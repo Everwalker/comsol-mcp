@@ -1,0 +1,55 @@
+{
+  "schema": "ROOT_W24_CURRENT09_COUNT_CONTRACT_FINDING_V1",
+  "created_utc": "2026-10-12T04:40:24.788857+00:00",
+  "status": "CHANGES_REQUIRED_NEW_SOURCE_CURRENT09_NATIVE_FAILED",
+  "id": "W24-MESH-COUNT-01",
+  "priority": 1,
+  "candidate_freeze": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current09-triangle/repository/docs/full_project_execution/w24/evidence/setup_candidate_20261012_current09/offline_candidate_freeze_current09.json",
+    "sha256": "6b357a1ec21c2e53d1a260bc403af03a9d0cec1f5da897f9e34e720510584308"
+  },
+  "prior_root_review": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/ROOT_SOURCE_REVIEW_CURRENT09.json",
+    "sha256": "047e2104226e4a63c17dac7459b18fa592a58f5c252e054d6143f66cd9e01085",
+    "superseded_scope": "Prior offline source/tests remain historical evidence; native failure exposed an unsupported cross-dimension count assumption missed in Root source review."
+  },
+  "actual_native_summary": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/native-run-current09-001/summary.json",
+    "sha256": "dfa727c7e33f841e725ccea310124d377563c92a4a7da8e77317194de1e3a460",
+    "observed_failure": "IllegalStateException: mesh element type counts do not bind a nonempty triangle mesh",
+    "explicit_solve_submissions": 0,
+    "raw_type_counts": "NOT_CAPTURED_BY_FAILURE_MESSAGE",
+    "actual_no_arg_vs_type_counts_relationship": "UNVERIFIED"
+  },
+  "primary_api": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/ROOT_MESH_COUNT_PRIMARY_API.json",
+    "sha256": "5519ca116cd32f1d4e6f24412d1eb9469a5877729ebf980917f9070aa3f306bf",
+    "doc_id": 7637,
+    "chunk_id": 22946,
+    "source_sha256": "0f46188b7694be0f1b7d188790218075aa6c831b58080f1d27ae04f3a141df23",
+    "supports": "Separate no-argument count and element-type count methods; it does not state that all dimension/type counts sum to the no-argument count."
+  },
+  "source_locations": [
+    {
+      "file": "tools/java/W24CureCouponFixture.java",
+      "predicate": "triangleCount <= 0 || countSum != totalElementCount"
+    },
+    {
+      "file": "tools/run_native_w24_cure_preflight.py",
+      "predicate": "normalized_counts.get(\"tri\") != tri_count or sum(normalized_counts.values()) != total_count"
+    }
+  ],
+  "required_successor": {
+    "preserve": "current09 freeze, raw failure, UNKNOWN/safe_retry=false and all original evidence remain immutable; never replay old request.",
+    "count_contract": "Retain direct no-argument count as a separately labeled raw observation, positivity and before/after stability. Retain every actual type count; remove undocumented sum-of-all-dimensional-types equality. Do not assign highest-dimensional semantics without evidence.",
+    "volume_contract": "Keep actual finite 2xNv vertices, 3xNtri zero-based connectivity, flat Ntri native entity IDs and per-type tri cardinality; actual four domains and straight triangle integral with original 1e-6 threshold; analytic comparator only; no area shortcut.",
+    "failure_evidence": "Preserve bounded actual geometry/unit/type/count/vertex metadata in validation failure diagnostics; do not invent counts after failure.",
+    "software_controls": [
+      "Positive non-argument count different from sum of all type counts with unchanged actual triangle arrays.",
+      "Negative missing/zero tri count, wrong connectivity/entity cardinality, unsupported element type and before/after native count/type drift.",
+      "Preserve original unit/domain/finite/radius/degenerate/tampered-array and no-clobber/reopen controls."
+    ],
+    "native_policy": "No new native admission from this finding; new frozen source/test closure and exact process gate needed."
+  },
+  "scientific_acceptance": "FAILED_NOT_ACCEPTED"
+}

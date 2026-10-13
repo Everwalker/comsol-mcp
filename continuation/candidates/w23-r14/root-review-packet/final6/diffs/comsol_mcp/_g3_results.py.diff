@@ -1,0 +1,122 @@
+--- /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/comsol_mcp/_g3_results.py
++++ /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/comsol_mcp/_g3_results.py
+@@ -5142,51 +5142,16 @@
+         if not strict_selection_enabled:
+             ms.apply_selection(target_feature)
+             return
+-        from ._g3_common import resolve_selection_entities, selection_state
+-
++        from ._g3_common import resolve_selection_entities, bind_strict_feature_selection
+         requested = dict(spec["selection"])
+         expected = resolve_selection_entities(worker, model_tag, requested)
+-        expected_entities = expected.get("entities") if isinstance(expected, Mapping) else None
+-        if (not isinstance(expected_entities, list) or not expected_entities or
+-                any(isinstance(item, bool) or not isinstance(item, int) or item < 1 for item in expected_entities)):
+-            raise ExecutionContractError("INVALID_SELECTION", "selection membership could not be read as a non-empty entity list")
+-        selection_node = _call(target_feature, "selection")
+-        _call(selection_node, "geom", requested["geometry"], requested["entity_dimension"])
+-        kind = requested["kind"]
+-        if kind == "named":
+-            _call(selection_node, "named", requested["tag"])
+-        elif kind == "explicit":
+-            _call(selection_node, "set", list(requested["entities"]))
+-        else:
+-            _call(selection_node, "all")
+-        observed = selection_state(selection_node)
+-        entities = observed.get("entities")
+-        if not isinstance(entities, list) or any(isinstance(item, bool) or not isinstance(item, int) for item in entities):
+-            raise ExecutionContractError("SELECTION_READBACK_UNAVAILABLE", "numerical feature selection entities could not be read back")
+-        if (observed.get("geometry") != requested["geometry"]
+-                or observed.get("dimension") != requested["entity_dimension"]
+-                or sorted(entities) != sorted(expected_entities)):
+-            raise ExecutionContractError("SELECTION_READBACK_MISMATCH", "numerical feature selection geometry, dimension, or members differ from the requested ROI")
+-        if kind == "named" and observed.get("named") != requested["tag"]:
+-            raise ExecutionContractError("SELECTION_READBACK_MISMATCH", "numerical feature named-selection readback differs from the requested tag")
+-        if observed.get("is_inheriting") is True:
+-            raise ExecutionContractError("SELECTION_READBACK_MISMATCH", "numerical feature unexpectedly reports an inherited selection")
+-        normalized_entities = sorted(entities)
++        record = bind_strict_feature_selection(worker, model_tag, target_feature, requested,
++            stage="before_numeric_read", expected=expected, apply=True)
++        normalized_entities = record["entities"]
+         if strict_selection_evidence and strict_selection_evidence[0]["entities"] != normalized_entities:
+             raise ExecutionContractError("SELECTION_READBACK_MISMATCH", "numerical features used different ROI membership")
+-        strict_selection_evidence.append({
+-            "role": role,
+-            "feature_tag": str(_call(target_feature, "tag")),
+-            "source": "actual_transient_numerical_feature",
+-            "component": requested["component"],
+-            "geometry": requested["geometry"],
+-            "entity_dimension": requested["entity_dimension"],
+-            "kind": kind,
+-            "tag": requested.get("tag"),
+-            "entities": normalized_entities,
+-            "resolver_source": expected.get("source"),
+-            "native_selection_readback": observed,
+-        })
++        strict_selection_evidence.append({"role":role,"feature_tag":str(_call(target_feature,"tag")),
++            "source":"actual_transient_numerical_feature",**{k:v for k,v in record.items() if k!="stage"}})
+ 
+     try:
+         feature = _call(numerical_list, "create", ephemeral_tag, feat_type)
+@@ -6699,6 +6664,14 @@
+     if not dataset_tag:
+         raise ExecutionContractError("INVALID_REQUEST", "spec.solution.dataset is required")
+ 
++    point_selection = spec.get("selection")
++    if point_selection is not None:
++        from ._g3_common import validate_selection_spec
++        point_selection = validate_selection_spec(point_selection, allowed_kinds={"named", "explicit"})
++        if not all(k in point_selection for k in ("component", "geometry", "entity_dimension")):
++            raise ExecutionContractError("INVALID_SELECTION", "point selection requires component/geometry/dimension")
++        if spec.get("entity_dim") is not None and (type(spec["entity_dim"]) is not int or spec["entity_dim"] != point_selection["entity_dimension"]):
++            raise ExecutionContractError("INVALID_SELECTION", "point selection and entity_dim differ")
+     complex_mode = spec.get("complex_mode", "real")
+     if complex_mode not in COMPLEX_MODES:
+         raise ExecutionContractError("API_UNSUPPORTED", f"complex_mode {complex_mode!r} is not supported")
+@@ -6794,6 +6767,14 @@
+         single_solution_count_observation = _single_stored_solution_count_observation(
+             model, dataset_binding, solution_tag)
+ 
++    point_selection_expected = None
++    if point_selection is not None:
++        if ctx.get("component") != point_selection["component"] or ctx.get("geometry") != point_selection["geometry"]:
++            raise ExecutionContractError("SELECTION_DATASET_MISMATCH", "point selection component/geometry differs from dataset")
++        from ._g3_common import resolve_selection_entities
++        point_selection_expected = resolve_selection_entities(worker, model_tag, point_selection, _component_final_entity=True)
++    point_selection_evidence = {}
++    point_selection_node = None
+     original_numerical_tags = tag_list(numerical_list)
+     from ._ephemeral_result_ticket import current_scope
+     ephemeral_scope = current_scope()
+@@ -6859,6 +6840,11 @@
+                 f"Interp data readback {data_readback!r} does not match dataset {dataset_tag!r}",
+             )
+         data_readback_status = "VERIFIED"
++        if point_selection is not None:
++            from ._g3_common import bind_strict_feature_selection
++            point_selection_node = _call(feature, "selection")
++            point_selection_evidence["before"] = bind_strict_feature_selection(worker, model_tag, feature, point_selection,
++                stage="before_numeric_read", expected=point_selection_expected, apply=True, selection_node=point_selection_node)
+         _call(feature, "set", "expr", expressions)
+         if requested_units is not None:
+             for index, unit in enumerate(requested_units):
+@@ -6884,6 +6870,11 @@
+             expression_units = dict(zip(after_units["expressions"], after_units["units"]))
+         else:
+             expression_units = _feature_units(feature, expressions)
++        if point_selection is not None:
++            point_selection_evidence["after"] = bind_strict_feature_selection(worker, model_tag, feature, point_selection,
++                stage="after_numeric_read", expected=point_selection_expected, selection_node=point_selection_node)
++            if point_selection_evidence["before"]["native_selection_readback"] != point_selection_evidence["after"]["native_selection_readback"]:
++                raise ExecutionContractError("SELECTION_READBACK_MISMATCH", "point selection changed during numeric read")
+         transformed = _transform_complex_data(raw_real, raw_imag, complex_mode, is_complex=is_complex)
+         if not pair_mapping_complete:
+             _validate_count_only_point_samples(transformed, num_expressions=len(expressions),
+@@ -7038,6 +7029,7 @@
+             "data": data_readback,
+             "data_status": data_readback_status,
+             "source": "NumericalFeature.getString('data') after set('data')",
++            "selection_application": point_selection_evidence,
+             **({"requested_unit_application": requested_unit_evidence} if requested_units is not None else {}),
+         },
+         "coordinate_unit": coordinate_unit,

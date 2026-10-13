@@ -1,0 +1,189 @@
+{
+  "approved_wheel_count": 8,
+  "approved_wheel_total_bytes": 7388559,
+  "created_utc": "2026-10-12T04:43:08.769816+00:00",
+  "distribution_versions": {
+    "psutil": "5.9.8",
+    "pyobjc-core": "12.2.2",
+    "pyobjc-framework-applicationservices": "12.2.2",
+    "pyobjc-framework-cocoa": "12.2.2",
+    "pyobjc-framework-coremedia": "12.2.2",
+    "pyobjc-framework-coretext": "12.2.2",
+    "pyobjc-framework-quartz": "12.2.2",
+    "pyobjc-framework-screencapturekit": "12.2.2"
+  },
+  "download": {
+    "argv": [
+      "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python3",
+      "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/fetch_pinned_arm64_wheels_r2.py",
+      "--execute-download"
+    ],
+    "argv_source": "exact pinned task interpreter and downloader from the R2 candidate plan",
+    "exit_code": 0,
+    "no_clobber": true,
+    "script_sha256": "2e8702bb87b7d5b524baf195bd82e59a99b079b8c0d07ed8a35eaf9cee4fc134",
+    "stdout_status": "NOT_CAPTURED"
+  },
+  "host": {
+    "architecture": "arm64",
+    "platform": "macOS-27.0-arm64-arm-64bit"
+  },
+  "install": {
+    "argv": [
+      "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python3",
+      "-m",
+      "pip",
+      "install",
+      "--no-index",
+      "--no-deps",
+      "--only-binary=:all:",
+      "--require-hashes",
+      "--find-links",
+      "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/wheelhouse",
+      "--target",
+      "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/install.staging",
+      "-r",
+      "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/requirements-arm64.txt"
+    ],
+    "argv_source": "exact argv preserved in ISOLATED_ARM64_RUNTIME_PLAN_R2.json",
+    "exit_code": 0,
+    "method": "hash-verified local wheels only; pinned-parent no-replace activation",
+    "stdout_status": "NOT_CAPTURED"
+  },
+  "interpreter": {
+    "executable": "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python",
+    "version": "3.12.13 (main, Mar  3 2026, 12:39:30) [Clang 21.0.0 (clang-2100.0.123.102)]"
+  },
+  "limitations": [
+    "Software environment/import verification only; no GUI or ScreenCaptureKit call was made.",
+    "Native macOS GUI/permission/profile validation remains NOT_RUN.",
+    "Intel x86_64 cryptography wheel builder closure remains OPEN."
+  ],
+  "post_install_imports": [
+    {
+      "file": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/site/psutil/__init__.py",
+      "module": "psutil"
+    },
+    {
+      "file": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/site/objc/__init__.py",
+      "module": "objc"
+    },
+    {
+      "file": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/site/AppKit/__init__.py",
+      "module": "AppKit"
+    },
+    {
+      "file": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/site/ApplicationServices/__init__.py",
+      "module": "ApplicationServices"
+    },
+    {
+      "file": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/site/Quartz/__init__.py",
+      "module": "Quartz"
+    },
+    {
+      "file": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/site/CoreText/__init__.py",
+      "module": "CoreText"
+    },
+    {
+      "file": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/site/CoreMedia/__init__.py",
+      "module": "CoreMedia"
+    },
+    {
+      "file": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/site/ScreenCaptureKit/__init__.py",
+      "module": "ScreenCaptureKit"
+    }
+  ],
+  "requirements_evidence_copy_sha256": "e0547d079a6dee23d269aaaa60301232a74a07c1dc39687388a10ab1728011a6",
+  "requirements_sha256": "e0547d079a6dee23d269aaaa60301232a74a07c1dc39687388a10ab1728011a6",
+  "schema": "comsol-mcp.w25-arm64-runtime-install-receipt/2",
+  "screencapturekit_binding_present": true,
+  "security_verification": {
+    "site": {
+      "identity": {
+        "device": 16777231,
+        "inode": 14842239
+      },
+      "security_semantics": "posix-owner-mode+filesystem-ownership+no-extended-acl",
+      "security_sha256": null
+    },
+    "task_directory": {
+      "identity": {
+        "device": 16777231,
+        "inode": 14842237
+      },
+      "security_semantics": "posix-owner-mode+filesystem-ownership+no-extended-acl",
+      "security_sha256": null
+    },
+    "trusted_parent": {
+      "identity": {
+        "device": 16777231,
+        "inode": 297256
+      },
+      "security_semantics": "posix-owner-mode+filesystem-ownership+no-extended-acl",
+      "security_sha256": null
+    }
+  },
+  "site_identity": {
+    "device": 16777231,
+    "inode": 14842239
+  },
+  "site_manifest": {
+    "file_count": 886,
+    "path": "ARM64_SITE_FILES_R2.json",
+    "sha256": "07735aecd5675786d676e740f40e56e098d1c9cde228c9c4315e2fdd542e3448",
+    "total_bytes": 34727229
+  },
+  "site_path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/site",
+  "source_scope": {
+    "comsol_launches": 0,
+    "gui_calls": 0,
+    "live_pyproject_changed": false,
+    "live_uv_lock_changed": false,
+    "network_calls_during_install_or_smoke": 0,
+    "permission_queries_or_prompts": 0,
+    "recovered_runtime_changed": false,
+    "solver_calls": 0,
+    "system_python_changed": false
+  },
+  "status": "SOFTWARE_PREPARATION_PASS",
+  "task_root": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24",
+  "task_root_identity": {
+    "device": 16777231,
+    "inode": 14842237
+  },
+  "verification_script_sha256": "53d432ce2a009c31c67541b315e835f2d504cd908e85364becb3740a2ec77928",
+  "verified_wheels": {
+    "psutil-5.9.8-cp38-abi3-macosx_11_0_arm64.whl": {
+      "sha256": "d16bbddf0693323b8c6123dd804100241da461e41d6e332fb0ba6058f630f8c8",
+      "size_bytes": 249898
+    },
+    "pyobjc_core-12.2.2-cp312-cp312-macosx_10_13_universal2.whl": {
+      "sha256": "122e6ad302a2abf5d4d4adb0156db751600ddf2768441696cba17b31323085e7",
+      "size_bytes": 6427637
+    },
+    "pyobjc_framework_applicationservices-12.2.2-cp312-cp312-macosx_10_13_universal2.whl": {
+      "sha256": "5506bd6b5268a97fcb79b5b021f6cbbaaf5cdff3ec87094d8870268d8cf096ed",
+      "size_bytes": 32765
+    },
+    "pyobjc_framework_cocoa-12.2.2-cp312-cp312-macosx_10_13_universal2.whl": {
+      "sha256": "e106f395531e67694376b0f1184612cbeea3ec8b9bf56b55ef41d026171d2a2d",
+      "size_bytes": 388117
+    },
+    "pyobjc_framework_coremedia-12.2.2-cp312-cp312-macosx_10_13_universal2.whl": {
+      "sha256": "84f5deee8d366bf73069a0525509637aa578ccd0e6688923b09999a8bc3077a8",
+      "size_bytes": 29421
+    },
+    "pyobjc_framework_coretext-12.2.2-cp312-cp312-macosx_10_13_universal2.whl": {
+      "sha256": "a69611de569d92776e6391ca25492a5bbb4a05ba744006349e377a4fc5f7c8a5",
+      "size_bytes": 30120
+    },
+    "pyobjc_framework_quartz-12.2.2-cp312-cp312-macosx_10_13_universal2.whl": {
+      "sha256": "7f668979d0c7320bf8f7ed6e030da578f93ab0f5dd619b295ec735cd8d5faa34",
+      "size_bytes": 219003
+    },
+    "pyobjc_framework_screencapturekit-12.2.2-cp312-cp312-macosx_10_13_universal2.whl": {
+      "sha256": "5c81c68bc0399ad7ca6ccaa978574354a4da8fbb474527664fdbf08cc8f8abd5",
+      "size_bytes": 11598
+    }
+  }
+}

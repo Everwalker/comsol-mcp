@@ -7,6 +7,8 @@ import com.comsol.model.NodeGroup;
 import com.comsol.model.NodeGroupList;
 import com.comsol.model.PrimitiveModelEntity;
 import com.comsol.model.GeomObjectSelection;
+import com.comsol.model.GeomSequence;
+import com.comsol.model.MaterialList;
 import com.comsol.model.MeshSequence;
 import com.comsol.model.ModelParam;
 import com.comsol.model.NumericalFeature;
@@ -67,6 +69,12 @@ public final class PersistentComsolWorker {
       "getDouble", "getDoubleArray", "getDoubleMatrix", "getInt", "getIntArray", "getIntMatrix",
       "getString", "getStringArray", "getStringMatrix", "getType", "getValueType",
       "getEntryKeys", "getEntryKeyIndex",
+      // G3 geometry export/repair and registered material import.  COMSOL
+      // 6.4 public API docs: GeomSequence.objectNames()/exportFinal(String)
+      // (GeomSequence.html SHA-256 047a6aeebc08362e81db383f1b758b688303a702b26a7d020e18146fa63ad661)
+      // and MaterialList.insert(String,String[]) (MaterialList.html SHA-256
+      // 3ae0833653f79722a163e80c41abf4cc8bd7fa890179862d879d576f7a91190c).
+      "objectNames", "exportFinal", "insert",
       "isActive", "isComplex", "isGeometryMeshDependent", "isInheriting", "isInitialized",
       "label", "location", "locationUri", "mesh", "model", "modelNode", "name", "numerical",
       "param", "physics", "properties", "remove", "rename", "result", "run", "runAll",
@@ -167,6 +175,10 @@ public final class PersistentComsolWorker {
       // G3.3 independent 6.4 javap verification: native geometry and per-solution metadata.
       "isAxisymmetric", "getSolnum", "getSolnums", "getPvals", "getUnits", "getUnit",
       "getPNamesOuter", "getPUnitsOuter", "getSolverSequence",
+      // W23 saved-solution diagnostic: COMSOL 6.4 SolverSequence.getPValsImag(int)
+      // exposes the imaginary part for one documented one-based solution number.
+      // It supplements (and does not replace) SolutionInfo tuple mapping.
+      "getPValsImag",
       // W21 selected historical solution→mesh association (COMSOL 6.4
       // Programming Reference p.546/549; javap of the installed public API):
       // SolutionInfo.getISol(outer,inner) returns zero-based [iMulti,iSol], and
@@ -178,7 +190,7 @@ public final class PersistentComsolWorker {
       // ProbeFeature.genResult(String): explicit write, never history-read preparation.
       "genResult", "copy", "resolveModelPath"));
   private static final Set<String> MODEL_UTIL = new HashSet<>(Arrays.asList(
-      "create", "load", "model", "remove", "tags", "uniquetag", "modelsUsedByOtherClients",
+      "create", "load", "loadCopy", "model", "remove", "tags", "uniquetag", "modelsUsedByOtherClients",
       "getComsolVersion",
       // G3 runtime licence probe: documented, non-seat-consuming query
       // (javap com.comsol.model.util.ModelUtil; KB Programming Reference p.42).
@@ -206,6 +218,12 @@ public final class PersistentComsolWorker {
   private final Path codeRoot;
   private final ConcurrentMap<String, CompiledArtifact> compiledArtifacts = new ConcurrentHashMap<>();
   private volatile boolean connected;
+  // True from the first dispatched showProgress(String) call until the exact
+  // typed stop sequence has redirected to stdout and disabled progress.  A
+  // lost/failed receipt intentionally leaves this latched, blocking another
+  // capture or disconnect from inheriting an unknown client-global sink.
+  private volatile boolean progressLogActive;
+  private volatile String progressLogPath = "";
   private volatile String serverIdentity = "";
 
   private PersistentComsolWorker(String token, int port, long initialGeneration, Path serverLockRoot) throws IOException {
@@ -309,7 +327,7 @@ public final class PersistentComsolWorker {
     if ("reflection_selftest".equals(type)) return map("ok", true, "result", reflectionSelftest());
     if ("marshalling_selftest".equals(type)) return map("ok", true, "result", marshallingSelftest());
     if ("shutdown".equals(type)) return error("PERMISSION_DENIED", "worker shutdown is controlled by its owner process");
-    if (!"connect".equals(type) && !"call".equals(type) && !"model".equals(type) && !"modelutil".equals(type) && !"license_checkout".equals(type) && !"model_snapshot".equals(type) && !"disconnect".equals(type) && !"lock_selftest".equals(type) && !"code_compile".equals(type) && !"code_execute".equals(type) && !"children".equals(type) && !"walk".equals(type) && !"public_describe".equals(type) && !"g2_entity_identity".equals(type) && !"g2_nodegroup_read".equals(type) && !"g2_nodegroup_ungroup".equals(type))
+    if (!"connect".equals(type) && !"call".equals(type) && !"model".equals(type) && !"modelutil".equals(type) && !"progress_log".equals(type) && !"license_checkout".equals(type) && !"model_snapshot".equals(type) && !"disconnect".equals(type) && !"lock_selftest".equals(type) && !"code_compile".equals(type) && !"code_execute".equals(type) && !"children".equals(type) && !"walk".equals(type) && !"public_describe".equals(type) && !"g2_entity_identity".equals(type) && !"g2_nodegroup_read".equals(type) && !"g2_nodegroup_ungroup".equals(type))
       return error("UNKNOWN_COMMAND", "unsupported internal worker command");
     String id = requiredId(request);
     RequestState old = requests.get(id);
@@ -338,6 +356,7 @@ public final class PersistentComsolWorker {
       else if ("model_snapshot".equals(type)) result = modelSnapshot(request);
       else if ("lock_selftest".equals(type)) result = lockSelftest(request);
       else if ("modelutil".equals(type)) result = modelUtil(request);
+      else if ("progress_log".equals(type)) result = progressLog(request);
       else if ("license_checkout".equals(type)) result = licenseCheckout(request);
       else if ("code_compile".equals(type)) result = compileJava(request);
       else if ("code_execute".equals(type)) result = executeJava(request);
@@ -352,6 +371,8 @@ public final class PersistentComsolWorker {
     } catch (WorkerFailure t) {
       Map<String,Object> failure = error(t.code, t.getMessage());
       if (t.details != null) failure.putAll(t.details);
+      if (t.getCause() != null && !failure.containsKey("cause_chain"))
+        failure.put("cause_chain", throwableChain(t.getCause(), progressLogPath));
       if ("NON_FINITE_JSON_VALUE".equals(t.code)) {
         // The native call already ran; the result could not be published as
         // JSON, so the caller must retain the dispatched operation as unknown.
@@ -383,6 +404,10 @@ public final class PersistentComsolWorker {
     return map("connected", true, "server", serverIdentity, "generation", generation.get(), "instance_id", instanceId, "engine_version", ModelUtil.getComsolVersion());
   }
   private Object disconnect() {
+    if (progressLogActive)
+      throw new WorkerFailure("EXECUTION_STATE_UNKNOWN",
+          "COMSOL progress capture is still active or unresolved; disconnect is blocked",
+          map("execution_state_unknown", true, "post_dispatch", true, "safe_retry", false));
     try { if (connected) ModelUtil.disconnect(); }
     finally { connected = false; serverIdentity = ""; generation.incrementAndGet(); handles.clear(); releaseServerLock(); }
     return map("connected", false, "generation", generation.get(), "instance_id", instanceId);
@@ -586,6 +611,108 @@ public final class PersistentComsolWorker {
   }
 
   /**
+   * Private, serialized ModelUtil progress capture control.
+   *
+   * <p>COMSOL 6.4 ModelUtil.showProgress(String) selects a client-side
+   * progress file; the Programming Reference documents null as stdout.
+   * ModelUtil.showProgress(boolean) returns whether the display setting
+   * changed. The path is host-minted inside one project-private job scope and
+   * is never returned or copied into Worker receipts.</p>
+   * <p>Versioned API evidence: COMSOL 6.4.0.293 ModelUtil, offline KB
+   * doc 7768/chunk 23171, SHA-256
+   * a5e4c080407a6735a5dd78e95b9fb089d92c0f518477ffdcc4f62b3348085c4eb;
+   * Programming Reference doc 4086/chunk 16699, SHA-256
+   * efba38a9c78d87e68e7306ced73ccc947c97ca43802bfb5b29045b45c56bb16a.</p>
+   */
+  private Object progressLog(Map<String, Object> request) throws Exception {
+    ensureConnected();
+    Object rawPath = request.get("path");
+    if (rawPath == null) {
+      if (!progressLogActive)
+        throw new WorkerFailure("INVALID_REQUEST", "there is no active progress capture to stop",
+            map("capture_dispatched", false));
+      try {
+        // The first overload redirects future progress output away from the
+        // job file. Only then disable the client progress display and verify
+        // COMSOL confirms the transition.
+        ModelUtil.showProgress((String) null);
+        boolean disabled = ModelUtil.showProgress(false);
+        if (!disabled)
+          throw new WorkerFailure("COMSOL_PROGRESS_DISABLE_UNCONFIRMED",
+              "COMSOL did not confirm progress-display disable after sink redirection",
+              map("execution_state_unknown", true, "post_dispatch", true, "safe_retry", false,
+                  "cause_chain", Collections.emptyList()));
+        progressLogActive = false;
+        progressLogPath = "";
+        return map("active", false, "disabled", true);
+      } catch (WorkerFailure failure) {
+        throw failure;
+      } catch (Throwable failure) {
+        throw new WorkerFailure("COMSOL_PROGRESS_DISABLE_FAILED",
+            "COMSOL progress sink could not be redirected and disabled with a verified receipt",
+            map("execution_state_unknown", true, "post_dispatch", true, "safe_retry", false,
+                "cause_chain", throwableChain(failure, progressLogPath)), failure);
+      }
+    }
+    if (!(rawPath instanceof String) || ((String) rawPath).isEmpty())
+      throw new WorkerFailure("INVALID_REQUEST", "progress capture path must be an absolute regular file",
+          map("capture_dispatched", false));
+    if (progressLogActive)
+      throw new WorkerFailure("EXECUTION_STATE_UNKNOWN", "another progress capture is active or unresolved",
+          map("execution_state_unknown", true, "post_dispatch", true, "safe_retry", false));
+    final Path path;
+    try {
+      path = Paths.get((String) rawPath);
+      if (!path.isAbsolute() || !path.normalize().equals(path)
+          || hasSymbolicLinkComponent(path)
+          || !Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)
+          || Files.size(path) != 0L)
+        throw new IOException("progress path must be a new empty regular file without symbolic-link components");
+    } catch (Exception invalid) {
+      throw new WorkerFailure("INVALID_REQUEST", "progress capture path must be an absolute empty regular file",
+          map("capture_dispatched", false));
+    }
+    // Latch before the API call: if COMSOL changes its global sink and then
+    // throws, a second request must not silently redirect another job's log.
+    progressLogActive = true;
+    progressLogPath = path.toString();
+    try {
+      ModelUtil.showProgress(path.toString());
+      return map("active", true, "disabled", false);
+    } catch (Throwable failure) {
+      throw new WorkerFailure("COMSOL_PROGRESS_ENABLE_FAILED",
+          "COMSOL progress sink activation did not produce a verified receipt",
+          map("execution_state_unknown", true, "post_dispatch", true, "safe_retry", false,
+              "cause_chain", throwableChain(failure, progressLogPath)), failure);
+    }
+  }
+
+  private static boolean hasSymbolicLinkComponent(Path path) {
+    Path current = path.getRoot();
+    if (current == null) return true;
+    for (Path part : path) {
+      current = current.resolve(part);
+      if (Files.isSymbolicLink(current)) return true;
+    }
+    return false;
+  }
+
+  private static List<Object> throwableChain(Throwable failure, String privatePath) {
+    List<Object> chain = new ArrayList<>();
+    Set<Throwable> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    Throwable current = failure;
+    while (current != null && seen.add(current) && chain.size() < 32) {
+      String message = current.getMessage();
+      if (message == null || message.trim().isEmpty()) message = current.getClass().getSimpleName();
+      if (privatePath != null && !privatePath.isEmpty()) message = message.replace(privatePath, "<private-progress-file>");
+      if (message.length() > 1200) message = message.substring(0, 1200);
+      chain.add(map("type", current.getClass().getName(), "message", message));
+      current = current.getCause();
+    }
+    return chain;
+  }
+
+  /**
    * Explicit, seat-consuming checkout route. This is deliberately a separate
    * Worker command; the generic modelutil allow-list never contains checkout.
    * The operation uses the already-connected client and never connects,
@@ -651,6 +778,22 @@ public final class PersistentComsolWorker {
     if (target == null) throw new IllegalArgumentException("UNKNOWN_WORKER_HANDLE");
     String method = string(request.get("method")); if (!METHODS.contains(method)) throw new SecurityException("METHOD_REJECTED");
     List<Object> args = list(request.get("args"));
+    if ("objectNames".equals(method)) {
+      if (!(target instanceof GeomSequence) || !args.isEmpty()) throw new SecurityException("METHOD_REJECTED");
+    }
+    if ("exportFinal".equals(method)) {
+      if (!(target instanceof GeomSequence) || args.size() != 1 || !(args.get(0) instanceof String)
+          || ((String) args.get(0)).isEmpty()) throw new SecurityException("METHOD_REJECTED");
+    }
+    if ("insert".equals(method)) {
+      if (!(target instanceof MaterialList) || args.size() != 2 || !(args.get(0) instanceof String)
+          || ((String) args.get(0)).isEmpty() || !(args.get(1) instanceof List<?>))
+        throw new SecurityException("METHOD_REJECTED");
+      for (Object materialTag : (List<?>) args.get(1)) {
+        if (!(materialTag instanceof String) || ((String) materialTag).isEmpty())
+          throw new IllegalArgumentException("MaterialList.insert tags must be nonempty strings");
+      }
+    }
     if ("getCoordinatesShape".equals(method)) {
       if (!args.isEmpty()) throw new IllegalArgumentException("getCoordinatesShape takes no arguments");
       return getCoordinatesShape(target);
@@ -1959,7 +2102,8 @@ public final class PersistentComsolWorker {
     if (t.getCause() != null && t.getCause() != t) {
       sb.append(" (cause: ").append(t.getCause().getClass().getSimpleName()).append(": ").append(t.getCause().getMessage()).append(")");
     }
-    return map("ok",false,"code",code,"message",sb.toString(),"execution_state_unknown",unknown);
+    return map("ok",false,"code",code,"message",sb.toString(),"execution_state_unknown",unknown,
+        "cause_chain", throwableChain(t, ""));
   }
   private static boolean constantTimeEquals(String a,String b) { return MessageDigest.isEqual(a.getBytes(StandardCharsets.UTF_8), b.getBytes(StandardCharsets.UTF_8)); }
   private static String sha256(String text) throws Exception { byte[] bytes = MessageDigest.getInstance("SHA-256").digest(text.getBytes(StandardCharsets.UTF_8)); StringBuilder out = new StringBuilder(); for(byte b:bytes) out.append(String.format("%02x", b)); return out.toString(); }

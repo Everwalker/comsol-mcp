@@ -1,0 +1,139 @@
+{
+  "schema": "comsol-mcp-root-readback-budget-dependency-note/1",
+  "created_utc": "2026-10-11T23:36:14.295308+00:00",
+  "status": "PRE_NATIVE_MATERIAL_DEPENDENCY_IDENTIFIED_EXECUTOR_REPAIR_IN_PROGRESS",
+  "input_findings_sha256": "4093f2b9b428a1b270a4ea3d7d3eb15cc00e9d9f547a1b3c0a262d3349367511",
+  "actual_dset1_observation": {
+    "dataset_tag": "dset1",
+    "direct_solver_sequence_parameter_reads": [
+      {
+        "imaginary": [
+          0.0
+        ],
+        "imaginary_status": "CAPTURED",
+        "inner_solnum": 1,
+        "outer": 1,
+        "parameter_names": [
+          "freq"
+        ],
+        "real": [
+          193414489032258.03
+        ],
+        "real_status": "CAPTURED"
+      }
+    ],
+    "sequence_parameter_names": [
+      "freq"
+    ],
+    "solution_info_get_solnum_1_true": [
+      1
+    ],
+    "solution_info_is_structured": true,
+    "solution_info_is_valid": true,
+    "solution_info_level_names": [
+      "freq"
+    ],
+    "solution_info_levels": 1,
+    "solution_info_receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+    "solution_info_typed_matrix_query_errors": [
+      {
+        "argument_types": [
+          "int[][]"
+        ],
+        "arguments": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "error_type": "com.comsol.util.exceptions.FlException",
+        "first_message": "com.comsol.util.exceptions.FlException: 未知解。",
+        "method": "getPNames",
+        "receiver": "SolutionInfo.getPNames(sol1)",
+        "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient"
+      },
+      {
+        "argument_types": [
+          "int[][]"
+        ],
+        "arguments": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "error_type": "com.comsol.util.exceptions.FlException",
+        "first_message": "com.comsol.util.exceptions.FlException: 未知解。",
+        "method": "getPvals",
+        "receiver": "SolutionInfo.getPvals(sol1)",
+        "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient"
+      },
+      {
+        "argument_types": [
+          "int[][]"
+        ],
+        "arguments": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "error_type": "com.comsol.util.exceptions.FlException",
+        "first_message": "com.comsol.util.exceptions.FlException: 未知解。",
+        "method": "getPvalsImag",
+        "receiver": "SolutionInfo.getPvalsImag(sol1)",
+        "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient"
+      },
+      {
+        "argument_types": [
+          "int[][]"
+        ],
+        "arguments": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "error_type": "com.comsol.util.exceptions.FlException",
+        "first_message": "com.comsol.util.exceptions.FlException: 未知解。",
+        "method": "getUnits",
+        "receiver": "SolutionInfo.getUnits(sol1)",
+        "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient"
+      }
+    ],
+    "solution_property": "sol1",
+    "solution_tag": "sol1",
+    "solver_sequence_is_attached": true,
+    "solver_sequence_kind": "SolverSequence",
+    "solver_sequence_type": "Parametric",
+    "study_tag": "std1"
+  },
+  "source_observed": "Current `_make_result_budget_guard` fallback accepts VERIFIED_SINGLE_STORED_NUMERIC_COUNT only; producer requires Eigenfrequency/Stored and isAttached=false. This does not prove dset1 allocation bound.",
+  "required": "In the successor candidate, independently prove the exact dset1 main-BMA Parametric/SolverSequence numeric singleton state and explicit result-selection allocation bound; preserve Stored/Eigenfrequency negative controls and incomplete SolutionInfo outer/inner mapping. Add production-path dset1 positive controls and wrong-bound/multiple-state negatives.",
+  "same_version_reference_reads": [
+    {
+      "doc_id": 7709,
+      "chunk_id": 23068,
+      "sha256": "94d28f308be1be1b57d81c40932be6aebfd91e134c221b8e2f7e2235d51b9abb",
+      "fact": "SolutionInfo.getUnit(String) returns named parameter unit independently of Nx2 getUnits queries."
+    },
+    {
+      "doc_id": 7714,
+      "chunk_id": 23082,
+      "sha256": "8fcefe8e2f2171858f49fe53ad6210d4231a6a28651766db67effc39c327a2c5",
+      "fact": "SolverSequence.getSize() first entry DOF count, second entry solution-number count. This does not supply outer/inner tuple axes."
+    }
+  ],
+  "executor_acknowledged": true,
+  "science": "NOT_ACCEPTED",
+  "new_native_authorization": false,
+  "historical_activity010": "Unchanged; no old operation replay."
+}

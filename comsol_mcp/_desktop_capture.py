@@ -53,6 +53,20 @@ class CapturedWindowImage:
     scope: str = "target_window"
 
 
+@dataclass(frozen=True, slots=True)
+class CapturedDesktopImage:
+    """Bounded encoded image bytes from one identity-verified window."""
+
+    data: bytes
+    sha256: str
+    width: int
+    height: int
+    target_identity_fingerprint: str
+    format: str
+    region: str
+    scope: str
+
+
 def capture_windows_window(
     identity: WindowIdentity,
     *,
@@ -87,6 +101,31 @@ def capture_windows_window(
             height=height,
             target_identity_fingerprint=identity.fingerprint(),
         )
+
+
+def capture_macos_screen_capture_kit_window(identity: WindowIdentity, *, gateway: Any) -> CapturedDesktopImage:
+    """Capture exactly one SCWindow through Apple's non-deprecated API.
+
+    ScreenCaptureKit resolves the shareable window by both its observed ID and
+    owning PID, then SCScreenshotManager receives a desktop-independent window
+    filter.  No display/screen capture API or global screenshot is used.
+    """
+    if sys.platform != "darwin" or identity.platform != "macos":
+        raise WindowCaptureError("UNSUPPORTED_PLATFORM", "ScreenCaptureKit window capture is available only on macOS")
+    image = gateway.capture_window(identity)
+    if not isinstance(image, Mapping):
+        raise WindowCaptureError("CAPTURE_OUTPUT_REJECTED", "ScreenCaptureKit gateway returned no typed image receipt")
+    data = image.get("data")
+    width, height = image.get("width"), image.get("height")
+    if (not isinstance(data, bytes) or not data or len(data) > _MAX_BYTES
+            or type(width) is not int or type(height) is not int
+            or width <= 0 or height <= 0 or width > _MAX_DIMENSION or height > _MAX_DIMENSION
+            or width * height > _MAX_PIXELS):
+        raise WindowCaptureError("CAPTURE_OUTPUT_REJECTED", "ScreenCaptureKit image is outside fixed size and dimension bounds")
+    return CapturedDesktopImage(data=data, sha256=hashlib.sha256(data).hexdigest(),
+                                width=width, height=height,
+                                target_identity_fingerprint=identity.fingerprint(),
+                                format="PNG", region="window", scope="target_window")
 
 
 def _validate_identity(identity: WindowIdentity) -> int:

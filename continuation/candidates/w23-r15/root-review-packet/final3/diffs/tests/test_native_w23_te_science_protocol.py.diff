@@ -1,0 +1,298 @@
+--- /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/tests/test_native_w23_te_science_protocol.py
++++ /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r15/tests/test_native_w23_te_science_protocol.py
+@@ -327,7 +327,7 @@
+         points[step] = {
+             "status": "PRODUCTION_NATIVE_COMPLEX_POINT_READBACK", "native_is_complex": True, "dataset": dataset,
+             "solution": solution, "sample_count": 1,
+-            "requested_unit_application": _requested_unit_application(protocol.bma_point_expressions(port), ["1/m", "1", "1/m"]),
++            "requested_unit_application": _requested_unit_application(protocol.bma_point_expressions(port, field_scheme="emw_down"), ["1/m", "1", "1/m"]),
+             "expression_units": {f"emw.beta_{port}": "1/m", f"emw.neff_{port}": "1", "emw.k0": "1/m"},
+             "expressions": [
+                 {"expression": f"emw.beta_{port}", "real": [k0 * neff], "imag": [0.0]},
+@@ -337,13 +337,13 @@
+         }
+     main = {"status": "PASS_NATIVE_NUMERICAL_FREQUENCY_HZ",
+             "frequency_hz": frequency, "frequency_unit": "Hz"}
+-    result = protocol.reconcile_bma_mode_point_readbacks(bindings, points, main)
++    result = protocol.reconcile_bma_mode_point_readbacks(bindings, points, main, field_scheme="emw_down")
+     assert result["status"] == "PASS_BMA_FORMULA_CROSSCHECK_ONLY"
+     assert all(row["science_acceptance"] == "NOT_EVALUATED" for row in result["bindings"])
+ 
+     points["bmaOutput"]["expression_units"]["emw.beta_2"] = "V/m"
+     with pytest.raises(protocol.ScienceProtocolError, match="units"):
+-        protocol.reconcile_bma_mode_point_readbacks(bindings, points, main)
++        protocol.reconcile_bma_mode_point_readbacks(bindings, points, main, field_scheme="emw_down")
+ 
+ 
+ def test_production_complex_point_readback_preserves_exact_dataset_shape_and_coordinates():
+@@ -381,7 +381,7 @@
+     raw = protocol.decode_production_complex_point_readback(
+         result, dataset_tag="dset3", solution_tag="sol3",
+         expressions=["down(emw.Ez)", "down(emw.Hy)"], expected_points=[[8.0, -1.0], [8.0, 1.0]],
+-        expected_solution_count=1, plane_id="output_x8")
++        expected_solution_count=1, plane_id="output_x8", field_scheme="emw_down")
+     assert raw["status"] == "PRODUCTION_NATIVE_COMPLEX_POINT_READBACK"
+     assert raw["science_acceptance"] == "NOT_EVALUATED"
+     assert raw["coordinates_m"] == [[8e-6, 8e-6], [-1e-6, 1e-6]]
+@@ -394,7 +394,7 @@
+         protocol.decode_production_complex_point_readback(
+             malformed, dataset_tag="dset3", solution_tag="sol3",
+             expressions=["down(emw.Ez)", "down(emw.Hy)"], expected_points=[[8.0, -1.0], [8.0, 1.0]],
+-            expected_solution_count=1, plane_id="output_x8")
++            expected_solution_count=1, plane_id="output_x8", field_scheme="emw_down")
+ 
+     malformed_count = copy.deepcopy(result)
+     malformed_count["solution_axes"]["numeric_count_observation"]["numeric_solution_count"] = 2
+@@ -402,7 +402,7 @@
+         protocol.decode_production_complex_point_readback(
+             malformed_count, dataset_tag="dset3", solution_tag="sol3",
+             expressions=["down(emw.Ez)", "down(emw.Hy)"], expected_points=[[8.0, -1.0], [8.0, 1.0]],
+-            expected_solution_count=1, plane_id="output_x8")
++            expected_solution_count=1, plane_id="output_x8", field_scheme="emw_down")
+ 
+     malformed_axes = copy.deepcopy(result)
+     malformed_axes["solution_axes"]["pair_mapping_complete"] = True
+@@ -410,7 +410,7 @@
+         protocol.decode_production_complex_point_readback(
+             malformed_axes, dataset_tag="dset3", solution_tag="sol3",
+             expressions=["down(emw.Ez)", "down(emw.Hy)"], expected_points=[[8.0, -1.0], [8.0, 1.0]],
+-            expected_solution_count=1, plane_id="output_x8")
++            expected_solution_count=1, plane_id="output_x8", field_scheme="emw_down")
+ 
+ 
+ def test_attached_frequency_count_witness_binds_native_point_readback_without_axis_completion():
+@@ -461,7 +461,7 @@
+         expected_points=[[8.0, -1.0], [8.0, 1.0]], expected_solution_count=1,
+         plane_id="output_x8", expected_count_witness=witness,
+         expected_expression_units={"emw.nx": ("1", ""), "emw.ny": ("1", "")},
+-        require_x_plane_normal=True)
++        require_x_plane_normal=True, field_scheme="emw_down")
+     assert decoded["normal_status"] == "VERIFIED_FROM_NATIVE_NX_NY"
+     assert decoded["native_normal_x"] == 1
+     assert decoded["science_acceptance"] == "NOT_EVALUATED"
+@@ -475,7 +475,7 @@
+             expected_points=[[8.0, -1.0], [8.0, 1.0]], expected_solution_count=1,
+             plane_id="output_x8", expected_count_witness=witness,
+             expected_expression_units={"emw.nx": ("1", ""), "emw.ny": ("1", "")},
+-            require_x_plane_normal=True)
++            require_x_plane_normal=True, field_scheme="emw_down")
+ 
+     malformed = copy.deepcopy(result)
+     malformed["expression_units"]["emw.nx"] = "m"
+@@ -485,7 +485,7 @@
+             expected_points=[[8.0, -1.0], [8.0, 1.0]], expected_solution_count=1,
+             plane_id="output_x8", expected_count_witness=witness,
+             expected_expression_units={"emw.nx": ("1", ""), "emw.ny": ("1", "")},
+-            require_x_plane_normal=True)
++            require_x_plane_normal=True, field_scheme="emw_down")
+ 
+ 
+ def test_simpson_and_native_integral_reconciliation_use_registered_metre_grid():
+@@ -496,7 +496,7 @@
+ 
+     output = _raw("output_x8", 8e-6, 1)
+     incident = _raw("input_xminus10", -10e-6, -1)
+-    independent = protocol.independent_integrals(output, incident)
++    independent = protocol.independent_integrals(output, incident, field_scheme="emw_down")
+     assert independent["unit"] == "W/m"
+     assert independent["output_native_normal_x"] == 1
+     assert independent["output_normal_sign"] == 1
+@@ -526,7 +526,7 @@
+ 
+ def test_core_capture_aperture_flux_has_independent_hand_computed_reference():
+     output = _raw("output_x8", 8e-6, 1, sample_count=protocol.REFINED_SAMPLE_COUNT)
+-    result = protocol.independent_capture_aperture_flux(output)
++    result = protocol.independent_capture_aperture_flux(output, field_scheme="emw_down")
+     assert result["status"] == "SOFTWARE_RECOMPUTED_NATIVE_CAPTURE_FLUX"
+     assert result["aperture_id"] == "receiver_core_aperture"
+     assert result["selection_tag"] == "selCoreCaptureX8"
+@@ -540,8 +540,8 @@
+ def test_native_capture_quadrature_comparison_binds_region_denominator_and_sign():
+     output = _raw("output_x8", 8e-6, 1, sample_count=protocol.REFINED_SAMPLE_COUNT)
+     incident = _raw("input_xminus10", -10e-6, -1, sample_count=protocol.REFINED_SAMPLE_COUNT)
+-    independent = protocol.independent_capture_aperture_flux(output)
+-    independent_integrals = protocol.independent_integrals(output, incident)
++    independent = protocol.independent_capture_aperture_flux(output, field_scheme="emw_down")
++    independent_integrals = protocol.independent_integrals(output, incident, field_scheme="emw_down")
+     native = {
+         "status": "SUCCEEDED", "result_status": "COMPUTED_NATIVE_INTEGRALS",
+         "identity": {"incident_reference": {"input_plane_id": "input_xminus10"}},
+@@ -604,8 +604,8 @@
+                     row["real"][index], row["imag"][index] = 1.0, -0.5
+     reverse_aperture = {**output, "expressions": rows}
+     incident = _raw("input_xminus10", -10e-6, -1, sample_count=protocol.REFINED_SAMPLE_COUNT)
+-    independent = protocol.independent_capture_aperture_flux(reverse_aperture)
+-    independent_integrals = protocol.independent_integrals(reverse_aperture, incident)
++    independent = protocol.independent_capture_aperture_flux(reverse_aperture, field_scheme="emw_down")
++    independent_integrals = protocol.independent_integrals(reverse_aperture, incident, field_scheme="emw_down")
+     assert independent["value"] == pytest.approx(-0.75e-6, rel=1e-12)
+     assert independent_integrals["signal_power"] > 0  # The full-plane signal remains forward-power normalized.
+ 
+@@ -637,11 +637,11 @@
+     missing_bound = {**output, "coordinates_m": [output["coordinates_m"][0],
+                      [value + 0.01e-6 for value in output["coordinates_m"][1]]]}
+     with pytest.raises(protocol.ScienceProtocolError, match="frozen y span"):
+-        protocol.independent_capture_aperture_flux(missing_bound)
++        protocol.independent_capture_aperture_flux(missing_bound, field_scheme="emw_down")
+     reversed_normal = _raw("output_x8", 8e-6, -1, normal_sign=1,
+                            sample_count=protocol.REFINED_SAMPLE_COUNT)
+     with pytest.raises(protocol.ScienceProtocolError, match="physical \\+x"):
+-        protocol.independent_capture_aperture_flux(reversed_normal)
++        protocol.independent_capture_aperture_flux(reversed_normal, field_scheme="emw_down")
+ 
+ 
+ def test_normal_sign_and_native_normal_flip_preserve_physical_forward_power():
+@@ -649,8 +649,8 @@
+     input_a = _raw("input_xminus10", -10e-6, -1, normal_sign=-1)
+     output_b = _raw("output_x8", 8e-6, -1, normal_sign=-1)
+     input_b = _raw("input_xminus10", -10e-6, 1, normal_sign=1)
+-    positive_x = protocol.independent_integrals(output_a, input_a)
+-    flipped_geometry_normal = protocol.independent_integrals(output_b, input_b)
++    positive_x = protocol.independent_integrals(output_a, input_a, field_scheme="emw_down")
++    flipped_geometry_normal = protocol.independent_integrals(output_b, input_b, field_scheme="emw_down")
+     for key in ("signal_power", "reference_mode_power", "incident_reference_power"):
+         assert flipped_geometry_normal[key] == pytest.approx(positive_x[key], rel=1e-12)
+     assert flipped_geometry_normal["reciprocal_overlap_numerator"] == pytest.approx(
+@@ -659,9 +659,9 @@
+ 
+ def test_reference_mode_complex_phase_rotates_cross_term_conjugately():
+     baseline = protocol.independent_integrals(
+-        _raw("output_x8", 8e-6, 1), _raw("input_xminus10", -10e-6, -1))
++        _raw("output_x8", 8e-6, 1), _raw("input_xminus10", -10e-6, -1), field_scheme="emw_down")
+     reference_rotated = protocol.independent_integrals(
+-        _raw("output_x8", 8e-6, 1, rotate_mode=1j), _raw("input_xminus10", -10e-6, -1))
++        _raw("output_x8", 8e-6, 1, rotate_mode=1j), _raw("input_xminus10", -10e-6, -1), field_scheme="emw_down")
+     assert reference_rotated["reference_mode_power"] == pytest.approx(baseline["reference_mode_power"], rel=1e-12)
+     z0 = complex(**baseline["reciprocal_overlap_numerator"])
+     z1 = complex(**reference_rotated["reciprocal_overlap_numerator"])
+@@ -671,7 +671,7 @@
+ def test_software_signal_global_phase_control_rotates_cross_integral_only():
+     output = _raw("output_x8", 8e-6, 1)
+     incident = _raw("input_xminus10", -10e-6, -1)
+-    receipt = protocol.software_global_phase_control(output, incident)
++    receipt = protocol.software_global_phase_control(output, incident, field_scheme="emw_down")
+     assert receipt["status"] == "PASS_SOFTWARE_SIGNAL_GLOBAL_PHASE_CONTROL"
+     assert receipt["scope"].startswith("software-only")
+     assert receipt["native_input_phase_solve_still_required"] is True
+@@ -682,10 +682,10 @@
+ def test_321_to_641_quadrature_refinement_is_an_explicit_gate():
+     coarse = protocol.independent_integrals(
+         _raw("output_x8", 8e-6, 1, sample_count=321),
+-        _raw("input_xminus10", -10e-6, -1, sample_count=321))
++        _raw("input_xminus10", -10e-6, -1, sample_count=321), field_scheme="emw_down")
+     fine = protocol.independent_integrals(
+         _raw("output_x8", 8e-6, 1, sample_count=641),
+-        _raw("input_xminus10", -10e-6, -1, sample_count=641))
++        _raw("input_xminus10", -10e-6, -1, sample_count=641), field_scheme="emw_down")
+     receipt = protocol.compare_quadrature_refinement(coarse, fine)
+     assert receipt["status"] == "PASS_321_TO_641_QUADRATURE_REFINEMENT"
+     assert receipt["coarse_points"] == 321 and receipt["fine_points"] == 641
+@@ -696,22 +696,22 @@
+     incident = _raw("input_xminus10", -10e-6, -1)
+     output["coordinates_m"][0][0] = 8.0
+     with pytest.raises(protocol.ScienceProtocolError, match="x plane"):
+-        protocol.independent_integrals(output, incident)
++        protocol.independent_integrals(output, incident, field_scheme="emw_down")
+ 
+     output = _raw("output_x8", 8e-6, 1)
+     expression = next(row for row in output["expressions"] if row["expression"] == "emw.ny")
+     expression["real"][12] = 1.0
+     with pytest.raises(protocol.ScienceProtocolError, match="nonzero y component"):
+-        protocol.independent_integrals(output, incident)
++        protocol.independent_integrals(output, incident, field_scheme="emw_down")
+ 
+     output = _raw("output_x8", 8e-6, 1.2)
+     with pytest.raises(protocol.ScienceProtocolError, match="unit x normal"):
+-        protocol.independent_integrals(output, incident)
++        protocol.independent_integrals(output, incident, field_scheme="emw_down")
+ 
+     output = _raw("output_x8", 8e-6, 1)
+     output["expressions"].append(dict(output["expressions"][0]))
+     with pytest.raises(protocol.ScienceProtocolError, match="duplicate expression"):
+-        protocol.independent_integrals(output, incident)
++        protocol.independent_integrals(output, incident, field_scheme="emw_down")
+ 
+ 
+ def test_native_phase_control_requires_input_only_rotation_and_fixed_output_mode():
+@@ -719,8 +719,8 @@
+     output90 = _raw("output_x8", 8e-6, 1, phase=1j)
+     incident0 = _raw("input_xminus10", -10e-6, -1, phase=1)
+     incident90 = _raw("input_xminus10", -10e-6, -1, phase=1j)
+-    q0 = protocol.independent_integrals(output0, incident0)
+-    q90 = protocol.independent_integrals(output90, incident90)
++    q0 = protocol.independent_integrals(output0, incident0, field_scheme="emw_down")
++    q90 = protocol.independent_integrals(output90, incident90, field_scheme="emw_down")
+     native0 = _native_from_quadrature(q0)
+     native90 = _native_from_quadrature(q90)
+     native0.update({"overlap_amplitude": {"real": 1.0, "imag": 0.0},
+@@ -731,31 +731,31 @@
+              "output_fields": output0, "native_overlap": native0}
+     case90 = {"phase_value": "90[deg]", "output_port_phase": "0[deg]",
+               "output_fields": output90, "native_overlap": native90}
+-    assert protocol.verify_native_phase_pair(case0, case90)["status"] == "PASS_NATIVE_INPUT_PHASE_CONTROL"
++    assert protocol.verify_native_phase_pair(case0, case90, field_scheme="emw_down")["status"] == "PASS_NATIVE_INPUT_PHASE_CONTROL"
+ 
+     # If the output reference rotates with the signal, the phase comparison
+     # is unidentifiable and must not be counted as a native phase pass.
+     case90_both_rotated = {**case90, "output_fields": _raw("output_x8", 8e-6, 1,
+                                                             phase=1j, rotate_mode=1j)}
+     with pytest.raises(protocol.ScienceProtocolError, match="output reference mode"):
+-        protocol.verify_native_phase_pair(case0, case90_both_rotated)
++        protocol.verify_native_phase_pair(case0, case90_both_rotated, field_scheme="emw_down")
+ 
+     mismatched_grid = {**case90, "output_fields": _raw("output_x8", 8e-6, 1,
+                                                         phase=1j, sample_count=641)}
+     with pytest.raises(protocol.ScienceProtocolError, match="different quadrature sample counts"):
+-        protocol.verify_native_phase_pair(case0, mismatched_grid)
++        protocol.verify_native_phase_pair(case0, mismatched_grid, field_scheme="emw_down")
+ 
+     shifted_grid_raw = _raw("output_x8", 8e-6, 1, phase=1j)
+     shifted_grid_raw["coordinates_m"][1][80] += 1e-9
+     shifted_grid = {**case90, "output_fields": shifted_grid_raw}
+     with pytest.raises(protocol.ScienceProtocolError, match="same coordinates"):
+-        protocol.verify_native_phase_pair(case0, shifted_grid)
++        protocol.verify_native_phase_pair(case0, shifted_grid, field_scheme="emw_down")
+ 
+     changed_power = {**case90, "native_overlap": {**native90, "integrals": {
+         **native90["integrals"], "signal_power": {"real": q90["signal_power"] * 1.1,
+                                                   "imag": 0, "unit": "W/m"}}}}
+     with pytest.raises(protocol.ScienceProtocolError, match="altered signal_power"):
+-        protocol.verify_native_phase_pair(case0, changed_power)
++        protocol.verify_native_phase_pair(case0, changed_power, field_scheme="emw_down")
+ 
+ 
+ def test_software_negative_controls_run_and_are_never_native_evidence():
+@@ -785,7 +785,7 @@
+     assert {row["port_name"] for row in bindings["bindings"]} == {"1", "2"}
+     assert all(row["sequence_parameter_observation"]["values"][0]["parameters"][0]["unit"] == "1" for row in bindings["bindings"])
+     with pytest.raises(protocol.ScienceProtocolError):
+-        protocol.reconcile_bma_mode_point_readbacks(bindings, {}, count)
++        protocol.reconcile_bma_mode_point_readbacks(bindings, {}, count, field_scheme="emw_down")
+ 
+ 
+ @pytest.mark.parametrize("mutation", [None, "unit", "dataset", "solution", "expression", "shape", "imag", "negative"])
+@@ -824,7 +824,7 @@
+         bindings["bindings"].append({"study_step_tag": step, "port_name": port, "dataset_tag": dataset,
+             "store_solution_reference": solution, "mode_frequency_expression": "f0",
+             "sequence_parameter_observation": {"values": [{"parameters": [{"name": "lambda", "real": 0.0, "imag": -k0*neff, "unit": "1"}]}]}})
+-        beta, index, vacuum = protocol.bma_point_expressions(port)
++        beta, index, vacuum = protocol.bma_point_expressions(port, field_scheme="emw_down")
+         points[step] = {"status": "PRODUCTION_NATIVE_COMPLEX_POINT_READBACK", "native_is_complex": True, "dataset": dataset,
+             "solution": solution, "sample_count": 1,
+             "requested_unit_application": _requested_unit_application([beta, index, vacuum], ["1/m", "1", "1/m"]),
+@@ -833,13 +833,13 @@
+                             {"expression": index, "real": [neff], "imag": [0.0]},
+                             {"expression": vacuum, "real": [k0], "imag": [0.0]}]}
+     physical = {"status": "PASS_NATIVE_NUMERICAL_FREQUENCY_HZ", "frequency_hz": frequency, "frequency_unit": "Hz"}
+-    result = protocol.reconcile_bma_mode_point_readbacks(bindings, points, physical)
++    result = protocol.reconcile_bma_mode_point_readbacks(bindings, points, physical, field_scheme="emw_down")
+     assert result["bindings"][1]["expressions"] == ["emw.beta_2", "emw.neff_2", "emw.k0"]
+     assert result["bindings"][1]["lambda_raw_getter"]["unit_label"] == "1"
+     points["bmaOutput"]["expressions"][0]["expression"] = "emw.beta_1"
+     points["bmaOutput"]["expressions"][1]["expression"] = "emw.neff_1"
+     with pytest.raises(protocol.ScienceProtocolError, match="wrong-port"):
+-        protocol.reconcile_bma_mode_point_readbacks(bindings, points, physical)
++        protocol.reconcile_bma_mode_point_readbacks(bindings, points, physical, field_scheme="emw_down")
+ 
+ 
+ 

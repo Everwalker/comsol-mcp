@@ -1,0 +1,133 @@
+{
+  "format": "managed-models-recipes-source-freeze/2",
+  "created_utc": "2026-10-11T18:01:50.927822+00:00",
+  "base_commit": "799bf7a0fa95313e7659f44d8ff40ff1678314d5",
+  "base_freeze": {
+    "path": "docs/full_project_continuation_v2/evidence/model_lifecycle_recipe/SOURCE_FREEZE.json",
+    "sha256": "043f421277ae22a4c4d21b872ec68d0ce0de2220926059872fd3b9da23169011"
+  },
+  "scope": [
+    "model.list",
+    "model.create",
+    "model.load",
+    "model.tree",
+    "model.save",
+    "model.clone",
+    "model.close",
+    "code.recipe_register",
+    "code.recipe_run"
+  ],
+  "changed_source_files_since_r1": [
+    {
+      "path": "comsol_mcp/_g3_managed_models.py",
+      "sha256": "80eeb5d39132063ea613c022fc33f41e649a33ac958672544f8bc36a6cfed26f"
+    },
+    {
+      "path": "tests/test_g3_managed_models.py",
+      "sha256": "0ab9374eb5e078af1c0d53d7f9c981e4cfe3fa50800e9d97b91fad9fd35ceb3b"
+    }
+  ],
+  "source_files": [
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "size_bytes": 774407,
+      "sha256": "7cb72bc648a936d7ea5253eb8ba3e4044b15150375d013fbe607f62f98a031d5"
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "size_bytes": 225175,
+      "sha256": "28440386ca1c433cff0347c1a705b4926a24c738095b2443dab3d425e65dafd0"
+    },
+    {
+      "path": "comsol_mcp/_g3_ops.py",
+      "size_bytes": 10330,
+      "sha256": "270a7aaa2b8d7d7bf565a96d70130695fcde297848ffe23a5921b98bdb489ff7"
+    },
+    {
+      "path": "comsol_mcp/_execution_service.py",
+      "size_bytes": 30057,
+      "sha256": "5ba2f22b4d0a59507164d2b9f5891845face36fc2f85ec6a27c4bd6fff2f20e2"
+    },
+    {
+      "path": "comsol_mcp/_domain_outcome.py",
+      "size_bytes": 49828,
+      "sha256": "f02ffbe8c22fbc830c910a41383e137a9a7b4eeb3279da84b22bfdf69c23aca3"
+    },
+    {
+      "path": "comsol_mcp/_java_worker.py",
+      "size_bytes": 64695,
+      "sha256": "3da3f1dc1481defafea3cf8938734ea9da9d41685dab2f80f8c8d567c782bc98"
+    },
+    {
+      "path": "comsol_mcp/worker_java/PersistentComsolWorker.java",
+      "size_bytes": 122001,
+      "sha256": "e6a5a1bb3311a95e86c4dc87b0146cdff1a7cc9db46952138ea4b2fbb46db332"
+    },
+    {
+      "path": "tests/test_java_worker.py",
+      "size_bytes": 46312,
+      "sha256": "dd8af14a200467427d2cb29d3bf93d9e85c81b4e2e0d20e7034c15676d4d4473"
+    },
+    {
+      "path": "comsol_mcp/_g3_managed_models.py",
+      "size_bytes": 89191,
+      "sha256": "80eeb5d39132063ea613c022fc33f41e649a33ac958672544f8bc36a6cfed26f"
+    },
+    {
+      "path": "tests/test_g3_managed_models.py",
+      "size_bytes": 45921,
+      "sha256": "0ab9374eb5e078af1c0d53d7f9c981e4cfe3fa50800e9d97b91fad9fd35ceb3b"
+    }
+  ],
+  "source_diffs": [
+    {
+      "path": "MODEL_LIFECYCLE_RECIPE_SOURCE.patch",
+      "sha256": "8937f2cdb4cc0fb0da5a0f47e7f7e2850eec8cc3702107e49e9c494e81c50a64",
+      "relation": "r1 full source patch from base_commit"
+    },
+    {
+      "path": "MODEL_LIFECYCLE_RECIPE_R2_DELTA.patch",
+      "sha256": "4eeef0312b243be698b9c32eb7429936ee4027623732ca2a43e5695e79699949",
+      "relation": "r2 changes from exact r1 managed-models/test files"
+    }
+  ],
+  "software_validation": [
+    {
+      "name": "R2 managed model and recipe production callbacks plus selected control, registry, permissions, artifact, W24, and OperationStore regressions",
+      "command": "TMPDIR=/private/tmp /private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python -m pytest -q tests/test_g3_managed_models.py tests/test_g3_model_delivery.py tests/test_control_daemon.py tests/test_control_daemon_projects.py tests/test_managed_backend.py tests/test_g2_security_guards.py tests/test_g2_w08_w12.py tests/test_g2_registry_packaging.py tests/test_model_catalog_adapters.py tests/test_w24_physical_controls.py tests/test_operation_store.py --tb=short --junitxml=docs/full_project_continuation_v2/evidence/model_lifecycle_recipe/junit-r2-managed-delivery.xml",
+      "result": "165 passed, 0 skipped, 0 failures, 0 errors",
+      "junit": {
+        "path": "docs/full_project_continuation_v2/evidence/model_lifecycle_recipe/junit-r2-managed-delivery.xml",
+        "sha256": "c68297bcdbacf865410b905898ffa727ec130aa5f92d4384767458299ce4cd5e",
+        "size_bytes": 24895,
+        "tests": 165,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "focused_managed_models": "20 passed, 0 failed (same Python runtime; command omitted JUnit output)"
+    }
+  ],
+  "r2_changes": [
+    "Recipe test evidence is historical immutable provenance: register still requires the test ModelRef to be current, while run verifies historical Worker/server/session/runtime binding internally without requiring the old model, endpoint, Worker epoch, or absolute project path to remain current.",
+    "model.load accepts pinned schema-v2 project-local registered .mph artifacts with absent legacy type metadata only after safe bounded MPH archive validation; typed metadata must match, and Worker tag delta confirms it adds exactly one model without clearing other tags.",
+    "model.save overwrite supports only an exact owned registered saved_model destination; descriptor-relative atomic name exchange retains old bytes until the new SHA/size artifact registration succeeds, with rollback/readback on registration failure.",
+    "Negative coverage includes unregistered, foreign, tampered, symlink, lexical/hardlink alias targets, wrong media metadata, malformed MPH, and registration failure recovery."
+  ],
+  "acceptance_boundaries": {
+    "control_daemon_and_operation_store": "EXERCISED_WITH_SYNTHETIC_WORKER_FIXTURE",
+    "model_load_and_save_overwrite_native_comsol": "NOT_RUN",
+    "persistent_java_worker_loopback": "PRIOR_R1_SOFTWARE_ONLY_EVIDENCE_UNCHANGED",
+    "comsol_native_execution": "NOT_RUN",
+    "numerical_or_physical_acceptance": "NOT_CLAIMED",
+    "target_runtime_portability": "UNVERIFIED",
+    "dirty_close_authorization_provider": "OPEN_REQUIRED_GAP; production managed context currently has no scoped verifier",
+    "independent_final_review": "PENDING",
+    "project_acceptance": "OPEN"
+  },
+  "notes": [
+    "The eight shared route/backend/registry/Worker files retain their exact r1 SHA-256 values; this r2 delta changes only the managed-model module and its tests.",
+    "Registered model packages remain a typed refusal for model.load; package dependency extraction is a distinct, not yet implemented capability.",
+    "The Worker fixture proves software dispatch, persistence, and recovery semantics only; it is not native COMSOL or numerical evidence."
+  ]
+}

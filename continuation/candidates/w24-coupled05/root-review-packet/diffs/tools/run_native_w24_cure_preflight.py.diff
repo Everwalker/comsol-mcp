@@ -1,0 +1,64 @@
+--- candidate04/tools/run_native_w24_cure_preflight.py
++++ candidate05/tools/run_native_w24_cure_preflight.py
+@@ -651,11 +651,22 @@
+     return {"bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+ 
+ 
+-def _process_inventory() -> dict[str, Any]:
++def _process_inventory(*, admission_owner: Any = None, observation_only: bool = False) -> dict[str, Any]:
+     """Classify native processes transiently and return only privacy-safe evidence."""
++    if observation_only and admission_owner is None:
++        raise ValueError("short observation requires the same original internal owner")
++    def cap(label,preferred):
++        if admission_owner is None:return preferred
++        from tools.w24_coupled_admission import require_admission_owner
++        owner=require_admission_owner(admission_owner)
++        if observation_only:return min(float(preferred),5.0)
++        return owner.before_effect(label,preferred)
++    def recheck():
++        if admission_owner is not None and not observation_only:admission_owner.wait_cap(1.01)
+     ps_command = ["/bin/ps", "-axo", "pid=,ppid=,comm=,args="]
+     lsof_command = ["/usr/sbin/lsof", "-nP", "-iTCP", "-sTCP:LISTEN"]
+-    ps = subprocess.run(ps_command, capture_output=True, text=True, check=False, timeout=15)
++    ps = subprocess.run(ps_command, capture_output=True, text=True, check=False, timeout=cap("W24_inventory_ps",15.0))
++    recheck()
+     rows: list[dict[str, Any]] = []
+     worker_rows: list[dict[str, Any]] = []
+     ps_failures: list[dict[str, str]] = []
+@@ -700,7 +711,8 @@
+     if not observer_present:
+         ps_failures.append({"code": "observer_pid_missing"})
+ 
+-    lsof = subprocess.run(lsof_command, capture_output=True, text=True, check=False, timeout=15)
++    lsof = subprocess.run(lsof_command, capture_output=True, text=True, check=False, timeout=cap("W24_inventory_lsof",15.0))
++    recheck()
+     listener_rows: list[dict[str, Any]] = []
+     lsof_failures: list[dict[str, str]] = []
+     parsed_listener_rows = 0
+@@ -847,7 +859,7 @@
+     coupled = (isinstance(candidate, dict) and candidate.get("schema") == "W24_COUPLED_ZERO_SOLVE_SETUP_OFFLINE_FREEZE_V1")
+     if (not isinstance(candidate, dict) or
+             candidate.get("status") != "FROZEN_OFFLINE_CANDIDATE_AWAITING_ROOT_NATIVE_SLOT" or
+-            (coupled and candidate.get("candidate_id") != "W24-COUPLED-SETUP-04") or
++            (coupled and candidate.get("candidate_id") != "W24-COUPLED-SETUP-05") or
+             (not coupled and (candidate.get("schema") != "W24_SETUP_CANDIDATE_OFFLINE_FREEZE_V1" or candidate.get("candidate_id") != "W24-CURE-HIST-AXISYM-01"))):
+         raise RuntimeError("offline W24 candidate freeze has an unknown schema/status/candidate")
+     setup_contract = None
+@@ -1994,7 +2006,7 @@
+         worker_port_value = worker_runtime.get("port") if isinstance(worker_runtime, dict) else None
+         if type(worker_pid) is not int or type(worker_port_value) is not int:
+             raise RuntimeError("Worker PID/port identity is missing from the owned runtime receipt")
+-        worker_process_identity = _process_snapshot(worker_pid)
++        worker_process_identity = _process_snapshot(worker_pid) if admission_owner is None else _process_snapshot(worker_pid,admission_owner=admission_owner)
+         worker_port = worker_port_value
+         if not isinstance(worker_process_identity, dict):
+             raise RuntimeError("Worker PID/birth/command identity could not be captured")
+@@ -2503,7 +2515,7 @@
+                     summary["status"] = "FAIL_OR_INCOMPLETE"
+             if cleanup and cleanup.get("status") == "CLEANUP_VERIFIED_EXACT_OWNED_PIDS_AND_PORTS_ABSENT":
+                 try:
+-                    post_inventory = _process_inventory()
++                    post_inventory = _process_inventory() if admission_owner is None else _process_inventory(admission_owner=admission_owner,observation_only=True)
+                     write_json(evidence / "postcleanup_inventory.json", post_inventory)
+                     summary["postcleanup_inventory_quiescent"] = post_inventory["quiescent"]
+                     if not post_inventory["quiescent"]:

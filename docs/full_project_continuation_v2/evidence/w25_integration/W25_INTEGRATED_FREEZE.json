@@ -1,0 +1,285 @@
+{
+  "acceptance": {
+    "COMSOL": "NOT_RUN",
+    "full_MASTER_GOAL": "OPEN",
+    "independent_root_review": "PENDING",
+    "native_macos_desktop": "NOT_RUN",
+    "original_W25_actions_and_T004_T023_T051_T052_T054": "OPEN"
+  },
+  "base_commit": "60464c85b429e649f4f80484473999e5365ad96a",
+  "documentation_boundary": {
+    "chunk_id": 19260,
+    "finding": "Java Shell is available only in the Windows version of COMSOL Desktop; no macOS Shell path or supported external submission endpoint is established. Active visible-model/endpoint identity, dirty state, and source-preserving save-copy remain UNOBSERVED on macOS.",
+    "relative_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_ref_modeling.19.028.html",
+    "sha256": "9c4d7ef193e9525eaa09fbf768507da981bdf6a6b48ace7ef4394c3adc3f39cc",
+    "source_title": "COMSOL 6.4 - Interactively Using the COMSOL API for Java in the Java Shell Window"
+  },
+  "files": [
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "sha256": "62d615b452fe75bfba4f9c7196ac4736cf68c41d5c52606544e687b248894835",
+      "size_bytes": 769708
+    },
+    {
+      "path": "comsol_mcp/_desktop_macos.py",
+      "sha256": "bcb98aff63a94a60d8db12865828129eab852d6fea618fe7b38bc08441146d7c",
+      "size_bytes": 15215
+    },
+    {
+      "path": "comsol_mcp/_desktop_platforms.py",
+      "sha256": "e7c2168904a36645c5ae7ec09b3e8a161b0576448fa41dc242a97fa3d3ae0f96",
+      "size_bytes": 3269
+    },
+    {
+      "path": "comsol_mcp/_desktop_service.py",
+      "sha256": "5e3afae0faafb925d5a8cd2d9e6b708a3e28e7aa173a3f50f1d2527a66953a38",
+      "size_bytes": 60756
+    },
+    {
+      "path": "docs/full_project_execution/w25/desktop_control_wiring.md",
+      "sha256": "58736a3b4871161759b32e3b6050fab06635a438a91a623549921c0d9f39f74e",
+      "size_bytes": 6166
+    },
+    {
+      "path": "docs/full_project_execution/w25/desktop_phase2a_dependency_status.md",
+      "sha256": "648187be1a61909947fa0942d834ff13d0a7f0ea215dc51fd4774949d262000b",
+      "size_bytes": 1893
+    },
+    {
+      "path": "docs/full_project_execution/w25/desktop_phase2b_managed_copy_load.md",
+      "sha256": "4027517395cc43cf4731feb9a44d06b1778c33dcfdc99fdac636c5725d706a88",
+      "size_bytes": 5989
+    },
+    {
+      "path": "docs/full_project_execution/w25/desktop_platform_adapter_matrix.md",
+      "sha256": "e0b752f34a6c874253f5e4672ddcd68c5b3c13822048d44468f2dcdaf3dad5ef",
+      "size_bytes": 12861
+    },
+    {
+      "path": "docs/full_project_execution/w25/desktop_service_interface.md",
+      "sha256": "a2be7a2ba825d99ecbd2e1d329c3ee01a02fe8ef57b8612f4afa8ecba535277f",
+      "size_bytes": 14703
+    },
+    {
+      "path": "pyproject.toml",
+      "sha256": "f6f9356edc1c970e36c32a82cc8d9e71bd1a94d5a0e1552495a04ca7634ee107",
+      "size_bytes": 1656
+    },
+    {
+      "path": "tests/test_desktop_control_wiring.py",
+      "sha256": "8983976cf5a30de82ba8ae895be7e653bbc440fdc90ffc154bb9a774f5e24569",
+      "size_bytes": 18031
+    },
+    {
+      "path": "tests/test_desktop_macos.py",
+      "sha256": "ae7fec5c4f124b8b4b35715f34f0317a8054dd2d9793c1fe6fd5521e25c92c7d",
+      "size_bytes": 7022
+    },
+    {
+      "path": "tests/test_desktop_macos_phase2a.py",
+      "sha256": "570398f569b2072c3567785b3aeae9ea688f714e49d18328b243d5e7c9d38a2a",
+      "size_bytes": 6193
+    },
+    {
+      "path": "tests/test_desktop_managed_load_phase2b.py",
+      "sha256": "5d134f165e8e55f42270db480284a1fdf4d552a31f5d3a7f174f49020732d647",
+      "size_bytes": 36279
+    },
+    {
+      "path": "tests/test_desktop_service.py",
+      "sha256": "c7d9b4a166f070ab5f06fcb1d4a1881e3310a75a5111c3829f3fb492f5996a6c",
+      "size_bytes": 37492
+    },
+    {
+      "path": "tests/test_desktop_sticky_effects_phase2c.py",
+      "sha256": "00de305c2b19281e7bd63fbf5dfe0fd2fa4dbc07aab4d636fe5fe4ce96bf0dd6",
+      "size_bytes": 11658
+    }
+  ],
+  "fingerprint_method": "SHA256 of sorted path NUL size NUL SHA256 newline records",
+  "integrated_scope_fingerprint": "fa08aba05763822b3515abab3403bee791e8b0fb4da9b2181c7064412ff7303b",
+  "merge_notes": [
+    "ControlDaemon was method-level grafted from the verified candidate; current P0 artifact.preview route and current unrelated G3/other daemon changes were preserved.",
+    "Added the existing Desktop attempt pre-dispatch guard call immediately before backend invocation; the W25 candidate contains this boundary and the integrated READY-race test requires it.",
+    "Finalization exceptions freeze the owned target and persist NON_READY inside the same session-scheduler callback before lane release; outer fallback only handles submission/admission failures.",
+    "pyproject.toml gained only the opt-in macOS desktop dependency extra; the existing MacOS classifier was kept.",
+    "Phase1 docs are labelled historical where Phase2b added software-only managed copy-load. No native Desktop action claim was added.",
+    "Corrected the finalization same-lane adversarial write controls to submit schema-valid legacy set_parameters requests with project/session/typed ModelRef/expected_revision/idempotency identity; the preserved r3 tests remain historical pre-correction evidence.",
+    "Recorded the COMSOL 6.4 local documentation boundary: Java Shell exists only in Windows Desktop; no macOS Desktop shell, active-model/endpoint proof, dirty-state read, or source-preserving save-copy route is established by this evidence. Those observations remain UNOBSERVED and controls refuse."
+  ],
+  "optional_runtime_check": {
+    "ApplicationServices_available": false,
+    "Foundation_available": false,
+    "Quartz_available": false,
+    "extra_declared": true,
+    "install_performed": false,
+    "permission_query_performed": false,
+    "psutil_available": false
+  },
+  "original_candidate_fingerprint": "8d50767c314f04d3e7a5119ed813c72f0dc10c444d8247fa949b40076a1c0c31",
+  "original_candidate_manifest_sha256": "7140c0e5e560204ccc2be908e05e9e7f69c392b7f5678eb4317d3bf21f74c6a6",
+  "original_candidate_source": "/Volumes/SSD/Comsol-MCP/execution-scratch/w25-sticky-parent-effects-phase2c-20261003-001/final-source001",
+  "original_candidate_verified_members": 116,
+  "patch": "docs/full_project_continuation_v2/evidence/w25_integration/W25_INTEGRATED_SOURCE.patch",
+  "patch_bytes": 167810,
+  "patch_scope_note": "ControlDaemon hunk extraction includes only W25 Desktop methods/guard/import/init; unrelated current P0/G3 hunks are excluded and preserved in the shared file.",
+  "patch_sha256": "21693229a47b89631d7ce6158efe391ccd416087abcce1b64f4345dc784c50aa",
+  "preimage_receipt": "docs/full_project_continuation_v2/evidence/w25_integration/preimage.json",
+  "schema": "W25_INTEGRATED_SOURCE_FREEZE_V1",
+  "status": "PASS_SCOPED_SOFTWARE_ROOT_REVIEW_PENDING",
+  "test_inputs": [
+    {
+      "path": "tests/test_desktop_capture.py",
+      "sha256": "a5897ceaa55ab880434be407294eabac705aed98be69e29faff7ec1a20725a24",
+      "size_bytes": 6493
+    },
+    {
+      "path": "tests/test_desktop_control_wiring.py",
+      "sha256": "8983976cf5a30de82ba8ae895be7e653bbc440fdc90ffc154bb9a774f5e24569",
+      "size_bytes": 18031
+    },
+    {
+      "path": "tests/test_desktop_macos.py",
+      "sha256": "ae7fec5c4f124b8b4b35715f34f0317a8054dd2d9793c1fe6fd5521e25c92c7d",
+      "size_bytes": 7022
+    },
+    {
+      "path": "tests/test_desktop_macos_phase2a.py",
+      "sha256": "570398f569b2072c3567785b3aeae9ea688f714e49d18328b243d5e7c9d38a2a",
+      "size_bytes": 6193
+    },
+    {
+      "path": "tests/test_desktop_managed_load_phase2b.py",
+      "sha256": "5d134f165e8e55f42270db480284a1fdf4d552a31f5d3a7f174f49020732d647",
+      "size_bytes": 36279
+    },
+    {
+      "path": "tests/test_desktop_service.py",
+      "sha256": "c7d9b4a166f070ab5f06fcb1d4a1881e3310a75a5111c3829f3fb492f5996a6c",
+      "size_bytes": 37492
+    },
+    {
+      "path": "tests/test_desktop_sticky_effects_phase2c.py",
+      "sha256": "00de305c2b19281e7bd63fbf5dfe0fd2fa4dbc07aab4d636fe5fe4ce96bf0dd6",
+      "size_bytes": 11658
+    },
+    {
+      "path": "tests/test_desktop_win32_identity.py",
+      "sha256": "53a8b0cfef472cd959ae46a140aab9ba3f65c73ad019f746bfcf9fc9635c643c",
+      "size_bytes": 3419
+    }
+  ],
+  "tests": {
+    "desktop_suite": {
+      "blocked_network_attempts": 0,
+      "errors": 0,
+      "exit_code": 0,
+      "failures": 0,
+      "junit_sha256": "4a5ebf84e1f77128af8ab33bf96357b030f8e6a624edcf2115e11b82f62366f9",
+      "label": "w25-desktop-software-suite-r4",
+      "network_guard_active_records": 7,
+      "network_guard_events": 7,
+      "network_guard_sha256": "1c818c46949f63dad0915010e1c41bb457df488cf36b04d9b2221a4f00f16e97",
+      "notes": "Python 3.12.13 / pytest 9.1.1; attempt004 reran the full suite after the two same-lane write controls were corrected to schema-valid set_parameters requests. Includes corrected READY-writeback race test; injected software fixtures only. Full argv/environment are in desktop-software-suite/attempt004/INVOCATION.json.",
+      "run_id": "w25-desktop-software-20261011-r4",
+      "schema": "W25_GUARDED_TEST_INVOCATION_V1",
+      "scope": [
+        "test_desktop_capture.py",
+        "test_desktop_control_wiring.py",
+        "test_desktop_macos.py",
+        "test_desktop_macos_phase2a.py",
+        "test_desktop_managed_load_phase2b.py",
+        "test_desktop_service.py",
+        "test_desktop_sticky_effects_phase2c.py",
+        "test_desktop_win32_identity.py"
+      ],
+      "skipped": 0,
+      "status": "PASS_SCOPED_SOFTWARE",
+      "tests": 188
+    },
+    "desktop_suite_attempt003": {
+      "errors": 0,
+      "exit_code": 0,
+      "failures": 0,
+      "junit_sha256": "59f88b4d5eecbdc3727ffa616712d451b58c2393963c664161d872f991149350",
+      "label": "w25-desktop-software-suite",
+      "network_guard_events": 7,
+      "network_guard_sha256": "a6c54615a8d0611b0bc1dece15a30989dec0318cc5a6bd653f494bd659561f4e",
+      "notes": "Python 3.12.13 / pytest 9.1.1; injected software fixtures. Guard log has only guard-active child-entry records, no blocked network attempts. Preserved as attempt003; its READY race control used an invalid synthetic parameter_set operation and is historical only for that adversarial claim.",
+      "run_id": "w25-desktop-software-20261011-r3",
+      "schema": "W25_GUARDED_TEST_INVOCATION_V1",
+      "scope": [
+        "test_desktop_capture.py",
+        "test_desktop_control_wiring.py",
+        "test_desktop_macos.py",
+        "test_desktop_macos_phase2a.py",
+        "test_desktop_managed_load_phase2b.py",
+        "test_desktop_service.py",
+        "test_desktop_sticky_effects_phase2c.py",
+        "test_desktop_win32_identity.py"
+      ],
+      "skipped": 0,
+      "status": "PASS_SCOPED_SOFTWARE",
+      "tests": 188
+    },
+    "note": "The focused READY fence test is included in the 188-test suite and must not be added to that count.",
+    "ready_fence_focused": {
+      "assertion": "A queued same-lane write admitted during successful READY persistence ran only after the finalizer durably recorded NON_READY; it was rejected before Worker receiver selection. Parent remained SUCCEEDED and target was dirty/active under the owning parent.",
+      "errors": 0,
+      "exit_code": 0,
+      "failures": 0,
+      "junit_sha256": "45a5382d4cab8c377b6ced403454c9ce6203ad82eecf44f5853a56783762c714",
+      "label": "w25-ready-fence-targeted",
+      "network_guard_events": 1,
+      "network_guard_sha256": "7c87b73d035aa7c791fc7710ec56da8e0e50b74de4d85fb661e49620f970e26a",
+      "notes": "Raw attempt003 retained unchanged. Its test source used invalid operation=parameter_set with an empty body, so this run is not accepted as proof of a valid admitted model write.",
+      "run_id": "w25-ready-fence-20261011-targeted-r3",
+      "schema": "W25_GUARDED_TEST_INVOCATION_V1",
+      "skipped": 0,
+      "status": "HISTORICAL_PRE_SCHEMA_CORRECTION",
+      "test": "tests/test_desktop_managed_load_phase2b.py::test_ready_writeback_failure_freezes_before_same_lane_write_runs",
+      "test_source_sha256_before_correction": "a26f4d3fb8fe8fa8410bb00e5132d35b941304952e2eb36494ca5ae6866f0399",
+      "tests": 1
+    },
+    "ready_fence_focused_attempt003": {
+      "assertion": "A queued same-lane write admitted during successful READY persistence ran only after the finalizer durably recorded NON_READY; it was rejected before Worker receiver selection. Parent remained SUCCEEDED and target was dirty/active under the owning parent.",
+      "errors": 0,
+      "exit_code": 0,
+      "failures": 0,
+      "junit_sha256": "45a5382d4cab8c377b6ced403454c9ce6203ad82eecf44f5853a56783762c714",
+      "label": "w25-ready-fence-targeted",
+      "network_guard_events": 1,
+      "network_guard_sha256": "7c87b73d035aa7c791fc7710ec56da8e0e50b74de4d85fb661e49620f970e26a",
+      "notes": "Raw attempt003 retained unchanged. Its test source used invalid operation=parameter_set with an empty body, so this run is not accepted as proof of a valid admitted model write.",
+      "run_id": "w25-ready-fence-20261011-targeted-r3",
+      "schema": "W25_GUARDED_TEST_INVOCATION_V1",
+      "skipped": 0,
+      "status": "HISTORICAL_PRE_SCHEMA_CORRECTION",
+      "test": "tests/test_desktop_managed_load_phase2b.py::test_ready_writeback_failure_freezes_before_same_lane_write_runs",
+      "test_source_sha256_before_correction": "a26f4d3fb8fe8fa8410bb00e5132d35b941304952e2eb36494ca5ae6866f0399",
+      "tests": 1
+    },
+    "w24_shared_dispatch_guard_regression": {
+      "attempt": "attempt002",
+      "blocked_network_attempts": 0,
+      "errors": 0,
+      "failures": 0,
+      "invocation_receipt": "docs/full_project_continuation_v2/evidence/w25_integration/w24-dispatch-guard-regression/attempt002/INVOCATION.json",
+      "junit_sha256": "cf278101c37b24e01349930d6bab4d38a4b6526e31b15ac65f8f9d9080ede106",
+      "network_guard_records": 1,
+      "network_guard_sha256": "4729c1174eaa4c13b6488e420dffa2344ac358a212bdd474e246d7ac2e9ac15d",
+      "notes": "Separate shared-dispatch-guard W24 regression; not included in the 188 W25 test count and not scientific/native acceptance.",
+      "run_id": "w25-w24-regression-20261011-r2",
+      "schema": "W25_W24_DISPATCH_GUARD_REGRESSION_V1",
+      "scope": [
+        "test_w24_cure_capture_link.py",
+        "test_w24_cure_coupon_fixture.py",
+        "test_w24_cure_science_runner.py",
+        "test_w24_cure_v2_capture.py"
+      ],
+      "skipped": 0,
+      "status": "PASS_SCOPED_SOFTWARE",
+      "tests": 259
+    }
+  }
+}

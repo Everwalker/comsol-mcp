@@ -1,0 +1,2820 @@
+--- preimage/comsol_mcp/_operation_store.py
++++ current/comsol_mcp/_operation_store.py
+@@ -9,7 +9,7 @@
+ import time
+ from pathlib import Path
+ from typing import Any, Callable
+-from uuid import uuid4
++from uuid import UUID, uuid4
+ 
+ 
+ # ``resume_claims`` is an additive SQLite table.  Keep the on-disk version at
+@@ -666,7 +666,7 @@
+     ) -> dict[str, Any]:
+         """Atomically append a hash-chained mutation event and advance its state.
+ 
+-        The single-action WFP executor uses this before/after its native call.
++        The V1 filter-only WFP executor uses this before/after its native call.
+         A committed intent is never replayed after a crash; only an exact
+         readback event can move it to APPLIED/RESTORED. The durable event is
+         stored in the existing OperationStore job ledger, not a side database.
+@@ -736,6 +736,12 @@
+                     if row is None:
+                         raise ResourcePolicyError("HOST_CONTROL_ADMISSION_UNKNOWN",
+                                                   "host mutation admission is absent from OperationStore")
++                    if self.db.execute(
++                            "SELECT 1 FROM job_events WHERE job_id=? AND event=? LIMIT 1",
++                            (row["job_id"], "HostControlMutationJournalV2"),
++                    ).fetchone() is not None:
++                        raise ResourcePolicyError("HOST_CONTROL_JOURNAL_STATE_CONFLICT",
++                                                  "V1 and V2 host mutation journals cannot be mixed")
+                     try:
+                         root_identity = json.loads(row["root_identity_json"])
+                         job_metadata = json.loads(row["job_metadata"] or "{}")
+@@ -970,6 +976,385 @@
+                                       "host mutation journal transaction failed closed",
+                                       details={"cause_type": type(exc).__name__}) from exc
+ 
++    def append_host_control_mutation_step_event(
++        self,
++        *,
++        admission_id: str,
++        event: str,
++        payload: dict[str, Any],
++    ) -> dict[str, Any]:
++        """Append one resource-scoped mutation step to the same durable ledger.
++
++        V2 keeps the existing host-control admission and SQLite job event chain,
++        but binds an ordered, multi-resource plan in the admission baseline.
++        Each resource has its own durable intent and exact readback record. A
++        crash between them leaves the admission at that pending step; callers
++        cannot skip it or replay the plan.
++        """
++        from ._w26_os_resources import ResourcePolicyError
++
++        event_contracts = {
++            "APPLY_STEP_INTENT": ("APPLY", {"step_index", "action_id", "resource_kind", "resource_key",
++                                                  "desired_identity_sha256", "dependency_sha256"}),
++            "APPLY_STEP_READBACK_VERIFIED": ("APPLY", {"step_index", "action_id", "resource_kind", "resource_key",
++                                                         "desired_identity_sha256", "created_resource_sha256",
++                                                         "dependency_sha256"}),
++            "RESTORE_STEP_INTENT": ("RESTORE", {"step_index", "action_id", "resource_kind", "resource_key",
++                                                    "expected_resource_sha256", "dependency_sha256"}),
++            "RESTORE_STEP_READBACK_VERIFIED": ("RESTORE", {"step_index", "action_id", "resource_kind", "resource_key",
++                                                              "expected_resource_sha256", "removed_resource_sha256",
++                                                              "dependency_sha256"}),
++            "RECOVERY_REQUIRED": (None, {"reason_code", "failed_event", "step_index", "action_id",
++                                          "resource_kind", "resource_key"}),
++        }
++        if (not isinstance(admission_id, str) or not admission_id
++                or event not in event_contracts or not isinstance(payload, dict)
++                or set(payload) != event_contracts[event][1]):
++            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
++                                      "V2 mutation event identity, type, or payload is outside the closed contract")
++        digest_fields = {"desired_identity_sha256", "created_resource_sha256",
++                         "expected_resource_sha256", "removed_resource_sha256", "dependency_sha256"}
++        identifiers = {"action_id", "resource_kind", "resource_key", "reason_code", "failed_event"}
++        for key, value in payload.items():
++            if key in digest_fields and (not isinstance(value, str)
++                                         or re.fullmatch(r"[0-9a-f]{64}", value) is None):
++                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
++                                          "V2 mutation event digest is malformed")
++            if key == "step_index" and (type(value) is not int or value < 0 or value >= 16):
++                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
++                                          "V2 mutation step index is outside its bound")
++            if key in identifiers and (not isinstance(value, str) or not value or len(value) > 256
++                                       or any(ord(char) < 32 for char in value)):
++                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
++                                          "V2 mutation event identifier is malformed")
++        encoded_payload = json.dumps(payload, sort_keys=True, ensure_ascii=False,
++                                     separators=(",", ":"), allow_nan=False)
++        if len(encoded_payload.encode("utf-8")) > 16 * 1024:
++            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
++                                      "V2 mutation event exceeds its durable bound")
++
++        def canonical(value: Any) -> str:
++            return json.dumps(value, sort_keys=True, ensure_ascii=False,
++                              separators=(",", ":"), allow_nan=False)
++
++        def digest(value: Any) -> str:
++            return hashlib.sha256(canonical(value).encode("utf-8")).hexdigest()
++
++        event_name = "HostControlMutationJournalV2"
++        try:
++            with self.lock:
++                self.db.execute("BEGIN IMMEDIATE")
++                try:
++                    row = self.db.execute(
++                        "SELECT a.*,j.job_id,j.operation_id,j.status AS job_status,j.metadata AS job_metadata,"
++                        "o.status AS operation_status,o.operation,o.metadata AS operation_metadata "
++                        "FROM host_control_admissions a "
++                        "JOIN jobs j ON j.job_id=a.job_id AND j.operation_id=a.operation_id "
++                        "JOIN operations o ON o.operation_id=a.operation_id "
++                        "WHERE a.admission_id=?", (admission_id,),
++                    ).fetchone()
++                    if row is None:
++                        raise ResourcePolicyError("HOST_CONTROL_ADMISSION_UNKNOWN",
++                                                  "V2 admission is absent from OperationStore")
++                    if self.db.execute(
++                            "SELECT 1 FROM job_events WHERE job_id=? AND event=? LIMIT 1",
++                            (row["job_id"], "HostControlMutationJournalV1"),
++                    ).fetchone() is not None:
++                        raise ResourcePolicyError("HOST_CONTROL_JOURNAL_STATE_CONFLICT",
++                                                  "V1 and V2 host mutation journals cannot be mixed")
++                    try:
++                        root_identity = json.loads(row["root_identity_json"])
++                        job_metadata = json.loads(row["job_metadata"] or "{}")
++                        operation_metadata = json.loads(row["operation_metadata"] or "{}")
++                        baseline = json.loads(row["baseline_json"])
++                    except (TypeError, json.JSONDecodeError) as exc:
++                        raise ResourcePolicyError("HOST_CONTROL_BINDING_UNKNOWN",
++                                                  "V2 admission scope or metadata is malformed") from exc
++                    binding = {
++                        "schema": "comsol-mcp.internal-host-control-operation/1",
++                        "admission_id": admission_id,
++                        "phase": row["phase"], "project_id": row["project_id"],
++                        "host_id": row["host_id"], "root_identity": root_identity,
++                        "profile_sha256": row["profile_sha256"], "plan_sha256": row["plan_sha256"],
++                        "source_plan_sha256": row["source_plan_sha256"],
++                        "source_receipt_sha256": row["source_receipt_sha256"],
++                    }
++                    for metadata in (job_metadata, operation_metadata):
++                        if (metadata.get("host_control") != binding
++                                or metadata.get("project_id") != row["project_id"]
++                                or metadata.get("host_id") != row["host_id"]
++                                or metadata.get("project_root_identity") != root_identity.get("file_id")
++                                or metadata.get("project_root_volume_id") != root_identity.get("volume_id")
++                                or metadata.get("project_root_owner_id") != root_identity.get("owner_id")):
++                            raise ResourcePolicyError("HOST_CONTROL_BINDING_MISMATCH",
++                                                      "V2 job and operation no longer match the exact admitted host scope")
++                    if (row["operation"] != f"host.change.{str(row['phase']).lower()}"
++                            or row["phase"] not in {"APPLY", "RESTORE"}
++                            or row["job_status"] != "RUNNING" or row["operation_status"] != "RUNNING"):
++                        raise ResourcePolicyError("HOST_CONTROL_STATE_CONFLICT",
++                                                  "V2 mutation events require the exact admitted running operation")
++                    if (not isinstance(baseline, dict)
++                            or hashlib.sha256(canonical(baseline).encode("utf-8")).hexdigest()
++                                != row["baseline_sha256"]):
++                        raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                  "V2 baseline hash does not match its durable admission")
++                    sequence = baseline.get("mutation_sequence")
++                    if (not isinstance(sequence, dict)
++                            or set(sequence) != {"schema", "phase", "plan_sha256", "steps"}
++                            or sequence.get("schema") != "comsol-mcp.host-control-mutation-sequence/2"
++                            or sequence.get("phase") != row["phase"]
++                            or sequence.get("plan_sha256") != row["plan_sha256"]
++                            or not isinstance(sequence.get("steps"), list)
++                            or not 1 <= len(sequence["steps"]) <= 3):
++                        raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                  "V2 admission lacks an exact bounded mutation sequence")
++                    step_fields = {"step_index", "action_id", "resource_kind", "resource_key",
++                                   "identity_sha256", "dependency_sha256", "expected_resource_sha256"}
++                    expected_phase = str(row["phase"])
++                    action_ids: set[str] = set()
++                    resource_keys: set[str] = set()
++                    step_kinds: list[str] = []
++                    dependency_digests: set[str] = set()
++                    for index, step in enumerate(sequence["steps"]):
++                        if (not isinstance(step, dict) or set(step) != step_fields
++                                or step.get("step_index") != index or type(step.get("step_index")) is not int
++                                or not isinstance(step.get("action_id"), str) or not step["action_id"]
++                                or step.get("resource_kind") not in {"wfp_provider", "wfp_sublayer", "wfp_filter"}
++                                or not isinstance(step.get("resource_key"), str) or not step["resource_key"]
++                                or any(not isinstance(step.get(key), str)
++                                       or re.fullmatch(r"[0-9a-f]{64}", step[key]) is None
++                                       for key in ("identity_sha256", "dependency_sha256"))
++                                or (expected_phase == "APPLY" and step.get("expected_resource_sha256") is not None)
++                                or (expected_phase == "RESTORE"
++                                    and (not isinstance(step.get("expected_resource_sha256"), str)
++                                         or re.fullmatch(r"[0-9a-f]{64}",
++                                                         step["expected_resource_sha256"]) is None))):
++                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                      "V2 admitted mutation step is malformed")
++                        try:
++                            parsed_key = "{" + str(UUID(step["resource_key"].strip("{}"))).upper() + "}"
++                        except (AttributeError, TypeError, ValueError) as exc:
++                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                      "V2 resource key is not a GUID") from exc
++                        if parsed_key != step["resource_key"]:
++                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                      "V2 resource key is not canonically encoded")
++                        if step["action_id"] in action_ids or parsed_key in resource_keys:
++                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                      "V2 sequence duplicates an action or resource key")
++                        action_ids.add(step["action_id"])
++                        resource_keys.add(parsed_key)
++                        step_kinds.append(step["resource_kind"])
++                        dependency_digests.add(step["dependency_sha256"])
++                    apply_orders = (["wfp_provider", "wfp_sublayer"],
++                                    ["wfp_provider", "wfp_sublayer", "wfp_filter"])
++                    allowed_orders = (apply_orders if expected_phase == "APPLY"
++                                      else tuple(list(reversed(order)) for order in apply_orders))
++                    if step_kinds not in allowed_orders:
++                        raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                  "V2 plan must use the exact provider/sublayer/filter dependency order")
++                    if len(dependency_digests) != 1:
++                        raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                  "V2 sequence does not share one exact dependency digest")
++                    records = self.db.execute(
++                        "SELECT id,metadata FROM job_events WHERE job_id=? AND event=? ORDER BY id",
++                        (row["job_id"], event_name),
++                    ).fetchall()
++                    intent_name = f"{expected_phase}_STEP_INTENT"
++                    verified_name = f"{expected_phase}_STEP_READBACK_VERIFIED"
++                    previous = "0" * 64
++                    state = "ADMITTED"
++                    next_index = 0
++                    pending: dict[str, Any] | None = None
++                    for ordinal, record_row in enumerate(records):
++                        try:
++                            prior = json.loads(record_row["metadata"])
++                        except (TypeError, json.JSONDecodeError) as exc:
++                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                      "V2 journal row is malformed") from exc
++                        expected_record_fields = {"schema", "admission_id", "job_id", "operation_id", "project_id",
++                                                  "host_id", "root_identity", "profile_sha256", "plan_sha256",
++                                                  "source_plan_sha256", "source_receipt_sha256", "phase", "sequence",
++                                                  "previous_sha256", "event", "payload", "record_sha256"}
++                        if (not isinstance(prior, dict) or set(prior) != expected_record_fields
++                                or prior.get("schema") != "comsol-mcp.host-control-mutation-journal/2"
++                                or prior.get("sequence") != ordinal or type(prior.get("sequence")) is not int
++                                or prior.get("previous_sha256") != previous
++                                or prior.get("admission_id") != admission_id
++                                or prior.get("job_id") != row["job_id"]
++                                or prior.get("operation_id") != row["operation_id"]
++                                or prior.get("project_id") != row["project_id"]
++                                or prior.get("host_id") != row["host_id"]
++                                or prior.get("root_identity") != root_identity
++                                or prior.get("profile_sha256") != row["profile_sha256"]
++                                or prior.get("plan_sha256") != row["plan_sha256"]
++                                or prior.get("source_plan_sha256") != row["source_plan_sha256"]
++                                or prior.get("source_receipt_sha256") != row["source_receipt_sha256"]
++                                or prior.get("phase") != expected_phase
++                                or not isinstance(prior.get("payload"), dict)
++                                or not isinstance(prior.get("record_sha256"), str)):
++                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                      "V2 journal chain scope is invalid")
++                        body = {key: value for key, value in prior.items() if key != "record_sha256"}
++                        if digest(body) != prior["record_sha256"]:
++                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                      "V2 journal record hash is invalid")
++                        old_event, old_payload = prior["event"], prior["payload"]
++                        if old_event == "RECOVERY_REQUIRED":
++                            expected_keys = event_contracts[old_event][1]
++                            if (set(old_payload) != expected_keys or pending is None
++                                    or old_payload.get("failed_event") != intent_name
++                                    or old_payload.get("step_index") != pending.get("step_index")
++                                    or old_payload.get("action_id") != pending.get("action_id")
++                                    or old_payload.get("resource_kind") != pending.get("resource_kind")
++                                    or old_payload.get("resource_key") != pending.get("resource_key")):
++                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                          "V2 recovery marker does not bind the pending step")
++                            state = "RECOVERY_REQUIRED"
++                        elif old_event == intent_name:
++                            if pending is not None or next_index >= len(sequence["steps"]):
++                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                          "V2 journal duplicated or exceeded the admitted action order")
++                            step = sequence["steps"][next_index]
++                            fields = event_contracts[intent_name][1]
++                            if (set(old_payload) != fields or old_payload.get("step_index") != next_index
++                                    or old_payload.get("action_id") != step["action_id"]
++                                    or old_payload.get("resource_kind") != step["resource_kind"]
++                                    or old_payload.get("resource_key") != step["resource_key"]
++                                    or old_payload.get("dependency_sha256") != step["dependency_sha256"]
++                                    or (expected_phase == "APPLY"
++                                        and old_payload.get("desired_identity_sha256") != step["identity_sha256"])
++                                    or (expected_phase == "RESTORE"
++                                        and old_payload.get("expected_resource_sha256") != step["expected_resource_sha256"])):
++                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                          "V2 intent differs from the exact admitted ordered action")
++                            pending = dict(old_payload)
++                            state = f"{expected_phase}_STEP_INTENT:{next_index}"
++                        elif old_event == verified_name:
++                            if pending is None:
++                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                          "V2 readback has no preceding durable intent")
++                            fields = event_contracts[verified_name][1]
++                            if any(old_payload.get(key) != pending.get(key)
++                                   for key in fields - {"created_resource_sha256", "removed_resource_sha256"}):
++                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                          "V2 readback differs from its exact pending intent")
++                            observed_resource = old_payload.get(
++                                "created_resource_sha256" if expected_phase == "APPLY" else "removed_resource_sha256")
++                            if (set(old_payload) != fields
++                                    or not isinstance(observed_resource, str)
++                                    or re.fullmatch(r"[0-9a-f]{64}", observed_resource) is None
++                                    or (expected_phase == "RESTORE"
++                                        and observed_resource != pending.get("expected_resource_sha256"))):
++                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                          "V2 readback does not prove the exact resource effect")
++                            pending = None
++                            next_index += 1
++                            state = ("APPLIED" if expected_phase == "APPLY" else "RESTORED") \
++                                if next_index == len(sequence["steps"]) else f"{expected_phase}_STEP_VERIFIED:{next_index - 1}"
++                        else:
++                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                      "V2 journal contains an unknown event")
++                        previous = prior["record_sha256"]
++                    if state != row["state"]:
++                        raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                  "V2 admission state differs from its journal history")
++                    phase_for_event = event_contracts[event][0]
++                    if event == "RECOVERY_REQUIRED":
++                        if (state == "RECOVERY_REQUIRED" or pending is None
++                                or payload.get("failed_event") != intent_name
++                                or payload.get("step_index") != pending.get("step_index")
++                                or payload.get("action_id") != pending.get("action_id")
++                                or payload.get("resource_kind") != pending.get("resource_kind")
++                                or payload.get("resource_key") != pending.get("resource_key")):
++                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_STATE_CONFLICT",
++                                                      "V2 recovery event must identify the active durable intent")
++                        new_state = "RECOVERY_REQUIRED"
++                    else:
++                        if phase_for_event != expected_phase:
++                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_STATE_CONFLICT",
++                                                      "V2 event phase differs from the admitted operation")
++                        step_index = payload["step_index"]
++                        if event == intent_name:
++                            if pending is not None or step_index != next_index or step_index >= len(sequence["steps"]):
++                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_STATE_CONFLICT",
++                                                          "V2 intent cannot skip, overlap, or replay a step")
++                            step = sequence["steps"][step_index]
++                            if (payload.get("action_id") != step["action_id"]
++                                    or payload.get("resource_kind") != step["resource_kind"]
++                                    or payload.get("resource_key") != step["resource_key"]
++                                    or payload.get("dependency_sha256") != step["dependency_sha256"]
++                                    or (expected_phase == "APPLY"
++                                        and payload.get("desired_identity_sha256") != step["identity_sha256"])
++                                    or (expected_phase == "RESTORE"
++                                        and payload.get("expected_resource_sha256") != step["expected_resource_sha256"])):
++                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
++                                                          "V2 intent differs from the admitted action sequence")
++                            new_state = f"{expected_phase}_STEP_INTENT:{step_index}"
++                        else:
++                            if pending is None:
++                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_STATE_CONFLICT",
++                                                          "V2 readback has no active durable intent")
++                            fields = event_contracts[event][1]
++                            if (set(payload) != fields
++                                    or any(payload.get(key) != pending.get(key)
++                                           for key in fields - {"created_resource_sha256", "removed_resource_sha256"})
++                                    or (expected_phase == "RESTORE"
++                                        and payload.get("removed_resource_sha256")
++                                            != pending.get("expected_resource_sha256"))):
++                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
++                                                          "V2 readback does not match the exact durable intent")
++                            new_state = ("APPLIED" if expected_phase == "APPLY" else "RESTORED") \
++                                if next_index + 1 == len(sequence["steps"]) else \
++                                f"{expected_phase}_STEP_VERIFIED:{next_index}"
++                    body = {
++                        "schema": "comsol-mcp.host-control-mutation-journal/2",
++                        "admission_id": admission_id, "job_id": row["job_id"],
++                        "operation_id": row["operation_id"], "project_id": row["project_id"],
++                        "host_id": row["host_id"], "root_identity": root_identity,
++                        "profile_sha256": row["profile_sha256"], "plan_sha256": row["plan_sha256"],
++                        "source_plan_sha256": row["source_plan_sha256"],
++                        "source_receipt_sha256": row["source_receipt_sha256"],
++                        "phase": row["phase"], "sequence": len(records),
++                        "previous_sha256": previous, "event": event, "payload": payload,
++                    }
++                    record = {**body, "record_sha256": digest(body)}
++                    self.db.execute(
++                        "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
++                        (row["job_id"], event_name, canonical(record)),
++                    )
++                    updated = self.db.execute(
++                        "UPDATE host_control_admissions SET state=?,updated_at=CURRENT_TIMESTAMP "
++                        "WHERE admission_id=? AND state=?",
++                        (new_state, admission_id, state),
++                    )
++                    if updated.rowcount != 1:
++                        raise ResourcePolicyError("HOST_CONTROL_STATE_CONFLICT",
++                                                  "V2 admission state changed while appending its event")
++                    self.db.execute("COMMIT")
++                except BaseException:
++                    if self.db.in_transaction:
++                        self.db.execute("ROLLBACK")
++                    raise
++                row = self.db.execute(
++                    "SELECT id,metadata FROM job_events WHERE job_id=? AND event=? ORDER BY id DESC LIMIT 1",
++                    (row["job_id"], event_name),
++                ).fetchone()
++                admission = self.db.execute(
++                    "SELECT state FROM host_control_admissions WHERE admission_id=?", (admission_id,)
++                ).fetchone()
++                if (row is None or json.loads(row["metadata"]) != record
++                        or admission is None or admission["state"] != new_state):
++                    raise ResourcePolicyError("HOST_CONTROL_JOURNAL_READBACK_UNKNOWN",
++                                              "committed V2 mutation event failed exact readback")
++                return {"id": int(row["id"]), **record, "state": new_state}
++        except ResourcePolicyError:
++            raise
++        except Exception as exc:
++            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_UNKNOWN",
++                                      "V2 mutation journal transaction failed closed",
++                                      details={"cause_type": type(exc).__name__}) from exc
++
+     def host_control_admission_state(self, admission_id: str) -> str:
+         """Read the exact durable state of one internal host admission."""
+         from ._w26_os_resources import ResourcePolicyError
+--- preimage/comsol_mcp/_w26_os_resources.py
++++ current/comsol_mcp/_w26_os_resources.py
+@@ -1854,7 +1854,8 @@
+         "baseline_identity", "baseline_sha256", "backup_path", "backup_sha256",
+     }
+     allowed_kinds = {"service_account", "appcontainer_profile", "file_acl",
+-                     "network_rule", "hard_quota", "launch_policy", "windows_acl", "wfp_filter",
++                     "network_rule", "hard_quota", "launch_policy", "windows_acl",
++                     "wfp_provider", "wfp_sublayer", "wfp_filter",
+                      "windows_service"}
+     actions: list[dict[str, Any]] = []
+     seen: set[str] = set()
+@@ -2027,6 +2028,52 @@
+                 or not _is_sha256(desired["grant_sha256"])
+                 or desired["grant_sha256"] not in {_sha256(grant.as_dict()) for grant in policy.wfp_grants}):
+             raise ValueError("wfp_filter desired state does not match an exact configured allow grant")
++    elif kind == "wfp_provider":
++        if profile.platform != "windows" or profile.windows_isolation is None:
++            raise ValueError("WFP provider proposal requires the closed Windows isolation profile")
++        expected = {"provider_key", "display_name", "description", "flags", "provider_data_sha256",
++                    "service_name", "security_sddl", "security_sha256"}
++        if fields != expected:
++            raise ValueError("wfp_provider desired state must bind every supported provider field")
++        policy = profile.windows_isolation
++        text_fields = ("display_name", "description", "service_name", "security_sddl")
++        if (any(not isinstance(desired[key], str) or not desired[key]
++                or len(desired[key]) > (4096 if key == "security_sddl" else 1024)
++                or any(ord(char) < 32 for char in desired[key]) for key in text_fields)
++                or not isinstance(desired["provider_key"], str)
++                or not _GUID_RE.fullmatch(desired["provider_key"])
++                or desired["provider_key"].strip("{}").casefold()
++                    != policy.wfp_provider_key.strip("{}").casefold()
++                or type(desired["flags"]) is not int or desired["flags"] != 1
++                or desired["provider_data_sha256"] != hashlib.sha256(b"").hexdigest()
++                or desired["service_name"].casefold() != policy.service_name.casefold()
++                or not _is_sha256(desired["security_sha256"])):
++            raise ValueError("wfp_provider desired state differs from the exact supported persistent-provider contract")
++    elif kind == "wfp_sublayer":
++        if profile.platform != "windows" or profile.windows_isolation is None:
++            raise ValueError("WFP sublayer proposal requires the closed Windows isolation profile")
++        expected = {"sublayer_key", "display_name", "description", "flags", "provider_key",
++                    "provider_data_sha256", "weight", "security_sddl", "security_sha256"}
++        if fields != expected:
++            raise ValueError("wfp_sublayer desired state must bind every supported sublayer field")
++        policy = profile.windows_isolation
++        text_fields = ("display_name", "description", "security_sddl")
++        if (any(not isinstance(desired[key], str) or not desired[key]
++                or len(desired[key]) > (4096 if key == "security_sddl" else 1024)
++                or any(ord(char) < 32 for char in desired[key]) for key in text_fields)
++                or not isinstance(desired["sublayer_key"], str)
++                or not _GUID_RE.fullmatch(desired["sublayer_key"])
++                or desired["sublayer_key"].strip("{}").casefold()
++                    != policy.wfp_sublayer_key.strip("{}").casefold()
++                or not isinstance(desired["provider_key"], str)
++                or not _GUID_RE.fullmatch(desired["provider_key"])
++                or desired["provider_key"].strip("{}").casefold()
++                    != policy.wfp_provider_key.strip("{}").casefold()
++                or type(desired["flags"]) is not int or desired["flags"] != 1
++                or type(desired["weight"]) is not int or not 0 <= desired["weight"] <= 0xFFFF
++                or desired["provider_data_sha256"] != hashlib.sha256(b"").hexdigest()
++                or not _is_sha256(desired["security_sha256"])):
++            raise ValueError("wfp_sublayer desired state differs from the exact supported persistent-sublayer contract")
+     elif kind == "windows_service":
+         if profile.platform != "windows" or profile.windows_isolation is None:
+             raise ValueError("Windows service proposal requires the closed Windows isolation profile")
+@@ -2131,7 +2178,8 @@
+         action_ids.add(action["action_id"])
+         if (action.get("operation") not in {"CREATE", "UPDATE"}
+                 or action.get("resource_kind") not in {"service_account", "appcontainer_profile", "file_acl",
+-                    "network_rule", "hard_quota", "launch_policy", "windows_acl", "wfp_filter", "windows_service"}
++                    "network_rule", "hard_quota", "launch_policy", "windows_acl", "wfp_provider",
++                    "wfp_sublayer", "wfp_filter", "windows_service"}
+                 or not isinstance(action.get("desired"), Mapping)):
+             _fail("HOST_PLAN_INVALID", "host plan action kind/operation/desired state is malformed")
+         try:
+--- preimage/comsol_mcp/_windows_host_change.py
++++ current/comsol_mcp/_windows_host_change.py
+@@ -1,7 +1,9 @@
+ """Internally authorized, journalled Windows host-change executor.
+ 
+-Only a single exact WFP filter CREATE and its receipt-bound DELETE restore are
+-implemented. Public MCP routing is intentionally unchanged. Plans containing
++The implemented WFP subset includes exact provider→sublayer→optional-filter
++CREATE and receipt-bound reverse restore. A provider/sublayer plan uses the V2
++per-resource OperationStore journal; the original filter-only V1 path remains
++compatible. Public MCP routing is intentionally unchanged. Plans containing
+ any other action/resource kind are refused before authorization consumption or
+ native mutation. A committed intent is never automatically replayed.
+ """
+@@ -12,6 +14,7 @@
+ import json
+ import os
+ import socket
++import uuid
+ from typing import Any, Mapping
+ 
+ from ._execution_contract import ExecutionContractError
+@@ -19,6 +22,7 @@
+ from ._project_authority import ProjectAuthority
+ from ._host_scoped_provider import HostScopedProvider
+ from . import _w26_os_resources as resources
++from . import _windows_t037_native as wfp_native
+ from ._windows_t037_wfp import (
+     CtypesWindowsWfpMutationApi, WindowsWfpMutationError, guid_key,
+     normalize_endpoint_grant, sha256,
+@@ -98,7 +102,7 @@
+                details={"cause_type": type(exc).__name__})
+ 
+ 
+-def _normalize_supported_plan(plan: Any, trusted_profile: Any) -> tuple[dict[str, Any], dict[str, Any]]:
++def _normalize_supported_actions(plan: Any, trusted_profile: Any) -> tuple[dict[str, Any], tuple[dict[str, Any], ...]]:
+     try:
+         payload = resources.validate_host_change_plan(plan)
+     except resources.ResourcePolicyError:
+@@ -111,87 +115,173 @@
+             or payload["host"] != {"platform": "windows", "host_id": trusted_profile.host_id}
+             or payload["profile"] != trusted_profile.as_dict()):
+         _error("HOST_CHANGE_PROFILE_SCOPE_MISMATCH", "plan does not bind the exact trusted startup profile/root/host")
+-    actions = payload["change_manifest"]
+-    if len(actions) != 1:
++    source_actions = payload["change_manifest"]
++    if not 1 <= len(source_actions) <= 3:
+         _error("HOST_CHANGE_ACTION_SET_UNSUPPORTED",
+-               "this implementation admits exactly one WFP filter action per authorized operation")
+-    source = actions[0]
+-    if source.get("resource_kind") != "wfp_filter" or source.get("operation") != "CREATE":
+-        _error("HOST_CHANGE_ACTION_UNSUPPORTED",
+-               "entire host-change plan was refused before effects because its resource kind/operation is unsupported")
++               "bounded WFP mutation plan must contain one to three actions")
++    normalized: list[dict[str, Any]] = []
+     policy = trusted_profile.windows_isolation
+-    desired = source.get("desired")
+-    if (not isinstance(desired, Mapping)
+-            or desired.get("provider_key") is None
+-            or guid_key(desired["provider_key"]) != guid_key(policy.wfp_provider_key)
+-            or guid_key(desired.get("sublayer_key")) != guid_key(policy.wfp_sublayer_key)
+-            or desired.get("action") != "PERMIT"):
+-        _error("HOST_CHANGE_WFP_SCOPE_MISMATCH", "filter does not bind the exact configured provider/sublayer/action")
+-    matches = [grant for grant in policy.wfp_grants
+-               if hashlib.sha256(_canonical(grant.as_dict()).encode("utf-8")).hexdigest()
+-               == desired.get("grant_sha256")]
+-    if len(matches) != 1:
+-        _error("HOST_CHANGE_WFP_GRANT_MISMATCH", "filter does not bind one unique configured network grant")
+-    grant = normalize_endpoint_grant(matches[0], policy=policy,
+-                                     launch_images=trusted_profile.launch_images)
+-    action = {
+-        "action_id": source["action_id"],
+-        "resource_name": source["resource_name"],
+-        "filter_key": desired["filter_key"],
+-        "provider_key": desired["provider_key"],
+-        "sublayer_key": desired["sublayer_key"],
+-        "desired_identity_sha256": source["desired_identity_sha256"],
+-        "ownership_guid": source["ownership_guid"],
+-        "plan_sha256": plan.sha256,
+-        "grant": grant,
+-        "grant_sha256": desired["grant_sha256"],
+-    }
+-    return payload, action
+-
+-
+-def _snapshot_dependencies(snapshot: Any, profile: Any, action: Mapping[str, Any], *,
+-                           require_filter_absent: bool) -> dict[str, Any]:
++    seen_ids: set[str] = set()
++    seen_keys: set[tuple[str, str]] = set()
++    for source in source_actions:
++        kind, desired = source.get("resource_kind"), source.get("desired")
++        if source.get("operation") != "CREATE" or kind not in {"wfp_provider", "wfp_sublayer", "wfp_filter"}:
++            _error("HOST_CHANGE_ACTION_UNSUPPORTED",
++                   "the whole plan was refused before effects because a resource kind/operation is unsupported")
++        if not isinstance(desired, Mapping):
++            _error("HOST_CHANGE_ACTION_UNSUPPORTED", "WFP action desired state is malformed")
++        if kind == "wfp_provider":
++            key = desired.get("provider_key")
++        elif kind == "wfp_sublayer":
++            key = desired.get("sublayer_key")
++        else:
++            key = desired.get("filter_key")
++        try:
++            key = "{" + str(uuid.UUID(guid_key(key))).upper() + "}"
++        except (TypeError, ValueError, WindowsWfpMutationError):
++            _error("HOST_CHANGE_WFP_SCOPE_MISMATCH", "WFP action resource key is invalid")
++        scope_key = (kind, guid_key(key))
++        if source["action_id"] in seen_ids or scope_key in seen_keys:
++            _error("HOST_CHANGE_ACTION_SET_INVALID", "WFP plan contains duplicate action IDs or resource keys")
++        seen_ids.add(source["action_id"])
++        seen_keys.add(scope_key)
++        action: dict[str, Any] = {
++            "action_id": source["action_id"],
++            "resource_name": source["resource_name"],
++            "resource_kind": kind,
++            "resource_key": key,
++            "desired": dict(desired),
++            "desired_identity_sha256": source["desired_identity_sha256"],
++            "ownership_guid": source["ownership_guid"],
++            "plan_sha256": plan.sha256,
++        }
++        if kind == "wfp_provider":
++            if guid_key(key) != guid_key(policy.wfp_provider_key):
++                _error("HOST_CHANGE_WFP_SCOPE_MISMATCH", "provider key differs from the trusted profile")
++            action["expected_resource"] = CtypesWindowsWfpMutationApi._expected_provider_row(desired)
++        elif kind == "wfp_sublayer":
++            if (guid_key(key) != guid_key(policy.wfp_sublayer_key)
++                    or guid_key(desired.get("provider_key")) != guid_key(policy.wfp_provider_key)):
++                _error("HOST_CHANGE_WFP_SCOPE_MISMATCH", "sublayer/provider keys differ from the trusted profile")
++            action["expected_resource"] = CtypesWindowsWfpMutationApi._expected_sublayer_row(desired)
++        else:
++            if (guid_key(desired.get("provider_key")) != guid_key(policy.wfp_provider_key)
++                    or guid_key(desired.get("sublayer_key")) != guid_key(policy.wfp_sublayer_key)
++                    or desired.get("action") != "PERMIT"):
++                _error("HOST_CHANGE_WFP_SCOPE_MISMATCH",
++                       "filter does not bind the exact configured provider/sublayer/action")
++            matches = [grant for grant in policy.wfp_grants
++                       if hashlib.sha256(_canonical(grant.as_dict()).encode("utf-8")).hexdigest()
++                       == desired.get("grant_sha256")]
++            if len(matches) != 1:
++                _error("HOST_CHANGE_WFP_GRANT_MISMATCH", "filter does not bind one unique configured network grant")
++            grant = normalize_endpoint_grant(matches[0], policy=policy,
++                                             launch_images=trusted_profile.launch_images)
++            action.update({"filter_key": key,
++                           "provider_key": desired["provider_key"],
++                           "sublayer_key": desired["sublayer_key"],
++                           "grant": grant,
++                           "grant_sha256": desired["grant_sha256"]})
++        normalized.append(action)
++
++    kinds = [item["resource_kind"] for item in normalized]
++    if len(set(kinds)) != len(kinds):
++        _error("HOST_CHANGE_ACTION_SET_INVALID", "a plan may contain at most one action of each WFP resource kind")
++    if "wfp_provider" in kinds or "wfp_sublayer" in kinds:
++        if not {"wfp_provider", "wfp_sublayer"}.issubset(kinds):
++            _error("HOST_CHANGE_ACTION_SET_UNSUPPORTED",
++                   "provider and sublayer must be created/restored as one dependency-bound plan")
++    order = {"wfp_provider": 0, "wfp_sublayer": 1, "wfp_filter": 2}
++    normalized.sort(key=lambda item: order[item["resource_kind"]])
++    if "wfp_filter" in kinds:
++        filter_action = next(item for item in normalized if item["resource_kind"] == "wfp_filter")
++        if (guid_key(filter_action["provider_key"]) != guid_key(policy.wfp_provider_key)
++                or guid_key(filter_action["sublayer_key"]) != guid_key(policy.wfp_sublayer_key)):
++            _error("HOST_CHANGE_WFP_SCOPE_MISMATCH", "filter dependency keys differ from the exact WFP policy")
++    return payload, tuple(normalized)
++
++
++def _normalize_supported_plan(plan: Any, trusted_profile: Any) -> tuple[dict[str, Any], dict[str, Any]]:
++    """Compatibility accessor for the earlier single-filter scoped tests."""
++    payload, actions = _normalize_supported_actions(plan, trusted_profile)
++    if len(actions) != 1 or actions[0]["resource_kind"] != "wfp_filter":
++        _error("HOST_CHANGE_ACTION_SET_UNSUPPORTED",
++               "this helper expects exactly one configured WFP filter action")
++    return payload, dict(actions[0])
++
++
++def _validated_wfp_snapshot(snapshot: Any) -> dict[str, Any]:
+     if not isinstance(snapshot, Mapping) or snapshot.get("state") != "COMPLETE_READ_ONLY":
+         _error("HOST_CHANGE_WFP_SNAPSHOT_INCOMPLETE", "complete bounded WFP read-only snapshot is required before mutation")
+     limits, counts = snapshot.get("limits"), snapshot.get("counts")
+-    if (not isinstance(limits, Mapping) or not isinstance(counts, Mapping)
+-            or any(type(limits.get(key)) is not int or limits[key] <= 0
+-                   for key in ("max_page_size", "max_pages_per_kind", "max_total_records", "max_total_bytes", "max_elapsed_ms"))
+-            or type(counts.get("total_records")) is not int
+-            or not 0 <= counts["total_records"] <= min(_MAX_SNAPSHOT_ROWS, limits["max_total_records"])
+-            or type(counts.get("total_bytes")) is not int
+-            or not 0 <= counts["total_bytes"] <= limits["max_total_bytes"]
+-            or type(counts.get("elapsed_ms")) is not int
+-            or not 0 <= counts["elapsed_ms"] <= limits["max_elapsed_ms"]
++    expected_limits = {"max_page_size": wfp_native.MAX_ENUM_PAGE,
++                       "max_pages_per_kind": wfp_native.MAX_ENUM_PAGES,
++                       "max_total_pages": wfp_native.MAX_ENUM_PAGES * 4,
++                       "max_total_records": wfp_native.MAX_ENUM_ROWS,
++                       "max_total_bytes": wfp_native.MAX_ENUM_TOTAL_BYTES,
++                       "max_elapsed_ms": wfp_native.MAX_ENUM_SECONDS * 1000}
++    count_fields = {"providers", "sublayers", "filters", "provider_contexts", "conditions", "pages",
++                    "pages_by_kind", "total_records", "total_bytes", "elapsed_ms"}
++    if (not isinstance(limits, Mapping) or dict(limits) != expected_limits
++            or not isinstance(counts, Mapping) or set(counts) != count_fields
++            or not isinstance(counts.get("pages_by_kind"), Mapping)
++            or set(counts["pages_by_kind"]) != {"Provider", "SubLayer", "Filter", "ProviderContext"}
++            or any(type(counts[key]) is not int or counts[key] < 0
++                   for key in count_fields - {"pages_by_kind"})
++            or any(type(value) is not int or value < 1 or value > wfp_native.MAX_ENUM_PAGES
++                   for value in counts["pages_by_kind"].values())
++            or counts["total_records"] > min(_MAX_SNAPSHOT_ROWS, expected_limits["max_total_records"])
++            or counts["total_bytes"] > expected_limits["max_total_bytes"]
++            or counts["elapsed_ms"] > expected_limits["max_elapsed_ms"]
++            or counts["pages"] > expected_limits["max_total_pages"]
++            or sum(counts["pages_by_kind"].values()) != counts["pages"]
+             or not _is_sha(snapshot.get("snapshot_sha256"))):
+         _error("HOST_CHANGE_WFP_SNAPSHOT_INVALID", "WFP snapshot lacks valid completeness bounds or digest")
+-    providers, sublayers, filters = (snapshot.get("providers"), snapshot.get("sublayers"), snapshot.get("filters"))
+-    if (not isinstance(providers, list) or not isinstance(sublayers, list) or not isinstance(filters, list)
+-            or len(providers) + len(sublayers) + len(filters) != counts["total_records"]
+-            or any(not isinstance(item, Mapping) for item in (*providers, *sublayers, *filters))):
++    if any(counts["pages_by_kind"][kind] <= 0
++           for kind in ("Provider", "SubLayer", "Filter", "ProviderContext")):
++        _error("HOST_CHANGE_WFP_SNAPSHOT_INVALID", "complete WFP snapshot must include every enumeration")
++    arrays = {key: snapshot.get(key) for key in
++              ("providers", "sublayers", "filters", "provider_contexts")}
++    if (any(not isinstance(rows, list) for rows in arrays.values())
++            or sum(len(rows) for rows in arrays.values()) != counts["total_records"]
++            or any(not isinstance(item, Mapping) for rows in arrays.values() for item in rows)):
+         _error("HOST_CHANGE_WFP_SNAPSHOT_INVALID", "WFP snapshot row sets do not match the bounded total")
+     try:
+         canonical_snapshot = {
+-            "providers": sorted(providers, key=lambda row: row.get("provider_key", "")),
+-            "sublayers": sorted(sublayers, key=lambda row: row.get("sublayer_key", "")),
+-            "filters": sorted(filters, key=lambda row: (row.get("layer_key", ""),
+-                                                         row.get("filter_id", -1))),
++            "providers": sorted(arrays["providers"], key=lambda row: row.get("provider_key", "")),
++            "sublayers": sorted(arrays["sublayers"], key=lambda row: row.get("sublayer_key", "")),
++            "filters": sorted(arrays["filters"], key=lambda row: (row.get("layer_key", ""),
++                                                                   row.get("filter_id", -1))),
++            "provider_contexts": arrays["provider_contexts"],
+         }
+-        observed_snapshot_sha = hashlib.sha256(
+-            _canonical(canonical_snapshot).encode("utf-8")).hexdigest()
++        canonical_bytes = _canonical(canonical_snapshot).encode("utf-8")
++        observed_snapshot_sha = hashlib.sha256(canonical_bytes).hexdigest()
+     except (TypeError, ValueError, KeyError) as exc:
+         _error("HOST_CHANGE_WFP_SNAPSHOT_INVALID",
+                "WFP snapshot rows cannot be canonically fingerprinted",
+                details={"cause_type": type(exc).__name__})
+-    if observed_snapshot_sha != snapshot["snapshot_sha256"]:
++    if (observed_snapshot_sha != snapshot["snapshot_sha256"]
++            or len(canonical_bytes) != counts["total_bytes"]):
+         _error("HOST_CHANGE_WFP_SNAPSHOT_TAMPERED",
+-               "WFP snapshot fingerprint does not bind its exact returned rows")
++               "WFP snapshot fingerprint or byte count does not bind its exact returned rows")
++    if any(not isinstance(row, Mapping) or set(row) != {"state"}
++           or row.get("state") != "PRESENT_UNCLASSIFIED" for row in arrays["provider_contexts"]):
++        _error("HOST_CHANGE_WFP_SNAPSHOT_INVALID", "provider-context rows are not opaque/unclassified records")
++    return {**arrays, "snapshot_sha256": snapshot["snapshot_sha256"],
++            "reasons": list(snapshot.get("reasons", []))[:256],
++            "counts": dict(counts), "limits": dict(limits)}
++
++
++def _snapshot_dependencies(snapshot: Any, profile: Any, action: Mapping[str, Any], *,
++                           require_filter_absent: bool) -> dict[str, Any]:
++    rows = _validated_wfp_snapshot(snapshot)
++    providers, sublayers, filters = rows["providers"], rows["sublayers"], rows["filters"]
+     policy = profile.windows_isolation
+-    for rows, key_name, label in ((providers, "provider_key", "provider"),
+-                                  (sublayers, "sublayer_key", "sublayer"),
+-                                  (filters, "filter_key", "filter")):
+-        try:
+-            keys = [guid_key(row.get(key_name)) for row in rows]
++    for resource_rows, key_name, label in ((providers, "provider_key", "provider"),
++                                           (sublayers, "sublayer_key", "sublayer"),
++                                           (filters, "filter_key", "filter")):
++        try:
++            keys = [guid_key(row.get(key_name)) for row in resource_rows]
+         except WindowsWfpMutationError as exc:
+             _error("HOST_CHANGE_WFP_SNAPSHOT_INVALID",
+                    f"WFP snapshot contains an invalid {label} key",
+@@ -223,18 +313,170 @@
+         _error("HOST_CHANGE_WFP_FILTER_EXISTS", "configured filter key already exists; no overwrite is permitted")
+     return {
+         "schema": "comsol-mcp.windows-wfp-dependency-baseline/1",
+-        "snapshot_sha256": snapshot["snapshot_sha256"],
++        "snapshot_sha256": rows["snapshot_sha256"],
+         "dependency_sha256": sha256(dependency),
+         "provider": dict(provider), "sublayer": dict(sublayer),
+         "target_filter_sha256": sha256(dict(target_rows[0])) if target_rows else None,
+         "target_filter_present": bool(target_rows),
+         "effective_policy_state": "UNVERIFIED",
+-        "wfp_snapshot_reasons": list(snapshot.get("reasons", []))[:256],
++        "wfp_snapshot_reasons": rows["reasons"],
+     }
++
++
++def _snapshot_sequence_dependencies(snapshot: Any, profile: Any,
++                                    actions: tuple[Mapping[str, Any], ...], *,
++                                    phase: str,
++                                    expected_resources: Mapping[str, str] | None = None,
++                                    admitted_plan_sha256: str | None = None) -> dict[str, Any]:
++    rows = _validated_wfp_snapshot(snapshot)
++    providers, sublayers, filters = rows["providers"], rows["sublayers"], rows["filters"]
++    policy = profile.windows_isolation
++    for values, key_name, label in ((providers, "provider_key", "provider"),
++                                    (sublayers, "sublayer_key", "sublayer"),
++                                    (filters, "filter_key", "filter")):
++        try:
++            keys = [guid_key(item.get(key_name)) for item in values]
++        except WindowsWfpMutationError as exc:
++            _error("HOST_CHANGE_WFP_SNAPSHOT_INVALID", f"WFP {label} key is malformed",
++                   details={"cause_code": exc.code})
++        if len(set(keys)) != len(keys):
++            _error("HOST_CHANGE_WFP_SNAPSHOT_INVALID", f"WFP snapshot contains duplicate {label} keys")
++    provider_by_key = {guid_key(row["provider_key"]): dict(row) for row in providers}
++    sublayer_by_key = {guid_key(row["sublayer_key"]): dict(row) for row in sublayers}
++    filter_by_key = {guid_key(row["filter_key"]): dict(row) for row in filters}
++    by_kind = {item["resource_kind"]: item for item in actions}
++    provider_key = guid_key(policy.wfp_provider_key)
++    sublayer_key = guid_key(policy.wfp_sublayer_key)
++    provider_action = by_kind.get("wfp_provider")
++    sublayer_action = by_kind.get("wfp_sublayer")
++    filter_action = by_kind.get("wfp_filter")
++    if phase == "APPLY":
++        for action in actions:
++            key = guid_key(action["resource_key"])
++            existing = {"wfp_provider": provider_by_key, "wfp_sublayer": sublayer_by_key,
++                        "wfp_filter": filter_by_key}[action["resource_kind"]].get(key)
++            if existing is not None:
++                _error("HOST_CHANGE_WFP_RESOURCE_EXISTS",
++                       "configured WFP key already exists; CREATE never overwrites a resource",
++                       details={"resource_kind": action["resource_kind"], "resource_key": action["resource_key"]})
++    else:
++        if not isinstance(expected_resources, Mapping) or set(expected_resources) != {
++                action["action_id"] for action in actions}:
++            _error("HOST_CHANGE_RECEIPT_MISMATCH", "restore resource hashes do not match the exact plan actions")
++        for action in actions:
++            key = guid_key(action["resource_key"])
++            existing = {"wfp_provider": provider_by_key, "wfp_sublayer": sublayer_by_key,
++                        "wfp_filter": filter_by_key}[action["resource_kind"]].get(key)
++            if existing is None or sha256(existing) != expected_resources[action["action_id"]]:
++                _error("HOST_CHANGE_RESTORE_DRIFT",
++                       "one receipt-bound WFP resource is absent or changed; no restore effects were started",
++                       details={"resource_kind": action["resource_kind"], "resource_key": action["resource_key"]})
++            expected = action.get("expected_resource")
++            if expected is not None and sha256(existing) != sha256(expected):
++                _error("HOST_CHANGE_RESTORE_DRIFT", "WFP resource differs from its exact planned desired state")
++
++    if provider_action:
++        provider_expected = provider_action["expected_resource"]
++        if phase == "APPLY" and provider_key in provider_by_key:
++            _error("HOST_CHANGE_WFP_RESOURCE_EXISTS", "configured provider key already exists")
++    else:
++        provider_expected = provider_by_key.get(provider_key)
++        if provider_expected is None:
++            _error("HOST_CHANGE_WFP_DEPENDENCY_MISSING", "configured WFP provider must exist before filter mutation")
++        if provider_expected.get("flags") not in {0, 1}:
++            _error("HOST_CHANGE_WFP_DEPENDENCY_UNSUPPORTED", "WFP provider has unsupported flag bits")
++    if sublayer_action:
++        sublayer_expected = sublayer_action["expected_resource"]
++        if phase == "APPLY" and sublayer_key in sublayer_by_key:
++            _error("HOST_CHANGE_WFP_RESOURCE_EXISTS", "configured sublayer key already exists")
++    else:
++        sublayer_expected = sublayer_by_key.get(sublayer_key)
++        if sublayer_expected is None:
++            _error("HOST_CHANGE_WFP_DEPENDENCY_MISSING", "configured WFP sublayer must exist before filter mutation")
++        if sublayer_expected.get("flags") not in {0, 1}:
++            _error("HOST_CHANGE_WFP_DEPENDENCY_UNSUPPORTED", "WFP sublayer has unsupported flag bits")
++    if (guid_key(sublayer_expected.get("provider_key")) != provider_key
++            or not _is_sha(provider_expected.get("security_sha256"))
++            or not _is_sha(sublayer_expected.get("security_sha256"))
++            or not _is_sha(provider_expected.get("provider_data_sha256"))
++            or not _is_sha(sublayer_expected.get("provider_data_sha256"))):
++        _error("HOST_CHANGE_WFP_DEPENDENCY_UNSUPPORTED", "configured provider/sublayer identity is incomplete")
++    if filter_action:
++        filter_key = guid_key(filter_action["resource_key"])
++        existing_filter = filter_by_key.get(filter_key)
++        if phase == "APPLY" and existing_filter is not None:
++            _error("HOST_CHANGE_WFP_RESOURCE_EXISTS", "configured filter key already exists")
++        if phase == "RESTORE":
++            planned_filter_keys = {guid_key(a["resource_key"]) for a in actions if a["resource_kind"] == "wfp_filter"}
++            if provider_action and any(guid_key(row.get("provider_key")) == provider_key
++                                       and guid_key(row.get("filter_key")) not in planned_filter_keys
++                                       for row in filters):
++                _error("HOST_CHANGE_WFP_PROVIDER_CHILDREN_PRESENT", "foreign filter references the provider")
++            if sublayer_action and any(guid_key(row.get("sublayer_key")) == sublayer_key
++                                       and guid_key(row.get("filter_key")) not in planned_filter_keys
++                                       for row in filters):
++                _error("HOST_CHANGE_WFP_SUBLAYER_CHILDREN_PRESENT", "foreign filter references the sublayer")
++    if phase == "RESTORE" and (provider_action or sublayer_action):
++        if rows["provider_contexts"]:
++            _error("HOST_CHANGE_WFP_CHILDREN_UNCLASSIFIED",
++                   "provider contexts are present; parent-resource ownership cannot be classified")
++        planned_filter_keys = {guid_key(a["resource_key"]) for a in actions if a["resource_kind"] == "wfp_filter"}
++        planned_sublayer_keys = {guid_key(a["resource_key"]) for a in actions
++                                 if a["resource_kind"] == "wfp_sublayer"}
++        if provider_action and any(row.get("provider_key") is not None
++                                   and guid_key(row["provider_key"]) == provider_key
++                                   and guid_key(row["sublayer_key"]) not in planned_sublayer_keys
++                                   for row in sublayers):
++            _error("HOST_CHANGE_WFP_PROVIDER_CHILDREN_PRESENT", "a foreign sublayer still references the provider")
++        if sublayer_action and any(guid_key(row["sublayer_key"]) == sublayer_key
++                                   and guid_key(row["filter_key"]) not in planned_filter_keys for row in filters):
++            _error("HOST_CHANGE_WFP_SUBLAYER_CHILDREN_PRESENT", "a foreign filter references the sublayer")
++        if provider_action and any(row.get("provider_key") is not None
++                                   and guid_key(row["provider_key"]) == provider_key
++                                   and guid_key(row["filter_key"]) not in planned_filter_keys
++                                   for row in filters):
++            _error("HOST_CHANGE_WFP_PROVIDER_CHILDREN_PRESENT", "a foreign filter references the provider")
++        if sublayer_action and any(row.get("provider_key") is not None
++                                   and guid_key(row["provider_key"]) == provider_key
++                                   and guid_key(row["sublayer_key"]) != sublayer_key for row in sublayers):
++            _error("HOST_CHANGE_WFP_PROVIDER_CHILDREN_PRESENT", "a foreign sublayer references the provider")
++    dependency = {"provider": dict(provider_expected), "sublayer": dict(sublayer_expected)}
++    dependency_sha = sha256(dependency)
++    step_rows = []
++    ordered = actions if phase == "APPLY" else tuple(reversed(actions))
++    for index, action in enumerate(ordered):
++        step_rows.append({"step_index": index, "action_id": action["action_id"],
++                          "resource_kind": action["resource_kind"],
++                          "resource_key": action["resource_key"],
++                          "identity_sha256": action["desired_identity_sha256"],
++                          "dependency_sha256": dependency_sha,
++                          "expected_resource_sha256": (expected_resources[action["action_id"]]
++                                                        if phase == "RESTORE" else None)})
++    sequence = {"schema": "comsol-mcp.host-control-mutation-sequence/2",
++                "phase": phase,
++                "plan_sha256": admitted_plan_sha256 or actions[0]["plan_sha256"],
++                "steps": step_rows}
++    return {"schema": "comsol-mcp.windows-wfp-plan-baseline/2",
++            "snapshot_sha256": rows["snapshot_sha256"],
++            "dependency_sha256": dependency_sha,
++            "provider": dict(provider_expected), "sublayer": dict(sublayer_expected),
++            "target_filter_sha256": (sha256(filter_by_key[guid_key(filter_action["resource_key"])])
++                                     if filter_action and guid_key(filter_action["resource_key"]) in filter_by_key
++                                     else None),
++            "effective_policy_state": "UNVERIFIED",
++            "wfp_snapshot_reasons": rows["reasons"],
++            "mutation_sequence": sequence}
+ 
+ 
+ def _receipt_payload(plan: Any, profile: Any, actions: tuple[Mapping[str, Any], ...]) -> dict[str, Any]:
+     return {"schema": "comsol-mcp.applied-host-change-receipt/1",
++            "plan_sha256": plan.sha256, "host_id": profile.host_id,
++            "platform": profile.platform, "actions": [dict(item) for item in actions]}
++
++
++def _receipt_payload_v2(plan: Any, profile: Any,
++                        actions: tuple[Mapping[str, Any], ...]) -> dict[str, Any]:
++    return {"schema": "comsol-mcp.applied-host-change-receipt/2",
+             "plan_sha256": plan.sha256, "host_id": profile.host_id,
+             "platform": profile.platform, "actions": [dict(item) for item in actions]}
+ 
+@@ -258,6 +500,37 @@
+             or item.get("prior_backup_path") is not None):
+         _error("HOST_CHANGE_RECEIPT_MISMATCH", "restore receipt does not describe this exact CREATE action")
+     return payload, source_action, item["created_resource_sha256"]
++
++
++def _verify_sequence_receipt(plan: Any, profile: Any, receipt: Any
++                             ) -> tuple[dict[str, Any], tuple[dict[str, Any], ...], dict[str, str]]:
++    _payload, actions = _normalize_supported_actions(plan, profile)
++    if not isinstance(receipt, resources.AppliedHostChangeReceipt):
++        _error("HOST_CHANGE_RECEIPT_INVALID", "restore requires a typed exact applied receipt")
++    items = tuple(receipt.actions)
++    if len(items) != len(actions):
++        _error("HOST_CHANGE_RECEIPT_MISMATCH", "receipt action count differs from its source plan")
++    expected_items = []
++    hashes: dict[str, str] = {}
++    for action, item in zip(actions, items, strict=True):
++        if (not isinstance(item, Mapping) or set(item) != {
++                "action_id", "resource_kind", "resource_key", "created_resource_sha256",
++                "prior_resource_sha256", "prior_backup_path"}
++                or item.get("action_id") != action["action_id"]
++                or item.get("resource_kind") != action["resource_kind"]
++                or guid_key(item.get("resource_key")) != guid_key(action["resource_key"])
++                or not _is_sha(item.get("created_resource_sha256"))
++                or item.get("prior_resource_sha256") is not None
++                or item.get("prior_backup_path") is not None):
++            _error("HOST_CHANGE_RECEIPT_MISMATCH", "receipt does not bind the exact ordered CREATE resources")
++        expected_items.append(dict(item))
++        hashes[action["action_id"]] = item["created_resource_sha256"]
++    body = _receipt_payload_v2(plan, profile, tuple(expected_items))
++    if (receipt.plan_sha256 != plan.sha256 or receipt.host_id != profile.host_id
++            or receipt.platform != "windows" or not _is_sha(receipt.receipt_sha256)
++            or hashlib.sha256(_canonical(body).encode("utf-8")).hexdigest() != receipt.receipt_sha256):
++        _error("HOST_CHANGE_RECEIPT_MISMATCH", "receipt digest differs from its exact source plan, host and rows")
++    return _payload, actions, hashes
+ 
+ 
+ @dataclass(frozen=True)
+@@ -334,6 +607,34 @@
+         baseline = _snapshot_dependencies(snapshot, self.profile, action, require_filter_absent=True)
+         baseline["current_binding"] = current
+         return payload, action, baseline
++
++    def _preflight_sequence(self, plan: Any
++                            ) -> tuple[dict[str, Any], tuple[dict[str, Any], ...], dict[str, Any], bool]:
++        payload, actions = _normalize_supported_actions(plan, self.profile)
++        use_v2 = len(actions) > 1 or actions[0]["resource_kind"] != "wfp_filter"
++        if not use_v2:
++            old_payload, action, baseline = self._preflight(plan)
++            return old_payload, (action,), baseline, False
++        if not self.software_only:
++            current = _current_windows_binding(self.profile)
++            validate_security = getattr(self.api, "preflight_security_descriptors", None)
++            if not callable(validate_security):
++                _error("HOST_CHANGE_WFP_SECURITY_PREFLIGHT_UNAVAILABLE",
++                       "native WFP adapter cannot validate exact planned security descriptors before admission")
++            validate_security(actions)
++        else:
++            current = {"host_id": self.profile.host_id,
++                       "host_fingerprint_sha256": self.profile.windows_isolation.host_fingerprint_sha256,
++                       "root_identity": {"device": self.profile.root.volume_id,
++                                         "inode": self.profile.root.file_id},
++                       "root_security_sha256": None,
++                       "service_token_sid": self.profile.windows_isolation.service_logon_sid,
++                       "evidence_classification": "SOFTWARE_ONLY"}
++        snapshot = self.api.observe_snapshot()
++        baseline = _snapshot_sequence_dependencies(snapshot, self.profile, actions,
++                                                   phase="APPLY", admitted_plan_sha256=plan.sha256)
++        baseline["current_binding"] = current
++        return payload, actions, baseline, True
+ 
+     def _admit(self, *, phase: str, plan_sha256: str, approval: resources.HostChangeApproval,
+                baseline: dict[str, Any], source_plan_sha256: str | None = None,
+@@ -408,8 +709,228 @@
+         except BaseException:
+             pass
+ 
++    def _finish_unknown_sequence(self, admission: _ExecutionAdmission, *, phase: str,
++                                 action: Mapping[str, Any], step_index: int | None,
++                                 cause: BaseException) -> None:
++        if step_index is not None:
++            event = f"{phase}_STEP_INTENT"
++            try:
++                self.store.append_host_control_mutation_step_event(
++                    admission_id=admission.admission_id,
++                    event="RECOVERY_REQUIRED",
++                    payload={"reason_code": getattr(cause, "code", type(cause).__name__)[:200],
++                             "failed_event": event, "step_index": step_index,
++                             "action_id": action["action_id"],
++                             "resource_kind": action["resource_kind"],
++                             "resource_key": action["resource_key"]})
++            except BaseException:
++                # A committed V2 intent already fences replay even when the
++                # recovery annotation itself cannot be persisted.
++                pass
++        try:
++            self.store.finish(admission.operation_id, status="UNKNOWN", result={
++                "success": False, "operation": f"host.change.{phase.lower()}",
++                "execution_state": "UNKNOWN", "host_change_state": "RECOVERY_REQUIRED",
++                "effective_policy_state": "UNVERIFIED", "safe_retry": False,
++                "cause_code": getattr(cause, "code", type(cause).__name__),
++                "evidence_classification": "SOFTWARE_ONLY" if self.software_only
++                    else "WINDOWS_NATIVE_READBACK_ONLY",
++            })
++        except BaseException:
++            pass
++
++    def _apply_sequence(self, plan: Any, actions: tuple[Mapping[str, Any], ...],
++                        baseline: Mapping[str, Any], *,
++                        approval: resources.HostChangeApproval) -> resources.AppliedHostChangeReceipt:
++        admission = self._admit(phase="APPLY", plan_sha256=plan.sha256,
++                                approval=approval, baseline=dict(baseline))
++        created: dict[str, dict[str, Any]] = {}
++        active_index: int | None = None
++        active_action: Mapping[str, Any] = actions[0]
++        try:
++            self._start(admission)
++            for index, action in enumerate(actions):
++                active_index, active_action = index, action
++                intent = {"step_index": index, "action_id": action["action_id"],
++                          "resource_kind": action["resource_kind"],
++                          "resource_key": action["resource_key"],
++                          "desired_identity_sha256": action["desired_identity_sha256"],
++                          "dependency_sha256": baseline["dependency_sha256"]}
++                self.store.append_host_control_mutation_step_event(
++                    admission_id=admission.admission_id, event="APPLY_STEP_INTENT", payload=intent)
++                kind = action["resource_kind"]
++                if kind == "wfp_provider":
++                    row = self.api.create_provider(action=action)
++                elif kind == "wfp_sublayer":
++                    provider_action = next(item for item in actions if item["resource_kind"] == "wfp_provider")
++                    provider_row = created[provider_action["action_id"]]
++                    row = self.api.create_sublayer(
++                        action=action, expected_provider_sha256=sha256(provider_row))
++                elif kind == "wfp_filter":
++                    provider_action = next(item for item in actions if item["resource_kind"] == "wfp_provider")
++                    sublayer_action = next(item for item in actions if item["resource_kind"] == "wfp_sublayer")
++                    dependency_sha = sha256({
++                        "provider": created[provider_action["action_id"]],
++                        "sublayer": created[sublayer_action["action_id"]],
++                    })
++                    if dependency_sha != baseline["dependency_sha256"]:
++                        _error("HOST_CHANGE_WFP_DEPENDENCY_MISMATCH",
++                               "created provider/sublayer do not match the full preflight dependency binding",
++                               stage="execution")
++                    row = self.api.create_filter(
++                        profile=self.profile, action=action,
++                        expected_dependency_sha256=dependency_sha)
++                else:
++                    _error("HOST_CHANGE_ACTION_UNSUPPORTED", "unsupported action escaped whole-plan preflight",
++                           stage="execution")
++                resource_sha = sha256(row)
++                verified = {**intent, "created_resource_sha256": resource_sha}
++                self.store.append_host_control_mutation_step_event(
++                    admission_id=admission.admission_id,
++                    event="APPLY_STEP_READBACK_VERIFIED", payload=verified)
++                created[action["action_id"]] = dict(row)
++                active_index = None
++
++            receipt_actions = tuple({
++                "action_id": action["action_id"],
++                "resource_kind": action["resource_kind"],
++                "resource_key": action["resource_key"],
++                "created_resource_sha256": sha256(created[action["action_id"]]),
++                "prior_resource_sha256": None, "prior_backup_path": None,
++            } for action in actions)
++            receipt_body = _receipt_payload_v2(plan, self.profile, receipt_actions)
++            receipt_sha = hashlib.sha256(_canonical(receipt_body).encode("utf-8")).hexdigest()
++            receipt = resources.AppliedHostChangeReceipt(
++                plan.sha256, self.profile.host_id, "windows", receipt_actions, receipt_sha)
++            result = {"success": True, "operation": "host.change.apply",
++                      "execution_state": "SUCCEEDED", "host_change_state": "APPLIED_UNVERIFIED",
++                      "plan_sha256": plan.sha256, "profile_sha256": self.profile.sha256,
++                      "applied_receipt": {**receipt_body, "receipt_sha256": receipt_sha},
++                      "receipt_sha256": receipt_sha,
++                      "effective_policy_state": "UNVERIFIED", "t037_state": "NOT_VERIFIED",
++                      "safe_retry": False,
++                      "evidence_classification": "SOFTWARE_ONLY" if self.software_only
++                          else "WINDOWS_NATIVE_READBACK_ONLY"}
++            accepted, authoritative = self.store.finish(
++                admission.operation_id, status="SUCCEEDED", result=result)
++            if not accepted or authoritative != "SUCCEEDED":
++                _error("HOST_CHANGE_RESULT_PERSISTENCE_UNKNOWN",
++                       "all WFP resources were read back but the durable terminal receipt is unknown",
++                       safe_retry=False, stage="execution")
++            return receipt
++        except Exception as exc:
++            self._finish_unknown_sequence(admission, phase="APPLY", action=active_action,
++                                          step_index=active_index, cause=exc)
++            _error("HOST_CHANGE_RECOVERY_REQUIRED",
++                   "ordered WFP apply may have changed Windows state; automatic replay is forbidden",
++                   safe_retry=False, stage="execution",
++                   details={"cause_code": getattr(exc, "code", None) or type(exc).__name__,
++                            "admission_id": admission.admission_id, "job_id": admission.job_id,
++                            "step_index": active_index})
++
++    def _restore_sequence(self, plan: Any, receipt: resources.AppliedHostChangeReceipt, *,
++                          approval: resources.HostChangeApproval
++                          ) -> dict[str, Any]:
++        _payload, actions, expected_resources = _verify_sequence_receipt(plan, self.profile, receipt)
++        if not self.software_only:
++            current = _current_windows_binding(self.profile)
++        else:
++            current = {"host_id": self.profile.host_id,
++                       "host_fingerprint_sha256": self.profile.windows_isolation.host_fingerprint_sha256,
++                       "root_identity": {"device": self.profile.root.volume_id,
++                                         "inode": self.profile.root.file_id},
++                       "root_security_sha256": None,
++                       "service_token_sid": self.profile.windows_isolation.service_logon_sid,
++                       "evidence_classification": "SOFTWARE_ONLY"}
++        snapshot = self.api.observe_snapshot()
++        # Build the restore authorization fingerprint from the exact fresh
++        # dependency snapshot, then bind that fingerprint into the admitted
++        # reverse sequence.
++        preliminary = _snapshot_sequence_dependencies(
++            snapshot, self.profile, actions, phase="RESTORE",
++            expected_resources=expected_resources, admitted_plan_sha256=plan.sha256)
++        restore_body = {"schema": "comsol-mcp.host-change-restore/2",
++                        "profile_sha256": self.profile.sha256,
++                        "source_plan_sha256": plan.sha256,
++                        "source_receipt_sha256": receipt.receipt_sha256,
++                        "resource_hashes": [{"action_id": action["action_id"],
++                                             "resource_kind": action["resource_kind"],
++                                             "resource_key": action["resource_key"],
++                                             "created_resource_sha256": expected_resources[action["action_id"]]}
++                                            for action in actions],
++                        "dependency_sha256": preliminary["dependency_sha256"],
++                        "snapshot_sha256": preliminary["snapshot_sha256"]}
++        restore_sha = hashlib.sha256(_canonical(restore_body).encode("utf-8")).hexdigest()
++        baseline = _snapshot_sequence_dependencies(
++            snapshot, self.profile, actions, phase="RESTORE",
++            expected_resources=expected_resources, admitted_plan_sha256=restore_sha)
++        baseline["current_binding"] = current
++        admission = self._admit(
++            phase="RESTORE", plan_sha256=restore_sha, approval=approval, baseline=baseline,
++            source_plan_sha256=plan.sha256, source_receipt_sha256=receipt.receipt_sha256)
++        ordered = tuple(reversed(actions))
++        active_index: int | None = None
++        active_action: Mapping[str, Any] = ordered[0]
++        try:
++            self._start(admission)
++            for index, action in enumerate(ordered):
++                active_index, active_action = index, action
++                resource_sha = expected_resources[action["action_id"]]
++                intent = {"step_index": index, "action_id": action["action_id"],
++                          "resource_kind": action["resource_kind"],
++                          "resource_key": action["resource_key"],
++                          "expected_resource_sha256": resource_sha,
++                          "dependency_sha256": baseline["dependency_sha256"]}
++                self.store.append_host_control_mutation_step_event(
++                    admission_id=admission.admission_id, event="RESTORE_STEP_INTENT", payload=intent)
++                kind = action["resource_kind"]
++                if kind == "wfp_filter":
++                    self.api.delete_filter(profile=self.profile, action=action,
++                                           expected_resource_sha256=resource_sha,
++                                           expected_dependency_sha256=baseline["dependency_sha256"])
++                elif kind == "wfp_sublayer":
++                    self.api.delete_sublayer(action=action, expected_resource_sha256=resource_sha)
++                elif kind == "wfp_provider":
++                    self.api.delete_provider(action=action, expected_resource_sha256=resource_sha)
++                else:
++                    _error("HOST_CHANGE_ACTION_UNSUPPORTED", "unsupported action escaped whole-plan preflight",
++                           stage="execution")
++                verified = {**intent, "removed_resource_sha256": resource_sha}
++                self.store.append_host_control_mutation_step_event(
++                    admission_id=admission.admission_id,
++                    event="RESTORE_STEP_READBACK_VERIFIED", payload=verified)
++                active_index = None
++            result = {"success": True, "operation": "host.change.restore",
++                      "execution_state": "SUCCEEDED", "host_change_state": "RESTORED_UNVERIFIED",
++                      "restore_plan_sha256": restore_sha,
++                      "source_plan_sha256": plan.sha256,
++                      "source_receipt_sha256": receipt.receipt_sha256,
++                      "effective_policy_state": "UNVERIFIED", "t037_state": "NOT_VERIFIED",
++                      "safe_retry": False,
++                      "evidence_classification": "SOFTWARE_ONLY" if self.software_only
++                          else "WINDOWS_NATIVE_READBACK_ONLY"}
++            accepted, authoritative = self.store.finish(
++                admission.operation_id, status="SUCCEEDED", result=result)
++            if not accepted or authoritative != "SUCCEEDED":
++                _error("HOST_CHANGE_RESULT_PERSISTENCE_UNKNOWN",
++                       "all WFP resources were absent on readback but terminal persistence is unknown",
++                       safe_retry=False, stage="execution")
++            return result
++        except Exception as exc:
++            self._finish_unknown_sequence(admission, phase="RESTORE", action=active_action,
++                                          step_index=active_index, cause=exc)
++            _error("HOST_CHANGE_RECOVERY_REQUIRED",
++                   "reverse WFP restore may have changed Windows state; automatic replay is forbidden",
++                   safe_retry=False, stage="execution",
++                   details={"cause_code": getattr(exc, "code", None) or type(exc).__name__,
++                            "admission_id": admission.admission_id, "job_id": admission.job_id,
++                            "step_index": active_index})
++
+     def apply(self, plan: Any, *, approval: resources.HostChangeApproval) -> resources.AppliedHostChangeReceipt:
+-        payload, action, baseline = self._preflight(plan)
++        payload, actions, baseline, use_v2 = self._preflight_sequence(plan)
++        if use_v2:
++            return self._apply_sequence(plan, actions, baseline, approval=approval)
++        action = actions[0]
+         admission = self._admit(phase="APPLY", plan_sha256=plan.sha256,
+                                 approval=approval, baseline=baseline)
+         try:
+@@ -462,6 +983,10 @@
+ 
+     def restore(self, plan: Any, receipt: resources.AppliedHostChangeReceipt, *,
+                 approval: resources.HostChangeApproval) -> dict[str, Any]:
++        _payload, actions = _normalize_supported_actions(plan, self.profile)
++        use_v2 = len(actions) > 1 or actions[0]["resource_kind"] != "wfp_filter"
++        if use_v2:
++            return self._restore_sequence(plan, receipt, approval=approval)
+         payload, action, created_sha = _verify_receipt(plan, self.profile, receipt)
+         if not self.software_only:
+             current = _current_windows_binding(self.profile)
+--- preimage/comsol_mcp/_windows_t037_wfp.py
++++ current/comsol_mcp/_windows_t037_wfp.py
+@@ -1,10 +1,12 @@
+-"""Narrow Windows Filtering Platform filter mutation adapter.
+-
+-This module supports one bounded subset only: persistent PERMIT filters at
+-the outbound IPv4 ALE_AUTH_CONNECT layer, tied to an exact configured
+-application, AppContainer SID, protocol, local/remote CIDR and remote port.
+-It does not create providers/sublayers, block traffic, install callouts, or
+-claim effective firewall arbitration or T037 isolation.
++"""Narrow Windows Filtering Platform resource mutation adapter.
++
++This module supports a bounded subset: persistent provider and sublayer
++creation with exact SDDL/readback, plus persistent PERMIT filters at the
++outbound IPv4 ALE_AUTH_CONNECT layer tied to one exact configured application,
++AppContainer SID, protocol, local/remote CIDR and remote port. Deletion is
++receipt-hash-bound and requires complete child enumeration. It does not block
++traffic, install callouts, or claim effective firewall arbitration or T037
++isolation.
+ 
+ All Win32 APIs are late-bound and use fixed-width SDK structures imported
+ from the read-only T037 observer. Importing on another platform is safe;
+@@ -13,6 +15,7 @@
+ from __future__ import annotations
+ 
+ import ctypes as C
++from contextlib import contextmanager
+ import hashlib
+ import ipaddress
+ import json
+@@ -51,6 +54,9 @@
+ FWPM_FILTER_FLAG_PERSISTENT = 0x00000001
+ FWP_ACTION_PERMIT = 0x00001002
+ FWP_E_FILTER_NOT_FOUND = 0x80320003
++FWP_E_PROVIDER_NOT_FOUND = 0x80320005
++FWP_E_PROVIDER_CONTEXT_NOT_FOUND = 0x80320006
++FWP_E_SUBLAYER_NOT_FOUND = 0x80320007
+ 
+ 
+ class WindowsWfpMutationError(ExecutionContractError):
+@@ -76,6 +82,10 @@
+     if not isinstance(value, str) or not _GUID.fullmatch(value):
+         _fail("WFP_GUID_INVALID", "WFP key is not a canonical GUID")
+     return value.strip("{}").casefold()
++
++
++def _canonical_guid(value: str) -> str:
++    return "{" + str(uuid.UUID(guid_key(value))).upper() + "}"
+ 
+ 
+ def guid_struct(value: str):
+@@ -152,6 +162,7 @@
+         self.api = native.CtypesWindowsPolicyApi()
+         self._fwpu = self.api._fwpu
+         self._advapi = self.api._advapi
++        self._kernel32 = self.api._kernel32
+         self._bind_mutation()
+ 
+     def _bind_mutation(self) -> None:
+@@ -171,13 +182,24 @@
+         f.FwpmFilterAdd0.restype = native.DWORD
+         f.FwpmFilterDeleteByKey0.argtypes = [native.HANDLE, C0.POINTER(native.GUID)]
+         f.FwpmFilterDeleteByKey0.restype = native.DWORD
++        f.FwpmProviderAdd0.argtypes = [native.HANDLE, C0.POINTER(native.FWPM_PROVIDER0), C0.c_void_p]
++        f.FwpmProviderAdd0.restype = native.DWORD
++        f.FwpmProviderDeleteByKey0.argtypes = [native.HANDLE, C0.POINTER(native.GUID)]
++        f.FwpmProviderDeleteByKey0.restype = native.DWORD
++        f.FwpmSubLayerAdd0.argtypes = [native.HANDLE, C0.POINTER(native.FWPM_SUBLAYER0), C0.c_void_p]
++        f.FwpmSubLayerAdd0.restype = native.DWORD
++        f.FwpmSubLayerDeleteByKey0.argtypes = [native.HANDLE, C0.POINTER(native.GUID)]
++        f.FwpmSubLayerDeleteByKey0.restype = native.DWORD
+         f.FwpmGetAppIdFromFileName0.argtypes = [native.LPCWSTR,
+                                                 C0.POINTER(C0.POINTER(native.FWP_BYTE_BLOB))]
+         f.FwpmGetAppIdFromFileName0.restype = native.DWORD
+         self._advapi.ConvertStringSidToSidW.argtypes = [native.LPCWSTR, C0.POINTER(C0.c_void_p)]
+         self._advapi.ConvertStringSidToSidW.restype = native.BOOL
+-        self._advapi.LocalFree.argtypes = [C0.c_void_p]
+-        self._advapi.LocalFree.restype = C0.c_void_p
++        self._advapi.ConvertStringSecurityDescriptorToSecurityDescriptorW.argtypes = [
++            native.LPCWSTR, native.DWORD, C0.POINTER(C0.c_void_p), C0.POINTER(native.DWORD)]
++        self._advapi.ConvertStringSecurityDescriptorToSecurityDescriptorW.restype = native.BOOL
++        self._kernel32.LocalFree.argtypes = [C0.c_void_p]
++        self._kernel32.LocalFree.restype = C0.c_void_p
+ 
+     def _check(self, status: int, field: str, *, code: str = "WFP_API_FAILED") -> None:
+         if int(status) != 0:
+@@ -200,7 +222,7 @@
+         if not pointer.value:
+             return
+         try:
+-            result = self._advapi.LocalFree(pointer)
++            result = self._kernel32.LocalFree(pointer)
+             if result:
+                 _fail("WFP_LOCAL_ALLOCATION_RELEASE_UNKNOWN", "LocalFree did not release a WFP local allocation",
+                       details={"primary_type": type(primary).__name__ if primary is not None else None},
+@@ -327,6 +349,324 @@
+         finally:
+             self._free(C.cast(pointer, C.c_void_p).value)
+ 
++    def _provider_row_or_none(self, engine: Any, key: str) -> dict[str, Any] | None:
++        pointer = C.POINTER(native.FWPM_PROVIDER0)()
++        guid = guid_struct(key)
++        status = int(self._fwpu.FwpmProviderGetByKey0(engine, C.byref(guid), C.byref(pointer)))
++        if status == 0 and pointer:
++            try:
++                item = pointer.contents
++                return {
++                    "provider_key": self.api._guid(item.providerKey),
++                    "display_data": self.api._display_data(item.displayData, "provider"),
++                    "flags": int(item.flags),
++                    "provider_data_sha256": hashlib.sha256(
++                        bytes.fromhex(self.api._bounded_blob(item.providerData))).hexdigest(),
++                    "service_name": native._bounded_utf16(
++                        item.serviceName, "WFP provider service name", nullable=True),
++                    "security_sha256": self.api._wfp_security_sha(engine, "Provider", item.providerKey),
++                }
++            finally:
++                self._free(C.cast(pointer, C.c_void_p).value)
++        if pointer:
++            self._free(C.cast(pointer, C.c_void_p).value)
++            _fail("WFP_NATIVE_ABI_INVALID", "failed provider lookup returned an allocated object",
++                  details={"status": status}, stage="execution")
++        if status == FWP_E_PROVIDER_NOT_FOUND:
++            return None
++        if status == 0:
++            _fail("WFP_NATIVE_ABI_INVALID", "provider lookup succeeded without a result object",
++                  stage="execution")
++        self._check(status, "FwpmProviderGetByKey0")
++        return None
++
++    def _sublayer_row_or_none(self, engine: Any, key: str) -> dict[str, Any] | None:
++        pointer = C.POINTER(native.FWPM_SUBLAYER0)()
++        guid = guid_struct(key)
++        status = int(self._fwpu.FwpmSubLayerGetByKey0(engine, C.byref(guid), C.byref(pointer)))
++        if status == 0 and pointer:
++            try:
++                item = pointer.contents
++                return {
++                    "sublayer_key": self.api._guid(item.subLayerKey),
++                    "display_data": self.api._display_data(item.displayData, "sublayer"),
++                    "flags": int(item.flags),
++                    "provider_key": self.api._guid(item.providerKey.contents) if item.providerKey else None,
++                    "provider_data_sha256": hashlib.sha256(
++                        bytes.fromhex(self.api._bounded_blob(item.providerData))).hexdigest(),
++                    "weight": int(item.weight),
++                    "security_sha256": self.api._wfp_security_sha(engine, "SubLayer", item.subLayerKey),
++                }
++            finally:
++                self._free(C.cast(pointer, C.c_void_p).value)
++        if pointer:
++            self._free(C.cast(pointer, C.c_void_p).value)
++            _fail("WFP_NATIVE_ABI_INVALID", "failed sublayer lookup returned an allocated object",
++                  details={"status": status}, stage="execution")
++        if status == FWP_E_SUBLAYER_NOT_FOUND:
++            return None
++        if status == 0:
++            _fail("WFP_NATIVE_ABI_INVALID", "sublayer lookup succeeded without a result object",
++                  stage="execution")
++        self._check(status, "FwpmSubLayerGetByKey0")
++        return None
++
++    def read_provider(self, provider_key: str) -> dict[str, Any] | None:
++        return self._session(readonly=True,
++                             callback=lambda engine: self._provider_row_or_none(engine, provider_key))
++
++    def read_sublayer(self, sublayer_key: str) -> dict[str, Any] | None:
++        return self._session(readonly=True,
++                             callback=lambda engine: self._sublayer_row_or_none(engine, sublayer_key))
++
++    @staticmethod
++    def _expected_provider_row(desired: Mapping[str, Any]) -> dict[str, Any]:
++        return {
++            "provider_key": _canonical_guid(desired["provider_key"]),
++            "display_data": {"name": desired["display_name"], "description": desired["description"]},
++            "flags": desired["flags"],
++            "provider_data_sha256": hashlib.sha256(b"").hexdigest(),
++            "service_name": desired["service_name"],
++            "security_sha256": desired["security_sha256"],
++        }
++
++    @staticmethod
++    def _expected_sublayer_row(desired: Mapping[str, Any]) -> dict[str, Any]:
++        return {
++            "sublayer_key": _canonical_guid(desired["sublayer_key"]),
++            "display_data": {"name": desired["display_name"], "description": desired["description"]},
++            "flags": desired["flags"],
++            "provider_key": _canonical_guid(desired["provider_key"]),
++            "provider_data_sha256": hashlib.sha256(b"").hexdigest(),
++            "weight": desired["weight"],
++            "security_sha256": desired["security_sha256"],
++        }
++
++    @staticmethod
++    def _validate_provider_row(row: Mapping[str, Any] | None,
++                               desired: Mapping[str, Any]) -> dict[str, Any]:
++        expected = CtypesWindowsWfpMutationApi._expected_provider_row(desired)
++        if not isinstance(row, Mapping) or set(row) != set(expected) or dict(row) != expected:
++            _fail("WFP_PROVIDER_READBACK_MISMATCH",
++                  "WFP provider readback differs from the exact persistent resource and security hash",
++                  stage="execution")
++        return dict(row)
++
++    @staticmethod
++    def _validate_sublayer_row(row: Mapping[str, Any] | None,
++                               desired: Mapping[str, Any]) -> dict[str, Any]:
++        expected = CtypesWindowsWfpMutationApi._expected_sublayer_row(desired)
++        if not isinstance(row, Mapping) or set(row) != set(expected) or dict(row) != expected:
++            _fail("WFP_SUBLAYER_READBACK_MISMATCH",
++                  "WFP sublayer readback differs from the exact persistent resource and security hash",
++                  stage="execution")
++        return dict(row)
++
++    @contextmanager
++    def _security_descriptor(self, sddl: str, expected_sha256: str):
++        pointer = C.c_void_p()
++        output_size = native.DWORD(0)
++        primary: BaseException | None = None
++        try:
++            ok = self._advapi.ConvertStringSecurityDescriptorToSecurityDescriptorW(
++                sddl, 1, C.byref(pointer), C.byref(output_size))
++            if not ok or not pointer.value:
++                _fail("WFP_SECURITY_SDDL_INVALID",
++                      "security descriptor conversion failed before any WFP mutation",
++                      details={"winerror": int(C.get_last_error())}, stage="validation")
++            observed_size = int(self.api._advapi.GetSecurityDescriptorLength(pointer))
++            if (not 20 <= observed_size <= 256 * 1024 or output_size.value != observed_size):
++                _fail("WFP_SECURITY_DESCRIPTOR_ABI_INVALID",
++                      "converted security descriptor length is inconsistent or outside its bound",
++                      stage="validation")
++            raw = C.string_at(pointer, observed_size)
++            try:
++                observed_sha = native.canonical_security_descriptor_sha256(raw)
++            except ValueError as exc:
++                _fail("WFP_SECURITY_DESCRIPTOR_UNSUPPORTED",
++                      "converted security descriptor is outside the normalized ACL subset",
++                      details={"cause_type": type(exc).__name__}, stage="validation")
++            if observed_sha != expected_sha256:
++                _fail("WFP_SECURITY_DESCRIPTOR_DIGEST_MISMATCH",
++                      "SDDL does not produce the exact security descriptor digest declared by the plan",
++                      stage="validation")
++            yield pointer
++        except BaseException as exc:
++            primary = exc
++            raise
++        finally:
++            if pointer.value:
++                self._free_local(pointer, primary=primary)
++
++    def preflight_security_descriptors(self, actions: tuple[Mapping[str, Any], ...]) -> None:
++        """Validate every CREATE descriptor before authorization admission/effects."""
++        for action in actions:
++            if action.get("resource_kind") not in {"wfp_provider", "wfp_sublayer"}:
++                continue
++            desired = action.get("desired")
++            if not isinstance(desired, Mapping):
++                _fail("WFP_SECURITY_SDDL_INVALID", "planned WFP security resource is malformed")
++            with self._security_descriptor(desired["security_sddl"], desired["security_sha256"]):
++                pass
++
++    def _provider_object(self, desired: Mapping[str, Any]) -> native.FWPM_PROVIDER0:
++        row = native.FWPM_PROVIDER0()
++        row.providerKey = guid_struct(desired["provider_key"])
++        name = C.create_unicode_buffer(desired["display_name"])
++        description = C.create_unicode_buffer(desired["description"])
++        service_name = C.create_unicode_buffer(desired["service_name"])
++        row.displayData.name = C.cast(name, C.c_void_p)
++        row.displayData.description = C.cast(description, C.c_void_p)
++        row.flags = int(desired["flags"])
++        row.providerData.size = 0
++        row.providerData.data = C.POINTER(native.BYTE)()
++        row.serviceName = C.cast(service_name, C.c_void_p)
++        row._keepalive = (name, description, service_name)
++        return row
++
++    def _sublayer_object(self, desired: Mapping[str, Any]) -> native.FWPM_SUBLAYER0:
++        row = native.FWPM_SUBLAYER0()
++        row.subLayerKey = guid_struct(desired["sublayer_key"])
++        name = C.create_unicode_buffer(desired["display_name"])
++        description = C.create_unicode_buffer(desired["description"])
++        provider = guid_struct(desired["provider_key"])
++        row.displayData.name = C.cast(name, C.c_void_p)
++        row.displayData.description = C.cast(description, C.c_void_p)
++        row.flags = int(desired["flags"])
++        row.providerKey = C.pointer(provider)
++        row.providerData.size = 0
++        row.providerData.data = C.POINTER(native.BYTE)()
++        row.weight = int(desired["weight"])
++        row._keepalive = (name, description, provider)
++        return row
++
++    def create_provider(self, *, action: Mapping[str, Any]) -> dict[str, Any]:
++        desired = action["desired"]
++        expected = self._expected_provider_row(desired)
++
++        def write(engine):
++            if self._provider_row_or_none(engine, desired["provider_key"]) is not None:
++                _fail("WFP_PROVIDER_KEY_EXISTS", "configured WFP provider exists; no overwrite is permitted",
++                      stage="execution")
++            provider = self._provider_object(desired)
++            with self._security_descriptor(desired["security_sddl"], desired["security_sha256"]) as sd:
++                status = int(self._fwpu.FwpmProviderAdd0(engine, C.byref(provider), sd))
++            self._check(status, "FwpmProviderAdd0", code="WFP_PROVIDER_ADD_FAILED")
++            row = self._provider_row_or_none(engine, desired["provider_key"])
++            return self._validate_provider_row(row, desired)
++
++        row = self._session(readonly=False, callback=write)
++        persisted = self.read_provider(desired["provider_key"])
++        if persisted is None or sha256(persisted) != sha256(row):
++            _fail("WFP_PROVIDER_READBACK_UNKNOWN", "committed WFP provider lacks an exact fresh readback",
++                  stage="execution")
++        validated = self._validate_provider_row(persisted, desired)
++        if sha256(validated) != sha256(expected):
++            _fail("WFP_PROVIDER_READBACK_MISMATCH", "provider resource hash differs from its exact desired identity",
++                  stage="execution")
++        return validated
++
++    def create_sublayer(self, *, action: Mapping[str, Any],
++                        expected_provider_sha256: str) -> dict[str, Any]:
++        desired = action["desired"]
++
++        def write(engine):
++            provider = self._provider_row_or_none(engine, desired["provider_key"])
++            if provider is None or sha256(provider) != expected_provider_sha256:
++                _fail("WFP_SUBLAYER_PROVIDER_DEPENDENCY_MISMATCH",
++                      "sublayer creation requires the exact previously verified provider",
++                      stage="execution")
++            if self._sublayer_row_or_none(engine, desired["sublayer_key"]) is not None:
++                _fail("WFP_SUBLAYER_KEY_EXISTS", "configured WFP sublayer exists; no overwrite is permitted",
++                      stage="execution")
++            sublayer = self._sublayer_object(desired)
++            with self._security_descriptor(desired["security_sddl"], desired["security_sha256"]) as sd:
++                status = int(self._fwpu.FwpmSubLayerAdd0(engine, C.byref(sublayer), sd))
++            self._check(status, "FwpmSubLayerAdd0", code="WFP_SUBLAYER_ADD_FAILED")
++            row = self._sublayer_row_or_none(engine, desired["sublayer_key"])
++            return self._validate_sublayer_row(row, desired)
++
++        row = self._session(readonly=False, callback=write)
++        persisted = self.read_sublayer(desired["sublayer_key"])
++        if persisted is None or sha256(persisted) != sha256(row):
++            _fail("WFP_SUBLAYER_READBACK_UNKNOWN", "committed WFP sublayer lacks an exact fresh readback",
++                  stage="execution")
++        return self._validate_sublayer_row(persisted, desired)
++
++    def _complete_wfp_rows(self, engine: Any) -> dict[str, list[dict[str, Any]]]:
++        budget = native._WfpBudget.start()
++        return {
++            "providers": self.api._enum(engine, "Provider", budget),
++            "sublayers": self.api._enum(engine, "SubLayer", budget),
++            "filters": self.api._enum(engine, "Filter", budget),
++            "provider_contexts": self.api._enum(engine, "ProviderContext", budget),
++        }
++
++    def delete_sublayer(self, *, action: Mapping[str, Any], expected_resource_sha256: str) -> None:
++        desired = action["desired"]
++
++        def write(engine):
++            rows = self._complete_wfp_rows(engine)
++            if rows["provider_contexts"]:
++                _fail("WFP_SUBLAYER_CHILDREN_UNCLASSIFIED",
++                      "provider contexts are present and cannot be proven unrelated to the sublayer",
++                      stage="execution")
++            key = guid_key(desired["sublayer_key"])
++            if any(guid_key(row["sublayer_key"]) == key for row in rows["filters"]):
++                _fail("WFP_SUBLAYER_CHILDREN_PRESENT", "a WFP filter still references the sublayer",
++                      stage="execution")
++            current = self._sublayer_row_or_none(engine, desired["sublayer_key"])
++            if current is None or sha256(current) != expected_resource_sha256:
++                _fail("WFP_SUBLAYER_DRIFTED", "receipt-bound WFP sublayer changed; it was preserved",
++                      stage="execution")
++            self._validate_sublayer_row(current, desired)
++            guid = guid_struct(desired["sublayer_key"])
++            status = int(self._fwpu.FwpmSubLayerDeleteByKey0(engine, C.byref(guid)))
++            self._check(status, "FwpmSubLayerDeleteByKey0", code="WFP_SUBLAYER_DELETE_FAILED")
++            if self._sublayer_row_or_none(engine, desired["sublayer_key"]) is not None:
++                _fail("WFP_SUBLAYER_DELETE_READBACK_MISMATCH", "WFP sublayer remained in its delete transaction",
++                      stage="execution")
++
++        self._session(readonly=False, callback=write)
++        if self.read_sublayer(desired["sublayer_key"]) is not None:
++            _fail("WFP_SUBLAYER_DELETE_READBACK_UNKNOWN", "deleted WFP sublayer remains after commit",
++                  stage="execution")
++
++    def delete_provider(self, *, action: Mapping[str, Any], expected_resource_sha256: str) -> None:
++        desired = action["desired"]
++
++        def write(engine):
++            rows = self._complete_wfp_rows(engine)
++            if rows["provider_contexts"]:
++                _fail("WFP_PROVIDER_CHILDREN_UNCLASSIFIED",
++                      "provider contexts are present and cannot be proven unrelated to the provider",
++                      stage="execution")
++            key = guid_key(desired["provider_key"])
++            if any(row.get("provider_key") is not None and guid_key(row["provider_key"]) == key
++                   for row in rows["sublayers"]):
++                _fail("WFP_PROVIDER_CHILDREN_PRESENT", "a WFP sublayer still references the provider",
++                      stage="execution")
++            if any(row.get("provider_key") is not None and guid_key(row["provider_key"]) == key
++                   for row in rows["filters"]):
++                _fail("WFP_PROVIDER_CHILDREN_PRESENT", "a WFP filter still references the provider",
++                      stage="execution")
++            current = self._provider_row_or_none(engine, desired["provider_key"])
++            if current is None or sha256(current) != expected_resource_sha256:
++                _fail("WFP_PROVIDER_DRIFTED", "receipt-bound WFP provider changed; it was preserved",
++                      stage="execution")
++            self._validate_provider_row(current, desired)
++            guid = guid_struct(desired["provider_key"])
++            status = int(self._fwpu.FwpmProviderDeleteByKey0(engine, C.byref(guid)))
++            self._check(status, "FwpmProviderDeleteByKey0", code="WFP_PROVIDER_DELETE_FAILED")
++            if self._provider_row_or_none(engine, desired["provider_key"]) is not None:
++                _fail("WFP_PROVIDER_DELETE_READBACK_MISMATCH", "WFP provider remained in its delete transaction",
++                      stage="execution")
++
++        self._session(readonly=False, callback=write)
++        if self.read_provider(desired["provider_key"]) is not None:
++            _fail("WFP_PROVIDER_DELETE_READBACK_UNKNOWN", "deleted WFP provider remains after commit",
++                  stage="execution")
++
+     def _filter_row_or_none(self, engine: Any, key: str) -> dict[str, Any] | None:
+         pointer = C.POINTER(native.FWPM_FILTER0)()
+         guid = guid_struct(key)
+@@ -354,6 +694,28 @@
+         return self._session(readonly=True,
+                              callback=lambda engine: self._filter_row_or_none(engine, filter_key))
+ 
++    def _app_id_blob(self, image_path: str) -> bytes:
++        """Read the exact application-ID blob for a configured image path."""
++        output = C.POINTER(native.FWP_BYTE_BLOB)()
++        primary: BaseException | None = None
++        try:
++            status = int(self._fwpu.FwpmGetAppIdFromFileName0(image_path, C.byref(output)))
++            if status != 0 or not output:
++                self._check(status, "FwpmGetAppIdFromFileName0")
++                _fail("WFP_NATIVE_ABI_INVALID", "application-ID lookup succeeded without an app blob",
++                      stage="execution")
++            blob = output.contents
++            if int(blob.size) <= 0 or int(blob.size) > 256 * 1024 or not blob.data:
++                _fail("WFP_NATIVE_ABI_INVALID", "application-ID blob length/pointer is invalid",
++                      stage="execution")
++            return C.string_at(blob.data, int(blob.size))
++        except BaseException as exc:
++            primary = exc
++            raise
++        finally:
++            if output:
++                self._free(C.cast(output, C.c_void_p).value, primary=primary)
++
+     def _check_dependencies(self, engine: Any, profile: Any, expected_sha256: str) -> dict[str, Any]:
+         policy = profile.windows_isolation
+         provider = self._provider_row(engine, policy.wfp_provider_key)
+@@ -395,7 +757,10 @@
+         if persisted is None or sha256(persisted) != sha256(row):
+             _fail("WFP_FILTER_READBACK_UNKNOWN", "committed WFP filter differs from the exact post-commit readback",
+                   stage="execution")
+-        self._validate_filter_semantics(persisted, profile, action, grant, marker)
++        app_blob = self._app_id_blob(grant["application_path"])
++        self._validate_filter_semantics(persisted, profile, action, grant, marker,
++                                        expected_app_blob=app_blob,
++                                        expected_package_sid=grant["principal_sid"])
+         return persisted
+ 
+     def _add_filter_in_transaction(self, engine: Any, policy: Any, action: Mapping[str, Any],
+@@ -566,6 +931,10 @@
+                                    marker: bytes, *, expected_policy: Any | None = None,
+                                    expected_app_blob: bytes | None = None,
+                                    expected_package_sid: str | None = None) -> None:
++        if expected_app_blob is None or expected_package_sid is None:
++            _fail("WFP_FILTER_IDENTITY_UNBOUND",
++                  "filter semantic readback must bind the configured application-ID and package SID",
++                  stage="execution")
+         policy = expected_policy if expected_policy is not None else profile.windows_isolation
+         if (guid_key(row.get("filter_key")) != guid_key(action["filter_key"])
+                 or guid_key(row.get("provider_key")) != guid_key(policy.wfp_provider_key)
+@@ -585,19 +954,36 @@
+         actual = row.get("conditions")
+         if not isinstance(actual, list):
+             _fail("WFP_FILTER_READBACK_MISMATCH", "WFP filter conditions are unavailable", stage="execution")
+-        # Native readback returns hashes for pointer-backed blobs; these are
+-        # checked by the creation path before this method. Exact key/type/value
+-        # cardinality is checked here for scalar/address conditions.
+-        fields = [item.get("field_key", "").upper() for item in actual if isinstance(item, Mapping)]
+         expected_rows = self._expected_conditions(grant, expected_app_blob, expected_package_sid)
+-        expected_fields = [item["field_key"] for item in expected_rows]
+-        if len(actual) != len(expected_fields) or sorted(fields) != sorted(expected_fields):
++        expected_by_field = {guid_key(item["field_key"]): item for item in expected_rows}
++        actual_by_field: dict[str, Mapping[str, Any]] = {}
++        for item in actual:
++            if (not isinstance(item, Mapping)
++                    or set(item) != {"field_key", "match_type", "condition_value"}
++                    or type(item.get("match_type")) is not int
++                    or not isinstance(item.get("condition_value"), Mapping)):
++                _fail("WFP_FILTER_READBACK_MISMATCH",
++                      "WFP condition row has unknown fields or malformed match/value types",
++                      stage="execution")
++            try:
++                field = guid_key(item["field_key"])
++            except WindowsWfpMutationError:
++                _fail("WFP_FILTER_READBACK_MISMATCH", "WFP condition field key is malformed",
++                      stage="execution")
++            if field in actual_by_field:
++                _fail("WFP_FILTER_READBACK_MISMATCH", "WFP filter has duplicate condition fields",
++                      stage="execution")
++            actual_by_field[field] = item
++        if len(actual) != len(expected_rows) or set(actual_by_field) != set(expected_by_field):
+             _fail("WFP_FILTER_READBACK_MISMATCH", "WFP filter has missing, duplicate, or unsupported conditions",
+                   stage="execution")
+-        actual_by_field = {guid_key(item["field_key"]): item["condition_value"]
+-                           for item in actual if isinstance(item, Mapping)}
+         for expected in expected_rows:
+-            actual_value = actual_by_field.get(guid_key(expected["field_key"]))
++            actual_row = actual_by_field[guid_key(expected["field_key"])]
++            if actual_row["match_type"] != expected["match_type"]:
++                _fail("WFP_FILTER_READBACK_MISMATCH",
++                      "WFP condition match operator differs from the exact equality grant",
++                      stage="execution")
++            actual_value = actual_row["condition_value"]
+             expected_value = expected["condition_value"]
+             if expected_value.get("type") == FWP_BYTE_BLOB_TYPE:
+                 if set(actual_value or {}) != {"type", "size", "sha256"}:
+@@ -630,7 +1016,10 @@
+                       stage="execution")
+             marker = self._owned_marker(profile, action)
+             grant = action["grant"]
+-            self._validate_filter_semantics(current, profile, action, grant, marker)
++            app_blob = self._app_id_blob(grant["application_path"])
++            self._validate_filter_semantics(current, profile, action, grant, marker,
++                                            expected_app_blob=app_blob,
++                                            expected_package_sid=grant["principal_sid"])
+             guid = guid_struct(action["filter_key"])
+             status = int(self._fwpu.FwpmFilterDeleteByKey0(engine, C.byref(guid)))
+             self._check(status, "FwpmFilterDeleteByKey0", code="WFP_FILTER_DELETE_FAILED")
+--- preimage/comsol_mcp/_windows_t037_native.py
++++ current/comsol_mcp/_windows_t037_native.py
+@@ -74,9 +74,9 @@
+     def add_page(self, kind: str, *, now_ns: int | None = None) -> None:
+         self.check_time(now_ns=now_ns)
+         self.pages += 1
+-        if self.pages > MAX_ENUM_PAGES * 3:
++        if self.pages > MAX_ENUM_PAGES * 4:
+             _fail("T037_NATIVE_WFP_PAGE_LIMIT", "WFP snapshot exceeded its total page bound",
+-                  max_pages=MAX_ENUM_PAGES * 3)
++                  max_pages=MAX_ENUM_PAGES * 4)
+         if self.pages_by_kind is None:
+             self.pages_by_kind = {}
+         self.pages_by_kind[kind] = self.pages_by_kind.get(kind, 0) + 1
+@@ -250,6 +250,10 @@
+                 ("flags", C.c_uint32), ("providerKey", C.POINTER(GUID)),
+                 ("providerData", FWP_BYTE_BLOB), ("weight", C.c_uint16)]
+ 
++class FWPM_PROVIDER_CONTEXT0(C.Structure):
++    """Opaque pointer target; provider-context semantics remain unclassified."""
++    pass
++
+ class FWPM_RANGE0(C.Structure):
+     _fields_ = [("valueLow", FWP_VALUE0), ("valueHigh", FWP_VALUE0)]
+ 
+@@ -513,7 +517,7 @@
+                     "service_sid", "state", "process_id", "binary_path", "service_binary_image_path",
+                     "service_binary_argv_sha256", "service_security_sha256", "service_security_semantics"}
+         wfp_keys = {"state", "counts", "limits", "snapshot_sha256", "reasons",
+-                    "providers", "sublayers", "filters"}
++                    "providers", "sublayers", "filters", "provider_contexts"}
+ 
+         def service_snapshot() -> dict[str, Any]:
+             row = self.api.observe_service(policy.service_name)
+@@ -534,13 +538,13 @@
+         wfp = self.api.observe_wfp_snapshot()
+         if not isinstance(wfp, Mapping) or set(wfp) != wfp_keys:
+             _fail("T037_NATIVE_WFP_ABI_INVALID", "WFP adapter returned an incomplete or unknown snapshot")
+-        required_counts = {"providers", "sublayers", "filters", "conditions", "pages",
++        required_counts = {"providers", "sublayers", "filters", "provider_contexts", "conditions", "pages",
+                            "pages_by_kind", "total_records", "total_bytes", "elapsed_ms"}
+         counts = wfp.get("counts")
+         limits = wfp.get("limits")
+         if (not isinstance(counts, Mapping) or set(counts) != required_counts
+                 or not isinstance(counts.get("pages_by_kind"), Mapping)
+-                or set(counts["pages_by_kind"]) != {"Provider", "SubLayer", "Filter"}
++                or set(counts["pages_by_kind"]) != {"Provider", "SubLayer", "Filter", "ProviderContext"}
+                 or not isinstance(limits, Mapping)
+                 or set(limits) != {"max_page_size", "max_pages_per_kind", "max_total_pages",
+                                    "max_total_records", "max_total_bytes", "max_elapsed_ms"}
+@@ -550,6 +554,7 @@
+                 or any(type(value) is not int or value <= 0 for value in limits.values())):
+             _fail("T037_NATIVE_WFP_ABI_INVALID", "WFP snapshot bounds/counters are malformed")
+         if (counts["total_records"] != counts["providers"] + counts["sublayers"] + counts["filters"]
++                + counts["provider_contexts"]
+                 or counts["total_records"] > limits["max_total_records"]
+                 or counts["total_bytes"] > limits["max_total_bytes"]
+                 or counts["elapsed_ms"] > limits["max_elapsed_ms"]
+@@ -557,12 +562,18 @@
+                 or sum(counts["pages_by_kind"].values()) != counts["pages"]
+                 or not _SHA_RE.fullmatch(wfp.get("snapshot_sha256", ""))):
+             _fail("T037_NATIVE_WFP_ABI_INVALID", "WFP snapshot did not satisfy its declared completeness bounds")
+-        if not all(isinstance(wfp.get(key), list) for key in ("reasons", "providers", "sublayers", "filters")):
++        if not all(isinstance(wfp.get(key), list) for key in
++                   ("reasons", "providers", "sublayers", "filters", "provider_contexts")):
+             _fail("T037_NATIVE_WFP_ABI_INVALID", "WFP snapshot arrays are malformed")
+         if any(not isinstance(item, str) for item in wfp["reasons"]):
+             _fail("T037_NATIVE_WFP_ABI_INVALID", "WFP snapshot reasons are malformed")
++        if any(not isinstance(item, Mapping) or set(item) != {"state"}
++               or item.get("state") != "PRESENT_UNCLASSIFIED"
++               for item in wfp["provider_contexts"]):
++            _fail("T037_NATIVE_WFP_ABI_INVALID",
++                  "provider-context snapshot rows must remain opaque and explicitly unclassified")
+         expected_limits = {"max_page_size": MAX_ENUM_PAGE, "max_pages_per_kind": MAX_ENUM_PAGES,
+-                           "max_total_pages": MAX_ENUM_PAGES * 3, "max_total_records": MAX_ENUM_ROWS,
++                           "max_total_pages": MAX_ENUM_PAGES * 4, "max_total_records": MAX_ENUM_ROWS,
+                            "max_total_bytes": MAX_ENUM_TOTAL_BYTES,
+                            "max_elapsed_ms": MAX_ENUM_SECONDS * 1000}
+         if dict(limits) != expected_limits:
+@@ -570,14 +581,15 @@
+         if (counts["providers"] != len(wfp["providers"])
+                 or counts["sublayers"] != len(wfp["sublayers"])
+                 or counts["filters"] != len(wfp["filters"])
++                or counts["provider_contexts"] != len(wfp["provider_contexts"])
+                 or counts["conditions"] != sum(
+                     len(row.get("conditions", [])) for row in wfp["filters"] if isinstance(row, Mapping))):
+             _fail("T037_NATIVE_WFP_ABI_INVALID", "WFP snapshot counts differ from its returned rows")
+         if any(counts["pages_by_kind"][kind] > MAX_ENUM_PAGES
+-               for kind in ("Provider", "SubLayer", "Filter")):
++               for kind in ("Provider", "SubLayer", "Filter", "ProviderContext")):
+             _fail("T037_NATIVE_WFP_ABI_INVALID", "WFP per-kind page counter exceeds its compiled bound")
+         if any(counts["pages_by_kind"][kind] < 1
+-               for kind in ("Provider", "SubLayer", "Filter")):
++               for kind in ("Provider", "SubLayer", "Filter", "ProviderContext")):
+             _fail("T037_NATIVE_WFP_ABI_INVALID", "WFP snapshot omitted a required complete enumeration")
+         filter_fields = {"filter_key", "display_data", "provider_key", "layer_key", "sublayer_key",
+                          "flags", "filter_id", "action_type", "action_callout_key", "context", "weight",
+@@ -675,9 +687,13 @@
+             "providers": sorted(wfp["providers"], key=lambda item: item["provider_key"]),
+             "sublayers": sorted(wfp["sublayers"], key=lambda item: item["sublayer_key"]),
+             "filters": sorted(wfp["filters"], key=lambda item: (item["layer_key"], item["filter_id"])),
++            "provider_contexts": wfp["provider_contexts"],
+         }
+-        if _sha(canonical_snapshot) != wfp["snapshot_sha256"]:
+-            _fail("T037_NATIVE_WFP_ABI_INVALID", "WFP rows do not match their exact snapshot digest")
++        canonical_bytes = _canonical(canonical_snapshot)
++        if (len(canonical_bytes) != counts["total_bytes"]
++                or _sha(canonical_snapshot) != wfp["snapshot_sha256"]):
++            _fail("T037_NATIVE_WFP_ABI_INVALID",
++                  "WFP rows or total-byte count do not match their exact snapshot digest")
+         proc_after = None
+         if process_observer is not None and type(scm_before["process_id"]) is int and scm_before["process_id"] > 0:
+             proc_after = self._process_identity(process_observer.observe_process(scm_before["process_id"]))
+@@ -725,6 +741,8 @@
+         if wfp["state"] != "COMPLETE_READ_ONLY":
+             reasons.append("WFP_SNAPSHOT_INCOMPLETE_OR_UNVERIFIED")
+         reasons.extend(wfp["reasons"])
++        if wfp["provider_contexts"] and "WFP_PROVIDER_CONTEXT_ROWS_UNCLASSIFIED" not in reasons:
++            reasons.append("WFP_PROVIDER_CONTEXT_ROWS_UNCLASSIFIED")
+         if any(row["flags"] != 0 for row in (*wfp["providers"], *wfp["sublayers"])):
+             reasons.append("WFP_PROVIDER_OR_SUBLAYER_FLAGS_NOT_CLASSIFIED")
+         if any(row["flags"] & ~0x7f for row in wfp["filters"]):
+@@ -861,6 +879,9 @@
+             _fail("T037_NATIVE_UNSUPPORTED", "Win32 policy API cannot bind outside Windows")
+         loader = dll_loader or C.WinDLL
+         self._advapi = loader("advapi32", use_last_error=True)
++        # LocalFree is exported by Kernel32.dll.  Do not rely on forwarded or
++        # dependency exports being visible through Advapi32's loader handle.
++        self._kernel32 = loader("kernel32", use_last_error=True)
+         self._fwpu = loader("fwpuclnt", use_last_error=True)
+         self._bind_scm()
+         self._bind_wfp()
+@@ -890,8 +911,8 @@
+         a.ConvertSidToStringSidW.restype = BOOL
+         a.IsValidSid.argtypes = [C.c_void_p]
+         a.IsValidSid.restype = BOOL
+-        a.LocalFree.argtypes = [C.c_void_p]
+-        a.LocalFree.restype = C.c_void_p
++        self._kernel32.LocalFree.argtypes = [C.c_void_p]
++        self._kernel32.LocalFree.restype = C.c_void_p
+ 
+     def observe_active_interactive_sids(self) -> tuple[str, ...]:
+         """Read every WTS Active session token; any inaccessible session fails closed."""
+@@ -952,7 +973,7 @@
+         f.FwpmTransactionCommit0.restype = DWORD
+         f.FwpmTransactionAbort0.argtypes = [HANDLE]
+         f.FwpmTransactionAbort0.restype = DWORD
+-        for kind in ("Filter", "Provider", "SubLayer"):
++        for kind in ("Filter", "Provider", "SubLayer", "ProviderContext"):
+             create = getattr(f, f"Fwpm{kind}CreateEnumHandle0")
+             enum = getattr(f, f"Fwpm{kind}Enum0")
+             destroy = getattr(f, f"Fwpm{kind}DestroyEnumHandle0")
+@@ -1056,7 +1077,7 @@
+         try:
+             value = text.value
+         finally:
+-            self._advapi.LocalFree(C.cast(text, C.c_void_p))
++            self._kernel32.LocalFree(C.cast(text, C.c_void_p))
+         if not isinstance(value, str) or not re.fullmatch(r"S-1-(?:[0-9]{1,2})-(?:[0-9]{1,10})(?:-[0-9]{1,10}){1,14}", value, re.I):
+             _fail("T037_NATIVE_SCM_IDENTITY_UNVERIFIED", "resolved service identity is not a canonical SID")
+         return value.upper()
+@@ -1192,7 +1213,7 @@
+             rows = tuple(_bounded_utf16(argv[index], "SCM command-line argument")
+                          for index in range(argc.value))
+         finally:
+-            self._advapi.LocalFree(C.cast(argv, C.c_void_p))
++            self._kernel32.LocalFree(C.cast(argv, C.c_void_p))
+         if any(item is None for item in rows):
+             _fail("T037_NATIVE_SCM_ABI_INVALID", "SCM command line contains an invalid argument")
+         return tuple(str(item) for item in rows)
+@@ -1247,7 +1268,7 @@
+         try:
+             return str(text.value).upper()
+         finally:
+-            self._advapi.LocalFree(C.cast(text, C.c_void_p))
++            self._kernel32.LocalFree(C.cast(text, C.c_void_p))
+ 
+     def _display_data(self, value: FWPM_DISPLAY_DATA0, kind: str) -> dict[str, str | None]:
+         return {"name": _bounded_utf16(value.name, f"{kind} display name", nullable=True),
+@@ -1355,7 +1376,9 @@
+         create = getattr(self._fwpu, f"Fwpm{kind}CreateEnumHandle0")
+         enum = getattr(self._fwpu, f"Fwpm{kind}Enum0")
+         destroy = getattr(self._fwpu, f"Fwpm{kind}DestroyEnumHandle0")
+-        row_type = {"Filter": FWPM_FILTER0, "Provider": FWPM_PROVIDER0, "SubLayer": FWPM_SUBLAYER0}[kind]
++        row_type = {"Filter": FWPM_FILTER0, "Provider": FWPM_PROVIDER0,
++                    "SubLayer": FWPM_SUBLAYER0,
++                    "ProviderContext": FWPM_PROVIDER_CONTEXT0}[kind]
+         enum_handle = HANDLE()
+         create_status = create(engine, None, C.byref(enum_handle))
+         if create_status != 0:
+@@ -1406,7 +1429,7 @@
+                                 "provider_data_sha256": hashlib.sha256(bytes.fromhex(self._bounded_blob(item.providerData))).hexdigest(),
+                                 "service_name": _bounded_utf16(item.serviceName, "WFP provider service name", nullable=True),
+                                 "security_sha256": self._wfp_security_sha(engine, "Provider", item.providerKey)}
+-                        else:
++                        elif kind == "SubLayer":
+                             row = {"sublayer_key": self._guid(item.subLayerKey),
+                                 "display_data": self._display_data(item.displayData, "sublayer"),
+                                 "flags": int(item.flags),
+@@ -1414,6 +1437,13 @@
+                                 "provider_data_sha256": hashlib.sha256(bytes.fromhex(self._bounded_blob(item.providerData))).hexdigest(),
+                                 "weight": int(item.weight),
+                                 "security_sha256": self._wfp_security_sha(engine, "SubLayer", item.subLayerKey)}
++                        else:
++                            if not pointers[index]:
++                                _fail("T037_NATIVE_WFP_ABI_INVALID",
++                                      "provider-context enumeration returned a null record pointer")
++                            # Count the complete set without interpreting the versioned union.
++                            # Any presence makes parent deletion fail closed in the mutator.
++                            row = {"state": "PRESENT_UNCLASSIFIED"}
+                         budget.add_row(row)
+                         output.append(row)
+                 except BaseException as exc:
+@@ -1483,6 +1513,7 @@
+             providers = self._enum(engine, "Provider", budget)
+             sublayers = self._enum(engine, "SubLayer", budget)
+             filters = self._enum(engine, "Filter", budget)
++            provider_contexts = self._enum(engine, "ProviderContext", budget)
+             budget.check_time()
+             self._wfpcheck(self._fwpu.FwpmTransactionCommit0(engine), "TransactionCommit0(READ_ONLY)")
+             transaction = False
+@@ -1504,11 +1535,14 @@
+                 reasons.append("WFP_FILTER_RIGHTS_OR_CALLOUT_FALLBACK_UNRESOLVED")
+             if any(item["conditions"] for item in filters):
+                 reasons.append("WFP_CONDITION_FIELD_SEMANTICS_NOT_CLASSIFIED")
++            if provider_contexts:
++                reasons.append("WFP_PROVIDER_CONTEXT_ROWS_UNCLASSIFIED")
+             reasons.append("WFP_EFFECTIVE_ARBITRATION_NOT_PROVEN")
+             reasons.append("WFP_LAYER_CATALOG_NOT_ENUMERATED")
+             content = {"providers": sorted(providers, key=lambda item: item["provider_key"] or ""),
+                        "sublayers": sorted(sublayers, key=lambda item: item["sublayer_key"] or ""),
+-                       "filters": sorted(filters, key=lambda item: (item["layer_key"] or "", item["filter_id"]))}
++                       "filters": sorted(filters, key=lambda item: (item["layer_key"] or "", item["filter_id"])),
++                       "provider_contexts": provider_contexts}
+             serialized = _canonical(content)
+             if len(serialized) > MAX_ENUM_TOTAL_BYTES:
+                 _fail("T037_NATIVE_WFP_BYTE_LIMIT", "canonical WFP snapshot exceeds its total byte bound",
+@@ -1516,16 +1550,18 @@
+             budget.check_time()
+             digest = hashlib.sha256(serialized).hexdigest()
+             counts = {"providers": len(providers), "sublayers": len(sublayers), "filters": len(filters),
++                      "provider_contexts": len(provider_contexts),
+                       "conditions": sum(len(item["conditions"]) for item in filters),
+                       "pages": budget.pages, "pages_by_kind": dict(budget.pages_by_kind or {}),
+                       "total_records": budget.rows, "total_bytes": len(serialized),
+                       "elapsed_ms": 0}
+             limits = {"max_page_size": MAX_ENUM_PAGE, "max_pages_per_kind": MAX_ENUM_PAGES,
+-                      "max_total_pages": MAX_ENUM_PAGES * 3, "max_total_records": MAX_ENUM_ROWS,
++                      "max_total_pages": MAX_ENUM_PAGES * 4, "max_total_records": MAX_ENUM_ROWS,
+                       "max_total_bytes": MAX_ENUM_TOTAL_BYTES, "max_elapsed_ms": MAX_ENUM_SECONDS * 1000}
+             result = {"state": "COMPLETE_READ_ONLY", "counts": counts, "limits": limits,
+                       "snapshot_sha256": digest, "reasons": reasons,
+-                      "providers": providers, "sublayers": sublayers, "filters": filters}
++                      "providers": providers, "sublayers": sublayers, "filters": filters,
++                      "provider_contexts": provider_contexts}
+         except BaseException as exc:
+             primary = exc
+             if transaction:
+--- preimage/tests/test_windows_host_change.py
++++ current/tests/test_windows_host_change.py
+@@ -22,6 +22,7 @@
+     WindowsHostChangeError,
+     WindowsHostChangeExecutor,
+     _SOFTWARE_TEST_TOKEN,
++    _normalize_supported_actions,
+     _normalize_supported_plan,
+ )
+ from comsol_mcp._windows_t037_wfp import sha256
+@@ -126,6 +127,37 @@
+     return resources.build_host_change_plan(profile, change_manifest=[action], operator_inputs={})
+ 
+ 
++def _provider_sublayer_plan(profile, *, with_filter=False):
++    empty_sha = hashlib.sha256(b"").hexdigest()
++    policy = profile.windows_isolation
++    actions = [
++        {"action_id": "provider-owned", "resource_kind": "wfp_provider",
++         "resource_name": "provider-owned", "operation": "CREATE",
++         "desired": {"provider_key": PROVIDER_KEY, "display_name": "COMSOL MCP",
++                     "description": "COMSOL MCP owned provider", "flags": 1,
++                     "provider_data_sha256": empty_sha, "service_name": policy.service_name,
++                     "security_sddl": "D:P(A;;GA;;;SY)", "security_sha256": "a" * 64},
++         "baseline_identity": None, "baseline_sha256": None,
++         "backup_path": None, "backup_sha256": None},
++        {"action_id": "sublayer-owned", "resource_kind": "wfp_sublayer",
++         "resource_name": "sublayer-owned", "operation": "CREATE",
++         "desired": {"sublayer_key": SUBLAYER_KEY, "display_name": "COMSOL MCP",
++                     "description": "COMSOL MCP owned sublayer", "flags": 1,
++                     "provider_key": PROVIDER_KEY, "provider_data_sha256": empty_sha,
++                     "weight": 2048, "security_sddl": "D:P(A;;GA;;;SY)",
++                     "security_sha256": "b" * 64},
++         "baseline_identity": None, "baseline_sha256": None,
++         "backup_path": None, "backup_sha256": None},
++    ]
++    if with_filter:
++        filter_desired = resources.validate_host_change_plan(_plan(profile))["change_manifest"][0]["desired"]
++        actions.append({"action_id": "filter-server-loopback", "resource_kind": "wfp_filter",
++                        "resource_name": "server-loopback", "operation": "CREATE",
++                        "desired": filter_desired, "baseline_identity": None,
++                        "baseline_sha256": None, "backup_path": None, "backup_sha256": None})
++    return resources.build_host_change_plan(profile, change_manifest=actions, operator_inputs={})
++
++
+ def _row(profile, action):
+     marker = json.dumps({"schema": "comsol-mcp.t037-owned-wfp-filter/1",
+                          "profile_sha256": profile.sha256,
+@@ -161,23 +193,34 @@
+                          "provider_data_sha256": "6" * 64}
+ 
+     def observe_snapshot(self):
++        from comsol_mcp import _windows_t037_native as native
+         providers, sublayers = [dict(self.provider)], [dict(self.sublayer)]
+         filters = [dict(row) for row in self.filters.values()]
++        provider_contexts = []
+         content = {"providers": sorted(providers, key=lambda row: row["provider_key"]),
+                    "sublayers": sorted(sublayers, key=lambda row: row["sublayer_key"]),
+-                   "filters": sorted(filters, key=lambda row: (row["layer_key"], row["filter_id"]))}
++                   "filters": sorted(filters, key=lambda row: (row["layer_key"], row["filter_id"])),
++                   "provider_contexts": provider_contexts}
+         serialized = json.dumps(content, sort_keys=True, ensure_ascii=False,
+                                 separators=(",", ":"), allow_nan=False).encode()
+         return {
+             "state": "COMPLETE_READ_ONLY",
+-            "counts": {"total_records": len(providers) + len(sublayers) + len(filters),
++            "counts": {"providers": len(providers), "sublayers": len(sublayers),
++                       "filters": len(filters), "provider_contexts": 0, "conditions": 0,
++                       "pages": 4, "pages_by_kind": {"Provider": 1, "SubLayer": 1,
++                       "Filter": 1, "ProviderContext": 1},
++                       "total_records": len(providers) + len(sublayers) + len(filters),
+                        "total_bytes": len(serialized), "elapsed_ms": 1},
+-            "limits": {"max_page_size": 100, "max_pages_per_kind": 100,
+-                       "max_total_records": 100000, "max_total_bytes": 32 * 1024 * 1024,
+-                       "max_elapsed_ms": 30000},
++            "limits": {"max_page_size": native.MAX_ENUM_PAGE,
++                       "max_pages_per_kind": native.MAX_ENUM_PAGES,
++                       "max_total_pages": native.MAX_ENUM_PAGES * 4,
++                       "max_total_records": native.MAX_ENUM_ROWS,
++                       "max_total_bytes": native.MAX_ENUM_TOTAL_BYTES,
++                       "max_elapsed_ms": native.MAX_ENUM_SECONDS * 1000},
+             "snapshot_sha256": hashlib.sha256(serialized).hexdigest(),
+             "reasons": ["WFP_EFFECTIVE_ARBITRATION_NOT_PROVEN"],
+             "providers": providers, "sublayers": sublayers, "filters": filters,
++            "provider_contexts": provider_contexts,
+         }
+ 
+     def create_filter(self, *, profile, action, expected_dependency_sha256):
+@@ -199,6 +242,108 @@
+         if current is None or sha256(current) != expected_resource_sha256:
+             raise RuntimeError("synthetic WFP drift")
+         del self.filters[action["filter_key"]]
++
++
++class FakeWfpSequence:
++    """Synthetic ordered WFP resource adapter used only at the software seam."""
++    def __init__(self, profile):
++        self.profile = profile
++        self.providers = {}
++        self.sublayers = {}
++        self.filters = {}
++        self.provider_contexts = []
++        self.calls = []
++        self.fail_after = None
++        self.fail_after_delete = None
++
++    @staticmethod
++    def _provider_row(action):
++        from comsol_mcp._windows_t037_wfp import CtypesWindowsWfpMutationApi
++        return CtypesWindowsWfpMutationApi._expected_provider_row(action["desired"])
++
++    @staticmethod
++    def _sublayer_row(action):
++        from comsol_mcp._windows_t037_wfp import CtypesWindowsWfpMutationApi
++        return CtypesWindowsWfpMutationApi._expected_sublayer_row(action["desired"])
++
++    def observe_snapshot(self):
++        from comsol_mcp import _windows_t037_native as native
++        providers = [dict(row) for row in self.providers.values()]
++        sublayers = [dict(row) for row in self.sublayers.values()]
++        filters = [dict(row) for row in self.filters.values()]
++        contexts = list(self.provider_contexts)
++        content = {"providers": sorted(providers, key=lambda row: row["provider_key"]),
++                   "sublayers": sorted(sublayers, key=lambda row: row["sublayer_key"]),
++                   "filters": sorted(filters, key=lambda row: (row["layer_key"], row["filter_id"])),
++                   "provider_contexts": contexts}
++        encoded = json.dumps(content, sort_keys=True, ensure_ascii=False,
++                             separators=(",", ":"), allow_nan=False).encode("utf-8")
++        counts = {"providers": len(providers), "sublayers": len(sublayers),
++                  "filters": len(filters), "provider_contexts": len(contexts),
++                  "conditions": sum(len(row.get("conditions", [])) for row in filters),
++                  "pages": 4, "pages_by_kind": {"Provider": 1, "SubLayer": 1,
++                  "Filter": 1, "ProviderContext": 1},
++                  "total_records": len(providers) + len(sublayers) + len(filters) + len(contexts),
++                  "total_bytes": len(encoded), "elapsed_ms": 1}
++        limits = {"max_page_size": native.MAX_ENUM_PAGE,
++                  "max_pages_per_kind": native.MAX_ENUM_PAGES,
++                  "max_total_pages": native.MAX_ENUM_PAGES * 4,
++                  "max_total_records": native.MAX_ENUM_ROWS,
++                  "max_total_bytes": native.MAX_ENUM_TOTAL_BYTES,
++                  "max_elapsed_ms": native.MAX_ENUM_SECONDS * 1000}
++        return {"state": "COMPLETE_READ_ONLY", "counts": counts, "limits": limits,
++                "snapshot_sha256": hashlib.sha256(encoded).hexdigest(),
++                "reasons": ["WFP_EFFECTIVE_ARBITRATION_NOT_PROVEN"], **content}
++
++    def _create(self, action, collection, row):
++        key = action["resource_key"].casefold()
++        self.calls.append(("create", action["resource_kind"], action["resource_key"]))
++        collection[key] = row
++        if self.fail_after == action["resource_kind"]:
++            raise RuntimeError("synthetic process loss after resource mutation")
++        return dict(row)
++
++    def create_provider(self, *, action):
++        return self._create(action, self.providers, self._provider_row(action))
++
++    def create_sublayer(self, *, action, expected_provider_sha256):
++        if (len(self.providers) != 1
++                or sha256(next(iter(self.providers.values()))) != expected_provider_sha256):
++            raise RuntimeError("wrong provider dependency")
++        return self._create(action, self.sublayers, self._sublayer_row(action))
++
++    def create_filter(self, *, profile, action, expected_dependency_sha256):
++        row = _row(profile, action)
++        return self._create(action, self.filters, row)
++
++    def delete_filter(self, *, profile, action, expected_resource_sha256,
++                      expected_dependency_sha256):
++        key = action["resource_key"].casefold()
++        row = self.filters.get(key)
++        if row is None or sha256(row) != expected_resource_sha256:
++            raise RuntimeError("filter drift")
++        del self.filters[key]
++        self.calls.append(("delete", "wfp_filter", action["resource_key"]))
++
++    def delete_sublayer(self, *, action, expected_resource_sha256):
++        key = action["resource_key"].casefold()
++        row = self.sublayers.get(key)
++        if row is None or sha256(row) != expected_resource_sha256 or self.filters:
++            raise RuntimeError("sublayer drift or child remains")
++        del self.sublayers[key]
++        self.calls.append(("delete", "wfp_sublayer", action["resource_key"]))
++        if self.fail_after_delete == "wfp_sublayer":
++            raise RuntimeError("synthetic process loss after sublayer delete")
++
++    def delete_provider(self, *, action, expected_resource_sha256):
++        key = action["resource_key"].casefold()
++        row = self.providers.get(key)
++        if row is None or sha256(row) != expected_resource_sha256 or self.sublayers or self.filters:
++            raise RuntimeError("provider drift or child remains")
++        del self.providers[key]
++        self.calls.append(("delete", "wfp_provider", action["resource_key"]))
++        if self.fail_after_delete == "wfp_provider":
++            raise RuntimeError("synthetic process loss after provider delete")
+ 
+ 
+ @pytest.fixture
+@@ -236,6 +381,14 @@
+ def _events(store, job_id):
+     rows = store.db.execute(
+         "SELECT metadata FROM job_events WHERE job_id=? AND event='HostControlMutationJournalV1' ORDER BY id",
++        (job_id,),
++    ).fetchall()
++    return [json.loads(row["metadata"]) for row in rows]
++
++
++def _events_v2(store, job_id):
++    rows = store.db.execute(
++        "SELECT metadata FROM job_events WHERE job_id=? AND event='HostControlMutationJournalV2' ORDER BY id",
+         (job_id,),
+     ).fetchall()
+     return [json.loads(row["metadata"]) for row in rows]
+@@ -260,6 +413,30 @@
+                "dependency_sha256": baseline["dependency_sha256"]}
+     return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False,
+                                      separators=(",", ":"), allow_nan=False).encode()).hexdigest()
++
++
++def _restore_sequence_sha(profile, plan, receipt, api):
++    from comsol_mcp._windows_host_change import _normalize_supported_actions, _snapshot_sequence_dependencies
++    _payload, actions = _normalize_supported_actions(plan, profile)
++    expected_hashes = {item["action_id"]: item["created_resource_sha256"]
++                       for item in receipt.actions}
++    preliminary = _snapshot_sequence_dependencies(
++        api.observe_snapshot(), profile, actions, phase="RESTORE",
++        expected_resources=expected_hashes, admitted_plan_sha256=plan.sha256)
++    body = {"schema": "comsol-mcp.host-change-restore/2",
++            "profile_sha256": profile.sha256,
++            "source_plan_sha256": plan.sha256,
++            "source_receipt_sha256": receipt.receipt_sha256,
++            "resource_hashes": [{"action_id": action["action_id"],
++                                 "resource_kind": action["resource_kind"],
++                                 "resource_key": action["resource_key"],
++                                 "created_resource_sha256": expected_hashes[action["action_id"]]}
++                                for action in actions],
++            "dependency_sha256": preliminary["dependency_sha256"],
++            "snapshot_sha256": preliminary["snapshot_sha256"]}
++    return hashlib.sha256(json.dumps(
++        body, sort_keys=True, ensure_ascii=False,
++        separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()
+ 
+ 
+ def test_supported_create_and_receipt_bound_restore_are_durably_journalled(host_env, tmp_path):
+@@ -325,6 +502,206 @@
+     assert restore_admission["state"] == "RESTORED"
+     assert [item["event"] for item in _events(store, restore_admission["job_id"])] == [
+         "RESTORE_INTENT", "RESTORE_READBACK_VERIFIED"]
++    provider.close()
++
++
++def test_provider_sublayer_filter_apply_and_reverse_restore_use_v2_per_step_journal(host_env, tmp_path):
++    from comsol_mcp._windows_host_change import _snapshot_sequence_dependencies
++
++    profile, _filter_plan, _action, _api, store, provider, authority, _executor = host_env
++    provider.close()
++    plan = _provider_sublayer_plan(profile, with_filter=True)
++    apply_ref = "provider-sublayer-filter-apply"
++    api = FakeWfpSequence(profile)
++    provider = _write_provider(tmp_path / "provider-config-v2", profile,
++                               [_apply_grant(profile, plan, apply_ref)])
++    authority.authorization_verifier = provider
++    executor = WindowsHostChangeExecutor._for_software_test(
++        store=store, authority=authority, profile=profile, api=api,
++        token=_SOFTWARE_TEST_TOKEN,
++    )
++
++    receipt = executor.apply(plan, approval=resources.HostChangeApproval(plan.sha256, apply_ref))
++    assert receipt.plan_sha256 == plan.sha256
++    assert [item["resource_kind"] for item in receipt.actions] == [
++        "wfp_provider", "wfp_sublayer", "wfp_filter"]
++    assert [item[:2] for item in api.calls] == [
++        ("create", "wfp_provider"), ("create", "wfp_sublayer"), ("create", "wfp_filter")]
++    apply_admission = store.db.execute(
++        "SELECT * FROM host_control_admissions WHERE phase='APPLY'").fetchone()
++    apply_events = _events_v2(store, apply_admission["job_id"])
++    assert [item["event"] for item in apply_events] == [
++        "APPLY_STEP_INTENT", "APPLY_STEP_READBACK_VERIFIED",
++        "APPLY_STEP_INTENT", "APPLY_STEP_READBACK_VERIFIED",
++        "APPLY_STEP_INTENT", "APPLY_STEP_READBACK_VERIFIED"]
++    assert apply_admission["state"] == "APPLIED"
++    applied_record = store.get_operation(apply_admission["operation_id"])
++    assert applied_record["result"]["applied_receipt"]["schema"] == \
++        "comsol-mcp.applied-host-change-receipt/2"
++
++    _payload, actions = _normalize_supported_actions(plan, profile)
++    expected_hashes = {item["action_id"]: item["created_resource_sha256"]
++                       for item in receipt.actions}
++    snapshot = api.observe_snapshot()
++    preliminary = _snapshot_sequence_dependencies(
++        snapshot, profile, actions, phase="RESTORE", expected_resources=expected_hashes,
++        admitted_plan_sha256=plan.sha256)
++    restore_body = {"schema": "comsol-mcp.host-change-restore/2",
++                    "profile_sha256": profile.sha256,
++                    "source_plan_sha256": plan.sha256,
++                    "source_receipt_sha256": receipt.receipt_sha256,
++                    "resource_hashes": [{"action_id": action["action_id"],
++                                         "resource_kind": action["resource_kind"],
++                                         "resource_key": action["resource_key"],
++                                         "created_resource_sha256": expected_hashes[action["action_id"]]}
++                                        for action in actions],
++                    "dependency_sha256": preliminary["dependency_sha256"],
++                    "snapshot_sha256": preliminary["snapshot_sha256"]}
++    restore_sha = hashlib.sha256(json.dumps(
++        restore_body, sort_keys=True, ensure_ascii=False,
++        separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()
++    restore_ref = "provider-sublayer-filter-restore"
++    provider.close()
++    provider = _write_provider(tmp_path / "provider-config-v2-restore", profile, [
++        _apply_grant(profile, plan, apply_ref),
++        _grant(profile, "host.change.restore", restore_ref, restore_sha,
++               phase="RESTORE", source_plan=plan.sha256,
++               source_receipt=receipt.receipt_sha256),
++    ])
++    authority.authorization_verifier = provider
++    executor.provider = provider
++    result = executor.restore(plan, receipt,
++                              approval=resources.HostChangeApproval(restore_sha, restore_ref))
++    assert result["execution_state"] == "SUCCEEDED"
++    assert [item[:2] for item in api.calls[-3:]] == [
++        ("delete", "wfp_filter"), ("delete", "wfp_sublayer"), ("delete", "wfp_provider")]
++    assert api.providers == api.sublayers == api.filters == {}
++    restore_admission = store.db.execute(
++        "SELECT * FROM host_control_admissions WHERE phase='RESTORE'").fetchone()
++    assert restore_admission["state"] == "RESTORED"
++    assert [item["event"] for item in _events_v2(store, restore_admission["job_id"])] == [
++        "RESTORE_STEP_INTENT", "RESTORE_STEP_READBACK_VERIFIED",
++        "RESTORE_STEP_INTENT", "RESTORE_STEP_READBACK_VERIFIED",
++        "RESTORE_STEP_INTENT", "RESTORE_STEP_READBACK_VERIFIED"]
++    assert store.get_operation(restore_admission["operation_id"])["status"] == "SUCCEEDED"
++    provider.close()
++
++
++def test_v2_partial_provider_creation_fences_replay_and_never_starts_sublayer(host_env, tmp_path):
++    profile, _plan_value, _action, _old_api, store, provider, authority, _executor = host_env
++    provider.close()
++    plan = _provider_sublayer_plan(profile)
++    ref = "provider-sublayer-crash"
++    api = FakeWfpSequence(profile)
++    api.fail_after = "wfp_sublayer"
++    provider = _write_provider(tmp_path / "provider-config-v2-crash", profile,
++                               [_apply_grant(profile, plan, ref)])
++    authority.authorization_verifier = provider
++    executor = WindowsHostChangeExecutor._for_software_test(
++        store=store, authority=authority, profile=profile, api=api,
++        token=_SOFTWARE_TEST_TOKEN,
++    )
++    with pytest.raises(WindowsHostChangeError) as unknown:
++        executor.apply(plan, approval=resources.HostChangeApproval(plan.sha256, ref))
++    assert unknown.value.code == "HOST_CHANGE_RECOVERY_REQUIRED"
++    admission = store.db.execute("SELECT * FROM host_control_admissions WHERE phase='APPLY'").fetchone()
++    assert admission["state"] == "RECOVERY_REQUIRED"
++    assert store.get_operation(admission["operation_id"])["status"] == "UNKNOWN"
++    assert [item[:2] for item in api.calls] == [
++        ("create", "wfp_provider"), ("create", "wfp_sublayer")]
++    events = _events_v2(store, admission["job_id"])
++    assert [item["event"] for item in events] == [
++        "APPLY_STEP_INTENT", "APPLY_STEP_READBACK_VERIFIED",
++        "APPLY_STEP_INTENT", "RECOVERY_REQUIRED"]
++    assert set(api.providers) == {PROVIDER_KEY.casefold()}
++    assert set(api.sublayers) == {SUBLAYER_KEY.casefold()}
++    # Model an out-of-band exact cleanup so the second attempt reaches the
++    # consumed one-shot authorization check; the failed apply itself left the
++    # durable UNKNOWN fence and no automatic replay path.
++    api.providers.clear()
++    api.sublayers.clear()
++    with pytest.raises(resources.ResourcePolicyError) as replay:
++        executor.apply(plan, approval=resources.HostChangeApproval(plan.sha256, ref))
++    assert replay.value.code == "HOST_CONTROL_AUTHORIZATION_REPLAYED"
++    assert len(api.calls) == 2
++    provider.close()
++
++
++def test_v2_provider_sublayer_only_plan_receipt_and_partial_reverse_restore(host_env, tmp_path):
++    profile, _plan_value, _action, _old_api, store, provider, authority, _executor = host_env
++    provider.close()
++    plan = _provider_sublayer_plan(profile)
++    apply_ref = "provider-sublayer-pair-apply"
++    api = FakeWfpSequence(profile)
++    provider = _write_provider(tmp_path / "provider-config-pair-apply", profile,
++                               [_apply_grant(profile, plan, apply_ref)])
++    authority.authorization_verifier = provider
++    executor = WindowsHostChangeExecutor._for_software_test(
++        store=store, authority=authority, profile=profile, api=api,
++        token=_SOFTWARE_TEST_TOKEN,
++    )
++    receipt = executor.apply(plan, approval=resources.HostChangeApproval(plan.sha256, apply_ref))
++    assert [item["resource_kind"] for item in receipt.actions] == ["wfp_provider", "wfp_sublayer"]
++    assert [item[:2] for item in api.calls] == [
++        ("create", "wfp_provider"), ("create", "wfp_sublayer")]
++    restore_sha = _restore_sequence_sha(profile, plan, receipt, api)
++    restore_ref = "provider-sublayer-pair-restore"
++    provider.close()
++    provider = _write_provider(tmp_path / "provider-config-pair-restore", profile, [
++        _grant(profile, "host.change.restore", restore_ref, restore_sha,
++               phase="RESTORE", source_plan=plan.sha256,
++               source_receipt=receipt.receipt_sha256),
++    ])
++    authority.authorization_verifier = provider
++    executor.provider = provider
++    api.fail_after_delete = "wfp_sublayer"
++    with pytest.raises(WindowsHostChangeError) as unknown:
++        executor.restore(plan, receipt,
++                         approval=resources.HostChangeApproval(restore_sha, restore_ref))
++    assert unknown.value.code == "HOST_CHANGE_RECOVERY_REQUIRED"
++    restore_admission = store.db.execute(
++        "SELECT * FROM host_control_admissions WHERE phase='RESTORE'").fetchone()
++    assert restore_admission["state"] == "RECOVERY_REQUIRED"
++    assert store.get_operation(restore_admission["operation_id"])["status"] == "UNKNOWN"
++    assert api.calls[-1][:2] == ("delete", "wfp_sublayer")
++    assert set(api.providers) == {PROVIDER_KEY.casefold()}
++    assert api.sublayers == {}
++    assert [item["event"] for item in _events_v2(store, restore_admission["job_id"])] == [
++        "RESTORE_STEP_INTENT", "RECOVERY_REQUIRED"]
++    provider.close()
++
++
++@pytest.mark.parametrize("foreign_child", ["provider-context", "foreign-filter"])
++def test_v2_restore_refuses_unclassified_or_foreign_children_before_admission(
++        host_env, tmp_path, foreign_child):
++    profile, _plan_value, _action, _old_api, store, provider, authority, _executor = host_env
++    provider.close()
++    plan = _provider_sublayer_plan(profile)
++    apply_ref = "provider-sublayer-child-apply-" + foreign_child
++    api = FakeWfpSequence(profile)
++    provider = _write_provider(tmp_path / ("provider-config-child-" + foreign_child), profile,
++                               [_apply_grant(profile, plan, apply_ref)])
++    authority.authorization_verifier = provider
++    executor = WindowsHostChangeExecutor._for_software_test(
++        store=store, authority=authority, profile=profile, api=api,
++        token=_SOFTWARE_TEST_TOKEN,
++    )
++    receipt = executor.apply(plan, approval=resources.HostChangeApproval(plan.sha256, apply_ref))
++    if foreign_child == "provider-context":
++        api.provider_contexts.append({"state": "PRESENT_UNCLASSIFIED"})
++        expected_code = "HOST_CHANGE_WFP_CHILDREN_UNCLASSIFIED"
++    else:
++        key = "{55555555-5555-4555-8555-555555555555}"
++        api.filters[key.casefold()] = {"filter_key": key, "provider_key": PROVIDER_KEY,
++                                       "sublayer_key": SUBLAYER_KEY, "layer_key": LAYER_KEY,
++                                       "filter_id": 901}
++        expected_code = "HOST_CHANGE_WFP_SUBLAYER_CHILDREN_PRESENT"
++    with pytest.raises(WindowsHostChangeError) as refusal:
++        executor.restore(plan, receipt,
++                         approval=resources.HostChangeApproval("0" * 64, "unused-restore-ref"))
++    assert refusal.value.code == expected_code
++    assert [item[0] for item in api.calls] == ["create", "create"]
++    assert store.db.execute("SELECT count(*) FROM host_control_admissions WHERE phase='RESTORE'").fetchone()[0] == 0
+     provider.close()
+ 
+ 
+@@ -490,6 +867,175 @@
+     assert mismatch.value.code == "WFP_FILTER_READBACK_MISMATCH"
+ 
+ 
++@pytest.mark.parametrize("mutation", ["wrong-match-type", "missing-sid-value", "extra-sid-field"])
++def test_filter_semantic_readback_rejects_wrong_operator_and_sid_shape(host_env, mutation):
++    from types import SimpleNamespace
++
++    from comsol_mcp._windows_t037_wfp import (
++        CtypesWindowsWfpMutationApi, FWP_MATCH_EQUAL, FWP_SID,
++        WindowsWfpMutationError,
++    )
++    FWP_MATCH_NOT_EQUAL = 1
++
++    profile, _plan_value, action, _api, _store, _provider, _authority, _executor = host_env
++    grant = action["grant"]
++    adapter = object.__new__(CtypesWindowsWfpMutationApi)
++    marker = json.dumps({"schema": "comsol-mcp.t037-owned-wfp-filter/1",
++                         "profile_sha256": profile.sha256,
++                         "plan_sha256": action["plan_sha256"],
++                         "action_id": action["action_id"],
++                         "ownership_guid": action["ownership_guid"]},
++                        sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()
++    app_blob = b"actual-app-id"
++    row = _row(profile, action)
++    row["conditions"] = adapter._expected_conditions(grant, app_blob, APPCONTAINER_SID)
++    package_row = next(item for item in row["conditions"]
++                       if item["condition_value"].get("type") == FWP_SID)
++    if mutation == "wrong-match-type":
++        package_row["match_type"] = FWP_MATCH_NOT_EQUAL
++        assert package_row["match_type"] != FWP_MATCH_EQUAL
++    elif mutation == "missing-sid-value":
++        package_row["condition_value"].pop("value")
++    else:
++        package_row["condition_value"]["sid_text"] = APPCONTAINER_SID
++    with pytest.raises(WindowsWfpMutationError) as mismatch:
++        adapter._validate_filter_semantics(
++            row, profile, action, grant, marker,
++            expected_app_blob=app_blob, expected_package_sid=APPCONTAINER_SID)
++    assert mismatch.value.code == "WFP_FILTER_READBACK_MISMATCH"
++
++
++def test_filter_semantic_create_and_delete_bind_app_id_and_package_sid(monkeypatch):
++    from types import SimpleNamespace
++
++    from comsol_mcp._windows_t037_wfp import CtypesWindowsWfpMutationApi
++
++    # Inspect the existing adapter paths: no new validator seam can satisfy
++    # this test because it exercises both production call sites' kwargs.
++    instance = object.__new__(CtypesWindowsWfpMutationApi)
++    seen = []
++    instance._session = lambda *, readonly, callback: callback(object())
++    instance._check_dependencies = lambda *_args: {"provider": {}, "sublayer": {}}
++    instance._filter_row_or_none = lambda *_args: None
++    instance._add_filter_in_transaction = lambda _engine, _policy, _action, _grant, _marker: {
++        "filter_key": FILTER_KEY}
++    instance.read_filter = lambda _key: {"filter_key": FILTER_KEY}
++    instance._app_id_blob = lambda _path: b"native-app-id"
++    instance._validate_filter_semantics = lambda *args, **kwargs: seen.append(kwargs)
++    # Execute the actual CREATE wrapper with only low-level native writing
++    # replaced. It must pass the grant SID and a freshly read application ID.
++    action = {"action_id": "filter-server-loopback", "filter_key": FILTER_KEY,
++              "plan_sha256": "1" * 64, "ownership_guid": "{44444444-4444-4444-8444-444444444444}",
++              "grant": {"application_path": SERVER_PATH, "principal_sid": APPCONTAINER_SID}}
++    policy = SimpleNamespace(wfp_provider_key=PROVIDER_KEY, wfp_sublayer_key=SUBLAYER_KEY)
++    profile = SimpleNamespace(windows_isolation=policy, sha256="2" * 64)
++    instance.api = SimpleNamespace()
++    instance.create_filter(profile=profile, action=action,
++                           expected_dependency_sha256="3" * 64)
++    assert seen[-1] == {"expected_app_blob": b"native-app-id",
++                        "expected_package_sid": APPCONTAINER_SID}
++
++    # For DELETE, provide an exact current row and let the method reach its
++    # semantic readback immediately before the delete call.
++    row = {"filter_key": FILTER_KEY}
++    from comsol_mcp._windows_t037_wfp import sha256
++    current = {"present": True}
++    def next_row(*_args):
++        if current["present"]:
++            return row
++        return None
++    instance._filter_row_or_none = next_row
++    instance._owned_marker = lambda *_args: b"owned-marker"
++    instance._fwpu = SimpleNamespace(FwpmFilterDeleteByKey0=lambda *_args: 0)
++    instance.read_filter = lambda _key: None
++    instance._session = lambda *, readonly, callback: callback(object())
++    def delete_row(*_args):
++        current["present"] = False
++        return 0
++    instance._fwpu.FwpmFilterDeleteByKey0 = delete_row
++    instance.delete_filter(profile=profile, action=action,
++                           expected_resource_sha256=sha256(row),
++                           expected_dependency_sha256="3" * 64)
++    assert seen[-1] == {"expected_app_blob": b"native-app-id",
++                        "expected_package_sid": APPCONTAINER_SID}
++
++
++def test_observer_and_mutator_load_localfree_only_from_kernel32(monkeypatch):
++    from types import SimpleNamespace
++
++    from comsol_mcp import _windows_t037_native as native
++    from comsol_mcp import _windows_t037_wfp as wfp
++
++    class Function:
++        def __init__(self, name, call_log):
++            self.name = name
++            self.call_log = call_log
++            self.argtypes = None
++            self.restype = None
++        def __call__(self, *args):
++            self.call_log.append(self.name)
++            return None
++
++    class StrictLibrary:
++        def __init__(self, name, exports):
++            self.name = name
++            self.exports = set(exports)
++            self.accessed = set()
++            self.functions = {}
++            self.calls = []
++        def __getattr__(self, symbol):
++            if symbol not in self.exports:
++                raise AssertionError(f"{self.name} does not export {symbol}")
++            self.accessed.add(symbol)
++            return self.functions.setdefault(symbol, Function(symbol, self.calls))
++
++    advapi_exports = {
++        "OpenSCManagerW", "OpenServiceW", "CloseServiceHandle", "QueryServiceConfigW",
++        "QueryServiceConfig2W", "QueryServiceStatusEx", "QueryServiceObjectSecurity",
++        "LookupAccountNameW", "ConvertSidToStringSidW", "IsValidSid",
++        "GetSecurityDescriptorLength", "ConvertStringSidToSidW",
++        "ConvertStringSecurityDescriptorToSecurityDescriptorW",
++    }
++    kernel_exports = {"LocalFree"}
++    wfp_exports = {"FwpmEngineOpen0", "FwpmEngineClose0", "FwpmTransactionBegin0",
++                   "FwpmTransactionCommit0", "FwpmTransactionAbort0", "FwpmFreeMemory0",
++                   "FwpmFilterGetSecurityInfoByKey0", "FwpmProviderGetSecurityInfoByKey0",
++                   "FwpmSubLayerGetSecurityInfoByKey0"}
++    for kind in ("Filter", "Provider", "SubLayer", "ProviderContext"):
++        wfp_exports.update({f"Fwpm{kind}CreateEnumHandle0", f"Fwpm{kind}Enum0",
++                            f"Fwpm{kind}DestroyEnumHandle0"})
++
++    observer_libs = {"advapi32": StrictLibrary("advapi32", advapi_exports),
++                     "kernel32": StrictLibrary("kernel32", kernel_exports),
++                     "fwpuclnt": StrictLibrary("fwpuclnt", wfp_exports)}
++    monkeypatch.setattr(native, "os", SimpleNamespace(name="nt"))
++    observer = native.CtypesWindowsPolicyApi(
++        platform_name="win32", dll_loader=lambda name, **_kwargs: observer_libs[name])
++    assert observer._kernel32 is observer_libs["kernel32"]
++    assert "LocalFree" not in observer_libs["advapi32"].accessed
++    assert "LocalFree" in observer_libs["kernel32"].accessed
++
++    mutation_exports = set(wfp_exports) | {
++        "FwpmProviderGetByKey0", "FwpmSubLayerGetByKey0", "FwpmFilterGetByKey0",
++        "FwpmFilterAdd0", "FwpmFilterDeleteByKey0", "FwpmProviderAdd0",
++        "FwpmProviderDeleteByKey0", "FwpmSubLayerAdd0", "FwpmSubLayerDeleteByKey0",
++        "FwpmGetAppIdFromFileName0",
++    }
++    mutation_libs = {"advapi32": StrictLibrary("advapi32-mutator", advapi_exports),
++                     "kernel32": StrictLibrary("kernel32-mutator", kernel_exports),
++                     "fwpuclnt": StrictLibrary("fwpuclnt-mutator", mutation_exports)}
++    api = SimpleNamespace(_advapi=mutation_libs["advapi32"],
++                          _kernel32=mutation_libs["kernel32"],
++                          _fwpu=mutation_libs["fwpuclnt"], FWPM_TXN_READ_ONLY=1)
++    monkeypatch.setattr(native, "CtypesWindowsPolicyApi", lambda: api)
++    monkeypatch.setattr(wfp, "os", SimpleNamespace(name="nt"))
++    mutation = wfp.CtypesWindowsWfpMutationApi()
++    mutation._free_local(wfp.C.c_void_p(0x1234))
++    assert "LocalFree" not in mutation_libs["advapi32"].accessed
++    assert "LocalFree" in mutation_libs["kernel32"].accessed
++    assert mutation_libs["kernel32"].calls == ["LocalFree"]
++
++
+ def test_unsupported_action_set_refuses_before_provider_consumption_or_native_call(host_env):
+     profile, _plan_value, _action, api, store, provider, authority, _executor = host_env
+     unsupported = _plan(profile, kind="windows_service")
+--- preimage/tests/test_windows_t037_native.py
++++ current/tests/test_windows_t037_native.py
+@@ -88,12 +88,14 @@
+         "conditions": [],
+         "security_sha256": "3" * 64,
+     }
+-    rows = {"providers": [provider], "sublayers": [sublayer], "filters": [filter_row]}
++    rows = {"providers": [provider], "sublayers": [sublayer], "filters": [filter_row],
++            "provider_contexts": []}
+     rows.update(overrides.pop("rows", {}))
+     canonical = {
+         "providers": sorted(rows["providers"], key=lambda item: item["provider_key"] or ""),
+         "sublayers": sorted(rows["sublayers"], key=lambda item: item["sublayer_key"] or ""),
+         "filters": sorted(rows["filters"], key=lambda item: (item["layer_key"] or "", item["filter_id"])),
++        "provider_contexts": rows["provider_contexts"],
+     }
+     return {
+         "state": "COMPLETE_READ_ONLY",
+@@ -101,17 +103,19 @@
+             "providers": len(rows["providers"]),
+             "sublayers": len(rows["sublayers"]),
+             "filters": len(rows["filters"]),
++            "provider_contexts": len(rows["provider_contexts"]),
+             "conditions": sum(len(item["conditions"]) for item in rows["filters"]),
+-            "pages": 3,
+-            "pages_by_kind": {"Provider": 1, "SubLayer": 1, "Filter": 1},
+-            "total_records": sum(len(rows[key]) for key in ("providers", "sublayers", "filters")),
++            "pages": 4,
++            "pages_by_kind": {"Provider": 1, "SubLayer": 1, "Filter": 1, "ProviderContext": 1},
++            "total_records": sum(len(rows[key]) for key in
++                                  ("providers", "sublayers", "filters", "provider_contexts")),
+             "total_bytes": len(native._canonical(canonical)),
+             "elapsed_ms": 5,
+         },
+         "limits": {
+             "max_page_size": native.MAX_ENUM_PAGE,
+             "max_pages_per_kind": native.MAX_ENUM_PAGES,
+-            "max_total_pages": native.MAX_ENUM_PAGES * 3,
++            "max_total_pages": native.MAX_ENUM_PAGES * 4,
+             "max_total_records": native.MAX_ENUM_ROWS,
+             "max_total_bytes": native.MAX_ENUM_TOTAL_BYTES,
+             "max_elapsed_ms": native.MAX_ENUM_SECONDS * 1000,
+@@ -128,6 +132,7 @@
+         "providers": sorted(wfp["providers"], key=lambda item: item["provider_key"]),
+         "sublayers": sorted(wfp["sublayers"], key=lambda item: item["sublayer_key"]),
+         "filters": sorted(wfp["filters"], key=lambda item: (item["layer_key"], item["filter_id"])),
++        "provider_contexts": wfp["provider_contexts"],
+     }
+     wfp["counts"]["total_bytes"] = len(native._canonical(canonical))
+     wfp["snapshot_sha256"] = hashlib.sha256(native._canonical(canonical)).hexdigest()
+@@ -520,13 +525,34 @@
+     extra["filter_id"] = 101
+     wfp["filters"].append(extra)
+     content = {"providers": wfp["providers"], "sublayers": wfp["sublayers"],
+-               "filters": sorted(wfp["filters"], key=lambda item: (item["layer_key"], item["filter_id"]))}
++               "filters": sorted(wfp["filters"], key=lambda item: (item["layer_key"], item["filter_id"])),
++               "provider_contexts": wfp["provider_contexts"]}
+     wfp["counts"]["filters"] += 1
+     wfp["counts"]["total_records"] += 1
+     wfp["counts"]["total_bytes"] = len(native._canonical(content))
+     wfp["snapshot_sha256"] = hashlib.sha256(native._canonical(content)).hexdigest()
+     result, _, _ = _observe(api=_FakeApi(wfp=wfp))
+     assert "WFP_EXTERNAL_FILTER_AT_CONFIGURED_LAYER_UNRESOLVED" in result.reasons
++
++
++def test_native_observation_keeps_provider_context_rows_unclassified_and_digest_bound():
++    wfp = _wfp_snapshot()
++    wfp["provider_contexts"] = [{"state": "PRESENT_UNCLASSIFIED"}]
++    wfp["counts"]["provider_contexts"] = 1
++    wfp["counts"]["total_records"] += 1
++    _reseal_wfp_snapshot(wfp)
++    result, _, _ = _observe(api=_FakeApi(wfp=wfp))
++    assert result.state == "UNVERIFIED"
++    assert "WFP_PROVIDER_CONTEXT_ROWS_UNCLASSIFIED" in result.reasons
++
++    malformed = _wfp_snapshot()
++    malformed["provider_contexts"] = [{"state": "OWNED_BY_CONFIGURED_PROVIDER"}]
++    malformed["counts"]["provider_contexts"] = 1
++    malformed["counts"]["total_records"] += 1
++    _reseal_wfp_snapshot(malformed)
++    with pytest.raises(native.NativePolicyError) as error:
++        _observe(api=_FakeApi(wfp=malformed))
++    assert error.value.code == "T037_NATIVE_WFP_ABI_INVALID"
+ 
+ 
+ def test_wfp_enum_destroy_failure_keeps_cleanup_unknown_with_primary_error():
+--- preimage/docs/full_project_continuation_v2/evidence/windows_host_change_wfp_r1/IMPLEMENTATION.md
++++ current/docs/full_project_continuation_v2/evidence/windows_host_change_wfp_r1/IMPLEMENTATION.md
+@@ -1,12 +1,22 @@
+ # Windows host-change WFP subset (software implementation)
+ 
+-This unit implements one bounded operation: create one persistent outbound IPv4
+-`ALE_AUTH_CONNECT` permit filter bound to one exact executable app ID, its
+-AppContainer package SID, protocol, and configured local/remote IPv4/port
+-selectors; restore deletes only that exact filter when the receipt hash and
+-live row still match. The API reuses an existing provider and sublayer. It does
+-not create/delete provider or sublayer objects, install callouts, configure
+-SCM/service identities, or evaluate effective WFP arbitration.
++The supported resource plan is a persistent WFP provider, its persistent
++sublayer, and optionally one persistent outbound IPv4 `ALE_AUTH_CONNECT`
++PERMIT filter bound to one exact executable app ID, AppContainer package SID,
++protocol, and configured local/remote IPv4/port selectors. Provider/sublayer
++plans are admitted as one dependency-bound ordered operation. Each resource
++has its own durable intent and exact readback event in the existing
++`OperationStore`; restore deletes in reverse dependency order and only when the
++receipt hash, live row, and complete child enumeration match. Unknown provider
++contexts or foreign children preserve the parent resources. Filter-only V1
++journaling remains compatible. Unsupported resource kinds are refused before
++authorization consumption or native effects.
++
++This is not effective WFP arbitration proof. The observer retains opaque
++provider-context rows as unclassified, and unknown callouts, conditions,
++layers, arbitration, ACL semantics, or external filters remain
++`UNVERIFIED`. No Windows kernel, API mutation, or policy apply/restore was run;
++the native platform status is `NOT_RUN`.
+ 
+ The Windows SDK condition identifier for the executable is
+ `FWPM_CONDITION_ALE_APP_ID`; the AppContainer identity is
+@@ -22,12 +32,20 @@
+ `comsol_mcp/_windows_t037_wfp.py` and the app-ID GUID has a literal regression
+ assertion in `tests/test_windows_host_change.py`.
+ 
+-The adapter performs bounded read-only dependency preflight, a transactional
+-no-clobber add, exact in-transaction and fresh-session readback, and drift-
+-protected delete. It records a durable intent before either native mutation.
+-Failures after intent remain `RECOVERY_REQUIRED` / `UNKNOWN`; automatic replay
+-is forbidden. These software tests exercise the protocol and ABI marshaling
+-fixtures only. No Windows kernel/API mutation was run. A successful filter
+-readback is not proof that the filter is effective or that T037 isolation is
+-complete: WFP arbitration, third-party callouts and complete policy proof
+-remain `UNVERIFIED`.
++The adapter performs bounded read-only dependency preflight, transactional
++no-clobber adds, exact in-transaction and fresh-session readback, and
++drift-protected deletes. Restore first requires full provider, sublayer,
++filter, and provider-context enumeration. WFP allocations are released through
++their owning API; `LocalFree` is bound through Kernel32. Filter semantic
++readback binds the configured application-ID blob and package SID and compares
++exact condition cardinality, values, and equality operators.
++
++Microsoft documents provider/sublayer creation and deletion through
++[`FwpmProviderAdd0`](https://learn.microsoft.com/en-us/windows/win32/api/fwpmu/nf-fwpmu-fwpmprovideradd0),
++[`FwpmSubLayerAdd0`](https://learn.microsoft.com/en-us/windows/win32/api/fwpmu/nf-fwpmu-fwpmsublayeradd0),
++and the [provider uninstall order](https://learn.microsoft.com/en-us/windows/win32/fwp/uninstalling-a-provider).
++Microsoft documents [`LocalFree`](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-localfree)
++as a Kernel32 API. Software fixtures test the transaction protocol and
++readback comparisons only; they do not establish native execution or policy
++effectiveness. Failures after a committed intent remain
++`RECOVERY_REQUIRED` / `UNKNOWN`; automatic replay is forbidden.

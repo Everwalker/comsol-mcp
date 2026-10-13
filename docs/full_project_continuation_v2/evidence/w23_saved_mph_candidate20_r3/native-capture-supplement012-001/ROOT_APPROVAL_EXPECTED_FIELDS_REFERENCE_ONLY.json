@@ -1,0 +1,69 @@
+{
+  "schema": "W23_ACTIVITY012_EXPECTED_APPROVAL_BLUEPRINT_V1",
+  "status": "REFERENCE_ONLY_NOT_APPROVAL",
+  "expected_approval_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261012-candidate20-r3/docs/full_project_execution/w23_overlap/evidence/native-run-20261012-012-saved-mph-zero-solve-candidate20-r3-final1/ROOT_APPROVAL_ACTIVITY012.json",
+  "expected_validated_fields": {
+    "status": "ROOT_APPROVED_FOR_EXACT_FROZEN_CANDIDATE",
+    "activity_id": "w23-saved-mph-zero-solve-readback-20261012-012",
+    "candidate_id": "W23-TE-SAVED-MPH-ZERO-SOLVE-READBACK-20",
+    "candidate_revision": "candidate20-r3",
+    "freeze_sha256": "351751f15cdf88caabba20c8c61455574e49eaf5568a139c532843f5166b9290",
+    "source_manifest_sha256": "b2a80b81896a871936405d0ecc4655fa6c26260287c37eadd44d35b8c04ebdfb",
+    "native_argv_sha256": "cf985d4fd2361b2fa8c11a7d809dc56b9906646814112bc63944f37a16d6ea03",
+    "max_owned_server_processes": 1,
+    "max_worker_sessions": 1,
+    "max_gui_processes": 0,
+    "max_study_run_calls": 0,
+    "max_solver_run_calls": 0,
+    "max_seconds_from_server_birth": 1800,
+    "cleanup_reserve_seconds": 120,
+    "retry_unknown_or_nonterminal_worker_request": false,
+    "read_only_call_plan_sha256": "f2f9fbb0b808a905231a7991b27885a327e0792b1a89b3ada17a398f224b08e8",
+    "exact_native_invocation": {
+      "argv": [
+        "env",
+        "-u",
+        "CODEX_NETWORK_GUARD_LOG",
+        "-u",
+        "CODEX_NETWORK_GUARD_LABEL",
+        "-u",
+        "CODEX_NETWORK_GUARD_RUN_ID",
+        "TMPDIR=/private/tmp",
+        "PYTHONPATH=/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261012-candidate20-r3",
+        "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python",
+        "-m",
+        "tools.run_native_w23_saved_mph_diagnostic",
+        "execute",
+        "--freeze",
+        "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261012-candidate20-r3/docs/full_project_execution/w23_overlap/evidence/native-run-20261012-012-saved-mph-zero-solve-candidate20-r3-final1/freeze.json",
+        "--freeze-sha256",
+        "351751f15cdf88caabba20c8c61455574e49eaf5568a139c532843f5166b9290",
+        "--approval",
+        "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261012-candidate20-r3/docs/full_project_execution/w23_overlap/evidence/native-run-20261012-012-saved-mph-zero-solve-candidate20-r3-final1/ROOT_APPROVAL_ACTIVITY012.json",
+        "--saved-model",
+        "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_009_candidate17_r2/private-control-store/activity009-r2/saved-models/w23_coarse-phase0_provisional.mph",
+        "--work",
+        "/private/tmp/comsol-mcp-w23-te-saved-mph-zero-solve-readback-20261012-012-candidate20-r3",
+        "--evidence",
+        "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261012-candidate20-r3/docs/full_project_execution/w23_overlap/evidence/native-run-20261012-012-saved-mph-zero-solve-candidate20-r3-final1/native-execute"
+      ],
+      "cwd": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261012-candidate20-r3",
+      "environment": {
+        "TMPDIR": "/private/tmp",
+        "PYTHONPATH": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261012-candidate20-r3",
+        "CODEX_NETWORK_GUARD_LOG": null,
+        "CODEX_NETWORK_GUARD_LABEL": null,
+        "CODEX_NETWORK_GUARD_RUN_ID": null
+      }
+    }
+  },
+  "additional_root_bindings_required": {
+    "source_review_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_saved_mph_candidate20_r3/ROOT_SOURCE_REVIEW_CANDIDATE20_R3.json",
+    "source_review_sha256": "247a40f59a6e65fb50594c507f31f810ece1992928597cc4f0e1b558e43536b8",
+    "metadata_clarification_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261012-candidate20-r3/root-review-packet/FINAL1_NATIVE_POINT_SLOT_METADATA_CLARIFICATION_R3.json",
+    "metadata_clarification_sha256": "1abf2ead7841d5841aa5c66b0bf00072d9605ed892aedc3a04c0b4a58c6f1835",
+    "capture_script_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_saved_mph_candidate20_r3/native-capture-supplement012-001/launch-activity012-r3.zsh",
+    "capture_script_sha256": "d1c71d42f2186c5c0d1ee09b12e7e43bdf60d3df6c4bb31a6ffc5324be251ed7"
+  },
+  "runner_approval_schema_dry_validation": "PASS_NO_NATIVE"
+}

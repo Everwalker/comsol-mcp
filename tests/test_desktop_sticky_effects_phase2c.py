@@ -53,16 +53,23 @@ def test_marked_save_copy_structured_error_cannot_be_retryable_failed(tmp_path, 
     first = RuntimeError("original provider cause")
     raised = DesktopOperationError("SAVE_PROVIDER_FAILURE", "provider failed after actual software copy",
                     side_effect_started=False, safe_retry=True)
-    def save(identity, destination):
+    def save(identity, destination, source=None):
         trace.append({"callback": "save_copy", "path": str(destination)})
-        original(identity, destination)
+        original(identity, destination, source)
         raise raised from first
     monkeypatch.setattr(h.adapter, "save_copy", save)
     try:
         args = migration_args(h, "marked-copy")
         result = h.coordinator.dispatch("desktop.migrate_standalone", args)
         results.append(result)
-        assert Path(args["save_policy"]["destination_path"]).read_bytes() == b"fixture save-copy bytes"
+        # The native Save Copy is confined to the private task stage. A
+        # provider error after writing must not publish the caller's final
+        # destination; the exact stage remains as recovery evidence because
+        # the operation is UNKNOWN and must not be replayed.
+        assert not Path(args["save_policy"]["destination_path"]).exists()
+        staged = Path(trace[0]["path"])
+        assert staged.parent.name.startswith("comsol-mcp-save-")
+        assert staged.read_bytes() == b"fixture save-copy bytes"
         assert raised.__cause__ is first
         assert result["execution"]["status"] == "UNKNOWN"
         assert result["error"]["code"] == "SAVE_PROVIDER_FAILURE"

@@ -1,0 +1,199 @@
+{
+  "created_utc": "2026-10-12T04:54:23.500318+00:00",
+  "desktop_launch_candidate": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/DESKTOP_LAUNCH_CANDIDATE_R2.json",
+    "sha256": "8462164d716c482df24eae0fddc2e87fb6954727373f025e1543aa4d918b7278",
+    "status": "PREPARED_NOT_LAUNCHED_WAITING_FOR_SERIAL_NATIVE_LANE"
+  },
+  "download": {
+    "argv": [
+      "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python3",
+      "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/fetch_pinned_arm64_wheels_r2.py",
+      "--execute-download"
+    ],
+    "exit_code": 0,
+    "script_sha256": "2e8702bb87b7d5b524baf195bd82e59a99b079b8c0d07ed8a35eaf9cee4fc134",
+    "stdout_status": "NOT_CAPTURED"
+  },
+  "import_smoke": {
+    "comsol_launches": 0,
+    "gui_calls": 0,
+    "modules": [
+      "psutil",
+      "objc",
+      "AppKit",
+      "ApplicationServices",
+      "Quartz",
+      "CoreText",
+      "CoreMedia",
+      "ScreenCaptureKit"
+    ],
+    "permission_checks": 0,
+    "screen_capture_api_invoked": false,
+    "screencapturekit_binding_present": true,
+    "solver_calls": 0,
+    "status": "PASS_SOFTWARE_ONLY",
+    "verifier_sha256": "53d432ce2a009c31c67541b315e835f2d504cd908e85364becb3740a2ec77928"
+  },
+  "install": {
+    "argv": [
+      "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python3",
+      "-m",
+      "pip",
+      "install",
+      "--no-index",
+      "--no-deps",
+      "--only-binary=:all:",
+      "--require-hashes",
+      "--find-links",
+      "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/wheelhouse",
+      "--target",
+      "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/install.staging",
+      "-r",
+      "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/requirements-arm64.txt"
+    ],
+    "exit_code": 0,
+    "method": "hash-verified local wheels only; pinned-parent no-replace activation",
+    "stdout_status": "NOT_CAPTURED"
+  },
+  "limits": [
+    "Download and pip install stdout were not captured; no raw output is claimed.",
+    "The recovered Python runtime, system Python, live pyproject.toml and uv.lock were not modified.",
+    "Windows native ACL behavior, Intel wheel build, COMSOL GUI, model binding, and numerical acceptance are NOT_RUN."
+  ],
+  "model_copy": {
+    "receipt_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/GUI_MODEL_TASK_COPY_R2.json",
+    "receipt_sha256": "2596b0f947b32653e9b4db40ddbaaac43254948c99f1bb43ad34c58c785b5c25",
+    "status": "TASK_OWNED_COPY_PREPARED_NOT_REGISTERED_NOT_OPENED",
+    "target": {
+      "directory_identity": {
+        "device": 16777231,
+        "inode": 15412981
+      },
+      "file_identity": {
+        "device": 16777231,
+        "inode": 15412982
+      },
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/gui-candidate/native_resume_child.mph",
+      "security": {
+        "identity": {
+          "device": 16777231,
+          "inode": 15412982
+        },
+        "security_semantics": "posix-owner-mode+filesystem-ownership+no-extended-acl",
+        "security_sha256": null
+      },
+      "sha256": "9999608757cff08cfe052b398c3de24b1e2e0603dc375db3d0cc5928f77c6346",
+      "size_bytes": 617475
+    }
+  },
+  "parent_freezes": [
+    {
+      "name": "R5_source_freeze",
+      "path": "local-preservation/w25-native-adapter-20261012-r5-r3/R5_SOURCE_FREEZE_R3.json",
+      "sha256": "e5c675aec2e9725b8ce1bdff23c5b2fd7a7540a570e8d4564259f6d68c2367ae"
+    },
+    {
+      "name": "WFP_V2_R4_source_freeze",
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_v2_recovery_r4_20261012/SOURCE_FREEZE_V2_R4.json",
+      "sha256": "157c16f1c0b7287318c47540759beb0ec705f4a3c83523d9b18761eaf8f0ffc5"
+    },
+    {
+      "name": "WFP_V2_R4_preservation",
+      "path": "local-preservation/windows_host_change_wfp_v2_recovery_r4_20261012/PRESERVATION.json",
+      "sha256": "c3bcb1d1dcdba60ce1863b0ecd378214df416dd6aed5bfab26c077036f5b4754"
+    }
+  ],
+  "requirements": {
+    "evidence_copy": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/requirements-arm64-R2.txt",
+    "evidence_copy_sha256": "e0547d079a6dee23d269aaaa60301232a74a07c1dc39687388a10ab1728011a6",
+    "task_path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/requirements-arm64.txt",
+    "task_sha256": "e0547d079a6dee23d269aaaa60301232a74a07c1dc39687388a10ab1728011a6"
+  },
+  "schema": "comsol-mcp.w25-arm64-delivery-freeze/2",
+  "status": "SOFTWARE_PREPARATION_PASS; GUI_NOT_RUN; R5_WFP_COMBINED_TEST_PENDING",
+  "task_runtime": {
+    "python": {
+      "executable": "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python",
+      "version": "3.12.13 (main, Mar  3 2026, 12:39:30) [Clang 21.0.0 (clang-2100.0.123.102)]"
+    },
+    "root": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24",
+    "root_identity": {
+      "device": 16777231,
+      "inode": 14842237
+    },
+    "site": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/site",
+    "site_file_count": 886,
+    "site_identity": {
+      "device": 16777231,
+      "inode": 14842239
+    },
+    "site_manifest": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/ARM64_SITE_FILES_R2.json",
+      "sha256": "07735aecd5675786d676e740f40e56e098d1c9cde228c9c4315e2fdd542e3448"
+    },
+    "site_total_bytes": 34727229
+  },
+  "wheelhouse": {
+    "count": 8,
+    "files": [
+      {
+        "device": 16777231,
+        "inode": 14859427,
+        "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/wheelhouse/psutil-5.9.8-cp38-abi3-macosx_11_0_arm64.whl",
+        "sha256": "d16bbddf0693323b8c6123dd804100241da461e41d6e332fb0ba6058f630f8c8",
+        "size_bytes": 249898
+      },
+      {
+        "device": 16777231,
+        "inode": 14859684,
+        "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/wheelhouse/pyobjc_core-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+        "sha256": "122e6ad302a2abf5d4d4adb0156db751600ddf2768441696cba17b31323085e7",
+        "size_bytes": 6427637
+      },
+      {
+        "device": 16777231,
+        "inode": 14859793,
+        "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/wheelhouse/pyobjc_framework_applicationservices-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+        "sha256": "5506bd6b5268a97fcb79b5b021f6cbbaaf5cdff3ec87094d8870268d8cf096ed",
+        "size_bytes": 32765
+      },
+      {
+        "device": 16777231,
+        "inode": 14859822,
+        "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/wheelhouse/pyobjc_framework_cocoa-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+        "sha256": "e106f395531e67694376b0f1184612cbeea3ec8b9bf56b55ef41d026171d2a2d",
+        "size_bytes": 388117
+      },
+      {
+        "device": 16777231,
+        "inode": 14859889,
+        "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/wheelhouse/pyobjc_framework_coremedia-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+        "sha256": "84f5deee8d366bf73069a0525509637aa578ccd0e6688923b09999a8bc3077a8",
+        "size_bytes": 29421
+      },
+      {
+        "device": 16777231,
+        "inode": 14859894,
+        "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/wheelhouse/pyobjc_framework_coretext-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+        "sha256": "a69611de569d92776e6391ca25492a5bbb4a05ba744006349e377a4fc5f7c8a5",
+        "size_bytes": 30120
+      },
+      {
+        "device": 16777231,
+        "inode": 14860047,
+        "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/wheelhouse/pyobjc_framework_quartz-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+        "sha256": "7f668979d0c7320bf8f7ed6e030da578f93ab0f5dd619b295ec735cd8d5faa34",
+        "size_bytes": 219003
+      },
+      {
+        "device": 16777231,
+        "inode": 14860376,
+        "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/wheelhouse/pyobjc_framework_screencapturekit-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+        "sha256": "5c81c68bc0399ad7ca6ccaa978574354a4da8fbb474527664fdbf08cc8f8abd5",
+        "size_bytes": 11598
+      }
+    ],
+    "total_bytes": 7388559
+  }
+}

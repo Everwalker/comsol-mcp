@@ -1,0 +1,728 @@
+#!/usr/bin/env python3
+"""Workflow state persistence, status/operations logging, path utilities, and tool infrastructure."""
+
+from __future__ import annotations
+
+import json
+import logging
+import os
+import socket
+import time
+from collections.abc import Mapping
+from contextlib import contextmanager
+from contextvars import ContextVar
+from datetime import datetime
+from pathlib import Path
+from uuid import uuid4
+from typing import Any
+
+from comsol_mcp._server import (
+    COMSOL_SERVER_MCP_HOME, COMSOL_ROOT, DEFAULT_HOST,
+    LOGS_DIR, OUTPUTS_DIR, STATUS_FILE, WORKFLOW_FILE, OPERATIONS_FILE, SERVER_LOG,
+    _runtime_lock, _background_jobs_lock, _background_jobs,
+    VERSION, WORKSPACE_ROOT, RECOMMENDED_DESKTOP_FLOW,
+    _ensure_dirs, _setup_logging,
+    _get_mph, _get_mph_error,
+)
+from comsol_mcp._server import session_server as _srv
+
+
+# A managed project operation gets an independent workflow state file inside
+# its authoritative project workspace.  Unscoped legacy calls retain the
+# process-level WORKFLOW_FILE and no environment/global path is changed.
+_PROJECT_WORKFLOW_ROOT: ContextVar[Path | None] = ContextVar(
+    "comsol_project_workflow_root", default=None,
+)
+_PROJECT_WORKFLOW_DIRNAME = ".comsol_mcp"
+
+
+# ---------------------------------------------------------------------------
+# JSON / time helpers
+# ---------------------------------------------------------------------------
+def _json(data: dict[str, Any]) -> str:
+    return json.dumps(data, indent=2, ensure_ascii=False, default=str)
+
+
+def _now_iso() -> str:
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _runtime_setting(name: str):
+    """Use ContextVar-bound paths/settings without breaking legacy monkeypatches."""
+    if _srv.active_runtime_context() is None:
+        return globals()[name]
+    return _srv.runtime_setting(name)
+
+
+def _runtime_output_dir() -> Path:
+    return Path(_runtime_setting("OUTPUTS_DIR"))
+
+
+# ---------------------------------------------------------------------------
+# Model label / path helpers (used by _status_payload, moved here to avoid
+# pulling in _model.py which depends on this module)
+# ---------------------------------------------------------------------------
+def _safe_model_label(model: Any | None) -> str:
+    if model is None:
+        return ""
+    try:
+        return str(model.java.label())
+    except Exception:
+        try:
+            return str(model.name())
+        except Exception:
+            return ""
+
+
+def _safe_model_path(model: Any | None) -> str:
+    if model is None:
+        return ""
+    try:
+        path = str(model.java.getFilePath() or "")
+    except Exception:
+        path = ""
+    if path:
+        return str(Path(path).resolve())
+    return ""
+
+
+def _safe_model_tag(model: Any | None) -> str:
+    if model is None:
+        return ""
+    try:
+        return str(model.java.tag())
+    except Exception:
+        try:
+            return str(model.name())
+        except Exception:
+            return ""
+
+
+def _resolved_model_file_path(model: Any | None) -> str:
+    path = str(_safe_model_path(model) or "").strip()
+    if not path:
+        return ""
+    try:
+        return str(Path(path).expanduser().resolve())
+    except Exception:
+        return path
+
+
+def _normcase_path(path: str) -> str:
+    raw = str(path or "").strip()
+    if not raw:
+        return ""
+    try:
+        return os.path.normcase(str(Path(raw).expanduser().resolve()))
+    except Exception:
+        return os.path.normcase(raw)
+
+
+# ---------------------------------------------------------------------------
+# Workflow state persistence
+# ---------------------------------------------------------------------------
+def _default_workflow_state() -> dict[str, Any]:
+    return {
+        "mode": "manual",
+        "current_main_model_path": "",
+        "snapshot_dir": "",
+        "snapshot_prefix": "",
+        "snapshot_name_template": "{prefix}_{label}_{timestamp}.mph",
+        "visible_main_locked": False,
+        "guard_level": "strict",
+        "snapshot_save_mode": "copy",
+        "main_model_tag": "",
+        "main_model_label": "",
+        "main_model_path": "",
+        "model_dimension": 0,
+        "workflow_stage": "awaiting_manual_server",
+        "mcp_client_lifecycle": "persistent-required",
+        "one_shot_client_allowed": False,
+        "notes": "",
+        "updated_at": _now_iso(),
+    }
+
+
+@contextmanager
+def project_workflow_state_scope(project_root: str | Path):
+    """Scope legacy workflow reads and writes to one registered project."""
+    from ._execution_contract import ExecutionContractError
+
+    try:
+        candidate = Path(project_root).expanduser().resolve(strict=True)
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise ExecutionContractError(
+            "PERMISSION_DENIED", "project workflow root is unavailable",
+        ) from exc
+    if not candidate.is_dir():
+        raise ExecutionContractError("PERMISSION_DENIED", "project workflow root is not a directory")
+    token = _PROJECT_WORKFLOW_ROOT.set(candidate)
+    try:
+        yield candidate
+    finally:
+        _PROJECT_WORKFLOW_ROOT.reset(token)
+
+
+def _project_scoped_path(root: Path, path: Path) -> Path:
+    """Canonicalize a scoped state path and refuse all symlink aliases."""
+    from ._execution_contract import ExecutionContractError, canonical_project_path
+
+    if path.is_symlink():
+        raise ExecutionContractError("PERMISSION_DENIED", "project workflow state cannot use symlink paths")
+    resolved = canonical_project_path(root, path)
+    if resolved != path:
+        raise ExecutionContractError("PERMISSION_DENIED", "project workflow state path is not canonical")
+    return resolved
+
+
+def _workflow_state_file() -> Path:
+    """Return the active workflow file, checking project containment before I/O."""
+    root = _PROJECT_WORKFLOW_ROOT.get()
+    session = _srv.active_runtime_context()
+    if session is not None:
+        from ._execution_contract import ExecutionContractError
+
+        if root is not None:
+            try:
+                active_project_root = root.resolve(strict=True)
+                registered_project_root = session.project_root.resolve(strict=True)
+            except (OSError, RuntimeError, ValueError) as exc:
+                raise ExecutionContractError(
+                    "PERMISSION_DENIED", "session project root is unavailable",
+                ) from exc
+            if active_project_root != registered_project_root:
+                raise ExecutionContractError(
+                    "PROJECT_IDENTITY_MISMATCH",
+                    "session workflow context does not match the active registered project",
+                )
+        paths = session.paths
+        workflow_file = paths.workflow_file
+        session_root = paths.root
+        try:
+            if session_root.is_symlink() or workflow_file.is_symlink():
+                raise ExecutionContractError(
+                    "PERMISSION_DENIED", "session workflow path cannot use symlinks",
+                )
+            if workflow_file.parent.resolve() != session_root.resolve():
+                raise ExecutionContractError(
+                    "PERMISSION_DENIED", "session workflow path escapes its session state directory",
+                )
+            session_root.mkdir(mode=0o700, parents=True, exist_ok=True)
+            if session_root.is_symlink() or workflow_file.is_symlink():
+                raise ExecutionContractError(
+                    "PERMISSION_DENIED", "session workflow path changed during creation",
+                )
+            if workflow_file.parent.resolve() != session_root.resolve():
+                raise ExecutionContractError(
+                    "PERMISSION_DENIED", "session workflow path changed during creation",
+                )
+        except ExecutionContractError:
+            raise
+        except (OSError, RuntimeError, ValueError) as exc:
+            raise ExecutionContractError(
+                "PERMISSION_DENIED", "session workflow state is unavailable",
+            ) from exc
+        return workflow_file
+
+    if root is None:
+        return Path(_runtime_setting("WORKFLOW_FILE"))
+
+    from ._execution_contract import ExecutionContractError
+
+    try:
+        root = root.resolve(strict=True)
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise ExecutionContractError("PERMISSION_DENIED", "project workflow root is unavailable") from exc
+
+    state_dir = _project_scoped_path(root, root / _PROJECT_WORKFLOW_DIRNAME)
+    if state_dir.exists() and not state_dir.is_dir():
+        raise ExecutionContractError("PERMISSION_DENIED", "project workflow state directory is not a directory")
+    if not state_dir.exists():
+        # Validate before creation, then revalidate after creation so an
+        # existing link or path substitution cannot redirect state I/O.
+        state_dir.mkdir(mode=0o700)
+        state_dir = _project_scoped_path(root, state_dir)
+
+    workflow_file = _project_scoped_path(root, state_dir / "workflow_state.json")
+    if workflow_file.exists() and not workflow_file.is_file():
+        raise ExecutionContractError("PERMISSION_DENIED", "project workflow state is not a regular file")
+    return workflow_file
+
+
+def _read_workflow_state() -> dict[str, Any]:
+    workflow_file = _workflow_state_file()
+    if _PROJECT_WORKFLOW_ROOT.get() is None:
+        _ensure_dirs()
+    if not workflow_file.exists():
+        state = _default_workflow_state()
+        workflow_file.write_text(_json(state), encoding="utf-8")
+        return state
+    try:
+        data = json.loads(workflow_file.read_text(encoding="utf-8"))
+    except Exception:
+        data = {}
+    state = _default_workflow_state()
+    if isinstance(data, dict):
+        state.update(data)
+    return state
+
+
+def _write_workflow_state(update: dict[str, Any]) -> dict[str, Any]:
+    workflow_file = _workflow_state_file()
+    state = _read_workflow_state()
+    state.update(update)
+    state["updated_at"] = _now_iso()
+    tmp_path = workflow_file.with_suffix(".json.tmp")
+    root = _PROJECT_WORKFLOW_ROOT.get()
+    session = _srv.active_runtime_context()
+    if session is not None:
+        session_root = session.paths.root
+        if tmp_path.is_symlink() or tmp_path.parent.resolve() != session_root.resolve():
+            from ._execution_contract import ExecutionContractError
+            raise ExecutionContractError("PERMISSION_DENIED", "session workflow temporary path escapes its state directory")
+    elif root is not None:
+        _project_scoped_path(root.resolve(strict=True), tmp_path)
+    tmp_path.write_text(_json(state), encoding="utf-8")
+    os.replace(tmp_path, workflow_file)
+    return state
+
+
+# ---------------------------------------------------------------------------
+# Status and operations logging
+# ---------------------------------------------------------------------------
+def _status_payload(extra: dict[str, Any] | None = None) -> dict[str, Any]:
+    connected = bool(_srv.runtime_value("_client_connected"))
+    server_running = False
+    server_port = None
+    server = _srv.runtime_value("_server")
+    connected_port = _srv.runtime_value("_connected_port")
+    connected_host = _srv.runtime_value("_connected_host")
+    server_started_by_mcp = _srv.runtime_value("_server_started_by_mcp")
+    current_model = _srv.runtime_value("_current_model")
+    current_model_path = _srv.runtime_value("_current_model_path")
+    last_command = _srv.runtime_value("_last_command")
+    last_error = _srv.runtime_value("_last_error")
+    if server is not None:
+        try:
+            server_running = bool(server.running())
+            server_port = getattr(server, "port", None)
+        except Exception:
+            server_running = False
+            server_port = getattr(server, "port", None)
+    elif connected:
+        server_port = connected_port
+
+    attached_to_existing_server = bool(connected and not server_started_by_mcp)
+    server_host = connected_host or _runtime_setting("DEFAULT_HOST")
+    comsol_root = _runtime_setting("COMSOL_ROOT")
+    mcp_home = _runtime_setting("COMSOL_SERVER_MCP_HOME")
+    logs_dir = _runtime_setting("LOGS_DIR")
+    outputs_dir = _runtime_setting("OUTPUTS_DIR")
+
+    payload = {
+        "version": VERSION,
+        "timestamp": time.time(),
+        "datetime": _now_iso(),
+        "status": "ready" if connected else "disconnected",
+        "server_running": server_running,
+        "server_started_by_mcp": server_started_by_mcp,
+        "attached_to_existing_server": attached_to_existing_server,
+        "server_host": server_host,
+        "server_port": server_port,
+        "server_endpoint": (
+            f"{server_host}:{server_port}"
+            if server_port
+            else ""
+        ),
+        "desktop_client_role": "visual-client",
+        "comsol_root": str(comsol_root),
+        "mcp_home": str(mcp_home),
+        "logs_dir": str(logs_dir),
+        "outputs_dir": str(outputs_dir),
+        "current_model_label": _safe_model_label(current_model),
+        "current_model_path": current_model_path or _safe_model_path(current_model),
+        "current_model_origin": _srv.runtime_value("_current_model_origin"),
+        "last_command": last_command,
+        "last_error": last_error,
+        "recommended_desktop_flow": RECOMMENDED_DESKTOP_FLOW,
+        "desktop_should_connect": {
+            "host": server_host,
+            "port": server_port,
+        },
+        "workflow": _read_workflow_state(),
+    }
+    if extra:
+        payload.update(extra)
+    return payload
+
+
+def _write_status(extra: dict[str, Any] | None = None) -> None:
+    _ensure_dirs()
+    payload = _status_payload(extra)
+    status_file = Path(_runtime_setting("STATUS_FILE"))
+    tmp_path = status_file.with_suffix(".json.tmp")
+    tmp_path.write_text(_json(payload), encoding="utf-8")
+    os.replace(tmp_path, status_file)
+
+
+def _append_operation(event: dict[str, Any]) -> None:
+    _ensure_dirs()
+    payload = {
+        "timestamp": time.time(),
+        "datetime": _now_iso(),
+        **event,
+    }
+    with Path(_runtime_setting("OPERATIONS_FILE")).open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(payload, ensure_ascii=False, default=str) + "\n")
+
+
+# ---------------------------------------------------------------------------
+# Background job management
+# ---------------------------------------------------------------------------
+def _create_background_job(kind: str, payload: dict[str, Any]) -> str:
+    job_id = f"{kind}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid4().hex[:8]}"
+    jobs_lock = _srv.background_jobs_lock()
+    jobs = _srv.runtime_value("_background_jobs")
+    with jobs_lock:
+        jobs[job_id] = {
+            "job_id": job_id,
+            "kind": kind,
+            "status": "running",
+            "created_at": _now_iso(),
+            "updated_at": _now_iso(),
+            "payload": payload,
+            "result": {},
+            "error": "",
+        }
+    return job_id
+
+
+def _update_background_job(job_id: str, **update: Any) -> dict[str, Any]:
+    jobs_lock = _srv.background_jobs_lock()
+    jobs = _srv.runtime_value("_background_jobs")
+    with jobs_lock:
+        job = jobs.setdefault(job_id, {"job_id": job_id})
+        job.update(update)
+        job["updated_at"] = _now_iso()
+        return dict(job)
+
+
+def _read_background_job(job_id: str = "") -> dict[str, Any]:
+    jobs_lock = _srv.background_jobs_lock()
+    jobs = _srv.runtime_value("_background_jobs")
+    with jobs_lock:
+        if job_id:
+            return dict(jobs.get(job_id, {}))
+        if not jobs:
+            return {}
+        latest_id = max(
+            jobs,
+            key=lambda key: str(jobs[key].get("updated_at", "")),
+        )
+        return dict(jobs[latest_id])
+
+
+# ---------------------------------------------------------------------------
+# Path and port utilities
+# ---------------------------------------------------------------------------
+def _resolve_path(value: str, *, base: Path | None = None, must_exist: bool = True) -> Path:
+    raw = str(value or "").strip()
+    if not raw:
+        raise ValueError("Path is required.")
+    if base is None:
+        context = _srv.active_runtime_context()
+        base = context.project_root if context is not None else WORKSPACE_ROOT
+    path = Path(raw).expanduser()
+    if not path.is_absolute():
+        path = base / path
+    path = path.resolve()
+    if must_exist and not path.exists():
+        raise FileNotFoundError(f"Path not found: {path}")
+    return path
+
+
+def _port_is_open(host: str, port: int, timeout_seconds: float = 1.0) -> bool:
+    try:
+        with socket.create_connection((host, int(port)), timeout=timeout_seconds):
+            return True
+    except OSError:
+        return False
+
+
+def _server_missing_guidance(host: str, port: int) -> dict[str, Any]:
+    return {
+        "server_available": False,
+        "host": host,
+        "port": int(port),
+        "message": (
+            f"No COMSOL Multiphysics Server is listening at {host}:{int(port)}. "
+            "Please start COMSOL Multiphysics Server manually, confirm its actual port, "
+            "then tell MCP that port."
+        ),
+        "next_step_for_user": "Start COMSOL Server manually and provide the actual listening port.",
+        "mcp_policy": "MCP will not start the server in visible-main mode.",
+    }
+
+
+def _mark_awaiting_manual_server(host: str, port: int, action: str) -> dict[str, Any]:
+    return _write_workflow_state(
+        {
+            "last_action": action,
+            "last_checked_host": host,
+            "last_checked_port": int(port),
+            "last_checked_at": _now_iso(),
+            "workflow_stage": "awaiting_manual_server",
+            "visible_main_locked": False,
+            "main_model_tag": "",
+            "main_model_label": "",
+            "main_model_path": "",
+        }
+    )
+
+
+def _resolve_output_path(value: str, default_path: Path) -> Path:
+    raw = str(value or "").strip()
+    if not raw:
+        path = default_path
+    else:
+        path = Path(raw).expanduser()
+        if not path.is_absolute():
+            context = _srv.active_runtime_context()
+            base = context.project_root if context is not None else WORKSPACE_ROOT
+            path = base / path
+    path = path.resolve()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+# ---------------------------------------------------------------------------
+# Error handling
+# ---------------------------------------------------------------------------
+def _require_mph() -> None:
+    if _srv._remote_client_factory is not None:
+        return
+    mph = _get_mph()
+    if mph is None:
+        raise RuntimeError(
+            "MPh is not available in the MCP Python environment. "
+            f"Import error: {_get_mph_error()}"
+        )
+
+
+def _friendly_connection_error(exc: Exception, host: str, port: int) -> RuntimeError:
+    message = str(exc).strip()
+    lowered = message.lower()
+    endpoint = f"{host}:{port}"
+    if "actively refused" in lowered or "connection refused" in lowered or "refused" in lowered:
+        return RuntimeError(
+            f"Connection refused for {endpoint}. The target port does not have a live "
+            "COMSOL Multiphysics Server listening on it. Start the server manually and "
+            "confirm the port in its console window before calling server_connect()."
+        )
+    if (
+        "auth" in lowered
+        or "password" in lowered
+        or "username" in lowered
+        or "login" in lowered
+        or "credential" in lowered
+    ):
+        return RuntimeError(
+            f"Authentication failed for {endpoint}. Verify the COMSOL Multiphysics "
+            "Server username and password you entered when the server started."
+        )
+    return RuntimeError(f"Failed to connect to {endpoint}: {message or type(exc).__name__}")
+
+
+# ---------------------------------------------------------------------------
+# Snapshot helpers
+# ---------------------------------------------------------------------------
+def _sanitize_snapshot_label(value: str) -> str:
+    cleaned = "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in (value or "").strip())
+    cleaned = cleaned.strip("_")
+    return cleaned or "snapshot"
+
+
+def _workflow_snapshot_path(label: str, workflow: dict[str, Any] | None = None) -> Path:
+    state = workflow or _read_workflow_state()
+    snapshot_dir = str(state.get("snapshot_dir", "") or "").strip()
+    current_main = str(state.get("current_main_model_path", "") or "").strip()
+    prefix = str(state.get("snapshot_prefix", "") or "").strip()
+    template = str(state.get("snapshot_name_template", "") or "").strip() or "{prefix}_{label}_{timestamp}.mph"
+
+    if snapshot_dir:
+            base_dir = _resolve_output_path(snapshot_dir, _runtime_output_dir()).resolve()
+    elif current_main:
+        base_dir = Path(current_main).expanduser().resolve().parent
+    else:
+        base_dir = _runtime_output_dir().resolve()
+    base_dir.mkdir(parents=True, exist_ok=True)
+
+    if not prefix:
+        if current_main:
+            prefix = Path(current_main).stem
+        else:
+            prefix = "server_model"
+    filename = template.format(
+        prefix=prefix,
+        label=_sanitize_snapshot_label(label),
+        timestamp=datetime.now().strftime("%Y%m%d_%H%M%S"),
+    )
+    if not filename.lower().endswith(".mph"):
+        filename += ".mph"
+    return (base_dir / filename).resolve()
+
+
+# ---------------------------------------------------------------------------
+# Tool result / run_tool (used by every MCP tool function)
+# ---------------------------------------------------------------------------
+class ToolExecutionError(RuntimeError):
+    """A business failure with auditable data for the legacy JSON envelope.
+
+    The W05 gateway converts an envelope with ``success: false`` into the
+    outer MCP ``isError`` result.  Retaining structured details here keeps
+    direct legacy tool-to-tool calls compatible while avoiding a fiction that
+    a partially applied engine mutation was successful.
+    """
+
+    def __init__(self, message: str, *, data: dict[str, Any] | None = None):
+        super().__init__(message)
+        self.data = data or {}
+
+
+_EXPLICIT_EXECUTION_SIGNALS = (
+    "partial_change",
+    "failed_item_may_have_changed",
+    "cleanup_failed",
+    "engine_state_unknown",
+    "execution_state_unknown",
+    "applied",
+)
+
+
+def _collect_explicit_execution_signals(value: Any, found: dict[str, bool], seen: set[int], budget: list[int]) -> None:
+    """Collect explicit boolean signals from bounded structured mappings.
+
+    This deliberately does not parse exception strings or JSON text.  Worker
+    protocol mappings may contain a nested ``failure`` object; only known
+    mapping fields and explicit ``True`` values are propagated.
+    """
+    if not isinstance(value, Mapping) or budget[0] <= 0:
+        return
+    marker = id(value)
+    if marker in seen:
+        return
+    seen.add(marker)
+    budget[0] -= 1
+    for name in _EXPLICIT_EXECUTION_SIGNALS:
+        if value.get(name) is True:
+            found[name] = True
+    for name in ("failure", "error", "data", "result", "details"):
+        nested = value.get(name)
+        if isinstance(nested, Mapping):
+            _collect_explicit_execution_signals(nested, found, seen, budget)
+
+
+def _exception_execution_signals(exc: BaseException) -> dict[str, bool]:
+    """Read explicit engine-state flags through a bounded cause/context chain."""
+    found: dict[str, bool] = {}
+    pending: list[BaseException] = [exc]
+    seen_exceptions: set[int] = set()
+    seen_mappings: set[int] = set()
+    budget = [64]
+    while pending and len(seen_exceptions) < 32:
+        current = pending.pop(0)
+        marker = id(current)
+        if marker in seen_exceptions:
+            continue
+        seen_exceptions.add(marker)
+        for name in _EXPLICIT_EXECUTION_SIGNALS:
+            if getattr(current, name, None) is True:
+                found[name] = True
+        for attribute in ("reply", "failure", "data"):
+            _collect_explicit_execution_signals(getattr(current, attribute, None), found, seen_mappings, budget)
+        if current.__cause__ is not None:
+            pending.append(current.__cause__)
+        if current.__context__ is not None and current.__context__ is not current.__cause__:
+            pending.append(current.__context__)
+    return found
+
+
+def _merge_exception_data(data: Mapping[str, Any] | None, exc: BaseException) -> dict[str, Any]:
+    """Merge exception signals without allowing an explicit True to regress."""
+    merged = dict(data or {})
+    for name, value in _exception_execution_signals(exc).items():
+        if value is True or merged.get(name) is True:
+            merged[name] = True
+    return merged
+
+
+def _tool_result(tool: str, success: bool, data: dict[str, Any] | None = None, error: str = "") -> str:
+    _srv.set_runtime_value("_last_command", tool)
+    _srv.set_runtime_value("_last_error", error)
+    payload = {
+        "success": success,
+        "tool": tool,
+        "timestamp": time.time(),
+        "datetime": _now_iso(),
+        "server": _status_payload(),
+        "data": data or {},
+        "error": error,
+        "log_path": str(_runtime_setting("SERVER_LOG")),
+        "operations_path": str(_runtime_setting("OPERATIONS_FILE")),
+    }
+    _append_operation(
+        {
+            "tool": tool,
+            "success": success,
+            "error": error,
+            "data": data or {},
+        }
+    )
+    _write_status({"last_command": tool, "last_error": error})
+    return _json(payload)
+
+
+def _run_tool_readonly(tool: str, callback) -> str:
+    """Run a read-only tool WITHOUT acquiring _runtime_lock.
+
+    Use for tools that only read state and never modify the model or
+    connection (server_info, check_server_port, workflow_info, run_study_status).
+    These tools must remain responsive even when a long-running operation
+    (e.g., run_study_async) holds the lock.
+    """
+    _setup_logging()
+    try:
+        data = callback()
+        return _tool_result(tool, True, data=data)
+    except ToolExecutionError as exc:
+        logging.exception("Tool %s failed", tool)
+        return _tool_result(tool, False, data=_merge_exception_data(exc.data, exc), error=str(exc))
+    except Exception as exc:
+        logging.exception("Tool %s failed", tool)
+        return _tool_result(tool, False, data=_merge_exception_data(None, exc), error=str(exc))
+
+
+def _run_tool(tool: str, callback) -> str:
+    _setup_logging()
+    lock = _srv.runtime_lock()
+    acquired = lock.acquire(timeout=120.0)
+    if not acquired:
+        err_msg = (
+            f"Tool {tool} could not acquire the runtime lock within 120s. "
+            "Another tool is likely running a long operation (e.g., model.solve). "
+            "If using run_study, switch to run_study_async and poll run_study_status."
+        )
+        logging.error(err_msg)
+        return _tool_result(tool, False, error=err_msg)
+    try:
+        try:
+            data = callback()
+            return _tool_result(tool, True, data=data)
+        except ToolExecutionError as exc:
+            logging.exception("Tool %s failed", tool)
+            return _tool_result(tool, False, data=_merge_exception_data(exc.data, exc), error=str(exc))
+        except Exception as exc:
+            logging.exception("Tool %s failed", tool)
+            return _tool_result(tool, False, data=_merge_exception_data(None, exc), error=str(exc))
+    finally:
+        lock.release()

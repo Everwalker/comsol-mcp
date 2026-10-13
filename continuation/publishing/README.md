@@ -1,0 +1,7 @@
+# Publication materializer provenance
+
+prepare.py, refine.py, closure.py and document.py are the exact successive local preparation scripts. Their original absolute B/O paths are historical evidence; do not execute them blindly on a different host. SOURCE_TO_SEND_RELATIVE_MAP.json gives source_relative for every workspace file and the portable published path/hash/size. External-source entries retain the original external path as historical provenance plus the included content path; use their published bytes, not an unavailable Mac path.
+
+Reconstruction of the published tree requires no original machine: checkout the Git tree and verify the published hashes. To reproduce the selection from a recovered workspace, provide an explicit new B/O root and use the relative map as an exact allowlist; do not rescan arbitrary host directories or adopt absent inputs. Frozen native actors need regenerated host-specific metadata/source reviews and a fresh once admission; publishing does not authorize native replay.
+
+All 31 absent references are historical (including command strings mistaken for paths by the broad historical reference collector). They are not accepted as executable current dependencies. Current standalone candidates and their separately included source closures remain available. Final R15 and W26 scoped double-review status is recorded in ../STATES.json; target native operations remain NOT_RUN. The exact publication tree is reviewed before normal main synchronization and pause.

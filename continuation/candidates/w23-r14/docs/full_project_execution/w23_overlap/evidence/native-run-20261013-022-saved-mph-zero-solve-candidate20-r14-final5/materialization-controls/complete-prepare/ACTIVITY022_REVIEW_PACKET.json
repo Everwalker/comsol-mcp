@@ -1,0 +1,250 @@
+{
+  "activity_id": "w23-saved-mph-zero-solve-readback-20261013-022",
+  "candidate_id": "W23-TE-SAVED-MPH-ZERO-SOLVE-READBACK-20",
+  "candidate_revision": "candidate20-r14",
+  "freeze_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/docs/full_project_execution/w23_overlap/evidence/native-run-20261013-022-saved-mph-zero-solve-candidate20-r14-final5/materialization-controls/complete-prepare/freeze.json",
+  "freeze_sha256": "2263ab4df193587c3e3d055e0c4f025f05c79d252f02aa4800dead9592a8151d",
+  "input_model": {
+    "bytes": 13795478,
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_009_candidate17_r2/private-control-store/activity009-r2/saved-models/w23_coarse-phase0_provisional.mph",
+    "sha256": "cba0c1d404003c4e60a20b04316cb1456c38cc2b45596dc2dc29bbed62674a8c",
+    "status": "PASS_EXACT_INPUT_IDENTITY"
+  },
+  "limits": {
+    "cleanup_reserve_seconds": 120,
+    "managed_operation_allowlist": [
+      "server_connect",
+      "model_load",
+      "model.inspect",
+      "dataset.list",
+      "dataset.solution_indices",
+      "operation_call/code.execute_java(saved_solution_diagnostic only)",
+      "operation_call/result.at_points(exact public {x,y} objects with um/spatial: four dset1/sol1 field grids with exact ordered FIELD_REQUESTED_UNITS [V/m,A/m,1], two dset1/sol1 freq reads requested Hz/GHz, dset2/sol2 and dset3/sol3 beta/neff/k0 port centers requested [1/m,1,1/m]; exactly eight slots)"
+    ],
+    "max_gui_processes": 0,
+    "max_owned_server_processes": 1,
+    "max_result_at_points_calls": 8,
+    "max_seconds_from_server_birth": 1800,
+    "max_solver_run_calls": 0,
+    "max_study_run_calls": 0,
+    "max_worker_sessions": 1,
+    "retry_unknown_or_nonterminal_worker_request": false,
+    "stop_after_first_unknown_or_nonterminal_worker_request": true
+  },
+  "native_invocation": {
+    "argv": [
+      "env",
+      "-u",
+      "CODEX_NETWORK_GUARD_LOG",
+      "-u",
+      "CODEX_NETWORK_GUARD_LABEL",
+      "-u",
+      "CODEX_NETWORK_GUARD_RUN_ID",
+      "TMPDIR=/private/tmp",
+      "PYTHONPATH=/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14",
+      "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python",
+      "-m",
+      "tools.run_native_w23_saved_mph_diagnostic",
+      "execute",
+      "--freeze",
+      "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/docs/full_project_execution/w23_overlap/evidence/native-run-20261013-022-saved-mph-zero-solve-candidate20-r14-final5/materialization-controls/complete-prepare/freeze.json",
+      "--freeze-sha256",
+      "2263ab4df193587c3e3d055e0c4f025f05c79d252f02aa4800dead9592a8151d",
+      "--approval",
+      "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/docs/full_project_execution/w23_overlap/evidence/native-run-20261013-022-saved-mph-zero-solve-candidate20-r14-final5/materialization-controls/complete-prepare/ROOT_APPROVAL_ACTIVITY022.json",
+      "--saved-model",
+      "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_009_candidate17_r2/private-control-store/activity009-r2/saved-models/w23_coarse-phase0_provisional.mph",
+      "--work",
+      "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/docs/full_project_execution/w23_overlap/evidence/native-run-20261013-022-saved-mph-zero-solve-candidate20-r14-final5/materialization-controls/complete-prepare/unborn-work",
+      "--evidence",
+      "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/docs/full_project_execution/w23_overlap/evidence/native-run-20261013-022-saved-mph-zero-solve-candidate20-r14-final5/materialization-controls/complete-prepare/unborn-native"
+    ],
+    "argv_sha256": "81b0b6d0af601a5755c961db9b09dc54ed0708b6cca835677dcd5f72b7147db8",
+    "cwd": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14",
+    "environment": {
+      "CODEX_NETWORK_GUARD_LABEL": null,
+      "CODEX_NETWORK_GUARD_LOG": null,
+      "CODEX_NETWORK_GUARD_RUN_ID": null,
+      "PYTHONPATH": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14",
+      "TMPDIR": "/private/tmp"
+    },
+    "evidence_path_expected_absent": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/docs/full_project_execution/w23_overlap/evidence/native-run-20261013-022-saved-mph-zero-solve-candidate20-r14-final5/materialization-controls/complete-prepare/unborn-native",
+    "root_approval_path_expected": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/docs/full_project_execution/w23_overlap/evidence/native-run-20261013-022-saved-mph-zero-solve-candidate20-r14-final5/materialization-controls/complete-prepare/ROOT_APPROVAL_ACTIVITY022.json",
+    "strict_test_network_guard": "NOT_SET_FOR_NATIVE",
+    "tool_sandbox_permissions": "require_escalated",
+    "work_path_expected_absent": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/docs/full_project_execution/w23_overlap/evidence/native-run-20261013-022-saved-mph-zero-solve-candidate20-r14-final5/materialization-controls/complete-prepare/unborn-work"
+  },
+  "native_scientific_acceptance": "NOT_RUN; diagnostic readback only",
+  "offline_gates": {
+    "compile": {
+      "classpath_jar_content_fingerprint_sha256": "c942b5e0fb93525bbd109028390bf15d27c1f702677149bca1b9f47aba7932b3",
+      "classpath_jar_count": 25,
+      "classpath_manifest_sha256": "ef9ccdd4b236aa56465e155860ed88465c89f63f86982898cc7b15f188ad0574",
+      "compiled_sources": {
+        "persistent_worker": {
+          "class_name": "comsol_mcp.worker_java.PersistentComsolWorker",
+          "classes": {
+            "comsol_mcp/worker_java/PersistentComsolWorker$ChangeHandler.class": {
+              "bytes": 2030,
+              "sha256": "7736d046eaef826c130de0de655b1ef5d7fd7ab5525c6b8e63c3ddd8a6b6eff7"
+            },
+            "comsol_mcp/worker_java/PersistentComsolWorker$CompiledArtifact.class": {
+              "bytes": 585,
+              "sha256": "1cba8d7c89fef11ea4271f3edee354e3b92d1bf2a095e59f089e92963a5c2982"
+            },
+            "comsol_mcp/worker_java/PersistentComsolWorker$Conversion.class": {
+              "bytes": 481,
+              "sha256": "782977539ae024f6be87fb691150a30e150eac45b4fb29b8635804e9ac0c0c96"
+            },
+            "comsol_mcp/worker_java/PersistentComsolWorker$DuplicateTagFixture.class": {
+              "bytes": 634,
+              "sha256": "77f4872187d4ee14c98958b733a3ff179da9ef74b534eeaea88eac8dce2fc4d9"
+            },
+            "comsol_mcp/worker_java/PersistentComsolWorker$HasProductFixture.class": {
+              "bytes": 944,
+              "sha256": "14188d527ceaa3ca1aca543aa6ab77fb300837aac7fb8aaf9170408d4b5a0ea9"
+            },
+            "comsol_mcp/worker_java/PersistentComsolWorker$Json$NonFiniteJsonValue.class": {
+              "bytes": 600,
+              "sha256": "35334d576b558f7b0bc163e9cc60f44687f08ae8f2cf503d495612c3df82b281"
+            },
+            "comsol_mcp/worker_java/PersistentComsolWorker$Json$Parser.class": {
+              "bytes": 3942,
+              "sha256": "fc931c8cba5ae4de7d9ea99336d5f5f62b563a81eddd03d10c2df17640cab4c7"
+            },
+            "comsol_mcp/worker_java/PersistentComsolWorker$Json.class": {
+              "bytes": 2800,
+              "sha256": "a7f2689ce9530a2e30dbbbcc1cd3a8d5adaec6d06e53d003801866fa116afdc9"
+            },
+            "comsol_mcp/worker_java/PersistentComsolWorker$RequestState.class": {
+              "bytes": 2469,
+              "sha256": "319cc7abfe584569b0103d45dd7ef7cb0889106480057629c1b601099adc6201"
+            },
+            "comsol_mcp/worker_java/PersistentComsolWorker$SourceSpec.class": {
+              "bytes": 619,
+              "sha256": "d33f888aba9c45cf87ae86189be0379b838971adf96a96f4633c7811d4467cf8"
+            },
+            "comsol_mcp/worker_java/PersistentComsolWorker$TaggableA.class": {
+              "bytes": 308,
+              "sha256": "81c9390679654ddbac1ecd9dddfc37a4e4b0635a08ac5b3fa6fe6a60a8d53f22"
+            },
+            "comsol_mcp/worker_java/PersistentComsolWorker$TaggableB.class": {
+              "bytes": 308,
+              "sha256": "5800641bbc38b6609c7b6d8ebb64f29ccffa05e30ebfcfdf0a3e1e5f02517c46"
+            },
+            "comsol_mcp/worker_java/PersistentComsolWorker$WorkerFailure.class": {
+              "bytes": 1150,
+              "sha256": "7ade9aa8cccb9626e249c56cd2e52912386565b95dab59661efb6b7374efa4b6"
+            },
+            "comsol_mcp/worker_java/PersistentComsolWorker.class": {
+              "bytes": 92772,
+              "sha256": "fca2316c682958414de7399722c557729c261e4678bbc83500c04967c96ed7ef"
+            }
+          },
+          "compile_command": [
+            "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home/bin/javac",
+            "-encoding",
+            "UTF-8",
+            "-classpath",
+            "/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.api_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.client_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.clientapi_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.communication_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.doc_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.nativebasicutil_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.nativejni_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.resources_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.security_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.systemutils_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.util_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.emf.common_2.18.0.v20191225-1014.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.equinox.common_3.11.0.v20200206-0817.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.equinox.registry_3.8.700.v20200121-1457.jar:/Applications/COMSOL64/Multiphysics/apiplugins/javax.websocket-1.0.0.v20140310-1603.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.jetty.jetty-client-9.4.58.v20250814.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.jetty.jetty-http-9.4.58.v20250814.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.jetty.jetty-io-9.4.58.v20250814.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.jetty.jetty-util-9.4.58.v20250814.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.jetty.websocket.javax-websocket-client-impl-9.4.58.v20250814.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.jetty.websocket.websocket-api-9.4.58.v20250814.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.jetty.websocket.websocket-client-9.4.58.v20250814.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.jetty.websocket.websocket-common-9.4.58.v20250814.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.osgi_3.15.200.v20200214-1600.jar:/Applications/COMSOL64/Multiphysics/apiplugins/truezip-6.jar",
+            "-d",
+            "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/docs/full_project_execution/w23_overlap/evidence/native-run-20261013-022-saved-mph-zero-solve-candidate20-r14-final5/offline_gates/compile/persistent_worker/classes",
+            "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/comsol_mcp/worker_java/PersistentComsolWorker.java"
+          ],
+          "javac_returncode": 0,
+          "javac_stderr": "",
+          "javac_stdout": "",
+          "javap_returncode": 0,
+          "javap_stderr": "",
+          "javap_stdout": "Compiled from \"PersistentComsolWorker.java\"\npublic final class comsol_mcp.worker_java.PersistentComsolWorker {\n  public static void main(java.lang.String[]) throws java.lang.Exception;\n  static void validateMeshBlockArguments(java.lang.String, java.util.List<?>);\n  static java.util.Map<java.lang.String, java.lang.Object> terminalInterpolationRangeFailure(java.lang.Object, java.lang.String, java.util.List<?>, java.lang.Throwable, java.lang.String);\n  static java.util.Map<java.lang.String, java.lang.Object> strictFieldPayload(double[][][], double[][][], double[][], boolean, long, int);\n  static {};\n}\n",
+          "source": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/comsol_mcp/worker_java/PersistentComsolWorker.java",
+          "source_sha256": "2497cc2d9006ad714040f77e046ac2ede90ef4ed31106a3c78899cca530a6b35"
+        },
+        "science_fixture": {
+          "class_name": "NativeW23TEScienceFixture",
+          "classes": {
+            "NativeW23TEScienceFixture$1.class": {
+              "bytes": 1189,
+              "sha256": "165683cae92342943ab8d80f6eae4fc236d8c676323466fbbfc45b789aadbb9b"
+            },
+            "NativeW23TEScienceFixture$2.class": {
+              "bytes": 1173,
+              "sha256": "2f935a92d440109c99a63d22e129bf748a37567e349905e03b5e758663a3ed22"
+            },
+            "NativeW23TEScienceFixture$PropertyReader.class": {
+              "bytes": 478,
+              "sha256": "a0b068c76f40d22da8007e50ad787849459d6590505d49551dfe623e490016e2"
+            },
+            "NativeW23TEScienceFixture$ReadOnlyCall.class": {
+              "bytes": 328,
+              "sha256": "bd34d1e22bc70cecc6503902cf6c6ecbf354b522e2b434111612be11d923d5b4"
+            },
+            "NativeW23TEScienceFixture.class": {
+              "bytes": 67806,
+              "sha256": "1183cca47f9ebc76fa164e1bed880e5043bd6241d7dabbe7b2aa17631c9cc8bd"
+            }
+          },
+          "compile_command": [
+            "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home/bin/javac",
+            "-encoding",
+            "UTF-8",
+            "-classpath",
+            "/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.api_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.client_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.clientapi_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.communication_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.doc_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.nativebasicutil_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.nativejni_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.resources_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.security_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.systemutils_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/com.comsol.util_1.0.0.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.emf.common_2.18.0.v20191225-1014.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.equinox.common_3.11.0.v20200206-0817.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.equinox.registry_3.8.700.v20200121-1457.jar:/Applications/COMSOL64/Multiphysics/apiplugins/javax.websocket-1.0.0.v20140310-1603.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.jetty.jetty-client-9.4.58.v20250814.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.jetty.jetty-http-9.4.58.v20250814.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.jetty.jetty-io-9.4.58.v20250814.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.jetty.jetty-util-9.4.58.v20250814.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.jetty.websocket.javax-websocket-client-impl-9.4.58.v20250814.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.jetty.websocket.websocket-api-9.4.58.v20250814.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.jetty.websocket.websocket-client-9.4.58.v20250814.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.jetty.websocket.websocket-common-9.4.58.v20250814.jar:/Applications/COMSOL64/Multiphysics/apiplugins/org.eclipse.osgi_3.15.200.v20200214-1600.jar:/Applications/COMSOL64/Multiphysics/apiplugins/truezip-6.jar",
+            "-d",
+            "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/docs/full_project_execution/w23_overlap/evidence/native-run-20261013-022-saved-mph-zero-solve-candidate20-r14-final5/offline_gates/compile/science_fixture/classes",
+            "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/tools/java/NativeW23TEScienceFixture.java"
+          ],
+          "javac_returncode": 0,
+          "javac_stderr": "注: /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/tools/java/NativeW23TEScienceFixture.java使用或覆盖了已过时的 API。\n注: 有关详细信息, 请使用 -Xlint:deprecation 重新编译。\n",
+          "javac_stdout": "",
+          "javap_returncode": 0,
+          "javap_stderr": "",
+          "javap_stdout": "Compiled from \"NativeW23TEScienceFixture.java\"\npublic final class NativeW23TEScienceFixture {\n  public static java.lang.Object run(com.comsol.model.Model, java.util.Map<java.lang.String, java.lang.Object>);\n  static {};\n}\n",
+          "source": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/tools/java/NativeW23TEScienceFixture.java",
+          "source_sha256": "63be8fa15063b914f9f37cd09cd4fe048f18c6a37c856820f44737bb4857e23e"
+        }
+      },
+      "comsol_version": {
+        "root_name": "Multiphysics",
+        "version_text": "6.4"
+      },
+      "jdk_home": "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home",
+      "status": "PASS_COMSOL_64_JDK11_COMPILE_AND_JAVAP"
+    },
+    "status": "PASS_ALL_OFFLINE_GATES"
+  },
+  "previous_activity009_preservation_check": {
+    "bytes": 7808,
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_009_candidate17_r2/ROOT_PRESERVATION_CLEANUP_CHECK009_R2.json",
+    "sha256": "27f6ad34cb2a82a8388f23f8c1e82f86d0616d5e8b3aa17a0c486c9c80bc3aa4",
+    "status": "PASS_EXACT_INPUT_IDENTITY"
+  },
+  "previous_activity010_preservation_check": {
+    "bytes": 2765,
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_010_saved_mph_diagnostic/ROOT_PRESERVATION_CLEANUP_CHECK010.json",
+    "sha256": "871bc390e64136c5c2b0caaf7a07a6ddc4d8a3169b41cef899718a2446b04492",
+    "status": "PASS_EXACT_INPUT_IDENTITY"
+  },
+  "prior_activity009": "FAIL_OR_INCOMPLETE; one durable Study.run SUCCEEDED then postprocessing failed; no replay",
+  "schema_version": 1,
+  "source_bytes": 20361230,
+  "source_changes_from_activity010_base": [
+    "tools/w23_te_science_protocol.py: exact attached raw count-only no-outer singleton plus separate native Interp freq[Hz] witness, BMA StoreSolution formula cross-check, and strict production complex point-readback unit/shape/normal validation",
+    "tools/run_native_w23_saved_mph_diagnostic.py: Current frozen activity exact requested-unit/per-port result.at_points allowlist, zero-Study field/mode reads, independent quadrature and saved-mode readback gates",
+    "tests/test_native_w23_te_science_protocol.py: positive/negative tests for frequency singleton, dataset/study binding, BMA formulas, native units and incomplete axes",
+    "tests/test_native_w23_te_science_runner.py: unchanged production science-runner contract regression included because readback helpers are shared",
+    "tests/test_native_w23_saved_mph_diagnostic.py and tests/test_g3_results.py: guard, dispatch, attached count-only, and no-axis-fabrication controls",
+    "docs/full_project_execution/w23_overlap/W23_TE_FIXTURE_PROPOSAL.md: append current frozen activity successor criteria; Activity010 failure/evidence remains unchanged"
+  ],
+  "source_count": 424,
+  "source_manifest_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/docs/full_project_execution/w23_overlap/evidence/native-run-20261013-022-saved-mph-zero-solve-candidate20-r14-final5/materialization-controls/complete-prepare/source_manifest.json",
+  "source_manifest_sha256": "beea72c917d5cf1e538938c75c5c165c836e763e2b22733568fecdad89568283",
+  "source_reconciliation": {
+    "bytes": 7494,
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_009_candidate17_r2/ACTIVITY009_R2_RECONCILIATION.json",
+    "sha256": "9e2fe93acbc4a67bc0f87c8c93b2a02e695f03ea3ffcda9512a2eab99dcca7a3",
+    "status": "PASS_EXACT_INPUT_IDENTITY"
+  },
+  "source_root": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14",
+  "status": "PREPARED_AWAITING_ROOT_REVIEW_AND_EXACT_ADMISSION"
+}

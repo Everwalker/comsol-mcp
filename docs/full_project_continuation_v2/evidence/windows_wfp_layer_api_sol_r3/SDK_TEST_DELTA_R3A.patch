@@ -1,0 +1,20 @@
+--- R3/tests/test_windows_wfp_sdk_abi.py
++++ R3A/tests/test_windows_wfp_sdk_abi.py
+@@ -189,3 +189,17 @@
+     assert effective.paths==[profile.windows_policy.wfp_grants[0].application_path]
+     assert 'WFP_DEFAULT_BLOCK_NOT_PROVEN' in result.reasons
+     assert result.verified is False and result.evidence_classification=='SOFTWARE_ONLY'
++
++
++def test_sdk_literal_v6_mask_and_range_decoders_use_257_and_258():
++    api=native.CtypesWindowsPolicyApi.__new__(native.CtypesWindowsPolicyApi)
++    address=native.FWP_V6_ADDR_AND_MASK();address.addr[15]=1;address.prefixLength=128
++    value=native.FWP_CONDITION_VALUE0();value.type=257;value.v6AddrMask=C.cast(C.pointer(address),C.c_void_p)
++    assert api._decode_value(value)=={'type':257,'address':'00'*15+'01','prefix_length':128}
++    interval=native.FWPM_RANGE0();interval.valueLow.type=2;interval.valueLow.uint16=100;interval.valueHigh.type=2;interval.valueHigh.uint16=200
++    value.type=258;value.rangeValue=C.cast(C.pointer(interval),C.c_void_p)
++    assert api._decode_value(value)=={'type':258,'low':{'type':2,'value':100},'high':{'type':2,'value':200}}
++    for reserved in [19,20,21]:
++        value.type=reserved
++        with pytest.raises(native.NativePolicyError):api._decode_value(value)
++        with pytest.raises(native.NativePolicyError):native._validate_normalized_fwp_value({'type':reserved,'value':0})

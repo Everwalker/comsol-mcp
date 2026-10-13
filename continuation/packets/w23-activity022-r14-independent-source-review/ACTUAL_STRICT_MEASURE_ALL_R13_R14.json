@@ -1,0 +1,156 @@
+{
+  "source_only": true,
+  "SDK_fixture": true,
+  "native": "NOT_RUN",
+  "arguments": {
+    "spec": {
+      "expressions": [
+        "T"
+      ],
+      "solution": {
+        "dataset": "dset1",
+        "solution": "sol1"
+      },
+      "aggregate": "integral",
+      "complex_mode": "real",
+      "selection": {
+        "kind": "all",
+        "component": "comp1",
+        "geometry": "geom1",
+        "entity_dimension": 3
+      },
+      "storage": "inline"
+    }
+  },
+  "proofs": {
+    "r13": {
+      "status": "RETURNED",
+      "strict_evidence": {
+        "status": "VERIFIED",
+        "selection_source": "actual_transient_numerical_feature_readback",
+        "selection_features": [
+          {
+            "role": "primary",
+            "feature_tag": "cmssp1",
+            "source": "actual_transient_numerical_feature",
+            "component": "comp1",
+            "geometry": "geom1",
+            "entity_dimension": 3,
+            "kind": "all",
+            "tag": null,
+            "entities": [
+              1,
+              2
+            ],
+            "resolver_source": "measure_tool_all",
+            "native_selection_readback": {
+              "named": null,
+              "named_error": null,
+              "is_inheriting": false,
+              "entities": [
+                1,
+                2
+              ],
+              "entities_error": null,
+              "dimension": 3,
+              "geometry": "geom1"
+            }
+          }
+        ],
+        "selection_membership_identical": true,
+        "selected_solution_pairs": [
+          {
+            "outer": 1,
+            "inner": 1,
+            "solnum": 1
+          },
+          {
+            "outer": 1,
+            "inner": 2,
+            "solnum": 2
+          },
+          {
+            "outer": 1,
+            "inner": 3,
+            "solnum": 3
+          }
+        ],
+        "solution_pair_source": "SolutionInfo_outer_inner_solnum_mapping",
+        "expression_unit_readback": {
+          "T": "K"
+        },
+        "requested_solution": {
+          "dataset": "dset1",
+          "solution": "sol1"
+        },
+        "dataset_binding": {
+          "dataset": "dset1",
+          "dataset_type": "Solution",
+          "solution": "sol1",
+          "component": "comp1",
+          "geometry": "geom1",
+          "dataset_chain": [
+            "dset1"
+          ],
+          "dataset_edges": [],
+          "binding_complete": true,
+          "sources": {
+            "solution": "dataset.solution -> model.sol().tags()",
+            "component": "dataset.comp -> modelNode.tags()/model.component()",
+            "geometry": "dataset.geom -> component.geom.tags()/getter"
+          },
+          "properties": {
+            "solution": "sol1",
+            "data": "sol1",
+            "comp": "comp1",
+            "geom": "geom1"
+          },
+          "read_errors": [],
+          "error": null,
+          "requested_solution": "sol1",
+          "provenance": {
+            "dataset_tags": [
+              "dset1"
+            ],
+            "solution_tags": [
+              "sol1"
+            ],
+            "read_only": true,
+            "mutation_methods_called": []
+          }
+        }
+      },
+      "measure_calls": [
+        [
+          "geom",
+          3
+        ],
+        [
+          "all"
+        ],
+        [
+          "entities"
+        ]
+      ],
+      "remaining_numerical_tags": []
+    },
+    "r14": {
+      "status": "REFUSED",
+      "code": "INVALID_SELECTION",
+      "message": "strict point selection requires named or explicit membership",
+      "measure_calls": [
+        [
+          "geom",
+          3
+        ],
+        [
+          "all"
+        ],
+        [
+          "entities"
+        ]
+      ],
+      "remaining_numerical_tags": []
+    }
+  }
+}

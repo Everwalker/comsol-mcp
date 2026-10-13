@@ -1,0 +1,80 @@
+"""Source-only metadata publication/fence and actual020 dangerous-run replay."""
+import copy,json,os
+from pathlib import Path
+import pytest
+from tools import run_native_w23_saved_mph_diagnostic as runner
+from tests.test_activity019_private_singleton_ticket import _setup
+from tests.test_ephemeral_result_ticket import _call
+
+RAW=Path(__file__).parent/'fixtures/w23_activity020/ALL_THREE_ACTUAL020_POINT_JOBS_ORIGINAL_TYPED_EVENTS.json'
+
+def _capture(name,data):
+    path=os.environ.get('W23_ACTIVITY021_METADATA_CAPTURE')
+    if path:
+        p=Path(path);p.mkdir(parents=True,exist_ok=True);(p/(name+'.json')).write_text(json.dumps(data,indent=2,sort_keys=True)+'\n')
+
+def _metadata_transport_sample():
+    # Deliberately transport sample strings, not generated physics definitions.
+    return {'diagnostic_phase':'definition_boundary_metadata','component_tag':'comp1','geometry_tag':'geom1','physics_tag':'ewfd','geometry_dimension':2,'numerical_feature_dispatch_count':0,'study_or_solver_invoked':False,'physics_or_selection_mutated':False,'scientific_acceptance':'NOT_EVALUATED','physics_name_raw':'SOURCE_SAMPLE_SCOPE','physics_scope_raw':'SOURCE_SAMPLE_SCOPE','physics_type':'SOURCE_SAMPLE_TYPE','polarization_components_raw':'outofplane','electric_field_name_raw':'E','electric_field_components_raw':['Ex','Ey','Ez'],'electric_field_fieldname_raw':['Ex','Ey','Ez'],'geometry_length_unit_raw':'um','geometry_bounding_box_raw':[-10,10,-8,8],'boundary_up_down_raw':[[1],[0]],'definition_tables':[{'table_type':'Expression','options':['recursive','all'],'raw_rows':[['SOURCE_SAMPLE_NOT_NATIVE_DEFINITION',None],None],'row_widths':[2,-1]}],'named_selections':[{'selection_tag':tag,'geometry_raw':'geom1','dimension_raw':dim,'entities_raw':[1]} for tag,dim in [('selReceiverX8',1),('selInputPort',1),('selCoreCaptureX8',1),('selCoreMaterial',2),('selPmlDomains',2),('selCladdingBottom',2),('selCladdingTop',2)]]}
+
+def test_transport_sample_raw_all_columns_null_rows_not_definition_acceptance():
+    sample=_metadata_transport_sample();before=copy.deepcopy(sample);r=runner.validate_definition_boundary_metadata(sample)
+    assert sample==before and r['definitions_interpreted'] is False and r['boundary_side_chosen'] is False and r['native_field_or_port_values']=='NOT_RUN'
+    _capture('sample-schema-not-definitions',{'source_only':True,'native':'NOT_RUN','sample':sample,'result':r})
+
+@pytest.mark.parametrize('fault',['phase','scope','rows','columns','width','entities','geometry','unknown','numeric'])
+def test_metadata_publication_negative_real_validator_rejects(fault):
+    sample=_metadata_transport_sample()
+    if fault=='phase':sample['diagnostic_phase']='raw_fields'
+    elif fault=='scope':sample['physics_tag']='different'
+    elif fault=='rows':sample['definition_tables'][0]['raw_rows']=[[]]*16385;sample['definition_tables'][0]['row_widths']=[0]*16385
+    elif fault=='columns':sample['definition_tables'][0]['raw_rows']=[['x']*129];sample['definition_tables'][0]['row_widths']=[129]
+    elif fault=='width':sample['definition_tables'][0]['row_widths'][0]=1
+    elif fault=='entities':sample['named_selections'][0]['entities_raw']=[True]
+    elif fault=='geometry':sample['named_selections'][0]['geometry_raw']='other'
+    elif fault=='unknown':sample['execution_state_unknown']=True
+    elif fault=='numeric':sample['numerical_feature_dispatch_count']=1
+    with pytest.raises(RuntimeError) as caught:runner.validate_definition_boundary_metadata(sample)
+    _capture('negative-'+fault,{'source_only':True,'native':'NOT_RUN','fault':fault,'error':str(caught.value)})
+
+@pytest.mark.parametrize('operation',['result.at_points','dataset.solution_indices','saved_solution_diagnostic','raw_fields','build','save','wrong-source'])
+def test_native_same_guard_denies_all_old_numerical_or_wrong_metadata_routes(tmp_path,operation):
+    calls=[]
+    class Daemon:
+        def dispatch(self,request):calls.append(request);return {'success':True,'data':'SOURCE_ONLY_SENTINEL'}
+    d=Daemon();runner._set_dispatch_allowlist(d,tmp_path/'journal.jsonl',allow=runner._allowed_metadata_dispatch)
+    req={'operation':'operation_call','arguments':{'operation_id':'code.execute_java','arguments':{'source_artifact':runner.FIXTURE.name,'entrypoint':'NativeW23TEScienceFixture#run','mode':'trusted','arguments':{'phase':'definition_boundary_metadata'}}}}
+    if operation in ['result.at_points','dataset.solution_indices']:
+        if operation=='result.at_points':req['arguments']['operation_id']=operation
+        else:req={'operation':operation,'arguments':{'path':'dset1'}}
+    elif operation=='wrong-source':req['arguments']['arguments']['source_artifact']='other.java'
+    else:req['arguments']['arguments']['arguments']['phase']=operation
+    with pytest.raises(RuntimeError):d.dispatch(req)
+    assert not calls
+    allowed={'operation':'operation_call','arguments':{'operation_id':'code.execute_java','arguments':{'source_artifact':runner.FIXTURE.name,'entrypoint':'NativeW23TEScienceFixture#run','mode':'trusted','arguments':{'phase':'definition_boundary_metadata'}}}}
+    assert d.dispatch(allowed)['success'] and len(calls)==1
+
+def test_actual020_all_three_jobs_and_field_unknown_flags_exact_source_replay(tmp_path,monkeypatch):
+    raw=json.loads(RAW.read_text());assert [r['whole_job']['status'] for r in raw]==['SUCCEEDED','SUCCEEDED','UNKNOWN']
+    failed=[e for e in raw[2]['whole_job']['events'] if e['event']=='worker_request' and e['metadata'].get('phase')=='observed' and e['metadata']['reply'].get('ok') is False]
+    assert len(failed)==1 and failed[0]['metadata']['metadata']['method']=='run';original=failed[0]['metadata']['reply'];assert original['failure']['execution_state_unknown'] is True and 'ewfd.Ex' in original['failure']['message']
+    options={'expressions':list(runner.RAW_FIELD_EXPRESSIONS),'unit':list(runner.FIELD_REQUESTED_UNITS),'points':[{'x':8.0,'y':-8+16*i/320} for i in range(321)]}
+    d,s,r,p,sdk,args,requests,used,faults,consume=_setup(tmp_path,monkeypatch,**options)
+    transport=d.backend.worker._request;actual=[]
+    def replay(body,timeout_s=None):
+        if body.get('method')=='run':
+            result=copy.deepcopy(original);result['request_id']=body['request_id'];result['type']=body['type'];actual.append({'current_request':body,'original_actual020_reply':original,'source_rebased_reply':result});return result
+        return transport(body,timeout_s)
+    d.backend.worker._request=replay
+    try:
+        result=_call(d,r,p,args,'source020-new-field-reproduction-key',1)
+        assert len(actual)==1 and result['success'] is False and result['error']['code']=='EXECUTION_STATE_UNKNOWN'
+        assert not any(q.get('method')=='getData' for q in requests)
+        _capture('actual020-field-unknown-reproduction',{'source_only':True,'native':'NOT_RUN','actual020_three_jobs':raw,'transport_boundary_other_replies':'recorded019/syntheticfieldsetup; no actual definition/normal evidence','failed_run_reply_preserved':actual,'real_production_response':result,'consume':consume,'definitions':'NOT_RUN','normal_side':'NOT_RUN'})
+    finally:d.close()
+
+def test_metadata_java_slice_contains_only_sdk_getters_and_fixed_bounds():
+    text=runner.FIXTURE.read_text();a=text.index('private static final int METADATA_MAX_FEATURES');b=text.index('private static Map<String, Object> savedSolutionDiagnostic',a);body=text[a:b]
+    for token in ['.create(','.set(','.setIndex(','.run(','.save(','.clear(','.named(']:assert token not in body
+    assert 'getInfoTable("Expression", "recursive", "all")' in body and 'METADATA_MAX_UTF8_BYTES' in body and 'getAdjOrient' in body
+    assert 'NO_UNDOCUMENTED_OFFSET_INFERRED' in body

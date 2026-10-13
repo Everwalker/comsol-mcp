@@ -1,0 +1,89 @@
+{
+  "schema": "comsol-mcp.root-w26-resource-review/1",
+  "status": "CHANGES_REQUIRED",
+  "review_scope": "W26 production disk coordinator delta and integration; not final independent review",
+  "freeze_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w26_resource_coordinator_r2_20261012/FREEZE_R2.json",
+  "freeze_sha256": "5b333e6e4f154922f1722ad938bbc2690a3b29c9da538f9ae0f8a54f85c579aa",
+  "source_scope_fingerprint_sha256": "a869b9d74804f1ad2d48f208f1741965fff2020add4231b0b32fd1eee65fd984",
+  "actual_evidence_checked": {
+    "five_frozen_source_copies_sha256_and_bytes": true,
+    "eight_test_artifacts_sha256": true,
+    "junit_actual_cases": [
+      {
+        "run": "r19",
+        "passed": 35,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "run": "r20",
+        "passed": 147,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ],
+    "strict_guards": [
+      {
+        "run": "r19",
+        "active_before_entrypoint": 1,
+        "denies_or_unexpected": 0
+      },
+      {
+        "run": "r20",
+        "active_before_entrypoint": 1,
+        "denies_or_unexpected": 0
+      }
+    ],
+    "critical_source_reads": [
+      "trusted config/load security",
+      "POSIX pinned storage observation",
+      "durable SQLite bind/reserve/release",
+      "existing daemon pre-RUNNING admission and terminal release",
+      "actual RemoteClient fake e2e and queued crash/UNKNOWN restart controls"
+    ]
+  },
+  "dependency_drift": {
+    "path": "comsol_mcp/_host_scoped_provider.py",
+    "frozen_sha256": "f015e7703312cfc9ef4dd897f3b72e7acab30cd60623dc95a1b6d05e7042f74f",
+    "current_sha256": "813e1df784ec8bd576b4ff18668fec7d0eac94eb0bff85b80c52f2abd380bca7",
+    "executor_explanation": "Darwin ACL ENOENT comment provenance correction; source behavior unchanged; provider owned freeze follows",
+    "original_freeze_unchanged": true
+  },
+  "required": [
+    {
+      "id": "W26-R2-STARTUP-CONFIG",
+      "priority": 1,
+      "file": "comsol_mcp/_control_daemon.py",
+      "lines": [
+        12375,
+        12389,
+        12475,
+        12478
+      ],
+      "finding": "Installed serve/CLI/environment does not accept or forward disk_resource_config; constructor injection alone leaves budget configuration unavailable to the actual daemon entrypoint.",
+      "repair": "Use existing host-provider startup pattern for --disk-resource-config and COMSOL_MCP_DISK_RESOURCE_CONFIG, validate trusted loader before serving, preserve absent-config compatibility, document actual bounded schema and add entrypoint positive/refusal controls."
+    },
+    {
+      "id": "W26-R2-DYNAMIC-BYPASS",
+      "priority": 1,
+      "file": "comsol_mcp/_w26_os_resources.py",
+      "lines": [
+        52,
+        2389,
+        2397
+      ],
+      "finding": "Catalog DYNAMIC effects return requires_reservation=False because DYNAMIC is outside _DISK_PRODUCING_EFFECTS. Actual api.invoke, result.numerical_manage/table_manage and plot.view_manage writes/evaluations can bypass configured admission.",
+      "repair": "Resolve effective effect using the existing validated server semantics, or conservatively require reservation for DYNAMIC with trusted estimates; never default it to read. Add low-budget zero-Worker-send and sufficient-budget terminal-release controls for an actual dynamic write, while established cached read/status/cancel/cleanup remain available."
+    }
+  ],
+  "limits": [
+    "software-only, fake Worker; no COMSOL/native/scientific acceptance",
+    "POSIX capacity admission is not a hard quota or disk-growth bound",
+    "queued-only crash evidence proves conservative reservation retention and no replay; it does not prove automatic release/reconciliation to terminal",
+    "Windows native provider, supported T037 apply/restore/launch and memory hard cap remain OPEN",
+    "five frozen sources are a focused unit, not the full release execution dependency closure"
+  ],
+  "next_action": "Same Windows execution Agent repairs the two concrete product gaps and retests affected unit; Model continues provider/release inventory. Goal remains ACTIVE/INCOMPLETE."
+}

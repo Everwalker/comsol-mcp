@@ -1,0 +1,16 @@
+{
+  "status": "FAIL_RESTORE_METADATA_NORMALIZATION",
+  "attempt_id": "runtime_restore_attempt001",
+  "recorded_at_utc": "2026-10-11T11:32:10.876615+00:00",
+  "scope": "new owned narrow Python 3.12 runtime restore only",
+  "archive": "/Volumes/SSD/Comsol-MCP/tmp-migration-20261005-001/archives/extended-scratch-013.tar",
+  "archive_sha256": "c381d0f062e09a8d1ee5434e89ea22e2a794fee2a863963743014cbf4e35b846",
+  "selected_restore_target": "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312",
+  "observed_error": {
+    "type": "ValueError",
+    "message": "unexpected restoration difference before normalization: comsol-mcp-recovery-runtime-20261004-001"
+  },
+  "failure_point": "migration.normalize_owned_restore on selected python312 subtree after narrow archive extraction",
+  "action_taken": "no retry against old paths; this attempt is retained as failure evidence before repairing only the new owned target metadata",
+  "network_access": "none"
+}

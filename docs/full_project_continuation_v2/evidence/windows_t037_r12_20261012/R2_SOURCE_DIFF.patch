@@ -1,0 +1,91 @@
+--- r1/comsol_mcp/_windows_t037.py
++++ r2/comsol_mcp/_windows_t037.py
+@@ -23,7 +23,6 @@
+ import re
+ import subprocess
+ import sys
+-import time
+ from typing import Any, Callable, Mapping, Sequence
+ 
+ from ._execution_contract import ExecutionContractError
+@@ -774,24 +773,14 @@
+ # ---------------------------------------------------------------------------
+ 
+ 
+-@dataclass(frozen=True)
+-class T037LaunchProof:
+-    profile_sha256: str
+-    host_fingerprint_sha256: str
+-    policy_snapshot_sha256: str
+-    session_id: str
+-    server_worker_job_key: str
+-    appcontainer_sid: str
+-    verified_at_monotonic_ns: int
+-
+-
+ class T037SessionProcessFactory:
+     """Popen-compatible callable that refuses fallback and shares one Job.
+ 
+-    The `proof` object is only accepted when created internally by an
+-    installed Windows policy verifier.  In this release there is no such
+-    verifier, so `create()` always rejects.  The call protocol remains
+-    explicit and testable without claiming that a synthetic object is OS proof.
++    This release has no native policy verifier or proof issuer, so the
++    process-factory preflight always rejects. No mutable proof field or
++    caller-provided receipt can unlock process creation. The call protocol
++    remains explicit so a future reviewed verifier can add an issuer without
++    a `Popen` fallback.
+     """
+ 
+     def __init__(self, profile: WindowsT037Profile, session_id: str, *,
+@@ -802,10 +791,6 @@
+             _refuse(ERROR_PROFILE_INVALID, "managed process factory requires a canonical session ID")
+         self.profile = profile
+         self.session_id = session_id
+-        # There is intentionally no constructor argument for a claimed proof.
+-        # Only an installed native policy verifier may populate this field;
+-        # that verifier is not present in this implementation.
+-        self._proof: T037LaunchProof | None = None
+         self._api = api
+         self._job = None
+         self._closed = False
+@@ -828,17 +813,7 @@
+         """Refuse before directory/file/child side effects until native proof exists."""
+         if self._closed:
+             _refuse(ERROR_POLICY_UNVERIFIED, "T037 session process factory is closed")
+-        proof = self._proof
+-        if (not isinstance(proof, T037LaunchProof)
+-                or proof.profile_sha256 != self.profile.source_sha256
+-                or proof.host_fingerprint_sha256 != self.profile.host_fingerprint_sha256
+-                or proof.session_id != self.session_id
+-                or proof.server_worker_job_key != self._job_key
+-                or proof.appcontainer_sid.casefold() != self.profile.appcontainer_sid.casefold()
+-                or type(proof.verified_at_monotonic_ns) is not int
+-                or proof.verified_at_monotonic_ns > time.monotonic_ns()
+-                or time.monotonic_ns() - proof.verified_at_monotonic_ns > 5_000_000_000):
+-            _refuse(ERROR_POLICY_UNVERIFIED, "T037 native policy proof is absent, stale, or bound to another launch session")
++        _refuse(ERROR_POLICY_UNVERIFIED, "T037 native policy verifier and launch-proof issuer are not implemented")
+ 
+     def _infer_role(self, command: Sequence[str]) -> str:
+         if not isinstance(command, Sequence) or isinstance(command, (str, bytes)) or not command:
+@@ -1445,7 +1420,7 @@
+ 
+ 
+ __all__ = [
+-    "PROFILE_SCHEMA", "T037LaunchProof", "T037PolicyAssessment", "WindowsT037Error",
++    "PROFILE_SCHEMA", "T037PolicyAssessment", "WindowsT037Error",
+     "WindowsT037Observer", "WindowsT037Profile", "T037SessionProcessFactory",
+     "assess_t037_readiness", "build_changes_manifest", "feasibility_snapshot",
+     "load_trusted_profile", "parse_profile_document", "restore_changes_manifest",
+--- r1/tests/test_windows_t037.py
++++ r2/tests/test_windows_t037.py
+@@ -139,6 +139,9 @@
+     profile = parsed_profile()
+     native = NeverCalledApi()
+     factory = t037.T037SessionProcessFactory(profile, "session-123", api=native)
++    # No native verifier/issuer exists, so even an arbitrary same-process
++    # attribute must not become a caller-minted launch proof.
++    factory._proof = object()
+     with pytest.raises(ExecutionContractError) as captured:
+         factory(["C:\\COMSOL\\bin\\mphserver.exe"], cwd="C:\\COMSOL")
+     assert captured.value.code == t037.ERROR_POLICY_UNVERIFIED

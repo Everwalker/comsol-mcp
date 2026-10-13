@@ -1,0 +1,322 @@
+--- r1/comsol_mcp/_host_scoped_provider.py
++++ r2/comsol_mcp/_host_scoped_provider.py
+@@ -15,6 +15,7 @@
+ import json
+ import os
+ from pathlib import Path
++import platform
+ import re
+ import stat
+ import sys
+@@ -64,12 +65,34 @@
+     ]
+ 
+ 
+-def _darwin_mount_flags(fd: int) -> tuple[int, str]:
++def _darwin_fstatfs_symbol(machine: str) -> str:
++    """Choose the SDK's 64-bit-inode fstatfs symbol for a Darwin target."""
++    normalized = machine.lower()
++    if normalized in {"arm64", "aarch64"}:
++        return "fstatfs"
++    if normalized == "x86_64":
++        return "fstatfs$INODE64"
++    raise ExecutionContractError(
++        "HOST_PROVIDER_UNSUPPORTED",
++        f"Darwin fstatfs ABI is not verified for architecture {machine!r}",
++    )
++
++
++def _darwin_mount_flags(fd: int, *, _machine: str | None = None) -> tuple[int, str]:
+     """Return mount flags from an open fd, rejecting an unknown Darwin ABI."""
+     if ctypes.sizeof(_DarwinStatfs) != 2168 or _DarwinStatfs.f_flags.offset != 64:
+         raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "Darwin statfs ABI is not the verified SDK layout")
+     result = _DarwinStatfs()
+-    fstatfs = ctypes.CDLL(None, use_errno=True).fstatfs
++    machine = _machine if _machine is not None else platform.machine()
++    symbol = _darwin_fstatfs_symbol(machine)
++    libc = ctypes.CDLL(None, use_errno=True)
++    try:
++        fstatfs = getattr(libc, symbol)
++    except AttributeError as exc:
++        raise ExecutionContractError(
++            "HOST_PROVIDER_UNSUPPORTED",
++            f"Darwin libc does not export the required {symbol} ABI for {machine!r}",
++        ) from exc
+     fstatfs.argtypes = [ctypes.c_int, ctypes.POINTER(_DarwinStatfs)]
+     fstatfs.restype = ctypes.c_int
+     if fstatfs(fd, ctypes.byref(result)) != 0:
+@@ -393,8 +416,8 @@
+     # SE_FILE_OBJECT=1, OWNER_SECURITY_INFORMATION=1,
+     # DACL_SECURITY_INFORMATION=4. READ_CONTROL on the opened handle suffices;
+     # no SACL privilege or write-security call is used.
+-    status = int(advapi.GetSecurityInfo(handle, 1, 1 | 4, None, C.byref(owner), None,
+-                                        C.byref(dacl), C.byref(descriptor)))
++    status = int(advapi.GetSecurityInfo(handle, 1, 1 | 4, C.byref(owner), None,
++                                        C.byref(dacl), None, C.byref(descriptor)))
+     if status != 0 or not descriptor.value:
+         raise ExecutionContractError("HOST_PROVIDER_UNSUPPORTED", f"Windows security descriptor query failed ({status})")
+     try:
+--- r1/tests/test_host_scoped_provider.py
++++ r2/tests/test_host_scoped_provider.py
+@@ -25,6 +25,7 @@
+     scope_sha256,
+     verify_private_path_security,
+     _DARWIN_MNT_IGNORE_OWNERSHIP,
++    _darwin_fstatfs_symbol,
+     _darwin_mount_flags,
+     _darwin_require_no_extended_acl,
+     _assert_posix_owner_and_mount,
+@@ -291,6 +292,72 @@
+         os.close(fd)
+ 
+ 
++def test_darwin_fstatfs_uses_architecture_specific_64bit_inode_symbol(monkeypatch):
++    import ctypes
++    import comsol_mcp._host_scoped_provider as provider_module
++
++    class Function:
++        def __init__(self, callback):
++            self.callback = callback
++            self.argtypes = None
++            self.restype = None
++
++        def __call__(self, *args):
++            return self.callback(*args)
++
++    def library_for(expected_symbol):
++        calls = []
++
++        def fill(_fd, result_ptr):
++            calls.append(expected_symbol)
++            result = ctypes.cast(result_ptr, ctypes.POINTER(provider_module._DarwinStatfs)).contents
++            result.f_flags = 0x1234
++            result.f_fstypename = b"apfs"
++            return 0
++
++        other = "fstatfs" if expected_symbol == "fstatfs$INODE64" else "fstatfs$INODE64"
++        return type("FakeLib", (), {
++            expected_symbol: Function(fill),
++            other: Function(lambda *_args: pytest.fail(f"wrong ABI symbol selected: {other}")),
++            "calls": calls,
++        })()
++
++    assert _darwin_fstatfs_symbol("arm64") == "fstatfs"
++    assert _darwin_fstatfs_symbol("aarch64") == "fstatfs"
++    assert _darwin_fstatfs_symbol("x86_64") == "fstatfs$INODE64"
++    with pytest.raises(ExecutionContractError) as unknown:
++        _darwin_fstatfs_symbol("i386")
++    assert unknown.value.code == "HOST_PROVIDER_UNSUPPORTED"
++
++    for machine, symbol in (("arm64", "fstatfs"), ("x86_64", "fstatfs$INODE64")):
++        fake_lib = library_for(symbol)
++        monkeypatch.setattr(provider_module.ctypes, "CDLL", lambda *_args, _lib=fake_lib, **_kwargs: _lib)
++        flags, filesystem = _darwin_mount_flags(19, _machine=machine)
++        assert flags == 0x1234 and filesystem == "apfs"
++        assert fake_lib.calls == [symbol]
++
++
++def test_darwin_x86_64_missing_inode64_symbol_fails_closed(monkeypatch):
++    import comsol_mcp._host_scoped_provider as provider_module
++
++    class Function:
++        def __init__(self):
++            self.argtypes = None
++            self.restype = None
++
++        def __call__(self, *_args):
++            pytest.fail("legacy fstatfs must not be used as an x86_64 fallback")
++
++    class FakeLib:
++        fstatfs = Function()
++
++    monkeypatch.setattr(provider_module.ctypes, "CDLL", lambda *_args, **_kwargs: FakeLib())
++    with pytest.raises(ExecutionContractError) as missing:
++        _darwin_mount_flags(19, _machine="x86_64")
++    assert missing.value.code == "HOST_PROVIDER_UNSUPPORTED"
++    assert "fstatfs$INODE64" in str(missing.value)
++
++
+ @pytest.mark.parametrize("policy", [
+     {"owner_trusted": True, "owner_is_daemon": True, "require_daemon_owner": True,
+      "dacl_present": False, "ace_rows": []},
+@@ -423,6 +490,180 @@
+     assert len(api.close_calls) == 4
+     assert api.k.closed_tokens == ["token"]
+     assert api.k.freed == ["sid-system", "sid-admins"]
++
++
++@pytest.mark.parametrize(
++    ("case", "ace_type", "ace_sid_is_trusted", "null_dacl", "should_refuse"),
++    [
++        ("valid", 0, True, False, False),
++        ("null-dacl", 0, True, True, True),
++        ("foreign-allow", 0, False, False, True),
++        ("unknown-ace", 5, True, False, True),
++    ],
++)
++def test_windows_descriptor_digest_calls_real_ctypes_path_with_correct_outputs_and_cleanup(
++    monkeypatch, case, ace_type, ace_sid_is_trusted, null_dacl, should_refuse
++):
++    """Exercise _win32_descriptor_digest itself through a function-level ABI shim.
++
++    This is SOFTWARE evidence only: the shim validates pointer positions,
++    decoding and cleanup without claiming Windows kernel behavior.
++    """
++    import ctypes as C
++    from ctypes import wintypes
++    import struct
++    import comsol_mcp._host_scoped_provider as provider_module
++
++    # ctypes.wintypes follows the host C ABI when these tests run off Windows.
++    # Supply the fixed-width Win32 scalar sizes the real DLL ABI uses.
++    monkeypatch.setattr(wintypes, "DWORD", C.c_uint32, raising=False)
++    monkeypatch.setattr(wintypes, "BOOL", C.c_int32, raising=False)
++
++    def sid(rid):
++        return bytes((1, 1, 0, 0, 0, 0, 0, 5)) + int(rid).to_bytes(4, "little")
++
++    owner_bytes = sid(1001)
++    allowed_bytes = owner_bytes if ace_sid_is_trusted else sid(2002)
++    owner_buffer = C.create_string_buffer(owner_bytes)
++    ace_sid_buffer = C.create_string_buffer(allowed_bytes)
++    ace_size = 8 + len(allowed_bytes)
++    ace_bytes = bytes((ace_type, 0)) + ace_size.to_bytes(2, "little") + bytes(4) + allowed_bytes
++    acl_bytes = bytes(8) + ace_bytes
++    acl_buffer = C.create_string_buffer(acl_bytes)
++    descriptor_buffer = C.create_string_buffer(b"SDDLTEST")
++    class Function:
++        def __init__(self, callback):
++            self.callback = callback
++            self.argtypes = None
++            self.restype = None
++
++        def __call__(self, *args):
++            return self.callback(*args)
++
++    def address(pointer):
++        if isinstance(pointer, int):
++            return pointer
++        if isinstance(pointer, C.c_void_p):
++            return int(pointer.value or 0)
++        return int(C.cast(pointer, C.c_void_p).value or 0)
++
++    def sid_length(pointer):
++        data = C.string_at(address(pointer), 8)
++        return 8 + data[1] * 4
++
++    class Advapi:
++        def __init__(self):
++            self.get_security_info_args = None
++            self.get_security_info = Function(self._get_security_info)
++            self.GetSecurityInfo = self.get_security_info
++            self.GetSecurityDescriptorDacl = Function(self._get_dacl)
++            self.GetSecurityDescriptorLength = Function(lambda _desc: len(b"SDDLTEST"))
++            self.GetAclInformation = Function(self._get_acl_info)
++            self.GetAce = Function(self._get_ace)
++            self.IsValidSid = Function(lambda value: address(value) in {
++                C.addressof(owner_buffer), C.addressof(ace_sid_buffer),
++                C.addressof(acl_buffer) + 16,
++            })
++            self.GetLengthSid = Function(sid_length)
++            self.EqualSid = Function(lambda left, right: C.string_at(address(left), sid_length(left))
++                                     == C.string_at(address(right), sid_length(right)))
++
++        def _get_security_info(self, *args):
++            self.get_security_info_args = args
++            # Win32 signature: owner, group, DACL, SACL, security descriptor.
++            C.cast(args[3], C.POINTER(C.c_void_p)).contents.value = C.addressof(owner_buffer)
++            C.cast(args[5], C.POINTER(C.c_void_p)).contents.value = C.addressof(acl_buffer)
++            C.cast(args[7], C.POINTER(C.c_void_p)).contents.value = C.addressof(descriptor_buffer)
++            return 0
++
++        def _get_dacl(self, _descriptor, present_ptr, dacl_ptr, defaulted_ptr):
++            C.cast(present_ptr, C.POINTER(wintypes.BOOL)).contents.value = 1
++            C.cast(dacl_ptr, C.POINTER(C.c_void_p)).contents.value = (
++                0 if null_dacl else C.addressof(acl_buffer)
++            )
++            C.cast(defaulted_ptr, C.POINTER(wintypes.BOOL)).contents.value = 0
++            return 1
++
++        def _get_acl_info(self, _acl, size_info_ptr, _size, _kind):
++            class AclSizeInfo(C.Structure):
++                _fields_ = [("AceCount", wintypes.DWORD), ("AclBytesInUse", wintypes.DWORD),
++                            ("AclBytesFree", wintypes.DWORD)]
++            out = C.cast(size_info_ptr, C.POINTER(AclSizeInfo)).contents
++            out.AceCount = 1
++            out.AclBytesInUse = len(acl_bytes)
++            out.AclBytesFree = 0
++            return 1
++
++        def _get_ace(self, _acl, index, ace_ptr):
++            assert index == 0
++            C.cast(ace_ptr, C.POINTER(C.c_void_p)).contents.value = C.addressof(acl_buffer) + 8
++            return 1
++
++    class Kernel:
++        def __init__(self):
++            self.freed = []
++            self.LocalFree = Function(self._local_free)
++
++        def _local_free(self, pointer):
++            self.freed.append(address(pointer))
++            return None
++
++    advapi = Advapi()
++    kernel = Kernel()
++    class Api:
++        k = kernel
++
++    monkeypatch.setattr(provider_module.ctypes, "WinDLL",
++                        lambda name, **_kwargs: advapi if name == "advapi32" else kernel,
++                        raising=False)
++    daemon_sid = C.c_void_p(C.addressof(owner_buffer))
++    trusted_sids = [daemon_sid]
++    if should_refuse:
++        with pytest.raises(ExecutionContractError) as refusal:
++            provider_module._win32_descriptor_digest(
++                Api(), C.c_void_p(0x1234), directory=False, require_daemon_owner=True,
++                daemon_sid=daemon_sid, trusted_sids=trusted_sids,
++            )
++        assert refusal.value.code == "HOST_PROVIDER_CONFIG_INVALID"
++    else:
++        result = provider_module._win32_descriptor_digest(
++            Api(), C.c_void_p(0x1234), directory=False, require_daemon_owner=True,
++            daemon_sid=daemon_sid, trusted_sids=trusted_sids,
++        )
++
++    args = advapi.get_security_info_args
++    assert args is not None and len(args) == 8
++    assert args[0].value == 0x1234
++    assert (args[1], args[2]) == (1, 5)  # SE_FILE_OBJECT and OWNER|DACL info
++    assert args[3] is not None and args[4] is None  # owner output, no group output
++    assert args[5] is not None and args[6] is None  # DACL output, no SACL output
++    assert args[7] is not None  # descriptor output
++    assert kernel.freed == [C.addressof(descriptor_buffer)]
++    if not should_refuse:
++        digest, owner_name = result
++        assert len(digest) == 64 and owner_name == "daemon"
++
++
++def test_windows_pinned_child_requests_read_control_access():
++    # Test the real _API access-mask construction through a narrow Native API shim.
++    import ctypes as C
++    import comsol_mcp._windows_parameter_publish as windows_publish
++
++    api = windows_publish._API.__new__(windows_publish._API)
++    observed = {}
++
++    class Native:
++        def NtCreateFile(self, out_handle, access, _attributes, io_status, *_rest):
++            observed["access"] = int(access)
++            C.cast(out_handle, C.POINTER(C.c_void_p)).contents.value = 0xA11
++            C.cast(io_status, C.POINTER(windows_publish._IoStatusBlock)).contents.Information = 1
++            return 0
++
++    api.nt = Native()
++    api.k = object()
++    handle = api._open_relative(C.c_void_p(0xB22), "config.json", read_control=True)
++    assert handle.value == 0xA11
++    assert observed["access"] == (0x00100080 | 0x00020000)
+ 
+ 
+ def test_provider_constant_time_compares_both_digests_for_each_bounded_grant(tmp_path, monkeypatch):

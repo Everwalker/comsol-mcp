@@ -1,0 +1,234 @@
+{
+  "candidate": {
+    "path": "/private/tmp/w25-r5-r3-wfp-v2-r4-candidate-20261012",
+    "receipt_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/combined-r5-wfp-r4-r1/COMBINED_CANDIDATE_R2.json",
+    "receipt_sha256": "4f55761626b98813060d202667e1d9f887dd1fb0f95b126e52fe53e36a102fb4",
+    "source_count": 147,
+    "source_tree_sha256": "3cf95c940a3118cf88b72112d6949190a560454e178eadf1adde4f66243db480"
+  },
+  "created_utc": "2026-10-12T05:01:37.395811+00:00",
+  "frozen_inputs": {
+    "r5": {
+      "path": "local-preservation/w25-native-adapter-20261012-r5-r3/R5_SOURCE_FREEZE_R3.json",
+      "sha256": "e5c675aec2e9725b8ce1bdff23c5b2fd7a7540a570e8d4564259f6d68c2367ae"
+    },
+    "wfp_r4_preservation": {
+      "path": "local-preservation/windows_host_change_wfp_v2_recovery_r4_20261012/PRESERVATION.json",
+      "sha256": "c3bcb1d1dcdba60ce1863b0ecd378214df416dd6aed5bfab26c077036f5b4754"
+    },
+    "wfp_v2_r4": {
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_v2_recovery_r4_20261012/SOURCE_FREEZE_V2_R4.json",
+      "sha256": "157c16f1c0b7287318c47540759beb0ec705f4a3c83523d9b18761eaf8f0ffc5"
+    }
+  },
+  "limits": [
+    "software-only; no COMSOL launch, GUI call, ScreenCaptureKit, permission query, or solver call",
+    "Windows native kernel and Intel build remain NOT_RUN",
+    "does not claim physical/numerical acceptance"
+  ],
+  "preserved_prior_attempts": [
+    {
+      "attempt": 1,
+      "network_attempts": 0,
+      "pytest_output": "103 passed before the first failure.",
+      "raw_files_prefix": "COMBINED_R5_WFP_R4",
+      "reason": "Default /var/folders temporary path contains a symlink; the production path verifier correctly refused it.",
+      "status": "FAILED_ENVIRONMENT_ALIAS"
+    },
+    {
+      "attempt": 2,
+      "network_attempts": 0,
+      "pytest_output": "191 passed, 9 skipped, 20 subtests passed before the historical Git-object case failed.",
+      "raw_files_prefix": "COMBINED_R5_WFP_R4_ATTEMPT2",
+      "reason": "The isolated candidate does not contain historical Git commit a3418bd4546ecc33e26448e7f2a1982727a37153; the exact WFP R4 test invocation excludes this inherited Git-object case.",
+      "status": "FAILED_HISTORICAL_GIT_FIXTURE"
+    }
+  ],
+  "raw_preserved_files": [
+    {
+      "sha256": "4f55761626b98813060d202667e1d9f887dd1fb0f95b126e52fe53e36a102fb4",
+      "size_bytes": 30132,
+      "source": "/private/tmp/w25-r5-r3-wfp-v2-r4-candidate-20261012/evidence/COMBINED_CANDIDATE_R2.json",
+      "target": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/combined-r5-wfp-r4-r1/COMBINED_CANDIDATE_R2.json"
+    },
+    {
+      "sha256": "dd6ddcc780d36d916259466f42b3eb64517fb655e3c47a1e9a48afcc964a1247",
+      "size_bytes": 1260,
+      "source": "/private/tmp/w25-r5-r3-wfp-v2-r4-candidate-20261012/evidence/COMBINED_R5_WFP_R4_ARGV.json",
+      "target": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/combined-r5-wfp-r4-r1/COMBINED_R5_WFP_R4_ARGV.json"
+    },
+    {
+      "sha256": "943a8166325a63fec2f1090d1cb1b3fff7d36b2c6939d99b16944f7bf0b863ac",
+      "size_bytes": 2979,
+      "source": "/private/tmp/w25-r5-r3-wfp-v2-r4-candidate-20261012/evidence/COMBINED_R5_WFP_R4.stdout.log",
+      "target": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/combined-r5-wfp-r4-r1/COMBINED_R5_WFP_R4.stdout.log"
+    },
+    {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "source": "/private/tmp/w25-r5-r3-wfp-v2-r4-candidate-20261012/evidence/COMBINED_R5_WFP_R4.stderr.log",
+      "target": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/combined-r5-wfp-r4-r1/COMBINED_R5_WFP_R4.stderr.log"
+    },
+    {
+      "sha256": "135f2c00d1e9907ba502a65f9acb74c0b72bfbeac193be54ad21dfc48cb741ae",
+      "size_bytes": 19019,
+      "source": "/private/tmp/w25-r5-r3-wfp-v2-r4-candidate-20261012/evidence/COMBINED_R5_WFP_R4.junit.xml",
+      "target": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/combined-r5-wfp-r4-r1/COMBINED_R5_WFP_R4.junit.xml"
+    },
+    {
+      "sha256": "a107dff5f43f769521b514bfa9b173598a294d5746e83b9dc2952f463086b242",
+      "size_bytes": 209,
+      "source": "/private/tmp/w25-r5-r3-wfp-v2-r4-candidate-20261012/evidence/COMBINED_R5_WFP_R4_NETWORK_GUARD.json",
+      "target": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/combined-r5-wfp-r4-r1/COMBINED_R5_WFP_R4_NETWORK_GUARD.json"
+    },
+    {
+      "sha256": "bf7842b381591b75d44444324fec260e254186b1d555fa3acfa463ee81c1c429",
+      "size_bytes": 34507,
+      "source": "/private/tmp/w25-r5-r3-wfp-v2-r4-candidate-20261012/evidence/COMBINED_R5_WFP_R4_RESULT.json",
+      "target": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/combined-r5-wfp-r4-r1/COMBINED_R5_WFP_R4_RESULT.json"
+    },
+    {
+      "sha256": "beed7157f0921a4edc4e40a9e120757b765e63b0563a872b944391e0c1a47cfc",
+      "size_bytes": 1572,
+      "source": "/private/tmp/w25-r5-r3-wfp-v2-r4-candidate-20261012/evidence/COMBINED_R5_WFP_R4_ATTEMPT2_ARGV.json",
+      "target": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/combined-r5-wfp-r4-r1/COMBINED_R5_WFP_R4_ATTEMPT2_ARGV.json"
+    },
+    {
+      "sha256": "bb589ad549e3e4f46ea7d699a65b76bc5d2f28d191eb373e0a3158dea926d0fd",
+      "size_bytes": 5331,
+      "source": "/private/tmp/w25-r5-r3-wfp-v2-r4-candidate-20261012/evidence/COMBINED_R5_WFP_R4_ATTEMPT2.stdout.log",
+      "target": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/combined-r5-wfp-r4-r1/COMBINED_R5_WFP_R4_ATTEMPT2.stdout.log"
+    },
+    {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "source": "/private/tmp/w25-r5-r3-wfp-v2-r4-candidate-20261012/evidence/COMBINED_R5_WFP_R4_ATTEMPT2.stderr.log",
+      "target": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/combined-r5-wfp-r4-r1/COMBINED_R5_WFP_R4_ATTEMPT2.stderr.log"
+    },
+    {
+      "sha256": "79f36f441b80fc64d80a0215e5a98f9d369f545f6c4d9329349da6e29fba6e66",
+      "size_bytes": 38008,
+      "source": "/private/tmp/w25-r5-r3-wfp-v2-r4-candidate-20261012/evidence/COMBINED_R5_WFP_R4_ATTEMPT2.junit.xml",
+      "target": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/combined-r5-wfp-r4-r1/COMBINED_R5_WFP_R4_ATTEMPT2.junit.xml"
+    },
+    {
+      "sha256": "a107dff5f43f769521b514bfa9b173598a294d5746e83b9dc2952f463086b242",
+      "size_bytes": 209,
+      "source": "/private/tmp/w25-r5-r3-wfp-v2-r4-candidate-20261012/evidence/COMBINED_R5_WFP_R4_ATTEMPT2.NETWORK_GUARD.json",
+      "target": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/combined-r5-wfp-r4-r1/COMBINED_R5_WFP_R4_ATTEMPT2.NETWORK_GUARD.json"
+    },
+    {
+      "sha256": "a8822faef74f88acd4304edd99e1f415f431ce50c8edc8873b9b66dba9a5e532",
+      "size_bytes": 34534,
+      "source": "/private/tmp/w25-r5-r3-wfp-v2-r4-candidate-20261012/evidence/COMBINED_R5_WFP_R4_ATTEMPT2_RESULT.json",
+      "target": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/combined-r5-wfp-r4-r1/COMBINED_R5_WFP_R4_ATTEMPT2_RESULT.json"
+    },
+    {
+      "sha256": "1bfe48193fd42574649d9763f442b0abd45e59edec07349e4c5e255963b8170c",
+      "size_bytes": 1910,
+      "source": "/private/tmp/w25-r5-r3-wfp-v2-r4-candidate-20261012/evidence/COMBINED_R5_WFP_R4_ATTEMPT3_ARGV.json",
+      "target": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/combined-r5-wfp-r4-r1/COMBINED_R5_WFP_R4_ATTEMPT3_ARGV.json"
+    },
+    {
+      "sha256": "d01af8a8541c9e7492a98a6d707a90e8ad0ec8b391fb48eb78d6a419d56ab212",
+      "size_bytes": 404,
+      "source": "/private/tmp/w25-r5-r3-wfp-v2-r4-candidate-20261012/evidence/COMBINED_R5_WFP_R4_ATTEMPT3.stdout.log",
+      "target": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/combined-r5-wfp-r4-r1/COMBINED_R5_WFP_R4_ATTEMPT3.stdout.log"
+    },
+    {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "source": "/private/tmp/w25-r5-r3-wfp-v2-r4-candidate-20261012/evidence/COMBINED_R5_WFP_R4_ATTEMPT3.stderr.log",
+      "target": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/combined-r5-wfp-r4-r1/COMBINED_R5_WFP_R4_ATTEMPT3.stderr.log"
+    },
+    {
+      "sha256": "2a68fe27e7c7d082851a78f2016054aa6d6bdd6553646f966b4f2ea32a1d73fd",
+      "size_bytes": 33363,
+      "source": "/private/tmp/w25-r5-r3-wfp-v2-r4-candidate-20261012/evidence/COMBINED_R5_WFP_R4_ATTEMPT3.junit.xml",
+      "target": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/combined-r5-wfp-r4-r1/COMBINED_R5_WFP_R4_ATTEMPT3.junit.xml"
+    },
+    {
+      "sha256": "8aa0d1818f3b042100c52b0fb6027c99098902f634d50738741c5bbb96d2f7d8",
+      "size_bytes": 209,
+      "source": "/private/tmp/w25-r5-r3-wfp-v2-r4-candidate-20261012/evidence/COMBINED_R5_WFP_R4_ATTEMPT3.NETWORK_GUARD.json",
+      "target": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/combined-r5-wfp-r4-r1/COMBINED_R5_WFP_R4_ATTEMPT3.NETWORK_GUARD.json"
+    },
+    {
+      "sha256": "b8efa0fcd89bb9280dab02c1ad2136b33d6a2c8f8f570095a55149599f26350b",
+      "size_bytes": 34907,
+      "source": "/private/tmp/w25-r5-r3-wfp-v2-r4-candidate-20261012/evidence/COMBINED_R5_WFP_R4_ATTEMPT3_RESULT.json",
+      "target": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/combined-r5-wfp-r4-r1/COMBINED_R5_WFP_R4_ATTEMPT3_RESULT.json"
+    }
+  ],
+  "schema": "comsol-mcp.w25-r5-wfp-r4-combined-closure/1",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "test_scope": {
+    "command_argv": [
+      "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python",
+      "-B",
+      "evidence/guarded_pytest.py",
+      "tests/test_desktop_control_wiring.py",
+      "tests/test_desktop_native_adapters_w25.py",
+      "tests/test_desktop_service.py",
+      "tests/test_desktop_sticky_effects_phase2c.py",
+      "tests/test_project_file_stream_publish.py",
+      "tests/test_windows_parameter_publish_native.py",
+      "tests/test_windows_host_change.py",
+      "tests/test_windows_t037_native.py",
+      "tests/test_operation_store.py",
+      "tests/test_operation_store_migrations.py",
+      "-k",
+      "not historical_fixture_commit_and_blob_identity_resolve",
+      "-q",
+      "--disable-warnings",
+      "--maxfail=1",
+      "-p",
+      "no:cacheprovider",
+      "--junitxml=/private/tmp/w25-r5-r3-wfp-v2-r4-candidate-20261012/evidence/COMBINED_R5_WFP_R4_ATTEMPT3.junit.xml"
+    ],
+    "environment": {
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "TMPDIR": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T",
+      "TMPDIR_identity": {
+        "device": 16777231,
+        "inode": 297256
+      },
+      "network_guard_attempts": 0
+    },
+    "interpretation": "JUnit suite tests=222 includes subtest accounting; 202 explicit testcase nodes comprise 193 pass and 9 skipped. Pytest's 20 subtests are separately reported; the historical Git-object case is one deselected test.",
+    "junit_raw": {
+      "error_nodes": 0,
+      "failure_nodes": 0,
+      "junit_root": "testsuites",
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/combined-r5-wfp-r4-r1/COMBINED_R5_WFP_R4_ATTEMPT3.junit.xml",
+      "regular_testcase_nodes": 202,
+      "sha256": "2a68fe27e7c7d082851a78f2016054aa6d6bdd6553646f966b4f2ea32a1d73fd",
+      "skipped_testcase_nodes": 9,
+      "testsuite_tests_attribute": 222
+    },
+    "modules": [
+      "tests/test_desktop_control_wiring.py",
+      "tests/test_desktop_native_adapters_w25.py",
+      "tests/test_desktop_service.py",
+      "tests/test_desktop_sticky_effects_phase2c.py",
+      "tests/test_project_file_stream_publish.py",
+      "tests/test_windows_parameter_publish_native.py",
+      "tests/test_windows_host_change.py",
+      "tests/test_windows_t037_native.py",
+      "tests/test_operation_store.py",
+      "tests/test_operation_store_migrations.py"
+    ],
+    "pytest_stdout_summary": "193 passed, 9 skipped, 1 deselected, 20 subtests passed",
+    "source_hash_map_bound": {
+      "after_sha256": "19b291e3b5c8f881c06719e5a68a932ffe91afbeedd089801f88abd027d0a067",
+      "before_sha256": "19b291e3b5c8f881c06719e5a68a932ffe91afbeedd089801f88abd027d0a067",
+      "file_count": 147
+    },
+    "source_inputs_identical": true
+  },
+  "third_attempt_receipt": {
+    "internal_junit_count_bug": "The attempt result reader used root attributes on a testsuites document and recorded zero counters. This appended closure parses the child testsuite and preserves the raw JUnit unchanged.",
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/combined-r5-wfp-r4-r1/COMBINED_R5_WFP_R4_ATTEMPT3_RESULT.json",
+    "sha256": "b8efa0fcd89bb9280dab02c1ad2136b33d6a2c8f8f570095a55149599f26350b"
+  }
+}

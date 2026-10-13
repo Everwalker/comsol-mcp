@@ -1,0 +1,43 @@
+from pathlib import Path
+import json,os,hashlib,ast,difflib,stat,datetime
+C=Path(__file__).resolve().parents[1];B=C.parents[1];P=C/'root-review-packet';old=B/'local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r12';E=next(C.glob('docs/**/freeze.json')).parent
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();ref=lambda p:{'path':str(p),'bytes':p.stat().st_size,'sha256':sha(p)}
+def save(name,obj):
+ p=P/name;data=(json.dumps(obj,indent=2,sort_keys=True)+'\n').encode();fd=os.open(p,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+ with os.fdopen(fd,'wb') as f:f.write(data);f.flush();os.fsync(f.fileno())
+ return ref(p)
+f=json.loads((E/'freeze.json').read_text());previous=json.loads(next(old.glob('docs/**/freeze.json')).read_text());source=f['source_files'];changed=[];same=[];astcount=0
+for rel,row in source.items():
+ p=Path(row['path']);assert sha(p)==row['sha256']
+ if rel.endswith('.py'):ast.parse(p.read_bytes());astcount+=1
+ before=previous['source_files'].get(rel)
+ if before and before['sha256']==row['sha256']:same.append(rel)
+ else:
+  oldp=old/rel;diff=P/'source-diff'/(rel+'.diff');diff.parent.mkdir(parents=True,exist_ok=True);diff.write_text(''.join(difflib.unified_diff(oldp.read_text().splitlines(True) if oldp.exists() else [],p.read_text().splitlines(True),fromfile='frozenr12/'+rel,tofile='r13/'+rel)));changed.append({'relative':rel,'kind':'MODIFIED' if before else 'ADDED','current':ref(p),'old':ref(oldp) if before else None,'diff':ref(diff)})
+assert len(source)==411 and len(changed)==4 and len(same)==407
+for rel in ['comsol_mcp/_g3_results.py','comsol_mcp/_ephemeral_result_ticket.py','comsol_mcp/_execution_service.py','comsol_mcp/_execution_contract.py','comsol_mcp/_java_worker.py','comsol_mcp/worker_java/PersistentComsolWorker.java','comsol_mcp/data/g2/common.schema.json','comsol_mcp/data/g2/02_ACTION_CATALOG.json','tools/w23_te_science_protocol.py']:
+ assert (C/rel).read_bytes()==(old/rel).read_bytes(),rel
+classes=json.loads((E/'offline_gates/EXACT_19_ORIGINAL_CLASS_COMPARISON.json').read_text())
+for row in classes:
+ path=Path(row['new021']['path']);raw=path.read_bytes();row['major']=int.from_bytes(raw[6:8],'big');assert row['major']==55
+ if row['label']=='persistent_worker':assert row['byte_exact'] is True
+classref=save('CURRENT19_CLASSES_WORKER14_EXACT_SCIENCE5_CURRENT_SOURCE_BINDING.json',{'status':'PASS_14_WORKER_ORIGINAL_BYTE_EXACT_5_SCIENCE_NEW_SOURCE_JAVAC_MAJOR55','not_all19_original_byte_exact':True,'science_current_source':ref(C/'tools/java/NativeW23TEScienceFixture.java'),'classes':classes,'worker14_count':sum(r['label']=='persistent_worker' for r in classes),'science5_count':sum(r['label']=='science_fixture' for r in classes),'legacy_comparison_filename':'offline_gates/EXACT_19_ORIGINAL_CLASS_COMPARISON.json preserved but row boolean truth distinguishes new science bytes'})
+regular=[];links=[];current31=[];negative28=[]
+for top in [E,P,C/'prebirth-input-tests']:
+ for directory,dirs,names in os.walk(top,followlinks=False):
+  for name in list(dirs)+names:
+   p=Path(directory)/name;mode=p.lstat().st_mode
+   if stat.S_ISLNK(mode):
+    links.append({'path':str(p),'target':os.readlink(p),'followed':False})
+    if name in dirs:dirs.remove(name)
+   elif stat.S_ISREG(mode):
+    regular.append(ref(p))
+    if name=='VALID_MATERIAL_PRE_MUTATION.json':current31.append(ref(p))
+    if name=='TARGETED_REFUSAL_RESULT.json':negative28.append(ref(p))
+assert len(current31)==31 and len(negative28)==28 and len(links)==3
+wv=B/'local-preservation/w24-cure-preflight-20261012-current11-config-projection/repository/tools/java/W24CureScienceFixture.java';wn=B/'repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current11/native-run-current11-001/solid_equation_view_expression_inventory.json';
+proposal={'status':'LOCATOR_ONLY_NO_G3_TICKET_OR_PUBLIC_SCHEMA_CHANGE','public_points':'02_ACTION_CATALOG result.at_points input top no selection/side; spec references existing EvaluationSpec with selection/SelectionSpec and entity_dim. SelectionSpec has named/entity/component/geometry/dimension, no side. Corrects earlier020 proposal no-selection wording.','current_gap':'G3 result_at_points ignores spec.selection and entity_dim; result.evaluate existing MeasureSpec.apply_selection uses typed dimension/selection. Frozen8-slot guard closes spec keys and excludes selection.','future_minimal_reuse':'After real metadata capture, use existing SelectionSpec/resolver/MeasureSpec to require exact same comp1/geom1 namedboundary+membership; explicit source-approved side policy only when native up/down entity mapping and normal closure known. Do not create persistent selections or set physics.','ticket_gap':'CurrentScope whitelist lacks selection child getter/entities/dim/geom and permits mutation set only on originalInterp receiver. A new selection child graph must prove receiver originated same original ephemeral feature and tag/generation; permit only exact validated entity/dimension setters and native readback, not any knownhandle/global.selection set. No such changes made here.','source_refs':[ref(C/p) for p in ['comsol_mcp/data/g2/02_ACTION_CATALOG.json','comsol_mcp/data/g2/common.schema.json','comsol_mcp/_g3_results.py','comsol_mcp/_measure_spec.py','comsol_mcp/_ephemeral_result_ticket.py']]}
+loc=save('PUBLIC_POINTS_SELECTION_SIDE_AND_ORIGINAL_TICKET_INTERFACE_LOCATORS.json',proposal)
+S=B/'repository/docs/full_project_continuation_v2/state/RESUME.json';assert sha(S)=='62667e19ba665ffaf47575cf88b4a94c41ff6c390152f8b6eb8433bed69665ce' and json.loads(S.read_text())['active_jobs']==[]
+receipt={'schema':'ACTIVITY021_R13_METADATA_ONLY_FULL_SOURCE_SDK_SOFTWARE_PACKET/1','status':'READY_FOR_ROOT_AND_NEW_INDEPENDENT_REVIEW_NOT_NATIVE_ADMITTED','source_root':str(C),'source_count':len(source),'PythonAST':astcount,'whole_source':source,'source_changed_from_r12':changed,'unchanged407_r12_sources':same,'freeze':ref(E/'freeze.json'),'source_manifest':ref(E/'source_manifest.json'),'real_current_production_prepare_no_gate_injection':ref(P/'SOURCE_SDK_FULL_PREPARE_RECEIPT.json'),'SDK_prepare_tool_session':2889,'SDK_prepare_exit_code':0,'actual_full_current_tests':f['offline_preflight']['focused_tests'],'test_scope':'Original513 + new19 =532 actualPASS9.31s/guardACTIVE1 DENY0. Pure metadata transport sample never definition/native science PASS; actual020 firstfield run originaltrue dangerous reply reproduced through productionG3/service at fake SDK boundary, all3original jobs fixedrefs retained.','current19_own_material_classification':classref,'actual_relative_material_gate':ref(E/'executable_offline_material_check.json'),'Current11_same_version_receiver_and_real_native_rows':[ref(wv),ref(wn)],'actual_SDK_pure_getter_javap':[ref(P/'API-getter-javap.stdout.txt'),ref(P/'API-getter-javap.stderr.txt'),ref(P/'AbstractSelection.javap.txt')],'first_preliminary_sdk_probe':'SDK_INTERFACE_COMPILE_RECEIPT is earlier source-only probe before final caught-prefix implementation; actual freeze current compile is authoritative','current31_genuine_material_baselines':current31,'current28_specific_refusals':negative28,'whole_raw_regular_files':regular,'deliberate_negative_symlinks_nofollow':links,'mechanical_publicselection_side_ticket_locator':loc,'limits_and_scope':f['limits'],'current_read_plan':f['read_only_call_plan'],'definition_phase':'Existing Javafixture new explicitreadonlyphase; exactCurrent11 featureInfo getter table allcols; namedselection dim/geom/entities, globalBBox, geom adjacency/orientation matrices, rawupdown, boundaryedge range/coords/normals. No setters/run/selectioncreate/numerical/modelsave. Newphase firstfailedgetter returns flaggedunknown capturedprefix and stops, runner rejects before subsequent operations; originalUNKNOWN preserved.','bounds':'32features8infotags512entities16384rows128cols8MiBUTF8/16MiBJSON publication, fixed7selections2ports; post-getter cap is not engine hardquota. Rawupdowncolumntoentity not guessed, no selectedphysics normal side assertion.','native_and_science':'NOT_RUN_METADATA_SOURCE_ONLY_NO_DEFINITION_OR_NORMAL_ACCEPTANCE','historical020_preserved':ref(B/'repository/docs/full_project_continuation_v2/evidence/w23_saved_mph_candidate20_r12/activity020-actual-terminal-001/PRESERVATION_RECEIPT.json'),'Root_actual020_disposition':ref(B/'repository/docs/full_project_continuation_v2/evidence/w23_saved_mph_candidate20_r12/ROOT_ACTUAL_ACTIVITY020_FREQ_PASS_FIELD_UNKNOWN_CHECK_AND_DISPOSITION.json'),'RESUME_unchanged_sha256':sha(S),'new_native_CAS':'NOT_MODIFIED','new_Root_approval':'NOT_CREATED','W24':'HOLD'}
+print(json.dumps(save('ROOT_REVIEW_PACKET_ACTIVITY021_R13.json',receipt)))

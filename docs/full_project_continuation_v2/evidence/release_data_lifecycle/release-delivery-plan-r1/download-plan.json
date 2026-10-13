@@ -1,0 +1,2697 @@
+{
+  "build_prerequisites": {
+    "blocker": "Build-system packages are not pinned in uv.lock. Cache inventory contains extracted candidates but no approved wheel artifact binding for deterministic task-local offline build. Do not treat system Python or extracted trees as the build environment; resolve a separately bounded isolated offline builder input plan after approval.",
+    "cached_exact_build_tool_versions_extracted_only": {
+      "build": [
+        "1.6.0",
+        "1.6.1"
+      ],
+      "pyproject-hooks": [
+        "1.2.0",
+        "1.3.3"
+      ],
+      "setuptools": [
+        "83.0.0",
+        "84.0.0"
+      ],
+      "wheel": [
+        "0.48.0"
+      ]
+    },
+    "host": {
+      "machine": "arm64",
+      "platform": "macOS-27.0-arm64-arm-64bit-Mach-O",
+      "python": "3.14.7",
+      "python_path": "/opt/homebrew/opt/python@3.14/bin/python3.14",
+      "uv": "uv 0.11.21 (Homebrew 2026-06-11 aarch64-apple-darwin)"
+    },
+    "installed_builder": {
+      "build_isolated_or_install_attempted": false,
+      "packages": {
+        "build": null,
+        "packaging": "26.2",
+        "setuptools": null,
+        "wheel": "0.47.0"
+      },
+      "setuptools_requirement_satisfied": false
+    },
+    "pyproject_declared_build_requires": [
+      "setuptools>=68",
+      "wheel"
+    ],
+    "uv_lock_has_build_backend_package_records": false
+  },
+  "created_date": "2026-10-12",
+  "declared_but_unlocked_desktop_optional": {
+    "missing_from_uv_lock": [
+      "psutil (darwin marker; no version pin in pyproject)",
+      "pyobjc-framework-ApplicationServices >=12.2.2 (darwin)",
+      "pyobjc-framework-Quartz >=12.2.2 (darwin)",
+      "pyobjc-framework-Cocoa >=12.2.2 (darwin)"
+    ],
+    "pyproject_optional_dependencies": [
+      "psutil; sys_platform == 'darwin'",
+      "pyobjc-framework-ApplicationServices>=12.2.2; sys_platform == 'darwin'",
+      "pyobjc-framework-Quartz>=12.2.2; sys_platform == 'darwin'",
+      "pyobjc-framework-Cocoa>=12.2.2; sys_platform == 'darwin'"
+    ],
+    "resolution": "Do not omit the declared extra. The base+dev target plan below is not a complete macOS desktop optional-dependency plan. A reviewed pyproject/uv.lock synchronization and exact artifact hashes are required before claiming desktop closure; no version or source files were changed.",
+    "status": "SOURCE_LOCK_MISMATCH_DARWIN_DESKTOP_EXTRA_NOT_INCLUDED",
+    "uv_lock_root_provides_extras": [
+      "dev"
+    ]
+  },
+  "inputs": {
+    "cache_inventory": {
+      "path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-cache-inventory-r2.json",
+      "sha256": "1de4ce83db18fdb5b2e3620a57e78675a190f3faeed1105955c1fca4f1ddf6ba"
+    },
+    "pyproject_toml": {
+      "path": "pyproject.toml",
+      "sha256": "f6f9356edc1c970e36c32a82cc8d9e71bd1a94d5a0e1552495a04ca7634ee107"
+    },
+    "uv_lock": {
+      "path": "uv.lock",
+      "sha256": "08b6b8fb1f6a7a110f45df7d9f3ac3dae3e343fddc1ce2ddae84e458c3130b3f"
+    }
+  },
+  "intel_cryptography": {
+    "expected_derived_tag": "cp312-abi3-macosx_12_0_x86_64",
+    "missing_now": [
+      "CPython 3.12 x86_64 build host/runtime",
+      "approved access to the exact locked cryptography sdist URL",
+      "approved access to the pinned OpenSSL source URL",
+      "target-native compiler/linker and SDK inputs on macOS 12-compatible x86_64 host",
+      "derived wheel bytes/SHA and native audit/provenance/lock overlay"
+    ],
+    "no_tag_or_version_downgrade": true,
+    "openssl_source": {
+      "license": "Apache-2.0",
+      "linkage": "static",
+      "sha256": "736b467530f916737b7031310ccb21d8218c6229e61e8e160cd1d3458cd543a8",
+      "url": "https://www.openssl.org/source/openssl-4.0.2.tar.gz"
+    },
+    "package": "cryptography==50.0.1",
+    "required_path": "Use tools/full_project_release.py verify_derived_wheel/compose_derived_wheel_lock and comsol-mcp-derived-wheel/1 provenance; no upstream or ARM wheel substitution.",
+    "status": "LOCKED_SDIST_ONLY_DERIVED_WHEEL_REQUIRED"
+  },
+  "schema": "comsol-mcp-cp312-release-download-plan/1",
+  "scope": {
+    "application_wheel": "The project application wheel is excluded from these third-party requirements and will be built only after the owned source candidate is frozen; do not reuse or rename a 0.1.9 wheel.",
+    "locked_closure": "The package rows are the project runtime plus dev/test closure already represented in uv.lock and selected by release-cache-inventory-r2 target compatibility.",
+    "network": "No network reads/writes were performed. Future downloads must use only the URLs listed below, into a fresh per-target task cache, then verify exact expected SHA256/size before installation.",
+    "repacking": "Do not convert uv archive-v0 extracted package trees into wheel archives."
+  },
+  "status": "PLAN_ONLY_NOT_DOWNLOADED_NOT_INSTALLED_NOT_BUILT",
+  "targets": {
+    "macos_arm64": {
+      "artifacts": [
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "annotated_types-0.8.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "annotated-types",
+          "sha256": "f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0",
+          "size_bytes": 13427,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/99/91/8acff4f5e50511b911bbccb72b8628a49c68ce14148cd9f6431094859a90/annotated_types-0.8.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "0.8.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "anyio-4.15.1-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "anyio",
+          "sha256": "6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101",
+          "size_bytes": 132079,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/12/b8/4bd346e22b28902df4d651910f5242c28d84e4a5c2435ca5c3f797ed7e2e/anyio-4.15.1-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "4.15.1",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "attrs-26.1.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "attrs",
+          "sha256": "c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309",
+          "size_bytes": 67548,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/64/b4/17d4b0b2a2dc85a6df63d1157e028ed19f90d4cd97c36717afef2bc2f395/attrs-26.1.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "26.1.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "certifi-2026.7.22-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "certifi",
+          "sha256": "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775",
+          "size_bytes": 136983,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "2026.7.22",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [],
+          "filename": "cffi-2.1.1-cp312-cp312-macosx_11_0_arm64.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "cffi",
+          "sha256": "f81b3b8f3d4e343550fa4baa0e479bba9f2d29ce9c2e9b51d1ce1718d7442fcf",
+          "size_bytes": 184719,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/54/7d/16e5a096677b5e313ca80cd5e5170efa3ea44624a82bb111925522da64b1/cffi-2.1.1-cp312-cp312-macosx_11_0_arm64.whl",
+          "uv_cache": "NO_MATCHING_VERSION_IN_TARGET_CACHE",
+          "version": "2.1.1",
+          "wheel_tags": [
+            "cp312-cp312-macosx_11_0_arm64"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "click-8.5.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "click",
+          "sha256": "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360",
+          "size_bytes": 125251,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/58/50/6c0d534c5f134586a8e1ba4e330569e32f057e33372ae556463212fb4cd3/click-8.5.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "8.5.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "cp311-abi3-macosx_11_0_arm64"
+          ],
+          "filename": "cryptography-50.0.1-cp39-abi3-macosx_11_0_arm64.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "cryptography",
+          "sha256": "ca83d00d9e69cd5eb63f2e69c3a5a59e0cecae5ae14c6ae0b35830fe3b37bad0",
+          "size_bytes": 4035307,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/84/a9/ee16a903f13755e914d1eecc482fe64d1f10761c3960e5d8fa6837377aff/cryptography-50.0.1-cp39-abi3-macosx_11_0_arm64.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "50.0.1",
+          "wheel_tags": [
+            "cp39-abi3-macosx_11_0_arm64"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "h11-0.16.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "h11",
+          "sha256": "63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86",
+          "size_bytes": 37515,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/04/4b/29cac41a4d98d144bf5f6d33995617b185d14b22401f75ca86f384e87ff1/h11-0.16.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "0.16.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "httpcore-1.0.9-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "httpcore",
+          "sha256": "2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55",
+          "size_bytes": 78784,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/7e/f5/f66802a942d491edb555dd61e3a9961140fd64c90bce1eafd741609d334d/httpcore-1.0.9-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "1.0.9",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "httpx-0.28.1-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "httpx",
+          "sha256": "d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad",
+          "size_bytes": 73517,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/2a/39/e50c7c3a983047577ee07d2a9e53faf5a69493943ec3f6a384bdc792deb2/httpx-0.28.1-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "0.28.1",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "httpx_sse-0.4.3-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "httpx-sse",
+          "sha256": "0ac1c9fe3c0afad2e0ebb25a934a59f4c7823b60792691f779fad2c5568830fc",
+          "size_bytes": 8960,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/d2/fd/6668e5aec43ab844de6fc74927e155a3b37bf40d7c3790e49fc0406b6578/httpx_sse-0.4.3-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "0.4.3",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "idna-3.20-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "idna",
+          "sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+          "size_bytes": 69583,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/58/a2/bb081bab032533a855d44de1d56f8e8426114ff1ba5d1f07a438a0a654f8/idna-3.20-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "3.20",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "iniconfig-2.3.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "iniconfig",
+          "sha256": "f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12",
+          "size_bytes": 7484,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/cb/b1/3846dd7f199d53cb17f49cba7e651e9ce294d8497c8c150530ed11865bb8/iniconfig-2.3.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "2.3.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [],
+          "filename": "jpype1-1.7.1-1-cp312-cp312-macosx_11_0_universal2.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "jpype1",
+          "sha256": "b3ddd9f9099202212a34679dfb95dda590bcfbd23289559d104e24abec9120d1",
+          "size_bytes": 569654,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/79/32/8b2279b12364f260111c7843bf9ede7dc442d5521d6d2ca728b3d522d445/jpype1-1.7.1-1-cp312-cp312-macosx_11_0_universal2.whl",
+          "uv_cache": "NO_MATCHING_VERSION_IN_TARGET_CACHE",
+          "version": "1.7.1",
+          "wheel_tags": [
+            "cp312-cp312-macosx_11_0_universal2"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "jsonschema-4.26.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "jsonschema",
+          "sha256": "d489f15263b8d200f8387e64b4c3a75f06629559fb73deb8fdfb525f2dab50ce",
+          "size_bytes": 90630,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/69/90/f63fb5873511e014207a475e2bb4e8b2e570d655b00ac19a9a0ca0a385ee/jsonschema-4.26.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "4.26.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "jsonschema_specifications-2025.9.1-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "jsonschema-specifications",
+          "sha256": "98802fee3a11ee76ecaca44429fda8a41bff98b00a0f2838151b113f210cc6fe",
+          "size_bytes": 18437,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/41/45/1a4ed80516f02155c51f51e8cedb3c1902296743db0bbc66608a0db2814f/jsonschema_specifications-2025.9.1-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "2025.9.1",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "mcp-1.30.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "mcp",
+          "sha256": "666edb5009503e1047c9d60346a756f94b261f05cc2625f23d41c728ffc484d0",
+          "size_bytes": 234581,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/f5/f4/e58bc33317c92a0203664daaf00bf6f41166cc0149e5d6870a03f7cd004a/mcp-1.30.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "1.30.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "mph-1.4.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "mph",
+          "sha256": "835835ac9d211601def50a6f8c61b783531e905d7165c8de7bf8a378a040c385",
+          "size_bytes": 65897,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/ef/6e/1de806ec962cd29a9c9a74905b43b75d90f7daf7c970bb4c7ceb9877164e/mph-1.4.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "1.4.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [],
+          "filename": "numpy-2.5.3-cp312-cp312-macosx_11_0_arm64.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "numpy",
+          "sha256": "f59a878c33d6b88122d80d239bb3b845d58708750b0cb06a09aebb9b18ec696c",
+          "size_bytes": 12009327,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/60/39/789131c1188c078dcb3a1692e72e1e050c68b88ffe72c9ccaac9bcd7a9cd/numpy-2.5.3-cp312-cp312-macosx_11_0_arm64.whl",
+          "uv_cache": "NO_MATCHING_VERSION_IN_TARGET_CACHE",
+          "version": "2.5.3",
+          "wheel_tags": [
+            "cp312-cp312-macosx_11_0_arm64"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "packaging-26.3-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "packaging",
+          "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+          "size_bytes": 129956,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "26.3",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "pluggy-1.6.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "pluggy",
+          "sha256": "e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746",
+          "size_bytes": 20538,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "1.6.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "pycparser-3.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "pycparser",
+          "sha256": "b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992",
+          "size_bytes": 48172,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "3.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "pydantic-2.13.5-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "pydantic",
+          "sha256": "346a034f080da3755d8e9cb5e00e8b07de1d39e4f6e2c87d8ab7cafa0b269a73",
+          "size_bytes": 472589,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/eb/47/c95ffc2009878c7aac0c5e08528022dcb885933252a88b5f170058014464/pydantic-2.13.5-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "2.13.5",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [],
+          "filename": "pydantic_core-2.46.5-cp312-cp312-macosx_11_0_arm64.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "pydantic-core",
+          "sha256": "a39ac25a9a2fa4072efdb429833c4a4c8009a51ff9eea3eeae131713cd27991e",
+          "size_bytes": 1922874,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/db/50/26b091836076ce4cb2fac264186936acc069e0595772cfd02a563bc4761a/pydantic_core-2.46.5-cp312-cp312-macosx_11_0_arm64.whl",
+          "uv_cache": "NO_MATCHING_VERSION_IN_TARGET_CACHE",
+          "version": "2.46.5",
+          "wheel_tags": [
+            "cp312-cp312-macosx_11_0_arm64"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "pydantic_settings-2.15.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "pydantic-settings",
+          "sha256": "0ba092c291c94baceb5eff768aa0d56400a457585bc0175925a5a5510303da42",
+          "size_bytes": 69413,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/30/a4/2bffa9f8e804325a09867f0e9d30795c80ea9f8d62560bd1b6ad6220eb2f/pydantic_settings-2.15.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "2.15.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "pygments-2.21.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "pygments",
+          "sha256": "2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9",
+          "size_bytes": 1250147,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/71/46/17f022dd3e953bf20a04a028a21ec746d942f8d2af30fa0f124fa0e6a684/pygments-2.21.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "2.21.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "pyjwt-2.15.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "pyjwt",
+          "sha256": "7a3742debf6b879e912dbb9819ceec1594be812452b78c5f2e2dfc56564954f8",
+          "size_bytes": 33680,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/e8/55/40e45bf052ee8ee12a4dfd785519660f8effa7b065442b91646ec6828619/pyjwt-2.15.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "2.15.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "pytest-9.1.1-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "pytest",
+          "sha256": "37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c",
+          "size_bytes": 386536,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/24/25/1de2678b631f5a49215c6c96fff41ba892b0a34df68d6d80292b1b48aa7f/pytest-9.1.1-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "9.1.1",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "python_dotenv-1.2.3-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "python-dotenv",
+          "sha256": "904552145e8bfed22162c09dab1c2b9b54fefa7b23ba780f4f26ca0316b0f0d9",
+          "size_bytes": 22780,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/0d/17/c5c6b53ddc18f297992099b3d9ec16c855c0ccc83263a21fe4d1c625ec6c/python_dotenv-1.2.3-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "1.2.3",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "python_multipart-0.0.32-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "python-multipart",
+          "sha256": "ff6d3f776f16878c894e52e107296ffc890e913c611b1a4ec6c44e2821fe2e23",
+          "size_bytes": 30042,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/e1/04/e8135ebd1ad02c56ec633277529b2602ff99ff634be76cdba5744cf554fd/python_multipart-0.0.32-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "0.0.32",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "referencing-0.37.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "referencing",
+          "sha256": "381329a9f99628c9069361716891d34ad94af76e461dcb0335825aecc7692231",
+          "size_bytes": 26766,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/2c/58/ca301544e1fa93ed4f80d724bf5b194f6e4b945841c5bfd555878eea9fcb/referencing-0.37.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "0.37.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "cp312-cp312-macosx_11_0_arm64"
+          ],
+          "filename": "rpds_py-2026.6.3-cp312-cp312-macosx_11_0_arm64.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "rpds-py",
+          "sha256": "538949e262e46caa31ac01bdb3c1e8f642622922cacbabbae6a8445d9dc33eaf",
+          "size_bytes": 338542,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/a4/73/319dfa745dd668efe89309141ded489126461fcecd2b8f3a3cda185129b6/rpds_py-2026.6.3-cp312-cp312-macosx_11_0_arm64.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "2026.6.3",
+          "wheel_tags": [
+            "cp312-cp312-macosx_11_0_arm64"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "sse_starlette-3.4.11-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "sse-starlette",
+          "sha256": "c7b2244bdff016fe7f64e10075e89a3e6bbf899649cc89b0fe884b5545042453",
+          "size_bytes": 17122,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/98/6a/2ba3ed4a69babf3afdddf7d8314a48d87562c0a442206bbc2a1b50d5efc0/sse_starlette-3.4.11-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "3.4.11",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "starlette-1.7.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "starlette",
+          "sha256": "67f8e99895493dd2911a03f11314af6ceebeae4e704bb9f43dfc6a9db151c93e",
+          "size_bytes": 78980,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/4e/d6/1ec1b290f9e0fb067899b61e1d37a30c923068bad260b216dbe37a7d2967/starlette-1.7.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "1.7.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "typing_extensions-4.16.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "typing-extensions",
+          "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+          "size_bytes": 45571,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "4.16.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "typing_inspection-0.4.4-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "typing-inspection",
+          "sha256": "65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147",
+          "size_bytes": 14750,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/67/81/4add07e5172b7ac40d8ed5ff580409a7801a4fe26d529bdd915401dabfbe/typing_inspection-0.4.4-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "0.4.4",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "uvicorn-0.53.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "uvicorn",
+          "sha256": "e8dca71ec86dce5f04e333f0d56cdedf942446e6643b9cea1af0d6d3a02cb03e",
+          "size_bytes": 87081,
+          "target": "macos_arm64",
+          "target_tags": [
+            "macosx_11_0_arm64",
+            "macosx_11_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/76/18/0eea75741ee812e9f598b687619ce2454f6c3a1c5cd21ea990ec6bd26f45/uvicorn-0.53.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "0.53.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        }
+      ],
+      "downloaded_count": 0,
+      "label": "CPython 3.12 / macosx_11_0_arm64 + macosx_11_0_universal2",
+      "local_target_wheelhouse_complete": false,
+      "locked_artifact_count": 37,
+      "python": "CPython 3.12",
+      "requirements_file": {
+        "package_line_count": 37,
+        "path": "requirements-macos-arm64-cp312.txt",
+        "sha256": "948bd9d6ad27cead0e97e0166c1647f5741eb29c47073915c2d0a385bfa54967"
+      },
+      "target_tags": {
+        "minimum_os": null,
+        "pip_platforms": [
+          "macosx_11_0_arm64",
+          "macosx_11_0_universal2"
+        ],
+        "python": "CPython 3.12"
+      }
+    },
+    "macos_x86_64": {
+      "artifacts": [
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "annotated_types-0.8.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "annotated-types",
+          "sha256": "f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0",
+          "size_bytes": 13427,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/99/91/8acff4f5e50511b911bbccb72b8628a49c68ce14148cd9f6431094859a90/annotated_types-0.8.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "0.8.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "anyio-4.15.1-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "anyio",
+          "sha256": "6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101",
+          "size_bytes": 132079,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/12/b8/4bd346e22b28902df4d651910f5242c28d84e4a5c2435ca5c3f797ed7e2e/anyio-4.15.1-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "4.15.1",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "attrs-26.1.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "attrs",
+          "sha256": "c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309",
+          "size_bytes": 67548,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/64/b4/17d4b0b2a2dc85a6df63d1157e028ed19f90d4cd97c36717afef2bc2f395/attrs-26.1.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "26.1.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "certifi-2026.7.22-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "certifi",
+          "sha256": "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775",
+          "size_bytes": 136983,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "2026.7.22",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [],
+          "filename": "cffi-2.1.1-cp312-cp312-macosx_10_15_x86_64.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "cffi",
+          "sha256": "c8c69575568085ba0b1b10c0249d779a214aea6f6522e949a0fc9fb0fcb449d0",
+          "size_bytes": 184821,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/10/69/43965eccfdead3b9220015fd1320e117be8c6ed01a62ffab76eeb752f5d5/cffi-2.1.1-cp312-cp312-macosx_10_15_x86_64.whl",
+          "uv_cache": "NO_MATCHING_VERSION_IN_TARGET_CACHE",
+          "version": "2.1.1",
+          "wheel_tags": [
+            "cp312-cp312-macosx_10_15_x86_64"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "click-8.5.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "click",
+          "sha256": "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360",
+          "size_bytes": 125251,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/58/50/6c0d534c5f134586a8e1ba4e330569e32f057e33372ae556463212fb4cd3/click-8.5.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "8.5.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "sdist_source_build_input",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [],
+          "filename": "cryptography-50.0.1.tar.gz",
+          "installable_as_target_wheel": false,
+          "local_target_wheelhouse": "MISSING",
+          "name": "cryptography",
+          "required_derived_wheel_tag": "cp312-abi3-macosx_12_0_x86_64",
+          "sha256": "5dd9bda1c12b4162f6ff568eeb5e0ff956c28d14406e875cfe8a63a2d414ff20",
+          "size_bytes": 880381,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/bb/ad/5d6702db60b1e40b41ef513b6967ff5848f307d50f8449baf1634f5908f1/cryptography-50.0.1.tar.gz",
+          "uv_cache": "NO_MATCHING_VERSION_IN_TARGET_CACHE",
+          "version": "50.0.1"
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "h11-0.16.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "h11",
+          "sha256": "63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86",
+          "size_bytes": 37515,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/04/4b/29cac41a4d98d144bf5f6d33995617b185d14b22401f75ca86f384e87ff1/h11-0.16.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "0.16.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "httpcore-1.0.9-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "httpcore",
+          "sha256": "2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55",
+          "size_bytes": 78784,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/7e/f5/f66802a942d491edb555dd61e3a9961140fd64c90bce1eafd741609d334d/httpcore-1.0.9-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "1.0.9",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "httpx-0.28.1-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "httpx",
+          "sha256": "d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad",
+          "size_bytes": 73517,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/2a/39/e50c7c3a983047577ee07d2a9e53faf5a69493943ec3f6a384bdc792deb2/httpx-0.28.1-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "0.28.1",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "httpx_sse-0.4.3-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "httpx-sse",
+          "sha256": "0ac1c9fe3c0afad2e0ebb25a934a59f4c7823b60792691f779fad2c5568830fc",
+          "size_bytes": 8960,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/d2/fd/6668e5aec43ab844de6fc74927e155a3b37bf40d7c3790e49fc0406b6578/httpx_sse-0.4.3-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "0.4.3",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "idna-3.20-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "idna",
+          "sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+          "size_bytes": 69583,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/58/a2/bb081bab032533a855d44de1d56f8e8426114ff1ba5d1f07a438a0a654f8/idna-3.20-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "3.20",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "iniconfig-2.3.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "iniconfig",
+          "sha256": "f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12",
+          "size_bytes": 7484,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/cb/b1/3846dd7f199d53cb17f49cba7e651e9ce294d8497c8c150530ed11865bb8/iniconfig-2.3.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "2.3.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [],
+          "filename": "jpype1-1.7.1-1-cp312-cp312-macosx_11_0_universal2.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "jpype1",
+          "sha256": "b3ddd9f9099202212a34679dfb95dda590bcfbd23289559d104e24abec9120d1",
+          "size_bytes": 569654,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/79/32/8b2279b12364f260111c7843bf9ede7dc442d5521d6d2ca728b3d522d445/jpype1-1.7.1-1-cp312-cp312-macosx_11_0_universal2.whl",
+          "uv_cache": "NO_MATCHING_VERSION_IN_TARGET_CACHE",
+          "version": "1.7.1",
+          "wheel_tags": [
+            "cp312-cp312-macosx_11_0_universal2"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "jsonschema-4.26.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "jsonschema",
+          "sha256": "d489f15263b8d200f8387e64b4c3a75f06629559fb73deb8fdfb525f2dab50ce",
+          "size_bytes": 90630,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/69/90/f63fb5873511e014207a475e2bb4e8b2e570d655b00ac19a9a0ca0a385ee/jsonschema-4.26.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "4.26.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "jsonschema_specifications-2025.9.1-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "jsonschema-specifications",
+          "sha256": "98802fee3a11ee76ecaca44429fda8a41bff98b00a0f2838151b113f210cc6fe",
+          "size_bytes": 18437,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/41/45/1a4ed80516f02155c51f51e8cedb3c1902296743db0bbc66608a0db2814f/jsonschema_specifications-2025.9.1-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "2025.9.1",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "mcp-1.30.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "mcp",
+          "sha256": "666edb5009503e1047c9d60346a756f94b261f05cc2625f23d41c728ffc484d0",
+          "size_bytes": 234581,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/f5/f4/e58bc33317c92a0203664daaf00bf6f41166cc0149e5d6870a03f7cd004a/mcp-1.30.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "1.30.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "mph-1.4.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "mph",
+          "sha256": "835835ac9d211601def50a6f8c61b783531e905d7165c8de7bf8a378a040c385",
+          "size_bytes": 65897,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/ef/6e/1de806ec962cd29a9c9a74905b43b75d90f7daf7c970bb4c7ceb9877164e/mph-1.4.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "1.4.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [],
+          "filename": "numpy-2.5.3-cp312-cp312-macosx_10_13_x86_64.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "numpy",
+          "sha256": "cb189f09db39283b26bfd061ec16189e14f71c6755207f72a0f7540867afe5b9",
+          "size_bytes": 16994982,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/d6/50/8fdbb16af64895706a45f06a4068e29db732ec180f3c1375f14123359138/numpy-2.5.3-cp312-cp312-macosx_10_13_x86_64.whl",
+          "uv_cache": "NO_MATCHING_VERSION_IN_TARGET_CACHE",
+          "version": "2.5.3",
+          "wheel_tags": [
+            "cp312-cp312-macosx_10_13_x86_64"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "packaging-26.3-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "packaging",
+          "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+          "size_bytes": 129956,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "26.3",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "pluggy-1.6.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "pluggy",
+          "sha256": "e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746",
+          "size_bytes": 20538,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "1.6.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "pycparser-3.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "pycparser",
+          "sha256": "b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992",
+          "size_bytes": 48172,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "3.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "pydantic-2.13.5-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "pydantic",
+          "sha256": "346a034f080da3755d8e9cb5e00e8b07de1d39e4f6e2c87d8ab7cafa0b269a73",
+          "size_bytes": 472589,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/eb/47/c95ffc2009878c7aac0c5e08528022dcb885933252a88b5f170058014464/pydantic-2.13.5-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "2.13.5",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [],
+          "filename": "pydantic_core-2.46.5-cp312-cp312-macosx_10_12_x86_64.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "pydantic-core",
+          "sha256": "b9fe6fb92520e3fd61f2e49000b6911b188824f089b75973ea06d6267f0b476d",
+          "size_bytes": 2076516,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/82/3f/76358795aa7a8c6d4f36e2cb828ad1c90ee118e1393a9281664f5aade9d4/pydantic_core-2.46.5-cp312-cp312-macosx_10_12_x86_64.whl",
+          "uv_cache": "NO_MATCHING_VERSION_IN_TARGET_CACHE",
+          "version": "2.46.5",
+          "wheel_tags": [
+            "cp312-cp312-macosx_10_12_x86_64"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "pydantic_settings-2.15.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "pydantic-settings",
+          "sha256": "0ba092c291c94baceb5eff768aa0d56400a457585bc0175925a5a5510303da42",
+          "size_bytes": 69413,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/30/a4/2bffa9f8e804325a09867f0e9d30795c80ea9f8d62560bd1b6ad6220eb2f/pydantic_settings-2.15.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "2.15.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "pygments-2.21.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "pygments",
+          "sha256": "2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9",
+          "size_bytes": 1250147,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/71/46/17f022dd3e953bf20a04a028a21ec746d942f8d2af30fa0f124fa0e6a684/pygments-2.21.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "2.21.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "pyjwt-2.15.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "pyjwt",
+          "sha256": "7a3742debf6b879e912dbb9819ceec1594be812452b78c5f2e2dfc56564954f8",
+          "size_bytes": 33680,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/e8/55/40e45bf052ee8ee12a4dfd785519660f8effa7b065442b91646ec6828619/pyjwt-2.15.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "2.15.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "pytest-9.1.1-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "pytest",
+          "sha256": "37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c",
+          "size_bytes": 386536,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/24/25/1de2678b631f5a49215c6c96fff41ba892b0a34df68d6d80292b1b48aa7f/pytest-9.1.1-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "9.1.1",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "python_dotenv-1.2.3-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "python-dotenv",
+          "sha256": "904552145e8bfed22162c09dab1c2b9b54fefa7b23ba780f4f26ca0316b0f0d9",
+          "size_bytes": 22780,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/0d/17/c5c6b53ddc18f297992099b3d9ec16c855c0ccc83263a21fe4d1c625ec6c/python_dotenv-1.2.3-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "1.2.3",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "python_multipart-0.0.32-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "python-multipart",
+          "sha256": "ff6d3f776f16878c894e52e107296ffc890e913c611b1a4ec6c44e2821fe2e23",
+          "size_bytes": 30042,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/e1/04/e8135ebd1ad02c56ec633277529b2602ff99ff634be76cdba5744cf554fd/python_multipart-0.0.32-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "0.0.32",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "referencing-0.37.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "referencing",
+          "sha256": "381329a9f99628c9069361716891d34ad94af76e461dcb0335825aecc7692231",
+          "size_bytes": 26766,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/2c/58/ca301544e1fa93ed4f80d724bf5b194f6e4b945841c5bfd555878eea9fcb/referencing-0.37.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "0.37.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [],
+          "filename": "rpds_py-2026.6.3-cp312-cp312-macosx_10_12_x86_64.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "rpds-py",
+          "sha256": "a0811d33247c3d6128a3001d763f2aa056bb3425204335400ac54f89eec3a0d0",
+          "size_bytes": 343691,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/5c/be/2e8974163072e7bab7df1a5acd54c4498e75e35d6d18b864d3a9d5dadc92/rpds_py-2026.6.3-cp312-cp312-macosx_10_12_x86_64.whl",
+          "uv_cache": "NO_MATCHING_VERSION_IN_TARGET_CACHE",
+          "version": "2026.6.3",
+          "wheel_tags": [
+            "cp312-cp312-macosx_10_12_x86_64"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "sse_starlette-3.4.11-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "sse-starlette",
+          "sha256": "c7b2244bdff016fe7f64e10075e89a3e6bbf899649cc89b0fe884b5545042453",
+          "size_bytes": 17122,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/98/6a/2ba3ed4a69babf3afdddf7d8314a48d87562c0a442206bbc2a1b50d5efc0/sse_starlette-3.4.11-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "3.4.11",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "starlette-1.7.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "starlette",
+          "sha256": "67f8e99895493dd2911a03f11314af6ceebeae4e704bb9f43dfc6a9db151c93e",
+          "size_bytes": 78980,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/4e/d6/1ec1b290f9e0fb067899b61e1d37a30c923068bad260b216dbe37a7d2967/starlette-1.7.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "1.7.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "typing_extensions-4.16.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "typing-extensions",
+          "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+          "size_bytes": 45571,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "4.16.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "typing_inspection-0.4.4-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "typing-inspection",
+          "sha256": "65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147",
+          "size_bytes": 14750,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/67/81/4add07e5172b7ac40d8ed5ff580409a7801a4fe26d529bdd915401dabfbe/typing_inspection-0.4.4-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "0.4.4",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "uvicorn-0.53.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "uvicorn",
+          "sha256": "e8dca71ec86dce5f04e333f0d56cdedf942446e6643b9cea1af0d6d3a02cb03e",
+          "size_bytes": 87081,
+          "target": "macos_x86_64",
+          "target_tags": [
+            "macosx_12_0_x86_64",
+            "macosx_12_0_universal2"
+          ],
+          "url": "https://files.pythonhosted.org/packages/76/18/0eea75741ee812e9f598b687619ce2454f6c3a1c5cd21ea990ec6bd26f45/uvicorn-0.53.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "0.53.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        }
+      ],
+      "downloaded_count": 0,
+      "label": "CPython 3.12 / macosx_12_0_x86_64 + macosx_12_0_universal2",
+      "local_target_wheelhouse_complete": false,
+      "locked_artifact_count": 37,
+      "python": "CPython 3.12",
+      "requirements_file": {
+        "package_line_count": 37,
+        "path": "requirements-macos-x86_64-cp312.txt",
+        "sha256": "db879eaa7c6704c8d51da38f275f641903328499d7fa96b84ab3ba8e23c130a1"
+      },
+      "target_tags": {
+        "minimum_os": "macOS 12.0 (COMSOL 6.3/6.4 Intel Mac requirement)",
+        "pip_platforms": [
+          "macosx_12_0_x86_64",
+          "macosx_12_0_universal2"
+        ],
+        "python": "CPython 3.12"
+      }
+    },
+    "win_amd64": {
+      "artifacts": [
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "annotated_types-0.8.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "annotated-types",
+          "sha256": "f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0",
+          "size_bytes": 13427,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/99/91/8acff4f5e50511b911bbccb72b8628a49c68ce14148cd9f6431094859a90/annotated_types-0.8.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "0.8.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "anyio-4.15.1-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "anyio",
+          "sha256": "6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101",
+          "size_bytes": 132079,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/12/b8/4bd346e22b28902df4d651910f5242c28d84e4a5c2435ca5c3f797ed7e2e/anyio-4.15.1-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "4.15.1",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "attrs-26.1.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "attrs",
+          "sha256": "c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309",
+          "size_bytes": 67548,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/64/b4/17d4b0b2a2dc85a6df63d1157e028ed19f90d4cd97c36717afef2bc2f395/attrs-26.1.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "26.1.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "certifi-2026.7.22-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "certifi",
+          "sha256": "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775",
+          "size_bytes": 136983,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "2026.7.22",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [],
+          "filename": "cffi-2.1.1-cp312-cp312-win_amd64.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "cffi",
+          "sha256": "f53e442b08449d42821fa4a4fba000095af9f62742a500f978a9f557ec44339a",
+          "size_bytes": 185919,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/d9/79/615cc094e2fb508cade7de88d3b4f6c4ec2bab695c97bce9153dc65aadf5/cffi-2.1.1-cp312-cp312-win_amd64.whl",
+          "uv_cache": "NO_MATCHING_VERSION_IN_TARGET_CACHE",
+          "version": "2.1.1",
+          "wheel_tags": [
+            "cp312-cp312-win_amd64"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "click-8.5.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "click",
+          "sha256": "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360",
+          "size_bytes": 125251,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/58/50/6c0d534c5f134586a8e1ba4e330569e32f057e33372ae556463212fb4cd3/click-8.5.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "8.5.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [],
+          "filename": "colorama-0.4.6-py2.py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "colorama",
+          "sha256": "4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6",
+          "size_bytes": 25335,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl",
+          "uv_cache": "NO_MATCHING_VERSION_IN_TARGET_CACHE",
+          "version": "0.4.6",
+          "wheel_tags": [
+            "py2-none-any",
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [],
+          "filename": "cryptography-50.0.1-cp39-abi3-win_amd64.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "cryptography",
+          "sha256": "55d16b1ef3ee0958d893a977b19777887e546c9954ea81b200c3301a864013f2",
+          "size_bytes": 3875429,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/99/89/87ef49ffe383ef4e147d27b7bf2088fb0b54ea409dd87b5a89442e5828a5/cryptography-50.0.1-cp39-abi3-win_amd64.whl",
+          "uv_cache": "NO_MATCHING_VERSION_IN_TARGET_CACHE",
+          "version": "50.0.1",
+          "wheel_tags": [
+            "cp39-abi3-win_amd64"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "h11-0.16.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "h11",
+          "sha256": "63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86",
+          "size_bytes": 37515,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/04/4b/29cac41a4d98d144bf5f6d33995617b185d14b22401f75ca86f384e87ff1/h11-0.16.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "0.16.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "httpcore-1.0.9-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "httpcore",
+          "sha256": "2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55",
+          "size_bytes": 78784,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/7e/f5/f66802a942d491edb555dd61e3a9961140fd64c90bce1eafd741609d334d/httpcore-1.0.9-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "1.0.9",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "httpx-0.28.1-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "httpx",
+          "sha256": "d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad",
+          "size_bytes": 73517,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/2a/39/e50c7c3a983047577ee07d2a9e53faf5a69493943ec3f6a384bdc792deb2/httpx-0.28.1-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "0.28.1",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "httpx_sse-0.4.3-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "httpx-sse",
+          "sha256": "0ac1c9fe3c0afad2e0ebb25a934a59f4c7823b60792691f779fad2c5568830fc",
+          "size_bytes": 8960,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/d2/fd/6668e5aec43ab844de6fc74927e155a3b37bf40d7c3790e49fc0406b6578/httpx_sse-0.4.3-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "0.4.3",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "idna-3.20-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "idna",
+          "sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+          "size_bytes": 69583,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/58/a2/bb081bab032533a855d44de1d56f8e8426114ff1ba5d1f07a438a0a654f8/idna-3.20-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "3.20",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "iniconfig-2.3.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "iniconfig",
+          "sha256": "f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12",
+          "size_bytes": 7484,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/cb/b1/3846dd7f199d53cb17f49cba7e651e9ce294d8497c8c150530ed11865bb8/iniconfig-2.3.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "2.3.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [],
+          "filename": "jpype1-1.7.1-cp312-cp312-win_amd64.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "jpype1",
+          "sha256": "d7dad528c73d02987358485dc37fab36edb9ad8bce53533e65f54cff1b68a4bc",
+          "size_bytes": 356985,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/ca/80/c0098bedd014bc9a1a8a349e40a1fc1408c79af28f6c32bdbb1a2b839c7b/jpype1-1.7.1-cp312-cp312-win_amd64.whl",
+          "uv_cache": "NO_MATCHING_VERSION_IN_TARGET_CACHE",
+          "version": "1.7.1",
+          "wheel_tags": [
+            "cp312-cp312-win_amd64"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "jsonschema-4.26.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "jsonschema",
+          "sha256": "d489f15263b8d200f8387e64b4c3a75f06629559fb73deb8fdfb525f2dab50ce",
+          "size_bytes": 90630,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/69/90/f63fb5873511e014207a475e2bb4e8b2e570d655b00ac19a9a0ca0a385ee/jsonschema-4.26.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "4.26.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "jsonschema_specifications-2025.9.1-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "jsonschema-specifications",
+          "sha256": "98802fee3a11ee76ecaca44429fda8a41bff98b00a0f2838151b113f210cc6fe",
+          "size_bytes": 18437,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/41/45/1a4ed80516f02155c51f51e8cedb3c1902296743db0bbc66608a0db2814f/jsonschema_specifications-2025.9.1-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "2025.9.1",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "mcp-1.30.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "mcp",
+          "sha256": "666edb5009503e1047c9d60346a756f94b261f05cc2625f23d41c728ffc484d0",
+          "size_bytes": 234581,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/f5/f4/e58bc33317c92a0203664daaf00bf6f41166cc0149e5d6870a03f7cd004a/mcp-1.30.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "1.30.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "mph-1.4.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "mph",
+          "sha256": "835835ac9d211601def50a6f8c61b783531e905d7165c8de7bf8a378a040c385",
+          "size_bytes": 65897,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/ef/6e/1de806ec962cd29a9c9a74905b43b75d90f7daf7c970bb4c7ceb9877164e/mph-1.4.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "1.4.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [],
+          "filename": "numpy-2.5.3-cp312-cp312-win_amd64.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "numpy",
+          "sha256": "0a59a421a32580a009e8a1751345bf829631b990dc1794b80514ab722b435def",
+          "size_bytes": 12567828,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/3c/a1/accf6d4f0c80c5d9ba9735d6b1550e444180599f34dec69ca01360f717ad/numpy-2.5.3-cp312-cp312-win_amd64.whl",
+          "uv_cache": "NO_MATCHING_VERSION_IN_TARGET_CACHE",
+          "version": "2.5.3",
+          "wheel_tags": [
+            "cp312-cp312-win_amd64"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "packaging-26.3-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "packaging",
+          "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+          "size_bytes": 129956,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "26.3",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "pluggy-1.6.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "pluggy",
+          "sha256": "e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746",
+          "size_bytes": 20538,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "1.6.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "pycparser-3.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "pycparser",
+          "sha256": "b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992",
+          "size_bytes": 48172,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "3.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "pydantic-2.13.5-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "pydantic",
+          "sha256": "346a034f080da3755d8e9cb5e00e8b07de1d39e4f6e2c87d8ab7cafa0b269a73",
+          "size_bytes": 472589,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/eb/47/c95ffc2009878c7aac0c5e08528022dcb885933252a88b5f170058014464/pydantic-2.13.5-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "2.13.5",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [],
+          "filename": "pydantic_core-2.46.5-cp312-cp312-win_amd64.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "pydantic-core",
+          "sha256": "5e81740c09e310f5aa5cbd3e434a01c154d4bef93241c7877b39f211d2b78ba8",
+          "size_bytes": 2043140,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/cf/c9/4c19f41b84cf6b622a72fbeed7665b25d47a187d68d47d0d430c07f23268/pydantic_core-2.46.5-cp312-cp312-win_amd64.whl",
+          "uv_cache": "NO_MATCHING_VERSION_IN_TARGET_CACHE",
+          "version": "2.46.5",
+          "wheel_tags": [
+            "cp312-cp312-win_amd64"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "pydantic_settings-2.15.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "pydantic-settings",
+          "sha256": "0ba092c291c94baceb5eff768aa0d56400a457585bc0175925a5a5510303da42",
+          "size_bytes": 69413,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/30/a4/2bffa9f8e804325a09867f0e9d30795c80ea9f8d62560bd1b6ad6220eb2f/pydantic_settings-2.15.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "2.15.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "pygments-2.21.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "pygments",
+          "sha256": "2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9",
+          "size_bytes": 1250147,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/71/46/17f022dd3e953bf20a04a028a21ec746d942f8d2af30fa0f124fa0e6a684/pygments-2.21.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "2.21.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "pyjwt-2.15.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "pyjwt",
+          "sha256": "7a3742debf6b879e912dbb9819ceec1594be812452b78c5f2e2dfc56564954f8",
+          "size_bytes": 33680,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/e8/55/40e45bf052ee8ee12a4dfd785519660f8effa7b065442b91646ec6828619/pyjwt-2.15.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "2.15.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "pytest-9.1.1-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "pytest",
+          "sha256": "37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c",
+          "size_bytes": 386536,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/24/25/1de2678b631f5a49215c6c96fff41ba892b0a34df68d6d80292b1b48aa7f/pytest-9.1.1-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "9.1.1",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "python_dotenv-1.2.3-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "python-dotenv",
+          "sha256": "904552145e8bfed22162c09dab1c2b9b54fefa7b23ba780f4f26ca0316b0f0d9",
+          "size_bytes": 22780,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/0d/17/c5c6b53ddc18f297992099b3d9ec16c855c0ccc83263a21fe4d1c625ec6c/python_dotenv-1.2.3-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "1.2.3",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "python_multipart-0.0.32-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "python-multipart",
+          "sha256": "ff6d3f776f16878c894e52e107296ffc890e913c611b1a4ec6c44e2821fe2e23",
+          "size_bytes": 30042,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/e1/04/e8135ebd1ad02c56ec633277529b2602ff99ff634be76cdba5744cf554fd/python_multipart-0.0.32-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "0.0.32",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [],
+          "filename": "pywin32-312-cp312-cp312-win_amd64.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "pywin32",
+          "sha256": "b457f6d628a47e8a7346ce22acb7e1a46a4a78b52e1d17e1af56871bd19a93bc",
+          "size_bytes": 6914841,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/03/d9/77040d3b43df3f3be32ea289433d660d2727f5ba327bc73be835127d9d60/pywin32-312-cp312-cp312-win_amd64.whl",
+          "uv_cache": "NO_MATCHING_VERSION_IN_TARGET_CACHE",
+          "version": "312",
+          "wheel_tags": [
+            "cp312-cp312-win_amd64"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "referencing-0.37.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "referencing",
+          "sha256": "381329a9f99628c9069361716891d34ad94af76e461dcb0335825aecc7692231",
+          "size_bytes": 26766,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/2c/58/ca301544e1fa93ed4f80d724bf5b194f6e4b945841c5bfd555878eea9fcb/referencing-0.37.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "0.37.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [],
+          "filename": "rpds_py-2026.6.3-cp312-cp312-win_amd64.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "rpds-py",
+          "sha256": "2c958bf94822e9290a40aaf2a822d4bc5c88099093e3948ad6c571eca9272e5f",
+          "size_bytes": 220394,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/04/3a/f0ee4d4dde9d3b69dedf1b5f74e7a40017046d55052d173e418c6a94f960/rpds_py-2026.6.3-cp312-cp312-win_amd64.whl",
+          "uv_cache": "NO_MATCHING_VERSION_IN_TARGET_CACHE",
+          "version": "2026.6.3",
+          "wheel_tags": [
+            "cp312-cp312-win_amd64"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "sse_starlette-3.4.11-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "sse-starlette",
+          "sha256": "c7b2244bdff016fe7f64e10075e89a3e6bbf899649cc89b0fe884b5545042453",
+          "size_bytes": 17122,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/98/6a/2ba3ed4a69babf3afdddf7d8314a48d87562c0a442206bbc2a1b50d5efc0/sse_starlette-3.4.11-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "3.4.11",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "starlette-1.7.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "starlette",
+          "sha256": "67f8e99895493dd2911a03f11314af6ceebeae4e704bb9f43dfc6a9db151c93e",
+          "size_bytes": 78980,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/4e/d6/1ec1b290f9e0fb067899b61e1d37a30c923068bad260b216dbe37a7d2967/starlette-1.7.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "1.7.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "typing_extensions-4.16.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "typing-extensions",
+          "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+          "size_bytes": 45571,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "4.16.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "typing_inspection-0.4.4-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "typing-inspection",
+          "sha256": "65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147",
+          "size_bytes": 14750,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/67/81/4add07e5172b7ac40d8ed5ff580409a7801a4fe26d529bdd915401dabfbe/typing_inspection-0.4.4-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "0.4.4",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        },
+        {
+          "artifact_kind": "wheel",
+          "cache_hash_verified_against_lock": false,
+          "cached_tags": [
+            "py3-none-any"
+          ],
+          "filename": "uvicorn-0.53.0-py3-none-any.whl",
+          "local_target_wheelhouse": "MISSING",
+          "name": "uvicorn",
+          "sha256": "e8dca71ec86dce5f04e333f0d56cdedf942446e6643b9cea1af0d6d3a02cb03e",
+          "size_bytes": 87081,
+          "target": "win_amd64",
+          "target_tags": [
+            "win_amd64"
+          ],
+          "url": "https://files.pythonhosted.org/packages/76/18/0eea75741ee812e9f598b687619ce2454f6c3a1c5cd21ea990ec6bd26f45/uvicorn-0.53.0-py3-none-any.whl",
+          "uv_cache": "EXTRACTED_VERSION_PRESENT_HASHED_WHEEL_ABSENT",
+          "version": "0.53.0",
+          "wheel_tags": [
+            "py3-none-any"
+          ]
+        }
+      ],
+      "downloaded_count": 0,
+      "label": "CPython 3.12 / win_amd64",
+      "local_target_wheelhouse_complete": false,
+      "locked_artifact_count": 39,
+      "python": "CPython 3.12",
+      "requirements_file": {
+        "package_line_count": 39,
+        "path": "requirements-win-cp312.txt",
+        "sha256": "67dd2e9e57133ba22499543199ee6471dd82ef11101f4b290e39dff110a07ea4"
+      },
+      "target_tags": {
+        "minimum_os": null,
+        "pip_platforms": [
+          "win_amd64"
+        ],
+        "python": "CPython 3.12"
+      }
+    }
+  }
+}

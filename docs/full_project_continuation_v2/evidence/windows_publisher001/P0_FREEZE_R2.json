@@ -1,0 +1,80 @@
+{
+  "acceptance": {
+    "native_comsol": "NOT_RUN",
+    "next": "Root review exact r2 hashes; the Windows-only RuntimeError cleanup control and all kernel tests require an authorized reachable Windows host.",
+    "scientific_acceptance": "NOT_RUN",
+    "windows_native_filesystem": "NOT_RUN"
+  },
+  "created_utc": "2026-10-11",
+  "evidence_id": "WINDOWS_PUBLISHER_P0_FREEZE_20261011_R2",
+  "frozen_transfer_file_set": [
+    {
+      "bytes": 23547,
+      "lines": 448,
+      "path": "comsol_mcp/_windows_parameter_publish.py",
+      "sha256": "1470deec349d4c0db78fbd2daaccf0c0713019e93444ea0c3e8f4609b74846f4",
+      "staged_bytes": 23547,
+      "staged_sha256": "1470deec349d4c0db78fbd2daaccf0c0713019e93444ea0c3e8f4609b74846f4"
+    },
+    {
+      "bytes": 14979,
+      "lines": 267,
+      "path": "tests/test_windows_parameter_publish_native.py",
+      "sha256": "cc281485330cdb2573f87897ba82204d653e749dee50066fa7859d9c82591317",
+      "staged_bytes": 14979,
+      "staged_sha256": "cc281485330cdb2573f87897ba82204d653e749dee50066fa7859d9c82591317"
+    }
+  ],
+  "guarded_runtime": "Python 3.12.13 in /private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python; network guard logs contain only GUARD_ACTIVE entry.",
+  "local_checks": [
+    {
+      "evidence": "windows_publisher001/r2_retry_tmpdir/invocation.json",
+      "status": "PASS",
+      "summary": "guarded pytest: 8 passed (3 Darwin lexical and 5 ArtifactStore stream tests), 9 Windows-kernel cases skipped, 20 subtests passed. The partial-yield then RuntimeError Windows helper control is present in the test file but was skipped on this Darwin host; its same-handle cleanup/typed receipt behavior remains NOT_RUN_WINDOWS.",
+      "test_presence": "ADDED_NOT_EXECUTED_ON_DARWIN",
+      "windows_runtime_control": "NOT_RUN_WINDOWS"
+    },
+    {
+      "evidence": "windows_publisher001/parameter_export_regressions/invocation.json",
+      "status": "PASS",
+      "summary": "guarded pytest parameter-export regressions: 7 passed, 37 deselected."
+    },
+    {
+      "command": "python3 -m py_compile comsol_mcp/_windows_parameter_publish.py comsol_mcp/_artifact_store.py tests/test_windows_parameter_publish_native.py tests/test_project_file_stream_publish.py",
+      "status": "PASS"
+    }
+  ],
+  "local_staging": {
+    "content_hashes_match_freeze": true,
+    "exact_file_count": 2,
+    "files": [
+      "comsol_mcp/_windows_parameter_publish.py",
+      "tests/test_windows_parameter_publish_native.py"
+    ],
+    "path": "/private/tmp/comsol-v2-win-publisher-20261011-p0-r2"
+  },
+  "related_wrapper_not_in_transfer_payload": {
+    "api": "ArtifactStore.publish_project_file_no_clobber(project_root, destination_relative_path, owned_source_path, *, expected_sha256, expected_size)",
+    "current_sha256": "52dbb0dba5305d974f6cd93b747093d076d753c30ec67e4159d437af87feb347",
+    "note": "Wrapper remains local integration code; it is not part of the authorized exact-two-file Windows payload.",
+    "path": "comsol_mcp/_artifact_store.py"
+  },
+  "review_delta_from_r1": {
+    "change": "Catch all ordinary Exception from source chunk iteration so partial owned destination data uses same-handle cleanup and typed residual receipt; BaseException interruptions close the handle in finally.",
+    "r1_helper_sha256": "ce3b3ee5db08998b77929c93c7a57ecb958af65a67c7896910e493feef57ab53",
+    "r2_helper_sha256": "1470deec349d4c0db78fbd2daaccf0c0713019e93444ea0c3e8f4609b74846f4"
+  },
+  "schema_version": 1,
+  "scope": "Public/synthetic Windows filesystem publisher and bounded source-stream publication. No COMSOL/native science execution.",
+  "status": "READY_FOR_ROOT_REVIEW_WITH_WINDOWS_CONNECTIVITY_BLOCKER",
+  "supersedes_for_current_code": "P0_FREEZE.json r1 remains preserved and records prior hash; this r2 freezes the corrected implementation.",
+  "windows_kernel_test_count": 9,
+  "windows_kernel_tests_status": "NOT_RUN",
+  "windows_preflight": {
+    "remote_staging_path": "C:/Temp/comsol_v2_20261011_p0_r2",
+    "source": "single prior read-only SSH preflight timed out; not retried at root instruction",
+    "status": "BLOCKED_CONNECTIVITY",
+    "target": "everwalker@192.168.100.2",
+    "transfer_status": "NOT_ATTEMPTED"
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "observed_utc": "2026-10-11T20:30:08.076482+00:00",
+  "status": "ROOT_FROZEN_SOFTWARE_ARTIFACT_CHECK_PASS",
+  "source_manifest_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/local-preservation/w26_os_resources_progress-20261012-r3/PRESERVATION.json",
+  "source_manifest_sha256": "e2b11e975a3dac3e9de3fbf661ddcf763265d8fb836136e7037a132c3df207d5",
+  "evidence_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w26_os_resources_progress_20261012_r3/EVIDENCE.json",
+  "evidence_sha256": "3fa71853deb06774c7a7851945ee2df7a0bb85f1cefa667a26cb8ab5a9c8a438",
+  "frozen_files_verified": [
+    {
+      "path": "comsol_mcp/_w26_os_resources.py",
+      "size_bytes": 84889,
+      "sha256": "ad6b6a71146569e8803c210a0783dec42823b2d2fdfaa9be5f80c480f089da76",
+      "role": "source"
+    },
+    {
+      "path": "comsol_mcp/_comsol_progress_capture.py",
+      "size_bytes": 29612,
+      "sha256": "84c87c9728edb0554bf094ae55f2288156f78f5f2a037a02088303e867223fd9",
+      "role": "source"
+    },
+    {
+      "path": "tests/test_w26_os_resources.py",
+      "size_bytes": 31959,
+      "sha256": "eb93b9aa2dc4528165500757181fb7a784a95fef66d250845226c9e013198f79",
+      "role": "test"
+    },
+    {
+      "path": "tests/test_comsol_progress_capture.py",
+      "size_bytes": 18430,
+      "sha256": "54f6504a82591186c1424cc9358cc80fdf7f9c2fcd1f977819899454b23adcb6",
+      "role": "test"
+    }
+  ],
+  "artifact_count_verified": 15,
+  "actual_junit_counts": {
+    "resource_profile": {
+      "tests": 20,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "progress_capture": {
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "strict_guard_logs_verified": 2,
+  "review_scope": "Root source review of pinned/quarantine progress cleanup and durable reservation/quiescence protocol plus exact artifact check. Synthetic provider tests establish software behavior only.",
+  "remaining_required_work": [
+    "Concrete startup resource coordinator and production path wiring",
+    "Native host isolation provider/launch adapter",
+    "Native COMSOL progress and resource verification",
+    "Windows kernel handle/quota/isolation verification",
+    "Independent whole-project acceptance"
+  ],
+  "native_or_T037_acceptance": "NOT_RUN",
+  "native_regular_file_growth_bound": "UNIMPLEMENTED",
+  "arbitrary_hostile_same_uid_inode_CAS": "NOT_CLAIMED",
+  "historical_failed_18pass_2fail_receipt_preserved": true
+}

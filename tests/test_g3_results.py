@@ -255,12 +255,64 @@ class FResults(FNode):
 
 
 class FSolver(FNode):
+    def __init__(self, *args: Any, parameter_rows: Mapping[int, tuple[Sequence[float], Sequence[float]]] | None = None,
+                 solution_info: Any = None, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.parameter_rows = dict(parameter_rows or {})
+        self.solution_info = solution_info
+
     def study(self, *args: Any) -> Any:  # SolverSequence.study() - no arguments
         return self._collection("study", args)
 
     def getPVals(self, *args: Any) -> Any:  # SolverSequence.getPVals() -> double[]
         self._guard("getPVals", args)
+        if args:
+            row = self.parameter_rows.get(int(args[0]))
+            if row is None:
+                raise FakeEngineError(f"missing real values for solnum {args[0]}")
+            return list(row[0])
         return self._read("getPVals")
+
+    def getPValsImag(self, *args: Any) -> Any:
+        self._guard("getPValsImag", args)
+        if len(args) != 1:
+            raise FakeEngineError("getPValsImag requires a one-based solnum")
+        row = self.parameter_rows.get(int(args[0]))
+        if row is None:
+            raise FakeEngineError(f"missing imaginary values for solnum {args[0]}")
+        return list(row[1])
+
+    def getPNames(self) -> Any:
+        self._guard("getPNames", ())
+        return self._read("getPNames")
+
+    def getSize(self) -> Any:
+        self._guard("getSize", ())
+        return self._read("getSize")
+
+    def getSequenceType(self) -> Any:
+        self._guard("getSequenceType", ())
+        return self._read("getSequenceType")
+
+    def isAttached(self) -> Any:
+        self._guard("isAttached", ())
+        return self._read("isAttached")
+
+    def getSolutioninfo(self) -> Any:
+        self._guard("getSolutioninfo", ())
+        return self.solution_info
+
+
+class FSolutionInfo(Entity):
+    def __init__(self, units: Mapping[str, str], **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self.units = dict(units)
+
+    def getUnit(self, name: str) -> str:
+        self._guard("getUnit", (name,))
+        if name not in self.units:
+            raise FakeEngineError(f"missing unit for parameter {name}")
+        return self.units[name]
 
 
 class FInterp(FNode):
@@ -338,6 +390,12 @@ class FWorker:
 def build_tree(*, times: Sequence[float] | None = None, feature_times: Any = None,
                study_steps: Sequence[tuple[str, str]] = (("stat", "Stationary"),),
                dataset_props: Mapping[str, Any] | None = None, solver_values: Any = "auto",
+               solver_parameter_names: Sequence[str] = (),
+               solver_parameter_rows: Mapping[int, tuple[Sequence[float], Sequence[float]]] | None = None,
+               solver_parameter_units: Mapping[str, str] | None = None,
+               solver_size: Sequence[int] | None = None,
+               solver_type: str = "SolverSequence", solver_sequence_type: str = "SolverSequence",
+               solver_attached: bool = True,
                sdim: int = 3, length_unit: str = "m", interp_kwargs: Mapping[str, Any] | None = None,
                numerical_kwargs: Mapping[str, Any] | None = None, solver_unavailable: Sequence[str] = (),
                dataset_tags: Sequence[str] = ("dset1",), component_tags: Sequence[str] = ("comp1",),
@@ -369,8 +427,18 @@ def build_tree(*, times: Sequence[float] | None = None, feature_times: Any = Non
     for tag in component_tags:
         model_nodes.items[tag] = component
 
-    solver = register(FSolver(tag=solution_tag, type_id="SolverSequence",
-                              props={"getPVals": solver_values}, unavailable=solver_unavailable))
+    parameter_rows = dict(solver_parameter_rows or {})
+    if solver_size is None:
+        solver_size = (100, max(1, len(parameter_rows)))
+    info = register(FSolutionInfo(solver_parameter_units or {})) if solver_parameter_units is not None else None
+    solver = register(FSolver(tag=solution_tag, type_id=solver_type,
+                              props={"getPVals": solver_values,
+                                     "getPNames": list(solver_parameter_names),
+                                     "getSize": list(solver_size),
+                                     "getSequenceType": solver_sequence_type,
+                                     "isAttached": solver_attached},
+                              parameter_rows=parameter_rows, solution_info=info,
+                              unavailable=solver_unavailable))
     solvers = register(FList())
     solvers.items[solution_tag] = solver
 
@@ -1076,6 +1144,130 @@ def test_a_create_that_fails_but_still_creates_is_reconciled_and_removed() -> No
     assert tree.numerical.items == {}
 
 
+def test_result_at_points_publishes_native_expression_units_and_verified_complex_coordinates(monkeypatch) -> None:
+    tree = build_tree(
+        sdim=2, length_unit="m",
+        solver_parameter_names=["lambda"],
+        solver_parameter_rows={1: ((193.4e12,), (-2.5e9,))},
+        solver_parameter_units={"lambda": "1/m"},
+        solver_size=(100, 1), solver_type="Eigenfrequency",
+        solver_sequence_type="Stored", solver_attached=False,
+    )
+    real = [[[1.0, 2.0]]]
+    imag = [[[0.5, -0.25]]]
+    coordinates = [[0.0, 1.0], [0.0, 0.0]]
+
+    def factory(tag: str, type_id: str) -> FInterp:
+        return FInterp(tag, type_id, complex_=True,
+                       props={"data": None, "expr": [], "unit": ["V/m"], "coord": None})
+
+    tree.numerical.factory = factory
+
+    def set_interpolation_coordinates(self: FInterp, values: Any) -> None:
+        self._guard("setInterpolationCoordinates", (values,))
+        self.coords = values
+        self.values = real
+
+    def get_imag_data(self: FInterp) -> Any:
+        self._guard("getImagData", ())
+        return imag
+
+    def get_coordinates(self: FInterp) -> Any:
+        self._guard("getCoordinates", ())
+        return self.coords
+
+    monkeypatch.setattr(FInterp, "setInterpolationCoordinates", set_interpolation_coordinates,
+                        raising=False)
+    monkeypatch.setattr(FInterp, "getImagData", get_imag_data, raising=False)
+    monkeypatch.setattr(FInterp, "getCoordinates", get_coordinates, raising=False)
+
+    result = results.result_at_points(tree.worker, "Model", {
+        "points": [[0.0, 0.0], [1.0, 0.0]], "coordinate_unit": "m",
+        "spec": {"expressions": ["ewfd.Ez"],
+                 "solution": {"dataset": "dset1"},
+                 "complex_mode": "preserve"},
+    })
+    assert result["status"]["ok"] is True, result["status"]
+    assert result["complex_mode"] == "preserve" and result["is_complex"] is True
+    assert result["expression_units"] == {"ewfd.Ez": "V/m"}
+    assert result["expression_unit_source"].startswith("NumericalFeature.getStringArray('unit')")
+    assert result["coordinate_readback"] == {
+        "status": "VERIFIED", "coordinates": coordinates, "unit": "m"}
+    assert result["solution_axes"]["pair_mapping_complete"] is False
+    count_observation = result["solution_axes"]["numeric_count_observation"]
+    assert count_observation["status"] == "VERIFIED_SINGLE_STORED_NUMERIC_COUNT"
+    assert count_observation["numeric_solution_count"] == 1
+    assert result["solution_axes"]["inner"] == []
+    assert result["field_array"] is None
+    budget = result["result_budget"]["records"][0]
+    assert budget["status"] == "PASS" and budget["allowed"] is True
+    assert budget["solution_axes_verification_scope"] == "numeric_singleton_count_only"
+    assert budget["solution_axes_pair_mapping_complete"] is False
+    assert budget["solution_count_observation"]["source"] == count_observation["source"]
+    assert result["values"] == [[[{"real": 1.0, "imag": 0.5},
+                                  {"real": 2.0, "imag": -0.25}]]]
+    methods, modelutil = java_allow_lists()
+    assert {"getImagData", "getCoordinates", "setInterpolationCoordinates"} <= (methods | modelutil)
+
+
+@pytest.mark.parametrize(
+    ("sequence_type", "solver_type", "attached", "solver_size", "rows"),
+    [
+        ("Stored", "Eigenfrequency", False, (100, 2), {
+            1: ((1.0,), (0.0,)), 2: ((2.0,), (0.0,)),
+        }),
+        ("SolverSequence", "Eigenfrequency", False, (100, 1), {
+            1: ((1.0,), (0.0,)),
+        }),
+        ("Stored", "Eigenfrequency", True, (100, 1), {
+            1: ((1.0,), (0.0,)),
+        }),
+    ],
+)
+def test_result_at_points_does_not_treat_non_single_stored_binding_as_axis_proof(
+    monkeypatch, sequence_type, solver_type, attached, solver_size, rows
+) -> None:
+    tree = build_tree(
+        sdim=2,
+        solver_parameter_names=["lambda"],
+        solver_parameter_rows=rows,
+        solver_parameter_units={"lambda": "1/m"},
+        solver_size=solver_size,
+        solver_type=solver_type,
+        solver_sequence_type=sequence_type,
+        solver_attached=attached,
+    )
+    created: list[FInterp] = []
+
+    def factory(tag: str, type_id: str) -> FInterp:
+        feature = FInterp(tag, type_id, complex_=False,
+                          props={"data": None, "expr": [], "unit": ["1"], "coord": None})
+        created.append(feature)
+        return feature
+
+    tree.numerical.factory = factory
+    def set_interpolation_coordinates(self: FInterp, values: Any) -> None:
+        self._guard("setInterpolationCoordinates", (values,))
+        self.coords = values
+
+    monkeypatch.setattr(FInterp, "setInterpolationCoordinates", set_interpolation_coordinates,
+                        raising=False)
+    result = results.result_at_points(tree.worker, "Model", {
+        "points": [[0.0, 0.0]], "coordinate_unit": "m",
+        "spec": {"expressions": ["ewfd.normE"],
+                 "solution": {"dataset": "dset1"}},
+    })
+
+    assert result["status"]["ok"] is False
+    assert result["result_budget"]["status"] == "BLOCKED"
+    record = result["result_budget"]["records"][0]
+    assert record["reason_code"] == "SOLUTION_AXES_UNVERIFIED"
+    assert record["getdata_called"] is False
+    assert result["solution_axes"]["pair_mapping_complete"] is False
+    assert result["solution_axes"]["numeric_count_observation"]["status"] == "UNVERIFIED"
+    assert created and "getData" not in created[0].methods()
+
+
 # ---------------------------------------------------------------------------
 # the acceptance driver consumes the payload (chain A and chain B)
 # ---------------------------------------------------------------------------
@@ -1207,6 +1399,59 @@ def test_chain_a_column_contract_survives_the_drivers_case_insensitive_lookup(tm
 # ---------------------------------------------------------------------------
 
 
+def test_solver_sequence_complex_parameter_observation_is_supplemental_and_typed() -> None:
+    tree = build_tree(
+        solver_parameter_names=("freq", "lambda"),
+        solver_parameter_rows={1: ((193.4e12, 1.5), (0.0, -2.0))},
+        solver_parameter_units={"freq": "Hz", "lambda": "1/m"},
+        solver_size=(420, 1),
+    )
+    data = results.dataset_solution_indices(tree.worker, "Model", {"path": "dset1"})
+    observation = data["solver_sequence_parameter_observation"]
+
+    assert observation["status"] == "OBSERVED_TYPED_COMPLEX_PARAMETER_VALUES"
+    assert observation["get_size"] == [420, 1]
+    assert observation["solution_number_count"] == 1
+    assert observation["pnames"] == ["freq", "lambda"]
+    assert observation["solution_values"][0]["solnum"] == 1
+    assert observation["solution_values"][0]["real_getter"]["raw"] == [193.4e12, 1.5]
+    assert observation["solution_values"][0]["imag_getter"]["raw"] == [0.0, -2.0]
+    assert [(row["name"], row["unit"]) for row in observation["parameter_rows"]] == [
+        ("freq", "Hz"), ("lambda", "1/m")]
+    # Direct sequence observations do not repair or overwrite SolutionInfo's
+    # actual tuple-mapping result, even when the raw complex values exist.
+    assert data["parameters_complete"] is False
+    assert data["axis_metadata_complete"] is False
+    assert observation["parameters_complete"] is False
+
+
+def test_solver_sequence_observation_fails_closed_on_vector_shape_or_unit_gaps() -> None:
+    malformed = build_tree(
+        solver_parameter_names=("freq", "lambda"),
+        solver_parameter_rows={1: ((193.4e12,), (0.0,))},
+        solver_parameter_units={"freq": "Hz", "lambda": "1/m"},
+        solver_size=(420, 1),
+    )
+    data = results.dataset_solution_indices(malformed.worker, "Model", {"path": "dset1"})
+    observation = data["solver_sequence_parameter_observation"]
+    assert observation["status"] == "UNVERIFIED_WITH_READ_ERRORS"
+    assert any(row.get("code") == "SOLVER_SEQUENCE_PARAMETER_SHAPE_MISMATCH"
+               for row in observation["read_errors"])
+    assert observation["parameter_rows"] == []
+    assert data["parameters_complete"] is False
+
+    no_units = build_tree(
+        solver_parameter_names=("freq",),
+        solver_parameter_rows={1: ((193.4e12,), (0.0,))},
+        solver_size=(420, 1),
+    )
+    no_unit_data = results.dataset_solution_indices(no_units.worker, "Model", {"path": "dset1"})
+    no_unit_observation = no_unit_data["solver_sequence_parameter_observation"]
+    assert no_unit_observation["status"] == "OBSERVED_VALUES_UNITS_UNAVAILABLE"
+    assert no_unit_observation["parameter_rows"][0]["unit"] is None
+    assert no_unit_data["parameters_complete"] is False
+
+
 def java_allow_lists() -> tuple[set[str], set[str]]:
     text = JAVA_WORKER.read_text(encoding="utf-8")
     methods_block = re.search(
@@ -1228,9 +1473,11 @@ def test_every_engine_method_the_adapter_calls_is_on_the_worker_allow_list() -> 
     tree, profile = steady_tree()
     with install_values(tree_values(tree, profile)):
         call_sample(tree, samples=3)
+    results.dataset_solution_indices(tree.worker, "Model", {"path": "dset1"})
     transient, transient_profile = transient_tree()
     with install_values(tree_values(transient, transient_profile)):
         call_sample(transient, samples=3)
+    results.dataset_solution_indices(transient.worker, "Model", {"path": "dset1"})
     called = tree.engine_methods() | transient.engine_methods()
     # the fake's own bookkeeping helpers are not engine methods
     called -= {"_read"}

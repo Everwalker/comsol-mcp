@@ -1,0 +1,77 @@
+{
+  "status": "UNKNOWN_RETAINED_OWNER_OBSERVE_ONLY",
+  "scope": "W24 setup-only native 6.4 model build/readback/Equation View/template save-reopen; zero study/solver submissions",
+  "python_executable": "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python",
+  "python_version": "3.12.13",
+  "engine_births": 1,
+  "native_solve_submissions": 0,
+  "trusted_code_startup": {
+    "status": "EXPLICIT_TASK_DEPLOYMENT_OPT_IN_SET_BEFORE_DAEMON_START",
+    "environment_variable": "COMSOL_MCP_TRUSTED_CODE",
+    "value": "1",
+    "trusted_code_isolation_claim": false,
+    "inherited_isolation_receipt_cleared_before_native_identity": false,
+    "isolation_receipt_installed_after_owned_server_verification": false
+  },
+  "python_runtime_preflight": "PREREADINESS_FIXTURE_ONLY",
+  "error": "ValueError: owned Popen birth differs from its whole-unit admission origin",
+  "traceback": "Traceback (most recent call last):\n  File \"/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-coupled-science-20261013-candidate05/repository/tools/run_native_w24_cure_preflight.py\", line 1973, in run\n    raise ValueError('owned Popen birth differs from its whole-unit admission origin')\nValueError: owned Popen birth differs from its whole-unit admission origin\n",
+  "coupled_admission_monitor_stop": "RETURNED_ORIGINAL_OWNER_AND_HANDLES_RETAINED",
+  "coupled_admission": {
+    "birth_epoch": 100.0,
+    "deadline_epoch": 1900.0,
+    "stop_reason": "coupled_stage_first_failure",
+    "original_handle_pids": {
+      "server": 101
+    },
+    "sampled_RSS_hard_cap": false
+  },
+  "at_utc_end": "2026-10-13T01:10:35.974264+08:00",
+  "cleanup": {
+    "status": "CLEANUP_UNVERIFIED",
+    "error": "AssertionError: assert (['/bin/ps', '...,comm=,args='] == ['/bin/ps', '...id=,command=']\n  \n  At index 2 diff: 'pid=,ppid=,comm=,args=' != 'pid=,ppid=,pgid=,command='\n  Use -v to get more diff)"
+  },
+  "coupled_owner_last_observation": {
+    "status": "UNKNOWN_RETAINED_OWNER_OBSERVE_ONLY",
+    "handles": [
+      {
+        "label": "server",
+        "pid": 101,
+        "returncode": null,
+        "reaped": false
+      }
+    ],
+    "nonterminal": [
+      "server"
+    ],
+    "uncertain": [],
+    "remaining_owned_group_processes": [
+      {
+        "pid": 101,
+        "ppid": 1,
+        "pgid": 101,
+        "command": "original-owned"
+      }
+    ],
+    "group_probe": {
+      "returncode": 0,
+      "stdout": "60001 1 60001 observing-cli\n101 1 101 original-owned\n",
+      "stderr": ""
+    },
+    "actual_elapsed_from_birth": 0.0,
+    "monotonic_elapsed_from_prebirth_admission": 0.0,
+    "original_stop_reason": "coupled_stage_first_failure",
+    "signals_sent": false,
+    "new_dispatch": false
+  },
+  "scientific_acceptance": "NOT_ACCEPTED",
+  "safe_retry": false,
+  "diagnostic_errors": [
+    {
+      "phase": "same_handle_observe_yield",
+      "error_type": "KeyError",
+      "error": "'worker'",
+      "occurrences": 1957655
+    }
+  ]
+}

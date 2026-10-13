@@ -1,0 +1,29 @@
+{
+  "schema": "ROOT_CPYTHON_STAGE_SOURCE_FINDINGS/1",
+  "at_utc": "2026-10-12T08:32:09.876311+00:00",
+  "status": "CHANGES_REQUIRED_SOURCE_ONLY",
+  "candidate_freeze_sha256": "9360a717d554da473be2fd142c93c7c7440d6729adba2e3cbb3928c61748dbda",
+  "source_sha256": "c3aa04e933042cefb4b219e8b434c925a4f225e69c6fc5ed627e3ca9ca52194d",
+  "findings": [
+    {
+      "id": "CPYTHON-STAGE-PREREQUISITE-01",
+      "priority": 1,
+      "issue": "build requires configure.PASS only, so dual-slice header validation can be bypassed; headers PASS merely checks tool rc and probe size comparison is runtime-only though binaries are not executed",
+      "required": "require verified header-stage receipt before build and verified build receipt before altinstall; static asserts in actual clang probe; parse actual Mach-O architecture/minimum OS per slice and generated config hashes, retain compiler/tool raw evidence"
+    },
+    {
+      "id": "CPYTHON-STAGE-OWNERSHIP-01",
+      "priority": 1,
+      "issue": "Popen PID is written only in finally after wait; interruption during build has no durable birth receipt or active-stage guard. A later stage invocation can overlap an unresolved build",
+      "required": "persist exact process PID/PPID/UID and actual birth plus argv/log refs immediately after Popen, preserve UNKNOWN on incomplete ownership, durable stage guard prohibits another stage/replay while prior command is not terminal; transfer real handle/session for continued observation without restarting"
+    },
+    {
+      "id": "CPYTHON-STAGE-CONTEXT-01",
+      "priority": 2,
+      "issue": "R2 dependency points to superseded unsafe unpack R2 and child env repurposes HOME",
+      "required": "new successor freeze depends on reviewed unpack R3, retain R2 source preimage; keep inherited HOME unchanged and use task-specific absolute build/prefix/cache settings with config sites disabled"
+    }
+  ],
+  "native_configure_build_install": "NOT_RUN",
+  "source_scope": "private task-local stages only; no system install, Intel binary execution or scientific acceptance"
+}

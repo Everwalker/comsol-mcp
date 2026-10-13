@@ -1,0 +1,463 @@
+--- r5/comsol_mcp/_session_lifecycle.py
++++ r6/comsol_mcp/_session_lifecycle.py
+@@ -218,7 +218,8 @@
+             found.append(record)
+         return sorted(found, key=lambda item: (item["updated_at"], item["session_id"]))
+ 
+-    def save(self, record: Mapping[str, Any], *, expected_revision: int | None = None) -> dict[str, Any]:
++    def save(self, record: Mapping[str, Any], *, expected_revision: int | None = None,
++             _finish_operation=None) -> dict[str, Any]:
+         proposed = validate_lifecycle_record(record)
+         if expected_revision is not None and (type(expected_revision) is not int or expected_revision < 1):
+             raise ValueError("expected_revision must be a positive integer")
+@@ -251,6 +252,10 @@
+             result = validate_lifecycle_record(updated)
+             return result
+ 
++        if _finish_operation is not None:
++            operation_id, status, operation_result = _finish_operation
++            return self._store.finish(operation_id, status=status, result=operation_result,
++                                      _lifecycle_update=(proposed["session_id"], update))
+         persisted = self._store.update_session_lifecycle(proposed["session_id"], update)
+         return deepcopy(result or validate_lifecycle_record(persisted))
+ 
+--- r5/comsol_mcp/_windows_t037.py
++++ r6/comsol_mcp/_windows_t037.py
+@@ -1023,6 +1023,16 @@
+ 
+     def close(self) -> None:
+         if self._api is not None:
++            from ._windows_t037_child import _PinnedParent, _PARENT_SEAL
++            retained_cleanup = getattr(self._api, "_retained_launch_cleanup", [])
++            def parent_release_confirmed(entry):
++                parent = getattr(entry[1], "__self__", None)
++                return (entry[0] == "native_parent" and type(parent) is _PinnedParent
++                        and parent._seal is _PARENT_SEAL and parent.launch_api is self._api
++                        and parent.closed is True)
++            retained_cleanup[:] = [entry for entry in retained_cleanup if not parent_release_confirmed(entry)]
++            if retained_cleanup:
++                _refuse("NATIVE_LAUNCH_RELEASE_UNKNOWN", "actual ancillary launch cleanup remains owned and unconfirmed")
+             if any(not parent.closed for parent in getattr(self._api, "_retained_parent_bindings", {}).values()):
+                 _refuse("NATIVE_PARENT_RELEASE_UNKNOWN", "actual pinned parent HANDLE remains owned after release failure")
+             if getattr(self._api, "_unclassified_create_handles", None):
+@@ -1618,42 +1628,52 @@
+                 _refuse("NATIVE_CHILD_CREATION_UNKNOWN", "partial native creation handles require owned recovery")
+             raise
+         finally:
++            pending_error = sys.exc_info()[1]
++            release_failures = []
++            def release(label, callback, *args, free_result=False):
++                try:
++                    result = callback(*args)
++                    if free_result and result:
++                        raise RuntimeError("native allocation release was not confirmed")
++                except BaseException as error:
++                    release_failures.append((label, error))
++                    # Retain the actual adapter/call target and original handle,
++                    # never a wire/PID reconstruction or a silent retry.
++                    if not hasattr(self, "_retained_launch_cleanup"):
++                        self._retained_launch_cleanup = []
++                    self._retained_launch_cleanup.append((label, callback, args, error))
+             if attribute_pointer:
+-                self.k.DeleteProcThreadAttributeList(attribute_pointer)
++                release("attribute_list", self.k.DeleteProcThreadAttributeList, attribute_pointer)
+             if primary_token.value:
+-                self.close_handle(primary_token)
++                release("primary_token", self.close_handle, primary_token)
+             if app_sid.value:
+-                self.k.LocalFree(app_sid)
++                release("appcontainer_sid", self.k.LocalFree, app_sid, free_result=True)
+             for sid in sid_allocations:
+                 if sid.value:
+-                    self.k.LocalFree(sid)
++                    release("capability_sid", self.k.LocalFree, sid, free_result=True)
+             for handle in reversed(duplicate_handles):
+-                try:
+-                    self.close_handle(handle)
+-                except Exception:
+-                    pass
+-            try:
+-                image_api.close(image_handle)
+-            finally:
+-                try:
+-                    for handle in reversed(parent_handles):
+-                        image_api.close(handle)
+-                finally:
+-                    if native_parent is not None:
+-                        pending_error = sys.exc_info()[1]
+-                        try:
+-                            native_parent.close()
+-                        except BaseException as release_error:
+-                            # A later read-handle close error must not mask the
+-                            # only recoverable child ownership transfer.
+-                            if retained_child is not None and not retained_child._closed:
+-                                if not hasattr(self, "_retained_children"):
+-                                    self._retained_children = {}
+-                                self._retained_children[id(retained_child)] = retained_child
+-                                raise NativeSuspendedChildLaunchError(retained_child,
+-                                    pending_error or release_error, release_error,
+-                                    seal=_NATIVE_SUSPENDED_CHILD_SEAL) from release_error
+-                            raise
++                release("inherited_handle", self.close_handle, handle)
++            release("pinned_image", image_api.close, image_handle)
++            for handle in reversed(parent_handles):
++                release("image_parent", image_api.close, handle)
++            if native_parent is not None:
++                release("native_parent", native_parent.close)
++            if release_failures:
++                diagnostics = tuple({"stage": label, "exception_type": type(error).__name__}
++                                    for label, error in release_failures)
++                if retained_child is not None:
++                    if not hasattr(self, "_retained_children"):
++                        self._retained_children = {}
++                    self._retained_children[id(retained_child)] = retained_child
++                    handoff = NativeSuspendedChildLaunchError(retained_child,
++                        pending_error or release_failures[0][1], release_failures[0][1],
++                        seal=_NATIVE_SUSPENDED_CHILD_SEAL)
++                    handoff.original_launch_error = pending_error
++                    handoff.cleanup_failures = diagnostics
++                    handoff.details["ancillary_cleanup_failures"] = diagnostics
++                    raise handoff from release_failures[0][1]
++                _refuse("NATIVE_LAUNCH_RELEASE_UNKNOWN", "native launch ancillary handles remain owned",
++                        ancillary_cleanup_failures=diagnostics)
+ 
+     def poll_process(self, process: Any) -> int | None:
+         result = int(self.k.WaitForSingleObject(process, 0))
+--- r5/comsol_mcp/_operation_store.py
++++ r6/comsol_mcp/_operation_store.py
+@@ -1500,7 +1500,7 @@
+             )
+             return job_id
+ 
+-    def finish(self, operation_id: str, *, status: str, result: dict[str, Any]) -> tuple[bool, str]:
++    def finish(self, operation_id: str, *, status: str, result: dict[str, Any], _lifecycle_update=None) -> tuple[bool, str]:
+         """Atomically record a result observation and synchronize its job status.
+ 
+         Returns ``(accepted, authoritative_status)`` so the caller can use the
+@@ -1557,6 +1557,9 @@
+                 )
+                 if operation.rowcount != 1 or job.rowcount != 1:
+                     raise KeyError(f"operation/job pair missing for {operation_id}")
++                if _lifecycle_update is not None:
++                    session_id, updater = _lifecycle_update
++                    self._update_session_lifecycle_in_transaction(session_id, updater)
+                 self.db.execute("COMMIT")
+                 return True, status
+             except Exception:
+@@ -3323,6 +3326,31 @@
+                 self.db.execute("ROLLBACK")
+                 raise
+ 
++    def _update_session_lifecycle_in_transaction(self, session_id, updater):
++        """Same lifecycle updater under an existing Store-owned write transaction."""
++        if not self.db.in_transaction:
++            raise RuntimeError("lifecycle update requires the existing Store write transaction")
++        row = self.db.execute(
++            "SELECT metadata FROM sessions WHERE session_id=?", (session_id,),
++        ).fetchone()
++        metadata = json.loads(row[0]) if row is not None else {}
++        if not isinstance(metadata, dict):
++            raise RuntimeError("persisted session metadata is malformed")
++        current = metadata.get("lifecycle")
++        if current is not None and not isinstance(current, dict):
++            raise RuntimeError("persisted lifecycle metadata is malformed")
++        replacement = updater(dict(current) if current is not None else None)
++        if not isinstance(replacement, dict):
++            raise TypeError("lifecycle updater must return an object")
++        metadata = dict(metadata)
++        metadata["lifecycle"] = replacement
++        self.db.execute(
++            "INSERT INTO sessions(session_id,metadata) VALUES(?,?) "
++            "ON CONFLICT(session_id) DO UPDATE SET metadata=excluded.metadata",
++            (session_id, json.dumps(metadata, sort_keys=True)),
++        )
++        return replacement
++
+     def update_session_lifecycle(self, session_id: str, updater) -> dict[str, Any]:
+         """Update only ``sessions.metadata.lifecycle`` under the store lock.
+ 
+@@ -3337,25 +3365,7 @@
+         with self.lock:
+             self.db.execute("BEGIN IMMEDIATE")
+             try:
+-                row = self.db.execute(
+-                    "SELECT metadata FROM sessions WHERE session_id=?", (session_id,),
+-                ).fetchone()
+-                metadata = json.loads(row[0]) if row is not None else {}
+-                if not isinstance(metadata, dict):
+-                    raise RuntimeError("persisted session metadata is malformed")
+-                current = metadata.get("lifecycle")
+-                if current is not None and not isinstance(current, dict):
+-                    raise RuntimeError("persisted lifecycle metadata is malformed")
+-                replacement = updater(dict(current) if current is not None else None)
+-                if not isinstance(replacement, dict):
+-                    raise TypeError("lifecycle updater must return an object")
+-                metadata = dict(metadata)
+-                metadata["lifecycle"] = replacement
+-                self.db.execute(
+-                    "INSERT INTO sessions(session_id,metadata) VALUES(?,?) "
+-                    "ON CONFLICT(session_id) DO UPDATE SET metadata=excluded.metadata",
+-                    (session_id, json.dumps(metadata, sort_keys=True)),
+-                )
++                replacement = self._update_session_lifecycle_in_transaction(session_id, updater)
+                 self.db.execute("COMMIT")
+                 return replacement
+             except BaseException:
+--- r5/comsol_mcp/_control_daemon.py
++++ r6/comsol_mcp/_control_daemon.py
+@@ -5709,16 +5709,16 @@
+                 return self._finish(record, self._error("PROJECT_IDENTITY_MISMATCH", str(exc)), "FAILED")
+             if lifecycle is None:
+                 return self._finish(record, self._error("SESSION_NOT_FOUND", "session lifecycle record not found"), "FAILED")
++            key = (project_id, session_id)
++            retained_handle = self._session_server_handles.get(key)
++            native_result = self._stop_retained_native_server(record, lifecycle, key, retained_handle, authorization_digest)
++            if native_result is not None:
++                return native_result
+             if lifecycle["state"] == "STOPPED":
+                 return self._finish(record, {"success": True, "data": {
+                     "project_id": project_id, "session_id": session_id,
+                     "state": "STOPPED", "already_stopped": True, "server_stopped": True,
+                 }}, "SUCCEEDED")
+-            key = (project_id, session_id)
+-            retained_handle = self._session_server_handles.get(key)
+-            native_result = self._stop_retained_native_server(record, lifecycle, key, retained_handle, authorization_digest)
+-            if native_result is not None:
+-                return native_result
+             if lifecycle.get("server_ownership") != "mcp_managed":
+                 return self._finish(record, self._error(
+                     "SERVER_OWNERSHIP_MISMATCH", "session.stop never terminates a shared or user-owned Server",
+@@ -9926,7 +9926,7 @@
+             if lifecycle is None:
+                 return self._finish(record, self._error("SESSION_NOT_FOUND", "session lifecycle record not found"), "FAILED")
+             retire_worker = routed.get("retire_worker", False) is True
+-            if retire_worker and lifecycle["state"] == "UNKNOWN":
++            if retire_worker:
+                 native_cleanup = self._retire_retained_native_worker(record, lifecycle, (project_id, session_id))
+                 if native_cleanup is not None:
+                     return native_cleanup
+@@ -11746,13 +11746,14 @@
+             updated = self._updated_session_lifecycle(lifecycle, state="DISCONNECTED", client_state="RETIRED",
+                 worker_instance_id=lifecycle["worker_instance_id"], worker_epoch=lifecycle["worker_epoch"],
+                 server_instance_id=lifecycle["server_instance_id"])
+-            self.session_lifecycle.save(updated, expected_revision=lifecycle["revision"])
++            result = self._finish(record, {"success": True, "data": {
++                "project_id": key[0], "session_id": key[1], "state": "DISCONNECTED",
++                "client_state": "RETIRED", "server_stopped": False,
++                "native_child_exit_evidence": evidence}}, "SUCCEEDED",
++                _native_lifecycle_transition=(updated, lifecycle["revision"]))
+             self._session_worker_handles.pop(key, None)
+             self._session_worker_child_identities.pop(key, None)
+-            return self._finish(record, {"success": True, "data": {
+-                "project_id": key[0], "session_id": key[1], "state": "DISCONNECTED",
+-                "client_state": "RETIRED", "server_stopped": False,
+-                "native_child_exit_evidence": evidence}}, "SUCCEEDED")
++            return result
+         except Exception as exc:
+             # close may have confirmed exit before event/CAS delivery failed.
+             # Retain the same live sealed wrapper for explicit terminal retry.
+@@ -11760,7 +11761,7 @@
+                 worker._process = process
+             return self._finish(record, self._error("EXECUTION_STATE_UNKNOWN",
+                 "native Worker cleanup or durable delivery is incomplete",
+-                data={"session_id": key[1], "worker_handle_preserved": True,
++                data={"session_id": key[1], "worker_handle_preserved": self._session_worker_handles.get(key) is worker,
+                       "child_effect_possible": True, "engine_dispatched": False},
+                 execution_state_unknown=True, safe_retry=False, cause_type=type(exc).__name__), "UNKNOWN")
+ 
+@@ -11796,10 +11797,11 @@
+             updated = self._updated_session_lifecycle(lifecycle, state="STOPPED", client_state="DISCONNECTED",
+                 server_state="STOPPED", server_ownership="unknown", server_process_identity=None,
+                 worker_instance_id=None, worker_epoch=None, server_instance_id=None)
+-            self.session_lifecycle.save(updated, expected_revision=lifecycle["revision"])
++            result = self._finish(record, {"success": True, "data": {"project_id": key[0], "session_id": key[1],
++                "state": "STOPPED", "server_stopped": True, "native_child_exit_evidence": stopped}}, "SUCCEEDED",
++                _native_lifecycle_transition=(updated, lifecycle["revision"]))
+             self._session_server_handles.pop(key, None)
+-            return self._finish(record, {"success": True, "data": {"project_id": key[0], "session_id": key[1],
+-                "state": "STOPPED", "server_stopped": True, "native_child_exit_evidence": stopped}}, "SUCCEEDED")
++            return result
+         except Exception as exc:
+             return self._finish(record, self._error("EXECUTION_STATE_UNKNOWN", "native Server cleanup or durable state delivery is incomplete",
+                 data={"server_stopped": process._closed and type(process.returncode) is int,
+@@ -12360,10 +12362,15 @@
+                 self.running.pop(job_id, None)
+         return self._finish(record, result, status)
+ 
+-    def _finish(self, record, result, status):
++    def _finish(self, record, result, status, *, _native_lifecycle_transition=None):
+         execution = result.setdefault("execution", {})
+         execution.update({key: record[key] for key in ("request_id", "operation_id", "request_hash", "idempotency_key", "job_id")})
+-        accepted, authoritative_status = self.store.finish(record["operation_id"], status=status, result=result)
++        if _native_lifecycle_transition is None:
++            accepted, authoritative_status = self.store.finish(record["operation_id"], status=status, result=result)
++        else:
++            proposed, revision = _native_lifecycle_transition
++            accepted, authoritative_status = self.session_lifecycle.save(proposed, expected_revision=revision,
++                _finish_operation=(record["operation_id"], status, result))
+         if not accepted:
+             # F02: The store rejected this write because the job is already in a
+             # terminal state.  Return the authoritative persistent result instead
+--- r5/tests/test_windows_child_binding.py
++++ r6/tests/test_windows_child_binding.py
+@@ -127,7 +127,7 @@
+     assert api._retained_children[id(process)] is process
+     factory=win.T037SessionProcessFactory(profile,'session-parent-release',api=api);factory._job=300
+     with pytest.raises(win.WindowsT037Error) as refused:factory.close()
+-    assert refused.value.code=='NATIVE_PARENT_RELEASE_UNKNOWN' and factory._job==300
++    assert refused.value.code=='NATIVE_LAUNCH_RELEASE_UNKNOWN' and factory._job==300
+     api.close_handle=close;process._parent_binding.close();state['cleanup_fail']=False
+     process.cleanup_owned(api,timeout=1);factory.close()
+     assert factory._job is None and process._closed
+--- r5/tests/test_windows_ownership_repair.py
++++ r6/tests/test_windows_ownership_repair.py
+@@ -0,0 +1,149 @@
++from types import SimpleNamespace
++import ctypes as C
++import subprocess
++import pytest
++from comsol_mcp import _windows_t037 as win
++from comsol_mcp import _windows_t037_acl as acl
++from comsol_mcp._session_server import OwnedServerLauncher,OwnedServerError
++from tests.test_windows_suspended_ownership import _launch_api,_create,_unknown
++from tests.test_session_server import _startup_runtime
++from tests.test_session_server_control import _make_daemon,_start,_stop
++
++@pytest.mark.parametrize('fault',['none','primary_token','image','image_parent','attribute','sid','inherited','native_parent','all'])
++def test_all_ancillary_production_cleanup_failures_preserve_same_created_child_handoff(monkeypatch,tmp_path,fault):
++    real_gate=acl.check_suspended_child_dacl
++    profile,api,events,state=_launch_api(monkeypatch,cleanup_fail=True)
++    fake_gate=acl.check_suspended_child_dacl
++    adapter=next(cell.cell_contents for cell in fake_gate.__closure__ if hasattr(cell.cell_contents,'bound_statistics'))
++    monkeypatch.setattr(acl,'check_suspended_child_dacl',real_gate)
++    monkeypatch.setattr(acl,'NativeChildAclApi',lambda:adapter)
++    calls=[];original=api.close_handle
++    def close(handle):
++        value=handle.value if hasattr(handle,'value') else handle;calls.append(('close',value))
++        if (value==56 and fault in {'primary_token','all'}) or (value==101 and fault in {'inherited','all'}) or (value==777 and fault in {'native_parent','all'}):raise OSError('ancillary close failed')
++        return original(handle)
++    api.close_handle=close
++    opened=api._open_image
++    def image(path):
++        adapter,parents,h,fp,name=opened(path);parents=[11,13];normal=adapter.close
++        def release(target):
++            calls.append(('image',target))
++            if (target==12 and fault in {'image','all'}) or (target in {11,13} and fault in {'image_parent','all'}):raise OSError('image close failed')
++            return normal(target)
++        adapter.close=release;return adapter,parents,h,fp,name
++    api._open_image=image
++    def attribute(pointer):
++        calls.append(('attribute',123))
++        if fault in {'attribute','all'}:raise OSError('attribute release failed')
++    api.k.DeleteProcThreadAttributeList=attribute
++    def sid(pointer):
++        calls.append(('sid',77))
++        return 77 if fault in {'sid','all'} else None
++    api.k.LocalFree=sid
++    launcher=OwnedServerLauncher(process_factory=lambda *a,**k:_create(profile,api),platform_name='darwin')
++    with pytest.raises(OwnedServerError) as captured:launcher.start(_startup_runtime(tmp_path),'project','session')
++    error=captured.value
++    assert error.uncertain and error.handle is not None
++    process=error.handle.process
++    assert process._owner is error.handle and process.pid==456 and process.birth_filetime_100ns==123
++    assert process._handle==200 and process._thread_handle==201 and not process._closed
++    assert process is api._retained_children[id(process)] and 'RESUME' not in events
++    assert ('image',12) in calls and ('image',11) in calls and ('image',13) in calls and ('close',777) in calls
++    if fault!='none':assert api._retained_launch_cleanup
++    if fault=='all':assert len(api._retained_launch_cleanup)>=7
++    api.close_handle=original;state['cleanup_fail']=False
++    stopped=launcher.stop(error.handle)
++    assert stopped['exit_confirmed'] and process._closed
++
++
++def _trigger(daemon,fault,role):
++    if fault=='operation':sql="BEFORE UPDATE OF status ON operations WHEN NEW.status='SUCCEEDED'"
++    elif fault=='finish_event':sql="BEFORE INSERT ON job_events WHEN NEW.event='SUCCEEDED'"
++    elif fault=='job':sql="BEFORE UPDATE OF status ON jobs WHEN NEW.status='SUCCEEDED'"
++    else:
++        path='state' if role=='server' else 'client_state';target='STOPPED' if role=='server' else 'RETIRED'
++        sql=f"BEFORE UPDATE OF metadata ON sessions WHEN json_extract(NEW.metadata,'$.lifecycle.{path}')='{target}'"
++    daemon.store.db.execute('CREATE TRIGGER native_terminal_failure '+sql+" BEGIN SELECT RAISE(ABORT,'actual SQLite terminal failure'); END")
++
++@pytest.mark.parametrize('fault',['none','operation','job','lifecycle','finish_event'])
++def test_server_real_sqlite_terminal_failure_preserves_owner_and_atomic_unknown_until_commit(monkeypatch,tmp_path,fault):
++    profile,api,events,state=_launch_api(monkeypatch,cleanup_fail=True)
++    launcher=OwnedServerLauncher(process_factory=lambda *a,**k:_create(profile,api),platform_name='darwin')
++    daemon,project,*_=_make_daemon(tmp_path,monkeypatch,server_launcher=launcher)
++    try:
++        started=_start(daemon,project);sid=started['data']['session_id'];key=(project,sid)
++        owner=daemon._session_server_handles[key];process=owner.process;state['cleanup_fail']=False
++        if fault!='none':_trigger(daemon,fault,'server')
++        stopped=_stop(daemon,project,sid,key='sqlite-terminal-'+fault)
++        if fault=='finish_event':
++            assert stopped['success'] and daemon._session_server_handles[key] is owner
++            assert daemon.session_lifecycle.get(project,sid)['state']=='STOPPED'
++            assert daemon.store.job(stopped['execution']['job_id'])['status']=='SUCCEEDED'
++            daemon.store.db.execute('DROP TRIGGER native_terminal_failure')
++            stopped=_stop(daemon,project,sid,key='sqlite-postcommit-retry')
++        elif fault!='none':
++            assert not stopped['success'] and stopped['error']['execution_state_unknown'] is True,stopped
++            assert daemon._session_server_handles[key] is owner and owner.process is process
++            assert daemon.session_lifecycle.get(project,sid)['state']=='UNKNOWN'
++            assert daemon.store.job(stopped['execution']['job_id'])['status']=='UNKNOWN'
++            assert stopped['data']['server_handle_preserved'] is True and process._closed
++            count=len([e for e in events if isinstance(e,tuple) and e[0]=='terminate'])
++            daemon.store.db.execute('DROP TRIGGER native_terminal_failure')
++            stopped=_stop(daemon,project,sid,key='sqlite-terminal-retry-'+fault)
++            assert len([e for e in events if isinstance(e,tuple) and e[0]=='terminate'])==count
++        assert stopped['success'] and stopped['data']['native_child_exit_evidence']['exit_confirmed'] is True
++        assert not stopped['data'].get('already_stopped') and key not in daemon._session_server_handles
++        assert daemon.session_lifecycle.get(project,sid)['state']=='STOPPED'
++    finally:daemon.close()
++
++@pytest.mark.parametrize('fault',['none','operation','job','lifecycle','finish_event'])
++def test_worker_real_sqlite_terminal_failure_preserves_owner_and_atomic_unknown_until_commit(monkeypatch,tmp_path,fault):
++    from comsol_mcp._java_worker import PersistentJavaWorker
++    profile,api,events,state,error=_unknown(monkeypatch)
++    paths=SimpleNamespace(validate=lambda:None,classpath=lambda:('fixture','hash',1,'jars'),
++        compilation_cache_fingerprint=lambda *args:('cache',{}),executable=lambda name:name,
++        private_prefs=None,classpath_separator=':',resolved_global_lock_root=tmp_path)
++    def factory(*a,**k):raise error
++    worker=PersistentJavaWorker(paths,state_dir=tmp_path/'worker',process_factory=factory)
++    monkeypatch.setattr(subprocess,'run',lambda *a,**k:SimpleNamespace(returncode=0,stderr=''))
++    daemon,project,*_=_make_daemon(tmp_path,monkeypatch,worker=worker)
++    try:
++        started=daemon.dispatch({'operation':'session.connect','arguments':{'project_id':project,'runtime_id':'fixture-runtime',
++            'endpoint':{'host':'127.0.0.1','port':2040},'idempotency_key':'sqlite-worker-start'},'execution':{}})
++        sid=started['data']['session_id'];key=(project,sid);process=worker._process;state['cleanup_fail']=False
++        def retire(label):return daemon.dispatch({'operation':'session.disconnect','arguments':{'project_id':project,
++            'session_id':sid,'retire_worker':True,'idempotency_key':label},'execution':{}})
++        if fault!='none':_trigger(daemon,fault,'worker')
++        retired=retire('sqlite-worker-terminal-'+fault)
++        if fault=='finish_event':
++            assert retired['success'] and daemon._session_worker_handles[key] is worker and worker._process is process
++            assert daemon.session_lifecycle.get(project,sid)['client_state']=='RETIRED'
++            assert daemon.store.job(retired['execution']['job_id'])['status']=='SUCCEEDED'
++            daemon.store.db.execute('DROP TRIGGER native_terminal_failure')
++            retired=retire('sqlite-worker-postcommit-retry')
++        elif fault!='none':
++            assert not retired['success'] and retired['error']['execution_state_unknown'] is True,retired
++            assert daemon._session_worker_handles[key] is worker and worker._process is process and process._owner is worker
++            assert retired['data']['worker_handle_preserved'] is True and process._closed
++            assert daemon.session_lifecycle.get(project,sid)['state']=='UNKNOWN'
++            assert daemon.store.job(retired['execution']['job_id'])['status']=='UNKNOWN'
++            count=len([e for e in events if isinstance(e,tuple) and e[0]=='terminate'])
++            daemon.store.db.execute('DROP TRIGGER native_terminal_failure')
++            retired=retire('sqlite-worker-terminal-retry-'+fault)
++            assert len([e for e in events if isinstance(e,tuple) and e[0]=='terminate'])==count
++        assert retired['success'] and retired['data']['client_state']=='RETIRED'
++        assert key not in daemon._session_worker_handles and worker._process is None
++        assert daemon.session_lifecycle.get(project,sid)['client_state']=='RETIRED'
++    finally:daemon.close()
++
++
++def test_ancillary_handle_release_cannot_be_cleared_by_closed_metadata(monkeypatch):
++    profile,api,events,state=_launch_api(monkeypatch)
++    class FakeClosed:
++        closed=True
++        def close(self):pass
++    fake=FakeClosed();api._retained_launch_cleanup=[('native_parent',fake.close,(),RuntimeError('unknown'))]
++    factory=win.T037SessionProcessFactory(profile,'session-fake-release',api=api);factory._job=300
++    with pytest.raises(win.WindowsT037Error) as refused:factory.close()
++    assert refused.value.code=='NATIVE_LAUNCH_RELEASE_UNKNOWN' and factory._job==300
++    assert len(api._retained_launch_cleanup)==1

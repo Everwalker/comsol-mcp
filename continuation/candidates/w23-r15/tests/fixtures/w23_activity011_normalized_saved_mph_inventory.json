@@ -1,0 +1,5036 @@
+{
+  "dataset_inventory": {
+    "datasets": [
+      {
+        "component": "comp1",
+        "geometry": "geom1",
+        "path": {
+          "segments": [
+            {
+              "accessor": "result"
+            },
+            {
+              "collection": "dataset",
+              "tag": "dset1"
+            }
+          ]
+        },
+        "solution": "sol1",
+        "tag": "dset1",
+        "type_id": "Solution"
+      },
+      {
+        "component": "comp1",
+        "geometry": "geom1",
+        "path": {
+          "segments": [
+            {
+              "accessor": "result"
+            },
+            {
+              "collection": "dataset",
+              "tag": "dset2"
+            }
+          ]
+        },
+        "solution": "sol2",
+        "tag": "dset2",
+        "type_id": "Solution"
+      },
+      {
+        "component": "comp1",
+        "geometry": "geom1",
+        "path": {
+          "segments": [
+            {
+              "accessor": "result"
+            },
+            {
+              "collection": "dataset",
+              "tag": "dset3"
+            }
+          ]
+        },
+        "solution": "sol3",
+        "tag": "dset3",
+        "type_id": "Solution"
+      }
+    ],
+    "solution_index_receipts": [
+      {
+        "dataset": {
+          "component": "comp1",
+          "geometry": "geom1",
+          "path": {
+            "segments": [
+              {
+                "accessor": "result"
+              },
+              {
+                "collection": "dataset",
+                "tag": "dset1"
+              }
+            ]
+          },
+          "solution": "sol1",
+          "tag": "dset1",
+          "type_id": "Solution"
+        },
+        "solution_indices": {
+          "axis_metadata_complete": false,
+          "axis_metadata_source": "SolutionInfo.getSolnum(outer, strict) + getPNames/getPvals/getUnits",
+          "binding_complete": false,
+          "binding_source": "dataset property 'solution'/'data' resolved against model.sol().tags(); SolutionInfo.getSolnum(outer, strict)",
+          "dataset": "dset1",
+          "dataset_binding": {
+            "binding_complete": true,
+            "component": "comp1",
+            "dataset": "dset1",
+            "dataset_chain": [
+              "dset1"
+            ],
+            "dataset_edges": [],
+            "dataset_type": "Solution",
+            "error": null,
+            "geometry": "geom1",
+            "properties": {
+              "comp": "comp1",
+              "geom": "geom1",
+              "solution": "sol1"
+            },
+            "provenance": {
+              "dataset_tags": [
+                "dset1",
+                "dset2",
+                "dset3"
+              ],
+              "mutation_methods_called": [],
+              "read_only": true,
+              "solution_tags": [
+                "sol1",
+                "sol2",
+                "sol3"
+              ]
+            },
+            "read_errors": [],
+            "requested_solution": null,
+            "solution": "sol1",
+            "sources": {
+              "component": "dataset.comp -> modelNode.tags()/model.component()",
+              "geometry": "dataset.geom -> component.geom.tags()/getter",
+              "solution": "dataset.solution -> model.sol().tags()"
+            }
+          },
+          "inner_indices": [],
+          "level_names": [
+            "freq"
+          ],
+          "outer_indices": [],
+          "pair_mapping_complete": false,
+          "parameters": {
+            "by_pair": {}
+          },
+          "parameters_complete": false,
+          "parameters_source": "SolutionInfo.getPNames(int[][])/getPvals(int[][])/getUnits(int[][])",
+          "read_errors": [
+            {
+              "allowlist_entry_required": null,
+              "code": "ENGINE_CALL_FAILED",
+              "message": "COMSOL getString probe failed: JavaWorkerError",
+              "method": "getString"
+            },
+            {
+              "code": "SOLUTION_METADATA_ERROR",
+              "message": "{\"completed_at_ms\": \"1791765896201\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1791765896199\", \"request_id\": \"wrk-e70b6fee-319d-4aca-87b3-74ea67b5d680\", \"started_at_ms\": \"1791765896199\", \"status\": \"FAILED\", \"type\": \"call\"}",
+              "method": "getSolnums"
+            },
+            {
+              "code": "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+              "message": "engine returned an empty outer axis; getSolnum(1,true) alone does not establish outer/inner pairs",
+              "method": "getOuterSolnum"
+            },
+            {
+              "allowlist_entry_required": null,
+              "code": "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+              "message": "outer/inner solution axes could not be read from the engine; no default index is invented and operations that select a solution axis stay refused",
+              "method": "SolutionInfo"
+            }
+          ],
+          "solnum_pairs": [],
+          "solution": "sol1",
+          "solution_count": 0,
+          "solver_sequence_parameter_observation": {
+            "attached": true,
+            "get_size": [
+              64057,
+              1
+            ],
+            "get_size_multi": [
+              1,
+              1
+            ],
+            "get_size_multi_getter": {
+              "method": "SolverSequence.getSizeMulti()",
+              "raw": [
+                1,
+                1
+              ],
+              "semantics": "[local solution count in multisolution, total solution number count] per COMSOL 6.4 doc7714/chunk23082",
+              "status": "CAPTURED"
+            },
+            "get_size_semantics": "[degrees_of_freedom, solution_number_count] per COMSOL 6.4 documentation",
+            "interpretation": "raw sequence-level complex values only; no outer/inner tuple mapping or complete parameter combinations inferred",
+            "parameter_rows": [
+              {
+                "imag": 0.0,
+                "name": "freq",
+                "parameter_index": 0,
+                "real": 193414489032258.03,
+                "solnum": 1,
+                "unit": "GHz"
+              }
+            ],
+            "parameter_units_complete": true,
+            "parameters_complete": false,
+            "pnames": [
+              "freq"
+            ],
+            "read_errors": [],
+            "receiver": "model.sol(<dataset-bound solution tag>)",
+            "sequence_type": "SolverSequence",
+            "solution_identity_matches_dataset_study": true,
+            "solution_info_count_scope": {
+              "getLevelNames": [
+                "freq"
+              ],
+              "getLevels": 1,
+              "getOuterSolnum": [],
+              "getOuterSolnum_semantics": "empty means no outer parameter/values per COMSOL 6.4 doc7709/chunk23066",
+              "read_errors": []
+            },
+            "solution_number_count": 1,
+            "solution_tag": "sol1",
+            "solution_type": "Parametric",
+            "solution_values": [
+              {
+                "imag_getter": {
+                  "arguments": [
+                    1
+                  ],
+                  "method": "SolverSequence.getPValsImag(int)",
+                  "raw": [
+                    0.0
+                  ]
+                },
+                "real_getter": {
+                  "arguments": [
+                    1
+                  ],
+                  "method": "SolverSequence.getPVals(int)",
+                  "raw": [
+                    193414489032258.03
+                  ]
+                },
+                "solnum": 1
+              }
+            ],
+            "source": "direct SolverSequence.getPNames/getSize/getPVals(int)/getPValsImag(int); supplemental to SolutionInfo",
+            "status": "OBSERVED_TYPED_COMPLEX_PARAMETER_VALUES",
+            "study": "std1",
+            "unit_observations": [
+              {
+                "arguments": [
+                  "freq"
+                ],
+                "method": "SolutionInfo.getUnit(String)",
+                "name": "freq",
+                "value": "GHz"
+              }
+            ]
+          },
+          "study": "std1",
+          "time_axis_source": "steady: no time axis",
+          "time_values": []
+        }
+      },
+      {
+        "dataset": {
+          "component": "comp1",
+          "geometry": "geom1",
+          "path": {
+            "segments": [
+              {
+                "accessor": "result"
+              },
+              {
+                "collection": "dataset",
+                "tag": "dset2"
+              }
+            ]
+          },
+          "solution": "sol2",
+          "tag": "dset2",
+          "type_id": "Solution"
+        },
+        "solution_indices": {
+          "axis_metadata_complete": false,
+          "axis_metadata_source": "SolutionInfo.getSolnum(outer, strict) + getPNames/getPvals/getUnits",
+          "binding_complete": false,
+          "binding_source": "dataset property 'solution'/'data' resolved against model.sol().tags(); SolutionInfo.getSolnum(outer, strict)",
+          "dataset": "dset2",
+          "dataset_binding": {
+            "binding_complete": true,
+            "component": "comp1",
+            "dataset": "dset2",
+            "dataset_chain": [
+              "dset2"
+            ],
+            "dataset_edges": [],
+            "dataset_type": "Solution",
+            "error": null,
+            "geometry": "geom1",
+            "properties": {
+              "comp": "comp1",
+              "geom": "geom1",
+              "solution": "sol2"
+            },
+            "provenance": {
+              "dataset_tags": [
+                "dset1",
+                "dset2",
+                "dset3"
+              ],
+              "mutation_methods_called": [],
+              "read_only": true,
+              "solution_tags": [
+                "sol1",
+                "sol2",
+                "sol3"
+              ]
+            },
+            "read_errors": [],
+            "requested_solution": null,
+            "solution": "sol2",
+            "sources": {
+              "component": "dataset.comp -> modelNode.tags()/model.component()",
+              "geometry": "dataset.geom -> component.geom.tags()/getter",
+              "solution": "dataset.solution -> model.sol().tags()"
+            }
+          },
+          "inner_indices": [],
+          "level_names": [
+            "lambda"
+          ],
+          "outer_indices": [],
+          "pair_mapping_complete": false,
+          "parameters": {
+            "by_pair": {}
+          },
+          "parameters_complete": false,
+          "parameters_source": "SolutionInfo.getPNames(int[][])/getPvals(int[][])/getUnits(int[][])",
+          "read_errors": [
+            {
+              "allowlist_entry_required": null,
+              "code": "ENGINE_CALL_FAILED",
+              "message": "COMSOL getString probe failed: JavaWorkerError",
+              "method": "getString"
+            },
+            {
+              "code": "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+              "message": "engine returned an empty outer axis; getSolnum(1,true) alone does not establish outer/inner pairs",
+              "method": "getOuterSolnum"
+            },
+            {
+              "allowlist_entry_required": null,
+              "code": "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+              "message": "outer/inner solution axes could not be read from the engine; no default index is invented and operations that select a solution axis stay refused",
+              "method": "SolutionInfo"
+            }
+          ],
+          "solnum_pairs": [],
+          "solution": "sol2",
+          "solution_count": 0,
+          "solver_sequence_parameter_observation": {
+            "attached": false,
+            "get_size": [
+              64057,
+              1
+            ],
+            "get_size_multi": [
+              1,
+              1
+            ],
+            "get_size_multi_getter": {
+              "method": "SolverSequence.getSizeMulti()",
+              "raw": [
+                1,
+                1
+              ],
+              "semantics": "[local solution count in multisolution, total solution number count] per COMSOL 6.4 doc7714/chunk23082",
+              "status": "CAPTURED"
+            },
+            "get_size_semantics": "[degrees_of_freedom, solution_number_count] per COMSOL 6.4 documentation",
+            "interpretation": "raw sequence-level complex values only; no outer/inner tuple mapping or complete parameter combinations inferred",
+            "parameter_rows": [
+              {
+                "imag": -6244288.968380504,
+                "name": "lambda",
+                "parameter_index": 0,
+                "real": 0.0,
+                "solnum": 1,
+                "unit": "1"
+              }
+            ],
+            "parameter_units_complete": true,
+            "parameters_complete": false,
+            "pnames": [
+              "lambda"
+            ],
+            "read_errors": [],
+            "receiver": "model.sol(<dataset-bound solution tag>)",
+            "sequence_type": "Stored",
+            "solution_identity_matches_dataset_study": true,
+            "solution_info_count_scope": {
+              "getLevelNames": [
+                "lambda"
+              ],
+              "getLevels": 1,
+              "getOuterSolnum": [],
+              "getOuterSolnum_semantics": "empty means no outer parameter/values per COMSOL 6.4 doc7709/chunk23066",
+              "read_errors": []
+            },
+            "solution_number_count": 1,
+            "solution_tag": "sol2",
+            "solution_type": "Eigenfrequency",
+            "solution_values": [
+              {
+                "imag_getter": {
+                  "arguments": [
+                    1
+                  ],
+                  "method": "SolverSequence.getPValsImag(int)",
+                  "raw": [
+                    -6244288.968380504
+                  ]
+                },
+                "real_getter": {
+                  "arguments": [
+                    1
+                  ],
+                  "method": "SolverSequence.getPVals(int)",
+                  "raw": [
+                    0.0
+                  ]
+                },
+                "solnum": 1
+              }
+            ],
+            "source": "direct SolverSequence.getPNames/getSize/getPVals(int)/getPValsImag(int); supplemental to SolutionInfo",
+            "status": "OBSERVED_TYPED_COMPLEX_PARAMETER_VALUES",
+            "study": "std1",
+            "unit_observations": [
+              {
+                "arguments": [
+                  "lambda"
+                ],
+                "method": "SolutionInfo.getUnit(String)",
+                "name": "lambda",
+                "value": "1"
+              }
+            ]
+          },
+          "study": "std1",
+          "time_axis_source": "steady: no time axis",
+          "time_values": []
+        }
+      },
+      {
+        "dataset": {
+          "component": "comp1",
+          "geometry": "geom1",
+          "path": {
+            "segments": [
+              {
+                "accessor": "result"
+              },
+              {
+                "collection": "dataset",
+                "tag": "dset3"
+              }
+            ]
+          },
+          "solution": "sol3",
+          "tag": "dset3",
+          "type_id": "Solution"
+        },
+        "solution_indices": {
+          "axis_metadata_complete": false,
+          "axis_metadata_source": "SolutionInfo.getSolnum(outer, strict) + getPNames/getPvals/getUnits",
+          "binding_complete": false,
+          "binding_source": "dataset property 'solution'/'data' resolved against model.sol().tags(); SolutionInfo.getSolnum(outer, strict)",
+          "dataset": "dset3",
+          "dataset_binding": {
+            "binding_complete": true,
+            "component": "comp1",
+            "dataset": "dset3",
+            "dataset_chain": [
+              "dset3"
+            ],
+            "dataset_edges": [],
+            "dataset_type": "Solution",
+            "error": null,
+            "geometry": "geom1",
+            "properties": {
+              "comp": "comp1",
+              "geom": "geom1",
+              "solution": "sol3"
+            },
+            "provenance": {
+              "dataset_tags": [
+                "dset1",
+                "dset2",
+                "dset3"
+              ],
+              "mutation_methods_called": [],
+              "read_only": true,
+              "solution_tags": [
+                "sol1",
+                "sol2",
+                "sol3"
+              ]
+            },
+            "read_errors": [],
+            "requested_solution": null,
+            "solution": "sol3",
+            "sources": {
+              "component": "dataset.comp -> modelNode.tags()/model.component()",
+              "geometry": "dataset.geom -> component.geom.tags()/getter",
+              "solution": "dataset.solution -> model.sol().tags()"
+            }
+          },
+          "inner_indices": [],
+          "level_names": [
+            "lambda"
+          ],
+          "outer_indices": [],
+          "pair_mapping_complete": false,
+          "parameters": {
+            "by_pair": {}
+          },
+          "parameters_complete": false,
+          "parameters_source": "SolutionInfo.getPNames(int[][])/getPvals(int[][])/getUnits(int[][])",
+          "read_errors": [
+            {
+              "allowlist_entry_required": null,
+              "code": "ENGINE_CALL_FAILED",
+              "message": "COMSOL getString probe failed: JavaWorkerError",
+              "method": "getString"
+            },
+            {
+              "code": "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+              "message": "engine returned an empty outer axis; getSolnum(1,true) alone does not establish outer/inner pairs",
+              "method": "getOuterSolnum"
+            },
+            {
+              "allowlist_entry_required": null,
+              "code": "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+              "message": "outer/inner solution axes could not be read from the engine; no default index is invented and operations that select a solution axis stay refused",
+              "method": "SolutionInfo"
+            }
+          ],
+          "solnum_pairs": [],
+          "solution": "sol3",
+          "solution_count": 0,
+          "solver_sequence_parameter_observation": {
+            "attached": false,
+            "get_size": [
+              64057,
+              1
+            ],
+            "get_size_multi": [
+              1,
+              1
+            ],
+            "get_size_multi_getter": {
+              "method": "SolverSequence.getSizeMulti()",
+              "raw": [
+                1,
+                1
+              ],
+              "semantics": "[local solution count in multisolution, total solution number count] per COMSOL 6.4 doc7714/chunk23082",
+              "status": "CAPTURED"
+            },
+            "get_size_semantics": "[degrees_of_freedom, solution_number_count] per COMSOL 6.4 documentation",
+            "interpretation": "raw sequence-level complex values only; no outer/inner tuple mapping or complete parameter combinations inferred",
+            "parameter_rows": [
+              {
+                "imag": -6244288.968380514,
+                "name": "lambda",
+                "parameter_index": 0,
+                "real": -1.6359882555849607e-08,
+                "solnum": 1,
+                "unit": "1"
+              }
+            ],
+            "parameter_units_complete": true,
+            "parameters_complete": false,
+            "pnames": [
+              "lambda"
+            ],
+            "read_errors": [],
+            "receiver": "model.sol(<dataset-bound solution tag>)",
+            "sequence_type": "Stored",
+            "solution_identity_matches_dataset_study": true,
+            "solution_info_count_scope": {
+              "getLevelNames": [
+                "lambda"
+              ],
+              "getLevels": 1,
+              "getOuterSolnum": [],
+              "getOuterSolnum_semantics": "empty means no outer parameter/values per COMSOL 6.4 doc7709/chunk23066",
+              "read_errors": []
+            },
+            "solution_number_count": 1,
+            "solution_tag": "sol3",
+            "solution_type": "Eigenfrequency",
+            "solution_values": [
+              {
+                "imag_getter": {
+                  "arguments": [
+                    1
+                  ],
+                  "method": "SolverSequence.getPValsImag(int)",
+                  "raw": [
+                    -6244288.968380514
+                  ]
+                },
+                "real_getter": {
+                  "arguments": [
+                    1
+                  ],
+                  "method": "SolverSequence.getPVals(int)",
+                  "raw": [
+                    -1.6359882555849607e-08
+                  ]
+                },
+                "solnum": 1
+              }
+            ],
+            "source": "direct SolverSequence.getPNames/getSize/getPVals(int)/getPValsImag(int); supplemental to SolutionInfo",
+            "status": "OBSERVED_TYPED_COMPLEX_PARAMETER_VALUES",
+            "study": "std1",
+            "unit_observations": [
+              {
+                "arguments": [
+                  "lambda"
+                ],
+                "method": "SolutionInfo.getUnit(String)",
+                "name": "lambda",
+                "value": "1"
+              }
+            ]
+          },
+          "study": "std1",
+          "time_axis_source": "steady: no time axis",
+          "time_values": []
+        }
+      }
+    ]
+  },
+  "internal_solver_execution_count": "UNKNOWN_NOT_INFERRED_FROM_READBACK",
+  "parameters_complete": false,
+  "raw_java_datasets": {
+    "dset1": {
+      "property_names": [
+        "hasbeenevaluated",
+        "defaultPlotIDs",
+        "solution",
+        "phaseshift",
+        "scalingfactor",
+        "comp",
+        "showgeom",
+        "geom",
+        "compgeommap",
+        "frametype",
+        "phase",
+        "scalefactor",
+        "probetag",
+        "evalcount",
+        "resetbeenset"
+      ],
+      "receiver_type": "com.comsol.clientapi.impl.DatasetFeatureClient",
+      "selected_properties": {
+        "data": {
+          "has_property": false,
+          "status": "PROPERTY_ABSENT"
+        },
+        "outersolnum": {
+          "has_property": false,
+          "status": "PROPERTY_ABSENT"
+        },
+        "solnum": {
+          "has_property": false,
+          "status": "PROPERTY_ABSENT"
+        },
+        "solution": {
+          "getter": "Dataset.getString",
+          "has_property": true,
+          "return_value": "sol1",
+          "status": "CAPTURED",
+          "value_type": "String"
+        }
+      },
+      "tag": "dset1"
+    },
+    "dset2": {
+      "property_names": [
+        "hasbeenevaluated",
+        "defaultPlotIDs",
+        "solution",
+        "phaseshift",
+        "scalingfactor",
+        "comp",
+        "showgeom",
+        "geom",
+        "compgeommap",
+        "frametype",
+        "phase",
+        "scalefactor",
+        "probetag",
+        "evalcount",
+        "resetbeenset"
+      ],
+      "receiver_type": "com.comsol.clientapi.impl.DatasetFeatureClient",
+      "selected_properties": {
+        "data": {
+          "has_property": false,
+          "status": "PROPERTY_ABSENT"
+        },
+        "outersolnum": {
+          "has_property": false,
+          "status": "PROPERTY_ABSENT"
+        },
+        "solnum": {
+          "has_property": false,
+          "status": "PROPERTY_ABSENT"
+        },
+        "solution": {
+          "getter": "Dataset.getString",
+          "has_property": true,
+          "return_value": "sol2",
+          "status": "CAPTURED",
+          "value_type": "String"
+        }
+      },
+      "tag": "dset2"
+    },
+    "dset3": {
+      "property_names": [
+        "hasbeenevaluated",
+        "defaultPlotIDs",
+        "solution",
+        "phaseshift",
+        "scalingfactor",
+        "comp",
+        "showgeom",
+        "geom",
+        "compgeommap",
+        "frametype",
+        "phase",
+        "scalefactor",
+        "probetag",
+        "evalcount",
+        "resetbeenset"
+      ],
+      "receiver_type": "com.comsol.clientapi.impl.DatasetFeatureClient",
+      "selected_properties": {
+        "data": {
+          "has_property": false,
+          "status": "PROPERTY_ABSENT"
+        },
+        "outersolnum": {
+          "has_property": false,
+          "status": "PROPERTY_ABSENT"
+        },
+        "solnum": {
+          "has_property": false,
+          "status": "PROPERTY_ABSENT"
+        },
+        "solution": {
+          "getter": "Dataset.getString",
+          "has_property": true,
+          "return_value": "sol3",
+          "status": "CAPTURED",
+          "value_type": "String"
+        }
+      },
+      "tag": "dset3"
+    }
+  },
+  "raw_java_sequences": [
+    {
+      "attached": true,
+      "get_size": [
+        64057,
+        1
+      ],
+      "get_size_multi": [
+        1,
+        1
+      ],
+      "parameter_values_by_solnum": [
+        {
+          "imaginary": [
+            0.0
+          ],
+          "parameter_units": [
+            {
+              "error": null,
+              "name": "freq",
+              "raw_status": "CAPTURED",
+              "status": "OBSERVED",
+              "value": "GHz"
+            }
+          ],
+          "real": [
+            193414489032258.03
+          ],
+          "solnum": 1
+        }
+      ],
+      "parameter_values_status": "RAW_TYPED_COMPLEX_VALUES_CAPTURED_NOT_INTERPRETED",
+      "parameters_complete": false,
+      "pnames": [
+        "freq"
+      ],
+      "raw_getter_source": "COMSOL 6.4 direct SolverSequence/ SolutionInfo typed getter receipts",
+      "sequence_type": "SolverSequence",
+      "solution_info_axis_metadata_complete": false,
+      "solution_info_count_scope": {
+        "getLevelNames": [
+          "freq"
+        ],
+        "getLevels": 1,
+        "getOuterSolnum": [],
+        "getPNamesOuter": [],
+        "getPUnitsOuter": [],
+        "matrix_getter_errors": [
+          {
+            "argument_types": [
+              "int[][]"
+            ],
+            "arguments": [
+              [
+                [
+                  1,
+                  1
+                ]
+              ]
+            ],
+            "declared_return_type": "java.lang.String[][]",
+            "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: 未知解。\nMessages:\n\t未知解。\n\t- 标记\n",
+            "error_type": "com.comsol.util.exceptions.FlException",
+            "method": "getPNames",
+            "receiver": "SolutionInfo.getPNames(sol1)",
+            "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+            "status": "ERROR"
+          },
+          {
+            "argument_types": [
+              "int[][]"
+            ],
+            "arguments": [
+              [
+                [
+                  1,
+                  1
+                ]
+              ]
+            ],
+            "declared_return_type": "double[][]",
+            "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: 未知解。\nMessages:\n\t未知解。\n\t- 标记\n",
+            "error_type": "com.comsol.util.exceptions.FlException",
+            "method": "getPvals",
+            "receiver": "SolutionInfo.getPvals(sol1)",
+            "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+            "status": "ERROR"
+          },
+          {
+            "argument_types": [
+              "int[][]"
+            ],
+            "arguments": [
+              [
+                [
+                  1,
+                  1
+                ]
+              ]
+            ],
+            "declared_return_type": "double[][]",
+            "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: 未知解。\nMessages:\n\t未知解。\n\t- 标记\n",
+            "error_type": "com.comsol.util.exceptions.FlException",
+            "method": "getPvalsImag",
+            "receiver": "SolutionInfo.getPvalsImag(sol1)",
+            "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+            "status": "ERROR"
+          },
+          {
+            "argument_types": [
+              "int[][]"
+            ],
+            "arguments": [
+              [
+                [
+                  1,
+                  1
+                ]
+              ]
+            ],
+            "declared_return_type": "java.lang.String[][]",
+            "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: 未知解。\nMessages:\n\t未知解。\n\t- 标记\n",
+            "error_type": "com.comsol.util.exceptions.FlException",
+            "method": "getUnits",
+            "receiver": "SolutionInfo.getUnits(sol1)",
+            "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+            "status": "ERROR"
+          }
+        ],
+        "read_errors": []
+      },
+      "solution_type": "Parametric",
+      "solver_tree_features": [
+        {
+          "feature_type": "StudyStep",
+          "path": "st1",
+          "property_names": [
+            "study",
+            "studystep",
+            "unredstudy",
+            "unredstep",
+            "useForModelReduction",
+            "splitcomplex",
+            "partmethod",
+            "linsmallelem",
+            "componentid",
+            "linsmallelemexpr",
+            "units",
+            "saveprevioussolution",
+            "assempara",
+            "useent",
+            "entsel",
+            "keeplog",
+            "message",
+            "const",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 0
+        },
+        {
+          "feature_type": "Variables",
+          "path": "v1",
+          "property_names": [
+            "control",
+            "initmethod",
+            "initsol",
+            "initsolhide",
+            "initsoluse",
+            "oldinitsoluse",
+            "initsolusesolnumhide",
+            "initsolusesolnum",
+            "solvertype",
+            "solnum",
+            "timeinterp",
+            "t",
+            "manualsol",
+            "manualsolnum",
+            "manualsolnum_vector_method",
+            "manualsolnum_vector_start",
+            "manualsolnum_vector_stop",
+            "manualsolnum_vector_step",
+            "manualsolnum_vector_numvalues",
+            "manualsolnum_vector_function",
+            "manualsolnum_vector_interval",
+            "manualsolnum_vector_freqperdec",
+            "listsol",
+            "listsolnum",
+            "scalemethod",
+            "scaleval",
+            "resscalemethod",
+            "resscaleval",
+            "resscalethresh",
+            "notsolmethod",
+            "notsol",
+            "notsolhide",
+            "notsoluse",
+            "oldnotsoluse",
+            "notsolusesolnumhide",
+            "notsolusesolnum",
+            "notsolvertype",
+            "notsolnum",
+            "nottimeinterp",
+            "nott",
+            "notmanualsol",
+            "notmanualsolnum",
+            "notmanualsolnum_vector_method",
+            "notmanualsolnum_vector_start",
+            "notmanualsolnum_vector_stop",
+            "notmanualsolnum_vector_step",
+            "notmanualsolnum_vector_numvalues",
+            "notmanualsolnum_vector_function",
+            "notmanualsolnum_vector_interval",
+            "notmanualsolnum_vector_freqperdec",
+            "notlistsol",
+            "notlistsolnum",
+            "initparametersmethod",
+            "clistctrl",
+            "cname",
+            "clist",
+            "keeplog",
+            "message",
+            "const",
+            "storesol",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 1
+        },
+        {
+          "feature_type": "Field",
+          "path": "v1/comp1_E",
+          "property_names": [
+            "comp",
+            "compintuse",
+            "compint",
+            "compintstatuse",
+            "compintstat",
+            "solvefor",
+            "reconstruct",
+            "usestoresel",
+            "storesel",
+            "valuetype",
+            "variables",
+            "scalemethod",
+            "scaleval",
+            "resscalemethod",
+            "resscaleval",
+            "resscalethresh",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 2
+        },
+        {
+          "feature_type": "Field",
+          "path": "v1/comp1_emw_Ebm1",
+          "property_names": [
+            "comp",
+            "compintuse",
+            "compint",
+            "compintstatuse",
+            "compintstat",
+            "solvefor",
+            "reconstruct",
+            "usestoresel",
+            "storesel",
+            "valuetype",
+            "variables",
+            "scalemethod",
+            "scaleval",
+            "resscalemethod",
+            "resscaleval",
+            "resscalethresh",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 3
+        },
+        {
+          "feature_type": "Field",
+          "path": "v1/comp1_emw_Ebm2",
+          "property_names": [
+            "comp",
+            "compintuse",
+            "compint",
+            "compintstatuse",
+            "compintstat",
+            "solvefor",
+            "reconstruct",
+            "usestoresel",
+            "storesel",
+            "valuetype",
+            "variables",
+            "scalemethod",
+            "scaleval",
+            "resscalemethod",
+            "resscaleval",
+            "resscalethresh",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 4
+        },
+        {
+          "feature_type": "State",
+          "path": "v1/comp1_Sparam1",
+          "property_names": [
+            "comp",
+            "compintuse",
+            "compint",
+            "compintstatuse",
+            "compintstat",
+            "solvefor",
+            "reconstruct",
+            "out",
+            "valuetype",
+            "fromstudy",
+            "stopcond",
+            "variables",
+            "scalemethod",
+            "scaleval",
+            "resscalemethod",
+            "resscaleval",
+            "resscalethresh",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 5
+        },
+        {
+          "feature_type": "Eigenvalue",
+          "path": "e1",
+          "property_names": [
+            "control",
+            "transform",
+            "k0",
+            "rAverage",
+            "omega",
+            "eigsolver",
+            "rtol",
+            "eigmethod",
+            "neigs",
+            "computeandstorelefteig",
+            "eigunit",
+            "transshift",
+            "shift",
+            "eigwhich",
+            "usesymeig",
+            "eigsymchk",
+            "appnreigs",
+            "maxnreigs",
+            "transshiftreg",
+            "eigsr",
+            "eiglr",
+            "eigsi",
+            "eigli",
+            "shiftregselect",
+            "shiftregman",
+            "chkeigregion",
+            "eigreschk",
+            "transeigref",
+            "eigref",
+            "searchcon",
+            "neigsmethodnhm",
+            "neigsmanual",
+            "transcontour",
+            "conmid",
+            "conrad",
+            "conradynhm",
+            "conangle",
+            "intgtypenhmest",
+            "nintgptsmethodnhmest",
+            "nintgptsnhmest",
+            "intgtypenhm",
+            "nintgptsmethodnhm",
+            "nintgptsnhm",
+            "termfeast",
+            "storefact",
+            "distrlinsol",
+            "usehermeig",
+            "eighermchk",
+            "neigsmethodhm",
+            "conlbdy",
+            "conubdy",
+            "conradyhm",
+            "intgtypehmest",
+            "nintgptsmethodhmest",
+            "nintgptshmest",
+            "intgtypehm",
+            "nintgptsmethodhm",
+            "nintgptshm",
+            "maxmatsize",
+            "approxnep",
+            "toltruncationnep",
+            "maxdegnep",
+            "expdegnep",
+            "scalingnep",
+            "qnrefinementnep",
+            "qnmaxitnep",
+            "tolfactqnnep",
+            "lastEigLinSolv",
+            "isstochestaction",
+            "linpmethod",
+            "linpsol",
+            "linpsolhide",
+            "linpsoluse",
+            "oldlinpsoluse",
+            "linpsolusesolnumhide",
+            "linpsolusesolnum",
+            "linpsolvertype",
+            "linpsolnum",
+            "linptimeinterp",
+            "linpt",
+            "linpmanualsol",
+            "linpmanualsolnum",
+            "linpmanualsolnum_vector_method",
+            "linpmanualsolnum_vector_start",
+            "linpmanualsolnum_vector_stop",
+            "linpmanualsolnum_vector_step",
+            "linpmanualsolnum_vector_numvalues",
+            "linpmanualsolnum_vector_function",
+            "linpmanualsolnum_vector_interval",
+            "linpmanualsolnum_vector_freqperdec",
+            "linplistsol",
+            "linplistsolnum",
+            "storelinpoint",
+            "plot",
+            "plotgroupdummy",
+            "plotgrouparr",
+            "plotwindowsarr",
+            "windowforpg",
+            "probesel",
+            "probes",
+            "eigfunscale",
+            "eigvfunscale",
+            "eigvfunscaleparam",
+            "massfieldactive",
+            "massfield",
+            "eigscalingexpression",
+            "filtereigexpression",
+            "filtereigdescription",
+            "storeeigsol",
+            "maxnumberstoredeigsol",
+            "sorteigorder",
+            "sorteigmethod",
+            "sorteigprimarily",
+            "sorteigsecondarily",
+            "sortontransformedeig",
+            "sorteigexpression",
+            "sorteigdescription",
+            "conjugatepairconsecutivesort",
+            "modefollowing",
+            "maxeigit",
+            "krylovdim",
+            "stopwhennoeigfound",
+            "eigname",
+            "clistctrl",
+            "cname",
+            "clist",
+            "keeplog",
+            "message",
+            "const",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 6
+        },
+        {
+          "feature_type": "Direct",
+          "path": "e1/dDef",
+          "property_names": [
+            "linsolver",
+            "mumpsalloc",
+            "mumpsreorder",
+            "mumpsrreorder",
+            "reusereorder",
+            "reusepattern",
+            "mumpsmtfact",
+            "mumpsmtsolve",
+            "pivotenable",
+            "thresh",
+            "pivotperturb",
+            "mumpsblr",
+            "mumpsblrtol",
+            "mumpsblrtype",
+            "ooc",
+            "memfracooc",
+            "incore",
+            "minicmemory",
+            "usetotmemory",
+            "internalmemusage",
+            "oocmemory",
+            "pardreorder",
+            "pardschedule",
+            "pardrreorder",
+            "pivotstrategy",
+            "pardmtsolve",
+            "clusterpardiso",
+            "preorder",
+            "cudssreusereorder",
+            "cudssreorder",
+            "cudssusematching",
+            "cudssmatching",
+            "cudssfactor",
+            "cudsspivotthreshold",
+            "cudssprecision",
+            "cudsspivotepsilonsp",
+            "cudsspivotepsilondp",
+            "cudsshybridmemory",
+            "cudssmemoryfactor",
+            "cudssusermemorylimit",
+            "cudssusermemorylimitactive",
+            "cudssusehybridcompute",
+            "cudssmultigpusinglenode",
+            "pivotrefines",
+            "errorchk",
+            "rhob",
+            "iterrefine",
+            "maxrefinesteps",
+            "errorratiobound",
+            "nliniterrefine",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 7
+        },
+        {
+          "feature_type": "Advanced",
+          "path": "e1/aDef",
+          "property_names": [
+            "symmetric",
+            "matrixformat",
+            "rowscale",
+            "nullfun",
+            "orthonormallimit",
+            "rankreduction",
+            "rankreductionorth",
+            "reusenullspacedata",
+            "convinfo",
+            "recoverysavinginfo",
+            "recoverysavingratio",
+            "recoverysaveforce",
+            "recoverysaveevery",
+            "blocksize",
+            "blocksizeactive",
+            "assemdistrsol",
+            "cachepattern",
+            "cachepatternmethod",
+            "cachepatternexpr",
+            "assemloc",
+            "optthread",
+            "statblockdistr",
+            "complexfun",
+            "matherr",
+            "checkmatherr",
+            "elemdatainit",
+            "globalcache",
+            "assemtol",
+            "keep",
+            "L",
+            "K",
+            "D",
+            "E",
+            "M",
+            "N",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 8
+        },
+        {
+          "feature_type": "Direct",
+          "path": "e1/d1",
+          "property_names": [
+            "linsolver",
+            "mumpsalloc",
+            "mumpsreorder",
+            "mumpsrreorder",
+            "reusereorder",
+            "reusepattern",
+            "mumpsmtfact",
+            "mumpsmtsolve",
+            "pivotenable",
+            "thresh",
+            "pivotperturb",
+            "mumpsblr",
+            "mumpsblrtol",
+            "mumpsblrtype",
+            "ooc",
+            "memfracooc",
+            "incore",
+            "minicmemory",
+            "usetotmemory",
+            "internalmemusage",
+            "oocmemory",
+            "pardreorder",
+            "pardschedule",
+            "pardrreorder",
+            "pivotstrategy",
+            "pardmtsolve",
+            "clusterpardiso",
+            "preorder",
+            "cudssreusereorder",
+            "cudssreorder",
+            "cudssusematching",
+            "cudssmatching",
+            "cudssfactor",
+            "cudsspivotthreshold",
+            "cudssprecision",
+            "cudsspivotepsilonsp",
+            "cudsspivotepsilondp",
+            "cudsshybridmemory",
+            "cudssmemoryfactor",
+            "cudssusermemorylimit",
+            "cudssusermemorylimitactive",
+            "cudssusehybridcompute",
+            "cudssmultigpusinglenode",
+            "pivotrefines",
+            "errorchk",
+            "rhob",
+            "iterrefine",
+            "maxrefinesteps",
+            "errorratiobound",
+            "nliniterrefine",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 9
+        },
+        {
+          "feature_type": "StoreSolution",
+          "path": "su1",
+          "property_names": [
+            "sol",
+            "keeplog",
+            "message",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "stored_solution_reference": "sol2",
+          "stored_solution_reference_getter": "StoreSolution.getString('sol')",
+          "tree_order": 10
+        },
+        {
+          "feature_type": "StudyStep",
+          "path": "st2",
+          "property_names": [
+            "study",
+            "studystep",
+            "unredstudy",
+            "unredstep",
+            "useForModelReduction",
+            "splitcomplex",
+            "partmethod",
+            "linsmallelem",
+            "componentid",
+            "linsmallelemexpr",
+            "units",
+            "saveprevioussolution",
+            "assempara",
+            "useent",
+            "entsel",
+            "keeplog",
+            "message",
+            "const",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 11
+        },
+        {
+          "feature_type": "Variables",
+          "path": "v2",
+          "property_names": [
+            "control",
+            "initmethod",
+            "initsol",
+            "initsolhide",
+            "initsoluse",
+            "oldinitsoluse",
+            "initsolusesolnumhide",
+            "initsolusesolnum",
+            "solvertype",
+            "solnum",
+            "timeinterp",
+            "t",
+            "manualsol",
+            "manualsolnum",
+            "manualsolnum_vector_method",
+            "manualsolnum_vector_start",
+            "manualsolnum_vector_stop",
+            "manualsolnum_vector_step",
+            "manualsolnum_vector_numvalues",
+            "manualsolnum_vector_function",
+            "manualsolnum_vector_interval",
+            "manualsolnum_vector_freqperdec",
+            "listsol",
+            "listsolnum",
+            "scalemethod",
+            "scaleval",
+            "resscalemethod",
+            "resscaleval",
+            "resscalethresh",
+            "notsolmethod",
+            "notsol",
+            "notsolhide",
+            "notsoluse",
+            "oldnotsoluse",
+            "notsolusesolnumhide",
+            "notsolusesolnum",
+            "notsolvertype",
+            "notsolnum",
+            "nottimeinterp",
+            "nott",
+            "notmanualsol",
+            "notmanualsolnum",
+            "notmanualsolnum_vector_method",
+            "notmanualsolnum_vector_start",
+            "notmanualsolnum_vector_stop",
+            "notmanualsolnum_vector_step",
+            "notmanualsolnum_vector_numvalues",
+            "notmanualsolnum_vector_function",
+            "notmanualsolnum_vector_interval",
+            "notmanualsolnum_vector_freqperdec",
+            "notlistsol",
+            "notlistsolnum",
+            "initparametersmethod",
+            "clistctrl",
+            "cname",
+            "clist",
+            "keeplog",
+            "message",
+            "const",
+            "storesol",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 12
+        },
+        {
+          "feature_type": "Field",
+          "path": "v2/comp1_E",
+          "property_names": [
+            "comp",
+            "compintuse",
+            "compint",
+            "compintstatuse",
+            "compintstat",
+            "solvefor",
+            "reconstruct",
+            "usestoresel",
+            "storesel",
+            "valuetype",
+            "variables",
+            "scalemethod",
+            "scaleval",
+            "resscalemethod",
+            "resscaleval",
+            "resscalethresh",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 13
+        },
+        {
+          "feature_type": "Field",
+          "path": "v2/comp1_emw_Ebm1",
+          "property_names": [
+            "comp",
+            "compintuse",
+            "compint",
+            "compintstatuse",
+            "compintstat",
+            "solvefor",
+            "reconstruct",
+            "usestoresel",
+            "storesel",
+            "valuetype",
+            "variables",
+            "scalemethod",
+            "scaleval",
+            "resscalemethod",
+            "resscaleval",
+            "resscalethresh",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 14
+        },
+        {
+          "feature_type": "Field",
+          "path": "v2/comp1_emw_Ebm2",
+          "property_names": [
+            "comp",
+            "compintuse",
+            "compint",
+            "compintstatuse",
+            "compintstat",
+            "solvefor",
+            "reconstruct",
+            "usestoresel",
+            "storesel",
+            "valuetype",
+            "variables",
+            "scalemethod",
+            "scaleval",
+            "resscalemethod",
+            "resscaleval",
+            "resscalethresh",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 15
+        },
+        {
+          "feature_type": "State",
+          "path": "v2/comp1_Sparam1",
+          "property_names": [
+            "comp",
+            "compintuse",
+            "compint",
+            "compintstatuse",
+            "compintstat",
+            "solvefor",
+            "reconstruct",
+            "out",
+            "valuetype",
+            "fromstudy",
+            "stopcond",
+            "variables",
+            "scalemethod",
+            "scaleval",
+            "resscalemethod",
+            "resscaleval",
+            "resscalethresh",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 16
+        },
+        {
+          "feature_type": "Eigenvalue",
+          "path": "e2",
+          "property_names": [
+            "control",
+            "transform",
+            "k0",
+            "rAverage",
+            "omega",
+            "eigsolver",
+            "rtol",
+            "eigmethod",
+            "neigs",
+            "computeandstorelefteig",
+            "eigunit",
+            "transshift",
+            "shift",
+            "eigwhich",
+            "usesymeig",
+            "eigsymchk",
+            "appnreigs",
+            "maxnreigs",
+            "transshiftreg",
+            "eigsr",
+            "eiglr",
+            "eigsi",
+            "eigli",
+            "shiftregselect",
+            "shiftregman",
+            "chkeigregion",
+            "eigreschk",
+            "transeigref",
+            "eigref",
+            "searchcon",
+            "neigsmethodnhm",
+            "neigsmanual",
+            "transcontour",
+            "conmid",
+            "conrad",
+            "conradynhm",
+            "conangle",
+            "intgtypenhmest",
+            "nintgptsmethodnhmest",
+            "nintgptsnhmest",
+            "intgtypenhm",
+            "nintgptsmethodnhm",
+            "nintgptsnhm",
+            "termfeast",
+            "storefact",
+            "distrlinsol",
+            "usehermeig",
+            "eighermchk",
+            "neigsmethodhm",
+            "conlbdy",
+            "conubdy",
+            "conradyhm",
+            "intgtypehmest",
+            "nintgptsmethodhmest",
+            "nintgptshmest",
+            "intgtypehm",
+            "nintgptsmethodhm",
+            "nintgptshm",
+            "maxmatsize",
+            "approxnep",
+            "toltruncationnep",
+            "maxdegnep",
+            "expdegnep",
+            "scalingnep",
+            "qnrefinementnep",
+            "qnmaxitnep",
+            "tolfactqnnep",
+            "lastEigLinSolv",
+            "isstochestaction",
+            "linpmethod",
+            "linpsol",
+            "linpsolhide",
+            "linpsoluse",
+            "oldlinpsoluse",
+            "linpsolusesolnumhide",
+            "linpsolusesolnum",
+            "linpsolvertype",
+            "linpsolnum",
+            "linptimeinterp",
+            "linpt",
+            "linpmanualsol",
+            "linpmanualsolnum",
+            "linpmanualsolnum_vector_method",
+            "linpmanualsolnum_vector_start",
+            "linpmanualsolnum_vector_stop",
+            "linpmanualsolnum_vector_step",
+            "linpmanualsolnum_vector_numvalues",
+            "linpmanualsolnum_vector_function",
+            "linpmanualsolnum_vector_interval",
+            "linpmanualsolnum_vector_freqperdec",
+            "linplistsol",
+            "linplistsolnum",
+            "storelinpoint",
+            "plot",
+            "plotgroupdummy",
+            "plotgrouparr",
+            "plotwindowsarr",
+            "windowforpg",
+            "probesel",
+            "probes",
+            "eigfunscale",
+            "eigvfunscale",
+            "eigvfunscaleparam",
+            "massfieldactive",
+            "massfield",
+            "eigscalingexpression",
+            "filtereigexpression",
+            "filtereigdescription",
+            "storeeigsol",
+            "maxnumberstoredeigsol",
+            "sorteigorder",
+            "sorteigmethod",
+            "sorteigprimarily",
+            "sorteigsecondarily",
+            "sortontransformedeig",
+            "sorteigexpression",
+            "sorteigdescription",
+            "conjugatepairconsecutivesort",
+            "modefollowing",
+            "maxeigit",
+            "krylovdim",
+            "stopwhennoeigfound",
+            "eigname",
+            "clistctrl",
+            "cname",
+            "clist",
+            "keeplog",
+            "message",
+            "const",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 17
+        },
+        {
+          "feature_type": "Direct",
+          "path": "e2/dDef",
+          "property_names": [
+            "linsolver",
+            "mumpsalloc",
+            "mumpsreorder",
+            "mumpsrreorder",
+            "reusereorder",
+            "reusepattern",
+            "mumpsmtfact",
+            "mumpsmtsolve",
+            "pivotenable",
+            "thresh",
+            "pivotperturb",
+            "mumpsblr",
+            "mumpsblrtol",
+            "mumpsblrtype",
+            "ooc",
+            "memfracooc",
+            "incore",
+            "minicmemory",
+            "usetotmemory",
+            "internalmemusage",
+            "oocmemory",
+            "pardreorder",
+            "pardschedule",
+            "pardrreorder",
+            "pivotstrategy",
+            "pardmtsolve",
+            "clusterpardiso",
+            "preorder",
+            "cudssreusereorder",
+            "cudssreorder",
+            "cudssusematching",
+            "cudssmatching",
+            "cudssfactor",
+            "cudsspivotthreshold",
+            "cudssprecision",
+            "cudsspivotepsilonsp",
+            "cudsspivotepsilondp",
+            "cudsshybridmemory",
+            "cudssmemoryfactor",
+            "cudssusermemorylimit",
+            "cudssusermemorylimitactive",
+            "cudssusehybridcompute",
+            "cudssmultigpusinglenode",
+            "pivotrefines",
+            "errorchk",
+            "rhob",
+            "iterrefine",
+            "maxrefinesteps",
+            "errorratiobound",
+            "nliniterrefine",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 18
+        },
+        {
+          "feature_type": "Advanced",
+          "path": "e2/aDef",
+          "property_names": [
+            "symmetric",
+            "matrixformat",
+            "rowscale",
+            "nullfun",
+            "orthonormallimit",
+            "rankreduction",
+            "rankreductionorth",
+            "reusenullspacedata",
+            "convinfo",
+            "recoverysavinginfo",
+            "recoverysavingratio",
+            "recoverysaveforce",
+            "recoverysaveevery",
+            "blocksize",
+            "blocksizeactive",
+            "assemdistrsol",
+            "cachepattern",
+            "cachepatternmethod",
+            "cachepatternexpr",
+            "assemloc",
+            "optthread",
+            "statblockdistr",
+            "complexfun",
+            "matherr",
+            "checkmatherr",
+            "elemdatainit",
+            "globalcache",
+            "assemtol",
+            "keep",
+            "L",
+            "K",
+            "D",
+            "E",
+            "M",
+            "N",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 19
+        },
+        {
+          "feature_type": "Direct",
+          "path": "e2/d1",
+          "property_names": [
+            "linsolver",
+            "mumpsalloc",
+            "mumpsreorder",
+            "mumpsrreorder",
+            "reusereorder",
+            "reusepattern",
+            "mumpsmtfact",
+            "mumpsmtsolve",
+            "pivotenable",
+            "thresh",
+            "pivotperturb",
+            "mumpsblr",
+            "mumpsblrtol",
+            "mumpsblrtype",
+            "ooc",
+            "memfracooc",
+            "incore",
+            "minicmemory",
+            "usetotmemory",
+            "internalmemusage",
+            "oocmemory",
+            "pardreorder",
+            "pardschedule",
+            "pardrreorder",
+            "pivotstrategy",
+            "pardmtsolve",
+            "clusterpardiso",
+            "preorder",
+            "cudssreusereorder",
+            "cudssreorder",
+            "cudssusematching",
+            "cudssmatching",
+            "cudssfactor",
+            "cudsspivotthreshold",
+            "cudssprecision",
+            "cudsspivotepsilonsp",
+            "cudsspivotepsilondp",
+            "cudsshybridmemory",
+            "cudssmemoryfactor",
+            "cudssusermemorylimit",
+            "cudssusermemorylimitactive",
+            "cudssusehybridcompute",
+            "cudssmultigpusinglenode",
+            "pivotrefines",
+            "errorchk",
+            "rhob",
+            "iterrefine",
+            "maxrefinesteps",
+            "errorratiobound",
+            "nliniterrefine",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 20
+        },
+        {
+          "feature_type": "StoreSolution",
+          "path": "su2",
+          "property_names": [
+            "sol",
+            "keeplog",
+            "message",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "stored_solution_reference": "sol3",
+          "stored_solution_reference_getter": "StoreSolution.getString('sol')",
+          "tree_order": 21
+        },
+        {
+          "feature_type": "StudyStep",
+          "path": "st3",
+          "property_names": [
+            "study",
+            "studystep",
+            "unredstudy",
+            "unredstep",
+            "useForModelReduction",
+            "splitcomplex",
+            "partmethod",
+            "linsmallelem",
+            "componentid",
+            "linsmallelemexpr",
+            "units",
+            "saveprevioussolution",
+            "assempara",
+            "useent",
+            "entsel",
+            "keeplog",
+            "message",
+            "const",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 22
+        },
+        {
+          "feature_type": "Variables",
+          "path": "v3",
+          "property_names": [
+            "control",
+            "initmethod",
+            "initsol",
+            "initsolhide",
+            "initsoluse",
+            "oldinitsoluse",
+            "initsolusesolnumhide",
+            "initsolusesolnum",
+            "solvertype",
+            "solnum",
+            "timeinterp",
+            "t",
+            "manualsol",
+            "manualsolnum",
+            "manualsolnum_vector_method",
+            "manualsolnum_vector_start",
+            "manualsolnum_vector_stop",
+            "manualsolnum_vector_step",
+            "manualsolnum_vector_numvalues",
+            "manualsolnum_vector_function",
+            "manualsolnum_vector_interval",
+            "manualsolnum_vector_freqperdec",
+            "listsol",
+            "listsolnum",
+            "scalemethod",
+            "scaleval",
+            "resscalemethod",
+            "resscaleval",
+            "resscalethresh",
+            "notsolmethod",
+            "notsol",
+            "notsolhide",
+            "notsoluse",
+            "oldnotsoluse",
+            "notsolusesolnumhide",
+            "notsolusesolnum",
+            "notsolvertype",
+            "notsolnum",
+            "nottimeinterp",
+            "nott",
+            "notmanualsol",
+            "notmanualsolnum",
+            "notmanualsolnum_vector_method",
+            "notmanualsolnum_vector_start",
+            "notmanualsolnum_vector_stop",
+            "notmanualsolnum_vector_step",
+            "notmanualsolnum_vector_numvalues",
+            "notmanualsolnum_vector_function",
+            "notmanualsolnum_vector_interval",
+            "notmanualsolnum_vector_freqperdec",
+            "notlistsol",
+            "notlistsolnum",
+            "initparametersmethod",
+            "clistctrl",
+            "cname",
+            "clist",
+            "keeplog",
+            "message",
+            "const",
+            "storesol",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 23
+        },
+        {
+          "feature_type": "Field",
+          "path": "v3/comp1_E",
+          "property_names": [
+            "comp",
+            "compintuse",
+            "compint",
+            "compintstatuse",
+            "compintstat",
+            "solvefor",
+            "reconstruct",
+            "usestoresel",
+            "storesel",
+            "valuetype",
+            "variables",
+            "scalemethod",
+            "scaleval",
+            "resscalemethod",
+            "resscaleval",
+            "resscalethresh",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 24
+        },
+        {
+          "feature_type": "Field",
+          "path": "v3/comp1_emw_Ebm1",
+          "property_names": [
+            "comp",
+            "compintuse",
+            "compint",
+            "compintstatuse",
+            "compintstat",
+            "solvefor",
+            "reconstruct",
+            "usestoresel",
+            "storesel",
+            "valuetype",
+            "variables",
+            "scalemethod",
+            "scaleval",
+            "resscalemethod",
+            "resscaleval",
+            "resscalethresh",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 25
+        },
+        {
+          "feature_type": "Field",
+          "path": "v3/comp1_emw_Ebm2",
+          "property_names": [
+            "comp",
+            "compintuse",
+            "compint",
+            "compintstatuse",
+            "compintstat",
+            "solvefor",
+            "reconstruct",
+            "usestoresel",
+            "storesel",
+            "valuetype",
+            "variables",
+            "scalemethod",
+            "scaleval",
+            "resscalemethod",
+            "resscaleval",
+            "resscalethresh",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 26
+        },
+        {
+          "feature_type": "State",
+          "path": "v3/comp1_Sparam1",
+          "property_names": [
+            "comp",
+            "compintuse",
+            "compint",
+            "compintstatuse",
+            "compintstat",
+            "solvefor",
+            "reconstruct",
+            "out",
+            "valuetype",
+            "fromstudy",
+            "stopcond",
+            "variables",
+            "scalemethod",
+            "scaleval",
+            "resscalemethod",
+            "resscaleval",
+            "resscalethresh",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 27
+        },
+        {
+          "feature_type": "Stationary",
+          "path": "s1",
+          "property_names": [
+            "control",
+            "stol",
+            "nonlin",
+            "linpmethod",
+            "linpsol",
+            "linpsolhide",
+            "linpsoluse",
+            "oldlinpsoluse",
+            "linpsolusesolnumhide",
+            "linpsolusesolnum",
+            "linpsolvertype",
+            "linpsolnum",
+            "linptimeinterp",
+            "linpt",
+            "linpmanualsol",
+            "linpmanualsolnum",
+            "linpmanualsolnum_vector_method",
+            "linpmanualsolnum_vector_start",
+            "linpmanualsolnum_vector_stop",
+            "linpmanualsolnum_vector_step",
+            "linpmanualsolnum_vector_numvalues",
+            "linpmanualsolnum_vector_function",
+            "linpmanualsolnum_vector_interval",
+            "linpmanualsolnum_vector_freqperdec",
+            "linplistsol",
+            "linplistsolnum",
+            "storelinpoint",
+            "keepnotsolstatic",
+            "outsollinear",
+            "outsollinearized",
+            "reacf",
+            "lumpedflux",
+            "plot",
+            "plotgroupdummy",
+            "plotgrouparr",
+            "plotwindowsarr",
+            "windowforpg",
+            "probesel",
+            "probes",
+            "clistctrl",
+            "cname",
+            "clist",
+            "keeplog",
+            "message",
+            "const",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 28
+        },
+        {
+          "feature_type": "Direct",
+          "path": "s1/dDef",
+          "property_names": [
+            "linsolver",
+            "mumpsalloc",
+            "mumpsreorder",
+            "mumpsrreorder",
+            "reusereorder",
+            "reusepattern",
+            "mumpsmtfact",
+            "mumpsmtsolve",
+            "pivotenable",
+            "thresh",
+            "pivotperturb",
+            "mumpsblr",
+            "mumpsblrtol",
+            "mumpsblrtype",
+            "ooc",
+            "memfracooc",
+            "incore",
+            "minicmemory",
+            "usetotmemory",
+            "internalmemusage",
+            "oocmemory",
+            "pardreorder",
+            "pardschedule",
+            "pardrreorder",
+            "pivotstrategy",
+            "pardmtsolve",
+            "clusterpardiso",
+            "preorder",
+            "cudssreusereorder",
+            "cudssreorder",
+            "cudssusematching",
+            "cudssmatching",
+            "cudssfactor",
+            "cudsspivotthreshold",
+            "cudssprecision",
+            "cudsspivotepsilonsp",
+            "cudsspivotepsilondp",
+            "cudsshybridmemory",
+            "cudssmemoryfactor",
+            "cudssusermemorylimit",
+            "cudssusermemorylimitactive",
+            "cudssusehybridcompute",
+            "cudssmultigpusinglenode",
+            "pivotrefines",
+            "errorchk",
+            "rhob",
+            "iterrefine",
+            "maxrefinesteps",
+            "errorratiobound",
+            "nliniterrefine",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 29
+        },
+        {
+          "feature_type": "Advanced",
+          "path": "s1/aDef",
+          "property_names": [
+            "symmetric",
+            "matrixformat",
+            "rowscale",
+            "nullfun",
+            "orthonormallimit",
+            "rankreduction",
+            "rankreductionorth",
+            "reusenullspacedata",
+            "storeresidual",
+            "convinfo",
+            "recoverysavinginfo",
+            "recoverysavingratio",
+            "recoverysaveforce",
+            "recoverysaveevery",
+            "autorescale",
+            "blocksize",
+            "blocksizeactive",
+            "assemdistrsol",
+            "cachepattern",
+            "cachepatternmethod",
+            "cachepatternexpr",
+            "assemloc",
+            "optthread",
+            "statblockdistr",
+            "complexfun",
+            "matherr",
+            "checkmatherr",
+            "elemdatainit",
+            "globalcache",
+            "assemtol",
+            "keep",
+            "L",
+            "K",
+            "D",
+            "E",
+            "M",
+            "N",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 30
+        },
+        {
+          "feature_type": "Parametric",
+          "path": "s1/p1",
+          "property_names": [
+            "control",
+            "sweeptype",
+            "pname",
+            "plist",
+            "plistarrexcelfilename",
+            "plistarrexcelsheet",
+            "plistarrexcelrange",
+            "plistarrexcelincludeheaders",
+            "plistarrexcelseparateunits",
+            "plistarrexceloverwrite",
+            "plistarrexcelcalculatedvalues",
+            "plistarr",
+            "plistarr_vector_method",
+            "plistarr_vector_start",
+            "plistarr_vector_stop",
+            "plistarr_vector_step",
+            "plistarr_vector_numvalues",
+            "plistarr_vector_function",
+            "plistarr_vector_interval",
+            "plistarr_vector_freqperdec",
+            "punit",
+            "pcontinuationmode",
+            "pcontinuation",
+            "showpreusesol",
+            "preusesol",
+            "ponerror",
+            "plooporder",
+            "paramtuning",
+            "pinitstep",
+            "pminstep",
+            "pmaxstep",
+            "initdampall",
+            "porder",
+            "useloadcase",
+            "loadcase",
+            "loadgroup",
+            "loadgroupweight",
+            "constraintgroup",
+            "uselsqdata",
+            "pnamelsq",
+            "plistarrlsq",
+            "continuationlsqall",
+            "excludelsqvalues",
+            "addsolutions",
+            "lsqparamsout",
+            "filledlsq",
+            "filledlsqmerged",
+            "lsqstructuredcontinuation",
+            "pout",
+            "plot",
+            "plotgroupdummy",
+            "plotgrouparr",
+            "plotwindowsarr",
+            "windowforpg",
+            "probesel",
+            "probes",
+            "probefreq",
+            "pdistrib",
+            "pwork",
+            "pworkactive",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 31
+        },
+        {
+          "feature_type": "FullyCoupled",
+          "path": "s1/fc1",
+          "property_names": [
+            "linsolver",
+            "dtech",
+            "initstep",
+            "minstep",
+            "rstep",
+            "rstepabs",
+            "useminsteprecovery",
+            "minsteprecovery",
+            "updweightsauto",
+            "updweightsdamp",
+            "updweightsdampval",
+            "updweightsdampvalconst",
+            "updweightsfac",
+            "ntermauto",
+            "maxiter",
+            "ntolfact",
+            "niter",
+            "termonres",
+            "reserrfact",
+            "backmethod",
+            "backtrackonce",
+            "backdampstep",
+            "maxdamp",
+            "mindamp",
+            "jtech",
+            "updweights",
+            "ntermconst",
+            "adapttol",
+            "atolchoice",
+            "adapttolcflweight",
+            "adapttolerrweight",
+            "initiallintol",
+            "etamax",
+            "atolthreshold",
+            "dampexponent",
+            "dampfactor",
+            "usecflcmp",
+            "stabacc",
+            "cfltech",
+            "initcfl",
+            "mincfl",
+            "forcecfl",
+            "kppid",
+            "kipid",
+            "kdpid",
+            "cfltol",
+            "adaptcfltol",
+            "cflaa",
+            "cflaacfl",
+            "cflaaset",
+            "cflaadim",
+            "cflaamix",
+            "cflaadelay",
+            "cflaafact",
+            "cfljtech",
+            "jtechcfl",
+            "cfljtechval",
+            "ressmooth",
+            "relaxationressmooth",
+            "aaccdim",
+            "aaccmix",
+            "aaccdelay",
+            "aaccfact",
+            "damp",
+            "initsteph",
+            "minsteph",
+            "ddoginitdamp",
+            "resscale",
+            "ddogrestart",
+            "ddogrestartactive",
+            "plot",
+            "plotgroupdummy",
+            "plotgrouparr",
+            "plotwindowsarr",
+            "windowforpg",
+            "probesel",
+            "probes",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 32
+        },
+        {
+          "feature_type": "Direct",
+          "path": "s1/d1",
+          "property_names": [
+            "linsolver",
+            "mumpsalloc",
+            "mumpsreorder",
+            "mumpsrreorder",
+            "reusereorder",
+            "reusepattern",
+            "mumpsmtfact",
+            "mumpsmtsolve",
+            "pivotenable",
+            "thresh",
+            "pivotperturb",
+            "mumpsblr",
+            "mumpsblrtol",
+            "mumpsblrtype",
+            "ooc",
+            "memfracooc",
+            "incore",
+            "minicmemory",
+            "usetotmemory",
+            "internalmemusage",
+            "oocmemory",
+            "pardreorder",
+            "pardschedule",
+            "pardrreorder",
+            "pivotstrategy",
+            "pardmtsolve",
+            "clusterpardiso",
+            "preorder",
+            "cudssreusereorder",
+            "cudssreorder",
+            "cudssusematching",
+            "cudssmatching",
+            "cudssfactor",
+            "cudsspivotthreshold",
+            "cudssprecision",
+            "cudsspivotepsilonsp",
+            "cudsspivotepsilondp",
+            "cudsshybridmemory",
+            "cudssmemoryfactor",
+            "cudssusermemorylimit",
+            "cudssusermemorylimitactive",
+            "cudssusehybridcompute",
+            "cudssmultigpusinglenode",
+            "pivotrefines",
+            "errorchk",
+            "rhob",
+            "iterrefine",
+            "maxrefinesteps",
+            "errorratiobound",
+            "nliniterrefine",
+            "changedproperties",
+            "lastchangedproperty",
+            "hiddenchangedproperties"
+          ],
+          "tree_order": 33
+        }
+      ],
+      "study_step_bindings_in_solver_tree_order": [
+        {
+          "path": "st1",
+          "solver_sequence": "sol1",
+          "study": "std1",
+          "studystep": "bmaInput",
+          "tree_order": 0
+        },
+        {
+          "path": "st2",
+          "solver_sequence": "sol1",
+          "study": "std1",
+          "studystep": "bmaOutput",
+          "tree_order": 11
+        },
+        {
+          "path": "st3",
+          "solver_sequence": "sol1",
+          "study": "std1",
+          "studystep": "freq",
+          "tree_order": 22
+        }
+      ],
+      "study_tag": "std1",
+      "tag": "sol1"
+    },
+    {
+      "attached": false,
+      "get_size": [
+        64057,
+        1
+      ],
+      "get_size_multi": [
+        1,
+        1
+      ],
+      "parameter_values_by_solnum": [
+        {
+          "imaginary": [
+            -6244288.968380504
+          ],
+          "parameter_units": [
+            {
+              "error": null,
+              "name": "lambda",
+              "raw_status": "CAPTURED",
+              "status": "OBSERVED",
+              "value": "1"
+            }
+          ],
+          "real": [
+            0.0
+          ],
+          "solnum": 1
+        }
+      ],
+      "parameter_values_status": "RAW_TYPED_COMPLEX_VALUES_CAPTURED_NOT_INTERPRETED",
+      "parameters_complete": false,
+      "pnames": [
+        "lambda"
+      ],
+      "raw_getter_source": "COMSOL 6.4 direct SolverSequence/ SolutionInfo typed getter receipts",
+      "sequence_type": "Stored",
+      "solution_info_axis_metadata_complete": false,
+      "solution_info_count_scope": {
+        "getLevelNames": [
+          "lambda"
+        ],
+        "getLevels": 1,
+        "getOuterSolnum": [],
+        "getPNamesOuter": [],
+        "getPUnitsOuter": [],
+        "matrix_getter_errors": [
+          {
+            "argument_types": [
+              "int[][]"
+            ],
+            "arguments": [
+              [
+                [
+                  1,
+                  1
+                ]
+              ]
+            ],
+            "declared_return_type": "java.lang.String[][]",
+            "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: 不支持的输入。\nMessages:\n\t不支持的输入。\n",
+            "error_type": "com.comsol.util.exceptions.FlException",
+            "method": "getPNames",
+            "receiver": "SolutionInfo.getPNames(sol2)",
+            "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+            "status": "ERROR"
+          },
+          {
+            "argument_types": [
+              "int[][]"
+            ],
+            "arguments": [
+              [
+                [
+                  1,
+                  1
+                ]
+              ]
+            ],
+            "declared_return_type": "double[][]",
+            "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: 不支持的输入。\nMessages:\n\t不支持的输入。\n",
+            "error_type": "com.comsol.util.exceptions.FlException",
+            "method": "getPvals",
+            "receiver": "SolutionInfo.getPvals(sol2)",
+            "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+            "status": "ERROR"
+          },
+          {
+            "argument_types": [
+              "int[][]"
+            ],
+            "arguments": [
+              [
+                [
+                  1,
+                  1
+                ]
+              ]
+            ],
+            "declared_return_type": "double[][]",
+            "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: 不支持的输入。\nMessages:\n\t不支持的输入。\n",
+            "error_type": "com.comsol.util.exceptions.FlException",
+            "method": "getPvalsImag",
+            "receiver": "SolutionInfo.getPvalsImag(sol2)",
+            "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+            "status": "ERROR"
+          },
+          {
+            "argument_types": [
+              "int[][]"
+            ],
+            "arguments": [
+              [
+                [
+                  1,
+                  1
+                ]
+              ]
+            ],
+            "declared_return_type": "java.lang.String[][]",
+            "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: 不支持的输入。\nMessages:\n\t不支持的输入。\n",
+            "error_type": "com.comsol.util.exceptions.FlException",
+            "method": "getUnits",
+            "receiver": "SolutionInfo.getUnits(sol2)",
+            "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+            "status": "ERROR"
+          }
+        ],
+        "read_errors": []
+      },
+      "solution_type": "Eigenfrequency",
+      "solver_tree_features": [],
+      "study_step_bindings_in_solver_tree_order": [],
+      "study_tag": "std1",
+      "tag": "sol2"
+    },
+    {
+      "attached": false,
+      "get_size": [
+        64057,
+        1
+      ],
+      "get_size_multi": [
+        1,
+        1
+      ],
+      "parameter_values_by_solnum": [
+        {
+          "imaginary": [
+            -6244288.968380514
+          ],
+          "parameter_units": [
+            {
+              "error": null,
+              "name": "lambda",
+              "raw_status": "CAPTURED",
+              "status": "OBSERVED",
+              "value": "1"
+            }
+          ],
+          "real": [
+            -1.6359882555849607e-08
+          ],
+          "solnum": 1
+        }
+      ],
+      "parameter_values_status": "RAW_TYPED_COMPLEX_VALUES_CAPTURED_NOT_INTERPRETED",
+      "parameters_complete": false,
+      "pnames": [
+        "lambda"
+      ],
+      "raw_getter_source": "COMSOL 6.4 direct SolverSequence/ SolutionInfo typed getter receipts",
+      "sequence_type": "Stored",
+      "solution_info_axis_metadata_complete": false,
+      "solution_info_count_scope": {
+        "getLevelNames": [
+          "lambda"
+        ],
+        "getLevels": 1,
+        "getOuterSolnum": [],
+        "getPNamesOuter": [],
+        "getPUnitsOuter": [],
+        "matrix_getter_errors": [
+          {
+            "argument_types": [
+              "int[][]"
+            ],
+            "arguments": [
+              [
+                [
+                  1,
+                  1
+                ]
+              ]
+            ],
+            "declared_return_type": "java.lang.String[][]",
+            "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: 不支持的输入。\nMessages:\n\t不支持的输入。\n",
+            "error_type": "com.comsol.util.exceptions.FlException",
+            "method": "getPNames",
+            "receiver": "SolutionInfo.getPNames(sol3)",
+            "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+            "status": "ERROR"
+          },
+          {
+            "argument_types": [
+              "int[][]"
+            ],
+            "arguments": [
+              [
+                [
+                  1,
+                  1
+                ]
+              ]
+            ],
+            "declared_return_type": "double[][]",
+            "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: 不支持的输入。\nMessages:\n\t不支持的输入。\n",
+            "error_type": "com.comsol.util.exceptions.FlException",
+            "method": "getPvals",
+            "receiver": "SolutionInfo.getPvals(sol3)",
+            "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+            "status": "ERROR"
+          },
+          {
+            "argument_types": [
+              "int[][]"
+            ],
+            "arguments": [
+              [
+                [
+                  1,
+                  1
+                ]
+              ]
+            ],
+            "declared_return_type": "double[][]",
+            "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: 不支持的输入。\nMessages:\n\t不支持的输入。\n",
+            "error_type": "com.comsol.util.exceptions.FlException",
+            "method": "getPvalsImag",
+            "receiver": "SolutionInfo.getPvalsImag(sol3)",
+            "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+            "status": "ERROR"
+          },
+          {
+            "argument_types": [
+              "int[][]"
+            ],
+            "arguments": [
+              [
+                [
+                  1,
+                  1
+                ]
+              ]
+            ],
+            "declared_return_type": "java.lang.String[][]",
+            "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: 不支持的输入。\nMessages:\n\t不支持的输入。\n",
+            "error_type": "com.comsol.util.exceptions.FlException",
+            "method": "getUnits",
+            "receiver": "SolutionInfo.getUnits(sol3)",
+            "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+            "status": "ERROR"
+          }
+        ],
+        "read_errors": []
+      },
+      "solution_type": "Eigenfrequency",
+      "solver_tree_features": [],
+      "study_step_bindings_in_solver_tree_order": [],
+      "study_tag": "std1",
+      "tag": "sol3"
+    }
+  ],
+  "solution_info_axis_metadata_complete": false,
+  "solver_run_dispatches": 0,
+  "study_inventory": {
+    "solver_sequences_for_study": [
+      {
+        "attached": true,
+        "get_size": [
+          64057,
+          1
+        ],
+        "get_size_multi": [
+          1,
+          1
+        ],
+        "parameter_values_by_solnum": [
+          {
+            "imaginary": [
+              0.0
+            ],
+            "parameter_units": [
+              {
+                "error": null,
+                "name": "freq",
+                "raw_status": "CAPTURED",
+                "status": "OBSERVED",
+                "value": "GHz"
+              }
+            ],
+            "real": [
+              193414489032258.03
+            ],
+            "solnum": 1
+          }
+        ],
+        "parameter_values_status": "RAW_TYPED_COMPLEX_VALUES_CAPTURED_NOT_INTERPRETED",
+        "parameters_complete": false,
+        "pnames": [
+          "freq"
+        ],
+        "raw_getter_source": "COMSOL 6.4 direct SolverSequence/ SolutionInfo typed getter receipts",
+        "sequence_type": "SolverSequence",
+        "solution_info_axis_metadata_complete": false,
+        "solution_info_count_scope": {
+          "getLevelNames": [
+            "freq"
+          ],
+          "getLevels": 1,
+          "getOuterSolnum": [],
+          "getPNamesOuter": [],
+          "getPUnitsOuter": [],
+          "matrix_getter_errors": [
+            {
+              "argument_types": [
+                "int[][]"
+              ],
+              "arguments": [
+                [
+                  [
+                    1,
+                    1
+                  ]
+                ]
+              ],
+              "declared_return_type": "java.lang.String[][]",
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: 未知解。\nMessages:\n\t未知解。\n\t- 标记\n",
+              "error_type": "com.comsol.util.exceptions.FlException",
+              "method": "getPNames",
+              "receiver": "SolutionInfo.getPNames(sol1)",
+              "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+              "status": "ERROR"
+            },
+            {
+              "argument_types": [
+                "int[][]"
+              ],
+              "arguments": [
+                [
+                  [
+                    1,
+                    1
+                  ]
+                ]
+              ],
+              "declared_return_type": "double[][]",
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: 未知解。\nMessages:\n\t未知解。\n\t- 标记\n",
+              "error_type": "com.comsol.util.exceptions.FlException",
+              "method": "getPvals",
+              "receiver": "SolutionInfo.getPvals(sol1)",
+              "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+              "status": "ERROR"
+            },
+            {
+              "argument_types": [
+                "int[][]"
+              ],
+              "arguments": [
+                [
+                  [
+                    1,
+                    1
+                  ]
+                ]
+              ],
+              "declared_return_type": "double[][]",
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: 未知解。\nMessages:\n\t未知解。\n\t- 标记\n",
+              "error_type": "com.comsol.util.exceptions.FlException",
+              "method": "getPvalsImag",
+              "receiver": "SolutionInfo.getPvalsImag(sol1)",
+              "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+              "status": "ERROR"
+            },
+            {
+              "argument_types": [
+                "int[][]"
+              ],
+              "arguments": [
+                [
+                  [
+                    1,
+                    1
+                  ]
+                ]
+              ],
+              "declared_return_type": "java.lang.String[][]",
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: 未知解。\nMessages:\n\t未知解。\n\t- 标记\n",
+              "error_type": "com.comsol.util.exceptions.FlException",
+              "method": "getUnits",
+              "receiver": "SolutionInfo.getUnits(sol1)",
+              "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+              "status": "ERROR"
+            }
+          ],
+          "read_errors": []
+        },
+        "solution_type": "Parametric",
+        "solver_tree_features": [
+          {
+            "feature_type": "StudyStep",
+            "path": "st1",
+            "property_names": [
+              "study",
+              "studystep",
+              "unredstudy",
+              "unredstep",
+              "useForModelReduction",
+              "splitcomplex",
+              "partmethod",
+              "linsmallelem",
+              "componentid",
+              "linsmallelemexpr",
+              "units",
+              "saveprevioussolution",
+              "assempara",
+              "useent",
+              "entsel",
+              "keeplog",
+              "message",
+              "const",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 0
+          },
+          {
+            "feature_type": "Variables",
+            "path": "v1",
+            "property_names": [
+              "control",
+              "initmethod",
+              "initsol",
+              "initsolhide",
+              "initsoluse",
+              "oldinitsoluse",
+              "initsolusesolnumhide",
+              "initsolusesolnum",
+              "solvertype",
+              "solnum",
+              "timeinterp",
+              "t",
+              "manualsol",
+              "manualsolnum",
+              "manualsolnum_vector_method",
+              "manualsolnum_vector_start",
+              "manualsolnum_vector_stop",
+              "manualsolnum_vector_step",
+              "manualsolnum_vector_numvalues",
+              "manualsolnum_vector_function",
+              "manualsolnum_vector_interval",
+              "manualsolnum_vector_freqperdec",
+              "listsol",
+              "listsolnum",
+              "scalemethod",
+              "scaleval",
+              "resscalemethod",
+              "resscaleval",
+              "resscalethresh",
+              "notsolmethod",
+              "notsol",
+              "notsolhide",
+              "notsoluse",
+              "oldnotsoluse",
+              "notsolusesolnumhide",
+              "notsolusesolnum",
+              "notsolvertype",
+              "notsolnum",
+              "nottimeinterp",
+              "nott",
+              "notmanualsol",
+              "notmanualsolnum",
+              "notmanualsolnum_vector_method",
+              "notmanualsolnum_vector_start",
+              "notmanualsolnum_vector_stop",
+              "notmanualsolnum_vector_step",
+              "notmanualsolnum_vector_numvalues",
+              "notmanualsolnum_vector_function",
+              "notmanualsolnum_vector_interval",
+              "notmanualsolnum_vector_freqperdec",
+              "notlistsol",
+              "notlistsolnum",
+              "initparametersmethod",
+              "clistctrl",
+              "cname",
+              "clist",
+              "keeplog",
+              "message",
+              "const",
+              "storesol",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 1
+          },
+          {
+            "feature_type": "Field",
+            "path": "v1/comp1_E",
+            "property_names": [
+              "comp",
+              "compintuse",
+              "compint",
+              "compintstatuse",
+              "compintstat",
+              "solvefor",
+              "reconstruct",
+              "usestoresel",
+              "storesel",
+              "valuetype",
+              "variables",
+              "scalemethod",
+              "scaleval",
+              "resscalemethod",
+              "resscaleval",
+              "resscalethresh",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 2
+          },
+          {
+            "feature_type": "Field",
+            "path": "v1/comp1_emw_Ebm1",
+            "property_names": [
+              "comp",
+              "compintuse",
+              "compint",
+              "compintstatuse",
+              "compintstat",
+              "solvefor",
+              "reconstruct",
+              "usestoresel",
+              "storesel",
+              "valuetype",
+              "variables",
+              "scalemethod",
+              "scaleval",
+              "resscalemethod",
+              "resscaleval",
+              "resscalethresh",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 3
+          },
+          {
+            "feature_type": "Field",
+            "path": "v1/comp1_emw_Ebm2",
+            "property_names": [
+              "comp",
+              "compintuse",
+              "compint",
+              "compintstatuse",
+              "compintstat",
+              "solvefor",
+              "reconstruct",
+              "usestoresel",
+              "storesel",
+              "valuetype",
+              "variables",
+              "scalemethod",
+              "scaleval",
+              "resscalemethod",
+              "resscaleval",
+              "resscalethresh",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 4
+          },
+          {
+            "feature_type": "State",
+            "path": "v1/comp1_Sparam1",
+            "property_names": [
+              "comp",
+              "compintuse",
+              "compint",
+              "compintstatuse",
+              "compintstat",
+              "solvefor",
+              "reconstruct",
+              "out",
+              "valuetype",
+              "fromstudy",
+              "stopcond",
+              "variables",
+              "scalemethod",
+              "scaleval",
+              "resscalemethod",
+              "resscaleval",
+              "resscalethresh",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 5
+          },
+          {
+            "feature_type": "Eigenvalue",
+            "path": "e1",
+            "property_names": [
+              "control",
+              "transform",
+              "k0",
+              "rAverage",
+              "omega",
+              "eigsolver",
+              "rtol",
+              "eigmethod",
+              "neigs",
+              "computeandstorelefteig",
+              "eigunit",
+              "transshift",
+              "shift",
+              "eigwhich",
+              "usesymeig",
+              "eigsymchk",
+              "appnreigs",
+              "maxnreigs",
+              "transshiftreg",
+              "eigsr",
+              "eiglr",
+              "eigsi",
+              "eigli",
+              "shiftregselect",
+              "shiftregman",
+              "chkeigregion",
+              "eigreschk",
+              "transeigref",
+              "eigref",
+              "searchcon",
+              "neigsmethodnhm",
+              "neigsmanual",
+              "transcontour",
+              "conmid",
+              "conrad",
+              "conradynhm",
+              "conangle",
+              "intgtypenhmest",
+              "nintgptsmethodnhmest",
+              "nintgptsnhmest",
+              "intgtypenhm",
+              "nintgptsmethodnhm",
+              "nintgptsnhm",
+              "termfeast",
+              "storefact",
+              "distrlinsol",
+              "usehermeig",
+              "eighermchk",
+              "neigsmethodhm",
+              "conlbdy",
+              "conubdy",
+              "conradyhm",
+              "intgtypehmest",
+              "nintgptsmethodhmest",
+              "nintgptshmest",
+              "intgtypehm",
+              "nintgptsmethodhm",
+              "nintgptshm",
+              "maxmatsize",
+              "approxnep",
+              "toltruncationnep",
+              "maxdegnep",
+              "expdegnep",
+              "scalingnep",
+              "qnrefinementnep",
+              "qnmaxitnep",
+              "tolfactqnnep",
+              "lastEigLinSolv",
+              "isstochestaction",
+              "linpmethod",
+              "linpsol",
+              "linpsolhide",
+              "linpsoluse",
+              "oldlinpsoluse",
+              "linpsolusesolnumhide",
+              "linpsolusesolnum",
+              "linpsolvertype",
+              "linpsolnum",
+              "linptimeinterp",
+              "linpt",
+              "linpmanualsol",
+              "linpmanualsolnum",
+              "linpmanualsolnum_vector_method",
+              "linpmanualsolnum_vector_start",
+              "linpmanualsolnum_vector_stop",
+              "linpmanualsolnum_vector_step",
+              "linpmanualsolnum_vector_numvalues",
+              "linpmanualsolnum_vector_function",
+              "linpmanualsolnum_vector_interval",
+              "linpmanualsolnum_vector_freqperdec",
+              "linplistsol",
+              "linplistsolnum",
+              "storelinpoint",
+              "plot",
+              "plotgroupdummy",
+              "plotgrouparr",
+              "plotwindowsarr",
+              "windowforpg",
+              "probesel",
+              "probes",
+              "eigfunscale",
+              "eigvfunscale",
+              "eigvfunscaleparam",
+              "massfieldactive",
+              "massfield",
+              "eigscalingexpression",
+              "filtereigexpression",
+              "filtereigdescription",
+              "storeeigsol",
+              "maxnumberstoredeigsol",
+              "sorteigorder",
+              "sorteigmethod",
+              "sorteigprimarily",
+              "sorteigsecondarily",
+              "sortontransformedeig",
+              "sorteigexpression",
+              "sorteigdescription",
+              "conjugatepairconsecutivesort",
+              "modefollowing",
+              "maxeigit",
+              "krylovdim",
+              "stopwhennoeigfound",
+              "eigname",
+              "clistctrl",
+              "cname",
+              "clist",
+              "keeplog",
+              "message",
+              "const",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 6
+          },
+          {
+            "feature_type": "Direct",
+            "path": "e1/dDef",
+            "property_names": [
+              "linsolver",
+              "mumpsalloc",
+              "mumpsreorder",
+              "mumpsrreorder",
+              "reusereorder",
+              "reusepattern",
+              "mumpsmtfact",
+              "mumpsmtsolve",
+              "pivotenable",
+              "thresh",
+              "pivotperturb",
+              "mumpsblr",
+              "mumpsblrtol",
+              "mumpsblrtype",
+              "ooc",
+              "memfracooc",
+              "incore",
+              "minicmemory",
+              "usetotmemory",
+              "internalmemusage",
+              "oocmemory",
+              "pardreorder",
+              "pardschedule",
+              "pardrreorder",
+              "pivotstrategy",
+              "pardmtsolve",
+              "clusterpardiso",
+              "preorder",
+              "cudssreusereorder",
+              "cudssreorder",
+              "cudssusematching",
+              "cudssmatching",
+              "cudssfactor",
+              "cudsspivotthreshold",
+              "cudssprecision",
+              "cudsspivotepsilonsp",
+              "cudsspivotepsilondp",
+              "cudsshybridmemory",
+              "cudssmemoryfactor",
+              "cudssusermemorylimit",
+              "cudssusermemorylimitactive",
+              "cudssusehybridcompute",
+              "cudssmultigpusinglenode",
+              "pivotrefines",
+              "errorchk",
+              "rhob",
+              "iterrefine",
+              "maxrefinesteps",
+              "errorratiobound",
+              "nliniterrefine",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 7
+          },
+          {
+            "feature_type": "Advanced",
+            "path": "e1/aDef",
+            "property_names": [
+              "symmetric",
+              "matrixformat",
+              "rowscale",
+              "nullfun",
+              "orthonormallimit",
+              "rankreduction",
+              "rankreductionorth",
+              "reusenullspacedata",
+              "convinfo",
+              "recoverysavinginfo",
+              "recoverysavingratio",
+              "recoverysaveforce",
+              "recoverysaveevery",
+              "blocksize",
+              "blocksizeactive",
+              "assemdistrsol",
+              "cachepattern",
+              "cachepatternmethod",
+              "cachepatternexpr",
+              "assemloc",
+              "optthread",
+              "statblockdistr",
+              "complexfun",
+              "matherr",
+              "checkmatherr",
+              "elemdatainit",
+              "globalcache",
+              "assemtol",
+              "keep",
+              "L",
+              "K",
+              "D",
+              "E",
+              "M",
+              "N",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 8
+          },
+          {
+            "feature_type": "Direct",
+            "path": "e1/d1",
+            "property_names": [
+              "linsolver",
+              "mumpsalloc",
+              "mumpsreorder",
+              "mumpsrreorder",
+              "reusereorder",
+              "reusepattern",
+              "mumpsmtfact",
+              "mumpsmtsolve",
+              "pivotenable",
+              "thresh",
+              "pivotperturb",
+              "mumpsblr",
+              "mumpsblrtol",
+              "mumpsblrtype",
+              "ooc",
+              "memfracooc",
+              "incore",
+              "minicmemory",
+              "usetotmemory",
+              "internalmemusage",
+              "oocmemory",
+              "pardreorder",
+              "pardschedule",
+              "pardrreorder",
+              "pivotstrategy",
+              "pardmtsolve",
+              "clusterpardiso",
+              "preorder",
+              "cudssreusereorder",
+              "cudssreorder",
+              "cudssusematching",
+              "cudssmatching",
+              "cudssfactor",
+              "cudsspivotthreshold",
+              "cudssprecision",
+              "cudsspivotepsilonsp",
+              "cudsspivotepsilondp",
+              "cudsshybridmemory",
+              "cudssmemoryfactor",
+              "cudssusermemorylimit",
+              "cudssusermemorylimitactive",
+              "cudssusehybridcompute",
+              "cudssmultigpusinglenode",
+              "pivotrefines",
+              "errorchk",
+              "rhob",
+              "iterrefine",
+              "maxrefinesteps",
+              "errorratiobound",
+              "nliniterrefine",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 9
+          },
+          {
+            "feature_type": "StoreSolution",
+            "path": "su1",
+            "property_names": [
+              "sol",
+              "keeplog",
+              "message",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "stored_solution_reference": "sol2",
+            "stored_solution_reference_getter": "StoreSolution.getString('sol')",
+            "tree_order": 10
+          },
+          {
+            "feature_type": "StudyStep",
+            "path": "st2",
+            "property_names": [
+              "study",
+              "studystep",
+              "unredstudy",
+              "unredstep",
+              "useForModelReduction",
+              "splitcomplex",
+              "partmethod",
+              "linsmallelem",
+              "componentid",
+              "linsmallelemexpr",
+              "units",
+              "saveprevioussolution",
+              "assempara",
+              "useent",
+              "entsel",
+              "keeplog",
+              "message",
+              "const",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 11
+          },
+          {
+            "feature_type": "Variables",
+            "path": "v2",
+            "property_names": [
+              "control",
+              "initmethod",
+              "initsol",
+              "initsolhide",
+              "initsoluse",
+              "oldinitsoluse",
+              "initsolusesolnumhide",
+              "initsolusesolnum",
+              "solvertype",
+              "solnum",
+              "timeinterp",
+              "t",
+              "manualsol",
+              "manualsolnum",
+              "manualsolnum_vector_method",
+              "manualsolnum_vector_start",
+              "manualsolnum_vector_stop",
+              "manualsolnum_vector_step",
+              "manualsolnum_vector_numvalues",
+              "manualsolnum_vector_function",
+              "manualsolnum_vector_interval",
+              "manualsolnum_vector_freqperdec",
+              "listsol",
+              "listsolnum",
+              "scalemethod",
+              "scaleval",
+              "resscalemethod",
+              "resscaleval",
+              "resscalethresh",
+              "notsolmethod",
+              "notsol",
+              "notsolhide",
+              "notsoluse",
+              "oldnotsoluse",
+              "notsolusesolnumhide",
+              "notsolusesolnum",
+              "notsolvertype",
+              "notsolnum",
+              "nottimeinterp",
+              "nott",
+              "notmanualsol",
+              "notmanualsolnum",
+              "notmanualsolnum_vector_method",
+              "notmanualsolnum_vector_start",
+              "notmanualsolnum_vector_stop",
+              "notmanualsolnum_vector_step",
+              "notmanualsolnum_vector_numvalues",
+              "notmanualsolnum_vector_function",
+              "notmanualsolnum_vector_interval",
+              "notmanualsolnum_vector_freqperdec",
+              "notlistsol",
+              "notlistsolnum",
+              "initparametersmethod",
+              "clistctrl",
+              "cname",
+              "clist",
+              "keeplog",
+              "message",
+              "const",
+              "storesol",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 12
+          },
+          {
+            "feature_type": "Field",
+            "path": "v2/comp1_E",
+            "property_names": [
+              "comp",
+              "compintuse",
+              "compint",
+              "compintstatuse",
+              "compintstat",
+              "solvefor",
+              "reconstruct",
+              "usestoresel",
+              "storesel",
+              "valuetype",
+              "variables",
+              "scalemethod",
+              "scaleval",
+              "resscalemethod",
+              "resscaleval",
+              "resscalethresh",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 13
+          },
+          {
+            "feature_type": "Field",
+            "path": "v2/comp1_emw_Ebm1",
+            "property_names": [
+              "comp",
+              "compintuse",
+              "compint",
+              "compintstatuse",
+              "compintstat",
+              "solvefor",
+              "reconstruct",
+              "usestoresel",
+              "storesel",
+              "valuetype",
+              "variables",
+              "scalemethod",
+              "scaleval",
+              "resscalemethod",
+              "resscaleval",
+              "resscalethresh",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 14
+          },
+          {
+            "feature_type": "Field",
+            "path": "v2/comp1_emw_Ebm2",
+            "property_names": [
+              "comp",
+              "compintuse",
+              "compint",
+              "compintstatuse",
+              "compintstat",
+              "solvefor",
+              "reconstruct",
+              "usestoresel",
+              "storesel",
+              "valuetype",
+              "variables",
+              "scalemethod",
+              "scaleval",
+              "resscalemethod",
+              "resscaleval",
+              "resscalethresh",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 15
+          },
+          {
+            "feature_type": "State",
+            "path": "v2/comp1_Sparam1",
+            "property_names": [
+              "comp",
+              "compintuse",
+              "compint",
+              "compintstatuse",
+              "compintstat",
+              "solvefor",
+              "reconstruct",
+              "out",
+              "valuetype",
+              "fromstudy",
+              "stopcond",
+              "variables",
+              "scalemethod",
+              "scaleval",
+              "resscalemethod",
+              "resscaleval",
+              "resscalethresh",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 16
+          },
+          {
+            "feature_type": "Eigenvalue",
+            "path": "e2",
+            "property_names": [
+              "control",
+              "transform",
+              "k0",
+              "rAverage",
+              "omega",
+              "eigsolver",
+              "rtol",
+              "eigmethod",
+              "neigs",
+              "computeandstorelefteig",
+              "eigunit",
+              "transshift",
+              "shift",
+              "eigwhich",
+              "usesymeig",
+              "eigsymchk",
+              "appnreigs",
+              "maxnreigs",
+              "transshiftreg",
+              "eigsr",
+              "eiglr",
+              "eigsi",
+              "eigli",
+              "shiftregselect",
+              "shiftregman",
+              "chkeigregion",
+              "eigreschk",
+              "transeigref",
+              "eigref",
+              "searchcon",
+              "neigsmethodnhm",
+              "neigsmanual",
+              "transcontour",
+              "conmid",
+              "conrad",
+              "conradynhm",
+              "conangle",
+              "intgtypenhmest",
+              "nintgptsmethodnhmest",
+              "nintgptsnhmest",
+              "intgtypenhm",
+              "nintgptsmethodnhm",
+              "nintgptsnhm",
+              "termfeast",
+              "storefact",
+              "distrlinsol",
+              "usehermeig",
+              "eighermchk",
+              "neigsmethodhm",
+              "conlbdy",
+              "conubdy",
+              "conradyhm",
+              "intgtypehmest",
+              "nintgptsmethodhmest",
+              "nintgptshmest",
+              "intgtypehm",
+              "nintgptsmethodhm",
+              "nintgptshm",
+              "maxmatsize",
+              "approxnep",
+              "toltruncationnep",
+              "maxdegnep",
+              "expdegnep",
+              "scalingnep",
+              "qnrefinementnep",
+              "qnmaxitnep",
+              "tolfactqnnep",
+              "lastEigLinSolv",
+              "isstochestaction",
+              "linpmethod",
+              "linpsol",
+              "linpsolhide",
+              "linpsoluse",
+              "oldlinpsoluse",
+              "linpsolusesolnumhide",
+              "linpsolusesolnum",
+              "linpsolvertype",
+              "linpsolnum",
+              "linptimeinterp",
+              "linpt",
+              "linpmanualsol",
+              "linpmanualsolnum",
+              "linpmanualsolnum_vector_method",
+              "linpmanualsolnum_vector_start",
+              "linpmanualsolnum_vector_stop",
+              "linpmanualsolnum_vector_step",
+              "linpmanualsolnum_vector_numvalues",
+              "linpmanualsolnum_vector_function",
+              "linpmanualsolnum_vector_interval",
+              "linpmanualsolnum_vector_freqperdec",
+              "linplistsol",
+              "linplistsolnum",
+              "storelinpoint",
+              "plot",
+              "plotgroupdummy",
+              "plotgrouparr",
+              "plotwindowsarr",
+              "windowforpg",
+              "probesel",
+              "probes",
+              "eigfunscale",
+              "eigvfunscale",
+              "eigvfunscaleparam",
+              "massfieldactive",
+              "massfield",
+              "eigscalingexpression",
+              "filtereigexpression",
+              "filtereigdescription",
+              "storeeigsol",
+              "maxnumberstoredeigsol",
+              "sorteigorder",
+              "sorteigmethod",
+              "sorteigprimarily",
+              "sorteigsecondarily",
+              "sortontransformedeig",
+              "sorteigexpression",
+              "sorteigdescription",
+              "conjugatepairconsecutivesort",
+              "modefollowing",
+              "maxeigit",
+              "krylovdim",
+              "stopwhennoeigfound",
+              "eigname",
+              "clistctrl",
+              "cname",
+              "clist",
+              "keeplog",
+              "message",
+              "const",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 17
+          },
+          {
+            "feature_type": "Direct",
+            "path": "e2/dDef",
+            "property_names": [
+              "linsolver",
+              "mumpsalloc",
+              "mumpsreorder",
+              "mumpsrreorder",
+              "reusereorder",
+              "reusepattern",
+              "mumpsmtfact",
+              "mumpsmtsolve",
+              "pivotenable",
+              "thresh",
+              "pivotperturb",
+              "mumpsblr",
+              "mumpsblrtol",
+              "mumpsblrtype",
+              "ooc",
+              "memfracooc",
+              "incore",
+              "minicmemory",
+              "usetotmemory",
+              "internalmemusage",
+              "oocmemory",
+              "pardreorder",
+              "pardschedule",
+              "pardrreorder",
+              "pivotstrategy",
+              "pardmtsolve",
+              "clusterpardiso",
+              "preorder",
+              "cudssreusereorder",
+              "cudssreorder",
+              "cudssusematching",
+              "cudssmatching",
+              "cudssfactor",
+              "cudsspivotthreshold",
+              "cudssprecision",
+              "cudsspivotepsilonsp",
+              "cudsspivotepsilondp",
+              "cudsshybridmemory",
+              "cudssmemoryfactor",
+              "cudssusermemorylimit",
+              "cudssusermemorylimitactive",
+              "cudssusehybridcompute",
+              "cudssmultigpusinglenode",
+              "pivotrefines",
+              "errorchk",
+              "rhob",
+              "iterrefine",
+              "maxrefinesteps",
+              "errorratiobound",
+              "nliniterrefine",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 18
+          },
+          {
+            "feature_type": "Advanced",
+            "path": "e2/aDef",
+            "property_names": [
+              "symmetric",
+              "matrixformat",
+              "rowscale",
+              "nullfun",
+              "orthonormallimit",
+              "rankreduction",
+              "rankreductionorth",
+              "reusenullspacedata",
+              "convinfo",
+              "recoverysavinginfo",
+              "recoverysavingratio",
+              "recoverysaveforce",
+              "recoverysaveevery",
+              "blocksize",
+              "blocksizeactive",
+              "assemdistrsol",
+              "cachepattern",
+              "cachepatternmethod",
+              "cachepatternexpr",
+              "assemloc",
+              "optthread",
+              "statblockdistr",
+              "complexfun",
+              "matherr",
+              "checkmatherr",
+              "elemdatainit",
+              "globalcache",
+              "assemtol",
+              "keep",
+              "L",
+              "K",
+              "D",
+              "E",
+              "M",
+              "N",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 19
+          },
+          {
+            "feature_type": "Direct",
+            "path": "e2/d1",
+            "property_names": [
+              "linsolver",
+              "mumpsalloc",
+              "mumpsreorder",
+              "mumpsrreorder",
+              "reusereorder",
+              "reusepattern",
+              "mumpsmtfact",
+              "mumpsmtsolve",
+              "pivotenable",
+              "thresh",
+              "pivotperturb",
+              "mumpsblr",
+              "mumpsblrtol",
+              "mumpsblrtype",
+              "ooc",
+              "memfracooc",
+              "incore",
+              "minicmemory",
+              "usetotmemory",
+              "internalmemusage",
+              "oocmemory",
+              "pardreorder",
+              "pardschedule",
+              "pardrreorder",
+              "pivotstrategy",
+              "pardmtsolve",
+              "clusterpardiso",
+              "preorder",
+              "cudssreusereorder",
+              "cudssreorder",
+              "cudssusematching",
+              "cudssmatching",
+              "cudssfactor",
+              "cudsspivotthreshold",
+              "cudssprecision",
+              "cudsspivotepsilonsp",
+              "cudsspivotepsilondp",
+              "cudsshybridmemory",
+              "cudssmemoryfactor",
+              "cudssusermemorylimit",
+              "cudssusermemorylimitactive",
+              "cudssusehybridcompute",
+              "cudssmultigpusinglenode",
+              "pivotrefines",
+              "errorchk",
+              "rhob",
+              "iterrefine",
+              "maxrefinesteps",
+              "errorratiobound",
+              "nliniterrefine",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 20
+          },
+          {
+            "feature_type": "StoreSolution",
+            "path": "su2",
+            "property_names": [
+              "sol",
+              "keeplog",
+              "message",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "stored_solution_reference": "sol3",
+            "stored_solution_reference_getter": "StoreSolution.getString('sol')",
+            "tree_order": 21
+          },
+          {
+            "feature_type": "StudyStep",
+            "path": "st3",
+            "property_names": [
+              "study",
+              "studystep",
+              "unredstudy",
+              "unredstep",
+              "useForModelReduction",
+              "splitcomplex",
+              "partmethod",
+              "linsmallelem",
+              "componentid",
+              "linsmallelemexpr",
+              "units",
+              "saveprevioussolution",
+              "assempara",
+              "useent",
+              "entsel",
+              "keeplog",
+              "message",
+              "const",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 22
+          },
+          {
+            "feature_type": "Variables",
+            "path": "v3",
+            "property_names": [
+              "control",
+              "initmethod",
+              "initsol",
+              "initsolhide",
+              "initsoluse",
+              "oldinitsoluse",
+              "initsolusesolnumhide",
+              "initsolusesolnum",
+              "solvertype",
+              "solnum",
+              "timeinterp",
+              "t",
+              "manualsol",
+              "manualsolnum",
+              "manualsolnum_vector_method",
+              "manualsolnum_vector_start",
+              "manualsolnum_vector_stop",
+              "manualsolnum_vector_step",
+              "manualsolnum_vector_numvalues",
+              "manualsolnum_vector_function",
+              "manualsolnum_vector_interval",
+              "manualsolnum_vector_freqperdec",
+              "listsol",
+              "listsolnum",
+              "scalemethod",
+              "scaleval",
+              "resscalemethod",
+              "resscaleval",
+              "resscalethresh",
+              "notsolmethod",
+              "notsol",
+              "notsolhide",
+              "notsoluse",
+              "oldnotsoluse",
+              "notsolusesolnumhide",
+              "notsolusesolnum",
+              "notsolvertype",
+              "notsolnum",
+              "nottimeinterp",
+              "nott",
+              "notmanualsol",
+              "notmanualsolnum",
+              "notmanualsolnum_vector_method",
+              "notmanualsolnum_vector_start",
+              "notmanualsolnum_vector_stop",
+              "notmanualsolnum_vector_step",
+              "notmanualsolnum_vector_numvalues",
+              "notmanualsolnum_vector_function",
+              "notmanualsolnum_vector_interval",
+              "notmanualsolnum_vector_freqperdec",
+              "notlistsol",
+              "notlistsolnum",
+              "initparametersmethod",
+              "clistctrl",
+              "cname",
+              "clist",
+              "keeplog",
+              "message",
+              "const",
+              "storesol",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 23
+          },
+          {
+            "feature_type": "Field",
+            "path": "v3/comp1_E",
+            "property_names": [
+              "comp",
+              "compintuse",
+              "compint",
+              "compintstatuse",
+              "compintstat",
+              "solvefor",
+              "reconstruct",
+              "usestoresel",
+              "storesel",
+              "valuetype",
+              "variables",
+              "scalemethod",
+              "scaleval",
+              "resscalemethod",
+              "resscaleval",
+              "resscalethresh",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 24
+          },
+          {
+            "feature_type": "Field",
+            "path": "v3/comp1_emw_Ebm1",
+            "property_names": [
+              "comp",
+              "compintuse",
+              "compint",
+              "compintstatuse",
+              "compintstat",
+              "solvefor",
+              "reconstruct",
+              "usestoresel",
+              "storesel",
+              "valuetype",
+              "variables",
+              "scalemethod",
+              "scaleval",
+              "resscalemethod",
+              "resscaleval",
+              "resscalethresh",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 25
+          },
+          {
+            "feature_type": "Field",
+            "path": "v3/comp1_emw_Ebm2",
+            "property_names": [
+              "comp",
+              "compintuse",
+              "compint",
+              "compintstatuse",
+              "compintstat",
+              "solvefor",
+              "reconstruct",
+              "usestoresel",
+              "storesel",
+              "valuetype",
+              "variables",
+              "scalemethod",
+              "scaleval",
+              "resscalemethod",
+              "resscaleval",
+              "resscalethresh",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 26
+          },
+          {
+            "feature_type": "State",
+            "path": "v3/comp1_Sparam1",
+            "property_names": [
+              "comp",
+              "compintuse",
+              "compint",
+              "compintstatuse",
+              "compintstat",
+              "solvefor",
+              "reconstruct",
+              "out",
+              "valuetype",
+              "fromstudy",
+              "stopcond",
+              "variables",
+              "scalemethod",
+              "scaleval",
+              "resscalemethod",
+              "resscaleval",
+              "resscalethresh",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 27
+          },
+          {
+            "feature_type": "Stationary",
+            "path": "s1",
+            "property_names": [
+              "control",
+              "stol",
+              "nonlin",
+              "linpmethod",
+              "linpsol",
+              "linpsolhide",
+              "linpsoluse",
+              "oldlinpsoluse",
+              "linpsolusesolnumhide",
+              "linpsolusesolnum",
+              "linpsolvertype",
+              "linpsolnum",
+              "linptimeinterp",
+              "linpt",
+              "linpmanualsol",
+              "linpmanualsolnum",
+              "linpmanualsolnum_vector_method",
+              "linpmanualsolnum_vector_start",
+              "linpmanualsolnum_vector_stop",
+              "linpmanualsolnum_vector_step",
+              "linpmanualsolnum_vector_numvalues",
+              "linpmanualsolnum_vector_function",
+              "linpmanualsolnum_vector_interval",
+              "linpmanualsolnum_vector_freqperdec",
+              "linplistsol",
+              "linplistsolnum",
+              "storelinpoint",
+              "keepnotsolstatic",
+              "outsollinear",
+              "outsollinearized",
+              "reacf",
+              "lumpedflux",
+              "plot",
+              "plotgroupdummy",
+              "plotgrouparr",
+              "plotwindowsarr",
+              "windowforpg",
+              "probesel",
+              "probes",
+              "clistctrl",
+              "cname",
+              "clist",
+              "keeplog",
+              "message",
+              "const",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 28
+          },
+          {
+            "feature_type": "Direct",
+            "path": "s1/dDef",
+            "property_names": [
+              "linsolver",
+              "mumpsalloc",
+              "mumpsreorder",
+              "mumpsrreorder",
+              "reusereorder",
+              "reusepattern",
+              "mumpsmtfact",
+              "mumpsmtsolve",
+              "pivotenable",
+              "thresh",
+              "pivotperturb",
+              "mumpsblr",
+              "mumpsblrtol",
+              "mumpsblrtype",
+              "ooc",
+              "memfracooc",
+              "incore",
+              "minicmemory",
+              "usetotmemory",
+              "internalmemusage",
+              "oocmemory",
+              "pardreorder",
+              "pardschedule",
+              "pardrreorder",
+              "pivotstrategy",
+              "pardmtsolve",
+              "clusterpardiso",
+              "preorder",
+              "cudssreusereorder",
+              "cudssreorder",
+              "cudssusematching",
+              "cudssmatching",
+              "cudssfactor",
+              "cudsspivotthreshold",
+              "cudssprecision",
+              "cudsspivotepsilonsp",
+              "cudsspivotepsilondp",
+              "cudsshybridmemory",
+              "cudssmemoryfactor",
+              "cudssusermemorylimit",
+              "cudssusermemorylimitactive",
+              "cudssusehybridcompute",
+              "cudssmultigpusinglenode",
+              "pivotrefines",
+              "errorchk",
+              "rhob",
+              "iterrefine",
+              "maxrefinesteps",
+              "errorratiobound",
+              "nliniterrefine",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 29
+          },
+          {
+            "feature_type": "Advanced",
+            "path": "s1/aDef",
+            "property_names": [
+              "symmetric",
+              "matrixformat",
+              "rowscale",
+              "nullfun",
+              "orthonormallimit",
+              "rankreduction",
+              "rankreductionorth",
+              "reusenullspacedata",
+              "storeresidual",
+              "convinfo",
+              "recoverysavinginfo",
+              "recoverysavingratio",
+              "recoverysaveforce",
+              "recoverysaveevery",
+              "autorescale",
+              "blocksize",
+              "blocksizeactive",
+              "assemdistrsol",
+              "cachepattern",
+              "cachepatternmethod",
+              "cachepatternexpr",
+              "assemloc",
+              "optthread",
+              "statblockdistr",
+              "complexfun",
+              "matherr",
+              "checkmatherr",
+              "elemdatainit",
+              "globalcache",
+              "assemtol",
+              "keep",
+              "L",
+              "K",
+              "D",
+              "E",
+              "M",
+              "N",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 30
+          },
+          {
+            "feature_type": "Parametric",
+            "path": "s1/p1",
+            "property_names": [
+              "control",
+              "sweeptype",
+              "pname",
+              "plist",
+              "plistarrexcelfilename",
+              "plistarrexcelsheet",
+              "plistarrexcelrange",
+              "plistarrexcelincludeheaders",
+              "plistarrexcelseparateunits",
+              "plistarrexceloverwrite",
+              "plistarrexcelcalculatedvalues",
+              "plistarr",
+              "plistarr_vector_method",
+              "plistarr_vector_start",
+              "plistarr_vector_stop",
+              "plistarr_vector_step",
+              "plistarr_vector_numvalues",
+              "plistarr_vector_function",
+              "plistarr_vector_interval",
+              "plistarr_vector_freqperdec",
+              "punit",
+              "pcontinuationmode",
+              "pcontinuation",
+              "showpreusesol",
+              "preusesol",
+              "ponerror",
+              "plooporder",
+              "paramtuning",
+              "pinitstep",
+              "pminstep",
+              "pmaxstep",
+              "initdampall",
+              "porder",
+              "useloadcase",
+              "loadcase",
+              "loadgroup",
+              "loadgroupweight",
+              "constraintgroup",
+              "uselsqdata",
+              "pnamelsq",
+              "plistarrlsq",
+              "continuationlsqall",
+              "excludelsqvalues",
+              "addsolutions",
+              "lsqparamsout",
+              "filledlsq",
+              "filledlsqmerged",
+              "lsqstructuredcontinuation",
+              "pout",
+              "plot",
+              "plotgroupdummy",
+              "plotgrouparr",
+              "plotwindowsarr",
+              "windowforpg",
+              "probesel",
+              "probes",
+              "probefreq",
+              "pdistrib",
+              "pwork",
+              "pworkactive",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 31
+          },
+          {
+            "feature_type": "FullyCoupled",
+            "path": "s1/fc1",
+            "property_names": [
+              "linsolver",
+              "dtech",
+              "initstep",
+              "minstep",
+              "rstep",
+              "rstepabs",
+              "useminsteprecovery",
+              "minsteprecovery",
+              "updweightsauto",
+              "updweightsdamp",
+              "updweightsdampval",
+              "updweightsdampvalconst",
+              "updweightsfac",
+              "ntermauto",
+              "maxiter",
+              "ntolfact",
+              "niter",
+              "termonres",
+              "reserrfact",
+              "backmethod",
+              "backtrackonce",
+              "backdampstep",
+              "maxdamp",
+              "mindamp",
+              "jtech",
+              "updweights",
+              "ntermconst",
+              "adapttol",
+              "atolchoice",
+              "adapttolcflweight",
+              "adapttolerrweight",
+              "initiallintol",
+              "etamax",
+              "atolthreshold",
+              "dampexponent",
+              "dampfactor",
+              "usecflcmp",
+              "stabacc",
+              "cfltech",
+              "initcfl",
+              "mincfl",
+              "forcecfl",
+              "kppid",
+              "kipid",
+              "kdpid",
+              "cfltol",
+              "adaptcfltol",
+              "cflaa",
+              "cflaacfl",
+              "cflaaset",
+              "cflaadim",
+              "cflaamix",
+              "cflaadelay",
+              "cflaafact",
+              "cfljtech",
+              "jtechcfl",
+              "cfljtechval",
+              "ressmooth",
+              "relaxationressmooth",
+              "aaccdim",
+              "aaccmix",
+              "aaccdelay",
+              "aaccfact",
+              "damp",
+              "initsteph",
+              "minsteph",
+              "ddoginitdamp",
+              "resscale",
+              "ddogrestart",
+              "ddogrestartactive",
+              "plot",
+              "plotgroupdummy",
+              "plotgrouparr",
+              "plotwindowsarr",
+              "windowforpg",
+              "probesel",
+              "probes",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 32
+          },
+          {
+            "feature_type": "Direct",
+            "path": "s1/d1",
+            "property_names": [
+              "linsolver",
+              "mumpsalloc",
+              "mumpsreorder",
+              "mumpsrreorder",
+              "reusereorder",
+              "reusepattern",
+              "mumpsmtfact",
+              "mumpsmtsolve",
+              "pivotenable",
+              "thresh",
+              "pivotperturb",
+              "mumpsblr",
+              "mumpsblrtol",
+              "mumpsblrtype",
+              "ooc",
+              "memfracooc",
+              "incore",
+              "minicmemory",
+              "usetotmemory",
+              "internalmemusage",
+              "oocmemory",
+              "pardreorder",
+              "pardschedule",
+              "pardrreorder",
+              "pivotstrategy",
+              "pardmtsolve",
+              "clusterpardiso",
+              "preorder",
+              "cudssreusereorder",
+              "cudssreorder",
+              "cudssusematching",
+              "cudssmatching",
+              "cudssfactor",
+              "cudsspivotthreshold",
+              "cudssprecision",
+              "cudsspivotepsilonsp",
+              "cudsspivotepsilondp",
+              "cudsshybridmemory",
+              "cudssmemoryfactor",
+              "cudssusermemorylimit",
+              "cudssusermemorylimitactive",
+              "cudssusehybridcompute",
+              "cudssmultigpusinglenode",
+              "pivotrefines",
+              "errorchk",
+              "rhob",
+              "iterrefine",
+              "maxrefinesteps",
+              "errorratiobound",
+              "nliniterrefine",
+              "changedproperties",
+              "lastchangedproperty",
+              "hiddenchangedproperties"
+            ],
+            "tree_order": 33
+          }
+        ],
+        "study_step_bindings_in_solver_tree_order": [
+          {
+            "path": "st1",
+            "solver_sequence": "sol1",
+            "study": "std1",
+            "studystep": "bmaInput",
+            "tree_order": 0
+          },
+          {
+            "path": "st2",
+            "solver_sequence": "sol1",
+            "study": "std1",
+            "studystep": "bmaOutput",
+            "tree_order": 11
+          },
+          {
+            "path": "st3",
+            "solver_sequence": "sol1",
+            "study": "std1",
+            "studystep": "freq",
+            "tree_order": 22
+          }
+        ],
+        "study_tag": "std1",
+        "tag": "sol1"
+      },
+      {
+        "attached": false,
+        "get_size": [
+          64057,
+          1
+        ],
+        "get_size_multi": [
+          1,
+          1
+        ],
+        "parameter_values_by_solnum": [
+          {
+            "imaginary": [
+              -6244288.968380504
+            ],
+            "parameter_units": [
+              {
+                "error": null,
+                "name": "lambda",
+                "raw_status": "CAPTURED",
+                "status": "OBSERVED",
+                "value": "1"
+              }
+            ],
+            "real": [
+              0.0
+            ],
+            "solnum": 1
+          }
+        ],
+        "parameter_values_status": "RAW_TYPED_COMPLEX_VALUES_CAPTURED_NOT_INTERPRETED",
+        "parameters_complete": false,
+        "pnames": [
+          "lambda"
+        ],
+        "raw_getter_source": "COMSOL 6.4 direct SolverSequence/ SolutionInfo typed getter receipts",
+        "sequence_type": "Stored",
+        "solution_info_axis_metadata_complete": false,
+        "solution_info_count_scope": {
+          "getLevelNames": [
+            "lambda"
+          ],
+          "getLevels": 1,
+          "getOuterSolnum": [],
+          "getPNamesOuter": [],
+          "getPUnitsOuter": [],
+          "matrix_getter_errors": [
+            {
+              "argument_types": [
+                "int[][]"
+              ],
+              "arguments": [
+                [
+                  [
+                    1,
+                    1
+                  ]
+                ]
+              ],
+              "declared_return_type": "java.lang.String[][]",
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: 不支持的输入。\nMessages:\n\t不支持的输入。\n",
+              "error_type": "com.comsol.util.exceptions.FlException",
+              "method": "getPNames",
+              "receiver": "SolutionInfo.getPNames(sol2)",
+              "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+              "status": "ERROR"
+            },
+            {
+              "argument_types": [
+                "int[][]"
+              ],
+              "arguments": [
+                [
+                  [
+                    1,
+                    1
+                  ]
+                ]
+              ],
+              "declared_return_type": "double[][]",
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: 不支持的输入。\nMessages:\n\t不支持的输入。\n",
+              "error_type": "com.comsol.util.exceptions.FlException",
+              "method": "getPvals",
+              "receiver": "SolutionInfo.getPvals(sol2)",
+              "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+              "status": "ERROR"
+            },
+            {
+              "argument_types": [
+                "int[][]"
+              ],
+              "arguments": [
+                [
+                  [
+                    1,
+                    1
+                  ]
+                ]
+              ],
+              "declared_return_type": "double[][]",
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: 不支持的输入。\nMessages:\n\t不支持的输入。\n",
+              "error_type": "com.comsol.util.exceptions.FlException",
+              "method": "getPvalsImag",
+              "receiver": "SolutionInfo.getPvalsImag(sol2)",
+              "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+              "status": "ERROR"
+            },
+            {
+              "argument_types": [
+                "int[][]"
+              ],
+              "arguments": [
+                [
+                  [
+                    1,
+                    1
+                  ]
+                ]
+              ],
+              "declared_return_type": "java.lang.String[][]",
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: 不支持的输入。\nMessages:\n\t不支持的输入。\n",
+              "error_type": "com.comsol.util.exceptions.FlException",
+              "method": "getUnits",
+              "receiver": "SolutionInfo.getUnits(sol2)",
+              "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+              "status": "ERROR"
+            }
+          ],
+          "read_errors": []
+        },
+        "solution_type": "Eigenfrequency",
+        "solver_tree_features": [],
+        "study_step_bindings_in_solver_tree_order": [],
+        "study_tag": "std1",
+        "tag": "sol2"
+      },
+      {
+        "attached": false,
+        "get_size": [
+          64057,
+          1
+        ],
+        "get_size_multi": [
+          1,
+          1
+        ],
+        "parameter_values_by_solnum": [
+          {
+            "imaginary": [
+              -6244288.968380514
+            ],
+            "parameter_units": [
+              {
+                "error": null,
+                "name": "lambda",
+                "raw_status": "CAPTURED",
+                "status": "OBSERVED",
+                "value": "1"
+              }
+            ],
+            "real": [
+              -1.6359882555849607e-08
+            ],
+            "solnum": 1
+          }
+        ],
+        "parameter_values_status": "RAW_TYPED_COMPLEX_VALUES_CAPTURED_NOT_INTERPRETED",
+        "parameters_complete": false,
+        "pnames": [
+          "lambda"
+        ],
+        "raw_getter_source": "COMSOL 6.4 direct SolverSequence/ SolutionInfo typed getter receipts",
+        "sequence_type": "Stored",
+        "solution_info_axis_metadata_complete": false,
+        "solution_info_count_scope": {
+          "getLevelNames": [
+            "lambda"
+          ],
+          "getLevels": 1,
+          "getOuterSolnum": [],
+          "getPNamesOuter": [],
+          "getPUnitsOuter": [],
+          "matrix_getter_errors": [
+            {
+              "argument_types": [
+                "int[][]"
+              ],
+              "arguments": [
+                [
+                  [
+                    1,
+                    1
+                  ]
+                ]
+              ],
+              "declared_return_type": "java.lang.String[][]",
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: 不支持的输入。\nMessages:\n\t不支持的输入。\n",
+              "error_type": "com.comsol.util.exceptions.FlException",
+              "method": "getPNames",
+              "receiver": "SolutionInfo.getPNames(sol3)",
+              "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+              "status": "ERROR"
+            },
+            {
+              "argument_types": [
+                "int[][]"
+              ],
+              "arguments": [
+                [
+                  [
+                    1,
+                    1
+                  ]
+                ]
+              ],
+              "declared_return_type": "double[][]",
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: 不支持的输入。\nMessages:\n\t不支持的输入。\n",
+              "error_type": "com.comsol.util.exceptions.FlException",
+              "method": "getPvals",
+              "receiver": "SolutionInfo.getPvals(sol3)",
+              "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+              "status": "ERROR"
+            },
+            {
+              "argument_types": [
+                "int[][]"
+              ],
+              "arguments": [
+                [
+                  [
+                    1,
+                    1
+                  ]
+                ]
+              ],
+              "declared_return_type": "double[][]",
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: 不支持的输入。\nMessages:\n\t不支持的输入。\n",
+              "error_type": "com.comsol.util.exceptions.FlException",
+              "method": "getPvalsImag",
+              "receiver": "SolutionInfo.getPvalsImag(sol3)",
+              "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+              "status": "ERROR"
+            },
+            {
+              "argument_types": [
+                "int[][]"
+              ],
+              "arguments": [
+                [
+                  [
+                    1,
+                    1
+                  ]
+                ]
+              ],
+              "declared_return_type": "java.lang.String[][]",
+              "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: 不支持的输入。\nMessages:\n\t不支持的输入。\n",
+              "error_type": "com.comsol.util.exceptions.FlException",
+              "method": "getUnits",
+              "receiver": "SolutionInfo.getUnits(sol3)",
+              "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+              "status": "ERROR"
+            }
+          ],
+          "read_errors": []
+        },
+        "solution_type": "Eigenfrequency",
+        "solver_tree_features": [],
+        "study_step_bindings_in_solver_tree_order": [],
+        "study_tag": "std1",
+        "tag": "sol3"
+      }
+    ],
+    "study_solver_sequence_queries": [
+      {
+        "actual_return_type": "[Ljava.lang.String;",
+        "argument_types": [
+          "java.lang.String"
+        ],
+        "arguments": [
+          "All"
+        ],
+        "declared_return_type": "java.lang.String[]",
+        "method": "Study.getSolverSequences",
+        "receiver": "model.study(std1)",
+        "receiver_type": "com.comsol.clientapi.impl.StudyClient",
+        "return_value": [
+          "sol1",
+          "sol2",
+          "sol3"
+        ],
+        "status": "CAPTURED"
+      },
+      {
+        "actual_return_type": "[Ljava.lang.String;",
+        "argument_types": [
+          "java.lang.String"
+        ],
+        "arguments": [
+          "None"
+        ],
+        "declared_return_type": "java.lang.String[]",
+        "method": "Study.getSolverSequences",
+        "receiver": "model.study(std1)",
+        "receiver_type": "com.comsol.clientapi.impl.StudyClient",
+        "return_value": [],
+        "status": "CAPTURED"
+      },
+      {
+        "actual_return_type": "[Ljava.lang.String;",
+        "argument_types": [
+          "java.lang.String"
+        ],
+        "arguments": [
+          "SolverSequence"
+        ],
+        "declared_return_type": "java.lang.String[]",
+        "method": "Study.getSolverSequences",
+        "receiver": "model.study(std1)",
+        "receiver_type": "com.comsol.clientapi.impl.StudyClient",
+        "return_value": [
+          "sol1"
+        ],
+        "status": "CAPTURED"
+      },
+      {
+        "actual_return_type": "[Ljava.lang.String;",
+        "argument_types": [
+          "java.lang.String"
+        ],
+        "arguments": [
+          "CopySolution"
+        ],
+        "declared_return_type": "java.lang.String[]",
+        "method": "Study.getSolverSequences",
+        "receiver": "model.study(std1)",
+        "receiver_type": "com.comsol.clientapi.impl.StudyClient",
+        "return_value": [],
+        "status": "CAPTURED"
+      },
+      {
+        "actual_return_type": "[Ljava.lang.String;",
+        "argument_types": [
+          "java.lang.String"
+        ],
+        "arguments": [
+          "ParametricStore"
+        ],
+        "declared_return_type": "java.lang.String[]",
+        "method": "Study.getSolverSequences",
+        "receiver": "model.study(std1)",
+        "receiver_type": "com.comsol.clientapi.impl.StudyClient",
+        "return_value": [],
+        "status": "CAPTURED"
+      },
+      {
+        "actual_return_type": "[Ljava.lang.String;",
+        "argument_types": [
+          "java.lang.String"
+        ],
+        "arguments": [
+          "Stored"
+        ],
+        "declared_return_type": "java.lang.String[]",
+        "method": "Study.getSolverSequences",
+        "receiver": "model.study(std1)",
+        "receiver_type": "com.comsol.clientapi.impl.StudyClient",
+        "return_value": [
+          "sol2",
+          "sol3"
+        ],
+        "status": "CAPTURED"
+      },
+      {
+        "actual_return_type": "[Ljava.lang.String;",
+        "argument_types": [
+          "java.lang.String"
+        ],
+        "arguments": [
+          "Parametric"
+        ],
+        "declared_return_type": "java.lang.String[]",
+        "method": "Study.getSolverSequences",
+        "receiver": "model.study(std1)",
+        "receiver_type": "com.comsol.clientapi.impl.StudyClient",
+        "return_value": [],
+        "status": "CAPTURED"
+      }
+    ],
+    "study_steps_in_configured_order": [
+      {
+        "PortName": "1",
+        "configured_order": 0,
+        "feature_type": "BoundaryModeAnalysis",
+        "modeFreq": "f0",
+        "plist": null,
+        "tag": "bmaInput"
+      },
+      {
+        "PortName": "2",
+        "configured_order": 1,
+        "feature_type": "BoundaryModeAnalysis",
+        "modeFreq": "f0",
+        "plist": null,
+        "tag": "bmaOutput"
+      },
+      {
+        "PortName": null,
+        "configured_order": 2,
+        "feature_type": "Frequency",
+        "modeFreq": null,
+        "plist": "f0",
+        "tag": "freq"
+      }
+    ],
+    "study_tag": "std1"
+  },
+  "study_run_dispatches": 0
+}

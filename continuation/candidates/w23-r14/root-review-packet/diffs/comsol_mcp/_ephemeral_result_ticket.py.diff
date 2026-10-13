@@ -1,0 +1,126 @@
+--- /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/comsol_mcp/_ephemeral_result_ticket.py
++++ /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/comsol_mcp/_ephemeral_result_ticket.py
+@@ -45,6 +45,7 @@
+         if seal is not _SEAL:raise TypeError('private original ticket required')
+         self._seal=seal;self.binding=binding;self.ticket=ticket;self.service=service;self.callback=callback
+         self.request_hash=ticket.request_hash;self.ticket_state=tuple(getattr(ticket,k) for k in ("operation_id","request_id","request_hash","operation","model_ref","expected_revision","external_event_counter","fingerprint"));self.args_hash=_hash(args);self.rows=[];self.pending=set();self.invalid=False;self.known_handles=set();self.supplemental=None
++        self.selection_request=json.loads(json.dumps(args.get("spec", {}).get("selection"))) if isinstance(args,Mapping) else None;self.selection_handle=None;self.selection_expected=None;self.selection_records={};self.selection_java_type=None
+         self.entered=False;self.finished=False;self.consumed=False;self.container=None;self.feature=None;self.tag=None;self.before=None;self.after=None;self.data_hash=None
+     def before_submit(self,worker,kind,body):
+         try:
+@@ -75,8 +76,9 @@
+                 if not (reply.get('ok') is False and reply.get('status')=='FAILED' and isinstance(reply.get('failure'),Mapping) and isinstance(reply['failure'].get('code'),str) and reply['failure'].get('code') and row['supplemental'] is True):self.invalid=True
+             value=reply.get('result');row['result_hash']=_hash(value);row['return_handle']=_handle(value)
+             row['return_generation']=value.get('generation') if isinstance(value,Mapping) else None
++            row['return_java_type']=value.get('java_type') if isinstance(value,Mapping) else None
+             if row['return_handle'] and row['ok'] is True and row['status']=='SUCCEEDED':self.known_handles.add(row['return_handle'])
+-            if row['method'] in {'tags','getType','tag'}:row['value']=value
++            if row['method'] in {'tags','getType','tag','geom','dim','named','entities','isInheriting'}:row['value']=value
+             row['done']=True;self.pending.remove(id(row))
+         except Exception:self.invalid=True
+     @contextmanager
+@@ -139,6 +141,26 @@
+         self.feature=feature._handle;self.tag=tag
+         if feature._call('getType')!='Interp' or feature._call('tag')!=tag:
+             raise ExecutionContractError('EXECUTION_STATE_UNKNOWN','created Interp receiver origin/type/tag is unverified',stage='post_dispatch')
++    def selection_child(self,node,requested,expected):
++        from ._java_worker import RemoteJava
++        if (not self.entered or not self.binding.intact() or not self.feature or self.selection_request!=dict(requested)
++            or not isinstance(node,RemoteJava) or node._worker is not self.binding.worker
++            or node._generation!=self.binding.identity['connection_epoch']):self.invalid=True;raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "temporary Interp selection child provenance is invalid", stage="post_dispatch")
++        matching=[r for r in self.rows if r['method']=='selection' and r['receiver']==self.feature and r['args']==[]
++            and r.get('ok') is True and r.get('status')=='SUCCEEDED' and r.get('return_handle')==node._handle
++            and r.get('return_generation')==self.binding.identity['connection_epoch']]
++        if not matching:self.invalid=True;raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "temporary Interp selection child provenance is invalid", stage="post_dispatch")
++        first=matching[0]['ordinal']
++        if self.selection_handle is None:
++            if any(r.get('return_handle')==node._handle for r in self.rows[:first]) or node._handle==self.feature:
++                self.invalid=True;raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "temporary Interp selection child provenance is invalid", stage="post_dispatch")
++            self.selection_handle=node._handle;self.selection_expected=json.loads(json.dumps(expected));self.selection_java_type=matching[0]['return_java_type']
++        elif self.selection_handle!=node._handle or self.selection_expected!=dict(expected):self.invalid=True
++    def selection_observed(self,node,stage,record):
++        if node._handle!=self.selection_handle or stage not in {'before_numeric_read','after_numeric_read'} or stage in self.selection_records:
++            self.invalid=True;return
++        self.selection_records[stage]=json.loads(json.dumps(record))
++
+     def finish_builtin(self,data):
+         try:
+             self.data_hash=_hash({k:v for k,v in data.items() if k!='observation_ref'})
+@@ -164,6 +186,17 @@
+             if units.get('status')!='VERIFIED_REQUESTED_UNITS_BEFORE_AND_AFTER_NUMERIC_READ':return False
+             cleanup=detail.get('cleanup',{})
+             if cleanup.get('tag')!=self.tag or cleanup.get('type_id')!='Interp' or cleanup.get('created') is not True or cleanup.get('removed') is not True or cleanup.get('cleanup_failed') is not False:return False
++            selection_evidence=detail.get('feature_readback',{}).get('selection_application',{})
++            if self.selection_request is not None:
++                if (not self.selection_handle or self.selection_records.keys()!={'before_numeric_read','after_numeric_read'}
++                    or selection_evidence!={'before':self.selection_records['before_numeric_read'],'after':self.selection_records['after_numeric_read']}):return False
++                req=self.selection_request;expected=self.selection_expected['entities']
++                for record in self.selection_records.values():
++                    ob=record['native_selection_readback']
++                    if (ob['geometry']!=req['geometry'] or type(ob['dimension']) is not int or ob['dimension']!=req['entity_dimension']
++                        or sorted(ob['entities'])!=sorted(expected) or ob['is_inheriting'] is not False
++                        or req['kind']=='named' and ob['named']!=req['tag']):return False
++            elif selection_evidence or self.selection_handle is not None:return False
+             creates=[];removes=[];reads=[];coords=[]
+             from ._domain_outcome import is_mutation_call
+             for row in self.rows:
+@@ -180,6 +213,36 @@
+                     elif method=='remove':
+                         if receiver!=self.container or args!=[self.tag]:return False
+                         removes.append(row)
++                    elif receiver==self.selection_handle:
++                        req=self.selection_request
++                        if method=='geom' and args:
++                            if args!=[req['geometry'],req['entity_dimension']]:return False
++                        elif method=='named' and args:
++                            if req['kind']!='named' or args!=[req['tag']]:return False
++                        elif method=='set':
++                            if req['kind']!='explicit' or args!=[req['entities']]:return False
++                        elif method in {'geom','dim','named','entities','isInheriting'} and args==[]:
++                            target={'geom':req['geometry'],'dim':req['entity_dimension'],'named':req.get('tag') if req['kind']=='named' else self.selection_records['before_numeric_read']['native_selection_readback']['named'],
++                                    'entities':self.selection_expected['entities'],'isInheriting':False}[method]
++                            value=row.get('value')
++                            if method=='entities':
++                                if not isinstance(value,list) or sorted(value)!=sorted(target):return False
++                            elif value!=target:return False
++                        else:return False
++                    elif method=='selection':
++                        if receiver==self.feature:
++                            if args!=[] or row.get('return_handle')!=self.selection_handle:return False
++                        else:
++                            req=self.selection_request
++                            roots={r.get('return_handle') for r in self.rows if r['kind']=='model' and r['tag']==b.ref.model_tag and r.get('ok') is True}
++                            comps={r.get('return_handle') for r in self.rows if r['method']=='component' and r['receiver'] in roots
++                                and r['args']==[req.get('component')] and r.get('ok') is True} if req else set()
++                            if receiver not in comps or req.get('kind')!='named' or args!=[req['tag']]:return False
++                    elif method in {'dim','entities','named','isInheriting'}:
++                        req=self.selection_request
++                        global_selections={r.get('return_handle') for r in self.rows if r['method']=='selection' and r['args']==[req.get('tag')]
++                            and r['receiver']!=self.feature and r.get('ok') is True} if req else set()
++                        if receiver not in global_selections or args:return False
+                     elif method in {'set','setIndex','setInterpolationCoordinates','run'}:
+                         if receiver!=self.feature:return False
+                         if method=='set' and (not args or args[0] not in {'data','expr','outersolnum','solnum','innerinput','outerinput'}):return False
+@@ -194,10 +257,21 @@
+                 elif kind=='model_snapshot':
+                     if row['tag']!=b.ref.model_tag:return False
+                 else:return False
++            if self.selection_request is not None:
++                req=self.selection_request
++                childrows=[r for r in self.rows if r['receiver']==self.selection_handle]
++                setters=[r for r in childrows if r['method']=='geom' and r['args']==[req['geometry'],req['entity_dimension']]]
++                binds=[r for r in childrows if r['method'] in {'named','set'} and r['args']]
++                if len(setters)!=1 or len(binds)!=1:return False
++                numeric=[r['ordinal'] for r in self.rows if r['method'] in {'run','getData','getImagData'} and r['receiver']==self.feature]
++                if not numeric or setters[0]['ordinal']>=min(numeric) or binds[0]['ordinal']>=min(numeric):return False
++                for method in ['geom','dim','named','entities','isInheriting']:
++                    getters=[r for r in childrows if r['method']==method and r['args']==[]]
++                    if not any(r['ordinal']<min(numeric) for r in getters) or not any(r['ordinal']>max(numeric) for r in getters):return False
+             if len(creates)!=1 or len(removes)!=1 or len(coords)!=1 or self.before is None:return False
+             first=creates[0]['ordinal'];last=removes[0]['ordinal']
+             if any(r.get('return_handle')==self.feature for r in self.rows[:first]):return False
+-            if any(r['method'] in {'set','setIndex','setInterpolationCoordinates','run'} and not first<r['ordinal']<last for r in self.rows):return False
++            if any((r['method'] in {'set','setIndex','setInterpolationCoordinates','run'} or r['receiver']==self.selection_handle and r['method'] in {'geom','named'} and r['args']) and not first<r['ordinal']<last for r in self.rows):return False
+             before=[r for r in reads if r['ordinal']<first];after=[r for r in reads if r['ordinal']>last]
+             if not before or not after or tuple(before[-1].get('value',()))!=self.before or tuple(after[-1].get('value',()))!=self.before:return False
+             if first>=last:return False

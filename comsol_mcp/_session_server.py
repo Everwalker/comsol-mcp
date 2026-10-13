@@ -531,7 +531,16 @@ class OwnedServerLauncher:
         self.poll_interval_s = poll_interval_s
 
     def start(self, runtime: SessionRuntimeConfig, project_id: str, session_id: str, *,
-              observation_sink: Callable[[Mapping[str, Any]], None] | None = None) -> ManagedServerHandle:
+              observation_sink: Callable[[Mapping[str, Any]], None] | None = None,
+              process_factory: Callable[..., Any] | None = None) -> ManagedServerHandle:
+        selected_process_factory = self.process_factory if process_factory is None else process_factory
+        if not callable(selected_process_factory):
+            raise OwnedServerError("owned Server process factory is not callable")
+        preflight = getattr(selected_process_factory, "preflight", None)
+        if callable(preflight):
+            # Policy refusal must happen before private directory/log creation
+            # and before any process API or fallback can run.
+            preflight()
         if self.platform_name in {"win32", "nt", "windows"}:
             windows_owned_server_path_budget(runtime.session_state_root, project_id, session_id)
         directories = create_server_directories(runtime, project_id, session_id)
@@ -588,7 +597,7 @@ class OwnedServerLauncher:
                 raise
 
         try:
-            process = self.process_factory(command, **options)
+            process = selected_process_factory(command, **options)
         except Exception as exc:
             try:
                 log_handle.close()

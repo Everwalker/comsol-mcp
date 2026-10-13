@@ -1,0 +1,25 @@
+--- /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/tools/run_native_w23_te_science.py
++++ /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/tools/run_native_w23_te_science.py
+@@ -1582,8 +1582,8 @@
+             raise ValueError(f"source map lacks {role}")
+         return {key: item[key] for key in ("dataset_id", "solution_id", "outer_index", "inner_index")}
+     def fields(e_prefix: str, h_prefix: str, suffix: str = "") -> dict[str, Any]:
+-        return {"electric": {axis: f"ewfd.{e_prefix}{axis}{suffix}" for axis in "xyz"},
+-                "magnetic": {axis: f"ewfd.{h_prefix}{axis}{suffix}" for axis in "xyz"}}
++        return {"electric": {axis: (f"down(emw.{e_prefix}{axis})" if not suffix else f"emw.{e_prefix}{axis}{suffix}") for axis in "xyz"},
++                "magnetic": {axis: (f"down(emw.{h_prefix}{axis})" if not suffix else f"emw.{h_prefix}{axis}{suffix}") for axis in "xyz"}}
+     return {
+         "schema_version": "1.0.0",
+         "phasor_convention": {
+@@ -2897,9 +2897,9 @@
+                     output641, input641)
+                 write_json(evidence / "software_global_phase_control.json", software_phase_control)
+             output_neff = _validate_mode_index(
+-                output641, "ewfd.neff_2", 2e-3 if mesh == "coarse" else 5e-4)
++                output641, "emw.neff_2", 2e-3 if mesh == "coarse" else 5e-4)
+             input_neff = _validate_mode_index(
+-                input641, "ewfd.neff_1", 2e-3 if mesh == "coarse" else 5e-4)
++                input641, "emw.neff_1", 2e-3 if mesh == "coarse" else 5e-4)
+             definition = build_mode_overlap_definition(
+                 source_receipt, int(output641["normal_sign"]), int(input641["normal_sign"]))
+             native_overlap, ref, revision = _native_overlap_call(

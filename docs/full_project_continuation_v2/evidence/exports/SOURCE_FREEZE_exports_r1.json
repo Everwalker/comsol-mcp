@@ -1,0 +1,25 @@
+{
+  "schema": "comsol-mcp-evidence-source-freeze/1",
+  "unit": "exports_report_bundle_publish",
+  "frozen_at_utc": "2026-10-11T18:20:14Z",
+  "platform": "macOS arm64 software test host",
+  "sources": {
+    "comsol_mcp/_g3_exports.py": "8b5f6b941e229666f303c4f5e4e73f3c3fa26c3b2d04a19b44d7194f88807646",
+    "tests/test_g3_exports.py": "9ad71e2f1de72e498223dd850085595251286c8beac0f028e282e3779121766e"
+  },
+  "verification": {
+    "command": "PYTHONPATH=tests TMPDIR=/private/tmp /private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python -m pytest -q tests/test_g3_exports.py tests/test_g3_model_delivery.py tests/test_g3_managed_models.py tests/test_g3_artifact_hardening.py tests/test_artifact_registration_import.py tests/test_artifact_verify.py tests/test_operation_store.py --tb=short --junitxml=docs/full_project_continuation_v2/evidence/exports/junit-exports-r1.xml",
+    "result": "147 passed, 1 skipped, 0 failed",
+    "junit": "docs/full_project_continuation_v2/evidence/exports/junit-exports-r1.xml",
+    "junit_sha256": "54d6774b3555c24383c08d41b0b7d85e390272176969a1daffd9002d86faa3e7",
+    "skip": "test_artifact_verify_real_accepted_dev1_bundles_through_registration: accepted dev1 archive paths were not supplied for this environment",
+    "py_compile": "PASS"
+  },
+  "scope": {
+    "export_report": "synthetic Worker model snapshot + paginated managed model tree + project-scoped artifact pins + durable OperationStore status/event projection; artifact bytes and output registration verified",
+    "export_evidence_bundle": "saveCopy MPH + selected schema-v2 artifacts + same-ModelRef W17 observation bytes + redacted durable operation logs + report/provenance/manifest; member SHA-256 and size verified",
+    "artifact_publish": "software-only injected provider with registered destination descriptor, exact scoped authorization, streamed pinned source, no-clobber output and readback verification",
+    "result_scope": "software fixtures only; COMSOL native execution NOT_RUN; numerical/physical acceptance UNVERIFIED; external host/network publication NOT_RUN",
+    "integration": "standalone callback module and handler tests; registry/ManagedBackend/ControlDaemon route wiring is pending shared-source owner handoff"
+  }
+}

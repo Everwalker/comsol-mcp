@@ -1,0 +1,31 @@
+{
+  "schema": "ROOT_W25_PROFILE_INTEGRATION_OBSERVATIONS_V1",
+  "status": "IN_PROGRESS_FINDINGS_NOT_CANDIDATE_ACCEPTANCE",
+  "date_utc": "2026-10-12",
+  "findings": [
+    {
+      "id": "W25-PROFILE-01",
+      "problem": "The new loader accepted a Windows security_semantics label different from the actual host-scoped provider contract.",
+      "correction": "Reuse the exact production provider contract and test positive and negative results.",
+      "executor_report": "Corrected; included in five passing focused profile tests. Whole-unit freeze and Root review remain pending."
+    },
+    {
+      "id": "W25-PROFILE-02",
+      "problem": "The provider identity obtained during trust verification was not bound to the file descriptor subsequently read.",
+      "correction": "Bind the actual pinned read to the initial identity; reverify identity and ACL evidence around the read, retaining replacement and ACL-drift controls.",
+      "executor_report": "Corrected; included in five passing focused profile tests. Whole-unit freeze and Root review remain pending."
+    },
+    {
+      "id": "W25-PROFILE-03",
+      "problem": "Python fstat identity and the existing Win32 provider identity use different native identifier widths, so direct comparison may refuse a valid Windows file.",
+      "primary_reference": "https://raw.githubusercontent.com/python/cpython/3.12/Python/fileutils.c",
+      "reference_scope": "The retrieved 3.12 branch uses FILE_ID_INFO when available: 64-bit VolumeSerialNumber and 128-bit FileId. This is source evidence, not a native observation of the project's Windows target.",
+      "correction": "Obtain the pinned Windows descriptor identity using the same native normalization as the production provider; do not close the borrowed CRT handle. Add a width-difference positive control.",
+      "status": "ISSUED_TO_SAME_EXECUTOR_PENDING_COMPLETE_UNIT"
+    }
+  ],
+  "scope": "Original W25 target window/model ownership and trusted GUI profile integration; no new trust system or acceptance waiver.",
+  "native_windows": "NOT_RUN",
+  "gui_operations_performed_by_root": false,
+  "project_acceptance": "NOT_ACCEPTED"
+}

@@ -1,0 +1,2427 @@
+--- a/comsol_mcp/_operation_store.py
++++ b/comsol_mcp/_operation_store.py
+@@ -61,6 +61,26 @@
+     ("status", "TEXT", 1, 0, None),
+     ("version", "INTEGER", 1, 0, None),
+     ("record_json", "TEXT", 1, 0, None),
++    ("created_at", "TEXT", 1, 0, "CURRENT_TIMESTAMP"),
++    ("updated_at", "TEXT", 1, 0, "CURRENT_TIMESTAMP"),
++)
++HOST_CONTROL_ADMISSION_TABLE_COLUMNS = (
++    ("admission_id", "TEXT", 1, 1, None),
++    ("operation_id", "TEXT", 1, 0, None),
++    ("job_id", "TEXT", 1, 0, None),
++    ("project_id", "TEXT", 1, 0, None),
++    ("host_id", "TEXT", 1, 0, None),
++    ("root_identity_json", "TEXT", 1, 0, None),
++    ("profile_sha256", "TEXT", 1, 0, None),
++    ("plan_sha256", "TEXT", 1, 0, None),
++    ("source_plan_sha256", "TEXT", 0, 0, None),
++    ("source_receipt_sha256", "TEXT", 0, 0, None),
++    ("phase", "TEXT", 1, 0, None),
++    ("authorization_ref_sha256", "TEXT", 1, 0, None),
++    ("scope_sha256", "TEXT", 1, 0, None),
++    ("baseline_json", "TEXT", 1, 0, None),
++    ("baseline_sha256", "TEXT", 1, 0, None),
++    ("state", "TEXT", 1, 0, None),
+     ("created_at", "TEXT", 1, 0, "CURRENT_TIMESTAMP"),
+     ("updated_at", "TEXT", 1, 0, "CURRENT_TIMESTAMP"),
+ )
+@@ -342,6 +362,40 @@
+                     or observed_attempt_columns != STAGE_ATTEMPT_TABLE_COLUMNS
+                     or not {("attempt_id",), ("idempotency_key",)} <= unique_attempt_columns):
+                 raise RuntimeError("invalid stage_attempts schema")
++            # Privileged host mutations use a dedicated atomic admission row.
++            # A generic operation/job row, even one named host.change.apply,
++            # cannot authorize the internal executor without this binding.
++            self.db.execute(
++                "CREATE TABLE IF NOT EXISTS host_control_admissions("
++                "admission_id TEXT PRIMARY KEY NOT NULL,operation_id TEXT NOT NULL UNIQUE,"
++                "job_id TEXT NOT NULL UNIQUE,project_id TEXT NOT NULL,host_id TEXT NOT NULL,"
++                "root_identity_json TEXT NOT NULL,profile_sha256 TEXT NOT NULL,plan_sha256 TEXT NOT NULL,"
++                "source_plan_sha256 TEXT,source_receipt_sha256 TEXT,phase TEXT NOT NULL,"
++                "authorization_ref_sha256 TEXT NOT NULL UNIQUE,scope_sha256 TEXT NOT NULL,"
++                "baseline_json TEXT NOT NULL,baseline_sha256 TEXT NOT NULL,state TEXT NOT NULL,"
++                "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
++                "updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"
++            )
++            host_object = self.db.execute(
++                "SELECT type FROM sqlite_master WHERE name='host_control_admissions'"
++            ).fetchone()
++            observed_host_columns = tuple(
++                (row[1], (row[2] or "").upper(), row[3], row[5], row[4])
++                for row in self.db.execute("PRAGMA table_info(host_control_admissions)").fetchall()
++            )
++            unique_host_columns: set[tuple[str, ...]] = set()
++            for index in self.db.execute("PRAGMA index_list(host_control_admissions)").fetchall():
++                if index[2] != 1 or (len(index) > 4 and index[4] != 0):
++                    continue
++                name = str(index[1]).replace("'", "''")
++                columns = self.db.execute(f"PRAGMA index_info('{name}')").fetchall()
++                if len(columns) == 1 and columns[0][1] >= 0 and columns[0][2] is not None:
++                    unique_host_columns.add((columns[0][2],))
++            if (host_object is None or host_object[0] != "table"
++                    or observed_host_columns != HOST_CONTROL_ADMISSION_TABLE_COLUMNS
++                    or not {("admission_id",), ("operation_id",), ("job_id",),
++                            ("authorization_ref_sha256",)} <= unique_host_columns):
++                raise RuntimeError("invalid host_control_admissions schema")
+             self.db.execute("COMMIT")
+         except Exception:
+             self.db.execute("ROLLBACK")
+@@ -397,6 +451,541 @@
+             except Exception:
+                 self.db.execute("ROLLBACK")
+                 raise
++
++    def begin_host_control_operation(
++        self,
++        *,
++        authority: Any,
++        provider: Any,
++        profile: Any,
++        phase: str,
++        plan_sha256: str,
++        authorization_ref: str,
++        baseline: dict[str, Any],
++        source_plan_sha256: str | None = None,
++        source_receipt_sha256: str | None = None,
++    ) -> tuple[dict[str, Any], dict[str, Any]]:
++        """Atomically authorize and admit one internal host-control operation.
++
++        This is intentionally separate from ``begin``. Caller-created generic
++        operation/job metadata never creates a host-control admission. The
++        trusted scoped provider is checked under the same SQLite write lock
++        that consumes the one-use authorization-reference digest and stores
++        the exact host/profile/root/plan binding plus its observed baseline.
++        """
++        from ._host_scoped_provider import HostScopedProvider, scope_sha256
++        from ._project_authority import ProjectAuthority
++        from ._w26_os_resources import (
++            HostResourceProfile, ResourcePolicyError, _path_key,
++            _sha256 as resource_sha256, validate_profile,
++        )
++
++        if (type(authority) is not ProjectAuthority or authority.store is not self
++                or type(provider) is not HostScopedProvider
++                or authority.authorization_verifier is not provider
++                or type(profile) is not HostResourceProfile):
++            raise ResourcePolicyError(
++                "HOST_CONTROL_TRUSTED_COMPONENT_REQUIRED",
++                "host mutation admission requires the existing authority, pinned HostScopedProvider, and typed profile",
++            )
++        try:
++            validate_profile(profile)
++        except (TypeError, ValueError) as exc:
++            raise ResourcePolicyError("HOST_CONTROL_PROFILE_INVALID", "host mutation profile is invalid") from exc
++        if (profile.platform != "windows" or profile.windows_isolation is None
++                or phase not in {"APPLY", "RESTORE"}
++                or not isinstance(plan_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", plan_sha256)
++                or not isinstance(authorization_ref, str) or not authorization_ref
++                or len(authorization_ref) > 512
++                or any(ord(char) < 32 for char in authorization_ref)
++                or not isinstance(baseline, dict)):
++            raise ResourcePolicyError("HOST_CONTROL_ADMISSION_INVALID", "host mutation admission fields are malformed")
++        if phase == "APPLY":
++            if source_plan_sha256 is not None or source_receipt_sha256 is not None:
++                raise ResourcePolicyError("HOST_CONTROL_ADMISSION_INVALID", "apply admission cannot name a restore source")
++            action = "host.change.apply"
++        else:
++            if (not isinstance(source_plan_sha256, str)
++                    or not re.fullmatch(r"[0-9a-f]{64}", source_plan_sha256)
++                    or not isinstance(source_receipt_sha256, str)
++                    or not re.fullmatch(r"[0-9a-f]{64}", source_receipt_sha256)):
++                raise ResourcePolicyError("HOST_CONTROL_ADMISSION_INVALID", "restore admission must bind its source plan and receipt")
++            action = "host.change.restore"
++        root_identity = profile.root.as_dict()
++        scope = {
++            "root": root_identity,
++            "host_id": profile.host_id,
++            "profile_sha256": profile.sha256,
++            "plan_sha256": plan_sha256,
++            "phase": phase,
++            "source_plan_sha256": source_plan_sha256,
++            "source_receipt_sha256": source_receipt_sha256,
++        }
++        try:
++            scope_digest = scope_sha256(profile.project_id, action, scope)
++            baseline_json = json.dumps(baseline, sort_keys=True, ensure_ascii=False,
++                                       separators=(",", ":"), allow_nan=False)
++        except (TypeError, ValueError, UnicodeEncodeError) as exc:
++            raise ResourcePolicyError("HOST_CONTROL_ADMISSION_INVALID", "host baseline/scope is not canonical") from exc
++        if len(baseline_json.encode("utf-8")) > 1024 * 1024:
++            raise ResourcePolicyError("HOST_CONTROL_ADMISSION_INVALID", "host baseline exceeds its durable record bound")
++        baseline_sha256 = hashlib.sha256(baseline_json.encode("utf-8")).hexdigest()
++        authorization_ref_sha256 = hashlib.sha256(authorization_ref.encode("utf-8")).hexdigest()
++        admission_id = str(uuid4())
++        operation_id, job_id = str(uuid4()), str(uuid4())
++        request_id = "host-control-" + str(uuid4())
++        idempotency_key = "host-control-" + str(uuid4())
++        operation_name = f"host.change.{phase.lower()}"
++        root_path = root_identity["path"]
++        request_hash = resource_sha256({
++            "operation": operation_name,
++            "project_id": profile.project_id,
++            "host_id": profile.host_id,
++            "root": root_identity,
++            "profile_sha256": profile.sha256,
++            "plan_sha256": plan_sha256,
++            "phase": phase,
++            "source_plan_sha256": source_plan_sha256,
++            "source_receipt_sha256": source_receipt_sha256,
++            "baseline_sha256": baseline_sha256,
++            "scope_sha256": scope_digest,
++        })
++        internal_binding = {
++            "schema": "comsol-mcp.internal-host-control-operation/1",
++            "admission_id": admission_id,
++            "phase": phase,
++            "project_id": profile.project_id,
++            "host_id": profile.host_id,
++            "root_identity": root_identity,
++            "profile_sha256": profile.sha256,
++            "plan_sha256": plan_sha256,
++            "source_plan_sha256": source_plan_sha256,
++            "source_receipt_sha256": source_receipt_sha256,
++        }
++        metadata = {"operation": operation_name, "project_id": profile.project_id,
++                    "project_root_identity": profile.root.file_id,
++                    "project_root_volume_id": profile.root.volume_id,
++                    "project_root_owner_id": profile.root.owner_id,
++                    "host_id": profile.host_id, "host_control": internal_binding}
++        try:
++            with self.lock:
++                self.db.execute("BEGIN IMMEDIATE")
++                try:
++                    # Recheck project permission, workspace binding, exact
++                    # host/root/profile scope, and provider-observed expiry
++                    # while the authorization ref is being consumed.
++                    project = authority.authorize_operation(profile.project_id, "host_control")
++                    if _path_key(project.get("workspace", ""), "windows") != _path_key(root_path, "windows"):
++                        raise ResourcePolicyError("HOST_CONTROL_ROOT_AUTHORITY_MISMATCH",
++                                                  "profile root differs from the authorized project workspace")
++                    if provider.verify_scope(profile.project_id, action, scope, authorization_ref) is not True:
++                        raise ResourcePolicyError("HOST_CONTROL_AUTHORIZATION_REQUIRED",
++                                                  "the pinned host provider rejected this exact host mutation scope")
++                    replay = self.db.execute(
++                        "SELECT admission_id,phase,scope_sha256 FROM host_control_admissions "
++                        "WHERE authorization_ref_sha256=?", (authorization_ref_sha256,),
++                    ).fetchone()
++                    if replay is not None:
++                        raise ResourcePolicyError(
++                            "HOST_CONTROL_AUTHORIZATION_REPLAYED",
++                            "host mutation authorization reference was already consumed",
++                            details={"admission_id": replay["admission_id"], "phase": replay["phase"]},
++                        )
++                    operation_metadata = json.dumps(metadata, sort_keys=True, ensure_ascii=False,
++                                                    separators=(",", ":"), allow_nan=False)
++                    timeouts = "{}"
++                    self.db.execute(
++                        "INSERT INTO operations(operation_id,request_id,idempotency_key,request_hash,operation,status,metadata,effective_timeouts) "
++                        "VALUES(?,?,?,?,?,'QUEUED',?,?)",
++                        (operation_id, request_id, idempotency_key, request_hash, operation_name,
++                         operation_metadata, timeouts),
++                    )
++                    self.db.execute(
++                        "INSERT INTO jobs(job_id,operation_id,status,metadata,effective_timeouts) "
++                        "VALUES(?,?,'QUEUED',?,?)",
++                        (job_id, operation_id, operation_metadata, timeouts),
++                    )
++                    self.db.execute(
++                        "INSERT INTO host_control_admissions(admission_id,operation_id,job_id,project_id,host_id,"
++                        "root_identity_json,profile_sha256,plan_sha256,source_plan_sha256,source_receipt_sha256,phase,"
++                        "authorization_ref_sha256,scope_sha256,baseline_json,baseline_sha256,state) "
++                        "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'ADMITTED')",
++                        (admission_id, operation_id, job_id, profile.project_id, profile.host_id,
++                         json.dumps(root_identity, sort_keys=True, ensure_ascii=False, separators=(",", ":")),
++                         profile.sha256, plan_sha256, source_plan_sha256, source_receipt_sha256, phase,
++                         authorization_ref_sha256, scope_digest, baseline_json, baseline_sha256),
++                    )
++                    self.db.execute(
++                        "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
++                        (job_id, "HostControlAdmissionCreated", json.dumps({
++                            "schema": "comsol-mcp.internal-host-control-admission-event/1",
++                            "admission_id": admission_id, "phase": phase,
++                            "profile_sha256": profile.sha256, "plan_sha256": plan_sha256,
++                            "scope_sha256": scope_digest,
++                            "authorization_ref_sha256": authorization_ref_sha256,
++                            "baseline_sha256": baseline_sha256,
++                        }, sort_keys=True, separators=(",", ":"))),
++                    )
++                    self.db.execute("COMMIT")
++                except BaseException:
++                    if self.db.in_transaction:
++                        self.db.execute("ROLLBACK")
++                    raise
++                operation_row = self.db.execute(
++                    "SELECT * FROM operations WHERE operation_id=?", (operation_id,)
++                ).fetchone()
++                admission_row = self.db.execute(
++                    "SELECT * FROM host_control_admissions WHERE admission_id=?", (admission_id,)
++                ).fetchone()
++                if operation_row is None or admission_row is None:
++                    raise ResourcePolicyError("HOST_CONTROL_ADMISSION_READBACK_UNKNOWN",
++                                              "committed host mutation admission failed exact readback")
++                record = self._op(operation_row)
++                record["job_id"] = job_id
++                admission = dict(admission_row)
++                if (record["status"] != "QUEUED" or admission["state"] != "ADMITTED"
++                        or admission["authorization_ref_sha256"] != authorization_ref_sha256
++                        or admission["baseline_sha256"] != baseline_sha256
++                        or json.loads(admission["baseline_json"]) != baseline):
++                    raise ResourcePolicyError("HOST_CONTROL_ADMISSION_READBACK_UNKNOWN",
++                                              "committed host mutation admission differs from exact bytes")
++                return record, admission
++        except ResourcePolicyError:
++            raise
++        except Exception as exc:
++            raise ResourcePolicyError("HOST_CONTROL_ADMISSION_UNKNOWN",
++                                      "host mutation admission transaction failed closed",
++                                      details={"cause_type": type(exc).__name__}) from exc
++
++    def append_host_control_mutation_event(
++        self,
++        *,
++        admission_id: str,
++        event: str,
++        payload: dict[str, Any],
++    ) -> dict[str, Any]:
++        """Atomically append a hash-chained mutation event and advance its state.
++
++        The single-action WFP executor uses this before/after its native call.
++        A committed intent is never replayed after a crash; only an exact
++        readback event can move it to APPLIED/RESTORED. The durable event is
++        stored in the existing OperationStore job ledger, not a side database.
++        """
++        from ._w26_os_resources import ResourcePolicyError
++
++        event_contracts = {
++            "APPLY_INTENT": ("APPLY", "ADMITTED", "APPLY_INTENT",
++                             {"action_id", "filter_key", "desired_identity_sha256", "dependency_sha256"}),
++            "APPLY_READBACK_VERIFIED": ("APPLY", "APPLY_INTENT", "APPLIED",
++                                        {"action_id", "filter_key", "desired_identity_sha256",
++                                         "created_resource_sha256", "dependency_sha256"}),
++            "RESTORE_INTENT": ("RESTORE", "ADMITTED", "RESTORE_INTENT",
++                               {"action_id", "filter_key", "expected_resource_sha256", "dependency_sha256"}),
++            "RESTORE_READBACK_VERIFIED": ("RESTORE", "RESTORE_INTENT", "RESTORED",
++                                          {"action_id", "filter_key", "removed_resource_sha256",
++                                           "expected_resource_sha256", "dependency_sha256"}),
++            "RECOVERY_REQUIRED": (None, None, "RECOVERY_REQUIRED",
++                                  {"reason_code", "failed_event", "action_id", "filter_key"}),
++        }
++        if (not isinstance(admission_id, str) or not admission_id
++                or event not in event_contracts or not isinstance(payload, dict)):
++            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
++                                      "host mutation event identity or type is malformed")
++        allowed_keys = event_contracts[event][3]
++        if set(payload) != allowed_keys:
++            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
++                                      "host mutation event payload fields are outside the closed contract")
++        digest_fields = {"desired_identity_sha256", "created_resource_sha256",
++                         "expected_resource_sha256", "removed_resource_sha256", "dependency_sha256"}
++        for key, value in payload.items():
++            if key in digest_fields and (not isinstance(value, str)
++                                         or re.fullmatch(r"[0-9a-f]{64}", value) is None):
++                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
++                                          "host mutation event digest is malformed")
++            if key in {"action_id", "filter_key", "reason_code", "failed_event"} and (
++                    not isinstance(value, str) or not value or len(value) > 256
++                    or any(ord(char) < 32 for char in value)):
++                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
++                                          "host mutation event identifier is malformed")
++        encoded_payload = json.dumps(payload, sort_keys=True, ensure_ascii=False,
++                                     separators=(",", ":"), allow_nan=False)
++        if len(encoded_payload.encode("utf-8")) > 16 * 1024:
++            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
++                                      "host mutation event payload exceeds its durable bound")
++
++        def canonical(value: Any) -> str:
++            return json.dumps(value, sort_keys=True, ensure_ascii=False,
++                              separators=(",", ":"), allow_nan=False)
++
++        def digest(value: Any) -> str:
++            return hashlib.sha256(canonical(value).encode("utf-8")).hexdigest()
++
++        event_name = "HostControlMutationJournalV1"
++        try:
++            with self.lock:
++                self.db.execute("BEGIN IMMEDIATE")
++                try:
++                    row = self.db.execute(
++                        "SELECT a.*,j.job_id,j.operation_id,j.status AS job_status,j.metadata AS job_metadata,"
++                        "o.status AS operation_status,o.operation,o.metadata AS operation_metadata "
++                        "FROM host_control_admissions a "
++                        "JOIN jobs j ON j.job_id=a.job_id AND j.operation_id=a.operation_id "
++                        "JOIN operations o ON o.operation_id=a.operation_id "
++                        "WHERE a.admission_id=?", (admission_id,),
++                    ).fetchone()
++                    if row is None:
++                        raise ResourcePolicyError("HOST_CONTROL_ADMISSION_UNKNOWN",
++                                                  "host mutation admission is absent from OperationStore")
++                    try:
++                        root_identity = json.loads(row["root_identity_json"])
++                        job_metadata = json.loads(row["job_metadata"] or "{}")
++                        operation_metadata = json.loads(row["operation_metadata"] or "{}")
++                    except (TypeError, json.JSONDecodeError) as exc:
++                        raise ResourcePolicyError("HOST_CONTROL_BINDING_UNKNOWN",
++                                                  "host mutation durable scope metadata is malformed") from exc
++                    binding = {
++                        "schema": "comsol-mcp.internal-host-control-operation/1",
++                        "admission_id": admission_id,
++                        "phase": row["phase"],
++                        "project_id": row["project_id"],
++                        "host_id": row["host_id"],
++                        "root_identity": root_identity,
++                        "profile_sha256": row["profile_sha256"],
++                        "plan_sha256": row["plan_sha256"],
++                        "source_plan_sha256": row["source_plan_sha256"],
++                        "source_receipt_sha256": row["source_receipt_sha256"],
++                    }
++                    for metadata in (job_metadata, operation_metadata):
++                        if (metadata.get("host_control") != binding
++                                or metadata.get("project_id") != row["project_id"]
++                                or metadata.get("host_id") != row["host_id"]
++                                or metadata.get("project_root_identity") != root_identity.get("file_id")
++                                or metadata.get("project_root_volume_id") != root_identity.get("volume_id")
++                                or metadata.get("project_root_owner_id") != root_identity.get("owner_id")):
++                            raise ResourcePolicyError("HOST_CONTROL_BINDING_MISMATCH",
++                                                      "job and operation no longer match the exact admitted host scope")
++                    phase, required_state, new_state, _keys = event_contracts[event]
++                    current_state = str(row["state"])
++                    if row["job_status"] != "RUNNING" or row["operation_status"] != "RUNNING":
++                        raise ResourcePolicyError("HOST_CONTROL_STATE_CONFLICT",
++                                                  "host mutation journal can advance only while its admitted operation is RUNNING")
++                    if event == "RECOVERY_REQUIRED":
++                        if current_state not in {"APPLY_INTENT", "RESTORE_INTENT"}:
++                            raise ResourcePolicyError("HOST_CONTROL_STATE_CONFLICT",
++                                                      "recovery can only be recorded after a durable mutation intent")
++                        if (payload["failed_event"] not in {"APPLY_INTENT", "RESTORE_INTENT"}
++                                or payload["failed_event"] != current_state):
++                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
++                                                      "recovery event must identify the current exact durable intent")
++                    elif row["phase"] != phase or current_state != required_state:
++                        raise ResourcePolicyError("HOST_CONTROL_STATE_CONFLICT",
++                                                  "host mutation event cannot replay or skip a durable state")
++                    if row["operation"] != f"host.change.{str(row['phase']).lower()}":
++                        raise ResourcePolicyError("HOST_CONTROL_BINDING_MISMATCH",
++                                                  "admitted operation name differs from its privileged phase")
++                    records = self.db.execute(
++                        "SELECT id,metadata FROM job_events WHERE job_id=? AND event=? ORDER BY id",
++                        (row["job_id"], event_name),
++                    ).fetchall()
++                    previous = "0" * 64
++                    journal_state = "ADMITTED"
++                    journal_action: str | None = None
++                    journal_filter: str | None = None
++                    journal_intent: dict[str, Any] | None = None
++                    phase_events = {
++                        "APPLY": {"APPLY_INTENT", "APPLY_READBACK_VERIFIED"},
++                        "RESTORE": {"RESTORE_INTENT", "RESTORE_READBACK_VERIFIED"},
++                    }[str(row["phase"])]
++                    event_payload_keys = {name: contract[3] for name, contract in event_contracts.items()}
++                    for sequence, record_row in enumerate(records):
++                        try:
++                            prior = json.loads(record_row["metadata"])
++                        except (TypeError, json.JSONDecodeError) as exc:
++                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                      "host mutation journal row is malformed") from exc
++                        expected_fields = {"schema", "admission_id", "job_id", "operation_id", "project_id",
++                                           "host_id", "root_identity", "profile_sha256", "plan_sha256",
++                                           "source_plan_sha256", "source_receipt_sha256", "phase", "sequence",
++                                           "previous_sha256", "event", "payload", "record_sha256"}
++                        if (not isinstance(prior, dict) or set(prior) != expected_fields
++                                or prior.get("schema") != "comsol-mcp.host-control-mutation-journal/1"
++                                or prior.get("sequence") != sequence or type(prior.get("sequence")) is not int
++                                or prior.get("previous_sha256") != previous
++                                or prior.get("admission_id") != admission_id
++                                or prior.get("job_id") != row["job_id"]
++                                or prior.get("operation_id") != row["operation_id"]
++                                or prior.get("project_id") != row["project_id"]
++                                or prior.get("host_id") != row["host_id"]
++                                or prior.get("root_identity") != root_identity
++                                or prior.get("profile_sha256") != row["profile_sha256"]
++                                or prior.get("plan_sha256") != row["plan_sha256"]
++                                or prior.get("source_plan_sha256") != row["source_plan_sha256"]
++                                or prior.get("source_receipt_sha256") != row["source_receipt_sha256"]
++                                or prior.get("phase") != row["phase"]
++                                or not isinstance(prior.get("payload"), dict)
++                                or not isinstance(prior.get("record_sha256"), str)):
++                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                      "host mutation journal chain binding is invalid")
++                        body = {key: value for key, value in prior.items() if key != "record_sha256"}
++                        if digest(body) != prior["record_sha256"]:
++                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                      "host mutation journal record hash differs from its payload")
++                        prior_event = prior["event"]
++                        prior_payload = prior["payload"]
++                        if (prior_event not in phase_events | {"RECOVERY_REQUIRED"}
++                                or set(prior_payload) != event_payload_keys[prior_event]):
++                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                      "host mutation journal has an impossible event or payload")
++                        for key, value in prior_payload.items():
++                            if key in digest_fields and (not isinstance(value, str)
++                                                         or re.fullmatch(r"[0-9a-f]{64}", value) is None):
++                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                          "host mutation journal contains a malformed digest")
++                            if key in {"action_id", "filter_key", "reason_code", "failed_event"} and (
++                                    not isinstance(value, str) or not value or len(value) > 256
++                                    or any(ord(char) < 32 for char in value)):
++                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                          "host mutation journal contains a malformed identifier")
++                        if prior_event == "RECOVERY_REQUIRED":
++                            if (journal_state not in {"APPLY_INTENT", "RESTORE_INTENT"}
++                                    or prior_payload.get("failed_event") != journal_state
++                                    or journal_intent is None
++                                    or prior_payload.get("action_id") != journal_intent.get("action_id")
++                                    or prior_payload.get("filter_key") != journal_intent.get("filter_key")):
++                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                          "host recovery event does not match the preceding intent")
++                            journal_state = "RECOVERY_REQUIRED"
++                        elif prior_event == ("APPLY_INTENT" if row["phase"] == "APPLY" else "RESTORE_INTENT"):
++                            if journal_state != "ADMITTED":
++                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                          "host mutation intent is duplicated or out of sequence")
++                            journal_state = prior_event
++                            journal_intent = dict(prior_payload)
++                        else:
++                            expected_intent = "APPLY_INTENT" if row["phase"] == "APPLY" else "RESTORE_INTENT"
++                            if (journal_state != expected_intent or journal_intent is None
++                                    or prior_payload.get("action_id") != journal_intent.get("action_id")
++                                    or prior_payload.get("filter_key") != journal_intent.get("filter_key")):
++                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                          "host mutation readback has no matching durable intent")
++                            if row["phase"] == "APPLY":
++                                matching = (prior_payload.get("desired_identity_sha256")
++                                            == journal_intent.get("desired_identity_sha256")
++                                            and prior_payload.get("dependency_sha256")
++                                            == journal_intent.get("dependency_sha256"))
++                            else:
++                                matching = (prior_payload.get("expected_resource_sha256")
++                                            == journal_intent.get("expected_resource_sha256")
++                                            and prior_payload.get("dependency_sha256")
++                                            == journal_intent.get("dependency_sha256")
++                                            and prior_payload.get("removed_resource_sha256")
++                                            == journal_intent.get("expected_resource_sha256"))
++                            if not matching:
++                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                          "host readback does not confirm the exact intent resource/dependency")
++                            journal_state = "APPLIED" if row["phase"] == "APPLY" else "RESTORED"
++                        if (not isinstance(prior_payload.get("action_id"), str)
++                                or not isinstance(prior_payload.get("filter_key"), str)
++                                or (journal_action is not None and prior_payload["action_id"] != journal_action)
++                                or (journal_filter is not None and prior_payload["filter_key"] != journal_filter)):
++                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                      "host mutation journal action identity changed between events")
++                        journal_action = prior_payload["action_id"]
++                        journal_filter = prior_payload["filter_key"]
++                        previous = prior["record_sha256"]
++                    if journal_state != current_state:
++                        raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
++                                                  "host mutation admission state differs from its journal history")
++                    if records and (payload["action_id"] != journal_action
++                                    or payload["filter_key"] != journal_filter):
++                        raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
++                                                  "host mutation event changed the action identity already journaled")
++                    if event in {"APPLY_READBACK_VERIFIED", "RESTORE_READBACK_VERIFIED"}:
++                        if journal_intent is None:
++                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_STATE_UNKNOWN",
++                                                      "host mutation readback has no durable intent")
++                        if row["phase"] == "APPLY":
++                            matching_current = (
++                                payload.get("desired_identity_sha256") == journal_intent.get("desired_identity_sha256")
++                                and payload.get("dependency_sha256") == journal_intent.get("dependency_sha256"))
++                        else:
++                            matching_current = (
++                                payload.get("expected_resource_sha256") == journal_intent.get("expected_resource_sha256")
++                                and payload.get("dependency_sha256") == journal_intent.get("dependency_sha256")
++                                and payload.get("removed_resource_sha256") == journal_intent.get("expected_resource_sha256"))
++                        if not matching_current:
++                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
++                                                      "host readback payload does not confirm the exact durable intent")
++                    if event == "RECOVERY_REQUIRED" and (
++                            journal_intent is None or payload.get("failed_event") != current_state
++                            or payload.get("action_id") != journal_intent.get("action_id")
++                            or payload.get("filter_key") != journal_intent.get("filter_key")):
++                        raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
++                                                  "recovery payload does not identify the current durable intent")
++                    body = {
++                        "schema": "comsol-mcp.host-control-mutation-journal/1",
++                        "admission_id": admission_id, "job_id": row["job_id"],
++                        "operation_id": row["operation_id"], "project_id": row["project_id"],
++                        "host_id": row["host_id"], "root_identity": root_identity,
++                        "profile_sha256": row["profile_sha256"], "plan_sha256": row["plan_sha256"],
++                        "source_plan_sha256": row["source_plan_sha256"],
++                        "source_receipt_sha256": row["source_receipt_sha256"],
++                        "phase": row["phase"], "sequence": len(records),
++                        "previous_sha256": previous, "event": event, "payload": payload,
++                    }
++                    record = {**body, "record_sha256": digest(body)}
++                    self.db.execute(
++                        "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
++                        (row["job_id"], event_name, canonical(record)),
++                    )
++                    updated = self.db.execute(
++                        "UPDATE host_control_admissions SET state=?,updated_at=CURRENT_TIMESTAMP "
++                        "WHERE admission_id=? AND state=?",
++                        (new_state, admission_id, current_state),
++                    )
++                    if updated.rowcount != 1:
++                        raise ResourcePolicyError("HOST_CONTROL_STATE_CONFLICT",
++                                                  "host mutation admission state changed during event append")
++                    self.db.execute("COMMIT")
++                except BaseException:
++                    if self.db.in_transaction:
++                        self.db.execute("ROLLBACK")
++                    raise
++                row = self.db.execute(
++                    "SELECT id,metadata FROM job_events WHERE job_id=? AND event=? ORDER BY id DESC LIMIT 1",
++                    (row["job_id"], event_name),
++                ).fetchone()
++                admission = self.db.execute(
++                    "SELECT state FROM host_control_admissions WHERE admission_id=?", (admission_id,)
++                ).fetchone()
++                if (row is None or json.loads(row["metadata"]) != record
++                        or admission is None or admission["state"] != new_state):
++                    raise ResourcePolicyError("HOST_CONTROL_JOURNAL_READBACK_UNKNOWN",
++                                              "durable host mutation event failed exact readback")
++                return {"id": int(row["id"]), **record, "state": new_state}
++        except ResourcePolicyError:
++            raise
++        except Exception as exc:
++            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_UNKNOWN",
++                                      "host mutation journal transaction failed closed",
++                                      details={"cause_type": type(exc).__name__}) from exc
++
++    def host_control_admission_state(self, admission_id: str) -> str:
++        """Read the exact durable state of one internal host admission."""
++        from ._w26_os_resources import ResourcePolicyError
++
++        if not isinstance(admission_id, str) or not admission_id:
++            raise ResourcePolicyError("HOST_CONTROL_ADMISSION_INVALID",
++                                      "host admission ID is malformed")
++        with self.lock:
++            row = self.db.execute(
++                "SELECT state FROM host_control_admissions WHERE admission_id=?",
++                (admission_id,),
++            ).fetchone()
++        if row is None or not isinstance(row["state"], str):
++            raise ResourcePolicyError("HOST_CONTROL_ADMISSION_UNKNOWN",
++                                      "host admission state could not be read")
++        return row["state"]
+ 
+     def begin_resume(
+         self,
+--- /dev/null
++++ b/comsol_mcp/_windows_host_change.py
+@@ -0,0 +1,528 @@
++"""Internally authorized, journalled Windows host-change executor.
++
++Only a single exact WFP filter CREATE and its receipt-bound DELETE restore are
++implemented. Public MCP routing is intentionally unchanged. Plans containing
++any other action/resource kind are refused before authorization consumption or
++native mutation. A committed intent is never automatically replayed.
++"""
++from __future__ import annotations
++
++from dataclasses import dataclass
++import hashlib
++import json
++import os
++import socket
++from typing import Any, Mapping
++
++from ._execution_contract import ExecutionContractError
++from ._operation_store import OperationStore
++from ._project_authority import ProjectAuthority
++from ._host_scoped_provider import HostScopedProvider
++from . import _w26_os_resources as resources
++from ._windows_t037_wfp import (
++    CtypesWindowsWfpMutationApi, WindowsWfpMutationError, guid_key,
++    normalize_endpoint_grant, sha256,
++)
++
++_SOFTWARE_TEST_TOKEN = object()
++_NATIVE_PROFILE_LOADER_TOKEN = object()
++_MAX_SNAPSHOT_ROWS = 100_000
++_SHA = frozenset("0123456789abcdef")
++
++
++class WindowsHostChangeError(ExecutionContractError):
++    """Typed pre-effect refusal or durable unknown from host mutation."""
++
++
++def _error(code: str, message: str, *, safe_retry: bool = False,
++           stage: str = "validation", details: Mapping[str, Any] | None = None) -> None:
++    raise WindowsHostChangeError(code, message, safe_retry=safe_retry,
++                                 stage=stage, details=details)
++
++
++def _is_sha(value: Any) -> bool:
++    return isinstance(value, str) and len(value) == 64 and all(char in _SHA for char in value)
++
++
++def _canonical(value: Any) -> str:
++    return json.dumps(value, sort_keys=True, ensure_ascii=False,
++                      separators=(",", ":"), allow_nan=False)
++
++
++def _current_windows_binding(profile: Any) -> dict[str, Any]:
++    """Verify current Windows host, service token and project-root identity."""
++    if os.name != "nt":
++        _error("HOST_CHANGE_WINDOWS_REQUIRED", "native host mutation is available only on Windows")
++    policy = profile.windows_isolation
++    from ._windows_t037 import windows_host_fingerprint, WindowsT037Error
++    from ._host_scoped_provider import verify_private_path_security
++    from ._windows_t037 import _Win32ReadOnlyApi
++    try:
++        fingerprint = windows_host_fingerprint()
++        host_id = socket.gethostname()
++        if fingerprint != policy.host_fingerprint_sha256 or host_id.casefold() != profile.host_id.casefold():
++            _error("HOST_CHANGE_HOST_MISMATCH", "trusted Windows profile names a different host or machine identity")
++        root = verify_private_path_security(profile.root.path, directory=True)
++        identity = root.get("identity")
++        if (root.get("security_semantics") != "windows-read-control-owner-dacl-persistent-acls"
++                or not isinstance(identity, Mapping)
++                or str(identity.get("device")) != profile.root.volume_id
++                or str(identity.get("inode")) != profile.root.file_id):
++            _error("HOST_CHANGE_ROOT_IDENTITY_MISMATCH", "trusted project root identity or ACL differs from startup profile")
++        api = _Win32ReadOnlyApi()
++        process = api.k.GetCurrentProcess()
++        token = api.open_process_token(process)
++        try:
++            token_observation = api.read_token(token)
++        finally:
++            api.close_handle(token)
++        if (token_observation.get("state") != "OBSERVED"
++                or token_observation.get("user_sid", "").casefold() != policy.service_logon_sid.casefold()
++                or profile.root.owner_id.casefold() != policy.service_logon_sid.casefold()):
++            _error("HOST_CHANGE_SERVICE_IDENTITY_MISMATCH",
++                   "host changes require the exact configured service logon identity and root owner")
++        return {"host_id": host_id, "host_fingerprint_sha256": fingerprint,
++                "root_identity": dict(identity),
++                "root_security_sha256": root.get("security_sha256"),
++                "service_token_sid": token_observation["user_sid"]}
++    except WindowsHostChangeError:
++        raise
++    except ExecutionContractError as exc:
++        _error("HOST_CHANGE_NATIVE_BINDING_UNKNOWN", "Windows host/root identity could not be verified",
++               details={"cause_code": exc.code})
++    except WindowsT037Error as exc:
++        _error("HOST_CHANGE_NATIVE_BINDING_UNKNOWN", "Windows host identity could not be verified",
++               details={"cause_code": exc.code})
++    except Exception as exc:
++        _error("HOST_CHANGE_NATIVE_BINDING_UNKNOWN", "Windows service/root binding failed closed",
++               details={"cause_type": type(exc).__name__})
++
++
++def _normalize_supported_plan(plan: Any, trusted_profile: Any) -> tuple[dict[str, Any], dict[str, Any]]:
++    try:
++        payload = resources.validate_host_change_plan(plan)
++    except resources.ResourcePolicyError:
++        raise
++    except Exception as exc:
++        _error("HOST_CHANGE_PLAN_INVALID", "typed host-change plan validation failed",
++               details={"cause_type": type(exc).__name__})
++    if (payload["project_id"] != trusted_profile.project_id
++            or payload["profile_sha256"] != trusted_profile.sha256
++            or payload["host"] != {"platform": "windows", "host_id": trusted_profile.host_id}
++            or payload["profile"] != trusted_profile.as_dict()):
++        _error("HOST_CHANGE_PROFILE_SCOPE_MISMATCH", "plan does not bind the exact trusted startup profile/root/host")
++    actions = payload["change_manifest"]
++    if len(actions) != 1:
++        _error("HOST_CHANGE_ACTION_SET_UNSUPPORTED",
++               "this implementation admits exactly one WFP filter action per authorized operation")
++    source = actions[0]
++    if source.get("resource_kind") != "wfp_filter" or source.get("operation") != "CREATE":
++        _error("HOST_CHANGE_ACTION_UNSUPPORTED",
++               "entire host-change plan was refused before effects because its resource kind/operation is unsupported")
++    policy = trusted_profile.windows_isolation
++    desired = source.get("desired")
++    if (not isinstance(desired, Mapping)
++            or desired.get("provider_key") is None
++            or guid_key(desired["provider_key"]) != guid_key(policy.wfp_provider_key)
++            or guid_key(desired.get("sublayer_key")) != guid_key(policy.wfp_sublayer_key)
++            or desired.get("action") != "PERMIT"):
++        _error("HOST_CHANGE_WFP_SCOPE_MISMATCH", "filter does not bind the exact configured provider/sublayer/action")
++    matches = [grant for grant in policy.wfp_grants
++               if hashlib.sha256(_canonical(grant.as_dict()).encode("utf-8")).hexdigest()
++               == desired.get("grant_sha256")]
++    if len(matches) != 1:
++        _error("HOST_CHANGE_WFP_GRANT_MISMATCH", "filter does not bind one unique configured network grant")
++    grant = normalize_endpoint_grant(matches[0], policy=policy,
++                                     launch_images=trusted_profile.launch_images)
++    action = {
++        "action_id": source["action_id"],
++        "resource_name": source["resource_name"],
++        "filter_key": desired["filter_key"],
++        "provider_key": desired["provider_key"],
++        "sublayer_key": desired["sublayer_key"],
++        "desired_identity_sha256": source["desired_identity_sha256"],
++        "ownership_guid": source["ownership_guid"],
++        "plan_sha256": plan.sha256,
++        "grant": grant,
++        "grant_sha256": desired["grant_sha256"],
++    }
++    return payload, action
++
++
++def _snapshot_dependencies(snapshot: Any, profile: Any, action: Mapping[str, Any], *,
++                           require_filter_absent: bool) -> dict[str, Any]:
++    if not isinstance(snapshot, Mapping) or snapshot.get("state") != "COMPLETE_READ_ONLY":
++        _error("HOST_CHANGE_WFP_SNAPSHOT_INCOMPLETE", "complete bounded WFP read-only snapshot is required before mutation")
++    limits, counts = snapshot.get("limits"), snapshot.get("counts")
++    if (not isinstance(limits, Mapping) or not isinstance(counts, Mapping)
++            or any(type(limits.get(key)) is not int or limits[key] <= 0
++                   for key in ("max_page_size", "max_pages_per_kind", "max_total_records", "max_total_bytes", "max_elapsed_ms"))
++            or type(counts.get("total_records")) is not int
++            or not 0 <= counts["total_records"] <= min(_MAX_SNAPSHOT_ROWS, limits["max_total_records"])
++            or type(counts.get("total_bytes")) is not int
++            or not 0 <= counts["total_bytes"] <= limits["max_total_bytes"]
++            or type(counts.get("elapsed_ms")) is not int
++            or not 0 <= counts["elapsed_ms"] <= limits["max_elapsed_ms"]
++            or not _is_sha(snapshot.get("snapshot_sha256"))):
++        _error("HOST_CHANGE_WFP_SNAPSHOT_INVALID", "WFP snapshot lacks valid completeness bounds or digest")
++    providers, sublayers, filters = (snapshot.get("providers"), snapshot.get("sublayers"), snapshot.get("filters"))
++    if (not isinstance(providers, list) or not isinstance(sublayers, list) or not isinstance(filters, list)
++            or len(providers) + len(sublayers) + len(filters) != counts["total_records"]
++            or any(not isinstance(item, Mapping) for item in (*providers, *sublayers, *filters))):
++        _error("HOST_CHANGE_WFP_SNAPSHOT_INVALID", "WFP snapshot row sets do not match the bounded total")
++    try:
++        canonical_snapshot = {
++            "providers": sorted(providers, key=lambda row: row.get("provider_key", "")),
++            "sublayers": sorted(sublayers, key=lambda row: row.get("sublayer_key", "")),
++            "filters": sorted(filters, key=lambda row: (row.get("layer_key", ""),
++                                                         row.get("filter_id", -1))),
++        }
++        observed_snapshot_sha = hashlib.sha256(
++            _canonical(canonical_snapshot).encode("utf-8")).hexdigest()
++    except (TypeError, ValueError, KeyError) as exc:
++        _error("HOST_CHANGE_WFP_SNAPSHOT_INVALID",
++               "WFP snapshot rows cannot be canonically fingerprinted",
++               details={"cause_type": type(exc).__name__})
++    if observed_snapshot_sha != snapshot["snapshot_sha256"]:
++        _error("HOST_CHANGE_WFP_SNAPSHOT_TAMPERED",
++               "WFP snapshot fingerprint does not bind its exact returned rows")
++    policy = profile.windows_isolation
++    for rows, key_name, label in ((providers, "provider_key", "provider"),
++                                  (sublayers, "sublayer_key", "sublayer"),
++                                  (filters, "filter_key", "filter")):
++        try:
++            keys = [guid_key(row.get(key_name)) for row in rows]
++        except WindowsWfpMutationError as exc:
++            _error("HOST_CHANGE_WFP_SNAPSHOT_INVALID",
++                   f"WFP snapshot contains an invalid {label} key",
++                   details={"cause_code": exc.code})
++        if len(keys) != len(set(keys)):
++            _error("HOST_CHANGE_WFP_SNAPSHOT_INVALID",
++                   f"WFP snapshot contains duplicate {label} keys")
++    provider_matches = [row for row in providers
++                        if guid_key(row.get("provider_key")) == guid_key(policy.wfp_provider_key)]
++    sublayer_matches = [row for row in sublayers
++                        if guid_key(row.get("sublayer_key")) == guid_key(policy.wfp_sublayer_key)]
++    if len(provider_matches) != 1 or len(sublayer_matches) != 1:
++        _error("HOST_CHANGE_WFP_DEPENDENCY_MISSING", "the configured provider and sublayer must each exist exactly once")
++    provider, sublayer = provider_matches[0], sublayer_matches[0]
++    if (provider.get("flags") != 0 or sublayer.get("flags") != 0
++            or guid_key(sublayer.get("provider_key")) != guid_key(policy.wfp_provider_key)
++            or not _is_sha(provider.get("security_sha256"))
++            or not _is_sha(sublayer.get("security_sha256"))
++            or not _is_sha(provider.get("provider_data_sha256"))
++            or not _is_sha(sublayer.get("provider_data_sha256"))):
++        _error("HOST_CHANGE_WFP_DEPENDENCY_UNSUPPORTED",
++               "provider or sublayer carries unknown flags, owner, or identity fields")
++    dependency = {"provider": dict(provider), "sublayer": dict(sublayer)}
++    target_rows = [row for row in filters
++                   if guid_key(row.get("filter_key")) == guid_key(action["filter_key"])]
++    if len(target_rows) > 1:
++        _error("HOST_CHANGE_WFP_FILTER_DUPLICATE", "WFP snapshot contains duplicate exact filter keys")
++    if require_filter_absent and target_rows:
++        _error("HOST_CHANGE_WFP_FILTER_EXISTS", "configured filter key already exists; no overwrite is permitted")
++    return {
++        "schema": "comsol-mcp.windows-wfp-dependency-baseline/1",
++        "snapshot_sha256": snapshot["snapshot_sha256"],
++        "dependency_sha256": sha256(dependency),
++        "provider": dict(provider), "sublayer": dict(sublayer),
++        "target_filter_sha256": sha256(dict(target_rows[0])) if target_rows else None,
++        "target_filter_present": bool(target_rows),
++        "effective_policy_state": "UNVERIFIED",
++        "wfp_snapshot_reasons": list(snapshot.get("reasons", []))[:256],
++    }
++
++
++def _receipt_payload(plan: Any, profile: Any, actions: tuple[Mapping[str, Any], ...]) -> dict[str, Any]:
++    return {"schema": "comsol-mcp.applied-host-change-receipt/1",
++            "plan_sha256": plan.sha256, "host_id": profile.host_id,
++            "platform": profile.platform, "actions": [dict(item) for item in actions]}
++
++
++def _verify_receipt(plan: Any, profile: Any, receipt: Any) -> tuple[dict[str, Any], dict[str, Any], str]:
++    payload, source_action = _normalize_supported_plan(plan, profile)
++    if not isinstance(receipt, resources.AppliedHostChangeReceipt):
++        _error("HOST_CHANGE_RECEIPT_INVALID", "restore requires a typed exact applied receipt")
++    body = _receipt_payload(plan, profile, tuple(receipt.actions))
++    if (receipt.plan_sha256 != plan.sha256 or receipt.host_id != profile.host_id
++            or receipt.platform != "windows" or not _is_sha(receipt.receipt_sha256)
++            or hashlib.sha256(_canonical(body).encode("utf-8")).hexdigest() != receipt.receipt_sha256
++            or len(receipt.actions) != 1):
++        _error("HOST_CHANGE_RECEIPT_MISMATCH", "applied receipt does not bind this exact source plan/host")
++    item = receipt.actions[0]
++    if (not isinstance(item, Mapping) or set(item) != {
++            "action_id", "created_resource_sha256", "prior_resource_sha256", "prior_backup_path"}
++            or item.get("action_id") != source_action["action_id"]
++            or not _is_sha(item.get("created_resource_sha256"))
++            or item.get("prior_resource_sha256") is not None
++            or item.get("prior_backup_path") is not None):
++        _error("HOST_CHANGE_RECEIPT_MISMATCH", "restore receipt does not describe this exact CREATE action")
++    return payload, source_action, item["created_resource_sha256"]
++
++
++@dataclass(frozen=True)
++class _ExecutionAdmission:
++    operation_id: str
++    job_id: str
++    admission_id: str
++
++
++class WindowsHostChangeExecutor:
++    """Internal apply/restore lifecycle bound to trusted profile and provider."""
++
++    def __init__(self, *, store: OperationStore, authority: ProjectAuthority,
++                 profile: Any, api: Any, software_only: bool,
++                 _construction_token: object | None = None):
++        if (type(store) is not OperationStore or type(authority) is not ProjectAuthority
++                or authority.store is not store or type(profile) is not resources.HostResourceProfile
++                or type(authority.authorization_verifier) is not HostScopedProvider):
++            _error("HOST_CHANGE_TRUSTED_COMPONENT_REQUIRED",
++                   "host mutation requires the existing OperationStore, ProjectAuthority, startup profile and pinned provider")
++        resources.validate_profile(profile)
++        if profile.platform != "windows" or profile.windows_isolation is None:
++            _error("HOST_CHANGE_WINDOWS_PROFILE_REQUIRED", "host mutation requires exact Windows isolation profile v2")
++        if software_only and (_construction_token is not _SOFTWARE_TEST_TOKEN or api is None):
++            _error("HOST_CHANGE_TEST_API_REQUIRED",
++                   "synthetic protocol execution requires the private software-test entry point")
++        if not software_only and _construction_token is not _NATIVE_PROFILE_LOADER_TOKEN:
++            _error("HOST_CHANGE_TRUSTED_PROFILE_LOADER_REQUIRED",
++                   "native host mutation construction must come from the trusted startup profile loader")
++        if not software_only and type(api) is not CtypesWindowsWfpMutationApi:
++            _error("HOST_CHANGE_NATIVE_API_REQUIRED", "production execution requires the fixed native WFP adapter")
++        self.store, self.authority, self.profile = store, authority, profile
++        self.provider = authority.authorization_verifier
++        self.api = api
++        self.software_only = software_only
++
++    @classmethod
++    def from_trusted_profile_path(cls, *, store: OperationStore, authority: ProjectAuthority,
++                                  trusted_profile_path: str | os.PathLike[str]) -> "WindowsHostChangeExecutor":
++        if os.name != "nt":
++            _error("HOST_CHANGE_WINDOWS_REQUIRED", "native host mutation is available only on Windows")
++        from ._windows_t037 import load_trusted_profile, WindowsT037ProfileV2
++        loaded = load_trusted_profile(trusted_profile_path)
++        if type(loaded) is not WindowsT037ProfileV2:
++            _error("HOST_CHANGE_PROFILE_V2_REQUIRED", "v1 intent-only profile cannot authorize a Windows host mutation")
++        profile = loaded.host_resource_profile
++        _current_windows_binding(profile)
++        return cls(store=store, authority=authority, profile=profile,
++                   api=CtypesWindowsWfpMutationApi(), software_only=False,
++                   _construction_token=_NATIVE_PROFILE_LOADER_TOKEN)
++
++    @classmethod
++    def _for_software_test(cls, *, store: OperationStore, authority: ProjectAuthority,
++                           profile: Any, api: Any, token: object) -> "WindowsHostChangeExecutor":
++        if token is not _SOFTWARE_TEST_TOKEN:
++            _error("HOST_CHANGE_TEST_TOKEN_REQUIRED", "synthetic WFP API is accepted only by the private test entry point")
++        return cls(store=store, authority=authority, profile=profile,
++                   api=api, software_only=True,
++                   _construction_token=_SOFTWARE_TEST_TOKEN)
++
++    def _preflight(self, plan: Any) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
++        payload, action = _normalize_supported_plan(plan, self.profile)
++        if not self.software_only:
++            current = _current_windows_binding(self.profile)
++        else:
++            current = {"host_id": self.profile.host_id,
++                       "host_fingerprint_sha256": self.profile.windows_isolation.host_fingerprint_sha256,
++                       "root_identity": {"device": self.profile.root.volume_id,
++                                         "inode": self.profile.root.file_id},
++                       "root_security_sha256": None,
++                       "service_token_sid": self.profile.windows_isolation.service_logon_sid,
++                       "evidence_classification": "SOFTWARE_ONLY"}
++        snapshot = self.api.observe_snapshot()
++        baseline = _snapshot_dependencies(snapshot, self.profile, action, require_filter_absent=True)
++        baseline["current_binding"] = current
++        return payload, action, baseline
++
++    def _admit(self, *, phase: str, plan_sha256: str, approval: resources.HostChangeApproval,
++               baseline: dict[str, Any], source_plan_sha256: str | None = None,
++               source_receipt_sha256: str | None = None) -> _ExecutionAdmission:
++        if (not isinstance(approval, resources.HostChangeApproval)
++                or approval.plan_sha256 != plan_sha256
++                or not isinstance(approval.authorization_ref, str)
++                or not approval.authorization_ref):
++            _error("HOST_CHANGE_APPROVAL_MISMATCH", "authorization must bind the exact apply/restore plan fingerprint")
++        try:
++            operation, admission = self.store.begin_host_control_operation(
++                authority=self.authority, provider=self.provider, profile=self.profile,
++                phase=phase, plan_sha256=plan_sha256,
++                authorization_ref=approval.authorization_ref, baseline=baseline,
++                source_plan_sha256=source_plan_sha256,
++                source_receipt_sha256=source_receipt_sha256,
++            )
++        except resources.ResourcePolicyError as exc:
++            if exc.code in {"HOST_CONTROL_ADMISSION_READBACK_UNKNOWN",
++                            "HOST_CONTROL_ADMISSION_UNKNOWN"}:
++                _error("HOST_CHANGE_ADMISSION_UNKNOWN",
++                       "host operation admission outcome is unknown; do not replay this authorization reference",
++                       safe_retry=False, stage="execution",
++                       details={"cause_code": exc.code})
++            raise
++        job_id = operation.get("job_id")
++        if (not isinstance(job_id, str) or admission.get("state") != "ADMITTED"
++                or operation.get("status") != "QUEUED"
++                or operation.get("operation") != f"host.change.{phase.lower()}"
++                or operation.get("operation_id") != admission.get("operation_id")
++                or operation.get("job_id") != admission.get("job_id")):
++            _error("HOST_CHANGE_ADMISSION_UNKNOWN", "committed host admission did not read back its exact job/state",
++                   safe_retry=False, stage="execution")
++        return _ExecutionAdmission(operation["operation_id"], job_id, admission["admission_id"])
++
++    def _start(self, admission: _ExecutionAdmission) -> None:
++        if self.store.host_control_admission_state(admission.admission_id) != "ADMITTED":
++            _error("HOST_CHANGE_ADMISSION_STATE_UNKNOWN",
++                   "durable host admission is not in the initial state before dispatch",
++                   safe_retry=False, stage="execution")
++        self.store.update_job(admission.job_id, "RUNNING")
++        operation = self.store.get_operation(admission.operation_id)
++        job = self.store.job(admission.job_id)
++        if (operation is None or job is None or operation.get("status") != "RUNNING"
++                or job.get("status") != "RUNNING"
++                or self.store.host_control_admission_state(admission.admission_id) != "ADMITTED"):
++            _error("HOST_CHANGE_START_UNKNOWN",
++                   "host operation/job did not durably enter RUNNING before its mutation intent",
++                   safe_retry=False, stage="execution")
++
++    def _finish_unknown(self, admission: _ExecutionAdmission, *, phase: str,
++                        action: Mapping[str, Any], cause: BaseException) -> None:
++        event = "APPLY_INTENT" if phase == "APPLY" else "RESTORE_INTENT"
++        try:
++            payload = {"reason_code": getattr(cause, "code", type(cause).__name__)[:200],
++                       "failed_event": event, "action_id": action["action_id"],
++                       "filter_key": action["filter_key"]}
++            self.store.append_host_control_mutation_event(
++                admission_id=admission.admission_id, event="RECOVERY_REQUIRED", payload=payload)
++        except BaseException:
++            # The original durable intent already prevents replay. If SQLite
++            # cannot record the recovery marker, retain the UNKNOWN operation.
++            pass
++        try:
++            self.store.finish(admission.operation_id, status="UNKNOWN", result={
++                "success": False, "operation": f"host.change.{phase.lower()}",
++                "execution_state": "UNKNOWN", "host_change_state": "RECOVERY_REQUIRED",
++                "effective_policy_state": "UNVERIFIED", "safe_retry": False,
++                "cause_code": getattr(cause, "code", type(cause).__name__),
++                "evidence_classification": "SOFTWARE_ONLY" if self.software_only else "WINDOWS_NATIVE_READBACK_ONLY",
++            })
++        except BaseException:
++            pass
++
++    def apply(self, plan: Any, *, approval: resources.HostChangeApproval) -> resources.AppliedHostChangeReceipt:
++        payload, action, baseline = self._preflight(plan)
++        admission = self._admit(phase="APPLY", plan_sha256=plan.sha256,
++                                approval=approval, baseline=baseline)
++        try:
++            self._start(admission)
++            intent = {"action_id": action["action_id"], "filter_key": action["filter_key"],
++                      "desired_identity_sha256": action["desired_identity_sha256"],
++                      "dependency_sha256": baseline["dependency_sha256"]}
++            self.store.append_host_control_mutation_event(
++                admission_id=admission.admission_id, event="APPLY_INTENT", payload=intent)
++            row = self.api.create_filter(profile=self.profile, action=action,
++                                         expected_dependency_sha256=baseline["dependency_sha256"])
++            resource_sha256 = sha256(row)
++            verified = {**intent, "created_resource_sha256": resource_sha256}
++            self.store.append_host_control_mutation_event(
++                admission_id=admission.admission_id,
++                event="APPLY_READBACK_VERIFIED", payload=verified)
++            receipt_actions = ({"action_id": action["action_id"],
++                               "created_resource_sha256": resource_sha256,
++                               "prior_resource_sha256": None, "prior_backup_path": None},)
++            receipt_body = _receipt_payload(plan, self.profile, receipt_actions)
++            receipt_sha = hashlib.sha256(_canonical(receipt_body).encode("utf-8")).hexdigest()
++            receipt = resources.AppliedHostChangeReceipt(
++                plan.sha256, self.profile.host_id, "windows", receipt_actions, receipt_sha)
++            result = {"success": True, "operation": "host.change.apply",
++                      "execution_state": "SUCCEEDED", "host_change_state": "APPLIED_UNVERIFIED",
++                      "plan_sha256": plan.sha256, "profile_sha256": self.profile.sha256,
++                      "receipt_sha256": receipt_sha, "created_resource_sha256": resource_sha256,
++                      "effective_policy_state": "UNVERIFIED",
++                      "t037_state": "NOT_VERIFIED", "safe_retry": False,
++                      "evidence_classification": ("SOFTWARE_ONLY" if self.software_only
++                                                   else "WINDOWS_NATIVE_READBACK_ONLY")}
++            accepted, authoritative = self.store.finish(admission.operation_id,
++                                                        status="SUCCEEDED", result=result)
++            if not accepted or authoritative != "SUCCEEDED":
++                _error("HOST_CHANGE_RESULT_PERSISTENCE_UNKNOWN",
++                       "filter was read back but its durable terminal receipt could not be committed",
++                       safe_retry=False, stage="execution")
++            return receipt
++        except Exception as exc:
++            self._finish_unknown(admission, phase="APPLY", action=action, cause=exc)
++            _error("HOST_CHANGE_RECOVERY_REQUIRED", "host filter mutation may have changed Windows state; automatic replay is forbidden",
++                   safe_retry=False, stage="execution",
++                   details={"cause_code": getattr(exc, "code", None) or type(exc).__name__,
++                            "admission_id": admission.admission_id, "job_id": admission.job_id})
++
++    def restore(self, plan: Any, receipt: resources.AppliedHostChangeReceipt, *,
++                approval: resources.HostChangeApproval) -> dict[str, Any]:
++        payload, action, created_sha = _verify_receipt(plan, self.profile, receipt)
++        if not self.software_only:
++            current = _current_windows_binding(self.profile)
++        else:
++            current = {"host_id": self.profile.host_id,
++                       "host_fingerprint_sha256": self.profile.windows_isolation.host_fingerprint_sha256,
++                       "root_identity": {"device": self.profile.root.volume_id,
++                                         "inode": self.profile.root.file_id},
++                       "root_security_sha256": None,
++                       "service_token_sid": self.profile.windows_isolation.service_logon_sid,
++                       "evidence_classification": "SOFTWARE_ONLY"}
++        snapshot = self.api.observe_snapshot()
++        baseline = _snapshot_dependencies(snapshot, self.profile, action, require_filter_absent=False)
++        if (baseline["target_filter_sha256"] != created_sha
++                or baseline["target_filter_present"] is not True):
++            _error("HOST_CHANGE_RESTORE_DRIFT", "receipt-bound filter is absent or changed; foreign/current state was preserved")
++        baseline["current_binding"] = current
++        restore_plan_payload = {
++            "schema": "comsol-mcp.host-change-restore/1",
++            "profile_sha256": self.profile.sha256,
++            "source_plan_sha256": plan.sha256,
++            "source_receipt_sha256": receipt.receipt_sha256,
++            "filter_key": action["filter_key"],
++            "expected_created_resource_sha256": created_sha,
++            "dependency_sha256": baseline["dependency_sha256"],
++        }
++        restore_plan_sha = hashlib.sha256(_canonical(restore_plan_payload).encode("utf-8")).hexdigest()
++        admission = self._admit(phase="RESTORE", plan_sha256=restore_plan_sha,
++                                approval=approval, baseline=baseline,
++                                source_plan_sha256=plan.sha256,
++                                source_receipt_sha256=receipt.receipt_sha256)
++        try:
++            self._start(admission)
++            intent = {"action_id": action["action_id"], "filter_key": action["filter_key"],
++                      "expected_resource_sha256": created_sha,
++                      "dependency_sha256": baseline["dependency_sha256"]}
++            self.store.append_host_control_mutation_event(
++                admission_id=admission.admission_id, event="RESTORE_INTENT", payload=intent)
++            self.api.delete_filter(profile=self.profile, action=action,
++                                   expected_resource_sha256=created_sha,
++                                   expected_dependency_sha256=baseline["dependency_sha256"])
++            self.store.append_host_control_mutation_event(
++                admission_id=admission.admission_id, event="RESTORE_READBACK_VERIFIED",
++                payload={**intent, "removed_resource_sha256": created_sha})
++            result = {"success": True, "operation": "host.change.restore",
++                      "execution_state": "SUCCEEDED", "host_change_state": "RESTORED_UNVERIFIED",
++                      "restore_plan_sha256": restore_plan_sha,
++                      "source_plan_sha256": plan.sha256,
++                      "source_receipt_sha256": receipt.receipt_sha256,
++                      "effective_policy_state": "UNVERIFIED", "t037_state": "NOT_VERIFIED",
++                      "safe_retry": False,
++                      "evidence_classification": ("SOFTWARE_ONLY" if self.software_only
++                                                   else "WINDOWS_NATIVE_READBACK_ONLY")}
++            accepted, authoritative = self.store.finish(admission.operation_id,
++                                                        status="SUCCEEDED", result=result)
++            if not accepted or authoritative != "SUCCEEDED":
++                _error("HOST_CHANGE_RESULT_PERSISTENCE_UNKNOWN",
++                       "filter deletion was read back but its durable terminal receipt could not be committed",
++                       safe_retry=False, stage="execution")
++            return result
++        except Exception as exc:
++            self._finish_unknown(admission, phase="RESTORE", action=action, cause=exc)
++            _error("HOST_CHANGE_RECOVERY_REQUIRED", "host filter restore may have changed Windows state; automatic replay is forbidden",
++                   safe_retry=False, stage="execution",
++                   details={"cause_code": getattr(exc, "code", None) or type(exc).__name__,
++                            "admission_id": admission.admission_id, "job_id": admission.job_id})
++
++
++__all__ = ["WindowsHostChangeExecutor", "WindowsHostChangeError"]
+--- /dev/null
++++ b/comsol_mcp/_windows_t037_wfp.py
+@@ -0,0 +1,651 @@
++"""Narrow Windows Filtering Platform filter mutation adapter.
++
++This module supports one bounded subset only: persistent PERMIT filters at
++the outbound IPv4 ALE_AUTH_CONNECT layer, tied to an exact configured
++application, AppContainer SID, protocol, local/remote CIDR and remote port.
++It does not create providers/sublayers, block traffic, install callouts, or
++claim effective firewall arbitration or T037 isolation.
++
++All Win32 APIs are late-bound and use fixed-width SDK structures imported
++from the read-only T037 observer. Importing on another platform is safe;
++constructing the native adapter there is a typed refusal.
++"""
++from __future__ import annotations
++
++import ctypes as C
++import hashlib
++import ipaddress
++import json
++import os
++import re
++import uuid
++from typing import Any, Mapping
++
++from ._execution_contract import ExecutionContractError
++from . import _windows_t037_native as native
++
++_GUID_BODY = (r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
++              r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
++_GUID = re.compile(r"^(?:\{" + _GUID_BODY + r"\}|" + _GUID_BODY + r")$")
++_SHA = re.compile(r"^[0-9a-f]{64}$")
++
++# GUID constants from the Windows Filtering Platform SDK (fwpmu.h).
++FWPM_LAYER_ALE_AUTH_CONNECT_V4 = "{C38D57D1-05A7-4C33-904F-7FBCEEE60E82}"
++# Keep this literal in sync with the SDK GUID for FWPM_CONDITION_ALE_APP_ID.
++# The suffix is 9437-D809ECEFC971; a prior candidate had a transcribed value.
++FWPM_CONDITION_ALE_APP_ID = "{D78E1E87-8644-4EA5-9437-D809ECEFC971}"
++FWPM_CONDITION_ALE_PACKAGE_ID = "{71BC78FA-F17C-4997-A602-6ABB261F351C}"
++FWPM_CONDITION_IP_LOCAL_ADDRESS = "{D9EE00DE-C1EF-4617-BFE3-FFD8F5A08957}"
++FWPM_CONDITION_IP_REMOTE_ADDRESS = "{B235AE9A-1D64-49B8-A44C-5FF3D9095045}"
++FWPM_CONDITION_IP_PROTOCOL = "{3971EF2B-623E-4F9A-8CB1-6E79B806B9A7}"
++FWPM_CONDITION_IP_LOCAL_PORT = "{0C1BA1AF-5765-453F-AF22-A8F791AC775B}"
++FWPM_CONDITION_IP_REMOTE_PORT = "{C35A604D-D22B-4E1A-91B4-68F674EE674B}"
++
++FWP_EMPTY = 0
++FWP_UINT8 = 1
++FWP_UINT16 = 2
++FWP_BYTE_BLOB_TYPE = 12
++FWP_SID = 13
++FWP_V4_ADDR_MASK = 19
++FWP_MATCH_EQUAL = 0
++FWPM_FILTER_FLAG_PERSISTENT = 0x00000001
++FWP_ACTION_PERMIT = 0x00001002
++FWP_E_FILTER_NOT_FOUND = 0x80320003
++
++
++class WindowsWfpMutationError(ExecutionContractError):
++    """Typed failure from the narrow WFP mutation API."""
++
++
++def _fail(code: str, message: str, *, details: Mapping[str, Any] | None = None,
++          safe_retry: bool = False, stage: str = "validation") -> None:
++    raise WindowsWfpMutationError(code, message, safe_retry=safe_retry,
++                                  details=details, stage=stage)
++
++
++def _canonical(value: Any) -> bytes:
++    return json.dumps(value, sort_keys=True, ensure_ascii=False,
++                      separators=(",", ":"), allow_nan=False).encode("utf-8")
++
++
++def sha256(value: Any) -> str:
++    return hashlib.sha256(_canonical(value)).hexdigest()
++
++
++def guid_key(value: str) -> str:
++    if not isinstance(value, str) or not _GUID.fullmatch(value):
++        _fail("WFP_GUID_INVALID", "WFP key is not a canonical GUID")
++    return value.strip("{}").casefold()
++
++
++def guid_struct(value: str):
++    """Return the SDK GUID structure in Windows UUID byte order."""
++    key = guid_key(value)
++    raw = uuid.UUID(key).bytes_le
++    return native.GUID.from_buffer_copy(raw)
++
++
++def normalize_endpoint_grant(grant: Any, *, policy: Any,
++                             launch_images: tuple[Any, ...]) -> dict[str, Any]:
++    """Validate and normalize the one WFP grant shape implemented here."""
++    expected_fields = {
++        "role", "direction", "layer", "layer_key", "address_family", "protocol",
++        "application_path", "principal_sid", "local_addresses", "remote_addresses",
++        "local_ports", "remote_ports",
++    }
++    if (not hasattr(grant, "as_dict") or set(grant.as_dict()) != expected_fields
++            or grant.role not in {"worker", "server"}
++            or grant.direction != "OUTBOUND" or grant.layer != "ALE_AUTH_CONNECT"
++            or guid_key(grant.layer_key) != guid_key(FWPM_LAYER_ALE_AUTH_CONNECT_V4)
++            or grant.address_family != "IPV4" or type(grant.protocol) is not int
++            or grant.protocol not in {6, 17}
++            or grant.principal_sid.casefold() != policy.appcontainer_sid.casefold()
++            or len(grant.local_addresses) != 1 or len(grant.remote_addresses) != 1
++            or len(grant.remote_ports) != 1 or len(grant.local_ports) > 1):
++        _fail("WFP_GRANT_UNSUPPORTED",
++              "WFP mutation supports one outbound IPv4 TCP/UDP ALE connect grant with exact selectors")
++    images = [row for row in launch_images if row.role == grant.role]
++    if len(images) != 1 or images[0].path.casefold() != grant.application_path.casefold():
++        _fail("WFP_GRANT_PROFILE_MISMATCH", "WFP application does not match one exact trusted launch image")
++    if grant.role not in {"worker", "server"}:
++        _fail("WFP_GRANT_UNSUPPORTED", "WFP role is outside the supported Server/Worker profile")
++    networks: dict[str, str] = {}
++    for label, raw in (("local", grant.local_addresses[0]), ("remote", grant.remote_addresses[0])):
++        try:
++            network = ipaddress.ip_network(raw, strict=True)
++        except ValueError as exc:
++            _fail("WFP_GRANT_UNSUPPORTED", "WFP IPv4 CIDR is not canonical", details={"selector": label})
++        if network.version != 4 or network.with_prefixlen != raw:
++            _fail("WFP_GRANT_UNSUPPORTED", "WFP selector is not one canonical IPv4 CIDR",
++                  details={"selector": label})
++        networks[label] = network.with_prefixlen
++    remote_port = grant.remote_ports[0]
++    if type(remote_port) is not int or not 1 <= remote_port <= 65535:
++        _fail("WFP_GRANT_UNSUPPORTED", "WFP remote port is outside the supported TCP/UDP range")
++    local_port = grant.local_ports[0] if grant.local_ports else None
++    if local_port is not None and (type(local_port) is not int or not 1 <= local_port <= 65535):
++        _fail("WFP_GRANT_UNSUPPORTED", "WFP local port is outside the supported TCP/UDP range")
++    return {
++        "role": grant.role,
++        "direction": "OUTBOUND",
++        "layer": "ALE_AUTH_CONNECT",
++        "layer_key": FWPM_LAYER_ALE_AUTH_CONNECT_V4,
++        "address_family": "IPV4",
++        "protocol": grant.protocol,
++        "application_path": grant.application_path,
++        "principal_sid": grant.principal_sid,
++        "local_address": networks["local"],
++        "remote_address": networks["remote"],
++        "local_port": local_port,
++        "remote_port": remote_port,
++    }
++
++
++class CtypesWindowsWfpMutationApi:
++    """Documented WFP user-mode filter CRUD for the narrow supported subset."""
++
++    evidence_classification = "WINDOWS_NATIVE_WFP_READBACK_ONLY"
++
++    def __init__(self):
++        if os.name != "nt":
++            _fail("WFP_NATIVE_UNSUPPORTED", "native WFP mutation is available only on Windows")
++        self.api = native.CtypesWindowsPolicyApi()
++        self._fwpu = self.api._fwpu
++        self._advapi = self.api._advapi
++        self._bind_mutation()
++
++    def _bind_mutation(self) -> None:
++        f = self._fwpu
++        C0 = C
++        f.FwpmProviderGetByKey0.argtypes = [native.HANDLE, C0.POINTER(native.GUID),
++                                            C0.POINTER(C0.POINTER(native.FWPM_PROVIDER0))]
++        f.FwpmProviderGetByKey0.restype = native.DWORD
++        f.FwpmSubLayerGetByKey0.argtypes = [native.HANDLE, C0.POINTER(native.GUID),
++                                            C0.POINTER(C0.POINTER(native.FWPM_SUBLAYER0))]
++        f.FwpmSubLayerGetByKey0.restype = native.DWORD
++        f.FwpmFilterGetByKey0.argtypes = [native.HANDLE, C0.POINTER(native.GUID),
++                                          C0.POINTER(C0.POINTER(native.FWPM_FILTER0))]
++        f.FwpmFilterGetByKey0.restype = native.DWORD
++        f.FwpmFilterAdd0.argtypes = [native.HANDLE, C0.POINTER(native.FWPM_FILTER0),
++                                     C0.c_void_p, C0.POINTER(C0.c_uint64)]
++        f.FwpmFilterAdd0.restype = native.DWORD
++        f.FwpmFilterDeleteByKey0.argtypes = [native.HANDLE, C0.POINTER(native.GUID)]
++        f.FwpmFilterDeleteByKey0.restype = native.DWORD
++        f.FwpmGetAppIdFromFileName0.argtypes = [native.LPCWSTR,
++                                                C0.POINTER(C0.POINTER(native.FWP_BYTE_BLOB))]
++        f.FwpmGetAppIdFromFileName0.restype = native.DWORD
++        self._advapi.ConvertStringSidToSidW.argtypes = [native.LPCWSTR, C0.POINTER(C0.c_void_p)]
++        self._advapi.ConvertStringSidToSidW.restype = native.BOOL
++        self._advapi.LocalFree.argtypes = [C0.c_void_p]
++        self._advapi.LocalFree.restype = C0.c_void_p
++
++    def _check(self, status: int, field: str, *, code: str = "WFP_API_FAILED") -> None:
++        if int(status) != 0:
++            _fail(code, f"Windows Filtering Platform {field} failed",
++                  details={"status": int(status)}, stage="execution")
++
++    def _free(self, pointer: int | None, *, primary: BaseException | None = None) -> None:
++        if not pointer:
++            return
++        try:
++            handle = C.c_void_p(int(pointer))
++            self._fwpu.FwpmFreeMemory0(C.byref(handle))
++        except BaseException as exc:
++            _fail("WFP_ALLOCATION_RELEASE_UNKNOWN", "WFP-owned allocation could not be released",
++                  details={"release_type": type(exc).__name__,
++                           "primary_type": type(primary).__name__ if primary is not None else None},
++                  stage="execution")
++
++    def _free_local(self, pointer: C.c_void_p, *, primary: BaseException | None = None) -> None:
++        if not pointer.value:
++            return
++        try:
++            result = self._advapi.LocalFree(pointer)
++            if result:
++                _fail("WFP_LOCAL_ALLOCATION_RELEASE_UNKNOWN", "LocalFree did not release a WFP local allocation",
++                      details={"primary_type": type(primary).__name__ if primary is not None else None},
++                      stage="execution")
++        except WindowsWfpMutationError:
++            raise
++        except BaseException as exc:
++            _fail("WFP_LOCAL_ALLOCATION_RELEASE_UNKNOWN", "LocalFree raised while releasing a WFP local allocation",
++                  details={"release_type": type(exc).__name__,
++                           "primary_type": type(primary).__name__ if primary is not None else None},
++                  stage="execution")
++
++    def _session(self, *, readonly: bool, callback):
++        f = self._fwpu
++        engine = native.HANDLE()
++        status = f.FwpmEngineOpen0(None, native.CtypesWindowsPolicyApi.RPC_C_AUTHN_WINNT,
++                                   None, None, C.byref(engine))
++        if int(status) != 0:
++            if engine.value:
++                try:
++                    close_status = int(f.FwpmEngineClose0(engine))
++                except BaseException as close_exc:
++                    _fail("WFP_SESSION_RELEASE_UNKNOWN", "failed WFP open returned a handle that could not be closed",
++                          details={"open_status": int(status), "close_type": type(close_exc).__name__},
++                          stage="execution")
++                if close_status != 0:
++                    _fail("WFP_SESSION_RELEASE_UNKNOWN", "failed WFP open returned a handle that could not be closed",
++                          details={"open_status": int(status), "close_status": close_status}, stage="execution")
++            self._check(status, "FwpmEngineOpen0")
++        if not engine.value:
++            _fail("WFP_NATIVE_ABI_INVALID", "FwpmEngineOpen0 returned a null engine handle", stage="execution")
++        transaction = False
++        primary: BaseException | None = None
++        result = None
++        cleanup_errors: list[tuple[str, int | str]] = []
++        try:
++            flags = self.api.FWPM_TXN_READ_ONLY if readonly else 0
++            status = f.FwpmTransactionBegin0(engine, flags)
++            self._check(status, "FwpmTransactionBegin0")
++            transaction = True
++            result = callback(engine)
++            status = f.FwpmTransactionCommit0(engine)
++            if int(status) != 0:
++                # A failed commit does not prove whether BFE applied the write.
++                _fail("WFP_COMMIT_OUTCOME_UNKNOWN", "WFP transaction commit outcome is unknown",
++                      details={"status": int(status)}, stage="execution")
++            transaction = False
++        except BaseException as exc:
++            primary = exc
++            if transaction:
++                try:
++                    abort_status = int(f.FwpmTransactionAbort0(engine))
++                    if abort_status != 0:
++                        cleanup_errors.append(("abort_status", abort_status))
++                except BaseException as abort_exc:
++                    cleanup_errors.append(("abort_type", type(abort_exc).__name__))
++                transaction = False
++        finally:
++            if transaction:
++                try:
++                    abort_status = int(f.FwpmTransactionAbort0(engine))
++                    if abort_status != 0:
++                        cleanup_errors.append(("abort_status", abort_status))
++                except BaseException as abort_exc:
++                    cleanup_errors.append(("abort_type", type(abort_exc).__name__))
++            try:
++                close_status = int(f.FwpmEngineClose0(engine))
++                if close_status != 0:
++                    cleanup_errors.append(("close_status", close_status))
++            except BaseException as close_exc:
++                cleanup_errors.append(("close_type", type(close_exc).__name__))
++        if primary is not None or cleanup_errors:
++            if cleanup_errors:
++                _fail("WFP_CLEANUP_OUTCOME_UNKNOWN", "WFP transaction/session cleanup could not be verified",
++                      details={"primary_code": getattr(primary, "code", None),
++                               "primary_type": type(primary).__name__ if primary is not None else None,
++                               "cleanup": cleanup_errors}, stage="execution")
++            assert primary is not None
++            raise primary
++        return result
++
++    def _provider_row(self, engine: Any, key: str) -> dict[str, Any]:
++        pointer = C.POINTER(native.FWPM_PROVIDER0)()
++        guid = guid_struct(key)
++        status = int(self._fwpu.FwpmProviderGetByKey0(engine, C.byref(guid), C.byref(pointer)))
++        if status != 0 or not pointer:
++            if pointer:
++                self._free(C.cast(pointer, C.c_void_p).value)
++            self._check(status, "FwpmProviderGetByKey0")
++            _fail("WFP_NATIVE_ABI_INVALID", "provider lookup succeeded without a result object", stage="execution")
++        try:
++            item = pointer.contents
++            return {
++                "provider_key": self.api._guid(item.providerKey),
++                "display_data": self.api._display_data(item.displayData, "provider"),
++                "flags": int(item.flags),
++                "provider_data_sha256": hashlib.sha256(bytes.fromhex(self.api._bounded_blob(item.providerData))).hexdigest(),
++                "service_name": native._bounded_utf16(item.serviceName, "WFP provider service name", nullable=True),
++                "security_sha256": self.api._wfp_security_sha(engine, "Provider", item.providerKey),
++            }
++        finally:
++            self._free(C.cast(pointer, C.c_void_p).value)
++
++    def _sublayer_row(self, engine: Any, key: str) -> dict[str, Any]:
++        pointer = C.POINTER(native.FWPM_SUBLAYER0)()
++        guid = guid_struct(key)
++        status = int(self._fwpu.FwpmSubLayerGetByKey0(engine, C.byref(guid), C.byref(pointer)))
++        if status != 0 or not pointer:
++            if pointer:
++                self._free(C.cast(pointer, C.c_void_p).value)
++            self._check(status, "FwpmSubLayerGetByKey0")
++            _fail("WFP_NATIVE_ABI_INVALID", "sublayer lookup succeeded without a result object", stage="execution")
++        try:
++            item = pointer.contents
++            return {
++                "sublayer_key": self.api._guid(item.subLayerKey),
++                "display_data": self.api._display_data(item.displayData, "sublayer"),
++                "flags": int(item.flags),
++                "provider_key": self.api._guid(item.providerKey.contents) if item.providerKey else None,
++                "provider_data_sha256": hashlib.sha256(bytes.fromhex(self.api._bounded_blob(item.providerData))).hexdigest(),
++                "weight": int(item.weight),
++                "security_sha256": self.api._wfp_security_sha(engine, "SubLayer", item.subLayerKey),
++            }
++        finally:
++            self._free(C.cast(pointer, C.c_void_p).value)
++
++    def _filter_row_or_none(self, engine: Any, key: str) -> dict[str, Any] | None:
++        pointer = C.POINTER(native.FWPM_FILTER0)()
++        guid = guid_struct(key)
++        status = int(self._fwpu.FwpmFilterGetByKey0(engine, C.byref(guid), C.byref(pointer)))
++        if status == 0 and pointer:
++            try:
++                return self.api._filter_row(engine, pointer.contents)
++            finally:
++                self._free(C.cast(pointer, C.c_void_p).value)
++        if pointer:
++            self._free(C.cast(pointer, C.c_void_p).value)
++            _fail("WFP_NATIVE_ABI_INVALID", "failed filter lookup returned an allocated object",
++                  details={"status": status}, stage="execution")
++        if status == FWP_E_FILTER_NOT_FOUND:
++            return None
++        if status == 0:
++            _fail("WFP_NATIVE_ABI_INVALID", "filter lookup succeeded without a result object", stage="execution")
++        self._check(status, "FwpmFilterGetByKey0")
++        return None
++
++    def observe_snapshot(self) -> dict[str, Any]:
++        return self.api.observe_wfp_snapshot()
++
++    def read_filter(self, filter_key: str) -> dict[str, Any] | None:
++        return self._session(readonly=True,
++                             callback=lambda engine: self._filter_row_or_none(engine, filter_key))
++
++    def _check_dependencies(self, engine: Any, profile: Any, expected_sha256: str) -> dict[str, Any]:
++        policy = profile.windows_isolation
++        provider = self._provider_row(engine, policy.wfp_provider_key)
++        sublayer = self._sublayer_row(engine, policy.wfp_sublayer_key)
++        if guid_key(sublayer.get("provider_key")) != guid_key(policy.wfp_provider_key):
++            _fail("WFP_DEPENDENCY_IDENTITY_MISMATCH", "configured sublayer is not owned by the exact configured provider",
++                  stage="execution")
++        dependency = {"provider": provider, "sublayer": sublayer}
++        actual_sha = sha256(dependency)
++        if actual_sha != expected_sha256:
++            _fail("WFP_DEPENDENCY_CHANGED", "provider or sublayer identity changed after preflight",
++                  details={"expected_sha256": expected_sha256, "observed_sha256": actual_sha},
++                  stage="execution")
++        return dependency
++
++    def create_filter(self, *, profile: Any, action: Mapping[str, Any],
++                      expected_dependency_sha256: str) -> dict[str, Any]:
++        policy = profile.windows_isolation
++        grant = action["grant"]
++        marker = _canonical({"schema": "comsol-mcp.t037-owned-wfp-filter/1",
++                             "profile_sha256": profile.sha256,
++                             "plan_sha256": action["plan_sha256"],
++                             "action_id": action["action_id"],
++                             "ownership_guid": action["ownership_guid"]})
++        if len(marker) > 4096:
++            _fail("WFP_FILTER_MARKER_INVALID", "owned filter marker exceeds its bound")
++
++        def write(engine):
++            self._check_dependencies(engine, profile, expected_dependency_sha256)
++            if self._filter_row_or_none(engine, action["filter_key"]) is not None:
++                _fail("WFP_FILTER_KEY_EXISTS", "configured WFP filter key already exists; no overwrite is permitted",
++                      stage="execution")
++            return self._add_filter_in_transaction(engine, policy, action, grant, marker)
++
++        row = self._session(readonly=False, callback=write)
++        # Transactional readback is followed by a fresh read-only session. A
++        # failure here is a post-effect unknown; callers must not replay.
++        persisted = self.read_filter(action["filter_key"])
++        if persisted is None or sha256(persisted) != sha256(row):
++            _fail("WFP_FILTER_READBACK_UNKNOWN", "committed WFP filter differs from the exact post-commit readback",
++                  stage="execution")
++        self._validate_filter_semantics(persisted, profile, action, grant, marker)
++        return persisted
++
++    def _add_filter_in_transaction(self, engine: Any, policy: Any, action: Mapping[str, Any],
++                                   grant: Mapping[str, Any], marker: bytes) -> dict[str, Any]:
++        app_blob_ptr = C.POINTER(native.FWP_BYTE_BLOB)()
++        sid_ptr = C.c_void_p()
++        primary: BaseException | None = None
++        app_id_bytes = None
++        try:
++            status = int(self._fwpu.FwpmGetAppIdFromFileName0(
++                grant["application_path"], C.byref(app_blob_ptr)))
++            if status != 0 or not app_blob_ptr:
++                # If the API returned an allocation alongside an error, the
++                # common finally block releases it exactly once.
++                self._check(status, "FwpmGetAppIdFromFileName0")
++                _fail("WFP_NATIVE_ABI_INVALID", "application-ID lookup succeeded without an app blob",
++                      stage="execution")
++            app_blob = app_blob_ptr.contents
++            if int(app_blob.size) <= 0 or int(app_blob.size) > 256 * 1024 or not app_blob.data:
++                _fail("WFP_NATIVE_ABI_INVALID", "WFP application-ID blob length/pointer is invalid",
++                      stage="execution")
++            app_id_bytes = C.string_at(app_blob.data, int(app_blob.size))
++            self._convert_sid(grant["principal_sid"], sid_out=sid_ptr)
++            app_condition = self._condition(FWPM_CONDITION_ALE_APP_ID, FWP_BYTE_BLOB_TYPE)
++            app_condition.conditionValue.byteBlob = app_blob_ptr
++            package_condition = self._condition(FWPM_CONDITION_ALE_PACKAGE_ID, FWP_SID)
++            package_condition.conditionValue.sid = sid_ptr
++
++            conditions, backing = self._conditions_for(grant, app_condition, package_condition)
++            _ = backing, app_id_bytes
++            filter_obj = self._make_filter(policy, action, marker, conditions)
++            filter_id = C.c_uint64(0)
++            filter_guid = guid_struct(action["filter_key"])
++            if guid_key(self.api._guid(filter_obj.filterKey)) != guid_key(action["filter_key"]):
++                _fail("WFP_NATIVE_ABI_INVALID", "filter key layout changed before FwpmFilterAdd0",
++                      stage="execution")
++            status = int(self._fwpu.FwpmFilterAdd0(
++                engine, C.byref(filter_obj), None, C.byref(filter_id)))
++            if status != 0:
++                self._check(status, "FwpmFilterAdd0", code="WFP_FILTER_ADD_FAILED")
++            if not 0 < int(filter_id.value) <= 0xffffffffffffffff:
++                _fail("WFP_NATIVE_ABI_INVALID", "FwpmFilterAdd0 did not return a valid runtime filter ID",
++                      stage="execution")
++            row = self._filter_row_or_none(engine, action["filter_key"])
++            if row is None or row.get("filter_id") != int(filter_id.value):
++                _fail("WFP_FILTER_READBACK_UNKNOWN",
++                      "new WFP filter ID/key did not match before transaction commit",
++                      stage="execution")
++            self._validate_filter_semantics(row, None, action, grant, marker,
++                                            expected_policy=policy,
++                                            expected_app_blob=app_id_bytes,
++                                            expected_package_sid=grant["principal_sid"])
++            return row
++        except BaseException as exc:
++            primary = exc
++            raise
++        finally:
++            release_error: BaseException | None = None
++            if app_blob_ptr:
++                try:
++                    self._free(C.cast(app_blob_ptr, C.c_void_p).value, primary=primary)
++                except BaseException as exc:
++                    release_error = exc
++            if sid_ptr.value:
++                try:
++                    self._free_local(sid_ptr, primary=primary)
++                except BaseException as exc:
++                    release_error = release_error or exc
++            if release_error is not None:
++                _fail("WFP_CONDITION_ALLOCATION_RELEASE_UNKNOWN",
++                      "WFP condition construction allocations could not all be released",
++                      details={"release_type": type(release_error).__name__,
++                               "primary_type": type(primary).__name__ if primary is not None else None},
++                      stage="execution")
++
++    def _convert_sid(self, sid_text: str, *, sid_out: C.c_void_p) -> None:
++        if not self._advapi.ConvertStringSidToSidW(sid_text, C.byref(sid_out)) or not sid_out.value:
++            _fail("WFP_PACKAGE_SID_UNAVAILABLE", "AppContainer SID could not be converted for the WFP package condition",
++                  details={"winerror": int(C.get_last_error())}, stage="execution")
++
++    @staticmethod
++    def _condition(field_key: str, data_type: int):
++        item = native.FWPM_FILTER_CONDITION0()
++        item.fieldKey = guid_struct(field_key)
++        item.matchType = FWP_MATCH_EQUAL
++        item.conditionValue.type = data_type
++        return item
++
++    def _conditions_for(self, grant: Mapping[str, Any], app_condition: Any,
++                        package_condition: Any):
++        conditions = [app_condition, package_condition]
++        backing: list[Any] = []
++        for field, cidr in ((FWPM_CONDITION_IP_LOCAL_ADDRESS, grant["local_address"]),
++                            (FWPM_CONDITION_IP_REMOTE_ADDRESS, grant["remote_address"])):
++            network = ipaddress.ip_network(cidr, strict=True)
++            address = native.FWP_V4_ADDR_AND_MASK(int(network.network_address), int(network.netmask))
++            backing.append(address)
++            item = self._condition(field, FWP_V4_ADDR_MASK)
++            item.conditionValue.v4AddrMask = C.cast(C.pointer(address), C.c_void_p)
++            conditions.append(item)
++        protocol = self._condition("{3971EF2B-623E-4F9A-8CB1-6E79B806B9A7}", FWP_UINT8)
++        protocol.conditionValue.uint8 = int(grant["protocol"])
++        conditions.append(protocol)
++        if grant["local_port"] is not None:
++            local_port = self._condition("{0C1BA1AF-5765-453F-AF22-A8F791AC775B}", FWP_UINT16)
++            local_port.conditionValue.uint16 = int(grant["local_port"])
++            conditions.append(local_port)
++        remote_port = self._condition("{C35A604D-D22B-4E1A-91B4-68F674EE674B}", FWP_UINT16)
++        remote_port.conditionValue.uint16 = int(grant["remote_port"])
++        conditions.append(remote_port)
++        return (native.FWPM_FILTER_CONDITION0 * len(conditions))(*conditions), backing
++
++    def _make_filter(self, policy: Any, action: Mapping[str, Any], marker: bytes, conditions: Any):
++        filter_obj = native.FWPM_FILTER0()
++        filter_key = guid_struct(action["filter_key"])
++        provider_key = guid_struct(policy.wfp_provider_key)
++        sublayer_key = guid_struct(policy.wfp_sublayer_key)
++        grant = action["grant"]
++        filter_obj.filterKey = filter_key
++        display_name = C.create_unicode_buffer("COMSOL MCP T037 " + action["action_id"])
++        filter_obj.displayData.name = C.cast(display_name, C.c_void_p)
++        filter_obj.displayData.description = None
++        filter_obj.flags = FWPM_FILTER_FLAG_PERSISTENT
++        filter_obj.providerKey = C.pointer(provider_key)
++        marker_buffer = (native.BYTE * len(marker)).from_buffer_copy(marker)
++        filter_obj.providerData.size = len(marker)
++        filter_obj.providerData.data = C.cast(marker_buffer, C.POINTER(native.BYTE))
++        filter_obj.layerKey = guid_struct(grant["layer_key"])
++        filter_obj.subLayerKey = sublayer_key
++        filter_obj.weight.type = FWP_EMPTY
++        filter_obj.numFilterConditions = len(conditions)
++        filter_obj.filterCondition = C.cast(conditions, C.POINTER(native.FWPM_FILTER_CONDITION0))
++        filter_obj.action.type = FWP_ACTION_PERMIT
++        filter_obj.rawContext = 0
++        # Keep every pointer target alive for the duration of Add0/GetByKey0.
++        filter_obj._keepalive = (display_name, provider_key, sublayer_key, marker_buffer,
++                                 conditions, filter_key)
++        return filter_obj
++
++    def _expected_conditions(self, grant: Mapping[str, Any], app_blob: bytes | None,
++                             package_sid: str | None) -> list[dict[str, Any]]:
++        app_value = {"type": FWP_BYTE_BLOB_TYPE}
++        package_value = {"type": FWP_SID}
++        if app_blob is not None:
++            app_value.update({"size": len(app_blob), "sha256": hashlib.sha256(app_blob).hexdigest()})
++        if package_sid is not None:
++            package_value["value"] = package_sid
++        values = [(FWPM_CONDITION_ALE_APP_ID, app_value),
++                  (FWPM_CONDITION_ALE_PACKAGE_ID, package_value)]
++        for field, cidr in ((FWPM_CONDITION_IP_LOCAL_ADDRESS, grant["local_address"]),
++                            (FWPM_CONDITION_IP_REMOTE_ADDRESS, grant["remote_address"])):
++            network = ipaddress.ip_network(cidr, strict=True)
++            values.append((field, {"type": FWP_V4_ADDR_MASK,
++                                   "address_u32": int(network.network_address),
++                                   "mask_u32": int(network.netmask)}))
++        values.append((FWPM_CONDITION_IP_PROTOCOL, {"type": FWP_UINT8,
++                                                     "value": grant["protocol"]}))
++        if grant["local_port"] is not None:
++            values.append((FWPM_CONDITION_IP_LOCAL_PORT, {"type": FWP_UINT16,
++                                                          "value": grant["local_port"]}))
++        values.append((FWPM_CONDITION_IP_REMOTE_PORT, {"type": FWP_UINT16,
++                                                        "value": grant["remote_port"]}))
++        return [{"field_key": field.upper(), "match_type": FWP_MATCH_EQUAL,
++                 "condition_value": value} for field, value in values]
++
++    def _validate_filter_semantics(self, row: Mapping[str, Any], profile: Any,
++                                   action: Mapping[str, Any], grant: Mapping[str, Any],
++                                   marker: bytes, *, expected_policy: Any | None = None,
++                                   expected_app_blob: bytes | None = None,
++                                   expected_package_sid: str | None = None) -> None:
++        policy = expected_policy if expected_policy is not None else profile.windows_isolation
++        if (guid_key(row.get("filter_key")) != guid_key(action["filter_key"])
++                or guid_key(row.get("provider_key")) != guid_key(policy.wfp_provider_key)
++                or guid_key(row.get("sublayer_key")) != guid_key(policy.wfp_sublayer_key)
++                or guid_key(row.get("layer_key")) != guid_key(grant["layer_key"])
++                or row.get("flags") != FWPM_FILTER_FLAG_PERSISTENT
++                or row.get("action_type") != FWP_ACTION_PERMIT
++                or row.get("action_callout_key") is not None
++                or row.get("has_provider_context") is not False
++                or row.get("context") != {"raw_context": 0}
++                or row.get("provider_data_sha256") != hashlib.sha256(marker).hexdigest()
++                or row.get("display_data") != {"name": "COMSOL MCP T037 " + action["action_id"],
++                                                "description": None}
++                or row.get("weight") != {"type": FWP_EMPTY, "value": None}):
++            _fail("WFP_FILTER_READBACK_MISMATCH", "WFP filter identity differs from the requested exact resource",
++                  stage="execution")
++        actual = row.get("conditions")
++        if not isinstance(actual, list):
++            _fail("WFP_FILTER_READBACK_MISMATCH", "WFP filter conditions are unavailable", stage="execution")
++        # Native readback returns hashes for pointer-backed blobs; these are
++        # checked by the creation path before this method. Exact key/type/value
++        # cardinality is checked here for scalar/address conditions.
++        fields = [item.get("field_key", "").upper() for item in actual if isinstance(item, Mapping)]
++        expected_rows = self._expected_conditions(grant, expected_app_blob, expected_package_sid)
++        expected_fields = [item["field_key"] for item in expected_rows]
++        if len(actual) != len(expected_fields) or sorted(fields) != sorted(expected_fields):
++            _fail("WFP_FILTER_READBACK_MISMATCH", "WFP filter has missing, duplicate, or unsupported conditions",
++                  stage="execution")
++        actual_by_field = {guid_key(item["field_key"]): item["condition_value"]
++                           for item in actual if isinstance(item, Mapping)}
++        for expected in expected_rows:
++            actual_value = actual_by_field.get(guid_key(expected["field_key"]))
++            expected_value = expected["condition_value"]
++            if expected_value.get("type") == FWP_BYTE_BLOB_TYPE:
++                if set(actual_value or {}) != {"type", "size", "sha256"}:
++                    _fail("WFP_FILTER_READBACK_MISMATCH", "WFP pointer-backed condition did not read back a bounded blob",
++                          stage="execution")
++                if (actual_value.get("type") != expected_value.get("type")
++                        or ("size" in expected_value and actual_value.get("size") != expected_value["size"])
++                        or ("sha256" in expected_value and actual_value.get("sha256") != expected_value["sha256"])):
++                    _fail("WFP_FILTER_READBACK_MISMATCH", "WFP application or principal condition differs from its exact input",
++                          stage="execution")
++            elif actual_value != expected_value:
++                _fail("WFP_FILTER_READBACK_MISMATCH", "WFP endpoint/protocol condition differs from its exact input",
++                      stage="execution")
++
++    def _owned_marker(self, profile: Any, action: Mapping[str, Any]) -> bytes:
++        return _canonical({"schema": "comsol-mcp.t037-owned-wfp-filter/1",
++                           "profile_sha256": profile.sha256,
++                           "plan_sha256": action["plan_sha256"],
++                           "action_id": action["action_id"],
++                           "ownership_guid": action["ownership_guid"]})
++
++    def delete_filter(self, *, profile: Any, action: Mapping[str, Any],
++                      expected_resource_sha256: str,
++                      expected_dependency_sha256: str) -> None:
++        def write(engine):
++            self._check_dependencies(engine, profile, expected_dependency_sha256)
++            current = self._filter_row_or_none(engine, action["filter_key"])
++            if current is None or sha256(current) != expected_resource_sha256:
++                _fail("WFP_FILTER_DRIFTED", "owned WFP filter changed after restore preflight; it was preserved",
++                      stage="execution")
++            marker = self._owned_marker(profile, action)
++            grant = action["grant"]
++            self._validate_filter_semantics(current, profile, action, grant, marker)
++            guid = guid_struct(action["filter_key"])
++            status = int(self._fwpu.FwpmFilterDeleteByKey0(engine, C.byref(guid)))
++            self._check(status, "FwpmFilterDeleteByKey0", code="WFP_FILTER_DELETE_FAILED")
++            if self._filter_row_or_none(engine, action["filter_key"]) is not None:
++                _fail("WFP_FILTER_DELETE_READBACK_MISMATCH", "WFP filter remained present in its delete transaction",
++                      stage="execution")
++            return None
++
++        self._session(readonly=False, callback=write)
++        if self.read_filter(action["filter_key"]) is not None:
++            _fail("WFP_FILTER_DELETE_READBACK_UNKNOWN", "deleted WFP filter remains present after commit",
++                  stage="execution")
++
++
++__all__ = [
++    "CtypesWindowsWfpMutationApi", "WindowsWfpMutationError",
++    "FWPM_LAYER_ALE_AUTH_CONNECT_V4", "normalize_endpoint_grant", "sha256",
++]
+--- /dev/null
++++ b/tests/test_windows_host_change.py
+@@ -0,0 +1,581 @@
++from __future__ import annotations
++
++from datetime import datetime, timedelta, timezone
++import hashlib
++import json
++import os
++from pathlib import Path
++import uuid
++
++import pytest
++
++from comsol_mcp import _w26_os_resources as resources
++from comsol_mcp._execution_contract import ExecutionContractError
++from comsol_mcp._host_scoped_provider import (
++    CONFIG_SCHEMA,
++    HostScopedProvider,
++    scope_sha256,
++)
++from comsol_mcp._operation_store import OperationStore
++from comsol_mcp._project_authority import ProjectAuthority
++from comsol_mcp._windows_host_change import (
++    WindowsHostChangeError,
++    WindowsHostChangeExecutor,
++    _SOFTWARE_TEST_TOKEN,
++    _normalize_supported_plan,
++)
++from comsol_mcp._windows_t037_wfp import sha256
++
++HOST_ID = "host-test"
++PROJECT_ID = "project-test"
++ROOT = r"C:\COMSOL\workspace"
++SERVICE_LOGON_SID = "S-1-5-21-1000"
++SERVICE_SID = "S-1-5-21-1001"
++INTERACTIVE_SID = "S-1-5-21-1002"
++APPCONTAINER_SID = "S-1-15-2-123456789"
++CAPABILITY_SID = "S-1-15-3-123456789"
++PROVIDER_KEY = "{11111111-1111-4111-8111-111111111111}"
++SUBLAYER_KEY = "{22222222-2222-4222-8222-222222222222}"
++FILTER_KEY = "{33333333-3333-4333-8333-333333333333}"
++LAYER_KEY = "{C38D57D1-05A7-4C33-904F-7FBCEEE60E82}"
++SERVER_PATH = r"C:\COMSOL\server\mphserver.exe"
++
++
++def _profile() -> resources.HostResourceProfile:
++    grant = resources.WindowsWfpGrant(
++        role="server", direction="OUTBOUND", layer="ALE_AUTH_CONNECT",
++        layer_key=LAYER_KEY, address_family="IPV4", protocol=6,
++        application_path=SERVER_PATH, principal_sid=APPCONTAINER_SID,
++        local_addresses=("127.0.0.1/32",), remote_addresses=("127.0.0.1/32",),
++        local_ports=(), remote_ports=(2040,),
++    )
++    isolation = resources.WindowsIsolationPolicy(
++        service_name="ComsolHost", service_start_name="McpService",
++        service_logon_sid=SERVICE_LOGON_SID, service_sid=SERVICE_SID,
++        service_sid_type="RESTRICTED", appcontainer_profile_name="comsol-private-v2",
++        appcontainer_sid=APPCONTAINER_SID, capability_sids=(CAPABILITY_SID,),
++        acl_grants=(resources.WindowsPathAclGrant(
++            ROOT, APPCONTAINER_SID, ("READ",), "a" * 64),),
++        wfp_provider_key=PROVIDER_KEY, wfp_sublayer_key=SUBLAYER_KEY,
++        wfp_filter_keys=(FILTER_KEY,), wfp_grants=(grant,),
++        host_fingerprint_sha256="b" * 64,
++    )
++    return resources.HostResourceProfile(
++        profile_id="profile-test", project_id=PROJECT_ID, platform="windows",
++        host_id=HOST_ID,
++        root=resources.PathIdentity(ROOT, "volume-1", "root-file-1", SERVICE_LOGON_SID),
++        launcher_account_id="S-1-5-21-1010", service_account_id=SERVICE_LOGON_SID,
++        interactive_account_id=INTERACTIVE_SID, applied_policy_id="policy-test",
++        launch_images=(
++            resources.LaunchImage("launcher", r"C:\COMSOL\launcher.exe", "c" * 64, "d" * 64),
++            resources.LaunchImage("server", SERVER_PATH, "e" * 64, "f" * 64),
++            resources.LaunchImage("worker", r"C:\COMSOL\java.exe", "1" * 64, "2" * 64),
++        ),
++        file_grants=(resources.PathGrant(ROOT, ("READ", "WRITE", "EXECUTE")),),
++        network_grants=(resources.NetworkGrant("LOOPBACK_ENDPOINT", "127.0.0.1", 2040),),
++        disk_budget=resources.DiskBudgetPolicy("ADMISSION_ONLY", 0, 1024, None),
++        allowed_operations=("study.run",), windows_isolation=isolation,
++    )
++
++
++def _grant(profile, action, ref, plan_sha, *, phase, source_plan=None, source_receipt=None):
++    scope = {
++        "root": profile.root.as_dict(), "host_id": profile.host_id,
++        "profile_sha256": profile.sha256, "plan_sha256": plan_sha,
++        "phase": phase, "source_plan_sha256": source_plan,
++        "source_receipt_sha256": source_receipt,
++    }
++    return {
++        "project_id": profile.project_id, "action": action,
++        "authorization_ref_sha256": hashlib.sha256(ref.encode()).hexdigest(),
++        "scope_sha256": scope_sha256(profile.project_id, action, scope),
++        "expires_at_utc": (datetime.now(timezone.utc) + timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%SZ"),
++    }
++
++
++def _write_provider(directory: Path, profile, grants) -> HostScopedProvider:
++    directory.mkdir(mode=0o700)
++    os.chmod(directory, 0o700)
++    path = directory / "provider.json"
++    path.write_text(json.dumps({"schema": CONFIG_SCHEMA, "destinations": [], "grants": grants},
++                               sort_keys=True, separators=(",", ":")), encoding="utf-8")
++    os.chmod(path, 0o600)
++    return HostScopedProvider.load(path)
++
++
++def _plan(profile, *, kind="wfp_filter", operation="CREATE"):
++    grant = profile.windows_isolation.wfp_grants[0]
++    desired = {
++        "filter_key": FILTER_KEY, "provider_key": PROVIDER_KEY,
++        "sublayer_key": SUBLAYER_KEY, "action": "PERMIT",
++        "grant_sha256": resources._sha256(grant.as_dict()),
++    }
++    if kind == "windows_service":
++        policy = profile.windows_isolation
++        desired = {"service_name": policy.service_name,
++                   "service_start_name": policy.service_start_name,
++                   "service_logon_sid": policy.service_logon_sid,
++                   "service_sid": policy.service_sid,
++                   "service_sid_type": policy.service_sid_type}
++    action = {
++        "action_id": "filter-server-loopback", "resource_kind": kind,
++        "resource_name": "server-loopback", "operation": operation,
++        "desired": desired, "baseline_identity": None, "baseline_sha256": None,
++        "backup_path": None, "backup_sha256": None,
++    }
++    return resources.build_host_change_plan(profile, change_manifest=[action], operator_inputs={})
++
++
++def _row(profile, action):
++    marker = json.dumps({"schema": "comsol-mcp.t037-owned-wfp-filter/1",
++                         "profile_sha256": profile.sha256,
++                         "plan_sha256": action["plan_sha256"],
++                         "action_id": action["action_id"],
++                         "ownership_guid": action["ownership_guid"]},
++                        sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()
++    return {
++        "filter_key": action["filter_key"], "provider_key": PROVIDER_KEY,
++        "sublayer_key": SUBLAYER_KEY, "layer_key": LAYER_KEY,
++        "flags": 1, "filter_id": 7, "action_type": 0x1002,
++        "action_callout_key": None, "has_provider_context": False,
++        "context": {"raw_context": 0}, "provider_data_sha256": hashlib.sha256(marker).hexdigest(),
++        "display_data": {"name": "COMSOL MCP T037 " + action["action_id"], "description": None},
++        "weight": {"type": 0, "value": None}, "effective_weight": {"type": 2, "value": 1},
++        "conditions": [], "security_sha256": "9" * 64,
++    }
++
++
++class FakeWfp:
++    """Synthetic API is accepted only through the private software-test seam."""
++    def __init__(self, profile, action):
++        self.profile = profile
++        self.action = action
++        self.filters = {}
++        self.calls = []
++        self.fail_after_create = False
++        self.before_create = None
++        self.provider = {"provider_key": PROVIDER_KEY, "flags": 0,
++                         "security_sha256": "3" * 64, "provider_data_sha256": "4" * 64}
++        self.sublayer = {"sublayer_key": SUBLAYER_KEY, "flags": 0,
++                         "provider_key": PROVIDER_KEY, "security_sha256": "5" * 64,
++                         "provider_data_sha256": "6" * 64}
++
++    def observe_snapshot(self):
++        providers, sublayers = [dict(self.provider)], [dict(self.sublayer)]
++        filters = [dict(row) for row in self.filters.values()]
++        content = {"providers": sorted(providers, key=lambda row: row["provider_key"]),
++                   "sublayers": sorted(sublayers, key=lambda row: row["sublayer_key"]),
++                   "filters": sorted(filters, key=lambda row: (row["layer_key"], row["filter_id"]))}
++        serialized = json.dumps(content, sort_keys=True, ensure_ascii=False,
++                                separators=(",", ":"), allow_nan=False).encode()
++        return {
++            "state": "COMPLETE_READ_ONLY",
++            "counts": {"total_records": len(providers) + len(sublayers) + len(filters),
++                       "total_bytes": len(serialized), "elapsed_ms": 1},
++            "limits": {"max_page_size": 100, "max_pages_per_kind": 100,
++                       "max_total_records": 100000, "max_total_bytes": 32 * 1024 * 1024,
++                       "max_elapsed_ms": 30000},
++            "snapshot_sha256": hashlib.sha256(serialized).hexdigest(),
++            "reasons": ["WFP_EFFECTIVE_ARBITRATION_NOT_PROVEN"],
++            "providers": providers, "sublayers": sublayers, "filters": filters,
++        }
++
++    def create_filter(self, *, profile, action, expected_dependency_sha256):
++        if self.before_create is not None:
++            self.before_create()
++        self.calls.append("create")
++        row = _row(profile, action)
++        if action["filter_key"] in self.filters:
++            raise RuntimeError("filter already exists")
++        self.filters[action["filter_key"]] = row
++        if self.fail_after_create:
++            raise RuntimeError("synthetic process loss after WFP mutation")
++        return dict(row)
++
++    def delete_filter(self, *, profile, action, expected_resource_sha256,
++                      expected_dependency_sha256):
++        self.calls.append("delete")
++        current = self.filters.get(action["filter_key"])
++        if current is None or sha256(current) != expected_resource_sha256:
++            raise RuntimeError("synthetic WFP drift")
++        del self.filters[action["filter_key"]]
++
++
++@pytest.fixture
++def host_env(tmp_path, monkeypatch):
++    profile = _profile()
++    plan = _plan(profile)
++    _, action = _normalize_supported_plan(plan, profile)
++    api = FakeWfp(profile, action)
++    store = OperationStore(tmp_path / "operations.sqlite")
++    provider = _write_provider(tmp_path / "provider-config", profile, [])
++    authority = ProjectAuthority(
++        store, workspace_root=tmp_path,
++        permission_provider=lambda: {"host_control", "inspect"},
++        grant_ceiling={"host_control", "inspect"}, authorization_verifier=provider,
++    )
++    # Darwin tests cannot represent a C: workspace. Keep the production
++    # authority class/store/provider checks but return the exact Windows path
++    # a real project record would yield after normal authorization.
++    monkeypatch.setattr(authority, "authorize_operation",
++                        lambda project_id, permission: {
++                            "project_id": project_id, "workspace": profile.root.path,
++                            "policy": {"permissions": [permission]},
++                        })
++    executor = WindowsHostChangeExecutor._for_software_test(
++        store=store, authority=authority, profile=profile, api=api,
++        token=_SOFTWARE_TEST_TOKEN,
++    )
++    try:
++        yield profile, plan, action, api, store, provider, authority, executor
++    finally:
++        provider.close()
++        store.close()
++
++
++def _events(store, job_id):
++    rows = store.db.execute(
++        "SELECT metadata FROM job_events WHERE job_id=? AND event='HostControlMutationJournalV1' ORDER BY id",
++        (job_id,),
++    ).fetchall()
++    return [json.loads(row["metadata"]) for row in rows]
++
++
++def _apply_grant(profile, plan, ref="apply-once"):
++    return _grant(profile, "host.change.apply", ref, plan.sha256, phase="APPLY")
++
++
++def _restore_sha(profile, plan, receipt, created_sha):
++    from comsol_mcp._windows_host_change import _snapshot_dependencies
++    _, action = _normalize_supported_plan(plan, profile)
++    api = FakeWfp(profile, action)
++    api.filters[action["filter_key"]] = _row(profile, action)
++    snapshot = api.observe_snapshot()
++    baseline = _snapshot_dependencies(snapshot, profile, action, require_filter_absent=False)
++    payload = {"schema": "comsol-mcp.host-change-restore/1",
++               "profile_sha256": profile.sha256, "source_plan_sha256": plan.sha256,
++               "source_receipt_sha256": receipt.receipt_sha256,
++               "filter_key": action["filter_key"],
++               "expected_created_resource_sha256": created_sha,
++               "dependency_sha256": baseline["dependency_sha256"]}
++    return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False,
++                                     separators=(",", ":"), allow_nan=False).encode()).hexdigest()
++
++
++def test_supported_create_and_receipt_bound_restore_are_durably_journalled(host_env, tmp_path):
++    profile, plan, action, api, store, provider, authority, executor = host_env
++    apply_ref = "apply-once"
++    provider.close()
++    provider = _write_provider(tmp_path / "provider-config-apply", profile,
++                               [_apply_grant(profile, plan, apply_ref)])
++    authority.authorization_verifier = provider
++    executor.provider = provider
++
++    def assert_write_ahead_intent():
++        admission = store.db.execute(
++            "SELECT * FROM host_control_admissions WHERE phase='APPLY'"
++        ).fetchone()
++        assert admission is not None and admission["state"] == "APPLY_INTENT"
++        journal = _events(store, admission["job_id"])
++        assert len(journal) == 1 and journal[0]["event"] == "APPLY_INTENT"
++        assert store.get_operation(admission["operation_id"])["status"] == "RUNNING"
++        assert store.job(admission["job_id"])["status"] == "RUNNING"
++
++    api.before_create = assert_write_ahead_intent
++    receipt = executor.apply(plan, approval=resources.HostChangeApproval(plan.sha256, apply_ref))
++    assert isinstance(receipt, resources.AppliedHostChangeReceipt)
++    assert api.calls == ["create"] and FILTER_KEY in api.filters
++
++    operation = store.db.execute("SELECT operation_id FROM host_control_admissions WHERE phase='APPLY'").fetchone()
++    admission = store.db.execute("SELECT * FROM host_control_admissions WHERE phase='APPLY'").fetchone()
++    assert admission["state"] == "APPLIED"
++    journal = _events(store, admission["job_id"])
++    assert [item["event"] for item in journal] == ["APPLY_INTENT", "APPLY_READBACK_VERIFIED"]
++    assert journal[1]["previous_sha256"] == journal[0]["record_sha256"]
++    assert store.get_operation(operation["operation_id"])["status"] == "SUCCEEDED"
++
++    restore_sha = _restore_sha(profile, plan, receipt,
++                               receipt.actions[0]["created_resource_sha256"])
++    restore_ref = "restore-once"
++    provider.close()
++    provider = _write_provider(tmp_path / "provider-config-restore", profile, [
++        _apply_grant(profile, plan, apply_ref),
++        _grant(profile, "host.change.restore", restore_ref, restore_sha,
++               phase="RESTORE", source_plan=plan.sha256,
++               source_receipt=receipt.receipt_sha256),
++    ])
++    authority.authorization_verifier = provider
++    executor.provider = provider
++    result = executor.restore(plan, receipt,
++                              approval=resources.HostChangeApproval(restore_sha, restore_ref))
++    assert result["execution_state"] == "SUCCEEDED"
++    assert result["effective_policy_state"] == "UNVERIFIED"
++    assert api.calls == ["create", "delete"] and FILTER_KEY not in api.filters
++    restore_admission = store.db.execute(
++        "SELECT * FROM host_control_admissions WHERE phase='RESTORE'").fetchone()
++    assert restore_admission["state"] == "RESTORED"
++    assert [item["event"] for item in _events(store, restore_admission["job_id"])] == [
++        "RESTORE_INTENT", "RESTORE_READBACK_VERIFIED"]
++    provider.close()
++
++
++def test_readback_must_match_durable_intent_before_journal_can_advance(host_env, tmp_path):
++    profile, plan, action, api, store, provider, authority, executor = host_env
++    ref = "journal-once"
++    provider.close()
++    provider = _write_provider(tmp_path / "provider-config-journal", profile,
++                               [_apply_grant(profile, plan, ref)])
++    authority.authorization_verifier = provider
++    executor.provider = provider
++
++    _, _, baseline = executor._preflight(plan)
++    admission = executor._admit(
++        phase="APPLY", plan_sha256=plan.sha256,
++        approval=resources.HostChangeApproval(plan.sha256, ref), baseline=baseline,
++    )
++    executor._start(admission)
++    intent = {"action_id": action["action_id"], "filter_key": action["filter_key"],
++              "desired_identity_sha256": action["desired_identity_sha256"],
++              "dependency_sha256": baseline["dependency_sha256"]}
++    store.append_host_control_mutation_event(
++        admission_id=admission.admission_id, event="APPLY_INTENT", payload=intent,
++    )
++
++    with pytest.raises(resources.ResourcePolicyError) as mismatch:
++        store.append_host_control_mutation_event(
++            admission_id=admission.admission_id,
++            event="APPLY_READBACK_VERIFIED",
++            payload={**intent, "desired_identity_sha256": "0" * 64,
++                     "created_resource_sha256": "1" * 64},
++        )
++    assert mismatch.value.code == "HOST_CONTROL_JOURNAL_INVALID"
++    admission_row = store.db.execute(
++        "SELECT * FROM host_control_admissions WHERE admission_id=?", (admission.admission_id,)
++    ).fetchone()
++    assert admission_row["state"] == "APPLY_INTENT"
++    assert [item["event"] for item in _events(store, admission.job_id)] == ["APPLY_INTENT"]
++    assert api.calls == []
++    provider.close()
++
++
++def test_tampered_complete_snapshot_refuses_before_authorization_or_mutation(host_env, tmp_path):
++    profile, plan, _action, api, store, provider, authority, _executor = host_env
++    ref = "snapshot-once"
++    provider.close()
++    provider = _write_provider(tmp_path / "provider-config-snapshot", profile,
++                               [_apply_grant(profile, plan, ref)])
++    authority.authorization_verifier = provider
++
++    class TamperedSnapshot(FakeWfp):
++        def observe_snapshot(self):
++            snapshot = super().observe_snapshot()
++            snapshot["providers"][0]["flags"] = 1
++            return snapshot
++
++    tampered = TamperedSnapshot(profile, _normalize_supported_plan(plan, profile)[1])
++    executor = WindowsHostChangeExecutor._for_software_test(
++        store=store, authority=authority, profile=profile, api=tampered,
++        token=_SOFTWARE_TEST_TOKEN,
++    )
++    with pytest.raises(WindowsHostChangeError) as refusal:
++        executor.apply(plan, approval=resources.HostChangeApproval(plan.sha256, ref))
++    assert refusal.value.code == "HOST_CHANGE_WFP_SNAPSHOT_TAMPERED"
++    assert tampered.calls == []
++    assert store.db.execute("SELECT count(*) FROM host_control_admissions").fetchone()[0] == 0
++    assert provider.verify_scope(PROJECT_ID, "host.change.apply",
++                                 {"root": profile.root.as_dict(), "host_id": HOST_ID,
++                                  "profile_sha256": profile.sha256,
++                                  "plan_sha256": plan.sha256, "phase": "APPLY",
++                                  "source_plan_sha256": None, "source_receipt_sha256": None}, ref) is True
++    provider.close()
++
++
++def test_wfp_ipv4_conditions_encode_host_order_and_readback_exactly(host_env):
++    import ctypes
++
++    from comsol_mcp import _windows_t037_native as native
++    from comsol_mcp._windows_t037_wfp import (
++        CtypesWindowsWfpMutationApi,
++        FWP_BYTE_BLOB_TYPE,
++        FWP_SID,
++        FWP_UINT16,
++        FWP_UINT8,
++        FWPM_CONDITION_ALE_APP_ID,
++        FWPM_CONDITION_ALE_PACKAGE_ID,
++        FWPM_CONDITION_IP_LOCAL_ADDRESS,
++        FWPM_CONDITION_IP_LOCAL_PORT,
++        FWPM_CONDITION_IP_PROTOCOL,
++        FWPM_CONDITION_IP_REMOTE_ADDRESS,
++        FWPM_CONDITION_IP_REMOTE_PORT,
++        WindowsWfpMutationError,
++        guid_key,
++    )
++
++    # The WFP SDK GUID must match the documented FWPM_CONDITION_ALE_APP_ID
++    # symbol. Keep a literal assertion so changing the module constant cannot
++    # make a malformed GUID self-consistent in this fixture.
++    assert FWPM_CONDITION_ALE_APP_ID == "{D78E1E87-8644-4EA5-9437-D809ECEFC971}"
++    assert FWPM_CONDITION_ALE_PACKAGE_ID == "{71BC78FA-F17C-4997-A602-6ABB261F351C}"
++
++    profile, plan, action, _api, _store, _provider, _authority, _executor = host_env
++    grant = action["grant"]
++    adapter = object.__new__(CtypesWindowsWfpMutationApi)
++    app_condition = adapter._condition(FWPM_CONDITION_ALE_APP_ID, FWP_BYTE_BLOB_TYPE)
++    package_condition = adapter._condition(FWPM_CONDITION_ALE_PACKAGE_ID, FWP_SID)
++    package_condition.conditionValue.sid = ctypes.c_void_p(0x1234)
++    assert package_condition.conditionValue.type == FWP_SID
++    assert package_condition.conditionValue.sid == 0x1234
++    conditions, backing = adapter._conditions_for(grant, app_condition, package_condition)
++    assert backing
++
++    by_key = {
++        guid_key(str(uuid.UUID(bytes_le=ctypes.string_at(
++            ctypes.byref(item.fieldKey), ctypes.sizeof(native.GUID))))): item
++        for item in conditions
++    }
++    assert len(by_key) == len(conditions)
++    assert set(by_key) == {
++        guid_key(FWPM_CONDITION_ALE_APP_ID), guid_key(FWPM_CONDITION_ALE_PACKAGE_ID),
++        guid_key(FWPM_CONDITION_IP_LOCAL_ADDRESS), guid_key(FWPM_CONDITION_IP_REMOTE_ADDRESS),
++        guid_key(FWPM_CONDITION_IP_PROTOCOL), guid_key(FWPM_CONDITION_IP_REMOTE_PORT),
++    }
++    local_address = ctypes.cast(
++        by_key[guid_key(FWPM_CONDITION_IP_LOCAL_ADDRESS)].conditionValue.v4AddrMask,
++        ctypes.POINTER(native.FWP_V4_ADDR_AND_MASK),
++    ).contents
++    remote_address = ctypes.cast(
++        by_key[guid_key(FWPM_CONDITION_IP_REMOTE_ADDRESS)].conditionValue.v4AddrMask,
++        ctypes.POINTER(native.FWP_V4_ADDR_AND_MASK),
++    ).contents
++    assert (local_address.addr, local_address.mask) == (0x7F000001, 0xFFFFFFFF)
++    assert (remote_address.addr, remote_address.mask) == (0x7F000001, 0xFFFFFFFF)
++    assert by_key[guid_key(FWPM_CONDITION_IP_PROTOCOL)].conditionValue.type == FWP_UINT8
++    assert by_key[guid_key(FWPM_CONDITION_IP_PROTOCOL)].conditionValue.uint8 == 6
++    assert by_key[guid_key(FWPM_CONDITION_IP_REMOTE_PORT)].conditionValue.type == FWP_UINT16
++    assert by_key[guid_key(FWPM_CONDITION_IP_REMOTE_PORT)].conditionValue.uint16 == 2040
++    expected = adapter._expected_conditions(grant, None, APPCONTAINER_SID)
++    assert guid_key(FWPM_CONDITION_IP_LOCAL_PORT) not in {
++        guid_key(item["field_key"]) for item in expected
++    }
++    assert {"field_key": guid_key(FWPM_CONDITION_ALE_PACKAGE_ID),
++            "condition_value": {"type": FWP_SID, "value": APPCONTAINER_SID}} in [
++        {"field_key": guid_key(item["field_key"]),
++         "condition_value": item["condition_value"]} for item in expected
++    ]
++
++    marker = json.dumps({"schema": "comsol-mcp.t037-owned-wfp-filter/1",
++                         "profile_sha256": profile.sha256,
++                         "plan_sha256": action["plan_sha256"],
++                         "action_id": action["action_id"],
++                         "ownership_guid": action["ownership_guid"]},
++                        sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()
++    app_blob, package_sid = b"exact app id", APPCONTAINER_SID
++    row = _row(profile, action)
++    row["conditions"] = adapter._expected_conditions(grant, app_blob, package_sid)
++    adapter._validate_filter_semantics(row, profile, action, grant, marker,
++                                       expected_app_blob=app_blob, expected_package_sid=package_sid)
++    row["conditions"][-1]["condition_value"]["value"] = 2041
++    with pytest.raises(WindowsWfpMutationError) as mismatch:
++        adapter._validate_filter_semantics(row, profile, action, grant, marker,
++                                           expected_app_blob=app_blob, expected_package_sid=package_sid)
++    assert mismatch.value.code == "WFP_FILTER_READBACK_MISMATCH"
++
++
++def test_unsupported_action_set_refuses_before_provider_consumption_or_native_call(host_env):
++    profile, _plan_value, _action, api, store, provider, authority, _executor = host_env
++    unsupported = _plan(profile, kind="windows_service")
++    executor = WindowsHostChangeExecutor._for_software_test(
++        store=store, authority=authority, profile=profile, api=api,
++        token=_SOFTWARE_TEST_TOKEN,
++    )
++    with pytest.raises(WindowsHostChangeError) as refusal:
++        executor.apply(unsupported,
++                       approval=resources.HostChangeApproval(unsupported.sha256, "unused-ref"))
++    assert refusal.value.code == "HOST_CHANGE_ACTION_UNSUPPORTED"
++    assert api.calls == []
++    assert store.db.execute("SELECT count(*) FROM host_control_admissions").fetchone()[0] == 0
++    assert provider.verify_scope(PROJECT_ID, "host.change.apply",
++                                 {"root": profile.root.as_dict(), "host_id": HOST_ID,
++                                  "profile_sha256": profile.sha256,
++                                  "plan_sha256": unsupported.sha256, "phase": "APPLY",
++                                  "source_plan_sha256": None, "source_receipt_sha256": None},
++                                 "unused-ref") is False
++
++
++def test_crash_after_create_records_unknown_and_unique_grant_prevents_replay(host_env, tmp_path):
++    profile, plan, _action, api, store, provider, authority, _executor = host_env
++    ref = "crash-once"
++    provider.close()
++    provider = _write_provider(tmp_path / "provider-config-crash", profile,
++                               [_apply_grant(profile, plan, ref)])
++    authority.authorization_verifier = provider
++    executor = WindowsHostChangeExecutor._for_software_test(
++        store=store, authority=authority, profile=profile, api=api,
++        token=_SOFTWARE_TEST_TOKEN,
++    )
++    api.fail_after_create = True
++    with pytest.raises(WindowsHostChangeError) as unknown:
++        executor.apply(plan, approval=resources.HostChangeApproval(plan.sha256, ref))
++    assert unknown.value.code == "HOST_CHANGE_RECOVERY_REQUIRED"
++    assert unknown.value.safe_retry is False
++    admission = store.db.execute("SELECT * FROM host_control_admissions").fetchone()
++    assert admission["state"] == "RECOVERY_REQUIRED"
++    assert store.get_operation(admission["operation_id"])["status"] == "UNKNOWN"
++    assert FILTER_KEY in api.filters
++    assert [item["event"] for item in _events(store, admission["job_id"])] == [
++        "APPLY_INTENT", "RECOVERY_REQUIRED"]
++    with pytest.raises(resources.ResourcePolicyError) as replay:
++        # Model a subsequent administrator cleanup restoring the exact
++        # pre-apply baseline. The consumed provider grant must still not
++        # authorize another CREATE.
++        api.filters.clear()
++        executor.apply(plan, approval=resources.HostChangeApproval(plan.sha256, ref))
++    assert replay.value.code == "HOST_CONTROL_AUTHORIZATION_REPLAYED"
++    assert api.calls == ["create"]
++    provider.close()
++
++
++def test_restore_preserves_changed_foreign_filter_before_consuming_authorization(host_env):
++    profile, plan, action, api, store, provider, authority, executor = host_env
++    row = _row(profile, action)
++    actions = ({"action_id": action["action_id"],
++                "created_resource_sha256": sha256(row),
++                "prior_resource_sha256": None, "prior_backup_path": None},)
++    body = {"schema": "comsol-mcp.applied-host-change-receipt/1",
++            "plan_sha256": plan.sha256, "host_id": profile.host_id,
++            "platform": "windows", "actions": [dict(item) for item in actions]}
++    receipt_sha = hashlib.sha256(json.dumps(body, sort_keys=True, ensure_ascii=False,
++                                            separators=(",", ":"), allow_nan=False).encode()).hexdigest()
++    receipt = resources.AppliedHostChangeReceipt(plan.sha256, profile.host_id,
++                                                "windows", actions, receipt_sha)
++    api.filters[FILTER_KEY] = {**row, "display_data": {"name": "foreign", "description": None}}
++    with pytest.raises(WindowsHostChangeError) as drift:
++        executor.restore(plan, receipt,
++                         approval=resources.HostChangeApproval("0" * 64, "unused"))
++    assert drift.value.code == "HOST_CHANGE_RESTORE_DRIFT"
++    assert FILTER_KEY in api.filters and api.calls == []
++    assert store.db.execute("SELECT count(*) FROM host_control_admissions").fetchone()[0] == 0
++
++
++def test_native_adapter_and_trusted_profile_loader_refuse_on_non_windows(tmp_path):
++    from comsol_mcp._windows_t037_wfp import CtypesWindowsWfpMutationApi, WindowsWfpMutationError
++
++    if os.name == "nt":
++        pytest.skip("native Windows construction is outside this software-only test")
++    with pytest.raises(WindowsWfpMutationError) as native:
++        CtypesWindowsWfpMutationApi()
++    assert native.value.code == "WFP_NATIVE_UNSUPPORTED"
++    profile = _profile()
++    provider = _write_provider(tmp_path / "native-provider", profile, [])
++    store = OperationStore(tmp_path / "native.sqlite")
++    authority = ProjectAuthority(store, workspace_root=tmp_path,
++                                 permission_provider=lambda: {"host_control"},
++                                 grant_ceiling={"host_control"},
++                                 authorization_verifier=provider)
++    with pytest.raises(WindowsHostChangeError) as host:
++        WindowsHostChangeExecutor.from_trusted_profile_path(
++            store=store, authority=authority,
++            trusted_profile_path=str(tmp_path / "not-used.json"))
++    assert host.value.code == "HOST_CHANGE_WINDOWS_REQUIRED"
++    provider.close()
++    store.close()
+--- a/tests/test_operation_store_migrations.py
++++ b/tests/test_operation_store_migrations.py
+@@ -103,6 +103,7 @@
+     after_names = {row[1] for row in after_objects}
+     assert after_names - {row[1] for row in before_objects} == {
+         "resume_claims", "projects", "stage_attempts", "idx_stage_attempt_scope",
++        "host_control_admissions", "idx_operations_request_id", "idx_artifacts_v2_project_scope",
+     }
+     assert [row[1] for row in store.db.execute("PRAGMA table_info(stage_attempts)")] == [
+         "attempt_id", "scope_digest", "stage_id", "idempotency_key", "request_hash",
+--- /dev/null
++++ b/docs/full_project_continuation_v2/evidence/windows_host_change_wfp_r1/IMPLEMENTATION.md
+@@ -0,0 +1,33 @@
++# Windows host-change WFP subset (software implementation)
++
++This unit implements one bounded operation: create one persistent outbound IPv4
++`ALE_AUTH_CONNECT` permit filter bound to one exact executable app ID, its
++AppContainer package SID, protocol, and configured local/remote IPv4/port
++selectors; restore deletes only that exact filter when the receipt hash and
++live row still match. The API reuses an existing provider and sublayer. It does
++not create/delete provider or sublayer objects, install callouts, configure
++SCM/service identities, or evaluate effective WFP arbitration.
++
++The Windows SDK condition identifier for the executable is
++`FWPM_CONDITION_ALE_APP_ID`; the AppContainer identity is
++`FWPM_CONDITION_ALE_PACKAGE_ID` (`FWP_SID`). The source pins their SDK GUIDs to
++`{D78E1E87-8644-4EA5-9437-D809ECEFC971}` and
++`{71BC78FA-F17C-4997-A602-6ABB261F351C}`, with literal assertions in the
++condition-marshaling test. Microsoft documents the condition
++identifiers and their types in [Filtering condition identifiers](https://learn.microsoft.com/en-us/windows/win32/fwp/filtering-condition-identifiers-)
++and condition availability at ALE_AUTH_CONNECT in [Filtering conditions available at each filtering layer](https://learn.microsoft.com/en-us/windows/win32/fwp/filtering-conditions-available-at-each-filtering-layer).
++Microsoft's [Permitting and blocking applications and users](https://learn.microsoft.com/en-us/windows/win32/fwp/permitting-and-blocking-applications-and-users)
++example uses `FwpmGetAppIdFromFileName0` and places its returned byte blob in
++`FWPM_CONDITION_ALE_APP_ID`. The SDK GUID literals are kept in
++`comsol_mcp/_windows_t037_wfp.py` and the app-ID GUID has a literal regression
++assertion in `tests/test_windows_host_change.py`.
++
++The adapter performs bounded read-only dependency preflight, a transactional
++no-clobber add, exact in-transaction and fresh-session readback, and drift-
++protected delete. It records a durable intent before either native mutation.
++Failures after intent remain `RECOVERY_REQUIRED` / `UNKNOWN`; automatic replay
++is forbidden. These software tests exercise the protocol and ABI marshaling
++fixtures only. No Windows kernel/API mutation was run. A successful filter
++readback is not proof that the filter is effective or that T037 isolation is
++complete: WFP arbitration, third-party callouts and complete policy proof
++remain `UNVERIFIED`.

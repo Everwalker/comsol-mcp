@@ -1,0 +1,498 @@
+--- preimage/pyproject.toml
++++ frozen/pyproject.toml
+@@ -24,13 +24,18 @@
+   "Programming Language :: Python :: 3 :: Only",
+   "License :: OSI Approved :: MIT License",
+   "Operating System :: Microsoft :: Windows",
+-  "Operating System :: MacOS",
+   "Topic :: Scientific/Engineering",
+   "Topic :: Scientific/Engineering :: Artificial Intelligence"
+ ]
+ 
+ [project.optional-dependencies]
+ dev = ["pytest"]
++desktop = [
++  "psutil; sys_platform == 'darwin'",
++  "pyobjc-framework-ApplicationServices>=12.2.2; sys_platform == 'darwin'",
++  "pyobjc-framework-Quartz>=12.2.2; sys_platform == 'darwin'",
++  "pyobjc-framework-Cocoa>=12.2.2; sys_platform == 'darwin'"
++]
+ 
+ [project.scripts]
+ comsol-mcp = "comsol_mcp.mcp_server:main"
+--- preimage/comsol_mcp/_desktop_macos.py
++++ frozen/comsol_mcp/_desktop_macos.py
+@@ -29,20 +29,52 @@
+         if __import__("sys").platform != "darwin":
+             return {"platform": "macos", "permission_status": "UNKNOWN", "control_status": UNSUPPORTED_CONTROL,
+                     "metadata_status": "WRONG_PLATFORM", **profile}
+-        try:
+-            from ApplicationServices import AXIsProcessTrusted
+-            trusted = bool(AXIsProcessTrusted())
+-        except Exception:
+-            trusted = False
+-        return {
++        result = {
+             "platform": "macos",
+-            "permission_status": "AVAILABLE" if trusted else BLOCKED_PERMISSION,
++            "permission_status": "UNKNOWN",
+             "control_status": UNSUPPORTED_CONTROL,
+-            "metadata_status": "AVAILABLE",
+-            "accessibility_trusted": trusted,
++            "metadata_status": "UNAVAILABLE",
++            "accessibility_trusted": None,
++            "permission_scope": "ACTUAL_PRODUCT_CALLER_ONLY_NOT_CUA_CERTIFICATION",
++            "metadata_qualification": "API availability only; process/window inventory not queried by status",
+             "control_note": "metadata observer only; no Accessibility control or screen capture is implemented",
+             **profile,
+         }
++        stage = "dependency_import"
++        try:
++            # Lazy imports: constructing the default adapter never loads these
++            # frameworks. Status checks no windows, tree, pixels or prompt API.
++            import ApplicationServices
++            import Quartz
++            import psutil
++            from Foundation import NSBundle
++            stage = "api_availability"
++            required = (
++                (ApplicationServices, "AXIsProcessTrusted"),
++                (Quartz, "CGWindowListCopyWindowInfo"),
++                (psutil, "Process"),
++                (NSBundle, "bundleWithPath_"),
++            )
++            for provider, name in required:
++                if not callable(getattr(provider, name, None)):
++                    raise AttributeError(f"required metadata API unavailable: {name}")
++            for name in ("kCGWindowListOptionOnScreenOnly", "kCGWindowListExcludeDesktopElements",
++                         "kCGNullWindowID", "kCGWindowOwnerPID", "kCGWindowOwnerName",
++                         "kCGWindowNumber", "kCGWindowName"):
++                if not hasattr(Quartz, name):
++                    raise AttributeError(f"required window metadata constant unavailable: {name}")
++            stage = "nonprompt_accessibility_trust"
++            trusted = bool(ApplicationServices.AXIsProcessTrusted())
++        except Exception as exc:
++            result["metadata_error"] = {
++                "stage": stage, "type": type(exc).__name__, "message": str(exc),
++            }
++            return result
++        result.update(
++            permission_status="AVAILABLE" if trusted else BLOCKED_PERMISSION,
++            metadata_status="AVAILABLE", accessibility_trusted=trusted,
++        )
++        return result
+ 
+     def enumerate_windows(self, runtime_id: str | None = None) -> list[WindowObservation]:
+         if __import__("sys").platform != "darwin":
+@@ -110,3 +142,154 @@
+         info = loaded.infoDictionary() or {}
+         value = info.objectForKey_("CFBundleShortVersionString") or info.objectForKey_("CFBundleVersion")
+         return str(value) if value else None
++
++
++class MacOSFrameworkGateway:
++    """Lazy product framework calls; this gateway never selects a COMSOL control.
++
++    ``framework_loader`` is a host-owned software-test seam, not request data.
++    There is deliberately no guessed Java Shell/menu/model selector profile.
++    """
++
++    def __init__(self, framework_loader=None):
++        self._loader = framework_loader
++        self._frameworks = None
++
++    def _load(self):
++        if self._frameworks is None:
++            try:
++                if self._loader is None:
++                    import ApplicationServices
++                    import Quartz
++                    self._frameworks = (ApplicationServices, Quartz)
++                else:
++                    self._frameworks = self._loader()
++            except ImportError as exc:
++                raise DesktopOperationError("WINDOW_METADATA_UNAVAILABLE", "product runtime lacks PyObjC ApplicationServices/Quartz", safe_retry=True) from exc
++        return self._frameworks
++
++    def permissions(self):
++        accessibility, quartz = self._load()
++        try:
++            trusted = bool(accessibility.AXIsProcessTrusted())
++            capture_allowed = bool(quartz.CGPreflightScreenCaptureAccess())
++        except AttributeError as exc:
++            raise DesktopOperationError("WINDOW_METADATA_UNAVAILABLE", "product framework permission API unavailable", safe_retry=True) from exc
++        return {
++            "accessibility_trusted": trusted,
++            "screen_capture_allowed": capture_allowed,
++            "permission_scope": "ACTUAL_PRODUCT_CALLER_ONLY_NOT_CUA_CERTIFICATION",
++        }
++
++    def attribute(self, element, name):
++        accessibility, _ = self._load()
++        error, value = accessibility.AXUIElementCopyAttributeValue(element, name, None)
++        if error != 0:
++            raise DesktopOperationError("AX_ATTRIBUTE_UNAVAILABLE", f"Accessibility attribute unavailable: {name}", safe_retry=True)
++        return value
++
++    def _point(self, value, kind):
++        accessibility, _ = self._load()
++        ok, decoded = accessibility.AXValueGetValue(value, kind, None)
++        if not ok:
++            raise DesktopOperationError("WINDOW_IDENTITY_UNKNOWN", "Accessibility window geometry unavailable", safe_retry=True)
++        return decoded
++
++    def target_window(self, identity):
++        accessibility, quartz = self._load()
++        if not self.permissions()["accessibility_trusted"]:
++            raise DesktopOperationError("PERMISSION_REQUIRED", "product Accessibility permission unavailable", category=BLOCKED_PERMISSION, safe_retry=True)
++        if not identity.native_window_id.startswith("CGWindow:"):
++            raise DesktopOperationError("WINDOW_IDENTITY_UNKNOWN", "expected an observed Quartz window identity", safe_retry=True)
++        number = int(identity.native_window_id.removeprefix("CGWindow:"))
++        infos = quartz.CGWindowListCopyWindowInfo(quartz.kCGWindowListOptionIncludingWindow, number) or []
++        matches = [item for item in infos if item.get(quartz.kCGWindowNumber) == number and item.get(quartz.kCGWindowOwnerPID) == identity.process_id]
++        if len(matches) != 1:
++            raise DesktopOperationError("WINDOW_IDENTITY_UNKNOWN", "Quartz owner/window is absent or ambiguous", safe_retry=True)
++        info = matches[0]
++        bounds = info.get(quartz.kCGWindowBounds, {})
++        expected = (bounds.get("X"), bounds.get("Y"), bounds.get("Width"), bounds.get("Height"))
++        if any(value is None for value in expected):
++            raise DesktopOperationError("WINDOW_IDENTITY_UNKNOWN", "Quartz window bounds incomplete", safe_retry=True)
++        app = accessibility.AXUIElementCreateApplication(identity.process_id)
++        windows = self.attribute(app, "AXWindows") or []
++        observed = []
++        for window in windows:
++            try:
++                position = self._point(self.attribute(window, "AXPosition"), accessibility.kAXValueCGPointType)
++                size = self._point(self.attribute(window, "AXSize"), accessibility.kAXValueCGSizeType)
++                title = str(self.attribute(window, "AXTitle") or "")
++                geometry = (position.x, position.y, size.width, size.height)
++                if geometry == expected and title == str(info.get(quartz.kCGWindowName) or ""):
++                    observed.append(window)
++            except DesktopOperationError:
++                continue
++        if len(observed) != 1:
++            raise DesktopOperationError("WINDOW_IDENTITY_UNKNOWN", "CG/AX association is absent or ambiguous; no focused-window fallback", safe_retry=True)
++        return observed[0]
++
++    def window_tree(self, identity, *, max_depth=4, max_nodes=128):
++        """Read only one associated window. Metadata is not a model binding."""
++        if type(max_depth) is not int or not 0 <= max_depth <= 8 or type(max_nodes) is not int or not 1 <= max_nodes <= 512:
++            raise DesktopOperationError("INVALID_REQUEST", "bounded AX inventory limits are invalid", safe_retry=True)
++        root = self.target_window(identity)
++        result = []
++        omitted = False
++        pending = [(root, 0, ())]
++        while pending and len(result) < max_nodes:
++            element, depth, path = pending.pop()
++            attributes = {}
++            for name in ("AXRole", "AXSubrole", "AXIdentifier", "AXTitle", "AXDescription", "AXEnabled"):
++                try:
++                    value = self.attribute(element, name)
++                    if isinstance(value, (str, bool)):
++                        attributes[name] = value[:512] if isinstance(value, str) else value
++                except DesktopOperationError:
++                    continue
++            result.append({"path": list(path), "attributes": attributes})
++            try:
++                children = self.attribute(element, "AXChildren") or []
++            except DesktopOperationError:
++                children = []
++            available = max(0, max_nodes - len(result) - len(pending))
++            if children and depth >= max_depth:
++                omitted = True
++            elif depth < max_depth:
++                # Never claim a complete tree after omitting children at either bound.
++                omitted = omitted or len(children) > available
++                for index in reversed(range(min(len(children), available))):
++                    pending.append((children[index], depth + 1, path + (index,)))
++        return {"nodes": result, "truncated": omitted or bool(pending), "scope": "TARGET_WINDOW_AX_METADATA_ONLY", "model_binding": "UNVERIFIED"}
++
++
++class MacOSAccessibilityObserver(MacOSMetadataAdapter):
++    """Product prerequisite provider only; all seven native controls stay unsupported."""
++
++    def __init__(self, *, gateway=None, identity_observer=None):
++        self.gateway = gateway if gateway is not None else MacOSFrameworkGateway()
++        self.identity_observer = identity_observer
++
++    def status(self, runtime_id=None):
++        profile = versioned_native_profile("macos")
++        try:
++            permissions = self.gateway.permissions()
++        except DesktopOperationError as exc:
++            return {"platform": "macos", "permission_status": "UNKNOWN", "control_status": UNSUPPORTED_CONTROL,
++                    "metadata_status": "UNAVAILABLE", "product_observer_error": exc.code, **profile}
++        return {"platform": "macos", "permission_status": "AVAILABLE" if permissions["accessibility_trusted"] else BLOCKED_PERMISSION,
++                "control_status": UNSUPPORTED_CONTROL, "metadata_status": "AVAILABLE", **permissions, **profile,
++                "source_prerequisite_provider": "LAZY_PRODUCT_AX_QUARTZ_READ_ONLY_IMPLEMENTED",
++                "selector_profile": "UNOBSERVED", "model_binding": "UNVERIFIED"}
++
++    def enumerate_windows(self, runtime_id=None):
++        if self.identity_observer is not None:
++            return list(self.identity_observer.enumerate_windows(runtime_id))
++        return super().enumerate_windows(runtime_id)
++
++    def inspect_accessibility(self, identity, *, max_depth=4, max_nodes=128):
++        if self.revalidate_window(identity) is None:
++            raise DesktopOperationError("WINDOW_IDENTITY_UNKNOWN", "target process/window identity changed before AX observation", safe_retry=True)
++        result = self.gateway.window_tree(identity, max_depth=max_depth, max_nodes=max_nodes)
++        if self.revalidate_window(identity) is None:
++            raise DesktopOperationError("WINDOW_IDENTITY_UNKNOWN", "target process/window identity changed during AX observation", safe_retry=True)
++        return {**result, "window_identity_fingerprint": identity.fingerprint(), "native_evidence": "NOT_RUN"}
+--- preimage/comsol_mcp/_desktop_platforms.py
++++ frozen/comsol_mcp/_desktop_platforms.py
+@@ -47,12 +47,14 @@
+     }
+ 
+ 
+-def create_native_metadata_adapter() -> MetadataOnlyDesktopAdapter:
++def create_native_metadata_adapter(*, macos_accessibility_observer: bool = False) -> MetadataOnlyDesktopAdapter:
+     """Return the host's read-only identity observer, with controls still gated."""
+     if sys.platform == "win32":
+         from ._desktop_windows import WindowsMetadataAdapter
+         return WindowsMetadataAdapter()
+     if sys.platform == "darwin":
+-        from ._desktop_macos import MacOSMetadataAdapter
++        from ._desktop_macos import MacOSMetadataAdapter, MacOSAccessibilityObserver
++        if macos_accessibility_observer:
++            return MacOSAccessibilityObserver()
+         return MacOSMetadataAdapter()
+     return MetadataOnlyDesktopAdapter()
+--- preimage/comsol_mcp/_desktop_service.py
++++ frozen/comsol_mcp/_desktop_service.py
+@@ -485,17 +485,31 @@
+                                      execution={**self._execution(record), "status": "FAILED"})
+                 self.store.finish(record["operation_id"], status="FAILED", result=failed)
+                 return failed
++        effects_started = False
++
++        def mark_effect() -> None:
++            nonlocal effects_started
++            self._mark_effect(record["operation_id"])
++            effects_started = True
++
+         try:
+-            result = self._execute_operation(operation, args, record, lambda: self._mark_effect(record["operation_id"]))
++            result = self._execute_operation(operation, args, record, mark_effect)
+             if result.get("success") is True:
+                 status = "SUCCEEDED"
++            elif effects_started:
++                execution = result.get("execution")
++                error = result.get("error")
++                result = {**result,
++                          "execution": {**(execution if isinstance(execution, Mapping) else {}), "status": "UNKNOWN"},
++                          "error": {**(error if isinstance(error, Mapping) else {}), "safe_retry": False}}
++                status = "UNKNOWN"
+             elif result.get("execution", {}).get("status") == "UNKNOWN":
+                 status = "UNKNOWN"
+             else:
+                 status = "FAILED"
+         except DesktopOperationError as exc:
+-            status = "UNKNOWN" if exc.side_effect_started else "FAILED"
+-            result = self._error(exc.code, str(exc), category=exc.category, safe_retry=exc.safe_retry,
++            status = "UNKNOWN" if effects_started or exc.side_effect_started else "FAILED"
++            result = self._error(exc.code, str(exc), category=exc.category, safe_retry=False if status == "UNKNOWN" else exc.safe_retry,
+                                  execution={**self._execution(record), "status": status})
+         except Exception as exc:
+             status = "UNKNOWN"
+--- preimage/tests/test_desktop_control_wiring.py
++++ frozen/tests/test_desktop_control_wiring.py
+@@ -211,3 +211,138 @@
+         _g2_registry.validate_call("desktop.bind", {
+             "project_id": "p", "idempotency_key": "key", "window_ref": "w", "model_ref": "m",
+         })
++
++
++def _desktop_claim(daemon, project='p'):
++    from comsol_mcp._desktop_service import DesktopDispatchContext
++    record, reused=daemon.store.begin(request_id='desktop-r',idempotency_key='desktop-k',request_hash='desktop-h',
++                                     operation='desktop.bind',metadata={'project_id':project})
++    daemon.store.update_job(record['job_id'],'RUNNING')
++    return DesktopDispatchContext('desktop.bind',record['request_id'],record['operation_id'],record['job_id'],
++                                  record['idempotency_key'],record['request_hash'],project)
++
++
++def _desktop_read_fixture(tmp_path):
++    service=_service(tmp_path)
++    service.ledger.permissions.add('host_control')
++    ref=service.bind_model('m')['execution']['model_ref']
++    daemon=ControlDaemon(tmp_path/'daemon',service=service)
++    daemon.backend.endpoint_key='127.0.0.1:2036'
++    daemon.backend._bind_model_project(ref,'p')
++    daemon.store.put_metadata('revisions',daemon.backend._model_project_key(ref),{'model_ref':ref,'project_id':'p','revision':0})
++    # Project authorization is host-injected software fixture; no GUI/process exists.
++    daemon.project_authority.authorize_operation=lambda project,permission: {'workspace':str(tmp_path)} if project=='p' else (_ for _ in ()).throw(RuntimeError('foreign project'))
++    return daemon,service,ref
++
++
++def test_desktop_queued_identity_uses_fresh_scoped_witness_without_second_claim(tmp_path, monkeypatch):
++    import json
++    daemon,service,ref=_desktop_read_fixture(tmp_path)
++    queued = []
++    submit = daemon.session_scheduler.submit
++    def scoped_submit(context, callback, *args, **kwargs):
++        queued.append(context)
++        return submit(context, callback, *args, **kwargs)
++    monkeypatch.setattr(daemon.session_scheduler, 'submit', scoped_submit)
++    monkeypatch.setattr(daemon.queue, 'submit', lambda *a, **kw: (_ for _ in ()).throw(AssertionError('legacy Desktop READ must use explicit None session scheduler')))
++    try:
++        context=_desktop_claim(daemon)
++        before=_operation_count(daemon)
++        result=daemon._desktop_engine_queue('desktop.binding.resolve',{'project_id':'p','model_ref_id':json.dumps(ref)},None,context)
++        assert result['success'] is True and result['data']['model_ref']==ref
++        assert result['data']['fingerprint_coverage']=='parameters+shallow_tree_identity'
++        assert result['data']['cas_guarantee']=='NONE'
++        assert result['data']['Desktop_model_binding']=='UNVERIFIED_BY_MANAGED_INSPECTION_ALONE'
++        assert _operation_count(daemon)==before==1
++        assert daemon.store.get_operation(context.operation_id)['status']=='RUNNING'
++        assert queued == [None]
++    finally:daemon.close()
++
++
++@pytest.mark.parametrize('case',['no_claim','wrong_project','wrong_epoch','unattributed','dirty','active','external_change'])
++def test_desktop_identity_refuses_unproven_or_unsafe_model_before_binding(tmp_path,case):
++    import json
++    from comsol_mcp._execution_contract import model_ref_from_mapping
++    daemon,service,ref=_desktop_read_fixture(tmp_path)
++    try:
++        context=_desktop_claim(daemon)
++        if case=='no_claim':daemon.store.update_job(context.job_id,'FAILED')
++        if case=='wrong_epoch':ref['generation']+=1
++        if case=='unattributed':daemon.backend.model_project_binding=lambda _: {'attribution':'UNATTRIBUTED'}
++        if case=='dirty':service.ledger._state_for(model_ref_from_mapping(ref)).dirty=True
++        if case=='active':service.ledger._state_for(model_ref_from_mapping(ref)).active_operation_id='other'
++        if case=='external_change':service.adapter.model_snapshot=lambda tag:{'model_tag':tag,'server_instance_id':'server','fingerprint':'changed','external_event_counter':1}
++        args={'project_id':'foreign' if case=='wrong_project' else 'p','model_ref_id':json.dumps(ref)}
++        expected={'no_claim':'OWNER_UNVERIFIED','wrong_project':'PROJECT_IDENTITY_MISMATCH','wrong_epoch':'MODEL_IDENTITY_MISMATCH','unattributed':'MODEL_IDENTITY_MISMATCH','dirty':'EXECUTION_STATE_UNKNOWN','active':'EXECUTION_STATE_UNKNOWN','external_change':'EXECUTION_STATE_UNKNOWN'}[case]
++        with pytest.raises(Exception) as caught:daemon._desktop_engine_queue('desktop.binding.resolve',args,None,context)
++        assert caught.value.code==expected
++        assert _operation_count(daemon)==1
++    finally:daemon.close()
++
++
++@pytest.mark.parametrize('operation',['desktop.shell_execute','model.load'])
++def test_native_shell_load_still_refuse_without_single_claim_provider(tmp_path,operation):
++    daemon=ControlDaemon(tmp_path/'daemon')
++    try:
++        result=daemon._desktop_engine_queue(operation,{},None,None)
++        assert result['success'] is False and result['data']['engine_dispatched'] is False
++        assert _operation_count(daemon)==0
++    finally:daemon.close()
++
++
++def test_save_copy_authorizer_reuses_project_path_policy_no_overwrite(tmp_path):
++    from pathlib import Path
++    daemon=ControlDaemon(tmp_path/'daemon')
++    daemon.project_authority.authorize_operation=lambda p,e: {'workspace':str(tmp_path)}
++    try:
++        new=tmp_path/'copy.mph'
++        assert daemon._authorize_desktop_save_copy('p',new) is True
++        new.write_bytes(b'protected')
++        assert daemon._authorize_desktop_save_copy('p',new) is False
++        assert daemon._authorize_desktop_save_copy('p',tmp_path.parent/'escape.mph') is False
++        assert daemon._authorize_desktop_save_copy('p',tmp_path/'.git'/'copy.mph') is False
++        link=tmp_path/'linked';link.symlink_to(tmp_path)
++        assert daemon._authorize_desktop_save_copy('p',link/'new.mph') is False
++        assert new.read_bytes()==b'protected'
++    finally:daemon.close()
++
++
++def test_registered_desktop_source_reuses_actual_artifact_integrity_and_project_scope(tmp_path):
++    from comsol_mcp._artifact_store import register_project_artifact,local_artifact_host_identity,local_engine_host_identity
++    from comsol_mcp._desktop_service import TrustedSourceArtifact
++    daemon,service,ref=_desktop_read_fixture(tmp_path)
++    try:
++        original=tmp_path/'trusted.java';original.write_bytes(b'// synthetic trusted source')
++        record=register_project_artifact(tmp_path,daemon.store,'trusted.java',project_id='p',role='java-source',
++                classification='synthetic',host_identity=local_artifact_host_identity(),
++                engine_host_identity=local_engine_host_identity(daemon.backend.endpoint_key),request_id='register-r',registering_operation_id='register-o')
++        artifact=daemon._resolve_desktop_artifact('p',record['artifact_id'])
++        assert isinstance(artifact,TrustedSourceArtifact) and artifact.sha256==record['artifact_id']
++        assert artifact.size==len(b'// synthetic trusted source')
++        with pytest.raises(Exception):daemon._resolve_desktop_artifact('foreign',record['artifact_id'])
++        # Alter the immutable registered copy rather than the retained input.
++        from pathlib import Path
++        (tmp_path/record['path']).write_bytes(b'changed')
++        with pytest.raises(Exception):daemon._resolve_desktop_artifact('p',record['artifact_id'])
++        assert _operation_count(daemon)==0
++    finally:daemon.close()
++
++
++def test_coordinator_bind_uses_single_claim_and_queue_inspect_with_fake_window_only(tmp_path):
++    import json
++    from comsol_mcp._desktop_service import DesktopModelObservation
++    daemon,service,ref=_desktop_read_fixture(tmp_path)
++    adapter=AvailableWindowAdapter()
++    adapter.observe_model=lambda _: DesktopModelObservation('SERVER','127.0.0.1:2036','m',fingerprint='f'*64)
++    daemon.desktop.adapter=adapter
++    try:
++        status=daemon.dispatch({'operation':'desktop.status','arguments':{'project_id':'p'},'execution':{}})
++        token=status['data']['windows'][0]['window_ref']
++        request={'operation':'desktop.bind','arguments':{'project_id':'p','idempotency_key':'real-queue-fixture',
++                 'window_ref':token,'model_ref':json.dumps(ref)},'execution':{}}
++        result=daemon.dispatch(request)
++        assert result['success'] is True and result['execution']['status']=='SUCCEEDED'
++        assert _operation_count(daemon)==1
++        assert daemon.dispatch(request)==result
++        assert _operation_count(daemon)==1
++    finally:daemon.close()
+--- preimage/tests/test_desktop_service.py
++++ frozen/tests/test_desktop_service.py
+@@ -765,7 +765,11 @@
+         harness.close()
+ 
+ 
+-def test_native_factory_is_not_a_fixture_and_keeps_control_capability_unsupported():
++def test_native_factory_is_not_a_fixture_and_keeps_control_capability_unsupported(monkeypatch):
++    # Software fixture only: do not query actual observer Accessibility trust.
++    import sys
++    from types import SimpleNamespace
++    monkeypatch.setitem(sys.modules, "ApplicationServices", SimpleNamespace(AXIsProcessTrusted=lambda: False))
+     adapter = create_native_metadata_adapter()
+     assert not isinstance(adapter, FixtureDesktopAdapter)
+     assert isinstance(adapter, MetadataOnlyDesktopAdapter)
+--- preimage/docs/full_project_execution/w25/desktop_control_wiring.md
++++ frozen/docs/full_project_execution/w25/desktop_control_wiring.md
+@@ -43,3 +43,12 @@
+ COMSOL, enumerate a real window, or perform GUI automation. See
+ [`desktop_service_interface.md`](desktop_service_interface.md) for the
+ per-action native adapter gaps and status matrix.
++
++
++## Isolated W25 contract003 Phase1 software scope (2026-10-02)
++
++This successor exists only in the isolated source copy. It adds a lazy product PyObjC AX/Quartz prerequisite observer with exact target-window mapping, non-prompt caller permission reads and bounded AX metadata. Codex CUA/observer permissions are not product acceptance. The factory defaults to the existing metadata-only adapter; opting into the observer does not enable controls. Missing/ambiguous mapping, dependencies or permission refuse; no focused-window fallback, screenshot, guessed COMSOL selector, input or launch is performed by the observer. All seven control methods, current-model observation, Shell/save/cancel remain unsupported without actual build-specific evidence.
++
++The Desktop queue now supports explicit JSON-encoded typed ModelRef resolution/inspection through the existing ExecutionService.inspect_evidence and model_project_binding, exact active durable claim and existing ProjectAuthority. It performs a fresh scoped parameters+shallow-tree identity read, not full-model identity/dirty preservation or a GUI binding. Wrong project/epoch, dirty or active model, or an external change refuses. Opaque identifiers without a trusted mapping still refuse. Registered source resolution reuses existing immutable project-artifact integrity/host scope; save-copy destination authorization reuses existing non-overwrite/symlink-confined ArtifactStore path policy. No recursive daemon dispatch, second durable claim, backend accessor or coordinator post-fingerprint semantics change.
++
++Native model.load/save-copy and Desktop Shell queued substeps still explicitly refuse. The next narrow implementation needs the observed current-window/model/Shell provider and a single-claim managed-load callback, followed by separate Root review; generic backend.invoke/managed-server Java cannot substitute. Original eight actions and T004/T023/T051/T052/T054 are still NOT_RUN/unaccepted. Software fixture evidence and retained first-run failures are in the isolated Phase1 HANDOFF, pending Root acceptance. No live repository promotion, Windows/Intel compatibility or matrix certification is implied.
+--- preimage/docs/full_project_execution/w25/desktop_platform_adapter_matrix.md
++++ frozen/docs/full_project_execution/w25/desktop_platform_adapter_matrix.md
+@@ -50,3 +50,12 @@
+ The repository's existing visible-main workflow binds an MCP managed-server model for server operations, and `tools/windows_handoff_snapshot.py` handles file handoff. Neither reads or selects a COMSOL Desktop window. The server-side visible-main state and a Desktop window handle are separate identities until a platform provider observes and cross-checks both.
+ 
+ For W25 target environments, status and pixel-source code are platform-labelled, while control support remains uncertified for Windows COMSOL 6.3/6.4 and macOS COMSOL 6.4. No statement here certifies native support for a particular build. The UI evidence needed to close each row is: exact OS/COMSOL build; observed window hierarchy/control identifiers; current Desktop connection and selected-model identifiers; API cross-check against the managed `ModelRef`; and action-specific before/after readback. No native GUI test was run.
++
++
++## Isolated W25 contract003 Phase1 software scope (2026-10-02)
++
++This successor exists only in the isolated source copy. It adds a lazy product PyObjC AX/Quartz prerequisite observer with exact target-window mapping, non-prompt caller permission reads and bounded AX metadata. Codex CUA/observer permissions are not product acceptance. The factory defaults to the existing metadata-only adapter; opting into the observer does not enable controls. Missing/ambiguous mapping, dependencies or permission refuse; no focused-window fallback, screenshot, guessed COMSOL selector, input or launch is performed by the observer. All seven control methods, current-model observation, Shell/save/cancel remain unsupported without actual build-specific evidence.
++
++The Desktop queue now supports explicit JSON-encoded typed ModelRef resolution/inspection through the existing ExecutionService.inspect_evidence and model_project_binding, exact active durable claim and existing ProjectAuthority. It performs a fresh scoped parameters+shallow-tree identity read, not full-model identity/dirty preservation or a GUI binding. Wrong project/epoch, dirty or active model, or an external change refuses. Opaque identifiers without a trusted mapping still refuse. Registered source resolution reuses existing immutable project-artifact integrity/host scope; save-copy destination authorization reuses existing non-overwrite/symlink-confined ArtifactStore path policy. No recursive daemon dispatch, second durable claim, backend accessor or coordinator post-fingerprint semantics change.
++
++Native model.load/save-copy and Desktop Shell queued substeps still explicitly refuse. The next narrow implementation needs the observed current-window/model/Shell provider and a single-claim managed-load callback, followed by separate Root review; generic backend.invoke/managed-server Java cannot substitute. Original eight actions and T004/T023/T051/T052/T054 are still NOT_RUN/unaccepted. Software fixture evidence and retained first-run failures are in the isolated Phase1 HANDOFF, pending Root acceptance. No live repository promotion, Windows/Intel compatibility or matrix certification is implied.
+--- preimage/docs/full_project_execution/w25/desktop_service_interface.md
++++ frozen/docs/full_project_execution/w25/desktop_service_interface.md
+@@ -53,3 +53,12 @@
+ ## Software verification
+ 
+ `tests/test_desktop_service.py` uses a real temporary SQLite `OperationStore` with explicit fixture adapters and verifies all eight coordinator routes, durable claim-before-callback ordering, same-key replay and body conflict, cross-coordinator ownership noninterference, optional-field type validation, pending/unknown non-replay, same-session serialization across windows, process-birth/lease invalidation, endpoint/model cross-binding, fingerprint invalidation, typed `NodePath` validation, dual shell permission, capture scope rejection, and save-copy hash/source-preservation handling. `tests/test_desktop_capture.py` exercises a non-GUI spawned child, bounded timeout/child-only termination, output-path confinement, size/header/hash validation and refusal off Windows. The latest four-file software regression run covers `test_desktop_service.py`, `test_desktop_capture.py`, `test_desktop_win32_identity.py`, and `test_desktop_control_wiring.py`: 51 passed on Python 3.12.13 / pytest 9.1.1. Its source hashes and output are recorded in [the Desktop software regression receipt](../evidence/w25_block_other_clients/desktop_software_retest_20260926T2230Z/desktop_software_regression.json). These tests do not establish native control support or any T004/T051/T052/T054 acceptance result.
++
++
++## Isolated W25 contract003 Phase1 software scope (2026-10-02)
++
++This successor exists only in the isolated source copy. It adds a lazy product PyObjC AX/Quartz prerequisite observer with exact target-window mapping, non-prompt caller permission reads and bounded AX metadata. Codex CUA/observer permissions are not product acceptance. The factory defaults to the existing metadata-only adapter; opting into the observer does not enable controls. Missing/ambiguous mapping, dependencies or permission refuse; no focused-window fallback, screenshot, guessed COMSOL selector, input or launch is performed by the observer. All seven control methods, current-model observation, Shell/save/cancel remain unsupported without actual build-specific evidence.
++
++The Desktop queue now supports explicit JSON-encoded typed ModelRef resolution/inspection through the existing ExecutionService.inspect_evidence and model_project_binding, exact active durable claim and existing ProjectAuthority. It performs a fresh scoped parameters+shallow-tree identity read, not full-model identity/dirty preservation or a GUI binding. Wrong project/epoch, dirty or active model, or an external change refuses. Opaque identifiers without a trusted mapping still refuse. Registered source resolution reuses existing immutable project-artifact integrity/host scope; save-copy destination authorization reuses existing non-overwrite/symlink-confined ArtifactStore path policy. No recursive daemon dispatch, second durable claim, backend accessor or coordinator post-fingerprint semantics change.
++
++Native model.load/save-copy and Desktop Shell queued substeps still explicitly refuse. The next narrow implementation needs the observed current-window/model/Shell provider and a single-claim managed-load callback, followed by separate Root review; generic backend.invoke/managed-server Java cannot substitute. Original eight actions and T004/T023/T051/T052/T054 are still NOT_RUN/unaccepted. Software fixture evidence and retained first-run failures are in the isolated Phase1 HANDOFF, pending Root acceptance. No live repository promotion, Windows/Intel compatibility or matrix certification is implied.

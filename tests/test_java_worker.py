@@ -905,6 +905,46 @@ class TestWorkerAllowlist:
         assert set(KNOWN_NON_API_PROBES) <= set(dispatched)
         assert set(WITHHELD_PENDING_TABLE_REPAIR) <= set(dispatched)
 
+    def test_progress_log_uses_a_private_typed_command_and_documented_modelutil_methods(self):
+        source = WORKER_SOURCE.read_text(encoding="utf-8")
+        assert '"progress_log".equals(type)' in source
+        assert 'else if ("progress_log".equals(type)) result = progressLog(request);' in source
+        assert "private Object progressLog(Map<String, Object> request)" in source
+        assert "ModelUtil.showProgress((String) null);" in source
+        assert "ModelUtil.showProgress(false);" in source
+        assert "ModelUtil.showProgress(path.toString());" in source
+        assert "progressLogActive" in source
+        assert "doc 7768/chunk 23171" in source
+        assert "a5e4c080407a6735a5dd78e95b9fb089d92c0f518477ffdcc4f62b3348085c4eb" in source
+        assert "doc 4086/chunk 16699" in source
+
+
+def test_remote_progress_sink_command_is_redacted_and_not_a_model_mutation(tmp_path):
+    from comsol_mcp._domain_outcome import witness_scope
+
+    class RecordingWorker:
+        def __init__(self):
+            self.calls = []
+
+        def submit(self, kind, payload, **_kwargs):
+            self.calls.append((kind, dict(payload)))
+            return {"ok": True, "result": {"active": payload.get("path") is not None,
+                                               "disabled": payload.get("path") is None}}
+
+    fake = RecordingWorker()
+    client = RemoteClient(fake)
+    path = tmp_path / "private-progress.log"
+    with witness_scope() as witness:
+        assert client.set_progress_log(str(path))["active"] is True
+        assert client.set_progress_log(None)["disabled"] is True
+    assert [kind for kind, _ in fake.calls] == ["progress_log", "progress_log"]
+    assert fake.calls[0][1] == {"path": str(path)}
+    assert fake.calls[1][1] == {"path": None}
+    assert witness.mutation_issued is False
+    assert all(row["is_mutation"] is False for row in witness.dispatches)
+    redacted = java_worker._redact({"type": "progress_log", "path": str(path)})
+    assert redacted == {"type": "progress_log", "path": "<private-progress-file>"}
+
     def test_table_column_header_setter_is_javap_verified_and_allowlisted(self):
         """The typed table header mutation reaches the reviewed COMSOL API."""
         methods = _allowlist_block("METHODS")
@@ -954,7 +994,7 @@ class TestWorkerAllowlist:
     def test_model_util_stays_minimal_and_has_no_dangerous_global(self):
         model_util = _allowlist_block("MODEL_UTIL")
         assert model_util == {
-            "create", "load", "model", "remove", "tags", "uniquetag", "modelsUsedByOtherClients",
+            "create", "load", "loadCopy", "model", "remove", "tags", "uniquetag", "modelsUsedByOtherClients",
             "getComsolVersion", "hasProduct",
         }
         assert not (model_util & DANGEROUS_GLOBAL_METHODS)

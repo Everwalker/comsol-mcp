@@ -1,0 +1,542 @@
+--- r4/comsol_mcp/_windows_t037.py
++++ r5/comsol_mcp/_windows_t037.py
+@@ -998,7 +998,10 @@
+         """Refuse before directory/file/child side effects until native proof exists."""
+         if self._closed:
+             _refuse(ERROR_POLICY_UNVERIFIED, "T037 session process factory is closed")
+-        _refuse(ERROR_POLICY_UNVERIFIED, "T037 native policy verifier and launch-proof issuer are not implemented")
++        if os.name == "nt":
++            from ._windows_t037_resume import refuse_unverified_prebirth
++            refuse_unverified_prebirth(self.profile)
++        _refuse(ERROR_POLICY_UNVERIFIED, "T037 prebirth native policy admission and child-proof issuer remain unverified")
+ 
+     def _infer_role(self, command: Sequence[str]) -> str:
+         if not isinstance(command, Sequence) or isinstance(command, (str, bytes)) or not command:
+@@ -1020,6 +1023,8 @@
+ 
+     def close(self) -> None:
+         if self._api is not None:
++            if any(not parent.closed for parent in getattr(self._api, "_retained_parent_bindings", {}).values()):
++                _refuse("NATIVE_PARENT_RELEASE_UNKNOWN", "actual pinned parent HANDLE remains owned after release failure")
+             if getattr(self._api, "_unclassified_create_handles", None):
+                 _refuse("NATIVE_CHILD_CREATION_UNKNOWN", "unclassified native creation handles block Job close")
+             for process in getattr(self._api, "_retained_children", {}).values():
+@@ -1134,7 +1139,8 @@
+             self._owner = owner
+ 
+     def note_resume_attempt(self):
+-        self._resume_attempted = True
++        with self._ownership_lock:
++            self._resume_attempted = True
+ 
+     def ownership_observation(self):
+         if self._seal is not _NATIVE_SUSPENDED_CHILD_SEAL:
+@@ -1414,6 +1420,7 @@
+         primary_token = W.HANDLE()
+         process_handle = thread_handle = None
+         retained_child = None
++        native_parent = None
+         attribute_pointer = None
+         image_verified = False
+         try:
+@@ -1515,6 +1522,9 @@
+             if options.get("start_new_session", False):
+                 flags |= self.CREATE_NEW_PROCESS_GROUP
+             process_info = PROCESS_INFORMATION()
++            from ._windows_t037_child import pin_native_parent
++            native_parent = pin_native_parent(self)
++            creation_parameters = (image_path, tuple(command), command_line.value)
+             created = self.a.CreateProcessAsUserW(
+                 primary_token, image_path, command_line, None, None, True, flags,
+                 C.cast(environment, C.c_void_p) if environment is not None else None,
+@@ -1525,11 +1535,25 @@
+                 retained_child = _RetainedSuspendedChild(
+                     self, process_handle, int(process_info.dwProcessId), command, thread_handle, job,
+                     seal=_NATIVE_SUSPENDED_CHILD_SEAL, creation_confirmed=complete)
++                retained_child._launch_profile_sha256 = profile.sha256
++                retained_child._launch_role = role
++                retained_child._resume_epoch = 0
++                retained_child._creation_parameters = creation_parameters
++                retained_child._creation_parameter_digests = {
++                    "classification": "ACTUAL_CREATEPROCESS_PARAMETERS_NOT_REMOTE_READBACK",
++                    "argv_sha256": hashlib.sha256(json.dumps(creation_parameters[1],
++                        ensure_ascii=False, separators=(",", ":")).encode("utf-8")).hexdigest(),
++                    "command_line_sha256": hashlib.sha256(creation_parameters[2].encode("utf-16-le")).hexdigest(),
++                    "application_name_sha256": hashlib.sha256(creation_parameters[0].encode("utf-16-le")).hexdigest(),
++                }
++                retained_child._parent_binding = native_parent
+             self._check(created, "CreateProcessAsUserW(STARTUPINFOEX/SecurityCapabilities)")
+             if not complete:
+                 _refuse(ERROR_UNSUPPORTED, "CreateProcessAsUserW returned incomplete process identity")
+             self._check(self.k.AssignProcessToJobObject(job, process_handle), "AssignProcessToJobObject(shared session job)")
+ 
++            if image_api.source_fingerprint(image_handle) != image_fingerprint:
++                _refuse(ERROR_POLICY_UNVERIFIED, "pinned image file identity changed during native creation")
+             observed_path = self.process_image_path(process_handle)
+             if ntpath.normcase(ntpath.abspath(observed_path)) != ntpath.normcase(image_path):
+                 _refuse(ERROR_POLICY_UNVERIFIED, "suspended process image path differs from the pinned executable")
+@@ -1555,9 +1579,16 @@
+                 _refuse(ERROR_UNSUPPORTED, "suspended child birth identity is unavailable")
+             # DACL observation is not MIC/WFP/quota/vendor or a child-bound
+             # launch proof. Even a direct low-level call must fail before Resume.
+-            _refuse("NATIVE_CHILD_PROOF_UNAVAILABLE", "sealed child-bound native resume authorization is not implemented")
+-            retained_child.note_resume_attempt()
+-            resumed = int(self.k.ResumeThread(thread_handle))
++            from ._windows_t037_child import observe_retained_child
++            child_binding = observe_retained_child(retained_child, profile, self, parent=native_parent)
++            if (image_api.source_fingerprint(image_handle) != image_fingerprint
++                    or not _constant_digest_equal(self._hash_image_handle(image_api, image_handle,
++                                                                         image_fingerprint[1]), expected_hash)):
++                _refuse(ERROR_POLICY_UNVERIFIED, "pinned image file changed during child observations")
++            from ._windows_t037_resume import issue_native_resume, resume_native_child
++            capability = issue_native_resume(retained_child, profile, child_binding,
++                                             self._last_child_dacl_observation)
++            resumed = resume_native_child(retained_child, capability)
+             if resumed == 0xFFFFFFFF:
+                 self._check(False, "ResumeThread(exact suspended main thread)")
+             if resumed != 1:
+@@ -1604,8 +1635,25 @@
+             try:
+                 image_api.close(image_handle)
+             finally:
+-                for handle in reversed(parent_handles):
+-                    image_api.close(handle)
++                try:
++                    for handle in reversed(parent_handles):
++                        image_api.close(handle)
++                finally:
++                    if native_parent is not None:
++                        pending_error = sys.exc_info()[1]
++                        try:
++                            native_parent.close()
++                        except BaseException as release_error:
++                            # A later read-handle close error must not mask the
++                            # only recoverable child ownership transfer.
++                            if retained_child is not None and not retained_child._closed:
++                                if not hasattr(self, "_retained_children"):
++                                    self._retained_children = {}
++                                self._retained_children[id(retained_child)] = retained_child
++                                raise NativeSuspendedChildLaunchError(retained_child,
++                                    pending_error or release_error, release_error,
++                                    seal=_NATIVE_SUSPENDED_CHILD_SEAL) from release_error
++                            raise
+ 
+     def poll_process(self, process: Any) -> int | None:
+         result = int(self.k.WaitForSingleObject(process, 0))
+--- r4/comsol_mcp/_windows_t037_resume.py
++++ r5/comsol_mcp/_windows_t037_resume.py
+@@ -0,0 +1,83 @@
++"""Child-bound one-use Resume boundary. No native isolation issuer exists yet."""
++from __future__ import annotations
++import threading
++from ._execution_contract import ExecutionContractError
++
++_SEAL=object()
++_lock=threading.RLock()
++_pending={} # Issuer-owned in-memory identity registry; never persisted or wire-minted.
++
++class _NativeResumeCapability:
++    __slots__=('process','profile_sha256','birth','thread_handle','job_handle','epoch','_seal','used')
++    def __init__(self,process,profile_sha256,*,seal):
++        if seal is not _SEAL:raise ValueError('native resume capability requires issuer authority')
++        self.process=process;self.profile_sha256=profile_sha256
++        self.birth=process.birth_filetime_100ns;self._seal=seal;self.used=False
++        self.thread_handle=process._thread_handle;self.job_handle=process._job_handle
++        self.epoch=process._resume_epoch
++
++
++def issue_native_resume(process,profile,child_binding,dacl_observation):
++    from ._windows_t037 import is_native_suspended_child,WindowsT037ProfileV2,WindowsT037Error
++    from ._windows_t037_child import RetainedChildObservation
++    from ._windows_t037_acl import ChildDaclObservation
++    reasons=[]
++    if not is_native_suspended_child(process) or process._owner is not process._api:
++        reasons.append('EXACT_NATIVE_CHILD_OWNER_UNAVAILABLE')
++    if type(profile) is not WindowsT037ProfileV2:reasons.append('TRUSTED_V2_PROFILE_REQUIRED')
++    if (type(child_binding) is not RetainedChildObservation or child_binding.pid!=getattr(process,"pid",None)
++            or child_binding.birth_filetime_100ns!=getattr(process,"birth_filetime_100ns",None)):
++        reasons.append('FRESH_ORIGINAL_HANDLE_BINDING_UNAVAILABLE')
++    if (type(dacl_observation) is not ChildDaclObservation or dacl_observation.child_pid!=getattr(process,"pid",None)
++            or dacl_observation.birth_filetime_100ns!=getattr(process,"birth_filetime_100ns",None)):
++        reasons.append('ACTUAL_CHILD_DACL_BINDING_UNAVAILABLE')
++    # These requirements have no reviewed producer/target contract. A caller's
++    # dict, read-only observation or frozen fixture cannot supply them.
++    reasons.extend(('JOB_REQUIRED_TARGET_UNAVAILABLE','REMOTE_ARGV_READBACK_UNAVAILABLE',
++                    'LOADED_IMAGE_INTEGRITY_UNAVAILABLE','WFP_ACCESS_VISIBILITY_UNVERIFIED',
++                    'WFP_DEFAULT_BLOCK_UNVERIFIED','WFP_EFFECTIVE_ARBITRATION_UNVERIFIED',
++                    'MIC_UNVERIFIED','FULL_FILESYSTEM_ISOLATION_UNVERIFIED',
++                    'VENDOR_LOOPBACK_LICENSE_COMPATIBILITY_UNVERIFIED'))
++    raise WindowsT037Error('NATIVE_CHILD_PROOF_UNAVAILABLE',
++        'native child requirements remain unverified; Resume authorization refused',
++        safe_retry=False,stage='pre_dispatch',details={'phase':'SUSPENDED_CHILD_OBSERVED','reasons':reasons})
++
++
++def resume_native_child(process,capability):
++    """Consume identity-bound authority before any possibly effective call.
++
++    Current issuer never registers a capability. This entry cannot be unlocked
++    by constructing its private value type, changing fields or passing JSON.
++    """
++    from ._windows_t037 import is_native_suspended_child
++    with _lock:
++        if (type(capability) is not _NativeResumeCapability or capability._seal is not _SEAL
++                or _pending.get(id(capability)) is not capability or capability.used
++                or capability.process is not process or not is_native_suspended_child(process)
++                or capability.birth!=process.birth_filetime_100ns or process._owner is not process._api
++                or capability.profile_sha256!=process._launch_profile_sha256
++                or capability.thread_handle!=process._thread_handle or capability.job_handle!=process._job_handle
++                or capability.epoch!=process._resume_epoch):
++            raise ExecutionContractError('NATIVE_CHILD_PROOF_UNAVAILABLE','no live one-use issuer authority for original child',safe_retry=False,stage='pre_dispatch')
++        capability.used=True
++        process._resume_epoch += 1
++        _pending.pop(id(capability))
++        # Record possible effect before entering the API; no exception or
++        # timeout can restore never-resumed cleanup eligibility.
++        process.note_resume_attempt()
++        return int(process._api.k.ResumeThread(process._thread_handle))
++
++
++def refuse_unverified_prebirth(profile):
++    """Observe host/broker/policy only. No unborn child evidence is requested."""
++    from ._windows_t037 import WindowsT037Observer,WindowsT037ProfileV2,windows_host_fingerprint
++    from ._windows_t037_native import WindowsNativePolicyAdapter
++    if type(profile) is not WindowsT037ProfileV2:
++        raise ExecutionContractError('T037_POLICY_UNVERIFIED','native static admission requires v2',safe_retry=False,stage='pre_dispatch')
++    observer=WindowsT037Observer()
++    observation=WindowsNativePolicyAdapter().observe(profile,
++        current_host_fingerprint=windows_host_fingerprint(),process_observer=observer)
++    raise ExecutionContractError('T037_POLICY_UNVERIFIED','prebirth native policy requirements remain unverified',
++        safe_retry=False,stage='pre_dispatch',details={'phase':'STATIC_HOST_BROKER_POLICY',
++        'reasons':list(observation.reasons)+['JOB_REQUIRED_TARGET_UNAVAILABLE','MIC_UNVERIFIED',
++        'FULL_FILESYSTEM_ISOLATION_UNVERIFIED','VENDOR_LOOPBACK_LICENSE_COMPATIBILITY_UNVERIFIED']})
+--- r4/comsol_mcp/_windows_t037_child.py
++++ r5/comsol_mcp/_windows_t037_child.py
+@@ -0,0 +1,155 @@
++"""Read actual retained child/parent handles; observations are never launch proof."""
++from __future__ import annotations
++import ctypes as C
++from dataclasses import dataclass
++import os
++from ._windows_t037_native import DWORD,BOOL,HANDLE
++from ._execution_contract import ExecutionContractError
++
++class ChildObservationError(ExecutionContractError):pass
++
++def _fail(code,message):
++    raise ChildObservationError(code,message,safe_retry=False,stage='pre_dispatch')
++
++# Windows WCHAR is 16 bits on all hosts; host ctypes.c_wchar is not its ABI.
++class PROCESSENTRY32W(C.Structure):
++    _fields_=[('dwSize',DWORD),('cntUsage',DWORD),('th32ProcessID',DWORD),
++              ('th32DefaultHeapID',C.c_size_t),('th32ModuleID',DWORD),('cntThreads',DWORD),
++              ('th32ParentProcessID',DWORD),('pcPriClassBase',C.c_int32),('dwFlags',DWORD),
++              ('szExeFile',C.c_uint16*260)]
++
++@dataclass(frozen=True)
++class RetainedChildObservation:
++    pid:int
++    birth_filetime_100ns:int
++    parent_pid:int
++    parent_birth_filetime_100ns:int
++    image_path:str
++    same_job:bool
++    job_snapshot:object
++    state:str='OBSERVED_NOT_NATIVE_PROOF'
++
++    def __post_init__(self):
++        if self.state!='OBSERVED_NOT_NATIVE_PROOF':raise ValueError('child observation cannot mint proof')
++
++class NativeChildProcessApi:
++    MAX_PROCESS_ROWS=65536
++    def __init__(self):
++        if os.name!='nt':_fail('CHILD_OBSERVATION_WINDOWS_REQUIRED','actual child process query requires Windows')
++        self.k=C.WinDLL('kernel32',use_last_error=True)
++        self.bind(self.k)
++
++    @staticmethod
++    def bind(k):
++        if C.sizeof(C.c_void_p)!=8 or C.sizeof(PROCESSENTRY32W)!=568 or PROCESSENTRY32W.szExeFile.offset!=44:
++            _fail('CHILD_OBSERVATION_ABI_UNSUPPORTED','only verified Windows x64 Toolhelp layout is supported')
++        rows={'GetCurrentProcessId':([],DWORD),'GetProcessId':([HANDLE],DWORD),
++              'CreateToolhelp32Snapshot':([DWORD,DWORD],HANDLE),
++              'Process32FirstW':([HANDLE,C.POINTER(PROCESSENTRY32W)],BOOL),
++              'Process32NextW':([HANDLE,C.POINTER(PROCESSENTRY32W)],BOOL),
++              'CloseHandle':([HANDLE],BOOL),'GetLastError':([],DWORD)}
++        for name,(args,result) in rows.items():
++            fn=getattr(k,name);fn.argtypes=args;fn.restype=result
++
++    def current_pid(self):
++        pid=int(self.k.GetCurrentProcessId())
++        if pid<=0:_fail('CHILD_PARENT_UNKNOWN','native broker PID is unavailable')
++        return pid
++
++    def process_pid(self,handle):
++        pid=int(self.k.GetProcessId(handle))
++        if pid<=0:_fail('CHILD_HANDLE_UNKNOWN','original process HANDLE identity unavailable')
++        return pid
++
++    def parent_pid(self,pid):
++        snapshot=self.k.CreateToolhelp32Snapshot(2,0) # TH32CS_SNAPPROCESS only.
++        if not snapshot or int(snapshot)==C.c_void_p(-1).value:
++            _fail('CHILD_PARENT_UNKNOWN','Toolhelp process snapshot is unavailable')
++        try:
++            entry=PROCESSENTRY32W();entry.dwSize=C.sizeof(entry)
++            ok=self.k.Process32FirstW(snapshot,C.byref(entry))
++            for _ in range(self.MAX_PROCESS_ROWS):
++                if not ok:
++                    if self.k.GetLastError()!=18:_fail('CHILD_PARENT_UNKNOWN','Toolhelp enumeration failed')
++                    _fail('CHILD_PARENT_UNKNOWN','actual child absent from process snapshot')
++                if entry.dwSize!=C.sizeof(entry):_fail('CHILD_OBSERVATION_ABI_UNSUPPORTED','Toolhelp returned unexpected structure size')
++                if int(entry.th32ProcessID)==pid:
++                    parent=int(entry.th32ParentProcessID)
++                    if parent<=0:_fail('CHILD_PARENT_UNKNOWN','actual child parent PID is unavailable')
++                    return parent
++                ok=self.k.Process32NextW(snapshot,C.byref(entry))
++            _fail('CHILD_PARENT_UNKNOWN','Toolhelp enumeration exceeded row budget')
++        finally:
++            if not self.k.CloseHandle(snapshot):_fail('CHILD_OBSERVATION_RELEASE_UNKNOWN','Toolhelp snapshot close was not confirmed')
++
++
++def observe_retained_child(process,profile,launch_api,*,parent=None,api=None):
++    """Read the original process HANDLE, pin actual broker parent, recheck both.
++
++    Neither argv, MIC, full filesystem isolation nor effective WFP is asserted.
++    Profile and Job limits still require their separate exact policy producer.
++    """
++    from ._windows_t037 import is_native_suspended_child,WindowsT037ProfileV2
++    if (not is_native_suspended_child(process) or process._api is not launch_api
++            or process._owner is not launch_api or type(profile) is not WindowsT037ProfileV2):
++        _fail('CHILD_HANDLE_OWNER_UNKNOWN','only actual never-resumed child owner may observe creation binding')
++    selected=api if api is not None else NativeChildProcessApi()
++    if selected.process_pid(process._handle)!=process.pid:
++        _fail('CHILD_HANDLE_UNKNOWN','original process HANDLE does not match created PID')
++    own_parent = parent is None
++    if own_parent:
++        parent = pin_native_parent(launch_api, api=selected)
++    if (type(parent) is not _PinnedParent or parent._seal is not _PARENT_SEAL
++            or parent.launch_api is not launch_api or parent.closed):
++        _fail('CHILD_PARENT_UNKNOWN','child observation requires the pinned original parent capability')
++    selected=parent.query
++    parent_pid=parent.pid
++    try:
++        parent_birth,parent_exit=launch_api.process_times(parent.handle)
++        if parent_birth!=parent.birth:
++            _fail('CHILD_PARENT_UNKNOWN','original parent birth changed since precreation pin')
++        birth,exit_time=launch_api.process_times(process._handle)
++        if (type(birth) is not int or birth<=0 or birth!=process.birth_filetime_100ns
++                or exit_time is not None or parent_birth<=0 or parent_exit is not None or parent_birth>birth):
++            _fail('CHILD_BIRTH_UNKNOWN','actual live child and parent birth binding unavailable')
++        if selected.parent_pid(process.pid)!=parent_pid:
++            _fail('CHILD_PARENT_UNKNOWN','actual child parent is not the current broker')
++        image=launch_api.process_image_path(process._handle)
++        membership=launch_api.is_process_in_job(process._handle,process._job_handle)
++        if membership is not True:_fail('CHILD_JOB_UNKNOWN','child is not observed in the same retained Job')
++        job=launch_api.job_snapshot(process._job_handle)
++        if (selected.process_pid(process._handle)!=process.pid or selected.parent_pid(process.pid)!=parent_pid
++                or launch_api.process_times(process._handle)!=(birth,None)
++                or launch_api.process_times(parent.handle)!=(parent_birth,None)):
++            _fail('CHILD_BINDING_CHANGED','actual HANDLE/parent birth changed during child observation')
++        return RetainedChildObservation(process.pid,birth,parent_pid,parent_birth,image,True,job)
++    finally:
++        if own_parent:parent.close()
++
++_PARENT_SEAL=object()
++class _PinnedParent:
++    def __init__(self,launch_api,query,pid,handle,birth,*,seal):
++        if seal is not _PARENT_SEAL:_fail('CHILD_PARENT_UNKNOWN','parent must come from the native handle producer')
++        self.launch_api=launch_api;self.query=query;self.pid=pid;self.handle=handle;self.birth=birth
++        self._seal=seal;self.closed=False
++    def close(self):
++        if not self.closed:
++            self.launch_api.close_handle(self.handle)
++            self.closed=True
++            getattr(self.launch_api,'_retained_parent_bindings',{}).pop(id(self),None)
++
++def pin_native_parent(launch_api,*,api=None):
++    query=api if api is not None else NativeChildProcessApi()
++    pid=query.current_pid();handle=launch_api.open_process(pid)
++    parent=_PinnedParent(launch_api,query,pid,handle,None,seal=_PARENT_SEAL)
++    if not hasattr(launch_api,'_retained_parent_bindings'):launch_api._retained_parent_bindings={}
++    launch_api._retained_parent_bindings[id(parent)]=parent
++    try:
++        birth,exited=launch_api.process_times(handle)
++        if type(birth) is not int or birth<=0 or exited is not None:
++            _fail('CHILD_PARENT_UNKNOWN','original broker handle birth/liveness unavailable before creation')
++        parent.birth=birth
++        return parent
++    except BaseException:
++        parent.close()
++        raise
+--- r4/tests/test_windows_suspended_ownership.py
++++ r5/tests/test_windows_suspended_ownership.py
+@@ -46,7 +46,11 @@
+     api._environment_buffer=lambda env:None
+     api.process_image_path=lambda p:profile._launch_image('server').path
+     api.is_process_in_job=lambda *_:True
+-    api.process_times=lambda p:(123,None)
++    api.open_process=lambda pid:777
++    api.job_snapshot=lambda job:{'state':'SOFTWARE_READBACK_ONLY'}
++    monkeypatch.setattr('comsol_mcp._windows_t037_child.NativeChildProcessApi',lambda:SimpleNamespace(
++        current_pid=lambda:55,process_pid=lambda handle:456,parent_pid=lambda pid:55))
++    api.process_times=lambda p:(10,None) if p==777 else (123,None)
+     api.close_handle=lambda h:events.append(('close',h.value if hasattr(h,'value') else h))
+     api.poll_process=lambda h:None if state['alive'] else 1
+     def terminate(h,code):
+@@ -231,7 +235,7 @@
+ 
+ def test_native_wait_timeout_and_birth_unknown_keep_original_handle_and_cannot_close_job(monkeypatch):
+     profile,api,events,state=_launch_api(monkeypatch)
+-    api.process_times=lambda p:(_ for _ in ()).throw(RuntimeError('birth observation unavailable'))
++    api.process_times=lambda p:(10,None) if p==777 else (_ for _ in ()).throw(RuntimeError('birth observation unavailable'))
+     def terminate(h,code):events.append(('terminate-requested',h))
+     api.terminate_process=terminate
+     with pytest.raises(win.NativeSuspendedChildLaunchError) as captured:_create(profile,api)
+--- r4/tests/test_windows_child_binding.py
++++ r5/tests/test_windows_child_binding.py
+@@ -0,0 +1,146 @@
++from types import SimpleNamespace
++import ctypes as C
++import pytest
++from comsol_mcp import _windows_t037_child as child
++from tests.test_windows_suspended_ownership import _unknown
++
++class Export:
++    def __init__(self,fn):self.fn=fn
++    def __call__(self,*a):return self.fn(*a)
++
++@pytest.mark.parametrize('mode',['present','missing','failure','overflow','closefail'])
++def test_actual_toolhelp_abi_bounded_enumeration_cleanup(mode):
++    events=[];state={'index':0,'error':18}
++    def row(handle,pointer):
++        events.append('row');state['index']+=1
++        if mode=='failure':state['error']=5;return 0
++        if mode=='missing':return 0
++        entry=C.cast(pointer,C.POINTER(child.PROCESSENTRY32W)).contents
++        entry.th32ProcessID=101 if mode!='overflow' else 999
++        entry.th32ParentProcessID=55
++        return 1
++    exports={'GetCurrentProcessId':lambda:55,'GetProcessId':lambda h:101,
++             'CreateToolhelp32Snapshot':lambda flags,pid:events.append((flags,pid)) or 22,
++             'Process32FirstW':row,'Process32NextW':row,
++             'CloseHandle':lambda h:events.append(('close',h)) or (mode!='closefail'),
++             'GetLastError':lambda:state['error']}
++    k=SimpleNamespace(**{n:Export(fn) for n,fn in exports.items()})
++    child.NativeChildProcessApi.bind(k)
++    assert C.sizeof(child.PROCESSENTRY32W)==568 and child.PROCESSENTRY32W.szExeFile.offset==44
++    assert len(k.Process32FirstW.argtypes)==2 and k.CreateToolhelp32Snapshot.restype is child.HANDLE
++    api=child.NativeChildProcessApi.__new__(child.NativeChildProcessApi);api.k=k;api.MAX_PROCESS_ROWS=3
++    if mode=='present':assert api.parent_pid(101)==55
++    else:
++        with pytest.raises(child.ChildObservationError):api.parent_pid(101)
++    assert events[-1]==('close',22)
++    if mode=='overflow':assert state['index']==4 # First + three next queries; budget refuses.
++
++@pytest.mark.parametrize('change',['none','pid','parent','parentbirth','childbirth','job','unsealed'])
++def test_actual_retained_child_original_handle_parent_birth_job_rechecks(monkeypatch,change):
++    profile,api,events,state,error=_unknown(monkeypatch)
++    process=error._process
++    observations=[]
++    api.open_process=lambda pid:777
++    api.close_handle=lambda handle:observations.append(('close-parent',handle))
++    api.process_times=lambda handle: (10,None) if handle==777 else (0 if change=='childbirth' else process.birth_filetime_100ns,None)
++    if change=='parentbirth':api.process_times=lambda handle:(99999999999,None) if handle==777 else (process.birth_filetime_100ns,None)
++    api.is_process_in_job=lambda h,j:change!='job'
++    api.job_snapshot=lambda j:{'state':'READ_ONLY_NOT_PROOF'}
++    query=SimpleNamespace(process_pid=lambda h:process.pid+1 if change=='pid' else process.pid,
++        current_pid=lambda:55,parent_pid=lambda p:56 if change=='parent' else 55)
++    target={'pid':process.pid} if change=='unsealed' else process
++    if change=='none':
++        result=child.observe_retained_child(target,profile,api,api=query)
++        assert result.state=='OBSERVED_NOT_NATIVE_PROOF' and result.same_job is True
++        with pytest.raises(ValueError):child.RetainedChildObservation(1,2,3,4,'x',True,{},state='VERIFIED')
++    else:
++        with pytest.raises(child.ChildObservationError):child.observe_retained_child(target,profile,api,api=query)
++    if change not in {'pid','unsealed'}:assert observations==[('close-parent',777)]
++    # The observation did not Resume, release or steal the child's owner.
++    assert process._owner is api and not process._closed and process.never_resumed
++    state['cleanup_fail']=False;process.cleanup_owned(api,timeout=1)
++
++@pytest.mark.parametrize('capability',['dict','lookalike','unregistered_private'])
++def test_resume_boundary_cannot_be_unlocked_by_wire_or_private_value_without_issuer(monkeypatch,capability):
++    from comsol_mcp import _windows_t037_resume as boundary
++    from comsol_mcp._execution_contract import ExecutionContractError
++    profile,api,events,state,error=_unknown(monkeypatch);process=error._process
++    if capability=='dict':cap={'state':'VERIFIED','process':process,'_proof':True}
++    elif capability=='lookalike':cap=SimpleNamespace(process=process,used=False,_seal=boundary._SEAL)
++    else:cap=boundary._NativeResumeCapability(process,profile.sha256,seal=boundary._SEAL)
++    with pytest.raises(ExecutionContractError):boundary.resume_native_child(process,cap)
++    assert 'RESUME' not in events and process.never_resumed
++    state['cleanup_fail']=False;process.cleanup_owned(api,timeout=1)
++
++
++def test_production_issuer_reports_every_missing_gate_and_never_registers_authority(monkeypatch):
++    from comsol_mcp import _windows_t037_resume as boundary
++    from comsol_mcp._execution_contract import ExecutionContractError
++    profile,api,events,state,error=_unknown(monkeypatch);process=error._process
++    assert isinstance(process._creation_parameters,tuple)
++    assert process._parent_binding.closed is True
++    with pytest.raises(ExecutionContractError) as captured:
++        boundary.issue_native_resume(process,profile,{'state':'VERIFIED'},{'isolation_state':'VERIFIED'})
++    assert 'JOB_REQUIRED_TARGET_UNAVAILABLE' in captured.value.details['reasons']
++    assert 'REMOTE_ARGV_READBACK_UNAVAILABLE' in captured.value.details['reasons']
++    assert 'MIC_UNVERIFIED' in captured.value.details['reasons']
++    assert boundary._pending=={} and process.never_resumed
++    process.note_resume_attempt()
++    process.note_resume_attempt()
++    assert not process.never_resumed
++    # Even an otherwise live original HANDLE cannot use never-resumed cleanup
++    # after any possible Resume attempt. The actual owner remains retained.
++    with pytest.raises(ExecutionContractError):process.cleanup_owned(api,timeout=1)
++    assert not process._closed and process._owner is api
++
++
++def test_prebirth_host_broker_observation_never_demands_an_unborn_child_or_mints_admission(monkeypatch):
++    from comsol_mcp import _windows_t037_resume as boundary
++    from comsol_mcp._execution_contract import ExecutionContractError
++    from tests.test_windows_child_acl import _observer
++    profile,*_=_observer();events=[]
++    observer=object()
++    monkeypatch.setattr('comsol_mcp._windows_t037.WindowsT037Observer',lambda:observer)
++    monkeypatch.setattr('comsol_mcp._windows_t037.windows_host_fingerprint',lambda:'e'*64)
++    class Adapter:
++        def observe(self,p,*,current_host_fingerprint,process_observer):
++            assert p is profile and process_observer is observer
++            events.append('actual_adapter_entrypoint');return SimpleNamespace(reasons=('WFP_EFFECTIVE_ARBITRATION_NOT_PROVEN',))
++    monkeypatch.setattr('comsol_mcp._windows_t037_native.WindowsNativePolicyAdapter',Adapter)
++    with pytest.raises(ExecutionContractError) as captured:boundary.refuse_unverified_prebirth(profile)
++    assert captured.value.details['phase']=='STATIC_HOST_BROKER_POLICY'
++    assert events==['actual_adapter_entrypoint'] and boundary._pending=={}
++
++
++def test_late_parent_release_error_cannot_mask_actual_retained_child_owner(monkeypatch):
++    from comsol_mcp import _windows_t037 as win
++    from tests.test_windows_suspended_ownership import _launch_api,_create
++    profile,api,events,state=_launch_api(monkeypatch,cleanup_fail=True)
++    close=api.close_handle
++    def fail_parent(handle):
++        if handle==777:raise RuntimeError('actual parent HANDLE close failed')
++        return close(handle)
++    api.close_handle=fail_parent
++    with pytest.raises(win.NativeSuspendedChildLaunchError) as captured:_create(profile,api)
++    process=captured.value._process
++    assert not process._closed and process._owner is api and process._parent_binding.closed is False
++    assert api._retained_children[id(process)] is process
++    factory=win.T037SessionProcessFactory(profile,'session-parent-release',api=api);factory._job=300
++    with pytest.raises(win.WindowsT037Error) as refused:factory.close()
++    assert refused.value.code=='NATIVE_PARENT_RELEASE_UNKNOWN' and factory._job==300
++    api.close_handle=close;process._parent_binding.close();state['cleanup_fail']=False
++    process.cleanup_owned(api,timeout=1);factory.close()
++    assert factory._job is None and process._closed
++
++
++def test_parent_birth_and_release_failure_retains_read_handle_owner_before_any_creation():
++    def fail_birth(handle):raise RuntimeError('native parent birth unavailable')
++    def fail_close(handle):raise RuntimeError('native parent close unavailable')
++    launch=SimpleNamespace(open_process=lambda pid:77,process_times=fail_birth,close_handle=fail_close)
++    query=SimpleNamespace(current_pid=lambda:55)
++    with pytest.raises(RuntimeError):child.pin_native_parent(launch,api=query)
++    retained=list(launch._retained_parent_bindings.values())
++    assert len(retained)==1 and retained[0].handle==77 and retained[0].birth is None and not retained[0].closed
++    launch.close_handle=lambda handle:None
++    retained[0].close()
++    assert not launch._retained_parent_bindings

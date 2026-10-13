@@ -1,0 +1,31 @@
+{
+  "status": "FAIL_OR_INCOMPLETE_READ_ONLY_SUPPLEMENT",
+  "at_utc": "2026-10-11T11:46:14.983663+00:00",
+  "error_type": "RuntimeError",
+  "error": "supplement project.create failed: {\"success\": false, \"data\": {}, \"error\": {\"code\": \"POLICY_ESCALATION_REFUSED\", \"message\": \"requested permissions exceed trusted host authority\", \"safe_retry\": false}, \"execution\": {\"request_id\": \"ba11cf2d-67a8-4b9c-ab76-95863bb0f024\", \"operation_id\": \"2a66632a-a85b-46c2-b1cb-5e67ea075c6f\", \"request_hash\": \"da205e1b52b55312cafffbf8be080c97df2c41235c52bd7b6e71bfe5465fd1bc\", \"idempotency_key\": \"supplement-project-32076813-f411-484f-96f1-6719d9045059\", \"job_id\": \"20679261-2b70-4dec-9015-bca87b255dbe\"}}",
+  "traceback": "Traceback (most recent call last):\n  File \"/private/tmp/comsol-v2-native-readback-source-20261011-r2/tools/verify_native_resume_saved_artifact.py\", line 619, in run\n    first = _reopen_and_sample(server, worker=server.worker,\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/private/tmp/comsol-v2-native-readback-source-20261011-r2/tools/verify_native_resume_saved_artifact.py\", line 364, in _reopen_and_sample\n    daemon, connection, project_id = _connect_daemon(server, server.work / f\"control-{phase}\", phase_state=phase_state)\n                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/private/tmp/comsol-v2-native-readback-source-20261011-r2/tools/verify_native_resume_saved_artifact.py\", line 241, in _connect_daemon\n    require_success(created, \"supplement project.create\")\n  File \"/private/tmp/comsol-v2-native-readback-source-20261011-r2/tools/run_native_resume_smoke.py\", line 113, in require_success\n    raise RuntimeError(f\"{label} failed: {json.dumps(response, ensure_ascii=False, default=json_default)[:5000]}\")\nRuntimeError: supplement project.create failed: {\"success\": false, \"data\": {}, \"error\": {\"code\": \"POLICY_ESCALATION_REFUSED\", \"message\": \"requested permissions exceed trusted host authority\", \"safe_retry\": false}, \"execution\": {\"request_id\": \"ba11cf2d-67a8-4b9c-ab76-95863bb0f024\", \"operation_id\": \"2a66632a-a85b-46c2-b1cb-5e67ea075c6f\", \"request_hash\": \"da205e1b52b55312cafffbf8be080c97df2c41235c52bd7b6e71bfe5465fd1bc\", \"idempotency_key\": \"supplement-project-32076813-f411-484f-96f1-6719d9045059\", \"job_id\": \"20679261-2b70-4dec-9015-bca87b255dbe\"}}\n",
+  "elapsed_s": 18.766,
+  "artifact_sha256_after": "9999608757cff08cfe052b398c3de24b1e2e0603dc375db3d0cc5928f77c6346",
+  "workers": [],
+  "solver_calls_allowed": 0,
+  "worker_guards": [
+    {
+      "phase": "worker_a",
+      "observed_requests": {},
+      "method_run_events": [],
+      "blocked_attempts": [],
+      "protected_handles": null,
+      "operation_rows": [
+        {
+          "job_id": "20679261-2b70-4dec-9015-bca87b255dbe",
+          "status": "FAILED",
+          "operation": "project.create",
+          "inner_operation": null
+        }
+      ],
+      "sample_revision_chain": [],
+      "nonterminal_jobs": []
+    }
+  ],
+  "owned_processes_preserved_if_state_unknown": false
+}

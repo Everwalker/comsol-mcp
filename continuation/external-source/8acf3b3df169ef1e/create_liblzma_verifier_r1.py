@@ -1,0 +1,10 @@
+from pathlib import Path
+E=Path('/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1')
+s=(E/'openssl359_runtime_verify_r2.py').read_text();s=s.replace('import openssl359_cpython_successor_r4 as prior','import liblzma_successor_r1 as prior').replace('from openssl359_runtime_successor_r2 import ROOT,INSTALLED,verify_inputs','from liblzma_runtime_profile_r1 import INSTALLED,OUTPUT_ROOT\nROOT=OUTPUT_ROOT').replace('from openssl359_runtime_profile_r3 import','from liblzma_runtime_profile_r1 import').replace('CPython3.12.13-official+OpenSSL3.5.9-official','CPython3.12.13-official+OpenSSL3.5.9-official+liblzma5.8.4-official').replace("for name in ('zlib','sqlite3','ctypes','venv'):","for name in ('zlib','sqlite3','ctypes','venv','_lzma'):")
+s=s.replace("    return profile\n", "    if profile.get('_lzma')!=str(INSTALLED/'cpython/lib/python3.12/lib-dynload/_lzma.cpython-312-darwin.so') or not profile.get('actual_lzma_roundtrip') or not profile.get('actual_tar_xz_product_roundtrip'):raise RuntimeError('required actual liblzma/tar.xz consumer evidence absent')\n    return profile\n")
+s=s.replace('first,profile=consume_profile(a.root);preservation=verify_inputs()','first,profile=consume_profile(a.root)\n    from liblzma_prepare_r1 import verify_tls_runtime\n    preservation=verify_tls_runtime()')
+s=s.replace('prior.layout()','prior.layout()').replace("tree_record(INSTALLED/'cpython')","tree_record(INSTALLED/'cpython')")
+(E/'liblzma_verify_r1.py').open('x').write(s)
+p=E/'liblzma_runtime_profile_r1.py';p.write_text(p.read_text().replace('CPython3.12.13-official+OpenSSL3.5.9-official','CPython3.12.13-official+OpenSSL3.5.9-official+liblzma5.8.4-official'))
+p=E/'liblzma_successor_r1.py';s=p.read_text().replace('TLS_HASHLIB_SCOPED_ACTUAL_PASS','LZMA_TLS_SCOPED_ACTUAL_PASS').replace("'_lzma':'REQUIRED_OPEN'","'_lzma':'PASS_ACTUAL_SCOPED' if status=='LZMA_TLS_SCOPED_ACTUAL_PASS' else 'REQUIRED_OPEN'")
+p.write_text(s)

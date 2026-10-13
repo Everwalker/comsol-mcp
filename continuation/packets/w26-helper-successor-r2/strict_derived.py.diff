@@ -1,0 +1,17 @@
+--- immutable R1/strict_derived.py
++++ R2/strict_derived.py
+@@ -30,6 +30,14 @@
+  if target!='macos_x86_64' or Path(wheel_path).name!=NAME:raise Refusal('wrong exact target/wheel filename')
+  raw,pid=read_regular(provenance_path);p=json.loads(raw)
+  wr,wid=read_regular(wheel_path);lr,lid=read_regular(source_lock);lic,licid=read_regular(license_path)
++ accepted_raw,accepted_record=read_regular(Path(__file__).parent/'ACCEPTED_CONTENT.json')
++ if accepted_record['sha256']!='adaea23660ac183ee8ceb7536684a14af43257d6dc9ea657e1e9581860b5dc46':raise Refusal('accepted artifact binding drifted')
++ accepted=json.loads(accepted_raw)
++ for current,key in [(wid,'accepted_whole_wheel'),(lid,'accepted_lock'),(licid,'accepted_license')]:
++  if any(current[k]!=accepted[key][k] for k in ('bytes','sha256')):raise Refusal('supplied whole content differs from original reviewed artifact/source')
++ for basis in accepted['basis_refs']:
++  _,now=read_regular(Path(basis['path']))
++  if now!=basis:raise Refusal('accepted original review/source identity drifted')
+  if p.get('schema')!='comsol-mcp-derived-wheel/2' or p.get('status')!='BUILD_CANDIDATE' or p.get('target')!=target:raise Refusal('wrong provenance schema/status/target')
+  if p.get('package')!={'name':'cryptography','version':'50.0.1'}:raise Refusal('wrong exact package')
+  wheel={'filename':NAME,'sha256':wid['sha256'],'bytes':wid['bytes'],'tag':TAG}

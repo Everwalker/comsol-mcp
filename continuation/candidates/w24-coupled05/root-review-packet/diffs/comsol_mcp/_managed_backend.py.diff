@@ -1,0 +1,20 @@
+--- candidate04/comsol_mcp/_managed_backend.py
++++ candidate05/comsol_mcp/_managed_backend.py
+@@ -1388,8 +1388,16 @@
+             raise ExecutionContractError("ISOLATION_PROOF_REQUIRED", "this G2 model mutation requires a configured owned-server isolation receipt")
+         if not self.endpoint_key:
+             raise ExecutionContractError("ISOLATION_PROOF_REQUIRED", "current COMSOL endpoint is not bound")
++        owner=getattr(self.worker,"_coupled_admission_owner",None) if self.worker is not None else None
++        if owner is not None:
++            from tools.w24_coupled_admission import require_admission_owner
++            owner=require_admission_owner(owner)
++            if owner.server.worker is not self.worker:
++                raise ExecutionContractError("ISOLATION_PROOF_REQUIRED","coupled G2 backend Worker receiver changed")
++            owner.before_effect("managed_G2_runtime_metadata",10.0)
+         runtime = self.worker.runtime_metadata() if self.worker is not None else {}
+-        return verify_owned_server(receipt, endpoint=self.endpoint_key, worker_pid=runtime.get("pid"))
++        return verify_owned_server(receipt,endpoint=self.endpoint_key,worker_pid=runtime.get("pid"),
++            **({"admission_owner":owner} if owner is not None else {}))
+ 
+     def _invoke_runtime_scoped(self, operation, arguments, execution, operation_id, event_callback=None):
+         """Route a runtime-scoped G3 operation without a model or a revision (C05).

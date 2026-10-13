@@ -1,0 +1,37 @@
+--- /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/tests/test_saved_mph_activity017_public_stack.py
++++ /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/tests/test_saved_mph_activity017_public_stack.py
+@@ -30,6 +30,8 @@
+ def test_activity017_exact_eight_slots_real_public_stack_keep_revision_and_partial_axes(tmp_path,monkeypatch):
+     daemon,service,ref,project,sdk,tree,nodes,args=_public(tmp_path,monkeypatch)
+     _install_point_values(monkeypatch)
++    from tests.test_activity022_boundary_selection_ticket import install_boundary_selection_fixture
++    install_boundary_selection_fixture(tree,monkeypatch)
+     # SDK-native dataset and solver collection fixtures. No resolver/FieldArray fake.
+     sol_list=tree.model.collections['sol']; original=tree.solver
+     for dataset,solution in [('dset2','sol2'),('dset3','sol3')]:
+@@ -38,7 +40,7 @@
+         tree.datasets.items[dataset]=FNode(dataset,'Solution',props=dict(tree.datasets.items['dset1'].props,solution=solution))
+     plan=[('freq_Hz','dset1','sol1',('freq',),('Hz',),[[-10.,0.]]),
+           ('freq_GHz','dset1','sol1',('freq',),('GHz',),[[-10.,0.]])]
+-    plan += [(f'fields_{plane}_{count}','dset1','sol1',runner.RAW_FIELD_EXPRESSIONS,runner.FIELD_REQUESTED_UNITS,runner._field_points(x,count))
++    plan += [(f'fields_{plane}_{count}','dset1','sol1',runner.plane_field_expressions("2" if x==8. else "1"),runner.plane_field_units("2" if x==8. else "1"),runner._field_points(x,count))
+              for plane,x in [('output_x8',8.),('input_xminus10',-10.)] for count in (321,641)]
+     plan += [(f'mode_point_{step}',dataset,solution,runner.protocol.bma_point_expressions(port),tuple(runner.mode_units(port).values()),[[x,0.]])
+              for step,dataset,solution,port,x in [('bmaInput','dset2','sol2','1',-10.),('bmaOutput','dset3','sol3','2',8.)]]
+@@ -49,6 +51,7 @@
+             partial=results._result_solution_binding(tree.model,solution)
+             assert partial and partial['pair_mapping_complete'] is False
+             spec={'expressions':list(expressions),'units':list(units),'solution':{'dataset':dataset,'solution':solution},'complex_mode':'preserve'}
++            if label.startswith('fields_'):spec.update(selection=runner.plane_selection('2' if points[0][0]==8. else '1'),entity_dim=1)
+             public={'spec':spec,'points':runner._public_points(points),'coordinate_unit':'um','frame':'spatial'}
+             response=_call(daemon,ref,project,public,label,0)
+             assert response['success'],response
+@@ -74,7 +77,7 @@
+     daemon,service,ref,project,sdk,tree,nodes,args=_public(tmp_path,monkeypatch)
+     try:
+         runner._set_dispatch_allowlist(daemon,tmp_path/'allowlist.jsonl')
+-        body={'spec':{'expressions':list(runner.RAW_FIELD_EXPRESSIONS),'units':list(runner.FIELD_REQUESTED_UNITS),'solution':{'dataset':'dset1','solution':'sol1'},'complex_mode':'preserve'},'points':runner._public_points(runner._field_points(8.,321)),'coordinate_unit':'um','frame':'spatial'}
++        body={'spec':{'expressions':list(runner.RAW_FIELD_EXPRESSIONS),'units':list(runner.FIELD_REQUESTED_UNITS),'solution':{'dataset':'dset1','solution':'sol1'},'complex_mode':'preserve','selection':runner.plane_selection('2'),'entity_dim':1},'points':runner._public_points(runner._field_points(8.,321)),'coordinate_unit':'um','frame':'spatial'}
+         if mutation=='missing':body['spec'].pop('units')
+         elif mutation=='wrong':body['spec']['units'][0]='A/m'
+         elif mutation=='extra':body['spec']['units'].append('1')

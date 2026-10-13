@@ -1,0 +1,46 @@
+{
+  "schema": "ROOT_W25_R5_SOURCE_FINDINGS_V1",
+  "created_utc": "2026-10-12T01:48:54.477912+00:00",
+  "candidate_freeze_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/local-preservation/w25-native-adapter-20261012-r5-r2/R5_SOURCE_FREEZE_R2.json",
+  "candidate_freeze_sha256": "bbfca9c71b51a04e1ff50a58ce6d4752fece6be28d9f43d2a60058785c5eaa11",
+  "status": "CHANGES_REQUIRED",
+  "scope": "Private-candidate implementation source review. Software 110 PASS/9 Windows-kernel SKIP retained; no native failure claimed. Exact packet reference validation still pending final successor review.",
+  "closed_r4_findings": [
+    "macOS 14.0 API floor",
+    "PyObjC getter method calls",
+    "actual standalone source identity comparisons",
+    "private staging/no-clobber publication architecture"
+  ],
+  "findings": [
+    {
+      "id": "W25-R5-UIA-DLL-01",
+      "priority": "P1",
+      "file": "comsol_mcp/_desktop_uia.py",
+      "line": 52,
+      "problem": "GetWindowThreadProcessId is imported from kernel32.dll and declared bool. Its documented DLL is User32.dll and return type is DWORD/uint; real AssertTarget always fails with EntryPointNotFound before UIA actions.",
+      "required_fix": "Use user32.dll uint ABI; audit all added PInvoke library/return types and add a meaningful actual Windows ABI entrypoint probe when Windows is available. Keep actual Windows result NOT_RUN here.",
+      "primary_reference": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowthreadprocessid"
+    },
+    {
+      "id": "W25-R5-SAVE-ASYNC-02",
+      "priority": "P1",
+      "files": [
+        "comsol_mcp/_desktop_windows.py",
+        "comsol_mcp/_desktop_macos.py",
+        "comsol_mcp/_desktop_service.py"
+      ],
+      "problem": "Windows Save Copy rejects if the asynchronously confirmed file is not immediately present, so the new coordinator cannot wait for delayed creation. macOS still hashes after only three 250ms samples; a later valid write produces digest mismatch against the coordinator. Two seconds of quiet alone does not establish a completed Save Copy if a writer pauses longer. Current native gateway receipts only prove dialog confirmation, not completion.",
+      "required_fix": "Delegate pinned byte/hash waiting to one coordinator and remove premature native adapter existence/digest gates. Add production-path asynchronous delayed creation and burst/pause controls using the actual native adapters (fake only gateway). Bind completion to an observed native save completion/state signal and validate completion before publishing final bytes; missing profile signal is typed unsupported before effects. Retain timeout/changed file UNKNOWN and no retry after effects. Do not promote arbitrary quiet-window or fake data to complete native MPH.",
+      "primary_reference": "https://learn.microsoft.com/en-us/dotnet/api/system.windows.automation.invokepattern.invoke"
+    },
+    {
+      "id": "W25-R5-STAGE-FOREIGN-03",
+      "priority": "P1",
+      "file": "comsol_mcp/_desktop_service.py",
+      "problem": "POSIX _verified_private_save_copy_file calls fchmod(fd,0600) before checking owner/link count. A hardlink placed at model.mph can change permissions on a foreign existing file before the later security verifier rejects it.",
+      "required_fix": "Before fchmod require the pinned regular file uid equals current task uid and st_nlink exactly 1, and prove the named file is the same pinned identity. Add hardlink/foreign-owner negative controls verifying no fchmod/publication/load occurs and foreign file remains unchanged. Preserve existing no-clobber/path pinning."
+    }
+  ],
+  "native_execution": "NOT_RUN",
+  "unified_independent_acceptance": "NOT_RUN"
+}

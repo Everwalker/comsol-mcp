@@ -411,13 +411,19 @@ def publish_project_file_no_clobber(
     *,
     expected_sha256: str,
     expected_size: int,
+    owned_source_root: str | Path | None = None,
+    expected_source_identity: Mapping[str, Any] | None = None,
+    expected_source_root_identity: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Pin a backend-owned project file and stream-publish it atomically.
+    """Pin a backend-owned file and stream-publish it atomically.
 
     ``owned_source_path`` is an internal backend capability, never a request
-    argument. It must name a regular, non-symlink file within the trusted
-    project. Source bytes are consumed once and verified against the supplied
-    digest and size before the destination name is committed.
+    argument. By default it names a regular, non-symlink file within the
+    trusted project. Native Save Copy may instead provide a host-private
+    staging root and pinned identities; those paths are checked by the
+    installed host-scoped ownership/ACL verifier before and after the stream.
+    Source bytes are consumed once and verified against the supplied digest
+    and size before the destination name is committed.
     """
     store = ArtifactStore(project_root)
     if (not isinstance(expected_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_sha256)
@@ -427,29 +433,52 @@ def publish_project_file_no_clobber(
         source_lexical = Path(owned_source_path).expanduser()
     except (TypeError, ValueError) as exc:
         raise _contract_error("INVALID_REQUEST", "owned source path is invalid") from exc
-    source = source_lexical if source_lexical.is_absolute() else store.project_root / source_lexical
+    external_source = owned_source_root is not None
+    if external_source:
+        try:
+            source_root_lexical = Path(owned_source_root).expanduser()
+        except (TypeError, ValueError) as exc:
+            raise _contract_error("INVALID_REQUEST", "owned staging root is invalid") from exc
+        if not source_root_lexical.is_absolute():
+            raise _contract_error("ACCESS_VIOLATION", "owned staging root must be absolute")
+        source_root = Path(os.path.abspath(os.fspath(source_root_lexical)))
+        if not isinstance(expected_source_identity, Mapping) or not isinstance(expected_source_root_identity, Mapping):
+            raise _contract_error("INVALID_REQUEST", "host-private publication requires pinned file and directory identities")
+    else:
+        source_root = store.project_root
+    source = source_lexical if source_lexical.is_absolute() else source_root / source_lexical
     source = Path(os.path.abspath(os.fspath(source)))
     try:
-        source.relative_to(store.project_root)
+        source_relative = source.relative_to(source_root).as_posix()
     except ValueError as exc:
-        raise _contract_error("ACCESS_VIOLATION", "owned source must be inside the trusted project root") from exc
+        raise _contract_error("ACCESS_VIOLATION", "owned source must be inside its exact authorized source root") from exc
+    if not source_relative or any(part in {"", ".", ".."} for part in Path(source_relative).parts):
+        raise _contract_error("ACCESS_VIOLATION", "owned source path is not canonical")
     _assert_no_symlink_components(source, field="owned package source")
+    if external_source:
+        _verify_owned_private_source(source_root, source, expected_source_root_identity,
+                                     expected_source_identity)
 
     if sys.platform == "win32":
         from ._windows_parameter_publish import PublishError, _API, pinned_parent, validate_paths
         try:
-            source_relative = source.relative_to(store.project_root).as_posix()
-            validate_paths(project_root, source_relative)
+            validate_paths(source_root, source_relative)
             validate_paths(project_root, destination_relative_path)
             store.resolve_safe_path(destination_relative_path, allow_overwrite=False)
 
             def windows_chunks() -> Iterator[bytes]:
-                with pinned_parent(project_root, source_relative, add_file=False, _api=_API()) as (api, parent, parts, binding):
+                if external_source:
+                    _verify_owned_private_source(source_root, source, expected_source_root_identity,
+                                                 expected_source_identity)
+                with pinned_parent(source_root, source_relative, add_file=False, _api=_API()) as (api, parent, parts, binding):
                     handle = api.open_source(parent, parts[-1])
                     try:
                         before = api.source_fingerprint(handle)
                         if before[1] != expected_size:
                             raise _contract_error("ARTIFACT_CHANGED", "owned source size differs from its pinned metadata")
+                        if (external_source and before[0] !=
+                                (expected_source_identity.get("device"), expected_source_identity.get("inode"))):
+                            raise _contract_error("ARTIFACT_CHANGED", "pinned file handle differs from verified host-private identity")
                         read_size = 0
                         while True:
                             block = api.read_chunk(handle, 1024 * 1024)
@@ -463,6 +492,9 @@ def publish_project_file_no_clobber(
                                 or api.child_identity(parent, parts[-1]) != before[0]):
                             raise _contract_error("ARTIFACT_CHANGED", "owned source changed during pinned streaming")
                         api.verify_named_binding(binding)
+                        if external_source:
+                            _verify_owned_private_source(source_root, source, expected_source_root_identity,
+                                                         expected_source_identity)
                     finally:
                         api.close(handle)
 
@@ -476,10 +508,16 @@ def publish_project_file_no_clobber(
             raise _contract_error(exc.code, str(exc), stage=exc.stage, details=exc.details) from exc
 
     def source_chunks() -> Iterator[bytes]:
+        if external_source:
+            _verify_owned_private_source(source_root, source, expected_source_root_identity,
+                                         expected_source_identity)
         handle, before = _open_pinned_artifact(source)
         try:
             if int(before.st_size) != expected_size:
                 raise _contract_error("ARTIFACT_CHANGED", "owned source size differs from its pinned metadata")
+            if (external_source and (int(before.st_dev), int(before.st_ino)) !=
+                    (expected_source_identity.get("device"), expected_source_identity.get("inode"))):
+                raise _contract_error("ARTIFACT_CHANGED", "pinned file handle differs from verified host-private identity")
             read_size = 0
             for block in iter(lambda: handle.read(1024 * 1024), b""):
                 read_size += len(block)
@@ -489,6 +527,9 @@ def publish_project_file_no_clobber(
             _assert_pinned_artifact_stable(source, before, os.fstat(handle.fileno()))
             if read_size != expected_size:
                 raise _artifact_changed(source, "file size changed while being streamed")
+            if external_source:
+                _verify_owned_private_source(source_root, source, expected_source_root_identity,
+                                             expected_source_identity)
         finally:
             handle.close()
 
@@ -496,6 +537,30 @@ def publish_project_file_no_clobber(
         store.project_root, destination_relative_path, source_chunks(),
         expected_sha256=expected_sha256, expected_size=expected_size,
     )
+
+
+def _verify_owned_private_source(source_root: Path, source: Path,
+                                 expected_root_identity: Mapping[str, Any] | None,
+                                 expected_source_identity: Mapping[str, Any] | None) -> None:
+    """Recheck native staging root/file owner, ACL and pinned identity."""
+    if not isinstance(expected_root_identity, Mapping) or not isinstance(expected_source_identity, Mapping):
+        raise _contract_error("INVALID_REQUEST", "host-private source identities are required")
+    from ._host_scoped_provider import verify_private_path_security
+    try:
+        root_evidence = verify_private_path_security(
+            source_root, directory=True, expected_identity=dict(expected_root_identity),
+        )
+        source_evidence = verify_private_path_security(
+            source, directory=False, expected_identity=dict(expected_source_identity),
+        )
+    except ExecutionContractError:
+        raise
+    except Exception as exc:
+        raise _contract_error("HOST_PROVIDER_UNSUPPORTED", "native staging trust could not be verified") from exc
+    if (not isinstance(root_evidence, Mapping) or not isinstance(source_evidence, Mapping)
+            or root_evidence.get("identity") != dict(expected_root_identity)
+            or source_evidence.get("identity") != dict(expected_source_identity)):
+        raise _contract_error("AUTHORIZATION_STATE_UNKNOWN", "native staging identity or security changed")
 
 
 def _publish_project_chunks_no_clobber(

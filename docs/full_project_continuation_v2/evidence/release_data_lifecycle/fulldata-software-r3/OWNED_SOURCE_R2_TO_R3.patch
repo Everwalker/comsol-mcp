@@ -1,0 +1,247 @@
+--- R2/tools/release_transition_lifecycle.py
++++ R3/tools/release_transition_lifecycle.py
+@@ -12,6 +12,7 @@
+ import hashlib
+ import json
+ import pathlib
++import re
+ import stat
+ import zipfile
+ from typing import Any
+@@ -285,11 +286,11 @@
+ 
+ 
+ FULL_VERIFY_SCRIPT = r'''
+-import hashlib,json,pathlib,sys,zipfile
++import hashlib,json,pathlib,re,sys,zipfile
+ from comsol_mcp._artifact_store import local_artifact_host_identity,resolve_registered_artifact
+ from comsol_mcp._operation_store import OperationStore
+ from comsol_mcp._project_authority import ProjectAuthority
+-from comsol_mcp._state_backup import _history_fingerprint
++from comsol_mcp._state_backup import _history_fingerprint,_inspect_schema
+ home=pathlib.Path(sys.argv[1]); workspace=pathlib.Path(sys.argv[2]); project_id=sys.argv[3]
+ artifact_id=sys.argv[4]; expected_sha=sys.argv[5]; expected_size=int(sys.argv[6])
+ seed=json.loads(pathlib.Path(sys.argv[7]).read_text()); entry=pathlib.Path(sys.argv[8])
+@@ -312,6 +313,9 @@
+  unknown_job=store.job(unknown['job_id'])
+  assert unknown_job['status']=='UNKNOWN', 'full restore must keep UNKNOWN history without reclassification'
+  durable_history_sha256=_history_fingerprint(store.db)
++ database_schema_version=_inspect_schema(store.db,allow_legacy_v1=False)
++ assert isinstance(durable_history_sha256,str) and re.fullmatch(r'[0-9a-f]{64}',durable_history_sha256)
++ assert type(database_schema_version) is int and database_schema_version > 0
+  native_entry={'schema':'comsol-mcp.zero-solve-model-reopen-entry/1','status':'NOT_RUN_SOFTWARE_PREPARED',
+   'evidence_scope':'SOFTWARE_PROJECT_AUTHORITY_ARTIFACTSTORE_FULL_RESTORE',
+   'project_id':project_id,'project_workspace':str(project_root),'workspace_root':str(workspace),
+@@ -326,7 +330,7 @@
+  print(json.dumps({'success':True,'project_id':project_id,'artifact_id':artifact_id,'sha256':resolved['sha256'],
+   'size_bytes':resolved['size'],'relative_path':resolved['relative_path'],'resolved_path':str(resolved['path']),
+   'unknown_operation_id':unknown['operation_id'],'unknown_status':'UNKNOWN','operation_replay_performed':False,
+-  'durable_history_sha256':durable_history_sha256,
++  'durable_history_sha256':durable_history_sha256,'database_schema_version':database_schema_version,
+   'worker_or_model_bindings_revived':False,'native_reopen_entry':str(entry),
+   'native_reopen_entry_sha256':hashlib.sha256(entry.read_bytes()).hexdigest(),'native':'NOT_RUN','solve':'NOT_RUN'},sort_keys=True))
+ finally:
+@@ -518,7 +522,11 @@
+         manifest = verified.get("manifest")
+         if (verified.get("success") is not True or verified.get("project_count") != 1
+                 or verified.get("file_count") != 1 or not isinstance(manifest, dict)
+-                or manifest.get("durable_history_sha256") != verified.get("durable_history_sha256")):
++                or not isinstance(verified.get("durable_history_sha256"), str)
++                or re.fullmatch(r"[0-9a-f]{64}", verified.get("durable_history_sha256", "")) is None
++                or manifest.get("durable_history_sha256") != verified.get("durable_history_sha256")
++                or type((manifest.get("database") or {}).get("schema_version")) is not int
++                or (manifest.get("database") or {}).get("schema_version") <= 0):
+             self.failures.append("full-backup-manifest-invalid")
+             raise self.release.ReleaseError("full backup did not inventory the expected project and registered MPH")
+         file_matches = [item for item in manifest.get("files", [])
+@@ -584,6 +592,19 @@
+                 or verified_model.get("solve") != "NOT_RUN"):
+             self.failures.append("restored-model-readback-invalid")
+             raise self.release.ReleaseError("restored ArtifactStore did not resolve the exact MPH and preserved history")
++        expected_history = self.backup_verified.get("durable_history_sha256")
++        observed_history = verified_model.get("durable_history_sha256")
++        if (not isinstance(expected_history, str)
++                or re.fullmatch(r"[0-9a-f]{64}", expected_history) is None
++                or observed_history != expected_history):
++            self.failures.append("restored-history-mismatch")
++            raise self.release.ReleaseError("restored durable history digest is missing or differs from the verified backup")
++        expected_schema = (self.backup_verified.get("manifest") or {}).get("database", {}).get("schema_version")
++        observed_schema = verified_model.get("database_schema_version")
++        if (type(expected_schema) is not int or expected_schema <= 0
++                or type(observed_schema) is not int or observed_schema != expected_schema):
++            self.failures.append("restored-schema-version-mismatch")
++            raise self.release.ReleaseError("restored database schema version is missing or differs from the verified backup")
+         self.full_restore_receipt = {"restore": restored, "verified_model": verified_model}
+         if (self.release.sha256_file(self.backup) != self.backup_verified.get("archive_sha256")
+                 or self.release.sha256_file(self.backup_manifest) != self.backup_manifest_sha256):
+@@ -602,17 +623,41 @@
+             except Exception as exc:
+                 self.failures.append("old-independent-reopen-error:" + type(exc).__name__)
+                 pass
+-        passed = package_pass and identity_pass and self.candidate_pass and self.restore_pass and self.restored_pass and not self.failures
++        lifecycle_ready = package_pass and identity_pass and self.candidate_pass and self.restore_pass and self.restored_pass and not self.failures
+         storage = getattr(self, "restored_storage", None)
+         differences = None
++        history_identical = False
++        schema_version_identical = False
+         if self.backup_verified is not None and storage is not None:
+             readback = (self.full_restore_receipt or {}).get("verified_model", {})
+-            restored_schema = storage["schema_version"]
+-            expected_schema = [[self.backup_verified.get("manifest", {}).get("database", {}).get("schema_version")]]
++            restored_schema_rows = storage.get("schema_version")
++            expected_schema = (self.backup_verified.get("manifest") or {}).get("database", {}).get("schema_version")
++            expected_history = self.backup_verified.get("durable_history_sha256")
++            observed_history = readback.get("durable_history_sha256")
++            observed_schema = readback.get("database_schema_version")
++            valid_expected_history = (isinstance(expected_history, str)
++                                      and re.fullmatch(r"[0-9a-f]{64}", expected_history) is not None)
++            valid_observed_history = (isinstance(observed_history, str)
++                                      and re.fullmatch(r"[0-9a-f]{64}", observed_history) is not None)
++            valid_expected_schema = type(expected_schema) is int and expected_schema > 0
++            valid_observed_schema = type(observed_schema) is int and observed_schema > 0
++            history_identical = valid_expected_history and valid_observed_history and expected_history == observed_history
++            schema_version_identical = (valid_expected_schema and valid_observed_schema
++                                        and expected_schema == observed_schema
++                                        and restored_schema_rows == [[expected_schema]])
+             differences = {"bytes_identical": None, "schema_identical": None,
+-                           "schema_version_identical": expected_schema == restored_schema,
+-                           "durable_history_sha256_identical": self.backup_verified.get("durable_history_sha256") == readback.get("durable_history_sha256"),
++                           "schema_version_identical": schema_version_identical,
++                           "durable_history_sha256_identical": history_identical,
++                           "expected_schema_version": expected_schema if valid_expected_schema else None,
++                           "observed_schema_version": observed_schema if valid_observed_schema else None,
++                           "expected_durable_history_sha256": expected_history if valid_expected_history else None,
++                           "observed_durable_history_sha256": observed_history if valid_observed_history else None,
+                            "note": "full restore rebinds project/workspace/host metadata; archive database bytes are not expected to equal the rebound database"}
++            if not history_identical and "restored-history-mismatch" not in self.failures:
++                self.failures.append("restored-history-mismatch")
++            if not schema_version_identical and "restored-schema-version-mismatch" not in self.failures:
++                self.failures.append("restored-schema-version-mismatch")
++        passed = lifecycle_ready and history_identical and schema_version_identical
+         return {"status": "PASS_DISPOSABLE_CODE_DATA_LIFECYCLE" if passed else "FAIL_OR_UNKNOWN_DATA_LIFECYCLE",
+                 "package": "PASS" if package_pass else "FAIL_OR_UNKNOWN",
+                 "code_identity": "PASS" if all(self.identities.get(n) is True for n in ("old", "candidate", "restored")) else "FAIL_OR_UNKNOWN",
+--- R2/tests/test_release_data_lifecycle.py
++++ R3/tests/test_release_data_lifecycle.py
+@@ -327,7 +327,8 @@
+     assert list(interrupted_workspace.iterdir()) == []
+ 
+ 
+-def test_lifecycle_orchestrator_uses_full_data_path_and_emits_native_entry(tmp_path):
++@pytest.mark.parametrize("tamper_post_seed_history", [False, True])
++def test_lifecycle_orchestrator_uses_full_data_path_and_emits_native_entry(tmp_path, tamper_post_seed_history):
+     old_wheel = ROOT / "evidence/w21_closure/delivery/comsol_mcp-0.1.9-py3-none-any.whl"
+     if not old_wheel.is_file():
+         pytest.skip("historical local wheel unavailable")
+@@ -347,6 +348,16 @@
+     home, seed = work / "synthetic-control-home", evidence / "old-generated-seed.json"
+     initial = run_fixture_child(old_root, helper.DATA_SCRIPT, ["seed", home, seed])
+     assert initial.returncode == 0, initial.stderr
++    seed_record = json.loads(seed.read_text())
++    durable_job = seed_record["operations"]["terminal"]["job_id"]
++    add_durable_event = (
++        "import sys; from comsol_mcp._operation_store import OperationStore; "
++        "s=OperationStore(sys.argv[1]); "
++        "s.add_event(sys.argv[2], 'PostSeedLifecycleEvidence', {'source':'synthetic-test-fixture','sequence':1}); "
++        "s.close()"
++    )
++    event = run_fixture_child(candidate_root, add_durable_event, [home / "operations.sqlite3", durable_job])
++    assert event.returncode == 0, event.stderr
+ 
+     lifecycle = object.__new__(helper.Lifecycle)
+     lifecycle.release = release
+@@ -380,6 +391,15 @@
+     def fixture_process(name, _py, code, arguments, *, supervised=True):
+         root = old_root if name == "old-independent-reopen" else candidate_root
+         child = run_fixture_child(root, code, arguments)
++        if name == "production-full-restore" and tamper_post_seed_history:
++            import sqlite3
++            restored_db = lifecycle.restored_home / "operations.sqlite3"
++            with sqlite3.connect(restored_db) as db:
++                changed = db.execute(
++                    "UPDATE job_events SET metadata=? WHERE event='PostSeedLifecycleEvidence'",
++                    (json.dumps({"tampered_after_restore": True}),),
++                ).rowcount
++            assert changed == 1, "expected exactly one restored non-seed durable history row"
+         record = {"argv": ["fixture-python", "-I", "-B", "-c", code, *map(str, arguments)],
+                   "exit_code": child.returncode, "stdout": child.stdout, "stderr": child.stderr}
+         lifecycle.retain_record(name, record)
+@@ -388,6 +408,20 @@
+     lifecycle.verify_seed = verify_seed
+     lifecycle.process = fixture_process
+     lifecycle.candidate_phase(pathlib.Path(sys.executable))
++    if tamper_post_seed_history:
++        with pytest.raises(release.ReleaseError, match="durable history digest"):
++            lifecycle.restore_candidate(pathlib.Path(sys.executable))
++        assert lifecycle.restore_pass is False
++        assert "restored-history-mismatch" in lifecycle.failures
++        failed = lifecycle.finish(pathlib.Path(sys.executable), True, True)
++        assert failed["status"] == "FAIL_OR_UNKNOWN_DATA_LIFECYCLE"
++        assert failed["data"] == "FAIL_OR_UNKNOWN"
++        readback_step = next(row for row in lifecycle.steps
++                             if row["name"] == "restored-project-artifact-readback")
++        readback_record = json.loads(pathlib.Path(readback_step["record_path"]).read_text())
++        changed_digest = json.loads(readback_record["stdout"])["durable_history_sha256"]
++        assert changed_digest != lifecycle.backup_verified["durable_history_sha256"]
++        return
+     lifecycle.restore_candidate(pathlib.Path(sys.executable))
+     result = lifecycle.finish(pathlib.Path(sys.executable), True, True)
+     assert result["status"] == "PASS_DISPOSABLE_CODE_DATA_LIFECYCLE"
+@@ -398,6 +432,57 @@
+     entry = json.loads(lifecycle.native_reopen_entry.read_text())
+     assert entry["status"] == "NOT_RUN_SOFTWARE_PREPARED" and entry["solve_requested"] is False
+     assert entry["artifact_sha256"] == lifecycle.model_sha256
++
++
++@pytest.mark.parametrize("defect", ["history-missing", "history-mismatch", "schema-missing", "schema-mismatch"])
++def test_lifecycle_finish_requires_exact_nonempty_history_and_schema_readback(tmp_path, defect):
++    lifecycle = object.__new__(helper.Lifecycle)
++    lifecycle.release = release
++    lifecycle.evidence = tmp_path
++    lifecycle.steps = []
++    lifecycle.failures = []
++    lifecycle.identities = {"old": True, "candidate": True, "restored": True}
++    lifecycle.old, lifecycle.new = {"version": "0.1.9"}, {"version": "0.1.10"}
++    lifecycle.bootstrap = {}
++    lifecycle.candidate_pass = lifecycle.restore_pass = lifecycle.restored_pass = True
++    expected_history = "a" * 64
++    observed_history = expected_history
++    expected_schema = observed_schema = 3
++    if defect == "history-missing":
++        observed_history = None
++    elif defect == "history-mismatch":
++        observed_history = "b" * 64
++    elif defect == "schema-missing":
++        observed_schema = None
++    elif defect == "schema-mismatch":
++        observed_schema = 4
++    lifecycle.backup_verified = {
++        "durable_history_sha256": expected_history,
++        "manifest": {"database": {"schema_version": expected_schema}},
++    }
++    lifecycle.full_restore_receipt = {
++        "verified_model": {
++            "durable_history_sha256": observed_history,
++            "database_schema_version": observed_schema,
++        }
++    }
++    lifecycle.project_artifact = None
++    lifecycle.native_reopen_entry = tmp_path / "native-entry.json"
++    lifecycle.restored_storage = {"schema_version": [[expected_schema]]}
++    for name in ("old-wheel-input.json", "candidate-wheel-input.json"):
++        (tmp_path / name).write_text("{}\n")
++    lifecycle.verify_seed = lambda: None
++    lifecycle.checked = lambda *_args, **_kwargs: {"before_storage": {"schema_version": [[expected_schema]]}}
++
++    result = lifecycle.finish(pathlib.Path(sys.executable), True, True)
++    assert result["status"] == "FAIL_OR_UNKNOWN_DATA_LIFECYCLE"
++    assert result["data"] == "FAIL_OR_UNKNOWN"
++    if defect.startswith("history"):
++        assert result["backup_vs_restored_storage"]["durable_history_sha256_identical"] is False
++        assert "restored-history-mismatch" in result["failures"]
++    else:
++        assert result["backup_vs_restored_storage"]["schema_version_identical"] is False
++        assert "restored-schema-version-mismatch" in result["failures"]
+ 
+ 
+ @pytest.mark.parametrize("defect", ["seed-result", "terminal-status", "unknown-retry", "new-row"])

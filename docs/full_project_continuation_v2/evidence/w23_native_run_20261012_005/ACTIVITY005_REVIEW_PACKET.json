@@ -1,0 +1,262 @@
+{
+  "acceptance_comparison": {
+    "all_non_material_acceptance_values_unchanged": true,
+    "analytic_neff_and_tolerances": {
+      "analytic_neff": 1.540405036791,
+      "coarse_tolerance": 0.002,
+      "fine_tolerance": 0.0005
+    },
+    "capture_and_phase_gates_unchanged": true,
+    "changed_acceptance_key": "material_tensor_readback only",
+    "overlap_thresholds": {
+      "normalized_overlap_minimum_coarse": 0.995,
+      "normalized_overlap_minimum_fine": 0.999
+    },
+    "scope_unchanged": true,
+    "study_or_solver_call_plan_unchanged": true
+  },
+  "activity_id": "w23-native-run-20261012-005",
+  "base_freeze_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-planar-te-source-20261012-004/docs/full_project_execution/w23_overlap/evidence/native-run-20261012-004-r2/freeze.json",
+  "base_freeze_sha256": "a88603e803786d9e52c65b66db1069f2de1e9782325b4315a07d60fbccd34683",
+  "candidate_id": "W23-TE-PLANAR-TE-SCIENCE-13",
+  "changed_source_count": 3,
+  "execution_invocation": {
+    "approval_path_expected": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-planar-te-source-20261012-005/docs/full_project_execution/w23_overlap/evidence/native-run-20261012-005-r2/ROOT_APPROVAL_ACTIVITY005.json",
+    "argv": [
+      "env",
+      "TMPDIR=/private/tmp",
+      "PYTHONPATH=/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-planar-te-source-20261012-005",
+      "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python",
+      "-m",
+      "tools.run_native_w23_te_science",
+      "execute",
+      "--freeze",
+      "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-planar-te-source-20261012-005/docs/full_project_execution/w23_overlap/evidence/native-run-20261012-005-r2/freeze.json",
+      "--freeze-sha256",
+      "9cd565d0cf45cb6c648309c8086d4a3bb150ce7d64eda6da03751b73fb2f8707",
+      "--approval",
+      "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-planar-te-source-20261012-005/docs/full_project_execution/w23_overlap/evidence/native-run-20261012-005-r2/ROOT_APPROVAL_ACTIVITY005.json",
+      "--work",
+      "/private/tmp/comsol-mcp-w23-te-science-20261012-005-activity005",
+      "--evidence",
+      "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-planar-te-source-20261012-005/docs/full_project_execution/w23_overlap/evidence/native-run-20261012-005-r2/native-run-20261012-005-execute"
+    ],
+    "cwd": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-planar-te-source-20261012-005",
+    "evidence_path_canonical_copy_target": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_005/private-control-store/activity005-raw",
+    "evidence_path_must_be_new": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-planar-te-source-20261012-005/docs/full_project_execution/w23_overlap/evidence/native-run-20261012-005-r2/native-run-20261012-005-execute",
+    "not_run_until_root_exact_activity005_approval": true,
+    "prelaunch_requirement": "Fresh elevated read-only ps/lsof ownership inventory immediately before any server birth; verify no shared COMSOL/Worker conflicts and prior Activity004 PIDs 49807, 49876, 49915 and ports 61319, 61326 remain absent.",
+    "stop_boundary": "One server, one Worker, zero GUI, at most four Study.run calls, 1800 seconds from first server birth including 120-second cleanup reserve. Stop after the first failed/UNKNOWN Worker/study request, do not replay any earlier idempotency key, preserve durable database/WAL sidecars, raw RPCs, outputs and exact-owned cleanup.",
+    "work_path_must_be_new": "/private/tmp/comsol-mcp-w23-te-science-20261012-005-activity005"
+  },
+  "failure_basis_and_fix": {
+    "activity004_durable_build_status": "5/5 operation and job rows SUCCEEDED; fixture-build job 5bcab1a9-f53f-421a-8898-03e85894d488 / operation b0dd80cb-2560-4e66-bdc5-3748ca546ad4 domain_state=succeeded, execution_success=true, execution_state_unknown=false; runner material gate failed afterward.",
+    "activity004_native_material_evidence": "All three materials and all six EPS/MU properties captured StringArray/getStringArray, raw_shape [1], exact raw scalar values, size_getter MaterialModel.size returning literal [3,3]; both capture statuses CAPTURED. Zero Study.run submissions; actual internal solver steps UNKNOWN.",
+    "activity004_preserved_native_raw_sha256": "e54058da73b8f6bd7024d760dcd8673cd2e902c651cf9f7b17d07bc0aaf1e5f7",
+    "activity004_project_reference_supplement_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_004/ACTIVITY004_RECONCILIATION_SUPPLEMENT001.json",
+    "activity004_project_reference_supplement_sha256": "4e5ad4424d5d081ddf9ff65b7693fcf13d02959256aef786815f15992a12a734",
+    "activity004_reconciliation_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_004/ACTIVITY004_RECONCILIATION.json",
+    "activity004_reconciliation_sha256": "52f6327b9db002b9102b5608202055ae32ae87634729eb6bf46d1ef82db7f23f",
+    "activity004_root_preservation_cleanup_check_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_004/ROOT_PRESERVATION_CLEANUP_CHECK004.json",
+    "activity004_root_preservation_cleanup_check_sha256": "219a2a474bf63a382d440e3165c1eee902c580d8b3c005cfcd732c18f5cee582",
+    "candidate_change": "Preserve literal MaterialModel.size and typed raw getter shape as distinct evidence. Admit only exact scalar getter/raw shape with size [1,1] or [3,3], reconstruct isotropic diagonal and then keep exact original eps/mu entry comparisons. Leave every unrelated acceptance limit unchanged.",
+    "documented_same_version_basis": [
+      {
+        "chunk_id": 16782,
+        "doc_id": 4111,
+        "document": "COMSOL 6.4 model.material()",
+        "sha256": "80ae61bc99d91b2e91aaeff7c91406bae0a768c7fbadef5b8efe95db33c262ab"
+      },
+      {
+        "chunk_id": 10907,
+        "doc_id": 3626,
+        "document": "COMSOL 6.4 Programming Reference Manual p.152",
+        "sha256": "5b7f23ad2eae77f59d71935f4f6c9b6b9ede380dc34da065181841e512bbc105"
+      },
+      {
+        "chunk_id": 16624,
+        "doc_id": 4040,
+        "document": "COMSOL 6.4 Materials",
+        "sha256": "a9c03166ff9ab086e634f87a3a57ae67723d867cc69ab022ec83a5a56d79aa3e"
+      },
+      {
+        "document": "same-repo W15 material tensor readback",
+        "path": "comsol_mcp/_g3_w15.py",
+        "reference_lines": "1128-1230"
+      }
+    ]
+  },
+  "freeze_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-planar-te-source-20261012-005/docs/full_project_execution/w23_overlap/evidence/native-run-20261012-005-r2/freeze.json",
+  "freeze_sha256": "9cd565d0cf45cb6c648309c8086d4a3bb150ce7d64eda6da03751b73fb2f8707",
+  "history_policy": "Activity001/002 UNKNOWN safe_retry=false, Activity003 build SUCCEEDED/readback FAIL, and Activity004 build SUCCEEDED/readback gate FAIL are immutable and are never replayed. Candidate13 is a new prepared offline source closure; it has not started a native process and requires an exact fresh Root admission.",
+  "limits": {
+    "cleanup_reserve_seconds": 120.0,
+    "max_gui_processes": 0,
+    "max_owned_server_processes": 1,
+    "max_seconds_from_server_birth": 1800.0,
+    "max_study_run_calls": 4,
+    "max_worker_sessions": 1,
+    "retry_unknown_or_nonterminal_worker_request": false,
+    "stop_after_first_failed_or_unknown_study_run": true
+  },
+  "limits_unchanged_from_activity004": true,
+  "native_scientific_acceptance": "NOT_RUN; no Root exact admission and no native process has started.",
+  "permanent_source_preservation_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-planar-te-source-20261012-005/docs/full_project_execution/w23_overlap/evidence/native-run-20261012-005-r2/PERMANENT_SOURCE_PRESERVATION.json",
+  "permanent_source_preservation_sha256": "47570bdcb9c103c7cf1714c8f1a7ffd1c6e03d51a64e3e6bf635111c4db47bc6",
+  "prepare": {
+    "activity004_raw_positive_control": {
+      "actual_preserved_native_bytes": true,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_005/private-control-store/ACTIVITY004_RAW_POSITIVE_CONTROL.json",
+      "sha256": "b8b2f2dbb839112ea608d245ed9059cf20e34a23dc2cff800799afb21e433f0a",
+      "status": "PASS_OFFLINE_VALIDATOR_ON_PRESERVED_ACTIVITY004_NATIVE_RAW_BYTES"
+    },
+    "all_offline_gates_pass": true,
+    "classpath_jar_content_fingerprint_sha256": "c942b5e0fb93525bbd109028390bf15d27c1f702677149bca1b9f47aba7932b3",
+    "classpath_jar_count": 25,
+    "compiled_class_count": {
+      "persistent_worker": 14,
+      "science_fixture": 4
+    },
+    "comsol_version": "1.30.0",
+    "focused_tests": {
+      "errors": 0,
+      "failures": 0,
+      "invocation_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_005/snapshot_tests/attempt001/invocation.json",
+      "invocation_sha256": "c7120f669630f2145fdf11c9aa6ea2c6191e8ba8ef47078ccfdf2333eadf3c45",
+      "network_policy": "local-only; strict network guard not applied to this test invocation",
+      "passed": 186,
+      "status": "PASS_LOCAL_FOCUSED_SUITE",
+      "stdout_sha256": "4688c1b3334d6db68dac5e69ee3fe698e99f7f4afbe443efe1633323edaa1f3e",
+      "strict_network_guard_pass": false
+    },
+    "mcp_stdio_tool_count": 112,
+    "offline_preflight_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-planar-te-source-20261012-005/docs/full_project_execution/w23_overlap/evidence/native-run-20261012-005-r2/offline_gates/offline_preflight_progress.json",
+    "offline_preflight_sha256": "136718532972dfa47526ff7ee607fb7f9cd33fe406fb975b7e7b04aa0e56041b",
+    "status": "PASS_ALL_OFFLINE_GATES"
+  },
+  "prepare_attempts": {
+    "attempt001": {
+      "reconciliation_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_005/PREPARE_ATTEMPT001_CLASSIFICATION_CORRECTION.json",
+      "reconciliation_sha256": "c6248eaf17596df0abc30208ea474be2e36fd14fe8993a9768df08f0d4a2f540",
+      "status": "EXCLUDED_FROM_STRICT_GUARD_EVIDENCE"
+    },
+    "attempt002": {
+      "guard_active_events": 3,
+      "guard_denied_operations": 0,
+      "guard_setup_errors": 0,
+      "invocation_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_005/prepare_attempt002/invocation.json",
+      "invocation_sha256": "6bca77fbbe528b8ff24f6653f549763f45f5325c4b4955ba1fd2615c14c6a286",
+      "status": "PASS_STRICT_GUARD_AND_OFFLINE_PREPARE"
+    }
+  },
+  "prepare_invocation_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-planar-te-source-20261012-005/docs/full_project_execution/w23_overlap/evidence/native-run-20261012-005-r2/PREPARE_INVOCATION.json",
+  "prepare_invocation_sha256": "e0805b2edb1728a36dfb9d26649b0cdac797c204459477596f9693a8014d25a1",
+  "representation_change": {
+    "activity004_native_raw_sha256": "e54058da73b8f6bd7024d760dcd8673cd2e902c651cf9f7b17d07bc0aaf1e5f7",
+    "changed_acceptance_key": "material_tensor_readback only",
+    "semantic_basis": "Captured MaterialModel.size property dimensions [3,3] are kept literally and distinguished from one-element typed getter raw_shape [1]. Only matching String/getString raw [] or StringArray/getStringArray exact one-entry raw [1], with size exactly [1,1] or [3,3], can be reconstructed isotropically; exact epsilon/mu diagonal and zero-offdiagonal checks remain. Every other status/type/getter/value/size/shape fails closed. Nine-entry arrays and exact 3x3 matrices remain as before. No whole-property string equality or nonsymmetric array ordering claim."
+  },
+  "schema_version": 1,
+  "source_change_manifest_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-planar-te-source-20261012-005/docs/full_project_execution/w23_overlap/evidence/native-run-20261012-005-r2/SOURCE_CHANGE_MANIFEST_FROM_ACTIVITY004.json",
+  "source_change_manifest_sha256": "2ad7ac7fe723197e67cc4862beecf70c55cea533a922d8418d89258410b6aa60",
+  "source_count": 135,
+  "source_manifest_file_sha256": "b10286a06aaed39f1beace33e307ce345ee8e697cd8b5c45d680d008ca5a96f8",
+  "source_manifest_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-planar-te-source-20261012-005/docs/full_project_execution/w23_overlap/evidence/native-run-20261012-005-r2/source_manifest.json",
+  "source_manifest_sha256": "63689d7c7309e0ca88b25e4a73f22c9f5ec031b9eabaf5264a2d4a00454e209a",
+  "source_root": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-planar-te-source-20261012-005",
+  "status": "PREPARED_NOT_EXECUTED_AWAITING_ROOT_SOURCE_REVIEW_AND_EXACT_ACTIVITY_ADMISSION",
+  "study_or_solver_call_plan": {
+    "bma_and_frequency_submission_relationship": "Each case sends one model.study('std1').run() Worker submission for the configured bmaInput, bmaOutput, and freq StudyFeature nodes. No separate BMA/frequency Study.run submission is planned; generated StudyStep bindings are read back from the solver tree.",
+    "configured_study_feature_count": 3,
+    "configured_study_features": [
+      {
+        "feature_type": "BoundaryModeAnalysis",
+        "mode_frequency_expression": "f0",
+        "port_name": "1",
+        "tag": "bmaInput"
+      },
+      {
+        "feature_type": "BoundaryModeAnalysis",
+        "mode_frequency_expression": "f0",
+        "port_name": "2",
+        "tag": "bmaOutput"
+      },
+      {
+        "feature_type": "Frequency",
+        "frequency_expression": "f0",
+        "tag": "freq"
+      }
+    ],
+    "configured_study_step_instances_across_all_calls": 12,
+    "count_basis": "One submitted Study.run call per frozen case. BMA input, BMA output, and Frequency are configured features within the same std1 study. Runtime StudyStep bindings are read from the generated solver tree; no one-sequence-per-step assumption is made. Internal solver executions are not inferred from this call plan.",
+    "solver_sequence_count_or_internal_solver_execution_count": "UNKNOWN_UNTIL_NATIVE_SOLVER_TREE_AND_RUNTIME_EVIDENCE",
+    "study_run_submission_count_max": 4,
+    "study_run_submissions": [
+      {
+        "bma_input_port": "1",
+        "bma_output_port": "2",
+        "case_id": "coarse-phase0",
+        "configured_step_tags_in_order": [
+          "bmaInput",
+          "bmaOutput",
+          "freq"
+        ],
+        "configured_study": "std1",
+        "dispatch_operation": "study.run",
+        "frequency_expression": "f0",
+        "method": "model.study('std1').run()",
+        "ordinal": 1,
+        "separate_bma_or_frequency_study_run_submissions": 0
+      },
+      {
+        "bma_input_port": "1",
+        "bma_output_port": "2",
+        "case_id": "coarse-phase90",
+        "configured_step_tags_in_order": [
+          "bmaInput",
+          "bmaOutput",
+          "freq"
+        ],
+        "configured_study": "std1",
+        "dispatch_operation": "study.run",
+        "frequency_expression": "f0",
+        "method": "model.study('std1').run()",
+        "ordinal": 2,
+        "separate_bma_or_frequency_study_run_submissions": 0
+      },
+      {
+        "bma_input_port": "1",
+        "bma_output_port": "2",
+        "case_id": "fine-phase0",
+        "configured_step_tags_in_order": [
+          "bmaInput",
+          "bmaOutput",
+          "freq"
+        ],
+        "configured_study": "std1",
+        "dispatch_operation": "study.run",
+        "frequency_expression": "f0",
+        "method": "model.study('std1').run()",
+        "ordinal": 3,
+        "separate_bma_or_frequency_study_run_submissions": 0
+      },
+      {
+        "bma_input_port": "1",
+        "bma_output_port": "2",
+        "case_id": "fine-phase90",
+        "configured_step_tags_in_order": [
+          "bmaInput",
+          "bmaOutput",
+          "freq"
+        ],
+        "configured_study": "std1",
+        "dispatch_operation": "study.run",
+        "frequency_expression": "f0",
+        "method": "model.study('std1').run()",
+        "ordinal": 4,
+        "separate_bma_or_frequency_study_run_submissions": 0
+      }
+    ]
+  },
+  "unchanged_source_count": 132
+}

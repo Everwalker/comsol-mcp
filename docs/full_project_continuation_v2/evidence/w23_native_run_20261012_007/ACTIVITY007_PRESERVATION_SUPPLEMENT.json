@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "activity_id": "w23-native-run-20261012-007",
+  "created_at_utc": "2026-10-11T19:24:27.377237Z",
+  "status": "PASS_EXECUTOR_COPY_AND_SQLITE_INTEGRITY_ROOT_REVIEW_PENDING",
+  "private_preservation_manifest_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_007/private-control-store/activity007-raw/PRESERVATION_MANIFEST007.json",
+  "private_preservation_manifest_sha256": "e58e9daa7853bd9cc5688b59232e9cd9676070ab338418c9cdf12df919f0e4a0",
+  "runner_evidence": {
+    "source_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-planar-te-source-20261012-007-candidate15/docs/full_project_execution/w23_overlap/evidence/native-run-20261012-007-r3/native-run-20261012-007-execute",
+    "file_count": 56,
+    "total_bytes": 5760727,
+    "copy_tree": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_007/private-control-store/activity007-raw/runner-evidence"
+  },
+  "owned_work_diagnostics": {
+    "source_path": "/private/tmp/comsol-mcp-w23-te-science-20261012-007-activity007",
+    "file_count": 26,
+    "total_bytes": 777702,
+    "copy_tree": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_007/private-control-store/activity007-raw/owned-work"
+  },
+  "copied_total_before_sidecar_supplement": {
+    "file_count": 82,
+    "bytes": 6538429
+  },
+  "sqlite_verification": [
+    {
+      "path": "runner-evidence/raw_operations.sqlite3",
+      "bytes": 491520,
+      "sha256": "ec1a74f7acb0a961018c36d4dcbf2162bbbc290b0e36e89a8c5366a6939b21ba",
+      "integrity_check": "ok",
+      "operations": 10,
+      "jobs": 10,
+      "study_run_unknown": [
+        "2b35fd09-1a92-4c93-9612-c7ecf591fa5d",
+        "w23-science-req-fba579ad-6acd-4368-9bf6-da98f889e44c",
+        "UNKNOWN"
+      ]
+    },
+    {
+      "path": "owned-work/control/operations.sqlite3",
+      "bytes": 491520,
+      "sha256": "f4018f06500620df9601b256fa16a67ec97dee16daa62bfefc58ac39bd970b96",
+      "integrity_check": "ok",
+      "operations": 10,
+      "jobs": 10,
+      "study_run_unknown": [
+        "2b35fd09-1a92-4c93-9612-c7ecf591fa5d",
+        "w23-science-req-fba579ad-6acd-4368-9bf6-da98f889e44c",
+        "UNKNOWN"
+      ]
+    }
+  ],
+  "sqlite_sidecars": {
+    "runner_snapshot_and_work_control_sidecars_created_or_seen_after_readonly_inspection": [
+      {
+        "source_path": "/private/tmp/comsol-mcp-w23-te-science-20261012-007-activity007/control/operations.sqlite3-wal",
+        "destination_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_007/private-control-store/activity007-raw/observer-created-sidecars/owned-work-control/operations.sqlite3-wal",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "copy_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "equal": true,
+        "provenance": "Created as a side effect of executor read-only SQLite inspection after the native runner terminated; these were not present in the initial post-run work-tree inventory. WAL is empty; no write transaction was issued."
+      },
+      {
+        "source_path": "/private/tmp/comsol-mcp-w23-te-science-20261012-007-activity007/control/operations.sqlite3-shm",
+        "destination_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_007/private-control-store/activity007-raw/observer-created-sidecars/owned-work-control/operations.sqlite3-shm",
+        "bytes": 32768,
+        "sha256": "fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb",
+        "copy_sha256": "fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb",
+        "equal": true,
+        "provenance": "Created as a side effect of executor read-only SQLite inspection after the native runner terminated; these were not present in the initial post-run work-tree inventory. WAL is empty; no write transaction was issued."
+      }
+    ],
+    "runner_raw_snapshot_sidecars": [
+      {
+        "database": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-planar-te-source-20261012-007-candidate15/docs/full_project_execution/w23_overlap/evidence/native-run-20261012-007-r3/native-run-20261012-007-execute/raw_operations.sqlite3",
+        "origin": "runner-snapshot",
+        "sidecar": "-wal",
+        "present": true,
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "database": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-planar-te-source-20261012-007-candidate15/docs/full_project_execution/w23_overlap/evidence/native-run-20261012-007-r3/native-run-20261012-007-execute/raw_operations.sqlite3",
+        "origin": "runner-snapshot",
+        "sidecar": "-shm",
+        "present": true,
+        "bytes": 32768,
+        "sha256": "fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb"
+      },
+      {
+        "database": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-planar-te-source-20261012-007-candidate15/docs/full_project_execution/w23_overlap/evidence/native-run-20261012-007-r3/native-run-20261012-007-execute/raw_operations.sqlite3",
+        "origin": "runner-snapshot",
+        "sidecar": "-journal",
+        "present": false,
+        "bytes": null,
+        "sha256": null
+      }
+    ],
+    "sidecar_semantics": "The original runner evidence directory inventory had the main raw_operations.sqlite3 but no adjacent -wal/-shm. Both DBs were opened only with read-only connections for inspection after termination; zero-byte WAL and 32768-byte SHM artifacts were then observed. Main database hashes remained unchanged. Work sidecars are preserved separately and identified as observer artifacts."
+  },
+  "durable_unknown": {
+    "operation_id": "2b35fd09-1a92-4c93-9612-c7ecf591fa5d",
+    "job_id": "97c6cdeb-044a-43cb-ab78-8775b1c4b757",
+    "request_id": "w23-science-req-fba579ad-6acd-4368-9bf6-da98f889e44c",
+    "status": "UNKNOWN",
+    "safe_retry": false,
+    "actual_study_run_dispatch_count": 1,
+    "internal_solver_execution_count": "UNKNOWN"
+  },
+  "cleanup": {
+    "status": "CLEANUP_VERIFIED_EXACT_OWNED_PIDS_AND_PORTS_ABSENT",
+    "server_pid": 38989,
+    "server_descendant_pid": 39058,
+    "worker_pid": 39087,
+    "server_port": 63329,
+    "worker_port": 63341,
+    "fresh_postcleanup_inventory_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_007/private-control-store/postcleanup-inventory-007-exact-20261012T1918Z/POSTCLEANUP_INVENTORY007.json",
+    "fresh_postcleanup_inventory_sha256": "720d7296ac271061a998910b8ab66f99f4539dcd523f9baa2b9b6741e5f01e94"
+  },
+  "model_artifact_count": 0,
+  "native_scientific_acceptance": "NOT_ACCEPTED",
+  "network_private_store_gitignore_verified": true
+}

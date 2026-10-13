@@ -1,0 +1,1470 @@
+{
+  "acceptance": {
+    "ARM_static_OpenSSL": "SCOPED_ACTUAL_COMMANDS_AND_OBJECTS_PASS",
+    "Intel_hardware": "NOT_RUN",
+    "TLS_hashlib_runtime": "NOT_RUN",
+    "_lzma": "REQUIRED_OPEN",
+    "generated_headers": "SCOPED_ACTUAL_BYTE_EQUAL_PASS",
+    "three_arch_delivery": "OPEN",
+    "two_fat_static_libraries": "SCOPED_ACTUAL_LIPO_AND_OBJECTS_PASS",
+    "universal2_TLS_modules": "NOT_BUILT"
+  },
+  "actual_binary_closure": [
+    {
+      "actual_fat_file": {
+        "bytes": 3219416,
+        "identity": {
+          "device": 16777231,
+          "inode": 18704825
+        },
+        "kind": "regular",
+        "mode": 420,
+        "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/fat/lib/libssl.a",
+        "sha256": "eec36991a61e3d37d3496ea4636c132338f3e6882209a3bc93d6a7bd2eb89ff6"
+      },
+      "actual_lipo": {
+        "actual_pid": 53375,
+        "actual_wait_rc": 0,
+        "diagnostic_errors": [],
+        "request": {
+          "argv": [
+            "/usr/bin/lipo",
+            "-create",
+            "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/openssl-arm64/lib/libssl.a",
+            "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-deps-r2/openssl-x86_64/lib/libssl.a",
+            "-output",
+            "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/fat/lib/libssl.a"
+          ],
+          "cwd": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2",
+          "inherited_group": 53372,
+          "parent_pid": 53374,
+          "start_unix": 1791824039.132721
+        },
+        "terminal_wait_observed": true
+      },
+      "name": "libssl.a",
+      "slices": {
+        "arm64": {
+          "actual_slice_equals_original_thin_bytes": true,
+          "archive_bytes": 1617856,
+          "archive_sha256": "fd08635e57e4b805c1ea603b52c52fe7495d975eda1a27f1eb802a6ffaf66081",
+          "each_object_minimum_os": [
+            11,
+            0,
+            0
+          ],
+          "object_count": 97
+        },
+        "x86_64": {
+          "actual_slice_equals_original_thin_bytes": true,
+          "archive_bytes": 1601512,
+          "archive_sha256": "5b08ea2f02e278b238cf287d8232aaf64251eb995a85bf23469169673322e5e2",
+          "each_object_minimum_os": [
+            11,
+            0,
+            0
+          ],
+          "object_count": 97
+        }
+      }
+    },
+    {
+      "actual_fat_file": {
+        "bytes": 17380520,
+        "identity": {
+          "device": 16777231,
+          "inode": 18704831
+        },
+        "kind": "regular",
+        "mode": 420,
+        "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/fat/lib/libcrypto.a",
+        "sha256": "865f09da0aa32f37035eb948bd46168de33584ef5c31c7037ed09454ac676451"
+      },
+      "actual_lipo": {
+        "actual_pid": 53376,
+        "actual_wait_rc": 0,
+        "diagnostic_errors": [],
+        "request": {
+          "argv": [
+            "/usr/bin/lipo",
+            "-create",
+            "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/openssl-arm64/lib/libcrypto.a",
+            "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-deps-r2/openssl-x86_64/lib/libcrypto.a",
+            "-output",
+            "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/fat/lib/libcrypto.a"
+          ],
+          "cwd": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2",
+          "inherited_group": 53372,
+          "parent_pid": 53374,
+          "start_unix": 1791824039.1712441
+        },
+        "terminal_wait_observed": true
+      },
+      "name": "libcrypto.a",
+      "slices": {
+        "arm64": {
+          "actual_slice_equals_original_thin_bytes": true,
+          "archive_bytes": 8564568,
+          "archive_sha256": "6fa1c76aada1055dc8993f35c4b0b26826f804d43795db63587967b9c0af90fa",
+          "each_object_minimum_os": [
+            11,
+            0,
+            0
+          ],
+          "object_count": 1003
+        },
+        "x86_64": {
+          "actual_slice_equals_original_thin_bytes": true,
+          "archive_bytes": 8815904,
+          "archive_sha256": "b1f104a75d7a620a1699d89004aecc4ed2b4053e5770fcda06249978ea4daa11",
+          "each_object_minimum_os": [
+            11,
+            0,
+            0
+          ],
+          "object_count": 1010
+        }
+      }
+    }
+  ],
+  "actual_closed": {
+    "elapsed_including_cleanup_s": 49.52246783400187,
+    "errors": [],
+    "fences_retained": true,
+    "final_original_root_records": {
+      "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/cpython-universal2": {
+        "anchor_identity": {
+          "device": 16777231,
+          "inode": 17174941
+        },
+        "device": 16777231,
+        "inode": 17390011,
+        "mode": 493,
+        "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/cpython-universal2",
+        "uid": 501
+      },
+      "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/cpython-universal2-build": {
+        "anchor_identity": {
+          "device": 16777231,
+          "inode": 17174941
+        },
+        "device": 16777231,
+        "inode": 17381131,
+        "mode": 448,
+        "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/cpython-universal2-build",
+        "uid": 501
+      },
+      "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-crypto-r3": {
+        "anchor_identity": {
+          "device": 16777231,
+          "inode": 17174941
+        },
+        "device": 16777231,
+        "inode": 18580926,
+        "mode": 448,
+        "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-crypto-r3",
+        "uid": 501
+      }
+    },
+    "old_roots_unchanged": true,
+    "preservation_failure": null,
+    "prior_failed_TLS_and_original_source": {
+      "cache_finding_sha256": "7b1c34f39285fbd47187f8dabefa27f41989321ee727ef1965f111ecfefeaa75",
+      "failed_tls_r1_snapshot_sha256": "70f4bbb56479bde2477aec3774ae7ef8043527c1893be82fa477e1ac8882fb70",
+      "failed_tls_r1_tree_records": 6352,
+      "failed_tls_r1_unchanged": true,
+      "old_CP_source_including155cache_unchanged": true,
+      "old_CP_source_records": 5082,
+      "old_fences_retained": true
+    },
+    "status": "VALIDATION_FAIL",
+    "within_cap": true
+  },
+  "actual_explicit_lipo_command_count": 2,
+  "actual_generated_headers": {
+    "arm_records": 145,
+    "exact_same_fd_bytes_equal": true,
+    "raw": {
+      "bytes": 83113,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704665
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/HEADERS_EXACT.json",
+      "sha256": "8010b4602a7ae7bf2e0010ca79338efc3c96f639d3db3b12d4ab3087fa7aff2f",
+      "uid": 501
+    },
+    "x86_records": 145
+  },
+  "actual_outer_command_count": 4,
+  "actual_outer_commands": [
+    {
+      "argv": [
+        "/usr/bin/perl",
+        "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/openssl-source/Configure",
+        "darwin64-arm64-cc",
+        "no-shared",
+        "no-tests",
+        "no-apps",
+        "--prefix=/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/openssl-arm64",
+        "--openssldir=/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/openssl-arm64/ssl",
+        "--libdir=lib",
+        "CC=/Library/Developer/CommandLineTools/usr/bin/clang",
+        "CFLAGS=-O2 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -mmacosx-version-min=11.0"
+      ],
+      "birth": {
+        "actual_ps_command": "/usr/bin/perl /private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/openssl-source/Configure darwin64-arm64-cc no-shared no-tests no-apps --prefix=/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/openssl-arm64 --openssldir=/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/openssl-arm64/ssl --libdir=lib CC=/Library/Developer/CommandLineTools/usr/bin/clang CFLAGS=-O2 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -mmacosx-version-min=11.0",
+        "birth_observed": "Tue Oct 13 00:53:19 2026",
+        "invocation_argv": [
+          "/usr/bin/perl",
+          "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/openssl-source/Configure",
+          "darwin64-arm64-cc",
+          "no-shared",
+          "no-tests",
+          "no-apps",
+          "--prefix=/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/openssl-arm64",
+          "--openssldir=/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/openssl-arm64/ssl",
+          "--libdir=lib",
+          "CC=/Library/Developer/CommandLineTools/usr/bin/clang",
+          "CFLAGS=-O2 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -mmacosx-version-min=11.0"
+        ],
+        "pid": 43126,
+        "ppid": 43014,
+        "raw": {
+          "argv": [
+            "/bin/ps",
+            "-p",
+            "43126",
+            "-o",
+            "pid=,ppid=,uid=,lstart=,command="
+          ],
+          "rc": 0,
+          "stderr": "",
+          "stdout": "43126 43014   501 Tue Oct 13 00:53:19 2026     /usr/bin/perl /private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/openssl-source/Configure darwin64-arm64-cc no-shared no-tests no-apps --prefix=/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/openssl-arm64 --openssldir=/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/openssl-arm64/ssl --libdir=lib CC=/Library/Developer/CommandLineTools/usr/bin/clang CFLAGS=-O2 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -mmacosx-version-min=11.0\n"
+        },
+        "status": "OBSERVED",
+        "uid": 501
+      },
+      "diagnostic_errors": [],
+      "finished_unix": 1791824002.366535,
+      "group": {
+        "actual_pgid": 43126,
+        "actual_sid": 43126,
+        "independent_session_observed": true,
+        "observed_unix": 1791823999.119822,
+        "parent_sid": 43014,
+        "status": "OBSERVED"
+      },
+      "owned_group_absent": true,
+      "owned_process_terminal": true,
+      "parent_pid": 43014,
+      "pid": 43126,
+      "rc": 0,
+      "requested_new_session": true,
+      "result_name": "arm-configure-a2176faa8d134b589ae6eacb4dfaaa45.result.json",
+      "status": "PASS",
+      "stderr": "arm-configure-a2176faa8d134b589ae6eacb4dfaaa45.stderr",
+      "stdout": "arm-configure-a2176faa8d134b589ae6eacb4dfaaa45.stdout",
+      "uid_at_spawn": 501
+    },
+    {
+      "argv": [
+        "/usr/bin/make",
+        "-j2",
+        "build_libs"
+      ],
+      "birth": {
+        "actual_ps_command": "/usr/bin/make -j2 build_libs",
+        "birth_observed": "Tue Oct 13 00:53:22 2026",
+        "invocation_argv": [
+          "/usr/bin/make",
+          "-j2",
+          "build_libs"
+        ],
+        "pid": 43159,
+        "ppid": 43014,
+        "raw": {
+          "argv": [
+            "/bin/ps",
+            "-p",
+            "43159",
+            "-o",
+            "pid=,ppid=,uid=,lstart=,command="
+          ],
+          "rc": 0,
+          "stderr": "",
+          "stdout": "43159 43014   501 Tue Oct 13 00:53:22 2026     /usr/bin/make -j2 build_libs\n"
+        },
+        "status": "OBSERVED",
+        "uid": 501
+      },
+      "diagnostic_errors": [],
+      "finished_unix": 1791824036.536392,
+      "group": {
+        "actual_pgid": 43159,
+        "actual_sid": 43159,
+        "independent_session_observed": true,
+        "observed_unix": 1791824002.391006,
+        "parent_sid": 43014,
+        "status": "OBSERVED"
+      },
+      "owned_group_absent": true,
+      "owned_process_terminal": true,
+      "parent_pid": 43014,
+      "pid": 43159,
+      "rc": 0,
+      "requested_new_session": true,
+      "result_name": "arm-build-4dbc8e2d42e447aaa11020de11388429.result.json",
+      "status": "PASS",
+      "stderr": "arm-build-4dbc8e2d42e447aaa11020de11388429.stderr",
+      "stdout": "arm-build-4dbc8e2d42e447aaa11020de11388429.stdout",
+      "uid_at_spawn": 501
+    },
+    {
+      "argv": [
+        "/usr/bin/make",
+        "install_dev"
+      ],
+      "birth": {
+        "actual_ps_command": "/usr/bin/make install_dev",
+        "birth_observed": "Tue Oct 13 00:53:56 2026",
+        "invocation_argv": [
+          "/usr/bin/make",
+          "install_dev"
+        ],
+        "pid": 52153,
+        "ppid": 43014,
+        "raw": {
+          "argv": [
+            "/bin/ps",
+            "-p",
+            "52153",
+            "-o",
+            "pid=,ppid=,uid=,lstart=,command="
+          ],
+          "rc": 0,
+          "stderr": "",
+          "stdout": "52153 43014   501 Tue Oct 13 00:53:56 2026     /usr/bin/make install_dev\n"
+        },
+        "status": "OBSERVED",
+        "uid": 501
+      },
+      "diagnostic_errors": [],
+      "finished_unix": 1791824038.956358,
+      "group": {
+        "actual_pgid": 52153,
+        "actual_sid": 52153,
+        "independent_session_observed": true,
+        "observed_unix": 1791824036.558385,
+        "parent_sid": 43014,
+        "status": "OBSERVED"
+      },
+      "owned_group_absent": true,
+      "owned_process_terminal": true,
+      "parent_pid": 43014,
+      "pid": 52153,
+      "rc": 0,
+      "requested_new_session": true,
+      "result_name": "arm-install-3f5a1f2161ad4aaf8da9af91b959c7b6.result.json",
+      "status": "PASS",
+      "stderr": "arm-install-3f5a1f2161ad4aaf8da9af91b959c7b6.stderr",
+      "stdout": "arm-install-3f5a1f2161ad4aaf8da9af91b959c7b6.stdout",
+      "uid_at_spawn": 501
+    },
+    {
+      "argv": [
+        "/usr/bin/make",
+        "-f",
+        "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/Merge.mk",
+        "merge"
+      ],
+      "birth": {
+        "actual_ps_command": "/usr/bin/make -f /private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/Merge.mk merge",
+        "birth_observed": "Tue Oct 13 00:53:59 2026",
+        "invocation_argv": [
+          "/usr/bin/make",
+          "-f",
+          "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/Merge.mk",
+          "merge"
+        ],
+        "pid": 53372,
+        "ppid": 43014,
+        "raw": {
+          "argv": [
+            "/bin/ps",
+            "-p",
+            "53372",
+            "-o",
+            "pid=,ppid=,uid=,lstart=,command="
+          ],
+          "rc": 0,
+          "stderr": "",
+          "stdout": "53372 43014   501 Tue Oct 13 00:53:59 2026     /usr/bin/make -f /private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/Merge.mk merge\n"
+        },
+        "status": "OBSERVED",
+        "uid": 501
+      },
+      "diagnostic_errors": [],
+      "finished_unix": 1791824039.277026,
+      "group": {
+        "actual_pgid": 53372,
+        "actual_sid": 53372,
+        "independent_session_observed": true,
+        "observed_unix": 1791824039.065391,
+        "parent_sid": 43014,
+        "status": "OBSERVED"
+      },
+      "owned_group_absent": true,
+      "owned_process_terminal": true,
+      "parent_pid": 43014,
+      "pid": 53372,
+      "rc": 0,
+      "requested_new_session": true,
+      "result_name": "merge-92e6aa9ca2dc4caeb05472a1c66d4db9.result.json",
+      "status": "PASS",
+      "stderr": "merge-92e6aa9ca2dc4caeb05472a1c66d4db9.stderr",
+      "stdout": "merge-92e6aa9ca2dc4caeb05472a1c66d4db9.stdout",
+      "uid_at_spawn": 501
+    }
+  ],
+  "actual_owner_absence": {
+    "actual_owned_pids": [
+      42995,
+      43014,
+      43126,
+      43159,
+      52153,
+      53372,
+      53374,
+      53375,
+      53376
+    ],
+    "checked_unix": 1791824290.8922,
+    "owner_group_absence": {
+      "43014": {
+        "status": "ABSENT"
+      },
+      "43126": {
+        "status": "ABSENT"
+      },
+      "43159": {
+        "status": "ABSENT"
+      },
+      "52153": {
+        "status": "ABSENT"
+      },
+      "53372": {
+        "status": "ABSENT"
+      }
+    },
+    "ps": {
+      "argv": [
+        "/bin/ps",
+        "-p",
+        "42995,43014,43126,43159,52153,53372,53374,53375,53376",
+        "-o",
+        "pid=,ppid=,uid=,lstart=,command="
+      ],
+      "rc": 1,
+      "stderr": "",
+      "stdout": ""
+    },
+    "signal_effect": "killpg0 existence observation only; no termination signal",
+    "terminal": {
+      "actual_pid": 43014,
+      "actual_wait_rc": 1,
+      "diagnostic_errors": [],
+      "elapsed_including_wait_and_flush_s": 49.641836208989844,
+      "same_handle_observed": true
+    }
+  },
+  "actual_wrapper_terminal": {
+    "actual_pid": 43014,
+    "actual_wait_rc": 1,
+    "diagnostic_errors": [],
+    "elapsed_including_wait_and_flush_s": 49.641836208989844,
+    "same_handle_observed": true
+  },
+  "created_utc": "2026-10-12T16:59:06.622841+00:00",
+  "effects": {
+    "COMSOL_GUI_Study": 0,
+    "network": 0,
+    "pure_x86_execution": 0,
+    "system_install": 0
+  },
+  "evidence_references": [
+    {
+      "bytes": 793,
+      "identity": {
+        "device": 16777231,
+        "inode": 18705981
+      },
+      "mode": "0o644",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-tls-execution-r2-9rlmhh5r/CASE_ALIAS_REAL_FACTS.json",
+      "sha256": "6ad47b86dfe1f2f8645caf09f4ddcde8cece8915587de88dac2a9ac13c78670f",
+      "uid": 501
+    },
+    {
+      "bytes": 4164251,
+      "identity": {
+        "device": 16777231,
+        "inode": 18705979
+      },
+      "mode": "0o644",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-tls-execution-r2-9rlmhh5r/FAILED_TLS_R2_COMPLETE_TREE.json",
+      "sha256": "035652b74c1b33dbe131aad0924568a3d7b6b1220dda9908ee3ebff5a4078d53",
+      "uid": 501
+    },
+    {
+      "bytes": 191,
+      "identity": {
+        "device": 16777231,
+        "inode": 18705980
+      },
+      "mode": "0o644",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-tls-execution-r2-9rlmhh5r/OWNED_IDS.json",
+      "sha256": "e6da5f4a29bb9940c573bbb90340d990ee9746efc70d8da092b0d8bc05f463c0",
+      "uid": 501
+    },
+    {
+      "bytes": 166,
+      "identity": {
+        "device": 16777231,
+        "inode": 18690472
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-tls-execution-r2-9rlmhh5r/PRIOR_OWNED_PID_ABSENCE.json",
+      "sha256": "f269de51a43bccb7ca5234289935202b902cdac894db0adcaf9241795ab529b3",
+      "uid": 501
+    },
+    {
+      "bytes": 936,
+      "identity": {
+        "device": 16777231,
+        "inode": 18705997
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-tls-execution-r2-9rlmhh5r/TERMINAL_OWNER_ABSENCE.json",
+      "sha256": "ce12b5e9289115a759d0b1e1f2d90962f3e20e02d100dbd6f14e4ff6aead1062",
+      "uid": 501
+    },
+    {
+      "bytes": 768,
+      "identity": {
+        "device": 16777231,
+        "inode": 18690471
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-tls-execution-r2-9rlmhh5r/argv.json",
+      "sha256": "7def91122c4f92297522a0f3d2d8b24961b45f948f0d78a52e2418b85d8536e3",
+      "uid": 501
+    },
+    {
+      "bytes": 621,
+      "identity": {
+        "device": 16777231,
+        "inode": 18690476
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-tls-execution-r2-9rlmhh5r/birth.json",
+      "sha256": "96d6a94ab22236c408ea0f9e7edb3610a7404d4ef284041745d2286e47bed53d",
+      "uid": 501
+    },
+    {
+      "bytes": 620,
+      "identity": {
+        "device": 16777231,
+        "inode": 18690475
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-tls-execution-r2-9rlmhh5r/spawn.json",
+      "sha256": "6026f06f25bc88a508d1d2b9791a03fc21551732e36effbc9eaebd4e453de62b",
+      "uid": 501
+    },
+    {
+      "bytes": 0,
+      "identity": {
+        "device": 16777231,
+        "inode": 18690474
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-tls-execution-r2-9rlmhh5r/stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "uid": 501
+    },
+    {
+      "bytes": 452,
+      "identity": {
+        "device": 16777231,
+        "inode": 18690473
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-tls-execution-r2-9rlmhh5r/stdout",
+      "sha256": "e9652405e6cd7ac1eab68eb03dada491aa19696ea66573358d5b20efcb48d66b",
+      "uid": 501
+    },
+    {
+      "bytes": 168,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704845
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-tls-execution-r2-9rlmhh5r/terminal.json",
+      "sha256": "8c44b42e8806434e75ff086163c8b5959f59dec0dae54ab2414e9bb2f30d27f7",
+      "uid": 501
+    },
+    {
+      "bytes": 3201,
+      "identity": {
+        "device": 16777231,
+        "inode": 18690389
+      },
+      "mode": "0o644",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-tls-execution-r2-9rlmhh5r/wrapper.py",
+      "sha256": "e8791b05ea6b7a3d06284a8c05ff5620d3da921d9ae8b19c5ab36122fb0f83fd",
+      "uid": 501
+    },
+    {
+      "bytes": 48,
+      "identity": {
+        "device": 16777231,
+        "inode": 18690498
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/ACTIVE.json",
+      "sha256": "9c76fe68ab72e481a1eb5f7ac1a7aac4724c59740a2b18c5cea30272b429eb7e",
+      "uid": 501
+    },
+    {
+      "bytes": 1986,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704844
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/CLOSED.json",
+      "sha256": "fc23d36b383f354b7cfa787e9271b3594bc60b6a1daf85dc0ade46d6346b89e5",
+      "uid": 501
+    },
+    {
+      "bytes": 9146,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704835
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/FAIL.json",
+      "sha256": "0e0da060c6af249e3eb88a31869b27fafef70f72e6c7aff14425e5160fa72827",
+      "uid": 501
+    },
+    {
+      "bytes": 83113,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704665
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/HEADERS_EXACT.json",
+      "sha256": "8010b4602a7ae7bf2e0010ca79338efc3c96f639d3db3b12d4ab3087fa7aff2f",
+      "uid": 501
+    },
+    {
+      "bytes": 1039507,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704833
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/MERGE.PASS.json",
+      "sha256": "21c2f95aa161fe6f08fee2efaec415a541768eb03f9c92f28db4545e1e491f80",
+      "uid": 501
+    },
+    {
+      "bytes": 1782,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704812
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/MERGE_INPUTS.json",
+      "sha256": "b50fa3791a356c1978e735a6ef463a8730dbda1e388da30aa10ecd63ec2e8798",
+      "uid": 501
+    },
+    {
+      "bytes": 620,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704813
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/Merge.mk",
+      "sha256": "7e2257a193601b326f528673212f7c5383eee9b078a4cde7970c9931fdbc658c",
+      "uid": 501
+    },
+    {
+      "bytes": 5143249,
+      "identity": {
+        "device": 16777231,
+        "inode": 18701788
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/PREPARED.json",
+      "sha256": "96391635104ad23d38b1ac0118dc9e48ef9a91307330b0dbf817e2f9f321d9ae",
+      "uid": 501
+    },
+    {
+      "bytes": 11145,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704843
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/RESULT.json",
+      "sha256": "51f306dacc76009ffda41065c5f05d3d0dc89cdaecf0c02dea61fff3ba999d3a",
+      "uid": 501
+    },
+    {
+      "bytes": 623,
+      "identity": {
+        "device": 16777231,
+        "inode": 18690497
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/TLS_R2.GUARD.json",
+      "sha256": "258635028d4e7954c84d410cbbb57bf392274b96360965b9197b910aabf1b53b",
+      "uid": 501
+    },
+    {
+      "bytes": 476,
+      "identity": {
+        "device": 16777231,
+        "inode": 18701828
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/arm-build.GUARD.json",
+      "sha256": "5727b8412077289b8d5fe12944745a4a629345f0b3acda120f6461fb861d7be1",
+      "uid": 501
+    },
+    {
+      "bytes": 1458,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704478
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/arm-build.PASS.json",
+      "sha256": "a2ea362ca5f8fc4cb7a9feb9596c2f5e0bae2076a436d5d06b8ac1ca8980e388",
+      "uid": 501
+    },
+    {
+      "bytes": 1125,
+      "identity": {
+        "device": 16777231,
+        "inode": 18701790
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/arm-configure.GUARD.json",
+      "sha256": "754e1a7874acbb2c12783df8aaaf42cad5ec955d5b5ad32439cd1853819e6039",
+      "uid": 501
+    },
+    {
+      "bytes": 3998,
+      "identity": {
+        "device": 16777231,
+        "inode": 18701827
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/arm-configure.PASS.json",
+      "sha256": "680c6a9f1b2c4121dca92b3bbfd3fdf404d3e294df6039a8bd849455ec497cd5",
+      "uid": 501
+    },
+    {
+      "bytes": 467,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704479
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/arm-install.GUARD.json",
+      "sha256": "4ffcac19df61b440c6974fcba5f309e8310350e542a6e62373ca2489c2b11e4a",
+      "uid": 501
+    },
+    {
+      "bytes": 1432,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704664
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/arm-install.PASS.json",
+      "sha256": "27a48a72105536f86e00b1ae13f207938024d5c851822124a53ba7831110ef7b",
+      "uid": 501
+    },
+    {
+      "bytes": 574,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704814
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/merge.GUARD.json",
+      "sha256": "d53e5a5260aff25a17b0b7d487800aa9fbcee1ea024709310d094ee076afd052",
+      "uid": 501
+    },
+    {
+      "bytes": 513,
+      "identity": {
+        "device": 16777231,
+        "inode": 18701834
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/arm-build-4dbc8e2d42e447aaa11020de11388429.birth.json",
+      "sha256": "441d6ca7df482eef35fec8825fe62e3cc4852e8db0be3fcb1d152beb54ce38f2",
+      "uid": 501
+    },
+    {
+      "bytes": 175,
+      "identity": {
+        "device": 16777231,
+        "inode": 18701833
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/arm-build-4dbc8e2d42e447aaa11020de11388429.group.json",
+      "sha256": "adeb7a3916dd668bc2d83b298009c1bc52b7b39d982e5f96bae35a4a005afb16",
+      "uid": 501
+    },
+    {
+      "bytes": 1404,
+      "identity": {
+        "device": 16777231,
+        "inode": 18701829
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/arm-build-4dbc8e2d42e447aaa11020de11388429.request.json",
+      "sha256": "e2899e0f572786c1e1e81f3d7c8aaa103317d6530007ef50a6ec05a309362245",
+      "uid": 501
+    },
+    {
+      "bytes": 1228,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704477
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/arm-build-4dbc8e2d42e447aaa11020de11388429.result.json",
+      "sha256": "9f2e8eb4197727f7f317103ac84bf47b0325373ee5044bb1180e8f6b888d6736",
+      "uid": 501
+    },
+    {
+      "bytes": 461,
+      "identity": {
+        "device": 16777231,
+        "inode": 18701832
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/arm-build-4dbc8e2d42e447aaa11020de11388429.spawn.json",
+      "sha256": "4e79b101808dd34e64d40f4ab6df115ce30cb3d865ab7c98cd4924cbfd24e42d",
+      "uid": 501
+    },
+    {
+      "bytes": 4724,
+      "identity": {
+        "device": 16777231,
+        "inode": 18701831
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/arm-build-4dbc8e2d42e447aaa11020de11388429.stderr",
+      "sha256": "534fd8e5354a4ea0557e8a02ac35d358db0c60add18f304c8081bcbbc443e637",
+      "uid": 501
+    },
+    {
+      "bytes": 1157590,
+      "identity": {
+        "device": 16777231,
+        "inode": 18701830
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/arm-build-4dbc8e2d42e447aaa11020de11388429.stdout",
+      "sha256": "70ccb61c3a58973fad81808c7283e80a26a126e37dda0655cdb0bda1fb5f9bb7",
+      "uid": 501
+    },
+    {
+      "bytes": 2345,
+      "identity": {
+        "device": 16777231,
+        "inode": 18701796
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/arm-configure-a2176faa8d134b589ae6eacb4dfaaa45.birth.json",
+      "sha256": "9559a146743fd3854fe57d407bae59ca0ab7f0f2f4ce006f51b2cd74348b99fa",
+      "uid": 501
+    },
+    {
+      "bytes": 175,
+      "identity": {
+        "device": 16777231,
+        "inode": 18701795
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/arm-configure-a2176faa8d134b589ae6eacb4dfaaa45.group.json",
+      "sha256": "7965b62c0d36e0b9e24eab87e8af8dce8e69868287aa479a133b94757aeaf09a",
+      "uid": 501
+    },
+    {
+      "bytes": 2061,
+      "identity": {
+        "device": 16777231,
+        "inode": 18701791
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/arm-configure-a2176faa8d134b589ae6eacb4dfaaa45.request.json",
+      "sha256": "21bf101e06a0c158232f30df542d244c8532aff4c50fb868b85b655fe87069d3",
+      "uid": 501
+    },
+    {
+      "bytes": 3732,
+      "identity": {
+        "device": 16777231,
+        "inode": 18701826
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/arm-configure-a2176faa8d134b589ae6eacb4dfaaa45.result.json",
+      "sha256": "c1e13d1f06d2a87cde89d48dfe4c32abbfe503ae7513812a705f0f30b1bbb21b",
+      "uid": 501
+    },
+    {
+      "bytes": 1117,
+      "identity": {
+        "device": 16777231,
+        "inode": 18701794
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/arm-configure-a2176faa8d134b589ae6eacb4dfaaa45.spawn.json",
+      "sha256": "cfee9ab90de94fef2594e212e00c7d513ff7006be75a6ddd6abcc8224ab836a0",
+      "uid": 501
+    },
+    {
+      "bytes": 0,
+      "identity": {
+        "device": 16777231,
+        "inode": 18701793
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/arm-configure-a2176faa8d134b589ae6eacb4dfaaa45.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "uid": 501
+    },
+    {
+      "bytes": 1216,
+      "identity": {
+        "device": 16777231,
+        "inode": 18701792
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/arm-configure-a2176faa8d134b589ae6eacb4dfaaa45.stdout",
+      "sha256": "a401365be922ac0232d614e1a66c05415c462d98ddc7300c3ba6d7244ae025a7",
+      "uid": 501
+    },
+    {
+      "bytes": 497,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704485
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/arm-install-3f5a1f2161ad4aaf8da9af91b959c7b6.birth.json",
+      "sha256": "9fe5aa5e5d190b8bd73043b37271b97be83c3eec3547e7342ee3f5f7c4ed61b2",
+      "uid": 501
+    },
+    {
+      "bytes": 175,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704484
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/arm-install-3f5a1f2161ad4aaf8da9af91b959c7b6.group.json",
+      "sha256": "af92df0b8881efe225a5b253f86e48da8ad7335c8eebbfab50fffaf19c352878",
+      "uid": 501
+    },
+    {
+      "bytes": 1399,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704480
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/arm-install-3f5a1f2161ad4aaf8da9af91b959c7b6.request.json",
+      "sha256": "2337464bf4837aaf7e2c9ea33a14e667d32124116eec7248849f97e2c1c4e951",
+      "uid": 501
+    },
+    {
+      "bytes": 1204,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704663
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/arm-install-3f5a1f2161ad4aaf8da9af91b959c7b6.result.json",
+      "sha256": "a6aa3edae5b85868682d13e35f06bd059bc029c3a90d2ca0314c3be828160ebf",
+      "uid": 501
+    },
+    {
+      "bytes": 456,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704483
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/arm-install-3f5a1f2161ad4aaf8da9af91b959c7b6.spawn.json",
+      "sha256": "0f8ceb43580e556c578a90b3dcefcb364aa3ab7989402a2e5df8c43fed4a7fa8",
+      "uid": 501
+    },
+    {
+      "bytes": 0,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704482
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/arm-install-3f5a1f2161ad4aaf8da9af91b959c7b6.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "uid": 501
+    },
+    {
+      "bytes": 54016,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704481
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/arm-install-3f5a1f2161ad4aaf8da9af91b959c7b6.stdout",
+      "sha256": "5e612e7ee822adfe581ff3e6be688bcafe0629cbe5180d24d932d7715901b013",
+      "uid": 501
+    },
+    {
+      "bytes": 680,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704827
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/lipo-libcrypto.a.request.json",
+      "sha256": "30017496bc660526684c6fe1bb6d3c0ad6770935278ba58202628d12946820f8",
+      "uid": 501
+    },
+    {
+      "bytes": 830,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704832
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/lipo-libcrypto.a.result.json",
+      "sha256": "e47064f0d0f9f292f8d51804b7515c05a517a07e017964f1515ea4056f63ca6d",
+      "uid": 501
+    },
+    {
+      "bytes": 607,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704830
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/lipo-libcrypto.a.spawn.json",
+      "sha256": "97a7212bbe8b35d4352f2585b234476bd3b3f4a2707dfb2ab8994f6faafc7146",
+      "uid": 501
+    },
+    {
+      "bytes": 0,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704829
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/lipo-libcrypto.a.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "uid": 501
+    },
+    {
+      "bytes": 0,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704828
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/lipo-libcrypto.a.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "uid": 501
+    },
+    {
+      "bytes": 670,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704821
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/lipo-libssl.a.request.json",
+      "sha256": "694f552ab17e4d711b6a9bc5f3b55629c91f4b451f8ec96daba6adb7d2fc7770",
+      "uid": 501
+    },
+    {
+      "bytes": 820,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704826
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/lipo-libssl.a.result.json",
+      "sha256": "d409090a721bbdacf779f7e92a068fb2a197da748aeff3c2e277fcf97880a173",
+      "uid": 501
+    },
+    {
+      "bytes": 598,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704824
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/lipo-libssl.a.spawn.json",
+      "sha256": "86897fac8bba95442dae8dc94eb9ac606e807fdf6b7f9ef7a6f464326f5dc891",
+      "uid": 501
+    },
+    {
+      "bytes": 0,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704823
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/lipo-libssl.a.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "uid": 501
+    },
+    {
+      "bytes": 0,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704822
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/lipo-libssl.a.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "uid": 501
+    },
+    {
+      "bytes": 835,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704820
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/merge-92e6aa9ca2dc4caeb05472a1c66d4db9.birth.json",
+      "sha256": "e7fcd78712c346374e50e0435256b3164c4fd45fc8ffabdcc29ff34a4d04bab8",
+      "uid": 501
+    },
+    {
+      "bytes": 175,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704819
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/merge-92e6aa9ca2dc4caeb05472a1c66d4db9.group.json",
+      "sha256": "77adf58a717e938dbd6b164a663d94d6023b7a1c46c6cc7e47faf6a28133310e",
+      "uid": 501
+    },
+    {
+      "bytes": 1494,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704815
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/merge-92e6aa9ca2dc4caeb05472a1c66d4db9.request.json",
+      "sha256": "2e915774fdc30cefba8c2df8fdb9f04dc81b148353a655d02529f06ea9d101a2",
+      "uid": 501
+    },
+    {
+      "bytes": 1656,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704834
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/merge-92e6aa9ca2dc4caeb05472a1c66d4db9.result.json",
+      "sha256": "1bd7917a743181908992d281e22e64173216661ef63a4a1c6e0227a2bc568f50",
+      "uid": 501
+    },
+    {
+      "bytes": 566,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704818
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/merge-92e6aa9ca2dc4caeb05472a1c66d4db9.spawn.json",
+      "sha256": "7fe28e5aab863adc667a2cd5c6af96f67ef48926026110c896b33c534a7c7ca5",
+      "uid": 501
+    },
+    {
+      "bytes": 0,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704817
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/merge-92e6aa9ca2dc4caeb05472a1c66d4db9.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "uid": 501
+    },
+    {
+      "bytes": 612,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704816
+      },
+      "mode": "0o600",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/logs/merge-92e6aa9ca2dc4caeb05472a1c66d4db9.stdout",
+      "sha256": "7e0234b9f3d79ef5f22f99ff047ddafc9b58b353e6dfe1ecf54f722dcaa0bf7b",
+      "uid": 501
+    },
+    {
+      "bytes": 3219416,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704825
+      },
+      "mode": "0o644",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/fat/lib/libssl.a",
+      "sha256": "eec36991a61e3d37d3496ea4636c132338f3e6882209a3bc93d6a7bd2eb89ff6",
+      "uid": 501
+    },
+    {
+      "bytes": 17380520,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704831
+      },
+      "mode": "0o644",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/fat/lib/libcrypto.a",
+      "sha256": "865f09da0aa32f37035eb948bd46168de33584ef5c31c7037ed09454ac676451",
+      "uid": 501
+    },
+    {
+      "bytes": 1617856,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704654
+      },
+      "mode": "0o644",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/openssl-arm64/lib/libssl.a",
+      "sha256": "fd08635e57e4b805c1ea603b52c52fe7495d975eda1a27f1eb802a6ffaf66081",
+      "uid": 501
+    },
+    {
+      "bytes": 8564568,
+      "identity": {
+        "device": 16777231,
+        "inode": 18704651
+      },
+      "mode": "0o644",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/openssl-arm64/lib/libcrypto.a",
+      "sha256": "6fa1c76aada1055dc8993f35c4b0b26826f804d43795db63587967b9c0af90fa",
+      "uid": 501
+    }
+  ],
+  "failed_unit_root": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2",
+  "failure": {
+    "actual_casealias_sameinode": {
+      "lower": {
+        "bytes": 1039507,
+        "identity": {
+          "device": 16777231,
+          "inode": 18704833
+        },
+        "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/merge.PASS.json",
+        "sha256": "21c2f95aa161fe6f08fee2efaec415a541768eb03f9c92f28db4545e1e491f80"
+      },
+      "original_error": "[Errno 17] File exists: 'merge.PASS.json'",
+      "same_device_inode": true,
+      "subsequent_CP_native_commands": 0,
+      "upper": {
+        "bytes": 1039507,
+        "identity": {
+          "device": 16777231,
+          "inode": 18704833
+        },
+        "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-r2/MERGE.PASS.json",
+        "sha256": "21c2f95aa161fe6f08fee2efaec415a541768eb03f9c92f28db4545e1e491f80"
+      }
+    },
+    "first": "[Errno 17] File exists: 'merge.PASS.json'",
+    "stage_status_receipt_not_written": true,
+    "subsequent_CP_native_commands": 0
+  },
+  "freeze": {
+    "bytes": 51833,
+    "identity": {
+      "device": 16777243,
+      "inode": 1164977
+    },
+    "mode": "0o644",
+    "nlink": 1,
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/TLS_SOURCE_FREEZE_R2.json",
+    "sha256": "3a4362e8ae7eaf5d70bf7eec8c05d0b9fa688f74c1d275807ad70fef39c45e91",
+    "uid": 501
+  },
+  "next_authorized_source_only": "independent fresh CP-only successor, six remaining outercommands, exact fat/header copies+officialCPtar, no rebuild/replay/remove oldfences",
+  "old_preservation": {
+    "failed_r2_complete_tree_records": 14067,
+    "failed_r2_snapshot": {
+      "bytes": 4164251,
+      "identity": {
+        "device": 16777231,
+        "inode": 18705979
+      },
+      "mode": "0o644",
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-tls-execution-r2-9rlmhh5r/FAILED_TLS_R2_COMPLETE_TREE.json",
+      "sha256": "035652b74c1b33dbe131aad0924568a3d7b6b1220dda9908ee3ebff5a4078d53",
+      "uid": 501
+    },
+    "final_original_root_records": {
+      "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/cpython-universal2": {
+        "anchor_identity": {
+          "device": 16777231,
+          "inode": 17174941
+        },
+        "device": 16777231,
+        "inode": 17390011,
+        "mode": 493,
+        "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/cpython-universal2",
+        "uid": 501
+      },
+      "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/cpython-universal2-build": {
+        "anchor_identity": {
+          "device": 16777231,
+          "inode": 17174941
+        },
+        "device": 16777231,
+        "inode": 17381131,
+        "mode": 448,
+        "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/cpython-universal2-build",
+        "uid": 501
+      },
+      "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-crypto-r3": {
+        "anchor_identity": {
+          "device": 16777231,
+          "inode": 17174941
+        },
+        "device": 16777231,
+        "inode": 18580926,
+        "mode": 448,
+        "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-crypto-r3",
+        "uid": 501
+      }
+    },
+    "old_roots_unchanged": true,
+    "preservation_failure": null,
+    "prior_failed_TLS_and_original_source": {
+      "cache_finding_sha256": "7b1c34f39285fbd47187f8dabefa27f41989321ee727ef1965f111ecfefeaa75",
+      "failed_tls_r1_snapshot_sha256": "70f4bbb56479bde2477aec3774ae7ef8043527c1893be82fa477e1ac8882fb70",
+      "failed_tls_r1_tree_records": 6352,
+      "failed_tls_r1_unchanged": true,
+      "old_CP_source_including155cache_unchanged": true,
+      "old_CP_source_records": 5082,
+      "old_fences_retained": true
+    }
+  },
+  "root_review": {
+    "bytes": 61244,
+    "identity": {
+      "device": 16777243,
+      "inode": 1165591
+    },
+    "mode": "0o600",
+    "nlink": 1,
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/ROOT_TLS_SOURCE_REVIEW_R2.json",
+    "sha256": "6c94ce2f12d5ab6ba44ede49710cbb8a4c2e90c73468262b269695870576001a",
+    "uid": 501
+  },
+  "schema": "comsol-mcp.tls-actual-execution/2",
+  "status": "ACTUAL_POST_MERGE_RECEIPT_TERMINAL_FAIL",
+  "tool_session_id": 67596,
+  "wrapper_root": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-tls-execution-r2-9rlmhh5r"
+}

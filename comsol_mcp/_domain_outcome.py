@@ -112,6 +112,7 @@ PARTIAL_STATUS_TOKENS = frozenset({"PARTIAL_FAILURE", "PARTIAL", "PARTIALLY_APPL
 SUCCEEDED_STATUS_TOKENS = frozenset({
     "APPLIED", "OK", "COMPLETE", "VERIFIED", "OBSERVED", "PASS", "PASSED",
     "SUCCEEDED", "READY", "AVAILABLE", "REFRESHED", "INCOMPLETE", "CLEARED", "SAMPLED",
+    "CREATED", "LOADED", "SAVED", "CLONED", "CLOSED", "REGISTERED", "EXECUTED",
 })
 
 #: Verification tokens as the transaction/mesh/physics validators publish them.
@@ -226,6 +227,13 @@ def is_mutation_call(method: str, args: Sequence[Any] = (), command: str = "call
     # D2 uses private typed commands rather than widening the generic call
     # allowlist.  Keep their dispatch classification local to the exact
     # command and signature: malformed/private lookalikes remain conservative.
+    # ModelUtil progress-sink control is a client-side logging setting, not a
+    # model mutation.  Its own lifecycle producer turns an uncertain setter
+    # or stop/readback into UNKNOWN; it must not masquerade as a model write in
+    # the domain dispatch witness.
+    if command == "progress_log":
+        return not (method == "showProgress" and receiver == "modelutil"
+                    and len(args) == 1 and (args[0] is None or type(args[0]) is str))
     if command == "g2_nodegroup_ungroup":
         return True
     if command == "g2_nodegroup_read":

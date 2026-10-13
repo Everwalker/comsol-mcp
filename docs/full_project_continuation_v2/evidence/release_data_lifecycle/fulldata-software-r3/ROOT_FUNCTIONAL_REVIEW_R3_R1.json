@@ -1,0 +1,80 @@
+{
+  "status": "PASS_SCOPED_SOFTWARE_CORRECTIONS_AND_POINTER_REVIEW",
+  "freeze_sha256": "5dd156adfb772e5367ac4ecd4e746d5701199a3dc2b73b9695ca9577f949a3c9",
+  "actual_junit": {
+    "tests": 42,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "source_inputs_verified": 7,
+  "snapshots_verified": 3,
+  "r2_findings_closed": [
+    "Full verification history fingerprint/schema gate restore_candidate and finish PASS; missing/mismatched values force failure",
+    "Restored native pointer corrected to actual PREP task-root; old wrong pointer retained"
+  ],
+  "reviewed_negative_controls": [
+    "Actual production post-seed event preserved through full backup/restore",
+    "After-restore persistent event mutation detected before PASS",
+    "Four direct finish controls missing/mismatch digest/schema"
+  ],
+  "readback003_prep": {
+    "immutable_sqlite_integrity": "ok",
+    "durable_history_sha256": "0f6c59071a228911bef51b7483792af39e81a368a13354e18f041395b7e28e3b",
+    "schema_version": 1,
+    "exact_mph_sha256": "9999608757cff08cfe052b398c3de24b1e2e0603dc375db3d0cc5928f77c6346",
+    "zero_solve_prep": true,
+    "native_reopen": "NOT_RUN",
+    "golden_scope": "same readback003 exact artifact"
+  },
+  "pointer_hash_checks": 17,
+  "base_dev_plan": {
+    "status": "PASS_EXACT_UV_LOCK_ARTIFACT_MATCH_PLAN_ONLY",
+    "targets": {
+      "macos_arm64": {
+        "artifacts": 37,
+        "artifact_kinds": {
+          "wheel": 37
+        },
+        "wheels": 37,
+        "sdist_source_build_inputs": 0
+      },
+      "macos_x86_64": {
+        "artifacts": 37,
+        "artifact_kinds": {
+          "wheel": 36,
+          "sdist_source_build_input": 1
+        },
+        "wheels": 36,
+        "sdist_source_build_inputs": 1
+      },
+      "win_amd64": {
+        "artifacts": 39,
+        "artifact_kinds": {
+          "wheel": 39
+        },
+        "wheels": 39,
+        "sdist_source_build_inputs": 0
+      }
+    },
+    "unique_artifacts": 50,
+    "unique_size_bytes": 69625484,
+    "desktop_extra": "UNLOCKED_CANDIDATE_PENDING",
+    "downloads": 0,
+    "installs": 0,
+    "builds": 0,
+    "intel_cryptography": "Source-build input only; derived cp312-abi3-macosx_12_0_x86_64 wheel not yet built"
+  },
+  "limits": [
+    "Software fixture and immutable data-PREP only; no three-platform installed transitions",
+    "No COMSOL scientific or native reopen acceptance",
+    "Application stays0.1.9; final0.1.10 and wheelhouse pending",
+    "Fixture child network guard was not applied; no guarded-runtime claim"
+  ],
+  "fresh_independent_unified_reviewer": "NOT_RUN",
+  "previous_root_receipt": {
+    "path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/fulldata-software-r3/ROOT_FUNCTIONAL_REVIEW_R3.json",
+    "sha256": "ecb96afa3a9ec84558fe05f10e9e87a802d62d3e3ab5b322b467bea7e31f0c07",
+    "correction": "Original review classified only literal sdist kind; Intel source is explicitly sdist_source_build_input, not a target wheel."
+  }
+}

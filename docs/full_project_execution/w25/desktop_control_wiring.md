@@ -26,11 +26,13 @@ and does not itself isolate Desktop permission. Admitted writes create the durab
 idempotency claim before adapter or engine callbacks; same-key requests replay
 the stored result and conflicting request bodies are rejected.
 
-The production coordinator selects the platform metadata adapter. The optional
-macOS Accessibility observer reads product-caller prerequisites without
-prompting; neither it nor the Windows observer enables controls or proves a
-COMSOL window-to-model association. Desktop action selectors, current-window
-model binding, and Desktop Shell submission remain unsupported.
+The production coordinator selects the platform adapter. The Windows path has
+late-bound UI Automation methods; the macOS path has late-bound Accessibility
+and ScreenCaptureKit methods. Every control is gated by a protected,
+build-specific observed-selector profile and a fresh coordinator model-binding
+check. No such COMSOL selector profile is installed or natively validated, so
+the native methods remain fail-closed in the current environment. Java Shell
+is explicitly Windows-only; macOS returns a typed unsupported result.
 
 The managed queue now supports scoped typed-ModelRef resolve/inspect and a
 private `save_copy` migration callback. It checks the exact durable parent/job,
@@ -42,12 +44,14 @@ native Desktop action is accepted. If READY publication/readback fails, the
 finalizer records a NON_READY fence before releasing the session lane, while
 preserving an already-SUCCEEDED parent result.
 
-The source-level desktop status observers and the separate Windows pixel
-primitive remain unverified on native COMSOL windows. All new tests use
-explicit in-process adapter fixtures or the fake dispatcher; they do not start
-COMSOL, enumerate a real window, or perform GUI automation. See
+The source-level UIA/AX/capture adapters remain unverified on native COMSOL
+windows. All new tests use explicit in-process adapter fixtures or the fake
+dispatcher; they do not start COMSOL, enumerate a real window, or perform GUI
+automation. See
 [`desktop_service_interface.md`](desktop_service_interface.md) for the
-per-action native adapter gaps and status matrix.
+per-action native adapter gaps and status matrix, and
+[`native-adapters-implementation-r4.md`](native-adapters-implementation-r4.md)
+for the current source/software projection.
 
 
 ## Isolated W25 contract003 Phase1 software scope (2026-10-02)

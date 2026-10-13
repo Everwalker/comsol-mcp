@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "status": "PASS_EXECUTOR_COPY_VERIFICATION_AND_INDEPENDENT_POSTCLEANUP_OBSERVATION; ROOT_REVIEW_PENDING",
+  "activity_id": "w23-native-run-20261012-006",
+  "reconciliation_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_006/ACTIVITY006_RECONCILIATION.json",
+  "reconciliation_sha256": "d634a2ac5311f99e364eb3558d5f3bb738a0a099fb9af9cce362f65b4094a2e4",
+  "private_copy_manifest_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_006/private-control-store/activity006-raw/PRESERVED_RAW_MANIFEST006.json",
+  "private_copy_manifest_sha256": "e73f6a430df5099191d30bb3f3593fc4e5c84c469d620a02dc32e6cee8df8781",
+  "private_copy_file_count": 63,
+  "private_copy_total_bytes": 4051669,
+  "per_file_hash_and_size_equal": true,
+  "sqlite_verification_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_006/private-control-store/activity006-raw/SQLITE_AND_COPY_VERIFICATION006.json",
+  "sqlite_verification_sha256": "ea84ce400c4786748201116800a75159444a68fa834ef29c934d1c6997cc9217",
+  "immutable_integrity_checks": [
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-planar-te-source-20261012-006/docs/full_project_execution/w23_overlap/evidence/native-run-20261012-006-r2/native-run-20261012-006-execute/raw_operations.sqlite3",
+      "sha256": "f6052641ada23488b64922c34fa68c90fc2a845e40b3a79c90f0f5ad7dc7004b",
+      "integrity_check": "ok",
+      "target_job": {
+        "job_id": "f436071a-96bd-48d9-9471-d22d54dea6d7",
+        "job_status": "UNKNOWN",
+        "operation_id": "dc759743-bb34-4293-b4db-ceed4f4d3045",
+        "operation_status": "UNKNOWN",
+        "idempotency_key": "w23-science-idem-d2adc6af-0cfe-44db-800f-0d815819db7d"
+      }
+    },
+    {
+      "path": "/private/tmp/comsol-mcp-w23-te-science-20261012-006-activity006/control/operations.sqlite3",
+      "sha256": "165a47c75f9e846a092855789a00ac1c6127017ba7dda85cd1474474dbc9990d",
+      "integrity_check": "ok",
+      "target_job": {
+        "job_id": "f436071a-96bd-48d9-9471-d22d54dea6d7",
+        "job_status": "UNKNOWN",
+        "operation_id": "dc759743-bb34-4293-b4db-ceed4f4d3045",
+        "operation_status": "UNKNOWN",
+        "idempotency_key": "w23-science-idem-d2adc6af-0cfe-44db-800f-0d815819db7d"
+      }
+    }
+  ],
+  "sqlite_sidecar_interpretation": "The SQLite files were first inspected through mode=ro and PRAGMA integrity_check before copy. The WAL/SHM files were observed with mtimes after the database files and after runner completion; they may be artifacts of that read-only inspection, so their copied bytes are preserved for audit but they are not treated as authoritative original WAL content. The main database files, runner ledger reconciliation, and direct RPC evidence carry the durable terminal state. No sidecars are claimed to have existed at native-run completion.",
+  "job_id": "f436071a-96bd-48d9-9471-d22d54dea6d7",
+  "operation_id": "dc759743-bb34-4293-b4db-ceed4f4d3045",
+  "job_status": "UNKNOWN",
+  "operation_status": "UNKNOWN",
+  "domain_state": null,
+  "execution_state_unknown": null,
+  "safe_retry": false,
+  "study_run_submission_count": 0,
+  "actual_solver_execution_count": "UNKNOWN_INTERNAL_SOLVER_STEPS_NOT_INFERRED",
+  "cleanup_runner_status": "CLEANUP_VERIFIED_EXACT_OWNED_PIDS_AND_PORTS_ABSENT",
+  "cleanup_rpc_status": "PASS_ALL_DIRECT_RPCS_TERMINAL",
+  "cleanup_managed_ledger_status": "PASS_TERMINAL_WORKER_LEDGER_RECONCILED_DURABLE_DOMAIN_UNKNOWN_RETAINED",
+  "active_queued_or_running_jobs": [],
+  "prelaunch_inventory_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-native006-prelaunch-inventory-20261012/INVENTORY.json",
+  "prelaunch_inventory_sha256": "74be81b3945e7d6f56ac464dc6b521eb482dae2c8fdad8420943ed717ce010ce",
+  "postcleanup_inventory_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-native006-postcleanup-inventory-20261012/INVENTORY.json",
+  "postcleanup_inventory_sha256": "e2b81f672d6889bc82c696be6e03da5bcf01f23783dca085652d03bf8ee9bdd4",
+  "postcleanup_inventory_status": "PASS_FRESH_POSTCLEANUP_NO_COMSOL_OR_WORKER",
+  "postcleanup_engine_worker_matches": 0,
+  "activity006_pids_absent": [
+    5652,
+    5721,
+    5758
+  ],
+  "activity006_ports_absent": [
+    56652,
+    56661
+  ],
+  "activity005_pids_absent": [
+    79475,
+    79544,
+    79629
+  ],
+  "activity005_ports_absent": [
+    50623,
+    50630
+  ],
+  "root_preservation_cleanup_review": "PENDING_ROOT_INDEPENDENT_REVIEW",
+  "scope_note": "Preserves native FAIL/UNKNOWN and cleanup evidence only; no study submission, solver count remains UNKNOWN, scientific acceptance NOT_ACCEPTED. Sidecar bytes observed after read-only SQLite inspection are retained but not represented as original runner WAL state.",
+  "created_utc": "2026-10-11T18:43:04.365642+00:00"
+}

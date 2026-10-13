@@ -109,7 +109,7 @@ Known, reported gaps (refused before the first write, never guessed):
 ``GeomSequence.axisymmetric(boolean)`` is not in the worker allow-list),
 component ``duplicate`` (not in the worker allow-list), pair source/destination
 binding, coordinate system ``coord()``/``isLinear()``/``isOrthonormal()``/``masterSystem()``
-readback, geometry ``object()``/``objectNames()``/``problems()``/
+readback, geometry ``object()``/``problems()``/
 ``isBuilt()``/``current()``/``angularUnit()`` readback, per-feature properties
 of a type whose documented table was not retrieved offline (the engine's own
 ``properties()`` enumeration is used as the name authority instead, and a name
@@ -120,7 +120,7 @@ Worker allow-list additions this module would use if the parent applies them
 never edits Java): ``axisymmetric``, ``isAxisymmetric``, ``angularUnit``,
 ``current``, ``isBuilt``, ``status``, ``problems``, ``problem``, ``message``,
 ``hasError``, ``errors``, ``warnings``, ``object``, ``objects``, ``obj``,
-``objectNames``, ``coord``, ``isLinear``, ``isOrthonormal``, ``masterSystem``,
+``coord``, ``isLinear``, ``isOrthonormal``, ``masterSystem``,
 ``source``, ``destination``, ``type``, ``pairName``, ``swap``,
 ``hasAutoSelection``, ``manualSelection``, ``searchMethod``, ``searchDist``,
 ``duplicate``.
@@ -128,7 +128,9 @@ never edits Java): ``axisymmetric``, ``isAxisymmetric``, ``angularUnit``,
 ``isAxisymmetric`` is now in the worker allow-list (the C07 axisymmetric
 measure needs the native flag), so the geometry readback probes it for real
 instead of claiming it is unavailable; the setter ``axisymmetric`` is still
-refused before the first write.
+refused before the first write. ``objectNames()`` is also available only on a
+``GeomSequence`` receiver, and geometry inspection reads it through that
+receiver-scoped worker entry.
 """
 
 from __future__ import annotations
@@ -484,7 +486,7 @@ WORKER_UNAVAILABLE_METHODS = frozenset(
     {
         "axisymmetric", "angularUnit", "isBuilt",
         "status", "message", "errors",
-        "warnings", "obj", "objectNames", "coord",
+        "warnings", "obj", "coord",
         "isLinear", "isOrthonormal", "masterSystem", "source", "destination",
         "pairName", "swap", "hasAutoSelection", "manualSelection",
         "searchMethod", "searchDist", "duplicate",
@@ -1046,14 +1048,14 @@ def _geometry_state(sequence: Any) -> dict[str, Any]:
     return {
         "dimension": call_probe(sequence, "getSDim")["value"],
         "length_unit": call_probe(sequence, "lengthUnit")["value"],
+        "object_names": call_probe(sequence, "objectNames"),
         "entity_counters": _geometry_counters(sequence),
         "bounding_box": _geometry_bounding_box(sequence),
         # ``isAxisymmetric`` is in the worker allow-list (C07 repair), so the
         # state reports the native flag instead of a stale unavailable claim.
         "axisymmetric_readback": call_probe(sequence, "isAxisymmetric"),
         "unavailable": {
-            name: _unavailable(name)
-            for name in ("angularUnit", "current", "problems", "objectNames")
+            name: _unavailable(name) for name in ("angularUnit", "current", "problems")
         },
     }
 

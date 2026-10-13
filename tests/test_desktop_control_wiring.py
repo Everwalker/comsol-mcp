@@ -59,6 +59,17 @@ def _operation_count(daemon):
     return daemon.store.db.execute("SELECT count(*) FROM operations").fetchone()[0]
 
 
+def _synthetic_png_1x1():
+    import struct
+    import zlib
+
+    def chunk(kind, payload):
+        return struct.pack(">I", len(payload)) + kind + payload + struct.pack(">I", zlib.crc32(kind + payload) & 0xFFFFFFFF)
+
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", 1, 1, 8, 6, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(b"\x00\xff\x00\x00\xff")) + chunk(b"IEND", b""))
+
+
 def test_all_public_desktop_tool_names_route_to_canonical_catalog_ids():
     calls = []
     server = FastMCP("desktop-gateway-test")
@@ -307,6 +318,92 @@ def test_save_copy_authorizer_reuses_project_path_policy_no_overwrite(tmp_path):
     finally:daemon.close()
 
 
+def test_control_daemon_save_copy_publishes_only_under_running_migration_claim(tmp_path, monkeypatch):
+    import json
+    from pathlib import Path
+    from comsol_mcp._desktop_service import DesktopDispatchContext, _create_private_save_copy_stage, _verified_private_save_copy_file
+
+    daemon, _service_value, _ref = _desktop_read_fixture(tmp_path)
+    daemon.project_authority.authorize_operation = lambda project, permission: (
+        {"workspace": str(tmp_path)} if project == "p" and permission == "project_write" else
+        (_ for _ in ()).throw(RuntimeError("scope denied")))
+
+    def begin_claim(key, destination):
+        arguments = {"project_id": "p", "idempotency_key": key, "window_ref": "software-only",
+                     "target_session_id": "target", "save_policy": {
+                         "mode": "save_copy", "destination_path": str(destination), "overwrite": False,
+                     }}
+        record, _reused = daemon.store.begin(
+            request_id=f"{key}-request", idempotency_key=key, request_hash=f"{key}-hash",
+            operation="desktop.migrate_standalone", metadata={"project_id": "p"},
+        )
+        daemon.store.update_job(record["job_id"], "RUNNING")
+        context = DesktopDispatchContext(
+            "desktop.migrate_standalone", record["request_id"], record["operation_id"], record["job_id"],
+            record["idempotency_key"], record["request_hash"], "p",
+        )
+        daemon.desktop._active_operations.add(context.operation_id)
+        scope = {"operation": context.operation, "arguments_json": json.dumps(arguments, sort_keys=True),
+                 "hash": context.request_hash}
+        return context, scope
+
+    try:
+        destination = tmp_path / "published" / "saved.mph"
+        destination.parent.mkdir()
+        context, scope = begin_claim("migration-publish-positive", destination)
+        stage_root, _root_identity = _create_private_save_copy_stage(context)
+        stage_path = stage_root / "model.mph"
+        payload = b"synthetic native Save Copy bytes"
+        stage_path.write_bytes(payload)
+        stage_receipt = _verified_private_save_copy_file(
+            stage_root, stage_path, _root_identity, completion_verified=True,
+        )
+        token = daemon._desktop_request_scope.set(scope)
+        try:
+            result = daemon._publish_desktop_save_copy(
+                "p", context, stage_root, stage_path, destination,
+                {**stage_receipt, "stage_root_identity": _root_identity},
+            )
+        finally:
+            daemon._desktop_request_scope.reset(token)
+        assert result["operation_id"] == context.operation_id
+        assert result["publication"] == "ARTIFACTSTORE_NO_CLOBBER"
+        assert result["sha256"] == stage_receipt["sha256"]
+        assert result["size_bytes"] == len(payload)
+        assert destination.read_bytes() == payload
+
+        raced_destination = tmp_path / "published" / "foreign-winner.mph"
+        raced_context, raced_scope = begin_claim("migration-publish-race", raced_destination)
+        raced_root, raced_root_identity = _create_private_save_copy_stage(raced_context)
+        raced_source = raced_root / "model.mph"
+        raced_source.write_bytes(b"second staged model")
+        raced_receipt = _verified_private_save_copy_file(
+            raced_root, raced_source, raced_root_identity, completion_verified=True,
+        )
+        import comsol_mcp._artifact_store as artifact_store
+        actual_publisher = artifact_store._publish_project_chunks_no_clobber
+
+        def install_foreign_leaf(root, relative, chunks, *, expected_sha256, expected_size):
+            raced_destination.write_bytes(b"foreign winner")
+            return actual_publisher(root, relative, chunks,
+                                    expected_sha256=expected_sha256, expected_size=expected_size)
+
+        monkeypatch.setattr(artifact_store, "_publish_project_chunks_no_clobber", install_foreign_leaf)
+        token = daemon._desktop_request_scope.set(raced_scope)
+        try:
+            with pytest.raises(Exception) as caught:
+                daemon._publish_desktop_save_copy(
+                    "p", raced_context, raced_root, raced_source, raced_destination,
+                    {**raced_receipt, "stage_root_identity": raced_root_identity},
+                )
+        finally:
+            daemon._desktop_request_scope.reset(token)
+        assert getattr(caught.value, "code", None) == "SAVE_COPY_PUBLISH_UNKNOWN"
+        assert raced_destination.read_bytes() == b"foreign winner"
+    finally:
+        daemon.close()
+
+
 def test_registered_desktop_source_reuses_actual_artifact_integrity_and_project_scope(tmp_path):
     from comsol_mcp._artifact_store import register_project_artifact,local_artifact_host_identity,local_engine_host_identity
     from comsol_mcp._desktop_service import TrustedSourceArtifact
@@ -315,7 +412,8 @@ def test_registered_desktop_source_reuses_actual_artifact_integrity_and_project_
         original=tmp_path/'trusted.java';original.write_bytes(b'// synthetic trusted source')
         record=register_project_artifact(tmp_path,daemon.store,'trusted.java',project_id='p',role='java-source',
                 classification='synthetic',host_identity=local_artifact_host_identity(),
-                engine_host_identity=local_engine_host_identity(daemon.backend.endpoint_key),request_id='register-r',registering_operation_id='register-o')
+                engine_host_identity=local_engine_host_identity(daemon.backend.endpoint_key),request_id='register-r',registering_operation_id='register-o',
+                artifact_type='text/x-java-source')
         artifact=daemon._resolve_desktop_artifact('p',record['artifact_id'])
         assert isinstance(artifact,TrustedSourceArtifact) and artifact.sha256==record['artifact_id']
         assert artifact.size==len(b'// synthetic trusted source')
@@ -346,3 +444,305 @@ def test_coordinator_bind_uses_single_claim_and_queue_inspect_with_fake_window_o
         assert daemon.dispatch(request)==result
         assert _operation_count(daemon)==1
     finally:daemon.close()
+
+
+def test_control_daemon_label_challenge_uses_durable_worker_lane_and_restores_exact_label(tmp_path):
+    from contextlib import contextmanager
+    import json
+    from comsol_mcp._desktop_service import DesktopModelObservation
+    from comsol_mcp._execution_contract import model_ref_from_mapping
+
+    daemon, service, ref = _desktop_read_fixture(tmp_path)
+    service.ledger.permissions.update({"inspect", "host_control"})
+    service.ledger.model_ownership[ref["model_tag"]] = "mcp_owned"
+    label = {"value": "owned-copy"}
+    worker_calls = []
+
+    class Model:
+        def label(self, value=None):
+            if value is None:
+                worker_calls.append(("get", label["value"]))
+                return label["value"]
+            worker_calls.append(("set", value))
+            label["value"] = value
+            return None
+
+    class Worker:
+        def __init__(self):
+            self._model = Model()
+
+        def client(self):
+            return self
+
+        def model(self, tag):
+            assert tag == ref["model_tag"]
+            return self._model
+
+        @contextmanager
+        def operation_context(self, _operation_id, on_request_event=None):
+            yield
+
+    daemon.backend.worker = Worker()
+    adapter = AvailableWindowAdapter()
+    adapter.observe_model = lambda _identity: DesktopModelObservation("UNVERIFIED", active_model_label=label["value"])
+    daemon.desktop.adapter = adapter
+    try:
+        status = daemon.dispatch({"operation": "desktop.status", "arguments": {"project_id": "p"}, "execution": {}})
+        window_ref = status["data"]["windows"][0]["window_ref"]
+        bound = daemon.dispatch({"operation": "desktop.bind", "arguments": {
+            "project_id": "p", "idempotency_key": "label-challenge-bind", "window_ref": window_ref,
+            "model_ref": json.dumps(ref),
+        }, "execution": {}})
+        assert bound["success"] is True
+        assert bound["data"]["binding_evidence"]["binding_method"] == "WORKER_LABEL_NONCE_CHALLENGE"
+        assert bound["data"]["binding_evidence"]["revision"] == 2
+        assert label["value"] == "owned-copy"
+        assert [kind for kind, _value in worker_calls].count("set") == 2
+        nonce = next(value for kind, value in worker_calls if kind == "set")
+        assert nonce.startswith("MCPBIND:") and len(nonce) == 40
+        state = service.ledger._state_for(model_ref_from_mapping(ref))
+        assert state.revision == 2 and state.dirty is False and state.active_operation_id is None
+        operation = daemon.store.get_operation(bound["execution"]["operation_id"])
+        assert operation["status"] == "SUCCEEDED"
+    finally:
+        daemon.close()
+
+
+@pytest.mark.parametrize("case", ["user_owned", "dirty"])
+def test_label_challenge_refuses_nonowned_or_uncertain_model_before_worker_mutation(tmp_path, case):
+    from contextlib import contextmanager
+    import json
+    from comsol_mcp._desktop_service import DesktopModelObservation
+    from comsol_mcp._execution_contract import model_ref_from_mapping
+
+    daemon, service, ref = _desktop_read_fixture(tmp_path)
+    service.ledger.permissions.update({"inspect", "host_control"})
+    if case == "dirty":
+        service.ledger._state_for(model_ref_from_mapping(ref)).dirty = True
+        service.ledger.model_ownership[ref["model_tag"]] = "mcp_owned"
+    label = {"value": "owned-copy"}
+    worker_calls = []
+
+    class Model:
+        def label(self, value=None):
+            worker_calls.append(("get" if value is None else "set", value))
+            if value is not None:
+                label["value"] = value
+            return label["value"]
+
+    class Worker:
+        def client(self):
+            return self
+
+        def model(self, _tag):
+            return Model()
+
+        @contextmanager
+        def operation_context(self, _operation_id, on_request_event=None):
+            yield
+
+    daemon.backend.worker = Worker()
+    adapter = AvailableWindowAdapter()
+    adapter.observe_model = lambda _identity: DesktopModelObservation("UNVERIFIED", active_model_label=label["value"])
+    daemon.desktop.adapter = adapter
+    try:
+        status = daemon.dispatch({"operation": "desktop.status", "arguments": {"project_id": "p"}, "execution": {}})
+        window_ref = status["data"]["windows"][0]["window_ref"]
+        result = daemon.dispatch({"operation": "desktop.bind", "arguments": {
+            "project_id": "p", "idempotency_key": "label-challenge-deny-" + case, "window_ref": window_ref,
+            "model_ref": json.dumps(ref),
+        }, "execution": {}})
+        assert result["success"] is False
+        assert result["execution"]["status"] == "FAILED"
+        assert worker_calls == []
+        assert label["value"] == "owned-copy"
+        assert daemon.store.get_operation(result["execution"]["operation_id"])["status"] == "FAILED"
+    finally:
+        daemon.close()
+
+
+def test_label_challenge_readback_loss_is_unknown_and_idempotency_prevents_retry(tmp_path):
+    from contextlib import contextmanager
+    import json
+    from comsol_mcp._desktop_service import DesktopModelObservation
+    from comsol_mcp._execution_contract import model_ref_from_mapping
+
+    daemon, service, ref = _desktop_read_fixture(tmp_path)
+    service.ledger.permissions.update({"inspect", "host_control"})
+    service.ledger.model_ownership[ref["model_tag"]] = "mcp_owned"
+    label = {"value": "owned-copy"}
+    worker_calls = []
+
+    class Model:
+        def label(self, value=None):
+            if value is None:
+                worker_calls.append(("get", label["value"]))
+                return label["value"]
+            worker_calls.append(("set", value))
+            label["value"] = value
+            return None
+
+    class Worker:
+        def client(self):
+            return self
+
+        def model(self, _tag):
+            return Model()
+
+        @contextmanager
+        def operation_context(self, _operation_id, on_request_event=None):
+            yield
+
+    daemon.backend.worker = Worker()
+    adapter = AvailableWindowAdapter()
+    # The UI never reflects the nonce, which makes the challenge fail closed;
+    # the Worker still restores the original label through the same queue.
+    adapter.observe_model = lambda _identity: DesktopModelObservation("UNVERIFIED", active_model_label="owned-copy")
+    daemon.desktop.adapter = adapter
+    try:
+        status = daemon.dispatch({"operation": "desktop.status", "arguments": {"project_id": "p"}, "execution": {}})
+        window_ref = status["data"]["windows"][0]["window_ref"]
+        request = {"operation": "desktop.bind", "arguments": {
+            "project_id": "p", "idempotency_key": "label-challenge-readback-loss", "window_ref": window_ref,
+            "model_ref": json.dumps(ref),
+        }, "execution": {}}
+        result = daemon.dispatch(request)
+        assert result["success"] is False and result["execution"]["status"] == "UNKNOWN"
+        assert result["error"]["safe_retry"] is False
+        assert label["value"] == "owned-copy"
+        assert [kind for kind, _value in worker_calls].count("set") == 2
+        assert daemon.desktop._bindings.get(window_ref) is None
+        state = service.ledger._state_for(model_ref_from_mapping(ref))
+        assert state.revision == 2 and state.dirty is False and state.active_operation_id is None
+        assert daemon.dispatch(request) == result
+        assert [kind for kind, _value in worker_calls].count("set") == 2
+    finally:
+        daemon.close()
+
+
+def test_control_daemon_action_uses_profile_adapter_resolver_and_durable_outer_operation(tmp_path):
+    from comsol_mcp._desktop_service import DesktopActionPlan, DesktopModelObservation
+
+    daemon, service, ref = _desktop_read_fixture(tmp_path)
+    service.ledger.permissions.update({"inspect", "host_control"})
+    service.ledger.model_ownership[ref["model_tag"]] = "mcp_owned"
+    calls = []
+    adapter = AvailableWindowAdapter()
+    adapter.observe_model = lambda _identity: DesktopModelObservation(
+        "SERVER", "127.0.0.1:2036", ref["model_tag"], fingerprint="f" * 64,
+    )
+    adapter.resolve_action = lambda _identity, action: (
+        calls.append(("resolve", dict(action))) or DesktopActionPlan("fixture.action", False, {"profile": "observed"})
+    )
+    adapter.perform_action = lambda _identity, plan: (
+        calls.append(("invoke", plan.action_id)) or {"verified": True, "action_id": plan.action_id}
+    )
+    daemon.desktop.adapter = adapter
+    try:
+        status = daemon.dispatch({"operation": "desktop.status", "arguments": {"project_id": "p"}, "execution": {}})
+        window_ref = status["data"]["windows"][0]["window_ref"]
+        bound = daemon.dispatch({"operation": "desktop.bind", "arguments": {
+            "project_id": "p", "idempotency_key": "profile-action-bind", "window_ref": window_ref,
+            "model_ref": __import__("json").dumps(ref),
+        }, "execution": {}})
+        assert bound["success"] is True
+        result = daemon.dispatch({"operation": "desktop.action", "arguments": {
+            "project_id": "p", "idempotency_key": "profile-action-run", "window_ref": window_ref,
+            "action": {"action_id": "fixture.action", "target": "window"},
+        }, "execution": {}})
+        assert result["success"] is True
+        assert result["data"]["action_id"] == "fixture.action"
+        assert result["data"]["declared_model_mutation"] is False
+        assert calls == [("resolve", {"action_id": "fixture.action", "target": "window"}),
+                         ("invoke", "fixture.action")]
+        assert daemon.store.get_operation(result["execution"]["operation_id"])["status"] == "SUCCEEDED"
+    finally:
+        daemon.close()
+
+
+def test_control_daemon_capture_registers_exact_window_bytes_in_project_artifact_store(tmp_path):
+    import hashlib
+    import json
+    from comsol_mcp._desktop_service import DesktopModelObservation
+
+    daemon, service, ref = _desktop_read_fixture(tmp_path)
+    service.ledger.permissions.update({"inspect", "host_control", "project_write"})
+    service.ledger.model_ownership[ref["model_tag"]] = "mcp_owned"
+    image = _synthetic_png_1x1()
+    adapter = AvailableWindowAdapter()
+    adapter.observe_model = lambda _identity: DesktopModelObservation(
+        "SERVER", "127.0.0.1:2036", ref["model_tag"], fingerprint="f" * 64,
+    )
+    adapter.capture = lambda identity, region: {
+        "verified": True, "region": region, "scope": "target_window", "format": "PNG",
+        "width": 1, "height": 1, "size": len(image), "sha256": hashlib.sha256(image).hexdigest(),
+        "image_bytes": image, "target_identity_fingerprint": identity.fingerprint(),
+        "profile_id": "software-fixture-only",
+    }
+    daemon.desktop.adapter = adapter
+    try:
+        status = daemon.dispatch({"operation": "desktop.status", "arguments": {"project_id": "p"}, "execution": {}})
+        window_ref = status["data"]["windows"][0]["window_ref"]
+        bound = daemon.dispatch({"operation": "desktop.bind", "arguments": {
+            "project_id": "p", "idempotency_key": "capture-bind", "window_ref": window_ref,
+            "model_ref": json.dumps(ref),
+        }, "execution": {}})
+        assert bound["success"] is True
+        captured = daemon.dispatch({"operation": "desktop.capture", "arguments": {
+            "project_id": "p", "idempotency_key": "capture-register", "window_ref": window_ref,
+            "region": "window",
+        }, "execution": {}})
+        assert captured["success"] is True, captured
+        assert "image_bytes" not in captured["data"]
+        assert captured["data"]["artifact_id"] == hashlib.sha256(image).hexdigest()
+        record = daemon.store.get_metadata("artifacts", captured["data"]["artifact_id"])
+        assert record["role"] == "desktop_capture" and record["artifact_type"] == "image/png"
+        assert record["classification"] == "project_private"
+        published = tmp_path / captured["data"]["path"]
+        assert published.read_bytes() == image
+        assert record["provenance"]["capture_scope"] == "target_window"
+        assert record["provenance"]["target_model_ref"] == ref
+    finally:
+        daemon.close()
+
+
+@pytest.mark.parametrize("case", ["wrong_window", "bad_png"])
+def test_control_daemon_capture_unknown_result_never_registers_mismatched_image(tmp_path, case):
+    import hashlib
+    import json
+    from comsol_mcp._desktop_service import DesktopModelObservation
+
+    daemon, service, ref = _desktop_read_fixture(tmp_path)
+    service.ledger.permissions.update({"inspect", "host_control", "project_write"})
+    service.ledger.model_ownership[ref["model_tag"]] = "mcp_owned"
+    image = _synthetic_png_1x1() if case == "wrong_window" else b"not a png"
+    adapter = AvailableWindowAdapter()
+    adapter.observe_model = lambda _identity: DesktopModelObservation(
+        "SERVER", "127.0.0.1:2036", ref["model_tag"], fingerprint="f" * 64,
+    )
+    adapter.capture = lambda identity, region: {
+        "verified": True, "region": region, "scope": "target_window", "format": "PNG",
+        "width": 1, "height": 1, "size": len(image), "sha256": hashlib.sha256(image).hexdigest(),
+        "image_bytes": image, "target_identity_fingerprint": "0" * 64 if case == "wrong_window" else identity.fingerprint(),
+        "profile_id": "software-fixture-only",
+    }
+    daemon.desktop.adapter = adapter
+    try:
+        status = daemon.dispatch({"operation": "desktop.status", "arguments": {"project_id": "p"}, "execution": {}})
+        window_ref = status["data"]["windows"][0]["window_ref"]
+        bound = daemon.dispatch({"operation": "desktop.bind", "arguments": {
+            "project_id": "p", "idempotency_key": "capture-deny-bind-" + case, "window_ref": window_ref,
+            "model_ref": json.dumps(ref),
+        }, "execution": {}})
+        assert bound["success"] is True
+        denied = daemon.dispatch({"operation": "desktop.capture", "arguments": {
+            "project_id": "p", "idempotency_key": "capture-deny-" + case, "window_ref": window_ref,
+            "region": "window",
+        }, "execution": {}})
+        assert denied["success"] is False and denied["execution"]["status"] == "UNKNOWN"
+        assert denied["error"]["safe_retry"] is False
+        digest = hashlib.sha256(image).hexdigest()
+        assert daemon.store.get_metadata("artifacts", digest) is None
+        assert not list(tmp_path.glob("desktop-capture-*"))
+    finally:
+        daemon.close()

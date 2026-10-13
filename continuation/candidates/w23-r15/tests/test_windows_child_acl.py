@@ -1,0 +1,117 @@
+from __future__ import annotations
+import ctypes as C
+from dataclasses import replace
+import hashlib
+from types import SimpleNamespace
+import pytest
+from comsol_mcp import _windows_t037_acl as acl
+from comsol_mcp._windows_t037 import WindowsT037ProfileV2
+from comsol_mcp._windows_t037_native import canonical_security_descriptor_sha256
+from tests.test_windows_host_change import _profile
+from tests.test_windows_t037_native import _security_descriptor
+
+
+def test_accesscheck_fixed_windows_abi_matches_independent_literals():
+    assert C.sizeof(acl.GENERIC_MAPPING)==16
+    assert C.sizeof(acl.TOKEN_STATISTICS)==56
+    assert acl.TOKEN_STATISTICS.ModifiedId.offset==48
+    calls={}
+    class Fn:
+        def __call__(self,*_):pass
+    a=SimpleNamespace(**{name:Fn() for name in ['GetSecurityInfo','GetSecurityDescriptorLength','GetSecurityDescriptorDacl','GetTokenInformation','OpenProcessToken','DuplicateTokenEx','MapGenericMask','AccessCheck']})
+    k=SimpleNamespace(**{name:Fn() for name in ['LocalFree','GetLastError','CloseHandle','GetProcessId']})
+    acl.NativeChildAclApi.bind(a,k)
+    assert len(a.AccessCheck.argtypes)==8 and a.AccessCheck.restype is acl.BOOL
+    assert len(a.GetSecurityInfo.argtypes)==8 and a.GetSecurityInfo.restype is acl.DWORD
+    assert len(a.DuplicateTokenEx.argtypes)==6
+    assert k.LocalFree.restype is C.c_void_p
+
+
+def _native_access(*,allowed=True,granted=True,privileges=0,oversize=False):
+    class A:
+        def MapGenericMask(self,mask,mapping):C.cast(mask,C.POINTER(acl.DWORD)).contents.value=0x120089
+        def AccessCheck(self,sd,token,mask,mapping,buffer,length,result,status):
+            if buffer is None:
+                C.cast(length,C.POINTER(acl.DWORD)).contents.value=acl.MAX_PRIVILEGES+1 if oversize else 8
+                return 0
+            C.cast(result,C.POINTER(acl.DWORD)).contents.value=mask.value if granted else 0
+            C.cast(status,C.POINTER(acl.BOOL)).contents.value=int(allowed)
+            C.memmove(buffer,int(privileges).to_bytes(4,'little')+b'\x00'*4,8);return 1
+    api=acl.NativeChildAclApi.__new__(acl.NativeChildAclApi);api.a=A();api.k=SimpleNamespace(GetLastError=lambda:122)
+    return api
+
+
+def test_actual_accesscheck_uses_child_impersonation_handle_and_generic_mapping():
+    api=_native_access();assert api.access(101,202,('READ',))==(0x120089,0x120089)
+
+
+@pytest.mark.parametrize('kwargs',[{'allowed':False},{'granted':False},{'privileges':1},{'oversize':True}])
+def test_actual_accesscheck_denial_partial_rights_privilege_bypass_and_oversize_refuse(kwargs):
+    with pytest.raises(acl.ChildAclError):_native_access(**kwargs).access(101,202,('READ',))
+
+
+def test_actual_descriptor_reader_rejects_null_dacl_and_frees_allocation():
+    raw=_security_descriptor(dacl_present=True,ace=None);storage=C.create_string_buffer(raw);released=[]
+    class A:
+        def GetSecurityInfo(self,h,kind,mask,owner,group,dacl,sacl,sd):
+            assert kind==1 and mask==7
+            C.cast(owner,C.POINTER(C.c_void_p)).contents.value=10;C.cast(group,C.POINTER(C.c_void_p)).contents.value=20
+            C.cast(sd,C.POINTER(C.c_void_p)).contents.value=C.addressof(storage);return 0
+        def GetSecurityDescriptorLength(self,sd):return len(raw)
+        def GetSecurityDescriptorDacl(self,sd,present,dacl,defaulted):
+            C.cast(present,C.POINTER(acl.BOOL)).contents.value=1;return 1
+    api=acl.NativeChildAclApi.__new__(acl.NativeChildAclApi);api.a=A();api.k=SimpleNamespace(LocalFree=lambda p:released.append(p.value) or None,GetLastError=lambda:0)
+    with pytest.raises(acl.ChildAclError) as capture:list(api.descriptor(9))
+    assert capture.value.code=='CHILD_ACL_NULL_DACL' and len(released)==1
+
+
+def _observer(*,change=None):
+    profile=_profile();policy=profile.windows_isolation
+    raw=_security_descriptor();digest=canonical_security_descriptor_sha256(raw)
+    grants=tuple(replace(g,security_descriptor_sha256=digest) for g in policy.acl_grants)
+    profile=replace(profile,windows_isolation=replace(policy,acl_grants=grants))
+    wrapper=WindowsT037ProfileV2(profile,'d'*64,{},'SOFTWARE_ONLY')
+    events=[]
+    class Files:
+        k=SimpleNamespace(GetFileAttributesW=lambda path:0x10)
+        def open_security_path(self,*_,**__):events.append('pin');return [10,11]
+        def info(self,h,*,directory):
+            if change=='inode' and events.count('info')>=2:identity=(1,99)
+            else:identity=(1,h)
+            events.append('info');return identity,0
+        def close(self,h):events.append(('close',h))
+    class Api:
+        files=Files()
+        def process_id(self,h):return 456
+        def bound_statistics(self,p,t):
+            if change=='token' and events.count('stats'):return b'changed'
+            events.append('stats');return b'token-original'
+        def duplicate(self,t):events.append(('duplicate',t));return 88
+        def close_token(self,t):events.append(('close-token',t))
+        def descriptor(self,h):
+            events.append('descriptor')
+            yield 99,raw+(b'changed' if change=='descriptor' and events.count('descriptor')>1 else b''),digest
+        def access(self,sd,token,rights):assert token==88;events.append('AccessCheck');return 1,1
+    class Launch:
+        def process_times(self,h):return 123,None
+        def read_token(self,t):return {'state':'OBSERVED','is_appcontainer':True,'appcontainer_sid':wrapper.appcontainer_sid}
+    return wrapper,Api(),Launch(),events
+
+
+def test_actual_dacl_gate_keeps_pinned_chain_token_pid_birth_provenance_and_no_isolation_claim():
+    profile,api,launch,events=_observer()
+    result=acl.check_suspended_child_dacl(profile,77,66,456,launch,api=api)
+    assert result.state=='DACL_OBSERVED_NOT_ISOLATION_PROOF' and result.isolation_state=='NOT_VERIFIED'
+    assert result.birth_filetime_100ns==123 and result.child_pid==456
+    assert events[-1]==('close-token',88)
+    assert ('close',11) in events and ('close',10) in events
+    assert events.index('pin')<events.index('AccessCheck')<events.index(('close',11))
+    with pytest.raises(ValueError):acl.ChildDaclObservation(456,123,'a'*64,(),state='VERIFIED')
+
+
+@pytest.mark.parametrize('change',['inode','descriptor','token'])
+def test_dacl_gate_rechecks_live_native_provenance_and_releases_own_query_handles(change):
+    profile,api,launch,events=_observer(change=change)
+    with pytest.raises(acl.ChildAclError):acl.check_suspended_child_dacl(profile,77,66,456,launch,api=api)
+    assert events[-1]==('close-token',88)
+    assert ('close',11) in events and ('close',10) in events

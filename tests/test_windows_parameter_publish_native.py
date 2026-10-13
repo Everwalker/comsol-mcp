@@ -15,6 +15,8 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import contextmanager
+from unittest.mock import patch
 
 parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument('--helper', default=str(Path(__file__).parents[1] / 'comsol_mcp' / '_windows_parameter_publish.py'))
@@ -43,6 +45,73 @@ class PathControls(unittest.TestCase):
                 module.publish_chunks('not-a-windows-path', 'table.json', (),
                                       expected_sha256=digest, expected_size=size)
             self.assertEqual(error.exception.code, 'INVALID_REQUEST')
+
+    def test_private_stage_cleanup_deletes_only_exact_file_and_directory_handles(self):
+        root_identity = {"device": 7, "inode": 70, "security_sha256": "a" * 64}
+        file_identity = {"device": 7, "inode": 71, "security_sha256": "b" * 64}
+
+        class FakeAPI:
+            def __init__(self, *, foreign_file=False):
+                self.deleted = []
+                self.closed = []
+                self.foreign_file = foreign_file
+
+            def open_child_directory_for_delete(self, parent, leaf):
+                return "owned-directory-handle"
+
+            def open_child_file_for_delete(self, parent, leaf):
+                return "owned-file-handle"
+
+            def info(self, handle, *, directory=False):
+                return ((7, 70), 0)
+
+            def source_fingerprint(self, handle):
+                identity = (7, 999 if self.foreign_file else 71)
+                return (identity, 123, 1, 2, 1)
+
+            def delete_owned(self, handle):
+                self.deleted.append(handle)
+
+            def close(self, handle):
+                self.closed.append(handle)
+
+            def exists_child(self, parent, leaf):
+                return False
+
+            def verify_named_binding(self, binding):
+                return None
+
+            def exists(self, path):
+                return False
+
+        @contextmanager
+        def fake_pinned_parent(_parent, _leaf, *, add_file=False, _api=None):
+            api = _api
+            yield api, "pinned-parent-handle", ("stage",), [(r"C:\Temp", (7, 1))]
+
+        api = FakeAPI()
+        with patch.object(module.os, "name", "nt"), patch.object(module, "pinned_parent", fake_pinned_parent):
+            module.delete_exact_private_stage(
+                r"C:\Temp\stage", root_identity, file_identity, _api=api,
+                _verify_security=lambda _path, *, directory, expected_identity: {"identity": expected_identity},
+            )
+        self.assertEqual(api.deleted, ["owned-file-handle", "owned-directory-handle"])
+        self.assertEqual(api.closed, ["owned-file-handle", "owned-directory-handle"])
+
+        foreign = FakeAPI(foreign_file=True)
+
+        @contextmanager
+        def foreign_parent(_parent, _leaf, *, add_file=False, _api=None):
+            yield _api, "pinned-parent-handle", ("stage",), [(r"C:\Temp", (7, 1))]
+
+        with patch.object(module.os, "name", "nt"), patch.object(module, "pinned_parent", foreign_parent):
+            with self.assertRaises(module.PublishError) as caught:
+                module.delete_exact_private_stage(
+                    r"C:\Temp\stage", root_identity, file_identity, _api=foreign,
+                    _verify_security=lambda _path, *, directory, expected_identity: {"identity": expected_identity},
+                )
+        self.assertEqual(caught.exception.code, "ACCESS_VIOLATION")
+        self.assertEqual(foreign.deleted, [])
 
 
 @unittest.skipUnless(os.name == 'nt', 'requires actual Windows kernel/filesystem')

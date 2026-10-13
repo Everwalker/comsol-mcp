@@ -1,0 +1,11 @@
+--- /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/tests/test_native_w23_saved_mph_diagnostic.py
++++ /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r15/tests/test_native_w23_saved_mph_diagnostic.py
+@@ -205,7 +205,7 @@
+             assert _allowed_diagnostic_dispatch(request) is True
+     for dataset, solution, x in (("dset2", "sol2", -10.0), ("dset3", "sol3", 8.0)):
+         assert _allowed_diagnostic_dispatch(
+-            _point_dispatch(dataset, solution, list(protocol.bma_point_expressions("1" if dataset == "dset2" else "2")), [[x, 0.0]])) is True
++            _point_dispatch(dataset, solution, list(protocol.bma_point_expressions("1" if dataset == "dset2" else "2", field_scheme="emw_down")), [[x, 0.0]])) is True
+ 
+     denied = [
+         _point_dispatch("dset3", "sol3", list(RAW_FIELD_EXPRESSIONS), _field_points(8.0, 321)),

@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "activity_id": "w23-native-run-20261012-007",
+  "created_at_utc": "2026-10-11T19:36:30.412962+00:00",
+  "status": "PASS_ROOT_PRESERVATION_AND_CAPTURED_CLEANUP_EVIDENCE_CHECK",
+  "checker_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-native007-root-check-20261012/check_preservation.py",
+  "checker_sha256": "c46cf39bcb456aec3b425ad6e87569c7865bdcedb52b5b0b5b71536c189ee3f3",
+  "inputs": {
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_007/private-control-store/activity007-raw/PRESERVATION_MANIFEST007.json": "e58e9daa7853bd9cc5688b59232e9cd9676070ab338418c9cdf12df919f0e4a0",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_007/ACTIVITY007_PRESERVATION_SUPPLEMENT.json": "aa1e73abdc0ff0db49a369c8cb16d89464bedd007f5b6c77a658f0be7a14b9fe",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_007/ACTIVITY007_RECONCILIATION.json": "5f727beb7b019ae75219650b153a9e37f23a49307c460251d8b8a4678dba71a3",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_007/private-control-store/postcleanup-inventory-007-exact-20261012T1918Z/POSTCLEANUP_INVENTORY007.json": "720d7296ac271061a998910b8ab66f99f4539dcd523f9baa2b9b6741e5f01e94"
+  },
+  "copy_verification": {
+    "base_files": 82,
+    "base_bytes": 6538429,
+    "separately_preserved_observer_created_sidecars": 2,
+    "total_files": 84,
+    "total_bytes": 6571197,
+    "source_and_copy_all_bytes_and_hashes_rechecked": true,
+    "model_mph_count": 0
+  },
+  "database_checks": [
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_007/private-control-store/activity007-raw/runner-evidence/raw_operations.sqlite3",
+      "sha256": "ec1a74f7acb0a961018c36d4dcbf2162bbbc290b0e36e89a8c5366a6939b21ba",
+      "integrity_check": "ok",
+      "status_counts": {
+        "operations": {
+          "FAILED": 1,
+          "SUCCEEDED": 8,
+          "UNKNOWN": 1
+        },
+        "jobs": {
+          "FAILED": 1,
+          "SUCCEEDED": 8,
+          "UNKNOWN": 1
+        }
+      },
+      "actual_study_run_presend_count": 1,
+      "study_run_status": "UNKNOWN",
+      "safe_retry": false
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_007/private-control-store/activity007-raw/owned-work/control/operations.sqlite3",
+      "sha256": "f4018f06500620df9601b256fa16a67ec97dee16daa62bfefc58ac39bd970b96",
+      "integrity_check": "ok",
+      "status_counts": {
+        "operations": {
+          "FAILED": 1,
+          "SUCCEEDED": 8,
+          "UNKNOWN": 1
+        },
+        "jobs": {
+          "FAILED": 1,
+          "SUCCEEDED": 8,
+          "UNKNOWN": 1
+        }
+      },
+      "actual_study_run_presend_count": 1,
+      "study_run_status": "UNKNOWN",
+      "safe_retry": false
+    }
+  ],
+  "study_run": {
+    "operation_id": "2b35fd09-1a92-4c93-9612-c7ecf591fa5d",
+    "job_id": "97c6cdeb-044a-43cb-ab78-8775b1c4b757",
+    "request_id": "w23-science-req-fba579ad-6acd-4368-9bf6-da98f889e44c",
+    "worker_request_id": "wrk-9f5a195e-c14f-4165-829b-4c90b8673756",
+    "presend_event_id": 178,
+    "observed_event_id": 179,
+    "actual_native_dispatch_count": 1,
+    "witness_mutating_dispatch_count": 1,
+    "worker_terminal_status": "FAILED",
+    "durable_domain_status": "UNKNOWN",
+    "safe_retry": false,
+    "raw_worker_error": "FlException: 以下特征遇到问题：\n  - 特征: 特征值求解器 1 (sol1/e1)\n无法在“特征值求解器”中组装矩阵。\n未定义“波动方程，电 1”所需的材料属性“sigma”。",
+    "internal_solver_execution_count": "UNKNOWN",
+    "original_summary_submission_count": 0,
+    "summary_zero_count_is_incorrect": true,
+    "correction_scope": "append-only; original evidence remains unchanged"
+  },
+  "native_gates": {
+    "material": "PASS_NATIVE_MATERIAL_TENSOR_READBACK",
+    "mesh": "PASS_NATIVE_FULL_DOMAIN_FREETRI_MESH_READBACK",
+    "pre_solve_study": "PASS_CONFIGURED_STUDY_FEATURES_BEFORE_SOLVE",
+    "mesh_triangles": 31496,
+    "validators_replayed_from_frozen_candidate15": true
+  },
+  "cleanup": {
+    "journalled_worker_requests_reconciled": 93,
+    "direct_rpcs_reconciled": 3,
+    "real_worker_client_disconnect_generation_before": 2,
+    "generation_after": 3,
+    "verified_task_pids": [
+      38989,
+      39058,
+      39087
+    ],
+    "verified_task_ports": [
+      63329,
+      63341
+    ],
+    "proof_scope": "Root rechecks immutable captured executor inventories and receipts; no new Root live ps/lsof probe in this check",
+    "captured_postcleanup_inventory_sha256": "720d7296ac271061a998910b8ab66f99f4539dcd523f9baa2b9b6741e5f01e94",
+    "birth_inclusive_elapsed_seconds": 13.135821104049683,
+    "durable_unknown_was_not_changed": true
+  },
+  "native_scientific_acceptance": "NOT_ACCEPTED",
+  "overall_master_goal": "OPEN",
+  "limitations": [
+    "No automatic replay of UNKNOWN Study.run",
+    "No completed solution or science acceptance",
+    "Gate PASS applies only to recorded Activity007 candidate15",
+    "Observer-created SQLite sidecars are preserved with explicit provenance; they are not original runner WAL evidence"
+  ]
+}

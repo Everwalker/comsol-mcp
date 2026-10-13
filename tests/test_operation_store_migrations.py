@@ -103,6 +103,7 @@ def test_historical_v1_extension_preserves_rows_idempotency_and_reopen(tmp_path)
     after_names = {row[1] for row in after_objects}
     assert after_names - {row[1] for row in before_objects} == {
         "resume_claims", "projects", "stage_attempts", "idx_stage_attempt_scope",
+        "host_control_admissions", "idx_operations_request_id", "idx_artifacts_v2_project_scope",
     }
     assert [row[1] for row in store.db.execute("PRAGMA table_info(stage_attempts)")] == [
         "attempt_id", "scope_digest", "stage_id", "idempotency_key", "request_hash",

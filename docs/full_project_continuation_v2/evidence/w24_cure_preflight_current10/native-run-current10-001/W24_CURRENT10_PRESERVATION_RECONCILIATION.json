@@ -1,0 +1,378 @@
+{
+  "schema": "W24_CURRENT10_TERMINAL_PRESERVATION_RECONCILIATION_V1",
+  "created_utc": "2026-10-12T07:50:17.753245+00:00",
+  "activity_id": "w24-cure-setup-only-current10-20261012-001",
+  "status": "FAIL_PRESERVED_TERMINAL_CLEANUP_VERIFIED_PENDING_ROOT_AUDIT",
+  "tool_execution": {
+    "session_id": 11938,
+    "terminal_observed": true,
+    "exit_code": 2,
+    "tool_stdout_bytes_observed": 0,
+    "exclusive_capture": [
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-launch-capture-current10-001/launcher.stdout.bin",
+        "sha256": "7f9453dd6178724887e42faf4b0f32cccd85d5389352f51ead416007cd848ea1",
+        "bytes": 1780911
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-launch-capture-current10-001/launcher.stderr.bin",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      }
+    ]
+  },
+  "native_birth": {
+    "server_pid": 21794,
+    "server_birth": "Mon Oct 12 15:41:19 2026",
+    "server_port": 49974,
+    "worker_pid": 21919,
+    "worker_birth": "Mon Oct 12 15:41:23 2026",
+    "worker_port": 49991,
+    "descendant_pids": [
+      21863
+    ],
+    "engine_births": 1,
+    "engine_birth_epoch": 1791790879.0,
+    "budget_seconds": 900.0,
+    "cleanup_finished_utc": "2026-10-12T07:41:39.916917+00:00",
+    "elapsed_from_birth_to_cleanup_finished_seconds": 20.916917085647583,
+    "postcleanup_inventory_at_utc": "2026-10-12T15:41:40.029318+08:00",
+    "elapsed_from_birth_to_postcleanup_capture_seconds": 21.02931809425354,
+    "summary_end_time_precedes_cleanup": "at_utc_end is pre-cleanup; do not use for inclusive cleanup elapsed"
+  },
+  "failure": {
+    "summary_status": "FAIL_OR_INCOMPLETE",
+    "original_error": "AssertionError: saved/reopened MPH configuration readbacks differ: {\"matches\": false, \"missing_keys\": [], \"added_keys\": [\"mesh_volume_observation\"], \"changed_keys\": [], \"compared_keys\": [\"axis_entity_ids\", \"domain_readbacks\", \"external_boundary_entity_count\", \"external_boundary_readbacks\", \"external_strain_readbacks\", \"geometry_axisymmetric\", \"geometry_bounding_box\", \"geometry_dimension\", \"geometry_domain_count\", \"geometry_entity_counts\", \"geometry_length_unit\", \"heat_readbacks\", \"material_tags\", \"mesh_tags\", \"ode_field_readbacks\", \"physics_tags\", \"solid_quasistatic_readback\", \"solver_readbacks\", \"solver_submissions\", \"study_tags\", \"study_time_readbacks\"], \"mesh_volume\": {\"matches\": true, \"checks\": {\"both_present\": true, \"same_project\": true, \"same_raw_mesh_sha256\": true, \"same_domain_triangle_columns\": true, \"same_domain_volume_readbacks\": true, \"stages_are_build_then_reopen\": true}, \"build_raw_mesh_sha256\": \"d759184d2fce1ffb13d16aaaa28a1dd987d7f2add2f609c7536660e6a13487db\", \"reopen_raw_mesh_sha256\": \"d759184d2fce1ffb13d16aaaa28a1dd987d7f2add2f609c7536660e6a13487db\"}}",
+    "classification": "SOURCE_CONFIGURATION_COMPARISON_ADDED_MESH_VOLUME_OBSERVATION_KEY; NO_NATIVE_UNKNOWN",
+    "scientific_acceptance": "NOT_ACCEPTED",
+    "setup_acceptance": "FAIL_NOT_ACCEPTED",
+    "safe_retry": false,
+    "replay_policy": "Never relaunch this activity or reuse its requests; only a separate reviewed successor may be admitted"
+  },
+  "initial_mesh_observations": {
+    "scope": "Initial undeformed native built mesh only; not deformed cure-history science",
+    "raw_mesh_sha256_build": "d759184d2fce1ffb13d16aaaa28a1dd987d7f2add2f609c7536660e6a13487db",
+    "raw_mesh_sha256_reopen": "d759184d2fce1ffb13d16aaaa28a1dd987d7f2add2f609c7536660e6a13487db",
+    "same_raw_mesh_bytes": true,
+    "same_domain_values": true,
+    "native_counts": {
+      "element_counts": {
+        "edg": 128,
+        "tri": 660,
+        "vtx": 12
+      },
+      "element_types": [
+        "tri",
+        "edg",
+        "vtx"
+      ],
+      "mesh_num_elem_noarg": 660,
+      "triangle_count": 660,
+      "vertex_count": 380
+    },
+    "raw_shapes": {
+      "triangle_connectivity": [
+        3,
+        660
+      ],
+      "vertex_coordinates": [
+        2,
+        380
+      ],
+      "triangle_entity_count": 660
+    },
+    "four_domains": {
+      "adhesive": {
+        "entities": [
+          3
+        ],
+        "selection": "sel_adhesive",
+        "volume_m3": 1.2566370614359235e-12,
+        "expected_volume_m3": 1.25663706144e-12,
+        "relative_volume_error": 3.243999688281694e-12
+      },
+      "alumina": {
+        "entities": [
+          1
+        ],
+        "selection": "sel_alumina",
+        "volume_m3": 9.817477042468105e-11,
+        "expected_volume_m3": 9.81747704247e-11,
+        "relative_volume_error": 1.9299872894355881e-13
+      },
+      "fiber": {
+        "entities": [
+          4
+        ],
+        "selection": "sel_fiber",
+        "volume_m3": 6.1359231515425664e-12,
+        "expected_volume_m3": 6.13592315154e-12,
+        "relative_volume_error": 4.182516793001781e-13
+      },
+      "gold": {
+        "entities": [
+          2
+        ],
+        "selection": "sel_gold",
+        "volume_m3": 3.141592653589801e-13,
+        "expected_volume_m3": 3.14159265359e-13,
+        "relative_volume_error": 6.331793704483583e-14
+      }
+    },
+    "relative_tolerance": 1e-06,
+    "global_setup_acceptance": "FAIL_NOT_ACCEPTED",
+    "scientific_acceptance": "NOT_ACCEPTED"
+  },
+  "saved_template": {
+    "source_path": "/private/tmp/comsol-mcp-w24-cure-setup-current10-20261012-r1/project/science/cure_template.mph",
+    "preserved_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/private-control-store/work/project/science/cure_template.mph",
+    "sha256": "087adad618b298f27ce8cf4f754a4aa153ab40c275a2a208a56a8e35d6776fd4",
+    "bytes": 1033718,
+    "status": "NATIVE_CONFIGURED_TEMPLATE_SAVED_NOT_SOLVED"
+  },
+  "durable_private_work": {
+    "manifest_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/private-control-store/PRESERVATION_MANIFEST.json",
+    "manifest_sha256": "f7f18f7505be87b8fe022740731627c6622dcc666a75207d98de11871ecb0591",
+    "file_count": 49,
+    "bytes": 3387882,
+    "sqlite_checks": [
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/private-control-store/work/control/docs_index.sqlite3",
+        "sha256": "3eee15d4e2ced32ecd1e1263553a165693ee1e83cee103fdcfe4b44c7d81af0c",
+        "integrity_check": "ok",
+        "tables": [
+          "documents"
+        ],
+        "row_counts": {
+          "documents": 0
+        },
+        "status_counts": {},
+        "immutable_read_only": true,
+        "sidecars": {
+          "-wal": false,
+          "-shm": false
+        }
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/private-control-store/work/control/operations.sqlite3",
+        "sha256": "f7025dd2445adacf3323ce2b2d990eee3ebab4187e2bd934e38779ebd11204a0",
+        "integrity_check": "ok",
+        "tables": [
+          "artifacts",
+          "checkpoints",
+          "job_events",
+          "jobs",
+          "operations",
+          "projects",
+          "resume_claims",
+          "revisions",
+          "runtimes",
+          "schema_meta",
+          "sessions",
+          "sqlite_sequence",
+          "stage_attempts"
+        ],
+        "row_counts": {
+          "artifacts": 0,
+          "checkpoints": 0,
+          "job_events": 106,
+          "jobs": 9,
+          "operations": 9,
+          "projects": 1,
+          "resume_claims": 0,
+          "revisions": 2,
+          "runtimes": 1,
+          "schema_meta": 1,
+          "sessions": 1,
+          "sqlite_sequence": 1,
+          "stage_attempts": 0
+        },
+        "status_counts": {
+          "jobs": [
+            [
+              "SUCCEEDED",
+              9
+            ]
+          ],
+          "operations": [
+            [
+              "SUCCEEDED",
+              9
+            ]
+          ],
+          "stage_attempts": []
+        },
+        "immutable_read_only": true,
+        "sidecars": {
+          "-wal": false,
+          "-shm": false
+        }
+      }
+    ]
+  },
+  "durable_raw_evidence": [
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/direct_native_call_guard.json",
+      "sha256": "8668a8768c03bb1448cf6f9b4746ea79c72e44ee9890940385c61d7e1798a399",
+      "bytes": 313
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/configured_template_receipt.json",
+      "sha256": "057904159faf6e475230902148120396f1da75d86781b8699f01536b2a9e60d7",
+      "bytes": 12008
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/native_mesh_volume_build.json",
+      "sha256": "1d14db123122139544c024a56099d8eb3ea6f309cb4dc330275c7c18915c076a",
+      "bytes": 32191
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/pre_worker_listener.json",
+      "sha256": "03f03ee5ef82c66c1d4f2aec45560805255ef295d91b660576e4048bf7c188d3",
+      "bytes": 3061
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/summary.json",
+      "sha256": "7f9453dd6178724887e42faf4b0f32cccd85d5389352f51ead416007cd848ea1",
+      "bytes": 1780911
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/prebirth_inventory.json",
+      "sha256": "ddb4ac72c4cf5ca11fa08c9123090f3b8f6fb026887b09634c2f779da8de8c36",
+      "bytes": 1205
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/worker_ledger_reconciliation.json",
+      "sha256": "01e28e88053554376719328c99d996903889e3672f54ff278aa30e081f6b475d",
+      "bytes": 31290
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/native_expression_inventory_receipt.json",
+      "sha256": "1b25eaf84147f89c735bdf347eafed1cf0f26baab37fcb272687a47f7472c8db",
+      "bytes": 7574
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/exact_owned_cleanup_receipt.json",
+      "sha256": "567085e64e6ff48e46fc1ee17ca4a83339901e086832ca3864a2fb58a104bd2f",
+      "bytes": 498538
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/postcleanup_inventory.json",
+      "sha256": "628b1696a4e416af6d069af2203a2574bf80c95f265254df4418b9c361ef9db3",
+      "bytes": 1205
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/offline_javac.json",
+      "sha256": "95cae8d542f82ed90f065243da5b86648c172e66d191c35a8572ceea127b721b",
+      "bytes": 1428
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/server_birth.json",
+      "sha256": "d6c014d80753ab8ff5cef6df0f788a1260fd7ddee5c972455bffb4393e6c87d8",
+      "bytes": 5746
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/managed_server_connection.json",
+      "sha256": "ae3cf47032015d8bfe4db1d8f309ad9ff7e71f3f216d76fb47d8e7e74ba6c477",
+      "bytes": 1683
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/precleanup_job_inventory.json",
+      "sha256": "926eb14d08a53707eaac99ae90727ab2fb9b975fce34e56402cc8d62da660ecf",
+      "bytes": 1232997
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/events.jsonl",
+      "sha256": "2105a0025bdd65e0f6ab0422163e9e1f2e737bc2026ef85bb2031fe3a672b223",
+      "bytes": 16609
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/native_build_readback.json",
+      "sha256": "cf24dcdf38a7903014b921baf370f35b00e8f6b16a7ba45f1043a06e19a8d400",
+      "bytes": 191403
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/worker_connection.json",
+      "sha256": "6980a15fb0ea66518ab00ac2d7de318214590ac4474afd8641ddabc416eab6e7",
+      "bytes": 5690
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/template_reopen_binding.json",
+      "sha256": "207e6d06cf248970cfbcd849de7c293e94ce5807dc5e0a759c8293dcb34ad72f",
+      "bytes": 2182
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/model_created.json",
+      "sha256": "12f6ce0ccd4d5c71fe4b68a7e9932de8d50747be1934a18798304eefb52c2300",
+      "bytes": 1335
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/solid_equation_view_expression_inventory.json",
+      "sha256": "f217718fd1ea4d1173fd986aa724599c1e4043246a3264d85dc0703875b3246c",
+      "bytes": 374792
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/precleanup_worker_request_inventory.json",
+      "sha256": "7f5d9c3a859c0783c48cf9845820d7e287cb2152d6a8d2040dc87fbe3a80a6a6",
+      "bytes": 28794
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/prelaunch_inventory.json",
+      "sha256": "482653fb1c756ca14b402d7d4bb97984cd288cf8348bd7a0bd47f7e69c40d214",
+      "bytes": 1205
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/project_workspace_created_before_birth.json",
+      "sha256": "597ac42014fa5343cf8e8fe129de0176f7efacdbce245957e1953093c53a111c",
+      "bytes": 3099
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/native_mesh_volume_reopen.json",
+      "sha256": "49201afbae255121a20d24a888110d200c527579ebefb2a47ff593b335e561c4",
+      "bytes": 32192
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/private_shadow_receipt.json",
+      "sha256": "fe77fecaceefe522ce4c0cb98c5d89bffd494221291867dcd8e674f783226a51",
+      "bytes": 1256
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/python_runtime_preflight.json",
+      "sha256": "0fc27479fd60e252b00ed1f9e64adbf9fbdeda270cc5b0f2bdef4dd2bd915a60",
+      "bytes": 10765
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/freeze.json",
+      "sha256": "5c89fa99b3aeefca4fbb7264073c2b021ec266adf334fc74cd8fb430ae429ccc",
+      "bytes": 63696
+    }
+  ],
+  "worker_ledger": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/worker_ledger_reconciliation.json",
+    "sha256": "01e28e88053554376719328c99d996903889e3672f54ff278aa30e081f6b475d",
+    "status": "ALL_WORKER_REQUESTS_TERMINAL",
+    "checks": {
+      "all_submissions_observed_once": true,
+      "all_observed_workers_terminal": true,
+      "no_orphan_observations": true,
+      "no_ambiguous_worker_ids": true,
+      "no_queued_or_running_jobs": true,
+      "all_direct_native_calls_returned": true
+    },
+    "submitted_count": 44,
+    "observed_count": 44,
+    "unknown_jobs": [],
+    "active_jobs": []
+  },
+  "study_solver_submissions": 0,
+  "internal_solver_execution_count": "UNKNOWN_NOT_INFERRED_FROM_SETUP_ONLY_READBACK",
+  "cleanup": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/exact_owned_cleanup_receipt.json",
+    "sha256": "567085e64e6ff48e46fc1ee17ca4a83339901e086832ca3864a2fb58a104bd2f",
+    "status": "CLEANUP_VERIFIED_EXACT_OWNED_PIDS_AND_PORTS_ABSENT",
+    "fresh_executor_absence_receipt_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/executor-w24-current10-postcleanup-check-20261012-r1/RECEIPT.json",
+    "fresh_executor_absence_receipt_sha256": "1bf3067b0eab67c8fbcf83f55c8aac8d19abc76a81e46fa41d054901a6e11e11",
+    "fresh_status": "PASS_FRESH_GLOBAL_QUIESCENCE_AND_EXACT_OWNED_ABSENCE"
+  },
+  "root_audit": "PENDING"
+}

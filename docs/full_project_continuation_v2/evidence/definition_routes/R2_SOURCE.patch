@@ -1,0 +1,721 @@
+--- comsol_mcp/_g3_definition_validation.py.r1
++++ comsol_mcp/_g3_definition_validation.py.r2
+@@ -30,7 +30,17 @@
+   ``dstmap`` maps destination coordinates; ``srcframe`` identifies the source
+   mesh frame; with ``usesrcmap=off``, ``dstmap`` maps destination to source
+   coordinates; mesh-search success depends on the source selection and mesh.
+-  Therefore numeric map agreement at samples never proves source-mesh coverage.
++  The documented ``method``, ``exttol`` and ``usenan`` properties control
++  bounded search behavior. ``closest`` selects a nearest source point and is
++  documented as defined everywhere, with ``exttol`` unused. Bounded finite
++  samples report operator-defined counts, never mesh inclusion or global
++  coverage.
++* Programming Reference, ``model.cpl()`` syntax, chunk 16738, SHA-256
++  ``29f57502ca11c069bb5713dcbf83da23316e6af13759a00f4f07541a69a16a29``:
++  ``set("opname", ...)`` changes the coupling operator name, defaulting to
++  the node tag. The evaluator reads back ``opname`` and uses a component-
++  qualified expression so another component's same-named operator cannot be
++  selected accidentally.
+ * API ``GeomObjectSelection``, chunk 22884, SHA-256
+   ``9eae62b35183321a2ce50763b5ad71ed27fdda2530ec24f50280927a7301d3a0``:
+   documents geometry-object selection accessors and mutation methods.  The
+@@ -530,31 +540,64 @@
+     return result if math.isfinite(result) else None
+ 
+ 
++def _is_nonfinite_scalar(value: Any) -> bool:
++    if isinstance(value, bool):
++        return False
++    if isinstance(value, (int, float)):
++        return not math.isfinite(float(value))
++    return isinstance(value, str) and value.strip().casefold() in {
++        "nan", "+nan", "-nan", "infinity", "+infinity", "-infinity",
++        "inf", "+inf", "-inf",
++    }
++
++
++def _mapping_method_semantics(method: str, exttol: float, usenan: str) -> str:
++    if method == "closest":
++        return "COMSOL documents closest as defined everywhere by using the nearest source-selection point; exttol is unused. Finite samples do not prove source-mesh overlap."
++    if method == "usetol":
++        outside = "returns NaN" if usenan == "on" else "raises an evaluation error"
++        return f"COMSOL documents usetol as defined within the source selection or slightly outside by relative mesh tolerance exttol={exttol:g}; outside it {outside}."
++    return f"COMSOL documents walk as traversing the source mesh and warns against disconnected components; exttol={exttol:g}, usenan={usenan}. Bounded samples do not prove global coverage."
++
++
+ def _evaluate_mapping_operator(
+     worker: Any,
+     model_tag: str,
+     *,
++    component_tag: str,
+     operator_tag: str,
++    operator_name: str,
+     dstmap_count: int,
+     points: Sequence[Mapping[str, Any]],
+     evaluation: Mapping[str, Any],
+     absolute_tolerance: float,
+     relative_tolerance: float,
++    srcframe: str,
++    method: str,
++    exttol: float,
++    usenan: str,
+ ) -> dict[str, Any]:
+-    """Evaluate cpltag(x/y/z) through the existing ephemeral Interp adapter.
++    """Evaluate the component-scoped coupling through the Interp adapter.
+ 
+     A response is a sampled operator witness only.  It cannot establish that
+-    every destination point maps into the source mesh.
++    every destination point maps into the source mesh. Coordinate residuals
++    are compared only for spatial source frames; mesh/material coordinates
++    remain UNVERIFIED without a verified frame conversion.
+     """
+-    if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", operator_tag) is None:
+-        raise ExecutionContractError("API_UNSUPPORTED", "GeneralExtrusion tag is not a safe coupling-expression identifier")
++    identifier = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
++    if identifier.fullmatch(component_tag) is None:
++        raise ExecutionContractError("API_UNSUPPORTED", "component tag is not a safe expression identifier")
++    if identifier.fullmatch(operator_tag) is None:
++        raise ExecutionContractError("API_UNSUPPORTED", "GeneralExtrusion tag is not a safe coupling-node identifier")
++    if identifier.fullmatch(operator_name) is None:
++        raise ExecutionContractError("API_UNSUPPORTED", "GeneralExtrusion.opname is not a safe operator-expression identifier")
+     for index, point in enumerate(points):
+         if point["destination_unit"] != evaluation["coordinate_unit"]:
+             raise ExecutionContractError("INVALID_REQUEST", f"test_points[{index}].destination_unit must match checks.evaluation.coordinate_unit")
+         if point["source_unit"] != evaluation["source_unit"]:
+             raise ExecutionContractError("INVALID_REQUEST", f"test_points[{index}].source_unit must match checks.evaluation.source_unit")
+ 
+-    expressions = [f"{operator_tag}({axis})" for axis in ("x", "y", "z")[:dstmap_count]]
++    expressions = [f"root.{component_tag}.{operator_name}({axis})" for axis in ("x", "y", "z")[:dstmap_count]]
+     from ._g3_results import result_at_points
+ 
+     response = result_at_points(worker, model_tag, {
+@@ -569,6 +612,26 @@
+     })
+     cleanup = response.get("cleanup") if isinstance(response, Mapping) else None
+     status = response.get("status") if isinstance(response, Mapping) else None
++    coverage_base = {
++        "scope": "requested_test_points_only",
++        "requested_point_count": len(points),
++        "operator_defined_finite_count": 0,
++        "nan_or_nonfinite_count": 0,
++        "point_error_count": 0,
++        "invalid_result_count": 0,
++        "undefined_or_error_count": None,
++        "undefined_or_error_fraction": None,
++        "unclassified_point_count": len(points),
++        "evaluation_error_batch_count": 0,
++        "finite_fraction": None,
++        "method": method,
++        "exttol": exttol,
++        "usenan": usenan,
++        "method_semantics": _mapping_method_semantics(method, exttol, usenan),
++        "status": "UNVERIFIED",
++        "source_mesh_inclusion": "NOT_INFERRED",
++        "global_source_mesh_coverage": "UNVERIFIED",
++    }
+     if not isinstance(cleanup, Mapping) or cleanup.get("cleanup_failed") or cleanup.get("removed") is not True:
+         return {
+             "status": "EXECUTION_STATE_UNKNOWN",
+@@ -578,73 +641,80 @@
+             "reason": "ephemeral result.Interp cleanup was not confirmed",
+             "partial_change": bool(isinstance(cleanup, Mapping) and cleanup.get("created")),
+             "execution_state_unknown": True,
++            "operator_coverage": coverage_base,
+         }
+     if not isinstance(status, Mapping) or status.get("ok") is not True:
++        engine_error = (status.get("engine_error") if isinstance(status, Mapping) else None)
++        coverage_base.update({
++            "evaluation_error_batch_count": 1,
++            "evaluation_error": engine_error or "result.at_points did not report a complete successful evaluation",
++            "reason": "batch failure does not identify which requested points were undefined",
++        })
+         return {
+             "status": "UNVERIFIED",
+             "expressions": expressions,
+             "cleanup": cleanup,
+             "engine_status": status,
+-            "reason": (status.get("engine_error") if isinstance(status, Mapping) else None)
+-                      or "result.at_points did not report a complete successful evaluation",
++            "reason": engine_error or "result.at_points did not report a complete successful evaluation",
+             "partial_change": False,
+             "execution_state_unknown": False,
++            "operator_coverage": coverage_base,
+         }
+ 
+     if response.get("dataset") != evaluation["solution"]["dataset"] or response.get("solution") != evaluation["solution"]["solution"]:
+         return {"status": "UNVERIFIED", "expressions": expressions, "cleanup": cleanup,
+                 "reason": "result.at_points did not bind the requested dataset/solution", "partial_change": False,
+-                "execution_state_unknown": False}
++                "execution_state_unknown": False, "operator_coverage": coverage_base}
+     if response.get("frame") != evaluation["coordinate_frame"]:
+         return {"status": "UNVERIFIED", "expressions": expressions, "cleanup": cleanup,
+                 "reason": "result.at_points response frame differs from the explicit request", "partial_change": False,
+-                "execution_state_unknown": False}
++                "execution_state_unknown": False, "operator_coverage": coverage_base}
+     if response.get("coordinate_unit") != evaluation["coordinate_unit"]:
+         return {"status": "UNVERIFIED", "expressions": expressions, "cleanup": cleanup,
+                 "reason": "result.at_points response coordinate unit differs from the explicit request", "partial_change": False,
+-                "execution_state_unknown": False}
++                "execution_state_unknown": False, "operator_coverage": coverage_base}
+     if not isinstance(response.get("feature_readback"), Mapping) or response["feature_readback"].get("data_status") != "VERIFIED" or response["feature_readback"].get("data") != evaluation["solution"]["dataset"]:
+         return {"status": "UNVERIFIED", "expressions": expressions, "cleanup": cleanup,
+                 "reason": "ephemeral Interp dataset property was not read back exactly", "partial_change": False,
+-                "execution_state_unknown": False}
++                "execution_state_unknown": False, "operator_coverage": coverage_base}
+     if not isinstance(response.get("dataset_binding"), Mapping):
+         return {"status": "UNVERIFIED", "expressions": expressions, "cleanup": cleanup,
+                 "reason": "dataset/solution resolver did not publish a binding witness", "partial_change": False,
+-                "execution_state_unknown": False}
++                "execution_state_unknown": False, "operator_coverage": coverage_base}
+     dataset_binding = response["dataset_binding"]
+     if dataset_binding.get("binding_complete") is not True or dataset_binding.get("solution") != evaluation["solution"]["solution"]:
+         return {"status": "UNVERIFIED", "expressions": expressions, "cleanup": cleanup,
+                 "dataset_binding": dict(dataset_binding),
+                 "reason": "dataset binding is incomplete or points to a different solution", "partial_change": False,
+-                "execution_state_unknown": False}
++                "execution_state_unknown": False, "operator_coverage": coverage_base}
+     coordinate_readback = response.get("coordinate_readback")
+     if not isinstance(coordinate_readback, Mapping) or coordinate_readback.get("status") != "VERIFIED" or not isinstance(coordinate_readback.get("unit"), str):
+         return {"status": "UNVERIFIED", "expressions": expressions, "cleanup": cleanup,
+                 "coordinate_readback": coordinate_readback,
+                 "reason": "spatial coordinates or geometry length unit were not read back", "partial_change": False,
+-                "execution_state_unknown": False}
++                "execution_state_unknown": False, "operator_coverage": coverage_base}
+ 
+     field = response.get("field_array")
+     if not isinstance(field, Mapping) or field.get("axes") != ["expression", "outer", "inner", "point"]:
+         return {"status": "UNVERIFIED", "expressions": expressions, "cleanup": cleanup,
+                 "reason": "result.at_points did not return the canonical bound FieldArray", "partial_change": False,
+-                "execution_state_unknown": False}
++                "execution_state_unknown": False, "operator_coverage": coverage_base}
+     shape = field.get("shape")
+     values = field.get("values")
+     if shape != [dstmap_count, 1, 1, len(points)] or not isinstance(values, Sequence) or isinstance(values, (str, bytes)) or len(values) != dstmap_count:
+         return {"status": "UNVERIFIED", "expressions": expressions, "cleanup": cleanup,
+                 "shape": shape, "reason": "FieldArray shape is not one selected solution pair per expression and test point",
+-                "partial_change": False, "execution_state_unknown": False}
++                "partial_change": False, "execution_state_unknown": False, "operator_coverage": coverage_base}
+     coords = field.get("coords")
+     if not isinstance(coords, Mapping) or coords.get("outer") != [evaluation["solution"]["outer"]] or coords.get("inner") != [evaluation["solution"]["inner"]]:
+         return {"status": "UNVERIFIED", "expressions": expressions, "cleanup": cleanup,
+                 "reason": "FieldArray selected outer/inner coordinates do not match the explicit SolutionSpec",
+-                "partial_change": False, "execution_state_unknown": False}
++                "partial_change": False, "execution_state_unknown": False, "operator_coverage": coverage_base}
+     metadata = field.get("metadata")
+     if not isinstance(metadata, Mapping) or metadata.get("pair_mapping_complete") is not True:
+         return {"status": "UNVERIFIED", "expressions": expressions, "cleanup": cleanup,
+                 "reason": "SolutionInfo pair mapping is incomplete", "partial_change": False,
+-                "execution_state_unknown": False}
++                "execution_state_unknown": False, "operator_coverage": coverage_base}
+     pairs = metadata.get("solution_pairs")
+     if not isinstance(pairs, Sequence) or isinstance(pairs, (str, bytes)) or not any(
+         isinstance(pair, Mapping) and pair.get("outer") == evaluation["solution"]["outer"]
+@@ -652,18 +722,24 @@
+     ):
+         return {"status": "UNVERIFIED", "expressions": expressions, "cleanup": cleanup,
+                 "reason": "requested outer/inner pair is absent from SolutionInfo readback", "partial_change": False,
+-                "execution_state_unknown": False}
++                "execution_state_unknown": False, "operator_coverage": coverage_base}
+     units = field.get("units")
+     expression_units = units.get("expression") if isinstance(units, Mapping) else None
+     if not isinstance(expression_units, Mapping) or any(expression_units.get(expr) != evaluation["source_unit"] for expr in expressions):
+         return {"status": "UNVERIFIED", "expressions": expressions, "cleanup": cleanup,
+                 "units": expression_units, "reason": "actual coupling-expression units are unavailable or differ from the requested source unit",
+-                "partial_change": False, "execution_state_unknown": False}
++                "partial_change": False, "execution_state_unknown": False, "operator_coverage": coverage_base}
+ 
+     sampled: list[dict[str, Any]] = []
++    finite_count = 0
++    nonfinite_count = 0
++    point_error_count = 0
++    invalid_result_count = 0
+     for point_index, point in enumerate(points):
+         actual_values: list[float] = []
+         shape_ok = True
++        had_nonfinite = False
++        had_point_error = False
+         for expr_index in range(dstmap_count):
+             try:
+                 raw = values[expr_index][0][0][point_index]
+@@ -673,11 +749,34 @@
+             number = _numeric_finite(raw)
+             if number is None:
+                 shape_ok = False
+-                break
++                if _is_nonfinite_scalar(raw):
++                    had_nonfinite = True
++                elif isinstance(raw, str) and any(token in raw.casefold() for token in ("error", "undefined", "domain")):
++                    had_point_error = True
++                continue
+             actual_values.append(number)
+         if not shape_ok:
+-            sampled.append({"index": point_index, "status": "DOMAIN_ERROR_OR_INVALID_VALUE",
+-                            "reason": "operator evaluation did not return finite real source coordinates"})
++            if had_nonfinite:
++                nonfinite_count += 1
++                sampled.append({"index": point_index, "status": "DOMAIN_ERROR_OR_INVALID_VALUE",
++                                "reason": "operator evaluation returned NaN or another nonfinite value"})
++            elif had_point_error:
++                point_error_count += 1
++                sampled.append({"index": point_index, "status": "OPERATOR_ERROR",
++                                "reason": "operator evaluation returned a point-specific error or undefined marker"})
++            else:
++                invalid_result_count += 1
++                sampled.append({"index": point_index, "status": "OPERATOR_RESULT_INVALID",
++                                "reason": "operator evaluation did not return a finite numeric coordinate for each map axis"})
++            continue
++        finite_count += 1
++        if srcframe != "spatial":
++            sampled.append({"index": point_index, "destination": list(point["destination"]),
++                            "destination_unit": point["destination_unit"],
++                            "mapped_source": actual_values, "source_frame": srcframe,
++                            "source_unit": evaluation["source_unit"],
++                            "status": "FRAME_CONVERSION_UNVERIFIED",
++                            "reason": "spatial result.at_points coordinates are not proven equivalent to GeneralExtrusion mesh/material frame coordinates"})
+             continue
+         residuals = [actual - expected for actual, expected in zip(actual_values, point["expected_source"])]
+         limits = [absolute_tolerance + relative_tolerance * abs(expected) for expected in point["expected_source"]]
+@@ -688,8 +787,19 @@
+                         "expected_source": list(point["expected_source"]), "residual": residuals,
+                         "tolerance": limits, "expressions": expressions,
+                         "status": "PASS" if within else "FAIL"})
++    coverage_base.update({
++        "operator_defined_finite_count": finite_count,
++        "nan_or_nonfinite_count": nonfinite_count,
++        "point_error_count": point_error_count,
++        "invalid_result_count": invalid_result_count,
++        "undefined_or_error_count": nonfinite_count + point_error_count + invalid_result_count,
++        "undefined_or_error_fraction": (nonfinite_count + point_error_count + invalid_result_count) / len(points) if points else None,
++        "unclassified_point_count": 0,
++        "finite_fraction": finite_count / len(points) if points else None,
++        "status": "OBSERVED",
++    })
+     sample_status = "PASS" if sampled and all(row.get("status") == "PASS" for row in sampled) else (
+-        "FAIL" if any(row.get("status") in {"FAIL", "DOMAIN_ERROR_OR_INVALID_VALUE"} for row in sampled) else "UNVERIFIED"
++        "FAIL" if any(row.get("status") in {"FAIL", "DOMAIN_ERROR_OR_INVALID_VALUE", "OPERATOR_ERROR", "OPERATOR_RESULT_INVALID"} for row in sampled) else "UNVERIFIED"
+     )
+     return {
+         "status": sample_status,
+@@ -705,7 +815,9 @@
+         "cleanup": dict(cleanup),
+         "partial_change": False,
+         "execution_state_unknown": False,
++        "operator_coverage": coverage_base,
+         "source_mesh_coverage": "UNVERIFIED",
++        "source_coordinate_frame_comparison": "VERIFIED_SPATIAL" if srcframe == "spatial" else "UNVERIFIED_FRAME_CONVERSION",
+         "destination_frame_evidence": "result.at_points accepted only spatial and verified its coordinate readback",
+     }
+ 
+@@ -714,16 +826,16 @@
+     """Check sampled GeneralExtrusion coordinates, preferably through COMSOL.
+ 
+     The optional arithmetic preview is a separate partial subcheck.  A COMSOL
+-    operator sample requires an explicit dataset, solution pair, spatial
+-    coordinate frame and units, then uses result.at_points' ephemeral Interp
+-    cleanup/readback path to evaluate ``cpltag(x/y/z)``.  Even a successful
+-    sample set cannot establish global source-mesh coverage or a documented
+-    destination-frame property.
++    optional operator samples require an explicit dataset, solution pair,
++    spatial destination-coordinate frame and units, then use result.at_points'
++    ephemeral Interp cleanup/readback path.  The operator expression uses the
++    read-back ``opname`` qualified to the component from the NodePath. Requested
++    samples can pass while global source-mesh coverage remains UNVERIFIED.
+     """
+-    args = operation_arguments(arguments, ("path", "test_points", "checks"), ("path", "test_points"))
+-    points_raw = args["test_points"]
+-    if not isinstance(points_raw, Sequence) or isinstance(points_raw, (str, bytes, Mapping)) or not 1 <= len(points_raw) <= 32:
+-        raise ExecutionContractError("INVALID_REQUEST", "test_points must contain 1..32 explicit coordinate comparisons")
++    args = operation_arguments(arguments, ("path", "test_points", "checks"), ("path",))
++    points_raw = args.get("test_points", [])
++    if not isinstance(points_raw, Sequence) or isinstance(points_raw, (str, bytes, Mapping)) or len(points_raw) > 32:
++        raise ExecutionContractError("INVALID_REQUEST", "test_points must be an array with at most 32 explicit coordinate comparisons")
+     checks = require_mapping(args.get("checks", {}), "checks")
+     reject_unknown_keys(checks, ("absolute_tolerance", "relative_tolerance", "evaluation"), "checks")
+     abs_tol = _strict_float(checks.get("absolute_tolerance", 0.0), "checks.absolute_tolerance")
+@@ -753,6 +865,18 @@
+         dstmap.pop()
+     if not 1 <= len(dstmap) <= 3 or any(not expr.strip() for expr in dstmap):
+         raise ExecutionContractError("API_UNSUPPORTED", "GeneralExtrusion.dstmap must contain 1..3 nonempty map expressions")
++    operator_name = _read_property(node, "opname")["value"]
++    if not isinstance(operator_name, str) or re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", operator_name) is None:
++        raise ExecutionContractError("API_UNSUPPORTED", "GeneralExtrusion.opname must read back as a safe nonlocal-operator identifier")
++    search_method = _read_property(node, "method")["value"]
++    if search_method not in {"usetol", "closest", "walk"}:
++        raise ExecutionContractError("API_UNSUPPORTED", "GeneralExtrusion.method is outside the documented search vocabulary")
++    exttol = _strict_float(_read_property(node, "exttol")["value"], "GeneralExtrusion.exttol")
++    if exttol < 0:
++        raise ExecutionContractError("API_UNSUPPORTED", "GeneralExtrusion.exttol readback is negative")
++    usenan = _read_property(node, "usenan")["value"]
++    if usenan not in {"on", "off"}:
++        raise ExecutionContractError("API_UNSUPPORTED", "GeneralExtrusion.usenan is outside the documented on/off vocabulary")
+     trees: list[ast.Expression] | None = None
+     map_parse_error: str | None = None
+     try:
+@@ -765,9 +889,9 @@
+ 
+     normalized = [_validate_mapping_point(point, index, len(dstmap)) for index, point in enumerate(points_raw)]
+     dimensions = {len(point["destination"]) for point in normalized}
+-    if len(dimensions) != 1:
++    if len(dimensions) > 1:
+         raise ExecutionContractError("INVALID_REQUEST", "all test_points must have the same destination coordinate dimension")
+-    if evaluation is not None and any(
++    if evaluation is not None and normalized and any(
+         point["destination_unit"] != evaluation["coordinate_unit"] or point["source_unit"] != evaluation["source_unit"]
+         for point in normalized
+     ):
+@@ -782,7 +906,7 @@
+                       "tag": named_probe["value"] if named_probe["ok"] else None}
+ 
+     arithmetic_preview: list[dict[str, Any]] = []
+-    if trees is not None:
++    if trees is not None and normalized:
+         for index, point in enumerate(normalized):
+             try:
+                 actual = [_eval_safe_map(tree, point["destination"]) for tree in trees]
+@@ -796,22 +920,35 @@
+                 arithmetic_preview.append({"index": index, "mapped_source": None,
+                                            "expected_source": point["expected_source"], "status": "UNDEFINED_AT_SAMPLE",
+                                            "error": {"code": exc.code, "message": str(exc)}})
++    component_segments = [segment for segment in path["segments"] if segment.get("collection") == "component"]
++    if len(component_segments) != 1 or not isinstance(component_segments[0].get("tag"), str):
++        raise ExecutionContractError("INVALID_NODE_PATH", "definition.mapping_validate requires exactly one owning component in its NodePath")
++    component_tag = component_segments[0]["tag"]
+     operator_result = None
+-    if evaluation is not None:
++    if evaluation is not None and normalized:
+         operator_result = _evaluate_mapping_operator(
+-            worker, model_tag, operator_tag=path["segments"][-1]["tag"], dstmap_count=len(dstmap),
+-            points=normalized, evaluation=evaluation, absolute_tolerance=abs_tol, relative_tolerance=rel_tol,
++            worker, model_tag, component_tag=component_tag,
++            operator_tag=path["segments"][-1]["tag"], operator_name=operator_name,
++            dstmap_count=len(dstmap), points=normalized, evaluation=evaluation,
++            absolute_tolerance=abs_tol, relative_tolerance=rel_tol, srcframe=srcframe,
++            method=search_method, exttol=exttol, usenan=usenan,
+         )
+     operator_ok = isinstance(operator_result, Mapping) and operator_result.get("status") == "PASS"
+     operator_failed = isinstance(operator_result, Mapping) and operator_result.get("status") == "FAIL"
+     unknown_execution = isinstance(operator_result, Mapping) and operator_result.get("execution_state_unknown") is True
++    partial_change = bool(isinstance(operator_result, Mapping) and operator_result.get("partial_change") is True)
++    execution_state_unknown = bool(isinstance(operator_result, Mapping) and operator_result.get("execution_state_unknown") is True)
+     status = "EXECUTION_STATE_UNKNOWN" if unknown_execution else (
+-        "VALIDATION_FAILED" if operator_failed else "PARTIAL_UNVERIFIED"
++        "VALIDATION_FAILED" if operator_failed else ("SAMPLED" if operator_ok else "PARTIAL_UNVERIFIED")
+     )
+     return {
+         "schema_version": "comsol-mcp.definition-mapping-validate/1.0.0",
+         "path": path,
+         "coupling_type": type_id,
++        "coupling_operator": {"tag": path["segments"][-1]["tag"], "opname": operator_name,
++                              "expression_scope": f"root.{component_tag}"},
++        "search": {"method": search_method, "exttol": exttol, "usenan": usenan,
++                   "bounded_semantics": _mapping_method_semantics(search_method, exttol, usenan)},
+         "source_frame": {"value": srcframe, "status": "OBSERVED"},
+         "destination_frame": {"value": None, "status": "NO_PROPERTY; EVALUATION_FRAME_BOUND" if evaluation is not None else "UNOBSERVED",
+                                "evaluation_frame": evaluation["coordinate_frame"] if evaluation is not None else None,
+@@ -822,19 +959,31 @@
+                                        "error": map_parse_error,
+                                        "description": "Python subset parses read-back map text only; never authoritative COMSOL evaluation"}},
+         "arithmetic_preview_points": arithmetic_preview,
+-        "operator_evaluation": operator_result or {"status": "NOT_RUN", "reason": "explicit checks.evaluation SolutionSpec/frame/units were not supplied"},
++        "operator_evaluation": operator_result or {"status": "NOT_RUN", "reason": (
++            "test_points were omitted or empty; bounded samples were not requested" if not normalized else
++            "explicit checks.evaluation SolutionSpec/frame/units were not supplied")},
+         "checks": {"absolute_tolerance": abs_tol, "relative_tolerance": rel_tol,
+-                   "arithmetic_preview_match": ("PASS" if arithmetic_preview and all(row["status"] == "PASS" for row in arithmetic_preview)
++                   "arithmetic_preview_match": ("NOT_RUN" if not normalized else "PASS" if arithmetic_preview and all(row["status"] == "PASS" for row in arithmetic_preview)
+                                                  else ("FAIL" if any(row["status"] == "FAIL" for row in arithmetic_preview)
+                                                        else "UNVERIFIED")),
+-                   "sampled_operator_values_match": "PASS" if operator_ok else ("FAIL" if operator_failed else "UNVERIFIED"),
++                   "sampled_operator_values_match": "PASS" if operator_ok else ("FAIL" if operator_failed else ("NOT_RUN" if not normalized else "UNVERIFIED")),
++                   "operator_coverage": (operator_result.get("operator_coverage") if isinstance(operator_result, Mapping) else {
++                       "status": "NOT_RUN" if not normalized else "UNVERIFIED",
++                       "scope": "requested_test_points_only", "requested_point_count": len(normalized),
++                       "operator_defined_finite_count": None, "nan_or_nonfinite_count": None,
++                       "point_error_count": None, "invalid_result_count": None,
++                       "undefined_or_error_count": None, "undefined_or_error_fraction": None,
++                       "unclassified_point_count": len(normalized), "evaluation_error_batch_count": 0,
++                       "finite_fraction": None, "method": search_method, "exttol": exttol,
++                       "usenan": usenan, "method_semantics": _mapping_method_semantics(search_method, exttol, usenan),
++                       "source_mesh_inclusion": "NOT_INFERRED", "global_source_mesh_coverage": "UNVERIFIED"}),
+                    "source_mesh_coverage": "UNVERIFIED",
+                    "overall_acceptance": "PARTIAL_UNVERIFIED"},
+-        "ok": False,
++        "ok": bool(operator_ok),
+         "sampled_operator_values_ok": operator_ok,
+         "status": status,
+-        "partial_change": False,
+-        "execution_state_unknown": False,
++        "partial_change": partial_change,
++        "execution_state_unknown": execution_state_unknown,
+         "limits": ["A finite coordinate map comparison does not prove source-mesh mapping coverage.",
+                    "Python arithmetic preview is not COMSOL operator evaluation and cannot establish the mapping contract.",
+                    "GeneralExtrusion usesrcmap=on inversion is unsupported.",
+--- tests/test_g3_definition_validation.py.r1
++++ tests/test_g3_definition_validation.py.r2
+@@ -43,9 +43,14 @@
+ 
+ 
+ class _GeneralExtrusion:
+-    def __init__(self, *, srcframe="spatial", dstmap=("x+1", "y-0.5", "z")):
++    def __init__(self, *, srcframe="spatial", dstmap=("x+1", "y-0.5", "z"),
++                 opname="gen1", method="usetol", exttol=0.3, usenan="off"):
+         self.srcframe = srcframe
+         self.dstmap = list(dstmap)
++        self.opname = opname
++        self.method = method
++        self.exttol = exttol
++        self.usenan = usenan
+         self._selection = _NamedSelection()
+ 
+     def getType(self):
+@@ -115,34 +120,43 @@
+ 
+ 
+ class _Model:
+-    def __init__(self, component=None):
+-        self._component = component or _Component()
++    def __init__(self, component=None, other_component=None):
++        self._components = {"comp1": component or _Component()}
++        if other_component is not None:
++            self._components["comp2"] = other_component
+ 
+     def component(self, tag):
+-        if tag != "comp1":
+-            raise KeyError(tag)
+-        return self._component
+-
+-
+-def _mapping_args(*, evaluation=None, test_points=None, checks=None):
+-    return {
++        return self._components[tag]
++
++
++_DEFAULT_TEST_POINTS = object()
++
++
++def _mapping_args(*, evaluation=None, test_points=_DEFAULT_TEST_POINTS, checks=None):
++    args = {
+         "path": {"segments": [
+             {"collection": "component", "tag": "comp1"},
+             {"collection": "cpl", "tag": "gen1"},
+         ]},
+-        "test_points": test_points or [{
++        "checks": {"evaluation": evaluation, **(checks or {})},
++    }
++    if test_points is _DEFAULT_TEST_POINTS:
++        test_points = [{
+             "destination": [1.0, 2.0, 3.0],
+             "destination_unit": "m",
+             "expected_source": [2.0, 1.5, 3.0],
+             "source_unit": "m",
+-        }],
+-        "checks": {"evaluation": evaluation, **(checks or {})},
+-    }
++        }]
++    if test_points is not None:
++        args["test_points"] = test_points
++    return args
+ 
+ 
+ def _patch_coupling_properties(monkeypatch):
+     def read(node, name):
+-        props = {"usesrcmap": "off", "srcframe": node.srcframe, "dstmap": node.dstmap}
++        props = {"usesrcmap": "off", "srcframe": node.srcframe, "dstmap": node.dstmap,
++                 "opname": node.opname, "method": node.method,
++                 "exttol": node.exttol, "usenan": node.usenan}
+         return {"ok": True, "value": props[name]}
+ 
+     monkeypatch.setattr(validation, "_read_property", read)
+@@ -224,9 +238,9 @@
+     assert result["status"] == "PARTIAL_UNVERIFIED"
+ 
+ 
+-def test_mapping_calls_real_at_points_contract_with_explicit_binding_and_units(monkeypatch):
+-    _patch_coupling_properties(monkeypatch)
+-    worker = _Worker(_Model(_Component(coupling=_GeneralExtrusion(srcframe="mesh"))))
++def test_mapping_calls_real_at_points_contract_with_explicit_binding_and_spatial_units(monkeypatch):
++    _patch_coupling_properties(monkeypatch)
++    worker = _Worker(_Model(_Component(coupling=_GeneralExtrusion(srcframe="spatial"))))
+     captured = {}
+ 
+     def fake_at_points(_worker, _model_tag, arguments):
+@@ -236,24 +250,155 @@
+     monkeypatch.setattr("comsol_mcp._g3_results.result_at_points", fake_at_points)
+     result = validation.definition_mapping_validate(worker, "m", _mapping_args(evaluation=_evaluation()))
+     assert captured["spec"] == {
+-        "expressions": ["gen1(x)", "gen1(y)", "gen1(z)"],
++        "expressions": ["root.comp1.gen1(x)", "root.comp1.gen1(y)", "root.comp1.gen1(z)"],
+         "solution": {"dataset": "dset1", "solution": "sol1", "outer": 2, "inner": 4},
+         "complex_mode": "real",
+     }
+     assert captured["points"] == [[1.0, 2.0, 3.0]]
+     assert captured["coordinate_unit"] == "m"
+     assert captured["frame"] == "spatial"
+-    assert result["source_frame"]["value"] == "mesh"
++    assert result["source_frame"]["value"] == "spatial"
+     assert result["operator_evaluation"]["status"] == "PASS"
+     assert result["checks"]["sampled_operator_values_match"] == "PASS"
+     assert result["sampled_operator_values_ok"] is True
++    assert result["checks"]["operator_coverage"]["operator_defined_finite_count"] == 1
++    assert result["checks"]["operator_coverage"]["finite_fraction"] == 1.0
+     assert result["checks"]["source_mesh_coverage"] == "UNVERIFIED"
+-    assert result["ok"] is False
+-    assert result["status"] == "PARTIAL_UNVERIFIED"
++    assert result["checks"]["overall_acceptance"] == "PARTIAL_UNVERIFIED"
++    assert result["ok"] is True
++    assert result["status"] == "SAMPLED"
++
++
++@pytest.mark.parametrize("srcframe", ["mesh", "material"])
++def test_mapping_does_not_compare_mesh_or_material_coordinates_as_spatial(monkeypatch, srcframe):
++    _patch_coupling_properties(monkeypatch)
++    worker = _Worker(_Model(_Component(coupling=_GeneralExtrusion(srcframe=srcframe))))
++    captured = {}
++
++    def fake_at_points(_worker, _model_tag, arguments):
++        captured.update(deepcopy(arguments))
++        return _operator_response(arguments)
++
++    monkeypatch.setattr("comsol_mcp._g3_results.result_at_points", fake_at_points)
++    result = validation.definition_mapping_validate(worker, "m", _mapping_args(evaluation=_evaluation()))
++    assert captured["spec"]["expressions"] == [
++        "root.comp1.gen1(x)", "root.comp1.gen1(y)", "root.comp1.gen1(z)"
++    ]
++    assert result["operator_evaluation"]["status"] == "UNVERIFIED"
++    assert result["operator_evaluation"]["test_points"][0]["status"] == "FRAME_CONVERSION_UNVERIFIED"
++    assert "residual" not in result["operator_evaluation"]["test_points"][0]
++    assert result["operator_evaluation"]["source_coordinate_frame_comparison"] == "UNVERIFIED_FRAME_CONVERSION"
++    assert result["operator_evaluation"]["operator_coverage"]["operator_defined_finite_count"] == 1
++    assert result["checks"]["sampled_operator_values_match"] == "UNVERIFIED"
++    assert result["ok"] is False
++
++
++def test_mapping_uses_readback_opname_and_component_scope_for_duplicate_operator_names(monkeypatch):
++    _patch_coupling_properties(monkeypatch)
++    comp1 = _Component(coupling=_GeneralExtrusion(opname="map_src"))
++    comp2 = _Component(coupling=_GeneralExtrusion(opname="map_src"))
++    worker = _Worker(_Model(comp1, comp2))
++    captured = {}
++
++    def fake_at_points(_worker, _model_tag, arguments):
++        captured.update(deepcopy(arguments))
++        return _operator_response(arguments)
++
++    monkeypatch.setattr("comsol_mcp._g3_results.result_at_points", fake_at_points)
++    result = validation.definition_mapping_validate(worker, "m", _mapping_args(evaluation=_evaluation()))
++    assert captured["spec"]["expressions"] == [
++        "root.comp1.map_src(x)", "root.comp1.map_src(y)", "root.comp1.map_src(z)"
++    ]
++    assert all("gen1(" not in expression for expression in captured["spec"]["expressions"])
++    assert all("root.comp2." not in expression for expression in captured["spec"]["expressions"])
++    assert result["coupling_operator"] == {"tag": "gen1", "opname": "map_src", "expression_scope": "root.comp1"}
++    assert result["ok"] is True
++
++
++def test_mapping_path_only_observes_metadata_without_requesting_samples(monkeypatch):
++    _patch_coupling_properties(monkeypatch)
++
++    def unexpected_at_points(*_args):
++        pytest.fail("result_at_points must not run when optional test_points are omitted")
++
++    monkeypatch.setattr("comsol_mcp._g3_results.result_at_points", unexpected_at_points)
++    result = validation.definition_mapping_validate(_Worker(_Model()), "m", _mapping_args(test_points=None))
++    assert result["source_frame"] == {"value": "spatial", "status": "OBSERVED"}
++    assert result["coupling_operator"]["opname"] == "gen1"
++    assert result["operator_evaluation"]["status"] == "NOT_RUN"
++    assert result["checks"]["arithmetic_preview_match"] == "NOT_RUN"
++    assert result["checks"]["sampled_operator_values_match"] == "NOT_RUN"
++    assert result["checks"]["operator_coverage"]["status"] == "NOT_RUN"
++    assert result["checks"]["operator_coverage"]["global_source_mesh_coverage"] == "UNVERIFIED"
++    assert result["ok"] is False
++
++
++def test_mapping_reports_bounded_search_coverage_and_closest_semantics(monkeypatch):
++    _patch_coupling_properties(monkeypatch)
++    coupling = _GeneralExtrusion(method="closest", exttol=0.75, usenan="on")
++    worker = _Worker(_Model(_Component(coupling=coupling)))
++    monkeypatch.setattr("comsol_mcp._g3_results.result_at_points", lambda _w, _m, args: _operator_response(args))
++    result = validation.definition_mapping_validate(worker, "m", _mapping_args(evaluation=_evaluation()))
++    coverage = result["checks"]["operator_coverage"]
++    assert coverage["scope"] == "requested_test_points_only"
++    assert coverage["operator_defined_finite_count"] == 1
++    assert coverage["nan_or_nonfinite_count"] == 0
++    assert coverage["point_error_count"] == 0
++    assert coverage["undefined_or_error_count"] == 0
++    assert coverage["undefined_or_error_fraction"] == 0.0
++    assert coverage["finite_fraction"] == 1.0
++    assert "nearest source-selection point" in coverage["method_semantics"]
++    assert "exttol is unused" in coverage["method_semantics"]
++    assert coverage["source_mesh_inclusion"] == "NOT_INFERRED"
++    assert result["checks"]["source_mesh_coverage"] == "UNVERIFIED"
++
++
++def test_mapping_coverage_preserves_nan_and_batch_error_as_distinct_outcomes(monkeypatch):
++    _patch_coupling_properties(monkeypatch)
++    args = _mapping_args(evaluation=_evaluation(), test_points=[
++        {"destination": [1.0, 2.0, 3.0], "destination_unit": "m",
++         "expected_source": [2.0, 1.5, 3.0], "source_unit": "m"},
++        {"destination": [2.0, 3.0, 4.0], "destination_unit": "m",
++         "expected_source": [3.0, 2.5, 4.0], "source_unit": "m"},
++    ])
++
++    def nan_at_points(_worker, _model_tag, call):
++        return _operator_response(call, values=[[[[2.0, "NaN"]]], [[[1.5, 2.5]]], [[[3.0, 4.0]]]])
++
++    monkeypatch.setattr("comsol_mcp._g3_results.result_at_points", nan_at_points)
++    nan_result = validation.definition_mapping_validate(_Worker(_Model()), "m", args)
++    coverage = nan_result["checks"]["operator_coverage"]
++    assert coverage["operator_defined_finite_count"] == 1
++    assert coverage["nan_or_nonfinite_count"] == 1
++    assert coverage["undefined_or_error_count"] == 1
++    assert coverage["undefined_or_error_fraction"] == 0.5
++    assert coverage["finite_fraction"] == 0.5
++    assert nan_result["operator_evaluation"]["test_points"][1]["status"] == "DOMAIN_ERROR_OR_INVALID_VALUE"
++
++    def point_error_at_points(_worker, _model_tag, call):
++        return _operator_response(call, values=[[[[2.0, "DOMAIN_ERROR"]]], [[[1.5, 2.5]]], [[[3.0, 4.0]]]])
++
++    monkeypatch.setattr("comsol_mcp._g3_results.result_at_points", point_error_at_points)
++    point_error_result = validation.definition_mapping_validate(_Worker(_Model()), "m", args)
++    point_error_coverage = point_error_result["checks"]["operator_coverage"]
++    assert point_error_coverage["operator_defined_finite_count"] == 1
++    assert point_error_coverage["point_error_count"] == 1
++    assert point_error_coverage["undefined_or_error_count"] == 1
++
++    def batch_error(_worker, _model_tag, call):
++        return _operator_response(call, status_ok=False)
++
++    monkeypatch.setattr("comsol_mcp._g3_results.result_at_points", batch_error)
++    error_result = validation.definition_mapping_validate(_Worker(_Model()), "m", args)
++    error_coverage = error_result["checks"]["operator_coverage"]
++    assert error_coverage["evaluation_error_batch_count"] == 1
++    assert error_coverage["unclassified_point_count"] == 2
++    assert error_coverage["finite_fraction"] is None
++    assert error_coverage["undefined_or_error_count"] is None
+ 
+ 
+ @pytest.mark.parametrize("response_kwargs, expected_status", [
+-    ({"expression_units": {"gen1(x)": "cm", "gen1(y)": "cm", "gen1(z)": "cm"}}, "UNVERIFIED"),
++    ({"expression_units": {"root.comp1.gen1(x)": "cm", "root.comp1.gen1(y)": "cm", "root.comp1.gen1(z)": "cm"}}, "UNVERIFIED"),
+     ({"cleanup": {"created": True, "removed": False, "cleanup_failed": True}}, "EXECUTION_STATE_UNKNOWN"),
+     ({"status_ok": False}, "UNVERIFIED"),
+     ({"pair_mapping_complete": False}, "UNVERIFIED"),
+@@ -270,6 +415,9 @@
+     assert result["operator_evaluation"]["status"] == expected_status
+     assert result["checks"]["sampled_operator_values_match"] == "UNVERIFIED"
+     assert result["ok"] is False
++    if expected_status == "EXECUTION_STATE_UNKNOWN":
++        assert result["partial_change"] is True
++        assert result["execution_state_unknown"] is True
+ 
+ 
+ def test_mapping_rejects_implicit_time_or_partial_solution_binding(monkeypatch):
+@@ -307,7 +455,7 @@
+     assert result["map"]["arithmetic_preview"]["status"] == "UNAVAILABLE"
+     assert result["operator_evaluation"]["status"] == "PASS"
+     assert result["checks"]["sampled_operator_values_match"] == "PASS"
+-    assert result["ok"] is False
++    assert result["ok"] is True
+ 
+ 
+ @pytest.mark.parametrize("response_kwargs, expected", [

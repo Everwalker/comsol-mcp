@@ -1,0 +1,66 @@
+{
+  "schema": 1,
+  "created_utc": "2026-10-11T16:16:37.181190+00:00",
+  "status": "ROOT_SOURCE_CHANGES_REQUIRED",
+  "scope": "Standalone definition helper source and software results only; no final independent review/native/dispatch acceptance",
+  "freeze_manifest": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/definition_routes/FREEZE_MANIFEST-r1.json",
+    "sha256": "3be6fd3ab6310c304b4ba793bd7244f3e6ffaee048d1fd64f381772668a01d67"
+  },
+  "source_at_check": [
+    {
+      "path": "comsol_mcp/_g3_definition_validation.py",
+      "size_bytes": 62354,
+      "sha256": "f988f3d958caf11dfa71446eed44c0190dc50c07de08f9a6aa28070593a0fce0",
+      "current_sha256": "f988f3d958caf11dfa71446eed44c0190dc50c07de08f9a6aa28070593a0fce0",
+      "matches_at_check": true
+    },
+    {
+      "path": "tests/test_g3_definition_validation.py",
+      "size_bytes": 21822,
+      "sha256": "1e238606f8409ab819bc6e43460fadd4a2eec981e82ad9b294c653f269277066",
+      "current_sha256": "1e238606f8409ab819bc6e43460fadd4a2eec981e82ad9b294c653f269277066",
+      "matches_at_check": true
+    }
+  ],
+  "actual_junit": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/definition_routes/software-r1/junit.xml",
+    "sha256": "8f2e7e11634fc0eb76e6562e7719bc34d9510b15f9c8e16847d5ce94b24a75d6",
+    "testcases": 250,
+    "failure": 0,
+    "error": 0,
+    "skipped": 0
+  },
+  "required_repairs": [
+    {
+      "id": "D1",
+      "finding": "Mapping cleanup UNKNOWN is returned with false top-level execution_state_unknown and partial_change. Propagate dangerous signals through existing domain envelope/ledger."
+    },
+    {
+      "id": "D2",
+      "finding": "Original test_points is optional; preserve path-only call with observed metadata and explicit samples NOT_RUN."
+    },
+    {
+      "id": "D3",
+      "finding": "Use read-back opname and component qualification. API default tag is not proof for a renamed coupling or duplicate operator in another component."
+    },
+    {
+      "id": "D4",
+      "finding": "Source-frame mesh/material mapping coordinates are not proved by cpl(x/y/z). Require actual frame evidence or typed UNVERIFIED; spatial path can be positive."
+    },
+    {
+      "id": "D5",
+      "finding": "Report finite requested-point operator-defined coverage with real search-policy readback. closest/usetol/extrapolation cannot prove source-mesh interior/global coverage."
+    }
+  ],
+  "same_version_source": {
+    "doc_id": 4097,
+    "chunk_ids": [
+      16738,
+      16740
+    ],
+    "sha256": "29f57502ca11c069bb5713dcbf83da23316e6af13759a00f4f07541a69a16a29"
+  },
+  "prior_software_250_result_retained": true,
+  "next_action": "Same execution agent repairs and tests the complete affected definition unit; retain r1 bytes/results; shared route integration follows owner handoff."
+}

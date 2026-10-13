@@ -402,10 +402,11 @@ class ActionEntry:
                 "entrypoints": [self.operation_id, self.mcp_tool_name, "registry_call", "operation_call"],
                 "permissions": "inspect is checked before job or event lookup",
                 "project_binding": "requested project_id must equal the outer execution project; both job and producer operation metadata must bind to it",
-                "engine_queue": "bypassed; no Worker, COMSOL stdout/stderr stream, or native solver call",
+                "engine_queue": "bypassed for reads; managed study.run and mesh.convergence_study persist project-private progress chunks under their exact host job/request/model/revision binding",
                 "paging": "opaque cursor binds the exact project/job, captured event prefix, snapshot count, digest, offset, and page limit",
-                "solver_output_log": "NOT_CAPTURED because OperationStore persists job events rather than COMSOL stdout/stderr",
-                "verification_scope": "durable control-plane event records only; not native solver-log acceptance",
+                "solver_output_log": "conditional: a typed serialized Worker lifecycle redirects ModelUtil.showProgress(String) to a private per-job file, redirects to stdout and disables progress before readback, then stores at most 1 MiB of SHA-256-verified base64 chunks; the temporary file itself has no API-enforced size quota while the solve runs; trusted Java recipes remain NOT_CAPTURED because they may change the process-global sink",
+                "exception_chain": "structured Worker throwable causes are retained when returned; otherwise only the exact failed Worker reply summary is reported, never inferred from stderr",
+                "verification_scope": "bounded software producer/store binding and chunk integrity; useful output and COMSOL behavior still require a native solver run",
             }
             result["data_schema"] = {
                 "type": "object",

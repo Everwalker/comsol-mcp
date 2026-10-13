@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "evidence_id": "WINDOWS_PUBLISHER_P0_FREEZE_20261011_01",
+  "created_utc": "2026-10-11T11:32:45Z",
+  "status": "READY_FOR_ROOT_REVIEW",
+  "scope": "Public/synthetic Windows filesystem publisher; no COMSOL/native science execution.",
+  "frozen_transfer_file_set": [
+    {
+      "path": "comsol_mcp/_windows_parameter_publish.py",
+      "sha256": "ce3b3ee5db08998b77929c93c7a57ecb958af65a67c7896910e493feef57ab53",
+      "bytes": 23115,
+      "lines": 442
+    },
+    {
+      "path": "tests/test_windows_parameter_publish_native.py",
+      "sha256": "cc281485330cdb2573f87897ba82204d653e749dee50066fa7859d9c82591317",
+      "bytes": 14979,
+      "lines": 267
+    }
+  ],
+  "local_staging": {
+    "path": "/private/tmp/comsol-v2-win-publisher-20261011-p0",
+    "files": [
+      "comsol_mcp/_windows_parameter_publish.py",
+      "tests/test_windows_parameter_publish_native.py"
+    ],
+    "content_hashes_match_freeze": true
+  },
+  "local_checks": [
+    {
+      "command": "python3 -m py_compile comsol_mcp/_windows_parameter_publish.py comsol_mcp/_artifact_store.py tests/test_windows_parameter_publish_native.py tests/test_project_file_stream_publish.py",
+      "status": "PASS"
+    },
+    {
+      "command": "python3 tests/test_windows_parameter_publish_native.py --helper comsol_mcp/_windows_parameter_publish.py",
+      "status": "LOCAL_DARWIN_LEXICAL_PASS",
+      "total": 12,
+      "passed": 3,
+      "skipped_windows_kernel_tests": 9,
+      "failed": 0
+    },
+    {
+      "command": "TMPDIR=/private/tmp python3 tests/test_project_file_stream_publish.py",
+      "status": "PASS",
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "command": "python3 -m pytest -q tests/test_project_file_stream_publish.py tests/test_artifact_registration_import.py -k 'project_file_stream or parameter_export'",
+      "status": "NOT_RUN",
+      "reason": "The available Python 3.14.7 runtime has no pytest module; equivalent new streaming checks ran through the standalone stdlib unittest script."
+    }
+  ],
+  "windows_preflight": {
+    "target": "everwalker@192.168.100.2",
+    "remote_staging_path": "C:/Temp/comsol_v2_20261011_p0",
+    "operation": "single read-only SSH Test-Path query; no transfer or network change",
+    "status": "BLOCKED_CONNECTIVITY",
+    "exit_code": 255,
+    "result": "ssh: connect to host 192.168.100.2 port 22: Operation timed out",
+    "remote_path_exists": "UNKNOWN",
+    "transfer_status": "NOT_ATTEMPTED"
+  },
+  "acceptance": {
+    "windows_native_filesystem": "NOT_RUN",
+    "native_comsol": "NOT_RUN",
+    "scientific_acceptance": "NOT_RUN",
+    "next": "Independent root review of these exact two-file hashes; rerun Windows tests only after an authorized host is reachable."
+  },
+  "primary_references": [
+    "https://learn.microsoft.com/en-us/windows/win32/api/ntdef/ns-ntdef-_object_attributes",
+    "https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/nf-ntifs-ntcreatefile",
+    "https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-fsa/4aeefef8-92c3-4abc-af7a-a610caf8a165"
+  ]
+}

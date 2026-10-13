@@ -1,0 +1,58 @@
+{
+  "base_commit": "799bf7a0fa95313e7659f44d8ff40ff1678314d5",
+  "current_git_head": "799bf7a0fa95313e7659f44d8ff40ff1678314d5",
+  "diff_path": "PROGRESS_R1_TO_R2.patch",
+  "files": [
+    {
+      "path": "comsol_mcp/_comsol_progress_capture.py",
+      "role": "test",
+      "sha256": "84c87c9728edb0554bf094ae55f2288156f78f5f2a037a02088303e867223fd9",
+      "size_bytes": 29612
+    },
+    {
+      "path": "comsol_mcp/_w26_os_resources.py",
+      "role": "test",
+      "sha256": "a86ac04ddb9bec9824577bd253217acfcb2f27297906959e8a2f51ce6e3bceaa",
+      "size_bytes": 70606
+    },
+    {
+      "path": "tests/test_comsol_progress_capture.py",
+      "role": "test",
+      "sha256": "54f6504a82591186c1424cc9358cc80fdf7f9c2fcd1f977819899454b23adcb6",
+      "size_bytes": 18430
+    },
+    {
+      "path": "tests/test_w26_os_resources.py",
+      "role": "test",
+      "sha256": "822bbb08cd8d3014a819ccfedadb04f1d4abaa5fdb9dc73f2133f6e92cf2cb6b",
+      "size_bytes": 24481
+    }
+  ],
+  "limitations": [
+    "No shared route or Worker integration was changed by this unit.",
+    "No production native host resource provider or OS mutation adapter is connected.",
+    "Windows progress capture fails closed before dispatch; Windows kernel behavior is NOT_RUN.",
+    "POSIX cleanup quarantine controls are deterministic software controls, not an inode-CAS guarantee against arbitrary same-UID races.",
+    "The persisted 1 MiB cap limits OperationStore readback only; it does not limit native temporary-file growth or satisfy the full disk budget.",
+    "Native COMSOL/T037 acceptance is NOT_RUN."
+  ],
+  "preservation_root": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/local-preservation/w26_os_resources_progress-20261012-r2",
+  "progress_r1_preimages": [
+    {
+      "path": "comsol_mcp/_comsol_progress_capture.py",
+      "preserved_from": "solver-domains-progress-20261012-r1",
+      "sha256": "f45cc71e72d638c7ac305ebd1b49096a6605d40366fac417f7c8fc9cc0edb8d1",
+      "size_bytes": 17266
+    },
+    {
+      "path": "tests/test_comsol_progress_capture.py",
+      "preserved_from": "solver-domains-progress-20261012-r1",
+      "sha256": "4a2bf911f9151115c4b1f9e1a1f1a8319dfcc38b10b77dac02bf76cc5e6870ea",
+      "size_bytes": 11595
+    }
+  ],
+  "repository": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository",
+  "schema": "W26_OS_RESOURCES_AND_PROGRESS_CAPTURE_SOURCE_FREEZE_V1",
+  "scope_fingerprint": "4a57ceedbb5caf9390a69352015d78e4eb504abd46724a7eb19b2eeb888b2558",
+  "status": "SOFTWARE_CANDIDATE_FROZEN_NATIVE_AND_T037_OPEN"
+}

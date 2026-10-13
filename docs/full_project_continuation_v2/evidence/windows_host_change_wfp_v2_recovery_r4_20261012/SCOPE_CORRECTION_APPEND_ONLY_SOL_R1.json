@@ -1,0 +1,19 @@
+{
+  "schema": "comsol-mcp.windows-wfp-r4-scope-correction/1",
+  "frozen_manifest": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_v2_recovery_r4_20261012/SOURCE_FREEZE_V2_R4.json",
+  "frozen_manifest_sha256": "157c16f1c0b7287318c47540759beb0ec705f4a3c83523d9b18761eaf8f0ffc5",
+  "incorrect_frozen_text": "The fake WFP adapter and native Windows kernel were not run; the tests establish Store/executor protocol behavior only.",
+  "correction": "FakeWfpSequence software adapter was executed in the R4 APPLY and RESTORE tests, including observed-persistent-resource recovery handling. Real Windows kernel, OS mutation and effective WFP filter enforcement were NOT_RUN.",
+  "original_frozen_manifest_modified": false,
+  "evidence": [
+    {
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_v2_recovery_r4_20261012/junit_focused001.xml",
+      "sha256": "0187d445fae2efdb4d6a5725595e825ea184cfe2f51ddbe5b7f4f55798d9e881"
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_v2_recovery_r4_20261012/junit_affected001.xml",
+      "sha256": "68dfebff610aec8fa45c623e91c538756fc435556606a6036b27532e395e8084"
+    }
+  ],
+  "scope": "Software Store/executor protocol behavior only; no native acceptance."
+}

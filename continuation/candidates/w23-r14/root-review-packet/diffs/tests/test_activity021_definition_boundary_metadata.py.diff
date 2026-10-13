@@ -1,0 +1,11 @@
+--- /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/tests/test_activity021_definition_boundary_metadata.py
++++ /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/tests/test_activity021_definition_boundary_metadata.py
+@@ -42,7 +42,7 @@
+     calls=[]
+     class Daemon:
+         def dispatch(self,request):calls.append(request);return {'success':True,'data':'SOURCE_ONLY_SENTINEL'}
+-    d=Daemon();runner._set_native_dispatch_guard(d,tmp_path/'journal.jsonl')
++    d=Daemon();runner._set_dispatch_allowlist(d,tmp_path/'journal.jsonl',allow=runner._allowed_metadata_dispatch)
+     req={'operation':'operation_call','arguments':{'operation_id':'code.execute_java','arguments':{'source_artifact':runner.FIXTURE.name,'entrypoint':'NativeW23TEScienceFixture#run','mode':'trusted','arguments':{'phase':'definition_boundary_metadata'}}}}
+     if operation in ['result.at_points','dataset.solution_indices']:
+         if operation=='result.at_points':req['arguments']['operation_id']=operation

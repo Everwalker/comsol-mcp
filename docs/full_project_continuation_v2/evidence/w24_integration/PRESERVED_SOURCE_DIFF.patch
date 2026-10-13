@@ -1,0 +1,2137 @@
+--- current/docs/full_project_execution/w24/W24_CURE_FIXTURE_PROPOSAL.md
++++ preserved/docs/full_project_execution/w24/W24_CURE_FIXTURE_PROPOSAL.md
+@@ -291,23 +291,36 @@
+ with `atolglobalmethod="unscaled"`, `atolglobal=1e-8`, and logical absolute
+ component-input values
+ `"T 1e-4 alpha 1e-8 alpha_iso 1e-8 qpost 1e-8 u 1e-12 w 1e-12"`.
+ Before mapping the logical displacement inputs, read back a two-dimensional
+-axisymmetric geometry and the unique Solid Mechanics `PhysicsField` with
+-`field()="u"` and distinct `component()` values exactly `{u,w}`. Enumerate the
+-complete `solid.field().tags()` list and read every field name and component
+-array; uniqueness applies to the `field()="u"` selection, not the total list
+-length. Retain the full descriptor inventory, actual total count, unique
+-selected-displacement count and exact selected row across all stages. Other
+-descriptors are observed metadata without an active/inactive claim. No
+-nonselected descriptor may share component `u` or `w` with the selected
+-displacement row; other auxiliary components are not given a global uniqueness
+-constraint. Missing,
+-duplicate, incomplete or failed getters remain fail-closed and include the
+-getter stage plus actual tags/count/names/components in the failure. Current06
+-reported a missing-or-ambiguous list failure but did not retain its raw tags or
+-count; candidate18 is a software contract correction, not native root-cause
+-closure or runtime acceptance. The generated
++axisymmetric geometry and both actual boolean getters
++`solid.prop("Mode2Daxi").getBoolean("includeTwist")` and
++`solid.prop("Mode2Daxi").getBoolean("ModeExtension")`. Both must be false,
++without setters, defaults or fallback. Preserve their exact property/getter
++provenance across all stages. The unique Solid Mechanics `PhysicsField` with
++`field()="u"` may have distinct raw `component()` values exactly `{u,w}` or
++`{u,v,w}`; retain its original names, length and order. Raw descriptor metadata
++does not establish active solved DOFs. The configured no-twist/no-mode-extension
++formulation maps only logical `u,w` to the actual `comp1_u` Time entry.
++Effective solved-DOF validation and tolerance conversion remain `UNVERIFIED`.
++Enumerate the complete `solid.field().tags()` list and read every field name
++and component array; uniqueness applies to the `field()="u"` selection, not
++the total list length. Retain full inventory/count and exact selected row.
++Other descriptors are observed metadata without an active/inactive claim.
++No nonselected descriptor may share any selected raw component, including
++`v` when present; unrelated auxiliary sharing has no global uniqueness rule.
++Missing, duplicate, incomplete or failed getters remain fail-closed. Sequential
++geometry, full fields, Time keys and mode getter returns are saved before
++validation; failure diagnostics retain all actual earlier observations and
++mark unobserved later returns explicitly.
++Current07 retained seven descriptors and selected raw `[u,v,w]`, but did not
++read either mode value: its actual configuration remains `UNOBSERVED`.
++Current06 raw tags/count were not retained. Official shipped build257 XML/UI
++history establishes the property mapping and boolean setters; the official
++6.4 API and installed JAR confirm the typed getter. These are mapping evidence,
++not build293 model-mode readback or scientific acceptance. Candidate19 is a
++software configuration/inventory correction; no new native attempt is accepted.
++The generated
+ Time solver has the actual native keys `comp1_T`, `comp1_alpha`,
+ `comp1_alpha_iso`, `comp1_qpost`, and `comp1_u`; both logical displacement
+ inputs `u` and `w` bind to the observed `comp1_u` entry. Apply setters only to
+ the actual keys returned by that Time solver after validating the geometry,
+@@ -508,4 +521,89 @@
+ real glue calibration, imperfect fiber/gold/ceramic interfaces, or complete
+ device geometry. These remain explicit W24 implementation and validation
+ work; neither a module-availability result nor this synthetic fixture can
+ close those requirements.
++
++
++## Candidate20 software physical-volume observation correction
++
++Current08 failed before a successful build readback: native geometry
++`getVolume()` on its 2-D domain returned an observed cross-section area,
++`1.2500000823638413e-7 m^2`. It was compared with the frozen physical
++volume `9.81747704247e-11 m^3`; that observation is not an accepted volume.
++All UNKNOWN requests and raw evidence remain protected.
++
++The coupon preserves this native area as `cross_section_area_m2` and observes
++`volume_m3` through a temporary Mesh dataset bound explicitly to already-built
++`mesh1`, with IntSurface, `data` bound to that dataset, geom1 dimension 2 and
++the exact singleton domain, expression `1`, unit `m^3`, and `intvolume=on`.
++Actual geometry, mesh, dataset type/binding, numerical type/data, selection,
++expression/unit/axisymmetric integration getters must match before `getReal()`.
++Only an exact 1x1 finite positive result is eligible for the unchanged four
++expected volumes and relative tolerance `1e-6`. There is no solution dataset,
++solnum, default dataset, mesh rebuild, analytical multiplier, or fallback.
++Only newly owned temporary numerical/dataset nodes are removed, in that order;
++actual post-cleanup tags must preserve the preexisting inventory. Getter,
++evaluation and cleanup failures retain actual partial observations and fail
++closed; cleanup failure cannot hide the primary failure.
++
++The COMSOL 6.4 primary evidence is preserved in current08's
++`physical-volume-readonly-diagnosis001/candidate20-readonly-evidence-and-minimal-plan001.json`
++(SHA256 `18dd78f136521dda7e3a1f9d96135e8805b3ddb64d35601c94b27f8330c171ce`):
++Mesh API doc4508/chunk17341, Mesh UI doc5995/chunk19453, official mesh
++visualization example doc11792/chunk34338, IntSurface integration properties
++doc4487/chunks17297-17299, and GeomMeasureBase doc7588/chunk22875.
++The documented Mesh/IntSurface composition is runtime UNVERIFIED until a
++separately authorized fresh setup attempt. Proxy controls prove software
++getter, binding, shape, threshold and owned-cleanup policy only. Candidate19
++mode/field/Time/tolerance contracts and Science source remain unchanged;
++effective solved DOF and numerical/scientific acceptance remain UNVERIFIED/NOT_RUN.
++
++
++## Candidate21 software mesh-generation composition repair
++
++Current09 setup failed before area/integral observation: its actual retained
++failure reports geom1 dimension 2 and axisymmetric, domain [1], mesh1 bound to
++geom1 with dimension 2, `isEmpty=true`, and `getNumElem=0`. The retained build
++readback is empty; full field/mode/Time readback, Equation View, save/reopen and
++science were not reached. Eight UNKNOWN attempts remain protected, without replay.
++
++The coupon's existing mesh sequence had a default Size and four local Size
++attributes, followed by `mesh.run()`, but no element-generating feature.
++Candidate21 adds only `mesh.create("ftri1", "FreeTri")` after those attributes
++and immediately before that existing run. COMSOL 6.4 FreeTri doc4379/chunk17131,
++SHA256 `a47a086e293788556ca136312089ba1aee148566543a316ef7e4c55cd5809b7b`,
++documents triangular generation in 2D and default selection of remaining entities.
++All four domain selections and sizes, geometry, physics, studies, field/mode
++checks, physical-volume getter, four expected volumes and `1e-6` tolerance remain
++unchanged. No meshing or mode setter was added to an observation getter.
++
++The existing Java proxy invokes the production mesh builder, checks frozen
++size/selection inputs and generator/run order, and contrasts a synthetic
++Size-only empty sequence with default remaining-domain generation. These are
++software composition controls, not actual COMSOL meshing or accepted volume.
++Actual FreeTri execution and Mesh/IntSurface physical-volume integration remain
++UNVERIFIED; science and effective solved DOF are NOT_RUN/UNVERIFIED. This repair
++does not modify the separately deferred Science/mechanics mesh configuration.
++
++## 2026-10-02 candidate22 successor: documented spatial-frame physical measurement
++
++Current10 remains an immutable failed setup attempt (terminal exit 2, one Server/Worker, zero RUN). The retained failure observed a nonempty 660-element mesh and positive cross-section area, but IntSurface/intvolume=on failed at getReal with undefined material-coordinate R in 2*pi*R. This is no accepted physical volume; the raw geometry/mesh/node bindings and owned temporary-node cleanup were observed only in the failure inventory. Nine UNKNOWN attempts remain protected against replay.
++
++Candidate22 changes only the existing coupon physical-measure configuration to documented MeasureSurface with Mesh/mesh1, frametype=spatial, intvolume=on and unit m^3. Its actual type and spatial-frame getters must pass before getReal; the undocumented expr setter/getter is removed. The physical source is recorded as NATIVE_MESH_MEASURESURFACE_SPATIAL_INTVOLUME_ON. Exact geometry dimension/axisymmetry/domain selection, positive already-built mesh, 1x1 finite-positive result, four expected volumes, relative tolerance 1e-6, unique owned temporary nodes and fail-closed cleanup are unchanged. FreeTri, all dimensions, materials, modes, raw fields, Time/tolerances and physics are unchanged. There is no analytic Jacobian, area multiplication, fallback, Solution dataset, solnum, rebuild or solve.
++
++Primary evidence: current10/root-measurement-frame-primary-read001.json (SHA256 e200837105573090675070f673ed37be6bd8a3cf6602fd35858e92dc7251a5ef); root-candidate22-measurement-frame-repair-plan001.md (SHA256 d478c2cbada3e5ab8cd6d15fe828afb253e6bf8b60bef98f30fe1a99a6a5ef47). Same-version Measurement4506/ch17336–17338 documents MeasureSurface/data/frametype/spatial/intvolume/unit/getReal; Mesh4508/ch17341 documents spatial coordinates; Frames5160/ch18291 distinguishes r from R. Documentation and proxy checks support software configuration only; this composition on the actual Mesh dataset remains runtime UNVERIFIED. Science applicability repair is deferred to a separate unit; effective solved DOF UNVERIFIED, native GO false, Science NOT_RUN. Existing production-helper proxy controls additionally reject old IntSurface type, type-getter failure, material-frame mismatch and frame-getter failure, enforce only documented setters and no expr, and retain previous binding/matrix/threshold/cleanup negative controls. Actual counts and immutable execution evidence belong to the candidate22 software handoff.
++
++## 2026-10-02 candidate23 successor: Science measure applicability (software only)
++
++After candidate22 root SOFTWARE_ONLY acceptance, the separately deferred Science unit corrects dimension-bound numerical types: IntSurface/intvolume for 2D-domain integrals, IntLine/intsurface for 1D boundary integrals, AvSurface/intvolume for 2D revolved-volume averages, and pointwise MaxSurface for 2D maxima without integration flags. Both numerical helpers and both Interp readback sites verify actual getType before evaluation and record that observed type. Mechanics mesh1 adds documented FreeTri immediately before its existing run, retaining Size hmax/hmin and all model selections/settings. Python consumers accept these types and reject obsolete 3D types, wrong bindings/dimensions/physical flags/units and pointwise maxima that claim integration weighting.
++
++Primary scope is root-candidate23-science-implementation-unit001.md (SHA256 e82a568f6929f57a8d48cd421cf98c60ecf8d4b838f0a95985a9d12d33c2a5f0), the preserved deferred plans and their same-version Int/Av/Max/2D example evidence. Expressions, units, Solution data/solnum=all, sampling times, geometry, physical/material/constitutive/stress mappings, acceptance thresholds and existing temporary-result cleanup remain unchanged. Candidate22 Coupon Java and setup runner are unchanged. Nine historical UNKNOWNs and all prior artifacts are preserved. Existing Java private-helper proxies plus focused Python positive/negative consumers are software fixtures only; actual native/scientific execution and effective solved DOF remain NOT_RUN/UNVERIFIED. No new native GO or engine birth belongs to this unit. Actual frozen test counts and hashes are recorded separately in the candidate23 handoff.
++
++
++### Candidate24 revision001 — actual measurement unit value-type dispatch (software only)
++
++Current11 retained the native MeasureSurface type, frametype=spatial, mesh1 with 660 elements and two-dimensional cross-section area. Its numerical unit getter failed because the unit property could not convert to a string array. getReal was not reached, no physical volume was accepted, and the actual unit value type/representation was unobserved. The failed attempt and its new UNKNOWN job remain immutable; no replay or native GO is implied.
++
++The Coupon physical-volume helper now reads getValueType("unit") first, retaining the actual type. Only exact String dispatches to getString("unit") and exact StringArray dispatches to getStringArray("unit"). The actual scalar or vector is retained as unit_raw, and a single scalar is normalized to one entry solely for the unchanged exact singleton m^3 acceptance check. Unknown/null types, null/empty/wrong values, extra vector entries and getter errors fail closed before getReal; there is no catch-based getter fallback. Same-version PropFeature documentation explicitly maps these two types to these getters; the MeasureSurface table's String array label is not a runtime type observation.
++
++The unit setter, MeasureSurface/spatial frame, Mesh/mesh1 bindings, selections, four frozen expected volumes, 1e-6 tolerance, positive 1x1 getReal contract, FreeTri, physics and owned-node finally cleanup are unchanged. Science and production setup runner are byte unchanged. Existing getter proxies exercise scalar/vector positives and type/shape/unit/getter negatives with partial-observation and no-fallback assertions; affected Coupon tests plus the original twelve required regressions are the bounded software selection. Native and scientific acceptance remain NOT_RUN/UNVERIFIED until a separately authorized fresh attempt; ten UNKNOWN histories are protected.
+--- current/tests/java/W24SolverSequenceDiagnosticsHarness.java
++++ preserved/tests/java/W24SolverSequenceDiagnosticsHarness.java
+@@ -13,8 +13,9 @@
+ import com.comsol.model.StudyList;
+ import com.comsol.model.physics.Physics;
+ import com.comsol.model.physics.PhysicsField;
+ import com.comsol.model.physics.PhysicsFieldList;
++import com.comsol.model.physics.PhysicsProp;
+ import java.lang.reflect.InvocationHandler;
+ import java.lang.reflect.InvocationTargetException;
+ import java.lang.reflect.Method;
+ import java.lang.reflect.Proxy;
+@@ -47,13 +48,618 @@
+         rejectsInvalidRootFeatureContracts();
+         failsClosedOnRequiredAndStructuralGetterErrors();
+         keepsAllDiagnosticOnlyAndRetainsGeneratorCause();
+         boundsLargeDiagnosticSnapshots();
++        verifiesCouponMeshGenerationComposition();
++        verifiesMeshOnlyPhysicalVolumeFromActualGetters();
++        verifiesScienceMeasureApplicabilityFromActualGetters();
+         verifiesCouponAndScienceFieldBindingContracts();
+         verifiesFullPhysicsFieldInventoryFromActualGetters();
++        verifiesConfiguredModesAndRawMetadataFromActualGetters();
++        verifiesPartialObservationFailures();
+         verifiesScienceContinuousDoseToleranceReadback();
+         rejectsMissingNativeGroupBeforeScienceSolverConfiguration();
+         System.out.println("W24 solver-sequence diagnostics proxy checks: PASS (" + cases + " cases)");
++    }
++
++
++    private static void verifiesScienceMeasureApplicabilityFromActualGetters() throws Exception {
++        Method cure = method(W24CureScienceFixture.class, "evaluateNumerical", Model.class, String.class,
++            List.class, String.class, String.class, String[].class, String[].class, int.class, int[].class,
++            String.class, int.class);
++        Method mechanics = method(W24CureScienceFixture.class, "mechanicsNumerical", Model.class, String.class,
++            List.class, String.class, String.class, String[].class, String[].class, int[].class);
++        Method interpolation = method(W24CureScienceFixture.class, "evaluateInterpolation", Model.class, String.class,
++            List.class, String.class, String[].class, String[].class, double[][].class, int.class);
++        String[][] specs = {{"cure", "IntSurface", "2", "intvolume"}, {"cure", "IntLine", "1", "intsurface"},
++            {"cure", "AvSurface", "2", "intvolume"}, {"mechanics", "AvSurface", "2", "intvolume"},
++            {"mechanics", "MaxSurface", "2", ""}, {"interp", "Interp", "0", ""}};
++        int count = 0;
++        for (String[] spec : specs) {
++            List<String> faults = new ArrayList<>(Arrays.asList("", "type", "type_getter", "dataset",
++                "unit", "expression", "solnum"));
++            if (spec[0].equals("interp")) faults.addAll(Arrays.asList("coorderr", "matherr"));
++            else faults.addAll(Arrays.asList("dimension", "geometry", "entities"));
++            if (!spec[3].isEmpty()) faults.add("flag");
++            for (String fault : faults) {
++                List<String> events = new ArrayList<>();
++                List<String> owned = new ArrayList<>();
++                Model model = scienceMeasureModel(fault, spec[1], Integer.parseInt(spec[2]), spec[3], spec[0].equals("mechanics"), events);
++                Object value = null;
++                try {
++                    if (spec[0].equals("cure")) value = cure.invoke(null, model, "solution_fixture", owned,
++                        spec[1], "role", new String[]{"x"}, new String[]{"Pa"}, Integer.parseInt(spec[2]),
++                        new int[]{3}, "on", 2);
++                    else if (spec[0].equals("mechanics")) value = mechanics.invoke(null, model, "solution_fixture",
++                        owned, spec[1], "role", new String[]{"x"}, new String[]{"Pa"}, new int[]{3});
++                    else value = interpolation.invoke(null, model, "solution_fixture", owned, "role",
++                        new String[]{"x"}, new String[]{"Pa"}, new double[][]{{1e-6}, {2e-6}}, 2);
++                    require(fault.isEmpty(), "Science malformed getter passed: " + Arrays.toString(spec) + "/" + fault);
++                    java.lang.reflect.Field field = value.getClass().getDeclaredField("readback");
++                    field.setAccessible(true);
++                    Map<String, Object> row = (Map<String, Object>) field.get(value);
++                    require(spec[1].equals(row.get("type")) && "solution_fixture".equals(row.get("dataset")) &&
++                            row.get("unit").equals(Arrays.asList("Pa")), "Science must retain actual readback");
++                    if (!spec[0].equals("interp")) {
++                        require(row.get("entity_dimension").equals(Integer.parseInt(spec[2])) &&
++                                row.get("entity_ids").equals(Arrays.asList(3)) &&
++                                (spec[3].isEmpty() ? row.get("axisymmetric_measure_property") == null : spec[3].equals(row.get("axisymmetric_measure_property"))) &&
++                                (spec[3].isEmpty() ? row.get("axisymmetric_measure_value") == null :
++                                    "on".equals(row.get("axisymmetric_measure_value"))),
++                            "Science dimension and axisymmetric physical flag must be actual");
++                    }
++                } catch (InvocationTargetException failure) {
++                    require(!fault.isEmpty() && failure.getCause() instanceof IllegalStateException,
++                        "Science getter failure must fail closed: " + fault + "/" + failure.getCause());
++                    require(!events.contains("run") && !events.contains("getReal") && !events.contains("getData"),
++                        "Science rejected getter must not evaluate: " + fault);
++                }
++                require(owned.size() == 1 && events.get(0).equals("create:" + spec[1]),
++                    "Actual owned numerical tag must be recorded before readback failure for caller cleanup");
++                require(events.contains("getType"), "requested type cannot stand in for actual getter");
++                cases++; count++;
++            }
++        }
++        System.out.println("W24 Science measurement applicability proxy checks: PASS (" + count + " cases; software only)");
++    }
++
++    private static Model scienceMeasureModel(String fault, String type, int dimension, String flag, boolean mechanics,
++            List<String> events) {
++        Map<String, Object> config = new LinkedHashMap<>();
++        com.comsol.model.LocalSelection selection = proxy(com.comsol.model.LocalSelection.class, (instance, method, args) -> {
++            switch (method.getName()) {
++                case "geom":
++                    if (args == null || args.length == 0) return fault.equals("geometry") ? "wronggeom" : "geom1";
++                    require(args.length == 2 && args[0].equals("geom1") && args[1].equals(dimension),
++                        "Science selected dimensional setter mismatch");
++                    events.add("selection.geom"); return instance;
++                case "set":
++                    require(Arrays.equals((int[]) args[0], new int[]{3}), "Science entity setter changed");
++                    events.add("selection.set"); return instance;
++                case "dim": return fault.equals("dimension") ? 3 : dimension;
++                case "entities": return fault.equals("entities") ? new int[]{4} : new int[]{3};
++                default: return objectMethod(instance, method, args);
++            }
++        });
++        com.comsol.model.NumericalFeature feature = proxy(com.comsol.model.NumericalFeature.class, (instance, method, args) -> {
++            String name = method.getName();
++            if (name.equals("set")) {
++                String key = String.valueOf(args[0]);
++                require(Arrays.asList("data", "expr", "unit", "solnum", "coorderr", "matherr", "intvolume", "intsurface").contains(key),
++                    "unexpected Science numerical setter " + key);
++                if (key.equals("intvolume") || key.equals("intsurface"))
++                    require(key.equals(flag) && args[1].equals("on"), "wrong dimensional physical integration flag");
++                config.put(key, args[1]); return instance;
++            }
++            if (name.equals("selection")) return selection;
++            if (name.equals("setInterpolationCoordinates")) return null;
++            if (name.equals("getType")) {
++                events.add("getType");
++                if (fault.equals("type_getter")) throw new IllegalStateException("synthetic Science getType failure");
++                if (fault.equals("type")) return type.equals("IntLine") ? "IntSurface" :
++                    type.equals("AvSurface") ? "AvVolume" : type.equals("MaxSurface") ? "MaxVolume" :
++                    type.equals("IntSurface") ? "IntVolume" : "Eval";
++                return type;
++            }
++            if (name.equals("getString")) {
++                String key = String.valueOf(args[0]); events.add("getString:" + key);
++                if (fault.equals("dataset") && key.equals("data")) return "foreign_solution";
++                if (fault.equals("solnum") && key.equals("solnum")) return "last";
++                if (fault.equals("flag") && key.equals(flag)) return "off";
++                return config.get(key);
++            }
++            if (name.equals("getStringArray")) {
++                String key = String.valueOf(args[0]); events.add("getStringArray:" + key);
++                if (fault.equals("unit") && key.equals("unit")) return new String[]{"m"};
++                if (fault.equals("expression") && key.equals("expr")) return new String[]{"foreign"};
++                return config.get(key);
++            }
++            if (name.equals("getBoolean")) return !fault.equals(String.valueOf(args[0]));
++            if (name.equals("run") || name.equals("getReal") || name.equals("getData")) {
++                require(events.contains("getType") && events.contains("getString:data") &&
++                        events.contains("getStringArray:unit"), "evaluation requires actual binding getters first");
++                if (!type.equals("Interp")) require(events.indexOf("selection.geom") < events.indexOf("selection.set"),
++                    "exact dimensional selection precedes entity assignment");
++                if (type.equals("MaxSurface")) require(!config.containsKey("intvolume") && !config.containsKey("intsurface"),
++                    "pointwise extrema must not be revolution-integrated");
++                events.add(name);
++                if (name.equals("getReal")) return mechanics ?
++                    new double[][]{{1.0}} : new double[][]{{1.0, 2.0}};
++                if (name.equals("getData")) return new double[][][]{{{1.0}, {2.0}}};
++                return null;
++            }
++            return objectMethod(instance, method, args);
++        });
++        com.comsol.model.NumericalFeatureList list = proxy(com.comsol.model.NumericalFeatureList.class, (instance, method, args) -> {
++            if (method.getName().equals("create")) {
++                require(type.equals(args[1]), "requested Science type is wrong");
++                events.add("create:" + args[1]);return feature;
++            }
++            return objectMethod(instance, method, args);
++        });
++        com.comsol.model.Results results = proxy(com.comsol.model.Results.class, (instance, method, args) -> {
++            if (method.getName().equals("numerical")) return args == null || args.length == 0 ? list : feature;
++            return objectMethod(instance, method, args);
++        });
++        return proxy(Model.class, (instance, method, args) -> {
++            if (method.getName().equals("result")) return results;
++            return objectMethod(instance, method, args);
++        });
++    }
++
++    private static void verifiesCouponMeshGenerationComposition() throws Exception {
++        // This proxy records the actual production addMesh calls. Synthetic
++        // remaining-domain/element state is composition evidence, not meshing.
++        List<String> events = new ArrayList<>();
++        Map<String, String> types = new LinkedHashMap<>();
++        Map<String, Map<String, Object>> settings = new LinkedHashMap<>();
++        Map<String, com.comsol.model.MeshFeature> features = new LinkedHashMap<>();
++        List<Integer> generatedDomains = new ArrayList<>();
++        String[] localTags = {"sizeAl", "sizeAu", "sizeAdh", "sizeFiber"};
++        String[] selections = {"sel_alumina", "sel_gold", "sel_adhesive", "sel_fiber"};
++        double[][] sizes = {{50e-6, 10e-6}, {50e-6, 5e-6}, {8e-6, 2e-6}, {25e-6, 5e-6}};
++        java.util.function.Function<String, com.comsol.model.MeshFeature> featureFor = tag -> {
++            settings.put(tag, new LinkedHashMap<>());
++            com.comsol.model.MeshSelection selection = proxy(com.comsol.model.MeshSelection.class,
++                (instance, method, args) -> {
++                    require(!tag.equals("ftri1"), "FreeTri must retain documented default remaining-domain selection");
++                    if (method.getName().equals("geom")) {
++                        require(args.length == 2 && args[0].equals("geom1") && args[1].equals(2),
++                            "local Size selection must keep geom1 entity dimension 2");
++                        settings.get(tag).put("geom", args[0]); settings.get(tag).put("dim", args[1]);
++                        events.add(tag + ".selection.geom"); return instance;
++                    }
++                    if (method.getName().equals("named")) {
++                        settings.get(tag).put("selection", args[0]);
++                        events.add(tag + ".selection.named"); return instance;
++                    }
++                    return objectMethod(instance, method, args);
++                });
++            return proxy(com.comsol.model.MeshFeature.class, (instance, method, args) -> {
++                if (method.getName().equals("selection") && method.getParameterCount() == 0) return selection;
++                if (method.getName().equals("set")) {
++                    String key = String.valueOf(args[0]);
++                    require(Arrays.asList("custom", "hmax", "hmin").contains(key), "unexpected mesh sizing setting");
++                    settings.get(tag).put(key, args[1]); events.add(tag + ".set:" + key); return instance;
++                }
++                return objectMethod(instance, method, args);
++            });
++        };
++        types.put("size", "Size"); features.put("size", featureFor.apply("size"));
++        com.comsol.model.MeshFeatureList featureList = proxy(com.comsol.model.MeshFeatureList.class,
++            (instance, method, args) -> {
++                if (method.getName().equals("create")) {
++                    String tag = String.valueOf(args[0]);
++                    require(Arrays.asList(localTags).contains(tag) && args[1].equals("Size") && !types.containsKey(tag),
++                        "unexpected or duplicate local Size feature");
++                    types.put(tag, "Size"); features.put(tag, featureFor.apply(tag));
++                    events.add("feature.create:" + tag); return features.get(tag);
++                }
++                return objectMethod(instance, method, args);
++            });
++        com.comsol.model.MeshSequence mesh = proxy(com.comsol.model.MeshSequence.class,
++            (instance, method, args) -> {
++                if (method.getName().equals("feature")) {
++                    if (method.getParameterCount() == 0) return featureList;
++                    require(features.containsKey(String.valueOf(args[0])), "unknown mesh feature getter");
++                    return features.get(String.valueOf(args[0]));
++                }
++                if (method.getName().equals("create")) {
++                    require(args[0].equals("ftri1") && args[1].equals("FreeTri") && !types.containsKey("ftri1"),
++                        "exactly one FreeTri generator required");
++                    require(types.size() == 5 && events.get(events.size() - 1).equals("sizeFiber.set:hmin"),
++                        "generator must follow all four completed local Size attributes");
++                    require(types.values().stream().allMatch("Size"::equals) && generatedDomains.isEmpty(),
++                        "Size-only sequence must remain synthetically empty before generator creation");
++                    events.add("SizeOnly.empty");
++                    types.put("ftri1", "FreeTri"); features.put("ftri1", featureFor.apply("ftri1"));
++                    events.add("sequence.create:ftri1:FreeTri"); return features.get("ftri1");
++                }
++                if (method.getName().equals("run") && method.getParameterCount() == 0) {
++                    events.add("mesh.run");
++                    if (types.containsValue("FreeTri")) generatedDomains.addAll(Arrays.asList(1, 2, 3, 4));
++                    return null;
++                }
++                if (method.getName().equals("isEmpty")) return generatedDomains.isEmpty();
++                if (method.getName().equals("getNumElem")) return generatedDomains.size() * 2;
++                return objectMethod(instance, method, args);
++            });
++        // Counterexample: default Size-only run produces no synthetic entities.
++        mesh.run();
++        require(mesh.isEmpty() && mesh.getNumElem() == 0, "Size-only run must not imply element generation");
++        events.clear(); cases++;
++        ComponentMeshList meshes = proxy(ComponentMeshList.class, (instance, method, args) -> {
++            if (method.getName().equals("create")) {
++                require(args.length == 2 && args[0].equals("mesh1") && args[1].equals("geom1"),
++                    "mesh must preserve mesh1/geom1 binding"); return mesh;
++            }
++            return objectMethod(instance, method, args);
++        });
++        ModelNode component = proxy(ModelNode.class, (instance, method, args) -> {
++            if (method.getName().equals("mesh") && method.getParameterCount() == 0) return meshes;
++            return objectMethod(instance, method, args);
++        });
++        Model model = proxy(Model.class, (instance, method, args) -> {
++            if (method.getName().equals("component")) {
++                require(args.length == 1 && args[0].equals("comp1"), "unexpected component binding"); return component;
++            }
++            return objectMethod(instance, method, args);
++        });
++        method(W24CureCouponFixture.class, "addMesh", Model.class).invoke(null, model);
++        require(settings.get("size").get("custom").equals("on") &&
++                settings.get("size").get("hmax").equals(50e-6) && settings.get("size").get("hmin").equals(5e-6),
++            "default mesh sizes must remain frozen");
++        for (int i = 0; i < localTags.length; i++) {
++            Map<String, Object> local = settings.get(localTags[i]);
++            require(local.get("geom").equals("geom1") && local.get("dim").equals(2) &&
++                    local.get("selection").equals(selections[i]) && local.get("custom").equals("on") &&
++                    local.get("hmax").equals(sizes[i][0]) && local.get("hmin").equals(sizes[i][1]),
++                "local Size selection/dimensions/values changed: " + localTags[i]);
++        }
++        require(events.get(events.size() - 1).equals("mesh.run") &&
++                events.get(events.size() - 2).equals("sequence.create:ftri1:FreeTri") &&
++                generatedDomains.equals(Arrays.asList(1, 2, 3, 4)) && !mesh.isEmpty() && mesh.getNumElem() > 0 &&
++                settings.get("ftri1").isEmpty(),
++            "generator must directly precede the sole production run and leave all remaining domains selected");
++        cases++;
++        System.out.println("W24 coupon mesh-generation composition proxy checks: PASS (2 cases; software only)");
++    }
++
++    private static void verifiesMeshOnlyPhysicalVolumeFromActualGetters() throws Exception {
++        Method reader = method(W24CureCouponFixture.class, "observeAxisymmetricPhysicalVolume",
++            Model.class, int[].class, double.class, String.class, String.class);
++        double[] expected = {9.81747704247e-11, 3.14159265359e-13, 1.25663706144e-12, 6.13592315154e-12};
++        int volumeCases = 0;
++        for (String representation : new String[]{"", "unit_scalar"}) {
++        for (double volume : expected) {
++            List<String> events = new ArrayList<>();
++            java.util.Set<String> datasets = new java.util.LinkedHashSet<>(Arrays.asList("existing_dataset"));
++            java.util.Set<String> numericals = new java.util.LinkedHashSet<>(Arrays.asList("existing_numerical"));
++            Map<String, Object> config = new LinkedHashMap<>();
++            Model model = volumeModel(representation, new double[][]{{volume}}, events, datasets, numericals, config);
++            Map<String, Object> row = (Map<String, Object>) reader.invoke(null, model, new int[]{3}, volume,
++                "owned_dataset", "owned_numerical");
++            require(row.get("volume_m3").equals(volume) && row.get("cross_section_area_m2").equals(1.25e-7) &&
++                    row.get("relative_volume_error").equals(0.0) &&
++                    "Mesh".equals(row.get("dataset_type")) && "mesh1".equals(row.get("dataset_mesh")) &&
++                    "MeasureSurface".equals(row.get("numerical_type")) && "spatial".equals(row.get("frametype")) &&
++                    "NATIVE_MESH_MEASURESURFACE_SPATIAL_INTVOLUME_ON".equals(row.get("physical_measure_source")) &&
++                    !row.containsKey("integrand") && !config.containsKey("expr") && "on".equals(row.get("intvolume")) &&
++                    "VERIFIED_OWNED_NODES_REMOVED".equals(row.get("temporary_cleanup")) &&
++                    datasets.equals(java.util.Set.of("existing_dataset")) &&
++                    numericals.equals(java.util.Set.of("existing_numerical")),
++                "physical volume must use actual integral with separate raw area and owned-only cleanup");
++            boolean scalar = representation.equals("unit_scalar");
++            require((scalar ? "String" : "StringArray").equals(row.get("unit_value_type")) &&
++                    (scalar ? "m^3" : Arrays.asList("m^3")).equals(row.get("unit_raw")) &&
++                    Arrays.asList("m^3").equals(row.get("unit")),
++                "actual unit value type and unmodified scalar/vector must be retained before normalized strict m^3 acceptance");
++            require(events.indexOf("numerical.getValueType:unit") >= 0 &&
++                    events.indexOf("numerical.getValueType:unit") < events.indexOf(scalar ? "numerical.getString:unit" : "numerical.getStringArray:unit") &&
++                    !events.contains(scalar ? "numerical.getStringArray:unit" : "numerical.getString:unit"),
++                "actual unit type must select exactly one native getter without fallback");
++            require(events.indexOf("mesh.getNumElem") < events.indexOf("dataset.create") &&
++                    events.indexOf("dataset.getString:mesh") < events.indexOf("numerical.create") &&
++                    events.indexOf("selection.geom:geom1:2") < events.indexOf("selection.set:[3]") &&
++                    events.indexOf("numerical.getString:intvolume") < events.indexOf("numerical.getReal") &&
++                    events.indexOf("numerical.getType") < events.indexOf("numerical.getReal") &&
++                    events.indexOf("numerical.getString:frametype") < events.indexOf("numerical.getReal") &&
++                    events.indexOf("selection.entities") < events.indexOf("numerical.getReal") &&
++                    events.indexOf("numerical.remove:owned_numerical") < events.indexOf("dataset.remove:owned_dataset"),
++                "actual getter/selection/evaluation/cleanup order must be retained: " + events);
++            cases++; volumeCases++;
++        }
++        }
++        String[] faults = {"geometry_dimension", "geometry_axisym", "geometry_getter", "mesh_missing", "mesh_geometry",
++            "mesh_dimension", "mesh_empty", "mesh_zero", "mesh_getter", "area_nan", "area_zero", "area_getter",
++            "domain_null", "domain_empty", "domain_multiple", "domain_duplicate", "domain_nonpositive",
++            "dataset_collision", "numerical_collision", "dataset_create_before", "dataset_create_after",
++            "dataset_type", "dataset_mesh", "dataset_getter", "numerical_create_before", "numerical_create_after",
++            "numerical_type", "numerical_data", "selection_geometry", "selection_dimension", "selection_entities",
++            "selection_getter", "selection_dimensions_mixed", "selection_dimensions_null", "frametype", "frametype_getter", "numerical_type_getter", "numerical_old_intsurface", "unit", "intvolume", "intvolume_getter", "getReal",
++            "unit_scalar_null", "unit_scalar_wrong", "unit_scalar_empty", "unit_scalar_getter",
++            "unit_array_null", "unit_array_empty", "unit_array_null_element", "unit_array_multiple", "unit_array_getter",
++            "unit_value_type_unknown", "unit_value_type_null", "unit_value_type_case", "unit_value_type_getter",
++            "matrix_null", "matrix_empty", "matrix_nullrow", "matrix_emptyrow", "matrix_1x2", "matrix_2x1", "matrix_ragged",
++            "matrix_nan", "matrix_inf", "matrix_zero", "matrix_negative", "volume_threshold",
++            "cleanup_numerical", "cleanup_dataset", "cleanup_verify", "getReal_and_cleanup"};
++        for (String fault : faults) {
++            List<String> events = new ArrayList<>();
++            java.util.Set<String> datasets = new java.util.LinkedHashSet<>(Arrays.asList("existing_dataset"));
++            java.util.Set<String> numericals = new java.util.LinkedHashSet<>(Arrays.asList("existing_numerical"));
++            if (fault.equals("dataset_collision")) datasets.add("owned_dataset");
++            if (fault.equals("numerical_collision")) numericals.add("owned_numerical");
++            Map<String, Object> config = new LinkedHashMap<>();
++            int[] entities = fault.equals("domain_null") ? null : fault.equals("domain_empty") ? new int[0] :
++                fault.equals("domain_multiple") ? new int[]{3, 4} : fault.equals("domain_duplicate") ? new int[]{3, 3} :
++                fault.equals("domain_nonpositive") ? new int[]{0} : new int[]{3};
++            Model model = volumeModel(fault, new double[][]{{expected[0]}}, events, datasets, numericals, config);
++            try {
++                reader.invoke(null, model, entities, expected[0], "owned_dataset", "owned_numerical");
++                throw new AssertionError("invalid volume getter fixture passed: " + fault);
++            } catch (InvocationTargetException failure) {
++                Throwable cause = failure.getCause();
++                require(cause instanceof IllegalStateException && cause.getMessage().contains("getter_stage=") &&
++                        cause.getMessage().contains("observed=") && cause.getMessage().contains("cleanup_failures="),
++                    "volume failure must retain actual partial observations and cleanup: " + fault + " / " + cause);
++                if (fault.equals("getReal_and_cleanup")) {
++                    require(cause.getMessage().contains("synthetic getReal failure") &&
++                            cause.getMessage().contains("synthetic numerical cleanup failure"),
++                        "cleanup failure must not hide primary evaluation failure");
++                }
++                if (fault.startsWith("unit_")) {
++                    require(!events.contains("numerical.getReal") &&
++                            cause.getMessage().contains("frametype=spatial") &&
++                            cause.getMessage().contains("VERIFIED_OWNED_NODES_REMOVED"),
++                        "invalid unit must fail before evaluation while retaining observed frame and exact owned cleanup: " + fault);
++                    if (fault.startsWith("unit_value_type")) {
++                        require(!events.contains("numerical.getString:unit") && !events.contains("numerical.getStringArray:unit"),
++                            "unrecognized/failed actual value type must not guess or fallback to any unit getter");
++                        require(cause.getMessage().contains("getter_stage=unit_value_type"), "actual value type getter stage must be retained");
++                    } else {
++                        boolean scalar = fault.startsWith("unit_scalar");
++                        require(cause.getMessage().contains("unit_value_type=" + (scalar ? "String" : "StringArray")) &&
++                                events.contains(scalar ? "numerical.getString:unit" : "numerical.getStringArray:unit") &&
++                                !events.contains(scalar ? "numerical.getStringArray:unit" : "numerical.getString:unit"),
++                            "getter failure/mismatch must retain actual representation and never use exception fallback");
++                        if (!fault.endsWith("getter")) require(cause.getMessage().contains("unit_raw="),
++                            "actually returned invalid scalar/vector must remain in partial observations");
++                    }
++                }
++            }
++            require(datasets.contains("existing_dataset") && numericals.contains("existing_numerical") &&
++                    !events.contains("dataset.remove:existing_dataset") && !events.contains("numerical.remove:existing_numerical"),
++                "foreign result nodes must be preserved: " + fault);
++            if (fault.endsWith("collision")) {
++                require(!events.contains("dataset.create") && !events.contains("numerical.create") &&
++                        !events.contains("dataset.remove:owned_dataset") && !events.contains("numerical.remove:owned_numerical"),
++                    "foreign collision must never be overwritten or removed");
++            } else if (!fault.startsWith("cleanup_") && !fault.equals("getReal_and_cleanup")) {
++                require(!datasets.contains("owned_dataset") && !numericals.contains("owned_numerical"),
++                    "primary failure must remove every created temporary node: " + fault);
++            }
++            if (fault.equals("cleanup_numerical") || fault.equals("getReal_and_cleanup")) {
++                require(!datasets.contains("owned_dataset") && numericals.contains("owned_numerical"),
++                    "dataset cleanup must still run after numerical cleanup fails");
++            }
++            if (fault.equals("cleanup_dataset")) require(!numericals.contains("owned_numerical"),
++                "numerical cleanup must precede dataset cleanup failure");
++            cases++; volumeCases++;
++        }
++        System.out.println("W24 mesh-only physical-volume proxy checks: PASS (" + volumeCases + " cases; software only)");
++    }
++
++    private static Model volumeModel(String fault, double[][] matrix, List<String> events,
++            java.util.Set<String> datasets, java.util.Set<String> numericals, Map<String, Object> config) {
++        GeomSequence geometry = proxy(GeomSequence.class, (instance, method, args) -> {
++            if (method.getName().equals("getSDim")) {
++                if (fault.equals("geometry_getter")) throw new IllegalStateException("synthetic geometry getter failure");
++                return fault.equals("geometry_dimension") ? 3 : 2;
++            }
++            if (method.getName().equals("isAxisymmetric")) return !fault.equals("geometry_axisym");
++            return objectMethod(instance, method, args);
++        });
++        com.comsol.model.MeshSequence mesh = proxy(com.comsol.model.MeshSequence.class, (instance, method, args) -> {
++            events.add("mesh." + method.getName());
++            switch (method.getName()) {
++                case "geom": return fault.equals("mesh_geometry") ? "foreign_geom" : "geom1";
++                case "getSDim": return fault.equals("mesh_dimension") ? 3 : 2;
++                case "isEmpty": return fault.equals("mesh_empty");
++                case "getNumElem":
++                    if (fault.equals("mesh_getter")) throw new IllegalStateException("synthetic mesh getter failure");
++                    return fault.equals("mesh_zero") ? 0 : 120;
++                default: return objectMethod(instance, method, args);
++            }
++        });
++        com.comsol.model.MeshSelection measureSelection = proxy(com.comsol.model.MeshSelection.class, (instance, method, args) -> {
++            if (method.getName().equals("geom") && args.length == 2) return instance;
++            if (method.getName().equals("set")) return instance;
++            return objectMethod(instance, method, args);
++        });
++        com.comsol.model.GeomMeasureFinal measure = proxy(com.comsol.model.GeomMeasureFinal.class, (instance, method, args) -> {
++            if (method.getName().equals("selection")) return measureSelection;
++            if (method.getName().equals("getVolume")) {
++                if (fault.equals("area_getter")) throw new IllegalStateException("synthetic area getter failure");
++                return fault.equals("area_nan") ? Double.NaN : fault.equals("area_zero") ? 0.0 : 1.25e-7;
++            }
++            return objectMethod(instance, method, args);
++        });
++        com.comsol.model.LocalSelection selection = proxy(com.comsol.model.LocalSelection.class, (instance, method, args) -> {
++            String name = method.getName();
++            if (name.equals("geom") && method.getParameterCount() == 2) {
++                events.add("selection.geom:" + args[0] + ":" + args[1]);
++                config.put("selection_geometry", args[0]); config.put("selection_dimension", args[1]); return instance;
++            }
++            if (name.equals("set")) {
++                int[] ids = (int[]) args[0]; config.put("selection_entities", ids.clone());
++                events.add("selection.set:" + Arrays.toString(ids)); return instance;
++            }
++            events.add("selection." + name);
++            if (name.equals("geom")) return fault.equals("selection_geometry") ? "foreign_geom" : config.get("selection_geometry");
++            if (name.equals("dim")) return fault.equals("selection_dimension") ? 1 : config.get("selection_dimension");
++            if (name.equals("dimension")) return fault.equals("selection_dimensions_null") ? null :
++                fault.equals("selection_dimensions_mixed") ? new int[]{1, 2} : new int[]{2};
++            if (name.equals("entities")) {
++                if (fault.equals("selection_getter")) throw new IllegalStateException("synthetic selection getter failure");
++                return fault.equals("selection_entities") ? new int[]{4} : config.get("selection_entities");
++            }
++            return objectMethod(instance, method, args);
++        });
++        com.comsol.model.DatasetFeature dataset = proxy(com.comsol.model.DatasetFeature.class, (instance, method, args) -> {
++            String name = method.getName();
++            if (name.equals("set")) {
++                require("mesh".equals(args[0]) && "mesh1".equals(args[1]), "unexpected Mesh dataset setting");
++                config.put("mesh", args[1]); return instance;
++            }
++            if (name.equals("getType")) return fault.equals("dataset_type") ? "Solution" : "Mesh";
++            if (name.equals("getString")) {
++                events.add("dataset.getString:" + args[0]);
++                if (fault.equals("dataset_getter")) throw new IllegalStateException("synthetic dataset getter failure");
++                return fault.equals("dataset_mesh") ? "othermesh" : config.get(String.valueOf(args[0]));
++            }
++            return objectMethod(instance, method, args);
++        });
++        com.comsol.model.NumericalFeature numerical = proxy(com.comsol.model.NumericalFeature.class, (instance, method, args) -> {
++            String name = method.getName();
++            if (name.equals("set")) {
++                String key = String.valueOf(args[0]);
++                require(Arrays.asList("data", "frametype", "unit", "intvolume").contains(key), "unexpected integral setter: " + key);
++                config.put(key, args[1]); return instance;
++            }
++            if (name.equals("selection")) return selection;
++            if (name.equals("getType")) {
++                events.add("numerical.getType");
++                if (fault.equals("numerical_type_getter")) throw new IllegalStateException("synthetic numerical type getter failure");
++                return fault.equals("numerical_type") ? "IntVolume" : fault.equals("numerical_old_intsurface") ? "IntSurface" : "MeasureSurface";
++            }
++            if (name.equals("getValueType")) {
++                require("unit".equals(args[0]), "only actual unit value type may be inspected");
++                events.add("numerical.getValueType:unit");
++                if (fault.equals("unit_value_type_getter")) throw new IllegalStateException("synthetic unit value type getter failure");
++                if (fault.equals("unit_value_type_unknown")) return "DoubleArray";
++                if (fault.equals("unit_value_type_null")) return null;
++                if (fault.equals("unit_value_type_case")) return "string";
++                return fault.startsWith("unit_scalar") ? "String" : "StringArray";
++            }
++            if (name.equals("getString")) {
++                String key = String.valueOf(args[0]); events.add("numerical.getString:" + key);
++                if (key.equals("unit")) {
++                    require(fault.startsWith("unit_scalar") && events.contains("numerical.getValueType:unit"),
++                        "scalar getter must be dispatched only after exact String value type");
++                    if (fault.equals("unit_scalar_getter")) throw new IllegalStateException("synthetic scalar unit getter failure");
++                    if (fault.equals("unit_scalar_null")) return null;
++                    if (fault.equals("unit_scalar_wrong")) return "m^2";
++                    if (fault.equals("unit_scalar_empty")) return "";
++                    return "m^3";
++                }
++                if (fault.equals("frametype_getter") && key.equals("frametype")) throw new IllegalStateException("synthetic frame getter failure");
++                if (fault.equals("frametype") && key.equals("frametype")) return "material";
++                if (fault.equals("intvolume_getter") && key.equals("intvolume")) throw new IllegalStateException("synthetic intvolume getter failure");
++                if (fault.equals("intvolume") && key.equals("intvolume")) return "off";
++                if (fault.equals("numerical_data") && key.equals("data")) return "default_dataset";
++                return config.get(key);
++            }
++            if (name.equals("getStringArray")) {
++                String key = String.valueOf(args[0]); events.add("numerical.getStringArray:" + key);
++                require(!fault.startsWith("unit_scalar") && events.contains("numerical.getValueType:unit"),
++                    "array getter must be dispatched only after exact StringArray value type");
++                if (fault.equals("unit_array_getter")) throw new IllegalStateException("synthetic array unit getter failure");
++                if (fault.equals("unit_array_null")) return null;
++                if (fault.equals("unit_array_empty")) return new String[0];
++                if (fault.equals("unit_array_null_element")) return new String[]{null};
++                if (fault.equals("unit_array_multiple")) return new String[]{"m^3", "m^3"};
++                if (fault.equals("unit") && key.equals("unit")) return new String[]{"m^2"};
++                require(key.equals("unit"), "undocumented measurement array getter: " + key);
++                return config.get(key);
++            }
++            if (name.equals("getReal")) {
++                events.add("numerical.getReal");
++                require(events.contains("numerical.getType") && events.contains("numerical.getString:frametype") &&
++                        "spatial".equals(config.get("frametype")) && !config.containsKey("expr") &&
++                        events.contains("numerical.getString:intvolume") && events.contains("numerical.getValueType:unit") &&
++                        (fault.equals("unit_scalar") ? events.contains("numerical.getString:unit") : events.contains("numerical.getStringArray:unit")) &&
++                        events.contains("selection.entities") && events.contains("dataset.getString:mesh"),
++                    "evaluation cannot precede required actual binding getters");
++                if (fault.equals("getReal") || fault.equals("getReal_and_cleanup")) throw new IllegalStateException("synthetic getReal failure");
++                switch (fault) {
++                    case "matrix_null": return null;
++                    case "matrix_empty": return new double[0][];
++                    case "matrix_nullrow": return new double[][]{null};
++                    case "matrix_emptyrow": return new double[][]{new double[0]};
++                    case "matrix_1x2": return new double[][]{{1e-10, 2e-10}};
++                    case "matrix_2x1": return new double[][]{{1e-10}, {2e-10}};
++                    case "matrix_ragged": return new double[][]{{1e-10}, {}};
++                    case "matrix_nan": return new double[][]{{Double.NaN}};
++                    case "matrix_inf": return new double[][]{{Double.POSITIVE_INFINITY}};
++                    case "matrix_zero": return new double[][]{{0.0}};
++                    case "matrix_negative": return new double[][]{{-1e-10}};
++                    case "volume_threshold": return new double[][]{{matrix[0][0] * 1.000002}};
++                    default: return matrix;
++                }
++            }
++            return objectMethod(instance, method, args);
++        });
++        com.comsol.model.DatasetFeatureList datasetList = proxy(com.comsol.model.DatasetFeatureList.class, (instance, method, args) -> {
++            switch (method.getName()) {
++                case "tags":
++                    if (fault.equals("cleanup_verify") && events.contains("dataset.remove:owned_dataset")) throw new IllegalStateException("synthetic cleanup verify failure");
++                    return datasets.toArray(new String[0]);
++                case "create":
++                    events.add("dataset.create");
++                    require("owned_dataset".equals(args[0]) && "Mesh".equals(args[1]), "unexpected dataset create");
++                    require(!datasets.contains(args[0]), "overwriting foreign dataset");
++                    if (fault.equals("dataset_create_before")) throw new IllegalStateException("synthetic dataset create before failure");
++                    datasets.add(String.valueOf(args[0]));
++                    if (fault.equals("dataset_create_after")) throw new IllegalStateException("synthetic dataset create after failure");
++                    return dataset;
++                case "remove":
++                    events.add("dataset.remove:" + args[0]);
++                    require("owned_dataset".equals(args[0]), "foreign dataset removal");
++                    if (fault.equals("cleanup_dataset")) throw new IllegalStateException("synthetic dataset cleanup failure");
++                    datasets.remove(args[0]); return null;
++                default: return objectMethod(instance, method, args);
++            }
++        });
++        com.comsol.model.NumericalFeatureList numericalList = proxy(com.comsol.model.NumericalFeatureList.class, (instance, method, args) -> {
++            switch (method.getName()) {
++                case "tags": return numericals.toArray(new String[0]);
++                case "create":
++                    events.add("numerical.create");
++                    require("owned_numerical".equals(args[0]) && "MeasureSurface".equals(args[1]), "unexpected numerical create");
++                    require(!numericals.contains(args[0]), "overwriting foreign numerical");
++                    if (fault.equals("numerical_create_before")) throw new IllegalStateException("synthetic numerical create before failure");
++                    numericals.add(String.valueOf(args[0]));
++                    if (fault.equals("numerical_create_after")) throw new IllegalStateException("synthetic numerical create after failure");
++                    return numerical;
++                case "remove":
++                    events.add("numerical.remove:" + args[0]);
++                    require("owned_numerical".equals(args[0]), "foreign numerical removal");
++                    if (fault.equals("cleanup_numerical") || fault.equals("getReal_and_cleanup")) throw new IllegalStateException("synthetic numerical cleanup failure");
++                    numericals.remove(args[0]); return null;
++                default: return objectMethod(instance, method, args);
++            }
++        });
++        com.comsol.model.Results results = proxy(com.comsol.model.Results.class, (instance, method, args) -> {
++            if (method.getName().equals("dataset")) return method.getParameterCount() == 0 ? datasetList : dataset;
++            if (method.getName().equals("numerical")) return method.getParameterCount() == 0 ? numericalList : numerical;
++            return objectMethod(instance, method, args);
++        });
++        ModelNode component = proxy(ModelNode.class, (instance, method, args) -> {
++            if (method.getName().equals("geom")) return geometry;
++            if (method.getName().equals("measure")) return measure;
++            if (method.getName().equals("mesh")) {
++                if (fault.equals("mesh_missing")) throw new IllegalStateException("synthetic missing mesh1");
++                require("mesh1".equals(args[0]), "unexpected mesh binding"); return mesh;
++            }
++            return objectMethod(instance, method, args);
++        });
++        return proxy(Model.class, (instance, method, args) -> {
++            if (method.getName().equals("component")) {
++                require("comp1".equals(args[0]), "unexpected component binding"); return component;
++            }
++            if (method.getName().equals("result")) return results;
++            return objectMethod(instance, method, args);
++        });
+     }
+ 
+     private static void verifiesCouponAndScienceFieldBindingContracts() {
+         for (boolean science : new boolean[]{false, true}) {
+@@ -89,9 +695,9 @@
+                 new String[][]{{"u", "w"}, {"u", "w"}}, nativeKeys(), "field=u");
+             expectFieldFailure(science, 2, true, new String[]{"u"}, new String[]{"u"},
+                 new String[][]{{"u"}}, nativeKeys(), "exactly {u,w}");
+             expectFieldFailure(science, 2, true, new String[]{"u"}, new String[]{"u"},
+-                new String[][]{{"u", "w", "v"}}, nativeKeys(), "exactly {u,w}");
++                new String[][]{{"u", "w", "unknown"}}, nativeKeys(), "exactly {u,w}");
+             expectFieldFailure(science, 2, true, new String[]{"u"}, new String[]{"u"},
+                 new String[][]{{"u", "u"}}, nativeKeys(), "ambiguous");
+             expectFieldFailure(science, 2, true, new String[]{"u"}, new String[]{"u"},
+                 new String[][]{{"u", "w"}}, new String[]{"comp1_T", "comp1_alpha", "comp1_alpha_iso", "comp1_qpost"},
+@@ -147,9 +753,9 @@
+                     throw new AssertionError("nonselected actual descriptor aliased u/w component ownership");
+                 } catch (InvocationTargetException expected) {
+                     String message = expected.getCause().getMessage();
+                     require(expected.getCause() instanceof IllegalStateException &&
+-                            message.contains("aliases selected u/w component ownership") &&
++                            message.contains("aliases selected raw component ownership") &&
+                             message.contains("actual_tags=[aux, disp]") && message.contains("actual_total_count=2") &&
+                             message.contains("actual_field_names=[auxiliary_fixture_field, u]") &&
+                             message.contains("actual_components="),
+                         "actual getter ownership alias must fail with complete observed inventory");
+@@ -192,12 +798,156 @@
+                 new String[][]{{"fixture_aux", "fixture_aux"}, {"u", "w"}}, nativeKeys(), "ambiguous");
+         }
+     }
+ 
++    private static void verifiesPartialObservationFailures() throws Exception {
++        for (boolean science : new boolean[]{false, true}) {
++            Method reader = method(science ? W24CureScienceFixture.class : W24CureCouponFixture.class,
++                "readSolverFieldContract", Model.class, SolverFeature.class);
++            for (String failure : new String[]{"geom_dimension_getter", "geom_axisym_getter",
++                    "geom_invalid_dimension", "geom_nonaxisymmetric", "tags", "component:disp",
++                    "entry_keys", "entry_keys_null"}) {
++                modeGetterCalls.clear();
++                Model model = descriptorModel(new String[]{"disp"}, new String[]{"u"}, new String[][]{{"u", "v", "w"}},
++                    failure, new int[]{0}, new int[]{0});
++                try {
++                    reader.invoke(null, model, entryTable(failure));
++                    throw new AssertionError("invalid partial observations passed");
++                } catch (InvocationTargetException expected) {
++                    String message = expected.getCause().getMessage();
++                    require(message.contains("actual_geometry_dimension=") &&
++                        message.contains("actual_geometry_axisymmetric=") &&
++                        message.contains("actual_Time_atolmethod_entry_keys=") &&
++                        message.contains("actual_Mode2Daxi_includeTwist=") &&
++                        message.contains("actual_Mode2Daxi_ModeExtension="), "partial failure omitted observation categories");
++                    if (failure.equals("geom_dimension_getter"))
++                        require(message.contains("actual_geometry_dimension=UNOBSERVED") &&
++                            message.contains("actual_geometry_axisymmetric=UNOBSERVED"), "failed geometry getter invented values");
++                    if (failure.equals("geom_axisym_getter"))
++                        require(message.contains("actual_geometry_dimension=2") &&
++                            message.contains("actual_geometry_axisymmetric=UNOBSERVED"), "prior dimension was lost");
++                    if (failure.equals("entry_keys_null"))
++                        require(message.contains("actual_Time_atolmethod_entry_keys=null") &&
++                            message.contains("actual_Mode2Daxi_ModeExtension=false"), "observed null differs from unobserved");
++                    else if (failure.startsWith("geom_invalid") || failure.equals("geom_nonaxisymmetric"))
++                        require(message.contains("actual_Time_atolmethod_entry_keys=[comp1_T") &&
++                            message.contains("actual_Mode2Daxi_ModeExtension=false"), "geometry validation lost later actual reads");
++                    else
++                        require(message.contains("actual_Time_atolmethod_entry_keys=UNOBSERVED") &&
++                            message.contains("actual_Mode2Daxi_ModeExtension=UNOBSERVED") && modeGetterCalls.isEmpty(),
++                            "failed sequential getter invented later observations");
++                }
++                cases++;
++            }
++        }
++    }
++
++    private static final List<String> modeGetterCalls = new ArrayList<>();
++
++    private static PhysicsProp modeProperty(String failing) {
++        return proxy(PhysicsProp.class, (instance, method, args) -> {
++            if (method.getName().startsWith("set")) throw new AssertionError("mode setter forbidden");
++            if (method.getName().equals("getBoolean")) {
++                String property = (String) args[0];
++                require(property.equals("includeTwist") || property.equals("ModeExtension"), "unexpected mode getter");
++                modeGetterCalls.add(property);
++                if (failing.equals("missing:" + property) || failing.equals("getter:" + property))
++                    throw new IllegalStateException("synthetic getter failure " + failing);
++                return failing.equals("enabled_both") || failing.equals("enabled:" + property);
++            }
++            return objectMethod(instance, method, args);
++        });
++    }
++
++    private static void verifiesConfiguredModesAndRawMetadataFromActualGetters() throws Exception {
++        for (boolean science : new boolean[]{false, true}) {
++            Method reader = method(science ? W24CureScienceFixture.class : W24CureCouponFixture.class,
++                "readSolverFieldContract", Model.class, SolverFeature.class);
++            for (String[] raw : new String[][]{{"u", "w"}, {"u", "v", "w"}, {"w", "v", "u"}}) {
++                modeGetterCalls.clear();
++                Model model = descriptorModel(new String[]{"disp"}, new String[]{"u"}, new String[][]{raw},
++                    "", new int[]{0}, new int[]{0});
++                Map<String, Object> contract = (Map<String, Object>) reader.invoke(null, model, entryTable(""));
++                Map<?, ?> modes = (Map<?, ?>) contract.get("axisymmetric_mode_readbacks");
++                require(modeGetterCalls.equals(Arrays.asList("includeTwist", "ModeExtension")) &&
++                    ((Map<?, ?>) modes.get("includeTwist")).get("value").equals(false) &&
++                    ((Map<?, ?>) modes.get("ModeExtension")).get("value").equals(false) &&
++                    ((Map<?, ?>) contract.get("physics_field_descriptor")).get("components").equals(Arrays.asList(raw)) &&
++                    contract.get("configured_logical_components").equals(Arrays.asList("u", "w")) &&
++                    contract.get("effective_solved_dof_validation").equals("UNVERIFIED"),
++                    "typed getters must retain raw metadata and configured/effective scope");
++                cases++;
++            }
++            for (String failure : new String[]{"enabled:includeTwist", "enabled:ModeExtension", "enabled_both",
++                    "mode_node_null", "mode_node_getter", "missing:includeTwist", "missing:ModeExtension",
++                    "getter:includeTwist", "getter:ModeExtension"}) {
++                modeGetterCalls.clear();
++                Model model = descriptorModel(new String[]{"disp"}, new String[]{"u"}, new String[][]{{"u", "v", "w"}},
++                    failure, new int[]{0}, new int[]{0});
++                try {
++                    reader.invoke(null, model, entryTable(""));
++                    throw new AssertionError("invalid/unobserved mode passed: " + failure);
++                } catch (InvocationTargetException exception) {
++                    String message = exception.getCause().getMessage();
++                    require(message.contains("getter_stage=") && message.contains("actual_geometry_dimension=2") &&
++                        message.contains("actual_geometry_axisymmetric=true") &&
++                        message.contains("actual_Time_atolmethod_entry_keys=[comp1_T") &&
++                        message.contains("actual_components=[[u, v, w]]") &&
++                        message.contains("actual_Mode2Daxi_includeTwist=") && message.contains("actual_Mode2Daxi_ModeExtension="),
++                        "mode failure must retain all earlier observations");
++                    if (failure.endsWith("includeTwist") && !failure.startsWith("enabled"))
++                        require(modeGetterCalls.equals(Arrays.asList("includeTwist")) &&
++                            message.contains("actual_Mode2Daxi_ModeExtension=UNOBSERVED"), "later getter must remain unobserved");
++                    if (failure.endsWith("ModeExtension") && !failure.startsWith("enabled"))
++                        require(modeGetterCalls.equals(Arrays.asList("includeTwist", "ModeExtension")) &&
++                            message.contains("actual_Mode2Daxi_includeTwist=false") &&
++                            message.contains("actual_Mode2Daxi_ModeExtension=UNOBSERVED"), "prior false must be retained");
++                }
++                cases++;
++            }
++            for (Boolean[] modes : new Boolean[][]{{null, false}, {false, null}}) {
++                try {
++                    if (science) W24CureScienceFixture.validateSolverFieldContract(2, true, modes[0], modes[1],
++                        new String[]{"disp"}, new String[]{"u"}, new String[][]{{"u", "w"}}, nativeKeys());
++                    else W24CureCouponFixture.validateSolverFieldContract(2, true, modes[0], modes[1],
++                        new String[]{"disp"}, new String[]{"u"}, new String[][]{{"u", "w"}}, nativeKeys());
++                    throw new AssertionError("unobserved pure mode passed");
++                } catch (IllegalStateException expected) {
++                    require(expected.getMessage().contains("observed disabled"), "null mode failed unexpectedly");
++                }
++                cases++;
++            }
++            for (String[] raw : new String[][]{{"u", "v", "v", "w"}, {"u", "v", "other"}, {"u", "v", "w", "other"}}) {
++                Model model = descriptorModel(new String[]{"disp"}, new String[]{"u"}, new String[][]{raw},
++                    "", new int[]{0}, new int[]{0});
++                try {
++                    reader.invoke(null, model, entryTable(""));
++                    throw new AssertionError("invalid raw component metadata passed");
++                } catch (InvocationTargetException expected) {
++                    require(expected.getCause().getMessage().contains("actual_Mode2Daxi_includeTwist=false") &&
++                        expected.getCause().getMessage().contains("actual_Time_atolmethod_entry_keys=[comp1_T"),
++                        "component validation must retain mode and Time readbacks");
++                }
++                cases++;
++            }
++            Model alias = descriptorModel(new String[]{"aux", "disp"}, new String[]{"auxiliary", "u"},
++                new String[][]{{"v"}, {"u", "v", "w"}}, "", new int[]{0}, new int[]{0});
++            try {
++                reader.invoke(null, alias, entryTable(""));
++                throw new AssertionError("auxiliary v alias passed");
++            } catch (InvocationTargetException expected) {
++                require(expected.getCause().getMessage().contains("aliases selected raw component ownership"),
++                    "v ownership must be fail closed");
++            }
++            cases++;
++        }
++    }
++
+     private static SolverFeature entryTable(String failing) {
+         return proxy(SolverFeature.class, (instance, method, args) -> {
+             if (method.getName().equals("getEntryKeys")) {
+                 if (failing.equals("entry_keys")) throw new IllegalStateException("synthetic getter failure entry_keys");
++                if (failing.equals("entry_keys_null")) return null;
+                 return nativeKeys();
+             }
+             return objectMethod(instance, method, args);
+         });
+@@ -205,10 +955,16 @@
+ 
+     private static Model descriptorModel(String[] tags, String[] names, String[][] components, String failing,
+             int[] nameGetters, int[] componentGetters) {
+         GeomSequence geom = proxy(GeomSequence.class, (instance, method, args) -> {
+-            if (method.getName().equals("getSDim")) return 2;
+-            if (method.getName().equals("isAxisymmetric")) return true;
++            if (method.getName().equals("getSDim")) {
++                if (failing.equals("geom_dimension_getter")) throw new IllegalStateException("synthetic geometry dimension failure");
++                return failing.equals("geom_invalid_dimension") ? 3 : 2;
++            }
++            if (method.getName().equals("isAxisymmetric")) {
++                if (failing.equals("geom_axisym_getter")) throw new IllegalStateException("synthetic geometry axisym failure");
++                return !failing.equals("geom_nonaxisymmetric");
++            }
+             return objectMethod(instance, method, args);
+         });
+         ModelNode component = proxy(ModelNode.class, (instance, method, args) -> {
+             if (method.getName().equals("geom") && method.getParameterCount() == 1) return geom;
+@@ -221,8 +977,14 @@
+             }
+             return objectMethod(instance, method, args);
+         });
+         Physics physics = proxy(Physics.class, (instance, method, args) -> {
++            if (method.getName().equals("prop") && method.getParameterCount() == 1) {
++                require("Mode2Daxi".equals(args[0]), "unexpected mode property node");
++                if (failing.equals("mode_node_null")) return null;
++                if (failing.equals("mode_node_getter")) throw new IllegalStateException("synthetic getter failure mode node");
++                return modeProperty(failing);
++            }
+             if (method.getName().equals("field") && method.getParameterCount() == 0) return list;
+             if (method.getName().equals("field") && method.getParameterCount() == 1) {
+                 String tag = (String) args[0];
+                 if (failing.equals("lookup:" + tag)) throw new IllegalStateException("synthetic getter failure lookup");
+@@ -377,10 +1139,10 @@
+ 
+     private static Map<String, Object> fieldContract(boolean science, int dimension, boolean axisymmetric,
+             String[] tags, String[] names, String[][] components, String[] keys) {
+         return science
+-            ? W24CureScienceFixture.validateSolverFieldContract(dimension, axisymmetric, tags, names, components, keys)
+-            : W24CureCouponFixture.validateSolverFieldContract(dimension, axisymmetric, tags, names, components, keys);
++            ? W24CureScienceFixture.validateSolverFieldContract(dimension, axisymmetric, false, false, tags, names, components, keys)
++            : W24CureCouponFixture.validateSolverFieldContract(dimension, axisymmetric, false, false, tags, names, components, keys);
+     }
+ 
+     private static Map<String, Object> toleranceRows(boolean science, Map<String, Object> contract,
+             Map<String, Object> rows) {
+@@ -457,8 +1219,12 @@
+             if (method.getName().equals("component") && method.getParameterCount() == 0) return components;
+             return objectMethod(instance, method, args);
+         });
+         Physics physics = proxy(Physics.class, (instance, method, args) -> {
++            if (method.getName().equals("prop") && method.getParameterCount() == 1) {
++                require("Mode2Daxi".equals(args[0]), "unexpected mode property node");
++                return modeProperty("");
++            }
+             if (method.getName().equals("field") && method.getParameterCount() == 0) return fields;
+             if (method.getName().equals("field") && method.getParameterCount() == 1) return field;
+             return objectMethod(instance, method, args);
+         });
+--- current/tests/test_w24_cure_capture_link.py
++++ preserved/tests/test_w24_cure_capture_link.py
+@@ -205,8 +205,15 @@
+         solvers[stage] = {
+             "rtol": 1e-5, "atolglobalmethod": "unscaled", "atolglobal": 1e-8,
+             "solver_field_contract": {
+                 "geometry_dimension": 2, "geometry_axisymmetric": True,
++                "axisymmetric_mode_readbacks": {
++                    "physics_tag": "solid", "property_node": "Mode2Daxi",
++                    "includeTwist": {"getter": "getBoolean", "value": False},
++                    "ModeExtension": {"getter": "getBoolean", "value": False},
++                },
++                "configured_logical_components": ["u", "w"],
++                "effective_solved_dof_validation": "UNVERIFIED",
+                 "physics_field_count": 1, "selected_displacement_field_count": 1,
+                 "physics_field_descriptors": [{
+                     "physics_tag": "solid", "physics_field_count": 1,
+                     "field_tag": "u", "field": "u", "components": ["u", "w"],
+@@ -1960,4 +1967,98 @@
+         contract["solver_entry_keys"].append("comp1_extra_active_fixture")
+         solver["field_tolerances"]["comp1_extra_active_fixture"] = dict(solver["field_tolerances"]["comp1_u"])
+     with pytest.raises(CaptureError):
+         validate_cure_law_v2_contract_readback(readback)
++
++
++@pytest.mark.parametrize("raw_components", [["u", "w"], ["u", "v", "w"], ["w", "v", "u"]])
++@pytest.mark.parametrize("aux_first", [True, False])
++def test_v2_configured_axisymmetric_modes_preserve_raw_components(raw_components, aux_first):
++    from tools.w24_cure_v2_capture import validate_cure_law_v2_contract_readback
++
++    readback = _with_auxiliary_physics_inventory(aux_first)
++    for solver in readback["solver_readbacks"].values():
++        contract = solver["solver_field_contract"]
++        contract["physics_field_descriptor"]["components"] = list(raw_components)
++        selected = next(row for row in contract["physics_field_descriptors"] if row["field"] == "u")
++        selected["components"] = list(raw_components)
++    before = copy.deepcopy(readback)
++    result = validate_cure_law_v2_contract_readback(readback)
++    assert readback == before
++    assert result["effective_serendipity_dof_tolerance_conversion"] == "UNVERIFIED"
++    assert result["full_dof_absolute_tolerances"]["comp1_u"] == 1e-12
++    assert result["full_dof_absolute_tolerances"]["comp1_w"] == 1e-12
++
++
++@pytest.mark.parametrize("property_name", ["includeTwist", "ModeExtension"])
++@pytest.mark.parametrize("value", [None, "false", "off", 0, 0.0, True])
++def test_v2_axisymmetric_mode_values_require_strict_false_boolean(property_name, value):
++    from tools.w24_cure_v2_capture import CaptureError, validate_cure_law_v2_contract_readback
++
++    readback = _contract_readback()
++    modes = readback["solver_readbacks"]["stdUV"]["solver_field_contract"]["axisymmetric_mode_readbacks"]
++    modes[property_name]["value"] = value
++    with pytest.raises(CaptureError):
++        validate_cure_law_v2_contract_readback(readback)
++
++
++@pytest.mark.parametrize("mutation", [
++    "missing_modes", "null_modes", "extra_mode_key", "wrong_physics", "wrong_node",
++    "missing_twist", "missing_extension", "null_twist", "null_extension",
++    "missing_getter", "wrong_getter", "extra_getter_key", "missing_value",
++    "both_enabled", "crossstage_mode", "crossstage_raw", "unknown_raw", "duplicate_raw", "renamed_raw",
++    "alias_v", "alias_uv", "alias_uvw", "configured_components", "verified_effective_dof",
++])
++def test_v2_axisymmetric_mode_provenance_and_raw_inventory_reject_tampering(mutation):
++    from tools.w24_cure_v2_capture import CaptureError, validate_cure_law_v2_contract_readback
++
++    readback = _with_auxiliary_physics_inventory()
++    for solver in readback["solver_readbacks"].values():
++        contract = solver["solver_field_contract"]
++        contract["physics_field_descriptor"]["components"] = ["u", "v", "w"]
++        next(row for row in contract["physics_field_descriptors"] if row["field"] == "u")["components"] = ["u", "v", "w"]
++    contract = readback["solver_readbacks"]["stdUV"]["solver_field_contract"]
++    modes = contract["axisymmetric_mode_readbacks"]
++    if mutation == "missing_modes":
++        contract.pop("axisymmetric_mode_readbacks")
++    elif mutation == "null_modes":
++        contract["axisymmetric_mode_readbacks"] = None
++    elif mutation == "extra_mode_key":
++        modes["forged"] = False
++    elif mutation == "wrong_physics":
++        modes["physics_tag"] = "another_solid"
++    elif mutation == "wrong_node":
++        modes["property_node"] = "ShapeProperty"
++    elif mutation in {"missing_twist", "missing_extension"}:
++        modes.pop("includeTwist" if mutation == "missing_twist" else "ModeExtension")
++    elif mutation in {"null_twist", "null_extension"}:
++        modes["includeTwist" if mutation == "null_twist" else "ModeExtension"] = None
++    elif mutation == "missing_getter":
++        modes["includeTwist"].pop("getter")
++    elif mutation == "wrong_getter":
++        modes["ModeExtension"]["getter"] = "getString"
++    elif mutation == "extra_getter_key":
++        modes["ModeExtension"]["fallback"] = False
++    elif mutation == "missing_value":
++        modes["includeTwist"].pop("value")
++    elif mutation == "both_enabled":
++        modes["includeTwist"]["value"] = modes["ModeExtension"]["value"] = True
++    elif mutation == "crossstage_mode":
++        readback["solver_readbacks"]["stdCool"]["solver_field_contract"]["axisymmetric_mode_readbacks"]["ModeExtension"]["value"] = True
++    elif mutation == "crossstage_raw":
++        other = readback["solver_readbacks"]["stdCool"]["solver_field_contract"]
++        other["physics_field_descriptor"]["components"] = ["u", "w"]
++        next(row for row in other["physics_field_descriptors"] if row["field"] == "u")["components"] = ["u", "w"]
++    elif mutation in {"unknown_raw", "duplicate_raw", "renamed_raw"}:
++        raw = {"unknown_raw": ["u", "v", "w", "other"], "duplicate_raw": ["u", "v", "v", "w"],
++               "renamed_raw": ["u", "v", "other"]}[mutation]
++        contract["physics_field_descriptor"]["components"] = raw
++        next(row for row in contract["physics_field_descriptors"] if row["field"] == "u")["components"] = list(raw)
++    elif mutation in {"alias_v", "alias_uv", "alias_uvw"}:
++        contract["physics_field_descriptors"][0]["components"] = {
++            "alias_v": ["v"], "alias_uv": ["u", "v"], "alias_uvw": ["u", "v", "w"]}[mutation]
++    elif mutation == "configured_components":
++        contract["configured_logical_components"] = ["u", "v", "w"]
++    elif mutation == "verified_effective_dof":
++        contract["effective_solved_dof_validation"] = "PASS"
++    with pytest.raises(CaptureError):
++        validate_cure_law_v2_contract_readback(readback)
+--- current/tests/test_w24_cure_coupon_fixture.py
++++ preserved/tests/test_w24_cure_coupon_fixture.py
+@@ -186,14 +186,51 @@
+         + compile_result["stdout_text"] + compile_result["stderr_text"]
+     )
+     for main_class, expected_stdout in (
+         ("W24DistributedODEResolverHarness", "W24 DistributedODE resolver proxy checks: PASS (3 cases)"),
+-        ("W24SolverSequenceDiagnosticsHarness", "W24 solver-sequence diagnostics proxy checks: PASS (122 cases)"),
++        ("W24SolverSequenceDiagnosticsHarness", "W24 solver-sequence diagnostics proxy checks: PASS (318 cases)"),
+     ):
+         result = run_results[main_class]
+         assert result["returncode"] == 0 and not result["timed_out"], (
+             f"offline {main_class} failed:\n" + result["stdout_text"] + result["stderr_text"]
+         )
+-        assert result["stdout_text"].strip() == expected_stdout
++        assert result["stdout_text"].strip().splitlines()[-1] == expected_stdout
++        if main_class == "W24SolverSequenceDiagnosticsHarness":
++            assert result["stdout_text"].strip().splitlines()[:-1] == [
++                "W24 coupon mesh-generation composition proxy checks: PASS (2 cases; software only)",
++                "W24 mesh-only physical-volume proxy checks: PASS (79 cases; software only)",
++                "W24 Science measurement applicability proxy checks: PASS (63 cases; software only)",
++            ]
+     assert all(value["major_version"] == 55 for value in class_artifacts.values()), (
+         "Corretto 11 output must retain Java class major version 55"
+     )
++
++
++def test_coupon_physical_measure_keeps_native_area_separate_from_mesh_integral():
++    source = FIXTURE.read_text(encoding="utf-8")
++    helper = source.split("private static Map<String, Object> observeAxisymmetricPhysicalVolume(", 1)[1].split(
++        "private static Map<String, Object> readback(Model model)", 1)[0]
++    assert '"cross_section_area_m2", area' in helper
++    assert '"volume_m3", volume' in helper
++    assert '"NATIVE_MESH_MEASURESURFACE_SPATIAL_INTVOLUME_ON"' in helper
++    assert 'numerical().create(numericalTag, "MeasureSurface")' in helper
++    assert 'integral.set("frametype", "spatial")' in helper
++    assert 'String frameType = integral.getString("frametype")' in helper
++    assert '!"spatial".equals(frameType)' in helper
++    assert '!"MeasureSurface".equals(numericalType)' in helper
++    assert helper.index('integral.getString("frametype")') < helper.index('integral.getReal()')
++    assert helper.index('integral.getType()') < helper.index('integral.getReal()')
++    assert '"expr"' not in helper and '"integrand"' not in helper
++    assert 'integral.set("unit", new String[]{"m^3"})' in helper
++    assert 'String unitValueType = integral.getValueType("unit")' in helper
++    assert '"String".equals(unitValueType)' in helper and '"StringArray".equals(unitValueType)' in helper
++    assert 'observed.put("unit_value_type", unitValueType)' in helper
++    assert 'observed.put("unit_raw", scalarUnit)' in helper
++    assert 'observed.put("unit_raw", units == null ? null : Arrays.asList(units))' in helper
++    assert helper.index('integral.getValueType("unit")') < helper.index('integral.getString("unit")')
++    assert helper.index('integral.getValueType("unit")') < helper.index('integral.getStringArray("unit")')
++    assert '!Arrays.equals(new String[]{"m^3"}, units)' in helper
++    assert 'integral.set("intvolume", "on")' in helper
++    for forbidden in ('"Solution"', '"solnum"', '.run(', '2*pi*r', '* expectedVolume', '* area'):
++        assert forbidden not in helper
++    assert 'double volume = values[0][0]' in helper
++    assert 'relativeError > 1.0e-6' in helper
+--- current/tests/test_w24_cure_science_runner.py
++++ preserved/tests/test_w24_cure_science_runner.py
+@@ -452,14 +452,14 @@
+                 "displacement_abs_max_m": displacement_max,
+                 "displacement_probe_m": displacement_probe,
+                 "displacement_probe_coordinate_m": [100e-6, 200e-6],
+                 "feature_readbacks": {
+-                    "stress_mean": mechanics_row("AvVolume", ["Pa"] * 4, expressions,
++                    "stress_mean": mechanics_row("AvSurface", ["Pa"] * 4, expressions,
+                                                   [4, 1], dimension=2, measure="intvolume"),
+-                    "stress_abs_max": mechanics_row("MaxVolume", ["Pa"] * 4,
++                    "stress_abs_max": mechanics_row("MaxSurface", ["Pa"] * 4,
+                                                      [f"abs({expr})" for expr in expressions],
+                                                      [4, 1], dimension=2),
+-                    "displacement_abs_max": mechanics_row("MaxVolume", ["m", "m"],
++                    "displacement_abs_max": mechanics_row("MaxSurface", ["m", "m"],
+                                                            ["abs(u)", "abs(w)"], [2, 1], dimension=2),
+                     "displacement_probe": {
+                         "type": "Interp", "dataset": dataset, "expression": ["u", "w"],
+                         "unit": ["m", "m"], "solution_selection": "all",
+@@ -477,20 +477,20 @@
+         else:
+             metrics_path = output_dir / "native_metrics.json"
+             readbacks = {
+                 "adhesive_cure_averages": _metric_readback(
+-                    "AvVolume", ["1", "1", "1"], 2, "intvolume",
++                    "AvSurface", ["1", "1", "1"], 2, "intvolume",
+                     expression=("alpha_iso", "alpha", "qpost")),
+-                "energy_alumina": _metric_readback("IntVolume", ["J"], 2, "intvolume"),
+-                "energy_gold": _metric_readback("IntVolume", ["J"], 2, "intvolume"),
+-                "energy_adhesive": _metric_readback("IntVolume", ["J"], 2, "intvolume"),
+-                "energy_fiber": _metric_readback("IntVolume", ["J"], 2, "intvolume"),
+-                "reaction_power": _metric_readback("IntVolume", ["W"], 2, "intvolume",
++                "energy_alumina": _metric_readback("IntSurface", ["J"], 2, "intvolume"),
++                "energy_gold": _metric_readback("IntSurface", ["J"], 2, "intvolume"),
++                "energy_adhesive": _metric_readback("IntSurface", ["J"], 2, "intvolume"),
++                "energy_fiber": _metric_readback("IntSurface", ["J"], 2, "intvolume"),
++                "reaction_power": _metric_readback("IntSurface", ["W"], 2, "intvolume",
+                                                    expression=("Qrxn",)),
+-                "outward_power": _metric_readback("IntSurface", ["W"], 1, "intsurface",
++                "outward_power": _metric_readback("IntLine", ["W"], 1, "intsurface",
+                                                    expression=("hconv*(T-Tenv)",), entity_count=8),
+                 "adhesive_mean_stress": _metric_readback(
+-                    "AvVolume", ["Pa"] * 4, 2, "intvolume",
++                    "AvSurface", ["Pa"] * 4, 2, "intvolume",
+                     expression=tuple(self.stress_components[role]["expression"] for role in runner.STRESS_ROLES)),
+                 "stress_probes": {**_metric_readback(
+                     "Interp", ["Pa"] * 4, None, None,
+                     expression=tuple(self.stress_components[role]["expression"] for role in runner.STRESS_ROLES)),
+@@ -1126,4 +1126,85 @@
+     path = tmp_path / "receipt.json"
+     path.write_text(json.dumps({"status": "BUILT_NOT_SOLVED"}), encoding="utf-8")
+     with pytest.raises(runner.CampaignError, match="successful unsolved native template"):
+         runner.validate_template_receipt(path)
++
++
++def _applicability_fixture(tmp_path, case_id):
++    evidence, stresses, cure = _native_metric_fixture(tmp_path)
++    if case_id == "cure":
++        return evidence, stresses, cure["native_metrics"], "native_metrics"
++    adapter = _FakeScienceAdapter(evidence)
++    adapter.stress_components = stresses
++    capture = adapter.capture_solution(
++        runner.SolveSlot(case_id, "stdMech", "software applicability fixture"),
++        output_dir=evidence / case_id, timeout_s=5.0)
++    return evidence, stresses, capture["mechanics_metrics"], "mechanics_metrics"
++
++
++def _verify_applicability(receipt, evidence, stresses, case_id):
++    if case_id == "cure":
++        return runner.verify_native_metrics_receipt(
++            receipt, evidence, expected_times=[0.0, 1500.0], stress_components=stresses)
++    return runner.verify_native_mechanics_receipt(
++        receipt, evidence, case_id=case_id, stress_components=stresses)
++
++
++@pytest.mark.parametrize("case_id", ["cure", "mechanics_free_expansion", "mechanics_fully_fixed"])
++def test_documented_science_types_accept_complete_synthetic_histories(tmp_path, case_id):
++    evidence, stresses, receipt, _ = _applicability_fixture(tmp_path, case_id)
++    result = _verify_applicability(receipt, evidence, stresses, case_id)
++    rows = result["artifact"]["feature_readbacks"]
++    if case_id == "cure":
++        assert rows["energy_alumina"]["type"] == "IntSurface"
++        assert rows["outward_power"]["type"] == "IntLine"
++        assert rows["adhesive_cure_averages"]["type"] == "AvSurface"
++    else:
++        assert rows["stress_mean"]["type"] == "AvSurface"
++        assert rows["stress_abs_max"]["type"] == rows["displacement_abs_max"]["type"] == "MaxSurface"
++
++
++@pytest.mark.parametrize("case_id,key,field,wrong", [
++    *[(case, key, field, wrong)
++      for case, key, oldtype in [
++          ("cure", "adhesive_cure_averages", "AvVolume"),
++          ("cure", "energy_alumina", "IntVolume"),
++          ("cure", "outward_power", "IntSurface"),
++          ("mechanics_free_expansion", "stress_mean", "AvVolume"),
++          ("mechanics_free_expansion", "stress_abs_max", "MaxVolume"),
++          ("mechanics_fully_fixed", "displacement_abs_max", "MaxVolume")]
++      for field, wrong in [
++          ("type", oldtype), ("entity_dimension", 3),
++          ("axisymmetric_measure_value", "off" if "max" not in key else "on"),
++          ("unit", ["badunit"]), ("dataset", "foreign_solution"), ("geometry", "wronggeom")]],
++    ("cure", "stress_probes", "type", "Eval"),
++    ("cure", "stress_probes", "dataset", "foreign_solution"),
++    ("mechanics_free_expansion", "displacement_probe", "type", "Eval"),
++    ("mechanics_free_expansion", "displacement_probe", "dataset", "foreign_solution"),
++])
++def test_science_consumers_reject_obsolete_types_and_wrong_readbacks(tmp_path, case_id, key, field, wrong):
++    evidence, stresses, receipt, _ = _applicability_fixture(tmp_path, case_id)
++    path = Path(receipt["path"])
++    artifact = json.loads(path.read_text(encoding="utf-8"))
++    artifact["feature_readbacks"][key][field] = wrong
++    path.write_text(json.dumps(artifact), encoding="utf-8")
++    receipt.update(size_bytes=path.stat().st_size, sha256=runner.sha256(path))
++    with pytest.raises(runner.CampaignError):
++        _verify_applicability(receipt, evidence, stresses, case_id)
++
++
++def test_science_creation_calls_use_documented_dimensions_and_actual_type_getters():
++    source = (Path(__file__).parents[1] / "tools/java/W24CureScienceFixture.java").read_text()
++    assert '"IntVolume"' not in source and '"AvVolume"' not in source and '"MaxVolume"' not in source
++    for signature, successor in [
++            ("mechanicsNumerical", "/** Capture native averages"),
++            ("evaluateNumerical", "private static NumericalValues evaluateInterpolation"),
++            ("evaluateInterpolation", "private static Map<String, Map<String, String>> readStressDescriptors")]:
++        helper = source.split("private static NumericalValues " + signature, 1)[1].split(successor, 1)[0]
++        assert helper.index("String actualType = feature.getType()") < helper.index("feature.run()")
++        assert 'readback.put("type", actualType)' in helper
++    inline = source.split('String interpType = interp.getType();', 1)[1]
++    assert inline.index('!"Interp".equals(interpType)') < inline.index("interp.run()")
++    assert 'interpReadback.put("type", interpType)' in inline
++    assert 'mesh.feature("size").set("hmax", 10e-6);\n            mesh.feature("size").set("hmin", 1e-6);\n            mesh.create("ftri1", "FreeTri");\n            mesh.run();' in source
++    assert '"IntLine", "outward_power", new String[]{"hconv*(T-Tenv)"}, new String[]{"W"}, 1,' in source
++    assert '"IntSurface", "reaction_power", new String[]{"Qrxn"}, new String[]{"W"}, 2,' in source
+--- current/tools/java/W24CureCouponFixture.java
++++ preserved/tools/java/W24CureCouponFixture.java
+@@ -1166,8 +1166,9 @@
+         localSize(model, mesh, "sizeAl", "sel_alumina", 50e-6, 10e-6);
+         localSize(model, mesh, "sizeAu", "sel_gold", 50e-6, 5e-6);
+         localSize(model, mesh, "sizeAdh", "sel_adhesive", 8e-6, 2e-6);
+         localSize(model, mesh, "sizeFiber", "sel_fiber", 25e-6, 5e-6);
++        mesh.create("ftri1", "FreeTri");
+         mesh.run();
+     }
+ 
+     private static void localSize(Model model, MeshSequence mesh, String tag, String selection,
+@@ -1244,11 +1245,17 @@
+     }
+ 
+     /** Pure fail-closed field/entry mapping gate, also exercised by the offline proxy harness. */
+     static Map<String, Object> validateSolverFieldContract(int geometryDimension, boolean axisymmetric,
++            Boolean includeTwist, Boolean modeExtension,
+             String[] fieldTags, String[] fieldNames, String[][] fieldComponents, String[] actualEntryKeys) {
+         if (geometryDimension != 2 || !axisymmetric) {
+             throw new IllegalStateException("W24 displacement tolerance mapping requires 2-D axisymmetric geometry");
++        }
++        if (!Boolean.FALSE.equals(includeTwist) || !Boolean.FALSE.equals(modeExtension)) {
++            throw new IllegalStateException("W24 configured u/w binding requires observed disabled Mode2Daxi " +
++                "includeTwist and ModeExtension; actual_includeTwist=" + includeTwist +
++                "; actual_ModeExtension=" + modeExtension);
+         }
+         if (fieldTags == null || fieldNames == null || fieldComponents == null || fieldTags.length == 0 ||
+             fieldNames.length != fieldTags.length || fieldComponents.length != fieldTags.length) {
+             throw physicsFieldContractFailure("validate:field=u descriptor arrays null/empty/misaligned", fieldTags, fieldNames, fieldComponents, null);
+@@ -1270,10 +1277,11 @@
+             }
+             if ("u".equals(fieldNames[i])) {
+                 displacementCount++;
+                 selected = i;
+-                if (components.size() != 2 || !components.contains("u") || !components.contains("w")) {
+-                    throw physicsFieldContractFailure("validate:field=u components must be exactly {u,w}", fieldTags, fieldNames, fieldComponents, null);
++                if (!(components.equals(new LinkedHashSet<>(Arrays.asList("u", "w"))) ||
++                      components.equals(new LinkedHashSet<>(Arrays.asList("u", "v", "w"))))) {
++                    throw physicsFieldContractFailure("validate:field=u components must be exactly {u,w} or {u,v,w}", fieldTags, fieldNames, fieldComponents, null);
+                 }
+             }
+             Map<String, Object> observed = new LinkedHashMap<>();
+             observed.put("physics_tag", "solid");
+@@ -1289,10 +1297,10 @@
+         }
+         for (int i = 0; i < fieldTags.length; i++) {
+             if (i == selected) continue;
+             for (String component : fieldComponents[i]) {
+-                if ("u".equals(component) || "w".equals(component)) {
+-                    throw physicsFieldContractFailure("validate:nonselected descriptor aliases selected u/w component ownership",
++                if (Arrays.asList(fieldComponents[selected]).contains(component)) {
++                    throw physicsFieldContractFailure("validate:nonselected descriptor aliases selected raw component ownership",
+                         fieldTags, fieldNames, fieldComponents, null);
+                 }
+             }
+         }
+@@ -1319,8 +1327,22 @@
+         bindings.put("w", "comp1_u");
+         Map<String, Object> contract = new LinkedHashMap<>();
+         contract.put("geometry_dimension", geometryDimension);
+         contract.put("geometry_axisymmetric", axisymmetric);
++        Map<String, Object> modes = new LinkedHashMap<>();
++        modes.put("physics_tag", "solid");
++        modes.put("property_node", "Mode2Daxi");
++        Map<String, Object> twist = new LinkedHashMap<>();
++        twist.put("getter", "getBoolean");
++        twist.put("value", includeTwist);
++        Map<String, Object> extension = new LinkedHashMap<>();
++        extension.put("getter", "getBoolean");
++        extension.put("value", modeExtension);
++        modes.put("includeTwist", twist);
++        modes.put("ModeExtension", extension);
++        contract.put("axisymmetric_mode_readbacks", modes);
++        contract.put("configured_logical_components", Arrays.asList("u", "w"));
++        contract.put("effective_solved_dof_validation", "UNVERIFIED");
+         contract.put("physics_field_count", fieldTags.length);
+         contract.put("physics_field_descriptors", descriptors);
+         contract.put("selected_displacement_field_count", displacementCount);
+         contract.put("physics_field_descriptor", descriptor);
+@@ -1341,22 +1363,27 @@
+     private static Map<String, Object> readSolverFieldContract(Model model, SolverFeature time) {
+         String[] fieldTags = null;
+         String[] fieldNames = null;
+         String[][] components = null;
++        Integer dimension = null;
++        Boolean axisymmetric = null;
++        String[] entryKeys = null;
++        boolean entryKeysObserved = false;
++        boolean fieldTagsObserved = false;
++        Boolean includeTwist = null;
++        Boolean modeExtension = null;
+         String getterStage = "geometry";
+         try {
+             GeomSequence geom = model.component(COMPONENT).geom(GEOMETRY);
+             getterStage = "geometry.getSDim";
+-            int dimension = geom.getSDim();
++            dimension = geom.getSDim();
+             getterStage = "geometry.isAxisymmetric";
+-            boolean axisymmetric = geom.isAxisymmetric();
+-            if (dimension != 2 || !axisymmetric) {
+-                throw new IllegalStateException("W24 displacement tolerance mapping requires 2-D axisymmetric geometry");
+-            }
++            axisymmetric = geom.isAxisymmetric();
+             getterStage = "model.physics(solid)";
+             Physics solid = model.physics("solid");
+             getterStage = "solid.field().tags()";
+             fieldTags = solid.field().tags();
++            fieldTagsObserved = true;
+             if (fieldTags == null || fieldTags.length == 0) {
+                 throw new IllegalStateException("field=u descriptor list is null or empty");
+             }
+             fieldNames = new String[fieldTags.length];
+@@ -1375,13 +1402,28 @@
+                 getterStage = "solid.field(" + fieldTags[i] + ").component()";
+                 components[i] = field.component();
+             }
+             getterStage = "time.getEntryKeys(atolmethod)";
+-            String[] entryKeys = time.getEntryKeys("atolmethod");
++            entryKeys = time.getEntryKeys("atolmethod");
++            entryKeysObserved = true;
++            getterStage = "solid.prop(Mode2Daxi)";
++            com.comsol.model.physics.PhysicsProp modes = solid.prop("Mode2Daxi");
++            if (modes == null) throw new IllegalStateException("Mode2Daxi property node getter returned null");
++            getterStage = "solid.prop(Mode2Daxi).getBoolean(includeTwist)";
++            includeTwist = modes.getBoolean("includeTwist");
++            getterStage = "solid.prop(Mode2Daxi).getBoolean(ModeExtension)";
++            modeExtension = modes.getBoolean("ModeExtension");
+             getterStage = "validateSolverFieldContract";
+-            return validateSolverFieldContract(dimension, axisymmetric, fieldTags, fieldNames, components, entryKeys);
++            return validateSolverFieldContract(dimension, axisymmetric, includeTwist, modeExtension, fieldTags, fieldNames, components, entryKeys);
+         } catch (RuntimeException cause) {
+-            throw physicsFieldContractFailure(getterStage, fieldTags, fieldNames, components, cause);
++            String message = physicsFieldContractFailure(getterStage, fieldTags, fieldNames, components, cause).getMessage() +
++                "; actual_tags_observed=" + fieldTagsObserved +
++                "; actual_geometry_dimension=" + (dimension == null ? "UNOBSERVED" : dimension) +
++                "; actual_geometry_axisymmetric=" + (axisymmetric == null ? "UNOBSERVED" : axisymmetric) +
++                "; actual_Time_atolmethod_entry_keys=" + (!entryKeysObserved ? "UNOBSERVED" : Arrays.toString(entryKeys)) +
++                "; actual_Mode2Daxi_includeTwist=" + (includeTwist == null ? "UNOBSERVED" : includeTwist) +
++                "; actual_Mode2Daxi_ModeExtension=" + (modeExtension == null ? "UNOBSERVED" : modeExtension);
++            throw new IllegalStateException(message, cause);
+         }
+     }
+ 
+     private static Map<String, Object> solverToleranceReadbacks(Model model, SolverFeature time) {
+@@ -1890,8 +1932,191 @@
+             }
+         }
+     }
+ 
++    /** Mesh-only physical volume observation. Never evaluate a solution or rebuild a mesh. */
++    private static Map<String, Object> observeAxisymmetricPhysicalVolume(
++            Model model, int[] entities, double expectedVolume, String datasetTag, String numericalTag) {
++        Map<String, Object> observed = new LinkedHashMap<>();
++        String stage = "geometry";
++        String[] originalDatasets = null, originalNumericals = null;
++        boolean datasetAttempted = false, numericalAttempted = false;
++        RuntimeException primary = null;
++        List<String> cleanupFailures = new ArrayList<>();
++        try {
++            GeomSequence geom = model.component(COMPONENT).geom(GEOMETRY);
++            int dimension = geom.getSDim();
++            observed.put("geometry_dimension", dimension);
++            boolean axisymmetric = geom.isAxisymmetric();
++            observed.put("geometry_axisymmetric", axisymmetric);
++            if (dimension != 2 || !axisymmetric) {
++                throw new IllegalStateException("physical volume requires actual 2-D axisymmetric geometry");
++            }
++            stage = "domain_entities";
++            observed.put("domain_entities", entities == null ? null : Arrays.toString(entities));
++            if (entities == null || entities.length != 1 || entities[0] <= 0) {
++                throw new IllegalStateException("physical volume selection must contain exactly one positive domain");
++            }
++            if (!Double.isFinite(expectedVolume) || expectedVolume <= 0.0) {
++                throw new IllegalStateException("invalid frozen expected physical volume");
++            }
++            stage = "already_built_mesh";
++            MeshSequence mesh = model.component(COMPONENT).mesh("mesh1");
++            String meshGeometry = mesh.geom();
++            observed.put("mesh_geometry", meshGeometry);
++            int meshDimension = mesh.getSDim();
++            observed.put("mesh_dimension", meshDimension);
++            boolean meshEmpty = mesh.isEmpty();
++            observed.put("mesh_empty", meshEmpty);
++            int elementCount = mesh.getNumElem();
++            observed.put("mesh_element_count", elementCount);
++            if (!GEOMETRY.equals(meshGeometry) || meshDimension != 2 || meshEmpty || elementCount <= 0) {
++                throw new IllegalStateException("physical volume requires available already-built mesh1 on geom1");
++            }
++            stage = "cross_section_area";
++            model.component(COMPONENT).measure().selection().geom(GEOMETRY, 2).set(entities);
++            double area = model.component(COMPONENT).measure().getVolume();
++            observed.put("cross_section_area_m2", area);
++            if (!Double.isFinite(area) || area <= 0.0) {
++                throw new IllegalStateException("invalid native 2-D cross-section area");
++            }
++            stage = "temporary_tag_ownership";
++            originalDatasets = model.result().dataset().tags();
++            originalNumericals = model.result().numerical().tags();
++            if (originalDatasets == null || originalNumericals == null ||
++                    new HashSet<>(Arrays.asList(originalDatasets)).size() != originalDatasets.length ||
++                    new HashSet<>(Arrays.asList(originalNumericals)).size() != originalNumericals.length ||
++                    datasetTag == null || datasetTag.isBlank() || numericalTag == null || numericalTag.isBlank() ||
++                    Arrays.asList(originalDatasets).contains(datasetTag) ||
++                    Arrays.asList(originalNumericals).contains(numericalTag)) {
++                throw new IllegalStateException("temporary physical-volume tag collision or invalid inventory");
++            }
++            observed.put("dataset_tag", datasetTag);
++            observed.put("numerical_tag", numericalTag);
++            stage = "dataset_create";
++            datasetAttempted = true;
++            model.result().dataset().create(datasetTag, "Mesh");
++            com.comsol.model.DatasetFeature dataset = model.result().dataset(datasetTag);
++            dataset.set("mesh", "mesh1");
++            stage = "dataset_getters";
++            String datasetType = dataset.getType();
++            observed.put("dataset_type", datasetType);
++            String datasetMesh = dataset.getString("mesh");
++            observed.put("dataset_mesh", datasetMesh);
++            if (!"Mesh".equals(datasetType) || !"mesh1".equals(datasetMesh)) {
++                throw new IllegalStateException("temporary Mesh dataset binding readback mismatch");
++            }
++            stage = "numerical_create";
++            numericalAttempted = true;
++            model.result().numerical().create(numericalTag, "MeasureSurface");
++            com.comsol.model.NumericalFeature integral = model.result().numerical(numericalTag);
++            integral.set("data", datasetTag);
++            integral.selection().geom(GEOMETRY, 2).set(entities);
++            integral.set("frametype", "spatial");
++            integral.set("unit", new String[]{"m^3"});
++            integral.set("intvolume", "on");
++            stage = "numerical_getters";
++            String numericalType = integral.getType();
++            observed.put("numerical_type", numericalType);
++            String data = integral.getString("data");
++            observed.put("numerical_data", data);
++            String selectionGeometry = integral.selection().geom();
++            observed.put("selection_geometry", selectionGeometry);
++            int selectionDimension = integral.selection().dim();
++            observed.put("selection_dimension", selectionDimension);
++            int[] selectionDimensions = integral.selection().dimension();
++            observed.put("selection_dimensions", selectionDimensions == null ? null : Arrays.toString(selectionDimensions));
++            int[] selected = integral.selection().entities();
++            observed.put("selection_entities", selected == null ? null : Arrays.toString(selected));
++            String frameType = integral.getString("frametype");
++            observed.put("frametype", frameType);
++            stage = "unit_value_type";
++            String unitValueType = integral.getValueType("unit");
++            observed.put("unit_value_type", unitValueType);
++            String[] units;
++            if ("String".equals(unitValueType)) {
++                stage = "unit_scalar_getter";
++                String scalarUnit = integral.getString("unit");
++                observed.put("unit_raw", scalarUnit);
++                units = new String[]{scalarUnit};
++            } else if ("StringArray".equals(unitValueType)) {
++                stage = "unit_array_getter";
++                units = integral.getStringArray("unit");
++                observed.put("unit_raw", units == null ? null : Arrays.asList(units));
++            } else {
++                throw new IllegalStateException("unsupported actual measurement unit value type: " + unitValueType);
++            }
++            observed.put("unit", units == null ? null : Arrays.asList(units));
++            stage = "numerical_getters";
++            String intvolume = integral.getString("intvolume");
++            observed.put("intvolume", intvolume);
++            if (!"MeasureSurface".equals(numericalType) || !datasetTag.equals(data) ||
++                    !GEOMETRY.equals(selectionGeometry) || selectionDimension != 2 ||
++                    !Arrays.equals(new int[]{2}, selectionDimensions) ||
++                    !Arrays.equals(entities, selected) || !"spatial".equals(frameType) ||
++                    !Arrays.equals(new String[]{"m^3"}, units) || !"on".equals(intvolume)) {
++                throw new IllegalStateException("mesh-only physical-volume integration readback mismatch");
++            }
++            stage = "getReal";
++            double[][] values = integral.getReal();
++            observed.put("integral_matrix", values == null ? null : Arrays.deepToString(values));
++            if (values == null || values.length != 1 || values[0] == null || values[0].length != 1 ||
++                    !Double.isFinite(values[0][0]) || values[0][0] <= 0.0) {
++                throw new IllegalStateException("physical-volume integral must be exactly 1x1 finite-positive");
++            }
++            double volume = values[0][0];
++            double relativeError = Math.abs(volume - expectedVolume) / expectedVolume;
++            observed.put("volume_m3", volume);
++            observed.put("expected_volume_m3", expectedVolume);
++            observed.put("relative_volume_error", relativeError);
++            observed.put("physical_measure_source", "NATIVE_MESH_MEASURESURFACE_SPATIAL_INTVOLUME_ON");
++            if (!Double.isFinite(relativeError) || relativeError > 1.0e-6) {
++                throw new IllegalStateException("axisymmetric physical domain volume failed pre-solve gate: native=" +
++                    volume + ", expected=" + expectedVolume + ", relative_error=" + relativeError);
++            }
++        } catch (RuntimeException failure) {
++            primary = failure;
++        } finally {
++            // Tags were absent in the observed pre-create inventory. A failed create may have made its node.
++            // Remove only those reserved nodes whose create was actually attempted, numerical before dataset.
++            if (numericalAttempted) {
++                try {
++                    if (Arrays.asList(model.result().numerical().tags()).contains(numericalTag)) {
++                        model.result().numerical().remove(numericalTag);
++                    }
++                } catch (RuntimeException failure) { cleanupFailures.add("numerical: " + failure); }
++            }
++            if (datasetAttempted) {
++                try {
++                    if (Arrays.asList(model.result().dataset().tags()).contains(datasetTag)) {
++                        model.result().dataset().remove(datasetTag);
++                    }
++                } catch (RuntimeException failure) { cleanupFailures.add("dataset: " + failure); }
++            }
++            if (datasetAttempted || numericalAttempted) {
++                try {
++                    String[] datasetsAfter = model.result().dataset().tags();
++                    String[] numericalsAfter = model.result().numerical().tags();
++                    observed.put("dataset_tags_after_cleanup", datasetsAfter == null ? null : Arrays.asList(datasetsAfter));
++                    observed.put("numerical_tags_after_cleanup", numericalsAfter == null ? null : Arrays.asList(numericalsAfter));
++                    if (datasetsAfter == null || numericalsAfter == null ||
++                            !new HashSet<>(Arrays.asList(originalDatasets)).equals(new HashSet<>(Arrays.asList(datasetsAfter))) ||
++                            !new HashSet<>(Arrays.asList(originalNumericals)).equals(new HashSet<>(Arrays.asList(numericalsAfter))) ||
++                            Arrays.asList(datasetsAfter).contains(datasetTag) || Arrays.asList(numericalsAfter).contains(numericalTag)) {
++                        cleanupFailures.add("owned temporary nodes leaked or preexisting tag inventory changed");
++                    }
++                } catch (RuntimeException failure) { cleanupFailures.add("cleanup verification: " + failure); }
++            }
++            observed.put("temporary_cleanup", cleanupFailures.isEmpty() ?
++                (datasetAttempted || numericalAttempted ? "VERIFIED_OWNED_NODES_REMOVED" : "NOT_CREATED") : "FAILED");
++        }
++        if (primary != null || !cleanupFailures.isEmpty()) {
++            throw new IllegalStateException("mesh-only physical-volume observation failed; getter_stage=" + stage +
++                "; observed=" + observed + "; primary=" + primary + "; cleanup_failures=" + cleanupFailures, primary);
++        }
++        return observed;
++    }
++
+     private static Map<String, Object> readback(Model model) {
+         Map<String, Object> result = new LinkedHashMap<>();
+         GeomSequence geom = model.component(COMPONENT).geom(GEOMETRY);
+         result.put("geometry_dimension", geom.getSDim());
+@@ -1910,24 +2135,14 @@
+             if (entities.length != 1) {
+                 throw new IllegalStateException("domain center selection must resolve to exactly one domain: " +
+                     DOMAIN_TAGS[i] + " -> " + java.util.Arrays.toString(entities));
+             }
+-            double volume = Double.NaN;
+-            if (entities.length > 0) {
+-                model.component(COMPONENT).measure().selection().geom(GEOMETRY, 2).set(entities);
+-                volume = model.component(COMPONENT).measure().getVolume();
+-            }
+-            double relativeError = Math.abs(volume - EXPECTED_VOLUMES[i]) / EXPECTED_VOLUMES[i];
+-            domains.put(DOMAIN_LABELS[i], Map.of(
+-                "selection", DOMAIN_TAGS[i], "entities", entities, "volume_m3", volume,
+-                "expected_volume_m3", EXPECTED_VOLUMES[i],
+-                "relative_volume_error", relativeError
+-            ));
+-            if (!Double.isFinite(volume) || relativeError > 1.0e-6) {
+-                throw new IllegalStateException("axisymmetric physical domain volume failed pre-solve gate for " +
+-                    DOMAIN_LABELS[i] + ": native=" + volume + ", expected=" + EXPECTED_VOLUMES[i] +
+-                    ", relative_error=" + relativeError);
+-            }
++            String unique = java.util.UUID.randomUUID().toString().replace("-", "");
++            Map<String, Object> volumeReadback = observeAxisymmetricPhysicalVolume(
++                model, entities, EXPECTED_VOLUMES[i], "w24mesh_" + unique, "w24vol_" + unique);
++            volumeReadback.put("selection", DOMAIN_TAGS[i]);
++            volumeReadback.put("entities", entities);
++            domains.put(DOMAIN_LABELS[i], volumeReadback);
+         }
+         result.put("domain_readbacks", domains);
+         Map<String, Object> externalEdges = new LinkedHashMap<>();
+         Set<Integer> externalEntityIds = new HashSet<>();
+--- current/tools/java/W24CureScienceFixture.java
++++ preserved/tools/java/W24CureScienceFixture.java
+@@ -193,8 +193,9 @@
+             MeshSequence mesh = model.component(COMPONENT).mesh().create("mesh1", GEOMETRY);
+             mesh.feature("size").set("custom", "on");
+             mesh.feature("size").set("hmax", 10e-6);
+             mesh.feature("size").set("hmin", 1e-6);
++            mesh.create("ftri1", "FreeTri");
+             mesh.run();
+ 
+             Study study = model.study().create("stdMech");
+             study.create("stat", "Stationary");
+@@ -446,13 +447,13 @@
+                 stressUnits[i] = stress.get(roles[i]).get("unit");
+                 absoluteExpressions[i] = "abs(" + expressions[i] + ")";
+             }
+             NumericalValues mean = mechanicsNumerical(model, datasetTag, numericalTags,
+-                "AvVolume", "stress_mean", expressions, stressUnits, domainIds);
++                "AvSurface", "stress_mean", expressions, stressUnits, domainIds);
+             NumericalValues stressMaximum = mechanicsNumerical(model, datasetTag, numericalTags,
+-                "MaxVolume", "stress_abs_max", absoluteExpressions, stressUnits, domainIds);
++                "MaxSurface", "stress_abs_max", absoluteExpressions, stressUnits, domainIds);
+             NumericalValues displacementMaximum = mechanicsNumerical(model, datasetTag, numericalTags,
+-                "MaxVolume", "displacement_abs_max", new String[]{"abs(u)", "abs(w)"},
++                "MaxSurface", "displacement_abs_max", new String[]{"abs(u)", "abs(w)"},
+                 new String[]{"m", "m"}, domainIds);
+ 
+             String interpTag = "w24mi" + Long.toUnsignedString(System.nanoTime(), 36);
+             NumericalFeature interp = model.result().numerical().create(interpTag, "Interp");
+@@ -464,9 +465,10 @@
+             interp.set("solnum", "all");
+             interp.set("coorderr", "on");
+             interp.set("matherr", "on");
+             interp.setInterpolationCoordinates(coordinates);
+-            if (!datasetTag.equals(interp.getString("data")) ||
++            String interpType = interp.getType();
++            if (!"Interp".equals(interpType) || !datasetTag.equals(interp.getString("data")) ||
+                 !Arrays.equals(new String[]{"u", "w"}, interp.getStringArray("expr")) ||
+                 !Arrays.equals(new String[]{"m", "m"}, interp.getStringArray("unit")) ||
+                 !"all".equals(interp.getString("solnum")) ||
+                 !interp.getBoolean("coorderr") || !interp.getBoolean("matherr")) {
+@@ -492,9 +494,9 @@
+             readbacks.put("stress_mean", mean.readback);
+             readbacks.put("stress_abs_max", stressMaximum.readback);
+             readbacks.put("displacement_abs_max", displacementMaximum.readback);
+             Map<String, Object> interpReadback = new LinkedHashMap<>();
+-            interpReadback.put("type", "Interp");
++            interpReadback.put("type", interpType);
+             interpReadback.put("dataset", interp.getString("data"));
+             interpReadback.put("expression", Arrays.asList(interp.getStringArray("expr")));
+             interpReadback.put("unit", Arrays.asList(interp.getStringArray("unit")));
+             interpReadback.put("solution_selection", interp.getString("solnum"));
+@@ -576,35 +578,36 @@
+         feature.selection().set(domainIds);
+         feature.set("expr", expressions);
+         feature.set("unit", units);
+         feature.set("solnum", "all");
+-        if ("AvVolume".equals(type)) feature.set("intvolume", "on");
+-        if (!datasetTag.equals(feature.getString("data")) ||
++        if ("AvSurface".equals(type)) feature.set("intvolume", "on");
++        String actualType = feature.getType();
++        if (!type.equals(actualType) || !datasetTag.equals(feature.getString("data")) ||
+             !Arrays.equals(expressions, feature.getStringArray("expr")) ||
+             !Arrays.equals(units, feature.getStringArray("unit")) ||
+             !"all".equals(feature.getString("solnum")) ||
+             feature.selection().dim() != 2 || !"geom1".equals(feature.selection().geom()) ||
+             !sameEntitySet(domainIds, feature.selection().entities())) {
+             throw new IllegalStateException("mechanics numerical readback mismatch for " + role);
+         }
+-        if ("AvVolume".equals(type) && !"on".equals(feature.getString("intvolume"))) {
++        if ("AvSurface".equals(type) && !"on".equals(feature.getString("intvolume"))) {
+             throw new IllegalStateException("mechanics stress mean lacks axisymmetric physical measure");
+         }
+         feature.run();
+         double[][] values = feature.getReal();
+         verifyMatrix(values, expressions.length, 1, role);
+         Map<String, Object> readback = new LinkedHashMap<>();
+         readback.put("native_tag", tag);
+-        readback.put("type", type);
++        readback.put("type", actualType);
+         readback.put("dataset", feature.getString("data"));
+         readback.put("expression", Arrays.asList(feature.getStringArray("expr")));
+         readback.put("unit", Arrays.asList(feature.getStringArray("unit")));
+         readback.put("solution_selection", feature.getString("solnum"));
+         readback.put("geometry", feature.selection().geom());
+         readback.put("entity_dimension", feature.selection().dim());
+         readback.put("entity_ids", boxed(feature.selection().entities()));
+-        readback.put("axisymmetric_measure_property", "AvVolume".equals(type) ? "intvolume" : null);
+-        readback.put("axisymmetric_measure_value", "AvVolume".equals(type) ? feature.getString("intvolume") : null);
++        readback.put("axisymmetric_measure_property", "AvSurface".equals(type) ? "intvolume" : null);
++        readback.put("axisymmetric_measure_value", "AvSurface".equals(type) ? feature.getString("intvolume") : null);
+         readback.put("shape", Arrays.asList(values.length, values[0].length));
+         return new NumericalValues(values, readback);
+     }
+ 
+@@ -642,9 +645,9 @@
+                 throw new IllegalStateException("native solution dataset did not read back its exact solver sequence");
+             }
+ 
+             NumericalValues means = evaluateNumerical(model, datasetTag, numericalTags,
+-                "AvVolume", "alpha", new String[]{"alpha_iso", "alpha", "qpost"},
++                "AvSurface", "alpha", new String[]{"alpha_iso", "alpha", "qpost"},
+                 new String[]{"1", "1", "1"}, 2,
+                 model.component(COMPONENT).selection("sel_adhesive").entities(2),
+                 "on", times.length);
+             featureReadbacks.put("adhesive_cure_averages", means.readback);
+@@ -656,9 +659,9 @@
+             Map<String, Object> energyReadbacks = new LinkedHashMap<>();
+             double[] storedEnergy = new double[times.length];
+             for (int i = 0; i < domainSelections.length; i++) {
+                 NumericalValues energy = evaluateNumerical(model, datasetTag, numericalTags,
+-                    "IntVolume", "energy_" + domainLabels[i],
++                    "IntSurface", "energy_" + domainLabels[i],
+                     new String[]{sensibleHeatExpressions[i]}, new String[]{"J"}, 2,
+                     model.component(COMPONENT).selection(domainSelections[i]).entities(2),
+                     "on", times.length);
+                 storedEnergyByDomain.put(domainLabels[i], energy.values[0]);
+@@ -667,15 +670,15 @@
+                     storedEnergy[timeIndex] += energy.values[0][timeIndex];
+                 }
+             }
+             NumericalValues reaction = evaluateNumerical(model, datasetTag, numericalTags,
+-                "IntVolume", "reaction_power", new String[]{"Qrxn"}, new String[]{"W"}, 2,
++                "IntSurface", "reaction_power", new String[]{"Qrxn"}, new String[]{"W"}, 2,
+                 model.component(COMPONENT).selection("sel_adhesive").entities(2), "on", times.length);
+             energyReadbacks.put("reaction_power", reaction.readback);
+ 
+             int[] externalEdges = uniqueExternalEdges(model);
+             NumericalValues outward = evaluateNumerical(model, datasetTag, numericalTags,
+-                "IntSurface", "outward_power", new String[]{"hconv*(T-Tenv)"}, new String[]{"W"}, 1,
++                "IntLine", "outward_power", new String[]{"hconv*(T-Tenv)"}, new String[]{"W"}, 1,
+                 externalEdges, "on", times.length);
+             energyReadbacks.put("outward_power", outward.readback);
+             featureReadbacks.putAll(energyReadbacks);
+ 
+@@ -687,9 +690,9 @@
+                 stressExpressions[i] = descriptor.get("expression");
+                 stressUnits[i] = descriptor.get("unit");
+             }
+             NumericalValues stressMean = evaluateNumerical(model, datasetTag, numericalTags,
+-                "AvVolume", "adhesive_mean_stress", stressExpressions, stressUnits, 2,
++                "AvSurface", "adhesive_mean_stress", stressExpressions, stressUnits, 2,
+                 model.component(COMPONENT).selection("sel_adhesive").entities(2), "on", times.length);
+             featureReadbacks.put("adhesive_mean_stress", stressMean.readback);
+ 
+             double[][] coordinates = new double[][]{
+@@ -770,9 +773,9 @@
+             artifact.put("fiber_end_displacement_m", fiberEndHistory);
+             artifact.put("feature_readbacks", featureReadbacks);
+             artifact.put("material_heat_capacity_readback", nativeThermalCapacityReadback(model));
+             artifact.put("numerical_shape_contract",
+-                "IntVolume/IntSurface/AvVolume getReal[expr][stored_solution]; Interp getData[expr][stored_solution][point]");
++                "IntSurface/IntLine/AvSurface getReal[expr][stored_solution]; Interp getData[expr][stored_solution][point]");
+             artifact.put("axisymmetric_physical_measure_readback", "intvolume=on; intsurface=on");
+ 
+             Path output = Path.of(pathText);
+             byte[] bytes = (toJson(artifact) + "\n").getBytes(StandardCharsets.UTF_8);
+@@ -980,14 +983,15 @@
+         feature.set("unit", units);
+         feature.set("solnum", "all");
+         String measureKey = dimension == 2 ? "intvolume" : "intsurface";
+         feature.set(measureKey, axisymmetricFlag);
+-        if (!datasetTag.equals(feature.getString("data")) ||
++        String actualType = feature.getType();
++        if (!type.equals(actualType) || !datasetTag.equals(feature.getString("data")) ||
+             !Arrays.equals(expressions, feature.getStringArray("expr")) ||
+             !Arrays.equals(units, feature.getStringArray("unit")) ||
+             !"all".equals(feature.getString("solnum")) ||
+             !axisymmetricFlag.equals(feature.getString(measureKey)) ||
+-            feature.selection().dim() != dimension ||
++            !GEOMETRY.equals(feature.selection().geom()) || feature.selection().dim() != dimension ||
+             !sameEntitySet(entities, feature.selection().entities())) {
+             throw new IllegalStateException("native numerical configuration readback mismatch for " + role);
+         }
+         feature.run();
+@@ -995,9 +999,9 @@
+         verifyMatrix(values, expressions.length, expectedTimeCount, role);
+         Map<String, Object> readback = new LinkedHashMap<>();
+         readback.put("role", role);
+         readback.put("native_tag", tag);
+-        readback.put("type", type);
++        readback.put("type", actualType);
+         readback.put("dataset", feature.getString("data"));
+         readback.put("expression", Arrays.asList(feature.getStringArray("expr")));
+         readback.put("unit", Arrays.asList(feature.getStringArray("unit")));
+         readback.put("solution_selection", feature.getString("solnum"));
+@@ -1022,9 +1026,10 @@
+         feature.set("solnum", "all");
+         feature.set("coorderr", "on");
+         feature.set("matherr", "on");
+         feature.setInterpolationCoordinates(coordinates);
+-        if (!datasetTag.equals(feature.getString("data")) ||
++        String actualType = feature.getType();
++        if (!"Interp".equals(actualType) || !datasetTag.equals(feature.getString("data")) ||
+             !Arrays.equals(expressions, feature.getStringArray("expr")) ||
+             !Arrays.equals(units, feature.getStringArray("unit")) ||
+             !"all".equals(feature.getString("solnum")) ||
+             !feature.getBoolean("coorderr") || !feature.getBoolean("matherr")) {
+@@ -1060,9 +1065,9 @@
+         }
+         Map<String, Object> readback = new LinkedHashMap<>();
+         readback.put("role", role);
+         readback.put("native_tag", tag);
+-        readback.put("type", "Interp");
++        readback.put("type", actualType);
+         readback.put("dataset", feature.getString("data"));
+         readback.put("expression", Arrays.asList(feature.getStringArray("expr")));
+         readback.put("unit", Arrays.asList(feature.getStringArray("unit")));
+         readback.put("solution_selection", feature.getString("solnum"));
+@@ -1431,11 +1436,17 @@
+     }
+ 
+     /** Pure fail-closed field/entry mapping gate, also exercised by the offline proxy harness. */
+     static Map<String, Object> validateSolverFieldContract(int geometryDimension, boolean axisymmetric,
++            Boolean includeTwist, Boolean modeExtension,
+             String[] fieldTags, String[] fieldNames, String[][] fieldComponents, String[] actualEntryKeys) {
+         if (geometryDimension != 2 || !axisymmetric) {
+             throw new IllegalStateException("W24 displacement tolerance mapping requires 2-D axisymmetric geometry");
++        }
++        if (!Boolean.FALSE.equals(includeTwist) || !Boolean.FALSE.equals(modeExtension)) {
++            throw new IllegalStateException("W24 configured u/w binding requires observed disabled Mode2Daxi " +
++                "includeTwist and ModeExtension; actual_includeTwist=" + includeTwist +
++                "; actual_ModeExtension=" + modeExtension);
+         }
+         if (fieldTags == null || fieldNames == null || fieldComponents == null || fieldTags.length == 0 ||
+             fieldNames.length != fieldTags.length || fieldComponents.length != fieldTags.length) {
+             throw physicsFieldContractFailure("validate:field=u descriptor arrays null/empty/misaligned", fieldTags, fieldNames, fieldComponents, null);
+@@ -1457,10 +1468,11 @@
+             }
+             if ("u".equals(fieldNames[i])) {
+                 displacementCount++;
+                 selected = i;
+-                if (components.size() != 2 || !components.contains("u") || !components.contains("w")) {
+-                    throw physicsFieldContractFailure("validate:field=u components must be exactly {u,w}", fieldTags, fieldNames, fieldComponents, null);
++                if (!(components.equals(new LinkedHashSet<>(Arrays.asList("u", "w"))) ||
++                      components.equals(new LinkedHashSet<>(Arrays.asList("u", "v", "w"))))) {
++                    throw physicsFieldContractFailure("validate:field=u components must be exactly {u,w} or {u,v,w}", fieldTags, fieldNames, fieldComponents, null);
+                 }
+             }
+             Map<String, Object> observed = new LinkedHashMap<>();
+             observed.put("physics_tag", "solid");
+@@ -1476,10 +1488,10 @@
+         }
+         for (int i = 0; i < fieldTags.length; i++) {
+             if (i == selected) continue;
+             for (String component : fieldComponents[i]) {
+-                if ("u".equals(component) || "w".equals(component)) {
+-                    throw physicsFieldContractFailure("validate:nonselected descriptor aliases selected u/w component ownership",
++                if (Arrays.asList(fieldComponents[selected]).contains(component)) {
++                    throw physicsFieldContractFailure("validate:nonselected descriptor aliases selected raw component ownership",
+                         fieldTags, fieldNames, fieldComponents, null);
+                 }
+             }
+         }
+@@ -1506,8 +1518,22 @@
+         bindings.put("w", "comp1_u");
+         Map<String, Object> contract = new LinkedHashMap<>();
+         contract.put("geometry_dimension", geometryDimension);
+         contract.put("geometry_axisymmetric", axisymmetric);
++        Map<String, Object> modes = new LinkedHashMap<>();
++        modes.put("physics_tag", "solid");
++        modes.put("property_node", "Mode2Daxi");
++        Map<String, Object> twist = new LinkedHashMap<>();
++        twist.put("getter", "getBoolean");
++        twist.put("value", includeTwist);
++        Map<String, Object> extension = new LinkedHashMap<>();
++        extension.put("getter", "getBoolean");
++        extension.put("value", modeExtension);
++        modes.put("includeTwist", twist);
++        modes.put("ModeExtension", extension);
++        contract.put("axisymmetric_mode_readbacks", modes);
++        contract.put("configured_logical_components", Arrays.asList("u", "w"));
++        contract.put("effective_solved_dof_validation", "UNVERIFIED");
+         contract.put("physics_field_count", fieldTags.length);
+         contract.put("physics_field_descriptors", descriptors);
+         contract.put("selected_displacement_field_count", displacementCount);
+         contract.put("physics_field_descriptor", descriptor);
+@@ -1528,22 +1554,27 @@
+     private static Map<String, Object> readSolverFieldContract(Model model, SolverFeature time) {
+         String[] fieldTags = null;
+         String[] fieldNames = null;
+         String[][] components = null;
++        Integer dimension = null;
++        Boolean axisymmetric = null;
++        String[] entryKeys = null;
++        boolean entryKeysObserved = false;
++        boolean fieldTagsObserved = false;
++        Boolean includeTwist = null;
++        Boolean modeExtension = null;
+         String getterStage = "geometry";
+         try {
+             GeomSequence geom = model.component(COMPONENT).geom(GEOMETRY);
+             getterStage = "geometry.getSDim";
+-            int dimension = geom.getSDim();
++            dimension = geom.getSDim();
+             getterStage = "geometry.isAxisymmetric";
+-            boolean axisymmetric = geom.isAxisymmetric();
+-            if (dimension != 2 || !axisymmetric) {
+-                throw new IllegalStateException("W24 displacement tolerance mapping requires 2-D axisymmetric geometry");
+-            }
++            axisymmetric = geom.isAxisymmetric();
+             getterStage = "model.physics(solid)";
+             Physics solid = model.physics("solid");
+             getterStage = "solid.field().tags()";
+             fieldTags = solid.field().tags();
++            fieldTagsObserved = true;
+             if (fieldTags == null || fieldTags.length == 0) {
+                 throw new IllegalStateException("field=u descriptor list is null or empty");
+             }
+             fieldNames = new String[fieldTags.length];
+@@ -1562,13 +1593,28 @@
+                 getterStage = "solid.field(" + fieldTags[i] + ").component()";
+                 components[i] = field.component();
+             }
+             getterStage = "time.getEntryKeys(atolmethod)";
+-            String[] entryKeys = time.getEntryKeys("atolmethod");
++            entryKeys = time.getEntryKeys("atolmethod");
++            entryKeysObserved = true;
++            getterStage = "solid.prop(Mode2Daxi)";
++            com.comsol.model.physics.PhysicsProp modes = solid.prop("Mode2Daxi");
++            if (modes == null) throw new IllegalStateException("Mode2Daxi property node getter returned null");
++            getterStage = "solid.prop(Mode2Daxi).getBoolean(includeTwist)";
++            includeTwist = modes.getBoolean("includeTwist");
++            getterStage = "solid.prop(Mode2Daxi).getBoolean(ModeExtension)";
++            modeExtension = modes.getBoolean("ModeExtension");
+             getterStage = "validateSolverFieldContract";
+-            return validateSolverFieldContract(dimension, axisymmetric, fieldTags, fieldNames, components, entryKeys);
++            return validateSolverFieldContract(dimension, axisymmetric, includeTwist, modeExtension, fieldTags, fieldNames, components, entryKeys);
+         } catch (RuntimeException cause) {
+-            throw physicsFieldContractFailure(getterStage, fieldTags, fieldNames, components, cause);
++            String message = physicsFieldContractFailure(getterStage, fieldTags, fieldNames, components, cause).getMessage() +
++                "; actual_tags_observed=" + fieldTagsObserved +
++                "; actual_geometry_dimension=" + (dimension == null ? "UNOBSERVED" : dimension) +
++                "; actual_geometry_axisymmetric=" + (axisymmetric == null ? "UNOBSERVED" : axisymmetric) +
++                "; actual_Time_atolmethod_entry_keys=" + (!entryKeysObserved ? "UNOBSERVED" : Arrays.toString(entryKeys)) +
++                "; actual_Mode2Daxi_includeTwist=" + (includeTwist == null ? "UNOBSERVED" : includeTwist) +
++                "; actual_Mode2Daxi_ModeExtension=" + (modeExtension == null ? "UNOBSERVED" : modeExtension);
++            throw new IllegalStateException(message, cause);
+         }
+     }
+ 
+     private static Map<String, Object> solverToleranceReadbacks(Model model, SolverFeature time) {
+--- current/tools/run_native_w24_cure_science.py
++++ preserved/tools/run_native_w24_cure_science.py
+@@ -5142,22 +5142,22 @@
+                     row.get("axisymmetric_measure_value") != axisymmetric):
+                 raise CampaignError(f"native numerical feature {key} lacks its axisymmetric physical measure flag")
+         return row
+ 
+-    require_feature("adhesive_cure_averages", feature_type="AvVolume", units=("1", "1", "1"),
++    require_feature("adhesive_cure_averages", feature_type="AvSurface", units=("1", "1", "1"),
+                     dimension=2, axisymmetric="on", entities_count=1,
+                     expressions=("alpha_iso", "alpha", "qpost"), shape=(3, len(times)))
+     for label in ("alumina", "gold", "adhesive", "fiber"):
+-        require_feature(f"energy_{label}", feature_type="IntVolume", units=("J",),
++        require_feature(f"energy_{label}", feature_type="IntSurface", units=("J",),
+                         dimension=2, axisymmetric="on", entities_count=1, shape=(1, len(times)))
+-    require_feature("reaction_power", feature_type="IntVolume", units=("W",),
++    require_feature("reaction_power", feature_type="IntSurface", units=("W",),
+                     dimension=2, axisymmetric="on", entities_count=1,
+                     expressions=("Qrxn",), shape=(1, len(times)))
+-    require_feature("outward_power", feature_type="IntSurface", units=("W",),
++    require_feature("outward_power", feature_type="IntLine", units=("W",),
+                     dimension=1, axisymmetric="on", entities_count=8,
+                     expressions=("hconv*(T-Tenv)",), shape=(1, len(times)))
+     expected_stress_expressions = tuple(stress_components[role]["expression"] for role in STRESS_ROLES)
+-    require_feature("adhesive_mean_stress", feature_type="AvVolume",
++    require_feature("adhesive_mean_stress", feature_type="AvSurface",
+                     units=tuple("Pa" for _ in STRESS_ROLES), dimension=2, axisymmetric="on",
+                     entities_count=1, expressions=expected_stress_expressions,
+                     shape=(4, len(times)))
+     probe_readback = require_feature("stress_probes", feature_type="Interp",
+@@ -5285,18 +5285,22 @@
+                 raise CampaignError(f"native mechanics feature {key} has an invalid selected-domain readback")
+         return row
+ 
+     expected_stress = [stress_components[role]["expression"] for role in STRESS_ROLES]
+-    mean_row = require_feature("stress_mean", kind="AvVolume", units=("Pa",) * 4,
++    mean_row = require_feature("stress_mean", kind="AvSurface", units=("Pa",) * 4,
+                                expressions=expected_stress, shape=(4, 1), dimension=2)
+     if (mean_row.get("axisymmetric_measure_property") != "intvolume" or
+             mean_row.get("axisymmetric_measure_value") != "on"):
+         raise CampaignError("native mechanics volume stress mean lacks axisymmetric physical weighting")
+-    require_feature("stress_abs_max", kind="MaxVolume", units=("Pa",) * 4,
++    stress_max_row = require_feature("stress_abs_max", kind="MaxSurface", units=("Pa",) * 4,
+                     expressions=tuple(f"abs({expr})" for expr in expected_stress),
+                     shape=(4, 1), dimension=2)
+-    require_feature("displacement_abs_max", kind="MaxVolume", units=("m", "m"),
++    displacement_max_row = require_feature("displacement_abs_max", kind="MaxSurface", units=("m", "m"),
+                     expressions=("abs(u)", "abs(w)"), shape=(2, 1), dimension=2)
++    for row in (stress_max_row, displacement_max_row):
++        if (row.get("axisymmetric_measure_property") is not None or
++                row.get("axisymmetric_measure_value") is not None):
++            raise CampaignError("native mechanics pointwise maxima must not claim physical integration weighting")
+     interp = readbacks.get("displacement_probe")
+     if (not isinstance(interp, Mapping) or interp.get("type") != "Interp" or
+             interp.get("dataset") != dataset or interp.get("expression") != ["u", "w"] or
+             interp.get("unit") != ["m", "m"] or interp.get("solution_selection") != "all" or
+--- current/tools/w24_cure_v2_capture.py
++++ preserved/tools/w24_cure_v2_capture.py
+@@ -440,8 +440,23 @@
+         field_contract = _require_mapping(solver.get("solver_field_contract"),
+                                           f"solver_readbacks.{stage}.solver_field_contract")
+         descriptor = _require_mapping(field_contract.get("physics_field_descriptor"),
+                                       f"solver_readbacks.{stage}.solver_field_contract.physics_field_descriptor")
++        modes = _require_mapping(field_contract.get("axisymmetric_mode_readbacks"),
++                                 f"solver_readbacks.{stage}.axisymmetric_mode_readbacks")
++        if (set(modes) != {"physics_tag", "property_node", "includeTwist", "ModeExtension"} or
++                modes.get("physics_tag") != "solid" or modes.get("property_node") != "Mode2Daxi"):
++            raise CaptureError(f"loaded model axisymmetric mode getter provenance is incomplete for {stage}")
++        mode_signature = []
++        for property_name in ("includeTwist", "ModeExtension"):
++            observed_mode = _require_mapping(modes.get(property_name), f"solver_readbacks.{stage}.{property_name}")
++            if (set(observed_mode) != {"getter", "value"} or observed_mode.get("getter") != "getBoolean" or
++                    observed_mode.get("value") is not False):
++                raise CaptureError(f"loaded model configured u/w binding lacks observed disabled {property_name} for {stage}")
++            mode_signature.append((property_name, observed_mode["getter"], observed_mode["value"]))
++        if (field_contract.get("configured_logical_components") != ["u", "w"] or
++                field_contract.get("effective_solved_dof_validation") != "UNVERIFIED"):
++            raise CaptureError(f"loaded model configured/effective DOF scope is incomplete for {stage}")
+         components = descriptor.get("components")
+         component_bindings = field_contract.get("component_solver_entry_bindings")
+         inventory = field_contract.get("physics_field_descriptors")
+         count = field_contract.get("physics_field_count")
+@@ -473,17 +488,18 @@
+                 not isinstance(field_contract.get("selected_displacement_field_count"), int) or
+                 field_contract.get("selected_displacement_field_count") != 1 or
+                 isinstance(descriptor.get("physics_field_count"), bool) or
+                 not isinstance(descriptor.get("physics_field_count"), int) or descriptor != displacement[0] or
+-                not isinstance(components, list) or len(components) != 2 or set(components) != {"u", "w"} or
++                not isinstance(components, list) or set(components) not in ({"u", "w"}, {"u", "v", "w"}) or
+                 component_bindings != {"u": "comp1_u", "w": "comp1_u"}):
+             raise CaptureError(f"loaded model solver field descriptor or observed u/w binding is incomplete for {stage}")
+-        if any(set(observed["components"]) & {"u", "w"}
++        if any(set(observed["components"]) & set(components)
+                for observed in inventory if observed["field"] != "u"):
+-            raise CaptureError(f"loaded model nonselected descriptor aliases selected u/w component ownership for {stage}")
++            raise CaptureError(f"loaded model nonselected descriptor aliases selected raw component ownership for {stage}")
+         signature = (field_contract.get("geometry_dimension"), field_contract.get("geometry_axisymmetric"),
+                      count, tuple(inventory_signature), descriptor.get("field_tag"), descriptor.get("field"),
+-                     tuple(components), tuple(sorted(component_bindings.items())))
++                     tuple(components), tuple(sorted(component_bindings.items())), tuple(mode_signature),
++                     tuple(field_contract["configured_logical_components"]), field_contract["effective_solved_dof_validation"])
+         if field_contract_signature is None:
+             field_contract_signature = signature
+         elif signature != field_contract_signature:
+             raise CaptureError("loaded model SolverSequence stages have inconsistent field descriptors or bindings")

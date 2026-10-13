@@ -681,7 +681,7 @@ def package(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[s
             "version": 1,
             "format_version": PACKAGE_FORMAT_VERSION,
             "model": {"model_ref": context["model_ref"], "source_revision": context["source_revision"],
-                      "comsol_version": str(worker.client().getComsolVersion()),
+                      "comsol_version": _reported_comsol_version(worker),
                       "include_solution": include_solution},
             "contents": {"model.mph": {"sha256": mph_sha, "size_bytes": mph_size}},
             "embedded_dependencies": embedded + embedded_unknown,
@@ -1068,9 +1068,19 @@ def _parse_version_declaration(value: str) -> tuple[tuple[int, int, int], int]:
     return _pad_product_version(family), build
 
 
+def _reported_comsol_version(worker: Any) -> str:
+    """Read ModelUtil version through the bound Worker facade."""
+    getter = getattr(worker, "getComsolVersion", None)
+    if callable(getter):
+        return getter()
+    # Compatibility for older fixtures/Worker facades. Production
+    # PersistentJavaWorker exposes the verified ModelUtil call directly.
+    return worker.client().getComsolVersion()
+
+
 def _current_version(worker: Any) -> str:
     try:
-        version = worker.client().getComsolVersion()
+        version = _reported_comsol_version(worker)
     except Exception as exc:
         raise PreWriteRefusal("RUNTIME_VERSION_UNAVAILABLE", "the attached Worker did not report its COMSOL version",
                               details={"cause_type": type(exc).__name__}) from exc

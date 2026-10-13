@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "observed_utc": "2026-10-11T18:08:28.768451+00:00",
+  "status": "ROOT_SOURCE_CHANGES_REQUIRED",
+  "source_freeze_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/model_lifecycle_recipe/SOURCE_FREEZE_r2.json",
+  "source_freeze_sha256": "c985bbc357a2a0101d44fba508c0abaf103cbb66ddac820f15d63ff8a640833a",
+  "owned_delta_patch_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/model_lifecycle_recipe/MODEL_LIFECYCLE_RECIPE_R2_DELTA.patch",
+  "owned_delta_patch_sha256": "4eeef0312b243be698b9c32eb7429936ee4027623732ca2a43e5695e79699949",
+  "source_count": 10,
+  "owned_changed_from_r1": [
+    "comsol_mcp/_g3_managed_models.py",
+    "tests/test_g3_managed_models.py"
+  ],
+  "shared_concurrent_changed_from_r1": [
+    "comsol_mcp/_managed_backend.py",
+    "comsol_mcp/_g3_ops.py"
+  ],
+  "shared_unchanged_from_r1_count": 6,
+  "attribution_correction": "The freeze records actual correct source hashes, but its claim that all eight shared files remain unchanged from r1 is false. Two shared files changed during the Windows-owned integration window. The two-file owned patch alone does not reconstruct the complete r2 source from r1. Final shared-unit diff/closure remains pending.",
+  "preserved_source_manifest": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/model-lifecycle-recipe-source-20261012-r2/PRESERVED_SOURCE_MANIFEST.json",
+    "sha256": "b66876eeddf25b250189dc91dd0c692fbebfc291eb19fc1e3908f2918f0a3db8"
+  },
+  "actual_junit": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/model_lifecycle_recipe/junit-r2-managed-delivery.xml",
+    "sha256": "c68297bcdbacf865410b905898ffa727ec130aa5f92d4384767458299ce4cd5e",
+    "counts": {
+      "cases": 165,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "test_modules": [
+      "tests.test_control_daemon",
+      "tests.test_control_daemon_projects",
+      "tests.test_g2_registry_packaging",
+      "tests.test_g2_security_guards",
+      "tests.test_g2_w08_w12",
+      "tests.test_g3_managed_models",
+      "tests.test_g3_model_delivery",
+      "tests.test_managed_backend",
+      "tests.test_model_catalog_adapters",
+      "tests.test_operation_store",
+      "tests.test_w24_physical_controls"
+    ]
+  },
+  "verified_scoped_repairs": [
+    "Historical recipe run uses immutable internally consistent durable execution evidence while independently validating current target/project/trusted policy/current source and runtime",
+    "Project-local registered pinned MPH loads with bounded archive safety/metadata checks; other model tags preserved",
+    "Darwin/Linux exact-owned destination replacement retains old bytes through registration; registration-failure rollback positive is tested"
+  ],
+  "remaining_required": [
+    {
+      "id": "R3_ROLLBACK_IDENTITY_SIZE",
+      "file": "comsol_mcp/_g3_managed_models.py",
+      "detail": "rollback_exchange compares _hash_regular_artifact identity dict against integer size, making post-publication-readback rollback report false even when bytes are restored. Compare identity.size and cover real post-exchange readback failure/rollback."
+    },
+    {
+      "id": "R3_WINDOWS",
+      "detail": "Windows explicit overwrite remains typed refused. Implement safe Windows publication/rollback; real kernel/native evidence may remain externally blocked."
+    },
+    {
+      "id": "R4_AUTH_PROVIDER",
+      "detail": "Production managed context has no trusted scoped authorization provider for dirty model.close/artifact.publish. Integrate one backend-owned provider after the shared ownership handoff."
+    }
+  ],
+  "evidence_scope": "165 actual software cases using real ControlDaemon/OperationStore with synthetic Worker in the recorded concurrent shared-source context. No COMSOL native/numerical/physical/Windows-kernel or independent final acceptance.",
+  "independent_reviewer": "NOT_RUN",
+  "native": "NOT_RUN",
+  "project_acceptance": "INCOMPLETE"
+}

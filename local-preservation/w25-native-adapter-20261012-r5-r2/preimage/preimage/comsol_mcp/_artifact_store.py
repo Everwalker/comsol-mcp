@@ -1,0 +1,2040 @@
+"""Artifact Store and Safe Export Service for COMSOL MCP (F08, F09).
+
+Provides:
+- Path containment validation preventing directory traversal and symlink escape.
+- Pre-write outcome verification: refuses to export when evaluation has errors or cleanup failed.
+- Atomic file publishing (temporary file + atomic os.replace).
+- Bounded-memory chunk streaming reader (offset + length) without full-file RAM buffering.
+- Strict format serialization: refuses non-finite JSON and unsupported formats.
+
+The chunk reader is published as ``artifact.read`` so a host can request
+bounded reads instead of receiving a whole array: NEXT_GOAL requires a real,
+host-requestable artifact/chunk contract that pins the file's immutable hash,
+size, offset, length and format, and explicitly rejects calling a
+"read everything into memory and split it afterwards" implementation streaming.
+"""
+from __future__ import annotations
+
+import base64
+import csv
+import ctypes
+import errno
+import hashlib
+import ipaddress
+import json
+import math
+import os
+import re
+import socket
+import stat
+import sys
+import tempfile
+from pathlib import Path
+from pathlib import PurePosixPath
+from typing import Any, Iterator, Mapping, Sequence
+
+from ._execution_contract import ExecutionContractError
+
+
+MAX_CHUNK_BYTES = 16 * 1024 * 1024
+CSV_COLUMNS = (
+    "axis", "expr", "outer", "inner", "point", "real", "imag", "unit",
+    "coord_0", "coord_1", "coord_2",
+)
+_UNKNOWN_STATUS = {"UNKNOWN", "EXECUTION_STATE_UNKNOWN", "ENGINE_STATE_UNKNOWN", "STATE_UNKNOWN"}
+_FAILED_STATUS = {"FAILED", "FAIL", "ERROR", "REFUSED", "REJECTED"}
+
+
+def _contract_error(
+    code: str,
+    message: str,
+    *,
+    stage: str = "validation",
+    details: Mapping[str, Any] | None = None,
+) -> ExecutionContractError:
+    return ExecutionContractError(code, message, stage=stage, details=details)
+
+
+def trusted_project_root(worker: Any) -> Path:
+    """Return the project root supplied by the trusted Worker configuration.
+
+    A request body never supplies this value.  The persistent Java Worker exposes
+    ``paths.resolved_project_root``; small test/adaptor Workers may expose
+    ``paths.project_root`` or a backend-owned ``project_root``.  Falling back to
+    the process cwd would make a file operation depend on whoever launched the
+    daemon, so it is deliberately rejected.
+    """
+    paths = getattr(worker, "paths", None)
+    candidate: Any = None
+    if paths is not None:
+        resolver = getattr(paths, "resolved_project_root", None)
+        if resolver is not None:
+            candidate = resolver() if callable(resolver) else resolver
+        if candidate is None:
+            candidate = getattr(paths, "project_root", None)
+    if candidate is None:
+        candidate = getattr(worker, "project_root", None)
+    if candidate is None:
+        raise _contract_error(
+            "RUNTIME_CONFIGURATION_REQUIRED",
+            "artifact operations require a trusted Worker project root; cwd is not an authorization source",
+        )
+    try:
+        raw = Path(candidate).expanduser()
+    except (TypeError, ValueError) as exc:
+        raise _contract_error("RUNTIME_CONFIGURATION_REQUIRED", "trusted project root is not a valid path") from exc
+    if not raw.is_absolute() or raw.is_symlink() or not raw.is_dir():
+        raise _contract_error(
+            "RUNTIME_CONFIGURATION_REQUIRED",
+            f"trusted project root must be an existing non-symlink directory: {candidate!r}",
+        )
+    _assert_no_symlink_components(raw, field="trusted project root")
+    try:
+        root = raw.resolve(strict=True)
+    except OSError as exc:
+        raise _contract_error("RUNTIME_CONFIGURATION_REQUIRED", "trusted project root could not be resolved") from exc
+    if not root.is_dir() or root.is_symlink():
+        raise _contract_error("RUNTIME_CONFIGURATION_REQUIRED", "trusted project root is not a directory")
+    if any(p in root.parts for p in ("site-packages", "dist-packages")):
+        raise _contract_error(
+            "RUNTIME_CONFIGURATION_REQUIRED",
+            f"site-packages is not an authorized project root: {root!r}",
+        )
+    return root
+
+
+def local_artifact_host_identity() -> str:
+    """Return a stable, non-reversible identifier for this artifact host.
+
+    This is provenance metadata, not an authentication token. A changed host
+    name intentionally makes old project registrations fail closed.
+    """
+    host = socket.gethostname().strip().casefold()
+    if not host:
+        raise _contract_error("ARTIFACT_HOST_UNVERIFIED", "local artifact host identity is unavailable")
+    return hashlib.sha256(host.encode("utf-8")).hexdigest()
+
+
+def project_root_identity(project_root: str | Path) -> str:
+    """Hash a normalized absolute project root without publishing its path."""
+    try:
+        root = Path(project_root).expanduser().resolve(strict=True)
+    except (OSError, TypeError, ValueError) as exc:
+        raise _contract_error("RUNTIME_CONFIGURATION_REQUIRED", "project root could not be resolved") from exc
+    if not root.is_dir() or root.is_symlink():
+        raise _contract_error("RUNTIME_CONFIGURATION_REQUIRED", "project root must be an existing directory")
+    normalized = os.path.normcase(os.path.normpath(str(root)))
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
+def local_engine_host_identity(endpoint: Any) -> str:
+    """Prove that a COMSOL endpoint is loopback-local before using local files."""
+    if not isinstance(endpoint, str) or not endpoint.strip():
+        raise _contract_error("ARTIFACT_HOST_UNVERIFIED", "COMSOL endpoint identity is unavailable")
+    value = endpoint.strip()
+    if value.startswith("["):
+        end = value.find("]")
+        host = value[1:end] if end > 0 else ""
+    else:
+        host = value.rsplit(":", 1)[0] if ":" in value else value
+    if host.casefold() == "localhost":
+        return local_artifact_host_identity()
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError as exc:
+        raise _contract_error(
+            "ARTIFACT_HOST_UNVERIFIED",
+            "only a literal loopback COMSOL endpoint can use this local project artifact route",
+        ) from exc
+    if not address.is_loopback:
+        raise _contract_error(
+            "ARTIFACT_HOST_UNVERIFIED",
+            "COMSOL endpoint is not loopback-local; project file visibility on a remote engine is unverified",
+        )
+    return local_artifact_host_identity()
+
+
+def _hash_regular_artifact(path: Path) -> tuple[str, dict[str, int]]:
+    handle, before = _open_pinned_artifact(path)
+    digest = hashlib.sha256()
+    try:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+        after = os.fstat(handle.fileno())
+        _assert_pinned_artifact_stable(path, before, after)
+    finally:
+        handle.close()
+    identity = {
+        "device": int(before.st_dev),
+        "inode": int(before.st_ino),
+        "size": int(before.st_size),
+        "mtime_ns": int(getattr(before, "st_mtime_ns", int(before.st_mtime * 1_000_000_000))),
+    }
+    return digest.hexdigest(), identity
+
+
+def register_project_artifact(
+    project_root: str | Path,
+    operation_store: Any,
+    source_relative_path: Any,
+    *,
+    project_id: str,
+    role: str,
+    classification: str,
+    host_identity: str,
+    engine_host_identity: str,
+    request_id: str,
+    registering_operation_id: str,
+    artifact_type: str | None = None,
+    format_version: str | None = None,
+    provenance_fields: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Copy and register a project-local ordinary file without widening access."""
+    if not isinstance(project_id, str) or not project_id.strip():
+        raise _contract_error("PROJECT_IDENTITY_MISMATCH", "project_id is required")
+    if not isinstance(role, str) or not role.strip() or len(role) > 96:
+        raise _contract_error("INVALID_REQUEST", "role must be a non-empty string of at most 96 characters")
+    if not isinstance(classification, str) or not classification.strip() or len(classification) > 96:
+        raise _contract_error("INVALID_REQUEST", "classification must be a non-empty string of at most 96 characters")
+    if not isinstance(source_relative_path, str) or not source_relative_path.strip():
+        raise _contract_error("INVALID_REQUEST", "path must be a project-relative file path")
+    for field, value in (("artifact_type", artifact_type), ("format_version", format_version)):
+        if value is not None and (not isinstance(value, str) or not value.strip() or len(value) > 128):
+            raise _contract_error("INVALID_REQUEST", f"{field} must be a bounded non-empty string")
+    if provenance_fields is None:
+        provenance_fields = {}
+    if not isinstance(provenance_fields, Mapping):
+        raise _contract_error("INVALID_REQUEST", "provenance_fields must be an object")
+    reserved_provenance = {"source_project_relative_path", "request_id", "registering_operation_id", "source_sha256"}
+    if set(provenance_fields) & reserved_provenance:
+        raise _contract_error("INVALID_REQUEST", "provenance_fields cannot replace registration identity")
+    try:
+        extra_provenance = json.loads(json.dumps(dict(provenance_fields), allow_nan=False))
+        if len(json.dumps(extra_provenance, ensure_ascii=False).encode("utf-8")) > 16 * 1024:
+            raise ValueError("oversized provenance")
+    except (TypeError, ValueError, UnicodeEncodeError) as exc:
+        raise _contract_error("INVALID_REQUEST", "provenance_fields must be bounded JSON data") from exc
+    source_lexical = Path(source_relative_path)
+    if source_lexical.is_absolute() or any(part == ".." for part in source_lexical.parts):
+        raise _contract_error("ACCESS_VIOLATION", "artifact.register accepts only project-relative paths without traversal")
+    try:
+        root = Path(project_root).expanduser().resolve(strict=True)
+    except (OSError, TypeError, ValueError) as exc:
+        raise _contract_error("RUNTIME_CONFIGURATION_REQUIRED", "trusted project root could not be resolved") from exc
+    store = ArtifactStore(root)
+    source = store.resolve_safe_path(source_relative_path, allow_overwrite=True)
+    if not source.is_file():
+        raise _contract_error("ARTIFACT_NOT_FOUND", "project-local source is not an existing regular file")
+    _assert_no_symlink_components(source, field="artifact.register source")
+    digest, source_identity = _hash_regular_artifact(source)
+    suffix = source.suffix.lower()
+    if suffix and not re.fullmatch(r"\.[a-z0-9]{1,16}", suffix):
+        raise _contract_error("INVALID_REQUEST", "artifact suffix is outside the supported safe filename vocabulary")
+    relative_destination = Path("g2_artifacts") / "registered" / f"{digest}{suffix}"
+    destination = store.resolve_safe_path(relative_destination.as_posix(), allow_overwrite=True)
+    root_id = project_root_identity(root)
+    existing = operation_store.get_metadata("artifacts", digest)
+    if existing is not None:
+        expected_origin = {
+            "schema_version": 2,
+            "artifact_id": digest,
+            "sha256": digest,
+            "path": relative_destination.as_posix(),
+            "project_id": project_id,
+            "project_root_identity": root_id,
+            "host_identity": host_identity,
+            "engine_host_identity": engine_host_identity,
+            "role": role,
+            "classification": classification,
+        }
+        if artifact_type is not None:
+            expected_origin["artifact_type"] = artifact_type
+        if format_version is not None:
+            expected_origin["format_version"] = format_version
+        if not isinstance(existing, Mapping) or any(existing.get(key) != value for key, value in expected_origin.items()):
+            raise _contract_error("ARTIFACT_REGISTRATION_CONFLICT", "this digest is already registered with different identity or classification")
+        provenance = existing.get("provenance")
+        if not isinstance(provenance, Mapping) or provenance.get("source_project_relative_path") != source_relative_path:
+            raise _contract_error("ARTIFACT_REGISTRATION_CONFLICT", "this digest was registered from a different project path")
+        resolved = resolve_registered_artifact(
+            root, operation_store, digest, project_id=project_id,
+            current_host_identity=host_identity, current_engine_host_identity=engine_host_identity,
+            current_server_instance_id="",
+        )
+        return {**dict(existing), "resolved_path": resolved["path"], "reused": True}
+
+    # Check before mkdir as well: if an attacker replaced an ancestor with a
+    # symlink, recursive mkdir could otherwise create a directory outside the
+    # project before the later post-create check rejected the path.
+    _assert_no_symlink_components(destination.parent, field="registered artifact directory")
+    destination.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    _assert_no_symlink_components(destination.parent, field="registered artifact directory")
+    created_destination = False
+    if destination.exists():
+        existing_digest, destination_identity = _hash_regular_artifact(destination)
+        if existing_digest != digest:
+            raise _contract_error("ARTIFACT_REGISTRATION_CONFLICT", "content-addressed destination exists with different bytes")
+    else:
+        fd, temp_name = tempfile.mkstemp(prefix=f".{digest}.", suffix=".partial", dir=str(destination.parent))
+        temp_path = Path(temp_name)
+        try:
+            output = os.fdopen(fd, "wb", closefd=True)
+            source_handle, source_before = _open_pinned_artifact(source)
+            copied = hashlib.sha256()
+            try:
+                with output:
+                    while True:
+                        chunk = source_handle.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        copied.update(chunk)
+                        output.write(chunk)
+                    output.flush()
+                    os.fsync(output.fileno())
+                _assert_pinned_artifact_stable(source, source_before, os.fstat(source_handle.fileno()))
+            finally:
+                source_handle.close()
+            if copied.hexdigest() != digest:
+                raise _contract_error("ARTIFACT_CHANGED", "project source changed between hash and copy")
+            _assert_no_symlink_components(destination.parent, field="registered artifact directory")
+            try:
+                os.link(temp_path, destination)
+            except FileExistsError:
+                raced_digest, _ = _hash_regular_artifact(destination)
+                if raced_digest != digest:
+                    raise _contract_error("ARTIFACT_REGISTRATION_CONFLICT", "content-addressed destination appeared with different bytes")
+            except OSError:
+                # Some supported project volumes do not implement hard links.
+                # Reserve the name exclusively, then atomically replace only
+                # our own placeholder with the already verified temporary file.
+                try:
+                    placeholder_fd = os.open(os.fspath(destination), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+                except FileExistsError as exc:
+                    raced_digest, _ = _hash_regular_artifact(destination)
+                    if raced_digest != digest:
+                        raise _contract_error("ARTIFACT_REGISTRATION_CONFLICT", "content-addressed destination appeared with different bytes") from exc
+                else:
+                    os.close(placeholder_fd)
+                    os.replace(temp_path, destination)
+                    created_destination = True
+            else:
+                created_destination = True
+        finally:
+            try:
+                temp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+    registered_digest, destination_identity = _hash_regular_artifact(destination)
+    if registered_digest != digest:
+        raise _contract_error("ARTIFACT_HASH_MISMATCH", "published project artifact failed digest readback")
+    if destination_identity["size"] != source_identity["size"]:
+        raise _contract_error("ARTIFACT_IDENTITY_MISMATCH", "registered file size changed during publication")
+    record = {
+        "schema_version": 2,
+        "artifact_id": digest,
+        "sha256": digest,
+        "path": relative_destination.as_posix(),
+        "size": destination_identity["size"],
+        "file_identity": destination_identity,
+        "project_id": project_id,
+        "project_root_identity": root_id,
+        "host_identity": host_identity,
+        "engine_host_identity": engine_host_identity,
+        "role": role,
+        "classification": classification,
+        "provenance": {
+            "source_project_relative_path": source_relative_path,
+            "request_id": request_id,
+            "registering_operation_id": registering_operation_id,
+            "source_sha256": digest,
+            **extra_provenance,
+        },
+    }
+    if artifact_type is not None:
+        record["artifact_type"] = artifact_type
+    if format_version is not None:
+        record["format_version"] = format_version
+    # Insert without upsert.  The hash-addressed data file may be shared by a
+    # simultaneous registration; leaving an unreferenced immutable file after
+    # a database error is safer than unlinking a file another successful row
+    # may already reference.
+    prior = operation_store.register_artifact_if_absent(digest, record)
+    if prior is not None:
+        expected_origin = {
+            "schema_version": 2,
+            "artifact_id": digest,
+            "sha256": digest,
+            "path": relative_destination.as_posix(),
+            "project_id": project_id,
+            "project_root_identity": root_id,
+            "host_identity": host_identity,
+            "engine_host_identity": engine_host_identity,
+            "role": role,
+            "classification": classification,
+        }
+        if artifact_type is not None:
+            expected_origin["artifact_type"] = artifact_type
+        if format_version is not None:
+            expected_origin["format_version"] = format_version
+        if not isinstance(prior, Mapping) or any(prior.get(key) != value for key, value in expected_origin.items()):
+            raise _contract_error("ARTIFACT_REGISTRATION_CONFLICT", "this digest was concurrently registered with different identity or classification")
+        prior_provenance = prior.get("provenance")
+        if not isinstance(prior_provenance, Mapping) or prior_provenance.get("source_project_relative_path") != source_relative_path:
+            raise _contract_error("ARTIFACT_REGISTRATION_CONFLICT", "this digest was concurrently registered from a different project path")
+        resolved = resolve_registered_artifact(
+            root, operation_store, digest, project_id=project_id,
+            current_host_identity=host_identity, current_engine_host_identity=engine_host_identity,
+            current_server_instance_id="",
+        )
+        return {**dict(prior), "resolved_path": resolved["path"], "reused": True}
+    return {**record, "resolved_path": destination, "reused": not created_destination}
+
+
+def publish_parameter_table_bytes_no_clobber(
+    project_root: str | Path,
+    destination_relative_path: Any,
+    payload: bytes,
+) -> dict[str, Any]:
+    """Publish bounded bytes inside a project using a no-clobber atomic name."""
+    if not isinstance(payload, bytes) or not payload:
+        raise _contract_error("INVALID_REQUEST", "published artifact bytes must be non-empty")
+    return _publish_project_chunks_no_clobber(
+        project_root, destination_relative_path, (payload,),
+        expected_sha256=hashlib.sha256(payload).hexdigest(), expected_size=len(payload),
+    )
+
+
+def publish_project_file_no_clobber(
+    project_root: str | Path,
+    destination_relative_path: Any,
+    owned_source_path: str | Path,
+    *,
+    expected_sha256: str,
+    expected_size: int,
+) -> dict[str, Any]:
+    """Pin a backend-owned project file and stream-publish it atomically.
+
+    ``owned_source_path`` is an internal backend capability, never a request
+    argument. It must name a regular, non-symlink file within the trusted
+    project. Source bytes are consumed once and verified against the supplied
+    digest and size before the destination name is committed.
+    """
+    store = ArtifactStore(project_root)
+    if (not isinstance(expected_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_sha256)
+            or isinstance(expected_size, bool) or not isinstance(expected_size, int) or expected_size <= 0):
+        raise _contract_error("INVALID_REQUEST", "file publication requires a SHA-256 and positive byte size")
+    try:
+        source_lexical = Path(owned_source_path).expanduser()
+    except (TypeError, ValueError) as exc:
+        raise _contract_error("INVALID_REQUEST", "owned source path is invalid") from exc
+    source = source_lexical if source_lexical.is_absolute() else store.project_root / source_lexical
+    source = Path(os.path.abspath(os.fspath(source)))
+    try:
+        source.relative_to(store.project_root)
+    except ValueError as exc:
+        raise _contract_error("ACCESS_VIOLATION", "owned source must be inside the trusted project root") from exc
+    _assert_no_symlink_components(source, field="owned package source")
+
+    if sys.platform == "win32":
+        from ._windows_parameter_publish import PublishError, _API, pinned_parent, validate_paths
+        try:
+            source_relative = source.relative_to(store.project_root).as_posix()
+            validate_paths(project_root, source_relative)
+            validate_paths(project_root, destination_relative_path)
+            store.resolve_safe_path(destination_relative_path, allow_overwrite=False)
+
+            def windows_chunks() -> Iterator[bytes]:
+                with pinned_parent(project_root, source_relative, add_file=False, _api=_API()) as (api, parent, parts, binding):
+                    handle = api.open_source(parent, parts[-1])
+                    try:
+                        before = api.source_fingerprint(handle)
+                        if before[1] != expected_size:
+                            raise _contract_error("ARTIFACT_CHANGED", "owned source size differs from its pinned metadata")
+                        read_size = 0
+                        while True:
+                            block = api.read_chunk(handle, 1024 * 1024)
+                            if not block:
+                                break
+                            read_size += len(block)
+                            if read_size > expected_size:
+                                raise _contract_error("ARTIFACT_CHANGED", "owned source grew while being streamed")
+                            yield block
+                        if (read_size != expected_size or api.source_fingerprint(handle) != before
+                                or api.child_identity(parent, parts[-1]) != before[0]):
+                            raise _contract_error("ARTIFACT_CHANGED", "owned source changed during pinned streaming")
+                        api.verify_named_binding(binding)
+                    finally:
+                        api.close(handle)
+
+            from ._windows_parameter_publish import publish_chunks
+            try:
+                return publish_chunks(project_root, destination_relative_path, windows_chunks(),
+                                      expected_sha256=expected_sha256, expected_size=expected_size)
+            except PublishError as exc:
+                raise _contract_error(exc.code, str(exc), stage=exc.stage, details=exc.details) from exc
+        except PublishError as exc:
+            raise _contract_error(exc.code, str(exc), stage=exc.stage, details=exc.details) from exc
+
+    def source_chunks() -> Iterator[bytes]:
+        handle, before = _open_pinned_artifact(source)
+        try:
+            if int(before.st_size) != expected_size:
+                raise _contract_error("ARTIFACT_CHANGED", "owned source size differs from its pinned metadata")
+            read_size = 0
+            for block in iter(lambda: handle.read(1024 * 1024), b""):
+                read_size += len(block)
+                if read_size > expected_size:
+                    raise _artifact_changed(source, "file grew while being streamed")
+                yield block
+            _assert_pinned_artifact_stable(source, before, os.fstat(handle.fileno()))
+            if read_size != expected_size:
+                raise _artifact_changed(source, "file size changed while being streamed")
+        finally:
+            handle.close()
+
+    return _publish_project_chunks_no_clobber(
+        store.project_root, destination_relative_path, source_chunks(),
+        expected_sha256=expected_sha256, expected_size=expected_size,
+    )
+
+
+def _publish_project_chunks_no_clobber(
+    project_root: str | Path,
+    destination_relative_path: Any,
+    chunks: Iterator[bytes],
+    *,
+    expected_sha256: str,
+    expected_size: int,
+) -> dict[str, Any]:
+    """Stream bytes to a pinned project parent and commit without replacement.
+
+    Every directory component is opened without following symlinks. The
+    project-root-to-parent binding is checked immediately before and after the
+    descriptor-relative commit.
+    """
+    if (not isinstance(expected_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_sha256)
+            or isinstance(expected_size, bool) or not isinstance(expected_size, int) or expected_size <= 0):
+        raise _contract_error("INVALID_REQUEST", "stream publication requires a SHA-256 and positive byte size")
+    try:
+        chunks = iter(chunks)
+    except TypeError as exc:
+        raise _contract_error("INVALID_REQUEST", "stream publication requires byte chunks") from exc
+    if sys.platform == "win32":
+        from ._windows_parameter_publish import PublishError, publish_chunks, validate_paths
+        try:
+            validate_paths(project_root, destination_relative_path)
+            # Preserve the production protected/private destination policy.
+            # The publisher still receives the original lexical root and pins
+            # its ancestor chain before creating bytes.
+            ArtifactStore(project_root).resolve_safe_path(destination_relative_path, allow_overwrite=False)
+            return publish_chunks(project_root, destination_relative_path, chunks,
+                                  expected_sha256=expected_sha256, expected_size=expected_size)
+        except PublishError as exc:
+            raise _contract_error(exc.code, str(exc), stage=exc.stage, details=exc.details) from exc
+    if not isinstance(destination_relative_path, str) or not destination_relative_path.strip():
+        raise _contract_error("INVALID_DESTINATION", "destination must be a project-relative file path")
+    lexical = Path(destination_relative_path)
+    if lexical.is_absolute() or any(part in {"", ".", ".."} for part in lexical.parts):
+        raise _contract_error("ACCESS_VIOLATION", "destination must be a canonical project-relative path")
+    if not (sys.platform == "darwin" or sys.platform.startswith("linux")):
+        raise _contract_error(
+            "NOT_IMPLEMENTED",
+            "descriptor-relative protected parameter publication is not implemented on this platform",
+            details={"platform": sys.platform, "capability": "parameter_export_descriptor_relative_publish"},
+        )
+    try:
+        root = Path(project_root).expanduser().resolve(strict=True)
+    except (OSError, TypeError, ValueError) as exc:
+        raise _contract_error("RUNTIME_CONFIGURATION_REQUIRED", "trusted project root could not be resolved") from exc
+    store = ArtifactStore(root)
+    destination = store.resolve_safe_path(destination_relative_path, allow_overwrite=False)
+    if destination.exists():
+        raise _contract_error("DESTINATION_EXISTS", "export destination already exists")
+    if not destination.parent.is_dir():
+        raise _contract_error("INVALID_DESTINATION", "export destination directory must already exist")
+    parent_parts = tuple(lexical.parts[:-1])
+    leaf_name = lexical.parts[-1]
+    directory_fds, directory_identity = _open_directory_binding(root, parent_parts)
+    parent_fd = directory_fds[-1]
+    temporary_name = f".parameter-export.{os.urandom(16).hex()}.partial"
+    file_fd: int | None = None
+    expected_file_identity: tuple[int, int] | None = None
+    digest = expected_sha256
+
+    def current_binding_matches() -> bool:
+        return _directory_binding_matches(root, parent_parts, directory_identity)
+
+    def cleanup_owned_publication() -> bool:
+        """Remove only our still-named inode and prove that its name is gone."""
+        if expected_file_identity is None:
+            return False
+        try:
+            current = os.stat(leaf_name, dir_fd=parent_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            return True
+        except OSError:
+            return False
+        if not stat.S_ISREG(current.st_mode) or (current.st_dev, current.st_ino) != expected_file_identity:
+            return False
+        try:
+            os.unlink(leaf_name, dir_fd=parent_fd)
+            os.fsync(parent_fd)
+        except OSError:
+            return False
+        try:
+            os.stat(leaf_name, dir_fd=parent_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            return True
+        except OSError:
+            return False
+        return False
+
+    def receipt_details(*, cleanup_verified: bool, cause_code: str) -> dict[str, Any]:
+        identity = expected_file_identity
+        return {
+            "partial_change": True,
+            "publication_committed": True,
+            "cleanup_verified": cleanup_verified,
+            "final_state": "ROLLED_BACK" if cleanup_verified else "UNKNOWN",
+            "residual_status": "ABSENT" if cleanup_verified else "UNKNOWN",
+            "cause_code": cause_code,
+            "relative_path": PurePosixPath(*lexical.parts).as_posix(),
+            "sha256": digest,
+            "size_bytes": expected_size,
+            "file_identity": ({"device": identity[0], "inode": identity[1]} if identity else None),
+        }
+
+    def rollback_or_unknown(code: str, message: str) -> None:
+        cleanup_verified = cleanup_owned_publication()
+        details = receipt_details(cleanup_verified=cleanup_verified, cause_code=code)
+        if cleanup_verified:
+            raise _contract_error(code, message, details=details)
+        raise _contract_error("ARTIFACT_PUBLISH_UNKNOWN", message, stage="post_dispatch", details=details)
+
+    try:
+        if not current_binding_matches():
+            raise _contract_error("ACCESS_VIOLATION", "project directory binding changed before export preparation")
+        try:
+            os.stat(leaf_name, dir_fd=parent_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            pass
+        else:
+            raise _contract_error("DESTINATION_EXISTS", "export destination appeared before preparation")
+
+        flags = os.O_RDWR | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
+        file_fd = os.open(temporary_name, flags, 0o600, dir_fd=parent_fd)
+        before = os.fstat(file_fd)
+        expected_file_identity = (before.st_dev, before.st_ino)
+        source_digest = hashlib.sha256()
+        source_size = 0
+        with os.fdopen(os.dup(file_fd), "wb", closefd=True) as output:
+            for block in chunks:
+                if not isinstance(block, bytes):
+                    raise _contract_error("INVALID_REQUEST", "stream source yielded a non-byte chunk")
+                if not block:
+                    continue
+                source_size += len(block)
+                if source_size > expected_size:
+                    raise _contract_error("ARTIFACT_SIZE_MISMATCH", "stream source exceeded its expected byte size")
+                source_digest.update(block)
+                output.write(block)
+            if source_size != expected_size:
+                raise _contract_error("ARTIFACT_SIZE_MISMATCH", "stream source did not match its expected byte size")
+            if source_digest.hexdigest() != expected_sha256:
+                raise _contract_error("ARTIFACT_HASH_MISMATCH", "stream source did not match its expected SHA-256")
+            output.flush()
+            os.fsync(output.fileno())
+        if not current_binding_matches():
+            raise _contract_error("ACCESS_VIOLATION", "project directory binding changed before export commit")
+        try:
+            os.stat(leaf_name, dir_fd=parent_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            pass
+        else:
+            raise _contract_error("DESTINATION_EXISTS", "export destination appeared before publication")
+
+        try:
+            os.link(temporary_name, leaf_name, src_dir_fd=parent_fd, dst_dir_fd=parent_fd, follow_symlinks=False)
+        except FileExistsError as exc:
+            raise _contract_error("DESTINATION_EXISTS", "export destination appeared before publication") from exc
+        except OSError as link_error:
+            # Some project filesystems refuse hard links. An exclusive rename
+            # keeps the compatibility fallback atomic and no-clobber. Native
+            # rename calls use the same pinned directory descriptor.
+            try:
+                _rename_no_clobber_at(parent_fd, temporary_name, leaf_name)
+            except FileExistsError as exc:
+                raise _contract_error("DESTINATION_EXISTS", "export destination appeared before publication") from exc
+            except OSError as exc:
+                if exc.errno == errno.EEXIST:
+                    raise _contract_error("DESTINATION_EXISTS", "export destination appeared before publication") from exc
+                if link_error.errno not in {errno.EPERM, errno.EOPNOTSUPP, errno.ENOTSUP, errno.EXDEV, errno.EMLINK}:
+                    raise _contract_error(
+                        "ARTIFACT_PUBLISH_FAILED", "filesystem could not commit an atomic no-clobber export",
+                    ) from link_error
+                raise _contract_error(
+                    "ARTIFACT_PUBLISH_FAILED",
+                    "filesystem could not commit an atomic no-clobber export",
+                ) from exc
+
+        try:
+            published_stat = os.stat(leaf_name, dir_fd=parent_fd, follow_symlinks=False)
+        except OSError as exc:
+            rollback_or_unknown("ARTIFACT_PUBLISH_UNKNOWN", "published name could not be inspected safely")
+        if (not stat.S_ISREG(published_stat.st_mode)
+                or (published_stat.st_dev, published_stat.st_ino) != expected_file_identity):
+            rollback_or_unknown("ARTIFACT_PUBLISH_UNKNOWN", "published name no longer identifies the owned temporary")
+        try:
+            os.fsync(parent_fd)
+            os.lseek(file_fd, 0, os.SEEK_SET)
+            observed_digest = hashlib.sha256()
+            observed_size = 0
+            for block in iter(lambda: os.read(file_fd, 1024 * 1024), b""):
+                observed_digest.update(block)
+                observed_size += len(block)
+            after = os.fstat(file_fd)
+        except OSError as exc:
+            rollback_or_unknown("ARTIFACT_PUBLISH_UNKNOWN", "published bytes could not be durably verified")
+        if ((after.st_dev, after.st_ino) != expected_file_identity
+                or observed_digest.hexdigest() != digest or observed_size != expected_size):
+            rollback_or_unknown("ARTIFACT_HASH_MISMATCH", "published bytes failed digest and size readback")
+
+        if not current_binding_matches():
+            rollback_or_unknown(
+                "ACCESS_VIOLATION", "project directory moved during export; the owned publication was rolled back",
+            )
+
+        # A second binding check follows readback and directory synchronization
+        # immediately before returning the publication receipt.
+        if not current_binding_matches():
+            rollback_or_unknown(
+                "ACCESS_VIOLATION", "project directory moved before export receipt; publication rollback was attempted",
+            )
+        return {
+            "relative_path": PurePosixPath(*lexical.parts).as_posix(),
+            "sha256": digest,
+            "size_bytes": observed_size,
+            "file_identity": {"device": after.st_dev, "inode": after.st_ino},
+        }
+    finally:
+        try:
+            if file_fd is not None:
+                # In the hard-link path this removes only the random temporary
+                # name. In the rename path it is already absent.
+                try:
+                    current_temp = os.stat(temporary_name, dir_fd=parent_fd, follow_symlinks=False)
+                    if expected_file_identity == (current_temp.st_dev, current_temp.st_ino):
+                        os.unlink(temporary_name, dir_fd=parent_fd)
+                except FileNotFoundError:
+                    pass
+                except OSError:
+                    pass
+        except OSError:
+            pass
+        if file_fd is not None:
+            os.close(file_fd)
+        for directory_fd in reversed(directory_fds):
+            os.close(directory_fd)
+
+
+def _directory_identity(fd: int) -> tuple[int, int]:
+    info = os.fstat(fd)
+    if not stat.S_ISDIR(info.st_mode):
+        raise _contract_error("ACCESS_VIOLATION", "an export path component is not a directory")
+    return info.st_dev, info.st_ino
+
+
+def _open_directory_binding(root: Path, relative_parts: Sequence[str]) -> tuple[list[int], tuple[tuple[int, int], ...]]:
+    """Open every root and export-parent component without following links."""
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
+    descriptors: list[int] = [os.open(os.fspath(Path(root.anchor or "/")), flags)]
+    identities: list[tuple[int, int]] = [_directory_identity(descriptors[0])]
+    try:
+        parts = (*root.parts[1:], *relative_parts)
+        for part in parts:
+            parent_fd = descriptors[-1]
+            child_fd = os.open(part, flags, dir_fd=parent_fd)
+            try:
+                child_identity = _directory_identity(child_fd)
+                named = os.stat(part, dir_fd=parent_fd, follow_symlinks=False)
+                if not stat.S_ISDIR(named.st_mode) or child_identity != (named.st_dev, named.st_ino):
+                    raise _contract_error("ACCESS_VIOLATION", "an export directory component changed while opening")
+            except BaseException:
+                os.close(child_fd)
+                raise
+            descriptors.append(child_fd)
+            identities.append(child_identity)
+        return descriptors, tuple(identities)
+    except BaseException:
+        for fd in reversed(descriptors):
+            os.close(fd)
+        raise
+
+
+def _directory_binding_matches(
+    root: Path,
+    relative_parts: Sequence[str],
+    expected: tuple[tuple[int, int], ...],
+) -> bool:
+    try:
+        descriptors, actual = _open_directory_binding(root, relative_parts)
+    except (OSError, ExecutionContractError, ValueError):
+        return False
+    try:
+        return actual == expected
+    finally:
+        for fd in reversed(descriptors):
+            os.close(fd)
+
+
+def _rename_no_clobber_at(directory_fd: int, source_name: str, destination_name: str) -> None:
+    """Atomically rename two names in a pinned directory without replacement."""
+    if sys.platform == "darwin":
+        rename_exclusive = getattr(ctypes.CDLL(None, use_errno=True), "renameatx_np", None)
+        if rename_exclusive is None:
+            raise OSError(errno.ENOTSUP, "descriptor-relative exclusive rename is unavailable")
+        rename_exclusive.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
+        rename_exclusive.restype = ctypes.c_int
+        result = rename_exclusive(
+            directory_fd, os.fsencode(source_name), directory_fd, os.fsencode(destination_name), 0x00000004,
+        )
+    elif sys.platform.startswith("linux"):
+        rename_exclusive = getattr(ctypes.CDLL(None, use_errno=True), "renameat2", None)
+        if rename_exclusive is None:
+            raise OSError(errno.ENOTSUP, "descriptor-relative exclusive rename is unavailable")
+        rename_exclusive.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
+        rename_exclusive.restype = ctypes.c_int
+        result = rename_exclusive(
+            directory_fd, os.fsencode(source_name), directory_fd, os.fsencode(destination_name), 0x00000001,
+        )
+    else:
+        raise OSError(errno.ENOTSUP, "descriptor-relative exclusive rename is unavailable on this platform")
+    if result != 0:
+        error = ctypes.get_errno() or errno.EIO
+        raise OSError(error, os.strerror(error), destination_name)
+
+
+def resolve_registered_artifact(
+    project_root: str | Path,
+    operation_store: Any,
+    artifact_id: Any,
+    *,
+    project_id: str,
+    current_host_identity: str,
+    current_engine_host_identity: str,
+    current_server_instance_id: str,
+    max_size_bytes: int | None = None,
+) -> dict[str, Any]:
+    """Resolve and verify one project-scoped artifact registration.
+
+    New records are stable across Worker restarts and bind to the managed
+    project and local host. Older saved-model records are accepted only in the
+    exact Worker connection epoch that created them. The returned absolute
+    path is for the immediate engine call; callers should publish only the
+    relative path and digest.
+    """
+    if not isinstance(artifact_id, str) or not re.fullmatch(r"[0-9a-f]{64}", artifact_id):
+        raise _contract_error("ARTIFACT_NOT_FOUND", "artifact_id must be a registered lowercase SHA-256 identifier")
+    if not isinstance(project_id, str) or not project_id.strip():
+        raise _contract_error("PROJECT_IDENTITY_MISMATCH", "a project_id is required to resolve an artifact")
+    if max_size_bytes is not None and (
+        isinstance(max_size_bytes, bool) or not isinstance(max_size_bytes, int) or max_size_bytes < 0
+    ):
+        raise _contract_error("INVALID_REQUEST", "max_size_bytes must be a non-negative integer")
+    try:
+        root = Path(project_root).expanduser().resolve(strict=True)
+    except (OSError, TypeError, ValueError) as exc:
+        raise _contract_error("RUNTIME_CONFIGURATION_REQUIRED", "trusted project root could not be resolved") from exc
+    if not root.is_dir() or root.is_symlink():
+        raise _contract_error("RUNTIME_CONFIGURATION_REQUIRED", "trusted project root must be an existing directory")
+    root_id = project_root_identity(root)
+    record = operation_store.get_metadata("artifacts", artifact_id)
+    if not isinstance(record, Mapping):
+        raise _contract_error("ARTIFACT_NOT_FOUND", "artifact_id has no registration in the current managed project store")
+    if record.get("artifact_id", artifact_id) != artifact_id or record.get("sha256") != artifact_id:
+        raise _contract_error("ARTIFACT_IDENTITY_MISMATCH", "artifact store key and registered digest do not match")
+
+    schema_version = record.get("schema_version", 1)
+    if type(schema_version) is int and schema_version == 2:
+        if (record.get("project_id") != project_id
+                or record.get("project_root_identity") != root_id
+                or record.get("host_identity") != current_host_identity
+                or record.get("engine_host_identity") != current_engine_host_identity):
+            raise _contract_error("ARTIFACT_SCOPE_MISMATCH", "artifact registration belongs to a different project or host")
+        relative = record.get("path")
+        if not isinstance(relative, str) or not relative:
+            raise _contract_error("ARTIFACT_IDENTITY_MISMATCH", "registered project artifact path must be relative")
+        portable_path = PurePosixPath(relative)
+        if portable_path.is_absolute() or portable_path.as_posix() != relative:
+            raise _contract_error("ARTIFACT_IDENTITY_MISMATCH", "registered project artifact path is not canonical relative POSIX syntax")
+        if any(part in {"", ".", ".."} for part in portable_path.parts):
+            raise _contract_error("ARTIFACT_IDENTITY_MISMATCH", "registered project artifact path contains traversal")
+        if len(portable_path.parts) != 3 or portable_path.parts[:2] != ("g2_artifacts", "registered"):
+            raise _contract_error("ARTIFACT_IDENTITY_MISMATCH", "registered artifact path is outside the managed content-addressed directory")
+        if re.fullmatch(re.escape(artifact_id) + r"(?:\.[a-z0-9]{1,16})?", portable_path.name) is None:
+            raise _contract_error("ARTIFACT_IDENTITY_MISMATCH", "registered artifact filename does not match its content address")
+        path = ArtifactStore(root).resolve_safe_path(relative, allow_overwrite=True)
+    elif schema_version is None or (type(schema_version) is int and schema_version == 1):
+        model_ref = record.get("model_ref")
+        if (not isinstance(model_ref, Mapping)
+                or not isinstance(model_ref.get("server_instance_id"), str)
+                or not model_ref.get("server_instance_id")
+                or model_ref.get("server_instance_id") != current_server_instance_id):
+            raise _contract_error(
+                "ARTIFACT_SCOPE_MISMATCH",
+                "legacy saved-model artifacts are limited to the Worker connection epoch that created them",
+            )
+        raw_path = record.get("path")
+        if not isinstance(raw_path, str) or not raw_path:
+            raise _contract_error("ARTIFACT_IDENTITY_MISMATCH", "legacy artifact record has no path")
+        path = ArtifactStore(root).resolve_safe_path(raw_path, allow_overwrite=True)
+    else:
+        raise _contract_error("ARTIFACT_IDENTITY_MISMATCH", "unsupported artifact record schema")
+
+    _assert_no_symlink_components(path, field="registered artifact")
+    try:
+        handle, before = _open_pinned_artifact(path)
+    except ExecutionContractError:
+        raise
+    digest = hashlib.sha256()
+    if max_size_bytes is not None and before.st_size > max_size_bytes:
+        handle.close()
+        raise _contract_error("ARTIFACT_TOO_LARGE", "registered artifact exceeds the caller's bounded read limit")
+    streamed_size = 0
+    try:
+        for chunk in iter(lambda: handle.read(64 * 1024 if max_size_bytes is not None else 1024 * 1024), b""):
+            streamed_size += len(chunk)
+            if max_size_bytes is not None and streamed_size > max_size_bytes:
+                raise _contract_error("ARTIFACT_TOO_LARGE", "registered artifact exceeds the caller's bounded read limit")
+            digest.update(chunk)
+        after = os.fstat(handle.fileno())
+        _assert_pinned_artifact_stable(path, before, after)
+    finally:
+        handle.close()
+    actual_identity = {
+        "device": int(before.st_dev),
+        "inode": int(before.st_ino),
+        "size": int(before.st_size),
+        "mtime_ns": int(getattr(before, "st_mtime_ns", int(before.st_mtime * 1_000_000_000))),
+    }
+    if digest.hexdigest() != artifact_id:
+        raise _contract_error("ARTIFACT_HASH_MISMATCH", "registered artifact bytes no longer match artifact_id")
+    recorded_size = record.get("size")
+    if recorded_size is not None and (isinstance(recorded_size, bool) or recorded_size != actual_identity["size"]):
+        raise _contract_error("ARTIFACT_IDENTITY_MISMATCH", "registered artifact size changed")
+    recorded_identity = record.get("file_identity")
+    if recorded_identity is not None:
+        if not isinstance(recorded_identity, Mapping) or any(
+            recorded_identity.get(key) != value for key, value in actual_identity.items()
+        ):
+            raise _contract_error("ARTIFACT_IDENTITY_MISMATCH", "registered artifact file identity changed")
+    return {
+        "artifact_id": artifact_id,
+        "path": path,
+        "relative_path": path.relative_to(root).as_posix(),
+        "sha256": artifact_id,
+        "size": actual_identity["size"],
+        "file_identity": actual_identity,
+        "role": record.get("role"),
+        "classification": record.get("classification"),
+        "record_schema_version": schema_version,
+    }
+
+
+def _reject_nonfinite(value: Any, *, path: str = "value") -> None:
+    """Validate values before a serializer or destination side effect runs."""
+    if value is None or isinstance(value, (str, bool, int)):
+        return
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise _contract_error(
+                "SERIALIZATION_ERROR",
+                f"non-finite numeric value at {path}: {value!r}",
+                stage="post_dispatch",
+            )
+        return
+    if isinstance(value, complex):
+        raise _contract_error(
+            "SERIALIZATION_ERROR",
+            f"raw complex value at {path} must be represented by explicit real/imag fields",
+            stage="post_dispatch",
+        )
+    if isinstance(value, Mapping):
+        for key, child in value.items():
+            if not isinstance(key, str):
+                raise _contract_error("SERIALIZATION_ERROR", f"mapping key at {path} is not a string", stage="post_dispatch")
+            _reject_nonfinite(child, path=f"{path}.{key}")
+        return
+    if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray, str)):
+        for index, child in enumerate(value):
+            _reject_nonfinite(child, path=f"{path}[{index}]")
+        return
+    raise _contract_error(
+        "SERIALIZATION_ERROR",
+        f"unsupported value type at {path}: {type(value).__name__}",
+        stage="post_dispatch",
+    )
+
+
+def _empty_values(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, Mapping) or (isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray))):
+        return len(value) == 0
+    return False
+
+
+def _evaluation_ok(eval_result: Mapping[str, Any]) -> None:
+    """Reject failed, partial, unknown, or unverified evaluation outcomes."""
+    status = eval_result.get("status")
+    if isinstance(status, Mapping):
+        if status.get("ok") is False or status.get("execution_state_unknown") is True:
+            raise _contract_error("EXPORT_FAILED", f"evaluation status is not publishable: {status}", stage="post_dispatch")
+        token = status.get("status")
+        if isinstance(token, str) and token.upper() in (_UNKNOWN_STATUS | _FAILED_STATUS):
+            raise _contract_error("EXPORT_FAILED", f"evaluation status is not publishable: {status}", stage="post_dispatch")
+        if status.get("engine_error") or status.get("cleanup_failed") is True:
+            raise _contract_error("EXPORT_FAILED", f"evaluation status contains an error: {status}", stage="post_dispatch")
+    elif isinstance(status, str) and status.upper() in (_UNKNOWN_STATUS | _FAILED_STATUS):
+        raise _contract_error("EXPORT_FAILED", f"evaluation status is not publishable: {status!r}", stage="post_dispatch")
+    for key in ("execution_state_unknown", "engine_state_unknown", "cleanup_failed", "partial_change"):
+        if eval_result.get(key) is True:
+            raise _contract_error("EXPORT_FAILED", f"evaluation carries {key}=true", stage="post_dispatch")
+    cleanup = eval_result.get("cleanup")
+    if isinstance(cleanup, Mapping) and cleanup.get("cleanup_failed") is True:
+        raise _contract_error("EXPORT_FAILED", f"evaluation cleanup failed: {cleanup}", stage="post_dispatch")
+    if eval_result.get("engine_error") or eval_result.get("error"):
+        raise _contract_error("EXPORT_FAILED", "evaluation returned an error", stage="post_dispatch")
+    if "values" not in eval_result or _empty_values(eval_result.get("values")):
+        raise _contract_error("EXPORT_FAILED", "evaluation produced no non-empty values", stage="post_dispatch")
+    _reject_nonfinite(eval_result.get("values"), path="values")
+
+
+def _json_payload(eval_result: Mapping[str, Any]) -> dict[str, Any]:
+    metadata = {
+        key: value for key, value in eval_result.items()
+        if key not in {"values", "artifact", "storage"}
+    }
+    payload = {
+        "spec": eval_result.get("spec", {}),
+        "values": eval_result["values"],
+        "metadata": metadata,
+    }
+    _reject_nonfinite(payload, path="payload")
+    return payload
+
+
+def _row_for_leaf(path: tuple[Any, ...], value: Any, eval_result: Mapping[str, Any]) -> list[Any]:
+    metadata = value if isinstance(value, Mapping) else {}
+
+    field_info = eval_result.get("field_array")
+    field_coords: dict[str, Any] = {}
+    field_axes: list[str] = []
+    field_units: dict[str, Any] = {}
+    if isinstance(field_info, Mapping):
+        field_coords = dict(field_info.get("coords") or {})
+        field_axes = list(field_info.get("axes") or [])
+        raw_units = field_info.get("units")
+        field_units = dict(raw_units) if isinstance(raw_units, Mapping) else {}
+    elif hasattr(field_info, "coords"):
+        field_coords = dict(getattr(field_info, "coords", None) or {})
+        field_axes = list(getattr(field_info, "axes", None) or [])
+        raw_units = getattr(field_info, "units", None)
+        field_units = dict(raw_units) if isinstance(raw_units, Mapping) else {}
+
+    _VALID_AXES = {"expression", "outer", "inner", "point", "component", "time", "parameter"}
+    if field_axes and any(ax not in _VALID_AXES for ax in field_axes):
+        raise _contract_error("DATA_INTEGRITY_ERROR", f"Invalid or unknown axes in field array: {field_axes}")
+
+    if not field_axes:
+        if len(path) == 4:
+            field_axes = ["expression", "outer", "inner", "point"]
+        elif len(path) == 3:
+            field_axes = ["expression", "outer", "inner"]
+        elif len(path) == 2:
+            field_axes = ["expression", "point"]
+        elif len(path) == 1:
+            field_axes = ["expression"]
+
+    # Real and imag separation
+    if isinstance(value, complex):
+        real, imag = value.real, value.imag
+    elif isinstance(value, Mapping) and ("real" in value or "imag" in value):
+        real, imag = value.get("real", ""), value.get("imag", "")
+    elif isinstance(value, Mapping) and "value" in value:
+        val = value["value"]
+        if isinstance(val, complex):
+            real, imag = val.real, val.imag
+        else:
+            real, imag = val, ""
+    else:
+        real, imag = value, ""
+
+    # Expression resolution
+    expr = metadata.get("expr")
+    expr_idx = None
+    if "expression" in field_axes:
+        pos = field_axes.index("expression")
+        if pos < len(path) and isinstance(path[pos], int):
+            expr_idx = path[pos]
+    elif path and isinstance(path[0], int):
+        expr_idx = path[0]
+
+    if not expr:
+        expr_coords = field_coords.get("expression") or eval_result.get("expressions")
+        if isinstance(expr_coords, Sequence) and expr_idx is not None and expr_idx < len(expr_coords):
+            expr = expr_coords[expr_idx]
+        elif expr_idx is not None:
+            expr = expr_idx
+        else:
+            expr = ""
+
+    # Outer axis label
+    outer = metadata.get("outer")
+    if outer is None or outer == "":
+        if "outer" in field_axes:
+            pos = field_axes.index("outer")
+            if pos < len(path) and isinstance(path[pos], int):
+                outer_idx = path[pos]
+                outer_coords = field_coords.get("outer")
+                if isinstance(outer_coords, Sequence) and outer_idx < len(outer_coords):
+                    outer = outer_coords[outer_idx]
+                else:
+                    outer = outer_idx
+            else:
+                outer = ""
+        else:
+            outer = ""
+
+    # Inner axis label
+    inner = metadata.get("inner")
+    if inner is None or inner == "":
+        if "inner" in field_axes:
+            pos = field_axes.index("inner")
+            if pos < len(path) and isinstance(path[pos], int):
+                inner_idx = path[pos]
+                inner_coords = field_coords.get("inner")
+                if isinstance(inner_coords, Sequence) and inner_idx < len(inner_coords):
+                    inner = inner_coords[inner_idx]
+                else:
+                    inner = inner_idx
+            else:
+                inner = ""
+        else:
+            inner = ""
+
+    # Point axis label
+    point = metadata.get("point")
+    point_idx = None
+    if point is None or point == "":
+        if "point" in field_axes:
+            pos = field_axes.index("point")
+            if pos < len(path) and isinstance(path[pos], int):
+                point_idx = path[pos]
+                point_coords = field_coords.get("point")
+                if isinstance(point_coords, Sequence) and point_idx < len(point_coords):
+                    point = point_coords[point_idx]
+                else:
+                    point = point_idx + 1
+            else:
+                point = ""
+        elif path and isinstance(path[-1], int):
+            point_idx = path[-1]
+            point = point_idx + 1
+        else:
+            point = ""
+    elif "point" in field_axes:
+        pos = field_axes.index("point")
+        if pos < len(path) and isinstance(path[pos], int):
+            point_idx = path[pos]
+
+    # Unit resolution
+    unit = metadata.get("unit")
+    if unit is None or unit == "":
+        unit_val = None
+        if field_units:
+            expr_units = field_units.get("expression")
+            if isinstance(expr_units, Mapping) and expr in expr_units:
+                unit_val = expr_units[expr]
+            elif isinstance(expr_units, Sequence) and expr_idx is not None and expr_idx < len(expr_units):
+                unit_val = expr_units[expr_idx]
+            elif expr in field_units:
+                unit_val = field_units[expr]
+        if unit_val is None:
+            raw_eval_units = eval_result.get("expression_units")
+            if isinstance(raw_eval_units, Mapping) and expr in raw_eval_units:
+                unit_val = raw_eval_units[expr]
+            elif isinstance(raw_eval_units, Sequence) and expr_idx is not None and expr_idx < len(raw_eval_units):
+                unit_val = raw_eval_units[expr_idx]
+        unit = unit_val if unit_val is not None else ""
+
+    # Spatial coordinates
+    coords = metadata.get("coords")
+    if not coords or not isinstance(coords, Sequence):
+        spatial = field_coords.get("spatial")
+        if isinstance(spatial, Sequence) and point_idx is not None and point_idx < len(spatial):
+            coords = spatial[point_idx]
+        else:
+            coords = eval_result.get("coordinates", ())
+    if not isinstance(coords, Sequence) or isinstance(coords, (str, bytes)):
+        coords = ()
+
+    return [
+        metadata.get("axis", "values"),
+        expr,
+        outer,
+        inner,
+        point,
+        real,
+        imag,
+        unit,
+        coords[0] if len(coords) > 0 else "",
+        coords[1] if len(coords) > 1 else "",
+        coords[2] if len(coords) > 2 else "",
+    ]
+
+
+def _iter_csv_rows(value: Any, eval_result: Mapping[str, Any], path: tuple[Any, ...] = ()) -> Iterator[list[Any]]:
+    if isinstance(value, Mapping):
+        if "real" in value or "imag" in value or "value" in value:
+            yield _row_for_leaf(path, value, eval_result)
+            return
+        for key, child in value.items():
+            yield from _iter_csv_rows(child, eval_result, path + (key,))
+        return
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        for index, child in enumerate(value):
+            yield from _iter_csv_rows(child, eval_result, path + (index,))
+        return
+    yield _row_for_leaf(path, value, eval_result)
+
+
+def _assert_no_symlink_components(path: Path, *, field: str) -> None:
+    """Reject symlink components without first resolving them away."""
+    lexical = Path(os.path.abspath(os.fspath(path)))
+    current = Path(lexical.anchor)
+    for component in lexical.parts[1:]:
+        current = current / component
+        try:
+            if current.is_symlink():
+                raise _contract_error(
+                    "ACCESS_VIOLATION",
+                    f"{field} contains a symlink component: {current}",
+                )
+        except OSError as exc:
+            raise _contract_error(
+                "ACCESS_VIOLATION",
+                f"{field} could not be inspected safely: {current}",
+            ) from exc
+
+
+def _rename_no_clobber(source: Path, destination: Path) -> None:
+    """Atomically move a same-directory temporary without replacing a name."""
+    if os.name == "nt":
+        # Windows rename refuses to replace an existing destination.
+        os.rename(source, destination)
+        return
+    library = ctypes.CDLL(None, use_errno=True)
+    if sys.platform == "darwin":
+        rename_exclusive = getattr(library, "renamex_np", None)
+        if rename_exclusive is None:
+            raise OSError(errno.ENOTSUP, "exclusive rename is unavailable")
+        rename_exclusive.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint]
+        rename_exclusive.restype = ctypes.c_int
+        result = rename_exclusive(os.fsencode(source), os.fsencode(destination), 0x00000004)
+    elif sys.platform.startswith("linux"):
+        rename_exclusive = getattr(library, "renameat2", None)
+        if rename_exclusive is None:
+            raise OSError(errno.ENOTSUP, "exclusive rename is unavailable")
+        rename_exclusive.argtypes = [
+            ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint,
+        ]
+        rename_exclusive.restype = ctypes.c_int
+        result = rename_exclusive(
+            -100, os.fsencode(source), -100, os.fsencode(destination), 0x00000001,
+        )
+    else:
+        raise OSError(errno.ENOTSUP, "exclusive rename is unavailable on this platform")
+    if result != 0:
+        error = ctypes.get_errno() or errno.EIO
+        raise OSError(error, os.strerror(error), os.fspath(destination))
+
+
+def _stream_file_hash(path: Path, *, block_size: int = 1024 * 1024) -> tuple[int, str]:
+    """Hash a completed file with bounded memory and return (size, digest)."""
+    digest = hashlib.sha256()
+    size = 0
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(block_size), b""):
+            digest.update(block)
+            size += len(block)
+    return size, digest.hexdigest()
+
+
+def _file_identity(st: os.stat_result) -> tuple[int, ...]:
+    """Return the identity/version fields pinned for one artifact read.
+
+    ``st_dev`` and ``st_ino`` bind the pathname to the opened inode while the
+    size and nanosecond mtime/ctime fields detect replacement or in-place
+    mutation during the bounded hash-and-read operation.  atime is omitted
+    because reading a file may legitimately update it.
+    On Windows NTFS, creation/metadata time (ctime) fluctuates between stat
+    and fstat upon initial file descriptor open, so ctime is omitted on win32.
+    """
+    if sys.platform == "win32":
+        return (
+            int(st.st_dev),
+            int(st.st_ino),
+            int(st.st_size),
+            int(st.st_mtime_ns),
+        )
+    return (
+        int(st.st_dev),
+        int(st.st_ino),
+        int(st.st_size),
+        int(st.st_mtime_ns),
+        int(st.st_ctime_ns),
+    )
+
+
+def _artifact_changed(path: Path, message: str) -> ExecutionContractError:
+    return _contract_error(
+        "ARTIFACT_CHANGED",
+        f"Artifact {path} changed during its pinned read: {message}",
+        stage="validation",
+    )
+
+
+def _open_pinned_artifact(path: Path) -> tuple[Any, os.stat_result]:
+    """Open a regular artifact with final-component ``O_NOFOLLOW``.
+
+    The caller must consume and validate the returned handle before closing it.
+    The path stat is compared with the first fd stat so a replacement between
+    the lexical checks and ``os.open`` cannot be mistaken for the requested
+    artifact.
+    """
+    _assert_no_symlink_components(path, field="artifact")
+    try:
+        path_before = os.stat(os.fspath(path), follow_symlinks=False)
+    except FileNotFoundError as exc:
+        raise _contract_error("ARTIFACT_NOT_FOUND", f"Artifact file not found: {path}") from exc
+    except OSError as exc:
+        raise _contract_error("ACCESS_VIOLATION", f"Artifact could not be inspected safely: {path}") from exc
+    if not stat.S_ISREG(path_before.st_mode):
+        raise _contract_error("ARTIFACT_NOT_FOUND", f"Artifact is not a regular file: {path}")
+
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        fd = os.open(os.fspath(path), flags)
+    except FileNotFoundError as exc:
+        raise _contract_error("ARTIFACT_NOT_FOUND", f"Artifact file not found: {path}") from exc
+    except OSError as exc:
+        if getattr(exc, "errno", None) == errno.ELOOP:
+            raise _contract_error("ACCESS_VIOLATION", f"Artifact became a symlink: {path}") from exc
+        raise _contract_error("ARTIFACT_NOT_FOUND", f"Artifact could not be opened: {path}") from exc
+
+    try:
+        handle = os.fdopen(fd, "rb", closefd=True)
+        fd = -1
+        fd_before = os.fstat(handle.fileno())
+        if not stat.S_ISREG(fd_before.st_mode) or _file_identity(fd_before) != _file_identity(path_before):
+            raise _artifact_changed(path, "pathname identity changed before reading")
+        return handle, fd_before
+    except BaseException:
+        if fd >= 0:
+            os.close(fd)
+        else:
+            # ``fdopen`` owns the descriptor after it succeeds.
+            try:
+                handle.close()  # type: ignore[name-defined]
+            except (NameError, OSError):
+                pass
+        raise
+
+
+def _assert_pinned_artifact_stable(path: Path, before: os.stat_result, after: os.stat_result) -> None:
+    """Verify both fd metadata and current pathname identity after reading."""
+    if not stat.S_ISREG(after.st_mode) or _file_identity(after) != _file_identity(before):
+        raise _artifact_changed(path, "opened-file metadata changed")
+    try:
+        path_after = os.stat(os.fspath(path), follow_symlinks=False)
+    except OSError as exc:
+        raise _artifact_changed(path, f"pathname could not be revalidated: {exc}") from exc
+    if not stat.S_ISREG(path_after.st_mode) or _file_identity(path_after) != _file_identity(before):
+        raise _artifact_changed(path, "pathname no longer names the opened file")
+
+
+_WHOLE_FILE_HASH_CACHE: dict[tuple[int, int, int, int, int], str] = {}
+
+
+def _read_pinned_chunk(path: Path, offset: int, length: int) -> dict[str, Any]:
+    """Hash and read one chunk from the same opened descriptor.
+
+    Keeping the hash and payload read on one fd closes the old race where a
+    same-size replacement could pair the old whole-file digest with new chunk
+    bytes.  The descriptor and pathname are checked before and after both
+    operations, with only bounded hash and chunk buffers allocated.
+    """
+    handle, before = _open_pinned_artifact(path)
+    try:
+        file_size = int(before.st_size)
+        if offset >= file_size:
+            raise _contract_error(
+                "INVALID_CHUNK_RANGE",
+                f"Offset {offset} is out of bounds for file of size {file_size}",
+            )
+
+        identity = _file_identity(before)
+        cached_hash = _WHOLE_FILE_HASH_CACHE.get(identity)
+        if cached_hash is not None:
+            whole_sha256 = cached_hash
+        else:
+            digest = hashlib.sha256()
+            hashed_size = 0
+            for block in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(block)
+                hashed_size += len(block)
+            if hashed_size != file_size:
+                raise _artifact_changed(path, f"size changed while hashing ({file_size} -> {hashed_size})")
+            whole_sha256 = digest.hexdigest()
+            if len(_WHOLE_FILE_HASH_CACHE) > 1024:
+                _WHOLE_FILE_HASH_CACHE.clear()
+            _WHOLE_FILE_HASH_CACHE[identity] = whole_sha256
+
+        handle.seek(offset)
+        chunk_data = handle.read(length)
+        after = os.fstat(handle.fileno())
+        _assert_pinned_artifact_stable(path, before, after)
+
+        chunk_sha256 = hashlib.sha256(chunk_data).hexdigest()
+        return {
+            "file_path": str(path),
+            "file_size": file_size,
+            "whole_file_sha256": whole_sha256,
+            "offset": offset,
+            "length": len(chunk_data),
+            "chunk_sha256": chunk_sha256,
+            "data_bytes": chunk_data,
+            "eof": (offset + len(chunk_data)) >= file_size,
+        }
+    finally:
+        handle.close()
+
+
+def _count_values(value: Any) -> int:
+    if value is None:
+        return 0
+    if isinstance(value, Mapping):
+        return sum(_count_values(child) for child in value.values())
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return sum(_count_values(child) for child in value)
+    return 1
+
+
+class ArtifactStore:
+    """Manages project-scoped artifacts, atomic exports, and chunk streaming."""
+
+    def __init__(self, project_root: Path | None = None) -> None:
+        if project_root is None:
+            raise _contract_error(
+                "RUNTIME_CONFIGURATION_REQUIRED",
+                "ArtifactStore requires an explicit trusted project root; cwd is not an authorization source",
+            )
+        try:
+            raw_root = Path(project_root).expanduser()
+        except (TypeError, ValueError) as exc:
+            raise _contract_error("RUNTIME_CONFIGURATION_REQUIRED", "project root is not a valid path") from exc
+        if not raw_root.is_absolute():
+            raise _contract_error("RUNTIME_CONFIGURATION_REQUIRED", "project root must be an absolute path")
+        _assert_no_symlink_components(raw_root, field="project root")
+        if not raw_root.is_dir():
+            raise _contract_error("RUNTIME_CONFIGURATION_REQUIRED", f"project root is not a directory: {raw_root}")
+        self.project_root = raw_root.resolve(strict=True)
+        if self.project_root.is_symlink() or not self.project_root.is_dir():
+            raise _contract_error("RUNTIME_CONFIGURATION_REQUIRED", f"project root is not a directory: {raw_root}")
+
+    def resolve_safe_path(self, dest: str, *, allow_overwrite: bool = False) -> Path:
+        """Resolve a path strictly inside the project root.
+
+        ``allow_overwrite`` is an explicit destination contract.  It only affects
+        an existing regular file; it never widens the root or permits a symlink.
+        """
+        if not isinstance(dest, (str, os.PathLike)) or not str(dest).strip():
+            raise _contract_error("INVALID_DESTINATION", "destination must be a non-empty path")
+        if not isinstance(allow_overwrite, bool):
+            raise _contract_error("INVALID_REQUEST", "allow_overwrite must be boolean")
+
+        raw_p = Path(dest).expanduser()
+        candidate = raw_p if raw_p.is_absolute() else self.project_root / raw_p
+        # Normalize ``..`` lexically without resolving symlinks; resolving first
+        # would hide a symlink that points back inside the root.
+        candidate = Path(os.path.abspath(os.fspath(candidate)))
+        try:
+            rel = candidate.relative_to(self.project_root)
+        except ValueError as exc:
+            raise _contract_error(
+                "ACCESS_VIOLATION",
+                f"Export destination {dest!r} escapes authorized project root {self.project_root}",
+            ) from exc
+
+        _PROTECTED_DIR_PREFIXES = (
+            ".phase1-private",
+            ".g3-private",
+            ".git",
+            ".env",
+            ".credentials",
+            ".token",
+            ".secret",
+            "comsol_prefs",
+            ".comsol_prefs",
+            "comsol-server-home",
+            "site-packages",
+            "dist-packages",
+            "comsol_mcp",
+            ".venv",
+            "venv",
+            "__pycache__",
+        )
+        _PROTECTED_TOKENS = {
+            "token",
+            "tokens",
+            "token.json",
+            "tokens.json",
+            "credential",
+            "credentials",
+            "credentials.ini",
+            "secret",
+            "secrets",
+            "secret.key",
+            "secret_model.mph",
+            "id_rsa",
+            "id_dsa",
+            "id_ecdsa",
+            "id_ed25519",
+            "master.key",
+            "auth_token",
+            "comsol.prefs",
+            "login.properties",
+            "transactions.json",
+            "docs_index.sqlite3",
+        }
+        _PROTECTED_EXTENSIONS = (
+            ".pem",
+            ".key",
+            ".crt",
+            ".pfx",
+            ".p12",
+            ".sqlite3",
+            ".db",
+            ".py",
+            ".pyc",
+            ".pyo",
+        )
+
+        def _is_protected(part_str: str) -> bool:
+            p_low = part_str.lower()
+            s_low = Path(p_low).stem
+            return (
+                part_str.startswith(".")
+                or any(p_low.startswith(prefix) for prefix in _PROTECTED_DIR_PREFIXES)
+                or p_low in _PROTECTED_TOKENS
+                or s_low in _PROTECTED_TOKENS
+                or any(p_low.endswith(ext) for ext in _PROTECTED_EXTENSIONS)
+            )
+
+        for part in rel.parts:
+            if _is_protected(part):
+                raise _contract_error(
+                    "ACCESS_VIOLATION",
+                    f"Destination {dest!r} enters protected or private path component {part!r}",
+                )
+
+        _assert_no_symlink_components(candidate, field="destination")
+        resolved = candidate.resolve(strict=False)
+        try:
+            rel_resolved = resolved.relative_to(self.project_root)
+        except ValueError as exc:
+            # Protect the race where a component appeared as a symlink between the
+            # lexical check and the first resolve.
+            raise _contract_error(
+                "ACCESS_VIOLATION",
+                f"Export destination {dest!r} escapes authorized project root {self.project_root}",
+            ) from exc
+
+        for part in rel_resolved.parts:
+            if _is_protected(part):
+                raise _contract_error(
+                    "ACCESS_VIOLATION",
+                    f"Resolved destination {resolved!r} enters protected or private path component {part!r}",
+                )
+
+        _assert_no_symlink_components(candidate, field="destination")
+
+        if resolved.exists():
+            if resolved.is_symlink() or resolved.is_dir():
+                raise _contract_error(
+                    "INVALID_DESTINATION",
+                    f"Destination path is not an existing regular file: {resolved}",
+                )
+            if not allow_overwrite:
+                raise _contract_error(
+                    "DESTINATION_EXISTS",
+                    f"Destination file already exists and overwrite is not authorized: {resolved}",
+                )
+
+        return resolved
+
+    _REGISTERED_ARTIFACTS: set[str] = set()
+
+    @classmethod
+    def register_artifact(cls, path_or_id: str | Path) -> str:
+        resolved_str = str(Path(path_or_id).resolve())
+        cls._REGISTERED_ARTIFACTS.add(resolved_str)
+        cls._REGISTERED_ARTIFACTS.add(str(path_or_id))
+        return resolved_str
+
+    @classmethod
+    def is_registered_artifact(cls, path_or_id: str | Path) -> bool:
+        p_str = str(path_or_id)
+        if p_str in cls._REGISTERED_ARTIFACTS:
+            return True
+        try:
+            return str(Path(path_or_id).resolve()) in cls._REGISTERED_ARTIFACTS
+        except Exception:
+            return False
+
+    def export_field_data(
+        self,
+        dest: str,
+        eval_result: Mapping[str, Any],
+        fmt: str = "json",
+        *,
+        chunk_size: int = 1024 * 64,
+        allow_overwrite: bool = False,
+    ) -> dict[str, Any]:
+        """Atomically export evaluation outcomes to a validated file."""
+        if not isinstance(eval_result, Mapping):
+            raise _contract_error("EXPORT_FAILED", "evaluation result must be a mapping", stage="post_dispatch")
+        if not isinstance(fmt, str):
+            raise _contract_error("API_UNSUPPORTED", "format must be 'json' or 'csv'")
+        fmt_lower = fmt.strip().lower()
+        if fmt_lower not in ("json", "csv"):
+            raise _contract_error(
+                "API_UNSUPPORTED",
+                f"Unsupported export format {fmt!r}; supported formats are 'json', 'csv'",
+            )
+        if isinstance(chunk_size, bool) or not isinstance(chunk_size, int) or not (0 < chunk_size <= MAX_CHUNK_BYTES):
+            raise _contract_error(
+                "INVALID_REQUEST",
+                f"chunk_size must be an integer from 1 to {MAX_CHUNK_BYTES}",
+            )
+        if not isinstance(allow_overwrite, bool):
+            raise _contract_error("INVALID_REQUEST", "allow_overwrite must be boolean")
+
+        # Semantic and destination checks happen before a directory is made or a
+        # temporary file is opened.  A failed/unknown outcome can never publish.
+        _evaluation_ok(eval_result)
+        target_path = self.resolve_safe_path(dest, allow_overwrite=allow_overwrite)
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        _assert_no_symlink_components(target_path.parent, field="destination parent")
+
+        values = eval_result["values"]
+        tmp_path: Path | None = None
+        try:
+            fd, tmp_name = tempfile.mkstemp(
+                prefix=f".{target_path.name}.tmp.", suffix=".partial", dir=str(target_path.parent)
+            )
+            os.close(fd)
+            tmp_path = Path(tmp_name)
+            _assert_no_symlink_components(target_path.parent, field="destination parent")
+            if fmt_lower == "json":
+                payload = _json_payload(eval_result)
+                with tmp_path.open("w", encoding="utf-8", newline="") as handle:
+                    json.dump(payload, handle, allow_nan=False, sort_keys=True, indent=2, ensure_ascii=False)
+                    handle.write("\n")
+                    handle.flush()
+                    os.fsync(handle.fileno())
+            else:
+                with tmp_path.open("w", encoding="utf-8", newline="") as handle:
+                    writer = csv.writer(handle)
+                    writer.writerow(CSV_COLUMNS)
+                    for row in _iter_csv_rows(values, eval_result):
+                        writer.writerow(row)
+                    handle.flush()
+                    os.fsync(handle.fileno())
+
+            byte_size, sha256 = _stream_file_hash(tmp_path)
+
+            # Re-authorize immediately before publication.  The first
+            # destination check is intentionally early (before evaluation and
+            # serialization), while this second check closes the long window in
+            # which a parent component or destination could have changed.
+            authorized_target = self.resolve_safe_path(dest, allow_overwrite=allow_overwrite)
+            if authorized_target != target_path:
+                raise _contract_error(
+                    "ACCESS_VIOLATION",
+                    "destination changed between preflight and publication",
+                    stage="post_dispatch",
+                )
+            _assert_no_symlink_components(authorized_target.parent, field="destination parent")
+
+            if allow_overwrite:
+                # Explicit overwrite is the only path that may replace an
+                # existing regular file.  The immediate authorization check
+                # above prevents a newly appeared symlink or directory from
+                # being silently accepted.
+                os.replace(tmp_path, authorized_target)
+            else:
+                # ``os.link`` is an atomic no-clobber publish when the temp file
+                # lives in the same directory.  It cannot overwrite a target
+                # that appeared after preflight, unlike os.replace.
+                try:
+                    os.link(tmp_path, authorized_target)
+                except FileExistsError as exc:
+                    raise _contract_error(
+                        "DESTINATION_EXISTS",
+                        f"Destination appeared before atomic no-clobber publish: {authorized_target}",
+                        stage="post_dispatch",
+                    ) from exc
+                except OSError as exc:
+                    raise _contract_error(
+                        "PUBLISH_FAILED",
+                        f"Atomic no-clobber publish failed for {authorized_target}: {exc}",
+                        stage="post_dispatch",
+                    ) from exc
+                try:
+                    tmp_path.unlink()
+                except OSError as exc:
+                    raise _contract_error(
+                        "PUBLISH_FAILED",
+                        f"Published artifact but could not remove temporary link {tmp_path}: {exc}",
+                        stage="post_dispatch",
+                    ) from exc
+            tmp_path = None
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise _contract_error(
+                "SERIALIZATION_ERROR",
+                f"serialization failed: {type(exc).__name__}: {exc}",
+                stage="post_dispatch",
+            ) from exc
+        finally:
+            if tmp_path is not None:
+                try:
+                    tmp_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
+
+        total_elements = eval_result.get("total_elements", 0)
+        if isinstance(total_elements, bool) or not isinstance(total_elements, int) or total_elements < 0:
+            total_elements = _count_values(values)
+        if total_elements == 0:
+            total_elements = _count_values(values)
+        self.register_artifact(authorized_target)
+        return {
+            "file_path": str(target_path),
+            "sha256": sha256,
+            "format": fmt_lower,
+            "byte_size": byte_size,
+            "total_elements": total_elements,
+            "chunk_info": {
+                "chunk_size": chunk_size,
+                "total_chunks": max(1, math.ceil(byte_size / chunk_size)),
+                "hash_algorithm": "sha256",
+                "streaming": True,
+            },
+            "evaluation_summary": {
+                key: eval_result.get(key)
+                for key in ("expressions", "dataset", "solution", "complex_mode", "is_complex")
+            },
+        }
+
+    @staticmethod
+    def read_chunk(file_path: str, offset: int, length: int) -> dict[str, Any]:
+        """Read a single byte chunk from an artifact file with bounded memory."""
+        p = Path(file_path)
+        if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
+            raise _contract_error("INVALID_CHUNK_RANGE", "offset must be a non-negative integer")
+        if isinstance(length, bool) or not isinstance(length, int) or length <= 0 or length > MAX_CHUNK_BYTES:
+            raise _contract_error(
+                "INVALID_CHUNK_RANGE",
+                f"length must be an integer from 1 to {MAX_CHUNK_BYTES}",
+            )
+        _assert_no_symlink_components(p, field="artifact")
+        pinned = _read_pinned_chunk(p, offset=offset, length=length)
+        return {
+            "file_path": pinned["file_path"],
+            "offset": pinned["offset"],
+            "length": pinned["length"],
+            "chunk_sha256": pinned["chunk_sha256"],
+            "data_bytes": pinned["data_bytes"],
+            "eof": pinned["eof"],
+        }
+
+
+def _require_string(arguments: Mapping[str, Any], key: str) -> str:
+    value = arguments.get(key)
+    if not isinstance(value, str) or not value.strip():
+        raise ExecutionContractError(
+            "INVALID_REQUEST", f"artifact.read requires a non-empty string {key!r}"
+        )
+    return value
+
+
+def artifact_read(
+    worker: Any, model_tag: str | None, arguments: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Read one bounded chunk of a published artifact.
+
+    This publishes the catalogue's ``artifact.read`` (effect READ, scope project,
+    signature ``artifact_id, offset?, length?, expected_sha256?, expected_chunk_sha256?``)
+    rather than inventing a sibling
+    name: the design catalogue is the source of truth for effects, and an operation
+    whose effect came from a private table would break that invariant.
+
+    ``worker`` supplies the trusted project root.  It is never replaced by a root
+    or project identifier in the request body.  ``model_tag`` is accepted for
+    signature compatibility with the other G3 operations; reads do not touch the
+    engine.  ``project_id`` and ``request_id`` are accepted-and-ignored; ``path``
+    is accepted as an alias for ``artifact_id``.
+
+    Two extra optional keys carry the integrity pins ACCEPTANCE C13 needs
+    (``expected_sha256`` for the whole file, ``expected_chunk_sha256`` for the served
+    chunk).  A catalogue-only caller that omits them still gets a per-chunk digest
+    plus the file's reported digest and size.
+
+    The destination is gated by the project-root containment check *before* any file
+    is opened (a request cannot widen the root, because the root comes from the
+    process and never from the request body), the pinned whole-file digest is verified
+    before the chunk is handed out, and each chunk carries its own digest.  Bytes
+    travel base64 encoded because the operation response is JSON.
+
+    Memory bound: one chunk read allocates at most ``length`` payload bytes (capped
+    at 16 MiB) plus the base64 wire copy, and never buffers the whole file.  The
+    whole-file digest is computed with a 1 MiB block buffer, so its memory remains
+    bounded by the block size rather than file size.
+    """
+    if not isinstance(arguments.get("artifact_id"), str) or not arguments["artifact_id"].strip():
+        # ``path`` stays accepted as an alias so the export-side reference can be passed
+        # through unchanged.
+        path = _require_string(arguments, "path")
+    else:
+        path = arguments["artifact_id"]
+    offset = arguments.get("offset", 0)
+    length = arguments.get("length", 1024 * 64)
+    if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0:
+        raise _contract_error("INVALID_REQUEST", f"offset must be a non-negative integer, got {offset!r}")
+    if not isinstance(length, int) or isinstance(length, bool) or length <= 0 or length > MAX_CHUNK_BYTES:
+        raise _contract_error(
+            "INVALID_REQUEST",
+            f"length must be an integer from 1 to {MAX_CHUNK_BYTES}, got {length!r}",
+        )
+
+    root = trusted_project_root(worker)
+    store = ArtifactStore(project_root=root)
+    # ``allow_overwrite=True`` here means an existing regular file may be read; it
+    # does not permit a write and still rejects all symlinks.
+    resolved = store.resolve_safe_path(path, allow_overwrite=True)
+    if not resolved.is_relative_to(store.project_root):
+        raise _contract_error(
+            "ACCESS_VIOLATION",
+            f"Artifact reads are limited to the project root {store.project_root}; {resolved} is outside it",
+        )
+    if not resolved.is_file():
+        raise _contract_error("ARTIFACT_NOT_FOUND", f"Artifact file not found: {resolved}")
+
+    # R02: artifact.read is restricted to registered published artifacts by default
+    require_registered = bool(arguments.get("require_registered", True))
+    if require_registered and not store.is_registered_artifact(resolved):
+        raise _contract_error(
+            "ACCESS_VIOLATION",
+            f"Artifact {resolved} is not a registered published artifact; reading arbitrary project files is prohibited",
+            stage="validation",
+        )
+
+    _assert_no_symlink_components(resolved, field="artifact")
+    pinned = _read_pinned_chunk(resolved, offset=offset, length=length)
+    file_size = pinned["file_size"]
+    whole_sha256 = pinned["whole_file_sha256"]
+    expected_whole = arguments.get("expected_sha256")
+    if expected_whole is not None:
+        if whole_sha256.lower() != str(expected_whole).lower():
+            raise _contract_error(
+                "ARTIFACT_HASH_MISMATCH",
+                f"Artifact {resolved} hashes to {whole_sha256}, not the pinned {expected_whole}",
+                details={
+                    "path": str(resolved),
+                    "actual_sha256": whole_sha256,
+                    "expected_sha256": str(expected_whole),
+                },
+            )
+
+    # ``pinned`` contains the payload read from the same descriptor used for
+    # the whole-file hash.  Do not reopen the pathname here: doing so would
+    # allow an old digest to be paired with bytes from a same-size replacement.
+    chunk = pinned
+    expected_chunk = arguments.get("expected_chunk_sha256")
+    if expected_chunk is not None and chunk["chunk_sha256"].lower() != str(expected_chunk).lower():
+        raise _contract_error(
+            "CHUNK_HASH_MISMATCH",
+            f"Chunk at offset {chunk['offset']} hashes to {chunk['chunk_sha256']}, "
+            f"not the expected {expected_chunk}",
+            details={
+                "path": str(resolved),
+                "offset": chunk["offset"],
+                "actual_sha256": chunk["chunk_sha256"],
+                "expected_sha256": str(expected_chunk),
+            },
+        )
+
+    return {
+        "file_path": str(resolved),
+        "file_size": file_size,
+        "format": resolved.suffix.lstrip(".") or None,
+        "whole_file_sha256": whole_sha256,
+        "whole_file_sha256_pinned": expected_whole is not None,
+        "offset": chunk["offset"],
+        "length": chunk["length"],
+        "eof": chunk["eof"],
+        "chunk_sha256": chunk["chunk_sha256"],
+        "encoding": "base64",
+        "data_base64": base64.b64encode(chunk["data_bytes"]).decode("ascii"),
+    }
+
+
+def csv_to_field_array(csv_data: str | Path | os.PathLike) -> Any:
+    """Reconstruct a FieldArray from a CSV exported by export_field_data."""
+    from ._solution_binding import FieldArray
+
+    if isinstance(csv_data, (Path, os.PathLike)) or (isinstance(csv_data, str) and os.path.exists(csv_data)):
+        with open(csv_data, "r", encoding="utf-8", newline="") as f:
+            reader = list(csv.DictReader(f))
+    elif isinstance(csv_data, str):
+        reader = list(csv.DictReader(csv_data.strip().splitlines()))
+    else:
+        raise _contract_error("INVALID_REQUEST", "csv_data must be a file path or CSV string")
+
+    if not reader:
+        raise _contract_error("INVALID_REQUEST", "CSV data is empty")
+
+    expressions: list[str] = []
+    outers: list[Any] = []
+    inners: list[Any] = []
+    points: list[Any] = []
+    spatial_by_point: dict[Any, list[float]] = {}
+    units_by_expr: dict[str, str] = {}
+    has_complex = False
+
+    def _parse_num(val_str: str) -> Any:
+        try:
+            return int(val_str)
+        except ValueError:
+            try:
+                return float(val_str)
+            except ValueError:
+                return val_str
+
+    for row in reader:
+        expr = row.get("expr", "")
+        if expr not in expressions:
+            expressions.append(expr)
+
+        outer_val = _parse_num(row.get("outer", ""))
+        if outer_val != "" and outer_val not in outers:
+            outers.append(outer_val)
+
+        inner_val = _parse_num(row.get("inner", ""))
+        if inner_val != "" and inner_val not in inners:
+            inners.append(inner_val)
+
+        point_val = _parse_num(row.get("point", ""))
+        if point_val != "" and point_val not in points:
+            points.append(point_val)
+
+        unit = row.get("unit", "")
+        if expr and unit:
+            units_by_expr[expr] = unit
+
+        imag_str = row.get("imag", "")
+        if imag_str not in ("", None):
+            try:
+                if float(imag_str) != 0.0:
+                    has_complex = True
+            except ValueError:
+                pass
+
+        c0, c1, c2 = row.get("coord_0", ""), row.get("coord_1", ""), row.get("coord_2", "")
+        if c0 != "" or c1 != "" or c2 != "":
+            coords_list = []
+            for c in (c0, c1, c2):
+                if c != "":
+                    try:
+                        coords_list.append(float(c))
+                    except ValueError:
+                        coords_list.append(c)
+            spatial_by_point[point_val] = coords_list
+
+    if not outers:
+        outers = [1]
+    if not inners:
+        inners = [1]
+    if not points:
+        points = [1]
+
+    grid: dict[tuple[Any, Any, Any, Any], Any] = {}
+    for row in reader:
+        expr = row.get("expr", "")
+        outer_val = _parse_num(row.get("outer", "")) if row.get("outer", "") != "" else outers[0]
+        inner_val = _parse_num(row.get("inner", "")) if row.get("inner", "") != "" else inners[0]
+        point_val = _parse_num(row.get("point", "")) if row.get("point", "") != "" else points[0]
+
+        real_str = row.get("real", "")
+        imag_str = row.get("imag", "")
+        real_val = float(real_str) if real_str != "" else 0.0
+        imag_val = float(imag_str) if imag_str != "" else 0.0
+        if has_complex:
+            grid[(expr, outer_val, inner_val, point_val)] = complex(real_val, imag_val)
+        else:
+            grid[(expr, outer_val, inner_val, point_val)] = real_val
+
+    data: list[list[list[list[Any]]]] = []
+    for e in expressions:
+        e_list = []
+        for o in outers:
+            o_list = []
+            for i in inners:
+                i_list = []
+                for p in points:
+                    i_list.append(grid.get((e, o, i, p), 0.0))
+                o_list.append(i_list)
+            e_list.append(o_list)
+        data.append(e_list)
+
+    coords: dict[str, Any] = {
+        "expression": expressions,
+        "outer": outers,
+        "inner": inners,
+        "point": points,
+    }
+    if spatial_by_point:
+        coords["spatial"] = [spatial_by_point.get(p, []) for p in points]
+
+    units: dict[str, Any] = {
+        "expression": units_by_expr,
+    }
+
+    return FieldArray(
+        data,
+        axes=("expression", "outer", "inner", "point"),
+        coords=coords,
+        units=units,
+        is_complex=has_complex,
+    )
+
+
+#: Host-requestable surface.  ``artifact.read`` is the catalogue's own operation for a
+#: bounded chunk read (effect READ, scope project, gate G4); publishing it is what
+#: ACCEPTANCE C13's chunk contract needs.  Its effect comes from the catalogue, so the
+#: operations surface keeps a single source of truth for effects.
+OPERATIONS: dict[str, Any] = {
+    "artifact.read": artifact_read,
+}

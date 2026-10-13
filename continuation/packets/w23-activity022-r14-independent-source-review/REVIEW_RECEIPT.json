@@ -1,0 +1,509 @@
+{
+  "schema": "INDEPENDENT_W23_ACTIVITY022_R14_FINAL6_COMPLETE_SOURCE_SOFTWARE_FIXED_ENTRY_REVIEW/1",
+  "reviewer": "/root/windows_r6_independent_source_review",
+  "result": "CHANGES_REQUIRED",
+  "not_final_goal_acceptance": true,
+  "candidate": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14",
+  "exact_binding": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/root-review-packet/final6/FINAL_SOURCE_SOFTWARE_AND_FIXED_ENTRY_BINDING_ACTIVITY022_R14.json",
+    "bytes": 2759,
+    "sha256": "57f431fd618abbcdd36a3d705583f2211616c9e319039ea149b8de34276ca600"
+  },
+  "exact_packet": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/root-review-packet/final6/ROOT_REVIEW_PACKET_ACTIVITY022_R14.json",
+    "bytes": 708696,
+    "sha256": "204632ffecf51c5077687477f4cdbd2547d954ec9cb4432be17f5e4270b2967a"
+  },
+  "exact_freeze": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/docs/full_project_execution/w23_overlap/evidence/native-run-20261013-022-saved-mph-zero-solve-candidate20-r14-final6/freeze.json",
+    "bytes": 365705,
+    "sha256": "1bda0d14e6ce99ed7377c3cd51899b1f1268c80da3049c557057a8373784a92f"
+  },
+  "mechanical_scope": {
+    "all424_current_source_verified": true,
+    "AST378": true,
+    "R13_all411_retained": true,
+    "same399": true,
+    "modified12": true,
+    "added13": true,
+    "all12_exact_independently_regenerated_diffs": true,
+    "whole1953_sameFD_refs_prepost_and_post_control": true,
+    "current1062_ordinary_refs": true,
+    "SDK19_major55_true_R13_byteexact": true,
+    "source_manifest_relative_material_actual_validator": true
+  },
+  "producer_evidence": {
+    "JUnit_actual_testcase_nodes": 752,
+    "PASS": 752,
+    "FAIL": 0,
+    "ERROR": 0,
+    "SKIP": 0,
+    "strict_guard_ACTIVE": 1,
+    "DENY": 0,
+    "reviewer_repeat_full_suite": false,
+    "claims_dont_include_full_campaign_compatibility_or_native_acceptance": true
+  },
+  "findings": [
+    {
+      "id": "W23-R14-STRICT-MEASURE-ALL-COMPAT-01",
+      "priority": 2,
+      "status": "OPEN_CHANGES_REQUIRED",
+      "file": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/comsol_mcp/_g3_common.py",
+      "line": 1729,
+      "consumer": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/comsol_mcp/_g3_results.py:5148",
+      "problem": "Shared strict feature helper accepts only named/explicit and rejects previously supported SelectionSpec kind all. Public MeasureSpec and strict_metric/strict_field identity validation still allow all.",
+      "actual_production_evidence": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/ACTUAL_STRICT_MEASURE_ALL_R13_R14.json",
+      "reproduction": "Actual result_evaluate strict_metric_evidence=True with unchanged FWiredTree SDK boundary, finalized measure enumerates [1,2]. R13 returns strict evidence VERIFIED; exact R14 refuses INVALID_SELECTION: strict point selection requires named or explicit membership. Both clean transient numerical nodes.",
+      "required_repair": "Restore strict measure all() and verify actual membership/geometry/dimension/inheritance under original contract. Keep current at_points named/explicit gate; no loosening selection identity."
+    },
+    {
+      "id": "W23-R14-FIXED-ENTRY-APPROVAL-02",
+      "priority": 2,
+      "status": "OPEN_CHANGES_REQUIRED",
+      "file": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/root-review-packet/final6/native-capture-supplement022-003/launch-activity022-r14.zsh",
+      "line": 11,
+      "problem": "Only effective 022-003 launch script test-f and actual --approval point to ROOT_APPROVAL_ACTIVITY021.json while freeze/metadata/blueprint point to ACTIVITY022. Metadata-only 4arg validation misses real script tokens.",
+      "actual_production_evidence": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/ACTUAL_SCRIPT_ARGV_APPROVAL_REFUSAL.json",
+      "reproduction": "Parse original actual exec line using shlex, 25 argv tokens. Exactly index18 differs. Original _validate_approval with metadata reference passes; same unchanged original validator with actual script argv raises RuntimeError naming native_argv_sha256 and exact_native_invocation.argv. Script never executed.",
+      "required_repair": "Bind actual script tests/argv to new022 approval; verify whole literal script and tokens against frozen metadata and original four-argument validator, preserving old invalidscript/raw."
+    },
+    {
+      "id": "W23-R14-FULL-CAMPAIGN-PRODUCER-CONSUMER-03",
+      "priority": 2,
+      "status": "OPEN_CHANGES_REQUIRED",
+      "file": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/tools/w23_te_science_protocol.py",
+      "line": 1406,
+      "consumer": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/tools/run_native_w23_te_science.py:2899",
+      "producer": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/tools/java/NativeW23TEScienceFixture.java:40",
+      "problem": "Whole full science campaign still dispatches Java raw_fields with original RAW_FIELDS 22 literal ewfd.* / ewfd.neff_1,_2 / nx,ny. R14 shared protocol normal/math/phase/capture/definitions and full campaign neff consumers were unconditionally changed to emw/down scheme. Original producer never emits the new labels.",
+      "actual_production_evidence": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/ACTUAL_FULL_CAMPAIGN_PRODUCER_CONSUMER_CONTRACT.json",
+      "reproduction": "Use exact original Java emitted labels and explicitly synthetic valid321point complex envelope. Actual R13 _plane_coordinates accepts; R14 refuses missing native nx/ny. Actual unchanged mode-index algorithm with original R13 ewfd.neff_2 argument accepts; new real R14 campaign emw.neff_2 argument refuses missingexpression. Source full campaign _raw_fields_call→helpers.independent_integrals reaches normal failure before mode-index.",
+      "required_repair": "Keep original Java/fullcampaign legacy default producer/consumer contract; route explicit savedpoint new scheme through only necessary new consumer/math/normal/phase/capture/definitions interfaces. No prefix fallback, numeric relabel, zero fill, criteria relaxation or native expansion."
+    }
+  ],
+  "scoped_inspection_and_controls_closed": [
+    {
+      "scope": "Current saved point strict selection origin",
+      "facts": [
+        "Private sealed original Ticket binding/service/builtin callback/worker object/ModelRef/request hash/epoch retained",
+        "Feature→selection original successful RPC return handle/generation retained; new getter wrapper not requested again",
+        "Exact before and after original child geom/dim/named/entities/isInheriting proof; real membership/unknown/unit/revision faults frozen controls guard1/0",
+        "Fresh actual Controller/Store SDK-boundary positive both planes consumes same child/revision0 and strict consumer rejects changed after membership; values are fixtures, not native science"
+      ]
+    },
+    {
+      "scope": "Exact fourteen expressions per plane and physical side evidence source",
+      "facts": [
+        "Six main down(emw.E/H), only own plane six direct boundary Emode/Hmode, physics emw.nx/ny; units V/m,A/m,1 explicit",
+        "Actual021 fixture byteexact original readback SHA ab6bbea6828ae36fd592bd4476227c857b3549904f8bb717d8175fb4cbf45565",
+        "Source invariant derives actual complete domain→edge adjacency membership and full unordered up/down incidence multiset; selected compatible rows have down=physical domains1..3 and up=outside0/PML4..6, without boundary-index-minus1 inference",
+        "Original physics.tag ewfd is preserved, actual scope root.comp1.emw determines variable aliases",
+        "Direct boundary mode aliases are never wrapped in down; no synthetic zeros, wrong-plane allowlist rejects",
+        "Physical numerical side, native normals/results and full scientific acceptance remain NOT_RUN"
+      ]
+    },
+    {
+      "scope": "Original safety/scientific contract",
+      "facts": [
+        "Controller/Store/Service/ManagedBackend/JavaWorker/SolutionBinding/Java fixture bytes exact R13",
+        "No Study/solver run; no GUI/model save; firstUNKNOWN/nonterminal stops; actual internal solver effects remain UNKNOWN",
+        "8saved slots, 1800birth incl120cleanup, original strict units/binding/count/coordinate/revision/budget/data/cleanup gates preserved",
+        "21point selection newfault records/new30 controls actual raw; all20originalfault injections retained in producer752 currentrun",
+        "Old016/018/019/020/021 raw failures/UNKNOWN preserved; no science/model migration or CAS update"
+      ]
+    }
+  ],
+  "independent_controls": {
+    "unique_cases": 4,
+    "first_narrow001": {
+      "PASS": 2,
+      "FAIL": 2,
+      "guardACTIVE": 1,
+      "DENY": 0,
+      "failures": "Reviewer synthetic fixture omitted original complex_readback marker and fixture parent directory. Both occur before target production chain; preserved original source/stdout/stderr/JUnit, corrected only those fixture fields."
+    },
+    "narrow002": {
+      "PASS": 2,
+      "DESELECT": 2,
+      "guardACTIVE": 1,
+      "DENY": 0,
+      "only_original_failed_cases_rerun": true
+    },
+    "closure001": {
+      "result": "FAIL_REVIEWER_SCHEMA_LABEL",
+      "cause": "Auditor used old short reference-only status; real current status is REFERENCE_ONLY_NOT_ROOT_APPROVAL_NOT_NATIVE_ADMISSION. Actual reference validator had passed; no native/effect. Original auditor/preimage/guard/stdout/stderr preserved."
+    },
+    "closure002": {
+      "result": "PASS_MECHANICAL_HASH_SCOPE_ONLY",
+      "guardACTIVE": 1,
+      "DENY": 0,
+      "not_semantic_whole_release_pass": true
+    },
+    "errors_not_erased": true
+  },
+  "runtime_identity": {
+    "status": "UNFIXED",
+    "separate_diagnosis": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/activity021-runtime-observation-independent-diagnosis/DIAGNOSIS_RECEIPT.json",
+    "separate_diagnosis_sha256": "adf2dcf7caf7ae5225e2f32e575faea012c986a4427787ac68370ccbc23036cb",
+    "no_observation_or_license_PASS_minted": true
+  },
+  "fixed_entry": {
+    "effective": "supplement022-003 only",
+    "script": {
+      "bytes": 4614,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/root-review-packet/final6/native-capture-supplement022-003/launch-activity022-r14.zsh",
+      "sha256": "a2e0bb52a5e2e34342125f5ada460cb98339030163ecacb3cfcfd8f4b8a78864"
+    },
+    "metadata": {
+      "bytes": 199530,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/root-review-packet/final6/native-capture-supplement022-003/NATIVE_CAPTURE_INVOCATION_ACTIVITY022_R14.json",
+      "sha256": "1fdb2fb99f4bb326e2db27269f643e32cb2525dcd37c2807db07d2ca08dceac2"
+    },
+    "blueprint": {
+      "bytes": 3505,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/root-review-packet/final6/native-capture-supplement022-003/ROOT_APPROVAL_EXPECTED_FIELDS_REFERENCE_ONLY.json",
+      "sha256": "fed28b4eed04f9f00ac8545cf9a3dad1dfdc4cd0d56db1c982d609cc0b6ae78a"
+    },
+    "metadata_reference_validation_pass": true,
+    "actual_script_validation_refused": true,
+    "six_future_paths_absent": true,
+    "Root_approval_created": false,
+    "script_executed": false
+  },
+  "scope_limits": {
+    "native_COMSOL_JavaSDK_compiler_JVM_targetPython_OSprobes_signals_Git_CAS_progress_effects": 0,
+    "SQLite_opened": false,
+    "only_new_private_audit_folder_and_public_synthetic_tmp_writes": true,
+    "native_science": "NOT_RUN",
+    "module_license": "UNVERIFIED",
+    "runtime_identity": "UNFIXED",
+    "W24": "HOLD",
+    "full_goal": "OPEN",
+    "whole_goal_or_publication_or_native_authority_not_granted": true
+  },
+  "next": "Root authorized minimal R15 repairs to three findings, affected production controls and current whole fingerprint review; W26 independent source-only next. User main-sync/pause is Root responsibility. No new native stage or repeated752 suite authorized by this receipt.",
+  "private_artifacts": [
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/ACTUAL_FULL_CAMPAIGN_PRODUCER_CONSUMER_CONTRACT.json",
+      "bytes": 1421,
+      "sha256": "dfb710224d1d71ec1e540e7dd4272ae26d4c7127ad327a12d49711cd68999e75",
+      "inode": 1246642,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/ACTUAL_PUBLIC_BOTH_PLANES_SHARED_CHILD_AND_CONSUMER.json",
+      "bytes": 52402,
+      "sha256": "34141a4f6c161612ebffa551b5bd1ed382bbac1e43ec6431b4030cbab484886e",
+      "inode": 1246643,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/ACTUAL_SCRIPT_ARGV_APPROVAL_REFUSAL.json",
+      "bytes": 4747,
+      "sha256": "48f30c913010884f90509568d1543b64501f36caeb90756774e72c6d6bc45ebd",
+      "inode": 1246629,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/ACTUAL_STRICT_MEASURE_ALL_R13_R14.json",
+      "bytes": 3765,
+      "sha256": "a4d47c55a4033f84b4c0b511d3792f7b74c9df6a742f06bb2fd77c6cee9bcd05",
+      "inode": 1246628,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/CLOSURE_VERIFICATION.json",
+      "bytes": 993372,
+      "sha256": "d29663937fba961cbbcce407e8a4941eb4aab0f00cb5508f9b7a0b98440aea88",
+      "inode": 1246624,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/POST_CONTROL_FIRST_PIN_READBACK.json",
+      "bytes": 872205,
+      "sha256": "3f8ef968f47fafe13354385a4713d0b768f8b203f8be605a2334b870370d23af",
+      "inode": 1253890,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/PRIVATE_LOOKUP_ERRORS_INITIAL.json",
+      "bytes": 357,
+      "sha256": "e1367a4867f3fa71342dd8b5020678be96a418d6272246d1bd81be007b188168",
+      "inode": 1228949,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/closure001.argv.json",
+      "bytes": 457,
+      "sha256": "17f4d79f208f0b8b83cbece47786439088fa8c23702b1e220ecaacad36040cff",
+      "inode": 1231094,
+      "mode": 420
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/closure001.guard.jsonl",
+      "bytes": 230,
+      "sha256": "5c5188f292887bd00da4c36129f2f3489ed3cbba312e30f41e9c60c0ae650a88",
+      "inode": 1231079,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/closure001.stderr.bin",
+      "bytes": 1283,
+      "sha256": "efd9e42df8a33ad57f46df88f4516a1c564c489c20e13d1e3702bcb4d78353ce",
+      "inode": 1231093,
+      "mode": 420
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/closure001.stdout.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "inode": 1231092,
+      "mode": 420
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/closure002.argv.json",
+      "bytes": 474,
+      "sha256": "0ac69a19d401611d9d3cd952abf02f10f67263341d4cceb985cbe96cf128a41e",
+      "inode": 1246627,
+      "mode": 420
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/closure002.guard.jsonl",
+      "bytes": 230,
+      "sha256": "2cb291bd0255a9fc7ff81079f8099b4852c6ef1375389334d1cc4b192e75e8ed",
+      "inode": 1246621,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/closure002.stderr.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "inode": 1246626,
+      "mode": 420
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/closure002.stdout.bin",
+      "bytes": 224,
+      "sha256": "62aaf6014b26bbab9fb16c62e83cfb7be1aef6437c9b80f947f005284dfa4e90",
+      "inode": 1246625,
+      "mode": 420
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/comsol_mcp___ephemeral_result_ticket.py.independent.diff",
+      "bytes": 11750,
+      "sha256": "6da906f0f40be3ceba79e8717c294e7e711bc12d65f6d3ee39563dff68515a02",
+      "inode": 1231080,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/comsol_mcp___g3_common.py.independent.diff",
+      "bytes": 5811,
+      "sha256": "9d03732046f6de73edc3459484f1e61a210a32a09155c2bb160187d804ddabb2",
+      "inode": 1231081,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/comsol_mcp___g3_results.py.independent.diff",
+      "bytes": 8286,
+      "sha256": "b988df1a93f020cf71ed8749b9a9576fe8a0c8e23f62d42e6a426303bb3429b6",
+      "inode": 1231082,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/ind-w23-r14-narrow001.argv.json",
+      "bytes": 1171,
+      "sha256": "ee24f9d60daffe6e81b416039b31d7cc1978a96773bae28e914d6dfe5ddabac7",
+      "inode": 1246623,
+      "mode": 420
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/ind-w23-r14-narrow001.guard.jsonl",
+      "bytes": 228,
+      "sha256": "a80b0d5d31f3f3b5e27013a6859082ca64d437132db0a5e43baea9dae6f340fa",
+      "inode": 1246622,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/ind-w23-r14-narrow001.junit.xml",
+      "bytes": 5147,
+      "sha256": "128b3630c0fa1bfd4deacb9762c8df0bc9e2e1e8171393a1b0a00295fc0a8e26",
+      "inode": 1246630,
+      "mode": 420
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/ind-w23-r14-narrow001.receipt.json",
+      "bytes": 567,
+      "sha256": "456c9abc517294003ef41605557922f48be828a153a25e6efeb693241d82b2f4",
+      "inode": 1246633,
+      "mode": 420
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/ind-w23-r14-narrow001.stderr.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "inode": 1246632,
+      "mode": 420
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/ind-w23-r14-narrow001.stdout.bin",
+      "bytes": 4563,
+      "sha256": "1b30ceee5f7c85e21c9a4d6d15a5652e7e60f93a92c92f04a78a9521d323b207",
+      "inode": 1246631,
+      "mode": 420
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/ind-w23-r14-narrow002.argv.json",
+      "bytes": 1215,
+      "sha256": "31802ef41292aa7645649db42e0b354e816c253b32e8e2f2a594fa67c38e70f4",
+      "inode": 1246641,
+      "mode": 420
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/ind-w23-r14-narrow002.guard.jsonl",
+      "bytes": 228,
+      "sha256": "0ec7170db2a686d2f2b7d492e79331df818091fb5947a3ea0c28dc848553f800",
+      "inode": 1246640,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/ind-w23-r14-narrow002.junit.xml",
+      "bytes": 630,
+      "sha256": "6380df818dceb1a1272d07e38cee071c67df4efde1fa8ec8f82ffc64d121c5e0",
+      "inode": 1246644,
+      "mode": 420
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/ind-w23-r14-narrow002.receipt.json",
+      "bytes": 619,
+      "sha256": "e92ec7ca1feb0621930c5d898938d2bd3b7d4e2e8f14f8f12ca53819b5d1bc00",
+      "inode": 1246647,
+      "mode": 420
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/ind-w23-r14-narrow002.stderr.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "inode": 1246646,
+      "mode": 420
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/ind-w23-r14-narrow002.stdout.bin",
+      "bytes": 112,
+      "sha256": "3f342f19f7b5fb911847b4028ba7ddd84dae56dc8ca74dae6f82f9c6f9555572",
+      "inode": 1246645,
+      "mode": 420
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/run_closure.py",
+      "bytes": 1276,
+      "sha256": "43eb308a69a8fa7998bf89a270fbcd8b24087bf75b37faa9b71c99956032b7c0",
+      "inode": 1228947,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/run_narrow.py",
+      "bytes": 1927,
+      "sha256": "be979415ec3ea405308f1f4c88b11ce0790c545d78f4bfcbd1a16c2800b7d23c",
+      "inode": 1228948,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/test_narrow_corrected_fixture.py",
+      "bytes": 8171,
+      "sha256": "fcfd65d96ee49780c6e334eaf7d3b7993041496d3a9141ab390aea619b5db0fb",
+      "inode": 1246639,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/test_narrow_production.py",
+      "bytes": 8123,
+      "sha256": "65803e01802c55754a3845544a5a0ca809ebc3a3d7b3bd417053645b608ca254",
+      "inode": 1246615,
+      "mode": 420
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/tests__test_activity021_definition_boundary_metadata.py.independent.diff",
+      "bytes": 1141,
+      "sha256": "c72f8c3bc0581b4c03efeaa603e5af16c1e84eb4550aaf489a7c5ac0bf168b60",
+      "inode": 1231083,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/tests__test_g3_results.py.independent.diff",
+      "bytes": 2403,
+      "sha256": "87117289eed247243e81caa9c0fb51bbfaca5f74c551779d3ddb9fce8353bb52",
+      "inode": 1231084,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/tests__test_native_w23_saved_mph_diagnostic.py.independent.diff",
+      "bytes": 3377,
+      "sha256": "044e7db531c2ae2f2002675f17959fd04dd8f9290690e71ede8575374742b168",
+      "inode": 1231085,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/tests__test_native_w23_te_science_protocol.py.independent.diff",
+      "bytes": 11603,
+      "sha256": "b502bf6d05d85706537b851e259aa884c6dea013999bc0dbabaa0be05d923e81",
+      "inode": 1231086,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/tests__test_native_w23_te_science_runner.py.independent.diff",
+      "bytes": 1435,
+      "sha256": "fc1ff3ec89e1da73daa2da23235038149760f3f2aba1906e88c0d701557a3cec",
+      "inode": 1231087,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/tests__test_saved_mph_activity017_public_stack.py.independent.diff",
+      "bytes": 3676,
+      "sha256": "c342cca0805a834455032c42057f5b9aa79c34c00f46e3213e23e36012cabf90",
+      "inode": 1231088,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/tools__run_native_w23_saved_mph_diagnostic.py.independent.diff",
+      "bytes": 33783,
+      "sha256": "101d063354b5c14ec99325cd716eb94135b9c7ceaf7e88b4af57d2688ce3a6c8",
+      "inode": 1231089,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/tools__run_native_w23_te_science.py.independent.diff",
+      "bytes": 1931,
+      "sha256": "e80047ad7a4e97a7f4433fc901e68bb8085a19aa4f79dd139ddb5640938a9838",
+      "inode": 1231090,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/tools__w23_te_science_protocol.py.independent.diff",
+      "bytes": 12705,
+      "sha256": "a0b13e9d6fcc4aab313e1b2b56bcbdf2ad8155ada0a3fee9eea9466ab1e69321",
+      "inode": 1231091,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/verify_closure.py",
+      "bytes": 9452,
+      "sha256": "b453640ba315dbe1e9b07880d76d9ac40ed776024c86b1d28dbcf63dcc5f6d45",
+      "inode": 1230743,
+      "mode": 420
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/verify_closure_initial_preimage.py",
+      "bytes": 9452,
+      "sha256": "b453640ba315dbe1e9b07880d76d9ac40ed776024c86b1d28dbcf63dcc5f6d45",
+      "inode": 1246619,
+      "mode": 420
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-activity022-r14-independent-source-review/verify_closure_status_corrected.py",
+      "bytes": 9473,
+      "sha256": "af30de5ea4c52b83cefca4689445d366cc58a12a5b0adec1e65a889d8d865a3a",
+      "inode": 1246620,
+      "mode": 384
+    }
+  ]
+}

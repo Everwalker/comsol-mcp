@@ -1,0 +1,414 @@
+{
+  "$defs": {
+    "capture": {
+      "additionalProperties": false,
+      "properties": {
+        "aperture_id": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "incident_reference_power": {
+          "$ref": "#/$defs/incidentPower"
+        },
+        "plane_id": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "sample_indices": {
+          "items": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "aperture_id",
+        "plane_id",
+        "sample_indices",
+        "incident_reference_power"
+      ],
+      "type": "object"
+    },
+    "complexArray": {
+      "additionalProperties": false,
+      "properties": {
+        "imag": {
+          "$ref": "#/$defs/complexVectorSamples"
+        },
+        "real": {
+          "$ref": "#/$defs/complexVectorSamples"
+        },
+        "unit": {
+          "enum": [
+            "V/m",
+            "A/m"
+          ]
+        }
+      },
+      "required": [
+        "unit",
+        "real",
+        "imag"
+      ],
+      "type": "object"
+    },
+    "complexScalar": {
+      "additionalProperties": false,
+      "properties": {
+        "imag": {
+          "type": "number"
+        },
+        "real": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "real",
+        "imag"
+      ],
+      "type": "object"
+    },
+    "complexVectorSamples": {
+      "description": "N by 3 real values; complex data uses required sibling real/imag arrays.",
+      "items": {
+        "$ref": "#/$defs/vector3"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "coordinates": {
+      "description": "Every sample must satisfy the fixed coordinate/local-difference 64-ULP plane-distance bound; no physical geometry tolerance, plane fitting, or projection is applied.",
+      "items": {
+        "$ref": "#/$defs/vector3"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "field": {
+      "additionalProperties": false,
+      "properties": {
+        "component_order": {
+          "const": [
+            "x",
+            "y",
+            "z"
+          ]
+        },
+        "coordinate_unit": {
+          "const": "m"
+        },
+        "electric_field": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/complexArray"
+            }
+          ],
+          "properties": {
+            "unit": {
+              "const": "V/m"
+            }
+          }
+        },
+        "field_id": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "magnetic_field": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/complexArray"
+            }
+          ],
+          "properties": {
+            "unit": {
+              "const": "A/m"
+            }
+          }
+        },
+        "mode": {
+          "$ref": "#/$defs/mode"
+        },
+        "phasor_convention": {
+          "$ref": "#/$defs/phasorConvention"
+        },
+        "sample_coordinates": {
+          "$ref": "#/$defs/coordinates"
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        }
+      },
+      "required": [
+        "field_id",
+        "source",
+        "phasor_convention",
+        "coordinate_unit",
+        "sample_coordinates",
+        "component_order",
+        "electric_field",
+        "magnetic_field"
+      ],
+      "type": "object"
+    },
+    "finiteNumber": {
+      "type": "number"
+    },
+    "incidentPower": {
+      "additionalProperties": false,
+      "properties": {
+        "input_plane_id": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "phasor_convention": {
+          "$ref": "#/$defs/phasorConvention"
+        },
+        "power": {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "reference_id": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        },
+        "unit": {
+          "enum": [
+            "W",
+            "W/m"
+          ]
+        }
+      },
+      "required": [
+        "reference_id",
+        "power",
+        "unit",
+        "input_plane_id",
+        "source",
+        "phasor_convention"
+      ],
+      "type": "object"
+    },
+    "mode": {
+      "additionalProperties": false,
+      "properties": {
+        "eigenvalue": {
+          "$ref": "#/$defs/complexScalar"
+        },
+        "eigenvalue_unit": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "mode_id": {
+          "$ref": "#/$defs/nonEmpty"
+        }
+      },
+      "required": [
+        "mode_id",
+        "eigenvalue",
+        "eigenvalue_unit"
+      ],
+      "type": "object"
+    },
+    "nonEmpty": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "phasorConvention": {
+      "additionalProperties": false,
+      "description": "Explicit complex-phasor time sign and declaration that E/H include reconstructed envelope phase; declarations do not establish source authenticity.",
+      "properties": {
+        "complex_field_representation": {
+          "const": "full_physical_complex_phasor_including_reconstructed_envelope_phase"
+        },
+        "time_dependence": {
+          "enum": [
+            "exp(-i omega t)",
+            "exp(+i omega t)"
+          ]
+        }
+      },
+      "required": [
+        "time_dependence",
+        "complex_field_representation"
+      ],
+      "type": "object"
+    },
+    "plane": {
+      "additionalProperties": false,
+      "properties": {
+        "coordinate_unit": {
+          "const": "m"
+        },
+        "coordinates": {
+          "$ref": "#/$defs/coordinates"
+        },
+        "geometry_dimension": {
+          "enum": [
+            2,
+            3
+          ]
+        },
+        "integration_measure": {
+          "enum": [
+            "line_per_unit_depth",
+            "area"
+          ]
+        },
+        "normal": {
+          "$ref": "#/$defs/vector3"
+        },
+        "plane_id": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "quadrature_weight_unit": {
+          "enum": [
+            "m",
+            "m^2"
+          ]
+        },
+        "quadrature_weights": {
+          "items": {
+            "exclusiveMinimum": 0,
+            "type": "number"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "plane_id",
+        "geometry_dimension",
+        "integration_measure",
+        "coordinate_unit",
+        "coordinates",
+        "quadrature_weight_unit",
+        "quadrature_weights",
+        "normal"
+      ],
+      "type": "object"
+    },
+    "powerFloor": {
+      "additionalProperties": false,
+      "properties": {
+        "unit": {
+          "enum": [
+            "W",
+            "W/m"
+          ]
+        },
+        "value": {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "value",
+        "unit"
+      ],
+      "type": "object"
+    },
+    "referenceMode": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/field"
+        },
+        {
+          "required": [
+            "mode"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "source": {
+      "additionalProperties": false,
+      "properties": {
+        "dataset_id": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "frequency_hz": {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "model_ref": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "model_revision": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "plane_id": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "solution_id": {
+          "$ref": "#/$defs/nonEmpty"
+        }
+      },
+      "required": [
+        "model_ref",
+        "model_revision",
+        "dataset_id",
+        "solution_id",
+        "frequency_hz",
+        "plane_id"
+      ],
+      "type": "object"
+    },
+    "vector3": {
+      "items": {
+        "type": "number"
+      },
+      "maxItems": 3,
+      "minItems": 3,
+      "type": "array"
+    }
+  },
+  "$id": "urn:comsol-mcp:result.mode_overlap:kernel-definition:1.1.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "capture": {
+      "$ref": "#/$defs/capture"
+    },
+    "eta_mode_upper_tolerance": {
+      "description": "Optional declared diagnostic tolerance; never changes or clamps the computed eta_mode.",
+      "minimum": 0,
+      "type": "number"
+    },
+    "incident_reference_power": {
+      "$ref": "#/$defs/incidentPower"
+    },
+    "phasor_convention": {
+      "$ref": "#/$defs/phasorConvention"
+    },
+    "plane": {
+      "$ref": "#/$defs/plane"
+    },
+    "power_floor": {
+      "$ref": "#/$defs/powerFloor"
+    },
+    "profile": {
+      "const": "reciprocal_lossless_forward_nondegenerate_planar_v1"
+    },
+    "reference_mode": {
+      "$ref": "#/$defs/referenceMode"
+    },
+    "schema_version": {
+      "const": "1.1.0"
+    },
+    "signal": {
+      "$ref": "#/$defs/field"
+    }
+  },
+  "required": [
+    "schema_version",
+    "profile",
+    "phasor_convention",
+    "plane",
+    "signal",
+    "reference_mode",
+    "power_floor",
+    "incident_reference_power"
+  ],
+  "title": "result.mode_overlap hydrated kernel definition v1.1.0",
+  "type": "object"
+}

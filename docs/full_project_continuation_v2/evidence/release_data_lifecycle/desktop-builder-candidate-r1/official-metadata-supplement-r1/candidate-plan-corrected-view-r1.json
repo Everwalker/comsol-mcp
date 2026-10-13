@@ -1,0 +1,2203 @@
+{
+  "base_dev_plan_summary": {
+    "cryptography_source_input_included_in_base_dev": {
+      "artifact_id": "c8b398e40fe5b5e1df73dbc5221edf46ed721fdfb5a1a91124e69e155eae7d7f",
+      "filename": "cryptography-50.0.1.tar.gz",
+      "sha256": "5dd9bda1c12b4162f6ff568eeb5e0ff956c28d14406e875cfe8a63a2d414ff20",
+      "size_bytes": 880381
+    },
+    "globally_unique_artifacts": 50,
+    "globally_unique_bytes": 69625484,
+    "status": "PLAN_ONLY_NOT_DOWNLOADED_NOT_INSTALLED_NOT_BUILT",
+    "target_counts": {
+      "macos_arm64": {
+        "artifact_rows": 37,
+        "bytes": 22955222,
+        "source_inputs": 0,
+        "wheels": 37
+      },
+      "macos_x86_64": {
+        "artifact_rows": 37,
+        "bytes": 24944844,
+        "source_inputs": 1,
+        "wheels": 36
+      },
+      "win_amd64": {
+        "artifact_rows": 39,
+        "bytes": 30084670,
+        "source_inputs": 0,
+        "wheels": 39
+      }
+    }
+  },
+  "builder_candidate": {
+    "build_system_declared": [
+      "setuptools>=68",
+      "wheel"
+    ],
+    "effective_requirements": [
+      "setuptools==83.0.0",
+      "wheel==0.48.0",
+      "packaging==26.3 (existing locked artifact; wheel requires packaging>=24.0)"
+    ],
+    "new_download_bytes": 1041410,
+    "observed_cp312_bootstrap_runtime": {
+      "architecture": "arm64",
+      "interpreter_sha256": "fe46716a94d8efa4514feb3c39ba3e270deee2187556986f6ddcff54aba7bb9a",
+      "note": "Current task runtime only. No portable runtime archive/whole-runtime freeze is included; this observation is not a three-platform builder.",
+      "packaging_present": true,
+      "path": "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python",
+      "pip": "26.1",
+      "python": "3.12.13",
+      "setuptools_present": false,
+      "wheel_present": false
+    },
+    "requires_python": {
+      "packaging": ">=3.9",
+      "setuptools": ">=3.10",
+      "wheel": ">=3.9"
+    },
+    "selected_locked_reuse": [
+      "200d61b6a4b17c27dfbf9e74cac76dbd66507262b63bc94f38ffa95ee9cfb1d0"
+    ],
+    "selected_new_downloads": [
+      "0682317cb2a67819acb86e8abbca459cb3bd747077a11a11a9cda5bec1a07f17",
+      "e75107d52f00ffe6014dc494d6e42deca18235fafa27f1db8c425d49c879f610"
+    ],
+    "target_tags": {
+      "packaging": "py3-none-any",
+      "setuptools": "py3-none-any",
+      "wheel": "py3-none-any"
+    },
+    "unresolved_target_builders": [
+      "No CPython 3.12 x86_64 macOS builder runtime is inventoried.",
+      "No CPython 3.12 win_amd64 builder runtime is inventoried."
+    ]
+  },
+  "candidate_lock_notice": "This is a reviewable candidate lock plan only. It does not authorize or perform package downloads, installations, builds, version edits, pyproject edits, or uv.lock edits. pyproject.toml, uv.lock, and project version remain unchanged.",
+  "created_utc": "2026-10-11T22:31:54Z",
+  "derived_from": {
+    "correction": "URL_CORRECTION.json",
+    "immutable_plan": "../candidate-plan-r1.json"
+  },
+  "desktop_extra_candidate": {
+    "declared_dependencies": [
+      "psutil; sys_platform == \"darwin\"",
+      "pyobjc-framework-ApplicationServices>=12.2.2; sys_platform == \"darwin\"",
+      "pyobjc-framework-Quartz>=12.2.2; sys_platform == \"darwin\"",
+      "pyobjc-framework-Cocoa>=12.2.2; sys_platform == \"darwin\""
+    ],
+    "macos_arm64": {
+      "artifact_ids": [
+        "03590d960a8de5dfee139cadd0335c97994ce5a4c10a5f3658226edc684f4f4a",
+        "8cdb7174a2cf5fede18ca5a6e7da44dd14741ca43b73e2987fca613d301c991a",
+        "956d3732e53e1ca216edb13dc5e9fcacad9afd7e1c5f6d031b2c00d99fcd4a47",
+        "5a79e17edca400bcae50dfc75662370bde546d2fecfff000f171f6b83697c50d",
+        "f3e89608fe8e472903685e757b903a7387e08b2de73ec688b2bb8c54dbbfd665",
+        "5544e3812a61b6d19516aa3df5a1b203224c8df8a9c05fdef1b40c6b28cc5293"
+      ],
+      "bytes": 7347540,
+      "distribution_count": 6,
+      "wheel_targets": "CPython 3.12 accepts the psutil cp38-abi3 ARM64 wheel and PyObjC cp312 macosx_10_13_universal2 wheels; target floor is macOS 11 ARM64."
+    },
+    "macos_x86_64": {
+      "artifact_ids": [
+        "03590d960a8de5dfee139cadd0335c97994ce5a4c10a5f3658226edc684f4f4a",
+        "8cdb7174a2cf5fede18ca5a6e7da44dd14741ca43b73e2987fca613d301c991a",
+        "956d3732e53e1ca216edb13dc5e9fcacad9afd7e1c5f6d031b2c00d99fcd4a47",
+        "5a79e17edca400bcae50dfc75662370bde546d2fecfff000f171f6b83697c50d",
+        "f3e89608fe8e472903685e757b903a7387e08b2de73ec688b2bb8c54dbbfd665",
+        "46c1c8ab6bd2ebfecc03f10e3cd88b5297edbac298c03cc52c46f5885e2509bd"
+      ],
+      "bytes": 7346344,
+      "distribution_count": 6,
+      "wheel_targets": "CPython 3.12 accepts the psutil cp36-abi3 x86_64 wheel and PyObjC cp312 macosx_10_13_universal2 wheels; target floor is macOS 12 x86_64."
+    },
+    "transitive_closure_note": "ApplicationServices 12.2.2 requires CoreText >=12.2.2; the framework chain also includes Quartz, Cocoa and pyobjc-core.",
+    "unique_desktop_artifact_count": 7,
+    "unique_desktop_bytes": 7596242,
+    "win_amd64": {
+      "artifact_ids": [],
+      "distribution_count": 0,
+      "reason": "All declared desktop dependencies are guarded by sys_platform == darwin."
+    }
+  },
+  "download_totals": {
+    "bytes_basis": "Candidate byte sum over 61 unique URL/SHA pairs. PyPI file sizes and existing base/dev plan sizes are exact metadata fields; OpenSSL 55,153,883 is retained from the immutable plan but remains UNVERIFIED_PRIMARY_SOURCE. The displayed summed bytes therefore include one unverified candidate size and are not a fully primary-verified transfer total.",
+    "sum_of_separate_target_staging_bytes": 161125938,
+    "unique_artifact_bytes": 143586224,
+    "unique_artifact_bytes_status": "UNVERIFIED_TOTAL_DUE_TO_OPENSSL_EXACT_SIZE",
+    "unique_artifact_mib": 136.934494,
+    "unique_url_sha_pairs": 61
+  },
+  "dry_run_instructions": {
+    "network_execution": "NOT_IMPLEMENTED; tool only prints candidate commands or verifies local files.",
+    "render_command": "python3 candidate_plan_tool.py --dry-run --cache-root /PATH/TO/NEW-TASK-CACHE",
+    "tool": "candidate_plan_tool.py",
+    "validate_command": "python3 candidate_plan_tool.py --validate",
+    "verification_command": "python3 candidate_plan_tool.py --verify-cache /PATH/TO/NEW-TASK-CACHE"
+  },
+  "input_binding": {
+    "accepted_source_review_reference": {
+      "path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/fulldata-software-r3/ROOT_FUNCTIONAL_REVIEW_R3_R1.json",
+      "sha256": "2454e0c295bbf33ed946ce796b5188bb47cf25c6c1adefe5879b0af00715da05"
+    },
+    "base_dev_download_plan": {
+      "path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e"
+    },
+    "metadata_pointer_index": {
+      "path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/desktop-builder-candidate-r1/metadata-pointers.json"
+    },
+    "pyproject_toml": {
+      "path": "pyproject.toml",
+      "sha256": "f6f9356edc1c970e36c32a82cc8d9e71bd1a94d5a0e1552495a04ca7634ee107"
+    },
+    "release_cache_inventory_r2": {
+      "path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-cache-inventory-r2.json",
+      "sha256": "1de4ce83db18fdb5b2e3620a57e78675a190f3faeed1105955c1fca4f1ddf6ba"
+    },
+    "uv_lock": {
+      "path": "uv.lock",
+      "sha256": "08b6b8fb1f6a7a110f45df7d9f3ac3dae3e343fddc1ce2ddae84e458c3130b3f"
+    }
+  },
+  "intel_cryptography_source_build": {
+    "additional_native_source_input": {
+      "artifact_id": "9bef7cb62959ffa2a8c934c07574f78c77b9f0cb90c3ef1a3c05d11103b6b8dc",
+      "canonical_url": "https://www.openssl.org/source/openssl-4.0.2.tar.gz",
+      "first_party_resolved_url": "https://github.com/openssl/openssl/releases/download/openssl-4.0.2/openssl-4.0.2.tar.gz",
+      "license_member": "openssl-4.0.2/LICENSE.txt",
+      "name": "OpenSSL",
+      "sha256": "736b467530f916737b7031310ccb21d8218c6229e61e8e160cd1d3458cd543a8",
+      "size_bytes": 55153883,
+      "size_bytes_basis_status": "UNVERIFIED_PRIMARY_SOURCE_API_ENDPOINT_INACCESSIBLE",
+      "static_linkage_required_by_existing_derived_wheel_contract": true,
+      "version": "4.0.2"
+    },
+    "additional_pypi_build_input": {
+      "active_requires_dist_for_cp312_no_extras": [],
+      "artifact_id": "c22b79bb6539d0cbd230ab89ff2243d9d2b8b15908d6c35776f8caef3ca7e676",
+      "name": "maturin",
+      "requires_dist": [
+        "tomli>=1.1.0; python_full_version < \"3.11\"",
+        "patchelf; extra == \"patchelf\"",
+        "ziglang>=0.10.0; extra == \"zig\""
+      ],
+      "requires_python": ">=3.7",
+      "selection": "Minimum exact version required by cryptography 50.0.1 source pyproject (maturin>=1.14.1,<2); Intel-only wheel avoids ARM-universal bytes.",
+      "sha256": "f3306078070c1508fd715b9116070cbcaff5959024272a9f1e6f5cb29768b86c",
+      "size_bytes": 10169205,
+      "url": "https://files.pythonhosted.org/packages/43/b6/79c881410a3b1c187f7eb3d407aecae646c6a4433d630d72200359015e83/maturin-1.14.1-py3-none-macosx_10_12_x86_64.whl",
+      "version": "1.14.1",
+      "wheel_tag": "py3-none-macosx_10_12_x86_64"
+    },
+    "cargo_offline_closure": "NOT_RESOLVED: no Cargo binary, registry cache, or registry source tree was found; exact Cargo.lock package source URLs/sizes and cache material are not enumerated in this candidate. Consequently Intel cryptography remains not build-closed even after the listed PyPI/OpenSSL artifacts.",
+    "locked_source_input": {
+      "artifact_id": "c8b398e40fe5b5e1df73dbc5221edf46ed721fdfb5a1a91124e69e155eae7d7f",
+      "installable_as_target_wheel": false,
+      "kind": "sdist_source_build_input",
+      "name": "cryptography",
+      "sha256": "5dd9bda1c12b4162f6ff568eeb5e0ff956c28d14406e875cfe8a63a2d414ff20",
+      "size_bytes": 880381,
+      "url": "https://files.pythonhosted.org/packages/bb/ad/5d6702db60b1e40b41ef513b6967ff5848f307d50f8449baf1634f5908f1/cryptography-50.0.1.tar.gz",
+      "version": "50.0.1"
+    },
+    "native_prerequisites": [
+      "Rust toolchain rustc/cargo >=1.83.0 (not present on current host; rustc/cargo commands absent).",
+      "CPython 3.12 x86_64 host/runtime (not present in inspected runtime; only arm64 CP312 observed).",
+      "macOS x86_64 compiler + SDK; current host is arm64 with Apple Clang 21.0.0 and Command Line Tools path /Library/Developer/CommandLineTools, not an x86_64 build validation.",
+      "cryptography source contains Cargo.lock and [tool.maturin].locked=true; Cargo registry crate sources needed by that lock are not inventoried locally."
+    ],
+    "reused_from_base_dev": [
+      "cffi 2.0.0 and its locked transitive pycparser wheel are already in the macos_x86_64 plan.",
+      "setuptools 83.0.0, wheel 0.48.0 and packaging 26.3 are in the candidate builder closure."
+    ],
+    "source_build_system_exact_requirements": [
+      "maturin>=1.14.1,<2",
+      "cffi>=2.0.0; platform_python_implementation != PyPy",
+      "setuptools!=74.0.0,!=74.1.0,!=74.1.1,!=74.1.2"
+    ],
+    "status": "SOURCE_INPUTS_HASH_PINNED_BUILD_PREREQUISITES_INCOMPLETE_NO_DERIVED_WHEEL",
+    "target": "macos_x86_64 CPython 3.12; required output tag cp312-abi3-macosx_12_0_x86_64"
+  },
+  "limitations": [
+    "Desktop dependencies are absent from live uv.lock; this candidate does not repair that source-lock mismatch.",
+    "No candidate package download, installation, build, version change, or live lockfile edit was made.",
+    "Unique URL/SHA total covers the enumerated base/dev + Desktop + project builder + known Intel cryptography/OpenSSL inputs. Cargo crates and Rust toolchain archive closure are unresolved and excluded from the byte total; do not claim full offline Intel source-build closure.",
+    "A derived Intel cryptography wheel with exact output hash, target-native audit, and provenance does not yet exist."
+  ],
+  "provenance_limits": {
+    "cargo_registry_closure": "NOT_RESOLVED",
+    "openssl_4_0_2_exact_bytes": "UNVERIFIED_PRIMARY_SOURCE_API_ENDPOINT_INACCESSIBLE",
+    "openssl_4_0_2_sha256": "OFFICIAL_GITHUB_RELEASE_EXPANDED_ASSETS_PAGE",
+    "x86_64_and_win_cp312_builders": "NOT_INVENTORIED"
+  },
+  "schema": "comsol-mcp-desktop-builder-candidate-plan/1",
+  "scope": {
+    "base_dev": "Reference existing frozen base/dev target download plan; no alteration to that file.",
+    "builder": "Project wheel build-system requires setuptools>=68 and wheel. Candidate selects setuptools==83.0.0 and wheel==0.48.0; wheel requires packaging>=24.0, satisfied by existing locked packaging==26.3 artifact already present in the base/dev plans. No extras are selected.",
+    "desktop_extra": "Resolve declared Darwin-only optional dependencies without dropping the extra. Pyproject currently declares psutil (unversioned) and PyObjC ApplicationServices, Quartz, Cocoa >=12.2.2. Candidate selects psutil==5.9.8 and PyObjC family==12.2.2; ApplicationServices transitively adds CoreText, yielding six installed distributions per macOS architecture.",
+    "lock_policy": "The candidate is not a uv.lock update. Formal synchronization of the declared desktop extra and any dependency/version change require separate explicit authorization.",
+    "network": "No binary/source artifact files fetched. Only release metadata pages/endpoints were read. No network installer or package manager invoked.",
+    "project_version": "0.1.9 (unchanged; 0.1.10 remains proposal only)",
+    "python_target": "CPython 3.12"
+  },
+  "status": "CANDIDATE_ONLY_NOT_DOWNLOADED_NOT_INSTALLED_NOT_BUILT_NOT_LOCKED",
+  "target_closures": {
+    "macos_arm64": {
+      "artifact_count": 45,
+      "artifacts": [
+        "1f78186786eee8bec450819f12bef13af1c2f596c6b5c6e64f51fd0badefc99d",
+        "38d050d56996d78b908ec4a5534faca2056822483ce3bd191e9530b9c429dc97",
+        "ece071e371fba62c28202df3e584ede1ddb91ff4113e4a81f20dae1ce8a205f7",
+        "531257e9ae775eedab8f0b7957d8108fd32e08197adbcb639b7d434a3ffaf95b",
+        "6a839461dc9bfcd455b4d9bad9d518dfb6cdd8c7b559219b5e43dc27fa2a8594",
+        "f6b1462b8635c22e7097060740ad02f589cc94406232b0799cdc7fa2e428b710",
+        "815640861bde9d2085e5a6b37806aeb9392d875291b2f7ce5a21ab14f718a402",
+        "f40b1c6177e8bae566676e3d45af420c3dacc5e172931ed68828c785a48c4a22",
+        "d30b59214f644f38d1acffd6751fa599ba2fc6178c1f671adf39bccb9f2a9d7c",
+        "08ff3625b139eb8581d188961f84d830779651ec48c5a0091385cf7f9511dd01",
+        "f80bf89bfda2a4717301894b7e1eb68fdcc4f324cea5abfb117d65e80c8768db",
+        "e37de7998590270f368aa8f8a1fbfe14e9146d50c1036fb61fae8b6ec6e31a65",
+        "70eee1bfcc430bbf9c73a02b7b5724290d35e2a50bb5a4f23e3285628f387ebe",
+        "ced13bdd1412c258a73701f1e83850fb94c86b1ed70cdb0337cbcdcebf7384ed",
+        "05478f308964e9daab0535e0de7b43d1a17ea6118d6d6d7ace0a57fc56b18889",
+        "7d6b09d3ca39fcf4b51d1ba175bf04cb7d6b11767cb37c53cb3e0f6149fef648",
+        "5755a3be2098fcff4cebd6f26f1819390d0f2d079de18c511a637a47ee1a35fc",
+        "63c7624b76c1f2fb33d93aefb16104134fde04f3cb44cd68abee799dd71d5878",
+        "5199c3427e86889076fea1eb8b90c80815d628932464dc1e5c61e68a6431b65c",
+        "200d61b6a4b17c27dfbf9e74cac76dbd66507262b63bc94f38ffa95ee9cfb1d0",
+        "669b5cb7636565443d57b197b081c9cd05ef3129c79bfbdff259f1af2090294b",
+        "86af04db3c87bc67ba15f94fca5ddbf77acc6f49fbb7d07fb50bde45be41e7ed",
+        "48117b00a0c8243b78ddef6790842cd6db200d0777d756d83c7f7d00a07b9007",
+        "557774e763321cea9ec23be32c56c0732aa126dbb022b35416b48ee3ce239f20",
+        "08651c97050790b4bc00d72cf4065a17f4a710402038e3077f9ead8510d2a4ec",
+        "89082897a3ea704440be31187df388f58e1fdc916029ca3a1ccb11306a979fac",
+        "64ae9b9fc766fd4fa9d7e90d2330d23ca77df0dae2d4139d0dbd48bf7e371661",
+        "f35ed753c2c1b555017252f530bdda6aedfc5281f49f89b62f16467ffc4356b5",
+        "945310e83b9fb0517a202d6f177588f8f569a8381a1c8f519c0760ea573ccf1e",
+        "ea16e61f20a917f9b01bfc0ea4744a3f509f3d901f53d096e7735c178b7aefd2",
+        "5bdaf7b384bcd1288665e873e8311e6c42803ab8bdefa54e86068f0483238916",
+        "e16175c739bbf6ce5f54354c65c427bb8fe1a501ecd81b832d5a1499b4df5edc",
+        "1cee7e242142a0ce5616795244f46ebe23ea4aff1f8bcb7618352c635ac2e9da",
+        "a22f8a265efad1554b9c96cb5c559edbe685b630545341f119237cc36f50b127",
+        "0533d055b744596dcff467ff101594a58ebf543f1822c4e1e779f1eed82a2615",
+        "5d91ebfe283ece5889581f1fc0ddf2216cac07f8107277cb711615d45d548bd4",
+        "1f454fc1bd4df9f3042cb8ce284d4888c345907e787dc7ffd166960a9a690282",
+        "03590d960a8de5dfee139cadd0335c97994ce5a4c10a5f3658226edc684f4f4a",
+        "8cdb7174a2cf5fede18ca5a6e7da44dd14741ca43b73e2987fca613d301c991a",
+        "956d3732e53e1ca216edb13dc5e9fcacad9afd7e1c5f6d031b2c00d99fcd4a47",
+        "5a79e17edca400bcae50dfc75662370bde546d2fecfff000f171f6b83697c50d",
+        "f3e89608fe8e472903685e757b903a7387e08b2de73ec688b2bb8c54dbbfd665",
+        "5544e3812a61b6d19516aa3df5a1b203224c8df8a9c05fdef1b40c6b28cc5293",
+        "0682317cb2a67819acb86e8abbca459cb3bd747077a11a11a9cda5bec1a07f17",
+        "e75107d52f00ffe6014dc494d6e42deca18235fafa27f1db8c425d49c879f610"
+      ],
+      "download_bytes_if_staged_separately": 31344172,
+      "source_artifact_count": 0,
+      "wheel_count": 45
+    },
+    "macos_x86_64": {
+      "artifact_count": 47,
+      "artifacts": [
+        "1f78186786eee8bec450819f12bef13af1c2f596c6b5c6e64f51fd0badefc99d",
+        "38d050d56996d78b908ec4a5534faca2056822483ce3bd191e9530b9c429dc97",
+        "ece071e371fba62c28202df3e584ede1ddb91ff4113e4a81f20dae1ce8a205f7",
+        "531257e9ae775eedab8f0b7957d8108fd32e08197adbcb639b7d434a3ffaf95b",
+        "70f24326fb93fd6b69642ba73423b1c1cf3030b4489c9273494b0f4c9dc2a9d1",
+        "f6b1462b8635c22e7097060740ad02f589cc94406232b0799cdc7fa2e428b710",
+        "c8b398e40fe5b5e1df73dbc5221edf46ed721fdfb5a1a91124e69e155eae7d7f",
+        "f40b1c6177e8bae566676e3d45af420c3dacc5e172931ed68828c785a48c4a22",
+        "d30b59214f644f38d1acffd6751fa599ba2fc6178c1f671adf39bccb9f2a9d7c",
+        "08ff3625b139eb8581d188961f84d830779651ec48c5a0091385cf7f9511dd01",
+        "f80bf89bfda2a4717301894b7e1eb68fdcc4f324cea5abfb117d65e80c8768db",
+        "e37de7998590270f368aa8f8a1fbfe14e9146d50c1036fb61fae8b6ec6e31a65",
+        "70eee1bfcc430bbf9c73a02b7b5724290d35e2a50bb5a4f23e3285628f387ebe",
+        "ced13bdd1412c258a73701f1e83850fb94c86b1ed70cdb0337cbcdcebf7384ed",
+        "05478f308964e9daab0535e0de7b43d1a17ea6118d6d6d7ace0a57fc56b18889",
+        "7d6b09d3ca39fcf4b51d1ba175bf04cb7d6b11767cb37c53cb3e0f6149fef648",
+        "5755a3be2098fcff4cebd6f26f1819390d0f2d079de18c511a637a47ee1a35fc",
+        "63c7624b76c1f2fb33d93aefb16104134fde04f3cb44cd68abee799dd71d5878",
+        "f64163f753fe97a32067b21920397a4ef9221a35687ed2c391c173a6d38eb313",
+        "200d61b6a4b17c27dfbf9e74cac76dbd66507262b63bc94f38ffa95ee9cfb1d0",
+        "669b5cb7636565443d57b197b081c9cd05ef3129c79bfbdff259f1af2090294b",
+        "86af04db3c87bc67ba15f94fca5ddbf77acc6f49fbb7d07fb50bde45be41e7ed",
+        "48117b00a0c8243b78ddef6790842cd6db200d0777d756d83c7f7d00a07b9007",
+        "5ed5e743aa7344baeab2e8fad52d5fa2064e4118d19a4d2b74003bac637014e8",
+        "08651c97050790b4bc00d72cf4065a17f4a710402038e3077f9ead8510d2a4ec",
+        "89082897a3ea704440be31187df388f58e1fdc916029ca3a1ccb11306a979fac",
+        "64ae9b9fc766fd4fa9d7e90d2330d23ca77df0dae2d4139d0dbd48bf7e371661",
+        "f35ed753c2c1b555017252f530bdda6aedfc5281f49f89b62f16467ffc4356b5",
+        "945310e83b9fb0517a202d6f177588f8f569a8381a1c8f519c0760ea573ccf1e",
+        "ea16e61f20a917f9b01bfc0ea4744a3f509f3d901f53d096e7735c178b7aefd2",
+        "5bdaf7b384bcd1288665e873e8311e6c42803ab8bdefa54e86068f0483238916",
+        "b9d1b166addc11ff1a583639f4e74cc215413359d4de18b4533341d3f231bbe6",
+        "1cee7e242142a0ce5616795244f46ebe23ea4aff1f8bcb7618352c635ac2e9da",
+        "a22f8a265efad1554b9c96cb5c559edbe685b630545341f119237cc36f50b127",
+        "0533d055b744596dcff467ff101594a58ebf543f1822c4e1e779f1eed82a2615",
+        "5d91ebfe283ece5889581f1fc0ddf2216cac07f8107277cb711615d45d548bd4",
+        "1f454fc1bd4df9f3042cb8ce284d4888c345907e787dc7ffd166960a9a690282",
+        "03590d960a8de5dfee139cadd0335c97994ce5a4c10a5f3658226edc684f4f4a",
+        "8cdb7174a2cf5fede18ca5a6e7da44dd14741ca43b73e2987fca613d301c991a",
+        "956d3732e53e1ca216edb13dc5e9fcacad9afd7e1c5f6d031b2c00d99fcd4a47",
+        "5a79e17edca400bcae50dfc75662370bde546d2fecfff000f171f6b83697c50d",
+        "f3e89608fe8e472903685e757b903a7387e08b2de73ec688b2bb8c54dbbfd665",
+        "46c1c8ab6bd2ebfecc03f10e3cd88b5297edbac298c03cc52c46f5885e2509bd",
+        "0682317cb2a67819acb86e8abbca459cb3bd747077a11a11a9cda5bec1a07f17",
+        "e75107d52f00ffe6014dc494d6e42deca18235fafa27f1db8c425d49c879f610",
+        "c22b79bb6539d0cbd230ab89ff2243d9d2b8b15908d6c35776f8caef3ca7e676",
+        "9bef7cb62959ffa2a8c934c07574f78c77b9f0cb90c3ef1a3c05d11103b6b8dc"
+      ],
+      "download_bytes_if_staged_separately": 98655686,
+      "source_artifact_count": 2,
+      "wheel_count": 45
+    },
+    "win_amd64": {
+      "artifact_count": 41,
+      "artifacts": [
+        "1f78186786eee8bec450819f12bef13af1c2f596c6b5c6e64f51fd0badefc99d",
+        "38d050d56996d78b908ec4a5534faca2056822483ce3bd191e9530b9c429dc97",
+        "ece071e371fba62c28202df3e584ede1ddb91ff4113e4a81f20dae1ce8a205f7",
+        "531257e9ae775eedab8f0b7957d8108fd32e08197adbcb639b7d434a3ffaf95b",
+        "24291e49f8048c2a0d9193bfccfbe7de87a17956f6eee7564313e86dc7be479c",
+        "f6b1462b8635c22e7097060740ad02f589cc94406232b0799cdc7fa2e428b710",
+        "479a976be942dc078a99aa1d33e7fb64e401c25a5a2dc40274889c7275c0274b",
+        "d754dd14c4ac62333abd429eb64e95547c272f5c348ba0d9d56af9f32bb55e8f",
+        "f40b1c6177e8bae566676e3d45af420c3dacc5e172931ed68828c785a48c4a22",
+        "d30b59214f644f38d1acffd6751fa599ba2fc6178c1f671adf39bccb9f2a9d7c",
+        "08ff3625b139eb8581d188961f84d830779651ec48c5a0091385cf7f9511dd01",
+        "f80bf89bfda2a4717301894b7e1eb68fdcc4f324cea5abfb117d65e80c8768db",
+        "e37de7998590270f368aa8f8a1fbfe14e9146d50c1036fb61fae8b6ec6e31a65",
+        "70eee1bfcc430bbf9c73a02b7b5724290d35e2a50bb5a4f23e3285628f387ebe",
+        "81138b2e256e8c2ca24fc9927750721bd3f234f37570d006900505f155c35b85",
+        "05478f308964e9daab0535e0de7b43d1a17ea6118d6d6d7ace0a57fc56b18889",
+        "7d6b09d3ca39fcf4b51d1ba175bf04cb7d6b11767cb37c53cb3e0f6149fef648",
+        "5755a3be2098fcff4cebd6f26f1819390d0f2d079de18c511a637a47ee1a35fc",
+        "63c7624b76c1f2fb33d93aefb16104134fde04f3cb44cd68abee799dd71d5878",
+        "ab0fa5a132b91253888f6456be23a12c0b03c2f84bc43295ea2343b90908d8f0",
+        "200d61b6a4b17c27dfbf9e74cac76dbd66507262b63bc94f38ffa95ee9cfb1d0",
+        "669b5cb7636565443d57b197b081c9cd05ef3129c79bfbdff259f1af2090294b",
+        "86af04db3c87bc67ba15f94fca5ddbf77acc6f49fbb7d07fb50bde45be41e7ed",
+        "48117b00a0c8243b78ddef6790842cd6db200d0777d756d83c7f7d00a07b9007",
+        "92eb583e144a00c802fdb563d3d8d2e159d3b2581114b23cbbff70d8cda57cc7",
+        "08651c97050790b4bc00d72cf4065a17f4a710402038e3077f9ead8510d2a4ec",
+        "89082897a3ea704440be31187df388f58e1fdc916029ca3a1ccb11306a979fac",
+        "64ae9b9fc766fd4fa9d7e90d2330d23ca77df0dae2d4139d0dbd48bf7e371661",
+        "f35ed753c2c1b555017252f530bdda6aedfc5281f49f89b62f16467ffc4356b5",
+        "945310e83b9fb0517a202d6f177588f8f569a8381a1c8f519c0760ea573ccf1e",
+        "ea16e61f20a917f9b01bfc0ea4744a3f509f3d901f53d096e7735c178b7aefd2",
+        "7036f30afd15612d75c2c0b8c9bc8d602b8c43ab127f86df5f57ebcaa52e434a",
+        "5bdaf7b384bcd1288665e873e8311e6c42803ab8bdefa54e86068f0483238916",
+        "52a2295a6064a9502e810b155e14037c8fd00700d331e0fca07770005094407d",
+        "1cee7e242142a0ce5616795244f46ebe23ea4aff1f8bcb7618352c635ac2e9da",
+        "a22f8a265efad1554b9c96cb5c559edbe685b630545341f119237cc36f50b127",
+        "0533d055b744596dcff467ff101594a58ebf543f1822c4e1e779f1eed82a2615",
+        "5d91ebfe283ece5889581f1fc0ddf2216cac07f8107277cb711615d45d548bd4",
+        "1f454fc1bd4df9f3042cb8ce284d4888c345907e787dc7ffd166960a9a690282",
+        "0682317cb2a67819acb86e8abbca459cb3bd747077a11a11a9cda5bec1a07f17",
+        "e75107d52f00ffe6014dc494d6e42deca18235fafa27f1db8c425d49c879f610"
+      ],
+      "download_bytes_if_staged_separately": 31126080,
+      "source_artifact_count": 0,
+      "wheel_count": 41
+    }
+  },
+  "unique_download_set": [
+    {
+      "artifact_id": "1f78186786eee8bec450819f12bef13af1c2f596c6b5c6e64f51fd0badefc99d",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "annotated_types-0.8.0-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "annotated-types",
+      "sha256": "f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0",
+      "size_bytes": 13427,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/99/91/8acff4f5e50511b911bbccb72b8628a49c68ce14148cd9f6431094859a90/annotated_types-0.8.0-py3-none-any.whl",
+      "version": "0.8.0",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "38d050d56996d78b908ec4a5534faca2056822483ce3bd191e9530b9c429dc97",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "anyio-4.15.1-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "anyio",
+      "sha256": "6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101",
+      "size_bytes": 132079,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/12/b8/4bd346e22b28902df4d651910f5242c28d84e4a5c2435ca5c3f797ed7e2e/anyio-4.15.1-py3-none-any.whl",
+      "version": "4.15.1",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "ece071e371fba62c28202df3e584ede1ddb91ff4113e4a81f20dae1ce8a205f7",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "attrs-26.1.0-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "attrs",
+      "sha256": "c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309",
+      "size_bytes": 67548,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/64/b4/17d4b0b2a2dc85a6df63d1157e028ed19f90d4cd97c36717afef2bc2f395/attrs-26.1.0-py3-none-any.whl",
+      "version": "26.1.0",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "531257e9ae775eedab8f0b7957d8108fd32e08197adbcb639b7d434a3ffaf95b",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "certifi-2026.7.22-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "certifi",
+      "sha256": "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775",
+      "size_bytes": 136983,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl",
+      "version": "2026.7.22",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "70f24326fb93fd6b69642ba73423b1c1cf3030b4489c9273494b0f4c9dc2a9d1",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "cffi-2.1.1-cp312-cp312-macosx_10_15_x86_64.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "cffi",
+      "sha256": "c8c69575568085ba0b1b10c0249d779a214aea6f6522e949a0fc9fb0fcb449d0",
+      "size_bytes": 184821,
+      "target_tags": [
+        "macosx_12_0_x86_64",
+        "macosx_12_0_universal2"
+      ],
+      "targets": [
+        "macos_x86_64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/10/69/43965eccfdead3b9220015fd1320e117be8c6ed01a62ffab76eeb752f5d5/cffi-2.1.1-cp312-cp312-macosx_10_15_x86_64.whl",
+      "version": "2.1.1",
+      "wheel_tags": [
+        "cp312-cp312-macosx_10_15_x86_64"
+      ]
+    },
+    {
+      "artifact_id": "6a839461dc9bfcd455b4d9bad9d518dfb6cdd8c7b559219b5e43dc27fa2a8594",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "cffi-2.1.1-cp312-cp312-macosx_11_0_arm64.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "cffi",
+      "sha256": "f81b3b8f3d4e343550fa4baa0e479bba9f2d29ce9c2e9b51d1ce1718d7442fcf",
+      "size_bytes": 184719,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/54/7d/16e5a096677b5e313ca80cd5e5170efa3ea44624a82bb111925522da64b1/cffi-2.1.1-cp312-cp312-macosx_11_0_arm64.whl",
+      "version": "2.1.1",
+      "wheel_tags": [
+        "cp312-cp312-macosx_11_0_arm64"
+      ]
+    },
+    {
+      "artifact_id": "24291e49f8048c2a0d9193bfccfbe7de87a17956f6eee7564313e86dc7be479c",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "cffi-2.1.1-cp312-cp312-win_amd64.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "cffi",
+      "sha256": "f53e442b08449d42821fa4a4fba000095af9f62742a500f978a9f557ec44339a",
+      "size_bytes": 185919,
+      "target_tags": [
+        "win_amd64"
+      ],
+      "targets": [
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/d9/79/615cc094e2fb508cade7de88d3b4f6c4ec2bab695c97bce9153dc65aadf5/cffi-2.1.1-cp312-cp312-win_amd64.whl",
+      "version": "2.1.1",
+      "wheel_tags": [
+        "cp312-cp312-win_amd64"
+      ]
+    },
+    {
+      "artifact_id": "f6b1462b8635c22e7097060740ad02f589cc94406232b0799cdc7fa2e428b710",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "click-8.5.0-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "click",
+      "sha256": "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360",
+      "size_bytes": 125251,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/58/50/6c0d534c5f134586a8e1ba4e330569e32f057e33372ae556463212fb4cd3/click-8.5.0-py3-none-any.whl",
+      "version": "8.5.0",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "479a976be942dc078a99aa1d33e7fb64e401c25a5a2dc40274889c7275c0274b",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "colorama-0.4.6-py2.py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "colorama",
+      "sha256": "4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6",
+      "size_bytes": 25335,
+      "target_tags": [
+        "win_amd64"
+      ],
+      "targets": [
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl",
+      "version": "0.4.6",
+      "wheel_tags": [
+        "py2-none-any",
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "815640861bde9d2085e5a6b37806aeb9392d875291b2f7ce5a21ab14f718a402",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "cryptography-50.0.1-cp39-abi3-macosx_11_0_arm64.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "metadata_url": "https://pypi.org/pypi/cryptography/50.0.1/json",
+      "name": "cryptography",
+      "sha256": "ca83d00d9e69cd5eb63f2e69c3a5a59e0cecae5ae14c6ae0b35830fe3b37bad0",
+      "size_bytes": 4035307,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/84/a9/ee16a903f13755e914d1eecc482fe64d1f10761c3960e5d8fa6837377aff/cryptography-50.0.1-cp39-abi3-macosx_11_0_arm64.whl",
+      "version": "50.0.1",
+      "wheel_tags": [
+        "cp39-abi3-macosx_11_0_arm64"
+      ]
+    },
+    {
+      "artifact_id": "d754dd14c4ac62333abd429eb64e95547c272f5c348ba0d9d56af9f32bb55e8f",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "cryptography-50.0.1-cp39-abi3-win_amd64.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "metadata_url": "https://pypi.org/pypi/cryptography/50.0.1/json",
+      "name": "cryptography",
+      "sha256": "55d16b1ef3ee0958d893a977b19777887e546c9954ea81b200c3301a864013f2",
+      "size_bytes": 3875429,
+      "target_tags": [
+        "win_amd64"
+      ],
+      "targets": [
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/99/89/87ef49ffe383ef4e147d27b7bf2088fb0b54ea409dd87b5a89442e5828a5/cryptography-50.0.1-cp39-abi3-win_amd64.whl",
+      "version": "50.0.1",
+      "wheel_tags": [
+        "cp39-abi3-win_amd64"
+      ]
+    },
+    {
+      "artifact_id": "c8b398e40fe5b5e1df73dbc5221edf46ed721fdfb5a1a91124e69e155eae7d7f",
+      "artifact_kind": "sdist_source_build_input",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "cryptography-50.0.1.tar.gz",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "metadata_url": "https://pypi.org/pypi/cryptography/50.0.1/json",
+      "name": "cryptography",
+      "sha256": "5dd9bda1c12b4162f6ff568eeb5e0ff956c28d14406e875cfe8a63a2d414ff20",
+      "size_bytes": 880381,
+      "target_tags": [
+        "macosx_12_0_x86_64",
+        "macosx_12_0_universal2"
+      ],
+      "targets": [
+        "macos_x86_64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/bb/ad/5d6702db60b1e40b41ef513b6967ff5848f307d50f8449baf1634f5908f1/cryptography-50.0.1.tar.gz",
+      "version": "50.0.1"
+    },
+    {
+      "artifact_id": "f40b1c6177e8bae566676e3d45af420c3dacc5e172931ed68828c785a48c4a22",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "h11-0.16.0-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "h11",
+      "sha256": "63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86",
+      "size_bytes": 37515,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/04/4b/29cac41a4d98d144bf5f6d33995617b185d14b22401f75ca86f384e87ff1/h11-0.16.0-py3-none-any.whl",
+      "version": "0.16.0",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "d30b59214f644f38d1acffd6751fa599ba2fc6178c1f671adf39bccb9f2a9d7c",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "httpcore-1.0.9-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "httpcore",
+      "sha256": "2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55",
+      "size_bytes": 78784,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/7e/f5/f66802a942d491edb555dd61e3a9961140fd64c90bce1eafd741609d334d/httpcore-1.0.9-py3-none-any.whl",
+      "version": "1.0.9",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "08ff3625b139eb8581d188961f84d830779651ec48c5a0091385cf7f9511dd01",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "httpx-0.28.1-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "httpx",
+      "sha256": "d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad",
+      "size_bytes": 73517,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/2a/39/e50c7c3a983047577ee07d2a9e53faf5a69493943ec3f6a384bdc792deb2/httpx-0.28.1-py3-none-any.whl",
+      "version": "0.28.1",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "f80bf89bfda2a4717301894b7e1eb68fdcc4f324cea5abfb117d65e80c8768db",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "httpx_sse-0.4.3-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "httpx-sse",
+      "sha256": "0ac1c9fe3c0afad2e0ebb25a934a59f4c7823b60792691f779fad2c5568830fc",
+      "size_bytes": 8960,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/d2/fd/6668e5aec43ab844de6fc74927e155a3b37bf40d7c3790e49fc0406b6578/httpx_sse-0.4.3-py3-none-any.whl",
+      "version": "0.4.3",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "e37de7998590270f368aa8f8a1fbfe14e9146d50c1036fb61fae8b6ec6e31a65",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "idna-3.20-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "idna",
+      "sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+      "size_bytes": 69583,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/58/a2/bb081bab032533a855d44de1d56f8e8426114ff1ba5d1f07a438a0a654f8/idna-3.20-py3-none-any.whl",
+      "version": "3.20",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "70eee1bfcc430bbf9c73a02b7b5724290d35e2a50bb5a4f23e3285628f387ebe",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "iniconfig-2.3.0-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "iniconfig",
+      "sha256": "f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12",
+      "size_bytes": 7484,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/cb/b1/3846dd7f199d53cb17f49cba7e651e9ce294d8497c8c150530ed11865bb8/iniconfig-2.3.0-py3-none-any.whl",
+      "version": "2.3.0",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "ced13bdd1412c258a73701f1e83850fb94c86b1ed70cdb0337cbcdcebf7384ed",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "jpype1-1.7.1-1-cp312-cp312-macosx_11_0_universal2.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "jpype1",
+      "sha256": "b3ddd9f9099202212a34679dfb95dda590bcfbd23289559d104e24abec9120d1",
+      "size_bytes": 569654,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/79/32/8b2279b12364f260111c7843bf9ede7dc442d5521d6d2ca728b3d522d445/jpype1-1.7.1-1-cp312-cp312-macosx_11_0_universal2.whl",
+      "version": "1.7.1",
+      "wheel_tags": [
+        "cp312-cp312-macosx_11_0_universal2"
+      ]
+    },
+    {
+      "artifact_id": "81138b2e256e8c2ca24fc9927750721bd3f234f37570d006900505f155c35b85",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "jpype1-1.7.1-cp312-cp312-win_amd64.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "jpype1",
+      "sha256": "d7dad528c73d02987358485dc37fab36edb9ad8bce53533e65f54cff1b68a4bc",
+      "size_bytes": 356985,
+      "target_tags": [
+        "win_amd64"
+      ],
+      "targets": [
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/ca/80/c0098bedd014bc9a1a8a349e40a1fc1408c79af28f6c32bdbb1a2b839c7b/jpype1-1.7.1-cp312-cp312-win_amd64.whl",
+      "version": "1.7.1",
+      "wheel_tags": [
+        "cp312-cp312-win_amd64"
+      ]
+    },
+    {
+      "artifact_id": "05478f308964e9daab0535e0de7b43d1a17ea6118d6d6d7ace0a57fc56b18889",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "jsonschema-4.26.0-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "jsonschema",
+      "sha256": "d489f15263b8d200f8387e64b4c3a75f06629559fb73deb8fdfb525f2dab50ce",
+      "size_bytes": 90630,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/69/90/f63fb5873511e014207a475e2bb4e8b2e570d655b00ac19a9a0ca0a385ee/jsonschema-4.26.0-py3-none-any.whl",
+      "version": "4.26.0",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "7d6b09d3ca39fcf4b51d1ba175bf04cb7d6b11767cb37c53cb3e0f6149fef648",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "jsonschema_specifications-2025.9.1-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "jsonschema-specifications",
+      "sha256": "98802fee3a11ee76ecaca44429fda8a41bff98b00a0f2838151b113f210cc6fe",
+      "size_bytes": 18437,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/41/45/1a4ed80516f02155c51f51e8cedb3c1902296743db0bbc66608a0db2814f/jsonschema_specifications-2025.9.1-py3-none-any.whl",
+      "version": "2025.9.1",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "c22b79bb6539d0cbd230ab89ff2243d9d2b8b15908d6c35776f8caef3ca7e676",
+      "artifact_kind": "wheel",
+      "downloaded": false,
+      "filename": "maturin-1.14.1-py3-none-macosx_10_12_x86_64.whl",
+      "local_target_wheelhouse": "MISSING",
+      "metadata_observed_utc": "2026-10-11T22:31:54Z",
+      "metadata_source": "PyPI JSON release metadata",
+      "metadata_url": "https://pypi.org/pypi/maturin/1.14.1/json",
+      "name": "maturin",
+      "requires_dist": [
+        "tomli>=1.1.0; python_full_version < \"3.11\"",
+        "patchelf; extra == \"patchelf\"",
+        "ziglang>=0.10.0; extra == \"zig\""
+      ],
+      "requires_dist_active_cp312": [
+        "tomli>=1.1.0; python_full_version < \"3.11\""
+      ],
+      "requires_python": ">=3.7",
+      "sha256": "f3306078070c1508fd715b9116070cbcaff5959024272a9f1e6f5cb29768b86c",
+      "size_bytes": 10169205,
+      "tags": [
+        "py3-none-macosx_10_12_x86_64"
+      ],
+      "target_tags": {
+        "macos_arm64": [
+          "macosx_11_0_arm64",
+          "macosx_11_0_universal2"
+        ],
+        "macos_x86_64": [
+          "macosx_12_0_x86_64",
+          "macosx_12_0_universal2"
+        ],
+        "win_amd64": [
+          "win_amd64"
+        ]
+      },
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/43/b6/79c881410a3b1c187f7eb3d407aecae646c6a4433d630d72200359015e83/maturin-1.14.1-py3-none-macosx_10_12_x86_64.whl",
+      "version": "1.14.1",
+      "wheel_tags": [
+        "py3-none-macosx_10_12_x86_64"
+      ]
+    },
+    {
+      "artifact_id": "5755a3be2098fcff4cebd6f26f1819390d0f2d079de18c511a637a47ee1a35fc",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "mcp-1.30.0-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "mcp",
+      "sha256": "666edb5009503e1047c9d60346a756f94b261f05cc2625f23d41c728ffc484d0",
+      "size_bytes": 234581,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/f5/f4/e58bc33317c92a0203664daaf00bf6f41166cc0149e5d6870a03f7cd004a/mcp-1.30.0-py3-none-any.whl",
+      "version": "1.30.0",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "63c7624b76c1f2fb33d93aefb16104134fde04f3cb44cd68abee799dd71d5878",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "mph-1.4.0-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "mph",
+      "sha256": "835835ac9d211601def50a6f8c61b783531e905d7165c8de7bf8a378a040c385",
+      "size_bytes": 65897,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/ef/6e/1de806ec962cd29a9c9a74905b43b75d90f7daf7c970bb4c7ceb9877164e/mph-1.4.0-py3-none-any.whl",
+      "version": "1.4.0",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "f64163f753fe97a32067b21920397a4ef9221a35687ed2c391c173a6d38eb313",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "numpy-2.5.3-cp312-cp312-macosx_10_13_x86_64.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "numpy",
+      "sha256": "cb189f09db39283b26bfd061ec16189e14f71c6755207f72a0f7540867afe5b9",
+      "size_bytes": 16994982,
+      "target_tags": [
+        "macosx_12_0_x86_64",
+        "macosx_12_0_universal2"
+      ],
+      "targets": [
+        "macos_x86_64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/d6/50/8fdbb16af64895706a45f06a4068e29db732ec180f3c1375f14123359138/numpy-2.5.3-cp312-cp312-macosx_10_13_x86_64.whl",
+      "version": "2.5.3",
+      "wheel_tags": [
+        "cp312-cp312-macosx_10_13_x86_64"
+      ]
+    },
+    {
+      "artifact_id": "5199c3427e86889076fea1eb8b90c80815d628932464dc1e5c61e68a6431b65c",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "numpy-2.5.3-cp312-cp312-macosx_11_0_arm64.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "numpy",
+      "sha256": "f59a878c33d6b88122d80d239bb3b845d58708750b0cb06a09aebb9b18ec696c",
+      "size_bytes": 12009327,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/60/39/789131c1188c078dcb3a1692e72e1e050c68b88ffe72c9ccaac9bcd7a9cd/numpy-2.5.3-cp312-cp312-macosx_11_0_arm64.whl",
+      "version": "2.5.3",
+      "wheel_tags": [
+        "cp312-cp312-macosx_11_0_arm64"
+      ]
+    },
+    {
+      "artifact_id": "ab0fa5a132b91253888f6456be23a12c0b03c2f84bc43295ea2343b90908d8f0",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "numpy-2.5.3-cp312-cp312-win_amd64.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "numpy",
+      "sha256": "0a59a421a32580a009e8a1751345bf829631b990dc1794b80514ab722b435def",
+      "size_bytes": 12567828,
+      "target_tags": [
+        "win_amd64"
+      ],
+      "targets": [
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/3c/a1/accf6d4f0c80c5d9ba9735d6b1550e444180599f34dec69ca01360f717ad/numpy-2.5.3-cp312-cp312-win_amd64.whl",
+      "version": "2.5.3",
+      "wheel_tags": [
+        "cp312-cp312-win_amd64"
+      ]
+    },
+    {
+      "artifact_id": "9bef7cb62959ffa2a8c934c07574f78c77b9f0cb90c3ef1a3c05d11103b6b8dc",
+      "artifact_kind": "native_source_archive",
+      "downloaded": false,
+      "filename": "openssl-4.0.2.tar.gz",
+      "included_license_member": "openssl-4.0.2/LICENSE.txt",
+      "license": "Apache-2.0",
+      "metadata_source": "OpenSSL first-party GitHub expanded-assets page verifies filename, URL and SHA-256; the candidate byte count is retained from prior non-primary archive-index evidence and is not verified by the official release API.",
+      "metadata_url": "https://github.com/openssl/openssl/releases/expanded_assets/openssl-4.0.2",
+      "name": "OpenSSL source component",
+      "resolved_first_party_url": "https://github.com/openssl/openssl/releases/download/openssl-4.0.2/openssl-4.0.2.tar.gz",
+      "sha256": "736b467530f916737b7031310ccb21d8218c6229e61e8e160cd1d3458cd543a8",
+      "size_bytes": 55153883,
+      "size_bytes_evidence": [
+        "https://fossies.org/linux/misc/openssl-4.0.2.tar.gz/",
+        "https://mirrors.omnios.org/openssl/"
+      ],
+      "size_bytes_evidence_status": "NON_PRIMARY_ONLY_OFFICIAL_API_ENDPOINT_INACCESSIBLE",
+      "size_bytes_primary_verified": false,
+      "size_note": "55,153,883 bytes is retained from the immutable candidate based on independent archive indexes. The official page reports only rounded 52.6 MB, and the official GitHub release REST endpoint was inaccessible; this exact byte count remains unverified by a primary source.",
+      "target_tags": {
+        "macos_x86_64": [
+          "source-archive-for-Intel-cryptography-build"
+        ]
+      },
+      "targets": [],
+      "url": "https://www.openssl.org/source/openssl-4.0.2.tar.gz",
+      "version": "4.0.2"
+    },
+    {
+      "artifact_id": "200d61b6a4b17c27dfbf9e74cac76dbd66507262b63bc94f38ffa95ee9cfb1d0",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "packaging-26.3-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "metadata_url": "https://pypi.org/pypi/packaging/26.3/json",
+      "name": "packaging",
+      "official_metadata_url": "https://pypi.org/pypi/packaging/26.3/json",
+      "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+      "size_bytes": 129956,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl",
+      "version": "26.3",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "669b5cb7636565443d57b197b081c9cd05ef3129c79bfbdff259f1af2090294b",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "pluggy-1.6.0-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "pluggy",
+      "sha256": "e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746",
+      "size_bytes": 20538,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl",
+      "version": "1.6.0",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "46c1c8ab6bd2ebfecc03f10e3cd88b5297edbac298c03cc52c46f5885e2509bd",
+      "artifact_kind": "wheel",
+      "downloaded": false,
+      "filename": "psutil-5.9.8-cp36-abi3-macosx_10_9_x86_64.whl",
+      "local_target_wheelhouse": "MISSING",
+      "metadata_observed_utc": "2026-10-11T22:31:54Z",
+      "metadata_source": "PyPI JSON release metadata",
+      "metadata_url": "https://pypi.org/pypi/psutil/5.9.8/json",
+      "name": "psutil",
+      "requires_dist": [
+        "enum34; python_version <= \"3.4\" and extra == \"test\"",
+        "ipaddress; python_version < \"3.0\" and extra == \"test\"",
+        "mock; python_version < \"3.0\" and extra == \"test\"",
+        "pywin32; sys_platform == \"win32\" and extra == \"test\"",
+        "wmi; sys_platform == \"win32\" and extra == \"test\""
+      ],
+      "requires_dist_active_cp312": [],
+      "requires_python": ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*",
+      "sha256": "aee678c8720623dc456fa20659af736241f575d79429a0e5e9cf88ae0605cc81",
+      "size_bytes": 248702,
+      "tags": [
+        "cp36-abi3-macosx_10_9_x86_64"
+      ],
+      "target_tags": {
+        "macos_arm64": [
+          "macosx_11_0_arm64",
+          "macosx_11_0_universal2"
+        ],
+        "macos_x86_64": [
+          "macosx_12_0_x86_64",
+          "macosx_12_0_universal2"
+        ],
+        "win_amd64": [
+          "win_amd64"
+        ]
+      },
+      "targets": [
+        "macos_x86_64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/e7/e3/07ae864a636d70a8a6f58da27cb1179192f1140d5d1da10886ade9405797/psutil-5.9.8-cp36-abi3-macosx_10_9_x86_64.whl",
+      "version": "5.9.8",
+      "wheel_tags": [
+        "cp36-abi3-macosx_10_9_x86_64"
+      ]
+    },
+    {
+      "artifact_id": "5544e3812a61b6d19516aa3df5a1b203224c8df8a9c05fdef1b40c6b28cc5293",
+      "artifact_kind": "wheel",
+      "downloaded": false,
+      "filename": "psutil-5.9.8-cp38-abi3-macosx_11_0_arm64.whl",
+      "local_target_wheelhouse": "MISSING",
+      "metadata_observed_utc": "2026-10-11T22:31:54Z",
+      "metadata_source": "PyPI JSON release metadata",
+      "metadata_url": "https://pypi.org/pypi/psutil/5.9.8/json",
+      "name": "psutil",
+      "requires_dist": [
+        "enum34; python_version <= \"3.4\" and extra == \"test\"",
+        "ipaddress; python_version < \"3.0\" and extra == \"test\"",
+        "mock; python_version < \"3.0\" and extra == \"test\"",
+        "pywin32; sys_platform == \"win32\" and extra == \"test\"",
+        "wmi; sys_platform == \"win32\" and extra == \"test\""
+      ],
+      "requires_dist_active_cp312": [],
+      "requires_python": ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*",
+      "sha256": "d16bbddf0693323b8c6123dd804100241da461e41d6e332fb0ba6058f630f8c8",
+      "size_bytes": 249898,
+      "tags": [
+        "cp38-abi3-macosx_11_0_arm64"
+      ],
+      "target_tags": {
+        "macos_arm64": [
+          "macosx_11_0_arm64",
+          "macosx_11_0_universal2"
+        ],
+        "macos_x86_64": [
+          "macosx_12_0_x86_64",
+          "macosx_12_0_universal2"
+        ],
+        "win_amd64": [
+          "win_amd64"
+        ]
+      },
+      "targets": [
+        "macos_arm64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/05/33/2d74d588408caedd065c2497bdb5ef83ce6082db01289a1e1147f6639802/psutil-5.9.8-cp38-abi3-macosx_11_0_arm64.whl",
+      "version": "5.9.8",
+      "wheel_tags": [
+        "cp38-abi3-macosx_11_0_arm64"
+      ]
+    },
+    {
+      "artifact_id": "86af04db3c87bc67ba15f94fca5ddbf77acc6f49fbb7d07fb50bde45be41e7ed",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "pycparser-3.0-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "pycparser",
+      "sha256": "b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992",
+      "size_bytes": 48172,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl",
+      "version": "3.0",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "48117b00a0c8243b78ddef6790842cd6db200d0777d756d83c7f7d00a07b9007",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "pydantic-2.13.5-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "pydantic",
+      "sha256": "346a034f080da3755d8e9cb5e00e8b07de1d39e4f6e2c87d8ab7cafa0b269a73",
+      "size_bytes": 472589,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/eb/47/c95ffc2009878c7aac0c5e08528022dcb885933252a88b5f170058014464/pydantic-2.13.5-py3-none-any.whl",
+      "version": "2.13.5",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "5ed5e743aa7344baeab2e8fad52d5fa2064e4118d19a4d2b74003bac637014e8",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "pydantic_core-2.46.5-cp312-cp312-macosx_10_12_x86_64.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "pydantic-core",
+      "sha256": "b9fe6fb92520e3fd61f2e49000b6911b188824f089b75973ea06d6267f0b476d",
+      "size_bytes": 2076516,
+      "target_tags": [
+        "macosx_12_0_x86_64",
+        "macosx_12_0_universal2"
+      ],
+      "targets": [
+        "macos_x86_64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/82/3f/76358795aa7a8c6d4f36e2cb828ad1c90ee118e1393a9281664f5aade9d4/pydantic_core-2.46.5-cp312-cp312-macosx_10_12_x86_64.whl",
+      "version": "2.46.5",
+      "wheel_tags": [
+        "cp312-cp312-macosx_10_12_x86_64"
+      ]
+    },
+    {
+      "artifact_id": "557774e763321cea9ec23be32c56c0732aa126dbb022b35416b48ee3ce239f20",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "pydantic_core-2.46.5-cp312-cp312-macosx_11_0_arm64.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "pydantic-core",
+      "sha256": "a39ac25a9a2fa4072efdb429833c4a4c8009a51ff9eea3eeae131713cd27991e",
+      "size_bytes": 1922874,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/db/50/26b091836076ce4cb2fac264186936acc069e0595772cfd02a563bc4761a/pydantic_core-2.46.5-cp312-cp312-macosx_11_0_arm64.whl",
+      "version": "2.46.5",
+      "wheel_tags": [
+        "cp312-cp312-macosx_11_0_arm64"
+      ]
+    },
+    {
+      "artifact_id": "92eb583e144a00c802fdb563d3d8d2e159d3b2581114b23cbbff70d8cda57cc7",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "pydantic_core-2.46.5-cp312-cp312-win_amd64.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "pydantic-core",
+      "sha256": "5e81740c09e310f5aa5cbd3e434a01c154d4bef93241c7877b39f211d2b78ba8",
+      "size_bytes": 2043140,
+      "target_tags": [
+        "win_amd64"
+      ],
+      "targets": [
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/cf/c9/4c19f41b84cf6b622a72fbeed7665b25d47a187d68d47d0d430c07f23268/pydantic_core-2.46.5-cp312-cp312-win_amd64.whl",
+      "version": "2.46.5",
+      "wheel_tags": [
+        "cp312-cp312-win_amd64"
+      ]
+    },
+    {
+      "artifact_id": "08651c97050790b4bc00d72cf4065a17f4a710402038e3077f9ead8510d2a4ec",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "pydantic_settings-2.15.0-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "pydantic-settings",
+      "sha256": "0ba092c291c94baceb5eff768aa0d56400a457585bc0175925a5a5510303da42",
+      "size_bytes": 69413,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/30/a4/2bffa9f8e804325a09867f0e9d30795c80ea9f8d62560bd1b6ad6220eb2f/pydantic_settings-2.15.0-py3-none-any.whl",
+      "version": "2.15.0",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "89082897a3ea704440be31187df388f58e1fdc916029ca3a1ccb11306a979fac",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "pygments-2.21.0-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "pygments",
+      "sha256": "2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9",
+      "size_bytes": 1250147,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/71/46/17f022dd3e953bf20a04a028a21ec746d942f8d2af30fa0f124fa0e6a684/pygments-2.21.0-py3-none-any.whl",
+      "version": "2.21.0",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "64ae9b9fc766fd4fa9d7e90d2330d23ca77df0dae2d4139d0dbd48bf7e371661",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "pyjwt-2.15.0-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "pyjwt",
+      "sha256": "7a3742debf6b879e912dbb9819ceec1594be812452b78c5f2e2dfc56564954f8",
+      "size_bytes": 33680,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/e8/55/40e45bf052ee8ee12a4dfd785519660f8effa7b065442b91646ec6828619/pyjwt-2.15.0-py3-none-any.whl",
+      "version": "2.15.0",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "03590d960a8de5dfee139cadd0335c97994ce5a4c10a5f3658226edc684f4f4a",
+      "artifact_kind": "wheel",
+      "downloaded": false,
+      "filename": "pyobjc_core-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "local_target_wheelhouse": "MISSING",
+      "metadata_observed_utc": "2026-10-11T22:31:54Z",
+      "metadata_source": "PyPI JSON release metadata",
+      "metadata_url": "https://pypi.org/pypi/pyobjc-core/12.2.2/json",
+      "name": "pyobjc-core",
+      "requires_dist": [],
+      "requires_dist_active_cp312": [],
+      "requires_python": ">=3.10",
+      "sha256": "122e6ad302a2abf5d4d4adb0156db751600ddf2768441696cba17b31323085e7",
+      "size_bytes": 6427637,
+      "tags": [
+        "cp312-cp312-macosx_10_13_universal2"
+      ],
+      "target_tags": {
+        "macos_arm64": [
+          "macosx_11_0_arm64",
+          "macosx_11_0_universal2"
+        ],
+        "macos_x86_64": [
+          "macosx_12_0_x86_64",
+          "macosx_12_0_universal2"
+        ],
+        "win_amd64": [
+          "win_amd64"
+        ]
+      },
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/86/b2/bbf7f049880ab40d110e66f25122342a1f6c98d6fe3c59bb98985503c660/pyobjc_core-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "version": "12.2.2",
+      "wheel_tags": [
+        "cp312-cp312-macosx_10_13_universal2"
+      ]
+    },
+    {
+      "artifact_id": "f3e89608fe8e472903685e757b903a7387e08b2de73ec688b2bb8c54dbbfd665",
+      "artifact_kind": "wheel",
+      "downloaded": false,
+      "filename": "pyobjc_framework_applicationservices-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "local_target_wheelhouse": "MISSING",
+      "metadata_observed_utc": "2026-10-11T22:31:54Z",
+      "metadata_source": "PyPI JSON release metadata",
+      "metadata_url": "https://pypi.org/pypi/pyobjc-framework-ApplicationServices/12.2.2/json",
+      "name": "pyobjc-framework-ApplicationServices",
+      "requires_dist": [
+        "pyobjc-core>=12.2.2",
+        "pyobjc-framework-Cocoa>=12.2.2",
+        "pyobjc-framework-Quartz>=12.2.2",
+        "pyobjc-framework-CoreText>=12.2.2"
+      ],
+      "requires_dist_active_cp312": [
+        "pyobjc-core>=12.2.2",
+        "pyobjc-framework-Cocoa>=12.2.2",
+        "pyobjc-framework-Quartz>=12.2.2",
+        "pyobjc-framework-CoreText>=12.2.2"
+      ],
+      "requires_python": ">=3.10",
+      "sha256": "5506bd6b5268a97fcb79b5b021f6cbbaaf5cdff3ec87094d8870268d8cf096ed",
+      "size_bytes": 32765,
+      "tags": [
+        "cp312-cp312-macosx_10_13_universal2"
+      ],
+      "target_tags": {
+        "macos_arm64": [
+          "macosx_11_0_arm64",
+          "macosx_11_0_universal2"
+        ],
+        "macos_x86_64": [
+          "macosx_12_0_x86_64",
+          "macosx_12_0_universal2"
+        ],
+        "win_amd64": [
+          "win_amd64"
+        ]
+      },
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/00/ed/9d85751400f1cd23d71c824a57352ec4d216a8728255dc00c032c431d3ad/pyobjc_framework_applicationservices-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "version": "12.2.2",
+      "wheel_tags": [
+        "cp312-cp312-macosx_10_13_universal2"
+      ]
+    },
+    {
+      "artifact_id": "8cdb7174a2cf5fede18ca5a6e7da44dd14741ca43b73e2987fca613d301c991a",
+      "artifact_kind": "wheel",
+      "downloaded": false,
+      "filename": "pyobjc_framework_cocoa-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "local_target_wheelhouse": "MISSING",
+      "metadata_observed_utc": "2026-10-11T22:31:54Z",
+      "metadata_source": "PyPI JSON release metadata",
+      "metadata_url": "https://pypi.org/pypi/pyobjc-framework-Cocoa/12.2.2/json",
+      "name": "pyobjc-framework-Cocoa",
+      "requires_dist": [
+        "pyobjc-core>=12.2.2"
+      ],
+      "requires_dist_active_cp312": [
+        "pyobjc-core>=12.2.2"
+      ],
+      "requires_python": ">=3.10",
+      "sha256": "e106f395531e67694376b0f1184612cbeea3ec8b9bf56b55ef41d026171d2a2d",
+      "size_bytes": 388117,
+      "tags": [
+        "cp312-cp312-macosx_10_13_universal2"
+      ],
+      "target_tags": {
+        "macos_arm64": [
+          "macosx_11_0_arm64",
+          "macosx_11_0_universal2"
+        ],
+        "macos_x86_64": [
+          "macosx_12_0_x86_64",
+          "macosx_12_0_universal2"
+        ],
+        "win_amd64": [
+          "win_amd64"
+        ]
+      },
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/fd/2f/b67e73d8bc367e03fe7861cd9c49fff9dcfa6db83bc0630c0adcfb25b7fa/pyobjc_framework_cocoa-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "version": "12.2.2",
+      "wheel_tags": [
+        "cp312-cp312-macosx_10_13_universal2"
+      ]
+    },
+    {
+      "artifact_id": "5a79e17edca400bcae50dfc75662370bde546d2fecfff000f171f6b83697c50d",
+      "artifact_kind": "wheel",
+      "downloaded": false,
+      "filename": "pyobjc_framework_coretext-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "local_target_wheelhouse": "MISSING",
+      "metadata_observed_utc": "2026-10-11T22:31:54Z",
+      "metadata_source": "PyPI JSON release metadata",
+      "metadata_url": "https://pypi.org/pypi/pyobjc-framework-CoreText/12.2.2/json",
+      "name": "pyobjc-framework-CoreText",
+      "requires_dist": [
+        "pyobjc-core>=12.2.2",
+        "pyobjc-framework-Cocoa>=12.2.2",
+        "pyobjc-framework-Quartz>=12.2.2"
+      ],
+      "requires_dist_active_cp312": [
+        "pyobjc-core>=12.2.2",
+        "pyobjc-framework-Cocoa>=12.2.2",
+        "pyobjc-framework-Quartz>=12.2.2"
+      ],
+      "requires_python": ">=3.10",
+      "sha256": "a69611de569d92776e6391ca25492a5bbb4a05ba744006349e377a4fc5f7c8a5",
+      "size_bytes": 30120,
+      "tags": [
+        "cp312-cp312-macosx_10_13_universal2"
+      ],
+      "target_tags": {
+        "macos_arm64": [
+          "macosx_11_0_arm64",
+          "macosx_11_0_universal2"
+        ],
+        "macos_x86_64": [
+          "macosx_12_0_x86_64",
+          "macosx_12_0_universal2"
+        ],
+        "win_amd64": [
+          "win_amd64"
+        ]
+      },
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/1c/88/e85a9268285fc0c28284dbdc869a27f5d3f2e436d2838221a6704b4f8eee/pyobjc_framework_coretext-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "version": "12.2.2",
+      "wheel_tags": [
+        "cp312-cp312-macosx_10_13_universal2"
+      ]
+    },
+    {
+      "artifact_id": "956d3732e53e1ca216edb13dc5e9fcacad9afd7e1c5f6d031b2c00d99fcd4a47",
+      "artifact_kind": "wheel",
+      "downloaded": false,
+      "filename": "pyobjc_framework_quartz-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "local_target_wheelhouse": "MISSING",
+      "metadata_observed_utc": "2026-10-11T22:31:54Z",
+      "metadata_source": "PyPI JSON release metadata",
+      "metadata_url": "https://pypi.org/pypi/pyobjc-framework-Quartz/12.2.2/json",
+      "name": "pyobjc-framework-Quartz",
+      "requires_dist": [
+        "pyobjc-core>=12.2.2",
+        "pyobjc-framework-Cocoa>=12.2.2"
+      ],
+      "requires_dist_active_cp312": [
+        "pyobjc-core>=12.2.2",
+        "pyobjc-framework-Cocoa>=12.2.2"
+      ],
+      "requires_python": ">=3.10",
+      "sha256": "7f668979d0c7320bf8f7ed6e030da578f93ab0f5dd619b295ec735cd8d5faa34",
+      "size_bytes": 219003,
+      "tags": [
+        "cp312-cp312-macosx_10_13_universal2"
+      ],
+      "target_tags": {
+        "macos_arm64": [
+          "macosx_11_0_arm64",
+          "macosx_11_0_universal2"
+        ],
+        "macos_x86_64": [
+          "macosx_12_0_x86_64",
+          "macosx_12_0_universal2"
+        ],
+        "win_amd64": [
+          "win_amd64"
+        ]
+      },
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/ed/e4/8be95d2ff850f82fb55b44c63333a00a920bf8a73642e7d9c2f3638a26d2/pyobjc_framework_quartz-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "version": "12.2.2",
+      "wheel_tags": [
+        "cp312-cp312-macosx_10_13_universal2"
+      ]
+    },
+    {
+      "artifact_id": "f35ed753c2c1b555017252f530bdda6aedfc5281f49f89b62f16467ffc4356b5",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "pytest-9.1.1-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "pytest",
+      "sha256": "37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c",
+      "size_bytes": 386536,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/24/25/1de2678b631f5a49215c6c96fff41ba892b0a34df68d6d80292b1b48aa7f/pytest-9.1.1-py3-none-any.whl",
+      "version": "9.1.1",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "945310e83b9fb0517a202d6f177588f8f569a8381a1c8f519c0760ea573ccf1e",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "python_dotenv-1.2.3-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "python-dotenv",
+      "sha256": "904552145e8bfed22162c09dab1c2b9b54fefa7b23ba780f4f26ca0316b0f0d9",
+      "size_bytes": 22780,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/0d/17/c5c6b53ddc18f297992099b3d9ec16c855c0ccc83263a21fe4d1c625ec6c/python_dotenv-1.2.3-py3-none-any.whl",
+      "version": "1.2.3",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "ea16e61f20a917f9b01bfc0ea4744a3f509f3d901f53d096e7735c178b7aefd2",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "python_multipart-0.0.32-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "python-multipart",
+      "sha256": "ff6d3f776f16878c894e52e107296ffc890e913c611b1a4ec6c44e2821fe2e23",
+      "size_bytes": 30042,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/e1/04/e8135ebd1ad02c56ec633277529b2602ff99ff634be76cdba5744cf554fd/python_multipart-0.0.32-py3-none-any.whl",
+      "version": "0.0.32",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "7036f30afd15612d75c2c0b8c9bc8d602b8c43ab127f86df5f57ebcaa52e434a",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "pywin32-312-cp312-cp312-win_amd64.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "pywin32",
+      "sha256": "b457f6d628a47e8a7346ce22acb7e1a46a4a78b52e1d17e1af56871bd19a93bc",
+      "size_bytes": 6914841,
+      "target_tags": [
+        "win_amd64"
+      ],
+      "targets": [
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/03/d9/77040d3b43df3f3be32ea289433d660d2727f5ba327bc73be835127d9d60/pywin32-312-cp312-cp312-win_amd64.whl",
+      "version": "312",
+      "wheel_tags": [
+        "cp312-cp312-win_amd64"
+      ]
+    },
+    {
+      "artifact_id": "5bdaf7b384bcd1288665e873e8311e6c42803ab8bdefa54e86068f0483238916",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "referencing-0.37.0-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "referencing",
+      "sha256": "381329a9f99628c9069361716891d34ad94af76e461dcb0335825aecc7692231",
+      "size_bytes": 26766,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/2c/58/ca301544e1fa93ed4f80d724bf5b194f6e4b945841c5bfd555878eea9fcb/referencing-0.37.0-py3-none-any.whl",
+      "version": "0.37.0",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "b9d1b166addc11ff1a583639f4e74cc215413359d4de18b4533341d3f231bbe6",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "rpds_py-2026.6.3-cp312-cp312-macosx_10_12_x86_64.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "rpds-py",
+      "sha256": "a0811d33247c3d6128a3001d763f2aa056bb3425204335400ac54f89eec3a0d0",
+      "size_bytes": 343691,
+      "target_tags": [
+        "macosx_12_0_x86_64",
+        "macosx_12_0_universal2"
+      ],
+      "targets": [
+        "macos_x86_64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/5c/be/2e8974163072e7bab7df1a5acd54c4498e75e35d6d18b864d3a9d5dadc92/rpds_py-2026.6.3-cp312-cp312-macosx_10_12_x86_64.whl",
+      "version": "2026.6.3",
+      "wheel_tags": [
+        "cp312-cp312-macosx_10_12_x86_64"
+      ]
+    },
+    {
+      "artifact_id": "e16175c739bbf6ce5f54354c65c427bb8fe1a501ecd81b832d5a1499b4df5edc",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "rpds_py-2026.6.3-cp312-cp312-macosx_11_0_arm64.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "rpds-py",
+      "sha256": "538949e262e46caa31ac01bdb3c1e8f642622922cacbabbae6a8445d9dc33eaf",
+      "size_bytes": 338542,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/a4/73/319dfa745dd668efe89309141ded489126461fcecd2b8f3a3cda185129b6/rpds_py-2026.6.3-cp312-cp312-macosx_11_0_arm64.whl",
+      "version": "2026.6.3",
+      "wheel_tags": [
+        "cp312-cp312-macosx_11_0_arm64"
+      ]
+    },
+    {
+      "artifact_id": "52a2295a6064a9502e810b155e14037c8fd00700d331e0fca07770005094407d",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "rpds_py-2026.6.3-cp312-cp312-win_amd64.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "rpds-py",
+      "sha256": "2c958bf94822e9290a40aaf2a822d4bc5c88099093e3948ad6c571eca9272e5f",
+      "size_bytes": 220394,
+      "target_tags": [
+        "win_amd64"
+      ],
+      "targets": [
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/04/3a/f0ee4d4dde9d3b69dedf1b5f74e7a40017046d55052d173e418c6a94f960/rpds_py-2026.6.3-cp312-cp312-win_amd64.whl",
+      "version": "2026.6.3",
+      "wheel_tags": [
+        "cp312-cp312-win_amd64"
+      ]
+    },
+    {
+      "artifact_id": "0682317cb2a67819acb86e8abbca459cb3bd747077a11a11a9cda5bec1a07f17",
+      "artifact_kind": "wheel",
+      "downloaded": false,
+      "filename": "setuptools-83.0.0-py3-none-any.whl",
+      "local_target_wheelhouse": "MISSING",
+      "metadata_observed_utc": "2026-10-11T22:31:54Z",
+      "metadata_source": "PyPI JSON release metadata",
+      "metadata_url": "https://pypi.org/pypi/setuptools/83.0.0/json",
+      "name": "setuptools",
+      "requires_dist": [
+        "pytest!=8.1.*,>=6; extra == \"test\"",
+        "virtualenv>=13.0.0; extra == \"test\"",
+        "wheel>=0.44.0; extra == \"test\"",
+        "pip>=19.1; extra == \"test\"",
+        "packaging>=24.2; extra == \"test\"",
+        "jaraco.envs>=2.2; extra == \"test\"",
+        "pytest-xdist>=3; extra == \"test\"",
+        "jaraco.path>=3.7.2; extra == \"test\"",
+        "build[virtualenv]>=1.0.3; extra == \"test\"",
+        "filelock>=3.4.0; extra == \"test\"",
+        "ini2toml[lite]>=0.14; extra == \"test\"",
+        "tomli-w>=1.0.0; extra == \"test\"",
+        "pytest-timeout; extra == \"test\"",
+        "pytest-perf; sys_platform != \"cygwin\" and extra == \"test\"",
+        "jaraco.develop>=7.21; (python_version >= \"3.9\" and sys_platform != \"cygwin\") and extra == \"test\"",
+        "pytest-home>=0.5; extra == \"test\"",
+        "pytest-subprocess; extra == \"test\"",
+        "pyproject-hooks!=1.1; extra == \"test\"",
+        "jaraco.test>=5.5; extra == \"test\"",
+        "sphinx>=3.5; extra == \"doc\"",
+        "jaraco.packaging>=9.3; extra == \"doc\"",
+        "rst.linker>=1.9; extra == \"doc\"",
+        "furo; extra == \"doc\"",
+        "sphinx-lint; extra == \"doc\"",
+        "jaraco.tidelift>=1.4; extra == \"doc\"",
+        "pygments-github-lexers==0.0.5; extra == \"doc\"",
+        "sphinx-favicon; extra == \"doc\"",
+        "sphinx-inline-tabs; extra == \"doc\"",
+        "sphinx-reredirects; extra == \"doc\"",
+        "sphinxcontrib-towncrier; extra == \"doc\"",
+        "sphinx-notfound-page<2,>=1; extra == \"doc\"",
+        "pyproject-hooks!=1.1; extra == \"doc\"",
+        "towncrier<24.7; extra == \"doc\"",
+        "packaging>=24.2; extra == \"core\"",
+        "more_itertools>=8.8; extra == \"core\"",
+        "jaraco.text>=3.7; extra == \"core\"",
+        "importlib_metadata>=6; python_version < \"3.10\" and extra == \"core\"",
+        "tomli>=2.0.1; python_version < \"3.11\" and extra == \"core\"",
+        "wheel>=0.43.0; extra == \"core\"",
+        "jaraco.functools>=4; extra == \"core\"",
+        "more_itertools; extra == \"core\"",
+        "pytest-checkdocs>=2.14; extra == \"check\"",
+        "pytest-ruff>=0.2.1; sys_platform != \"cygwin\" and extra == \"check\"",
+        "ruff>=0.13.0; sys_platform != \"cygwin\" and extra == \"check\"",
+        "pytest-cov; extra == \"cover\"",
+        "pytest-enabler>=3.4; extra == \"enabler\"",
+        "pytest-mypy>=1.0.1; platform_python_implementation != \"PyPy\" and extra == \"type\"",
+        "mypy==1.18.*; extra == \"type\"",
+        "importlib_metadata>=7.0.2; python_version < \"3.10\" and extra == \"type\"",
+        "jaraco.develop>=7.21; sys_platform != \"cygwin\" and extra == \"type\""
+      ],
+      "requires_dist_active_cp312": [],
+      "requires_python": ">=3.10",
+      "sha256": "29b23c360f22f414dc7336bb39178cc7bcbf6021ed2733cde173f09dba19abb3",
+      "size_bytes": 1008090,
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_tags": {
+        "macos_arm64": [
+          "macosx_11_0_arm64",
+          "macosx_11_0_universal2"
+        ],
+        "macos_x86_64": [
+          "macosx_12_0_x86_64",
+          "macosx_12_0_universal2"
+        ],
+        "win_amd64": [
+          "win_amd64"
+        ]
+      },
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/5d/40/e1e72872c6354b306daef1703549e8e83b4d43cfea356311bf722a043752/setuptools-83.0.0-py3-none-any.whl",
+      "version": "83.0.0",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "1cee7e242142a0ce5616795244f46ebe23ea4aff1f8bcb7618352c635ac2e9da",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "sse_starlette-3.4.11-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "sse-starlette",
+      "sha256": "c7b2244bdff016fe7f64e10075e89a3e6bbf899649cc89b0fe884b5545042453",
+      "size_bytes": 17122,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/98/6a/2ba3ed4a69babf3afdddf7d8314a48d87562c0a442206bbc2a1b50d5efc0/sse_starlette-3.4.11-py3-none-any.whl",
+      "version": "3.4.11",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "a22f8a265efad1554b9c96cb5c559edbe685b630545341f119237cc36f50b127",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "starlette-1.7.0-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "starlette",
+      "sha256": "67f8e99895493dd2911a03f11314af6ceebeae4e704bb9f43dfc6a9db151c93e",
+      "size_bytes": 78980,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/4e/d6/1ec1b290f9e0fb067899b61e1d37a30c923068bad260b216dbe37a7d2967/starlette-1.7.0-py3-none-any.whl",
+      "version": "1.7.0",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "0533d055b744596dcff467ff101594a58ebf543f1822c4e1e779f1eed82a2615",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "typing_extensions-4.16.0-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "typing-extensions",
+      "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+      "size_bytes": 45571,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl",
+      "version": "4.16.0",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "5d91ebfe283ece5889581f1fc0ddf2216cac07f8107277cb711615d45d548bd4",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "typing_inspection-0.4.4-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "typing-inspection",
+      "sha256": "65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147",
+      "size_bytes": 14750,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/67/81/4add07e5172b7ac40d8ed5ff580409a7801a4fe26d529bdd915401dabfbe/typing_inspection-0.4.4-py3-none-any.whl",
+      "version": "0.4.4",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "1f454fc1bd4df9f3042cb8ce284d4888c345907e787dc7ffd166960a9a690282",
+      "artifact_kind": "wheel",
+      "base_plan_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "base_plan_sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "downloaded": false,
+      "filename": "uvicorn-0.53.0-py3-none-any.whl",
+      "metadata_source": "existing hash-pinned base/dev download-plan",
+      "name": "uvicorn",
+      "sha256": "e8dca71ec86dce5f04e333f0d56cdedf942446e6643b9cea1af0d6d3a02cb03e",
+      "size_bytes": 87081,
+      "target_tags": [
+        "macosx_11_0_arm64",
+        "macosx_11_0_universal2"
+      ],
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/76/18/0eea75741ee812e9f598b687619ce2454f6c3a1c5cd21ea990ec6bd26f45/uvicorn-0.53.0-py3-none-any.whl",
+      "version": "0.53.0",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    },
+    {
+      "artifact_id": "e75107d52f00ffe6014dc494d6e42deca18235fafa27f1db8c425d49c879f610",
+      "artifact_kind": "wheel",
+      "downloaded": false,
+      "filename": "wheel-0.48.0-py3-none-any.whl",
+      "local_target_wheelhouse": "MISSING",
+      "metadata_observed_utc": "2026-10-11T22:31:54Z",
+      "metadata_source": "PyPI JSON release metadata",
+      "metadata_url": "https://pypi.org/pypi/wheel/0.48.0/json",
+      "name": "wheel",
+      "requires_dist": [
+        "packaging>=24.0"
+      ],
+      "requires_python": ">=3.9",
+      "sha256": "3217dcc807155e45db462d7ef2431f5ddda0d7273b700d05a67b271ceb1287ab",
+      "size_bytes": 33320,
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_tags": {
+        "macos_arm64": [
+          "macosx_11_0_arm64",
+          "macosx_11_0_universal2"
+        ],
+        "macos_x86_64": [
+          "macosx_12_0_x86_64",
+          "macosx_12_0_universal2"
+        ],
+        "win_amd64": [
+          "win_amd64"
+        ]
+      },
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64",
+        "win_amd64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/2e/29/69cfbb602cd91690c55d38ba9fe53e6a7e76a6fa647bf38f19c138d25449/wheel-0.48.0-py3-none-any.whl",
+      "version": "0.48.0",
+      "wheel_tags": [
+        "py3-none-any"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "acceptance_limits": {
+    "COMSOL_native": "NOT_RUN",
+    "Windows_and_Intel_native_build": "NOT_RUN",
+    "desktop_optional_dependency_closure": "UNRESOLVED_LOCK_MISMATCH",
+    "external_download": "NOT_RUN",
+    "native_reopen": "NOT_RUN",
+    "solve": "NOT_RUN",
+    "three_arch_installed_transition": "NOT_RUN",
+    "wheelhouse": "NOT_READY"
+  },
+  "cp312_release_plan": {
+    "application_version_changed": false,
+    "builds": 0,
+    "desktop_optional": "declared in pyproject but absent from uv.lock; no full desktop closure claimed",
+    "directory": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1",
+    "downloads": 0,
+    "files": {
+      "README.md": "e7b88242a2901852c24c2f6d4dae63c23db532f2796a3bee5907d116cd0f7197",
+      "download-plan.json": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e",
+      "requirements-macos-arm64-cp312.txt": "948bd9d6ad27cead0e97e0166c1647f5741eb29c47073915c2d0a385bfa54967",
+      "requirements-macos-x86_64-cp312.txt": "db879eaa7c6704c8d51da38f275f641903328499d7fa96b84ab3ba8e23c130a1",
+      "requirements-win-cp312.txt": "67dd2e9e57133ba22499543199ee6471dd82ef11101f4b290e39dff110a07ea4"
+    },
+    "installs": 0,
+    "status": "PLAN_ONLY_NOT_DOWNLOADED_NOT_INSTALLED_NOT_BUILT",
+    "validation_receipt": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/fulldata-software-r3/CP312_PLAN_VALIDATION.json",
+    "validation_receipt_sha256": "9f130056aa91bba9a2100eeadfbf69b799b22a55b24bae14b90e46ada0f90610"
+  },
+  "date": "2026-10-12",
+  "execution": {
+    "command": "TMPDIR=/private/tmp <recovered CPython 3.12.13>/bin/python -m pytest -q --junitxml=<freeze>/lifecycle-r3-affected.xml tests/test_release_data_lifecycle.py",
+    "junit_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/fulldata-software-r3/lifecycle-r3-affected.xml",
+    "junit_sha256": "f9663ed5ba75a932925a6d7b5b4e0a9eef4e5f1a186cac3776e56ef31538091a",
+    "pytest": "9.1.1",
+    "python": "3.12.13",
+    "result": {
+      "errors": 0,
+      "failed": 0,
+      "passed": 42,
+      "skipped": 0,
+      "testcases": 42
+    },
+    "runtime_path": "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python",
+    "test_input_source_sha256": {
+      "comsol_mcp/_artifact_store.py": "52dbb0dba5305d974f6cd93b747093d076d753c30ec67e4159d437af87feb347",
+      "comsol_mcp/_operation_store.py": "d9d6c3d54ff4afc625f28f5e70595fd23f6a899e05863a9cdf0b05711a0808fa",
+      "comsol_mcp/_project_authority.py": "82b90c1157b242f80feb9079ac4b58e2a1295719a7a323a97532497a740181a8",
+      "comsol_mcp/_state_backup.py": "9ab50378fc7eab8c72def62beb0d7191ef68c25e1fa1ace717e0424294f3ba5c",
+      "tests/test_release_data_lifecycle.py": "ae164965f29d8021eb220ac2fdb59083c7c0e5561e3d1454cb8c160a3ddf4e95",
+      "tools/full_project_release.py": "708700ca4271521190d6ad74991b501f887a7af8b1e8727d1ccf922a6f295a72",
+      "tools/release_transition_lifecycle.py": "be7f06d1771c90228a9598a56cb3b666da27a0a620f71d518923727c84262b2c"
+    }
+  },
+  "pointer_correction": {
+    "corrected_r2_pointer": {
+      "path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/READBACK003_RESTORED_MODEL_PREP_POINTER_R2.json",
+      "sha256": "0f9f56b5ad0b132519555e6265876ac9730b35d140ea14704eafd96a098c7d29"
+    },
+    "correction_receipt": {
+      "path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/READBACK003_PREP_POINTER_CORRECTION_R2.json",
+      "sha256": "984ee2183d2003eed1ccbb3db348490f654b4b5a0d1677ba7dadbf3c87ef93d2"
+    },
+    "native_status": "NOT_RUN",
+    "preserved_r1_pointer": {
+      "path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/READBACK003_RESTORED_MODEL_PREP_POINTER.json",
+      "sha256": "3dcab9baf0b59b9fddf66dfbd185c402d68cb74354ff6384b38cec37c18712af"
+    },
+    "restored_model_path": "/private/tmp/comsol-v2-native-zero-solve-prep-readback003-20261012-r1/restored-workspaces/projects/project-00000001/g2_artifacts/registered/9999608757cff08cfe052b398c3de24b1e2e0603dc375db3d0cc5928f77c6346.mph",
+    "restored_model_sha256": "9999608757cff08cfe052b398c3de24b1e2e0603dc375db3d0cc5928f77c6346",
+    "restored_model_size_bytes": 617475
+  },
+  "prior_evidence_unchanged": {
+    "historical_39_case_junit_sha256": "dd92d8ec77e21ec7826942832ddb85babe1e54acb09f2b8251bc32176c1e05e0",
+    "historical_review_r2_sha256": "cc04cdae974fc980b5860af427e6de82c7db37aa0021b57c3d9f172a1cb71a21",
+    "source_freeze_r1_sha256": "1fc300075f4cf2f4fe6fe05f5bc4b6053f1facf39780335c27c987f7be3ca746",
+    "source_freeze_r2_sha256": "208385fa64e7832221d6cd062c6ce20b455a090cadfa09855880938e407e36c3"
+  },
+  "repair_delta": [
+    "production full verification returns durable-history SHA-256 and schema version from the restored OperationStore database; both are required and validated before restore_pass can become true",
+    "Lifecycle.finish requires a nonempty well-formed history digest and exact schema version equality with the verified backup; missing or mismatched values force data lifecycle failure",
+    "actual source OperationStore receives a durable post-seed job event before backup; successful restore preserves it, while an after-restore metadata edit is detected before PASS",
+    "four direct finish controls cover missing/mismatched history digest and missing/mismatched schema version"
+  ],
+  "schema": "comsol-mcp-full-data-lifecycle-software-freeze/3",
+  "source_freeze": {
+    "files": {
+      "FULL_DATA_LIFECYCLE_CONTRACT.md": "948add7daffdc7f9c0e4e5ba717a15fefb80b61474a7cd774558a0a22f79bcde",
+      "release_transition_lifecycle.py": "be7f06d1771c90228a9598a56cb3b666da27a0a620f71d518923727c84262b2c",
+      "test_release_data_lifecycle.py": "ae164965f29d8021eb220ac2fdb59083c7c0e5561e3d1454cb8c160a3ddf4e95"
+    },
+    "owned_r2_to_r3_patch": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/fulldata-software-r3/OWNED_SOURCE_R2_TO_R3.patch",
+    "patch_sha256": "0dd1007e2b1cab5b193bd444f1afb458db7994d8c1ec53e5fc01532e8a0758b8",
+    "source_snapshot_directory": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/fulldata-software-r3/source_snapshot"
+  },
+  "status": "PASS_SCOPED_SOFTWARE_FIXTURE"
+}

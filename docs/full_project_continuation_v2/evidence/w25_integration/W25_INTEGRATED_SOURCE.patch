@@ -1,0 +1,2410 @@
+--- a/comsol_mcp/_control_daemon.py
++++ b/comsol_mcp/_control_daemon.py
+@@ -4,6 +4,7 @@
+ import argparse
+ import base64
+ from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
++from contextvars import ContextVar
+ from contextlib import ExitStack, contextmanager, nullcontext
+ from datetime import datetime, timezone
+ import hashlib
+@@ -367,6 +369,8 @@
+             resolve_artifact=self._resolve_desktop_artifact,
+             authorize_save_copy=self._authorize_desktop_save_copy,
+         )
++        self._desktop_request_scope = ContextVar(f"desktop_request_{id(self)}", default=None)
++        self._desktop_unpersisted_attempts = {}
+         self.lock = threading.RLock()
+         self._admission_lock = threading.RLock()
+         self._worker_retirement_state = "OPEN"
+@@ -3936,7 +3956,36 @@
+             routed,
+             allow_coordinator_only=True,
+         )
+-        return self.desktop.dispatch(operation, routed)
++        frozen = json.dumps(routed, sort_keys=True, allow_nan=False)
++        semantic = {k: v for k, v in routed.items() if k not in {"request_id", "idempotency_key"}}
++        scope = {"operation": operation, "arguments_json": frozen,
++                 "hash": canonical_request_hash(operation, semantic, None, None, project_id=routed["project_id"])}
++        token = self._desktop_request_scope.set(scope)
++        try:
++            try:
++                result = self.desktop.dispatch(operation, routed)
++            except Exception as exc:
++                # Coordinator terminal persistence can itself fail after load.
++                # Keep authoritative parent status distinct from target readiness.
++                if operation != "desktop.migrate_standalone" or not scope.get("attempt"):
++                    raise
++                attempt, capture, record = scope["attempt"], scope["capture"], scope["record"]
++                self.session_scheduler.submit(capture["runtime"], self._desktop_freeze_owned_attempt,
++                                              capture, record, attempt, exc).result()
++                try:
++                    parent = self.store.get_operation(record["operation_id"])
++                    status = parent.get("status") if parent else "UNOBSERVED"
++                except Exception:
++                    status = "UNOBSERVED"
++                return self._desktop_non_ready_result(None, str(exc), status, attempt)
++            if operation == "desktop.migrate_standalone":
++                try:
++                    return self._desktop_finish_attempt(result, scope)
++                except Exception as exc:
++                    return self._desktop_non_ready_result(result, str(exc), "UNOBSERVED")
++            return result
++        finally:
++            self._desktop_request_scope.reset(token)
+ 
+     def _authorize_desktop(self, project_id: str, permission: str) -> bool:
+         """Map catalog Desktop permissions to host-owned capability grants."""
+@@ -3956,45 +4005,560 @@
+         required = {"READ": "inspect", "HOST_CONTROL": "host_control", "TRUSTED_CODE": "trusted_code"}.get(permission)
+         return required is not None and required in permissions
+ 
++    def _desktop_parent_claim(self, context, *, migration=False):
++        if context is None:
++            raise DesktopOperationError("OWNER_UNVERIFIED", "store-issued Desktop claim is required", safe_retry=False)
++        record = self.store.get_operation(context.operation_id)
++        job = self.store.operation_job(context.operation_id)
++        if (not isinstance(record, Mapping) or not isinstance(job, Mapping)
++                or record.get("status") != "RUNNING" or job.get("status") != "RUNNING"
++                or job.get("job_id") != context.job_id or job.get("operation_id") != context.operation_id
++                or any(record.get(k) != getattr(context, k) for k in
++                       ("operation_id", "operation", "request_id", "idempotency_key", "request_hash"))
++                or record.get("metadata", {}).get("project_id") != context.project_id):
++            raise DesktopOperationError("OWNER_UNVERIFIED", "exact Desktop operation/job claim is not active", safe_retry=False)
++        record = {**record, "job_id": job["job_id"]}
++        if migration:
++            scope = self._desktop_request_scope.get()
++            if (scope is None or context.operation != "desktop.migrate_standalone"
++                    or scope["hash"] != context.request_hash or scope["operation"] != context.operation):
++                raise DesktopOperationError("OWNER_UNVERIFIED", "no matching private migration request scope", safe_retry=False)
++            with self.desktop._operation_lock:
++                if context.operation_id not in self.desktop._active_operations:
++                    raise DesktopOperationError("OWNER_UNVERIFIED", "migration is not locally owned", safe_retry=False)
++        return record
++
++    def _desktop_capture_backend(self, project_id, session_id, *, load=False):
++        try:
++            runtime = self.session_registry.get(project_id, session_id)
++        except SessionContextMissing:
++            runtime = None
++        if runtime is None:
++            # Only an explicit original default READ may use the legacy lane.
++            backend = self._default_backend
++            service = backend.service
++            if (load or (project_id, session_id) in self._session_backends
++                    or self.session_lifecycle.get(project_id, session_id) is not None
++                    or service is None or service.ledger.session_id != session_id):
++                raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "existing registered target is required", safe_retry=False)
++            return {"runtime": None, "backend": backend, "service": service,
++                    "worker": backend.worker, "project": project_id, "session": session_id,
++                    "server": service.ledger.server_instance_id, "endpoint": backend.endpoint_key}
++        backend, service, worker = runtime.backend, runtime.service, runtime.worker
++        capture = {"runtime": runtime, "backend": backend, "service": service, "worker": worker,
++                   "client": runtime.client, "project": project_id, "session": session_id,
++                   "epoch": runtime.worker_epoch, "instance": runtime.worker_instance_id,
++                   "server": getattr(getattr(service, "ledger", None), "server_instance_id", None),
++                   "endpoint": getattr(backend, "endpoint_key", None)}
++        with self.session_registry._lock:
++            capture["selected_pointers"] = [(ctx, ctx.current_model, ctx.current_model_origin, ctx.current_model_path)
++                    for ctx in self.session_registry._contexts.values()]
++        from . import _server
++        capture["legacy_pointer"] = (_server._current_model, _server._current_model_origin, _server._current_model_path)
++        self._desktop_recheck_backend(capture)
++        return capture
++
++    @staticmethod
++    def _desktop_check_pointers(capture):
++        from . import _server
++        pointers = capture.get("selected_pointers") or []
++        legacy = capture.get("legacy_pointer")
++        if (any(ctx.current_model is not ptr or ctx.current_model_origin != origin or ctx.current_model_path != path
++                for ctx, ptr, origin, path in pointers)
++                or (legacy is not None and (legacy[0] is not _server._current_model
++                    or legacy[1:] != (_server._current_model_origin, _server._current_model_path)))):
++            raise DesktopOperationError("EXECUTION_STATE_UNKNOWN", "managed selected pointer changed", safe_retry=False)
++
++    def _desktop_recheck_backend(self, capture, *, health=False):
++        runtime, backend, service = capture["runtime"], capture["backend"], capture["service"]
++        if runtime is None:
++            if (backend is not self._default_backend or backend.service is not service
++                    or service is None or service.ledger.session_id != capture["session"]
++                    or service.ledger.server_instance_id != capture["server"]
++                    or backend.endpoint_key != capture["endpoint"]):
++                raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "legacy read binding changed", safe_retry=False)
++            return
++        key = (capture["project"], capture["session"])
++        try:
++            registered = self.session_registry.get(*key)
++            lifecycle = self.session_lifecycle.get(*key)
++        except Exception as exc:
++            raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "registered binding is unavailable", safe_retry=False) from exc
++        identity = getattr(backend, "worker_identity", None)
++        if (registered is not runtime or runtime.backend is not backend or runtime.service is not service
++                or runtime.worker is not capture["worker"] or runtime.client is not capture["client"]
++                or backend is None or service is None or capture["worker"] is None or capture["client"] is None
++                or self._session_backends.get(key) is not backend
++                or self._session_worker_handles.get(key) is not capture["worker"]
++                or backend.worker is not capture["worker"] or backend.service is not service
++                or runtime.worker_epoch != capture["epoch"] or runtime.worker_instance_id != capture["instance"]
++                or runtime.client_retired or not runtime.client_connected
++                or runtime.project_root.resolve() != backend.project_root.resolve()
++                or service.ledger.session_id != capture["session"] or service.ledger.server_instance_id != capture["server"]
++                or backend.endpoint_key != capture["endpoint"]
++                or not isinstance(identity, Mapping)
++                or identity.get("worker_instance_id") != capture["instance"]
++                or identity.get("connection_epoch") != capture["epoch"]
++                or identity.get("server_instance_id") != capture["server"]
++                or not isinstance(lifecycle, Mapping) or lifecycle.get("state") != "CONNECTED"
++                or lifecycle.get("client_state") != "CONNECTED"
++                or lifecycle.get("worker_instance_id") != capture["instance"]
++                or lifecycle.get("worker_epoch") != capture["epoch"]
++                or lifecycle.get("server_instance_id") != capture["server"]):
++            raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "captured registered Worker binding changed or is unknown", safe_retry=False)
++        if health:
++            observed = capture["worker"].health()
++            if (not isinstance(observed, Mapping) or observed.get("connected") is not True
++                    or observed.get("instance_id") != capture["instance"]
++                    or observed.get("generation") != capture["epoch"]
++                    or observed.get("server") != capture["endpoint"]):
++                raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "actual existing Worker health differs", safe_retry=False)
++
++    def _desktop_attempt_rows(self, project):
++        offset = 0
++        while True:
++            page = self.store.list_jobs(offset=offset, limit=100, project_id=project)
++            for job in page:
++                attempt = job.get("metadata", {}).get("desktop_copy_load")
++                if isinstance(attempt, Mapping):
++                    yield job, attempt
++            offset += len(page)
++            if not page or offset >= page.total:
++                break
++
++    def _desktop_save_attempt(self, record, attempt):
++        job = self.store.job(record["job_id"])
++        if not job or job.get("operation_id") != record["operation_id"]:
++            raise DesktopOperationError("OWNER_UNVERIFIED", "attempt parent job disappeared", safe_retry=False)
++        self.store.update_job(record["job_id"], job["status"], {"desktop_copy_load": json.loads(json.dumps(attempt))})
++        if self.store.job(record["job_id"]).get("metadata", {}).get("desktop_copy_load") != attempt:
++            raise DesktopOperationError("EXECUTION_STATE_UNKNOWN", "attempt persistence readback disagrees", safe_retry=False)
++
++    def _desktop_file_witness(self, project, path):
++        from ._artifact_store import ArtifactStore
++        workspace = self.project_authority.authorize_operation(project, "project_write")["workspace"]
++        actual = ArtifactStore(Path(workspace)).resolve_safe_path(str(path), allow_overwrite=True)
++        if not Path(path).is_absolute() or actual != Path(path) or actual.is_symlink() or not actual.is_file():
++            raise DesktopOperationError("SAVE_COPY_UNVERIFIED", "copy must be an exact confined regular file", safe_retry=False)
++        st = actual.stat(follow_symlinks=False)
++        return {"path": str(actual), "size": st.st_size, "sha256": hashlib.sha256(actual.read_bytes()).hexdigest(),
++                "dev": st.st_dev, "ino": st.st_ino, "mtime_ns": st.st_mtime_ns}
++
++    def _desktop_owned_ref_guard(self, capture, raw_ref=None, operation=None, *, ignore_parent=None):
++        # Durable attempt state is independent of a possibly stale clean revision row.
++        attempts = [a for _j, a in self._desktop_attempt_rows(capture["project"])]
++        attempts += list(self._desktop_unpersisted_attempts.values())
++        for a in attempts:
++            if a.get("session") != capture["session"] or a.get("parent_id") == ignore_parent:
++                continue
++            if a.get("state") == "READY":
++                continue
++            tag = (a.get("model_ref") or {}).get("model_tag") or a.get("planned_tag")
++            # The registered receiver server is authoritative. A forged server
++            # or generation in a ref must not reach legacy tag selection first.
++            target = (isinstance(raw_ref, Mapping) and capture["server"] == a.get("server")
++                      and raw_ref.get("model_tag") == tag)
++            unbound_selection = operation in {"model_load", "model.load", "model_adopt", "model.adopt", "load_visible_main_model", "load_current_main_model"}
++            if (raw_ref is None and operation is None) or target or unbound_selection:
++                raise DesktopOperationError("EXECUTION_STATE_UNKNOWN", "owned copy-load attempt is unresolved; no alias, adoption or new-key retry", safe_retry=False)
++
++    def _desktop_ref_readiness(self, capture, attempt, *, provisional=False):
++        from ._execution_contract import model_ref_from_mapping
++        self._desktop_recheck_backend(capture, health=True)
++        self._desktop_check_pointers(capture)
++        ref = model_ref_from_mapping(attempt["model_ref"])
++        service, backend = capture["service"], capture["backend"]
++        state = service.ledger._state_for(ref)
++        key = backend._model_project_key(ref.as_dict())
++        row = self.store.get_metadata("revisions", key)
++        session = self.store.get_metadata("sessions", ref.session_id) or {}
++        saved = session.get("models", {}).get(ref.model_tag)
++        identity = session.get("worker_identity") or {}
++        active = attempt["parent_id"] if provisional else None
++        if (ref.session_id != capture["session"] or ref.server_instance_id != capture["server"]
++                or state.dirty or state.active_operation_id != active or state.revision != attempt["revision"]
++                or state.fingerprint != attempt["fingerprint"] or not state.fingerprint
++                or service.ledger.model_ownership.get(ref.model_tag) != "mcp_owned"
++                or backend.model_project_binding(ref.as_dict()) != {"attribution": "PROJECT_BOUND", "project_id": capture["project"]}
++                or not isinstance(row, Mapping) or row.get("model_ref") != ref.as_dict()
++                or row.get("dirty") is not False or row.get("active_operation_id") != active
++                or row.get("revision") != state.revision or row.get("fingerprint") != state.fingerprint
++                or not isinstance(saved, Mapping) or saved.get("ref") != ref.as_dict()
++                or saved.get("dirty") is not False or saved.get("active_operation_id") != active
++                or saved.get("ownership") != "mcp_owned" or saved.get("retired") is not False
++                or saved.get("revision") != state.revision or saved.get("fingerprint") != state.fingerprint
++                or session.get("server_instance_id") != capture["server"]
++                or identity.get("server_instance_id") != capture["server"]
++                or identity.get("worker_instance_id") != capture["instance"]
++                or identity.get("connection_epoch") != capture["epoch"]):
++            raise DesktopOperationError("EXECUTION_STATE_UNKNOWN", "exact owned target readiness is not established", safe_retry=False)
++        return state
++
++    def _desktop_freeze_owned_attempt(self, capture, record, attempt, cause):
++        errors = list(attempt.get("secondary_errors") or [])
++        observed = {"type": type(cause).__name__, "message": str(cause)}
++        if attempt.get("cause"):
++            errors.append({"stage": "subsequent_tail", **observed})
++        else:
++            attempt["cause"] = observed
++        attempt.update(state="NON_READY", durable_guard="UNVERIFIED")
++        ledger = capture["service"].ledger
++        tag = attempt.get("planned_tag")
++        state = ledger._models.get(tag) if tag else None
++        if (state is not None and state.ref.as_dict() == attempt.get("model_ref")
++                and (ledger.model_ownership.get(tag) == "mcp_owned"
++                     or attempt.get("actual_owned_tag_verified") is True)):
++            state.dirty, state.fingerprint, state.active_operation_id = True, None, record["operation_id"]
++        try:
++            self._desktop_recheck_backend(capture)
++            capture["backend"].persist()
++        except Exception as exc:
++            errors.append({"stage": "fence_persist", "type": type(exc).__name__, "message": str(exc)})
++        try:
++            # Even when revision persistence fails, the separate admitted attempt guards writes/restart.
++            attempt["secondary_errors"] = errors
++            self._desktop_save_attempt(record, attempt)
++            attempt["durable_guard"] = "ATTEMPT_NON_READY_RECORDED"
++            self._desktop_save_attempt(record, attempt)
++        except Exception as exc:
++            errors.append({"stage": "attempt_persist", "type": type(exc).__name__, "message": str(exc)})
++            self._desktop_unpersisted_attempts[record["operation_id"]] = json.loads(json.dumps(attempt))
++        attempt["secondary_errors"] = errors
++
++    def _desktop_queued_load_copy(self, arguments, parent, capture, scope, witness):
++        from ._execution_contract import model_ref_from_mapping
++        self._desktop_recheck_backend(capture, health=True)
++        self._desktop_parent_claim(parent)
++        original = json.loads(scope["arguments_json"])
++        if (scope["hash"] != parent.request_hash or scope["operation"] != parent.operation
++                or arguments.get("project_id") != parent.project_id
++                or arguments.get("target_session_id") != capture["session"]
++                or arguments.get("target_session_id") != original.get("target_session_id")
++                or arguments.get("load_mode") != "save_copy"
++                or arguments.get("model_path") != witness["path"]
++                or arguments.get("source_sha256") != witness["sha256"]):
++            raise DesktopOperationError("OWNER_UNVERIFIED", "queued load provenance differs from exact parent request", safe_retry=False)
++        with self.desktop._operation_lock:
++            if parent.operation_id not in self.desktop._active_operations:
++                raise DesktopOperationError("OWNER_UNVERIFIED", "queued migration owner disappeared", safe_retry=False)
++        self._desktop_owned_ref_guard(capture, ignore_parent=parent.operation_id)
++        if self._desktop_file_witness(parent.project_id, arguments["model_path"]) != witness:
++            raise DesktopOperationError("SAVE_COPY_UNVERIFIED", "copy changed while queued", safe_retry=False)
++        backend, service, client = capture["backend"], capture["service"], capture["client"]
++        record = {**self.store.get_operation(parent.operation_id), "job_id": parent.job_id}
++        attempt = {"parent_id": parent.operation_id, "job_id": parent.job_id, "request_hash": parent.request_hash,
++                   "project": parent.project_id, "session": capture["session"], "server": capture["server"],
++                   "worker_instance": capture["instance"], "epoch": capture["epoch"], "copy": witness,
++                   "state": "ADMITTED", "planned_tag": None, "model_ref": None}
++        self._desktop_save_attempt(record, attempt)
++        scope["attempt"], scope["capture"], scope["record"] = attempt, capture, record
++        pre_models = dict(service.ledger._models)
++        try:
++            with backend.context(parent.operation_id, self._session_worker_event_callback(record)):
++                before = client.tags()
++                if not isinstance(before, (list, tuple)) or any(not isinstance(t, str) or not t for t in before) or len(set(before)) != len(before):
++                    raise ValueError("native tag inventory is malformed")
++                tag = client.uniquetag("w25copy")
++                if not isinstance(tag, str) or not tag or tag in before or tag in service.ledger._models or tag in service.ledger._generations or tag in capture["runtime"].owned_model_tags:
++                    raise ValueError("unique tag is not actual fresh")
++                persisted = self.store.get_metadata("sessions", capture["session"]) or {}
++                if tag in persisted.get("models", {}) or any((row.get("model_ref") or {}).get("model_tag") == tag
++                        and (row.get("model_ref") or {}).get("server_instance_id") == capture["server"]
++                        for row in self.store.list_metadata("revisions")):
++                    raise ValueError("unique tag has a persisted prior identity")
++                attempt.update(planned_tag=tag, state="LOADING", native_tags_before=list(before))
++                self._desktop_save_attempt(record, attempt)
++                loaded = client.load(witness["path"], tag=tag)
++                returned = loaded.java.tag()
++                after = client.tags()
++                attempt["returned_tag"], attempt["native_tags_after"] = returned, list(after)
++                if returned != tag or len(set(after)) != len(after) or set(after) != set(before) | {tag}:
++                    raise ValueError("returned tag or exact native delta differs")
++                attempt["actual_owned_tag_verified"] = True
++                bound = service.bind_model(tag, ownership="mcp_owned")
++                raw = bound.get("execution", {}).get("model_ref")
++                ref = model_ref_from_mapping(raw)
++                state = service.ledger._state_for(ref)
++                if ref.session_id != capture["session"] or ref.server_instance_id != capture["server"] or ref.model_tag != tag or state.dirty or state.revision != 0:
++                    raise ValueError("bound identity or initial state differs")
++                attempt.update(model_ref=ref.as_dict(), revision=state.revision, fingerprint=state.fingerprint, state="PROVISIONAL")
++                state.active_operation_id = parent.operation_id
++                backend._bind_model_project(ref.as_dict(), parent.project_id)
++                capture["runtime"].owned_model_tags.add(tag)
++                backend.persist()
++                self._desktop_ref_readiness(capture, attempt, provisional=True)
++                self._desktop_save_attempt(record, attempt)
++                if self._desktop_file_witness(parent.project_id, witness["path"]) != witness:
++                    raise ValueError("copy changed after load")
++                self._desktop_check_pointers(capture)
++                return {"success": True, "data": {"model_ref": ref.as_dict(), "model_tag": tag,
++                        "server_endpoint": capture["endpoint"], "fingerprint": state.fingerprint,
++                        "revision": state.revision, "Desktop_model_binding": "UNVERIFIED_BY_MANAGED_INSPECTION_ALONE",
++                        "fingerprint_coverage": "parameters+shallow_tree_identity", "cas_guarantee": "NONE"}}
++        except Exception as exc:
++            # bind_model may have inserted its exact state before inspect/_emit raises.
++            tag = attempt.get("planned_tag")
++            state = service.ledger._models.get(tag) if tag else None
++            if state is not None and tag not in pre_models:
++                attempt["model_ref"] = state.ref.as_dict()
++            elif attempt.get("actual_owned_tag_verified") and tag not in pre_models:
++                ref = service.ledger.bind_model(tag, ownership="mcp_owned", fingerprint=None)
++                attempt["model_ref"] = ref.as_dict()
++            self._desktop_freeze_owned_attempt(capture, record, attempt, exc)
++            raise DesktopOperationError("EXECUTION_STATE_UNKNOWN", "copy-load has owned partial or unobserved effects; original cause: " + str(exc), side_effect_started=True, safe_retry=False) from exc
++
++    def _desktop_finish_attempt(self, result, scope):
++        attempt, capture, record = scope.get("attempt"), scope.get("capture"), scope.get("record")
++        if attempt is None and isinstance(result, Mapping) and isinstance(result.get("data"), Mapping) and result["data"].get("target_model_ref"):
++            identifier = result.get("execution", {}).get("operation_id")
++            record = self.store.get_operation(identifier) if identifier else None
++            job = self.store.operation_job(identifier) if identifier else None
++            if record and job:
++                record = {**record, "job_id": job["job_id"]}
++                attempt = job.get("metadata", {}).get("desktop_copy_load")
++                if not isinstance(attempt, Mapping):
++                    # This is a new incomplete-readiness observation, not a
++                    # reconstruction of the missing original admission record.
++                    raw = result["data"]["target_model_ref"]
++                    attempt = {"parent_id": identifier, "job_id": job["job_id"], "request_hash": record["request_hash"],
++                               "project": record["metadata"]["project_id"], "session": raw["session_id"],
++                               "server": raw["server_instance_id"], "planned_tag": raw["model_tag"], "model_ref": raw,
++                               "state": "NON_READY", "cause": {"type": "MissingAttemptProvenance", "message": "stored admitted copy-load provenance is absent"},
++                               "provenance_scope": "STORED_TERMINAL_TARGET_ONLY_ORIGINAL_ATTEMPT_NOT_RECONSTRUCTED"}
++                if attempt:
++                    try:
++                        capture = self._desktop_capture_backend(record["metadata"]["project_id"], attempt["session"], load=True)
++                    except Exception as exc:
++                        observed = {"type": type(exc).__name__, "message": str(exc)}
++                        attempt = json.loads(json.dumps(attempt))
++                        if not attempt.get("cause"):
++                            attempt["cause"] = observed
++                        else:
++                            attempt.setdefault("secondary_errors", []).append({"stage": "replay_capture", **observed})
++                        attempt.update(state="NON_READY", durable_guard="UNVERIFIED")
++                        try:
++                            self._desktop_save_attempt(record, attempt)
++                            attempt["durable_guard"] = "ATTEMPT_NON_READY_RECORDED"
++                            self._desktop_save_attempt(record, attempt)
++                        except Exception as secondary:
++                            attempt.setdefault("secondary_errors", []).append({"stage": "replay_attempt_persist", "type": type(secondary).__name__, "message": str(secondary)})
++                            self._desktop_unpersisted_attempts[record["operation_id"]] = attempt
++                        return self._desktop_non_ready_result(result, str(exc), record.get("status"), attempt)
++                    if attempt.get("model_ref") != result["data"]["target_model_ref"]:
++                        return self._desktop_non_ready_result(result, "stored exact targetref differs", record.get("status"))
++            else:
++                return self._desktop_non_ready_result(result, "stored parent operation/job proof is absent",
++                                                      record.get("status") if record else "UNOBSERVED")
++        if attempt is None:
++            return result
++        try:
++            return self.session_scheduler.submit(capture["runtime"], self._desktop_finalize_owned, result, capture, record, attempt).result()
++        except Exception as exc:
++            # The callback fences ordinary finalization failures before it releases the
++            # session lane. This fallback covers admission/submission failures before it ran.
++            if not attempt.pop("_finalization_fenced_in_lane", False):
++                self._desktop_freeze_owned_attempt(capture, record, attempt, exc)
++            try:
++                parent = self.store.get_operation(record["operation_id"])
++                parent_status = parent.get("status") if parent else "UNOBSERVED"
++            except Exception:
++                parent_status = "UNOBSERVED"
++            return self._desktop_non_ready_result(result, str(exc), parent_status, attempt)
++
++    def _desktop_finalize_owned(self, result, capture, record, attempt):
++        try:
++            self._desktop_recheck_backend(capture)
++            parent = self.store.get_operation(record["operation_id"])
++            job = self.store.operation_job(record["operation_id"])
++            if not parent or not job or parent.get("status") != "SUCCEEDED" or job.get("status") != "SUCCEEDED" or result.get("success") is not True:
++                raise ValueError("actual parent terminal/witness is not SUCCEEDED")
++            if attempt.get("state") == "READY":
++                self._desktop_ref_readiness(capture, attempt)
++                return result
++            if attempt.get("state") != "PROVISIONAL":
++                raise ValueError("owned attempt remains non-ready")
++            state = self._desktop_ref_readiness(capture, attempt, provisional=True)
++            state.active_operation_id = None
++            capture["backend"].persist()
++            self._desktop_ref_readiness(capture, attempt)
++            attempt["state"] = "READY"
++            self._desktop_save_attempt(record, attempt)
++            return result
++        except Exception as exc:
++            # READY publication, its readback and any final recheck share this serial
++            # callback. Persist NON_READY while the same session lane is still held.
++            self._desktop_freeze_owned_attempt(capture, record, attempt, exc)
++            attempt["_finalization_fenced_in_lane"] = True
++            raise
++
++    @staticmethod
++    def _desktop_non_ready_result(original, cause, parent_status, attempt=None):
++        return {"success": False, "data": {"target_readiness": "NON_READY", "parent_persisted_status": parent_status,
++                "original_parent_result": original, "owned_attempt": attempt},
++                "error": {"code": "EXECUTION_STATE_UNKNOWN", "message": cause, "safe_retry": False}}
++
+     def _desktop_engine_queue(self, operation, arguments, model_ref, context):
+-        """Serialize any future managed API substep and fail closed today."""
+-        future = self.queue.submit(self._reject_unavailable_desktop_engine_route, operation)
+-        return future.result()
++        from ._execution_contract import model_ref_from_mapping
++        if operation == "model.load":
++            if context is None or self._desktop_request_scope.get() is None:
++                return self._reject_unavailable_desktop_engine_route(operation)
++            self._desktop_parent_claim(context, migration=True)
++            scope = self._desktop_request_scope.get()
++            original = json.loads(scope["arguments_json"])
++            if (model_ref is not None or arguments.get("load_mode") != "save_copy"
++                    or arguments.get("project_id") != context.project_id
++                    or arguments.get("target_session_id") != original.get("target_session_id")
++                    or Path(arguments.get("model_path", "")) != Path(original["save_policy"]["destination_path"]).expanduser().resolve()
++                    or original["save_policy"].get("mode") != "save_copy" or original["save_policy"].get("overwrite") is not False):
++                raise DesktopOperationError("OWNER_UNVERIFIED", "copy-load differs from original migration request", safe_retry=False)
++            capture = self._desktop_capture_backend(context.project_id, arguments["target_session_id"], load=True)
++            self._desktop_owned_ref_guard(capture, ignore_parent=context.operation_id)
++            witness = self._desktop_file_witness(context.project_id, arguments["model_path"])
++            if witness["sha256"] != arguments.get("source_sha256"):
++                raise DesktopOperationError("SAVE_COPY_UNVERIFIED", "copy SHA differs from Coordinator receipt", safe_retry=False)
++            return self.session_scheduler.submit(capture["runtime"], self._desktop_queued_load_copy, dict(arguments), context, capture, scope, witness).result()
++        if operation not in {"desktop.binding.resolve", "desktop.binding.inspect"}:
++            return self._reject_unavailable_desktop_engine_route(operation)
++        if operation == "desktop.binding.resolve":
++            try:
++                model_ref = model_ref_from_mapping(json.loads(arguments["model_ref_id"]))
++            except (ValueError, TypeError, KeyError):
++                return self._reject_unavailable_desktop_engine_route(operation)
++        if model_ref is None:
++            raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "typed ModelRef is required", safe_retry=True)
++        self._desktop_parent_claim(context)
++        capture = self._desktop_capture_backend(context.project_id, model_ref.session_id)
++        scope = self._desktop_request_scope.get()
++        try:
++            return self.session_scheduler.submit(capture["runtime"], self._desktop_queued_read, operation, arguments, model_ref, context, capture, scope).result()
++        except Exception as exc:
++            attempt = scope.get("attempt") if scope is not None else None
++            if (context.operation == "desktop.migrate_standalone" and attempt is not None
++                    and attempt.get("parent_id") == context.operation_id
++                    and attempt.get("model_ref") == model_ref.as_dict()):
++                self.session_scheduler.submit(scope["capture"]["runtime"], self._desktop_freeze_owned_attempt,
++                                              scope["capture"], scope["record"], attempt, exc).result()
++                raise DesktopOperationError("EXECUTION_STATE_UNKNOWN", "post-load private inspection failed: " + str(exc),
++                                            side_effect_started=True, safe_retry=False) from exc
++            raise
++
++    def _desktop_before_model_dispatch(self, operation, execution, arguments):
++        context = active_session_context()
++        if context is None:
++            return
++        attempts = [a for _j, a in self._desktop_attempt_rows(context.project_id)
++                    if a.get("session") == context.session_id and a.get("state") != "READY"]
++        attempts += [a for a in self._desktop_unpersisted_attempts.values() if a.get("session") == context.session_id]
++        if not attempts:
++            return
++        capture = self._desktop_capture_backend(context.project_id, context.session_id, load=True)
++        self._desktop_owned_ref_guard(capture, execution.get("model_ref") or arguments.get("model_ref"), operation)
++
++    def _desktop_queued_read(self, operation, arguments, model_ref, context, capture, request_scope):
++        self._desktop_recheck_backend(capture, health=capture["runtime"] is not None)
++        backend = capture["backend"]
++        # A native save/load or Shell provider still needs an approved single-
++        # claim substep. Never substitute generic model.load/Java dispatch.
++        if operation not in {"desktop.binding.resolve", "desktop.binding.inspect"}:
++            return self._reject_unavailable_desktop_engine_route(operation)
++        from ._execution_contract import model_ref_from_mapping
++        if operation == "desktop.binding.resolve":
++            try:
++                raw = json.loads(arguments["model_ref_id"])
++            except (ValueError, TypeError, KeyError):
++                return self._reject_unavailable_desktop_engine_route(operation)
++            if not isinstance(raw, dict):
++                return self._reject_unavailable_desktop_engine_route(operation)
++            model_ref = model_ref_from_mapping(raw)
++        if model_ref is None:
++            raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "current typed ModelRef is required", safe_retry=True)
++        project_id = arguments.get("project_id")
++        if context.project_id != project_id:
++            raise DesktopOperationError("PROJECT_IDENTITY_MISMATCH", "Desktop claim project differs", safe_retry=True)
++        record = self._desktop_parent_claim(context)
++        if (not isinstance(record, Mapping) or record.get("status") != "RUNNING"
++                or record.get("idempotency_key") != context.idempotency_key
++                or record.get("request_hash") != context.request_hash
++                or record.get("request_id") != context.request_id
++                or record.get("operation") != context.operation
++                or record.get("metadata", {}).get("project_id") != project_id):
++            raise DesktopOperationError("OWNER_UNVERIFIED", "Desktop callback has no exact active durable claim", safe_retry=True)
++        service = backend.service
++        if service is None or not backend.endpoint_key:
++            return self._reject_unavailable_desktop_engine_route(operation)
++        self.project_authority.authorize_operation(project_id, "inspect")
++        attributed = backend.model_project_binding(model_ref.as_dict())
++        if attributed.get("attribution") != "PROJECT_BOUND" or attributed.get("project_id") != project_id:
++            raise DesktopOperationError("MODEL_IDENTITY_MISMATCH", "typed model is not attributed to this project", safe_retry=True)
++        state = service.ledger._state_for(model_ref)
++        same_parent = (context.operation == "desktop.migrate_standalone" and request_scope is not None
++                       and request_scope.get("hash") == context.request_hash
++                       and (request_scope.get("attempt") or {}).get("state") == "PROVISIONAL"
++                       and (request_scope.get("attempt") or {}).get("model_ref") == model_ref.as_dict()
++                       and state.active_operation_id == context.operation_id)
++        if same_parent:
++            with self.desktop._operation_lock:
++                same_parent = context.operation_id in self.desktop._active_operations
++        if state.dirty or (state.active_operation_id is not None and not same_parent):
++            raise DesktopOperationError("EXECUTION_STATE_UNKNOWN", "managed model requires reconciliation or has an active operation", safe_retry=False)
++        # inspect_evidence validates epoch and freshly reads the adapter's
++        # documented parameters+shallow-tree fingerprint and external counter.
++        # It neither creates a Desktop binding nor proves complete model/dirty
++        # state preservation. Keep that bounded witness explicit in the result.
++        with backend.context(context.operation_id, self._session_worker_event_callback(record)):
++            evidence = service.inspect_evidence(model_ref)
++        if service.ledger._state_for(model_ref).dirty:
++            raise DesktopOperationError("EXECUTION_STATE_UNKNOWN", "external model change requires explicit reconciliation", safe_retry=False)
++        snapshot = evidence.get("model_snapshot", {})
++        actual_ref = evidence.get("execution", {}).get("model_ref")
++        if (actual_ref != model_ref.as_dict() or snapshot.get("model_tag") != model_ref.model_tag
++                or snapshot.get("server_instance_id") != model_ref.server_instance_id
++                or not isinstance(snapshot.get("fingerprint"), str) or not snapshot["fingerprint"]):
++            raise DesktopOperationError("MODEL_IDENTITY_MISMATCH", "fresh managed snapshot differs from typed reference", safe_retry=True)
++        return {"success": True, "data": {
++            "model_ref": actual_ref, "server_endpoint": backend.endpoint_key,
++            "model_tag": model_ref.model_tag, "fingerprint": snapshot["fingerprint"],
++            "revision": evidence["execution"].get("revision"),
++            "fingerprint_coverage": snapshot.get("coverage"),
++            "cas_guarantee": snapshot.get("cas_guarantee"),
++            "Desktop_model_binding": "UNVERIFIED_BY_MANAGED_INSPECTION_ALONE",
++        }}
+ 
+     @staticmethod
+     def _reject_unavailable_desktop_engine_route(operation: str) -> dict[str, Any]:
+-        # desktop.binding.resolve/inspect and Desktop Shell execution do not
+-        # yet have a trusted current-window binding API in ManagedBackend.
+-        # Keeping the rejection inside the existing queue ensures that a
+-        # future approved implementation cannot silently bypass serialization.
+-        return {
+-            "success": False,
+-            "data": {"engine_dispatched": False},
+-            "error": {
+-                "code": "UNSUPPORTED_CONTROL",
+-                "message": f"managed Desktop engine route is unavailable: {operation}",
+-                "stage": "validation",
+-                "safe_retry": True,
+-            },
+-        }
++        return {"success": False, "data": {"engine_dispatched": False}, "error": {
++            "code": "UNSUPPORTED_CONTROL", "message": f"managed Desktop engine route is unavailable: {operation}",
++            "stage": "validation", "safe_retry": True,
++        }}
+ 
+     @staticmethod
+     def _resolve_desktop_action(project_id, action):
+-        raise DesktopOperationError(
+-            "UNSUPPORTED_CONTROL", "no versioned trusted Desktop action resolver is configured",
+-            safe_retry=True,
++        raise DesktopOperationError("UNSUPPORTED_CONTROL", "no observed versioned COMSOL action selector profile", safe_retry=True)
++
++    def _resolve_desktop_artifact(self, project_id, artifact_id):
++        from ._artifact_store import resolve_registered_artifact, local_artifact_host_identity, local_engine_host_identity
++        from ._desktop_service import TrustedSourceArtifact
++        project = self.project_authority.authorize_operation(project_id, "trusted_code")
++        service = self.backend.service
++        if service is None or not self.backend.endpoint_key:
++            raise DesktopOperationError("UNSUPPORTED_CONTROL", "no exact managed endpoint for registered source provenance", safe_retry=True)
++        record = resolve_registered_artifact(
++            project["workspace"], self.store, artifact_id, project_id=project_id,
++            current_host_identity=local_artifact_host_identity(),
++            current_engine_host_identity=local_engine_host_identity(self.backend.endpoint_key),
++            current_server_instance_id=service.ledger.server_instance_id,
+         )
+-
+-    @staticmethod
+-    def _resolve_desktop_artifact(project_id, artifact_id):
+-        raise DesktopOperationError(
+-            "UNSUPPORTED_CONTROL", "no trusted Desktop Shell artifact resolver is configured",
+-            safe_retry=True,
+-        )
+-
+-    @staticmethod
+-    def _authorize_desktop_save_copy(project_id, destination):
+-        return False
++        return TrustedSourceArtifact(record["artifact_id"], record["sha256"], record["size"],
++                                     "registered-project-artifact:" + project_id)
++
++    def _authorize_desktop_save_copy(self, project_id, destination):
++        from ._artifact_store import ArtifactStore
++        try:
++            project = self.project_authority.authorize_operation(project_id, "project_write")
++            path = ArtifactStore(Path(project["workspace"])).resolve_safe_path(str(destination), allow_overwrite=False)
++            return path == destination and destination.is_absolute() and not destination.exists()
++        except (ExecutionContractError, OSError, ValueError, TypeError):
++            return False
+ 
+     def _dispatch_catalog_job_control(self, inner_operation: str, inner_arguments: dict[str, Any], *, execution: dict[str, Any]) -> dict[str, Any]:
+         return self._dispatch_catalog_job_control_impl(
+@@ -10846,6 +11411,7 @@
+                 from contextlib import nullcontext
+                 project_scope = nullcontext()
+             with project_scope:
++                self._desktop_before_model_dispatch(operation, execution, arguments)
+                 if resume_context is None:
+                     result = self.backend.invoke(operation, arguments, execution, operation_id, worker_event)
+                 else:
+--- a/comsol_mcp/_desktop_macos.py
++++ b/comsol_mcp/_desktop_macos.py
+@@ -29,20 +29,52 @@
+         if __import__("sys").platform != "darwin":
+             return {"platform": "macos", "permission_status": "UNKNOWN", "control_status": UNSUPPORTED_CONTROL,
+                     "metadata_status": "WRONG_PLATFORM", **profile}
+-        try:
+-            from ApplicationServices import AXIsProcessTrusted
+-            trusted = bool(AXIsProcessTrusted())
+-        except Exception:
+-            trusted = False
+-        return {
++        result = {
+             "platform": "macos",
+-            "permission_status": "AVAILABLE" if trusted else BLOCKED_PERMISSION,
++            "permission_status": "UNKNOWN",
+             "control_status": UNSUPPORTED_CONTROL,
+-            "metadata_status": "AVAILABLE",
+-            "accessibility_trusted": trusted,
++            "metadata_status": "UNAVAILABLE",
++            "accessibility_trusted": None,
++            "permission_scope": "ACTUAL_PRODUCT_CALLER_ONLY_NOT_CUA_CERTIFICATION",
++            "metadata_qualification": "API availability only; process/window inventory not queried by status",
+             "control_note": "metadata observer only; no Accessibility control or screen capture is implemented",
+             **profile,
+         }
++        stage = "dependency_import"
++        try:
++            # Lazy imports: constructing the default adapter never loads these
++            # frameworks. Status checks no windows, tree, pixels or prompt API.
++            import ApplicationServices
++            import Quartz
++            import psutil
++            from Foundation import NSBundle
++            stage = "api_availability"
++            required = (
++                (ApplicationServices, "AXIsProcessTrusted"),
++                (Quartz, "CGWindowListCopyWindowInfo"),
++                (psutil, "Process"),
++                (NSBundle, "bundleWithPath_"),
++            )
++            for provider, name in required:
++                if not callable(getattr(provider, name, None)):
++                    raise AttributeError(f"required metadata API unavailable: {name}")
++            for name in ("kCGWindowListOptionOnScreenOnly", "kCGWindowListExcludeDesktopElements",
++                         "kCGNullWindowID", "kCGWindowOwnerPID", "kCGWindowOwnerName",
++                         "kCGWindowNumber", "kCGWindowName"):
++                if not hasattr(Quartz, name):
++                    raise AttributeError(f"required window metadata constant unavailable: {name}")
++            stage = "nonprompt_accessibility_trust"
++            trusted = bool(ApplicationServices.AXIsProcessTrusted())
++        except Exception as exc:
++            result["metadata_error"] = {
++                "stage": stage, "type": type(exc).__name__, "message": str(exc),
++            }
++            return result
++        result.update(
++            permission_status="AVAILABLE" if trusted else BLOCKED_PERMISSION,
++            metadata_status="AVAILABLE", accessibility_trusted=trusted,
++        )
++        return result
+ 
+     def enumerate_windows(self, runtime_id: str | None = None) -> list[WindowObservation]:
+         if __import__("sys").platform != "darwin":
+@@ -110,3 +142,154 @@
+         info = loaded.infoDictionary() or {}
+         value = info.objectForKey_("CFBundleShortVersionString") or info.objectForKey_("CFBundleVersion")
+         return str(value) if value else None
++
++
++class MacOSFrameworkGateway:
++    """Lazy product framework calls; this gateway never selects a COMSOL control.
++
++    ``framework_loader`` is a host-owned software-test seam, not request data.
++    There is deliberately no guessed Java Shell/menu/model selector profile.
++    """
++
++    def __init__(self, framework_loader=None):
++        self._loader = framework_loader
++        self._frameworks = None
++
++    def _load(self):
++        if self._frameworks is None:
++            try:
++                if self._loader is None:
++                    import ApplicationServices
++                    import Quartz
++                    self._frameworks = (ApplicationServices, Quartz)
++                else:
++                    self._frameworks = self._loader()
++            except ImportError as exc:
++                raise DesktopOperationError("WINDOW_METADATA_UNAVAILABLE", "product runtime lacks PyObjC ApplicationServices/Quartz", safe_retry=True) from exc
++        return self._frameworks
++
++    def permissions(self):
++        accessibility, quartz = self._load()
++        try:
++            trusted = bool(accessibility.AXIsProcessTrusted())
++            capture_allowed = bool(quartz.CGPreflightScreenCaptureAccess())
++        except AttributeError as exc:
++            raise DesktopOperationError("WINDOW_METADATA_UNAVAILABLE", "product framework permission API unavailable", safe_retry=True) from exc
++        return {
++            "accessibility_trusted": trusted,
++            "screen_capture_allowed": capture_allowed,
++            "permission_scope": "ACTUAL_PRODUCT_CALLER_ONLY_NOT_CUA_CERTIFICATION",
++        }
++
++    def attribute(self, element, name):
++        accessibility, _ = self._load()
++        error, value = accessibility.AXUIElementCopyAttributeValue(element, name, None)
++        if error != 0:
++            raise DesktopOperationError("AX_ATTRIBUTE_UNAVAILABLE", f"Accessibility attribute unavailable: {name}", safe_retry=True)
++        return value
++
++    def _point(self, value, kind):
++        accessibility, _ = self._load()
++        ok, decoded = accessibility.AXValueGetValue(value, kind, None)
++        if not ok:
++            raise DesktopOperationError("WINDOW_IDENTITY_UNKNOWN", "Accessibility window geometry unavailable", safe_retry=True)
++        return decoded
++
++    def target_window(self, identity):
++        accessibility, quartz = self._load()
++        if not self.permissions()["accessibility_trusted"]:
++            raise DesktopOperationError("PERMISSION_REQUIRED", "product Accessibility permission unavailable", category=BLOCKED_PERMISSION, safe_retry=True)
++        if not identity.native_window_id.startswith("CGWindow:"):
++            raise DesktopOperationError("WINDOW_IDENTITY_UNKNOWN", "expected an observed Quartz window identity", safe_retry=True)
++        number = int(identity.native_window_id.removeprefix("CGWindow:"))
++        infos = quartz.CGWindowListCopyWindowInfo(quartz.kCGWindowListOptionIncludingWindow, number) or []
++        matches = [item for item in infos if item.get(quartz.kCGWindowNumber) == number and item.get(quartz.kCGWindowOwnerPID) == identity.process_id]
++        if len(matches) != 1:
++            raise DesktopOperationError("WINDOW_IDENTITY_UNKNOWN", "Quartz owner/window is absent or ambiguous", safe_retry=True)
++        info = matches[0]
++        bounds = info.get(quartz.kCGWindowBounds, {})
++        expected = (bounds.get("X"), bounds.get("Y"), bounds.get("Width"), bounds.get("Height"))
++        if any(value is None for value in expected):
++            raise DesktopOperationError("WINDOW_IDENTITY_UNKNOWN", "Quartz window bounds incomplete", safe_retry=True)
++        app = accessibility.AXUIElementCreateApplication(identity.process_id)
++        windows = self.attribute(app, "AXWindows") or []
++        observed = []
++        for window in windows:
++            try:
++                position = self._point(self.attribute(window, "AXPosition"), accessibility.kAXValueCGPointType)
++                size = self._point(self.attribute(window, "AXSize"), accessibility.kAXValueCGSizeType)
++                title = str(self.attribute(window, "AXTitle") or "")
++                geometry = (position.x, position.y, size.width, size.height)
++                if geometry == expected and title == str(info.get(quartz.kCGWindowName) or ""):
++                    observed.append(window)
++            except DesktopOperationError:
++                continue
++        if len(observed) != 1:
++            raise DesktopOperationError("WINDOW_IDENTITY_UNKNOWN", "CG/AX association is absent or ambiguous; no focused-window fallback", safe_retry=True)
++        return observed[0]
++
++    def window_tree(self, identity, *, max_depth=4, max_nodes=128):
++        """Read only one associated window. Metadata is not a model binding."""
++        if type(max_depth) is not int or not 0 <= max_depth <= 8 or type(max_nodes) is not int or not 1 <= max_nodes <= 512:
++            raise DesktopOperationError("INVALID_REQUEST", "bounded AX inventory limits are invalid", safe_retry=True)
++        root = self.target_window(identity)
++        result = []
++        omitted = False
++        pending = [(root, 0, ())]
++        while pending and len(result) < max_nodes:
++            element, depth, path = pending.pop()
++            attributes = {}
++            for name in ("AXRole", "AXSubrole", "AXIdentifier", "AXTitle", "AXDescription", "AXEnabled"):
++                try:
++                    value = self.attribute(element, name)
++                    if isinstance(value, (str, bool)):
++                        attributes[name] = value[:512] if isinstance(value, str) else value
++                except DesktopOperationError:
++                    continue
++            result.append({"path": list(path), "attributes": attributes})
++            try:
++                children = self.attribute(element, "AXChildren") or []
++            except DesktopOperationError:
++                children = []
++            available = max(0, max_nodes - len(result) - len(pending))
++            if children and depth >= max_depth:
++                omitted = True
++            elif depth < max_depth:
++                # Never claim a complete tree after omitting children at either bound.
++                omitted = omitted or len(children) > available
++                for index in reversed(range(min(len(children), available))):
++                    pending.append((children[index], depth + 1, path + (index,)))
++        return {"nodes": result, "truncated": omitted or bool(pending), "scope": "TARGET_WINDOW_AX_METADATA_ONLY", "model_binding": "UNVERIFIED"}
++
++
++class MacOSAccessibilityObserver(MacOSMetadataAdapter):
++    """Product prerequisite provider only; all seven native controls stay unsupported."""
++
++    def __init__(self, *, gateway=None, identity_observer=None):
++        self.gateway = gateway if gateway is not None else MacOSFrameworkGateway()
++        self.identity_observer = identity_observer
++
++    def status(self, runtime_id=None):
++        profile = versioned_native_profile("macos")
++        try:
++            permissions = self.gateway.permissions()
++        except DesktopOperationError as exc:
++            return {"platform": "macos", "permission_status": "UNKNOWN", "control_status": UNSUPPORTED_CONTROL,
++                    "metadata_status": "UNAVAILABLE", "product_observer_error": exc.code, **profile}
++        return {"platform": "macos", "permission_status": "AVAILABLE" if permissions["accessibility_trusted"] else BLOCKED_PERMISSION,
++                "control_status": UNSUPPORTED_CONTROL, "metadata_status": "AVAILABLE", **permissions, **profile,
++                "source_prerequisite_provider": "LAZY_PRODUCT_AX_QUARTZ_READ_ONLY_IMPLEMENTED",
++                "selector_profile": "UNOBSERVED", "model_binding": "UNVERIFIED"}
++
++    def enumerate_windows(self, runtime_id=None):
++        if self.identity_observer is not None:
++            return list(self.identity_observer.enumerate_windows(runtime_id))
++        return super().enumerate_windows(runtime_id)
++
++    def inspect_accessibility(self, identity, *, max_depth=4, max_nodes=128):
++        if self.revalidate_window(identity) is None:
++            raise DesktopOperationError("WINDOW_IDENTITY_UNKNOWN", "target process/window identity changed before AX observation", safe_retry=True)
++        result = self.gateway.window_tree(identity, max_depth=max_depth, max_nodes=max_nodes)
++        if self.revalidate_window(identity) is None:
++            raise DesktopOperationError("WINDOW_IDENTITY_UNKNOWN", "target process/window identity changed during AX observation", safe_retry=True)
++        return {**result, "window_identity_fingerprint": identity.fingerprint(), "native_evidence": "NOT_RUN"}
+--- a/comsol_mcp/_desktop_platforms.py
++++ b/comsol_mcp/_desktop_platforms.py
+@@ -47,12 +47,14 @@
+     }
+ 
+ 
+-def create_native_metadata_adapter() -> MetadataOnlyDesktopAdapter:
++def create_native_metadata_adapter(*, macos_accessibility_observer: bool = False) -> MetadataOnlyDesktopAdapter:
+     """Return the host's read-only identity observer, with controls still gated."""
+     if sys.platform == "win32":
+         from ._desktop_windows import WindowsMetadataAdapter
+         return WindowsMetadataAdapter()
+     if sys.platform == "darwin":
+-        from ._desktop_macos import MacOSMetadataAdapter
++        from ._desktop_macos import MacOSMetadataAdapter, MacOSAccessibilityObserver
++        if macos_accessibility_observer:
++            return MacOSAccessibilityObserver()
+         return MacOSMetadataAdapter()
+     return MetadataOnlyDesktopAdapter()
+--- a/comsol_mcp/_desktop_service.py
++++ b/comsol_mcp/_desktop_service.py
+@@ -485,17 +485,31 @@
+                                      execution={**self._execution(record), "status": "FAILED"})
+                 self.store.finish(record["operation_id"], status="FAILED", result=failed)
+                 return failed
++        effects_started = False
++
++        def mark_effect() -> None:
++            nonlocal effects_started
++            self._mark_effect(record["operation_id"])
++            effects_started = True
++
+         try:
+-            result = self._execute_operation(operation, args, record, lambda: self._mark_effect(record["operation_id"]))
++            result = self._execute_operation(operation, args, record, mark_effect)
+             if result.get("success") is True:
+                 status = "SUCCEEDED"
++            elif effects_started:
++                execution = result.get("execution")
++                error = result.get("error")
++                result = {**result,
++                          "execution": {**(execution if isinstance(execution, Mapping) else {}), "status": "UNKNOWN"},
++                          "error": {**(error if isinstance(error, Mapping) else {}), "safe_retry": False}}
++                status = "UNKNOWN"
+             elif result.get("execution", {}).get("status") == "UNKNOWN":
+                 status = "UNKNOWN"
+             else:
+                 status = "FAILED"
+         except DesktopOperationError as exc:
+-            status = "UNKNOWN" if exc.side_effect_started else "FAILED"
+-            result = self._error(exc.code, str(exc), category=exc.category, safe_retry=exc.safe_retry,
++            status = "UNKNOWN" if effects_started or exc.side_effect_started else "FAILED"
++            result = self._error(exc.code, str(exc), category=exc.category, safe_retry=False if status == "UNKNOWN" else exc.safe_retry,
+                                  execution={**self._execution(record), "status": status})
+         except Exception as exc:
+             status = "UNKNOWN"
+--- a/docs/full_project_execution/w25/desktop_control_wiring.md
++++ b/docs/full_project_execution/w25/desktop_control_wiring.md
+@@ -26,16 +26,21 @@
+ idempotency claim before adapter or engine callbacks; same-key requests replay
+ the stored result and conflicting request bodies are rejected.
+ 
+-The production coordinator selects the platform's real metadata adapter. The
+-Windows and macOS adapters currently report `control_status=UNSUPPORTED_CONTROL`
+-and cannot mint write leases. There is no current-window/current-model binding
+-provider, action resolver, artifact resolver, or save-copy path authorizer.
+-Consequently no Desktop write can reach an operating-system control callback.
+-The managed API substep callback submits through the existing one-worker queue,
+-but currently returns a deterministic `stage=validation`,
+-`engine_dispatched=false` refusal because no trusted Desktop binding route has
+-been implemented. This path reports a failed unsupported operation, not an
+-unknown engine outcome.
++The production coordinator selects the platform metadata adapter. The optional
++macOS Accessibility observer reads product-caller prerequisites without
++prompting; neither it nor the Windows observer enables controls or proves a
++COMSOL window-to-model association. Desktop action selectors, current-window
++model binding, and Desktop Shell submission remain unsupported.
++
++The managed queue now supports scoped typed-ModelRef resolve/inspect and a
++private `save_copy` migration callback. It checks the exact durable parent/job,
++registered session identity, source-copy witness, target tag delta, project
++attribution and persisted readiness. A same-lane pre-dispatch guard rejects
++writes against unresolved targets before backend receiver selection. These are
++fixture-backed software paths; `desktop_binding_verified` remains false and no
++native Desktop action is accepted. If READY publication/readback fails, the
++finalizer records a NON_READY fence before releasing the session lane, while
++preserving an already-SUCCEEDED parent result.
+ 
+ The source-level desktop status observers and the separate Windows pixel
+ primitive remain unverified on native COMSOL windows. All new tests use
+@@ -43,3 +48,14 @@
+ COMSOL, enumerate a real window, or perform GUI automation. See
+ [`desktop_service_interface.md`](desktop_service_interface.md) for the
+ per-action native adapter gaps and status matrix.
++
++
++## Isolated W25 contract003 Phase1 software scope (2026-10-02)
++
++This successor exists only in the isolated source copy. It adds a lazy product PyObjC AX/Quartz prerequisite observer with exact target-window mapping, non-prompt caller permission reads and bounded AX metadata. Codex CUA/observer permissions are not product acceptance. The factory defaults to the existing metadata-only adapter; opting into the observer does not enable controls. Missing/ambiguous mapping, dependencies or permission refuse; no focused-window fallback, screenshot, guessed COMSOL selector, input or launch is performed by the observer. All seven control methods, current-model observation, Shell/save/cancel remain unsupported without actual build-specific evidence.
++
++The Desktop queue now supports explicit JSON-encoded typed ModelRef resolution/inspection through the existing ExecutionService.inspect_evidence and model_project_binding, exact active durable claim and existing ProjectAuthority. It performs a fresh scoped parameters+shallow-tree identity read, not full-model identity/dirty preservation or a GUI binding. Wrong project/epoch, dirty or active model, or an external change refuses. Opaque identifiers without a trusted mapping still refuse. Registered source resolution reuses existing immutable project-artifact integrity/host scope; save-copy destination authorization reuses existing non-overwrite/symlink-confined ArtifactStore path policy. No recursive daemon dispatch, second durable claim, backend accessor or coordinator post-fingerprint semantics change.
++
++This Phase1 snapshot preceded the Phase2b single-claim managed copy-load callback. The later software callback only loads a project-authorized copy into a registered managed session; it does not perform or certify native Desktop save-copy, current-window binding, or Desktop Shell actions. Generic backend.invoke/managed-server Java still cannot substitute for an observed Desktop Shell provider. Original eight actions and T004/T023/T051/T052/T054 are still NOT_RUN/unaccepted. Phase1 software fixture evidence and retained first-run failures remain in the isolated Phase1 HANDOFF. Current scoped source/test hashes and the 188-case software run are recorded under `docs/full_project_continuation_v2/evidence/w25_integration/`; Root review and all native/action-matrix acceptance remain open.
++
++COMSOL 6.4's local Java Shell manual states that this interactive window is only available in the Windows version of COMSOL Desktop. Source: *Interactively Using the COMSOL API for Java in the Java Shell Window*, `doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_ref_modeling.19.028.html`, chunk 19260, SHA-256 `9c4d7ef193e9525eaa09fbf768507da981bdf6a6b48ace7ef4394c3adc3f39cc`. No supported macOS Desktop API route for current-window/model/endpoint identity, dirty state, or source-preserving save-copy is established by this candidate. Those observations remain `UNOBSERVED`, and their controls must refuse until supported evidence exists.
+--- a/docs/full_project_execution/w25/desktop_phase2a_dependency_status.md
++++ b/docs/full_project_execution/w25/desktop_phase2a_dependency_status.md
+@@ -0,0 +1,7 @@
++# W25 Phase2a dependency and truthful status software unit (historical stage)
++
++The opt-in desktop extra supplies psutil and macOS PyObjC ApplicationServices, Quartz and Cocoa/Foundation providers with darwin markers. Ordinary mcp/MPh/JPype1 dependencies and dev pytest remain unchanged. Packaging declarations are not installed runtime proof; resolved binary wheel pins/hashes and actual caller imports need a separately authorized new task-owned observer runtime.
++
++Default MacOSMetadataAdapter.status is lazy until called. It checks dependency/API availability before a nonprompt AXIsProcessTrusted query. Missing providers/APIs or API exceptions return permission UNKNOWN and metadata UNAVAILABLE with the actual exception stage/type/message. A successfully returned false bit is BLOCKED_PERMISSION; true is only this product caller's permission. Missing Quartz/psutil/Foundation cannot produce metadata AVAILABLE. Status does not enumerate windows, read AX trees, capture pixels, prompt, launch, send input or query screen-capture permission. Controls remain unsupported and no observed COMSOL selector/profile is added.
++
++Software tests use injected framework protocol fixtures only. Eight native actions/T004/T023/T051/T052/T054, shared binding/standalone dirty-preserving save migration/Shell/cancel remain open. Private load and expected mutation were design pending in this phase-specific unit. The later Phase2b candidate added a software-only managed-session saved-copy load callback; it did not add native Desktop load, expected-mutation acceptance, or GUI binding. COMSOL 6.4 documents Java Shell only in Windows Desktop; this phase establishes no equivalent macOS route or visible-window/model/endpoint/dirty-state/save-copy observation. The macOS facts remain `UNOBSERVED` and controls refuse without supported evidence. Phase1/live repository and Native34/Test38 were protected.
+--- a/docs/full_project_execution/w25/desktop_phase2b_managed_copy_load.md
++++ b/docs/full_project_execution/w25/desktop_phase2b_managed_copy_load.md
+@@ -0,0 +1,19 @@
++# W25 private single-claim copy-load software candidate
++
++This isolated Phase2b candidate implements the daemon route admitted by `root-Phase2b-daemon-software-admission001.json`. It adds no public operation, session factory, backend accessor, Coordinator lifecycle change, or model execution ticket. The existing Desktop Coordinator remains the only creator and finisher of the parent operation/job.
++
++The daemon captures catalog-validated migration arguments before that claim, computes the existing canonical request hash, and verifies the actual paired RUNNING operation/job and local owner after claim. Captured values are passed explicitly into the existing session scheduler; ContextVars are not assumed to propagate to its thread. Load requires the exact existing registered project/target session, backend/service/client/Worker object, epoch, lifecycle and health. Missing or retired registered targets never fall back to the legacy backend. Legacy full typed Desktop READ still uses an explicitly captured default backend on `session_scheduler.submit(None, ...)`.
++
++The private callback reads an existing confined, regular non-symlink saved copy and measures hash, size and stat identity before/inside/after queue execution. It performs one fresh unique-tag direct load, verifies the actual returned tag and exact tag delta, binds the verified owned tag, attributes it to the project, persists and independently reads typed session/revision records. It preserves target, foreign and default selected pointers and never restores unexpected drift by assignment. The original saved copy stays intact on failure.
++
++A durable same-job `desktop_copy_load` attempt precedes load. The actual new ref is parent-active before the serialized callback ends. Only the same parent private migration inspect may inspect that provisional ref. The normal daemon execution boundary checks unresolved owned attempts before legacy receiver lookup or pointer selection. New keys, stale clean revision rows, generation aliases, adoption and reopened stores cannot turn an unresolved attempt into a clean ref.
++
++Historical frozen Phase2b preserves the old Coordinator's parent FAILED after a nonmutating binding-inspect exception despite earlier load effects, with a separate NON_READY dirty/active target and safe_retry=false. The fresh Phase2c candidate adds only a local sticky effect marker in the actual parent claim: unchanged ownership checking runs before marking, and a later structured exception or unsuccessful result after that mark records UNKNOWN/safe_retry=false before the existing single finish. Success remains SUCCEEDED; pre-mark refusal retains FAILED/retry semantics. This is a possible-effect classification boundary, not proof of a native effect or a new durable crash/reopen guarantee. Phase2b history, daemon fencing, original engine-call behavior and native limitations remain preserved.
++
++Release requires actual parent and paired job SUCCEEDED, exact captured identity, successful load/source/inspect witnesses and persisted readiness. A release or outer receipt failure retains the original cause and secondary failures separately, re-fences the actual owned ref and returns target NON_READY. An already SUCCEEDED parent remains authoritative and is never overwritten. Same-key replay reads the stored exact target and current durable readiness before exposing success; it does not load, bind or reconcile. Missing admitted provenance is reported as a new incomplete-readiness observation, never reconstructed as historical evidence. If storage cannot preserve a fence, durable guard is explicitly UNVERIFIED, no safe retry is offered, and Root must decide the minimal additional protection.
++
++The integrated daemon also fences final readiness failures within the same `SessionEndpointScheduler` callback. If the provisional-to-READY persist or its readback raises, `_desktop_finalize_owned` re-dirties the exact owned ref and writes the attempt NON_READY before the lane can admit a queued model write. The outer response preserves parent SUCCEEDED versus target NON_READY. A focused adversarial control persists READY, queues a same-lane write during that window, injects an uncertain return, and verifies the queued write is refused before receiver selection. This is software evidence for the integrated source only; it does not establish crash recovery if both durable fence writes fail.
++
++Software tests use real temporary OperationStore, registry/context and scheduler with injected Worker and Desktop protocols. Their request events are synthetic method-entry evidence, not native request termination. All existing Desktop regressions remain required. The source ledger has no global mutex and the parent/ref release is not an atomic database transaction; same-lane admitted write exclusion does not certify arbitrary direct calls or external COMSOL clients.
++
++The original eight actions and T004/T023/T051/T052/T054 acceptance remain OPEN. Actual selectors, shared Desktop/server binding, native unsaved-copy preservation, Shell expected mutation, cancellation, permission recovery and blockOtherClients release require separately authorized actual evidence. COMSOL 6.4 documents Java Shell only for Windows Desktop; its Java Shell docs do not establish an equivalent macOS route or an external submission endpoint. The local source is *Interactively Using the COMSOL API for Java in the Java Shell Window*, `doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_ref_modeling.19.028.html`, chunk 19260, SHA-256 `9c4d7ef193e9525eaa09fbf768507da981bdf6a6b48ace7ef4394c3adc3f39cc`. macOS visible-model/endpoint identity, dirty state and save-copy therefore remain `UNOBSERVED`; unsupported evidence must produce refusal. `desktop_binding_verified` remains false after managed copy-load. No runtime, native, Science, Windows, Intel or complete MASTER acceptance follows from these software fixtures; live source and canonical documents are not promoted by this candidate.
+--- a/docs/full_project_execution/w25/desktop_platform_adapter_matrix.md
++++ b/docs/full_project_execution/w25/desktop_platform_adapter_matrix.md
+@@ -26,7 +26,7 @@
+ | `desktop.select_node` | A fresh model binding plus versioned UI tree mapping from the typed API `NodePath` to an actual tree item and exact selected-path readback. | `UNSUPPORTED_CONTROL`. No COMSOL tree controls or mapping have been observed. |
+ | `desktop.capture` | A fresh model binding, an exact target-window/region mapping, and a trusted artifact sink that returns the captured bytes' immutable artifact ID and SHA-256. | `UNSUPPORTED_CONTROL`. The Windows single-HWND pixel helper is source-only and not connected to the coordinator or artifact store. Graphics-area selection and model binding are missing. |
+ | `desktop.action` | A fresh model binding plus an authorized, exact COMSOL menu/control selector for a supported build and post-action model/window readback. | `UNSUPPORTED_CONTROL`. UIA/AX availability does not prove any COMSOL-specific selector. |
+-| `desktop.shell_execute` | A fresh binding to the displayed model and a verified method to submit to that COMSOL Desktop's Java Shell, with returned execution/readback identity. | `UNSUPPORTED_CONTROL`. COMSOL documents Java Shell as an interactive Desktop window selected from the UI; it does not document an external submission endpoint. The coordinator's managed-server Java artifact path is a different route and is not evidence of Desktop Java Shell execution. |
++| `desktop.shell_execute` | A fresh binding to the displayed model and a verified method to submit to that COMSOL Desktop's Java Shell, with returned execution/readback identity. | `UNSUPPORTED_CONTROL`. COMSOL 6.4 documents Java Shell only for the Windows version of COMSOL Desktop. Its documentation describes interactive input in that UI, not an external submission endpoint. The coordinator's managed-server Java artifact path is a different route and is not evidence of Desktop Java Shell execution. No supported macOS Desktop Shell route is established by this source. |
+ | `desktop.migrate_standalone` | A fresh observation of the exact standalone window/model identity, dirty state and fingerprint; a new authorized save-copy with hash; managed load; and source preservation recheck. | `UNSUPPORTED_CONTROL`. The coordinator's save-copy state machine is tested with fixtures, but the platform cannot observe standalone identity/dirty state or save the UI model. |
+ 
+ No action becomes supported merely because an OS API can find a window or pixels. The coordinator still rejects public `desktop.capture` without a validated model binding. No guessed widget name, title text, path, or model tag substitutes for that evidence.
+@@ -39,7 +39,9 @@
+ 
+ COMSOL 6.4's Java API `ModelUtil.tags()` returns all model tags. That list has no documented association to the currently displayed model in one particular Desktop HWND. [COMSOL 6.4: `ModelUtil`](https://doc.comsol.com/6.4/doc/com.comsol.help.comsol/api/com/comsol/model/util/ModelUtil.html)
+ 
+-COMSOL 6.4 documents Java Shell as an interactive Java command window opened from the Desktop UI; it accepts commands and Enter/Run to execute them. The documentation does not provide a separate external automation endpoint, nor does the current source have a verified UI selector for the shell prompt. [COMSOL 6.4: Java Shell and Data Viewer windows](https://doc.comsol.com/6.4/doc/com.comsol.help.comsol/application_programming_guide.15.13.html)
++COMSOL 6.4 documents Java Shell as an interactive Java command window opened from the Desktop UI and explicitly limits it to the Windows version of COMSOL Desktop. The user enters commands in the window and runs them there. The documentation does not provide an external submission endpoint, and this source has no verified Windows UI Automation selector for the prompt. This Java Shell route is unavailable on macOS; do not use managed-server Java or a guessed macOS accessibility selector as a substitute. Local official source: *Interactively Using the COMSOL API for Java in the Java Shell Window*, COMSOL 6.4, `doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_ref_modeling.19.028.html`, chunk 19260, SHA-256 `9c4d7ef193e9525eaa09fbf768507da981bdf6a6b48ace7ef4394c3adc3f39cc`. [COMSOL 6.4 Java Shell documentation](https://doc.comsol.com/6.4/doc/com.comsol.help.comsol/application_programming_guide.15.13.html)
++
++No documented macOS API path has been established here for proving that a particular Desktop window owns the active model and endpoint, exposing its dirty state, or making a source-preserving save-copy. Until a vendor-documented route and build-specific observable UI/API identity are evidenced, those facts remain `UNOBSERVED` and the corresponding operation must refuse. `ModelUtil.tags()` enumerates loaded model tags but does not by itself bind a tag to a particular visible Desktop window.
+ 
+ The low-level Windows helper calls `PrintWindow(hwnd, hdc, 0)` for the complete window only. Microsoft states this call is blocking/synchronous and the target application processes `WM_PRINT`. The helper therefore runs in a short-lived spawned process, waits a fixed upper bound, and if needed terminates only that helper. A timeout says nothing about whether COMSOL has finished handling the paint message; the helper never signals or terminates COMSOL. It validates the HWND owner PID, process birth, login SID, Windows session and COMSOL executable version before and after painting; checks unchanged dimensions; bounds output to 8192 pixels per side, 12 million pixels and 64 MiB; writes only one new BMP beneath its private temporary directory; then checks the exact path, file type, header, dimensions, length and SHA-256 in the parent process. [Microsoft: `PrintWindow`](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-printwindow)
+ 
+@@ -50,3 +52,12 @@
+ The repository's existing visible-main workflow binds an MCP managed-server model for server operations, and `tools/windows_handoff_snapshot.py` handles file handoff. Neither reads or selects a COMSOL Desktop window. The server-side visible-main state and a Desktop window handle are separate identities until a platform provider observes and cross-checks both.
+ 
+ For W25 target environments, status and pixel-source code are platform-labelled, while control support remains uncertified for Windows COMSOL 6.3/6.4 and macOS COMSOL 6.4. No statement here certifies native support for a particular build. The UI evidence needed to close each row is: exact OS/COMSOL build; observed window hierarchy/control identifiers; current Desktop connection and selected-model identifiers; API cross-check against the managed `ModelRef`; and action-specific before/after readback. No native GUI test was run.
++
++
++## Isolated W25 contract003 Phase1 software scope (2026-10-02)
++
++This successor exists only in the isolated source copy. It adds a lazy product PyObjC AX/Quartz prerequisite observer with exact target-window mapping, non-prompt caller permission reads and bounded AX metadata. Codex CUA/observer permissions are not product acceptance. The factory defaults to the existing metadata-only adapter; opting into the observer does not enable controls. Missing/ambiguous mapping, dependencies or permission refuse; no focused-window fallback, screenshot, guessed COMSOL selector, input or launch is performed by the observer. All seven control methods, current-model observation, Shell/save/cancel remain unsupported without actual build-specific evidence.
++
++The Desktop queue now supports explicit JSON-encoded typed ModelRef resolution/inspection through the existing ExecutionService.inspect_evidence and model_project_binding, exact active durable claim and existing ProjectAuthority. It performs a fresh scoped parameters+shallow-tree identity read, not full-model identity/dirty preservation or a GUI binding. Wrong project/epoch, dirty or active model, or an external change refuses. Opaque identifiers without a trusted mapping still refuse. Registered source resolution reuses existing immutable project-artifact integrity/host scope; save-copy destination authorization reuses existing non-overwrite/symlink-confined ArtifactStore path policy. No recursive daemon dispatch, second durable claim, backend accessor or coordinator post-fingerprint semantics change.
++
++This Phase1 snapshot preceded the Phase2b single-claim managed copy-load callback. That later software callback loads a project-authorized copy into a registered managed session; it does not perform or certify native Desktop save-copy, current-window binding, or Desktop Shell actions. Generic backend.invoke/managed-server Java still cannot substitute for an observed Desktop Shell provider. Original eight actions and T004/T023/T051/T052/T054 are still NOT_RUN/unaccepted. Phase1 software fixture evidence and retained first-run failures remain in the isolated Phase1 HANDOFF. Current scoped source/test hashes and the 188-case software run are recorded under `docs/full_project_continuation_v2/evidence/w25_integration/`; Root review and all native/action-matrix acceptance remain open.
+--- a/docs/full_project_execution/w25/desktop_service_interface.md
++++ b/docs/full_project_execution/w25/desktop_service_interface.md
+@@ -16,7 +16,7 @@
+ 
+ `desktop.select_node` requires an existing verified binding, a nonempty NodePath, and adapter readback of the exact selected path. `desktop.capture` passes through the caller's specific region for the selected window, rejects full-desktop/screen scopes, and requires a result to attest the requested region, target-window scope, artifact ID and SHA-256. `desktop.action` requires a trusted action resolver, adapter verification of the exact action ID, and a post-action window/model cross-check. Every action callback runs while the same native window and server session are serialized.
+ 
+-`desktop.shell_execute` resolves a project artifact with immutable provenance, checks the requested managed model against the live binding, and dispatches only through the injected engine queue. Success requires the queue to attest execution, source SHA-256, and target `ModelRef`, followed by a post-execution binding and fingerprint check. The service does not execute a local shell command. The existing managed-server Java artifact path is not the same as running code in the COMSOL Desktop Java Shell; the native action remains unavailable until a versioned Desktop Shell selector and readback are evidenced.
++`desktop.shell_execute` resolves a project artifact with immutable provenance, checks the requested managed model against the live binding, and dispatches only through the injected engine queue. Success requires the queue to attest execution, source SHA-256, and target `ModelRef`, followed by a post-execution binding and fingerprint check. The service does not execute a local shell command. The existing managed-server Java artifact path is not the same as running code in the COMSOL Desktop Java Shell. COMSOL 6.4 documents Java Shell only in the Windows version of Desktop, as an interactive UI window; it does not document an external submission endpoint. The local source is *Interactively Using the COMSOL API for Java in the Java Shell Window*, `doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_ref_modeling.19.028.html`, chunk 19260, SHA-256 `9c4d7ef193e9525eaa09fbf768507da981bdf6a6b48ace7ef4394c3adc3f39cc`. The action remains unavailable on both platforms until a supported Windows UI route and its exact selector/readback are evidenced; no macOS Java Shell route is established.
+ 
+ `desktop.migrate_standalone` accepts only `save_policy={"mode":"save_copy","destination_path":"<absolute new path>","overwrite":false}`. The injected project path policy must authorize the normalized destination. The adapter must return an exact path, SHA-256, and unchanged source dirty/fingerprint evidence; the service hashes the written bytes, loads the copy through the managed queue into the requested session, then rechecks the original window/model and a typed source-preservation record. It does not ask the source Desktop to show the new server model and reports `desktop_binding_verified=false`; the result includes the loaded managed `ModelRef` for an explicit later bind/show operation. The source window/model stays open and its identity, dirty flag, and fingerprint must remain unchanged. It never reports a transparent attach.
+ 
+@@ -33,7 +33,7 @@
+ | `desktop.shell_execute` | Execute a trusted registered artifact against the exact managed model. |
+ | `model.load` | Load the verified save-copy into the requested managed session. |
+ 
+-Production wiring now instantiates the coordinator from `ControlDaemon` with the daemon's `OperationStore`, the platform metadata adapter, and host-owned permission/action/artifact/path-policy closures. Direct Desktop calls and nested `registry_call`/`operation_call` routes reach this coordinator before the generic daemon claim, preventing a duplicate operation claim. Managed engine callbacks use the existing queue directly and do not recursively call `ControlDaemon.dispatch`. The host's real action, artifact, binding and save-copy providers are not available yet; the integration therefore records deterministic unsupported/validation outcomes with `engine_dispatched=false` instead of simulating native success. See [public control wiring](desktop_control_wiring.md) for the live route and current refusal behavior.
++Production wiring instantiates the coordinator from `ControlDaemon` with the daemon's `OperationStore`, the platform metadata adapter, and host-owned permission/action/artifact/path-policy closures. Direct Desktop calls and nested `registry_call`/`operation_call` routes reach this coordinator before the generic daemon claim, preventing a duplicate operation claim. Managed engine callbacks use the existing queue directly and do not recursively call `ControlDaemon.dispatch`. The managed queue provides fixture-tested typed-ModelRef inspection and a private single-claim saved-copy load into a registered managed session. Native current-window/model association, action selectors, Desktop Shell submission and Desktop-side save-copy remain unavailable; this software path never reports native binding. See [public control wiring](desktop_control_wiring.md) for the current route and refusal behavior.
+ 
+ ## Per-action implementation status
+ 
+@@ -48,8 +48,17 @@
+ | `desktop.shell_execute` | Dual authorization, trusted artifact provenance, exact queue target and result proof | Coordinator has a managed-server Java artifact queue path; that does not satisfy the COMSOL Desktop Java Shell catalog action. Desktop Shell route remains `UNSUPPORTED_CONTROL / NOT_RUN`. |
+ | `desktop.migrate_standalone` | Save-copy/hash/load/select/source-preservation state machine | `PARTIAL / NOT_IMPLEMENTED_NATIVE_ADAPTER`; `NOT_RUN`. |
+ 
+-The Windows observer uses pywin32 lazily. The macOS observer uses Quartz, psutil and an optional Accessibility trust query without prompting. The Windows pixel helper uses `PrintWindow` only inside a bounded spawned helper process and writes a temporary BMP under a private temporary directory; a timeout stops that helper only and leaves target-window paint completion unknown. Software tests cover the helper protocol with a non-GUI child fixture; they do not invoke Win32 APIs. The factory smoke test selected the host adapter and called its read-only status method; it did not enumerate native windows or invoke Accessibility controls, screen capture, COMSOL, or a GUI action. The Windows process/window observer and macOS window enumeration remain unexecuted. Missing identity fields or permission status fail closed. The user's campaign scope decision to skip macOS Apple Silicon and Intel COMSOL 6.3 remains `USER_REQUESTED_SKIP / NOT_RUN`; this software implementation does not override it or infer compatibility.
++The Windows observer uses pywin32 lazily. The macOS observer uses Quartz, psutil and an optional Accessibility trust query without prompting. The Windows pixel helper uses `PrintWindow` only inside a bounded spawned helper process and writes a temporary BMP under a private temporary directory; a timeout stops that helper only and leaves target-window paint completion unknown. Software tests cover the helper protocol with a non-GUI child fixture; they do not invoke Win32 APIs. The factory smoke test selected the host adapter and called its read-only status method; it did not enumerate native windows or invoke Accessibility controls, screen capture, COMSOL, or a GUI action. The Windows process/window observer and macOS window enumeration remain unexecuted. Missing identity fields or permission status fail closed. No macOS path currently proves the visible Desktop's active model/endpoint, dirty state, or source-preserving save-copy; those facts remain `UNOBSERVED` and must not be inferred from managed-server state or model tags. The user's campaign scope decision to skip macOS Apple Silicon and Intel COMSOL 6.3 remains `USER_REQUESTED_SKIP / NOT_RUN`; this software implementation does not override it or infer compatibility.
+ 
+ ## Software verification
+ 
+ `tests/test_desktop_service.py` uses a real temporary SQLite `OperationStore` with explicit fixture adapters and verifies all eight coordinator routes, durable claim-before-callback ordering, same-key replay and body conflict, cross-coordinator ownership noninterference, optional-field type validation, pending/unknown non-replay, same-session serialization across windows, process-birth/lease invalidation, endpoint/model cross-binding, fingerprint invalidation, typed `NodePath` validation, dual shell permission, capture scope rejection, and save-copy hash/source-preservation handling. `tests/test_desktop_capture.py` exercises a non-GUI spawned child, bounded timeout/child-only termination, output-path confinement, size/header/hash validation and refusal off Windows. The latest four-file software regression run covers `test_desktop_service.py`, `test_desktop_capture.py`, `test_desktop_win32_identity.py`, and `test_desktop_control_wiring.py`: 51 passed on Python 3.12.13 / pytest 9.1.1. Its source hashes and output are recorded in [the Desktop software regression receipt](../evidence/w25_block_other_clients/desktop_software_retest_20260926T2230Z/desktop_software_regression.json). These tests do not establish native control support or any T004/T051/T052/T054 acceptance result.
++
++
++## Historical isolated W25 contract003 Phase1 software scope (2026-10-02)
++
++This successor exists only in the isolated source copy. It adds a lazy product PyObjC AX/Quartz prerequisite observer with exact target-window mapping, non-prompt caller permission reads and bounded AX metadata. Codex CUA/observer permissions are not product acceptance. The factory defaults to the existing metadata-only adapter; opting into the observer does not enable controls. Missing/ambiguous mapping, dependencies or permission refuse; no focused-window fallback, screenshot, guessed COMSOL selector, input or launch is performed by the observer. All seven control methods, current-model observation, Shell/save/cancel remain unsupported without actual build-specific evidence.
++
++The Desktop queue now supports explicit JSON-encoded typed ModelRef resolution/inspection through the existing ExecutionService.inspect_evidence and model_project_binding, exact active durable claim and existing ProjectAuthority. It performs a fresh scoped parameters+shallow-tree identity read, not full-model identity/dirty preservation or a GUI binding. Wrong project/epoch, dirty or active model, or an external change refuses. Opaque identifiers without a trusted mapping still refuse. Registered source resolution reuses existing immutable project-artifact integrity/host scope; save-copy destination authorization reuses existing non-overwrite/symlink-confined ArtifactStore path policy. No recursive daemon dispatch, second durable claim, backend accessor or coordinator post-fingerprint semantics change.
++
++This Phase1 snapshot preceded the Phase2b single-claim managed copy-load callback. The later software callback loads a project-authorized copy into a registered managed session; it does not perform or certify native Desktop save-copy, current-window binding, or Desktop Shell actions. Generic backend.invoke/managed-server Java still cannot substitute for an observed Desktop Shell provider. Original eight actions and T004/T023/T051/T052/T054 are still NOT_RUN/unaccepted. Software fixture evidence and retained first-run failures remain historical. Current scoped integration software receipts are recorded under `docs/full_project_continuation_v2/evidence/w25_integration/`; they do not imply native acceptance. No live repository promotion, Windows/Intel compatibility or matrix certification is implied.
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -31,6 +31,12 @@
+ 
+ [project.optional-dependencies]
+ dev = ["pytest"]
++desktop = [
++  "psutil; sys_platform == 'darwin'",
++  "pyobjc-framework-ApplicationServices>=12.2.2; sys_platform == 'darwin'",
++  "pyobjc-framework-Quartz>=12.2.2; sys_platform == 'darwin'",
++  "pyobjc-framework-Cocoa>=12.2.2; sys_platform == 'darwin'"
++]
+ 
+ [project.scripts]
+ comsol-mcp = "comsol_mcp.mcp_server:main"
+--- a/tests/test_desktop_control_wiring.py
++++ b/tests/test_desktop_control_wiring.py
+@@ -211,3 +211,138 @@
+         _g2_registry.validate_call("desktop.bind", {
+             "project_id": "p", "idempotency_key": "key", "window_ref": "w", "model_ref": "m",
+         })
++
++
++def _desktop_claim(daemon, project='p'):
++    from comsol_mcp._desktop_service import DesktopDispatchContext
++    record, reused=daemon.store.begin(request_id='desktop-r',idempotency_key='desktop-k',request_hash='desktop-h',
++                                     operation='desktop.bind',metadata={'project_id':project})
++    daemon.store.update_job(record['job_id'],'RUNNING')
++    return DesktopDispatchContext('desktop.bind',record['request_id'],record['operation_id'],record['job_id'],
++                                  record['idempotency_key'],record['request_hash'],project)
++
++
++def _desktop_read_fixture(tmp_path):
++    service=_service(tmp_path)
++    service.ledger.permissions.add('host_control')
++    ref=service.bind_model('m')['execution']['model_ref']
++    daemon=ControlDaemon(tmp_path/'daemon',service=service)
++    daemon.backend.endpoint_key='127.0.0.1:2036'
++    daemon.backend._bind_model_project(ref,'p')
++    daemon.store.put_metadata('revisions',daemon.backend._model_project_key(ref),{'model_ref':ref,'project_id':'p','revision':0})
++    # Project authorization is host-injected software fixture; no GUI/process exists.
++    daemon.project_authority.authorize_operation=lambda project,permission: {'workspace':str(tmp_path)} if project=='p' else (_ for _ in ()).throw(RuntimeError('foreign project'))
++    return daemon,service,ref
++
++
++def test_desktop_queued_identity_uses_fresh_scoped_witness_without_second_claim(tmp_path, monkeypatch):
++    import json
++    daemon,service,ref=_desktop_read_fixture(tmp_path)
++    queued = []
++    submit = daemon.session_scheduler.submit
++    def scoped_submit(context, callback, *args, **kwargs):
++        queued.append(context)
++        return submit(context, callback, *args, **kwargs)
++    monkeypatch.setattr(daemon.session_scheduler, 'submit', scoped_submit)
++    monkeypatch.setattr(daemon.queue, 'submit', lambda *a, **kw: (_ for _ in ()).throw(AssertionError('legacy Desktop READ must use explicit None session scheduler')))
++    try:
++        context=_desktop_claim(daemon)
++        before=_operation_count(daemon)
++        result=daemon._desktop_engine_queue('desktop.binding.resolve',{'project_id':'p','model_ref_id':json.dumps(ref)},None,context)
++        assert result['success'] is True and result['data']['model_ref']==ref
++        assert result['data']['fingerprint_coverage']=='parameters+shallow_tree_identity'
++        assert result['data']['cas_guarantee']=='NONE'
++        assert result['data']['Desktop_model_binding']=='UNVERIFIED_BY_MANAGED_INSPECTION_ALONE'
++        assert _operation_count(daemon)==before==1
++        assert daemon.store.get_operation(context.operation_id)['status']=='RUNNING'
++        assert queued == [None]
++    finally:daemon.close()
++
++
++@pytest.mark.parametrize('case',['no_claim','wrong_project','wrong_epoch','unattributed','dirty','active','external_change'])
++def test_desktop_identity_refuses_unproven_or_unsafe_model_before_binding(tmp_path,case):
++    import json
++    from comsol_mcp._execution_contract import model_ref_from_mapping
++    daemon,service,ref=_desktop_read_fixture(tmp_path)
++    try:
++        context=_desktop_claim(daemon)
++        if case=='no_claim':daemon.store.update_job(context.job_id,'FAILED')
++        if case=='wrong_epoch':ref['generation']+=1
++        if case=='unattributed':daemon.backend.model_project_binding=lambda _: {'attribution':'UNATTRIBUTED'}
++        if case=='dirty':service.ledger._state_for(model_ref_from_mapping(ref)).dirty=True
++        if case=='active':service.ledger._state_for(model_ref_from_mapping(ref)).active_operation_id='other'
++        if case=='external_change':service.adapter.model_snapshot=lambda tag:{'model_tag':tag,'server_instance_id':'server','fingerprint':'changed','external_event_counter':1}
++        args={'project_id':'foreign' if case=='wrong_project' else 'p','model_ref_id':json.dumps(ref)}
++        expected={'no_claim':'OWNER_UNVERIFIED','wrong_project':'PROJECT_IDENTITY_MISMATCH','wrong_epoch':'MODEL_IDENTITY_MISMATCH','unattributed':'MODEL_IDENTITY_MISMATCH','dirty':'EXECUTION_STATE_UNKNOWN','active':'EXECUTION_STATE_UNKNOWN','external_change':'EXECUTION_STATE_UNKNOWN'}[case]
++        with pytest.raises(Exception) as caught:daemon._desktop_engine_queue('desktop.binding.resolve',args,None,context)
++        assert caught.value.code==expected
++        assert _operation_count(daemon)==1
++    finally:daemon.close()
++
++
++@pytest.mark.parametrize('operation',['desktop.shell_execute','model.load'])
++def test_native_shell_load_still_refuse_without_single_claim_provider(tmp_path,operation):
++    daemon=ControlDaemon(tmp_path/'daemon')
++    try:
++        result=daemon._desktop_engine_queue(operation,{},None,None)
++        assert result['success'] is False and result['data']['engine_dispatched'] is False
++        assert _operation_count(daemon)==0
++    finally:daemon.close()
++
++
++def test_save_copy_authorizer_reuses_project_path_policy_no_overwrite(tmp_path):
++    from pathlib import Path
++    daemon=ControlDaemon(tmp_path/'daemon')
++    daemon.project_authority.authorize_operation=lambda p,e: {'workspace':str(tmp_path)}
++    try:
++        new=tmp_path/'copy.mph'
++        assert daemon._authorize_desktop_save_copy('p',new) is True
++        new.write_bytes(b'protected')
++        assert daemon._authorize_desktop_save_copy('p',new) is False
++        assert daemon._authorize_desktop_save_copy('p',tmp_path.parent/'escape.mph') is False
++        assert daemon._authorize_desktop_save_copy('p',tmp_path/'.git'/'copy.mph') is False
++        link=tmp_path/'linked';link.symlink_to(tmp_path)
++        assert daemon._authorize_desktop_save_copy('p',link/'new.mph') is False
++        assert new.read_bytes()==b'protected'
++    finally:daemon.close()
++
++
++def test_registered_desktop_source_reuses_actual_artifact_integrity_and_project_scope(tmp_path):
++    from comsol_mcp._artifact_store import register_project_artifact,local_artifact_host_identity,local_engine_host_identity
++    from comsol_mcp._desktop_service import TrustedSourceArtifact
++    daemon,service,ref=_desktop_read_fixture(tmp_path)
++    try:
++        original=tmp_path/'trusted.java';original.write_bytes(b'// synthetic trusted source')
++        record=register_project_artifact(tmp_path,daemon.store,'trusted.java',project_id='p',role='java-source',
++                classification='synthetic',host_identity=local_artifact_host_identity(),
++                engine_host_identity=local_engine_host_identity(daemon.backend.endpoint_key),request_id='register-r',registering_operation_id='register-o')
++        artifact=daemon._resolve_desktop_artifact('p',record['artifact_id'])
++        assert isinstance(artifact,TrustedSourceArtifact) and artifact.sha256==record['artifact_id']
++        assert artifact.size==len(b'// synthetic trusted source')
++        with pytest.raises(Exception):daemon._resolve_desktop_artifact('foreign',record['artifact_id'])
++        # Alter the immutable registered copy rather than the retained input.
++        from pathlib import Path
++        (tmp_path/record['path']).write_bytes(b'changed')
++        with pytest.raises(Exception):daemon._resolve_desktop_artifact('p',record['artifact_id'])
++        assert _operation_count(daemon)==0
++    finally:daemon.close()
++
++
++def test_coordinator_bind_uses_single_claim_and_queue_inspect_with_fake_window_only(tmp_path):
++    import json
++    from comsol_mcp._desktop_service import DesktopModelObservation
++    daemon,service,ref=_desktop_read_fixture(tmp_path)
++    adapter=AvailableWindowAdapter()
++    adapter.observe_model=lambda _: DesktopModelObservation('SERVER','127.0.0.1:2036','m',fingerprint='f'*64)
++    daemon.desktop.adapter=adapter
++    try:
++        status=daemon.dispatch({'operation':'desktop.status','arguments':{'project_id':'p'},'execution':{}})
++        token=status['data']['windows'][0]['window_ref']
++        request={'operation':'desktop.bind','arguments':{'project_id':'p','idempotency_key':'real-queue-fixture',
++                 'window_ref':token,'model_ref':json.dumps(ref)},'execution':{}}
++        result=daemon.dispatch(request)
++        assert result['success'] is True and result['execution']['status']=='SUCCEEDED'
++        assert _operation_count(daemon)==1
++        assert daemon.dispatch(request)==result
++        assert _operation_count(daemon)==1
++    finally:daemon.close()
+--- a/tests/test_desktop_macos.py
++++ b/tests/test_desktop_macos.py
+@@ -0,0 +1,145 @@
++"""Injected product-framework protocol tests only; no macOS APIs are invoked."""
++from types import SimpleNamespace
++import pytest
++from comsol_mcp._desktop_macos import MacOSFrameworkGateway, MacOSAccessibilityObserver
++from comsol_mcp._desktop_platforms import create_native_metadata_adapter
++from comsol_mcp._desktop_service import DesktopOperationError, WindowIdentity, WindowObservation, UNSUPPORTED_CONTROL
++
++ID = WindowIdentity('macos', 'CGWindow:7', 123, 'birth:123', 'uid:test', 'session:test', '6.4.0.293')
++
++class AX:
++    kAXValueCGPointType = 'point'
++    kAXValueCGSizeType = 'size'
++    def __init__(self):
++        self.trust = True
++        self.calls = []
++        self.window = {'AXPosition': SimpleNamespace(x=10,y=20), 'AXSize': SimpleNamespace(width=100,height=90),
++                       'AXTitle':'COMSOL fixture', 'AXRole':'AXWindow', 'AXChildren':[]}
++        self.windows = [self.window]
++    def AXIsProcessTrusted(self):
++        self.calls.append('nonprompt-trust')
++        return self.trust
++    def AXUIElementCreateApplication(self, pid):
++        self.calls.append(('application',pid))
++        return {'AXWindows':self.windows}
++    def AXUIElementCopyAttributeValue(self, element, name, _):
++        self.calls.append(('attribute',name))
++        return (0,element[name]) if name in element else (1,None)
++    def AXValueGetValue(self, value, kind, _):
++        return True,value
++
++class Q:
++    kCGWindowListOptionIncludingWindow=8
++    kCGWindowNumber='number';kCGWindowOwnerPID='pid';kCGWindowBounds='bounds';kCGWindowName='title'
++    def __init__(self):
++        self.screen=True;self.calls=[]
++        self.info={'number':7,'pid':123,'bounds':{'X':10,'Y':20,'Width':100,'Height':90},'title':'COMSOL fixture'}
++    def CGPreflightScreenCaptureAccess(self):
++        self.calls.append('nonprompt-screen')
++        return self.screen
++    def CGWindowListCopyWindowInfo(self, option, number):
++        self.calls.append(('single-window',option,number))
++        return [self.info]
++
++@pytest.fixture
++def gateway():
++    ax,q=AX(),Q()
++    return MacOSFrameworkGateway(lambda:(ax,q)),ax,q
++
++def test_gateway_lazy_until_explicit_probe():
++    calls=[]
++    ax,q=AX(),Q()
++    g=MacOSFrameworkGateway(lambda: calls.append('load') or (ax,q))
++    assert calls==[] and ax.calls==[] and q.calls==[]
++    assert g.permissions()['permission_scope']=='ACTUAL_PRODUCT_CALLER_ONLY_NOT_CUA_CERTIFICATION'
++    g.permissions()
++    assert calls==['load']
++
++def test_missing_framework_does_not_prompt_or_enable_control():
++    def missing():raise ImportError('fixture missing')
++    a=MacOSAccessibilityObserver(gateway=MacOSFrameworkGateway(missing))
++    value=a.status()
++    assert value['permission_status']=='UNKNOWN' and value['control_status']==UNSUPPORTED_CONTROL
++    assert value['product_observer_error']=='WINDOW_METADATA_UNAVAILABLE'
++
++def test_permission_bits_separate_and_do_not_enable_controls(gateway):
++    g,ax,q=gateway;q.screen=False
++    a=MacOSAccessibilityObserver(gateway=g)
++    value=a.status()
++    assert value['accessibility_trusted'] is True and value['screen_capture_allowed'] is False
++    assert value['control_status']==UNSUPPORTED_CONTROL and value['selector_profile']=='UNOBSERVED'
++    assert value['model_binding']=='UNVERIFIED'
++
++def test_tree_reads_exact_associated_window_not_other_app_or_model(gateway):
++    g,ax,q=gateway
++    value=g.window_tree(ID)
++    assert value['scope']=='TARGET_WINDOW_AX_METADATA_ONLY' and value['model_binding']=='UNVERIFIED'
++    assert len(value['nodes'])==1
++    assert q.calls[-1]==('single-window',8,7)
++    assert ('application',123) in ax.calls
++    assert not any('Value' in str(call) for call in ax.calls)
++
++@pytest.mark.parametrize('case',['permission','wrong_pid','wrong_window','bounds','title','ambiguous','missing_windows','missing_geometry'])
++def test_mapping_failure_is_no_focused_window_fallback(gateway,case):
++    g,ax,q=gateway
++    if case=='permission':ax.trust=False
++    if case=='wrong_pid':q.info['pid']=124
++    if case=='wrong_window':q.info['number']=8
++    if case=='bounds':q.info['bounds']['X']=11
++    if case=='title':q.info['title']='another'
++    if case=='ambiguous':ax.windows.append(dict(ax.window))
++    if case=='missing_windows':ax.windows=[]
++    if case=='missing_geometry':ax.window.pop('AXSize')
++    with pytest.raises(DesktopOperationError):g.window_tree(ID)
++    assert not any('Focused' in str(c) for c in ax.calls)
++
++@pytest.mark.parametrize('depth,nodes',[(-1,1),(9,1),(True,1),(1,0),(1,513),(1,True)])
++def test_invalid_inventory_limits_before_native_calls(gateway,depth,nodes):
++    g,ax,q=gateway
++    with pytest.raises(DesktopOperationError):g.window_tree(ID,max_depth=depth,max_nodes=nodes)
++    assert ax.calls==[] and q.calls==[]
++
++def test_tree_node_bound_and_truncation(gateway):
++    g,ax,q=gateway
++    ax.window['AXChildren']=[{'AXRole':'AXButton','AXTitle':'child'} for _ in range(10)]
++    value=g.window_tree(ID,max_nodes=3)
++    assert len(value['nodes'])==3
++    # At least one child was omitted; truncation must be truthful.
++    assert value['truncated'] is True
++
++def test_observer_revalidates_before_and_after(gateway):
++    g,ax,q=gateway
++    class Observer:
++        calls=0
++        def enumerate_windows(self,_):
++            self.calls+=1
++            return [WindowObservation(ID)] if self.calls==1 else []
++    observer=Observer();a=MacOSAccessibilityObserver(gateway=g,identity_observer=observer)
++    with pytest.raises(DesktopOperationError,match='during'):a.inspect_accessibility(ID)
++    assert observer.calls==2
++
++def test_stale_identity_never_enters_ax(gateway):
++    g,ax,q=gateway
++    observer=SimpleNamespace(enumerate_windows=lambda _ : [])
++    a=MacOSAccessibilityObserver(gateway=g,identity_observer=observer)
++    with pytest.raises(DesktopOperationError,match='before'):a.inspect_accessibility(ID)
++    assert ax.calls==[] and q.calls==[]
++
++@pytest.mark.parametrize('method,args',[('observe_model',(ID,)),('show_model',(ID,None)),('select_node',(ID,{})),('capture',(ID,'graphics')),('perform_action',(ID,None)),('save_copy',(ID,None)),('verify_source_preserved',(ID,None))])
++def test_no_unobserved_selector_route_becomes_available(gateway,method,args):
++    g,ax,q=gateway;a=MacOSAccessibilityObserver(gateway=g)
++    with pytest.raises(DesktopOperationError):getattr(a,method)(*args)
++    assert ax.calls==[] and q.calls==[]
++
++def test_factory_observer_choice_is_explicit_and_lazy(monkeypatch):
++    import comsol_mcp._desktop_platforms as platforms
++    monkeypatch.setattr(platforms.sys,'platform','darwin')
++    a=create_native_metadata_adapter(macos_accessibility_observer=True)
++    assert isinstance(a,MacOSAccessibilityObserver) and a.gateway._frameworks is None
++
++
++def test_missing_nonprompt_framework_api_reports_unknown_not_available():
++    gateway=MacOSFrameworkGateway(lambda:(SimpleNamespace(),SimpleNamespace()))
++    result=MacOSAccessibilityObserver(gateway=gateway).status()
++    assert result['permission_status']=='UNKNOWN' and result['metadata_status']=='UNAVAILABLE'
++    assert result['control_status']==UNSUPPORTED_CONTROL
+--- a/tests/test_desktop_macos_phase2a.py
++++ b/tests/test_desktop_macos_phase2a.py
+@@ -0,0 +1,107 @@
++"""Injected software controls; no actual permission APIs, inventory or install."""
++import builtins
++import sys
++import tomllib
++from pathlib import Path
++from types import SimpleNamespace
++import pytest
++from packaging.requirements import Requirement
++from comsol_mcp._desktop_macos import MacOSMetadataAdapter
++from comsol_mcp._desktop_service import BLOCKED_PERMISSION, UNSUPPORTED_CONTROL
++
++@pytest.fixture
++def providers(monkeypatch):
++    calls=[]
++    def no_inventory(*args):raise AssertionError('status must not enumerate or inspect UI')
++    ax=SimpleNamespace(AXIsProcessTrusted=lambda: calls.append('AX-nonprompt') or True)
++    q=SimpleNamespace(CGWindowListCopyWindowInfo=no_inventory,
++        CGRequestScreenCaptureAccess=no_inventory, CGPreflightScreenCaptureAccess=no_inventory)
++    for name in ('kCGWindowListOptionOnScreenOnly','kCGWindowListExcludeDesktopElements',
++                 'kCGNullWindowID','kCGWindowOwnerPID','kCGWindowOwnerName','kCGWindowNumber','kCGWindowName'):
++        setattr(q,name,1)
++    p=SimpleNamespace(Process=no_inventory)
++    f=SimpleNamespace(NSBundle=SimpleNamespace(bundleWithPath_=no_inventory))
++    modules={'ApplicationServices':ax,'Quartz':q,'psutil':p,'Foundation':f}
++    for name,module in modules.items():monkeypatch.setitem(sys.modules,name,module)
++    monkeypatch.setattr(sys,'platform','darwin')
++    return modules,calls
++
++def assert_unavailable(value):
++    assert value['permission_status']=='UNKNOWN'
++    assert value['metadata_status']=='UNAVAILABLE'
++    assert value['accessibility_trusted'] is None
++    assert value['control_status']==UNSUPPORTED_CONTROL
++    assert value['native_evidence']=='NOT_RUN'
++
++@pytest.mark.parametrize('trusted',[False,True])
++def test_successful_nonprompt_bit_only_caller_and_no_inventory(providers,trusted):
++    modules,calls=providers
++    modules['ApplicationServices'].AXIsProcessTrusted=lambda: calls.append('AX-nonprompt') or trusted
++    value=MacOSMetadataAdapter().status()
++    assert value['permission_status']==('AVAILABLE' if trusted else BLOCKED_PERMISSION)
++    assert value['metadata_status']=='AVAILABLE' and value['accessibility_trusted'] is trusted
++    assert value['permission_scope']=='ACTUAL_PRODUCT_CALLER_ONLY_NOT_CUA_CERTIFICATION'
++    assert value['control_status']==UNSUPPORTED_CONTROL and value['native_evidence']=='NOT_RUN'
++    assert value['operation_gaps']['desktop.capture'].startswith('UNSUPPORTED_CONTROL')
++    assert calls==['AX-nonprompt'] and 'metadata_error' not in value
++
++@pytest.mark.parametrize('name',['ApplicationServices','Quartz','psutil','Foundation'])
++def test_missing_dependency_is_not_permission_denied(monkeypatch,providers,name):
++    modules,calls=providers;monkeypatch.setitem(sys.modules,name,None)
++    value=MacOSMetadataAdapter().status();assert_unavailable(value)
++    assert value['metadata_error']['stage']=='dependency_import'
++    assert value['metadata_error']['type'] in {'ModuleNotFoundError','ImportError'}
++    assert calls==[]
++
++@pytest.mark.parametrize('provider,symbol',[
++    ('ApplicationServices','AXIsProcessTrusted'),('Quartz','CGWindowListCopyWindowInfo'),
++    ('psutil','Process'),('Foundation','NSBundle'),('Quartz','kCGWindowNumber')])
++def test_missing_api_or_constant_is_unknown_before_permission(monkeypatch,providers,provider,symbol):
++    modules,calls=providers;monkeypatch.delattr(modules[provider],symbol)
++    value=MacOSMetadataAdapter().status();assert_unavailable(value)
++    assert value['metadata_error']['stage'] in {'api_availability','dependency_import'}
++    assert calls==[]
++
++@pytest.mark.parametrize('provider,symbol',[
++    ('ApplicationServices','AXIsProcessTrusted'),('Quartz','CGWindowListCopyWindowInfo'),
++    ('psutil','Process'),('Foundation','bundleWithPath_')])
++def test_noncallable_api_never_reports_available(monkeypatch,providers,provider,symbol):
++    modules,calls=providers
++    target=modules[provider].NSBundle if provider=='Foundation' else modules[provider]
++    monkeypatch.setattr(target,symbol,None)
++    value=MacOSMetadataAdapter().status();assert_unavailable(value)
++    assert value['metadata_error']['stage']=='api_availability' and calls==[]
++
++@pytest.mark.parametrize('error',[RuntimeError('fixture API error'),OSError('fixture OS error')])
++def test_permission_api_exception_retains_unknown_and_cause(providers,error):
++    modules,calls=providers
++    def fail():calls.append('AX-nonprompt');raise error
++    modules['ApplicationServices'].AXIsProcessTrusted=fail
++    value=MacOSMetadataAdapter().status();assert_unavailable(value)
++    assert value['metadata_error']=={'stage':'nonprompt_accessibility_trust','type':type(error).__name__,'message':str(error)}
++    assert calls==['AX-nonprompt']
++
++def test_construct_and_wrong_platform_status_do_not_load_or_query(monkeypatch):
++    calls=[];original=builtins.__import__
++    def guard(name,*args,**kwargs):
++        if name in {'ApplicationServices','Quartz','psutil','Foundation'}:
++            calls.append(name);raise AssertionError('unexpected lazy import')
++        return original(name,*args,**kwargs)
++    monkeypatch.setattr(builtins,'__import__',guard)
++    adapter=MacOSMetadataAdapter();assert calls==[]
++    monkeypatch.setattr(sys,'platform','linux')
++    result=adapter.status();assert result['metadata_status']=='WRONG_PLATFORM' and calls==[]
++
++def test_packaging_extra_only_darwin_and_core_unchanged():
++    root=Path(__file__).parents[1]
++    current=tomllib.loads((root/'pyproject.toml').read_text())
++    assert current['project']['dependencies']==['mcp>=1.30,<2','MPh','JPype1']
++    assert current['project']['optional-dependencies']['dev']==['pytest']
++    extra=[Requirement(x) for x in current['project']['optional-dependencies']['desktop']]
++    assert {x.name for x in extra}=={'psutil','pyobjc-framework-ApplicationServices','pyobjc-framework-Quartz','pyobjc-framework-Cocoa'}
++    for item in extra:
++        assert item.marker.evaluate({'sys_platform':'darwin'})
++        assert not item.marker.evaluate({'sys_platform':'linux'})
++        assert not item.marker.evaluate({'sys_platform':'win32'})
++    # Complete pyproject field preservation belongs to the frozen diff/manifest
++    # audit; this deliverable test must not depend on a sibling scratch baseline.
+--- a/tests/test_desktop_managed_load_phase2b.py
++++ b/tests/test_desktop_managed_load_phase2b.py
+@@ -0,0 +1,661 @@
++"""Software fixtures only: real durable store/scheduler, no Desktop/native provider."""
++from contextlib import contextmanager
++from hashlib import sha256
++from pathlib import Path
++import json
++import threading
++import time
++import os
++from concurrent.futures import ThreadPoolExecutor
++
++import pytest
++
++from comsol_mcp._control_daemon import ControlDaemon
++from comsol_mcp._desktop_service import DesktopModelObservation, DesktopOperationError
++from comsol_mcp._execution_contract import SessionLedger, model_ref_from_mapping, canonical_request_hash
++from comsol_mcp._execution_service import ExecutionService
++from comsol_mcp._managed_backend import ManagedBackend
++from comsol_mcp._session_context import SessionRuntimeConfig, SessionRuntimeContext, SessionEndpointIdentity, use_session_context
++from comsol_mcp._session_lifecycle import new_lifecycle_record
++from test_desktop_service import FixtureDesktopAdapter
++
++
++class SoftwareWorker:
++    """Injected RPC seam. No process, Java, socket or platform call exists here."""
++    def __init__(self):
++        self.trace = []
++        self.scope = threading.local()
++        self.tagset = ["foreign"]
++        self.failure = None
++        self.fingerprint = "f" * 64
++        self.serial = 0
++        self.java = self
++        self.loaded_tag = None
++        self.request_serial = 0
++
++    def health(self):
++        return {"connected": True, "instance_id": "worker-b", "generation": 1, "server": "127.0.0.1:2040"}
++
++    @contextmanager
++    def operation_context(self, operation_id, on_request_event):
++        old = getattr(self.scope, "operation", None)
++        old_callback = getattr(self.scope, "callback", None)
++        self.scope.operation = operation_id
++        self.scope.callback = on_request_event
++        try:
++            yield
++        finally:
++            self.scope.operation = old
++            self.scope.callback = old_callback
++
++    def observe(self, method, **details):
++        self.trace.append({"method": method, "parent": getattr(self.scope, "operation", None),
++                           "thread": threading.get_ident(), **details})
++        callback = getattr(self.scope, "callback", None)
++        if callback is not None:
++            self.request_serial += 1
++            request = {"request_id": "software-subrequest-" + str(self.request_serial),
++                       "request_sha256": sha256(json.dumps({"method": method, "details": details}, sort_keys=True).encode()).hexdigest(),
++                       "operation_id": self.scope.operation, "scope": "INJECTED_SOFTWARE_METHOD_ENTRY_ONLY"}
++            callback({**request, "phase": "submitted"})
++            callback({**request, "phase": "observed", "status": "METHOD_ENTRY_NOT_NATIVE_TERMINAL"})
++
++    def tags(self):
++        self.observe("tags")
++        if self.failure == "duplicate_tags": return ["foreign", "foreign"]
++        if self.failure == "malformed_tags": return [None]
++        if self.failure == "extra_delta" and self.loaded_tag: return [*self.tagset, "unowned-extra"]
++        if self.failure == "missing_foreign" and self.loaded_tag: return [self.loaded_tag]
++        return list(self.tagset)
++
++    def uniquetag(self, prefix):
++        self.observe("uniquetag")
++        if self.failure == "reused_tag":
++            return "foreign"
++        self.serial += 1
++        return prefix + str(self.serial)
++
++    def load(self, path, *, tag):
++        self.observe("load", path=path, tag=tag)
++        self.tagset.append(tag)
++        self.loaded_tag = tag
++        if self.failure == "load":
++            raise RuntimeError("injected load failure after tag effect")
++        return self
++
++    def tag(self):
++        return "wrong-return" if self.failure == "returned_tag" else self.loaded_tag
++
++    def model_snapshot(self, tag):
++        self.observe("snapshot", tag=tag)
++        if self.failure == "snapshot":
++            raise RuntimeError("injected bind snapshot failure")
++        return {"model_tag": tag, "server_instance_id": "server-b", "fingerprint": self.fingerprint,
++                "external_event_counter": 0}
++
++    def model(self, tag):
++        self.observe("receiver_selection", tag=tag)
++        raise AssertionError("blocked attempt must not select a receiver")
++
++    def start(self, *a, **kw):
++        raise AssertionError("no start")
++
++    connect = start
++    remove = start
++
++
++class Harness:
++    def __init__(self, root):
++        self.root = root.resolve()
++        self.adapter = FixtureDesktopAdapter()
++        default = ExecutionService(SessionLedger("default", "server-default", permissions={"inspect", "host_control"}), self, project_root=self.root)
++        self.daemon = ControlDaemon(root / "daemon", service=default, desktop_adapter=self.adapter)
++        self.adapter.store = self.daemon.store
++        self.adapter.models["WINDOW:1"] = DesktopModelObservation(
++            "STANDALONE", standalone_model_id="standalone-1", fingerprint="source-fingerprint", dirty=True)
++        self.worker = SoftwareWorker()
++        self.service = ExecutionService(SessionLedger("target", "server-b", permissions={"inspect", "project_write", "host_control"}),
++                                        self.worker, project_root=self.root)
++        self.backend = ManagedBackend(root / "target", self.daemon.store, service=self.service,
++                                      worker=self.worker, project_root=self.root)
++        self.backend.worker_identity = {"runtime_id": "fixture", "worker_instance_id": "worker-b", "connection_epoch": 1,
++                                        "server_instance_id": "server-b", "server_ownership": "shared"}
++        self.backend.endpoint_key = "127.0.0.1:2040"
++        runtime = SessionRuntimeConfig("fixture", "6.4.0.293", root, root / "NOT_EXECUTED-java", (root / "NOT_LOADED.jar",), root, root)
++        self.context = SessionRuntimeContext("p", "target", self.root, runtime, SessionEndpointIdentity("127.0.0.1", 2040, 1),
++                    backend=self.backend, worker_instance_id="worker-b", worker=self.worker, service=self.service,
++                    client=self.worker, client_connected=True, current_model=object(), current_model_origin="foreign", current_model_path="foreign.mph")
++        self.daemon.session_registry.register(self.context)
++        # Same text tag in A/C must not be mistaken for B's identity.
++        default.ledger.bind_model("w25copy1", ownership="user_owned", fingerprint="a" * 64)
++        self.foreign = SessionRuntimeContext("foreign-project", "foreign-session", self.root, runtime,
++                  SessionEndpointIdentity("127.0.0.1", 2041, 1), current_model=object(),
++                  current_model_origin="foreign-C", current_model_path="C.mph")
++        self.daemon.session_registry.register(self.foreign)
++        self.foreign_pointer = self.foreign.current_model
++        self.daemon._session_backends[("p", "target")] = self.backend
++        self.daemon._session_worker_handles[("p", "target")] = self.worker
++        self.daemon.session_lifecycle.save(new_lifecycle_record(project_id="p", session_id="target", state="CONNECTED", runtime_id="fixture",
++             endpoint={"host": "127.0.0.1", "port": 2040}, client_state="CONNECTED", server_state="SHARED", server_ownership="shared",
++             worker_instance_id="worker-b", worker_epoch=1, server_instance_id="server-b"))
++        # Explicit trusted software project-authority seam, no ACL broadening in product.
++        self.daemon.project_authority.authorize_operation = lambda project, permission: {"workspace": self.root} if project == "p" else (_ for _ in ()).throw(ValueError("wrong project"))
++        status = self.daemon.dispatch({"operation": "desktop.status", "arguments": {"project_id": "p"}})
++        self.window = status["data"]["windows"][0]["window_ref"]
++        self.pointer = self.context.current_model
++        self.before = self.snapshot()
++
++    def model_snapshot(self, tag):
++        raise AssertionError("default backend must not inspect target")
++
++    def request(self, key="copy-1", **changes):
++        args = {"project_id": "p", "idempotency_key": key, "request_id": "req-" + key, "window_ref": self.window,
++                "target_session_id": "target", "save_policy": {"mode": "save_copy", "destination_path": str(self.root / (key + ".mph")), "overwrite": False}}
++        args.update(changes)
++        return {"operation": "desktop.migrate_standalone", "arguments": args}
++
++    def migrate(self, request=None):
++        return self.daemon.dispatch(request or self.request())
++
++    def attempt(self):
++        rows = list(self.daemon._desktop_attempt_rows("p"))
++        assert len(rows) == 1
++        return rows[0]
++
++    def assert_blocked(self, raw, operation="parameter_set"):
++        before = list(self.worker.trace)
++        with use_session_context(self.context), pytest.raises(DesktopOperationError, match="unresolved"):
++            self.daemon._desktop_before_model_dispatch(operation, {"model_ref": raw}, {})
++        assert self.worker.trace == before
++        assert self.context.current_model is self.pointer
++
++    def close(self):
++        evidence_dir = os.environ.get("W25_PHASE2B_EVIDENCE_DIR")
++        if evidence_dir:
++            path = Path(evidence_dir) / (self.root.name + ".json")
++            path.parent.mkdir(parents=True, exist_ok=True)
++            path.write_text(json.dumps({"scope": "INJECTED_SOFTWARE_WORKER_AND_ADAPTER_ONLY", "before": self.before,
++                      "after": self.snapshot(), "worker_trace": self.worker.trace}, indent=2) + "\n")
++        self.daemon.close()
++
++    def snapshot(self):
++        store = self.daemon.store
++        return {"operation_count": store.db.execute("SELECT count(*) FROM operations").fetchone()[0],
++                "jobs": list(store.list_jobs(project_id="p", limit=100)),
++                "events": {j["job_id"]: store.events(j["job_id"], limit=1000) for j in store.list_jobs(project_id="p", limit=100)},
++                "revisions": store.list_metadata("revisions"), "sessions": store.list_metadata("sessions"),
++                "ledger_models": {tag: {"model_ref": state.ref.as_dict(), "revision": state.revision, "dirty": state.dirty,
++                   "fingerprint": state.fingerprint, "active_operation_id": state.active_operation_id}
++                    for tag, state in self.service.ledger._models.items()},
++                "generations": dict(self.service.ledger._generations),
++                "selected_pointer_preserved": self.context.current_model is self.pointer,
++                "foreign_pointer_preserved": self.foreign.current_model is self.foreign_pointer,
++                "selected_origin": self.context.current_model_origin, "selected_path": self.context.current_model_path,
++                "native_fixture_tags": list(self.worker.tagset), "volatile_attempts": self.daemon._desktop_unpersisted_attempts,
++                "copy_files": [{"path": str(p), "size": p.stat().st_size, "sha256": sha256(p.read_bytes()).hexdigest()}
++                               for p in sorted(self.root.glob("*.mph")) if p.is_file() and not p.is_symlink()]}
++
++
++@pytest.fixture
++def harness(tmp_path):
++    h = Harness(tmp_path)
++    try:
++        yield h
++    finally:
++        h.close()
++
++
++def queue_valid_parameter_write(harness, ref, key):
++    """Queue a schema-valid legacy mutating operation with its real identity envelope."""
++    from comsol_mcp._g2_registry import validate_call
++
++    daemon = harness.daemon
++    state = harness.service.ledger._state_for(ref)
++    arguments = {"parameters_json": json.dumps([
++        {"name": "w25_race_probe", "expression": "1"},
++    ])}
++    execution = {
++        "project_id": "p",
++        "session_id": harness.context.session_id,
++        "model_ref": ref.as_dict(),
++        "expected_revision": state.revision,
++        "idempotency_key": key,
++        "request_id": key,
++    }
++    # This is the real registered legacy set_parameters operation and its MCP
++    # input schema. Keep the authorizer/backend seams below, but do not admit a
++    # made-up operation or an empty argument body as evidence of a queued write.
++    validate_call("set_parameters", {**arguments, **execution}, allow_unbound_identity=True)
++    request_hash = canonical_request_hash(
++        "set_parameters", arguments, ref, state.revision,
++        project_id="p", idempotency_key=key, request_id=key,
++    )
++    record, reused = daemon.store.begin(
++        request_id=key, idempotency_key=key, request_hash=request_hash,
++        operation="set_parameters", metadata={"project_id": "p"},
++    )
++    assert not reused
++    timeouts = {"queue_timeout_s": None, "execution_timeout_s": None, "progress_timeout_s": None}
++    future = daemon.session_scheduler.submit(
++        harness.context, daemon._execute, record, "set_parameters", arguments,
++        execution, timeouts, time.monotonic(),
++    )
++    return record, future
++
++
++def test_one_parent_claim_registered_worker_load_inspect_and_release(harness):
++    result = harness.migrate()
++    assert result["success"], result
++    job, attempt = harness.attempt()
++    ref = model_ref_from_mapping(result["data"]["target_model_ref"])
++    assert ref.session_id == "target" and ref.server_instance_id == "server-b"
++    assert result["data"]["desktop_binding_verified"] is False
++    assert job["status"] == "SUCCEEDED" and attempt["state"] == "READY"
++    args = harness.request()["arguments"]
++    semantic = {k: v for k, v in args.items() if k not in {"request_id", "idempotency_key"}}
++    digest = canonical_request_hash("desktop.migrate_standalone", semantic, None, None, project_id="p")
++    assert attempt["request_hash"] == digest == harness.daemon.store.get_operation(job["operation_id"])["request_hash"]
++    assert harness.daemon.store.db.execute("SELECT count(*) FROM operations").fetchone()[0] == 1
++    assert harness.daemon.store.db.execute("SELECT count(*) FROM jobs").fetchone()[0] == 1
++    assert {entry["parent"] for entry in harness.worker.trace} == {job["operation_id"]}
++    events = [e["metadata"] for e in harness.daemon.store.events(job["job_id"], limit=1000) if e["event"] == "worker_request"]
++    submitted = [e for e in events if e["phase"] == "submitted"]
++    assert len(submitted) == len(harness.worker.trace)
++    assert len({e["request_id"] for e in submitted}) == len(submitted)
++    assert all(e["operation_id"] == job["operation_id"] and len(e["request_sha256"]) == 64 for e in submitted)
++    assert len({entry["thread"] for entry in harness.worker.trace}) == 1
++    assert sum(entry["method"] == "load" for entry in harness.worker.trace) == 1
++    assert sum(entry["method"] == "snapshot" for entry in harness.worker.trace) >= 3
++    state = harness.service.ledger._state_for(ref)
++    assert not state.dirty and state.active_operation_id is None and state.revision == 0
++    assert harness.backend.model_project_binding(ref.as_dict()) == {"attribution": "PROJECT_BOUND", "project_id": "p"}
++    assert harness.context.current_model is harness.pointer
++    assert harness.foreign.current_model is harness.foreign_pointer
++    assert harness.adapter.models["WINDOW:1"].mode == "STANDALONE"
++    before = list(harness.worker.trace)
++    replay = harness.migrate()
++    assert replay == result
++    assert harness.worker.trace == before
++
++
++@pytest.mark.parametrize("failure", ["reused_tag", "duplicate_tags", "malformed_tags", "extra_delta", "missing_foreign", "load", "returned_tag", "snapshot", "emit", "persist", "silent_persist", "source_preservation", "tail_persist"])
++def test_partial_effects_are_durable_non_ready_never_replayed(harness, monkeypatch, failure):
++    harness.worker.failure = failure
++    if failure == "emit":
++        monkeypatch.setattr(harness.service, "_emit", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("injected emit failure")))
++    if failure in {"persist", "tail_persist"}:
++        original = harness.backend.persist
++        def persist():
++            states = list(harness.service.ledger._models.values())
++            if failure == "persist" or (states and states[0].active_operation_id is None):
++                raise RuntimeError("injected persist failure")
++            return original()
++        monkeypatch.setattr(harness.backend, "persist", persist)
++    if failure == "silent_persist": monkeypatch.setattr(harness.backend, "persist", lambda: None)
++    if failure == "source_preservation":
++        harness.adapter.preserve_source = False
++    request = harness.request()
++    result = harness.migrate(request)
++    assert not result["success"], result
++    job, attempt = harness.attempt()
++    assert attempt["state"] == "NON_READY"
++    assert attempt["durable_guard"] == "ATTEMPT_NON_READY_RECORDED"
++    assert attempt["cause"]["message"]
++    assert job["status"] == ("SUCCEEDED" if failure == "tail_persist" else "UNKNOWN")
++    trace = list(harness.worker.trace)
++    replay = harness.migrate(request)
++    assert not replay["success"] and harness.worker.trace == trace
++    new_key = harness.migrate(harness.request("different-key"))
++    assert not new_key["success"] and harness.worker.trace == trace
++    if attempt.get("model_ref"):
++        raw = attempt["model_ref"]
++        state = harness.service.ledger._state_for(model_ref_from_mapping(raw))
++        assert state.dirty and state.active_operation_id == job["operation_id"]
++        harness.assert_blocked(raw)
++        alias = {**raw, "generation": raw["generation"] + 10}
++        harness.assert_blocked(alias)
++        harness.assert_blocked({**raw, "server_instance_id": "forged-server"})
++        harness.assert_blocked({**raw, "session_id": "forged-session"})
++        # A stale clean revision row cannot overrule durable owned-attempt metadata.
++        key = harness.backend._model_project_key(raw)
++        harness.daemon.store.put_metadata("revisions", key, {"model_ref": raw, "dirty": False, "revision": 0, "fingerprint": "f" * 64, "project_id": "p"})
++        harness.assert_blocked(raw)
++    harness.assert_blocked(None, "model_load")
++    assert harness.context.current_model is harness.pointer
++
++
++@pytest.mark.parametrize("bad", ["missing", "retired", "disconnected", "epoch", "table", "lifecycle", "worker_health"])
++def test_target_capture_refuses_before_any_worker_call(harness, monkeypatch, bad):
++    if bad == "missing":
++        request = harness.request(target_session_id="not-registered")
++    else:
++        request = harness.request()
++    if bad == "retired": harness.context.client_retired = True
++    if bad == "disconnected": harness.context.client_connected = False
++    if bad == "epoch": harness.backend.worker_identity["connection_epoch"] = 2
++    if bad == "table": harness.daemon._session_backends.pop(("p", "target"))
++    if bad == "lifecycle": harness.daemon.session_lifecycle.save(new_lifecycle_record(project_id="p", session_id="target", state="NEW"))
++    if bad == "worker_health": monkeypatch.setattr(harness.worker, "health", lambda: {"connected": False})
++    result = harness.migrate(request)
++    assert not result["success"]
++    assert harness.worker.trace == []
++    assert harness.service.ledger._models == {}
++    assert harness.context.current_model is harness.pointer
++
++
++def test_reopened_store_guard_survives_stale_clean_registry(harness):
++    harness.worker.failure = "snapshot"
++    assert not harness.migrate()["success"]
++    job, attempt = harness.attempt()
++    raw = attempt["model_ref"]
++    from comsol_mcp._operation_store import OperationStore
++    reopened = OperationStore(harness.daemon.store.path)
++    old = harness.daemon.store
++    try:
++        harness.daemon.store = reopened
++        state = harness.service.ledger._state_for(model_ref_from_mapping(raw))
++        state.dirty, state.active_operation_id, state.fingerprint = False, None, "f" * 64
++        harness.assert_blocked(raw)
++        assert reopened.operation_job(job["operation_id"])["metadata"]["desktop_copy_load"]["state"] == "NON_READY"
++    finally:
++        harness.daemon.store = old
++        reopened.close()
++
++
++@pytest.mark.parametrize("stage", ["finish_before", "finish_after", "service_receipt"])
++def test_outer_tail_failure_freezes_ref_without_overwriting_terminal(harness, monkeypatch, stage):
++    store = harness.daemon.store
++    original = store.finish
++    def finish(operation_id, **kwargs):
++        if stage == "finish_after":
++            original(operation_id, **kwargs)
++        raise RuntimeError("injected outer finish failure")
++    if stage == "service_receipt":
++        original_complete = harness.daemon.desktop._complete_pending_binding
++        def complete(operation_id, *, succeeded):
++            if succeeded:
++                raise RuntimeError("injected service receipt failure")
++            return original_complete(operation_id, succeeded=succeeded)
++        monkeypatch.setattr(harness.daemon.desktop, "_complete_pending_binding", complete)
++    else:
++        monkeypatch.setattr(store, "finish", finish)
++    result = harness.migrate()
++    assert not result["success"] and result["data"]["target_readiness"] == "NON_READY"
++    job, attempt = harness.attempt()
++    assert job["status"] == ("RUNNING" if stage == "finish_before" else "SUCCEEDED")
++    assert result["data"]["parent_persisted_status"] == job["status"]
++    assert attempt["state"] == "NON_READY" and attempt["cause"]["message"]
++    harness.assert_blocked(attempt["model_ref"])
++    trace = list(harness.worker.trace)
++    replay = harness.migrate()
++    assert not replay["success"] and harness.worker.trace == trace
++
++
++def test_attempt_persistence_error_reports_unverified_and_preserves_volatile_guard(harness, monkeypatch):
++    original = harness.daemon._desktop_save_attempt
++    def save(record, attempt):
++        if attempt["state"] == "NON_READY":
++            raise RuntimeError("injected durable attempt storage failure")
++        return original(record, attempt)
++    monkeypatch.setattr(harness.daemon, "_desktop_save_attempt", save)
++    harness.worker.failure = "snapshot"
++    result = harness.migrate()
++    assert not result["success"]
++    volatile = next(iter(harness.daemon._desktop_unpersisted_attempts.values()))
++    assert volatile["durable_guard"] == "UNVERIFIED"
++    assert volatile["secondary_errors"][-1]["stage"] == "attempt_persist"
++    harness.assert_blocked(volatile["model_ref"])
++
++
++@pytest.mark.parametrize("change", ["retire", "replace_table", "file_bytes", "symlink", "hash_receipt", "foreign_pointer"])
++def test_queued_recheck_and_file_identity_refuse_effects(harness, monkeypatch, change):
++    original = harness.daemon._desktop_queued_load_copy
++    def callback(arguments, parent, capture, scope, witness):
++        if change == "retire": harness.context.client_retired = True
++        if change == "replace_table": harness.daemon._session_backends[("p", "target")] = object()
++        if change == "file_bytes": Path(witness["path"]).write_bytes(b"changed copy")
++        if change == "symlink":
++            path = Path(witness["path"])
++            path.rename(path.with_suffix(".saved"))
++            path.symlink_to(path.with_suffix(".saved"))
++        if change == "hash_receipt": arguments["source_sha256"] = "0" * 64
++        if change == "foreign_pointer":
++            old_load = harness.worker.load
++            def load(*a, **kw):
++                harness.context.current_model = object()
++                return old_load(*a, **kw)
++            monkeypatch.setattr(harness.worker, "load", load)
++        return original(arguments, parent, capture, scope, witness)
++    monkeypatch.setattr(harness.daemon, "_desktop_queued_load_copy", callback)
++    result = harness.migrate()
++    assert not result["success"]
++    if change != "foreign_pointer":
++        assert harness.worker.trace == []
++    else:
++        job, attempt = harness.attempt()
++        assert attempt["state"] == "NON_READY"
++        assert "selected pointer changed" in attempt["cause"]["message"]
++
++
++@pytest.mark.parametrize("field", ["operation_id", "job_id", "operation", "request_id", "request_hash", "idempotency_key", "project_id"])
++def test_exact_parent_context_rechecked_inside_lane(harness, monkeypatch, field):
++    from dataclasses import replace
++    original = harness.daemon._desktop_queued_load_copy
++    def callback(arguments, parent, capture, scope, witness):
++        return original(arguments, replace(parent, **{field: "wrong"}), capture, scope, witness)
++    monkeypatch.setattr(harness.daemon, "_desktop_queued_load_copy", callback)
++    result = harness.migrate()
++    assert not result["success"] and harness.worker.trace == []
++    assert harness.service.ledger._models == {}
++
++
++def test_bind_clean_interval_is_serial_and_core_write_is_rejected_before_receiver(harness, monkeypatch):
++    entered, release = threading.Event(), threading.Event()
++    original_emit = harness.service._emit
++    def emit(event, *a, **kw):
++        if event == "bound":
++            entered.set()
++            assert release.wait(5)
++        return original_emit(event, *a, **kw)
++    monkeypatch.setattr(harness.service, "_emit", emit)
++    daemon = harness.daemon
++    monkeypatch.setattr(daemon, "_authorize_project_execution", lambda *a, **kw: None)
++    monkeypatch.setattr(daemon.project_authority, "apply_timeout_caps", lambda project, timeouts: timeouts)
++    monkeypatch.setattr(daemon.project_authority, "get_project", lambda project: {"workspace": harness.root})
++    def invoke(*a, **kw):
++        harness.worker.model("must-not-select")
++    monkeypatch.setattr(harness.backend, "invoke", invoke)
++    with ThreadPoolExecutor(max_workers=1) as executor:
++        migration = executor.submit(harness.migrate)
++        assert entered.wait(5)
++        state = next(iter(harness.service.ledger._models.values()))
++        assert state.active_operation_id is None  # actual bind emission clean interval
++        _record, write = queue_valid_parameter_write(harness, state.ref, "write")
++        assert not write.done()
++        release.set()
++        rejected = write.result(5)
++        result = migration.result(5)
++    assert not rejected["success"]
++    assert result["success"], result
++    assert not any(t["method"] == "receiver_selection" for t in harness.worker.trace)
++    assert harness.context.current_model is harness.pointer
++    assert daemon.store.db.execute("SELECT count(*) FROM operations").fetchone()[0] == 2
++
++
++@pytest.mark.parametrize("bad", ["owner_missing", "terminal_parent", "owned_tag_prior", "retirement_lane", "closed_scheduler"])
++def test_owner_and_prior_identity_or_retirement_refuse(harness, monkeypatch, bad):
++    if bad == "owned_tag_prior": harness.context.owned_model_tags.add("w25copy1")
++    if bad == "retirement_lane":
++        with harness.daemon.session_scheduler._lock:
++            harness.daemon.session_scheduler._closed_session_bindings.add(harness.context.worker_binding_key)
++    if bad == "closed_scheduler": harness.daemon.session_scheduler.close()
++    if bad in {"owner_missing", "terminal_parent"}:
++        original = harness.daemon._desktop_queued_load_copy
++        def callback(arguments, parent, capture, scope, witness):
++            if bad == "owner_missing":
++                with harness.daemon.desktop._operation_lock:
++                    harness.daemon.desktop._active_operations.discard(parent.operation_id)
++            else:
++                harness.daemon.store.update_job(parent.job_id, "UNKNOWN")
++            return original(arguments, parent, capture, scope, witness)
++        monkeypatch.setattr(harness.daemon, "_desktop_queued_load_copy", callback)
++    result = harness.migrate()
++    assert not result["success"]
++    assert not any(t["method"] == "load" for t in harness.worker.trace)
++
++
++@pytest.mark.parametrize("bad", ["dirty", "active", "retired_context", "missing_context", "worker_health", "wrong_revision_row", "lost_attempt_metadata"])
++def test_same_key_replay_checks_current_readiness_without_rpc(harness, monkeypatch, bad):
++    first = harness.migrate()
++    assert first["success"], first
++    job, attempt = harness.attempt()
++    raw = attempt["model_ref"]
++    state = harness.service.ledger._state_for(model_ref_from_mapping(raw))
++    if bad == "dirty": state.dirty = True
++    if bad == "active": state.active_operation_id = "another-parent"
++    if bad == "retired_context": harness.context.client_retired = True
++    if bad == "missing_context": harness.daemon.session_registry.remove("p", "target", expected=harness.context)
++    if bad == "worker_health": monkeypatch.setattr(harness.worker, "health", lambda: {"connected": False})
++    if bad == "wrong_revision_row": harness.daemon.store.put_metadata("revisions", harness.backend._model_project_key(raw), {"model_ref": raw, "revision": 99})
++    if bad == "lost_attempt_metadata":
++        harness.daemon.store.update_job(job["job_id"], "SUCCEEDED", {"desktop_copy_load": None})
++    trace = list(harness.worker.trace)
++    replay = harness.migrate()
++    assert not replay["success"] and replay["data"]["parent_persisted_status"] == "SUCCEEDED"
++    assert harness.daemon.store.get_operation(job["operation_id"])["status"] == "SUCCEEDED"
++    assert harness.worker.trace == trace
++
++
++def test_ambient_foreign_context_does_not_route_load_or_inspection(harness):
++    with use_session_context(harness.foreign):
++        result = harness.migrate()
++    assert result["success"], result
++    assert result["data"]["target_model_ref"]["session_id"] == "target"
++    assert harness.foreign.current_model is harness.foreign_pointer
++    assert not any(t["method"] == "receiver_selection" for t in harness.worker.trace)
++
++
++def test_foreign_pointer_change_after_post_inspect_prevents_release(harness, monkeypatch):
++    original = harness.adapter.verify_source_preserved
++    def preserve(*a, **kw):
++        harness.foreign.current_model = object()
++        return original(*a, **kw)
++    monkeypatch.setattr(harness.adapter, "verify_source_preserved", preserve)
++    result = harness.migrate()
++    assert not result["success"] and result["data"]["parent_persisted_status"] == "SUCCEEDED"
++    job, attempt = harness.attempt()
++    assert attempt["state"] == "NON_READY" and "selected pointer changed" in attempt["cause"]["message"]
++    assert job["status"] == "SUCCEEDED"
++
++
++@pytest.mark.parametrize("corruption", ["revision_ref", "session_ref", "session_worker", "session_server", "saved_ownership", "project", "ownership", "post_inspect"])
++def test_independent_persisted_identity_and_post_inspect_failures(harness, monkeypatch, corruption):
++    original = harness.backend.persist
++    def persist():
++        original()
++        if not harness.service.ledger._models:
++            return
++        state = next(iter(harness.service.ledger._models.values()))
++        ref = state.ref.as_dict()
++        store = harness.daemon.store
++        key = harness.backend._model_project_key(ref)
++        if corruption in {"revision_ref", "project"}:
++            row = store.get_metadata("revisions", key)
++            if corruption == "revision_ref": row["model_ref"] = {**ref, "server_instance_id": "foreign"}
++            else: row["project_id"] = "foreign-project"
++            store.put_metadata("revisions", key, row)
++        if corruption in {"session_ref", "session_worker", "session_server", "saved_ownership"}:
++            row = store.get_metadata("sessions", ref["session_id"])
++            if corruption == "session_ref": row["models"][ref["model_tag"]]["ref"] = {**ref, "generation": 99}
++            elif corruption == "session_worker": row["worker_identity"]["connection_epoch"] = 99
++            elif corruption == "session_server": row["worker_identity"]["server_instance_id"] = "foreign-server"
++            else: row["models"][ref["model_tag"]]["ownership"] = "user_owned"
++            store.put_metadata("sessions", ref["session_id"], row)
++        if corruption == "ownership": harness.service.ledger.model_ownership[ref["model_tag"]] = "user_owned"
++    if corruption == "post_inspect":
++        snapshot = harness.worker.model_snapshot
++        def observed(tag):
++            if sum(t["method"] == "snapshot" for t in harness.worker.trace) >= 2:
++                raise RuntimeError("injected final private inspection failure")
++            return snapshot(tag)
++        monkeypatch.setattr(harness.worker, "model_snapshot", observed)
++    else:
++        monkeypatch.setattr(harness.backend, "persist", persist)
++    result = harness.migrate()
++    assert not result["success"]
++    job, attempt = harness.attempt()
++    # Phase2c keeps the already-marked load effect sticky across the READ
++    # wrapper. Frozen Phase2b's parent FAILED remains historical evidence.
++    assert job["status"] == "UNKNOWN"
++    assert attempt["state"] == "NON_READY"
++    assert attempt["cause"]["message"]
++    state = harness.service.ledger._state_for(model_ref_from_mapping(attempt["model_ref"]))
++    assert state.dirty and state.active_operation_id == job["operation_id"]
++    harness.assert_blocked(attempt["model_ref"])
++
++
++def test_foreign_parent_read_cannot_inspect_provisional_ref(harness, monkeypatch):
++    from comsol_mcp._desktop_service import DesktopDispatchContext
++    entered, release = threading.Event(), threading.Event()
++    original = harness.adapter.verify_source_preserved
++    def preservation(*a, **kw):
++        entered.set()
++        assert release.wait(5)
++        return original(*a, **kw)
++    monkeypatch.setattr(harness.adapter, "verify_source_preserved", preservation)
++    with ThreadPoolExecutor(max_workers=1) as executor:
++        migration = executor.submit(harness.migrate)
++        assert entered.wait(5)
++        job, attempt = harness.attempt()
++        record, reused = harness.daemon.store.begin(request_id="foreign-read", idempotency_key="foreign-read", request_hash="foreign-hash",
++                                                   operation="desktop.bind", metadata={"project_id": "p"})
++        harness.daemon.store.update_job(record["job_id"], "RUNNING")
++        context = DesktopDispatchContext(operation_id=record["operation_id"], job_id=record["job_id"], operation=record["operation"],
++                                         request_id=record["request_id"], idempotency_key=record["idempotency_key"], request_hash=record["request_hash"], project_id="p")
++        before = list(harness.worker.trace)
++        try:
++            with pytest.raises(DesktopOperationError, match="active operation"):
++                harness.daemon._desktop_engine_queue("desktop.binding.inspect", {"project_id": "p"}, model_ref_from_mapping(attempt["model_ref"]), context)
++            assert harness.worker.trace == before
++        finally:
++            release.set()
++        assert migration.result(5)["success"]
++
++
++def test_ready_writeback_failure_freezes_before_same_lane_write_runs(harness, monkeypatch):
++    daemon = harness.daemon
++    queued_writes = []
++    original_save = daemon._desktop_save_attempt
++
++    monkeypatch.setattr(daemon, "_authorize_project_execution", lambda *a, **kw: None)
++    monkeypatch.setattr(daemon.project_authority, "apply_timeout_caps", lambda project, timeouts: timeouts)
++    monkeypatch.setattr(daemon.project_authority, "get_project", lambda project: {"workspace": harness.root})
++    monkeypatch.setattr(harness.backend, "invoke", lambda *a, **kw: harness.worker.model("must-not-select"))
++
++    def save_then_uncertain_ready(record, attempt):
++        original_save(record, attempt)
++        if attempt.get("state") == "READY":
++            target = next(iter(harness.service.ledger._models.values()))
++            _write_record, future = queue_valid_parameter_write(
++                harness, target.ref, "ready-window-write",
++            )
++            queued_writes.append(future)
++            # Persistence succeeded; make the callback observe an uncertain return path.
++            raise RuntimeError("injected READY readback uncertainty")
++
++    monkeypatch.setattr(daemon, "_desktop_save_attempt", save_then_uncertain_ready)
++    result = harness.migrate()
++    assert not result["success"]
++    assert result["data"]["parent_persisted_status"] == "SUCCEEDED"
++    assert len(queued_writes) == 1
++    rejected = queued_writes[0].result(5)
++    assert not rejected["success"]
++    job, attempt = harness.attempt()
++    assert job["status"] == "SUCCEEDED"
++    assert attempt["state"] == "NON_READY"
++    assert attempt["durable_guard"] == "ATTEMPT_NON_READY_RECORDED"
++    assert attempt["cause"]["message"] == "injected READY readback uncertainty"
++    assert all(entry["method"] != "receiver_selection" for entry in harness.worker.trace)
++    target = next(iter(harness.service.ledger._models.values()))
++    assert target.dirty and target.fingerprint is None
++    assert target.active_operation_id == job["operation_id"]
+--- a/tests/test_desktop_service.py
++++ b/tests/test_desktop_service.py
+@@ -765,7 +765,11 @@
+         harness.close()
+ 
+ 
+-def test_native_factory_is_not_a_fixture_and_keeps_control_capability_unsupported():
++def test_native_factory_is_not_a_fixture_and_keeps_control_capability_unsupported(monkeypatch):
++    # Software fixture only: do not query actual observer Accessibility trust.
++    import sys
++    from types import SimpleNamespace
++    monkeypatch.setitem(sys.modules, "ApplicationServices", SimpleNamespace(AXIsProcessTrusted=lambda: False))
+     adapter = create_native_metadata_adapter()
+     assert not isinstance(adapter, FixtureDesktopAdapter)
+     assert isinstance(adapter, MetadataOnlyDesktopAdapter)
+--- a/tests/test_desktop_sticky_effects_phase2c.py
++++ b/tests/test_desktop_sticky_effects_phase2c.py
+@@ -0,0 +1,227 @@
++"""Real Coordinator/Store software controls; no native effect certification."""
++from pathlib import Path
++import json
++import os
++from copy import deepcopy
++
++import pytest
++
++from comsol_mcp._desktop_service import DesktopModelObservation, DesktopOperationError
++from test_desktop_service import Harness
++
++
++def migration_args(h, key):
++    return {"project_id": "proj-1", "idempotency_key": key, "request_id": "request-" + key,
++            "window_ref": h.windows()[0], "target_session_id": "session-target",
++            "save_policy": {"mode": "save_copy", "destination_path": str(h.save_root / (key + ".mph")), "overwrite": False}}
++
++
++def standalone(h):
++    h.adapter.models["WINDOW:1"] = DesktopModelObservation("STANDALONE", standalone_model_id="source-1",
++                    fingerprint="source-fingerprint", dirty=True)
++
++
++def evidence(h, name, results, trace, finishes):
++    out = os.environ.get("W25_PHASE2C_EVIDENCE_DIR")
++    if out:
++        p = Path(out) / (h.save_root.name + "-" + name + ".json")
++        p.parent.mkdir(parents=True, exist_ok=True)
++        jobs = list(h.store.list_jobs(limit=100))
++        p.write_text(json.dumps({"scope": "ACTUAL_COORDINATOR_TEMPORARY_STORE_INJECTED_SOFTWARE_PROVIDER",
++            "results": results, "callbacks": trace, "finish_calls": finishes,
++            "operation_count": h.store.db.execute("SELECT count(*) FROM operations").fetchone()[0],
++            "jobs": jobs, "operations": [h.store.get_operation(j["operation_id"]) for j in jobs],
++            "events": {j["job_id"]: h.store.events(j["job_id"], limit=1000) for j in jobs}}, indent=2) + "\n")
++
++
++def spy_finish(h, monkeypatch):
++    calls = []
++    original = h.store.finish
++    def finish(operation_id, **kwargs):
++        calls.append({"operation_id": operation_id, "status": kwargs["status"]})
++        return original(operation_id, **kwargs)
++    monkeypatch.setattr(h.store, "finish", finish)
++    return calls
++
++
++def test_marked_save_copy_structured_error_cannot_be_retryable_failed(tmp_path, monkeypatch):
++    h = Harness(tmp_path)
++    standalone(h)
++    trace, results = [], []
++    finishes = spy_finish(h, monkeypatch)
++    original = h.adapter.save_copy
++    first = RuntimeError("original provider cause")
++    raised = DesktopOperationError("SAVE_PROVIDER_FAILURE", "provider failed after actual software copy",
++                    side_effect_started=False, safe_retry=True)
++    def save(identity, destination):
++        trace.append({"callback": "save_copy", "path": str(destination)})
++        original(identity, destination)
++        raise raised from first
++    monkeypatch.setattr(h.adapter, "save_copy", save)
++    try:
++        args = migration_args(h, "marked-copy")
++        result = h.coordinator.dispatch("desktop.migrate_standalone", args)
++        results.append(result)
++        assert Path(args["save_policy"]["destination_path"]).read_bytes() == b"fixture save-copy bytes"
++        assert raised.__cause__ is first
++        assert result["execution"]["status"] == "UNKNOWN"
++        assert result["error"]["code"] == "SAVE_PROVIDER_FAILURE"
++        assert result["error"]["message"] == str(raised)
++        assert result["error"]["safe_retry"] is False
++        assert len(finishes) == len(trace) == 1
++        replay = h.coordinator.dispatch("desktop.migrate_standalone", args)
++        results.append(replay)
++        assert replay == result and len(finishes) == len(trace) == 1
++        assert h.store.db.execute("SELECT count(*) FROM operations").fetchone()[0] == 1
++        assert h.store.get_operation(result["execution"]["operation_id"])["status"] == "UNKNOWN"
++    finally:
++        evidence(h, "marked-copy", results, trace, finishes)
++        h.close()
++
++
++def test_real_early_source_refusal_keeps_failed_retry_hint(tmp_path, monkeypatch):
++    h = Harness(tmp_path)
++    trace, results = [], []
++    finishes = spy_finish(h, monkeypatch)
++    monkeypatch.setattr(h.adapter, "save_copy", lambda *a: trace.append("must-not-save"))
++    try:
++        result = h.coordinator.dispatch("desktop.migrate_standalone", migration_args(h, "not-standalone"))
++        results.append(result)
++        assert result["execution"]["status"] == "FAILED"
++        assert result["error"]["code"] == "MODEL_BINDING_UNKNOWN"
++        assert result["error"]["safe_retry"] is True
++        assert trace == [] and finishes[0]["status"] == "FAILED" and len(finishes) == 1
++    finally:
++        evidence(h, "early", results, trace, finishes); h.close()
++
++
++def test_mark_checks_actual_local_owner_before_sticky_state(tmp_path, monkeypatch):
++    h = Harness(tmp_path); standalone(h)
++    trace, results = [], []
++    finishes = spy_finish(h, monkeypatch)
++    original = h.coordinator._mark_effect
++    def no_owner(operation_id):
++        with h.coordinator._operation_lock:
++            h.coordinator._active_operations.discard(operation_id)
++        return original(operation_id)
++    monkeypatch.setattr(h.coordinator, "_mark_effect", no_owner)
++    monkeypatch.setattr(h.adapter, "save_copy", lambda *a: trace.append("must-not-save"))
++    try:
++        result = h.coordinator.dispatch("desktop.migrate_standalone", migration_args(h, "no-owner"))
++        results.append(result)
++        assert result["execution"]["status"] == "FAILED"
++        assert result["error"]["code"] == "OPERATION_OWNERSHIP_LOST"
++        assert trace == [] and len(finishes) == 1 and finishes[0]["status"] == "FAILED"
++    finally:
++        evidence(h, "owner", results, trace, finishes); h.close()
++
++
++@pytest.mark.parametrize("marked", [False, True])
++def test_unsuccessful_mapping_copies_status_and_error_without_mutating_caller(tmp_path, monkeypatch, marked):
++    h = Harness(tmp_path)
++    trace, results = [], []
++    finishes = spy_finish(h, monkeypatch)
++    caller = {"success": False, "data": {"first_cause": {"code": "ADAPTER_CAUSE", "message": "provider detail"}},
++              "execution": {"status": "FAILED", "witness": "keep"},
++              "error": {"code": "PROVIDER_RETURNED_FAILURE", "message": "keep original error", "safe_retry": True,
++                        "secondary": {"message": "keep secondary"}}}
++    before = deepcopy(caller)
++    def execute(operation, args, record, mark_effect):
++        trace.append({"parent": record["operation_id"], "marked": marked})
++        if marked: mark_effect()
++        return caller
++    monkeypatch.setattr(h.coordinator, "_execute_operation", execute)
++    try:
++        args = migration_args(h, "returned-failure")
++        result = h.coordinator.dispatch("desktop.migrate_standalone", args)
++        results.append(result)
++        expected = "UNKNOWN" if marked else "FAILED"
++        assert result["execution"]["status"] == expected
++        assert result["execution"]["witness"] == "keep"
++        assert result["error"]["safe_retry"] is (not marked)
++        assert result["error"]["code"] == caller["error"]["code"]
++        assert result["error"]["message"] == caller["error"]["message"]
++        assert result["data"] == caller["data"] and result["error"]["secondary"] == caller["error"]["secondary"]
++        assert caller == before
++        if marked:
++            assert result is not caller and result["error"] is not caller["error"] and result["execution"] is not caller["execution"]
++        assert len(finishes) == 1 and finishes[0]["status"] == expected
++        replay = h.coordinator.dispatch("desktop.migrate_standalone", args)
++        results.append(replay)
++        assert replay == result and len(trace) == len(finishes) == 1
++        assert h.store.db.execute("SELECT count(*) FROM operations").fetchone()[0] == 1
++    finally:
++        evidence(h, "returned", results, trace, finishes); h.close()
++
++
++@pytest.mark.parametrize(("marked", "own_effect", "expected"), [
++    (False, False, "FAILED"), (False, True, "UNKNOWN"), (True, False, "UNKNOWN"), (True, True, "UNKNOWN")])
++def test_structured_exception_uses_local_or_exception_effect_and_preserves_cause(tmp_path, monkeypatch, marked, own_effect, expected):
++    h = Harness(tmp_path)
++    trace, results = [], []
++    finishes = spy_finish(h, monkeypatch)
++    original_cause = ValueError("first original cause")
++    raised = DesktopOperationError("TRUSTED_FAILURE", "unchanged message", category="BLOCKED_PERMISSION",
++                                   side_effect_started=own_effect, safe_retry=True)
++    def execute(operation, args, record, mark_effect):
++        trace.append({"parent": record["operation_id"], "mark": marked, "exception_effect": own_effect})
++        if marked: mark_effect()
++        raise raised from original_cause
++    monkeypatch.setattr(h.coordinator, "_execute_operation", execute)
++    try:
++        result = h.coordinator.dispatch("desktop.migrate_standalone", migration_args(h, "structured"))
++        results.append(result)
++        assert result["execution"]["status"] == expected
++        assert result["error"] == {"code": "TRUSTED_FAILURE", "message": "unchanged message", "safe_retry": expected == "FAILED"}
++        assert result["data"]["status"] == "BLOCKED_PERMISSION"
++        assert raised.__cause__ is original_cause
++        assert finishes == [{"operation_id": result["execution"]["operation_id"], "status": expected}]
++    finally:
++        evidence(h, "exception", results, trace, finishes); h.close()
++
++
++def test_distinct_followup_claim_does_not_inherit_earlier_marker(tmp_path, monkeypatch):
++    h = Harness(tmp_path)
++    trace, results = [], []
++    finishes = spy_finish(h, monkeypatch)
++    def execute(operation, args, record, mark_effect):
++        marked = args["idempotency_key"] == "first-marked"
++        trace.append({"parent": record["operation_id"], "mark": marked})
++        if marked: mark_effect()
++        raise DesktopOperationError("SAME_PROVIDER_FAILURE", "same source", side_effect_started=False, safe_retry=True)
++    monkeypatch.setattr(h.coordinator, "_execute_operation", execute)
++    try:
++        first = h.coordinator.dispatch("desktop.migrate_standalone", migration_args(h, "first-marked"))
++        second = h.coordinator.dispatch("desktop.migrate_standalone", migration_args(h, "next-unmarked"))
++        results.extend([first, second])
++        assert first["execution"]["status"] == "UNKNOWN" and first["error"]["safe_retry"] is False
++        assert second["execution"]["status"] == "FAILED" and second["error"]["safe_retry"] is True
++        assert first["execution"]["operation_id"] != second["execution"]["operation_id"]
++        assert len(finishes) == len(trace) == 2
++        assert h.store.db.execute("SELECT count(*) FROM operations").fetchone()[0] == 2
++    finally:
++        evidence(h, "followup", results, trace, finishes); h.close()
++
++
++def test_success_after_mark_stays_succeeded_and_same_key_replay_is_readonly(tmp_path, monkeypatch):
++    h = Harness(tmp_path); standalone(h)
++    finishes = spy_finish(h, monkeypatch)
++    trace, results = [], []
++    original = h.adapter.save_copy
++    def save(*args):
++        trace.append("save_copy")
++        return original(*args)
++    monkeypatch.setattr(h.adapter, "save_copy", save)
++    try:
++        args = migration_args(h, "success")
++        result = h.coordinator.dispatch("desktop.migrate_standalone", args)
++        results.append(result)
++        assert result["success"] and result["execution"]["status"] == "SUCCEEDED"
++        assert result["data"]["desktop_binding_verified"] is False
++        assert len(finishes) == len(trace) == 1 and finishes[0]["status"] == "SUCCEEDED"
++        queue_before = list(h.engine.calls)
++        replay = h.coordinator.dispatch("desktop.migrate_standalone", args)
++        results.append(replay)
++        assert replay == result and h.engine.calls == queue_before and len(finishes) == len(trace) == 1
++    finally:
++        evidence(h, "success", results, trace, finishes); h.close()

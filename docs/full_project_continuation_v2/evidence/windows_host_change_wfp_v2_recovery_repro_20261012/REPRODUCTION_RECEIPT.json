@@ -1,0 +1,74 @@
+{
+  "schema": "comsol-mcp.host-control-recovery-required-repro/1",
+  "captured_at_utc": "2026-10-12",
+  "classification": "SOFTWARE_ONLY_PRODUCTION_STORE_AND_EXECUTOR_REPRO",
+  "result": "REPRODUCED",
+  "native_windows": "NOT_RUN",
+  "scope": "Existing WindowsHostChangeExecutor software-test seam plus production OperationStore V2 journal and SQLite admission; no OS mutation.",
+  "injection": "Fake WFP adapter raises after provider and sublayer effects; OperationStore.finish(UNKNOWN) then raises before the UNKNOWN terminal write, leaving the actual admission/job/operation RUNNING.",
+  "observed": {
+    "admission_before_direct_store_call": "RECOVERY_REQUIRED",
+    "operation_before_direct_store_call": "RUNNING",
+    "job_before_direct_store_call": "RUNNING",
+    "journal_before_direct_store_call": [
+      "APPLY_STEP_INTENT",
+      "APPLY_STEP_READBACK_VERIFIED",
+      "APPLY_STEP_INTENT",
+      "RECOVERY_REQUIRED"
+    ],
+    "store_accepts_readback_after_recovery_required": true,
+    "state_after_readback": "APPLY_STEP_VERIFIED:1",
+    "store_accepts_following_intent": true,
+    "state_after_following_intent": "APPLY_STEP_INTENT:2"
+  },
+  "artifacts": [
+    {
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_v2_recovery_repro_20261012/repro_store_recovery_state.py",
+      "sha256": "bec83576e55e5596707ae8029c998c612909e754eb280b15d4f80a2ba8db2e64"
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_v2_recovery_repro_20261012/repro_result_attempt003.json",
+      "sha256": "1952d467ec661528e812d332d47c948c164c0e2c85e16712b313613f6381433b"
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_v2_recovery_repro_20261012/network-guard.jsonl",
+      "sha256": "5b33ab8fcbb16c3ea15e5177935ef0fb3e00c6bca191c38498cdff7237f1f497",
+      "guard_events": 3,
+      "deny_events": 0
+    }
+  ],
+  "source_hashes": [
+    {
+      "path": "comsol_mcp/_operation_store.py",
+      "sha256": "a033e1e4e5fe3c0ba3d2a7f6d8020da52f5618e8dce50c7ca1a9a568d875bc7b",
+      "v2_r3_freeze_match": true
+    },
+    {
+      "path": "comsol_mcp/_windows_host_change.py",
+      "sha256": "21b18d981884443ce3c17fa42c11f490607f7a11f09536d9d3942470043ed8e9",
+      "v2_r3_freeze_match": true
+    },
+    {
+      "path": "comsol_mcp/_w26_os_resources.py",
+      "sha256": "15088d2fcfce57aebdd60feb40db3fbbc3d94098f5ba5c0fb8c5fcfabdd3a1d4",
+      "v2_r3_freeze_match": true
+    },
+    {
+      "path": "comsol_mcp/_host_scoped_provider.py",
+      "sha256": "11d8934dcdc6fccc1196248adec6afdea2ccf29f9b4769485ab756fbeaa1b1cf",
+      "v2_r3_freeze_match": true
+    },
+    {
+      "path": "tests/test_windows_host_change.py",
+      "sha256": "36f10e127623d604819eeb44a04b325359dc1514de213126e1a6f61813b86984",
+      "v2_r3_freeze_match": true
+    }
+  ],
+  "runtime": {
+    "python": "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python",
+    "python_version": "3.12.13",
+    "network_guard": "GUARD_ACTIVE_BEFORE_CHILD_ENTRYPOINT",
+    "strict_guard_denies": 0
+  },
+  "decision": "Do not alter frozen Store/resources/provider in this packet. Send the reproduced boundary to Root; apply a narrow absorbed-state rejection only after the Model shared-source handoff window."
+}

@@ -1,0 +1,160 @@
+{
+  "candidate": "host-scoped-provider-acl-r1",
+  "created_utc": "2026-10-11T21:04:18Z",
+  "limitations": [
+    "The Windows ACL verifier has only software mock ABI/policy coverage here; real Windows owner/DACL semantics remain NOT_RUN.",
+    "The macOS no-ACL ENOENT interpretation is runtime-probe bounded and must fail closed on all other results.",
+    "This freeze does not certify native COMSOL operation, external delivery, kernel race guarantees, or final independent review."
+  ],
+  "owned_source_snapshot": [
+    {
+      "baseline_path": "local-preservation/model-r3-r4-fullrestore-provider-20261012-r4/source/comsol_mcp/_host_scoped_provider.py",
+      "baseline_sha256": "ead326cb3055a76bd4a997cf2ddf861d5f8c421e26f6a279bfe2ac421661db35",
+      "bytes": 52972,
+      "current_sha256": "813e1df784ec8bd576b4ff18668fec7d0eac94eb0bff85b80c52f2abd380bca7",
+      "path": "comsol_mcp/_host_scoped_provider.py",
+      "snapshot_path": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r1/source_snapshot/comsol_mcp/_host_scoped_provider.py",
+      "snapshot_sha256": "813e1df784ec8bd576b4ff18668fec7d0eac94eb0bff85b80c52f2abd380bca7"
+    },
+    {
+      "baseline_path": "local-preservation/model-r3-r4-fullrestore-provider-20261012-r4/source/comsol_mcp/_windows_parameter_publish.py",
+      "baseline_sha256": "5a418434c3022069444db9924fcbe591342a3395bd911b088faff94f7d1d6073",
+      "bytes": 26595,
+      "current_sha256": "f128dc330ea3a7366765e1fe16dd03e7ba63cacf9d02e992d748a781f97b0ea8",
+      "path": "comsol_mcp/_windows_parameter_publish.py",
+      "snapshot_path": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r1/source_snapshot/comsol_mcp/_windows_parameter_publish.py",
+      "snapshot_sha256": "f128dc330ea3a7366765e1fe16dd03e7ba63cacf9d02e992d748a781f97b0ea8"
+    },
+    {
+      "baseline_path": "local-preservation/model-r3-r4-fullrestore-provider-20261012-r4/source/tests/test_host_scoped_provider.py",
+      "baseline_sha256": "34171a25b1fe7d7dce1b111744491335b00d4a089a9e1e4a0b4b26915379c324",
+      "bytes": 28195,
+      "current_sha256": "b1d39404ce4dec4934180fc842887723b213c3119055900ac54794c9d0591f7b",
+      "path": "tests/test_host_scoped_provider.py",
+      "snapshot_path": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r1/source_snapshot/tests/test_host_scoped_provider.py",
+      "snapshot_sha256": "b1d39404ce4dec4934180fc842887723b213c3119055900ac54794c9d0591f7b"
+    },
+    {
+      "baseline_path": "local-preservation/model-r3-r4-fullrestore-provider-20261012-r4/source/docs/full_project_continuation_v2/HOST_SCOPED_PROVIDER_CONFIG.md",
+      "baseline_sha256": "4fd57797ad20a5a28b91e993fe59c54b8f740786dd9ee3408ad73f1455392f01",
+      "bytes": 4975,
+      "current_sha256": "bbe26dc83c6e05bbd357f83b5009bb2ebde72ab3fcc5a82dccf6d7c3f7a17248",
+      "path": "docs/full_project_continuation_v2/HOST_SCOPED_PROVIDER_CONFIG.md",
+      "snapshot_path": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r1/source_snapshot/docs/full_project_continuation_v2/HOST_SCOPED_PROVIDER_CONFIG.md",
+      "snapshot_sha256": "bbe26dc83c6e05bbd357f83b5009bb2ebde72ab3fcc5a82dccf6d7c3f7a17248"
+    }
+  ],
+  "patch_from_r4": {
+    "path": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r1/PATCH_FROM_R4.patch",
+    "sha256": "1502b5593da574752e73a796c2a7b93b77fccff38f672e6355bc90e8860dac80"
+  },
+  "platform_status": {
+    "darwin_posix_and_acl_fixture_checks": "SOFTWARE_PASS_ON_REAL_MACOS_RUNTIME",
+    "external_publish": "NOT_RUN",
+    "native_comsol": "NOT_RUN",
+    "windows_acl_kernel": "NOT_RUN"
+  },
+  "preserved_runner_wrapper_failure": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r1/attempt001-runner-failure.json",
+  "prior_r4_review": "docs/full_project_continuation_v2/evidence/exports_restore_r4_20261012/ROOT_REVIEW_R4.json (preserved; this freeze supplements its provider findings)",
+  "regression": {
+    "binding_receipt": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r1/INVOCATION_AND_SOURCE_BINDING_R2.json",
+    "binding_receipt_sha256": "ca791f3e68d97365cb6e78230fdefb8133bc51fca4b1429c0dbba409af6e5492",
+    "execution_inputs_unchanged": true,
+    "guard_no_denied_network": true,
+    "junit_path": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r1/junit-provider-security-r2.xml",
+    "junit_sha256": "93e4162d05a302756b5cdfb34bb405bed5818a0cc0651987b5982a81ce8622fd",
+    "network_guard_path": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r1/network-guard-attempt003.jsonl",
+    "network_guard_sha256": "c45f4b12bbe8cee284a4dca6cd2139c974a26be0c5c15949e37ff9fe76f1c664",
+    "outcome": "180 passed; 0 failures; 0 errors; 10 skipped; 20 subtests passed",
+    "python": "3.12.13 (main, Mar  3 2026, 12:39:30) [Clang 21.0.0 (clang-2100.0.123.102)]",
+    "skips": [
+      {
+        "classname": "tests.test_artifact_verify",
+        "reason": "accepted dev1 archive paths were not supplied for this environment",
+        "test": "test_artifact_verify_real_accepted_dev1_bundles_through_registration"
+      },
+      {
+        "classname": "tests.test_windows_parameter_publish_native.NativeControls",
+        "reason": "requires actual Windows kernel/filesystem",
+        "test": "test_junction_rejected_without_touching_target"
+      },
+      {
+        "classname": "tests.test_windows_parameter_publish_native.NativeControls",
+        "reason": "requires actual Windows kernel/filesystem",
+        "test": "test_parent_and_project_rename_blocked_while_pinned"
+      },
+      {
+        "classname": "tests.test_windows_parameter_publish_native.NativeControls",
+        "reason": "requires actual Windows kernel/filesystem",
+        "test": "test_pinned_parent_reparse_race_never_writes_outside"
+      },
+      {
+        "classname": "tests.test_windows_parameter_publish_native.NativeControls",
+        "reason": "requires actual Windows kernel/filesystem",
+        "test": "test_postcommit_cleanup_failure_preserves_unknown_receipt"
+      },
+      {
+        "classname": "tests.test_windows_parameter_publish_native.NativeControls",
+        "reason": "requires actual Windows kernel/filesystem",
+        "test": "test_postcommit_read_failure_rolls_back_and_reports_unknown"
+      },
+      {
+        "classname": "tests.test_windows_parameter_publish_native.NativeControls",
+        "reason": "requires actual Windows kernel/filesystem",
+        "test": "test_stream_reader_exception_cleans_temp_and_keeps_typed_receipt"
+      },
+      {
+        "classname": "tests.test_windows_parameter_publish_native.NativeControls",
+        "reason": "requires actual Windows kernel/filesystem",
+        "test": "test_streaming_publish_checks_chunks_digest_and_size_before_rename"
+      },
+      {
+        "classname": "tests.test_windows_parameter_publish_native.NativeControls",
+        "reason": "requires actual Windows kernel/filesystem",
+        "test": "test_unicode_publish_and_no_clobber"
+      },
+      {
+        "classname": "tests.test_windows_parameter_publish_native.NativeControls",
+        "reason": "requires actual Windows kernel/filesystem",
+        "test": "test_write_failure_removes_only_owned_temp"
+      }
+    ],
+    "tests_in_junit": 210,
+    "tmpdir": "/private/tmp"
+  },
+  "runtime_probe": {
+    "acl_cases": [
+      {
+        "acl_pointer_present": false,
+        "case": "fresh private directory without extended ACL",
+        "errno": 2,
+        "errno_name": "ENOENT",
+        "result": "accepted_no_acl"
+      },
+      {
+        "acl_get_entry_first_result": 0,
+        "acl_pointer_present": true,
+        "case": "fixture-only everyone read ACL",
+        "entry_pointer_present": true,
+        "errno": 0,
+        "result": "detected_extended_acl"
+      }
+    ],
+    "limits": "The local manual specifies the ACL API return/errno contract but does not explicitly define ENOENT as the no-ACL sentinel; the accepted no-ACL behavior is limited to the observed valid-pinned-fd probe on this macOS runtime.",
+    "path": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r1/DARWIN_ACL_RUNTIME_PROBE.json",
+    "sha256": "9ea113b2b7c9bbb0ba893ff5d3483d13edee881076821a6fda769d44d6980639"
+  },
+  "schema": "comsol-mcp.host-scoped-provider-acl-source-freeze/1",
+  "scope": "Add Darwin pinned-fd extended-ACL refusal; retain approved R4 host provider and R3 Windows publication helpers. No unrelated shared-source edits.",
+  "sdk_excerpt": {
+    "acl_header_sha256": "9511f84f0abe1e108e10979900d4fea8567534aef78f0984f7050c49f6c29ff7",
+    "mount_header_sha256": "45872741bb916b92bddd2e562d2047b552af1f68269081a0aeb58a3e5a2b8a51",
+    "official_manual_pages": [
+      "https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man3/acl_get_file.3.html",
+      "https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man3/acl_get_entry.3.html"
+    ],
+    "path": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r1/SDK_API_EXCERPT.txt",
+    "sha256": "79c1f816ea54fee5b018cbe9c7175cb135d6143b563754f13aa075c2317b8b3e"
+  },
+  "status": "FROZEN_SOFTWARE_EVIDENCE_ROOT_REVIEW_PENDING"
+}

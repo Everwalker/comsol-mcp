@@ -1,0 +1,35 @@
+{
+  "schema": "ROOT_W24_CURRENT08_VOLUME_SUCCESSOR_PLAN_V1",
+  "created_utc": "2026-10-12T02:02:58.831285+00:00",
+  "status": "IMPLEMENTATION_REQUIRED_NEW_SOURCE_NO_NATIVE_ADMISSION",
+  "old_candidate_freeze_sha256": "12cdf25b44ded09ca53b436b03a59820894d60d29049cef8e23e00e854512915",
+  "observed_failure": "Actual Mesh dataset + MeasureSurface/intvolume=on/frametype=spatial getReal fails on internally formed 2*pi*R undefined variable. Build operation/job stays UNKNOWN/safe_retry=false; zero Study/solver. Do not declare R aliases or guess a different frame as validated fix.",
+  "primary_references": [
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current08/ROOT_PRIMARY_MESH_VOLUME_API.json",
+      "sha256": "6244a6f88064797a4285bc5e6ae938535c5473cd484654b73c7bd7030aba0c9a"
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current08/ROOT_PRIMARY_MESH_INDEX_API.json",
+      "sha256": "ee0e632bde06dc9de6534a8af03a5c8e60e9239227e6f47872077eeed81e4866"
+    }
+  ],
+  "bounded_replacement": {
+    "scope": "Initial undeformed straight-edged coupon only; native built-mesh axisymmetric volume witness, not deformed solved material/physical history. Original four domain geometry, material/physics/mesh/solver and 1e-6 volume tolerance remain.",
+    "native_reads": [
+      "Actual comp1/geom1 dimension=2, axisymmetric=true, lengthUnit=m; current mesh1/geom1 nonempty and existing mesh counts.",
+      "getTypes/getNumVertex/getVertex/getNumElem(tri)/getElem(tri)/getElemEntity(tri) via same-version API, read-only on already built mesh. Use bounds and existing W21 block/index/hash conventions; no mesh.run/solve from observer.",
+      "Native selected domain IDs from the existing actual selections, no recipe-assigned topology. Exact coordinate/connectivity/entity shapes and all zero-based indices checked. Reject unsupported non-tri top-dimensional element types before computing."
+    ],
+    "integration": "For each actual selected-domain triangle, compute absolute determinant area A and centroid radius rbar=(r0+r1+r2)/3; V=sum(2*pi*A*rbar). This is exact integration of the linear radius on straight triangles in the initial mesh. Read coordinates in validated m and tag output m^3; finite nonnegative radius, positive area and selected element count required. Expected analytic volume is comparator only, never result fallback.",
+    "evidence": "Preserve full actual mesh arrays once or canonical raw mesh artifact with SHA and precise per-domain element subsets/counts; bind computed native volume to those actual bytes and ModelRef/revision. Independent Python offline recomputation from same raw arrays can check arithmetic but is not separate native observation. Existing geometry cross-section area remains separate area witness.",
+    "reopen": "Same Worker immutable MPH save/reopen readback recomputes the same native mesh witness and compares all required configuration/domain volumes; zero solve.",
+    "limitations": "No claim that mesh geometry equals post-cure deformed spatial configuration; T047 current material volume/history still requires solved fields and frame/detF provenance."
+  },
+  "negative_controls": [
+    "Wrong domain/entity pairing and missing selected domain, malformed/ragged arrays, out-of-range indices, nonfinite coordinates, negative radii, degenerate triangle, unsupported quad/top-dimensional kind, wrong length unit refuse.",
+    "Tampered raw mesh coordinates/connectivity/entity produce arithmetic/hash mismatch; analytic expected may not replace missing native arrays.",
+    "Actual current08 R failure preserved as regression/source evidence; no silent fallback when native observer fails."
+  ],
+  "delivery": "Same Native Agent implementation/test/debug in a new immutable source candidate on stable candidate19/current08 closure; preserve current08 source and raw UNKNOWN. Root reviews focused diff and full affected test outcome before any next native birth. W23 requested-unit and port-index successor remains required in the same lane."
+}

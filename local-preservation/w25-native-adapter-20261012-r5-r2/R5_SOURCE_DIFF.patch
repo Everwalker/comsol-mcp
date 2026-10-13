@@ -1,0 +1,1736 @@
+--- a/comsol_mcp/_artifact_store.py
++++ b/comsol_mcp/_artifact_store.py
+@@ -411,13 +411,19 @@
+     *,
+     expected_sha256: str,
+     expected_size: int,
++    owned_source_root: str | Path | None = None,
++    expected_source_identity: Mapping[str, Any] | None = None,
++    expected_source_root_identity: Mapping[str, Any] | None = None,
+ ) -> dict[str, Any]:
+-    """Pin a backend-owned project file and stream-publish it atomically.
++    """Pin a backend-owned file and stream-publish it atomically.
+ 
+     ``owned_source_path`` is an internal backend capability, never a request
+-    argument. It must name a regular, non-symlink file within the trusted
+-    project. Source bytes are consumed once and verified against the supplied
+-    digest and size before the destination name is committed.
++    argument. By default it names a regular, non-symlink file within the
++    trusted project. Native Save Copy may instead provide a host-private
++    staging root and pinned identities; those paths are checked by the
++    installed host-scoped ownership/ACL verifier before and after the stream.
++    Source bytes are consumed once and verified against the supplied digest
++    and size before the destination name is committed.
+     """
+     store = ArtifactStore(project_root)
+     if (not isinstance(expected_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_sha256)
+@@ -427,29 +433,52 @@
+         source_lexical = Path(owned_source_path).expanduser()
+     except (TypeError, ValueError) as exc:
+         raise _contract_error("INVALID_REQUEST", "owned source path is invalid") from exc
+-    source = source_lexical if source_lexical.is_absolute() else store.project_root / source_lexical
++    external_source = owned_source_root is not None
++    if external_source:
++        try:
++            source_root_lexical = Path(owned_source_root).expanduser()
++        except (TypeError, ValueError) as exc:
++            raise _contract_error("INVALID_REQUEST", "owned staging root is invalid") from exc
++        if not source_root_lexical.is_absolute():
++            raise _contract_error("ACCESS_VIOLATION", "owned staging root must be absolute")
++        source_root = Path(os.path.abspath(os.fspath(source_root_lexical)))
++        if not isinstance(expected_source_identity, Mapping) or not isinstance(expected_source_root_identity, Mapping):
++            raise _contract_error("INVALID_REQUEST", "host-private publication requires pinned file and directory identities")
++    else:
++        source_root = store.project_root
++    source = source_lexical if source_lexical.is_absolute() else source_root / source_lexical
+     source = Path(os.path.abspath(os.fspath(source)))
+     try:
+-        source.relative_to(store.project_root)
++        source_relative = source.relative_to(source_root).as_posix()
+     except ValueError as exc:
+-        raise _contract_error("ACCESS_VIOLATION", "owned source must be inside the trusted project root") from exc
++        raise _contract_error("ACCESS_VIOLATION", "owned source must be inside its exact authorized source root") from exc
++    if not source_relative or any(part in {"", ".", ".."} for part in Path(source_relative).parts):
++        raise _contract_error("ACCESS_VIOLATION", "owned source path is not canonical")
+     _assert_no_symlink_components(source, field="owned package source")
++    if external_source:
++        _verify_owned_private_source(source_root, source, expected_source_root_identity,
++                                     expected_source_identity)
+ 
+     if sys.platform == "win32":
+         from ._windows_parameter_publish import PublishError, _API, pinned_parent, validate_paths
+         try:
+-            source_relative = source.relative_to(store.project_root).as_posix()
+-            validate_paths(project_root, source_relative)
++            validate_paths(source_root, source_relative)
+             validate_paths(project_root, destination_relative_path)
+             store.resolve_safe_path(destination_relative_path, allow_overwrite=False)
+ 
+             def windows_chunks() -> Iterator[bytes]:
+-                with pinned_parent(project_root, source_relative, add_file=False, _api=_API()) as (api, parent, parts, binding):
++                if external_source:
++                    _verify_owned_private_source(source_root, source, expected_source_root_identity,
++                                                 expected_source_identity)
++                with pinned_parent(source_root, source_relative, add_file=False, _api=_API()) as (api, parent, parts, binding):
+                     handle = api.open_source(parent, parts[-1])
+                     try:
+                         before = api.source_fingerprint(handle)
+                         if before[1] != expected_size:
+                             raise _contract_error("ARTIFACT_CHANGED", "owned source size differs from its pinned metadata")
++                        if (external_source and before[0] !=
++                                (expected_source_identity.get("device"), expected_source_identity.get("inode"))):
++                            raise _contract_error("ARTIFACT_CHANGED", "pinned file handle differs from verified host-private identity")
+                         read_size = 0
+                         while True:
+                             block = api.read_chunk(handle, 1024 * 1024)
+@@ -463,6 +492,9 @@
+                                 or api.child_identity(parent, parts[-1]) != before[0]):
+                             raise _contract_error("ARTIFACT_CHANGED", "owned source changed during pinned streaming")
+                         api.verify_named_binding(binding)
++                        if external_source:
++                            _verify_owned_private_source(source_root, source, expected_source_root_identity,
++                                                         expected_source_identity)
+                     finally:
+                         api.close(handle)
+ 
+@@ -476,10 +508,16 @@
+             raise _contract_error(exc.code, str(exc), stage=exc.stage, details=exc.details) from exc
+ 
+     def source_chunks() -> Iterator[bytes]:
++        if external_source:
++            _verify_owned_private_source(source_root, source, expected_source_root_identity,
++                                         expected_source_identity)
+         handle, before = _open_pinned_artifact(source)
+         try:
+             if int(before.st_size) != expected_size:
+                 raise _contract_error("ARTIFACT_CHANGED", "owned source size differs from its pinned metadata")
++            if (external_source and (int(before.st_dev), int(before.st_ino)) !=
++                    (expected_source_identity.get("device"), expected_source_identity.get("inode"))):
++                raise _contract_error("ARTIFACT_CHANGED", "pinned file handle differs from verified host-private identity")
+             read_size = 0
+             for block in iter(lambda: handle.read(1024 * 1024), b""):
+                 read_size += len(block)
+@@ -489,6 +527,9 @@
+             _assert_pinned_artifact_stable(source, before, os.fstat(handle.fileno()))
+             if read_size != expected_size:
+                 raise _artifact_changed(source, "file size changed while being streamed")
++            if external_source:
++                _verify_owned_private_source(source_root, source, expected_source_root_identity,
++                                             expected_source_identity)
+         finally:
+             handle.close()
+ 
+@@ -496,6 +537,30 @@
+         store.project_root, destination_relative_path, source_chunks(),
+         expected_sha256=expected_sha256, expected_size=expected_size,
+     )
++
++
++def _verify_owned_private_source(source_root: Path, source: Path,
++                                 expected_root_identity: Mapping[str, Any] | None,
++                                 expected_source_identity: Mapping[str, Any] | None) -> None:
++    """Recheck native staging root/file owner, ACL and pinned identity."""
++    if not isinstance(expected_root_identity, Mapping) or not isinstance(expected_source_identity, Mapping):
++        raise _contract_error("INVALID_REQUEST", "host-private source identities are required")
++    from ._host_scoped_provider import verify_private_path_security
++    try:
++        root_evidence = verify_private_path_security(
++            source_root, directory=True, expected_identity=dict(expected_root_identity),
++        )
++        source_evidence = verify_private_path_security(
++            source, directory=False, expected_identity=dict(expected_source_identity),
++        )
++    except ExecutionContractError:
++        raise
++    except Exception as exc:
++        raise _contract_error("HOST_PROVIDER_UNSUPPORTED", "native staging trust could not be verified") from exc
++    if (not isinstance(root_evidence, Mapping) or not isinstance(source_evidence, Mapping)
++            or root_evidence.get("identity") != dict(expected_root_identity)
++            or source_evidence.get("identity") != dict(expected_source_identity)):
++        raise _contract_error("AUTHORIZATION_STATE_UNKNOWN", "native staging identity or security changed")
+ 
+ 
+ def _publish_project_chunks_no_clobber(
+--- a/comsol_mcp/_control_daemon.py
++++ b/comsol_mcp/_control_daemon.py
+@@ -413,6 +413,7 @@
+             resolve_artifact=self._resolve_desktop_artifact,
+             authorize_save_copy=self._authorize_desktop_save_copy,
+             publish_capture=self._publish_desktop_capture,
++            publish_save_copy=self._publish_desktop_save_copy,
+         )
+         self._desktop_request_scope = ContextVar(f"desktop_request_{id(self)}", default=None)
+         self._desktop_unpersisted_attempts = {}
+@@ -4858,6 +4859,70 @@
+         except (ExecutionContractError, OSError, ValueError, TypeError):
+             return False
+ 
++    def _publish_desktop_save_copy(self, project_id, context, stage_root, stage_path,
++                                   destination, stage_receipt):
++        """No-clobber publish a native Save Copy from verified private staging."""
++        from ._artifact_store import ArtifactStore, publish_project_file_no_clobber
++
++        record = self._desktop_parent_claim(context, migration=True)
++        if (record.get("operation") != "desktop.migrate_standalone"
++                or record.get("metadata", {}).get("project_id") != project_id):
++            raise DesktopOperationError("OWNER_UNVERIFIED", "save-copy publication has no exact active migration claim", safe_retry=False)
++        if (not isinstance(stage_receipt, Mapping)
++                or not isinstance(stage_receipt.get("sha256"), str)
++                or type(stage_receipt.get("size_bytes")) is not int
++                or not isinstance(stage_receipt.get("file_identity"), Mapping)
++                or not isinstance(stage_receipt.get("stage_root_identity"), Mapping)):
++            raise DesktopOperationError("SAVE_COPY_UNVERIFIED", "save-copy publication requires the pinned stage hash, size and security identities", side_effect_started=True, safe_retry=False)
++        scope = self._desktop_request_scope.get()
++        try:
++            request = json.loads(scope["arguments_json"])
++            requested_destination = Path(request["save_policy"]["destination_path"]).expanduser().resolve(strict=False)
++            project = self.project_authority.authorize_operation(project_id, "project_write")
++            root = Path(project["workspace"]).resolve(strict=True)
++            final_path = ArtifactStore(root).resolve_safe_path(str(destination), allow_overwrite=False)
++            relative = final_path.relative_to(root).as_posix()
++        except DesktopOperationError:
++            raise
++        except Exception as exc:
++            raise DesktopOperationError("SAVE_COPY_PATH_REJECTED", "project authority could not bind the requested Save Copy destination", safe_retry=False) from exc
++        if (requested_destination != destination or final_path != destination
++                or destination.exists() or destination.is_symlink()):
++            raise DesktopOperationError("SAVE_COPY_PATH_REJECTED", "final Save Copy destination is not the exact new project-authorized request path", safe_retry=False)
++        try:
++            published = publish_project_file_no_clobber(
++                root, relative, stage_path,
++                expected_sha256=stage_receipt["sha256"],
++                expected_size=stage_receipt["size_bytes"],
++                owned_source_root=stage_root,
++                expected_source_identity=stage_receipt["file_identity"],
++                expected_source_root_identity=stage_receipt["stage_root_identity"],
++            )
++            # Publication has just created this exact leaf through the pinned
++            # no-clobber publisher; allow it for readback, then bind the digest
++            # and handle identity to the publication receipt below.
++            resolved = ArtifactStore(root).resolve_safe_path(relative, allow_overwrite=True)
++            from ._artifact_store import _hash_regular_artifact
++            digest, file_identity = _hash_regular_artifact(resolved)
++            if (digest != stage_receipt["sha256"] or file_identity["size"] != stage_receipt["size_bytes"]
++                    or file_identity["device"] != published.get("file_identity", {}).get("device")
++                    or file_identity["inode"] != published.get("file_identity", {}).get("inode")):
++                raise DesktopOperationError("SAVE_COPY_PUBLISH_UNKNOWN", "published final path does not name the exact no-clobber bytes", side_effect_started=True, safe_retry=False)
++        except DesktopOperationError:
++            raise
++        except Exception as exc:
++            raise DesktopOperationError("SAVE_COPY_PUBLISH_UNKNOWN", f"ArtifactStore Save Copy publication did not reach a verified outcome ({type(exc).__name__})", side_effect_started=True, safe_retry=False) from exc
++        return {
++            "path": str(destination), "sha256": published["sha256"],
++            "size_bytes": published["size_bytes"],
++            "file_identity": published.get("file_identity"),
++            "publication": "ARTIFACTSTORE_NO_CLOBBER",
++            "operation_id": context.operation_id,
++            "request_id": context.request_id,
++            "project_id": project_id,
++            "relative_path": relative,
++        }
++
+     def _dispatch_catalog_job_control(self, inner_operation: str, inner_arguments: dict[str, Any], *, execution: dict[str, Any]) -> dict[str, Any]:
+         return self._dispatch_catalog_job_control_impl(
+             inner_operation, inner_arguments, execution=execution,
+--- a/comsol_mcp/_desktop_macos.py
++++ b/comsol_mcp/_desktop_macos.py
+@@ -7,6 +7,7 @@
+ from __future__ import annotations
+ 
+ import os
++import math
+ from pathlib import Path
+ import platform
+ import re
+@@ -27,6 +28,18 @@
+ )
+ from ._desktop_platforms import versioned_native_profile
+ from ._desktop_selector_profile import load_selector_profile
++
++
++def _require_screencapturekit_14() -> None:
++    """SCScreenshotManager is a macOS 14 API; fail before framework calls."""
++    release = platform.mac_ver()[0]
++    match = re.match(r"^(\d+)\.(\d+)(?:\.|$)", release) if isinstance(release, str) else None
++    if not match or tuple(map(int, match.groups())) < (14, 0):
++        raise DesktopOperationError(
++            "SCREEN_CAPTURE_API_UNAVAILABLE",
++            "SCScreenshotManager window capture requires a readable macOS 14.0 or newer release",
++            safe_retry=True,
++        )
+ 
+ 
+ class MacOSMetadataAdapter(MetadataOnlyDesktopAdapter):
+@@ -218,19 +231,50 @@
+ 
+     def capture_window(self, identity):
+         """Capture the exact observed SCWindow, never a display or desktop."""
+-        appkit, sc = self._load_capture()
+-        window_id = int(identity.native_window_id.removeprefix("CGWindow:"))
++        _require_screencapturekit_14()
++        try:
++            window_id = int(identity.native_window_id.removeprefix("CGWindow:"))
++        except (AttributeError, TypeError, ValueError) as exc:
++            raise DesktopOperationError("WINDOW_IDENTITY_REJECTED", "ScreenCaptureKit requires a canonical observed CGWindow identity", safe_retry=True) from exc
+         if identity.platform != "macos" or window_id <= 0:
+             raise DesktopOperationError("WINDOW_IDENTITY_REJECTED", "ScreenCaptureKit requires the exact observed CGWindow identity", safe_retry=True)
++
++        def call_getter(receiver, name, *, code="WINDOW_IDENTITY_UNKNOWN"):
++            getter = getattr(receiver, name, None)
++            if not callable(getter):
++                raise DesktopOperationError(code, f"ScreenCaptureKit {name} accessor is unavailable", safe_retry=True)
++            try:
++                value = getter()
++            except Exception as exc:
++                raise DesktopOperationError(code, f"ScreenCaptureKit {name} accessor failed", safe_retry=True) from exc
++            if value is None:
++                raise DesktopOperationError(code, f"ScreenCaptureKit {name} accessor returned no value", safe_retry=True)
++            return value
++
++        appkit, sc = self._load_capture()
+         shareable_class = getattr(sc, "SCShareableContent", None)
+         list_method = getattr(shareable_class, "getShareableContentExcludingDesktopWindows_onScreenWindowsOnly_completionHandler_", None)
+         if not callable(list_method):
+             raise DesktopOperationError("SCREEN_CAPTURE_API_UNAVAILABLE", "ScreenCaptureKit shareable-window API is unavailable", safe_retry=True)
+         content = self._wait_callback(lambda callback: list_method(False, True, callback))
+-        windows = list(getattr(content, "windows", []) or [])
+-        matches = [window for window in windows
+-                   if int(getattr(window, "windowID", -1)) == window_id
+-                   and int(getattr(getattr(window, "owningApplication", None), "processID", -1)) == identity.process_id]
++        if content is None:
++            raise DesktopOperationError("WINDOW_IDENTITY_UNKNOWN", "ScreenCaptureKit returned no shareable content", safe_retry=True)
++        try:
++            windows = list(call_getter(content, "windows"))
++        except TypeError as exc:
++            raise DesktopOperationError("WINDOW_IDENTITY_UNKNOWN", "ScreenCaptureKit windows accessor did not return a sequence", safe_retry=True) from exc
++        if not windows:
++            raise DesktopOperationError("WINDOW_IDENTITY_UNKNOWN", "ScreenCaptureKit returned no shareable windows", safe_retry=True)
++        matches = []
++        for candidate in windows:
++            observed_id = call_getter(candidate, "windowID")
++            application = call_getter(candidate, "owningApplication")
++            observed_pid = call_getter(application, "processID")
++            if (isinstance(observed_id, bool) or not isinstance(observed_id, int) or observed_id <= 0
++                    or isinstance(observed_pid, bool) or not isinstance(observed_pid, int) or observed_pid <= 0):
++                raise DesktopOperationError("WINDOW_IDENTITY_UNKNOWN", "ScreenCaptureKit returned malformed window or process identity", safe_retry=True)
++            if observed_id == window_id and observed_pid == identity.process_id:
++                matches.append(candidate)
+         if len(matches) != 1:
+             raise DesktopOperationError("WINDOW_IDENTITY_UNKNOWN", "ScreenCaptureKit window ID and owning PID are absent or ambiguous", safe_retry=True)
+         window = matches[0]
+@@ -243,10 +287,18 @@
+         try:
+             content_filter = filter_class.alloc().initWithDesktopIndependentWindow_(window)
+             configuration = config_class.alloc().init()
+-            frame = getattr(window, "frame", None)
+-            if callable(frame):
+-                frame = frame()
+-            width, height = int(round(float(frame.size.width))), int(round(float(frame.size.height)))
++            frame = call_getter(window, "frame", code="SCREEN_CAPTURE_API_UNAVAILABLE")
++            size = getattr(frame, "size", None)
++            if size is None:
++                raise DesktopOperationError("SCREEN_CAPTURE_API_UNAVAILABLE", "ScreenCaptureKit frame has no size", safe_retry=True)
++            width_value, height_value = getattr(size, "width", None), getattr(size, "height", None)
++            if (isinstance(width_value, bool) or not isinstance(width_value, (int, float))
++                    or isinstance(height_value, bool) or not isinstance(height_value, (int, float))):
++                raise DesktopOperationError("SCREEN_CAPTURE_API_UNAVAILABLE", "ScreenCaptureKit frame dimensions are malformed", safe_retry=True)
++            width_float, height_float = float(width_value), float(height_value)
++            if not (math.isfinite(width_float) and math.isfinite(height_float)):
++                raise DesktopOperationError("SCREEN_CAPTURE_API_UNAVAILABLE", "ScreenCaptureKit frame dimensions are non-finite", safe_retry=True)
++            width, height = int(round(width_float)), int(round(height_float))
+             if not (1 <= width <= 8192 and 1 <= height <= 8192 and width * height <= 12_000_000):
+                 raise DesktopOperationError("CAPTURE_OUTPUT_REJECTED", "ScreenCaptureKit window frame exceeds image bounds", safe_retry=True)
+             configuration.setWidth_(width)
+@@ -753,10 +805,7 @@
+         from ._desktop_capture import capture_macos_screen_capture_kit_window
+         if region != "window":
+             raise DesktopOperationError("CAPTURE_SCOPE_REJECTED", "macOS capture currently supports only the exact ScreenCaptureKit window filter", safe_retry=True)
+-        release = platform.mac_ver()[0]
+-        match = re.match(r"^(\d+)\.(\d+)(?:\.|$)", release) if isinstance(release, str) else None
+-        if not match or tuple(map(int, match.groups())) < (12, 3):
+-            raise DesktopOperationError("SCREEN_CAPTURE_API_UNAVAILABLE", "ScreenCaptureKit window capture requires a readable macOS 12.3 or newer release", safe_retry=True)
++        _require_screencapturekit_14()
+         permission = self.gateway.permissions()
+         if permission.get("screen_capture_allowed") is not True:
+             raise DesktopOperationError("PERMISSION_REQUIRED", "macOS Screen Recording permission is unavailable", category=BLOCKED_PERMISSION, safe_retry=True)
+@@ -805,8 +854,9 @@
+         current = self.observe_model(identity)
+         return SourcePreservation(
+             current.mode == source.mode and current.active_model_label == source.active_model_label
++            and current.standalone_model_id == source.standalone_model_id
+             and current.fingerprint == source.fingerprint and current.dirty == source.dirty,
+-            source.standalone_model_id or "", current.fingerprint or "", bool(current.dirty),
++            current.standalone_model_id or "", current.fingerprint or "", bool(current.dirty),
+         )
+ 
+     @staticmethod
+--- a/comsol_mcp/_desktop_service.py
++++ b/comsol_mcp/_desktop_service.py
+@@ -13,6 +13,8 @@
+ import json
+ import os
+ import secrets
++import stat
++import tempfile
+ import threading
+ import time
+ from pathlib import Path
+@@ -145,10 +147,11 @@
+ @dataclass(frozen=True, slots=True)
+ class SavedCopy:
+     path: str
+-    sha256: str
++    sha256: str | None
+     source_preserved: bool
+     source_dirty_after: bool
+     source_fingerprint_after: str
++    size_bytes: int | None = None
+ 
+ 
+ @dataclass(frozen=True, slots=True)
+@@ -213,6 +216,173 @@
+                  context: DesktopDispatchContext) -> Mapping[str, Any]: ...
+ 
+ 
++def _verify_private_save_copy_directory(path: Path,
++                                        expected_identity: Mapping[str, Any] | None = None) -> dict[str, Any]:
++    from ._host_scoped_provider import verify_private_path_security
++    try:
++        evidence = verify_private_path_security(
++            path, directory=True,
++            expected_identity=dict(expected_identity) if expected_identity is not None else None,
++        )
++    except Exception as exc:
++        raise DesktopOperationError("SAVE_COPY_STAGE_UNTRUSTED", "host-private Save Copy staging directory failed owner/ACL identity verification", side_effect_started=False, safe_retry=True) from exc
++    if not isinstance(evidence, Mapping) or not isinstance(evidence.get("identity"), Mapping):
++        raise DesktopOperationError("SAVE_COPY_STAGE_UNTRUSTED", "staging directory verifier returned no pinned identity", side_effect_started=False, safe_retry=True)
++    semantics = evidence.get("security_semantics")
++    if semantics not in {
++        "posix-owner-mode", "posix-owner-mode+filesystem-ownership+no-extended-acl",
++        "windows-read-control-owner-dacl-persistent-acls",
++    }:
++        raise DesktopOperationError("SAVE_COPY_STAGE_UNTRUSTED", "staging directory has no supported host ownership proof", side_effect_started=False, safe_retry=True)
++    return dict(evidence["identity"])
++
++
++def _create_private_save_copy_stage(context: DesktopDispatchContext) -> tuple[Path, dict[str, Any]]:
++    try:
++        parent = Path(tempfile.gettempdir()).resolve(strict=True)
++        info = parent.lstat()
++        if stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode):
++            raise OSError("temporary root is not a real directory")
++        operation_suffix = sha256(context.operation_id.encode("utf-8")).hexdigest()[:16]
++        stage = Path(tempfile.mkdtemp(prefix=f"comsol-mcp-save-{operation_suffix}-", dir=str(parent)))
++        if os.name != "nt":
++            os.chmod(stage, 0o700)
++        identity = _verify_private_save_copy_directory(stage)
++        return stage, identity
++    except DesktopOperationError:
++        raise
++    except Exception as exc:
++        raise DesktopOperationError("SAVE_COPY_STAGE_UNAVAILABLE", "a host-owned private Save Copy staging directory could not be created", side_effect_started=False, safe_retry=True) from exc
++
++
++def _verified_private_save_copy_file(stage_root: Path, path: Path,
++                                     stage_root_identity: Mapping[str, Any],
++                                     *, timeout_s: float = 120.0) -> dict[str, Any]:
++    """Wait for a stable Save Copy, then hash bytes from a pinned host-private handle."""
++    if path.parent != stage_root or path.name != "model.mph":
++        raise DesktopOperationError("SAVE_COPY_STAGE_UNTRUSTED", "native Save Copy path escaped its exact task-private staging directory", side_effect_started=True, safe_retry=False)
++    deadline = time.monotonic() + timeout_s
++    previous = None
++    stable_since = None
++    while time.monotonic() < deadline:
++        _verify_private_save_copy_directory(stage_root, stage_root_identity)
++        try:
++            named = path.lstat()
++        except FileNotFoundError:
++            stable_since = None
++            previous = None
++            time.sleep(0.1)
++            continue
++        except OSError as exc:
++            raise DesktopOperationError("SAVE_COPY_UNVERIFIED", "private Save Copy output could not be inspected", side_effect_started=True, safe_retry=False) from exc
++        if stat.S_ISLNK(named.st_mode) or not stat.S_ISREG(named.st_mode):
++            raise DesktopOperationError("SAVE_COPY_UNVERIFIED", "private Save Copy output is not an ordinary regular file", side_effect_started=True, safe_retry=False)
++        if named.st_size <= 0:
++            previous, stable_since = None, None
++            time.sleep(0.1)
++            continue
++        current = (int(named.st_dev), int(named.st_ino), int(named.st_size),
++                   int(getattr(named, "st_mtime_ns", int(named.st_mtime * 1e9))),
++                   int(getattr(named, "st_ctime_ns", int(named.st_ctime * 1e9))))
++        now = time.monotonic()
++        if current == previous:
++            if stable_since is None:
++                stable_since = now
++        else:
++            previous, stable_since = current, None
++        # Three adjacent samples only establish a 200 ms pause, which is too
++        # short for native Save Copy writers that flush in bursts. Require a
++        # bounded two-second quiet window before pinning and hashing.
++        if stable_since is not None and now - stable_since >= 2.0:
++            break
++        time.sleep(0.1)
++    else:
++        raise DesktopOperationError("SAVE_COPY_TIMEOUT", "native Save Copy did not produce a stable private file before its deadline", side_effect_started=True, safe_retry=False)
++
++    _verify_private_save_copy_directory(stage_root, stage_root_identity)
++    if os.name == "nt":
++        from ._windows_parameter_publish import _API, pinned_parent
++        from ._host_scoped_provider import verify_private_path_security
++        relative = path.relative_to(stage_root).as_posix()
++        with pinned_parent(stage_root, relative, add_file=False, _api=_API()) as (api, parent, parts, binding):
++            handle = api.open_source(parent, parts[-1])
++            try:
++                before = api.source_fingerprint(handle)
++                if before[1] <= 0 or before[4] != 1:
++                    raise DesktopOperationError("SAVE_COPY_UNVERIFIED", "Windows Save Copy staging file has invalid size or link count", side_effect_started=True, safe_retry=False)
++                evidence = verify_private_path_security(path, directory=False)
++                identity = evidence.get("identity") if isinstance(evidence, Mapping) else None
++                if (not isinstance(identity, Mapping)
++                        or (identity.get("device"), identity.get("inode")) != before[0]):
++                    raise DesktopOperationError("SAVE_COPY_CHANGED", "Windows staged file differs from its verified ACL identity", side_effect_started=True, safe_retry=False)
++                digest = __import__("hashlib").sha256()
++                size = 0
++                while True:
++                    block = api.read_chunk(handle, 1024 * 1024)
++                    if not block:
++                        break
++                    digest.update(block); size += len(block)
++                after = api.source_fingerprint(handle)
++                if (after != before or size != before[1]
++                        or api.child_identity(parent, parts[-1]) != before[0]):
++                    raise DesktopOperationError("SAVE_COPY_CHANGED", "Windows staged file changed during its pinned hash", side_effect_started=True, safe_retry=False)
++                api.verify_named_binding(binding)
++                _verify_private_save_copy_directory(stage_root, stage_root_identity)
++                final_evidence = verify_private_path_security(path, directory=False,
++                                                              expected_identity=dict(identity))
++                return {"sha256": digest.hexdigest(), "size_bytes": size,
++                        "file_identity": dict(final_evidence["identity"]),
++                        "source_security_semantics": final_evidence.get("security_semantics")}
++            finally:
++                api.close(handle)
++
++    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
++    try:
++        fd = os.open(path, flags)
++    except OSError as exc:
++        raise DesktopOperationError("SAVE_COPY_CHANGED", "private Save Copy output could not be pinned for hashing", side_effect_started=True, safe_retry=False) from exc
++    try:
++        before = os.fstat(fd)
++        if (not stat.S_ISREG(before.st_mode)
++                or (int(before.st_dev), int(before.st_ino), int(before.st_size)) != current[:3]):
++            raise DesktopOperationError("SAVE_COPY_CHANGED", "private Save Copy output changed before hashing", side_effect_started=True, safe_retry=False)
++        os.fchmod(fd, 0o600)
++        # fchmod intentionally tightens a newly-created file inside the
++        # already-private stage before ownership verification; bind subsequent
++        # hash/readback checks to that final metadata state.
++        before = os.fstat(fd)
++        from ._host_scoped_provider import verify_private_path_security
++        evidence = verify_private_path_security(path, directory=False)
++        identity = evidence.get("identity") if isinstance(evidence, Mapping) else None
++        if (not isinstance(identity, Mapping)
++                or (identity.get("device"), identity.get("inode")) != (before.st_dev, before.st_ino)):
++            raise DesktopOperationError("SAVE_COPY_CHANGED", "private Save Copy output changed during ownership verification", side_effect_started=True, safe_retry=False)
++        digest = __import__("hashlib").sha256()
++        size = 0
++        while True:
++            block = os.read(fd, 1024 * 1024)
++            if not block:
++                break
++            digest.update(block); size += len(block)
++        after = os.fstat(fd)
++        named_after = path.lstat()
++        if (size != before.st_size or (after.st_dev, after.st_ino, after.st_size,
++                                       after.st_mtime_ns, after.st_ctime_ns) !=
++                (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_ctime_ns)
++                or (named_after.st_dev, named_after.st_ino, named_after.st_size,
++                    named_after.st_mtime_ns, named_after.st_ctime_ns) !=
++                (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_ctime_ns)):
++            raise DesktopOperationError("SAVE_COPY_CHANGED", "private Save Copy output changed during its pinned hash", side_effect_started=True, safe_retry=False)
++        _verify_private_save_copy_directory(stage_root, stage_root_identity)
++        final_evidence = verify_private_path_security(path, directory=False,
++                                                      expected_identity=dict(identity))
++        return {"sha256": digest.hexdigest(), "size_bytes": size,
++                "file_identity": dict(final_evidence["identity"]),
++                "source_security_semantics": final_evidence.get("security_semantics")}
++    finally:
++        os.close(fd)
++
++
+ class AuthorizationCheck(Protocol):
+     def __call__(self, project_id: str, permission: str) -> bool: ...
+ 
+@@ -266,6 +436,7 @@
+         resolve_artifact: ArtifactResolver,
+         authorize_save_copy: SaveCopyAuthorizer,
+         publish_capture: Callable[[str, DesktopDispatchContext, Mapping[str, Any]], Mapping[str, Any]] | None = None,
++        publish_save_copy: Callable[[str, DesktopDispatchContext, Path, Path, Path, Mapping[str, Any]], Mapping[str, Any]] | None = None,
+         handle_ttl_s: float = 30.0,
+         clock: Callable[[], float] = time.monotonic,
+     ) -> None:
+@@ -292,6 +463,7 @@
+         self.resolve_artifact = resolve_artifact
+         self.authorize_save_copy = authorize_save_copy
+         self.publish_capture = publish_capture
++        self.publish_save_copy = publish_save_copy
+         self.handle_ttl_s = float(handle_ttl_s)
+         self.clock = clock
+         self._leases: dict[str, _WindowLease] = {}
+@@ -909,19 +1081,38 @@
+         destination = raw_destination.resolve(strict=False)
+         if destination.exists() or not self.authorize_save_copy(project_id, destination):
+             raise DesktopOperationError("SAVE_COPY_PATH_REJECTED", "save-copy destination must be absolute, new, and project-authorized", category=BLOCKED_PERMISSION, safe_retry=True)
++        if self.publish_save_copy is None:
++            raise DesktopOperationError("SAVE_COPY_PUBLISH_UNAVAILABLE", "migration requires the bound ArtifactStore no-clobber publisher", category=UNSUPPORTED_CONTROL, safe_retry=True)
++        stage_root, stage_root_identity = _create_private_save_copy_stage(context)
++        stage_path = stage_root / "model.mph"
++        if stage_path.exists() or stage_path.is_symlink():
++            raise DesktopOperationError("SAVE_COPY_STAGE_UNKNOWN", "private Save Copy staging leaf was not new", category=MODEL_BINDING_UNKNOWN, safe_retry=True)
+         mark_effect()
+-        copy = self.adapter.save_copy(observation.identity, destination, source)
+-        if not isinstance(copy, SavedCopy) or Path(copy.path) != destination or not self._valid_sha256(copy.sha256):
+-            raise DesktopOperationError("SAVE_COPY_UNVERIFIED", "adapter did not return an exact path and SHA-256 for the copy", category=MODEL_BINDING_UNKNOWN, side_effect_started=True)
++        copy = self.adapter.save_copy(observation.identity, stage_path, source)
++        if (not isinstance(copy, SavedCopy) or Path(copy.path) != stage_path
++                or (copy.sha256 is not None and not self._valid_sha256(copy.sha256))):
++            raise DesktopOperationError("SAVE_COPY_UNVERIFIED", "adapter did not return the exact private staging path and an optional valid SHA-256", category=MODEL_BINDING_UNKNOWN, side_effect_started=True)
+         if not copy.source_preserved or copy.source_dirty_after != source.dirty or copy.source_fingerprint_after != source.fingerprint:
+             raise DesktopOperationError("SOURCE_MODEL_NOT_PRESERVED", "save-copy changed or discarded the standalone source state", category=MODEL_BINDING_UNKNOWN, side_effect_started=True)
+-        if not destination.is_file() or self._file_sha256(destination) != copy.sha256:
+-            raise DesktopOperationError("SAVE_COPY_HASH_MISMATCH", "saved copy is missing or its bytes do not match the adapter receipt", category=MODEL_BINDING_UNKNOWN, side_effect_started=True)
++        stage_receipt = _verified_private_save_copy_file(stage_root, stage_path, stage_root_identity)
++        if ((copy.sha256 is not None and stage_receipt["sha256"] != copy.sha256)
++                or (copy.size_bytes is not None and copy.size_bytes != stage_receipt["size_bytes"])):
++            raise DesktopOperationError("SAVE_COPY_HASH_MISMATCH", "saved copy bytes differ from the pinned native receipt", category=MODEL_BINDING_UNKNOWN, side_effect_started=True)
++        published = self.publish_save_copy(
++            project_id, context, stage_root, stage_path, destination,
++            {**stage_receipt, "stage_root_identity": dict(stage_root_identity)},
++        )
++        if (not isinstance(published, Mapping) or published.get("path") != str(destination)
++                or published.get("sha256") != stage_receipt["sha256"]
++                or published.get("size_bytes") != stage_receipt["size_bytes"]
++                or published.get("operation_id") != context.operation_id
++                or published.get("publication") != "ARTIFACTSTORE_NO_CLOBBER"):
++            raise DesktopOperationError("SAVE_COPY_PUBLISH_UNKNOWN", "ArtifactStore did not verify the exact staged bytes under this durable migration claim", category=MODEL_BINDING_UNKNOWN, side_effect_started=True, safe_retry=False)
+         loaded = self._engine_call("model.load", {
+             "project_id": project_id,
+             "target_session_id": str(args["target_session_id"]),
+             "model_path": str(destination),
+-            "source_sha256": copy.sha256,
++            "source_sha256": stage_receipt["sha256"],
+             "load_mode": "save_copy",
+         }, None, context, mutating=True)
+         snapshot = self._snapshot_from_response(loaded)
+@@ -930,6 +1121,7 @@
+         final_observation = self._revalidate(self._get_lease(token))
+         final_model = self._observe_model(final_observation.identity)
+         if (final_model.mode != "STANDALONE" or final_model.standalone_model_id != source.standalone_model_id
++                or final_model.active_model_label != source.active_model_label
+                 or final_model.fingerprint != source.fingerprint or final_model.dirty != source.dirty):
+             raise DesktopOperationError("SOURCE_MODEL_NOT_PRESERVED", "the original Desktop window no longer shows the same standalone source", category=MODEL_BINDING_UNKNOWN, side_effect_started=True)
+         managed_after = self._engine_snapshot("desktop.binding.inspect", {"project_id": project_id}, snapshot.model_ref, context)
+@@ -940,13 +1132,17 @@
+                 or preserved.standalone_model_id != source.standalone_model_id
+                 or preserved.fingerprint != source.fingerprint or preserved.dirty != source.dirty):
+             raise DesktopOperationError("SOURCE_MODEL_NOT_PRESERVED", "source standalone model is no longer open after migration", category=MODEL_BINDING_UNKNOWN, side_effect_started=True)
++        self._cleanup_save_copy_stage(stage_root, stage_root_identity, stage_receipt["file_identity"])
+         return self._success({
+             "migration_mode": "explicit_save_copy",
+             "source_window_identity": final_observation.identity.fingerprint(),
+             "source_standalone_model_id": source.standalone_model_id,
+             "source_fingerprint": source.fingerprint,
+             "source_dirty_preserved": source.dirty,
+-            "saved_copy": {"path": str(destination), "sha256": copy.sha256},
++            "saved_copy": {"path": str(destination), "sha256": stage_receipt["sha256"],
++                           "size_bytes": stage_receipt["size_bytes"],
++                           "file_identity": published.get("file_identity"),
++                           "operation_id": context.operation_id},
+             "target_model_ref": snapshot.model_ref.as_dict(),
+             "target_model_tag": snapshot.model_tag,
+             "target_server_endpoint": snapshot.server_endpoint,
+@@ -955,6 +1151,66 @@
+             "desktop_binding_verified": False,
+             "source_window_preserved": True,
+         }, operation="desktop.migrate_standalone", record=record)
++
++    def _cleanup_save_copy_stage(self, stage_root: Path, expected_identity: Mapping[str, Any],
++                                 expected_file_identity: Mapping[str, Any]) -> None:
++        """Remove a successful private POSIX scratch via pinned directory handles."""
++        if os.name == "nt":
++            try:
++                from ._windows_parameter_publish import delete_exact_private_stage
++                delete_exact_private_stage(
++                    stage_root, dict(expected_identity), dict(expected_file_identity),
++                )
++            except Exception:
++                # A changed name, ACL, link count or non-empty directory is
++                # left in place; deletion never falls back to a re-resolved
++                # path operation.
++                return
++            return
++        parent_fd = stage_fd = None
++        try:
++            _verify_private_save_copy_directory(stage_root, expected_identity)
++            flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
++            parent_fd = os.open(stage_root.parent, flags)
++            parent_before = os.fstat(parent_fd)
++            stage_fd = os.open(stage_root.name, flags, dir_fd=parent_fd)
++            stage_before = os.fstat(stage_fd)
++            if (not stat.S_ISDIR(stage_before.st_mode)
++                    or (int(stage_before.st_dev), int(stage_before.st_ino)) !=
++                    (expected_identity.get("device"), expected_identity.get("inode"))):
++                return
++            named_stage = os.stat(stage_root.name, dir_fd=parent_fd, follow_symlinks=False)
++            if ((named_stage.st_dev, named_stage.st_ino) != (stage_before.st_dev, stage_before.st_ino)
++                    or not stat.S_ISDIR(named_stage.st_mode)):
++                return
++            try:
++                staged = os.stat("model.mph", dir_fd=stage_fd, follow_symlinks=False)
++            except FileNotFoundError:
++                staged = None
++            if staged is not None:
++                if (not stat.S_ISREG(staged.st_mode)
++                        or (int(staged.st_dev), int(staged.st_ino)) !=
++                        (expected_file_identity.get("device"), expected_file_identity.get("inode"))):
++                    return
++                os.unlink("model.mph", dir_fd=stage_fd)
++                os.fsync(stage_fd)
++            _verify_private_save_copy_directory(stage_root, expected_identity)
++            current_parent = os.stat(stage_root.parent, follow_symlinks=False)
++            current_stage = os.stat(stage_root.name, dir_fd=parent_fd, follow_symlinks=False)
++            if ((current_parent.st_dev, current_parent.st_ino) != (parent_before.st_dev, parent_before.st_ino)
++                    or (current_stage.st_dev, current_stage.st_ino) != (stage_before.st_dev, stage_before.st_ino)):
++                return
++            os.rmdir(stage_root.name, dir_fd=parent_fd)
++            os.fsync(parent_fd)
++        except Exception:
++            # Leaving a verified private residue is safer than deleting an
++            # object that changed during cleanup.
++            return
++        finally:
++            if stage_fd is not None:
++                os.close(stage_fd)
++            if parent_fd is not None:
++                os.close(parent_fd)
+ 
+     def _observe_model(self, identity: WindowIdentity) -> DesktopModelObservation:
+         value = self.adapter.observe_model(identity)
+--- a/comsol_mcp/_desktop_uia.py
++++ b/comsol_mcp/_desktop_uia.py
+@@ -10,6 +10,7 @@
+ import base64
+ import json
+ import os
++import re
+ import subprocess
+ import sys
+ from typing import Any, Callable, Mapping
+@@ -26,11 +27,104 @@
+ $r = ConvertFrom-Json -InputObject $raw -ErrorAction Stop
+ Add-Type -AssemblyName UIAutomationClient
+ Add-Type -AssemblyName UIAutomationTypes
++$identityType = @'
++using System;
++using System.Runtime.InteropServices;
++using System.Text;
++
++public sealed class ComsolDesktopTargetProcessPin : IDisposable {
++    private const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
++    private const uint SYNCHRONIZE = 0x00100000;
++    private const uint TOKEN_QUERY = 0x0008;
++    private const int TokenUser = 1;
++    private IntPtr process = IntPtr.Zero;
++    private readonly uint processId;
++    private readonly string expectedBirth;
++    private readonly string expectedSid;
++    private readonly uint expectedSession;
++
++    [StructLayout(LayoutKind.Sequential)] private struct FILETIME { public uint Low; public uint High; }
++    [DllImport("kernel32.dll", SetLastError=true)] private static extern IntPtr OpenProcess(uint access, bool inherit, uint pid);
++    [DllImport("kernel32.dll", SetLastError=true)] private static extern bool GetProcessTimes(IntPtr process, out FILETIME creation, out FILETIME exit, out FILETIME kernel, out FILETIME user);
++    [DllImport("kernel32.dll", SetLastError=true)] private static extern uint WaitForSingleObject(IntPtr handle, uint milliseconds);
++    [DllImport("kernel32.dll", SetLastError=true)] private static extern bool GetWindowThreadProcessId(IntPtr hwnd, out uint pid);
++    [DllImport("kernel32.dll", SetLastError=true)] private static extern bool ProcessIdToSessionId(uint pid, out uint session);
++    [DllImport("advapi32.dll", SetLastError=true)] private static extern bool OpenProcessToken(IntPtr process, uint access, out IntPtr token);
++    [DllImport("advapi32.dll", SetLastError=true)] private static extern bool GetTokenInformation(IntPtr token, int infoClass, IntPtr info, uint length, out uint returned);
++    [DllImport("advapi32.dll", CharSet=CharSet.Unicode, SetLastError=true)] private static extern bool ConvertSidToStringSid(IntPtr sid, out IntPtr text);
++    [DllImport("kernel32.dll")] private static extern IntPtr LocalFree(IntPtr memory);
++    [DllImport("kernel32.dll", SetLastError=true)] private static extern bool CloseHandle(IntPtr handle);
++
++    public ComsolDesktopTargetProcessPin(uint pid, string birth, string sid, uint session) {
++        processId = pid; expectedBirth = birth; expectedSid = sid; expectedSession = session;
++        process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE, false, pid);
++        if (process == IntPtr.Zero) throw new InvalidOperationException("UIA_PROCESS_OPEN_FAILED");
++        try { AssertProcessIdentity(); }
++        catch { Dispose(); throw; }
++    }
++
++    private void AssertProcessIdentity() {
++        if (WaitForSingleObject(process, 0) != 0x00000102)
++            throw new InvalidOperationException("UIA_PROCESS_TERMINATED");
++        FILETIME creation, exit, kernel, user;
++        if (!GetProcessTimes(process, out creation, out exit, out kernel, out user))
++            throw new InvalidOperationException("UIA_PROCESS_BIRTH_UNAVAILABLE");
++        long ticks = ((long)creation.High << 32) | creation.Low;
++        // pywin32's FileTimeToSystemTime view is millisecond precision; retain
++        // that exact identity encoding (six digits with three trailing zeros).
++        ticks = (ticks / 10000L) * 10000L;
++        string birth = DateTime.FromFileTimeUtc(ticks).ToString("yyyy-MM-dd'T'HH:mm:ss.fff'000Z'", System.Globalization.CultureInfo.InvariantCulture);
++        if (!String.Equals("UTC:" + birth, expectedBirth, StringComparison.Ordinal))
++            throw new InvalidOperationException("UIA_PROCESS_BIRTH_MISMATCH");
++        uint session;
++        if (!ProcessIdToSessionId(processId, out session) || session != expectedSession)
++            throw new InvalidOperationException("UIA_PROCESS_SESSION_MISMATCH");
++        IntPtr token = IntPtr.Zero;
++        IntPtr buffer = IntPtr.Zero;
++        IntPtr sidText = IntPtr.Zero;
++        try {
++            if (!OpenProcessToken(process, TOKEN_QUERY, out token)) throw new InvalidOperationException("UIA_PROCESS_TOKEN_UNAVAILABLE");
++            uint needed;
++            GetTokenInformation(token, TokenUser, IntPtr.Zero, 0, out needed);
++            if (needed < IntPtr.Size || needed > 65536) throw new InvalidOperationException("UIA_PROCESS_TOKEN_SIZE_INVALID");
++            buffer = Marshal.AllocHGlobal((int)needed);
++            if (!GetTokenInformation(token, TokenUser, buffer, needed, out needed)) throw new InvalidOperationException("UIA_PROCESS_TOKEN_READ_FAILED");
++            IntPtr sid = Marshal.ReadIntPtr(buffer);
++            if (sid == IntPtr.Zero || !ConvertSidToStringSid(sid, out sidText)) throw new InvalidOperationException("UIA_PROCESS_SID_UNAVAILABLE");
++            string actualSid = Marshal.PtrToStringUni(sidText);
++            if (!String.Equals(actualSid, expectedSid, StringComparison.Ordinal)) throw new InvalidOperationException("UIA_PROCESS_LOGIN_MISMATCH");
++        } finally {
++            if (sidText != IntPtr.Zero) LocalFree(sidText);
++            if (buffer != IntPtr.Zero) Marshal.FreeHGlobal(buffer);
++            if (token != IntPtr.Zero) CloseHandle(token);
++        }
++    }
++
++    public void AssertTarget(IntPtr hwnd) {
++        AssertProcessIdentity();
++        uint hwndPid;
++        if (hwnd == IntPtr.Zero || GetWindowThreadProcessId(hwnd, out hwndPid) == 0 || hwndPid != processId)
++            throw new InvalidOperationException("UIA_HWND_PROCESS_MISMATCH");
++    }
++
++    public void Dispose() {
++        if (process != IntPtr.Zero) { CloseHandle(process); process = IntPtr.Zero; }
++    }
++}
++'@
++Add-Type -TypeDefinition $identityType -Language CSharp
+ $scope = [System.Windows.Automation.TreeScope]::Descendants
++$sessionMatch = [regex]::Match([string]$r.desktop_session_id, '^WTS:(0|[1-9][0-9]{0,9})$')
++if (-not $sessionMatch.Success) { throw 'UIA_SESSION_IDENTITY_INVALID' }
++$pin = [ComsolDesktopTargetProcessPin]::new([uint32]$r.process_id, [string]$r.process_birth,
++    [string]$r.login_id, [uint32]$sessionMatch.Groups[1].Value)
++try {
+ $windowHandle = [IntPtr]::new([Int64]$r.hwnd)
++$pin.AssertTarget($windowHandle)
+ $window = [System.Windows.Automation.AutomationElement]::FromHandle($windowHandle)
+ if ($null -eq $window -or $window.Current.ProcessId -ne [int]$r.process_id) { throw 'UIA_WINDOW_PROCESS_MISMATCH' }
+ function Find-Exact($root, $sel, $expectedPid) {
++    $pin.AssertTarget($windowHandle)
+     $p = $sel.properties
+     $conditions = [System.Collections.Generic.List[System.Windows.Automation.Condition]]::new()
+     $conditions.Add([System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::AutomationIdProperty, [string]$p.automation_id))
+@@ -47,6 +141,7 @@
+     return $matches[0]
+ }
+ function Read-Exact($element, $selector) {
++    $pin.AssertTarget($windowHandle)
+     $pattern = $null
+     switch ([string]$selector.readback) {
+         'name' { return [string]$element.Current.Name }
+@@ -62,24 +157,29 @@
+     }
+ }
+ function Invoke-Exact($element, $selector) {
++    $pin.AssertTarget($windowHandle)
+     if ([string]$selector.pattern -eq 'selection') {
+         $pattern = $null
+         if (-not $element.TryGetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern, [ref]$pattern)) { throw ('UIA_SELECTION_PATTERN_UNAVAILABLE:' + $selector.selector_id) }
+         $pattern.Select()
++        $pin.AssertTarget($windowHandle)
+         return [bool]$pattern.Current.IsSelected
+     } elseif ([string]$selector.pattern -eq 'invoke') {
+         $pattern = $null
+         if (-not $element.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$pattern)) { throw ('UIA_INVOKE_PATTERN_UNAVAILABLE:' + $selector.selector_id) }
+         $pattern.Invoke()
++        $pin.AssertTarget($windowHandle)
+         return $true
+     } else { throw ('UIA_PROFILE_PATTERN_REJECTED:' + $selector.selector_id) }
+ }
+ function Set-Exact($element, $selector, $value) {
++    $pin.AssertTarget($windowHandle)
+     if ([string]$selector.pattern -ne 'value') { throw ('UIA_PROFILE_PATTERN_REJECTED:' + $selector.selector_id) }
+     $pattern = $null
+     if (-not $element.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref]$pattern)) { throw ('UIA_VALUE_PATTERN_UNAVAILABLE:' + $selector.selector_id) }
+     $pattern.SetValue([string]$value)
+     if ([string]$pattern.Current.Value -cne [string]$value) { throw ('UIA_VALUE_READBACK_MISMATCH:' + $selector.selector_id) }
++    $pin.AssertTarget($windowHandle)
+ }
+ $result = $null
+ switch ([string]$r.action) {
+@@ -124,6 +224,7 @@
+         $deadline = [DateTime]::UtcNow.AddSeconds([int]$r.timeout_seconds)
+         $busySeen = $false; $last = $beforeOutput; $stable = 0; $finalOutput = $beforeOutput
+         while ([DateTime]::UtcNow -lt $deadline) {
++            $pin.AssertTarget($windowHandle)
+             Start-Sleep -Milliseconds 250
+             $busyNow = Read-Exact (Find-Exact $window $busySel $r.process_id) $busySel
+             if ($busyNow -ceq $busyValue) { $busySeen = $true; $stable = 0; continue }
+@@ -142,6 +243,7 @@
+         $deadline = [DateTime]::UtcNow.AddSeconds(10)
+         $dialog = $null; $pathElement = $null; $confirm = $null
+         while ([DateTime]::UtcNow -lt $deadline -and $null -eq $pathElement) {
++            $pin.AssertTarget($windowHandle)
+             Start-Sleep -Milliseconds 200
+             $root = [System.Windows.Automation.AutomationElement]::RootElement
+             $condition = [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ProcessIdProperty, [int]$r.process_id)
+@@ -165,7 +267,11 @@
+     }
+     default { throw 'UIA_ACTION_UNSUPPORTED' }
+ }
++$pin.AssertTarget($windowHandle)
+ ConvertTo-Json -InputObject $result -Compress -Depth 8
++} finally {
++    $pin.Dispose()
++}
+ '''
+ 
+ 
+@@ -218,9 +324,14 @@
+             hwnd = int(identity.native_window_id.removeprefix("HWND:"), 16)
+         except ValueError as exc:
+             raise DesktopOperationError("WINDOW_IDENTITY_REJECTED", "UIA HWND is malformed", safe_retry=True) from exc
+-        if hwnd <= 0 or identity.process_id <= 0 or identity.process_birth.upper() in {"UNKNOWN", "UNVERIFIED"}:
++        if (hwnd <= 0 or type(identity.process_id) is not int or identity.process_id <= 0
++                or not re.fullmatch(r"UTC:\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z", identity.process_birth)
++                or not re.fullmatch(r"S-1-(?:0|[1-9]\d*)(?:-(?:0|[1-9]\d*))+", identity.login_id)
++                or not re.fullmatch(r"WTS:(?:0|[1-9]\d{0,9})", identity.desktop_session_id)):
+             raise DesktopOperationError("WINDOW_IDENTITY_REJECTED", "UIA requires complete process birth and HWND evidence", safe_retry=True)
+-        return {"hwnd": hwnd, "process_id": identity.process_id}
++        return {"hwnd": hwnd, "process_id": identity.process_id,
++                "process_birth": identity.process_birth, "login_id": identity.login_id,
++                "desktop_session_id": identity.desktop_session_id}
+ 
+     def read(self, identity: WindowIdentity, selector: Mapping[str, Any]) -> str:
+         result = self._runner({**self._base(identity), "action": "read", "selector": dict(selector)})
+--- a/comsol_mcp/_desktop_windows.py
++++ b/comsol_mcp/_desktop_windows.py
+@@ -316,24 +316,40 @@
+         required = {"save_copy", "save_path", "save_confirm"}
+         if not required <= set(profile["selectors"]):
+             raise DesktopOperationError("DESKTOP_SELECTOR_UNAVAILABLE", "profile lacks exact observed Save Copy and dialog selectors", safe_retry=True)
++        from ._desktop_service import DesktopModelObservation
++        if (not isinstance(source, DesktopModelObservation) or source.mode != "STANDALONE"
++                or not isinstance(source.standalone_model_id, str) or not source.standalone_model_id
++                or not isinstance(source.active_model_label, str) or not source.active_model_label
++                or not isinstance(source.fingerprint, str) or not source.fingerprint
++                or type(source.dirty) is not bool):
++            raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "Save Copy requires a complete standalone source baseline before UI effects", safe_retry=True)
++        before = self.observe_model(identity)
++        if (before.mode != source.mode or before.standalone_model_id != source.standalone_model_id
++                or before.active_model_label != source.active_model_label
++                or before.fingerprint != source.fingerprint or before.dirty != source.dirty):
++            raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "standalone source changed before Save Copy", safe_retry=True)
+         selectors = {name: profile["selectors"][name] for name in required}
+         self.gateway.save_copy(identity, selectors, str(destination))
+         if not destination.is_file() or destination.is_symlink():
+             raise DesktopOperationError("SAVE_COPY_UNVERIFIED", "UIA Save Copy produced no regular target file", side_effect_started=True, safe_retry=False)
+-        digest = self._file_sha256(destination)
+         after = self.observe_model(identity)
+-        if source is None or (after.active_model_label != source.active_model_label or after.dirty != source.dirty
+-                              or after.fingerprint != source.fingerprint):
++        if (after.mode != source.mode or after.standalone_model_id != source.standalone_model_id
++                or after.active_model_label != source.active_model_label or after.dirty != source.dirty
++                or after.fingerprint != source.fingerprint):
+             raise DesktopOperationError("SOURCE_MODEL_NOT_PRESERVED", "source signal changed or lacks an exact preservation baseline", side_effect_started=True, safe_retry=False)
+-        return SavedCopy(str(destination), digest, True, bool(after.dirty), str(after.fingerprint))
++        # Completion, ownership and hash are established by the coordinator's
++        # pinned host-private staging verifier after UIA returns. Hashing a
++        # caller path here would race an unfinished or replaced Save Copy.
++        return SavedCopy(str(destination), None, True, bool(after.dirty), str(after.fingerprint))
+ 
+     def verify_source_preserved(self, identity: WindowIdentity, source):
+         from ._desktop_service import SourcePreservation
+         current = self.observe_model(identity)
+         return SourcePreservation(
+             current.mode == source.mode and current.active_model_label == source.active_model_label
++            and current.standalone_model_id == source.standalone_model_id
+             and current.fingerprint == source.fingerprint and current.dirty == source.dirty,
+-            source.standalone_model_id or "", current.fingerprint or "", bool(current.dirty),
++            current.standalone_model_id or "", current.fingerprint or "", bool(current.dirty),
+         )
+ 
+     @staticmethod
+--- a/tests/test_desktop_control_wiring.py
++++ b/tests/test_desktop_control_wiring.py
+@@ -318,6 +318,88 @@
+     finally:daemon.close()
+ 
+ 
++def test_control_daemon_save_copy_publishes_only_under_running_migration_claim(tmp_path, monkeypatch):
++    import json
++    from pathlib import Path
++    from comsol_mcp._desktop_service import DesktopDispatchContext, _create_private_save_copy_stage, _verified_private_save_copy_file
++
++    daemon, _service_value, _ref = _desktop_read_fixture(tmp_path)
++    daemon.project_authority.authorize_operation = lambda project, permission: (
++        {"workspace": str(tmp_path)} if project == "p" and permission == "project_write" else
++        (_ for _ in ()).throw(RuntimeError("scope denied")))
++
++    def begin_claim(key, destination):
++        arguments = {"project_id": "p", "idempotency_key": key, "window_ref": "software-only",
++                     "target_session_id": "target", "save_policy": {
++                         "mode": "save_copy", "destination_path": str(destination), "overwrite": False,
++                     }}
++        record, _reused = daemon.store.begin(
++            request_id=f"{key}-request", idempotency_key=key, request_hash=f"{key}-hash",
++            operation="desktop.migrate_standalone", metadata={"project_id": "p"},
++        )
++        daemon.store.update_job(record["job_id"], "RUNNING")
++        context = DesktopDispatchContext(
++            "desktop.migrate_standalone", record["request_id"], record["operation_id"], record["job_id"],
++            record["idempotency_key"], record["request_hash"], "p",
++        )
++        daemon.desktop._active_operations.add(context.operation_id)
++        scope = {"operation": context.operation, "arguments_json": json.dumps(arguments, sort_keys=True),
++                 "hash": context.request_hash}
++        return context, scope
++
++    try:
++        destination = tmp_path / "published" / "saved.mph"
++        destination.parent.mkdir()
++        context, scope = begin_claim("migration-publish-positive", destination)
++        stage_root, _root_identity = _create_private_save_copy_stage(context)
++        stage_path = stage_root / "model.mph"
++        payload = b"synthetic native Save Copy bytes"
++        stage_path.write_bytes(payload)
++        stage_receipt = _verified_private_save_copy_file(stage_root, stage_path, _root_identity)
++        token = daemon._desktop_request_scope.set(scope)
++        try:
++            result = daemon._publish_desktop_save_copy(
++                "p", context, stage_root, stage_path, destination,
++                {**stage_receipt, "stage_root_identity": _root_identity},
++            )
++        finally:
++            daemon._desktop_request_scope.reset(token)
++        assert result["operation_id"] == context.operation_id
++        assert result["publication"] == "ARTIFACTSTORE_NO_CLOBBER"
++        assert result["sha256"] == stage_receipt["sha256"]
++        assert result["size_bytes"] == len(payload)
++        assert destination.read_bytes() == payload
++
++        raced_destination = tmp_path / "published" / "foreign-winner.mph"
++        raced_context, raced_scope = begin_claim("migration-publish-race", raced_destination)
++        raced_root, raced_root_identity = _create_private_save_copy_stage(raced_context)
++        raced_source = raced_root / "model.mph"
++        raced_source.write_bytes(b"second staged model")
++        raced_receipt = _verified_private_save_copy_file(raced_root, raced_source, raced_root_identity)
++        import comsol_mcp._artifact_store as artifact_store
++        actual_publisher = artifact_store._publish_project_chunks_no_clobber
++
++        def install_foreign_leaf(root, relative, chunks, *, expected_sha256, expected_size):
++            raced_destination.write_bytes(b"foreign winner")
++            return actual_publisher(root, relative, chunks,
++                                    expected_sha256=expected_sha256, expected_size=expected_size)
++
++        monkeypatch.setattr(artifact_store, "_publish_project_chunks_no_clobber", install_foreign_leaf)
++        token = daemon._desktop_request_scope.set(raced_scope)
++        try:
++            with pytest.raises(Exception) as caught:
++                daemon._publish_desktop_save_copy(
++                    "p", raced_context, raced_root, raced_source, raced_destination,
++                    {**raced_receipt, "stage_root_identity": raced_root_identity},
++                )
++        finally:
++            daemon._desktop_request_scope.reset(token)
++        assert getattr(caught.value, "code", None) == "SAVE_COPY_PUBLISH_UNKNOWN"
++        assert raced_destination.read_bytes() == b"foreign winner"
++    finally:
++        daemon.close()
++
++
+ def test_registered_desktop_source_reuses_actual_artifact_integrity_and_project_scope(tmp_path):
+     from comsol_mcp._artifact_store import register_project_artifact,local_artifact_host_identity,local_engine_host_identity
+     from comsol_mcp._desktop_service import TrustedSourceArtifact
+--- a/tests/test_desktop_native_adapters_w25.py
++++ b/tests/test_desktop_native_adapters_w25.py
+@@ -20,11 +20,12 @@
+     load_selector_profile, validate_profile,
+ )
+ from comsol_mcp._desktop_service import DesktopModelObservation, DesktopOperationError, TrustedSourceArtifact, WindowIdentity
+-from comsol_mcp._desktop_uia import WindowsUIAutomationGateway
++from comsol_mcp._desktop_uia import WindowsUIAutomationGateway, _POWERSHELL
+ from comsol_mcp._desktop_windows import WindowsDesktopAdapter
+ 
+ 
+-WINDOWS_ID = WindowIdentity("windows", "HWND:4a", 42, "birth:42", "S-1-5-21-test", "WTS:2", "6.4.0.293")
++WINDOWS_ID = WindowIdentity("windows", "HWND:4a", 42, "UTC:2026-10-12T00:00:00.000000Z",
++                            "S-1-5-21-100-200-300-1001", "WTS:2", "6.4.0.293")
+ MAC_ID = WindowIdentity("macos", "CGWindow:7", 123, "birth:123", "uid:501", "session:test", "6.4.0.293")
+ 
+ 
+@@ -255,6 +256,9 @@
+     assert reply["gateway"] == "WINDOWS_UIAUTOMATION_COMSOL_JAVA_SHELL"
+     assert reply["output_sha256"] == hashlib.sha256(b"Done").hexdigest()
+     assert requests[0]["hwnd"] == 0x4A and requests[0]["process_id"] == 42
++    assert requests[0]["process_birth"] == WINDOWS_ID.process_birth
++    assert requests[0]["login_id"] == WINDOWS_ID.login_id
++    assert requests[0]["desktop_session_id"] == WINDOWS_ID.desktop_session_id
+     assert requests[0]["source"] == source.decode()
+     assert requests[0]["source_sha256"] == hashlib.sha256(source).hexdigest()
+ 
+@@ -271,6 +275,98 @@
+     with pytest.raises(DesktopOperationError):
+         unverified.execute_shell(WINDOWS_ID, selectors, source, "0" * 64)
+     assert calls == []
++
++
++@pytest.mark.parametrize("field,value", [
++    ("process_birth", "birth:42"),
++    ("login_id", "uid:501"),
++    ("desktop_session_id", "session:2"),
++])
++def test_windows_uia_rejects_incomplete_process_identity_before_runner(field, value):
++    from dataclasses import replace
++
++    calls = []
++    gateway = WindowsUIAutomationGateway(lambda request, **_kw: calls.append(request) or {})
++    identity = replace(WINDOWS_ID, **{field: value})
++    with pytest.raises(DesktopOperationError) as caught:
++        gateway.read(identity, {"selector_id": "label"})
++    assert caught.value.code == "WINDOW_IDENTITY_REJECTED"
++    assert calls == []
++
++
++def test_windows_uia_native_script_pins_process_handle_and_checks_identity_around_effects():
++    assert "OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE" in _POWERSHELL
++    assert "GetProcessTimes(process" in _POWERSHELL
++    assert "ProcessIdToSessionId(processId" in _POWERSHELL
++    assert "OpenProcessToken(process, TOKEN_QUERY" in _POWERSHELL
++    assert "GetWindowThreadProcessId(hwnd" in _POWERSHELL
++    assert "function Invoke-Exact" in _POWERSHELL and "$pin.AssertTarget($windowHandle)" in _POWERSHELL
++    assert "finally {\n    $pin.Dispose()\n}" in _POWERSHELL
++
++
++def test_windows_save_copy_refuses_source_id_drift_before_ui_effect(tmp_path):
++    source = DesktopModelObservation("STANDALONE", standalone_model_id="id-A", active_model_label="model-A",
++                                     fingerprint="a" * 64, dirty=False)
++    selectors = {
++        "active_model_label": _selector("windows", "active_model_label", pattern="read", readback="value"),
++        "standalone_model_id": _selector("windows", "standalone_model_id", pattern="read", readback="value"),
++        "model_fingerprint": _selector("windows", "model_fingerprint", pattern="read", readback="value"),
++        "model_dirty": _selector("windows", "model_dirty", pattern="read", readback="value",
++                                 states={"dirty": "Dirty", "clean": "Clean"}),
++        "save_copy": _selector("windows", "save_copy", pattern="invoke"),
++        "save_path": _selector("windows", "save_path", pattern="value", readback="value"),
++        "save_confirm": _selector("windows", "save_confirm", pattern="invoke"),
++    }
++    class Gateway:
++        def __init__(self):
++            self.saves = []
++
++        def read(self, _identity, selector):
++            return {
++                "active_model_label": "model-A",
++                "standalone_model_id": "id-B",  # Only the native source ID drifted.
++                "model_fingerprint": "a" * 64,
++                "model_dirty": "Clean",
++            }[selector["selector_id"]]
++
++        def save_copy(self, *args):
++            self.saves.append(args)
++
++    gateway = Gateway()
++    adapter = WindowsDesktopAdapter(gateway=gateway)
++    adapter._profile = lambda _identity: {"selectors": selectors, "profile_sha256": "b" * 64}
++    with pytest.raises(DesktopOperationError) as caught:
++        adapter.save_copy(WINDOWS_ID, tmp_path / "stage.mph", source)
++    assert caught.value.code == "MODEL_BINDING_UNKNOWN"
++    assert gateway.saves == []
++
++
++def test_windows_and_macos_source_preservation_report_observed_current_model_id():
++    source = DesktopModelObservation("STANDALONE", standalone_model_id="id-A", active_model_label="model-A",
++                                     fingerprint="a" * 64, dirty=False)
++    windows_selectors = {
++        name: _selector("windows", name, pattern="read", readback="value",
++                        states={"dirty": "Dirty", "clean": "Clean"} if name == "model_dirty" else None)
++        for name in ("active_model_label", "standalone_model_id", "model_fingerprint", "model_dirty")
++    }
++    windows_values = {"active_model_label": "model-A", "standalone_model_id": "id-B",
++                      "model_fingerprint": "a" * 64, "model_dirty": "Clean"}
++    windows = WindowsDesktopAdapter(gateway=SimpleNamespace(
++        read=lambda _identity, selector: windows_values[selector["selector_id"]]))
++    windows._profile = lambda _identity: {"selectors": windows_selectors, "profile_sha256": "c" * 64}
++    windows_result = windows.verify_source_preserved(WINDOWS_ID, source)
++    assert windows_result.still_open is False and windows_result.standalone_model_id == "id-B"
++
++    mac_selectors = {
++        name: _selector("macos", name, pattern="read", readback="value",
++                        states={"dirty": "Dirty", "clean": "Clean"} if name == "model_dirty" else None)
++        for name in ("active_model_label", "standalone_model_id", "model_fingerprint", "model_dirty")
++    }
++    mac = MacOSDesktopAdapter(gateway=SimpleNamespace(
++        read_selector=lambda _identity, selector: windows_values[selector["selector_id"]]))
++    mac._profile = lambda _identity: {"selectors": mac_selectors, "profile_sha256": "d" * 64}
++    mac_result = mac.verify_source_preserved(MAC_ID, source)
++    assert mac_result.still_open is False and mac_result.standalone_model_id == "id-B"
+ 
+ 
+ def test_windows_adapter_uses_profile_gated_uia_for_shell_not_engine_route():
+@@ -372,7 +468,7 @@
+     @classmethod
+     def getShareableContentExcludingDesktopWindows_onScreenWindowsOnly_completionHandler_(cls, exclude, onscreen, callback):
+         cls.calls.append((exclude, onscreen))
+-        callback(SimpleNamespace(windows=list(cls.windows)), None)
++        callback(SimpleNamespace(windows=lambda: list(cls.windows)), None)
+ 
+ 
+ class _SCFilter:
+@@ -431,8 +527,10 @@
+ 
+ 
+ def _sc_frameworks(pid=123):
+-    window = SimpleNamespace(windowID=7, owningApplication=SimpleNamespace(processID=pid),
+-                             frame=SimpleNamespace(size=SimpleNamespace(width=1.0, height=1.0)))
++    application = SimpleNamespace(processID=lambda: pid)
++    frame = SimpleNamespace(size=SimpleNamespace(width=1.0, height=1.0))
++    window = SimpleNamespace(windowID=lambda: 7, owningApplication=lambda: application,
++                             frame=lambda: frame)
+     _SCShareableContent.windows = [window]
+     _SCShareableContent.calls = []
+     _SCScreenshotManager.calls = []
+@@ -446,6 +544,7 @@
+     appkit, sc, window = _sc_frameworks()
+     gateway = MacOSFrameworkGateway(capture_framework_loader=lambda: (appkit, sc))
+     monkeypatch.setattr("comsol_mcp._desktop_capture.sys.platform", "darwin")
++    monkeypatch.setattr("comsol_mcp._desktop_macos.platform.mac_ver", lambda: ("14.0", ("", "", ""), ""))
+     image = capture_macos_screen_capture_kit_window(MAC_ID, gateway=gateway)
+     assert image.data == _one_pixel_png()
+     assert image.format == "PNG" and image.region == "window" and image.scope == "target_window"
+@@ -461,6 +560,7 @@
+     appkit, sc, _window = _sc_frameworks(pid=999)
+     gateway = MacOSFrameworkGateway(capture_framework_loader=lambda: (appkit, sc))
+     monkeypatch.setattr("comsol_mcp._desktop_capture.sys.platform", "darwin")
++    monkeypatch.setattr("comsol_mcp._desktop_macos.platform.mac_ver", lambda: ("14.0", ("", "", ""), ""))
+     with pytest.raises(DesktopOperationError) as caught:
+         capture_macos_screen_capture_kit_window(MAC_ID, gateway=gateway)
+     assert caught.value.code == "WINDOW_IDENTITY_UNKNOWN"
+@@ -499,11 +599,57 @@
+     gateway = Gateway()
+     adapter = MacOSDesktopAdapter(gateway=gateway)
+     monkeypatch.setattr("comsol_mcp._desktop_capture.sys.platform", "darwin")
+-    monkeypatch.setattr("comsol_mcp._desktop_macos.platform.mac_ver", lambda: ("12.2.1", ("", "", ""), ""))
++    monkeypatch.setattr("comsol_mcp._desktop_macos.platform.mac_ver", lambda: ("13.6.7", ("", "", ""), ""))
+     with pytest.raises(DesktopOperationError) as caught:
+         adapter.capture(MAC_ID, "window")
+     assert caught.value.code == "SCREEN_CAPTURE_API_UNAVAILABLE"
+     assert gateway.calls == 0
++
++
++@pytest.mark.parametrize("release", ["12.3", "13.0", "13.6.7", "unreadable"])
++def test_macos_screenshotmanager_gate_refuses_below_14_before_permissions(release, monkeypatch):
++    class Gateway:
++        calls = 0
++        def permissions(self):
++            self.calls += 1
++            return {"screen_capture_allowed": True}
++    gateway = Gateway()
++    adapter = MacOSDesktopAdapter(gateway=gateway)
++    monkeypatch.setattr("comsol_mcp._desktop_capture.sys.platform", "darwin")
++    monkeypatch.setattr("comsol_mcp._desktop_macos.platform.mac_ver", lambda: (release, ("", "", ""), ""))
++    with pytest.raises(DesktopOperationError) as caught:
++        adapter.capture(MAC_ID, "window")
++    assert caught.value.code == "SCREEN_CAPTURE_API_UNAVAILABLE"
++    assert gateway.calls == 0
++
++
++@pytest.mark.parametrize("bad_window", [
++    SimpleNamespace(windowID=7, owningApplication=lambda: SimpleNamespace(processID=lambda: 123), frame=lambda: SimpleNamespace(size=SimpleNamespace(width=1, height=1))),
++    SimpleNamespace(windowID=lambda: 7, owningApplication=None, frame=lambda: SimpleNamespace(size=SimpleNamespace(width=1, height=1))),
++    SimpleNamespace(windowID=lambda: 7, owningApplication=lambda: SimpleNamespace(processID=None), frame=lambda: SimpleNamespace(size=SimpleNamespace(width=1, height=1))),
++    SimpleNamespace(windowID=lambda: 7, owningApplication=lambda: SimpleNamespace(processID=lambda: 123), frame=None),
++])
++def test_macos_screenshotmanager_requires_callable_nonnull_objc_getters(bad_window, monkeypatch):
++    appkit, sc, _ = _sc_frameworks()
++    _SCShareableContent.windows = [bad_window]
++    _SCScreenshotManager.calls = []
++    gateway = MacOSFrameworkGateway(capture_framework_loader=lambda: (appkit, sc))
++    monkeypatch.setattr("comsol_mcp._desktop_capture.sys.platform", "darwin")
++    monkeypatch.setattr("comsol_mcp._desktop_macos.platform.mac_ver", lambda: ("14.0", ("", "", ""), ""))
++    with pytest.raises(DesktopOperationError) as caught:
++        capture_macos_screen_capture_kit_window(MAC_ID, gateway=gateway)
++    assert caught.value.code in {"WINDOW_IDENTITY_UNKNOWN", "SCREEN_CAPTURE_API_UNAVAILABLE"}
++    assert _SCScreenshotManager.calls == []
++
++
++def test_macos_framework_gateway_refuses_pre14_before_loading_screencapturekit(monkeypatch):
++    calls = []
++    gateway = MacOSFrameworkGateway(capture_framework_loader=lambda: calls.append("load") or (None, None))
++    monkeypatch.setattr("comsol_mcp._desktop_macos.platform.mac_ver", lambda: ("13.6.7", ("", "", ""), ""))
++    with pytest.raises(DesktopOperationError) as caught:
++        gateway.capture_window(MAC_ID)
++    assert caught.value.code == "SCREEN_CAPTURE_API_UNAVAILABLE"
++    assert calls == []
+ 
+ 
+ def test_macos_gateway_sets_only_exact_profiled_ax_value_and_reads_it_back(monkeypatch):
+--- a/tests/test_desktop_service.py
++++ b/tests/test_desktop_service.py
+@@ -144,7 +144,8 @@
+     def save_copy(self, identity: WindowIdentity, destination: Path, source=None):
+         self._claim_observed("desktop.migrate_standalone")
+         destination.write_bytes(b"fixture save-copy bytes")
+-        return SavedCopy(str(destination), sha256(destination.read_bytes()).hexdigest(), True, True, "source-fingerprint")
++        payload = destination.read_bytes()
++        return SavedCopy(str(destination), sha256(payload).hexdigest(), True, True, "source-fingerprint", len(payload))
+ 
+     def verify_source_preserved(self, identity: WindowIdentity, source: DesktopModelObservation):
+         return SourcePreservation(
+@@ -235,6 +236,23 @@
+         def authorize_save_copy(project_id, destination):
+             return destination.is_relative_to(self.save_root)
+ 
++        def publish_save_copy(project_id, context, stage_root, stage_path, destination, receipt):
++            operation = self.store.get_operation(context.operation_id)
++            job = self.store.operation_job(context.operation_id)
++            assert operation["operation"] == "desktop.migrate_standalone" and operation["status"] == "RUNNING"
++            assert job["job_id"] == context.job_id and job["status"] == "RUNNING"
++            assert project_id == context.project_id == "proj-1"
++            if destination.exists():
++                raise DesktopOperationError("DESTINATION_EXISTS", "foreign file appeared before fixture publisher")
++            payload = stage_path.read_bytes()
++            assert sha256(payload).hexdigest() == receipt["sha256"]
++            assert len(payload) == receipt["size_bytes"]
++            with destination.open("xb") as output:
++                output.write(payload)
++            return {"path": str(destination), "sha256": receipt["sha256"],
++                    "size_bytes": receipt["size_bytes"], "operation_id": context.operation_id,
++                    "publication": "ARTIFACTSTORE_NO_CLOBBER", "file_identity": None}
++
+         def resolve_permission(project_id, permission):
+             return permission in self.permissions
+ 
+@@ -246,6 +264,7 @@
+             resolve_action=resolve_action,
+             resolve_artifact=resolve_artifact,
+             authorize_save_copy=authorize_save_copy,
++            publish_save_copy=publish_save_copy,
+             handle_ttl_s=10,
+             clock=clock or (lambda: self.clock_value[0]),
+         )
+@@ -456,6 +475,9 @@
+         assert migrated["data"]["source_window_identity"] == _window(2).identity.fingerprint()
+         assert "WINDOW:2" not in harness.adapter.show_model_calls
+         assert destination.is_file()
++        load_calls = [call for call in harness.engine.calls if call[0] == "model.load"]
++        assert len(load_calls) == 1
++        assert load_calls[0][1]["source_sha256"] == migrated["data"]["saved_copy"]["sha256"]
+     finally:
+         harness.close()
+ 
+@@ -735,6 +757,132 @@
+         harness.close()
+ 
+ 
++def test_migration_source_id_change_after_load_is_unknown_and_never_replays(tmp_path):
++    from dataclasses import replace
++
++    harness = Harness(tmp_path)
++    try:
++        token = harness.windows()[0]
++        source = DesktopModelObservation("STANDALONE", standalone_model_id="standalone-source-1",
++                                         fingerprint="source-fingerprint", dirty=True)
++        harness.adapter.models["WINDOW:1"] = source
++        original_engine = harness.engine
++
++        def load_then_change_id(operation, arguments, model_ref, context):
++            result = original_engine(operation, arguments, model_ref, context)
++            if operation == "model.load":
++                harness.adapter.models["WINDOW:1"] = replace(source, standalone_model_id="standalone-source-2")
++            return result
++
++        harness.coordinator.engine_queue = load_then_change_id
++        destination = tmp_path / "source-id-drift.mph"
++        arguments = {
++            "project_id": "proj-1", "idempotency_key": "migration-source-id-drift", "window_ref": token,
++            "target_session_id": "session-target", "save_policy": {
++                "mode": "save_copy", "destination_path": str(destination), "overwrite": False,
++            },
++        }
++        failed = harness.coordinator.dispatch("desktop.migrate_standalone", arguments)
++        assert failed["success"] is False
++        assert failed["error"]["code"] == "SOURCE_MODEL_NOT_PRESERVED"
++        assert failed["execution"]["status"] == "UNKNOWN"
++        assert destination.is_file()
++        count = len([call for call in original_engine.calls if call[0] == "model.load"])
++        replay = harness.coordinator.dispatch("desktop.migrate_standalone", arguments)
++        assert replay == failed
++        assert len([call for call in original_engine.calls if call[0] == "model.load"]) == count == 1
++    finally:
++        harness.close()
++
++
++def test_private_save_copy_waits_for_delayed_writer_to_finish(tmp_path, monkeypatch):
++    """A transient partial UI Save Copy is not published as a complete file."""
++    import hashlib
++    import os
++    import tempfile
++    from comsol_mcp._desktop_service import (
++        DesktopDispatchContext,
++        _create_private_save_copy_stage,
++        _verified_private_save_copy_file,
++    )
++
++    tmp_path.chmod(0o700)
++    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
++    context = DesktopDispatchContext(
++        "desktop.migrate_standalone", "request-delayed", "op-delayed", "job-delayed",
++        "idempotency-delayed", "a" * 64, "proj-1",
++    )
++    stage_root, stage_identity = _create_private_save_copy_stage(context)
++    staged = stage_root / "model.mph"
++    full_bytes = b"partial MPH prefix" + b"completed writer tail" * 8192
++    staged.write_bytes(full_bytes[:len(b"partial MPH prefix")])
++    staged.chmod(0o600)
++    errors = []
++
++    def finish_later():
++        try:
++            time.sleep(0.28)
++            with staged.open("ab") as stream:
++                stream.write(full_bytes[len(b"partial MPH prefix"):])
++                stream.flush()
++                os.fsync(stream.fileno())
++        except Exception as exc:  # surfaced below as a test failure
++            errors.append(exc)
++
++    writer = threading.Thread(target=finish_later)
++    writer.start()
++    try:
++        receipt = _verified_private_save_copy_file(stage_root, staged, stage_identity, timeout_s=4)
++        writer.join(timeout=3)
++        assert not writer.is_alive() and not errors
++        assert receipt["size_bytes"] == len(full_bytes)
++        assert receipt["sha256"] == hashlib.sha256(full_bytes).hexdigest()
++    finally:
++        writer.join(timeout=3)
++
++
++def test_private_save_copy_rejects_named_file_replacement_during_pinned_hash(tmp_path, monkeypatch):
++    """Pinned bytes plus a substituted pathname remains UNKNOWN, never publishable."""
++    import hashlib
++    import os
++    import tempfile
++    import comsol_mcp._desktop_service as desktop_service
++
++    tmp_path.chmod(0o700)
++    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
++    context = desktop_service.DesktopDispatchContext(
++        "desktop.migrate_standalone", "request-race", "op-race", "job-race",
++        "idempotency-race", "b" * 64, "proj-1",
++    )
++    stage_root, stage_identity = desktop_service._create_private_save_copy_stage(context)
++    staged = stage_root / "model.mph"
++    original_bytes = b"owned model bytes" * 131072
++    staged.write_bytes(original_bytes)
++    staged.chmod(0o600)
++    before = staged.lstat()
++    original_read = os.read
++    replaced = False
++
++    def replace_name_after_hash_starts(fd, size):
++        nonlocal replaced
++        current = os.fstat(fd)
++        if not replaced and (current.st_dev, current.st_ino) == (before.st_dev, before.st_ino):
++            replaced = True
++            staged.rename(stage_root / "model.original")
++            staged.write_bytes(b"foreign replacement")
++            staged.chmod(0o600)
++        return original_read(fd, size)
++
++    monkeypatch.setattr(os, "read", replace_name_after_hash_starts)
++    with pytest.raises(desktop_service.DesktopOperationError) as caught:
++        desktop_service._verified_private_save_copy_file(stage_root, staged, stage_identity, timeout_s=4)
++    assert replaced
++    assert caught.value.code == "SAVE_COPY_CHANGED"
++    assert caught.value.safe_retry is False
++    assert (stage_root / "model.original").read_bytes() == original_bytes
++    assert staged.read_bytes() == b"foreign replacement"
++
++
+ def test_second_live_coordinator_does_not_reconcile_another_owners_running_claim(tmp_path):
+     harness = Harness(tmp_path)
+     try:
+--- a/tests/test_desktop_sticky_effects_phase2c.py
++++ b/tests/test_desktop_sticky_effects_phase2c.py
+@@ -62,7 +62,14 @@
+         args = migration_args(h, "marked-copy")
+         result = h.coordinator.dispatch("desktop.migrate_standalone", args)
+         results.append(result)
+-        assert Path(args["save_policy"]["destination_path"]).read_bytes() == b"fixture save-copy bytes"
++        # The native Save Copy is confined to the private task stage. A
++        # provider error after writing must not publish the caller's final
++        # destination; the exact stage remains as recovery evidence because
++        # the operation is UNKNOWN and must not be replayed.
++        assert not Path(args["save_policy"]["destination_path"]).exists()
++        staged = Path(trace[0]["path"])
++        assert staged.parent.name.startswith("comsol-mcp-save-")
++        assert staged.read_bytes() == b"fixture save-copy bytes"
+         assert raised.__cause__ is first
+         assert result["execution"]["status"] == "UNKNOWN"
+         assert result["error"]["code"] == "SAVE_PROVIDER_FAILURE"
+--- /dev/null
++++ b/docs/full_project_execution/w25/native-adapters-implementation-r5.md
+@@ -0,0 +1,48 @@
++# W25 native desktop adapters — R5 source correction
++
++R5 corrects the five findings in the immutable R4 source review while keeping
++native desktop and COMSOL execution out of scope. The prior R4 freeze and its
++review remain unchanged; this note describes the successor source only.
++
++## Source changes
++
++- ScreenCaptureKit capture now checks for a readable macOS 14.0-or-newer
++  release before permission checks or framework loading. The exact-window
++  gateway repeats the gate, so direct gateway calls cannot reach
++  `SCScreenshotManager` on macOS 12 or 13.
++- PyObjC ScreenCaptureKit access uses callable Objective-C getters for
++  `windows()`, `windowID()`, `owningApplication()`, `processID()`, and
++  `frame()`. The window ID and owning PID must each have one exact match.
++- Windows and macOS source-preservation receipts return the currently observed
++  standalone model ID. Save Copy compares the full pre-effect baseline
++  (standalone mode, model ID, label, fingerprint, and dirty state), and the
++  coordinator compares the current ID again after managed loading.
++- The Windows UI Automation process pin holds a native process handle for the
++  request and checks the pinned process birth time, login SID, session, and
++  HWND owner before and after every effect. The handle is disposed in a
++  `finally` block. Missing or changed identity makes the operation UNKNOWN;
++  the coordinator does not replay it.
++- Native Save Copy targets a new owner-trusted private task directory. The
++  coordinator waits for a two-second stable window, opens and hashes the
++  staged file through a pinned handle, and streams those exact bytes through
++  the existing ArtifactStore no-clobber publisher under the durable
++  `desktop.migrate_standalone` claim. A final-target race preserves the
++  foreign file. The managed model is loaded only from the verified published
++  receipt. Failed or uncertain Save Copy leaves its private evidence and
++  cannot be replayed into a second UI effect.
++- Private stage removal uses exact pinned identities. The Windows publisher
++  helper deletes only the exact stage file and directory handles; an
++  identity/security mismatch leaves the residue in place.
++
++## Verification
++
++The R5 focused/affected software suite is bound in the adjacent freeze packet.
++It covers ScreenCaptureKit OS and getter gates, source-ID drift, process
++identity request fields, exact durable migration callback admission,
++no-clobber destination races, private-stage replacement during stream/hash,
++delayed partial Save Copy writes, and sticky UNKNOWN/idempotency behavior.
++Fixtures and mocked Win32/PyObjC boundaries establish software behavior only.
++
++Windows UI Automation, Windows kernel handle/ACL behavior, native macOS
++ScreenCaptureKit/Accessibility, and licensed COMSOL desktop behavior remain
++`NOT_RUN`. No native UI or COMSOL operation was launched for R5.
+--- a/comsol_mcp/_desktop_selector_profile.py (initial private candidate)
++++ b/comsol_mcp/_desktop_selector_profile.py (R2-provider candidate)
+@@ -91,8 +91,11 @@
+     semantics = security.get("security_semantics")
+     host = host_platform or ("windows" if os.name == "nt" else "macos" if sys.platform == "darwin" else "posix")
+     if host == "windows":
+-        from ._host_scoped_provider import WINDOWS_PRIVATE_PATH_SECURITY_SEMANTICS
+-        expected_semantics = WINDOWS_PRIVATE_PATH_SECURITY_SEMANTICS
++        # This is the exact semantic label emitted by the reviewed host
++        # provider API. Keep the consumer bound to its returned contract
++        # without requiring a convenience constant that older compatible
++        # provider snapshots do not export.
++        expected_semantics = "windows-read-control-owner-dacl-persistent-acls"
+     elif host == "macos":
+         expected_semantics = "posix-owner-mode+filesystem-ownership+no-extended-acl"
+     else:
+--- a/comsol_mcp/_host_scoped_provider.py (initial private candidate)
++++ b/comsol_mcp/_host_scoped_provider.py (R2-provider candidate)
+@@ -29,12 +29,10 @@
+ MAX_CONFIG_BYTES = 1024 * 1024
+ MAX_DESTINATIONS = 64
+ MAX_GRANTS = 1024
+-WINDOWS_PRIVATE_PATH_SECURITY_SEMANTICS = "windows-read-control-owner-dacl-persistent-acls"
+ _SHA256 = re.compile(r"^[0-9a-f]{64}$")
+ _IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+ _TARGET_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,255}$")
+-_GRANT_ACTIONS = frozenset({"model.close", "artifact.publish",
+-                            "host.change.apply", "host.change.restore"})
++_GRANT_ACTIONS = frozenset({"model.close", "artifact.publish"})
+ _MODEL_REF_KEYS = frozenset({"schema_version", "session_id", "server_instance_id", "model_tag", "generation"})
+ 
+ # macOS SDK sys/mount.h defines MNT_IGNORE_OWNERSHIP as 0x00200000.  The
+@@ -226,35 +224,6 @@
+                 "destination_ref": scope["destination_ref"],
+                 "destination_registration_sha256": scope["destination_registration_sha256"],
+                 "artifacts": normalized}
+-    if action in {"host.change.apply", "host.change.restore"}:
+-        required = {"root", "host_id", "profile_sha256", "plan_sha256", "phase",
+-                    "source_plan_sha256", "source_receipt_sha256"}
+-        if not isinstance(scope, Mapping) or set(scope) != required:
+-            raise ExecutionContractError("AUTHORIZATION_SCOPE_INVALID", "host.change scope fields are malformed")
+-        root = scope.get("root")
+-        if (not isinstance(root, Mapping) or set(root) != {"path", "volume_id", "file_id", "owner_id"}
+-                or any(not isinstance(root.get(key), str) or not root[key] or len(root[key]) > 4096
+-                       or any(ord(char) < 32 for char in root[key])
+-                       for key in ("path", "volume_id", "file_id", "owner_id"))):
+-            raise ExecutionContractError("AUTHORIZATION_SCOPE_INVALID", "host.change root identity is malformed")
+-        if (not isinstance(scope.get("host_id"), str) or not _IDENTIFIER.fullmatch(scope["host_id"])
+-                or any(not isinstance(scope.get(key), str) or not _SHA256.fullmatch(scope[key])
+-                       for key in ("profile_sha256", "plan_sha256"))):
+-            raise ExecutionContractError("AUTHORIZATION_SCOPE_INVALID", "host.change host/profile/plan binding is malformed")
+-        phase = "APPLY" if action == "host.change.apply" else "RESTORE"
+-        if scope.get("phase") != phase:
+-            raise ExecutionContractError("AUTHORIZATION_SCOPE_INVALID", "host.change phase differs from its action")
+-        source_plan, source_receipt = scope.get("source_plan_sha256"), scope.get("source_receipt_sha256")
+-        if phase == "APPLY":
+-            if source_plan is not None or source_receipt is not None:
+-                raise ExecutionContractError("AUTHORIZATION_SCOPE_INVALID", "apply authorization cannot contain restore-source digests")
+-        elif (not isinstance(source_plan, str) or not _SHA256.fullmatch(source_plan)
+-              or not isinstance(source_receipt, str) or not _SHA256.fullmatch(source_receipt)):
+-            raise ExecutionContractError("AUTHORIZATION_SCOPE_INVALID", "restore authorization must bind its source plan and receipt")
+-        return {"root": dict(root), "host_id": scope["host_id"],
+-                "profile_sha256": scope["profile_sha256"], "plan_sha256": scope["plan_sha256"],
+-                "phase": phase, "source_plan_sha256": source_plan,
+-                "source_receipt_sha256": source_receipt}
+     raise ExecutionContractError("AUTHORIZATION_SCOPE_INVALID", "host provider action is not grantable")
+ 
+ 
+@@ -655,7 +624,7 @@
+         if expected_identity is not None and dict(expected_identity) != identity:
+             raise ExecutionContractError("AUTHORIZATION_STATE_UNKNOWN", "Windows private path identity or ACL changed")
+         return {"identity": identity, "security_sha256": identity["security_sha256"],
+-                "security_semantics": WINDOWS_PRIVATE_PATH_SECURITY_SEMANTICS,
++                "security_semantics": "windows-read-control-owner-dacl-persistent-acls",
+                 "path_chain": descriptors}
+     except ExecutionContractError:
+         raise
+--- a/tests/test_desktop_native_adapters_w25.py (initial private candidate)
++++ b/tests/test_desktop_native_adapters_w25.py (R2-provider candidate)
+@@ -94,10 +94,8 @@
+ 
+ 
+ def test_selector_profile_uses_exact_windows_provider_contract_and_acl_digest():
+-    from comsol_mcp._host_scoped_provider import WINDOWS_PRIVATE_PATH_SECURITY_SEMANTICS
+-
+     good = {"identity": {"device": 7, "inode": 22, "security_sha256": "a" * 64},
+-            "security_semantics": WINDOWS_PRIVATE_PATH_SECURITY_SEMANTICS,
++            "security_semantics": "windows-read-control-owner-dacl-persistent-acls",
+             "security_sha256": "a" * 64}
+     assert _require_security_evidence(good, host_platform="windows") == good
+     for bad in (
+--- a/comsol_mcp/_windows_parameter_publish.py (R4 frozen source)
++++ b/comsol_mcp/_windows_parameter_publish.py (R5 candidate)
+@@ -152,7 +152,7 @@
+         return handle
+ 
+     def _open_relative(self, parent_handle, leaf, *, directory=False, create=False, add_file=False,
+-                       add_directory=False, read_data=False, read_control=False):
++                       add_directory=False, read_data=False, read_control=False, delete=False):
+         """Open exactly one child of a pinned directory object.
+ 
+         A full path assembled from checked ancestor names can start traversing
+@@ -172,6 +172,8 @@
+         access = 0x001000A0 if directory else (0x00100081 if read_data else 0x00100080)
+         if read_control:
+             access |= 0x00020000  # READ_CONTROL for a read-only security descriptor query
++        if delete:
++            access |= 0x00010000  # DELETE on this exact opened object
+         # Directory handles are traversable; file identity probes need only
+         # READ_ATTRIBUTES so execution permission is never requested.
+         if directory and add_file:
+@@ -180,7 +182,7 @@
+             access |= 0x4  # FILE_ADD_SUBDIRECTORY on a pinned parent
+         if create:
+             access = (0x00110080 if directory else 0x00110083)  # add/delete and read identity on created object
+-        share = 0x3 if directory or read_control else (0x1 if create or read_data else 0x7)
++        share = 0x3 if directory or read_control or delete else (0x1 if create or read_data else 0x7)
+         disposition = 2 if create else 1  # FILE_CREATE / FILE_OPEN
+         options = (0x1 if directory else 0x40) | 0x20 | 0x00200000
+         status = int(self.nt.NtCreateFile(C.byref(output), access, C.byref(attributes),
+@@ -205,6 +207,12 @@
+     def open_child_directory(self, parent_handle, leaf, *, add_file=False, add_directory=False):
+         return self._open_relative(parent_handle, leaf, directory=True, add_file=add_file,
+                                    add_directory=add_directory)
++
++    def open_child_directory_for_delete(self, parent_handle, leaf):
++        return self._open_relative(parent_handle, leaf, directory=True, delete=True)
++
++    def open_child_file_for_delete(self, parent_handle, leaf):
++        return self._open_relative(parent_handle, leaf, delete=True)
+ 
+     def create_child_directory(self, parent_handle, leaf):
+         """Exclusively create one no-reparse directory relative to a pinned parent."""
+@@ -383,6 +391,67 @@
+             except OSError:
+                 if not pending:
+                     raise
++
++
++def delete_exact_private_stage(stage_root, expected_root_identity, expected_file_identity,
++                               *, source_name="model.mph", _api=None, _verify_security=None):
++    """Delete a verified private stage using only pinned Windows handles.
++
++    The source file and stage directory are each opened relative to a pinned
++    parent with DELETE access and without FILE_SHARE_DELETE. Identity and ACL
++    evidence are checked before marking either handle for deletion. A nonempty
++    directory or substituted leaf remains in place and raises a typed error.
++    """
++    if os.name != "nt":
++        raise PublishError("NOT_IMPLEMENTED", "Windows private-stage cleanup requires Windows")
++    if _verify_security is None:
++        from ._host_scoped_provider import verify_private_path_security
++        _verify_security = verify_private_path_security
++
++    path = os.fspath(stage_root)
++    if (not isinstance(path, str) or not ntpath.isabs(path) or not ntpath.basename(path) or source_name != "model.mph"
++            or not isinstance(expected_root_identity, dict)
++            or not isinstance(expected_file_identity, dict)):
++        raise PublishError("INVALID_REQUEST", "private-stage cleanup requires exact pinned directory/file identities")
++    api = _api or _API()
++    directory_handle = file_handle = None
++    with pinned_parent(ntpath.dirname(path), ntpath.basename(path), add_file=False,
++                       _api=api) as (_api_value, parent, parts, binding):
++        if len(parts) != 1:
++            raise PublishError("ACCESS_VIOLATION", "private-stage path must be a direct child of its pinned parent")
++        try:
++            directory_handle = api.open_child_directory_for_delete(parent, parts[0])
++            directory_identity = api.info(directory_handle, directory=True)[0]
++            if (directory_identity != (expected_root_identity.get("device"), expected_root_identity.get("inode"))
++                    or _verify_security(path, directory=True,
++                                        expected_identity=expected_root_identity).get("identity") != expected_root_identity):
++                raise PublishError("ACCESS_VIOLATION", "private-stage directory identity or ACL changed before cleanup")
++            file_handle = api.open_child_file_for_delete(directory_handle, source_name)
++            file_fingerprint = api.source_fingerprint(file_handle)
++            if (file_fingerprint[0] != (expected_file_identity.get("device"), expected_file_identity.get("inode"))
++                    or file_fingerprint[1] <= 0 or file_fingerprint[4] != 1
++                    or _verify_security(ntpath.join(path, source_name), directory=False,
++                                        expected_identity=expected_file_identity).get("identity") != expected_file_identity):
++                raise PublishError("ACCESS_VIOLATION", "private-stage file identity, link count, or ACL changed before cleanup")
++            api.delete_owned(file_handle)
++            api.close(file_handle)
++            file_handle = None
++            if api.exists_child(directory_handle, source_name):
++                raise PublishError("ACCESS_VIOLATION", "private-stage source file remained after handle deletion")
++            api.verify_named_binding(binding)
++            if _verify_security(path, directory=True,
++                                expected_identity=expected_root_identity).get("identity") != expected_root_identity:
++                raise PublishError("ACCESS_VIOLATION", "private-stage directory changed before handle deletion")
++            api.delete_owned(directory_handle)
++            api.close(directory_handle)
++            directory_handle = None
++            if api.exists(path):
++                raise PublishError("ACCESS_VIOLATION", "private-stage directory name was recreated during cleanup")
++        finally:
++            if file_handle is not None:
++                api.close(file_handle)
++            if directory_handle is not None:
++                api.close(directory_handle)
+ 
+ 
+ def publish(project_root, destination, payload, *, _api=None):

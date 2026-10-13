@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "status": "ROOT_PRESERVATION_LEDGER_AND_CAPTURED_CLEANUP_CHECK_PASS",
+  "observed_utc": "2026-10-11T16:51:35.186476+00:00",
+  "activity_id": "w23-native-run-20261012-003",
+  "scope": "Read-only source/destination preservation, immutable durable ledger, actual raw getter fields and captured cleanup process/listener checks. Not fresh process inventory or scientific acceptance.",
+  "raw_manifest": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_003/private-control-store/activity003-raw/PRESERVED_RAW_MANIFEST.json",
+    "sha256": "3c82a75f11dbb37ea004a9aa5803d456056ccac9d4e07426d917500193dda145",
+    "actual_files_verified_source_and_copy": 44
+  },
+  "reconciliation": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_003/ACTIVITY003_RECONCILIATION.json",
+    "sha256": "2d2cdea4eec1d6d1482c7aa3e5d517d167406ce90351dce68d1fa63cb4349ce4"
+  },
+  "durable_operation": {
+    "operation_id": "4cef3d7a-82ab-45fa-832a-f00dfaa9e86f",
+    "request_id": "w23-science-req-ce19469a-3276-455c-a018-85aeec575b31",
+    "operation": "operation_call",
+    "status": "SUCCEEDED"
+  },
+  "durable_job": {
+    "job_id": "cbcbad4e-1cdb-48f9-a065-256e45bc5b62",
+    "operation_id": "4cef3d7a-82ab-45fa-832a-f00dfaa9e86f",
+    "status": "SUCCEEDED"
+  },
+  "producer_execution_success": true,
+  "producer_domain_state": "succeeded",
+  "execution_state_unknown": false,
+  "partial_change": false,
+  "runner_validation": "FAIL_MATERIAL_TENSOR_READBACK_SHAPE_REJECTED",
+  "study_run_submissions": 0,
+  "actual_solver_execution_count": "UNKNOWN_NOT_INFERRED",
+  "cleanup_owned_pids_absent_in_captured_ps": [
+    21625,
+    21700,
+    21771
+  ],
+  "cleanup_owned_ports_absent": [
+    54811,
+    54820
+  ],
+  "elapsed_including_cleanup_seconds": 9.56527304649353,
+  "reconciliation_metadata_correction": {
+    "field": "cleanup.descendant_pids",
+    "recorded": [],
+    "actual_captured_task_descendant_pids": [
+      21700
+    ],
+    "basis": "exact_owned_cleanup_receipt.postcheck.pids_absent.descendant_0 plus captured global ps. Original reconciliation preserved; omission is metadata only."
+  },
+  "physical_and_scientific_acceptance": "NOT_RUN",
+  "next_action": "Native executor preserves candidate11 failure, then prepares a new exact source with documented strict isotropic stored-shape decoding; old activities are never replayed."
+}

@@ -1,0 +1,4749 @@
+{
+  "source_only": true,
+  "native": "NOT_RUN",
+  "fault": "revision",
+  "response": {
+    "data": {
+      "binding_source": "resolve_dataset_binding(model, dataset_tag)",
+      "cleanup": {
+        "cleanup_failed": false,
+        "created": true,
+        "error": null,
+        "removed": true,
+        "tag": "cmssp1",
+        "type_id": "Interp",
+        "verified_removed": true
+      },
+      "cleanup_failed": false,
+      "complex_mode": "preserve",
+      "coordinate_readback": {
+        "coordinates": [
+          [
+            -10.0
+          ],
+          [
+            0.0
+          ]
+        ],
+        "status": "VERIFIED",
+        "unit": "\u00b5m"
+      },
+      "coordinate_unit": "um",
+      "dataset": "dset1",
+      "dataset_binding": {
+        "binding_complete": true,
+        "component": "comp1",
+        "dataset": "dset1",
+        "dataset_chain": [
+          "dset1"
+        ],
+        "dataset_edges": [],
+        "dataset_type": "Solution",
+        "error": null,
+        "geometry": "geom1",
+        "properties": {
+          "comp": "comp1",
+          "geom": "geom1",
+          "solution": "sol1"
+        },
+        "provenance": {
+          "dataset_tags": [
+            "dset1"
+          ],
+          "mutation_methods_called": [],
+          "read_only": true,
+          "solution_tags": [
+            "sol1"
+          ]
+        },
+        "read_errors": [],
+        "requested_solution": "sol1",
+        "solution": "sol1",
+        "sources": {
+          "component": "dataset.comp -> modelNode.tags()/model.component()",
+          "geometry": "dataset.geom -> component.geom.tags()/getter",
+          "solution": "dataset.solution -> model.sol().tags()"
+        }
+      },
+      "dispatch_stage": "post_dispatch",
+      "domain_outcome": {
+        "cleanup_failed": false,
+        "details": {
+          "status_unexpected_keys": [
+            "cleanup_failed",
+            "verification_status"
+          ]
+        },
+        "dispatch_stage": "post_dispatch",
+        "execution_state_unknown": false,
+        "operation": "result.at_points",
+        "state": "succeeded",
+        "verification": {
+          "declared_by": [
+            "verification_status"
+          ],
+          "raw_status": "PASSED"
+        },
+        "verification_status": "PASSED",
+        "witness": {
+          "dispatches": [
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "result",
+              "receiver": "handle-1"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "numerical",
+              "receiver": "handle-2"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "dataset",
+              "receiver": "handle-2"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "tags",
+              "receiver": "handle-4"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "get",
+              "receiver": "handle-4"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "result",
+              "receiver": "handle-1"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "dataset",
+              "receiver": "handle-2"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "tags",
+              "receiver": "handle-4"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "sol",
+              "receiver": "handle-1"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "tags",
+              "receiver": "handle-6"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "get",
+              "receiver": "handle-4"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getType",
+              "receiver": "handle-5"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "properties",
+              "receiver": "handle-5"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getString",
+              "receiver": "handle-5"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "properties",
+              "receiver": "handle-5"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "properties",
+              "receiver": "handle-5"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "properties",
+              "receiver": "handle-5"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getString",
+              "receiver": "handle-5"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "properties",
+              "receiver": "handle-5"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getString",
+              "receiver": "handle-5"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "modelNode",
+              "receiver": "handle-1"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "tags",
+              "receiver": "handle-7"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "component",
+              "receiver": "handle-1"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "geom",
+              "receiver": "handle-8"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "tags",
+              "receiver": "handle-9"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "get",
+              "receiver": "handle-9"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "component",
+              "receiver": "handle-1"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "geom",
+              "receiver": "handle-8"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "lengthUnit",
+              "receiver": "handle-10"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getSDim",
+              "receiver": "handle-10"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "isAxisymmetric",
+              "receiver": "handle-10"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "sol",
+              "receiver": "handle-1"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "tags",
+              "receiver": "handle-6"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "get",
+              "receiver": "handle-6"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getSolutioninfo",
+              "receiver": "handle-11"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getOuterSolnum",
+              "receiver": "handle-12"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getSolnums",
+              "receiver": "handle-12"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getLevelNames",
+              "receiver": "handle-12"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "sol",
+              "receiver": "handle-1"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "tags",
+              "receiver": "handle-6"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "get",
+              "receiver": "handle-6"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getSolutioninfo",
+              "receiver": "handle-11"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "study",
+              "receiver": "handle-11"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getType",
+              "receiver": "handle-11"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": true,
+              "method": "getSequenceType",
+              "receiver": "handle-11"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": true,
+              "method": "isAttached",
+              "receiver": "handle-11"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "study",
+              "receiver": "handle-11"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": true,
+              "method": "getSize",
+              "receiver": "handle-11"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": true,
+              "method": "getSizeMulti",
+              "receiver": "handle-11"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getPNames",
+              "receiver": "handle-11"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getPVals",
+              "receiver": "handle-11"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": true,
+              "method": "getPValsImag",
+              "receiver": "handle-11"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getUnit",
+              "receiver": "handle-12"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getLevelNames",
+              "receiver": "handle-12"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": true,
+              "method": "getLevels",
+              "receiver": "handle-12"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getOuterSolnum",
+              "receiver": "handle-12"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "study",
+              "receiver": "handle-1"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "tags",
+              "receiver": "handle-13"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "study",
+              "receiver": "handle-1"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "tags",
+              "receiver": "handle-13"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "study",
+              "receiver": "handle-11"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "component",
+              "receiver": "handle-1"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "selection",
+              "receiver": "handle-8"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "geom",
+              "receiver": "handle-14"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": true,
+              "method": "dim",
+              "receiver": "handle-14"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": true,
+              "method": "entities",
+              "receiver": "handle-14"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "tags",
+              "receiver": "handle-3"
+            },
+            {
+              "args_count": 2,
+              "command": "call",
+              "is_mutation": true,
+              "method": "create",
+              "receiver": "handle-3"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getType",
+              "receiver": "handle-15"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "tag",
+              "receiver": "handle-15"
+            },
+            {
+              "args_count": 2,
+              "command": "call",
+              "is_mutation": true,
+              "method": "set",
+              "receiver": "handle-15"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getString",
+              "receiver": "handle-15"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "selection",
+              "receiver": "handle-15"
+            },
+            {
+              "args_count": 2,
+              "command": "call",
+              "is_mutation": true,
+              "method": "geom",
+              "receiver": "handle-16"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": true,
+              "method": "named",
+              "receiver": "handle-16"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "geom",
+              "receiver": "handle-16"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": true,
+              "method": "dim",
+              "receiver": "handle-16"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": true,
+              "method": "named",
+              "receiver": "handle-16"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": true,
+              "method": "entities",
+              "receiver": "handle-16"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "isInheriting",
+              "receiver": "handle-16"
+            },
+            {
+              "args_count": 2,
+              "command": "call",
+              "is_mutation": true,
+              "method": "set",
+              "receiver": "handle-15"
+            },
+            {
+              "args_count": 3,
+              "command": "call",
+              "is_mutation": true,
+              "method": "setIndex",
+              "receiver": "handle-15"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": true,
+              "method": "setInterpolationCoordinates",
+              "receiver": "handle-15"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getStringArray",
+              "receiver": "handle-15"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getStringArray",
+              "receiver": "handle-15"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": true,
+              "method": "run",
+              "receiver": "handle-15"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "isComplex",
+              "receiver": "handle-15"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "isComplex",
+              "receiver": "handle-15"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getData",
+              "receiver": "handle-15"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getStringArray",
+              "receiver": "handle-15"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getStringArray",
+              "receiver": "handle-15"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "geom",
+              "receiver": "handle-16"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": true,
+              "method": "dim",
+              "receiver": "handle-16"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": true,
+              "method": "named",
+              "receiver": "handle-16"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": true,
+              "method": "entities",
+              "receiver": "handle-16"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "isInheriting",
+              "receiver": "handle-16"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "getCoordinates",
+              "receiver": "handle-15"
+            },
+            {
+              "args_count": 1,
+              "command": "call",
+              "is_mutation": true,
+              "method": "remove",
+              "receiver": "handle-3"
+            },
+            {
+              "args_count": 0,
+              "command": "call",
+              "is_mutation": false,
+              "method": "tags",
+              "receiver": "handle-3"
+            }
+          ],
+          "engine_calls": 99,
+          "methods": [
+            "component",
+            "create",
+            "dataset",
+            "dim",
+            "entities",
+            "geom",
+            "get",
+            "getCoordinates",
+            "getData",
+            "getLevelNames",
+            "getLevels",
+            "getOuterSolnum",
+            "getPNames",
+            "getPVals",
+            "getPValsImag",
+            "getSDim",
+            "getSequenceType",
+            "getSize",
+            "getSizeMulti",
+            "getSolnums",
+            "getSolutioninfo",
+            "getString",
+            "getStringArray",
+            "getType",
+            "getUnit",
+            "isAttached",
+            "isAxisymmetric",
+            "isComplex",
+            "isInheriting",
+            "lengthUnit",
+            "modelNode",
+            "named",
+            "numerical",
+            "properties",
+            "remove",
+            "result",
+            "run",
+            "selection",
+            "set",
+            "setIndex",
+            "setInterpolationCoordinates",
+            "sol",
+            "study",
+            "tag",
+            "tags"
+          ],
+          "mutation_issued": true,
+          "mutation_method": "getSequenceType"
+        }
+      },
+      "domain_state": "succeeded",
+      "effect": "evaluate",
+      "execution_state_unknown": true,
+      "expression_unit_source": "NumericalFeature.getStringArray('unit') after result.at_points evaluation",
+      "expression_units": {
+        "freq": "Hz"
+      },
+      "expressions": [
+        "freq"
+      ],
+      "feature_readback": {
+        "data": "dset1",
+        "data_status": "VERIFIED",
+        "requested_unit_application": {
+          "after": {
+            "expressions": [
+              "freq"
+            ],
+            "source": "same actual Interp NumericalFeature.getStringArray(expr/unit)",
+            "stage": "after_numeric_read",
+            "status": "VERIFIED_EXACT_NATIVE_ARRAYS",
+            "units": [
+              "Hz"
+            ]
+          },
+          "before": {
+            "expressions": [
+              "freq"
+            ],
+            "source": "same actual Interp NumericalFeature.getStringArray(expr/unit)",
+            "stage": "before_numeric_read",
+            "status": "VERIFIED_EXACT_NATIVE_ARRAYS",
+            "units": [
+              "Hz"
+            ]
+          },
+          "no_external_scaling_or_relabeling": true,
+          "requested_expressions": [
+            "freq"
+          ],
+          "requested_units": [
+            "Hz"
+          ],
+          "setter": "actual Interp NumericalFeature.setIndex(unit,requested,index)",
+          "status": "VERIFIED_REQUESTED_UNITS_BEFORE_AND_AFTER_NUMERIC_READ"
+        },
+        "selection_application": {
+          "after": {
+            "component": "comp1",
+            "entities": [
+              1,
+              3,
+              5
+            ],
+            "entity_dimension": 1,
+            "geometry": "geom1",
+            "kind": "named",
+            "native_selection_readback": {
+              "dimension": 1,
+              "entities": [
+                1,
+                3,
+                5
+              ],
+              "geometry": "geom1",
+              "is_inheriting": false,
+              "named": "selInputPort"
+            },
+            "resolver_source": "component_named_selection",
+            "stage": "after_numeric_read",
+            "tag": "selInputPort"
+          },
+          "before": {
+            "component": "comp1",
+            "entities": [
+              1,
+              3,
+              5
+            ],
+            "entity_dimension": 1,
+            "geometry": "geom1",
+            "kind": "named",
+            "native_selection_readback": {
+              "dimension": 1,
+              "entities": [
+                1,
+                3,
+                5
+              ],
+              "geometry": "geom1",
+              "is_inheriting": false,
+              "named": "selInputPort"
+            },
+            "resolver_source": "component_named_selection",
+            "stage": "before_numeric_read",
+            "tag": "selInputPort"
+          }
+        },
+        "source": "NumericalFeature.getString('data') after set('data')"
+      },
+      "field_array": null,
+      "frame": "spatial",
+      "is_complex": false,
+      "isolation_proof": {
+        "status": "SYNTHETIC_OS_BOUNDARY_ONLY"
+      },
+      "partial_change": false,
+      "point_count": 1,
+      "points": [
+        {
+          "x": -10.0,
+          "y": 0.0
+        }
+      ],
+      "requires_model_reconciliation": true,
+      "result_budget": {
+        "limits": {
+          "engine_internal_cache": "UNMEASURED",
+          "max_bytes": 67108864,
+          "max_elements": 1000000,
+          "scope": "numeric_payload_only"
+        },
+        "publish_allowed": true,
+        "records": [
+          {
+            "allowed": true,
+            "budget_scope": "numeric_payload_only",
+            "computed": {
+              "bytes": 8,
+              "complex_components": 1,
+              "elements": 1,
+              "expression_count": 1,
+              "inner_count_total": 1,
+              "inner_counts_by_outer": null,
+              "numeric_payload_bytes": 8,
+              "numeric_payload_scalar_bytes": 8,
+              "numeric_payload_scope": "float64 scalar payload only; excludes JSON, wire, Python-list, and engine-cache overhead",
+              "outer_count": 1,
+              "raw_point_upper_bound": 1,
+              "raw_point_upper_bounds_by_outer": [
+                1
+              ],
+              "raw_upper_bound_source": "validated-Interp-request-coordinates;interp-coordinate-columns",
+              "requested_point_count": 1,
+              "scalar_bytes": 8
+            },
+            "data_vector_count": {
+              "interpretation": "observation only; never treated as coordinate count",
+              "used_for_point_bound": false,
+              "value": null
+            },
+            "feature_kind": "Interp",
+            "getdata_called": true,
+            "limits": {
+              "max_bytes": 67108864,
+              "max_elements": 1000000,
+              "max_numeric_payload_bytes": 67108864
+            },
+            "metadata_sources": {
+              "expression": "validated-request-expressions",
+              "point_count": "validated-Interp-request-coordinates",
+              "raw_point_upper_bound": "validated-Interp-request-coordinates;interp-coordinate-columns",
+              "solution_axes": "exact dataset.solution\u2192model.sol().tags() binding plus attached Parametric/SolverSequence actual stable model.study().tags() membership and solution.study() identity, one freq level, empty getOuterSolnum(), getSize()[1]=1, getSizeMulti()==[1,1], and typed finite freq singleton with exact native Hz or GHz display label (raw value/unit unchanged)"
+            },
+            "operation": "result.at_points",
+            "pre_getdata": true,
+            "publish_allowed": true,
+            "raw_getter": "getData",
+            "raw_layout": "expression,solnum,vertex",
+            "reason": "verified pre-getData result allocation is within both configured limits",
+            "reason_code": "BUDGET_WITHIN_LIMIT",
+            "request_progress": {
+              "consumed_numeric_payload_bytes": 8,
+              "consumed_numeric_payload_elements": 1,
+              "max_bytes": 67108864,
+              "max_elements": 1000000
+            },
+            "requested": {
+              "complex_components": 1,
+              "expression_count": 1,
+              "inner_count": 1,
+              "inner_counts_by_outer": null,
+              "max_bytes": 67108864,
+              "max_elements": 1000000,
+              "outer_count": 1,
+              "point_count": 1,
+              "raw_point_upper_bound": 1,
+              "raw_point_upper_bounds_by_outer": [
+                1
+              ],
+              "raw_upper_bound_source": "validated-Interp-request-coordinates;interp-coordinate-columns",
+              "raw_upper_bound_verified": true,
+              "reported_data_vector_count": null,
+              "scalar_bytes": 8
+            },
+            "solution_axes_pair_mapping_complete": false,
+            "solution_axes_verification_scope": "numeric_singleton_count_only",
+            "solution_count_observation": {
+              "attached_study_membership": {
+                "actual_member": true,
+                "read_errors": [],
+                "solution_study_after": "std1",
+                "source": "same model.study().tags() twice plus final dataset-bound SolverSequence.study()",
+                "status": "VERIFIED",
+                "study": "std1",
+                "study_identity_stable": true,
+                "study_tags_after": [
+                  "std1"
+                ],
+                "study_tags_before": [
+                  "std1"
+                ],
+                "tags_complete": true,
+                "tags_stable": true
+              },
+              "dataset": "dset1",
+              "numeric_solution_count": 1,
+              "observation": {
+                "attached": true,
+                "get_size": [
+                  64057,
+                  1
+                ],
+                "get_size_multi": [
+                  1,
+                  1
+                ],
+                "get_size_multi_getter": {
+                  "method": "SolverSequence.getSizeMulti()",
+                  "raw": [
+                    1,
+                    1
+                  ],
+                  "semantics": "[local solution count in multisolution, total solution number count] per COMSOL 6.4 doc7714/chunk23082",
+                  "status": "CAPTURED"
+                },
+                "get_size_semantics": "[degrees_of_freedom, solution_number_count] per COMSOL 6.4 documentation",
+                "interpretation": "raw sequence-level complex values only; no outer/inner tuple mapping or complete parameter combinations inferred",
+                "parameter_rows": [
+                  {
+                    "imag": 0.0,
+                    "name": "freq",
+                    "parameter_index": 0,
+                    "real": 193414489032258.03,
+                    "solnum": 1,
+                    "unit": "GHz"
+                  }
+                ],
+                "parameter_units_complete": true,
+                "parameters_complete": false,
+                "pnames": [
+                  "freq"
+                ],
+                "read_errors": [],
+                "receiver": "model.sol(<dataset-bound solution tag>)",
+                "sequence_type": "SolverSequence",
+                "solution_identity_matches_dataset_study": true,
+                "solution_info_count_scope": {
+                  "getLevelNames": [
+                    "freq"
+                  ],
+                  "getLevels": 1,
+                  "getOuterSolnum": [],
+                  "getOuterSolnum_semantics": "empty means no outer parameter/values per COMSOL 6.4 doc7709/chunk23066",
+                  "read_errors": []
+                },
+                "solution_number_count": 1,
+                "solution_tag": "sol1",
+                "solution_type": "Parametric",
+                "solution_values": [
+                  {
+                    "imag_getter": {
+                      "arguments": [
+                        1
+                      ],
+                      "method": "SolverSequence.getPValsImag(int)",
+                      "raw": [
+                        0.0
+                      ]
+                    },
+                    "real_getter": {
+                      "arguments": [
+                        1
+                      ],
+                      "method": "SolverSequence.getPVals(int)",
+                      "raw": [
+                        193414489032258.03
+                      ]
+                    },
+                    "solnum": 1
+                  }
+                ],
+                "source": "direct SolverSequence.getPNames/getSize/getPVals(int)/getPValsImag(int); supplemental to SolutionInfo",
+                "status": "OBSERVED_TYPED_COMPLEX_PARAMETER_VALUES",
+                "study": "std1",
+                "unit_observations": [
+                  {
+                    "arguments": [
+                      "freq"
+                    ],
+                    "method": "SolutionInfo.getUnit(String)",
+                    "name": "freq",
+                    "value": "GHz"
+                  }
+                ]
+              },
+              "reasons": [],
+              "solution": "sol1",
+              "solution_axes_pair_mapping_complete": false,
+              "source": "exact dataset.solution\u2192model.sol().tags() binding plus attached Parametric/SolverSequence actual stable model.study().tags() membership and solution.study() identity, one freq level, empty getOuterSolnum(), getSize()[1]=1, getSizeMulti()==[1,1], and typed finite freq singleton with exact native Hz or GHz display label (raw value/unit unchanged)",
+              "status": "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT",
+              "witness_kind": "attached_parametric_frequency_singleton"
+            },
+            "status": "PASS",
+            "verification": "VERIFIED"
+          }
+        ],
+        "status": "PASS"
+      },
+      "solution": "sol1",
+      "solution_axes": {
+        "axis_metadata_complete": false,
+        "inner": [],
+        "interpretation": "numeric sample count may be bounded by a direct stored-solution observation; a documented single-level attached frequency sequence may also bound one sample; outer/inner tuple mapping remains unavailable",
+        "numeric_count_observation": {
+          "attached_study_membership": {
+            "actual_member": true,
+            "read_errors": [],
+            "solution_study_after": "std1",
+            "source": "same model.study().tags() twice plus final dataset-bound SolverSequence.study()",
+            "status": "VERIFIED",
+            "study": "std1",
+            "study_identity_stable": true,
+            "study_tags_after": [
+              "std1"
+            ],
+            "study_tags_before": [
+              "std1"
+            ],
+            "tags_complete": true,
+            "tags_stable": true
+          },
+          "dataset": "dset1",
+          "numeric_solution_count": 1,
+          "observation": {
+            "attached": true,
+            "get_size": [
+              64057,
+              1
+            ],
+            "get_size_multi": [
+              1,
+              1
+            ],
+            "get_size_multi_getter": {
+              "method": "SolverSequence.getSizeMulti()",
+              "raw": [
+                1,
+                1
+              ],
+              "semantics": "[local solution count in multisolution, total solution number count] per COMSOL 6.4 doc7714/chunk23082",
+              "status": "CAPTURED"
+            },
+            "get_size_semantics": "[degrees_of_freedom, solution_number_count] per COMSOL 6.4 documentation",
+            "interpretation": "raw sequence-level complex values only; no outer/inner tuple mapping or complete parameter combinations inferred",
+            "parameter_rows": [
+              {
+                "imag": 0.0,
+                "name": "freq",
+                "parameter_index": 0,
+                "real": 193414489032258.03,
+                "solnum": 1,
+                "unit": "GHz"
+              }
+            ],
+            "parameter_units_complete": true,
+            "parameters_complete": false,
+            "pnames": [
+              "freq"
+            ],
+            "read_errors": [],
+            "receiver": "model.sol(<dataset-bound solution tag>)",
+            "sequence_type": "SolverSequence",
+            "solution_identity_matches_dataset_study": true,
+            "solution_info_count_scope": {
+              "getLevelNames": [
+                "freq"
+              ],
+              "getLevels": 1,
+              "getOuterSolnum": [],
+              "getOuterSolnum_semantics": "empty means no outer parameter/values per COMSOL 6.4 doc7709/chunk23066",
+              "read_errors": []
+            },
+            "solution_number_count": 1,
+            "solution_tag": "sol1",
+            "solution_type": "Parametric",
+            "solution_values": [
+              {
+                "imag_getter": {
+                  "arguments": [
+                    1
+                  ],
+                  "method": "SolverSequence.getPValsImag(int)",
+                  "raw": [
+                    0.0
+                  ]
+                },
+                "real_getter": {
+                  "arguments": [
+                    1
+                  ],
+                  "method": "SolverSequence.getPVals(int)",
+                  "raw": [
+                    193414489032258.03
+                  ]
+                },
+                "solnum": 1
+              }
+            ],
+            "source": "direct SolverSequence.getPNames/getSize/getPVals(int)/getPValsImag(int); supplemental to SolutionInfo",
+            "status": "OBSERVED_TYPED_COMPLEX_PARAMETER_VALUES",
+            "study": "std1",
+            "unit_observations": [
+              {
+                "arguments": [
+                  "freq"
+                ],
+                "method": "SolutionInfo.getUnit(String)",
+                "name": "freq",
+                "value": "GHz"
+              }
+            ]
+          },
+          "reasons": [],
+          "solution": "sol1",
+          "solution_axes_pair_mapping_complete": false,
+          "source": "exact dataset.solution\u2192model.sol().tags() binding plus attached Parametric/SolverSequence actual stable model.study().tags() membership and solution.study() identity, one freq level, empty getOuterSolnum(), getSize()[1]=1, getSizeMulti()==[1,1], and typed finite freq singleton with exact native Hz or GHz display label (raw value/unit unchanged)",
+          "status": "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT",
+          "witness_kind": "attached_parametric_frequency_singleton"
+        },
+        "outer": [],
+        "pair_mapping_complete": false,
+        "parameters_complete": false
+      },
+      "status": {
+        "cleanup_failed": false,
+        "engine_error": null,
+        "ok": true,
+        "verification_status": "PASSED"
+      },
+      "values": [
+        [
+          [
+            {
+              "imag": 0.0,
+              "real": 193414489032258.03
+            }
+          ]
+        ]
+      ],
+      "verification_status": "PASSED",
+      "verified_outcome": "succeeded"
+    },
+    "error": null,
+    "execution": {
+      "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+      "dirty": true,
+      "idempotency_key": "selection-revision",
+      "job_id": "a28f9f01-5043-49c2-9d82-eb042717b6c4",
+      "model_ownership": "user_owned",
+      "model_ref": {
+        "generation": 1,
+        "model_tag": "Model",
+        "schema_version": 1,
+        "server_instance_id": "public-test-epoch",
+        "session_id": "public-test-session"
+      },
+      "operation_id": "459decf1-7866-4d4d-a735-5f28f2e4e668",
+      "request_hash": "70eefbd042a3331e15ec09021a1da31fccfc8c9e4b7876454afa6228b53bc721",
+      "request_id": "selection-revision",
+      "revision": 1,
+      "server_ownership": "shared",
+      "session_id": "public-test-session"
+    },
+    "execution_state_unknown": true,
+    "success": false
+  },
+  "revision": 1,
+  "actual_sdk_requests": [
+    {
+      "tag": "Model",
+      "type": "model_snapshot",
+      "request_id": "wrk-1b1786eb-9b5b-4773-ab38-f8d5b23b032c"
+    },
+    {
+      "tag": "Model",
+      "type": "model_snapshot",
+      "request_id": "wrk-85f43932-060d-4b35-91df-48633953956b"
+    },
+    {
+      "tag": "Model",
+      "type": "model_snapshot",
+      "request_id": "wrk-a797bbf3-82bf-42f7-b707-fe52da2333c4"
+    },
+    {
+      "tag": "Model",
+      "type": "model",
+      "request_id": "wrk-e9476c12-3cc1-4196-9b67-557fe67f2c35"
+    },
+    {
+      "handle": "handle-1",
+      "generation": 1,
+      "method": "result",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-672fec13-9bfc-4c4e-9eb4-0b91cea063be"
+    },
+    {
+      "handle": "handle-2",
+      "generation": 1,
+      "method": "numerical",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-810107d2-10dd-48ec-98dd-769f0f7928a5"
+    },
+    {
+      "handle": "handle-2",
+      "generation": 1,
+      "method": "dataset",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-bf00e6ac-5ede-4855-83d3-d8deda8329dc"
+    },
+    {
+      "handle": "handle-4",
+      "generation": 1,
+      "method": "tags",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-28c060b3-fc3d-46d0-8a67-1c0a0982aaa3"
+    },
+    {
+      "handle": "handle-4",
+      "generation": 1,
+      "method": "get",
+      "args": [
+        "dset1"
+      ],
+      "type": "call",
+      "request_id": "wrk-7818d287-6ff0-4e65-ae35-0fdc45014fd6"
+    },
+    {
+      "handle": "handle-1",
+      "generation": 1,
+      "method": "result",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-7b4636bb-2c98-4eef-999a-ceb5131311fa"
+    },
+    {
+      "handle": "handle-2",
+      "generation": 1,
+      "method": "dataset",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-f46b8df1-b9b1-4d60-bdd7-049353a141a5"
+    },
+    {
+      "handle": "handle-4",
+      "generation": 1,
+      "method": "tags",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-c653c954-476f-47d7-965a-20a66729bc7c"
+    },
+    {
+      "handle": "handle-1",
+      "generation": 1,
+      "method": "sol",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-9d8e9541-9739-4e4b-a938-45fd97b9c529"
+    },
+    {
+      "handle": "handle-6",
+      "generation": 1,
+      "method": "tags",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-86c909c1-cba7-4230-9b6e-313e7d64b07c"
+    },
+    {
+      "handle": "handle-4",
+      "generation": 1,
+      "method": "get",
+      "args": [
+        "dset1"
+      ],
+      "type": "call",
+      "request_id": "wrk-803cead1-a933-4518-8daf-dd28116eed65"
+    },
+    {
+      "handle": "handle-5",
+      "generation": 1,
+      "method": "getType",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-cfef8734-6f51-4d25-a32d-9e9900b96764"
+    },
+    {
+      "handle": "handle-5",
+      "generation": 1,
+      "method": "properties",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-9d145c12-05c5-4b00-b44f-75bfff63bde0"
+    },
+    {
+      "handle": "handle-5",
+      "generation": 1,
+      "method": "getString",
+      "args": [
+        "solution"
+      ],
+      "type": "call",
+      "request_id": "wrk-f9c1f625-0664-4b5c-bf3d-1aedf13666b6"
+    },
+    {
+      "handle": "handle-5",
+      "generation": 1,
+      "method": "properties",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-1c5ef06e-4345-4ca2-a93d-aad1794f8354"
+    },
+    {
+      "handle": "handle-5",
+      "generation": 1,
+      "method": "properties",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-74d8c206-aa8d-4bc0-9538-6bef208ead57"
+    },
+    {
+      "handle": "handle-5",
+      "generation": 1,
+      "method": "properties",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-c523e8f8-7699-4afd-9b0a-698d1dfa276c"
+    },
+    {
+      "handle": "handle-5",
+      "generation": 1,
+      "method": "getString",
+      "args": [
+        "comp"
+      ],
+      "type": "call",
+      "request_id": "wrk-f994a5ec-1803-474a-bc62-0809b0c8a689"
+    },
+    {
+      "handle": "handle-5",
+      "generation": 1,
+      "method": "properties",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-82766359-c6c4-4664-9f45-f8c6de278ad1"
+    },
+    {
+      "handle": "handle-5",
+      "generation": 1,
+      "method": "getString",
+      "args": [
+        "geom"
+      ],
+      "type": "call",
+      "request_id": "wrk-6ee5a6f9-9af7-41f2-97a1-05922d275da3"
+    },
+    {
+      "handle": "handle-1",
+      "generation": 1,
+      "method": "modelNode",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-e1d8ea49-7315-48fb-9be8-4928a3589b1d"
+    },
+    {
+      "handle": "handle-7",
+      "generation": 1,
+      "method": "tags",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-3eb5537f-1454-4820-8470-297966b19fb1"
+    },
+    {
+      "handle": "handle-1",
+      "generation": 1,
+      "method": "component",
+      "args": [
+        "comp1"
+      ],
+      "type": "call",
+      "request_id": "wrk-f82780e3-67c1-414d-a93a-a43128e0c496"
+    },
+    {
+      "handle": "handle-8",
+      "generation": 1,
+      "method": "geom",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-fc816adb-59cb-44a9-82f8-bb1a5fa1335c"
+    },
+    {
+      "handle": "handle-9",
+      "generation": 1,
+      "method": "tags",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-fa0b2d6f-9d7d-48ec-a182-03ff8c8fa42c"
+    },
+    {
+      "handle": "handle-9",
+      "generation": 1,
+      "method": "get",
+      "args": [
+        "geom1"
+      ],
+      "type": "call",
+      "request_id": "wrk-c78de37c-7d49-44e8-aeb3-e3e3ebb8b230"
+    },
+    {
+      "handle": "handle-1",
+      "generation": 1,
+      "method": "component",
+      "args": [
+        "comp1"
+      ],
+      "type": "call",
+      "request_id": "wrk-346782bb-6a1e-425c-b197-0a9d501aa9a5"
+    },
+    {
+      "handle": "handle-8",
+      "generation": 1,
+      "method": "geom",
+      "args": [
+        "geom1"
+      ],
+      "type": "call",
+      "request_id": "wrk-6bb1d426-374e-4464-a0bd-b905af368743"
+    },
+    {
+      "handle": "handle-10",
+      "generation": 1,
+      "method": "lengthUnit",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-37f6c460-1645-4232-966c-4691e0cb4720"
+    },
+    {
+      "handle": "handle-10",
+      "generation": 1,
+      "method": "getSDim",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-026cbe5a-bd1a-4630-85f6-daafeff8f0f5"
+    },
+    {
+      "handle": "handle-10",
+      "generation": 1,
+      "method": "isAxisymmetric",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-cd1d76d1-3a6e-4781-bb9c-aed15efec8b5"
+    },
+    {
+      "handle": "handle-1",
+      "generation": 1,
+      "method": "sol",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-7548b49b-893c-4cb9-bd35-a9b6bffdb18c"
+    },
+    {
+      "handle": "handle-6",
+      "generation": 1,
+      "method": "tags",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-23612bda-9dd1-4126-a4fc-90967ffb6d2b"
+    },
+    {
+      "handle": "handle-6",
+      "generation": 1,
+      "method": "get",
+      "args": [
+        "sol1"
+      ],
+      "type": "call",
+      "request_id": "wrk-f4ebfd99-ba5b-4953-90b5-b6d806a565ca"
+    },
+    {
+      "handle": "handle-11",
+      "generation": 1,
+      "method": "getSolutioninfo",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-7d24e63d-af9d-4e2f-98b4-e20106aaaddd"
+    },
+    {
+      "handle": "handle-12",
+      "generation": 1,
+      "method": "getOuterSolnum",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-0db3abd7-05fd-40f7-881c-7cb36d780413"
+    },
+    {
+      "handle": "handle-12",
+      "generation": 1,
+      "method": "getSolnums",
+      "args": [
+        []
+      ],
+      "type": "call",
+      "request_id": "wrk-c904e545-17cc-444e-8982-c5164430a190"
+    },
+    {
+      "handle": "handle-12",
+      "generation": 1,
+      "method": "getLevelNames",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-ec89cd68-068c-42cb-88d2-e8b67652af9b"
+    },
+    {
+      "handle": "handle-1",
+      "generation": 1,
+      "method": "sol",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-e382cc00-dfee-45bb-89b0-48a8c146ea44"
+    },
+    {
+      "handle": "handle-6",
+      "generation": 1,
+      "method": "tags",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-d636d36e-fdf1-4ed2-a78b-e0faa5b1c520"
+    },
+    {
+      "handle": "handle-6",
+      "generation": 1,
+      "method": "get",
+      "args": [
+        "sol1"
+      ],
+      "type": "call",
+      "request_id": "wrk-8295869c-c5c5-4e21-b9c8-e781525eea5e"
+    },
+    {
+      "handle": "handle-11",
+      "generation": 1,
+      "method": "getSolutioninfo",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-3c0e06c5-a31b-45ba-984d-63c8aa8032a3"
+    },
+    {
+      "handle": "handle-11",
+      "generation": 1,
+      "method": "study",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-78fa9635-f17b-4320-9b8c-017ab4cd7f38"
+    },
+    {
+      "handle": "handle-11",
+      "generation": 1,
+      "method": "getType",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-c69d6bc8-e6d1-4978-927d-3c74151eeeb0"
+    },
+    {
+      "handle": "handle-11",
+      "generation": 1,
+      "method": "getSequenceType",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-195b434c-1ada-45e6-b87d-3d0e65960791"
+    },
+    {
+      "handle": "handle-11",
+      "generation": 1,
+      "method": "isAttached",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-c089d59c-ca35-4cc8-acb0-44427db2c1ca"
+    },
+    {
+      "handle": "handle-11",
+      "generation": 1,
+      "method": "study",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-f422306e-178e-4bf2-8dea-290765bcce0a"
+    },
+    {
+      "handle": "handle-11",
+      "generation": 1,
+      "method": "getSize",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-f9dd27f9-219a-4849-98ec-93ab73be7411"
+    },
+    {
+      "handle": "handle-11",
+      "generation": 1,
+      "method": "getSizeMulti",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-8c65feeb-5eb3-498e-9bf2-49e069da14ff"
+    },
+    {
+      "handle": "handle-11",
+      "generation": 1,
+      "method": "getPNames",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-6f165828-21ae-4478-a8e3-d283e14db365"
+    },
+    {
+      "handle": "handle-11",
+      "generation": 1,
+      "method": "getPVals",
+      "args": [
+        1
+      ],
+      "type": "call",
+      "request_id": "wrk-bb81c099-4a62-4382-b5c9-26cba32765a5"
+    },
+    {
+      "handle": "handle-11",
+      "generation": 1,
+      "method": "getPValsImag",
+      "args": [
+        1
+      ],
+      "type": "call",
+      "request_id": "wrk-ce4cebb1-5692-40ef-8f3a-b88d21366430"
+    },
+    {
+      "handle": "handle-12",
+      "generation": 1,
+      "method": "getUnit",
+      "args": [
+        "freq"
+      ],
+      "type": "call",
+      "request_id": "wrk-d1426a5d-34af-4b74-acc1-2ac68cff7663"
+    },
+    {
+      "handle": "handle-12",
+      "generation": 1,
+      "method": "getLevelNames",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-bd986376-749d-4f4c-b2e8-322ffa21f523"
+    },
+    {
+      "handle": "handle-12",
+      "generation": 1,
+      "method": "getLevels",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-257bde7f-d028-4f25-bb9e-2fda64a9075b"
+    },
+    {
+      "handle": "handle-12",
+      "generation": 1,
+      "method": "getOuterSolnum",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-b89fc98a-bd73-449b-93e0-0913d73749c4"
+    },
+    {
+      "handle": "handle-1",
+      "generation": 1,
+      "method": "study",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-3b74fff7-13e0-4fda-b561-b6e0276f33c7"
+    },
+    {
+      "handle": "handle-13",
+      "generation": 1,
+      "method": "tags",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-606d4ac0-14ed-4a4c-b092-66db32d38dd0"
+    },
+    {
+      "handle": "handle-1",
+      "generation": 1,
+      "method": "study",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-d8eaae47-d32d-4d0d-b992-624cfba63ffd"
+    },
+    {
+      "handle": "handle-13",
+      "generation": 1,
+      "method": "tags",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-c73f992c-dd42-47c5-86ab-3315d4e508f1"
+    },
+    {
+      "handle": "handle-11",
+      "generation": 1,
+      "method": "study",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-35b29ae7-3465-43f8-aa5d-244ae432bf10"
+    },
+    {
+      "tag": "Model",
+      "type": "model",
+      "request_id": "wrk-7c82041c-ffea-4a5c-bc49-d27aa232fa1f"
+    },
+    {
+      "handle": "handle-1",
+      "generation": 1,
+      "method": "component",
+      "args": [
+        "comp1"
+      ],
+      "type": "call",
+      "request_id": "wrk-43426672-a908-4496-8d82-6e6b798ed807"
+    },
+    {
+      "handle": "handle-8",
+      "generation": 1,
+      "method": "selection",
+      "args": [
+        "selInputPort"
+      ],
+      "type": "call",
+      "request_id": "wrk-5e1388b1-7d53-4f94-bc3b-8b97e093f1d6"
+    },
+    {
+      "handle": "handle-14",
+      "generation": 1,
+      "method": "geom",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-56835cc0-b5ae-4eea-ba59-52737b46402d"
+    },
+    {
+      "handle": "handle-14",
+      "generation": 1,
+      "method": "dim",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-c6a049f7-3e78-4094-8241-b3c25eb0d450"
+    },
+    {
+      "handle": "handle-14",
+      "generation": 1,
+      "method": "entities",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-2c20f41b-cca4-4c8e-bd6a-4f435560188f"
+    },
+    {
+      "handle": "handle-3",
+      "generation": 1,
+      "method": "tags",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-31b5ad11-7842-447d-a8bc-dc4db06b4184"
+    },
+    {
+      "handle": "handle-3",
+      "generation": 1,
+      "method": "create",
+      "args": [
+        "cmssp1",
+        "Interp"
+      ],
+      "type": "call",
+      "request_id": "wrk-b9449410-b968-4e74-b64d-449d1d20f87b"
+    },
+    {
+      "handle": "handle-15",
+      "generation": 1,
+      "method": "getType",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-e3789e35-c6c3-4c2a-b0b5-e5ace3ad8fd9"
+    },
+    {
+      "handle": "handle-15",
+      "generation": 1,
+      "method": "tag",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-6b47ce86-872d-43cd-97af-f071316dad18"
+    },
+    {
+      "handle": "handle-15",
+      "generation": 1,
+      "method": "set",
+      "args": [
+        "data",
+        "dset1"
+      ],
+      "type": "call",
+      "request_id": "wrk-19efa391-753f-4363-9783-7e4d8bac004f"
+    },
+    {
+      "handle": "handle-15",
+      "generation": 1,
+      "method": "getString",
+      "args": [
+        "data"
+      ],
+      "type": "call",
+      "request_id": "wrk-cb6af737-f77f-45eb-b1e6-21f0237d2da6"
+    },
+    {
+      "handle": "handle-15",
+      "generation": 1,
+      "method": "selection",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-b6b8acd9-aabe-45c3-a46f-f876010d59a7"
+    },
+    {
+      "handle": "handle-16",
+      "generation": 1,
+      "method": "geom",
+      "args": [
+        "geom1",
+        1
+      ],
+      "type": "call",
+      "request_id": "wrk-9dd2f264-8081-4198-a607-a4c33588353d"
+    },
+    {
+      "handle": "handle-16",
+      "generation": 1,
+      "method": "named",
+      "args": [
+        "selInputPort"
+      ],
+      "type": "call",
+      "request_id": "wrk-684855c9-a9ee-4cac-81bc-ce092067dd11"
+    },
+    {
+      "handle": "handle-16",
+      "generation": 1,
+      "method": "geom",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-c3222a51-eabe-43d8-8d5d-effdd9a05b19"
+    },
+    {
+      "handle": "handle-16",
+      "generation": 1,
+      "method": "dim",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-4ec40d18-586b-4bb6-be01-ab294ce72a31"
+    },
+    {
+      "handle": "handle-16",
+      "generation": 1,
+      "method": "named",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-e7494f91-ace6-40ac-9102-6e2174d44382"
+    },
+    {
+      "handle": "handle-16",
+      "generation": 1,
+      "method": "entities",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-7e6f26ae-39d4-4b5c-b83f-c917be06ab50"
+    },
+    {
+      "handle": "handle-16",
+      "generation": 1,
+      "method": "isInheriting",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-7e22548e-03f6-4103-b5c1-92687f1d6925"
+    },
+    {
+      "handle": "handle-15",
+      "generation": 1,
+      "method": "set",
+      "args": [
+        "expr",
+        [
+          "freq"
+        ]
+      ],
+      "type": "call",
+      "request_id": "wrk-31d1b459-3516-41d1-ad6d-2d233f037036"
+    },
+    {
+      "handle": "handle-15",
+      "generation": 1,
+      "method": "setIndex",
+      "args": [
+        "unit",
+        "Hz",
+        0
+      ],
+      "type": "call",
+      "request_id": "wrk-aed7f610-b54b-4fa8-ac1b-e099e220dcf1"
+    },
+    {
+      "handle": "handle-15",
+      "generation": 1,
+      "method": "setInterpolationCoordinates",
+      "args": [
+        [
+          [
+            -10.0
+          ],
+          [
+            0.0
+          ]
+        ]
+      ],
+      "type": "call",
+      "request_id": "wrk-ad54e1d0-8c61-4572-ab06-6ef9495e0e1e"
+    },
+    {
+      "handle": "handle-15",
+      "generation": 1,
+      "method": "getStringArray",
+      "args": [
+        "expr"
+      ],
+      "type": "call",
+      "request_id": "wrk-6e6a3b57-eab3-4ff6-8866-bab5c9509d92"
+    },
+    {
+      "handle": "handle-15",
+      "generation": 1,
+      "method": "getStringArray",
+      "args": [
+        "unit"
+      ],
+      "type": "call",
+      "request_id": "wrk-49b2c773-7210-4bf5-b30f-426ff0869c7a"
+    },
+    {
+      "handle": "handle-15",
+      "generation": 1,
+      "method": "run",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-5fba546b-01cc-48f0-9060-fd6e0a02e742"
+    },
+    {
+      "handle": "handle-15",
+      "generation": 1,
+      "method": "isComplex",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-e02307a4-8a20-4347-ae50-c2c9886ae7aa"
+    },
+    {
+      "handle": "handle-15",
+      "generation": 1,
+      "method": "isComplex",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-179ed53f-ca57-4169-9a07-71006ee0b797"
+    },
+    {
+      "handle": "handle-15",
+      "generation": 1,
+      "method": "getData",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-0da92556-5427-407d-84d7-910de453f14f"
+    },
+    {
+      "handle": "handle-15",
+      "generation": 1,
+      "method": "getStringArray",
+      "args": [
+        "expr"
+      ],
+      "type": "call",
+      "request_id": "wrk-c64b6c48-ac09-4869-aa11-bedf4bcb5326"
+    },
+    {
+      "handle": "handle-15",
+      "generation": 1,
+      "method": "getStringArray",
+      "args": [
+        "unit"
+      ],
+      "type": "call",
+      "request_id": "wrk-6c39711f-a180-4c17-9162-2458d45fff65"
+    },
+    {
+      "handle": "handle-16",
+      "generation": 1,
+      "method": "geom",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-bfa1ee8a-d131-4daa-b359-145daf6c4e14"
+    },
+    {
+      "handle": "handle-16",
+      "generation": 1,
+      "method": "dim",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-cb7ae698-ef81-4434-87c6-67ca1623c3a7"
+    },
+    {
+      "handle": "handle-16",
+      "generation": 1,
+      "method": "named",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-9e87b222-cf7a-4041-9650-9c4e2ecc41a8"
+    },
+    {
+      "handle": "handle-16",
+      "generation": 1,
+      "method": "entities",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-f5b06965-5e9a-41c5-a192-f1680b014308"
+    },
+    {
+      "handle": "handle-16",
+      "generation": 1,
+      "method": "isInheriting",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-ce2f412e-5a22-46a9-b313-3861156acd0e"
+    },
+    {
+      "handle": "handle-15",
+      "generation": 1,
+      "method": "getCoordinates",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-1a0f11c3-379c-45e7-9d7b-ee64187a4e36"
+    },
+    {
+      "handle": "handle-3",
+      "generation": 1,
+      "method": "remove",
+      "args": [
+        "cmssp1"
+      ],
+      "type": "call",
+      "request_id": "wrk-4db6bbfd-5ff6-4156-b8d4-cb5e2881b8be"
+    },
+    {
+      "handle": "handle-3",
+      "generation": 1,
+      "method": "tags",
+      "args": [],
+      "type": "call",
+      "request_id": "wrk-0e57a0b5-fe7d-4f57-bd62-a05b18589b89"
+    },
+    {
+      "tag": "Model",
+      "type": "model_snapshot",
+      "request_id": "wrk-cba77b59-4bfe-4d91-b099-ed22883c4afc"
+    }
+  ],
+  "private_scope_rows": [
+    {
+      "ordinal": 0,
+      "kind": "model",
+      "method": null,
+      "receiver": null,
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-e9476c12-3cc1-4196-9b67-557fe67f2c35",
+      "tag": "Model",
+      "generation": null,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "b074dc6aa393ae7c053afaa29e6bdc3cb1bd14181500bdbda278ec84aafa1ca4",
+      "return_handle": "handle-1",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity"
+    },
+    {
+      "ordinal": 1,
+      "kind": "call",
+      "method": "result",
+      "receiver": "handle-1",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-672fec13-9bfc-4c4e-9eb4-0b91cea063be",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "4909a65285c8f54e1d6b1899559201ba576ae180c52fe7d88f7804b4c785e373",
+      "return_handle": "handle-2",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity"
+    },
+    {
+      "ordinal": 2,
+      "kind": "call",
+      "method": "numerical",
+      "receiver": "handle-2",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-810107d2-10dd-48ec-98dd-769f0f7928a5",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "0595f36635e5acea6446f29784b719344f50e4c54c97cb3fb12a61984deccf3c",
+      "return_handle": "handle-3",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity"
+    },
+    {
+      "ordinal": 3,
+      "kind": "call",
+      "method": "dataset",
+      "receiver": "handle-2",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-bf00e6ac-5ede-4855-83d3-d8deda8329dc",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "b2158e66d5d6d729efb4830bc4748f16bd20914046eaa15421a5a7ab044dbc51",
+      "return_handle": "handle-4",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity"
+    },
+    {
+      "ordinal": 4,
+      "kind": "call",
+      "method": "tags",
+      "receiver": "handle-4",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-28c060b3-fc3d-46d0-8a67-1c0a0982aaa3",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "58a3a32b24fc4e244f6c4008eea3e857c531933325df61ad97847da72da022a1",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": [
+        "dset1"
+      ]
+    },
+    {
+      "ordinal": 5,
+      "kind": "call",
+      "method": "get",
+      "receiver": "handle-4",
+      "args_hash": "58a3a32b24fc4e244f6c4008eea3e857c531933325df61ad97847da72da022a1",
+      "args": [
+        "dset1"
+      ],
+      "request_id": "wrk-7818d287-6ff0-4e65-ae35-0fdc45014fd6",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "aa43c499c72cecfcb120b67474bacf2c2fdb27a3da68f199c4d4be82f4216ff9",
+      "return_handle": "handle-5",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity"
+    },
+    {
+      "ordinal": 6,
+      "kind": "call",
+      "method": "result",
+      "receiver": "handle-1",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-7b4636bb-2c98-4eef-999a-ceb5131311fa",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "4909a65285c8f54e1d6b1899559201ba576ae180c52fe7d88f7804b4c785e373",
+      "return_handle": "handle-2",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity"
+    },
+    {
+      "ordinal": 7,
+      "kind": "call",
+      "method": "dataset",
+      "receiver": "handle-2",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-f46b8df1-b9b1-4d60-bdd7-049353a141a5",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "b2158e66d5d6d729efb4830bc4748f16bd20914046eaa15421a5a7ab044dbc51",
+      "return_handle": "handle-4",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity"
+    },
+    {
+      "ordinal": 8,
+      "kind": "call",
+      "method": "tags",
+      "receiver": "handle-4",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-c653c954-476f-47d7-965a-20a66729bc7c",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "58a3a32b24fc4e244f6c4008eea3e857c531933325df61ad97847da72da022a1",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": [
+        "dset1"
+      ]
+    },
+    {
+      "ordinal": 9,
+      "kind": "call",
+      "method": "sol",
+      "receiver": "handle-1",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-9d8e9541-9739-4e4b-a938-45fd97b9c529",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "22c186ae7f0898af8b8df94a2bf1bcf57405f49800ec118b5f87f4df96d2aa71",
+      "return_handle": "handle-6",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity"
+    },
+    {
+      "ordinal": 10,
+      "kind": "call",
+      "method": "tags",
+      "receiver": "handle-6",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-86c909c1-cba7-4230-9b6e-313e7d64b07c",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "ee8a63f5feb2667707a323bb71076bd6b84438ab6b2964b1f1f5197627a69656",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": [
+        "sol1"
+      ]
+    },
+    {
+      "ordinal": 11,
+      "kind": "call",
+      "method": "get",
+      "receiver": "handle-4",
+      "args_hash": "58a3a32b24fc4e244f6c4008eea3e857c531933325df61ad97847da72da022a1",
+      "args": [
+        "dset1"
+      ],
+      "request_id": "wrk-803cead1-a933-4518-8daf-dd28116eed65",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "aa43c499c72cecfcb120b67474bacf2c2fdb27a3da68f199c4d4be82f4216ff9",
+      "return_handle": "handle-5",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity"
+    },
+    {
+      "ordinal": 12,
+      "kind": "call",
+      "method": "getType",
+      "receiver": "handle-5",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-cfef8734-6f51-4d25-a32d-9e9900b96764",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "d9696ab77e673340d5cc4ac9c79d2b6f1ee4be259f9aa6f8e4cfc16fb380c10f",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": "Solution"
+    },
+    {
+      "ordinal": 13,
+      "kind": "call",
+      "method": "properties",
+      "receiver": "handle-5",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-9d145c12-05c5-4b00-b44f-75bfff63bde0",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "08b67a70411de470cfd564a7d7ac4710cab16d7cb2f4a6e4e9e09aedd9203121",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 14,
+      "kind": "call",
+      "method": "getString",
+      "receiver": "handle-5",
+      "args_hash": "44004c23d7bc7f4637a6e20b0f8b9e5bad0e9ac1f9d41b6c28db2bf7e5dcc02a",
+      "args": [
+        "solution"
+      ],
+      "request_id": "wrk-f9c1f625-0664-4b5c-bf3d-1aedf13666b6",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "d2d5dccd6d35282321ea3a7d7812756e1f34aaf0ce8e78bf3c71dda34f564018",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 15,
+      "kind": "call",
+      "method": "properties",
+      "receiver": "handle-5",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-1c5ef06e-4345-4ca2-a93d-aad1794f8354",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "08b67a70411de470cfd564a7d7ac4710cab16d7cb2f4a6e4e9e09aedd9203121",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 16,
+      "kind": "call",
+      "method": "properties",
+      "receiver": "handle-5",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-74d8c206-aa8d-4bc0-9538-6bef208ead57",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "08b67a70411de470cfd564a7d7ac4710cab16d7cb2f4a6e4e9e09aedd9203121",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 17,
+      "kind": "call",
+      "method": "properties",
+      "receiver": "handle-5",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-c523e8f8-7699-4afd-9b0a-698d1dfa276c",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "08b67a70411de470cfd564a7d7ac4710cab16d7cb2f4a6e4e9e09aedd9203121",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 18,
+      "kind": "call",
+      "method": "getString",
+      "receiver": "handle-5",
+      "args_hash": "0b45f610dda4c0cac4009acd98e289deb767380313fbc4cca204d9bfff7fc42d",
+      "args": [
+        "comp"
+      ],
+      "request_id": "wrk-f994a5ec-1803-474a-bc62-0809b0c8a689",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "7784a876bf8237f12175d386bc92777f37e03e18cfc0f8f62e5123e746fe1c80",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 19,
+      "kind": "call",
+      "method": "properties",
+      "receiver": "handle-5",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-82766359-c6c4-4664-9f45-f8c6de278ad1",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "08b67a70411de470cfd564a7d7ac4710cab16d7cb2f4a6e4e9e09aedd9203121",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 20,
+      "kind": "call",
+      "method": "getString",
+      "receiver": "handle-5",
+      "args_hash": "7e828a08e19949865e89a0e96443e44fc60367ce2440cb9e3dd41fa3bc55ff55",
+      "args": [
+        "geom"
+      ],
+      "request_id": "wrk-6ee5a6f9-9af7-41f2-97a1-05922d275da3",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "b0c1ea4b7ff6789f8776b4273b7f7d87c0b15b2fc11e398c194ee997409eef6d",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 21,
+      "kind": "call",
+      "method": "modelNode",
+      "receiver": "handle-1",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-e1d8ea49-7315-48fb-9be8-4928a3589b1d",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "658823f8cff95b42bbf9d41c8da73c6f4d3ae83bbd71d8b981ec89438e862823",
+      "return_handle": "handle-7",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity"
+    },
+    {
+      "ordinal": 22,
+      "kind": "call",
+      "method": "tags",
+      "receiver": "handle-7",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-3eb5537f-1454-4820-8470-297966b19fb1",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "fcc78d3a399a95f90a979b76dd6ae7416caffedbbad567897cc5bbe572ec2487",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": [
+        "comp1"
+      ]
+    },
+    {
+      "ordinal": 23,
+      "kind": "call",
+      "method": "component",
+      "receiver": "handle-1",
+      "args_hash": "fcc78d3a399a95f90a979b76dd6ae7416caffedbbad567897cc5bbe572ec2487",
+      "args": [
+        "comp1"
+      ],
+      "request_id": "wrk-f82780e3-67c1-414d-a93a-a43128e0c496",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "4b05b951d6c697f054315cfce8d12d693177dfc6d8c805778469e4b558bef064",
+      "return_handle": "handle-8",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity"
+    },
+    {
+      "ordinal": 24,
+      "kind": "call",
+      "method": "geom",
+      "receiver": "handle-8",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-fc816adb-59cb-44a9-82f8-bb1a5fa1335c",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "a9c5b52bf67291859bf5041bd5118167caae067fa45cb4988e06064cca30cafa",
+      "return_handle": "handle-9",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity",
+      "value": {
+        "$worker_handle": "handle-9",
+        "generation": 1,
+        "java_type": "com.comsol.model.FixtureSDKEntity"
+      }
+    },
+    {
+      "ordinal": 25,
+      "kind": "call",
+      "method": "tags",
+      "receiver": "handle-9",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-fa0b2d6f-9d7d-48ec-a182-03ff8c8fa42c",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "2a1d1860b7cbe5be7e8f751bc6b3c5428a464865213888aeb628a2fce044813e",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": [
+        "geom1"
+      ]
+    },
+    {
+      "ordinal": 26,
+      "kind": "call",
+      "method": "get",
+      "receiver": "handle-9",
+      "args_hash": "2a1d1860b7cbe5be7e8f751bc6b3c5428a464865213888aeb628a2fce044813e",
+      "args": [
+        "geom1"
+      ],
+      "request_id": "wrk-c78de37c-7d49-44e8-aeb3-e3e3ebb8b230",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "dcd99d8fa6d1ac3dabc17464400b461680d14153246779107b3cda9c22be8a7b",
+      "return_handle": "handle-10",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity"
+    },
+    {
+      "ordinal": 27,
+      "kind": "call",
+      "method": "component",
+      "receiver": "handle-1",
+      "args_hash": "fcc78d3a399a95f90a979b76dd6ae7416caffedbbad567897cc5bbe572ec2487",
+      "args": [
+        "comp1"
+      ],
+      "request_id": "wrk-346782bb-6a1e-425c-b197-0a9d501aa9a5",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "4b05b951d6c697f054315cfce8d12d693177dfc6d8c805778469e4b558bef064",
+      "return_handle": "handle-8",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity"
+    },
+    {
+      "ordinal": 28,
+      "kind": "call",
+      "method": "geom",
+      "receiver": "handle-8",
+      "args_hash": "2a1d1860b7cbe5be7e8f751bc6b3c5428a464865213888aeb628a2fce044813e",
+      "args": [
+        "geom1"
+      ],
+      "request_id": "wrk-6bb1d426-374e-4464-a0bd-b905af368743",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "dcd99d8fa6d1ac3dabc17464400b461680d14153246779107b3cda9c22be8a7b",
+      "return_handle": "handle-10",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity",
+      "value": {
+        "$worker_handle": "handle-10",
+        "generation": 1,
+        "java_type": "com.comsol.model.FixtureSDKEntity"
+      }
+    },
+    {
+      "ordinal": 29,
+      "kind": "call",
+      "method": "lengthUnit",
+      "receiver": "handle-10",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-37f6c460-1645-4232-966c-4691e0cb4720",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "7d5b8569b5e7c9c4a23eb5542faaa8aa96930eebd167bfb25c6360635bf5a8da",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 30,
+      "kind": "call",
+      "method": "getSDim",
+      "receiver": "handle-10",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-026cbe5a-bd1a-4630-85f6-daafeff8f0f5",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 31,
+      "kind": "call",
+      "method": "isAxisymmetric",
+      "receiver": "handle-10",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-cd1d76d1-3a6e-4781-bb9c-aed15efec8b5",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 32,
+      "kind": "call",
+      "method": "sol",
+      "receiver": "handle-1",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-7548b49b-893c-4cb9-bd35-a9b6bffdb18c",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "22c186ae7f0898af8b8df94a2bf1bcf57405f49800ec118b5f87f4df96d2aa71",
+      "return_handle": "handle-6",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity"
+    },
+    {
+      "ordinal": 33,
+      "kind": "call",
+      "method": "tags",
+      "receiver": "handle-6",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-23612bda-9dd1-4126-a4fc-90967ffb6d2b",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "ee8a63f5feb2667707a323bb71076bd6b84438ab6b2964b1f1f5197627a69656",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": [
+        "sol1"
+      ]
+    },
+    {
+      "ordinal": 34,
+      "kind": "call",
+      "method": "get",
+      "receiver": "handle-6",
+      "args_hash": "ee8a63f5feb2667707a323bb71076bd6b84438ab6b2964b1f1f5197627a69656",
+      "args": [
+        "sol1"
+      ],
+      "request_id": "wrk-f4ebfd99-ba5b-4953-90b5-b6d806a565ca",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "d42a442899694f88be9fc91691f46cfe5113e8ee33193d39649565e237583bd8",
+      "return_handle": "handle-11",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity"
+    },
+    {
+      "ordinal": 35,
+      "kind": "call",
+      "method": "getSolutioninfo",
+      "receiver": "handle-11",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-7d24e63d-af9d-4e2f-98b4-e20106aaaddd",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "464b1d63ee65e4b6339b6a992327c5d88420d05f2b44b7f479de1245eed9cf44",
+      "return_handle": "handle-12",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity"
+    },
+    {
+      "ordinal": 36,
+      "kind": "call",
+      "method": "getOuterSolnum",
+      "receiver": "handle-12",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-0db3abd7-05fd-40f7-881c-7cb36d780413",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": true,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 37,
+      "kind": "call",
+      "method": "getSolnums",
+      "receiver": "handle-12",
+      "args_hash": "cf1cbb66a638b4860a516671fb74850e6ccf787fe6c4c8d29e9c04efe880bd05",
+      "args": [
+        []
+      ],
+      "request_id": "wrk-c904e545-17cc-444e-8982-c5164430a190",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": true,
+      "handled_failure": true,
+      "ok": false,
+      "status": "FAILED",
+      "failure_hash": "2fffb4ac9234d6fc2693052855fcebd22e0751fe7b7f35052a040b5af1696283",
+      "failure": {
+        "code": "ENGINE_CALL_FAILED",
+        "message": "FlException: \u672a\u77e5\u89e3\u3002\n  - \u6807\u8bb0"
+      },
+      "dangerous_reply": false,
+      "result_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 38,
+      "kind": "call",
+      "method": "getLevelNames",
+      "receiver": "handle-12",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-ec89cd68-068c-42cb-88d2-e8b67652af9b",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": true,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "d2dadddb933386ac20b23b8914f8ed22e6d4d7ab8449e3c436e32a5506d80b63",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 39,
+      "kind": "call",
+      "method": "sol",
+      "receiver": "handle-1",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-e382cc00-dfee-45bb-89b0-48a8c146ea44",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "22c186ae7f0898af8b8df94a2bf1bcf57405f49800ec118b5f87f4df96d2aa71",
+      "return_handle": "handle-6",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity"
+    },
+    {
+      "ordinal": 40,
+      "kind": "call",
+      "method": "tags",
+      "receiver": "handle-6",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-d636d36e-fdf1-4ed2-a78b-e0faa5b1c520",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "ee8a63f5feb2667707a323bb71076bd6b84438ab6b2964b1f1f5197627a69656",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": [
+        "sol1"
+      ]
+    },
+    {
+      "ordinal": 41,
+      "kind": "call",
+      "method": "get",
+      "receiver": "handle-6",
+      "args_hash": "ee8a63f5feb2667707a323bb71076bd6b84438ab6b2964b1f1f5197627a69656",
+      "args": [
+        "sol1"
+      ],
+      "request_id": "wrk-8295869c-c5c5-4e21-b9c8-e781525eea5e",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "d42a442899694f88be9fc91691f46cfe5113e8ee33193d39649565e237583bd8",
+      "return_handle": "handle-11",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity"
+    },
+    {
+      "ordinal": 42,
+      "kind": "call",
+      "method": "getSolutioninfo",
+      "receiver": "handle-11",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-3c0e06c5-a31b-45ba-984d-63c8aa8032a3",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "464b1d63ee65e4b6339b6a992327c5d88420d05f2b44b7f479de1245eed9cf44",
+      "return_handle": "handle-12",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity"
+    },
+    {
+      "ordinal": 43,
+      "kind": "call",
+      "method": "study",
+      "receiver": "handle-11",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-78fa9635-f17b-4320-9b8c-017ab4cd7f38",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "5d7340dd7c3f0750232ab75b3ecef5ab911dace81d184fa2e1a1d7de776ccb3f",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 44,
+      "kind": "call",
+      "method": "getType",
+      "receiver": "handle-11",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-c69d6bc8-e6d1-4978-927d-3c74151eeeb0",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "e9ebc838583bcb52191158d2d5338a0f577dc444f85b40dfc8b68f6ad17a7509",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": "Parametric"
+    },
+    {
+      "ordinal": 45,
+      "kind": "call",
+      "method": "getSequenceType",
+      "receiver": "handle-11",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-195b434c-1ada-45e6-b87d-3d0e65960791",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "b2f51396740010da1fe99d63dd995e6ca6bbc1e98d96cc18463474356acfb031",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 46,
+      "kind": "call",
+      "method": "isAttached",
+      "receiver": "handle-11",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-c089d59c-ca35-4cc8-acb0-44427db2c1ca",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 47,
+      "kind": "call",
+      "method": "study",
+      "receiver": "handle-11",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-f422306e-178e-4bf2-8dea-290765bcce0a",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "5d7340dd7c3f0750232ab75b3ecef5ab911dace81d184fa2e1a1d7de776ccb3f",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 48,
+      "kind": "call",
+      "method": "getSize",
+      "receiver": "handle-11",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-f9dd27f9-219a-4849-98ec-93ab73be7411",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "bb59a786084b48efd350707ddc0467e158b9c1041c18cfa77d7998f1c8ab9eba",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 49,
+      "kind": "call",
+      "method": "getSizeMulti",
+      "receiver": "handle-11",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-8c65feeb-5eb3-498e-9bf2-49e069da14ff",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "e61b9f584dbe27741cef6e9ee440831d7d94470c0871b0871541f0308916efea",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 50,
+      "kind": "call",
+      "method": "getPNames",
+      "receiver": "handle-11",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-6f165828-21ae-4478-a8e3-d283e14db365",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "d2dadddb933386ac20b23b8914f8ed22e6d4d7ab8449e3c436e32a5506d80b63",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 51,
+      "kind": "call",
+      "method": "getPVals",
+      "receiver": "handle-11",
+      "args_hash": "080a9ed428559ef602668b4c00f114f1a11c3f6b02a435f0bdc154578e4d7f22",
+      "args": [
+        1
+      ],
+      "request_id": "wrk-bb81c099-4a62-4382-b5c9-26cba32765a5",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "324dc8059af69387e9a35650a086e8cae023ab8903ec72fa5c8a9cd2da2b6c7e",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 52,
+      "kind": "call",
+      "method": "getPValsImag",
+      "receiver": "handle-11",
+      "args_hash": "080a9ed428559ef602668b4c00f114f1a11c3f6b02a435f0bdc154578e4d7f22",
+      "args": [
+        1
+      ],
+      "request_id": "wrk-ce4cebb1-5692-40ef-8f3a-b88d21366430",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "37aed087d1cfac1ac1185c1622819ee5100567b178df43d6c00e8a7db4bc244b",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 53,
+      "kind": "call",
+      "method": "getUnit",
+      "receiver": "handle-12",
+      "args_hash": "d2dadddb933386ac20b23b8914f8ed22e6d4d7ab8449e3c436e32a5506d80b63",
+      "args": [
+        "freq"
+      ],
+      "request_id": "wrk-d1426a5d-34af-4b74-acc1-2ac68cff7663",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "bdef7bc5a794d797101b9fdee289dbfac421628a4fff30747d3a83c650c4e746",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 54,
+      "kind": "call",
+      "method": "getLevelNames",
+      "receiver": "handle-12",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-bd986376-749d-4f4c-b2e8-322ffa21f523",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "d2dadddb933386ac20b23b8914f8ed22e6d4d7ab8449e3c436e32a5506d80b63",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 55,
+      "kind": "call",
+      "method": "getLevels",
+      "receiver": "handle-12",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-257bde7f-d028-4f25-bb9e-2fda64a9075b",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 56,
+      "kind": "call",
+      "method": "getOuterSolnum",
+      "receiver": "handle-12",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-b89fc98a-bd73-449b-93e0-0913d73749c4",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 57,
+      "kind": "call",
+      "method": "study",
+      "receiver": "handle-1",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-3b74fff7-13e0-4fda-b561-b6e0276f33c7",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "14a765b9900d626e7ea0681096cd49ea7b096fab58e669ef977254e2040d422d",
+      "return_handle": "handle-13",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity"
+    },
+    {
+      "ordinal": 58,
+      "kind": "call",
+      "method": "tags",
+      "receiver": "handle-13",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-606d4ac0-14ed-4a4c-b092-66db32d38dd0",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "e3d169c8799dff050dfd3bd18c00df0d37a9c14ce53ddec279a0f0fc8f6ef0b2",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": [
+        "std1"
+      ]
+    },
+    {
+      "ordinal": 59,
+      "kind": "call",
+      "method": "study",
+      "receiver": "handle-1",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-d8eaae47-d32d-4d0d-b992-624cfba63ffd",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "14a765b9900d626e7ea0681096cd49ea7b096fab58e669ef977254e2040d422d",
+      "return_handle": "handle-13",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity"
+    },
+    {
+      "ordinal": 60,
+      "kind": "call",
+      "method": "tags",
+      "receiver": "handle-13",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-c73f992c-dd42-47c5-86ab-3315d4e508f1",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "e3d169c8799dff050dfd3bd18c00df0d37a9c14ce53ddec279a0f0fc8f6ef0b2",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": [
+        "std1"
+      ]
+    },
+    {
+      "ordinal": 61,
+      "kind": "call",
+      "method": "study",
+      "receiver": "handle-11",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-35b29ae7-3465-43f8-aa5d-244ae432bf10",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "5d7340dd7c3f0750232ab75b3ecef5ab911dace81d184fa2e1a1d7de776ccb3f",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 62,
+      "kind": "model",
+      "method": null,
+      "receiver": null,
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-7c82041c-ffea-4a5c-bc49-d27aa232fa1f",
+      "tag": "Model",
+      "generation": null,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "b074dc6aa393ae7c053afaa29e6bdc3cb1bd14181500bdbda278ec84aafa1ca4",
+      "return_handle": "handle-1",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity"
+    },
+    {
+      "ordinal": 63,
+      "kind": "call",
+      "method": "component",
+      "receiver": "handle-1",
+      "args_hash": "fcc78d3a399a95f90a979b76dd6ae7416caffedbbad567897cc5bbe572ec2487",
+      "args": [
+        "comp1"
+      ],
+      "request_id": "wrk-43426672-a908-4496-8d82-6e6b798ed807",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "4b05b951d6c697f054315cfce8d12d693177dfc6d8c805778469e4b558bef064",
+      "return_handle": "handle-8",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity"
+    },
+    {
+      "ordinal": 64,
+      "kind": "call",
+      "method": "selection",
+      "receiver": "handle-8",
+      "args_hash": "4555e2f7d3c44eff79b3e3f2c9edc1f8e01b9af9756c52ed65400a7610e926ea",
+      "args": [
+        "selInputPort"
+      ],
+      "request_id": "wrk-5e1388b1-7d53-4f94-bc3b-8b97e093f1d6",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "65d4766f014f9f4392f4952a3dbe7a538fea5d338795e3ba48a84ab47c7bcc9a",
+      "return_handle": "handle-14",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity"
+    },
+    {
+      "ordinal": 65,
+      "kind": "call",
+      "method": "geom",
+      "receiver": "handle-14",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-56835cc0-b5ae-4eea-ba59-52737b46402d",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "b0c1ea4b7ff6789f8776b4273b7f7d87c0b15b2fc11e398c194ee997409eef6d",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": "geom1"
+    },
+    {
+      "ordinal": 66,
+      "kind": "call",
+      "method": "dim",
+      "receiver": "handle-14",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-c6a049f7-3e78-4094-8241-b3c25eb0d450",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": 1
+    },
+    {
+      "ordinal": 67,
+      "kind": "call",
+      "method": "entities",
+      "receiver": "handle-14",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-2c20f41b-cca4-4c8e-bd6a-4f435560188f",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "cfc87d00440d503b95b27223bdd7c42be2f142aba4da12e534f051c68b843b13",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": [
+        1,
+        3,
+        5
+      ]
+    },
+    {
+      "ordinal": 68,
+      "kind": "call",
+      "method": "tags",
+      "receiver": "handle-3",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-31b5ad11-7842-447d-a8bc-dc4db06b4184",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": []
+    },
+    {
+      "ordinal": 69,
+      "kind": "call",
+      "method": "create",
+      "receiver": "handle-3",
+      "args_hash": "7822fce485405ab95bb42440496a1417ed92bd150a46f11b796f7ae7228b5b64",
+      "args": [
+        "cmssp1",
+        "Interp"
+      ],
+      "request_id": "wrk-b9449410-b968-4e74-b64d-449d1d20f87b",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "63fb73e1f3f5c9318b9416dd6b9466df117dc64b451b046e0c56e8a71746021a",
+      "return_handle": "handle-15",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity"
+    },
+    {
+      "ordinal": 70,
+      "kind": "call",
+      "method": "getType",
+      "receiver": "handle-15",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-e3789e35-c6c3-4c2a-b0b5-e5ace3ad8fd9",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "4a734ad013e9f6e2e6d1dfb00801d70e2e3b71f6520e258bd29524a233d906b6",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": "Interp"
+    },
+    {
+      "ordinal": 71,
+      "kind": "call",
+      "method": "tag",
+      "receiver": "handle-15",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-6b47ce86-872d-43cd-97af-f071316dad18",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "11c9fc483c04c255283e9a6f97b65ac71c0eaef67b8d1bd855505b66e8db5986",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": "cmssp1"
+    },
+    {
+      "ordinal": 72,
+      "kind": "call",
+      "method": "set",
+      "receiver": "handle-15",
+      "args_hash": "3bd318cd79bf621c5a825412eb23c00615dffa0834e46898d57314e52b683a17",
+      "args": [
+        "data",
+        "dset1"
+      ],
+      "request_id": "wrk-19efa391-753f-4363-9783-7e4d8bac004f",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 73,
+      "kind": "call",
+      "method": "getString",
+      "receiver": "handle-15",
+      "args_hash": "0bb0bfa71b01a0396ab1f7058d434012dd3c3a672d8e923cb8de5c7cea9c2393",
+      "args": [
+        "data"
+      ],
+      "request_id": "wrk-cb6af737-f77f-45eb-b1e6-21f0237d2da6",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "411f48fdcadd66af195128e23bea90eb84123297686598c44d30714aca0ce0f0",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 74,
+      "kind": "call",
+      "method": "selection",
+      "receiver": "handle-15",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-b6b8acd9-aabe-45c3-a46f-f876010d59a7",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "720adf9f7475770545f29eb52abb72a1d5c6537826467f905eb8ff54f586e9a6",
+      "return_handle": "handle-16",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity"
+    },
+    {
+      "ordinal": 75,
+      "kind": "call",
+      "method": "geom",
+      "receiver": "handle-16",
+      "args_hash": "38a88c97c293cff6661c31a55518eea65156665996daaca9ef5754bb30696ce4",
+      "args": [
+        "geom1",
+        1
+      ],
+      "request_id": "wrk-9dd2f264-8081-4198-a607-a4c33588353d",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "720adf9f7475770545f29eb52abb72a1d5c6537826467f905eb8ff54f586e9a6",
+      "return_handle": "handle-16",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity",
+      "value": {
+        "$worker_handle": "handle-16",
+        "generation": 1,
+        "java_type": "com.comsol.model.FixtureSDKEntity"
+      }
+    },
+    {
+      "ordinal": 76,
+      "kind": "call",
+      "method": "named",
+      "receiver": "handle-16",
+      "args_hash": "4555e2f7d3c44eff79b3e3f2c9edc1f8e01b9af9756c52ed65400a7610e926ea",
+      "args": [
+        "selInputPort"
+      ],
+      "request_id": "wrk-684855c9-a9ee-4cac-81bc-ce092067dd11",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "720adf9f7475770545f29eb52abb72a1d5c6537826467f905eb8ff54f586e9a6",
+      "return_handle": "handle-16",
+      "return_generation": 1,
+      "return_java_type": "com.comsol.model.FixtureSDKEntity",
+      "value": {
+        "$worker_handle": "handle-16",
+        "generation": 1,
+        "java_type": "com.comsol.model.FixtureSDKEntity"
+      }
+    },
+    {
+      "ordinal": 77,
+      "kind": "call",
+      "method": "geom",
+      "receiver": "handle-16",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-c3222a51-eabe-43d8-8d5d-effdd9a05b19",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "b0c1ea4b7ff6789f8776b4273b7f7d87c0b15b2fc11e398c194ee997409eef6d",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": "geom1"
+    },
+    {
+      "ordinal": 78,
+      "kind": "call",
+      "method": "dim",
+      "receiver": "handle-16",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-4ec40d18-586b-4bb6-be01-ab294ce72a31",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": 1
+    },
+    {
+      "ordinal": 79,
+      "kind": "call",
+      "method": "named",
+      "receiver": "handle-16",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-e7494f91-ace6-40ac-9102-6e2174d44382",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "e332e5487ba1af2efd9c67ed4f69b7a5c32e9d751cdbb6c37601580a17e046a3",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": "selInputPort"
+    },
+    {
+      "ordinal": 80,
+      "kind": "call",
+      "method": "entities",
+      "receiver": "handle-16",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-7e6f26ae-39d4-4b5c-b83f-c917be06ab50",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "cfc87d00440d503b95b27223bdd7c42be2f142aba4da12e534f051c68b843b13",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": [
+        1,
+        3,
+        5
+      ]
+    },
+    {
+      "ordinal": 81,
+      "kind": "call",
+      "method": "isInheriting",
+      "receiver": "handle-16",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-7e22548e-03f6-4103-b5c1-92687f1d6925",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": false
+    },
+    {
+      "ordinal": 82,
+      "kind": "call",
+      "method": "set",
+      "receiver": "handle-15",
+      "args_hash": "a77805bce92608ac699904fb2953fdf03c23129fd47d55f3270e24c5415b2180",
+      "args": [
+        "expr",
+        [
+          "freq"
+        ]
+      ],
+      "request_id": "wrk-31d1b459-3516-41d1-ad6d-2d233f037036",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 83,
+      "kind": "call",
+      "method": "setIndex",
+      "receiver": "handle-15",
+      "args_hash": "f1e813607ec9ddce0a795841d700f99fbec50ed7da09637ff172d1debf6538c1",
+      "args": [
+        "unit",
+        "Hz",
+        0
+      ],
+      "request_id": "wrk-aed7f610-b54b-4fa8-ac1b-e099e220dcf1",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 84,
+      "kind": "call",
+      "method": "setInterpolationCoordinates",
+      "receiver": "handle-15",
+      "args_hash": "f28b2e5e612ccec74125e863e0188e1e9890342b72625cd3fb27269be403f308",
+      "args": null,
+      "request_id": "wrk-ad54e1d0-8c61-4572-ab06-6ef9495e0e1e",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 85,
+      "kind": "call",
+      "method": "getStringArray",
+      "receiver": "handle-15",
+      "args_hash": "7c8a2807d0eb24fc8df8e1f4c3552d7b18f23b38ebd041db55d807570e7d827b",
+      "args": [
+        "expr"
+      ],
+      "request_id": "wrk-6e6a3b57-eab3-4ff6-8866-bab5c9509d92",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "d2dadddb933386ac20b23b8914f8ed22e6d4d7ab8449e3c436e32a5506d80b63",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 86,
+      "kind": "call",
+      "method": "getStringArray",
+      "receiver": "handle-15",
+      "args_hash": "16cb0effb37da940f7ff3ad0118f04a9e5a2fcc03b5f8af46bc97fb794ccd18e",
+      "args": [
+        "unit"
+      ],
+      "request_id": "wrk-49b2c773-7210-4bf5-b30f-426ff0869c7a",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "5a4b18ace256689cb35c0bb71cb2e037e5e89a25a636b1cc77fc2b0d0374edaa",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 87,
+      "kind": "call",
+      "method": "run",
+      "receiver": "handle-15",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-5fba546b-01cc-48f0-9060-fd6e0a02e742",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 88,
+      "kind": "call",
+      "method": "isComplex",
+      "receiver": "handle-15",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-e02307a4-8a20-4347-ae50-c2c9886ae7aa",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 89,
+      "kind": "call",
+      "method": "isComplex",
+      "receiver": "handle-15",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-179ed53f-ca57-4169-9a07-71006ee0b797",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 90,
+      "kind": "call",
+      "method": "getData",
+      "receiver": "handle-15",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-0da92556-5427-407d-84d7-910de453f14f",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "083240bbe6ffe1b5ca06e1aef677ec744af7a29dfb21f247921192c350f3fc0f",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 91,
+      "kind": "call",
+      "method": "getStringArray",
+      "receiver": "handle-15",
+      "args_hash": "7c8a2807d0eb24fc8df8e1f4c3552d7b18f23b38ebd041db55d807570e7d827b",
+      "args": [
+        "expr"
+      ],
+      "request_id": "wrk-c64b6c48-ac09-4869-aa11-bedf4bcb5326",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "d2dadddb933386ac20b23b8914f8ed22e6d4d7ab8449e3c436e32a5506d80b63",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 92,
+      "kind": "call",
+      "method": "getStringArray",
+      "receiver": "handle-15",
+      "args_hash": "16cb0effb37da940f7ff3ad0118f04a9e5a2fcc03b5f8af46bc97fb794ccd18e",
+      "args": [
+        "unit"
+      ],
+      "request_id": "wrk-6c39711f-a180-4c17-9162-2458d45fff65",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "5a4b18ace256689cb35c0bb71cb2e037e5e89a25a636b1cc77fc2b0d0374edaa",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 93,
+      "kind": "call",
+      "method": "geom",
+      "receiver": "handle-16",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-bfa1ee8a-d131-4daa-b359-145daf6c4e14",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "b0c1ea4b7ff6789f8776b4273b7f7d87c0b15b2fc11e398c194ee997409eef6d",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": "geom1"
+    },
+    {
+      "ordinal": 94,
+      "kind": "call",
+      "method": "dim",
+      "receiver": "handle-16",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-cb7ae698-ef81-4434-87c6-67ca1623c3a7",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": 1
+    },
+    {
+      "ordinal": 95,
+      "kind": "call",
+      "method": "named",
+      "receiver": "handle-16",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-9e87b222-cf7a-4041-9650-9c4e2ecc41a8",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "e332e5487ba1af2efd9c67ed4f69b7a5c32e9d751cdbb6c37601580a17e046a3",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": "selInputPort"
+    },
+    {
+      "ordinal": 96,
+      "kind": "call",
+      "method": "entities",
+      "receiver": "handle-16",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-f5b06965-5e9a-41c5-a192-f1680b014308",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "cfc87d00440d503b95b27223bdd7c42be2f142aba4da12e534f051c68b843b13",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": [
+        1,
+        3,
+        5
+      ]
+    },
+    {
+      "ordinal": 97,
+      "kind": "call",
+      "method": "isInheriting",
+      "receiver": "handle-16",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-ce2f412e-5a22-46a9-b313-3861156acd0e",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": false
+    },
+    {
+      "ordinal": 98,
+      "kind": "call",
+      "method": "getCoordinates",
+      "receiver": "handle-15",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-1a0f11c3-379c-45e7-9d7b-ee64187a4e36",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "720931621229fddecf6ba46b7aefc584d2f254cba4405122a36d5acdc428c010",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 99,
+      "kind": "call",
+      "method": "remove",
+      "receiver": "handle-3",
+      "args_hash": "475f0b72ccc0cd8d5f3f8f391775190a512fc6b13f14fedf4445e456aee67ac9",
+      "args": [
+        "cmssp1"
+      ],
+      "request_id": "wrk-4db6bbfd-5ff6-4156-b8d4-cb5e2881b8be",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null
+    },
+    {
+      "ordinal": 100,
+      "kind": "call",
+      "method": "tags",
+      "receiver": "handle-3",
+      "args_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "args": [],
+      "request_id": "wrk-0e57a0b5-fe7d-4f57-bd62-a05b18589b89",
+      "tag": null,
+      "generation": 1,
+      "done": true,
+      "supplemental": false,
+      "handled_failure": false,
+      "ok": true,
+      "status": "SUCCEEDED",
+      "failure_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "failure": null,
+      "dangerous_reply": false,
+      "result_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "return_handle": null,
+      "return_generation": null,
+      "return_java_type": null,
+      "value": []
+    }
+  ],
+  "private_consume": true,
+  "scope_invalid": false,
+  "selection_records": {
+    "before_numeric_read": {
+      "stage": "before_numeric_read",
+      "component": "comp1",
+      "geometry": "geom1",
+      "entity_dimension": 1,
+      "kind": "named",
+      "tag": "selInputPort",
+      "entities": [
+        1,
+        3,
+        5
+      ],
+      "resolver_source": "component_named_selection",
+      "native_selection_readback": {
+        "geometry": "geom1",
+        "dimension": 1,
+        "named": "selInputPort",
+        "entities": [
+          1,
+          3,
+          5
+        ],
+        "is_inheriting": false
+      }
+    },
+    "after_numeric_read": {
+      "stage": "after_numeric_read",
+      "component": "comp1",
+      "geometry": "geom1",
+      "entity_dimension": 1,
+      "kind": "named",
+      "tag": "selInputPort",
+      "entities": [
+        1,
+        3,
+        5
+      ],
+      "resolver_source": "component_named_selection",
+      "native_selection_readback": {
+        "geometry": "geom1",
+        "dimension": 1,
+        "named": "selInputPort",
+        "entities": [
+          1,
+          3,
+          5
+        ],
+        "is_inheriting": false
+      }
+    }
+  }
+}

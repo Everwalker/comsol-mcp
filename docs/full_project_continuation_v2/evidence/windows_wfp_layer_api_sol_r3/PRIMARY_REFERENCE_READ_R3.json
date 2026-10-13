@@ -1,0 +1,21 @@
+{
+  "schema": "comsol-mcp.windows-wfp-primary-reference-read/3",
+  "date_utc": "2026-10-12",
+  "references": [
+    {"url": "https://learn.microsoft.com/en-us/windows/win32/api/fwptypes/ne-fwptypes-fwp_data_type", "read": true, "finding": "C enum assigns FWP_SINGLE_DATA_TYPE_MAX 255; subsequent V4_ADDR_MASK, V6_ADDR_MASK, RANGE_TYPE are 256,257,258. Current source incorrectly uses 19,20,21."},
+    {"url": "https://learn.microsoft.com/en-us/windows/win32/api/fwpmtypes/ns-fwpmtypes-fwpm_layer0", "read": true, "finding": "Layer schema includes layer GUID, displayData, flags, numFields, field pointer, default sublayer GUID, layerId."},
+    {"url": "https://learn.microsoft.com/en-us/windows/win32/api/fwpmtypes/ns-fwpmtypes-fwpm_field0", "read": true, "finding": "Field schema carries GUID pointer, field interpretation enum, and FWP data type."},
+    {"url": "https://learn.microsoft.com/en-us/windows/win32/api/fwpmtypes/ne-fwpmtypes-fwpm_field_type", "read": true, "finding": "Closed supported field interpretation values are raw=0, IP-address=1, flags=2; max sentinel is not an observed type."},
+    {"url": "https://learn.microsoft.com/en-us/windows/win32/api/fwpmu/nf-fwpmu-fwpmlayercreateenumhandle0", "read": true, "finding": "NULL enumTemplate asks for all layers; explicit transaction is needed for current results. Only objects with READ permission are returned, so enumeration alone does not establish universal visibility."},
+    {"url": "https://learn.microsoft.com/en-us/windows/win32/api/fwpmu/nf-fwpmu-fwpmlayerenum0", "read": true, "finding": "Layer enum yields bounded pages of allocated FWPM_LAYER0 pointer results."},
+    {"url": "https://learn.microsoft.com/en-us/windows/win32/api/fwpmu/nf-fwpmu-fwpmlayerdestroyenumhandle0", "read": true, "finding": "Layer enum handles must be explicitly destroyed."},
+    {"url": "https://learn.microsoft.com/en-us/windows/win32/api/fwpmu/nf-fwpmu-fwpmgetappidfromfilename0", "read": true, "finding": "Documented API derives native App-ID from image filename and returns a FWP_BYTE_BLOB allocation requiring FwpmFreeMemory0."},
+    {"url": "https://learn.microsoft.com/en-us/windows/win32/fwp/filter-arbitration", "read": true, "finding": "Sublayer/filter weights, action-write rights and vetoing callouts affect final WFP action; ownership or permit rule presence is not effective enforcement proof."}
+  ],
+  "preimage_test": "sdk_preimage_failure001.junit.xml",
+  "preimage_result": "FAIL: source constant 19 differs from independent official SDK literal 256",
+  "compatibility_proposal": "Use exact SDK 256/257/258 in native decoder, validator and mutation producer. Reject 19/20/21 as reserved unsupported values; do not silently reinterpret historical evidence or grant native proof.",
+  "root_architecture_decision": "REQUESTED",
+  "native_windows": "NOT_RUN",
+  "os_mutation": "NOT_RUN"
+}

@@ -93,6 +93,99 @@ class ProjectFileStreamPublish(unittest.TestCase):
         self.assertEqual(caught.exception.code, "ACCESS_VIOLATION")
         self.assertEqual(list(self.destination_dir.iterdir()), [])
 
+    def _private_stage(self, payload):
+        from comsol_mcp._host_scoped_provider import verify_private_path_security
+
+        stage_root = Path(self.scratch.name) / "native-private-stage"
+        stage_root.mkdir(mode=0o700, exist_ok=False)
+        if os.name != "nt":
+            stage_root.chmod(0o700)
+        source = stage_root / "model.mph"
+        source.write_bytes(payload)
+        if os.name != "nt":
+            source.chmod(0o600)
+        root_identity = verify_private_path_security(stage_root, directory=True)["identity"]
+        source_identity = verify_private_path_security(source, directory=False)["identity"]
+        return stage_root, source, root_identity, source_identity
+
+    def test_native_private_stage_publishes_through_pinned_artifact_store_source(self):
+        payload = b"synthetic private staged model" * 4096
+        stage_root, source, root_identity, source_identity = self._private_stage(payload)
+        receipt = publish_project_file_no_clobber(
+            self.root, "exports/migrated.mph", source,
+            expected_sha256=hashlib.sha256(payload).hexdigest(), expected_size=len(payload),
+            owned_source_root=stage_root, expected_source_identity=source_identity,
+            expected_source_root_identity=root_identity,
+        )
+        self.assertEqual((self.destination_dir / "migrated.mph").read_bytes(), payload)
+        self.assertEqual(receipt["sha256"], hashlib.sha256(payload).hexdigest())
+        self.assertEqual(receipt["size_bytes"], len(payload))
+        self.assertEqual(receipt["relative_path"], "exports/migrated.mph")
+        self.assertEqual(source.read_bytes(), payload)
+
+    def test_native_private_stage_preserves_foreign_destination_racing_publication(self):
+        import comsol_mcp._artifact_store as artifact_store
+
+        payload = b"staged source bytes"
+        stage_root, source, root_identity, source_identity = self._private_stage(payload)
+        destination = self.destination_dir / "raced.mph"
+        original = artifact_store._publish_project_chunks_no_clobber
+
+        def race_after_path_admission(root, relative, chunks, *, expected_sha256, expected_size):
+            destination.write_bytes(b"foreign winner")
+            return original(root, relative, chunks, expected_sha256=expected_sha256, expected_size=expected_size)
+
+        artifact_store._publish_project_chunks_no_clobber = race_after_path_admission
+        try:
+            with self.assertRaises(Exception) as caught:
+                publish_project_file_no_clobber(
+                    self.root, "exports/raced.mph", source,
+                    expected_sha256=hashlib.sha256(payload).hexdigest(), expected_size=len(payload),
+                    owned_source_root=stage_root, expected_source_identity=source_identity,
+                    expected_source_root_identity=root_identity,
+                )
+        finally:
+            artifact_store._publish_project_chunks_no_clobber = original
+        self.assertIn(getattr(caught.exception, "code", ""), {"DESTINATION_EXISTS", "ACCESS_VIOLATION"})
+        self.assertEqual(destination.read_bytes(), b"foreign winner")
+
+    def test_native_private_stage_replacement_during_stream_is_rejected_before_commit(self):
+        import comsol_mcp._artifact_store as artifact_store
+
+        payload = b"a" * (2 * 1024 * 1024 + 17)
+        stage_root, source, root_identity, source_identity = self._private_stage(payload)
+        destination = self.destination_dir / "source-race.mph"
+        original = artifact_store._publish_project_chunks_no_clobber
+
+        def replace_after_first_chunk(root, relative, chunks, *, expected_sha256, expected_size):
+            iterator = iter(chunks)
+
+            def raced_chunks():
+                yield next(iterator)
+                displaced = source.with_name("model.original")
+                source.replace(displaced)
+                source.write_bytes(b"replacement source")
+                if os.name != "nt":
+                    source.chmod(0o600)
+                yield from iterator
+
+            return original(root, relative, raced_chunks(), expected_sha256=expected_sha256,
+                            expected_size=expected_size)
+
+        artifact_store._publish_project_chunks_no_clobber = replace_after_first_chunk
+        try:
+            with self.assertRaises(Exception) as caught:
+                publish_project_file_no_clobber(
+                    self.root, "exports/source-race.mph", source,
+                    expected_sha256=hashlib.sha256(payload).hexdigest(), expected_size=len(payload),
+                    owned_source_root=stage_root, expected_source_identity=source_identity,
+                    expected_source_root_identity=root_identity,
+                )
+        finally:
+            artifact_store._publish_project_chunks_no_clobber = original
+        self.assertIn(getattr(caught.exception, "code", None), {"AUTHORIZATION_STATE_UNKNOWN", "ARTIFACT_CHANGED"})
+        self.assertFalse(destination.exists())
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

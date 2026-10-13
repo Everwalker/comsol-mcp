@@ -1,0 +1,47 @@
+{
+  "acl_calls": [
+    "acl_get_fd_np(fd, ACL_TYPE_EXTENDED)",
+    "acl_get_entry(acl, ACL_FIRST_ENTRY, &entry)",
+    "acl_free(acl)"
+  ],
+  "mutation_scope": "chmod +a was applied only to a new /private/tmp TemporaryDirectory fixture and removed before cleanup; no existing user/system ACL, owner, or mount configuration was changed",
+  "outcome": "PASS on current macOS host; Windows kernel behavior remains NOT_RUN",
+  "platform": "macOS-27.0-arm64-arm-64bit",
+  "private_tmp_mount": {
+    "filesystem": "apfs",
+    "mount_flags": 76583040,
+    "security_semantics": "posix-owner-mode+filesystem-ownership+no-extended-acl"
+  },
+  "probe_cases": [
+    {
+      "acl_pointer_present": false,
+      "case": "fresh private directory without extended ACL",
+      "errno": 2,
+      "errno_name": "ENOENT",
+      "result": "accepted_no_acl"
+    },
+    {
+      "acl_get_entry_first_result": 0,
+      "acl_pointer_present": true,
+      "case": "fixture-only everyone read ACL",
+      "entry_pointer_present": true,
+      "errno": 0,
+      "result": "detected_extended_acl"
+    }
+  ],
+  "python": "3.12.13 (main, Mar  3 2026, 12:39:30) [Clang 21.0.0 (clang-2100.0.123.102)]",
+  "repository_volume_mount": {
+    "filesystem": "apfs",
+    "ignore_ownership_flag_set": true,
+    "mount_flags": 77632024
+  },
+  "schema": "comsol-mcp.host-scoped-provider-darwin-acl-probe/1",
+  "sdk_constants": {
+    "ACL_TYPE_EXTENDED": "0x00000100 from local sys/acl.h",
+    "MNT_IGNORE_OWNERSHIP": "0x00200000 from local sys/mount.h"
+  },
+  "sdk_headers": {
+    "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/acl.h": "9511f84f0abe1e108e10979900d4fea8567534aef78f0984f7050c49f6c29ff7",
+    "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/mount.h": "45872741bb916b92bddd2e562d2047b552af1f68269081a0aeb58a3e5a2b8a51"
+  }
+}

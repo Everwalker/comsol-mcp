@@ -1,0 +1,1975 @@
+"""Authoritative G2 action registry and host fallback helpers.
+
+The design catalog remains the source of operation names and schemas.  This
+module loads it once, marks the bounded W08-W12 implementation surface, and
+exposes deterministic list/describe/search/manifest results.  Unknown catalog
+entries stay visible as unavailable metadata; they are never silently exposed
+as executable operations.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+import json
+import os
+from pathlib import Path
+import re
+from typing import Any, Mapping
+
+from ._execution_contract import ExecutionContractError, LEGACY_TOOL_EFFECTS
+
+
+_WORKSPACE_CATALOG_PATH = Path(__file__).resolve().parents[1] / "docs" / "comsol_mcp_design_v1" / "02_ACTION_CATALOG.json"
+_PACKAGE_CATALOG_PATH = Path(__file__).resolve().parent / "data" / "g2" / "02_ACTION_CATALOG.json"
+
+
+def _select_catalog_path() -> Path:
+    """Select the immutable package copy and verify checkout provenance.
+
+    The wheel must remain usable after the repository checkout is absent, so
+    the package resource is authoritative whenever it exists.  In a checkout,
+    compare it byte-for-byte with the reviewed design source and fail closed
+    if the two copies drift.  The workspace fallback keeps older editable
+    checkouts importable while the package-data migration is being completed.
+    """
+    package_path, workspace_path = _PACKAGE_CATALOG_PATH, _WORKSPACE_CATALOG_PATH
+    if package_path.is_file():
+        if workspace_path.is_file():
+            try:
+                package_bytes = package_path.read_bytes()
+                workspace_bytes = workspace_path.read_bytes()
+            except OSError as exc:
+                raise RuntimeError("action catalog resource could not be read") from exc
+            if package_bytes != workspace_bytes:
+                raise RuntimeError(
+                    "packaged action catalog differs from the reviewed design source: "
+                    f"{package_path} != {workspace_path}"
+                )
+        return package_path
+    if workspace_path.is_file():
+        return workspace_path
+    # Keep the missing-resource error in _catalog_entries(), where the path is
+    # included without attempting to guess another checkout location.
+    return package_path
+
+
+# Installed wheels use this package resource even when a similarly named
+# repository directory happens to be adjacent to site-packages.
+CATALOG_PATH = _select_catalog_path()
+
+# These are the G2 actions with a control-plane implementation in this
+# repository.  The registry deliberately keeps the list narrower than the
+# 272-action design catalog so an unimplemented action cannot be called by
+# accident.  G3 (W13-W16) domain operations live in ``_g3_ops`` and extend
+# this surface through ``is_implemented`` below.
+NODE_ACTIONS = frozenset({"node.create", "node.copy", "node.remove", "node.label_set", "node.active_set", "node.move", "node.selection_get", "node.selection_set"})
+IMPLEMENTED_OPERATIONS = frozenset({
+    "registry.list", "registry.describe", "registry.search", "registry.call", "registry.manifest",
+    "model.adopt", "model.inspect", "job.resume", "artifact.register",
+    "model.compare",
+    "desktop.status",
+    "node.inspect", "node.children", "node.find", "node.property_schema", "node.property_get",
+    "node.property_set", "node.property_index_set", "node.property_entry_set",
+    "node.create", "node.copy", "node.remove", "node.label_set", "node.active_set", "node.move",
+    "node.selection_get", "node.selection_set", "api.describe", "api.invoke", "checkpoint.branch", "api.probe",
+    "code.describe_java", "code.compile_java", "code.execute_java", "code.inspect_run",
+    "checkpoint.create", "checkpoint.list", "checkpoint.inspect", "checkpoint.restore", "checkpoint.diff",
+    "transaction.preview", "transaction.trial", "transaction.apply", "transaction.verify", "transaction.recover",
+    "docs.index", "docs.search", "docs.get", "docs.examples", "docs.error_search",
+})
+
+# These catalog actions are implemented by ControlDaemon's cached operation
+# store.  They deliberately bypass ManagedBackend and the serial engine queue;
+# adding them here advertises that bounded control-plane route without
+# implying that any COMSOL solver capability is available.
+CONTROL_IMPLEMENTED_OPERATIONS = frozenset({
+    "job.list", "job.status", "job.log", "job.result", "job.reconcile",
+    "job.wait", "job.cancel", "job.cleanup",
+    "artifact.list", "artifact.inspect", "artifact.verify", "artifact.preview",
+    "project.create", "project.inspect", "project.contract_set",
+    "project.policy_set", "project.permissions", "project.state_export",
+    "experiment.inspect", "experiment.case_result", "experiment.stage_define", "experiment.stage_run",
+    "solver.log_read",
+    # Durable project-scoped lifecycle snapshots and process-birth fenced
+    # owned Server lifecycle.
+    "session.list", "session.inspect", "session.health", "session.connect",
+    "session.start", "session.disconnect", "session.reconnect", "session.recover", "session.stop",
+})
+
+# The durable coordinator owns admission, authorization, idempotency, and
+# deterministic refusal for these Desktop controls. Their host/native control
+# adapters remain unavailable, so these routes are schema-validatable but are
+# deliberately not advertised as executable catalog capabilities.
+DESKTOP_COORDINATOR_ONLY_OPERATIONS = frozenset({
+    "desktop.bind", "desktop.show_model", "desktop.select_node", "desktop.capture",
+    "desktop.action", "desktop.shell_execute", "desktop.migrate_standalone",
+})
+
+
+def is_implemented(operation_id: str) -> bool:
+    """True when the operation has a control-plane implementation in this build.
+
+    G2 keeps a frozen allow-list; the G3 domain modules register their own
+    executable set in ``_g3_ops``.  The import is lazy so this module stays
+    importable while G2-only deployments exist and to avoid an import cycle
+    (``_g3_ops`` reads the catalog through this module).
+    """
+    if operation_id in IMPLEMENTED_OPERATIONS or operation_id in CONTROL_IMPLEMENTED_OPERATIONS:
+        return True
+    try:
+        from ._g3_ops import IMPLEMENTED_OPERATIONS as g3_implemented
+    except Exception:
+        return False
+    return operation_id in g3_implemented
+
+MCP_ALIASES = {
+    "registry.list": "registry_list",
+    "registry.describe": "registry_describe",
+    "registry.search": "registry_search",
+    "registry.call": "registry_call",
+    "registry.manifest": "registry_manifest",
+}
+
+# The fallback is an explicit compatibility map for the original 51-tool
+# surface.  It is intentionally separate from the 272-action design catalog:
+# hiding a legacy tool from ``tools/list`` must not remove its managed backend
+# route, and a fallback call still enters the ordinary service permission and
+# revision gate.  ``runtime_poc_v64`` remains listed for truthful discovery;
+# the backend may report its existing disabled/unsupported result.
+LEGACY_FALLBACK_NAMES = frozenset({
+    "check_server_port", "commit_current_main_model", "configure_single_main_workflow", "configure_solver",
+    "create_feature", "create_physics", "create_physics_feature", "create_solver_config", "delete_feature",
+    "ensure_component", "ensure_geometry", "ensure_mesh", "evaluate_expressions", "get_core_metrics",
+    "get_parameters", "list_physics", "list_physics_features", "list_solver_config", "list_solver_features",
+    "load_current_main_model", "load_visible_main_model", "manage_variables", "mcp_tool_audit", "model_create",
+    "model_load", "model_tree", "prune_loaded_models", "remove_physics", "remove_physics_feature", "run_feature",
+    "run_study", "run_study_async", "run_study_status", "run_visible_main_iteration", "runtime_poc_v64",
+    "save_main_model_snapshot", "save_model", "server_connect", "server_disconnect", "server_info", "server_start",
+    "set_parameters", "set_physics_selection", "start_visible_main_workflow", "start_visible_main_workflow_async",
+    "unlock_visible_main", "update_feature", "update_physics_feature", "verify_visible_main_session",
+    "visible_main_workflow_status", "workflow_info",
+})
+
+# FastMCP already owns the public legacy argument contract.  Keep one lazy,
+# read-only snapshot of those schemas for the operation fallback instead of
+# maintaining a second hand-written table for 51 functions.  The imports below
+# load function definitions and register them with a disposable FastMCP object;
+# no tool body, COMSOL client, JVM, or engine operation is invoked.
+_LEGACY_SCHEMA_CACHE: dict[str, dict[str, Any]] | None = None
+
+
+def _legacy_input_schemas() -> dict[str, dict[str, Any]]:
+    """Return strict schemas generated by the existing FastMCP registrations."""
+    global _LEGACY_SCHEMA_CACHE
+    if _LEGACY_SCHEMA_CACHE is not None:
+        return _LEGACY_SCHEMA_CACHE
+
+    from mcp.server.fastmcp import FastMCP
+    from . import (
+        _tools_connection, _tools_workflow, _tools_model, _tools_params,
+        _tools_geometry, _tools_snapshot, _tools_physics, _tools_solver,
+        _tools_phase1,
+    )
+
+    probe = FastMCP("comsol-mcp-legacy-schema")
+    for module in (
+        _tools_connection, _tools_workflow, _tools_model, _tools_params,
+        _tools_geometry, _tools_snapshot, _tools_physics, _tools_solver,
+        _tools_phase1,
+    ):
+        module.register(probe)
+
+    tools = getattr(getattr(probe, "_tool_manager", None), "_tools", {})
+    schemas: dict[str, dict[str, Any]] = {}
+    for name in LEGACY_FALLBACK_NAMES:
+        tool = tools.get(name)
+        schema = getattr(tool, "parameters", None)
+        if not isinstance(schema, Mapping):
+            continue
+        # Detach from FastMCP's internal object and close the legacy contract:
+        # the original Python signatures have no **kwargs, so an unknown field
+        # must be rejected before the managed backend or engine is reached.
+        detached = json.loads(json.dumps(dict(schema), ensure_ascii=False))
+        detached.setdefault("type", "object")
+        detached.setdefault("properties", {})
+        detached["additionalProperties"] = False
+        schemas[name] = detached
+
+    missing = sorted(LEGACY_FALLBACK_NAMES - schemas.keys())
+    if missing:
+        raise RuntimeError("legacy FastMCP schema missing for: " + ", ".join(missing))
+    _LEGACY_SCHEMA_CACHE = schemas
+    return schemas
+
+CONTROL_STATUS_TOOL_NAMES = frozenset({
+    "session_health", "model_inspect", "model_adopt",
+    "job_list", "job_status", "job_log", "job_result", "job_wait", "job_cancel", "job_reconcile",
+})
+
+# Profile selection affects only the static MCP publication.  The backend
+# registry and explicit fallback map remain complete in every mode.
+_PROFILE_ALWAYS_TOOLS = frozenset({
+    "registry_list", "registry_describe", "registry_search", "registry_manifest", "registry_call",
+    "operation_describe", "operation_call", "session_health", "model_inspect", "model_adopt",
+    "job_list", "job_status", "job_log", "job_result", "job_wait", "job_cancel", "job_reconcile",
+    "mcp_tool_audit", "server_info", "check_server_port", "desktop_status",
+})
+_PROFILE_DOMAIN_TOOLS = frozenset({
+    "workflow_info", "visible_main_workflow_status", "verify_visible_main_session", "model_tree", "get_parameters",
+    "set_parameters", "evaluate_expressions", "get_core_metrics", "run_study_status", "run_feature", "run_study",
+    "run_study_async", "ensure_component", "ensure_geometry", "ensure_mesh", "create_feature", "update_feature",
+    "delete_feature", "create_physics", "remove_physics", "create_physics_feature", "update_physics_feature",
+    "remove_physics_feature", "set_physics_selection", "list_physics", "list_physics_features", "list_solver_config",
+    "list_solver_features", "create_solver_config", "configure_solver", "manage_variables", "docs_index", "docs_search",
+    "docs_get", "docs_examples", "docs_error_search", "transaction_preview", "transaction_trial", "transaction_apply",
+    "transaction_verify", "transaction_recover", "checkpoint_list", "checkpoint_inspect", "checkpoint_diff",
+    "model_compare", *{operation.replace(".", "_") for operation in NODE_ACTIONS}, "checkpoint_branch", "api_probe",
+})
+_PROFILE_EXPERT_TOOLS = frozenset({
+    "code_describe_java", "code_compile_java", "code_execute_java", "code_inspect_run", "docs_index", "docs_search",
+    "docs_get", "docs_examples", "docs_error_search", "transaction_preview", "transaction_trial", "transaction_apply",
+    "transaction_verify", "transaction_recover", "checkpoint_list", "checkpoint_inspect", "checkpoint_diff",
+    *{operation.replace(".", "_") for operation in NODE_ACTIONS}, "api_describe", "api_invoke", "checkpoint_branch", "api_probe",
+})
+
+
+def current_tool_profile(value: str | None = None) -> str:
+    profile = (value if value is not None else os.environ.get("COMSOL_MCP_TOOL_PROFILE", "full")).strip().lower()
+    if profile not in {"full", "domain", "expert"}:
+        raise ExecutionContractError("INVALID_REQUEST", "COMSOL_MCP_TOOL_PROFILE must be full, domain, or expert")
+    return profile
+
+
+def is_tool_published(name: str, *, profile: str | None = None) -> bool:
+    selected = current_tool_profile(profile)
+    if selected == "full" or name in _PROFILE_ALWAYS_TOOLS:
+        return True
+    return name in (_PROFILE_DOMAIN_TOOLS if selected == "domain" else _PROFILE_EXPERT_TOOLS)
+
+
+def published_tool_names(names: list[str] | tuple[str, ...] | set[str], *, profile: str | None = None) -> list[str]:
+    return [name for name in names if is_tool_published(name, profile=profile)]
+
+
+@dataclass(frozen=True, slots=True)
+class ActionEntry:
+    operation_id: str
+    mcp_tool_name: str
+    domain: str
+    purpose: str
+    effect: str
+    scope: str
+    gate: str
+    implementation_status: str
+    input_schema: Mapping[str, Any]
+    output_contract: str
+    route: str
+    required_tests: tuple[str, ...]
+    notes: str = ""
+
+    def as_dict(self) -> dict[str, Any]:
+        catalog_schema = dict(self.input_schema)
+        effective_schema = _effective_input_schema(catalog_schema, self.operation_id)
+        result = {
+            "operation_id": self.operation_id,
+            "mcp_tool_name": self.mcp_tool_name,
+            "domain": self.domain,
+            "purpose": self.purpose,
+            "effect": self.effect,
+            "scope": self.scope,
+            "gate": self.gate,
+            "implementation_status": "SUPPORTED_UNVERIFIED" if is_implemented(self.operation_id) else self.implementation_status,
+            # ``input_schema`` is the schema clients should actually use on
+            # the production wire.  Keep the design catalog form alongside it
+            # so a reviewer can see the compatibility delta rather than
+            # mistaking a historical ``model_ref: string`` for the live
+            # structured ModelRef envelope.
+            "input_schema": effective_schema,
+            "catalog_input_schema": catalog_schema,
+            "output_schema": json.loads(json.dumps(_ACTION_RESULT_SCHEMA)),
+            "wire_compatibility": json.loads(json.dumps(_WIRE_COMPATIBILITY)),
+            "output_contract": self.output_contract,
+            "route": self.route,
+            "required_tests": list(self.required_tests),
+            "notes": self.notes,
+            "executable": is_implemented(self.operation_id) or self.operation_id in LEGACY_FALLBACK_NAMES,
+        }
+        if self.operation_id in {"parameter.import", "parameter.export"}:
+            result["data_schema"] = _parameter_io_data_schema(self.operation_id)
+            result["runtime_dispatch_contract"] = {
+                "handler": "serial ManagedBackend G3 parameter-table adapter through the existing ExecutionService",
+                "entrypoints": [self.operation_id, self.mcp_tool_name, "registry_call", "operation_call"],
+                "effect": "WRITE" if self.operation_id == "parameter.import" else "FILE_WRITE",
+                "source_artifact": (
+                    "schema-v2 project registration with exact digest/project/root/host/engine scope and parameter_source or parameter_table role"
+                    if self.operation_id == "parameter.import" else None
+                ),
+                "formats": ["json", "csv"],
+                "format_version": "comsol-mcp-parameter-table/1",
+                "csv_null_encoding": "group and unit columns use one JSON scalar; unit null is null and differs from an empty string",
+                "verification": "raw expression and descr text readback; evaluateUnit is checked after the complete import batch; exports require complete stable double-read projection",
+                "atomicity": "export destination is project-scoped, no-clobber, fsync-backed, then registered as a schema-v2 parameter_source",
+                "outcomes": "setter, readback, unit, publication and registration failures retain applied/failed/not_executed and partial or unknown state",
+                "limits": "8 MiB file, 4096 rows, bounded groups and text; no local expression evaluation or unit conversion",
+                "verification_scope": "managed software path only; no COMSOL native success is implied",
+            }
+        if self.operation_id in {"model.dependencies", "model.package", "model.rebuild_target"}:
+            result["data_schema"] = _model_delivery_data_schema(self.operation_id)
+            result["runtime_dispatch_contract"] = {
+                "handler": "single bound-model ManagedBackend callback through the existing ExecutionService/Worker queue",
+                "entrypoints": [self.operation_id, self.mcp_tool_name, "registry_call", "operation_call"],
+                "identity": "outer project/session/ModelRef/request identity plus exact expected_revision; caller private context is ignored",
+                "worker_scope": "typed Model.file().archive() inventory and saveCopy package route; no resource() temporary path",
+                "recipe": ("registered schema-v2 role=model_recipe artifact with strict version/runtime/products/steps; full model-scope READ/WRITE/EVALUATE/COMPUTE admission is prevalidated before dispatch"
+                           if self.operation_id == "model.rebuild_target" else None),
+                "publication": ("actual MPH plus manifest.json, streamed no-clobber project publication, SHA-256 and schema-v2 registration receipt"
+                                if self.operation_id == "model.package" else None),
+                "verification_scope": "software implementation; native COMSOL package/readback/solve acceptance remains separate",
+                "limitations": ["external libraries/services/code are explicitly UNVERIFIED unless separately enumerated",
+                                "file-backed recipe steps without a registered artifact resolver are rejected before engine dispatch"],
+            }
+        if self.operation_id in NODE_ACTIONS | {"api.describe", "api.invoke"}:
+            result["data_schema"] = _unit_a_data_schema(self.operation_id)
+            result["runtime_dispatch_contract"] = {
+                "handler": "serial managed actual public-interface adapter",
+                "entrypoints": [self.operation_id, self.mcp_tool_name, "registry_call", "operation_call"],
+                "effect_resolution": "api.invoke: pure exact overload at project ACL; actual receiver/interface/version before write ticket; caller declaration is assertion only",
+                "verification_scope": "software implementation only; native capability/dependency verification remains separately UNVERIFIED",
+                "limits": ["same-list copy only until cross-parent tag-path native verification", "remove refuses unknown dependency coverage", "selection geometric revision and spatial/object adapters remain unsupported"],
+            }
+        if self.operation_id in {"checkpoint.branch", "api.probe"}:
+            from ._g2_checkpoint_ops import data_schema
+            result["data_schema"] = data_schema(self.operation_id)
+            branch = self.operation_id == "checkpoint.branch"
+            result["runtime_dispatch_contract"] = {
+                "handler": "serial managed owned checkpoint-copy adapter",
+                "entrypoints": [self.operation_id, self.mcp_tool_name, "registry_call", "operation_call"],
+                "scope": "exact checkpoint into persistent independently bound owned branch; source pointer/ref retained"
+                         if branch else "invoke/create_feature only on owned private checkpoint copy; explicit typed source/private readback; no automatic source apply",
+                "permissions": "project_write" if branch else "compute plus server-resolved inner inspect/project_write permission at project ACL and backend",
+                "engine_queue": "one existing serialized engine claim and one existing WRITE ticket"
+                                if branch else "one existing serialized engine claim and one COMPUTE ticket; current source revision captured internally",
+                "revision_policy": "only exact service-owned verified branch proof can preserve source revision"
+                                   if branch else "caller expected_revision forbidden; original COMPUTE ticket revision semantics retained",
+                "lifetime": "owned branch model/file/ref persist; uncertain failures retain owned evidence"
+                            if branch else "temporary actual private ModelRef; exact owned model/file cleanup and ref retirement only after verified removal",
+                "failure_policy": "unresolved load/bind/readback/source/pointer/persistence/cleanup is UNKNOWN with safe_retry=false; no automatic retry",
+                "verification_scope": "software implementation only; real COMSOL checkpoint lifecycle and native semantics remain UNVERIFIED",
+                "limits": ["exact authoritative checkpoint source epoch required; no unrecorded lineage is inferred",
+                           "source observations cover declared snapshot/readback only; full semantic untouched remains unknown"],
+            }
+        if self.operation_id == "checkpoint.diff":
+            from ._g2_checkpoint_diff import data_schema
+            result["data_schema"] = data_schema()
+            result["runtime_dispatch_contract"] = {
+                "handler": "serial managed public typed pure-getter semantic projection",
+                "entrypoints": [self.operation_id, self.mcp_tool_name, "registry_call", "operation_call"],
+                "permissions": "inspect; historical MPH requires existing verified owned-copy isolation",
+                "scope": "default full model; explicit typed subtrees/named properties are scoped comparisons",
+                "selectors": "exact current or authoritative checkpoint ID; SHA/label aliases refused; same selector still read",
+                "engine_queue": "one existing serialized READ claim; no WRITE ticket or source ephemeral mutation",
+                "completeness": "EQUAL/DIFFERENT only with all requested getter coverage, cleanup and source observations complete; otherwise INCOMPLETE/equal=null",
+                "failure_policy": "owned-copy cleanup/source uncertainty is UNKNOWN with safe_retry=false and dirty source guard",
+                "limits": "2000 nodes/20 seconds/5000 getter RPC default; page100 max500; 500MiB observed serialized projection/private input engineering bound; no hard native cancellation",
+                "verification_scope": "software implementation only; real COMSOL checkpoint semantic coverage/native lifecycle remain UNVERIFIED",
+            }
+        if self.operation_id == "model.compare":
+            from ._g2_model_compare import data_schema
+            result["data_schema"] = data_schema()
+            result["runtime_dispatch_contract"] = {
+                "handler": "serial managed public typed pure-getter comparison of two current ModelRefs",
+                "entrypoints": [self.operation_id, self.mcp_tool_name, "registry_call", "operation_call"],
+                "permissions": "inspect on both exact same-project ModelRefs",
+                "other_model_ref": "canonical JSON serialization of a complete ModelRef; tags, paths and hashes are not aliases",
+                "engine_queue": "one existing serialized READ operation context; no WRITE ticket, clone/load/save/remove or temporary model",
+                "scope": "versioned closed model structure/key-property projection, explicit NodePaths/properties and exact named typed getter metrics",
+                "completeness": "EQUAL/DIFFERENT only when both full requested projections, units and repeated readback are complete and stable; otherwise INCOMPLETE/equal=null",
+                "failure_policy": "identity, Worker, revision, counter, handle or requested-value drift yields UNKNOWN and conservatively fences both model revisions",
+                "verification_scope": "bounded software implementation only; complete native API coverage remains UNVERIFIED",
+                "limits": "2000 nodes/20 seconds/5000 getter RPC default; page100 max500; 500MiB observed serialized projection engineering bound; no hard native cancellation",
+            }
+        if self.operation_id in CONTROL_IMPLEMENTED_OPERATIONS:
+            result["runtime_dispatch_contract"] = {
+                "handler": ("ControlDaemon project authority over the durable operation store"
+                             if self.operation_id.startswith("project.") else "ControlDaemon cached operation store"),
+                "entrypoints": [self.operation_id, "registry_call", "operation_call"],
+                "engine_queue": "bypassed; project actions remain usable without a COMSOL connection" if self.operation_id.startswith("project.") else "bypassed",
+                "nested_identity": "model/session/revision/idempotency/request identifiers are not nested action fields and are never copied from the outer execution envelope",
+                "verification_scope": "control-plane software behavior only; no COMSOL solver capability implied",
+            }
+        if self.operation_id == "solver.log_read":
+            result["runtime_dispatch_contract"] = {
+                "handler": "ControlDaemon project-authorized stable OperationStore job-event snapshot",
+                "entrypoints": [self.operation_id, self.mcp_tool_name, "registry_call", "operation_call"],
+                "permissions": "inspect is checked before job or event lookup",
+                "project_binding": "requested project_id must equal the outer execution project; both job and producer operation metadata must bind to it",
+                "engine_queue": "bypassed for reads; managed study.run and mesh.convergence_study persist project-private progress chunks under their exact host job/request/model/revision binding",
+                "paging": "opaque cursor binds the exact project/job, captured event prefix, snapshot count, digest, offset, and page limit",
+                "solver_output_log": "conditional: a typed serialized Worker lifecycle redirects ModelUtil.showProgress(String) to a private per-job file, redirects to stdout and disables progress before readback, then stores at most 1 MiB of SHA-256-verified base64 chunks; the temporary file itself has no API-enforced size quota while the solve runs; trusted Java recipes remain NOT_CAPTURED because they may change the process-global sink",
+                "exception_chain": "structured Worker throwable causes are retained when returned; otherwise only the exact failed Worker reply summary is reported, never inferred from stderr",
+                "verification_scope": "bounded software producer/store binding and chunk integrity; useful output and COMSOL behavior still require a native solver run",
+            }
+            result["data_schema"] = {
+                "type": "object",
+                "required": ["job_id", "project_id", "events", "event_count", "next_cursor", "snapshot",
+                             "solver_output_log", "exception_chain"],
+                "properties": {
+                    "job_id": {"type": "string"}, "project_id": {"type": "string"},
+                    "job_status": {"type": ["string", "null"]},
+                    "events": {"type": "array", "items": {"type": "object"}},
+                    "event_count": {"type": "integer", "minimum": 0},
+                    "next_cursor": {"type": ["string", "null"]},
+                    "snapshot": {"type": "object"},
+                    "solver_output_log": {"type": "object"},
+                    "exception_chain": {"type": "object"},
+                },
+                "additionalProperties": False,
+            }
+        if self.operation_id in {"artifact.list", "artifact.inspect", "artifact.verify", "artifact.preview"}:
+            result["data_schema"] = (
+                _artifact_verify_data_schema() if self.operation_id == "artifact.verify"
+                else _artifact_read_data_schema(self.operation_id)
+            )
+            result["runtime_dispatch_contract"] = {
+                "handler": (
+                    "ControlDaemon ProjectAuthority plus project-scoped OperationStore and bounded registered-bundle verifier"
+                    if self.operation_id == "artifact.verify" else
+                    "ControlDaemon ProjectAuthority plus project-scoped OperationStore and registered-artifact resolver"
+                ),
+                "entrypoints": [self.operation_id, self.mcp_tool_name, "registry_call", "operation_call"],
+                "permissions": "inspect checked before artifact metadata lookup",
+                "project_binding": "exact persisted project_id/workspace/root and local host/configured loopback engine identity",
+                "engine_queue": "bypassed; no Worker lookup or COMSOL request",
+                "store_effects": "request path is read-only; additive scope indexes are created at OperationStore initialization",
+                "artifact.list": "bounded indexed keyset page; filters limited to role/classification; listed files remain NOT_CHECKED",
+                "artifact.inspect": "schema-v2 registration only; verifies registered bytes, size, pinned file identity and symlink-free path",
+                "artifact.verify": "bounded read-only ZIP/wheel parsing of declared package content through the existing host-only registration route; no extraction, payload imports, subprocess, Worker or native runtime",
+                "limits": "resource ceilings are explicit; unsupported formats/marker semantics or budget hits cannot produce VERIFIED_DECLARED_PACKAGE_CONTENT",
+                "verification_scope": "declared software package content only; producer trust and native compatibility remain unverified/not run",
+            }
+            if self.operation_id == "artifact.preview":
+                result["runtime_dispatch_contract"] = {
+                    "handler": "ControlDaemon ProjectAuthority, scoped schema-v2 OperationStore lookup, one pinned local file descriptor, and stdlib PNG/CSV/JSON preview codec",
+                    "entrypoints": ["artifact.preview", "artifact_preview", "registry_call", "operation_call"],
+                    "permissions": "inspect is checked before scoped artifact metadata lookup and file access",
+                    "project_binding": "exact persisted project_id/workspace/root, local host, and configured loopback engine identity",
+                    "engine_queue": "bypassed; no Worker/JVM request, native call, subprocess, or network access",
+                    "store_effects": "read-only request; registration metadata, source bytes, and OperationStore rows are not modified",
+                    "formats": "content-validated non-interlaced 8-bit PNG and strict UTF-8 comma CSV or JSON scalar tables; HTML/SVG/XML and other formats are unsupported",
+                    "sampling": "nearest source-pixel center for images; deterministic first or endpoint-inclusive uniform rows and first columns for data; exact zero-based selected indices are returned",
+                    "limits": "source 16 MiB; PNG side 8192, 16M pixels and 64 MiB expanded bytes; JSON depth 64 and 250000 nodes; data 100000 rows, 4096 columns and 250000 cells; preview JSON 2 MiB; options image sides 1-1024, data rows 1-500 and columns 1-128",
+                    "provenance": "source SHA-256 and schema-v2 identity are checked on one pinned descriptor before and after full content parsing; absolute host paths are omitted",
+                    "typed_failures": ["INVALID_REQUEST", "PERMISSION_DENIED", "ARTIFACT_NOT_FOUND", "ARTIFACT_READ_FAILED", "ACCESS_VIOLATION", "ARTIFACT_SCOPE_MISMATCH", "ARTIFACT_IDENTITY_MISMATCH", "ARTIFACT_HASH_MISMATCH", "ARTIFACT_CHANGED", "ARTIFACT_FORMAT_INVALID", "ARTIFACT_FORMAT_MISMATCH", "UNSUPPORTED_FORMAT", "INCOMPLETE"],
+                    "verification_scope": "bounded software control-plane behavior only; no package completeness, native compatibility, or scientific acceptance is implied",
+                }
+        if self.operation_id in {"experiment.inspect", "experiment.case_result"}:
+            result["runtime_dispatch_contract"] = {
+                "handler": "ControlDaemon project-authorized W21 OperationStore snapshot",
+                "entrypoints": [self.operation_id, "registry_call", "operation_call"],
+                "project_scope": "project_id is required in the action body; producer operation metadata proves legacy records that omitted project_id",
+                "engine_queue": "bypassed; no Worker RPC or current ModelRef is required",
+                "snapshot": "design, run, case and producer operation/job metadata are read from one SQLite snapshot",
+                "case_identity": "case_id is matched exactly; case_ordinal is returned as observation metadata and is not an input alias",
+                "best_feasible": "only frozen objective/constraint contracts and hash-verified metric evaluations are ranked; FOUND covers verified completed feasible cases and does not assert global optimality",
+                "verification_scope": "durable software records only; model results remain subject to their recorded run status and provenance",
+            }
+            if self.operation_id == "experiment.inspect":
+                result["data_schema"] = {
+                    "type": "object",
+                    "required": ["project_id", "experiment_id", "status", "design_status", "design", "run", "cases", "best_feasible"],
+                    "properties": {
+                        "project_id": {"type": "string"},
+                        "experiment_id": {"type": "string"},
+                        "status": {"type": "string", "enum": ["DESIGNED", "QUEUED", "RUNNING", "UNKNOWN", "COMPLETE", "PARTIAL", "FAILED", "CANCELLED", "EXPIRED", "LOST"]},
+                        "design_status": {"type": "string"},
+                        "design": {"type": "object"},
+                        "run": {"type": "object"},
+                        "cases": {"type": "array", "items": {
+                            "type": "object",
+                            "required": ["case_id", "case_ordinal", "status", "parameters", "record_source",
+                                         "failure_reason", "cache", "case_model_artifact"],
+                            "properties": {
+                                "case_id": {"type": "string"},
+                                "case_ordinal": {"type": ["integer", "null"]},
+                                "status": {"type": "string"},
+                                "parameters": {"type": ["object", "null"]},
+                                "record_source": {"type": ["string", "null"]},
+                                "failure_reason": {"type": "object"},
+                                "cache": {"type": "object"},
+                                "case_model_artifact": {"type": "object"},
+                            },
+                        }},
+                        "best_feasible": {
+                            "type": "object",
+                            "required": ["status", "reason_code", "case_id"],
+                            "properties": {
+                                "status": {"type": "string", "enum": ["NOT_DEFINED", "UNVERIFIED", "FOUND", "NONE_FEASIBLE", "UNKNOWN"]},
+                                "reason_code": {"type": "string"},
+                                "case_id": {"type": ["string", "null"]},
+                                "objective": {"type": "object"},
+                                "constraints": {"type": "array", "items": {"type": "object"}},
+                                "comparison_scope": {"type": "string", "enum": ["verified_completed_cases", "all_planned_terminal_cases"]},
+                                "ranking_complete": {"type": "boolean"},
+                                "tie_break": {"type": "string"},
+                                "counts": {
+                                    "type": "object",
+                                    "required": ["total_cases", "verified_completed_cases", "feasible_cases",
+                                                 "infeasible_cases", "unresolved_cases", "not_run_cases", "failed_cases"],
+                                    "properties": {
+                                        "total_cases": {"type": "integer", "minimum": 0},
+                                        "verified_completed_cases": {"type": "integer", "minimum": 0},
+                                        "feasible_cases": {"type": "integer", "minimum": 0},
+                                        "infeasible_cases": {"type": "integer", "minimum": 0},
+                                        "unresolved_cases": {"type": "integer", "minimum": 0},
+                                        "not_run_cases": {"type": "integer", "minimum": 0},
+                                        "failed_cases": {"type": "integer", "minimum": 0},
+                                    },
+                                    "additionalProperties": False,
+                                },
+                            },
+                            "additionalProperties": False,
+                        },
+                        "result_scope": {"type": "string"},
+                    },
+                    "additionalProperties": False,
+                }
+                result["output_contract"] = (
+                    "ActionResult data: one project-attributed durable design/run snapshot plus exact case_id statuses, "
+                    "failure/cache/model-copy observations, and best-feasible ranking over verified completed cases; "
+                    "RUNNING, UNKNOWN, partial and unrecorded cases remain distinct."
+                )
+            else:
+                result["data_schema"] = {
+                    "type": "object",
+                    "required": ["project_id", "experiment_id", "case_id", "case_ordinal", "status", "run_status", "result", "record_source", "case_model_artifact"],
+                    "properties": {
+                        "project_id": {"type": "string"},
+                        "experiment_id": {"type": "string"},
+                        "case_id": {"type": "string"},
+                        "case_ordinal": {"type": ["integer", "null"]},
+                        "status": {"type": "string"},
+                        "run_status": {"type": "string"},
+                        "result": {"type": ["object", "null"]},
+                        "record_source": {"type": ["string", "null"]},
+                        "case_model_artifact": {"type": "object"},
+                    },
+                    "additionalProperties": False,
+                }
+                result["output_contract"] = (
+                    "ActionResult data: exact case_id result from its hash-checked case artifact or finalized run artifact; "
+                    "case_ordinal is readback only and cannot substitute for case_id."
+                )
+            if self.operation_id.startswith("project."):
+                result["runtime_dispatch_contract"].update({
+                    "workspace": "created below the explicitly configured project root and revalidated on every access",
+                    "permissions": "daemon-start host grant ceiling intersected with current service grants and project policy",
+                    "project_policy": "permissions and scheduler timeout caps only; unsupported resource/data policy fields are refused",
+                    "model_attribution": "explicit outer execution.project_id at model create/adopt; legacy untagged revisions remain UNATTRIBUTED",
+                })
+            if self.operation_id == "job.cleanup":
+                result["runtime_dispatch_contract"].update({
+                    "scope": "explicit job_ids only; every selected job must be terminal and have no linked job dependency",
+                    "project_scope": "when outer execution.project_id is supplied it must match each selected job's recorded project_id",
+                    "purged": "job-row request/cache metadata only",
+                    "preserved": ["operation and idempotency record", "result", "job event audit", "formal artifacts", "checkpoints"],
+                })
+                result["output_contract"] = "ActionResult data: cleaned_job_ids:string[], cleaned_count:integer; a repeated cleanup is an idempotent no-op."
+                result["data_schema"] = {
+                    "type": "object",
+                    "required": ["cleaned_job_ids", "cleaned_count"],
+                    "properties": {
+                        "cleaned_job_ids": {"type": "array", "items": {"type": "string"}},
+                        "cleaned_count": {"type": "integer", "minimum": 0},
+                    },
+                    "additionalProperties": False,
+                }
+        if self.operation_id in {"job.list", "job.log"}:
+            result["runtime_dispatch_contract"]["cursor"] = (
+                "Base-10, zero-based offset encoded as a string; cursor is mutually exclusive with offset"
+                if self.operation_id == "job.list"
+                else "Base-10, zero-based event offset encoded as a string"
+            )
+        if self.operation_id == "job.list":
+            result["runtime_dispatch_contract"]["filter_fields"] = ["status", "project_id"]
+        if self.operation_id == "desktop.status":
+            result["runtime_dispatch_contract"] = {
+                "handler": "ControlDaemon DesktopCoordinator read-only status route",
+                "entrypoints": ["desktop_status", self.operation_id, "registry_call", "operation_call"],
+                "engine_queue": "bypassed",
+                "verification_scope": "platform metadata observer source only; current native window observation remains NOT_RUN; unsupported controls do not mint write handles",
+            }
+        if self.operation_id in {"model.adopt", "model.inspect"}:
+            result["runtime_dispatch_contract"] = {
+                "handler": "ManagedBackend model adapter",
+                "entrypoints": [self.operation_id, "registry_call", "operation_call"],
+                "engine_queue": "serialized_worker_queue",
+                "identity": "session_id and model_ref are supplied only in the outer execution envelope",
+                "model_adopt": ("server_model_tag is adapted exactly to the existing model_tag adoption callback; requires project_write and returns the newly bound ModelRef." if self.operation_id == "model.adopt" else None),
+                "model_inspect": ("returns managed identity/revision, COMSOL model structure, solution tags and Model.FileResourceList tags; external runtime dependencies outside that public inventory remain unverified." if self.operation_id == "model.inspect" else None),
+                "verification_scope": "managed API route; native COMSOL readback evidence is reported separately",
+            }
+            result["runtime_dispatch_contract"] = {
+                key: value for key, value in result["runtime_dispatch_contract"].items()
+                if value is not None
+            }
+        if self.operation_id == "job.resume":
+            result["runtime_dispatch_contract"] = {
+                "handler": "ControlDaemon durable resume claim plus serialized ManagedBackend restore-and-run",
+                "entrypoints": ["job.resume", "registry_call", "operation_call"],
+                "admission": "atomically creates one child study.run job per failed source job and caller idempotency key",
+                "engine_queue": "serialized_worker_queue",
+                "restart_semantics": "load the SHA-bound pre-run Model snapshot into a fresh server tag and execute study.run again from its beginning; this is not solver-internal iteration continuation",
+                "allowlist": ["study.run with recovery_policy.mode=restart_from_checkpoint", "no pre-existing solution tags", "no Model.FileResourceList dependencies"],
+                "source_state": "source must be terminal FAILED with all submitted Worker request IDs observed SUCCEEDED or FAILED; UNKNOWN/RUNNING/unobserved requests are refused",
+                "preserved": ["parent failure result and audit", "formal checkpoint", "parent-child link", "single-use claim"],
+                "verification_scope": "software route; COMSOL solution/snapshot readback remains a separate native evidence gate",
+            }
+        if self.operation_id == "result.mode_overlap":
+            from ._w23_results import NATIVE_RESULT_SCHEMA
+            result["runtime_dispatch_contract"] = {
+                "handler": "managed W23 native numerical integration adapter",
+                "entrypoints": [self.operation_id, "registry_call", "operation_call"],
+                "effect": "catalog EVALUATE; ordinary managed evaluate permission, isolation, revision and callback gates apply",
+                "engine_queue": "serialized_worker_queue",
+                "provenance": "native dataset/solution/mode selectors and named integration surfaces are read back; field values and quadrature are evaluated by COMSOL IntLine/IntSurface features",
+                "caller_arrays": "not accepted by this route; the separate _mode_overlap kernel remains SOFTWARE_ONLY",
+                "verification_scope": "native numerical integration plumbing only; independent quadrature benchmark and full W23 physical/model acceptance remain separate gates",
+            }
+            result["data_schema"] = json.loads(json.dumps(NATIVE_RESULT_SCHEMA))
+            result["output_contract"] = (
+                "ActionResult data: native COMSOL raw signal/mode/overlap/incident integrals and normalized eta_mode; "
+                "integration cleanup and source/surface identity are included, while physical acceptance is not implied."
+            )
+        if self.operation_id == "result.mode_overlap_basis_v2":
+            from ._w23_basis_v2_results import NATIVE_RESULT_SCHEMA
+            result["runtime_dispatch_contract"] = {
+                "handler": "managed W23 full-3D two-mode subspace native integral adapter v2",
+                "entrypoints": [self.operation_id, "registry_call", "operation_call"],
+                "effect": "catalog EVALUATE; ordinary managed project_write permission, isolation, revision and callback gates apply",
+                "engine_queue": "serialized_worker_queue",
+                "identity": "project, complete ModelRef, model revision and mode solution selectors are checked against the active managed execution context before Worker access",
+                "integrals": "eight COMSOL IntSurface reads produce the complex 2x2 Gram matrix, two coupling terms, and signal/incident powers on named port apertures",
+                "caller_arrays": "not accepted; all fields, datasets, solution selectors and named surfaces are native model readbacks",
+                "verification_scope": "native raw-integral route only; independent field quadrature, basis projection acceptance and optical-science acceptance remain separate gates",
+            }
+            result["data_schema"] = json.loads(json.dumps(NATIVE_RESULT_SCHEMA))
+            result["output_contract"] = (
+                "ActionResult data: exact native complex Gram/coupling/power integrals and readbacks; "
+                "no projection, quadrature-comparison, or physical acceptance is implied."
+            )
+        return result
+
+
+_ACTION_RESULT_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "required": ["success", "data"],
+    "properties": {
+        "success": {"type": "boolean"},
+        "data": {"type": "object"},
+        "error": {"type": ["object", "string", "null"]},
+        "execution": {"type": "object"},
+    },
+    "additionalProperties": True,
+}
+
+_WIRE_COMPATIBILITY: dict[str, Any] = {
+    "transport": "MCP structuredContent plus text mirror; isError equals not success",
+    "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+    "execution_fields": ["session_id", "model_ref", "expected_revision", "idempotency_key", "request_id", "rpc_timeout_s", "queue_timeout_s", "execution_timeout_s"],
+    "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+    "result_fields": ["success", "data", "error", "execution"],
+}
+
+
+#: The action vocabulary ``definition.component_manage`` enforces itself (its
+#: own final ``INVALID_REQUEST`` lists exactly these).  The design catalogue
+#: declares ``tag`` in its unconditional ``required`` list, but the operation
+#: addresses a tag only for the actions that *name* one component: ``list``
+#: enumerates ``model.component()`` and the executable adapter refuses a tag for
+#: it ("action 'list' does not accept a tag", Programming Reference
+#: ``model.component()`` / javap ``ComponentList``).  The per-action truth is
+#: published below and enforced by ``_validate_operation_shape`` before
+#: dispatch, so a correct ``{"action": "list"}`` body is not refused for the
+#: argument the operation itself forbids (live evidence:
+#: ``evidence/phase4_1/runs/20260921T001454Z-g3_1-m1c`` W13_T006 -- the driver's
+#: component-list read was answered ``INVALID_REQUEST: missing required
+#: operation arguments: tag``, which blocked the case's prerequisite chain).
+COMPONENT_MANAGE_ACTIONS: tuple[str, ...] = ("create", "inspect", "list", "remove", "copy")
+#: The subset of that vocabulary whose call addresses an existing/new component
+#: by tag and therefore requires one.
+COMPONENT_MANAGE_TAGGED_ACTIONS: tuple[str, ...] = tuple(
+    action for action in COMPONENT_MANAGE_ACTIONS if action != "list"
+)
+
+
+def _unit_a_data_schema(operation: str) -> dict[str, Any]:
+    # Domain output is closed; the enclosing ActionResult keeps its shared wire.
+    fields = {
+        "schema_version": {"const": 1}, "operation": {"const": operation},
+        "status": {"enum": ["OBSERVED", "INCOMPLETE", "UNKNOWN"]}, "complete": {"type": "boolean"},
+        "source_identity": {"type": "object"}, "evidence": {"type": "object"},
+        "coverage": {"type": "array", "items": {"type": "object"}}, "errors": {"type": "array", "items": {"type": "object"}},
+        "isolation_proof": {"type": "object"},
+        "domain_state": {"type": "string"}, "verification_status": {"type": "string"},
+        "execution_state_unknown": {"type": "boolean"}, "partial_change": {"type": "boolean"},
+        "cleanup_failed": {"type": "boolean"}, "dispatch_stage": {"type": "string"},
+        "domain_outcome": {"type": "object"}, "effect": {"type": "string"}, "verified_outcome": {"type": "string"},
+    }
+    strings = {"type_id", "copy_method", "source_tag_path", "requested_label", "resolved_effect", "runtime_version", "capability_registry_sha"}
+    arrays = {"applied", "failed", "not_executed", "order_before", "order_after", "methods", "receiver_interfaces", "public_interfaces"}
+    booleans = {"created"}
+    integers = {"index_dispatched"}
+    allowed = {
+        "node.create": {"created_path", "type_id", "created", "applied", "failed", "not_executed", "readback", "dependency_check", "property_result"},
+        "node.copy": {"source_path", "target_path", "copy_method", "source_tag_path", "readback", "dependency_check"},
+        "node.remove": {"removed_path", "affected", "applied", "failed", "dependency_check", "checkpoint_id"},
+        "node.label_set": {"path", "requested_label", "before", "after"},
+        "node.active_set": {"path", "before", "after", "validity_observation"},
+        "node.move": {"path", "anchor", "order_before", "order_after", "index_dispatched"},
+        "node.selection_get": {"path", "selection_name", "public_interfaces", "selection", "readback"},
+        "node.selection_set": {"path", "selection_name", "public_interfaces", "selection", "readback", "requested", "applied"},
+        "api.describe": {"path", "runtime_version", "methods", "receiver_interfaces", "capability_registry_sha"},
+        "api.invoke": {"path", "capability", "resolved_effect", "typed_return", "readback"},
+    }[operation]
+    for name in allowed:
+        fields[name] = ({"type": "string"} if name in strings else {"type": "array"} if name in arrays
+                        else {"type": "boolean"} if name in booleans else {"type": "integer"} if name in integers else {})
+    if operation == "api.invoke":
+        def typed_return(kind, payload):
+            return {"type": "object", "properties": {"kind": {"const": kind}, **payload},
+                    "required": ["kind", *payload], "additionalProperties": False}
+        fields["typed_return"] = {"oneOf": [
+            typed_return("value", {"java_type": {"type": "string"}, "value": {"$ref": "common.schema.json#/$defs/TypedValue"}}),
+            typed_return("null", {"java_type": {"type": "string"}}),
+            typed_return("void", {}),
+            typed_return("node_ref", {"model_ref": {"type": "object"}, "path": {"$ref": "common.schema.json#/$defs/NodePath"}, "public_interface": {"type": "string"}}),
+        ]}
+    return {"type": "object", "required": ["schema_version", "operation", "status", "complete", "source_identity", "evidence", "coverage", "errors"],
+            "properties": fields, "additionalProperties": False}
+
+
+def _effective_input_schema(catalog_schema: Mapping[str, Any], operation_id: str = "") -> dict[str, Any]:
+    """Make the published schema describe the actual MCP compatibility wire."""
+    if operation_id == "checkpoint.diff":
+        from ._g2_checkpoint_diff import input_schema
+        return input_schema()
+    if operation_id == "model.compare":
+        from ._g2_model_compare import input_schema
+        return input_schema()
+    if operation_id in {"checkpoint.branch", "api.probe"}:
+        from ._g2_checkpoint_ops import input_schema
+        return input_schema(operation_id)
+    if operation_id == "artifact.preview":
+        effective = json.loads(json.dumps(dict(catalog_schema), ensure_ascii=False))
+        properties = effective.get("properties")
+        if isinstance(properties, dict):
+            properties["options"] = _artifact_preview_options_schema()
+            properties["artifact_id"] = {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        return effective
+    if operation_id in {"metric.define", "metric.list", "metric.evaluate", "metric.remove", "metric.compare"}:
+        from ._metric_contract import input_schema
+        return input_schema(operation_id)
+    # The catalog contains JSON-compatible values.  A JSON round trip gives
+    # callers a detached object without mutating the source catalog mapping.
+    effective = json.loads(json.dumps(dict(catalog_schema), ensure_ascii=False))
+    properties = effective.get("properties")
+    if isinstance(properties, dict) and "model_ref" in properties:
+        properties["model_ref"] = {
+            "type": "object",
+            "required": ["schema_version", "session_id", "server_instance_id", "model_tag", "generation"],
+            "properties": {
+                "schema_version": {"type": "integer", "minimum": 1},
+                "session_id": {"type": "string", "minLength": 1},
+                "server_instance_id": {"type": "string", "minLength": 1},
+                "model_tag": {"type": "string", "minLength": 1},
+                "generation": {"type": "integer", "minimum": 1},
+            },
+            "additionalProperties": False,
+            "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
+        }
+    if operation_id == "node.create":
+        properties["properties"]["default"] = []
+    elif operation_id == "node.remove":
+        properties["cascade"]["default"] = False
+    elif operation_id == "node.move":
+        effective["oneOf"] = [{"required": ["before"], "not": {"required": ["after"]}}, {"required": ["after"], "not": {"required": ["before"]}}]
+    elif operation_id == "api.invoke":
+        properties["declared_effect"] = {"type": "string", "enum": ["READ", "WRITE"], "description": "Assertion only; the server determines actual effect from the reviewed exact capability."}
+    if operation_id in {"model.dependencies", "model.rebuild_target"} and isinstance(properties, dict):
+        # Additive managed-wire revision binding. The historical catalog copy
+        # and its 272-action source contract are intentionally unchanged.
+        properties["expected_revision"] = {"type": "integer", "minimum": 0}
+        if operation_id == "model.dependencies":
+            properties["verify_hashes"].setdefault("default", False)
+            effective["required"] = list(dict.fromkeys([*effective.get("required", []), "expected_revision"]))
+    if operation_id == "model.package" and isinstance(properties, dict):
+        properties["include_solution"].setdefault("default", True)
+    if operation_id == "model.rebuild_target" and isinstance(properties, dict):
+        effective["required"] = list(dict.fromkeys([*effective.get("required", []), "expected_revision"]))
+    # The offline index adapter accepts optional provenance selectors when it
+    # writes a source.  Older catalog snapshots omitted them even though the
+    # production control path has always carried these fields.
+    if operation_id == "docs.index" and isinstance(properties, dict):
+        properties.setdefault("version", {"type": "string"})
+        properties.setdefault("product", {"type": "string"})
+    if operation_id in {"model.adopt", "model.inspect"} and isinstance(properties, dict):
+        # These identities are carried by the outer execution envelope on the
+        # managed wire.  The historical design catalogue placed some of them
+        # in the operation body, so publish the actual arguments accepted by
+        # direct and registry fallback calls.
+        for name in ("project_id", "session_id", "model_ref", "idempotency_key", "request_id"):
+            properties.pop(name, None)
+        effective["required"] = [
+            "server_model_tag" if operation_id == "model.adopt" else name
+            for name in effective.get("required", [])
+            if name not in {"project_id", "session_id", "model_ref", "idempotency_key", "request_id"}
+        ]
+        if operation_id == "model.inspect":
+            properties["detail"] = {
+                "type": "string", "enum": ["summary", "structure", "dependencies"],
+                "description": "summary includes identity, structure counts, solutions and dependency scope; structure and dependencies return their corresponding detailed inventory.",
+            }
+    if operation_id == "result.mode_overlap" and isinstance(properties, dict):
+        # Managed identities live in the outer execution envelope. Replace
+        # the catalog's historical unconstrained definition object with the
+        # native source/surface contract consumed by W23.
+        from ._w23_results import NATIVE_DEFINITION_SCHEMA
+        for name in ("project_id", "session_id", "model_ref", "expected_revision", "idempotency_key", "request_id"):
+            properties.pop(name, None)
+        properties["definition"] = json.loads(json.dumps(NATIVE_DEFINITION_SCHEMA))
+        effective["required"] = ["definition"]
+    if operation_id == "result.mode_overlap_basis_v2" and isinstance(properties, dict):
+        from ._w23_basis_v2_results import NATIVE_DEFINITION_SCHEMA
+        for name in ("project_id", "session_id", "model_ref", "expected_revision", "idempotency_key", "request_id"):
+            properties.pop(name, None)
+        properties["definition"] = json.loads(json.dumps(NATIVE_DEFINITION_SCHEMA))
+        effective["required"] = ["definition"]
+    if operation_id == "transaction.preview":
+        # Static planning never enters the engine or requires a bound model.
+        # Identity remains optional context, unlike apply/trial/restore.
+        effective["required"] = [name for name in effective.get("required", [])
+                                 if name not in {"session_id", "model_ref", "expected_revision"}]
+    if operation_id in {"node.children", "node.find"}:
+        # R02 continuation and traversal budgets are additive to the reviewed
+        # catalog schema; the engine adapter validates their exact shape.
+        properties.setdefault("budget", {
+            "type": "object",
+            "properties": {"max_nodes": {"type": "integer"}, "max_seconds": {"type": "number"}, "max_rpc": {"type": "integer"}},
+            "additionalProperties": False,
+            "description": "Traversal budget for the resumable node search; values are validated by the engine adapter.",
+        })
+    if operation_id == "node.find":
+        properties.setdefault("cursor", {"type": "string", "description": "Continuation cursor returned by a truncated search."})
+    if operation_id == "job.list" and isinstance(properties, dict):
+        properties["cursor"] = {
+            "type": "string", "pattern": "^(0|[1-9][0-9]*)$",
+            "description": "Zero-based decimal offset cursor; mutually exclusive with offset.",
+        }
+        properties["filter"] = {
+            "type": "object",
+            "properties": {"status": {"type": "string"}, "project_id": {"type": "string"}},
+            "additionalProperties": False,
+        }
+        effective["allOf"] = [{"not": {"required": ["cursor", "offset"]}}]
+    if operation_id == "job.log" and isinstance(properties, dict):
+        properties["cursor"] = {
+            "type": "string", "pattern": "^(0|[1-9][0-9]*)$",
+            "description": "Zero-based decimal event offset cursor.",
+        }
+    if operation_id == "solver.log_read" and isinstance(properties, dict):
+        properties["cursor"] = {
+            "type": "string", "maxLength": 4096,
+            "description": "Opaque versioned cursor bound to the project, job, and exact captured event prefix.",
+        }
+        properties["limit"] = {"type": "integer", "minimum": 1, "maximum": 1000}
+    if operation_id == "job.cleanup" and isinstance(properties, dict):
+        properties["job_ids"] = {
+            "type": "array", "minItems": 1,
+            "items": {"type": "string", "minLength": 1},
+            "description": "Explicit terminal job identifiers; bulk selection is not supported.",
+        }
+        properties["policy"] = {
+            "type": "object",
+            "properties": {"metadata_only": {"type": "boolean", "const": True}},
+            "additionalProperties": False,
+            "description": "Only the job-row request/cache metadata may be compacted; audit, results and artifacts are retained.",
+        }
+        effective["required"] = list(dict.fromkeys([*effective.get("required", []), "job_ids"]))
+    if operation_id == "job.resume" and isinstance(properties, dict):
+        properties["authorization_ref"] = {
+            "type": "string", "minLength": 1,
+            "description": "Required only when the source model is dirty or its revision advanced after the failed run; records explicit restore authorization.",
+        }
+        # job_id and checkpoint_id are the only nested action arguments.  The
+        # model identity/revision, session, authorization and idempotency key
+        # live in the outer execution contract.
+        for name in ("session_id", "model_ref", "expected_revision", "idempotency_key", "request_id", "project_id"):
+            properties.pop(name, None)
+        effective["required"] = ["job_id"]
+    if operation_id == "study.run" and isinstance(properties, dict):
+        for name in ("project_id", "session_id", "model_ref", "idempotency_key", "request_id"):
+            properties.pop(name, None)
+        effective["required"] = ["study"]
+        properties["recovery_policy"] = {
+            "type": "object",
+            "properties": {"mode": {"type": "string", "enum": ["restart_from_checkpoint"]}},
+            "required": ["mode"],
+            "additionalProperties": False,
+            "description": "Opt in to a pre-run Model save so a terminal FAILED job may be replayed from the start; this does not continue solver iterations.",
+        }
+    if operation_id == "definition.component_manage":
+        # The catalogue's flat ``required`` list names ``tag`` unconditionally;
+        # the operation's own per-action contract does not (see
+        # COMPONENT_MANAGE_ACTIONS).  Publish the conditional rule -- required
+        # for every action that names a component, forbidden for ``list`` -- so
+        # a client reading the schema is told the truth, and enforce it in
+        # ``_validate_operation_shape`` for the calls that reach dispatch.
+        required = effective.get("required")
+        if isinstance(required, list):
+            effective["required"] = [name for name in required if name != "tag"]
+        if isinstance(properties, dict):
+            properties["source_tag"] = {
+                "type": "string", "minLength": 1,
+                "description": "Existing component tag to copy; required only when action is copy.",
+            }
+        effective["allOf"] = [
+            {"if": {"properties": {"action": {"const": "list"}}, "required": ["action"]},
+             "then": {"not": {"required": ["tag"]}},
+             "else": {
+                 "properties": {"action": {"enum": list(COMPONENT_MANAGE_TAGGED_ACTIONS)}},
+                 "required": ["tag"],
+             }},
+            {"if": {"properties": {"action": {"const": "copy"}}, "required": ["action"]},
+             "then": {"required": ["source_tag"]},
+             "else": {"not": {"required": ["source_tag"]}}},
+        ]
+    return effective
+
+
+def _artifact_read_data_schema(operation_id: str) -> dict[str, Any]:
+    type_hint = {
+        "type": "object", "required": ["value", "status"], "additionalProperties": False,
+        "properties": {
+            "value": {"type": ["string", "null"]},
+            "status": {"type": "string", "enum": ["DECLARED", "DECLARED_SUFFIX_ONLY", "NOT_RECORDED"]},
+        },
+    }
+    if operation_id == "artifact.list":
+        item = {
+            "type": "object",
+            "required": ["artifact_id", "sha256", "size_bytes", "role", "classification",
+                         "record_schema_version", "type_hint", "version_status",
+                         "producer_job_status", "verification_status"],
+            "additionalProperties": False,
+            "properties": {
+                "artifact_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                "size_bytes": {"type": "integer", "minimum": 0},
+                "role": {"type": "string"},
+                "classification": {"type": "string"},
+                "record_schema_version": {"type": "integer", "const": 2},
+                "type_hint": type_hint,
+                "version_status": {"type": "string", "enum": ["DECLARED", "NOT_RECORDED"]},
+                "producer_job_status": {"type": "string", "const": "NOT_LOOKED_UP"},
+                "verification_status": {"type": "string", "const": "NOT_CHECKED"},
+            },
+        }
+        return {
+            "type": "object",
+            "required": ["data_schema_version", "project_id", "items", "next_cursor", "has_more", "limit", "verification_scope"],
+            "additionalProperties": False,
+            "properties": {
+                "data_schema_version": {"type": "integer", "const": 1},
+                "project_id": {"type": "string"},
+                "request_id": {"type": "string"},
+                "items": {"type": "array", "items": item},
+                "next_cursor": {"type": ["string", "null"]},
+                "has_more": {"type": "boolean"},
+                "limit": {"type": "integer", "minimum": 1, "maximum": 200},
+                "verification_scope": {"type": "string", "const": "METADATA_ONLY"},
+            },
+        }
+    if operation_id == "artifact.inspect":
+        producer_job = {
+            "type": "object", "required": ["job_id", "status"], "additionalProperties": False,
+            "properties": {
+                "job_id": {"type": ["string", "null"]},
+                "status": {"type": "string", "enum": ["NOT_RECORDED", "UNVERIFIABLE", "UNKNOWN",
+                    "QUEUED", "RUNNING", "SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED", "LOST"]},
+            },
+        }
+        integrity = {
+            "type": "object", "required": ["status", "checks"], "additionalProperties": False,
+            "properties": {
+                "status": {"type": "string", "const": "VERIFIED_CONTENT_AND_PINNED_IDENTITY"},
+                "checks": {"type": "array", "items": {"type": "string"}},
+            },
+        }
+        return {
+            "type": "object",
+            "required": ["data_schema_version", "project_id", "artifact_id", "sha256", "size_bytes",
+                         "relative_path", "role", "classification", "record_schema_version", "type_hint",
+                         "format_version", "format_version_status", "producer_job", "file_integrity", "package_status"],
+            "additionalProperties": False,
+            "properties": {
+                "data_schema_version": {"type": "integer", "const": 1},
+                "project_id": {"type": "string"},
+                "request_id": {"type": "string"},
+                "artifact_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                "size_bytes": {"type": "integer", "minimum": 0},
+                "relative_path": {"type": "string"},
+                "role": {"type": "string"},
+                "classification": {"type": "string"},
+                "record_schema_version": {"type": "integer", "const": 2},
+                "type_hint": type_hint,
+                "format_version": {"type": ["string", "null"]},
+                "format_version_status": {"type": "string", "enum": ["DECLARED", "NOT_RECORDED"]},
+                "producer_job": producer_job,
+                "file_integrity": integrity,
+                "package_status": {"type": "string", "const": "NOT_VERIFIED"},
+            },
+        }
+    if operation_id == "artifact.preview":
+        return _artifact_preview_data_schema()
+    raise ValueError("unsupported artifact read action")
+
+
+def _artifact_verify_data_schema() -> dict[str, Any]:
+    finding = {
+        "type": "object", "required": ["code", "severity", "detail"],
+        "additionalProperties": False,
+        "properties": {
+            "code": {"type": "string", "minLength": 1, "maxLength": 64},
+            "severity": {"type": "string", "enum": ["ERROR", "WARNING"]},
+            "detail": {"type": "string", "maxLength": 240},
+            "member": {"type": "string", "maxLength": 240},
+        },
+    }
+    native_component = {
+        "type": "object", "required": ["name", "version", "linkage", "status"],
+        "additionalProperties": False,
+        "properties": {
+            "name": {"type": "string"},
+            "version": {"type": "string"},
+            "linkage": {"type": "string"},
+            "status": {"type": "string", "const": "DECLARED_CONTENT_BINDING_ONLY"},
+        },
+    }
+    return {
+        "type": "object",
+        "required": [
+            "data_schema_version", "project_id", "artifact_id", "format", "format_schema",
+            "format_verdict", "member_integrity", "dependency_closure", "target_format",
+            "declared_target", "declared_python", "declared_comsol_version",
+            "target_runtime_compatibility", "portability_status", "producer_trust", "native_compatibility",
+            "native_components", "findings", "source_note", "resource_budget_note",
+        ],
+        "additionalProperties": False,
+        "properties": {
+            "data_schema_version": {"type": "integer", "const": 1},
+            "project_id": {"type": "string", "minLength": 1},
+            "request_id": {"type": "string", "minLength": 1},
+            "artifact_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "format": {"type": "string", "minLength": 1},
+            "format_schema": {"type": ["string", "null"]},
+            "format_verdict": {"type": "string", "enum": [
+                "VERIFIED_DECLARED_PACKAGE_CONTENT", "INVALID", "INCOMPLETE", "UNSUPPORTED",
+            ]},
+            "member_integrity": {"type": "string", "enum": ["PASS", "FAIL", "INCOMPLETE"]},
+            "dependency_closure": {"type": "string", "enum": ["PASS_DECLARED_TARGET", "FAIL", "INCOMPLETE"]},
+            "target_format": {"type": "string", "enum": ["PASS_STATIC_TAGS", "FAIL", "INCOMPLETE"]},
+            "declared_target": {"type": ["string", "null"]},
+            "declared_python": {"type": ["string", "null"]},
+            "declared_comsol_version": {"type": ["string", "null"]},
+            "target_runtime_compatibility": {"type": "string", "enum": ["UNVERIFIED", "NOT_APPLICABLE"]},
+            "portability_status": {"type": "string", "enum": ["UNVERIFIED", "NOT_APPLICABLE"]},
+            "producer_trust": {"type": "string", "const": "UNVERIFIED_UNLESS_EXISTING_AUTHORITATIVE_PRODUCER_PROOF"},
+            "native_compatibility": {"type": "string", "const": "NOT_RUN"},
+            "native_components": {"type": "array", "items": native_component},
+            "findings": {"type": "array", "items": finding, "maxItems": 101},
+            "source_note": {"type": "string"},
+            "resource_budget_note": {"type": "string"},
+        },
+    }
+
+def _parameter_io_data_schema(operation_id: str) -> dict[str, Any]:
+    registration = {
+        "type": ["object", "null"],
+        "properties": {
+            "schema_version": {"type": "integer", "const": 2},
+            "role": {"type": "string"},
+            "classification": {"type": "string"},
+            "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "size": {"type": "integer", "minimum": 0},
+            "relative_path": {"type": "string"},
+        },
+        "additionalProperties": False,
+    }
+    properties: dict[str, Any] = {
+        "data_schema_version": {"type": "integer", "const": 1},
+        "operation": {"type": "string", "const": operation_id},
+        "status": {"type": "string", "enum": ["APPLIED", "PARTIAL_FAILURE", "EXECUTION_STATE_UNKNOWN"]},
+        "ok": {"type": "boolean"},
+        "partial_change": {"type": "boolean"},
+        "execution_state_unknown": {"type": "boolean"},
+        "format": {"type": "string", "enum": ["json", "csv"]},
+        "format_version": {"type": "string", "const": "comsol-mcp-parameter-table/1"},
+        "destination": {"type": "string"},
+        "artifact_id": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+        "source_artifact_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "source_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "size_bytes": {"type": "integer", "minimum": 0},
+        "relative_path": {"type": "string"},
+        "source_format": {"type": "string", "enum": ["json", "csv"]},
+        "source_revision": {"type": "integer", "minimum": 0},
+        "source_groups": {"type": "array", "items": {"type": "string"}},
+        "groups": {"type": "array", "items": {"type": "string"}},
+        "group_override": {"type": ["string", "null"]},
+        "row_count": {"type": "integer", "minimum": 0},
+        "artifact_registration": registration,
+        "applied": {"type": "array", "items": {"type": "object"}},
+        "failed": {"type": "array", "items": {"type": "object"}},
+        "not_executed": {"type": "array", "items": {"type": "object"}},
+        "unit_semantics": {"type": "string"},
+        "description_semantics": {"type": "string"},
+        "isolation_proof": {"type": "object"},
+        "domain_state": {"type": "string", "enum": ["succeeded", "failed", "partial", "unknown"]},
+        "verification_status": {"type": "string"},
+        "cleanup_failed": {"type": "boolean"},
+        "dispatch_stage": {"type": "string"},
+        "domain_outcome": {"type": "object"},
+        "effect": {"type": "string"},
+    }
+    required = [
+        "data_schema_version", "operation", "status", "ok", "partial_change",
+        "execution_state_unknown", "source_revision", "row_count", "applied",
+        "failed", "not_executed", "unit_semantics",
+    ]
+    if operation_id == "parameter.import":
+        required.extend(["source_artifact_id", "source_sha256", "source_format", "source_groups", "group_override"])
+    else:
+        required.extend(["format", "format_version", "destination", "artifact_id", "sha256",
+                         "size_bytes", "relative_path", "groups", "artifact_registration",
+                         "description_semantics"])
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": f"https://comsol-mcp.local/schemas/{operation_id.replace('.', '-')}-data/1",
+        "type": "object",
+        "required": required,
+        "properties": properties,
+        "additionalProperties": False,
+    }
+
+
+def _model_delivery_data_schema(operation_id: str) -> dict[str, Any]:
+    """Closed top-level response contracts for the three managed delivery actions."""
+    sha = {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    revision = {"type": "integer", "minimum": 0}
+    model_ref = {
+        "type": "object",
+        "required": ["schema_version", "session_id", "server_instance_id", "model_tag", "generation"],
+        "properties": {
+            "schema_version": {"type": "integer", "minimum": 1},
+            "session_id": {"type": "string", "minLength": 1},
+            "server_instance_id": {"type": "string", "minLength": 1},
+            "model_tag": {"type": "string", "minLength": 1},
+            "generation": {"type": "integer", "minimum": 1},
+        },
+        "additionalProperties": False,
+    }
+    common = {
+        "domain_state": {"type": "string", "enum": ["succeeded", "failed", "partial", "unknown"]},
+        "verification_status": {"type": "string"},
+        "execution_state_unknown": {"type": "boolean"},
+        "partial_change": {"type": "boolean"},
+        "cleanup_failed": {"type": "boolean"},
+        "dispatch_stage": {"type": "string"},
+        "domain_outcome": {"type": "object"},
+        "effect": {"type": "string"},
+        "isolation_proof": {"type": "object"},
+        "verified_outcome": {"type": "string"},
+        "requires_model_reconciliation": {"type": "boolean"},
+    }
+    source_reference = {
+        "type": "object",
+        "required": ["state", "project_relative_path"],
+        "properties": {
+            "state": {"type": "string", "enum": ["VERIFIED", "AUTHORIZED_PROJECT_LOCAL", "MISSING", "UNVERIFIED"]},
+            "project_relative_path": {"type": ["string", "null"]},
+            "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "size_bytes": {"type": "integer", "minimum": 0},
+            "reason": {"type": "string"},
+        },
+        "additionalProperties": False,
+    }
+    function_reference = {
+        "type": "object", "required": ["kind", "tag", "function_type", "authorized_source", "verification"],
+        "properties": {"kind": {"const": "function_data"}, "tag": {"type": ["string", "null"]},
+            "function_type": {"type": "string"}, "authorized_source": source_reference,
+            "verification": {"type": "string"}, "package_path": {"type": "string"}},
+        "additionalProperties": False,
+    }
+    cad_reference = {
+        "type": "object", "required": ["kind", "component", "geometry", "feature", "authorized_source", "verification"],
+        "properties": {"kind": {"const": "cad_geometry"}, "component": {"type": "string"},
+            "geometry": {"type": "string"}, "feature": {"type": "string"},
+            "authorized_source": source_reference, "verification": {"type": "string"},
+            "package_path": {"type": "string"}},
+        "additionalProperties": False,
+    }
+    resolved_dependency = {
+        "type": "object", "required": ["project_relative_path", "package_path", "sha256", "size_bytes"],
+        "properties": {"project_relative_path": {"type": "string"}, "package_path": {"type": "string"},
+            "sha256": sha, "size_bytes": {"type": "integer", "minimum": 0}},
+        "additionalProperties": False,
+    }
+    published_file_identity = {
+        "type": "object", "required": ["device", "inode"],
+        "properties": {"device": {"type": "integer", "minimum": 0},
+            "inode": {"type": "integer", "minimum": 0}},
+        "additionalProperties": False,
+    }
+    registered_file_identity = {
+        "type": "object", "required": ["device", "inode", "size", "mtime_ns"],
+        "properties": {"device": {"type": "integer", "minimum": 0},
+            "inode": {"type": "integer", "minimum": 0}, "size": {"type": "integer", "minimum": 0},
+            "mtime_ns": {"type": "integer", "minimum": 0}},
+        "additionalProperties": False,
+    }
+    registration = {
+        "type": "object",
+        "required": ["schema_version", "artifact_id", "sha256", "path", "size", "file_identity",
+                     "project_id", "project_root_identity", "host_identity", "engine_host_identity",
+                     "role", "classification", "provenance", "reused"],
+        "properties": {
+            "schema_version": {"type": "integer", "const": 2}, "artifact_id": sha, "sha256": sha,
+            "path": {"type": "string"}, "size": {"type": "integer", "minimum": 1},
+            "file_identity": registered_file_identity, "project_id": {"type": "string"},
+            "project_root_identity": sha, "host_identity": sha, "engine_host_identity": sha,
+            "role": {"type": "string", "const": "model_package"},
+            "classification": {"type": "string", "const": "project_local"},
+            "provenance": {"type": "object", "required": ["source_project_relative_path", "request_id",
+                "registering_operation_id", "source_sha256", "source_model_ref", "source_revision", "include_solution"],
+                "properties": {"source_project_relative_path": {"type": "string"}, "request_id": {"type": "string"},
+                    "registering_operation_id": {"type": "string", "const": "model.package"}, "source_sha256": sha,
+                    "source_model_ref": model_ref, "source_revision": revision, "include_solution": {"type": "boolean"}},
+                "additionalProperties": False},
+            "artifact_type": {"type": "string", "const": "application/zip"},
+            "format_version": {"type": "string", "const": "comsol-mcp-model-package/1"},
+            "reused": {"type": "boolean"},
+        },
+        "additionalProperties": False,
+    }
+    publication_receipt = {
+        "type": "object", "required": ["relative_path", "sha256", "size_bytes", "file_identity"],
+        "properties": {"relative_path": {"type": "string"}, "sha256": sha,
+            "size_bytes": {"type": "integer", "minimum": 1}, "file_identity": published_file_identity},
+        "additionalProperties": False,
+    }
+    manifest_resource_verified = {
+        "type": "object", "required": ["resource_tag", "archive_member", "sha256", "size_bytes", "resolution"],
+        "properties": {"resource_tag": {"type": "string"}, "archive_member": {"type": "string"},
+            "sha256": sha, "size_bytes": {"type": "integer", "minimum": 0},
+            "resolution": {"type": "string", "const": "VERIFIED_EMBEDDED_MPH_MEMBER"}},
+        "additionalProperties": False,
+    }
+    manifest_resource_unverified = {
+        "type": "object", "required": ["resource_tag", "state", "archive_members", "reason"],
+        "properties": {"resource_tag": {"type": "string"}, "state": {"type": "string", "const": "UNVERIFIED"},
+            "archive_members": {"type": "array", "items": {"type": "string"}}, "reason": {"type": "string"}},
+        "additionalProperties": False,
+    }
+    manifest_unresolved = {
+        "type": "object", "required": ["kind", "state", "reason"],
+        "properties": {"kind": {"type": "string"}, "state": {"type": "string"}, "reason": {"type": "string"},
+            "tag": {"type": ["string", "null"]}, "resource_tag": {"type": "string"},
+            "component": {"type": ["string", "null"]}, "geometry": {"type": ["string", "null"]},
+            "feature": {"type": ["string", "null"]},
+            "archive_members": {"type": "array", "items": {"type": "string"}}},
+        "additionalProperties": False,
+    }
+    package_manifest = {
+        "type": "object", "required": ["schema", "version", "format_version", "model", "contents",
+            "embedded_dependencies", "resolved_project_dependencies", "file_references", "dependency_coverage",
+            "unresolved_items", "external_code", "external_libraries_services", "portability_status",
+            "absolute_paths_in_manifest", "save_semantics"],
+        "properties": {
+            "schema": {"type": "string", "const": "comsol-mcp-model-package"},
+            "version": {"type": "integer", "const": 1},
+            "format_version": {"type": "string", "const": "comsol-mcp-model-package/1"},
+            "model": {"type": "object", "required": ["model_ref", "source_revision", "comsol_version", "include_solution"],
+                "properties": {"model_ref": model_ref, "source_revision": revision,
+                    "comsol_version": {"type": "string"}, "include_solution": {"type": "boolean"}},
+                "additionalProperties": False},
+            "contents": {"type": "object", "required": ["model.mph"], "properties": {
+                "model.mph": {"type": "object", "required": ["sha256", "size_bytes"],
+                    "properties": {"sha256": sha, "size_bytes": {"type": "integer", "minimum": 1}},
+                    "additionalProperties": False}}, "additionalProperties": False},
+            "embedded_dependencies": {"type": "array", "items": {"oneOf": [manifest_resource_verified, manifest_resource_unverified]}},
+            "resolved_project_dependencies": {"type": "array", "items": resolved_dependency},
+            "file_references": {"type": "array", "items": {"oneOf": [function_reference, cad_reference]}},
+            "dependency_coverage": {"type": "object", "required": ["model_file_resource_api", "functions",
+                "geometry_import_features", "external_code", "external_libraries_services"],
+                "properties": {name: {"type": "string", "enum": ["PASS_SCOPED", "PARTIAL", "UNVERIFIED"]}
+                    for name in ("model_file_resource_api", "functions", "geometry_import_features", "external_code",
+                                 "external_libraries_services")}, "additionalProperties": False},
+            "unresolved_items": {"type": "array", "items": manifest_unresolved},
+            "external_code": {"type": "object", "required": ["status", "reason"],
+                "properties": {"status": {"type": "string", "const": "UNVERIFIED"}, "reason": {"type": "string"}},
+                "additionalProperties": False},
+            "external_libraries_services": {"type": "object", "required": ["status", "reason"],
+                "properties": {"status": {"type": "string", "const": "UNVERIFIED"}, "reason": {"type": "string"}},
+                "additionalProperties": False},
+            "portability_status": {"type": "string", "const": "UNVERIFIED"},
+            "absolute_paths_in_manifest": {"type": "boolean", "const": False},
+            "save_semantics": {"type": "string"},
+        },
+        "additionalProperties": False,
+    }
+    properties: dict[str, Any]
+    required: list[str]
+    if operation_id == "model.dependencies":
+        coverage_value = {"type": "string", "enum": ["PASS_SCOPED", "PARTIAL", "UNVERIFIED"]}
+        properties = {
+            "data_schema_version": {"type": "integer", "const": 1}, "operation": {"const": operation_id},
+            "status": {"type": "string", "const": "INCOMPLETE"}, "verify_hashes": {"type": "boolean"},
+            "model_ref": model_ref, "source_revision": revision, "final_revision": revision,
+            "coverage": {"type": "object", "required": ["model_file_resource_api", "functions", "geometry_import_features", "external_code", "external_libraries_services"],
+                         "properties": {name: coverage_value for name in ("model_file_resource_api", "functions", "geometry_import_features", "external_code", "external_libraries_services")},
+                         "additionalProperties": False},
+            "file_resources": {"type": "array", "items": {"type": "object", "required": ["tag", "archive_members", "archive_status", "embedded_sha256", "embedded_size_bytes", "verification"],
+                "properties": {"tag": {"type": "string"}, "archive_members": {"type": "array", "items": {"type": "string"}},
+                    "archive_status": {"type": "string", "enum": ["ENUMERATED", "UNAVAILABLE"]}, "embedded_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+                    "embedded_size_bytes": {"type": ["integer", "null"], "minimum": 0}, "verification": {"type": "string", "enum": ["UNVERIFIED", "VERIFIED_IN_SAVED_MPH", "UNVERIFIED_ARCHIVE_MEMBER_NOT_FOUND", "UNVERIFIED_MPH_READ_FAILED", "UNVERIFIED_MODEL_MPH_NOT_AUTHORIZED"]}}, "additionalProperties": False}},
+            "file_references": {"type": "array", "items": {"oneOf": [function_reference, cad_reference]}},
+            "unresolved_items": {"type": "array", "items": {"type": "object", "required": ["kind", "state", "reason"],
+                "properties": {"kind": {"type": "string"}, "state": {"type": "string"}, "reason": {"type": "string"},
+                    "tag": {"type": ["string", "null"]}, "component": {"type": ["string", "null"]}, "geometry": {"type": ["string", "null"]},
+                    "feature": {"type": ["string", "null"]}, "resource_tag": {"type": "string"},
+                    "archive_members": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": False}},
+            "inventory_errors": {"type": "array", "items": {"type": "string"}},
+            "scope_note": {"type": "string"}, **common,
+        }
+        required = ["data_schema_version", "operation", "status", "verify_hashes", "model_ref", "source_revision", "final_revision", "coverage", "file_resources", "file_references", "unresolved_items", "inventory_errors", "scope_note"]
+    elif operation_id == "model.package":
+        properties = {
+            "data_schema_version": {"type": "integer", "const": 1}, "operation": {"const": operation_id},
+            "status": {"type": "string", "const": "APPLIED"}, "ok": {"type": "boolean", "const": True},
+            "source_revision": revision, "final_revision": revision, "destination": {"type": "string"},
+            "sha256": sha, "size_bytes": {"type": "integer", "minimum": 1}, "mph_sha256": sha,
+            "mph_size_bytes": {"type": "integer", "minimum": 1}, "include_solution": {"type": "boolean"},
+            "artifact_registration": registration, "publication_receipt": publication_receipt,
+            "resolved_project_dependencies": {"type": "array", "items": resolved_dependency},
+            "manifest": package_manifest, "portability_status": {"type": "string", "const": "UNVERIFIED"},
+            "safe_retry": {"type": "boolean", "const": False}, **common,
+        }
+        required = ["data_schema_version", "operation", "status", "ok", "source_revision", "final_revision", "destination", "sha256", "size_bytes", "mph_sha256", "mph_size_bytes", "include_solution", "resolved_project_dependencies", "artifact_registration", "publication_receipt", "manifest", "portability_status", "safe_retry"]
+    else:
+        properties = {
+            "data_schema_version": {"type": "integer", "const": 1}, "operation": {"const": operation_id},
+            "status": {"type": "string", "enum": ["APPLIED", "EXECUTION_STATE_UNKNOWN"]},
+            "ok": {"type": "boolean"}, "partial_change": {"type": "boolean"},
+            "execution_state_unknown": {"type": "boolean"}, "safe_retry": {"type": "boolean", "const": False},
+            "completed_steps": {"type": "integer", "minimum": 0, "maximum": 128},
+            "attempted_steps": {"type": "integer", "minimum": 1, "maximum": 128},
+            "step_readbacks": {"type": "array", "items": {"type": "object"}},
+            "failed_step": {"type": "object", "required": ["index", "operation_id", "failure_type"],
+                "properties": {"index": {"type": "integer", "minimum": 0, "maximum": 127},
+                    "operation_id": {"type": "string"}, "failure_type": {"type": "string"}},
+                "additionalProperties": False}, "not_executed_steps": {"type": "string"},
+            "source_revision": revision, "final_revision": revision,
+            "runtime": {"type": "object", "required": ["runtime_id", "worker_install_identity", "endpoint", "server_instance_id", "comsol_version", "attachment"],
+                "properties": {"runtime_id": {"type": "string"}, "worker_install_identity": {"type": "string"},
+                    "endpoint": {"type": "string"}, "server_instance_id": {"type": "string"}, "comsol_version": {"type": "string"},
+                    "attachment": {"type": "string", "const": "EXACT_CURRENT_WORKER"}}, "additionalProperties": False},
+            "recipe_artifact": {"type": "object", "required": ["artifact_id", "sha256", "size_bytes"],
+                "properties": {"artifact_id": sha, "sha256": sha, "size_bytes": {"type": "integer", "minimum": 1}, "role": {"type": "string"}}, "additionalProperties": False},
+            "products": {"type": "array", "items": {"type": "object"}}, "model_ref": model_ref, **common,
+        }
+        required = ["data_schema_version", "operation", "status", "ok", "partial_change", "execution_state_unknown", "safe_retry", "completed_steps", "step_readbacks", "source_revision", "final_revision", "runtime", "recipe_artifact", "products", "model_ref"]
+    return {"$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$id": f"https://comsol-mcp.local/schemas/{operation_id.replace('.', '-')}-data/1",
+            "type": "object", "required": required, "properties": properties,
+            "additionalProperties": False}
+
+def _artifact_preview_options_schema() -> dict[str, Any]:
+    image_fields = {"max_width", "max_height"}
+    data_fields = {"max_rows", "max_columns", "row_selection"}
+    properties = {
+        "schema_version": {"type": "integer", "const": 1, "description": "Closed artifact.preview options schema."},
+        "kind": {"type": "string", "enum": ["auto", "image", "data"], "default": "auto"},
+        "max_width": {"type": "integer", "minimum": 1, "maximum": 1024, "default": 512},
+        "max_height": {"type": "integer", "minimum": 1, "maximum": 1024, "default": 512},
+        "max_rows": {"type": "integer", "minimum": 1, "maximum": 500, "default": 100},
+        "max_columns": {"type": "integer", "minimum": 1, "maximum": 128, "default": 32},
+        "row_selection": {"type": "string", "enum": ["first", "uniform"], "default": "first"},
+    }
+    no_data_options = {"not": {"anyOf": [{"required": [name]} for name in sorted(data_fields)]}}
+    no_image_options = {"not": {"anyOf": [{"required": [name]} for name in sorted(image_fields)]}}
+    return {
+        "type": "object",
+        "properties": properties,
+        "additionalProperties": False,
+        "allOf": [
+            {"if": {"properties": {"kind": {"const": "image"}}, "required": ["kind"]}, "then": no_data_options},
+            {"if": {"properties": {"kind": {"const": "data"}}, "required": ["kind"]}, "then": no_image_options},
+        ],
+        "description": "Closed v1 options. Omit options for auto detection and the defaults; unknown keys are refused before artifact metadata access.",
+    }
+
+def _artifact_preview_data_schema() -> dict[str, Any]:
+    provenance = {
+        "type": "object",
+        "required": ["project_id", "artifact_id", "source_sha256", "source_size_bytes",
+                     "registration_schema_version", "project_root_host_engine_scope_verified",
+                     "pinned_descriptor_sha256_verified_before_and_after"],
+        "additionalProperties": False,
+        "properties": {
+            "project_id": {"type": "string"},
+            "artifact_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "source_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "source_size_bytes": {"type": "integer", "minimum": 0, "maximum": 16777216},
+            "registration_schema_version": {"type": "integer", "const": 2},
+            "project_root_host_engine_scope_verified": {"type": "boolean", "const": True},
+            "pinned_descriptor_sha256_verified_before_and_after": {"type": "boolean", "const": True},
+        },
+    }
+    common = {
+        "preview_schema_version": {"type": "integer", "const": 1},
+        "project_id": {"type": "string"},
+        "artifact_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "source_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "source_size_bytes": {"type": "integer", "minimum": 0, "maximum": 16777216},
+        "role": {"type": "string"},
+        "classification": {"type": "string"},
+        "registration_schema_version": {"type": "integer", "const": 2},
+        "provenance": provenance,
+        "downsampled": {"type": "boolean"},
+    }
+    options_image = {
+        "type": "object", "required": ["schema_version", "kind", "max_width", "max_height"],
+        "additionalProperties": False,
+        "properties": {
+            "schema_version": {"type": "integer", "const": 1},
+            "kind": {"type": "string", "const": "image"},
+            "max_width": {"type": "integer", "minimum": 1, "maximum": 1024},
+            "max_height": {"type": "integer", "minimum": 1, "maximum": 1024},
+        },
+    }
+    options_data = {
+        "type": "object", "required": ["schema_version", "kind", "max_rows", "max_columns", "row_selection"],
+        "additionalProperties": False,
+        "properties": {
+            "schema_version": {"type": "integer", "const": 1},
+            "kind": {"type": "string", "const": "data"},
+            "max_rows": {"type": "integer", "minimum": 1, "maximum": 500},
+            "max_columns": {"type": "integer", "minimum": 1, "maximum": 128},
+            "row_selection": {"type": "string", "enum": ["first", "uniform"]},
+        },
+    }
+    image_schema = {
+        "type": "object",
+        "required": ["preview_schema_version", "kind", "project_id", "artifact_id", "source_sha256",
+                     "source_size_bytes", "media_type", "role", "classification", "registration_schema_version",
+                     "provenance", "options_applied", "preview_media_type", "original_width", "original_height",
+                     "preview_width", "preview_height", "downsampled", "sampling_method", "encoded_bytes_unchanged",
+                     "preview_sha256", "preview_size_bytes", "preview_png_base64"],
+        "additionalProperties": False,
+        "properties": {
+            **common,
+            "kind": {"type": "string", "const": "image"},
+            "media_type": {"type": "string", "const": "image/png"},
+            "request_id": {"type": "string"},
+            "options_applied": options_image,
+            "preview_media_type": {"type": "string", "const": "image/png"},
+            "original_width": {"type": "integer", "minimum": 1, "maximum": 8192},
+            "original_height": {"type": "integer", "minimum": 1, "maximum": 8192},
+            "preview_width": {"type": "integer", "minimum": 1, "maximum": 1024},
+            "preview_height": {"type": "integer", "minimum": 1, "maximum": 1024},
+            "sampling_method": {"type": "string", "const": "nearest_source_pixel_center"},
+            "encoded_bytes_unchanged": {"type": "boolean"},
+            "preview_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "preview_size_bytes": {"type": "integer", "minimum": 1, "maximum": 2097152},
+            "preview_png_base64": {"type": "string", "contentEncoding": "base64", "contentMediaType": "image/png"},
+        },
+    }
+    data_schema = {
+        "type": "object",
+        "required": ["preview_schema_version", "kind", "project_id", "artifact_id", "source_sha256",
+                     "source_size_bytes", "media_type", "role", "classification", "registration_schema_version",
+                     "provenance", "options_applied", "columns_origin", "columns", "units", "rows",
+                     "sampling", "downsampled", "formula_strings_are_data"],
+        "additionalProperties": False,
+        "properties": {
+            **common,
+            "kind": {"type": "string", "const": "data"},
+            "media_type": {"type": "string", "enum": ["text/csv", "application/json"]},
+            "request_id": {"type": "string"},
+            "options_applied": options_data,
+            "columns_origin": {"type": "string", "enum": ["csv_header", "declared_columns", "object_keys", "zero_based_positions"]},
+            "columns": {"type": "array", "items": {"type": "string"}, "maxItems": 128},
+            "units": {"type": "array", "items": {"type": ["string", "null"]}, "maxItems": 128},
+            "rows": {"type": "array", "maxItems": 500, "items": {"type": "array", "maxItems": 128,
+                "items": {"type": ["string", "integer", "number", "boolean", "null"]}}},
+            "sampling": {
+                "type": "object",
+                "required": ["row_selection", "column_selection", "total_rows", "total_columns",
+                             "selected_row_indices", "selected_column_indices", "truncated"],
+                "additionalProperties": False,
+                "properties": {
+                    "row_selection": {"type": "string", "enum": ["first", "uniform"]},
+                    "column_selection": {"type": "string", "const": "first"},
+                    "total_rows": {"type": "integer", "minimum": 0, "maximum": 100000},
+                    "total_columns": {"type": "integer", "minimum": 1, "maximum": 4096},
+                    "selected_row_indices": {"type": "array", "items": {"type": "integer", "minimum": 0}, "maxItems": 500},
+                    "selected_column_indices": {"type": "array", "items": {"type": "integer", "minimum": 0}, "maxItems": 128},
+                    "truncated": {"type": "boolean"},
+                },
+            },
+            "formula_strings_are_data": {"type": "boolean", "const": True},
+        },
+    }
+    return {
+        "oneOf": [image_schema, data_schema],
+        "description": "Validated actual schema-v2 artifact content. Data values are sampled verbatim; source totals and selected zero-based indices are explicit.",
+    }
+
+
+
+def _catalog_entries() -> tuple[ActionEntry, ...]:
+    try:
+        raw = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"action catalog unavailable: {CATALOG_PATH}") from exc
+    operations = raw.get("operations")
+    if not isinstance(operations, list):
+        raise RuntimeError("action catalog operations must be an array")
+    entries: list[ActionEntry] = []
+    for item in operations:
+        if not isinstance(item, Mapping) or not isinstance(item.get("operation_id"), str):
+            continue
+        operation_id = item["operation_id"]
+        # Import-time value stays side-effect free; ``as_dict`` recomputes it
+        # through ``is_implemented`` at call time so the G3 modules (loaded
+        # lazily) are reflected without an import cycle.
+        status = "SUPPORTED_UNVERIFIED" if operation_id in IMPLEMENTED_OPERATIONS else str(item.get("implementation_status", "PROPOSED_NOT_IMPLEMENTED"))
+        entries.append(ActionEntry(
+            operation_id=operation_id,
+            mcp_tool_name=str(item.get("mcp_tool_name") or operation_id.replace(".", "_")),
+            domain=str(item.get("domain") or operation_id.split(".", 1)[0]),
+            purpose=str(item.get("purpose") or ""), effect=str(item.get("effect") or ""),
+            scope=str(item.get("scope") or ""), gate=str(item.get("gate") or ""),
+            implementation_status=status, input_schema=item.get("input_schema") if isinstance(item.get("input_schema"), Mapping) else {},
+            output_contract=str(item.get("output_contract") or "ActionResult"), route=str(item.get("route") or ""),
+            required_tests=tuple(str(value) for value in item.get("required_tests", []) if isinstance(value, str)),
+            notes=str(item.get("notes") or ""),
+        ))
+    return tuple(entries)
+
+
+ENTRIES = _catalog_entries()
+BY_ID = {entry.operation_id: entry for entry in ENTRIES}
+BY_TOOL = {entry.mcp_tool_name: entry for entry in ENTRIES}
+
+# ``code.describe_java`` is the read-only front half of the required
+# describe/compile/execute flow.  Older catalog snapshots only listed the
+# compile and execute calls, so keep this additive synthetic entry explicit
+# instead of pretending it came from the historical catalog.
+if "code.describe_java" not in BY_ID:
+    _describe_schema = {"type": "object", "properties": {
+        "project_id": {"type": "string"}, "source_artifact": {"type": "string"}, "entrypoint": {"type": "string"}},
+        "required": ["project_id", "source_artifact"], "additionalProperties": False}
+    _describe_entry = ActionEntry("code.describe_java", "code_describe_java", "code", "Describe bound Java source and side effects", "READ", "project", "G2", "SUPPORTED_UNVERIFIED", _describe_schema, "ActionResult", "control plane", ("schema_valid", "normal_path"), "Source is data until explicit trusted_code execution.")
+    ENTRIES = (*ENTRIES, _describe_entry)
+    BY_ID[_describe_entry.operation_id] = _describe_entry
+    BY_TOOL[_describe_entry.mcp_tool_name] = _describe_entry
+
+
+def _entry(operation_id: str) -> ActionEntry:
+    if not isinstance(operation_id, str) or not operation_id:
+        raise ExecutionContractError("INVALID_REQUEST", "operation_id is required")
+    try:
+        return BY_ID[operation_id]
+    except KeyError as exc:
+        raise ExecutionContractError("UNSUPPORTED_OPERATION", f"unknown registry operation: {operation_id}") from exc
+
+
+def _legacy_entry(operation_id: str) -> ActionEntry | None:
+    """Return the explicit compatibility descriptor for an omitted legacy tool."""
+    if operation_id not in LEGACY_FALLBACK_NAMES:
+        return None
+    effect = LEGACY_TOOL_EFFECTS.get(operation_id)
+    if not isinstance(effect, str):
+        # A name can only be added to the allowlist together with a server-side
+        # effect classification.  Do not make a dynamic fallback permission.
+        raise ExecutionContractError("PERMISSION_DENIED", f"legacy fallback has no effect classification: {operation_id}")
+    input_schema = _legacy_input_schemas().get(operation_id)
+    if input_schema is None:
+        # This should be unreachable after _legacy_input_schemas()'s complete
+        # set check, but keep the fallback fail-closed if a registration drifts.
+        raise ExecutionContractError("UNSUPPORTED_OPERATION", f"legacy fallback schema unavailable: {operation_id}")
+    return ActionEntry(
+        operation_id=operation_id,
+        mcp_tool_name=operation_id,
+        domain="legacy",
+        purpose="Managed compatibility route for the original MCP tool",
+        effect=effect.upper(),
+        scope="legacy managed service",
+        gate="W01 compatibility mapping plus ordinary service gate",
+        implementation_status="SUPPORTED_UNVERIFIED",
+        input_schema=input_schema,
+        output_contract="success/data/error/execution envelope",
+        route="legacy managed backend",
+        required_tests=("legacy_fallback", "permission_gate"),
+        notes="Hidden from a narrowed static publication profile only; callable through operation_call with this explicit mapping. Input schema is generated from the registered FastMCP function signature; unknown fields are rejected before dispatch.",
+    )
+
+
+def operation_describe(operation_id: str) -> dict[str, Any]:
+    """Describe a logical catalog action or an explicitly mapped legacy tool."""
+    try:
+        return _entry(operation_id).as_dict()
+    except ExecutionContractError as exc:
+        if exc.code != "UNSUPPORTED_OPERATION":
+            raise
+        legacy = _legacy_entry(operation_id)
+        if legacy is None:
+            raise
+        return legacy.as_dict()
+
+
+def registry_list(*, domain: str | None = None, cursor: str | None = None, limit: int = 100) -> dict[str, Any]:
+    if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 500:
+        raise ExecutionContractError("INVALID_REQUEST", "limit must be an integer between 1 and 500")
+    selected = [entry for entry in ENTRIES if not domain or entry.domain == domain]
+    start = 0
+    if cursor:
+        try:
+            start = int(cursor)
+        except (TypeError, ValueError) as exc:
+            raise ExecutionContractError("INVALID_REQUEST", "cursor must be an integer continuation token") from exc
+        if start < 0:
+            raise ExecutionContractError("INVALID_REQUEST", "cursor must be non-negative")
+    rows = [entry.as_dict() for entry in selected[start:start + limit]]
+    next_cursor = str(start + len(rows)) if start + len(rows) < len(selected) else None
+    return {"operations": rows, "next_cursor": next_cursor, "count": len(rows), "total": len(selected)}
+
+
+def registry_describe(operation_id: str) -> dict[str, Any]:
+    return _entry(operation_id).as_dict()
+
+
+def registry_search(query: str, *, domain: str | None = None) -> dict[str, Any]:
+    if not isinstance(query, str) or not query.strip():
+        raise ExecutionContractError("INVALID_REQUEST", "query must be a non-empty string")
+    terms = [term.lower() for term in re.findall(r"[\w.:-]+", query) if term]
+    selected = [entry for entry in ENTRIES if not domain or entry.domain == domain]
+    ranked: list[tuple[int, ActionEntry]] = []
+    for entry in selected:
+        haystack = " ".join((entry.operation_id, entry.mcp_tool_name, entry.domain, entry.purpose, entry.notes)).lower()
+        score = sum((3 if term in entry.operation_id.lower() else 2 if term in entry.mcp_tool_name.lower() else 1) for term in terms if term in haystack)
+        if score:
+            ranked.append((score, entry))
+    ranked.sort(key=lambda item: (-item[0], item[1].operation_id))
+    return {"query": query, "operations": [{**entry.as_dict(), "score": score} for score, entry in ranked]}
+
+
+def registry_manifest(profile: str | None = None) -> dict[str, Any]:
+    profile = profile or "full"
+    if profile not in {"full", "domain", "expert"}:
+        raise ExecutionContractError("INVALID_REQUEST", "profile must be full, domain, or expert")
+    executable = [entry for entry in ENTRIES if is_implemented(entry.operation_id)]
+    if profile == "domain":
+        # Domain profile is a presentation filter.  It retains registry_call
+        # so an operation absent from a static host can still be selected.
+        # G3 (W13-W16) domain actions belong to this profile.
+        executable = [entry for entry in executable if entry.domain in {
+            "registry", "node", "docs", "transaction", "checkpoint",
+            "parameter", "variable", "function", "selection", "geometry", "definition",
+            "material", "physics", "mesh", "study", "solver",
+        }]
+    elif profile == "expert":
+        executable = [entry for entry in executable if entry.domain in {"registry", "node", "api", "code", "transaction", "checkpoint"}]
+    return {
+        "profile": profile,
+        "publication_profile": current_tool_profile(),
+        "catalog_path": str(CATALOG_PATH),
+        "catalog_sha256": __import__("hashlib").sha256(CATALOG_PATH.read_bytes()).hexdigest(),
+        "operations": [entry.as_dict() for entry in executable],
+        "fallback": {"describe": "operation_describe", "call": "operation_call", "dynamic_tools": False,
+                     "legacy_operations": sorted(LEGACY_FALLBACK_NAMES)},
+        "limitations": ["COMSOL engine and GUI acceptance remain runtime-scoped and are not implied by registry publication."],
+    }
+
+
+def validate_call(operation_id: str, arguments: Any, *, allow_unbound_identity: bool = False,
+                  allow_coordinator_only: bool = False) -> ActionEntry:
+    """Validate a catalog operation before it reaches a control/engine call.
+
+    Published registry calls carry identity and idempotency in the managed
+    request envelope, so those fields are required by default even when the
+    historical catalog put them in the operation body.  Transaction action
+    entries are deliberately an exception: their outer transaction supplies
+    the identity and gate, while each inner action is only a static plan row.
+    Callers for that internal path must opt in explicitly with
+    ``allow_unbound_identity=True``. ``allow_coordinator_only`` admits the
+    seven Desktop controls to the durable coordinator for permission/idempotency
+    checks while preserving their not-executable catalog status.
+    """
+    legacy = _legacy_entry(operation_id)
+    entry = legacy if legacy is not None else _entry(operation_id)
+    if (legacy is None and not is_implemented(entry.operation_id)
+            and not (allow_coordinator_only and entry.operation_id in DESKTOP_COORDINATOR_ONLY_OPERATIONS)):
+        raise ExecutionContractError("UNSUPPORTED_OPERATION", f"operation is cataloged but not executable in this build: {operation_id}")
+    if not isinstance(arguments, Mapping):
+        raise ExecutionContractError("INVALID_REQUEST", "registry call arguments must be an object")
+    schema = _effective_input_schema(entry.input_schema, entry.operation_id)
+    if isinstance(schema, Mapping):
+        _validate_schema_object(arguments, schema, operation_id)
+    required = schema.get("required", []) if isinstance(schema, Mapping) else []
+    identity_fields = {"project_id", "session_id", "model_ref", "expected_revision", "idempotency_key"}
+    missing = [name for name in required if name not in arguments and not (allow_unbound_identity and name in identity_fields)]
+    if missing:
+        raise ExecutionContractError("INVALID_REQUEST", f"missing required operation arguments: {', '.join(missing)}")
+    _validate_operation_shape(entry.operation_id, arguments)
+    return entry
+
+
+# The catalog schemas use references into common.schema.json.  The gateway
+# keeps that catalog as the source of truth, but it must still reject malformed
+# top-level calls before they reach a model.  Referenced values receive their
+# operation-specific strict validation at the execution adapter (NodePath and
+# TypedValue); this small validator covers the JSON primitives and closed
+# operation objects available directly in the catalog without introducing a
+# second schema dependency in the control daemon.
+_ENVELOPE_FIELDS = frozenset({
+    "project_id", "session_id", "model_ref", "expected_revision",
+    "idempotency_key", "request_id",
+})
+
+
+def _validate_schema_object(arguments: Mapping[str, Any], schema: Mapping[str, Any], operation_id: str) -> None:
+    properties = schema.get("properties")
+    if not isinstance(properties, Mapping):
+        return
+    allowed = set(properties) | _ENVELOPE_FIELDS
+    if schema.get("additionalProperties") is False:
+        unknown = sorted(set(arguments) - allowed)
+        if unknown:
+            raise ExecutionContractError(
+                "INVALID_REQUEST",
+                f"{operation_id} has unsupported arguments: {', '.join(unknown)}",
+            )
+    for name, value in arguments.items():
+        if name in _ENVELOPE_FIELDS or name not in properties:
+            continue
+        _validate_schema_value(value, properties[name], f"{operation_id}.{name}")
+
+
+def _validate_schema_value(value: Any, schema: Any, label: str) -> None:
+    if not isinstance(schema, Mapping):
+        return
+    if "$ref" in schema:
+        # NodePath, TypedValue and the other common definitions have strict
+        # executable validators at their adapters.  Do not guess their shape
+        # here from the reference string.
+        return
+    enum = schema.get("enum")
+    if isinstance(enum, list) and value not in enum:
+        raise ExecutionContractError("INVALID_REQUEST", f"{label} must be one of {enum!r}")
+    expected_type = schema.get("type")
+    if expected_type == "string":
+        if not isinstance(value, str):
+            raise ExecutionContractError("INVALID_REQUEST", f"{label} must be a string")
+        if isinstance(schema.get("minLength"), int) and len(value) < schema["minLength"]:
+            raise ExecutionContractError("INVALID_REQUEST", f"{label} must not be empty")
+        return
+    if expected_type == "boolean":
+        if type(value) is not bool:
+            raise ExecutionContractError("INVALID_REQUEST", f"{label} must be a boolean")
+        return
+    if expected_type == "integer":
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise ExecutionContractError("INVALID_REQUEST", f"{label} must be an integer")
+        if isinstance(schema.get("minimum"), (int, float)) and value < schema["minimum"]:
+            raise ExecutionContractError("INVALID_REQUEST", f"{label} is below its minimum")
+        if isinstance(schema.get("maximum"), (int, float)) and value > schema["maximum"]:
+            raise ExecutionContractError("INVALID_REQUEST", f"{label} is above its maximum")
+        return
+    if expected_type == "number":
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ExecutionContractError("INVALID_REQUEST", f"{label} must be a number")
+        return
+    if expected_type == "array":
+        if not isinstance(value, list):
+            raise ExecutionContractError("INVALID_REQUEST", f"{label} must be an array")
+        item_schema = schema.get("items")
+        if isinstance(item_schema, Mapping):
+            for index, item in enumerate(value):
+                _validate_schema_value(item, item_schema, f"{label}[{index}]")
+        return
+    if expected_type == "object" and not isinstance(value, Mapping):
+        raise ExecutionContractError("INVALID_REQUEST", f"{label} must be an object")
+
+
+def _validate_operation_shape(operation_id: str, arguments: Mapping[str, Any]) -> None:
+    """Apply the executable adapter's small pre-engine shape obligations.
+
+    JSON Schema references such as ``NodePath`` and ``TypedValue`` live in a
+    shared design file, so the generic validator intentionally does not copy
+    those definitions.  The fallback still must reject an empty names list or
+    malformed typed action before the no-model gate reports ENGINE_UNRESPONSIVE.
+    """
+    from ._g2_contract import NodePath, validate_property_set, validate_typed_value
+
+    if operation_id == "checkpoint.diff":
+        from ._g2_checkpoint_diff import normalize
+        normalize(arguments)
+        return
+    if operation_id == "model.compare":
+        from ._g2_model_compare import normalize
+        normalize(arguments)
+        return
+    if operation_id == "artifact.preview":
+        from ._g2_artifact_preview import normalize_options
+        normalize_options(arguments.get("options"))
+        return
+    if operation_id in {"checkpoint.branch", "api.probe"}:
+        from ._g2_checkpoint_ops import normalize
+        normalize(operation_id, arguments)
+        return
+    if operation_id.startswith("node.") and operation_id in NODE_ACTIONS:
+        from ._g2_engine import validate_node_action
+        validate_node_action(operation_id, arguments)
+        return
+    if operation_id == "api.invoke":
+        from ._g2_public_api import provisional_effect
+        resolved = provisional_effect(arguments)
+        if arguments.get("declared_effect") != resolved:
+            raise ExecutionContractError("PERMISSION_DENIED", "declared effect differs from server exact capability")
+        return
+    if operation_id == "api.describe":
+        NodePath.from_wire(arguments.get("path"))
+        if arguments.get("method") is not None and not isinstance(arguments["method"], str):
+            raise ExecutionContractError("INVALID_REQUEST", "method must be a string")
+        return
+
+    if operation_id == "experiment.stage_define":
+        from ._stage_contract import validate_stage_plan_definition
+        validate_stage_plan_definition(arguments.get("definition"))
+        return
+
+    if operation_id == "experiment.state_map":
+        from ._stage_contract import normalize_state_map_request
+        normalize_state_map_request(arguments)
+        return
+
+    if operation_id in {"metric.define", "metric.list", "metric.evaluate", "metric.remove", "metric.compare"}:
+        from ._metric_contract import normalize_arguments
+        normalize_arguments(operation_id, arguments)
+        return
+
+    path_operations = {
+        "node.inspect", "node.children", "node.property_schema", "node.property_get",
+        "node.property_set", "node.property_index_set", "node.property_entry_set",
+        "desktop.select_node",
+    }
+    if operation_id == "model.adopt":
+        value = arguments.get("server_model_tag")
+        if not isinstance(value, str) or not value.strip():
+            raise ExecutionContractError("INVALID_REQUEST", "server_model_tag must be a non-empty string")
+    elif operation_id == "model.inspect":
+        detail = arguments.get("detail", "summary")
+        if detail not in {"summary", "structure", "dependencies"}:
+            raise ExecutionContractError("INVALID_REQUEST", "detail must be summary, structure, or dependencies")
+    elif operation_id == "result.mode_overlap":
+        from ._w23_results import validate_request_shape
+        validate_request_shape(arguments)
+    elif operation_id == "result.mode_overlap_basis_v2":
+        from ._w23_basis_v2_results import validate_request_shape
+        validate_request_shape(arguments)
+    elif operation_id == "study.run" and "recovery_policy" in arguments:
+        policy = arguments.get("recovery_policy")
+        if not isinstance(policy, Mapping) or set(policy) != {"mode"} or policy.get("mode") != "restart_from_checkpoint":
+            raise ExecutionContractError("INVALID_REQUEST", "recovery_policy must be {mode: restart_from_checkpoint}")
+    elif operation_id in path_operations:
+        NodePath.from_wire(arguments.get("path"))
+    if operation_id == "node.inspect":
+        if "include_values" in arguments and type(arguments["include_values"]) is not bool:
+            raise ExecutionContractError("INVALID_REQUEST", "include_values must be a boolean")
+    elif operation_id == "node.property_get":
+        names = arguments.get("names")
+        if not isinstance(names, list) or not names or not all(isinstance(name, str) and name for name in names):
+            raise ExecutionContractError("INVALID_REQUEST", "names must be a non-empty array of strings")
+    elif operation_id == "node.property_set":
+        validate_property_set(arguments.get("properties"))
+    elif operation_id == "node.property_index_set":
+        name, indices, value = arguments.get("name"), arguments.get("indices"), arguments.get("value")
+        if not isinstance(name, str) or not name:
+            raise ExecutionContractError("INVALID_REQUEST", "name is required")
+        if not isinstance(indices, list) or not indices or not all(isinstance(item, int) and not isinstance(item, bool) for item in indices):
+            raise ExecutionContractError("INVALID_REQUEST", "indices must be a non-empty integer array")
+        validate_typed_value(value)
+    elif operation_id == "node.property_entry_set":
+        for field in ("name", "key"):
+            if not isinstance(arguments.get(field), str) or not arguments[field]:
+                raise ExecutionContractError("INVALID_REQUEST", f"{field} is required")
+        validate_typed_value(arguments.get("value"))
+    elif operation_id in {"transaction.preview", "transaction.trial", "transaction.apply"}:
+        if not isinstance(arguments.get("actions"), list):
+            raise ExecutionContractError("INVALID_REQUEST", "actions must be an array")
+    elif operation_id == "docs.index":
+        sources = arguments.get("sources")
+        if not isinstance(sources, list) or not sources or not all(isinstance(item, str) and item for item in sources):
+            raise ExecutionContractError("INVALID_REQUEST", "sources must be a non-empty array of paths")
+    elif operation_id == "definition.component_manage":
+        # The catalogue requires ``tag`` for every action; the operation itself
+        # requires it for the actions that name a component and *refuses* it for
+        # ``list`` (which enumerates ``model.component()``).  Enforcing the real
+        # per-action rule here keeps the coarse form's strictness -- a create
+        # without a tag is still refused before dispatch -- without demanding an
+        # argument the operation forbids.
+        action = arguments.get("action")
+        if not isinstance(action, str) or action not in COMPONENT_MANAGE_ACTIONS:
+            raise ExecutionContractError(
+                "INVALID_REQUEST",
+                f"action must be one of {'/'.join(COMPONENT_MANAGE_ACTIONS)}")
+        if action == "list":
+            if arguments.get("tag") is not None:
+                raise ExecutionContractError(
+                    "INVALID_REQUEST", "action 'list' does not accept a tag")
+        elif not isinstance(arguments.get("tag"), str) or not arguments["tag"]:
+            raise ExecutionContractError(
+                "INVALID_REQUEST",
+                f"tag is required for action {action!r} (only 'list' enumerates the component container "
+                "without naming one)")
+        if action == "copy":
+            source_tag = arguments.get("source_tag")
+            if not isinstance(source_tag, str) or not source_tag:
+                raise ExecutionContractError("INVALID_REQUEST", "source_tag is required for action 'copy'")
+        elif "source_tag" in arguments:
+            raise ExecutionContractError("INVALID_REQUEST", "source_tag is accepted only for action 'copy'")
+    if operation_id in {"node.children", "node.find"}:
+        budget = arguments.get("budget")
+        if budget is not None:
+            if not isinstance(budget, Mapping):
+                raise ExecutionContractError("INVALID_REQUEST", "budget must be an object")
+            unknown = sorted(set(budget) - {"max_nodes", "max_seconds", "max_rpc"})
+            if unknown:
+                raise ExecutionContractError("INVALID_REQUEST", f"budget has unsupported fields: {', '.join(unknown)}")
+            for name in ("max_nodes", "max_rpc"):
+                if name in budget and (isinstance(budget[name], bool) or not isinstance(budget[name], int) or budget[name] < 1):
+                    raise ExecutionContractError("INVALID_REQUEST", f"budget.{name} must be a positive integer")
+            if "max_seconds" in budget and (isinstance(budget["max_seconds"], bool) or not isinstance(budget["max_seconds"], (int, float)) or budget["max_seconds"] <= 0):
+                raise ExecutionContractError("INVALID_REQUEST", "budget.max_seconds must be a positive number")
+        if operation_id == "node.find" and arguments.get("cursor") is not None and not isinstance(arguments.get("cursor"), str):
+            raise ExecutionContractError("INVALID_REQUEST", "cursor must be a string")
+
+
+def operation_for_tool(name: str) -> str:
+    if name in BY_TOOL:
+        return BY_TOOL[name].operation_id
+    if name in BY_ID:
+        return name
+    raise ExecutionContractError("UNSUPPORTED_OPERATION", f"unknown operation tool: {name}")

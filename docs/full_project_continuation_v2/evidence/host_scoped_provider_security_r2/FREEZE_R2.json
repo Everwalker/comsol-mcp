@@ -1,0 +1,93 @@
+{
+  "attribution_corrections": {
+    "immutable_r1_freeze": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r1/FREEZE_R1.json",
+    "r1_review_scope_correction": "R1 must not be described as approving the R4 provider baseline; the exact ROOT_REVIEW_R4.json is CHANGES_REQUIRED.",
+    "r1_security_review": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r1/ROOT_FOCUSED_SECURITY_REVIEW_R1.json",
+    "r1_security_review_sha256": "370e8d83d8f913c42e34bc17fe66eaa1e0ce98faa72e18a50021f18f704bd40e",
+    "r1_test_count_correction": {
+      "note": "R1 regression.tests_in_junit=210 is not the XML testcase count; raw XML has 190 testcase nodes.",
+      "passed_testcases": 180,
+      "raw_junit_testcase_count": 190,
+      "skipped_testcases": 10,
+      "subtests_passed_separately": 20
+    },
+    "r4_review": "docs/full_project_continuation_v2/evidence/exports_restore_r4_20261012/ROOT_REVIEW_R4.json",
+    "r4_review_sha256": "ff1d8f23ffcc5230efc3edbdf5049befe2e67970258d9a96a6c6fbac143eb21c",
+    "r4_review_status": "CHANGES_REQUIRED"
+  },
+  "candidate": "host-scoped-provider-security-r2",
+  "focused_validation": {
+    "execution_inputs_unchanged": true,
+    "junit_path": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r2/junit-provider-security-r2-focused.xml",
+    "junit_sha256": "cc615d52267e8bf315baec74dd0d9c863cdcdb874f5b0bf11dc13a6b73120389",
+    "path": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r2/INVOCATION_PROVIDER_FOCUSED_R2.json",
+    "result": "27 passed; 0 failed; 0 skipped; 0 subtests",
+    "sha256": "2f9eeb42e81c1fc2f0e32f4c89714c869245ea4f80e6e5c2f7149cf0ff2462c4"
+  },
+  "integrated_validation": {
+    "execution_inputs_unchanged": true,
+    "junit_path": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r2/junit-provider-security-r2.xml",
+    "junit_sha256": "ea3715ef4ce3d4dff106862c21e748b3b6ea9f1538e8787dd8f7ce139b7c053d",
+    "path": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r2/INVOCATION_AND_SOURCE_BINDING_R2.json",
+    "result": "226 passed; 10 skipped; 20 subtests; 2 W26 tests failed with missing required session_id; isolated W26 confirmed 39 passed / 2 failed. Failure is recorded and assigned to shared W26 owner; do not claim integrated pass.",
+    "sha256": "7705f170ae285e5b5c4c1c4ce932f1e44372d96f14a65ca09697a347ac7c89c8"
+  },
+  "limits": [
+    "Windows kernel/real ACL behavior NOT_RUN.",
+    "Darwin Intel runtime NOT_RUN; x86_64 ABI is covered only by software symbol-selection and missing-symbol tests.",
+    "Current ARM64 runtime probe uses the actual fstatfs symbol and observed /private/tmp as APFS; no numerical COMSOL/native test is implied.",
+    "The Windows ACL tests are function-level ctypes shims and do not emulate or certify kernel ACL semantics."
+  ],
+  "owned_source_snapshot": [
+    {
+      "bytes": 53837,
+      "changed_from_r1": true,
+      "path": "comsol_mcp/_host_scoped_provider.py",
+      "r1_snapshot_sha256": "813e1df784ec8bd576b4ff18668fec7d0eac94eb0bff85b80c52f2abd380bca7",
+      "sha256": "5b3cc6f7f619752b04423c4a5336a6f776634b6fa28cde4c8ff24e2e54d50e6f",
+      "snapshot_path": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r2/source_snapshot_r2/comsol_mcp/_host_scoped_provider.py",
+      "snapshot_sha256": "5b3cc6f7f619752b04423c4a5336a6f776634b6fa28cde4c8ff24e2e54d50e6f"
+    },
+    {
+      "bytes": 26595,
+      "changed_from_r1": false,
+      "path": "comsol_mcp/_windows_parameter_publish.py",
+      "r1_snapshot_sha256": "f128dc330ea3a7366765e1fe16dd03e7ba63cacf9d02e992d748a781f97b0ea8",
+      "sha256": "f128dc330ea3a7366765e1fe16dd03e7ba63cacf9d02e992d748a781f97b0ea8",
+      "snapshot_path": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r2/source_snapshot_r2/comsol_mcp/_windows_parameter_publish.py",
+      "snapshot_sha256": "f128dc330ea3a7366765e1fe16dd03e7ba63cacf9d02e992d748a781f97b0ea8"
+    },
+    {
+      "bytes": 38231,
+      "changed_from_r1": true,
+      "path": "tests/test_host_scoped_provider.py",
+      "r1_snapshot_sha256": "b1d39404ce4dec4934180fc842887723b213c3119055900ac54794c9d0591f7b",
+      "sha256": "7b4bcd6d8814c06c5213886765dc4c110b3099889747989c950e7ee63ab4ee9a",
+      "snapshot_path": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r2/source_snapshot_r2/tests/test_host_scoped_provider.py",
+      "snapshot_sha256": "7b4bcd6d8814c06c5213886765dc4c110b3099889747989c950e7ee63ab4ee9a"
+    },
+    {
+      "bytes": 4975,
+      "changed_from_r1": false,
+      "path": "docs/full_project_continuation_v2/HOST_SCOPED_PROVIDER_CONFIG.md",
+      "r1_snapshot_sha256": "bbe26dc83c6e05bbd357f83b5009bb2ebde72ab3fcc5a82dccf6d7c3f7a17248",
+      "sha256": "bbe26dc83c6e05bbd357f83b5009bb2ebde72ab3fcc5a82dccf6d7c3f7a17248",
+      "snapshot_path": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r2/source_snapshot_r2/docs/full_project_continuation_v2/HOST_SCOPED_PROVIDER_CONFIG.md",
+      "snapshot_sha256": "bbe26dc83c6e05bbd357f83b5009bb2ebde72ab3fcc5a82dccf6d7c3f7a17248"
+    }
+  ],
+  "patch_from_r1": {
+    "path": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r2/PATCH_FROM_R1.patch",
+    "sha256": "b9e8968501a96333ebdb881664dbcf9365ca08109b6e34ad2842f38ae83b2ecc"
+  },
+  "prior_r1_artifacts_preserved": true,
+  "schema": "comsol-mcp.host-scoped-provider-security-freeze/2",
+  "scope": "Fix Win32 GetSecurityInfo output pointer order; test the actual ctypes parsing function through a function-level ABI shim; verify READ_CONTROL access-mask construction; choose the Darwin 64-bit-inode fstatfs ABI per target architecture and fail closed on unknown or missing symbols.",
+  "sdk_abi_excerpt": {
+    "cdefs_full_header_sha256": "ac1a889ee7e6f3025e01be9981d26751489b9e63e926035201cae07ab9e6576f",
+    "mount_full_header_sha256": "45872741bb916b92bddd2e562d2047b552af1f68269081a0aeb58a3e5a2b8a51",
+    "path": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r2/SDK_DARWIN_FSTATFS_ABI_R2.txt",
+    "sha256": "ad324062ed622f91ebcbe1f5a723a059640c3646fdeb45ef7b809b3b09644340"
+  },
+  "status": "OWNED_PROVIDER_DELTA_FROZEN; SHARED_W26_REGRESSION_PENDING_OWNER_FIX"
+}

@@ -1,0 +1,47 @@
+--- /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/tests/test_g3_results.py
++++ /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r15/tests/test_g3_results.py
+@@ -2072,7 +2072,7 @@
+         return protocol.decode_production_complex_point_readback(native, dataset_tag="dset1", solution_tag="sol1",
+             expressions=["freq"], expected_points=[[0.0,0.0]], expected_solution_count=1,
+             plane_id="physical_frequency", expected_count_witness=count,
+-            expected_expression_units={"freq": "Hz"}, expected_requested_units=["Hz"])
++            expected_expression_units={"freq": "Hz"}, expected_requested_units=["Hz"], field_scheme="emw_down")
+     if mutation:
+         with pytest.raises(protocol.ScienceProtocolError, match="requested-unit"):
+             decode()
+@@ -2133,7 +2133,7 @@
+             expressions=expr, expected_points=[[0.0,0.0]], expected_solution_count=1,
+             plane_id="physical_frequency", expected_count_witness=count,
+             expected_expression_units={"freq": "Hz"}, expected_requested_units=["Hz"],
+-            scalar_frequency=mutation != "field_route")
++            scalar_frequency=mutation != "field_route", field_scheme="emw_down")
+     if mutation:
+         with pytest.raises(protocol.ScienceProtocolError): decode()
+     else:
+@@ -2154,7 +2154,7 @@
+         node.complex_ = False
+         return node
+     tree.numerical.factory = real_factory
+-    args["spec"]["expressions"] = list(protocol.bma_point_expressions(port))
++    args["spec"]["expressions"] = list(protocol.bma_point_expressions(port, field_scheme="emw_down"))
+     args["spec"]["units"] = ["1/m", "1", "1/m"]
+     def coords(self, matrix):
+         self.coords = matrix
+@@ -2180,7 +2180,7 @@
+             expressions=args["spec"]["expressions"], expected_points=[[0,0]], expected_solution_count=1,
+             plane_id="bma_scalar", expected_count_witness=count,
+             expected_expression_units=dict(zip(args["spec"]["expressions"], args["spec"]["units"])),
+-            expected_requested_units=args["spec"]["units"], scalar_bma_binding=binding)
++            expected_requested_units=args["spec"]["units"], scalar_bma_binding=binding, field_scheme="emw_down")
+     if mutation:
+         with pytest.raises(protocol.ScienceProtocolError): decode()
+     else:
+@@ -2228,7 +2228,7 @@
+         points = runner._field_points(-10.0 if x == "minus10" else 8.0,int(n))
+     else:
+         port = case[-1];dataset,solution = ("dset2","sol2") if port == "1" else ("dset3","sol3")
+-        expr,units = list(runner.protocol.bma_point_expressions(port)),["1/m","1","1/m"]
++        expr,units = list(runner.protocol.bma_point_expressions(port, field_scheme="emw_down")),["1/m","1","1/m"]
+         points = [[-10.0 if port == "1" else 8.0,0.0]]
+         tree.datasets.items[dataset] = FNode(tag=dataset,type_id="Solution",props={"solution":solution})
+         solver = copy.deepcopy(tree.solver);solver.tag_ = solution

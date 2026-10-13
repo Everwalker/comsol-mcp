@@ -1,0 +1,49 @@
+--- /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/tests/test_native_w23_saved_mph_diagnostic.py
++++ /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/tests/test_native_w23_saved_mph_diagnostic.py
+@@ -177,10 +177,13 @@
+ 
+ def _point_dispatch(dataset: str, solution: str, expressions: list[str], points: list[list[float]],
+                     *, complex_mode: str = "preserve") -> dict:
++    from tools.run_native_w23_saved_mph_diagnostic import plane_field_expressions, plane_selection, plane_field_units
++    port = "1" if points and points[0][0]==-10 else "2"
++    selected = expressions == list(plane_field_expressions(port))
+     units = None
+-    if expressions == list(RAW_FIELD_EXPRESSIONS):
++    if selected:
+         from tools.run_native_w23_saved_mph_diagnostic import FIELD_REQUESTED_UNITS
+-        units = list(FIELD_REQUESTED_UNITS)
++        units = list(plane_field_units(port))
+     elif expressions == ["freq"]: units = ["Hz"]
+     elif dataset in {"dset2", "dset3"}:
+         units = list(mode_units("1" if dataset == "dset2" else "2").values())
+@@ -188,7 +191,7 @@
+         "operation_id": "result.at_points",
+         "arguments": {"spec": {"expressions": expressions,
+                                  "solution": {"dataset": dataset, "solution": solution},
+-                                 "complex_mode": complex_mode, **({"units": units} if units else {})},
++                                 "complex_mode": complex_mode, **({"units": units} if units else {}), **({"selection":plane_selection(port),"entity_dim":1} if selected else {})},
+                       "points": [{"x": point[0], "y": point[1]} for point in points], "coordinate_unit": "um", "frame": "spatial"},
+     }}
+ 
+@@ -196,7 +199,8 @@
+ def test_saved_field_and_bma_point_reads_allow_only_the_frozen_dataset_grid_and_expressions():
+     for x in (-10.0, 8.0):
+         for count in (321, 641):
+-            request = _point_dispatch("dset1", "sol1", list(RAW_FIELD_EXPRESSIONS),
++            from tools.run_native_w23_saved_mph_diagnostic import plane_field_expressions
++            request = _point_dispatch("dset1", "sol1", list(plane_field_expressions("1" if x==-10 else "2")),
+                                       _field_points(x, count))
+             assert _allowed_diagnostic_dispatch(request) is True
+     for dataset, solution, x in (("dset2", "sol2", -10.0), ("dset3", "sol3", 8.0)):
+@@ -261,9 +265,9 @@
+     assert _allowed_diagnostic_dispatch(request)
+     request["arguments"]["arguments"]["spec"]["units"] = ["MHz"]
+     assert not _allowed_diagnostic_dispatch(request)
+-    wrong_port = _point_dispatch("dset3", "sol3", ["ewfd.beta_1", "ewfd.neff_1", "ewfd.k0"], [[8.0, 0.0]])
++    wrong_port = _point_dispatch("dset3", "sol3", ["emw.beta_1", "emw.neff_1", "emw.k0"], [[8.0, 0.0]])
+     assert not _allowed_diagnostic_dispatch(wrong_port)
+-    correct = _point_dispatch("dset3", "sol3", ["ewfd.beta_2", "ewfd.neff_2", "ewfd.k0"], [[8.0, 0.0]])
++    correct = _point_dispatch("dset3", "sol3", ["emw.beta_2", "emw.neff_2", "emw.k0"], [[8.0, 0.0]])
+     assert _allowed_diagnostic_dispatch(correct)
+     correct["arguments"]["arguments"]["spec"].pop("units")
+     assert not _allowed_diagnostic_dispatch(correct)

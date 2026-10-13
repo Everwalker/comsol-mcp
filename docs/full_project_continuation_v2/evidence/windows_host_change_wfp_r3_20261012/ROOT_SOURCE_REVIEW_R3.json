@@ -1,0 +1,91 @@
+{
+  "schema": "ROOT_WFP_V2_R3_SOURCE_REVIEW/1",
+  "status": "CHANGES_REQUIRED",
+  "freeze": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/windows_host_change_wfp_r3_20261012/SOURCE_FREEZE_V2_R3.json",
+    "sha256": "618648c68d76bb1a3d2204d41adcdc12631aceb3b642bc6c666425e2e4fa8727"
+  },
+  "whole_reference_review": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/windows_host_change_wfp_r3_20261012/ROOT_REFERENCE_AND_REVIEW_PROGRESS_R3.json",
+    "sha256": "567019c95ae37863fe5eabb18011a71f9601c2713e71b8b8f5ade2b4f6796b7a"
+  },
+  "reproduction": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/windows_host_change_wfp_v2_recovery_repro_20261012/REPRODUCTION_RECEIPT.json",
+    "sha256": "b58ec8a7160b5631d7142e746bde5188c4139c69a8045c05e52402fd13ae521c",
+    "verified_refs": [
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/windows_host_change_wfp_v2_recovery_repro_20261012/repro_store_recovery_state.py",
+        "sha256": "bec83576e55e5596707ae8029c998c612909e754eb280b15d4f80a2ba8db2e64",
+        "bytes": 5679
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/windows_host_change_wfp_v2_recovery_repro_20261012/repro_result_attempt003.json",
+        "sha256": "1952d467ec661528e812d332d47c948c164c0e2c85e16712b313613f6381433b",
+        "bytes": 958
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/windows_host_change_wfp_v2_recovery_repro_20261012/network-guard.jsonl",
+        "sha256": "5b33ab8fcbb16c3ea15e5177935ef0fb3e00c6bca191c38498cdff7237f1f497",
+        "bytes": 753
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/local-preservation/windows_host_change_wfp_v2_r3_20261012/source/comsol_mcp/_operation_store.py",
+        "sha256": "a033e1e4e5fe3c0ba3d2a7f6d8020da52f5618e8dce50c7ca1a9a568d875bc7b",
+        "bytes": 295868
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/local-preservation/windows_host_change_wfp_v2_r3_20261012/source/comsol_mcp/_windows_host_change.py",
+        "sha256": "21b18d981884443ce3c17fa42c11f490607f7a11f09536d9d3942470043ed8e9",
+        "bytes": 67497
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/local-preservation/windows_host_change_wfp_v2_r3_20261012/source/comsol_mcp/_w26_os_resources.py",
+        "sha256": "15088d2fcfce57aebdd60feb40db3fbbc3d94098f5ba5c0fb8c5fcfabdd3a1d4",
+        "bytes": 184272
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/comsol_mcp/_host_scoped_provider.py",
+        "sha256": "11d8934dcdc6fccc1196248adec6afdea2ccf29f9b4769485ab756fbeaa1b1cf",
+        "bytes": 56451
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/local-preservation/windows_host_change_wfp_v2_r3_20261012/source/tests/test_windows_host_change.py",
+        "sha256": "36f10e127623d604819eeb44a04b325359dc1514de213126e1a6f61813b86984",
+        "bytes": 59260
+      }
+    ],
+    "actual_production_store_boundary": {
+      "admission_before_direct_store_call": "RECOVERY_REQUIRED",
+      "operation_before_direct_store_call": "RUNNING",
+      "job_before_direct_store_call": "RUNNING",
+      "journal_before_direct_store_call": [
+        "APPLY_STEP_INTENT",
+        "APPLY_STEP_READBACK_VERIFIED",
+        "APPLY_STEP_INTENT",
+        "RECOVERY_REQUIRED"
+      ],
+      "store_accepts_readback_after_recovery_required": true,
+      "state_after_readback": "APPLY_STEP_VERIFIED:1",
+      "store_accepts_following_intent": true,
+      "state_after_following_intent": "APPLY_STEP_INTENT:2"
+    },
+    "scope": "Real production Store/admission and executor logic under fake OS adapter; no Windows kernel run."
+  },
+  "finding": {
+    "id": "WFP-V2-RECOVERY-01",
+    "priority": 1,
+    "file": "comsol_mcp/_operation_store.py",
+    "reason": "A pending RECOVERY_REQUIRED step can be marked verified and later execution continued when UNKNOWN terminal write fails and the durable job remains RUNNING.",
+    "required": "Treat RECOVERY_REQUIRED as an absorbing state in ordinary append and durable history replay. Refuse any ordinary intent/readback suffix with no state or event changes. Explicit future manual reconciliation must use its own trusted authorization/route, not this ordinary event API.",
+    "verification": [
+      "APPLY and RESTORE executor post-effect failure with real UNKNOWN write failure injection.",
+      "Direct append after recovery refuses and leaves exact DB state/event count unchanged.",
+      "A correctly hash-chained ordinary suffix after RECOVERY_REQUIRED is detected as invalid during history replay."
+    ]
+  },
+  "r2_required_findings": "CLOSED_IN_SOURCE_R3",
+  "software_pass_scope": "77 focused plus 2 host-contract tests; broader memory failure and historical Git failure retained separately.",
+  "native_windows": "NOT_RUN",
+  "effective_wfp_arbitration": "UNVERIFIED",
+  "goal": "INCOMPLETE_NOT_ACCEPTED"
+}

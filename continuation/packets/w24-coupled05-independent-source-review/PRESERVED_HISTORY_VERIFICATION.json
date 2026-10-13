@@ -1,0 +1,178 @@
+{
+  "historical_runs": [
+    {
+      "folder": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-coupled-science-20261013-candidate05/offline-r1-propagation",
+      "junit_present": true,
+      "cases": 8,
+      "bad": [
+        {
+          "name": "test_actual_listener_identity_nested_PS_is_capped_and_late_return_mints_no_receipt",
+          "kind": "failure",
+          "message": "comsol_mcp._execution_contract.ExecutionContractError: macOS process/socket probe is unavailable"
+        },
+        {
+          "name": "test_actual_start_worker_nested_G2_PS_and_socket_probes_same_owner[False]",
+          "kind": "failure",
+          "message": "AttributeError: 'SDKWorker' object has no attribute 'getComsolVersion'"
+        },
+        {
+          "name": "test_actual_start_worker_nested_G2_PS_and_socket_probes_same_owner[True]",
+          "kind": "failure",
+          "message": "AttributeError: 'SDKWorker' object has no attribute 'getComsolVersion'"
+        }
+      ],
+      "guard_active": 1,
+      "guard_denied": 0
+    },
+    {
+      "folder": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-coupled-science-20261013-candidate05/offline-r2-propagation",
+      "junit_present": true,
+      "cases": 8,
+      "bad": [],
+      "guard_active": 1,
+      "guard_denied": 0
+    },
+    {
+      "folder": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-coupled-science-20261013-candidate05/offline-r3-main-worker",
+      "junit_present": false,
+      "guard_active": 1,
+      "guard_denied": 0
+    },
+    {
+      "folder": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-coupled-science-20261013-candidate05/offline-r4-main-worker",
+      "junit_present": true,
+      "cases": 9,
+      "bad": [],
+      "guard_active": 1,
+      "guard_denied": 0
+    },
+    {
+      "folder": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-coupled-science-20261013-candidate05/offline-r5-affected-final",
+      "junit_present": true,
+      "cases": 198,
+      "bad": [],
+      "guard_active": 6,
+      "guard_denied": 0
+    },
+    {
+      "folder": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-coupled-science-20261013-candidate05/offline-r6-affected-final",
+      "junit_present": true,
+      "cases": 200,
+      "bad": [],
+      "guard_active": 6,
+      "guard_denied": 0
+    }
+  ],
+  "original_owned_software_fixture": [
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-coupled-science-20261013-candidate05/offline-r3-main-worker/HANG_FAILURE_PRESERVATION.json",
+      "sha256": "21b4f2506fd7a885898864fc08f33e457d9acf12a20142b82314273c10e8be53",
+      "original": {
+        "status": "SOFTWARE_FIXTURE_FAIL_TERMINATED_OWNED_PYTEST",
+        "tool_session": 77213,
+        "pytest_pid": 60001,
+        "wrapper_pid": 59999,
+        "exit_code": -15,
+        "raw_observations_retained_at": "/private/tmp/pytest-of-everwalker/pytest-302/test_actual_run_main_Worker_sn0/main-worker-capture",
+        "native_execution": "NOT_RUN",
+        "first_failure": "fixture birth epoch differs; fake yield KeyError repeated by actual retainer",
+        "JUnit": "NOT_CAPTURED_INTERRUPTED"
+      }
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-coupled-science-20261013-candidate05/offline-r3-main-worker/actual_failed_main_worker_summary.json",
+      "sha256": "ea04a206ec286833c973471bffcbb727461fa5c500c7cde70e9b1264b1223cf2",
+      "original": {
+        "status": "UNKNOWN_RETAINED_OWNER_OBSERVE_ONLY",
+        "scope": "W24 setup-only native 6.4 model build/readback/Equation View/template save-reopen; zero study/solver submissions",
+        "python_executable": "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python",
+        "python_version": "3.12.13",
+        "engine_births": 1,
+        "native_solve_submissions": 0,
+        "trusted_code_startup": {
+          "status": "EXPLICIT_TASK_DEPLOYMENT_OPT_IN_SET_BEFORE_DAEMON_START",
+          "environment_variable": "COMSOL_MCP_TRUSTED_CODE",
+          "value": "1",
+          "trusted_code_isolation_claim": false,
+          "inherited_isolation_receipt_cleared_before_native_identity": false,
+          "isolation_receipt_installed_after_owned_server_verification": false
+        },
+        "python_runtime_preflight": "PREREADINESS_FIXTURE_ONLY",
+        "error": "ValueError: owned Popen birth differs from its whole-unit admission origin",
+        "traceback": "Traceback (most recent call last):\n  File \"/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-coupled-science-20261013-candidate05/repository/tools/run_native_w24_cure_preflight.py\", line 1973, in run\n    raise ValueError('owned Popen birth differs from its whole-unit admission origin')\nValueError: owned Popen birth differs from its whole-unit admission origin\n",
+        "coupled_admission_monitor_stop": "RETURNED_ORIGINAL_OWNER_AND_HANDLES_RETAINED",
+        "coupled_admission": {
+          "birth_epoch": 100.0,
+          "deadline_epoch": 1900.0,
+          "stop_reason": "coupled_stage_first_failure",
+          "original_handle_pids": {
+            "server": 101
+          },
+          "sampled_RSS_hard_cap": false
+        },
+        "at_utc_end": "2026-10-13T01:10:35.974264+08:00",
+        "cleanup": {
+          "status": "CLEANUP_UNVERIFIED",
+          "error": "AssertionError: assert (['/bin/ps', '...,comm=,args='] == ['/bin/ps', '...id=,command=']\n  \n  At index 2 diff: 'pid=,ppid=,comm=,args=' != 'pid=,ppid=,pgid=,command='\n  Use -v to get more diff)"
+        },
+        "coupled_owner_last_observation": {
+          "status": "UNKNOWN_RETAINED_OWNER_OBSERVE_ONLY",
+          "handles": [
+            {
+              "label": "server",
+              "pid": 101,
+              "returncode": null,
+              "reaped": false
+            }
+          ],
+          "nonterminal": [
+            "server"
+          ],
+          "uncertain": [],
+          "remaining_owned_group_processes": [
+            {
+              "pid": 101,
+              "ppid": 1,
+              "pgid": 101,
+              "command": "original-owned"
+            }
+          ],
+          "group_probe": {
+            "returncode": 0,
+            "stdout": "60001 1 60001 observing-cli\n101 1 101 original-owned\n",
+            "stderr": ""
+          },
+          "actual_elapsed_from_birth": 0.0,
+          "monotonic_elapsed_from_prebirth_admission": 0.0,
+          "original_stop_reason": "coupled_stage_first_failure",
+          "signals_sent": false,
+          "new_dispatch": false
+        },
+        "scientific_acceptance": "NOT_ACCEPTED",
+        "safe_retry": false,
+        "diagnostic_errors": [
+          {
+            "phase": "same_handle_observe_yield",
+            "error_type": "KeyError",
+            "error": "'worker'",
+            "occurrences": 1957655
+          }
+        ]
+      }
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-coupled-science-20261013-candidate05/offline-r3-main-worker/owned_software_stop.json",
+      "sha256": "dc0456b9ad4dc0ba292763ac5df503c37d205b28689f8a902dd4c99531d2fa86",
+      "original": {
+        "pid": 60001,
+        "parent": 59999,
+        "identity_raw": "60001 59999 Tue Oct 13 01:10:35 2026     /opt/homebrew/Cellar/python@3.12/3.12.13_2/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python -m pytest -q tests/test_w24_coupled_probe_propagation.py --junitxml=/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-coupled-science-20261013-candidate05/offline-r3-main-worker/junit.xml\n",
+        "signal": "SIGTERM",
+        "scope": "owned software pytest fixture only"
+      }
+    }
+  ],
+  "old_raw_observation_files": "Retained at original paths; not removed or rewritten",
+  "parent04_767": "HISTORICAL_NOT_REEXECUTED",
+  "native": "NOT_RUN_BY_REVIEWER"
+}

@@ -1,0 +1,25 @@
+--- /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/tests/test_g3_results.py
++++ /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/tests/test_g3_results.py
+@@ -2224,7 +2224,7 @@
+     if case.startswith("freq"):
+         dataset,solution,expr,units,points = "dset1","sol1",["freq"],[case.split("_")[1]],[[-10.0,0.0]]
+     elif case.startswith("field"):
+-        _,x,n = case.split("_");dataset,solution,expr,units = "dset1","sol1",list(runner.RAW_FIELD_EXPRESSIONS),list(runner.FIELD_REQUESTED_UNITS)
++        _,x,n = case.split("_");port="1" if x=="minus10" else "2";dataset,solution,expr,units = "dset1","sol1",list(runner.plane_field_expressions(port)),list(runner.plane_field_units(port))
+         points = runner._field_points(-10.0 if x == "minus10" else 8.0,int(n))
+     else:
+         port = case[-1];dataset,solution = ("dset2","sol2") if port == "1" else ("dset3","sol3")
+@@ -2238,9 +2238,13 @@
+         self.values = [[[1.0]*len(matrix[0])] for _ in expr]
+     monkeypatch.setattr(FInterp,"setInterpolationCoordinates",coordinates,raising=False)
+     monkeypatch.setattr(FInterp,"getImagData",lambda self:[[[0.0]*len(self.coords[0])] for _ in expr],raising=False)
++    if case.startswith("field"):
++        from tests.test_activity022_boundary_selection_ticket import install_boundary_selection_fixture
++        install_boundary_selection_fixture(tree,monkeypatch)
+     daemon,ref,project = _real_public_points_daemon(tmp_path,monkeypatch,tree)
+     spec = {"expressions":expr,"solution":{"dataset":dataset,"solution":solution},"complex_mode":"preserve"}
+     if units is not None:spec["units"] = units
++    if case.startswith("field"):spec.update(selection=runner.plane_selection(port),entity_dim=1)
+     body = {"spec":spec,"points":runner._public_points(points),"coordinate_unit":"um","frame":"spatial"}
+     request = {"operation":"operation_call","arguments":{"operation_id":"result.at_points","arguments":body},"execution":{"project_id":project,"session_id":ref["session_id"],"model_ref":ref,"expected_revision":0,"request_id":"public-points","idempotency_key":"public-points","rpc_timeout_s":30,"queue_timeout_s":30,"execution_timeout_s":None}}
+     runner._set_dispatch_allowlist(daemon,tmp_path/"closed-public-journal.jsonl")

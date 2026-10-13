@@ -1,0 +1,23 @@
+{
+  "schema": "root-r14-review-addendum/1",
+  "status": "CHANGES_REQUIRED_THREE_CONFIRMED_SOURCE_COMPATIBILITY_ISSUES",
+  "root_review_sha256": "578f9aad807cd102dd6ab1826e8c2fe8ebecb2c70ec13aa050a9a04f9a745c85",
+  "independent_review": {
+    "path": "local-preservation/w23-activity022-r14-independent-source-review/REVIEW_RECEIPT.json",
+    "bytes": 28425,
+    "sha256": "048dfa05fb324e53f5a6c0b68ab1b6779cbab13e7f8190ab7cd348b393009731"
+  },
+  "findings": [
+    "STRICT-MEASURE-ALL-COMPAT-01: original strict measure supports all; shared binder now rejects it.",
+    "FIXED-ENTRY-APPROVAL-02: actual shell uses Activity021 approval name while metadata binds Activity022; actual production validator refuses.",
+    "FULL-CAMPAIGN-PRODUCER-CONSUMER-03: unchanged Java rawFields produces ewfd aliases and nx/ny; modified shared consumers require emw/down names. Independent actual production consumer comparison confirms rejection."
+  ],
+  "authorized_source_repair": "New R15 preserves frozen R14. Restore original strict measure all without expanding point/Ticket kinds. Match literal shell argv to exact frozen metadata. Preserve original full-campaign Java/legacy default and use an explicit saved-point field scheme for Activity022; no missing-name fallback, value relabeling, fabricated zeros, or Java/native expansion. Bind all affected actual callers and tests to the final source.",
+  "user_instruction": "这轮完成后，将进度同步到github main，包括所有异地开发需要的源码，完成后暂停",
+  "round_boundary": "Finish current source repair/review and source continuation publication to main, verify remote commit, then pause the existing goal. Do not claim full W01-W26 acceptance.",
+  "persistent_readback_authority": "Previously granted bounded saved-MPH authority remains recorded. No Activity022, W24, or W26 target installer is launched in this source-checkpoint round.",
+  "git_authority": "Latest direct user request explicitly authorizes normal non-force main synchronization. Preserve earlier rejection as history; no force push or replacement of unknown remote work.",
+  "runtime_identity_mismatch": "UNFIXED; original Activity021 UNVERIFIED is retained.",
+  "native": "NOT_RUN",
+  "CAS_write": 0
+}

@@ -1,0 +1,53 @@
+--- immutable R2 actor
++++ new R3 actor
+@@ -1,8 +1,10 @@
+ """Proposed exact32 download-only entrypoint; dry-run by default, once guard on execution."""
+ import argparse,hashlib,json,os,signal,sys,tempfile,time
+ from pathlib import Path
++sys.path.insert(0,'/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-helper-successor-r2')
+ from strict_derived import read_regular
+-D=Path(__file__).parent
++D=Path('/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-helper-successor-r2')
++EXECUTION_DIR=Path('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-execution-r3-p09omcx9')
+ E=Path('/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1')
+ ORIGINAL=E/'acquire_exact_archives.py'
+ ORIGINAL_SHA='dde0f5c827af8e3675f2c6dee6b0792a1ae94e8d7f09be3b6f778857983df683'
+@@ -27,17 +29,35 @@
+  return original,rows
+ 
+ def main():
++ started=time.monotonic()
+  a=argparse.ArgumentParser();a.add_argument('--execute-download',action='store_true');a.add_argument('--approved-manifest-sha256');args=a.parse_args()
++ if args.execute_download:
++  inherited=float(os.environ['COMSOL_W26_BATCH_START_MONOTONIC'])
++  if not 0<=time.monotonic()-inherited<CAP-RESERVE:raise RuntimeError('invalid or exhausted inherited outer monotonic budget')
++  started=inherited
++  prior_alarm_handler=signal.getsignal(signal.SIGALRM)
++  signal.signal(signal.SIGALRM,lambda *_: (_ for _ in ()).throw(BatchDeadlineExceeded('inherited outer deadline exhausted')))
++  signal.setitimer(signal.ITIMER_REAL,max(0.001,CAP-RESERVE-(time.monotonic()-started)))
++ if args.execute_download:
++  guard=json.loads(read_regular(EXECUTION_DIR/'WRAPPER_ONCE_GUARD.json')[0])
++  if guard.get('pid')!=os.getppid() or guard.get('uid')!=os.getuid() or guard.get('actor_argv',[])[3:]!=sys.argv:raise RuntimeError('actor is not the exact created child of the admitted wrapper')
++  bound=guard['admission']['binding'];fixed=E/'ROOT_W26_EXACT32_ONCE_DISPATCH_BINDING_R3.json'
++  if bound.get('path')!=str(fixed) or read_regular(fixed)[1]!=bound:raise RuntimeError('actual Root once binding changed or is missing')
++  if json.loads(read_regular(fixed)[0]).get('status')!='GRANTED_ONCE_DOWNLOAD_ONLY':raise RuntimeError('Root once binding does not admit download')
+  original,rows=source_and_rows()
+  if not args.execute_download:
+   print(json.dumps({'status':'DRY_RUN_EXACT32_ONLY','count':32,'bytes':TOTAL,'manifest_sha256':MANIFEST_SHA,'network':0}));return
+  if args.approved_manifest_sha256!=MANIFEST_SHA:raise RuntimeError('wrong approved exact manifest SHA')
+- started=time.monotonic();parent=Path(tempfile.gettempdir()).resolve();parent_security=original.verify_temp_parent(parent)
++ parent=Path(tempfile.gettempdir()).resolve();parent_security=original.verify_temp_parent(parent)
+  # Permanent source-candidate guard is created before the new input prefix; no replays.
+- dfd=os.open(D,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
++ dfd=os.open(EXECUTION_DIR,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+  original.write_json(dfd,'EXACT32_ONCE_GUARD.json',{'argv':sys.argv,'pid':os.getpid(),'manifest_sha256':MANIFEST_SHA,'started_unix':time.time()});os.close(dfd)
+  prefix=Path(tempfile.mkdtemp(prefix='comsol-w26-exact32-inputs-r1-',dir=parent));security=original.verify_private_path_security(prefix,directory=True)
+- pfd=os.open(prefix,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW);af=ef=None;old=signal.getsignal(signal.SIGALRM);failure=None;result={'status':'UNKNOWN','count_acquired':0,'install_build':0,'prefix':str(prefix)}
++ original.verify_private_path_security(EXECUTION_DIR,directory=True,expected_identity={'device': 16777231, 'inode': 28704049})
++ checkpoint_fd=os.open(EXECUTION_DIR,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
++ try:original.write_json(checkpoint_fd,'PREFIX_CREATED.json',{'prefix':str(prefix),'pid':os.getpid(),'uid':os.getuid(),'security':security})
++ finally:os.close(checkpoint_fd)
++ pfd=os.open(prefix,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW);af=ef=None;old=prior_alarm_handler;failure=None;result={'status':'UNKNOWN','count_acquired':0,'install_build':0,'prefix':str(prefix)}
+  def alarm(*_):raise BatchDeadlineExceeded('600s unit cap cleanup reserve reached; no retry')
+  try:
+   original.write_json(pfd,'OWNER.json',{'pid':os.getpid(),'uid':os.getuid(),'argv':sys.argv,'security':security,'parent_security':parent_security,'manifest_sha256':MANIFEST_SHA,'original_source_sha256':ORIGINAL_SHA})

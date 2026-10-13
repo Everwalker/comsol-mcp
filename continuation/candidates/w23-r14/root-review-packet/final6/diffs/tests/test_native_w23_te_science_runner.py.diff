@@ -1,0 +1,17 @@
+--- /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/tests/test_native_w23_te_science_runner.py
++++ /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/tests/test_native_w23_te_science_runner.py
+@@ -227,10 +227,10 @@
+             ("reference_mode", "dOut", "solOut"),
+             ("incident_reference", "dIn", "solIn"))}}
+     definition = runner.build_mode_overlap_definition(sources, 1, -1)
+-    assert definition["reference_mode"]["fields"]["electric"]["x"] == "ewfd.Emodex_2"
+-    assert definition["reference_mode"]["fields"]["magnetic"]["z"] == "ewfd.Hmodez_2"
+-    assert definition["incident_reference"]["fields"]["electric"]["x"] == "ewfd.Emodex_1"
+-    assert definition["signal"]["fields"]["magnetic"]["y"] == "ewfd.Hy"
++    assert definition["reference_mode"]["fields"]["electric"]["x"] == "emw.Emodex_2"
++    assert definition["reference_mode"]["fields"]["magnetic"]["z"] == "emw.Hmodez_2"
++    assert definition["incident_reference"]["fields"]["electric"]["x"] == "emw.Emodex_1"
++    assert definition["signal"]["fields"]["magnetic"]["y"] == "down(emw.Hy)"
+     assert definition["capture"] == {
+         "aperture_id": "receiver_core_aperture", "plane_id": "output_x8",
+         "selection": {"component": "comp1", "geometry": "geom1", "tag": "selCoreCaptureX8"},

@@ -1,0 +1,38 @@
+{
+  "schema": "comsol-mcp.root-source-review/1",
+  "created_utc": "2026-10-11T20:03:11Z",
+  "reviewer": "root",
+  "status": "CHANGES_REQUIRED",
+  "scope": "Activity008 candidate16 offline r1 source review; not final independent whole-project acceptance",
+  "source_root": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-planar-te-source-20261012-008-candidate16",
+  "packet_sha256": "81e47e0b121c3d527415690c4aa7389410cdfc411e392b03ba53104996e36368",
+  "freeze_sha256": "d567467d4e8c4dcf63197afedfa4e9638a511e3b697d0183ec692539f05266d0",
+  "source_manifest_sha256": "8a0359d579bb117d894c6a761decdf3f2ab2897f471c3f26821c344c05d38943",
+  "native_execution_authorized": false,
+  "native_execution_status": "NOT_RUN",
+  "findings": [
+    {
+      "id": "008-R1-P1-ASYNC-DISPATCH-ACCOUNTING",
+      "priority": 1,
+      "file": "tools/run_native_w23_te_science.py",
+      "line": 2422,
+      "problem": "durable_after_rows, new_rows, response_rows and accounting_status are computed before _wait_job and remain unchanged afterwards. The production ControlDaemon can return pending after its RPC wait window; the same job's submitted event may appear later. A successful terminal job with one actual Study.run then incorrectly retains the earlier zero-row UNVERIFIED result.",
+      "required_change": "Reconcile durable job/events again after same-job terminal wait or exception, preserving actual COMSOL failure as primary. Perform at most one dispatch and no retry; missing/UNKNOWN evidence must stop. Add deterministic pending-zero to terminal-one coverage using real OperationStore fields, plus pending UNKNOWN and original-failure controls. Preserve r1 bytes and prepare a newly frozen r2 packet."
+    },
+    {
+      "id": "008-R1-P2-CONDUCTIVITY-NUMERIC-UNDERFLOW",
+      "priority": 2,
+      "file": "tools/run_native_w23_te_science.py",
+      "line": 1540,
+      "problem": "float('1e-400') becomes zero, so a nonzero electricconductivity literal is accepted as exact lossless zero.",
+      "required_change": "Use Decimal or exact numeric lexical validation before conversion, retaining native S/m, typed getter, raw shape and captured size checks. Reject nonzero underflow and overflow literals with explicit controls."
+    }
+  ],
+  "same_version_documentation_read_by_root": [
+    {"doc_id": 22410, "chunk_id": 98325, "source_sha256": "08b5d145ac8adf123ca0e48c74593c6062ecfa21130efc9b033376f8416b9c2c", "supports": "real relative permittivity, relative permeability 1, electric conductivity 0 S/m in a waveguide material"},
+    {"doc_id": 3626, "chunk_id": 10909, "source_sha256": "5b7f23ad2eae77f59d71935f4f6c9b6b9ede380dc34da065181841e512bbc105", "supports": "electricconductivity API physical-quantity key"},
+    {"doc_id": 11652, "chunk_id": 33714, "source_sha256": "1045cdfbcaf7cca0b9c12c065a094a76071607878e5777692fc93313c86b91fd", "supports": "typed array conductivity setter and native S/m expression"}
+  ],
+  "unchanged_acceptance": {"maximum_study_run_calls": 4, "total_activity_budget_s": 1800, "cleanup_reserve_s": 120, "science_thresholds": "UNCHANGED"},
+  "next_action": "Same execution Agent repairs and tests offline r2, then returns exact source freeze, raw JUnit and review packet to root before any new ownership inventory or native admission. Historical Activity007 UNKNOWN/safe_retry=false remains unchanged."
+}

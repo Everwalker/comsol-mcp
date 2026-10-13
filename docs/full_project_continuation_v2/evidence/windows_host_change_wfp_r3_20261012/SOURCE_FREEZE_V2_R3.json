@@ -1,0 +1,285 @@
+{
+  "artifacts": [
+    {
+      "junit": {
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0,
+        "tests": 77
+      },
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_r3_20261012/junit_attempt002.xml",
+      "sha256": "ae1bfbed9926edcde65ebf8e492e1f7039ee928d6ee87a3a2c86b856703d8556",
+      "size_bytes": 11509
+    },
+    {
+      "guard_denies": 0,
+      "guard_events": [
+        "GUARD_ACTIVE_BEFORE_CHILD_ENTRYPOINT"
+      ],
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_r3_20261012/strict_guard_attempt002.jsonl",
+      "sha256": "c73fae1b115a8ade355f3157ef36497fe5f307d1ef4b0401e5c22cb1cb612b34",
+      "size_bytes": 251
+    },
+    {
+      "junit": {
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0,
+        "tests": 2
+      },
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_r3_20261012/junit_attempt004.xml",
+      "sha256": "854f8be4f2d3d262dc9a96d36593321331e783d30b94f1c025bfeffe563e2122",
+      "size_bytes": 560
+    },
+    {
+      "guard_denies": 0,
+      "guard_events": [
+        "GUARD_ACTIVE_BEFORE_CHILD_ENTRYPOINT"
+      ],
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_r3_20261012/strict_guard_attempt004.jsonl",
+      "sha256": "efdb33fa62e04e194f62e28d7b488ff41516f7bf7071a1f9a7de0f9da4ad0ce3",
+      "size_bytes": 260
+    },
+    {
+      "junit": {
+        "errors": 0,
+        "failures": 1,
+        "skipped": 0,
+        "tests": 126
+      },
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_r3_20261012/junit_attempt003.xml",
+      "sha256": "bb9a42058398578a70980f4211422e847037ed0baf68b1d83275a0ad234b6637",
+      "size_bytes": 21071
+    },
+    {
+      "guard_denies": 0,
+      "guard_events": [
+        "GUARD_ACTIVE_BEFORE_CHILD_ENTRYPOINT"
+      ],
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_r3_20261012/strict_guard_attempt003.jsonl",
+      "sha256": "85175eb2bda8cb4fcb955853d035791a091a22e460968316e2c0a5eeb0100d98",
+      "size_bytes": 257
+    },
+    {
+      "junit": {
+        "errors": 0,
+        "failures": 1,
+        "skipped": 0,
+        "tests": 1
+      },
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_r3_20261012/junit_historical_missing_commit.xml",
+      "sha256": "7f090ebac0a37e9591093d3fd26353eea8632b94ac1805162068406b7723e7b3",
+      "size_bytes": 1099
+    },
+    {
+      "guard_denies": 0,
+      "guard_events": [
+        "GUARD_ACTIVE_BEFORE_CHILD_ENTRYPOINT"
+      ],
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_r3_20261012/strict_guard_historical_missing_commit.jsonl",
+      "sha256": "bf8b55a9e174dc0ad4b5f41333ef01e18d271e6e58f2894d1214dc79c1844008",
+      "size_bytes": 271
+    }
+  ],
+  "base_commit": null,
+  "captured_at_utc": "2026-10-12T04:17:44Z",
+  "checks": [
+    {
+      "artifacts": [
+        "junit_attempt002.xml",
+        "strict_guard_attempt002.jsonl"
+      ],
+      "invocation": "pytest tests/test_windows_host_change.py tests/test_windows_t037_native.py tests/test_operation_store.py tests/test_operation_store_migrations.py -k not historical_fixture_commit_and_blob_identity_resolve -q --disable-warnings --maxfail=1",
+      "name": "strict focused affected regression",
+      "result": "77 passed, 1 deselected; 0 failures/errors/skips"
+    },
+    {
+      "artifacts": [
+        "junit_attempt004.xml",
+        "strict_guard_attempt004.jsonl"
+      ],
+      "invocation": "pytest tests/test_w26_os_resources.py -k host_change_plan -q --disable-warnings --maxfail=1",
+      "name": "W26 host-change contract focused",
+      "result": "2 passed, 57 deselected; 0 failures/errors/skips"
+    },
+    {
+      "artifacts": [
+        "junit_attempt003.xml",
+        "strict_guard_attempt003.jsonl"
+      ],
+      "invocation": "pytest tests/test_windows_host_change.py tests/test_windows_t037_native.py tests/test_operation_store.py tests/test_operation_store_migrations.py tests/test_w26_os_resources.py -k not historical_fixture_commit_and_blob_identity_resolve -q --disable-warnings --maxfail=1",
+      "name": "expanded W26 file exploratory run",
+      "result": "125 passed, 1 failed, 1 deselected; test_memory_only_admission_precedes_worker_and_terminal_release_is_durable failed at tests/test_w26_os_resources.py:1582 because live memory admission returned REFUSED before dispatch; preserved and unrelated to WFP source logic."
+    },
+    {
+      "artifacts": [
+        "junit_historical_missing_commit.xml",
+        "strict_guard_historical_missing_commit.jsonl"
+      ],
+      "invocation": "pytest tests/test_operation_store_migrations.py::test_historical_fixture_commit_and_blob_identity_resolve -q --disable-warnings --tb=short",
+      "name": "inherited historical Git-object fixture",
+      "result": "1 failed because git rev-parse a3418bd4546ecc33e26448e7f2a1982727a37153:comsol_mcp/_operation_store.py is unavailable in current Git object history; excluded from focused affected regression and preserved."
+    },
+    {
+      "name": "py_compile",
+      "result": "passed for five production modules and four relevant test modules after the V2 changes."
+    }
+  ],
+  "current_git_head": "799bf7a0fa95313e7659f44d8ff40ff1678314d5",
+  "dependencies": [
+    {
+      "path": "comsol_mcp/_execution_contract.py",
+      "sha256": "dbb112cbbdef9a4d45f69c230123d4e9e57f7b71e337532d83989aa827e6c9e3",
+      "size_bytes": 22753
+    },
+    {
+      "path": "comsol_mcp/_project_authority.py",
+      "sha256": "82b90c1157b242f80feb9079ac4b58e2a1295719a7a323a97532497a740181a8",
+      "size_bytes": 32352
+    },
+    {
+      "path": "comsol_mcp/_host_scoped_provider.py",
+      "sha256": "11d8934dcdc6fccc1196248adec6afdea2ccf29f9b4769485ab756fbeaa1b1cf",
+      "size_bytes": 56451
+    },
+    {
+      "path": "comsol_mcp/_windows_t037.py",
+      "sha256": "fefa4dcd61e67cd5c89c1caa3f74ad24628f5c7069c7110f5ae931d25fa4240e",
+      "size_bytes": 84518
+    }
+  ],
+  "diff_artifact": {
+    "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_r3_20261012/WFP_V2_SOURCE.patch",
+    "sha256": "57bf3c747316b85967f8b2a45037690ae8fe3a274dacfc1d4de8e2bc029b1883",
+    "size_bytes": 175208
+  },
+  "guard_runtime": [
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/temp-loss-runtime-recovery-20261004-001/builder-preparation022/network-guard/guarded_entry.py",
+      "sha256": "e04b2cec6471e5b6ebb547bf6ede48ad7e6d497ee6048c720512fc6bba9a3242",
+      "size_bytes": 826
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/execution-scratch/temp-loss-runtime-recovery-20261004-001/builder-preparation022/network-guard/sitecustomize.py",
+      "sha256": "479369dd916bb05f8a9e1bde27bb999de66a87051f54d2a607b3071b8b5025c2",
+      "size_bytes": 1755
+    }
+  ],
+  "known_open_production_gaps": [
+    "No native Windows execution or effective WFP arbitration proof.",
+    "SCM ServiceMain/broker identity and trusted authorization/ControlDaemon route remain open.",
+    "AppContainer/service identity provisioning and causal restricted launch/descendant propagation remain open.",
+    "Windows-native provider/sublayer/filter API compatibility remains NOT_RUN; external callouts, opaque provider contexts, unsupported layers/conditions remain fail-closed or UNVERIFIED."
+  ],
+  "platform_status": {
+    "effective_wfp_arbitration": "UNVERIFIED",
+    "software_protocol": "SCOPED_PASS",
+    "windows_kernel": "NOT_RUN",
+    "windows_os_mutation": "NOT_RUN"
+  },
+  "preimage_manifest": "local-preservation/windows_host_change_wfp_r3_preimage_20261012/PRESERVATION.json",
+  "preimage_manifest_sha256": "62b42bd4c1157579a5b91c619df293fd5c236ee051c19db40098526db16fa06f",
+  "preservation_manifest": "local-preservation/windows_host_change_wfp_v2_r3_20261012/PRESERVATION.json",
+  "preservation_manifest_sha256": "949f3094ef7e5b66ccb3571a8a5c4b69df9355e76425d34d27d4f123887eb6f5",
+  "previous_r2_freeze": "local-preservation/windows_host_change_wfp_r2_20261012/SOURCE_FREEZE.json",
+  "previous_r2_freeze_sha256": "edfc136f578a8f74fe53eef9da427ea89207d17c9bda5c7b9c7f87e243aedde8",
+  "runtime": {
+    "python_path": "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python",
+    "version": "Python 3.12.13"
+  },
+  "schema": "comsol-mcp.windows-host-change-wfp-v2-source-freeze/1",
+  "scope": "WFP CREATE provider\u2192sublayer\u2192optional filter and receipt-bound reverse restore; durable per-step OperationStore journal; software only.",
+  "source_scope_fingerprint": "55028bda52a5e96fb5620e8b108b74c7bec5c4ca14e3886e453b7bc9c47a2029",
+  "sources": [
+    {
+      "changed_since_preimage": true,
+      "path": "comsol_mcp/_operation_store.py",
+      "preimage_sha256": "bcf59197b1b92e936c924f15f54bbb40b107d072b44a38587a026926893b1834",
+      "preimage_size_bytes": 266589,
+      "sha256": "a033e1e4e5fe3c0ba3d2a7f6d8020da52f5618e8dce50c7ca1a9a568d875bc7b",
+      "size_bytes": 295868,
+      "snapshot_path": "local-preservation/windows_host_change_wfp_v2_r3_20261012/source/comsol_mcp/_operation_store.py"
+    },
+    {
+      "changed_since_preimage": true,
+      "path": "comsol_mcp/_w26_os_resources.py",
+      "preimage_sha256": "7f0e69cadb9a9b6e9501231ac699d0980f640b2e09e0e4a15ce395546a4ebde0",
+      "preimage_size_bytes": 180722,
+      "sha256": "15088d2fcfce57aebdd60feb40db3fbbc3d94098f5ba5c0fb8c5fcfabdd3a1d4",
+      "size_bytes": 184272,
+      "snapshot_path": "local-preservation/windows_host_change_wfp_v2_r3_20261012/source/comsol_mcp/_w26_os_resources.py"
+    },
+    {
+      "changed_since_preimage": true,
+      "path": "comsol_mcp/_windows_host_change.py",
+      "preimage_sha256": "654bdf499f4338a0b3020ca747219e49e800fe45c8ed2a9ab426eb23ea87bb81",
+      "preimage_size_bytes": 32752,
+      "sha256": "21b18d981884443ce3c17fa42c11f490607f7a11f09536d9d3942470043ed8e9",
+      "size_bytes": 67497,
+      "snapshot_path": "local-preservation/windows_host_change_wfp_v2_r3_20261012/source/comsol_mcp/_windows_host_change.py"
+    },
+    {
+      "changed_since_preimage": true,
+      "path": "comsol_mcp/_windows_t037_wfp.py",
+      "preimage_sha256": "9cc206cd07581dc35a7339e2138bcaf3cb9b222f7a11e7319a3e025fe68bb0fc",
+      "preimage_size_bytes": 36286,
+      "sha256": "028603fe4fc0beb2bad44b47b03e5db3d03ce95c456ab087cf86ddda02588f3c",
+      "size_bytes": 58003,
+      "snapshot_path": "local-preservation/windows_host_change_wfp_v2_r3_20261012/source/comsol_mcp/_windows_t037_wfp.py"
+    },
+    {
+      "changed_since_preimage": true,
+      "path": "comsol_mcp/_windows_t037_native.py",
+      "preimage_sha256": "4271a86977f0cb7f81b3a90e64b47f5f5a7350e3e0ba31aa8145ae151a04de01",
+      "preimage_size_bytes": 92747,
+      "sha256": "012dff8dfe252c875f6962018e26bd8c9eb7dde5ea9abe0c933b7ad463260e12",
+      "size_bytes": 95126,
+      "snapshot_path": "local-preservation/windows_host_change_wfp_v2_r3_20261012/source/comsol_mcp/_windows_t037_native.py"
+    },
+    {
+      "changed_since_preimage": false,
+      "path": "tests/test_operation_store.py",
+      "preimage_sha256": "f5436cc8ac662403fec29ff3177acf399b7c47724f605f625c4989a221992c33",
+      "preimage_size_bytes": 16146,
+      "sha256": "f5436cc8ac662403fec29ff3177acf399b7c47724f605f625c4989a221992c33",
+      "size_bytes": 16146,
+      "snapshot_path": "local-preservation/windows_host_change_wfp_v2_r3_20261012/source/tests/test_operation_store.py"
+    },
+    {
+      "changed_since_preimage": false,
+      "path": "tests/test_operation_store_migrations.py",
+      "preimage_sha256": "4c047bf9034138c41ab8b99271e90e61008a10053683a7302350d08215512e34",
+      "preimage_size_bytes": 15974,
+      "sha256": "4c047bf9034138c41ab8b99271e90e61008a10053683a7302350d08215512e34",
+      "size_bytes": 15974,
+      "snapshot_path": "local-preservation/windows_host_change_wfp_v2_r3_20261012/source/tests/test_operation_store_migrations.py"
+    },
+    {
+      "changed_since_preimage": true,
+      "path": "tests/test_windows_host_change.py",
+      "preimage_sha256": "7aa3e4ec377995c2d9eae0489baa40915f5b4553e929984dbe7cfcea501c83d6",
+      "preimage_size_bytes": 29572,
+      "sha256": "36f10e127623d604819eeb44a04b325359dc1514de213126e1a6f61813b86984",
+      "size_bytes": 59260,
+      "snapshot_path": "local-preservation/windows_host_change_wfp_v2_r3_20261012/source/tests/test_windows_host_change.py"
+    },
+    {
+      "changed_since_preimage": true,
+      "path": "tests/test_windows_t037_native.py",
+      "preimage_sha256": "fdc856d0c2928648950c19de9683575dd682d126820c54ed1987489cb9cdc6be",
+      "preimage_size_bytes": 31724,
+      "sha256": "efe4b198827831c21e544701c5f60317a1bbc1a87d2272bf5ec7c1609ac0848f",
+      "size_bytes": 32945,
+      "snapshot_path": "local-preservation/windows_host_change_wfp_v2_r3_20261012/source/tests/test_windows_t037_native.py"
+    },
+    {
+      "changed_since_preimage": true,
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_r1/IMPLEMENTATION.md",
+      "preimage_sha256": "9eb94b7ba9bd284b54885e508b11eb6ec2c4dd982f43f84994aa920792b44a54",
+      "preimage_size_bytes": 2392,
+      "sha256": "5376ce05ddbf3870dc9c07e94b59ab2a643b3fe5f7a874ee8b3f731b1677a62e",
+      "size_bytes": 3657,
+      "snapshot_path": "local-preservation/windows_host_change_wfp_v2_r3_20261012/source/docs/full_project_continuation_v2/evidence/windows_host_change_wfp_r1/IMPLEMENTATION.md"
+    }
+  ]
+}

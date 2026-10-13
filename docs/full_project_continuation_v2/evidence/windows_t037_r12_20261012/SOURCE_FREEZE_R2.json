@@ -1,0 +1,128 @@
+{
+  "created_utc": "2026-10-11T22:12:23Z",
+  "dependencies": [
+    {
+      "path": "comsol_mcp/_host_scoped_provider.py",
+      "preservation": "DEPENDENCY_HASH_ONLY; owned by adjacent unit",
+      "sha256": "5b3cc6f7f619752b04423c4a5336a6f776634b6fa28cde4c8ff24e2e54d50e6f",
+      "size_bytes": 53837
+    },
+    {
+      "path": "comsol_mcp/_windows_parameter_publish.py",
+      "preservation": "DEPENDENCY_HASH_ONLY; owned by adjacent unit",
+      "sha256": "f128dc330ea3a7366765e1fe16dd03e7ba63cacf9d02e992d748a781f97b0ea8",
+      "size_bytes": 26595
+    },
+    {
+      "path": "comsol_mcp/_w26_os_resources.py",
+      "preservation": "DEPENDENCY_HASH_ONLY; owned by adjacent unit",
+      "sha256": "e19946f52715efad9aca120860a2529863745edf96c4a3aacfa0976b8c027d27",
+      "size_bytes": 133592
+    }
+  ],
+  "files": [
+    {
+      "path": "comsol_mcp/_windows_t037.py",
+      "sha256": "68a9c47a9be9c806156cc005d538d2b826effa08cf9f4b36ac48576e06b4bf30",
+      "size_bytes": 75416
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "sha256": "7268c311e9732099544853be31ab9315b32b414df81b4855e14931aa861923f5",
+      "size_bytes": 792343
+    },
+    {
+      "path": "comsol_mcp/_session_server.py",
+      "sha256": "d2c80b077a874d3f11f663225a7d421cc2b3016466f30074eb04b83e7a698c4f",
+      "size_bytes": 39074
+    },
+    {
+      "path": "comsol_mcp/_java_worker.py",
+      "sha256": "a077b57b74e036ebd363b1a64e4b801a1000f57b3d7356d4238a331015f16710",
+      "size_bytes": 65883
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "sha256": "a8c79494db18de5ee4e01847d36bc5158bf65fa4416e93a9b65db058cb7a429c",
+      "size_bytes": 232805
+    },
+    {
+      "path": "tests/test_windows_t037.py",
+      "sha256": "ca6ab8e532d29b4d5b4c4588c49f763a640040188fa20bbb2f048b5f00704c02",
+      "size_bytes": 14181
+    },
+    {
+      "path": "tests/test_control_daemon.py",
+      "sha256": "5c83687f97da339d6305e41aa4e70f246f4edec76100aaa7bdae02553acf56b1",
+      "size_bytes": 6691
+    },
+    {
+      "path": "tests/test_session_server.py",
+      "sha256": "dda18e07e32ec291b56716aee1adbf0179b06ce4931bea4d66d3da47daf1e321",
+      "size_bytes": 31734
+    },
+    {
+      "path": "tests/test_java_worker.py",
+      "sha256": "77551975df32106ee5f432eae98e74bf0da82fcc6bdade4845d9cc7c1b854ee2",
+      "size_bytes": 48372
+    },
+    {
+      "path": "docs/full_project_continuation_v2/WINDOWS_T037_PROFILE.md",
+      "sha256": "dbd1104213c200d0700cf8bf9e27528d591baaeab0cb39e7d7f1d092d746fb62",
+      "size_bytes": 2630
+    }
+  ],
+  "git_head_at_freeze": "799bf7a0fa95313e7659f44d8ff40ff1678314d5",
+  "preservation_path": "local-preservation/windows-t037-20261012-r2",
+  "preservation_receipt_sha256": "5fa055781d1822233ac9734176b35671d2e3bf409651366bacd8d2e7387b6a3e",
+  "r1_freeze_sha256": "c3e00dda864b9bca185356722c4a0b4e42b84eb4528c720eaef6e55fc0026116",
+  "r1_preservation_receipt_sha256": "a5d99e77c4dd22598828125d985a81762faa77c5db27b38640a8deef2b46e754",
+  "r2_delta_files": [
+    "comsol_mcp/_windows_t037.py",
+    "tests/test_windows_t037.py"
+  ],
+  "r2_delta_summary": "Removed mutable proof-field unlock path. Factory preflight always typed-refuses until a trusted native policy verifier and proof issuer exist; adversarial test assigns factory._proof=object() and confirms no native API invocation/Popen fallback.",
+  "schema": "windows-t037-source-freeze/2",
+  "verification": {
+    "COMSOL_or_scientific_acceptance": "NOT_RUN",
+    "created_utc": "2026-10-11T22:12:23Z",
+    "focused_r2": {
+      "argv": [
+        "exec",
+        "import pytest; raise SystemExit(pytest.main(['tests/test_windows_t037.py','-q','--basetemp=/private/tmp/comsol-t037-r12-pytest-20261012','--junitxml=docs/full_project_continuation_v2/evidence/windows_t037_r12_20261012/junit.xml']))"
+      ],
+      "cwd": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository",
+      "guarded_entry": "/Volumes/SSD/Comsol-MCP/execution-scratch/temp-loss-runtime-recovery-20261004-001/builder-preparation022/network-guard/guarded_entry.py",
+      "junit": {
+        "counts": {
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0,
+          "tests": 24
+        },
+        "path": "docs/full_project_continuation_v2/evidence/windows_t037_r12_20261012/junit.xml",
+        "sha256": "5a2ef733dbb1351c6d757de688553a5e4ac5a6ba4b60694fb59a80a5812d4a79"
+      },
+      "label": "windows-t037-r12",
+      "network_guard": {
+        "denied_events": 0,
+        "events": 1,
+        "path": "docs/full_project_continuation_v2/evidence/windows_t037_r12_20261012/network-guard.jsonl",
+        "sha256": "0b205c50ec4cf90b92912f6a53e1a85db01b9f7c3854499b57fa205214945037"
+      },
+      "python": "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python",
+      "result": "24 passed in 0.24s; strict network guard active; zero denied events",
+      "run_id": "windows-t037-r12-20261012",
+      "scope": "software tests only; no COMSOL, JAR, GUI, Windows host, or external network"
+    },
+    "git_diff_check": "PASS for T037 changed source/test/docs paths",
+    "native_windows_kernel": "NOT_RUN",
+    "py_compile": "PASS for the 9 touched Python modules/test files",
+    "r1_regressions_inherited_unchanged": {
+      "r4_diagnostic": "67 passed, 11 failed, 7 errors, 1 skipped; retained as historical diagnostic with 8 guard-denied socket operations",
+      "r6": "25 passed, 1 deselected; source hashes unchanged for its selected inputs",
+      "r7": "8 passed, 49 deselected; task-local localhost Python fixture only; source pre/post hashes exact"
+    },
+    "schema": "windows-t037-runs/2"
+  }
+}

@@ -1,0 +1,1220 @@
+--- preimage/comsol_mcp/_control_daemon.py
++++ candidate/comsol_mcp/_control_daemon.py
+@@ -12959,7 +12959,11 @@
+ 
+ 
+ def serve(home, *, host_provider_config=None, disk_resource_config=None, memory_resource_config=None,
+-          windows_t037_profile=None, _scm_runtime=None):
++          windows_t037_profile=None, _scm_runtime=None, _scm_bootstrap_request=None,
++          _scm_profile_source_sha256=None):
++    if _scm_bootstrap_request is not None and _scm_runtime is None:
++        from ._windows_t037_broker import WindowsScmError
++        raise WindowsScmError("SCM_BOOTSTRAP_SERVICE_REQUIRED", "bootstrap requests require the explicit SCM entrypoint")
+     home = Path(home)
+     home.mkdir(mode=0o700, parents=True, exist_ok=True)
+     os.chmod(home, 0o700)
+@@ -12994,7 +12998,8 @@
+         singleton.close()
+         raise
+     try:
+-        return _serve_control_listener(home, daemon, token, _scm_runtime)
++        return _serve_control_listener(home, daemon, token, _scm_runtime,
++                                       _scm_bootstrap_request, _scm_profile_source_sha256)
+     finally:
+         # Existing close drains accepted execution lanes and preserves UNKNOWN
+         # ownership. SCM STOP is not a solver cancellation or a host RESTORE.
+@@ -13005,14 +13010,15 @@
+                 singleton.close()
+ 
+ 
+-def _serve_control_listener(home, daemon, token, _scm_runtime):
++def _serve_control_listener(home, daemon, token, _scm_runtime, bootstrap_path, profile_source_sha256):
+     if _scm_runtime is not None:
+         from ._windows_t037 import WindowsT037ProfileV2
+         from ._windows_t037_broker import ScmServiceRuntime, WindowsScmError
+         profile = daemon._windows_t037_profile
+         if (type(_scm_runtime) is not ScmServiceRuntime
+                 or type(profile) is not WindowsT037ProfileV2
+-                or _scm_runtime.service_name != profile.service_name):
++                or _scm_runtime.service_name != profile.service_name
++                or profile.source_sha256 != profile_source_sha256):
+             raise WindowsScmError("SCM_DAEMON_PROFILE_MISMATCH",
+                                   "SCM service does not bind the daemon's trusted v2 startup profile")
+     daemon._control_singleton_lock_held = True
+@@ -13063,15 +13069,31 @@
+         temporary.replace(home / "control.json")
+         stop_monitor = None
+         monitor_done = threading.Event()
++        bootstrap_failure = []
+         try:
+             if _scm_runtime is not None:
+                 # SCM readiness follows actual daemon and endpoint initialization.
+                 # This does not attest child isolation or native policy readiness.
+                 _scm_runtime.mark_running()
+                 daemon._windows_t037_host_control_issuer(_scm_runtime)
++                bootstrap_future = None
++                if bootstrap_path is not None:
++                    from ._windows_t037_bootstrap import submit_bootstrap
++                    bootstrap_future = submit_bootstrap(daemon, _scm_runtime, bootstrap_path)
++                    # Retain the actual accepted handle throughout shutdown.
++                    # Polling bounds observation only; it does not cancel the
++                    # serial lane or infer that a host effect did not happen.
++                    daemon._scm_bootstrap_future = bootstrap_future
+ 
+                 def stop_service_listener():
+                     while not monitor_done.is_set():
++                        if bootstrap_future is not None and bootstrap_future.done():
++                            try:
++                                bootstrap_future.result()
++                            except BaseException as exc:
++                                bootstrap_failure.append(exc)
++                                server.shutdown()
++                                return
+                         if _scm_runtime.wait_for_stop(timeout=0.2):
+                             server.shutdown()
+                             return
+@@ -13080,6 +13102,8 @@
+                                                 name="windows-scm-stop", daemon=True)
+                 stop_monitor.start()
+             server.serve_forever()
++            if bootstrap_failure:
++                raise bootstrap_failure[0]
+         except BaseException as exc:
+             exception_type = type(exc).__name__
+             if not _CONTROL_DAEMON_SAFE_TYPE_RE.fullmatch(exception_type):
+@@ -13120,7 +13144,7 @@
+ 
+ def serve_windows_scm_service(home, *, service_name, windows_t037_profile,
+                               host_provider_config=None, disk_resource_config=None,
+-                              memory_resource_config=None):
++                              memory_resource_config=None, bootstrap_request=None):
+     """Explicit own-process SCM entrypoint; no console or vendor fallback."""
+     from ._windows_t037 import WindowsT037ProfileV2, load_trusted_profile
+     from ._windows_t037_broker import WindowsScmError, WindowsScmServiceBroker
+@@ -13138,7 +13162,9 @@
+         return serve(home, host_provider_config=host_provider_config,
+                      disk_resource_config=disk_resource_config,
+                      memory_resource_config=memory_resource_config,
+-                     windows_t037_profile=selected_profile, _scm_runtime=runtime)
++                     windows_t037_profile=selected_profile, _scm_runtime=runtime,
++                     _scm_bootstrap_request=bootstrap_request,
++                     _scm_profile_source_sha256=profile.source_sha256)
+ 
+     return WindowsScmServiceBroker(service_name, service_main).run()
+ 
+@@ -13156,14 +13182,19 @@
+                         help="trusted Windows T037 startup profile; may also use COMSOL_MCP_WINDOWS_T037_PROFILE")
+     parser.add_argument("--windows-scm-service-name", default=None,
+                         help="explicit own-process SCM entrypoint; must match the trusted v2 profile")
++    parser.add_argument("--windows-scm-bootstrap-request", default=None,
++                        help="one explicitly configured pinned private request; SCM entrypoint only")
+     arguments = parser.parse_args(argv)
++    if arguments.windows_scm_bootstrap_request is not None and arguments.windows_scm_service_name is None:
++        parser.error("--windows-scm-bootstrap-request requires --windows-scm-service-name")
+     if arguments.windows_scm_service_name is not None:
+         return serve_windows_scm_service(
+             arguments.home, service_name=arguments.windows_scm_service_name,
+             host_provider_config=arguments.host_provider_config,
+             disk_resource_config=arguments.disk_resource_config,
+             memory_resource_config=arguments.memory_resource_config,
+-            windows_t037_profile=arguments.windows_t037_profile)
++            windows_t037_profile=arguments.windows_t037_profile,
++            bootstrap_request=arguments.windows_scm_bootstrap_request)
+     return serve(arguments.home, host_provider_config=arguments.host_provider_config,
+                  disk_resource_config=arguments.disk_resource_config,
+                  memory_resource_config=arguments.memory_resource_config,
+--- /dev/null
++++ candidate/comsol_mcp/_windows_t037_bootstrap.py
+@@ -0,0 +1,170 @@
++"""One explicitly configured private SCM bootstrap request, without a queue.
++
++Reading intent never establishes native policy proof. Only a live sealed SCM
++runtime may submit it through the daemon's existing authority and serial lane.
++"""
++from __future__ import annotations
++
++from dataclasses import dataclass
++import hashlib
++import json
++import math
++import os
++from pathlib import Path
++from types import MappingProxyType
++from typing import Any
++
++from ._windows_t037_broker import WindowsScmError
++
++SCHEMA = 'COMSOL_MCP_WINDOWS_SCM_BOOTSTRAP_V1'
++MAX_REQUEST_BYTES = 2 * 1024 * 1024
++MAX_DEPTH = 32
++MAX_NODES = 100_000
++_WINDOWS = os.name == 'nt'
++
++
++def _fail(code, message):
++    raise WindowsScmError(code, message, safe_retry=False, stage='validation')
++
++
++def _object(pairs):
++    row = {}
++    for key, value in pairs:
++        if key in row:
++            _fail('SCM_BOOTSTRAP_DUPLICATE_KEY', 'bootstrap JSON contains a duplicate object key')
++        row[key] = value
++    return row
++
++
++def _decode(raw: bytes):
++    if not isinstance(raw, bytes) or not 1 <= len(raw) <= MAX_REQUEST_BYTES:
++        _fail('SCM_BOOTSTRAP_SIZE_INVALID', 'bootstrap JSON size is outside its bound')
++    try:
++        value = json.loads(raw.decode('utf-8'), object_pairs_hook=_object,
++                           parse_constant=lambda _: _fail('SCM_BOOTSTRAP_JSON_INVALID', 'nonfinite JSON is forbidden'))
++    except (UnicodeDecodeError, json.JSONDecodeError, RecursionError):
++        _fail('SCM_BOOTSTRAP_JSON_INVALID', 'bootstrap must be bounded UTF-8 JSON')
++    pending = [(value, 0)]
++    count = 0
++    while pending:
++        item, depth = pending.pop()
++        count += 1
++        if depth > MAX_DEPTH or count > MAX_NODES:
++            _fail('SCM_BOOTSTRAP_JSON_LIMIT', 'bootstrap JSON exceeds structural bounds')
++        if isinstance(item, dict):
++            pending.extend((child, depth + 1) for child in item.values())
++        elif isinstance(item, list):
++            pending.extend((child, depth + 1) for child in item)
++        elif isinstance(item, float) and not math.isfinite(item):
++            _fail('SCM_BOOTSTRAP_JSON_INVALID', 'nonfinite JSON is forbidden')
++    return value
++
++
++def read_private_bootstrap(path) -> bytes:
++    """Read the exact owner/DACL/path-chain protected file through one handle."""
++    if not _WINDOWS:
++        _fail('SCM_BOOTSTRAP_WINDOWS_REQUIRED', 'private bootstrap loading requires Windows handle/ACL APIs')
++    target = Path(path)
++    if not target.is_absolute() or '..' in target.parts or target.name in {'', '.', '..'}:
++        _fail('SCM_BOOTSTRAP_PATH_INVALID', 'bootstrap requires an absolute canonical file path')
++    from ._host_scoped_provider import verify_private_path_security
++    from ._windows_parameter_publish import _API
++    api = _API()
++    before = verify_private_path_security(target, directory=False)
++    chain = api.open_security_path(target.parent, directory=True)
++    handle = None
++    try:
++        handle = api.open_source(chain[-1], target.name)
++        fingerprint = api.source_fingerprint(handle)
++        identity, size, _created, _written, links = fingerprint
++        expected = {'device': identity[0], 'inode': identity[1],
++                    'security_sha256': before['security_sha256']}
++        if (before['identity'] != expected or links != 1
++                or not 1 <= size <= MAX_REQUEST_BYTES
++                or before['security_semantics'] != 'windows-read-control-owner-dacl-persistent-acls'):
++            _fail('SCM_BOOTSTRAP_PINNING_INVALID', 'bootstrap identity, link count, ACL semantics or size is invalid')
++        payload = bytearray()
++        while len(payload) < size:
++            block = api.read_chunk(handle, min(16384, size - len(payload)))
++            if not block:
++                _fail('SCM_BOOTSTRAP_FILE_CHANGED', 'bootstrap file ended before its pinned size')
++            payload.extend(block)
++        if api.read_chunk(handle, 1) or api.source_fingerprint(handle) != fingerprint:
++            _fail('SCM_BOOTSTRAP_FILE_CHANGED', 'bootstrap file changed during pinned read')
++        after = verify_private_path_security(target, directory=False, expected_identity=expected)
++        if after['security_sha256'] != before['security_sha256']:
++            _fail('SCM_BOOTSTRAP_FILE_CHANGED', 'bootstrap ACL changed during pinned read')
++        return bytes(payload)
++    finally:
++        if handle is not None:
++            api.close(handle)
++        for item in reversed(chain):
++            api.close(item)
++
++
++@dataclass(frozen=True)
++class BootstrapRequest:
++    phase: str
++    authorization_ref: str
++    plan: Any
++    receipt: Any
++    source_sha256: str
++
++
++def parse_bootstrap(raw: bytes, profile) -> BootstrapRequest:
++    from ._windows_t037 import WindowsT037ProfileV2
++    from . import _w26_os_resources as resources
++    from ._windows_host_change import _normalize_supported_actions, _verify_receipt, _verify_sequence_receipt
++    if type(profile) is not WindowsT037ProfileV2:
++        _fail('SCM_BOOTSTRAP_PROFILE_REQUIRED', 'bootstrap requires the daemon trusted v2 profile')
++    value = _decode(raw)
++    fields = {'schema', 'service_name', 'profile_source_sha256', 'host_profile_sha256',
++              'project_id', 'phase', 'authorization_ref', 'plan', 'receipt'}
++    if not isinstance(value, dict) or set(value) != fields or value['schema'] != SCHEMA:
++        _fail('SCM_BOOTSTRAP_SCHEMA_INVALID', 'bootstrap fields must match the exact closed schema')
++    if (value['service_name'] != profile.service_name
++            or value['profile_source_sha256'] != profile.source_sha256
++            or value['host_profile_sha256'] != profile.sha256
++            or value['project_id'] != profile.host_resource_profile.project_id):
++        _fail('SCM_BOOTSTRAP_PROFILE_MISMATCH', 'bootstrap does not bind this exact service/profile/project')
++    selected = value['plan']
++    if not isinstance(selected, dict) or set(selected) != {'payload_json', 'sha256'}:
++        _fail('SCM_BOOTSTRAP_PLAN_INVALID', 'bootstrap requires the exact immutable plan envelope')
++    if not isinstance(selected['payload_json'], str):
++        _fail('SCM_BOOTSTRAP_PLAN_INVALID', 'plan payload must be a JSON string')
++    _decode(selected['payload_json'].encode('utf-8'))  # Nested JSON has the same duplicate/depth bounds.
++    plan = resources.HostChangePlan(selected['payload_json'], selected['sha256'])
++    resources.validate_host_change_plan(plan)
++    _normalize_supported_actions(plan, profile.host_resource_profile)
++    from ._windows_t037_broker import _authorization_ref
++    authorization_ref = _authorization_ref(value['authorization_ref'])
++    phase, receipt = value['phase'], None
++    if phase == 'APPLY':
++        if value['receipt'] is not None:
++            _fail('SCM_BOOTSTRAP_RECEIPT_INVALID', 'APPLY must not carry a receipt')
++    elif phase == 'RESTORE':
++        r = value['receipt']
++        if not isinstance(r, dict) or set(r) != {'plan_sha256', 'host_id', 'platform', 'actions', 'receipt_sha256'}:
++            _fail('SCM_BOOTSTRAP_RECEIPT_INVALID', 'RESTORE requires the exact receipt envelope')
++        if not isinstance(r['actions'], list) or not 1 <= len(r['actions']) <= 3:
++            _fail('SCM_BOOTSTRAP_RECEIPT_INVALID', 'RESTORE receipt actions are outside the supported bound')
++        receipt = resources.AppliedHostChangeReceipt(r['plan_sha256'], r['host_id'], r['platform'],
++                                                     tuple(r['actions']), r['receipt_sha256'])
++        # Both historical one-filter and V2 sequence receipts retain their
++        # actual digest/schema. No translation may mint a replacement receipt.
++        if len(receipt.actions) == 1 and isinstance(receipt.actions[0], dict) and 'resource_kind' not in receipt.actions[0]:
++            _verify_receipt(plan, profile.host_resource_profile, receipt)
++        else:
++            _verify_sequence_receipt(plan, profile.host_resource_profile, receipt)
++        receipt = resources.AppliedHostChangeReceipt(
++            receipt.plan_sha256, receipt.host_id, receipt.platform,
++            tuple(MappingProxyType(dict(item)) for item in receipt.actions), receipt.receipt_sha256)
++    else:
++        _fail('SCM_BOOTSTRAP_PHASE_INVALID', 'bootstrap phase must be APPLY or RESTORE')
++    return BootstrapRequest(phase, authorization_ref, plan, receipt, hashlib.sha256(raw).hexdigest())
++
++
++def submit_bootstrap(daemon, runtime, path):
++    request = parse_bootstrap(read_private_bootstrap(path), daemon._windows_t037_profile)
++    return daemon._submit_scm_host_control(runtime, phase=request.phase, plan=request.plan,
++                                           authorization_ref=request.authorization_ref, receipt=request.receipt)
+--- preimage/comsol_mcp/_windows_t037_native.py
++++ candidate/comsol_mcp/_windows_t037_native.py
+@@ -729,13 +729,13 @@
+         if scm["service_security_semantics"] != "OWNER_DACL_CANONICAL_ACE_ORDER_READ_CONTROL":
+             reasons.append("SCM_SERVICE_SECURITY_UNVERIFIED")
+ 
+-        server_images = [item for item in profile.launch_images if item.role == "server"]
+-        if len(server_images) != 1:
+-            _fail("T037_NATIVE_PROFILE_INVALID", "v2 profile must contain exactly one server launch image")
+-        server = server_images[0]
+-        expected_image = ntpath.normcase(ntpath.normpath(server.path))
++        launcher_images = [item for item in profile.launch_images if item.role == "launcher"]
++        if len(launcher_images) != 1:
++            _fail("T037_NATIVE_PROFILE_INVALID", "v2 profile must contain exactly one SCM launcher image")
++        launcher = launcher_images[0]
++        expected_image = ntpath.normcase(ntpath.normpath(launcher.path))
+         if (ntpath.normcase(ntpath.normpath(scm["service_binary_image_path"])) != expected_image
+-                or scm["service_binary_argv_sha256"] != server.argv_sha256):
++                or scm["service_binary_argv_sha256"] != launcher.argv_sha256):
+             reasons.append("SCM_BINARY_IMAGE_OR_ARGV_MISMATCH")
+ 
+         if wfp["state"] != "COMPLETE_READ_ONLY":
+@@ -814,18 +814,17 @@
+             groups = {item.casefold() for item in token["group_sids"]}
+             if policy.service_sid.casefold() not in groups:
+                 reasons.append("SCM_PROCESS_SERVICE_SID_GROUP_UNVERIFIED")
+-            if not token["is_appcontainer"] or str(token["appcontainer_sid"]).casefold() != policy.appcontainer_sid.casefold():
+-                reasons.append("SCM_PROCESS_APPCONTAINER_TOKEN_UNVERIFIED")
+-            capabilities = {item.casefold() for item in token["capability_sids"]}
+-            if not {item.casefold() for item in policy.capability_sids}.issubset(capabilities):
+-                reasons.append("SCM_PROCESS_APPCONTAINER_CAPABILITIES_UNVERIFIED")
++            # The own-process broker uses the configured service logon/service
++            # SID. AppContainer identity and shared Job membership belong to
++            # the actual restricted Server/Worker children, separately.
+             if proc_after["image_path"] != expected_image:
+                 reasons.append("SCM_PROCESS_IMAGE_PATH_MISMATCH")
+             reasons.append("LOADED_IMAGE_CONTENT_HASH_NOT_PROVEN")
+-            if proc_after["job_membership_exact"] is not True:
+-                reasons.append("EXACT_SERVER_WORKER_JOB_BINDING_UNAVAILABLE")
++            reasons.append("EXACT_SERVER_WORKER_JOB_BINDING_UNAVAILABLE")
+ 
+         reasons.extend(("WFP_EFFECTIVE_ARBITRATION_NOT_PROVEN",
++                        "SERVER_WORKER_APPCONTAINER_TOKENS_NOT_PROVEN",
++                        "SERVER_WORKER_PARENT_BIRTH_IMAGE_ARGV_NOT_PROVEN",
+                         "VENDOR_LOOPBACK_COMPATIBILITY_NOT_PROVEN",
+                         "NATIVE_T037_PROOF_ISSUER_NOT_IMPLEMENTED",
+                         "FILESYSTEM_ACL_GRANT_COMPARISON_NOT_IMPLEMENTED"))
+--- /dev/null
++++ candidate/comsol_mcp/_windows_t037_broker.py
+@@ -0,0 +1,567 @@
++"""Windows SCM entrypoint and sealed internal host-control requests.
++
++This module implements the documented Service Control Manager callback
++protocol. It does not install a service, create an account, change ACL/WFP
++state, or prove T037 isolation. The actual installation/broker binding and
++native Windows validation remain separate deployment work.
++
++SCM APIs are loaded only on Windows. Software tests inject a private fake API
++through the explicit test constructor; that path never becomes a production
++proof or a launch fallback.
++"""
++from __future__ import annotations
++
++import ctypes
++from dataclasses import dataclass, field
++import os
++import re
++import threading
++from typing import Any, Callable, Mapping
++
++from ._execution_contract import ExecutionContractError
++
++ERROR_CALL_NOT_IMPLEMENTED = 120
++ERROR_SUCCESS = 0
++ERROR_SERVICE_SPECIFIC_ERROR = 1066
++SERVICE_CONTROL_STOP = 0x00000001
++SERVICE_CONTROL_INTERROGATE = 0x00000004
++SERVICE_CONTROL_SHUTDOWN = 0x00000005
++SERVICE_WIN32_OWN_PROCESS = 0x00000010
++SERVICE_ACCEPT_STOP = 0x00000001
++SERVICE_ACCEPT_SHUTDOWN = 0x00000004
++SERVICE_STOPPED = 0x00000001
++SERVICE_START_PENDING = 0x00000002
++SERVICE_STOP_PENDING = 0x00000003
++SERVICE_RUNNING = 0x00000004
++_SERVICE_NAME = re.compile(r"^[A-Za-z0-9_.-]{1,256}$")
++_MAX_START_ARGUMENTS = 32
++
++
++class WindowsScmError(ExecutionContractError):
++    """Typed refusal or failure in the Windows service dispatcher protocol."""
++
++
++def _fail(code: str, message: str, *, details: Mapping[str, Any] | None = None) -> None:
++    raise WindowsScmError(code, message, safe_retry=False, stage="validation", details=details)
++
++
++# Windows WCHAR is always 16 bits. Do not use c_wchar/wintypes.LPWSTR in
++# portable layout declarations: on Darwin c_wchar is 32 bits.
++DWORD = ctypes.c_uint32
++BOOL = ctypes.c_int32
++HANDLE = ctypes.c_void_p
++WCHAR = ctypes.c_uint16
++LPWSTR16 = ctypes.POINTER(WCHAR)
++LPWSTR16_ARRAY = ctypes.POINTER(LPWSTR16)
++_CALLBACK_FACTORY = getattr(ctypes, "WINFUNCTYPE", ctypes.CFUNCTYPE)
++SERVICE_MAIN_FUNCTIONW = _CALLBACK_FACTORY(None, DWORD, LPWSTR16_ARRAY)
++HANDLER_FUNCTION_EX = _CALLBACK_FACTORY(DWORD, DWORD, DWORD, ctypes.c_void_p, ctypes.c_void_p)
++
++
++class SERVICE_STATUS(ctypes.Structure):
++    _fields_ = [
++        ("dwServiceType", DWORD),
++        ("dwCurrentState", DWORD),
++        ("dwControlsAccepted", DWORD),
++        ("dwWin32ExitCode", DWORD),
++        ("dwServiceSpecificExitCode", DWORD),
++        ("dwCheckPoint", DWORD),
++        ("dwWaitHint", DWORD),
++    ]
++
++
++class SERVICE_TABLE_ENTRYW(ctypes.Structure):
++    _fields_ = [("lpServiceName", LPWSTR16), ("lpServiceProc", SERVICE_MAIN_FUNCTIONW)]
++
++
++def scm_abi_layout() -> dict[str, Any]:
++    """Return fixed-width declarations and host layout for review/tests."""
++    return {
++        "DWORD_size": ctypes.sizeof(DWORD),
++        "BOOL_size": ctypes.sizeof(BOOL),
++        "WCHAR_size": ctypes.sizeof(WCHAR),
++        "HANDLE_size": ctypes.sizeof(HANDLE),
++        "SERVICE_STATUS_size": ctypes.sizeof(SERVICE_STATUS),
++        "SERVICE_STATUS_offsets": {name: getattr(SERVICE_STATUS, name).offset for name, _ in SERVICE_STATUS._fields_},
++        "SERVICE_TABLE_ENTRYW_size": ctypes.sizeof(SERVICE_TABLE_ENTRYW),
++        "SERVICE_TABLE_ENTRYW_offsets": {
++            "lpServiceName": SERVICE_TABLE_ENTRYW.lpServiceName.offset,
++            "lpServiceProc": SERVICE_TABLE_ENTRYW.lpServiceProc.offset,
++        },
++        "pointer_size": ctypes.sizeof(ctypes.c_void_p),
++    }
++
++
++def _validate_abi() -> None:
++    layout = scm_abi_layout()
++    pointer_size = layout["pointer_size"]
++    if (layout["DWORD_size"] != 4 or layout["BOOL_size"] != 4 or layout["WCHAR_size"] != 2
++            or layout["SERVICE_STATUS_size"] != 28
++            or layout["SERVICE_STATUS_offsets"] != {
++                "dwServiceType": 0, "dwCurrentState": 4, "dwControlsAccepted": 8,
++                "dwWin32ExitCode": 12, "dwServiceSpecificExitCode": 16,
++                "dwCheckPoint": 20, "dwWaitHint": 24,
++            }
++            or pointer_size not in {4, 8}
++            or layout["SERVICE_TABLE_ENTRYW_size"] != 2 * pointer_size
++            or layout["SERVICE_TABLE_ENTRYW_offsets"] != {
++                "lpServiceName": 0, "lpServiceProc": pointer_size,
++            }):
++        _fail("SCM_ABI_UNSUPPORTED", "ctypes service ABI layout does not match fixed Win32 widths")
++
++
++def _bind_export(dll: Any, name: str, argtypes: list[Any], restype: Any) -> Any:
++    try:
++        fn = getattr(dll, name)
++    except AttributeError as exc:
++        _fail("SCM_API_EXPORT_UNAVAILABLE", f"required Win32 export {name} is unavailable")
++    if not callable(fn):
++        _fail("SCM_API_EXPORT_INVALID", f"required Win32 export {name} is not callable")
++    try:
++        fn.argtypes = argtypes
++        fn.restype = restype
++    except Exception as exc:
++        _fail("SCM_API_ABI_BINDING_FAILED", f"Win32 export {name} rejected its documented ctypes ABI",
++              details={"cause_type": type(exc).__name__})
++    return fn
++
++
++class CtypesWindowsScmApi:
++    """Late-bound fixed-width wrapper for the documented SCM dispatcher APIs."""
++
++    def __init__(self) -> None:
++        if os.name != "nt":
++            _fail("SCM_WINDOWS_REQUIRED", "Windows SCM APIs are unavailable on this host")
++        _validate_abi()
++        try:
++            self._advapi = ctypes.WinDLL("advapi32", use_last_error=True)
++            self._kernel = ctypes.WinDLL("kernel32", use_last_error=True)
++        except Exception as exc:
++            _fail("SCM_DLL_LOAD_FAILED", "Windows SCM libraries could not be loaded",
++                  details={"cause_type": type(exc).__name__})
++        self._bind()
++        self._active_callbacks: tuple[Any, ...] = ()
++
++    @staticmethod
++    def bind_exports(advapi: Any, kernel: Any) -> dict[str, Any]:
++        """Bind only the named Win32 exports; exposed for deterministic ABI tests."""
++        _validate_abi()
++        return {
++            "StartServiceCtrlDispatcherW": _bind_export(
++                advapi, "StartServiceCtrlDispatcherW", [ctypes.POINTER(SERVICE_TABLE_ENTRYW)], BOOL),
++            "RegisterServiceCtrlHandlerExW": _bind_export(
++                advapi, "RegisterServiceCtrlHandlerExW",
++                [LPWSTR16, HANDLER_FUNCTION_EX, ctypes.c_void_p], HANDLE),
++            "SetServiceStatus": _bind_export(
++                advapi, "SetServiceStatus", [HANDLE, ctypes.POINTER(SERVICE_STATUS)], BOOL),
++            "GetLastError": _bind_export(kernel, "GetLastError", [], DWORD),
++        }
++
++    def _bind(self) -> None:
++        exports = self.bind_exports(self._advapi, self._kernel)
++        self._start = exports["StartServiceCtrlDispatcherW"]
++        self._register = exports["RegisterServiceCtrlHandlerExW"]
++        self._set_status = exports["SetServiceStatus"]
++        self._get_last_error = exports["GetLastError"]
++
++    @staticmethod
++    def _wide_name(value: str):
++        raw = value.encode("utf-16-le", errors="strict")
++        units = [raw[i] | (raw[i + 1] << 8) for i in range(0, len(raw), 2)] + [0]
++        return (WCHAR * len(units))(*units)
++
++    def start_service_ctrl_dispatcher(self, service_name: str,
++                                      service_main: Callable[[int, Any], None]) -> None:
++        name = self._wide_name(service_name)
++        callback = SERVICE_MAIN_FUNCTIONW(service_main)
++        table = (SERVICE_TABLE_ENTRYW * 2)()
++        table[0].lpServiceName = ctypes.cast(name, LPWSTR16)
++        table[0].lpServiceProc = callback
++        # The zero-initialized final entry is the required NULL terminator.
++        self._active_callbacks = (name, callback, table)
++        if not self._start(table):
++            error = int(self._get_last_error())
++            self._active_callbacks = ()
++            _fail("SCM_DISPATCH_FAILED", "StartServiceCtrlDispatcherW failed",
++                  details={"winerror": error})
++        self._active_callbacks = ()
++
++    def register_service_ctrl_handler_ex(self, service_name: str,
++                                         handler: Callable[[int, int, Any, Any], int]) -> Any:
++        name = self._wide_name(service_name)
++        callback = HANDLER_FUNCTION_EX(handler)
++        handle = self._register(ctypes.cast(name, LPWSTR16), callback, None)
++        if not handle:
++            error = int(self._get_last_error())
++            _fail("SCM_HANDLER_REGISTRATION_FAILED", "RegisterServiceCtrlHandlerExW failed",
++                  details={"winerror": error})
++        current = self._active_callbacks
++        self._active_callbacks = (*current, name, callback)
++        return handle
++
++    def set_service_status(self, handle: Any, status: "ServiceStatus") -> None:
++        native = SERVICE_STATUS(
++            SERVICE_WIN32_OWN_PROCESS, status.current_state, status.controls_accepted,
++            status.win32_exit_code, status.service_specific_exit_code,
++            status.checkpoint, status.wait_hint_ms,
++        )
++        if not self._set_status(handle, ctypes.byref(native)):
++            error = int(self._get_last_error())
++            _fail("SCM_STATUS_UPDATE_FAILED", "SetServiceStatus failed",
++                  details={"winerror": error, "state": status.current_state})
++
++
++@dataclass(frozen=True)
++class ServiceStatus:
++    current_state: int
++    controls_accepted: int = 0
++    win32_exit_code: int = 0
++    service_specific_exit_code: int = 0
++    checkpoint: int = 0
++    wait_hint_ms: int = 0
++
++
++_SCM_RUNTIME_SEAL = object()
++_SCM_TEST_API_TOKEN = object()
++_HOST_CONTROL_REQUEST_SEAL = object()
++
++
++class ScmServiceRuntime:
++    """Short-lived service context only created by the SCM broker callback."""
++
++    def __init__(self, broker: "WindowsScmServiceBroker", seal: object):
++        if seal is not _SCM_RUNTIME_SEAL:
++            _fail("SCM_RUNTIME_SEAL_REQUIRED", "service runtime can only be created by the SCM broker")
++        self._broker = broker
++        self._seal = seal
++        self._stop_event = threading.Event()
++        self._active = True
++        self._status_handle: Any = None
++        self._state = "REGISTERING"
++        self._lock = threading.RLock()
++
++    @property
++    def service_name(self) -> str:
++        return self._broker.service_name
++
++    @property
++    def is_active(self) -> bool:
++        with self._lock:
++            return self._active and self._state == "RUNNING" and not self._stop_event.is_set()
++
++    @property
++    def stop_requested(self) -> bool:
++        return self._stop_event.is_set()
++
++    def mark_running(self) -> None:
++        self._broker._mark_running(self)
++
++    def wait_for_stop(self, timeout: float | None = None) -> bool:
++        """Wait for a stop/shutdown signal; True means a stop was requested."""
++        return self._stop_event.wait(timeout)
++
++    def _activate(self, handle: Any) -> None:
++        with self._lock:
++            self._status_handle = handle
++            self._state = "START_PENDING"
++
++    def _deactivate(self) -> None:
++        with self._lock:
++            self._active = False
++            self._state = "STOPPED"
++
++
++class WindowsScmServiceBroker:
++    """Own-process SCM dispatcher wrapper with no console/Popen fallback."""
++
++    def __init__(self, service_name: str,
++                 service_main: Callable[[ScmServiceRuntime], None], *,
++                 api: Any | None = None, _test_token: object | None = None):
++        if not isinstance(service_name, str) or not _SERVICE_NAME.fullmatch(service_name):
++            _fail("SCM_SERVICE_NAME_INVALID", "service_name must be a bounded canonical SCM service name")
++        if not callable(service_main):
++            _fail("SCM_SERVICE_MAIN_REQUIRED", "service_main callback is required")
++        if api is not None and _test_token is not _SCM_TEST_API_TOKEN:
++            _fail("SCM_TEST_API_FORBIDDEN", "injected SCM APIs are reserved for explicit software tests")
++        self.service_name = service_name
++        self._service_main = service_main
++        self._api = api if api is not None else CtypesWindowsScmApi()
++        for name in ("start_service_ctrl_dispatcher", "register_service_ctrl_handler_ex", "set_service_status"):
++            if not callable(getattr(self._api, name, None)):
++                _fail("SCM_API_PROTOCOL_INVALID", f"SCM adapter is missing {name}")
++        self._lock = threading.RLock()
++        self._started = False
++        self._entered = False
++        self._runtime: ScmServiceRuntime | None = None
++        self._error: BaseException | None = None
++
++    @classmethod
++    def _for_software_test(cls, service_name: str,
++                           service_main: Callable[[ScmServiceRuntime], None], *,
++                           api: Any, token: object) -> "WindowsScmServiceBroker":
++        if token is not _SCM_TEST_API_TOKEN:
++            _fail("SCM_TEST_TOKEN_REQUIRED", "synthetic SCM adapter requires its private test token")
++        return cls(service_name, service_main, api=api, _test_token=_SCM_TEST_API_TOKEN)
++
++    def run(self) -> None:
++        with self._lock:
++            if self._started:
++                _fail("SCM_DISPATCH_ALREADY_STARTED", "StartServiceCtrlDispatcherW may be invoked once per process")
++            self._started = True
++        self._api.start_service_ctrl_dispatcher(self.service_name, self._service_main_callback)
++        if self._error is not None:
++            raise WindowsScmError("SCM_SERVICE_RUNTIME_FAILED", "SCM service callback failed",
++                                  safe_retry=False, stage="execution",
++                                  details={"cause_type": type(self._error).__name__}) from self._error
++        if not self._entered:
++            _fail("SCM_DISPATCH_RETURNED_WITHOUT_SERVICE", "SCM dispatcher returned without a ServiceMain callback")
++
++    def _service_main_callback(self, argument_count: Any, _arguments: Any) -> None:
++        with self._lock:
++            if self._entered:
++                self._error = WindowsScmError("SCM_DUPLICATE_SERVICE_MAIN", "ServiceMain callback was invoked more than once")
++                return
++            self._entered = True
++        runtime = ScmServiceRuntime(self, _SCM_RUNTIME_SEAL)
++        self._runtime = runtime
++        try:
++            # The documented sequence registers HandlerEx immediately on entry,
++            # before the first SetServiceStatus call or service initialization.
++            handler = self._handler_callback
++            status_handle = self._api.register_service_ctrl_handler_ex(self.service_name, handler)
++            if status_handle in (None, 0):
++                _fail("SCM_HANDLER_REGISTRATION_FAILED", "SCM handler registration returned no status handle")
++            runtime._activate(status_handle)
++            self._set_status(runtime, ServiceStatus(
++                SERVICE_START_PENDING, checkpoint=1, wait_hint_ms=30_000,
++            ))
++            if isinstance(argument_count, int) and argument_count > _MAX_START_ARGUMENTS:
++                _fail("SCM_START_ARGUMENTS_EXCESSIVE", "SCM start argument count exceeds the bounded service contract")
++            self._service_main(runtime)
++            # ServiceMain must remain alive until a real SCM stop/shutdown
++            # callback. Returning while START_PENDING is a failed startup;
++            # returning while RUNNING is an unannounced service exit.
++            if runtime._state == "START_PENDING" and not runtime.stop_requested:
++                _fail("SCM_SERVICE_MAIN_RETURNED_BEFORE_RUNNING",
++                      "service callback returned before reporting SERVICE_RUNNING")
++            if runtime._state == "RUNNING" and not runtime.stop_requested:
++                _fail("SCM_SERVICE_MAIN_RETURNED_ACTIVE",
++                      "service callback returned while the service was still active")
++        except BaseException as exc:
++            with self._lock:
++                self._error = exc
++        finally:
++            try:
++                if runtime._status_handle is not None and runtime._state != "STOPPED":
++                    self._set_status(runtime, ServiceStatus(
++                        SERVICE_STOPPED,
++                        win32_exit_code=(0 if self._error is None else ERROR_SERVICE_SPECIFIC_ERROR),
++                        service_specific_exit_code=(0 if self._error is None else 1),
++                    ))
++            except BaseException as cleanup_exc:
++                if self._error is None:
++                    self._error = cleanup_exc
++            runtime._deactivate()
++
++    def _handler_callback(self, control: Any, _event_type: Any, _event_data: Any, _context: Any) -> int:
++        try:
++            code = int(control)
++            runtime = self._runtime
++            if runtime is None:
++                return ERROR_CALL_NOT_IMPLEMENTED
++            if code == SERVICE_CONTROL_INTERROGATE:
++                return ERROR_SUCCESS
++            if code not in {SERVICE_CONTROL_STOP, SERVICE_CONTROL_SHUTDOWN}:
++                return ERROR_CALL_NOT_IMPLEMENTED
++            runtime._stop_event.set()
++            with runtime._lock:
++                running = runtime._state == "RUNNING"
++            if running:
++                self._set_status(runtime, ServiceStatus(
++                    SERVICE_STOP_PENDING, checkpoint=1, wait_hint_ms=30_000,
++                ))
++            return ERROR_SUCCESS
++        except BaseException as exc:
++            with self._lock:
++                if self._error is None:
++                    self._error = exc
++            return 31  # ERROR_GEN_FAILURE; never unwind an exception through Win32.
++
++    def _set_status(self, runtime: ScmServiceRuntime, status: ServiceStatus) -> None:
++        with runtime._lock:
++            previous = runtime._state
++            allowed = {
++                "START_PENDING": {"START_PENDING", "RUNNING", "STOPPED"},
++                "RUNNING": {"STOP_PENDING", "STOPPED"},
++                "STOP_PENDING": {"STOPPED"},
++            }
++            target_name = {
++                SERVICE_START_PENDING: "START_PENDING", SERVICE_RUNNING: "RUNNING",
++                SERVICE_STOP_PENDING: "STOP_PENDING", SERVICE_STOPPED: "STOPPED",
++            }.get(status.current_state)
++            if target_name is None or target_name not in allowed.get(previous, set()):
++                _fail("SCM_STATUS_TRANSITION_INVALID", "service status transition is not allowed",
++                      details={"from": previous, "to": status.current_state})
++            if previous == "STOPPED":
++                _fail("SCM_STATUS_AFTER_STOPPED", "no service status calls are allowed after SERVICE_STOPPED")
++            if status.current_state == SERVICE_RUNNING:
++                status = ServiceStatus(SERVICE_RUNNING,
++                                       SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN)
++            self._api.set_service_status(runtime._status_handle, status)
++            runtime._state = target_name
++
++    def _mark_running(self, runtime: ScmServiceRuntime) -> None:
++        if runtime is not self._runtime or runtime._seal is not _SCM_RUNTIME_SEAL:
++            _fail("SCM_RUNTIME_MISMATCH", "service readiness came from another or forged SCM runtime")
++        if runtime.stop_requested:
++            _fail("SCM_START_ABORTED", "service cannot report ready after SCM requested stop")
++        self._set_status(runtime, ServiceStatus(SERVICE_RUNNING,
++                                                SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN))
++
++
++def _authorization_ref(value: Any) -> str:
++    if (not isinstance(value, str) or not value.strip() or len(value) > 512
++            or any(ord(char) < 32 for char in value)):
++        _fail("HOST_CONTROL_AUTHORIZATION_REQUIRED", "host control requires a bounded trusted authorization reference")
++    return value
++
++
++class InternalHostControlRequest:
++    """Non-serializable, one-use request issued only within a live SCM callback."""
++
++    __slots__ = ("phase", "plan", "receipt", "approval", "authorization_ref", "project_id", "profile_sha256",
++                 "profile_source_sha256", "runtime", "authority", "provider", "_seal", "_used", "_use_lock")
++
++    def __init__(self, *, phase: str, plan: Any, receipt: Any, approval: Any,
++                 authorization_ref: str, project_id: str, profile_sha256: str,
++                 profile_source_sha256: str, runtime: ScmServiceRuntime,
++                 authority: Any, provider: Any,
++                 seal: object):
++        if seal is not _HOST_CONTROL_REQUEST_SEAL:
++            _fail("HOST_CONTROL_REQUEST_SEAL_REQUIRED", "internal host-control request cannot be constructed by wire input")
++        self.phase, self.plan, self.receipt, self.approval = phase, plan, receipt, approval
++        self.authorization_ref = authorization_ref
++        self.project_id, self.profile_sha256, self.runtime = project_id, profile_sha256, runtime
++        self.profile_source_sha256 = profile_source_sha256
++        self.authority, self.provider = authority, provider
++        self._seal = seal
++        self._used = False
++        self._use_lock = threading.Lock()
++
++    def __setattr__(self, name: str, value: Any) -> None:
++        if hasattr(self, name):
++            raise AttributeError("internal host-control request is immutable")
++        object.__setattr__(self, name, value)
++
++    def consume(self, *, service_name: str, project_id: str, profile_sha256: str) -> None:
++        with self._use_lock:
++            if self._seal is not _HOST_CONTROL_REQUEST_SEAL or self._used:
++                _fail("HOST_CONTROL_REQUEST_REPLAYED", "internal host-control request is forged or already consumed")
++            if (not self.runtime.is_active or self.runtime._seal is not _SCM_RUNTIME_SEAL
++                    or self.runtime.service_name != service_name
++                    or self.project_id != project_id or self.profile_sha256 != profile_sha256):
++                _fail("HOST_CONTROL_REQUEST_BINDING_MISMATCH", "internal host-control request is stale or bound to another service/profile")
++            object.__setattr__(self, "_used", True)
++
++
++class WindowsT037HostControlIssuer:
++    """Issue a bounded internal route capability from trusted host state.
++
++    This capability only opens the in-process ControlDaemon route. The
++    WindowsHostChangeExecutor still revalidates the exact profile, project
++    host_control grant, scoped provider grant and one-use SQLite admission
++    immediately before any host mutation.
++    """
++
++    def __init__(self, *, authority: Any, provider: Any, profile: Any,
++                 profile_source_sha256: str):
++        from ._host_scoped_provider import HostScopedProvider
++        from ._project_authority import ProjectAuthority
++        from ._w26_os_resources import HostResourceProfile
++
++        if (type(authority) is not ProjectAuthority or type(provider) is not HostScopedProvider
++                or authority.authorization_verifier is not provider
++                or type(profile) is not HostResourceProfile):
++            _fail("HOST_CONTROL_ISSUER_TRUSTED_COMPONENT_REQUIRED",
++                  "issuer requires the existing project authority, pinned provider and exact host profile")
++        if profile.platform != "windows" or profile.windows_isolation is None:
++            _fail("HOST_CONTROL_WINDOWS_PROFILE_REQUIRED", "issuer requires the exact Windows isolation profile")
++        if (not isinstance(profile_source_sha256, str)
++                or not re.fullmatch(r"[0-9a-f]{64}", profile_source_sha256)):
++            _fail("HOST_CONTROL_PROFILE_BINDING_INVALID", "issuer requires the exact trusted startup profile digest")
++        self.authority, self.provider, self.profile = authority, provider, profile
++        self.profile_source_sha256 = profile_source_sha256
++
++    def issue(self, runtime: ScmServiceRuntime, *, phase: str, plan: Any,
++              authorization_ref: str, receipt: Any = None) -> InternalHostControlRequest:
++        from . import _w26_os_resources as resources
++        from ._windows_host_change import _normalize_supported_actions
++
++        policy = self.profile.windows_isolation
++        if (type(runtime) is not ScmServiceRuntime or runtime._seal is not _SCM_RUNTIME_SEAL
++                or not runtime.is_active or runtime.service_name != policy.service_name):
++            _fail("HOST_CONTROL_SCM_RUNTIME_REQUIRED",
++                  "host-control capabilities require the active configured SCM service runtime")
++        if type(plan) is not resources.HostChangePlan:
++            _fail("HOST_CONTROL_PLAN_REQUIRED", "host-control route requires the typed immutable host-change plan")
++        try:
++            payload = resources.validate_host_change_plan(plan)
++            if (payload["project_id"] != self.profile.project_id
++                    or payload["profile_sha256"] != self.profile.sha256
++                    or payload["profile"] != self.profile.as_dict()
++                    or payload["host"] != {"platform": "windows", "host_id": self.profile.host_id}):
++                _fail("HOST_CONTROL_SCOPE_MISMATCH", "host-change plan does not bind this exact profile, host and project")
++            _normalize_supported_actions(plan, self.profile)
++        except resources.ResourcePolicyError:
++            raise
++        except WindowsScmError:
++            raise
++        except Exception as exc:
++            _fail("HOST_CONTROL_PLAN_INVALID", "host-change plan validation failed",
++                  details={"cause_type": type(exc).__name__})
++        try:
++            self.authority.authorize_operation(self.profile.project_id, "host_control")
++        except ExecutionContractError:
++            raise
++        authorization_ref = _authorization_ref(authorization_ref)
++        if phase == "APPLY":
++            if receipt is not None:
++                _fail("HOST_CONTROL_REQUEST_INVALID", "apply request cannot carry a restore receipt")
++            scope = {"root": self.profile.root.as_dict(), "host_id": self.profile.host_id,
++                     "profile_sha256": self.profile.sha256, "plan_sha256": plan.sha256,
++                     "phase": "APPLY", "source_plan_sha256": None,
++                     "source_receipt_sha256": None}
++            if self.provider.verify_scope(self.profile.project_id, "host.change.apply",
++                                          scope, authorization_ref) is not True:
++                _fail("HOST_CONTROL_AUTHORIZATION_REQUIRED",
++                      "trusted scoped provider did not authorize this exact apply plan")
++            approval = resources.HostChangeApproval(plan.sha256, authorization_ref)
++        elif phase == "RESTORE":
++            if (type(receipt) is not resources.AppliedHostChangeReceipt
++                    or receipt.plan_sha256 != plan.sha256 or receipt.host_id != self.profile.host_id
++                    or receipt.platform != "windows"):
++                _fail("HOST_CONTROL_RECEIPT_MISMATCH", "restore route requires the exact typed apply receipt")
++            # The restore plan hash includes a fresh native dependency snapshot
++            # and is therefore generated/authorized inside the executor's
++            # transactional admission. The internal executor accepts the raw
++            # reference only through this sealed request and binds it after the
++            # fresh snapshot; no caller-computed hash is accepted.
++            approval = None
++        else:
++            _fail("HOST_CONTROL_PHASE_UNSUPPORTED", "host-control phase must be APPLY or RESTORE")
++        return InternalHostControlRequest(
++            phase=phase, plan=plan, receipt=receipt, approval=approval,
++            authorization_ref=authorization_ref,
++            project_id=self.profile.project_id, profile_sha256=self.profile.sha256,
++            profile_source_sha256=self.profile_source_sha256,
++            runtime=runtime, authority=self.authority, provider=self.provider,
++            seal=_HOST_CONTROL_REQUEST_SEAL,
++        )
++
++
++__all__ = [
++    "CtypesWindowsScmApi", "HANDLER_FUNCTION_EX", "InternalHostControlRequest",
++    "SERVICE_MAIN_FUNCTIONW", "SERVICE_STATUS", "SERVICE_TABLE_ENTRYW",
++    "ScmServiceRuntime", "WindowsScmError", "WindowsScmServiceBroker",
++    "WindowsT037HostControlIssuer", "scm_abi_layout",
++]
+--- /dev/null
++++ candidate/tests/test_windows_t037_bootstrap.py
+@@ -0,0 +1,177 @@
++from __future__ import annotations
++from dataclasses import replace
++import hashlib,json
++from pathlib import Path
++from types import SimpleNamespace
++import pytest
++from comsol_mcp import _windows_t037_bootstrap as bootstrap
++from comsol_mcp._windows_t037 import WindowsT037ProfileV2
++from comsol_mcp._windows_t037_broker import WindowsScmError
++from tests.test_windows_host_change import _profile,_plan
++
++
++def _document():
++    profile=WindowsT037ProfileV2(host_resource_profile=_profile(),source_sha256='d'*64,
++                               source_identity={'device':1,'inode':2},security_semantics='SOFTWARE_FIXTURE_ONLY')
++    plan=_plan(profile.host_resource_profile)
++    d={'schema':bootstrap.SCHEMA,'service_name':profile.service_name,'profile_source_sha256':profile.source_sha256,
++       'host_profile_sha256':profile.sha256,'project_id':profile.host_resource_profile.project_id,
++       'phase':'APPLY','authorization_ref':'apply-once','plan':{'payload_json':plan.payload_json,'sha256':plan.sha256},'receipt':None}
++    return profile,plan,d
++
++
++def _raw(d):return json.dumps(d,separators=(',',':')).encode()
++
++
++def test_bootstrap_apply_parses_exact_typed_plan_and_source_binding():
++    profile,plan,d=_document();request=bootstrap.parse_bootstrap(_raw(d),profile)
++    assert request.plan==plan and request.receipt is None and request.phase=='APPLY'
++    assert request.source_sha256==hashlib.sha256(_raw(d)).hexdigest()
++    with pytest.raises(Exception):request.phase='RESTORE'
++
++
++@pytest.mark.parametrize('field,value',[
++ ('service_name','Other'),('profile_source_sha256','0'*64),('host_profile_sha256','0'*64),
++ ('project_id','Other'),('phase','REPLAY'),('receipt',{}),('surprise',True)])
++def test_bootstrap_rejects_changed_scope_and_unknown_fields(field,value):
++    profile,_,d=_document();d[field]=value
++    with pytest.raises(WindowsScmError):bootstrap.parse_bootstrap(_raw(d),profile)
++
++
++@pytest.mark.parametrize('where',['outer','plan','payload'])
++def test_bootstrap_duplicate_keys_rejected_at_every_json_boundary(where):
++    profile,_,d=_document()
++    if where=='outer':raw=_raw(d)[:-1]+b',"phase":"APPLY"}'
++    elif where=='plan':raw=_raw(d).replace(b'"sha256":',b'"sha256":"duplicate","sha256":',1)
++    else:
++        d['plan']['payload_json']=d['plan']['payload_json'][:-1]+',"schema":"duplicate"}'
++        d['plan']['sha256']=hashlib.sha256(d['plan']['payload_json'].encode()).hexdigest();raw=_raw(d)
++    with pytest.raises(WindowsScmError) as captured:bootstrap.parse_bootstrap(raw,profile)
++    assert captured.value.code=='SCM_BOOTSTRAP_DUPLICATE_KEY'
++
++
++def test_bootstrap_restore_requires_exact_receipt_digest_and_deep_schema():
++    from comsol_mcp._windows_host_change import _receipt_payload
++    profile,plan,d=_document()
++    row={'action_id':plan.as_dict()['change_manifest'][0]['action_id'],
++         'created_resource_sha256':'a'*64,'prior_resource_sha256':None,'prior_backup_path':None}
++    body=_receipt_payload(plan,profile.host_resource_profile,(row,))
++    digest=hashlib.sha256(json.dumps(body,sort_keys=True,ensure_ascii=False,separators=(',',':'),allow_nan=False).encode()).hexdigest()
++    d['phase']='RESTORE';d['authorization_ref']='restore-separate'
++    d['receipt']={'plan_sha256':plan.sha256,'host_id':profile.host_resource_profile.host_id,
++                  'platform':'windows','actions':[row],'receipt_sha256':digest}
++    r=bootstrap.parse_bootstrap(_raw(d),profile)
++    assert r.receipt.receipt_sha256==digest
++    with pytest.raises(TypeError):r.receipt.actions[0]['created_resource_sha256']='b'*64
++    d['receipt']['actions'][0]['invented']=True
++    with pytest.raises(Exception):bootstrap.parse_bootstrap(_raw(d),profile)
++
++
++def test_bootstrap_bounds_utf8_and_deep_json():
++    profile,_,d=_document()
++    for raw in [b'\xff',b'{}'*(bootstrap.MAX_REQUEST_BYTES//2+1),b'{"x":NaN}',b'['*40+b'0'+b']'*40]:
++        with pytest.raises(WindowsScmError):bootstrap.parse_bootstrap(raw,profile)
++
++
++@pytest.mark.parametrize('change',['none','inode','fingerprint','acl','links','oversize','truncated','grow'])
++def test_private_bootstrap_pins_handle_path_identity_acl_and_closes_every_handle(tmp_path,monkeypatch,change):
++    profile,_,d=_document();raw=_raw(d);calls=[]
++    class Api:
++        def __init__(self):self.offset=0;self.samples=0
++        def open_security_path(self,path,*,directory):return [10,11]
++        def open_source(self,parent,name):assert parent==11;return 12
++        def source_fingerprint(self,h):
++            self.samples+=1
++            return ((1,2 if change!='inode' else 3),len(raw)+(1 if change=='truncated' else 0),
++                    5,6+(self.samples-1 if change=='fingerprint' else 0),2 if change=='links' else 1) if change!='oversize' else ((1,2),bootstrap.MAX_REQUEST_BYTES+1,5,6,1)
++        def read_chunk(self,h,size):
++            block=raw[self.offset:self.offset+size];self.offset+=len(block)
++            if not block and change=='grow':return b'x'
++            return block
++        def close(self,h):calls.append(h)
++    checks=[]
++    def verify(path,*,directory,expected_identity=None):
++        checks.append(expected_identity)
++        digest=('b'*64 if change=='acl' and expected_identity is not None else 'a'*64)
++        return {'identity':{'device':1,'inode':2,'security_sha256':digest},'security_sha256':digest,
++                'security_semantics':'windows-read-control-owner-dacl-persistent-acls'}
++    monkeypatch.setattr(bootstrap,'_WINDOWS',True)
++    monkeypatch.setattr('comsol_mcp._windows_parameter_publish._API',Api)
++    monkeypatch.setattr('comsol_mcp._host_scoped_provider.verify_private_path_security',verify)
++    if change=='none':assert bootstrap.read_private_bootstrap(tmp_path/'request.json')==raw
++    else:
++        with pytest.raises(WindowsScmError):bootstrap.read_private_bootstrap(tmp_path/'request.json')
++    assert calls==[12,11,10]
++
++
++def test_bootstrap_console_cli_and_direct_serve_refuse_before_side_effects(tmp_path):
++    from comsol_mcp import _control_daemon as control
++    with pytest.raises(SystemExit) as parsed:
++        control.main(['--home',str(tmp_path/'uncreated'),'--windows-scm-bootstrap-request','request.json'])
++    assert parsed.value.code==2 and not (tmp_path/'uncreated').exists()
++    with pytest.raises(WindowsScmError) as direct:
++        control.serve(tmp_path/'uncreated',_scm_bootstrap_request='request.json')
++    assert direct.value.code=='SCM_BOOTSTRAP_SERVICE_REQUIRED'
++    assert not (tmp_path/'uncreated').exists()
++
++
++from tests.test_windows_host_change import host_env
++
++
++@pytest.mark.parametrize('effect_unknown',[False,True])
++def test_actual_bootstrap_scm_daemon_serial_lane_and_store_consumed_grant_never_replay(
++        host_env,monkeypatch,tmp_path,effect_unknown):
++    from concurrent.futures import ThreadPoolExecutor
++    import threading
++    from comsol_mcp._control_daemon import ControlDaemon
++    from comsol_mcp._windows_host_change import WindowsHostChangeExecutor
++    from comsol_mcp._w26_os_resources import ResourcePolicyError
++    from comsol_mcp._windows_t037_broker import WindowsScmServiceBroker,_SCM_TEST_API_TOKEN,SERVICE_CONTROL_STOP
++    from tests.test_windows_t037_broker import _ScmApi
++    profile,plan,action,api,store,provider,authority,executor=host_env
++    from tests.test_windows_host_change import _write_provider,_apply_grant
++    provider.close()
++    provider=_write_provider(tmp_path/'bootstrap-provider',profile,[_apply_grant(profile,plan)])
++    authority.authorization_verifier=provider
++    executor.provider=provider
++    wrapper=WindowsT037ProfileV2(host_resource_profile=profile,source_sha256='d'*64,
++                               source_identity={'device':1,'inode':2},security_semantics='SOFTWARE_FIXTURE_ONLY')
++    # Real production methods use the fixture's actual authority/provider/Store.
++    # The native constructor seam remains explicitly SOFTWARE_ONLY, exercising
++    # actual executor journaling without calling Windows or changing OS policy.
++    daemon=ControlDaemon.__new__(ControlDaemon)
++    daemon._windows_t037_profile=wrapper;daemon._windows_t037_profile_path='fixture-profile'
++    daemon._scoped_host_provider=provider;daemon.project_authority=authority;daemon.store=store
++    daemon.queue=ThreadPoolExecutor(max_workers=1)
++    daemon._dispatch_condition=threading.Condition();daemon._closing=False;daemon._control_dispatch_inflight=0
++    monkeypatch.setattr('comsol_mcp._windows_t037.load_trusted_profile',lambda _path:wrapper)
++    monkeypatch.setattr(WindowsHostChangeExecutor,'from_trusted_profile_path',classmethod(lambda cls,**kw:executor))
++    d={'schema':bootstrap.SCHEMA,'service_name':wrapper.service_name,'profile_source_sha256':wrapper.source_sha256,
++       'host_profile_sha256':wrapper.sha256,'project_id':profile.project_id,'phase':'APPLY',
++       'authorization_ref':'apply-once','plan':{'payload_json':plan.payload_json,'sha256':plan.sha256},'receipt':None}
++    monkeypatch.setattr(bootstrap,'read_private_bootstrap',lambda _path:_raw(d))
++    api.fail_after_create=effect_unknown
++    scm=_ScmApi();result=[]
++    def service_main(runtime):
++        runtime.mark_running()
++        future=bootstrap.submit_bootstrap(daemon,runtime,'explicit-private-request')
++        if effect_unknown:
++            with pytest.raises(Exception) as unknown:future.result(timeout=2)
++            assert unknown.value.code=='HOST_CHANGE_RECOVERY_REQUIRED'
++        else:result.append(future.result(timeout=2))
++        admission=store.db.execute('SELECT * FROM host_control_admissions').fetchone()
++        assert admission['state']==('RECOVERY_REQUIRED' if effect_unknown else 'APPLIED')
++        before=list(api.calls)
++        api.filters.clear() # Even restoring the synthetic baseline cannot reuse a consumed grant.
++        with pytest.raises(ResourcePolicyError) as replay:
++            bootstrap.submit_bootstrap(daemon,runtime,'same-explicit-request').result(timeout=2)
++        assert replay.value.code=='HOST_CONTROL_AUTHORIZATION_REPLAYED'
++        assert api.calls==before
++        assert scm.handler(SERVICE_CONTROL_STOP,0,None,None)==0
++    try:
++        WindowsScmServiceBroker._for_software_test('ComsolHost',service_main,api=scm,token=_SCM_TEST_API_TOKEN).run()
++    finally:
++        daemon.queue.shutdown(wait=True)
++        provider.close()
++    assert daemon._control_dispatch_inflight==0
++    if not effect_unknown:assert result[0].plan_sha256==plan.sha256
+--- preimage/tests/test_windows_t037_broker.py
++++ candidate/tests/test_windows_t037_broker.py
+@@ -377,3 +377,58 @@
+     # The singleton must also have been released; acquire its actual lock again.
+     lock = control.ProcessLock(tmp_path/'home'/'control.lock')
+     lock.close()
++
++
++@pytest.mark.parametrize('bootstrap_state',['pending','failed'])
++def test_service_bootstrap_observation_retains_pending_handle_on_stop_and_reports_failures(
++        tmp_path,monkeypatch,bootstrap_state):
++    from comsol_mcp import _control_daemon as control
++    from comsol_mcp import _windows_t037 as t037
++    from comsol_mcp import _windows_t037_bootstrap as bootstrap
++    from tests.test_windows_t037_bootstrap import _document,_raw
++    profile,plan,document=_document()
++    monkeypatch.setattr(t037,'load_trusted_profile',lambda _path:profile)
++    monkeypatch.setattr(bootstrap,'read_private_bootstrap',lambda _path:_raw(document))
++    future=Future()
++    if bootstrap_state=='failed':future.set_exception(RuntimeError('synthetic host bootstrap failure'))
++    api=_ScmApi();entered=threading.Event();stopped=threading.Event();closed=[];errors=[];daemons=[]
++    class Daemon:
++        def __init__(self,_home,**_options):
++            self._windows_t037_profile=profile;daemons.append(self)
++        def _windows_t037_host_control_issuer(self,runtime):assert runtime.is_active
++        def _submit_scm_host_control(self,runtime,**request):
++            assert runtime.is_active and request['plan']==plan and request['authorization_ref']=='apply-once'
++            return future
++        def close(self):
++            assert self._scm_bootstrap_future is future
++            assert not future.cancelled()
++            if bootstrap_state=='pending':
++                assert not future.done() # STOP observation has not inferred or canceled the host effect.
++                future.set_result('software-drained-terminal')
++            closed.append(True)
++    class Server:
++        server_port=12345
++        def __init__(self,*_):pass
++        def serve_forever(self):entered.set();assert stopped.wait(3)
++        def shutdown(self):stopped.set()
++        def server_close(self):pass
++    monkeypatch.setattr(control,'ControlDaemon',Daemon)
++    monkeypatch.setattr(control,'ThreadingHTTPServer',Server)
++    monkeypatch.setattr(control,'process_identity',lambda _pid:{'start_epoch_ms':42})
++    monkeypatch.setattr('comsol_mcp._windows_t037_broker.WindowsScmServiceBroker',
++                        lambda name,callback:WindowsScmServiceBroker._for_software_test(
++                            name,callback,api=api,token=_SCM_TEST_API_TOKEN))
++    def run():
++        try:
++            control.main(['--home',str(tmp_path/'home'),'--windows-t037-profile','pinned-profile',
++                          '--windows-scm-service-name','ComsolHost','--windows-scm-bootstrap-request','explicit-request'])
++        except BaseException as exc:errors.append(exc)
++    thread=threading.Thread(target=run);thread.start();assert entered.wait(2)
++    if bootstrap_state=='pending':assert api.handler(SERVICE_CONTROL_STOP,0,None,None)==0
++    thread.join(4);assert not thread.is_alive() and closed==[True]
++    assert not future.cancelled()
++    if bootstrap_state=='failed':
++        assert len(errors)==1 and errors[0].code=='SCM_SERVICE_RUNTIME_FAILED'
++        assert api.status[-1].service_specific_exit_code==1
++    else:assert errors==[]
++    assert api.status[-1].current_state==SERVICE_STOPPED
+--- preimage/tests/test_windows_t037_native.py
++++ candidate/tests/test_windows_t037_native.py
+@@ -41,13 +41,14 @@
+         wfp_sublayer_key=SUBLAYER,
+         wfp_grants=(grant,),
+     )
++    launcher = SimpleNamespace(role="launcher", path=r"C:\COMSOL\broker.exe", argv_sha256="f" * 64)
+     server = SimpleNamespace(role="server", path=SERVER_PATH, argv_sha256=ARGV_SHA)
+     worker = SimpleNamespace(role="worker", path=r"C:\COMSOL\worker.exe", argv_sha256="e" * 64)
+     return SimpleNamespace(
+         windows_policy=policy,
+         host_fingerprint_sha256=FP,
+         interactive_account_sid=INTERACTIVE_SID,
+-        launch_images=(server, worker),
++        launch_images=(launcher, server, worker),
+         sha256="b" * 64,
+     )
+ 
+@@ -148,9 +149,9 @@
+         "service_sid": SERVICE_SID,
+         "state": "RUNNING",
+         "process_id": 456,
+-        "binary_path": SERVER_PATH,
+-        "service_binary_image_path": SERVER_PATH,
+-        "service_binary_argv_sha256": ARGV_SHA,
++        "binary_path": r"C:\COMSOL\broker.exe",
++        "service_binary_image_path": r"C:\COMSOL\broker.exe",
++        "service_binary_argv_sha256": "f" * 64,
+         "service_security_sha256": "9" * 64,
+         "service_security_semantics": "OWNER_DACL_CANONICAL_ACE_ORDER_READ_CONTROL",
+     }
+@@ -189,7 +190,7 @@
+             "pid": 456,
+             "birth_filetime_100ns": 123456789,
+             "exit_filetime_100ns": None,
+-            "image_path": SERVER_PATH,
++            "image_path": r"C:\COMSOL\broker.exe",
+             "job_membership_any": True,
+             "job_membership_exact": False,
+             "job": None,
+@@ -826,3 +827,23 @@
+         api.observe_wfp_snapshot()
+     assert elapsed.value.code == "T037_NATIVE_WFP_TIME_LIMIT"
+     assert api._fwpu.closed == 1
++
++
++def test_scm_broker_uses_launcher_without_claiming_child_appcontainer_or_job_proof():
++    row=_FakeProcessObserver().observe_process(456)
++    row['token']=dict(row['token'],is_appcontainer=False,appcontainer_sid=None,capability_sids=[])
++    result=native.WindowsNativePolicyAdapter(api=_FakeApi()).observe(
++        _profile(),current_host_fingerprint=FP,process_observer=_FakeProcessObserver([row,row]))
++    assert 'SCM_BINARY_IMAGE_OR_ARGV_MISMATCH' not in result.reasons
++    assert 'SCM_PROCESS_IMAGE_PATH_MISMATCH' not in result.reasons
++    assert 'SCM_PROCESS_APPCONTAINER_TOKEN_UNVERIFIED' not in result.reasons
++    assert 'SCM_PROCESS_APPCONTAINER_CAPABILITIES_UNVERIFIED' not in result.reasons
++    assert 'SERVER_WORKER_APPCONTAINER_TOKENS_NOT_PROVEN' in result.reasons
++    assert 'SERVER_WORKER_PARENT_BIRTH_IMAGE_ARGV_NOT_PROVEN' in result.reasons
++    assert 'EXACT_SERVER_WORKER_JOB_BINDING_UNAVAILABLE' in result.reasons
++    assert 'WFP_EFFECTIVE_ARBITRATION_NOT_PROVEN' in result.reasons
++    assert result.verified is False
++    wrong=_service(service_binary_image_path=SERVER_PATH,service_binary_argv_sha256=ARGV_SHA)
++    bad=native.WindowsNativePolicyAdapter(api=_FakeApi(service=wrong)).observe(
++        _profile(),current_host_fingerprint=FP,process_observer=_FakeProcessObserver([row,row]))
++    assert 'SCM_BINARY_IMAGE_OR_ARGV_MISMATCH' in bad.reasons

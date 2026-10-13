@@ -1,0 +1,294 @@
+{
+  "schema": "W24_CURRENT08_PRESERVATION_RECONCILIATION_V1",
+  "activity_id": "w24-cure-setup-only-current08-20261012-001",
+  "created_at_utc": "2026-10-12T02:02:16.147661+00:00",
+  "scope": "Preservation, durable ledger read-only integrity/status, and captured exact-owned process cleanup only. Native setup acceptance remains failed; no science acceptance.",
+  "candidate_freeze_sha256": "12cdf25b44ded09ca53b436b03a59820894d60d29049cef8e23e00e854512915",
+  "root_approval_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current08/repository/docs/full_project_execution/w24/evidence/setup_candidate_20261012_current08/ROOT_APPROVAL_ACTIVITY_W24_SETUP_CURRENT08.json",
+  "root_approval_sha256": "c8c479aa79025057d536bfd8ceef3e22d68d02ac422cbce42e0ebefc7d4e17a8",
+  "native_outcome": {
+    "status": "FAIL_OR_INCOMPLETE",
+    "job_status": "UNKNOWN",
+    "operation_status": "UNKNOWN",
+    "safe_retry": false,
+    "root_cause": "COMSOL MeasureSurface.getReal failed: expression 2*pi*R references undefined variable R in domain 1. Mesh readback observed nonempty mesh with 660 elements; the runner stopped at first failure.",
+    "native_solve_submissions": 0,
+    "internal_solver_execution_count": "UNKNOWN",
+    "scientific_acceptance": "NOT_ACCEPTED"
+  },
+  "outer_capture": {
+    "stdout_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current08/native-launch-capture-current08-001/launcher.stdout.bin",
+    "stdout_bytes": 669364,
+    "stdout_sha256": "a7f82776f47a463ca5ba71757a977ed6c768b125ba5dad309532593b13119876",
+    "stderr_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current08/native-launch-capture-current08-001/launcher.stderr.bin",
+    "stderr_bytes": 0,
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "summary_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current08/native-run-current08-001/summary.json",
+    "summary_bytes": 669364,
+    "summary_sha256": "a7f82776f47a463ca5ba71757a977ed6c768b125ba5dad309532593b13119876",
+    "stdout_equals_summary": true
+  },
+  "runner_cleanup": {
+    "receipt_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current08/native-run-current08-001/exact_owned_cleanup_receipt.json",
+    "receipt_sha256": "8ccd6aef73ffc272a9094b25b939744e7b4caec6ac828b72d3f2f275264b7618",
+    "runner_postcleanup_inventory_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current08/native-run-current08-001/postcleanup_inventory.json",
+    "runner_postcleanup_inventory_sha256": "fc77c4321248a7327ef1c1884c5bc90deb2ebaa50e437ccc1d3a4a49905b44a5",
+    "exact_owned_pids": [
+      44968,
+      45064,
+      45037
+    ],
+    "exact_owned_ports": [
+      53990,
+      54009
+    ]
+  },
+  "fresh_postcleanup_inventory": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-current08-postcleanup-check-20261012T020042Z/INVENTORY.json",
+    "bytes": 3057,
+    "sha256": "b09e1f8b2545cd1805f39d1559738948d7fcb114090a16552c98c69fe535dc1a",
+    "utc": "2026-10-12T02:00:42.757518+00:00",
+    "checks": {
+      "owned_pids": {
+        "argv": [
+          "ps",
+          "-p",
+          "44968,45064,45037",
+          "-o",
+          "pid=,ppid=,lstart=,command="
+        ],
+        "exit_code": 1,
+        "stdout_bytes": 0,
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_bytes": 0,
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "owned_ports": {
+        "argv": [
+          "lsof",
+          "-nP",
+          "-iTCP:53990",
+          "-iTCP:54009"
+        ],
+        "exit_code": 1,
+        "stdout_bytes": 0,
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_bytes": 0,
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "all_native_listeners": {
+        "argv": [
+          "lsof",
+          "-nP",
+          "-iTCP",
+          "-sTCP:LISTEN"
+        ],
+        "exit_code": 0,
+        "stdout_bytes": 1370,
+        "stdout_sha256": "20b6de229311eeb250975f7a0c6dbd37604fcb0365333fbae9aeb970d399f4c6",
+        "stderr_bytes": 0,
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "no_comsol_engine_listener_named_in_capture": true
+    }
+  },
+  "private_control_store": {
+    "directory": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current08/native-run-current08-001/private-control-store",
+    "ignore_rule_checks": [
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current08/native-run-current08-001/private-control-store/control/operations.sqlite3",
+        "exit_code": 0,
+        "stdout": ".gitignore:43:docs/full_project_continuation_v2/evidence/**/private-control-store/\tdocs/full_project_continuation_v2/evidence/w24_cure_preflight_current08/native-run-current08-001/private-control-store/control/operations.sqlite3",
+        "stderr_bytes": 0,
+        "ignored": true
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current08/native-run-current08-001/private-control-store/PRIVATE_CONTROL_STORE_COPY_MANIFEST.json",
+        "exit_code": 0,
+        "stdout": ".gitignore:43:docs/full_project_continuation_v2/evidence/**/private-control-store/\tdocs/full_project_continuation_v2/evidence/w24_cure_preflight_current08/native-run-current08-001/private-control-store/PRIVATE_CONTROL_STORE_COPY_MANIFEST.json",
+        "stderr_bytes": 0,
+        "ignored": true
+      }
+    ],
+    "copy_manifest_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current08/native-run-current08-001/private-control-store/PRIVATE_CONTROL_STORE_COPY_MANIFEST.json",
+    "copy_manifest_sha256": "ff223735ca00b9e728f9b7c7558c2be3076ebfe9d6f0529b0ecd1f04cb295fc0",
+    "copy_count": 12,
+    "all_copies_byte_equal": true,
+    "files": [
+      {
+        "source_path": "/private/tmp/comsol-mcp-w24-cure-setup-current08-20261012-r1/control/operations.sqlite3",
+        "copy_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current08/native-run-current08-001/private-control-store/control/operations.sqlite3",
+        "bytes": 217088,
+        "sha256": "48c1e7d81be6db04daa90a3af8393cbcdcb8b8d8d6036d793b717f45a8ae27cf",
+        "byte_equal": true
+      },
+      {
+        "source_path": "/private/tmp/comsol-mcp-w24-cure-setup-current08-20261012-r1/control/docs_index.sqlite3",
+        "copy_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current08/native-run-current08-001/private-control-store/control/docs_index.sqlite3",
+        "bytes": 16384,
+        "sha256": "3eee15d4e2ced32ecd1e1263553a165693ee1e83cee103fdcfe4b44c7d81af0c",
+        "byte_equal": true
+      },
+      {
+        "source_path": "/private/tmp/comsol-mcp-w24-cure-setup-current08-20261012-r1/worker-state/worker.stderr.log",
+        "copy_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current08/native-run-current08-001/private-control-store/worker-state/worker.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "byte_equal": true
+      },
+      {
+        "source_path": "/private/tmp/comsol-mcp-w24-cure-setup-current08-20261012-r1/worker-state/worker_endpoint.json",
+        "copy_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current08/native-run-current08-001/private-control-store/worker-state/worker_endpoint.json",
+        "bytes": 362,
+        "sha256": "253fbe74dc6ccdd20a7b009b9b8c99fd71710ee42ffbde7d5afc6382a7414854",
+        "byte_equal": true
+      },
+      {
+        "source_path": "/private/tmp/comsol-mcp-w24-cure-setup-current08-20261012-r1/project/science/.comsol_mcp/workflow_state.json",
+        "copy_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current08/native-run-current08-001/private-control-store/project/science/.comsol_mcp/workflow_state.json",
+        "bytes": 541,
+        "sha256": "df9fec0c7755b08bd1fbd1482fa877ff63e00a362414fbfa30108215791dda4a",
+        "byte_equal": true
+      },
+      {
+        "source_path": "/private/tmp/comsol-mcp-w24-cure-setup-current08-20261012-r1/runtime/server.port",
+        "copy_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current08/native-run-current08-001/private-control-store/runtime/server.port",
+        "bytes": 6,
+        "sha256": "c226fa3a9489e4ed9edeb20dbe91eefa78a3b5b73752d305ed6dadbf9b08caaa",
+        "byte_equal": true
+      },
+      {
+        "source_path": "/private/tmp/comsol-mcp-w24-cure-setup-current08-20261012-r1/mphserver.log",
+        "copy_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current08/native-run-current08-001/private-control-store/mphserver.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "byte_equal": true
+      },
+      {
+        "source_path": "/private/tmp/comsol-mcp-w24-cure-setup-current08-20261012-r1/runtime/prefs/logs/mphserver1.log",
+        "copy_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current08/native-run-current08-001/private-control-store/runtime/prefs/logs/mphserver1.log",
+        "bytes": 21660,
+        "sha256": "44b85aaa02969f75cd60369dfdd4984a7b283f052bd1f5341f5a7ee9df0c9eec",
+        "byte_equal": true
+      },
+      {
+        "source_path": "/private/tmp/comsol-mcp-w24-cure-setup-current08-20261012-r1/runtime/prefs/logs/mphserver1_render.log",
+        "copy_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current08/native-run-current08-001/private-control-store/runtime/prefs/logs/mphserver1_render.log",
+        "bytes": 409,
+        "sha256": "50a56dcdad4d9e4c9d69d542a790b3df2747891801b2bc66e0de7b1613d6a754",
+        "byte_equal": true
+      },
+      {
+        "source_path": "/private/tmp/comsol-mcp-w24-cure-setup-current08-20261012-r1/runtime/prefs/tomcat/logs/mphservercatalina.2026-10-12.log",
+        "copy_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current08/native-run-current08-001/private-control-store/runtime/prefs/tomcat/logs/mphservercatalina.2026-10-12.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "byte_equal": true
+      },
+      {
+        "source_path": "/private/tmp/comsol-mcp-w24-cure-setup-current08-20261012-r1/runtime/prefs/tomcat/logs/mphserverlocalhost.2026-10-12.log",
+        "copy_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current08/native-run-current08-001/private-control-store/runtime/prefs/tomcat/logs/mphserverlocalhost.2026-10-12.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "byte_equal": true
+      },
+      {
+        "source_path": "/private/tmp/comsol-mcp-w24-cure-setup-current08-20261012-r1/isolation_receipt.json",
+        "copy_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current08/native-run-current08-001/private-control-store/isolation_receipt.json",
+        "bytes": 2523,
+        "sha256": "1b676d4f66fed68b7e6d03ba9ff601ccd15060bec8caff13dd3b62712f34ee93",
+        "byte_equal": true
+      }
+    ],
+    "sidecars_checked": [
+      {
+        "relative_path": "control/operations.sqlite3-wal",
+        "source_path": "/private/tmp/comsol-mcp-w24-cure-setup-current08-20261012-r1/control/operations.sqlite3-wal",
+        "exists": false,
+        "bytes": 0,
+        "sha256": null
+      },
+      {
+        "relative_path": "control/operations.sqlite3-shm",
+        "source_path": "/private/tmp/comsol-mcp-w24-cure-setup-current08-20261012-r1/control/operations.sqlite3-shm",
+        "exists": false,
+        "bytes": 0,
+        "sha256": null
+      },
+      {
+        "relative_path": "control/docs_index.sqlite3-wal",
+        "source_path": "/private/tmp/comsol-mcp-w24-cure-setup-current08-20261012-r1/control/docs_index.sqlite3-wal",
+        "exists": false,
+        "bytes": 0,
+        "sha256": null
+      },
+      {
+        "relative_path": "control/docs_index.sqlite3-shm",
+        "source_path": "/private/tmp/comsol-mcp-w24-cure-setup-current08-20261012-r1/control/docs_index.sqlite3-shm",
+        "exists": false,
+        "bytes": 0,
+        "sha256": null
+      }
+    ],
+    "databases": [
+      {
+        "copy_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current08/native-run-current08-001/private-control-store/control/operations.sqlite3",
+        "bytes": 217088,
+        "sha256": "48c1e7d81be6db04daa90a3af8393cbcdcb8b8d8d6036d793b717f45a8ae27cf",
+        "integrity_check": "ok",
+        "table_counts": {
+          "schema_meta": 1,
+          "operations": 5,
+          "jobs": 5,
+          "job_events": 48,
+          "sessions": 1,
+          "runtimes": 1,
+          "revisions": 1,
+          "artifacts": 0,
+          "checkpoints": 0,
+          "resume_claims": 0,
+          "projects": 1,
+          "stage_attempts": 0
+        },
+        "status_counts": {
+          "jobs": {
+            "SUCCEEDED": 4,
+            "UNKNOWN": 1
+          },
+          "operations": {
+            "SUCCEEDED": 4,
+            "UNKNOWN": 1
+          }
+        },
+        "target_execution": {
+          "operation_id": "5d069a6e-38b7-475a-9985-c1127229e42d",
+          "job_id": "d207b135-13e0-4cfb-b3f6-e5204497185a",
+          "request_id": "w24-build-request-7f2e44ab-230c-414d-b058-b2e3d1eab378",
+          "operation_status": "UNKNOWN",
+          "job_status": "UNKNOWN",
+          "durable_request_matches": 1,
+          "durable_job_operation_links": 1,
+          "target_job_event_counts": {
+            "RUNNING": 1,
+            "UNKNOWN": 1,
+            "worker_request": 10
+          },
+          "domain_state": "unknown",
+          "execution_state_unknown": true,
+          "safe_retry": null
+        }
+      },
+      {
+        "copy_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current08/native-run-current08-001/private-control-store/control/docs_index.sqlite3",
+        "bytes": 16384,
+        "sha256": "3eee15d4e2ced32ecd1e1263553a165693ee1e83cee103fdcfe4b44c7d81af0c",
+        "integrity_check": "ok",
+        "table_counts": {
+          "documents": 0
+        },
+        "status_counts": {}
+      }
+    ]
+  },
+  "durable_unknown_policy": "Do not replay the fixture build request or idempotency key. Keep the original UNKNOWN/safe_retry=false classification. No source repair, scientific acceptance, or new native launch is part of this receipt."
+}

@@ -1,0 +1,128 @@
+{
+  "base_commit": "799bf7a0fa95313e7659f44d8ff40ff1678314d5",
+  "coverage_summary": [
+    "configured sufficient budget dispatches through existing ControlDaemon/Worker lane after durable reservation and releases only after durable terminal",
+    "insufficient budget, competing reservation, wrong or changed root refuse before domain dispatch; negative controls assert zero fake Worker sends",
+    "actual parameter.set RemoteClient fake exercises Worker request event, mutation, and readback; incorrect readback makes UNKNOWN and reservation remains held across restart",
+    "queued-only crash keeps reservation, reconciles without replay/dispatch; concurrent admissions serialize through existing OperationStore",
+    "trusted configuration is owner/ACL/filesystem-capability checked with verify_private_path_security and exact post-read identity validation"
+  ],
+  "limits": [
+    "SOFTWARE_ONLY: no Windows kernel/runtime execution; no live external Windows host transfer or COMSOL process",
+    "POSIX fstatvfs capacity observation is admission-only, not a hard quota or disk-growth cap",
+    "Windows live storage/quota provider is unavailable; host apply/restore adapters are plan-only typed refusals",
+    "T037 process/file/network isolation, trusted service-account deployment, native quota backing, memory cap, and full independent review remain OPEN/NOT_RUN"
+  ],
+  "platform": "darwin",
+  "runtime": "Python 3.12.13",
+  "schema": "comsol-mcp.w26-resource-coordinator-freeze/v1",
+  "scope": "W26 disk admission profile/config loader, POSIX admission-only provider, durable reservation coordinator, existing OperationStore/ControlDaemon integration and tests",
+  "source_scope_fingerprint_sha256": "a869b9d74804f1ad2d48f208f1741965fff2020add4231b0b32fd1eee65fd984",
+  "sources": [
+    {
+      "ownership": "W26-owned",
+      "path": "comsol_mcp/_w26_os_resources.py",
+      "sha256": "8f21eefed1379610b8602fae25877041e54eedeed762a3e44812ec5dea214d5b",
+      "size_bytes": 133320,
+      "snapshot_match": true,
+      "snapshot_sha256": "8f21eefed1379610b8602fae25877041e54eedeed762a3e44812ec5dea214d5b"
+    },
+    {
+      "ownership": "integration_dependency",
+      "path": "comsol_mcp/_control_daemon.py",
+      "sha256": "8b8d8fd78b3ec12026f112685a96410d28c73f3f76227a391c5f05baf327e533",
+      "size_bytes": 785875,
+      "snapshot_match": true,
+      "snapshot_sha256": "8b8d8fd78b3ec12026f112685a96410d28c73f3f76227a391c5f05baf327e533"
+    },
+    {
+      "ownership": "integration_dependency",
+      "path": "comsol_mcp/_operation_store.py",
+      "sha256": "d9d6c3d54ff4afc625f28f5e70595fd23f6a899e05863a9cdf0b05711a0808fa",
+      "size_bytes": 226849,
+      "snapshot_match": true,
+      "snapshot_sha256": "d9d6c3d54ff4afc625f28f5e70595fd23f6a899e05863a9cdf0b05711a0808fa"
+    },
+    {
+      "ownership": "integration_dependency",
+      "path": "comsol_mcp/_host_scoped_provider.py",
+      "sha256": "f015e7703312cfc9ef4dd897f3b72e7acab30cd60623dc95a1b6d05e7042f74f",
+      "size_bytes": 52811,
+      "snapshot_match": true,
+      "snapshot_sha256": "f015e7703312cfc9ef4dd897f3b72e7acab30cd60623dc95a1b6d05e7042f74f"
+    },
+    {
+      "ownership": "W26-owned",
+      "path": "tests/test_w26_os_resources.py",
+      "sha256": "f67f88848e761235fec298b005e77750961b55d8f6c63a0b447ab1df7c7d3b50",
+      "size_bytes": 66595,
+      "snapshot_match": true,
+      "snapshot_sha256": "f67f88848e761235fec298b005e77750961b55d8f6c63a0b447ab1df7c7d3b50"
+    }
+  ],
+  "status": "SCOPED_SOFTWARE_EVIDENCE_ROOT_REVIEW_PENDING",
+  "test_runs": [
+    {
+      "count_matches_expected": true,
+      "errors": 0,
+      "expected_tests": 35,
+      "failures": 0,
+      "junit": {
+        "path": "docs/full_project_continuation_v2/evidence/w26_os_resources_r19_20261012/junit-r19.xml",
+        "sha256": "d91a878976814f45e35c69e236f316bea6f102489ebb3bdf470a60761c518d6d"
+      },
+      "passed": 35,
+      "run_id": "r19",
+      "skipped": 0,
+      "stderr": {
+        "empty": true,
+        "path": "docs/full_project_continuation_v2/evidence/w26_os_resources_r19_20261012/stderr-r19.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "path": "docs/full_project_continuation_v2/evidence/w26_os_resources_r19_20261012/stdout-r19.txt",
+        "sha256": "71bb61656e40cce8e1c3af97a7e62f7c5f9663ecb14a86cce99e9ad0ef2c893d"
+      },
+      "strict_network_guard": {
+        "active_before_entrypoint": 1,
+        "event_count": 1,
+        "path": "docs/full_project_continuation_v2/evidence/w26_os_resources_r19_20261012/network-guard-r19.jsonl",
+        "sha256": "4af3d559edb8e0eff64ef175cfe96fc7860293acd480c94ff68afe3335162b23",
+        "unexpected_or_deny_events": 0
+      },
+      "suite": "tests/test_w26_os_resources.py",
+      "tests": 35
+    },
+    {
+      "count_matches_expected": true,
+      "errors": 0,
+      "expected_tests": 147,
+      "failures": 0,
+      "junit": {
+        "path": "docs/full_project_continuation_v2/evidence/w26_os_resources_r20_20261012/junit-r20.xml",
+        "sha256": "d7195bf0aee9258c7865cf458335bbfea2715188ac7f5492617c646599270666"
+      },
+      "passed": 147,
+      "run_id": "r20",
+      "skipped": 0,
+      "stderr": {
+        "empty": true,
+        "path": "docs/full_project_continuation_v2/evidence/w26_os_resources_r20_20261012/stderr-r20.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "path": "docs/full_project_continuation_v2/evidence/w26_os_resources_r20_20261012/stdout-r20.txt",
+        "sha256": "9e7988460dc6b1929b79f15e4d5f166f979221f4ff4bcbb52e31aa4976213c49"
+      },
+      "strict_network_guard": {
+        "active_before_entrypoint": 1,
+        "event_count": 1,
+        "path": "docs/full_project_continuation_v2/evidence/w26_os_resources_r20_20261012/network-guard-r20.jsonl",
+        "sha256": "061c3c674e2da2b69eb30428734fcfaa1ed46e8028fcc9633dbf9c6c38bc7e87",
+        "unexpected_or_deny_events": 0
+      },
+      "suite": "tests/test_control_daemon.py + tests/test_control_daemon_projects.py + tests/test_control_daemon_sessions.py",
+      "tests": 147
+    }
+  ]
+}

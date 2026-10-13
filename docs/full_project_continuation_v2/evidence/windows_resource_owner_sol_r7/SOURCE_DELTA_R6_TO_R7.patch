@@ -1,0 +1,378 @@
+--- r6/comsol_mcp/_windows_t037.py
++++ r7/comsol_mcp/_windows_t037.py
+@@ -1030,7 +1030,13 @@
+                 return (entry[0] == "native_parent" and type(parent) is _PinnedParent
+                         and parent._seal is _PARENT_SEAL and parent.launch_api is self._api
+                         and parent.closed is True)
+-            retained_cleanup[:] = [entry for entry in retained_cleanup if not parent_release_confirmed(entry)]
++            def token_release_confirmed(entry):
++                token = getattr(entry[1], "__self__", None)
++                return (entry[0] == "child_token" and type(token) is _RetainedChildToken
++                        and token._seal is _NATIVE_CHILD_TOKEN_SEAL and token._api is self._api
++                        and token.closed is True)
++            retained_cleanup[:] = [entry for entry in retained_cleanup
++                if not parent_release_confirmed(entry) and not token_release_confirmed(entry)]
+             if retained_cleanup:
+                 _refuse("NATIVE_LAUNCH_RELEASE_UNKNOWN", "actual ancillary launch cleanup remains owned and unconfirmed")
+             if any(not parent.closed for parent in getattr(self._api, "_retained_parent_bindings", {}).values()):
+@@ -1106,6 +1112,27 @@
+             _refuse(ERROR_POLICY_UNVERIFIED, "launch recovery capability is invalid")
+         self._process.transfer_owner(self._process._api, owner)
+         return self._process
++
++
++_NATIVE_CHILD_TOKEN_SEAL = object()
++
++class _RetainedChildToken:
++    """Actual token owner bound to the original native child, never wire-minted."""
++    def __init__(self, api, handle, process, *, seal):
++        if (seal is not _NATIVE_CHILD_TOKEN_SEAL or type(process) is not _RetainedSuspendedChild
++                or process._seal is not _NATIVE_SUSPENDED_CHILD_SEAL or process._api is not api):
++            _refuse("NATIVE_CHILD_TOKEN_OWNER_UNKNOWN", "token requires actual native child provenance")
++        self._api, self._handle, self._process = api, handle, process
++        self._seal = seal
++        self.closed = False
++
++    def release_owned(self, owner):
++        if owner is not self._api or self._seal is not _NATIVE_CHILD_TOKEN_SEAL:
++            _refuse("NATIVE_CHILD_TOKEN_OWNER_UNKNOWN", "only the original native API owner may release this token")
++        if not self.closed:
++            self._api.close_handle(self._handle)
++            self.closed = True
++        getattr(self._api, "_retained_child_tokens", {}).pop(id(self), None)
+ 
+ 
+ class _RetainedSuspendedChild(_Win32ChildProcess):
+@@ -1124,6 +1151,8 @@
+         self._job_handle = job
+         self._owner = api
+         self._resume_attempted = False
++        self._pending_resource_release_jobs = set()
++        self._terminal_resource_release_observations = {}
+         self._ownership_lock = __import__('threading').RLock()
+         try:
+             if not self._creation_confirmed:
+@@ -1433,6 +1462,7 @@
+         native_parent = None
+         attribute_pointer = None
+         image_verified = False
++        launch_release_failures = []
+         try:
+             if not _constant_digest_equal(self._hash_image_handle(image_api, image_handle,
+                                                                    image_fingerprint[1]), expected_hash):
+@@ -1570,13 +1600,24 @@
+             child_token = W.HANDLE()
+             self._check(self.a.OpenProcessToken(process_handle, self.TOKEN_QUERY | 0x2, C.byref(child_token)),
+                         "OpenProcessToken(suspended child)")
++            token_owner = _RetainedChildToken(self, child_token, retained_child, seal=_NATIVE_CHILD_TOKEN_SEAL)
++            if not hasattr(self, "_retained_child_tokens"):
++                self._retained_child_tokens = {}
++            self._retained_child_tokens[id(token_owner)] = token_owner
+             try:
+                 observed = self.read_token(child_token)
+                 from ._windows_t037_acl import check_suspended_child_dacl
+                 self._last_child_dacl_observation = check_suspended_child_dacl(
+                     profile, process_handle, child_token, int(process_info.dwProcessId), self)
+             finally:
+-                self.close_handle(child_token)
++                try:
++                    token_owner.release_owned(self)
++                except BaseException as error:
++                    launch_release_failures.append(("child_token", error))
++                    if not hasattr(self, "_retained_launch_cleanup"):
++                        self._retained_launch_cleanup = []
++                    self._retained_launch_cleanup.append(("child_token", token_owner.release_owned, (self,), error))
++                    raise
+             if (observed.get("state") != "OBSERVED" or observed.get("is_appcontainer") is not True
+                     or observed.get("user_sid", "").casefold() != profile.service_account_sid.casefold()
+                     or observed.get("appcontainer_sid", "").casefold() != profile.appcontainer_sid.casefold()
+@@ -1629,7 +1670,7 @@
+             raise
+         finally:
+             pending_error = sys.exc_info()[1]
+-            release_failures = []
++            release_failures = launch_release_failures
+             def release(label, callback, *args, free_result=False):
+                 try:
+                     result = callback(*args)
+--- r6/comsol_mcp/_control_daemon.py
++++ r7/comsol_mcp/_control_daemon.py
+@@ -11746,11 +11746,17 @@
+             updated = self._updated_session_lifecycle(lifecycle, state="DISCONNECTED", client_state="RETIRED",
+                 worker_instance_id=lifecycle["worker_instance_id"], worker_epoch=lifecycle["worker_epoch"],
+                 server_instance_id=lifecycle["server_instance_id"])
++            process._pending_resource_release_jobs.add(record["job_id"])
++            resource_observation = {}
+             result = self._finish(record, {"success": True, "data": {
+                 "project_id": key[0], "session_id": key[1], "state": "DISCONNECTED",
+                 "client_state": "RETIRED", "server_stopped": False,
+                 "native_child_exit_evidence": evidence}}, "SUCCEEDED",
+-                _native_lifecycle_transition=(updated, lifecycle["revision"]))
++                _native_lifecycle_transition=(updated, lifecycle["revision"]),
++                _native_resource_release_observation=resource_observation)
++            if not self._native_terminal_resources_complete(process, record["job_id"], resource_observation):
++                worker._process = process
++                return result
+             self._session_worker_handles.pop(key, None)
+             self._session_worker_child_identities.pop(key, None)
+             return result
+@@ -11797,9 +11803,14 @@
+             updated = self._updated_session_lifecycle(lifecycle, state="STOPPED", client_state="DISCONNECTED",
+                 server_state="STOPPED", server_ownership="unknown", server_process_identity=None,
+                 worker_instance_id=None, worker_epoch=None, server_instance_id=None)
++            process._pending_resource_release_jobs.add(record["job_id"])
++            resource_observation = {}
+             result = self._finish(record, {"success": True, "data": {"project_id": key[0], "session_id": key[1],
+                 "state": "STOPPED", "server_stopped": True, "native_child_exit_evidence": stopped}}, "SUCCEEDED",
+-                _native_lifecycle_transition=(updated, lifecycle["revision"]))
++                _native_lifecycle_transition=(updated, lifecycle["revision"]),
++                _native_resource_release_observation=resource_observation)
++            if not self._native_terminal_resources_complete(process, record["job_id"], resource_observation):
++                return result
+             self._session_server_handles.pop(key, None)
+             return result
+         except Exception as exc:
+@@ -12362,7 +12373,8 @@
+                 self.running.pop(job_id, None)
+         return self._finish(record, result, status)
+ 
+-    def _finish(self, record, result, status, *, _native_lifecycle_transition=None):
++    def _finish(self, record, result, status, *, _native_lifecycle_transition=None,
++                _native_resource_release_observation=None):
+         execution = result.setdefault("execution", {})
+         execution.update({key: record[key] for key in ("request_id", "operation_id", "request_hash", "idempotency_key", "job_id")})
+         if _native_lifecycle_transition is None:
+@@ -12388,59 +12400,61 @@
+         self.store.update_job(record["job_id"], authoritative_status, {"finished_observed_at": time.time()})
+         self.store.add_event(record["job_id"], authoritative_status, {"operation_id": record["operation_id"], "at": time.time()})
+         if authoritative_status in {"SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED", "LOST"}:
+-            self._release_terminal_resource_reservations(record["job_id"])
++            released = self._release_terminal_resource_reservations(record["job_id"])
++            if _native_resource_release_observation is not None:
++                _native_resource_release_observation.update(released)
+         return result
+ 
+-    def _release_terminal_disk_reservation(self, job_id):
+-        """Release disk accounting after a durable terminal write, never alter its result."""
+-        coordinator = self._disk_resource_coordinator
++    def _release_terminal_accounting(self, job_id, coordinator, kind):
++        """Return exact release/held/diagnostic durability; ordinary finish stays compatible."""
+         if coordinator is None:
+-            return
++            return {"state": "COMPLETE", "reservation_state": "NOT_CONFIGURED", "diagnostic_durable": True}
+         try:
+             outcome = coordinator.release_terminal_if_reserved(job_id)
+-            if outcome is not None:
+-                self.store.add_event(job_id, "W26DiskReservationReleased", {
+-                    "status": outcome.get("status"),
+-                    "reservation_id": outcome.get("reservation_id"),
+-                    "idempotent": outcome.get("idempotent") is True,
+-                    "evidence_classification": outcome.get("evidence_classification", "SOFTWARE_ONLY"),
+-                })
++            if outcome is None:
++                return {"state": "COMPLETE", "reservation_state": "ABSENT_AFTER_DURABLE_QUERY", "diagnostic_durable": True}
++            self.store.add_event(job_id, f"W26{kind}ReservationReleased", {
++                "status": outcome.get("status"), "reservation_id": outcome.get("reservation_id"),
++                "idempotent": outcome.get("idempotent") is True,
++                "evidence_classification": outcome.get("evidence_classification", "SOFTWARE_ONLY")})
++            complete = outcome.get("status") in {"RELEASED", "RELEASED_AFTER_QUIESCENCE"}
++            return {"state": "COMPLETE" if complete else "HELD",
++                    "reservation_state": outcome.get("status"), "diagnostic_durable": True}
+         except Exception as exc:
+-            # The operation's durable terminal result is primary. Retain the
+-            # reservation and record only a bounded cleanup diagnostic.
++            durable = False
+             try:
+-                self.store.add_event(job_id, "W26DiskReservationReleaseDeferred", {
+-                    "cause_type": type(exc).__name__,
+-                    "code": getattr(exc, "code", None),
+-                    "reservation_retained": True,
+-                })
++                self.store.add_event(job_id, f"W26{kind}ReservationReleaseDeferred", {
++                    "cause_type": type(exc).__name__, "code": getattr(exc, "code", None),
++                    "reservation_retained": True})
++                durable = True
+             except Exception:
+                 pass
++            return {"state": "DEFERRED" if durable else "UNKNOWN", "diagnostic_durable": durable,
++                    "cause_type": type(exc).__name__}
++
++    def _release_terminal_disk_reservation(self, job_id):
++        return self._release_terminal_accounting(job_id, self._disk_resource_coordinator, "Disk")
+ 
+     def _release_terminal_resource_reservations(self, job_id):
+-        """Release host accounting after terminal persistence; UNKNOWN remains held."""
+-        self._release_terminal_disk_reservation(job_id)
+-        coordinator = self._memory_resource_coordinator
+-        if coordinator is None:
+-            return
+-        try:
+-            outcome = coordinator.release_terminal_if_reserved(job_id)
+-            if outcome is not None:
+-                self.store.add_event(job_id, "W26MemoryReservationReleased", {
+-                    "status": outcome.get("status"),
+-                    "reservation_id": outcome.get("reservation_id"),
+-                    "idempotent": outcome.get("idempotent") is True,
+-                    "evidence_classification": outcome.get("evidence_classification", "SOFTWARE_ONLY"),
+-                })
+-        except Exception as exc:
+-            try:
+-                self.store.add_event(job_id, "W26MemoryReservationReleaseDeferred", {
+-                    "cause_type": type(exc).__name__,
+-                    "code": getattr(exc, "code", None),
+-                    "reservation_retained": True,
+-                })
+-            except Exception:
+-                pass
++        """Required reservations stay held on any incomplete terminal observation."""
++        disk = self._release_terminal_disk_reservation(job_id)
++        memory = self._release_terminal_accounting(job_id, self._memory_resource_coordinator, "Memory")
++        states = {disk["state"], memory["state"]}
++        state = ("COMPLETE" if states == {"COMPLETE"} else "UNKNOWN" if "UNKNOWN" in states
++                 else "DEFERRED" if "DEFERRED" in states else "HELD")
++        return {"state": state, "disk": disk, "memory": memory}
++
++    def _native_terminal_resources_complete(self, process, job_id, current):
++        # Only an already validated original child capability reaches here.
++        # Job IDs were captured from actual accepted operations, never used to
++        # manufacture cleanup authority from persisted metadata.
++        for pending_job in tuple(process._pending_resource_release_jobs):
++            observation = (current if pending_job == job_id and current
++                           else self._release_terminal_resource_reservations(pending_job))
++            process._terminal_resource_release_observations[pending_job] = observation
++            if observation.get("state") == "COMPLETE":
++                process._pending_resource_release_jobs.remove(pending_job)
++        return not process._pending_resource_release_jobs
+ 
+     def _pending(self, record, **extra):
+         job_id = record.get("job_id")
+--- r6/tests/test_windows_resource_owner.py
++++ r7/tests/test_windows_resource_owner.py
+@@ -0,0 +1,127 @@
++"""Actual owned consumers/coordinator/SQLite paths; native OS adapters are synthetic."""
++from types import SimpleNamespace
++import ctypes as C
++import sqlite3,subprocess
++import pytest
++from comsol_mcp import _windows_t037 as win,_windows_t037_acl as acl
++from comsol_mcp._session_server import OwnedServerLauncher,OwnedServerError
++from tests.test_windows_suspended_ownership import _launch_api,_create,_unknown
++from tests.test_session_server import _startup_runtime
++from tests.test_session_server_control import _make_daemon,_start,_stop
++
++
++def _actual_gate(monkeypatch,original):
++    fake=acl.check_suspended_child_dacl
++    adapter=next(c.cell_contents for c in fake.__closure__ if hasattr(c.cell_contents,'bound_statistics'))
++    monkeypatch.setattr(acl,'check_suspended_child_dacl',original)
++    monkeypatch.setattr(acl,'NativeChildAclApi',lambda:adapter)
++
++@pytest.mark.parametrize('mode',['control','child_unknown','child_terminal'])
++def test_inner_child_token_actual_owner_retry_and_factory_gate(monkeypatch,tmp_path,mode):
++    original_acl=acl.check_suspended_child_dacl
++    profile,api,events,state=_launch_api(monkeypatch,cleanup_fail=mode!='child_terminal')
++    _actual_gate(monkeypatch,original_acl)
++    original_open=api.a.OpenProcessToken;original_close=api.close_handle
++    def open_token(p,access,out):
++        result=original_open(p,access,out)
++        if int(p)==200:C.cast(out,C.POINTER(api.W.HANDLE)).contents.value=57
++        return result
++    def close(handle):
++        value=handle.value if hasattr(handle,'value') else handle
++        if value==57 and mode!='control':
++            events.append(('failed-close-child-token',57));raise OSError('actual native child token close failed')
++        return original_close(handle)
++    api.a.OpenProcessToken=open_token;api.close_handle=close
++    launcher=OwnedServerLauncher(process_factory=lambda *a,**kw:_create(profile,api),platform_name='darwin')
++    with pytest.raises(OwnedServerError) as captured:launcher.start(_startup_runtime(tmp_path),'project','session')
++    error=captured.value
++    assert error.uncertain and error.handle is not None
++    process=error.handle.process
++    assert process._owner is error.handle and process.pid==456 and process.birth_filetime_100ns==123
++    retained=getattr(api,'_retained_launch_cleanup',[])
++    api.close_job=lambda job:events.append(('close-job',job))
++    factory=win.T037SessionProcessFactory(profile,'child-token-owner',api=api);factory._job=300
++    if mode!='control':
++        assert any(x[0]=='child_token' for x in retained)
++        tokens=list(api._retained_child_tokens.values());assert len(tokens)==1
++        token=tokens[0]
++        assert type(token) is win._RetainedChildToken and token._process is process and token._handle.value==57 and not token.closed
++        with pytest.raises(win.WindowsT037Error):token.release_owned(object())
++        with pytest.raises(win.WindowsT037Error):factory.close()
++        assert factory._job==300 and ('close-job',300) not in events
++        assert bool(process._closed)==(mode=='child_terminal')
++        api.close_handle=original_close
++        token.release_owned(api);before=events.count(('close',57))
++        token.release_owned(api)
++        assert token.closed and events.count(('close',57))==before==1
++        assert not api._retained_child_tokens
++    api.close_handle=original_close;state['cleanup_fail']=False;launcher.stop(error.handle)
++    factory.close();assert ('close-job',300) in events
++
++@pytest.mark.parametrize('role',['server','worker'])
++@pytest.mark.parametrize('fault',['control','resource_query','resource_deferred_write'])
++def test_actual_memory_sqlite_release_unknown_retains_terminal_capability_until_all_original_jobs_clear(monkeypatch,tmp_path,role,fault):
++    original_acl=acl.check_suspended_child_dacl
++    if role=='server':
++        profile,api,events,state=_launch_api(monkeypatch,cleanup_fail=True);_actual_gate(monkeypatch,original_acl)
++        launcher=OwnedServerLauncher(process_factory=lambda *a,**kw:_create(profile,api),platform_name='darwin')
++        daemon,project,*_=_make_daemon(tmp_path,monkeypatch,server_launcher=launcher)
++        started=_start(daemon,project)
++    else:
++        from comsol_mcp._java_worker import PersistentJavaWorker
++        profile,api,events,state,error=_unknown(monkeypatch)
++        paths=SimpleNamespace(validate=lambda:None,classpath=lambda:('fixture','hash',1,'jars'),
++            compilation_cache_fingerprint=lambda *args:('cache',{}),executable=lambda name:name,
++            private_prefs=None,classpath_separator=':',resolved_global_lock_root=tmp_path)
++        def factory(*a,**k):raise error
++        worker=PersistentJavaWorker(paths,state_dir=tmp_path/'worker',process_factory=factory)
++        monkeypatch.setattr(subprocess,'run',lambda *a,**kw:SimpleNamespace(returncode=0,stderr=''))
++        daemon,project,*_=_make_daemon(tmp_path,monkeypatch,worker=worker)
++        started=daemon.dispatch({'operation':'session.connect','arguments':{'project_id':project,'runtime_id':'fixture-runtime',
++            'endpoint':{'host':'127.0.0.1','port':2040},'idempotency_key':'memory-worker-start'},'execution':{}})
++    sid=started['data']['session_id'];key=(project,sid)
++    owners=daemon._session_server_handles if role=='server' else daemon._session_worker_handles
++    owner=owners[key];process=owner.process if role=='server' else owner._process;state['cleanup_fail']=False
++    from comsol_mcp import _w26_memory_resources as memory
++    from tests.test_w26_os_resources import _write_memory_config
++    config=memory.TrustedMemoryResourceConfig.load(_write_memory_config(tmp_path))
++    daemon._memory_resource_coordinator=memory.MemoryResourceCoordinator(config=config,store=daemon.store,authority=daemon.project_authority)
++    def stop(label):
++        if role=='server':return _stop(daemon,project,sid,key=label)
++        return daemon.dispatch({'operation':'session.disconnect','arguments':{'project_id':project,'session_id':sid,
++            'retire_worker':True,'idempotency_key':label},'execution':{}})
++    denied=[]
++    def authorizer(action,arg1,arg2,dbname,source):
++        if action==sqlite3.SQLITE_READ and arg1=='job_events' and source is None:
++            denied.append((action,arg1,arg2));return sqlite3.SQLITE_DENY
++        return sqlite3.SQLITE_OK
++    try:
++        if fault=='resource_deferred_write':
++            daemon.store.db.execute("CREATE TRIGGER resource_deferred_failure BEFORE INSERT ON job_events WHEN NEW.event='W26MemoryReservationReleaseDeferred' BEGIN SELECT RAISE(ABORT,'real SQLite deferred diagnostic failure'); END")
++        if fault!='control':daemon.store.db.set_authorizer(authorizer)
++        first=stop('memory-cleanup-'+role+'-'+fault)
++        assert first['success'] and 'native_child_exit_evidence' in first['data'],first
++        assert process._closed and type(process.returncode) is int
++        count=sum(isinstance(x,tuple) and x[0]=='terminate' for x in events)
++        if fault!='control':
++            assert denied and owners.get(key) is owner
++            assert (owner.process if role=='server' else owner._process) is process
++            job_id=first['execution']['job_id']
++            assert job_id in process._pending_resource_release_jobs
++            expected='UNKNOWN' if fault=='resource_deferred_write' else 'DEFERRED'
++            observed=process._terminal_resource_release_observations[job_id]
++            assert observed['state']==expected
++            assert observed['memory']['diagnostic_durable'] is (fault!='resource_deferred_write')
++            second=stop('memory-cleanup-still-denied')
++            assert second['success'] and owners.get(key) is owner and job_id in process._pending_resource_release_jobs
++            assert second['execution']['job_id'] in process._pending_resource_release_jobs
++            assert sum(isinstance(x,tuple) and x[0]=='terminate' for x in events)==count
++            daemon.store.db.set_authorizer(None)
++            if fault=='resource_deferred_write':daemon.store.db.execute('DROP TRIGGER resource_deferred_failure')
++            terminal=stop('memory-cleanup-permission-restored')
++            assert terminal['success'] and 'native_child_exit_evidence' in terminal['data']
++            assert not terminal['data'].get('already_stopped') and not terminal['data'].get('already_retired')
++        assert key not in owners and not process._pending_resource_release_jobs
++        assert sum(isinstance(x,tuple) and x[0]=='terminate' for x in events)==count
++    finally:
++        daemon.store.db.set_authorizer(None);daemon.close()

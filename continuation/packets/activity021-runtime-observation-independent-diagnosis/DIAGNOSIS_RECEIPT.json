@@ -1,0 +1,554 @@
+{
+  "schema": "ACTIVITY021_RUNTIME_OBSERVATION_INDEPENDENT_SOURCE_RAW_DIAGNOSIS/1",
+  "result": "CONFIRMED_SOURCE_RAW_RUNTIME_ID_DOMAIN_MISMATCH_UNFIXED",
+  "candidate": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13",
+  "freeze": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/docs/full_project_execution/w23_overlap/evidence/native-run-20261013-021-saved-mph-zero-solve-candidate20-r13-final1/freeze.json",
+    "bytes": 172884,
+    "sha256": "d8babde3ce5ff94f7f026c9f86271ac5f52074a17a484d9d3e94dbdc55a729fa"
+  },
+  "original_actual_preservation": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_saved_mph_candidate20_r13/activity021-actual-terminal-001/PRESERVATION_RECEIPT.json",
+    "bytes": 8901,
+    "sha256": "66d8a30d91ab16bcbe2a04dc8df6419c3c6453210ae9d199b61bff9375d1f4ba"
+  },
+  "Root_actual_audit": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_saved_mph_candidate20_r13/ROOT_ACTUAL_ACTIVITY021_METADATA_CHECK_AND_R14_DISPOSITION.json",
+    "bytes": 75474,
+    "sha256": "964eb0869e96a3e16c08aa1c5e5e23dcd0e4989d5127d4f9f4da61695b06f1ea"
+  },
+  "scope": "Single remaining runtime observation source/raw diagnosis for Root architecture. No new SDK test/target process/Native proof or full Goal acceptance; original21 metadata result and priorR19 source result unchanged.",
+  "actual_observation": {
+    "job_id": "e3155dd4-5e44-4b25-aeb6-2c00ebf7bd94",
+    "operation_id": "258436a8-6da1-403c-a2a0-03bfe1cd9d4b",
+    "status": "SUCCEEDED",
+    "execution_runtime_observation": {
+      "cause_type": "ValueError",
+      "reason_code": "RUNTIME_IDENTITY_UNVERIFIED",
+      "schema": "comsol-worker-runtime-observation/v1",
+      "status": "UNVERIFIED"
+    },
+    "server_ownership": "shared",
+    "original_SQLite_same_terminal_observation": true,
+    "raw_getComsolVersion": {
+      "observed_event_id": 143,
+      "status": "SUCCEEDED",
+      "ok": true,
+      "value": "COMSOL Multiphysics 6.4 (开发版本: 293)",
+      "source": "Original metadatajob complete durable Worker event, not new call"
+    },
+    "metadata_Job_product_query_count": 0
+  },
+  "confirmed_cause": {
+    "type": "runtime ID semantic-domain mismatch",
+    "data": {
+      "actual_stored_backend_runtime_id": "runtime-c77d36bb-2dd4-477b-b9c2-0b023aad054b",
+      "required_canonical_installation_runtime_id_from_original_helper": "comsol-install:%2Fprivate%2Ftmp%2Fcomsol-mcp-w23-te-saved-mph-zero-solve-readback-20261013-021-candidate20-r13%2Fcomsol-shadow",
+      "recorded_Worker_root_from_original_constructor": "/private/tmp/comsol-mcp-w23-te-saved-mph-zero-solve-readback-20261013-021-candidate20-r13/comsol-shadow",
+      "current_filesystem_canonical_root": "/private/tmp/comsol-mcp-w23-te-saved-mph-zero-solve-readback-20261013-021-candidate20-r13/comsol-shadow",
+      "other_snapshot_identity_fields": {
+        "worker_instance_id": "c77d36bb-2dd4-477b-b9c2-0b023aad054b",
+        "connection_epoch": 2,
+        "server_instance_id": "6d7c410816f8c6198e0bc1ceb79242ba8795571f89479e485b5a6df2ad385272",
+        "endpoint": "127.0.0.1:58813"
+      },
+      "mismatch_field": "runtime_id",
+      "same_worker_state_source": "Original consistent SQLite snapshot, sessions metadata"
+    },
+    "producer": "Legacy ManagedBackend.connect creates runtime-WorkerUUID; _code_execution_runtime_observation requires canonical filesystem installation ID returned by runtime_id_for_root and compares five exact fields.",
+    "failure_branch": "This unequal runtime_id is sufficient to enter source ValueError live Worker identity differs from the backend binding; raw only preserves ValueError/reason_code, not exception message.",
+    "parser_or_API_absence": "No. Original ModelUtil getComsolVersion success; source _version_parts pads6.4 to6.4.0 and _explicit_build explicitly supports开发版本293. Any unavailable install build is otherwise wrapped with RUNTIME_VERSION_UNAVAILABLE/PreWriteRefusal, not the stored naked ValueError.",
+    "evidence_limit": "Exact observation-time health payload/exception message were not recorded. Nearby captured health and persistedfour other identityfields agree; not promoted to an exact live OBSERVED witness.",
+    "no_new_repro": "Derivation from exact frozen source and original raw values only; no function called against SDK."
+  },
+  "producer_consumer_chain": {
+    "JavaWorker": "ModelUtil.getComsolVersion via existing modelutil submit recorded actualreply; health/runtime_metadata supplies instance/generation/endpoint/connected without engine entry for health.",
+    "backend": "ObservedSuccess host flag binds originalcode_execute sourceSHA/entrypoint/wrapper/model/snapshots then attaches separate runtime observation; failure deliberately does not rewrite terminalcode success.",
+    "ExecutionService": "server_ownership from SessionLedger and ModelRef/revision; neither field mints OS process ownership.",
+    "Store": "Original operationSUCCEEDED with nested runtime observationUNVERIFIED persisted; current diagnostic leaves raw untouched.",
+    "consumer": "_g3_managed_models._test_runtime_observation accepts only OBSERVED, exactversion, runtimeidentity, originalJobbinding/project/ModelRef/currentWorker. Existing UNVERIFIED yieldsNone/RECIPE_TEST_UNVERIFIED, not a recipe/runtime acceptance."
+  },
+  "runtime_ID_contracts": [
+    {
+      "where": "legacy ManagedBackend.connect",
+      "meaning": "runtime-WorkerUUID transient Worker identity label",
+      "actual": "runtime-c77d36bb-2dd4-477b-b9c2-0b023aad054b"
+    },
+    {
+      "where": "SessionRuntimeConfig.runtime_id",
+      "meaning": "Current immutable configuration accepts any nonempty descriptive/catalog label; source does not restrict it to installation URI."
+    },
+    {
+      "where": "runtime_installation.runtime_id_for_root",
+      "meaning": "Canonical local filesystem installation identifier comsol-install:+quotedroot",
+      "required": "comsol-install:%2Fprivate%2Ftmp%2Fcomsol-mcp-w23-te-saved-mph-zero-solve-readback-20261013-021-candidate20-r13%2Fcomsol-shadow"
+    }
+  ],
+  "minimum_repair_proposal": {
+    "status": "PROPOSAL_FOR_ROOT_ARCHITECTURE_NOT_IMPLEMENTED",
+    "preferred": "Keep existing Worker/catalog runtime_id semantics and persisted sessions/runtimes labels. Bind a backend-private original installation identifier/config/Worker at connection, using the existing canonical runtime_id_for_root. Observer checks that original bound installation against current actual Worker.paths plus original current-lane Worker/catalog ID, UUID, epoch, server identity and endpoint; do not compare unlike domains.",
+    "installation_field": "An explicitly named installation_runtime_id can be diagnostic data separate from runtime_identity.runtime_id. It is not JSON authority. Existing consumer still requires OBSERVED + exact version + full original identity/project/ModelRef bindings.",
+    "legacy": "Original legacy expected runtime label must be derived from the same actual Worker instance (runtime-UUID), not blindly copied from mutable identity to make compare vacuous.",
+    "registered": "Same original immutable SessionRuntimeConfig runtime_id/installation root binding must be retained, rather than imposing a new canonical-string constraint on existing catalog labels.",
+    "alternate": "Root may choose canonical internal runtime_id for both producers, but must explicitly preserve/migrate old persisted namespaces and honor existing config labels; not a blind global replacement.",
+    "failure_diagnostics": "Preserve UNVERIFIED terminal marker and original raw. Add bounded reason/mismatched-field diagnostics without credentials, new callback/authority or parallel journal; never rewrite old job to OBSERVED.",
+    "existing_current_version": "Keep _current_version exact ModelUtil readback/local observed installation family+explicitbuild comparator and all raw results; do not infer build from root basename or compilation fingerprint.",
+    "future_software_controls_not_executed_here": [
+      "Actual legacy attach producer followed by observer/current consumer with same original Worker SDK boundary",
+      "Existing registered attach/catalog-label compatibility",
+      "Wrong original root, UUID/epoch/endpoint/server fields, unavailable observed local build, failed getComsolVersion remain UNVERIFIED/refused",
+      "Original Store terminal UNKNOWN/success compatibility and persisted identity restoration without old-evidence rewrite"
+    ]
+  },
+  "server_ownership_separation": {
+    "actual_label": "shared by legacy attach default/cachedledger",
+    "physical": "Independent task NativeLoopbackServer firstPopen/ownedcleanup evidence belongs to original task helper; no typedprocess/lifecycle handoff to defaultbackend.",
+    "scope": "Physical ownedcleanup and logicalshared classification are different provenance; do not replace shared withmcp_managed fromJSON/PID/listener alone.",
+    "existing_supported_owned_route": "connect_session already requires exact OwnedServerProcessIdentity and lifecycle ownership for mcp_managed. If Root later wants suchtransfer, use originaltypedroute and sameoriginalprocessowner; no takeover or freshauthority inferred here."
+  },
+  "license_scope": {
+    "actual_this_unit": "NOT_RUN_NO_HASPRODUCT_OR_CHECKOUT",
+    "current_runtime_observation_producer": "Only version/runtime identity, no modules/license observation field",
+    "existing_interface": "Reuse original _g3_runtime.license_inspect/_product_rows/string_array_value -> same original Worker.submit(modelutil hasProduct) if Root includes explicit product query in future bounded scope.",
+    "parameter_and_primary": "COMSOL6.4 official ModelUtil hasProduct(String...product) uses one String[] argument and actual boolean per requested documented token (RF for RF Module); marshalling/API refusal is not false/no-license.",
+    "inventory_only": "Model.getUsedProducts inventory or installed module directories are not licensing acceptance.",
+    "native_scope_boundary": "No query here; no implicit permission or native admission. No ModelUtil.checkoutLicense / new seat-consuming action.",
+    "cannot_accept": "Even actual hasProduct true is license capability, not proof floating seat availability for solver execution, not physical science or product completion."
+  },
+  "local_primary_docs": {
+    "skill": "comsol-local-kb",
+    "version": "COMSOL6.4.0.293 documentation corpus",
+    "version_doc": {
+      "doc_id": 4086,
+      "chunk_id": 16698,
+      "sha256": "efba38a9c78d87e68e7306ced73ccc947c97ca43802bfb5b29045b45c56bb16a",
+      "meaning": "getComsolVersion returns current COMSOL version string, actualcall captured."
+    },
+    "license_doc": {
+      "doc_id": 4086,
+      "chunk_id": 16700,
+      "sha256": "efba38a9c78d87e68e7306ced73ccc947c97ca43802bfb5b29045b45c56bb16a",
+      "meaning": "hasProduct String[] license-capability query vs separate seat-consuming checkout family; RF documentedRFtoken."
+    },
+    "source": "Read actuallocalchunks and stored exactMCP results; Windows source_original fields notopened; docs not runtime/seat/science proof"
+  },
+  "cannot_accept": [
+    "Existing UNVERIFIED row cannot become OBSERVED from this offline diagnosis or storedhealth replay",
+    "Compile/root folder names, normalizedstrings or physicalcleanup do not prove modulelicense",
+    "Do not remove strict identity/version checks or copy identity fields intoexpected to makecomparison vacuous",
+    "No hardquota/fullOS isolation/solver/physicalscience or wholeGoal completion fromthis result"
+  ],
+  "remaining_required": "Runtime observation producer repair and futurebounded real sameWorker provenance remain OPEN; product availability/seat/runtime/science accepted only under existing requiredscope with actual results.",
+  "read_only_verification": {
+    "source_and_raw26_firstpins_sameFD_beforeafter": true,
+    "originalsnapshot_SHA": "56777dd09c95ca99a0b0274ec03c7a8e6da468e5d8b7e185b992314e5b4aa336",
+    "originalfreeze_source14refs_exact": true,
+    "storedmetadata_queried_SQLite_readOnly": true,
+    "mainDB_unchanged": true,
+    "source_or_old_raw_payload_modified": false,
+    "all_source_raw_pins": [
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_saved_mph_candidate20_r13/activity021-actual-terminal-001/PRESERVATION_RECEIPT.json",
+        "bytes": 8901,
+        "sha256": "66d8a30d91ab16bcbe2a04dc8df6419c3c6453210ae9d199b61bff9375d1f4ba",
+        "device": 16777243,
+        "inode": 1193840,
+        "UID": 501,
+        "nlink": 1,
+        "mode": 384
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_saved_mph_candidate20_r13/ROOT_ACTUAL_ACTIVITY021_METADATA_CHECK_AND_R14_DISPOSITION.json",
+        "bytes": 75474,
+        "sha256": "964eb0869e96a3e16c08aa1c5e5e23dcd0e4989d5127d4f9f4da61695b06f1ea",
+        "device": 16777243,
+        "inode": 1193923,
+        "UID": 501,
+        "nlink": 1,
+        "mode": 384
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/docs/full_project_execution/w23_overlap/evidence/native-run-20261013-021-saved-mph-zero-solve-candidate20-r13-final1/native-execute/definition_boundary_metadata_job_terminal.json",
+        "bytes": 2513596,
+        "sha256": "d7194d0afae2d34841e050aad345f3471ec296017c839ad9620e30a78128e864",
+        "device": 16777243,
+        "inode": 1193683,
+        "UID": 501,
+        "nlink": 1,
+        "mode": 420
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/docs/full_project_execution/w23_overlap/evidence/native-run-20261013-021-saved-mph-zero-solve-candidate20-r13-final1/native-execute/managed_ledger_reconciliation.json",
+        "bytes": 3563973,
+        "sha256": "c518df330dac3ab966b9de07bada2a8d838465c61dec5be1cc2cbea6eddd1ec4",
+        "device": 16777243,
+        "inode": 1193692,
+        "UID": 501,
+        "nlink": 1,
+        "mode": 420
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/docs/full_project_execution/w23_overlap/evidence/native-run-20261013-021-saved-mph-zero-solve-candidate20-r13-final1/native-execute/private-control-store/raw_operations.sqlite3",
+        "bytes": 1355776,
+        "sha256": "56777dd09c95ca99a0b0274ec03c7a8e6da468e5d8b7e185b992314e5b4aa336",
+        "device": 16777243,
+        "inode": 1193690,
+        "UID": 501,
+        "nlink": 1,
+        "mode": 420
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_saved_mph_candidate20_r13/activity021-actual-terminal-001/COMPLETE_WORK_NOFOLLOW_COPY_MANIFEST.json",
+        "bytes": 62682,
+        "sha256": "f5e341ee3a6525eb475df563f8f696fd4e27090060b1d04e248ed940b4632765",
+        "device": 16777243,
+        "inode": 1193838,
+        "UID": 501,
+        "nlink": 1,
+        "mode": 384
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/docs/full_project_execution/w23_overlap/evidence/native-run-20261013-021-saved-mph-zero-solve-candidate20-r13-final1/native-execute/worker_connection.json",
+        "bytes": 6761,
+        "sha256": "e7e982ae04198de958a1e47df81e019feb217b62df384aec6eb78cffebbaa884",
+        "device": 16777243,
+        "inode": 1193671,
+        "UID": 501,
+        "nlink": 1,
+        "mode": 420
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/docs/full_project_execution/w23_overlap/evidence/native-run-20261013-021-saved-mph-zero-solve-candidate20-r13-final1/native-execute/managed_connection.json",
+        "bytes": 1704,
+        "sha256": "03965c5b4579e2270c3bbd73ab346922a0a6e13e0a9f29195aca852e2641f7b5",
+        "device": 16777243,
+        "inode": 1193673,
+        "UID": 501,
+        "nlink": 1,
+        "mode": 420
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/docs/full_project_execution/w23_overlap/evidence/native-run-20261013-021-saved-mph-zero-solve-candidate20-r13-final1/native-execute/cleanup_worker_health_before_disconnect.json",
+        "bytes": 326,
+        "sha256": "29dacb302ffbae94dbc9b3ba78a5a817be4779c6406a9a395b9a9d284361a564",
+        "device": 16777243,
+        "inode": 1193688,
+        "UID": 501,
+        "nlink": 1,
+        "mode": 420
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/docs/full_project_execution/w23_overlap/evidence/native-run-20261013-021-saved-mph-zero-solve-candidate20-r13-final1/native-execute/cleanup_worker_disconnect.json",
+        "bytes": 825,
+        "sha256": "010f4ebae3e3094a872e9adfb24da4bfb776a902bc94a2122f717ad38437e36f",
+        "device": 16777243,
+        "inode": 1193696,
+        "UID": 501,
+        "nlink": 1,
+        "mode": 420
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/docs/full_project_execution/w23_overlap/evidence/native-run-20261013-021-saved-mph-zero-solve-candidate20-r13-final1/native-execute/direct_worker_rpcs.jsonl",
+        "bytes": 1808,
+        "sha256": "667d4111d3d68040fd3eaca34a33f91e0a8f4091ebd270077c02459c1d08d9b2",
+        "device": 16777243,
+        "inode": 1193670,
+        "UID": 501,
+        "nlink": 1,
+        "mode": 420
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/docs/full_project_execution/w23_overlap/evidence/native-run-20261013-021-saved-mph-zero-solve-candidate20-r13-final1/freeze.json",
+        "bytes": 172884,
+        "sha256": "d8babde3ce5ff94f7f026c9f86271ac5f52074a17a484d9d3e94dbdc55a729fa",
+        "device": 16777243,
+        "inode": 1191899,
+        "UID": 501,
+        "nlink": 1,
+        "mode": 420
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/comsol_mcp/_managed_backend.py",
+        "bytes": 233017,
+        "sha256": "cc97b1440981af973610a2e9eb4907a8365b56aab617b5fb023be9c62070bf0a",
+        "device": 16777243,
+        "inode": 1189765,
+        "UID": 501,
+        "nlink": 1,
+        "mode": 420
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/comsol_mcp/_java_worker.py",
+        "bytes": 66834,
+        "sha256": "42c2dc0eb018eb3fd58299b93fd1161ab6a3baae01f82d47d260a5e2e9270933",
+        "device": 16777243,
+        "inode": 1189748,
+        "UID": 501,
+        "nlink": 1,
+        "mode": 420
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/comsol_mcp/_execution_service.py",
+        "bytes": 30511,
+        "sha256": "14c921b1ab068fd290f117207408dd5865079f613d835a3799e0198d27933f0a",
+        "device": 16777243,
+        "inode": 1189755,
+        "UID": 501,
+        "nlink": 1,
+        "mode": 420
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/comsol_mcp/_g3_model_delivery.py",
+        "bytes": 68294,
+        "sha256": "9c6aa7c1de31e325dca21f49bec1df9351a642952869b215f47e50b092a65e80",
+        "device": 16777243,
+        "inode": 1189858,
+        "UID": 501,
+        "nlink": 1,
+        "mode": 420
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/comsol_mcp/_g3_managed_models.py",
+        "bytes": 109505,
+        "sha256": "408fe130dbb8ac3ad36c1e3bea8968588675b4ce1ae8e4a3fd30624a45edb286",
+        "device": 16777243,
+        "inode": 1189810,
+        "UID": 501,
+        "nlink": 1,
+        "mode": 420
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/comsol_mcp/_runtime_installation.py",
+        "bytes": 29061,
+        "sha256": "afb2bbd81783d025d030e9790d720d11cde0d0a6fd6fe890f38d69813e3e31ce",
+        "device": 16777243,
+        "inode": 1189836,
+        "UID": 501,
+        "nlink": 1,
+        "mode": 420
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/comsol_mcp/_runtime_state.py",
+        "bytes": 6511,
+        "sha256": "6d2de604b0ba4cab7283de66107df6401dab3d5d74cb99e4b34c331d162cc3d6",
+        "device": 16777243,
+        "inode": 1189835,
+        "UID": 501,
+        "nlink": 1,
+        "mode": 420
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/comsol_mcp/worker_java/PersistentComsolWorker.java",
+        "bytes": 129865,
+        "sha256": "2497cc2d9006ad714040f77e046ac2ede90ef4ed31106a3c78899cca530a6b35",
+        "device": 16777243,
+        "inode": 1189879,
+        "UID": 501,
+        "nlink": 1,
+        "mode": 420
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/tools/run_native_resume_smoke.py",
+        "bytes": 79102,
+        "sha256": "fb086c01ba6b9e48f78415bf092877d2b9cab9011c13f8613b48c0ae75e67180",
+        "device": 16777243,
+        "inode": 1189732,
+        "UID": 501,
+        "nlink": 1,
+        "mode": 420
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/tools/run_native_w23_te_science.py",
+        "bytes": 202430,
+        "sha256": "951ac8b5e44c873c5ce17d533744a289b261bedbe48bd9cdce458c798593fade",
+        "device": 16777243,
+        "inode": 1189733,
+        "UID": 501,
+        "nlink": 1,
+        "mode": 420
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/tools/run_native_w23_saved_mph_diagnostic.py",
+        "bytes": 102564,
+        "sha256": "469d4c883312ab22db0ddb9fd99edbf63f2fef692ae9c811c35dd5644d3659ab",
+        "device": 16777243,
+        "inode": 1189729,
+        "UID": 501,
+        "nlink": 1,
+        "mode": 420
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/tools/run_native_w23_te_managed_preflight.py",
+        "bytes": 93380,
+        "sha256": "b249524c65ed0f68fcf79139897e699e51cd05643fb6aa18fa29f92689d8cb52",
+        "device": 16777243,
+        "inode": 1189734,
+        "UID": 501,
+        "nlink": 1,
+        "mode": 420
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/comsol_mcp/_session_context.py",
+        "bytes": 38915,
+        "sha256": "6c1222cdeaed6f14208f4ead0f9b82beccf96b7c1a445d0a8b43107878e2406d",
+        "device": 16777243,
+        "inode": 1189750,
+        "UID": 501,
+        "nlink": 1,
+        "mode": 420
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/comsol_mcp/_g3_runtime.py",
+        "bytes": 57141,
+        "sha256": "663af8ffdd7b6d99a915acfb4bad768a5c2227e18088511a375dcb7d7e75ae52",
+        "device": 16777243,
+        "inode": 1189863,
+        "UID": 501,
+        "nlink": 1,
+        "mode": 420
+      }
+    ]
+  },
+  "review_reader_side_effect": {
+    "status": "REVIEW_READER_SIDE_EFFECT_PRESERVED_AND_ORIGINAL_RAW_MEMBERSHIP_RESTORED",
+    "readOnlyWAL_mode_aux_created": 2,
+    "bytes_SHM": 32768,
+    "bytes_WAL": 0,
+    "Root_explicit_authorized_exact_own_aux_preserve_move": true,
+    "fullmetadata_birth_identity_SHA_privatepreserved": true,
+    "originalmembership_restored": [
+      "raw_operations.sqlite3",
+      "raw_operations_post_disconnect.sqlite3"
+    ],
+    "old_snapshots_or_aux_deleted": 0,
+    "mainDB_before_after_SHA_same": true,
+    "helper_failures_preserved": "Initial readonlyschema projection wrongnestedledger and latercrossrealm names-array assertion; corrected projections/assertions only, no SDK or database mutation. Raw ownaux fullbytes retained in privatefolder.",
+    "note": "Not described as0filesystemeffects: actual reviewer-generated auxiliaries were captured and removed only underRoot permission."
+  },
+  "effects": {
+    "new_SDK_tests": 0,
+    "JVM": 0,
+    "COMSOL": 0,
+    "nativeWorker": 0,
+    "WindowsSDK": 0,
+    "make_pip_compile": 0,
+    "targetPython": 0,
+    "OS_processprobe": 0,
+    "signals": 0,
+    "approval": 0,
+    "CAS": 0,
+    "GIT": 0,
+    "PROGRESS_RESUME": 0,
+    "production_source_or_old_raw_bytes": 0,
+    "SQLITE_readOnly_queries": "Original storedsnapshot only",
+    "SQLite_incidental_own_aux": "2created, bothpreserved/restored underRootexplicitauthorization"
+  },
+  "private_artifacts": [
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/activity021-runtime-observation-independent-diagnosis/ACTUAL_CELLS_AND_RUNTIME_ID_MISMATCH.json",
+      "bytes": 4009,
+      "sha256": "45e519c8312bbe8544b308d86fffa5999df3a35861ff6951cce36728ac846c61",
+      "inode": 1200439,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/activity021-runtime-observation-independent-diagnosis/DIAGNOSIS_AND_MINIMAL_REPAIR_PROPOSAL.json",
+      "bytes": 18178,
+      "sha256": "0c5fbd7524dc246f5af14dd3e6e78ba059663ad86fb9c71c98d1f89cffc63230",
+      "inode": 1202453,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/activity021-runtime-observation-independent-diagnosis/NODE_READONLY_GENERATED_SQLITE_SHM.bin",
+      "bytes": 32768,
+      "sha256": "fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb",
+      "inode": 1204463,
+      "mode": 420
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/activity021-runtime-observation-independent-diagnosis/NODE_READONLY_GENERATED_SQLITE_WAL.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "inode": 1204464,
+      "mode": 420
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/activity021-runtime-observation-independent-diagnosis/PRIMARY_MODELUTIL_23171_READ.json",
+      "bytes": 5365,
+      "sha256": "384dad316e0b72790810986fb0bab251bf63255f604fcbc23f5c57f9a7f3ce14",
+      "inode": 1197326,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/activity021-runtime-observation-independent-diagnosis/PRIMARY_MODELUTIL_LICENSE_16700.json",
+      "bytes": 5850,
+      "sha256": "464c4e520f7511eaf8d0ab1ea14945ac4bfc5eac27409dbc7d307bb0d1e3dfed",
+      "inode": 1198861,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/activity021-runtime-observation-independent-diagnosis/PRIMARY_MODELUTIL_LICENSE_SEARCH.json",
+      "bytes": 6826,
+      "sha256": "1fb7f4078b3fd88b0b64afed0caf575bcfe3178c8d54e266ac1412989b5acc4b",
+      "inode": 1198873,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/activity021-runtime-observation-independent-diagnosis/PRIMARY_MODELUTIL_VERSION_16698.json",
+      "bytes": 5089,
+      "sha256": "92d5ba442281e33147d7c6513361446b86bbdb7c29b789f3bc064ce04bec509d",
+      "inode": 1198703,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/activity021-runtime-observation-independent-diagnosis/PRIMARY_MODELUTIL_VERSION_SEARCH.json",
+      "bytes": 8447,
+      "sha256": "31616ff682d5c477c0b6ad99b98eb388d544e4131b343f62914672437ae11d94",
+      "inode": 1198872,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/activity021-runtime-observation-independent-diagnosis/PRIVATE_AUX_RESTORATION_ASSERTION_ERROR.json",
+      "bytes": 514,
+      "sha256": "a47627e349336de0480b7f0f89e0d162107be55b3ad07bf0a545e4cf74932890",
+      "inode": 1206445,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/activity021-runtime-observation-independent-diagnosis/PRIVATE_READONLY_LOOKUP_FAILURES.json",
+      "bytes": 731,
+      "sha256": "2b2cb3df2a5aa4b7e4ff67b1f6929031a50dd55693f3c8ab5620ad3cc98099c9",
+      "inode": 1206483,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/activity021-runtime-observation-independent-diagnosis/PRIVATE_READONLY_SCHEMA_ERROR.json",
+      "bytes": 350,
+      "sha256": "e39391c5e0c2ce8fde657ee951bc2401ab7d99bcdb464197ea7818c2c1f17a5d",
+      "inode": 1195743,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/activity021-runtime-observation-independent-diagnosis/READONLY_PRODUCER_CONSUMER_SOURCE_SLICES.json",
+      "bytes": 60833,
+      "sha256": "ca9604175a3dde20e29274228a2809acf43298ecb93c2bda7d37a384aef5a840",
+      "inode": 1200440,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/activity021-runtime-observation-independent-diagnosis/SOURCE_AND_RAW_FIRSTPINS_READBACK.json",
+      "bytes": 11998,
+      "sha256": "d97a7b3231454cb942ad2348831cf5dd3a0cd7c7d7f21f0b62d00b631f28f5a9",
+      "inode": 1206484,
+      "mode": 384
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/activity021-runtime-observation-independent-diagnosis/SQLITE_READER_AUX_SIDE_EFFECT_AND_RESTORATION.json",
+      "bytes": 7507,
+      "sha256": "dbd1721235bd47b168a053702415788be497f093d14d90bf35df74409fdb7354",
+      "inode": 1206446,
+      "mode": 384
+    }
+  ],
+  "conclusion": "ActualValueError is explained by unlike runtimeID domains in existinginterfaces. NoSDKmethod absence or newenginecall shown. Compatible repair must separate installation binding fromWorker/catalog identity while retaining strict consumers. Current UNVERIFIED/version/modulelicense/physicalruntime acceptance is not promoted; Goal staysOPEN."
+}

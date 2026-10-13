@@ -1,0 +1,591 @@
+--- a/comsol_mcp/_w26_os_resources.py
++++ b/comsol_mcp/_w26_os_resources.py
+@@ -20,6 +20,7 @@
+ import re
+ import sqlite3
+ import stat
++import time
+ from pathlib import Path
+ from typing import Any, Mapping, Sequence
+ 
+@@ -30,10 +31,13 @@
+ SNAPSHOT_SCHEMA = "comsol-mcp.host-resource-snapshot/v1"
+ PLAN_SCHEMA = "comsol-mcp.host-change-plan/v1"
+ RESERVATION_SCHEMA = "comsol-mcp.disk-reservation/v1"
++QUIESCENCE_SCHEMA = "comsol-mcp.job-quiescence-witness/v1"
+ _MAX_SQLITE_INT = (1 << 63) - 1
++_QUIESCENCE_MAX_AGE_NS = 30_000_000_000
+ _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+ _IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,127}$")
+ _NATIVE_STORAGE_ATTESTATION = object()
++_NATIVE_QUIESCENCE_ATTESTATION = object()
+ _SENSITIVE_NAMES = frozenset({
+     "authorization", "token", "accesstoken", "password", "passwd", "secret",
+     "credential", "credentials", "apikey", "privatekey", "licensefilecontents",
+@@ -639,6 +643,86 @@
+     """
+ 
+     pass
++
++
++class JobQuiescenceProvider:
++    """Provider contract for independently proving that one job owns no live work."""
++
++    def prove_quiescence(self, *, store: Any, profile: HostResourceProfile,
++                         job_binding: Mapping[str, Any], reservation_id: str) -> "JobQuiescenceWitness":
++        raise NotImplementedError
++
++
++class NativeJobQuiescenceProvider(JobQuiescenceProvider):
++    """Startup-installed adapter backed by exact process and write-ownership evidence.
++
++    There is no production implementation connected in this unit. An adapter
++    must prove the exact owned process tree has terminated, owned writes have
++    stopped, and the existing durable operation ledger is quiescent.
++    """
++
++    pass
++
++
++@dataclass(frozen=True)
++class JobQuiescenceWitness:
++    """Opaque, job-bound proof returned by a trusted quiescence provider.
++
++    The evidence hashes refer to the provider's exact process-tree, write-scope,
++    and durable-ledger observations. This witness releases only the physical
++    disk reservation; it never changes the domain operation's UNKNOWN status.
++    """
++
++    schema: str
++    provider_id: str
++    profile_id: str
++    profile_sha256: str
++    project_id: str
++    root_file_id: str
++    host_id: str
++    job_id: str
++    operation_id: str
++    reservation_id: str
++    domain_status: str
++    safe_retry: bool
++    process_tree_state: str
++    process_tree_evidence_sha256: str
++    owned_writes_state: str
++    owned_writes_evidence_sha256: str
++    operation_ledger_state: str
++    operation_ledger_watermark: int
++    operation_ledger_evidence_sha256: str
++    observed_monotonic_ns: int
++    _attestation: object = field(default=None, repr=False, compare=False)
++
++    def as_dict(self) -> dict[str, Any]:
++        return {
++            "schema": self.schema,
++            "provider_id": self.provider_id,
++            "profile_id": self.profile_id,
++            "profile_sha256": self.profile_sha256,
++            "project_id": self.project_id,
++            "root_file_id": self.root_file_id,
++            "host_id": self.host_id,
++            "job_id": self.job_id,
++            "operation_id": self.operation_id,
++            "reservation_id": self.reservation_id,
++            "domain_status": self.domain_status,
++            "safe_retry": self.safe_retry,
++            "process_tree_state": self.process_tree_state,
++            "process_tree_evidence_sha256": self.process_tree_evidence_sha256,
++            "owned_writes_state": self.owned_writes_state,
++            "owned_writes_evidence_sha256": self.owned_writes_evidence_sha256,
++            "operation_ledger_state": self.operation_ledger_state,
++            "operation_ledger_watermark": self.operation_ledger_watermark,
++            "operation_ledger_evidence_sha256": self.operation_ledger_evidence_sha256,
++            "observed_monotonic_ns": self.observed_monotonic_ns,
++        }
++
++
++def _issue_native_quiescence_witness(**fields: Any) -> JobQuiescenceWitness:
++    """Internal adapter seam; caller-supplied request data must never reach it."""
++    return JobQuiescenceWitness(**fields, _attestation=_NATIVE_QUIESCENCE_ATTESTATION)
+ 
+ 
+ @dataclass(frozen=True)
+@@ -1083,7 +1167,8 @@
+ __all__ = [
+     "AppliedHostChangeReceipt", "CapabilityState", "DiskAdmission", "DiskBudgetPolicy",
+     "HostChangeApproval", "HostChangePlan", "HostChangeVerification", "HostResourceProfile",
+-    "HostResourceProvider", "HostResourceSnapshot", "LaunchImage", "NetworkGrant", "PathGrant",
++    "HostResourceProvider", "HostResourceSnapshot", "JobQuiescenceProvider",
++    "JobQuiescenceWitness", "LaunchImage", "NativeJobQuiescenceProvider", "NetworkGrant", "PathGrant",
+     "PathIdentity", "ProcessWitness", "QuotaState", "ResourcePolicyError", "SnapshotAssessment",
+     "StorageObservation", "VerifiedLaunchBinding", "apply_host_change_plan", "apply_restore_plan",
+     "assess_snapshot", "build_host_change_plan", "build_restore_plan", "disk_scope_id",
+@@ -1160,15 +1245,20 @@
+         "SELECT id,job_id,metadata FROM job_events WHERE event='W26DiskReservation' ORDER BY id"
+     ).fetchall()
+     state: dict[str, tuple[str, dict[str, Any]]] = {}
+-    allowed = {"schema", "reservation_id", "status", "project_id", "job_id", "operation_id",
+-               "profile_id", "profile_sha256", "root_file_id", "filesystem_id", "scope_id",
+-               "quota_id", "requested_bytes", "observation_sha256", "enforcement", "at_monotonic_ns"}
++    base_fields = {"schema", "reservation_id", "status", "project_id", "job_id", "operation_id",
++                   "profile_id", "profile_sha256", "root_file_id", "filesystem_id", "scope_id",
++                   "quota_id", "requested_bytes", "observation_sha256", "enforcement", "at_monotonic_ns"}
++    quiescence_fields = {"release_basis", "quiescence_witness", "quiescence_witness_sha256"}
+     for row in rows:
+         try:
+             item = _event_json(row["metadata"])
+-            if (set(item) != allowed or item.get("schema") != RESERVATION_SCHEMA
++            status = item.get("status")
++            expected_fields = (base_fields if status in {"RESERVED", "RELEASED"}
++                               else base_fields | quiescence_fields
++                               if status == "RELEASED_AFTER_QUIESCENCE" else set())
++            if (not expected_fields or set(item) != expected_fields
++                    or item.get("schema") != RESERVATION_SCHEMA
+                     or item.get("job_id") != row["job_id"]
+-                    or item.get("status") not in {"RESERVED", "RELEASED"}
+                     or not _is_sha256(item.get("profile_sha256"))
+                     or not _is_sha256(item.get("observation_sha256"))
+                     or type(item.get("requested_bytes")) is not int
+@@ -1178,18 +1268,28 @@
+                     or not _nonempty(item.get("filesystem_id"))
+                     or not _nonempty(item.get("root_file_id"))):
+                 raise ValueError("reservation event fields are invalid")
++            if status == "RELEASED_AFTER_QUIESCENCE":
++                witness = item.get("quiescence_witness")
++                if (item.get("release_basis") != "INDEPENDENT_QUIESCENCE"
++                        or not isinstance(witness, dict)
++                        or not _is_sha256(item.get("quiescence_witness_sha256"))
++                        or _sha256(witness) != item["quiescence_witness_sha256"]):
++                    raise ValueError("quiescence release receipt is malformed or has a bad digest")
++                _validate_quiescence_witness_dict(witness, item, event_id=row["id"], db=db)
+             reservation_id = item["reservation_id"]
+             previous = state.get(reservation_id)
+             if previous is None:
+-                if item["status"] != "RESERVED":
++                if status != "RESERVED":
+                     raise ValueError("release event has no reserve event")
+                 state[reservation_id] = (row["job_id"], item)
+                 continue
+             previous_job, previous_item = previous
+-            if previous_job != row["job_id"] or item["status"] != "RELEASED":
++            if previous_job != row["job_id"] or status not in {"RELEASED", "RELEASED_AFTER_QUIESCENCE"}:
+                 raise ValueError("reservation identity is duplicated or transition is invalid")
+-            base_prev = {key: value for key, value in previous_item.items() if key != "status"}
+-            base_next = {key: value for key, value in item.items() if key != "status"}
++            base_prev = {key: value for key, value in previous_item.items()
++                         if key in base_fields and key != "status"}
++            base_next = {key: value for key, value in item.items()
++                         if key in base_fields and key != "status"}
+             if base_prev != base_next or previous_item["status"] != "RESERVED":
+                 raise ValueError("reservation release does not match its original reservation")
+             state[reservation_id] = (row["job_id"], item)
+@@ -1208,7 +1308,8 @@
+                       operation_names: Sequence[str] | None = None) -> dict[str, Any]:
+     row = db.execute(
+         "SELECT j.job_id,j.operation_id,j.status AS job_status,j.metadata AS job_metadata,"
+-        "o.operation,o.status AS operation_status,o.metadata AS operation_metadata "
++        "j.finished_at AS job_finished_at,o.operation,o.status AS operation_status,"
++        "o.metadata AS operation_metadata,o.result AS operation_result,o.finished_at AS operation_finished_at "
+         "FROM jobs j JOIN operations o ON o.operation_id=j.operation_id WHERE j.job_id=?", (job_id,),
+     ).fetchone()
+     if row is None:
+@@ -1218,6 +1319,10 @@
+         operation_metadata = _event_json(row["operation_metadata"])
+     except ValueError:
+         _fail("RESOURCE_RESERVATION_JOB_UNKNOWN", "job metadata is malformed")
++    try:
++        operation_result = json.loads(row["operation_result"] or "null")
++    except (TypeError, json.JSONDecodeError):
++        _fail("RESOURCE_RESERVATION_JOB_UNKNOWN", "job result is malformed")
+     operation = row["operation"]
+     if (job_metadata.get("project_id") != profile.project_id
+             or operation_metadata.get("project_id") != profile.project_id
+@@ -1227,9 +1332,142 @@
+     allowed = set(operation_names or profile.allowed_operations)
+     if operation not in allowed or operation not in profile.allowed_operations:
+         _fail("RESOURCE_RESERVATION_OPERATION_UNSUPPORTED", "job operation is outside the trusted budget profile")
+-    return {"operation_id": row["operation_id"], "operation": operation,
++    return {"job_id": row["job_id"], "operation_id": row["operation_id"], "operation": operation,
+             "job_status": row["job_status"], "operation_status": row["operation_status"],
+-            "job_metadata": job_metadata}
++            "job_metadata": job_metadata, "operation_result": operation_result,
++            "job_finished_at": row["job_finished_at"],
++            "operation_finished_at": row["operation_finished_at"]}
++
++
++def _unknown_result_is_nonretryable(result: Any) -> bool:
++    if not isinstance(result, Mapping) or result.get("success") is not False:
++        return False
++    execution = result.get("execution")
++    error = result.get("error")
++    return (isinstance(execution, Mapping) and execution.get("status") == "UNKNOWN"
++            and isinstance(error, Mapping) and error.get("safe_retry") is False)
++
++
++def _job_ledger_snapshot(db: sqlite3.Connection, job_id: str,
++                         *, before_event_id: int | None = None) -> tuple[int, str]:
++    if before_event_id is None:
++        rows = db.execute(
++            "SELECT id,event,metadata,created_at FROM job_events WHERE job_id=? ORDER BY id", (job_id,)
++        ).fetchall()
++    else:
++        rows = db.execute(
++            "SELECT id,event,metadata,created_at FROM job_events "
++            "WHERE job_id=? AND id<? ORDER BY id", (job_id, before_event_id)
++        ).fetchall()
++    payload = [{"id": row["id"], "event": row["event"],
++                "metadata": row["metadata"], "created_at": row["created_at"]} for row in rows]
++    value = rows[-1]["id"] if rows else 0
++    if type(value) is not int or not 0 <= value <= _MAX_SQLITE_INT:
++        _fail("RESOURCE_QUIESCENCE_LEDGER_UNKNOWN", "durable job ledger watermark is malformed")
++    return value, _sha256(payload)
++
++
++def _validate_quiescence_witness_dict(witness: Mapping[str, Any],
++                                       reservation: Mapping[str, Any], *,
++                                       event_id: int | None = None,
++                                       db: sqlite3.Connection | None = None) -> None:
++    required = {
++        "schema", "provider_id", "profile_id", "profile_sha256", "project_id", "root_file_id",
++        "host_id", "job_id", "operation_id", "reservation_id", "domain_status", "safe_retry",
++        "process_tree_state", "process_tree_evidence_sha256", "owned_writes_state",
++        "owned_writes_evidence_sha256", "operation_ledger_state", "operation_ledger_watermark",
++        "operation_ledger_evidence_sha256", "observed_monotonic_ns",
++    }
++    if set(witness) != required:
++        raise ValueError("quiescence witness fields do not match the supported schema")
++    if (witness.get("schema") != QUIESCENCE_SCHEMA
++            or not _nonempty(witness.get("provider_id"))
++            or witness.get("domain_status") != "UNKNOWN"
++            or witness.get("safe_retry") is not False
++            or witness.get("process_tree_state") != "TERMINATED"
++            or witness.get("owned_writes_state") != "STOPPED"
++            or witness.get("operation_ledger_state") != "QUIESCENT"):
++        raise ValueError("quiescence witness lacks exact nonretryable UNKNOWN cleanup states")
++    for field_name in ("profile_sha256", "process_tree_evidence_sha256",
++                       "owned_writes_evidence_sha256", "operation_ledger_evidence_sha256"):
++        if not _is_sha256(witness.get(field_name)):
++            raise ValueError(f"quiescence witness {field_name} is invalid")
++    bindings = ("profile_id", "profile_sha256", "project_id", "root_file_id", "job_id",
++                "operation_id", "reservation_id")
++    if any(witness.get(name) != reservation.get(name) for name in bindings):
++        raise ValueError("quiescence witness is bound to another reservation or operation")
++    if not _nonempty(witness.get("host_id")):
++        raise ValueError("quiescence witness host identity is missing")
++    try:
++        watermark = _checked_int(witness.get("operation_ledger_watermark"),
++                                 "operation_ledger_watermark")
++        _checked_int(witness.get("observed_monotonic_ns"), "observed_monotonic_ns")
++    except ValueError as exc:
++        raise ValueError(str(exc)) from exc
++    if event_id is not None and watermark >= event_id:
++        raise ValueError("quiescence ledger watermark is not before the durable release event")
++    if db is not None:
++        observed_watermark, observed_digest = _job_ledger_snapshot(
++            db, str(witness["job_id"]), before_event_id=event_id)
++        if watermark != observed_watermark or witness["operation_ledger_evidence_sha256"] != observed_digest:
++            raise ValueError("quiescence witness does not match the durable job ledger snapshot")
++
++
++def _verify_quiescence_witness(*, provider: JobQuiescenceProvider | None, store: Any,
++                               profile: HostResourceProfile, job: Mapping[str, Any],
++                               reservation: Mapping[str, Any]) -> dict[str, Any]:
++    if provider is None:
++        _fail("RESOURCE_QUIESCENCE_PROVIDER_NOT_CONFIGURED",
++              "UNKNOWN reservation remains fenced without an independent process/write/ledger verifier",
++              evidence_classification="SOFTWARE_ONLY")
++    if not isinstance(provider, NativeJobQuiescenceProvider):
++        _fail("RESOURCE_QUIESCENCE_PROVIDER_UNTRUSTED",
++              "caller-supplied or synthetic providers cannot release UNKNOWN reservations",
++              evidence_classification="SOFTWARE_ONLY")
++    if not _unknown_result_is_nonretryable(job.get("operation_result")):
++        _fail("RESOURCE_QUIESCENCE_DOMAIN_STATE_UNBOUND",
++              "durable operation result does not preserve UNKNOWN with safe_retry=false")
++    if job.get("job_finished_at") is not None or job.get("operation_finished_at") is not None:
++        _fail("RESOURCE_QUIESCENCE_DOMAIN_STATE_UNBOUND",
++              "UNKNOWN reservation has terminal finish timestamps")
++    try:
++        witness = provider.prove_quiescence(store=store, profile=profile,
++                                             job_binding=job,
++                                             reservation_id=str(reservation["reservation_id"]))
++    except Exception as exc:
++        _fail("RESOURCE_QUIESCENCE_PROVIDER_UNAVAILABLE",
++              "independent process/write/ledger proof could not be obtained",
++              cause_type=type(exc).__name__)
++    if (not isinstance(witness, JobQuiescenceWitness)
++            or witness._attestation is not _NATIVE_QUIESCENCE_ATTESTATION):
++        _fail("RESOURCE_QUIESCENCE_WITNESS_UNTRUSTED",
++              "provider did not return a native-attested typed witness")
++    try:
++        payload = witness.as_dict()
++        _validate_quiescence_witness_dict(payload, reservation)
++    except (TypeError, ValueError) as exc:
++        _fail("RESOURCE_QUIESCENCE_WITNESS_INVALID", "quiescence witness is malformed",
++              cause=str(exc))
++    if (witness.profile_id != profile.profile_id or witness.profile_sha256 != profile.sha256
++            or witness.project_id != profile.project_id or witness.root_file_id != profile.root.file_id
++            or witness.host_id != profile.host_id or witness.job_id != job.get("job_id")
++            or witness.operation_id != job.get("operation_id")):
++        _fail("RESOURCE_QUIESCENCE_WITNESS_IDENTITY_MISMATCH",
++              "quiescence witness does not match the active host, project, job, and operation")
++    expected_watermark, expected_ledger_digest = _job_ledger_snapshot(store.db, str(job["job_id"]))
++    if (witness.operation_ledger_watermark != expected_watermark
++            or witness.operation_ledger_evidence_sha256 != expected_ledger_digest):
++        _fail("RESOURCE_QUIESCENCE_LEDGER_CHANGED",
++              "durable job ledger changed or does not match the quiescence observation",
++              expected_watermark=expected_watermark,
++              observed_watermark=witness.operation_ledger_watermark,
++              expected_sha256=expected_ledger_digest)
++    verification_time_ns = time.monotonic_ns()
++    if (witness.observed_monotonic_ns > verification_time_ns
++            or verification_time_ns - witness.observed_monotonic_ns > _QUIESCENCE_MAX_AGE_NS):
++        _fail("RESOURCE_QUIESCENCE_WITNESS_STALE",
++              "quiescence observation is stale or from the future")
++    return payload
+ 
+ 
+ def reserve_disk_for_job(*, store: Any, authority: Any, profile: HostResourceProfile,
+@@ -1301,8 +1539,13 @@
+ 
+ 
+ def release_disk_for_job(*, store: Any, authority: Any, profile: HostResourceProfile,
+-                         job_id: str) -> dict[str, Any]:
+-    """Release only a known terminal reservation; UNKNOWN/LOST stay held."""
++                         job_id: str,
++                         quiescence_provider: JobQuiescenceProvider | None = None) -> dict[str, Any]:
++    """Release terminal work, or UNKNOWN only after exact independent quiescence proof.
++
++    Releasing a disk reservation is physical resource accounting only. The
++    UNKNOWN operation result and ``safe_retry=false`` remain untouched.
++    """
+     from ._operation_store import OperationStore
+     from ._project_authority import ProjectAuthority
+     if not isinstance(store, OperationStore) or not isinstance(authority, ProjectAuthority) or authority.store is not store:
+@@ -1313,16 +1556,6 @@
+             _authorize_profile_project(authority, profile, profile.project_id, "compute",
+                                        code_prefix="RESOURCE_RESERVATION")
+             job = _read_job_binding(store.db, job_id, profile)
+-            if job["job_status"] != job["operation_status"]:
+-                _fail("RESOURCE_RESERVATION_UNCONFIRMED",
+-                      "job and operation terminal states do not agree",
+-                      job_status=job["job_status"], operation_status=job["operation_status"])
+-            if job["job_status"] in {"UNKNOWN", "RECONCILING", "RUNNING", "QUEUED", "STARTING", "EXPIRED", "LOST"}:
+-                _fail("RESOURCE_RESERVATION_UNCONFIRMED", "reservation remains held until job state is durably terminal",
+-                      job_status=job["job_status"])
+-            if job["job_status"] not in {"SUCCEEDED", "FAILED", "CANCELLED"}:
+-                _fail("RESOURCE_RESERVATION_UNCONFIRMED", "job state does not prove reservation release is safe",
+-                      job_status=job["job_status"])
+             reservation_id = _reservation_id(job_id, job["operation_id"], profile)
+             states = _load_reservations(store.db)
+             current = states.get(reservation_id)
+@@ -1331,10 +1564,41 @@
+             found_job, item = current
+             if found_job != job_id:
+                 _fail("RESOURCE_RESERVATION_IDENTITY_CONFLICT", "reservation belongs to another job")
+-            if item["status"] == "RELEASED":
++            if item["status"] in {"RELEASED", "RELEASED_AFTER_QUIESCENCE"}:
+                 store.db.execute("COMMIT")
+-                return {"status": "RELEASED", "reservation_id": reservation_id, "idempotent": True,
++                result = {"status": item["status"], "reservation_id": reservation_id,
++                          "idempotent": True, "evidence_classification": "SOFTWARE_ONLY"}
++                if item["status"] == "RELEASED_AFTER_QUIESCENCE":
++                    result.update({"domain_status_at_release": "UNKNOWN", "safe_retry_at_release": False,
++                                   "quiescence_witness_sha256": item["quiescence_witness_sha256"]})
++                return result
++
++            if job["job_status"] != job["operation_status"]:
++                _fail("RESOURCE_RESERVATION_UNCONFIRMED",
++                      "job and operation status do not agree",
++                      job_status=job["job_status"], operation_status=job["operation_status"])
++            if job["job_status"] == "UNKNOWN":
++                witness = _verify_quiescence_witness(
++                    provider=quiescence_provider, store=store, profile=profile, job=job,
++                    reservation=item)
++                witness_sha256 = _sha256(witness)
++                released = {**item, "status": "RELEASED_AFTER_QUIESCENCE",
++                            "release_basis": "INDEPENDENT_QUIESCENCE",
++                            "quiescence_witness": witness,
++                            "quiescence_witness_sha256": witness_sha256}
++                store.db.execute("INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
++                                 (job_id, "W26DiskReservation", _canonical_json(released)))
++                store.db.execute("COMMIT")
++                return {"status": "RELEASED_AFTER_QUIESCENCE", "reservation_id": reservation_id,
++                        "idempotent": False, "domain_status_at_release": "UNKNOWN",
++                        "safe_retry_at_release": False,
++                        "quiescence_witness_sha256": witness_sha256,
+                         "evidence_classification": "SOFTWARE_ONLY"}
++
++            if job["job_status"] not in {"SUCCEEDED", "FAILED", "CANCELLED"}:
++                _fail("RESOURCE_RESERVATION_UNCONFIRMED",
++                      "reservation remains held until terminal status or independently verified UNKNOWN quiescence",
++                      job_status=job["job_status"])
+             released = {**item, "status": "RELEASED"}
+             store.db.execute("INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
+                              (job_id, "W26DiskReservation", _canonical_json(released)))
+--- a/tests/test_w26_os_resources.py
++++ b/tests/test_w26_os_resources.py
+@@ -6,6 +6,7 @@
+ import os
+ from pathlib import Path
+ import threading
++import time
+ 
+ import pytest
+ 
+@@ -79,6 +80,41 @@
+     return record
+ 
+ 
++class _SyntheticQuiescenceProvider(resources.NativeJobQuiescenceProvider):
++    """Protocol fixture only; its fields are not native OS evidence."""
++
++    def __init__(self, *, wrong_job=False, stale=False):
++        self.wrong_job = wrong_job
++        self.stale = stale
++
++    def prove_quiescence(self, *, store, profile, job_binding, reservation_id):
++        job_id = "another-job" if self.wrong_job else job_binding["job_id"]
++        observed = time.monotonic_ns() - (60_000_000_000 if self.stale else 1)
++        watermark, ledger_digest = resources._job_ledger_snapshot(store.db, job_id)
++        return resources._issue_native_quiescence_witness(
++            schema=resources.QUIESCENCE_SCHEMA,
++            provider_id="synthetic-protocol-test-only",
++            profile_id=profile.profile_id,
++            profile_sha256=profile.sha256,
++            project_id=profile.project_id,
++            root_file_id=profile.root.file_id,
++            host_id=profile.host_id,
++            job_id=job_id,
++            operation_id=job_binding["operation_id"],
++            reservation_id=reservation_id,
++            domain_status="UNKNOWN",
++            safe_retry=False,
++            process_tree_state="TERMINATED",
++            process_tree_evidence_sha256="a" * 64,
++            owned_writes_state="STOPPED",
++            owned_writes_evidence_sha256="b" * 64,
++            operation_ledger_state="QUIESCENT",
++            operation_ledger_watermark=watermark,
++            operation_ledger_evidence_sha256=ledger_digest,
++            observed_monotonic_ns=observed,
++        )
++
++
+ def _complete_snapshot(profile, *, now=1000):
+     launcher, server, worker = profile.launch_images
+     processes = (
+@@ -232,13 +268,114 @@
+     with pytest.raises(resources.ResourcePolicyError) as unknown:
+         resources.release_disk_for_job(store=store, authority=authority, profile=profile,
+                                        job_id=first["job_id"])
+-    assert unknown.value.code == "RESOURCE_RESERVATION_UNCONFIRMED"
++    assert unknown.value.code == "RESOURCE_QUIESCENCE_PROVIDER_NOT_CONFIGURED"
+     second = _queued_job(store, project_id, project)
+     with pytest.raises(resources.ResourcePolicyError) as overcommit:
+         resources.reserve_disk_for_job(store=store, authority=authority, profile=profile,
+                                        job_id=second["job_id"], requested_bytes=40,
+                                        observation=observation, now_monotonic_ns=1000)
+     assert overcommit.value.code == "INSUFFICIENT_DISK_BUDGET"
++    store.close()
++
++
++def test_unknown_quiescence_release_is_exact_durable_and_does_not_resolve_domain(tmp_path):
++    store, authority, project, project_id = _authority(tmp_path)
++    db_path = tmp_path / "operations.sqlite"
++    profile = replace(_profile(project), project_id=project_id)
++    observation = _storage(profile, free=100)
++    first = _queued_job(store, project_id, project)
++    reserved = resources.reserve_disk_for_job(
++        store=store, authority=authority, profile=profile, job_id=first["job_id"],
++        requested_bytes=70, observation=observation, now_monotonic_ns=1000)
++    unknown_result = {
++        "success": False,
++        "execution": {"status": "UNKNOWN", "job_id": first["job_id"]},
++        "error": {"code": "EXECUTION_STATE_UNKNOWN", "safe_retry": False},
++    }
++    store.finish(first["operation_id"], status="UNKNOWN", result=unknown_result)
++
++    with pytest.raises(resources.ResourcePolicyError) as absent:
++        resources.release_disk_for_job(store=store, authority=authority, profile=profile,
++                                       job_id=first["job_id"])
++    assert absent.value.code == "RESOURCE_QUIESCENCE_PROVIDER_NOT_CONFIGURED"
++    with pytest.raises(resources.ResourcePolicyError) as untrusted:
++        resources.release_disk_for_job(store=store, authority=authority, profile=profile,
++                                       job_id=first["job_id"], quiescence_provider=object())
++    assert untrusted.value.code == "RESOURCE_QUIESCENCE_PROVIDER_UNTRUSTED"
++    with pytest.raises(resources.ResourcePolicyError) as wrong_identity:
++        resources.release_disk_for_job(
++            store=store, authority=authority, profile=profile, job_id=first["job_id"],
++            quiescence_provider=_SyntheticQuiescenceProvider(wrong_job=True))
++    assert wrong_identity.value.code == "RESOURCE_QUIESCENCE_WITNESS_INVALID"
++    with pytest.raises(resources.ResourcePolicyError) as stale:
++        resources.release_disk_for_job(
++            store=store, authority=authority, profile=profile, job_id=first["job_id"],
++            quiescence_provider=_SyntheticQuiescenceProvider(stale=True))
++    assert stale.value.code == "RESOURCE_QUIESCENCE_WITNESS_STALE"
++
++    released = resources.release_disk_for_job(
++        store=store, authority=authority, profile=profile, job_id=first["job_id"],
++        quiescence_provider=_SyntheticQuiescenceProvider())
++    assert released["status"] == "RELEASED_AFTER_QUIESCENCE"
++    assert released["domain_status_at_release"] == "UNKNOWN"
++    assert released["safe_retry_at_release"] is False
++    assert released["evidence_classification"] == "SOFTWARE_ONLY"
++    persisted_job = store.job(first["job_id"])
++    assert persisted_job["status"] == persisted_job["operation"]["status"] == "UNKNOWN"
++    assert persisted_job["result"] == unknown_result
++    again = resources.release_disk_for_job(
++        store=store, authority=authority, profile=profile, job_id=first["job_id"])
++    assert again["status"] == "RELEASED_AFTER_QUIESCENCE" and again["idempotent"] is True
++    store.close()
++
++    # Recovery trusts only the durable reservation transition. It does not
++    # rewrite UNKNOWN, infer completion, or enable retry.
++    reopened = OperationStore(db_path)
++    workspace_root = tmp_path / "authorized"
++    host_permissions = {"inspect", "project_write", "compute", "host_control"}
++    authority2 = ProjectAuthority(reopened, workspace_root=workspace_root,
++                                  permission_provider=lambda: host_permissions,
++                                  grant_ceiling=host_permissions)
++    recovered = resources._load_reservations(reopened.db)
++    assert recovered[reserved["reservation_id"]][1]["status"] == "RELEASED_AFTER_QUIESCENCE"
++    still_unknown = reopened.job(first["job_id"])
++    assert still_unknown["status"] == still_unknown["operation"]["status"] == "UNKNOWN"
++    assert still_unknown["result"]["error"]["safe_retry"] is False
++
++    second = _queued_job(reopened, project_id, project)
++    admitted = resources.reserve_disk_for_job(
++        store=reopened, authority=authority2, profile=profile, job_id=second["job_id"],
++        requested_bytes=80, observation=observation, now_monotonic_ns=1000)
++    assert admitted["status"] == "RESERVED" and admitted["requested_bytes"] == 80
++    reopened.close()
++
++
++def test_tampered_persisted_quiescence_receipt_fences_reservation_recovery(tmp_path):
++    store, authority, project, project_id = _authority(tmp_path)
++    profile = replace(_profile(project), project_id=project_id)
++    record = _queued_job(store, project_id, project)
++    resources.reserve_disk_for_job(store=store, authority=authority, profile=profile,
++                                   job_id=record["job_id"], requested_bytes=25,
++                                   observation=_storage(profile), now_monotonic_ns=1000)
++    store.finish(record["operation_id"], status="UNKNOWN", result={
++        "success": False, "execution": {"status": "UNKNOWN"},
++        "error": {"safe_retry": False},
++    })
++    resources.release_disk_for_job(
++        store=store, authority=authority, profile=profile, job_id=record["job_id"],
++        quiescence_provider=_SyntheticQuiescenceProvider())
++    with store.lock:
++        row = store.db.execute(
++            "SELECT id,metadata FROM job_events WHERE job_id=? AND event='W26DiskReservation' "
++            "ORDER BY id DESC LIMIT 1", (record["job_id"],)).fetchone()
++        damaged = json.loads(row["metadata"])
++        damaged["quiescence_witness"]["process_tree_state"] = "RUNNING"
++        store.db.execute("UPDATE job_events SET metadata=? WHERE id=?",
++                         (json.dumps(damaged, sort_keys=True), row["id"]))
++    with pytest.raises(resources.ResourcePolicyError) as blocked:
++        resources._load_reservations(store.db)
++    assert blocked.value.code == "RESOURCE_RESERVATION_STATE_UNKNOWN"
++    assert store.job(record["job_id"])["status"] == "UNKNOWN"
+     store.close()
+ 
+ 

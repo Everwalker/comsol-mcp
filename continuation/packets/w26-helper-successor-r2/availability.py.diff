@@ -1,0 +1,19 @@
+--- immutable R1/availability.py
++++ R2/availability.py
+@@ -9,7 +9,7 @@
+ R=Path('/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2');D=Path(__file__).parent
+ E=R/'repository/docs/full_project_continuation_v2/evidence';W=E/'w25-native-delivery-preparation-r2';B=E/'intel-builder-execution-r1'
+ P=Path('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4')
+-env=default_environment();env.update(sys_platform='darwin',platform_system='Darwin',platform_machine='arm64',os_name='posix',python_version='3.12',python_full_version='3.12.13',implementation_name='cpython',platform_python_implementation='CPython',extra='')
++env=default_environment();env.update(sys_platform='darwin',platform_system='Darwin',platform_machine='arm64',os_name='posix',python_version='3.12',python_full_version='3.12.13',implementation_version='3.12.13',implementation_name='cpython',platform_python_implementation='CPython',extra='')
+ def marker(s,extra=''):return not s or Marker(s).evaluate({**env,'extra':extra})
+ def obj(p):return json.loads(read_regular(p)[0])
+ lock=tomllib.loads(read_regular(R/'repository/uv.lock')[0].decode());project=tomllib.loads(read_regular(R/'repository/pyproject.toml')[0].decode())
+@@ -75,6 +75,6 @@
+ backend=[{'name':'setuptools','declared_requirement':'setuptools>=68',**observed['setuptools']},{'name':'wheel','declared_requirement':'wheel','version_selection':'0.48.0 PROPOSED_FROM_PRIOR_EXTRACTED_CACHE_NOT_APPROVED_ARTIFACT','filename':'wheel-0.48.0-py3-none-any.whl PROPOSED_REQUIRES_OFFICIAL_METADATA','source_url':None,'sha256':None,'bytes':None,'available':False,'metadata':'ORIGINAL_WHEEL_NOT_BOUND; DEPENDENCIES_UNRESOLVED'}]
+ missing=[r for r in rows if not r['available']]
+ result={'schema':'comsol-w26-finite-availability/1','status':'PREPARATION_NOT_COMPLETE_INSTALL_CLOSURE','marker_environment':env,'base_runtime':rows,'desktop_external_overlay':drows,'backend':backend,'counts':{'base_runtime':len(rows),'base_original_available':len(rows)-len(missing),'base_missing':len(missing),'desktop_original_available':len(drows),'backend_available':1,'backend_unresolved':1},'missing_base_exact_acquisition':missing,'precise_acquisition_plan':{'status':'NOT_EXECUTED_NOT_AUTHORIZED_BY_THIS_SOURCE_PACKET','runtime':'Exactly missing_base_exact_acquisition URLs/bytes/SHA, no dependencies/floating resolver; original acquire_exact_archives policy privateprefix/noclobber/HTTPSfirstparty/durable receipts first mismatch stop; manifest whole review before network.','backend':'First one public GET https://pypi.org/pypi/wheel/0.48.0/json capped2MiB to fixed private raw; verify Name/version/file identity and canonical files.pythonhosted URL/digest/size/RequiresDist. Then submit exact backend file+any missing locked packaging RequiresDist input to Root before acquisition. No unknown metadata filled or third-party mirror.','max_known_runtime_GETs':len(missing),'known_runtime_aggregate_bytes':sum(r['bytes'] for r in missing)},'limited_scope':'Active lock base-runtime graph and fixed desktop original-wheel RequiresDist only. Dev pytest intentionally excluded from runtime graph; old base+dev target list is cross-check, not new lock. No transitive stdlib completeness claim; old gdbm/tkinter diagnostics unchanged.','effects':{'network':0,'target_python':0,'pip':0,'native':0,'unpack':0},'original_wheel_records':metadata_refs}
+-p=D/'AVAILABILITY_FINAL_R1.json'
++p=D/'AVAILABILITY_R2.json'
+ with p.open('xb') as f:f.write((json.dumps(result,indent=2,sort_keys=True)+'\n').encode());f.flush();os.fsync(f.fileno())
+ print(result['counts']);print('missing exact bytes',result['precise_acquisition_plan']['known_runtime_aggregate_bytes'])

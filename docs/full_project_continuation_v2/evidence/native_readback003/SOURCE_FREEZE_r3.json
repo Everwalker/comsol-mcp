@@ -1,0 +1,1096 @@
+{
+  "status": "PASS_R3_NARROW_SNAPSHOT_COPY_BEFORE_AFTER_HASH_IDENTICAL",
+  "revision": 3,
+  "supersedes_source_freeze_record_only": "SOURCE_FREEZE_r2.json retained unchanged; native_readback002 remains terminal FAIL and is not replayed.",
+  "frozen_at_utc": "2026-10-11T11:53:47.511887+00:00",
+  "baseline_freeze_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/native_readback002/SOURCE_FREEZE_r2.json",
+  "baseline_freeze_sha256": "b43f241a895883e80cc4c061522d27e6c056517fddc61f80c4a962bfb47dcdbc",
+  "baseline_source_fingerprint": "11bb712bb8be450dcbe36eca0bcf81a94ebc759eefe4d04e8205f87822fb945c",
+  "baseline_snapshot_root": "/private/tmp/comsol-v2-native-readback-source-20261011-r2",
+  "snapshot_root": "/private/tmp/comsol-v2-native-readback-source-20261011-r3",
+  "source_root": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository",
+  "scope": "Native-readback-only source closure: the exact r2 full comsol_mcp/resource tree, native resume oracle, and design catalogue copies, with only the fixed readback runner replaced. Focused tests are held separately in test_scope. Workspace model-delivery/W25 changes are outside this bounded native candidate and are not implied as reviewed.",
+  "source_file_count": 120,
+  "source_fingerprint": "5ad8c67a48e83241098c36cf0e51f7bf00bee1d3339604f0d2061f365e2853e6",
+  "copy_before_after_hashes_identical": true,
+  "source_metadata_stable_during_copy": true,
+  "catalogue_copies_identical": true,
+  "catalogue_sha256": "124ef66964e7f2cae78eca79b974f4f8c2ea1a3263f6440427de5edab052124e",
+  "changed_source_paths_vs_revision2": [
+    {
+      "path": "tools/verify_native_resume_saved_artifact.py",
+      "r2_sha256": "d7e74ee2ee7b4a6662aa3ab1a99c9f10a71e2d208905016ad0ccddd44cdc0d82",
+      "r3_sha256": "ec37fefad1f3b9e871d212ac852da0f083b23ff3186120930795925814468eda",
+      "r2_size_bytes": 44211,
+      "r3_size_bytes": 44195
+    }
+  ],
+  "runner_copy_source_before": {
+    "sha256": "ec37fefad1f3b9e871d212ac852da0f083b23ff3186120930795925814468eda",
+    "size_bytes": 44195,
+    "mtime_ns": 1791719355777849230,
+    "inode": 686088
+  },
+  "runner_copy_source_after": {
+    "sha256": "ec37fefad1f3b9e871d212ac852da0f083b23ff3186120930795925814468eda",
+    "size_bytes": 44195,
+    "mtime_ns": 1791719355777849230,
+    "inode": 686088
+  },
+  "source_manifest": {
+    "comsol_mcp/__init__.py": {
+      "sha256": "17b614b0aa965a4bf24a07e3908a981875f917e13845ea97ceee9f29a97eee39",
+      "size_bytes": 198
+    },
+    "comsol_mcp/_artifact_preview_io.py": {
+      "sha256": "26da9be95a52466094b293230ee39e128027f413643ab8cc789d78070aac91a2",
+      "size_bytes": 8200
+    },
+    "comsol_mcp/_artifact_store.py": {
+      "sha256": "52dbb0dba5305d974f6cd93b747093d076d753c30ec67e4159d437af87feb347",
+      "size_bytes": 94602
+    },
+    "comsol_mcp/_atomic_save.py": {
+      "sha256": "635222c08633ff37f3f7d8e5ec6d5bdf5da8c58236f11271be1c662695ffdfd0",
+      "size_bytes": 7281
+    },
+    "comsol_mcp/_complex_transform.py": {
+      "sha256": "0adebdb27a8e9d28a0807e1908d44bd957d0c7f5523933fed94b86a382e173a0",
+      "size_bytes": 5720
+    },
+    "comsol_mcp/_connection.py": {
+      "sha256": "2699f12230b5832c7c8fe806fa1bfdca3be2e108ecc753a39808d92d862b7ea3",
+      "size_bytes": 3930
+    },
+    "comsol_mcp/_control_client.py": {
+      "sha256": "c2f68007eb56a4a9ef274f241dc377376c7126c4876c51228e8b6aa47da62754",
+      "size_bytes": 8865
+    },
+    "comsol_mcp/_control_daemon.py": {
+      "sha256": "fddce2933c3240aff2710aa934da2030b6de21283b7f8736ae8ac16ec928aeac",
+      "size_bytes": 728108
+    },
+    "comsol_mcp/_convergence_store.py": {
+      "sha256": "51d53df4ee7b404e27452a2c1b8733dd3a372d92baf60cdad5bb43fef6566f13",
+      "size_bytes": 5845
+    },
+    "comsol_mcp/_daemon_quiescence.py": {
+      "sha256": "8ecd34eabb3a940b74d8ad015d0d10d3b9dc59e30a5085cdaee7791ad90ee025",
+      "size_bytes": 12334
+    },
+    "comsol_mcp/_dataset_binding.py": {
+      "sha256": "891f9a06595217d5101aa361cb60b53bb3a9f6b88a918bef41765b0f5f82627e",
+      "size_bytes": 21562
+    },
+    "comsol_mcp/_desktop_capture.py": {
+      "sha256": "914c2b59ed6b750705e81efa96dc2273dedb21872c67b197445175b4fbc0c114",
+      "size_bytes": 22695
+    },
+    "comsol_mcp/_desktop_macos.py": {
+      "sha256": "9bdebd75c00abb20cb7f8e69c8e277fd653a6cbc52a07739dcc858ce7a963228",
+      "size_bytes": 4892
+    },
+    "comsol_mcp/_desktop_platforms.py": {
+      "sha256": "5b4f687df3e0519a99cc4830c249b889b90b0022cfdefc5f4cef144bfc306fb7",
+      "size_bytes": 3107
+    },
+    "comsol_mcp/_desktop_service.py": {
+      "sha256": "77c180224edefa50b18ef3e7146089c6e68d658a847f55b8dde588fe0c57865f",
+      "size_bytes": 60119
+    },
+    "comsol_mcp/_desktop_win32_identity.py": {
+      "sha256": "c528e3e8e950883b759b3f8f96ab036783186a640cfff4588f9aa105b3b7f065",
+      "size_bytes": 2833
+    },
+    "comsol_mcp/_desktop_windows.py": {
+      "sha256": "a652a89f18365fe87455ff2aae933274a809cbec77753304cdf085d75f7bf5e3",
+      "size_bytes": 5372
+    },
+    "comsol_mcp/_domain_outcome.py": {
+      "sha256": "0aba689a0dd8803c204d117ae32b940bafb662f913f632b6cead03dc33bfe4d8",
+      "size_bytes": 49726
+    },
+    "comsol_mcp/_execution_contract.py": {
+      "sha256": "dbb112cbbdef9a4d45f69c230123d4e9e57f7b71e337532d83989aa827e6c9e3",
+      "size_bytes": 22753
+    },
+    "comsol_mcp/_execution_service.py": {
+      "sha256": "e1dd344c2c39c3566721ec36ca0a27d6d05cc1df91b97751bbdfac807cd7a480",
+      "size_bytes": 25618
+    },
+    "comsol_mcp/_g2_artifact_preview.py": {
+      "sha256": "55cb9787f61adaa9b0a0f9dd4c57bcaf502b4d845717f5330eda01c82da9f6a7",
+      "size_bytes": 36780
+    },
+    "comsol_mcp/_g2_artifact_reads.py": {
+      "sha256": "9fcd22e740015b88dcdc9c18d72807e0e7b30a82783570febcc7b9d91824cfa5",
+      "size_bytes": 20597
+    },
+    "comsol_mcp/_g2_artifact_verify.py": {
+      "sha256": "7f481e11221d0233054a5443f6aa4d67ad2532dd559e3c718cd21aa977f9560e",
+      "size_bytes": 77308
+    },
+    "comsol_mcp/_g2_checkpoint_diff.py": {
+      "sha256": "ee3b2f9339634de4429c63a64c90a37ad0eb46d503b0da50849a40e2b0687c57",
+      "size_bytes": 60492
+    },
+    "comsol_mcp/_g2_checkpoint_ops.py": {
+      "sha256": "b566d9132fd87c103e1179811eb4c554af2389741b91064f223faeaf10d4c08d",
+      "size_bytes": 34099
+    },
+    "comsol_mcp/_g2_code.py": {
+      "sha256": "107a256c53e915bb3a546bef67ec8917a55fd5254c703ba612b9a38db151873d",
+      "size_bytes": 6087
+    },
+    "comsol_mcp/_g2_contract.py": {
+      "sha256": "7c8eb864bc8ee2adf4b9b78106e4eb17f4248eef479e2b3ea58a43f263e4e11e",
+      "size_bytes": 24798
+    },
+    "comsol_mcp/_g2_copy_subtree.py": {
+      "sha256": "49d8017bd3694cbbd07d2c3ef48d1638134ffb820a33d755b87c38a72c9eef21",
+      "size_bytes": 8498
+    },
+    "comsol_mcp/_g2_docs.py": {
+      "sha256": "af8d7825a3db29b9f33e1dbb3b5f19e32a8713136595a97b5e7433114337cbd5",
+      "size_bytes": 13902
+    },
+    "comsol_mcp/_g2_engine.py": {
+      "sha256": "f122242432dc6db00294b83d61317744694ffbbddfa7ee994c9ea3262cf2b4a9",
+      "size_bytes": 97979
+    },
+    "comsol_mcp/_g2_group_remove.py": {
+      "sha256": "0c037b6bfe86fbe14b43339f50ab848a495496d27bd47fd6ef37eb0733c1596b",
+      "size_bytes": 26340
+    },
+    "comsol_mcp/_g2_isolation.py": {
+      "sha256": "dd2da52140d191bea3cd036fe5ab06782d9ff30c119686c13bde99c32d64580b",
+      "size_bytes": 43571
+    },
+    "comsol_mcp/_g2_model_compare.py": {
+      "sha256": "96a5750d8c7760d9a20244585e0a9b0d97a5b04840e690a8283d25dfd4e83597",
+      "size_bytes": 53038
+    },
+    "comsol_mcp/_g2_public_api.py": {
+      "sha256": "52a4477541108390a962574c4c7a13c669841936d449e6ee7a925d64cd9b44a1",
+      "size_bytes": 13107
+    },
+    "comsol_mcp/_g2_registry.py": {
+      "sha256": "a91e21263fab5be96a8f9b1d17f61c6033b37135bf8eb0fd336a94ceb11744b1",
+      "size_bytes": 104782
+    },
+    "comsol_mcp/_g2_tools.py": {
+      "sha256": "d62451b60a529d146c91849f47b9f51be6d19788962131e3ea24386e7a2a04f9",
+      "size_bytes": 2557
+    },
+    "comsol_mcp/_g2_transactions.py": {
+      "sha256": "d8c5d84d58f205627df5e31489360b4ef2e7759d7ef67b916dc4fc5318cfba80",
+      "size_bytes": 26302
+    },
+    "comsol_mcp/_g3_common.py": {
+      "sha256": "9b3e8dfff78966b35d78ee0aa25cb50098c3f2ae556161b8161fd2f44938b6d3",
+      "size_bytes": 74830
+    },
+    "comsol_mcp/_g3_metrics.py": {
+      "sha256": "89e9297c13ac8f42c5260c61e723ffbdb24d3a46858b0d9abf8729ac62241d87",
+      "size_bytes": 69281
+    },
+    "comsol_mcp/_g3_ops.py": {
+      "sha256": "31cb4600c75940e965e0d9ba4b97ced461ad94433972cb0ab3d848e12bbe28bd",
+      "size_bytes": 10198
+    },
+    "comsol_mcp/_g3_parameter_io.py": {
+      "sha256": "6de371947f6919f142c5be606eee6b5f8ea76e17dc5785f5f84faf02ae929b84",
+      "size_bytes": 35435
+    },
+    "comsol_mcp/_g3_results.py": {
+      "sha256": "0ba862600c124b2139a1de41135440c9c3492ad4514817c00d0ece9aeb247785",
+      "size_bytes": 378335
+    },
+    "comsol_mcp/_g3_runtime.py": {
+      "sha256": "663af8ffdd7b6d99a915acfb4bad768a5c2227e18088511a375dcb7d7e75ae52",
+      "size_bytes": 57141
+    },
+    "comsol_mcp/_g3_units.py": {
+      "sha256": "99a785c59bd2fe6c1d6fad20369a650041850f2008ccd4079bab11377d952d64",
+      "size_bytes": 22854
+    },
+    "comsol_mcp/_g3_w13.py": {
+      "sha256": "a1aa8f1da14c305f77c3f9a9e7092c214c15bed185e27792e95233bf539d6eb2",
+      "size_bytes": 143604
+    },
+    "comsol_mcp/_g3_w14.py": {
+      "sha256": "33db916edd304734c0337bdf0aa40025122d1658bbea72c68d8c6009301e01f5",
+      "size_bytes": 151923
+    },
+    "comsol_mcp/_g3_w15.py": {
+      "sha256": "c267190f280c8f712ed177d0f3be2382e0dd8250479476ba4ebb9bd0a2091ff1",
+      "size_bytes": 186453
+    },
+    "comsol_mcp/_g3_w16.py": {
+      "sha256": "562f983aca0e4dcccba00ec9f804248ea238d6e0d2a2b8c82ce02012640a53d9",
+      "size_bytes": 179787
+    },
+    "comsol_mcp/_g3_w18.py": {
+      "sha256": "378376fe50e4dcf14a55a7e1b03ed807ef29b1472ce342475044b83893ed09fd",
+      "size_bytes": 48113
+    },
+    "comsol_mcp/_g3_w20_validation.py": {
+      "sha256": "77ec0f38f2da8b3d7cb53f2fe72bcb247d3d5568e027c19cda515e98a67aafc3",
+      "size_bytes": 68279
+    },
+    "comsol_mcp/_g3_w21.py": {
+      "sha256": "bf567f34257d58e931f457d211182fddf04f1d94c6c0771fb4c69833fd2886a6",
+      "size_bytes": 27290
+    },
+    "comsol_mcp/_gate_a_reopen.py": {
+      "sha256": "9ce03851f179ea74da0a911a6b31cab055e84f3b3cc27ab535ed5aac68fdd16a",
+      "size_bytes": 15146
+    },
+    "comsol_mcp/_java_worker.py": {
+      "sha256": "44da4fcafa6d9fc3384f5d0707c909fea0451557a2af1cce5ca68c3890189b85",
+      "size_bytes": 64417
+    },
+    "comsol_mcp/_managed_backend.py": {
+      "sha256": "ffaee182ed1d4dc117b44a7aa780749772061c0d651d13e3e6e930ab6eabc161",
+      "size_bytes": 202011
+    },
+    "comsol_mcp/_mcp_gateway.py": {
+      "sha256": "ff40a6f0f4a472a4950bb698c3d8a0b05330ed4ffa186538cffcb3edccade16f",
+      "size_bytes": 15493
+    },
+    "comsol_mcp/_measure_spec.py": {
+      "sha256": "4f73e40b4b560934fff54763a1532f38597fe758edf66a0e077671b0674afea1",
+      "size_bytes": 15506
+    },
+    "comsol_mcp/_metric_contract.py": {
+      "sha256": "98860f7c00cb1dafb10d3facfce8ee39c5389b0f0557369d198af150c187b8bb",
+      "size_bytes": 20169
+    },
+    "comsol_mcp/_mode_overlap.py": {
+      "sha256": "f93b87c26f3af7b2fa4498cf88b430069ae200619606dfed6906479d2036ba56",
+      "size_bytes": 45199
+    },
+    "comsol_mcp/_model.py": {
+      "sha256": "814baf91e74eeb370ab25f9a8b6ae768a1ab0a851d68870b67cb13b88b88ac13",
+      "size_bytes": 9708
+    },
+    "comsol_mcp/_model_ops.py": {
+      "sha256": "182d945188fca0afe624c1699b686aca7d3a8b2d23b0fae301aa5adaa2984903",
+      "size_bytes": 64890
+    },
+    "comsol_mcp/_observation_store.py": {
+      "sha256": "fa1eec16402dce15c33e66423ecd6f8d227fa1abac63e76a47c6c288af4cdc3e",
+      "size_bytes": 5318
+    },
+    "comsol_mcp/_operation_store.py": {
+      "sha256": "d9d6c3d54ff4afc625f28f5e70595fd23f6a899e05863a9cdf0b05711a0808fa",
+      "size_bytes": 226849
+    },
+    "comsol_mcp/_phase1_runtime.py": {
+      "sha256": "e4636f8f790079593f53f11e8abd544526c5a5a289e068ccfbcf4b599dbe62f7",
+      "size_bytes": 8419
+    },
+    "comsol_mcp/_physics_ops.py": {
+      "sha256": "3a006aef40f484b61ba0151cc9a76fc612d093ba8853789b26d5924a0df25ac9",
+      "size_bytes": 12501
+    },
+    "comsol_mcp/_platform_paths.py": {
+      "sha256": "96d3bc7defee41fda14f45ffa050ff7089e4e0573345a2929e0facba7f663b32",
+      "size_bytes": 1646
+    },
+    "comsol_mcp/_platform_process.py": {
+      "sha256": "f201026c8ebc66ae22548917e1cc248b1397c61b4681df3134a59a9f83f2795d",
+      "size_bytes": 14391
+    },
+    "comsol_mcp/_probe_manage.py": {
+      "sha256": "447b45d5bc3fdcee6a2ec3935f32a140d18fa1b02af23814fb92ef0027adcf1e",
+      "size_bytes": 58266
+    },
+    "comsol_mcp/_process_diagnostics.py": {
+      "sha256": "e9f0626eb8b6c122fa30cce4b2728d87da112e5002d3517dac24e6ed8d1ad4e9",
+      "size_bytes": 8820
+    },
+    "comsol_mcp/_project_authority.py": {
+      "sha256": "82b90c1157b242f80feb9079ac4b58e2a1295719a7a323a97532497a740181a8",
+      "size_bytes": 32352
+    },
+    "comsol_mcp/_result_budget.py": {
+      "sha256": "64a3de71839c4224fc92869d89b2dae6cb6bd1726878bb2f0a121e00f9ebcf4c",
+      "size_bytes": 26401
+    },
+    "comsol_mcp/_runtime_control.py": {
+      "sha256": "e9acab89e52a6ed27a55610dec5f75f76ad2baab1ea57ed84e6612177d820ffe",
+      "size_bytes": 20182
+    },
+    "comsol_mcp/_runtime_installation.py": {
+      "sha256": "afb2bbd81783d025d030e9790d720d11cde0d0a6fd6fe890f38d69813e3e31ce",
+      "size_bytes": 29061
+    },
+    "comsol_mcp/_runtime_state.py": {
+      "sha256": "6d2de604b0ba4cab7283de66107df6401dab3d5d74cb99e4b34c331d162cc3d6",
+      "size_bytes": 6511
+    },
+    "comsol_mcp/_security_os.py": {
+      "sha256": "34d3c47c3ac27de98ba74b36cf6f2bbf51ba2873514bdc22e4c60af00b1f373c",
+      "size_bytes": 6479
+    },
+    "comsol_mcp/_server.py": {
+      "sha256": "530e1954308f9a844b86814b4d44d05fe9e51968f618cc0a7e9e93382fbf64fa",
+      "size_bytes": 11703
+    },
+    "comsol_mcp/_session_context.py": {
+      "sha256": "6c1222cdeaed6f14208f4ead0f9b82beccf96b7c1a445d0a8b43107878e2406d",
+      "size_bytes": 38915
+    },
+    "comsol_mcp/_session_lifecycle.py": {
+      "sha256": "10d74f0d733365e4c66dba612568fe0fc47260581b0a29884279d6d0b9dd1121",
+      "size_bytes": 14305
+    },
+    "comsol_mcp/_session_server.py": {
+      "sha256": "f6404e5fcf970446d8b10b16586b5e91d73ea2be5b36ddaa0caf25c6c21de8fd",
+      "size_bytes": 38497
+    },
+    "comsol_mcp/_solution_binding.py": {
+      "sha256": "0815aac9d118d9c51e4eb22386bead9b00b59085c5aee08195e41a0324c42e2a",
+      "size_bytes": 30161
+    },
+    "comsol_mcp/_solver_ops.py": {
+      "sha256": "2a8dcd6bd6f79898e0e0ae4af8941c9e97cfd4cf18e4190d7267e7bdda682595",
+      "size_bytes": 3725
+    },
+    "comsol_mcp/_source_manifest.py": {
+      "sha256": "273226a8538438feeec4156bb883bbbdb121294ca9d928c10683386085f0c1ae",
+      "size_bytes": 4898
+    },
+    "comsol_mcp/_stage_contract.py": {
+      "sha256": "c028b33223b0cca3d994c9359efc6a02b27ed2f3103511639e9d3014bfacdbbe",
+      "size_bytes": 48940
+    },
+    "comsol_mcp/_state.py": {
+      "sha256": "71c862d438c588ff0d8aae6db349873813f0f4f94e041e4b60a3f481d8b0d78c",
+      "size_bytes": 27468
+    },
+    "comsol_mcp/_state_backup.py": {
+      "sha256": "a1c33f6696f70ef085f39627fd582f6a898b3bbc92ab04fd1c0aacd12d936488",
+      "size_bytes": 43383
+    },
+    "comsol_mcp/_tools_connection.py": {
+      "sha256": "6cf46068542fa46308f92c89bee6a9574a3507c73d69b59f265cf26290d520e5",
+      "size_bytes": 11901
+    },
+    "comsol_mcp/_tools_control.py": {
+      "sha256": "c6d3007117268be2529f8ca725f2bbe3bdb3fae5c2f9d04223437817c3efc6d0",
+      "size_bytes": 3490
+    },
+    "comsol_mcp/_tools_desktop.py": {
+      "sha256": "f341c9096a4efb913912b785ff04beafafce1e7ce229b46e60e96318531d4b43",
+      "size_bytes": 4359
+    },
+    "comsol_mcp/_tools_geometry.py": {
+      "sha256": "8e3a8b12ae252b6fb7ccf718e38de7b959228d5c2aeb1653e95443cec41c0e0a",
+      "size_bytes": 6895
+    },
+    "comsol_mcp/_tools_model.py": {
+      "sha256": "aa247e34e6cbacc3f7481082c91edabc999273a7118de41536f3539e44ddc7b5",
+      "size_bytes": 3881
+    },
+    "comsol_mcp/_tools_params.py": {
+      "sha256": "d6faf82a2c49466b60e4d045bf04cdcb3fc8c6d0771359f1de278876dd6753ce",
+      "size_bytes": 19355
+    },
+    "comsol_mcp/_tools_phase1.py": {
+      "sha256": "8a3eab8d289b29bd5b9d1a63fb8e9eeb93576d506b333f57e24d21b6e49f1060",
+      "size_bytes": 775
+    },
+    "comsol_mcp/_tools_physics.py": {
+      "sha256": "72ed57f61a778d2cb822809b91914e70a869890699f18d3da1bfed474414eb98",
+      "size_bytes": 12558
+    },
+    "comsol_mcp/_tools_snapshot.py": {
+      "sha256": "ddd37955676f032c065e13812fa8f945e954c9ebe82c06ce0754e118b31c7e35",
+      "size_bytes": 10871
+    },
+    "comsol_mcp/_tools_solver.py": {
+      "sha256": "60adf34f7c1aa67ece852b5259099339c4391fbd26a77e4b80be994fffed3934",
+      "size_bytes": 9867
+    },
+    "comsol_mcp/_tools_w18.py": {
+      "sha256": "2df053e4a1ac0d326f230300e69597a71068a3b2f66270976bf5f0600d1d5fd4",
+      "size_bytes": 704
+    },
+    "comsol_mcp/_tools_w20.py": {
+      "sha256": "6182269064dfc8973fdb6845b4e768bbf60e92322e79ac0e92ad4913496f564e",
+      "size_bytes": 7837
+    },
+    "comsol_mcp/_tools_w21.py": {
+      "sha256": "e686b2d9545eb91d470aca99ac5f5e8eb01278ab669b35b7c34abcd87f22d964",
+      "size_bytes": 9096
+    },
+    "comsol_mcp/_tools_workflow.py": {
+      "sha256": "4c35c2c92afc09acd2136647c142b7607ca3fbc0cb6b22b4a04d487764c2b9ad",
+      "size_bytes": 22520
+    },
+    "comsol_mcp/_vcsel_source.py": {
+      "sha256": "7a4a79426cd14c426099f07535b70566cdd1c16bbf2a4b9261814610b514d963",
+      "size_bytes": 9535
+    },
+    "comsol_mcp/_w21_execution.py": {
+      "sha256": "d9ec833c69eb691a9c0acd85984c7ae39828da763962d1fe80722ff8819547ba",
+      "size_bytes": 94999
+    },
+    "comsol_mcp/_w21_initial_stage.py": {
+      "sha256": "9019f0046d25c0287918dac28e3e84ff8de4766e558590e90bd7a675634d0ffe",
+      "size_bytes": 12374
+    },
+    "comsol_mcp/_w21_mesh_evidence.py": {
+      "sha256": "8d13794d74547742a4dd38e1516eca3c7102980cc856c96e974216261e193181",
+      "size_bytes": 26977
+    },
+    "comsol_mcp/_w21_mesh_readback.py": {
+      "sha256": "c6fe5120c7ca3dbb89c4dbe0e3be9bfcba821ae938964147d11cd7ba867e9851",
+      "size_bytes": 30742
+    },
+    "comsol_mcp/_w21_native_output.py": {
+      "sha256": "33d9c229711335decf01f665ef761a3ded583a1b66972930b54b3c5519f0773d",
+      "size_bytes": 97313
+    },
+    "comsol_mcp/_w21_stage_backend.py": {
+      "sha256": "c57ae9a25ead998d714e8c89a10434f134e670a532c7dae9b4fa1007220873d7",
+      "size_bytes": 115705
+    },
+    "comsol_mcp/_w23_basis_v2_contract.py": {
+      "sha256": "837f3508acb505d1b6be726274099009d3a6d5d95e3dcf410b2d7db40b877aa4",
+      "size_bytes": 20040
+    },
+    "comsol_mcp/_w23_basis_v2_provenance.py": {
+      "sha256": "16feeb0fba3f2952616eb472bb3cdab391cf8240ea04a5edcc9d0f0c25e399c9",
+      "size_bytes": 38968
+    },
+    "comsol_mcp/_w23_basis_v2_results.py": {
+      "sha256": "ef06db7a645dc79ec6a9898d47952fbec75ea27b046221b026a5825135ea6eef",
+      "size_bytes": 52371
+    },
+    "comsol_mcp/_w23_results.py": {
+      "sha256": "fae3ddcc4abab9866eaa3a667b418ef2fe8a70c4fba651bc62ab323316c991ca",
+      "size_bytes": 54222
+    },
+    "comsol_mcp/_windows_parameter_publish.py": {
+      "sha256": "ce3b3ee5db08998b77929c93c7a57ecb958af65a67c7896910e493feef57ab53",
+      "size_bytes": 23115
+    },
+    "comsol_mcp/data/g2/02_ACTION_CATALOG.json": {
+      "sha256": "124ef66964e7f2cae78eca79b974f4f8c2ea1a3263f6440427de5edab052124e",
+      "size_bytes": 581341
+    },
+    "comsol_mcp/data/g2/common.schema.json": {
+      "sha256": "1beb031c1da5fedcdbfbb43750aa4e4d0e8b7c07ce4513a832ff3fe535dd7afa",
+      "size_bytes": 7757
+    },
+    "comsol_mcp/mcp_server.py": {
+      "sha256": "daa3972ca26b8e1ba72b07f3d346a1523b390bb556197aede0b8d58f4231a0a4",
+      "size_bytes": 1927
+    },
+    "comsol_mcp/phase1_java/BoundPhase1Poc.java": {
+      "sha256": "093c51f1144b2713f1427194014266ee2cd82f0f5597bcaba71c11a34816c00f",
+      "size_bytes": 2662
+    },
+    "comsol_mcp/phase1_java/BoundPhase1ProductProbe.java": {
+      "sha256": "788e85cceb5b2a4b55a93e738eee6e37aa8faf8dc7c38587f2c95ef39a4ff619",
+      "size_bytes": 423
+    },
+    "comsol_mcp/phase1_java/BoundPhase1Reopen.java": {
+      "sha256": "4625f30ca27d492c05442e7b370ea1353389259e83e0b0382868c35e658081a4",
+      "size_bytes": 732
+    },
+    "comsol_mcp/worker_java/PersistentComsolWorker.java": {
+      "sha256": "739d60553aaa2ecf8121284a1115a132df6dbe0b2827f93f238d697fba3e1b73",
+      "size_bytes": 113293
+    },
+    "docs/comsol_mcp_design_v1/02_ACTION_CATALOG.json": {
+      "sha256": "124ef66964e7f2cae78eca79b974f4f8c2ea1a3263f6440427de5edab052124e",
+      "size_bytes": 581341
+    },
+    "tools/run_native_resume_smoke.py": {
+      "sha256": "fb086c01ba6b9e48f78415bf092877d2b9cab9011c13f8613b48c0ae75e67180",
+      "size_bytes": 79102
+    },
+    "tools/verify_native_resume_saved_artifact.py": {
+      "sha256": "ec37fefad1f3b9e871d212ac852da0f083b23ff3186120930795925814468eda",
+      "size_bytes": 44195
+    }
+  },
+  "snapshot_manifest": {
+    "comsol_mcp/__init__.py": {
+      "sha256": "17b614b0aa965a4bf24a07e3908a981875f917e13845ea97ceee9f29a97eee39",
+      "size_bytes": 198
+    },
+    "comsol_mcp/_artifact_preview_io.py": {
+      "sha256": "26da9be95a52466094b293230ee39e128027f413643ab8cc789d78070aac91a2",
+      "size_bytes": 8200
+    },
+    "comsol_mcp/_artifact_store.py": {
+      "sha256": "52dbb0dba5305d974f6cd93b747093d076d753c30ec67e4159d437af87feb347",
+      "size_bytes": 94602
+    },
+    "comsol_mcp/_atomic_save.py": {
+      "sha256": "635222c08633ff37f3f7d8e5ec6d5bdf5da8c58236f11271be1c662695ffdfd0",
+      "size_bytes": 7281
+    },
+    "comsol_mcp/_complex_transform.py": {
+      "sha256": "0adebdb27a8e9d28a0807e1908d44bd957d0c7f5523933fed94b86a382e173a0",
+      "size_bytes": 5720
+    },
+    "comsol_mcp/_connection.py": {
+      "sha256": "2699f12230b5832c7c8fe806fa1bfdca3be2e108ecc753a39808d92d862b7ea3",
+      "size_bytes": 3930
+    },
+    "comsol_mcp/_control_client.py": {
+      "sha256": "c2f68007eb56a4a9ef274f241dc377376c7126c4876c51228e8b6aa47da62754",
+      "size_bytes": 8865
+    },
+    "comsol_mcp/_control_daemon.py": {
+      "sha256": "fddce2933c3240aff2710aa934da2030b6de21283b7f8736ae8ac16ec928aeac",
+      "size_bytes": 728108
+    },
+    "comsol_mcp/_convergence_store.py": {
+      "sha256": "51d53df4ee7b404e27452a2c1b8733dd3a372d92baf60cdad5bb43fef6566f13",
+      "size_bytes": 5845
+    },
+    "comsol_mcp/_daemon_quiescence.py": {
+      "sha256": "8ecd34eabb3a940b74d8ad015d0d10d3b9dc59e30a5085cdaee7791ad90ee025",
+      "size_bytes": 12334
+    },
+    "comsol_mcp/_dataset_binding.py": {
+      "sha256": "891f9a06595217d5101aa361cb60b53bb3a9f6b88a918bef41765b0f5f82627e",
+      "size_bytes": 21562
+    },
+    "comsol_mcp/_desktop_capture.py": {
+      "sha256": "914c2b59ed6b750705e81efa96dc2273dedb21872c67b197445175b4fbc0c114",
+      "size_bytes": 22695
+    },
+    "comsol_mcp/_desktop_macos.py": {
+      "sha256": "9bdebd75c00abb20cb7f8e69c8e277fd653a6cbc52a07739dcc858ce7a963228",
+      "size_bytes": 4892
+    },
+    "comsol_mcp/_desktop_platforms.py": {
+      "sha256": "5b4f687df3e0519a99cc4830c249b889b90b0022cfdefc5f4cef144bfc306fb7",
+      "size_bytes": 3107
+    },
+    "comsol_mcp/_desktop_service.py": {
+      "sha256": "77c180224edefa50b18ef3e7146089c6e68d658a847f55b8dde588fe0c57865f",
+      "size_bytes": 60119
+    },
+    "comsol_mcp/_desktop_win32_identity.py": {
+      "sha256": "c528e3e8e950883b759b3f8f96ab036783186a640cfff4588f9aa105b3b7f065",
+      "size_bytes": 2833
+    },
+    "comsol_mcp/_desktop_windows.py": {
+      "sha256": "a652a89f18365fe87455ff2aae933274a809cbec77753304cdf085d75f7bf5e3",
+      "size_bytes": 5372
+    },
+    "comsol_mcp/_domain_outcome.py": {
+      "sha256": "0aba689a0dd8803c204d117ae32b940bafb662f913f632b6cead03dc33bfe4d8",
+      "size_bytes": 49726
+    },
+    "comsol_mcp/_execution_contract.py": {
+      "sha256": "dbb112cbbdef9a4d45f69c230123d4e9e57f7b71e337532d83989aa827e6c9e3",
+      "size_bytes": 22753
+    },
+    "comsol_mcp/_execution_service.py": {
+      "sha256": "e1dd344c2c39c3566721ec36ca0a27d6d05cc1df91b97751bbdfac807cd7a480",
+      "size_bytes": 25618
+    },
+    "comsol_mcp/_g2_artifact_preview.py": {
+      "sha256": "55cb9787f61adaa9b0a0f9dd4c57bcaf502b4d845717f5330eda01c82da9f6a7",
+      "size_bytes": 36780
+    },
+    "comsol_mcp/_g2_artifact_reads.py": {
+      "sha256": "9fcd22e740015b88dcdc9c18d72807e0e7b30a82783570febcc7b9d91824cfa5",
+      "size_bytes": 20597
+    },
+    "comsol_mcp/_g2_artifact_verify.py": {
+      "sha256": "7f481e11221d0233054a5443f6aa4d67ad2532dd559e3c718cd21aa977f9560e",
+      "size_bytes": 77308
+    },
+    "comsol_mcp/_g2_checkpoint_diff.py": {
+      "sha256": "ee3b2f9339634de4429c63a64c90a37ad0eb46d503b0da50849a40e2b0687c57",
+      "size_bytes": 60492
+    },
+    "comsol_mcp/_g2_checkpoint_ops.py": {
+      "sha256": "b566d9132fd87c103e1179811eb4c554af2389741b91064f223faeaf10d4c08d",
+      "size_bytes": 34099
+    },
+    "comsol_mcp/_g2_code.py": {
+      "sha256": "107a256c53e915bb3a546bef67ec8917a55fd5254c703ba612b9a38db151873d",
+      "size_bytes": 6087
+    },
+    "comsol_mcp/_g2_contract.py": {
+      "sha256": "7c8eb864bc8ee2adf4b9b78106e4eb17f4248eef479e2b3ea58a43f263e4e11e",
+      "size_bytes": 24798
+    },
+    "comsol_mcp/_g2_copy_subtree.py": {
+      "sha256": "49d8017bd3694cbbd07d2c3ef48d1638134ffb820a33d755b87c38a72c9eef21",
+      "size_bytes": 8498
+    },
+    "comsol_mcp/_g2_docs.py": {
+      "sha256": "af8d7825a3db29b9f33e1dbb3b5f19e32a8713136595a97b5e7433114337cbd5",
+      "size_bytes": 13902
+    },
+    "comsol_mcp/_g2_engine.py": {
+      "sha256": "f122242432dc6db00294b83d61317744694ffbbddfa7ee994c9ea3262cf2b4a9",
+      "size_bytes": 97979
+    },
+    "comsol_mcp/_g2_group_remove.py": {
+      "sha256": "0c037b6bfe86fbe14b43339f50ab848a495496d27bd47fd6ef37eb0733c1596b",
+      "size_bytes": 26340
+    },
+    "comsol_mcp/_g2_isolation.py": {
+      "sha256": "dd2da52140d191bea3cd036fe5ab06782d9ff30c119686c13bde99c32d64580b",
+      "size_bytes": 43571
+    },
+    "comsol_mcp/_g2_model_compare.py": {
+      "sha256": "96a5750d8c7760d9a20244585e0a9b0d97a5b04840e690a8283d25dfd4e83597",
+      "size_bytes": 53038
+    },
+    "comsol_mcp/_g2_public_api.py": {
+      "sha256": "52a4477541108390a962574c4c7a13c669841936d449e6ee7a925d64cd9b44a1",
+      "size_bytes": 13107
+    },
+    "comsol_mcp/_g2_registry.py": {
+      "sha256": "a91e21263fab5be96a8f9b1d17f61c6033b37135bf8eb0fd336a94ceb11744b1",
+      "size_bytes": 104782
+    },
+    "comsol_mcp/_g2_tools.py": {
+      "sha256": "d62451b60a529d146c91849f47b9f51be6d19788962131e3ea24386e7a2a04f9",
+      "size_bytes": 2557
+    },
+    "comsol_mcp/_g2_transactions.py": {
+      "sha256": "d8c5d84d58f205627df5e31489360b4ef2e7759d7ef67b916dc4fc5318cfba80",
+      "size_bytes": 26302
+    },
+    "comsol_mcp/_g3_common.py": {
+      "sha256": "9b3e8dfff78966b35d78ee0aa25cb50098c3f2ae556161b8161fd2f44938b6d3",
+      "size_bytes": 74830
+    },
+    "comsol_mcp/_g3_metrics.py": {
+      "sha256": "89e9297c13ac8f42c5260c61e723ffbdb24d3a46858b0d9abf8729ac62241d87",
+      "size_bytes": 69281
+    },
+    "comsol_mcp/_g3_ops.py": {
+      "sha256": "31cb4600c75940e965e0d9ba4b97ced461ad94433972cb0ab3d848e12bbe28bd",
+      "size_bytes": 10198
+    },
+    "comsol_mcp/_g3_parameter_io.py": {
+      "sha256": "6de371947f6919f142c5be606eee6b5f8ea76e17dc5785f5f84faf02ae929b84",
+      "size_bytes": 35435
+    },
+    "comsol_mcp/_g3_results.py": {
+      "sha256": "0ba862600c124b2139a1de41135440c9c3492ad4514817c00d0ece9aeb247785",
+      "size_bytes": 378335
+    },
+    "comsol_mcp/_g3_runtime.py": {
+      "sha256": "663af8ffdd7b6d99a915acfb4bad768a5c2227e18088511a375dcb7d7e75ae52",
+      "size_bytes": 57141
+    },
+    "comsol_mcp/_g3_units.py": {
+      "sha256": "99a785c59bd2fe6c1d6fad20369a650041850f2008ccd4079bab11377d952d64",
+      "size_bytes": 22854
+    },
+    "comsol_mcp/_g3_w13.py": {
+      "sha256": "a1aa8f1da14c305f77c3f9a9e7092c214c15bed185e27792e95233bf539d6eb2",
+      "size_bytes": 143604
+    },
+    "comsol_mcp/_g3_w14.py": {
+      "sha256": "33db916edd304734c0337bdf0aa40025122d1658bbea72c68d8c6009301e01f5",
+      "size_bytes": 151923
+    },
+    "comsol_mcp/_g3_w15.py": {
+      "sha256": "c267190f280c8f712ed177d0f3be2382e0dd8250479476ba4ebb9bd0a2091ff1",
+      "size_bytes": 186453
+    },
+    "comsol_mcp/_g3_w16.py": {
+      "sha256": "562f983aca0e4dcccba00ec9f804248ea238d6e0d2a2b8c82ce02012640a53d9",
+      "size_bytes": 179787
+    },
+    "comsol_mcp/_g3_w18.py": {
+      "sha256": "378376fe50e4dcf14a55a7e1b03ed807ef29b1472ce342475044b83893ed09fd",
+      "size_bytes": 48113
+    },
+    "comsol_mcp/_g3_w20_validation.py": {
+      "sha256": "77ec0f38f2da8b3d7cb53f2fe72bcb247d3d5568e027c19cda515e98a67aafc3",
+      "size_bytes": 68279
+    },
+    "comsol_mcp/_g3_w21.py": {
+      "sha256": "bf567f34257d58e931f457d211182fddf04f1d94c6c0771fb4c69833fd2886a6",
+      "size_bytes": 27290
+    },
+    "comsol_mcp/_gate_a_reopen.py": {
+      "sha256": "9ce03851f179ea74da0a911a6b31cab055e84f3b3cc27ab535ed5aac68fdd16a",
+      "size_bytes": 15146
+    },
+    "comsol_mcp/_java_worker.py": {
+      "sha256": "44da4fcafa6d9fc3384f5d0707c909fea0451557a2af1cce5ca68c3890189b85",
+      "size_bytes": 64417
+    },
+    "comsol_mcp/_managed_backend.py": {
+      "sha256": "ffaee182ed1d4dc117b44a7aa780749772061c0d651d13e3e6e930ab6eabc161",
+      "size_bytes": 202011
+    },
+    "comsol_mcp/_mcp_gateway.py": {
+      "sha256": "ff40a6f0f4a472a4950bb698c3d8a0b05330ed4ffa186538cffcb3edccade16f",
+      "size_bytes": 15493
+    },
+    "comsol_mcp/_measure_spec.py": {
+      "sha256": "4f73e40b4b560934fff54763a1532f38597fe758edf66a0e077671b0674afea1",
+      "size_bytes": 15506
+    },
+    "comsol_mcp/_metric_contract.py": {
+      "sha256": "98860f7c00cb1dafb10d3facfce8ee39c5389b0f0557369d198af150c187b8bb",
+      "size_bytes": 20169
+    },
+    "comsol_mcp/_mode_overlap.py": {
+      "sha256": "f93b87c26f3af7b2fa4498cf88b430069ae200619606dfed6906479d2036ba56",
+      "size_bytes": 45199
+    },
+    "comsol_mcp/_model.py": {
+      "sha256": "814baf91e74eeb370ab25f9a8b6ae768a1ab0a851d68870b67cb13b88b88ac13",
+      "size_bytes": 9708
+    },
+    "comsol_mcp/_model_ops.py": {
+      "sha256": "182d945188fca0afe624c1699b686aca7d3a8b2d23b0fae301aa5adaa2984903",
+      "size_bytes": 64890
+    },
+    "comsol_mcp/_observation_store.py": {
+      "sha256": "fa1eec16402dce15c33e66423ecd6f8d227fa1abac63e76a47c6c288af4cdc3e",
+      "size_bytes": 5318
+    },
+    "comsol_mcp/_operation_store.py": {
+      "sha256": "d9d6c3d54ff4afc625f28f5e70595fd23f6a899e05863a9cdf0b05711a0808fa",
+      "size_bytes": 226849
+    },
+    "comsol_mcp/_phase1_runtime.py": {
+      "sha256": "e4636f8f790079593f53f11e8abd544526c5a5a289e068ccfbcf4b599dbe62f7",
+      "size_bytes": 8419
+    },
+    "comsol_mcp/_physics_ops.py": {
+      "sha256": "3a006aef40f484b61ba0151cc9a76fc612d093ba8853789b26d5924a0df25ac9",
+      "size_bytes": 12501
+    },
+    "comsol_mcp/_platform_paths.py": {
+      "sha256": "96d3bc7defee41fda14f45ffa050ff7089e4e0573345a2929e0facba7f663b32",
+      "size_bytes": 1646
+    },
+    "comsol_mcp/_platform_process.py": {
+      "sha256": "f201026c8ebc66ae22548917e1cc248b1397c61b4681df3134a59a9f83f2795d",
+      "size_bytes": 14391
+    },
+    "comsol_mcp/_probe_manage.py": {
+      "sha256": "447b45d5bc3fdcee6a2ec3935f32a140d18fa1b02af23814fb92ef0027adcf1e",
+      "size_bytes": 58266
+    },
+    "comsol_mcp/_process_diagnostics.py": {
+      "sha256": "e9f0626eb8b6c122fa30cce4b2728d87da112e5002d3517dac24e6ed8d1ad4e9",
+      "size_bytes": 8820
+    },
+    "comsol_mcp/_project_authority.py": {
+      "sha256": "82b90c1157b242f80feb9079ac4b58e2a1295719a7a323a97532497a740181a8",
+      "size_bytes": 32352
+    },
+    "comsol_mcp/_result_budget.py": {
+      "sha256": "64a3de71839c4224fc92869d89b2dae6cb6bd1726878bb2f0a121e00f9ebcf4c",
+      "size_bytes": 26401
+    },
+    "comsol_mcp/_runtime_control.py": {
+      "sha256": "e9acab89e52a6ed27a55610dec5f75f76ad2baab1ea57ed84e6612177d820ffe",
+      "size_bytes": 20182
+    },
+    "comsol_mcp/_runtime_installation.py": {
+      "sha256": "afb2bbd81783d025d030e9790d720d11cde0d0a6fd6fe890f38d69813e3e31ce",
+      "size_bytes": 29061
+    },
+    "comsol_mcp/_runtime_state.py": {
+      "sha256": "6d2de604b0ba4cab7283de66107df6401dab3d5d74cb99e4b34c331d162cc3d6",
+      "size_bytes": 6511
+    },
+    "comsol_mcp/_security_os.py": {
+      "sha256": "34d3c47c3ac27de98ba74b36cf6f2bbf51ba2873514bdc22e4c60af00b1f373c",
+      "size_bytes": 6479
+    },
+    "comsol_mcp/_server.py": {
+      "sha256": "530e1954308f9a844b86814b4d44d05fe9e51968f618cc0a7e9e93382fbf64fa",
+      "size_bytes": 11703
+    },
+    "comsol_mcp/_session_context.py": {
+      "sha256": "6c1222cdeaed6f14208f4ead0f9b82beccf96b7c1a445d0a8b43107878e2406d",
+      "size_bytes": 38915
+    },
+    "comsol_mcp/_session_lifecycle.py": {
+      "sha256": "10d74f0d733365e4c66dba612568fe0fc47260581b0a29884279d6d0b9dd1121",
+      "size_bytes": 14305
+    },
+    "comsol_mcp/_session_server.py": {
+      "sha256": "f6404e5fcf970446d8b10b16586b5e91d73ea2be5b36ddaa0caf25c6c21de8fd",
+      "size_bytes": 38497
+    },
+    "comsol_mcp/_solution_binding.py": {
+      "sha256": "0815aac9d118d9c51e4eb22386bead9b00b59085c5aee08195e41a0324c42e2a",
+      "size_bytes": 30161
+    },
+    "comsol_mcp/_solver_ops.py": {
+      "sha256": "2a8dcd6bd6f79898e0e0ae4af8941c9e97cfd4cf18e4190d7267e7bdda682595",
+      "size_bytes": 3725
+    },
+    "comsol_mcp/_source_manifest.py": {
+      "sha256": "273226a8538438feeec4156bb883bbbdb121294ca9d928c10683386085f0c1ae",
+      "size_bytes": 4898
+    },
+    "comsol_mcp/_stage_contract.py": {
+      "sha256": "c028b33223b0cca3d994c9359efc6a02b27ed2f3103511639e9d3014bfacdbbe",
+      "size_bytes": 48940
+    },
+    "comsol_mcp/_state.py": {
+      "sha256": "71c862d438c588ff0d8aae6db349873813f0f4f94e041e4b60a3f481d8b0d78c",
+      "size_bytes": 27468
+    },
+    "comsol_mcp/_state_backup.py": {
+      "sha256": "a1c33f6696f70ef085f39627fd582f6a898b3bbc92ab04fd1c0aacd12d936488",
+      "size_bytes": 43383
+    },
+    "comsol_mcp/_tools_connection.py": {
+      "sha256": "6cf46068542fa46308f92c89bee6a9574a3507c73d69b59f265cf26290d520e5",
+      "size_bytes": 11901
+    },
+    "comsol_mcp/_tools_control.py": {
+      "sha256": "c6d3007117268be2529f8ca725f2bbe3bdb3fae5c2f9d04223437817c3efc6d0",
+      "size_bytes": 3490
+    },
+    "comsol_mcp/_tools_desktop.py": {
+      "sha256": "f341c9096a4efb913912b785ff04beafafce1e7ce229b46e60e96318531d4b43",
+      "size_bytes": 4359
+    },
+    "comsol_mcp/_tools_geometry.py": {
+      "sha256": "8e3a8b12ae252b6fb7ccf718e38de7b959228d5c2aeb1653e95443cec41c0e0a",
+      "size_bytes": 6895
+    },
+    "comsol_mcp/_tools_model.py": {
+      "sha256": "aa247e34e6cbacc3f7481082c91edabc999273a7118de41536f3539e44ddc7b5",
+      "size_bytes": 3881
+    },
+    "comsol_mcp/_tools_params.py": {
+      "sha256": "d6faf82a2c49466b60e4d045bf04cdcb3fc8c6d0771359f1de278876dd6753ce",
+      "size_bytes": 19355
+    },
+    "comsol_mcp/_tools_phase1.py": {
+      "sha256": "8a3eab8d289b29bd5b9d1a63fb8e9eeb93576d506b333f57e24d21b6e49f1060",
+      "size_bytes": 775
+    },
+    "comsol_mcp/_tools_physics.py": {
+      "sha256": "72ed57f61a778d2cb822809b91914e70a869890699f18d3da1bfed474414eb98",
+      "size_bytes": 12558
+    },
+    "comsol_mcp/_tools_snapshot.py": {
+      "sha256": "ddd37955676f032c065e13812fa8f945e954c9ebe82c06ce0754e118b31c7e35",
+      "size_bytes": 10871
+    },
+    "comsol_mcp/_tools_solver.py": {
+      "sha256": "60adf34f7c1aa67ece852b5259099339c4391fbd26a77e4b80be994fffed3934",
+      "size_bytes": 9867
+    },
+    "comsol_mcp/_tools_w18.py": {
+      "sha256": "2df053e4a1ac0d326f230300e69597a71068a3b2f66270976bf5f0600d1d5fd4",
+      "size_bytes": 704
+    },
+    "comsol_mcp/_tools_w20.py": {
+      "sha256": "6182269064dfc8973fdb6845b4e768bbf60e92322e79ac0e92ad4913496f564e",
+      "size_bytes": 7837
+    },
+    "comsol_mcp/_tools_w21.py": {
+      "sha256": "e686b2d9545eb91d470aca99ac5f5e8eb01278ab669b35b7c34abcd87f22d964",
+      "size_bytes": 9096
+    },
+    "comsol_mcp/_tools_workflow.py": {
+      "sha256": "4c35c2c92afc09acd2136647c142b7607ca3fbc0cb6b22b4a04d487764c2b9ad",
+      "size_bytes": 22520
+    },
+    "comsol_mcp/_vcsel_source.py": {
+      "sha256": "7a4a79426cd14c426099f07535b70566cdd1c16bbf2a4b9261814610b514d963",
+      "size_bytes": 9535
+    },
+    "comsol_mcp/_w21_execution.py": {
+      "sha256": "d9ec833c69eb691a9c0acd85984c7ae39828da763962d1fe80722ff8819547ba",
+      "size_bytes": 94999
+    },
+    "comsol_mcp/_w21_initial_stage.py": {
+      "sha256": "9019f0046d25c0287918dac28e3e84ff8de4766e558590e90bd7a675634d0ffe",
+      "size_bytes": 12374
+    },
+    "comsol_mcp/_w21_mesh_evidence.py": {
+      "sha256": "8d13794d74547742a4dd38e1516eca3c7102980cc856c96e974216261e193181",
+      "size_bytes": 26977
+    },
+    "comsol_mcp/_w21_mesh_readback.py": {
+      "sha256": "c6fe5120c7ca3dbb89c4dbe0e3be9bfcba821ae938964147d11cd7ba867e9851",
+      "size_bytes": 30742
+    },
+    "comsol_mcp/_w21_native_output.py": {
+      "sha256": "33d9c229711335decf01f665ef761a3ded583a1b66972930b54b3c5519f0773d",
+      "size_bytes": 97313
+    },
+    "comsol_mcp/_w21_stage_backend.py": {
+      "sha256": "c57ae9a25ead998d714e8c89a10434f134e670a532c7dae9b4fa1007220873d7",
+      "size_bytes": 115705
+    },
+    "comsol_mcp/_w23_basis_v2_contract.py": {
+      "sha256": "837f3508acb505d1b6be726274099009d3a6d5d95e3dcf410b2d7db40b877aa4",
+      "size_bytes": 20040
+    },
+    "comsol_mcp/_w23_basis_v2_provenance.py": {
+      "sha256": "16feeb0fba3f2952616eb472bb3cdab391cf8240ea04a5edcc9d0f0c25e399c9",
+      "size_bytes": 38968
+    },
+    "comsol_mcp/_w23_basis_v2_results.py": {
+      "sha256": "ef06db7a645dc79ec6a9898d47952fbec75ea27b046221b026a5825135ea6eef",
+      "size_bytes": 52371
+    },
+    "comsol_mcp/_w23_results.py": {
+      "sha256": "fae3ddcc4abab9866eaa3a667b418ef2fe8a70c4fba651bc62ab323316c991ca",
+      "size_bytes": 54222
+    },
+    "comsol_mcp/_windows_parameter_publish.py": {
+      "sha256": "ce3b3ee5db08998b77929c93c7a57ecb958af65a67c7896910e493feef57ab53",
+      "size_bytes": 23115
+    },
+    "comsol_mcp/data/g2/02_ACTION_CATALOG.json": {
+      "sha256": "124ef66964e7f2cae78eca79b974f4f8c2ea1a3263f6440427de5edab052124e",
+      "size_bytes": 581341
+    },
+    "comsol_mcp/data/g2/common.schema.json": {
+      "sha256": "1beb031c1da5fedcdbfbb43750aa4e4d0e8b7c07ce4513a832ff3fe535dd7afa",
+      "size_bytes": 7757
+    },
+    "comsol_mcp/mcp_server.py": {
+      "sha256": "daa3972ca26b8e1ba72b07f3d346a1523b390bb556197aede0b8d58f4231a0a4",
+      "size_bytes": 1927
+    },
+    "comsol_mcp/phase1_java/BoundPhase1Poc.java": {
+      "sha256": "093c51f1144b2713f1427194014266ee2cd82f0f5597bcaba71c11a34816c00f",
+      "size_bytes": 2662
+    },
+    "comsol_mcp/phase1_java/BoundPhase1ProductProbe.java": {
+      "sha256": "788e85cceb5b2a4b55a93e738eee6e37aa8faf8dc7c38587f2c95ef39a4ff619",
+      "size_bytes": 423
+    },
+    "comsol_mcp/phase1_java/BoundPhase1Reopen.java": {
+      "sha256": "4625f30ca27d492c05442e7b370ea1353389259e83e0b0382868c35e658081a4",
+      "size_bytes": 732
+    },
+    "comsol_mcp/worker_java/PersistentComsolWorker.java": {
+      "sha256": "739d60553aaa2ecf8121284a1115a132df6dbe0b2827f93f238d697fba3e1b73",
+      "size_bytes": 113293
+    },
+    "docs/comsol_mcp_design_v1/02_ACTION_CATALOG.json": {
+      "sha256": "124ef66964e7f2cae78eca79b974f4f8c2ea1a3263f6440427de5edab052124e",
+      "size_bytes": 581341
+    },
+    "tools/run_native_resume_smoke.py": {
+      "sha256": "fb086c01ba6b9e48f78415bf092877d2b9cab9011c13f8613b48c0ae75e67180",
+      "size_bytes": 79102
+    },
+    "tools/verify_native_resume_saved_artifact.py": {
+      "sha256": "ec37fefad1f3b9e871d212ac852da0f083b23ff3186120930795925814468eda",
+      "size_bytes": 44195
+    }
+  },
+  "test_scope_root": "/private/tmp/comsol-v2-native-readback-tests-20261011-r3",
+  "test_scope_manifest": {
+    "tests/test_native_resume_smoke_runner.py": {
+      "sha256": "8da475a5301dd38455dffff55d81146a699aa84b6012a514ce516272462a3de9",
+      "size_bytes": 13536,
+      "snapshot_sha256": "8da475a5301dd38455dffff55d81146a699aa84b6012a514ce516272462a3de9",
+      "snapshot_size_bytes": 13536,
+      "copy_before_after_stable": true
+    },
+    "tests/test_control_daemon_projects.py": {
+      "sha256": "33fc418ff44d2a942dc6dc86e6f0fedb16fc3e4121ca7867a00e5343de0ecb38",
+      "size_bytes": 35672,
+      "snapshot_sha256": "33fc418ff44d2a942dc6dc86e6f0fedb16fc3e4121ca7867a00e5343de0ecb38",
+      "snapshot_size_bytes": 35672,
+      "copy_before_after_stable": true
+    },
+    "tests/test_project_authority.py": {
+      "sha256": "c076d178df63bc1aaaf263c7f0cee2a22fa1c87a46b0a63774b0e79eab2d35cf",
+      "size_bytes": 17603,
+      "snapshot_sha256": "c076d178df63bc1aaaf263c7f0cee2a22fa1c87a46b0a63774b0e79eab2d35cf",
+      "snapshot_size_bytes": 17603,
+      "copy_before_after_stable": true
+    }
+  },
+  "focused_test_evidence_from_workspace": [
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/readback_runner_tests004/result.json",
+      "status": "PASS",
+      "result_sha256": "3ef9cb1baca63f78fb6500c861dd86a54038ab9a5dedf97d17d86bf2afdb4929"
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/readback_runner_tests005/result.json",
+      "status": "PASS",
+      "result_sha256": "c51224859237094c25801cc9708747241e5be4120c84c8e523f0a8f176685f9b"
+    }
+  ],
+  "prior_r2_native_failure_preserved": {
+    "evidence_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/native_readback002/raw/supplement_failure.json",
+    "sha256": "c302d80c16799409d196fd8e481cfb03747896fd657eca648b2c33fae7761bd0",
+    "status": "FAIL_OR_INCOMPLETE_READ_ONLY_SUPPLEMENT",
+    "error_code": "POLICY_ESCALATION_REFUSED",
+    "source_run08_status": "FAIL_OR_INCOMPLETE",
+    "no_replay": true,
+    "private_control_store_backup": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/native_readback002/private-control-store",
+    "private_control_store_receipt_sha256": "a95fbc164f6112460edde1292823788f091e7a567c60085a0edbf40ed82d0312"
+  },
+  "native_readback_tests_evidence": {
+    "status": "PASS",
+    "evidence_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/native_readback003/snapshot_tests/result.json",
+    "evidence_sha256": "ed441aa97beb0f9f587dead7e428f70d8806485968956dda6fdca8eb226a955f",
+    "pytest_exit_code": 0,
+    "guard_active_before_process_count": 2,
+    "denied_socket_call_count": 0,
+    "guard_setup_error_count": 0,
+    "import_probe": "comsol_mcp=/private/tmp/comsol-v2-native-readback-source-20261011-r3/comsol_mcp/__init__.py\nreadback_runner=/private/tmp/comsol-v2-native-readback-source-20261011-r3/tools/verify_native_resume_saved_artifact.py\nresume_oracle=/private/tmp/comsol-v2-native-readback-source-20261011-r3/tools/run_native_resume_smoke.py\n",
+    "test_scope_manifest": {
+      "tests/test_native_resume_smoke_runner.py": {
+        "sha256": "8da475a5301dd38455dffff55d81146a699aa84b6012a514ce516272462a3de9",
+        "size_bytes": 13536,
+        "snapshot_sha256": "8da475a5301dd38455dffff55d81146a699aa84b6012a514ce516272462a3de9",
+        "snapshot_size_bytes": 13536,
+        "copy_before_after_stable": true
+      },
+      "tests/test_control_daemon_projects.py": {
+        "sha256": "33fc418ff44d2a942dc6dc86e6f0fedb16fc3e4121ca7867a00e5343de0ecb38",
+        "size_bytes": 35672,
+        "snapshot_sha256": "33fc418ff44d2a942dc6dc86e6f0fedb16fc3e4121ca7867a00e5343de0ecb38",
+        "snapshot_size_bytes": 35672,
+        "copy_before_after_stable": true
+      },
+      "tests/test_project_authority.py": {
+        "sha256": "c076d178df63bc1aaaf263c7f0cee2a22fa1c87a46b0a63774b0e79eab2d35cf",
+        "size_bytes": 17603,
+        "snapshot_sha256": "c076d178df63bc1aaaf263c7f0cee2a22fa1c87a46b0a63774b0e79eab2d35cf",
+        "snapshot_size_bytes": 17603,
+        "copy_before_after_stable": true
+      }
+    },
+    "scope_note": "Software and production-route tests only; no COMSOL engine acceptance."
+  },
+  "workspace_focused_test_evidence_after_r3_freeze": [
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/readback_runner_tests004/result.json",
+      "status": "PASS",
+      "result_sha256": "3ef9cb1baca63f78fb6500c861dd86a54038ab9a5dedf97d17d86bf2afdb4929"
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/readback_runner_tests005/result.json",
+      "status": "PASS",
+      "result_sha256": "c51224859237094c25801cc9708747241e5be4120c84c8e523f0a8f176685f9b"
+    }
+  ]
+}

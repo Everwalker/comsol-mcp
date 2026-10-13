@@ -1,0 +1,57 @@
+{
+  "affected_evidence": [
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/PYTHON_AND_BUILD_INPUT_METADATA_R2.json",
+      "sha256": "14116a58d52ac340258cf3cfefe56d3ca6e321ee051b3127b5131ffed3e71042"
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r2/PY_O3_CROSS_GUIDANCE_R2.md",
+      "sha256": "8ff47c6020d6bc9a8f177f3b3e2010745ad9c75e92c96f7df16982d10d056398"
+    }
+  ],
+  "at_utc": "2026-10-12T05:15:44.502931+00:00",
+  "finding_id": "W25-INTEL-HEADER-01",
+  "priority": "P2",
+  "problem": "Generic CPython cross-compilation documentation was used to propose --build arm / --host x86_64-apple-darwin / --with-build-python as a first-party macOS route; exact-version configure.ac refuses that route. No actual cross build was run, so this is a plan/source finding, not a observed native failure.",
+  "required_successor": [
+    "Preserve the existing source-only plan and untested status. Append the exact-source finding/correction and raw byte/hash reference, without rewriting frozen R2 files.",
+    "Investigate the official --enable-universalsdk and --with-universal-archs=universal2 configuration with the installed SDK, actual generated header provenance, and compilation under both target slices.",
+    "Keep host ARM tool execution separate from target x86 artifacts. Do not run a pure x86 executable, invoke Rosetta installation, inject fake MACHDEP/ac_cv answers, or synthesize target pyconfig/_sysconfigdata proof.",
+    "Prove the cryptography CFFI include path selects an actual source-generated target-capable include tree. Inspect final Mach-O slices, deployment commands and linked libraries; an Intel hardware/runtime test remains separate."
+  ],
+  "schema": "comsol-mcp.root-intel-header-plan-finding/1",
+  "source_review": {
+    "cross_host_checks_line_spans": [
+      [
+        503,
+        533
+      ],
+      [
+        565,
+        592
+      ]
+    ],
+    "exact_version": "v3.12.13",
+    "observed_source_behavior": "Both cross_compiling=yes host cases have no Darwin branch and reject an unsupported host. Universal SDK configuration has a universal2 case that adds arm64 and x86_64 compilation flags.",
+    "primary_url": "https://raw.githubusercontent.com/python/cpython/v3.12.13/configure.ac",
+    "read_via": "web open/find; raw source byte capture pending executor supplement",
+    "supported_darwin_universal_option_line_spans": [
+      [
+        350,
+        369
+      ],
+      [
+        2440,
+        2444
+      ]
+    ]
+  },
+  "status": "CHANGES_REQUIRED_SCOPED_HEADER_GENERATION_PLAN",
+  "unchanged_acceptance": {
+    "actual_intel_runtime": "NOT_RUN",
+    "arm64_runtime_and_private_combined": "PASS_SCOPED_SOFTWARE as independently recorded in ROOT_RUNTIME_AND_COMBINED_REVIEW_R2.json",
+    "desktop_gui": "NOT_RUN",
+    "full_project": "INCOMPLETE_NOT_ACCEPTED",
+    "intel_builder": "OPEN_NOT_BUILD_READY"
+  }
+}

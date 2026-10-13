@@ -1,0 +1,19 @@
+--- immutable R1/test_successor.py
++++ R2/test_successor.py
+@@ -32,6 +32,16 @@
+   out=self.r/'derived.txt'
+   release.compose_derived_wheel_lock(req,self.w,self.lock,q,self.lic,'macos_x86_64',out)
+   self.assertIn(self.p['wheel']['sha256'],out.read_text());self.assertEqual(hashlib.sha256(LOCK.read_bytes()).hexdigest(),before)
++ def test_whole_staging_copy(self):
++  result=self.call();self.assertEqual(result['wheel']['sha256'],BASE['wheel']['sha256']);self.assertNotEqual(self.w.stat().st_ino,W.stat().st_ino);self.assertNotEqual(self.lock.stat().st_ino,LOCK.stat().st_ino);self.assertNotEqual(self.lic.stat().st_ino,LIC.stat().st_ino)
++ def test_python_bytes_rewritten_with_self_consistent_provenance(self):
++  self.zipchange('cryptography/__init__.py',lambda b:b+b'\n# synthetic tamper\n');self.reject()
++ def test_zip_container_only_rewritten(self):
++  self.zipchange('cryptography/__init__.py',lambda b:b);self.assertNotEqual(hashlib.sha256(self.w.read_bytes()).hexdigest(),BASE['wheel']['sha256']);self.reject()
++ def test_changed_lock_self_consistent_provenance(self):
++  self.lock.write_bytes(self.lock.read_bytes()+b'\n# synthetic drift\n');self.p['source_lock']['sha256']=hashlib.sha256(self.lock.read_bytes()).hexdigest();self.reject()
++ def test_changed_license_self_consistent_provenance(self):
++  self.lic.write_bytes(self.lic.read_bytes()+b'\n# synthetic drift\n');self.p['native_component']['license_file']['sha256']=hashlib.sha256(self.lic.read_bytes()).hexdigest();self.p['native_component']['license_file']['bytes']=self.lic.stat().st_size;self.reject()
+  def test_wrong_filename(self):self.w=self.w.rename(self.r/'cryptography-50.0.1-cp312-abi3-macosx_12_0_x86_64.whl');self.reject()
+  def test_wrong_internal_abi(self):self.zipchange('cryptography-50.0.1.dist-info/WHEEL',lambda b:b.replace(b'cp39',b'cp312'));self.reject()
+  def test_duplicate_internal_tag(self):self.zipchange('cryptography-50.0.1.dist-info/WHEEL',lambda b:b+b'Tag: '+strict.TAG.encode()+b'\n');self.reject()

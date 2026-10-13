@@ -198,6 +198,419 @@ def _raw_expression_map(raw: Mapping[str, Any]) -> dict[str, list[complex]]:
     return result
 
 
+def _finite_complex_row(real: Any, imag: Any, *, label: str) -> complex:
+    return complex(_as_finite_float(real, f"{label}.real"),
+                   _as_finite_float(imag, f"{label}.imag"))
+
+
+def reconcile_stored_sequence_parameter_observation(
+    java_sequence: Mapping[str, Any], worker_observation: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Reconcile raw Java and production Worker reads of the same solver tag.
+
+    This intentionally leaves SolutionInfo tuple mapping and completeness
+    untouched. It only proves both APIs returned the same sequence-level
+    complex values, units, and declared sequence identity.
+    """
+    if not isinstance(java_sequence, Mapping) or not isinstance(worker_observation, Mapping):
+        raise ScienceProtocolError("stored solver sequence observations must be objects")
+    if java_sequence.get("parameter_values_status") != "RAW_TYPED_COMPLEX_VALUES_CAPTURED_NOT_INTERPRETED":
+        raise ScienceProtocolError("direct Java solver sequence values are not fully captured")
+    if worker_observation.get("status") != "OBSERVED_TYPED_COMPLEX_PARAMETER_VALUES":
+        raise ScienceProtocolError("production Worker solver sequence values or units are incomplete")
+    identity_fields = (
+        ("sequence_type", "sequence_type"),
+        ("solution_type", "solution_type"),
+        ("study_tag", "study"),
+        ("attached", "attached"),
+        ("get_size", "get_size"),
+        ("pnames", "pnames"),
+    )
+    mismatches = {
+        java_key: {"java": java_sequence.get(java_key), "worker": worker_observation.get(worker_key)}
+        for java_key, worker_key in identity_fields
+        if java_sequence.get(java_key) != worker_observation.get(worker_key)
+    }
+    java_tag = java_sequence.get("tag")
+    worker_tag = worker_observation.get("solution_tag")
+    if not isinstance(java_tag, str) or java_tag != worker_tag:
+        mismatches["solution_tag"] = {"java": java_tag, "worker": worker_tag}
+    if mismatches:
+        raise ScienceProtocolError(f"Java and Worker sequence identity differs: {mismatches}")
+
+    names = java_sequence.get("pnames")
+    size = java_sequence.get("get_size")
+    java_values = java_sequence.get("parameter_values_by_solnum")
+    worker_values = worker_observation.get("solution_values")
+    if (not isinstance(names, list) or not names
+            or not isinstance(size, list) or len(size) != 2
+            or type(size[1]) is not int or size[1] < 1
+            or not isinstance(java_values, list) or not isinstance(worker_values, list)
+            or len(java_values) != size[1] or len(worker_values) != size[1]):
+        raise ScienceProtocolError("stored solver sequence size/name/value rows do not reconcile")
+
+    java_units_by_name: dict[str, str] = {}
+    for row in java_values:
+        if not isinstance(row, Mapping):
+            raise ScienceProtocolError("Java sequence parameter row is malformed")
+        units = row.get("parameter_units")
+        if not isinstance(units, list) or len(units) != len(names):
+            raise ScienceProtocolError("Java sequence unit readback does not match the parameter-name axis")
+        for name, unit_row in zip(names, units):
+            if (not isinstance(unit_row, Mapping) or unit_row.get("name") != name
+                    or unit_row.get("status") != "OBSERVED"
+                    or not isinstance(unit_row.get("value"), str) or not unit_row["value"].strip()):
+                raise ScienceProtocolError(f"Java sequence unit readback is unavailable for {name!r}")
+            unit = str(unit_row["value"])
+            if name in java_units_by_name and java_units_by_name[name] != unit:
+                raise ScienceProtocolError(f"Java sequence unit changed between solution numbers for {name!r}")
+            java_units_by_name[name] = unit
+
+    worker_units = worker_observation.get("unit_observations")
+    if not isinstance(worker_units, list) or len(worker_units) != len(names):
+        raise ScienceProtocolError("Worker sequence unit readback does not match the parameter-name axis")
+    worker_units_by_name: dict[str, str] = {}
+    for name, row in zip(names, worker_units):
+        if (not isinstance(row, Mapping) or row.get("name") != name
+                or not isinstance(row.get("value"), str) or not row["value"].strip()):
+            raise ScienceProtocolError(f"Worker sequence unit readback is unavailable for {name!r}")
+        worker_units_by_name[name] = str(row["value"])
+    if java_units_by_name != worker_units_by_name:
+        raise ScienceProtocolError("Java and Worker sequence units differ")
+
+    comparisons = []
+    for expected_solnum, (java_row, worker_row) in enumerate(zip(java_values, worker_values), start=1):
+        if (java_row.get("solnum") != expected_solnum
+                or worker_row.get("solnum") != expected_solnum):
+            raise ScienceProtocolError("stored sequence solution numbers are not the exact one-based sequence")
+        java_real, java_imag = java_row.get("real"), java_row.get("imaginary")
+        worker_real_getter, worker_imag_getter = worker_row.get("real_getter"), worker_row.get("imag_getter")
+        worker_real = worker_real_getter.get("raw") if isinstance(worker_real_getter, Mapping) else None
+        worker_imag = worker_imag_getter.get("raw") if isinstance(worker_imag_getter, Mapping) else None
+        if (not isinstance(java_real, list) or not isinstance(java_imag, list)
+                or not isinstance(worker_real, list) or not isinstance(worker_imag, list)
+                or len(java_real) != len(names) or len(java_imag) != len(names)
+                or len(worker_real) != len(names) or len(worker_imag) != len(names)):
+            raise ScienceProtocolError(f"stored sequence value shape is invalid at solnum {expected_solnum}")
+        per_parameter = []
+        for index, name in enumerate(names):
+            java_value = _finite_complex_row(java_real[index], java_imag[index], label=f"Java {name}")
+            worker_value = _finite_complex_row(worker_real[index], worker_imag[index], label=f"Worker {name}")
+            if java_value != worker_value:
+                raise ScienceProtocolError(f"Java and Worker raw values differ for {name!r} at solnum {expected_solnum}")
+            per_parameter.append({"name": name, "real": java_value.real, "imag": java_value.imag,
+                                 "unit": java_units_by_name[name]})
+        comparisons.append({"solnum": expected_solnum, "parameters": per_parameter,
+                            "raw_values_match_exactly": True})
+    return {
+        "status": "PASS_JAVA_WORKER_RAW_SEQUENCE_READBACK_MATCH",
+        "scope": "raw solver-sequence identity/complex values/units only; SolutionInfo tuple mapping remains unchanged",
+        "solution_tag": java_tag,
+        "sequence_type": java_sequence.get("sequence_type"),
+        "solution_type": java_sequence.get("solution_type"),
+        "attached": java_sequence.get("attached"),
+        "study_tag": java_sequence.get("study_tag"),
+        "get_size": list(size), "pnames": list(names),
+        "parameters_complete": False,
+        "solution_info_axis_metadata_complete": False,
+        "values": comparisons,
+    }
+
+
+def resolve_bma_stored_dataset_bindings(
+    study_inventory: Mapping[str, Any], dataset_inventory: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Resolve each BMA StudyStep through its adjacent StoreSolution to a dataset.
+
+    The association follows the captured COMSOL solver-tree order and exact
+    ``StoreSolution.sol`` readback. It does not infer roles from sol/dset tag
+    ordering, numeric eigenvalues, or SolutionInfo tuple indexes.
+    """
+    if not isinstance(study_inventory, Mapping) or not isinstance(dataset_inventory, Mapping):
+        raise ScienceProtocolError("study and dataset inventories must be objects")
+    study_tag = study_inventory.get("study_tag")
+    study_steps = study_inventory.get("study_steps_in_configured_order")
+    sequences = study_inventory.get("solver_sequences_for_study")
+    index_receipts = dataset_inventory.get("solution_index_receipts")
+    if (not isinstance(study_tag, str) or not study_tag
+            or not isinstance(study_steps, list) or not isinstance(sequences, list)
+            or not isinstance(index_receipts, list)):
+        raise ScienceProtocolError("study or dataset inventory lacks the exact W23 readback collections")
+
+    step_by_tag: dict[str, Mapping[str, Any]] = {}
+    for row in study_steps:
+        if not isinstance(row, Mapping) or not isinstance(row.get("tag"), str):
+            raise ScienceProtocolError("configured study-step inventory contains a malformed row")
+        if row["tag"] in step_by_tag:
+            raise ScienceProtocolError("configured study-step inventory contains a duplicate tag")
+        step_by_tag[row["tag"]] = row
+    bma_steps = [row for row in study_steps if row.get("feature_type") == "BoundaryModeAnalysis"]
+    if len(bma_steps) != 2:
+        raise ScienceProtocolError("the saved W23 artifact must expose exactly two BoundaryModeAnalysis steps")
+    if any(not isinstance(row.get("PortName"), str) or not row["PortName"].strip()
+           or not isinstance(row.get("modeFreq"), str) or not row["modeFreq"].strip()
+           for row in bma_steps):
+        raise ScienceProtocolError("each BMA step must preserve its actual PortName and modeFreq properties")
+    if len({str(row["PortName"]) for row in bma_steps}) != len(bma_steps):
+        raise ScienceProtocolError("BMA steps do not bind unique native PortName properties")
+
+    attached_sequences = [row for row in sequences if isinstance(row, Mapping)
+                          and row.get("sequence_type") == "SolverSequence"
+                          and row.get("study_tag") == study_tag and row.get("attached") is True]
+    if len(attached_sequences) != 1:
+        raise ScienceProtocolError("study must have exactly one attached SolverSequence with a matching study tag")
+    main_sequence = attached_sequences[0]
+    sequence_tag = main_sequence.get("tag")
+    tree = main_sequence.get("solver_tree_features")
+    step_bindings = main_sequence.get("study_step_bindings_in_solver_tree_order")
+    if (not isinstance(sequence_tag, str) or not isinstance(tree, list)
+            or not isinstance(step_bindings, list)):
+        raise ScienceProtocolError("attached SolverSequence lacks ordered solver-tree bindings")
+    tree_by_order: dict[int, Mapping[str, Any]] = {}
+    for row in tree:
+        if not isinstance(row, Mapping) or type(row.get("tree_order")) is not int:
+            raise ScienceProtocolError("solver-tree row lacks an exact integer tree_order")
+        if row["tree_order"] in tree_by_order:
+            raise ScienceProtocolError("solver-tree contains duplicate tree_order values")
+        tree_by_order[row["tree_order"]] = row
+    if sorted(tree_by_order) != list(range(len(tree_by_order))):
+        raise ScienceProtocolError("solver-tree order is not a contiguous captured traversal")
+    bindings_by_step: dict[str, Mapping[str, Any]] = {}
+    for binding in step_bindings:
+        if not isinstance(binding, Mapping) or binding.get("solver_sequence") != sequence_tag:
+            raise ScienceProtocolError("StudyStep binding is not attributed to the actual SolverSequence")
+        step_name = binding.get("studystep")
+        if not isinstance(step_name, str) or step_name in bindings_by_step:
+            raise ScienceProtocolError("StudyStep binding has a missing or duplicate study step identity")
+        if binding.get("study") != study_tag or type(binding.get("tree_order")) is not int:
+            raise ScienceProtocolError("StudyStep binding does not prove its study and ordered tree position")
+        tree_row = tree_by_order.get(binding["tree_order"])
+        if (not isinstance(tree_row, Mapping) or tree_row.get("feature_type") != "StudyStep"
+                or tree_row.get("path") != binding.get("path")):
+            raise ScienceProtocolError("StudyStep binding does not match the exact solver-tree feature row")
+        bindings_by_step[step_name] = binding
+    ordered_bindings = sorted(bindings_by_step.values(), key=lambda row: row["tree_order"])
+
+    dataset_matches: dict[str, list[Mapping[str, Any]]] = {}
+    for receipt in index_receipts:
+        if not isinstance(receipt, Mapping):
+            raise ScienceProtocolError("dataset solution-index receipt is malformed")
+        dataset = receipt.get("dataset")
+        indices = receipt.get("solution_indices")
+        if (not isinstance(dataset, Mapping) or dataset.get("type_id", "").lower() != "solution"
+                or not isinstance(indices, Mapping)):
+            continue
+        solution = indices.get("solution")
+        tag = dataset.get("tag")
+        if isinstance(solution, str) and isinstance(tag, str):
+            dataset_matches.setdefault(solution, []).append(receipt)
+
+    resolved: list[dict[str, Any]] = []
+    for bma in bma_steps:
+        step_tag = bma["tag"]
+        binding = bindings_by_step.get(step_tag)
+        if binding is None:
+            raise ScienceProtocolError(f"BMA step {step_tag!r} has no exact StudyStep solver-tree binding")
+        current_order = binding["tree_order"]
+        next_orders = [row["tree_order"] for row in ordered_bindings
+                       if row["tree_order"] > current_order]
+        next_order = min(next_orders) if next_orders else len(tree_by_order)
+        stores = [row for order, row in sorted(tree_by_order.items())
+                  if current_order < order < next_order and row.get("feature_type") == "StoreSolution"]
+        if len(stores) != 1:
+            raise ScienceProtocolError(f"BMA step {step_tag!r} must have exactly one following StoreSolution before the next StudyStep")
+        store = stores[0]
+        solution_tag = store.get("stored_solution_reference")
+        if (store.get("stored_solution_reference_getter") != "StoreSolution.getString('sol')"
+                or not isinstance(solution_tag, str) or not solution_tag.strip()
+                or store.get("stored_solution_reference_read_error") is not None):
+            raise ScienceProtocolError(f"BMA step {step_tag!r} StoreSolution.sol readback is unavailable")
+        output_sequence_rows = [row for row in sequences if isinstance(row, Mapping)
+                                and row.get("tag") == solution_tag]
+        if len(output_sequence_rows) != 1:
+            raise ScienceProtocolError(f"StoreSolution points to a missing or duplicate native solution {solution_tag!r}")
+        output_sequence = output_sequence_rows[0]
+        if (output_sequence.get("sequence_type") != "Stored"
+                or output_sequence.get("solution_type") != "Eigenfrequency"
+                or output_sequence.get("study_tag") != study_tag
+                or output_sequence.get("attached") is not False):
+            raise ScienceProtocolError(f"stored BMA solution {solution_tag!r} has an unexpected native sequence identity")
+        matches = dataset_matches.get(solution_tag, [])
+        if len(matches) != 1:
+            raise ScienceProtocolError(f"stored BMA solution {solution_tag!r} must map to exactly one Solution dataset")
+        dataset_receipt = matches[0]
+        dataset_row = dataset_receipt["dataset"]
+        indices = dataset_receipt["solution_indices"]
+        binding_receipt = indices.get("dataset_binding")
+        if (not isinstance(binding_receipt, Mapping)
+                or binding_receipt.get("binding_complete") is not True
+                or binding_receipt.get("solution") != solution_tag):
+            raise ScienceProtocolError(f"dataset for stored BMA solution {solution_tag!r} lacks exact native dataset binding")
+        worker_observation = indices.get("solver_sequence_parameter_observation")
+        reconciled_observation = reconcile_stored_sequence_parameter_observation(
+            output_sequence, worker_observation)
+        if (reconciled_observation.get("pnames") != ["lambda"]
+                or reconciled_observation.get("get_size", [None, None])[1] != 1):
+            raise ScienceProtocolError("a BMA saved mode must expose one raw lambda value before scalar formula checks")
+        resolved.append({
+            "study_step_tag": step_tag,
+            "study_tag": study_tag,
+            "study_step_type": bma["feature_type"],
+            "port_name": str(bma["PortName"]),
+            "mode_frequency_expression": str(bma["modeFreq"]),
+            "solver_sequence_tag": sequence_tag,
+            "study_step_feature_path": binding["path"],
+            "study_step_tree_order": current_order,
+            "store_solution_feature_path": store.get("path"),
+            "store_solution_tree_order": store.get("tree_order"),
+            "store_solution_reference": solution_tag,
+            "store_solution_reference_getter": store.get("stored_solution_reference_getter"),
+            "dataset_tag": dataset_row["tag"],
+            "dataset_solution_property": indices.get("solution"),
+            "dataset_binding": dict(binding_receipt),
+            "solution_info_axis_metadata_complete": indices.get("axis_metadata_complete"),
+            "solution_info_parameters_complete": indices.get("parameters_complete"),
+            "solution_info_read_errors": list(indices.get("read_errors") or []),
+            "sequence_parameter_observation": reconciled_observation,
+            "status": "VERIFIED_STEP_STORE_DATASET_BINDING_ONLY",
+            "science_acceptance": "NOT_EVALUATED",
+        })
+    return {
+        "status": "PASS_BMA_STUDY_STORE_DATASET_BINDINGS",
+        "study_tag": study_tag,
+        "solver_sequence_tag": sequence_tag,
+        "bindings": resolved,
+        "science_acceptance": "NOT_EVALUATED",
+        "solution_info_axis_mapping_repaired": False,
+        "basis": "captured StudyStep.studystep + ordered solver-tree feature + StoreSolution.getString('sol') + production dataset.solution binding",
+    }
+
+
+def decode_production_complex_point_readback(
+    result: Mapping[str, Any], *, dataset_tag: str, solution_tag: str,
+    expressions: Sequence[str], expected_points: Sequence[Sequence[float]],
+    expected_solution_count: int, plane_id: str,
+) -> dict[str, Any]:
+    """Decode one exact stored solution through the public result.at_points path."""
+    if not isinstance(result, Mapping):
+        raise ScienceProtocolError("production result.at_points response must be an object")
+    status = result.get("status")
+    cleanup = result.get("cleanup")
+    if (not isinstance(status, Mapping) or status.get("ok") is not True
+            or not isinstance(cleanup, Mapping) or cleanup.get("cleanup_failed") is True
+            or result.get("complex_mode") != "preserve"
+            or result.get("is_complex") is not True):
+        raise ScienceProtocolError("production result.at_points did not return a clean complex-preserve result")
+    if result.get("dataset") != dataset_tag or result.get("solution") != solution_tag:
+        raise ScienceProtocolError("production result.at_points did not retain the exact dataset/solution identity")
+    binding = result.get("dataset_binding")
+    if (not isinstance(binding, Mapping) or binding.get("binding_complete") is not True
+            or binding.get("solution") != solution_tag):
+        raise ScienceProtocolError("production result.at_points lacks exact native dataset.solution binding")
+    axes = result.get("solution_axes")
+    count_observation = axes.get("numeric_count_observation") if isinstance(axes, Mapping) else None
+    if (not isinstance(axes, Mapping)
+            or axes.get("pair_mapping_complete") is not False
+            or not isinstance(count_observation, Mapping)
+            or count_observation.get("status") != "VERIFIED_SINGLE_STORED_NUMERIC_COUNT"
+            or count_observation.get("numeric_solution_count") != 1
+            or count_observation.get("dataset") != dataset_tag
+            or count_observation.get("solution") != solution_tag
+            or not isinstance(count_observation.get("source"), str)
+            or not count_observation.get("source")):
+        raise ScienceProtocolError(
+            "production point readback lacks the exact stored-solution numeric singleton witness; "
+            "outer/inner SolutionInfo mapping must remain explicitly incomplete")
+    budget = result.get("result_budget")
+    records = budget.get("records") if isinstance(budget, Mapping) else None
+    if (not isinstance(budget, Mapping) or budget.get("status") != "PASS"
+            or not isinstance(records, list) or not records
+            or any(not isinstance(row, Mapping) or row.get("status") != "PASS"
+                   or row.get("allowed") is not True
+                   or row.get("solution_axes_verification_scope") != "numeric_singleton_count_only"
+                   or row.get("solution_axes_pair_mapping_complete") is not False
+                   for row in records)):
+        raise ScienceProtocolError(
+            "production point readback lacks a passed pre-getData numeric budget bound "
+            "that preserves incomplete outer/inner mapping")
+    if result.get("field_array") is not None:
+        raise ScienceProtocolError(
+            "production point readback must not manufacture a FieldArray when tuple axes are unavailable")
+    feature_readback = result.get("feature_readback")
+    if (not isinstance(feature_readback, Mapping)
+            or feature_readback.get("data_status") != "VERIFIED"
+            or feature_readback.get("data") != dataset_tag):
+        raise ScienceProtocolError("production Interp did not verify its native data dataset")
+    coordinate_readback = result.get("coordinate_readback")
+    if not isinstance(coordinate_readback, Mapping) or coordinate_readback.get("status") != "VERIFIED":
+        raise ScienceProtocolError("production Interp coordinate readback is not verified")
+    coordinate_unit = coordinate_readback.get("unit")
+    unit_to_m = {"m": 1.0, "cm": 1e-2, "mm": 1e-3,
+                 "um": 1e-6, "µm": 1e-6, "nm": 1e-9}
+    if coordinate_unit not in unit_to_m:
+        raise ScienceProtocolError("production coordinate readback has no supported native geometry unit")
+    coordinates = coordinate_readback.get("coordinates")
+    if (not isinstance(coordinates, list) or not expected_points
+            or len(coordinates) != len(expected_points[0])
+            or any(not isinstance(row, list) or len(row) != len(expected_points)
+                   for row in coordinates)):
+        raise ScienceProtocolError("production coordinate readback has an unexpected dimension-major shape")
+    expected_dim = len(expected_points[0])
+    if expected_dim < 1 or any(len(point) != expected_dim for point in expected_points):
+        raise ScienceProtocolError("requested point coordinate rows have inconsistent dimensions")
+    coordinates_m: list[list[float]] = [[] for _ in range(expected_dim)]
+    for dimension in range(expected_dim):
+        for point_index, expected in enumerate(expected_points):
+            actual = _as_finite_float(coordinates[dimension][point_index], "native coordinate")
+            if not math.isclose(actual, _as_finite_float(expected[dimension], "requested coordinate"),
+                                rel_tol=1e-10, abs_tol=1e-12):
+                raise ScienceProtocolError("production coordinate readback differs from the requested sample grid")
+            coordinates_m[dimension].append(actual * unit_to_m[coordinate_unit])
+
+    if (isinstance(expected_solution_count, bool) or type(expected_solution_count) is not int
+            or expected_solution_count != 1):
+        raise ScienceProtocolError("this readback route requires exactly one observed stored solution number")
+    if result.get("point_count") != len(expected_points):
+        raise ScienceProtocolError("production result point_count differs from the requested sample count")
+    actual_expressions = result.get("expressions")
+    values = result.get("values")
+    if (not isinstance(expressions, Sequence) or isinstance(expressions, (str, bytes))
+            or not expressions or list(actual_expressions or []) != list(expressions)
+            or not isinstance(values, list) or len(values) != len(expressions)):
+        raise ScienceProtocolError("production complex point values do not match the exact expression list")
+    raw_rows: list[dict[str, Any]] = []
+    for expression, expression_values in zip(expressions, values):
+        if (not isinstance(expression, str) or not isinstance(expression_values, list)
+                or len(expression_values) != expected_solution_count
+                or not isinstance(expression_values[0], list)
+                or len(expression_values[0]) != len(expected_points)):
+            raise ScienceProtocolError(f"production complex result shape is invalid for {expression!r}")
+        row = {"expression": expression, "real": [], "imag": []}
+        for point_index, value in enumerate(expression_values[0]):
+            if not isinstance(value, Mapping) or not {"real", "imag"} <= set(value):
+                raise ScienceProtocolError(f"complex result for {expression!r} point {point_index} lacks real/imag")
+            item = _finite_complex_row(value.get("real"), value.get("imag"), label=expression)
+            row["real"].append(item.real)
+            row["imag"].append(item.imag)
+        raw_rows.append(row)
+    return {
+        "status": "PRODUCTION_NATIVE_COMPLEX_POINT_READBACK",
+        "scope": "exact dataset-bound single stored solution; sample identity/values only, not a native integral or scientific acceptance",
+        "operation": "result.at_points",
+        "dataset": dataset_tag, "solution": solution_tag,
+        "plane": plane_id,
+        "sample_count": len(expected_points),
+        "complex_readback": True,
+        "coordinates_m": coordinates_m,
+        "coordinate_geometry_unit": coordinate_unit,
+        "expression_units": dict(result.get("expression_units") or {}),
+        "expressions": raw_rows,
+        "normal_sign": None,
+        "normal_status": "NOT_CAPTURED_BY_POINT_INTERPOLATION",
+        "science_acceptance": "NOT_EVALUATED",
+    }
+
+
 def _plane_coordinates(raw: Mapping[str, Any], *, expected_x_m: float) -> tuple[list[float], int, int]:
     sample_count = raw.get("sample_count")
     coordinates = raw.get("coordinates_m")

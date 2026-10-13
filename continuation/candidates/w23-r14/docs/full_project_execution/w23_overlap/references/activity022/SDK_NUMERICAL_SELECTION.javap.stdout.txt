@@ -1,0 +1,77 @@
+Compiled from "SourceFile"
+public interface com.comsol.model.NumericalFeature extends com.comsol.model.NumericalBaseFeature,com.comsol.model.ResultBaseFeature {
+  public abstract void appendResult();
+  public abstract double[][][] computeResult();
+  public abstract com.comsol.model.PropFeatureList<com.comsol.model.PropFeature> feature();
+  public abstract double[][][] getComplex();
+  public abstract double[][][] getComplex(boolean);
+  public abstract double[][][] getComplex(int);
+  public abstract double[][][] getComplex(boolean, int);
+  public abstract double[][] getCoordinates();
+  public abstract double[][][] getData();
+  public abstract double[][] getData(int);
+  public abstract int[][] getElements();
+  public abstract double[][] getImag();
+  public abstract double[][] getImag(int);
+  public abstract double[][] getImag(boolean, boolean);
+  public abstract double[][] getImag(boolean, boolean, int);
+  public abstract double[][][] getImagData();
+  public abstract double[][] getImagData(int);
+  public abstract int getNData();
+  public abstract int getNData(int);
+  public abstract double[][] getReal();
+  public abstract double[][] getReal(boolean);
+  public abstract double[][] getReal(int);
+  public abstract double[][] getReal(boolean, int);
+  public abstract int[] getVertexElements();
+  public abstract boolean isComplex();
+  public abstract boolean isComplex(int);
+  public abstract void run();
+  public abstract void setInterpolationCoordinates(double[][]);
+  public abstract void setResult();
+}
+Compiled from "SourceFile"
+public interface com.comsol.model.Selection extends com.comsol.model.AbstractSelection {
+  public abstract com.comsol.model.Selection add(int...);
+  public abstract com.comsol.model.Selection all();
+  public abstract com.comsol.model.Selection allGeom();
+  public abstract com.comsol.model.Selection allVoids();
+  public abstract com.comsol.model.Selection allgeom();
+  public abstract com.comsol.model.Selection clear();
+  public abstract int[] dom(int);
+  public abstract int[] entities();
+  public abstract int[] entities(int);
+  public abstract com.comsol.model.Selection geom(java.lang.String);
+  public abstract com.comsol.model.Selection geom(int);
+  public abstract com.comsol.model.Selection geom(java.lang.String, int);
+  public abstract com.comsol.model.Selection geom(java.lang.String, int, int, java.lang.String[]);
+  public abstract com.comsol.model.Selection global();
+  public abstract com.comsol.model.Selection inherit(boolean);
+  public abstract int inputDimension();
+  public abstract int[] inputEntities();
+  public abstract int[] interiorEntities(int);
+  public abstract int[] interiordom(int);
+  public abstract boolean isGeom();
+  public abstract boolean isGlobal();
+  public abstract boolean isInheriting();
+  public abstract boolean isgeom();
+  public abstract boolean isglobal();
+  public abstract boolean isinheriting();
+  public abstract int[] meshControlEntities(int);
+  public abstract com.comsol.model.Selection remove(int...);
+  public abstract com.comsol.model.Selection set(int...);
+}
+Compiled from "SourceFile"
+public interface com.comsol.model.LocalSelection extends com.comsol.model.Selection {
+  public abstract boolean embedded();
+  public abstract com.comsol.model.LocalSelection embedded(boolean);
+  public abstract com.comsol.model.EmbeddedSelection embeddedSelection();
+  public abstract java.lang.String named();
+  public abstract com.comsol.model.LocalSelection named(java.lang.String);
+}
+Compiled from "SourceFile"
+public interface com.comsol.model.AbstractSelection extends com.comsol.model.ModelEntity {
+  public abstract int dim();
+  public abstract int[] dimension();
+  public abstract java.lang.String geom();
+}

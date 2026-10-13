@@ -1,0 +1,218 @@
+{
+  "base_commit": "799bf7a0fa95313e7659f44d8ff40ff1678314d5",
+  "created_at_local": "2026-10-12",
+  "evidence_classification": "SOFTWARE_ONLY",
+  "final_regression": {
+    "command": [
+      "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python",
+      "/Volumes/SSD/Comsol-MCP/execution-scratch/temp-loss-runtime-recovery-20261004-001/builder-preparation022/network-guard/guarded_entry.py",
+      "exec",
+      "pytest.main(['tests/test_w26_memory_resources.py','tests/test_w26_os_resources.py','-q','--basetemp=/private/tmp/w26-memory-resources-r7-pytest','--junitxml=docs/full_project_continuation_v2/evidence/w26_memory_resources_r3/junit-r7.xml'])"
+    ],
+    "guard_log": {
+      "path": "docs/full_project_continuation_v2/evidence/w26_memory_resources_r3/network-guard-r7.jsonl",
+      "sha256": "053a2ab3dae2cdc535a7b9d1b74ac9c69644a6e5e0505b6475b70e2bfbdbf5d0",
+      "size_bytes": 244
+    },
+    "junit": {
+      "path": "docs/full_project_continuation_v2/evidence/w26_memory_resources_r3/junit-r7.xml",
+      "sha256": "8c81f7aad1f6a20162e32a1c12f195410ab4b4c5b2bead68cf8a9b80a96a4eab",
+      "size_bytes": 8994
+    },
+    "native_observation": "macOS read-only Mach/sysctl observer exercised; Windows GlobalMemoryStatusEx NOT_RUN",
+    "no_comsol_or_gui": true,
+    "runtime": "Python 3.12 bundled recovery runtime; strict local network guard active",
+    "summary": {
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "tests": 59
+    }
+  },
+  "limitations": [
+    "Memory is host-wide admission accounting only; no kernel hard cap or per-process enforcement is implemented.",
+    "Windows memory ABI is implemented but Windows kernel/runtime execution was NOT_RUN.",
+    "Disk quota/hard-quota enforcement and T037 isolation policy issuer/SCM/WFP deployment remain separate open requirements."
+  ],
+  "owned_source_files": [
+    {
+      "path": "comsol_mcp/_w26_memory_resources.py",
+      "sha256": "cd1a77df59a1ddb5ad9dbf663f2c9f00953f149a34c1f674dc042deb2b56653d",
+      "size_bytes": 65401
+    },
+    {
+      "path": "comsol_mcp/_w26_os_resources.py",
+      "sha256": "a15afd91ec64b2885dcb3ea1e52c4ab848bc472efd4b74eebd573795ec16a6e1",
+      "size_bytes": 134165
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "sha256": "10fa0f3f8fdd34c0fb31c9be5b3866349a60b9c001a1f339ca8920724858b6eb",
+      "size_bytes": 797228
+    },
+    {
+      "path": "tests/test_w26_memory_resources.py",
+      "sha256": "c13fb669e4b762b677a05dc2dc29f322c3f961be0e13489c9d09e75bd889472b",
+      "size_bytes": 10309
+    },
+    {
+      "path": "tests/test_w26_os_resources.py",
+      "sha256": "9efb790432d8a3d47989e6a602ee02da5c9da74adeed7349bd2961db331748e3",
+      "size_bytes": 89976
+    },
+    {
+      "path": "docs/full_project_continuation_v2/MEMORY_RESOURCE_CONFIG.md",
+      "sha256": "e759b12770df737d06b5057d821a4c10f92c3e161e858d0950853271c86c8fd8",
+      "size_bytes": 3148
+    }
+  ],
+  "preservation_snapshot": "local-preservation/w26_memory_admission_20261012_r1",
+  "preserved_prior_runs": [
+    {
+      "path": "docs/full_project_continuation_v2/evidence/w26_memory_resources_r2/junit.xml",
+      "sha256": "d592a4049369690c048454cd1aeef4d2f29430a346c0b3d374be8835a7d79c37",
+      "size_bytes": 12110
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/w26_memory_resources_r2/network-guard.jsonl",
+      "sha256": "43eae835d0804fcf043c8105e727b3416962a29cb97d2930e0c22d1d355d364e",
+      "size_bytes": 228
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/w26_memory_resources_r3/junit-r4.xml",
+      "sha256": "c4832fa950fe12bcc78fb30914442e82917caa93fc2d7748f71d5b2f83fd5257",
+      "size_bytes": 10835
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/w26_memory_resources_r3/network-guard-r4.jsonl",
+      "sha256": "fbe1e30e7e0d2978382cd5ac19451be026153a07932edbbdbcd1fe572d5ec4db",
+      "size_bytes": 244
+    }
+  ],
+  "runtime_dependency_files": [
+    {
+      "path": "comsol_mcp/_host_scoped_provider.py",
+      "sha256": "5b3cc6f7f619752b04423c4a5336a6f776634b6fa28cde4c8ff24e2e54d50e6f",
+      "size_bytes": 53837
+    },
+    {
+      "path": "comsol_mcp/_project_authority.py",
+      "sha256": "82b90c1157b242f80feb9079ac4b58e2a1295719a7a323a97532497a740181a8",
+      "size_bytes": 32352
+    },
+    {
+      "path": "comsol_mcp/_operation_store.py",
+      "sha256": "d9d6c3d54ff4afc625f28f5e70595fd23f6a899e05863a9cdf0b05711a0808fa",
+      "size_bytes": 226849
+    },
+    {
+      "path": "comsol_mcp/_execution_contract.py",
+      "sha256": "dbb112cbbdef9a4d45f69c230123d4e9e57f7b71e337532d83989aa827e6c9e3",
+      "size_bytes": 22753
+    },
+    {
+      "path": "comsol_mcp/_g3_ops.py",
+      "sha256": "d456796622636eeb6eab7b0176901892effc84261ae0d699a6dd801dbb31287a",
+      "size_bytes": 10349
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "sha256": "b44933b14790f5f6b60a733adbac9082654ec76261a08df8f45d7e1c1e9c5280",
+      "size_bytes": 128719
+    },
+    {
+      "path": "comsol_mcp/_execution_service.py",
+      "sha256": "5ba2f22b4d0a59507164d2b9f5891845face36fc2f85ec6a27c4bd6fff2f20e2",
+      "size_bytes": 30057
+    },
+    {
+      "path": "comsol_mcp/_java_worker.py",
+      "sha256": "a077b57b74e036ebd363b1a64e4b801a1000f57b3d7356d4238a331015f16710",
+      "size_bytes": 65883
+    },
+    {
+      "path": "comsol_mcp/_windows_t037.py",
+      "sha256": "68a9c47a9be9c806156cc005d538d2b826effa08cf9f4b36ac48576e06b4bf30",
+      "size_bytes": 75416
+    }
+  ],
+  "schema": "comsol-mcp.memory-admission-source-freeze/v1",
+  "scope_fingerprint_sha256": "6cf03914733365d3c7563070090c06c014a17ed027793543656ed3962787b9d4",
+  "snapshot_files": [
+    {
+      "path": "local-preservation/w26_memory_admission_20261012_r1/comsol_mcp/_w26_memory_resources.py",
+      "sha256": "cd1a77df59a1ddb5ad9dbf663f2c9f00953f149a34c1f674dc042deb2b56653d",
+      "size_bytes": 65401
+    },
+    {
+      "path": "local-preservation/w26_memory_admission_20261012_r1/comsol_mcp/_w26_os_resources.py",
+      "sha256": "a15afd91ec64b2885dcb3ea1e52c4ab848bc472efd4b74eebd573795ec16a6e1",
+      "size_bytes": 134165
+    },
+    {
+      "path": "local-preservation/w26_memory_admission_20261012_r1/comsol_mcp/_control_daemon.py",
+      "sha256": "10fa0f3f8fdd34c0fb31c9be5b3866349a60b9c001a1f339ca8920724858b6eb",
+      "size_bytes": 797228
+    },
+    {
+      "path": "local-preservation/w26_memory_admission_20261012_r1/tests/test_w26_memory_resources.py",
+      "sha256": "c13fb669e4b762b677a05dc2dc29f322c3f961be0e13489c9d09e75bd889472b",
+      "size_bytes": 10309
+    },
+    {
+      "path": "local-preservation/w26_memory_admission_20261012_r1/tests/test_w26_os_resources.py",
+      "sha256": "9efb790432d8a3d47989e6a602ee02da5c9da74adeed7349bd2961db331748e3",
+      "size_bytes": 89976
+    },
+    {
+      "path": "local-preservation/w26_memory_admission_20261012_r1/docs/full_project_continuation_v2/MEMORY_RESOURCE_CONFIG.md",
+      "sha256": "e759b12770df737d06b5057d821a4c10f92c3e161e858d0950853271c86c8fd8",
+      "size_bytes": 3148
+    },
+    {
+      "path": "local-preservation/w26_memory_admission_20261012_r1/comsol_mcp/_host_scoped_provider.py",
+      "sha256": "5b3cc6f7f619752b04423c4a5336a6f776634b6fa28cde4c8ff24e2e54d50e6f",
+      "size_bytes": 53837
+    },
+    {
+      "path": "local-preservation/w26_memory_admission_20261012_r1/comsol_mcp/_project_authority.py",
+      "sha256": "82b90c1157b242f80feb9079ac4b58e2a1295719a7a323a97532497a740181a8",
+      "size_bytes": 32352
+    },
+    {
+      "path": "local-preservation/w26_memory_admission_20261012_r1/comsol_mcp/_operation_store.py",
+      "sha256": "d9d6c3d54ff4afc625f28f5e70595fd23f6a899e05863a9cdf0b05711a0808fa",
+      "size_bytes": 226849
+    },
+    {
+      "path": "local-preservation/w26_memory_admission_20261012_r1/comsol_mcp/_execution_contract.py",
+      "sha256": "dbb112cbbdef9a4d45f69c230123d4e9e57f7b71e337532d83989aa827e6c9e3",
+      "size_bytes": 22753
+    },
+    {
+      "path": "local-preservation/w26_memory_admission_20261012_r1/comsol_mcp/_g3_ops.py",
+      "sha256": "d456796622636eeb6eab7b0176901892effc84261ae0d699a6dd801dbb31287a",
+      "size_bytes": 10349
+    },
+    {
+      "path": "local-preservation/w26_memory_admission_20261012_r1/comsol_mcp/_g2_registry.py",
+      "sha256": "b44933b14790f5f6b60a733adbac9082654ec76261a08df8f45d7e1c1e9c5280",
+      "size_bytes": 128719
+    },
+    {
+      "path": "local-preservation/w26_memory_admission_20261012_r1/comsol_mcp/_execution_service.py",
+      "sha256": "5ba2f22b4d0a59507164d2b9f5891845face36fc2f85ec6a27c4bd6fff2f20e2",
+      "size_bytes": 30057
+    },
+    {
+      "path": "local-preservation/w26_memory_admission_20261012_r1/comsol_mcp/_java_worker.py",
+      "sha256": "a077b57b74e036ebd363b1a64e4b801a1000f57b3d7356d4238a331015f16710",
+      "size_bytes": 65883
+    },
+    {
+      "path": "local-preservation/w26_memory_admission_20261012_r1/comsol_mcp/_windows_t037.py",
+      "sha256": "68a9c47a9be9c806156cc005d538d2b826effa08cf9f4b36ac48576e06b4bf30",
+      "size_bytes": 75416
+    }
+  ]
+}

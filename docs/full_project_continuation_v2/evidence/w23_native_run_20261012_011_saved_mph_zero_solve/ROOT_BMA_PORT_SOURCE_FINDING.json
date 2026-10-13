@@ -1,0 +1,52 @@
+{
+  "candidate19_r2_immutable": true,
+  "executed_activity011_state_unchanged": "FAIL_FIRST_UNIT_GATE; NO_BMA_POINT_READS_CAPTURED",
+  "existing_consistent_source": {
+    "input_neff_line": 2902,
+    "output_neff_line": 2900,
+    "path": "tools/run_native_w23_te_science.py",
+    "values": [
+      "ewfd.neff_2",
+      "ewfd.neff_1"
+    ]
+  },
+  "finding_id": "W23-SAVED-READBACK-PORT-01",
+  "native_acceptance": "NOT_RUN_FOR_SUCCESSOR",
+  "primary_source": {
+    "chunk_id": 99065,
+    "doc_id": 22515,
+    "doc_sha256": "d2a8396f4424aba81b15a93a4c4f8d0c84778c9cb3a2fc9fe6d8131ecafbad0c",
+    "pdf_page": 25,
+    "response_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_011_saved_mph_zero_solve/ROOT_PRIMARY_BMA_PORT_EXPRESSIONS.json",
+    "response_sha256": "e68414d9f3957e25f85b0e99f4971fb56c43251e39d465bf55af82c877361293",
+    "scope": "Official tapered waveguide example distinguishes input/output propagation constants beta_1/beta_2. The ewbe example supports port indexing, not this ewfd model numerical acceptance."
+  },
+  "priority": "W24 preflight first; integrate alongside W23 physical unit successor before any saved-readback native approval",
+  "recorded_at_utc": "2026-10-12T01:11:28.067753+00:00",
+  "required_correction": "Derive exact expression suffix only from validated native port_name 1/2 and exact BMA store/dataset binding; use same per-port expressions in dispatch allowlist, requested units, actual readback decoder, formula crosscheck and neff physics gate. Reject wrong-port expressions even if numerical values happen to match. Preserve units/raw provenance and physical gate tolerances.",
+  "schema_version": 1,
+  "source_findings": [
+    {
+      "finding": "MODE_POINT_EXPRESSIONS and mode index check use ewfd.beta_1/ewfd.neff_1 for both bmaInput port1 and bmaOutput port2 despite exact dset3/sol3/PortName2 binding.",
+      "lines": [
+        67,
+        77,
+        1184,
+        1193,
+        1201,
+        1212
+      ],
+      "path": "tools/run_native_w23_saved_mph_diagnostic.py"
+    },
+    {
+      "finding": "reconcile_bma_mode_point_readbacks extracts and validates only suffix1 beta/neff for both port roles.",
+      "lines": [
+        931,
+        936,
+        941
+      ],
+      "path": "tools/w23_te_science_protocol.py"
+    }
+  ],
+  "status": "CHANGES_REQUIRED_IN_SUCCESSOR_SOURCE"
+}

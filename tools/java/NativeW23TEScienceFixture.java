@@ -5,6 +5,7 @@ import com.comsol.model.NumericalFeature;
 import com.comsol.model.ParameterEntity;
 import com.comsol.model.PropFeature;
 import com.comsol.model.SelectionFeature;
+import com.comsol.model.SolutionInfo;
 import com.comsol.model.StudyFeature;
 import com.comsol.model.SolverFeature;
 import com.comsol.model.SolverSequence;
@@ -254,20 +255,26 @@ public final class NativeW23TEScienceFixture {
             studySteps.add(row);
         }
         String[] solverSequenceTags = model.study("std1").getSolverSequences("SolverSequence");
+        List<String> allSolverTags = Arrays.asList(model.sol().tags());
         List<Map<String, Object>> solverSequences = new ArrayList<>();
-        for (String sequenceTag : solverSequenceTags) {
+        for (String sequenceTag : allSolverTags) {
             SolverSequence sequence = model.sol(sequenceTag);
             Map<String, Object> sequenceRow = new LinkedHashMap<>();
             sequenceRow.put("tag", sequenceTag);
-            sequenceRow.put("feature_type", sequence.getType());
-            List<Map<String, Object>> studyStepBindings = new ArrayList<>();
-            List<Map<String, Object>> solverTree = new ArrayList<>();
-            for (String featureTag : sequence.feature().tags()) {
-                collectSolverFeature(sequence.feature(featureTag), featureTag,
-                        solverTree, studyStepBindings);
+            captureSolverSequenceMetadata(sequence, sequenceRow);
+            if (Arrays.asList(solverSequenceTags).contains(sequenceTag)) {
+                List<Map<String, Object>> studyStepBindings = new ArrayList<>();
+                List<Map<String, Object>> solverTree = new ArrayList<>();
+                for (String featureTag : sequence.feature().tags()) {
+                    collectSolverFeature(sequence.feature(featureTag), featureTag,
+                            solverTree, studyStepBindings);
+                }
+                for (Map<String, Object> binding : studyStepBindings) {
+                    binding.put("solver_sequence", sequenceTag);
+                }
+                sequenceRow.put("solver_tree_features", solverTree);
+                sequenceRow.put("study_step_bindings_in_solver_tree_order", studyStepBindings);
             }
-            sequenceRow.put("solver_tree_features", solverTree);
-            sequenceRow.put("study_step_bindings_in_solver_tree_order", studyStepBindings);
             solverSequences.add(sequenceRow);
         }
         List<Map<String, Object>> datasets = new ArrayList<>();
@@ -287,6 +294,7 @@ public final class NativeW23TEScienceFixture {
             datasets.add(row);
         }
         result.put("fixture_id", FIXTURE_ID);
+        result.put("study_tag", "std1");
         result.put("study_steps_in_configured_order", studySteps);
         result.put("solver_sequences_for_study", solverSequences);
         result.put("solver_sequence_query_type", "SolverSequence");
@@ -305,12 +313,14 @@ public final class NativeW23TEScienceFixture {
                                              List<Map<String, Object>> bindings) {
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("path", path);
+        row.put("tree_order", tree.size());
         String type = feature.getType();
         row.put("feature_type", type);
         tree.add(row);
         if ("StudyStep".equals(type)) {
             Map<String, Object> binding = new LinkedHashMap<>();
             binding.put("path", path);
+            binding.put("tree_order", row.get("tree_order"));
             binding.put("feature_type", type);
             for (String property : new String[]{"study", "studystep"}) {
                 if (feature.hasProperty(property)) {
@@ -323,10 +333,106 @@ public final class NativeW23TEScienceFixture {
             }
             bindings.add(binding);
         }
+        if ("StoreSolution".equals(type) && feature.hasProperty("sol")) {
+            try {
+                row.put("stored_solution_reference", feature.getString("sol"));
+                row.put("stored_solution_reference_getter", "StoreSolution.getString('sol')");
+            } catch (Throwable error) {
+                row.put("stored_solution_reference_read_error", error.toString());
+            }
+        }
         for (String childTag : feature.feature().tags()) {
             collectSolverFeature(feature.feature(childTag), path + "/" + childTag,
                     tree, bindings);
         }
+    }
+
+    private static void captureSolverSequenceMetadata(SolverSequence sequence,
+                                                       Map<String, Object> row) {
+        try { row.put("solution_type", sequence.getType()); }
+        catch (Throwable error) { row.put("solution_type_read_error", error.toString()); }
+        try { row.put("sequence_type", sequence.getSequenceType()); }
+        catch (Throwable error) { row.put("sequence_type_read_error", error.toString()); }
+        try { row.put("study_tag", sequence.study()); }
+        catch (Throwable error) { row.put("study_tag_read_error", error.toString()); }
+        try { row.put("attached", sequence.isAttached()); }
+        catch (Throwable error) { row.put("attached_read_error", error.toString()); }
+        int[] size = null;
+        try {
+            size = sequence.getSize();
+            row.put("get_size", safeIntList(size));
+            row.put("get_size_semantics", "COMSOL 6.4: [degrees_of_freedom, solution_number_count]");
+        } catch (Throwable error) {
+            row.put("get_size_read_error", error.toString());
+        }
+        String[] parameterNames = null;
+        try {
+            parameterNames = sequence.getPNames();
+            row.put("pnames", safeStringList(parameterNames));
+        } catch (Throwable error) {
+            row.put("pnames_read_error", error.toString());
+        }
+        String sequenceType = null;
+        try { sequenceType = sequence.getSequenceType(); }
+        catch (Throwable ignored) { /* the first failure is already preserved above */ }
+        String solutionType = null;
+        try { solutionType = sequence.getType(); }
+        catch (Throwable ignored) { /* the first failure is already preserved above */ }
+        if (!"SolverSequence".equals(sequenceType) && !"Stored".equals(sequenceType)) {
+            row.put("parameter_values_status", "NOT_APPLICABLE_BY_DOCUMENTED_SEQUENCE_TYPE");
+            return;
+        }
+        if (size == null || size.length != 2 || size[1] < 1 || size[1] > 4096) {
+            row.put("parameter_values_status", "UNVERIFIED_SIZE_SHAPE_OR_COUNT");
+            return;
+        }
+        if (parameterNames == null || parameterNames.length == 0) {
+            row.put("parameter_values_status", "UNVERIFIED_PARAMETER_NAMES_UNAVAILABLE");
+            return;
+        }
+        List<Map<String, Object>> parameterValues = new ArrayList<>();
+        SolutionInfo solutionInfo = null;
+        try { solutionInfo = sequence.getSolutioninfo(); }
+        catch (Throwable error) { row.put("solution_info_read_error", error.toString()); }
+        for (int solnum = 1; solnum <= size[1]; solnum++) {
+            Map<String, Object> valueRow = new LinkedHashMap<>();
+            valueRow.put("solnum", solnum);
+            try {
+                double[] real = sequence.getPVals(solnum);
+                valueRow.put("real", safeDoubleList(real));
+            } catch (Throwable error) {
+                valueRow.put("real_read_error", error.toString());
+            }
+            try {
+                double[] imaginary = sequence.getPValsImag(solnum);
+                valueRow.put("imaginary", safeDoubleList(imaginary));
+            } catch (Throwable error) {
+                valueRow.put("imaginary_read_error", error.toString());
+            }
+            List<Map<String, Object>> units = new ArrayList<>();
+            for (String name : parameterNames) {
+                Map<String, Object> unitRow = new LinkedHashMap<>();
+                unitRow.put("name", name);
+                if (solutionInfo == null) {
+                    unitRow.put("status", "UNAVAILABLE_NO_SOLUTION_INFO");
+                } else {
+                    try {
+                        unitRow.put("value", solutionInfo.getUnit(name));
+                        unitRow.put("status", "OBSERVED");
+                    } catch (Throwable error) {
+                        unitRow.put("read_error", error.toString());
+                        unitRow.put("status", "UNVERIFIED");
+                    }
+                }
+                units.add(unitRow);
+            }
+            valueRow.put("parameter_units", units);
+            parameterValues.add(valueRow);
+        }
+        row.put("parameter_values_by_solnum", parameterValues);
+        row.put("parameter_values_status", "RAW_TYPED_COMPLEX_VALUES_CAPTURED_NOT_INTERPRETED");
+        row.put("parameter_values_receiver", "model.sol(" + sequence.tag() + ")");
+        row.put("parameter_axis_interpretation", "No outer/inner tuple mapping, unit conversion, or physical role inferred");
     }
 
     private static Map<String, Object> rawFields(Model model, Map<String, Object> args) {
@@ -585,6 +691,12 @@ public final class NativeW23TEScienceFixture {
     private static List<Integer> safeIntList(int[] values) {
         List<Integer> result = new ArrayList<>();
         if (values != null) for (int value : values) result.add(value);
+        return result;
+    }
+
+    private static List<Double> safeDoubleList(double[] values) {
+        List<Double> result = new ArrayList<>();
+        if (values != null) for (double value : values) result.add(value);
         return result;
     }
 }

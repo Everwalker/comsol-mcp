@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/prepare_context.py", line 35, in <module>
+    raw,record=read_regular(Path(p));primaries[p]=record
+               ~~~~~~~~~~~~^^^^^^^^^
+  File "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-helper-successor-r2/strict_derived.py", line 18, in read_regular
+    if not stat.S_ISREG(s.st_mode) or s.st_uid!=os.getuid() or s.st_nlink!=1 or s.st_size>limit or s.st_mode&0o022:raise Refusal('untrusted or oversized regular input')
+                                                                                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+native_parser.Refusal: untrusted or oversized regular input

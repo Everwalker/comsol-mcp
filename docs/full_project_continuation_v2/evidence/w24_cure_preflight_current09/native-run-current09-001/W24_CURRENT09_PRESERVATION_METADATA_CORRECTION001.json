@@ -1,0 +1,83 @@
+{
+  "schema": "comsol-w24-current09-preservation-metadata-correction-v1",
+  "created_at_utc": "2026-10-12T04:45:02.487624+00:00",
+  "status": "APPEND_ONLY_CORRECTION; original reconciliation bytes retained unchanged",
+  "original_receipt": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/native-run-current09-001/W24_CURRENT09_PRESERVATION_RECONCILIATION.json",
+    "bytes": 21057,
+    "sha256": "9810331ee13afbf4dd8d198b88fc4656c1d9f30eb6243ab14b05b36e46b62421"
+  },
+  "corrections": [
+    {
+      "field": "dispatch_and_terminal.worker_request_id",
+      "old_value": null,
+      "corrected_value": "dfdc0348-3fa2-4945-a304-a3c488b35850",
+      "basis": [
+        {
+          "artifact": {
+            "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/native-run-current09-001/summary.json",
+            "bytes": 626797,
+            "sha256": "dfa727c7e33f841e725ccea310124d377563c92a4a7da8e77317194de1e3a460"
+          },
+          "json_pointer": "/unknown_project_jobs/0/operation/result/data/worker/request_id"
+        },
+        {
+          "artifact": {
+            "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/native-run-current09-001/worker_ledger_reconciliation.json",
+            "bytes": 31306,
+            "sha256": "a5eb6e34126e32223e60273c273bc45bd64e43569f61563bfaab10520bbf04ca"
+          },
+          "json_pointer": "/durable_result/project_jobs_unknown_preserved/0/operation/result/data/worker/request_id"
+        },
+        {
+          "artifact": {
+            "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/native-run-current09-001/worker_ledger_reconciliation.json",
+            "bytes": 31306,
+            "sha256": "a5eb6e34126e32223e60273c273bc45bd64e43569f61563bfaab10520bbf04ca"
+          },
+          "json_pointer": "/worker_inventory/requests/dfdc0348-3fa2-4945-a304-a3c488b35850/submitted/0/request_id"
+        }
+      ]
+    },
+    {
+      "field": "failure_interpretation",
+      "replacement": "The Java W24CureCouponFixture#run count predicate threw IllegalStateException: mesh element type counts do not bind a nonempty triangle mesh. The runner received the Worker failure and preserved the request as execution_state_unknown/domain_state=unknown; it did not independently reject a successful mesh result. Actual getter counts/arrays were NOT_CAPTURED because the Java predicate terminated before producing native_mesh_raw.",
+      "basis": [
+        {
+          "artifact": {
+            "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/native-run-current09-001/summary.json",
+            "bytes": 626797,
+            "sha256": "dfa727c7e33f841e725ccea310124d377563c92a4a7da8e77317194de1e3a460"
+          },
+          "json_pointer": "/unknown_project_jobs/0/operation/result/data/worker/failure/message"
+        },
+        {
+          "artifact": {
+            "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/native-run-current09-001/summary.json",
+            "bytes": 626797,
+            "sha256": "dfa727c7e33f841e725ccea310124d377563c92a4a7da8e77317194de1e3a460"
+          },
+          "json_pointer": "/error/traceback"
+        },
+        {
+          "artifact": {
+            "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/native-run-current09-001/precleanup_job_inventory.json",
+            "bytes": 50182,
+            "sha256": "f8a533a20714102762403430beb4eddc558e5bd0c0145208f07f5664972bf3ec"
+          },
+          "json_pointer": "/unknown/0/result/data/worker/failure/message"
+        }
+      ]
+    }
+  ],
+  "unchanged_classification": {
+    "job_id": "bd23c4a1-f492-4f0f-b36c-b8b5c5240063",
+    "operation_id": "dfdc0348-3fa2-4945-a304-a3c488b35850",
+    "caller_request_id": "w24-build-request-34ab079a-9929-46a8-a41c-abb7740cdfba",
+    "durable_domain_state": "unknown",
+    "safe_retry": false,
+    "native_solve_submissions": 0,
+    "internal_solver_execution_count": "UNKNOWN",
+    "scientific_acceptance": "NOT_ACCEPTED"
+  }
+}

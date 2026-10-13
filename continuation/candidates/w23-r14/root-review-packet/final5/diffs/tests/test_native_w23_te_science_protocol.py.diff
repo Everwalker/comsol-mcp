@@ -1,0 +1,192 @@
+--- /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/tests/test_native_w23_te_science_protocol.py
++++ /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/tests/test_native_w23_te_science_protocol.py
+@@ -102,24 +102,19 @@
+         normal_sign = 1 if plane == "output_x8" else -1
+     y = [-8e-6 + 16e-6 * index / (n - 1) for index in range(n)]
+     coordinates = [[x] * n, y]
+-    names = [
+-        "ewfd.Ex", "ewfd.Ey", "ewfd.Ez", "ewfd.Hx", "ewfd.Hy", "ewfd.Hz",
+-        "ewfd.Emodex_2", "ewfd.Emodey_2", "ewfd.Emodez_2",
+-        "ewfd.Hmodex_2", "ewfd.Hmodey_2", "ewfd.Hmodez_2",
+-        "ewfd.Emodex_1", "ewfd.Emodey_1", "ewfd.Emodez_1",
+-        "ewfd.Hmodex_1", "ewfd.Hmodey_1", "ewfd.Hmodez_1", "nx", "ny",
+-    ]
++    from tools.run_native_w23_saved_mph_diagnostic import plane_field_expressions
++    names = list(plane_field_expressions("2" if plane=="output_x8" else "1"))
+     values: dict[str, list[complex]] = {name: [0j] * n for name in names}
+     if plane == "output_x8":
+-        values["ewfd.Ez"] = [phase * (2 + 1j)] * n
+-        values["ewfd.Hy"] = [phase * (-1 + 0.5j)] * n
+-        values["ewfd.Emodez_2"] = [rotate_mode * (1 - 0.25j)] * n
+-        values["ewfd.Hmodey_2"] = [rotate_mode * (-0.5 - 0.75j)] * n
++        values["down(emw.Ez)"] = [phase * (2 + 1j)] * n
++        values["down(emw.Hy)"] = [phase * (-1 + 0.5j)] * n
++        values["emw.Emodez_2"] = [rotate_mode * (1 - 0.25j)] * n
++        values["emw.Hmodey_2"] = [rotate_mode * (-0.5 - 0.75j)] * n
+     else:
+-        values["ewfd.Emodez_1"] = [phase * (1 + 0.5j)] * n
+-        values["ewfd.Hmodey_1"] = [phase * (-0.75 + 0.25j)] * n
+-    values["nx"] = [complex(normal_x)] * n
+-    values["ny"] = [0j] * n
++        values["emw.Emodez_1"] = [phase * (1 + 0.5j)] * n
++        values["emw.Hmodey_1"] = [phase * (-0.75 + 0.25j)] * n
++    values["emw.nx"] = [complex(normal_x)] * n
++    values["emw.ny"] = [0j] * n
+     expressions = [{"expression": name,
+                     "real": [value.real for value in values[name]],
+                     "imag": [value.imag for value in values[name]]}
+@@ -333,11 +328,11 @@
+             "status": "PRODUCTION_NATIVE_COMPLEX_POINT_READBACK", "native_is_complex": True, "dataset": dataset,
+             "solution": solution, "sample_count": 1,
+             "requested_unit_application": _requested_unit_application(protocol.bma_point_expressions(port), ["1/m", "1", "1/m"]),
+-            "expression_units": {f"ewfd.beta_{port}": "1/m", f"ewfd.neff_{port}": "1", "ewfd.k0": "1/m"},
++            "expression_units": {f"emw.beta_{port}": "1/m", f"emw.neff_{port}": "1", "emw.k0": "1/m"},
+             "expressions": [
+-                {"expression": f"ewfd.beta_{port}", "real": [k0 * neff], "imag": [0.0]},
+-                {"expression": f"ewfd.neff_{port}", "real": [neff], "imag": [0.0]},
+-                {"expression": "ewfd.k0", "real": [k0], "imag": [0.0]},
++                {"expression": f"emw.beta_{port}", "real": [k0 * neff], "imag": [0.0]},
++                {"expression": f"emw.neff_{port}", "real": [neff], "imag": [0.0]},
++                {"expression": "emw.k0", "real": [k0], "imag": [0.0]},
+             ],
+         }
+     main = {"status": "PASS_NATIVE_NUMERICAL_FREQUENCY_HZ",
+@@ -346,7 +341,7 @@
+     assert result["status"] == "PASS_BMA_FORMULA_CROSSCHECK_ONLY"
+     assert all(row["science_acceptance"] == "NOT_EVALUATED" for row in result["bindings"])
+ 
+-    points["bmaOutput"]["expression_units"]["ewfd.beta_2"] = "V/m"
++    points["bmaOutput"]["expression_units"]["emw.beta_2"] = "V/m"
+     with pytest.raises(protocol.ScienceProtocolError, match="units"):
+         protocol.reconcile_bma_mode_point_readbacks(bindings, points, main)
+ 
+@@ -375,9 +370,9 @@
+         "feature_readback": {"data": "dset3", "data_status": "VERIFIED"},
+         "coordinate_readback": {"status": "VERIFIED",
+                                  "coordinates": [[8.0, 8.0], [-1.0, 1.0]], "unit": "um"},
+-        "point_count": 2, "expressions": ["ewfd.Ez", "ewfd.Hy"],
++        "point_count": 2, "expressions": ["down(emw.Ez)", "down(emw.Hy)"],
+         "complex_mode": "preserve", "is_complex": True,
+-        "expression_units": {"ewfd.Ez": "V/m", "ewfd.Hy": "A/m"},
++        "expression_units": {"down(emw.Ez)": "V/m", "down(emw.Hy)": "A/m"},
+         "values": [
+             [[{"real": 1.0, "imag": 2.0}, {"real": 3.0, "imag": 4.0}]],
+             [[{"real": -2.0, "imag": 0.5}, {"real": -1.0, "imag": 0.25}]],
+@@ -385,7 +380,7 @@
+     }
+     raw = protocol.decode_production_complex_point_readback(
+         result, dataset_tag="dset3", solution_tag="sol3",
+-        expressions=["ewfd.Ez", "ewfd.Hy"], expected_points=[[8.0, -1.0], [8.0, 1.0]],
++        expressions=["down(emw.Ez)", "down(emw.Hy)"], expected_points=[[8.0, -1.0], [8.0, 1.0]],
+         expected_solution_count=1, plane_id="output_x8")
+     assert raw["status"] == "PRODUCTION_NATIVE_COMPLEX_POINT_READBACK"
+     assert raw["science_acceptance"] == "NOT_EVALUATED"
+@@ -398,7 +393,7 @@
+     with pytest.raises(protocol.ScienceProtocolError, match="shape"):
+         protocol.decode_production_complex_point_readback(
+             malformed, dataset_tag="dset3", solution_tag="sol3",
+-            expressions=["ewfd.Ez", "ewfd.Hy"], expected_points=[[8.0, -1.0], [8.0, 1.0]],
++            expressions=["down(emw.Ez)", "down(emw.Hy)"], expected_points=[[8.0, -1.0], [8.0, 1.0]],
+             expected_solution_count=1, plane_id="output_x8")
+ 
+     malformed_count = copy.deepcopy(result)
+@@ -406,7 +401,7 @@
+     with pytest.raises(protocol.ScienceProtocolError, match="numeric singleton"):
+         protocol.decode_production_complex_point_readback(
+             malformed_count, dataset_tag="dset3", solution_tag="sol3",
+-            expressions=["ewfd.Ez", "ewfd.Hy"], expected_points=[[8.0, -1.0], [8.0, 1.0]],
++            expressions=["down(emw.Ez)", "down(emw.Hy)"], expected_points=[[8.0, -1.0], [8.0, 1.0]],
+             expected_solution_count=1, plane_id="output_x8")
+ 
+     malformed_axes = copy.deepcopy(result)
+@@ -414,7 +409,7 @@
+     with pytest.raises(protocol.ScienceProtocolError, match="numeric singleton"):
+         protocol.decode_production_complex_point_readback(
+             malformed_axes, dataset_tag="dset3", solution_tag="sol3",
+-            expressions=["ewfd.Ez", "ewfd.Hy"], expected_points=[[8.0, -1.0], [8.0, 1.0]],
++            expressions=["down(emw.Ez)", "down(emw.Hy)"], expected_points=[[8.0, -1.0], [8.0, 1.0]],
+             expected_solution_count=1, plane_id="output_x8")
+ 
+ 
+@@ -453,19 +448,19 @@
+         "feature_readback": {"data": "dset1", "data_status": "VERIFIED"},
+         "coordinate_readback": {"status": "VERIFIED",
+                                  "coordinates": [[8.0, 8.0], [-1.0, 1.0]], "unit": "um"},
+-        "point_count": 2, "expressions": ["nx", "ny"],
++        "point_count": 2, "expressions": ["emw.nx", "emw.ny"],
+         "complex_mode": "preserve", "is_complex": True,
+-        "expression_units": {"nx": "1", "ny": ""},
++        "expression_units": {"emw.nx": "1", "emw.ny": ""},
+         "values": [
+             [[{"real": 1.0, "imag": 0.0}, {"real": 1.0, "imag": 0.0}]],
+             [[{"real": 0.0, "imag": 0.0}, {"real": 0.0, "imag": 0.0}]],
+         ],
+     }
+     decoded = protocol.decode_production_complex_point_readback(
+-        result, dataset_tag="dset1", solution_tag="sol1", expressions=["nx", "ny"],
++        result, dataset_tag="dset1", solution_tag="sol1", expressions=["emw.nx", "emw.ny"],
+         expected_points=[[8.0, -1.0], [8.0, 1.0]], expected_solution_count=1,
+         plane_id="output_x8", expected_count_witness=witness,
+-        expected_expression_units={"nx": ("1", ""), "ny": ("1", "")},
++        expected_expression_units={"emw.nx": ("1", ""), "emw.ny": ("1", "")},
+         require_x_plane_normal=True)
+     assert decoded["normal_status"] == "VERIFIED_FROM_NATIVE_NX_NY"
+     assert decoded["native_normal_x"] == 1
+@@ -476,20 +471,20 @@
+         "solution_info_count_scope"]["getLevelNames"] = ["freq", "modeIndex"]
+     with pytest.raises(protocol.ScienceProtocolError, match="attached result.at_points singleton"):
+         protocol.decode_production_complex_point_readback(
+-            malformed, dataset_tag="dset1", solution_tag="sol1", expressions=["nx", "ny"],
++            malformed, dataset_tag="dset1", solution_tag="sol1", expressions=["emw.nx", "emw.ny"],
+             expected_points=[[8.0, -1.0], [8.0, 1.0]], expected_solution_count=1,
+             plane_id="output_x8", expected_count_witness=witness,
+-            expected_expression_units={"nx": ("1", ""), "ny": ("1", "")},
++            expected_expression_units={"emw.nx": ("1", ""), "emw.ny": ("1", "")},
+             require_x_plane_normal=True)
+ 
+     malformed = copy.deepcopy(result)
+-    malformed["expression_units"]["nx"] = "m"
++    malformed["expression_units"]["emw.nx"] = "m"
+     with pytest.raises(protocol.ScienceProtocolError, match="unit"):
+         protocol.decode_production_complex_point_readback(
+-            malformed, dataset_tag="dset1", solution_tag="sol1", expressions=["nx", "ny"],
++            malformed, dataset_tag="dset1", solution_tag="sol1", expressions=["emw.nx", "emw.ny"],
+             expected_points=[[8.0, -1.0], [8.0, 1.0]], expected_solution_count=1,
+             plane_id="output_x8", expected_count_witness=witness,
+-            expected_expression_units={"nx": ("1", ""), "ny": ("1", "")},
++            expected_expression_units={"emw.nx": ("1", ""), "emw.ny": ("1", "")},
+             require_x_plane_normal=True)
+ 
+ 
+@@ -602,7 +597,7 @@
+     rows = [dict(row) for row in output["expressions"]]
+     y = output["coordinates_m"][1]
+     for row in rows:
+-        if row["expression"] == "ewfd.Hy":
++        if row["expression"] == "down(emw.Hy)":
+             for index, coordinate in enumerate(y):
+                 if (protocol.CAPTURE_Y_MIN_M - 1e-12 <= coordinate
+                         <= protocol.CAPTURE_Y_MAX_M + 1e-12):
+@@ -704,7 +699,7 @@
+         protocol.independent_integrals(output, incident)
+ 
+     output = _raw("output_x8", 8e-6, 1)
+-    expression = next(row for row in output["expressions"] if row["expression"] == "ny")
++    expression = next(row for row in output["expressions"] if row["expression"] == "emw.ny")
+     expression["real"][12] = 1.0
+     with pytest.raises(protocol.ScienceProtocolError, match="nonzero y component"):
+         protocol.independent_integrals(output, incident)
+@@ -839,10 +834,10 @@
+                             {"expression": vacuum, "real": [k0], "imag": [0.0]}]}
+     physical = {"status": "PASS_NATIVE_NUMERICAL_FREQUENCY_HZ", "frequency_hz": frequency, "frequency_unit": "Hz"}
+     result = protocol.reconcile_bma_mode_point_readbacks(bindings, points, physical)
+-    assert result["bindings"][1]["expressions"] == ["ewfd.beta_2", "ewfd.neff_2", "ewfd.k0"]
++    assert result["bindings"][1]["expressions"] == ["emw.beta_2", "emw.neff_2", "emw.k0"]
+     assert result["bindings"][1]["lambda_raw_getter"]["unit_label"] == "1"
+-    points["bmaOutput"]["expressions"][0]["expression"] = "ewfd.beta_1"
+-    points["bmaOutput"]["expressions"][1]["expression"] = "ewfd.neff_1"
++    points["bmaOutput"]["expressions"][0]["expression"] = "emw.beta_1"
++    points["bmaOutput"]["expressions"][1]["expression"] = "emw.neff_1"
+     with pytest.raises(protocol.ScienceProtocolError, match="wrong-port"):
+         protocol.reconcile_bma_mode_point_readbacks(bindings, points, physical)
+ 

@@ -1,0 +1,1719 @@
+{
+  "old_blob": "46da97d7eb4335ad40b2b163dbcbe493d4ece280",
+  "current_blob": "1ef7cd3bbc42dd7c00def9742d8b5bfa02ac8996",
+  "original_count": 272,
+  "current_count": 273,
+  "added": [
+    "result.mode_overlap_basis_v2"
+  ],
+  "removed": [],
+  "changed": [
+    {
+      "operation_id": "experiment.design",
+      "changed_fields": [
+        "input_schema"
+      ],
+      "changes": {
+        "input_schema": [
+          {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "experiment.design input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "definition": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "idempotency_key",
+              "definition"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "experiment.design input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "definition": {
+                "type": "object",
+                "properties": {
+                  "metric_evaluations": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "metric_id",
+                        "version",
+                        "definition_sha256"
+                      ],
+                      "properties": {
+                        "metric_id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "definition_sha256": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{64}$"
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "objective": {
+                    "type": "object",
+                    "required": [
+                      "metric_ref",
+                      "tuple",
+                      "direction",
+                      "unit"
+                    ],
+                    "properties": {
+                      "metric_ref": {
+                        "type": "object",
+                        "required": [
+                          "metric_id",
+                          "version",
+                          "definition_sha256"
+                        ],
+                        "properties": {
+                          "metric_id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "definition_sha256": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{64}$"
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "tuple": {
+                        "type": "object",
+                        "required": [
+                          "outer",
+                          "inner"
+                        ],
+                        "properties": {
+                          "outer": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "inner": {
+                            "type": "integer",
+                            "minimum": 1
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "direction": {
+                        "type": "string",
+                        "enum": [
+                          "minimize",
+                          "maximize"
+                        ]
+                      },
+                      "unit": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "constraints": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "constraint_id",
+                        "metric_ref",
+                        "tuple",
+                        "relation",
+                        "value",
+                        "unit"
+                      ],
+                      "properties": {
+                        "constraint_id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "metric_ref": {
+                          "type": "object",
+                          "required": [
+                            "metric_id",
+                            "version",
+                            "definition_sha256"
+                          ],
+                          "properties": {
+                            "metric_id": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "version": {
+                              "type": "integer",
+                              "minimum": 1
+                            },
+                            "definition_sha256": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{64}$"
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        "tuple": {
+                          "type": "object",
+                          "required": [
+                            "outer",
+                            "inner"
+                          ],
+                          "properties": {
+                            "outer": {
+                              "type": "integer",
+                              "minimum": 1
+                            },
+                            "inner": {
+                              "type": "integer",
+                              "minimum": 1
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        "relation": {
+                          "type": "string",
+                          "enum": [
+                            "<",
+                            "<=",
+                            ">",
+                            ">="
+                          ]
+                        },
+                        "value": {
+                          "type": "number"
+                        },
+                        "unit": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "dependentRequired": {
+                  "objective": [
+                    "constraints"
+                  ],
+                  "constraints": [
+                    "objective"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "idempotency_key",
+              "definition"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    {
+      "operation_id": "experiment.stage_define",
+      "changed_fields": [
+        "implementation_status",
+        "input_schema",
+        "notes",
+        "output_contract",
+        "route"
+      ],
+      "changes": {
+        "implementation_status": [
+          "PROPOSED_NOT_IMPLEMENTED",
+          "SOFTWARE_CONTROL_ROUTE_IMPLEMENTED_NATIVE_UNVERIFIED"
+        ],
+        "input_schema": [
+          {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "experiment.stage_define input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "definition": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "idempotency_key",
+              "definition"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "experiment.stage_define input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "definition": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "plan_id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                      },
+                      "stages": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "stage_id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                            },
+                            "ordinal": {
+                              "type": "integer",
+                              "minimum": 1
+                            },
+                            "depends_on": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                              },
+                              "uniqueItems": true
+                            },
+                            "study_target": {
+                              "$ref": "common.schema.json#/$defs/NodePath"
+                            },
+                            "source_selection": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "const": "initial_state"
+                                    },
+                                    "strategy": {
+                                      "const": "declared_initial"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "strategy"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "const": "stage"
+                                    },
+                                    "stage_id": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                                    },
+                                    "selection": {
+                                      "$ref": "common.schema.json#/$defs/SolutionSpec"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "stage_id",
+                                    "selection"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            "target_selection": {
+                              "$ref": "common.schema.json#/$defs/SolutionSpec"
+                            },
+                            "variable_mappings": {
+                              "type": "array",
+                              "minItems": 1,
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "source_variable": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "target_variable": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "source_unit": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "target_unit": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "mapping_method": {
+                                    "enum": [
+                                      "identity",
+                                      "interpolate",
+                                      "projection"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "source_variable",
+                                  "target_variable",
+                                  "source_unit",
+                                  "target_unit",
+                                  "mapping_method"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "reference_state": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "strategy": {
+                                      "const": "initial_state"
+                                    }
+                                  },
+                                  "required": [
+                                    "strategy"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "strategy": {
+                                      "const": "predecessor_stage"
+                                    },
+                                    "source_stage_id": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                                    }
+                                  },
+                                  "required": [
+                                    "strategy",
+                                    "source_stage_id"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            "checks": {
+                              "type": "array",
+                              "items": {
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "const": "continuity"
+                                      },
+                                      "check_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                                      },
+                                      "source_variable": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "target_variable": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "unit": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "tolerance": {
+                                        "type": "object",
+                                        "properties": {
+                                          "absolute": {
+                                            "type": "number",
+                                            "minimum": 0
+                                          },
+                                          "relative": {
+                                            "type": "number",
+                                            "minimum": 0
+                                          }
+                                        },
+                                        "required": [
+                                          "absolute",
+                                          "relative"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "check_id",
+                                      "source_variable",
+                                      "target_variable",
+                                      "unit",
+                                      "tolerance"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "const": "conservation"
+                                      },
+                                      "check_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                                      },
+                                      "quantity": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "terms": {
+                                        "type": "array",
+                                        "minItems": 2,
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "side": {
+                                              "enum": [
+                                                "source",
+                                                "target"
+                                              ]
+                                            },
+                                            "variable": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "coefficient": {
+                                              "type": "number"
+                                            }
+                                          },
+                                          "required": [
+                                            "side",
+                                            "variable",
+                                            "coefficient"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      },
+                                      "unit": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "tolerance": {
+                                        "type": "object",
+                                        "properties": {
+                                          "absolute": {
+                                            "type": "number",
+                                            "minimum": 0
+                                          },
+                                          "relative": {
+                                            "type": "number",
+                                            "minimum": 0
+                                          }
+                                        },
+                                        "required": [
+                                          "absolute",
+                                          "relative"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "check_id",
+                                      "quantity",
+                                      "terms",
+                                      "unit",
+                                      "tolerance"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              }
+                            }
+                          },
+                          "required": [
+                            "stage_id",
+                            "ordinal",
+                            "depends_on",
+                            "study_target",
+                            "source_selection",
+                            "target_selection",
+                            "variable_mappings",
+                            "reference_state",
+                            "checks"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "plan_id",
+                      "stages"
+                    ],
+                    "additionalProperties": false,
+                    "title": "stage plan v1 declaration-only definition"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "plan_id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                      },
+                      "stages": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "stage_id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                            },
+                            "ordinal": {
+                              "type": "integer",
+                              "minimum": 1
+                            },
+                            "depends_on": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                              },
+                              "uniqueItems": true
+                            },
+                            "study_target": {
+                              "$ref": "common.schema.json#/$defs/NodePath"
+                            },
+                            "source_selection": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "const": "initial_state"
+                                    },
+                                    "strategy": {
+                                      "const": "declared_initial"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "strategy"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "const": "stage"
+                                    },
+                                    "stage_id": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                                    },
+                                    "selection": {
+                                      "$ref": "common.schema.json#/$defs/SolutionSpec"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "stage_id",
+                                    "selection"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            "target_selection": {
+                              "$ref": "common.schema.json#/$defs/SolutionSpec"
+                            },
+                            "variable_mappings": {
+                              "type": "array",
+                              "minItems": 1,
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "source_variable": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "target_variable": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "source_unit": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "target_unit": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "mapping_method": {
+                                    "const": "identity"
+                                  }
+                                },
+                                "required": [
+                                  "source_variable",
+                                  "target_variable",
+                                  "source_unit",
+                                  "target_unit",
+                                  "mapping_method"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "reference_state": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "strategy": {
+                                      "const": "initial_state"
+                                    }
+                                  },
+                                  "required": [
+                                    "strategy"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "strategy": {
+                                      "const": "predecessor_stage"
+                                    },
+                                    "source_stage_id": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                                    }
+                                  },
+                                  "required": [
+                                    "strategy",
+                                    "source_stage_id"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            "checks": {
+                              "type": "array",
+                              "items": {
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "const": "continuity"
+                                      },
+                                      "check_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                                      },
+                                      "source_variable": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "target_variable": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "unit": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "tolerance": {
+                                        "type": "object",
+                                        "properties": {
+                                          "absolute": {
+                                            "type": "number",
+                                            "minimum": 0
+                                          },
+                                          "relative": {
+                                            "type": "number",
+                                            "minimum": 0
+                                          }
+                                        },
+                                        "required": [
+                                          "absolute",
+                                          "relative"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      "operator": {
+                                        "const": "pointwise_max_abs"
+                                      },
+                                      "source_solution": {
+                                        "$ref": "common.schema.json#/$defs/SolutionSpec"
+                                      },
+                                      "target_solution": {
+                                        "$ref": "common.schema.json#/$defs/SolutionSpec"
+                                      },
+                                      "source_selection": {
+                                        "$ref": "common.schema.json#/$defs/SelectionSpec"
+                                      },
+                                      "target_selection": {
+                                        "$ref": "common.schema.json#/$defs/SelectionSpec"
+                                      },
+                                      "frame": {
+                                        "enum": [
+                                          "spatial",
+                                          "material",
+                                          "geometry",
+                                          "mesh"
+                                        ]
+                                      },
+                                      "boundary_time": {
+                                        "type": "object",
+                                        "properties": {
+                                          "value": {
+                                            "type": "number"
+                                          },
+                                          "unit": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          }
+                                        },
+                                        "required": [
+                                          "value",
+                                          "unit"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "check_id",
+                                      "source_variable",
+                                      "target_variable",
+                                      "unit",
+                                      "tolerance",
+                                      "operator",
+                                      "source_solution",
+                                      "target_solution",
+                                      "source_selection",
+                                      "target_selection",
+                                      "frame",
+                                      "boundary_time"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "const": "conservation"
+                                      },
+                                      "check_id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+                                      },
+                                      "quantity": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "terms": {
+                                        "type": "array",
+                                        "minItems": 2,
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "side": {
+                                              "enum": [
+                                                "source",
+                                                "target"
+                                              ]
+                                            },
+                                            "variable": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "coefficient": {
+                                              "type": "number"
+                                            },
+                                            "selection": {
+                                              "$ref": "common.schema.json#/$defs/SelectionSpec"
+                                            },
+                                            "entity_dimension": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 3
+                                            }
+                                          },
+                                          "required": [
+                                            "side",
+                                            "variable",
+                                            "coefficient",
+                                            "selection",
+                                            "entity_dimension"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      },
+                                      "unit": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "tolerance": {
+                                        "type": "object",
+                                        "properties": {
+                                          "absolute": {
+                                            "type": "number",
+                                            "minimum": 0
+                                          },
+                                          "relative": {
+                                            "type": "number",
+                                            "minimum": 0
+                                          }
+                                        },
+                                        "required": [
+                                          "absolute",
+                                          "relative"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      "operator": {
+                                        "const": "native_integral"
+                                      },
+                                      "source_solution": {
+                                        "$ref": "common.schema.json#/$defs/SolutionSpec"
+                                      },
+                                      "target_solution": {
+                                        "$ref": "common.schema.json#/$defs/SolutionSpec"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "check_id",
+                                      "quantity",
+                                      "terms",
+                                      "unit",
+                                      "tolerance",
+                                      "operator",
+                                      "source_solution",
+                                      "target_solution"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              }
+                            },
+                            "mapping_profile": {
+                              "const": "same_name_same_mesh_initialization"
+                            },
+                            "target_variables": {
+                              "$ref": "common.schema.json#/$defs/NodePath"
+                            }
+                          },
+                          "required": [
+                            "stage_id",
+                            "ordinal",
+                            "depends_on",
+                            "study_target",
+                            "source_selection",
+                            "target_selection",
+                            "variable_mappings",
+                            "reference_state",
+                            "checks",
+                            "mapping_profile"
+                          ],
+                          "additionalProperties": false,
+                          "allOf": [
+                            {
+                              "if": {
+                                "properties": {
+                                  "source_selection": {
+                                    "properties": {
+                                      "kind": {
+                                        "const": "stage"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "source_selection"
+                                ]
+                              },
+                              "then": {
+                                "required": [
+                                  "target_variables"
+                                ]
+                              },
+                              "else": {
+                                "not": {
+                                  "required": [
+                                    "target_variables"
+                                  ]
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      "version": {
+                        "type": "integer",
+                        "const": 2
+                      }
+                    },
+                    "required": [
+                      "plan_id",
+                      "stages",
+                      "version"
+                    ],
+                    "additionalProperties": false,
+                    "title": "stage plan v2 executable mapping contract"
+                  }
+                ],
+                "description": "Version 1 remains declaration-only with its original hash shape; version 2 freezes the strict same-name initialization profile."
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "idempotency_key",
+              "definition"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "notes": [
+          "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "Version 1 definitions are unchanged declarations. Version 2 freezes an explicit same-name/same-mesh initialization profile; runtime field, unit, mesh, frame and conservation proof remains required before a stage can be accepted."
+        ],
+        "output_contract": [
+          "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "immutable project/model-scoped stage plan, declaration revision and hash; all engine-facing targets remain DECLARED_UNVERIFIED"
+        ],
+        "route": [
+          "control orchestration + versioned engine calls; scientific rules are explicit",
+          "durable plan registration; no Worker RPC or solve; future study/solution/mapping existence is DECLARED_UNVERIFIED"
+        ]
+      }
+    },
+    {
+      "operation_id": "experiment.stage_run",
+      "changed_fields": [
+        "arguments_signature",
+        "implementation_status",
+        "input_schema",
+        "notes",
+        "output_contract",
+        "route"
+      ],
+      "changes": {
+        "arguments_signature": [
+          "stage_id:str,source:SolutionSpec?",
+          "stage_id:str,source_attempt_id:str?,source:SolutionSpec?"
+        ],
+        "implementation_status": [
+          "PROPOSED_NOT_IMPLEMENTED",
+          "SOFTWARE_CONTROL_ROUTE_IMPLEMENTED_NATIVE_UNVERIFIED"
+        ],
+        "input_schema": [
+          {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "experiment.stage_run input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "stage_id": {
+                "type": "string"
+              },
+              "source": {
+                "$ref": "common.schema.json#/$defs/SolutionSpec"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "idempotency_key",
+              "stage_id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "experiment.stage_run input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "stage_id": {
+                "type": "string"
+              },
+              "source": {
+                "type": "object",
+                "properties": {
+                  "dataset": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "solution": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "outer": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "inner": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "time": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 1,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "type": "number"
+                        },
+                        "unit": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "value",
+                        "unit"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "dataset",
+                  "outer"
+                ],
+                "additionalProperties": false,
+                "oneOf": [
+                  {
+                    "required": [
+                      "inner"
+                    ],
+                    "not": {
+                      "required": [
+                        "time"
+                      ]
+                    }
+                  },
+                  {
+                    "required": [
+                      "time"
+                    ],
+                    "not": {
+                      "required": [
+                        "inner"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "source_attempt_id": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "idempotency_key",
+              "stage_id",
+              "expected_revision"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "notes": [
+          "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "source_attempt_id must resolve to the unique accepted predecessor attempt bound by the immutable plan. This software route currently records a no-dispatch attempt because exact native mapping, continuity/conservation and saved-output evidence are not yet available; native COMSOL execution remains unverified."
+        ],
+        "output_contract": [
+          "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "Durable stage_attempt with exact plan/ModelRef/revision binding; NOT_DISPATCHED_UNVERIFIED when native mapping evidence is unavailable; no scientific acceptance implied"
+        ],
+        "route": [
+          "control orchestration + versioned engine calls; scientific rules are explicit",
+          "atomic project/ModelRef-scoped stage attempt admission; current native field/unit/mesh/frame and saved-output proof is unavailable, so attempts stop before Worker RPC and solve"
+        ]
+      }
+    },
+    {
+      "operation_id": "experiment.state_map",
+      "changed_fields": [
+        "capability_requirements",
+        "implementation_status",
+        "input_schema",
+        "notes",
+        "output_contract",
+        "route"
+      ],
+      "changes": {
+        "capability_requirements": [
+          "common target with version capability probe",
+          "COMSOL Variables initial-solution selector plus SolverSequence study/isAttached readback"
+        ],
+        "implementation_status": [
+          "PROPOSED_NOT_IMPLEMENTED",
+          "SOFTWARE_CONTROL_ROUTE_IMPLEMENTED_NATIVE_UNVERIFIED"
+        ],
+        "input_schema": [
+          {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "experiment.state_map input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "source": {
+                "$ref": "common.schema.json#/$defs/SolutionSpec"
+              },
+              "target": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "mapping": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "source",
+              "target",
+              "mapping"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "experiment.state_map input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "source": {
+                "$ref": "common.schema.json#/$defs/SolutionSpec"
+              },
+              "target": {
+                "$ref": "common.schema.json#/$defs/NodePath"
+              },
+              "mapping": {
+                "type": "object",
+                "properties": {
+                  "profile": {
+                    "type": "string",
+                    "enum": [
+                      "same_name_same_mesh_initialization"
+                    ]
+                  },
+                  "variables": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "source_variable": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "target_variable": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "source_unit": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "target_unit": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "mapping_method": {
+                          "type": "string",
+                          "enum": [
+                            "identity"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "source_variable",
+                        "target_variable",
+                        "source_unit",
+                        "target_unit",
+                        "mapping_method"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "profile",
+                  "variables"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "project_id",
+              "session_id",
+              "model_ref",
+              "expected_revision",
+              "idempotency_key",
+              "source",
+              "target",
+              "mapping"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "notes": [
+          "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "This bounded profile configures and reads back COMSOL Variables initial-solution selector properties only. Caller-declared units and same-name identity are not native proof; source/target field identity, units, mesh topology, frame equality, and hidden solver history remain UNVERIFIED. The operation never solves."
+        ],
+        "output_contract": [
+          "ActionResult; add domain-specific data schema before implementation gate is closed",
+          "ActionResult with exact source-solution selector and target attachment readbacks; coverage_status=PARTIAL until variable/unit/mesh/frame mapping evidence is complete"
+        ],
+        "route": [
+          "control orchestration + versioned engine calls; scientific rules are explicit",
+          "single-Worker WRITE; read back the exact source selector and unique attached target solver before selector configuration; never solve"
+        ]
+      }
+    },
+    {
+      "operation_id": "session.connect",
+      "changed_fields": [
+        "arguments_signature",
+        "implementation_status",
+        "input_schema",
+        "notes"
+      ],
+      "changes": {
+        "arguments_signature": [
+          "runtime_id:str,endpoint:Endpoint,credentials_ref:str?",
+          "runtime_id:str,endpoint:Endpoint,session_id:str?,credentials_ref:str?"
+        ],
+        "implementation_status": [
+          "PROPOSED_NOT_IMPLEMENTED",
+          "IMPLEMENTED"
+        ],
+        "input_schema": [
+          {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "session.connect input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "runtime_id": {
+                "type": "string"
+              },
+              "endpoint": {
+                "$ref": "common.schema.json#/$defs/Endpoint"
+              },
+              "credentials_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "idempotency_key",
+              "runtime_id",
+              "endpoint"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "session.connect input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "runtime_id": {
+                "type": "string"
+              },
+              "endpoint": {
+                "$ref": "common.schema.json#/$defs/Endpoint"
+              },
+              "credentials_ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "idempotency_key",
+              "runtime_id",
+              "endpoint"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "notes": [
+          "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "可选session_id仅用于附着本Daemon先前session.start创建且仍持有精确Server Popen/出生/loopback listener证据的session；普通连接自动分配新session_id。"
+        ]
+      }
+    },
+    {
+      "operation_id": "session.disconnect",
+      "changed_fields": [
+        "arguments_signature",
+        "input_schema",
+        "notes",
+        "purpose"
+      ],
+      "changes": {
+        "arguments_signature": [
+          "session_id:str",
+          "session_id:str,retire_worker:bool?"
+        ],
+        "input_schema": [
+          {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "session.disconnect input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "project_id",
+              "idempotency_key",
+              "session_id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "session.disconnect input",
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "idempotency_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "session_id": {
+                "type": "string"
+              },
+              "retire_worker": {
+                "type": "boolean",
+                "description": "默认false；true仅在精确Worker身份、进程出生和静默fence均可验证时关闭并回收该Worker子进程，不停止COMSOL Server。"
+              }
+            },
+            "required": [
+              "project_id",
+              "idempotency_key",
+              "session_id"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "notes": [
+          "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "retire_worker=true只退休本Daemon持有精确Popen句柄且出生身份可核验的Worker；共享Server不受影响。缺少出生/退出证据时保留句柄并失败关闭。"
+        ],
+        "purpose": [
+          "断开客户端，不默认关闭Server",
+          "断开客户端，不默认关闭Server；可选择退休本Daemon精确创建的Worker子进程"
+        ]
+      }
+    },
+    {
+      "operation_id": "session.reconnect",
+      "changed_fields": [
+        "implementation_status"
+      ],
+      "changes": {
+        "implementation_status": [
+          "PROPOSED_NOT_IMPLEMENTED",
+          "IMPLEMENTED"
+        ]
+      }
+    },
+    {
+      "operation_id": "session.start",
+      "changed_fields": [
+        "implementation_status",
+        "notes"
+      ],
+      "changes": {
+        "implementation_status": [
+          "PROPOSED_NOT_IMPLEMENTED",
+          "IMPLEMENTED"
+        ],
+        "notes": [
+          "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "仅空options/resources当前可执行；要求project host_control。启动前验证本地runtime_id、私有安装影子、精确进程出生和单一127.0.0.1 listener；不修改安装树。"
+        ]
+      }
+    },
+    {
+      "operation_id": "session.stop",
+      "changed_fields": [
+        "implementation_status",
+        "notes"
+      ],
+      "changes": {
+        "implementation_status": [
+          "PROPOSED_NOT_IMPLEMENTED",
+          "IMPLEMENTED"
+        ],
+        "notes": [
+          "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+          "要求project host_control与authorization_ref。仅在Worker已断开或精确退休、无未解决任务且保留精确Popen/出生/loopback listener时停止本Daemon自有Server；shared/user-owned永不由此路由停止。"
+        ]
+      }
+    }
+  ]
+}

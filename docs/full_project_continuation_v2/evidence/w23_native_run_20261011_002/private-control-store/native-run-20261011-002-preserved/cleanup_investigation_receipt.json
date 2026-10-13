@@ -1,0 +1,68 @@
+{
+  "lsof_filtered_rows": [
+    "java    67057 everwalker   59u  IPv6 0xa1d4723c306b2a83      0t0  TCP 127.0.0.1:59840 (LISTEN)",
+    "java    67057 everwalker  174u  IPv6 0x47f1073c5e355f2b      0t0  TCP 127.0.0.1:59840->127.0.0.1:59852 (ESTABLISHED)",
+    "java    67160 everwalker    8u  IPv6 0x5bfc55c0e3ccfab2      0t0  TCP 127.0.0.1:59847 (LISTEN)",
+    "java    67160 everwalker   63u  IPv6 0xdee70dc13ec73506      0t0  TCP 127.0.0.1:59852->127.0.0.1:59840 (ESTABLISHED)"
+  ],
+  "observed_at_utc": "2026-10-11T15:16:50.831788+00:00",
+  "probes": [
+    {
+      "argv": [
+        "/bin/ps",
+        "-p",
+        "67057,67126,67160",
+        "-o",
+        "pid=,ppid=,lstart=,command="
+      ],
+      "returncode": 0,
+      "sha256": "281830e90b19c953673f3bc2545ae8f486e247a85b44b1c3a26a66033ac5f726",
+      "stderr": "",
+      "stdout_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261011_002/private-control-store/native-run-20261011-002-preserved/cleanup_investigation001.txt"
+    },
+    {
+      "argv": [
+        "/usr/sbin/lsof",
+        "-nP",
+        "-a",
+        "-p",
+        "67057,67126,67160",
+        "-iTCP"
+      ],
+      "returncode": 0,
+      "sha256": "fa8df693817d3dd84954aeec36be4120d5b3f8260b37b13ed3aeee928b1e992a",
+      "stderr": "",
+      "stdout_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261011_002/private-control-store/native-run-20261011-002-preserved/cleanup_investigation002.txt"
+    }
+  ],
+  "processes": [
+    {
+      "birth": "Sun Oct 11 23:03:21 2026",
+      "command_length": 2128,
+      "command_sha256": "fbe81f00e7e6bd2aa417975771de42eef48902d6e7ceb3bcb292cfefd480e381",
+      "main_class": "com.comsol.util.application.ServerApplication",
+      "pid": 67057,
+      "ppid": 1,
+      "task_work_path_present": true
+    },
+    {
+      "birth": "Sun Oct 11 23:03:21 2026",
+      "command_length": 446,
+      "command_sha256": "58497576dfab4630b4508aa52d5bfcff9bb3fe5b7128d32110834b500f442352",
+      "main_class": "comsol launcher",
+      "pid": 67126,
+      "ppid": 67057,
+      "task_work_path_present": true
+    },
+    {
+      "birth": "Sun Oct 11 23:03:24 2026",
+      "command_length": 3528,
+      "command_sha256": "1ed8a34f42c54d386fe67c04ebc02ae2ded19ef4c7573e3bf61e46bfd67cd40b",
+      "main_class": "comsol_mcp.worker_java.PersistentComsolWorker",
+      "pid": 67160,
+      "ppid": 1,
+      "task_work_path_present": true
+    }
+  ],
+  "scope": "read-only targeted follow-up for unexpected task-path COMSOL PID before cleanup; no process mutation"
+}

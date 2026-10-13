@@ -1,0 +1,41 @@
+{
+  "schema": "WINDOWS_CHILD_PHASE_PRIMARY_REFERENCE/1",
+  "date": "2026-10-12",
+  "sources": [
+    {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessasuserw",
+      "status": "READ_OFFICIAL_PRIMARY"
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-resumethread",
+      "status": "READ_OFFICIAL_PRIMARY"
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/tlhelp32/ns-tlhelp32-processentry32w",
+      "status": "READ_OFFICIAL_PRIMARY"
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/jobapi2/nf-jobapi2-queryinformationjobobject",
+      "status": "READ_OFFICIAL_PRIMARY"
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-jobobject_extended_limit_information",
+      "status": "READ_OFFICIAL_PRIMARY"
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-jobobject_cpu_rate_control_information",
+      "status": "READ_OFFICIAL_PRIMARY"
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-jobobject_basic_limit_information",
+      "status": "READ_OFFICIAL_PRIMARY"
+    }
+  ],
+  "semantics": [
+    "PROCESSENTRY32W observed parent PID is combined with separately retained actual parent HANDLE birth before/after native creation",
+    "Actual API constructs lpApplicationName/Unicode commandline; recorded hashes establish creation-parameter provenance only",
+    "Job ProcessMemoryLimit and JobMemoryLimit bound committed virtual memory, not RSS or admission reservations",
+    "ResumeThread return is previous suspend count; effect-possible is recorded before entering API"
+  ],
+  "scope": "No real Windows runtime or native proof acceptance."
+}

@@ -1,0 +1,35 @@
+{
+  "actual_fake_api_calls_before_direct_store_calls": [
+    [
+      "create",
+      "wfp_provider"
+    ],
+    [
+      "create",
+      "wfp_sublayer"
+    ]
+  ],
+  "apply_error": {
+    "code": "HOST_CHANGE_RECOVERY_REQUIRED",
+    "safe_retry": false
+  },
+  "classification": "SOFTWARE_ONLY_PRODUCTION_STORE_AND_EXECUTOR_REPRO",
+  "direct_store_calls_are_not_native_or_os_mutations": true,
+  "native_windows": "NOT_RUN",
+  "state_after_next_intent": "APPLY_STEP_INTENT:2",
+  "state_after_readback": "APPLY_STEP_VERIFIED:1",
+  "state_before_untrusted_store_call": {
+    "admission": "RECOVERY_REQUIRED",
+    "job": "RUNNING",
+    "journal_events": [
+      "APPLY_STEP_INTENT",
+      "APPLY_STEP_READBACK_VERIFIED",
+      "APPLY_STEP_INTENT",
+      "RECOVERY_REQUIRED"
+    ],
+    "operation": "RUNNING"
+  },
+  "store_accepted_next_step_intent": true,
+  "store_accepted_readback_after_recovery_required": true,
+  "terminal_unknown_write_injected_failure": true
+}

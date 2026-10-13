@@ -1,0 +1,534 @@
+{
+  "closure_summary": {
+    "all_sha256_unique": true,
+    "all_urls_unique": true,
+    "dependency_edges": [
+      "ApplicationServices -> Cocoa, Quartz, CoreText",
+      "ScreenCaptureKit -> CoreMedia, Cocoa",
+      "CoreText -> Cocoa, Quartz",
+      "Quartz -> Cocoa",
+      "CoreMedia -> Cocoa",
+      "All PyObjC frameworks -> pyobjc-core"
+    ],
+    "packages": [
+      "psutil==5.9.8",
+      "pyobjc-core==12.2.2",
+      "pyobjc-framework-ApplicationServices==12.2.2",
+      "pyobjc-framework-Cocoa==12.2.2",
+      "pyobjc-framework-CoreText==12.2.2",
+      "pyobjc-framework-Quartz==12.2.2",
+      "pyobjc-framework-ScreenCaptureKit==12.2.2",
+      "pyobjc-framework-CoreMedia==12.2.2"
+    ],
+    "total_bytes": 7388559,
+    "wheel_count": 8
+  },
+  "created_utc": "2026-10-12T03:47:44Z",
+  "evidence_inputs": {
+    "openssl_official_api_snapshot_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/desktop-builder-candidate-r4-w25/openssl-4.0.2-release-api.json",
+    "r4_candidate_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/desktop-builder-candidate-r4-w25/candidate-plan-r4-w25.json",
+    "r4_candidate_sha256": "24f0cf5790dacdd5180075cd1072f306b656dbf7a768b619a4593ee748b4a8ed",
+    "r4_metadata_projection_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/desktop-builder-candidate-r4-w25/metadata-used-fields-r4-w25.json",
+    "r4_metadata_projection_sha256": "db49ba91dfb547a0320893be9c5272129544c1d5246607d3f6dc03b730d22718",
+    "r4_root_review_path": "docs/full_project_continuation_v2/evidence/w25_native_adapter_root_review_r4/ROOT_SOURCE_REVIEW_R4.json",
+    "r5_freeze_path": "local-preservation/w25-native-adapter-20261012-r5-r3/R5_SOURCE_FREEZE_R3.json",
+    "r5_freeze_sha256": "e5c675aec2e9725b8ce1bdff23c5b2fd7a7540a570e8d4564259f6d68c2367ae",
+    "r5_patch_path": "local-preservation/w25-native-adapter-20261012-r5-r3/R5_SOURCE_DIFF_R3.patch",
+    "r5_patch_sha256": "2aa9135bf9f7317a762aa0c79af3d897836e37646e63f19e696a8f3de5c2897c",
+    "r5_root_review_path": "docs/full_project_continuation_v2/evidence/w25_native_adapter_root_review_r5/ROOT_SOURCE_REVIEW_R3.json",
+    "r5_root_review_sha256": "4be95693231adae736aa0ebcaa17aa5ca1c9eca2373cc24fe9d266d2ac738e7d"
+  },
+  "limitations": [
+    "This is a candidate acquisition manifest, not an approved download or install.",
+    "No PyObjC/psutil package wheel is installed into the recovered CP312 runtime.",
+    "The recovered CP312 interpreter is a task runtime and not a portable release runtime.",
+    "No native GUI, COMSOL process, Screen Recording permission, selector profile, or real selector was observed in this task.",
+    "No wheel build or runtime integration was performed."
+  ],
+  "live_project_state": {
+    "notice": "No pyproject, uv.lock, or version change is part of this candidate. ScreenCaptureKit/CoreMedia are successor runtime needs and are absent from the live lock.",
+    "pyproject_sha256": "f6f9356edc1c970e36c32a82cc8d9e71bd1a94d5a0e1552495a04ca7634ee107",
+    "uv_lock_sha256": "08b6b8fb1f6a7a110f45df7d9f3ac3dae3e343fddc1ce2ddae84e458c3130b3f",
+    "version": "0.1.9"
+  },
+  "os_floor_correction": {
+    "basis": "Installed macOS 27.0 SDK SCScreenshotManager.h declares API_AVAILABLE(macos(14.0)); code checks this floor before framework/capture calls.",
+    "corrected_api_floor": "14.0",
+    "old_r4_candidate_value": "12.3 (package platform metadata only)",
+    "package_metadata_is_distinct": "The PyPI platform requirement MacOS X >=12.3 does not establish availability of SCScreenshotManager; this W25 action is gated at macOS 14.0.",
+    "sdk_header_path": "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks/ScreenCaptureKit.framework/Headers/SCScreenshotManager.h",
+    "sdk_header_sha256": "f62995d35201d09753c852cdb83ce9880b9fae4ec34e1baef1d91fa1b47181e7"
+  },
+  "required_runtime_wheel_closure": [
+    {
+      "artifact_id": "5544e3812a61b6d19516aa3df5a1b203224c8df8a9c05fdef1b40c6b28cc5293",
+      "artifact_kind": "wheel",
+      "downloaded": false,
+      "filename": "psutil-5.9.8-cp38-abi3-macosx_11_0_arm64.whl",
+      "local_target_wheelhouse": "MISSING",
+      "metadata_observed_utc": "2026-10-11T22:31:54Z",
+      "metadata_source": "PyPI JSON release metadata",
+      "metadata_url": "https://pypi.org/pypi/psutil/5.9.8/json",
+      "name": "psutil",
+      "pypi_release_json_url": "https://pypi.org/pypi/psutil/5.9.8/json",
+      "requires_dist": [
+        "enum34; python_version <= \"3.4\" and extra == \"test\"",
+        "ipaddress; python_version < \"3.0\" and extra == \"test\"",
+        "mock; python_version < \"3.0\" and extra == \"test\"",
+        "pywin32; sys_platform == \"win32\" and extra == \"test\"",
+        "wmi; sys_platform == \"win32\" and extra == \"test\""
+      ],
+      "requires_dist_active_cp312": [],
+      "requires_python": ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*",
+      "sha256": "d16bbddf0693323b8c6123dd804100241da461e41d6e332fb0ba6058f630f8c8",
+      "size_bytes": 249898,
+      "tags": [
+        "cp38-abi3-macosx_11_0_arm64"
+      ],
+      "target_selection": {
+        "accepted_tags": [
+          "cp38-abi3-macosx_11_0_arm64"
+        ],
+        "acquisition_state": "PLAN_ONLY_NOT_DOWNLOADED_NOT_INSTALLED",
+        "host_arch": "arm64",
+        "host_os": "macOS >=14.0 for SCScreenshotManager capture route",
+        "interpreter": "CPython 3.12.13"
+      },
+      "target_tags": {
+        "macos_arm64": [
+          "macosx_11_0_arm64",
+          "macosx_11_0_universal2"
+        ],
+        "macos_x86_64": [
+          "macosx_12_0_x86_64",
+          "macosx_12_0_universal2"
+        ],
+        "win_amd64": [
+          "win_amd64"
+        ]
+      },
+      "targets": [
+        "macos_arm64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/05/33/2d74d588408caedd065c2497bdb5ef83ce6082db01289a1e1147f6639802/psutil-5.9.8-cp38-abi3-macosx_11_0_arm64.whl",
+      "version": "5.9.8",
+      "wheel_tags": [
+        "cp38-abi3-macosx_11_0_arm64"
+      ]
+    },
+    {
+      "artifact_id": "03590d960a8de5dfee139cadd0335c97994ce5a4c10a5f3658226edc684f4f4a",
+      "artifact_kind": "wheel",
+      "downloaded": false,
+      "filename": "pyobjc_core-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "local_target_wheelhouse": "MISSING",
+      "metadata_observed_utc": "2026-10-11T22:31:54Z",
+      "metadata_source": "PyPI JSON release metadata",
+      "metadata_url": "https://pypi.org/pypi/pyobjc-core/12.2.2/json",
+      "name": "pyobjc-core",
+      "pypi_release_json_url": "https://pypi.org/pypi/pyobjc-core/12.2.2/json",
+      "requires_dist": [],
+      "requires_dist_active_cp312": [],
+      "requires_python": ">=3.10",
+      "sha256": "122e6ad302a2abf5d4d4adb0156db751600ddf2768441696cba17b31323085e7",
+      "size_bytes": 6427637,
+      "tags": [
+        "cp312-cp312-macosx_10_13_universal2"
+      ],
+      "target_selection": {
+        "accepted_tags": [
+          "cp312-cp312-macosx_10_13_universal2"
+        ],
+        "acquisition_state": "PLAN_ONLY_NOT_DOWNLOADED_NOT_INSTALLED",
+        "host_arch": "arm64",
+        "host_os": "macOS >=14.0 for SCScreenshotManager capture route",
+        "interpreter": "CPython 3.12.13"
+      },
+      "target_tags": {
+        "macos_arm64": [
+          "macosx_11_0_arm64",
+          "macosx_11_0_universal2"
+        ],
+        "macos_x86_64": [
+          "macosx_12_0_x86_64",
+          "macosx_12_0_universal2"
+        ],
+        "win_amd64": [
+          "win_amd64"
+        ]
+      },
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/86/b2/bbf7f049880ab40d110e66f25122342a1f6c98d6fe3c59bb98985503c660/pyobjc_core-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "version": "12.2.2",
+      "wheel_tags": [
+        "cp312-cp312-macosx_10_13_universal2"
+      ]
+    },
+    {
+      "artifact_id": "f3e89608fe8e472903685e757b903a7387e08b2de73ec688b2bb8c54dbbfd665",
+      "artifact_kind": "wheel",
+      "downloaded": false,
+      "filename": "pyobjc_framework_applicationservices-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "local_target_wheelhouse": "MISSING",
+      "metadata_observed_utc": "2026-10-11T22:31:54Z",
+      "metadata_source": "PyPI JSON release metadata",
+      "metadata_url": "https://pypi.org/pypi/pyobjc-framework-ApplicationServices/12.2.2/json",
+      "name": "pyobjc-framework-ApplicationServices",
+      "pypi_release_json_url": "https://pypi.org/pypi/pyobjc-framework-ApplicationServices/12.2.2/json",
+      "requires_dist": [
+        "pyobjc-core>=12.2.2",
+        "pyobjc-framework-Cocoa>=12.2.2",
+        "pyobjc-framework-Quartz>=12.2.2",
+        "pyobjc-framework-CoreText>=12.2.2"
+      ],
+      "requires_dist_active_cp312": [
+        "pyobjc-core>=12.2.2",
+        "pyobjc-framework-Cocoa>=12.2.2",
+        "pyobjc-framework-Quartz>=12.2.2",
+        "pyobjc-framework-CoreText>=12.2.2"
+      ],
+      "requires_python": ">=3.10",
+      "sha256": "5506bd6b5268a97fcb79b5b021f6cbbaaf5cdff3ec87094d8870268d8cf096ed",
+      "size_bytes": 32765,
+      "tags": [
+        "cp312-cp312-macosx_10_13_universal2"
+      ],
+      "target_selection": {
+        "accepted_tags": [
+          "cp312-cp312-macosx_10_13_universal2"
+        ],
+        "acquisition_state": "PLAN_ONLY_NOT_DOWNLOADED_NOT_INSTALLED",
+        "host_arch": "arm64",
+        "host_os": "macOS >=14.0 for SCScreenshotManager capture route",
+        "interpreter": "CPython 3.12.13"
+      },
+      "target_tags": {
+        "macos_arm64": [
+          "macosx_11_0_arm64",
+          "macosx_11_0_universal2"
+        ],
+        "macos_x86_64": [
+          "macosx_12_0_x86_64",
+          "macosx_12_0_universal2"
+        ],
+        "win_amd64": [
+          "win_amd64"
+        ]
+      },
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/00/ed/9d85751400f1cd23d71c824a57352ec4d216a8728255dc00c032c431d3ad/pyobjc_framework_applicationservices-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "version": "12.2.2",
+      "wheel_tags": [
+        "cp312-cp312-macosx_10_13_universal2"
+      ]
+    },
+    {
+      "artifact_id": "8cdb7174a2cf5fede18ca5a6e7da44dd14741ca43b73e2987fca613d301c991a",
+      "artifact_kind": "wheel",
+      "downloaded": false,
+      "filename": "pyobjc_framework_cocoa-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "local_target_wheelhouse": "MISSING",
+      "metadata_observed_utc": "2026-10-11T22:31:54Z",
+      "metadata_source": "PyPI JSON release metadata",
+      "metadata_url": "https://pypi.org/pypi/pyobjc-framework-Cocoa/12.2.2/json",
+      "name": "pyobjc-framework-Cocoa",
+      "pypi_release_json_url": "https://pypi.org/pypi/pyobjc-framework-Cocoa/12.2.2/json",
+      "requires_dist": [
+        "pyobjc-core>=12.2.2"
+      ],
+      "requires_dist_active_cp312": [
+        "pyobjc-core>=12.2.2"
+      ],
+      "requires_python": ">=3.10",
+      "sha256": "e106f395531e67694376b0f1184612cbeea3ec8b9bf56b55ef41d026171d2a2d",
+      "size_bytes": 388117,
+      "tags": [
+        "cp312-cp312-macosx_10_13_universal2"
+      ],
+      "target_selection": {
+        "accepted_tags": [
+          "cp312-cp312-macosx_10_13_universal2"
+        ],
+        "acquisition_state": "PLAN_ONLY_NOT_DOWNLOADED_NOT_INSTALLED",
+        "host_arch": "arm64",
+        "host_os": "macOS >=14.0 for SCScreenshotManager capture route",
+        "interpreter": "CPython 3.12.13"
+      },
+      "target_tags": {
+        "macos_arm64": [
+          "macosx_11_0_arm64",
+          "macosx_11_0_universal2"
+        ],
+        "macos_x86_64": [
+          "macosx_12_0_x86_64",
+          "macosx_12_0_universal2"
+        ],
+        "win_amd64": [
+          "win_amd64"
+        ]
+      },
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/fd/2f/b67e73d8bc367e03fe7861cd9c49fff9dcfa6db83bc0630c0adcfb25b7fa/pyobjc_framework_cocoa-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "version": "12.2.2",
+      "wheel_tags": [
+        "cp312-cp312-macosx_10_13_universal2"
+      ]
+    },
+    {
+      "artifact_id": "92fa6fdedefdce3febd37284ceddab6ed2a5a8efb2b28b558ee4a8b622b1489b",
+      "artifact_kind": "wheel",
+      "core_metadata_sha256": "df07bbeb35cec8de5a9b471ecf28e554a281a73cb499772275de11b819c1fff5",
+      "downloaded": false,
+      "filename": "pyobjc_framework_coremedia-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "local_target_wheelhouse": "MISSING",
+      "metadata_observed_utc": "2026-10-12T00:05:06Z",
+      "metadata_source": "Official PyPI version JSON selected-file metadata projection (no package file fetched)",
+      "metadata_url": "https://pypi.org/pypi/pyobjc-framework-CoreMedia/12.2.2/json",
+      "name": "pyobjc-framework-CoreMedia",
+      "platform_requirement": "MacOS X (>=10.7)",
+      "pypi_last_serial": 39927728,
+      "pypi_release_json_url": "https://pypi.org/pypi/pyobjc-framework-CoreMedia/12.2.2/json",
+      "requires_dist": [
+        "pyobjc-core>=12.2.2",
+        "pyobjc-framework-Cocoa>=12.2.2"
+      ],
+      "requires_dist_active_cp312": [
+        "pyobjc-core>=12.2.2",
+        "pyobjc-framework-Cocoa>=12.2.2"
+      ],
+      "requires_python": ">=3.10",
+      "sha256": "84f5deee8d366bf73069a0525509637aa578ccd0e6688923b09999a8bc3077a8",
+      "size_bytes": 29421,
+      "tags": [
+        "cp312-cp312-macosx_10_13_universal2"
+      ],
+      "target_selection": {
+        "accepted_tags": [
+          "cp312-cp312-macosx_10_13_universal2"
+        ],
+        "acquisition_state": "PLAN_ONLY_NOT_DOWNLOADED_NOT_INSTALLED",
+        "host_arch": "arm64",
+        "host_os": "macOS >=14.0 for SCScreenshotManager capture route",
+        "interpreter": "CPython 3.12.13"
+      },
+      "target_tags": {
+        "macos_arm64": [
+          "macosx_11_0_arm64",
+          "macosx_11_0_universal2"
+        ],
+        "macos_x86_64": [
+          "macosx_12_0_x86_64",
+          "macosx_12_0_universal2"
+        ],
+        "win_amd64": [
+          "win_amd64"
+        ]
+      },
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/cd/26/de907d6ead970916b39787e52bed679945328161f2abac533515b2ac8934/pyobjc_framework_coremedia-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "version": "12.2.2",
+      "wheel_tags": [
+        "cp312-cp312-macosx_10_13_universal2"
+      ]
+    },
+    {
+      "artifact_id": "5a79e17edca400bcae50dfc75662370bde546d2fecfff000f171f6b83697c50d",
+      "artifact_kind": "wheel",
+      "downloaded": false,
+      "filename": "pyobjc_framework_coretext-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "local_target_wheelhouse": "MISSING",
+      "metadata_observed_utc": "2026-10-11T22:31:54Z",
+      "metadata_source": "PyPI JSON release metadata",
+      "metadata_url": "https://pypi.org/pypi/pyobjc-framework-CoreText/12.2.2/json",
+      "name": "pyobjc-framework-CoreText",
+      "pypi_release_json_url": "https://pypi.org/pypi/pyobjc-framework-CoreText/12.2.2/json",
+      "requires_dist": [
+        "pyobjc-core>=12.2.2",
+        "pyobjc-framework-Cocoa>=12.2.2",
+        "pyobjc-framework-Quartz>=12.2.2"
+      ],
+      "requires_dist_active_cp312": [
+        "pyobjc-core>=12.2.2",
+        "pyobjc-framework-Cocoa>=12.2.2",
+        "pyobjc-framework-Quartz>=12.2.2"
+      ],
+      "requires_python": ">=3.10",
+      "sha256": "a69611de569d92776e6391ca25492a5bbb4a05ba744006349e377a4fc5f7c8a5",
+      "size_bytes": 30120,
+      "tags": [
+        "cp312-cp312-macosx_10_13_universal2"
+      ],
+      "target_selection": {
+        "accepted_tags": [
+          "cp312-cp312-macosx_10_13_universal2"
+        ],
+        "acquisition_state": "PLAN_ONLY_NOT_DOWNLOADED_NOT_INSTALLED",
+        "host_arch": "arm64",
+        "host_os": "macOS >=14.0 for SCScreenshotManager capture route",
+        "interpreter": "CPython 3.12.13"
+      },
+      "target_tags": {
+        "macos_arm64": [
+          "macosx_11_0_arm64",
+          "macosx_11_0_universal2"
+        ],
+        "macos_x86_64": [
+          "macosx_12_0_x86_64",
+          "macosx_12_0_universal2"
+        ],
+        "win_amd64": [
+          "win_amd64"
+        ]
+      },
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/1c/88/e85a9268285fc0c28284dbdc869a27f5d3f2e436d2838221a6704b4f8eee/pyobjc_framework_coretext-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "version": "12.2.2",
+      "wheel_tags": [
+        "cp312-cp312-macosx_10_13_universal2"
+      ]
+    },
+    {
+      "artifact_id": "956d3732e53e1ca216edb13dc5e9fcacad9afd7e1c5f6d031b2c00d99fcd4a47",
+      "artifact_kind": "wheel",
+      "downloaded": false,
+      "filename": "pyobjc_framework_quartz-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "local_target_wheelhouse": "MISSING",
+      "metadata_observed_utc": "2026-10-11T22:31:54Z",
+      "metadata_source": "PyPI JSON release metadata",
+      "metadata_url": "https://pypi.org/pypi/pyobjc-framework-Quartz/12.2.2/json",
+      "name": "pyobjc-framework-Quartz",
+      "pypi_release_json_url": "https://pypi.org/pypi/pyobjc-framework-Quartz/12.2.2/json",
+      "requires_dist": [
+        "pyobjc-core>=12.2.2",
+        "pyobjc-framework-Cocoa>=12.2.2"
+      ],
+      "requires_dist_active_cp312": [
+        "pyobjc-core>=12.2.2",
+        "pyobjc-framework-Cocoa>=12.2.2"
+      ],
+      "requires_python": ">=3.10",
+      "sha256": "7f668979d0c7320bf8f7ed6e030da578f93ab0f5dd619b295ec735cd8d5faa34",
+      "size_bytes": 219003,
+      "tags": [
+        "cp312-cp312-macosx_10_13_universal2"
+      ],
+      "target_selection": {
+        "accepted_tags": [
+          "cp312-cp312-macosx_10_13_universal2"
+        ],
+        "acquisition_state": "PLAN_ONLY_NOT_DOWNLOADED_NOT_INSTALLED",
+        "host_arch": "arm64",
+        "host_os": "macOS >=14.0 for SCScreenshotManager capture route",
+        "interpreter": "CPython 3.12.13"
+      },
+      "target_tags": {
+        "macos_arm64": [
+          "macosx_11_0_arm64",
+          "macosx_11_0_universal2"
+        ],
+        "macos_x86_64": [
+          "macosx_12_0_x86_64",
+          "macosx_12_0_universal2"
+        ],
+        "win_amd64": [
+          "win_amd64"
+        ]
+      },
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/ed/e4/8be95d2ff850f82fb55b44c63333a00a920bf8a73642e7d9c2f3638a26d2/pyobjc_framework_quartz-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "version": "12.2.2",
+      "wheel_tags": [
+        "cp312-cp312-macosx_10_13_universal2"
+      ]
+    },
+    {
+      "artifact_id": "0d95893c57d21ee03d960e6a6ee5ebcb76def272ae9e8c6c5566f9320d704424",
+      "artifact_kind": "wheel",
+      "core_metadata_sha256": "1114556dc18d1662f66df1a52191e61c6dd99b9ef479ec5b5a8dea6e9029f519",
+      "downloaded": false,
+      "filename": "pyobjc_framework_screencapturekit-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "local_target_wheelhouse": "MISSING",
+      "metadata_observed_utc": "2026-10-12T00:05:06Z",
+      "metadata_source": "Official PyPI version JSON selected-file metadata projection (no package file fetched)",
+      "metadata_url": "https://pypi.org/pypi/pyobjc-framework-ScreenCaptureKit/12.2.2/json",
+      "name": "pyobjc-framework-ScreenCaptureKit",
+      "platform_requirement": "MacOS X (>=12.3)",
+      "pypi_last_serial": 39927835,
+      "pypi_release_json_url": "https://pypi.org/pypi/pyobjc-framework-ScreenCaptureKit/12.2.2/json",
+      "requires_dist": [
+        "pyobjc-core>=12.2.2",
+        "pyobjc-framework-CoreMedia>=12.2.2",
+        "pyobjc-framework-Cocoa>=12.2.2"
+      ],
+      "requires_dist_active_cp312": [
+        "pyobjc-core>=12.2.2",
+        "pyobjc-framework-CoreMedia>=12.2.2",
+        "pyobjc-framework-Cocoa>=12.2.2"
+      ],
+      "requires_python": ">=3.10",
+      "sha256": "5c81c68bc0399ad7ca6ccaa978574354a4da8fbb474527664fdbf08cc8f8abd5",
+      "size_bytes": 11598,
+      "tags": [
+        "cp312-cp312-macosx_10_13_universal2"
+      ],
+      "target_selection": {
+        "accepted_tags": [
+          "cp312-cp312-macosx_10_13_universal2"
+        ],
+        "acquisition_state": "PLAN_ONLY_NOT_DOWNLOADED_NOT_INSTALLED",
+        "host_arch": "arm64",
+        "host_os": "macOS >=14.0 for SCScreenshotManager capture route",
+        "interpreter": "CPython 3.12.13"
+      },
+      "target_tags": {
+        "macos_arm64": [
+          "macosx_11_0_arm64",
+          "macosx_11_0_universal2"
+        ],
+        "macos_x86_64": [
+          "macosx_12_0_x86_64",
+          "macosx_12_0_universal2"
+        ],
+        "win_amd64": [
+          "win_amd64"
+        ]
+      },
+      "targets": [
+        "macos_arm64",
+        "macos_x86_64"
+      ],
+      "url": "https://files.pythonhosted.org/packages/05/17/1bf74d227db0abc7ee8cd1d5affcdf8f81cdf514d14f6ce938b94f3b3d0f/pyobjc_framework_screencapturekit-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "version": "12.2.2",
+      "wheel_tags": [
+        "cp312-cp312-macosx_10_13_universal2"
+      ]
+    }
+  ],
+  "schema": "w25-native-delivery-arm64-candidate/1",
+  "status": "SCOPED_METADATA_AND_LOCAL_INVENTORY_ONLY",
+  "target": {
+    "arch": "arm64",
+    "observed_runtime_path": "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python3",
+    "os": "macOS 14.0 or newer for capture action",
+    "python": "CPython 3.12.13",
+    "python_tag": "cp312"
+  }
+}

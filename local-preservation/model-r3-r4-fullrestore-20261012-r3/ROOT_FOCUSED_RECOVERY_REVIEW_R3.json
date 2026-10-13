@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "observed_utc": "2026-10-11T20:30:08.077279+00:00",
+  "status": "ROOT_FOCUSED_RECOVERY_DELTA_REVIEW_PASS",
+  "freeze_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/local-preservation/model-r3-r4-fullrestore-20261012-r3/FREEZE_RECEIPT.json",
+  "freeze_sha256": "3bbb4b0d0ddb83cf94960cd1bb5a2644b75be01a2a1f686dd1f808e42033e172",
+  "owned_delta_source_files": {
+    "comsol_mcp/_state_backup.py": {
+      "attribution": "owned restartable full-restore cleanup journal recovery and deterministic process-interruption tests",
+      "r2_sha256": "be245f26ab63427a0bdfc9eebf5919e591c1ab93bf4d667c2952ae68a99ac564",
+      "sha256": "9ab50378fc7eab8c72def62beb0d7191ef68c25e1fa1ace717e0424294f3ba5c",
+      "unchanged_from_r2": false
+    },
+    "tests/test_state_backup.py": {
+      "attribution": "owned restartable full-restore cleanup journal recovery and deterministic process-interruption tests",
+      "r2_sha256": "9ff826479e0b65399093fef2957829a3adebc12f71e221bc86155886c6f3123c",
+      "sha256": "dff3310f448613e9b8b839a9eaca33be50182d6aa59e37b9c4084a315acdc157",
+      "unchanged_from_r2": false
+    }
+  },
+  "reviewed_patch_sha256": "9eddde0c03c9bcf0100c28315f4a791adc725081a08e5f699daad8dbef155d1f",
+  "focused_junit_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/local-preservation/model-r3-r4-fullrestore-20261012-r3/evidence/junit-state-backup-r3.xml",
+  "focused_junit_sha256": "068f8a7cdf8b6ae8ef30e55ebad697b31bfad12828f1ba154c4d3da4bd22701a",
+  "actual_junit_counts": {
+    "tests": 27,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "review_scope": "The two owned files and recovery delta from r2. Forty-file snapshot is not independently accepted as an integrated candidate; two Windows resource inputs are contemporaneous drift.",
+  "findings_addressed": [
+    "Pinned parent/quarantine cleanup instead of full-path recursive deletion",
+    "PREPARED rename-to-quarantine before journal phase update",
+    "QUARANTINED partial deletion recovery from exact manifest subset",
+    "REMOVE_INTENT root rmdir before DONE journal update",
+    "Foreign same-content quarantine replacement refused during reopened recovery"
+  ],
+  "limitations": [
+    "POSIX name operations cannot claim inode-CAS against arbitrary hostile same-UID races",
+    "Windows recursive exact-handle cleanup remains typed unavailable",
+    "Power-loss durability across filesystems is not proved by injected process-interruption tests",
+    "Installed scoped host authorization provider and combined validation still pending",
+    "Actual native full-model restore still NOT_RUN"
+  ],
+  "independent_whole_project_acceptance": "NOT_RUN"
+}

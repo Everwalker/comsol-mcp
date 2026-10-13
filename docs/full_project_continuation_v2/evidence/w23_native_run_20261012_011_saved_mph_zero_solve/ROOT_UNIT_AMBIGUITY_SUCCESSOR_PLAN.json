@@ -1,0 +1,46 @@
+{
+  "implementation_plan": [
+    "Preserve raw getter number, imaginary component, and unit labels without numeric conversion or relabeling.",
+    "Keep singleton count, dataset/solution/study identity, no-outer and raw Java/Worker consistency as count-only proof; do not assert complete tuple axes or physical units.",
+    "Use existing EvaluationSpec.units and production Interp result.at_points path: explicitly request Hz for freq, 1/m for beta and k0, 1 for neff, require actual readback expression/unit/data/coordinate binding. Do not add public schema keys.",
+    "Check frequency, beta/k0/neff and physical relationships from native numerical values with explicit observed units. Raw lambda can only provide numerical consistency of beta=j*lambda, and cannot independently provide physical dimensions.",
+    "Compare attached count observation to exact raw witness fields, independently of the native physical frequency proof.",
+    "Replay real Activity011 captured raw payload through corrected count-only resolver offline, while keeping missing physical numerical witness NOT_CAPTURED. Test refusal for unit mismatch in physical evaluator, changed raw value/unit, wrong dataset/study, fabricated outer axis, multiple stored solutions.",
+    "Fix append_jsonl invocation against its actual production signature and persist raw top-level stdout/stderr in successor entry. Preserve all executed011 snapshots and old failures."
+  ],
+  "observed_raw_sol1": {
+    "SolutionInfo.getUnit_freq": "GHz",
+    "getPVals": [
+      193414489032258.03
+    ],
+    "getPValsImag": [
+      0.0
+    ],
+    "java_worker_reconciliation": "PASS_RAW_OBSERVATIONS_EXACT_MATCH",
+    "native_physical_frequency_Hz": "NOT_CAPTURED"
+  },
+  "observed_raw_sol2_sol3": {
+    "getUnit_lambda": "1",
+    "raw_parameter_dimension": "UNRESOLVED_DO_NOT_RELABEL_AS_1_PER_M"
+  },
+  "preserved_activity011": "FAIL_NOT_ACCEPTED_DO_NOT_REPLAY",
+  "primary_source": {
+    "chunk_id": 16582,
+    "doc_id": 4017,
+    "doc_sha256": "e4d45c3d1bba23c5aabff32d02b82029065d0c5d8bb32176e4a943a51f8c45c7",
+    "preserved_response_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_011_saved_mph_zero_solve/ROOT_PRIMARY_NUMERICAL_UNIT_API.json",
+    "preserved_response_sha256": "e446a9495cafd08099f29044cd21147d03b1d4739ee5e8a5278d8ed7015afe67",
+    "scope": "Official numerical evaluation example sets requested unit and reads numerical value and actual unit from same feature; this is API basis, not proof of this saved model."
+  },
+  "priority": "W24 zero-Study preflight offline prepare first; then W23 successor offline implementation; new native only through separate frozen Root admission",
+  "recorded_at_utc": "2026-10-12T01:01:28.207595+00:00",
+  "root_finding": "The frozen gate conflates raw getter metadata with physical frequency in Hz. Native Java and Worker values/labels match exactly. Getter documentation does not establish their numeric-unit pairing. No GHz conversion may be inferred.",
+  "schema_version": 1,
+  "status": "ROOT_ARCHITECTURE_PLAN_FOR_SUCCESSOR_NOT_NATIVE_ACCEPTANCE",
+  "unchanged_constraints": [
+    "No Study.run/solver.run in saved-MPH successor readback",
+    "No tolerance relaxation",
+    "No historical UNKNOWN replay",
+    "No native acceptance from fixtures or API documentation"
+  ]
+}

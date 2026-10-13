@@ -1,0 +1,1572 @@
+"""Managed, Worker-backed W21 stage output readback.
+
+The stage output reader deliberately uses the existing G3 result operations and
+managed execution service.  It does not turn a requested SolutionSpec, unit,
+frame, or caller-provided array into engine evidence.  Result-evaluation
+features are transient model nodes, so their service tickets and revision
+changes are returned as an explicit chain for the stage daemon to verify.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import math
+import re
+from collections.abc import Mapping, Sequence
+from typing import Any
+from uuid import uuid4
+
+from ._execution_contract import ExecutionContractError
+from ._stage_contract import sha256_json
+
+OUTPUT_CONTRACT = "w21-stage-output-readback/v1"
+_SOLUTION_INFO_SOURCE = "SolutionInfo.getSolnum(outer, strict)"
+_MAX_FIELD_SCALARS = 65_536
+_MAX_FIELD_JSON_BYTES = 8 * 1024 * 1024
+_AUTOMATIC_UNIT_CONTROL_SCOPE = "automatic_native_expression_unit_dimensionality"
+_AUTO_UNIT_ABS_TOL = 1e-10
+_AUTO_UNIT_REL_TOL = 1e-12
+_SAFE_FIELD_EXPRESSION = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*")
+
+
+class _EvidenceUnavailable(Exception):
+    """A deterministic gap in a requested readback, not an engine failure."""
+
+
+def _finite(value: Any) -> bool:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return math.isfinite(float(value))
+    except (OverflowError, ValueError):
+        return False
+
+
+def _numeric_scalars(value: Any) -> int:
+    if isinstance(value, bool):
+        return 0
+    if isinstance(value, (int, float)):
+        return 1
+    if isinstance(value, Mapping):
+        return sum(_numeric_scalars(item) for item in value.values())
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return sum(_numeric_scalars(item) for item in value)
+    return 0
+
+
+def _plain_json(value: Any) -> Any:
+    """Detach JSON-shaped evidence without accepting nonfinite values."""
+    if isinstance(value, Mapping):
+        return {str(key): _plain_json(item) for key, item in value.items()}
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return [_plain_json(item) for item in value]
+    if isinstance(value, float) and not math.isfinite(value):
+        raise _EvidenceUnavailable("nonfinite numeric evidence")
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    raise _EvidenceUnavailable("result payload is not finite JSON evidence")
+
+
+def _unverified(binding: Mapping[str, Any], stage_run_operation_id: str, solve_revision: int,
+                target_selection: Mapping[str, Any], reason: str, *,
+                revision_chain: list[dict[str, Any]] | None = None,
+                output_tuple: Mapping[str, Any] | None = None,
+                solution_binding: Mapping[str, Any] | None = None,
+                checks: list[dict[str, Any]] | None = None,
+                evidence_refs: list[dict[str, Any]] | None = None,
+                output_revision: int | None = None) -> dict[str, Any]:
+    return {
+        "contract": OUTPUT_CONTRACT,
+        "producer": "managed-backend-stage-output-readback",
+        "status": "UNVERIFIED",
+        "binding": dict(binding),
+        "stage_run_operation_id": stage_run_operation_id,
+        "solve_revision": solve_revision,
+        "model_revision": solve_revision,
+        "output_revision": output_revision if type(output_revision) is int else solve_revision,
+        "target_selection_sha256": sha256_json(dict(target_selection)),
+        "output_tuple": dict(output_tuple) if isinstance(output_tuple, Mapping) else None,
+        "solution_binding": dict(solution_binding) if isinstance(solution_binding, Mapping) else None,
+        "checks": list(checks or []),
+        "evidence_refs": list(evidence_refs or []),
+        "revision_chain": list(revision_chain or []),
+        "missing": [reason],
+    }
+
+
+def _check_tuple(solution_spec: Mapping[str, Any], raw: Mapping[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Resolve one DSL SolutionSpec against an actual SolutionInfo pair table."""
+    dataset = solution_spec.get("dataset")
+    if not isinstance(dataset, str) or raw.get("dataset") != dataset:
+        raise _EvidenceUnavailable("dataset identity did not match the requested SolutionSpec")
+    solution = raw.get("solution")
+    if not isinstance(solution, str) or not solution:
+        raise _EvidenceUnavailable("dataset did not resolve one actual SolutionInfo sequence")
+    if solution_spec.get("solution") is not None and solution_spec.get("solution") != solution:
+        raise _EvidenceUnavailable("requested solution tag differs from the actual dataset binding")
+    pairs = raw.get("solnum_pairs")
+    if (raw.get("binding_complete") is not True or raw.get("pair_mapping_complete") is not True
+            or _SOLUTION_INFO_SOURCE not in str(raw.get("binding_source", ""))
+            or not isinstance(pairs, list) or not pairs):
+        raise _EvidenceUnavailable("complete SolutionInfo.getSolnum pair mapping is unavailable")
+    pair_rows: list[dict[str, int]] = []
+    seen: set[tuple[int, int]] = set()
+    by_outer: dict[int, list[int]] = {}
+    for row in pairs:
+        if not isinstance(row, Mapping):
+            raise _EvidenceUnavailable("SolutionInfo pair row is malformed")
+        outer, inner, solnum = row.get("outer"), row.get("inner"), row.get("solnum")
+        if any(type(value) is not int or value < 1 for value in (outer, inner, solnum)):
+            raise _EvidenceUnavailable("SolutionInfo pair has an invalid index")
+        key = (outer, inner)
+        if key in seen:
+            raise _EvidenceUnavailable("SolutionInfo pair mapping contains duplicate tuples")
+        seen.add(key)
+        by_outer.setdefault(outer, []).append(inner)
+        pair_rows.append({"outer": outer, "inner": inner, "solnum": solnum})
+
+    outer_labels = raw.get("outer_indices")
+    if not isinstance(outer_labels, list) or outer_labels != list(by_outer):
+        raise _EvidenceUnavailable("outer axis does not match the actual SolutionInfo pair sequence")
+    inner_labels = raw.get("inner_indices")
+    expected_inner_labels = (list(next(iter(by_outer.values())))
+                             if by_outer and all(values == next(iter(by_outer.values())) for values in by_outer.values())
+                             else sorted({value for values in by_outer.values() for value in values}))
+    if inner_labels != expected_inner_labels:
+        raise _EvidenceUnavailable("inner axis does not match the actual SolutionInfo pair sequence")
+
+    parameters = raw.get("parameters")
+    parameter_rows = parameters.get("by_pair") if isinstance(parameters, Mapping) else None
+    requested_filters = any(solution_spec.get(name) is not None for name in ("time", "frequency", "parameters"))
+    if requested_filters and (raw.get("parameters_complete") is not True
+                              or not isinstance(raw.get("parameters_source"), str)
+                              or not all(method in raw["parameters_source"] for method in
+                                         ("SolutionInfo.getPNames", "getPvals", "getUnits"))
+                              or not isinstance(parameter_rows, Mapping)):
+        raise _EvidenceUnavailable("complete native SolutionInfo parameter values and units are unavailable")
+
+    filters: dict[str, Any] = {}
+    candidates = list(pair_rows)
+    outer_selector = solution_spec.get("outer")
+    if isinstance(outer_selector, list):
+        if len(outer_selector) != 1:
+            raise _EvidenceUnavailable("output SolutionSpec must select one outer index")
+        candidates = [row for row in candidates if row["outer"] == outer_selector[0]]
+    elif outer_selector in {"first", "last"}:
+        if not outer_labels:
+            raise _EvidenceUnavailable("actual outer axis is empty")
+        selected = outer_labels[0] if outer_selector == "first" else outer_labels[-1]
+        candidates = [row for row in candidates if row["outer"] == selected]
+    elif outer_selector == "all":
+        raise _EvidenceUnavailable("output SolutionSpec cannot resolve outer=all to one tuple")
+    elif outer_selector is not None:
+        raise _EvidenceUnavailable("output SolutionSpec outer selector is unsupported")
+
+    # Per-outer first/last semantics follow the actual sorted inner labels used
+    # by the frozen output validator; ambiguity is rejected below.
+    inner_selector = solution_spec.get("inner")
+    if isinstance(inner_selector, list):
+        if len(inner_selector) != 1:
+            raise _EvidenceUnavailable("output SolutionSpec must select one inner index")
+        candidates = [row for row in candidates if row["inner"] == inner_selector[0]]
+    elif inner_selector in {"first", "last"}:
+        candidates = [row for row in candidates if row["inner"] == (
+            min(by_outer[row["outer"]]) if inner_selector == "first" else max(by_outer[row["outer"]])
+        )]
+    elif inner_selector == "all":
+        raise _EvidenceUnavailable("output SolutionSpec cannot resolve inner=all to one tuple")
+    elif inner_selector is not None:
+        raise _EvidenceUnavailable("output SolutionSpec inner selector is unsupported")
+
+    def param_row(pair: Mapping[str, int]) -> Mapping[str, Any]:
+        row = parameter_rows.get(f"{pair['outer']}:{pair['inner']}") if isinstance(parameter_rows, Mapping) else None
+        if (not isinstance(row, Mapping) or row.get("solnum") != pair["solnum"]
+                or not isinstance(row.get("names"), list)
+                or not isinstance(row.get("values"), list)
+                or not isinstance(row.get("units"), list)
+                or not (len(row["names"]) == len(row["values"]) == len(row["units"]))):
+            raise _EvidenceUnavailable("SolutionInfo parameter row is incomplete for an exact tuple")
+        return row
+
+    for axis, aliases in (("time", {"time", "t"}), ("frequency", {"frequency", "freq"})):
+        requested = solution_spec.get(axis)
+        if requested is None:
+            continue
+        if not isinstance(requested, list) or len(requested) != 1:
+            raise _EvidenceUnavailable(f"output SolutionSpec {axis} must select one exact quantity")
+        quantity = requested[0]
+        if not isinstance(quantity, Mapping) or not _finite(quantity.get("value")) or not isinstance(quantity.get("unit"), str):
+            raise _EvidenceUnavailable(f"output SolutionSpec {axis} quantity is malformed")
+        matches: list[tuple[dict[str, int], str, float, str]] = []
+        for pair in candidates:
+            row = param_row(pair)
+            indices = [index for index, name in enumerate(row["names"])
+                       if isinstance(name, str) and name.casefold() in aliases]
+            if len(indices) != 1:
+                continue
+            index = indices[0]
+            value, unit = row["values"][index], row["units"][index]
+            if (_finite(value) and unit == quantity["unit"]
+                    and math.isclose(float(value), float(quantity["value"]), rel_tol=1e-12, abs_tol=1e-15)):
+                matches.append((pair, row["names"][index], float(value), unit))
+        if not matches or len({item[1] for item in matches}) != 1 or len({item[3] for item in matches}) != 1:
+            raise _EvidenceUnavailable(f"native SolutionInfo {axis} values/units do not resolve the requested quantity")
+        parameter_name = matches[0][1]
+        filters[axis] = {"status": "VERIFIED", "parameter_name": parameter_name,
+                         "value": matches[0][2], "unit": matches[0][3],
+                         "source": raw["parameters_source"]}
+        candidates = [item[0] for item in matches]
+
+    requested_parameters = solution_spec.get("parameters")
+    if requested_parameters is not None:
+        if not isinstance(requested_parameters, Mapping):
+            raise _EvidenceUnavailable("output SolutionSpec parameter selector is malformed")
+        matched = []
+        for pair in candidates:
+            row = param_row(pair)
+            ok = True
+            for name, expected in requested_parameters.items():
+                if name not in row["names"]:
+                    ok = False
+                    break
+                index = row["names"].index(name)
+                expected_value = expected.get("value") if isinstance(expected, Mapping) else expected
+                expected_unit = expected.get("unit") if isinstance(expected, Mapping) else None
+                if (row["values"][index] != expected_value
+                        or (expected_unit is not None and row["units"][index] != expected_unit)):
+                    ok = False
+                    break
+            if ok:
+                matched.append(pair)
+        candidates = matched
+    if len(candidates) != 1:
+        raise _EvidenceUnavailable("SolutionSpec did not resolve exactly one actual outer/inner/solnum tuple")
+    pair = candidates[0]
+    normalized_binding = dict(raw)
+    normalized_binding["outer_indices"] = list(by_outer)
+    normalized_binding["inner_indices"] = expected_inner_labels
+    normalized_binding["inner_indices_by_outer"] = {key: sorted(set(values)) for key, values in by_outer.items()}
+    normalized_binding["selection_resolution"] = {
+        "status": "VERIFIED",
+        "target_selection_sha256": sha256_json(dict(solution_spec)),
+        "resolved_pair": dict(pair),
+        "filters": filters,
+        "source": "managed dataset.solution_indices readback; SolutionInfo.getSolnum(outer, strict)",
+    }
+    return ({"dataset": dataset, "solution": solution, **pair}, normalized_binding)
+
+
+def _safe_declared_unit(value: Any) -> bool:
+    """Accept a deliberately small COMSOL unit grammar before embedding it in an expression."""
+    if not isinstance(value, str) or not value or len(value) > 128 or any(char.isspace() for char in value):
+        return False
+    index = 0
+
+    def parse_atom() -> bool:
+        nonlocal index
+        if index >= len(value):
+            return False
+        if value[index] == "(":
+            index += 1
+            if not parse_product() or index >= len(value) or value[index] != ")":
+                return False
+            index += 1
+        elif value[index] == "%":
+            index += 1
+        elif value[index] == "1":
+            index += 1
+        elif value[index].isascii() and (value[index].isalpha() or value[index] == "_"):
+            index += 1
+            while (index < len(value) and value[index].isascii()
+                   and (value[index].isalnum() or value[index] == "_")):
+                index += 1
+        else:
+            return False
+        if index < len(value) and value[index] == "^":
+            index += 1
+            if index < len(value) and value[index] in "+-":
+                index += 1
+            start = index
+            while index < len(value) and value[index].isdigit() and value[index].isascii():
+                index += 1
+            if index == start:
+                return False
+        return True
+
+    def parse_product() -> bool:
+        nonlocal index
+        if not parse_atom():
+            return False
+        while index < len(value) and value[index] in "*/":
+            index += 1
+            if not parse_atom():
+                return False
+        return True
+
+    return parse_product() and index == len(value)
+
+
+def _field_control_expressions(expression: Any, declared_unit: Any) -> list[str]:
+    if (not isinstance(expression, str) or len(expression) > 256
+            or _SAFE_FIELD_EXPRESSION.fullmatch(expression) is None):
+        raise _EvidenceUnavailable("field unit controls support only a simple qualified variable expression")
+    if not _safe_declared_unit(declared_unit):
+        raise _EvidenceUnavailable("field unit controls reject unsupported or unsafe declared-unit syntax")
+    return [expression, f"({expression})/1[{declared_unit}]", "1"]
+
+
+def _complex_scalar(value: Any, *, label: str) -> complex:
+    if isinstance(value, Mapping):
+        if set(value) != {"real", "imag"} or not _finite(value.get("real")) or not _finite(value.get("imag")):
+            raise _EvidenceUnavailable(f"{label} contains a malformed or nonfinite complex component")
+        return complex(float(value["real"]), float(value["imag"]))
+    if _finite(value):
+        return complex(float(value), 0.0)
+    raise _EvidenceUnavailable(f"{label} contains a nonfinite or nonnumeric value")
+
+
+def _unit_control_evidence(expressions: Sequence[str], expression_values: Sequence[Sequence[Any]],
+                           unit_values: Mapping[str, Any], declared_unit: str) -> dict[str, Any]:
+    original, normalized, constant = expressions
+    readbacks = {expression: unit_values.get(expression) for expression in expressions}
+    failures: list[str] = []
+    missing: list[str] = []
+    for expression, expected in ((original, declared_unit), (normalized, "1"), (constant, "1")):
+        actual = readbacks[expression]
+        if not isinstance(actual, str) or not actual.strip():
+            missing.append(f"automatic unit readback is missing for {expression}")
+        elif actual != expected:
+            failures.append(f"automatic unit readback for {expression} was {actual!r}, expected {expected!r}")
+
+    def compare(left: Sequence[Any], right: Sequence[Any], *, label: str,
+                right_value: complex | None = None) -> dict[str, Any]:
+        if right_value is None and (not left or len(left) != len(right)):
+            return {"status": "FAIL", "point_count": min(len(left), len(right)),
+                    "max_absolute_error": None, "failure": f"{label} point counts do not match"}
+        errors: list[float] = []
+        limits: list[float] = []
+        try:
+            pairs = ((item, right_value) for item in left) if right_value is not None else zip(left, right)
+            for lhs, rhs in pairs:
+                a = _complex_scalar(lhs, label=label)
+                b = rhs if right_value is not None else _complex_scalar(rhs, label=label)
+                error = abs(a - b)
+                scale = max(abs(a), abs(b))
+                limit = _AUTO_UNIT_ABS_TOL + _AUTO_UNIT_REL_TOL * scale
+                if not math.isfinite(error) or not math.isfinite(scale) or not math.isfinite(limit):
+                    raise _EvidenceUnavailable(f"{label} difference or threshold overflowed")
+                errors.append(error)
+                limits.append(limit)
+        except _EvidenceUnavailable as exc:
+            return {"status": "FAIL", "point_count": len(left),
+                    "max_absolute_error": None, "failure": str(exc)}
+        max_error = max(errors, default=0.0)
+        status = "PASS" if all(error <= limit for error, limit in zip(errors, limits)) else "FAIL"
+        return {"status": status, "point_count": len(left),
+                "max_absolute_error": max_error, "max_allowed_error": max(limits, default=0.0)}
+
+    normalized_check = compare(expression_values[0], expression_values[1], label="normalized expression control")
+    constant_check = compare(expression_values[2], (), label="constant-one control", right_value=complex(1.0, 0.0))
+    for label, control in (("normalized expression", normalized_check), ("constant-one", constant_check)):
+        if control.get("status") == "FAIL":
+            failures.append(f"{label} numeric control failed: {control.get('failure', 'tolerance exceeded')}")
+    status = "FAIL" if failures else "UNVERIFIED" if missing else "VERIFIED"
+    return {
+        "status": status,
+        "scope": _AUTOMATIC_UNIT_CONTROL_SCOPE,
+        "source": "strict_field_readback.expression_unit_readback.values",
+        "units_overridden": False,
+        "declared_unit": declared_unit,
+        "expressions": list(expressions),
+        "expression_unit_readbacks": readbacks,
+        "numeric_controls": {"normalized_matches_original": normalized_check,
+                             "constant_equals_real_one": constant_check},
+        "threshold": {"absolute": _AUTO_UNIT_ABS_TOL, "relative": _AUTO_UNIT_REL_TOL},
+        "missing": missing,
+        "failures": failures,
+        "limits": ["active degrees of freedom are not established",
+                   "physics intrinsic units are not established",
+                   "coordinate frame and solver history are not established"],
+    }
+
+
+def _field_payload(evaluation: Mapping[str, Any], expressions: Sequence[str], *,
+                   declared_unit: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    evidence = evaluation.get("strict_field_readback")
+    if not isinstance(evidence, Mapping) or evidence.get("status") != "VERIFIED":
+        raise _EvidenceUnavailable("strict native field/coordinate readback is incomplete")
+    field = evidence.get("field_array")
+    coordinates = evidence.get("coordinates")
+    if not isinstance(field, Mapping) or not isinstance(coordinates, Mapping):
+        raise _EvidenceUnavailable("strict field or native coordinate payload is missing")
+    values = field.get("values")
+    coords = coordinates.get("values")
+    shape = field.get("shape")
+    axes = field.get("axes")
+    if (axes != ["expression", "outer", "inner", "point"]
+            or not isinstance(shape, list) or len(shape) != 4
+            or shape[0] != len(expressions) or shape[1:3] != [1, 1]
+            or type(shape[3]) is not int or shape[3] < 1
+            or not isinstance(values, list) or len(values) != len(expressions)
+            or any(not isinstance(expression_row, list) or len(expression_row) != 1
+                   or not isinstance(expression_row[0], list) or len(expression_row[0]) != 1
+                   or not isinstance(expression_row[0][0], list) or len(expression_row[0][0]) != shape[3]
+                   for expression_row in values)
+            or not isinstance(coords, list) or not coords
+            or any(not isinstance(axis, list) or len(axis) != shape[3] for axis in coords)):
+        raise _EvidenceUnavailable("strict field/coordinate shapes do not form one complete three-expression selected tuple")
+    scalars = _numeric_scalars(values) + _numeric_scalars(coords)
+    if scalars > _MAX_FIELD_SCALARS:
+        raise _EvidenceUnavailable("strict field/coordinate scalar cap was exceeded")
+    try:
+        payload_bytes = len(json.dumps({"values": values, "coordinates": coords}, allow_nan=False,
+                                       separators=(",", ":")).encode("utf-8"))
+    except (TypeError, ValueError) as exc:
+        raise _EvidenceUnavailable("strict field/coordinate payload contains nonfinite data") from exc
+    if payload_bytes > _MAX_FIELD_JSON_BYTES:
+        raise _EvidenceUnavailable("strict field/coordinate JSON cap was exceeded")
+    field_metadata = field.get("metadata")
+    if (not isinstance(field_metadata, Mapping)
+            or field_metadata.get("requested_expressions") != list(expressions)):
+        raise _EvidenceUnavailable("strict field expression order is not bound to the combined request")
+    expression_values: list[list[Any]] = []
+    for expression_axis_row in values:
+        normalized_values = []
+        for item in expression_axis_row[0][0]:
+            scalar = _complex_scalar(item, label="pointwise field")
+            if isinstance(item, Mapping):
+                normalized_values.append({"real": float(scalar.real), "imag": float(scalar.imag)})
+            else:
+                normalized_values.append(float(scalar.real))
+        expression_values.append(normalized_values)
+    coord_rows: list[list[float]] = []
+    for row in coords:
+        normalized = []
+        for item in row:
+            if not _finite(item):
+                raise _EvidenceUnavailable("native coordinates contain a nonfinite value")
+            normalized.append(float(item))
+        coord_rows.append(normalized)
+    unit_evidence = evidence.get("expression_unit_readback")
+    unit_values = unit_evidence.get("values", {}) if isinstance(unit_evidence, Mapping) else {}
+    if not isinstance(unit_values, Mapping):
+        unit_values = {}
+    automatic_unit_controls = _unit_control_evidence(expressions, expression_values, unit_values, declared_unit)
+    unit = unit_values.get(expressions[0])
+    field_evidence = _plain_json(dict(evidence))
+    frame_evidence = coordinates
+    return ({"values": expression_values[0], "coordinates": coord_rows, "unit_readback": unit,
+             "automatic_unit_control_evidence": automatic_unit_controls,
+             "reported_expression_unit_readback": _plain_json(dict(unit_evidence))
+                 if isinstance(unit_evidence, Mapping) else None,
+             "coordinate_frame": coordinates.get("coordinate_frame"),
+             "coordinate_frame_evidence": _plain_json(dict(frame_evidence)),
+             "selection_readback": _plain_json(evidence.get("selection_readback")),
+             "shape": [1, 1, 1, shape[3]],
+             "slice": {"source": "strict_field_readback.field_array.values",
+                       "source_shape": list(shape), "axis": "expression", "expression_index": 0,
+                       "expression": expressions[0], "requested_expressions": list(expressions)}}, field_evidence)
+
+
+def _selection_readback_matches(value: Any, requested: Mapping[str, Any], *, role: str = "primary") -> bool:
+    """Bind numerical feature evidence to the frozen component selection."""
+    if not isinstance(value, Mapping):
+        return False
+    if value.get("role") != role or value.get("source") != "actual_transient_numerical_feature":
+        return False
+    if (value.get("component") != requested.get("component")
+            or value.get("geometry") != requested.get("geometry")
+            or value.get("entity_dimension") != requested.get("entity_dimension")
+            or value.get("kind") != requested.get("kind")):
+        return False
+    entities = value.get("entities")
+    if (not isinstance(entities, list) or not entities
+            or any(type(entity) is not int or entity < 1 for entity in entities)):
+        return False
+    kind = requested.get("kind")
+    if kind == "named" and value.get("tag") != requested.get("tag"):
+        return False
+    if kind == "explicit":
+        expected = requested.get("entities")
+        if (not isinstance(expected, list) or any(type(entity) is not int or entity < 1 for entity in expected)
+                or sorted(entities) != sorted(expected)):
+            return False
+    native = value.get("native_selection_readback")
+    return (isinstance(native, Mapping)
+            and native.get("geometry") == requested.get("geometry")
+            and native.get("dimension") == requested.get("entity_dimension")
+            and native.get("entities") == entities
+            and native.get("is_inheriting") is not True)
+
+
+def _integral_value(evaluation: Mapping[str, Any], expression: str, pair: Mapping[str, Any],
+                    selection: Mapping[str, Any]) -> tuple[float, Any, dict[str, Any]]:
+    if not isinstance(evaluation.get("strict_metric_evidence"), Mapping):
+        raise _EvidenceUnavailable("native integration feature selection/solution evidence is missing")
+    fa = evaluation.get("field_array")
+    if not isinstance(fa, Mapping) or not isinstance(fa.get("values"), list):
+        raise _EvidenceUnavailable("native integral result field array is missing")
+    values = fa["values"]
+    # Aggregate result must be a scalar for exactly the selected tuple. Accept
+    # only singleton axes, not a first-item fallback over a larger payload.
+    def singleton(value: Any) -> Any:
+        while isinstance(value, list):
+            if len(value) != 1:
+                raise _EvidenceUnavailable("native integral result is not a singleton exact tuple")
+            value = value[0]
+        return value
+    scalar = singleton(values)
+    if not _finite(scalar):
+        raise _EvidenceUnavailable("native integral result is nonfinite or complex")
+    metric = evaluation["strict_metric_evidence"]
+    actual_pairs = metric.get("selected_solution_pairs")
+    if not isinstance(actual_pairs, list) or actual_pairs != [
+        {"outer": pair["outer"], "inner": pair["inner"], "solnum": pair["solnum"]}
+    ]:
+        raise _EvidenceUnavailable("native integral did not read back exactly the selected solution tuple")
+    selections = metric.get("selection_features")
+    primary = [item for item in selections if isinstance(item, Mapping) and item.get("role") == "primary"] \
+        if isinstance(selections, list) else []
+    if len(primary) != 1 or not _selection_readback_matches(primary[0], selection):
+        raise _EvidenceUnavailable("native integral numerical feature selection was not read back")
+    unit_values = metric.get("expression_unit_readback")
+    unit = unit_values.get(expression) if isinstance(unit_values, Mapping) else None
+    return float(scalar), unit, _plain_json(dict(metric))
+
+
+def _coordinate_pairs_equal(left: Mapping[str, Any], right: Mapping[str, Any]) -> bool:
+    return (left.get("coordinates") == right.get("coordinates")
+            and left.get("shape") == right.get("shape"))
+
+
+def _intrinsic_unit_matches(payload: Mapping[str, Any], expected_unit: Any) -> bool:
+    evidence = payload.get("automatic_unit_control_evidence")
+    if (not isinstance(evidence, Mapping) or evidence.get("status") != "VERIFIED"
+            or evidence.get("scope") != _AUTOMATIC_UNIT_CONTROL_SCOPE
+            or evidence.get("units_overridden") is not False
+            or evidence.get("declared_unit") != expected_unit):
+        return False
+    expressions = evidence.get("expressions")
+    readbacks = evidence.get("expression_unit_readbacks")
+    numeric = evidence.get("numeric_controls")
+    return (isinstance(expressions, list) and len(expressions) == 3
+            and isinstance(readbacks, Mapping)
+            and readbacks.get(expressions[0]) == expected_unit
+            and readbacks.get(expressions[1]) == "1"
+            and readbacks.get(expressions[2]) == "1"
+            and isinstance(numeric, Mapping)
+            and numeric.get("normalized_matches_original", {}).get("status") == "PASS"
+            and numeric.get("constant_equals_real_one", {}).get("status") == "PASS")
+
+
+def _coordinate_frame_matches(payload: Mapping[str, Any], expected_frame: Any) -> bool:
+    evidence = payload.get("coordinate_frame_evidence")
+    return (isinstance(evidence, Mapping)
+            and evidence.get("coordinate_frame_status") == "VERIFIED"
+            and evidence.get("coordinate_frame") == expected_frame)
+
+
+def _max_abs_pairwise_error(source: Sequence[float], target: Sequence[float]) -> tuple[float, float]:
+    if not source or len(source) != len(target):
+        raise _EvidenceUnavailable("source and target pointwise field shapes do not match")
+
+    def scalar(value: Any) -> complex:
+        if isinstance(value, Mapping):
+            real, imaginary = value.get("real"), value.get("imag")
+            if not _finite(real) or not _finite(imaginary):
+                raise _EvidenceUnavailable("pointwise complex field contains a nonfinite component")
+            return complex(float(real), float(imaginary))
+        if not _finite(value):
+            raise _EvidenceUnavailable("pointwise field contains a nonfinite value")
+        return complex(float(value), 0.0)
+
+    pairs = [(scalar(a), scalar(b)) for a, b in zip(source, target)]
+    errors = [abs(a - b) for a, b in pairs]
+    scales = [max(abs(a), abs(b)) for a, b in pairs]
+    if any(not math.isfinite(value) for value in errors + scales):
+        raise _EvidenceUnavailable("pointwise error or reference scale overflowed")
+    return max(errors), max(scales)
+
+
+def _artifact_ref(backend: Any, payload: Mapping[str, Any], *, binding: Mapping[str, Any],
+                  stage_run_operation_id: str, model_revision: int, child_operation_id: str,
+                  managed_operation_id: str | None, request_id: str, request_hash: str | None,
+                  revision_witness: str, worker_requests: Sequence[Mapping[str, Any]], readphase: str,
+                  check_definition_sha256: str, selection_sha256: str,
+                  tuple_binding: Mapping[str, Any]) -> dict[str, Any]:
+    from ._artifact_store import ArtifactStore, trusted_project_root
+
+    identity = uuid4().hex
+    name = f"w21_stage_readbacks/{identity}.json"
+    exported = ArtifactStore(trusted_project_root(backend.worker)).export_field_data(
+        name,
+        {"values": _plain_json(dict(payload)), "status": {"ok": True},
+         "provenance": {
+             "binding": dict(binding), "stage_run_operation_id": stage_run_operation_id,
+             "model_revision": model_revision, "child_operation_id": child_operation_id,
+             "managed_operation_id": managed_operation_id,
+             "request_id": request_id, "request_hash": request_hash, "readphase": readphase,
+             "revision_witness": revision_witness,
+             "worker_requests": [dict(row) for row in worker_requests],
+             "check_definition_sha256": check_definition_sha256,
+             "selection_sha256": selection_sha256, "tuple_binding": dict(tuple_binding),
+         }},
+        "json",
+    )
+    record = {
+        "schema_version": 1, "kind": "w21_stage_output_readback",
+        "project_id": binding["project_id"], "model_ref": dict(binding["model_ref"]),
+        "stage_attempt_id": binding["attempt_id"], "stage_run_operation_id": stage_run_operation_id,
+        "model_revision": model_revision, "child_operation_id": child_operation_id,
+        "managed_operation_id": managed_operation_id,
+        "request_id": request_id, "request_hash": request_hash, "readphase": readphase,
+        "revision_witness": revision_witness,
+        "worker_requests": [dict(row) for row in worker_requests],
+        "check_definition_sha256": check_definition_sha256,
+        "selection_sha256": selection_sha256, "tuple_binding": dict(tuple_binding),
+        "artifact": dict(exported), "sha256": exported["sha256"],
+    }
+    key = f"w21-stage-output-readback:{identity}"
+    backend.store.persist_artifact(key, record)
+    return {"artifact_id": key, "file_path": exported.get("file_path"),
+            "sha256": exported["sha256"], "byte_size": exported.get("byte_size"),
+            "readphase": readphase, "child_operation_id": child_operation_id,
+            "managed_operation_id": managed_operation_id,
+            "request_id": request_id, "request_hash": request_hash,
+            "revision_witness": revision_witness,
+            "worker_requests": [dict(row) for row in worker_requests],
+            "observation_revision": model_revision}
+
+
+def produce_stage_output_readback(
+    backend: Any, *, binding: Mapping[str, Any], stage: Mapping[str, Any], plan: Mapping[str, Any],
+    stage_run_operation_id: str, model_revision: int, solve_result: Mapping[str, Any],
+    event_callback: Any = None, authorize_callback: Any = None,
+) -> dict[str, Any]:
+    """Read actual result fields/integrals through managed G3 service tickets."""
+    from ._managed_backend import _G3_EFFECT_MAP
+    from ._w21_stage_backend import is_registered_initial_state_stage
+
+    if (not isinstance(binding, Mapping) or not isinstance(stage, Mapping)
+            or not isinstance(plan, Mapping) or not isinstance(solve_result, Mapping)):
+        raise ExecutionContractError("INVALID_REQUEST", "stage output readback identity is malformed", stage="validation")
+    model_ref = binding.get("model_ref")
+    project_id = binding.get("project_id")
+    if (not isinstance(model_ref, Mapping) or not isinstance(project_id, str)
+            or not isinstance(stage_run_operation_id, str) or not stage_run_operation_id
+            or type(model_revision) is not int):
+        raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "stage output readback lacks exact run identity", stage="validation")
+    if backend.service is None or backend.worker is None:
+        raise ExecutionContractError("ENGINE_UNRESPONSIVE", "managed Worker/service is unavailable", stage="validation")
+    ref = dict(model_ref)
+    # ModelRef construction is kept on the existing parser to avoid accepting
+    # any caller-defined representation of the managed ledger key.
+    from ._execution_contract import model_ref_from_mapping
+    ledger_ref = model_ref_from_mapping(ref)
+    state = backend.service.ledger._state_for(ledger_ref)
+    if state.dirty or state.revision != model_revision:
+        raise ExecutionContractError("REVISION_CONFLICT", "stage output readback does not start at the exact clean solve revision", stage="validation")
+    if backend.model_project_binding(ref) != {"attribution": "PROJECT_BOUND", "project_id": project_id}:
+        raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "stage output ModelRef is not bound to the same project", stage="validation")
+
+    target_selection = stage.get("target_selection")
+    if not isinstance(target_selection, Mapping):
+        raise ExecutionContractError("INVALID_REQUEST", "stage target SolutionSpec is unavailable", stage="validation")
+    checks = stage.get("checks")
+    if not isinstance(checks, list):
+        raise ExecutionContractError("INVALID_REQUEST", "stage checks are malformed", stage="validation")
+    initial_state_route = is_registered_initial_state_stage(plan, stage)
+    initial_action_plan: list[str] = []
+    initial_action_cursor = 0
+    initial_action_cap: int | None = None
+    if initial_state_route:
+        from ._w21_stage_backend import initial_stage_managed_action_plan
+
+        action_record = backend.store.get_metadata(
+            "artifacts", f"w21-initial-stage-preflight:{binding.get('attempt_id')}",
+        )
+        expected_action_plan = initial_stage_managed_action_plan(plan, stage)
+        if (not isinstance(action_record, Mapping)
+                or action_record.get("kind") != "w21_initial_stage_preflight"
+                or action_record.get("binding") != dict(binding)
+                or action_record.get("managed_internal_action_plan") != expected_action_plan
+                or not isinstance(expected_action_plan, list)):
+            raise ExecutionContractError(
+                "STAGE_PROFILE_UNVERIFIED",
+                "initial managed-action plan is not bound to the persisted preflight",
+                stage="pre_dispatch",
+            )
+        initial_action_plan = list(expected_action_plan)
+        initial_action_cap = action_record.get("internal_read_cap")
+        if initial_action_cap is not None and (
+                type(initial_action_cap) is not int or initial_action_cap != 12
+                or len(initial_action_plan) > initial_action_cap):
+            raise ExecutionContractError(
+                "STAGE_PROFILE_UNVERIFIED",
+                "initial managed-action plan exceeds the frozen runner profile cap",
+                stage="pre_dispatch",
+            )
+        initial_action_cursor = 1  # the persisted preflight already consumed its first action
+    current_revision = model_revision
+    operation_index = 0
+    chain: list[dict[str, Any]] = []
+    all_events: list[dict[str, Any]] = []
+    evidence_refs: list[dict[str, Any]] = []
+    last_initial_dataset_readback: dict[str, Any] | None = None
+    last_initial_mesh_association: dict[str, Any] | None = None
+
+    def managed_call(operation: str, arguments: Mapping[str, Any], *, readphase: str,
+                     strict_mode: str | None = None,
+                     native_context: Mapping[str, Any] | None = None,
+                     effect_override: str | None = None) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+        nonlocal current_revision, operation_index, initial_action_cursor
+        operation_index += 1
+        child_operation_id = f"w21-output-{uuid4().hex}"
+        child_request_id = f"w21-output-request-{uuid4().hex}"
+        child_execution = {
+            "project_id": project_id, "session_id": ref.get("session_id"), "model_ref": ref,
+            "expected_revision": current_revision, "request_id": child_request_id,
+            "idempotency_key": f"{binding['attempt_id']}:output:{operation_index}",
+        }
+        if (effect_override is not None
+                and (not initial_state_route or operation != "solver.inspect"
+                     or readphase != "initial-stage-active-variables-xmesh"
+                     or effect_override != "EVALUATE")):
+            raise ExecutionContractError(
+                "STAGE_PROFILE_UNVERIFIED",
+                "private stage output effect override is outside the exact Variables.xmeshInfo ticket",
+                stage="pre_dispatch",
+            )
+        effective_effect = effect_override or operation_effect(operation)
+        if callable(authorize_callback):
+            # The private xmesh observation is ticketed as EVALUATE, which
+            # requires the same project_write authority as result.evaluate.
+            # The domain operation remains solver.inspect and its caller-supplied
+            # flags cannot select this server-owned effect override.
+            auth_operation = "result.evaluate" if effect_override == "EVALUATE" else operation
+            authorize_callback(auth_operation, dict(arguments), child_execution)
+        events: list[dict[str, Any]] = []
+        worker = getattr(backend, "worker", None)
+        worker_generation = getattr(worker, "generation", None)
+        if callable(worker_generation):
+            worker_generation = worker_generation()
+        if type(worker_generation) is not int or worker_generation < 1:
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                "stage output Worker epoch is unavailable or malformed",
+                stage="pre_dispatch",
+            )
+
+        if initial_state_route:
+            if operation == "study.inspect" and readphase == "initial-stage-study-solver-binding":
+                planned_actions = ["study.inspect:postsolve"]
+            elif operation == "solver.inspect" and readphase == "initial-stage-active-variables":
+                planned_actions = ["solver.inspect:active-variables"]
+            elif operation == "solver.inspect" and readphase == "initial-stage-active-variables-xmesh":
+                planned_actions = ["Variables.xmeshInfo:active-variables"]
+            elif operation == "dataset.solution_indices" and readphase == "initial-stage-output-tuple":
+                planned_actions = ["dataset.solution_indices:output-tuple"]
+            elif operation == "dataset.solution_indices" and readphase == "initial-stage-solution-mesh-association":
+                planned_actions = ["dataset.solution_indices:solution-mesh-association"]
+            elif operation == "dataset.solution_indices" and readphase.startswith("initial-target-field:"):
+                field_index = readphase.split(":", 2)[1]
+                if not field_index.isdigit():
+                    raise ExecutionContractError("STAGE_PROFILE_UNVERIFIED", "initial field action index is malformed", stage="pre_dispatch")
+                planned_actions = [f"dataset.solution_indices:field-binding:{field_index}"]
+            elif operation == "result.evaluate" and readphase.startswith("initial-target-field:"):
+                field_index = readphase.split(":", 2)[1]
+                if not field_index.isdigit():
+                    raise ExecutionContractError("STAGE_PROFILE_UNVERIFIED", "initial Eval action index is malformed", stage="pre_dispatch")
+                planned_actions = [f"result.evaluate:field:{field_index}"]
+            else:
+                raise ExecutionContractError("STAGE_PROFILE_UNVERIFIED", "unexpected initial managed observation action", stage="pre_dispatch")
+            next_cursor = initial_action_cursor + len(planned_actions)
+            # Reserve the one final mesh.inspect action before this Worker
+            # dispatch so the actual route cannot exceed its immutable plan.
+            if (initial_action_plan[initial_action_cursor:next_cursor] != planned_actions
+                    or next_cursor >= len(initial_action_plan)
+                    or (initial_action_cap is not None and next_cursor + 1 > initial_action_cap)):
+                raise ExecutionContractError("STAGE_PROFILE_UNVERIFIED", "initial managed-action budget/order differs before Worker dispatch", stage="pre_dispatch")
+            initial_action_cursor = next_cursor
+
+        def capture(event: Any) -> None:
+            if not isinstance(event, Mapping):
+                raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "Worker output event is malformed", stage="post_dispatch")
+            copied = dict(event)
+            # Preserve the Worker's original command kind and RPC metadata. This
+            # sidecar carries the actual managed model binding across command
+            # kinds such as model_snapshot and model, which do not have a Java
+            # receiver/method pair.
+            copied["w21_stage_output_binding"] = {
+                "model_ref": dict(ref), "model_tag": ref.get("model_tag"),
+                "worker_generation": worker_generation,
+                "child_operation_id": child_operation_id,
+                "operation": operation, "readphase": readphase,
+            }
+            events.append(copied)
+            all_events.append({"readphase": readphase, "operation": operation, "event": copied})
+            if copied.get("operation_id") != child_operation_id:
+                raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "Worker output event has a different child operation identity", stage="post_dispatch")
+            if callable(event_callback):
+                event_callback(copied, readphase=readphase, operation=operation,
+                               child_operation_id=child_operation_id,
+                               expected_revision=current_revision)
+
+        mode_token = None
+        mode_context = getattr(backend, "_stage_output_mode_context", None)
+        if strict_mode is not None and mode_context is not None:
+            mode_token = mode_context.set(strict_mode)
+        native_token = None
+        native_mode = getattr(backend, "_stage_native_context", None)
+        if initial_state_route and native_mode is not None:
+            private_context = dict(native_context or {})
+            private_context.setdefault("purpose", "initial_stage_output")
+            private_context.setdefault("binding", dict(binding))
+            private_context.setdefault("stage_run_operation_id", stage_run_operation_id)
+            private_context.setdefault("solve_revision", model_revision)
+            private_context.setdefault("readphase", readphase)
+            private_context.setdefault("expected_revision", current_revision)
+            if effect_override == "EVALUATE":
+                private_context["variables_xmesh_ticket"] = True
+            native_token = native_mode.set(private_context)
+        try:
+            reply = backend.invoke(operation, dict(arguments), child_execution, child_operation_id, capture)
+        finally:
+            if native_token is not None:
+                native_mode.reset(native_token)
+            if mode_token is not None:
+                mode_context.reset(mode_token)
+        if not isinstance(reply, Mapping) or reply.get("success") is not True or not isinstance(reply.get("execution"), Mapping):
+            raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", f"managed {operation} output ticket did not complete", stage="post_dispatch")
+        execution = reply["execution"]
+        revision = execution.get("revision")
+        managed_operation_id = execution.get("operation_id")
+        managed_request_id = execution.get("request_id")
+        ticket_hash = execution.get("request_hash")
+        state_now = backend.service.ledger._state_for(ledger_ref)
+        read_only = _G3_EFFECT_MAP.get(str(effective_effect).upper()) == "inspect"
+        expected_delta = 0 if read_only else 1
+        if (execution.get("model_ref") != ref or execution.get("session_id") != ref.get("session_id")
+                or execution.get("project_id") not in (None, project_id)
+                or (not read_only and (managed_operation_id is None
+                    or not isinstance(managed_operation_id, str) or not managed_operation_id
+                    or managed_request_id != child_request_id
+                    or not isinstance(ticket_hash, str) or len(ticket_hash) != 64))
+                or (read_only and (managed_operation_id is not None
+                    or managed_request_id is not None or ticket_hash is not None))
+                or type(revision) is not int or revision != state_now.revision or state_now.dirty
+                or revision != current_revision + expected_delta):
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                f"managed {operation} output ticket revision chain is invalid "
+                f"(expected={current_revision + expected_delta}, returned={revision}, live={state_now.revision}, dirty={state_now.dirty}, "
+                f"model_match={execution.get('model_ref') == ref}, session_match={execution.get('session_id') == ref.get('session_id')}, "
+                f"project_match={execution.get('project_id') in (None, project_id)})",
+                stage="post_dispatch",
+            )
+        event_rows = []
+        for event in events:
+            kind = event.get("kind")
+            if kind not in {"call", "model", "model_snapshot"}:
+                raise ExecutionContractError(
+                    "EXECUTION_STATE_UNKNOWN",
+                    f"managed {operation} emitted an unsupported Worker command kind",
+                    stage="post_dispatch",
+                )
+            metadata = event.get("metadata")
+            sidecar = event.get("w21_stage_output_binding")
+            request_id = event.get("request_id")
+            request_hash = event.get("request_hash")
+            if (not isinstance(metadata, Mapping) or metadata.get("type") != kind
+                    or metadata.get("request_id") != request_id
+                    or not isinstance(request_id, str) or not request_id
+                    or not isinstance(request_hash, str) or len(request_hash) != 64
+                    or not isinstance(sidecar, Mapping)
+                    or sidecar.get("model_ref") != ref
+                    or sidecar.get("model_tag") != ref.get("model_tag")
+                    or sidecar.get("worker_generation") != worker_generation
+                    or sidecar.get("child_operation_id") != child_operation_id
+                    or sidecar.get("operation") != operation
+                    or sidecar.get("readphase") != readphase):
+                raise ExecutionContractError(
+                    "EXECUTION_STATE_UNKNOWN",
+                    f"managed {operation} Worker command is not bound to its exact model/readphase",
+                    stage="post_dispatch",
+                )
+            if kind == "call":
+                if (metadata.get("generation") != worker_generation
+                        or not isinstance(metadata.get("handle"), str) or not metadata.get("handle")
+                        or not isinstance(metadata.get("method"), str) or not metadata.get("method")
+                        or not isinstance(metadata.get("args"), list)):
+                    raise ExecutionContractError(
+                        "EXECUTION_STATE_UNKNOWN",
+                        "submitted stage output call has no exact receiver/generation/method metadata",
+                        stage="post_dispatch",
+                    )
+                model_tag = None
+                method = metadata["method"]
+                receiver = metadata["handle"]
+            else:
+                if metadata.get("tag") != ref.get("model_tag"):
+                    raise ExecutionContractError(
+                        "EXECUTION_STATE_UNKNOWN",
+                        "stage output model command names a different model tag",
+                        stage="post_dispatch",
+                    )
+                model_tag = metadata["tag"]
+                method = None
+                receiver = None
+            if event.get("phase") != "submitted":
+                continue
+            event_rows.append({
+                "worker_request_id": request_id, "worker_request_hash": request_hash,
+                "worker_kind": kind, "worker_model_tag": model_tag,
+                "worker_method": method, "worker_receiver": receiver,
+                "worker_generation": worker_generation, "phase": "submitted",
+            })
+        if not event_rows:
+            raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", f"managed {operation} returned without a submitted Worker request", stage="post_dispatch")
+        chain_row = {
+            "operation": operation, "readphase": readphase,
+            "child_operation_id": child_operation_id,
+            "child_request_id": child_request_id, "request_id": child_request_id,
+            "managed_operation_id": managed_operation_id, "request_hash": ticket_hash,
+            "managed_request_id": managed_request_id,
+            "managed_ticket_operation": (
+                "w21_initial_variables_xmesh" if effect_override == "EVALUATE"
+                else operation.replace(".", "_") if not read_only else None
+            ),
+            "revision_witness": "service-inspect-no-ticket" if read_only else "managed-evaluate-ticket",
+            "expected_revision": current_revision, "revision": revision,
+            "effect": effective_effect, "worker_requests": event_rows,
+        }
+        chain.append(chain_row)
+        current_revision = revision
+        return dict(reply), events
+
+    def operation_effect(operation: str) -> str:
+        from ._g3_ops import EFFECTS
+        return EFFECTS.get(operation, "READ")
+
+    def solution_binding_for(spec: Mapping[str, Any], readphase: str, *,
+                             selected_tuple: Mapping[str, Any] | None = None) -> tuple[dict[str, Any], dict[str, Any]]:
+        nonlocal last_initial_dataset_readback, last_initial_mesh_association
+        private_context = ({"purpose": "initial_stage_output",
+                           **({"selected_tuple": dict(selected_tuple)} if isinstance(selected_tuple, Mapping) else {})}
+                          if initial_state_route else None)
+        reply, _ = managed_call("dataset.solution_indices", {"path": spec["dataset"]},
+                                readphase=readphase, native_context=private_context)
+        data = reply.get("data")
+        if isinstance(data, Mapping) and isinstance(data.get("data"), Mapping):
+            data = data["data"]
+        if not isinstance(data, Mapping):
+            raise _EvidenceUnavailable("dataset.solution_indices returned no native binding")
+        if initial_state_route:
+            candidate = data.get("w21_initial_stage_dataset")
+            last_initial_dataset_readback = dict(candidate) if isinstance(candidate, Mapping) else None
+            association = data.get("w21_initial_stage_mesh_association")
+            last_initial_mesh_association = dict(association) if isinstance(association, Mapping) else None
+        try:
+            tuple_value, resolved_binding = _check_tuple(spec, data)
+        except _EvidenceUnavailable:
+            raise
+        return tuple_value, resolved_binding
+
+    def read_field(spec: Mapping[str, Any], selection: Mapping[str, Any], expression: str,
+                   declared_unit: Any,
+                   readphase: str, check_hash: str) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
+        if (selection.get("kind") not in {"named", "explicit", "all"}
+                or any(not isinstance(selection.get(name), str) or not selection.get(name)
+                       for name in ("component", "geometry"))
+                or type(selection.get("entity_dimension")) is not int):
+            raise _EvidenceUnavailable("field selection kind/component/geometry/dimension is unsupported")
+        expressions = _field_control_expressions(expression, declared_unit)
+        tuple_value, resolved_binding = solution_binding_for(spec, readphase + ":solution-binding")
+        evaluation_spec = {
+            "expressions": expressions,
+            "solution": {"dataset": spec["dataset"], "solution": tuple_value["solution"],
+                         "outer": tuple_value["outer"], "inner": tuple_value["inner"]},
+            "aggregate": "none", "complex_mode": "preserve", "selection": dict(selection),
+        }
+        private_context = None
+        if initial_state_route:
+            private_context = {
+                "purpose": "initial_stage_output",
+                "dataset_identity": dict(last_initial_dataset_readback or {}),
+                "target_variable": expression,
+            }
+        reply, _ = managed_call("result.evaluate", {"spec": evaluation_spec}, readphase=readphase,
+                                strict_mode="strict_field_readback", native_context=private_context)
+        data = reply.get("data")
+        if not isinstance(data, Mapping):
+            raise _EvidenceUnavailable("result.evaluate returned no strict field readback")
+        actual = data.get("strict_field_readback")
+        if not isinstance(actual, Mapping):
+            raise _EvidenceUnavailable("result.evaluate did not return strict native field evidence")
+        actual_tuple = actual.get("solution_tuple")
+        if (not isinstance(actual_tuple, Mapping)
+                or actual_tuple.get("outer") != tuple_value["outer"]
+                or actual_tuple.get("inner") != tuple_value["inner"]
+                or actual_tuple.get("solnum") != tuple_value["solnum"]):
+            raise _EvidenceUnavailable("strict field reader returned a different actual SolutionInfo tuple")
+        payload, raw_evidence = _field_payload(data, expressions, declared_unit=declared_unit)
+        if not _selection_readback_matches(raw_evidence.get("selection_readback"), selection):
+            raise _EvidenceUnavailable("native field numerical feature selection differs from the frozen selector")
+        ticket = chain[-1]
+        field_ref = _artifact_ref(
+            backend, {"tuple": tuple_value, "binding": resolved_binding,
+                      "field": raw_evidence, "normalized_field": payload},
+            binding=binding, stage_run_operation_id=stage_run_operation_id,
+            model_revision=ticket["revision"], child_operation_id=ticket["child_operation_id"],
+            managed_operation_id=ticket["managed_operation_id"],
+            request_id=ticket["request_id"], request_hash=ticket["request_hash"],
+            revision_witness=ticket["revision_witness"], worker_requests=ticket["worker_requests"],
+            readphase=readphase, check_definition_sha256=check_hash,
+            selection_sha256=sha256_json(dict(selection)), tuple_binding=tuple_value,
+        )
+        return tuple_value, resolved_binding, payload, raw_evidence, field_ref
+
+    def read_integral(spec: Mapping[str, Any], term: Mapping[str, Any], readphase: str,
+                      check_hash: str) -> tuple[dict[str, Any], dict[str, Any], float, Any, dict[str, Any]]:
+        selection = term.get("selection")
+        if (not isinstance(selection, Mapping) or selection.get("kind") not in {"named", "explicit", "all"}
+                or any(not isinstance(selection.get(name), str) or not selection.get(name)
+                       for name in ("component", "geometry"))
+                or type(term.get("entity_dimension")) is not int):
+            raise _EvidenceUnavailable("native-integral term selection kind/component/geometry/dimension is unsupported")
+        tuple_value, resolved_binding = solution_binding_for(spec, readphase + ":solution-binding")
+        expression = term["variable"]
+        evaluation_spec = {
+            "expressions": [expression],
+            "solution": {"dataset": spec["dataset"], "solution": tuple_value["solution"],
+                         "outer": tuple_value["outer"], "inner": tuple_value["inner"]},
+            "aggregate": "integral", "entity_dim": term["entity_dimension"],
+            "selection": dict(term["selection"]),
+        }
+        reply, _ = managed_call("result.evaluate", {"spec": evaluation_spec}, readphase=readphase,
+                                strict_mode="strict_metric_evidence")
+        data = reply.get("data")
+        if not isinstance(data, Mapping):
+            raise _EvidenceUnavailable("result.evaluate returned no native integral result")
+        integral, unit, metric_evidence = _integral_value(
+            data, expression, tuple_value, term["selection"],
+        )
+        ticket = chain[-1]
+        evidence_ref = _artifact_ref(
+            backend, {"tuple": tuple_value, "binding": resolved_binding,
+                      "term": dict(term), "native_integral": integral,
+                      "unit_readback": unit, "strict_metric_evidence": metric_evidence},
+            binding=binding, stage_run_operation_id=stage_run_operation_id,
+            model_revision=ticket["revision"], child_operation_id=ticket["child_operation_id"],
+            managed_operation_id=ticket["managed_operation_id"],
+            request_id=ticket["request_id"], request_hash=ticket["request_hash"],
+            revision_witness=ticket["revision_witness"], worker_requests=ticket["worker_requests"],
+            readphase=readphase, check_definition_sha256=check_hash,
+            selection_sha256=sha256_json(dict(term["selection"])), tuple_binding=tuple_value,
+        )
+        return tuple_value, resolved_binding, integral, unit, {"metric": metric_evidence, "evidence_ref": evidence_ref}
+
+    if initial_state_route:
+        def operation_data(reply: Mapping[str, Any]) -> Mapping[str, Any] | None:
+            data = reply.get("data")
+            if isinstance(data, Mapping) and isinstance(data.get("data"), Mapping):
+                data = data["data"]
+            return data if isinstance(data, Mapping) else None
+
+        def unverified_initial(reason: str, *, output_tuple: Mapping[str, Any] | None = None,
+                               output_binding: Mapping[str, Any] | None = None,
+                               dataset_identity: Mapping[str, Any] | None = None,
+                               study_solver_binding: Mapping[str, Any] | None = None,
+                               variables_dof_readback: Mapping[str, Any] | None = None,
+                               mesh_association: Mapping[str, Any] | None = None,
+                               fields: Sequence[Mapping[str, Any]] = ()) -> dict[str, Any]:
+            return {
+                "contract": OUTPUT_CONTRACT,
+                "producer": "managed-backend-initial-output-readback",
+                "status": "UNVERIFIED", "binding": dict(binding),
+                "stage_run_operation_id": stage_run_operation_id,
+                "solve_revision": model_revision, "model_revision": model_revision,
+                "output_revision": current_revision,
+                "target_selection_sha256": sha256_json(dict(target_selection)),
+                "output_tuple": dict(output_tuple) if isinstance(output_tuple, Mapping) else None,
+                "solution_binding": dict(output_binding) if isinstance(output_binding, Mapping) else None,
+                "initial_output_scope": "INITIAL_OUTPUT_AND_SOURCE_ARTIFACT_ONLY",
+                "initial_source_facts": "NOT_APPLICABLE",
+                "history_identity": "NOT_APPLICABLE",
+                "study_solver_binding": dict(study_solver_binding or {}),
+                "dataset_identity": dict(dataset_identity or {}),
+                "variables_dof_readback": dict(variables_dof_readback or {}),
+                "solution_mesh_association": dict(mesh_association or {}),
+                "initial_field_readbacks": [dict(row) for row in fields],
+                "checks": [], "evidence_refs": evidence_refs,
+                "revision_chain": chain,
+                "managed_internal_action_plan": list(initial_action_plan),
+                "internal_read_cap": initial_action_cap,
+                "output_missing": [reason],
+            }
+
+        stage_segments = (stage.get("study_target", {}).get("segments")
+                          if isinstance(stage.get("study_target"), Mapping) else None)
+        if (not isinstance(stage_segments, list) or len(stage_segments) != 1
+                or not isinstance(stage_segments[0], Mapping)
+                or stage_segments[0].get("collection") != "study"
+                or not isinstance(stage_segments[0].get("tag"), str)):
+            return unverified_initial("registered study target is unavailable")
+        study_tag = stage_segments[0]["tag"]
+        study_reply, _ = managed_call(
+            "study.inspect",
+            {"path": {"segments": [{"collection": "study", "tag": study_tag}]}},
+            readphase="initial-stage-study-solver-binding",
+            native_context={"purpose": "initial_stage_output", "study_tag": study_tag},
+        )
+        study_data = operation_data(study_reply)
+        solver_sequence_evidence = (study_data.get("_w21_initial_stage_solver_sequences")
+                                    if isinstance(study_data, Mapping) else None)
+        solver_tags = solver_sequence_evidence.get("tags") if isinstance(solver_sequence_evidence, Mapping) else None
+        attached_rows = study_data.get("solver_sequences") if isinstance(study_data, Mapping) else None
+        if (not isinstance(study_data, Mapping) or study_data.get("study") != study_tag
+                or not isinstance(solver_sequence_evidence, Mapping)
+                or solver_sequence_evidence.get("status") != "VERIFIED"
+                or solver_sequence_evidence.get("source") != "Study.getSolverSequences(String)"
+                or not isinstance(solver_tags, list) or len(solver_tags) != 1
+                or not isinstance(solver_tags[0], str) or not solver_tags[0]
+                or not isinstance(attached_rows, list)
+                or not any(isinstance(row, Mapping) and row.get("solver") == solver_tags[0]
+                           for row in attached_rows)):
+            return unverified_initial("Study does not resolve one exact attached SolverSequence",
+                                      study_solver_binding={"study": dict(study_data or {}),
+                                                            "solver_sequences": dict(solver_sequence_evidence or {})})
+        solver_tag = solver_tags[0]
+        solver_reply, _ = managed_call(
+            "solver.inspect",
+            {"path": {"segments": [{"collection": "sol", "tag": solver_tag}]}},
+            readphase="initial-stage-active-variables",
+            native_context={"purpose": "initial_stage_output", "study_tag": study_tag,
+                            "solver_tag": solver_tag},
+        )
+        solver_data = operation_data(solver_reply)
+        def flatten_features(rows: Any) -> list[Mapping[str, Any]]:
+            flattened: list[Mapping[str, Any]] = []
+            if not isinstance(rows, list):
+                return flattened
+            for row in rows:
+                if not isinstance(row, Mapping):
+                    continue
+                flattened.append(row)
+                flattened.extend(flatten_features(row.get("children")))
+            return flattened
+        feature_rows = flatten_features(solver_data.get("features") if isinstance(solver_data, Mapping) else None)
+        variables_features = [row for row in feature_rows if row.get("type_id") == "Variables"]
+        active_variables = [row for row in variables_features if row.get("is_active") is True]
+        study_solver_binding = {
+            "status": "VERIFIED" if (isinstance(solver_data, Mapping)
+                and solver_data.get("kind") == "solver_sequence"
+                and solver_data.get("solver") == solver_tag
+                and solver_data.get("study") == study_tag
+                and solver_data.get("is_attached") is True
+                and len(active_variables) == 1) else "UNVERIFIED",
+            "study_tag": study_tag, "study_solver_sequences": dict(solver_sequence_evidence),
+            "attached_solver_sequences": _plain_json(attached_rows),
+            "solver_tag": solver_tag,
+            "solver_readback": _plain_json(dict(solver_data)) if isinstance(solver_data, Mapping) else None,
+            "variables_feature_count": len(variables_features),
+            "active_variables_feature_count": len(active_variables),
+        }
+        if study_solver_binding["status"] != "VERIFIED":
+            return unverified_initial("Study/SolverSequence/active Variables identity is incomplete",
+                                      study_solver_binding=study_solver_binding)
+        variables_feature = active_variables[0]
+        variables_path = variables_feature.get("path")
+        if not isinstance(variables_path, Mapping):
+            return unverified_initial("the unique active Variables feature has no exact NodePath",
+                                      study_solver_binding=study_solver_binding)
+        xmesh_reply, _ = managed_call(
+            "solver.inspect", {"path": dict(variables_path)},
+            readphase="initial-stage-active-variables-xmesh",
+            native_context={
+                "purpose": "initial_stage_output", "study_tag": study_tag,
+                "solver_tag": solver_tag, "variables_feature_tag": variables_feature.get("tag"),
+                "variables_feature_path": dict(variables_path),
+            },
+            effect_override="EVALUATE",
+        )
+        xmesh_data = operation_data(xmesh_reply)
+        xmesh = (xmesh_data.get("initial_xmesh_dof_readback")
+                 if isinstance(xmesh_data, Mapping) else None)
+        if (not isinstance(xmesh, Mapping) or xmesh.get("status") != "VERIFIED"
+                or xmesh.get("feature_tag") != variables_feature.get("tag")
+                or xmesh.get("feature_active") is not True
+                or type(xmesh.get("n_dofs")) is not int or xmesh.get("n_dofs") <= 0
+                or xmesh.get("cleanup") != "clearXmesh"):
+            return unverified_initial("active Variables xmeshInfo DOF readback is incomplete",
+                                      study_solver_binding=study_solver_binding,
+                                      variables_dof_readback=xmesh if isinstance(xmesh, Mapping) else {})
+        study_solver_binding["variables_feature_path"] = dict(variables_path)
+        study_solver_binding["variables_dof_readback"] = dict(xmesh)
+
+        try:
+            output_tuple, output_binding = solution_binding_for(target_selection, "initial-stage-output-tuple")
+        except _EvidenceUnavailable as exc:
+            return unverified_initial(str(exc), study_solver_binding=study_solver_binding,
+                                      variables_dof_readback=xmesh)
+        dataset_identity = dict(last_initial_dataset_readback or {})
+        if (dataset_identity.get("status") != "VERIFIED"
+                or dataset_identity.get("dataset") != output_tuple.get("dataset")
+                or dataset_identity.get("solution") != output_tuple.get("solution")
+                or dataset_identity.get("dataset_type") != "Solution"
+                or dataset_identity.get("frametype") not in {"mesh", "material", "spatial", "geometry"}
+                or type(dataset_identity.get("spatial_dimension")) is not int
+                or dataset_identity.get("component") is None
+                or dataset_identity.get("geometry") is None):
+            return unverified_initial("actual Solution dataset/frame/component/geometry binding is incomplete",
+                                      output_tuple=output_tuple, output_binding=output_binding,
+                                      dataset_identity=dataset_identity, study_solver_binding=study_solver_binding,
+                                      variables_dof_readback=xmesh)
+        try:
+            # This second READ binds the actual selected SolutionInfo pair to
+            # its solver mesh; it does not compare mesh DOFs with Eval points.
+            solution_binding_for(target_selection, "initial-stage-solution-mesh-association",
+                                 selected_tuple=output_tuple)
+            association_reply = chain[-1]
+            association_call_data = last_initial_mesh_association
+        except _EvidenceUnavailable as exc:
+            return unverified_initial(str(exc), output_tuple=output_tuple,
+                                      output_binding=output_binding, dataset_identity=dataset_identity,
+                                      study_solver_binding=study_solver_binding,
+                                      variables_dof_readback=xmesh)
+        mesh_association = dict(association_call_data or {})
+        if (mesh_association.get("status") != "VERIFIED"
+                or mesh_association.get("dataset") != output_tuple.get("dataset")
+                or mesh_association.get("solution") != output_tuple.get("solution")
+                or mesh_association.get("selected_tuple") != {
+                    key: output_tuple.get(key) for key in ("dataset", "solution", "outer", "inner", "solnum")}
+                or mesh_association.get("geometry") != dataset_identity.get("geometry")
+                or not isinstance(mesh_association.get("mesh_tag"), str)
+                or not mesh_association.get("mesh_tag")):
+            return unverified_initial("selected SolutionInfo-to-mesh association is incomplete",
+                                      output_tuple=output_tuple, output_binding=output_binding,
+                                      dataset_identity=dataset_identity, study_solver_binding=study_solver_binding,
+                                      variables_dof_readback=xmesh, mesh_association=mesh_association)
+
+        fields: list[dict[str, Any]] = []
+        mappings = stage.get("variable_mappings")
+        if not isinstance(mappings, list) or not mappings:
+            return unverified_initial("registered initial stage has no variable mappings",
+                                      output_tuple=output_tuple, output_binding=output_binding,
+                                      dataset_identity=dataset_identity, study_solver_binding=study_solver_binding,
+                                      variables_dof_readback=xmesh, mesh_association=mesh_association)
+        field_names = xmesh.get("field_names")
+        field_dofs = xmesh.get("field_n_dofs")
+        dof_by_name = ({name: count for name, count in zip(field_names, field_dofs)}
+                       if isinstance(field_names, list) and isinstance(field_dofs, list)
+                       and len(field_names) == len(field_dofs) else {})
+        selection = {
+            "kind": "all", "component": dataset_identity["component"],
+            "geometry": dataset_identity["geometry"],
+            "entity_dimension": dataset_identity["spatial_dimension"],
+        }
+        for mapping_index, mapping in enumerate(mappings):
+            if not isinstance(mapping, Mapping):
+                return unverified_initial("registered variable mapping row is malformed",
+                                          output_tuple=output_tuple, output_binding=output_binding,
+                                          dataset_identity=dataset_identity, study_solver_binding=study_solver_binding,
+                                          variables_dof_readback=xmesh, mesh_association=mesh_association,
+                                          fields=fields)
+            target_variable, target_unit = mapping.get("target_variable"), mapping.get("target_unit")
+            if (not isinstance(target_variable, str) or not target_variable
+                    or not isinstance(target_unit, str) or not target_unit
+                    or dof_by_name.get(target_variable, 0) <= 0):
+                return unverified_initial("mapped target variable is absent from active Variables field DOFs",
+                                          output_tuple=output_tuple, output_binding=output_binding,
+                                          dataset_identity=dataset_identity, study_solver_binding=study_solver_binding,
+                                          variables_dof_readback=xmesh, mesh_association=mesh_association,
+                                          fields=fields)
+            mapping_hash = sha256_json(dict(mapping))
+            try:
+                actual_tuple, resolved_binding, field_payload, raw_field, field_ref = read_field(
+                    target_selection, selection, target_variable, target_unit,
+                    f"initial-target-field:{mapping_index}", mapping_hash,
+                )
+            except _EvidenceUnavailable as exc:
+                return unverified_initial(str(exc), output_tuple=output_tuple,
+                                          output_binding=output_binding,
+                                          dataset_identity=dataset_identity,
+                                          study_solver_binding=study_solver_binding,
+                                          variables_dof_readback=xmesh,
+                                          mesh_association=mesh_association, fields=fields)
+            unit_controls = field_payload.get("automatic_unit_control_evidence")
+            if (actual_tuple != output_tuple
+                    or field_payload.get("unit_readback") != target_unit
+                    or not _intrinsic_unit_matches(field_payload, target_unit)
+                    or not _coordinate_frame_matches(field_payload, dataset_identity.get("frametype"))):
+                return unverified_initial("mapped field tuple/unit/frame controls are incomplete",
+                                          output_tuple=output_tuple, output_binding=output_binding,
+                                          dataset_identity=dataset_identity, study_solver_binding=study_solver_binding,
+                                          variables_dof_readback=xmesh, mesh_association=mesh_association,
+                                          fields=fields + [{
+                                              "mapping_index": mapping_index, "mapping": dict(mapping),
+                                              "mapping_sha256": mapping_hash,
+                                              "target_variable": target_variable, "target_unit": target_unit,
+                                              "tuple": actual_tuple, "solution_binding": resolved_binding,
+                                              "normalized_field": field_payload, "field_readback": raw_field,
+                                              "evidence_ref": field_ref,
+                                          }])
+            fields.append({
+                "mapping_index": mapping_index, "mapping": dict(mapping),
+                "mapping_sha256": mapping_hash, "target_variable": target_variable,
+                "target_unit": target_unit, "target_dof_count": dof_by_name[target_variable],
+                "tuple": actual_tuple, "solution_binding": resolved_binding,
+                "normalized_field": field_payload, "field_readback": raw_field,
+                "automatic_unit_control_evidence": dict(unit_controls),
+                "coordinate_frame": dataset_identity.get("frametype"),
+                "selection": dict(selection), "evidence_ref": field_ref,
+            })
+            evidence_refs.append(field_ref)
+        output_ticket = next((row for row in chain
+                              if row.get("readphase") == "initial-stage-output-tuple"), None)
+        if isinstance(output_ticket, Mapping):
+            output_tuple_ref = _artifact_ref(
+                backend, {"output_tuple": output_tuple, "solution_binding": output_binding},
+                binding=binding, stage_run_operation_id=stage_run_operation_id,
+                model_revision=output_ticket["revision"], child_operation_id=output_ticket["child_operation_id"],
+                managed_operation_id=output_ticket["managed_operation_id"],
+                request_id=output_ticket["request_id"], request_hash=output_ticket["request_hash"],
+                revision_witness=output_ticket["revision_witness"], worker_requests=output_ticket["worker_requests"],
+                readphase=output_ticket["readphase"],
+                check_definition_sha256=sha256_json({"kind": "initial-output-tuple", "target_selection": dict(target_selection)}),
+                selection_sha256=sha256_json(dict(target_selection)), tuple_binding=output_tuple,
+            )
+            evidence_refs.append(output_tuple_ref)
+        return {
+            "contract": OUTPUT_CONTRACT,
+            "producer": "managed-backend-initial-output-readback",
+            "status": "VERIFIED", "binding": dict(binding),
+            "stage_run_operation_id": stage_run_operation_id,
+            "solve_revision": model_revision, "model_revision": model_revision,
+            "output_revision": current_revision,
+            "target_selection_sha256": sha256_json(dict(target_selection)),
+            "output_tuple": output_tuple, "solution_binding": output_binding,
+            "initial_output_scope": "INITIAL_OUTPUT_AND_SOURCE_ARTIFACT_ONLY",
+            "initial_source_facts": "NOT_APPLICABLE", "history_identity": "NOT_APPLICABLE",
+            "study_solver_binding": study_solver_binding,
+            "dataset_identity": dataset_identity,
+            "variables_dof_readback": dict(xmesh),
+            "solution_mesh_association": mesh_association,
+            "initial_field_readbacks": fields,
+            "checks": [], "evidence_refs": evidence_refs,
+            "revision_chain": chain,
+            "managed_internal_action_plan": list(initial_action_plan),
+            "internal_read_cap": initial_action_cap,
+            "internal_read_count_before_mesh": initial_action_cursor,
+            "worker_events": [{"readphase": item["readphase"], "operation": item["operation"],
+                                "operation_id": item["event"].get("operation_id"),
+                                "phase": item["event"].get("phase"),
+                                "request_id": item["event"].get("request_id"),
+                                "request_hash": item["event"].get("request_hash")}
+                               for item in all_events],
+        }
+
+    try:
+        output_tuple, output_binding = solution_binding_for(target_selection, "stage-output-tuple")
+    except _EvidenceUnavailable as exc:
+        return _unverified(binding, stage_run_operation_id, model_revision, target_selection, str(exc),
+                           revision_chain=chain, output_revision=current_revision)
+
+    output_ticket = chain[-1]
+    output_tuple_ref = _artifact_ref(
+        backend, {"output_tuple": output_tuple, "solution_binding": output_binding},
+        binding=binding, stage_run_operation_id=stage_run_operation_id,
+        model_revision=output_ticket["revision"], child_operation_id=output_ticket["child_operation_id"],
+        managed_operation_id=output_ticket["managed_operation_id"],
+        request_id=output_ticket["request_id"], request_hash=output_ticket["request_hash"],
+        revision_witness=output_ticket["revision_witness"], worker_requests=output_ticket["worker_requests"],
+        readphase="stage-output-tuple",
+        check_definition_sha256=sha256_json({"kind": "stage-output-tuple", "target_selection": dict(target_selection)}),
+        selection_sha256=sha256_json(dict(target_selection)), tuple_binding=output_tuple,
+    )
+    evidence_refs.append(output_tuple_ref)
+
+    if not checks:
+        return _unverified(binding, stage_run_operation_id, model_revision, target_selection,
+                           "stage declares no checks; output cannot automatically pass",
+                           revision_chain=chain, output_tuple=output_tuple,
+                           solution_binding=output_binding, evidence_refs=evidence_refs,
+                           output_revision=current_revision)
+
+    observed_checks: list[dict[str, Any]] = []
+    for check in checks:
+        if not isinstance(check, Mapping):
+            raise ExecutionContractError("INVALID_REQUEST", "stage contains a malformed output check", stage="validation")
+        check_id = check.get("check_id")
+        check_hash = sha256_json(dict(check))
+        row: dict[str, Any] = {
+            "check_id": check_id, "check_definition_sha256": check_hash,
+            "binding": dict(binding), "stage_run_operation_id": stage_run_operation_id,
+            "model_revision": model_revision, "status": "UNVERIFIED", "unit": None,
+            "observed_error": None, "reference_scale": None,
+            "missing": [],
+        }
+        try:
+            if check.get("kind") == "continuity":
+                required_v2 = ("source_solution", "target_solution", "source_selection", "target_selection",
+                               "boundary_time")
+                if any(not isinstance(check.get(name), Mapping) for name in required_v2):
+                    raise _EvidenceUnavailable("continuity check lacks the version-2 source/target readback contract")
+                if (not isinstance(check.get("source_variable"), str) or not check["source_variable"]
+                        or not isinstance(check.get("target_variable"), str) or not check["target_variable"]
+                        or not isinstance(check.get("frame"), str) or not check["frame"]):
+                    raise _EvidenceUnavailable("continuity expression/frame contract is malformed")
+                source_tuple, source_binding, source_payload, source_raw, source_ref = read_field(
+                    check["source_solution"], check["source_selection"], check["source_variable"], check.get("unit"),
+                    f"{check_id}:source-field", check_hash)
+                target_tuple, target_binding, target_payload, target_raw, target_ref = read_field(
+                    check["target_solution"], check["target_selection"], check["target_variable"], check.get("unit"),
+                    f"{check_id}:target-field", check_hash)
+                evidence_refs.extend((source_ref, target_ref))
+                row.update(source_tuple=source_tuple, source_solution_binding=source_binding,
+                           target_tuple=target_tuple, target_solution_binding=target_binding,
+                           source_selection_sha256=sha256_json(dict(check["source_selection"])),
+                           target_selection_sha256=sha256_json(dict(check["target_selection"])),
+                           source_unit_readback=source_payload.get("unit_readback"),
+                           target_unit_readback=target_payload.get("unit_readback"),
+                           automatic_unit_control_scope=_AUTOMATIC_UNIT_CONTROL_SCOPE,
+                           source_unit_control_status=source_payload["automatic_unit_control_evidence"]["status"],
+                           target_unit_control_status=target_payload["automatic_unit_control_evidence"]["status"],
+                           unit_control_evidence={
+                               "scope": _AUTOMATIC_UNIT_CONTROL_SCOPE,
+                               "source": source_payload["automatic_unit_control_evidence"],
+                               "target": target_payload["automatic_unit_control_evidence"],
+                           },
+                           source_coordinate_frame=source_payload.get("coordinate_frame"),
+                           target_coordinate_frame=target_payload.get("coordinate_frame"),
+                           source_observation_revision=source_ref["observation_revision"],
+                           target_observation_revision=target_ref["observation_revision"],
+                           evidence_ref={"sha256": source_ref["sha256"], "artifact_id": source_ref["artifact_id"],
+                                         "target_sha256": target_ref["sha256"], "target_artifact_id": target_ref["artifact_id"]})
+                if _coordinate_pairs_equal(source_payload, target_payload):
+                    error, scale = _max_abs_pairwise_error(source_payload["values"], target_payload["values"])
+                    row["measured_error"], row["measured_reference_scale"] = error, scale
+                    unit_verified = (
+                        source_payload.get("unit_readback") == target_payload.get("unit_readback")
+                        and _intrinsic_unit_matches(source_payload, check.get("unit"))
+                        and _intrinsic_unit_matches(target_payload, check.get("unit"))
+                    )
+                    frame_verified = (
+                        _coordinate_frame_matches(source_payload, check.get("frame"))
+                        and _coordinate_frame_matches(target_payload, check.get("frame"))
+                        and source_payload.get("coordinate_frame") == target_payload.get("coordinate_frame")
+                    )
+                    if not unit_verified:
+                        controls = (source_payload["automatic_unit_control_evidence"],
+                                    target_payload["automatic_unit_control_evidence"])
+                        if any(control.get("status") == "FAIL" for control in controls):
+                            row["missing"].append("automatic native expression-unit dimensionality controls failed")
+                        else:
+                            row["missing"].append("automatic native expression-unit dimensionality controls are incomplete")
+                    if not frame_verified:
+                        row["missing"].append("coordinate-frame readback is unavailable or does not match the frozen frame")
+                    if unit_verified and frame_verified:
+                        row["unit"] = check["unit"]
+                        row["observed_error"], row["reference_scale"] = error, scale
+                        row["measurement_status"] = "VERIFIED_AUTO_UNIT_CONTROLS_AND_FRAME"
+                else:
+                    row["missing"].append("native source/target coordinates do not match exactly")
+            elif check.get("kind") == "conservation":
+                required_v2 = ("source_solution", "target_solution", "terms")
+                if any(not isinstance(check.get(name), Mapping if name != "terms" else list) for name in required_v2):
+                    raise _EvidenceUnavailable("conservation check lacks the version-2 source/target native-integral contract")
+                if not check.get("terms"):
+                    raise _EvidenceUnavailable("conservation check has no native integral terms")
+                term_rows = []
+                coefficient_values: list[float] = []
+                integral_values: list[float] = []
+                term_refs = []
+                for term_index, term in enumerate(check.get("terms", [])):
+                    side_spec = check.get(f"{term['side']}_solution")
+                    term_tuple, term_binding, integral_value, unit_readback, metric = read_integral(
+                        side_spec, term, f"{check_id}:term:{term_index}", check_hash)
+                    metric_evidence = metric["metric"]
+                    term_ref = metric["evidence_ref"]
+                    evidence_refs.append(term_ref); term_refs.append(term_ref)
+                    term_rows.append({"term_index": term_index, "term_sha256": sha256_json(dict(term)),
+                                      "selection_sha256": sha256_json(dict(term["selection"])),
+                                      "selection_status": "VERIFIED" if metric_evidence.get("selection_features") else "UNVERIFIED",
+                                      "solution_tuple": term_tuple, "solution_binding": term_binding,
+                                      "integral_value": integral_value,
+                                      "unit_readback": unit_readback,
+                                      "observation_revision": term_ref["observation_revision"],
+                                      "evidence_ref": {"sha256": term_ref["sha256"], "artifact_id": term_ref["artifact_id"]}})
+                    coefficient = float(term["coefficient"])
+                    contribution = coefficient * integral_value
+                    if not math.isfinite(contribution):
+                        raise _EvidenceUnavailable("native integral coefficient multiplication overflowed")
+                    coefficient_values.append(coefficient); integral_values.append(integral_value)
+                signed_error = sum(c * value for c, value in zip(coefficient_values, integral_values))
+                observed_error = abs(signed_error)
+                reference_scale = sum(abs(c * value) for c, value in zip(coefficient_values, integral_values))
+                if not math.isfinite(signed_error) or not math.isfinite(observed_error) or not math.isfinite(reference_scale):
+                    raise _EvidenceUnavailable("native integral signed error or reference scale overflowed")
+                target_term_rows = [item for item in term_rows
+                                    if check["terms"][item["term_index"]]["side"] == "target"]
+                row.update(target_tuple=output_tuple, target_solution_binding=output_binding,
+                           target_term_tuples=[item["solution_tuple"] for item in target_term_rows],
+                           target_term_solution_bindings=[item["solution_binding"] for item in target_term_rows],
+                           target_term_tuple=(target_term_rows[0]["solution_tuple"] if len(target_term_rows) == 1 else None),
+                           target_term_solution_binding=(target_term_rows[0]["solution_binding"] if len(target_term_rows) == 1 else None),
+                           source_tuple=next((item["solution_tuple"] for item in term_rows
+                                              if check["terms"][item["term_index"]]["side"] == "source"), None),
+                           source_solution_binding=next((item["solution_binding"] for item in term_rows
+                                                         if check["terms"][item["term_index"]]["side"] == "source"), None),
+                           term_readbacks=term_rows, signed_error=signed_error,
+                           observed_error=observed_error,
+                           reference_scale=reference_scale,
+                           evidence_ref={"sha256": term_refs[0]["sha256"], "artifact_id": term_refs[0]["artifact_id"],
+                                         "term_refs": [{"sha256": item["sha256"], "artifact_id": item["artifact_id"]}
+                                                       for item in term_refs]},
+                           measurement_status="MEASURED_NATIVE_INTEGRAL")
+                actual_units = [item.get("unit_readback") for item in term_rows]
+                if not actual_units or any(unit is None for unit in actual_units):
+                    row["missing"].append("native integral unit readback is unavailable")
+                else:
+                    row["unit_readbacks"] = actual_units
+                    row["missing"].append("intrinsic integral unit dimensionality is not established by configured feature unit readback")
+            else:
+                row["missing"].append("unsupported check operator")
+        except _EvidenceUnavailable as exc:
+            row["missing"].append(str(exc))
+        # Unit controls establish only automatic expression-unit dimensionality;
+        # they do not promote active DOFs, physics units, frame, or history.
+        if row.get("missing"):
+            row["status"] = "UNVERIFIED"
+        else:
+            tolerance = check.get("tolerance", {})
+            threshold = float(tolerance.get("absolute", 0.0)) + float(tolerance.get("relative", 0.0)) * float(row["reference_scale"])
+            if not math.isfinite(threshold):
+                row["missing"].append("check threshold overflowed")
+                row["status"] = "UNVERIFIED"
+            else:
+                row["status"] = "PASS" if float(row["observed_error"]) <= threshold else "FAIL"
+        observed_checks.append(row)
+
+    status_verified = all(row.get("status") in {"PASS", "FAIL"} for row in observed_checks)
+    output = {
+        "contract": OUTPUT_CONTRACT, "producer": "managed-backend-stage-output-readback",
+        "status": "VERIFIED" if status_verified else "UNVERIFIED",
+        "binding": dict(binding), "stage_run_operation_id": stage_run_operation_id,
+        "solve_revision": model_revision, "model_revision": model_revision,
+        "output_revision": current_revision,
+        "target_selection_sha256": sha256_json(dict(target_selection)),
+        "output_tuple": output_tuple, "solution_binding": output_binding,
+        "checks": observed_checks, "evidence_refs": evidence_refs,
+        "revision_chain": chain,
+        "worker_events": [{"readphase": item["readphase"], "operation": item["operation"],
+                            "operation_id": item["event"].get("operation_id"),
+                            "phase": item["event"].get("phase"),
+                            "request_id": item["event"].get("request_id"),
+                            "request_hash": item["event"].get("request_hash")}
+                           for item in all_events],
+    }
+    return output
+
+
+__all__ = ["OUTPUT_CONTRACT", "produce_stage_output_readback"]

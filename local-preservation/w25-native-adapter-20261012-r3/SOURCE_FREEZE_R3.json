@@ -1,0 +1,461 @@
+{
+  "candidate_dependency_plan": {
+    "path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/desktop-builder-candidate-r3-w25",
+    "status": "PASS_CANDIDATE_PLAN_OFFLINE_VALIDATION; 63 unique downloads; 143627243 bytes; not downloaded/installed/built"
+  },
+  "created_utc": "2026-10-12T00:35:00Z",
+  "junit": {
+    "errors": 0,
+    "failures": 0,
+    "sha256": "a8e2ed7d49e8cb74271a54d0965f333148e2debe5fe56d8250cb012ca251b81c",
+    "skipped": 0,
+    "tests": 240
+  },
+  "limitations": [
+    "Native Windows kernel/UIA not run",
+    "Native macOS GUI/AX/ScreenCaptureKit not run",
+    "COMSOL not started",
+    "No trusted observed selector profile installed",
+    "macOS ScreenCaptureKit declared closure only in candidate; live pyproject/uv.lock unchanged"
+  ],
+  "network_guard": {
+    "active_before_child_entrypoint": 7,
+    "blocked_attempts": 0,
+    "events": 7,
+    "sha256": "f6ed6343e75a3acd1c0b5e24760aa859cc81fc3511a243281bc32a568565ff8f"
+  },
+  "preimage_files": [
+    {
+      "repository_path": "comsol_mcp/_desktop_service.py",
+      "sha256": "5e3afae0faafb925d5a8cd2d9e6b708a3e28e7aa173a3f50f1d2527a66953a38",
+      "size_bytes": 60756,
+      "snapshot_path": "preimage/comsol_mcp/_desktop_service.py"
+    },
+    {
+      "repository_path": "comsol_mcp/_desktop_platforms.py",
+      "sha256": "e7c2168904a36645c5ae7ec09b3e8a161b0576448fa41dc242a97fa3d3ae0f96",
+      "size_bytes": 3269,
+      "snapshot_path": "preimage/comsol_mcp/_desktop_platforms.py"
+    },
+    {
+      "repository_path": "comsol_mcp/_desktop_windows.py",
+      "sha256": "a652a89f18365fe87455ff2aae933274a809cbec77753304cdf085d75f7bf5e3",
+      "size_bytes": 5372,
+      "snapshot_path": "preimage/comsol_mcp/_desktop_windows.py"
+    },
+    {
+      "repository_path": "comsol_mcp/_desktop_macos.py",
+      "sha256": "bcb98aff63a94a60d8db12865828129eab852d6fea618fe7b38bc08441146d7c",
+      "size_bytes": 15215,
+      "snapshot_path": "preimage/comsol_mcp/_desktop_macos.py"
+    },
+    {
+      "repository_path": "comsol_mcp/_desktop_capture.py",
+      "sha256": "914c2b59ed6b750705e81efa96dc2273dedb21872c67b197445175b4fbc0c114",
+      "size_bytes": 22695,
+      "snapshot_path": "preimage/comsol_mcp/_desktop_capture.py"
+    },
+    {
+      "repository_path": "comsol_mcp/_desktop_win32_identity.py",
+      "sha256": "c528e3e8e950883b759b3f8f96ab036783186a640cfff4588f9aa105b3b7f065",
+      "size_bytes": 2833,
+      "snapshot_path": "preimage/comsol_mcp/_desktop_win32_identity.py"
+    },
+    {
+      "repository_path": "comsol_mcp/_control_daemon.py",
+      "sha256": "10fa0f3f8fdd34c0fb31c9be5b3866349a60b9c001a1f339ca8920724858b6eb",
+      "size_bytes": 797228,
+      "snapshot_path": "preimage/comsol_mcp/_control_daemon.py"
+    },
+    {
+      "repository_path": "comsol_mcp/_artifact_store.py",
+      "sha256": "52dbb0dba5305d974f6cd93b747093d076d753c30ec67e4159d437af87feb347",
+      "size_bytes": 94602,
+      "snapshot_path": "preimage/comsol_mcp/_artifact_store.py"
+    },
+    {
+      "repository_path": "tests/test_desktop_capture.py",
+      "sha256": "a5897ceaa55ab880434be407294eabac705aed98be69e29faff7ec1a20725a24",
+      "size_bytes": 6493,
+      "snapshot_path": "preimage/tests/test_desktop_capture.py"
+    },
+    {
+      "repository_path": "tests/test_desktop_control_wiring.py",
+      "sha256": "8983976cf5a30de82ba8ae895be7e653bbc440fdc90ffc154bb9a774f5e24569",
+      "size_bytes": 18031,
+      "snapshot_path": "preimage/tests/test_desktop_control_wiring.py"
+    },
+    {
+      "repository_path": "tests/test_desktop_macos.py",
+      "sha256": "ae7fec5c4f124b8b4b35715f34f0317a8054dd2d9793c1fe6fd5521e25c92c7d",
+      "size_bytes": 7022,
+      "snapshot_path": "preimage/tests/test_desktop_macos.py"
+    },
+    {
+      "repository_path": "tests/test_desktop_macos_phase2a.py",
+      "sha256": "570398f569b2072c3567785b3aeae9ea688f714e49d18328b243d5e7c9d38a2a",
+      "size_bytes": 6193,
+      "snapshot_path": "preimage/tests/test_desktop_macos_phase2a.py"
+    },
+    {
+      "repository_path": "tests/test_desktop_managed_load_phase2b.py",
+      "sha256": "5d134f165e8e55f42270db480284a1fdf4d552a31f5d3a7f174f49020732d647",
+      "size_bytes": 36279,
+      "snapshot_path": "preimage/tests/test_desktop_managed_load_phase2b.py"
+    },
+    {
+      "repository_path": "tests/test_desktop_service.py",
+      "sha256": "c7d9b4a166f070ab5f06fcb1d4a1881e3310a75a5111c3829f3fb492f5996a6c",
+      "size_bytes": 37492,
+      "snapshot_path": "preimage/tests/test_desktop_service.py"
+    },
+    {
+      "repository_path": "tests/test_desktop_sticky_effects_phase2c.py",
+      "sha256": "00de305c2b19281e7bd63fbf5dfe0fd2fa4dbc07aab4d636fe5fe4ce96bf0dd6",
+      "size_bytes": 11658,
+      "snapshot_path": "preimage/tests/test_desktop_sticky_effects_phase2c.py"
+    },
+    {
+      "repository_path": "tests/test_desktop_win32_identity.py",
+      "sha256": "53a8b0cfef472cd959ae46a140aab9ba3f65c73ad019f746bfcf9fc9635c643c",
+      "size_bytes": 3419,
+      "snapshot_path": "preimage/tests/test_desktop_win32_identity.py"
+    },
+    {
+      "repository_path": "docs/full_project_execution/w25/desktop_platform_adapter_matrix.md",
+      "sha256": "e0b752f34a6c874253f5e4672ddcd68c5b3c13822048d44468f2dcdaf3dad5ef",
+      "size_bytes": 12861,
+      "snapshot_path": "preimage/docs/full_project_execution/w25/desktop_platform_adapter_matrix.md"
+    },
+    {
+      "repository_path": "docs/full_project_execution/w25/desktop_control_wiring.md",
+      "sha256": "58736a3b4871161759b32e3b6050fab06635a438a91a623549921c0d9f39f74e",
+      "size_bytes": 6166,
+      "snapshot_path": "preimage/docs/full_project_execution/w25/desktop_control_wiring.md"
+    },
+    {
+      "repository_path": "pyproject.toml",
+      "sha256": "f6f9356edc1c970e36c32a82cc8d9e71bd1a94d5a0e1552495a04ca7634ee107",
+      "size_bytes": 1656,
+      "snapshot_path": "preimage/pyproject.toml"
+    },
+    {
+      "repository_path": "uv.lock",
+      "sha256": "08b6b8fb1f6a7a110f45df7d9f3ac3dae3e343fddc1ce2ddae84e458c3130b3f",
+      "size_bytes": 279457,
+      "snapshot_path": "preimage/uv.lock"
+    }
+  ],
+  "preimage_source_count": 20,
+  "prior_integrated_control_daemon": {
+    "current_sha256": "83fa07fec0286d9d0d004777eab03979295324ef887a7d4ef1368e0fefe9b3db",
+    "current_size_bytes": 810368,
+    "preimage_sha256": "10fa0f3f8fdd34c0fb31c9be5b3866349a60b9c001a1f339ca8920724858b6eb",
+    "prior_integrated_freeze_sha256": "36e0b7601a401552882cf61f77ccff0704f24f3987ca2296aa31875550ce487f",
+    "prior_method_level_patch_sha256": "21693229a47b89631d7ce6158efe391ccd416087abcce1b64f4345dc784c50aa",
+    "scope": "Current file is frozen and tested as an integration input; the full preimage diff is not attributed wholly to W25."
+  },
+  "runtime": "Python 3.12.13; pytest 9.1.1 from recovered local task runtime",
+  "schema": "W25_NATIVE_ADAPTER_SOURCE_FREEZE_R3",
+  "snapshot_root": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/local-preservation/w25-native-adapter-20261012-r3",
+  "source_count": 38,
+  "source_diff": {
+    "attribution_note": "Exact current-vs-original W25 preimage diff. _control_daemon.py contains prior W25 and concurrent non-W25 shared integration; this r3 turn did not edit it.",
+    "path": "W25_SOURCE_DIFF.patch",
+    "sha256": "10a13639011c5647cd5f18e9e1297d093e3863ab643624a4a6425487ed9a4b53",
+    "size_bytes": 835850
+  },
+  "source_files": [
+    {
+      "repository_path": "comsol_mcp/_artifact_store.py",
+      "sha256": "52dbb0dba5305d974f6cd93b747093d076d753c30ec67e4159d437af87feb347",
+      "size_bytes": 94602,
+      "snapshot_path": "source/comsol_mcp/_artifact_store.py"
+    },
+    {
+      "repository_path": "comsol_mcp/_control_daemon.py",
+      "sha256": "83fa07fec0286d9d0d004777eab03979295324ef887a7d4ef1368e0fefe9b3db",
+      "size_bytes": 810368,
+      "snapshot_path": "source/comsol_mcp/_control_daemon.py"
+    },
+    {
+      "repository_path": "comsol_mcp/_desktop_capture.py",
+      "sha256": "34abdab7926e461b8c9909d7deee12ce4cf34e0aa0e91f8030043c1c0e1e3ce7",
+      "size_bytes": 24607,
+      "snapshot_path": "source/comsol_mcp/_desktop_capture.py"
+    },
+    {
+      "repository_path": "comsol_mcp/_desktop_macos.py",
+      "sha256": "318e533af06924602a565f3957ff543b44d3d445d580a872ab8c949f5e17feff",
+      "size_bytes": 48988,
+      "snapshot_path": "source/comsol_mcp/_desktop_macos.py"
+    },
+    {
+      "repository_path": "comsol_mcp/_desktop_platforms.py",
+      "sha256": "4c50c4596cbc8d79dd610d66cada1deb38e400c607a5bb04b59f1766a9c76059",
+      "size_bytes": 3913,
+      "snapshot_path": "source/comsol_mcp/_desktop_platforms.py"
+    },
+    {
+      "repository_path": "comsol_mcp/_desktop_selector_profile.py",
+      "sha256": "3082e0436859cbabfdd3bc7d9918b0ee1b5523267fc68b661d92bb5456d00a2f",
+      "size_bytes": 24460,
+      "snapshot_path": "source/comsol_mcp/_desktop_selector_profile.py"
+    },
+    {
+      "repository_path": "comsol_mcp/_desktop_service.py",
+      "sha256": "f4d871906ec2c4d07014c93d88bbdaa5545efc49f96659fdbf246cd450ca7b6f",
+      "size_bytes": 77470,
+      "snapshot_path": "source/comsol_mcp/_desktop_service.py"
+    },
+    {
+      "repository_path": "comsol_mcp/_desktop_uia.py",
+      "sha256": "35be69b23769b8c8c56df2ca8ed54013701e07018011a48c22126edd40b22350",
+      "size_bytes": 18867,
+      "snapshot_path": "source/comsol_mcp/_desktop_uia.py"
+    },
+    {
+      "repository_path": "comsol_mcp/_desktop_win32_identity.py",
+      "sha256": "c528e3e8e950883b759b3f8f96ab036783186a640cfff4588f9aa105b3b7f065",
+      "size_bytes": 2833,
+      "snapshot_path": "source/comsol_mcp/_desktop_win32_identity.py"
+    },
+    {
+      "repository_path": "comsol_mcp/_desktop_windows.py",
+      "sha256": "ffc211235f918104921ba02e2fda7f6f6d0efe8f04301ce85c5c1bab5f3f3285",
+      "size_bytes": 20162,
+      "snapshot_path": "source/comsol_mcp/_desktop_windows.py"
+    },
+    {
+      "repository_path": "comsol_mcp/_host_scoped_provider.py",
+      "sha256": "6c1c98d095edb1c8c6a75fa395f7fc649a3750f7ad7764f3fbd8e78c805d91e5",
+      "size_bytes": 53919,
+      "snapshot_path": "source/comsol_mcp/_host_scoped_provider.py"
+    },
+    {
+      "repository_path": "comsol_mcp/_managed_backend.py",
+      "sha256": "a8c79494db18de5ee4e01847d36bc5158bf65fa4416e93a9b65db058cb7a429c",
+      "size_bytes": 232805,
+      "snapshot_path": "source/comsol_mcp/_managed_backend.py"
+    },
+    {
+      "repository_path": "comsol_mcp/_operation_store.py",
+      "sha256": "d9d6c3d54ff4afc625f28f5e70595fd23f6a899e05863a9cdf0b05711a0808fa",
+      "size_bytes": 226849,
+      "snapshot_path": "source/comsol_mcp/_operation_store.py"
+    },
+    {
+      "repository_path": "comsol_mcp/_project_authority.py",
+      "sha256": "82b90c1157b242f80feb9079ac4b58e2a1295719a7a323a97532497a740181a8",
+      "size_bytes": 32352,
+      "snapshot_path": "source/comsol_mcp/_project_authority.py"
+    },
+    {
+      "repository_path": "comsol_mcp/_windows_parameter_publish.py",
+      "sha256": "f128dc330ea3a7366765e1fe16dd03e7ba63cacf9d02e992d748a781f97b0ea8",
+      "size_bytes": 26595,
+      "snapshot_path": "source/comsol_mcp/_windows_parameter_publish.py"
+    },
+    {
+      "repository_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/desktop-builder-candidate-r3-w25/DRY_RUN_COMMANDS.txt",
+      "sha256": "263eb8f5d377f9be9a80ea0950c7e85f28c86fed68522598cc30e327b8426d72",
+      "size_bytes": 23830,
+      "snapshot_path": "source/docs/full_project_continuation_v2/evidence/release_data_lifecycle/desktop-builder-candidate-r3-w25/DRY_RUN_COMMANDS.txt"
+    },
+    {
+      "repository_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/desktop-builder-candidate-r3-w25/README.md",
+      "sha256": "71386be7907e5b41886e0a662f2cc983f62aed6ec1e747fba93b6321f695bb10",
+      "size_bytes": 1360,
+      "snapshot_path": "source/docs/full_project_continuation_v2/evidence/release_data_lifecycle/desktop-builder-candidate-r3-w25/README.md"
+    },
+    {
+      "repository_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/desktop-builder-candidate-r3-w25/SOURCE_FREEZE_R3.json",
+      "sha256": "9e631e89df44c3f324d74a5ea55440c2c8e7c178d54dbe7a270e0ee6a0e2c546",
+      "size_bytes": 1494,
+      "snapshot_path": "source/docs/full_project_continuation_v2/evidence/release_data_lifecycle/desktop-builder-candidate-r3-w25/SOURCE_FREEZE_R3.json"
+    },
+    {
+      "repository_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/desktop-builder-candidate-r3-w25/candidate-plan-r3-w25.json",
+      "sha256": "e6d06bd26999d5fdeb11d1c8ce32ff30b4c2ae03c8fb9d6d72cf6566c3658e59",
+      "size_bytes": 106901,
+      "snapshot_path": "source/docs/full_project_continuation_v2/evidence/release_data_lifecycle/desktop-builder-candidate-r3-w25/candidate-plan-r3-w25.json"
+    },
+    {
+      "repository_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/desktop-builder-candidate-r3-w25/candidate_plan_tool.py",
+      "sha256": "d633b52b30b00a43ed59659a236e9ebc0472c39aaaa0ad4d7cede66dc9a97675",
+      "size_bytes": 10341,
+      "snapshot_path": "source/docs/full_project_continuation_v2/evidence/release_data_lifecycle/desktop-builder-candidate-r3-w25/candidate_plan_tool.py"
+    },
+    {
+      "repository_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/desktop-builder-candidate-r3-w25/dry-run-validation-output.txt",
+      "sha256": "50b7dbd9cdb55ef3f86aa5a0e03b695df8ac5b02c445687ea2701c62f118d8ca",
+      "size_bytes": 23826,
+      "snapshot_path": "source/docs/full_project_continuation_v2/evidence/release_data_lifecycle/desktop-builder-candidate-r3-w25/dry-run-validation-output.txt"
+    },
+    {
+      "repository_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/desktop-builder-candidate-r3-w25/metadata-used-fields-r3-w25.json",
+      "sha256": "db49ba91dfb547a0320893be9c5272129544c1d5246607d3f6dc03b730d22718",
+      "size_bytes": 4183,
+      "snapshot_path": "source/docs/full_project_continuation_v2/evidence/release_data_lifecycle/desktop-builder-candidate-r3-w25/metadata-used-fields-r3-w25.json"
+    },
+    {
+      "repository_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/desktop-builder-candidate-r3-w25/openssl-4.0.2-release-api.json",
+      "sha256": "7c708177b5b3b4862247c6326448ef05c25a75c5452bc209c05689869210f78c",
+      "size_bytes": 12320,
+      "snapshot_path": "source/docs/full_project_continuation_v2/evidence/release_data_lifecycle/desktop-builder-candidate-r3-w25/openssl-4.0.2-release-api.json"
+    },
+    {
+      "repository_path": "docs/full_project_execution/w25/desktop_control_wiring.md",
+      "sha256": "cfa5b2bfdbf1a41844ae98b60f3bf434fbc90cef94dda0ef72598713d13469e5",
+      "size_bytes": 6412,
+      "snapshot_path": "source/docs/full_project_execution/w25/desktop_control_wiring.md"
+    },
+    {
+      "repository_path": "docs/full_project_execution/w25/desktop_platform_adapter_matrix.md",
+      "sha256": "ad89cf539864f25aa491d9c99f34b0438191c997a83e0874a1ac4d0467fe1256",
+      "size_bytes": 13198,
+      "snapshot_path": "source/docs/full_project_execution/w25/desktop_platform_adapter_matrix.md"
+    },
+    {
+      "repository_path": "docs/full_project_execution/w25/native-adapters-implementation-r3.md",
+      "sha256": "c0c047d4caf00ac75b68a3ce0571ced0a4196847a20f4070ee2bd6d316ab6d1f",
+      "size_bytes": 7820,
+      "snapshot_path": "source/docs/full_project_execution/w25/native-adapters-implementation-r3.md"
+    },
+    {
+      "repository_path": "pyproject.toml",
+      "sha256": "f6f9356edc1c970e36c32a82cc8d9e71bd1a94d5a0e1552495a04ca7634ee107",
+      "size_bytes": 1656,
+      "snapshot_path": "source/pyproject.toml"
+    },
+    {
+      "repository_path": "tests/test_desktop_capture.py",
+      "sha256": "a5897ceaa55ab880434be407294eabac705aed98be69e29faff7ec1a20725a24",
+      "size_bytes": 6493,
+      "snapshot_path": "source/tests/test_desktop_capture.py"
+    },
+    {
+      "repository_path": "tests/test_desktop_control_wiring.py",
+      "sha256": "47ac644f6ee5e3e270ba32f83afbe3e2dbb4723bda77bc049e159ef9304b8956",
+      "size_bytes": 32891,
+      "snapshot_path": "source/tests/test_desktop_control_wiring.py"
+    },
+    {
+      "repository_path": "tests/test_desktop_macos.py",
+      "sha256": "ae7fec5c4f124b8b4b35715f34f0317a8054dd2d9793c1fe6fd5521e25c92c7d",
+      "size_bytes": 7022,
+      "snapshot_path": "source/tests/test_desktop_macos.py"
+    },
+    {
+      "repository_path": "tests/test_desktop_macos_phase2a.py",
+      "sha256": "570398f569b2072c3567785b3aeae9ea688f714e49d18328b243d5e7c9d38a2a",
+      "size_bytes": 6193,
+      "snapshot_path": "source/tests/test_desktop_macos_phase2a.py"
+    },
+    {
+      "repository_path": "tests/test_desktop_managed_load_phase2b.py",
+      "sha256": "5d134f165e8e55f42270db480284a1fdf4d552a31f5d3a7f174f49020732d647",
+      "size_bytes": 36279,
+      "snapshot_path": "source/tests/test_desktop_managed_load_phase2b.py"
+    },
+    {
+      "repository_path": "tests/test_desktop_native_adapters_w25.py",
+      "sha256": "efa64497109c7486ccf7543a491e9b829bd78f6eb0d78d78db9f2e16d976a767",
+      "size_bytes": 28753,
+      "snapshot_path": "source/tests/test_desktop_native_adapters_w25.py"
+    },
+    {
+      "repository_path": "tests/test_desktop_service.py",
+      "sha256": "51a6ff940eac86b565e3e680df9c0b7432d5d747c62ff8c1ee2334e64e42d763",
+      "size_bytes": 38495,
+      "snapshot_path": "source/tests/test_desktop_service.py"
+    },
+    {
+      "repository_path": "tests/test_desktop_sticky_effects_phase2c.py",
+      "sha256": "ebd707c78ae4b3a14e5ce50305faeb359bc5aeca91c9b86f8dfc0d903fe4c637",
+      "size_bytes": 11679,
+      "snapshot_path": "source/tests/test_desktop_sticky_effects_phase2c.py"
+    },
+    {
+      "repository_path": "tests/test_desktop_win32_identity.py",
+      "sha256": "53a8b0cfef472cd959ae46a140aab9ba3f65c73ad019f746bfcf9fc9635c643c",
+      "size_bytes": 3419,
+      "snapshot_path": "source/tests/test_desktop_win32_identity.py"
+    },
+    {
+      "repository_path": "tests/test_host_scoped_provider.py",
+      "sha256": "7b4bcd6d8814c06c5213886765dc4c110b3099889747989c950e7ee63ab4ee9a",
+      "size_bytes": 38231,
+      "snapshot_path": "source/tests/test_host_scoped_provider.py"
+    },
+    {
+      "repository_path": "uv.lock",
+      "sha256": "08b6b8fb1f6a7a110f45df7d9f3ac3dae3e343fddc1ce2ddae84e458c3130b3f",
+      "size_bytes": 279457,
+      "snapshot_path": "source/uv.lock"
+    }
+  ],
+  "status": "PASS_SCOPED_GUARDED_SOFTWARE / NATIVE_GUI_AND_COMSOL_NOT_RUN",
+  "test_evidence_files": [
+    {
+      "repository_path": "docs/full_project_continuation_v2/evidence/w25_integration/HANDOFF.md",
+      "sha256": "a086ff842ce28ef05e86c4c6fc049133f6d1136d7289d3cff0fa8a4cd3de8d58",
+      "size_bytes": 4064,
+      "snapshot_path": "evidence/docs/full_project_continuation_v2/evidence/w25_integration/HANDOFF.md"
+    },
+    {
+      "repository_path": "docs/full_project_continuation_v2/evidence/w25_integration/W25_INTEGRATED_FREEZE.json",
+      "sha256": "36e0b7601a401552882cf61f77ccff0704f24f3987ca2296aa31875550ce487f",
+      "size_bytes": 14397,
+      "snapshot_path": "evidence/docs/full_project_continuation_v2/evidence/w25_integration/W25_INTEGRATED_FREEZE.json"
+    },
+    {
+      "repository_path": "docs/full_project_continuation_v2/evidence/w25_integration/W25_INTEGRATED_SOURCE.patch",
+      "sha256": "21693229a47b89631d7ce6158efe391ccd416087abcce1b64f4345dc784c50aa",
+      "size_bytes": 167810,
+      "snapshot_path": "evidence/docs/full_project_continuation_v2/evidence/w25_integration/W25_INTEGRATED_SOURCE.patch"
+    },
+    {
+      "repository_path": "docs/full_project_continuation_v2/evidence/w25_native_adapter_preimage_r1/PREIMAGE.json",
+      "sha256": "8908545860c8fb2fd6cc8287c9b881c670400ddaec38886eb49a188f170488e4",
+      "size_bytes": 6393,
+      "snapshot_path": "evidence/docs/full_project_continuation_v2/evidence/w25_native_adapter_preimage_r1/PREIMAGE.json"
+    },
+    {
+      "repository_path": "docs/full_project_continuation_v2/evidence/w25_native_adapter_r3/BOUND_SUITE_RECEIPT.json",
+      "sha256": "49e621b86442f6f1e35c895b0c3af23fd1ae0c6fc36e09b7d63913f1f60512e4",
+      "size_bytes": 10523,
+      "snapshot_path": "evidence/docs/full_project_continuation_v2/evidence/w25_native_adapter_r3/BOUND_SUITE_RECEIPT.json"
+    },
+    {
+      "repository_path": "docs/full_project_continuation_v2/evidence/w25_native_adapter_r3/junit-bound.xml",
+      "sha256": "a8e2ed7d49e8cb74271a54d0965f333148e2debe5fe56d8250cb012ca251b81c",
+      "size_bytes": 36070,
+      "snapshot_path": "evidence/docs/full_project_continuation_v2/evidence/w25_native_adapter_r3/junit-bound.xml"
+    },
+    {
+      "repository_path": "docs/full_project_continuation_v2/evidence/w25_native_adapter_r3/network-guard-bound.jsonl",
+      "sha256": "f6ed6343e75a3acd1c0b5e24760aa859cc81fc3511a243281bc32a568565ff8f",
+      "size_bytes": 1743,
+      "snapshot_path": "evidence/docs/full_project_continuation_v2/evidence/w25_native_adapter_r3/network-guard-bound.jsonl"
+    },
+    {
+      "repository_path": "docs/full_project_continuation_v2/evidence/w25_native_adapter_r3/pytest-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "snapshot_path": "evidence/docs/full_project_continuation_v2/evidence/w25_native_adapter_r3/pytest-stderr.txt"
+    },
+    {
+      "repository_path": "docs/full_project_continuation_v2/evidence/w25_native_adapter_r3/pytest-stdout.txt",
+      "sha256": "734feeabbb0e84681e36778cdd83699ee35121ffd470e20f3bde6d60ca0e9c15",
+      "size_bytes": 340,
+      "snapshot_path": "evidence/docs/full_project_continuation_v2/evidence/w25_native_adapter_r3/pytest-stdout.txt"
+    },
+    {
+      "repository_path": "docs/full_project_continuation_v2/evidence/w25_native_adapter_r3/run_bound_suite.py",
+      "sha256": "c3a3c3e397f49255ae7f76d13b401326242f8253b1aa46b2fb583b362f3e9e09",
+      "size_bytes": 5132,
+      "snapshot_path": "evidence/docs/full_project_continuation_v2/evidence/w25_native_adapter_r3/run_bound_suite.py"
+    }
+  ]
+}

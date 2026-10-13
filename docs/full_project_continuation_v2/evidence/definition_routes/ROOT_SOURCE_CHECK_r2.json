@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "status": "ROOT_SOURCE_CHANGES_REQUIRED_FOR_REMAINING_D5_AND_INTEGRATION",
+  "created_utc": "2026-10-11T16:44:04.246481+00:00",
+  "candidate_id": "definition-routes-20261012-r2",
+  "manifest_sha256": "916f26aba8105420f9f0bf35132fc3ae7965ba294505493d2d32dc741a24ff35",
+  "source_files": [
+    {
+      "path": "comsol_mcp/_g3_definition_validation.py",
+      "size_bytes": 72411,
+      "sha256": "914756c51449d605fe98d1e6602793fa1b9a0f99eaef529f0097ed38dfb885ce"
+    },
+    {
+      "path": "tests/test_g3_definition_validation.py",
+      "size_bytes": 29952,
+      "sha256": "9f8d304e08f4b0c0de6baadae02e869837b5c3f8af91481c862f8c8d6abdaec1"
+    }
+  ],
+  "referenced_artifact_bytes_and_sha_verified": 11,
+  "actual_junit_testcases": 256,
+  "junit_failures_errors_skips": 0,
+  "review_scope": "Root development source/evidence check only. Not final independent Reviewer and not native/scientific acceptance.",
+  "r1_sources_preserved": [
+    {
+      "path": "docs/full_project_continuation_v2/evidence/definition_routes/source-r1/_g3_definition_validation.py",
+      "size_bytes": 62354,
+      "sha256": "f988f3d958caf11dfa71446eed44c0190dc50c07de08f9a6aa28070593a0fce0"
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/definition_routes/source-r1/test_g3_definition_validation.py",
+      "size_bytes": 21822,
+      "sha256": "1e238606f8409ab819bc6e43460fadd4a2eec981e82ad9b294c653f269277066"
+    }
+  ],
+  "findings": [
+    {
+      "id": "D1-D4",
+      "status": "FIXED_IN_STANDALONE_SOFTWARE_SCOPE",
+      "evidence": "Read r1-to-r2 production diff and adversarial controls for top-level cleanup uncertainty, path-only metadata, actual opname/component scope, mesh/material frame refusal."
+    },
+    {
+      "id": "D5",
+      "status": "PARTIALLY_FIXED_REQUIRED_REMAINS",
+      "fixed": "method/exttol/usenan and bounded finite/NaN/error/unclassified counts; closest semantics; no inferred global coverage.",
+      "remaining": "Read back manualsearchdist/searchdist and their actual unit basis and active/inactive semantics; same-version Table 2-71 documents influence on boundary/edge/point orthogonal search.",
+      "basis": {
+        "doc_id": 4097,
+        "chunk_id": 16740,
+        "source_sha256": "29f57502ca11c069bb5713dcbf83da23316e6af13759a00f4f07541a69a16a29"
+      }
+    },
+    {
+      "id": "PRODUCTION_INTEGRATION",
+      "status": "DEFERRED_PENDING_SHARED_OWNER_HANDOFF",
+      "required": "Existing ControlDaemon permission/effect, same serial lane, durable OperationStore UNKNOWN propagation and honest requested-check results; no direct fake acceptance row."
+    }
+  ],
+  "next_action": "Executor continues seven domain routes; finish this remaining pair and shared routing/log producer in the same complete integrated unit, then freeze/test once. No extra helper admission gate.",
+  "native_comsol": "NOT_RUN",
+  "scientific_acceptance": "NOT_EVALUATED",
+  "final_independent_reviewer": "NOT_RUN"
+}

@@ -1,0 +1,51 @@
+{
+  "Root_agrees": true,
+  "Root_partial_audit_failure": {
+    "actual_rc": 1,
+    "actual_session": 36531,
+    "actual_terminal_chunk": "6e4980",
+    "cause": "Root audit assumed junit.xml and actual producer artifact is raw.junit.xml. No source/native writes; no acceptance receipt produced. Actual names and actual_rc field corrected in this R2 review; historical raw retained.",
+    "script": "/private/tmp/root-openssl359-r1-1-source-check.py"
+  },
+  "created_utc": "2026-10-12T19:23:17.344642+00:00",
+  "finding": {
+    "acceptance": "Normal five public fixtures copy exact accepted bytes. Regular inode/symlink/same-inode content replacement after first acceptance refuses before copying replacement bytes or publishing prepared success. Preserve failures and leave future SSL C API runtime decode protocol unchanged.",
+    "actual_first_reader": "tls_cert_checks_r4.checked_fixture",
+    "actual_observation": "Actual prepare_sources completes, copies nonfixed bytes into runtime-certfixtures and publishes fixed fixture metadata despite destination SHA differing from accepted fixed PIN.",
+    "actual_producer": "prepare_sources",
+    "four_fixture_source_line": 92,
+    "id": "OPENSSL359-PINNED-CERT-COPY-01",
+    "impact": "Violates the accepted original same-FD pinned-copy protocol and can copy data outside the validated fixed input. Later runtime rejection does not undo this already completed copy. No user data was used or copied in review.",
+    "keycert_source_line": 95,
+    "priority": "P2",
+    "raw_evidence": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/openssl359-r1_1-independent-source-review/ACTUAL_PREPARE_SOURCE_PINNED_CERT_COPY_RESIDUAL.json",
+      "sha256": "6cba7cf519df95668b4bf19a0201ed3f928328d604e3e92af2dcdd73e2993500"
+    },
+    "reproduction": "All five actual production copy paths reproduced with public synthetic bytes: four post-validation regular inode replacements and keycert post-validation symlink to an external synthetic file. Original checked_fixture/file_record/checkpoint_bytes/copy_blob methods execute unchanged. Only earlier archive-auth/extraction phases are explicitly disclosed SDK boundary fixtures; no real tar unpack.",
+    "required_repair": "Retain the first checked_fixture returned identity/bytes/SHA and use it with known fixed path/fresh mode/kind in the existing original checkpoint_bytes reader; copy only the accepted raw bytes with original copy_blob. Check all five actual destination bytes against the accepted fixed values. Do not resample a new acceptance row or reopen plain path after fixed validation.",
+    "root_cause": "Four fixtures use a newly sampled file_record after fixed-byte checked_fixture acceptance, so a replacement regular inode is accepted with a new SHA instead of the first fixed identity/size/SHA. The fifth keycert uses plain Path.read_bytes after acceptance, which can follow a replacement symlink. The immutable first-reader result is discarded in both paths.",
+    "source": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/openssl359_sources_r1.py",
+    "status": "OPEN_REPRODUCED_SOURCE_SOFTWARE",
+    "title": "Certificate copier discards the first fixed-reader binding and copies post-validation replacement bytes"
+  },
+  "freeze": {
+    "bytes": 173850,
+    "path": "docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/OPENSSL359_SOURCE_FREEZE_R1_1.json",
+    "sha256": "f6430ea1eada788eb5d128e9b150ac0580ca0c8414c745eba84467bdee0b02a5"
+  },
+  "independent_receipt": {
+    "bytes": 9607,
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/openssl359-r1_1-independent-source-review/REVIEW_RECEIPT.json",
+    "sha256": "db050f1172f276f6806e38d32e1db0277de851f94a8ac7985e4cc739e4b7c604"
+  },
+  "native_R1_1": "NOT_RUN_NO_ADMISSION",
+  "old_receipts_sources_unchanged": true,
+  "schema": "ROOT_OPENSSL359_R1_1_FINDING_DISPOSITION/1",
+  "status": "CHANGES_REQUIRED",
+  "successor_freeze": {
+    "bytes": 270885,
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/OPENSSL359_SOURCE_FREEZE_R2.json",
+    "sha256": "dfbfb3d47fd331f10e87ac981a90c2adc966507ae8d11c134a1d38e60f1dd71f"
+  }
+}

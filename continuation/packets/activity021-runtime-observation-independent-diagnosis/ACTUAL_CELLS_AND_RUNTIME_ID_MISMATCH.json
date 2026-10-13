@@ -1,0 +1,102 @@
+{
+  "status": "READONLY_ACTUAL_CAPTURE_CELLS_NO_REPLAY",
+  "job_id": "e3155dd4-5e44-4b25-aeb6-2c00ebf7bd94",
+  "operation_id": "258436a8-6da1-403c-a2a0-03bfe1cd9d4b",
+  "terminal_status": "SUCCEEDED",
+  "execution_runtime_observation": {
+    "cause_type": "ValueError",
+    "reason_code": "RUNTIME_IDENTITY_UNVERIFIED",
+    "schema": "comsol-worker-runtime-observation/v1",
+    "status": "UNVERIFIED"
+  },
+  "server_ownership": "shared",
+  "ModelRef": {
+    "generation": 1,
+    "model_tag": "mcp_ae5acc9f9bdd",
+    "schema_version": 1,
+    "server_instance_id": "6d7c410816f8c6198e0bc1ceb79242ba8795571f89479e485b5a6df2ad385272",
+    "session_id": "session-6f0e8dd2b65dc78b5745855b"
+  },
+  "original_runtime_binding": {
+    "endpoint": "127.0.0.1:58813",
+    "kind": "default_backend",
+    "project_id": "c4ea84db-95e4-46c1-90c1-c256a85694a5",
+    "session_id": "session-6f0e8dd2b65dc78b5745855b",
+    "worker_epoch": 2,
+    "worker_instance_id": "c77d36bb-2dd4-477b-b9c2-0b023aad054b"
+  },
+  "original_sqlite_persisted_identity": {
+    "connection_epoch": 2,
+    "endpoint": "127.0.0.1:58813",
+    "runtime_id": "runtime-c77d36bb-2dd4-477b-b9c2-0b023aad054b",
+    "server_instance_id": "6d7c410816f8c6198e0bc1ceb79242ba8795571f89479e485b5a6df2ad385272",
+    "worker_instance_id": "c77d36bb-2dd4-477b-b9c2-0b023aad054b"
+  },
+  "original_sqlite_persisted_ledger_server_ownership": "shared",
+  "ModelUtil_version_observed_cells": [
+    {
+      "event_id": 143,
+      "job_id": "e3155dd4-5e44-4b25-aeb6-2c00ebf7bd94",
+      "phase": "observed",
+      "kind": "modelutil",
+      "request_id": "wrk-acb8913e-cece-485a-bc4a-d4ef5007da6a",
+      "request_hash": "a76b0322bdef2c991fa2f7b65de44fb1fbab42f809c68b7706b953b09eaf9ca1",
+      "payload_metadata": {
+        "args": [],
+        "method": "getComsolVersion",
+        "request_id": "wrk-acb8913e-cece-485a-bc4a-d4ef5007da6a",
+        "type": "modelutil"
+      },
+      "actual_reply": {
+        "ok": true,
+        "status": "SUCCEEDED",
+        "type": "modelutil",
+        "result": "COMSOL Multiphysics 6.4 (开发版本: 293)"
+      }
+    }
+  ],
+  "worker_connect": {
+    "connected": true,
+    "engine_version": "COMSOL Multiphysics 6.4 (开发版本: 293)",
+    "generation": 2,
+    "instance_id": "c77d36bb-2dd4-477b-b9c2-0b023aad054b",
+    "server": "127.0.0.1:58813"
+  },
+  "worker_runtime": {
+    "connected": true,
+    "generation": 2,
+    "host": "127.0.0.1",
+    "instance_id": "c77d36bb-2dd4-477b-b9c2-0b023aad054b",
+    "pid": 50479,
+    "port": 58820,
+    "server": "127.0.0.1:58813"
+  },
+  "cleanup_later_health": {
+    "changed_count": 0,
+    "connected": true,
+    "generation": 2,
+    "instance_id": "c77d36bb-2dd4-477b-b9c2-0b023aad054b",
+    "ok": true,
+    "queued_or_running": 0,
+    "server": "127.0.0.1:58813",
+    "status": "HEALTHY"
+  },
+  "exact_observer_health_not_logged": true,
+  "source_and_raw_runtime_ID_mismatch": {
+    "actual_stored_backend_runtime_id": "runtime-c77d36bb-2dd4-477b-b9c2-0b023aad054b",
+    "required_canonical_installation_runtime_id_from_original_helper": "comsol-install:%2Fprivate%2Ftmp%2Fcomsol-mcp-w23-te-saved-mph-zero-solve-readback-20261013-021-candidate20-r13%2Fcomsol-shadow",
+    "recorded_Worker_root_from_original_constructor": "/private/tmp/comsol-mcp-w23-te-saved-mph-zero-solve-readback-20261013-021-candidate20-r13/comsol-shadow",
+    "current_filesystem_canonical_root": "/private/tmp/comsol-mcp-w23-te-saved-mph-zero-solve-readback-20261013-021-candidate20-r13/comsol-shadow",
+    "other_snapshot_identity_fields": {
+      "worker_instance_id": "c77d36bb-2dd4-477b-b9c2-0b023aad054b",
+      "connection_epoch": 2,
+      "server_instance_id": "6d7c410816f8c6198e0bc1ceb79242ba8795571f89479e485b5a6df2ad385272",
+      "endpoint": "127.0.0.1:58813"
+    },
+    "mismatch_field": "runtime_id",
+    "same_worker_state_source": "Original consistent SQLite snapshot, sessions metadata"
+  },
+  "SDK_license_calls_in_metadata_job": 0,
+  "OS_probes_new": 0,
+  "SDK_tests_or_native_calls_new": 0
+}

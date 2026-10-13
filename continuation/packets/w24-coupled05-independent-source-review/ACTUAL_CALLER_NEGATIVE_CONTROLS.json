@@ -1,0 +1,52 @@
+{
+  "status": "PASS_SCOPED_SOURCE_SOFTWARE",
+  "controls": [
+    {
+      "actual_control": "test_actual_listener_identity_nested_PS_is_capped_and_late_return_mints_no_receipt",
+      "negative": {}
+    },
+    {
+      "actual_control": "test_actual_start_worker_nested_G2_PS_and_socket_probes_same_owner",
+      "negative": {
+        "late": true
+      }
+    },
+    {
+      "actual_control": "test_actual_ManagedBackend_G2_verifier_propagates_original_owner_and_refuses_receiver_changes",
+      "negative": {
+        "drift": "late_ps"
+      }
+    },
+    {
+      "actual_control": "test_actual_ManagedBackend_G2_verifier_propagates_original_owner_and_refuses_receiver_changes",
+      "negative": {
+        "drift": "late_socket"
+      }
+    },
+    {
+      "actual_control": "test_actual_ManagedBackend_G2_verifier_propagates_original_owner_and_refuses_receiver_changes",
+      "negative": {
+        "drift": "foreign_worker"
+      }
+    },
+    {
+      "actual_control": "test_actual_ManagedBackend_G2_verifier_propagates_original_owner_and_refuses_receiver_changes",
+      "negative": {
+        "drift": "bad_owner_json"
+      }
+    }
+  ],
+  "late_PS_then_socket_is_not_dispatched": true,
+  "late_socket_no_next_route_and_no_verified_proof": true,
+  "wrong_Worker_or_JSON_owner_no_SDK_calls": true,
+  "actual_objects": [
+    "NativeLoopbackServer",
+    "ManagedBackend",
+    "OperationStore",
+    "typedOriginalOwner",
+    "SampledRssMonitor",
+    "actualG2Verifier"
+  ],
+  "native_run": "NOT_RUN",
+  "public_native_admission": "NOT_ATTEMPTED"
+}

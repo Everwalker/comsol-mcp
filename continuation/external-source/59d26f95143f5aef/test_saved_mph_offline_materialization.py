@@ -1,0 +1,83 @@
+"""Exercise real prepare and the real SDK class-path gate; no native activity."""
+from __future__ import annotations
+
+import copy
+import json
+import os
+import shutil
+from pathlib import Path
+
+import pytest
+
+from tools import run_native_w23_saved_mph_diagnostic as runner
+
+
+def _seed():
+    root = Path(os.environ["W23_OFFLINE_CLASS_TEST_SEED"])
+    receipt = json.loads(Path(os.environ["W23_OFFLINE_CLASS_TEST_RECEIPT"]).read_text())
+    assert receipt["status"] == "PASS_COMSOL_64_JDK11_COMPILE_AND_JAVAP"
+    for label, source in receipt["compiled_sources"].items():
+        assert runner.sha256_file(Path(source["source"])) == source["source_sha256"]
+        for relative, expected in source["classes"].items():
+            path = root / label / "classes" / relative
+            assert path.stat().st_size == expected["bytes"]
+            assert runner.sha256_file(path) == expected["sha256"]
+    return root, receipt
+
+
+def _case(name):
+    # Keep failed preparation and metadata-copy evidence beside the actual SDK seed.
+    root = Path(os.environ["W23_OFFLINE_CLASS_TEST_EVIDENCE"])
+    assert root.is_relative_to(runner.EVIDENCE_ROOT)
+    root.mkdir(parents=True, exist_ok=True)
+    return root / name
+
+
+def test_real_prepare_refuses_receipt_without_its_relative_class_tree(monkeypatch):
+    _root, compile_receipt = _seed()
+    evidence = _case("prepare-missing-classes")
+    # Only compilation/test orchestration is injected; the path/hash gate is real.
+    monkeypatch.setattr(runner, "_compile_and_test", lambda _path: {
+        "status": "PASS_ALL_OFFLINE_GATES", "compile": copy.deepcopy(compile_receipt)})
+    with pytest.raises(RuntimeError, match="frozen compiler output is missing or changed"):
+        runner.prepare(evidence, work=evidence / "unborn-work",
+                       execution_evidence=evidence / "unborn-native")
+    assert (evidence / "source_manifest.json").is_file()
+    assert not (evidence / "freeze.json").exists()
+    assert not (evidence / "ACTIVITY018_REVIEW_PACKET.json").exists()
+    runner.write_json(evidence / "NEGATIVE_RESULT.json", {
+        "status": "PASS_REAL_PREPARE_REJECTED_BEFORE_PUBLISHING_FREEZE",
+        "native_started": False, "path_gate_mocked": False})
+
+
+def test_metadata_only_successor_rejected_then_complete_tree_passes(monkeypatch):
+    root, compile_receipt = _seed()
+    evidence = _case("complete-prepare")
+
+    def compiled(path):
+        shutil.copytree(root, path / "offline_gates" / "compile")
+        return {"status": "PASS_ALL_OFFLINE_GATES", "compile": copy.deepcopy(compile_receipt)}
+
+    monkeypatch.setattr(runner, "_compile_and_test", compiled)
+    result = runner.prepare(evidence, work=evidence / "unborn-work",
+                            execution_evidence=evidence / "unborn-native")
+    freeze_path = Path(result["freeze_path"])
+    runner._validate_freeze(freeze_path, result["freeze_sha256"])
+    successor = _case("metadata-only-successor")
+    successor.mkdir(exist_ok=False)
+    for name in ("freeze.json", "source_manifest.json"):
+        shutil.copyfile(evidence / name, successor / name)
+    moved = successor / "freeze.json"
+    with pytest.raises(RuntimeError, match="frozen compiler output is missing or changed"):
+        runner._validate_freeze(moved, runner.sha256_file(moved))
+    runner.write_json(successor / "NEGATIVE_RESULT.json", {
+        "status": "PASS_REAL_FREEZE_VALIDATOR_REJECTED_METADATA_ONLY_COPY",
+        "native_started": False, "path_gate_mocked": False})
+    shutil.copytree(evidence / "offline_gates", successor / "offline_gates")
+    validated = runner._validate_freeze(moved, runner.sha256_file(moved))
+    material = runner.science._check_offline_receipts(moved, validated)
+    assert all(Path(row["class_dir"]).is_relative_to(successor)
+               for row in material["compiled_class_outputs"].values())
+    runner.write_json(successor / "RESTORED_TREE_RESULT.json", {
+        "status": "PASS_SAME_REAL_PREFLIGHT_WITH_COMPLETE_PERSISTENT_RELATIVE_TREE",
+        "material": material, "native_started": False, "path_gate_mocked": False})

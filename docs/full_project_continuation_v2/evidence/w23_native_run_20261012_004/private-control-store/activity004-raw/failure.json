@@ -1,0 +1,7 @@
+{
+  "error": "ValueError: UNVERIFIED matCore relpermittivity: StringArray must be an isotropic [1] or full [9] value with matching stored size",
+  "no_retry": true,
+  "status": "FAIL_OR_INCOMPLETE",
+  "study_run_submissions": [],
+  "traceback": "Traceback (most recent call last):\n  File \"/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-planar-te-source-20261012-004/tools/run_native_w23_te_science.py\", line 2087, in execute\n    material_gate = validate_material_tensor_readback(build)\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-planar-te-source-20261012-004/tools/run_native_w23_te_science.py\", line 1494, in validate_material_tensor_readback\n    eps_matrix, eps_form = reconstruct_tensor(row.get(\"relative_permittivity\"), tag=tag,\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-planar-te-source-20261012-004/tools/run_native_w23_te_science.py\", line 1469, in reconstruct_tensor\n    raise ValueError(\nValueError: UNVERIFIED matCore relpermittivity: StringArray must be an isotropic [1] or full [9] value with matching stored size\n"
+}

@@ -1,0 +1,54 @@
+{
+  "schema": "comsol-mcp.root-focused-provider-abi-review/v1",
+  "created_at_utc": "2026-10-11T21:22:20.385576+00:00",
+  "status": "PASS_SCOPED_SOFTWARE_CORRECTIONS",
+  "freeze": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r2/FREEZE_R2.json",
+    "sha256": "102b48efcb7584820c912cc37c4c25cdb24e13c65706a84dcf79eadc0d26a6c6"
+  },
+  "owned_snapshot_and_current": "MATCH_FOUR_FILES",
+  "focus_test_result": {
+    "passed": 27,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "integrated_guarded_result": {
+    "regular_nodes": 370,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 10,
+    "regular_passed": 360,
+    "subtests_passed_separately": 20,
+    "suite_tests_attribute": 390,
+    "execution_input_files_pre_post_equal": 135
+  },
+  "integrated_receipt": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r2/POSTW26_INTEGRATED_RECEIPT_R2.json",
+    "sha256": "d4b0bcfe6623113471600de5292732bf5fbde8c99cb906adf180b5f6babfa5d8"
+  },
+  "attribution_correction": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r2/ATTRIBUTION_CORRECTION_R2.json",
+    "sha256": "ea486d41fcb44d2b714cc5c23f9ed279c668838dd788e25cdc6eef75b1e87760"
+  },
+  "finding_disposition": [
+    {
+      "finding": "GetSecurityInfo OWNER/DACL pointers in wrong positions",
+      "status": "FIXED",
+      "basis": "Correct owner/group/DACL/SACL parameter order; function-level pointer ABI and descriptor parser controls including 32-bit DWORD on macOS"
+    },
+    {
+      "finding": "Intel macOS legacy fstatfs ABI symbol",
+      "status": "FIXED",
+      "basis": "x86_64 selects fstatfs$INODE64; arm64 selects fstatfs; unsupported/missing correct symbol refuses with no fallback; same installed SDK primary evidence"
+    }
+  ],
+  "limits": [
+    "Windows kernel ACL/token/reparse NOT_RUN",
+    "Darwin Intel actual runtime NOT_RUN",
+    "COMSOL/native/science NOT_RUN",
+    "Software ctypes shims are not OS-native validation",
+    "No independent final Reviewer acceptance"
+  ],
+  "retest": "Inherited exact frozen focused and subsequent stable-source guarded integrated results; Root did not duplicate execution"
+}

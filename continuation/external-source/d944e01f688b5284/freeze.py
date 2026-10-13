@@ -1,0 +1,15 @@
+import json,ast,hashlib,os,sys
+from pathlib import Path
+R=Path('/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2');D=Path(__file__).parent;A=D.parent/'w26-helper-successor-r2';X=D.parent/'w26-exact32-wrapper-r3';E=R/'repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1';sys.path.insert(0,str(A));from strict_derived import read_regular
+root=Path('/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-liblzma-r2');lib=root/'cpython/lib/python3.12';config=lib/'_sysconfigdata__darwin_darwin.py'
+t=ast.parse(read_regular(config)[0]);vars=ast.literal_eval(next(n.value for n in t.body if isinstance(n,ast.Assign) and any(isinstance(q,ast.Name) and q.id=='build_time_vars' for q in n.targets)));assert vars['WHEEL_PKG_DIR']==''
+boot={'schema':'comsol-w26-bootstrap-primary/1','WHEEL_PKG_DIR':'','source_refs':[read_regular(p)[1] for p in [config,lib/'ensurepip/__init__.py',lib/'venv/__init__.py',lib/'ensurepip/_bundled/pip-25.0.1-py3-none-any.whl']], 'primary_lines':{'venv':[383,387,388],'ensurepip':[79,98,99,101,120,175,189,190]},'facts':'Original actual macOS sysconfig empty WHEEL_PKG_DIR; official bundled pip25.0.1 only, no system-wheel directory adopted; ensurepip explicit no-index/no-cache-dir and isolated child handling. Source-only bytes; actual new venv/ensurepip NOT_RUN.'}
+(D/'BOOTSTRAP_PRIMARY.json').write_text(json.dumps(boot,indent=2,sort_keys=True)+'\n')
+metadata=json.loads(read_regular(D/'ACTUAL43_METADATA_CLOSURE.json')[0]);plan=json.loads(read_regular(D/'NEXT_OFFLINE_UNIT_PLAN.json')[0]);assert not Path(plan['unit_root']).exists()
+for row in metadata['actual_inputs']:assert read_regular(Path(row['actual_record']['path']))[1]==row['actual_record']
+for p in D.glob('*.py'):ast.parse(p.read_bytes(),filename=str(p))
+refs=[read_regular(p)[1] for p in [X/'ACTUAL_EXECUTION_R3.json',X/'FREEZE_R3.json',A/'FREEZE_R2.json',E/'ROOT_LIBLZMA_R2_ACTUAL_CHECK.json',E/'ROOT_W26_EXACT32_SOURCE_REVIEW_R3.json',E/'ROOT_W26_EXACT32_ONCE_DISPATCH_BINDING_R3.json',R/'repository/uv.lock',R/'repository/pyproject.toml',R/'repository/tools/full_project_release.py']]+boot['source_refs']
+result={'schema':'comsol-w26-offline-input-source-freeze/1','status':'PASS_FINITE_ACTUAL_INPUTS_SOURCE_PREPARATION_NOT_INSTALL_ADMISSION','files':[read_regular(p)[1] for p in sorted(D.iterdir()) if p.is_file() and p.name!='FREEZE_R1.json'],'references':refs,'actual43_inputs':[r['actual_record'] for r in metadata['actual_inputs']],'counts':metadata['counts'],'plan':read_regular(D/'NEXT_OFFLINE_UNIT_PLAN.json')[1],'effects':metadata['effects'],'current_product_integrated_source':'NOT_SUPPLIED_NO_APPLICATION_WHEEL_BUILT','gdbm_tkinter_diagnostics':'Historical IMPORT_FAILED/UNRESOLVED unchanged; finite Root ea03 interpretation only, no transitive stdlib acceptance'}
+p=D/'FREEZE_R1.json'
+with p.open('x') as f:json.dump(result,f,indent=2,sort_keys=True);f.write('\n');f.flush();os.fsync(f.fileno())
+print(read_regular(p)[1]);print('metadata',read_regular(D/'ACTUAL43_METADATA_CLOSURE.json')[1]);print('plan',read_regular(D/'NEXT_OFFLINE_UNIT_PLAN.json')[1])

@@ -1,6 +1,8 @@
 # W25 platform adapter profiles and source evidence
 
-Status: `VERSIONED_SOURCE_PROFILES_IMPLEMENTED / WINDOWS_HWND_PIXEL_PRIMITIVE_IMPLEMENTED_NOT_ROUTED / NATIVE_GUI_NOT_RUN`.
+Status: `HISTORICAL_MATRIX_SUPERSEDED_FOR_CURRENT_SOURCE_STATUS / NATIVE_GUI_NOT_RUN`.
+
+> Historical record: this matrix captured the earlier Phase 1/2 state before the W25 production adapter work. Its current-capability tables below are retained as history and are superseded by [`native-adapters-implementation-r4.md`](native-adapters-implementation-r4.md). Use that document for the current source projection. Native GUI/COMSOL acceptance remains `NOT_RUN`.
 
 This matrix records what the current platform code can observe, what the Windows pixel helper can do in isolation, and what remains unsupported in the public Desktop operation path. Source/API availability is not native acceptance. No GUI, COMSOL process, Java Shell, Windows UI Automation tree, Apple Accessibility tree, or native capture was inspected or invoked for this work.
 

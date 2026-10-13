@@ -1,0 +1,95 @@
+{
+  "schema": "comsol-mcp.root-lifecycle-functional-review/1",
+  "status": "CHANGES_REQUIRED",
+  "scope": "R2 owned lifecycle source diff, exact 39 software result attribution and true003 PREP binding; not final independent review",
+  "freeze_path": "repository/docs/full_project_continuation_v2/evidence/release_data_lifecycle/fulldata-software-r1/SOURCE_FREEZE_R2.json",
+  "freeze_sha256": "208385fa64e7832221d6cd062c6ce20b455a090cadfa09855880938e407e36c3",
+  "checks": [
+    {
+      "path": "repository/docs/full_project_continuation_v2/evidence/release_data_lifecycle/FULL_DATA_LIFECYCLE_CONTRACT.md",
+      "sha256": "948add7daffdc7f9c0e4e5ba717a15fefb80b61474a7cd774558a0a22f79bcde",
+      "bytes": 2039,
+      "kind": "current"
+    },
+    {
+      "path": "repository/docs/full_project_continuation_v2/evidence/release_data_lifecycle/fulldata-software-r1/source_snapshot/FULL_DATA_LIFECYCLE_CONTRACT.md",
+      "sha256": "948add7daffdc7f9c0e4e5ba717a15fefb80b61474a7cd774558a0a22f79bcde",
+      "bytes": 2039,
+      "kind": "snapshot"
+    },
+    {
+      "path": "repository/tests/test_release_data_lifecycle.py",
+      "sha256": "4f4bba19c2f0baf6deb7a8971c981aa94328bdc7e30edbc83254070fa455e2b3",
+      "bytes": 31404,
+      "kind": "current"
+    },
+    {
+      "path": "repository/docs/full_project_continuation_v2/evidence/release_data_lifecycle/fulldata-software-r1/source_snapshot/test_release_data_lifecycle.py",
+      "sha256": "4f4bba19c2f0baf6deb7a8971c981aa94328bdc7e30edbc83254070fa455e2b3",
+      "bytes": 31404,
+      "kind": "snapshot"
+    },
+    {
+      "path": "repository/tools/release_transition_lifecycle.py",
+      "sha256": "79b8549fbb735654ba7578eea92ce199cbbeccc298c2cc2ae0af4305676a49db",
+      "bytes": 42329,
+      "kind": "current"
+    },
+    {
+      "path": "repository/docs/full_project_continuation_v2/evidence/release_data_lifecycle/fulldata-software-r1/source_snapshot/release_transition_lifecycle.py",
+      "sha256": "79b8549fbb735654ba7578eea92ce199cbbeccc298c2cc2ae0af4305676a49db",
+      "bytes": 42329,
+      "kind": "snapshot"
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/fulldata-software-r1/OWNED_SOURCE.patch",
+      "sha256": "4adb0fe87b8c4e5f8966bbf9c24af591e2541ad193a63e92133e5265d7cd20f9",
+      "bytes": 40391
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/fulldata-software-r1/junit.xml",
+      "sha256": "dd92d8ec77e21ec7826942832ddb85babe1e54acb09f2b8251bc32176c1e05e0",
+      "bytes": 6140
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-cache-inventory-r2.json",
+      "sha256": "1de4ce83db18fdb5b2e3620a57e78675a190f3faeed1105955c1fca4f1ddf6ba",
+      "bytes": 74418
+    }
+  ],
+  "source_dependencies_checked": {
+    "comsol_mcp/_artifact_store.py": "52dbb0dba5305d974f6cd93b747093d076d753c30ec67e4159d437af87feb347",
+    "comsol_mcp/_operation_store.py": "d9d6c3d54ff4afc625f28f5e70595fd23f6a899e05863a9cdf0b05711a0808fa",
+    "comsol_mcp/_project_authority.py": "82b90c1157b242f80feb9079ac4b58e2a1295719a7a323a97532497a740181a8",
+    "comsol_mcp/_state_backup.py": "9ab50378fc7eab8c72def62beb0d7191ef68c25e1fa1ace717e0424294f3ba5c",
+    "tests/test_release_data_lifecycle.py": "4f4bba19c2f0baf6deb7a8971c981aa94328bdc7e30edbc83254070fa455e2b3",
+    "tools/release_transition_lifecycle.py": "79b8549fbb735654ba7578eea92ce199cbbeccc298c2cc2ae0af4305676a49db"
+  },
+  "test_result": {
+    "passed": 39,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "scope": "source fixture; installed release/native NOT_RUN"
+  },
+  "findings": [
+    {
+      "id": "R2-01",
+      "priority": 1,
+      "file": "tools/release_transition_lifecycle.py",
+      "line": 596,
+      "problem": "finish computes PASS before checking complete durable-history/schema comparison; restore_candidate does not enforce the exact backup vs resolved restored history digest. False/missing comparison can still produce PASS.",
+      "required": "Require nonempty exact durable-history digest equality and applicable schema identity before successful lifecycle status; preserve actual tamper failures and cover archive-existing nonseed history mutation."
+    },
+    {
+      "id": "R2-02",
+      "priority": 1,
+      "file": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/READBACK003_RESTORED_MODEL_PREP_POINTER.json",
+      "problem": "restored_registered_model.path points outside the actual unique preparation root and differs from real entry/receipt.",
+      "required": "Append immutable corrected pointer and attribution; bind actual verified task-specific restored path/hash/size. Preserve R1 pointer and R2 freeze."
+    }
+  ],
+  "native_status": "NOT_RUN",
+  "installed_transition_status": "NOT_RUN",
+  "do_not_replay_unknown": true
+}

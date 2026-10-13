@@ -1,0 +1,47 @@
+{
+  "schema": "comsol-mcp.root-host-provider-security-review/1",
+  "status": "CHANGES_REQUIRED",
+  "freeze_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r1/FREEZE_R1.json",
+  "freeze_sha256": "444852195e689d66e31322f23ea204249d895086b5422bc0227cb35f48c20a3c",
+  "evidence_checked": {
+    "four_owned_snapshot_baseline_hashes_and_sizes": true,
+    "patch_sdk_runtime_probe_and_test_binding_hashes": true,
+    "actual_regular_junit_testcase_entries": 190,
+    "passed_regular": 180,
+    "skipped_regular": 10,
+    "failures": 0,
+    "errors": 0,
+    "reported_subtests_passed": 20,
+    "guard_active_events": 8,
+    "network_denials": 0,
+    "real_runtime_cases": "Mac ARM64 private APFS/no-extended-ACL positive; private fixture ACL/noowners and unknown API refusal; scope remains software/host-observation, not COMSOL or Windows kernel"
+  },
+  "required": [
+    {
+      "id": "PROVIDER-WIN32-OUTPUT-POINTERS",
+      "priority": 1,
+      "file": "comsol_mcp/_host_scoped_provider.py",
+      "finding": "GetSecurityInfo call passes None to ppsidOwner and ppDacl; owner lands at ppsidGroup and dacl at ppSacl. Requested owner/DACL cannot be verified on a real Windows host.",
+      "repair": "Use owner, None, dacl, None, descriptor output pointer order. Exercise the actual ctypes parser in function-level ABI shim, including valid/null DACL/foreign allow/unknown ACE and LocalFree cleanup. Do not mock out the function under test."
+    },
+    {
+      "id": "PROVIDER-DARWIN-INTEL-INODE64",
+      "priority": 1,
+      "file": "comsol_mcp/_host_scoped_provider.py",
+      "finding": "ctypes binds unsuffixed fstatfs for all Darwin targets, but installed SDK x86_64 uses $INODE64 with the declared 2168-byte statfs layout; the legacy symbol uses a different structure. Self-size assertion cannot prove the C callee ABI.",
+      "sdk_evidence": "MacOSX.sdk/usr/include/sys/cdefs.h:654-657,752-757 and sys/mount.h:442",
+      "repair": "Select fstatfs on arm64 and fstatfs$INODE64 on x86_64 based on the SDK. Unsupported architectures or missing correct symbol fail closed; software selector controls and current ARM64 real probe, while Intel native remains NOT_RUN."
+    }
+  ],
+  "metadata_corrections": [
+    "Original R4 provider review ff1d8f23ffcc5230efc3edbdf5049befe2e67970258d9a96a6c6fbac143eb21c was CHANGES_REQUIRED, not approved; preserve R1 freeze and append accurate R2 lineage.",
+    "Raw XML contains 190 regular testcase elements; 20 subtests must be recorded separately from regular testcase count.",
+    "ENOENT absent extended ACL interpretation is local-runtime-probe derived, not promised by the quoted manual."
+  ],
+  "limitations": [
+    "Windows/Intel actual kernel behavior NOT_RUN",
+    "source/dependency maps aid integrity and do not certify runtime scientific acceptance",
+    "not the final independent unified review"
+  ],
+  "next_action": "Same Model executor fixes both ABI defects and relevant test/metadata controls in one owned R2, then continues W26 release inventory."
+}

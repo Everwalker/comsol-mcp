@@ -1,0 +1,1007 @@
+{
+  "acceptance": {
+    "ARM_selected_SSL_hashlib_knownvectors_defaultTLS_cert_MemoryBIO12and13": "PASS_ACTUAL",
+    "Intel_hardware": "NOT_RUN",
+    "_lzma": "REQUIRED_OPEN",
+    "complete_runtime_three_arch_final_delivery": "OPEN",
+    "full_immutable_R4_14215_and43_alloldtrees": "PASS_ACTUAL_UNCHANGED",
+    "installed3dualCPU_min11_systemdylib_bytes": "PASS_ACTUAL_READONLY"
+  },
+  "actor_pid": 43877,
+  "actual_profile": {
+    "_hashlib": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-cpython-r4/cpython/lib/python3.12/lib-dynload/_hashlib.cpython-312-darwin.so",
+    "_lzma_requirement": "REQUIRED_PRODUCT_TAR_XZ_CAPABILITY",
+    "_ssl": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-cpython-r4/cpython/lib/python3.12/lib-dynload/_ssl.cpython-312-darwin.so",
+    "actual_MemoryBIO": {
+      "actual_cases": [
+        {
+          "actual_handshake_complete": true,
+          "client_cipher": [
+            "ECDHE-RSA-AES256-GCM-SHA384",
+            "TLSv1.2",
+            256
+          ],
+          "client_version": "TLSv1.2",
+          "elapsed_s": 0.004928624985041097,
+          "encrypted_payload_roundtrip": true,
+          "iterations": 3,
+          "required_version": "TLSv1.2",
+          "server_cipher": [
+            "ECDHE-RSA-AES256-GCM-SHA384",
+            "TLSv1.2",
+            256
+          ],
+          "server_version": "TLSv1.2"
+        },
+        {
+          "actual_handshake_complete": true,
+          "client_cipher": [
+            "TLS_AES_256_GCM_SHA384",
+            "TLSv1.3",
+            256
+          ],
+          "client_version": "TLSv1.3",
+          "elapsed_s": 0.00371445799828507,
+          "encrypted_payload_roundtrip": true,
+          "iterations": 2,
+          "required_version": "TLSv1.3",
+          "server_cipher": [
+            "TLS_AES_256_GCM_SHA384",
+            "TLSv1.3",
+            256
+          ],
+          "server_version": "TLSv1.3"
+        }
+      ],
+      "default_TLS_minimum": "TLSv1_2",
+      "default_security_level": 2,
+      "fixture": {
+        "bytes": 4058,
+        "sha256": "cfd723672e8205a30f93aa14e24ef5b0264c41db367b50cfa0b6fcb83d881947"
+      },
+      "network_connections": 0,
+      "sockets_created": 0
+    },
+    "actual_certificate_cases": {
+      "IPv4_IPv6_SAN_URI_AIA_CRL": true,
+      "actual_backend": "fresh ARM-selected patched _ssl._test_decode_cert",
+      "cases": [
+        {
+          "actual_fields": {
+            "subjectAltName": [
+              [
+                "DNS",
+                "allsans"
+              ],
+              [
+                "othername",
+                "<unsupported>"
+              ],
+              [
+                "othername",
+                "<unsupported>"
+              ],
+              [
+                "email",
+                "user@example.org"
+              ],
+              [
+                "DNS",
+                "www.example.org"
+              ],
+              [
+                "DirName",
+                [
+                  [
+                    [
+                      "countryName",
+                      "XY"
+                    ]
+                  ],
+                  [
+                    [
+                      "localityName",
+                      "Castle Anthrax"
+                    ]
+                  ],
+                  [
+                    [
+                      "organizationName",
+                      "Python Software Foundation"
+                    ]
+                  ],
+                  [
+                    [
+                      "commonName",
+                      "dirname example"
+                    ]
+                  ]
+                ]
+              ],
+              [
+                "URI",
+                "https://www.python.org/"
+              ],
+              [
+                "IP Address",
+                "127.0.0.1"
+              ],
+              [
+                "IP Address",
+                "0:0:0:0:0:0:0:1"
+              ],
+              [
+                "Registered ID",
+                "1.2.3.4.5"
+              ]
+            ]
+          },
+          "expected_fields_matched": true,
+          "fixture": "allsans.pem",
+          "input": {
+            "bytes": 10105,
+            "identity": {
+              "device": 16777231,
+              "inode": 22919204
+            },
+            "sha256": "b6e7f6eeef758dd9f2f3f2645029471f09b8a8eb25670045d9d91fd24c597629"
+          }
+        },
+        {
+          "actual_fields": {
+            "subjectAltName": [
+              [
+                "DNS",
+                "altnull.python.org\u0000example.com"
+              ],
+              [
+                "email",
+                "null@python.org\u0000user@example.org"
+              ],
+              [
+                "URI",
+                "http://null.python.org\u0000http://example.org"
+              ],
+              [
+                "IP Address",
+                "192.0.2.1"
+              ],
+              [
+                "IP Address",
+                "2001:DB8:0:0:0:0:0:1"
+              ]
+            ]
+          },
+          "expected_fields_matched": true,
+          "fixture": "nullbytecert.pem",
+          "input": {
+            "bytes": 5435,
+            "identity": {
+              "device": 16777231,
+              "inode": 22919205
+            },
+            "sha256": "3454585a198ffea4f78c67d58d1ebe89a0be1107612058e25ed4cb37964f2a71"
+          }
+        },
+        {
+          "actual_fields": {
+            "OCSP": [
+              "http://ocsp.verisign.com"
+            ],
+            "caIssuers": [
+              "http://SVRIntl-G3-aia.verisign.com/SVRIntlG3.cer"
+            ],
+            "crlDistributionPoints": [
+              "http://SVRIntl-G3-crl.verisign.com/SVRIntlG3.crl"
+            ],
+            "subjectAltName": [
+              [
+                "DNS",
+                "projects.developer.nokia.com"
+              ],
+              [
+                "DNS",
+                "projects.forum.nokia.com"
+              ]
+            ]
+          },
+          "expected_fields_matched": true,
+          "fixture": "nokia.pem",
+          "input": {
+            "bytes": 1923,
+            "identity": {
+              "device": 16777231,
+              "inode": 22919206
+            },
+            "sha256": "b34d31d2e3c349a6b90c727f0b0ce5561837395749e3b7f8ce0a9075dd1201f4"
+          }
+        },
+        {
+          "actual_malformed_rejected": true,
+          "error": "('Error decoding PEM-encoded file',)",
+          "error_type": "SSLError",
+          "fixture": "badcert.pem",
+          "input": {
+            "bytes": 1928,
+            "identity": {
+              "device": 16777231,
+              "inode": 22919207
+            },
+            "sha256": "262a107916641c7f211ac5898c0177535cd0bdc5aa872cc6e883842694d8f521"
+          }
+        }
+      ],
+      "malformed_negative": true,
+      "socket_calls": 0
+    },
+    "actual_machine": "arm64",
+    "executable": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-cpython-r4/cpython/bin/python3.12",
+    "gdbm_tk_requirement": "UNRESOLVED_NO_SCOPE_EXCLUSION",
+    "modules": {
+      "_gdbm": {
+        "cause": "No module named '_gdbm'",
+        "status": "IMPORT_FAILED",
+        "type": "ModuleNotFoundError"
+      },
+      "_lzma": {
+        "cause": "No module named '_lzma'",
+        "status": "IMPORT_FAILED",
+        "type": "ModuleNotFoundError"
+      },
+      "_tkinter": {
+        "cause": "No module named '_tkinter'",
+        "status": "IMPORT_FAILED",
+        "type": "ModuleNotFoundError"
+      },
+      "ctypes": {
+        "file": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-cpython-r4/cpython/lib/python3.12/ctypes/__init__.py",
+        "status": "IMPORTED"
+      },
+      "sqlite3": {
+        "file": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-cpython-r4/cpython/lib/python3.12/sqlite3/__init__.py",
+        "status": "IMPORTED"
+      },
+      "venv": {
+        "file": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-cpython-r4/cpython/lib/python3.12/venv/__init__.py",
+        "status": "IMPORTED"
+      },
+      "zlib": {
+        "file": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-cpython-r4/cpython/lib/python3.12/lib-dynload/zlib.cpython-312-darwin.so",
+        "status": "IMPORTED"
+      }
+    },
+    "network_connections": 0,
+    "official_unmodified_CPython": true,
+    "provider": "OpenSSL 3.5.9 29 Sep 2026",
+    "provider_info": [
+      3,
+      5,
+      0,
+      9,
+      0
+    ],
+    "provider_number": 810549392,
+    "python": "3.12.13 (main, Oct 13 2026, 04:38:46) [Clang 21.0.0 (clang-2100.3.34.2)]",
+    "sha256_known_vector": true,
+    "software_variant": "CPython3.12.13-official+OpenSSL3.5.9-official",
+    "source_ssl_sha256": "19beed620c8b9eaec82e21235cf83f505e279ad8ede63652616d3fedea4a1710",
+    "ssl_context_created": true,
+    "x86_runtime": "NOT_RUN"
+  },
+  "actual_profile_first_record": {
+    "bytes": 5516,
+    "identity": {
+      "device": 16777231,
+      "inode": 24051136
+    },
+    "kind": "regular",
+    "mode": 384,
+    "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-runtime-r2/ARM_RUNTIME_PROFILE.json",
+    "sha256": "c77468892b0b64ac1f9e95cfc68d51c5faffb4ada163d6602960c2231cf3a115"
+  },
+  "actual_tool_session": 66078,
+  "closed": {
+    "elapsed_including_cleanup_s": 37.163839334010845,
+    "errors": [],
+    "fences_retained": true,
+    "old_roots_unchanged": true,
+    "preservation_failure": null,
+    "status": "TLS_HASHLIB_SCOPED_ACTUAL_PASS",
+    "within_cap": true
+  },
+  "command": {
+    "argv": [
+      "/usr/bin/make",
+      "-f",
+      "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-runtime-r2/Runtime.mk",
+      "runtime"
+    ],
+    "birth": {
+      "actual_ps_command": "/usr/bin/make -f /private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-runtime-r2/Runtime.mk runtime",
+      "birth_observed": "Tue Oct 13 05:05:41 2026",
+      "invocation_argv": [
+        "/usr/bin/make",
+        "-f",
+        "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-runtime-r2/Runtime.mk",
+        "runtime"
+      ],
+      "pid": 43972,
+      "ppid": 43877,
+      "raw": {
+        "argv": [
+          "/bin/ps",
+          "-p",
+          "43972",
+          "-o",
+          "pid=,ppid=,uid=,lstart=,command="
+        ],
+        "rc": 0,
+        "stderr": "",
+        "stdout": "43972 43877   501 Tue Oct 13 05:05:41 2026     /usr/bin/make -f /private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-runtime-r2/Runtime.mk runtime\n"
+      },
+      "status": "OBSERVED",
+      "uid": 501
+    },
+    "diagnostic_errors": [],
+    "finished_unix": 1791839154.772168,
+    "group": {
+      "actual_pgid": 43972,
+      "actual_sid": 43972,
+      "independent_session_observed": true,
+      "observed_unix": 1791839141.23963,
+      "parent_sid": 43877,
+      "status": "OBSERVED"
+    },
+    "owned_group_absent": true,
+    "owned_process_terminal": true,
+    "parent_pid": 43877,
+    "pid": 43972,
+    "rc": 0,
+    "requested_new_session": true,
+    "status": "PASS",
+    "stderr": "runtime-d73e8fa6bbb24d5782b7dbb0561cfc1d.stderr",
+    "stdout": "runtime-d73e8fa6bbb24d5782b7dbb0561cfc1d.stdout",
+    "uid_at_spawn": 501
+  },
+  "complete_new_tree": {
+    "bytes": 4677,
+    "identity": {
+      "device": 16777231,
+      "inode": 24051482
+    },
+    "kind": "regular",
+    "mode": 384,
+    "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-openssl359-runtime-r2-execution-vg00m5pi/COMPLETE_RUNTIME_R2_TREE.json",
+    "sha256": "106504c3452c2e796f6653e0412ba5308b72823088cf28b42cc7b76d252d0024"
+  },
+  "effects": {
+    "COMSOL": 0,
+    "OpenSSL_lipo_CPbuild": 0,
+    "network": 0,
+    "outer_make": 1,
+    "pure_Intel_execution": 0,
+    "recipe_fixed_steps": 2,
+    "system_install": 0
+  },
+  "fences": "original R4 FAILED/ACTIVE/guards and this runtime guard/ACTIVE remain immutable; no replay",
+  "firstactual_provider_durable": {
+    "bytes": 10002,
+    "identity": {
+      "device": 16777231,
+      "inode": 24051481
+    },
+    "kind": "regular",
+    "mode": 384,
+    "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-openssl359-runtime-r2-execution-vg00m5pi/ACTUAL_FIRST_PROVIDER_AND_PROFILE_CONSUMPTION.json",
+    "sha256": "dc8bbd76628f15ff4ff1f2dbf74c8b66f121ccc0b41e7996fc0828f2e01e6df4"
+  },
+  "fresh_owner_absence": {
+    "all_groups_absent": true,
+    "all_pids_absent": true,
+    "argv": [
+      "/bin/ps",
+      "-p",
+      "43875,43877,43972",
+      "-o",
+      "pid=,ppid=,uid=,lstart=,command="
+    ],
+    "groups": [
+      {
+        "absent": true,
+        "actual_error": "ProcessLookupError",
+        "pgid": 43877
+      },
+      {
+        "absent": true,
+        "actual_error": "ProcessLookupError",
+        "pgid": 43972
+      }
+    ],
+    "rc": 1,
+    "stderr": "",
+    "stdout": "",
+    "unix": 1791839206.175445
+  },
+  "installed_binary_actual": {
+    "_hashlib": {
+      "file": {
+        "bytes": 9279424,
+        "identity": {
+          "device": 16777231,
+          "inode": 22996548
+        },
+        "kind": "regular",
+        "mode": 493,
+        "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-cpython-r4/cpython/lib/python3.12/lib-dynload/_hashlib.cpython-312-darwin.so",
+        "sha256": "6cda9d6fb1281933487aa8584026a8e68818bab06dd08f64bbd1a58c0532e2d0"
+      },
+      "slices": {
+        "arm64": {
+          "architecture": "arm64",
+          "bytes": 4364224,
+          "executed": false,
+          "filetype": 8,
+          "linked_dylibs": [
+            "/usr/lib/libSystem.B.dylib"
+          ],
+          "minimum_os": [
+            11,
+            0,
+            0
+          ],
+          "sha256": "4992ed1253baafe4b51147fd556e47aa7da8185fe83e80790db27f288f7f2d8e"
+        },
+        "x86_64": {
+          "architecture": "x86_64",
+          "bytes": 4900944,
+          "executed": false,
+          "filetype": 8,
+          "linked_dylibs": [
+            "/usr/lib/libSystem.B.dylib"
+          ],
+          "minimum_os": [
+            11,
+            0,
+            0
+          ],
+          "sha256": "71d1d974d4b24bf3a84355e4b7db7349961a69e1ec9073d18092cd894d5c83d1"
+        }
+      }
+    },
+    "_ssl": {
+      "file": {
+        "bytes": 11246072,
+        "identity": {
+          "device": 16777231,
+          "inode": 22996547
+        },
+        "kind": "regular",
+        "mode": 493,
+        "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-cpython-r4/cpython/lib/python3.12/lib-dynload/_ssl.cpython-312-darwin.so",
+        "sha256": "f9dfe4358b272e3985a7ec2b7e0873b7bfe745d054d7292910da15ea344a7d8d"
+      },
+      "slices": {
+        "arm64": {
+          "architecture": "arm64",
+          "bytes": 5315064,
+          "executed": false,
+          "filetype": 8,
+          "linked_dylibs": [
+            "/usr/lib/libSystem.B.dylib"
+          ],
+          "minimum_os": [
+            11,
+            0,
+            0
+          ],
+          "sha256": "da496b6b340144fb9e268412b6e2239b02378d2d2bafc74024aa2cf83555e718"
+        },
+        "x86_64": {
+          "architecture": "x86_64",
+          "bytes": 5916176,
+          "executed": false,
+          "filetype": 8,
+          "linked_dylibs": [
+            "/usr/lib/libSystem.B.dylib"
+          ],
+          "minimum_os": [
+            11,
+            0,
+            0
+          ],
+          "sha256": "d3fb71f824c8643af9671aca24e469810031f4c42b88cd0fcd24fa7c27176719"
+        }
+      }
+    },
+    "python": {
+      "arm64": {
+        "architecture": "arm64",
+        "bytes": 6656040,
+        "executed": false,
+        "filetype": 2,
+        "linked_dylibs": [
+          "/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation",
+          "/usr/lib/libSystem.B.dylib"
+        ],
+        "minimum_os": [
+          11,
+          0,
+          0
+        ],
+        "sha256": "20be5ff2b0bd4f860dba35e6776057160e683d3017b5f1274f21927644d7e50a"
+      },
+      "x86_64": {
+        "architecture": "x86_64",
+        "bytes": 6649336,
+        "executed": false,
+        "filetype": 2,
+        "linked_dylibs": [
+          "/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation",
+          "/usr/lib/libSystem.B.dylib"
+        ],
+        "minimum_os": [
+          11,
+          0,
+          0
+        ],
+        "sha256": "260cf08b19def6fd50c579bc56fdeec5a55b50d312796d4dd0a88c5b72d50667"
+      }
+    }
+  },
+  "old_input_preservation": {
+    "R4_original_actual_receipt_sha256": "ac0bc9e027a0f8741f31e585184a0ba3d183e059d03b59c01e90b62354cbf87f",
+    "R4_records": 14215,
+    "R4_snapshot_sha256": "63f7c4d7f0bda0fb93a8a923dcdf7b40a0476b7c0944fff8c260e086b73b1f4b",
+    "all_old_trees_unchanged": true
+  },
+  "refs": [
+    {
+      "bytes": 4769,
+      "identity": {
+        "device": 16777231,
+        "inode": 24050964
+      },
+      "kind": "regular",
+      "mode": 420,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-openssl359-runtime-r2-execution-vg00m5pi/wrapper.py",
+      "sha256": "277730411cf8a0f5b3536e9aa2fc451f7a877ae147fc7b5f8f1151be38493b93"
+    },
+    {
+      "bytes": 636,
+      "identity": {
+        "device": 16777231,
+        "inode": 24050997
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-openssl359-runtime-r2-execution-vg00m5pi/birth.json",
+      "sha256": "17f91463f058eca2a71f35d86cd01bf72e7dbb76ab6ff31ee0051dee31234b42"
+    },
+    {
+      "bytes": 108,
+      "identity": {
+        "device": 16777231,
+        "inode": 24050994
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-openssl359-runtime-r2-execution-vg00m5pi/stdout",
+      "sha256": "588d63db1afb33ca7961d32a99634d1cb6ba902cc50b3e7ded15fd98435c4d06"
+    },
+    {
+      "bytes": 4677,
+      "identity": {
+        "device": 16777231,
+        "inode": 24051482
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-openssl359-runtime-r2-execution-vg00m5pi/COMPLETE_RUNTIME_R2_TREE.json",
+      "sha256": "106504c3452c2e796f6653e0412ba5308b72823088cf28b42cc7b76d252d0024"
+    },
+    {
+      "bytes": 463,
+      "identity": {
+        "device": 16777231,
+        "inode": 24051446
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-openssl359-runtime-r2-execution-vg00m5pi/OWNED_PID_GROUP_ABSENCE.json",
+      "sha256": "203c2c6a86de064e54eb7d944acd15c173697dd0d7931507881405cd9654f281"
+    },
+    {
+      "bytes": 0,
+      "identity": {
+        "device": 16777231,
+        "inode": 24050995
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-openssl359-runtime-r2-execution-vg00m5pi/stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 10002,
+      "identity": {
+        "device": 16777231,
+        "inode": 24051481
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-openssl359-runtime-r2-execution-vg00m5pi/ACTUAL_FIRST_PROVIDER_AND_PROFILE_CONSUMPTION.json",
+      "sha256": "dc8bbd76628f15ff4ff1f2dbf74c8b66f121ccc0b41e7996fc0828f2e01e6df4"
+    },
+    {
+      "bytes": 254,
+      "identity": {
+        "device": 16777231,
+        "inode": 24051483
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-openssl359-runtime-r2-execution-vg00m5pi/COMPLETE_RUNTIME_R2_ROOT_IDENTITY.json",
+      "sha256": "19148e50f16b8ccb9baa1f5caaf225e752638d7a89988d107b7d150e851d070f"
+    },
+    {
+      "bytes": 375,
+      "identity": {
+        "device": 16777231,
+        "inode": 24050965
+      },
+      "kind": "regular",
+      "mode": 420,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-openssl359-runtime-r2-execution-vg00m5pi/WRAPPER_SOURCE_PIN.json",
+      "sha256": "310b3435938f6bc52216c9f5a5ba15012651e1042ece3b9644e42542907f81ed"
+    },
+    {
+      "bytes": 736,
+      "identity": {
+        "device": 16777231,
+        "inode": 24050993
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-openssl359-runtime-r2-execution-vg00m5pi/PRIOR_OWNED_GROUP_ABSENCE.json",
+      "sha256": "cc8e8f49aeece068f9f62b6541b0b80d7a9651515c958eb849ed14e670ddd1f0"
+    },
+    {
+      "bytes": 260,
+      "identity": {
+        "device": 16777231,
+        "inode": 24051480
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-openssl359-runtime-r2-execution-vg00m5pi/POST_EXECUTION_FULL_INPUT_PRESERVATION.json",
+      "sha256": "329bee9f7e302a1ff0383c9f999463ddc8825d4a172c914e2e669484b848ab22"
+    },
+    {
+      "bytes": 1377,
+      "identity": {
+        "device": 16777231,
+        "inode": 24050990
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-openssl359-runtime-r2-execution-vg00m5pi/START_INPUT_PINS.json",
+      "sha256": "957f0e76d8947440192aac661cc9555c7a0e75a709edab8134b10be09a30b336"
+    },
+    {
+      "bytes": 189,
+      "identity": {
+        "device": 16777231,
+        "inode": 24050992
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-openssl359-runtime-r2-execution-vg00m5pi/PRIOR_OWNED_PID_ABSENCE.json",
+      "sha256": "c71b1b98e3bc483fa2e1918a1b0febd7773784ec8e3ad51d9208bb69cfa811b9"
+    },
+    {
+      "bytes": 783,
+      "identity": {
+        "device": 16777231,
+        "inode": 24050991
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-openssl359-runtime-r2-execution-vg00m5pi/argv.json",
+      "sha256": "6ab2d65a9f6d1fddd6098b3cbfd16ce1d2d2fb40b7089c8edc7fe9ddf61a8580"
+    },
+    {
+      "bytes": 167,
+      "identity": {
+        "device": 16777231,
+        "inode": 24051232
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-openssl359-runtime-r2-execution-vg00m5pi/terminal.json",
+      "sha256": "bc4b7de4a498243ee43f15c24f8fcde49aa231aa87a6cfd4f6b58330b27d6d25"
+    },
+    {
+      "bytes": 634,
+      "identity": {
+        "device": 16777231,
+        "inode": 24050996
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-openssl359-runtime-r2-execution-vg00m5pi/spawn.json",
+      "sha256": "ccd3169a33c87dd36648058d2578dfb9019526609f3598da9272d2fb3df873b8"
+    },
+    {
+      "bytes": 5648,
+      "identity": {
+        "device": 16777231,
+        "inode": 24051444
+      },
+      "kind": "regular",
+      "mode": 420,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-openssl359-runtime-r2-execution-vg00m5pi/capture_actual_terminal.py",
+      "sha256": "f19399aa743bb541f598d7d8538c51a6acb04699555a8627e72c220515309adc"
+    },
+    {
+      "bytes": 2222,
+      "identity": {
+        "device": 16777231,
+        "inode": 24051230
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-runtime-r2/RESULT.json",
+      "sha256": "4835ec56254f9154b21e68e9c853c579f9cfaa85173e73cbb063c9a9f6c59a88"
+    },
+    {
+      "bytes": 2749643,
+      "identity": {
+        "device": 16777231,
+        "inode": 24051195
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-runtime-r2/ACTUAL_RUNTIME_AND_INSTALL.json",
+      "sha256": "c8fec1ad303c5fb769d62d8c99160b2212826b2fae125f3067a4db3c9dafd761"
+    },
+    {
+      "bytes": 2356,
+      "identity": {
+        "device": 16777231,
+        "inode": 24051197
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-runtime-r2/RUNTIME_DONE.json",
+      "sha256": "cd53fdc8b79da31f257598425f087f3d1e06789d0e5dac885589cc36c4c35b46"
+    },
+    {
+      "bytes": 41,
+      "identity": {
+        "device": 16777231,
+        "inode": 24051044
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-runtime-r2/ACTIVE.json",
+      "sha256": "4efcc9544da9e6e83771fbbb725c5cc617fba53f292a88a2edcb6c02492117de"
+    },
+    {
+      "bytes": 230,
+      "identity": {
+        "device": 16777231,
+        "inode": 24051231
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-runtime-r2/CLOSED.json",
+      "sha256": "b60674ad0cc4580012861dd4d6033aa457b24144dc45c56ec079e89f14c33d2b"
+    },
+    {
+      "bytes": 260,
+      "identity": {
+        "device": 16777231,
+        "inode": 24051045
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-runtime-r2/INPUTS_VERIFIED.json",
+      "sha256": "329bee9f7e302a1ff0383c9f999463ddc8825d4a172c914e2e669484b848ab22"
+    },
+    {
+      "bytes": 663,
+      "identity": {
+        "device": 16777231,
+        "inode": 24051043
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-runtime-r2/RUNTIME_ONCE_GUARD.json",
+      "sha256": "b76323c11a58e19351a7d4ac70d2afb63ffec8a7f256e46bf44912b2764c893e"
+    },
+    {
+      "bytes": 878,
+      "identity": {
+        "device": 16777231,
+        "inode": 24051046
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-runtime-r2/Runtime.mk",
+      "sha256": "e785cbb6687e316a68de1ed73dd2cead696ed628bd33b17f00f22b8726138a00"
+    },
+    {
+      "bytes": 5516,
+      "identity": {
+        "device": 16777231,
+        "inode": 24051136
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-runtime-r2/ARM_RUNTIME_PROFILE.json",
+      "sha256": "c77468892b0b64ac1f9e95cfc68d51c5faffb4ada163d6602960c2231cf3a115"
+    },
+    {
+      "bytes": 1751,
+      "identity": {
+        "device": 16777231,
+        "inode": 24051196
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-runtime-r2/logs/runtime-d73e8fa6bbb24d5782b7dbb0561cfc1d.result.json",
+      "sha256": "3fe9daa058ee9f8aed8c71e7a799d9a28bd881eab472a0f96d5f172fa64c8f48"
+    },
+    {
+      "bytes": 174,
+      "identity": {
+        "device": 16777231,
+        "inode": 24051104
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-runtime-r2/logs/runtime-d73e8fa6bbb24d5782b7dbb0561cfc1d.group.json",
+      "sha256": "7e2d185f086f91287811737eb7e2efda4a57797168219bb44890ebe0b6edc51b"
+    },
+    {
+      "bytes": 592,
+      "identity": {
+        "device": 16777231,
+        "inode": 24051103
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-runtime-r2/logs/runtime-d73e8fa6bbb24d5782b7dbb0561cfc1d.spawn.json",
+      "sha256": "df192b6190a0a87823f99ffd08c8a95cca8bda67e8873971f51268e744a07a78"
+    },
+    {
+      "bytes": 0,
+      "identity": {
+        "device": 16777231,
+        "inode": 24051102
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-runtime-r2/logs/runtime-d73e8fa6bbb24d5782b7dbb0561cfc1d.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 904,
+      "identity": {
+        "device": 16777231,
+        "inode": 24051105
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-runtime-r2/logs/runtime-d73e8fa6bbb24d5782b7dbb0561cfc1d.birth.json",
+      "sha256": "858809f8510490b06dda728026be19c5ac3d9fe86e63643abb40915f2c25ba15"
+    },
+    {
+      "bytes": 1237,
+      "identity": {
+        "device": 16777231,
+        "inode": 24051100
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-runtime-r2/logs/runtime-d73e8fa6bbb24d5782b7dbb0561cfc1d.request.json",
+      "sha256": "fe8073608e0c25e5ba0f18ccf9d49934eb8b1b9e745a4d486c6a8ba43faae2db"
+    },
+    {
+      "bytes": 6521,
+      "identity": {
+        "device": 16777231,
+        "inode": 24051101
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-runtime-r2/logs/runtime-d73e8fa6bbb24d5782b7dbb0561cfc1d.stdout",
+      "sha256": "5166cbbce04d4b7c89cc655399761c3986a03a6e9db62f901ba8cab45420c42a"
+    },
+    {
+      "bytes": 390450,
+      "identity": {
+        "device": 16777243,
+        "inode": 1174349
+      },
+      "kind": "regular",
+      "mode": 420,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/OPENSSL359_RUNTIME_SOURCE_FREEZE_R2.json",
+      "sha256": "ba426e936583648f83fece2ae6a584295e9c3c0ade893d05897b073aede8a0da"
+    },
+    {
+      "bytes": 386306,
+      "identity": {
+        "device": 16777243,
+        "inode": 1174389
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/ROOT_OPENSSL359_RUNTIME_SOURCE_REVIEW_R2.json",
+      "sha256": "080e54e87de326ae7e127b926c685a12d547e3add10dd591e08224413c8ef00a"
+    },
+    {
+      "bytes": 10662,
+      "identity": {
+        "device": 16777243,
+        "inode": 1174488
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/ROOT_OPENSSL359_RUNTIME_R2_ONCE_DISPATCH_BINDING.json",
+      "sha256": "83184a4b849f986b307a03b05edde90e01f0f44e96c1c9848057b43932fee8e7"
+    },
+    {
+      "bytes": 1237278,
+      "identity": {
+        "device": 16777243,
+        "inode": 1172768
+      },
+      "kind": "regular",
+      "mode": 420,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/OPENSSL359_CPYTHON_EXECUTION_RESULT_R4.json",
+      "sha256": "ac0bc9e027a0f8741f31e585184a0ba3d183e059d03b59c01e90b62354cbf87f"
+    },
+    {
+      "bytes": 36822,
+      "identity": {
+        "device": 16777243,
+        "inode": 1174309
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/ROOT_OPENSSL359_CPYTHON_R4_ACTUAL_FAILURE_CHECK.json",
+      "sha256": "e0c10e22333fdcade473413ca748516d972bccdbf8049a828732ecb9abb2e320"
+    },
+    {
+      "bytes": 13525,
+      "identity": {
+        "device": 16777243,
+        "inode": 1174476
+      },
+      "kind": "regular",
+      "mode": 384,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/openssl359-runtime-r2-independent-source-review/REVIEW_RECEIPT.json",
+      "sha256": "d96427b50a32085023e9d706c1869e64b2a57f3edfd573891e994fe2428236fa"
+    }
+  ],
+  "root_identity": {
+    "device": 16777231,
+    "inode": 24051041,
+    "mode": 448,
+    "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-tls-openssl359-runtime-r2",
+    "records": 17,
+    "regular_bytes": 2772988,
+    "uid": 501
+  },
+  "schema": "comsol-mcp.openssl359-runtime-r2-actual/1",
+  "status": "TLS_HASHLIB_SCOPED_ACTUAL_PASS",
+  "wrapper_pid": 43875,
+  "wrapper_terminal": {
+    "actual_pid": 43877,
+    "actual_wait_rc": 0,
+    "diagnostic_errors": [],
+    "elapsed_including_wait_and_flush_s": 37.27818320901133,
+    "same_handle_observed": true
+  }
+}

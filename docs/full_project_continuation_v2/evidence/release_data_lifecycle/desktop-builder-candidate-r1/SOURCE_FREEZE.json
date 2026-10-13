@@ -1,0 +1,89 @@
+{
+  "schema": "comsol-mcp-desktop-builder-candidate-freeze/1",
+  "status": "PLAN_ONLY",
+  "created_utc": "2026-10-11T22:34:43Z",
+  "candidate_validation": {
+    "built": false,
+    "installed": false,
+    "network_accessed": false,
+    "schema": "comsol-mcp-desktop-builder-candidate-plan/1",
+    "status": "PASS_CANDIDATE_PLAN_OFFLINE_VALIDATION",
+    "target_bytes": {
+      "macos_arm64": 31344172,
+      "macos_x86_64": 98655686,
+      "win_amd64": 31126080
+    },
+    "unique_download_bytes": 143586224,
+    "unique_download_count": 61
+  },
+  "candidate_artifacts": [
+    {
+      "path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/desktop-builder-candidate-r1/candidate-plan-r1.json",
+      "sha256": "1273bc753613ae051a9c484a0da4dd15d33ed291c279fb18c0659b8dcaf10687",
+      "size_bytes": 97811
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/desktop-builder-candidate-r1/metadata-pointers.json",
+      "sha256": "f793637eecb34aedfef20fbf6229a966c298b7e8b9b8dad0f32cf5d350edf107",
+      "size_bytes": 7245
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/desktop-builder-candidate-r1/candidate_plan_tool.py",
+      "sha256": "bf3b062806d9dcad8bb5b3a353dfbc8bb91b7a4d2a7e134dce830b080be362f1",
+      "size_bytes": 10337
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/desktop-builder-candidate-r1/README.md",
+      "sha256": "0ac385750e2bc6259267561f1d95e4abe39dc1de13386d5b5cabbc2066134627",
+      "size_bytes": 2979
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/desktop-builder-candidate-r1/CANDIDATE_VALIDATION.json",
+      "sha256": "411ba2bd8b845e557e52210d784b3e6fcc25292aad846ac778ba06b21b3264e9",
+      "size_bytes": 364
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/desktop-builder-candidate-r1/DRY_RUN_COMMANDS.txt",
+      "sha256": "355b52b46b6964a14c05ff43dc6393402f257a6500ff3b829ea158aed664b35f",
+      "size_bytes": 22834
+    }
+  ],
+  "bound_inputs": [
+    {
+      "path": "pyproject.toml",
+      "sha256": "f6f9356edc1c970e36c32a82cc8d9e71bd1a94d5a0e1552495a04ca7634ee107"
+    },
+    {
+      "path": "uv.lock",
+      "sha256": "08b6b8fb1f6a7a110f45df7d9f3ac3dae3e343fddc1ce2ddae84e458c3130b3f"
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-delivery-plan-r1/download-plan.json",
+      "sha256": "ec9103a9a74abcfc77c9fa60147bd1175336f1458c539e5f625180015f36585e"
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-cache-inventory-r2.json",
+      "sha256": "1de4ce83db18fdb5b2e3620a57e78675a190f3faeed1105955c1fca4f1ddf6ba"
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/fulldata-software-r3/ROOT_FUNCTIONAL_REVIEW_R3_R1.json",
+      "sha256": "2454e0c295bbf33ed946ce796b5188bb47cf25c6c1adefe5879b0af00715da05"
+    }
+  ],
+  "actions": {
+    "binary_downloads": 0,
+    "installations": 0,
+    "builds": 0,
+    "live_lock_or_project_version_edits": 0,
+    "dry_run_commands_executed": false,
+    "cache_directory_created": false,
+    "metadata_pointer_index_saved_raw_metadata": false
+  },
+  "scope_notes": [
+    "Metadata pointers identify previously inspected read-only official metadata; raw metadata responses are not saved locally.",
+    "The candidate plan merges the previously reviewed 50-artifact base/dev plan with Desktop and builder additions without editing pyproject.toml or uv.lock.",
+    "Intel cryptography source-build closure remains incomplete: Cargo registry sources/crates and a CPython 3.12 x86_64 builder are not present in the observed local inventory.",
+    "The 61-pair/143586224-byte unique set excludes unresolved Cargo crates and Rust/toolchain downloads; it is a candidate download set, not a complete reproducible three-architecture build closure."
+  ],
+  "dry_run_cache_path": "/private/tmp/comsol-mcp-candidate-downloads-r1"
+}

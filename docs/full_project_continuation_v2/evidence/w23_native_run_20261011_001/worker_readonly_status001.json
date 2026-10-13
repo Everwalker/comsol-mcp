@@ -1,0 +1,62 @@
+{
+  "auth_response": {
+    "generation": 2,
+    "ok": true,
+    "type": "authenticated"
+  },
+  "diagnostic_id": "w23-diagnostic-health-5adfbaf5-a38b-4feb-bc18-a898a22d8d3d",
+  "endpoint_host": "127.0.0.1",
+  "endpoint_port": 61943,
+  "interpretation": {
+    "health_is_worker_dispatch_fast_path": true,
+    "no_engine_command_dispatched": true,
+    "target_status_is_existing_request_read_only": true
+  },
+  "kind": "read_only_original_worker_health_and_existing_request_status",
+  "observed_at_utc": "2026-10-11T13:16:28.550578+00:00",
+  "responses": [
+    {
+      "request": {
+        "request_id": "w23-diagnostic-health-5adfbaf5-a38b-4feb-bc18-a898a22d8d3d",
+        "type": "health"
+      },
+      "response": {
+        "changed_count": 0,
+        "connected": true,
+        "generation": 2,
+        "instance_id": "0f61f256-fdda-43b0-ad33-a4c3e03957b6",
+        "ok": true,
+        "queued_or_running": 0,
+        "server": "127.0.0.1:61926",
+        "status": "HEALTHY"
+      }
+    },
+    {
+      "request": {
+        "request_id": "25dc1c8a-fb67-4bcd-ba0c-08f63071d26f",
+        "type": "status"
+      },
+      "response": {
+        "completed_at_ms": "1791723394960",
+        "failure": {
+          "code": "ENGINE_CALL_FAILED",
+          "execution_state_unknown": true,
+          "message": "InvocationTargetException: null (cause: FlException: Matrix_item_at_row_X_and_column_Y_is_not_a_scalar#1#1)",
+          "ok": false
+        },
+        "ok": false,
+        "queued_at_ms": "1791723394111",
+        "request_id": "25dc1c8a-fb67-4bcd-ba0c-08f63071d26f",
+        "started_at_ms": "1791723394111",
+        "status": "FAILED",
+        "type": "code_execute"
+      }
+    }
+  ],
+  "server_endpoint": "127.0.0.1:61926",
+  "study_or_solver_or_gui_actions": 0,
+  "token_recorded": false,
+  "worker_generation": 2,
+  "worker_instance_id": "0f61f256-fdda-43b0-ad33-a4c3e03957b6",
+  "worker_pid": 80851
+}

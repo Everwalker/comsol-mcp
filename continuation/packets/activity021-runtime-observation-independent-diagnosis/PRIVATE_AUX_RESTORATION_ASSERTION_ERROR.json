@@ -1,0 +1,10 @@
+{
+  "error": "Values have same structure but are not reference-equal",
+  "cause": "Node deep strict assertion compares fs array from another realm with literal array. Actual restored names identical. Both own aux already fully preserved/moved; no repeat move.",
+  "actual_membership": [
+    "raw_operations.sqlite3",
+    "raw_operations_post_disconnect.sqlite3"
+  ],
+  "correct_verification": "Compare explicit names via joined strings rather than prototype identity",
+  "native_or_original_snapshot_changes": 0
+}

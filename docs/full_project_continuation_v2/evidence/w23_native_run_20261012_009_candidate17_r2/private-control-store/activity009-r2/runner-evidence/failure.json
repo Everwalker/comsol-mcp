@@ -1,0 +1,88 @@
+{
+  "error": "ValueError: signal requires exactly one native Solution dataset/index pair; found 0",
+  "no_retry": true,
+  "provisional_saved_models": {
+    "coarse-phase0": {
+      "artifact_role": "provisional_model_capture_only",
+      "bytes": 13795478,
+      "case_id": "coarse-phase0_provisional",
+      "java_save_readback": {
+        "bytes": 13795478,
+        "fixture_id": "w23_planar_te_numeric_port_science_v1",
+        "path": "/private/tmp/comsol-mcp-w23-te-science-activity009-candidate17-r2/work/project/science/w23_coarse-phase0_provisional.mph",
+        "study_or_solver_invoked": false
+      },
+      "parent_case_id": "coarse-phase0",
+      "path": "/private/tmp/comsol-mcp-w23-te-science-activity009-candidate17-r2/work/project/science/w23_coarse-phase0_provisional.mph",
+      "scientific_acceptance": "NOT_ACCEPTED",
+      "sha256": "cba0c1d404003c4e60a20b04316cb1456c38cc2b45596dc2dc29bbed62674a8c",
+      "status": "CAPTURED_PROVISIONAL_MPH_BEFORE_SOLUTION_READBACK",
+      "study_run_submission": {
+        "at_utc": "2026-10-11T21:26:25.051137+00:00",
+        "domain_state": "succeeded",
+        "durable_job_status": "SUCCEEDED",
+        "durable_operation_status": "SUCCEEDED",
+        "execution_state_unknown": false,
+        "job_id": "6994d472-7e47-49f3-a0c8-6e15c4716c0d",
+        "method": "model.study('std1').run()",
+        "operation": "study.run",
+        "operation_id": "43ea9965-93af-4327-9599-4af0281964fb",
+        "operation_request_id": "w23-science-req-e9eb11e4-f4ba-4eb7-9321-afed257a2ab3",
+        "ordinal": 1,
+        "request_id": "wrk-0d1bc31b-eca8-47c7-a113-5150807b1f04",
+        "safe_retry": null,
+        "worker_event": {
+          "kind": "call",
+          "metadata": {
+            "args": [],
+            "generation": 2,
+            "handle": "h-bb5840b6-4860-45db-85c7-dca0fb56360e",
+            "method": "run",
+            "request_id": "wrk-0d1bc31b-eca8-47c7-a113-5150807b1f04",
+            "type": "call"
+          },
+          "operation_id": "43ea9965-93af-4327-9599-4af0281964fb",
+          "phase": "submitted",
+          "request_hash": "fbc720267c164317f589d8702e8a511bc0556f9e2e2139fd05f123647ba32cab",
+          "request_id": "wrk-0d1bc31b-eca8-47c7-a113-5150807b1f04"
+        },
+        "worker_event_id": 178
+      }
+    }
+  },
+  "status": "FAIL_OR_INCOMPLETE",
+  "study_run_submissions": [
+    {
+      "at_utc": "2026-10-11T21:26:25.051137+00:00",
+      "domain_state": "succeeded",
+      "durable_job_status": "SUCCEEDED",
+      "durable_operation_status": "SUCCEEDED",
+      "execution_state_unknown": false,
+      "job_id": "6994d472-7e47-49f3-a0c8-6e15c4716c0d",
+      "method": "model.study('std1').run()",
+      "operation": "study.run",
+      "operation_id": "43ea9965-93af-4327-9599-4af0281964fb",
+      "operation_request_id": "w23-science-req-e9eb11e4-f4ba-4eb7-9321-afed257a2ab3",
+      "ordinal": 1,
+      "request_id": "wrk-0d1bc31b-eca8-47c7-a113-5150807b1f04",
+      "safe_retry": null,
+      "worker_event": {
+        "kind": "call",
+        "metadata": {
+          "args": [],
+          "generation": 2,
+          "handle": "h-bb5840b6-4860-45db-85c7-dca0fb56360e",
+          "method": "run",
+          "request_id": "wrk-0d1bc31b-eca8-47c7-a113-5150807b1f04",
+          "type": "call"
+        },
+        "operation_id": "43ea9965-93af-4327-9599-4af0281964fb",
+        "phase": "submitted",
+        "request_hash": "fbc720267c164317f589d8702e8a511bc0556f9e2e2139fd05f123647ba32cab",
+        "request_id": "wrk-0d1bc31b-eca8-47c7-a113-5150807b1f04"
+      },
+      "worker_event_id": 178
+    }
+  ],
+  "traceback": "Traceback (most recent call last):\n  File \"/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-planar-te-source-20261012-009-candidate17-r2/tools/run_native_w23_te_science.py\", line 2861, in execute\n    source_receipt = resolve_mode_overlap_sources(\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-planar-te-source-20261012-009-candidate17-r2/tools/run_native_w23_te_science.py\", line 1559, in resolve_mode_overlap_sources\n    raise ValueError(f\"{role} requires exactly one native Solution dataset/index pair; found {len(candidates)}\")\nValueError: signal requires exactly one native Solution dataset/index pair; found 0\n"
+}

@@ -217,6 +217,274 @@ def test_actual_old_current_code_profile_backup_restore_and_independent_reopen(t
     assert release.sha256_file(backup) == json.loads(records[2].stdout)["sha256"]
 
 
+def test_full_data_lifecycle_uses_project_authority_artifactstore_full_restore_and_recover(tmp_path):
+    """Actual source functions roundtrip a pinned 6.4 MPH without starting COMSOL."""
+    old_wheel = ROOT / "evidence/w21_closure/delivery/comsol_mcp-0.1.9-py3-none-any.whl"
+    model = ROOT / "evidence/w21_closure/windows/reviewer64_reopen01/project/review_reopen.mph"
+    model_sha = "ee71658d66a92efc19c78de7742eb24c1ef3b16f1fb33b1d6814b1e79c96b9d6"
+    model_size = 10_725_566
+    if not old_wheel.is_file():
+        pytest.skip("historical local wheel unavailable")
+    assert release.sha256_file(model) == model_sha and model.stat().st_size == model_size
+
+    old_root, candidate_root = tmp_path / "old-code", tmp_path / "candidate-code"
+    for base in (old_root, candidate_root):
+        pkg = base / "comsol_mcp"
+        pkg.mkdir(parents=True)
+        (pkg / "__init__.py").write_text(f"__path__.append({str(ROOT / 'comsol_mcp')!r})\n")
+    with zipfile.ZipFile(old_wheel) as wheel:
+        (old_root / "comsol_mcp/_operation_store.py").write_bytes(wheel.read("comsol_mcp/_operation_store.py"))
+    (candidate_root / "comsol_mcp/_operation_store.py").write_bytes((ROOT / "comsol_mcp/_operation_store.py").read_bytes())
+
+    home, seed = tmp_path / "source-control-home", tmp_path / "old-generated-seed.json"
+    workspaces = tmp_path / "source-workspaces"
+    backup_dir = tmp_path / "backup-output"
+    backup_dir.mkdir()
+    archive = backup_dir / "registered-projects.tar"
+    backup_manifest = pathlib.Path(str(archive) + ".manifest.json")
+    initial = run_fixture_child(old_root, helper.DATA_SCRIPT, ["seed", home, seed])
+    assert initial.returncode == 0, initial.stderr
+    registered = run_fixture_child(candidate_root, helper.FULL_DATA_SCRIPT,
+        ["register", home, workspaces, model, model_sha, model_size])
+    assert registered.returncode == 0, registered.stderr
+    registration = json.loads(registered.stdout)
+    assert registration["project_id"] and registration["artifact_id"] == model_sha
+    assert registration["artifact_size_bytes"] == model_size
+    assert registration["registered_role"] == "saved_model"
+
+    backed = run_fixture_child(candidate_root, helper.FULL_BACKUP_SCRIPT,
+        ["--home", home, "--destination", archive])
+    assert backed.returncode == 0, backed.stderr
+    backup_receipt = json.loads(backed.stdout)
+    assert backup_receipt["project_count"] == 1 and backup_receipt["file_count"] == 1
+    model_rows = [row for row in backup_receipt["manifest"]["files"]
+                  if row["sha256"] == model_sha and row["size_bytes"] == model_size
+                  and any(ref["artifact_key"] == model_sha and ref["role"] == "saved_model"
+                          for ref in row["registrations"])]
+    assert len(model_rows) == 1
+    candidate = run_fixture_child(candidate_root, helper.DATA_SCRIPT, ["candidate-full", home, seed])
+    assert candidate.returncode == 0, candidate.stderr
+    assert len(json.loads(candidate.stdout)["reconciled_job_ids"]) == 1
+    controlled = run_fixture_child(candidate_root, helper.FAILURE_SCRIPT, [])
+    assert controlled.returncode == 73
+
+    restored_home, restored_workspace = tmp_path / "restored-control-home", tmp_path / "restored-workspaces"
+    restored_home.mkdir(); restored_workspace.mkdir()
+    restore = run_fixture_child(candidate_root, helper.FULL_RESTORE_SCRIPT,
+        ["--home", restored_home, "--workspace-root", restored_workspace,
+         "--archive", archive, "--manifest", backup_manifest, "--confirm"])
+    assert restore.returncode == 0, restore.stderr
+    restore_receipt = json.loads(restore.stdout)
+    assert restore_receipt["operation_replay_performed"] is False
+    assert restore_receipt["worker_or_model_bindings_revived"] is False
+    entry = tmp_path / "zero-solve-entry.json"
+    verify = run_fixture_child(candidate_root, helper.FULL_VERIFY_SCRIPT,
+        [restored_home, restored_workspace, registration["project_id"], model_sha,
+         model_sha, model_size, seed, entry])
+    assert verify.returncode == 0, verify.stderr
+    readback = json.loads(verify.stdout)
+    assert readback["unknown_status"] == "UNKNOWN"
+    assert readback["operation_replay_performed"] is False
+    assert readback["native"] == readback["solve"] == "NOT_RUN"
+    native_entry = json.loads(entry.read_text())
+    assert native_entry["status"] == "NOT_RUN_SOFTWARE_PREPARED"
+    assert native_entry["solve_requested"] is False
+    assert native_entry["target_runtime"] == "COMSOL Multiphysics 6.4.0.293"
+    assert release.sha256_file(pathlib.Path(readback["resolved_path"])) == model_sha
+
+    # Content-address verification refuses a byte change after restore.
+    artifact_path = pathlib.Path(readback["resolved_path"])
+    with artifact_path.open("r+b") as stream:
+        first = stream.read(1)
+        stream.seek(0)
+        stream.write(bytes([first[0] ^ 1]))
+        stream.flush()
+    tampered = run_fixture_child(candidate_root, helper.FULL_VERIFY_SCRIPT,
+        [restored_home, restored_workspace, registration["project_id"], model_sha,
+         model_sha, model_size, seed, tmp_path / "tampered-entry.json"])
+    assert tampered.returncode != 0
+    assert "ARTIFACT_HASH_MISMATCH" in tampered.stderr
+
+    old_reopen = run_fixture_child(old_root, helper.DATA_SCRIPT, ["restored-full", restored_home, seed])
+    assert old_reopen.returncode == 0, old_reopen.stderr
+    assert json.loads(old_reopen.stdout)["unknown_safe_retry_false_verified"] is True
+
+    # Simulate process death after the durable PROJECTS_INSTALLED journal
+    # phase. The real full-recover CLI must return the new targets to empty.
+    interrupted_home, interrupted_workspace = tmp_path / "interrupted-home", tmp_path / "interrupted-workspaces"
+    interrupted_home.mkdir(); interrupted_workspace.mkdir()
+    crashed = run_fixture_child(candidate_root, helper.FULL_RESTORE_CRASH_SCRIPT,
+        [interrupted_home, interrupted_workspace, archive, backup_manifest])
+    assert crashed.returncode == 82
+    assert (interrupted_home / "full-state.restore.pending.json").is_file()
+    recovered = run_fixture_child(candidate_root, helper.FULL_RECOVER_SCRIPT,
+        ["--home", interrupted_home, "--confirm"])
+    assert recovered.returncode == 0, recovered.stderr
+    recover_receipt = json.loads(recovered.stdout)
+    assert recover_receipt["success"] is True and recover_receipt["operation"] == "full_recover"
+    assert not (interrupted_home / "full-state.restore.pending.json").exists()
+    assert not (interrupted_home / "operations.sqlite3").exists()
+    assert list(interrupted_workspace.iterdir()) == []
+
+
+@pytest.mark.parametrize("tamper_post_seed_history", [False, True])
+def test_lifecycle_orchestrator_uses_full_data_path_and_emits_native_entry(tmp_path, tamper_post_seed_history):
+    old_wheel = ROOT / "evidence/w21_closure/delivery/comsol_mcp-0.1.9-py3-none-any.whl"
+    if not old_wheel.is_file():
+        pytest.skip("historical local wheel unavailable")
+    old_root, candidate_root = tmp_path / "old-code", tmp_path / "candidate-code"
+    for base in (old_root, candidate_root):
+        pkg = base / "comsol_mcp"
+        pkg.mkdir(parents=True)
+        (pkg / "__init__.py").write_text(f"__path__.append({str(ROOT / 'comsol_mcp')!r})\n")
+    with zipfile.ZipFile(old_wheel) as wheel:
+        (old_root / "comsol_mcp/_operation_store.py").write_bytes(wheel.read("comsol_mcp/_operation_store.py"))
+    (candidate_root / "comsol_mcp/_operation_store.py").write_bytes((ROOT / "comsol_mcp/_operation_store.py").read_bytes())
+
+    work, evidence = tmp_path / "work", tmp_path / "evidence"
+    work.mkdir(); evidence.mkdir()
+    for name in ("old-wheel-input.json", "candidate-wheel-input.json"):
+        (evidence / name).write_text("{}\n")
+    home, seed = work / "synthetic-control-home", evidence / "old-generated-seed.json"
+    initial = run_fixture_child(old_root, helper.DATA_SCRIPT, ["seed", home, seed])
+    assert initial.returncode == 0, initial.stderr
+    seed_record = json.loads(seed.read_text())
+    durable_job = seed_record["operations"]["terminal"]["job_id"]
+    add_durable_event = (
+        "import sys; from comsol_mcp._operation_store import OperationStore; "
+        "s=OperationStore(sys.argv[1]); "
+        "s.add_event(sys.argv[2], 'PostSeedLifecycleEvidence', {'source':'synthetic-test-fixture','sequence':1}); "
+        "s.close()"
+    )
+    event = run_fixture_child(candidate_root, add_durable_event, [home / "operations.sqlite3", durable_job])
+    assert event.returncode == 0, event.stderr
+
+    lifecycle = object.__new__(helper.Lifecycle)
+    lifecycle.release = release
+    lifecycle.evidence = evidence
+    lifecycle.sandbox = "fixture-no-engine-runner"
+    lifecycle.steps = []
+    lifecycle.failures = []
+    lifecycle.old, lifecycle.new = {"version": "0.1.9"}, {"version": "0.1.10"}
+    lifecycle.bootstrap = {}
+    lifecycle.identities = {"old": True, "candidate": True, "restored": True}
+    lifecycle.home = home
+    lifecycle.workspace_root = work / "source-projects"
+    lifecycle.seed = seed
+    lifecycle.seed_sha256 = release.sha256_file(seed)
+    lifecycle.backup = evidence / "before-candidate-open.full-state.tar"
+    lifecycle.backup_manifest = pathlib.Path(str(lifecycle.backup) + ".manifest.json")
+    lifecycle.restored_home = work / "full-restored-control-home"
+    lifecycle.restored_workspace = work / "full-restored-workspaces"
+    lifecycle.native_reopen_entry = evidence / "zero-solve-reopen-entry.json"
+    lifecycle.model_input = ROOT / "evidence/w21_closure/windows/reviewer64_reopen01/project/review_reopen.mph"
+    lifecycle.model_sha256 = "ee71658d66a92efc19c78de7742eb24c1ef3b16f1fb33b1d6814b1e79c96b9d6"
+    lifecycle.model_size_bytes = 10_725_566
+    lifecycle.backup_verified = None
+    lifecycle.project_artifact = None
+    lifecycle.full_restore_receipt = None
+    lifecycle.candidate_pass = lifecycle.restore_pass = lifecycle.restored_pass = False
+
+    def verify_seed():
+        assert release.sha256_file(seed) == lifecycle.seed_sha256
+
+    def fixture_process(name, _py, code, arguments, *, supervised=True):
+        root = old_root if name == "old-independent-reopen" else candidate_root
+        child = run_fixture_child(root, code, arguments)
+        if name == "production-full-restore" and tamper_post_seed_history:
+            import sqlite3
+            restored_db = lifecycle.restored_home / "operations.sqlite3"
+            with sqlite3.connect(restored_db) as db:
+                changed = db.execute(
+                    "UPDATE job_events SET metadata=? WHERE event='PostSeedLifecycleEvidence'",
+                    (json.dumps({"tampered_after_restore": True}),),
+                ).rowcount
+            assert changed == 1, "expected exactly one restored non-seed durable history row"
+        record = {"argv": ["fixture-python", "-I", "-B", "-c", code, *map(str, arguments)],
+                  "exit_code": child.returncode, "stdout": child.stdout, "stderr": child.stderr}
+        lifecycle.retain_record(name, record)
+        return record
+
+    lifecycle.verify_seed = verify_seed
+    lifecycle.process = fixture_process
+    lifecycle.candidate_phase(pathlib.Path(sys.executable))
+    if tamper_post_seed_history:
+        with pytest.raises(release.ReleaseError, match="durable history digest"):
+            lifecycle.restore_candidate(pathlib.Path(sys.executable))
+        assert lifecycle.restore_pass is False
+        assert "restored-history-mismatch" in lifecycle.failures
+        failed = lifecycle.finish(pathlib.Path(sys.executable), True, True)
+        assert failed["status"] == "FAIL_OR_UNKNOWN_DATA_LIFECYCLE"
+        assert failed["data"] == "FAIL_OR_UNKNOWN"
+        readback_step = next(row for row in lifecycle.steps
+                             if row["name"] == "restored-project-artifact-readback")
+        readback_record = json.loads(pathlib.Path(readback_step["record_path"]).read_text())
+        changed_digest = json.loads(readback_record["stdout"])["durable_history_sha256"]
+        assert changed_digest != lifecycle.backup_verified["durable_history_sha256"]
+        return
+    lifecycle.restore_candidate(pathlib.Path(sys.executable))
+    result = lifecycle.finish(pathlib.Path(sys.executable), True, True)
+    assert result["status"] == "PASS_DISPOSABLE_CODE_DATA_LIFECYCLE"
+    assert result["backup_storage"]["operation"] == "full_backup"
+    assert result["full_restore"]["restore"]["operation"] == "full_restore"
+    assert result["backup_vs_restored_storage"]["durable_history_sha256_identical"] is True
+    assert result["native"] == result["science"] == "NOT_RUN"
+    entry = json.loads(lifecycle.native_reopen_entry.read_text())
+    assert entry["status"] == "NOT_RUN_SOFTWARE_PREPARED" and entry["solve_requested"] is False
+    assert entry["artifact_sha256"] == lifecycle.model_sha256
+
+
+@pytest.mark.parametrize("defect", ["history-missing", "history-mismatch", "schema-missing", "schema-mismatch"])
+def test_lifecycle_finish_requires_exact_nonempty_history_and_schema_readback(tmp_path, defect):
+    lifecycle = object.__new__(helper.Lifecycle)
+    lifecycle.release = release
+    lifecycle.evidence = tmp_path
+    lifecycle.steps = []
+    lifecycle.failures = []
+    lifecycle.identities = {"old": True, "candidate": True, "restored": True}
+    lifecycle.old, lifecycle.new = {"version": "0.1.9"}, {"version": "0.1.10"}
+    lifecycle.bootstrap = {}
+    lifecycle.candidate_pass = lifecycle.restore_pass = lifecycle.restored_pass = True
+    expected_history = "a" * 64
+    observed_history = expected_history
+    expected_schema = observed_schema = 3
+    if defect == "history-missing":
+        observed_history = None
+    elif defect == "history-mismatch":
+        observed_history = "b" * 64
+    elif defect == "schema-missing":
+        observed_schema = None
+    elif defect == "schema-mismatch":
+        observed_schema = 4
+    lifecycle.backup_verified = {
+        "durable_history_sha256": expected_history,
+        "manifest": {"database": {"schema_version": expected_schema}},
+    }
+    lifecycle.full_restore_receipt = {
+        "verified_model": {
+            "durable_history_sha256": observed_history,
+            "database_schema_version": observed_schema,
+        }
+    }
+    lifecycle.project_artifact = None
+    lifecycle.native_reopen_entry = tmp_path / "native-entry.json"
+    lifecycle.restored_storage = {"schema_version": [[expected_schema]]}
+    for name in ("old-wheel-input.json", "candidate-wheel-input.json"):
+        (tmp_path / name).write_text("{}\n")
+    lifecycle.verify_seed = lambda: None
+    lifecycle.checked = lambda *_args, **_kwargs: {"before_storage": {"schema_version": [[expected_schema]]}}
+
+    result = lifecycle.finish(pathlib.Path(sys.executable), True, True)
+    assert result["status"] == "FAIL_OR_UNKNOWN_DATA_LIFECYCLE"
+    assert result["data"] == "FAIL_OR_UNKNOWN"
+    if defect.startswith("history"):
+        assert result["backup_vs_restored_storage"]["durable_history_sha256_identical"] is False
+        assert "restored-history-mismatch" in result["failures"]
+    else:
+        assert result["backup_vs_restored_storage"]["schema_version_identical"] is False
+        assert "restored-schema-version-mismatch" in result["failures"]
+
+
 @pytest.mark.parametrize("defect", ["seed-result", "terminal-status", "unknown-retry", "new-row"])
 def test_actual_child_rejects_changed_old_data(tmp_path, defect):
     # Same fixed child profile, using current source only; this is a software

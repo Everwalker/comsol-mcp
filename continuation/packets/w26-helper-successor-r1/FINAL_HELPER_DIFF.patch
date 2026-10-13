@@ -1,0 +1,94 @@
+--- immutable original
++++ private strict successor
+@@ -517,84 +517,13 @@
+     return matches[0]
+ 
+ 
+-def verify_derived_wheel(provenance_path: pathlib.Path, wheel_path: pathlib.Path,
+-                         source_lock: pathlib.Path, openssl_license_path: pathlib.Path,
+-                         target: str) -> dict[str, Any]:
+-    """Validate the separately attested cryptography source-build wheel.
+-
+-    The repository lock remains immutable. The provenance binds the local wheel
+-    to its locked sdist and records the non-Python OpenSSL component and native
+-    audit needed to distinguish a build candidate from an upstream wheel.
+-    """
+-    provenance_path = provenance_path.resolve(strict=True)
+-    wheel_path = wheel_path.resolve(strict=True)
+-    source_lock = source_lock.resolve(strict=True)
+-    openssl_license_path = openssl_license_path.resolve(strict=True)
+-    if target != "macos_x86_64":
+-        raise ReleaseError("derived cryptography wheel provenance is only valid for macos_x86_64")
+-    try:
+-        provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+-    except (OSError, json.JSONDecodeError) as exc:
+-        raise ReleaseError(f"derived wheel provenance is missing or invalid: {exc}") from exc
+-    if provenance.get("schema") != "comsol-mcp-derived-wheel/1" or provenance.get("status") != "BUILD_CANDIDATE":
+-        raise ReleaseError("derived wheel provenance must be a BUILD_CANDIDATE using the supported schema")
+-    if provenance.get("target") != target:
+-        raise ReleaseError("derived wheel provenance target does not match the requested target")
+-    package = provenance.get("package", {})
+-    if package.get("name") != "cryptography" or package.get("version") != "50.0.1":
+-        raise ReleaseError("derived wheel provenance must identify cryptography==50.0.1")
+-    wheel_row = provenance.get("wheel", {})
+-    digest = sha256_file(wheel_path)
+-    if (wheel_row.get("filename") != wheel_path.name or wheel_row.get("sha256") != digest or
+-            wheel_row.get("bytes") != wheel_path.stat().st_size):
+-        raise ReleaseError("derived wheel identity, size, or SHA256 does not match provenance")
+-    meta = wheel_metadata(wheel_path)
+-    dist, version, _tags = _wheel_dist_version(wheel_path)
+-    expected_tag = "cp312-abi3-macosx_12_0_x86_64"
+-    if (dist != "cryptography" or version != "50.0.1" or meta["normalized_name"] != dist or
+-            meta["version"] != version or meta["wheel_tags"] != [expected_tag] or
+-            wheel_row.get("tag") != expected_tag or not wheel_target_check(wheel_path.name, target) or
+-            not wheel_tag_identity_matches(wheel_path, meta)):
+-        raise ReleaseError("derived wheel filename or internal tag is not CPython 3.12 abi3 macOS 12 x86_64")
+-
+-    source = provenance.get("source", {})
+-    source_lock_row = provenance.get("source_lock", {})
+-    lock_sha = sha256_file(source_lock)
+-    locked = _locked_package(source_lock, "cryptography", "50.0.1")
+-    locked_sdist = locked.get("sdist", {})
+-    locked_sdist_sha = str(locked_sdist.get("hash", "")).removeprefix("sha256:")
+-    if (source_lock_row.get("filename") != source_lock.name or source_lock_row.get("sha256") != lock_sha or
+-            source_lock_row.get("sdist_sha256") != locked_sdist_sha or
+-            source.get("url") != locked_sdist.get("url") or source.get("sha256") != locked_sdist_sha):
+-        raise ReleaseError("derived wheel source provenance is not bound to the selected uv.lock sdist record")
+-    if not re.fullmatch(r"[0-9a-f]{64}", locked_sdist_sha):
+-        raise ReleaseError("uv.lock cryptography sdist entry has no valid SHA256")
+-
+-    openssl = provenance.get("native_component", {})
+-    license_row = openssl.get("license_file", {})
+-    if (openssl.get("name") != "OpenSSL" or openssl.get("version") != "4.0.2" or
+-            openssl.get("license") != "Apache-2.0" or openssl.get("linkage") != "static" or
+-            openssl.get("source_url") != OPENSSL_402_SOURCE_URL or
+-            openssl.get("source_sha256") != OPENSSL_402_SOURCE_SHA256 or
+-            license_row.get("filename") != openssl_license_path.name or
+-            license_row.get("sha256") != sha256_file(openssl_license_path) or
+-            license_row.get("bytes") != openssl_license_path.stat().st_size):
+-        raise ReleaseError("derived wheel OpenSSL version, static linkage, source hash, or license binding is invalid")
+-    native = provenance.get("native_audit", {})
+-    allowed_system_libraries = {"/usr/lib/libSystem.B.dylib", "/usr/lib/libiconv.2.dylib"}
+-    dynamic_libraries = set(native.get("dynamic_libraries", []))
+-    if (native.get("architecture") != "x86_64" or native.get("minimum_os") != "12.0" or
+-            native.get("openssl_dynamic_dependency") is not False or
+-            native.get("temporary_dylib_dependencies") != [] or
+-            not dynamic_libraries.issubset(allowed_system_libraries) or
+-            not dynamic_libraries):
+-        raise ReleaseError("derived wheel native audit is missing or reports an unapproved dynamic dependency")
+-    if provenance.get("uv_lock_modified") is not False or provenance.get("upstream_source_patched") is not False:
+-        raise ReleaseError("derived wheel provenance must confirm the upstream source and uv.lock were unchanged")
+-    return {"provenance": provenance, "provenance_sha256": sha256_file(provenance_path),
+-            "provenance_filename": provenance_path.name, "wheel": wheel_row,
+-            "native_component": openssl, "license_path": openssl_license_path,
+-            "source_lock_sha256": lock_sha}
++def verify_derived_wheel(provenance_path, wheel_path, source_lock, openssl_license_path, target):
++    from strict_derived import verify, Refusal
++    try:
++        return verify(provenance_path, wheel_path, source_lock, openssl_license_path, target)
++    except (Refusal, OSError, ValueError, KeyError, zipfile.BadZipFile) as exc:
++        raise ReleaseError(str(exc)) from exc
++
+ 
+ 
+ def compose_derived_wheel_lock(requirements: pathlib.Path, wheel: pathlib.Path,

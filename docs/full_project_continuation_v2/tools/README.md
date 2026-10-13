@@ -1,0 +1,4 @@
+# 工具边界
+bootstrap/verify_package校验和恢复固定源，不认证引擎。init_resume验证原要求、读取已有表和scope，不覆盖旧状态、不导入仓库代码。status只输出摘要；checkpoint只更新新指针。preclean_inventory只读Git路径清单，不备份、不删除，不得把safe_to_delete改真。
+本版不携带旧init_completion/status完成审计器，不新造第二套全矩阵；继续使用已恢复原表和真实最终Reviewer。
+本次没有实际网络完整恢复、Windows/PowerShell/COMSOL运行；本包测试见PACKAGE_QA。

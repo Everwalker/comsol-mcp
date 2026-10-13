@@ -1,0 +1,6 @@
+from pathlib import Path
+import os,json,subprocess,sys
+out=Path(__file__).parent.resolve();candidate=out.parent/'w23-saved-mph-science-readback-20261013-candidate20-r14';guard=Path('/Volumes/SSD/Comsol-MCP/execution-scratch/temp-loss-runtime-recovery-20261004-001/builder-preparation022/network-guard');label=sys.argv[1];script=sys.argv[2] if len(sys.argv)>2 else 'verify_closure.py';log=out/(label+'.guard.jsonl');fd=os.open(log,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600);os.close(fd)
+argv=['/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python','-B',str(guard/'guarded_entry.py'),'exec','import runpy; runpy.run_path('+repr(str(out/script))+', run_name="__main__")']
+env=dict(os.environ,PYTHONPATH=f'{guard}:{candidate}',CODEX_NETWORK_GUARD_LOG=str(log),CODEX_NETWORK_GUARD_LABEL='ind-w23-r14-'+label,CODEX_NETWORK_GUARD_RUN_ID='ind-w23-r14-'+label,PYTHONDONTWRITEBYTECODE='1',TMPDIR='/private/tmp')
+p=subprocess.run(argv,cwd=candidate,env=env,capture_output=True);(out/(label+'.stdout.bin')).write_bytes(p.stdout);(out/(label+'.stderr.bin')).write_bytes(p.stderr);(out/(label+'.argv.json')).write_text(json.dumps(argv)+'\n');print(p.stdout.decode());print(p.stderr.decode());print('rc',p.returncode);sys.exit(p.returncode)

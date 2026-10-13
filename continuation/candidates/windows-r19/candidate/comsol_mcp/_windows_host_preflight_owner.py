@@ -1,0 +1,165 @@
+"""Private strong roots for actual readonly provider preflight native objects.
+
+No wire authority, persistent owner, path replay or host-policy proof.
+"""
+from __future__ import annotations
+import ctypes as C
+import threading
+from ._execution_contract import ExecutionContractError
+from ._windows_owned_resources import registry_for
+
+_ROOTS={}
+_ROOT_LOCK=threading.RLock()
+_SEAL=object()
+
+def fail(message):
+    raise ExecutionContractError('HOST_PREFLIGHT_RESOURCE_UNKNOWN',message,safe_retry=False,stage='pre_dispatch')
+
+def scalar(value,kind):
+    raw=getattr(value,'value',value)
+    bounds={'BOOL':(-2**31,2**31-1),'DWORD':(0,2**32-1),'NTSTATUS':(-2**31,2**31-1)}
+    low,high=bounds[kind]
+    if type(raw) is not int or not low<=raw<=high:fail('readonly SDK '+kind+' return malformed')
+    return raw
+
+
+class _PreflightOwner:
+    def __init__(self,api):
+        self._seal=_SEAL;self.api=api;self.registry=registry_for(api);self.sdk={};self.first_cause=None;self.scope=self.registry.scope();self.retired=False
+        if self.registry.owner is not api:fail('readonly preflight requires original API registry owner')
+        if self.registry.unresolved():fail('readonly preflight root must precede acquisition; existing resources cannot be re-adopted')
+    def check_owner(self):
+        if (self._seal is not _SEAL or _ROOTS.get(id(self.api)) is not self
+            or self.registry.owner is not self.api or registry_for(self.api) is not self.registry
+            or getattr(self.api,'_readonly_preflight_owner',None) is not self):
+            fail('readonly preflight original actual owner/root changed')
+    def remember(self,error):
+        if self.first_cause is None and error is not None:self.first_cause=error
+    def function(self,name,dll):
+        self.check_owner()
+        if threading.get_ident()!=self.scope.thread_id:
+            fail('readonly SDK acquisition/read requires original preflight thread')
+        if name not in self.sdk:self.sdk[name]=getattr(dll,name)
+        return self.sdk[name]
+    def capture(self,storage,*,family,closer,keepalive=()):
+        self.check_owner();address=getattr(storage,'value',storage)
+        if address is None or address==0:return None
+        entry=None
+        def release(actual):
+            self.check_owner()
+            if (entry is None or entry.adapter is not self.api or self.registry._entries.get(entry.seq) is not entry
+                or type(address) is not int or address<=0 or address==C.c_void_p(-1).value
+                or getattr(actual,'value',actual)!=address):fail('foreign/malformed readonly native resource')
+            result=closer(C.c_void_p(address))
+            if family=='handle':
+                if scalar(result,'BOOL')==0:fail('original readonly CloseHandle refused')
+            else:
+                raw=getattr(result,'value',result)
+                if raw is not None and (type(raw) is not int or raw!=0):fail('original readonly LocalFree not confirmed')
+        # Capture original storage strongly before the generic value validation.
+        entry=self.registry.acquire(self.api,storage,release,mode='VOID',label='host_preflight_'+family,
+            keepalive=(storage,*keepalive),domain='native' if family=='handle' else 'host_preflight_local',
+            value_reader=lambda actual:getattr(actual,'value',actual))
+        return entry
+    def allocation_call(self,name,dll,storage,*args,family,keepalive=()):
+        closer=self.function('CloseHandle' if family=='handle' else 'LocalFree',self.api.k)
+        fn=self.function(name,dll)
+        primary=None
+        try:return fn(*args)
+        except BaseException as error:primary=error;self.remember(error);raise
+        finally:
+            try:self.capture(storage,family=family,closer=closer,keepalive=(*keepalive,primary))
+            except BaseException as capture_error:
+                self.remember(primary or capture_error)
+                raise
+    def release(self,storage,*,family,primary=None):
+        self.remember(primary);self.check_owner()
+        entry=self.registry.find(self.api,storage,domain='native' if family=='handle' else 'host_preflight_local')
+        if entry is None:fail('readonly metadata cannot adopt a resource for cleanup')
+        try:entry.release_owned(self.api)
+        except BaseException as error:self.remember(primary or error);raise
+    def hold(self,storage,*buffers):
+        entry=self.registry.find(self.api,storage)
+        if entry is None:fail('borrowed SID requires original retained token allocation')
+        entry.keepalive=(*entry.keepalive,*buffers)
+    def entries(self):
+        return tuple(e for e in self.registry.unresolved() if e.seq>self.scope.seq)
+    def path_closer(self,handle):
+        self.check_owner()
+        entry=self.registry.find(self.api,handle)
+        if entry is None or entry not in self.entries():fail('path cleanup lacks original preflight acquisition')
+        # The native SDK callback was captured before acquisition, independent
+        # of later api.k/CloseHandle fields.
+        if scalar(self.sdk['CloseHandle'](handle),'BOOL')==0:fail('original readonly path CloseHandle refused')
+    def cleanup(self,*,retry=False):
+        self.check_owner();errors=[]
+        with self.registry._lock:
+            for entry in reversed(self.entries()):
+                # Never retry UNKNOWN as part of automatic unwinding.
+                if entry.state=='UNKNOWN' and not retry:
+                    errors.append(entry.error);continue
+                try:
+                    if retry:self.registry.retry_owned(entry,self.api)
+                    else:entry.release_owned(self.api)
+                except BaseException as error:self.remember(error);errors.append(error)
+        return errors
+    def reconcile(self):
+        self.check_owner()
+        if self.entries():fail('readonly original resources remain UNKNOWN/owned')
+        with _ROOT_LOCK:
+            _ROOTS.pop(id(self.api));self.retired=True
+
+
+def hold_original(api):
+    with _ROOT_LOCK:
+        owner=_ROOTS.get(id(api))
+        if owner is None:
+            if getattr(api, '_readonly_preflight_owner', None) is not None:
+                fail('original readonly API cannot be re-adopted or replayed after cleanup')
+            owner=_PreflightOwner(api);_ROOTS[id(api)]=owner;api._readonly_preflight_owner=owner
+        elif owner.api is not api:fail('readonly root identity collision')
+        owner.check_owner();return owner
+
+
+def finish_original(api,primary=None):
+    owner=hold_original(api);owner.remember(primary);errors=owner.cleanup()
+    if errors or owner.entries():
+        error=ExecutionContractError('HOST_PREFLIGHT_RESOURCE_UNKNOWN','readonly native resources retained; explicit original cleanup required',safe_retry=False,stage='pre_dispatch',details={'first_cause_type':type(owner.first_cause).__name__ if owner.first_cause else None,'first_cause_code':getattr(owner.first_cause,'code',None)})
+        error._original_preflight_owner=owner;error._first_cause=owner.first_cause
+        raise error from owner.first_cause
+    if primary is None:
+        owner.reconcile()
+
+
+def cleanup_original(api):
+    """Private original-entry cleanup only; no path/provider/authorization replay."""
+    with _ROOT_LOCK:owner=_ROOTS.get(id(api))
+    if owner is None or owner.api is not api:fail('explicit cleanup requires the retained original actual API')
+    with owner.registry._lock:
+        errors=owner.cleanup(retry=True)
+        if errors or owner.entries():fail('explicit original readonly cleanup not confirmed')
+        owner.reconcile()
+
+
+def retained_original_owners():
+    with _ROOT_LOCK:return tuple(_ROOTS.values())
+
+
+def confirmed_original_cleanup(owner):
+    return (type(owner) is _PreflightOwner and owner._seal is _SEAL and owner.retired
+            and _ROOTS.get(id(owner.api)) is None and registry_for(owner.api) is owner.registry
+            and owner.registry.owner is owner.api and not owner.registry.unresolved())
+
+
+def serialized_original_preflight(function):
+    from functools import wraps
+    @wraps(function)
+    def guarded(api, *args, **kwargs):
+        owner=hold_original(api)
+        with owner.registry._lock:
+            try:return function(api,*args,**kwargs)
+            except BaseException as error:
+                owner.remember(error)
+                error._original_preflight_owner=owner
+                raise
+    return guarded

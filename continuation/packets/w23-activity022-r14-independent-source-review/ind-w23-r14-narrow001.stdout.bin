@@ -1,0 +1,65 @@
+..FF                                                                     [100%]
+=================================== FAILURES ===================================
+___ test_full_science_original_java_output_contract_current_consumers_refuse ___
+
+    def test_full_science_original_java_output_contract_current_consumers_refuse():
+     old=load('review_r13_science_protocol',R13/'tools/w23_te_science_protocol.py')
+     java=(C/'tools/java/NativeW23TEScienceFixture.java').read_text();body=java.split('private static final String[] RAW_FIELDS = {',1)[1].split('};',1)[0];names=re.findall(r'"([^"]+)"',body);assert len(names)==22 and names[-4:]==['ewfd.neff_1','ewfd.neff_2','nx','ny']
+     count=321;y=[-8e-6+16e-6*i/(count-1) for i in range(count)]
+     raw={'sample_count':count,'normal_sign':1,'coordinates_m':[[8e-6]*count,y],'expressions':[{'expression':n,'real':[1.0 if n=='nx' else campaign.EXPECTED_NEFF_TE0 if 'neff' in n else 0.0]*count,'imag':[0.0]*count} for n in names]}
+>    prior=old._plane_coordinates(raw,expected_x_m=8e-6);assert prior[1:]==(1,1)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+../w23-activity022-r14-independent-source-review/test_narrow_production.py:60: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../w23-saved-mph-science-readback-20261013-candidate20-r13/tools/w23_te_science_protocol.py:1380: in _plane_coordinates
+    normals = _raw_expression_map(raw)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+raw = {'sample_count': 321, 'normal_sign': 1, 'coordinates_m': [[8e-06, 8e-06, 8e-06, 8e-06, 8e-06, 8e-06, ...], [-8e-06, -7...xpression': 'ewfd.Hz', 'real': [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, ...], 'imag': [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, ...]}, ...]}
+
+    def _raw_expression_map(raw: Mapping[str, Any]) -> dict[str, list[complex]]:
+        sample_count = raw.get("sample_count")
+        if raw.get("complex_readback") is not True or sample_count not in QUADRATURE_SAMPLE_COUNTS:
+>           raise ScienceProtocolError("raw field receipt is not one of the frozen native complex quadrature exports")
+E           review_r13_science_protocol.ScienceProtocolError: raw field receipt is not one of the frozen native complex quadrature exports
+
+../w23-saved-mph-science-readback-20261013-candidate20-r13/tools/w23_te_science_protocol.py:181: ScienceProtocolError
+________ test_original_public_selection_both_planes_consume_same_child _________
+
+tmp_path = PosixPath('/private/tmp/ind-w23-r14-narrow001/test_original_public_selection0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10bbefb30>
+
+    def test_original_public_selection_both_planes_consume_same_child(tmp_path,monkeypatch):
+     proofs=[]
+     for port in ['1','2']:
+>     out,g=setup(tmp_path/port,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+../w23-activity022-r14-independent-source-review/test_narrow_production.py:71: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_activity022_boundary_selection_ticket.py:27: in setup
+    out=_public(tmp_path,monkeypatch);daemon,service,ref,project,sdk,tree,nodes,args=out
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_ephemeral_result_ticket.py:43: in _public
+    sdk=_RpcSDK(tree);root=tmp_path/'project';root.mkdir()
+                                              ^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/tmp/ind-w23-r14-narrow001/test_original_public_selection0/1/project')
+mode = 511, parents = False, exist_ok = False
+
+    def mkdir(self, mode=0o777, parents=False, exist_ok=False):
+        """
+        Create a new directory at this given path.
+        """
+        try:
+>           os.mkdir(self, mode)
+E           FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/ind-w23-r14-narrow001/test_original_public_selection0/1/project'
+
+/opt/homebrew/Cellar/python@3.12/3.12.13_2/Frameworks/Python.framework/Versions/3.12/lib/python3.12/pathlib.py:1311: FileNotFoundError
+=========================== short test summary info ============================
+FAILED ../w23-activity022-r14-independent-source-review/test_narrow_production.py::test_full_science_original_java_output_contract_current_consumers_refuse
+FAILED ../w23-activity022-r14-independent-source-review/test_narrow_production.py::test_original_public_selection_both_planes_consume_same_child
+2 failed, 2 passed in 0.19s

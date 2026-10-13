@@ -1,0 +1,37 @@
+--- a/comsol_mcp/_windows_host_change.py
++++ b/comsol_mcp/_windows_host_change.py
+@@ -433,9 +433,14 @@
+             receipt_sha = hashlib.sha256(_canonical(receipt_body).encode("utf-8")).hexdigest()
+             receipt = resources.AppliedHostChangeReceipt(
+                 plan.sha256, self.profile.host_id, "windows", receipt_actions, receipt_sha)
++            receipt_document = {**receipt_body, "receipt_sha256": receipt_sha}
+             result = {"success": True, "operation": "host.change.apply",
+                       "execution_state": "SUCCEEDED", "host_change_state": "APPLIED_UNVERIFIED",
+                       "plan_sha256": plan.sha256, "profile_sha256": self.profile.sha256,
++                      # Persist the complete typed receipt in the durable result
++                      # so an acknowledged terminal apply remains recoverable
++                      # if the caller disconnects before this method returns.
++                      "applied_receipt": receipt_document,
+                       "receipt_sha256": receipt_sha, "created_resource_sha256": resource_sha256,
+                       "effective_policy_state": "UNVERIFIED",
+                       "t037_state": "NOT_VERIFIED", "safe_retry": False,
+--- a/tests/test_windows_host_change.py
++++ b/tests/test_windows_host_change.py
+@@ -292,7 +292,16 @@
+     journal = _events(store, admission["job_id"])
+     assert [item["event"] for item in journal] == ["APPLY_INTENT", "APPLY_READBACK_VERIFIED"]
+     assert journal[1]["previous_sha256"] == journal[0]["record_sha256"]
+-    assert store.get_operation(operation["operation_id"])["status"] == "SUCCEEDED"
++    completed = store.get_operation(operation["operation_id"])
++    assert completed["status"] == "SUCCEEDED"
++    assert completed["result"]["applied_receipt"] == {
++        "schema": "comsol-mcp.applied-host-change-receipt/1",
++        "plan_sha256": receipt.plan_sha256,
++        "host_id": receipt.host_id,
++        "platform": receipt.platform,
++        "actions": [dict(item) for item in receipt.actions],
++        "receipt_sha256": receipt.receipt_sha256,
++    }
+ 
+     restore_sha = _restore_sha(profile, plan, receipt,
+                                receipt.actions[0]["created_resource_sha256"])

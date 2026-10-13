@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "observed_utc": "2026-10-11T20:41:43.900577+00:00",
+  "status": "CHANGES_REQUIRED",
+  "review_scope": "Root complete owned host-provider and startup/configuration delta plus exact frozen artifact check. Final whole-project independent review remains separate.",
+  "freeze_receipt_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/local-preservation/model-r3-r4-fullrestore-provider-20261012-r4/FREEZE_RECEIPT.json",
+  "freeze_receipt_sha256": "9f5d4f3cbc77591bff6074d9b10951b6077c9c08dc9517b7acaba197c87eafaa",
+  "snapshot_hashes_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/local-preservation/model-r3-r4-fullrestore-provider-20261012-r4/SNAPSHOT_HASHES.json",
+  "snapshot_hashes_sha256": "9921752f6a9f3eaab6abeef9127860d0372b50674efbdf929e7c144e7e09a9f6",
+  "snapshot_artifacts_verified": 47,
+  "source_provider_sha256": "ead326cb3055a76bd4a997cf2ddf861d5f8c421e26f6a279bfe2ac421661db35",
+  "actual_junit_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/local-preservation/model-r3-r4-fullrestore-provider-20261012-r4/evidence/junit-provider-affected-r4.xml",
+  "actual_junit_sha256": "9d1fac7adbeef7e3d849d26a82b6c609156ddb024620da417af540a8c7d15d8d",
+  "actual_junit_counts": {
+    "tests": 120,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1
+  },
+  "positive_scope": "Actual software ControlDaemon startup file/environment selection, exact model.close/artifact.publish local destination authorization, no-clobber/size/SHA readback, secret-hash-only durable metadata. COMSOL and Windows kernel NOT_RUN.",
+  "required_repairs": [
+    {
+      "id": "HOST-P1-EFFECTIVE-PERMISSION",
+      "problem": "Config, parent and sink trust uses POSIX st_uid/st_mode without effective filesystem ownership proof. macOS noowners volumes can invalidate this assumption; Windows lacks geteuid and POSIX mode is not DACL proof. Parent mode is also not rechecked by _assert_stable.",
+      "repair": "Pinned read-only effective ownership/permissions verification for config, private parent and sink. macOS use same-version SDK fstatfs flags and reject ignored ownership/unknown. Windows use actual handle owner/DACL/persistent-ACL verification or typed refusal until implemented. Revalidate parent privacy and descriptor identity; never mutate host policy.",
+      "tests": "Actual local owner-enabled APFS positive, noowners/unknown/parent-permission-change/unsupported refusal; Windows software ABI controls distinct from kernel NOT_RUN."
+    },
+    {
+      "id": "HOST-P2-CONSTANT-TIME",
+      "problem": "Authorization and scope hash matching uses dictionary tuple lookup rather than the promised constant-time comparison.",
+      "repair": "Bounded inventory with constant-time digest comparisons, preserve exact action/project/expiry scope."
+    }
+  ],
+  "evidence_followup": "Add hashes for actual affected-run test/helper dependencies omitted from the 43-path snapshot, including state_backup_manifest_candidate and startup_gate_integration; do not call the snapshot an integrated whole-source closure.",
+  "shared_ownership": "Returned to Windows; repair provider module/tests/docs without modifying shared ControlDaemon/backend.",
+  "known_restore_delta": "Prior focused r3 restoration review inherited; no repeat full restore implementation review.",
+  "independent_whole_project_acceptance": "NOT_RUN"
+}

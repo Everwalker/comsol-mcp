@@ -1,0 +1,50 @@
+{
+  "schema": "W26_STORAGE_READONLY_OBSERVATION_V1",
+  "status": "CURRENT_READONLY_STORAGE_FACTS_NOT_RESOURCE_OR_T037_ACCEPTANCE",
+  "time_utc": "2026-10-12T00:10:42.817259+00:00",
+  "observations": [
+    {
+      "raw_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/root-w26-storage-readonly-20261012-r1/diskutil-info-0.plist",
+      "raw_sha256": "2a383a375cb9d406a1b15ab42df6fc019745f71d924cd1baf3385f3e19e2d030",
+      "exit_code": 0,
+      "device_node": "/dev/disk3s5",
+      "mount_point": "/System/Volumes/Data",
+      "filesystem": "apfs",
+      "global_permissions_enabled": true,
+      "apfs_container_free_bytes": 209619861504,
+      "apfs_volume_quota_field_present": false,
+      "hard_quota_proof": "UNVERIFIED_NO_QUOTA_FIELD_IN_THIS_OBSERVATION"
+    },
+    {
+      "raw_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/root-w26-storage-readonly-20261012-r1/diskutil-info-1.plist",
+      "raw_sha256": "ada827179783ffa38660fbe0edc619c05315c9994eed59f4f25ec901b3ba8280",
+      "exit_code": 0,
+      "device_node": "/dev/disk6s1",
+      "mount_point": "/Volumes/SSD",
+      "filesystem": "apfs",
+      "global_permissions_enabled": false,
+      "apfs_container_free_bytes": 668132319232,
+      "apfs_volume_quota_field_present": false,
+      "hard_quota_proof": "UNVERIFIED_NO_QUOTA_FIELD_IN_THIS_OBSERVATION"
+    }
+  ],
+  "initial_attempt": {
+    "argv": [
+      "/usr/sbin/diskutil",
+      "info",
+      "-plist",
+      "/private/tmp"
+    ],
+    "exit_code": 1,
+    "error": "Could not find disk: /private/tmp",
+    "interpretation": "Invalid diskutil target, not an approval-service failure; df resolved actual device nodes."
+  },
+  "scope": [
+    "diskutil info succeeded for actual df-resolved devices after read-only escalation",
+    "No account, ACL, quota, volume or mount changes",
+    "APFS container free space is not a task hard quota",
+    "SSD GlobalPermissionsEnabled=false cannot establish an enforced private ACL boundary"
+  ],
+  "native_acceptance": "NOT_RUN",
+  "hard_quota_acceptance": "UNVERIFIED"
+}

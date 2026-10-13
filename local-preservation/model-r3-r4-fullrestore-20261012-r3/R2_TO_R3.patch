@@ -1,0 +1,531 @@
+--- a/comsol_mcp/_state_backup.py
++++ b/comsol_mcp/_state_backup.py
+@@ -2198,34 +2198,16 @@
+     """Narrow fault-injection seam for deterministic restore-cleanup race tests."""
+ 
+ 
+-def _rename_restore_entry_to_quarantine(parent_fd: int, leaf: str,
+-                                        expected_identity: Mapping[str, Any]) -> tuple[str, dict[str, int]]:
+-    try:
+-        before = os.stat(leaf, dir_fd=parent_fd, follow_symlinks=False)
+-    except OSError as exc:
+-        raise StateBackupError("RESTORE_TARGET_CHANGED", "restore cleanup source disappeared before quarantine") from exc
+-    identity = {"device": int(before.st_dev), "inode": int(before.st_ino)}
+-    if (not (stat.S_ISDIR(before.st_mode) or stat.S_ISREG(before.st_mode))
+-            or identity != {"device": expected_identity.get("device"), "inode": expected_identity.get("inode")}):
+-        raise StateBackupError("RESTORE_TARGET_CHANGED", "restore cleanup entry differs from its pinned identity")
+-    quarantine = f".comsol-restore-remove-{uuid4().hex}"
+-    try:
+-        _renameat_directory_noreplace(parent_fd, leaf, parent_fd, quarantine)
+-        moved = os.stat(quarantine, dir_fd=parent_fd, follow_symlinks=False)
+-    except Exception as exc:
+-        if isinstance(exc, StateBackupError):
+-            raise
+-        raise StateBackupError("RESTORE_ROLLBACK_INCOMPLETE", "restore cleanup could not move the exact entry into quarantine") from exc
+-    moved_identity = {"device": int(moved.st_dev), "inode": int(moved.st_ino)}
+-    if not (stat.S_ISDIR(moved.st_mode) or stat.S_ISREG(moved.st_mode)) or moved_identity != identity:
+-        # A same-name substitution may have been moved. Put it back only when
+-        # the original name is still vacant; never replace an arriving entry.
+-        try:
+-            _renameat_directory_noreplace(parent_fd, quarantine, parent_fd, leaf)
+-        except Exception:
+-            pass
+-        raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined restore entry failed exact moved-identity readback")
+-    return quarantine, identity
++def _after_restore_quarantine_move(root: Path, relative: str, quarantine_leaf: str) -> None:
++    """Fault seam after the durable PREPARED rename but before phase advance."""
++
++
++def _after_restore_quarantine_child_removed(directory_fd: int, relative: str) -> None:
++    """Fault seam for restartable partial removal of a quarantined tree."""
++
++
++def _after_restore_quarantine_rmdir(parent_fd: int, quarantine_leaf: str) -> None:
++    """Fault seam after the root quarantine is gone and before DONE is journaled."""
+ 
+ 
+ def _remove_quarantined_tree_contents(directory_fd: int, *, prefix: str,
+@@ -2250,32 +2232,33 @@
+                 _remove_quarantined_tree_contents(child_fd, prefix=relative, expected_files=expected_files)
+             finally:
+                 os.close(child_fd)
+-            quarantine, moved_identity = _rename_restore_entry_to_quarantine(directory_fd, name, identity)
+-            if moved_identity != identity:
+-                raise StateBackupError("RESTORE_TARGET_CHANGED", "nested quarantined directory identity changed")
+-            current = os.stat(quarantine, dir_fd=directory_fd, follow_symlinks=False)
+-            if {"device": int(current.st_dev), "inode": int(current.st_ino)} != identity:
+-                raise StateBackupError("RESTORE_TARGET_CHANGED", "nested quarantined directory name was substituted")
+-            try:
+-                os.rmdir(quarantine, dir_fd=directory_fd)
++            current = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
++            if (not stat.S_ISDIR(current.st_mode)
++                    or {"device": int(current.st_dev), "inode": int(current.st_ino)} != identity):
++                raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined directory name changed before removal")
++            try:
++                # Descriptor-relative rmdir avoids re-resolving the workspace
++                # root. POSIX still has no inode-CAS rmdir for a hostile
++                # same-UID swap between this check and the syscall.
++                os.rmdir(name, dir_fd=directory_fd)
+             except OSError as exc:
+                 raise StateBackupError("RESTORE_ROLLBACK_INCOMPLETE", "pinned nested restore directory could not be removed") from exc
++            _after_restore_quarantine_child_removed(directory_fd, relative)
+             continue
+         if not stat.S_ISREG(named.st_mode):
+             raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined restore tree contains a symlink or special file")
+         if expected_files is not None and relative not in expected_files:
+             raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined restore tree contains an unlisted file")
+-        quarantine, moved_identity = _rename_restore_entry_to_quarantine(directory_fd, name, identity)
+         flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
+         try:
+-            file_fd = os.open(quarantine, flags, dir_fd=directory_fd)
++            file_fd = os.open(name, flags, dir_fd=directory_fd)
+         except OSError as exc:
+             raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined file could not be opened without following links") from exc
+         try:
+             opened = os.fstat(file_fd)
+             if (not stat.S_ISREG(opened.st_mode)
+-                    or {"device": int(opened.st_dev), "inode": int(opened.st_ino)} != moved_identity):
+-                raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined file differs from its moved handle")
++                    or {"device": int(opened.st_dev), "inode": int(opened.st_ino)} != identity):
++                raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined file differs from its pinned handle")
+             digest = hashlib.sha256()
+             total = 0
+             while True:
+@@ -2285,17 +2268,22 @@
+                 digest.update(block)
+                 total += len(block)
+             after = os.fstat(file_fd)
+-            if ({"device": int(after.st_dev), "inode": int(after.st_ino)} != moved_identity
++            if ({"device": int(after.st_dev), "inode": int(after.st_ino)} != identity
+                     or int(after.st_size) != total):
+                 raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined file changed while being verified")
+         finally:
+             os.close(file_fd)
+         if expected_files is not None and expected_files[relative] != (digest.hexdigest(), total):
+             raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined file bytes differ from the durable manifest")
+-        current = os.stat(quarantine, dir_fd=directory_fd, follow_symlinks=False)
+-        if {"device": int(current.st_dev), "inode": int(current.st_ino)} != moved_identity:
++        current = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
++        if (not stat.S_ISREG(current.st_mode)
++                or {"device": int(current.st_dev), "inode": int(current.st_ino)} != identity):
+             raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined file name was substituted before unlink")
+-        os.unlink(quarantine, dir_fd=directory_fd)
++        # This is relative to the pinned parent handle. POSIX does not provide
++        # unlink-by-inode, so a hostile same-UID swap after this final stat is
++        # an OS-level race we cannot claim to eliminate.
++        os.unlink(name, dir_fd=directory_fd)
++        _after_restore_quarantine_child_removed(directory_fd, relative)
+ 
+ 
+ def _remove_exact_directory(root: Path, relative: str, *, expected_identity: Mapping[str, Any],
+@@ -2320,9 +2308,20 @@
+     item = next((entry for entry in cleanup_items
+                  if isinstance(entry, dict) and entry.get("root_relative") == journal_root_relative
+                  and entry.get("relative") == relative and entry.get("identity") == expected), None)
+-    if item is not None and item.get("phase") == "DONE":
+-        return
+-    resuming_quarantine = item is not None and item.get("phase") == "QUARANTINED"
++    completed = item is not None and item.get("phase") == "DONE"
++    if item is not None and item.get("phase") not in {"PREPARED", "QUARANTINED", "REMOVE_INTENT", "DONE"}:
++        raise StateBackupError("RESTORE_JOURNAL_INVALID", "restore directory cleanup has an unknown phase")
++    if item is not None:
++        quarantine_value = item.get("quarantine_leaf")
++        if (item.get("root_identity") != root_expected or item.get("leaf") != parts[-1]
++                or item.get("parent_relative") != "/".join(parts[:-1])
++                or not isinstance(quarantine_value, str)
++                or not re.fullmatch(r"\.comsol-restore-cleanup-[0-9a-f]{32}", quarantine_value)
++                or type(item.get("allow_subset")) is not bool
++                or item.get("allow_subset") != bool(allow_subset)
++                or _journal_cleanup_files(item.get("expected_files")) != expected_files):
++            raise StateBackupError("RESTORE_JOURNAL_INVALID", "directory cleanup identity or manifest changed")
++    resuming_quarantine = item is not None and item.get("phase") in {"QUARANTINED", "REMOVE_INTENT"}
+ 
+     descriptors: list[int] = []
+     links: list[tuple[int, str, dict[str, int]]] = []
+@@ -2344,6 +2343,15 @@
+             links.append((parent_fd, component, child_identity))
+             descriptors.append(child_fd)
+             parent_fd = child_fd
++        if completed:
++            _verify_posix_directory_links(links)
++            for leaf in (parts[-1], item["quarantine_leaf"]):
++                try:
++                    os.stat(leaf, dir_fd=parent_fd, follow_symlinks=False)
++                except FileNotFoundError:
++                    continue
++                raise StateBackupError("RESTORE_TARGET_CHANGED", "a new leaf appeared after cleanup was journaled DONE")
++            return
+         if item is None:
+             # Capture a durable cleanup intent before moving any directory.
+             named = os.stat(parts[-1], dir_fd=parent_fd, follow_symlinks=False)
+@@ -2373,37 +2381,65 @@
+                     "allow_subset": bool(allow_subset)}
+             cleanup_items.append(item)
+             _full_journal_write(journal_home, journal)
+-        else:
+-            if (item.get("root_identity") != root_expected or item.get("leaf") != parts[-1]
+-                    or item.get("parent_relative") != "/".join(parts[:-1])
+-                    or item.get("quarantine_leaf", "").find("/") >= 0):
+-                raise StateBackupError("RESTORE_JOURNAL_INVALID", "pending directory cleanup identity or location changed")
+-
+         quarantine = item["quarantine_leaf"]
+         if item.get("phase") == "PREPARED":
+-            try:
+-                os.stat(quarantine, dir_fd=parent_fd, follow_symlinks=False)
++            moved_this_call = False
++            try:
++                quarantined = os.stat(quarantine, dir_fd=parent_fd, follow_symlinks=False)
+             except FileNotFoundError:
+-                source = os.stat(parts[-1], dir_fd=parent_fd, follow_symlinks=False)
++                try:
++                    source = os.stat(parts[-1], dir_fd=parent_fd, follow_symlinks=False)
++                except FileNotFoundError as exc:
++                    raise StateBackupError("RESTORE_TARGET_CHANGED", "prepared cleanup source and quarantine are both missing") from exc
+                 if (not stat.S_ISDIR(source.st_mode)
+                         or {"device": int(source.st_dev), "inode": int(source.st_ino)} != expected):
+                     raise StateBackupError("RESTORE_TARGET_CHANGED", "prepared restore cleanup source no longer has its journaled identity")
+                 _renameat_directory_noreplace(parent_fd, parts[-1], parent_fd, quarantine)
++                moved_this_call = True
++                _after_restore_quarantine_move(root, relative, quarantine)
++                quarantined = os.stat(quarantine, dir_fd=parent_fd, follow_symlinks=False)
+             else:
+-                raise StateBackupError("RESTORE_TARGET_CHANGED", "restore cleanup quarantine unexpectedly existed before its journaled move")
+-            moved = os.stat(quarantine, dir_fd=parent_fd, follow_symlinks=False)
+-            if (not stat.S_ISDIR(moved.st_mode)
+-                    or {"device": int(moved.st_dev), "inode": int(moved.st_ino)} != expected):
++                try:
++                    os.stat(parts[-1], dir_fd=parent_fd, follow_symlinks=False)
++                except FileNotFoundError:
++                    pass
++                else:
++                    raise StateBackupError("RESTORE_TARGET_CHANGED", "prepared restore cleanup has both source and quarantine entries")
++            if (not stat.S_ISDIR(quarantined.st_mode)
++                    or {"device": int(quarantined.st_dev), "inode": int(quarantined.st_ino)} != expected):
+                 # A foreign substitution was moved; restore it only by an
+                 # exclusive rename and never overwrite an arriving leaf.
+-                try:
+-                    _renameat_directory_noreplace(parent_fd, quarantine, parent_fd, parts[-1])
+-                except Exception:
+-                    pass
++                if moved_this_call:
++                    try:
++                        _renameat_directory_noreplace(parent_fd, quarantine, parent_fd, parts[-1])
++                    except Exception:
++                        pass
+                 raise StateBackupError("RESTORE_TARGET_CHANGED", "moved cleanup directory failed exact identity readback")
+             item["phase"] = "QUARANTINED"
+             _full_journal_write(journal_home, journal)
+-        elif item.get("phase") != "QUARANTINED":
++
++        if item.get("phase") in {"QUARANTINED", "REMOVE_INTENT"}:
++            try:
++                moved = os.stat(quarantine, dir_fd=parent_fd, follow_symlinks=False)
++            except FileNotFoundError:
++                moved = None
++            try:
++                source = os.stat(parts[-1], dir_fd=parent_fd, follow_symlinks=False)
++            except FileNotFoundError:
++                source = None
++            if source is not None:
++                raise StateBackupError("RESTORE_TARGET_CHANGED", "a leaf appeared at the original cleanup path")
++            if moved is None:
++                if item.get("phase") != "REMOVE_INTENT":
++                    raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined cleanup disappeared before remove intent")
++                _verify_posix_directory_links(links)
++                item["phase"] = "DONE"
++                _full_journal_write(journal_home, journal)
++                return
++            if (not stat.S_ISDIR(moved.st_mode)
++                    or {"device": int(moved.st_dev), "inode": int(moved.st_ino)} != expected):
++                raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantine leaf no longer has its journaled identity")
++        else:
+             raise StateBackupError("RESTORE_JOURNAL_INVALID", "restore directory cleanup has an unknown phase")
+ 
+         quarantine_fd = os.open(quarantine, _posix_directory_flags(), dir_fd=parent_fd)
+@@ -2453,6 +2489,9 @@
+         if (not stat.S_ISDIR(moved.st_mode)
+                 or {"device": int(moved.st_dev), "inode": int(moved.st_ino)} != expected):
+             raise StateBackupError("RESTORE_TARGET_CHANGED", "empty cleanup quarantine was substituted before directory removal")
++        if item.get("phase") != "REMOVE_INTENT":
++            item["phase"] = "REMOVE_INTENT"
++            _full_journal_write(journal_home, journal)
+         try:
+             # POSIX has no unlink-by-directory-handle operation. The pinned
+             # parent plus no-replace quarantine prevents re-resolving the
+@@ -2461,6 +2500,7 @@
+             os.rmdir(quarantine, dir_fd=parent_fd)
+         except OSError as exc:
+             raise StateBackupError("RESTORE_ROLLBACK_INCOMPLETE", "pinned restore cleanup quarantine could not be removed") from exc
++        _after_restore_quarantine_rmdir(parent_fd, quarantine)
+         _verify_posix_directory_links(links)
+         item["phase"] = "DONE"
+         _full_journal_write(journal_home, journal)
+@@ -2647,15 +2687,102 @@
+     _fsync_directory(home)
+ 
+ 
++def _journal_identity(value: Any, field: str) -> dict[str, int]:
++    if (not isinstance(value, Mapping)
++            or type(value.get("device")) is not int or value["device"] < 0
++            or type(value.get("inode")) is not int or value["inode"] <= 0):
++        raise StateBackupError("RESTORE_JOURNAL_INVALID", f"{field} identity is malformed")
++    return {"device": value["device"], "inode": value["inode"]}
++
++
++def _journal_cleanup_files(value: Any) -> dict[str, tuple[str, int]] | None:
++    if value is None:
++        return None
++    if not isinstance(value, Mapping):
++        raise StateBackupError("RESTORE_JOURNAL_INVALID", "cleanup file inventory is malformed")
++    result: dict[str, tuple[str, int]] = {}
++    for relative, item in value.items():
++        parts = _safe_relative_parts(relative) if isinstance(relative, str) else ()
++        if (not parts or not isinstance(item, list) or len(item) != 2
++                or not isinstance(item[0], str) or not re.fullmatch(r"[0-9a-f]{64}", item[0])
++                or type(item[1]) is not int or item[1] < 0):
++            raise StateBackupError("RESTORE_JOURNAL_INVALID", "cleanup file inventory entry is malformed")
++        result[relative] = (item[0], item[1])
++    return result
++
++
++def _resume_pending_directory_cleanup(home: Path, journal: dict[str, Any],
++                                      workspace_root: Path) -> None:
++    entries = journal.get("directory_cleanup", [])
++    if not isinstance(entries, list):
++        raise StateBackupError("RESTORE_JOURNAL_INVALID", "directory cleanup journal field is malformed")
++    workspace_identity = _journal_identity(journal.get("workspace_root_identity"), "workspace root")
++    stage_leaf = journal.get("workspace_stage_leaf")
++    stage_identity_value = journal.get("workspace_stage_identity")
++    stage_identity = (_journal_identity(stage_identity_value, "staging root")
++                      if stage_identity_value is not None else None)
++    if workspace_identity != _directory_identity(workspace_root):
++        raise StateBackupError("RESTORE_TARGET_CHANGED", "workspace root differs from its journaled identity")
++
++    for item in entries:
++        if not isinstance(item, dict):
++            raise StateBackupError("RESTORE_JOURNAL_INVALID", "directory cleanup journal entry is malformed")
++        phase = item.get("phase")
++        if phase not in {"PREPARED", "QUARANTINED", "REMOVE_INTENT", "DONE"}:
++            raise StateBackupError("RESTORE_JOURNAL_INVALID", "directory cleanup phase is invalid")
++        if phase == "DONE":
++            continue
++        root_relative = item.get("root_relative")
++        if root_relative == "":
++            cleanup_root = workspace_root
++            root_identity = workspace_identity
++        elif isinstance(stage_leaf, str) and root_relative == stage_leaf:
++            if stage_identity is None:
++                raise StateBackupError("RESTORE_JOURNAL_INVALID", "pending cleanup lacks its staging-root identity")
++            cleanup_root = workspace_root / stage_leaf
++            if _directory_identity_beneath(workspace_root, stage_leaf,
++                                           expected_root_identity=workspace_identity) != stage_identity:
++                raise StateBackupError("RESTORE_TARGET_CHANGED", "pending cleanup staging root changed identity")
++            root_identity = stage_identity
++        else:
++            raise StateBackupError("RESTORE_JOURNAL_INVALID", "pending cleanup has an unrecognized root")
++        item_root_identity = _journal_identity(item.get("root_identity"), "cleanup root")
++        if item_root_identity != root_identity:
++            raise StateBackupError("RESTORE_JOURNAL_INVALID", "pending cleanup root identity conflicts with restore journal")
++        relative = item.get("relative")
++        parts = _safe_relative_parts(relative) if isinstance(relative, str) else ()
++        if (not parts or item.get("leaf") != parts[-1]
++                or item.get("parent_relative") != "/".join(parts[:-1])):
++            raise StateBackupError("RESTORE_JOURNAL_INVALID", "pending cleanup path is malformed")
++        quarantine = item.get("quarantine_leaf")
++        if (not isinstance(quarantine, str)
++                or not re.fullmatch(r"\.comsol-restore-cleanup-[0-9a-f]{32}", quarantine)):
++            raise StateBackupError("RESTORE_JOURNAL_INVALID", "pending cleanup quarantine name is malformed")
++        identity = _journal_identity(item.get("identity"), "cleanup target")
++        expected_files = _journal_cleanup_files(item.get("expected_files"))
++        if type(item.get("allow_subset")) is not bool:
++            raise StateBackupError("RESTORE_JOURNAL_INVALID", "pending cleanup subset policy is malformed")
++        _remove_exact_directory(
++            cleanup_root, relative, expected_identity=identity,
++            expected_root_identity=root_identity, expected_files=expected_files,
++            allow_subset=item["allow_subset"], journal_home=home, journal=journal,
++            journal_root_relative=root_relative,
++        )
++
++
+ def _rollback_full_restore(home: Path, journal: dict[str, Any]) -> Path:
+     recovery = home / journal["recovery_directory"]
+     _existing_directory(recovery, "full restore recovery directory")
++    workspace_root = _existing_directory(journal["workspace_root"], "restore workspace root")
++    _assert_directory_identity(workspace_root, journal["workspace_root_identity"])
++    # Resume durable cleanup intents before checking whether the original leaf
++    # exists. A successful quarantine rename makes that leaf disappear, but
++    # the journal must still finish the exact owned cleanup after a restart.
++    _resume_pending_directory_cleanup(home, journal, workspace_root)
+     state_path = recovery / "restore-state.json"
+     if not state_path.exists():
+         # Before state publication, the journal guarantees that no live path
+         # was touched. Only clear it when both new targets are still empty.
+-        workspace_root = _existing_directory(journal["workspace_root"], "restore workspace root")
+-        _assert_directory_identity(workspace_root, journal["workspace_root_identity"])
+         _restore_empty_workspace(workspace_root)
+         db_path = home / DATABASE_NAME
+         if db_path.exists() or db_path.is_symlink():
+--- a/comsol_mcp/_w26_os_resources.py
++++ b/comsol_mcp/_w26_os_resources.py
+@@ -1569,7 +1569,7 @@
+                 result = {"status": item["status"], "reservation_id": reservation_id,
+                           "idempotent": True, "evidence_classification": "SOFTWARE_ONLY"}
+                 if item["status"] == "RELEASED_AFTER_QUIESCENCE":
+-                    result.update({"domain_status": "UNKNOWN", "safe_retry": False,
++                    result.update({"domain_status_at_release": "UNKNOWN", "safe_retry_at_release": False,
+                                    "quiescence_witness_sha256": item["quiescence_witness_sha256"]})
+                 return result
+ 
+@@ -1590,7 +1590,8 @@
+                                  (job_id, "W26DiskReservation", _canonical_json(released)))
+                 store.db.execute("COMMIT")
+                 return {"status": "RELEASED_AFTER_QUIESCENCE", "reservation_id": reservation_id,
+-                        "idempotent": False, "domain_status": "UNKNOWN", "safe_retry": False,
++                        "idempotent": False, "domain_status_at_release": "UNKNOWN",
++                        "safe_retry_at_release": False,
+                         "quiescence_witness_sha256": witness_sha256,
+                         "evidence_classification": "SOFTWARE_ONLY"}
+ 
+--- a/tests/test_state_backup.py
++++ b/tests/test_state_backup.py
+@@ -549,6 +549,128 @@
+     with pytest.raises(StateBackupError) as fenced:
+         assert_no_pending_restore(home)
+     assert fenced.value.code == "RESTORE_RECOVERY_REQUIRED"
++    with pytest.raises(StateBackupError) as refused_recovery:
++        recover_full_restore(home, confirm=True)
++    assert refused_recovery.value.code == "RESTORE_TARGET_CHANGED"
++    assert state_backup._directory_identity(foreign_leaf) == injected["identity"]
++    assert state_backup._tree_file_inventory(foreign_leaf) == state_backup._tree_file_inventory(foreign_copy)
++
++
++def _interrupt_full_restore_for_cleanup_recovery(tmp_path, monkeypatch, seam_name, callback):
++    import comsol_mcp._state_backup as state_backup
++
++    archive, manifest = _full_backup_fixture(tmp_path)
++    home = tmp_path / "interrupted-control"
++    workspace = tmp_path / "interrupted-workspace"
++    home.mkdir()
++    workspace.mkdir()
++    def fail_validation(*_args, **_kwargs):
++        raise RuntimeError("inject failure after projects install")
++
++    monkeypatch.setattr(state_backup, "_validate_rebound_database", fail_validation)
++    monkeypatch.setattr(state_backup, seam_name, callback)
++    with pytest.raises(StateBackupError) as interrupted:
++        restore_full_backup(home, workspace, archive, manifest, confirm=True)
++    assert interrupted.value.code == "RESTORE_ROLLBACK_INCOMPLETE"
++    assert (home / ACTIVE_FULL_RESTORE_JOURNAL).is_file()
++    with pytest.raises(StateBackupError) as fenced:
++        assert_no_pending_restore(home)
++    assert fenced.value.code == "RESTORE_RECOVERY_REQUIRED"
++    return state_backup, home, workspace
++
++
++def test_full_restore_recovers_prepared_intent_after_quarantine_rename_before_phase_write(tmp_path, monkeypatch):
++    import comsol_mcp._state_backup as state_backup
++
++    injected = {}
++
++    def after_move(root, relative, quarantine_leaf):
++        if relative == "projects" and not injected:
++            injected.update(root=root, quarantine=quarantine_leaf)
++            raise RuntimeError("simulate interruption after rename and before QUARANTINED journal write")
++
++    state_backup, home, workspace = _interrupt_full_restore_for_cleanup_recovery(
++        tmp_path, monkeypatch, "_after_restore_quarantine_move", after_move
++    )
++    journal = state_backup._read_full_restore_journal(home)
++    cleanup = next(item for item in journal["directory_cleanup"] if item["relative"] == "projects")
++    assert cleanup["phase"] == "PREPARED"
++    assert not (workspace / "projects").exists()
++    assert (workspace / cleanup["quarantine_leaf"]).is_dir()
++
++    recovered = recover_full_restore(home, confirm=True)
++    assert recovered["success"] is True
++    assert not (home / ACTIVE_FULL_RESTORE_JOURNAL).exists()
++    assert list(workspace.iterdir()) == []
++    archived = Path(recovered["recovery_directory"]) / "full-restore-journal.json"
++    archived_journal = json.loads(archived.read_text())
++    assert next(item for item in archived_journal["directory_cleanup"]
++                if item["relative"] == "projects")["phase"] == "DONE"
++
++
++def test_full_restore_recovers_after_partial_quarantine_tree_cleanup(tmp_path, monkeypatch):
++    import comsol_mcp._state_backup as state_backup
++
++    injected = {}
++
++    def after_child_removed(_directory_fd, relative):
++        if not injected:
++            injected["first_removed"] = relative
++            raise RuntimeError("simulate interruption after deleting one manifest-listed child")
++
++    state_backup, home, workspace = _interrupt_full_restore_for_cleanup_recovery(
++        tmp_path, monkeypatch, "_after_restore_quarantine_child_removed", after_child_removed
++    )
++    journal = state_backup._read_full_restore_journal(home)
++    cleanup = next(item for item in journal["directory_cleanup"] if item["relative"] == "projects")
++    assert cleanup["phase"] == "QUARANTINED"
++    assert injected["first_removed"]
++    assert (workspace / cleanup["quarantine_leaf"]).is_dir()
++
++    recovered = recover_full_restore(home, confirm=True)
++    assert recovered["success"] is True
++    assert not (home / ACTIVE_FULL_RESTORE_JOURNAL).exists()
++    assert list(workspace.iterdir()) == []
++    archived_journal = json.loads((Path(recovered["recovery_directory"])
++                                   / "full-restore-journal.json").read_text())
++    assert next(item for item in archived_journal["directory_cleanup"]
++                if item["relative"] == "projects")["phase"] == "DONE"
++
++
++def test_full_restore_recovers_after_quarantine_rmdir_before_done_journal_write(tmp_path, monkeypatch):
++    import comsol_mcp._state_backup as state_backup
++
++    injected = {}
++
++    def after_rmdir(_parent_fd, quarantine_leaf):
++        injected.setdefault("calls", []).append(quarantine_leaf)
++        # The installed projects tree is removed first, then the now-empty
++        # stage root. Interrupt at the last directory after its child removal.
++        if len(injected["calls"]) == 2:
++            injected["quarantine"] = quarantine_leaf
++            raise RuntimeError("simulate interruption after rmdir and before DONE journal write")
++
++    state_backup, home, workspace = _interrupt_full_restore_for_cleanup_recovery(
++        tmp_path, monkeypatch, "_after_restore_quarantine_rmdir", after_rmdir
++    )
++    journal = state_backup._read_full_restore_journal(home)
++    cleanup = next(item for item in journal["directory_cleanup"]
++                   if item["quarantine_leaf"] == injected["quarantine"])
++    assert len(injected["calls"]) == 2
++    assert cleanup["leaf"] == journal["workspace_stage_leaf"]
++    assert cleanup["root_relative"] == ""
++    assert cleanup["phase"] == "REMOVE_INTENT"
++    assert not (workspace / cleanup["quarantine_leaf"]).exists()
++    assert not (workspace / cleanup["leaf"]).exists()
++
++    recovered = recover_full_restore(home, confirm=True)
++    assert recovered["success"] is True
++    assert not (home / ACTIVE_FULL_RESTORE_JOURNAL).exists()
++    assert list(workspace.iterdir()) == []
++    archived_journal = json.loads((Path(recovered["recovery_directory"])
++                                   / "full-restore-journal.json").read_text())
++    assert next(item for item in archived_journal["directory_cleanup"]
++                if item["quarantine_leaf"] == injected["quarantine"])["phase"] == "DONE"
+ 
+ 
+ def test_online_backup_includes_committed_wal_pages_without_migrating_source(tmp_path):
+--- a/tests/test_w26_os_resources.py
++++ b/tests/test_w26_os_resources.py
+@@ -317,7 +317,8 @@
+         store=store, authority=authority, profile=profile, job_id=first["job_id"],
+         quiescence_provider=_SyntheticQuiescenceProvider())
+     assert released["status"] == "RELEASED_AFTER_QUIESCENCE"
+-    assert released["domain_status"] == "UNKNOWN" and released["safe_retry"] is False
++    assert released["domain_status_at_release"] == "UNKNOWN"
++    assert released["safe_retry_at_release"] is False
+     assert released["evidence_classification"] == "SOFTWARE_ONLY"
+     persisted_job = store.job(first["job_id"])
+     assert persisted_job["status"] == persisted_job["operation"]["status"] == "UNKNOWN"

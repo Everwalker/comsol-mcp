@@ -1,0 +1,249 @@
+{
+  "at_utc": "2026-10-12T05:03:16.975211+00:00",
+  "changed_paths": [
+    "comsol_mcp/_operation_store.py",
+    "tests/test_windows_host_change.py"
+  ],
+  "finding_closed": "WFP-V2-RECOVERY-01",
+  "freeze_sha256": "157c16f1c0b7287318c47540759beb0ec705f4a3c83523d9b18761eaf8f0ffc5",
+  "limitations": [
+    "Software controls use FakeWfpSequence; they execute the fake adapter. Real Windows APIs/kernel/SCM/effective filtering and host mutation remain NOT_RUN or UNVERIFIED.",
+    "Raw SQL crafted-suffix control proves replay refusal, not database tamper resistance.",
+    "One inherited historical Git-object fixture is expressly deselected; its original raw failure remains in R3.",
+    "The R3 broad memory-admission failure is preserved and is not closed by this narrow patch.",
+    "This is Root scoped source/software review, not final independent unified acceptance."
+  ],
+  "metadata_observation": "Frozen R4 limitation says the fake WFP adapter was not run, although the tests execute it. This wording must be corrected through an append-only supplement; frozen raw evidence remains unchanged.",
+  "raw_test_results": [
+    {
+      "errors": 0,
+      "failed": 0,
+      "guard_active": 1,
+      "guard_denials": 0,
+      "name": "focused001",
+      "passed": 2,
+      "skipped": 0
+    },
+    {
+      "errors": 0,
+      "failed": 0,
+      "guard_active": 1,
+      "guard_denials": 0,
+      "name": "affected001",
+      "passed": 79,
+      "skipped": 0
+    }
+  ],
+  "review": [
+    "Production append refuses all ordinary journal events after the durable RECOVERY_REQUIRED fence before event dispatch.",
+    "Replay refuses a hash-consistent schema-valid ordinary suffix following RECOVERY_REQUIRED; the fence cannot be cleared by ordinary readback or a next intent.",
+    "Actual production Store/executor tests exercise APPLY and RESTORE post-effect uncertainty plus failure of the terminal UNKNOWN write, and preserve RUNNING job/operation with RECOVERY_REQUIRED admission.",
+    "Direct readback and next-intent refusal preserves the journal size; a deliberately injected suffix is refused on the next production replay without any extra fake adapter calls."
+  ],
+  "schema": "comsol-mcp.root-wfp-v2-recovery-r4-review/1",
+  "source_scope_fingerprint": "90f20cd5b6515020685aee938aa6700c8159a999fe3c50a7ad3201bb808d1678",
+  "status": "PASS_SCOPED_RECOVERY_ABSORBING_STATE_SOURCE_AND_SOFTWARE_CONTROLS",
+  "unchanged_r3_sources": 8,
+  "verified_references": [
+    {
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_v2_recovery_r4_20261012/SOURCE_FREEZE_V2_R4.json",
+      "sha256": "157c16f1c0b7287318c47540759beb0ec705f4a3c83523d9b18761eaf8f0ffc5",
+      "size_bytes": 11064
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_r3_20261012/SOURCE_FREEZE_V2_R3.json",
+      "sha256": "618648c68d76bb1a3d2204d41adcdc12631aceb3b642bc6c666425e2e4fa8727",
+      "size_bytes": 13481
+    },
+    {
+      "path": "local-preservation/windows_host_change_wfp_v2_recovery_r4_20261012/PRESERVATION.json",
+      "sha256": "c3bcb1d1dcdba60ce1863b0ecd378214df416dd6aed5bfab26c077036f5b4754",
+      "size_bytes": 3766
+    },
+    {
+      "path": "local-preservation/windows_host_change_wfp_v2_recovery_r4_preimage_20261012/PRESERVATION.json",
+      "sha256": "68a080572c37baa52bd73dcbc0b165dc9d656f73fe59401fd4b12870fac75ec5",
+      "size_bytes": 1188
+    },
+    {
+      "path": "local-preservation/windows_host_change_wfp_v2_recovery_r4_20261012/source/comsol_mcp/_operation_store.py",
+      "sha256": "2d33958f7e2ac22213c237f30d26f4b83887338af40af3be7e8e468940149a4c",
+      "size_bytes": 296488
+    },
+    {
+      "path": "local-preservation/windows_host_change_wfp_v2_r3_20261012/source/comsol_mcp/_operation_store.py",
+      "sha256": "a033e1e4e5fe3c0ba3d2a7f6d8020da52f5618e8dce50c7ca1a9a568d875bc7b",
+      "size_bytes": 295868
+    },
+    {
+      "path": "local-preservation/windows_host_change_wfp_v2_recovery_r4_20261012/source/comsol_mcp/_w26_os_resources.py",
+      "sha256": "15088d2fcfce57aebdd60feb40db3fbbc3d94098f5ba5c0fb8c5fcfabdd3a1d4",
+      "size_bytes": 184272
+    },
+    {
+      "path": "local-preservation/windows_host_change_wfp_v2_r3_20261012/source/comsol_mcp/_w26_os_resources.py",
+      "sha256": "15088d2fcfce57aebdd60feb40db3fbbc3d94098f5ba5c0fb8c5fcfabdd3a1d4",
+      "size_bytes": 184272
+    },
+    {
+      "path": "local-preservation/windows_host_change_wfp_v2_recovery_r4_20261012/source/comsol_mcp/_windows_host_change.py",
+      "sha256": "21b18d981884443ce3c17fa42c11f490607f7a11f09536d9d3942470043ed8e9",
+      "size_bytes": 67497
+    },
+    {
+      "path": "local-preservation/windows_host_change_wfp_v2_r3_20261012/source/comsol_mcp/_windows_host_change.py",
+      "sha256": "21b18d981884443ce3c17fa42c11f490607f7a11f09536d9d3942470043ed8e9",
+      "size_bytes": 67497
+    },
+    {
+      "path": "local-preservation/windows_host_change_wfp_v2_recovery_r4_20261012/source/comsol_mcp/_windows_t037_wfp.py",
+      "sha256": "028603fe4fc0beb2bad44b47b03e5db3d03ce95c456ab087cf86ddda02588f3c",
+      "size_bytes": 58003
+    },
+    {
+      "path": "local-preservation/windows_host_change_wfp_v2_r3_20261012/source/comsol_mcp/_windows_t037_wfp.py",
+      "sha256": "028603fe4fc0beb2bad44b47b03e5db3d03ce95c456ab087cf86ddda02588f3c",
+      "size_bytes": 58003
+    },
+    {
+      "path": "local-preservation/windows_host_change_wfp_v2_recovery_r4_20261012/source/comsol_mcp/_windows_t037_native.py",
+      "sha256": "012dff8dfe252c875f6962018e26bd8c9eb7dde5ea9abe0c933b7ad463260e12",
+      "size_bytes": 95126
+    },
+    {
+      "path": "local-preservation/windows_host_change_wfp_v2_r3_20261012/source/comsol_mcp/_windows_t037_native.py",
+      "sha256": "012dff8dfe252c875f6962018e26bd8c9eb7dde5ea9abe0c933b7ad463260e12",
+      "size_bytes": 95126
+    },
+    {
+      "path": "local-preservation/windows_host_change_wfp_v2_recovery_r4_20261012/source/tests/test_operation_store.py",
+      "sha256": "f5436cc8ac662403fec29ff3177acf399b7c47724f605f625c4989a221992c33",
+      "size_bytes": 16146
+    },
+    {
+      "path": "local-preservation/windows_host_change_wfp_v2_r3_20261012/source/tests/test_operation_store.py",
+      "sha256": "f5436cc8ac662403fec29ff3177acf399b7c47724f605f625c4989a221992c33",
+      "size_bytes": 16146
+    },
+    {
+      "path": "local-preservation/windows_host_change_wfp_v2_recovery_r4_20261012/source/tests/test_operation_store_migrations.py",
+      "sha256": "4c047bf9034138c41ab8b99271e90e61008a10053683a7302350d08215512e34",
+      "size_bytes": 15974
+    },
+    {
+      "path": "local-preservation/windows_host_change_wfp_v2_r3_20261012/source/tests/test_operation_store_migrations.py",
+      "sha256": "4c047bf9034138c41ab8b99271e90e61008a10053683a7302350d08215512e34",
+      "size_bytes": 15974
+    },
+    {
+      "path": "local-preservation/windows_host_change_wfp_v2_recovery_r4_20261012/source/tests/test_windows_host_change.py",
+      "sha256": "3a3c3d648240170ad17d9693d87ffce32c7dc57d983c084fe4e0243e75935091",
+      "size_bytes": 67802
+    },
+    {
+      "path": "local-preservation/windows_host_change_wfp_v2_r3_20261012/source/tests/test_windows_host_change.py",
+      "sha256": "36f10e127623d604819eeb44a04b325359dc1514de213126e1a6f61813b86984",
+      "size_bytes": 59260
+    },
+    {
+      "path": "local-preservation/windows_host_change_wfp_v2_recovery_r4_20261012/source/tests/test_windows_t037_native.py",
+      "sha256": "efe4b198827831c21e544701c5f60317a1bbc1a87d2272bf5ec7c1609ac0848f",
+      "size_bytes": 32945
+    },
+    {
+      "path": "local-preservation/windows_host_change_wfp_v2_r3_20261012/source/tests/test_windows_t037_native.py",
+      "sha256": "efe4b198827831c21e544701c5f60317a1bbc1a87d2272bf5ec7c1609ac0848f",
+      "size_bytes": 32945
+    },
+    {
+      "path": "local-preservation/windows_host_change_wfp_v2_recovery_r4_20261012/source/docs/full_project_continuation_v2/evidence/windows_host_change_wfp_r1/IMPLEMENTATION.md",
+      "sha256": "5376ce05ddbf3870dc9c07e94b59ab2a643b3fe5f7a874ee8b3f731b1677a62e",
+      "size_bytes": 3657
+    },
+    {
+      "path": "local-preservation/windows_host_change_wfp_v2_r3_20261012/source/docs/full_project_continuation_v2/evidence/windows_host_change_wfp_r1/IMPLEMENTATION.md",
+      "sha256": "5376ce05ddbf3870dc9c07e94b59ab2a643b3fe5f7a874ee8b3f731b1677a62e",
+      "size_bytes": 3657
+    },
+    {
+      "path": "local-preservation/windows_host_change_wfp_v2_recovery_r4_preimage_20261012/source/comsol_mcp/_operation_store.py",
+      "sha256": "a033e1e4e5fe3c0ba3d2a7f6d8020da52f5618e8dce50c7ca1a9a568d875bc7b",
+      "size_bytes": 295868
+    },
+    {
+      "path": "local-preservation/windows_host_change_wfp_v2_recovery_r4_preimage_20261012/source/tests/test_windows_host_change.py",
+      "sha256": "36f10e127623d604819eeb44a04b325359dc1514de213126e1a6f61813b86984",
+      "size_bytes": 59260
+    },
+    {
+      "path": "comsol_mcp/_execution_contract.py",
+      "sha256": "dbb112cbbdef9a4d45f69c230123d4e9e57f7b71e337532d83989aa827e6c9e3",
+      "size_bytes": 22753
+    },
+    {
+      "path": "comsol_mcp/_project_authority.py",
+      "sha256": "82b90c1157b242f80feb9079ac4b58e2a1295719a7a323a97532497a740181a8",
+      "size_bytes": 32352
+    },
+    {
+      "path": "comsol_mcp/_host_scoped_provider.py",
+      "sha256": "11d8934dcdc6fccc1196248adec6afdea2ccf29f9b4769485ab756fbeaa1b1cf",
+      "size_bytes": 56451
+    },
+    {
+      "path": "comsol_mcp/_windows_t037.py",
+      "sha256": "fefa4dcd61e67cd5c89c1caa3f74ad24628f5c7069c7110f5ae931d25fa4240e",
+      "size_bytes": 84518
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_v2_recovery_r4_20261012/junit_focused001.xml",
+      "sha256": "0187d445fae2efdb4d6a5725595e825ea184cfe2f51ddbe5b7f4f55798d9e881",
+      "size_bytes": 557
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_v2_recovery_r4_20261012/junit_affected001.xml",
+      "sha256": "68dfebff610aec8fa45c623e91c538756fc435556606a6036b27532e395e8084",
+      "size_bytes": 11811
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_v2_recovery_r4_20261012/strict_guard_focused001.jsonl",
+      "sha256": "511884f95a75e478e196ed4fe4c7fa4549e318e89443000047ea0ae237a39b22",
+      "size_bytes": 250
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_v2_recovery_r4_20261012/strict_guard_affected001.jsonl",
+      "sha256": "6c699a620a98b28262362a750e5726ba52962f8045f374ee457e2376420d00e3",
+      "size_bytes": 252
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_v2_recovery_repro_20261012/REPRODUCTION_RECEIPT.json",
+      "sha256": "b58ec8a7160b5631d7142e746bde5188c4139c69a8045c05e52402fd13ae521c",
+      "size_bytes": 3327
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_v2_recovery_repro_20261012/repro_result_attempt003.json",
+      "sha256": "1952d467ec661528e812d332d47c948c164c0e2c85e16712b313613f6381433b",
+      "size_bytes": 958
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_v2_recovery_repro_20261012/network-guard.jsonl",
+      "sha256": "5b33ab8fcbb16c3ea15e5177935ef0fb3e00c6bca191c38498cdff7237f1f497",
+      "size_bytes": 753
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_v2_recovery_repro_20261012/repro_store_recovery_state.py",
+      "sha256": "bec83576e55e5596707ae8029c998c612909e754eb280b15d4f80a2ba8db2e64",
+      "size_bytes": 5679
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_v2_recovery_r4_20261012/make_r4_freeze.py",
+      "sha256": "7fa9365aa9b5b0e978e9685a74ccab34655c2bbf6b5016cf223575643b526a4d",
+      "size_bytes": 10231
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/windows_host_change_wfp_v2_recovery_r4_20261012/RECOVERY_ABSORBING_STATE_R4.patch",
+      "sha256": "ffb7a0cf061c4b55ac413dcf2998d5cb13377c39f69d5bbf7e00094f8cfcbfa8",
+      "size_bytes": 11010
+    }
+  ]
+}

@@ -1,0 +1,197 @@
+{
+  "acceptance": {
+    "T037_host_isolation": "OPEN",
+    "hard_quota": "NOT_IMPLEMENTED",
+    "memory_limit": "NOT_IMPLEMENTED",
+    "native_comsol": "NOT_RUN",
+    "windows_kernel": "NOT_RUN"
+  },
+  "base_commit": "799bf7a",
+  "changes": [
+    "ControlDaemon serve now accepts disk_resource_config, resolves COMSOL_MCP_DISK_RESOURCE_CONFIG, and forwards it to the existing trusted startup loader.",
+    "CLI accepts --disk-resource-config; absent config preserves the prior no-disk-profile constructor path; invalid selected config refuses before listener creation.",
+    "Catalog effect DYNAMIC is treated as disk-producing and requires the configured project profile and trusted operation estimate; DYNAMIC maps to project_write for reservation ledger authorization.",
+    "Tests exercise actual api.invoke comments(String) write through ControlDaemon/ManagedBackend with zero Worker sends on insufficient budget and durable terminal release on sufficient budget; all named DYNAMIC routes are checked for reservation admission.",
+    "Added strict disk-resource config schema and startup usage documentation."
+  ],
+  "created_at_utc": "2026-10-11T21:16:58+00:00",
+  "current_git_head": "799bf7a0fa95313e7659f44d8ff40ff1678314d5",
+  "debug_history": [
+    {
+      "classification": "DEBUG_ONLY_PRE_FIX; initial dynamic API input lacked required outer session_id and did not reach disk admission",
+      "path": "docs/full_project_continuation_v2/evidence/w26_resource_coordinator_r3_20261012/junit-focused-r1.xml"
+    },
+    {
+      "classification": "DEBUG_ONLY; positive API route then hit independent isolation gate; subsequently test fixture explicitly scoped to software only",
+      "path": "docs/full_project_continuation_v2/evidence/w26_resource_coordinator_r3_20261012/junit-focused-r2.xml"
+    }
+  ],
+  "dependencies": [
+    {
+      "path": "comsol_mcp/_host_scoped_provider.py",
+      "sha256": "5b3cc6f7f619752b04423c4a5336a6f776634b6fa28cde4c8ff24e2e54d50e6f",
+      "size_bytes": 53837
+    },
+    {
+      "path": "comsol_mcp/_operation_store.py",
+      "sha256": "d9d6c3d54ff4afc625f28f5e70595fd23f6a899e05863a9cdf0b05711a0808fa",
+      "size_bytes": 226849
+    },
+    {
+      "path": "comsol_mcp/_state_backup.py",
+      "sha256": "9ab50378fc7eab8c72def62beb0d7191ef68c25e1fa1ace717e0424294f3ba5c",
+      "size_bytes": 177415
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "sha256": "b44933b14790f5f6b60a733adbac9082654ec76261a08df8f45d7e1c1e9c5280",
+      "size_bytes": 128719
+    },
+    {
+      "path": "comsol_mcp/_g2_public_api.py",
+      "sha256": "52a4477541108390a962574c4c7a13c669841936d449e6ee7a925d64cd9b44a1",
+      "size_bytes": 13107
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "sha256": "fb6cbf235a57d46bb9f4196816bddcf46d439c5524183ce0aa6939e670abbaf5",
+      "size_bytes": 232617
+    },
+    {
+      "path": "comsol_mcp/_java_worker.py",
+      "sha256": "ce9d517857f6f1f965bcba73c67f8bd9ffdeb3ae865aa19e4f6a24d4c1d69fc0",
+      "size_bytes": 65437
+    },
+    {
+      "path": "comsol_mcp/_execution_service.py",
+      "sha256": "5ba2f22b4d0a59507164d2b9f5891845face36fc2f85ec6a27c4bd6fff2f20e2",
+      "size_bytes": 30057
+    },
+    {
+      "path": "comsol_mcp/_execution_contract.py",
+      "sha256": "dbb112cbbdef9a4d45f69c230123d4e9e57f7b71e337532d83989aa827e6c9e3",
+      "size_bytes": 22753
+    },
+    {
+      "path": "comsol_mcp/_project_authority.py",
+      "sha256": "82b90c1157b242f80feb9079ac4b58e2a1295719a7a323a97532497a740181a8",
+      "size_bytes": 32352
+    },
+    {
+      "owned_snapshot": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r2/",
+      "path": "tests/test_host_scoped_provider.py",
+      "sha256": "7b4bcd6d8814c06c5213886765dc4c110b3099889747989c950e7ee63ab4ee9a",
+      "size_bytes": 38231
+    }
+  ],
+  "guard_logs": [
+    {
+      "denial_events": [],
+      "events": [
+        "GUARD_ACTIVE_BEFORE_CHILD_ENTRYPOINT"
+      ],
+      "path": "docs/full_project_continuation_v2/evidence/w26_resource_coordinator_r3_20261012/network-guard-w26-r4.jsonl",
+      "sha256": "abe9c11e2c5b16033520c51ff4ae53fe0f06c531284a505e09d18f7d60b4cec6"
+    },
+    {
+      "denial_events": [],
+      "events": [
+        "GUARD_ACTIVE_BEFORE_CHILD_ENTRYPOINT"
+      ],
+      "path": "docs/full_project_continuation_v2/evidence/w26_resource_coordinator_r3_20261012/network-guard-daemon-r3.jsonl",
+      "sha256": "682044c113125be95cbe633a01febc5b3bfdd6e0117e47f3316c24a54bce746e"
+    },
+    {
+      "denial_events": [],
+      "events": [
+        "GUARD_ACTIVE_BEFORE_CHILD_ENTRYPOINT"
+      ],
+      "path": "docs/full_project_continuation_v2/evidence/w26_resource_coordinator_r3_20261012/network-guard-provider-r3.jsonl",
+      "sha256": "efd59f934378436ee5c493769c4f100d3b77cff6e58c198ec6a64f1a485bff3a"
+    }
+  ],
+  "limitations": [
+    "DYNAMIC routes are conservatively reserved because there is no route-independent trusted resolver proving a READ effect before admission.",
+    "Disk estimates are trusted admission estimates, not enforced per-job upper bounds; POSIX free-space observation is advisory and can race external writers.",
+    "Windows disk storage/profile provider and actual Windows-kernel verification remain NOT_RUN/unsupported.",
+    "COMSOL native/scientific validation, actual isolated host-account proof, T037 OS policy and hard quotas remain open."
+  ],
+  "owned_sources": [
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "sha256": "012427e14c2345eac4a9430f6e4011d905d953f85d094ad18948724921584ef6",
+      "size_bytes": 786590,
+      "snapshot_path": "source/comsol_mcp/_control_daemon.py"
+    },
+    {
+      "path": "comsol_mcp/_w26_os_resources.py",
+      "sha256": "e19946f52715efad9aca120860a2529863745edf96c4a3aacfa0976b8c027d27",
+      "size_bytes": 133592,
+      "snapshot_path": "source/comsol_mcp/_w26_os_resources.py"
+    },
+    {
+      "path": "tests/test_w26_os_resources.py",
+      "sha256": "f244fd0afb85006b42cea503245999d9030ea78f064c401f67072d03d942eed4",
+      "size_bytes": 75908,
+      "snapshot_path": "source/tests/test_w26_os_resources.py"
+    },
+    {
+      "path": "docs/full_project_continuation_v2/DISK_RESOURCE_CONFIG.md",
+      "sha256": "ac5aef0bfe0bf98de6e7e5fa015621bf57b96b208f274cd68883b6cb101da0ea",
+      "size_bytes": 3700,
+      "snapshot_path": "source/docs/full_project_continuation_v2/DISK_RESOURCE_CONFIG.md"
+    }
+  ],
+  "parent_review": {
+    "disposition": "CHANGES_REQUIRED; this r3 addresses the two scoped findings",
+    "path": "docs/full_project_continuation_v2/evidence/w26_resource_coordinator_r2_20261012/ROOT_FOCUSED_REVIEW_R2.json",
+    "sha256": "856b4f777e97936dda191df2faa422ac95265f9cc03fc544a1c61a98105418a6"
+  },
+  "runtime": {
+    "guard_entry": "/Volumes/SSD/Comsol-MCP/execution-scratch/temp-loss-runtime-recovery-20261004-001/builder-preparation022/network-guard/guarded_entry.py",
+    "interpreter": "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python",
+    "python": "3.12.13",
+    "tmp_root": "/private/tmp"
+  },
+  "schema": "comsol-mcp.w26-resource-coordinator-source-freeze/v3",
+  "scope_fingerprint_sha256": "72be4f3422528fde9e02227ab3eaac81be6c2108f06760415e2a00140abf1f03",
+  "software_tests": [
+    {
+      "errors": 0,
+      "failures": 0,
+      "junit": "docs/full_project_continuation_v2/evidence/w26_resource_coordinator_r3_20261012/junit-w26-r4.xml",
+      "junit_sha256": "505c98c3a54a9e9798884c91f9a54d35a9c83ee5758ffd41c067b8f7caeff51e",
+      "label": "w26_resource_coordinator",
+      "passed": 45,
+      "skipped": 0,
+      "tests": 45
+    },
+    {
+      "errors": 0,
+      "failures": 0,
+      "junit": "docs/full_project_continuation_v2/evidence/w26_resource_coordinator_r3_20261012/junit-daemon-r3.xml",
+      "junit_sha256": "f8e2bb1ccddc573e1788d9de399a633f0e1858377a30ecddbd4f0e69b409ecf9",
+      "label": "control_daemon_project_sessions",
+      "passed": 147,
+      "skipped": 0,
+      "tests": 147
+    },
+    {
+      "errors": 0,
+      "failures": 0,
+      "junit": "docs/full_project_continuation_v2/evidence/w26_resource_coordinator_r3_20261012/junit-provider-r3.xml",
+      "junit_sha256": "b4db8ae65db6cd19ac57936c9eaf9e7c6d9f3a8b7fad65a3e9699ef7d46f7ae4",
+      "label": "host_scoped_provider_compatibility",
+      "passed": 27,
+      "skipped": 0,
+      "tests": 27
+    }
+  ],
+  "source_diff": {
+    "path": "docs/full_project_continuation_v2/evidence/w26_resource_coordinator_r3_20261012/W26_RESOURCE_COORDINATOR_R3.patch",
+    "r2_baseline": "docs/full_project_continuation_v2/evidence/w26_resource_coordinator_r2_20261012/source/",
+    "sha256": "afa79a6c6a58a4548b9b62161e0e021db906ad4f89b11c09b8aa17cfd933facd",
+    "size_bytes": 20555
+  },
+  "status": "SOFTWARE_ONLY_SCOPED_SOURCE_FREEZE"
+}

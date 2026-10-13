@@ -1,0 +1,175 @@
+--- /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r13/tools/w23_te_science_protocol.py
++++ /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/tools/w23_te_science_protocol.py
+@@ -880,7 +880,7 @@
+     """Use only a validated native PortName; callers bind it to exact BMA store/dataset."""
+     if port_name not in {"1", "2"}:
+         raise ScienceProtocolError("BMA expression selection requires native PortName 1 or 2")
+-    return (f"ewfd.beta_{port_name}", f"ewfd.neff_{port_name}", "ewfd.k0")
++    return (f"emw.beta_{port_name}", f"emw.neff_{port_name}", "emw.k0")
+ 
+ 
+ def _require_requested_unit_application(
+@@ -1080,12 +1080,12 @@
+             values_by_name[expression] = _finite_complex_row(row["real"][0], row["imag"][0], label=f"{step} {expression}")
+             if point["native_is_complex"] is False and values_by_name[expression].imag != 0.0:
+                 raise ScienceProtocolError(f"{step} native real-only scalar has nonzero imaginary value")
+-        if (units.get(beta_expression) != "1/m" or units.get("ewfd.k0") != "1/m"
++        if (units.get(beta_expression) != "1/m" or units.get("emw.k0") != "1/m"
+                 or units.get(neff_expression) not in {"1", ""}):
+             raise ScienceProtocolError(f"{step} native beta/neff/k0 expression units are not the documented 1/m, 1, 1/m")
+         beta = values_by_name[beta_expression]
+         neff = values_by_name[neff_expression]
+-        k0 = values_by_name["ewfd.k0"]
++        k0 = values_by_name["emw.k0"]
+         beta_expected = 1j * lambda_value
+         beta_error = abs(beta - beta_expected) / max(abs(beta_expected), 1.0)
+         k0_error = abs(k0 - expected_k0) / max(abs(expected_k0), 1.0)
+@@ -1103,7 +1103,7 @@
+             "expressions": list(expected_expressions),
+             "beta": {"real": beta.real, "imag": beta.imag, "unit": units[beta_expression]},
+             "neff": {"real": neff.real, "imag": neff.imag, "unit": units[neff_expression]},
+-            "k0": {"real": k0.real, "imag": k0.imag, "unit": units["ewfd.k0"]},
++            "k0": {"real": k0.real, "imag": k0.imag, "unit": units["emw.k0"]},
+             "observed_frequency_hz": frequency,
+             "formulae": {"beta_i": "beta_i=j*lambda", "neff_i": "neff_i=beta_i/k0",
+                          "k0": "2*pi*observed_main_frequency_hz/c"},
+@@ -1118,6 +1118,26 @@
+             "science_acceptance": "NOT_EVALUATED"}
+ 
+ 
++def _require_point_selection_application(result: Mapping[str, Any], expected_selection: Mapping[str, Any]) -> None:
++    application = result.get("feature_readback", {}).get("selection_application")
++    if not isinstance(application, Mapping) or set(application)!={"before", "after"}:
++        raise ScienceProtocolError("field point readback lacks actual before/after transient selection")
++    entities = [8,10,12] if expected_selection.get("tag")=="selReceiverX8" else [1,3,5] if expected_selection.get("tag")=="selInputPort" else None
++    if entities is None:raise ScienceProtocolError("field plane selection is not registered")
++    before = after = None
++    for stage,key in [("before_numeric_read","before"),("after_numeric_read","after")]:
++        record = application[key];observed = record.get("native_selection_readback") if isinstance(record,Mapping) else None
++        if (not isinstance(observed,Mapping) or record.get("stage")!=stage or record.get("component")!=expected_selection["component"]
++            or record.get("geometry")!=expected_selection["geometry"] or record.get("entity_dimension")!=1
++            or record.get("kind")!="named" or record.get("tag")!=expected_selection["tag"]
++            or observed.get("geometry")!="geom1" or type(observed.get("dimension")) is not int or observed["dimension"]!=1
++            or observed.get("named")!=expected_selection["tag"] or observed.get("entities")!=entities
++            or observed.get("is_inheriting") is not False):
++            raise ScienceProtocolError("field transient selection identity/membership/inheritance mismatch")
++        if key=="before":before=observed
++        else:after=observed
++    if before!=after:raise ScienceProtocolError("field transient selection changed during point read")
++
+ def decode_production_complex_point_readback(
+     result: Mapping[str, Any], *, dataset_tag: str, solution_tag: str,
+     expressions: Sequence[str], expected_points: Sequence[Sequence[float]],
+@@ -1128,6 +1148,7 @@
+     expected_requested_units: Sequence[str] | None = None,
+     scalar_frequency: bool = False,
+     scalar_bma_binding: Mapping[str, Any] | None = None,
++    expected_selection: Mapping[str, Any] | None = None,
+ ) -> dict[str, Any]:
+     """Decode one exact singleton through production result.at_points.
+ 
+@@ -1321,11 +1342,13 @@
+             row["real"].append(item.real)
+             row["imag"].append(item.imag)
+         raw_rows.append(row)
++    if expected_selection is not None:
++        _require_point_selection_application(result, expected_selection)
+     normal_sign: int | None = None
+     normal_status = "NOT_CAPTURED_BY_POINT_INTERPOLATION"
+     if require_x_plane_normal:
+         by_name = {row["expression"]: row for row in raw_rows}
+-        nx_row, ny_row = by_name.get("nx"), by_name.get("ny")
++        nx_row, ny_row = by_name.get("emw.nx"), by_name.get("emw.ny")
+         if (not isinstance(nx_row, Mapping) or not isinstance(ny_row, Mapping)
+                 or len(nx_row["real"]) != len(expected_points)
+                 or len(ny_row["real"]) != len(expected_points)):
+@@ -1339,6 +1362,8 @@
+                 or len({1 if value.real > 0 else -1 for value in nx}) != 1):
+             raise ScienceProtocolError("native x-plane normals are not a constant unit x normal")
+         normal_sign = 1 if nx[0].real > 0 else -1
++        if expected_selection is not None and normal_sign != (1 if expected_selection["tag"]=="selReceiverX8" else -1):
++            raise ScienceProtocolError("native normal direction differs from exact physics plane")
+         normal_status = "VERIFIED_FROM_NATIVE_NX_NY"
+     return {
+         "status": "PRODUCTION_NATIVE_COMPLEX_POINT_READBACK",
+@@ -1378,7 +1403,7 @@
+     if not math.isclose(ys[0], -8e-6, rel_tol=0, abs_tol=1e-12) or not math.isclose(ys[-1], 8e-6, rel_tol=0, abs_tol=1e-12):
+         raise ScienceProtocolError("COMSOL coordinate readback does not cover the frozen y span in metres")
+     normals = _raw_expression_map(raw)
+-    nx, ny = normals.get("nx"), normals.get("ny")
++    nx, ny = normals.get("emw.nx"), normals.get("emw.ny")
+     if nx is None or ny is None:
+         raise ScienceProtocolError("native boundary normal nx/ny was not exported")
+     if any(abs(abs(value.real) - 1) > 1e-10 or abs(value.imag) > 1e-12 for value in nx):
+@@ -1424,12 +1449,12 @@
+         raise ScienceProtocolError("declared normal_sign and native boundary normal do not both point along physical +x")
+     out = _raw_expression_map(output_raw)
+     inc = _raw_expression_map(input_raw)
+-    signal_e = {axis: f"ewfd.E{axis}" for axis in "xyz"}
+-    signal_h = {axis: f"ewfd.H{axis}" for axis in "xyz"}
+-    output_mode_e = {axis: f"ewfd.Emode{axis}_2" for axis in "xyz"}
+-    output_mode_h = {axis: f"ewfd.Hmode{axis}_2" for axis in "xyz"}
+-    incident_mode_e = {axis: f"ewfd.Emode{axis}_1" for axis in "xyz"}
+-    incident_mode_h = {axis: f"ewfd.Hmode{axis}_1" for axis in "xyz"}
++    signal_e = {axis: f"down(emw.E{axis})" for axis in "xyz"}
++    signal_h = {axis: f"down(emw.H{axis})" for axis in "xyz"}
++    output_mode_e = {axis: f"emw.Emode{axis}_2" for axis in "xyz"}
++    output_mode_h = {axis: f"emw.Hmode{axis}_2" for axis in "xyz"}
++    incident_mode_e = {axis: f"emw.Emode{axis}_1" for axis in "xyz"}
++    incident_mode_h = {axis: f"emw.Hmode{axis}_1" for axis in "xyz"}
+     signal_flux = _poynting_x(out, signal_e, signal_h)
+     mode_flux = _poynting_x(out, output_mode_e, output_mode_h)
+     incident_flux = _poynting_x(inc, incident_mode_e, incident_mode_h)
+@@ -1515,11 +1540,11 @@
+             or not math.isclose(selected_y[-1], CAPTURE_Y_MAX_M, rel_tol=0, abs_tol=1e-12)):
+         raise ScienceProtocolError("native 641-point grid does not exactly cover the frozen core capture bounds")
+     fields = _raw_expression_map(output_raw)
+-    required = ("ewfd.Ey", "ewfd.Ez", "ewfd.Hy", "ewfd.Hz")
++    required = ("down(emw.Ey)", "down(emw.Ez)", "down(emw.Hy)", "down(emw.Hz)")
+     if any(name not in fields for name in required):
+         raise ScienceProtocolError("capture quadrature is missing native signal E/H components")
+-    electric = {axis: f"ewfd.E{axis}" for axis in "xyz"}
+-    magnetic = {axis: f"ewfd.H{axis}" for axis in "xyz"}
++    electric = {axis: f"down(emw.E{axis})" for axis in "xyz"}
++    magnetic = {axis: f"down(emw.H{axis})" for axis in "xyz"}
+     flux_x = _poynting_x(fields, electric, magnetic)
+     values = [0.5 * (flux_x[index] * native_nx * declared_sign).real for index in selected]
+     result = _simpson_uniform_any(values, selected_y, label="capture aperture Poynting flux").real
+@@ -1679,7 +1704,7 @@
+         raise ScienceProtocolError("software global-phase control requires a unit-magnitude complex factor")
+     base = independent_integrals(output_raw, input_raw)
+     fields = _raw_expression_map(output_raw)
+-    signal_names = {f"ewfd.E{axis}" for axis in "xyz"} | {f"ewfd.H{axis}" for axis in "xyz"}
++    signal_names = {f"down(emw.E{axis})" for axis in "xyz"} | {f"down(emw.H{axis})" for axis in "xyz"}
+     if not signal_names.issubset(fields):
+         raise ScienceProtocolError("software phase control is missing one or more signal E/H components")
+     rotated = dict(output_raw)
+@@ -1759,8 +1784,8 @@
+             or nx0 != nx90 or sign0 != sign90):
+         raise ScienceProtocolError("native phase pair output fields are not bound to the same coordinates and oriented plane")
+     values0, values90 = _raw_expression_map(raw0), _raw_expression_map(raw90)
+-    signal_names = [f"ewfd.E{axis}" for axis in "xyz"] + [f"ewfd.H{axis}" for axis in "xyz"]
+-    mode_names = [f"ewfd.Emode{axis}_2" for axis in "xyz"] + [f"ewfd.Hmode{axis}_2" for axis in "xyz"]
++    signal_names = [f"down(emw.E{axis})" for axis in "xyz"] + [f"down(emw.H{axis})" for axis in "xyz"]
++    mode_names = [f"emw.Emode{axis}_2" for axis in "xyz"] + [f"emw.Hmode{axis}_2" for axis in "xyz"]
+     ratios: list[complex] = []
+     mode_relative_errors: list[float] = []
+     for name in signal_names:
+@@ -1851,14 +1876,14 @@
+                                   "complex_field_representation": "full_physical_complex_phasor_including_reconstructed_envelope_phase"},
+             "output_surface": {"plane_id": "x8", "selection": {"component": "comp1", "geometry": "geom1", "tag": "selReceiverX8"}, "normal_sign": 1},
+             "signal": {"field_id": "signal", "source": {"dataset_id": "dset1", "solution_id": "sol1", "outer_index": 1, "inner_index": 1},
+-                       "fields": {"electric": {axis: f"ewfd.E{axis}" for axis in "xyz"}, "magnetic": {axis: f"ewfd.H{axis}" for axis in "xyz"}}},
++                       "fields": {"electric": {axis: f"down(emw.E{axis})" for axis in "xyz"}, "magnetic": {axis: f"down(emw.H{axis})" for axis in "xyz"}}},
+             "reference_mode": {"mode_id": "output_mode_1", "mode_axis_parameter": "modeIndex",
+                                "source": {"dataset_id": "dset1", "solution_id": "sol1", "outer_index": 1, "inner_index": 1},
+-                               "fields": {"electric": {axis: f"ewfd.Emode{axis}_2" for axis in "xyz"}, "magnetic": {axis: f"ewfd.Hmode{axis}_2" for axis in "xyz"}}},
++                               "fields": {"electric": {axis: f"emw.Emode{axis}_2" for axis in "xyz"}, "magnetic": {axis: f"emw.Hmode{axis}_2" for axis in "xyz"}}},
+             "incident_reference": {"reference_id": "input_mode_1", "input_plane_id": "xminus10",
+                                    "selection": {"component": "comp1", "geometry": "geom1", "tag": "selInputPort"}, "normal_sign": -1,
+                                    "source": {"dataset_id": "dset1", "solution_id": "sol1", "outer_index": 1, "inner_index": 1},
+-                                   "fields": {"electric": {axis: f"ewfd.Emode{axis}_1" for axis in "xyz"}, "magnetic": {axis: f"ewfd.Hmode{axis}_1" for axis in "xyz"}}},
++                                   "fields": {"electric": {axis: f"emw.Emode{axis}_1" for axis in "xyz"}, "magnetic": {axis: f"emw.Hmode{axis}_1" for axis in "xyz"}}},
+             "power_floor": {"value": 1e-12, "unit": POWER_UNIT_2D},
+         }
+         if label == "caller_array_provenance":

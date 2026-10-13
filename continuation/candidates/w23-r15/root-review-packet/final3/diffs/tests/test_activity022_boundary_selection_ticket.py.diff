@@ -1,0 +1,11 @@
+--- /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/tests/test_activity022_boundary_selection_ticket.py
++++ /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r15/tests/test_activity022_boundary_selection_ticket.py
+@@ -128,7 +128,7 @@
+     for name,expression in [('emw.Ex','0'),('emw.Ey','0'),('emw.Ez','Ez')]:
+         assert all(row[2]==expression for row in allrows if row[1]==name)
+     for p in ['1','2']:
+-        for name in runner.protocol.bma_point_expressions(p):assert any(row[1]==name and row[5]=='全局' for row in allrows)
++        for name in runner.protocol.bma_point_expressions(p, field_scheme="emw_down"):assert any(row[1]==name and row[5]=='全局' for row in allrows)
+     domains={}
+     for selection in r['named_selections']:
+         if selection['dimension_raw']==2:

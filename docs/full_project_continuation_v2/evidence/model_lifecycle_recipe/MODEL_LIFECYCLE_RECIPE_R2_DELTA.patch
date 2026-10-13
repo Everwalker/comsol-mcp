@@ -1,0 +1,1007 @@
+--- a/comsol_mcp/_g3_managed_models.py
++++ b/comsol_mcp/_g3_managed_models.py
+@@ -11,8 +11,13 @@
+ import hashlib
+ import json
+ import os
++import ctypes
++import errno
+ from pathlib import Path
++from pathlib import PurePosixPath, PureWindowsPath
+ import re
++import stat
++import sys
+ import tempfile
+ from typing import Any, Mapping
+ 
+@@ -201,10 +206,7 @@
+         raise PreWriteRefusal("INVALID_REQUEST", "model.load path_policy only permits a registered artifact")
+     resolved = _resolve_registered(context, body.get("artifact_id"))
+     record = context["operation_store"].get_metadata("artifacts", resolved["artifact_id"])
+-    if (not isinstance(record, Mapping) or record.get("schema_version") != 2
+-            or record.get("role") != MODEL_SAVE_ROLE or record.get("artifact_type") != MODEL_SAVE_FORMAT
+-            or record.get("format_version") != "comsol-mph-savecopy/1"):
+-        raise PreWriteRefusal("ARTIFACT_ROLE_MISMATCH", "model.load requires a schema-v2 registered saved_model artifact")
++    _validate_loadable_mph(record, resolved, context)
+     before = {str(tag) for tag in worker.client().tags()}
+     try:
+         model = worker.client().load(str(resolved["path"]))
+@@ -221,8 +223,392 @@
+     return {"status": "LOADED", "model_tag": tag, "model_ref": ref,
+             "artifact_id": resolved["artifact_id"], "sha256": resolved["sha256"],
+             "size_bytes": resolved["size"], "ownership": "mcp_owned", "project_id": context["project_id"]}
++
++
++def _validate_loadable_mph(record: Any, resolved: Mapping[str, Any], context: Mapping[str, Any]) -> None:
++    """Admit a pinned registered MPH without treating arbitrary paths as input.
++
++    ``artifact.register`` predates typed media metadata, so a registered .mph
++    may have no ``artifact_type``/``format_version``.  In that case the pinned
++    project-local registration, canonical source suffix, and bounded safe MPH
++    ZIP structure are the format evidence.  If metadata is present, it must
++    agree with the MPH format.  The Worker load/readback remains the final
++    native-format check.
++    """
++    if not isinstance(record, Mapping) or record.get("schema_version") != 2:
++        raise PreWriteRefusal("ARTIFACT_ROLE_MISMATCH", "model.load requires a schema-v2 registered artifact")
++    if (record.get("project_id") != context.get("project_id")
++            or record.get("classification") != "project_local"):
++        raise PreWriteRefusal("ARTIFACT_ROLE_MISMATCH", "model.load requires a project-local registered artifact")
++    if record.get("role") == "model_package":
++        raise PreWriteRefusal("ARTIFACT_ROLE_MISMATCH", "model.load accepts registered MPH files; model packages require explicit extraction")
++    provenance = record.get("provenance")
++    if not isinstance(provenance, Mapping):
++        raise PreWriteRefusal("ARTIFACT_ROLE_MISMATCH", "registered model artifact has no source provenance")
++    source_path = provenance.get("source_project_relative_path")
++    registered_path = record.get("path")
++    if (not isinstance(source_path, str) or not source_path.lower().endswith(".mph")
++            or not isinstance(registered_path, str) or not registered_path.lower().endswith(".mph")
++            or Path(source_path).is_absolute() or any(part in {"", ".", ".."} for part in Path(source_path).parts)):
++        raise PreWriteRefusal("ARTIFACT_ROLE_MISMATCH", "model.load requires a canonical project-local .mph registration")
++    if record.get("artifact_type") not in (None, MODEL_SAVE_FORMAT):
++        raise PreWriteRefusal("ARTIFACT_ROLE_MISMATCH", "registered artifact type is not COMSOL MPH")
++    if record.get("format_version") not in (None, "comsol-mph-savecopy/1", "comsol-mph/1"):
++        raise PreWriteRefusal("ARTIFACT_ROLE_MISMATCH", "registered MPH format version is unsupported")
++    if (record.get("sha256") != resolved.get("sha256")
++            or record.get("artifact_id") != resolved.get("artifact_id")
++            or record.get("size") != resolved.get("size")):
++        raise PreWriteRefusal("ARTIFACT_IDENTITY_MISMATCH", "resolved registered MPH identity differs from its durable record")
++    try:
++        # Reuse the model-package MPH reader's bounded central-directory and
++        # path/special-member checks.  No FileResource temporary path is read.
++        from ._g3_model_delivery import _hash_embedded_resources
++        _hash_embedded_resources(Path(resolved["path"]), ())
++    except (PreWriteRefusal, ExecutionContractError) as exc:
++        raise PreWriteRefusal("MODEL_FORMAT_UNVERIFIED", "registered .mph bytes are not a safely readable COMSOL MPH archive",
++                              details={"cause_code": getattr(exc, "code", None)}) from exc
++
++
++def _registered_overwrite_target(context: Mapping[str, Any], store: Any, target: Path,
++                                 relative: str) -> tuple[dict[str, Any], str, dict[str, int]]:
++    """Prove an existing destination is the exact saved_model previously published here."""
++    from ._artifact_store import _hash_regular_artifact
++
++    try:
++        target_digest, target_identity = _hash_regular_artifact(target)
++    except ExecutionContractError as exc:
++        raise PreWriteRefusal(exc.code, str(exc), details=dict(exc.details)) from exc
++    candidates = []
++    for row in context["operation_store"].list_metadata("artifacts"):
++        provenance = row.get("provenance") if isinstance(row, Mapping) else None
++        if (isinstance(provenance, Mapping)
++                and provenance.get("source_project_relative_path") == relative
++                and row.get("role") == MODEL_SAVE_ROLE
++                and row.get("project_id") == context["project_id"]
++                and row.get("sha256") == target_digest
++                and provenance.get("source_sha256") == target_digest):
++            candidates.append(dict(row))
++    if len(candidates) != 1:
++        raise PreWriteRefusal("OVERWRITE_UNSAFE", "destination bytes do not match one exact owned registered saved_model")
++    record = candidates[0]
++    if (record.get("schema_version") != 2 or record.get("artifact_id") != target_digest
++            or record.get("classification") != "project_local"
++            or record.get("artifact_type") != MODEL_SAVE_FORMAT
++            or record.get("format_version") != "comsol-mph-savecopy/1"):
++        raise PreWriteRefusal("OVERWRITE_UNSAFE", "registered overwrite target has incompatible metadata")
++    resolved = _resolve_registered(context, target_digest)
++    if (Path(resolved["path"]).resolve(strict=True) == target.resolve(strict=True)
++            or ((resolved.get("file_identity", {}).get("device"), resolved.get("file_identity", {}).get("inode"))
++                == (target_identity.get("device"), target_identity.get("inode")))):
++        raise PreWriteRefusal("OVERWRITE_UNSAFE", "destination aliases the immutable registered artifact")
++    return record, target_digest, target_identity
++
++
++def _hash_open_handle(file_descriptor: int) -> tuple[str, int, os.stat_result]:
++    digest = hashlib.sha256()
++    size = 0
++    os.lseek(file_descriptor, 0, os.SEEK_SET)
++    for block in iter(lambda: os.read(file_descriptor, 1024 * 1024), b""):
++        size += len(block)
++        digest.update(block)
++    os.lseek(file_descriptor, 0, os.SEEK_SET)
++    return digest.hexdigest(), size, os.fstat(file_descriptor)
++
++
++def _exchange_names(directory_fd: int, first: str, second: str) -> None:
++    """Atomically exchange two names relative to one already pinned directory."""
++    if sys.platform == "darwin":
++        exchange = getattr(ctypes.CDLL(None, use_errno=True), "renameatx_np", None)
++        if exchange is None:
++            raise OSError(errno.ENOTSUP, "atomic exchange is unavailable")
++        exchange.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
++        exchange.restype = ctypes.c_int
++        result = exchange(directory_fd, os.fsencode(first), directory_fd, os.fsencode(second), 0x00000002)
++    elif sys.platform.startswith("linux"):
++        exchange = getattr(ctypes.CDLL(None, use_errno=True), "renameat2", None)
++        if exchange is None:
++            raise OSError(errno.ENOTSUP, "atomic exchange is unavailable")
++        exchange.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
++        exchange.restype = ctypes.c_int
++        result = exchange(directory_fd, os.fsencode(first), directory_fd, os.fsencode(second), 0x00000002)
++    else:
++        raise OSError(errno.ENOTSUP, "atomic registered overwrite is unavailable on this platform")
++    if result != 0:
++        error = ctypes.get_errno() or errno.EIO
++        raise OSError(error, os.strerror(error), second)
++
++
++def _atomic_exchange_publish(root: Path, relative: str, source: Path, *,
++                             expected_sha256: str, expected_size: int,
++                             old_sha256: str, old_identity: Mapping[str, int]) -> dict[str, Any]:
++    """Replace one registered destination by atomic exchange, retaining old bytes until registration."""
++    from ._artifact_store import (
++        _assert_pinned_artifact_stable, _directory_binding_matches,
++        _hash_regular_artifact, _open_directory_binding, _open_pinned_artifact,
++    )
++
++    lexical = PurePosixPath(relative)
++    if (lexical.is_absolute() or not lexical.parts or lexical.as_posix() != relative
++            or any(part in {"", ".", ".."} for part in lexical.parts)):
++        raise PreWriteRefusal("INVALID_DESTINATION", "overwrite destination must be canonical project-relative syntax")
++    if sys.platform not in {"darwin", "linux"}:
++        raise PreWriteRefusal("OVERWRITE_PLATFORM_UNSUPPORTED", "safe atomic overwrite is unavailable on this platform")
++    parent_parts = tuple(lexical.parts[:-1])
++    leaf = lexical.parts[-1]
++    descriptors, directory_identity = _open_directory_binding(root, parent_parts)
++    parent_fd = descriptors[-1]
++    temporary = f".model-save-{os.urandom(16).hex()}.partial"
++    temporary_identity: tuple[int, int] | None = None
++    swapped = False
++    retained_backup = False
++
++    def binding_matches() -> bool:
++        return _directory_binding_matches(root, parent_parts, directory_identity)
++
++    def named_stat(name: str) -> os.stat_result:
++        value = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
++        if not stat.S_ISREG(value.st_mode):
++            raise PreWriteRefusal("OVERWRITE_UNSAFE", "overwrite path is not a regular file")
++        return value
++
++    def cleanup_temporary(expected: tuple[int, int] | None) -> bool:
++        if expected is None:
++            return True
++        try:
++            found = os.stat(temporary, dir_fd=parent_fd, follow_symlinks=False)
++        except FileNotFoundError:
++            return True
++        except OSError:
++            return False
++        if not stat.S_ISREG(found.st_mode) or (found.st_dev, found.st_ino) != expected:
++            return False
++        try:
++            os.unlink(temporary, dir_fd=parent_fd)
++            os.fsync(parent_fd)
++        except OSError:
++            return False
++        try:
++            os.stat(temporary, dir_fd=parent_fd, follow_symlinks=False)
++        except FileNotFoundError:
++            return True
++        except OSError:
++            return False
++        return False
++
++    def rollback_exchange() -> bool:
++        try:
++            if not binding_matches() or temporary_identity is None:
++                return False
++            current = named_stat(leaf)
++            backup = named_stat(temporary)
++            if ((current.st_dev, current.st_ino) != temporary_identity
++                    or (backup.st_dev, backup.st_ino) != (old_identity.get("device"), old_identity.get("inode"))):
++                return False
++            _exchange_names(parent_fd, temporary, leaf)
++            final = named_stat(leaf)
++            staged = named_stat(temporary)
++            final_hash, final_size = _hash_regular_artifact(root / relative)
++            staged_hash, staged_size = _hash_regular_artifact(root / PurePosixPath(*parent_parts, temporary))
++            if ((final.st_dev, final.st_ino) != (old_identity.get("device"), old_identity.get("inode"))
++                    or final_hash != old_sha256 or final_size != old_identity.get("size")
++                    or (staged.st_dev, staged.st_ino) != temporary_identity
++                    or staged_hash != expected_sha256 or staged_size != expected_size):
++                return False
++            return cleanup_temporary(temporary_identity)
++        except (OSError, ExecutionContractError, ValueError):
++            return False
++
++    try:
++        if not binding_matches():
++            raise PreWriteRefusal("ACCESS_VIOLATION", "project directory binding changed before overwrite")
++        old_fd = os.open(leaf, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0), dir_fd=parent_fd)
++        try:
++            old_before = os.fstat(old_fd)
++            old_hash, old_size, old_after = _hash_open_handle(old_fd)
++            if ((old_before.st_dev, old_before.st_ino) != (old_identity.get("device"), old_identity.get("inode"))
++                    or (old_after.st_dev, old_after.st_ino) != (old_before.st_dev, old_before.st_ino)
++                    or old_hash != old_sha256 or old_size != old_identity.get("size")):
++                raise PreWriteRefusal("ARTIFACT_CHANGED", "registered overwrite destination changed after preflight")
++        finally:
++            os.close(old_fd)
++        flags = os.O_RDWR | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
++        output_fd = os.open(temporary, flags, 0o600, dir_fd=parent_fd)
++        temporary_stat = os.fstat(output_fd)
++        temporary_identity = (temporary_stat.st_dev, temporary_stat.st_ino)
++        source_handle, source_before = _open_pinned_artifact(source)
++        try:
++            source_hash = hashlib.sha256()
++            source_size = 0
++            with os.fdopen(os.dup(output_fd), "wb", closefd=True) as output:
++                while True:
++                    block = source_handle.read(1024 * 1024)
++                    if not block:
++                        break
++                    source_size += len(block)
++                    if source_size > expected_size:
++                        raise ExecutionContractError("ARTIFACT_CHANGED", "saved MPH grew while staging overwrite")
++                    source_hash.update(block)
++                    output.write(block)
++                output.flush()
++                os.fsync(output.fileno())
++            _assert_pinned_artifact_stable(source, source_before, os.fstat(source_handle.fileno()))
++        finally:
++            source_handle.close()
++        if source_size != expected_size or source_hash.hexdigest() != expected_sha256:
++            raise ExecutionContractError("ARTIFACT_HASH_MISMATCH", "staged MPH differs from its verified SHA/size")
++        staged_hash, staged_size, staged_after = _hash_open_handle(output_fd)
++        if ((staged_after.st_dev, staged_after.st_ino) != temporary_identity
++                or staged_hash != expected_sha256 or staged_size != expected_size):
++            raise ExecutionContractError("ARTIFACT_HASH_MISMATCH", "staged overwrite failed same-handle readback")
++        os.fsync(output_fd)
++        if not binding_matches():
++            raise PreWriteRefusal("ACCESS_VIOLATION", "project directory binding changed before overwrite commit")
++        current_old = named_stat(leaf)
++        if ((current_old.st_dev, current_old.st_ino) != (old_identity.get("device"), old_identity.get("inode"))
++                or current_old.st_size != old_identity.get("size")):
++            raise PreWriteRefusal("ARTIFACT_CHANGED", "registered overwrite destination changed before commit")
++        _exchange_names(parent_fd, temporary, leaf)
++        swapped = True
++        os.fsync(parent_fd)
++        published = named_stat(leaf)
++        backup = named_stat(temporary)
++        published_hash, published_identity = _hash_regular_artifact(root / relative)
++        backup_path = root / PurePosixPath(*parent_parts, temporary)
++        backup_hash, backup_identity = _hash_regular_artifact(backup_path)
++        if ((published.st_dev, published.st_ino) != temporary_identity
++                or published_hash != expected_sha256 or published_identity["size"] != expected_size
++                or (backup.st_dev, backup.st_ino) != (old_identity.get("device"), old_identity.get("inode"))
++                or backup_hash != old_sha256 or backup_identity["size"] != old_identity.get("size")
++                or not binding_matches()):
++            if not rollback_exchange():
++                retained_backup = True
++                raise ExecutionContractError("OVERWRITE_STATE_UNKNOWN", "atomic overwrite readback failed and rollback could not be verified",
++                                             stage="post_dispatch", details={"safe_retry": False,
++                                                 "destination": relative, "recovery_path": backup_path.relative_to(root).as_posix()})
++            swapped = False
++            raise ExecutionContractError("OVERWRITE_ROLLED_BACK", "atomic overwrite failed readback and the original bytes were restored",
++                                         stage="post_dispatch", details={"safe_retry": False, "destination": relative})
++        retained_backup = True
++        return {"relative_path": relative, "backup_relative_path": backup_path.relative_to(root).as_posix(),
++                "backup_name": temporary, "parent_parts": list(parent_parts),
++                "directory_identity": [list(pair) for pair in directory_identity],
++                "old_sha256": old_sha256, "old_size_bytes": int(old_identity["size"]),
++                "old_identity": {"device": int(old_identity["device"]), "inode": int(old_identity["inode"])},
++                "new_sha256": expected_sha256, "new_size_bytes": expected_size,
++                "new_identity": {"device": temporary_identity[0], "inode": temporary_identity[1]}}
++    except BaseException:
++        if swapped:
++            if rollback_exchange():
++                swapped = False
++                retained_backup = False
++            else:
++                retained_backup = True
++                raise ExecutionContractError("OVERWRITE_STATE_UNKNOWN", "overwrite failed after exchange; preserve destination and retained bytes",
++                                             stage="post_dispatch", details={"safe_retry": False, "destination": relative,
++                                                 "recovery_path": (root / PurePosixPath(*parent_parts, temporary)).relative_to(root).as_posix()})
++        if not retained_backup:
++            cleanup_temporary(temporary_identity)
++        raise
++    finally:
++        try:
++            os.close(output_fd)  # noqa: F821 - initialized on the only path that reaches the staging block
++        except (OSError, UnboundLocalError):
++            pass
++        for descriptor in reversed(descriptors):
++            try:
++                os.close(descriptor)
++            except OSError:
++                pass
+ 
+ 
++def _finalize_overwrite(root: Path, receipt: Mapping[str, Any]) -> None:
++    """Remove the verified old-name backup after durable artifact registration."""
++    from ._artifact_store import _directory_binding_matches, _hash_regular_artifact, _open_directory_binding
++
++    relative = receipt["relative_path"]
++    parent_parts = tuple(receipt["parent_parts"])
++    expected_binding = tuple(tuple(pair) for pair in receipt["directory_identity"])
++    descriptors, _ = _open_directory_binding(root, parent_parts)
++    parent_fd = descriptors[-1]
++    backup_name = receipt["backup_name"]
++    try:
++        if not _directory_binding_matches(root, parent_parts, expected_binding):
++            raise ExecutionContractError("OVERWRITE_STATE_UNKNOWN", "project directory binding changed before old-byte cleanup",
++                                         stage="post_dispatch", details={"safe_retry": False,
++                                             "recovery_path": receipt["backup_relative_path"]})
++        backup = os.stat(backup_name, dir_fd=parent_fd, follow_symlinks=False)
++        expected = receipt["old_identity"]
++        digest, identity = _hash_regular_artifact(root / PurePosixPath(*parent_parts, backup_name))
++        if ((backup.st_dev, backup.st_ino) != (expected["device"], expected["inode"])
++                or digest != receipt["old_sha256"] or identity["size"] != receipt["old_size_bytes"]):
++            raise ExecutionContractError("OVERWRITE_STATE_UNKNOWN", "retained original bytes changed before cleanup",
++                                         stage="post_dispatch", details={"safe_retry": False,
++                                             "recovery_path": receipt["backup_relative_path"]})
++        os.unlink(backup_name, dir_fd=parent_fd)
++        os.fsync(parent_fd)
++        try:
++            os.stat(backup_name, dir_fd=parent_fd, follow_symlinks=False)
++        except FileNotFoundError:
++            pass
++        else:
++            raise ExecutionContractError("OVERWRITE_STATE_UNKNOWN", "retained original name remains after cleanup",
++                                         stage="post_dispatch", details={"safe_retry": False,
++                                             "recovery_path": receipt["backup_relative_path"]})
++    except OSError as exc:
++        raise ExecutionContractError("OVERWRITE_STATE_UNKNOWN", "old-byte backup cleanup could not be verified",
++                                     stage="post_dispatch", details={"safe_retry": False,
++                                         "cause_type": type(exc).__name__,
++                                         "recovery_path": receipt["backup_relative_path"]}) from exc
++    finally:
++        for descriptor in reversed(descriptors):
++            try:
++                os.close(descriptor)
++            except OSError:
++                pass
++
++
++def _rollback_registered_overwrite(root: Path, receipt: Mapping[str, Any]) -> bool:
++    """Restore the prior registered bytes if later registration fails."""
++    from ._artifact_store import _directory_binding_matches, _hash_regular_artifact, _open_directory_binding
++
++    relative = receipt["relative_path"]
++    parent_parts = tuple(receipt["parent_parts"])
++    expected_binding = tuple(tuple(pair) for pair in receipt["directory_identity"])
++    descriptors, _ = _open_directory_binding(root, parent_parts)
++    parent_fd = descriptors[-1]
++    backup_name = receipt["backup_name"]
++    try:
++        if not _directory_binding_matches(root, parent_parts, expected_binding):
++            return False
++        current = os.stat(relative.rsplit("/", 1)[-1], dir_fd=parent_fd, follow_symlinks=False)
++        backup = os.stat(backup_name, dir_fd=parent_fd, follow_symlinks=False)
++        if ((current.st_dev, current.st_ino) != (receipt["new_identity"]["device"], receipt["new_identity"]["inode"])
++                or (backup.st_dev, backup.st_ino) != (receipt["old_identity"]["device"], receipt["old_identity"]["inode"])):
++            return False
++        _exchange_names(parent_fd, backup_name, relative.rsplit("/", 1)[-1])
++        os.fsync(parent_fd)
++        original_hash, original_identity = _hash_regular_artifact(root / relative)
++        staged_hash, staged_identity = _hash_regular_artifact(root / receipt["backup_relative_path"])
++        if (original_hash != receipt["old_sha256"] or original_identity["size"] != receipt["old_size_bytes"]
++                or staged_hash != receipt["new_sha256"] or staged_identity["size"] != receipt["new_size_bytes"]):
++            return False
++        os.unlink(backup_name, dir_fd=parent_fd)
++        os.fsync(parent_fd)
++        try:
++            os.stat(backup_name, dir_fd=parent_fd, follow_symlinks=False)
++        except FileNotFoundError:
++            return True
++        return False
++    except (OSError, ExecutionContractError, ValueError):
++        return False
++    finally:
++        for descriptor in reversed(descriptors):
++            try:
++                os.close(descriptor)
++            except OSError:
++                pass
++
++
+ def tree(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+     body, context = _arguments(arguments, {"path", "depth", "cursor", "limit"})
+     _model_state(context, model_tag)
+@@ -263,11 +649,13 @@
+         raise PreWriteRefusal("INVALID_REQUEST", "destination must be nonempty and project-relative")
+     if type(overwrite) is not bool or type(include_solution) is not bool:
+         raise PreWriteRefusal("INVALID_REQUEST", "overwrite and include_solution must be booleans")
++    destination_lexical = PurePosixPath(destination)
++    if (destination_lexical.is_absolute() or destination_lexical.as_posix() != destination
++            or "\\" in destination or any(part in {"", ".", ".."} for part in destination.split("/"))):
++        raise PreWriteRefusal("INVALID_DESTINATION", "destination must use canonical project-relative POSIX syntax")
+     root = Path(context["project_root"]).resolve(strict=True)
+     from ._artifact_store import ArtifactStore
+-    # Validate destination before dispatch. The publisher is the authoritative
+-    # no-clobber commit point; overwrite=true only permits idempotent reuse of
+-    # an exact registered file, never replacement of different bytes.
++    # Validate the destination and its durable ownership before dispatch.
+     store = ArtifactStore(root)
+     try:
+         target = store.resolve_safe_path(destination, allow_overwrite=overwrite)
+@@ -282,17 +670,20 @@
+         raise PreWriteRefusal("INVALID_DESTINATION", "model.save requires an existing project-local destination directory")
+     relative = target.relative_to(root).as_posix()
+     existing_record = None
++    old_digest = None
++    old_identity = None
+     if target.exists():
+-        existing_record = next((row for row in context["operation_store"].list_metadata("artifacts")
+-                                if row.get("role") == MODEL_SAVE_ROLE
+-                                and isinstance(row.get("provenance"), Mapping)
+-                                and row["provenance"].get("source_project_relative_path") == relative), None)
+-        if not overwrite or existing_record is None or existing_record.get("project_id") != context["project_id"]:
++        if not overwrite:
+             raise PreWriteRefusal("DESTINATION_EXISTS", "existing destination is not an owned registered saved_model; it cannot be overwritten")
++        existing_record, old_digest, old_identity = _registered_overwrite_target(context, store, target, relative)
++        if sys.platform not in {"darwin", "linux"}:
++            raise PreWriteRefusal("OVERWRITE_PLATFORM_UNSUPPORTED", "safe atomic overwrite is unavailable on this platform")
+     scratch = Path(tempfile.mkdtemp(prefix="model-save-", dir=root))
+     source = scratch / "model.mph"
+     dispatched = False
+     succeeded = False
++    overwrite_receipt = None
++    registration_succeeded = False
+     stage = "preflight"
+     try:
+         live_model = worker.client().model(model_tag).java
+@@ -311,13 +702,11 @@
+             raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "saveCopy changed the live model filepath",
+                                          stage="post_dispatch", details={"before": before_path, "after": after_path,
+                                                                           "safe_retry": False})
+-        if target.exists():
+-            stage = "overwrite_readback"
+-            from ._artifact_store import _hash_regular_artifact as hash_regular
+-            current_sha, _ = hash_regular(target)
+-            if current_sha != sha:
+-                raise PreWriteRefusal("OVERWRITE_UNSAFE", "overwrite is limited to identical registered saved-model bytes")
+-            published = {"sha256": sha, "size_bytes": size, "reused_existing": True}
++        if existing_record is not None:
++            stage = "overwrite_publish"
++            overwrite_receipt = _atomic_exchange_publish(root, relative, source,
++                expected_sha256=sha, expected_size=size, old_sha256=str(old_digest), old_identity=old_identity)
++            published = {"sha256": sha, "size_bytes": size, "reused_existing": False}
+         else:
+             stage = "publish"
+             receipt_publish = publish_project_file_no_clobber(root, relative, source,
+@@ -325,12 +714,26 @@
+             published = {"sha256": receipt_publish["sha256"], "size_bytes": receipt_publish["size_bytes"],
+                          "reused_existing": False}
+         stage = "register"
+-        registration = _register_saved_model(context, relative, sha256=sha, size=size)
++        try:
++            registration = _register_saved_model(context, relative, sha256=sha, size=size)
++            registration_succeeded = True
++        except Exception:
++            if overwrite_receipt is not None and not _rollback_registered_overwrite(root, overwrite_receipt):
++                raise ExecutionContractError("OVERWRITE_STATE_UNKNOWN", "artifact registration failed after overwrite; the prior destination could not be restored",
++                                             stage="post_dispatch", details={"safe_retry": False,
++                                                 "destination": relative,
++                                                 "recovery_path": overwrite_receipt["backup_relative_path"]})
++            overwrite_receipt = None
++            raise
++        if overwrite_receipt is not None:
++            stage = "overwrite_finalize"
++            _finalize_overwrite(root, overwrite_receipt)
++            overwrite_receipt = None
+         succeeded = True
+         return {"status": "SAVED", "model_ref": context["model_ref"], "source_revision": context["source_revision"],
+                 "destination": relative, "artifact_id": registration["artifact_id"], "sha256": sha,
+                 "size_bytes": size, "include_solution": include_solution, "overwrite": overwrite,
+-                "overwrite_policy": "IDENTICAL_REGISTERED_BYTES_ONLY", "publication": published,
++                "overwrite_policy": "OWNED_REGISTERED_TARGET_ATOMIC_EXCHANGE", "publication": published,
+                 "live_filepath_preserved": True}
+     except Exception as exc:
+         receipt_path = scratch / "failure_receipt.json"
+@@ -342,6 +745,11 @@
+                        "stage": stage, "dispatched": True, "safe_retry": False,
+                        "cause_type": type(exc).__name__, "cause_code": getattr(exc, "code", None),
+                        "cause_message": str(exc)[:500]}
++            if overwrite_receipt is not None:
++                payload["overwrite_recovery"] = {"backup_path": overwrite_receipt.get("backup_relative_path"),
++                                                  "old_sha256": overwrite_receipt.get("old_sha256"),
++                                                  "new_sha256": overwrite_receipt.get("new_sha256"),
++                                                  "registration_succeeded": registration_succeeded}
+             if source.is_file():
+                 from ._artifact_store import _hash_regular_artifact
+                 digest, identity = _hash_regular_artifact(source)
+@@ -582,7 +990,8 @@
+         raise PreWriteRefusal("ARTIFACT_CHANGED", "registered source identity changed during its pinned read")
+ 
+ 
+-def _test_runtime_observation(context: Mapping[str, Any], record: Mapping[str, Any], *, expected_version: str) -> dict[str, Any] | None:
++def _test_runtime_observation(context: Mapping[str, Any], record: Mapping[str, Any], *, expected_version: str,
++                              require_current_worker: bool) -> dict[str, Any] | None:
+     metadata = record.get("metadata")
+     binding = metadata.get("runtime_binding") if isinstance(metadata, Mapping) else None
+     result = record.get("result")
+@@ -595,25 +1004,71 @@
+     if (not isinstance(observation, Mapping) or observation.get("schema") != "comsol-worker-runtime-observation/v1"
+             or observation.get("status") != "OBSERVED" or observation.get("comsol_version") != expected_version
+             or not isinstance(identity, Mapping) or not isinstance(binding, Mapping)
+-            or not isinstance(bound_identity, Mapping) or service is None):
++            or service is None):
+         return None
+     identity_fields = ("runtime_id", "worker_instance_id", "connection_epoch", "server_instance_id", "endpoint")
+-    if any(identity.get(name) != bound_identity.get(name) for name in identity_fields):
++    if (not all(isinstance(identity.get(name), str) and identity.get(name)
++                for name in ("runtime_id", "worker_instance_id", "server_instance_id", "endpoint"))
++            or type(identity.get("connection_epoch")) is not int or identity["connection_epoch"] < 1):
+         return None
+-    if (identity.get("server_instance_id") != service.ledger.server_instance_id
+-            or identity.get("endpoint") != getattr(backend, "endpoint_key", None)
+-            or binding.get("worker_instance_id") != identity.get("worker_instance_id")
++    result_model_ref = execution.get("model_ref") if isinstance(execution, Mapping) else None
++    if (binding.get("worker_instance_id") != identity.get("worker_instance_id")
+             or binding.get("worker_epoch") != identity.get("connection_epoch")):
+         return None
+     if binding.get("endpoint") is not None and binding.get("endpoint") != identity.get("endpoint"):
++        return None
++    # The durable observation is historical provenance. Its runtime binding,
++    # outer execution identity and exact ModelRef must agree with one another,
++    # but a later recipe run may use a new Worker/session or a relocated
++    # project. Only registration requires the original target to remain live.
++    if (binding.get("project_id") != context.get("project_id")
++            or not isinstance(binding.get("session_id"), str) or not binding.get("session_id")
++            or not isinstance(result_model_ref, Mapping)
++            or result_model_ref.get("session_id") != binding.get("session_id")
++            or result_model_ref.get("server_instance_id") != identity.get("server_instance_id")):
+         return None
++    if require_current_worker:
++        if not isinstance(bound_identity, Mapping):
++            return None
++        if any(identity.get(name) != bound_identity.get(name) for name in identity_fields):
++            return None
++        if (identity.get("server_instance_id") != service.ledger.server_instance_id
++                or identity.get("endpoint") != getattr(backend, "endpoint_key", None)
++                or binding.get("session_id") != service.ledger.session_id):
++            return None
+     return {"comsol_version": expected_version,
+             "runtime_identity": {name: identity.get(name) for name in identity_fields}}
++
++
++def _worker_source_path_matches(source_artifact: Any, registered_relative_path: str) -> bool:
++    """Bind a historical Worker path to the content-addressed relative name.
++
++    The durable event records the absolute path seen by the old Worker. That
++    absolute root may legitimately change after project relocation; its final
++    registered-artifact components remain stable and are sufficient here
++    because the independent host-minted execution result binds the source SHA.
++    """
++    if not isinstance(source_artifact, str) or not source_artifact:
++        return False
++    expected_posix = PurePosixPath(registered_relative_path)
++    raw_posix = PurePosixPath(source_artifact)
++    if raw_posix.is_absolute() and not any(part == ".." for part in raw_posix.parts):
++        parts = raw_posix.parts
++        expected = expected_posix.parts
++        if len(parts) >= len(expected) and parts[-len(expected):] == expected:
++            return True
++    raw_windows = PureWindowsPath(source_artifact)
++    if raw_windows.is_absolute() and not any(part == ".." for part in raw_windows.parts):
++        parts = tuple(part.casefold() for part in raw_windows.parts)
++        expected = tuple(part.casefold() for part in expected_posix.parts)
++        if len(parts) >= len(expected) and parts[-len(expected):] == expected:
++            return True
++    return False
+ 
+ 
+ def _validate_test_refs(context: Mapping[str, Any], refs: Any, *, source_sha256: str,
+-                        source_artifact_id: str, source_path: str, worker_source_path: str, entrypoint: str,
+-                        expected_version: str) -> list[dict[str, Any]]:
++                        source_artifact_id: str, source_path: str, entrypoint: str,
++                        expected_version: str, require_current_worker: bool) -> list[dict[str, Any]]:
+     if not isinstance(refs, list) or not refs or len(refs) > 64:
+         raise PreWriteRefusal("RECIPE_TEST_REQUIRED", "test_refs must contain 1 to 64 durable test operation ids")
+     if any(not isinstance(ref, str) or not ref or len(ref) > 128 for ref in refs) or len(set(refs)) != len(refs):
+@@ -670,7 +1125,7 @@
+                     and isinstance(sent_payload, Mapping)
+                     and isinstance(received_payload, Mapping)
+                     and sent_payload == received_payload
+-                    and sent_payload.get("source_artifact") == worker_source_path
++                    and _worker_source_path_matches(sent_payload.get("source_artifact"), source_path)
+                     and sent_payload.get("entrypoint") == entrypoint
+                     and isinstance(model_ref, Mapping)
+                     and sent_payload.get("tag") == model_ref.get("model_tag")
+@@ -729,13 +1184,15 @@
+         except Exception as exc:
+             raise PreWriteRefusal("RECIPE_TEST_UNVERIFIED", "test_ref has an invalid exact ModelRef",
+                                   details={"test_ref": ref}) from exc
+-        binding = context["backend"].model_project_binding(bound_ref.as_dict())
+-        if (binding != {"attribution": "PROJECT_BOUND", "project_id": context["project_id"]}
+-                or bound_ref.server_instance_id != context["execution_service"].ledger.server_instance_id
+-                or bound_ref.session_id != context["execution_service"].ledger.session_id):
+-            raise PreWriteRefusal("RECIPE_TEST_UNVERIFIED", "test_ref ModelRef is not bound to this project and attached server",
+-                                  details={"test_ref": ref})
+-        runtime = _test_runtime_observation(context, record, expected_version=expected_version)
++        if require_current_worker:
++            binding = context["backend"].model_project_binding(bound_ref.as_dict())
++            if (binding != {"attribution": "PROJECT_BOUND", "project_id": context["project_id"]}
++                    or bound_ref.server_instance_id != context["execution_service"].ledger.server_instance_id
++                    or bound_ref.session_id != context["execution_service"].ledger.session_id):
++                raise PreWriteRefusal("RECIPE_TEST_UNVERIFIED", "test_ref ModelRef is not bound to this project and attached server",
++                                      details={"test_ref": ref})
++        runtime = _test_runtime_observation(context, record, expected_version=expected_version,
++                                            require_current_worker=require_current_worker)
+         if runtime is None:
+             raise PreWriteRefusal("RECIPE_TEST_UNVERIFIED", "test_ref has no exact observed runtime identity for the attached Worker",
+                                   details={"test_ref": ref, "scope": "EXECUTION_SMOKE"})
+@@ -774,8 +1231,7 @@
+     evidence = _validate_test_refs(context, body.get("test_refs"), source_sha256=resolved["sha256"],
+                                    source_artifact_id=resolved["artifact_id"],
+                                    source_path=resolved["relative_path"], entrypoint=description["entrypoint"],
+-                                   worker_source_path=description["source_artifact"],
+-                                   expected_version=exact_version)
++                                   expected_version=exact_version, require_current_worker=True)
+     recipe = {
+         "schema": MODEL_RECIPE_SCHEMA,
+         "version": 1,
+@@ -900,8 +1356,8 @@
+         raise PreWriteRefusal("ARTIFACT_HASH_MISMATCH", "recipe source no longer matches the registered source SHA/entrypoint")
+     evidence = _validate_test_refs(context, recipe["test_refs"], source_sha256=source["sha256"],
+                                    source_artifact_id=source["artifact_id"], source_path=source["relative_path"],
+-                                   worker_source_path=description["source_artifact"],
+-                                   entrypoint=description["entrypoint"], expected_version=actual_version)
++                                   entrypoint=description["entrypoint"], expected_version=actual_version,
++                                   require_current_worker=False)
+     if evidence != recipe["accepted_test_evidence"]:
+         raise PreWriteRefusal("RECIPE_TEST_UNVERIFIED", "registered execution-smoke evidence differs from current durable records")
+     model = worker.client().model(model_tag)
+--- a/tests/test_g3_managed_models.py
++++ b/tests/test_g3_managed_models.py
+@@ -32,6 +32,7 @@
+         self._tag = tag
+         self._path = path
+         self._label = tag
++        self._save_payload = b"synthetic saved model"
+         self.calls = []
+         self.java = self
+ 
+@@ -61,7 +62,7 @@
+         if method == "saveModelPackage":
+             target, _include_solution = args
+             with zipfile.ZipFile(target, "w") as archive:
+-                archive.writestr("model/fixture.txt", "synthetic saved model")
++                archive.writestr("model/fixture.txt", self._save_payload)
+             return {"saved": True, "live_filepath_preserved": True}
+         raise AssertionError(f"unexpected model call: {method}")
+ 
+@@ -114,6 +115,8 @@
+         self.removed = []
+         self._active_operation_id = ""
+         self._active_event_callback = None
++        self.instance_id = "worker-1"
++        self.worker_generation = 1
+         self._client = _Client(self)
+ 
+     def client(self):
+@@ -130,7 +133,8 @@
+             self._active_operation_id, self._active_event_callback = previous
+ 
+     def runtime_metadata(self):
+-        return {"connected": True, "server": self.endpoint, "instance_id": "worker-1", "generation": 1}
++        return {"connected": True, "server": self.endpoint, "instance_id": self.instance_id,
++                "generation": self.worker_generation}
+ 
+     def model_snapshot(self, tag):
+         if tag not in self.models:
+@@ -275,8 +279,55 @@
+     assert Path(env["worker"].models["mcp_load1"]._path) == Path(artifact["resolved_path"])
+     assert env["backend"].model_project_binding(result["model_ref"]) == {
+         "attribution": "PROJECT_BOUND", "project_id": "project-1"}
++
++
++def test_load_accepts_registered_restored_mph_without_typed_metadata(env):
++    restored = env["root"] / "restore" / "recovered.mph"
++    restored.parent.mkdir()
++    with zipfile.ZipFile(restored, "w") as archive:
++        archive.writestr("model/fixture.txt", "restored model bytes")
++    artifact = register_project_artifact(
++        env["root"], env["store"], "restore/recovered.mph", project_id="project-1", role="restored_model",
++        classification="project_local", host_identity=env["context"]["host_identity"],
++        engine_host_identity=env["context"]["engine_host_identity"], request_id="restore-register",
++        registering_operation_id="artifact.register")
++    before = set(env["worker"].models)
++    result = models.load_model(env["worker"], "", _args(env["context"], artifact_id=artifact["artifact_id"]))
++    assert result["status"] == "LOADED"
++    assert result["model_tag"] == "mcp_load1"
++    assert set(env["worker"].models) == before | {"mcp_load1"}
++    assert Path(env["worker"].models["mcp_load1"]._path) == Path(artifact["resolved_path"])
+ 
+ 
++def test_load_rejects_registered_non_mph_metadata_before_engine(env):
++    saved = env["root"] / "wrong.mph"
++    with zipfile.ZipFile(saved, "w") as archive:
++        archive.writestr("model/fixture.txt", "registered archive")
++    artifact = register_project_artifact(
++        env["root"], env["store"], "wrong.mph", project_id="project-1", role="restored_model",
++        classification="project_local", host_identity=env["context"]["host_identity"],
++        engine_host_identity=env["context"]["engine_host_identity"], request_id="wrong-register",
++        registering_operation_id="artifact.register", artifact_type="application/zip", format_version="zip/1")
++    with pytest.raises(Exception) as error:
++        models.load_model(env["worker"], "", _args(env["context"], artifact_id=artifact["artifact_id"]))
++    assert getattr(error.value, "code", None) == "ARTIFACT_ROLE_MISMATCH"
++    assert set(env["worker"].models) == {"m", "foreign"}
++
++
++def test_load_rejects_unreadable_registered_mph_before_engine(env):
++    malformed = env["root"] / "malformed.mph"
++    malformed.write_bytes(b"not a COMSOL MPH archive")
++    artifact = register_project_artifact(
++        env["root"], env["store"], "malformed.mph", project_id="project-1", role="restored_model",
++        classification="project_local", host_identity=env["context"]["host_identity"],
++        engine_host_identity=env["context"]["engine_host_identity"], request_id="malformed-register",
++        registering_operation_id="artifact.register")
++    with pytest.raises(Exception) as error:
++        models.load_model(env["worker"], "", _args(env["context"], artifact_id=artifact["artifact_id"]))
++    assert getattr(error.value, "code", None) == "MODEL_FORMAT_UNVERIFIED"
++    assert set(env["worker"].models) == {"m", "foreign"}
++
++
+ def test_load_rejects_unregistered_or_wrong_role_artifact_before_engine(env):
+     with pytest.raises(Exception) as error:
+         models.load_model(env["worker"], "", _args(env["context"], artifact_id="a" * 64))
+@@ -318,19 +369,116 @@
+     assert env["worker"].models["m"].calls[0][0] == "getFilePath"
+ 
+ 
+-def test_save_no_clobber_and_safe_identical_overwrite(env):
++def test_save_no_clobber_and_atomic_overwrite_of_owned_registered_target(env):
+     (env["root"] / "exports").mkdir()
+     first = models.save_model(env["worker"], "m", _args(env["context"], destination="exports/model.mph", overwrite=False))
+     with pytest.raises(Exception) as error:
+         models.save_model(env["worker"], "m", _args(env["context"], destination="exports/model.mph", overwrite=False))
+     assert getattr(error.value, "code", None) == "DESTINATION_EXISTS"
+-    # A requested overwrite is accepted only when the existing path is an
+-    # exact registered saved_model and the newly saved bytes are identical.
++    old_bytes = (env["root"] / "exports" / "model.mph").read_bytes()
++    env["worker"].models["m"]._save_payload = b"updated synthetic model bytes"
+     second = models.save_model(env["worker"], "m", _args(env["context"], destination="exports/model.mph", overwrite=True))
+-    assert second["sha256"] == first["sha256"]
+-    assert second["publication"]["reused_existing"] is True
++    assert second["sha256"] != first["sha256"]
++    assert second["publication"]["reused_existing"] is False
++    assert second["overwrite_policy"] == "OWNED_REGISTERED_TARGET_ATOMIC_EXCHANGE"
++    assert hashlib.sha256((env["root"] / "exports" / "model.mph").read_bytes()).hexdigest() == second["sha256"]
++    old_record = env["store"].get_metadata("artifacts", first["artifact_id"])
++    assert (env["root"] / old_record["path"]).read_bytes() == old_bytes
++    assert not list((env["root"] / "exports").glob(".model-save-*.partial"))
+ 
+ 
++def test_save_overwrite_refuses_unregistered_or_tampered_target_before_engine(env):
++    exports = env["root"] / "exports"
++    exports.mkdir()
++    unregistered = exports / "unregistered.mph"
++    unregistered.write_bytes(b"foreign bytes")
++    before_calls = list(env["worker"].models["m"].calls)
++    with pytest.raises(Exception) as unregistered_error:
++        models.save_model(env["worker"], "m", _args(env["context"], destination="exports/unregistered.mph", overwrite=True))
++    assert getattr(unregistered_error.value, "code", None) == "OVERWRITE_UNSAFE"
++    assert env["worker"].models["m"].calls == before_calls
++
++    result = models.save_model(env["worker"], "m", _args(env["context"], destination="exports/tampered.mph", overwrite=False))
++    tampered = exports / "tampered.mph"
++    tampered.write_bytes(b"changed after registration")
++    before_calls = list(env["worker"].models["m"].calls)
++    with pytest.raises(Exception) as tampered_error:
++        models.save_model(env["worker"], "m", _args(env["context"], destination="exports/tampered.mph", overwrite=True))
++    assert getattr(tampered_error.value, "code", None) == "OVERWRITE_UNSAFE"
++    assert env["worker"].models["m"].calls == before_calls
++    assert result["status"] == "SAVED"
++
++    foreign_path = exports / "foreign.mph"
++    with zipfile.ZipFile(foreign_path, "w") as archive:
++        archive.writestr("model/fixture.txt", "another project")
++    register_project_artifact(
++        env["root"], env["store"], "exports/foreign.mph", project_id="project-2", role=models.MODEL_SAVE_ROLE,
++        classification="project_local", host_identity=env["context"]["host_identity"],
++        engine_host_identity=env["context"]["engine_host_identity"], request_id="foreign-register",
++        registering_operation_id="model.save", artifact_type=models.MODEL_SAVE_FORMAT,
++        format_version="comsol-mph-savecopy/1")
++    before_calls = list(env["worker"].models["m"].calls)
++    with pytest.raises(Exception) as foreign_error:
++        models.save_model(env["worker"], "m", _args(env["context"], destination="exports/foreign.mph", overwrite=True))
++    assert getattr(foreign_error.value, "code", None) == "OVERWRITE_UNSAFE"
++    assert env["worker"].models["m"].calls == before_calls
++
++
++def test_save_overwrite_refuses_symlink_and_lexical_alias_before_engine(env):
++    exports = env["root"] / "exports"
++    exports.mkdir()
++    models.save_model(env["worker"], "m", _args(env["context"], destination="exports/model.mph", overwrite=False))
++    symlink = exports / "linked.mph"
++    symlink.symlink_to(exports / "model.mph")
++    before_calls = list(env["worker"].models["m"].calls)
++    with pytest.raises(Exception) as link_error:
++        models.save_model(env["worker"], "m", _args(env["context"], destination="exports/linked.mph", overwrite=True))
++    assert getattr(link_error.value, "code", None) == "ACCESS_VIOLATION"
++    with pytest.raises(Exception) as alias_error:
++        models.save_model(env["worker"], "m", _args(env["context"], destination="exports/../exports/model.mph", overwrite=True))
++    assert getattr(alias_error.value, "code", None) == "INVALID_DESTINATION"
++    assert env["worker"].models["m"].calls == before_calls
++
++
++def test_save_overwrite_refuses_hardlink_alias_of_registered_blob_before_engine(env):
++    exports = env["root"] / "exports"
++    exports.mkdir()
++    alias = exports / "alias.mph"
++    with zipfile.ZipFile(alias, "w") as archive:
++        archive.writestr("model/fixture.txt", "hardlink alias fixture")
++    artifact = register_project_artifact(
++        env["root"], env["store"], "exports/alias.mph", project_id="project-1", role=models.MODEL_SAVE_ROLE,
++        classification="project_local", host_identity=env["context"]["host_identity"],
++        engine_host_identity=env["context"]["engine_host_identity"], request_id="alias-register",
++        registering_operation_id="model.save", artifact_type=models.MODEL_SAVE_FORMAT,
++        format_version="comsol-mph-savecopy/1")
++    registered_blob = env["root"] / artifact["path"]
++    alias.unlink()
++    alias.hardlink_to(registered_blob)
++    before_calls = list(env["worker"].models["m"].calls)
++    with pytest.raises(Exception) as error:
++        models.save_model(env["worker"], "m", _args(env["context"], destination="exports/alias.mph", overwrite=True))
++    assert getattr(error.value, "code", None) == "OVERWRITE_UNSAFE"
++    assert env["worker"].models["m"].calls == before_calls
++
++
++def test_save_overwrite_restores_original_when_registration_fails(monkeypatch, env):
++    (env["root"] / "exports").mkdir()
++    first = models.save_model(env["worker"], "m", _args(env["context"], destination="exports/model.mph", overwrite=False))
++    target = env["root"] / "exports" / "model.mph"
++    original = target.read_bytes()
++    env["worker"].models["m"]._save_payload = b"replacement whose registration will fail"
++    monkeypatch.setattr(models, "_register_saved_model", lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("injected registration failure")))
++    with pytest.raises(Exception) as error:
++        models.save_model(env["worker"], "m", _args(env["context"], destination="exports/model.mph", overwrite=True))
++    assert getattr(error.value, "code", None) == "EXECUTION_STATE_UNKNOWN"
++    assert target.read_bytes() == original
++    assert env["store"].get_metadata("artifacts", first["artifact_id"]) is not None
++    receipts = list(env["root"].glob("model-save-*/failure_receipt.json"))
++    assert len(receipts) == 1
++    assert json.loads(receipts[0].read_text())["stage"] == "register"
++
++
+ def test_clone_uses_typed_loadcopy_and_leaves_source_unchanged(env):
+     before = env["worker"].backend_snapshot("m")
+     result = models.clone_model(env["worker"], "m", _args(env["context"], label="Clone", include_solution=True))
+@@ -369,6 +517,15 @@
+     assert "m" in env["worker"].models
+ 
+ 
++def test_historical_recipe_worker_path_survives_project_relocation_but_stays_content_addressed():
++    digest = "a" * 64
++    rel = f"g2_artifacts/registered/{digest}.java"
++    assert models._worker_source_path_matches(f"/old/project/{rel}", rel)
++    assert models._worker_source_path_matches(f"/new/moved/project/{rel}", rel)
++    assert not models._worker_source_path_matches(f"/new/moved/project/src/Recipe.java", rel)
++    assert not models._worker_source_path_matches(f"/new/moved/project/../{rel}", rel)
++
++
+ def _register_source(env, payload: bytes, rel="src/Recipe.java"):
+     path = env["root"] / rel
+     path.parent.mkdir(parents=True, exist_ok=True)
+@@ -498,7 +655,19 @@
+         assert saved["success"] is True, saved
+         assert saved["data"]["include_solution"] is True
+         assert saved["data"]["live_filepath_preserved"] is True
++        revision = service.ledger._models["mcp1"].revision
+ 
++        original_sha = saved["data"]["sha256"]
++        worker.models["mcp1"]._save_payload = b"ControlDaemon overwrite software fixture"
++        overwritten = _dispatch_managed(daemon, "model.save", {
++            "destination": "exports/model.mph", "overwrite": True,
++        }, project_id=project_id, session_id=session_id, model_ref=ref, revision=revision,
++           request_id="model-save-overwrite", idempotency_key="model-save-overwrite")
++        assert overwritten["success"] is True, overwritten
++        assert overwritten["data"]["sha256"] != original_sha
++        assert hashlib.sha256((project_root / "exports" / "model.mph").read_bytes()).hexdigest() == overwritten["data"]["sha256"]
++        saved = overwritten
++
+         loaded = _dispatch_managed(daemon, "model.load", {"artifact_id": saved["data"]["artifact_id"]},
+             project_id=project_id, session_id=session_id, request_id="model-load", idempotency_key="model-load")
+         assert loaded["success"] is True, loaded
+@@ -506,13 +675,30 @@
+         assert loaded_ref["model_tag"] == "mcp_load2"
+         assert loaded["data"]["artifact_id"] == saved["data"]["artifact_id"]
+ 
++        restored_dir = project_root / "restore"
++        restored_dir.mkdir()
++        with zipfile.ZipFile(restored_dir / "recovered.mph", "w") as archive:
++            archive.writestr("model/fixture.txt", "restored model bytes")
++        registered = _dispatch_managed(daemon, "artifact.register", {
++            "project_id": project_id, "idempotency_key": "register-restored-mph",
++            "path": "restore/recovered.mph", "role": "restored_model", "classification": "project_local",
++        }, project_id=project_id, session_id=session_id, request_id="register-restored-mph",
++           idempotency_key="register-restored-mph")
++        assert registered["success"] is True, registered
++        restored = _dispatch_managed(daemon, "model.load", {"artifact_id": registered["data"]["artifact_id"]},
++            project_id=project_id, session_id=session_id, request_id="load-restored-mph",
++            idempotency_key="load-restored-mph")
++        assert restored["success"] is True, restored
++        assert restored["execution"]["model_ref"]["model_tag"] == "mcp_load3"
++        assert "mcp1" in worker.models and "foreign" in worker.models
++
+         revision = service.ledger._models["mcp1"].revision
+         cloned = _dispatch_managed(daemon, "model.clone", {"label": "Clone"}, project_id=project_id,
+             session_id=session_id, model_ref=ref, revision=revision, request_id="model-clone",
+             idempotency_key="model-clone")
+         assert cloned["success"] is True, cloned
+         clone_ref = cloned["data"]["model_ref"]
+-        assert clone_ref["model_tag"] == "mcp_clone3"
++        assert clone_ref["model_tag"] == "mcp_clone4"
+         assert cloned["data"]["source_preserved"] is True
+         assert "mcp1" in worker.models and clone_ref["model_tag"] in worker.models
+ 
+@@ -606,6 +792,41 @@
+         assert invalid["error"]["code"] == "RECIPE_ARGUMENTS_INVALID"
+         assert len(worker.executions) == 2
+ 
++        # The execution-smoke record is historical provenance. Closing the
++        # tested ModelRef, making a fresh target, and reconnecting a new
++        # Worker epoch must not invalidate the registered recipe.
++        source_revision = service.ledger._models["mcp1"].revision
++        closed_source = _dispatch_managed(daemon, "model.close", {"discard_changes": False},
++            project_id=project_id, session_id=session_id, model_ref=ref, revision=source_revision,
++            request_id="recipe-smoke-model-close", idempotency_key="recipe-smoke-model-close")
++        assert closed_source["success"] is True, closed_source
++        replacement = _dispatch_managed(daemon, "model.create", {"label": "Recipe target", "dimension": 2},
++            project_id=project_id, session_id=session_id, request_id="recipe-target-create",
++            idempotency_key="recipe-target-create")
++        assert replacement["success"] is True, replacement
++        target_ref = replacement["execution"]["model_ref"]
++        endpoint = "127.0.0.1:25433"
++        worker.endpoint = endpoint
++        daemon.backend.endpoint_key = endpoint
++        worker.instance_id = "worker-reconnected"
++        worker.worker_generation = 2
++        daemon.backend.worker_identity = {
++            "runtime_id": runtime_id_for_root(install_root),
++            "worker_instance_id": "worker-reconnected", "connection_epoch": 2,
++            "server_instance_id": "server-daemon", "endpoint": endpoint,
++        }
++        replay_on_new_target = _dispatch_managed(daemon, "code.recipe_run", {
++            "recipe_id": recipe_id, "arguments": {"count": 4}},
++            project_id=project_id, session_id=session_id, model_ref=target_ref,
++            revision=service.ledger._models[target_ref["model_tag"]].revision,
++            request_id="recipe-run-new-target", idempotency_key="recipe-run-new-target")
++        assert replay_on_new_target["success"] is True, replay_on_new_target
++        assert replay_on_new_target["data"]["status"] == "EXECUTED"
++        assert [row["test_ref"] for row in replay_on_new_target["data"]["test_refs"]] == [
++            execute["execution"]["operation_id"]]
++        assert worker.executions[-1][0] == target_ref["model_tag"]
++        assert worker.executions[-1][3] == {"count": 4}
++
+         # A later duplicate/tampered durable Worker event must not make the
+         # already accepted test reference reusable as trusted evidence.
+         job_id = daemon.store.operation_job(execute["execution"]["operation_id"])["job_id"]
+@@ -621,11 +842,11 @@
+             "input_schema": {"type": "object", "properties": {"count": {"type": "integer"}},
+                              "required": ["count"], "additionalProperties": False},
+             "test_refs": [execute["execution"]["operation_id"]],
+-        }, project_id=project_id, session_id=session_id, model_ref=ref,
+-            revision=service.ledger._models["mcp1"].revision, request_id="recipe-register-tampered",
++        }, project_id=project_id, session_id=session_id, model_ref=target_ref,
++            revision=service.ledger._models[target_ref["model_tag"]].revision, request_id="recipe-register-tampered",
+             idempotency_key="recipe-register-tampered")
+         assert tampered["success"] is False
+         assert tampered["error"]["code"] == "RECIPE_TEST_UNVERIFIED"
+-        assert len(worker.executions) == 2
++        assert len(worker.executions) == 3
+     finally:
+         daemon.close()

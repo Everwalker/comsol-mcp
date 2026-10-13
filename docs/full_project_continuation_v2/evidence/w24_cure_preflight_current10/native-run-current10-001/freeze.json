@@ -1,0 +1,1255 @@
+{
+  "status": "FROZEN_BEFORE_NATIVE_BIRTH",
+  "frozen_at_utc": "2026-10-12T15:41:19.698333+08:00",
+  "candidate_id": "W24-CURE-HIST-AXISYM-01",
+  "scope": "setup-only native model/physics/mesh/solver construction, complete Equation View capture, MPH save/reopen readback; no study.run",
+  "limits": {
+    "max_owned_engine_processes": 1,
+    "max_wall_seconds_from_process_birth": 900.0,
+    "cleanup_reserve_seconds": 45.0,
+    "solver_submissions_this_preflight": 0,
+    "max_worker_sessions_this_preflight": 1,
+    "cleanup_policy": "W23 exact PID/birth/command/port reconciliation; SIGTERM only; no SIGKILL fallback",
+    "following_solver_campaign": {
+      "status": "NOT_FROZEN_BY_THIS_PREFLIGHT",
+      "separate_birth_budget_seconds": 3600,
+      "max_submissions": 10,
+      "max_sequential_workers": 2,
+      "first_two_slots": [
+        "mechanics_free_expansion",
+        "mechanics_fully_fixed"
+      ],
+      "start_condition": "complete solver/control/readback implementation and exact inputs frozen after this native preflight"
+    }
+  },
+  "plan": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/docs/full_project_execution/w24/W24_CURE_FIXTURE_PROPOSAL.md",
+    "sha256": "595b6f97c56be787b464460e53678f35fd41aba1c33a78c5980033ff9bd3cc99"
+  },
+  "registered_project": {
+    "project_id": "2ac0136b-46e0-4194-b2b4-bdc2466a827e",
+    "workspace": "/private/tmp/comsol-mcp-w24-cure-setup-current10-20261012-r1/project/science",
+    "workspace_role": "actual W24 fixture source/classes/template/save/reopen and science artifacts",
+    "authorized_root": "/private/tmp/comsol-mcp-w24-cure-setup-current10-20261012-r1/project",
+    "policy_permissions": [
+      "inspect",
+      "project_write",
+      "compute",
+      "trusted_code"
+    ],
+    "prebirth_host_grants": {
+      "startup_ceiling": [
+        "compute",
+        "inspect",
+        "project_write",
+        "trusted_code"
+      ],
+      "effective_host_permissions": [
+        "compute",
+        "inspect",
+        "project_write",
+        "trusted_code"
+      ]
+    },
+    "creation_receipt": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/project_workspace_created_before_birth.json",
+    "creation_receipt_sha256": "597ac42014fa5343cf8e8fe129de0176f7efacdbce245957e1953093c53a111c",
+    "fixture_source": "/private/tmp/comsol-mcp-w24-cure-setup-current10-20261012-r1/project/science/W24CureCouponFixture.java",
+    "fixture_source_sha256": "999ea669244419970ca523a17e9ae5a900a053ab75af8e015210fdf8514d5f06",
+    "compiled_classes": [
+      "W24CureCouponFixture$SolverDiagnosticRead.class",
+      "W24CureCouponFixture.class"
+    ]
+  },
+  "offline_candidate_freeze": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/docs/full_project_execution/w24/evidence/setup_candidate_20261012_current10/offline_candidate_freeze_current10.json",
+    "sha256": "2fe8b79b55792f9a41473f883a2ea732ccf1c2dc0c6be880fe80f8b42d81ea69",
+    "candidate_id": "W24-CURE-HIST-AXISYM-01",
+    "source_count": 141,
+    "status": "FROZEN_OFFLINE_CANDIDATE_AWAITING_ROOT_NATIVE_SLOT",
+    "runtime_environment": {
+      "distributions": [
+        {
+          "name": "annotated-types",
+          "version": "0.8.0"
+        },
+        {
+          "name": "anyio",
+          "version": "4.15.1"
+        },
+        {
+          "name": "attrs",
+          "version": "26.1.0"
+        },
+        {
+          "name": "certifi",
+          "version": "2026.7.22"
+        },
+        {
+          "name": "cffi",
+          "version": "2.1.1"
+        },
+        {
+          "name": "click",
+          "version": "8.5.0"
+        },
+        {
+          "name": "cryptography",
+          "version": "50.0.1"
+        },
+        {
+          "name": "h11",
+          "version": "0.16.0"
+        },
+        {
+          "name": "httpcore",
+          "version": "1.0.9"
+        },
+        {
+          "name": "httpx",
+          "version": "0.28.1"
+        },
+        {
+          "name": "httpx-sse",
+          "version": "0.4.3"
+        },
+        {
+          "name": "idna",
+          "version": "3.20"
+        },
+        {
+          "name": "iniconfig",
+          "version": "2.3.0"
+        },
+        {
+          "name": "jpype1",
+          "version": "1.7.1"
+        },
+        {
+          "name": "jsonschema",
+          "version": "4.26.0"
+        },
+        {
+          "name": "jsonschema-specifications",
+          "version": "2025.9.1"
+        },
+        {
+          "name": "mcp",
+          "version": "1.30.0"
+        },
+        {
+          "name": "mph",
+          "version": "1.4.0"
+        },
+        {
+          "name": "numpy",
+          "version": "2.5.3"
+        },
+        {
+          "name": "packaging",
+          "version": "26.3"
+        },
+        {
+          "name": "pip",
+          "version": "26.1"
+        },
+        {
+          "name": "pluggy",
+          "version": "1.6.0"
+        },
+        {
+          "name": "pycparser",
+          "version": "3.0"
+        },
+        {
+          "name": "pydantic",
+          "version": "2.13.5"
+        },
+        {
+          "name": "pydantic-core",
+          "version": "2.46.5"
+        },
+        {
+          "name": "pydantic-settings",
+          "version": "2.15.0"
+        },
+        {
+          "name": "pygments",
+          "version": "2.21.0"
+        },
+        {
+          "name": "pyjwt",
+          "version": "2.15.0"
+        },
+        {
+          "name": "pytest",
+          "version": "9.1.1"
+        },
+        {
+          "name": "python-dotenv",
+          "version": "1.2.3"
+        },
+        {
+          "name": "python-multipart",
+          "version": "0.0.32"
+        },
+        {
+          "name": "referencing",
+          "version": "0.37.0"
+        },
+        {
+          "name": "rpds-py",
+          "version": "2026.6.3"
+        },
+        {
+          "name": "sse-starlette",
+          "version": "3.4.11"
+        },
+        {
+          "name": "starlette",
+          "version": "1.7.0"
+        },
+        {
+          "name": "typing-extensions",
+          "version": "4.16.0"
+        },
+        {
+          "name": "typing-inspection",
+          "version": "0.4.4"
+        },
+        {
+          "name": "uvicorn",
+          "version": "0.53.0"
+        }
+      ],
+      "distributions_sha256": "f165f1ff1ec60d3465a962663f722f5b206f5351e934bb4336bdfe8cbae5af3d",
+      "ignored_appledouble_metadata": [],
+      "pip_check_python": "/opt/homebrew/opt/python@3.12/bin/python3.12",
+      "pip_check_python_resolved": "/opt/homebrew/Cellar/python@3.12/3.12.13_2/Frameworks/Python.framework/Versions/3.12/bin/python3.12",
+      "pip_check_python_version": "3 12 13",
+      "pip_check_version": "26.1",
+      "python_executable": "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python",
+      "python_resolved_executable": "/opt/homebrew/Cellar/python@3.12/3.12.13_2/Frameworks/Python.framework/Versions/3.12/bin/python3.12",
+      "python_version": "3.12.13"
+    }
+  },
+  "runtime_environment": {
+    "status": "PASS",
+    "scope": "Python runtime/dependency validation plus production registry/ControlDaemon construction with no Worker or COMSOL connection",
+    "engine_births": 0,
+    "study_or_solver_submissions": 0,
+    "frozen_runtime_environment": {
+      "distributions": [
+        {
+          "name": "annotated-types",
+          "version": "0.8.0"
+        },
+        {
+          "name": "anyio",
+          "version": "4.15.1"
+        },
+        {
+          "name": "attrs",
+          "version": "26.1.0"
+        },
+        {
+          "name": "certifi",
+          "version": "2026.7.22"
+        },
+        {
+          "name": "cffi",
+          "version": "2.1.1"
+        },
+        {
+          "name": "click",
+          "version": "8.5.0"
+        },
+        {
+          "name": "cryptography",
+          "version": "50.0.1"
+        },
+        {
+          "name": "h11",
+          "version": "0.16.0"
+        },
+        {
+          "name": "httpcore",
+          "version": "1.0.9"
+        },
+        {
+          "name": "httpx",
+          "version": "0.28.1"
+        },
+        {
+          "name": "httpx-sse",
+          "version": "0.4.3"
+        },
+        {
+          "name": "idna",
+          "version": "3.20"
+        },
+        {
+          "name": "iniconfig",
+          "version": "2.3.0"
+        },
+        {
+          "name": "jpype1",
+          "version": "1.7.1"
+        },
+        {
+          "name": "jsonschema",
+          "version": "4.26.0"
+        },
+        {
+          "name": "jsonschema-specifications",
+          "version": "2025.9.1"
+        },
+        {
+          "name": "mcp",
+          "version": "1.30.0"
+        },
+        {
+          "name": "mph",
+          "version": "1.4.0"
+        },
+        {
+          "name": "numpy",
+          "version": "2.5.3"
+        },
+        {
+          "name": "packaging",
+          "version": "26.3"
+        },
+        {
+          "name": "pip",
+          "version": "26.1"
+        },
+        {
+          "name": "pluggy",
+          "version": "1.6.0"
+        },
+        {
+          "name": "pycparser",
+          "version": "3.0"
+        },
+        {
+          "name": "pydantic",
+          "version": "2.13.5"
+        },
+        {
+          "name": "pydantic-core",
+          "version": "2.46.5"
+        },
+        {
+          "name": "pydantic-settings",
+          "version": "2.15.0"
+        },
+        {
+          "name": "pygments",
+          "version": "2.21.0"
+        },
+        {
+          "name": "pyjwt",
+          "version": "2.15.0"
+        },
+        {
+          "name": "pytest",
+          "version": "9.1.1"
+        },
+        {
+          "name": "python-dotenv",
+          "version": "1.2.3"
+        },
+        {
+          "name": "python-multipart",
+          "version": "0.0.32"
+        },
+        {
+          "name": "referencing",
+          "version": "0.37.0"
+        },
+        {
+          "name": "rpds-py",
+          "version": "2026.6.3"
+        },
+        {
+          "name": "sse-starlette",
+          "version": "3.4.11"
+        },
+        {
+          "name": "starlette",
+          "version": "1.7.0"
+        },
+        {
+          "name": "typing-extensions",
+          "version": "4.16.0"
+        },
+        {
+          "name": "typing-inspection",
+          "version": "0.4.4"
+        },
+        {
+          "name": "uvicorn",
+          "version": "0.53.0"
+        }
+      ],
+      "distributions_sha256": "f165f1ff1ec60d3465a962663f722f5b206f5351e934bb4336bdfe8cbae5af3d",
+      "ignored_appledouble_metadata": [],
+      "pip_check_python": "/opt/homebrew/opt/python@3.12/bin/python3.12",
+      "pip_check_python_resolved": "/opt/homebrew/Cellar/python@3.12/3.12.13_2/Frameworks/Python.framework/Versions/3.12/bin/python3.12",
+      "pip_check_python_version": "3 12 13",
+      "pip_check_version": "26.1",
+      "python_executable": "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python",
+      "python_resolved_executable": "/opt/homebrew/Cellar/python@3.12/3.12.13_2/Frameworks/Python.framework/Versions/3.12/bin/python3.12",
+      "python_version": "3.12.13"
+    },
+    "python_executable": "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python",
+    "python_resolved_executable": "/opt/homebrew/Cellar/python@3.12/3.12.13_2/Frameworks/Python.framework/Versions/3.12/bin/python3.12",
+    "python_version": "3.12.13",
+    "installed_distributions": [
+      {
+        "name": "annotated-types",
+        "version": "0.8.0"
+      },
+      {
+        "name": "anyio",
+        "version": "4.15.1"
+      },
+      {
+        "name": "attrs",
+        "version": "26.1.0"
+      },
+      {
+        "name": "certifi",
+        "version": "2026.7.22"
+      },
+      {
+        "name": "cffi",
+        "version": "2.1.1"
+      },
+      {
+        "name": "click",
+        "version": "8.5.0"
+      },
+      {
+        "name": "cryptography",
+        "version": "50.0.1"
+      },
+      {
+        "name": "h11",
+        "version": "0.16.0"
+      },
+      {
+        "name": "httpcore",
+        "version": "1.0.9"
+      },
+      {
+        "name": "httpx",
+        "version": "0.28.1"
+      },
+      {
+        "name": "httpx-sse",
+        "version": "0.4.3"
+      },
+      {
+        "name": "idna",
+        "version": "3.20"
+      },
+      {
+        "name": "iniconfig",
+        "version": "2.3.0"
+      },
+      {
+        "name": "jpype1",
+        "version": "1.7.1"
+      },
+      {
+        "name": "jsonschema",
+        "version": "4.26.0"
+      },
+      {
+        "name": "jsonschema-specifications",
+        "version": "2025.9.1"
+      },
+      {
+        "name": "mcp",
+        "version": "1.30.0"
+      },
+      {
+        "name": "mph",
+        "version": "1.4.0"
+      },
+      {
+        "name": "numpy",
+        "version": "2.5.3"
+      },
+      {
+        "name": "packaging",
+        "version": "26.3"
+      },
+      {
+        "name": "pip",
+        "version": "26.1"
+      },
+      {
+        "name": "pluggy",
+        "version": "1.6.0"
+      },
+      {
+        "name": "pycparser",
+        "version": "3.0"
+      },
+      {
+        "name": "pydantic",
+        "version": "2.13.5"
+      },
+      {
+        "name": "pydantic-core",
+        "version": "2.46.5"
+      },
+      {
+        "name": "pydantic-settings",
+        "version": "2.15.0"
+      },
+      {
+        "name": "pygments",
+        "version": "2.21.0"
+      },
+      {
+        "name": "pyjwt",
+        "version": "2.15.0"
+      },
+      {
+        "name": "pytest",
+        "version": "9.1.1"
+      },
+      {
+        "name": "python-dotenv",
+        "version": "1.2.3"
+      },
+      {
+        "name": "python-multipart",
+        "version": "0.0.32"
+      },
+      {
+        "name": "referencing",
+        "version": "0.37.0"
+      },
+      {
+        "name": "rpds-py",
+        "version": "2026.6.3"
+      },
+      {
+        "name": "sse-starlette",
+        "version": "3.4.11"
+      },
+      {
+        "name": "starlette",
+        "version": "1.7.0"
+      },
+      {
+        "name": "typing-extensions",
+        "version": "4.16.0"
+      },
+      {
+        "name": "typing-inspection",
+        "version": "0.4.4"
+      },
+      {
+        "name": "uvicorn",
+        "version": "0.53.0"
+      }
+    ],
+    "installed_distributions_sha256": "f165f1ff1ec60d3465a962663f722f5b206f5351e934bb4336bdfe8cbae5af3d",
+    "ignored_appledouble_metadata": [],
+    "required_runtime_distributions": {
+      "jpype1": "1.7.1",
+      "mcp": "1.30.0",
+      "mph": "1.4.0"
+    },
+    "pip_check": {
+      "command": [
+        "/opt/homebrew/opt/python@3.12/bin/python3.12",
+        "-m",
+        "pip",
+        "--python",
+        "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python",
+        "check"
+      ],
+      "exit_code": 0,
+      "stdout": "No broken requirements found.\n",
+      "stderr": "",
+      "pip_check_python_identity": {
+        "executable": "/opt/homebrew/opt/python@3.12/bin/python3.12",
+        "version": "3 12 13",
+        "pip_version": "26.1"
+      }
+    },
+    "production_imports": {
+      "mcp": "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/lib/python3.12/site-packages/mcp/__init__.py",
+      "mcp.server.fastmcp": "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/lib/python3.12/site-packages/mcp/server/fastmcp/__init__.py",
+      "mph": "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/lib/python3.12/site-packages/mph/__init__.py",
+      "jpype": "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/lib/python3.12/site-packages/jpype/__init__.py",
+      "comsol_mcp._server": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_server.py"
+    },
+    "production_registry": {
+      "status": "COLLECTED",
+      "entry_count": 58,
+      "entry_names": [
+        "check_server_port",
+        "commit_current_main_model",
+        "configure_single_main_workflow",
+        "configure_solver",
+        "create_feature",
+        "create_physics",
+        "create_physics_feature",
+        "create_solver_config",
+        "delete_feature",
+        "ensure_component",
+        "ensure_geometry",
+        "ensure_mesh",
+        "evaluate_expressions",
+        "get_core_metrics",
+        "get_parameters",
+        "list_physics",
+        "list_physics_features",
+        "list_solver_config",
+        "list_solver_features",
+        "load_current_main_model",
+        "load_visible_main_model",
+        "manage_variables",
+        "mcp_tool_audit",
+        "model_create",
+        "model_load",
+        "model_tree",
+        "operation_call",
+        "operation_describe",
+        "prune_loaded_models",
+        "registry_call",
+        "registry_describe",
+        "registry_list",
+        "registry_manifest",
+        "registry_search",
+        "remove_physics",
+        "remove_physics_feature",
+        "run_feature",
+        "run_study",
+        "run_study_async",
+        "run_study_status",
+        "run_visible_main_iteration",
+        "runtime_poc_v64",
+        "save_main_model_snapshot",
+        "save_model",
+        "server_connect",
+        "server_disconnect",
+        "server_info",
+        "server_start",
+        "set_parameters",
+        "set_physics_selection",
+        "start_visible_main_workflow",
+        "start_visible_main_workflow_async",
+        "unlock_visible_main",
+        "update_feature",
+        "update_physics_feature",
+        "verify_visible_main_session",
+        "visible_main_workflow_status",
+        "workflow_info"
+      ],
+      "entry_names_sha256": "40ebe53835440b27eb851109d1a3d31743635a2c27621fbb08cfcf03d459c13f"
+    },
+    "production_control_daemon": {
+      "status": "CONSTRUCTED_NO_ENGINE",
+      "worker": null,
+      "service": null,
+      "registry_entry_count": 58,
+      "registry_entry_names_sha256": "40ebe53835440b27eb851109d1a3d31743635a2c27621fbb08cfcf03d459c13f",
+      "trusted_code_host_grants": {
+        "startup_ceiling": [
+          "compute",
+          "inspect",
+          "project_write",
+          "trusted_code"
+        ],
+        "effective_host_permissions": [
+          "compute",
+          "inspect",
+          "project_write",
+          "trusted_code"
+        ]
+      },
+      "close": "RETURNED"
+    },
+    "scratch_removed": true,
+    "no_engine_assertion": "ControlDaemon.worker is None and service is None; no connect or model operation was invoked"
+  },
+  "offline_compile": {
+    "javac": "",
+    "fixture_sha256": "999ea669244419970ca523a17e9ae5a900a053ab75af8e015210fdf8514d5f06",
+    "exit_code": 0
+  },
+  "sources": {
+    "runner": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/tools/run_native_w24_cure_preflight.py",
+      "sha256": "83b8302601db6f496bd7b55b480bfcabf0078876a3c1402ead3c1bd556fef37e"
+    },
+    "java_fixture": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/tools/java/W24CureCouponFixture.java",
+      "sha256": "999ea669244419970ca523a17e9ae5a900a053ab75af8e015210fdf8514d5f06"
+    },
+    "proposal": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/docs/full_project_execution/w24/W24_CURE_FIXTURE_PROPOSAL.md",
+      "sha256": "595b6f97c56be787b464460e53678f35fd41aba1c33a78c5980033ff9bd3cc99"
+    },
+    "server_helper": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/tools/run_native_resume_smoke.py",
+      "sha256": "fb086c01ba6b9e48f78415bf092877d2b9cab9011c13f8613b48c0ae75e67180"
+    },
+    "geometry_inventory_helper": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/tools/run_native_artifact_geometry.py",
+      "sha256": "f3c0d7bc61e185f4ee738d74c7b8b23ea83a56c5809bc7ed3082ba8c03bf388d"
+    },
+    "control_daemon": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_control_daemon.py",
+      "sha256": "fddce2933c3240aff2710aa934da2030b6de21283b7f8736ae8ac16ec928aeac"
+    },
+    "execution_service": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_execution_service.py",
+      "sha256": "e1dd344c2c39c3566721ec36ca0a27d6d05cc1df91b97751bbdfac807cd7a480"
+    },
+    "managed_backend": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_managed_backend.py",
+      "sha256": "ffaee182ed1d4dc117b44a7aa780749772061c0d651d13e3e6e930ab6eabc161"
+    },
+    "java_worker": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_java_worker.py",
+      "sha256": "44da4fcafa6d9fc3384f5d0707c909fea0451557a2af1cce5ca68c3890189b85"
+    },
+    "java_worker_source": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/worker_java/PersistentComsolWorker.java",
+      "sha256": "50b5d0a75c030f3ac3813c50c621afc419d830cc3b57f0f3cc6be075960fbd39"
+    },
+    "study_dispatch": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g3_w16.py",
+      "sha256": "562f983aca0e4dcccba00ec9f804248ea238d6e0d2a2b8c82ce02012640a53d9"
+    },
+    "geometry_dispatch": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g3_w14.py",
+      "sha256": "33db916edd304734c0337bdf0aa40025122d1658bbea72c68d8c6009301e01f5"
+    },
+    "operation_store": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_operation_store.py",
+      "sha256": "d9d6c3d54ff4afc625f28f5e70595fd23f6a899e05863a9cdf0b05711a0808fa"
+    },
+    "isolation": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g2_isolation.py",
+      "sha256": "dd2da52140d191bea3cd036fe5ab06782d9ff30c119686c13bde99c32d64580b"
+    },
+    "exact_cleanup_helper": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/tools/run_native_w23_te_managed_preflight.py",
+      "sha256": "b249524c65ed0f68fcf79139897e699e51cd05643fb6aa18fa29f92689d8cb52"
+    },
+    "science_runner": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/tools/run_native_w24_cure_science.py",
+      "sha256": "9cfbe11ef1cc7dac885385ff6c9553cd731f303962093008c3a02c93729eaa99"
+    },
+    "science_java_fixture": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/tools/java/W24CureScienceFixture.java",
+      "sha256": "2ffd59615704c588976364812e9e4cd18f8105331ef0f0db3942d51fca4c22a1"
+    },
+    "science_runner_tests": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/tests/test_w24_cure_science_runner.py",
+      "sha256": "bddad671bb5ea817c06183f9489eb0e6617555f4a21bf9a59770fcbd74c70d39"
+    },
+    "fixture_acceptance": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/tests/test_w24_cure_coupon_fixture.py",
+      "sha256": "bef3a7b223e1d25aec59ebeeb64089ab0b3f00fb53505771ed5a2259f75a3c52"
+    },
+    "worker_transition_tests": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/tests/test_w24_worker_transition.py",
+      "sha256": "1e9cc96217ec175c3b3f058fcda9b2a6c2bb43c21577d50a64233420d4d200a3"
+    },
+    "preflight_runner_tests": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/tests/test_w24_cure_preflight_runner.py",
+      "sha256": "3b7127c3d0afd159744b06da4966c6d10641bb82395fce5ce4543a6d25e46bbb"
+    },
+    "science_acceptance": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/tools/w24_science_acceptance.py",
+      "sha256": "e11a43dc69e2de25386af8f449d010dd62001ec667fecf7055ff37ad1b4cd2cd"
+    },
+    "science_acceptance_tests": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/tests/test_w24_science_acceptance.py",
+      "sha256": "78a41ecd958ea41b5e82f40d485a4064da130436cf026f104d4ea909aa7a0211"
+    },
+    "runtime_control_tests": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/tests/test_runtime_control.py",
+      "sha256": "e4d9c90c259ba9221ed025e03b8ba7601a7c4a066f832aa72871dfd90f5a739b"
+    },
+    "g3_runtime_tests": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/tests/test_g3_runtime.py",
+      "sha256": "8d42d4d43fa04a17ea590e1fa9496d3f60b74e230e27346fa3ae89d910492452"
+    },
+    "runtime_installation_tests": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/tests/test_runtime_installation.py",
+      "sha256": "24cdd097c54e7a02be2ac3347707ddd61e622dfd20fcdda666a6f73a7fa95aec"
+    },
+    "control_daemon_tests": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/tests/test_control_daemon.py",
+      "sha256": "5c83687f97da339d6305e41aa4e70f246f4edec76100aaa7bdae02553acf56b1"
+    },
+    "control_daemon_projects_tests": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/tests/test_control_daemon_projects.py",
+      "sha256": "557b89cf275ec4fa6e200f4edae36f1ae5b9f31acaa513487df75242e2806d0b"
+    },
+    "managed_backend_tests": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/tests/test_managed_backend.py",
+      "sha256": "507bae5ff08ae0e9d11f87b1f6b3c3ce07ebcedf93502bab846fbd3a24d8a18a"
+    },
+    "execution_service_tests": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/tests/test_execution_service.py",
+      "sha256": "96f8dab2a324bcfc4235b77955597391d2b15a4add36e8701ba737a3cd8cdb11"
+    },
+    "session_context_tests": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/tests/test_session_context.py",
+      "sha256": "5ca27f69b8f0ce1592413e3a7cc5d04618ab293d7ba2a3cba3ead9b8ea9bfd17"
+    },
+    "session_lifecycle_tests": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/tests/test_session_lifecycle.py",
+      "sha256": "3ef38cf305c994607a441707206758ef3ff108ef17620191bfe1d9752d00d341"
+    },
+    "operation_store_migration_tests": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/tests/test_operation_store_migrations.py",
+      "sha256": "e657341e8beaac4f9eb18b83a96b376fdab590c8c740456dfcc98ba2d7309a44"
+    },
+    "project_authority_tests": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/tests/test_project_authority.py",
+      "sha256": "c076d178df63bc1aaaf263c7f0cee2a22fa1c87a46b0a63774b0e79eab2d35cf"
+    },
+    "model_catalog_adapter_tests": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/tests/test_model_catalog_adapters.py",
+      "sha256": "15f7d85a0047cbe8f0fb278902fe4d66105614bc76ea95a6952d3c9cd36e76f1"
+    },
+    "workspace_action_catalog": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/docs/comsol_mcp_design_v1/02_ACTION_CATALOG.json",
+      "sha256": "124ef66964e7f2cae78eca79b974f4f8c2ea1a3263f6440427de5edab052124e"
+    },
+    "runtime:comsol_mcp/__init__.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/__init__.py",
+      "sha256": "17b614b0aa965a4bf24a07e3908a981875f917e13845ea97ceee9f29a97eee39"
+    },
+    "runtime:comsol_mcp/_artifact_preview_io.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_artifact_preview_io.py",
+      "sha256": "26da9be95a52466094b293230ee39e128027f413643ab8cc789d78070aac91a2"
+    },
+    "runtime:comsol_mcp/_artifact_store.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_artifact_store.py",
+      "sha256": "52dbb0dba5305d974f6cd93b747093d076d753c30ec67e4159d437af87feb347"
+    },
+    "runtime:comsol_mcp/_atomic_save.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_atomic_save.py",
+      "sha256": "635222c08633ff37f3f7d8e5ec6d5bdf5da8c58236f11271be1c662695ffdfd0"
+    },
+    "runtime:comsol_mcp/_complex_transform.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_complex_transform.py",
+      "sha256": "0adebdb27a8e9d28a0807e1908d44bd957d0c7f5523933fed94b86a382e173a0"
+    },
+    "runtime:comsol_mcp/_connection.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_connection.py",
+      "sha256": "2699f12230b5832c7c8fe806fa1bfdca3be2e108ecc753a39808d92d862b7ea3"
+    },
+    "runtime:comsol_mcp/_control_client.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_control_client.py",
+      "sha256": "c2f68007eb56a4a9ef274f241dc377376c7126c4876c51228e8b6aa47da62754"
+    },
+    "runtime:comsol_mcp/_convergence_store.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_convergence_store.py",
+      "sha256": "51d53df4ee7b404e27452a2c1b8733dd3a372d92baf60cdad5bb43fef6566f13"
+    },
+    "runtime:comsol_mcp/_daemon_quiescence.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_daemon_quiescence.py",
+      "sha256": "8ecd34eabb3a940b74d8ad015d0d10d3b9dc59e30a5085cdaee7791ad90ee025"
+    },
+    "runtime:comsol_mcp/_dataset_binding.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_dataset_binding.py",
+      "sha256": "891f9a06595217d5101aa361cb60b53bb3a9f6b88a918bef41765b0f5f82627e"
+    },
+    "runtime:comsol_mcp/_desktop_capture.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_desktop_capture.py",
+      "sha256": "914c2b59ed6b750705e81efa96dc2273dedb21872c67b197445175b4fbc0c114"
+    },
+    "runtime:comsol_mcp/_desktop_macos.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_desktop_macos.py",
+      "sha256": "9bdebd75c00abb20cb7f8e69c8e277fd653a6cbc52a07739dcc858ce7a963228"
+    },
+    "runtime:comsol_mcp/_desktop_platforms.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_desktop_platforms.py",
+      "sha256": "5b4f687df3e0519a99cc4830c249b889b90b0022cfdefc5f4cef144bfc306fb7"
+    },
+    "runtime:comsol_mcp/_desktop_service.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_desktop_service.py",
+      "sha256": "77c180224edefa50b18ef3e7146089c6e68d658a847f55b8dde588fe0c57865f"
+    },
+    "runtime:comsol_mcp/_desktop_win32_identity.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_desktop_win32_identity.py",
+      "sha256": "c528e3e8e950883b759b3f8f96ab036783186a640cfff4588f9aa105b3b7f065"
+    },
+    "runtime:comsol_mcp/_desktop_windows.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_desktop_windows.py",
+      "sha256": "a652a89f18365fe87455ff2aae933274a809cbec77753304cdf085d75f7bf5e3"
+    },
+    "runtime:comsol_mcp/_domain_outcome.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_domain_outcome.py",
+      "sha256": "0aba689a0dd8803c204d117ae32b940bafb662f913f632b6cead03dc33bfe4d8"
+    },
+    "runtime:comsol_mcp/_execution_contract.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_execution_contract.py",
+      "sha256": "dbb112cbbdef9a4d45f69c230123d4e9e57f7b71e337532d83989aa827e6c9e3"
+    },
+    "runtime:comsol_mcp/_g2_artifact_preview.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g2_artifact_preview.py",
+      "sha256": "55cb9787f61adaa9b0a0f9dd4c57bcaf502b4d845717f5330eda01c82da9f6a7"
+    },
+    "runtime:comsol_mcp/_g2_artifact_reads.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g2_artifact_reads.py",
+      "sha256": "9fcd22e740015b88dcdc9c18d72807e0e7b30a82783570febcc7b9d91824cfa5"
+    },
+    "runtime:comsol_mcp/_g2_artifact_verify.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g2_artifact_verify.py",
+      "sha256": "7f481e11221d0233054a5443f6aa4d67ad2532dd559e3c718cd21aa977f9560e"
+    },
+    "runtime:comsol_mcp/_g2_checkpoint_diff.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g2_checkpoint_diff.py",
+      "sha256": "ee3b2f9339634de4429c63a64c90a37ad0eb46d503b0da50849a40e2b0687c57"
+    },
+    "runtime:comsol_mcp/_g2_checkpoint_ops.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g2_checkpoint_ops.py",
+      "sha256": "b566d9132fd87c103e1179811eb4c554af2389741b91064f223faeaf10d4c08d"
+    },
+    "runtime:comsol_mcp/_g2_code.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g2_code.py",
+      "sha256": "107a256c53e915bb3a546bef67ec8917a55fd5254c703ba612b9a38db151873d"
+    },
+    "runtime:comsol_mcp/_g2_contract.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g2_contract.py",
+      "sha256": "7c8eb864bc8ee2adf4b9b78106e4eb17f4248eef479e2b3ea58a43f263e4e11e"
+    },
+    "runtime:comsol_mcp/_g2_copy_subtree.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g2_copy_subtree.py",
+      "sha256": "49d8017bd3694cbbd07d2c3ef48d1638134ffb820a33d755b87c38a72c9eef21"
+    },
+    "runtime:comsol_mcp/_g2_docs.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g2_docs.py",
+      "sha256": "af8d7825a3db29b9f33e1dbb3b5f19e32a8713136595a97b5e7433114337cbd5"
+    },
+    "runtime:comsol_mcp/_g2_engine.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g2_engine.py",
+      "sha256": "f122242432dc6db00294b83d61317744694ffbbddfa7ee994c9ea3262cf2b4a9"
+    },
+    "runtime:comsol_mcp/_g2_group_remove.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g2_group_remove.py",
+      "sha256": "0c037b6bfe86fbe14b43339f50ab848a495496d27bd47fd6ef37eb0733c1596b"
+    },
+    "runtime:comsol_mcp/_g2_model_compare.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g2_model_compare.py",
+      "sha256": "96a5750d8c7760d9a20244585e0a9b0d97a5b04840e690a8283d25dfd4e83597"
+    },
+    "runtime:comsol_mcp/_g2_public_api.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g2_public_api.py",
+      "sha256": "52a4477541108390a962574c4c7a13c669841936d449e6ee7a925d64cd9b44a1"
+    },
+    "runtime:comsol_mcp/_g2_registry.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g2_registry.py",
+      "sha256": "a91e21263fab5be96a8f9b1d17f61c6033b37135bf8eb0fd336a94ceb11744b1"
+    },
+    "runtime:comsol_mcp/_g2_tools.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g2_tools.py",
+      "sha256": "d62451b60a529d146c91849f47b9f51be6d19788962131e3ea24386e7a2a04f9"
+    },
+    "runtime:comsol_mcp/_g2_transactions.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g2_transactions.py",
+      "sha256": "d8c5d84d58f205627df5e31489360b4ef2e7759d7ef67b916dc4fc5318cfba80"
+    },
+    "runtime:comsol_mcp/_g3_common.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g3_common.py",
+      "sha256": "9b3e8dfff78966b35d78ee0aa25cb50098c3f2ae556161b8161fd2f44938b6d3"
+    },
+    "runtime:comsol_mcp/_g3_metrics.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g3_metrics.py",
+      "sha256": "89e9297c13ac8f42c5260c61e723ffbdb24d3a46858b0d9abf8729ac62241d87"
+    },
+    "runtime:comsol_mcp/_g3_ops.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g3_ops.py",
+      "sha256": "31cb4600c75940e965e0d9ba4b97ced461ad94433972cb0ab3d848e12bbe28bd"
+    },
+    "runtime:comsol_mcp/_g3_parameter_io.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g3_parameter_io.py",
+      "sha256": "6de371947f6919f142c5be606eee6b5f8ea76e17dc5785f5f84faf02ae929b84"
+    },
+    "runtime:comsol_mcp/_g3_results.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g3_results.py",
+      "sha256": "b2fc34679aa7202beef0100e4555d34c703e23b60fbf587403c50ff121ac9123"
+    },
+    "runtime:comsol_mcp/_g3_runtime.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g3_runtime.py",
+      "sha256": "663af8ffdd7b6d99a915acfb4bad768a5c2227e18088511a375dcb7d7e75ae52"
+    },
+    "runtime:comsol_mcp/_g3_units.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g3_units.py",
+      "sha256": "99a785c59bd2fe6c1d6fad20369a650041850f2008ccd4079bab11377d952d64"
+    },
+    "runtime:comsol_mcp/_g3_w13.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g3_w13.py",
+      "sha256": "a1aa8f1da14c305f77c3f9a9e7092c214c15bed185e27792e95233bf539d6eb2"
+    },
+    "runtime:comsol_mcp/_g3_w15.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g3_w15.py",
+      "sha256": "c267190f280c8f712ed177d0f3be2382e0dd8250479476ba4ebb9bd0a2091ff1"
+    },
+    "runtime:comsol_mcp/_g3_w18.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g3_w18.py",
+      "sha256": "378376fe50e4dcf14a55a7e1b03ed807ef29b1472ce342475044b83893ed09fd"
+    },
+    "runtime:comsol_mcp/_g3_w20_validation.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g3_w20_validation.py",
+      "sha256": "77ec0f38f2da8b3d7cb53f2fe72bcb247d3d5568e027c19cda515e98a67aafc3"
+    },
+    "runtime:comsol_mcp/_g3_w21.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_g3_w21.py",
+      "sha256": "bf567f34257d58e931f457d211182fddf04f1d94c6c0771fb4c69833fd2886a6"
+    },
+    "runtime:comsol_mcp/_gate_a_reopen.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_gate_a_reopen.py",
+      "sha256": "9ce03851f179ea74da0a911a6b31cab055e84f3b3cc27ab535ed5aac68fdd16a"
+    },
+    "runtime:comsol_mcp/_mcp_gateway.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_mcp_gateway.py",
+      "sha256": "ff40a6f0f4a472a4950bb698c3d8a0b05330ed4ffa186538cffcb3edccade16f"
+    },
+    "runtime:comsol_mcp/_measure_spec.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_measure_spec.py",
+      "sha256": "4f73e40b4b560934fff54763a1532f38597fe758edf66a0e077671b0674afea1"
+    },
+    "runtime:comsol_mcp/_metric_contract.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_metric_contract.py",
+      "sha256": "98860f7c00cb1dafb10d3facfce8ee39c5389b0f0557369d198af150c187b8bb"
+    },
+    "runtime:comsol_mcp/_mode_overlap.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_mode_overlap.py",
+      "sha256": "f93b87c26f3af7b2fa4498cf88b430069ae200619606dfed6906479d2036ba56"
+    },
+    "runtime:comsol_mcp/_model.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_model.py",
+      "sha256": "814baf91e74eeb370ab25f9a8b6ae768a1ab0a851d68870b67cb13b88b88ac13"
+    },
+    "runtime:comsol_mcp/_model_ops.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_model_ops.py",
+      "sha256": "182d945188fca0afe624c1699b686aca7d3a8b2d23b0fae301aa5adaa2984903"
+    },
+    "runtime:comsol_mcp/_observation_store.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_observation_store.py",
+      "sha256": "fa1eec16402dce15c33e66423ecd6f8d227fa1abac63e76a47c6c288af4cdc3e"
+    },
+    "runtime:comsol_mcp/_phase1_runtime.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_phase1_runtime.py",
+      "sha256": "e4636f8f790079593f53f11e8abd544526c5a5a289e068ccfbcf4b599dbe62f7"
+    },
+    "runtime:comsol_mcp/_physics_ops.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_physics_ops.py",
+      "sha256": "3a006aef40f484b61ba0151cc9a76fc612d093ba8853789b26d5924a0df25ac9"
+    },
+    "runtime:comsol_mcp/_platform_paths.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_platform_paths.py",
+      "sha256": "96d3bc7defee41fda14f45ffa050ff7089e4e0573345a2929e0facba7f663b32"
+    },
+    "runtime:comsol_mcp/_platform_process.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_platform_process.py",
+      "sha256": "f201026c8ebc66ae22548917e1cc248b1397c61b4681df3134a59a9f83f2795d"
+    },
+    "runtime:comsol_mcp/_probe_manage.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_probe_manage.py",
+      "sha256": "447b45d5bc3fdcee6a2ec3935f32a140d18fa1b02af23814fb92ef0027adcf1e"
+    },
+    "runtime:comsol_mcp/_process_diagnostics.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_process_diagnostics.py",
+      "sha256": "e9f0626eb8b6c122fa30cce4b2728d87da112e5002d3517dac24e6ed8d1ad4e9"
+    },
+    "runtime:comsol_mcp/_project_authority.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_project_authority.py",
+      "sha256": "82b90c1157b242f80feb9079ac4b58e2a1295719a7a323a97532497a740181a8"
+    },
+    "runtime:comsol_mcp/_result_budget.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_result_budget.py",
+      "sha256": "64a3de71839c4224fc92869d89b2dae6cb6bd1726878bb2f0a121e00f9ebcf4c"
+    },
+    "runtime:comsol_mcp/_runtime_control.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_runtime_control.py",
+      "sha256": "e9acab89e52a6ed27a55610dec5f75f76ad2baab1ea57ed84e6612177d820ffe"
+    },
+    "runtime:comsol_mcp/_runtime_installation.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_runtime_installation.py",
+      "sha256": "afb2bbd81783d025d030e9790d720d11cde0d0a6fd6fe890f38d69813e3e31ce"
+    },
+    "runtime:comsol_mcp/_runtime_state.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_runtime_state.py",
+      "sha256": "6d2de604b0ba4cab7283de66107df6401dab3d5d74cb99e4b34c331d162cc3d6"
+    },
+    "runtime:comsol_mcp/_security_os.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_security_os.py",
+      "sha256": "34d3c47c3ac27de98ba74b36cf6f2bbf51ba2873514bdc22e4c60af00b1f373c"
+    },
+    "runtime:comsol_mcp/_server.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_server.py",
+      "sha256": "530e1954308f9a844b86814b4d44d05fe9e51968f618cc0a7e9e93382fbf64fa"
+    },
+    "runtime:comsol_mcp/_session_context.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_session_context.py",
+      "sha256": "6c1222cdeaed6f14208f4ead0f9b82beccf96b7c1a445d0a8b43107878e2406d"
+    },
+    "runtime:comsol_mcp/_session_lifecycle.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_session_lifecycle.py",
+      "sha256": "10d74f0d733365e4c66dba612568fe0fc47260581b0a29884279d6d0b9dd1121"
+    },
+    "runtime:comsol_mcp/_session_server.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_session_server.py",
+      "sha256": "f6404e5fcf970446d8b10b16586b5e91d73ea2be5b36ddaa0caf25c6c21de8fd"
+    },
+    "runtime:comsol_mcp/_solution_binding.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_solution_binding.py",
+      "sha256": "bc8f0c50af9d086a9dc4c0ac8d5376a884dcaa04fd46e069ac15dc160bcba490"
+    },
+    "runtime:comsol_mcp/_solver_ops.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_solver_ops.py",
+      "sha256": "2a8dcd6bd6f79898e0e0ae4af8941c9e97cfd4cf18e4190d7267e7bdda682595"
+    },
+    "runtime:comsol_mcp/_source_manifest.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_source_manifest.py",
+      "sha256": "273226a8538438feeec4156bb883bbbdb121294ca9d928c10683386085f0c1ae"
+    },
+    "runtime:comsol_mcp/_stage_contract.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_stage_contract.py",
+      "sha256": "c028b33223b0cca3d994c9359efc6a02b27ed2f3103511639e9d3014bfacdbbe"
+    },
+    "runtime:comsol_mcp/_state.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_state.py",
+      "sha256": "71c862d438c588ff0d8aae6db349873813f0f4f94e041e4b60a3f481d8b0d78c"
+    },
+    "runtime:comsol_mcp/_state_backup.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_state_backup.py",
+      "sha256": "a1c33f6696f70ef085f39627fd582f6a898b3bbc92ab04fd1c0aacd12d936488"
+    },
+    "runtime:comsol_mcp/_tools_connection.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_tools_connection.py",
+      "sha256": "6cf46068542fa46308f92c89bee6a9574a3507c73d69b59f265cf26290d520e5"
+    },
+    "runtime:comsol_mcp/_tools_control.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_tools_control.py",
+      "sha256": "c6d3007117268be2529f8ca725f2bbe3bdb3fae5c2f9d04223437817c3efc6d0"
+    },
+    "runtime:comsol_mcp/_tools_desktop.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_tools_desktop.py",
+      "sha256": "f341c9096a4efb913912b785ff04beafafce1e7ce229b46e60e96318531d4b43"
+    },
+    "runtime:comsol_mcp/_tools_geometry.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_tools_geometry.py",
+      "sha256": "8e3a8b12ae252b6fb7ccf718e38de7b959228d5c2aeb1653e95443cec41c0e0a"
+    },
+    "runtime:comsol_mcp/_tools_model.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_tools_model.py",
+      "sha256": "aa247e34e6cbacc3f7481082c91edabc999273a7118de41536f3539e44ddc7b5"
+    },
+    "runtime:comsol_mcp/_tools_params.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_tools_params.py",
+      "sha256": "d6faf82a2c49466b60e4d045bf04cdcb3fc8c6d0771359f1de278876dd6753ce"
+    },
+    "runtime:comsol_mcp/_tools_phase1.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_tools_phase1.py",
+      "sha256": "8a3eab8d289b29bd5b9d1a63fb8e9eeb93576d506b333f57e24d21b6e49f1060"
+    },
+    "runtime:comsol_mcp/_tools_physics.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_tools_physics.py",
+      "sha256": "72ed57f61a778d2cb822809b91914e70a869890699f18d3da1bfed474414eb98"
+    },
+    "runtime:comsol_mcp/_tools_snapshot.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_tools_snapshot.py",
+      "sha256": "ddd37955676f032c065e13812fa8f945e954c9ebe82c06ce0754e118b31c7e35"
+    },
+    "runtime:comsol_mcp/_tools_solver.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_tools_solver.py",
+      "sha256": "60adf34f7c1aa67ece852b5259099339c4391fbd26a77e4b80be994fffed3934"
+    },
+    "runtime:comsol_mcp/_tools_w18.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_tools_w18.py",
+      "sha256": "2df053e4a1ac0d326f230300e69597a71068a3b2f66270976bf5f0600d1d5fd4"
+    },
+    "runtime:comsol_mcp/_tools_w20.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_tools_w20.py",
+      "sha256": "6182269064dfc8973fdb6845b4e768bbf60e92322e79ac0e92ad4913496f564e"
+    },
+    "runtime:comsol_mcp/_tools_w21.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_tools_w21.py",
+      "sha256": "e686b2d9545eb91d470aca99ac5f5e8eb01278ab669b35b7c34abcd87f22d964"
+    },
+    "runtime:comsol_mcp/_tools_workflow.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_tools_workflow.py",
+      "sha256": "4c35c2c92afc09acd2136647c142b7607ca3fbc0cb6b22b4a04d487764c2b9ad"
+    },
+    "runtime:comsol_mcp/_vcsel_source.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_vcsel_source.py",
+      "sha256": "7a4a79426cd14c426099f07535b70566cdd1c16bbf2a4b9261814610b514d963"
+    },
+    "runtime:comsol_mcp/_w21_execution.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_w21_execution.py",
+      "sha256": "d9ec833c69eb691a9c0acd85984c7ae39828da763962d1fe80722ff8819547ba"
+    },
+    "runtime:comsol_mcp/_w21_initial_stage.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_w21_initial_stage.py",
+      "sha256": "9019f0046d25c0287918dac28e3e84ff8de4766e558590e90bd7a675634d0ffe"
+    },
+    "runtime:comsol_mcp/_w21_mesh_evidence.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_w21_mesh_evidence.py",
+      "sha256": "8d13794d74547742a4dd38e1516eca3c7102980cc856c96e974216261e193181"
+    },
+    "runtime:comsol_mcp/_w21_mesh_readback.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_w21_mesh_readback.py",
+      "sha256": "c6fe5120c7ca3dbb89c4dbe0e3be9bfcba821ae938964147d11cd7ba867e9851"
+    },
+    "runtime:comsol_mcp/_w21_native_output.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_w21_native_output.py",
+      "sha256": "33d9c229711335decf01f665ef761a3ded583a1b66972930b54b3c5519f0773d"
+    },
+    "runtime:comsol_mcp/_w21_stage_backend.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_w21_stage_backend.py",
+      "sha256": "c57ae9a25ead998d714e8c89a10434f134e670a532c7dae9b4fa1007220873d7"
+    },
+    "runtime:comsol_mcp/_w23_basis_v2_contract.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_w23_basis_v2_contract.py",
+      "sha256": "837f3508acb505d1b6be726274099009d3a6d5d95e3dcf410b2d7db40b877aa4"
+    },
+    "runtime:comsol_mcp/_w23_basis_v2_provenance.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_w23_basis_v2_provenance.py",
+      "sha256": "16feeb0fba3f2952616eb472bb3cdab391cf8240ea04a5edcc9d0f0c25e399c9"
+    },
+    "runtime:comsol_mcp/_w23_basis_v2_results.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_w23_basis_v2_results.py",
+      "sha256": "ef06db7a645dc79ec6a9898d47952fbec75ea27b046221b026a5825135ea6eef"
+    },
+    "runtime:comsol_mcp/_w23_results.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_w23_results.py",
+      "sha256": "fae3ddcc4abab9866eaa3a667b418ef2fe8a70c4fba651bc62ab323316c991ca"
+    },
+    "runtime:comsol_mcp/_windows_parameter_publish.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/_windows_parameter_publish.py",
+      "sha256": "ce3b3ee5db08998b77929c93c7a57ecb958af65a67c7896910e493feef57ab53"
+    },
+    "runtime_data:comsol_mcp/data/g2/02_ACTION_CATALOG.json": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/data/g2/02_ACTION_CATALOG.json",
+      "sha256": "124ef66964e7f2cae78eca79b974f4f8c2ea1a3263f6440427de5edab052124e"
+    },
+    "runtime_data:comsol_mcp/data/g2/common.schema.json": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/data/g2/common.schema.json",
+      "sha256": "1beb031c1da5fedcdbfbb43750aa4e4d0e8b7c07ce4513a832ff3fe535dd7afa"
+    },
+    "runtime:comsol_mcp/mcp_server.py": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/comsol_mcp/mcp_server.py",
+      "sha256": "daa3972ca26b8e1ba72b07f3d346a1523b390bb556197aede0b8d58f4231a0a4"
+    }
+  }
+}

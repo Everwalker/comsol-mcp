@@ -1,0 +1,26 @@
+{
+  "status": "PASS_SCOPED_RECOVERY_TOOL_REPAIR",
+  "tests": {
+    "suite": "tests/test_continuation.py",
+    "passed": 18,
+    "failed": 0,
+    "errors": 0,
+    "command": "env TMPDIR=/private/tmp python3 -m unittest discover -s tests -p test_continuation.py -v"
+  },
+  "retained_prior_failure": {
+    "command": "python3 -m unittest discover -s tests -p test_continuation.py -v",
+    "passed": 14,
+    "errors": 4,
+    "cause": "Default tempfile directory /var alias rejected by unchanged safe_ancestors guard; resolved with canonical TMPDIR=/private/tmp"
+  },
+  "init_resume": "EXISTING_STATE_INDEXED_NOT_RESET",
+  "upstream_hashes_unchanged": {
+    "TASKS": true,
+    "ACTION_COVERAGE": true,
+    "ACCEPTANCE_MATRIX": true,
+    "RESUME": true
+  },
+  "original_package_integrity": "44-file verify PASS applies only to original restored workpack before this repair; original manifest/QA retained unchanged; no post-repair manifest PASS claim",
+  "current_catalog_retained": "1ef7cd3bbc42dd7c00def9742d8b5bfa02ac8996",
+  "native_certified": false
+}

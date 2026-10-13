@@ -1,0 +1,65 @@
+{
+  "actual_native_configure_build_install": "NOT_RUN",
+  "argv": [
+    "python3",
+    "-B",
+    "-m",
+    "unittest",
+    "test_cpython_builder_r4.py"
+  ],
+  "executions": 7,
+  "expanded_fault_cases": [
+    "spawn_write",
+    "group_write",
+    "birth_write",
+    "result_write",
+    "actual_birth_exception",
+    "raw_log_fsync",
+    "raw_log_close",
+    "observer_fsync_stdout_stderr_fallback_failure"
+  ],
+  "initial_launch_failure": {
+    "preserved_raw": [
+      {
+        "bytes": 0,
+        "path": "docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/CPYTHON_R4_TEST.stdout",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "bytes": 741,
+        "path": "docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/CPYTHON_R4_TEST.stderr",
+        "sha256": "3f9d3f8128819a50c0f75ea88675b5be6e6d57aab7061813f1eb65ba2664a634"
+      }
+    ],
+    "rc": 1,
+    "reason": "wrong relative test-file creation cwd; no tests/children/native commands launched"
+  },
+  "raw": [
+    {
+      "bytes": 6116,
+      "path": "docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/CPYTHON_R4_TEST_R2.stdout",
+      "sha256": "b3486383340e93422ba8c9e5fd264dd07bb45eb9e0d2099bd78fd1e93d61cad1"
+    },
+    {
+      "bytes": 847,
+      "path": "docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/CPYTHON_R4_TEST_R2.stderr",
+      "sha256": "df5716c656e335976daf49e886a0406b2b5a76e6604fdfdef4e02fd9444c2e88"
+    },
+    {
+      "bytes": 0,
+      "path": "docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/CPYTHON_R4_DIAG_TEST.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 98,
+      "path": "docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/CPYTHON_R4_DIAG_TEST.stderr",
+      "sha256": "bce4be65f3f1a55986099063d7b9b9fde28c5ea82b9ece923bb3f19b670b03fd"
+    }
+  ],
+  "rc": 0,
+  "runtime": "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python3",
+  "schema": "comsol-mcp.cpython-r4-focused/1",
+  "scope": "tiny real task-owned Python children, actual ps/getpgid/getsid/wait, injected filesystem diagnostic failures; no hardware/scientific acceptance",
+  "status": "PASS_LOCAL_FIXTURES",
+  "tests": 6
+}

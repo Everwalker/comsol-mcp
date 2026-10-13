@@ -1,0 +1,233 @@
+--- preimage/_control_daemon.py
++++ candidate/_control_daemon.py
+@@ -594,6 +594,13 @@
+             profile=profile.host_resource_profile,
+             profile_source_sha256=profile.source_sha256,
+         )
++
++    def _submit_scm_host_control(self, runtime, *, phase, plan, authorization_ref, receipt=None):
++        """Trusted ServiceMain route; ordinary RPC cannot call this capability."""
++        issuer = self._windows_t037_host_control_issuer(runtime)
++        request = issuer.issue(runtime, phase=phase, plan=plan,
++                               authorization_ref=authorization_ref, receipt=receipt)
++        return self._submit_internal_host_control(request)
+ 
+     def _submit_internal_host_control(self, request):
+         """Queue one sealed SCM-issued host mutation on the existing serial lane."""
+@@ -12952,7 +12959,7 @@
+ 
+ 
+ def serve(home, *, host_provider_config=None, disk_resource_config=None, memory_resource_config=None,
+-          windows_t037_profile=None):
++          windows_t037_profile=None, _scm_runtime=None):
+     home = Path(home)
+     home.mkdir(mode=0o700, parents=True, exist_ok=True)
+     os.chmod(home, 0o700)
+@@ -12986,6 +12993,28 @@
+     except Exception:
+         singleton.close()
+         raise
++    try:
++        return _serve_control_listener(home, daemon, token, _scm_runtime)
++    finally:
++        # Existing close drains accepted execution lanes and preserves UNKNOWN
++        # ownership. SCM STOP is not a solver cancellation or a host RESTORE.
++        if _scm_runtime is not None:
++            try:
++                daemon.close()
++            finally:
++                singleton.close()
++
++
++def _serve_control_listener(home, daemon, token, _scm_runtime):
++    if _scm_runtime is not None:
++        from ._windows_t037 import WindowsT037ProfileV2
++        from ._windows_t037_broker import ScmServiceRuntime, WindowsScmError
++        profile = daemon._windows_t037_profile
++        if (type(_scm_runtime) is not ScmServiceRuntime
++                or type(profile) is not WindowsT037ProfileV2
++                or _scm_runtime.service_name != profile.service_name):
++            raise WindowsScmError("SCM_DAEMON_PROFILE_MISMATCH",
++                                  "SCM service does not bind the daemon's trusted v2 startup profile")
+     daemon._control_singleton_lock_held = True
+     class Handler(BaseHTTPRequestHandler):
+         def do_POST(self):
+@@ -13007,61 +13036,111 @@
+                 self.send_error(500, "internal control error")
+         def log_message(self, *_): pass
+     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+-    server.daemon_threads = True
+-    temporary = home / "control.json.tmp"
+-    endpoint = {"port": server.server_port, "token": token, "pid": os.getpid()}
+-    start_epoch_ms = process_identity(os.getpid())["start_epoch_ms"]
+-    if isinstance(start_epoch_ms, int):
+-        endpoint["process_start_epoch_ms"] = start_epoch_ms
+-    daemon_identity = {
+-        "schema": _CONTROL_DAEMON_IDENTITY_SCHEMA,
+-        "event": "DAEMON_READY",
+-        "observed_at_utc": _utc_millis(),
+-        "pid": os.getpid(),
+-        "birth": f"start_epoch_ms:{start_epoch_ms}" if isinstance(start_epoch_ms, int) and start_epoch_ms > 0 else None,
+-        "exit_code": None,
+-        "exception_type": None,
+-        "errno": None,
+-        "winerror": None,
+-        "error_category": None,
+-    }
+-    # This fixed-schema file is credential-free and diagnostic only. The
+-    # authenticated endpoint/token remains exclusively in control.json.
+-    _write_control_daemon_identity(home, daemon_identity)
+-    temporary.write_text(json.dumps(endpoint))
+-    os.chmod(temporary, 0o600)
+-    temporary.replace(home / "control.json")
+     try:
+-        server.serve_forever()
+-    except BaseException as exc:
+-        exception_type = type(exc).__name__
+-        if not _CONTROL_DAEMON_SAFE_TYPE_RE.fullmatch(exception_type):
+-            exception_type = "UnclassifiedError"
+-        errno_value = getattr(exc, "errno", None)
+-        winerror_value = getattr(exc, "winerror", None)
+-        serve_observation = {
+-            **daemon_identity,
+-            "event": "DAEMON_SERVE_FAILED",
++        server.daemon_threads = True
++        temporary = home / "control.json.tmp"
++        endpoint = {"port": server.server_port, "token": token, "pid": os.getpid()}
++        start_epoch_ms = process_identity(os.getpid())["start_epoch_ms"]
++        if isinstance(start_epoch_ms, int):
++            endpoint["process_start_epoch_ms"] = start_epoch_ms
++        daemon_identity = {
++            "schema": _CONTROL_DAEMON_IDENTITY_SCHEMA,
++            "event": "DAEMON_READY",
+             "observed_at_utc": _utc_millis(),
++            "pid": os.getpid(),
++            "birth": f"start_epoch_ms:{start_epoch_ms}" if isinstance(start_epoch_ms, int) and start_epoch_ms > 0 else None,
+             "exit_code": None,
+-            "exception_type": exception_type,
+-            "errno": errno_value if type(errno_value) is int else None,
+-            "winerror": winerror_value if type(winerror_value) is int else None,
+-            "error_category": "DAEMON_SERVE_LOOP_RAISED",
++            "exception_type": None,
++            "errno": None,
++            "winerror": None,
++            "error_category": None,
+         }
++        # This fixed-schema file is credential-free and diagnostic only. The
++        # authenticated endpoint/token remains exclusively in control.json.
++        _write_control_daemon_identity(home, daemon_identity)
++        temporary.write_text(json.dumps(endpoint))
++        os.chmod(temporary, 0o600)
++        temporary.replace(home / "control.json")
++        stop_monitor = None
++        monitor_done = threading.Event()
+         try:
+-            _write_control_daemon_identity(home, serve_observation)
+-        except Exception:
+-            pass
+-        raise
+-    else:
+-        _write_control_daemon_identity(home, {
+-            **daemon_identity,
+-            "event": "DAEMON_SERVE_RETURNED",
+-            "observed_at_utc": _utc_millis(),
+-            "exit_code": None,
+-            "error_category": "DAEMON_SERVE_LOOP_RETURNED",
+-        })
++            if _scm_runtime is not None:
++                # SCM readiness follows actual daemon and endpoint initialization.
++                # This does not attest child isolation or native policy readiness.
++                _scm_runtime.mark_running()
++                daemon._windows_t037_host_control_issuer(_scm_runtime)
++
++                def stop_service_listener():
++                    while not monitor_done.is_set():
++                        if _scm_runtime.wait_for_stop(timeout=0.2):
++                            server.shutdown()
++                            return
++
++                stop_monitor = threading.Thread(target=stop_service_listener,
++                                                name="windows-scm-stop", daemon=True)
++                stop_monitor.start()
++            server.serve_forever()
++        except BaseException as exc:
++            exception_type = type(exc).__name__
++            if not _CONTROL_DAEMON_SAFE_TYPE_RE.fullmatch(exception_type):
++                exception_type = "UnclassifiedError"
++            errno_value = getattr(exc, "errno", None)
++            winerror_value = getattr(exc, "winerror", None)
++            serve_observation = {
++                **daemon_identity,
++                "event": "DAEMON_SERVE_FAILED",
++                "observed_at_utc": _utc_millis(),
++                "exit_code": None,
++                "exception_type": exception_type,
++                "errno": errno_value if type(errno_value) is int else None,
++                "winerror": winerror_value if type(winerror_value) is int else None,
++                "error_category": "DAEMON_SERVE_LOOP_RAISED",
++            }
++            try:
++                _write_control_daemon_identity(home, serve_observation)
++            except Exception:
++                pass
++            raise
++        else:
++            _write_control_daemon_identity(home, {
++                **daemon_identity,
++                "event": "DAEMON_SERVE_RETURNED",
++                "observed_at_utc": _utc_millis(),
++                "exit_code": None,
++                "error_category": "DAEMON_SERVE_LOOP_RETURNED",
++            })
++        finally:
++            monitor_done.set()
++            if stop_monitor is not None:
++                stop_monitor.join(timeout=1)
++    finally:
++        if _scm_runtime is not None:
++            server.server_close()
++
++
++def serve_windows_scm_service(home, *, service_name, windows_t037_profile,
++                              host_provider_config=None, disk_resource_config=None,
++                              memory_resource_config=None):
++    """Explicit own-process SCM entrypoint; no console or vendor fallback."""
++    from ._windows_t037 import WindowsT037ProfileV2, load_trusted_profile
++    from ._windows_t037_broker import WindowsScmError, WindowsScmServiceBroker
++
++    selected_profile = (windows_t037_profile if windows_t037_profile is not None
++                        else os.environ.get("COMSOL_MCP_WINDOWS_T037_PROFILE"))
++    if selected_profile is None:
++        raise WindowsScmError("SCM_PROFILE_REQUIRED", "SCM startup requires a pinned trusted T037 v2 profile")
++    profile = load_trusted_profile(selected_profile)
++    if type(profile) is not WindowsT037ProfileV2 or profile.service_name != service_name:
++        raise WindowsScmError("SCM_PROFILE_SERVICE_MISMATCH",
++                              "SCM entrypoint service name differs from the trusted v2 profile")
++
++    def service_main(runtime):
++        return serve(home, host_provider_config=host_provider_config,
++                     disk_resource_config=disk_resource_config,
++                     memory_resource_config=memory_resource_config,
++                     windows_t037_profile=selected_profile, _scm_runtime=runtime)
++
++    return WindowsScmServiceBroker(service_name, service_main).run()
+ 
+ 
+ def main(argv=None):
+@@ -13075,7 +13154,16 @@
+                         help="trusted host memory admission JSON file; may also use COMSOL_MCP_MEMORY_RESOURCE_CONFIG")
+     parser.add_argument("--windows-t037-profile", default=None,
+                         help="trusted Windows T037 startup profile; may also use COMSOL_MCP_WINDOWS_T037_PROFILE")
++    parser.add_argument("--windows-scm-service-name", default=None,
++                        help="explicit own-process SCM entrypoint; must match the trusted v2 profile")
+     arguments = parser.parse_args(argv)
++    if arguments.windows_scm_service_name is not None:
++        return serve_windows_scm_service(
++            arguments.home, service_name=arguments.windows_scm_service_name,
++            host_provider_config=arguments.host_provider_config,
++            disk_resource_config=arguments.disk_resource_config,
++            memory_resource_config=arguments.memory_resource_config,
++            windows_t037_profile=arguments.windows_t037_profile)
+     return serve(arguments.home, host_provider_config=arguments.host_provider_config,
+                  disk_resource_config=arguments.disk_resource_config,
+                  memory_resource_config=arguments.memory_resource_config,

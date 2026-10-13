@@ -1,0 +1,217 @@
+"""Actual admission/RSS/retention classes; only OS/Popen boundary is synthetic."""
+import subprocess,weakref,gc,os
+from pathlib import Path
+from types import SimpleNamespace
+import pytest
+from tools import w24_coupled_admission as admission
+from tools import run_native_w24_static_shape_setup_campaign as campaign
+
+class Process:
+    def __init__(self,pid,code=None):self.pid=pid;self.code=code;self.waits=[]
+    def poll(self):return self.code
+    def wait(self,timeout):
+        self.waits.append(timeout)
+        if self.code is None:raise subprocess.TimeoutExpired('original',timeout)
+        return self.code
+    def communicate(self,timeout):
+        self.waits.append(timeout)
+        if self.code is None:raise subprocess.TimeoutExpired('original-compiler',timeout)
+        return ('stdout','stderr')
+
+@pytest.fixture
+def owned(tmp_path,monkeypatch):
+    clock=SimpleNamespace(value=100.0)
+    monkeypatch.setattr(admission,'time',SimpleNamespace(time=lambda:clock.value,
+        monotonic=lambda:clock.value,sleep=lambda delay:None))
+    import comsol_mcp._platform_process as platform_process
+    monkeypatch.setattr(platform_process,'process_identity',lambda pid:{'alive':True,'start_epoch_ms':100000})
+    server=SimpleNamespace(proc=Process(101),work=tmp_path)
+    ps=SimpleNamespace(rss=1,extra='',group_rows='',sample_hook=None)
+    def probe(*args,**kwargs):
+        if ps.sample_hook:ps.sample_hook()
+        return SimpleNamespace(returncode=0,stderr='',stdout=f'101 1 {ps.rss} server\n102 1 1 {tmp_path}/PersistentComsolWorker\n201 1 1 compiler\n103 101 1 server-child\n'+ps.extra)
+    real=campaign.SampledRssMonitor
+    def monitor(**kwargs):return real(**kwargs,ps_runner=probe,
+        identity_reader=lambda pid:{'alive':True,'start_epoch_ms':100000})
+    monkeypatch.setattr(campaign,'SampledRssMonitor',monitor)
+    def group_probe(*args,**kwargs):return SimpleNamespace(returncode=0,stderr='',stdout=f'{os.getpid()} 1 99999 observer\n'+ps.group_rows)
+    monkeypatch.setattr(admission.subprocess,'run',group_probe)
+    owner=admission._new_coupled_admission(server,tmp_path)
+    owner.on_server_birth();owner.bind_child(Process(102),'worker')
+    yield owner,clock,ps
+    owner.monitor.stop()
+
+def test_one_birth_deadline_and_owned_descendant_sample_covers_cure(owned):
+    owner,clock,ps=owned
+    assert owner.birth_epoch==100 and owner.deadline_epoch==1900
+    assert owner.monitor.include_owned_descendants
+    owner.before_effect('cure_build',600)
+    sample=owner.monitor.last_sample
+    assert {p['pid'] for p in sample['processes']}=={101,102,103}
+    assert sample['hard_cap'] is False
+    clock.value=1200
+    assert owner.before_effect('cure_reopen',600)==100
+    assert owner.deadline_epoch==1900
+
+@pytest.mark.parametrize('operation',['server_connect','model_create','operation_call'])
+def test_late_Worker_return_inside_reserve_all_routes_zero_dispatch(owned,operation):
+    owner,clock,ps=owned;clock.value=1300
+    daemon=SimpleNamespace(dispatch=lambda request:pytest.fail('effect in cleanup reserve'))
+    with pytest.raises(TimeoutError):owner.dispatch(daemon,{'operation':operation})
+    clock.value=100 # A clock rollback cannot erase the first stop.
+    with pytest.raises(RuntimeError):owner.before_effect('retry',30)
+
+def test_each_wait_queue_rpc_execution_is_capped_by_same_birth(owned):
+    owner,clock,ps=owned;clock.value=1290;requests=[]
+    daemon=SimpleNamespace(dispatch=lambda request:requests.append(request) or {'success':True,'data':{}})
+    owner.dispatch(daemon,{'operation':'model_create','execution':{
+        'rpc_timeout_s':30,'queue_timeout_s':60,'execution_timeout_s':None}})
+    assert requests[0]['execution']=={'rpc_timeout_s':10.,'queue_timeout_s':10.,'execution_timeout_s':10.}
+
+def test_reserve_rechecked_after_slow_RSS_probe(owned):
+    owner,clock,ps=owned
+    ps.sample_hook=lambda:setattr(clock,'value',1300)
+    with pytest.raises(TimeoutError):owner.before_effect('late_after_probe',30)
+
+def test_RSS_stop_during_cure_prevents_first_model_mutation(owned):
+    owner,clock,ps=owned;ps.rss=7*1024*1024
+    with pytest.raises(RuntimeError,match='RSS'):owner.before_effect('cure_model_create',30)
+    assert owner.stop_reason
+
+def test_compiler_timeout_retains_exact_handle_and_blocks_all_follow_on(owned):
+    owner,clock,ps=owned;child=Process(201);reference=weakref.ref(child)
+    with pytest.raises(subprocess.TimeoutExpired):owner.wait_child(child,'worker_javac',60)
+    assert owner.handles['worker_javac'] is child
+    del child;gc.collect();assert reference() is owner.handles['worker_javac']
+    with pytest.raises(RuntimeError):owner.before_effect('connect_after_unknown',30)
+    assert owner.handles['worker_javac'].waits==[60.]
+
+def test_terminal_owners_exit_without_retention_or_false_unknown(owned):
+    owner,clock,ps=owned
+    for process in owner.handles.values():process.code=0
+    summary={'status':'NATIVE_SETUP_PREFLIGHT_PASS_NOT_SOLVED'}
+    from tools.run_native_w24_cure_preflight import _finalize_coupled_owned_lifecycle_before_cli_return
+    result=_finalize_coupled_owned_lifecycle_before_cli_return(owner,summary,owner.evidence)
+    assert result is summary
+    assert summary['coupled_owner_final_observation']['status']=='TERMINAL_REAPED_AND_ORIGINAL_GROUPS_ABSENT'
+    assert summary['status']=='NATIVE_SETUP_PREFLIGHT_PASS_NOT_SOLVED'
+    assert id(owner) not in admission._RETAINED_OWNERS
+
+def test_finally_retains_owner_until_real_same_handle_and_group_terminal(owned,monkeypatch):
+    owner,clock,ps=owned;clock.value=2000 # Beyond admission budget: observe only.
+    for process in owner.handles.values():process.code=0
+    child=Process(201);owner.handles['worker_javac']=child;owner.groups['worker_javac']=201
+    reference=weakref.ref(child);ps.group_rows='202 201 201 descendant\n';ticks=[]
+    def yield_original(delay):
+        assert delay<=1 and admission._RETAINED_OWNERS[id(owner)] is owner
+        assert reference() is owner.handles['worker_javac']
+        gc.collect();ticks.append(1)
+        if len(ticks)==1:child.code=7 # Reaped leader alone must not close a surviving group.
+        elif len(ticks)==2:ps.group_rows=''
+        else:pytest.fail('retainer failed to close actual terminal handles/groups')
+    monkeypatch.setattr(admission.time,'sleep',yield_original)
+    summary={'status':'FAIL_OR_INCOMPLETE','error':'first compiler timeout'}
+    from tools.run_native_w24_cure_preflight import _finalize_coupled_owned_lifecycle_before_cli_return
+    result=_finalize_coupled_owned_lifecycle_before_cli_return(owner,summary,owner.evidence)
+    assert result is summary
+    assert len(ticks)==2 and summary['error']=='first compiler timeout'
+    assert summary['status']=='FAIL_OR_INCOMPLETE' and summary['safe_retry'] is False
+    assert summary['coupled_unit_budget_exceeded'] is True
+    assert id(owner) not in admission._RETAINED_OWNERS
+    assert child.waits==[0.1,0.1]
+
+def test_JSON_cannot_supply_an_owner(owned):
+    owner,clock,ps=owned
+    with pytest.raises(ValueError):admission.require_admission_owner({'deadline_epoch':1900})
+
+def test_real_native_server_worker_helper_late_start_stops_before_connect(owned):
+    from tools.run_native_resume_smoke import NativeLoopbackServer
+    owner,clock,ps=owned
+    # Native Server/Worker transport is synthetic; execute the actual helper.
+    server=NativeLoopbackServer.__new__(NativeLoopbackServer)
+    server.proc=owner.server.proc;server.work=owner.server.work;owner.server=server
+    server.port=56388;server.shadow_root=server.work;server.prefs=server.work
+    server.project=server.work;server.worker_state=server.work
+    server.paths_type=lambda *a,**kw:object()
+    calls=[]
+    class SDKWorker:
+        def __init__(self,*args,**kwargs):self._process=Process(102)
+        def start(self,**kwargs):
+            owner.bind_child(self._process,'worker') if 'worker' not in owner.handles else None
+            clock.value=1300;return {'ready':True}
+        def client(self):return self
+        def connect(self,*a,**kw):calls.append('connect');pytest.fail('late startup dispatched connect')
+    server.worker_type=SDKWorker
+    with pytest.raises(TimeoutError):server.start_worker(admission_owner=owner)
+    assert calls==[] and owner.handles['server'] is server.proc
+    assert server.worker is not None
+
+def test_real_persistent_worker_javac_timeout_retains_compiler_before_worker_birth(owned,tmp_path,monkeypatch):
+    from comsol_mcp import _java_worker as java
+    owner,clock,ps=owned;child=Process(201)
+    paths=SimpleNamespace(validate=lambda:None,classpath=lambda:('sdk-classpath','h',1,'j'),
+        compilation_cache_fingerprint=lambda *args:('private-cache',{}),
+        executable=lambda name:Path('/synthetic-sdk')/name)
+    worker=java.PersistentJavaWorker(paths,state_dir=tmp_path/'worker')
+    births=[]
+    def popen(command,**kwargs):births.append((command,kwargs));return child
+    monkeypatch.setattr(java.subprocess,'Popen',popen)
+    with pytest.raises(subprocess.TimeoutExpired):worker.start(admission_owner=owner,startup_timeout_s=25)
+    assert len(births)==1 and births[0][0][0].endswith('javac')
+    assert births[0][1]['start_new_session'] is True
+    assert worker._process is None and owner.handles['worker_javac'] is child
+    assert owner.stop_reason and child.waits==[60.]
+
+def test_real_persistent_transport_budget_caps_socket_and_queue(owned,tmp_path,monkeypatch):
+    from comsol_mcp import _java_worker as java
+    import io,json
+    owner,clock,ps=owned;clock.value=1290
+    worker=java.PersistentJavaWorker(SimpleNamespace(),state_dir=tmp_path/'worker')
+    worker._port=56389;worker._coupled_admission_owner=owner
+    limits=[];writes=[]
+    class Stream:
+        def __init__(self):self.read_count=0
+        def readline(self):
+            self.read_count+=1
+            if self.read_count==1:return b'{"ok":true}\n'
+            reply={'ok':True,'status':'SUCCEEDED','result':{}}
+            if 'request_id' in writes[-1]:reply['request_id']=writes[-1]['request_id']
+            return json.dumps(reply).encode()+b'\n' 
+        def write(self,raw):writes.append(json.loads(raw));return len(raw)
+        def flush(self):pass
+        def close(self):pass
+    class Socket:
+        def __enter__(self):return self
+        def __exit__(self,*args):pass
+        def settimeout(self,value):limits.append(value)
+        def makefile(self,*args):return Stream()
+    monkeypatch.setattr(java.socket,'create_connection',lambda address,timeout:limits.append(timeout) or Socket())
+    # Use health so the actual RPC read path is exercised without a native model action.
+    result=worker.health(timeout_s=30)
+    assert result['status']=='SUCCEEDED' and limits==[10.,10.]
+    worker.submit('modelutil',{'method':'tags','args':[]},rpc_timeout_s=30,queue_timeout_s=60)
+    assert writes[-1]['queue_timeout_ms']==10000
+    assert limits==[10.,10.,10.,10.]
+
+def test_actual_run_finally_and_cli_have_no_owner_disposal_bypass():
+    import ast,inspect
+    from tools import run_native_w24_cure_preflight as runner
+    tree=ast.parse(inspect.getsource(runner.run))
+    finalizers=[node for node in ast.walk(tree) if isinstance(node,ast.Try) and node.finalbody]
+    calls=[node for node in ast.walk(ast.Module(body=finalizers[0].finalbody,type_ignores=[]))
+           if isinstance(node,ast.Call) and isinstance(node.func,ast.Name)
+           and node.func.id=='_finalize_coupled_owned_lifecycle_before_cli_return']
+    assert len(calls)==1
+    # The real CLI waits on run(), which must complete this single finally boundary.
+    main=ast.parse(inspect.getsource(runner.main))
+    assert any(isinstance(node,ast.Call) and isinstance(node.func,ast.Name) and node.func.id=='run'
+               for node in ast.walk(main))
+
+def test_group_absence_cannot_be_minted_from_empty_successful_PS(owned,monkeypatch):
+    owner,clock,ps=owned
+    for process in owner.handles.values():process.code=0
+    monkeypatch.setattr(admission.subprocess,'run',lambda *args,**kwargs:
+                        SimpleNamespace(returncode=0,stderr='',stdout=''))
+    result=owner.observe_owned_terminal_once()
+    assert result['status']=='UNKNOWN_RETAINED_OWNER_OBSERVE_ONLY'
+    assert result['uncertain']==[{'group_probe':'OBSERVING_CLI_PROCESS_NOT_CAPTURED'}]

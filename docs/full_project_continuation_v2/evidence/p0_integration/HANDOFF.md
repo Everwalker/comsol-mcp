@@ -1,0 +1,29 @@
+# P0 parameter002 + artifact.preview002 integration
+
+Status: Darwin managed software tests PASS; Windows handle publisher implemented, actual Windows tests NOT_RUN. Native COMSOL, GUI, Worker, scientific acceptance and final unified review NOT_RUN in this unit. No commit/push, original contracts or historical progress matrix changed.
+
+P0 scoped fingerprint: `40d8a2a2f799b80a5860637e4fc412f365e1aac8985440041e7d6196d148815f` (canonical sorted manifest.files JSON SHA-256; 14 production/test files, excludes unrelated simultaneous recovery/native changes).
+
+Both original candidate TAR bytes matched adjacent SHA-256. Only exact allowlisted regular production/tests files were restored to `/private/tmp/comsol-v2-p0-sources-20261007`, each matching original inventory SHA-256. No `.git`, private refs, symlinks, AppleDouble, or traversal members entered new source. `source_restore.json` binds selected source files to archives. Parameter001+002 patch restores production table adapter and ManagedBackend binding; parameter002 `_artifact_store.py` and `_g3_parameter_io.py` are byte-identical to validated archive members. Preview002 implementation/tests are exact validated source members. Shared registry/control/read files use narrow merge preserving artifact.verify and model.compare; artifact.verify output schema is AST-source-identical to HEAD.
+
+Implemented: strict JSON/CSV parameter tables, description/unit roundtrip, bound ManagedBackend model queue, atomic no-clobber publication and pinned parent binding, typed prewrite refusals and conservative UNKNOWN publication cleanup receipts. Preview uses existing authorized schema-v2 registration, one pinned read descriptor, PNG ordering repair, typed pinned-I/O refusals, explicit `downsampled` plus source/preview dimensions and sampling metadata. Immutable reviewer control SHA-256 remains `af350d59b3c3ca1cd96bb4d50f8e6534d511f5fff2bff78f29f312ba71a38595`; controls were executed without edits.
+
+Executed with fresh APFS HOME/TMPDIR/cache/basetemp and guarded entrypoint:
+
+- `focused`: collection ERROR (missing ARTIFACT_PREVIEW_REVIEW_REPO invocation environment). Preserved stdout/stderr/JUnit/exit; no application tests executed.
+- `focused-rerun1`: **102 passed** (parameter registration/import, original preview, repair and immutable reviewer controls), 2.45s.
+- `regression`: **354 passed**, 2.16s (parameter required six selectors and preview original four selectors de-duplicated across eight files).
+- `git diff --check`: PASS.
+- Every guard event is GUARD_ACTIVE_BEFORE_CHILD_ENTRYPOINT; no denied socket event. Raw argv/stdout/stderr/JUnit/guard/exit and hashes are retained per run and manifest. No repeated C066 full 273-case suite.
+
+Runtime restored via original migration module with only writable log/receipt destinations redirected to new owned APFS root. Full inventory restore receipt reports equality and original TAR verification PASS at `/private/tmp/comsol-v2-runtime-20261007-new/migration-receipts/extended-scratch-013.full-restore.json`. Python `/private/tmp/comsol-v2-runtime-20261007-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python` executes current installed Homebrew 3.12 through intact absolute interpreter symlink; actual import probe confirms pytest 9.1.1, mcp, pydantic 2.13.5. Historical pyvenv.cfg command records the old creation path, but sys.executable is this new path and actual guarded suites passed. No network installation performed.
+
+Historical Windows design boundary (now implemented): `_artifact_store.publish_parameter_table_bytes_no_clobber` explicitly refuses platforms other than Darwin/Linux at line 413. Directory admission/binding uses POSIX `dir_fd`, O_DIRECTORY/O_NOFOLLOW, descriptor-relative stat/unlink/link/rename and parent fsync (`_open_directory_binding`, `_directory_binding_matches`, `_rename_exclusive_at`). Existing generic Windows exclusive rename and `_platform_paths` COMSOL docs discovery do not implement stable authorized parent handles or descriptor-relative publication. Main Agent needs a Windows file-handle/reparse/parent-move/no-clobber design and actual Windows execution; do not relabel Windows PASS. Windows preview pinned filesystem behavior also remains actual-host NOT_RUN.
+
+Next: Main Agent reviews scoped diff/manifest, handles Windows publisher design and remaining authorized P0 capabilities, then native/scientific/delivery work and final unified independent Reviewer. This local result does not establish full W01-W26 acceptance.
+
+## Windows implementation continuation
+
+Parent-approved Win32 design now implemented in `_windows_parameter_publish.py` and routed by `_artifact_store` win32 branch, preserving ArtifactStore protected/private path policy. Pure ctypes stdlib module uses fixed Windows DWORD/BOOLEAN widths, real HANDLE alignment and FileName field offset, ancestor directory handles without DELETE sharing, reparse refusal, no-clobber same-file-handle rename and same-handle disposition cleanup, postcommit UNKNOWN receipts. Root receives original lexical path, rejects namespace/UNC/ADS/reserved/short-name/trailing-dot-space aliases; ordinary Unicode and spaces accepted. No claim of directory power-loss fsync. Source was supplied to Main Agent for exact-file review and actual Windows-only kernel/filesystem tests.
+
+Latest Darwin impacted reruns after win32 wrapper: focused-rerun2 **102 passed**, regression-rerun1 **354 passed**. Stdlib Windows script on Mac: **2 lexical passed, 6 native skipped**. Actual Windows remains NOT_RUN here until Main Agent returns evidence. `manifest-darwin-preview-pre-windows.json` preserves previous 12-file fingerprint. Historical argv paths remain their real original run locations after evidence moved to canonical `repository/docs/full_project_continuation_v2/evidence/p0_integration`; new runs use the canonical path.

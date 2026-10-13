@@ -1,0 +1,167 @@
+{
+  "schema": "ROOT_MEMORY_ADMISSION_REVIEW_V1",
+  "created_utc": "2026-10-11T22:47:48.623888+00:00",
+  "status": "CHANGES_REQUIRED",
+  "candidate_manifest_sha256": "41d07ac57e2ce3e789c1b02a992206fc8c9c17ec70ddddcb926cfbfc0eb787e0",
+  "scope_fingerprint_sha256": "6cf03914733365d3c7563070090c06c014a17ed027793543656ed3962787b9d4",
+  "checked": [
+    {
+      "path": "comsol_mcp/_w26_memory_resources.py",
+      "live_matches": true
+    },
+    {
+      "path": "comsol_mcp/_w26_os_resources.py",
+      "live_matches": true
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "live_matches": true
+    },
+    {
+      "path": "tests/test_w26_memory_resources.py",
+      "live_matches": true
+    },
+    {
+      "path": "tests/test_w26_os_resources.py",
+      "live_matches": true
+    },
+    {
+      "path": "docs/full_project_continuation_v2/MEMORY_RESOURCE_CONFIG.md",
+      "live_matches": true
+    },
+    {
+      "path": "comsol_mcp/_host_scoped_provider.py",
+      "live_matches": true
+    },
+    {
+      "path": "comsol_mcp/_project_authority.py",
+      "live_matches": true
+    },
+    {
+      "path": "comsol_mcp/_operation_store.py",
+      "live_matches": true
+    },
+    {
+      "path": "comsol_mcp/_execution_contract.py",
+      "live_matches": true
+    },
+    {
+      "path": "comsol_mcp/_g3_ops.py",
+      "live_matches": true
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "live_matches": true
+    },
+    {
+      "path": "comsol_mcp/_execution_service.py",
+      "live_matches": true
+    },
+    {
+      "path": "comsol_mcp/_java_worker.py",
+      "live_matches": true
+    },
+    {
+      "path": "comsol_mcp/_windows_t037.py",
+      "live_matches": true
+    },
+    {
+      "path": "repository/local-preservation/w26_memory_admission_20261012_r1/comsol_mcp/_w26_memory_resources.py",
+      "snapshot_matches": true
+    },
+    {
+      "path": "repository/local-preservation/w26_memory_admission_20261012_r1/comsol_mcp/_w26_os_resources.py",
+      "snapshot_matches": true
+    },
+    {
+      "path": "repository/local-preservation/w26_memory_admission_20261012_r1/comsol_mcp/_control_daemon.py",
+      "snapshot_matches": true
+    },
+    {
+      "path": "repository/local-preservation/w26_memory_admission_20261012_r1/tests/test_w26_memory_resources.py",
+      "snapshot_matches": true
+    },
+    {
+      "path": "repository/local-preservation/w26_memory_admission_20261012_r1/tests/test_w26_os_resources.py",
+      "snapshot_matches": true
+    },
+    {
+      "path": "repository/local-preservation/w26_memory_admission_20261012_r1/docs/full_project_continuation_v2/MEMORY_RESOURCE_CONFIG.md",
+      "snapshot_matches": true
+    },
+    {
+      "path": "repository/local-preservation/w26_memory_admission_20261012_r1/comsol_mcp/_host_scoped_provider.py",
+      "snapshot_matches": true
+    },
+    {
+      "path": "repository/local-preservation/w26_memory_admission_20261012_r1/comsol_mcp/_project_authority.py",
+      "snapshot_matches": true
+    },
+    {
+      "path": "repository/local-preservation/w26_memory_admission_20261012_r1/comsol_mcp/_operation_store.py",
+      "snapshot_matches": true
+    },
+    {
+      "path": "repository/local-preservation/w26_memory_admission_20261012_r1/comsol_mcp/_execution_contract.py",
+      "snapshot_matches": true
+    },
+    {
+      "path": "repository/local-preservation/w26_memory_admission_20261012_r1/comsol_mcp/_g3_ops.py",
+      "snapshot_matches": true
+    },
+    {
+      "path": "repository/local-preservation/w26_memory_admission_20261012_r1/comsol_mcp/_g2_registry.py",
+      "snapshot_matches": true
+    },
+    {
+      "path": "repository/local-preservation/w26_memory_admission_20261012_r1/comsol_mcp/_execution_service.py",
+      "snapshot_matches": true
+    },
+    {
+      "path": "repository/local-preservation/w26_memory_admission_20261012_r1/comsol_mcp/_java_worker.py",
+      "snapshot_matches": true
+    },
+    {
+      "path": "repository/local-preservation/w26_memory_admission_20261012_r1/comsol_mcp/_windows_t037.py",
+      "snapshot_matches": true
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/w26_memory_resources_r3/junit-r7.xml",
+      "evidence_matches": true
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/w26_memory_resources_r3/network-guard-r7.jsonl",
+      "evidence_matches": true
+    }
+  ],
+  "live_drift_after_freeze": [],
+  "recorded_junit_counts": {
+    "tests": 59,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0
+  },
+  "findings": [
+    {
+      "id": "MEM-R1-01",
+      "severity": "required",
+      "path": "comsol_mcp/_w26_memory_resources.py",
+      "line": 941,
+      "problem": "reserve_prepared_in_transaction validates an old observation against prepared.now_monotonic_ns rather than current write-lock time, admitting samples expired while disk/SQLite admission was delayed.",
+      "required": "Capture current monotonic time inside reservation transaction and reject aged observations; joint reservations roll back without RUNNING or Worker dispatch."
+    },
+    {
+      "id": "MEM-R1-02",
+      "severity": "required",
+      "path": "comsol_mcp/_w26_memory_resources.py",
+      "line": 998,
+      "problem": "release_terminal_if_reserved accepts all OperationStore.TERMINAL states including LOST and EXPIRED, which do not establish quiescence for an already dispatched engine.",
+      "required": "Hold uncertain dispatched work unless actual fresh quiescence is verified; allow confirmed completion or provable never-dispatched release. Preserve UNKNOWN result and retry semantics."
+    }
+  ],
+  "source_scope_only": true,
+  "hard_cap": "NOT_IMPLEMENTED",
+  "windows_kernel": "NOT_RUN",
+  "comsol_gui": "NOT_RUN",
+  "final_independent_review": "NOT_RUN"
+}

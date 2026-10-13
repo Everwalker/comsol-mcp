@@ -1,0 +1,214 @@
+--- a/comsol_mcp/_operation_store.py
++++ b/comsol_mcp/_operation_store.py
+@@ -1200,6 +1200,11 @@
+                             raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+                                                       "V2 journal record hash is invalid")
+                         old_event, old_payload = prior["event"], prior["payload"]
++                        if state == "RECOVERY_REQUIRED":
++                            raise ResourcePolicyError(
++                                "HOST_CONTROL_JOURNAL_STATE_CONFLICT",
++                                "V2 recovery fence is absorbing; a later ordinary journal event is not permitted",
++                            )
+                         if old_event == "RECOVERY_REQUIRED":
+                             expected_keys = event_contracts[old_event][1]
+                             if (set(old_payload) != expected_keys or pending is None
+@@ -1259,6 +1264,11 @@
+                     if state != row["state"]:
+                         raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+                                                   "V2 admission state differs from its journal history")
++                    if state == "RECOVERY_REQUIRED":
++                        raise ResourcePolicyError(
++                            "HOST_CONTROL_JOURNAL_STATE_CONFLICT",
++                            "V2 recovery fence is absorbing; ordinary append cannot clear it",
++                        )
+                     phase_for_event = event_contracts[event][0]
+                     if event == "RECOVERY_REQUIRED":
+                         if (state == "RECOVERY_REQUIRED" or pending is None
+--- a/tests/test_windows_host_change.py
++++ b/tests/test_windows_host_change.py
+@@ -439,6 +439,81 @@
+         separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()
+ 
+ 
++def _assert_v2_recovery_fence_absorbs_direct_and_hashed_suffix_events(
++        store, admission, *, phase):
++    assert phase in {"APPLY", "RESTORE"}
++    job_id = admission["job_id"]
++    events = _events_v2(store, job_id)
++    assert events[-1]["event"] == "RECOVERY_REQUIRED"
++    assert events[-2]["event"] == f"{phase}_STEP_INTENT"
++    pending = events[-2]["payload"]
++    steps = json.loads(admission["baseline_json"])["mutation_sequence"]["steps"]
++    next_index = pending["step_index"] + 1
++    assert next_index < len(steps)
++    next_step = steps[next_index]
++
++    verified_event = f"{phase}_STEP_READBACK_VERIFIED"
++    verified_payload = {
++        **pending,
++        ("created_resource_sha256" if phase == "APPLY" else "removed_resource_sha256"):
++            (pending.get("expected_resource_sha256") or "e" * 64),
++    }
++    next_intent_event = f"{phase}_STEP_INTENT"
++    next_intent = {
++        "step_index": next_index,
++        "action_id": next_step["action_id"],
++        "resource_kind": next_step["resource_kind"],
++        "resource_key": next_step["resource_key"],
++        "dependency_sha256": next_step["dependency_sha256"],
++        ("desired_identity_sha256" if phase == "APPLY" else "expected_resource_sha256"):
++            (next_step["identity_sha256"] if phase == "APPLY"
++             else next_step["expected_resource_sha256"]),
++    }
++
++    before = len(events)
++    for event, payload in ((verified_event, verified_payload),
++                           (next_intent_event, next_intent)):
++        with pytest.raises(resources.ResourcePolicyError) as refused:
++            store.append_host_control_mutation_step_event(
++                admission_id=admission["admission_id"], event=event, payload=payload)
++        assert refused.value.code == "HOST_CONTROL_JOURNAL_STATE_CONFLICT"
++        assert len(_events_v2(store, job_id)) == before
++        assert store.host_control_admission_state(admission["admission_id"]) == "RECOVERY_REQUIRED"
++
++    # Inject a fully hash-consistent, schema-valid readback suffix as if an
++    # earlier process wrote it before crashing. The next production append
++    # must reject the persisted history instead of treating it as recovery.
++    last = events[-1]
++    body = {key: value for key, value in last.items() if key != "record_sha256"}
++    body.update({
++        "sequence": len(events),
++        "previous_sha256": last["record_sha256"],
++        "event": verified_event,
++        "payload": verified_payload,
++    })
++    canonical = json.dumps(body, sort_keys=True, ensure_ascii=False,
++                           separators=(",", ":"), allow_nan=False)
++    suffix = {**body, "record_sha256": hashlib.sha256(canonical.encode("utf-8")).hexdigest()}
++    store.db.execute(
++        "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
++        (job_id, "HostControlMutationJournalV2",
++         json.dumps(suffix, sort_keys=True, ensure_ascii=False,
++                    separators=(",", ":"), allow_nan=False)),
++    )
++    store.db.commit()
++    after_suffix = len(_events_v2(store, job_id))
++    assert after_suffix == before + 1
++    with pytest.raises(resources.ResourcePolicyError) as replay_refused:
++        store.append_host_control_mutation_step_event(
++            admission_id=admission["admission_id"],
++            event=next_intent_event,
++            payload=next_intent,
++        )
++    assert replay_refused.value.code == "HOST_CONTROL_JOURNAL_STATE_CONFLICT"
++    assert len(_events_v2(store, job_id)) == after_suffix
++    assert store.host_control_admission_state(admission["admission_id"]) == "RECOVERY_REQUIRED"
++
++
+ def test_supported_create_and_receipt_bound_restore_are_durably_journalled(host_env, tmp_path):
+     profile, plan, action, api, store, provider, authority, executor = host_env
+     apply_ref = "apply-once"
+@@ -624,6 +699,103 @@
+         executor.apply(plan, approval=resources.HostChangeApproval(plan.sha256, ref))
+     assert replay.value.code == "HOST_CONTROL_AUTHORIZATION_REPLAYED"
+     assert len(api.calls) == 2
++    provider.close()
++
++
++def test_v2_apply_recovery_required_is_absorbing_if_unknown_finish_write_fails(host_env, tmp_path):
++    profile, _old_plan, _action, _old_api, store, provider, authority, _old_executor = host_env
++    provider.close()
++    plan = _provider_sublayer_plan(profile, with_filter=True)
++    authorization_ref = "apply-unknown-finish-write-failure"
++    provider = _write_provider(tmp_path / "provider-config-apply-recovery-fence", profile,
++                               [_apply_grant(profile, plan, authorization_ref)])
++    authority.authorization_verifier = provider
++    api = FakeWfpSequence(profile)
++    api.fail_after = "wfp_sublayer"
++    executor = WindowsHostChangeExecutor._for_software_test(
++        store=store, authority=authority, profile=profile, api=api,
++        token=_SOFTWARE_TEST_TOKEN,
++    )
++
++    original_finish = store.finish
++
++    def fail_unknown_terminal_write(operation_id, *, status, result):
++        if status == "UNKNOWN":
++            raise OSError("simulated process/store failure before UNKNOWN terminal write")
++        return original_finish(operation_id, status=status, result=result)
++
++    store.finish = fail_unknown_terminal_write
++    with pytest.raises(WindowsHostChangeError) as unknown:
++        executor.apply(plan, approval=resources.HostChangeApproval(plan.sha256, authorization_ref))
++    store.finish = original_finish
++    assert unknown.value.code == "HOST_CHANGE_RECOVERY_REQUIRED"
++    admission = store.db.execute(
++        "SELECT * FROM host_control_admissions WHERE phase='APPLY'").fetchone()
++    assert admission["state"] == "RECOVERY_REQUIRED"
++    assert store.get_operation(admission["operation_id"])["status"] == "RUNNING"
++    assert store.job(admission["job_id"])["status"] == "RUNNING"
++    assert [item["event"] for item in _events_v2(store, admission["job_id"])] == [
++        "APPLY_STEP_INTENT", "APPLY_STEP_READBACK_VERIFIED",
++        "APPLY_STEP_INTENT", "RECOVERY_REQUIRED"]
++    _assert_v2_recovery_fence_absorbs_direct_and_hashed_suffix_events(
++        store, admission, phase="APPLY")
++    assert [item[:2] for item in api.calls] == [
++        ("create", "wfp_provider"), ("create", "wfp_sublayer")]
++    provider.close()
++
++
++def test_v2_restore_recovery_required_is_absorbing_if_unknown_finish_write_fails(host_env, tmp_path):
++    profile, _old_plan, _action, _old_api, store, provider, authority, _old_executor = host_env
++    provider.close()
++    plan = _provider_sublayer_plan(profile, with_filter=True)
++    apply_ref = "restore-recovery-fence-apply"
++    api = FakeWfpSequence(profile)
++    provider = _write_provider(tmp_path / "provider-config-restore-recovery-apply", profile,
++                               [_apply_grant(profile, plan, apply_ref)])
++    authority.authorization_verifier = provider
++    executor = WindowsHostChangeExecutor._for_software_test(
++        store=store, authority=authority, profile=profile, api=api,
++        token=_SOFTWARE_TEST_TOKEN,
++    )
++    receipt = executor.apply(plan, approval=resources.HostChangeApproval(plan.sha256, apply_ref))
++
++    restore_sha = _restore_sequence_sha(profile, plan, receipt, api)
++    restore_ref = "restore-recovery-fence-restore"
++    provider.close()
++    provider = _write_provider(tmp_path / "provider-config-restore-recovery-restore", profile, [
++        _grant(profile, "host.change.restore", restore_ref, restore_sha,
++               phase="RESTORE", source_plan=plan.sha256,
++               source_receipt=receipt.receipt_sha256),
++    ])
++    authority.authorization_verifier = provider
++    executor.provider = provider
++    api.fail_after_delete = "wfp_sublayer"
++
++    original_finish = store.finish
++
++    def fail_unknown_terminal_write(operation_id, *, status, result):
++        if status == "UNKNOWN":
++            raise OSError("simulated process/store failure before UNKNOWN terminal write")
++        return original_finish(operation_id, status=status, result=result)
++
++    store.finish = fail_unknown_terminal_write
++    with pytest.raises(WindowsHostChangeError) as unknown:
++        executor.restore(plan, receipt,
++                         approval=resources.HostChangeApproval(restore_sha, restore_ref))
++    store.finish = original_finish
++    assert unknown.value.code == "HOST_CHANGE_RECOVERY_REQUIRED"
++    admission = store.db.execute(
++        "SELECT * FROM host_control_admissions WHERE phase='RESTORE'").fetchone()
++    assert admission["state"] == "RECOVERY_REQUIRED"
++    assert store.get_operation(admission["operation_id"])["status"] == "RUNNING"
++    assert store.job(admission["job_id"])["status"] == "RUNNING"
++    assert [item["event"] for item in _events_v2(store, admission["job_id"])] == [
++        "RESTORE_STEP_INTENT", "RESTORE_STEP_READBACK_VERIFIED",
++        "RESTORE_STEP_INTENT", "RECOVERY_REQUIRED"]
++    _assert_v2_recovery_fence_absorbs_direct_and_hashed_suffix_events(
++        store, admission, phase="RESTORE")
++    assert [item[:2] for item in api.calls[-2:]] == [
++        ("delete", "wfp_filter"), ("delete", "wfp_sublayer")]
+     provider.close()
+ 
+ 

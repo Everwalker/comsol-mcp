@@ -1,0 +1,13 @@
+{
+  "schema": "ROOT_W24_MESH_INDEX_PRIMARY_REFERENCE_V1",
+  "scope": "Official same-version mesh corner indexing example, source evidence only.",
+  "read": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"doc_id\": 11794,\n  \"title\": \"COMSOL 6.4 - Getting and Setting Mesh Data\",\n  \"path\": \"doc/help/wtpwebapps/ROOT/doc/com.comsol.help.llmatlab/llmatlab_ug_model.6.25.html\",\n  \"sha256\": \"63375d474ee2eacf9bf1e574f8c9b601f043fde6e1e32632a1b9f4817bf7149a\",\n  \"page\": null,\n  \"chunk_id\": 34342,\n  \"total_chars\": 878,\n  \"offset\": 0,\n  \"next_offset\": null,\n  \"text\": \"Model');\\n\\ncomp1 = model.component.create('comp1', true);\\n\\ngeom1 = comp1.geom.create('geom1', 2);\\n\\ngeom1.feature.create('sq1', 'Square');\\n\\ngeom1.run;\\n\\nmesh1 = comp1.mesh.create('mesh1');\\n\\nmesh1.feature.create('ftri1', 'FreeTri');\\n\\nmesh1.feature('size').set('hmax', 0.5);\\n\\nmesh1.run('ftri1');\\n\\nmphmesh(model);\\n\\n[meshstats,meshdata] = mphmeshstats(model);\\n\\nvtx = meshdata.vertex\\n\\ntri = meshdata.elem{2}\\n\\n[x,y] = meshgrid([0 0.5 1], [0 0.5 1]);\\n\\ncoord = [x(:) y(:)]';\\n\\nnew_tri(:,1)=[0;3;4];\\n\\nnew_tri(:,2)=[0;1;4];\\n\\nnew_tri(:,3)=[1;4;5];\\n\\nnew_tri(:,4)=[1;2;5];\\n\\nnew_tri(:,5)=[3;6;7];\\n\\nnew_tri(:,6)=[3;4;7];\\n\\nnew_tri(:,7)=[4;7;8];\\n\\nnew_tri(:,8)=[4;5;8];\\n\\ncomp2 = model.component.create('comp2', true);\\n\\ncomp2.geom.create('geom2',2);\\n\\nmesh2 = comp2.mesh.create('mesh2');\\n\\nmesh2.data.setElem('tri',new_tri);\\n\\nmesh2.data.setVertex(coord);\\n\\nmesh2.data.createMesh;\\n\\nmphmesh(model,'mesh2');\"\n}"
+      }
+    ],
+    "isError": false
+  }
+}

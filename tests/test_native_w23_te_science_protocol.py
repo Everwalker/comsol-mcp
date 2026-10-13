@@ -1,11 +1,90 @@
 from __future__ import annotations
 
 import cmath
+import copy
 import math
 
 import pytest
 
 from tools import w23_te_science_protocol as protocol
+
+
+def _stored_solver(tag: str, value_real: float, value_imag: float):
+    return {
+        "tag": tag, "sequence_type": "Stored", "solution_type": "Eigenfrequency",
+        "study_tag": "std1", "attached": False, "get_size": [100, 1],
+        "pnames": ["lambda"],
+        "parameter_values_status": "RAW_TYPED_COMPLEX_VALUES_CAPTURED_NOT_INTERPRETED",
+        "parameter_values_by_solnum": [{
+            "solnum": 1, "real": [value_real], "imaginary": [value_imag],
+            "parameter_units": [{"name": "lambda", "status": "OBSERVED", "value": "1/m"}],
+        }],
+    }
+
+
+def _stored_dataset_receipt(dataset_tag: str, solution_tag: str,
+                            value_real: float, value_imag: float):
+    return {
+        "dataset": {"tag": dataset_tag, "type_id": "Solution"},
+        "solution_indices": {
+            "dataset": dataset_tag, "solution": solution_tag,
+            "binding_complete": False, "axis_metadata_complete": False,
+            "parameters_complete": False,
+            "dataset_binding": {"binding_complete": True, "solution": solution_tag,
+                                 "dataset": dataset_tag, "dataset_type": "Solution"},
+            "read_errors": [{"code": "SOLUTION_AXIS_METADATA_UNAVAILABLE"}],
+            "solver_sequence_parameter_observation": {
+                "status": "OBSERVED_TYPED_COMPLEX_PARAMETER_VALUES",
+                "solution_tag": solution_tag, "sequence_type": "Stored",
+                "solution_type": "Eigenfrequency", "study": "std1", "attached": False,
+                "get_size": [100, 1], "pnames": ["lambda"],
+                "solution_values": [{"solnum": 1,
+                    "real_getter": {"raw": [value_real]},
+                    "imag_getter": {"raw": [value_imag]}}],
+                "unit_observations": [{"name": "lambda", "value": "1/m"}],
+                "parameters_complete": False,
+            },
+        },
+    }
+
+
+def _saved_bma_inventory():
+    bindings = [
+        {"path": "bmaInput", "tree_order": 0, "feature_type": "StudyStep",
+         "study": "std1", "studystep": "bmaInput", "solver_sequence": "sol1"},
+        {"path": "bmaOutput", "tree_order": 2, "feature_type": "StudyStep",
+         "study": "std1", "studystep": "bmaOutput", "solver_sequence": "sol1"},
+        {"path": "freq", "tree_order": 4, "feature_type": "StudyStep",
+         "study": "std1", "studystep": "freq", "solver_sequence": "sol1"},
+    ]
+    return {
+        "study_tag": "std1",
+        "study_steps_in_configured_order": [
+            {"tag": "bmaInput", "feature_type": "BoundaryModeAnalysis",
+             "PortName": "1", "modeFreq": "f0"},
+            {"tag": "bmaOutput", "feature_type": "BoundaryModeAnalysis",
+             "PortName": "2", "modeFreq": "f0"},
+            {"tag": "freq", "feature_type": "Frequency", "plist": "f0"},
+        ],
+        "solver_sequences_for_study": [
+            {"tag": "sol1", "sequence_type": "SolverSequence", "solution_type": "Parametric",
+             "study_tag": "std1", "attached": True,
+             "solver_tree_features": [
+                {"path": "bmaInput", "tree_order": 0, "feature_type": "StudyStep"},
+                {"path": "su1", "tree_order": 1, "feature_type": "StoreSolution",
+                 "stored_solution_reference": "sol2",
+                 "stored_solution_reference_getter": "StoreSolution.getString('sol')"},
+                {"path": "bmaOutput", "tree_order": 2, "feature_type": "StudyStep"},
+                {"path": "su2", "tree_order": 3, "feature_type": "StoreSolution",
+                 "stored_solution_reference": "sol3",
+                 "stored_solution_reference_getter": "StoreSolution.getString('sol')"},
+                {"path": "freq", "tree_order": 4, "feature_type": "StudyStep"},
+            ],
+             "study_step_bindings_in_solver_tree_order": bindings},
+            _stored_solver("sol2", 0.0, -6244288.968380504),
+            _stored_solver("sol3", -1.6359882555849607e-8, -6244288.968380514),
+        ],
+    }
 
 
 def _event(rpc_id: str, phase: str, status: str | None = None):
@@ -93,6 +172,113 @@ def test_cleanup_gate_requires_managed_and_direct_ledgers_and_preserves_unknown(
         {"safe_for_owned_cleanup": False}, direct)["safe_for_owned_cleanup"]
     assert not protocol.combine_cleanup_gates(
         managed_unknown, {"safe_for_owned_cleanup": False})["safe_for_owned_cleanup"]
+
+
+def test_bma_stored_solution_roles_follow_study_tree_store_and_dataset_bindings():
+    inventory = _saved_bma_inventory()
+    datasets = {"solution_index_receipts": [
+        _stored_dataset_receipt("dset2", "sol2", 0.0, -6244288.968380504),
+        _stored_dataset_receipt("dset3", "sol3", -1.6359882555849607e-8, -6244288.968380514),
+    ]}
+    result = protocol.resolve_bma_stored_dataset_bindings(inventory, datasets)
+    assert result["status"] == "PASS_BMA_STUDY_STORE_DATASET_BINDINGS"
+    assert result["science_acceptance"] == "NOT_EVALUATED"
+    assert [(row["study_step_tag"], row["store_solution_reference"], row["dataset_tag"])
+            for row in result["bindings"]] == [
+                ("bmaInput", "sol2", "dset2"), ("bmaOutput", "sol3", "dset3")]
+    assert all(row["solution_info_axis_metadata_complete"] is False for row in result["bindings"])
+    assert all(row["solution_info_parameters_complete"] is False for row in result["bindings"])
+    assert result["bindings"][1]["sequence_parameter_observation"]["values"][0]["parameters"][0] == {
+        "name": "lambda", "real": -1.6359882555849607e-8,
+        "imag": -6244288.968380514, "unit": "1/m"}
+
+
+@pytest.mark.parametrize("mutate", ["missing_store", "duplicate_dataset", "wrong_sequence_value"])
+def test_bma_stored_solution_binding_is_fail_closed(mutate):
+    inventory = _saved_bma_inventory()
+    datasets = {"solution_index_receipts": [
+        _stored_dataset_receipt("dset2", "sol2", 0.0, -6244288.968380504),
+        _stored_dataset_receipt("dset3", "sol3", -1.6359882555849607e-8, -6244288.968380514),
+    ]}
+    if mutate == "missing_store":
+        inventory["solver_sequences_for_study"][0]["solver_tree_features"][1]["stored_solution_reference"] = None
+    elif mutate == "duplicate_dataset":
+        datasets["solution_index_receipts"].append(
+            _stored_dataset_receipt("dset3_duplicate", "sol3", -1.6359882555849607e-8,
+                                    -6244288.968380514))
+    else:
+        datasets["solution_index_receipts"][1]["solution_indices"][
+            "solver_sequence_parameter_observation"]["solution_values"][0][
+                "imag_getter"]["raw"][0] += 1.0
+    with pytest.raises(protocol.ScienceProtocolError):
+        protocol.resolve_bma_stored_dataset_bindings(inventory, datasets)
+
+
+def test_production_complex_point_readback_preserves_exact_dataset_shape_and_coordinates():
+    result = {
+        "status": {"ok": True, "cleanup_failed": False},
+        "cleanup": {"cleanup_failed": False},
+        "dataset": "dset3", "solution": "sol3",
+        "dataset_binding": {"binding_complete": True, "solution": "sol3"},
+        "solution_axes": {
+            "pair_mapping_complete": False,
+            "numeric_count_observation": {
+                "status": "VERIFIED_SINGLE_STORED_NUMERIC_COUNT",
+                "numeric_solution_count": 1,
+                "dataset": "dset3", "solution": "sol3",
+                "source": "exact dataset binding + Stored getSize()[1]=1 + typed complex lambda row",
+            },
+        },
+        "result_budget": {"status": "PASS", "records": [{
+            "status": "PASS", "allowed": True,
+            "solution_axes_verification_scope": "numeric_singleton_count_only",
+            "solution_axes_pair_mapping_complete": False,
+        }]},
+        "field_array": None,
+        "feature_readback": {"data": "dset3", "data_status": "VERIFIED"},
+        "coordinate_readback": {"status": "VERIFIED",
+                                 "coordinates": [[8.0, 8.0], [-1.0, 1.0]], "unit": "um"},
+        "point_count": 2, "expressions": ["ewfd.Ez", "ewfd.Hy"],
+        "complex_mode": "preserve", "is_complex": True,
+        "expression_units": {"ewfd.Ez": "V/m", "ewfd.Hy": "A/m"},
+        "values": [
+            [[{"real": 1.0, "imag": 2.0}, {"real": 3.0, "imag": 4.0}]],
+            [[{"real": -2.0, "imag": 0.5}, {"real": -1.0, "imag": 0.25}]],
+        ],
+    }
+    raw = protocol.decode_production_complex_point_readback(
+        result, dataset_tag="dset3", solution_tag="sol3",
+        expressions=["ewfd.Ez", "ewfd.Hy"], expected_points=[[8.0, -1.0], [8.0, 1.0]],
+        expected_solution_count=1, plane_id="output_x8")
+    assert raw["status"] == "PRODUCTION_NATIVE_COMPLEX_POINT_READBACK"
+    assert raw["science_acceptance"] == "NOT_EVALUATED"
+    assert raw["coordinates_m"] == [[8e-6, 8e-6], [-1e-6, 1e-6]]
+    assert raw["normal_status"] == "NOT_CAPTURED_BY_POINT_INTERPOLATION"
+    assert raw["expressions"][0]["imag"] == [2.0, 4.0]
+
+    malformed = copy.deepcopy(result)
+    malformed["values"][0][0].pop()
+    with pytest.raises(protocol.ScienceProtocolError, match="shape"):
+        protocol.decode_production_complex_point_readback(
+            malformed, dataset_tag="dset3", solution_tag="sol3",
+            expressions=["ewfd.Ez", "ewfd.Hy"], expected_points=[[8.0, -1.0], [8.0, 1.0]],
+            expected_solution_count=1, plane_id="output_x8")
+
+    malformed_count = copy.deepcopy(result)
+    malformed_count["solution_axes"]["numeric_count_observation"]["numeric_solution_count"] = 2
+    with pytest.raises(protocol.ScienceProtocolError, match="numeric singleton"):
+        protocol.decode_production_complex_point_readback(
+            malformed_count, dataset_tag="dset3", solution_tag="sol3",
+            expressions=["ewfd.Ez", "ewfd.Hy"], expected_points=[[8.0, -1.0], [8.0, 1.0]],
+            expected_solution_count=1, plane_id="output_x8")
+
+    malformed_axes = copy.deepcopy(result)
+    malformed_axes["solution_axes"]["pair_mapping_complete"] = True
+    with pytest.raises(protocol.ScienceProtocolError, match="numeric singleton"):
+        protocol.decode_production_complex_point_readback(
+            malformed_axes, dataset_tag="dset3", solution_tag="sol3",
+            expressions=["ewfd.Ez", "ewfd.Hy"], expected_points=[[8.0, -1.0], [8.0, 1.0]],
+            expected_solution_count=1, plane_id="output_x8")
 
 
 def test_simpson_and_native_integral_reconciliation_use_registered_metre_grid():

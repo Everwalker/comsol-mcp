@@ -345,8 +345,10 @@ class PersistentJavaWorker:
     """One persistent worker process.  A timeout never terminates the child."""
 
     def __init__(self, paths: JavaWorkerPaths, *, state_dir: Path | None = None,
-                 on_request_event: Callable[[dict[str, Any]], None] | None = None) -> None:
+                 on_request_event: Callable[[dict[str, Any]], None] | None = None,
+                 process_factory: Callable[..., Any] | None = None) -> None:
         self.paths = paths
+        self._process_factory = process_factory
         self.state_dir = state_dir or Path(tempfile.mkdtemp(prefix="comsol-mcp-worker-state-"))
         self._token = secrets.token_urlsafe(32)
         self._process: subprocess.Popen[str] | None = None
@@ -373,6 +375,11 @@ class PersistentJavaWorker:
 
     def start(self, *, startup_timeout_s: float = 20.0) -> dict[str, Any]:
         with self._lock:
+            preflight = getattr(self._process_factory, "preflight", None)
+            if callable(preflight):
+                # Do not run javac or touch the endpoint cache until the
+                # injected execution boundary admits this exact session.
+                preflight()
             if self._process is not None and self._process.poll() is None:
                 return self.health(timeout_s=1.0)
             self.paths.validate()
@@ -410,8 +417,9 @@ class PersistentJavaWorker:
             command += ["--generation", str(self._next_generation)]
             environment = dict(os.environ); environment["COMSOL_MCP_WORKER_TOKEN"] = self._token
             log = (self.state_dir / "worker.stderr.log").open("a", encoding="utf-8")
-            self._process = subprocess.Popen(command, text=True, stdout=subprocess.DEVNULL, stderr=log,
-                                             env=environment, start_new_session=True)
+            factory = self._process_factory or subprocess.Popen
+            self._process = factory(command, text=True, stdout=subprocess.DEVNULL, stderr=log,
+                                    env=environment, start_new_session=True)
             log.close()
             deadline = time.monotonic() + startup_timeout_s
             ready: dict[str, Any] | None = None
@@ -616,7 +624,7 @@ class PersistentJavaWorker:
 
     def submit(self, kind: str, payload: Mapping[str, Any], *, request_id: str | None = None,
                queue_timeout_s: float | None = None, rpc_timeout_s: float | None = None) -> dict[str, Any]:
-        if kind not in {"connect", "disconnect", "model", "modelutil", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
+        if kind not in {"connect", "disconnect", "model", "modelutil", "progress_log", "license_checkout", "model_snapshot", "call", "children", "walk", "public_describe", "lock_selftest", "code_compile", "code_execute", "g2_entity_identity", "g2_nodegroup_read", "g2_nodegroup_ungroup"}:
             raise JavaWorkerError("unknown private worker command")
         body = dict(payload); body["type"] = kind; body["request_id"] = request_id or f"wrk-{uuid.uuid4()}"
         if queue_timeout_s is not None:
@@ -1064,6 +1072,17 @@ class RemoteClient:
         return _decode_reply(self._worker.submit("modelutil", {"method": "uniquetag", "args": [prefix]}, **kwargs), self._worker)
     def getComsolVersion(self, **kwargs: Any) -> Any:
         return _decode_reply(self._worker.submit("modelutil", {"method": "getComsolVersion", "args": []}, **kwargs), self._worker)
+    def modelsUsedByOtherClients(self, **kwargs: Any) -> Any:
+        """Return tags COMSOL reports as currently used by other clients."""
+        return _decode_reply(self._worker.submit("modelutil", {"method": "modelsUsedByOtherClients", "args": []}, **kwargs), self._worker)
+    def set_progress_log(self, path: str | None, **kwargs: Any) -> dict[str, Any]:
+        """Set or disable the private Worker client's ModelUtil progress sink."""
+        from ._domain_outcome import record_engine_method
+        record_engine_method("showProgress", path, command="progress_log", receiver="modelutil")
+        result = _decode_reply(self._worker.submit("progress_log", {"path": path}, **kwargs), self._worker)
+        if not isinstance(result, dict):
+            raise JavaWorkerError("Worker returned an invalid progress-log receipt")
+        return result
     def create(self, name: str, **kwargs: Any) -> RemoteModel:
         """Create with a generated tag; the caller's value is a display label."""
         from ._domain_outcome import record_engine_method
@@ -1107,8 +1126,11 @@ def _as_model(value: Any) -> RemoteModel:
 
 def _redact(value: Any) -> Any:
     if isinstance(value, Mapping):
-        return {str(key): "<redacted>" if str(key).lower() in {"token", "password", "secret", "authorization"} else _redact(item)
-                for key, item in value.items()}
+        result = {str(key): "<redacted>" if str(key).lower() in {"token", "password", "secret", "authorization"} else _redact(item)
+                  for key, item in value.items()}
+        if value.get("type") == "progress_log" and "path" in result:
+            result["path"] = "<private-progress-file>"
+        return result
     if isinstance(value, list): return [_redact(item) for item in value]
     return value
 

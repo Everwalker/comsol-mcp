@@ -1,0 +1,1162 @@
+--- a/comsol_mcp/_java_worker.py
++++ b/comsol_mcp/_java_worker.py
+@@ -418,9 +418,20 @@
+             environment = dict(os.environ); environment["COMSOL_MCP_WORKER_TOKEN"] = self._token
+             log = (self.state_dir / "worker.stderr.log").open("a", encoding="utf-8")
+             factory = self._process_factory or subprocess.Popen
+-            self._process = factory(command, text=True, stdout=subprocess.DEVNULL, stderr=log,
+-                                    env=environment, start_new_session=True)
+-            log.close()
++            try:
++                self._process = factory(command, text=True, stdout=subprocess.DEVNULL, stderr=log,
++                                        env=environment, start_new_session=True)
++            except Exception as exc:
++                from ._windows_t037 import NativeSuspendedChildLaunchError
++                if type(exc) is NativeSuspendedChildLaunchError:
++                    self._process = exc.transfer_to(self)
++                    self._port = self._generation = None
++                    unknown = JavaWorkerError("native Worker child cleanup is uncertain; actual owner retained")
++                    unknown.execution_state_unknown = True
++                    raise unknown from exc
++                raise
++            finally:
++                log.close()
+             deadline = time.monotonic() + startup_timeout_s
+             ready: dict[str, Any] | None = None
+             while time.monotonic() < deadline:
+@@ -865,7 +876,10 @@
+     def close(self) -> None:
+         # Only the child started by this instance is eligible for termination. No COMSOL server is touched.
+         with self._lock:
+-            if self._process is not None and self._process.poll() is None:
++            from ._windows_t037 import _RetainedSuspendedChild
++            if type(self._process) is _RetainedSuspendedChild:
++                self._process.cleanup_owned(self, timeout=3)
++            elif self._process is not None and self._process.poll() is None:
+                 self._process.terminate()
+                 try: self._process.wait(timeout=3)
+                 except subprocess.TimeoutExpired: self._process.kill(); self._process.wait(timeout=3)
+--- a/comsol_mcp/_session_server.py
++++ b/comsol_mcp/_session_server.py
+@@ -107,6 +107,7 @@
+     start_epoch_ms: int | None = None
+     log_handle: Any = None
+     retired: bool = False
++    suspended_launch_recovery: Any = None
+ 
+ 
+ ListenerRow = tuple[int, CanonicalSocket]
+@@ -599,6 +600,23 @@
+         try:
+             process = selected_process_factory(command, **options)
+         except Exception as exc:
++            from ._windows_t037 import NativeSuspendedChildLaunchError
++            if type(exc) is NativeSuspendedChildLaunchError:
++                retained = ManagedServerHandle(process=None, runtime_id=runtime.runtime_id,
++                                               executable=executable, directories=directories, log_handle=log_handle)
++                retained.process = exc.transfer_to(retained)
++                retained.suspended_launch_recovery = retained.process
++                persistence_failed = False
++                try:
++                    emit_observation("STARTUP_UNKNOWN", pid=retained.process.pid,
++                                     child_handle=retained, exception=exc,
++                                     error_category="NATIVE_CHILD_CLEANUP_UNKNOWN")
++                except Exception:
++                    persistence_failed = True
++                raise _StartupObservationError(
++                    "native Server child creation/cleanup is uncertain; actual handle retained",
++                    handle=retained, uncertain=True, diagnostic_persistence_failed=persistence_failed,
++                    startup_exception_type=_safe_exception_type(exc)) from exc
+             try:
+                 log_handle.close()
+             except Exception:
+@@ -738,6 +756,20 @@
+         if not isinstance(handle, ManagedServerHandle) or handle.retired:
+             raise OwnedServerError("exact live owned Server handle is unavailable", uncertain=True)
+         process = handle.process
++        if handle.suspended_launch_recovery is not None:
++            from ._windows_t037 import is_native_suspended_child
++            if (handle.suspended_launch_recovery is not process or not is_native_suspended_child(process)):
++                raise OwnedServerError("simplified native cleanup capability is unavailable", handle=handle, uncertain=True)
++            try:
++                result = process.cleanup_owned(handle, timeout=timeout_s)
++            except Exception as exc:
++                raise OwnedServerError("native suspended Server cleanup is unconfirmed; owner retained",
++                                       handle=handle, uncertain=True) from exc
++            handle.retired = True
++            self._close_log(handle)
++            return {"pid": process.pid, "birth_filetime_100ns": process.birth_filetime_100ns,
++                    "exit_confirmed": True, "child_reaped": True, "returncode": result,
++                    "server_stopped": True, "never_resumed_native_child": True}
+         identity = handle.process_identity
+         endpoint = handle.endpoint
+         if (identity is None or endpoint is None or getattr(process, "pid", None) != identity.pid
+--- a/comsol_mcp/_windows_t037.py
++++ b/comsol_mcp/_windows_t037.py
+@@ -1019,6 +1019,12 @@
+         return self._job_key
+ 
+     def close(self) -> None:
++        if self._api is not None:
++            if getattr(self._api, "_unclassified_create_handles", None):
++                _refuse("NATIVE_CHILD_CREATION_UNKNOWN", "unclassified native creation handles block Job close")
++            for process in getattr(self._api, "_retained_children", {}).values():
++                if type(process.poll()) is not int:
++                    _refuse("NATIVE_CHILD_CLEANUP_UNKNOWN", "session Job/owner remains retained while child exit is unknown")
+         self._closed = True
+         if self._job is not None and self._api is not None:
+             self._api.close_job(self._job)
+@@ -1062,6 +1068,126 @@
+             self.close()
+         except Exception:
+             pass
++
++
++_NATIVE_SUSPENDED_CHILD_SEAL = object()
++
++
++class NativeSuspendedChildLaunchError(WindowsT037Error):
++    """Non-wire ownership handoff for an actual retained CreateProcess child."""
++    def __init__(self, process, cause, cleanup_error, *, seal):
++        if (seal is not _NATIVE_SUSPENDED_CHILD_SEAL or type(process) is not _RetainedSuspendedChild
++                or getattr(process, "_seal", None) is not _NATIVE_SUSPENDED_CHILD_SEAL):
++            _refuse(ERROR_POLICY_UNVERIFIED, "native launch recovery requires an actual retained child capability")
++        super().__init__("NATIVE_CHILD_CLEANUP_UNKNOWN", "suspended child cleanup is unconfirmed; original owner retained",
++                         details={"pid": process.pid, "birth_filetime_100ns": process.birth_filetime_100ns,
++                                  "effect_possible": True, "never_resumed": process.never_resumed,
++                                  "cause_type": type(cause).__name__, "cleanup_error_type": type(cleanup_error).__name__})
++        self._process = process
++        self._seal = seal
++
++    def transfer_to(self, owner):
++        if self._seal is not _NATIVE_SUSPENDED_CHILD_SEAL:
++            _refuse(ERROR_POLICY_UNVERIFIED, "launch recovery capability is invalid")
++        self._process.transfer_owner(self._process._api, owner)
++        return self._process
++
++
++class _RetainedSuspendedChild(_Win32ChildProcess):
++    """Unique actual HANDLE owner; metadata cannot enable simplified cleanup."""
++    def __init__(self, api, handle, pid, args, thread_handle, job, *, seal, creation_confirmed=True):
++        if seal is not _NATIVE_SUSPENDED_CHILD_SEAL:
++            _refuse(ERROR_POLICY_UNVERIFIED, "retained child requires native creation provenance")
++        self._api, self._handle = api, handle
++        self.pid = pid if type(pid) is int and pid > 0 else None
++        self.args = list(args)
++        self.returncode = None
++        self._closed = False
++        self._creation_confirmed = creation_confirmed is True
++        self._seal = seal
++        self._thread_handle = thread_handle
++        self._job_handle = job
++        self._owner = api
++        self._resume_attempted = False
++        self._ownership_lock = __import__('threading').RLock()
++        try:
++            if not self._creation_confirmed:
++                raise ValueError("creation response was not confirmed")
++            birth, exited = api.process_times(handle)
++            self.birth_filetime_100ns = birth if type(birth) is int and birth > 0 else None
++        except Exception:
++            self.birth_filetime_100ns = None
++
++    @property
++    def never_resumed(self):
++        return self._seal is _NATIVE_SUSPENDED_CHILD_SEAL and self._creation_confirmed and not self._resume_attempted
++
++    def poll(self):
++        if not self._creation_confirmed:
++            _refuse("NATIVE_CHILD_CREATION_UNKNOWN", "unconfirmed creation handle is not terminal/ownership evidence")
++        return super().poll()
++
++    def transfer_owner(self, expected, owner):
++        with self._ownership_lock:
++            if self._owner is not expected or owner is None or owner is expected:
++                _refuse("NATIVE_CHILD_OWNER_TRANSFER_REFUSED", "actual child has already transferred its owner")
++            self._owner = owner
++
++    def note_resume_attempt(self):
++        self._resume_attempted = True
++
++    def ownership_observation(self):
++        if self._seal is not _NATIVE_SUSPENDED_CHILD_SEAL:
++            _refuse(ERROR_POLICY_UNVERIFIED, "native ownership provenance is missing")
++        return {"schema": "comsol-mcp.retained-native-child/1", "pid": self.pid,
++                "birth_filetime_100ns": self.birth_filetime_100ns,
++                "creation_response_confirmed": self._creation_confirmed,
++                "resume_attempted": self._resume_attempted, "effect_possible": True,
++                "never_resumed": self.never_resumed,
++                "terminal_state": "EXIT_CONFIRMED" if type(self.returncode) is int else "UNKNOWN"}
++
++    def cleanup_owned(self, owner, timeout=5):
++        with self._ownership_lock:
++            if self._owner is not owner or not self.never_resumed:
++                _refuse("NATIVE_CHILD_OWNER_REQUIRED", "simplified cleanup requires the exact never-resumed owner")
++            if self._closed:
++                return self.returncode
++            if self.poll() is None:
++                self.terminate()
++                self.wait(timeout=timeout)
++            if type(self.poll()) is not int:
++                _refuse("NATIVE_CHILD_CLEANUP_UNKNOWN", "actual child exit has not been confirmed")
++            self.close_owned(owner)
++            return self.returncode
++
++    def close_owned(self, owner):
++        with self._ownership_lock:
++            if self._owner is not owner:
++                _refuse("NATIVE_CHILD_OWNER_REQUIRED", "only the actual transferred owner may close the child")
++            if self._closed:
++                return
++            if type(self.poll()) is not int:
++                _refuse("NATIVE_CHILD_CLEANUP_UNKNOWN", "process handle cannot be closed before confirmed exit")
++            if self._thread_handle:
++                self._api.close_handle(self._thread_handle)
++                self._thread_handle = None
++            super().close()
++
++    def close(self):
++        _refuse("NATIVE_CHILD_OWNER_REQUIRED", "retained child close requires the explicit unique owner")
++
++    def __del__(self):
++        pass # GC is never ownership/recovery evidence and cannot release this handle.
++
++
++def is_native_suspended_child(process):
++    return (type(process) is _RetainedSuspendedChild
++            and getattr(process, "_seal", None) is _NATIVE_SUSPENDED_CHILD_SEAL
++            and process.never_resumed)
++
++
++def is_native_retained_child(process):
++    return type(process) is _RetainedSuspendedChild and getattr(process, "_seal", None) is _NATIVE_SUSPENDED_CHILD_SEAL
+ 
+ 
+ class _Win32LaunchApi(_Win32ReadOnlyApi):
+@@ -1287,6 +1413,7 @@
+         app_sid = C.c_void_p()
+         primary_token = W.HANDLE()
+         process_handle = thread_handle = None
++        retained_child = None
+         attribute_pointer = None
+         image_verified = False
+         try:
+@@ -1388,13 +1515,18 @@
+             if options.get("start_new_session", False):
+                 flags |= self.CREATE_NEW_PROCESS_GROUP
+             process_info = PROCESS_INFORMATION()
+-            self._check(self.a.CreateProcessAsUserW(
++            created = self.a.CreateProcessAsUserW(
+                 primary_token, image_path, command_line, None, None, True, flags,
+                 C.cast(environment, C.c_void_p) if environment is not None else None,
+-                cwd, C.byref(startup), C.byref(process_info)),
+-                "CreateProcessAsUserW(STARTUPINFOEX/SecurityCapabilities)")
++                cwd, C.byref(startup), C.byref(process_info))
+             process_handle, thread_handle = process_info.hProcess, process_info.hThread
+-            if not process_handle or not thread_handle or int(process_info.dwProcessId) <= 0:
++            complete = bool(created and process_handle and thread_handle and int(process_info.dwProcessId) > 0)
++            if process_handle or thread_handle:
++                retained_child = _RetainedSuspendedChild(
++                    self, process_handle, int(process_info.dwProcessId), command, thread_handle, job,
++                    seal=_NATIVE_SUSPENDED_CHILD_SEAL, creation_confirmed=complete)
++            self._check(created, "CreateProcessAsUserW(STARTUPINFOEX/SecurityCapabilities)")
++            if not complete:
+                 _refuse(ERROR_UNSUPPORTED, "CreateProcessAsUserW returned incomplete process identity")
+             self._check(self.k.AssignProcessToJobObject(job, process_handle), "AssignProcessToJobObject(shared session job)")
+ 
+@@ -1402,10 +1534,13 @@
+             if ntpath.normcase(ntpath.abspath(observed_path)) != ntpath.normcase(image_path):
+                 _refuse(ERROR_POLICY_UNVERIFIED, "suspended process image path differs from the pinned executable")
+             child_token = W.HANDLE()
+-            self._check(self.a.OpenProcessToken(process_handle, self.TOKEN_QUERY, C.byref(child_token)),
++            self._check(self.a.OpenProcessToken(process_handle, self.TOKEN_QUERY | 0x2, C.byref(child_token)),
+                         "OpenProcessToken(suspended child)")
+             try:
+                 observed = self.read_token(child_token)
++                from ._windows_t037_acl import check_suspended_child_dacl
++                self._last_child_dacl_observation = check_suspended_child_dacl(
++                    profile, process_handle, child_token, int(process_info.dwProcessId), self)
+             finally:
+                 self.close_handle(child_token)
+             if (observed.get("state") != "OBSERVED" or observed.get("is_appcontainer") is not True
+@@ -1418,6 +1553,10 @@
+             birth, _exit = self.process_times(process_handle)
+             if birth <= 0:
+                 _refuse(ERROR_UNSUPPORTED, "suspended child birth identity is unavailable")
++            # DACL observation is not MIC/WFP/quota/vendor or a child-bound
++            # launch proof. Even a direct low-level call must fail before Resume.
++            _refuse("NATIVE_CHILD_PROOF_UNAVAILABLE", "sealed child-bound native resume authorization is not implemented")
++            retained_child.note_resume_attempt()
+             resumed = int(self.k.ResumeThread(thread_handle))
+             if resumed == 0xFFFFFFFF:
+                 self._check(False, "ResumeThread(exact suspended main thread)")
+@@ -1428,25 +1567,24 @@
+             process = _Win32ChildProcess(self, process_handle, int(process_info.dwProcessId), command)
+             process_handle = None
+             return process
+-        except BaseException:
+-            # Never return a child whose token/job/image state is unknown.  It
+-            # is still suspended until every check passes.
+-            if process_handle:
++        except BaseException as cause:
++            if retained_child is not None:
+                 try:
+-                    self.k.TerminateProcess(process_handle, 1)
+-                    self.k.WaitForSingleObject(process_handle, 5000)
+-                except Exception:
+-                    pass
+-            if thread_handle:
+-                try:
+-                    self.close_handle(thread_handle)
+-                except Exception:
+-                    pass
+-            if process_handle:
+-                try:
+-                    self.close_handle(process_handle)
+-                except Exception:
+-                    pass
++                    retained_child.cleanup_owned(self, timeout=5)
++                except BaseException as cleanup_error:
++                    if not hasattr(self, "_retained_children"):
++                        self._retained_children = {}
++                    self._retained_children[id(retained_child)] = retained_child
++                    raise NativeSuspendedChildLaunchError(
++                        retained_child, cause, cleanup_error, seal=_NATIVE_SUSPENDED_CHILD_SEAL) from cause
++                finally:
++                    # The wrapper owns both native process/thread handles.
++                    process_handle = thread_handle = None
++            elif process_handle or thread_handle:
++                # No validated CreateProcess identity exists for a malformed
++                # partial response. Do not infer safe cleanup or PID ownership.
++                self._unclassified_create_handles = (process_handle, thread_handle)
++                _refuse("NATIVE_CHILD_CREATION_UNKNOWN", "partial native creation handles require owned recovery")
+             raise
+         finally:
+             if attribute_pointer:
+--- a/comsol_mcp/_windows_t037_acl.py
++++ b/comsol_mcp/_windows_t037_acl.py
+@@ -0,0 +1,183 @@
++"""Actual child-token DACL observation on retained filesystem handles.
++
++This module reads security and evaluates AccessCheck. It does not change ACLs,
++impersonate a thread, elevate privileges, or issue isolation/resume proof.
++"""
++from __future__ import annotations
++import ctypes as C
++from dataclasses import dataclass
++import hashlib,json,ntpath,os
++from ._execution_contract import ExecutionContractError
++from ._windows_t037_native import (DWORD,BOOL,HANDLE,canonical_security_descriptor,
++                                     canonical_security_descriptor_sha256)
++MAX_DESCRIPTOR=1024*1024
++MAX_PRIVILEGES=64*1024
++
++class ChildAclError(ExecutionContractError):pass
++
++def _fail(code,message,**details):
++    raise ChildAclError(code,message,safe_retry=False,stage='pre_dispatch',details=details or None)
++
++class GENERIC_MAPPING(C.Structure):
++    _fields_=[('GenericRead',DWORD),('GenericWrite',DWORD),('GenericExecute',DWORD),('GenericAll',DWORD)]
++class LUID(C.Structure):
++    _fields_=[('LowPart',DWORD),('HighPart',C.c_int32)]
++class TOKEN_STATISTICS(C.Structure):
++    _fields_=[('TokenId',LUID),('AuthenticationId',LUID),('ExpirationTime',C.c_int64),
++              ('TokenType',DWORD),('ImpersonationLevel',DWORD),('DynamicCharged',DWORD),
++              ('DynamicAvailable',DWORD),('GroupCount',DWORD),('PrivilegeCount',DWORD),('ModifiedId',LUID)]
++
++@dataclass(frozen=True)
++class ChildDaclObservation:
++    child_pid:int
++    birth_filetime_100ns:int
++    token_statistics_sha256:str
++    checks:tuple
++    state:str='DACL_OBSERVED_NOT_ISOLATION_PROOF'
++    mandatory_integrity_state:str='NOT_VERIFIED'
++    isolation_state:str='NOT_VERIFIED'
++
++    def __post_init__(self):
++        if self.state!='DACL_OBSERVED_NOT_ISOLATION_PROOF' or self.mandatory_integrity_state!='NOT_VERIFIED' or self.isolation_state!='NOT_VERIFIED':
++            raise ValueError('DACL observation cannot mint isolation proof')
++
++class NativeChildAclApi:
++    def __init__(self):
++        if os.name!='nt':_fail('CHILD_ACL_WINDOWS_REQUIRED','actual AccessCheck requires Windows')
++        from ._windows_parameter_publish import _API
++        self.files=_API();self.a=C.WinDLL('advapi32',use_last_error=True);self.k=self.files.k
++        if C.sizeof(GENERIC_MAPPING)!=16 or C.sizeof(TOKEN_STATISTICS)!=56:
++            _fail('CHILD_ACL_ABI_INVALID','AccessCheck/token-statistics ABI is unsupported')
++        self.bind(self.a,self.k)
++
++    @staticmethod
++    def bind(a,k):
++        pp=C.POINTER(C.c_void_p)
++        signatures={
++            'GetSecurityInfo':([HANDLE,DWORD,DWORD,pp,pp,pp,pp,pp],DWORD),
++            'GetSecurityDescriptorLength':([C.c_void_p],DWORD),
++            'GetSecurityDescriptorDacl':([C.c_void_p,C.POINTER(BOOL),pp,C.POINTER(BOOL)],BOOL),
++            'GetTokenInformation':([HANDLE,DWORD,C.c_void_p,DWORD,C.POINTER(DWORD)],BOOL),
++            'OpenProcessToken':([HANDLE,DWORD,C.POINTER(HANDLE)],BOOL),
++            'DuplicateTokenEx':([HANDLE,DWORD,C.c_void_p,DWORD,DWORD,C.POINTER(HANDLE)],BOOL),
++            'MapGenericMask':([C.POINTER(DWORD),C.POINTER(GENERIC_MAPPING)],None),
++            'AccessCheck':([C.c_void_p,HANDLE,DWORD,C.POINTER(GENERIC_MAPPING),C.c_void_p,
++                            C.POINTER(DWORD),C.POINTER(DWORD),C.POINTER(BOOL)],BOOL),
++        }
++        try:
++            for name,(args,result) in signatures.items():
++                fn=getattr(a,name);fn.argtypes=args;fn.restype=result
++            k.LocalFree.argtypes=[C.c_void_p];k.LocalFree.restype=C.c_void_p
++            k.GetLastError.argtypes=[];k.GetLastError.restype=DWORD
++            k.CloseHandle.argtypes=[HANDLE];k.CloseHandle.restype=BOOL
++            k.GetProcessId.argtypes=[HANDLE];k.GetProcessId.restype=DWORD
++        except Exception as exc:_fail('CHILD_ACL_ABI_INVALID','required native AccessCheck export is unavailable',cause_type=type(exc).__name__)
++
++    def _check(self,ok,label):
++        if not ok:_fail('CHILD_ACL_NATIVE_API_FAILED',label+' failed',winerror=int(self.k.GetLastError()))
++
++    def statistics(self,token):
++        data=TOKEN_STATISTICS();needed=DWORD()
++        self._check(self.a.GetTokenInformation(token,10,C.byref(data),C.sizeof(data),C.byref(needed)),'GetTokenInformation(TokenStatistics)')
++        if needed.value!=C.sizeof(data):_fail('CHILD_ACL_ABI_INVALID','token statistics returned unexpected size')
++        return bytes(C.string_at(C.byref(data),C.sizeof(data)))
++
++    def process_id(self,process):return int(self.k.GetProcessId(process))
++
++    def bound_statistics(self,process,token):
++        attached=HANDLE()
++        self._check(self.a.OpenProcessToken(process,8,C.byref(attached)),'OpenProcessToken(actual child binding)')
++        if not attached:_fail('CHILD_ACL_TOKEN_INVALID','child token binding returned no handle')
++        try:
++            value=self.statistics(token)
++            if value!=self.statistics(attached):_fail('CHILD_ACL_TOKEN_INVALID','supplied token is not the actual child token')
++            return value
++        finally:self.close_token(attached)
++
++    def descriptor(self,handle):
++        owner=C.c_void_p();group=C.c_void_p();dacl=C.c_void_p();sd=C.c_void_p()
++        try:
++            status=self.a.GetSecurityInfo(handle,1,7,C.byref(owner),C.byref(group),C.byref(dacl),None,C.byref(sd))
++            if status:_fail('CHILD_ACL_DESCRIPTOR_UNAVAILABLE','GetSecurityInfo failed',winerror=int(status))
++            if not sd or not owner or not group:_fail('CHILD_ACL_DESCRIPTOR_INVALID','descriptor must contain owner and group')
++            size=int(self.a.GetSecurityDescriptorLength(sd))
++            if not 20<=size<=MAX_DESCRIPTOR:_fail('CHILD_ACL_DESCRIPTOR_INVALID','descriptor size is outside bound')
++            present=BOOL();defaulted=BOOL();actual_dacl=C.c_void_p()
++            self._check(self.a.GetSecurityDescriptorDacl(sd,C.byref(present),C.byref(actual_dacl),C.byref(defaulted)),'GetSecurityDescriptorDacl')
++            if not present.value or not actual_dacl:_fail('CHILD_ACL_NULL_DACL','absent or NULL DACL cannot establish confinement')
++            raw=C.string_at(sd,size)
++            parsed=canonical_security_descriptor(raw)
++            if not parsed['dacl']['present'] or parsed['dacl']['null']:_fail('CHILD_ACL_NULL_DACL','canonical descriptor is grant-all')
++            yield sd,raw,canonical_security_descriptor_sha256(raw)
++        finally:
++            if sd and self.k.LocalFree(sd):_fail('CHILD_ACL_RELEASE_UNKNOWN','LocalFree(descriptor) was not confirmed')
++
++    def access(self,sd,impersonation_token,rights):
++        if not rights or any(r not in {'READ','WRITE','EXECUTE'} for r in rights):_fail('CHILD_ACL_RIGHTS_INVALID','rights are outside the admitted grammar')
++        mask=DWORD(sum({'READ':0x80000000,'WRITE':0x40000000,'EXECUTE':0x20000000}[r] for r in set(rights)))
++        mapping=GENERIC_MAPPING(0x120089,0x120116,0x1200a0,0x1f01ff)
++        self.a.MapGenericMask(C.byref(mask),C.byref(mapping))
++        if not mask.value or mask.value&0xf0000000:_fail('CHILD_ACL_ABI_INVALID','generic access mask was not mapped')
++        length=DWORD(0);granted=DWORD();allowed=BOOL()
++        ok=self.a.AccessCheck(sd,impersonation_token,mask,C.byref(mapping),None,C.byref(length),C.byref(granted),C.byref(allowed))
++        if ok or self.k.GetLastError()!=122 or not 8<=length.value<=MAX_PRIVILEGES:
++            _fail('CHILD_ACL_PRIVILEGES_UNAVAILABLE','AccessCheck privilege-size probe did not return a bounded buffer')
++        buffer=C.create_string_buffer(length.value);capacity=length.value
++        self._check(self.a.AccessCheck(sd,impersonation_token,mask,C.byref(mapping),buffer,C.byref(length),C.byref(granted),C.byref(allowed)),'AccessCheck(actual child token)')
++        if not 8<=length.value<=capacity:_fail('CHILD_ACL_ABI_INVALID','AccessCheck wrote inconsistent privilege length')
++        used=int.from_bytes(buffer.raw[:4],'little')
++        if used or not allowed.value or granted.value&mask.value!=mask.value:
++            _fail('CHILD_ACL_RIGHTS_REFUSED','DACL does not grant the exact child rights without privileged bypass',privileges_used=used,desired_mask=mask.value,granted_mask=granted.value)
++        return mask.value,granted.value
++
++    def duplicate(self,token):
++        result=HANDLE()
++        self._check(self.a.DuplicateTokenEx(token,8,None,2,2,C.byref(result)),'DuplicateTokenEx(impersonation)')
++        if not result:_fail('CHILD_ACL_TOKEN_INVALID','token duplication returned no handle')
++        return result
++
++    def close_token(self,token):self._check(self.k.CloseHandle(token),'CloseHandle(impersonation token)')
++
++
++def check_suspended_child_dacl(profile,process_handle,token_handle,child_pid,launch_api,*,api=None):
++    from contextlib import contextmanager
++    from ._windows_t037 import WindowsT037ProfileV2
++    if type(profile) is not WindowsT037ProfileV2:_fail('CHILD_ACL_PROFILE_REQUIRED','child AccessCheck requires the trusted v2 profile')
++    selected=api if api is not None else NativeChildAclApi()
++    birth,exit_time=launch_api.process_times(process_handle)
++    if type(child_pid) is not int or child_pid<=0 or type(birth) is not int or birth<=0 or exit_time is not None:
++        _fail('CHILD_ACL_PROCESS_UNKNOWN','actual child PID/birth/exit is not a live suspended identity')
++    if selected.process_id(process_handle)!=child_pid:_fail('CHILD_ACL_PROCESS_UNKNOWN','PID does not match the retained actual process handle')
++    original=selected.bound_statistics(process_handle,token_handle)
++    before=launch_api.read_token(token_handle)
++    if (before.get('state')!='OBSERVED' or before.get('is_appcontainer') is not True
++            or str(before.get('appcontainer_sid')).casefold()!=profile.appcontainer_sid.casefold()):
++        _fail('CHILD_ACL_TOKEN_INVALID','AccessCheck requires the actual child AppContainer token')
++    child_grants=[g for g in profile.windows_policy.acl_grants if g.principal_sid.casefold()==profile.appcontainer_sid.casefold()]
++    if not child_grants:_fail('CHILD_ACL_PROFILE_REQUIRED','profile has no actual child ACL grants')
++    impersonation=selected.duplicate(token_handle)
++    checks=[]
++    try:
++        for grant in child_grants:
++            attributes=int(selected.files.k.GetFileAttributesW(grant.path))
++            if attributes==0xffffffff or attributes&0x400:_fail('CHILD_ACL_PATH_INVALID','ACL path is missing or reparse')
++            directory=bool(attributes&0x10)
++            chain=selected.files.open_security_path(grant.path,directory=directory)
++            try:
++                identities=[selected.files.info(h,directory=True if index<len(chain)-1 else directory)[0] for index,h in enumerate(chain)]
++                descriptor=contextmanager(selected.descriptor)
++                with descriptor(chain[-1]) as (sd,raw,digest):
++                    if digest!=grant.security_descriptor_sha256:_fail('CHILD_ACL_DESCRIPTOR_CHANGED','descriptor differs from the exact approved hash')
++                    desired,granted=selected.access(sd,impersonation,grant.rights)
++                with descriptor(chain[-1]) as (_,after_raw,after_digest):
++                    if after_raw!=raw or after_digest!=digest:_fail('CHILD_ACL_DESCRIPTOR_CHANGED','descriptor changed during AccessCheck')
++                final=[selected.files.info(h,directory=True if index<len(chain)-1 else directory)[0] for index,h in enumerate(chain)]
++                if final!=identities:_fail('CHILD_ACL_PATH_CHANGED','pinned path chain identity changed')
++                checks.append((grant.path,tuple(identities),digest,desired,granted))
++            finally:
++                for handle in reversed(chain):selected.files.close(handle)
++        if (selected.bound_statistics(process_handle,token_handle)!=original or launch_api.read_token(token_handle)!=before
++                or launch_api.process_times(process_handle)!=(birth,exit_time)):
++            _fail('CHILD_ACL_PROVENANCE_CHANGED','actual child/token provenance changed during DACL check')
++        return ChildDaclObservation(child_pid,birth,hashlib.sha256(original).hexdigest(),tuple(checks))
++    finally:selected.close_token(impersonation)
+--- a/comsol_mcp/_control_daemon.py
++++ b/comsol_mcp/_control_daemon.py
+@@ -5614,6 +5614,10 @@
+                     )
+                 if handle is not None:
+                     self._session_server_handles[key] = handle
++                    try:
++                        self._record_retained_native_child(record, key, handle)
++                    except Exception as native_persist_exc:
++                        startup_error_summary["native_ownership_persist_error_type"] = type(native_persist_exc).__name__
+                     endpoint = ({"host": handle.endpoint.address, "port": handle.endpoint.port}
+                                 if handle.endpoint is not None else None)
+                     durable_process = None
+@@ -5710,6 +5714,11 @@
+                     "project_id": project_id, "session_id": session_id,
+                     "state": "STOPPED", "already_stopped": True, "server_stopped": True,
+                 }}, "SUCCEEDED")
++            key = (project_id, session_id)
++            retained_handle = self._session_server_handles.get(key)
++            native_result = self._stop_retained_native_server(record, lifecycle, key, retained_handle, authorization_digest)
++            if native_result is not None:
++                return native_result
+             if lifecycle.get("server_ownership") != "mcp_managed":
+                 return self._finish(record, self._error(
+                     "SERVER_OWNERSHIP_MISMATCH", "session.stop never terminates a shared or user-owned Server",
+@@ -6097,6 +6106,22 @@
+                 dispatched = dispatched or exc.dispatched
+                 if worker is not None:
+                     self._session_worker_handles[(project_id, session_id)] = worker
++                from ._windows_t037 import is_native_retained_child
++                native_process = getattr(worker, "_process", None)
++                if is_native_retained_child(native_process) and native_process._owner is worker:
++                    persistence_error = None
++                    try:
++                        self._record_retained_native_child(record, (project_id, session_id), worker)
++                        self._remember_session_worker_child((project_id, session_id), worker)
++                        lifecycle = self.session_lifecycle.save(connection_lifecycle("UNKNOWN", "UNKNOWN"),
++                            expected_revision=lifecycle["revision"])
++                    except Exception as native_persist_exc:
++                        persistence_error = type(native_persist_exc).__name__
++                    return self._finish(record, self._error("EXECUTION_STATE_UNKNOWN", "native Worker birth/cleanup is uncertain; actual owner retained",
++                        data={"session_id": session_id, "engine_dispatched": bool(dispatched),
++                              "worker_handle_preserved": True, "child_effect_possible": True,
++                              "ownership_persist_error_type": persistence_error},
++                        execution_state_unknown=True, safe_retry=False), "UNKNOWN")
+                 runtime_meta = exc.runtime_metadata or {}
+                 remote_reply = exc.reply or {}
+                 self._bind_session_job_to_worker(
+@@ -6199,6 +6224,22 @@
+             except Exception as exc:
+                 if worker is not None:
+                     self._session_worker_handles[(project_id, session_id)] = worker
++                from ._windows_t037 import is_native_retained_child
++                native_process = getattr(worker, "_process", None)
++                if is_native_retained_child(native_process) and native_process._owner is worker:
++                    persistence_error = None
++                    try:
++                        self._record_retained_native_child(record, (project_id, session_id), worker)
++                        self._remember_session_worker_child((project_id, session_id), worker)
++                        lifecycle = self.session_lifecycle.save(connection_lifecycle("UNKNOWN", "UNKNOWN"),
++                            expected_revision=lifecycle["revision"])
++                    except Exception as native_persist_exc:
++                        persistence_error = type(native_persist_exc).__name__
++                    return self._finish(record, self._error("EXECUTION_STATE_UNKNOWN", "native Worker birth/cleanup is uncertain; actual owner retained",
++                        data={"session_id": session_id, "engine_dispatched": bool(dispatched),
++                              "worker_handle_preserved": True, "child_effect_possible": True,
++                              "ownership_persist_error_type": persistence_error},
++                        execution_state_unknown=True, safe_retry=False), "UNKNOWN")
+                 if dispatched:
+                     try:
+                         runtime_meta = worker.runtime_metadata() if worker is not None else {}
+@@ -9885,6 +9926,10 @@
+             if lifecycle is None:
+                 return self._finish(record, self._error("SESSION_NOT_FOUND", "session lifecycle record not found"), "FAILED")
+             retire_worker = routed.get("retire_worker", False) is True
++            if retire_worker and lifecycle["state"] == "UNKNOWN":
++                native_cleanup = self._retire_retained_native_worker(record, lifecycle, (project_id, session_id))
++                if native_cleanup is not None:
++                    return native_cleanup
+             if lifecycle["state"] == "DISCONNECTED":
+                 if not retire_worker:
+                     return self._finish(record, {"success": True, "data": {
+@@ -11665,6 +11710,104 @@
+                          "dispatch_performed": False},
+             )
+ 
++    def _record_retained_native_child(self, record, key, owner):
++        from ._windows_t037 import is_native_retained_child
++        process = getattr(owner, "process", None) or getattr(owner, "_process", None)
++        if not is_native_retained_child(process) or process._owner is not owner:
++            return None
++        metadata = {**process.ownership_observation(), "project_id": key[0], "session_id": key[1],
++                    "operation_id": record["operation_id"], "job_id": record["job_id"]}
++        self.store.add_event(record["job_id"], "NativeChildOwnershipUnknown", metadata)
++        return metadata
++
++    def _retire_retained_native_worker(self, record, lifecycle, key):
++        from ._windows_t037 import is_native_suspended_child
++        worker = self._session_worker_handles.get(key)
++        process = getattr(worker, "_process", None)
++        if not is_native_suspended_child(process) or process._owner is not worker:
++            return None
++        # A private never-resumed capability has never acquired an engine
++        # endpoint/epoch. Its original HANDLE is the only cleanup authority.
++        try:
++            self._record_retained_native_child(record, key, worker)
++            self.store.add_event(record["job_id"], "NativeChildCleanupIntent", {
++                "project_id": key[0], "session_id": key[1], "pid": process.pid,
++                "birth_filetime_100ns": process.birth_filetime_100ns,
++                "never_resumed": True, "retire_worker": True})
++            worker.close()
++            if not process._closed or type(process.returncode) is not int:
++                raise RuntimeError("native Worker terminal HANDLE observation unavailable")
++            evidence = process.ownership_observation()
++            self.store.add_event(record["job_id"], "NativeChildExitConfirmed", evidence)
++            # A Server can share the factory Job; leave it to its own exact
++            # owner if still retained, never close that Job through this child.
++            if key not in self._session_server_handles:
++                self._close_t037_session_factory(key)
++            updated = self._updated_session_lifecycle(lifecycle, state="DISCONNECTED", client_state="RETIRED",
++                worker_instance_id=lifecycle["worker_instance_id"], worker_epoch=lifecycle["worker_epoch"],
++                server_instance_id=lifecycle["server_instance_id"])
++            self.session_lifecycle.save(updated, expected_revision=lifecycle["revision"])
++            self._session_worker_handles.pop(key, None)
++            self._session_worker_child_identities.pop(key, None)
++            return self._finish(record, {"success": True, "data": {
++                "project_id": key[0], "session_id": key[1], "state": "DISCONNECTED",
++                "client_state": "RETIRED", "server_stopped": False,
++                "native_child_exit_evidence": evidence}}, "SUCCEEDED")
++        except Exception as exc:
++            # close may have confirmed exit before event/CAS delivery failed.
++            # Retain the same live sealed wrapper for explicit terminal retry.
++            if getattr(worker, "_process", None) is None:
++                worker._process = process
++            return self._finish(record, self._error("EXECUTION_STATE_UNKNOWN",
++                "native Worker cleanup or durable delivery is incomplete",
++                data={"session_id": key[1], "worker_handle_preserved": True,
++                      "child_effect_possible": True, "engine_dispatched": False},
++                execution_state_unknown=True, safe_retry=False, cause_type=type(exc).__name__), "UNKNOWN")
++
++    def _stop_retained_native_server(self, record, lifecycle, key, handle, authorization_digest):
++        from ._windows_t037 import is_native_suspended_child
++        process = getattr(handle, "process", None)
++        if (not is_native_suspended_child(process) or process._owner is not handle
++                or getattr(handle, "suspended_launch_recovery", None) is not process
++                or handle.runtime_id != lifecycle.get("runtime_id")):
++            return None
++        if key in self._session_worker_handles:
++            return self._finish(record, self._error("WORKER_BINDING_UNKNOWN", "retained Worker must be resolved before native Server cleanup",
++                data={"server_stopped": False}, safe_retry=False), "FAILED")
++        try:
++            self._record_retained_native_child(record, key, handle)
++            self.store.add_event(record["job_id"], "NativeChildCleanupIntent", {
++                "project_id": key[0], "session_id": key[1], "pid": process.pid,
++                "birth_filetime_100ns": process.birth_filetime_100ns,
++                "authorization_ref_sha256": authorization_digest, "never_resumed": True})
++            if handle.retired and process._closed and type(process.returncode) is int:
++                # Reuse only the live sealed wrapper's previously observed
++                # terminal result after a durable event/CAS write failed.
++                stopped = {"pid": process.pid, "birth_filetime_100ns": process.birth_filetime_100ns,
++                           "never_resumed_native_child": True, "exit_confirmed": True,
++                           "child_reaped": True, "returncode": process.returncode, "server_stopped": True}
++            else:
++                stopped = self.session_server_launcher.stop(handle)
++            if (stopped.get("never_resumed_native_child") is not True or stopped.get("exit_confirmed") is not True
++                    or stopped.get("child_reaped") is not True or stopped.get("pid") != process.pid):
++                raise RuntimeError("native cleanup returned incomplete actual-handle exit evidence")
++            self.store.add_event(record["job_id"], "NativeChildExitConfirmed", dict(stopped))
++            self._close_t037_session_factory(key)
++            updated = self._updated_session_lifecycle(lifecycle, state="STOPPED", client_state="DISCONNECTED",
++                server_state="STOPPED", server_ownership="unknown", server_process_identity=None,
++                worker_instance_id=None, worker_epoch=None, server_instance_id=None)
++            self.session_lifecycle.save(updated, expected_revision=lifecycle["revision"])
++            self._session_server_handles.pop(key, None)
++            return self._finish(record, {"success": True, "data": {"project_id": key[0], "session_id": key[1],
++                "state": "STOPPED", "server_stopped": True, "native_child_exit_evidence": stopped}}, "SUCCEEDED")
++        except Exception as exc:
++            return self._finish(record, self._error("EXECUTION_STATE_UNKNOWN", "native Server cleanup or durable state delivery is incomplete",
++                data={"server_stopped": process._closed and type(process.returncode) is int,
++                      "server_handle_preserved": key in self._session_server_handles,
++                      "job_retained": key in self._session_t037_process_factories,
++                      "native_cleanup_state": "EXIT_CONFIRMED" if process._closed and type(process.returncode) is int else "UNKNOWN"},
++                execution_state_unknown=True, safe_retry=False, cause_type=type(exc).__name__), "UNKNOWN")
++
+     def _new_t037_session_factory(self, project_id: str, session_id: str):
+         if self._windows_t037_profile is None:
+             return None
+@@ -13006,6 +13149,15 @@
+         if _scm_runtime is not None:
+             try:
+                 daemon.close()
++                # The accepted operation may finish only while close drains its
++                # serial lane, after the listener monitor has stopped.
++                accepted = getattr(daemon, "_scm_bootstrap_future", None)
++                if accepted is not None:
++                    from ._windows_t037_broker import WindowsScmError
++                    if not accepted.done():
++                        raise WindowsScmError("SCM_BOOTSTRAP_DRAIN_UNKNOWN",
++                                              "accepted bootstrap is still pending after daemon drain")
++                    accepted.result()  # Preserve the actual late exception.
+             finally:
+                 singleton.close()
+ 
+--- a/tests/test_windows_suspended_ownership.py
++++ b/tests/test_windows_suspended_ownership.py
+@@ -0,0 +1,278 @@
++from __future__ import annotations
++import ctypes as C
++import io,threading
++from types import SimpleNamespace
++import pytest
++from comsol_mcp import _windows_t037 as win
++from comsol_mcp._windows_t037_native import DWORD,BOOL,HANDLE,WORD,BYTE
++from tests.test_windows_child_acl import _observer
++
++
++def _launch_api(monkeypatch,*,cleanup_fail=False,acl_fail=False):
++    profile,acl_api,acl_launch,acl_events=_observer()
++    events=[];state={'alive':True,'cleanup_fail':cleanup_fail,'acl':None}
++    class PI(C.Structure):
++        _fields_=[('hProcess',HANDLE),('hThread',HANDLE),('dwProcessId',DWORD),('dwThreadId',DWORD)]
++    class A:
++        def OpenProcessToken(self,p,access,out):
++            events.append(('open-token',int(p),access));C.cast(out,C.POINTER(HANDLE)).contents.value=55;return 1
++        def DuplicateTokenEx(self,t,access,attrs,level,kind,out):C.cast(out,C.POINTER(HANDLE)).contents.value=56;return 1
++        def ConvertStringSidToSidW(self,text,out):C.cast(out,C.POINTER(C.c_void_p)).contents.value=77;return 1
++        def CreateProcessAsUserW(self,*args):
++            events.append('CREATE_SUSPENDED');pi=C.cast(args[-1],C.POINTER(PI)).contents
++            assert args[6]&win._Win32LaunchApi.CREATE_SUSPENDED
++            pi.hProcess=200;pi.hThread=201;pi.dwProcessId=456;pi.dwThreadId=9;return 1
++    class K:
++        def GetCurrentProcess(self):return 1
++        def AssignProcessToJobObject(self,job,p):events.append('assign-job');return 1
++        def ResumeThread(self,t):events.append('RESUME');return 1
++        def DeleteProcThreadAttributeList(self,p):events.append('delete-attribute')
++        def LocalFree(self,p):events.append('free-sid');return None
++    class Image:
++        def source_fingerprint(self,h):return ((1,2),10,3,4,1)
++        def close(self,h):events.append(('close-image',h))
++    api=win._Win32LaunchApi.__new__(win._Win32LaunchApi)
++    api.C=C;api.W=SimpleNamespace(HANDLE=HANDLE,DWORD=DWORD,BOOL=BOOL,WORD=WORD,BYTE=BYTE,UINT=DWORD,LPCWSTR=C.c_wchar_p,LPWSTR=C.c_wchar_p)
++    api.a=A();api.k=K()
++    def check(ok,label):
++        if not ok:raise win.WindowsT037Error('NATIVE_TEST_FAILURE',label)
++    api._check=check
++    api._open_image=lambda path:(Image(),[],12,((1,2),10,3,4,1),path)
++    api._hash_image_handle=lambda *_:profile.server_image_sha256
++    api.read_token=lambda t:{'state':'OBSERVED','user_sid':profile.service_account_sid,'is_appcontainer':True,'appcontainer_sid':profile.appcontainer_sid,'capability_sids':list(profile.capability_sids)}
++    api._stdio_source=lambda *_,**__:(100,False)
++    api._duplicate_inheritable=lambda s:HANDLE(101)
++    api._attribute_list=lambda *args:(None,C.c_void_p(123))
++    api._environment_buffer=lambda env:None
++    api.process_image_path=lambda p:profile._launch_image('server').path
++    api.is_process_in_job=lambda *_:True
++    api.process_times=lambda p:(123,None)
++    api.close_handle=lambda h:events.append(('close',h.value if hasattr(h,'value') else h))
++    api.poll_process=lambda h:None if state['alive'] else 1
++    def terminate(h,code):
++        events.append(('terminate',h))
++        if state['cleanup_fail']:raise RuntimeError('synthetic exact-handle termination failure')
++        state['alive']=False
++    api.terminate_process=terminate
++    api.wait_process=lambda h,timeout,args:1 if not state['alive'] else (_ for _ in ()).throw(TimeoutError('still live'))
++    from comsol_mcp._windows_t037_acl import check_suspended_child_dacl as real_acl_gate
++    def acl_gate(p,process,token,pid,launch):
++        events.append('AccessCheckGate')
++        if acl_fail:raise win.WindowsT037Error('CHILD_ACL_RIGHTS_REFUSED','synthetic native DACL denial')
++        state['acl']=real_acl_gate(p,process,token,pid,launch,api=acl_api)
++        return state['acl']
++    monkeypatch.setattr('comsol_mcp._windows_t037_acl.check_suspended_child_dacl',acl_gate)
++    return profile,api,events,state
++
++
++def _create(profile,api):
++    return api.create_suspended_appcontainer_child([profile._launch_image('server').path],{},profile=profile,job=300,role='server')
++
++
++@pytest.mark.parametrize('acl_fail',[False,True])
++def test_actual_production_launch_gate_refuses_resume_and_confirms_exact_cleanup(monkeypatch,acl_fail):
++    profile,api,events,state=_launch_api(monkeypatch,acl_fail=acl_fail)
++    with pytest.raises(win.WindowsT037Error) as captured:_create(profile,api)
++    assert captured.value.code==('CHILD_ACL_RIGHTS_REFUSED' if acl_fail else 'NATIVE_CHILD_PROOF_UNAVAILABLE')
++    assert 'CREATE_SUSPENDED' in events and 'AccessCheckGate' in events and 'RESUME' not in events
++    assert ('terminate',200) in events and ('close',200) in events and ('close',201) in events
++    assert not state['alive']
++
++
++def _unknown(monkeypatch):
++    profile,api,events,state=_launch_api(monkeypatch,cleanup_fail=True)
++    with pytest.raises(win.NativeSuspendedChildLaunchError) as captured:_create(profile,api)
++    error=captured.value
++    assert error.details['effect_possible'] is True and error.details['birth_filetime_100ns']==123
++    assert ('close',200) not in events and ('close',201) not in events and 'RESUME' not in events
++    return profile,api,events,state,error
++
++
++def test_unknown_child_has_single_owner_and_blocks_job_close_until_terminal(monkeypatch):
++    profile,api,events,state,error=_unknown(monkeypatch)
++    factory=win.T037SessionProcessFactory(profile,'session-test',api=api);factory._job=300
++    api.close_job=lambda h:events.append(('close-job',h))
++    with pytest.raises(win.WindowsT037Error):factory.close()
++    assert factory._job==300 and not factory._closed
++    owner=object();process=error.transfer_to(owner)
++    with pytest.raises(win.WindowsT037Error):error.transfer_to(object())
++    with pytest.raises(win.WindowsT037Error):process.close()
++    assert process._owner is owner
++    with pytest.raises(RuntimeError):process.cleanup_owned(owner)
++    assert not process._closed and process._owner is owner
++    state['cleanup_fail']=False
++    assert process.cleanup_owned(owner)==1
++    assert process.cleanup_owned(owner)==1
++    assert events.count(('close',200))==1 and events.count(('close',201))==1
++    factory.close();factory.close()
++    assert events.count(('close-job',300))==1
++
++
++def test_server_actual_start_transfers_unknown_child_to_managed_handle_then_cleanup_is_terminal(monkeypatch,tmp_path):
++    from tests.test_session_server import _startup_runtime
++    from comsol_mcp._session_server import OwnedServerLauncher,_StartupObservationError
++    profile,api,events,state,error=_unknown(monkeypatch)
++    def factory(*_,**__):raise error
++    launcher=OwnedServerLauncher(process_factory=factory,platform_name='darwin')
++    with pytest.raises(_StartupObservationError) as captured:launcher.start(_startup_runtime(tmp_path),'project','session')
++    handle=captured.value.handle
++    assert captured.value.uncertain and handle.process is error._process
++    assert handle.process._owner is handle and handle.endpoint is None and not handle.retired
++    with pytest.raises(Exception):launcher.stop(handle)
++    assert not handle.retired and not handle.process._closed
++    state['cleanup_fail']=False
++    outcome=launcher.stop(handle)
++    assert outcome['never_resumed_native_child'] and outcome['exit_confirmed'] and handle.retired
++
++
++def test_server_simplified_cleanup_refuses_dictionary_and_resume_attempted_capability(monkeypatch,tmp_path):
++    from comsol_mcp._session_server import OwnedServerLauncher,ManagedServerHandle
++    profile,api,events,state,error=_unknown(monkeypatch)
++    launcher=OwnedServerLauncher(platform_name='darwin')
++    fake={'pid':456,'never_resumed':True}
++    handle=ManagedServerHandle(fake,'runtime','exe',None,suspended_launch_recovery=fake)
++    with pytest.raises(Exception):launcher.stop(handle)
++    handle=ManagedServerHandle(None,'runtime','exe',None)
++    handle.process=error.transfer_to(handle);handle.suspended_launch_recovery=handle.process
++    handle.process.note_resume_attempt()
++    before=list(events)
++    with pytest.raises(Exception):launcher.stop(handle)
++    assert events==before and not handle.retired
++
++
++def test_actual_java_worker_start_retains_native_child_and_close_failure_never_drops_owner(monkeypatch,tmp_path):
++    from comsol_mcp._java_worker import PersistentJavaWorker,JavaWorkerError
++    import subprocess
++    profile,api,events,state,error=_unknown(monkeypatch)
++    paths=SimpleNamespace(validate=lambda:None,classpath=lambda:('synthetic','hash',1,'jars'),
++       compilation_cache_fingerprint=lambda *args:('cache',{}),executable=lambda name:name,
++       private_prefs=None,classpath_separator=':',resolved_global_lock_root=tmp_path)
++    def factory(*_,**__):raise error
++    worker=PersistentJavaWorker(paths,state_dir=tmp_path/'worker',process_factory=factory)
++    monkeypatch.setattr(subprocess,'run',lambda *_,**__:SimpleNamespace(returncode=0,stderr=''))
++    with pytest.raises(JavaWorkerError):worker.start()
++    process=worker._process
++    assert process is error._process and process._owner is worker
++    with pytest.raises(RuntimeError):worker.close()
++    assert worker._process is process and not process._closed
++    state['cleanup_fail']=False
++    worker.close();worker.close()
++    assert worker._process is None and process._closed
++
++
++def test_actual_daemon_server_start_unknown_and_authorized_stop_keep_store_and_live_owner(monkeypatch,tmp_path):
++    from tests.test_session_server_control import _make_daemon,_start,_stop
++    from comsol_mcp._session_server import OwnedServerLauncher
++    profile,api,events,state,error=_unknown(monkeypatch)
++    def factory(*_,**__):raise error
++    launcher=OwnedServerLauncher(process_factory=factory,platform_name='darwin')
++    daemon,project,*_=_make_daemon(tmp_path,monkeypatch,server_launcher=launcher)
++    try:
++        started=_start(daemon,project)
++        assert not started['success'] and started['error']['code']=='EXECUTION_STATE_UNKNOWN'
++        sid=started['data']['session_id'];key=(project,sid);handle=daemon._session_server_handles[key]
++        assert daemon.store.job(started['execution']['job_id'])['status']=='UNKNOWN'
++        rows=daemon.store.db.execute("SELECT metadata FROM job_events WHERE event='NativeChildOwnershipUnknown'").fetchall()
++        import json
++        assert json.loads(rows[-1][0])['birth_filetime_100ns']==123
++        failed=_stop(daemon,project,sid,key='native-stop-unknown')
++        assert not failed['success'] and failed['error']['code']=='EXECUTION_STATE_UNKNOWN'
++        assert daemon._session_server_handles[key] is handle and not handle.process._closed
++        state['cleanup_fail']=False
++        stopped=_stop(daemon,project,sid,key='native-stop-terminal')
++        assert stopped['success'],stopped
++        assert daemon.session_lifecycle.get(project,sid)['state']=='STOPPED'
++        assert key not in daemon._session_server_handles and handle.process._closed
++    finally:daemon.close()
++
++
++def test_actual_daemon_worker_before_connect_dispatch_retains_unknown_owner_and_store(monkeypatch,tmp_path):
++    from tests.test_session_server_control import _make_daemon
++    from comsol_mcp._java_worker import PersistentJavaWorker
++    import subprocess
++    profile,api,events,state,error=_unknown(monkeypatch)
++    paths=SimpleNamespace(validate=lambda:None,classpath=lambda:('synthetic','hash',1,'jars'),
++       compilation_cache_fingerprint=lambda *args:('cache',{}),executable=lambda name:name,
++       private_prefs=None,classpath_separator=':',resolved_global_lock_root=tmp_path)
++    def process_factory(*_,**__):raise error
++    worker=PersistentJavaWorker(paths,state_dir=tmp_path/'worker',process_factory=process_factory)
++    monkeypatch.setattr(subprocess,'run',lambda *_,**__:SimpleNamespace(returncode=0,stderr=''))
++    daemon,project,*_=_make_daemon(tmp_path,monkeypatch,worker=worker)
++    try:
++        response=daemon.dispatch({'operation':'session.connect','arguments':{'project_id':project,'runtime_id':'fixture-runtime','endpoint':{'host':'127.0.0.1','port':2040},'idempotency_key':'native-worker-start'},'execution':{}})
++        assert not response['success'] and response['error']['code']=='EXECUTION_STATE_UNKNOWN',response
++        assert response['error']['safe_retry'] is False
++        assert response['data']['engine_dispatched'] is False and response['data']['child_effect_possible'] is True
++        sid=response['data']['session_id'];key=(project,sid)
++        assert daemon._session_worker_handles[key] is worker
++        assert daemon.store.job(response['execution']['job_id'])['status']=='UNKNOWN'
++        rows=daemon.store.db.execute("SELECT metadata FROM job_events WHERE event='NativeChildOwnershipUnknown'").fetchall()
++        assert rows
++        def retire(label):
++            return daemon.dispatch({'operation':'session.disconnect','arguments':{'project_id':project,
++                'session_id':sid,'retire_worker':True,'idempotency_key':label},'execution':{}})
++        failed=retire('native-retire-fail')
++        assert not failed['success'] and failed['error']['execution_state_unknown'] is True,failed
++        assert daemon._session_worker_handles[key] is worker and worker._process is error._process
++        state['cleanup_fail']=False
++        original=daemon.store.add_event
++        def fail_exit(job,event,metadata):
++            if event=='NativeChildExitConfirmed':raise OSError('durable Worker exit event failed')
++            return original(job,event,metadata)
++        monkeypatch.setattr(daemon.store,'add_event',fail_exit)
++        failed=retire('native-retire-durable-fail')
++        assert not failed['success'] and worker._process is error._process and error._process._closed,failed
++        monkeypatch.setattr(daemon.store,'add_event',original)
++        terminal=retire('native-retire-terminal')
++        assert terminal['success'] and terminal['data']['client_state']=='RETIRED',terminal
++        assert key not in daemon._session_worker_handles and worker._process is None
++    finally:daemon.close()
++
++
++def test_native_wait_timeout_and_birth_unknown_keep_original_handle_and_cannot_close_job(monkeypatch):
++    profile,api,events,state=_launch_api(monkeypatch)
++    api.process_times=lambda p:(_ for _ in ()).throw(RuntimeError('birth observation unavailable'))
++    def terminate(h,code):events.append(('terminate-requested',h))
++    api.terminate_process=terminate
++    with pytest.raises(win.NativeSuspendedChildLaunchError) as captured:_create(profile,api)
++    error=captured.value
++    assert error.details['birth_filetime_100ns'] is None
++    assert ('close',200) not in events and ('close',201) not in events
++    factory=win.T037SessionProcessFactory(profile,'session-timeout',api=api);factory._job=300
++    api.close_job=lambda h:events.append(('close-job',h))
++    with pytest.raises(win.WindowsT037Error):factory.close()
++    assert factory._job==300 and not factory._closed
++    owner=object();process=error.transfer_to(owner)
++    state['alive']=False
++    assert process.cleanup_owned(owner)==1
++    factory.close()
++    assert ('close-job',300) in events
++
++
++def test_actual_daemon_native_exit_event_write_failure_keeps_live_capability_for_terminal_retry(monkeypatch,tmp_path):
++    from tests.test_session_server_control import _make_daemon,_start,_stop
++    from comsol_mcp._session_server import OwnedServerLauncher
++    profile,api,events,state,error=_unknown(monkeypatch)
++    def factory(*_,**__):raise error
++    launcher=OwnedServerLauncher(process_factory=factory,platform_name='darwin')
++    daemon,project,*_=_make_daemon(tmp_path,monkeypatch,server_launcher=launcher)
++    try:
++        started=_start(daemon,project);sid=started['data']['session_id'];key=(project,sid)
++        state['cleanup_fail']=False
++        original=daemon.store.add_event
++        def fail_once(job,event,metadata):
++            if event=='NativeChildExitConfirmed':raise RuntimeError('synthetic durable exit-event failure')
++            return original(job,event,metadata)
++        monkeypatch.setattr(daemon.store,'add_event',fail_once)
++        failed=_stop(daemon,project,sid,key='native-terminal-write-fail')
++        assert not failed['success'] and failed['error']['code']=='EXECUTION_STATE_UNKNOWN'
++        handle=daemon._session_server_handles[key]
++        assert handle.retired and handle.process._closed
++        assert failed['data']['native_cleanup_state']=='EXIT_CONFIRMED'
++        monkeypatch.setattr(daemon.store,'add_event',original)
++        before=events.count(('terminate',200))
++        stopped=_stop(daemon,project,sid,key='native-terminal-write-retry')
++        assert stopped['success'],stopped
++        assert events.count(('terminate',200))==before
++        assert key not in daemon._session_server_handles
++    finally:daemon.close()
+--- a/tests/test_windows_t037_broker.py
++++ b/tests/test_windows_t037_broker.py
+@@ -379,7 +379,7 @@
+     lock.close()
+ 
+ 
+-@pytest.mark.parametrize('bootstrap_state',['pending','failed'])
++@pytest.mark.parametrize('bootstrap_state',['pending','failed','late_failed','still_pending'])
+ def test_service_bootstrap_observation_retains_pending_handle_on_stop_and_reports_failures(
+         tmp_path,monkeypatch,bootstrap_state):
+     from comsol_mcp import _control_daemon as control
+@@ -402,9 +402,10 @@
+         def close(self):
+             assert self._scm_bootstrap_future is future
+             assert not future.cancelled()
+-            if bootstrap_state=='pending':
++            if bootstrap_state in {'pending','late_failed','still_pending'}:
+                 assert not future.done() # STOP observation has not inferred or canceled the host effect.
+-                future.set_result('software-drained-terminal')
++                if bootstrap_state=='pending':future.set_result('software-drained-terminal')
++                elif bootstrap_state=='late_failed':future.set_exception(RuntimeError('late drain failure'))
+             closed.append(True)
+     class Server:
+         server_port=12345
+@@ -424,10 +425,10 @@
+                           '--windows-scm-service-name','ComsolHost','--windows-scm-bootstrap-request','explicit-request'])
+         except BaseException as exc:errors.append(exc)
+     thread=threading.Thread(target=run);thread.start();assert entered.wait(2)
+-    if bootstrap_state=='pending':assert api.handler(SERVICE_CONTROL_STOP,0,None,None)==0
++    if bootstrap_state!='failed':assert api.handler(SERVICE_CONTROL_STOP,0,None,None)==0
+     thread.join(4);assert not thread.is_alive() and closed==[True]
+     assert not future.cancelled()
+-    if bootstrap_state=='failed':
++    if bootstrap_state!='pending':
+         assert len(errors)==1 and errors[0].code=='SCM_SERVICE_RUNTIME_FAILED'
+         assert api.status[-1].service_specific_exit_code==1
+     else:assert errors==[]
+--- a/tests/test_windows_child_acl.py
++++ b/tests/test_windows_child_acl.py
+@@ -0,0 +1,117 @@
++from __future__ import annotations
++import ctypes as C
++from dataclasses import replace
++import hashlib
++from types import SimpleNamespace
++import pytest
++from comsol_mcp import _windows_t037_acl as acl
++from comsol_mcp._windows_t037 import WindowsT037ProfileV2
++from comsol_mcp._windows_t037_native import canonical_security_descriptor_sha256
++from tests.test_windows_host_change import _profile
++from tests.test_windows_t037_native import _security_descriptor
++
++
++def test_accesscheck_fixed_windows_abi_matches_independent_literals():
++    assert C.sizeof(acl.GENERIC_MAPPING)==16
++    assert C.sizeof(acl.TOKEN_STATISTICS)==56
++    assert acl.TOKEN_STATISTICS.ModifiedId.offset==48
++    calls={}
++    class Fn:
++        def __call__(self,*_):pass
++    a=SimpleNamespace(**{name:Fn() for name in ['GetSecurityInfo','GetSecurityDescriptorLength','GetSecurityDescriptorDacl','GetTokenInformation','OpenProcessToken','DuplicateTokenEx','MapGenericMask','AccessCheck']})
++    k=SimpleNamespace(**{name:Fn() for name in ['LocalFree','GetLastError','CloseHandle','GetProcessId']})
++    acl.NativeChildAclApi.bind(a,k)
++    assert len(a.AccessCheck.argtypes)==8 and a.AccessCheck.restype is acl.BOOL
++    assert len(a.GetSecurityInfo.argtypes)==8 and a.GetSecurityInfo.restype is acl.DWORD
++    assert len(a.DuplicateTokenEx.argtypes)==6
++    assert k.LocalFree.restype is C.c_void_p
++
++
++def _native_access(*,allowed=True,granted=True,privileges=0,oversize=False):
++    class A:
++        def MapGenericMask(self,mask,mapping):C.cast(mask,C.POINTER(acl.DWORD)).contents.value=0x120089
++        def AccessCheck(self,sd,token,mask,mapping,buffer,length,result,status):
++            if buffer is None:
++                C.cast(length,C.POINTER(acl.DWORD)).contents.value=acl.MAX_PRIVILEGES+1 if oversize else 8
++                return 0
++            C.cast(result,C.POINTER(acl.DWORD)).contents.value=mask.value if granted else 0
++            C.cast(status,C.POINTER(acl.BOOL)).contents.value=int(allowed)
++            C.memmove(buffer,int(privileges).to_bytes(4,'little')+b'\x00'*4,8);return 1
++    api=acl.NativeChildAclApi.__new__(acl.NativeChildAclApi);api.a=A();api.k=SimpleNamespace(GetLastError=lambda:122)
++    return api
++
++
++def test_actual_accesscheck_uses_child_impersonation_handle_and_generic_mapping():
++    api=_native_access();assert api.access(101,202,('READ',))==(0x120089,0x120089)
++
++
++@pytest.mark.parametrize('kwargs',[{'allowed':False},{'granted':False},{'privileges':1},{'oversize':True}])
++def test_actual_accesscheck_denial_partial_rights_privilege_bypass_and_oversize_refuse(kwargs):
++    with pytest.raises(acl.ChildAclError):_native_access(**kwargs).access(101,202,('READ',))
++
++
++def test_actual_descriptor_reader_rejects_null_dacl_and_frees_allocation():
++    raw=_security_descriptor(dacl_present=True,ace=None);storage=C.create_string_buffer(raw);released=[]
++    class A:
++        def GetSecurityInfo(self,h,kind,mask,owner,group,dacl,sacl,sd):
++            assert kind==1 and mask==7
++            C.cast(owner,C.POINTER(C.c_void_p)).contents.value=10;C.cast(group,C.POINTER(C.c_void_p)).contents.value=20
++            C.cast(sd,C.POINTER(C.c_void_p)).contents.value=C.addressof(storage);return 0
++        def GetSecurityDescriptorLength(self,sd):return len(raw)
++        def GetSecurityDescriptorDacl(self,sd,present,dacl,defaulted):
++            C.cast(present,C.POINTER(acl.BOOL)).contents.value=1;return 1
++    api=acl.NativeChildAclApi.__new__(acl.NativeChildAclApi);api.a=A();api.k=SimpleNamespace(LocalFree=lambda p:released.append(p.value) or None,GetLastError=lambda:0)
++    with pytest.raises(acl.ChildAclError) as capture:list(api.descriptor(9))
++    assert capture.value.code=='CHILD_ACL_NULL_DACL' and len(released)==1
++
++
++def _observer(*,change=None):
++    profile=_profile();policy=profile.windows_isolation
++    raw=_security_descriptor();digest=canonical_security_descriptor_sha256(raw)
++    grants=tuple(replace(g,security_descriptor_sha256=digest) for g in policy.acl_grants)
++    profile=replace(profile,windows_isolation=replace(policy,acl_grants=grants))
++    wrapper=WindowsT037ProfileV2(profile,'d'*64,{},'SOFTWARE_ONLY')
++    events=[]
++    class Files:
++        k=SimpleNamespace(GetFileAttributesW=lambda path:0x10)
++        def open_security_path(self,*_,**__):events.append('pin');return [10,11]
++        def info(self,h,*,directory):
++            if change=='inode' and events.count('info')>=2:identity=(1,99)
++            else:identity=(1,h)
++            events.append('info');return identity,0
++        def close(self,h):events.append(('close',h))
++    class Api:
++        files=Files()
++        def process_id(self,h):return 456
++        def bound_statistics(self,p,t):
++            if change=='token' and events.count('stats'):return b'changed'
++            events.append('stats');return b'token-original'
++        def duplicate(self,t):events.append(('duplicate',t));return 88
++        def close_token(self,t):events.append(('close-token',t))
++        def descriptor(self,h):
++            events.append('descriptor')
++            yield 99,raw+(b'changed' if change=='descriptor' and events.count('descriptor')>1 else b''),digest
++        def access(self,sd,token,rights):assert token==88;events.append('AccessCheck');return 1,1
++    class Launch:
++        def process_times(self,h):return 123,None
++        def read_token(self,t):return {'state':'OBSERVED','is_appcontainer':True,'appcontainer_sid':wrapper.appcontainer_sid}
++    return wrapper,Api(),Launch(),events
++
++
++def test_actual_dacl_gate_keeps_pinned_chain_token_pid_birth_provenance_and_no_isolation_claim():
++    profile,api,launch,events=_observer()
++    result=acl.check_suspended_child_dacl(profile,77,66,456,launch,api=api)
++    assert result.state=='DACL_OBSERVED_NOT_ISOLATION_PROOF' and result.isolation_state=='NOT_VERIFIED'
++    assert result.birth_filetime_100ns==123 and result.child_pid==456
++    assert events[-1]==('close-token',88)
++    assert ('close',11) in events and ('close',10) in events
++    assert events.index('pin')<events.index('AccessCheck')<events.index(('close',11))
++    with pytest.raises(ValueError):acl.ChildDaclObservation(456,123,'a'*64,(),state='VERIFIED')
++
++
++@pytest.mark.parametrize('change',['inode','descriptor','token'])
++def test_dacl_gate_rechecks_live_native_provenance_and_releases_own_query_handles(change):
++    profile,api,launch,events=_observer(change=change)
++    with pytest.raises(acl.ChildAclError):acl.check_suspended_child_dacl(profile,77,66,456,launch,api=api)
++    assert events[-1]==('close-token',88)
++    assert ('close',11) in events and ('close',10) in events

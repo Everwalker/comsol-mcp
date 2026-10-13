@@ -1,0 +1,59 @@
+{
+  "schema": "ROOT_T037_SOURCE_REVIEW_V1",
+  "status": "CHANGES_REQUIRED",
+  "time_utc": "2026-10-12T00:25:42.219737+00:00",
+  "candidate_manifest_sha256": "862943c3855c7a5f48ddd65a1c327ee66c16aecb07690407bbe2c8d58c000296",
+  "scope_fingerprint_sha256": "9afedec97d6e3a9cf92b25c8552c45023a3f417ebcfd28bb814eb4f7717518af",
+  "evidence_check": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/windows_t037_native_policy_r1_20261012/ROOT_EVIDENCE_CHECK_R1.json",
+    "sha256": "7320f9936ffe69a336a9bf57b4f71b228d8a2d39236923cbc5d1d13163ea792f",
+    "verified_refs": 51,
+    "dependencies_unchanged": 6,
+    "junit_tests": [
+      47,
+      6,
+      59
+    ],
+    "test_overlap": "6 is a subset of 59",
+    "guard_active": [
+      1,
+      1,
+      1
+    ],
+    "guard_denies": [
+      0,
+      0,
+      0
+    ]
+  },
+  "source_scope_observations": [
+    "v2 closed profile bridge and intent/proof separation",
+    "readonly SCM/process sampling and compiled WFP inventory bounds",
+    "actual FWPM_TXN_READ_ONLY enumeration and transaction lifecycle",
+    "sealed observation never issues verified binding; launcher preflight remains refusal",
+    "plan/journal are software-only and real apply/restore remains absent"
+  ],
+  "required": [
+    {
+      "id": "T037-READONLY-R1-01",
+      "file": "comsol_mcp/_windows_t037_native.py",
+      "function": "CtypesWindowsPolicyApi._enum",
+      "start_line": 1354,
+      "problem": "Enum0 status and time checks occur before the try/finally that frees the returned page. A non-null successful allocation leaks if the time check raises; a non-null error-return out pointer also bypasses cleanup.",
+      "repair": "Cover native call, status/time checks and row decoding by the page-allocation release finally. Release only allocated output exactly once. Preserve primary query/time failure when cleanup becomes unknown.",
+      "required_controls": [
+        "Production _enum shim returns a non-null page then exceeds time bound: page released, enum handle destroyed and outer engine cleanup reconciled",
+        "Production _enum shim returns error status with a non-null page: allocation released and primary error preserved",
+        "Cleanup failure remains typed unknown with primary cause rather than a silent success"
+      ]
+    }
+  ],
+  "not_accepted": [
+    "Windows native kernel/SCM/WFP",
+    "T037 policy isolation",
+    "real applier/restore",
+    "trusted native issuer/launcher",
+    "MASTER_GOAL"
+  ],
+  "next_action": "Same executor repair/test/freeze R2 without changing R1 artifacts; then Root scoped review and remaining production implementation."
+}

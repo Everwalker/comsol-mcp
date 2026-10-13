@@ -571,6 +571,134 @@ def _call_recorded(node: Any, method: str, *args: Any, errors: list[dict[str, An
         raise
 
 
+def _solver_sequence_parameter_observation(
+    solution: Any,
+    solution_info: Any,
+    *,
+    study_tag: str | None,
+    solution_tag: str,
+) -> dict[str, Any]:
+    """Capture the SolverSequence's typed complex parameter axis separately.
+
+    COMSOL's direct SolverSequence getters are a supplemental raw observation;
+    they do not replace SolutionInfo's outer/inner tuple mapping and must never
+    turn ``parameters_complete`` into true.  ``getSize()`` is documented as
+    ``[degrees_of_freedom, solnums]``.  Each ``getPVals(solnum)`` and
+    ``getPValsImag(solnum)`` call uses the documented one-based solution number.
+    """
+    errors: list[dict[str, Any]] = []
+
+    def read(node: Any, method: str, *args: Any) -> Any:
+        return _record(node, method, *args, errors=errors)
+
+    type_value = read(solution, "getType")
+    sequence_type = read(solution, "getSequenceType")
+    attached = read(solution, "isAttached")
+    observed_study = read(solution, "study")
+    raw_size = read(solution, "getSize")
+    raw_names = read(solution, "getPNames")
+    names = list(raw_names) if isinstance(raw_names, (list, tuple)) else None
+    size = list(raw_size) if isinstance(raw_size, (list, tuple)) else None
+    solnum_count: int | None = None
+    size_valid = (
+        size is not None and len(size) == 2
+        and all(type(item) is int and item >= 0 for item in size)
+    )
+    if not size_valid and raw_size is not None:
+        errors.append({"method": "getSize", "code": "SOLVER_SEQUENCE_SIZE_SHAPE_INVALID",
+                       "message": "getSize() must return exactly two nonnegative integers"})
+    if size_valid:
+        solnum_count = size[1]
+        if not 1 <= solnum_count <= 4096:
+            errors.append({"method": "getSize", "code": "SOLVER_SEQUENCE_SOLNUM_COUNT_UNSUPPORTED",
+                           "message": "documented getSize()[1] solution count must be in 1..4096"})
+            solnum_count = None
+    if names is not None and any(not isinstance(name, str) or not name for name in names):
+        errors.append({"method": "getPNames", "code": "SOLVER_SEQUENCE_PARAMETER_NAMES_INVALID",
+                       "message": "parameter names must be nonempty strings"})
+        names = None
+    elif names is None and raw_names is not None:
+        errors.append({"method": "getPNames", "code": "SOLVER_SEQUENCE_PARAMETER_NAMES_SHAPE_INVALID",
+                       "message": "getPNames() must return a string array"})
+
+    values_by_solnum: list[dict[str, Any]] = []
+    if solnum_count is not None:
+        for solnum in range(1, solnum_count + 1):
+            real = read(solution, "getPVals", solnum)
+            imag = read(solution, "getPValsImag", solnum)
+            real_values = list(real) if isinstance(real, (list, tuple)) else None
+            imag_values = list(imag) if isinstance(imag, (list, tuple)) else None
+            values_by_solnum.append({
+                "solnum": solnum,
+                "real_getter": {"method": "SolverSequence.getPVals(int)", "arguments": [solnum],
+                                "raw": real_values},
+                "imag_getter": {"method": "SolverSequence.getPValsImag(int)", "arguments": [solnum],
+                                "raw": imag_values},
+            })
+
+    units_by_name: dict[str, Any] = {}
+    unit_observations: list[dict[str, Any]] = []
+    if names is not None and solution_info is not None:
+        for name in names:
+            unit = read(solution_info, "getUnit", name)
+            units_by_name[name] = unit if isinstance(unit, str) and unit else None
+            unit_observations.append({"name": name, "method": "SolutionInfo.getUnit(String)",
+                                      "arguments": [name], "value": units_by_name[name]})
+    else:
+        units_by_name = {name: None for name in (names or [])}
+
+    rows: list[dict[str, Any]] = []
+    rows_shape_valid = names is not None and bool(names)
+    if rows_shape_valid:
+        for entry in values_by_solnum:
+            real = entry["real_getter"]["raw"]
+            imag = entry["imag_getter"]["raw"]
+            if (real is None or imag is None or len(real) != len(names)
+                    or len(imag) != len(names)):
+                rows_shape_valid = False
+                errors.append({"method": "getPVals/getPValsImag", "code": "SOLVER_SEQUENCE_PARAMETER_SHAPE_MISMATCH",
+                               "message": f"solution number {entry['solnum']} values do not match getPNames() length"})
+                continue
+            for index, name in enumerate(names):
+                rows.append({"solnum": entry["solnum"], "parameter_index": index,
+                             "name": name, "real": real[index], "imag": imag[index],
+                             "unit": units_by_name.get(name)})
+    units_complete = bool(names) and all(units_by_name.get(name) for name in names)
+    if errors:
+        status = "UNVERIFIED_WITH_READ_ERRORS"
+    elif not names:
+        status = "NO_PARAMETER_NAMES_REPORTED"
+    elif not rows_shape_valid:
+        status = "UNVERIFIED_SHAPE_MISMATCH"
+    elif not units_complete:
+        status = "OBSERVED_VALUES_UNITS_UNAVAILABLE"
+    else:
+        status = "OBSERVED_TYPED_COMPLEX_PARAMETER_VALUES"
+    return {
+        "status": status,
+        "source": "direct SolverSequence.getPNames/getSize/getPVals(int)/getPValsImag(int); supplemental to SolutionInfo",
+        "solution_tag": solution_tag,
+        "receiver": "model.sol(<dataset-bound solution tag>)",
+        "sequence_type": sequence_type if isinstance(sequence_type, str) else None,
+        "solution_type": type_value if isinstance(type_value, str) else None,
+        "attached": attached if isinstance(attached, bool) else None,
+        "study": observed_study if isinstance(observed_study, str) else study_tag,
+        "solution_identity_matches_dataset_study": (
+            observed_study == study_tag if isinstance(observed_study, str) and study_tag else None),
+        "get_size": size,
+        "get_size_semantics": "[degrees_of_freedom, solution_number_count] per COMSOL 6.4 documentation",
+        "solution_number_count": solnum_count,
+        "pnames": names,
+        "solution_values": values_by_solnum,
+        "unit_observations": unit_observations,
+        "parameter_rows": rows,
+        "parameter_units_complete": units_complete,
+        "parameters_complete": False,
+        "interpretation": "raw sequence-level complex values only; no outer/inner tuple mapping or complete parameter combinations inferred",
+        "read_errors": errors,
+    }
+
+
 def _unique_tag(existing: Sequence[str]) -> str:
     taken = {str(item) for item in existing}
     for index in range(1, MAX_EPHEMERAL_TAG_ATTEMPTS):
@@ -2571,6 +2699,10 @@ def dataset_solution_indices(worker: Any, model_tag: str, arguments: Mapping[str
                             + (f" ({study_error})" if study_error else ""))
 
     sol_info = _read(sol_node, "getSolutioninfo")
+    solver_sequence_observation = _solver_sequence_parameter_observation(
+        sol_node, sol_info, study_tag=study_tag, solution_tag=str(solution_tag))
+    read_errors.extend({**entry, "scope": "supplemental SolverSequence parameter observation"}
+                       for entry in solver_sequence_observation["read_errors"])
     outer_indices: list[int] = []
     inner_indices: list[int] = []
     level_names: list[str] = []
@@ -2678,6 +2810,7 @@ def dataset_solution_indices(worker: Any, model_tag: str, arguments: Mapping[str
             "SolutionInfo.getPNames(int[][])/getPvals(int[][])/getUnits(int[][])"
             if typed_mapping_available else "SolverSequence.getParamNames()/getParamVals() (index-paired)"
         ),
+        "solver_sequence_parameter_observation": solver_sequence_observation,
         "solution_count": len(typed_binding.get("solnum_pairs", [])) if typed_binding else (len(pvals) if pvals else len(inner_indices)),
         "solnum_pairs": list(typed_binding.get("solnum_pairs", [])) if typed_binding else [],
         "read_errors": read_errors,
@@ -3005,6 +3138,7 @@ def _make_result_budget_guard(
     feature_kind: str,
     expressions: Sequence[str],
     binding: Mapping[str, Any] | None,
+    single_solution_count_observation: Mapping[str, Any] | None = None,
     point_count: int | None = None,
     max_elements: int = RESULT_NUMERIC_PAYLOAD_MAX_ELEMENTS,
     max_bytes: int = RESULT_NUMERIC_PAYLOAD_MAX_BYTES,
@@ -3047,10 +3181,23 @@ def _make_result_budget_guard(
             if not inner_values:
                 binding_verified = False
 
-        # Do not ask the engine for a raw point witness when the solution axes
-        # themselves are incomplete.  The refusal remains pre-getData and
-        # identifies which metadata contract failed.
-        if not binding_verified:
+        # A direct, detached Stored/Eigenfrequency sequence can prove a
+        # singleton numeric allocation bound without proving any outer/inner
+        # tuple mapping. This exception is intentionally count-only: no axis
+        # selectors or FieldArray coordinates are synthesized from it.
+        count_only_witness = bool(
+            isinstance(single_solution_count_observation, Mapping)
+            and single_solution_count_observation.get("status") == "VERIFIED_SINGLE_STORED_NUMERIC_COUNT"
+            and single_solution_count_observation.get("numeric_solution_count") == 1
+            and single_solution_count_observation.get("solution_axes_pair_mapping_complete") is False
+        )
+        if not binding_verified and count_only_witness:
+            planned_solution_count = 1
+            solution_count_source = str(single_solution_count_observation.get("source"))
+        elif binding_verified:
+            planned_solution_count = len(inner_values)
+            solution_count_source = "validated-SolutionBinding.outer/inner-pairs"
+        else:
             decision = _budget_refusal(
                 operation=operation,
                 feature_kind=feature_kind,
@@ -3079,7 +3226,7 @@ def _make_result_budget_guard(
                     operation=operation,
                     feature_kind=feature_kind,
                     expression_count=len(expressions),
-                    inner_count=len(inner_values),
+                    inner_count=planned_solution_count,
                     max_elements=max_elements,
                     max_bytes=max_bytes,
                     reason_code="POINT_COUNT_UNVERIFIED",
@@ -3100,7 +3247,7 @@ def _make_result_budget_guard(
                     operation=operation,
                     feature_kind=feature_kind,
                     expression_count=len(expressions),
-                    inner_count=len(inner_values),
+                    inner_count=planned_solution_count,
                     max_elements=max_elements,
                     max_bytes=max_bytes,
                     reason_code="RAW_POINT_SHAPE_UNAVAILABLE",
@@ -3116,7 +3263,7 @@ def _make_result_budget_guard(
             expression_count=len(expressions),
             point_count=raw_point_count if raw_point_count is not None else point_count,
             outer_count=1,
-            inner_count=len(inner_values),
+            inner_count=planned_solution_count,
             max_elements=remaining_elements,
             max_bytes=remaining_bytes,
             operation=operation,
@@ -3128,13 +3275,23 @@ def _make_result_budget_guard(
             solution_axes_verified=True,
             expression_source="validated-request-expressions",
             point_count_source=raw_point_source,
-            solution_axes_source="validated-SolutionBinding.outer/inner-pairs",
+            # The planner's solution-axis witness is used as a numeric
+            # allocation bound here. The separate fields below preserve
+            # whether an outer/inner tuple mapping actually exists.
+            solution_axes_source=solution_count_source,
             raw_point_upper_bound=raw_point_count,
             raw_upper_bound_verified=raw_bound_verified,
             raw_upper_bound_source=raw_point_source if raw_bound_verified else None,
             complex_components=complex_components,
         )
         decision = _append(decision)
+        decision["solution_axes_verification_scope"] = (
+            "numeric_singleton_count_only" if count_only_witness else "outer_inner_tuple_mapping"
+        )
+        decision["solution_axes_pair_mapping_complete"] = bool(binding_verified)
+        decision["solution_count_observation"] = (
+            dict(single_solution_count_observation) if count_only_witness else None
+        )
         if shape_witness is not None:
             decision["raw_point_shape_witness"] = shape_witness
         if decision.get("status") != "PASS" or decision.get("allowed") is not True:
@@ -3867,6 +4024,120 @@ def _result_solution_binding(model: Any, solution_tag: Any) -> dict[str, Any] | 
         if exc.code in {"API_UNSUPPORTED", "NODE_NOT_FOUND"}:
             return None
         raise
+
+
+def _single_stored_solution_count_observation(
+    model: Any,
+    dataset_binding: Mapping[str, Any] | None,
+    solution_tag: Any,
+) -> dict[str, Any]:
+    """Prove a one-sample allocation bound without inventing solution axes.
+
+    This narrow witness is only for a direct ``Solution`` dataset bound to a
+    detached, stored eigenfrequency sequence whose documented ``getSize()[1]``
+    reports exactly one solution number.  It supports memory accounting for
+    ``result.at_points``; it is not a SolutionInfo tuple mapping and cannot be
+    used for outer/inner selectors or FieldArray coordinates.
+    """
+    base: dict[str, Any] = {
+        "status": "UNVERIFIED",
+        "numeric_solution_count": None,
+        "solution_axes_pair_mapping_complete": False,
+        "dataset": dataset_binding.get("dataset") if isinstance(dataset_binding, Mapping) else None,
+        "solution": solution_tag if isinstance(solution_tag, str) else None,
+        "source": None,
+        "observation": None,
+        "reasons": [],
+    }
+    sources = dataset_binding.get("sources") if isinstance(dataset_binding, Mapping) else None
+    source = (
+        isinstance(dataset_binding, Mapping)
+        and dataset_binding.get("binding_complete") is True
+        and dataset_binding.get("dataset_type") == "Solution"
+        and dataset_binding.get("dataset") is not None
+        and dataset_binding.get("solution") == solution_tag
+        and isinstance(sources, Mapping)
+        and sources.get("solution") == "dataset.solution -> model.sol().tags()"
+        and isinstance(solution_tag, str)
+        and bool(solution_tag)
+    )
+    if not source:
+        base["reasons"].append("dataset binding is not an exact direct Solution→model.sol membership witness")
+        return base
+
+    solutions = _call(model, "sol")
+    if solution_tag not in tag_list(solutions):
+        base["reasons"].append("dataset-bound solution tag is absent from model.sol().tags()")
+        return base
+    node = _call(solutions, "get", solution_tag)
+    info = _call(node, "getSolutioninfo")
+    identity_errors: list[dict[str, Any]] = []
+    study_tag = _record(node, "study", errors=identity_errors)
+    observation = _solver_sequence_parameter_observation(
+        node,
+        info,
+        study_tag=study_tag if isinstance(study_tag, str) and study_tag else None,
+        solution_tag=solution_tag,
+    )
+    base["observation"] = observation
+    reasons: list[str] = []
+    if identity_errors:
+        reasons.append("direct SolverSequence.study() readback failed")
+    size = observation.get("get_size")
+    names = observation.get("pnames")
+    values = observation.get("solution_values")
+    rows = observation.get("parameter_rows")
+    if observation.get("solution_type") != "Eigenfrequency":
+        reasons.append("direct SolverSequence.getType() is not Eigenfrequency")
+    if observation.get("sequence_type") != "Stored":
+        reasons.append("direct SolverSequence.getSequenceType() is not Stored")
+    if observation.get("attached") is not False:
+        reasons.append("direct SolverSequence.isAttached() did not prove a detached stored solution")
+    if not isinstance(observation.get("study"), str) or not observation["study"]:
+        reasons.append("direct SolverSequence.study() did not return a study tag")
+    if (
+        not isinstance(size, list)
+        or len(size) != 2
+        or any(type(item) is not int or item < 0 for item in size)
+        or size[0] <= 0
+        or size[1] != 1
+    ):
+        reasons.append("documented getSize()[1] did not prove exactly one solution number")
+    if names != ["lambda"]:
+        reasons.append("direct getPNames() did not return exactly the stored eigenfrequency parameter ['lambda']")
+    if observation.get("status") != "OBSERVED_TYPED_COMPLEX_PARAMETER_VALUES":
+        reasons.append("typed real/imaginary parameter values and units are not fully observed")
+    if (
+        not isinstance(values, list)
+        or len(values) != 1
+        or values[0].get("solnum") != 1
+        or values[0].get("real_getter", {}).get("raw") is None
+        or values[0].get("imag_getter", {}).get("raw") is None
+        or not isinstance(rows, list)
+        or len(rows) != 1
+        or rows[0].get("name") != "lambda"
+        or not isinstance(rows[0].get("unit"), str)
+        or not rows[0]["unit"]
+    ):
+        reasons.append("one typed complex eigenfrequency row with a native unit was not read back")
+    else:
+        for component in (rows[0].get("real"), rows[0].get("imag")):
+            if isinstance(component, bool) or not isinstance(component, (int, float)) or not math.isfinite(float(component)):
+                reasons.append("typed eigenfrequency row contains a non-finite or non-numeric value")
+                break
+    if reasons:
+        base["reasons"] = reasons
+        return base
+    base.update({
+        "status": "VERIFIED_SINGLE_STORED_NUMERIC_COUNT",
+        "numeric_solution_count": 1,
+        "source": (
+            "exact dataset.solution→model.sol().tags() binding plus direct Stored/Eigenfrequency "
+            "SolverSequence.getSize()[1]=1 and one typed complex lambda row"
+        ),
+        "reasons": [],
+    })
+    return base
 
 
 def _merge_outer_feature_data(
@@ -6295,10 +6566,14 @@ def result_at_points(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
         or _string_or_none(dset_node, "data", errs)
     )
     solution_binding = _result_solution_binding(model, solution_tag)
+    single_solution_count_observation: dict[str, Any] | None = None
     if solution_spec.get("outer") is not None and not solution_binding:
         raise ExecutionContractError("SOLUTION_AXIS_METADATA_UNAVAILABLE", "outer selection requires SolutionInfo metadata")
     if solution_spec.get("inner") is not None and (not solution_binding or not solution_binding.get("pair_mapping_complete")):
         raise ExecutionContractError("SOLUTION_AXIS_METADATA_UNAVAILABLE", "inner selection requires complete SolutionInfo metadata")
+    if not (isinstance(solution_binding, Mapping) and solution_binding.get("pair_mapping_complete") is True):
+        single_solution_count_observation = _single_stored_solution_count_observation(
+            model, dataset_binding, solution_tag)
 
     ephemeral_tag = _unique_tag(tag_list(numerical_list))
     cleanup: dict[str, Any] = {
@@ -6313,6 +6588,7 @@ def result_at_points(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
     feature = None
     engine_error = None
     transformed = None
+    expression_units: dict[str, str | None] = {}
     field_array_payload: Any = None
     is_complex: bool | None = None
     field_array_is_complex = False
@@ -6326,6 +6602,7 @@ def result_at_points(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
         feature_kind="Interp",
         expressions=expressions,
         binding=solution_binding,
+        single_solution_count_observation=single_solution_count_observation,
         point_count=point_count,
         records=result_budget_records,
     )
@@ -6485,6 +6762,27 @@ def result_at_points(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
         "dataset_binding": (
             dict(dataset_binding) if isinstance(dataset_binding, Mapping) else None
         ),
+        "solution_axes": {
+            "pair_mapping_complete": bool(
+                isinstance(solution_binding, Mapping)
+                and solution_binding.get("pair_mapping_complete") is True
+            ),
+            "outer": list(solution_binding.get("outer_indices", []))
+                if isinstance(solution_binding, Mapping) else [],
+            "inner": list(solution_binding.get("inner_indices", []))
+                if isinstance(solution_binding, Mapping) else [],
+            "numeric_count_observation": (
+                dict(single_solution_count_observation)
+                if single_solution_count_observation is not None else None
+            ),
+            "interpretation": (
+                "numeric sample count may be bounded by a direct stored-solution observation; "
+                "outer/inner tuple mapping remains unavailable"
+                if single_solution_count_observation is not None
+                and single_solution_count_observation.get("status") == "VERIFIED_SINGLE_STORED_NUMERIC_COUNT"
+                else "only a complete SolutionBinding establishes outer/inner tuples"
+            ),
+        },
         "feature_readback": {
             "data": data_readback,
             "data_status": data_readback_status,
@@ -6492,6 +6790,8 @@ def result_at_points(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
         },
         "coordinate_unit": coordinate_unit,
         "frame": frame,
+        "expression_units": dict(expression_units),
+        "expression_unit_source": "NumericalFeature.getStringArray('unit') after result.at_points evaluation",
         "coordinate_readback": {
             "status": readback_status,
             "coordinates": readback_coords,

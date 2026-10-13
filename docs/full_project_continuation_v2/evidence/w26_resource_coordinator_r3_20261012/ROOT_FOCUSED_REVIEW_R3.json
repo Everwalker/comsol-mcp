@@ -1,0 +1,81 @@
+{
+  "schema": "comsol-mcp.root-focused-resource-review/v1",
+  "created_at_utc": "2026-10-11T21:19:38.715675+00:00",
+  "status": "PASS_SCOPED_SOFTWARE_CORRECTIONS",
+  "candidate_freeze": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w26_resource_coordinator_r3_20261012/FREEZE_R3.json",
+    "sha256": "a7a41e20216886e8a59b9ee4ba44e44c6c01cc2a0bb5d131ce0b10b0749e87a7",
+    "scope_fingerprint_sha256": "72be4f3422528fde9e02227ab3eaac81be6c2108f06760415e2a00140abf1f03"
+  },
+  "source_checks": [
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "sha256": "012427e14c2345eac4a9430f6e4011d905d953f85d094ad18948724921584ef6",
+      "snapshot_and_current": "MATCH"
+    },
+    {
+      "path": "comsol_mcp/_w26_os_resources.py",
+      "sha256": "e19946f52715efad9aca120860a2529863745edf96c4a3aacfa0976b8c027d27",
+      "snapshot_and_current": "MATCH"
+    },
+    {
+      "path": "tests/test_w26_os_resources.py",
+      "sha256": "f244fd0afb85006b42cea503245999d9030ea78f064c401f67072d03d942eed4",
+      "snapshot_and_current": "MATCH"
+    },
+    {
+      "path": "docs/full_project_continuation_v2/DISK_RESOURCE_CONFIG.md",
+      "sha256": "ac5aef0bfe0bf98de6e7e5fa015621bf57b96b208f274cd68883b6cb101da0ea",
+      "snapshot_and_current": "MATCH"
+    }
+  ],
+  "verified_test_results": [
+    {
+      "label": "w26_resource_coordinator",
+      "tests": 45,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 45,
+      "junit_sha256": "505c98c3a54a9e9798884c91f9a54d35a9c83ee5758ffd41c067b8f7caeff51e"
+    },
+    {
+      "label": "control_daemon_project_sessions",
+      "tests": 147,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 147,
+      "junit_sha256": "f8e2bb1ccddc573e1788d9de399a633f0e1858377a30ecddbd4f0e69b409ecf9"
+    },
+    {
+      "label": "host_scoped_provider_compatibility",
+      "tests": 27,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 27,
+      "junit_sha256": "b4db8ae65db6cd19ac57936c9eaf9e7c6d9f3a8b7fad65a3e9699ef7d46f7ae4"
+    }
+  ],
+  "parent_findings_disposition": [
+    {
+      "finding": "startup disk config unreachable from installed daemon CLI/environment",
+      "status": "FIXED",
+      "basis": "serve kwargs, CLI parser and startup rejection before listener; default kwargs remain empty"
+    },
+    {
+      "finding": "DYNAMIC operations bypass configured disk reservation",
+      "status": "FIXED",
+      "basis": "DYNAMIC conservative classification and project-write reservation authorization; real software api.invoke route low-budget no Worker send, sufficient-budget durable terminal release"
+    }
+  ],
+  "scope": "Source/diff and preserved guarded software evidence review only; not independent final project Reviewer",
+  "limits": [
+    "DYNAMIC routes are conservatively reserved because there is no route-independent trusted resolver proving a READ effect before admission.",
+    "Disk estimates are trusted admission estimates, not enforced per-job upper bounds; POSIX free-space observation is advisory and can race external writers.",
+    "Windows disk storage/profile provider and actual Windows-kernel verification remain NOT_RUN/unsupported.",
+    "COMSOL native/scientific validation, actual isolated host-account proof, T037 OS policy and hard quotas remain open."
+  ],
+  "retest": "Inherited exact frozen guarded tests; no duplicate test execution by Root"
+}

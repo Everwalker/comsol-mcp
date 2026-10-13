@@ -1,0 +1,142 @@
+{
+  "affected_regression": {
+    "command": "pytest tests/test_g3_managed_models.py tests/test_g3_exports.py tests/test_g3_model_delivery.py tests/test_artifact_verify.py tests/test_control_daemon.py tests/test_control_daemon_projects.py tests/test_control_daemon_sessions.py tests/test_state_backup.py tests/test_windows_model_publish.py tests/test_windows_parameter_publish_native.py",
+    "errors": 0,
+    "failed": 0,
+    "junit": {
+      "path": "junit-affected.xml",
+      "sha256": "f7775a93e2ab4d1c687a2cee232e9aa5f2b18a3a2b32d57ba5de573df48ee45e"
+    },
+    "passed": 250,
+    "skipped": 10,
+    "skips": [
+      {
+        "classname": "tests.test_artifact_verify",
+        "reason": "accepted dev1 archive paths were not supplied for this environment",
+        "test": "test_artifact_verify_real_accepted_dev1_bundles_through_registration"
+      },
+      {
+        "classname": "tests.test_windows_parameter_publish_native.NativeControls",
+        "reason": "requires actual Windows kernel/filesystem",
+        "test": "test_junction_rejected_without_touching_target"
+      },
+      {
+        "classname": "tests.test_windows_parameter_publish_native.NativeControls",
+        "reason": "requires actual Windows kernel/filesystem",
+        "test": "test_parent_and_project_rename_blocked_while_pinned"
+      },
+      {
+        "classname": "tests.test_windows_parameter_publish_native.NativeControls",
+        "reason": "requires actual Windows kernel/filesystem",
+        "test": "test_pinned_parent_reparse_race_never_writes_outside"
+      },
+      {
+        "classname": "tests.test_windows_parameter_publish_native.NativeControls",
+        "reason": "requires actual Windows kernel/filesystem",
+        "test": "test_postcommit_cleanup_failure_preserves_unknown_receipt"
+      },
+      {
+        "classname": "tests.test_windows_parameter_publish_native.NativeControls",
+        "reason": "requires actual Windows kernel/filesystem",
+        "test": "test_postcommit_read_failure_rolls_back_and_reports_unknown"
+      },
+      {
+        "classname": "tests.test_windows_parameter_publish_native.NativeControls",
+        "reason": "requires actual Windows kernel/filesystem",
+        "test": "test_stream_reader_exception_cleans_temp_and_keeps_typed_receipt"
+      },
+      {
+        "classname": "tests.test_windows_parameter_publish_native.NativeControls",
+        "reason": "requires actual Windows kernel/filesystem",
+        "test": "test_streaming_publish_checks_chunks_digest_and_size_before_rename"
+      },
+      {
+        "classname": "tests.test_windows_parameter_publish_native.NativeControls",
+        "reason": "requires actual Windows kernel/filesystem",
+        "test": "test_unicode_publish_and_no_clobber"
+      },
+      {
+        "classname": "tests.test_windows_parameter_publish_native.NativeControls",
+        "reason": "requires actual Windows kernel/filesystem",
+        "test": "test_write_failure_removes_only_owned_temp"
+      }
+    ],
+    "subtests_passed": 20
+  },
+  "platform_status": {
+    "external_publish": "NOT_RUN",
+    "full_restore_software_route": "PASS",
+    "native_comsol": "NOT_RUN",
+    "windows_kernel": "NOT_RUN"
+  },
+  "runtime": {
+    "host": "macOS",
+    "python": "3.12.13",
+    "tmpdir": "/private/tmp"
+  },
+  "schema": "comsol-mcp.delivery-restore-r4-software-closure/1",
+  "scope": "software-only regression evidence for current delivery, model lifecycle/recipe, definitions/domains, artifact.verify, exports, full state backup/restore, publishers, and ControlDaemon routes; no native COMSOL acceptance",
+  "source_sha256": {
+    "comsol_mcp/_comsol_progress_capture.py": "84c87c9728edb0554bf094ae55f2288156f78f5f2a037a02088303e867223fd9",
+    "comsol_mcp/_control_daemon.py": "82adff5768f429350ae630cce45d0b367b0da6a3073155468cb39a919b370199",
+    "comsol_mcp/_domain_outcome.py": "2b6fe962ce32437ad3bbc8e0ea0be01f9c76d78b84ebb37571dbf22b1511db6b",
+    "comsol_mcp/_execution_service.py": "5ba2f22b4d0a59507164d2b9f5891845face36fc2f85ec6a27c4bd6fff2f20e2",
+    "comsol_mcp/_g2_artifact_verify.py": "ea050a723b67b06ff8ef3ad2b12d317669c3393ed2b8af545d3ba449c04676db",
+    "comsol_mcp/_g2_registry.py": "b44933b14790f5f6b60a733adbac9082654ec76261a08df8f45d7e1c1e9c5280",
+    "comsol_mcp/_g3_definition_validation.py": "914756c51449d605fe98d1e6602793fa1b9a0f99eaef529f0097ed38dfb885ce",
+    "comsol_mcp/_g3_exports.py": "519625eb060ab847fc76ec2b44c51679dfcdfe697a30bb82faba61bd3841cd7c",
+    "comsol_mcp/_g3_managed_models.py": "408fe130dbb8ac3ad36c1e3bea8968588675b4ce1ae8e4a3fd30624a45edb286",
+    "comsol_mcp/_g3_mesh_convergence_executor.py": "06dbb670839d56d0096562083f90c146c4da3135ce9d4c25418d5c3a95c3aa3e",
+    "comsol_mcp/_g3_model_delivery.py": "9c6aa7c1de31e325dca21f49bec1df9351a642952869b215f47e50b092a65e80",
+    "comsol_mcp/_g3_model_domains.py": "ea789f9d2e48e1e32254d2f2c346d2c27440bfb6f6e2f8af6a54469172210df8",
+    "comsol_mcp/_g3_ops.py": "d456796622636eeb6eab7b0176901892effc84261ae0d699a6dd801dbb31287a",
+    "comsol_mcp/_g3_solver_ops.py": "bf8188154c68d08dcc64c23a11004d9360267951ccabcafe608cd0cdbcd0ee27",
+    "comsol_mcp/_g3_w14.py": "a6cfbf3cbd330701f04f05341bec0b62e08bb9c459a4b9e4ed57fbeb504aa8d6",
+    "comsol_mcp/_g3_w16.py": "1242cd85660cb59baf1d34b7d5bd08a025ef9cbd92f34bf9264c188d6dbc0708",
+    "comsol_mcp/_java_worker.py": "ce9d517857f6f1f965bcba73c67f8bd9ffdeb3ae865aa19e4f6a24d4c1d69fc0",
+    "comsol_mcp/_managed_backend.py": "fb6cbf235a57d46bb9f4196816bddcf46d439c5524183ce0aa6939e670abbaf5",
+    "comsol_mcp/_state_backup.py": "3208e866ec007b36f952c39585d250214cd822772f5aa6ef0ecbc75e589c6019",
+    "comsol_mcp/_w26_os_resources.py": "a86ac04ddb9bec9824577bd253217acfcb2f27297906959e8a2f51ce6e3bceaa",
+    "comsol_mcp/_windows_model_publish.py": "45b3909296707a0d9c2d35777a7d443b338af9d27d6a30b248f0eaebcd2923d6",
+    "comsol_mcp/_windows_parameter_publish.py": "5a418434c3022069444db9924fcbe591342a3395bd911b088faff94f7d1d6073",
+    "comsol_mcp/worker_java/PersistentComsolWorker.java": "dfe202e623af961cad3e11b6d6cd00106d8ca594627358b8811047f47a7790ab",
+    "tests/test_artifact_verify.py": "e633be9d6d8e92526ce66d84f63eee7697d867aa3b38167d7cdffb2f547e2276",
+    "tests/test_comsol_progress_capture.py": "54f6504a82591186c1424cc9358cc80fdf7f9c2fcd1f977819899454b23adcb6",
+    "tests/test_control_daemon.py": "5c83687f97da339d6305e41aa4e70f246f4edec76100aaa7bdae02553acf56b1",
+    "tests/test_control_daemon_projects.py": "33fc418ff44d2a942dc6dc86e6f0fedb16fc3e4121ca7867a00e5343de0ecb38",
+    "tests/test_control_daemon_sessions.py": "94f78b7ff81c35b217e9b177971207ac95b37ded10a4ee5c6b7ff81b2eb7f12b",
+    "tests/test_g3_definition_validation.py": "9f8d304e08f4b0c0de6baadae02e869837b5c3f8af91481c862f8c8d6abdaec1",
+    "tests/test_g3_exports.py": "e00ca085fdd18c03308784dd02f809366e8110fc22d073a187f2972195b0c541",
+    "tests/test_g3_managed_models.py": "16bd98f3cef224638b6d17e38d0909f76d70c41ed263a6ff2020801e75d89969",
+    "tests/test_g3_mesh_convergence_executor.py": "1a4d483fa5f431dde516b7a120f73cc98d4a98da18bebd2cc95a31cc06208697",
+    "tests/test_g3_model_delivery.py": "b5f9fa90e7a5b66345bec4f702bd78b707d305c97b95d47a21766cf2291a321b",
+    "tests/test_g3_model_domains.py": "ec6dd8d75d8155b5ee18508aa5bbd14c17e1141cd8546196090810e6da56cfe9",
+    "tests/test_g3_w14.py": "15d0b8180f10ec73d717ed29e51dcc4dde270854aa211a87b9af40583fd5105f",
+    "tests/test_java_worker.py": "77551975df32106ee5f432eae98e74bf0da82fcc6bdade4845d9cc7c1b854ee2",
+    "tests/test_state_backup.py": "b7e92ac7a7f16786513e044387c927c09c1227855219866f06a7d9d1eb7ac3be",
+    "tests/test_w26_os_resources.py": "822bbb08cd8d3014a819ccfedadb04f1d4abaa5fdb9dc73f2133f6e92cf2cb6b",
+    "tests/test_windows_model_publish.py": "95cd115513e29d923cc6ae1f989337814bd6c43844c05ca25a51c4bb75be8f16",
+    "tests/test_windows_parameter_publish_native.py": "cc281485330cdb2573f87897ba82204d653e749dee50066fa7859d9c82591317"
+  },
+  "worker_loopback": {
+    "command": "pytest tests/test_java_worker.py",
+    "errors": 0,
+    "failed": 0,
+    "initial_sandbox_attempt": "FAILED_BEFORE_RUNTIME_DUE_TO_OS_BIND_PERMISSION; Java reported BindException Operation not permitted; same suite passed under the authorized loopback scope.",
+    "junit": {
+      "path": "junit-java-worker.xml",
+      "sha256": "a534f930a67683cd9032580443c57f9479de3fa018927e66c42b8f37bed22b49"
+    },
+    "passed": 37,
+    "scope_note": "Elevated retry allowed only ephemeral loopback sockets; started no COMSOL server, ran no solve, and did not touch ports 80752/80851.",
+    "skipped": 1,
+    "skips": [
+      {
+        "classname": "tests.test_java_worker",
+        "reason": "Windows owner semantics only",
+        "test": "test_windows_existing_foreign_lock_root_is_rejected_without_takeover"
+      }
+    ],
+    "status": "PASS_SOFTWARE_LOOPBACK"
+  }
+}

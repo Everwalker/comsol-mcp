@@ -1,0 +1,87 @@
+{
+  "schema": "comsol-mcp.root-source-review/1",
+  "created_utc": "2026-10-12T00:45:48.752234+00:00",
+  "status": "CHANGES_REQUIRED",
+  "candidate_freeze_path": "local-preservation/w25-native-adapter-20261012-r4/SOURCE_FREEZE_R4.json",
+  "candidate_freeze_sha256": "f02741dc359a62a646e5183940cb1f7479b2594e6176315e55abc5cf62782b54",
+  "byte_verification": {
+    "references": 159,
+    "source_files": 47,
+    "preimage_files": 20,
+    "test_evidence_files": 12,
+    "frozen_source_and_evidence": "ALL_MATCH_AT_REVIEW"
+  },
+  "raw_software": {
+    "tests": 240,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "guard_active": 7,
+    "guard_deny": 0
+  },
+  "native_gui_windows_macos_comsol": "NOT_RUN",
+  "findings": [
+    {
+      "id": "W25-R4-01",
+      "file": "comsol_mcp/_desktop_macos.py",
+      "line": 755,
+      "issue": "The SCScreenshotManager path admits macOS 12.3-13.x and probes permission before rejecting absent screenshot API. Installed official SDK declares SCScreenshotManager API_AVAILABLE(macos(14.0)); 12.3 is ScreenCaptureKit framework introduction, not this selected API.",
+      "required": "Gate chosen screenshot route at readable >=14.0 before permissions/framework/API access; test 12.3/13.x negative and 14.0 positive; correct docs and native plan."
+    },
+    {
+      "id": "W25-R4-02",
+      "file": "comsol_mcp/_desktop_macos.py",
+      "line": 224,
+      "issue": "capture_window accesses SCShareableContent.windows, SCWindow.windowID/owningApplication and SCRunningApplication.processID as Python values. Real PyObjC Objective-C property getters are callable selectors. The current SimpleNamespace attribute fixtures conceal a production TypeError.",
+      "required": "Use actual callable Objective-C getters with strict typed/nullable/cardinality checks for every target identity and frame; tests must represent the real method interface. Keep malformed and wrong-PID fail-closed; do not introduce GUI/native PASS."
+    },
+    {
+      "id": "W25-R4-03",
+      "file": "comsol_mcp/_desktop_windows.py",
+      "line": 329,
+      "issue": "Both platform verify_source_preserved implementations return source.standalone_model_id instead of current.standalone_model_id, and omit the current-vs-source ID comparison. Windows save_copy also omits complete baseline comparison before first UI effect and source mode/standalone ID comparison afterwards. A changed source with same label/fingerprint/dirty can be falsely declared preserved after managed load.",
+      "required": "Complete typed source baseline recheck before effects; compare current mode, standalone ID, label, fingerprint and dirty after save and final load; receipt must report actually observed current ID. Add production adapter/coordinator negative test where only source ID changes after save/load."
+    },
+    {
+      "id": "W25-R4-04",
+      "file": "comsol_mcp/_desktop_uia.py",
+      "line": 203,
+      "issue": "Gateway _base requires nonUNKNOWN process_birth but only sends HWND/PID. Fixed PowerShell checks only current PID and ignores birth/login/session. Coordinator before/after revalidation cannot prevent directing an effect at a reused PID/HWND during the gateway call.",
+      "required": "Carry exact native birth/session binding into fixed helper; pin and verify actual Windows process handle identity immediately before interactions and before later multi-step actions, close owned handle finally, reject drift before first effect; post-effect identity uncertainty stays UNKNOWN/no retry. Reuse shared birth representation, handle its pywin32 precision deliberately using official API evidence and ABI shims; no guessed conversion."
+    },
+    {
+      "id": "W25-R4-05",
+      "file": "comsol_mcp/_desktop_service.py",
+      "line": 912,
+      "issue": "Migration sends caller final project destination directly to native Save Copy. exists() checks leave a race in which a foreign final file can appear before native write/confirmation. Windows hashes an ordinary pathname immediately without stable completion/pinned identity. These paths cannot substantiate the claimed no-clobber publication or complete copy bytes.",
+      "required": "Save only to newly created host-trusted, task-owned private staging location, then wait for stable regular file and hash a pinned handle. Publish to separately authorized final project destination through existing publish_project_file_no_clobber/ArtifactStore producer and exact durable claim; preserve foreign destination and never request UI overwrite. Hash/identity/source drift makes UNKNOWN. Test destination appearance at publication, partial/delayed native save, replacement during hash, no overwrite/no second UI replay. Source/publish callbacks may be minimally extended in shared ControlDaemon; no parallel queue/store."
+    }
+  ],
+  "official_primary_reference": [
+    {
+      "url": "https://pyobjc.readthedocs.io/en/latest/core/intro.html",
+      "read_section": "Objective-C uses accessors everywhere; properties in Python require accessor methods.",
+      "quoted_verbatim": "The property syntax is not supported in Python, you always have to use accessor methods."
+    },
+    {
+      "url": "https://developer.apple.com/documentation/screencapturekit/scscreenshotmanager",
+      "read_scope": "Method/class declaration; local official installed SDK gives availability."
+    }
+  ],
+  "installed_sdk_preservation": [
+    {
+      "installed_sdk_path": "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks/ScreenCaptureKit.framework/Headers/SCScreenshotManager.h",
+      "preserved_path": "docs/full_project_continuation_v2/evidence/w25_native_adapter_root_review_r4/SCScreenshotManager.h",
+      "sha256": "f62995d35201d09753c852cdb83ce9880b9fae4ec34e1baef1d91fa1b47181e7",
+      "size_bytes": 9917
+    },
+    {
+      "installed_sdk_path": "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks/ScreenCaptureKit.framework/Headers/SCShareableContent.h",
+      "preserved_path": "docs/full_project_continuation_v2/evidence/w25_native_adapter_root_review_r4/SCShareableContent.h",
+      "sha256": "46a2606f2ca96ca1ba7f6796002dcdd22d593ffaa92088ea1c9db6aece3a491c",
+      "size_bytes": 9066
+    }
+  ],
+  "metadata_note": "R4 created_utc is 2026-10-12T00:50:00Z, later than Root current-time observation 2026-10-12 00:43:55 UTC. Preserve R4 and use actual clock for successor; this is not raw runtime evidence.",
+  "acceptance": "OPEN; only raw scoped software results and frozen bytes verified, source changes required."
+}

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="3" time="0.250" timestamp="2026-10-13T11:46:29.923712+08:00" hostname="Everwalacstudio.lan"><testcase classname="w23-activity022-r15-independent-source-review.test_narrow_production" name="test_real_strict_evaluate_all_returns_verified_and_points_reject_prechild" time="0.002" /><testcase classname="w23-activity022-r15-independent-source-review.test_narrow_production" name="test_actual_final3_literal_script_all_tokens_guards_original_validator" time="0.005" /><testcase classname="w23-activity022-r15-independent-source-review.test_narrow_production" name="test_original_java_legacy_and_explicit_saved_schemas_all_pure_consumers_and_callers" time="0.115"><failure message="tools.w23_te_science_protocol.ScienceProtocolError: phase0 normalized_overlap must be finite numeric data">def test_original_java_legacy_and_explicit_saved_schemas_all_pure_consumers_and_callers():
+     proofs=[]
+     for scheme in ['legacy','emw_down']:
+      if scheme=='legacy':out=legacy_raw('output_x8',8e-6,1);inc=legacy_raw('input_xminus10',-10e-6,-1);rot=legacy_raw('output_x8',8e-6,1,phase=1j)
+      else:out=_raw('output_x8',8e-6,1,sample_count=641);inc=_raw('input_xminus10',-10e-6,-1,sample_count=641);rot=_raw('output_x8',8e-6,1,sample_count=641,phase=1j)
+      kw={} if scheme=='legacy' else {'field_scheme':'emw_down'}
+      base=proto.independent_integrals(out,inc,**kw);q90=proto.independent_integrals(rot,inc,**kw);capture=proto.independent_capture_aperture_flux(out,**kw);phase=proto.software_global_phase_control(out,inc,**kw)
+      native0=_native_from_quadrature(base);native90=_native_from_quadrature(q90);native0.update(overlap_amplitude={'real':1.,'imag':0.},reference_coupling_efficiency=.75);native90.update(overlap_amplitude={'real':0.,'imag':1.},reference_coupling_efficiency=.75)
+      c0={'phase_value':'0[deg]','output_port_phase':'0[deg]','output_fields':out,'native_overlap':native0};c90={'phase_value':'90[deg]','output_port_phase':'0[deg]','output_fields':rot,'native_overlap':native90}
+&gt;     phasepair=proto.verify_native_phase_pair(c0,c90,**kw)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+../w23-activity022-r15-independent-source-review/test_narrow_production.py:66: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tools/w23_te_science_protocol.py:1867: in verify_native_phase_pair
+    leftf, rightf = _as_finite_float(left, f"phase0 {key}"), _as_finite_float(right, f"phase90 {key}")
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+value = None, label = 'phase0 normalized_overlap'
+
+    def _as_finite_float(value: Any, label: str) -&gt; float:
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+&gt;           raise ScienceProtocolError(f"{label} must be finite numeric data")
+E           tools.w23_te_science_protocol.ScienceProtocolError: phase0 normalized_overlap must be finite numeric data
+
+tools/w23_te_science_protocol.py:115: ScienceProtocolError</failure></testcase></testsuite></testsuites>

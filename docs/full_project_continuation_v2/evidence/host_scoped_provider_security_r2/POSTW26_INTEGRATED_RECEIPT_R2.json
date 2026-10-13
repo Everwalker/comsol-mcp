@@ -1,0 +1,98 @@
+{
+  "execution": {
+    "inputs_unchanged": true,
+    "path": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r2/postw26-fixed-run-attempt002/INVOCATION.json",
+    "returncode": 0,
+    "sha256": "b5402e3583b655d4320fb463353a05a3fb761fbc51bc8186d421059c53d63a8a"
+  },
+  "junit": {
+    "junit_suite_tests_attribute": 390,
+    "path": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r2/postw26-fixed-run-attempt002/junit.xml",
+    "raw_testcase_nodes": 370,
+    "regular_passed": 360,
+    "regular_skipped": 10,
+    "sha256": "949e8ad0e6767a7ac167e72e36cde5b291057d303bef8be2007faf1d557b8fc2",
+    "skipped_tests": [
+      {
+        "reason": "accepted dev1 archive paths were not supplied for this environment",
+        "test": "tests.test_artifact_verify::test_artifact_verify_real_accepted_dev1_bundles_through_registration"
+      },
+      {
+        "reason": "requires actual Windows kernel/filesystem",
+        "test": "tests.test_windows_parameter_publish_native.NativeControls::test_junction_rejected_without_touching_target"
+      },
+      {
+        "reason": "requires actual Windows kernel/filesystem",
+        "test": "tests.test_windows_parameter_publish_native.NativeControls::test_parent_and_project_rename_blocked_while_pinned"
+      },
+      {
+        "reason": "requires actual Windows kernel/filesystem",
+        "test": "tests.test_windows_parameter_publish_native.NativeControls::test_pinned_parent_reparse_race_never_writes_outside"
+      },
+      {
+        "reason": "requires actual Windows kernel/filesystem",
+        "test": "tests.test_windows_parameter_publish_native.NativeControls::test_postcommit_cleanup_failure_preserves_unknown_receipt"
+      },
+      {
+        "reason": "requires actual Windows kernel/filesystem",
+        "test": "tests.test_windows_parameter_publish_native.NativeControls::test_postcommit_read_failure_rolls_back_and_reports_unknown"
+      },
+      {
+        "reason": "requires actual Windows kernel/filesystem",
+        "test": "tests.test_windows_parameter_publish_native.NativeControls::test_stream_reader_exception_cleans_temp_and_keeps_typed_receipt"
+      },
+      {
+        "reason": "requires actual Windows kernel/filesystem",
+        "test": "tests.test_windows_parameter_publish_native.NativeControls::test_streaming_publish_checks_chunks_digest_and_size_before_rename"
+      },
+      {
+        "reason": "requires actual Windows kernel/filesystem",
+        "test": "tests.test_windows_parameter_publish_native.NativeControls::test_unicode_publish_and_no_clobber"
+      },
+      {
+        "reason": "requires actual Windows kernel/filesystem",
+        "test": "tests.test_windows_parameter_publish_native.NativeControls::test_write_failure_removes_only_owned_temp"
+      }
+    ],
+    "subtests_passed_separately": 20
+  },
+  "limitations": [
+    "SOFTWARE_ONLY; no COMSOL engine or solve was started.",
+    "Windows kernel ACL/reparse behavior NOT_RUN.",
+    "Darwin Intel runtime NOT_RUN.",
+    "Accepted-dev1 bundle test skipped because exact accepted archive paths were not supplied to this environment.",
+    "Windows native filesystem controls skipped on macOS."
+  ],
+  "network_guard": {
+    "denial_events": 0,
+    "entry_sha256": "e04b2cec6471e5b6ebb547bf6ede48ad7e6d497ee6048c720512fc6bba9a3242",
+    "events": 7,
+    "path": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r2/postw26-fixed-run-attempt002/network-guard.jsonl",
+    "sha256": "ddfa966d1df36e89135a5d7724dfe31eb347c7eac581de4dd32fc07daf143e0d"
+  },
+  "provider_r2_freeze": {
+    "path": "docs/full_project_continuation_v2/evidence/host_scoped_provider_security_r2/FREEZE_R2.json",
+    "sha256": "102b48efcb7584820c912cc37c4c25cdb24e13c65706a84dcf79eadc0d26a6c6"
+  },
+  "schema": "comsol-mcp.provider-w26-postfix-integrated-receipt/1",
+  "source_hashes": {
+    "comsol_mcp/_control_daemon.py": "012427e14c2345eac4a9430f6e4011d905d953f85d094ad18948724921584ef6",
+    "comsol_mcp/_host_scoped_provider.py": "5b3cc6f7f619752b04423c4a5336a6f776634b6fa28cde4c8ff24e2e54d50e6f",
+    "comsol_mcp/_w26_os_resources.py": "e19946f52715efad9aca120860a2529863745edf96c4a3aacfa0976b8c027d27",
+    "tests/test_control_daemon.py": "5c83687f97da339d6305e41aa4e70f246f4edec76100aaa7bdae02553acf56b1",
+    "tests/test_control_daemon_projects.py": "33fc418ff44d2a942dc6dc86e6f0fedb16fc3e4121ca7867a00e5343de0ecb38",
+    "tests/test_control_daemon_sessions.py": "94f78b7ff81c35b217e9b177971207ac95b37ded10a4ee5c6b7ff81b2eb7f12b",
+    "tests/test_host_scoped_provider.py": "7b4bcd6d8814c06c5213886765dc4c110b3099889747989c950e7ee63ab4ee9a",
+    "tests/test_w26_os_resources.py": "f244fd0afb85006b42cea503245999d9030ea78f064c401f67072d03d942eed4"
+  },
+  "w26_r3_freeze": {
+    "path": "docs/full_project_continuation_v2/evidence/w26_resource_coordinator_r3_20261012/FREEZE_R3.json",
+    "scope_fingerprint_sha256": "72be4f3422528fde9e02227ab3eaac81be6c2108f06760415e2a00140abf1f03",
+    "sha256": "a7a41e20216886e8a59b9ee4ba44e44c6c01cc2a0bb5d131ce0b10b0749e87a7"
+  },
+  "w26_r3_root_focused_review": {
+    "path": "docs/full_project_continuation_v2/evidence/w26_resource_coordinator_r3_20261012/ROOT_FOCUSED_REVIEW_R3.json",
+    "sha256": "5370fd283cdff8fc78d7bda757511c3b7913902932e1cebd0f5621f9881a4986",
+    "status": "PASS_SCOPED_SOFTWARE_CORRECTIONS"
+  }
+}

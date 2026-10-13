@@ -1,0 +1,226 @@
+{
+  "schema": "SOLVER_DOMAINS_PROGRESS_SHARED_INTEGRATION_FREEZE_V1",
+  "status": "OWNED_SOURCE_PRESERVED_AND_SOFTWARE_CHECKED_ROOT_REVIEW_PENDING",
+  "base_commit": "60464c85b429e649f4f80484473999e5365ad96a",
+  "current_git_head": "799bf7a0fa95313e7659f44d8ff40ff1678314d5",
+  "preservation": {
+    "path": "local-preservation/solver-domains-progress-20261012-r1/PRESERVATION.json",
+    "sha256": "9bb6a0e79a79ed0dfc4d7780b74c137aecf627c867b999bbc44d0287fd390546",
+    "source_scope_fingerprint": "37dd6fbf92f3b19f85dfb7340970a13f835f37f41ccc66ac5b13dc1a55cf9b82",
+    "preserved_file_count": 32
+  },
+  "scoped_patch": {
+    "path": "docs/full_project_continuation_v2/evidence/solver_domain_integration_r1/final/OWNED_SOURCE.patch",
+    "size_bytes": 405139,
+    "sha256": "e37f178f7df4cdd586d8419c4a9c2f23e847b9b023b005df73ae00f4618bc8ff"
+  },
+  "test_runs": {
+    "owned_integration": {
+      "runner": "python -m pytest under sitecustomize network guard",
+      "summary": "630 passed; 0 failed; 0 skipped; includes definitions, seven model domains, six solver routes, W14, progress producer, execution-service/Worker allowlist/API compile checks",
+      "junit": {
+        "path": "docs/full_project_continuation_v2/evidence/solver_domain_integration_r1/final/owned-regression/junit.xml",
+        "size_bytes": 83086,
+        "sha256": "ca80ea4294059ffa965964cfec2149b3e7e3b3253f1ccea1a03fe425cbc4a794"
+      },
+      "guard_log": {
+        "path": "docs/full_project_continuation_v2/evidence/solver_domain_integration_r1/final/owned-regression/network-guard.jsonl",
+        "size_bytes": 255,
+        "sha256": "441df274542ec2ea9766fd999e240e7b2f97a76056886963eceadd5758edb048"
+      },
+      "guard_events": 1,
+      "blocked_socket_events": 0,
+      "guard_active_process_ids": [
+        47488
+      ],
+      "junit_suites": [
+        {
+          "tests": 630,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "time": "2.601"
+        }
+      ]
+    },
+    "w14_focused": {
+      "runner": "guarded_entry.py exec under sitecustomize network guard",
+      "summary": "153 passed; 0 failed; validates GeomSequence.objectNames receiver readback and repaired W14 unavailable set",
+      "junit": {
+        "path": "docs/full_project_continuation_v2/evidence/solver_domain_integration_r1/final/w14-fix/junit.xml",
+        "size_bytes": 19548,
+        "sha256": "a688a73176491d222874e1eff4b6dd58ca5adf078c7cbda2ef2fbbeaa684b52f"
+      },
+      "guard_log": {
+        "path": "docs/full_project_continuation_v2/evidence/solver_domain_integration_r1/final/w14-fix/network-guard.jsonl",
+        "size_bytes": 235,
+        "sha256": "fc929e9e5d348d2273f06bf7913f6a8b93464eecb4dc7f01d3d811c1717cd9fb"
+      },
+      "guard_events": 1,
+      "blocked_socket_events": 0,
+      "guard_active_process_ids": [
+        44948
+      ],
+      "junit_suites": [
+        {
+          "tests": 153,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "time": "0.165"
+        }
+      ]
+    },
+    "desktop_capture_spawn_suite": {
+      "runner": "python -m pytest under the same sitecustomize network guard",
+      "summary": "8 passed; 0 failed; 0 skipped; parent and spawned children loaded guard; 0 denied socket calls",
+      "junit": {
+        "path": "docs/full_project_continuation_v2/evidence/solver_domain_integration_r1/final/desktop-spawn-debug/direct-module/junit.xml",
+        "size_bytes": 1282,
+        "sha256": "c7904c974464a141ad17f4fd4e1facc1ef905a0fcb903e2adc0915756c222e94"
+      },
+      "guard_log": {
+        "path": "docs/full_project_continuation_v2/evidence/solver_domain_integration_r1/final/desktop-spawn-debug/direct-module/network-guard.jsonl",
+        "size_bytes": 1827,
+        "sha256": "87398ed7725a2e380bc4619198097fb22499713dd8596a5775d9e019533b4275"
+      },
+      "guard_events": 7,
+      "blocked_socket_events": 0,
+      "guard_active_process_ids": [
+        45231,
+        45232,
+        45233,
+        45234,
+        45239,
+        45241,
+        45242
+      ],
+      "junit_suites": [
+        {
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "time": "0.645"
+        }
+      ]
+    },
+    "historical_wrapper_combined_attempt": {
+      "runner": "guarded_entry.py exec with corrected tests PYTHONPATH",
+      "summary": "995 collected; 959 passed; 6 failed; 10 skipped; 20 subtests passed. Historical pre-W14-fix run; preserved unchanged, not represented as clean current-candidate suite. Failures: two then-current model-owned R3 cases, one stale W14 objectNames refusal, three spawn tests incompatible with guarded exec entry.",
+      "junit": {
+        "path": "docs/full_project_continuation_v2/evidence/solver_domain_integration_r1/final/retry02/junit.xml",
+        "size_bytes": 189795,
+        "sha256": "16261553bade51a16468494ae299ec2447d743dc14b4ea11e747c6fa5ac713e7"
+      },
+      "guard_log": {
+        "path": "docs/full_project_continuation_v2/evidence/solver_domain_integration_r1/final/retry02/network-guard.jsonl",
+        "size_bytes": 2510,
+        "sha256": "cff06238c1c66fbc2c1ad5662a1403dedb8c77f7186bc29e0ff3216d34d29d4f"
+      },
+      "guard_events": 10,
+      "blocked_socket_events": 0,
+      "guard_active_process_ids": [
+        41893,
+        41924,
+        41925,
+        41954,
+        41985,
+        42026,
+        42037,
+        42039,
+        42063,
+        42079
+      ],
+      "junit_suites": [
+        {
+          "tests": 995,
+          "failures": 6,
+          "errors": 0,
+          "skipped": 10,
+          "time": "21.016"
+        }
+      ]
+    }
+  },
+  "runner_debug": {
+    "initial_collection_attempt": {
+      "junit": {
+        "path": "docs/full_project_continuation_v2/evidence/solver_domain_integration_r1/final/junit.xml",
+        "size_bytes": 2689,
+        "sha256": "7781a18fce7fd4bd15585e585f0e13ffd8837d6ca6867b85599f8fa4b2c12312"
+      },
+      "stdout": {
+        "path": "docs/full_project_continuation_v2/evidence/solver_domain_integration_r1/final/stdout.log",
+        "size_bytes": 2657,
+        "sha256": "2148a81b408d04bc0120a6d6d97ba8b8f560ea05e1abff58842e22eef8d41478"
+      },
+      "result": "3 collection errors because tests directory was absent from PYTHONPATH; retained as debug history."
+    },
+    "guarded_exec_spawn": {
+      "stdout": {
+        "path": "docs/full_project_continuation_v2/evidence/solver_domain_integration_r1/final/desktop-spawn-debug/process-start-instrumented/stdout.log",
+        "size_bytes": 12395,
+        "sha256": "7a4435cef7d8ebdcccf4d2e55f34b316dceae453e9e4e59ad38ac844bc218ce6"
+      },
+      "junit": {
+        "path": "docs/full_project_continuation_v2/evidence/solver_domain_integration_r1/final/desktop-spawn-debug/process-start-instrumented/junit.xml",
+        "size_bytes": 3489,
+        "sha256": "05423beccc64faea097fad74d9498bed7f761c97b3632ca9203b2f109791996f"
+      },
+      "guard_log": {
+        "path": "docs/full_project_continuation_v2/evidence/solver_domain_integration_r1/final/desktop-spawn-debug/process-start-instrumented/network-guard.jsonl",
+        "size_bytes": 747,
+        "sha256": "34d0cf5d03c43d7cb69d45679afad8d559dd1051ae14f8bad3fc1f62edcc4dcf"
+      },
+      "finding": "Process.start failed before helper PID creation: guarded exec pytest main reported current_process._inheriting=True; multiprocessing.spawn._check_not_importing_main raised RuntimeError; helper timeout parameter was 5s but failure was immediate. python -m pytest resolves this runner incompatibility."
+    }
+  },
+  "acceptance": {
+    "owned_source_software": "PASS_SCOPED",
+    "overall_disk_budget": "CHANGES_REQUIRED_NO_PROVIDER",
+    "persisted_progress_readback_limit_bytes": 1048576,
+    "native_progress_file_growth": "NOT_CAPPED_BY_THIS_LIMIT; overall project disk budget remains unimplemented",
+    "managed_study_run_and_mesh_convergence_study_progress_capture": "SOFTWARE_PRODUCER_TESTED_NATIVE_NOT_RUN",
+    "trusted_code_recipe_progress_capture": "NOT_CAPTURED",
+    "COMSOL_native_or_scientific_validation": "NOT_RUN",
+    "Windows_native_publisher_and_kernel_controls": "NOT_RUN_BLOCKED_CONNECTIVITY",
+    "T037_OS_file_network_process_external_execution_policy_logs": "NOT_RUN",
+    "model_managed_save_R3": "CURRENT_FIX_REPORTED_PENDING_CLOSURE; model-agent-owned source is changing and excluded from this owned freeze",
+    "independent_reviewer": "PENDING_ROOT_REVIEW",
+    "MASTER_GOAL": "OPEN"
+  },
+  "excluded_concurrent_owner_scope": [
+    {
+      "path": "comsol_mcp/_g3_managed_models.py",
+      "reason": "model agent R3 overwrite/full-restore work remains in progress; not part of this freeze"
+    },
+    {
+      "path": "comsol_mcp/_windows_model_publish.py",
+      "reason": "model agent R3/R4 publisher controls remain in progress; Windows native execution NOT_RUN"
+    },
+    {
+      "path": "comsol_mcp/_state_backup.py",
+      "reason": "model agent full-restore race work remains in progress"
+    },
+    {
+      "path": "comsol_mcp/_g3_exports.py",
+      "reason": "independent model export unit owned by model agent"
+    }
+  ],
+  "source_scope_fingerprint_method": "SHA256 of sorted path NUL size NUL SHA256 newline records",
+  "notes": [
+    "Preserves exact current public source/test bytes only; excludes .git, private databases, user models, tokens, GUI data, and commercial/private model files.",
+    "Historical 995-test wrapper invocation result is retained separately; its 6 failures are not rewritten. Three desktop-capture failures were traced to guarded-entry exec/spawn bootstrap and passed with python -m pytest under the same sitecustomize socket guard.",
+    "The original specification requires an overall disk budget. No project-wide disk budget provider/preflight exists; 1 MiB is the persisted progress-readback cap only and does not cap temporary native file growth. This remains CHANGES_REQUIRED.",
+    "COMSOL/native science/log emission and Windows native kernel controls were NOT_RUN; no PASS claim is made."
+  ],
+  "windows_readonly_preflight": {
+    "status": "WINDOWS_NOT_RUN_BLOCKED_CONNECTIVITY",
+    "receipt": "docs/full_project_continuation_v2/evidence/solver_domain_integration_r1/final/WINDOWS_READONLY_PREFLIGHT_RESULT.json",
+    "receipt_sha256": "6354c26d2819ff35d773f80c3c046908f0c4beb148ffd6f48daac53cd983f4d5",
+    "remote_stage_path": "C:/Temp/comsol_v2_20261011_p0_r2",
+    "host": "everwalker@192.168.100.2",
+    "result": "SSH timed out before remote query; destination existence and OS remain UNKNOWN; no transfer or host changes"
+  }
+}

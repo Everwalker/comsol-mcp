@@ -1,0 +1,201 @@
+{
+  "data": {
+    "axis_metadata_complete": false,
+    "axis_metadata_source": "SolutionInfo.getSolnum(outer, strict) + getPNames/getPvals/getUnits",
+    "binding_complete": false,
+    "binding_source": "dataset property 'solution'/'data' resolved against model.sol().tags(); SolutionInfo.getSolnum(outer, strict)",
+    "dataset": "dset1",
+    "dataset_binding": {
+      "binding_complete": true,
+      "component": "comp1",
+      "dataset": "dset1",
+      "dataset_chain": [
+        "dset1"
+      ],
+      "dataset_edges": [],
+      "dataset_type": "Solution",
+      "error": null,
+      "geometry": "geom1",
+      "properties": {
+        "comp": "comp1",
+        "geom": "geom1",
+        "solution": "sol1"
+      },
+      "provenance": {
+        "dataset_tags": [
+          "dset1",
+          "dset2",
+          "dset3"
+        ],
+        "mutation_methods_called": [],
+        "read_only": true,
+        "solution_tags": [
+          "sol1",
+          "sol2",
+          "sol3"
+        ]
+      },
+      "read_errors": [],
+      "requested_solution": null,
+      "solution": "sol1",
+      "sources": {
+        "component": "dataset.comp -> modelNode.tags()/model.component()",
+        "geometry": "dataset.geom -> component.geom.tags()/getter",
+        "solution": "dataset.solution -> model.sol().tags()"
+      }
+    },
+    "inner_indices": [],
+    "level_names": [
+      "freq"
+    ],
+    "outer_indices": [],
+    "pair_mapping_complete": false,
+    "parameters": {
+      "by_pair": {}
+    },
+    "parameters_complete": false,
+    "parameters_source": "SolutionInfo.getPNames(int[][])/getPvals(int[][])/getUnits(int[][])",
+    "read_errors": [
+      {
+        "allowlist_entry_required": null,
+        "code": "ENGINE_CALL_FAILED",
+        "message": "COMSOL getString probe failed: JavaWorkerError",
+        "method": "getString"
+      },
+      {
+        "code": "SOLUTION_METADATA_ERROR",
+        "message": "{\"completed_at_ms\": \"1791807212115\", \"failure\": {\"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1791807212114\", \"request_id\": \"wrk-f0308b34-01f0-4526-8707-b8848a4613da\", \"started_at_ms\": \"1791807212114\", \"status\": \"FAILED\", \"type\": \"call\"}",
+        "method": "getSolnums"
+      },
+      {
+        "code": "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+        "message": "engine returned an empty outer axis; getSolnum(1,true) alone does not establish outer/inner pairs",
+        "method": "getOuterSolnum"
+      },
+      {
+        "allowlist_entry_required": null,
+        "code": "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+        "message": "outer/inner solution axes could not be read from the engine; no default index is invented and operations that select a solution axis stay refused",
+        "method": "SolutionInfo"
+      }
+    ],
+    "solnum_pairs": [],
+    "solution": "sol1",
+    "solution_count": 0,
+    "solver_sequence_parameter_observation": {
+      "attached": true,
+      "get_size": [
+        64057,
+        1
+      ],
+      "get_size_multi": [
+        1,
+        1
+      ],
+      "get_size_multi_getter": {
+        "method": "SolverSequence.getSizeMulti()",
+        "raw": [
+          1,
+          1
+        ],
+        "semantics": "[local solution count in multisolution, total solution number count] per COMSOL 6.4 doc7714/chunk23082",
+        "status": "CAPTURED"
+      },
+      "get_size_semantics": "[degrees_of_freedom, solution_number_count] per COMSOL 6.4 documentation",
+      "interpretation": "raw sequence-level complex values only; no outer/inner tuple mapping or complete parameter combinations inferred",
+      "parameter_rows": [
+        {
+          "imag": 0.0,
+          "name": "freq",
+          "parameter_index": 0,
+          "real": 193414489032258.03,
+          "solnum": 1,
+          "unit": "GHz"
+        }
+      ],
+      "parameter_units_complete": true,
+      "parameters_complete": false,
+      "pnames": [
+        "freq"
+      ],
+      "read_errors": [],
+      "receiver": "model.sol(<dataset-bound solution tag>)",
+      "sequence_type": "SolverSequence",
+      "solution_identity_matches_dataset_study": true,
+      "solution_info_count_scope": {
+        "getLevelNames": [
+          "freq"
+        ],
+        "getLevels": 1,
+        "getOuterSolnum": [],
+        "getOuterSolnum_semantics": "empty means no outer parameter/values per COMSOL 6.4 doc7709/chunk23066",
+        "read_errors": []
+      },
+      "solution_number_count": 1,
+      "solution_tag": "sol1",
+      "solution_type": "Parametric",
+      "solution_values": [
+        {
+          "imag_getter": {
+            "arguments": [
+              1
+            ],
+            "method": "SolverSequence.getPValsImag(int)",
+            "raw": [
+              0.0
+            ]
+          },
+          "real_getter": {
+            "arguments": [
+              1
+            ],
+            "method": "SolverSequence.getPVals(int)",
+            "raw": [
+              193414489032258.03
+            ]
+          },
+          "solnum": 1
+        }
+      ],
+      "source": "direct SolverSequence.getPNames/getSize/getPVals(int)/getPValsImag(int); supplemental to SolutionInfo",
+      "status": "OBSERVED_TYPED_COMPLEX_PARAMETER_VALUES",
+      "study": "std1",
+      "unit_observations": [
+        {
+          "arguments": [
+            "freq"
+          ],
+          "method": "SolutionInfo.getUnit(String)",
+          "name": "freq",
+          "value": "GHz"
+        }
+      ]
+    },
+    "study": "std1",
+    "time_axis_source": "steady: no time axis",
+    "time_values": []
+  },
+  "error": null,
+  "execution": {
+    "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+    "dirty": false,
+    "idempotency_key": "w23-science-idem-4cb89259-d4ed-4f93-b8db-8198c574cd46",
+    "job_id": "ee2c132f-c002-4c03-b2a3-edbfff692b7e",
+    "model_ownership": "mcp_owned",
+    "model_ref": {
+      "generation": 1,
+      "model_tag": "mcp_2808574cd31d",
+      "schema_version": 1,
+      "server_instance_id": "52bdb40f5b9cfd17e3eef9723ba1b806e606e1bff22e55caf569690a5b4ef602",
+      "session_id": "session-477e527bb527d433fff51070"
+    },
+    "operation_id": "872752fa-ec52-41e9-b64e-24798271b6c8",
+    "project_id": "8c831ed9-bd2c-4ac3-9d4f-676c01a42cac",
+    "request_hash": "1e6f9e519a0b39ddb33cd21aed9a6138319a679147d13885fbd2b6beae7c319a",
+    "request_id": "w23-science-req-f513f2d9-5f2d-4332-ad18-e9351d67e8a1",
+    "revision": 0,
+    "server_ownership": "shared",
+    "session_id": "session-477e527bb527d433fff51070"
+  },
+  "success": true
+}

@@ -1,0 +1,138 @@
+{
+  "actual_g3": {
+    "axis_metadata_complete": false,
+    "axis_metadata_source": "SolutionInfo.getSolnum(outer, strict) + getPNames/getPvals/getUnits",
+    "binding_complete": false,
+    "binding_source": "dataset property 'solution'/'data' resolved against model.sol().tags(); SolutionInfo.getSolnum(outer, strict)",
+    "dataset": "dset1",
+    "dataset_binding": {
+      "binding_complete": true,
+      "component": "comp1",
+      "dataset": "dset1",
+      "dataset_chain": [
+        "dset1"
+      ],
+      "dataset_edges": [],
+      "dataset_type": "Solution",
+      "error": null,
+      "geometry": "geom1",
+      "properties": {
+        "comp": "comp1",
+        "geom": "geom1",
+        "solution": "sol1"
+      },
+      "provenance": {
+        "dataset_tags": [
+          "dset1"
+        ],
+        "mutation_methods_called": [],
+        "read_only": true,
+        "solution_tags": [
+          "sol1"
+        ]
+      },
+      "read_errors": [],
+      "requested_solution": null,
+      "solution": "sol1",
+      "sources": {
+        "component": "dataset.comp -> modelNode.tags()/model.component()",
+        "geometry": "dataset.geom -> component.geom.tags()/getter",
+        "solution": "dataset.solution -> model.sol().tags()"
+      }
+    },
+    "inner_indices": [],
+    "level_names": [
+      "freq"
+    ],
+    "outer_indices": [],
+    "pair_mapping_complete": false,
+    "parameters": {
+      "by_pair": {}
+    },
+    "parameters_complete": false,
+    "parameters_source": "SolutionInfo.getPNames(int[][])/getPvals(int[][])/getUnits(int[][])",
+    "read_errors": [
+      {
+        "code": "SOLUTION_METADATA_ERROR",
+        "message": "{\"completed_at_ms\": \"1791846668882\", \"failure\": {\"cause_chain\": [{\"message\": \"Unknown_solution\", \"type\": \"com.comsol.util.exceptions.FlException\"}], \"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1791846668879\", \"request_id\": \"wrk-fd695a7e-5c53-4ce1-aab3-3b101421b052\", \"started_at_ms\": \"1791846668879\", \"status\": \"FAILED\", \"type\": \"call\"}",
+        "method": "getSolnums"
+      },
+      {
+        "code": "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+        "message": "engine returned an empty outer axis; getSolnum(1,true) alone does not establish outer/inner pairs",
+        "method": "getOuterSolnum"
+      },
+      {
+        "allowlist_entry_required": null,
+        "code": "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+        "message": "outer/inner solution axes could not be read from the engine; no default index is invented and operations that select a solution axis stay refused",
+        "method": "SolutionInfo"
+      }
+    ],
+    "solnum_pairs": [],
+    "solution": "sol1",
+    "solution_count": 0,
+    "solver_sequence_parameter_observation": {
+      "attached": true,
+      "get_size": null,
+      "get_size_multi": [
+        1,
+        1
+      ],
+      "get_size_multi_getter": {
+        "method": "SolverSequence.getSizeMulti()",
+        "raw": [
+          1,
+          1
+        ],
+        "semantics": "[local solution count in multisolution, total solution number count] per COMSOL 6.4 doc7714/chunk23082",
+        "status": "CAPTURED"
+      },
+      "get_size_semantics": "[degrees_of_freedom, solution_number_count] per COMSOL 6.4 documentation",
+      "interpretation": "raw sequence-level complex values only; no outer/inner tuple mapping or complete parameter combinations inferred",
+      "parameter_rows": [],
+      "parameter_units_complete": true,
+      "parameters_complete": false,
+      "pnames": [
+        "freq"
+      ],
+      "read_errors": [],
+      "receiver": "model.sol(<dataset-bound solution tag>)",
+      "sequence_type": "SolverSequence",
+      "solution_identity_matches_dataset_study": true,
+      "solution_info_count_scope": {
+        "getLevelNames": [
+          "freq"
+        ],
+        "getLevels": 1,
+        "getOuterSolnum": [],
+        "getOuterSolnum_semantics": "empty means no outer parameter/values per COMSOL 6.4 doc7709/chunk23066",
+        "read_errors": []
+      },
+      "solution_number_count": null,
+      "solution_tag": "sol1",
+      "solution_type": "Parametric",
+      "solution_values": [],
+      "source": "direct SolverSequence.getPNames/getSize/getPVals(int)/getPValsImag(int); supplemental to SolutionInfo",
+      "status": "OBSERVED_TYPED_COMPLEX_PARAMETER_VALUES",
+      "study": "std1",
+      "unit_observations": [
+        {
+          "arguments": [
+            "freq"
+          ],
+          "method": "SolutionInfo.getUnit(String)",
+          "name": "freq",
+          "value": "GHz"
+        }
+      ]
+    },
+    "study": "std1",
+    "time_axis_source": "steady: no time axis",
+    "time_values": []
+  },
+  "actual_protocol_refusal": "Java and Worker sequence identity differs: {'get_size': {'java': [64057, 1], 'worker': None}}",
+  "controlled_boundary_mutation": "missing-count",
+  "native": "NOT_RUN",
+  "source_only": true
+}

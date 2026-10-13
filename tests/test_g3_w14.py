@@ -316,7 +316,8 @@ class FNode:
                  selection_override: Any = None,
                  sdim: int | None = None,
                  length_unit_value: str | None = None,
-                 axisymmetric_value: bool = False) -> None:
+                 axisymmetric_value: bool = False,
+                 object_names_value: list[str] | None = None) -> None:
         self.tag_ = tag
         self.type_id = type_id
         self.label_ = label if label is not None else f"{tag} label"
@@ -340,6 +341,7 @@ class FNode:
         self.sdim = sdim
         self.length_unit_value = length_unit_value
         self.axisymmetric_value = bool(axisymmetric_value)
+        self.object_names_value = list(object_names_value or [])
         self.selection_calls: dict[str, FSelection] = {}
         self.removed = False
 
@@ -558,6 +560,12 @@ class FNode:
         if "isAxisymmetric" in self.unavailable:
             raise _rejected("isAxisymmetric")
         return self.axisymmetric_value
+
+    def objectNames(self) -> list[str]:
+        self.calls.append(("objectNames", ()))
+        if "objectNames" in self.unavailable:
+            raise _rejected("objectNames")
+        return list(self.object_names_value)
 
     def getBoundingBox(self) -> list[float]:
         self.calls.append(("getBoundingBox", ()))
@@ -977,6 +985,18 @@ class TestInspect:
         assert result["geometry_state"]["bounding_box"]["value"][0] == 0.0
         assert result["geometry_state"]["axisymmetric_readback"] == {"ok": True, "value": True, "error": None}
         assert result["geometry_state"]["unavailable"]["problems"]["allowlist_entry_required"] == "problems"
+
+    def test_geometry_state_reads_object_names_from_bound_geom_sequence(self):
+        geom = geometry("geom1", object_names_value=["obj1", "obj2"])
+        worker, _, _ = world(geometries={"geom1": geom})
+
+        result = call("geometry.inspect", worker, {"path": geom_path("geom1")})
+
+        assert result["geometry_state"]["object_names"] == {
+            "ok": True, "value": ["obj1", "obj2"], "error": None,
+        }
+        assert ("objectNames", ()) in geom.calls
+        assert "objectNames" not in result["geometry_state"]["unavailable"]
 
     def test_resolves_a_workplanes_nested_sequence(self):
         inner = geometry("wp_geom", sdim=2, features={"r1": rectangle_feature("r1")})

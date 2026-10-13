@@ -1,0 +1,133 @@
+--- /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/tools/run_native_w23_saved_mph_diagnostic.py
++++ /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r15/tools/run_native_w23_saved_mph_diagnostic.py
+@@ -38,7 +38,7 @@
+ EVIDENCE_ROOT = REPO / "docs/full_project_execution/w23_overlap/evidence"
+ ACTIVITY_ID = "w23-saved-mph-zero-solve-readback-20261013-022"
+ CANDIDATE_ID = "W23-TE-SAVED-MPH-ZERO-SOLVE-READBACK-20"
+-CANDIDATE_REVISION = "candidate20-r14"
++CANDIDATE_REVISION = "candidate20-r15"
+ PROJECT_LABEL = f"W23 Activity009 saved-MPH zero-solve diagnostic {ACTIVITY_ID} {CANDIDATE_REVISION}"
+ SOURCE_MODEL = Path("/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_009_candidate17_r2/private-control-store/activity009-r2/saved-models/w23_coarse-phase0_provisional.mph")
+ SOURCE_MODEL_SHA256 = "cba0c1d404003c4e60a20b04316cb1456c38cc2b45596dc2dc29bbed62674a8c"
+@@ -66,7 +66,7 @@
+         + [f"emw.{kind}{axis}_{port}" for kind in ("Emode", "Hmode") for axis in "xyz"] + ["emw.nx", "emw.ny"])
+ 
+ RAW_FIELD_EXPRESSIONS = plane_field_expressions("2")
+-MODE_POINT_EXPRESSIONS = protocol.bma_point_expressions("1")
++MODE_POINT_EXPRESSIONS = protocol.bma_point_expressions("1", field_scheme="emw_down")
+ FREQUENCY_EXPRESSIONS = ("freq",)
+ FREQUENCY_UNITS = {"freq": "Hz"}
+ FIELD_UNITS = {
+@@ -85,7 +85,7 @@
+ 
+ 
+ def mode_units(port_name: str) -> dict[str, str]:
+-    beta, neff, k0 = protocol.bma_point_expressions(port_name)
++    beta, neff, k0 = protocol.bma_point_expressions(port_name, field_scheme="emw_down")
+     return {beta: "1/m", neff: "1", k0: "1/m"}
+ MODE_DATASETS = {"dset2": ("sol2", "bmaInput", "1", -10.0),
+                  "dset3": ("sol3", "bmaOutput", "2", 8.0)}
+@@ -140,6 +140,8 @@
+         (REPO / "tests/test_activity019_private_singleton_ticket.py").resolve(),
+         (REPO / "tests/test_activity021_definition_boundary_metadata.py").resolve(),
+         (REPO / "tests/test_activity022_boundary_selection_ticket.py").resolve(),
++        (REPO / "tests/test_activity022_r15_measure_all_and_literal_entry.py").resolve(),
++        (REPO / "tests/fixtures/w23_activity022/ACTUAL_R14_WRONG_LITERAL_ENTRY.zsh").resolve(),
+         (REPO / "tests/fixtures/w23_activity021/ACTUAL021_DEFINITION_BOUNDARY_RAW.json").resolve(),
+         (REPO / "tests/fixtures/w23_activity020/ALL_THREE_ACTUAL020_POINT_JOBS_ORIGINAL_TYPED_EVENTS.json").resolve(),
+         *((REPO / "tests/fixtures/w23_activity019" / name).resolve() for name in (
+@@ -202,6 +204,31 @@
+         "--approval", str(approval_path), "--saved-model", str(input_path),
+         "--work", str(work), "--evidence", str(evidence),
+     ]
++
++
++def _validate_literal_capture_entry(script_path: Path, metadata: Mapping[str, Any], approval: Mapping[str, Any], freeze: Mapping[str, Any], freeze_sha256: str) -> dict[str, Any]:
++    """Read actual fixed shell bytes, then run the original four-argument guard."""
++    import shlex
++    text = script_path.read_text(encoding="utf-8")
++    lines = [line.strip() for line in text.splitlines() if line.strip()]
++    exec_lines = [line for line in lines if line.startswith("exec ")]
++    if len(exec_lines)!=1 or any(token in exec_lines[0] for token in ("$", "`", "\\", ";", "&&", "||")):
++        raise RuntimeError("fixed capture must contain one literal exec argv")
++    tokens = shlex.split(exec_lines[0])[1:]
++    try:cut=tokens.index(">")
++    except ValueError as exc:raise RuntimeError("fixed capture lacks stdout capture redirection") from exc
++    actual = tokens[:cut]
++    declared = metadata["exact_native_invocation"]
++    if actual != declared["argv"]:
++        raise RuntimeError("literal script argv differs from fixed metadata argv")
++    path = str(freeze["approval_path_expected"])
++    if (actual[actual.index("--approval")+1]!=path or [shlex.split(l)[2] for l in lines if l.startswith("test -f ")]!=[path]
++        or [shlex.split(l)[3] for l in lines if l.startswith("test ! -L ") and "ROOT_APPROVAL_ACTIVITY" in l]!=[path]
++        or [shlex.split(l)[1] for l in lines if l.startswith("cd ")]!=[declared["cwd"]]):
++        raise RuntimeError("actual approval guards or cwd differ from frozen invocation")
++    _validate_approval(approval, freeze, freeze_sha256, actual)
++    return {"status":"PASS_ACTUAL_LITERAL_SCRIPT_ARGV_AND_APPROVAL_GUARDS_FOUR_ARG_VALIDATOR", "actual_argv":actual,
++        "script_sha256":sha256_file(script_path),"actual_approval_path":path,"native":"NOT_RUN","Rootapproval":"REFERENCE_ONLY"}
+ 
+ 
+ def _strict_test_environment(evidence: Path) -> dict[str, str]:
+@@ -247,6 +274,7 @@
+         REPO / "tests/test_activity019_private_singleton_ticket.py",
+         REPO / "tests/test_activity021_definition_boundary_metadata.py",
+         REPO / "tests/test_activity022_boundary_selection_ticket.py",
++        REPO / "tests/test_activity022_r15_measure_all_and_literal_entry.py",
+         REPO / "tests/test_g3_common.py",
+         REPO / "tests/test_g3_3_core_numeric_contracts.py",
+         REPO / "tests/test_g3_3_remediation.py",
+@@ -674,7 +702,7 @@
+         return points == _public_points([[-10.0, 0.0]]) and spec.get("units") in (["Hz"], ["GHz"])
+     if (dataset, solution_tag) in {("dset2", "sol2"), ("dset3", "sol3")}:
+         port = MODE_DATASETS[dataset][2]
+-        expected_expressions = protocol.bma_point_expressions(port)
++        expected_expressions = protocol.bma_point_expressions(port, field_scheme="emw_down")
+         x_um = MODE_DATASETS[dataset][3]
+         return (expressions == list(expected_expressions) and points == _public_points([[x_um, 0.0]])
+                 and spec.get("units") == list(mode_units(port).values()))
+@@ -1477,7 +1505,7 @@
+                     expected_count_witness=main_frequency,
+                     expected_expression_units=FIELD_UNITS,
+                     expected_requested_units=requested_units,
+-                    require_x_plane_normal=True, expected_selection=plane_selection(port))
++                    require_x_plane_normal=True, expected_selection=plane_selection(port), field_scheme="emw_down")
+                 decoded_fields[plane_id][sample_count] = decoded
+                 write_json(evidence / f"{label}_decoded.json", decoded)
+ 
+@@ -1489,7 +1517,7 @@
+             if time.time() >= deadline_epoch - CLEANUP_RESERVE_SECONDS:
+                 raise TimeoutError("BMA mode point readback reached cleanup reserve; no further native reads")
+             port_name = str(binding["port_name"])
+-            mode_expressions = protocol.bma_point_expressions(port_name)
++            mode_expressions = protocol.bma_point_expressions(port_name, field_scheme="emw_down")
+             actual_mode_units = mode_units(port_name)
+             label = f"mode_point_{step}"
+             point_body, ref, revision = _at_points_once(
+@@ -1506,23 +1534,23 @@
+                 expected_points=[[MODE_DATASETS[dataset_tag][3], 0.0]],
+                 expected_solution_count=1, plane_id=f"{step}_port_center",
+                 expected_expression_units=actual_mode_units,
+-                expected_requested_units=tuple(actual_mode_units.values()), scalar_bma_binding=binding)
++                expected_requested_units=tuple(actual_mode_units.values()), scalar_bma_binding=binding, field_scheme="emw_down")
+             mode_point_readbacks[step] = decoded
+             write_json(evidence / f"{label}_decoded.json", decoded)
+         bma_formula_check = protocol.reconcile_bma_mode_point_readbacks(
+-            bma_bindings, mode_point_readbacks, physical_frequency)
++            bma_bindings, mode_point_readbacks, physical_frequency, field_scheme="emw_down")
+         write_json(evidence / "bma_mode_formula_crosscheck.json", bma_formula_check)
+         neff_checks = {}
+         for step in ("bmaInput", "bmaOutput"):
+             neff_checks[step] = science._validate_mode_index(
+-                mode_point_readbacks[step], protocol.bma_point_expressions(str(bma_by_step[step]["port_name"]))[1], 2e-3)
++                mode_point_readbacks[step], protocol.bma_point_expressions(str(bma_by_step[step]["port_name"]), field_scheme="emw_down")[1], 2e-3)
+         write_json(evidence / "saved_bma_neff_checks.json", neff_checks)
+ 
+         independent = {}
+         for sample_count in (protocol.SAMPLE_COUNT, protocol.REFINED_SAMPLE_COUNT):
+             independent[sample_count] = protocol.independent_integrals(
+                 decoded_fields["output_x8"][sample_count],
+-                decoded_fields["input_xminus10"][sample_count])
++                decoded_fields["input_xminus10"][sample_count], field_scheme="emw_down")
+             write_json(evidence / f"saved_field_independent_integrals_{sample_count}.json",
+                        independent[sample_count])
+         refinement = protocol.compare_quadrature_refinement(

@@ -1,0 +1,67 @@
+{
+  "status": "PASS_SCOPED_SOURCE_SOFTWARE",
+  "actual_methods": [
+    "_process_snapshot",
+    "_mac_process_snapshot",
+    "_socket_rows",
+    "_mac_socket_rows",
+    "_run_mac_probe",
+    "originalOwner.before_effect"
+  ],
+  "original_deadline_monotonic": 1900.0,
+  "work_cleanup_reserve": 600.0,
+  "calls": [
+    {
+      "command": [
+        "/bin/ps",
+        "-p",
+        "101",
+        "-o",
+        "pid=,ppid=,lstart=,command="
+      ],
+      "timeout": 5.0
+    },
+    {
+      "command": [
+        "/usr/sbin/lsof",
+        "-nP",
+        "-iTCP:56388"
+      ],
+      "timeout": 3.0
+    }
+  ],
+  "actual_parsed_process": {
+    "pid": 101,
+    "birth": "Mon Oct 12 00:00:00 2026",
+    "command": "/sdk/comsol mphserver",
+    "command_sha256": "7581bf52914c441dbf36c495e1765cebcbf85b0d4c7f1b023b05920555f55bbe"
+  },
+  "actual_socket_rows": [
+    {
+      "pid": 101,
+      "endpoint": "127.0.0.1:56388",
+      "local_endpoint": "127.0.0.1:56388",
+      "remote_endpoint": null,
+      "state": "LISTEN",
+      "raw": "java 101 fixture 5u IPv4 0 0t0 TCP 127.0.0.1:56388 (LISTEN)"
+    },
+    {
+      "pid": 101,
+      "endpoint": "127.0.0.1:56388->127.0.0.1:60000",
+      "local_endpoint": "127.0.0.1:56388",
+      "remote_endpoint": "127.0.0.1:60000",
+      "state": "ESTABLISHED",
+      "raw": "java 101 fixture 6u IPv4 0 0t0 TCP 127.0.0.1:56388->127.0.0.1:60000 (ESTABLISHED)"
+    },
+    {
+      "pid": 102,
+      "endpoint": "127.0.0.1:60000->127.0.0.1:56388",
+      "local_endpoint": "127.0.0.1:60000",
+      "remote_endpoint": "127.0.0.1:56388",
+      "state": "ESTABLISHED",
+      "raw": "java 102 fixture 7u IPv4 0 0t0 TCP 127.0.0.1:60000->127.0.0.1:56388 (ESTABLISHED)"
+    }
+  ],
+  "verified_native_proof_minted": false,
+  "native_run": "NOT_RUN"
+}

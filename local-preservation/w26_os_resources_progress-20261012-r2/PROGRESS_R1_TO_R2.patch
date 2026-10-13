@@ -1,0 +1,602 @@
+--- a/comsol_mcp/_comsol_progress_capture.py
++++ b/comsol_mcp/_comsol_progress_capture.py
+@@ -22,7 +22,6 @@
+ from pathlib import Path
+ import secrets
+ import stat
+-import tempfile
+ from typing import Any, Mapping
+ 
+ from ._execution_contract import ExecutionContractError, PreWriteRefusal
+@@ -41,6 +40,18 @@
+ }
+ MAX_STORED_BYTES = 1024 * 1024
+ CHUNK_BYTES = 8192
++_PROGRESS_LEAF = "progress.log"
++PATH_CAPABILITY = "POSIX_PINNED_DIRECTORY_CHAIN"
++CLEANUP_CAPABILITY = "EXCLUSIVE_QUARANTINE_AND_POSTMOVE_IDENTITY_CHECK"
++CLEANUP_SAME_UID_LIMITATION = (
++    "POSIX has no atomic unlink-by-inode primitive here; the private 0700 directory, random exclusive "
++    "quarantine names, post-move identity checks, and deterministic replacement controls reduce the race, "
++    "but do not claim protection from an arbitrary concurrent same-UID mutator after the final check."
++)
++
++
++def _supports_pinned_progress_cleanup() -> bool:
++    return os.name != "nt"
+ 
+ 
+ def _binding_for_job(store: Any, operation_id: str, operation: str,
+@@ -118,6 +129,19 @@
+             int(info.st_mtime_ns), int(info.st_ctime_ns))
+ 
+ 
++def _nofollow_file_flags() -> int:
++    return os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
++
++
++def _renameat_noreplace(source_parent_fd: int, source_leaf: str,
++                        destination_parent_fd: int, destination_leaf: str) -> None:
++    """Use ArtifactStore's reviewed pinned-directory exclusive rename primitive."""
++    if source_parent_fd != destination_parent_fd:
++        raise OSError("progress cleanup quarantine must stay in one pinned parent")
++    from ._artifact_store import _rename_no_clobber_at
++    _rename_no_clobber_at(source_parent_fd, source_leaf, destination_leaf)
++
++
+ class ComsolProgressCapture:
+     """One bounded progress-log lifecycle inside the already-serialized job."""
+ 
+@@ -134,66 +158,238 @@
+         self.active = False
+         self._scratch_identity: tuple[int, int] | None = None
+         self._file_identity: tuple[int, int] | None = None
++        self._root_fds: list[int] = []
++        self._root_links: list[tuple[int, str, dict[str, int]]] = []
++        self._root_identity: dict[str, int] | None = None
++        self._scratch_fd: int | None = None
++        self._scratch_leaf: str | None = None
++        self._file_leaf = _PROGRESS_LEAF
++        self._windows_pin: Any = None
+ 
+     def _event(self, name: str, metadata: Mapping[str, Any]) -> None:
+         self.store.add_event(self.binding["job_id"], name,
+                              {**self.binding, **dict(metadata)})
+ 
+     def _cleanup_scratch(self) -> bool:
+-        if self.scratch is None or self.log_path is None:
++        if self.scratch is None or self.log_path is None or self._scratch_identity is None:
++            self._close_pinned_handles()
+             return True
+         try:
+-            scratch_info = os.stat(self.scratch, follow_symlinks=False)
+-            if (self._scratch_identity is None
+-                    or (int(scratch_info.st_dev), int(scratch_info.st_ino)) != self._scratch_identity
+-                    or stat.S_ISLNK(scratch_info.st_mode)
+-                    or not stat.S_ISDIR(scratch_info.st_mode)):
+-                return False
+-            try:
+-                file_info = os.stat(self.log_path, follow_symlinks=False)
++            if not _supports_pinned_progress_cleanup():
++                # The current publisher API can pin/create the directory tree,
++                # but it has no reviewed open-for-delete/verified-remove seam
++                # for this file lifecycle. Retain it and report UNKNOWN rather
++                # than falling back to a checked absolute-path unlink.
++                return False
++            from ._state_backup import _posix_directory_flags, _verify_posix_directory_links
++
++            if (not self._root_fds or self._scratch_fd is None or self._scratch_leaf is None
++                    or self._root_identity is None or self._scratch_identity is None):
++                return False
++            root_fd = self._root_fds[-1]
++            _verify_posix_directory_links(self._root_links)
++            self._check_pinned_scratch_binding()
++
++            # Quarantine the leaf using an exclusive relative rename. If the
++            # name was swapped after the preceding check, inspect the actual
++            # moved object and put a foreign object back without replacement.
++            try:
++                named_file = os.stat(self._file_leaf, dir_fd=self._scratch_fd, follow_symlinks=False)
+             except FileNotFoundError:
+-                file_info = None
+-            if file_info is not None:
++                named_file = None
++            if named_file is not None:
+                 if (self._file_identity is None
+-                        or (int(file_info.st_dev), int(file_info.st_ino)) != self._file_identity
+-                        or stat.S_ISLNK(file_info.st_mode)
+-                        or not stat.S_ISREG(file_info.st_mode)):
++                        or (int(named_file.st_dev), int(named_file.st_ino)) != self._file_identity
++                        or not stat.S_ISREG(named_file.st_mode)):
+                     return False
+-                self.log_path.unlink()
+-            self.scratch.rmdir()
+-            return not self.scratch.exists()
+-        except OSError:
++                file_quarantine = ".cleanup-file-" + secrets.token_hex(16)
++                _renameat_noreplace(self._scratch_fd, self._file_leaf,
++                                    self._scratch_fd, file_quarantine)
++                moved_file = os.open(file_quarantine, _nofollow_file_flags(), dir_fd=self._scratch_fd)
++                try:
++                    moved_info = os.fstat(moved_file)
++                    moved_identity = (int(moved_info.st_dev), int(moved_info.st_ino))
++                finally:
++                    os.close(moved_file)
++                if moved_identity != self._file_identity:
++                    try:
++                        _renameat_noreplace(self._scratch_fd, file_quarantine,
++                                            self._scratch_fd, self._file_leaf)
++                    except OSError:
++                        return False
++                    return False
++                # This name is unpredictable and lives in the private pinned
++                # directory. Recheck its exact inode immediately before unlink;
++                # any deterministic replacement is retained as UNKNOWN.
++                current_quarantine = os.stat(file_quarantine, dir_fd=self._scratch_fd,
++                                             follow_symlinks=False)
++                if (int(current_quarantine.st_dev), int(current_quarantine.st_ino)) != self._file_identity:
++                    try:
++                        _renameat_noreplace(self._scratch_fd, file_quarantine,
++                                            self._scratch_fd, self._file_leaf)
++                    except OSError:
++                        pass
++                    return False
++                os.unlink(file_quarantine, dir_fd=self._scratch_fd)
++
++            if os.listdir(self._scratch_fd):
++                return False
++            _verify_posix_directory_links(self._root_links)
++            self._check_pinned_scratch_binding()
++            dir_quarantine = ".cleanup-dir-" + secrets.token_hex(16)
++            _renameat_noreplace(root_fd, self._scratch_leaf, root_fd, dir_quarantine)
++            moved_dir = os.open(dir_quarantine, _posix_directory_flags(), dir_fd=root_fd)
++            try:
++                moved_info = os.fstat(moved_dir)
++                moved_identity = (int(moved_info.st_dev), int(moved_info.st_ino))
++                if moved_identity != self._scratch_identity:
++                    try:
++                        os.close(moved_dir)
++                    finally:
++                        moved_dir = -1
++                    _renameat_noreplace(root_fd, dir_quarantine, root_fd, self._scratch_leaf)
++                    return False
++                if os.listdir(moved_dir):
++                    return False
++            finally:
++                if moved_dir >= 0:
++                    os.close(moved_dir)
++            try:
++                _verify_posix_directory_links(self._root_links)
++            except Exception:
++                try:
++                    _renameat_noreplace(root_fd, dir_quarantine, root_fd, self._scratch_leaf)
++                except OSError:
++                    pass
++                return False
++            quarantined_info = os.stat(dir_quarantine, dir_fd=root_fd, follow_symlinks=False)
++            if (not stat.S_ISDIR(quarantined_info.st_mode)
++                    or (int(quarantined_info.st_dev), int(quarantined_info.st_ino)) != self._scratch_identity):
++                try:
++                    _renameat_noreplace(root_fd, dir_quarantine, root_fd, self._scratch_leaf)
++                except OSError:
++                    pass
++                return False
++            os.rmdir(dir_quarantine, dir_fd=root_fd)
++            try:
++                _verify_posix_directory_links(self._root_links)
++            except Exception:
++                return False
++            try:
++                os.stat(self._scratch_leaf, dir_fd=root_fd, follow_symlinks=False)
++                return False
++            except FileNotFoundError:
++                return True
++        except Exception:
+             return False
++        finally:
++            self._close_pinned_handles()
++
++    def _close_pinned_handles(self) -> None:
++        if self._scratch_fd is not None:
++            try:
++                os.close(self._scratch_fd)
++            except OSError:
++                pass
++            self._scratch_fd = None
++        for descriptor in reversed(self._root_fds):
++            try:
++                os.close(descriptor)
++            except OSError:
++                pass
++        self._root_fds = []
++        if self._windows_pin is not None:
++            try:
++                self._windows_pin.__exit__(None, None, None)
++            except Exception:
++                pass
++            self._windows_pin = None
++
++    def _check_pinned_scratch_binding(self) -> None:
++        assert self._root_fds and self._scratch_fd is not None and self._scratch_leaf is not None
++        root_fd = self._root_fds[-1]
++        scratch_info = os.stat(self._scratch_leaf, dir_fd=root_fd, follow_symlinks=False)
++        scratch_fd_info = os.fstat(self._scratch_fd)
++        identity = (int(scratch_info.st_dev), int(scratch_info.st_ino))
++        if (not stat.S_ISDIR(scratch_info.st_mode) or identity != self._scratch_identity
++                or identity != (int(scratch_fd_info.st_dev), int(scratch_fd_info.st_ino))):
++            raise OSError("private progress directory name no longer names its pinned inode")
+ 
+     def __enter__(self) -> "ComsolProgressCapture":
+         try:
++            if not _supports_pinned_progress_cleanup():
++                raise PreWriteRefusal(
++                    "COMSOL_PROGRESS_PATH_ADAPTER_UNAVAILABLE",
++                    "Windows progress-file capture is disabled until a verified handle-relative file cleanup adapter exists",
++                    details={"native_operation_dispatched": False, "cleanup_verified": True,
++                             "residual_status": "ABSENT", "capability_state": "NOT_CONFIGURED"},
++                )
+             from ._artifact_store import _assert_no_symlink_components
++            from ._state_backup import (_create_directory_tree, _directory_identity,
++                                       _open_posix_directory_chain, _posix_directory_flags,
++                                       _verify_posix_directory_links)
+ 
+             if not self.root.is_absolute() or self.root.is_symlink() or not self.root.is_dir():
+                 raise OSError("the active project workspace is not a regular directory")
+             _assert_no_symlink_components(self.root, field="progress capture project root")
+             self.root = self.root.resolve(strict=True)
+-            self.scratch = Path(tempfile.mkdtemp(prefix=".comsol-progress-", dir=self.root))
+-            _assert_no_symlink_components(self.scratch, field="private progress capture directory")
+-            scratch_info = os.stat(self.scratch, follow_symlinks=False)
+-            self._scratch_identity = (int(scratch_info.st_dev), int(scratch_info.st_ino))
+-            self.log_path = self.scratch / "progress.log"
+-            fd = os.open(self.log_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+-            file_info = os.fstat(fd)
+-            self._file_identity = (int(file_info.st_dev), int(file_info.st_ino))
+-            os.close(fd)
++            self._root_identity = _directory_identity(self.root)
++            self._root_fds, self._root_links, _ = _open_posix_directory_chain(
++                self.root, expected_identity=self._root_identity)
++            root_fd = self._root_fds[-1]
++            _verify_posix_directory_links(self._root_links)
++            self._scratch_leaf = ".comsol-progress-" + secrets.token_hex(16)
++            self.scratch = self.root / self._scratch_leaf
++            self._scratch_identity = tuple(_create_directory_tree(
++                self.root, self._scratch_leaf, expected_root_identity=self._root_identity).values())
++            # The helper returns device/inode as an ordered identity mapping.
++            if len(self._scratch_identity) != 2:
++                raise OSError("private progress directory identity is malformed")
++            _verify_posix_directory_links(self._root_links)
++            self._scratch_fd = os.open(self._scratch_leaf, _posix_directory_flags(), dir_fd=root_fd)
++            scratch_info = os.fstat(self._scratch_fd)
++            scratch_name_info = os.stat(self._scratch_leaf, dir_fd=root_fd, follow_symlinks=False)
++            if (not stat.S_ISDIR(scratch_name_info.st_mode)
++                    or self._scratch_identity != (int(scratch_info.st_dev), int(scratch_info.st_ino))
++                    or self._scratch_identity != (int(scratch_name_info.st_dev), int(scratch_name_info.st_ino))):
++                raise OSError("private progress directory changed during handle-relative open")
++            self.log_path = self.scratch / self._file_leaf
++            fd = os.open(self._file_leaf, os.O_CREAT | os.O_EXCL | os.O_WRONLY
++                         | getattr(os, "O_NOFOLLOW", 0), 0o600, dir_fd=self._scratch_fd)
++            try:
++                file_info = os.fstat(fd)
++                if not stat.S_ISREG(file_info.st_mode):
++                    raise OSError("private progress output is not a regular file")
++                self._file_identity = (int(file_info.st_dev), int(file_info.st_ino))
++            finally:
++                os.close(fd)
+             self._event("COMSOLProgressCaptureRequested", {
+                 "capture_state": "REQUESTED", "scratch_id": self.scratch.name,
+                 "byte_limit": MAX_STORED_BYTES, "chunk_bytes": CHUNK_BYTES,
++                "path_capability": PATH_CAPABILITY,
++                "cleanup_capability": CLEANUP_CAPABILITY,
++                "same_uid_mutation_limitation": CLEANUP_SAME_UID_LIMITATION,
+                 "api_evidence": API_EVIDENCE,
+             })
+         except PreWriteRefusal:
+             raise
+         except Exception as exc:
+-            self._cleanup_scratch()
++            cleaned = self._cleanup_scratch()
++            if not cleaned:
++                raise ExecutionContractError(
++                    "EXECUTION_STATE_UNKNOWN",
++                    "progress capture setup failed and its handle-pinned scratch cleanup is unverified",
++                    stage="pre_dispatch",
++                    details={"partial_change": self._scratch_identity is not None,
++                             "publication_committed": False, "native_operation_dispatched": False,
++                             "cleanup_verified": False, "residual_status": "UNKNOWN",
++                             "safe_retry": False, "cause_type": type(exc).__name__},
++                ) from exc
+             raise PreWriteRefusal("COMSOL_PROGRESS_LOG_UNAVAILABLE",
+                                   "a private per-job progress file could not be prepared",
+-                                  details={"cause_type": type(exc).__name__}) from exc
++                                  details={"cause_type": type(exc).__name__,
++                                           "partial_change": False, "cleanup_verified": True,
++                                           "residual_status": "ABSENT"}) from exc
+ 
+         try:
+             self.client = self.worker.client()
+@@ -218,24 +414,29 @@
+                 })
+             except Exception:
+                 pass
++            self._close_pinned_handles()
+             raise ExecutionContractError(
+                 "EXECUTION_STATE_UNKNOWN", "COMSOL progress sink activation did not return a verified receipt",
+                 stage="post_dispatch", details={"job_id": self.binding["job_id"],
+                                                  "capture_id": self.binding["capture_id"],
+-                                                 "cause_type": type(exc).__name__, "safe_retry": False},
++                                                 "cause_type": type(exc).__name__, "partial_change": True,
++                                                 "native_operation_dispatched": True,
++                                                 "cleanup_verified": False, "residual_status": "UNKNOWN",
++                                                 "safe_retry": False},
+             ) from exc
+ 
+     def _read_chunks(self) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+-        from ._artifact_store import _assert_no_symlink_components
++        from ._state_backup import _verify_posix_directory_links
+ 
+         assert self.scratch is not None and self.log_path is not None
+-        _assert_no_symlink_components(self.scratch, field="private progress capture directory")
+-        if self.log_path.is_symlink() or not self.log_path.is_file():
+-            raise OSError("COMSOL progress output is not a regular file")
+-        if {entry.name for entry in self.scratch.iterdir()} != {self.log_path.name}:
++        if not _supports_pinned_progress_cleanup() or self._scratch_fd is None or not self._root_fds:
++            raise OSError("handle-relative progress readback is unavailable")
++        _verify_posix_directory_links(self._root_links)
++        self._check_pinned_scratch_binding()
++        if set(os.listdir(self._scratch_fd)) != {self._file_leaf}:
+             raise OSError("the private progress directory contains an unexpected entry")
+-        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+-        fd = os.open(self.log_path, flags)
++        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
++        fd = os.open(self._file_leaf, flags, dir_fd=self._scratch_fd)
+         chunks: list[dict[str, Any]] = []
+         try:
+             before = os.fstat(fd)
+@@ -269,11 +470,13 @@
+                 captured += len(raw)
+                 chunk_index += 1
+             after = os.fstat(fd)
+-            path_after = os.stat(self.log_path, follow_symlinks=False)
++            path_after = os.stat(self._file_leaf, dir_fd=self._scratch_fd, follow_symlinks=False)
+             if (_identity_key(before) != _identity_key(after)
+                     or _identity_key(after) != _identity_key(path_after)
+                     or stat.S_ISLNK(path_after.st_mode)):
+                 raise OSError("COMSOL progress output changed during readback")
++            _verify_posix_directory_links(self._root_links)
++            self._check_pinned_scratch_binding()
+         finally:
+             os.close(fd)
+         truncated = int(before.st_size) > MAX_STORED_BYTES
+@@ -292,6 +495,8 @@
+     def __exit__(self, exc_type, exc, traceback) -> bool:
+         if not self.active:
+             return False
++        cleanup_attempted = False
++        cleanup_verified = False
+         try:
+             stopped = self.client.set_progress_log(None)
+             if not isinstance(stopped, Mapping) or stopped.get("active") is not False or stopped.get("disabled") is not True:
+@@ -300,10 +505,15 @@
+             summary, chunks = self._read_chunks()
+             for chunk in chunks:
+                 self.store.add_event(self.binding["job_id"], chunk["event"], chunk["metadata"])
++            cleanup_attempted = True
+             cleaned = self._cleanup_scratch()
++            cleanup_verified = cleaned
+             summary.update({"cleanup_verified": cleaned,
+                             "scratch_retained": not cleaned,
+                             "scratch_id": self.scratch.name if self.scratch else None,
++                            "path_capability": PATH_CAPABILITY,
++                            "cleanup_capability": CLEANUP_CAPABILITY,
++                            "same_uid_mutation_limitation": CLEANUP_SAME_UID_LIMITATION,
+                             "api_evidence": API_EVIDENCE})
+             self._event("COMSOLProgressCaptureCompleted", summary)
+             if not cleaned:
+@@ -314,13 +524,24 @@
+                     "capture_state": "UNKNOWN", "cause_type": type(failure).__name__,
+                     "scratch_id": self.scratch.name if self.scratch else None,
+                     "worker_sink_state": "UNKNOWN" if self.active else "DISABLED",
++                    "cleanup_verified": cleanup_verified,
++                    "residual_status": "ABSENT" if cleanup_verified else "UNKNOWN",
++                    "native_operation_dispatched": True,
++                    "path_capability": PATH_CAPABILITY,
++                    "cleanup_capability": CLEANUP_CAPABILITY,
++                    "same_uid_mutation_limitation": CLEANUP_SAME_UID_LIMITATION,
+                     "safe_retry": False,
+                 })
+             except Exception:
+                 pass
++            self._close_pinned_handles()
+             details: dict[str, Any] = {
+                 "job_id": self.binding["job_id"], "capture_id": self.binding["capture_id"],
+-                "cause_type": type(failure).__name__, "safe_retry": False,
++                "cause_type": type(failure).__name__, "partial_change": True,
++                "native_operation_dispatched": True, "cleanup_attempted": cleanup_attempted,
++                "cleanup_verified": cleanup_verified,
++                "residual_status": "ABSENT" if cleanup_verified else "UNKNOWN",
++                "safe_retry": False,
+             }
+             if exc is not None:
+                 details["prior_error"] = {"type": type(exc).__name__, "message": str(exc)[:500]}
+@@ -331,4 +552,5 @@
+         return False
+ 
+ 
+-__all__ = ["API_EVIDENCE", "CHUNK_BYTES", "MAX_STORED_BYTES", "PRODUCER", "ComsolProgressCapture"]
++__all__ = ["API_EVIDENCE", "CHUNK_BYTES", "CLEANUP_CAPABILITY", "CLEANUP_SAME_UID_LIMITATION",
++           "MAX_STORED_BYTES", "PATH_CAPABILITY", "PRODUCER", "ComsolProgressCapture"]
+--- a/tests/test_comsol_progress_capture.py
++++ b/tests/test_comsol_progress_capture.py
+@@ -7,6 +7,7 @@
+ import pytest
+ 
+ from comsol_mcp import _g3_solver_ops
++from comsol_mcp import _comsol_progress_capture as progress_capture
+ from comsol_mcp._comsol_progress_capture import CHUNK_BYTES, MAX_STORED_BYTES, ComsolProgressCapture
+ from comsol_mcp import _g3_ops
+ from comsol_mcp._execution_contract import ExecutionContractError, PreWriteRefusal
+@@ -171,6 +172,26 @@
+     store.close()
+ 
+ 
++def test_progress_capture_fails_closed_when_pinned_path_cleanup_adapter_is_unavailable(tmp_path, monkeypatch):
++    project = tmp_path / "project"
++    project.mkdir()
++    store = OperationStore(tmp_path / "operations.sqlite")
++    record, execution = _bound_job(store, tmp_path)
++    client = _Client()
++    capture = ComsolProgressCapture(
++        _Worker(client), store, project, operation_id=record["operation_id"],
++        operation="study.run", execution=execution, model_ref=MODEL_REF, model_revision=7)
++    monkeypatch.setattr(progress_capture, "_supports_pinned_progress_cleanup", lambda: False)
++    with pytest.raises(PreWriteRefusal) as unsupported:
++        capture.__enter__()
++    assert unsupported.value.code == "COMSOL_PROGRESS_PATH_ADAPTER_UNAVAILABLE"
++    assert unsupported.value.details["native_operation_dispatched"] is False
++    assert unsupported.value.details["residual_status"] == "ABSENT"
++    assert client.calls == []
++    assert list(project.iterdir()) == []
++    store.close()
++
++
+ def test_progress_capture_stop_uncertainty_retains_scratch_and_marks_unknown(tmp_path):
+     (tmp_path / "project").mkdir()
+     store = OperationStore(tmp_path / "operations.sqlite")
+@@ -202,6 +223,136 @@
+     assert failure.value.details["safe_retry"] is False
+     result = _g3_solver_ops.solver_log_read(store, "project-1", {"job_id": record["job_id"]})
+     assert result["solver_output_log"]["status"] == "UNKNOWN"
++    store.close()
++
++
++def test_progress_parent_reparse_replacement_before_relative_create_writes_nothing_outside(
++        tmp_path, monkeypatch):
++    project = tmp_path / "project"
++    outside = tmp_path / "outside"
++    project.mkdir()
++    outside.mkdir()
++    store = OperationStore(tmp_path / "operations.sqlite")
++    record, execution = _bound_job(store, tmp_path)
++    client = _Client()
++    capture = ComsolProgressCapture(
++        _Worker(client), store, project, operation_id=record["operation_id"],
++        operation="study.run", execution=execution, model_ref=MODEL_REF, model_revision=7)
++    from comsol_mcp import _state_backup
++    create_tree = _state_backup._create_directory_tree
++    moved_project = tmp_path / "project-original"
++
++    def replace_parent_after_pin(*args, **kwargs):
++        project.rename(moved_project)
++        project.symlink_to(outside, target_is_directory=True)
++        return create_tree(*args, **kwargs)
++
++    monkeypatch.setattr(_state_backup, "_create_directory_tree", replace_parent_after_pin)
++    with pytest.raises(PreWriteRefusal) as refusal:
++        capture.__enter__()
++    assert refusal.value.details["cleanup_verified"] is True
++    assert client.calls == []
++    assert list(outside.iterdir()) == []
++    assert project.is_symlink()
++    project.unlink()
++    moved_project.rename(project)
++    store.close()
++
++
++def test_progress_foreign_file_swapped_after_check_is_quarantined_and_restored(tmp_path, monkeypatch):
++    project = tmp_path / "project"
++    project.mkdir()
++    store = OperationStore(tmp_path / "operations.sqlite")
++    client = _Client(b"native-looking but synthetic\n")
++    record, _execution, capture = _capture(store, tmp_path, client)
++    real_rename = progress_capture._renameat_noreplace
++    swapped = False
++
++    def replace_file_after_identity_check(src_parent, src_leaf, dst_parent, dst_leaf):
++        nonlocal swapped
++        if src_leaf == "progress.log" and dst_leaf.startswith(".cleanup-file-") and not swapped:
++            swapped = True
++            owned = capture.scratch / "owned-file-preserved"
++            (capture.scratch / "progress.log").rename(owned)
++            (capture.scratch / "progress.log").write_bytes(b"foreign bytes must survive")
++        return real_rename(src_parent, src_leaf, dst_parent, dst_leaf)
++
++    monkeypatch.setattr(progress_capture, "_renameat_noreplace", replace_file_after_identity_check)
++    with pytest.raises(ExecutionContractError) as failure:
++        with capture:
++            pass
++    assert swapped is True
++    assert failure.value.code == "EXECUTION_STATE_UNKNOWN"
++    assert failure.value.details["safe_retry"] is False
++    assert (capture.scratch / "progress.log").read_bytes() == b"foreign bytes must survive"
++    assert (capture.scratch / "owned-file-preserved").read_bytes() == client.payload
++    response = _g3_solver_ops.solver_log_read(store, "project-1", {"job_id": record["job_id"]})
++    assert response["solver_output_log"]["status"] == "UNKNOWN"
++    store.close()
++
++
++def test_progress_foreign_scratch_swapped_after_check_is_restored_not_deleted(tmp_path, monkeypatch):
++    project = tmp_path / "project"
++    project.mkdir()
++    store = OperationStore(tmp_path / "operations.sqlite")
++    client = _Client(b"progress to retain until review\n")
++    _record, _execution, capture = _capture(store, tmp_path, client)
++    real_rename = progress_capture._renameat_noreplace
++    swapped = False
++    owned_scratch = project / "owned-scratch-preserved"
++
++    def replace_scratch_after_identity_check(src_parent, src_leaf, dst_parent, dst_leaf):
++        nonlocal swapped
++        if src_leaf == capture.scratch.name and dst_leaf.startswith(".cleanup-dir-") and not swapped:
++            swapped = True
++            capture.scratch.rename(owned_scratch)
++            capture.scratch.mkdir()
++        return real_rename(src_parent, src_leaf, dst_parent, dst_leaf)
++
++    monkeypatch.setattr(progress_capture, "_renameat_noreplace", replace_scratch_after_identity_check)
++    with pytest.raises(ExecutionContractError) as failure:
++        with capture:
++            pass
++    assert swapped is True
++    assert failure.value.code == "EXECUTION_STATE_UNKNOWN"
++    assert capture.scratch.is_dir()
++    assert owned_scratch.is_dir()
++    assert list(owned_scratch.iterdir()) == []
++    assert list(capture.scratch.iterdir()) == []
++    store.close()
++
++
++def test_progress_parent_replaced_during_cleanup_retains_unknown_without_outside_write(tmp_path, monkeypatch):
++    project = tmp_path / "project"
++    outside = tmp_path / "outside"
++    project.mkdir()
++    outside.mkdir()
++    store = OperationStore(tmp_path / "operations.sqlite")
++    client = _Client(b"progress from the exact pinned project\n")
++    _record, _execution, capture = _capture(store, tmp_path, client)
++    real_rename = progress_capture._renameat_noreplace
++    moved_project = tmp_path / "project-original"
++    swapped = False
++
++    def replace_parent_after_binding_check(src_parent, src_leaf, dst_parent, dst_leaf):
++        nonlocal swapped
++        if src_leaf == capture.scratch.name and dst_leaf.startswith(".cleanup-dir-") and not swapped:
++            swapped = True
++            project.rename(moved_project)
++            project.symlink_to(outside, target_is_directory=True)
++        return real_rename(src_parent, src_leaf, dst_parent, dst_leaf)
++
++    monkeypatch.setattr(progress_capture, "_renameat_noreplace", replace_parent_after_binding_check)
++    with pytest.raises(ExecutionContractError) as failure:
++        with capture:
++            pass
++    assert swapped is True
++    assert failure.value.code == "EXECUTION_STATE_UNKNOWN"
++    assert list(outside.iterdir()) == []
++    assert project.is_symlink()
++    assert (moved_project / capture.scratch.name).is_dir()
++    project.unlink()
++    moved_project.rename(project)
+     store.close()
+ 
+ 

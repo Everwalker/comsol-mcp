@@ -1,0 +1,87 @@
+{
+  "schema": "comsol-mcp.root-native-preservation-check/1",
+  "status": "PASS_SCOPED_PRESERVATION_AND_CAPTURED_OWNED_CLEANUP",
+  "activity_id": "w23-native-run-20261012-008-r3-r2",
+  "source_freeze_sha256": "2a37a0c84a5648d646302e55df0d95c56eb979b8d0400daff2840243e305aa05",
+  "root_approval_sha256": "9c59c2977e3b3317a332c3016360f6281fa91f99873cd1bd3d4f344bf2ec6485",
+  "terminal_cas_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_008_candidate16_r3/RESUME_CAS_ACTIVITY008_R3_R2_TERMINAL_002.json",
+  "terminal_cas_sha256": "3b079a61161f81c77266bd3da2973e7b4977fd1a5ff754029ac2853b48bdd086",
+  "terminal_resume_sha256_at_check": "2d5801d0d515703c18df876ba772fb38e804b40a2ab3e7052ff145f778bbd302",
+  "checked": {
+    "terminal_cas_nine_reference_hashes": true,
+    "runner_evidence_and_launcher_streams": {
+      "files": 28,
+      "bytes": 4751340,
+      "sha256_and_size_verified": true
+    },
+    "original_private_copies": {
+      "files": 3,
+      "two_operations_databases_bytes_each": 487424,
+      "docs_index_bytes": 16384,
+      "source_and_copy_hashes_verified": true
+    },
+    "later_observed_sidecars": {
+      "main_bytes": 487424,
+      "wal_bytes": 0,
+      "shm_bytes": 32768,
+      "source_and_copy_hashes_verified": true,
+      "provenance": "PRESERVED_OBSERVED_BYTES_PROVENANCE_TIMING_UNCERTAIN"
+    },
+    "sqlite_actual": {
+      "mode": "ro&immutable=1",
+      "sha256": "e03d6fa03e96ad20353149c33ee50ae8e2c4b77a367cb78a40c0a6680c02294c",
+      "integrity_check": "ok",
+      "operations": {
+        "SUCCEEDED": 9,
+        "FAILED": 1
+      },
+      "jobs": {
+        "SUCCEEDED": 9,
+        "FAILED": 1
+      },
+      "actual_study_run_submitted": 1,
+      "worker_submitted_event_id": 178,
+      "worker_observed_event_id": 179,
+      "worker_request_id": "wrk-082ff841-b58a-4227-a478-4ace90cde774",
+      "observed_status": "SUCCEEDED",
+      "managed_operation_id": "711c2ef8-f6b5-4c0f-94b5-8200354077dc",
+      "managed_job_id": "c3c53b39-ecd7-410c-a60a-6b04dba9aa23",
+      "outer_operation": "operation_call",
+      "inner_operation": "study.run",
+      "result_success": true,
+      "domain_state": "succeeded"
+    },
+    "captured_cleanup_raw": {
+      "ps_returncode": 0,
+      "lsof_returncode": 0,
+      "exact_owned_pids_absent": [
+        27154,
+        27223,
+        27270
+      ],
+      "exact_owned_ports_absent": [
+        64773,
+        64790
+      ],
+      "independent_pid_port_parse": true,
+      "scope": "captured postcleanup at runner termination, not a fresh next-launch gate"
+    },
+    "actual_disconnect": {
+      "before_generation": 2,
+      "before_connected": true,
+      "after_generation": 3,
+      "after_connected": false
+    },
+    "elapsed_birth_inclusive_seconds": 13.335249900817871
+  },
+  "original_failure_unchanged": {
+    "summary_status": "FAIL_OR_INCOMPLETE",
+    "native_result": "UNKNOWN_OR_NOT_RUN",
+    "error": "KeyError: 'ordinal' at runner:2676",
+    "science": "NOT_ACCEPTED",
+    "saved_mph": "ABSENT",
+    "field_frequency_dataset_overlap_readback": "NOT_REACHED",
+    "internal_solver_execution_count": "UNKNOWN_INTERNAL_SOLVER_STEPS_NOT_INFERRED"
+  },
+  "next_action": "Continue new candidate offline repair of durable-row mapping and optional provisional save; never replay succeeded Activity008 or reuse its consumed approval; fresh Root admission is required for another new bounded native activity."
+}

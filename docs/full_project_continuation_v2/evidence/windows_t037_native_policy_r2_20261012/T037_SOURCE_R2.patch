@@ -1,0 +1,164 @@
+--- a/comsol_mcp/_windows_t037_native.py
++++ b/comsol_mcp/_windows_t037_native.py
+@@ -1380,12 +1380,19 @@
+             for _page in range(MAX_ENUM_PAGES):
+                 budget.add_page(kind)
+                 array = C.c_void_p()
+                 count = DWORD(0)
+-                self._wfpcheck(enum(engine, enum_handle, MAX_ENUM_PAGE, C.byref(array), C.byref(count)),
+-                               f"{kind}Enum0")
+-                budget.check_time()
++                page_primary: BaseException | None = None
+                 try:
++                    # Enum0 may allocate its result array even when it reports
++                    # failure.  It may also return a valid page just as the
++                    # wall-clock budget expires.  Keep status checking, the
++                    # time gate, and every operation that reads the page inside
++                    # this allocation's single release scope.
++                    enum_status = enum(engine, enum_handle, MAX_ENUM_PAGE,
++                                       C.byref(array), C.byref(count))
++                    self._wfpcheck(enum_status, f"{kind}Enum0")
++                    budget.check_time()
+                     if count.value > MAX_ENUM_PAGE or (count.value and not array.value):
+                         _fail("T037_NATIVE_WFP_ABI_INVALID", f"{kind} page count/pointer is invalid")
+                     pointers = C.cast(array, C.POINTER(C.POINTER(row_type))) if count.value else None
+                     for index in range(count.value):
+@@ -1408,11 +1415,21 @@
+                                 "weight": int(item.weight),
+                                 "security_sha256": self._wfp_security_sha(engine, "SubLayer", item.subLayerKey)}
+                         budget.add_row(row)
+                         output.append(row)
++                except BaseException as exc:
++                    page_primary = exc
++                    raise
+                 finally:
+                     if array.value:
+-                        self._free(array)
++                        try:
++                            self._free(array)
++                        except BaseException as release_exc:
++                            _fail("T037_NATIVE_WFP_HANDLE_RELEASE_UNKNOWN",
++                                  f"WFP {kind} result page allocation could not be released",
++                                  release_exception_type=type(release_exc).__name__,
++                                  primary_type=type(page_primary).__name__ if page_primary is not None else None,
++                                  primary_code=getattr(page_primary, "code", None) if page_primary is not None else None)
+                 if count.value < MAX_ENUM_PAGE:
+                     return output
+             _fail("T037_NATIVE_WFP_SNAPSHOT_INCOMPLETE", f"{kind} enumeration exceeded page limit")
+         except BaseException as exc:
+--- a/tests/test_windows_t037_native.py
++++ b/tests/test_windows_t037_native.py
+@@ -569,8 +569,113 @@
+     assert cleanup.value.code == "T037_NATIVE_WFP_HANDLE_RELEASE_UNKNOWN"
+     assert cleanup.value.details["primary_code"] == "T037_NATIVE_WFP_QUERY_FAILED"
+ 
+ 
++def _page_allocation_cleanup_probe(monkeypatch, *, enum_status=0, expire_after_return=False,
++                                  free_raises=False):
++    clock = [100]
++    monkeypatch.setattr(native.time, "monotonic_ns", lambda: clock[0])
++    sentinel = 0x123450
++
++    class FakeWfp:
++        def __init__(self):
++            self.free_values = []
++            self.destroyed = []
++            self.aborted = 0
++            self.closed = 0
++            self.committed = 0
++
++        def FwpmEngineOpen0(self, _name, _auth, _identity, _session, out):
++            C.cast(out, C.POINTER(native.HANDLE)).contents.value = 33
++            return 0
++
++        def FwpmTransactionBegin0(self, _engine, _flags):
++            return 0
++
++        def FwpmProviderCreateEnumHandle0(self, _engine, _template, out):
++            C.cast(out, C.POINTER(native.HANDLE)).contents.value = 12
++            return 0
++
++        def FwpmProviderEnum0(self, _engine, _handle, _page_size, array_out, count_out):
++            C.cast(array_out, C.POINTER(C.c_void_p)).contents.value = sentinel
++            C.cast(count_out, C.POINTER(native.DWORD)).contents.value = 1
++            if expire_after_return:
++                clock[0] += (native.MAX_ENUM_SECONDS * 1_000_000_000) + 1
++            return enum_status
++
++        def FwpmProviderDestroyEnumHandle0(self, _engine, handle):
++            self.destroyed.append(handle.value)
++            return 0
++
++        def FwpmFreeMemory0(self, pointer_to_pointer):
++            value = C.cast(pointer_to_pointer, C.POINTER(C.c_void_p)).contents.value
++            self.free_values.append(value)
++            if free_raises:
++                raise RuntimeError("synthetic WFP page release failure")
++
++        def FwpmTransactionAbort0(self, _engine):
++            self.aborted += 1
++            return 0
++
++        def FwpmTransactionCommit0(self, _engine):
++            self.committed += 1
++            return 0
++
++        def FwpmEngineClose0(self, _engine):
++            self.closed += 1
++            return 0
++
++    api = object.__new__(native.CtypesWindowsPolicyApi)
++    api._fwpu = FakeWfp()
++    return api, api._fwpu, sentinel
++
++
++def test_wfp_page_allocation_is_freed_after_successful_page_expires_time_budget(monkeypatch):
++    api, fwpu, sentinel = _page_allocation_cleanup_probe(
++        monkeypatch, expire_after_return=True)
++
++    with pytest.raises(native.NativePolicyError) as expired:
++        api.observe_wfp_snapshot()
++
++    assert expired.value.code == "T037_NATIVE_WFP_TIME_LIMIT"
++    assert fwpu.free_values == [sentinel]
++    assert fwpu.destroyed == [12]
++    assert fwpu.aborted == 1
++    assert fwpu.committed == 0
++    assert fwpu.closed == 1
++
++
++def test_wfp_error_status_with_nonnull_page_frees_before_aborting(monkeypatch):
++    api, fwpu, sentinel = _page_allocation_cleanup_probe(monkeypatch, enum_status=88)
++
++    with pytest.raises(native.NativePolicyError) as failure:
++        api.observe_wfp_snapshot()
++
++    assert failure.value.code == "T037_NATIVE_WFP_QUERY_FAILED"
++    assert failure.value.details["status"] == 88
++    assert fwpu.free_values == [sentinel]
++    assert fwpu.destroyed == [12]
++    assert fwpu.aborted == 1
++    assert fwpu.committed == 0
++    assert fwpu.closed == 1
++
++
++def test_wfp_page_release_failure_is_unknown_and_retains_enum_primary(monkeypatch):
++    api, fwpu, sentinel = _page_allocation_cleanup_probe(
++        monkeypatch, enum_status=88, free_raises=True)
++
++    with pytest.raises(native.NativePolicyError) as failure:
++        api.observe_wfp_snapshot()
++
++    assert failure.value.code == "T037_NATIVE_WFP_HANDLE_RELEASE_UNKNOWN"
++    assert failure.value.details["primary_code"] == "T037_NATIVE_WFP_QUERY_FAILED"
++    assert fwpu.free_values == [sentinel]
++    assert fwpu.destroyed == [12]
++    assert fwpu.aborted == 1
++    assert fwpu.committed == 0
++    assert fwpu.closed == 1
++
++
+ def test_wfp_readonly_transaction_aborts_and_closes_engine_after_query_failure():
+     class FakeWfp:
+         def __init__(self):
+             self.aborted = 0

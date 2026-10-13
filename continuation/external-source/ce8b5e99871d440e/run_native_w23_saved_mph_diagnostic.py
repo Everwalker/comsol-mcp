@@ -1,0 +1,1654 @@
+#!/usr/bin/env python3
+"""Prepare and execute one bounded, zero-explicit-solve W23 saved-MPH readback.
+
+This runner reopens only the exact Activity009 provisional MPH in a fresh,
+task-owned project. It compares managed dataset.solution_indices with direct
+typed Java readback, resolves documented BMA/store/dataset bindings, and uses
+the production result.at_points route to read saved fields only. It never
+submits Study.run or a solver run and never saves or modifies the source model.
+"""
+from __future__ import annotations
+
+import argparse
+import contextlib
+import hashlib
+import importlib
+import json
+import math
+import stat
+import os
+import shutil
+import subprocess
+import sys
+import time
+import traceback
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Mapping
+from uuid import uuid4
+
+from tools import run_native_w23_te_science as science
+from tools import w23_te_science_protocol as protocol
+
+REPO = Path(__file__).resolve().parents[1]
+EXPECTED_PYTHON = Path("/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python")
+FIXTURE = REPO / "tools/java/NativeW23TEScienceFixture.java"
+PLAN = REPO / "docs/full_project_execution/w23_overlap/W23_TE_FIXTURE_PROPOSAL.md"
+TEST = REPO / "tests/test_native_w23_saved_mph_diagnostic.py"
+EVIDENCE_ROOT = REPO / "docs/full_project_execution/w23_overlap/evidence"
+ACTIVITY_ID = "w23-saved-mph-zero-solve-readback-20261013-018"
+CANDIDATE_ID = "W23-TE-SAVED-MPH-ZERO-SOLVE-READBACK-20"
+CANDIDATE_REVISION = "candidate20-r10"
+PROJECT_LABEL = f"W23 Activity009 saved-MPH zero-solve diagnostic {ACTIVITY_ID} {CANDIDATE_REVISION}"
+SOURCE_MODEL = Path("/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_009_candidate17_r2/private-control-store/activity009-r2/saved-models/w23_coarse-phase0_provisional.mph")
+SOURCE_MODEL_SHA256 = "cba0c1d404003c4e60a20b04316cb1456c38cc2b45596dc2dc29bbed62674a8c"
+SOURCE_MODEL_BYTES = 13_795_478
+SOURCE_RECONCILIATION = Path("/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_009_candidate17_r2/ACTIVITY009_R2_RECONCILIATION.json")
+SOURCE_RECONCILIATION_SHA256 = "9e2fe93acbc4a67bc0f87c8c93b2a02e695f03ea3ffcda9512a2eab99dcca7a3"
+ROOT_PRESERVATION_CHECK = Path("/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_009_candidate17_r2/ROOT_PRESERVATION_CLEANUP_CHECK009_R2.json")
+ROOT_PRESERVATION_CHECK_SHA256 = "27f6ad34cb2a82a8388f23f8c1e82f86d0616d5e8b3aa17a0c486c9c80bc3aa4"
+ACTIVITY010_PRESERVATION_CHECK = Path("/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_010_saved_mph_diagnostic/ROOT_PRESERVATION_CLEANUP_CHECK010.json")
+ACTIVITY010_PRESERVATION_CHECK_SHA256 = "871bc390e64136c5c2b0caaf7a07a6ddc4d8a3169b41cef899718a2446b04492"
+MAX_BIRTH_SECONDS = 1800.0
+CLEANUP_RESERVE_SECONDS = 120.0
+ALLOWED_MANAGED_OPERATIONS = frozenset({
+    "server_connect", "model_load", "model.inspect",
+    "dataset.list", "dataset.solution_indices", "operation_call",
+})
+ALLOWED_OPERATION_CALL_IDS = frozenset({"code.execute_java", "result.at_points"})
+STUDY_SEQUENCE_TYPES = (
+    "All", "None", "SolverSequence", "CopySolution",
+    "ParametricStore", "Stored", "Parametric",
+)
+RAW_FIELD_EXPRESSIONS = (
+    "ewfd.Ex", "ewfd.Ey", "ewfd.Ez", "ewfd.Hx", "ewfd.Hy", "ewfd.Hz",
+    "ewfd.Emodex_2", "ewfd.Emodey_2", "ewfd.Emodez_2",
+    "ewfd.Hmodex_2", "ewfd.Hmodey_2", "ewfd.Hmodez_2",
+    "ewfd.Emodex_1", "ewfd.Emodey_1", "ewfd.Emodez_1",
+    "ewfd.Hmodex_1", "ewfd.Hmodey_1", "ewfd.Hmodez_1", "nx", "ny",
+)
+MODE_POINT_EXPRESSIONS = protocol.bma_point_expressions("1")
+FREQUENCY_EXPRESSIONS = ("freq",)
+FREQUENCY_UNITS = {"freq": "Hz"}
+FIELD_UNITS = {
+    **{f"ewfd.E{axis}": "V/m" for axis in "xyz"},
+    **{f"ewfd.H{axis}": "A/m" for axis in "xyz"},
+    **{f"ewfd.Emode{axis}_{suffix}": "V/m"
+       for axis in "xyz" for suffix in ("1", "2")},
+    **{f"ewfd.Hmode{axis}_{suffix}": "A/m"
+       for axis in "xyz" for suffix in ("1", "2")},
+    "nx": ("1", ""), "ny": ("1", ""),
+}
+FIELD_REQUESTED_UNITS = tuple(
+    FIELD_UNITS[expression] if isinstance(FIELD_UNITS[expression], str)
+    else FIELD_UNITS[expression][0] for expression in RAW_FIELD_EXPRESSIONS
+)
+
+
+def mode_units(port_name: str) -> dict[str, str]:
+    beta, neff, k0 = protocol.bma_point_expressions(port_name)
+    return {beta: "1/m", neff: "1", k0: "1/m"}
+MODE_DATASETS = {"dset2": ("sol2", "bmaInput", "1", -10.0),
+                 "dset3": ("sol3", "bmaOutput", "2", 8.0)}
+
+
+def utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def sha256_json(value: Any) -> str:
+    payload = json.dumps(value, ensure_ascii=False, sort_keys=True,
+                         separators=(",", ":"), allow_nan=False).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def write_json(path: Path, value: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(path.name + ".tmp")
+    temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2,
+                                    sort_keys=True, default=str, allow_nan=False) + "\n",
+                         encoding="utf-8")
+    os.replace(temporary, path)
+
+
+def _source_files() -> dict[str, dict[str, Any]]:
+    """Extend the exact, already-frozen W23 runtime closure with this diagnostic."""
+    rows = science._source_files()
+    parent = json.loads((REPO / "PARENT_MERGED_SOURCE_CLOSURE_R11_R7.json").read_text())
+    for relative in parent["source_files"]:
+        path = REPO / relative
+        rows[relative] = {"path": str(path.resolve()), "bytes": path.stat().st_size, "sha256": sha256_file(path)}
+    for path in (REPO / "tests/test_saved_mph_activity017_public_stack.py", REPO / "PARENT_MERGED_SOURCE_CLOSURE_R11_R7.json"):
+        rows[path.relative_to(REPO).as_posix()] = {"path": str(path.resolve()), "bytes": path.stat().st_size, "sha256": sha256_file(path)}
+    additional = (
+        Path(__file__).resolve(),
+        (REPO / "tests/test_native_w23_saved_mph_diagnostic.py").resolve(),
+        (REPO / "tests/test_native_w23_te_science_protocol.py").resolve(),
+        (REPO / "tests/test_native_w23_te_science_runner.py").resolve(),
+        (REPO / "tests/test_g3_results.py").resolve(),
+        (REPO / "docs/comsol_mcp_design_v1/common.schema.json").resolve(),
+        PLAN.resolve(),
+        (REPO / "tests/test_saved_mph_offline_materialization.py").resolve(),
+        (REPO / "tests/fixtures/w23_activity011_normalized_saved_mph_inventory.json").resolve(),
+        *((REPO / "tests/fixtures/w23_activity015" / name).resolve() for name in (
+            "physical_frequency_Hz_terminal_response.json", "managed_solution_indices_dset1_terminal_response.json",
+            "ACTUAL_HZ_JOB_ALL_WORKER_EVENTS.json", "ROOT_ACTIVITY015_COUNT_ONLY_PUBLICATION_DECISION.json", "PROVENANCE.json")),
+        *((REPO / "tests/fixtures/w23_activity014" / name).resolve() for name in (
+            "physical_frequency_Hz_terminal_response.json", "ACTUAL_OPERATIONSTORE_HZ_REQUEST.json",
+            "ROOT_SINGLETON_COUNT_NATIVE_LABEL_DECISION.json", "PROVENANCE.json")),
+        *((REPO / "docs/full_project_execution/w23_overlap/references" / name).resolve() for name in (
+            "PRIMARY_INTERP_GETDATA_17293.json", "PRIMARY_INTERP_UNIT_17294.json", "PRIMARY_NUMERICAL_GETDATA_22986.json")),
+    )
+    for path in additional:
+        if not path.is_file():
+            raise FileNotFoundError(path)
+        rows[path.relative_to(REPO).as_posix()] = {
+            "path": str(path), "bytes": path.stat().st_size,
+            "sha256": sha256_file(path),
+        }
+    return dict(sorted(rows.items()))
+
+
+def _source_digest(rows: Mapping[str, Any]) -> str:
+    return science._source_manifest_sha256(rows)
+
+
+def _assert_source_inputs() -> dict[str, Any]:
+    references = {
+        "source_model": (SOURCE_MODEL, SOURCE_MODEL_BYTES, SOURCE_MODEL_SHA256),
+        "source_reconciliation": (SOURCE_RECONCILIATION, None, SOURCE_RECONCILIATION_SHA256),
+        "root_preservation_check": (ROOT_PRESERVATION_CHECK, None, ROOT_PRESERVATION_CHECK_SHA256),
+        "activity010_preservation_check": (ACTIVITY010_PRESERVATION_CHECK, None, ACTIVITY010_PRESERVATION_CHECK_SHA256),
+    }
+    result: dict[str, Any] = {}
+    for label, (path, expected_bytes, expected_sha) in references.items():
+        if not path.is_file() or path.is_symlink():
+            raise FileNotFoundError(f"{label} is absent or is not a regular preserved file: {path}")
+        observed_sha = sha256_file(path)
+        observed_bytes = path.stat().st_size
+        if observed_sha != expected_sha or (expected_bytes is not None and observed_bytes != expected_bytes):
+            raise RuntimeError(f"{label} differs from the exact preserved input: bytes={observed_bytes}, sha256={observed_sha}")
+        result[label] = {"path": str(path), "bytes": observed_bytes,
+                         "sha256": observed_sha, "status": "PASS_EXACT_INPUT_IDENTITY"}
+    return result
+
+
+def _native_argv(freeze_path: Path, freeze_sha256: str, approval_path: Path,
+                 input_path: Path, work: Path, evidence: Path) -> list[str]:
+    return [
+        "env", "-u", "CODEX_NETWORK_GUARD_LOG",
+        "-u", "CODEX_NETWORK_GUARD_LABEL",
+        "-u", "CODEX_NETWORK_GUARD_RUN_ID",
+        "TMPDIR=/private/tmp", f"PYTHONPATH={REPO}",
+        str(EXPECTED_PYTHON), "-m", "tools.run_native_w23_saved_mph_diagnostic", "execute",
+        "--freeze", str(freeze_path), "--freeze-sha256", freeze_sha256,
+        "--approval", str(approval_path), "--saved-model", str(input_path),
+        "--work", str(work), "--evidence", str(evidence),
+    ]
+
+
+def _strict_test_environment(evidence: Path) -> dict[str, str]:
+    guard = Path("/Volumes/SSD/Comsol-MCP/execution-scratch/temp-loss-runtime-recovery-20261004-001/builder-preparation022/network-guard")
+    if not guard.is_dir():
+        raise FileNotFoundError(f"required strict offline test guard is unavailable: {guard}")
+    env = dict(os.environ)
+    env["TMPDIR"] = "/private/tmp"
+    env["PYTHONPATH"] = os.pathsep.join((str(guard), str(REPO)))
+    env["CODEX_NETWORK_GUARD_LOG"] = str(evidence / "diagnostic-network-guard.jsonl")
+    env["CODEX_NETWORK_GUARD_LABEL"] = f"w23_{ACTIVITY_ID}_{CANDIDATE_REVISION}_focused"
+    env["CODEX_NETWORK_GUARD_RUN_ID"] = f"{ACTIVITY_ID}-{CANDIDATE_REVISION}-focused-001"
+    return env
+
+
+def _compile_and_test(evidence: Path) -> dict[str, Any]:
+    offline = evidence / "offline_gates"
+    offline.mkdir(parents=True, exist_ok=False)
+    imports = science._runtime_helper_imports()
+    import_receipt = {
+        "status": "PASS_EXISTING_PRODUCTION_HELPER_IMPORTS",
+        "resolved_helpers": sorted(imports),
+        "python_executable": sys.executable,
+        "python_version": sys.version,
+    }
+    write_json(offline / "runtime_imports.json", import_receipt)
+    dependency = science._pip_dependency_check()
+    write_json(offline / "pip_dependency_check.json", dependency)
+    compile_output = offline / "compile"
+    compile_receipt = science._compile_sources(compile_output)
+    write_json(offline / "compile.json", compile_receipt)
+    test_paths = [
+        REPO / "tests/test_native_w23_saved_mph_diagnostic.py",
+        REPO / "tests/test_native_w23_te_science_protocol.py",
+        REPO / "tests/test_native_w23_te_science_runner.py",
+        REPO / "tests/test_g3_results.py",
+        REPO / "tests/test_ephemeral_result_ticket.py",
+        REPO / "tests/test_saved_mph_activity017_public_stack.py",
+        REPO / "tests/test_saved_mph_offline_materialization.py",
+    ]
+    command = [str(EXPECTED_PYTHON), "-m", "pytest", "-q",
+               *(str(path) for path in test_paths),
+               "--junitxml", str(offline / f"activity{ACTIVITY_ID.rsplit('-',1)[1]}_focused_junit.xml")]
+    env = _strict_test_environment(offline)
+    env["W23_OFFLINE_CLASS_TEST_SEED"] = str(compile_output)
+    env["W23_OFFLINE_CLASS_TEST_RECEIPT"] = str(offline / "compile.json")
+    env["W23_OFFLINE_CLASS_TEST_EVIDENCE"] = str(evidence / "materialization-controls")
+    env["W23_ACTIVITY017_SOFTWARE_CAPTURE"] = str(offline / "actual_public_stack")
+    guard_log = Path(env["CODEX_NETWORK_GUARD_LOG"])
+    guard_log.touch(exist_ok=False)
+    result = subprocess.run(command, cwd=REPO, env=env, text=True,
+                            capture_output=True, timeout=600, check=False)
+    (offline / "diagnostic_pytest.stdout.txt").write_text(result.stdout, encoding="utf-8")
+    (offline / "diagnostic_pytest.stderr.txt").write_text(result.stderr, encoding="utf-8")
+    test_receipt = {
+        "status": "PASS_FOCUSED_STRICT_GUARDED_JUNIT" if result.returncode == 0 else "FAIL_FOCUSED_STRICT_GUARDED_JUNIT",
+        "command": command, "cwd": str(REPO), "strict_guard_enabled": True,
+        "environment": {key: env[key] for key in (
+            "TMPDIR", "PYTHONPATH", "CODEX_NETWORK_GUARD_LOG",
+            "CODEX_NETWORK_GUARD_LABEL", "CODEX_NETWORK_GUARD_RUN_ID")},
+        "returncode": result.returncode,
+        "stdout_path": str(offline / "diagnostic_pytest.stdout.txt"),
+        "stderr_path": str(offline / "diagnostic_pytest.stderr.txt"),
+        "junit_path": str(offline / f"activity{ACTIVITY_ID.rsplit('-',1)[1]}_focused_junit.xml"),
+        "junit_sha256": sha256_file(offline / f"activity{ACTIVITY_ID.rsplit('-',1)[1]}_focused_junit.xml") if (offline / f"activity{ACTIVITY_ID.rsplit('-',1)[1]}_focused_junit.xml").is_file() else None,
+        "test_paths": [str(path) for path in test_paths],
+        "network_guard_sha256": sha256_file(Path(env["PYTHONPATH"].split(os.pathsep)[0]) / "sitecustomize.py"),
+    }
+    guard_rows = []
+    if guard_log.is_file():
+        for line in guard_log.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            guard_rows.append(json.loads(line))
+    test_receipt["network_guard"] = {
+        "status": "ACTIVE_NO_DENY_OR_SETUP_ERROR" if (
+            guard_rows and guard_rows[0].get("event") == "GUARD_ACTIVE_BEFORE_CHILD_ENTRYPOINT"
+            and not any(row.get("event") in {"DENIED_BEFORE_SOCKET_OPERATION", "GUARD_SETUP_ERROR"}
+                        for row in guard_rows)) else "FAIL_NOT_ACTIVE_OR_DENIED",
+        "path": str(guard_log), "sha256": sha256_file(guard_log),
+        "event_count": len(guard_rows),
+        "events": [row.get("event") for row in guard_rows],
+    }
+    write_json(offline / "diagnostic_junit_receipt.json", test_receipt)
+    if test_receipt["network_guard"]["status"] != "ACTIVE_NO_DENY_OR_SETUP_ERROR":
+        raise RuntimeError(f"strict offline test guard did not prove active/no-deny state; see {guard_log}")
+    if result.returncode != 0:
+        raise RuntimeError(f"focused offline strict-guard tests failed; see {offline}")
+    return {"runtime_imports": import_receipt, "pip_dependency_check": dependency,
+            "compile": compile_receipt, "focused_tests": test_receipt,
+            "status": "PASS_ALL_OFFLINE_GATES"}
+
+
+def prepare(evidence: Path, *, work: Path, execution_evidence: Path) -> dict[str, Any]:
+    if not evidence.as_posix().startswith(str(EVIDENCE_ROOT.resolve()) + "/"):
+        raise ValueError("--evidence must be a new directory below the candidate W23 evidence root")
+    if evidence.exists():
+        raise FileExistsError(f"candidate evidence already exists: {evidence}")
+    evidence.mkdir(parents=True, exist_ok=False)
+    input_refs = _assert_source_inputs()
+    source_before = _source_files()
+    gates = _compile_and_test(evidence)
+    source_after = _source_files()
+    if source_before != source_after:
+        raise RuntimeError("frozen W23 source closure changed during offline gates")
+    manifest_artifact = science._write_source_manifest_artifact(evidence, source_after)
+    freeze_path = evidence / "freeze.json"
+    approval_path = evidence / f"ROOT_APPROVAL_ACTIVITY{ACTIVITY_ID.rsplit('-',1)[1]}.json"
+    freeze: dict[str, Any] = {
+        "schema_version": 1,
+        "activity_id": ACTIVITY_ID,
+        "candidate_id": CANDIDATE_ID,
+        "candidate_revision": CANDIDATE_REVISION,
+        "status": "FROZEN_AWAITING_ROOT_APPROVAL",
+        "created_at_utc": utc_now(),
+        "scope": "Reopen one preserved Activity009 W23 provisional MPH in a new registered project; reconcile exact Study/SolverSequence/StoreSolution/Dataset bindings and one attached raw count-only singleton and separate requested-unit physical freq[Hz] numerical witness, then read saved complex fields and BMA beta/neff/k0 only through the production result.at_points API. No Study.run or solver.run is dispatched.",
+        "scope_limits": {
+            "diagnostic_only": True,
+            "saved_artifact_readback_only": True,
+            "native_scientific_acceptance": "NOT_ACCEPTED",
+            "field_and_mode_readback": "READ_ONLY_SAVED_SOLUTION_RESULT_AT_POINTS",
+            "study_or_solver_execution": "PROHIBITED",
+            "explicit_study_run_dispatches": 0,
+            "explicit_solver_run_dispatches": 0,
+            "internal_solver_execution_count": "UNKNOWN_NOT_INFERRED_FROM_READBACK",
+            "no_role_guessing": True,
+            "no_outer_inner_tuple_inference": True,
+            "no_frequency_inference_from_config_or_tag": True,
+            "no_saved_model_mutation_or_resave": True,
+            "no_companion_full_recovery_model": True,
+        },
+        "target": {
+            "platform": "macOS", "comsol_root": str(science.INSTALL_ROOT),
+            "required_engine_identity": "COMSOL Multiphysics 6.4.0.293",
+            "jdk_home": str(science.JAVA11), "python_executable": sys.executable,
+            "python_version": sys.version,
+        },
+        "input": {
+            "path": str(SOURCE_MODEL), "bytes": SOURCE_MODEL_BYTES,
+            "sha256": SOURCE_MODEL_SHA256,
+            "role": "Activity009 provisional saved model; copied byte-for-byte into a new registered project before model_load",
+            "prior_activity_reconciliation": {
+                "path": str(SOURCE_RECONCILIATION), "sha256": SOURCE_RECONCILIATION_SHA256,
+                "status": "TERMINAL_POSTPROCESS_FAIL_AFTER_ONE_SUCCEEDED_STUDY_RUN_CLEANUP_VERIFIED",
+                "study_run_dispatch_count": 1, "study_run_job_status": "SUCCEEDED",
+                "runner_exit_code": 2,
+                "native_scientific_acceptance": "NOT_ACCEPTED",
+                "actual_internal_solver_execution_count": "UNKNOWN_INTERNAL_SOLVER_STEPS_NOT_INFERRED",
+            },
+            "root_preservation_cleanup_check": {
+                "path": str(ROOT_PRESERVATION_CHECK), "sha256": ROOT_PRESERVATION_CHECK_SHA256,
+                "scope": "preservation and captured owned cleanup only",
+            },
+            "activity010_preservation_cleanup_check": {
+                "path": str(ACTIVITY010_PRESERVATION_CHECK),
+                "sha256": ACTIVITY010_PRESERVATION_CHECK_SHA256,
+                "scope": "Activity010 artifact/ledger preservation and captured owned cleanup only; no scientific acceptance",
+            },
+        },
+        "official_api_basis": {
+            "solution_info": {
+                "version": "COMSOL 6.4", "doc_id": 7709,
+                "chunks": [23066, 23067],
+                "sha256": "94d28f308be1be1b57d81c40932be6aebfd91e134c221b8e2f7e2235d51b9abb",
+                "documented_contract": "getPNames/getPvals/getPvalsImag/getUnits accept one-based solnums where each solnums[n] is an (outer,inner) tuple; doc example maps (2,4) to return entry 5. getSolnum(outer,true) returns one-based inner solution numbers or an empty array when strict and the outer index is invalid. getOuterSolnum returns an empty array if there are no outer parameters/values. getSol and getSolverSequence accept a one-based outer solution number.",
+            },
+            "study_solver_sequence": {
+                "version": "COMSOL 6.4", "doc_id": 7716,
+                "chunk": 23089,
+                "sha256": "7ab71c87a119f01583dbf0441ec9b032e257c4125aa9994b9d83f72571236546",
+                "documented_query_types": list(STUDY_SEQUENCE_TYPES),
+            },
+            "solver_sequence_type_and_parameter_values": {
+                "version": "COMSOL 6.4", "doc_id": 7714,
+                "chunk": 23081,
+                "sha256": "8fcefe8e2f2171858f49fe53ad6210d4231a6a28651766db67effc39c327a2c5",
+                "documented_contract": "getSequenceType() classifies actual sequence types including SolverSequence, CopySolution, ParametricStore, and Stored. getPNames() returns the sequence parameter names; getPVals(solnum) and getPValsImag(solnum) return actual stored real/imaginary parameter values for the requested solution index. Preserve returned names/values without assigning a frequency, wavelength, time, or eigenvalue role.",
+            },
+            "solver_sequence_parameter_values": {
+                "version": "COMSOL 6.4", "doc_id": 4604,
+                "chunk": 17527,
+                "sha256": "551d3f05317ab35fd2a6aeb37390c7d74979209137d25347b601602ba6b3ba45",
+                "documented_contract": "getPVals(int solnum) exposes actual stored parameter tuples, time values, or real eigenvalues according to the solution sequence; getPValsImag(int solnum) exposes imaginary values. Activity010 records exact getter identity and raw return for the observed inner solnum but does not infer which semantic axis the values represent.",
+                "installed_javap": "COMSOL 6.4.0.293 SolverSequence declares getPNames() -> String[], getPVals(int) -> double[], and getPValsImag(int) -> double[].",
+            },
+            "copy_solution": {
+                "version": "COMSOL 6.4", "doc_id": 4617, "chunk": 17546,
+                "sha256": "ceb3130ca7cf0085b539ade97d9c2f8c66b6c48e07ac1764769b0e91a494371b",
+                "property_read": "sol",
+            },
+            "store_solution": {
+                "version": "COMSOL 6.4", "doc_id": 4644, "chunk": 17597,
+                "sha256": "5f98a43c69e60ccd3c8c8666beba64607b8e4f74e965322e95c6978ce01c809b",
+                "property_read": "sol",
+            },
+            "boundary_mode_analysis": {
+                "version": "COMSOL 6.4", "doc_id": 26574,
+                "chunk": 112469, "pdf_page": 91,
+                "sha256": "e3bb06e25ac37dcdf51d70f56b2ab47d8d5057b475cad321456e1d160c7154cc",
+                "documented_contract": "Boundary Mode Analysis uses beta_i=j*lambda and neff_i=beta_i/k0; this is the BMA relation, not ordinary Mode Analysis beta=imag(alpha).",
+            },
+        },
+        "limits": {
+            "max_owned_server_processes": 1,
+            "max_worker_sessions": 1,
+            "max_gui_processes": 0,
+            "max_study_run_calls": 0,
+            "max_solver_run_calls": 0,
+            "max_seconds_from_server_birth": int(MAX_BIRTH_SECONDS),
+            "cleanup_reserve_seconds": int(CLEANUP_RESERVE_SECONDS),
+            "retry_unknown_or_nonterminal_worker_request": False,
+            "stop_after_first_unknown_or_nonterminal_worker_request": True,
+            "managed_operation_allowlist": ["server_connect", "model_load", "model.inspect", "dataset.list", "dataset.solution_indices", "operation_call/code.execute_java(saved_solution_diagnostic only)", "operation_call/result.at_points(exact public {x,y} objects with um/spatial: four dset1/sol1 field grids with exact ordered FIELD_REQUESTED_UNITS [V/m,A/m,1], two dset1/sol1 freq reads requested Hz/GHz, dset2/sol2 and dset3/sol3 beta/neff/k0 port centers requested [1/m,1,1/m]; exactly eight slots)"],
+        },
+        "read_only_call_plan": {
+            "ordered_point_slots": ["freq_Hz", "freq_GHz", "fields_output_x8_321", "fields_output_x8_641", "fields_input_xminus10_321", "fields_input_xminus10_641", "mode_point_bmaInput", "mode_point_bmaOutput"],
+            "project_create_before_birth_permissions": ["inspect", "project_write", "trusted_code"],
+            "load_method": "production managed model_load for the registered project; ModelRef/revision and backend project binding verified",
+            "model_input_preparation": "copy exact 009 preserved MPH SHA/size into new registered project workspace; do not write source artifact",
+            "managed_dataset_readback": "dataset.list then dataset.solution_indices once per native Solution dataset, terminal wait at most once per dispatched job",
+            "java_readback": "one code.execute_java call with phase=saved_solution_diagnostic; same exact SolutionInfo receiver receives documented int[][] row tuples derived only from getSolnum(outer,true); on each same observed solver-sequence tag capture typed getSize/getSizeMulti/getPNames/getPVals/getPValsImag/getUnit and exact level/outer metadata. Preserve SolutionInfo matrix errors and keep tuple completeness false.",
+            "study_tree_readback": "query all seven documented Study.getSolverSequences types; capture exact sequence tags/types/attached-study/tree plus StoreSolution/CopySolution sol properties and Dataset solution links",
+            "main_count_singleton_witness": "count-only raw numeric/unit-label evidence; accept only exact native Hz/GHz display labels without changing raw values/units; no physical unit interpretation; require one exact attached Parametric/SolverSequence bound by StudyStep.study/studystep and production dataset.solution; production singleton additionally requires complete stable actual model.study().tags() membership and final solution.study() identity with raw getter evidence; Java and Worker getSize/getSizeMulti/getPNames/getPVals/getPValsImag/getUnit must match; SolutionInfo getLevelNames=[freq], getLevels=1, getOuterSolnum=[], getPNamesOuter=[], getPUnitsOuter=[]; leave parameters_complete and axis_metadata_complete false and never synthesize outer=1",
+            "physical_frequency_witness": "two sequential dset1/sol1 result.at_points of freq at [-10,0] um with EvaluationSpec.units=[Hz] and [GHz]; same actual ModelRef/revision and Worker instance/generation/server epoch; require both actual real/imag native numerical values scale by 1e9 at reltol1e-12 abstol0; identical raw values with changed labels FAIL/UNVERIFIED and escalate Root; actual production Interp applies per-expression setIndex(unit) and verifies exact native getStringArray(expr/unit) arrays before and after numeric read; those arrays bind the actual value/Hz label, data, expression and coordinate readback; no external scaling or getter relabeling",
+            "bma_mode_witness": "require bmaInput/bmaOutput configured PortName 1/2 and modeFreq=f0; map their solver StudyStep to exact following StoreSolution.sol and one managed Solution dataset; reconcile one stored raw lambda getter (unit label preserved, numerical consistency only) with production result.at_points beta_1/neff_1 for native PortName1 and beta_2/neff_2 for native PortName2 plus common k0; request units [1/m,1,1/m] and reject wrong-port expressions even if numeric values match, and cross-check beta=j*lambda, neff=beta/k0, k0=2*pi*observed_freq/c",
+            "public_point_contract": "Production public points are exact coordinate objects {x:number,y:number}, coordinate_unit=um, frame=spatial. Internal coordinate matrices and all frozen physical grids are unchanged; closedallowlist rejects arrays/extra/missingkeys/wrongdim/unit/nonfinite/bool before dispatch.",
+            "field_readback": "production result.at_points only: dset1/sol1 complex full RAW_FIELD_EXPRESSIONS on x=-10 um and x=8 um grids, 321 and 641 registered samples from y=-8 um to +8 um; explicit exact ordered EvaluationSpec.units from FIELD_UNITS (dimensionless nx/ny requested 1), actual native getStringArray(expr/unit) before and after data required; derive x-normal from native nx/ny; compute independent Simpson powers/overlap and 321-to-641 refinement from saved arrays",
+            "forbidden": ["Study.run", "sol.run*", "sequence generation", "model save", "result.mode_overlap", "outer/inner selector inference", "formal W23 scientific acceptance"],
+            "saved_mph_reopen": "the one initial model_load opens the saved MPH; no model.save or second reopen is allowed",
+        },
+        "work_path": str(work),
+        "execution_evidence_path": str(execution_evidence),
+        "approval_path_expected": str(approval_path),
+        "native_invocation_argv": _native_argv(freeze_path, "<freeze-sha256>", approval_path,
+                                                SOURCE_MODEL, work, execution_evidence),
+        "source_files": source_after,
+        "source_manifest_sha256": _source_digest(source_after),
+        "source_manifest_artifact": manifest_artifact,
+        "offline_preflight": gates,
+        "native_acceptance": "NOT_RUN",
+    }
+    # A freeze is publishable only when its own relative compiler tree exists.
+    material = science._check_offline_receipts(freeze_path, freeze)
+    write_json(evidence / "executable_offline_material_check.json", material)
+    write_json(freeze_path, freeze)
+    freeze_sha = sha256_file(freeze_path)
+    argv = _native_argv(freeze_path, freeze_sha, approval_path,
+                        SOURCE_MODEL, work, execution_evidence)
+    packet = {
+        "schema_version": 1,
+        "activity_id": ACTIVITY_ID,
+        "candidate_id": CANDIDATE_ID,
+        "candidate_revision": CANDIDATE_REVISION,
+        "status": "PREPARED_AWAITING_ROOT_REVIEW_AND_EXACT_ADMISSION",
+        "source_root": str(REPO),
+        "freeze_path": str(freeze_path), "freeze_sha256": freeze_sha,
+        "source_manifest_path": str(evidence / "source_manifest.json"),
+        "source_manifest_sha256": freeze["source_manifest_sha256"],
+        "source_count": len(source_after),
+        "source_bytes": sum(int(row["bytes"]) for row in source_after.values()),
+        "source_changes_from_activity010_base": [
+            "tools/w23_te_science_protocol.py: exact attached raw count-only no-outer singleton plus separate native Interp freq[Hz] witness, BMA StoreSolution formula cross-check, and strict production complex point-readback unit/shape/normal validation",
+            "tools/run_native_w23_saved_mph_diagnostic.py: Current frozen activity exact requested-unit/per-port result.at_points allowlist, zero-Study field/mode reads, independent quadrature and saved-mode readback gates",
+            "tests/test_native_w23_te_science_protocol.py: positive/negative tests for frequency singleton, dataset/study binding, BMA formulas, native units and incomplete axes",
+            "tests/test_native_w23_te_science_runner.py: unchanged production science-runner contract regression included because readback helpers are shared",
+            "tests/test_native_w23_saved_mph_diagnostic.py and tests/test_g3_results.py: guard, dispatch, attached count-only, and no-axis-fabrication controls",
+            "docs/full_project_execution/w23_overlap/W23_TE_FIXTURE_PROPOSAL.md: append current frozen activity successor criteria; Activity010 failure/evidence remains unchanged",
+        ],
+        "previous_activity009_preservation_check": input_refs["root_preservation_check"],
+        "previous_activity010_preservation_check": input_refs["activity010_preservation_check"],
+        "source_reconciliation": input_refs["source_reconciliation"],
+        "input_model": input_refs["source_model"],
+        "offline_gates": gates,
+        "native_invocation": {
+            "argv": argv, "argv_sha256": sha256_json(argv),
+            "cwd": str(REPO),
+            "environment": {"TMPDIR": "/private/tmp", "PYTHONPATH": str(REPO),
+                             "CODEX_NETWORK_GUARD_LOG": None,
+                             "CODEX_NETWORK_GUARD_LABEL": None,
+                             "CODEX_NETWORK_GUARD_RUN_ID": None},
+            "strict_test_network_guard": "NOT_SET_FOR_NATIVE",
+            "tool_sandbox_permissions": "require_escalated",
+            "work_path_expected_absent": str(work),
+            "evidence_path_expected_absent": str(execution_evidence),
+            "root_approval_path_expected": str(approval_path),
+        },
+        "limits": freeze["limits"],
+        "native_scientific_acceptance": "NOT_RUN; diagnostic readback only",
+        "prior_activity009": "FAIL_OR_INCOMPLETE; one durable Study.run SUCCEEDED then postprocessing failed; no replay",
+    }
+    write_json(evidence / f"ACTIVITY{ACTIVITY_ID.rsplit('-',1)[1]}_REVIEW_PACKET.json", packet)
+    receipt = {
+        "status": "PREPARED_AWAITING_ROOT_REVIEW_AND_EXACT_ADMISSION",
+        "activity_id": ACTIVITY_ID, "candidate_id": CANDIDATE_ID,
+        "candidate_revision": CANDIDATE_REVISION,
+        "freeze_path": str(freeze_path), "freeze_sha256": freeze_sha,
+        "packet_path": str(evidence / f"ACTIVITY{ACTIVITY_ID.rsplit('-',1)[1]}_REVIEW_PACKET.json"),
+        "packet_sha256": sha256_file(evidence / f"ACTIVITY{ACTIVITY_ID.rsplit('-',1)[1]}_REVIEW_PACKET.json"),
+        "source_count": len(source_after),
+        "study_run_dispatches_allowed": 0, "solver_run_dispatches_allowed": 0,
+        "native_process_started": False,
+        "native_scientific_acceptance": "NOT_RUN",
+    }
+    write_json(evidence / "prepare_receipt.json", receipt)
+    return {**receipt, "packet": packet}
+
+
+def _validate_freeze(freeze_path: Path, expected_sha256: str) -> dict[str, Any]:
+    if not freeze_path.is_file() or sha256_file(freeze_path) != expected_sha256:
+        raise RuntimeError("freeze path is absent or its SHA-256 does not match the exact reviewed candidate")
+    freeze = json.loads(freeze_path.read_text(encoding="utf-8"))
+    if (freeze.get("status") != "FROZEN_AWAITING_ROOT_APPROVAL"
+            or freeze.get("activity_id") != ACTIVITY_ID
+            or freeze.get("candidate_id") != CANDIDATE_ID
+            or freeze.get("candidate_revision") != CANDIDATE_REVISION
+            or freeze.get("source_manifest_sha256") != _source_digest(freeze.get("source_files", {}))):
+        raise RuntimeError("freeze identity/status/source-map digest is invalid")
+    if _source_files() != freeze.get("source_files"):
+        raise RuntimeError("candidate source closure changed after freeze")
+    science._validate_source_manifest_artifact(freeze_path, freeze)
+    # Recheck the actual freeze parent, including metadata-only successors.
+    science._check_offline_receipts(freeze_path, freeze)
+    return freeze
+
+
+def _validate_approval(approval: Mapping[str, Any], freeze: Mapping[str, Any],
+                       freeze_sha256: str, argv: list[str]) -> None:
+    expected = {
+        "status": "ROOT_APPROVED_FOR_EXACT_FROZEN_CANDIDATE",
+        "activity_id": ACTIVITY_ID,
+        "candidate_id": CANDIDATE_ID,
+        "candidate_revision": CANDIDATE_REVISION,
+        "freeze_sha256": freeze_sha256,
+        "source_manifest_sha256": freeze["source_manifest_sha256"],
+        "native_argv_sha256": sha256_json(argv),
+        "max_owned_server_processes": 1, "max_worker_sessions": 1,
+        "max_gui_processes": 0, "max_study_run_calls": 0,
+        "max_solver_run_calls": 0,
+        "max_seconds_from_server_birth": int(MAX_BIRTH_SECONDS),
+        "cleanup_reserve_seconds": int(CLEANUP_RESERVE_SECONDS),
+        "retry_unknown_or_nonterminal_worker_request": False,
+        "read_only_call_plan_sha256": sha256_json(freeze["read_only_call_plan"]),
+    }
+    mismatches = {key: {"expected": value, "observed": approval.get(key)}
+                  for key, value in expected.items() if approval.get(key) != value}
+    invocation = approval.get("exact_native_invocation")
+    if isinstance(invocation, Mapping):
+        if invocation.get("argv") != argv:
+            mismatches["exact_native_invocation.argv"] = {"expected": argv, "observed": invocation.get("argv")}
+        if invocation.get("cwd") != str(REPO):
+            mismatches["exact_native_invocation.cwd"] = {"expected": str(REPO), "observed": invocation.get("cwd")}
+        expected_environment = {
+            "TMPDIR": "/private/tmp", "PYTHONPATH": str(REPO),
+            "CODEX_NETWORK_GUARD_LOG": None,
+            "CODEX_NETWORK_GUARD_LABEL": None,
+            "CODEX_NETWORK_GUARD_RUN_ID": None,
+        }
+        if invocation.get("environment") != expected_environment:
+            mismatches["exact_native_invocation.environment"] = {
+                "expected": expected_environment,
+                "observed": invocation.get("environment"),
+            }
+    else:
+        mismatches["exact_native_invocation"] = {"expected": "exact argv/cwd/environment object", "observed": None}
+    if mismatches:
+        raise RuntimeError("exact frozen activity root approval mismatch: " + json.dumps(mismatches, ensure_ascii=False, sort_keys=True))
+
+
+def _bind_project_create(response: Mapping[str, Any], helpers: Mapping[str, Any],
+                         expected_workspace: Path) -> dict[str, Any]:
+    science.PROJECT_LABEL = PROJECT_LABEL
+    return science._bind_authoritative_project(response, helpers,
+                                               expected_workspace=expected_workspace)
+
+
+def _allowed_diagnostic_dispatch(request: Mapping[str, Any]) -> bool:
+    operation = request.get("operation")
+    if operation not in ALLOWED_MANAGED_OPERATIONS:
+        return False
+    if operation != "operation_call":
+        return True
+    arguments = request.get("arguments")
+    if not isinstance(arguments, Mapping) or set(arguments) != {"operation_id", "arguments"}:
+        return False
+    operation_id = arguments.get("operation_id")
+    operation_arguments = arguments.get("arguments")
+    if operation_id == "result.at_points":
+        return _allowed_saved_point_read(operation_arguments)
+    if (operation_id != "code.execute_java"
+            or not isinstance(operation_arguments, Mapping)
+            or set(operation_arguments) != {"source_artifact", "entrypoint", "arguments", "mode"}):
+        return False
+    fixture_arguments = operation_arguments.get("arguments")
+    return (
+        operation_arguments.get("source_artifact") == FIXTURE.name
+        and operation_arguments.get("entrypoint") == "NativeW23TEScienceFixture#run"
+        and operation_arguments.get("mode") == "trusted"
+        and isinstance(fixture_arguments, Mapping)
+        and fixture_arguments.get("phase") == "saved_solution_diagnostic"
+        and set(fixture_arguments) == {"phase"}
+    )
+
+
+def _field_points(x_um: float, sample_count: int) -> list[list[float]]:
+    if sample_count not in {protocol.SAMPLE_COUNT, protocol.REFINED_SAMPLE_COUNT}:
+        raise ValueError("field sample count is outside the frozen 321/641 grid")
+    return [[x_um, -8.0 + 16.0 * index / (sample_count - 1)]
+            for index in range(sample_count)]
+
+
+def _public_points(points: list[list[float]]) -> list[dict[str, float]]:
+    """Canonical public objects; preserve the frozen internal x/y values."""
+    converted = []
+    for point in points:
+        if (not isinstance(point, (list, tuple)) or len(point) != 2
+                or any(type(value) not in (int, float) or not math.isfinite(value) for value in point)):
+            raise ValueError("saved diagnostic points must be finite exact 2D numeric coordinates")
+        converted.append({"x": point[0], "y": point[1]})
+    return converted
+
+
+def _allowed_saved_point_read(raw_arguments: Any) -> bool:
+    if not isinstance(raw_arguments, Mapping) or set(raw_arguments) != {
+            "spec", "points", "coordinate_unit", "frame"}:
+        return False
+    spec = raw_arguments.get("spec")
+    if (not isinstance(spec, Mapping)
+            or set(spec) not in ({"expressions", "solution", "complex_mode"},
+                                 {"expressions", "solution", "complex_mode", "units"})
+            or spec.get("complex_mode") != "preserve"
+            or raw_arguments.get("coordinate_unit") != "um"
+            or raw_arguments.get("frame") != "spatial"):
+        return False
+    solution = spec.get("solution")
+    if not isinstance(solution, Mapping) or set(solution) != {"dataset", "solution"}:
+        return False
+    dataset, solution_tag = solution.get("dataset"), solution.get("solution")
+    expressions = spec.get("expressions")
+    points = raw_arguments.get("points")
+    if not isinstance(expressions, list) or not isinstance(points, list):
+        return False
+    if (not points or any(not isinstance(point, Mapping) or set(point) != {"x", "y"}
+                         or any(type(value) not in (int, float) or not math.isfinite(value) for value in point.values())
+                         for point in points)):
+        return False
+    if (dataset == "dset1" and solution_tag == "sol1"
+            and expressions == list(RAW_FIELD_EXPRESSIONS)
+            and spec.get("units") == list(FIELD_REQUESTED_UNITS)):
+        return any(points == _public_points(_field_points(x_um, count))
+                   for x_um in (-10.0, 8.0)
+                   for count in (protocol.SAMPLE_COUNT, protocol.REFINED_SAMPLE_COUNT))
+    if (dataset, solution_tag) == ("dset1", "sol1") and expressions == list(FREQUENCY_EXPRESSIONS):
+        return points == _public_points([[-10.0, 0.0]]) and spec.get("units") in (["Hz"], ["GHz"])
+    if (dataset, solution_tag) in {("dset2", "sol2"), ("dset3", "sol3")}:
+        port = MODE_DATASETS[dataset][2]
+        expected_expressions = protocol.bma_point_expressions(port)
+        x_um = MODE_DATASETS[dataset][3]
+        return (expressions == list(expected_expressions) and points == _public_points([[x_um, 0.0]])
+                and spec.get("units") == list(mode_units(port).values()))
+    return False
+
+
+def _set_dispatch_allowlist(daemon: Any, journal_path: Path) -> None:
+    original = daemon.dispatch
+
+    def guarded(request: Mapping[str, Any]) -> dict[str, Any]:
+        operation = request.get("operation")
+        arguments = request.get("arguments")
+        allowed = _allowed_diagnostic_dispatch(request)
+        if not allowed:
+            row = {"at_utc": utc_now(), "status": "BLOCKED_NOT_IN_DIAGNOSTIC_ALLOWLIST",
+                   "operation": operation, "arguments": arguments}
+            with journal_path.open("a", encoding="utf-8") as stream:
+                stream.write(json.dumps(row, ensure_ascii=False, default=str) + "\n")
+                stream.flush()
+                os.fsync(stream.fileno())
+            raise RuntimeError("managed operation blocked by saved-MPH diagnostic allowlist")
+        with journal_path.open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps({"at_utc": utc_now(), "status": "DISPATCHED",
+                                     "operation": operation,
+                                     "operation_id": (arguments.get("operation_id")
+                                                      if isinstance(arguments, Mapping) else None)},
+                                    ensure_ascii=False, default=str) + "\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        return original(request)
+    daemon.dispatch = guarded
+
+
+def _query_once(daemon: Any, operation: str, arguments: dict[str, Any],
+                ref: dict[str, Any], revision: int, *, project_id: str,
+                deadline_epoch: float, evidence: Path, label: str) -> tuple[dict[str, Any], dict[str, Any], int]:
+    response = science._dispatch(daemon, operation, arguments,
+                                 project_id=project_id, ref=ref, revision=revision,
+                                 timeout_s=min(120.0, max(1.0, deadline_epoch - time.time() - CLEANUP_RESERVE_SECONDS)))
+    write_json(evidence / f"{label}_dispatch_response.json", response)
+    job_id = science._job_id(response)
+    if job_id is not None:
+        response = science._wait_job(daemon, response,
+                                     deadline_epoch=deadline_epoch,
+                                     cleanup_reserve_s=CLEANUP_RESERVE_SECONDS,
+                                     label=label, evidence=evidence)
+    write_json(evidence / f"{label}_terminal_response.json", response)
+    if job_id is not None:
+        job = daemon.store.job(job_id)
+        if not isinstance(job, Mapping) or job.get("status") not in {"SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED", "UNKNOWN", "LOST"}:
+            raise RuntimeError(f"{label} did not reach a durable terminal job state; do not issue another request")
+        if job.get("status") in {"UNKNOWN", "QUEUED", "RUNNING"}:
+            raise RuntimeError(f"{label} durable job is {job.get('status')}; stop issuing requests")
+    new_ref, new_revision = science._update_ref(response, daemon, ref, revision)
+    return response, new_ref, new_revision
+
+
+def _copy_input_into_registered_workspace(source: Path, workspace: Path,
+                                          evidence: Path) -> Path:
+    target_dir = workspace / "inputs"
+    target_dir.mkdir(parents=True, exist_ok=False)
+    target = target_dir / "activity009-coarse-phase0-provisional.mph"
+    if target.exists():
+        raise FileExistsError(target)
+    shutil.copyfile(source, target)
+    with target.open("rb") as stream:
+        os.fsync(stream.fileno())
+    identity = {"source_path": str(source), "source_bytes": source.stat().st_size,
+                "source_sha256": sha256_file(source), "project_copy_path": str(target),
+                "project_copy_bytes": target.stat().st_size,
+                "project_copy_sha256": sha256_file(target),
+                "byte_exact_copy": sha256_file(source) == sha256_file(target)
+                    and source.stat().st_size == target.stat().st_size,
+                "source_opened_read_only": True, "model_mutation_or_resave": False}
+    if identity["source_sha256"] != SOURCE_MODEL_SHA256 or not identity["byte_exact_copy"]:
+        raise RuntimeError("registered-project MPH copy failed exact SHA/size verification")
+    write_json(evidence / "saved_model_input_copy.json", identity)
+    return target
+
+
+def _load_saved_model_once(daemon: Any, model_path: Path, helpers: Mapping[str, Any],
+                           evidence: Path, deadline_epoch: float) -> tuple[dict[str, Any], int, str]:
+    project_id = science._active_project_id()
+    response = science._dispatch(daemon, "model_load", {"path": str(model_path)},
+                                 project_id=project_id, timeout_s=120.0)
+    write_json(evidence / "model_load_dispatch_response.json", response)
+    job_id = science._job_id(response)
+    if job_id is not None:
+        response = science._wait_job(daemon, response,
+                                     deadline_epoch=deadline_epoch,
+                                     cleanup_reserve_s=CLEANUP_RESERVE_SECONDS,
+                                     label="model_load", evidence=evidence)
+    write_json(evidence / "model_load_terminal_response.json", response)
+    if response.get("success") is not True:
+        raise RuntimeError("managed model_load failed: " + json.dumps(response, ensure_ascii=False, default=str)[:8000])
+    execution = response.get("execution")
+    data = response.get("data")
+    ref = execution.get("model_ref") if isinstance(execution, Mapping) else None
+    revision = execution.get("revision") if isinstance(execution, Mapping) else None
+    if (not isinstance(ref, Mapping) or type(revision) is not int
+            or not isinstance(ref.get("model_tag"), str)):
+        raise RuntimeError("model_load response lacks exact managed ModelRef/revision")
+    binding = daemon.backend.model_project_binding(ref)
+    if (not isinstance(binding, Mapping) or binding.get("attribution") != "PROJECT_BOUND"
+            or binding.get("project_id") != project_id):
+        raise RuntimeError("model_load response is not bound to the exact registered diagnostic project")
+    model_tag = str(data.get("model_tag") if isinstance(data, Mapping) else ref.get("model_tag"))
+    inspect = science._dispatch(daemon, "model.inspect", {"detail": "summary"},
+                                project_id=project_id, ref=dict(ref), revision=revision,
+                                timeout_s=60.0)
+    if inspect.get("success") is not True:
+        raise RuntimeError("managed model.inspect after reopen failed")
+    write_json(evidence / "model_project_binding.json", {
+        "status": "PASS_SAVED_MODEL_LOADED_AND_PROJECT_BOUND",
+        "source_sha256": SOURCE_MODEL_SHA256, "loaded_model_path": str(model_path),
+        "project_id": project_id, "model_ref": dict(ref), "revision": revision,
+        "model_tag": model_tag, "backend_binding": dict(binding),
+        "model_inspect_response": inspect,
+        "study_or_solver_invoked": False,
+    })
+    return dict(ref), revision, model_tag
+
+
+def _response_body(response: Mapping[str, Any]) -> dict[str, Any]:
+    if response.get("success") is not True:
+        raise RuntimeError("managed readback failed: " + json.dumps(response, ensure_ascii=False, default=str)[:8000])
+    return science._operation_body(response)
+
+
+def _at_points_once(daemon: Any, *, dataset: str, solution: str,
+                    expressions: tuple[str, ...], points: list[list[float]],
+                    ref: dict[str, Any], revision: int, project_id: str,
+                    deadline_epoch: float, evidence: Path, label: str,
+                    requested_units: tuple[str, ...] | None = None
+                    ) -> tuple[dict[str, Any], dict[str, Any], int]:
+    arguments = {
+        "spec": {"expressions": list(expressions),
+                 "solution": {"dataset": dataset, "solution": solution},
+                 "complex_mode": "preserve"},
+        "points": _public_points(points), "coordinate_unit": "um", "frame": "spatial",
+    }
+    if requested_units is not None:
+        arguments["spec"]["units"] = list(requested_units)
+    request = {"operation_id": "result.at_points", "arguments": arguments}
+    if not _allowed_saved_point_read(arguments):
+        raise RuntimeError(f"{label} point readback is outside the exact saved-MPH allowlist")
+    response, ref, revision = _query_once(
+        daemon, "operation_call", request, ref, revision,
+        project_id=project_id, deadline_epoch=deadline_epoch,
+        evidence=evidence, label=label)
+    body = _response_body(response)
+    write_json(evidence / f"{label}_native_result_raw.json", {
+        "request": request, "response": response, "body": body,
+        "scope": "read-only saved solution result.at_points; no Study.run or solver.run",
+        "native_scientific_acceptance": "NOT_EVALUATED",
+    })
+    return body, ref, revision
+
+
+def _frequency_readback_once(
+    daemon: Any, server: Any, *, requested_unit: str, ref: dict[str, Any], revision: int,
+    project_id: str, deadline_epoch: float, evidence: Path, count_witness: Mapping[str, Any],
+    expected_context: Mapping[str, Any] | None = None,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], int]:
+    if requested_unit not in {"Hz", "GHz"}:
+        raise RuntimeError("frequency-control unit is outside the frozen Hz/GHz pair")
+    if time.time() >= deadline_epoch - CLEANUP_RESERVE_SECONDS:
+        raise TimeoutError("frequency-control readback reached cleanup reserve")
+    label = "physical_frequency_" + requested_unit
+    def epoch(stage: str) -> dict[str, Any]:
+        health = server.worker.health(timeout_s=5.0)
+        write_json(evidence / f"{label}_worker_health_{stage}.json", health)
+        if (not isinstance(health, Mapping) or health.get("ok") is not True
+                or health.get("connected") is not True or health.get("queued_or_running") != 0
+                or not isinstance(health.get("instance_id"), str) or not health["instance_id"]
+                or type(health.get("generation")) is not int or health["generation"] <= 0
+                or not isinstance(health.get("server"), str) or not health["server"]):
+            raise RuntimeError("frequency-control actual Worker health/epoch is not quiescent and bound")
+        return {key: health[key] for key in ("instance_id", "generation", "server")}
+    before_epoch = epoch("before")
+    before_ref, before_revision = dict(ref), revision
+    if expected_context is not None:
+        if (before_ref != expected_context.get("model_ref_before")
+                or before_revision != expected_context.get("revision_before")
+                or before_epoch != expected_context.get("worker_epoch_before")):
+            write_json(evidence / f"{label}_pre_dispatch_identity_refusal.json", {
+                "status": "FAIL_CONTEXT_CHANGED_BEFORE_SECOND_UNIT_READ", "model_ref": before_ref,
+                "revision": before_revision, "worker_epoch": before_epoch,
+                "expected_context": dict(expected_context), "native_point_dispatch_issued": False})
+            raise RuntimeError("frequency-control ModelRef/revision/Worker epoch changed before second unit dispatch")
+    body, ref, revision = _at_points_once(
+        daemon, dataset="dset1", solution="sol1", expressions=FREQUENCY_EXPRESSIONS,
+        points=[[-10.0, 0.0]], ref=ref, revision=revision, project_id=project_id,
+        deadline_epoch=deadline_epoch, evidence=evidence, label=label,
+        requested_units=(requested_unit,))
+    after_epoch = epoch("after")
+    context = {"model_ref_before": before_ref, "model_ref_after": dict(ref),
+               "revision_before": before_revision, "revision_after": revision,
+               "worker_epoch_before": before_epoch, "worker_epoch_after": after_epoch}
+    write_json(evidence / f"{label}_exact_context.json", context)
+    if before_ref != ref or before_revision != revision or before_epoch != after_epoch:
+        raise RuntimeError("frequency-control ModelRef/revision/Worker epoch changed during unit read; no further point dispatch")
+    decoded = protocol.decode_production_complex_point_readback(
+        body, dataset_tag="dset1", solution_tag="sol1", expressions=FREQUENCY_EXPRESSIONS,
+        expected_points=[[-10.0, 0.0]], expected_solution_count=1, plane_id=label,
+        expected_count_witness=count_witness, expected_expression_units={"freq": requested_unit},
+        expected_requested_units=(requested_unit,), scalar_frequency=True)
+    write_json(evidence / f"{label}_decoded.json", decoded)
+    return decoded, context, ref, revision
+
+
+def validate_fixture_readback(readback: Mapping[str, Any]) -> dict[str, Any]:
+    if readback.get("diagnostic_phase") != "saved_solution_diagnostic":
+        raise ValueError("Java readback is not the frozen diagnostic phase")
+    if readback.get("explicit_study_or_solver_run_calls_in_this_phase") != 0:
+        raise ValueError("fixture reports a forbidden Study/solver run call")
+    if readback.get("native_scientific_acceptance") != "NOT_ACCEPTED_DIAGNOSTIC_READBACK_ONLY":
+        raise ValueError("diagnostic readback must remain explicitly NOT_ACCEPTED")
+    if readback.get("internal_solver_execution_count") != "UNKNOWN_NOT_INFERRED_FROM_READBACK":
+        raise ValueError("readback cannot infer internal solver execution count")
+    queries = readback.get("study_solver_sequence_queries")
+    if not isinstance(queries, list) or [row.get("arguments", [None])[0] for row in queries] != list(STUDY_SEQUENCE_TYPES):
+        raise ValueError("diagnostic did not preserve all seven exact Study.getSolverSequences query types")
+    for row in queries:
+        if row.get("status") not in {"CAPTURED", "ERROR"}:
+            raise ValueError("Study sequence query lacks explicit terminal readback status")
+    datasets = readback.get("datasets")
+    solutions = readback.get("solver_sequences")
+    dataset_info = readback.get("dataset_solution_info")
+    if not isinstance(datasets, list) or not isinstance(solutions, list) or not isinstance(dataset_info, list):
+        raise ValueError("diagnostic omitted datasets, solver trees, or exact dataset-bound SolutionInfo reads")
+    matrix_calls = []
+    direct_sequence_value_calls = 0
+    solution_info_receivers = 0
+
+    def require_raw_outcome(call: Mapping[str, Any], label: str) -> None:
+        status = call.get("status")
+        if status == "CAPTURED":
+            if "actual_return_type" not in call or "return_value" not in call:
+                raise ValueError(f"{label} lacks its raw captured return type/value")
+        elif status == "ERROR":
+            if not isinstance(call.get("error_type"), str) or "error" not in call:
+                raise ValueError(f"{label} lacks its raw getter error")
+        else:
+            raise ValueError(f"{label} lacks a captured value or explicit error")
+
+    for row in solutions:
+        sequence_type = row.get("sequence_receiver_type")
+        parameter_names = row.get("parameter_names_getter")
+        if not isinstance(parameter_names, Mapping) or parameter_names.get("method") != "getPNames":
+            raise ValueError("SolverSequence.getPNames() getter receipt is missing")
+        if sequence_type is not None and parameter_names.get("receiver_type") != sequence_type:
+            raise ValueError("SolverSequence.getPNames receiver differs from the observed sequence object")
+        require_raw_outcome(parameter_names, "SolverSequence.getPNames")
+
+    for row in list(solutions) + list(dataset_info):
+        info = row.get("solution_info")
+        if not isinstance(info, Mapping):
+            continue
+        receiver_type = info.get("solution_info_receiver_type")
+        info_getter = info.get("solution_info_getter")
+        if not isinstance(info_getter, Mapping):
+            raise ValueError("SolutionInfo receiver getter was not preserved")
+        require_raw_outcome(info_getter, "SolverSequence.getSolutioninfo")
+        if receiver_type is not None:
+            if not isinstance(receiver_type, str) or not receiver_type:
+                raise ValueError("SolutionInfo actual receiver type is malformed")
+            solution_info_receivers += 1
+        calls = info.get("metadata_calls", [])
+        if not isinstance(calls, list):
+            raise ValueError("SolutionInfo metadata calls are not an ordered raw list")
+        for call in calls if isinstance(calls, list) else []:
+            if not isinstance(call, Mapping):
+                raise ValueError("SolutionInfo metadata call is not an object")
+            if receiver_type is not None and call.get("receiver_type") != receiver_type:
+                raise ValueError("SolutionInfo getter receiver type differs from the exact getSolutioninfo receiver")
+            require_raw_outcome(call, f"SolutionInfo.{call.get('method')}")
+            if call.get("method") not in {"getPNames", "getPvals", "getPvalsImag", "getUnits"}:
+                continue
+            matrix_calls.append(call)
+            args = call.get("arguments")
+            if call.get("argument_types") != ["int[][]"]:
+                raise ValueError("SolutionInfo matrix getter did not preserve declared int[][] argument type")
+            if (not isinstance(args, list) or len(args) != 1
+                    or not isinstance(args[0], list) or len(args[0]) != 1
+                    or not isinstance(args[0][0], list) or len(args[0][0]) != 2
+                    or any(type(value) is not int or value < 1 for value in args[0][0])):
+                raise ValueError("SolutionInfo matrix getter argument is not one documented one-based (outer,inner) tuple")
+        info_pairs = info.get("observed_one_based_outer_inner_pairs")
+        sequence_reads = info.get("solver_sequence_parameter_reads")
+        if not isinstance(info_pairs, list) or not isinstance(sequence_reads, list):
+            raise ValueError("SolutionInfo to SolverSequence one-based pair observations are missing")
+        normalized_pairs: set[tuple[int, int]] = set()
+        for pair in info_pairs:
+            if (not isinstance(pair, list) or len(pair) != 2
+                    or any(type(value) is not int or value < 1 for value in pair)):
+                raise ValueError("observed SolutionInfo tuple is not a positive one-based (outer,inner) pair")
+            normalized_pairs.add((pair[0], pair[1]))
+        seen_sequence_pairs: set[tuple[int, int]] = set()
+        for pair_row in sequence_reads:
+            if not isinstance(pair_row, Mapping):
+                raise ValueError("SolverSequence parameter read is not an object")
+            outer, inner = pair_row.get("outer"), pair_row.get("inner_solnum")
+            if type(outer) is not int or type(inner) is not int or (outer, inner) not in normalized_pairs:
+                raise ValueError("SolverSequence getPVals probe is not bound to an observed SolutionInfo tuple")
+            seen_sequence_pairs.add((outer, inner))
+            for key, method in (("real_parameter_values", "getPVals"),
+                                ("imaginary_parameter_values", "getPValsImag")):
+                call = pair_row.get(key)
+                if not isinstance(call, Mapping) or call.get("method") != method:
+                    raise ValueError(f"SolverSequence {method}(inner_solnum) call is missing")
+                if call.get("argument_types") != ["int"] or call.get("arguments") != [inner]:
+                    raise ValueError(f"SolverSequence {method} did not use the observed one-based inner solution number")
+                sequence_type = row.get("sequence_receiver_type") or row.get("solver_sequence_type")
+                if sequence_type is not None and call.get("receiver_type") != sequence_type:
+                    raise ValueError(f"SolverSequence {method} receiver differs from the observed sequence object")
+                require_raw_outcome(call, f"SolverSequence.{method}")
+                direct_sequence_value_calls += 1
+        if seen_sequence_pairs != normalized_pairs:
+            raise ValueError("SolverSequence real/imaginary value reads do not cover the exact observed pair set")
+    if direct_sequence_value_calls != 2 * sum(
+            len(row.get("solution_info", {}).get("observed_one_based_outer_inner_pairs", []))
+            for row in list(solutions) + list(dataset_info)
+            if isinstance(row, Mapping) and isinstance(row.get("solution_info"), Mapping)):
+        raise ValueError("direct SolverSequence real/imaginary parameter value reads are incomplete")
+    return {
+        "status": "PASS_DIAGNOSTIC_CAPTURE_SCHEMA_ONLY",
+        "study_query_types": list(STUDY_SEQUENCE_TYPES),
+        "dataset_count": len(datasets), "solver_sequence_count": len(solutions),
+        "dataset_bound_solution_info_count": len(dataset_info),
+        "typed_matrix_getter_calls": len(matrix_calls),
+        "direct_sequence_parameter_value_calls": direct_sequence_value_calls,
+        "solution_info_receiver_count": solution_info_receivers,
+        "matrix_tuple_semantics": "one-based (outer,inner), documented by COMSOL 6.4 doc7709/chunk23066",
+        "solution_roles_inferred": False,
+        "scientific_acceptance": "NOT_ACCEPTED_DIAGNOSTIC_READBACK_ONLY",
+        "internal_solver_execution_count": "UNKNOWN_NOT_INFERRED_FROM_READBACK",
+    }
+
+
+def _set_native_dispatch_guard(daemon: Any, journal: Path) -> None:
+    _set_dispatch_allowlist(daemon, journal)
+
+
+def _validate_private_read_input(path: Path, label: str, *, candidate_only: bool) -> None:
+    if (not path.is_absolute() or path.resolve(strict=True) != path or path.is_symlink()
+            or (candidate_only and REPO not in path.parents)):
+        raise ValueError(label + " must be a canonical ordinary private-candidate path")
+    info = path.lstat()
+    if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid():
+        raise ValueError(label + " must be an owner-bound ordinary file")
+
+
+def _expected_work_path() -> Path:
+    # Both identity values are frozen source constants checked in _validate_freeze.
+    suffix = ACTIVITY_ID.removeprefix("w23-saved-mph-zero-solve-readback-")
+    if suffix == ACTIVITY_ID or "/" in suffix or "/" in CANDIDATE_REVISION:
+        raise RuntimeError("invalid frozen activity/revision identity")
+    return Path("/private/tmp") / ("comsol-mcp-w23-te-saved-mph-zero-solve-readback-" + suffix + "-" + CANDIDATE_REVISION)
+
+
+def _validate_fresh_execution_paths(freeze: Mapping[str, Any], work: Path, evidence: Path) -> None:
+    expected_work = _expected_work_path()
+    expected_evidence = Path(freeze["execution_evidence_path"])
+    if Path(freeze["work_path"]) != expected_work or work != expected_work:
+        raise ValueError("--work must equal the exact frozen activity/revision canonical path")
+    if evidence != expected_evidence or not evidence.is_absolute() or REPO not in evidence.parents:
+        raise ValueError("--evidence must equal the exact frozen private-candidate path")
+    for label,path in (("work",work),("evidence",evidence)):
+        if (path.resolve(strict=False) != path or any(part in (".","..") for part in path.parts)
+                or path.is_symlink()):
+            raise ValueError(label + " path must be canonical without symlinks")
+        if path.exists():
+            raise FileExistsError(label + " path must be fresh")
+        parent = path.parent
+        if parent.resolve(strict=True) != parent or parent.is_symlink():
+            raise ValueError(label + " parent must be canonical without symlinks")
+        observed = parent.stat()
+        allowed_owners = {0,os.getuid()} if label == "work" else {os.getuid()}
+        if not stat.S_ISDIR(observed.st_mode) or observed.st_uid not in allowed_owners:
+            raise ValueError(label + " parent ownership/type is not authorized")
+
+
+def execute(freeze_path: Path, freeze_sha256: str, approval_path: Path,
+            saved_model: Path, work: Path, evidence: Path) -> dict[str, Any]:
+    _validate_private_read_input(freeze_path,"freeze",candidate_only=True)
+    _validate_private_read_input(approval_path,"approval",candidate_only=True)
+    _validate_private_read_input(saved_model,"saved model",candidate_only=False)
+    helpers = science._load_helper_refs()
+    freeze = _validate_freeze(freeze_path, freeze_sha256)
+    approval = json.loads(approval_path.read_text(encoding="utf-8"))
+    planned_argv = _native_argv(freeze_path, freeze_sha256, approval_path,
+                                saved_model, work, evidence)
+    if not isinstance(approval, Mapping):
+        raise RuntimeError("root approval receipt must be a JSON object")
+    _validate_approval(approval, freeze, freeze_sha256, planned_argv)
+    if Path(sys.executable).resolve() != EXPECTED_PYTHON.resolve():
+        raise RuntimeError("native diagnostic interpreter differs from frozen Python 3.12 runtime")
+    if os.environ.get("PYTHONPATH") != str(REPO) or os.environ.get("TMPDIR") != "/private/tmp":
+        raise RuntimeError("native environment must use candidate-only PYTHONPATH and TMPDIR=/private/tmp")
+    if any(os.environ.get(name) is not None for name in (
+            "CODEX_NETWORK_GUARD_LOG", "CODEX_NETWORK_GUARD_LABEL",
+            "CODEX_NETWORK_GUARD_RUN_ID")):
+        raise RuntimeError("native environment must not inherit offline-test network-guard variables")
+    if sys.platform != "darwin":
+        raise RuntimeError(f"native saved-MPH diagnostic requires macOS, observed {sys.platform}")
+    if saved_model != SOURCE_MODEL or not saved_model.is_file() or saved_model.is_symlink():
+        raise RuntimeError("saved-MPH path differs from the exact Activity009 source artifact")
+    if saved_model.stat().st_size != SOURCE_MODEL_BYTES or sha256_file(saved_model) != SOURCE_MODEL_SHA256:
+        raise RuntimeError("saved-MPH bytes/SHA differ from the frozen Activity009 input")
+    _validate_fresh_execution_paths(freeze, work, evidence)
+    _assert_source_inputs()
+    if _source_files() != freeze["source_files"]:
+        raise RuntimeError("frozen source closure changed immediately before prebirth inventory")
+    return _execute_native_campaign(helpers, freeze_path, freeze_sha256, approval,
+                                    saved_model, work, evidence, freeze)
+
+
+def _execute_native_campaign(helpers: Mapping[str, Any], freeze_path: Path,
+                             freeze_sha256: str, approval: Mapping[str, Any],
+                             saved_model: Path, work: Path, evidence: Path,
+                             freeze: Mapping[str, Any]) -> dict[str, Any]:
+    """Native-effect handoff; execute has completed all immutable CLI guards."""
+    evidence.mkdir(parents=True, exist_ok=False)
+    write_json(evidence / "root_approval.json", dict(approval))
+    summary: dict[str, Any] = {
+        "activity_id": ACTIVITY_ID, "candidate_id": CANDIDATE_ID,
+        "candidate_revision": CANDIDATE_REVISION,
+        "status": "PREBIRTH_NOT_STARTED",
+        "native_scientific_acceptance": "NOT_ACCEPTED_DIAGNOSTIC_READBACK_ONLY",
+        "input_model_sha256": SOURCE_MODEL_SHA256,
+        "study_run_dispatch_count": 0, "solver_run_dispatch_count": 0,
+        "actual_internal_solver_execution_count": "UNKNOWN_NOT_INFERRED_FROM_READBACK",
+        "server_birth": None, "server_pid": None, "worker_pid": None,
+        "cleanup_status": "NOT_STARTED", "native_calls": [],
+    }
+    write_json(evidence / "summary.json", summary)
+    preflight = helpers["preflight_module"]
+    server = None
+    authority_daemon = None
+    daemon = None
+    project_receipt: dict[str, Any] | None = None
+    project_id: str | None = None
+    server_identity: dict[str, Any] = {}
+    worker_identity: dict[str, Any] | None = None
+    worker_port: int | None = None
+    direct_journal = science.DirectRpcJournal(evidence / "direct_worker_rpcs.jsonl")
+    managed_dispatch_journal = evidence / "managed_dispatches.jsonl"
+    birth_epoch: float | None = None
+    deadline_epoch: float | None = None
+    fixture_terminal = False
+    unknown_seen = False
+    dispatch_guard_count = 0
+    project_workspace: Path | None = None
+    diagnostic_readback: Mapping[str, Any] | None = None
+    production_dataset_rows: list[Mapping[str, Any]] = []
+    solution_index_receipts: list[dict[str, Any]] = []
+    try:
+        compile_identity = science._check_offline_receipts(freeze_path, freeze)
+        write_json(evidence / "frozen_compile_identity.json", compile_identity)
+        inventory = preflight._process_inventory()
+        write_json(evidence / "prelaunch_inventory.json", inventory)
+        if not inventory.get("quiescent"):
+            raise RuntimeError("fresh prelaunch inventory is not quiescent; no COMSOL server started")
+        server = helpers["NativeLoopbackServer"](work, evidence,
+                                                  event_log=evidence / "events.jsonl")
+        shadow = server.prepare_shadow()
+        write_json(evidence / "private_shadow_receipt.json", shadow)
+        if _source_files() != freeze["source_files"]:
+            raise RuntimeError("frozen source closure changed while staging private COMSOL tree")
+        prebirth = preflight._process_inventory()
+        write_json(evidence / "prebirth_inventory.json", prebirth)
+        if not prebirth.get("quiescent"):
+            raise RuntimeError("fresh pre-birth inventory is not quiescent")
+        science.PROJECT_LABEL = PROJECT_LABEL
+        science._set_prebirth_project_authority_opt_in()
+        authority_daemon = helpers["ControlDaemon"](work / "control", worker=None,
+                                                     project_root=server.project)
+        create_request = {
+            "operation": "project.create",
+            "arguments": {"label": PROJECT_LABEL, "workspace": "science",
+                          "policy": {"permissions": ["inspect", "project_write", "trusted_code"]}},
+            "execution": {"request_id": f"w23-diagnostic-project-create-{uuid4()}",
+                          "idempotency_key": f"w23-diagnostic-project-create-{uuid4()}",
+                          "rpc_timeout_s": 30.0, "queue_timeout_s": 30.0},
+        }
+        project_response = authority_daemon.dispatch(create_request)
+        write_json(evidence / "project_create_request.json", create_request)
+        write_json(evidence / "project_create_response.json", project_response)
+        project_receipt = _bind_project_create(project_response, helpers,
+                                               server.project / "science")
+        policy = project_receipt["project_record"].get("policy", {}).get("permissions", [])
+        if sorted(policy) != ["inspect", "project_write", "trusted_code"]:
+            raise RuntimeError("registered diagnostic project permissions exceed or differ from frozen read-only scope")
+        project_id = str(project_receipt["project_id"])
+        project_receipt.update({"request": create_request,
+                                "response": project_response,
+                                "permissions": policy,
+                                "compute_permission_granted": False})
+        write_json(evidence / "project_create_receipt.json", project_receipt)
+        authority_daemon.close()
+        authority_daemon = None
+        after_create = preflight._process_inventory()
+        write_json(evidence / "prebirth_after_project_create_inventory.json", after_create)
+        if not after_create.get("quiescent"):
+            raise RuntimeError("fresh process/listener inventory changed before server birth")
+        if _source_files() != freeze["source_files"]:
+            raise RuntimeError("frozen source closure changed before server birth")
+        listener = server.start_and_verify_listener()
+        server_identity = dict(server.process_identity or {})
+        birth_text = server_identity.get("birth")
+        if not isinstance(birth_text, str):
+            raise RuntimeError("owned COMSOL server birth identity was not captured")
+        birth_epoch = preflight._mac_birth_epoch(birth_text)
+        deadline_epoch = birth_epoch + MAX_BIRTH_SECONDS
+        summary.update({"status": "NATIVE_DIAGNOSTIC_RUNNING",
+                        "server_birth": birth_text,
+                        "server_pid": server.proc.pid if server.proc else None,
+                        "server_port": server.port,
+                        "birth_epoch": birth_epoch,
+                        "deadline_epoch": deadline_epoch})
+        write_json(evidence / "server_birth.json", {
+            "process_identity": server_identity, "listener": listener,
+            "birth_epoch": birth_epoch, "deadline_epoch": deadline_epoch,
+            "budget_seconds": MAX_BIRTH_SECONDS,
+            "cleanup_reserve_seconds": CLEANUP_RESERVE_SECONDS,
+            "source_model_sha256": SOURCE_MODEL_SHA256,
+        })
+        write_json(evidence / "summary.json", summary)
+        if time.time() >= deadline_epoch - CLEANUP_RESERVE_SECONDS:
+            raise TimeoutError("birth budget entered cleanup reserve before Worker startup")
+        worker_identity_sink: dict[str, Any] = {}
+        worker_info = science._start_worker_with_journal(server, direct_journal,
+                                                         helpers, worker_identity_sink)
+        worker_identity = dict(worker_info.get("worker_process_identity", {}))
+        runtime = worker_info.get("worker_runtime", {})
+        worker_port = runtime.get("port") if isinstance(runtime, Mapping) else None
+        if type(worker_port) is not int:
+            raise RuntimeError("exact Worker listener port unavailable")
+        summary["worker_pid"] = worker_identity.get("pid")
+        write_json(evidence / "worker_connection.json", worker_info)
+        science._set_runtime_environment(server)
+        daemon = helpers["ControlDaemon"](work / "control", worker=server.worker,
+                                          project_root=server.project)
+        _set_native_dispatch_guard(daemon, managed_dispatch_journal)
+        connection = science._dispatch(daemon, "server_connect",
+                                       {"host": "127.0.0.1", "port": server.port},
+                                       project_id=project_id, timeout_s=30.0)
+        write_json(evidence / "managed_connection.json", connection)
+        if (connection.get("success") is not True
+                or connection.get("data", {}).get("endpoint") != f"127.0.0.1:{server.port}"):
+            raise RuntimeError("managed server_connect failed exact task-owned loopback binding")
+        project_workspace = science._project_science_workspace(project_receipt)
+        staged_fixture = project_workspace / FIXTURE.name
+        if staged_fixture.exists():
+            raise FileExistsError(staged_fixture)
+        shutil.copyfile(FIXTURE, staged_fixture)
+        if sha256_file(staged_fixture) != sha256_file(FIXTURE):
+            raise RuntimeError("staged Java diagnostic fixture hash differs from frozen source")
+        write_json(evidence / "fixture_stage.json", {
+            "source": str(FIXTURE), "source_sha256": sha256_file(FIXTURE),
+            "staged": str(staged_fixture), "staged_sha256": sha256_file(staged_fixture),
+            "exact_copy": True,
+        })
+        staged_model = _copy_input_into_registered_workspace(SOURCE_MODEL,
+                                                             project_workspace, evidence)
+        ref, revision, model_tag = _load_saved_model_once(daemon, staged_model,
+                                                          helpers, evidence,
+                                                          float(deadline_epoch))
+        summary.update({"model_tag": model_tag,
+                        "model_ref": ref, "model_revision": revision,
+                        "project_id": project_id})
+        write_json(evidence / "summary.json", summary)
+        if time.time() >= deadline_epoch - CLEANUP_RESERVE_SECONDS:
+            raise TimeoutError("diagnostic work reached cleanup reserve before dataset inventory")
+        dataset_response, ref, revision = _query_once(
+            daemon, "dataset.list", {}, ref, revision, project_id=project_id,
+            deadline_epoch=float(deadline_epoch), evidence=evidence,
+            label="dataset_list")
+        dataset_body = _response_body(dataset_response)
+        dataset_rows = dataset_body.get("datasets")
+        if not isinstance(dataset_rows, list):
+            raise RuntimeError("dataset.list returned no datasets list")
+        production_dataset_rows = [dict(row) for row in dataset_rows if isinstance(row, Mapping)]
+        write_json(evidence / "dataset_list_raw.json", {
+            "response": dataset_response, "datasets": dataset_rows,
+            "source": "production managed dataset.list route",
+        })
+        for item in dataset_rows:
+            if not isinstance(item, Mapping) or str(item.get("type_id", "")).lower() != "solution":
+                continue
+            tag = item.get("tag")
+            if not isinstance(tag, str) or not tag:
+                continue
+            if time.time() >= deadline_epoch - CLEANUP_RESERVE_SECONDS:
+                raise TimeoutError("diagnostic reached cleanup reserve; remaining metadata reads stopped")
+            try:
+                response, ref, revision = _query_once(
+                    daemon, "dataset.solution_indices", {"path": tag}, ref, revision,
+                    project_id=project_id, deadline_epoch=float(deadline_epoch),
+                    evidence=evidence, label=f"managed_solution_indices_{tag}")
+                index_body = _response_body(response)
+                solution_index_receipts.append({"dataset": dict(item),
+                                                "solution_indices": index_body})
+                write_json(evidence / f"managed_solution_indices_{tag}_projection.json", {
+                    "dataset_tag": tag, "response": response,
+                    "body": index_body,
+                    "status": "CAPTURED_RAW_RESPONSE_NOT_SCIENTIFIC_ACCEPTANCE",
+                })
+            except BaseException as exc:
+                write_json(evidence / f"managed_solution_indices_{tag}_exception.json", {
+                    "dataset_tag": tag, "status": "ERROR_NO_RETRY",
+                    "error": f"{type(exc).__name__}: {exc}",
+                    "traceback": traceback.format_exc(),
+                })
+                if any(job.get("status") in {"UNKNOWN", "QUEUED", "RUNNING"}
+                       for job in preflight._ledger_reconciliation(daemon).get("jobs", [])):
+                    unknown_seen = True
+                    raise
+        if time.time() >= deadline_epoch - CLEANUP_RESERVE_SECONDS:
+            raise TimeoutError("diagnostic reached cleanup reserve before Java readback")
+        java_readback, ref, revision = science._fixture_call(
+            daemon, ref, revision, FIXTURE.name,
+            {"phase": "saved_solution_diagnostic"}, helpers,
+            deadline_epoch=float(deadline_epoch), evidence=evidence,
+            label="saved_solution_diagnostic")
+        fixture_terminal = True
+        diagnostic_readback = java_readback
+        write_json(evidence / "saved_solution_diagnostic_raw.json", {
+            "readback": java_readback, "model_ref": ref,
+            "revision": revision, "model_tag": model_tag,
+            "source_model_sha256": SOURCE_MODEL_SHA256,
+            "raw_return_values_preserved": True,
+            "scientific_acceptance": "NOT_ACCEPTED_DIAGNOSTIC_READBACK_ONLY",
+        })
+        validation = validate_fixture_readback(java_readback)
+        write_json(evidence / "diagnostic_schema_check.json", validation)
+        actual_study_rows = science._actual_science_study_run_submissions(
+            daemon, preflight)
+        write_json(evidence / "study_run_submission_audit.json", {
+            "rows": actual_study_rows,
+            "observed_durable_study_run_submission_count": len(actual_study_rows),
+            "required_count": 0,
+            "status": "PASS_ZERO_EXPLICIT_STUDY_RUN_SUBMISSIONS"
+                     if not actual_study_rows else "FAIL_FORBIDDEN_STUDY_RUN_SUBMISSION_OBSERVED",
+            "internal_solver_execution_count": "UNKNOWN_NOT_INFERRED_FROM_READBACK",
+        })
+        if actual_study_rows:
+            raise RuntimeError("forbidden Study.run submission was persisted during metadata diagnostic")
+        inventory = protocol.normalize_saved_mph_diagnostic_inventory(
+            java_readback, production_dataset_rows, solution_index_receipts)
+        write_json(evidence / "normalized_saved_mph_inventory.json", inventory)
+        main_frequency = protocol.resolve_main_frequency_dataset(
+            inventory["study_inventory"], inventory["dataset_inventory"])
+        bma_bindings = protocol.resolve_bma_stored_dataset_bindings(
+            inventory["study_inventory"], inventory["dataset_inventory"])
+        write_json(evidence / "main_frequency_singleton_witness.json", main_frequency)
+        write_json(evidence / "bma_study_store_dataset_bindings.json", bma_bindings)
+        if ((main_frequency.get("dataset_tag"), main_frequency.get("dataset_solution_property"))
+                != ("dset1", "sol1")):
+            raise RuntimeError("captured main frequency dataset is not the exact Activity010-proven dset1/sol1")
+        bma_by_step = {row["study_step_tag"]: row for row in bma_bindings["bindings"]}
+        expected_bma = {
+            "bmaInput": ("dset2", "sol2", "1", -10.0),
+            "bmaOutput": ("dset3", "sol3", "2", 8.0),
+        }
+        for step, expected in expected_bma.items():
+            row = bma_by_step.get(step)
+            actual = ((row or {}).get("dataset_tag"), (row or {}).get("store_solution_reference"),
+                      (row or {}).get("port_name"), expected[3])
+            if actual != expected:
+                raise RuntimeError(f"saved {step} StoreSolution/dataset/port differs from exact Activity010 evidence: {actual!r}")
+
+        decoded_fields: dict[str, dict[int, Mapping[str, Any]]] = {
+            "output_x8": {}, "input_xminus10": {}}
+        point_read_dispatches = 0
+        frequency_hz, hz_context, ref, revision = _frequency_readback_once(
+            daemon, server, requested_unit="Hz", ref=ref, revision=revision,
+            project_id=project_id, deadline_epoch=float(deadline_epoch), evidence=evidence,
+            count_witness=main_frequency)
+        point_read_dispatches += 1
+        frequency_ghz, ghz_context, ref, revision = _frequency_readback_once(
+            daemon, server, requested_unit="GHz", ref=ref, revision=revision,
+            project_id=project_id, deadline_epoch=float(deadline_epoch), evidence=evidence,
+            count_witness=main_frequency, expected_context=hz_context)
+        point_read_dispatches += 1
+        frequency_scaling = protocol.verify_frequency_unit_scaling(
+            frequency_hz, frequency_ghz, [hz_context, ghz_context])
+        write_json(evidence / "physical_frequency_actual_native_unit_scaling.json", frequency_scaling)
+        physical_frequency = protocol.resolve_physical_frequency_point_readback(frequency_hz, main_frequency)
+        write_json(evidence / "physical_frequency_native_numerical_witness.json", physical_frequency)
+
+        for plane_id, x_um in (("output_x8", 8.0), ("input_xminus10", -10.0)):
+            for sample_count in (protocol.SAMPLE_COUNT, protocol.REFINED_SAMPLE_COUNT):
+                if time.time() >= deadline_epoch - CLEANUP_RESERVE_SECONDS:
+                    raise TimeoutError("saved-field readback reached cleanup reserve; remaining native reads stopped")
+                label = f"fields_{plane_id}_{sample_count}"
+                point_body, ref, revision = _at_points_once(
+                    daemon, dataset="dset1", solution="sol1",
+                    expressions=RAW_FIELD_EXPRESSIONS,
+                    points=_field_points(x_um, sample_count), ref=ref, revision=revision,
+                    project_id=project_id, deadline_epoch=float(deadline_epoch),
+                    evidence=evidence, label=label, requested_units=FIELD_REQUESTED_UNITS)
+                point_read_dispatches += 1
+                decoded = protocol.decode_production_complex_point_readback(
+                    point_body, dataset_tag="dset1", solution_tag="sol1",
+                    expressions=RAW_FIELD_EXPRESSIONS,
+                    expected_points=_field_points(x_um, sample_count),
+                    expected_solution_count=1, plane_id=plane_id,
+                    expected_count_witness=main_frequency,
+                    expected_expression_units=FIELD_UNITS,
+                    expected_requested_units=FIELD_REQUESTED_UNITS,
+                    require_x_plane_normal=True)
+                decoded_fields[plane_id][sample_count] = decoded
+                write_json(evidence / f"{label}_decoded.json", decoded)
+
+        mode_point_readbacks: dict[str, Mapping[str, Any]] = {}
+        for step in ("bmaInput", "bmaOutput"):
+            binding = bma_by_step[step]
+            dataset_tag = str(binding["dataset_tag"])
+            solution_tag = str(binding["store_solution_reference"])
+            if time.time() >= deadline_epoch - CLEANUP_RESERVE_SECONDS:
+                raise TimeoutError("BMA mode point readback reached cleanup reserve; no further native reads")
+            port_name = str(binding["port_name"])
+            mode_expressions = protocol.bma_point_expressions(port_name)
+            actual_mode_units = mode_units(port_name)
+            label = f"mode_point_{step}"
+            point_body, ref, revision = _at_points_once(
+                daemon, dataset=dataset_tag, solution=solution_tag,
+                expressions=mode_expressions,
+                points=[[MODE_DATASETS[dataset_tag][3], 0.0]],
+                ref=ref, revision=revision, project_id=project_id,
+                deadline_epoch=float(deadline_epoch), evidence=evidence, label=label,
+                requested_units=tuple(actual_mode_units.values()))
+            point_read_dispatches += 1
+            decoded = protocol.decode_production_complex_point_readback(
+                point_body, dataset_tag=dataset_tag, solution_tag=solution_tag,
+                expressions=mode_expressions,
+                expected_points=[[MODE_DATASETS[dataset_tag][3], 0.0]],
+                expected_solution_count=1, plane_id=f"{step}_port_center",
+                expected_expression_units=actual_mode_units,
+                expected_requested_units=tuple(actual_mode_units.values()), scalar_bma_binding=binding)
+            mode_point_readbacks[step] = decoded
+            write_json(evidence / f"{label}_decoded.json", decoded)
+        bma_formula_check = protocol.reconcile_bma_mode_point_readbacks(
+            bma_bindings, mode_point_readbacks, physical_frequency)
+        write_json(evidence / "bma_mode_formula_crosscheck.json", bma_formula_check)
+        neff_checks = {}
+        for step in ("bmaInput", "bmaOutput"):
+            neff_checks[step] = science._validate_mode_index(
+                mode_point_readbacks[step], protocol.bma_point_expressions(str(bma_by_step[step]["port_name"]))[1], 2e-3)
+        write_json(evidence / "saved_bma_neff_checks.json", neff_checks)
+
+        independent = {}
+        for sample_count in (protocol.SAMPLE_COUNT, protocol.REFINED_SAMPLE_COUNT):
+            independent[sample_count] = protocol.independent_integrals(
+                decoded_fields["output_x8"][sample_count],
+                decoded_fields["input_xminus10"][sample_count])
+            write_json(evidence / f"saved_field_independent_integrals_{sample_count}.json",
+                       independent[sample_count])
+        refinement = protocol.compare_quadrature_refinement(
+            independent[protocol.SAMPLE_COUNT], independent[protocol.REFINED_SAMPLE_COUNT])
+        write_json(evidence / "saved_field_quadrature_refinement.json", refinement)
+        summary.update({"status": "SAVED_MPH_READBACK_GATES_CAPTURED_NOT_FORMAL_SCIENCE_ACCEPTED",
+                        "fixture_status": java_readback.get("diagnostic_phase"),
+                        "diagnostic_schema_status": validation["status"],
+                        "main_frequency_witness_status": main_frequency["status"],
+                        "bma_binding_status": bma_bindings["status"],
+                        "bma_formula_crosscheck_status": bma_formula_check["status"],
+                        "field_point_read_dispatch_count": point_read_dispatches,
+                        "study_run_dispatch_count": 0,
+                        "solver_run_dispatch_count": 0,
+                        "study_run_durable_submission_count": 0,
+                        "actual_internal_solver_execution_count": "UNKNOWN_NOT_INFERRED_FROM_READBACK",
+                        "native_scientific_acceptance": "NOT_ACCEPTED_SAVED_ARTIFACT_READBACK_ONLY"})
+    except BaseException as exc:
+        summary.update({"status": "FAIL_OR_INCOMPLETE",
+                        "error": f"{type(exc).__name__}: {exc}",
+                        "traceback": traceback.format_exc(),
+                        "native_scientific_acceptance": "NOT_ACCEPTED_DIAGNOSTIC_READBACK_ONLY"})
+        science.append_jsonl(evidence / "events.jsonl", {
+            "event": "diagnostic_failed_or_incomplete", "error": summary["error"],
+            "worker_request_terminal": fixture_terminal})
+    finally:
+        managed_reconciliation: dict[str, Any] | None = None
+        direct_reconciliation: dict[str, Any] | None = None
+        cleanup_gates: dict[str, Any] | None = None
+        cleanup_authorization: dict[str, Any] | None = None
+        idle: dict[str, Any] | None = None
+        worker_health: Any = None
+        disconnect_receipt: dict[str, Any] = {"status": "NOT_ATTEMPTED"}
+        cleanup: dict[str, Any] = {"status": "NOT_STARTED"}
+        if daemon is not None:
+            try:
+                endpoint_gate = preflight._task_endpoint_identity_gate(
+                    server, server_identity=server_identity,
+                    worker_identity=worker_identity, worker_port=worker_port,
+                    process_snapshot=helpers["_process_snapshot"],
+                    require_worker_peer=True)
+                write_json(evidence / "cleanup_endpoint_identity_gate.json", endpoint_gate)
+                if endpoint_gate.get("safe") is True:
+                    worker_health = server.worker.health(timeout_s=5.0)
+                write_json(evidence / "cleanup_worker_health_before_disconnect.json", {
+                    "expected_endpoint": f"127.0.0.1:{server.port}",
+                    "response": worker_health,
+                    "read_only_health_rpc": True,
+                })
+                managed_reconciliation = preflight._ledger_reconciliation(daemon)
+                managed_reconciliation["sqlite_snapshot"] = preflight._backup_operation_store(
+                    daemon, evidence / "private-control-store" / "raw_operations.sqlite3")
+                write_json(evidence / "managed_ledger_reconciliation.json", managed_reconciliation)
+                direct_reconciliation = helpers["reconcile_direct_rpc_events"](
+                    science.read_jsonl(direct_journal.path))
+                write_json(evidence / "direct_rpc_reconciliation_before_disconnect.json", direct_reconciliation)
+                cleanup_gates = helpers["combine_cleanup_gates"](managed_reconciliation,
+                                                                  direct_reconciliation)
+                idle = preflight._daemon_idle_proof(
+                    daemon, worker_health=worker_health,
+                    expected_endpoint=f"127.0.0.1:{server.port}" if server and server.port else None)
+                cleanup_authorization = science._cleanup_authorization(
+                    project_receipt, project_id, preflight,
+                    managed_reconciliation, cleanup_gates, idle)
+                write_json(evidence / "cleanup_gates_before_disconnect.json", {
+                    "combined": cleanup_gates, "daemon_idle_proof": idle,
+                    "unknown_preserved": True,
+                })
+                write_json(evidence / "cleanup_project_scope_before_disconnect.json", cleanup_authorization)
+            except BaseException as exc:
+                summary["cleanup_reconciliation_error"] = f"{type(exc).__name__}: {exc}"
+                cleanup_authorization = {"safe_for_owned_cleanup": False}
+        if server is not None and server.proc is not None:
+            endpoint_gate = json.loads((evidence / "cleanup_endpoint_identity_gate.json").read_text()) if (evidence / "cleanup_endpoint_identity_gate.json").is_file() else {}
+            safe = bool(cleanup_authorization
+                        and cleanup_authorization.get("safe_for_owned_cleanup") is True
+                        and endpoint_gate.get("safe") is True
+                        and idle and idle.get("idle") is True
+                        and idle.get("worker_health_quiescent") is True)
+            if safe and server.worker is not None:
+                try:
+                    health_after: Any = None
+                    request_id = f"w23-diagnostic-cleanup-disconnect-{uuid4()}"
+                    disconnect = server.worker.client().disconnect(
+                        request_id=request_id, rpc_timeout_s=10.0)
+                    health_after = server.worker.health(timeout_s=5.0)
+                    disconnect_ok = science._worker_disconnect_verified(
+                        disconnect, worker_health, health_after)
+                    disconnect_receipt = {
+                        "status": "PASS_WORKER_DISCONNECTED_QUIESCENT" if disconnect_ok else "BLOCKED_WORKER_DISCONNECT_NOT_CONFIRMED",
+                        "request_id": request_id,
+                        "decoded_remote_client_result": disconnect,
+                        "health_before": worker_health, "health_after": health_after,
+                        "durable_domain_outcome_rewritten": False,
+                    }
+                    write_json(evidence / "cleanup_worker_disconnect.json", disconnect_receipt)
+                    managed_reconciliation = preflight._ledger_reconciliation(daemon)
+                    managed_reconciliation["sqlite_snapshot"] = preflight._backup_operation_store(
+                        daemon, evidence / "private-control-store" / "raw_operations_post_disconnect.sqlite3")
+                    direct_reconciliation = helpers["reconcile_direct_rpc_events"](
+                        science.read_jsonl(direct_journal.path))
+                    cleanup_gates = helpers["combine_cleanup_gates"](managed_reconciliation,
+                                                                      direct_reconciliation)
+                    cleanup_authorization = science._cleanup_authorization(
+                        project_receipt, project_id, preflight,
+                        managed_reconciliation, cleanup_gates, idle)
+                    write_json(evidence / "direct_rpc_reconciliation.json", direct_reconciliation)
+                    write_json(evidence / "cleanup_gates.json", {
+                        "combined": cleanup_gates,
+                        "daemon_idle_proof_before_disconnect": idle,
+                        "worker_disconnect": disconnect_receipt,
+                        "unknown_preserved": True,
+                    })
+                    write_json(evidence / "cleanup_project_scope.json", cleanup_authorization)
+                    if disconnect_ok and cleanup_authorization.get("safe_for_owned_cleanup") is True:
+                        cleanup = preflight._exact_owned_cleanup(
+                            server, server_identity=server_identity,
+                            worker_identity=worker_identity,
+                            worker_port=worker_port,
+                            process_snapshot=helpers["_process_snapshot"],
+                            reconciliation=managed_reconciliation,
+                            evidence=evidence, require_fixture_terminal=False)
+                    else:
+                        cleanup = {"status": "LEFT_RUNNING_ACTIVE_OR_UNKNOWN",
+                                   "reason": "Worker disconnect/health/ledger proof did not pass",
+                                   "durable_unknown_preserved": True}
+                        write_json(evidence / "exact_owned_cleanup_receipt.json", cleanup)
+                except BaseException as exc:
+                    cleanup = {"status": "CLEANUP_UNVERIFIED",
+                               "error": f"{type(exc).__name__}: {exc}",
+                               "durable_unknown_preserved": True}
+                    write_json(evidence / "exact_owned_cleanup_receipt.json", cleanup)
+            else:
+                cleanup = {"status": "LEFT_RUNNING_ACTIVE_OR_UNKNOWN",
+                           "server_pid": server.proc.pid, "server_port": server.port,
+                           "project_and_idle_gate": cleanup_authorization,
+                           "endpoint_identity_gate": endpoint_gate,
+                           "durable_unknown_preserved": True,
+                           "action": "No signal; exact ownership, terminality, or idle proof is incomplete"}
+                write_json(evidence / "exact_owned_cleanup_receipt.json", cleanup)
+            try:
+                postinventory = preflight._process_inventory()
+                write_json(evidence / "postcleanup_inventory.json", postinventory)
+            except BaseException as exc:
+                write_json(evidence / "postcleanup_inventory_error.json", {
+                    "error": f"{type(exc).__name__}: {exc}"})
+                summary["status"] = "FAIL_OR_INCOMPLETE"
+        if daemon is not None and (server is None or server.proc is None
+                                   or cleanup.get("status") == "CLEANUP_VERIFIED_EXACT_OWNED_PIDS_AND_PORTS_ABSENT"):
+            try:
+                daemon.close()
+            except BaseException as exc:
+                summary["daemon_close_error"] = f"{type(exc).__name__}: {exc}"
+                summary["status"] = "FAIL_OR_INCOMPLETE"
+        if authority_daemon is not None:
+            try:
+                authority_daemon.close()
+            except BaseException as exc:
+                summary["project_create_daemon_close_error"] = f"{type(exc).__name__}: {exc}"
+        summary["cleanup_status"] = cleanup.get("status")
+        summary["managed_ledger_status"] = managed_reconciliation.get("status") if managed_reconciliation else None
+        summary["managed_ledger_safe_for_owned_cleanup"] = managed_reconciliation.get("safe_for_owned_cleanup") if managed_reconciliation else None
+        summary["direct_rpc_reconciliation_status"] = direct_reconciliation.get("status") if direct_reconciliation else None
+        summary["cleanup_gates"] = cleanup_gates
+        summary["cleanup_authorization"] = cleanup_authorization
+        summary["worker_disconnect"] = disconnect_receipt
+        summary["observed_internal_solver_count"] = "UNKNOWN_NOT_INFERRED_FROM_READBACK"
+        summary["explicit_study_or_solver_execution_allowed"] = False
+        summary["native_scientific_acceptance"] = "NOT_ACCEPTED_DIAGNOSTIC_READBACK_ONLY"
+        if birth_epoch is not None:
+            finished = time.time()
+            elapsed = max(0.0, finished - birth_epoch)
+            summary["birth_inclusive_budget"] = {
+                "birth_epoch": birth_epoch, "deadline_epoch": deadline_epoch,
+                "finished_epoch_includes_cleanup": finished,
+                "elapsed_seconds_includes_cleanup": elapsed,
+                "max_seconds": MAX_BIRTH_SECONDS,
+                "cleanup_reserve_seconds": CLEANUP_RESERVE_SECONDS,
+                "budget_exceeded": elapsed > MAX_BIRTH_SECONDS,
+                "deadline_was_not_reset": True,
+            }
+            if elapsed > MAX_BIRTH_SECONDS:
+                summary["status"] = "FAIL_OR_INCOMPLETE_OVER_BUDGET"
+        summary["finished_at_utc"] = utc_now()
+        write_json(evidence / "summary.json", summary)
+    return summary
+
+
+class _DurableCliTee:
+    """Write CLI diagnostics to a durable raw text stream and original console."""
+    def __init__(self, console: Any, durable: Any):
+        self.console, self.durable = console, durable
+
+    def write(self, text: str) -> int:
+        self.durable.write(text)
+        self.durable.flush()
+        return self.console.write(text)
+
+    def flush(self) -> None:
+        self.durable.flush()
+        self.console.flush()
+
+
+def _execute_with_cli_capture(args: Any) -> int:
+    # Keep CLI streams outside execute's newly-created evidence directory.
+    args.evidence.parent.mkdir(parents=True, exist_ok=True)
+    stdout_path = args.evidence.with_name(args.evidence.name + ".cli.stdout.bin")
+    stderr_path = args.evidence.with_name(args.evidence.name + ".cli.stderr.bin")
+    with stdout_path.open("x", encoding="utf-8") as stdout, stderr_path.open("x", encoding="utf-8") as stderr:
+        with contextlib.redirect_stdout(_DurableCliTee(sys.stdout, stdout)), contextlib.redirect_stderr(_DurableCliTee(sys.stderr, stderr)):
+            try:
+                summary = execute(args.freeze, args.freeze_sha256, args.approval,
+                                  args.saved_model, args.work, args.evidence)
+                print(json.dumps(summary, ensure_ascii=False, indent=2, default=str))
+                return 0 if summary.get("status") == "SAVED_MPH_READBACK_GATES_CAPTURED_NOT_FORMAL_SCIENCE_ACCEPTED" and summary.get("cleanup_status") == "CLEANUP_VERIFIED_EXACT_OWNED_PIDS_AND_PORTS_ABSENT" else 2
+            except BaseException:
+                traceback.print_exc()
+                raise
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    commands = parser.add_subparsers(dest="command", required=True)
+    prepare_parser = commands.add_parser("prepare")
+    prepare_parser.add_argument("--evidence", type=Path, required=True)
+    prepare_parser.add_argument("--work", type=Path, required=True)
+    prepare_parser.add_argument("--execution-evidence", type=Path, required=True)
+    execute_parser = commands.add_parser("execute")
+    execute_parser.add_argument("--freeze", type=Path, required=True)
+    execute_parser.add_argument("--freeze-sha256", required=True)
+    execute_parser.add_argument("--approval", type=Path, required=True)
+    execute_parser.add_argument("--saved-model", type=Path, required=True)
+    execute_parser.add_argument("--work", type=Path, required=True)
+    execute_parser.add_argument("--evidence", type=Path, required=True)
+    args = parser.parse_args(argv)
+    if args.command == "prepare":
+        receipt = prepare(args.evidence, work=args.work,
+                          execution_evidence=args.execution_evidence)
+        print(json.dumps(receipt, ensure_ascii=False, indent=2, default=str))
+        return 0
+    return _execute_with_cli_capture(args)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

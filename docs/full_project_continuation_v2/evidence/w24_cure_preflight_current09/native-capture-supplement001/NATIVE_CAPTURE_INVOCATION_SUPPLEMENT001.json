@@ -1,0 +1,79 @@
+{
+  "argv": [
+    "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current09-triangle/repository/tools/run_native_w24_cure_preflight.py",
+    "--work",
+    "/private/tmp/comsol-mcp-w24-cure-setup-current09-20261012-r1",
+    "--evidence",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/native-run-current09-001",
+    "--candidate-freeze",
+    "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current09-triangle/repository/docs/full_project_execution/w24/evidence/setup_candidate_20261012_current09/offline_candidate_freeze_current09.json",
+    "--expected-candidate-sha256",
+    "6b357a1ec21c2e53d1a260bc403af03a9d0cec1f5da897f9e34e720510584308"
+  ],
+  "budget": {
+    "cleanup_reserve_seconds": 45.0,
+    "gui_processes": 0,
+    "max_seconds_from_exact_birth_including_setup_reopen_and_cleanup": 900.0,
+    "owned_server_processes": 1,
+    "study_or_solver_submissions": 0,
+    "worker_sessions_sequential": 1
+  },
+  "capture_directory": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/native-launch-capture-current09-001",
+  "capture_directory_must_be_absent_before_launch": true,
+  "change_scope": "Invocation wrapper only; candidate freeze, source, tests, exact runner argv, cwd, environment, native budget and evidence path are unchanged by this supplement.",
+  "cwd": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current09-triangle/repository",
+  "environment_overrides": {
+    "PYTHONPATH": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current09-triangle/repository",
+    "TMPDIR": "/private/tmp"
+  },
+  "exclusive_directory_creation": "mkdir <path> without -p; with set -e a pre-existing capture directory stops before the runner starts.",
+  "failure_behavior": "set -e; one command per line; no command chaining; failed mkdir/cd/redirection prevents runner exec.",
+  "freeze_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current09-triangle/repository/docs/full_project_execution/w24/evidence/setup_candidate_20261012_current09/offline_candidate_freeze_current09.json",
+  "freeze_sha256": "6b357a1ec21c2e53d1a260bc403af03a9d0cec1f5da897f9e34e720510584308",
+  "lineage_note": "Parent packet path is recorded here; the packet binds this supplement by SHA-256 to avoid a circular hash dependency.",
+  "native_started": false,
+  "no_clobber": "zsh setopt noclobber; the stdout/stderr redirections fail if either destination already exists.",
+  "parent_packet_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/ACTIVITY_W24_SETUP_REVIEW_PACKET_CURRENT09.json",
+  "path_prechecks": {
+    "approval_absent": true,
+    "capture_directory_absent": true,
+    "runner_evidence_absent": true,
+    "stderr_absent": true,
+    "stdout_absent": true,
+    "work_absent": true
+  },
+  "precheck_utc": "2026-10-12T04:14:48.817126+00:00",
+  "prepared_utc": "2026-10-12T04:14:48.816953+00:00",
+  "requires_escalated": true,
+  "root_approval_expected_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current09-triangle/repository/docs/full_project_execution/w24/evidence/setup_candidate_20261012_current09/ROOT_APPROVAL_ACTIVITY_W24_SETUP_CURRENT09.json",
+  "runner_evidence_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/native-run-current09-001",
+  "runner_evidence_path_must_be_absent": true,
+  "schema": "W24_CURE_PREFLIGHT_NATIVE_CAPTURE_INVOCATION_SUPPLEMENT_V1",
+  "shell_argv": [
+    "/bin/zsh",
+    "-lc",
+    "set -e\nsetopt noclobber\nmkdir /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/native-launch-capture-current09-001\ncd /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current09-triangle/repository\nexport PYTHONPATH=/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current09-triangle/repository\nexport TMPDIR=/private/tmp\nexec /private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current09-triangle/repository/tools/run_native_w24_cure_preflight.py --work /private/tmp/comsol-mcp-w24-cure-setup-current09-20261012-r1 --evidence /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/native-run-current09-001 --candidate-freeze /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current09-triangle/repository/docs/full_project_execution/w24/evidence/setup_candidate_20261012_current09/offline_candidate_freeze_current09.json --expected-candidate-sha256 6b357a1ec21c2e53d1a260bc403af03a9d0cec1f5da897f9e34e720510584308 > /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/native-launch-capture-current09-001/launcher.stdout.bin 2> /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/native-launch-capture-current09-001/launcher.stderr.bin\n"
+  ],
+  "shell_script_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/native-capture-supplement001/launch-current09.zsh",
+  "shell_script_sha256": "5f1872c04c06dbb3098d04c9d5ae63c5eeb17e4bcd3f5c643e1e890cce252ed8",
+  "source_or_test_changes_after_final_guarded_suite": "No candidate source/test changes after offline-r14; freeze, verifier, shell capture and packet metadata are preparation evidence only.",
+  "status": "PREPARED_OFFLINE_NOT_STARTED",
+  "stderr_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/native-launch-capture-current09-001/launcher.stderr.bin",
+  "stdout_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/native-launch-capture-current09-001/launcher.stdout.bin",
+  "strict_network_guard": "Offline tests only; omitted from native invocation because it blocks COMSOL loopback. Native process ownership/ports/budget require fresh elevated Root admission.",
+  "syntax_check": {
+    "command": [
+      "/bin/zsh",
+      "-n",
+      "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/native-capture-supplement001/launch-current09.zsh"
+    ],
+    "exit_code": 0,
+    "stderr_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/native-capture-supplement001/zsh-syntax.stderr.bin",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stdout_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/native-capture-supplement001/zsh-syntax.stdout.bin",
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "work_path": "/private/tmp/comsol-mcp-w24-cure-setup-current09-20261012-r1",
+  "work_path_must_be_absent": true
+}

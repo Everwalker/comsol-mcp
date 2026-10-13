@@ -1,0 +1,1103 @@
+--- r1/comsol_mcp/_state_backup.py
++++ r2/comsol_mcp/_state_backup.py
+@@ -2136,29 +2136,344 @@
+         raise StateBackupError("RESTORE_TARGET_CHANGED", "partial restore tree contains an unlisted or changed file")
+ 
+ 
++def _tree_inventory_fd(directory_fd: int, prefix: str = "") -> dict[str, tuple[str, int]]:
++    """Inventory a tree through already-pinned directory handles only."""
++    result: dict[str, tuple[str, int]] = {}
++    for name in sorted(os.listdir(directory_fd)):
++        if name in {".", ".."} or "/" in name or "\\" in name or "\x00" in name:
++            raise StateBackupError("RESTORE_TARGET_CHANGED", "restore tree contains a non-canonical entry")
++        relative = f"{prefix}/{name}" if prefix else name
++        try:
++            named = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
++        except OSError as exc:
++            raise StateBackupError("RESTORE_TARGET_CHANGED", "restore tree entry changed during handle-relative inventory") from exc
++        identity = {"device": int(named.st_dev), "inode": int(named.st_ino)}
++        if stat.S_ISDIR(named.st_mode):
++            try:
++                child_fd = os.open(name, _posix_directory_flags(), dir_fd=directory_fd)
++            except OSError as exc:
++                raise StateBackupError("RESTORE_TARGET_CHANGED", "restore tree directory could not be opened without following links") from exc
++            try:
++                if _fd_directory_identity(child_fd) != identity:
++                    raise StateBackupError("RESTORE_TARGET_CHANGED", "restore tree directory changed during handle-relative inventory")
++                result.update(_tree_inventory_fd(child_fd, relative))
++            finally:
++                os.close(child_fd)
++            continue
++        if not stat.S_ISREG(named.st_mode):
++            raise StateBackupError("RESTORE_TARGET_CHANGED", "restore tree contains a symlink or special file")
++        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
++        try:
++            file_fd = os.open(name, flags, dir_fd=directory_fd)
++        except OSError as exc:
++            raise StateBackupError("RESTORE_TARGET_CHANGED", "restore tree file could not be opened without following links") from exc
++        try:
++            before = os.fstat(file_fd)
++            if (not stat.S_ISREG(before.st_mode)
++                    or {"device": int(before.st_dev), "inode": int(before.st_ino)} != identity):
++                raise StateBackupError("RESTORE_TARGET_CHANGED", "restore tree file changed during handle-relative inventory")
++            digest = hashlib.sha256()
++            total = 0
++            while True:
++                block = os.read(file_fd, 1024 * 1024)
++                if not block:
++                    break
++                digest.update(block)
++                total += len(block)
++            after = os.fstat(file_fd)
++            if ({"device": int(after.st_dev), "inode": int(after.st_ino)} != identity
++                    or int(after.st_size) != total):
++                raise StateBackupError("RESTORE_TARGET_CHANGED", "restore tree file changed while being hashed")
++            result[relative] = (digest.hexdigest(), total)
++        finally:
++            os.close(file_fd)
++    return result
++
++
++def _before_restore_quarantine_delete(root: Path, relative: str, quarantine_leaf: str) -> None:
++    """Narrow fault-injection seam for deterministic restore-cleanup race tests."""
++
++
++def _before_restore_quarantine_rmdir(parent_fd: int, quarantine_leaf: str) -> None:
++    """Narrow fault-injection seam for deterministic restore-cleanup race tests."""
++
++
++def _rename_restore_entry_to_quarantine(parent_fd: int, leaf: str,
++                                        expected_identity: Mapping[str, Any]) -> tuple[str, dict[str, int]]:
++    try:
++        before = os.stat(leaf, dir_fd=parent_fd, follow_symlinks=False)
++    except OSError as exc:
++        raise StateBackupError("RESTORE_TARGET_CHANGED", "restore cleanup source disappeared before quarantine") from exc
++    identity = {"device": int(before.st_dev), "inode": int(before.st_ino)}
++    if (not (stat.S_ISDIR(before.st_mode) or stat.S_ISREG(before.st_mode))
++            or identity != {"device": expected_identity.get("device"), "inode": expected_identity.get("inode")}):
++        raise StateBackupError("RESTORE_TARGET_CHANGED", "restore cleanup entry differs from its pinned identity")
++    quarantine = f".comsol-restore-remove-{uuid4().hex}"
++    try:
++        _renameat_directory_noreplace(parent_fd, leaf, parent_fd, quarantine)
++        moved = os.stat(quarantine, dir_fd=parent_fd, follow_symlinks=False)
++    except Exception as exc:
++        if isinstance(exc, StateBackupError):
++            raise
++        raise StateBackupError("RESTORE_ROLLBACK_INCOMPLETE", "restore cleanup could not move the exact entry into quarantine") from exc
++    moved_identity = {"device": int(moved.st_dev), "inode": int(moved.st_ino)}
++    if not (stat.S_ISDIR(moved.st_mode) or stat.S_ISREG(moved.st_mode)) or moved_identity != identity:
++        # A same-name substitution may have been moved. Put it back only when
++        # the original name is still vacant; never replace an arriving entry.
++        try:
++            _renameat_directory_noreplace(parent_fd, quarantine, parent_fd, leaf)
++        except Exception:
++            pass
++        raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined restore entry failed exact moved-identity readback")
++    return quarantine, identity
++
++
++def _remove_quarantined_tree_contents(directory_fd: int, *, prefix: str,
++                                      expected_files: Mapping[str, tuple[str, int]] | None) -> None:
++    for name in sorted(os.listdir(directory_fd)):
++        if name in {".", ".."} or "/" in name or "\\" in name or "\x00" in name:
++            raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined restore tree contains a non-canonical entry")
++        relative = f"{prefix}/{name}" if prefix else name
++        try:
++            named = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
++        except OSError as exc:
++            raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined restore entry changed before removal") from exc
++        identity = {"device": int(named.st_dev), "inode": int(named.st_ino)}
++        if stat.S_ISDIR(named.st_mode):
++            try:
++                child_fd = os.open(name, _posix_directory_flags(), dir_fd=directory_fd)
++            except OSError as exc:
++                raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined directory could not be opened without following links") from exc
++            try:
++                if _fd_directory_identity(child_fd) != identity:
++                    raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined directory changed before removal")
++                _remove_quarantined_tree_contents(child_fd, prefix=relative, expected_files=expected_files)
++            finally:
++                os.close(child_fd)
++            quarantine, moved_identity = _rename_restore_entry_to_quarantine(directory_fd, name, identity)
++            if moved_identity != identity:
++                raise StateBackupError("RESTORE_TARGET_CHANGED", "nested quarantined directory identity changed")
++            current = os.stat(quarantine, dir_fd=directory_fd, follow_symlinks=False)
++            if {"device": int(current.st_dev), "inode": int(current.st_ino)} != identity:
++                raise StateBackupError("RESTORE_TARGET_CHANGED", "nested quarantined directory name was substituted")
++            try:
++                os.rmdir(quarantine, dir_fd=directory_fd)
++            except OSError as exc:
++                raise StateBackupError("RESTORE_ROLLBACK_INCOMPLETE", "pinned nested restore directory could not be removed") from exc
++            continue
++        if not stat.S_ISREG(named.st_mode):
++            raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined restore tree contains a symlink or special file")
++        if expected_files is not None and relative not in expected_files:
++            raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined restore tree contains an unlisted file")
++        quarantine, moved_identity = _rename_restore_entry_to_quarantine(directory_fd, name, identity)
++        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
++        try:
++            file_fd = os.open(quarantine, flags, dir_fd=directory_fd)
++        except OSError as exc:
++            raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined file could not be opened without following links") from exc
++        try:
++            opened = os.fstat(file_fd)
++            if (not stat.S_ISREG(opened.st_mode)
++                    or {"device": int(opened.st_dev), "inode": int(opened.st_ino)} != moved_identity):
++                raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined file differs from its moved handle")
++            digest = hashlib.sha256()
++            total = 0
++            while True:
++                block = os.read(file_fd, 1024 * 1024)
++                if not block:
++                    break
++                digest.update(block)
++                total += len(block)
++            after = os.fstat(file_fd)
++            if ({"device": int(after.st_dev), "inode": int(after.st_ino)} != moved_identity
++                    or int(after.st_size) != total):
++                raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined file changed while being verified")
++        finally:
++            os.close(file_fd)
++        if expected_files is not None and expected_files[relative] != (digest.hexdigest(), total):
++            raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined file bytes differ from the durable manifest")
++        current = os.stat(quarantine, dir_fd=directory_fd, follow_symlinks=False)
++        if {"device": int(current.st_dev), "inode": int(current.st_ino)} != moved_identity:
++            raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined file name was substituted before unlink")
++        os.unlink(quarantine, dir_fd=directory_fd)
++
++
+ def _remove_exact_directory(root: Path, relative: str, *, expected_identity: Mapping[str, Any],
+                             expected_root_identity: Mapping[str, Any],
+                             expected_files: Mapping[str, tuple[str, int]] | None = None,
+-                            allow_subset: bool = False) -> None:
+-    first = _directory_identity_beneath(root, relative,
+-                                        expected_root_identity=expected_root_identity)
++                            allow_subset: bool = False, journal_home: Path,
++                            journal: dict[str, Any], journal_root_relative: str = "") -> None:
++    if os.name == "nt":
++        # The current Windows publisher can pin and move a directory handle,
++        # but the installed helper does not expose safe recursive deletion by
++        # that exact handle. Keep the durable recovery fence instead of
++        # resolving a pathname for deletion.
++        raise StateBackupError("RESTORE_CLEANUP_UNAVAILABLE",
++                               "Windows exact-handle recursive directory cleanup is unavailable; recovery remains fenced")
+     expected = {"device": expected_identity.get("device"), "inode": expected_identity.get("inode")}
+-    if first != expected:
+-        raise StateBackupError("RESTORE_TARGET_CHANGED", "restore directory identity differs from its durable journal")
+-    target = root.joinpath(*_safe_relative_parts(relative))
+-    if expected_files is not None:
+-        if allow_subset:
+-            _verify_tree_subset(target, expected_files)
++    root_expected = {"device": expected_root_identity.get("device"),
++                     "inode": expected_root_identity.get("inode")}
++    parts = _safe_relative_parts(relative)
++    cleanup_items = journal.setdefault("directory_cleanup", [])
++    if not isinstance(cleanup_items, list):
++        raise StateBackupError("RESTORE_JOURNAL_INVALID", "directory cleanup journal field is malformed")
++    item = next((entry for entry in cleanup_items
++                 if isinstance(entry, dict) and entry.get("root_relative") == journal_root_relative
++                 and entry.get("relative") == relative and entry.get("identity") == expected), None)
++    if item is not None and item.get("phase") == "DONE":
++        return
++    resuming_quarantine = item is not None and item.get("phase") == "QUARANTINED"
++
++    descriptors: list[int] = []
++    links: list[tuple[int, str, dict[str, int]]] = []
++    parent_fd = -1
++    try:
++        descriptors, links, actual_root = _open_posix_directory_chain(
++            root, expected_identity=root_expected)
++        if actual_root != root_expected:
++            raise StateBackupError("RESTORE_TARGET_CHANGED", "restore cleanup root differs from its journaled identity")
++        parent_fd = descriptors[-1]
++        for component in parts[:-1]:
++            child_fd = os.open(component, _posix_directory_flags(), dir_fd=parent_fd)
++            child_identity = _fd_directory_identity(child_fd)
++            named = os.stat(component, dir_fd=parent_fd, follow_symlinks=False)
++            if (not stat.S_ISDIR(named.st_mode)
++                    or child_identity != {"device": int(named.st_dev), "inode": int(named.st_ino)}):
++                os.close(child_fd)
++                raise StateBackupError("RESTORE_TARGET_CHANGED", "restore cleanup parent changed during handle-relative open")
++            links.append((parent_fd, component, child_identity))
++            descriptors.append(child_fd)
++            parent_fd = child_fd
++        if item is None:
++            # Capture a durable cleanup intent before moving any directory.
++            named = os.stat(parts[-1], dir_fd=parent_fd, follow_symlinks=False)
++            actual = {"device": int(named.st_dev), "inode": int(named.st_ino)}
++            if not stat.S_ISDIR(named.st_mode) or actual != expected:
++                raise StateBackupError("RESTORE_TARGET_CHANGED", "restore directory identity differs from its durable journal")
++            target_fd = os.open(parts[-1], _posix_directory_flags(), dir_fd=parent_fd)
++            try:
++                if _fd_directory_identity(target_fd) != expected:
++                    raise StateBackupError("RESTORE_TARGET_CHANGED", "restore directory changed before pinned inventory")
++                current_files = _tree_inventory_fd(target_fd)
++                if expected_files is not None:
++                    if allow_subset:
++                        if any(name not in expected_files or expected_files[name] != value
++                               for name, value in current_files.items()):
++                            raise StateBackupError("RESTORE_TARGET_CHANGED", "restore tree differs from the allowed manifest subset")
++                    elif current_files != dict(expected_files):
++                        raise StateBackupError("RESTORE_TARGET_CHANGED", "restore tree differs from the exact verified manifest")
++            finally:
++                os.close(target_fd)
++            quarantine = f".comsol-restore-cleanup-{uuid4().hex}"
++            item = {"root_relative": journal_root_relative, "root_identity": root_expected,
++                    "relative": relative, "leaf": parts[-1], "parent_relative": "/".join(parts[:-1]),
++                    "quarantine_leaf": quarantine, "identity": expected, "phase": "PREPARED",
++                    "expected_files": ({name: [value[0], value[1]] for name, value in expected_files.items()}
++                                       if expected_files is not None else None),
++                    "allow_subset": bool(allow_subset)}
++            cleanup_items.append(item)
++            _full_journal_write(journal_home, journal)
+         else:
+-            _verify_exact_tree(target, expected_files)
+-    second = _directory_identity_beneath(root, relative,
+-                                         expected_root_identity=expected_root_identity)
+-    if second != expected:
+-        raise StateBackupError("RESTORE_TARGET_CHANGED", "restore directory was substituted during rollback verification")
+-    try:
+-        shutil.rmtree(target)
++            if (item.get("root_identity") != root_expected or item.get("leaf") != parts[-1]
++                    or item.get("parent_relative") != "/".join(parts[:-1])
++                    or item.get("quarantine_leaf", "").find("/") >= 0):
++                raise StateBackupError("RESTORE_JOURNAL_INVALID", "pending directory cleanup identity or location changed")
++
++        quarantine = item["quarantine_leaf"]
++        if item.get("phase") == "PREPARED":
++            try:
++                os.stat(quarantine, dir_fd=parent_fd, follow_symlinks=False)
++            except FileNotFoundError:
++                source = os.stat(parts[-1], dir_fd=parent_fd, follow_symlinks=False)
++                if (not stat.S_ISDIR(source.st_mode)
++                        or {"device": int(source.st_dev), "inode": int(source.st_ino)} != expected):
++                    raise StateBackupError("RESTORE_TARGET_CHANGED", "prepared restore cleanup source no longer has its journaled identity")
++                _renameat_directory_noreplace(parent_fd, parts[-1], parent_fd, quarantine)
++            else:
++                raise StateBackupError("RESTORE_TARGET_CHANGED", "restore cleanup quarantine unexpectedly existed before its journaled move")
++            moved = os.stat(quarantine, dir_fd=parent_fd, follow_symlinks=False)
++            if (not stat.S_ISDIR(moved.st_mode)
++                    or {"device": int(moved.st_dev), "inode": int(moved.st_ino)} != expected):
++                # A foreign substitution was moved; restore it only by an
++                # exclusive rename and never overwrite an arriving leaf.
++                try:
++                    _renameat_directory_noreplace(parent_fd, quarantine, parent_fd, parts[-1])
++                except Exception:
++                    pass
++                raise StateBackupError("RESTORE_TARGET_CHANGED", "moved cleanup directory failed exact identity readback")
++            item["phase"] = "QUARANTINED"
++            _full_journal_write(journal_home, journal)
++        elif item.get("phase") != "QUARANTINED":
++            raise StateBackupError("RESTORE_JOURNAL_INVALID", "restore directory cleanup has an unknown phase")
++
++        quarantine_fd = os.open(quarantine, _posix_directory_flags(), dir_fd=parent_fd)
++        try:
++            if _fd_directory_identity(quarantine_fd) != expected:
++                raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined directory no longer has its journaled identity")
++            raw_expected = item.get("expected_files")
++            if raw_expected is None:
++                files_for_delete = None
++            elif isinstance(raw_expected, dict):
++                files_for_delete = {name: (value[0], value[1]) for name, value in raw_expected.items()
++                                    if isinstance(name, str) and isinstance(value, list) and len(value) == 2}
++                if len(files_for_delete) != len(raw_expected):
++                    raise StateBackupError("RESTORE_JOURNAL_INVALID", "cleanup file inventory is malformed")
++            else:
++                raise StateBackupError("RESTORE_JOURNAL_INVALID", "cleanup file inventory is malformed")
++            current_files = _tree_inventory_fd(quarantine_fd)
++            if files_for_delete is not None:
++                if item.get("allow_subset") or resuming_quarantine:
++                    if any(name not in files_for_delete or files_for_delete[name] != value
++                           for name, value in current_files.items()):
++                        raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined tree contains an unlisted or changed file")
++                elif current_files != files_for_delete:
++                    raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined tree differs from the exact manifest")
++            _before_restore_quarantine_delete(root, relative, quarantine)
++            _verify_posix_directory_links(links)
++            moved = os.stat(quarantine, dir_fd=parent_fd, follow_symlinks=False)
++            if (not stat.S_ISDIR(moved.st_mode)
++                    or {"device": int(moved.st_dev), "inode": int(moved.st_ino)} != expected):
++                raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined directory leaf was substituted before cleanup")
++            # Re-check bytes and names after the deterministic race seam.
++            current_files = _tree_inventory_fd(quarantine_fd)
++            if files_for_delete is not None:
++                if item.get("allow_subset") or resuming_quarantine:
++                    changed = any(name not in files_for_delete or files_for_delete[name] != value
++                                  for name, value in current_files.items())
++                else:
++                    changed = current_files != files_for_delete
++                if changed:
++                    raise StateBackupError("RESTORE_TARGET_CHANGED", "quarantined tree changed before pinned cleanup")
++            _remove_quarantined_tree_contents(quarantine_fd, prefix="", expected_files=files_for_delete)
++        finally:
++            os.close(quarantine_fd)
++        _before_restore_quarantine_rmdir(parent_fd, quarantine)
++        _verify_posix_directory_links(links)
++        moved = os.stat(quarantine, dir_fd=parent_fd, follow_symlinks=False)
++        if (not stat.S_ISDIR(moved.st_mode)
++                or {"device": int(moved.st_dev), "inode": int(moved.st_ino)} != expected):
++            raise StateBackupError("RESTORE_TARGET_CHANGED", "empty cleanup quarantine was substituted before directory removal")
++        try:
++            # POSIX has no unlink-by-directory-handle operation. The pinned
++            # parent plus no-replace quarantine prevents re-resolving the
++            # workspace path; a hostile same-UID process can still race the
++            # final name check and rmdir, so this is not an inode-CAS claim.
++            os.rmdir(quarantine, dir_fd=parent_fd)
++        except OSError as exc:
++            raise StateBackupError("RESTORE_ROLLBACK_INCOMPLETE", "pinned restore cleanup quarantine could not be removed") from exc
++        _verify_posix_directory_links(links)
++        item["phase"] = "DONE"
++        _full_journal_write(journal_home, journal)
++    except StateBackupError:
++        raise
+     except OSError as exc:
+-        raise StateBackupError("RESTORE_ROLLBACK_INCOMPLETE", "exact journal-owned restore directory could not be removed") from exc
++        raise StateBackupError("RESTORE_ROLLBACK_INCOMPLETE", "handle-relative restore cleanup failed; keep the recovery journal fenced") from exc
++    finally:
++        for descriptor in reversed(descriptors):
++            try:
++                os.close(descriptor)
++            except OSError:
++                pass
+ 
+ 
+ def _directory_identity(path: Path) -> dict[str, int]:
+@@ -2388,7 +2703,8 @@
+                     "device": child_expected.get("device"), "inode": child_expected.get("inode")}:
+                 raise StateBackupError("RESTORE_TARGET_CHANGED", "installed project directory was replaced")
+         _remove_exact_directory(workspace_root, "projects", expected_identity=installed_projects_expected,
+-                                expected_root_identity=workspace_root_identity, expected_files=expected_files)
++                                expected_root_identity=workspace_root_identity, expected_files=expected_files,
++                                journal_home=home, journal=journal, journal_root_relative="")
+ 
+     if stage.exists():
+         staged_projects = stage / "projects"
+@@ -2410,17 +2726,13 @@
+                         raise StateBackupError("RESTORE_TARGET_CHANGED", "staged project directory was replaced")
+             _remove_exact_directory(stage, "projects", expected_identity=staged_projects_expected,
+                                     expected_root_identity=stage_expected,
+-                                    expected_files=_expected_projects_files(manifest), allow_subset=True)
+-        if any(stage.iterdir()):
+-            raise StateBackupError("RESTORE_TARGET_CHANGED", "restore staging directory contains unexpected data")
+-        if _directory_identity_beneath(workspace_root, journal["workspace_stage_leaf"],
+-                                       expected_root_identity=workspace_root_identity) != {
+-                "device": stage_expected.get("device"), "inode": stage_expected.get("inode")}:
+-            raise StateBackupError("RESTORE_TARGET_CHANGED", "staging directory was substituted during cleanup")
+-        try:
+-            stage.rmdir()
+-        except OSError as exc:
+-            raise StateBackupError("RESTORE_ROLLBACK_INCOMPLETE", "empty owned restore stage could not be removed") from exc
++                                    expected_files=_expected_projects_files(manifest), allow_subset=True,
++                                    journal_home=home, journal=journal,
++                                    journal_root_relative=journal["workspace_stage_leaf"])
++        _remove_exact_directory(workspace_root, journal["workspace_stage_leaf"],
++                                expected_identity=stage_expected,
++                                expected_root_identity=workspace_root_identity, expected_files={},
++                                journal_home=home, journal=journal, journal_root_relative="")
+ 
+     db_path = home / DATABASE_NAME
+     expected_db = journal.get("installed_database_sha256")
+@@ -2634,13 +2946,10 @@
+                     raise StateBackupError("HISTORY_HASH_MISMATCH", "installed full restore changed durable history")
+             finally:
+                 live.close()
+-            if stage.exists():
+-                if _directory_identity_beneath(target_workspace, stage_leaf,
+-                        expected_root_identity=workspace_identity) != journal["workspace_stage_identity"]:
+-                    raise StateBackupError("RESTORE_TARGET_CHANGED", "restore staging directory was replaced before cleanup")
+-                if any(stage.iterdir()):
+-                    raise StateBackupError("RESTORE_STAGE_UNEXPECTED", "staged project directory contains uninstalled files")
+-                stage.rmdir()
++            _remove_exact_directory(target_workspace, stage_leaf,
++                                    expected_identity=journal["workspace_stage_identity"],
++                                    expected_root_identity=workspace_identity, expected_files={},
++                                    journal_home=locked, journal=journal, journal_root_relative="")
+             _archive_full_restore_journal(locked, recovery, journal, "RESTORED_AND_REBOUND")
+             return {"success": True, "operation": "full_restore", "database": DATABASE_NAME,
+                     "database_sha256": _sha256(live_db), "integrity_check": "ok",
+--- r1/comsol_mcp/_w26_os_resources.py
++++ r2/comsol_mcp/_w26_os_resources.py
+@@ -20,6 +20,7 @@
+ import re
+ import sqlite3
+ import stat
++import time
+ from pathlib import Path
+ from typing import Any, Mapping, Sequence
+ 
+@@ -30,10 +31,13 @@
+ SNAPSHOT_SCHEMA = "comsol-mcp.host-resource-snapshot/v1"
+ PLAN_SCHEMA = "comsol-mcp.host-change-plan/v1"
+ RESERVATION_SCHEMA = "comsol-mcp.disk-reservation/v1"
++QUIESCENCE_SCHEMA = "comsol-mcp.job-quiescence-witness/v1"
+ _MAX_SQLITE_INT = (1 << 63) - 1
++_QUIESCENCE_MAX_AGE_NS = 30_000_000_000
+ _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+ _IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,127}$")
+ _NATIVE_STORAGE_ATTESTATION = object()
++_NATIVE_QUIESCENCE_ATTESTATION = object()
+ _SENSITIVE_NAMES = frozenset({
+     "authorization", "token", "accesstoken", "password", "passwd", "secret",
+     "credential", "credentials", "apikey", "privatekey", "licensefilecontents",
+@@ -639,6 +643,86 @@
+     """
+ 
+     pass
++
++
++class JobQuiescenceProvider:
++    """Provider contract for independently proving that one job owns no live work."""
++
++    def prove_quiescence(self, *, store: Any, profile: HostResourceProfile,
++                         job_binding: Mapping[str, Any], reservation_id: str) -> "JobQuiescenceWitness":
++        raise NotImplementedError
++
++
++class NativeJobQuiescenceProvider(JobQuiescenceProvider):
++    """Startup-installed adapter backed by exact process and write-ownership evidence.
++
++    There is no production implementation connected in this unit. An adapter
++    must prove the exact owned process tree has terminated, owned writes have
++    stopped, and the existing durable operation ledger is quiescent.
++    """
++
++    pass
++
++
++@dataclass(frozen=True)
++class JobQuiescenceWitness:
++    """Opaque, job-bound proof returned by a trusted quiescence provider.
++
++    The evidence hashes refer to the provider's exact process-tree, write-scope,
++    and durable-ledger observations. This witness releases only the physical
++    disk reservation; it never changes the domain operation's UNKNOWN status.
++    """
++
++    schema: str
++    provider_id: str
++    profile_id: str
++    profile_sha256: str
++    project_id: str
++    root_file_id: str
++    host_id: str
++    job_id: str
++    operation_id: str
++    reservation_id: str
++    domain_status: str
++    safe_retry: bool
++    process_tree_state: str
++    process_tree_evidence_sha256: str
++    owned_writes_state: str
++    owned_writes_evidence_sha256: str
++    operation_ledger_state: str
++    operation_ledger_watermark: int
++    operation_ledger_evidence_sha256: str
++    observed_monotonic_ns: int
++    _attestation: object = field(default=None, repr=False, compare=False)
++
++    def as_dict(self) -> dict[str, Any]:
++        return {
++            "schema": self.schema,
++            "provider_id": self.provider_id,
++            "profile_id": self.profile_id,
++            "profile_sha256": self.profile_sha256,
++            "project_id": self.project_id,
++            "root_file_id": self.root_file_id,
++            "host_id": self.host_id,
++            "job_id": self.job_id,
++            "operation_id": self.operation_id,
++            "reservation_id": self.reservation_id,
++            "domain_status": self.domain_status,
++            "safe_retry": self.safe_retry,
++            "process_tree_state": self.process_tree_state,
++            "process_tree_evidence_sha256": self.process_tree_evidence_sha256,
++            "owned_writes_state": self.owned_writes_state,
++            "owned_writes_evidence_sha256": self.owned_writes_evidence_sha256,
++            "operation_ledger_state": self.operation_ledger_state,
++            "operation_ledger_watermark": self.operation_ledger_watermark,
++            "operation_ledger_evidence_sha256": self.operation_ledger_evidence_sha256,
++            "observed_monotonic_ns": self.observed_monotonic_ns,
++        }
++
++
++def _issue_native_quiescence_witness(**fields: Any) -> JobQuiescenceWitness:
++    """Internal adapter seam; caller-supplied request data must never reach it."""
++    return JobQuiescenceWitness(**fields, _attestation=_NATIVE_QUIESCENCE_ATTESTATION)
+ 
+ 
+ @dataclass(frozen=True)
+@@ -1083,7 +1167,8 @@
+ __all__ = [
+     "AppliedHostChangeReceipt", "CapabilityState", "DiskAdmission", "DiskBudgetPolicy",
+     "HostChangeApproval", "HostChangePlan", "HostChangeVerification", "HostResourceProfile",
+-    "HostResourceProvider", "HostResourceSnapshot", "LaunchImage", "NetworkGrant", "PathGrant",
++    "HostResourceProvider", "HostResourceSnapshot", "JobQuiescenceProvider",
++    "JobQuiescenceWitness", "LaunchImage", "NativeJobQuiescenceProvider", "NetworkGrant", "PathGrant",
+     "PathIdentity", "ProcessWitness", "QuotaState", "ResourcePolicyError", "SnapshotAssessment",
+     "StorageObservation", "VerifiedLaunchBinding", "apply_host_change_plan", "apply_restore_plan",
+     "assess_snapshot", "build_host_change_plan", "build_restore_plan", "disk_scope_id",
+@@ -1160,15 +1245,20 @@
+         "SELECT id,job_id,metadata FROM job_events WHERE event='W26DiskReservation' ORDER BY id"
+     ).fetchall()
+     state: dict[str, tuple[str, dict[str, Any]]] = {}
+-    allowed = {"schema", "reservation_id", "status", "project_id", "job_id", "operation_id",
+-               "profile_id", "profile_sha256", "root_file_id", "filesystem_id", "scope_id",
+-               "quota_id", "requested_bytes", "observation_sha256", "enforcement", "at_monotonic_ns"}
++    base_fields = {"schema", "reservation_id", "status", "project_id", "job_id", "operation_id",
++                   "profile_id", "profile_sha256", "root_file_id", "filesystem_id", "scope_id",
++                   "quota_id", "requested_bytes", "observation_sha256", "enforcement", "at_monotonic_ns"}
++    quiescence_fields = {"release_basis", "quiescence_witness", "quiescence_witness_sha256"}
+     for row in rows:
+         try:
+             item = _event_json(row["metadata"])
+-            if (set(item) != allowed or item.get("schema") != RESERVATION_SCHEMA
++            status = item.get("status")
++            expected_fields = (base_fields if status in {"RESERVED", "RELEASED"}
++                               else base_fields | quiescence_fields
++                               if status == "RELEASED_AFTER_QUIESCENCE" else set())
++            if (not expected_fields or set(item) != expected_fields
++                    or item.get("schema") != RESERVATION_SCHEMA
+                     or item.get("job_id") != row["job_id"]
+-                    or item.get("status") not in {"RESERVED", "RELEASED"}
+                     or not _is_sha256(item.get("profile_sha256"))
+                     or not _is_sha256(item.get("observation_sha256"))
+                     or type(item.get("requested_bytes")) is not int
+@@ -1178,18 +1268,28 @@
+                     or not _nonempty(item.get("filesystem_id"))
+                     or not _nonempty(item.get("root_file_id"))):
+                 raise ValueError("reservation event fields are invalid")
++            if status == "RELEASED_AFTER_QUIESCENCE":
++                witness = item.get("quiescence_witness")
++                if (item.get("release_basis") != "INDEPENDENT_QUIESCENCE"
++                        or not isinstance(witness, dict)
++                        or not _is_sha256(item.get("quiescence_witness_sha256"))
++                        or _sha256(witness) != item["quiescence_witness_sha256"]):
++                    raise ValueError("quiescence release receipt is malformed or has a bad digest")
++                _validate_quiescence_witness_dict(witness, item, event_id=row["id"], db=db)
+             reservation_id = item["reservation_id"]
+             previous = state.get(reservation_id)
+             if previous is None:
+-                if item["status"] != "RESERVED":
++                if status != "RESERVED":
+                     raise ValueError("release event has no reserve event")
+                 state[reservation_id] = (row["job_id"], item)
+                 continue
+             previous_job, previous_item = previous
+-            if previous_job != row["job_id"] or item["status"] != "RELEASED":
++            if previous_job != row["job_id"] or status not in {"RELEASED", "RELEASED_AFTER_QUIESCENCE"}:
+                 raise ValueError("reservation identity is duplicated or transition is invalid")
+-            base_prev = {key: value for key, value in previous_item.items() if key != "status"}
+-            base_next = {key: value for key, value in item.items() if key != "status"}
++            base_prev = {key: value for key, value in previous_item.items()
++                         if key in base_fields and key != "status"}
++            base_next = {key: value for key, value in item.items()
++                         if key in base_fields and key != "status"}
+             if base_prev != base_next or previous_item["status"] != "RESERVED":
+                 raise ValueError("reservation release does not match its original reservation")
+             state[reservation_id] = (row["job_id"], item)
+@@ -1208,7 +1308,8 @@
+                       operation_names: Sequence[str] | None = None) -> dict[str, Any]:
+     row = db.execute(
+         "SELECT j.job_id,j.operation_id,j.status AS job_status,j.metadata AS job_metadata,"
+-        "o.operation,o.status AS operation_status,o.metadata AS operation_metadata "
++        "j.finished_at AS job_finished_at,o.operation,o.status AS operation_status,"
++        "o.metadata AS operation_metadata,o.result AS operation_result,o.finished_at AS operation_finished_at "
+         "FROM jobs j JOIN operations o ON o.operation_id=j.operation_id WHERE j.job_id=?", (job_id,),
+     ).fetchone()
+     if row is None:
+@@ -1218,6 +1319,10 @@
+         operation_metadata = _event_json(row["operation_metadata"])
+     except ValueError:
+         _fail("RESOURCE_RESERVATION_JOB_UNKNOWN", "job metadata is malformed")
++    try:
++        operation_result = json.loads(row["operation_result"] or "null")
++    except (TypeError, json.JSONDecodeError):
++        _fail("RESOURCE_RESERVATION_JOB_UNKNOWN", "job result is malformed")
+     operation = row["operation"]
+     if (job_metadata.get("project_id") != profile.project_id
+             or operation_metadata.get("project_id") != profile.project_id
+@@ -1227,9 +1332,142 @@
+     allowed = set(operation_names or profile.allowed_operations)
+     if operation not in allowed or operation not in profile.allowed_operations:
+         _fail("RESOURCE_RESERVATION_OPERATION_UNSUPPORTED", "job operation is outside the trusted budget profile")
+-    return {"operation_id": row["operation_id"], "operation": operation,
++    return {"job_id": row["job_id"], "operation_id": row["operation_id"], "operation": operation,
+             "job_status": row["job_status"], "operation_status": row["operation_status"],
+-            "job_metadata": job_metadata}
++            "job_metadata": job_metadata, "operation_result": operation_result,
++            "job_finished_at": row["job_finished_at"],
++            "operation_finished_at": row["operation_finished_at"]}
++
++
++def _unknown_result_is_nonretryable(result: Any) -> bool:
++    if not isinstance(result, Mapping) or result.get("success") is not False:
++        return False
++    execution = result.get("execution")
++    error = result.get("error")
++    return (isinstance(execution, Mapping) and execution.get("status") == "UNKNOWN"
++            and isinstance(error, Mapping) and error.get("safe_retry") is False)
++
++
++def _job_ledger_snapshot(db: sqlite3.Connection, job_id: str,
++                         *, before_event_id: int | None = None) -> tuple[int, str]:
++    if before_event_id is None:
++        rows = db.execute(
++            "SELECT id,event,metadata,created_at FROM job_events WHERE job_id=? ORDER BY id", (job_id,)
++        ).fetchall()
++    else:
++        rows = db.execute(
++            "SELECT id,event,metadata,created_at FROM job_events "
++            "WHERE job_id=? AND id<? ORDER BY id", (job_id, before_event_id)
++        ).fetchall()
++    payload = [{"id": row["id"], "event": row["event"],
++                "metadata": row["metadata"], "created_at": row["created_at"]} for row in rows]
++    value = rows[-1]["id"] if rows else 0
++    if type(value) is not int or not 0 <= value <= _MAX_SQLITE_INT:
++        _fail("RESOURCE_QUIESCENCE_LEDGER_UNKNOWN", "durable job ledger watermark is malformed")
++    return value, _sha256(payload)
++
++
++def _validate_quiescence_witness_dict(witness: Mapping[str, Any],
++                                       reservation: Mapping[str, Any], *,
++                                       event_id: int | None = None,
++                                       db: sqlite3.Connection | None = None) -> None:
++    required = {
++        "schema", "provider_id", "profile_id", "profile_sha256", "project_id", "root_file_id",
++        "host_id", "job_id", "operation_id", "reservation_id", "domain_status", "safe_retry",
++        "process_tree_state", "process_tree_evidence_sha256", "owned_writes_state",
++        "owned_writes_evidence_sha256", "operation_ledger_state", "operation_ledger_watermark",
++        "operation_ledger_evidence_sha256", "observed_monotonic_ns",
++    }
++    if set(witness) != required:
++        raise ValueError("quiescence witness fields do not match the supported schema")
++    if (witness.get("schema") != QUIESCENCE_SCHEMA
++            or not _nonempty(witness.get("provider_id"))
++            or witness.get("domain_status") != "UNKNOWN"
++            or witness.get("safe_retry") is not False
++            or witness.get("process_tree_state") != "TERMINATED"
++            or witness.get("owned_writes_state") != "STOPPED"
++            or witness.get("operation_ledger_state") != "QUIESCENT"):
++        raise ValueError("quiescence witness lacks exact nonretryable UNKNOWN cleanup states")
++    for field_name in ("profile_sha256", "process_tree_evidence_sha256",
++                       "owned_writes_evidence_sha256", "operation_ledger_evidence_sha256"):
++        if not _is_sha256(witness.get(field_name)):
++            raise ValueError(f"quiescence witness {field_name} is invalid")
++    bindings = ("profile_id", "profile_sha256", "project_id", "root_file_id", "job_id",
++                "operation_id", "reservation_id")
++    if any(witness.get(name) != reservation.get(name) for name in bindings):
++        raise ValueError("quiescence witness is bound to another reservation or operation")
++    if not _nonempty(witness.get("host_id")):
++        raise ValueError("quiescence witness host identity is missing")
++    try:
++        watermark = _checked_int(witness.get("operation_ledger_watermark"),
++                                 "operation_ledger_watermark")
++        _checked_int(witness.get("observed_monotonic_ns"), "observed_monotonic_ns")
++    except ValueError as exc:
++        raise ValueError(str(exc)) from exc
++    if event_id is not None and watermark >= event_id:
++        raise ValueError("quiescence ledger watermark is not before the durable release event")
++    if db is not None:
++        observed_watermark, observed_digest = _job_ledger_snapshot(
++            db, str(witness["job_id"]), before_event_id=event_id)
++        if watermark != observed_watermark or witness["operation_ledger_evidence_sha256"] != observed_digest:
++            raise ValueError("quiescence witness does not match the durable job ledger snapshot")
++
++
++def _verify_quiescence_witness(*, provider: JobQuiescenceProvider | None, store: Any,
++                               profile: HostResourceProfile, job: Mapping[str, Any],
++                               reservation: Mapping[str, Any]) -> dict[str, Any]:
++    if provider is None:
++        _fail("RESOURCE_QUIESCENCE_PROVIDER_NOT_CONFIGURED",
++              "UNKNOWN reservation remains fenced without an independent process/write/ledger verifier",
++              evidence_classification="SOFTWARE_ONLY")
++    if not isinstance(provider, NativeJobQuiescenceProvider):
++        _fail("RESOURCE_QUIESCENCE_PROVIDER_UNTRUSTED",
++              "caller-supplied or synthetic providers cannot release UNKNOWN reservations",
++              evidence_classification="SOFTWARE_ONLY")
++    if not _unknown_result_is_nonretryable(job.get("operation_result")):
++        _fail("RESOURCE_QUIESCENCE_DOMAIN_STATE_UNBOUND",
++              "durable operation result does not preserve UNKNOWN with safe_retry=false")
++    if job.get("job_finished_at") is not None or job.get("operation_finished_at") is not None:
++        _fail("RESOURCE_QUIESCENCE_DOMAIN_STATE_UNBOUND",
++              "UNKNOWN reservation has terminal finish timestamps")
++    try:
++        witness = provider.prove_quiescence(store=store, profile=profile,
++                                             job_binding=job,
++                                             reservation_id=str(reservation["reservation_id"]))
++    except Exception as exc:
++        _fail("RESOURCE_QUIESCENCE_PROVIDER_UNAVAILABLE",
++              "independent process/write/ledger proof could not be obtained",
++              cause_type=type(exc).__name__)
++    if (not isinstance(witness, JobQuiescenceWitness)
++            or witness._attestation is not _NATIVE_QUIESCENCE_ATTESTATION):
++        _fail("RESOURCE_QUIESCENCE_WITNESS_UNTRUSTED",
++              "provider did not return a native-attested typed witness")
++    try:
++        payload = witness.as_dict()
++        _validate_quiescence_witness_dict(payload, reservation)
++    except (TypeError, ValueError) as exc:
++        _fail("RESOURCE_QUIESCENCE_WITNESS_INVALID", "quiescence witness is malformed",
++              cause=str(exc))
++    if (witness.profile_id != profile.profile_id or witness.profile_sha256 != profile.sha256
++            or witness.project_id != profile.project_id or witness.root_file_id != profile.root.file_id
++            or witness.host_id != profile.host_id or witness.job_id != job.get("job_id")
++            or witness.operation_id != job.get("operation_id")):
++        _fail("RESOURCE_QUIESCENCE_WITNESS_IDENTITY_MISMATCH",
++              "quiescence witness does not match the active host, project, job, and operation")
++    expected_watermark, expected_ledger_digest = _job_ledger_snapshot(store.db, str(job["job_id"]))
++    if (witness.operation_ledger_watermark != expected_watermark
++            or witness.operation_ledger_evidence_sha256 != expected_ledger_digest):
++        _fail("RESOURCE_QUIESCENCE_LEDGER_CHANGED",
++              "durable job ledger changed or does not match the quiescence observation",
++              expected_watermark=expected_watermark,
++              observed_watermark=witness.operation_ledger_watermark,
++              expected_sha256=expected_ledger_digest)
++    verification_time_ns = time.monotonic_ns()
++    if (witness.observed_monotonic_ns > verification_time_ns
++            or verification_time_ns - witness.observed_monotonic_ns > _QUIESCENCE_MAX_AGE_NS):
++        _fail("RESOURCE_QUIESCENCE_WITNESS_STALE",
++              "quiescence observation is stale or from the future")
++    return payload
+ 
+ 
+ def reserve_disk_for_job(*, store: Any, authority: Any, profile: HostResourceProfile,
+@@ -1301,8 +1539,13 @@
+ 
+ 
+ def release_disk_for_job(*, store: Any, authority: Any, profile: HostResourceProfile,
+-                         job_id: str) -> dict[str, Any]:
+-    """Release only a known terminal reservation; UNKNOWN/LOST stay held."""
++                         job_id: str,
++                         quiescence_provider: JobQuiescenceProvider | None = None) -> dict[str, Any]:
++    """Release terminal work, or UNKNOWN only after exact independent quiescence proof.
++
++    Releasing a disk reservation is physical resource accounting only. The
++    UNKNOWN operation result and ``safe_retry=false`` remain untouched.
++    """
+     from ._operation_store import OperationStore
+     from ._project_authority import ProjectAuthority
+     if not isinstance(store, OperationStore) or not isinstance(authority, ProjectAuthority) or authority.store is not store:
+@@ -1313,16 +1556,6 @@
+             _authorize_profile_project(authority, profile, profile.project_id, "compute",
+                                        code_prefix="RESOURCE_RESERVATION")
+             job = _read_job_binding(store.db, job_id, profile)
+-            if job["job_status"] != job["operation_status"]:
+-                _fail("RESOURCE_RESERVATION_UNCONFIRMED",
+-                      "job and operation terminal states do not agree",
+-                      job_status=job["job_status"], operation_status=job["operation_status"])
+-            if job["job_status"] in {"UNKNOWN", "RECONCILING", "RUNNING", "QUEUED", "STARTING", "EXPIRED", "LOST"}:
+-                _fail("RESOURCE_RESERVATION_UNCONFIRMED", "reservation remains held until job state is durably terminal",
+-                      job_status=job["job_status"])
+-            if job["job_status"] not in {"SUCCEEDED", "FAILED", "CANCELLED"}:
+-                _fail("RESOURCE_RESERVATION_UNCONFIRMED", "job state does not prove reservation release is safe",
+-                      job_status=job["job_status"])
+             reservation_id = _reservation_id(job_id, job["operation_id"], profile)
+             states = _load_reservations(store.db)
+             current = states.get(reservation_id)
+@@ -1331,10 +1564,40 @@
+             found_job, item = current
+             if found_job != job_id:
+                 _fail("RESOURCE_RESERVATION_IDENTITY_CONFLICT", "reservation belongs to another job")
+-            if item["status"] == "RELEASED":
++            if item["status"] in {"RELEASED", "RELEASED_AFTER_QUIESCENCE"}:
+                 store.db.execute("COMMIT")
+-                return {"status": "RELEASED", "reservation_id": reservation_id, "idempotent": True,
++                result = {"status": item["status"], "reservation_id": reservation_id,
++                          "idempotent": True, "evidence_classification": "SOFTWARE_ONLY"}
++                if item["status"] == "RELEASED_AFTER_QUIESCENCE":
++                    result.update({"domain_status": "UNKNOWN", "safe_retry": False,
++                                   "quiescence_witness_sha256": item["quiescence_witness_sha256"]})
++                return result
++
++            if job["job_status"] != job["operation_status"]:
++                _fail("RESOURCE_RESERVATION_UNCONFIRMED",
++                      "job and operation status do not agree",
++                      job_status=job["job_status"], operation_status=job["operation_status"])
++            if job["job_status"] == "UNKNOWN":
++                witness = _verify_quiescence_witness(
++                    provider=quiescence_provider, store=store, profile=profile, job=job,
++                    reservation=item)
++                witness_sha256 = _sha256(witness)
++                released = {**item, "status": "RELEASED_AFTER_QUIESCENCE",
++                            "release_basis": "INDEPENDENT_QUIESCENCE",
++                            "quiescence_witness": witness,
++                            "quiescence_witness_sha256": witness_sha256}
++                store.db.execute("INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
++                                 (job_id, "W26DiskReservation", _canonical_json(released)))
++                store.db.execute("COMMIT")
++                return {"status": "RELEASED_AFTER_QUIESCENCE", "reservation_id": reservation_id,
++                        "idempotent": False, "domain_status": "UNKNOWN", "safe_retry": False,
++                        "quiescence_witness_sha256": witness_sha256,
+                         "evidence_classification": "SOFTWARE_ONLY"}
++
++            if job["job_status"] not in {"SUCCEEDED", "FAILED", "CANCELLED"}:
++                _fail("RESOURCE_RESERVATION_UNCONFIRMED",
++                      "reservation remains held until terminal status or independently verified UNKNOWN quiescence",
++                      job_status=job["job_status"])
+             released = {**item, "status": "RELEASED"}
+             store.db.execute("INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
+                              (job_id, "W26DiskReservation", _canonical_json(released)))
+--- r1/tests/test_state_backup.py
++++ r2/tests/test_state_backup.py
+@@ -463,6 +463,94 @@
+     assert fenced.value.code == "RESTORE_RECOVERY_REQUIRED"
+ 
+ 
++def test_full_restore_quarantine_cleanup_pins_workspace_after_root_path_swap(tmp_path, monkeypatch):
++    import comsol_mcp._state_backup as state_backup
++
++    archive, manifest = _full_backup_fixture(tmp_path)
++    home = tmp_path / "target-control"
++    workspace = tmp_path / "target-workspace"
++    parked = tmp_path / "owned-workspace-parked"
++    outside = tmp_path / "outside"
++    home.mkdir()
++    workspace.mkdir()
++    outside.mkdir()
++    sentinel = outside / "foreign.mph"
++    sentinel.write_bytes(b"preserve the outside tree")
++
++    def fail_after_projects_install(*_args, **_kwargs):
++        raise RuntimeError("inject post-install failure to enter rollback")
++
++    injected = {}
++
++    def swap_workspace_before_rmdir(parent_fd, quarantine_leaf):
++        if injected:
++            return
++        # The descriptor is already pinned to this workspace directory. Move
++        # its pathname away and replace the old pathname with an outside link.
++        workspace.rename(parked)
++        workspace.symlink_to(outside, target_is_directory=True)
++        injected["done"] = quarantine_leaf
++
++    monkeypatch.setattr(state_backup, "_validate_rebound_database", fail_after_projects_install)
++    monkeypatch.setattr(state_backup, "_before_restore_quarantine_rmdir", swap_workspace_before_rmdir)
++    with pytest.raises(StateBackupError) as refused:
++        restore_full_backup(home, workspace, archive, manifest, confirm=True)
++    assert refused.value.code == "RESTORE_ROLLBACK_INCOMPLETE"
++    assert injected["done"].startswith(".comsol-restore-cleanup-")
++    assert workspace.is_symlink()
++    assert sentinel.read_bytes() == b"preserve the outside tree"
++    assert (home / ACTIVE_FULL_RESTORE_JOURNAL).is_file()
++    with pytest.raises(StateBackupError) as fenced:
++        assert_no_pending_restore(home)
++    assert fenced.value.code == "RESTORE_RECOVERY_REQUIRED"
++
++
++def test_full_restore_quarantine_cleanup_preserves_same_content_foreign_leaf(tmp_path, monkeypatch):
++    import shutil
++    import comsol_mcp._state_backup as state_backup
++
++    archive, manifest = _full_backup_fixture(tmp_path)
++    home = tmp_path / "target-control"
++    workspace = tmp_path / "target-workspace"
++    home.mkdir()
++    workspace.mkdir()
++    template = tmp_path / "foreign-projects-template"
++    foreign_copy = tmp_path / "foreign-projects-copy"
++    parked_owned = tmp_path / "owned-projects-parked"
++    injected = {}
++
++    def fail_after_projects_install(*_args, **_kwargs):
++        raise RuntimeError("inject post-install failure to enter rollback")
++
++    def preserve_template(root, relative, quarantine_leaf):
++        if relative == "projects" and not template.exists():
++            shutil.copytree(root / quarantine_leaf, template)
++
++    def replace_quarantine_with_same_content(parent_fd, quarantine_leaf):
++        if injected or not template.exists():
++            return
++        quarantine = workspace / quarantine_leaf
++        quarantine.rename(parked_owned)
++        shutil.copytree(template, quarantine)
++        shutil.copytree(template, foreign_copy)
++        injected.update(leaf=quarantine_leaf, identity=state_backup._directory_identity(quarantine))
++
++    monkeypatch.setattr(state_backup, "_validate_rebound_database", fail_after_projects_install)
++    monkeypatch.setattr(state_backup, "_before_restore_quarantine_delete", preserve_template)
++    monkeypatch.setattr(state_backup, "_before_restore_quarantine_rmdir", replace_quarantine_with_same_content)
++    with pytest.raises(StateBackupError) as refused:
++        restore_full_backup(home, workspace, archive, manifest, confirm=True)
++    assert refused.value.code == "RESTORE_ROLLBACK_INCOMPLETE"
++    foreign_leaf = workspace / injected["leaf"]
++    assert foreign_leaf.is_dir() and not foreign_leaf.is_symlink()
++    assert state_backup._directory_identity(foreign_leaf) == injected["identity"]
++    assert state_backup._tree_file_inventory(foreign_leaf) == state_backup._tree_file_inventory(foreign_copy)
++    assert (home / ACTIVE_FULL_RESTORE_JOURNAL).is_file()
++    with pytest.raises(StateBackupError) as fenced:
++        assert_no_pending_restore(home)
++    assert fenced.value.code == "RESTORE_RECOVERY_REQUIRED"
++
++
+ def test_online_backup_includes_committed_wal_pages_without_migrating_source(tmp_path):
+     home = tmp_path / "control"
+     home.mkdir()
+--- r1/tests/test_w26_os_resources.py
++++ r2/tests/test_w26_os_resources.py
+@@ -6,6 +6,7 @@
+ import os
+ from pathlib import Path
+ import threading
++import time
+ 
+ import pytest
+ 
+@@ -79,6 +80,41 @@
+     return record
+ 
+ 
++class _SyntheticQuiescenceProvider(resources.NativeJobQuiescenceProvider):
++    """Protocol fixture only; its fields are not native OS evidence."""
++
++    def __init__(self, *, wrong_job=False, stale=False):
++        self.wrong_job = wrong_job
++        self.stale = stale
++
++    def prove_quiescence(self, *, store, profile, job_binding, reservation_id):
++        job_id = "another-job" if self.wrong_job else job_binding["job_id"]
++        observed = time.monotonic_ns() - (60_000_000_000 if self.stale else 1)
++        watermark, ledger_digest = resources._job_ledger_snapshot(store.db, job_id)
++        return resources._issue_native_quiescence_witness(
++            schema=resources.QUIESCENCE_SCHEMA,
++            provider_id="synthetic-protocol-test-only",
++            profile_id=profile.profile_id,
++            profile_sha256=profile.sha256,
++            project_id=profile.project_id,
++            root_file_id=profile.root.file_id,
++            host_id=profile.host_id,
++            job_id=job_id,
++            operation_id=job_binding["operation_id"],
++            reservation_id=reservation_id,
++            domain_status="UNKNOWN",
++            safe_retry=False,
++            process_tree_state="TERMINATED",
++            process_tree_evidence_sha256="a" * 64,
++            owned_writes_state="STOPPED",
++            owned_writes_evidence_sha256="b" * 64,
++            operation_ledger_state="QUIESCENT",
++            operation_ledger_watermark=watermark,
++            operation_ledger_evidence_sha256=ledger_digest,
++            observed_monotonic_ns=observed,
++        )
++
++
+ def _complete_snapshot(profile, *, now=1000):
+     launcher, server, worker = profile.launch_images
+     processes = (
+@@ -232,13 +268,113 @@
+     with pytest.raises(resources.ResourcePolicyError) as unknown:
+         resources.release_disk_for_job(store=store, authority=authority, profile=profile,
+                                        job_id=first["job_id"])
+-    assert unknown.value.code == "RESOURCE_RESERVATION_UNCONFIRMED"
++    assert unknown.value.code == "RESOURCE_QUIESCENCE_PROVIDER_NOT_CONFIGURED"
+     second = _queued_job(store, project_id, project)
+     with pytest.raises(resources.ResourcePolicyError) as overcommit:
+         resources.reserve_disk_for_job(store=store, authority=authority, profile=profile,
+                                        job_id=second["job_id"], requested_bytes=40,
+                                        observation=observation, now_monotonic_ns=1000)
+     assert overcommit.value.code == "INSUFFICIENT_DISK_BUDGET"
++    store.close()
++
++
++def test_unknown_quiescence_release_is_exact_durable_and_does_not_resolve_domain(tmp_path):
++    store, authority, project, project_id = _authority(tmp_path)
++    db_path = tmp_path / "operations.sqlite"
++    profile = replace(_profile(project), project_id=project_id)
++    observation = _storage(profile, free=100)
++    first = _queued_job(store, project_id, project)
++    reserved = resources.reserve_disk_for_job(
++        store=store, authority=authority, profile=profile, job_id=first["job_id"],
++        requested_bytes=70, observation=observation, now_monotonic_ns=1000)
++    unknown_result = {
++        "success": False,
++        "execution": {"status": "UNKNOWN", "job_id": first["job_id"]},
++        "error": {"code": "EXECUTION_STATE_UNKNOWN", "safe_retry": False},
++    }
++    store.finish(first["operation_id"], status="UNKNOWN", result=unknown_result)
++
++    with pytest.raises(resources.ResourcePolicyError) as absent:
++        resources.release_disk_for_job(store=store, authority=authority, profile=profile,
++                                       job_id=first["job_id"])
++    assert absent.value.code == "RESOURCE_QUIESCENCE_PROVIDER_NOT_CONFIGURED"
++    with pytest.raises(resources.ResourcePolicyError) as untrusted:
++        resources.release_disk_for_job(store=store, authority=authority, profile=profile,
++                                       job_id=first["job_id"], quiescence_provider=object())
++    assert untrusted.value.code == "RESOURCE_QUIESCENCE_PROVIDER_UNTRUSTED"
++    with pytest.raises(resources.ResourcePolicyError) as wrong_identity:
++        resources.release_disk_for_job(
++            store=store, authority=authority, profile=profile, job_id=first["job_id"],
++            quiescence_provider=_SyntheticQuiescenceProvider(wrong_job=True))
++    assert wrong_identity.value.code == "RESOURCE_QUIESCENCE_WITNESS_INVALID"
++    with pytest.raises(resources.ResourcePolicyError) as stale:
++        resources.release_disk_for_job(
++            store=store, authority=authority, profile=profile, job_id=first["job_id"],
++            quiescence_provider=_SyntheticQuiescenceProvider(stale=True))
++    assert stale.value.code == "RESOURCE_QUIESCENCE_WITNESS_STALE"
++
++    released = resources.release_disk_for_job(
++        store=store, authority=authority, profile=profile, job_id=first["job_id"],
++        quiescence_provider=_SyntheticQuiescenceProvider())
++    assert released["status"] == "RELEASED_AFTER_QUIESCENCE"
++    assert released["domain_status"] == "UNKNOWN" and released["safe_retry"] is False
++    assert released["evidence_classification"] == "SOFTWARE_ONLY"
++    persisted_job = store.job(first["job_id"])
++    assert persisted_job["status"] == persisted_job["operation"]["status"] == "UNKNOWN"
++    assert persisted_job["result"] == unknown_result
++    again = resources.release_disk_for_job(
++        store=store, authority=authority, profile=profile, job_id=first["job_id"])
++    assert again["status"] == "RELEASED_AFTER_QUIESCENCE" and again["idempotent"] is True
++    store.close()
++
++    # Recovery trusts only the durable reservation transition. It does not
++    # rewrite UNKNOWN, infer completion, or enable retry.
++    reopened = OperationStore(db_path)
++    workspace_root = tmp_path / "authorized"
++    host_permissions = {"inspect", "project_write", "compute", "host_control"}
++    authority2 = ProjectAuthority(reopened, workspace_root=workspace_root,
++                                  permission_provider=lambda: host_permissions,
++                                  grant_ceiling=host_permissions)
++    recovered = resources._load_reservations(reopened.db)
++    assert recovered[reserved["reservation_id"]][1]["status"] == "RELEASED_AFTER_QUIESCENCE"
++    still_unknown = reopened.job(first["job_id"])
++    assert still_unknown["status"] == still_unknown["operation"]["status"] == "UNKNOWN"
++    assert still_unknown["result"]["error"]["safe_retry"] is False
++
++    second = _queued_job(reopened, project_id, project)
++    admitted = resources.reserve_disk_for_job(
++        store=reopened, authority=authority2, profile=profile, job_id=second["job_id"],
++        requested_bytes=80, observation=observation, now_monotonic_ns=1000)
++    assert admitted["status"] == "RESERVED" and admitted["requested_bytes"] == 80
++    reopened.close()
++
++
++def test_tampered_persisted_quiescence_receipt_fences_reservation_recovery(tmp_path):
++    store, authority, project, project_id = _authority(tmp_path)
++    profile = replace(_profile(project), project_id=project_id)
++    record = _queued_job(store, project_id, project)
++    resources.reserve_disk_for_job(store=store, authority=authority, profile=profile,
++                                   job_id=record["job_id"], requested_bytes=25,
++                                   observation=_storage(profile), now_monotonic_ns=1000)
++    store.finish(record["operation_id"], status="UNKNOWN", result={
++        "success": False, "execution": {"status": "UNKNOWN"},
++        "error": {"safe_retry": False},
++    })
++    resources.release_disk_for_job(
++        store=store, authority=authority, profile=profile, job_id=record["job_id"],
++        quiescence_provider=_SyntheticQuiescenceProvider())
++    with store.lock:
++        row = store.db.execute(
++            "SELECT id,metadata FROM job_events WHERE job_id=? AND event='W26DiskReservation' "
++            "ORDER BY id DESC LIMIT 1", (record["job_id"],)).fetchone()
++        damaged = json.loads(row["metadata"])
++        damaged["quiescence_witness"]["process_tree_state"] = "RUNNING"
++        store.db.execute("UPDATE job_events SET metadata=? WHERE id=?",
++                         (json.dumps(damaged, sort_keys=True), row["id"]))
++    with pytest.raises(resources.ResourcePolicyError) as blocked:
++        resources._load_reservations(store.db)
++    assert blocked.value.code == "RESOURCE_RESERVATION_STATE_UNKNOWN"
++    assert store.job(record["job_id"])["status"] == "UNKNOWN"
+     store.close()
+ 
+ 

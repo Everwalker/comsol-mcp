@@ -1,0 +1,395 @@
+--- r2/comsol_mcp/_control_daemon.py
++++ r3/comsol_mcp/_control_daemon.py
+@@ -12372,7 +12372,7 @@
+                     self._dispatch_condition.notify_all()
+ 
+ 
+-def serve(home, *, host_provider_config=None):
++def serve(home, *, host_provider_config=None, disk_resource_config=None):
+     home = Path(home)
+     home.mkdir(mode=0o700, parents=True, exist_ok=True)
+     os.chmod(home, 0o700)
+@@ -12384,10 +12384,17 @@
+         singleton.close()
+         raise
+     token = secrets.token_urlsafe(32)
+-    selected_provider_config = host_provider_config or os.environ.get("COMSOL_MCP_HOST_PROVIDER_CONFIG")
++    selected_provider_config = (host_provider_config if host_provider_config is not None
++                                else os.environ.get("COMSOL_MCP_HOST_PROVIDER_CONFIG"))
++    selected_disk_config = (disk_resource_config if disk_resource_config is not None
++                            else os.environ.get("COMSOL_MCP_DISK_RESOURCE_CONFIG"))
++    daemon_options = {}
++    if selected_provider_config is not None:
++        daemon_options["host_provider_config"] = selected_provider_config
++    if selected_disk_config is not None:
++        daemon_options["disk_resource_config"] = selected_disk_config
+     try:
+-        daemon = (ControlDaemon(home, host_provider_config=selected_provider_config)
+-                  if selected_provider_config else ControlDaemon(home))
++        daemon = ControlDaemon(home, **daemon_options)
+     except Exception:
+         singleton.close()
+         raise
+@@ -12469,10 +12476,17 @@
+         })
+ 
+ 
+-if __name__ == "__main__":
++def main(argv=None):
+     parser = argparse.ArgumentParser()
+     parser.add_argument("--home", required=True)
+     parser.add_argument("--host-provider-config", default=None,
+                         help="host-only scoped grant/destination JSON file; may also use COMSOL_MCP_HOST_PROVIDER_CONFIG")
+-    arguments = parser.parse_args()
+-    serve(arguments.home, host_provider_config=arguments.host_provider_config)
++    parser.add_argument("--disk-resource-config", default=None,
++                        help="trusted host disk admission JSON file; may also use COMSOL_MCP_DISK_RESOURCE_CONFIG")
++    arguments = parser.parse_args(argv)
++    return serve(arguments.home, host_provider_config=arguments.host_provider_config,
++                 disk_resource_config=arguments.disk_resource_config)
++
++
++if __name__ == "__main__":
++    main()
+--- r2/comsol_mcp/_w26_os_resources.py
++++ r3/comsol_mcp/_w26_os_resources.py
+@@ -49,10 +49,14 @@
+ DISK_CONFIG_SCHEMA = "comsol-mcp.disk-resource-config/v1"
+ DISK_ROOT_BINDING_EVENT = "W26DiskRootBinding"
+ _DISK_CONFIG_MAX_BYTES = 262_144
+-_DISK_PRODUCING_EFFECTS = frozenset({"COMPUTE", "FILE_WRITE", "WRITE", "STATE_WRITE", "TRUSTED_CODE", "EVALUATE"})
++_DISK_PRODUCING_EFFECTS = frozenset({"COMPUTE", "FILE_WRITE", "WRITE", "STATE_WRITE", "TRUSTED_CODE", "EVALUATE", "DYNAMIC"})
+ _EFFECT_PERMISSION = {
+     "INSPECT": "inspect", "PROJECT_WRITE": "project_write", "READ": "inspect",
+     "WRITE": "project_write", "STATE_WRITE": "project_write", "FILE_WRITE": "project_write",
++    # DYNAMIC is reserved conservatively. ControlDaemon separately resolves
++    # request-specific permissions where the API exposes a closed resolver;
++    # the disk profile itself uses the strongest project-scoped write grant.
++    "DYNAMIC": "project_write",
+     "COMPUTE": "compute", "EVALUATE": "project_write", "TRUSTED_CODE": "trusted_code",
+     "HOST_CONTROL": "host_control",
+ }
+--- r2/tests/test_w26_os_resources.py
++++ r3/tests/test_w26_os_resources.py
+@@ -985,6 +985,7 @@
+         self.generation = 1
+         self.submitted = []
+         self.parameters = {}
++        self.comments = {}
+         self.readback_override = None
+         self._event_callback = None
+ 
+@@ -1000,6 +1001,19 @@
+             yield
+         finally:
+             self._event_callback = previous
++
++    def describe_public(self, _node):
++        from comsol_mcp._g2_public_api import MODEL_ENTITY, VERSION
++        return {
++            "runtime_version": VERSION,
++            "interfaces": [MODEL_ENTITY],
++            "methods": [
++                {"interface": MODEL_ENTITY, "method": "comments", "parameters": [],
++                 "returns": "java.lang.String"},
++                {"interface": MODEL_ENTITY, "method": "comments", "parameters": ["java.lang.String"],
++                 "returns": MODEL_ENTITY},
++            ],
++        }
+ 
+     def submit(self, kind, payload, **kwargs):
+         safe_payload = dict(payload)
+@@ -1019,6 +1033,19 @@
+             if method == "param" and handle.startswith("model:"):
+                 result = {"$worker_handle": f"{handle}:param", "generation": self.generation,
+                           "java_type": "ParamCollection"}
++            elif method == "feature" and handle.startswith("model:") and len(args) == 1:
++                result = {"$worker_handle": f"{handle}:feature:{args[0]}",
++                          "generation": self.generation, "java_type": "ModelEntity"}
++            elif method == "comments" and ":feature:" in handle:
++                if args:
++                    value = args[0]["data"] if isinstance(args[0], dict) else str(args[0])
++                    self.comments[handle] = value
++                    result = {"$worker_handle": handle, "generation": self.generation,
++                              "java_type": "ModelEntity"}
++                else:
++                    result = self.comments.get(handle, "")
++            elif method == "resolveModelPath" and ":feature:" in handle:
++                result = "m/feature/resource_test"
+             elif method == "set" and handle.endswith(":param"):
+                 self.parameters[str(args[0])] = str(args[1])
+             elif method == "get" and handle.endswith(":param"):
+@@ -1028,7 +1055,8 @@
+ 
+ 
+ def _daemon_disk_environment(tmp_path, *, reserve_free=0, allowed_operation="parameter.set",
+-                             wrong_root=False, replace_root=False):
++                             wrong_root=False, replace_root=False, operation="parameter.set",
++                             arguments=None, estimate=64 * 1024):
+     home = tmp_path / "daemon-home"
+     workspace_root = tmp_path / "workspace-root"
+     workspace_root.mkdir(parents=True)
+@@ -1046,7 +1074,7 @@
+     if wrong_root:
+         selected_root.mkdir()
+     profile = _disk_profile(project_id, selected_root, operation=allowed_operation,
+-                            estimate=64 * 1024, reserve_free=reserve_free,
++                            estimate=estimate, reserve_free=reserve_free,
+                             max_task=2 * 1024 * 1024)
+     config_path = _write_disk_config(tmp_path / "resource-config", profile)
+     service = ExecutionService(SessionLedger("session", "server"), _DaemonResourceAdapter(),
+@@ -1070,17 +1098,110 @@
+         parked = project_path.with_name("project-one-parked")
+         os.rename(project_path, parked)
+         project_path.mkdir()
++    execution = {"project_id": project_id, "model_ref": model_ref.as_dict(), "expected_revision": 0,
++                 "idempotency_key": "disk-resource-request", "request_id": "disk-resource-request"}
++    if operation in {"api.invoke", "api_invoke"}:
++        # Unit A's frozen public schema requires the exact session identity in
++        # the outer envelope. This is the bound service ledger session, not a
++        # newly fabricated project session.
++        execution["session_id"] = model_ref.session_id
+     request = {
+-        "operation": "parameter.set",
+-        "arguments": {"parameters": [{"name": "resource_test", "expression": "1"}]},
+-        # This is the existing default Worker lane: the ModelRef binds the
+-        # service session, while an outer session id would request a separate
+-        # registered session lifecycle that this software fixture does not own.
+-        "execution": {"project_id": project_id, "model_ref": model_ref.as_dict(), "expected_revision": 0,
+-                      "idempotency_key": "disk-resource-request",
+-                      "request_id": "disk-resource-request"},
++        "operation": operation,
++        "arguments": (arguments if arguments is not None else
++                      {"parameters": [{"name": "resource_test", "expression": "1"}]}),
++        # The default Worker lane is bound by the exact ModelRef. Only routes
++        # whose public schema requires it carry the matching service session.
++        "execution": execution,
+     }
+     return daemon, request, project_path, project_id, profile, config_path
++
++
++def _dynamic_api_write_request():
++    return {
++        "path": {"segments": [{"collection": "feature", "tag": "resource_test"}]},
++        "method": "comments",
++        "arguments": [{"kind": "string", "shape": [], "data": "disk-admitted dynamic write"}],
++        "declared_effect": "WRITE",
++    }
++
++
++def _fake_daemon_serve_environment(monkeypatch, daemon_type):
++    from comsol_mcp import _control_daemon as daemon_module
++
++    class FakeLock:
++        def __init__(self, _path): pass
++        def close(self): pass
++
++    class FakeServer:
++        server_port = 24974
++        daemon_threads = False
++        def serve_forever(self): pass
++
++    monkeypatch.setattr(daemon_module, "ProcessLock", FakeLock)
++    monkeypatch.setattr(daemon_module, "ControlDaemon", daemon_type)
++    monkeypatch.setattr(daemon_module, "ThreadingHTTPServer", lambda *_args: FakeServer())
++    monkeypatch.setattr(daemon_module, "process_identity", lambda _pid: {"start_epoch_ms": 100})
++    return daemon_module
++
++
++def test_control_daemon_serve_accepts_disk_config_and_preserves_unconfigured_startup(tmp_path, monkeypatch):
++    observed = []
++
++    class FakeDaemon:
++        def __init__(self, _home, **options):
++            observed.append(options)
++            self._control_singleton_lock_held = False
++
++    daemon_module = _fake_daemon_serve_environment(monkeypatch, FakeDaemon)
++    monkeypatch.delenv("COMSOL_MCP_DISK_RESOURCE_CONFIG", raising=False)
++    config = tmp_path / "trusted-disk-config.json"
++    daemon_module.serve(tmp_path / "configured-home", disk_resource_config=config)
++    daemon_module.serve(tmp_path / "legacy-home")
++    assert observed == [{"disk_resource_config": config}, {}]
++
++
++def test_control_daemon_serve_reads_disk_config_from_environment(tmp_path, monkeypatch):
++    observed = []
++
++    class FakeDaemon:
++        def __init__(self, _home, **options):
++            observed.append(options)
++            self._control_singleton_lock_held = False
++
++    daemon_module = _fake_daemon_serve_environment(monkeypatch, FakeDaemon)
++    config = tmp_path / "disk-config-from-env.json"
++    monkeypatch.setenv("COMSOL_MCP_DISK_RESOURCE_CONFIG", str(config))
++    daemon_module.serve(tmp_path / "environment-home")
++    assert observed == [{"disk_resource_config": str(config)}]
++
++
++def test_control_daemon_cli_forwards_disk_resource_config(tmp_path, monkeypatch):
++    from comsol_mcp import _control_daemon as daemon_module
++
++    observed = []
++    monkeypatch.setattr(daemon_module, "serve", lambda *args, **kwargs: observed.append((args, kwargs)))
++    config = tmp_path / "disk-config-cli.json"
++    daemon_module.main(["--home", str(tmp_path / "cli-home"),
++                        "--disk-resource-config", str(config)])
++    assert observed == [((str(tmp_path / "cli-home"),),
++                         {"host_provider_config": None, "disk_resource_config": str(config)})]
++
++
++def test_control_daemon_rejects_invalid_disk_config_before_opening_listener(tmp_path, monkeypatch):
++    from comsol_mcp import _control_daemon as daemon_module
++
++    class FakeLock:
++        def __init__(self, _path): pass
++        def close(self): pass
++
++    monkeypatch.setattr(daemon_module, "ProcessLock", FakeLock)
++    monkeypatch.setattr(daemon_module, "ThreadingHTTPServer",
++                        lambda *_args: pytest.fail("listener must not open with invalid trusted config"))
++    config = tmp_path / "invalid-disk-config.json"
++    config.write_text("{}", encoding="utf-8")
++    with pytest.raises(ExecutionContractError) as refused:
++        daemon_module.serve(tmp_path / "invalid-home", disk_resource_config=config)
++    assert refused.value.code.startswith("DISK_RESOURCE_CONFIG")
+ 
+ 
+ @pytest.mark.skipif(os.name == "nt", reason="POSIX trusted config and storage provider; Windows adapter NOT_RUN")
+@@ -1114,6 +1235,80 @@
+         assert len(reservation_indexes) == 2
+         assert names.index("SUCCEEDED") < reservation_indexes[1] < names.index("W26DiskReservationReleased")
+         assert "W26DiskReservationReleased" in names
++    finally:
++        daemon.close()
++
++
++@pytest.mark.skipif(os.name == "nt", reason="POSIX coordinator; Windows kernel adapter NOT_RUN")
++def test_dynamic_api_write_with_low_budget_refuses_before_any_worker_send(tmp_path, monkeypatch):
++    from comsol_mcp import _g3_ops
++
++    monkeypatch.setattr(_g3_ops, "REQUIRES_ISOLATION", frozenset())
++    daemon, request, _project, _project_id, _profile, _config = _daemon_disk_environment(
++        tmp_path, allowed_operation="api.invoke", operation="api.invoke",
++        arguments=_dynamic_api_write_request(), reserve_free=10**18,
++    )
++    try:
++        result = daemon.dispatch(request)
++        assert result["success"] is False
++        assert result["error"]["code"] == "INSUFFICIENT_DISK_BUDGET", result
++        assert result["data"]["engine_dispatched"] is False
++        assert daemon.worker.submitted == []
++        job_id = result["execution"]["job_id"]
++        assert daemon.store.job(job_id)["status"] == "FAILED"
++        assert daemon.store.get_operation(result["execution"]["operation_id"])["status"] == "FAILED"
++        assert not any(item[0] == "RUNNING" for item in daemon.store.db.execute(
++            "SELECT event FROM job_events WHERE job_id=?", (job_id,)).fetchall())
++    finally:
++        daemon.close()
++
++
++@pytest.mark.skipif(os.name == "nt", reason="POSIX coordinator; Windows kernel adapter NOT_RUN")
++def test_dynamic_api_write_with_sufficient_budget_dispatches_and_releases_terminal_reservation(tmp_path, monkeypatch):
++    from comsol_mcp import _g3_ops
++
++    monkeypatch.setattr(_g3_ops, "REQUIRES_ISOLATION", frozenset())
++    daemon, request, _project, _project_id, _profile, _config = _daemon_disk_environment(
++        tmp_path, allowed_operation="api.invoke", operation="api.invoke",
++        arguments=_dynamic_api_write_request(),
++    )
++    # The product isolation verifier is an independent T037 gate. This test
++    # exercises disk reservation and the actual software API route only; the
++    # fixture marker below is explicitly not OS-sandbox evidence.
++    monkeypatch.setattr(daemon.backend, "_require_g2_isolation",
++                        lambda: {"scope": "SOFTWARE_FIXTURE_ONLY"})
++    try:
++        result = daemon.dispatch(request)
++        assert result["success"] is True, result
++        assert result["data"]["resolved_effect"] == "WRITE"
++        assert result["data"]["readback"] == "disk-admitted dynamic write"
++        assert daemon.worker.submitted
++        job_id = result["execution"]["job_id"]
++        assert daemon.store.job(job_id)["status"] == "SUCCEEDED"
++        reservation_rows = [item for bound_job, item in resources._load_reservations(daemon.store.db).values()
++                            if bound_job == job_id]
++        assert len(reservation_rows) == 1 and reservation_rows[0]["status"] == "RELEASED"
++        names = [row[0] for row in daemon.store.db.execute(
++            "SELECT event FROM job_events WHERE job_id=? ORDER BY id", (job_id,)).fetchall()]
++        assert names.index("W26DiskAdmission") < names.index("RUNNING") < names.index("worker_request")
++        assert names.index("SUCCEEDED") < names.index("W26DiskReservationReleased")
++    finally:
++        daemon.close()
++
++
++@pytest.mark.parametrize("operation", [
++    "api.invoke", "result.numerical_manage", "result.table_manage", "plot.view_manage",
++])
++@pytest.mark.skipif(os.name == "nt", reason="POSIX trusted config and storage provider; Windows adapter NOT_RUN")
++def test_all_catalog_dynamic_routes_require_configured_disk_reservation(tmp_path, operation):
++    daemon, _request, _project, project_id, _profile, _config = _daemon_disk_environment(
++        tmp_path, allowed_operation=operation, operation=operation,
++    )
++    try:
++        assert resources._registered_operation_effect(operation) == "DYNAMIC"
++        assert daemon._disk_resource_coordinator.requires_reservation(
++            project_id=project_id, operation_id=operation,
++        ) is True
+     finally:
+         daemon.close()
+ 
+--- r2/docs/full_project_continuation_v2/DISK_RESOURCE_CONFIG.md
++++ r3/docs/full_project_continuation_v2/DISK_RESOURCE_CONFIG.md
+@@ -0,0 +1,52 @@
++# Trusted disk-admission startup configuration
++
++This configuration enables the current POSIX `fstatvfs` admission coordinator. It is not a hard quota, a temporary-file limit, a memory limit, or an OS sandbox. Windows remains unsupported until a native root/storage identity adapter is implemented.
++
++The daemon accepts the same file through the CLI or environment:
++
++```sh
++python -m comsol_mcp._control_daemon \
++  --home /absolute/private/control-home \
++  --disk-resource-config /absolute/private/disk-resource.json
++```
++
++Alternatively set `COMSOL_MCP_DISK_RESOURCE_CONFIG` in the daemon's trusted service environment. A CLI path takes precedence over the environment value. If neither is supplied, startup keeps the prior unconfigured behavior. If a path is supplied but cannot be read and validated as a trusted file, startup refuses before opening the listener.
++
++The strict schema is shown below. Replace every example identity with values read from the actual host and the exact existing registered project root; the strings beginning with `REPLACE_` are explanatory placeholders and cannot be loaded as-is. Store the file in a private, ownership-enforcing filesystem: on POSIX the config file must be private, its parent must not be group/other writable, and the pinned root must match its configured device/inode/owner. Darwin `MNT_IGNORE_OWNERSHIP` volumes and unsupported ACL checks are rejected.
++
++```json
++{
++  "schema": "comsol-mcp.disk-resource-config/v1",
++  "host_id": "REPLACE_WITH_EXACT_HOSTNAME",
++  "platform": "macos",
++  "profiles": [
++    {
++      "profile_id": "project-disk-admission",
++      "project_id": "REPLACE_WITH_REGISTERED_PROJECT_ID",
++      "root": {
++        "path": "/absolute/canonical/path/to/the/existing/project",
++        "volume_id": "REPLACE_WITH_DECIMAL_ST_DEV",
++        "file_id": "REPLACE_WITH_DECIMAL_ST_INO",
++        "owner_id": "REPLACE_WITH_DECIMAL_ST_UID"
++      },
++      "storage_id": "REPLACE_WITH_posix_ST_DEV_AND_F_FSID",
++      "disk_budget": {
++        "mode": "ADMISSION_ONLY",
++        "reserve_free_bytes": 1073741824,
++        "max_task_reservation_bytes": 5368709120,
++        "quota_profile_id": null
++      },
++      "allowed_operations": ["api.invoke"],
++      "trusted_estimates": [
++        {"operation_id": "api.invoke", "estimate_bytes": 1048576}
++      ]
++    }
++  ]
++}
++```
++
++`storage_id` uses the provider's current observed filesystem form, normally `posix:<st_dev>:<f_fsid>` where the platform exposes `f_fsid`, otherwise `posix:<st_dev>`. The root identity uses decimal `st_dev`, `st_ino`, and `st_uid` strings. The current provider securely reopens and pins the root before each admission, checks the exact identity and re-reads free capacity.
++
++Every allowed canonical operation must have exactly one positive trusted estimate no greater than `max_task_reservation_bytes`. The estimate is operator-controlled startup policy, not caller input or a measured upper bound. Existing public routes classified `DYNAMIC`, including `api.invoke`, are conservatively reserved; until a reliable READ-effect resolver is available they also need a trusted estimate. The exact public capability/project permission check still runs before reservation and dispatch. Cached read/status/cancel/cleanup paths keep their existing handling.
++
++Reservations are written to the existing durable OperationStore before the job enters `RUNNING` or sends Worker work. A confirmed terminal result releases the reservation; `UNKNOWN` keeps it held unless a separate fresh quiescence proof is available. This mechanism is advisory free-space admission: it cannot prevent an untrusted or external writer from consuming space after observation, and it does not cap COMSOL temporary files.

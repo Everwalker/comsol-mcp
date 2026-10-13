@@ -1,0 +1,50 @@
+{
+  "command": "TMPDIR=/private/tmp /private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python -m pytest -q --junitxml=docs/full_project_continuation_v2/evidence/release_data_lifecycle/fulldata-software-r1/junit.xml tests/test_release_data_lifecycle.py tests/test_state_backup.py::test_full_backup_restore_rebinds_project_and_artifact_without_replaying_unknown tests/test_state_backup.py::test_full_restore_incomplete_rollback_fences_startup_then_explicit_recovery_clears_targets",
+  "documentation_sha256": "948add7daffdc7f9c0e4e5ba717a15fefb80b61474a7cd774558a0a22f79bcde",
+  "junit": {
+    "errors": 0,
+    "failures": 0,
+    "path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/fulldata-software-r1/junit.xml",
+    "sha256": "dd92d8ec77e21ec7826942832ddb85babe1e54acb09f2b8251bc32176c1e05e0",
+    "skipped": 0,
+    "tests": 39
+  },
+  "known_model": {
+    "native_status": "NOT_RUN",
+    "path": "evidence/w21_closure/windows/reviewer64_reopen01/project/review_reopen.mph",
+    "sha256": "ee71658d66a92efc19c78de7742eb24c1ef3b16f1fb33b1d6814b1e79c96b9d6",
+    "size_bytes": 10725566
+  },
+  "native_comsol": "NOT_RUN",
+  "network_guard_applied_to_fixture_children": false,
+  "release_install_upgrade_rollback": "NOT_RUN",
+  "release_version_unchanged": true,
+  "runtime": {
+    "machine": "arm64",
+    "platform": "macOS-27.0-arm64-arm-64bit",
+    "python": "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python",
+    "python_version": "3.12.13"
+  },
+  "schema": "comsol-mcp.release-data-lifecycle-software-run/1",
+  "scope": "release lifecycle helper plus actual ProjectAuthority and ArtifactStore registration, production full-backup/full-restore/full-recover, candidate UNKNOWN reconciliation, restored hash readback, old OperationStore reopen, and content-tamper refusal; this is not an installed-package transition",
+  "solve": "NOT_RUN",
+  "source_inputs_pre_and_post_sha256": {
+    "after": {
+      "comsol_mcp/_artifact_store.py": "52dbb0dba5305d974f6cd93b747093d076d753c30ec67e4159d437af87feb347",
+      "comsol_mcp/_operation_store.py": "d9d6c3d54ff4afc625f28f5e70595fd23f6a899e05863a9cdf0b05711a0808fa",
+      "comsol_mcp/_project_authority.py": "82b90c1157b242f80feb9079ac4b58e2a1295719a7a323a97532497a740181a8",
+      "comsol_mcp/_state_backup.py": "9ab50378fc7eab8c72def62beb0d7191ef68c25e1fa1ace717e0424294f3ba5c",
+      "tests/test_release_data_lifecycle.py": "4f4bba19c2f0baf6deb7a8971c981aa94328bdc7e30edbc83254070fa455e2b3",
+      "tools/release_transition_lifecycle.py": "79b8549fbb735654ba7578eea92ce199cbbeccc298c2cc2ae0af4305676a49db"
+    },
+    "before": {
+      "comsol_mcp/_artifact_store.py": "52dbb0dba5305d974f6cd93b747093d076d753c30ec67e4159d437af87feb347",
+      "comsol_mcp/_operation_store.py": "d9d6c3d54ff4afc625f28f5e70595fd23f6a899e05863a9cdf0b05711a0808fa",
+      "comsol_mcp/_project_authority.py": "82b90c1157b242f80feb9079ac4b58e2a1295719a7a323a97532497a740181a8",
+      "comsol_mcp/_state_backup.py": "9ab50378fc7eab8c72def62beb0d7191ef68c25e1fa1ace717e0424294f3ba5c",
+      "tests/test_release_data_lifecycle.py": "4f4bba19c2f0baf6deb7a8971c981aa94328bdc7e30edbc83254070fa455e2b3",
+      "tools/release_transition_lifecycle.py": "79b8549fbb735654ba7578eea92ce199cbbeccc298c2cc2ae0af4305676a49db"
+    }
+  },
+  "status": "PASS_SCOPED_SOFTWARE_FIXTURE"
+}

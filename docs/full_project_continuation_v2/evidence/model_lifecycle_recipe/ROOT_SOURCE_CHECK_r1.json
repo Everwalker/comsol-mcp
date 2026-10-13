@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "status": "ROOT_SOURCE_CHANGES_REQUIRED",
+  "observed_utc": "2026-10-11T17:42:44.218263+00:00",
+  "scope": "Single whole 7-model/2-recipe source review; not final independent Reviewer, native or project acceptance",
+  "source_freeze": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/model-lifecycle-recipe-source-20261012-001/SOURCE_FREEZE.json",
+    "sha256": "043f421277ae22a4c4d21b872ec68d0ce0de2220926059872fd3b9da23169011"
+  },
+  "preserved_source_manifest": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/model-lifecycle-recipe-source-20261012-001/PRESERVED_SOURCE_MANIFEST.json",
+    "sha256": "84785608fba8220cc55e94b4434db73c67924b0ab4f2349f9dce8477183dc5e6"
+  },
+  "actual_junit_verification": {
+    "managed_model_recipe_and_affected": {
+      "passed": 157,
+      "failed": 0,
+      "skipped": 0
+    },
+    "w25_ready_fence_and_sessions": {
+      "passed": 210,
+      "failed": 0,
+      "skipped": 0
+    },
+    "software_java_worker_loopback": {
+      "passed": 40,
+      "failed": 0,
+      "skipped": 1,
+      "deselected": 1
+    },
+    "allowlist_inventory_deselection": "Required to re-enable after Windows domain integration; not accepted as a full Worker regression PASS"
+  },
+  "issues": [
+    {
+      "id": "R1",
+      "file": "comsol_mcp/_g3_managed_models.py",
+      "line": 585,
+      "problem": "recipe_run requires historical test ModelRef and Worker/server/session identity to still be the current live binding and compares current absolute source path with historical Worker events. A tested recipe cannot be reused after test-model close, reconnect, or clean-target root migration.",
+      "required": "Keep historical durable source/runtime/event evidence immutable and internally consistent; validate current target permission/version/source independently. Preserve registration strictness and tamper/UNKNOWN/foreign-project controls."
+    },
+    {
+      "id": "R2",
+      "file": "comsol_mcp/_g3_managed_models.py",
+      "line": 203,
+      "problem": "model.load permits only this implementation saved_model savecopy metadata, excluding legal registered pinned external/restored MPH.",
+      "required": "Support authentic project-bound registered MPH inputs through exact safe artifact/hash/format verification without adopting or clearing other models."
+    },
+    {
+      "id": "R3",
+      "file": "comsol_mcp/_g3_managed_models.py",
+      "line": 316,
+      "problem": "overwrite=true only permits identical destination bytes, so ordinary explicit overwrite after a model change cannot succeed.",
+      "required": "Implement safe explicit overwrite of the exact owned registered target with preserved original/failure evidence and guarded transactional publication; foreign/unregistered/tampered/alias inputs refuse."
+    },
+    {
+      "id": "R4",
+      "file": "comsol_mcp/_managed_backend.py",
+      "problem": "Production dirty-close context hardcodes authorization_scope_verifier=None. Refusal is safe, but no actual configured trusted provider positive path exists.",
+      "required": "After exclusive shared ownership returns, wire one backend-owned scoped authorization provider shared with artifact.publish; no caller-string authorization or synthetic callback promoted to native acceptance."
+    }
+  ],
+  "remediation_assignment": "Same Luna Max model executor owns independent managed_models/tests fixes; Windows retains shared files; preserve r1 and make one r2 after complete fixes/affected regressions",
+  "comsol_native": "NOT_RUN",
+  "target_portability": "UNVERIFIED",
+  "independent_final_review": "NOT_RUN",
+  "project_acceptance": "OPEN"
+}

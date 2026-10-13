@@ -1,0 +1,146 @@
+{
+  "format": "definition-validation-source-freeze/2",
+  "candidate_id": "definition-routes-20261012-r2",
+  "created_at": "2026-10-12T00:36:21.024616+08:00",
+  "status": "CANDIDATE_FROZEN_FOR_ROOT_REVIEW",
+  "base_commit": "60464c85b429e649f4f80484473999e5365ad96a",
+  "current_git_head_at_freeze": "799bf7a0fa95313e7659f44d8ff40ff1678314d5",
+  "scope": "Standalone helper and focused software tests for function.validate, selection.rebind and definition.mapping_validate. No shared dispatcher/registry/Worker files.",
+  "source_files": [
+    {
+      "path": "comsol_mcp/_g3_definition_validation.py",
+      "size_bytes": 72411,
+      "sha256": "914756c51449d605fe98d1e6602793fa1b9a0f99eaef529f0097ed38dfb885ce"
+    },
+    {
+      "path": "tests/test_g3_definition_validation.py",
+      "size_bytes": 29952,
+      "sha256": "9f8d304e08f4b0c0de6baadae02e869837b5c3f8af91481c862f8c8d6abdaec1"
+    }
+  ],
+  "preserved_r1_sources": [
+    {
+      "path": "docs/full_project_continuation_v2/evidence/definition_routes/source-r1/_g3_definition_validation.py",
+      "size_bytes": 62354,
+      "sha256": "f988f3d958caf11dfa71446eed44c0190dc50c07de08f9a6aa28070593a0fce0"
+    },
+    {
+      "path": "docs/full_project_continuation_v2/evidence/definition_routes/source-r1/test_g3_definition_validation.py",
+      "size_bytes": 21822,
+      "sha256": "1e238606f8409ab819bc6e43460fadd4a2eec981e82ad9b294c653f269277066"
+    }
+  ],
+  "r1_preservation": {
+    "candidate_id": "definition-routes-20261012-r1",
+    "source_sha256": [
+      "f988f3d958caf11dfa71446eed44c0190dc50c07de08f9a6aa28070593a0fce0",
+      "1e238606f8409ab819bc6e43460fadd4a2eec981e82ad9b294c653f269277066"
+    ],
+    "original_250_pass_junit": "docs/full_project_continuation_v2/evidence/definition_routes/software-r1/junit.xml",
+    "status": "PRESERVED_UNMODIFIED; superseded for source acceptance by r2 only"
+  },
+  "root_review_r1_fixes": [
+    {
+      "id": "D1",
+      "status": "IMPLEMENTED_AND_TESTED",
+      "change": "Propagate operator cleanup partial_change and execution_state_unknown flags to the top-level result."
+    },
+    {
+      "id": "D2",
+      "status": "IMPLEMENTED_AND_TESTED",
+      "change": "Honor optional/empty test_points; metadata-only requests mark arithmetic, operator samples and bounded coverage NOT_RUN."
+    },
+    {
+      "id": "D3",
+      "status": "IMPLEMENTED_AND_TESTED",
+      "change": "Read back GeneralExtrusion.opname and evaluate root.<component>.<opname>(x/y/z); component-qualified tests cover same opname in two components and tag != opname."
+    },
+    {
+      "id": "D4",
+      "status": "IMPLEMENTED_AND_TESTED",
+      "change": "Only compare coordinate residuals when srcframe=spatial; mesh/material samples keep finite-value observations but return FRAME_CONVERSION_UNVERIFIED without residuals."
+    },
+    {
+      "id": "D5",
+      "status": "IMPLEMENTED_AND_TESTED",
+      "change": "Read back method/exttol/usenan; report requested-point finite, NaN, point-error, invalid and unclassified counts/fractions with method semantics. Global source-mesh coverage remains UNVERIFIED."
+    }
+  ],
+  "official_api_evidence": {
+    "path": "docs/full_project_continuation_v2/evidence/definition_routes/API_EVIDENCE-r2.json",
+    "size_bytes": 1580,
+    "sha256": "0fb2e42174d6cdd37fbed061ce140630877294f03ec6db948c77ca37c497932b"
+  },
+  "review_diff": {
+    "path": "docs/full_project_continuation_v2/evidence/definition_routes/R2_SOURCE.patch",
+    "size_bytes": 43265,
+    "sha256": "ff303488fd6620fd6fa750f2d35e895d020d1546af9e6d3a24313bb933a89a2a"
+  },
+  "software_tests": {
+    "status": "PASS",
+    "command_scope": [
+      "tests/test_g3_definition_validation.py",
+      "tests/test_g3_w17.py",
+      "tests/test_g3_w13.py",
+      "tests/test_function_evaluate_contract.py"
+    ],
+    "tests": 256,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "time_seconds": 0.426,
+    "invocation": {
+      "path": "docs/full_project_continuation_v2/evidence/definition_routes/software-r2/invocation.json",
+      "size_bytes": 1693,
+      "sha256": "c2c2a481a899c1d1d1e1ae0f3b6767973ec801cb24b125bdcd6f9bdc4c1bea34"
+    },
+    "junit": {
+      "path": "docs/full_project_continuation_v2/evidence/definition_routes/software-r2/junit-final.xml",
+      "size_bytes": 34340,
+      "sha256": "d39204701b4e077a3d1d17353dc31d61ad4be81e6f2122d1ee97de45e71d94ac"
+    },
+    "strict_network_guard": {
+      "path": "docs/full_project_continuation_v2/evidence/definition_routes/software-r2/network-guard-final.jsonl",
+      "size_bytes": 239,
+      "sha256": "c6549949662c8fb29e24f6820f8dc3f6173f91b0af7e9b172c4a6378aa1f95eb"
+    },
+    "strict_network_guard_records": 1,
+    "blocked_network_events": 0,
+    "superseded_attempts_preserved": [
+      {
+        "junit": {
+          "path": "docs/full_project_continuation_v2/evidence/definition_routes/software-r2/junit-focused.xml",
+          "size_bytes": 5429,
+          "sha256": "215927d9f86474dc214ca3f6781c4b2f32e44713389cca53b24800ed049be93a"
+        },
+        "summary": "Initial focused r2 run exposed path-only empty-dimension guard; one failure, retained as debug record."
+      },
+      {
+        "junit": {
+          "path": "docs/full_project_continuation_v2/evidence/definition_routes/software-r2/junit-focused-retry.xml",
+          "size_bytes": 4610,
+          "sha256": "3b615596b20105375644c07dea52e442aaa2f7d89d383eab77264bb1c0e8c8c0"
+        },
+        "summary": "Focused helper suite passed after path-only correction; 28 passed."
+      }
+    ]
+  },
+  "acceptance": {
+    "production_dispatch_integration": "DEFERRED_UNTIL_SHARED_SOURCE_OWNER_HANDOFF",
+    "native_comsol": "NOT_RUN",
+    "gui": "NOT_RUN",
+    "scientific_acceptance": "NOT_EVALUATED",
+    "destination_frame_property": "UNOBSERVED; result.at_points destination evaluation frame spatial only",
+    "source_mesh_coverage": "UNVERIFIED_GLOBAL; bounded requested-point finite fraction only",
+    "mesh_material_frame_coordinate_residuals": "UNVERIFIED; no frame conversion evidence",
+    "function_global_data_continuity": "UNVERIFIED",
+    "independent_reviewer": "PENDING_ROOT_REVIEW",
+    "overall": "CANDIDATE_SOURCE_AND_SOFTWARE_ONLY_NOT_ACCEPTED"
+  },
+  "scope_notes": [
+    "Arithmetic preview remains a partial Python subset; actual sampled coupling values are read through result.at_points with explicit dataset/solution/outer/inner, units and spatial query coordinates.",
+    "Operator coverage classifies only requested test points and never infers source-mesh inclusion or global coverage; closest semantics are explicitly reported.",
+    "Mesh/material source-frame samples are not compared against spatial coordinates.",
+    "All tests use API-shaped synthetic fixtures; no COMSOL engine/model or GUI was started."
+  ]
+}

@@ -1,0 +1,1842 @@
+{
+  "actual_public_request_reply": {
+    "data": {
+      "axis_metadata_complete": false,
+      "axis_metadata_source": "SolutionInfo.getSolnum(outer, strict) + getPNames/getPvals/getUnits",
+      "binding_complete": false,
+      "binding_source": "dataset property 'solution'/'data' resolved against model.sol().tags(); SolutionInfo.getSolnum(outer, strict)",
+      "dataset": "dset1",
+      "dataset_binding": {
+        "binding_complete": true,
+        "component": "comp1",
+        "dataset": "dset1",
+        "dataset_chain": [
+          "dset1"
+        ],
+        "dataset_edges": [],
+        "dataset_type": "Solution",
+        "error": null,
+        "geometry": "geom1",
+        "properties": {
+          "comp": "comp1",
+          "geom": "geom1",
+          "solution": "sol1"
+        },
+        "provenance": {
+          "dataset_tags": [
+            "dset1"
+          ],
+          "mutation_methods_called": [],
+          "read_only": true,
+          "solution_tags": [
+            "sol1"
+          ]
+        },
+        "read_errors": [],
+        "requested_solution": null,
+        "solution": "sol1",
+        "sources": {
+          "component": "dataset.comp -> modelNode.tags()/model.component()",
+          "geometry": "dataset.geom -> component.geom.tags()/getter",
+          "solution": "dataset.solution -> model.sol().tags()"
+        }
+      },
+      "inner_indices": [],
+      "level_names": [
+        "freq"
+      ],
+      "outer_indices": [],
+      "pair_mapping_complete": false,
+      "parameters": {
+        "by_pair": {}
+      },
+      "parameters_complete": false,
+      "parameters_source": "SolutionInfo.getPNames(int[][])/getPvals(int[][])/getUnits(int[][])",
+      "read_errors": [
+        {
+          "code": "SOLUTION_METADATA_ERROR",
+          "message": "{\"completed_at_ms\": \"1791846668882\", \"failure\": {\"cause_chain\": [{\"message\": \"Unknown_solution\", \"type\": \"com.comsol.util.exceptions.FlException\"}], \"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1791846668879\", \"request_id\": \"wrk-8e722962-16dd-4545-9826-99fc2115a1df\", \"started_at_ms\": \"1791846668879\", \"status\": \"FAILED\", \"type\": \"call\"}",
+          "method": "getSolnums"
+        },
+        {
+          "code": "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+          "message": "engine returned an empty outer axis; getSolnum(1,true) alone does not establish outer/inner pairs",
+          "method": "getOuterSolnum"
+        },
+        {
+          "allowlist_entry_required": null,
+          "code": "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+          "message": "outer/inner solution axes could not be read from the engine; no default index is invented and operations that select a solution axis stay refused",
+          "method": "SolutionInfo"
+        }
+      ],
+      "solnum_pairs": [],
+      "solution": "sol1",
+      "solution_count": 0,
+      "solver_sequence_parameter_observation": {
+        "attached": true,
+        "get_size": [
+          64057,
+          1
+        ],
+        "get_size_multi": [
+          1,
+          1
+        ],
+        "get_size_multi_getter": {
+          "method": "SolverSequence.getSizeMulti()",
+          "raw": [
+            1,
+            1
+          ],
+          "semantics": "[local solution count in multisolution, total solution number count] per COMSOL 6.4 doc7714/chunk23082",
+          "status": "CAPTURED"
+        },
+        "get_size_semantics": "[degrees_of_freedom, solution_number_count] per COMSOL 6.4 documentation",
+        "interpretation": "raw sequence-level complex values only; no outer/inner tuple mapping or complete parameter combinations inferred",
+        "parameter_rows": [
+          {
+            "imag": 0.0,
+            "name": "freq",
+            "parameter_index": 0,
+            "real": 193414489032258.03,
+            "solnum": 1,
+            "unit": "GHz"
+          }
+        ],
+        "parameter_units_complete": true,
+        "parameters_complete": false,
+        "pnames": [
+          "freq"
+        ],
+        "read_errors": [],
+        "receiver": "model.sol(<dataset-bound solution tag>)",
+        "sequence_type": "SolverSequence",
+        "solution_identity_matches_dataset_study": true,
+        "solution_info_count_scope": {
+          "getLevelNames": [
+            "freq"
+          ],
+          "getLevels": 1,
+          "getOuterSolnum": [],
+          "getOuterSolnum_semantics": "empty means no outer parameter/values per COMSOL 6.4 doc7709/chunk23066",
+          "read_errors": []
+        },
+        "solution_number_count": 1,
+        "solution_tag": "sol1",
+        "solution_type": "Parametric",
+        "solution_values": [
+          {
+            "imag_getter": {
+              "arguments": [
+                1
+              ],
+              "method": "SolverSequence.getPValsImag(int)",
+              "raw": [
+                0.0
+              ]
+            },
+            "real_getter": {
+              "arguments": [
+                1
+              ],
+              "method": "SolverSequence.getPVals(int)",
+              "raw": [
+                193414489032258.03
+              ]
+            },
+            "solnum": 1
+          }
+        ],
+        "source": "direct SolverSequence.getPNames/getSize/getPVals(int)/getPValsImag(int); supplemental to SolutionInfo",
+        "status": "OBSERVED_TYPED_COMPLEX_PARAMETER_VALUES",
+        "study": "std1",
+        "unit_observations": [
+          {
+            "arguments": [
+              "freq"
+            ],
+            "method": "SolutionInfo.getUnit(String)",
+            "name": "freq",
+            "value": "GHz"
+          }
+        ]
+      },
+      "study": "std1",
+      "time_axis_source": "steady: no time axis",
+      "time_values": []
+    },
+    "error": null,
+    "execution": {
+      "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+      "dirty": false,
+      "idempotency_key": "source018-indices",
+      "job_id": "24bdf42f-f654-4bc2-8ceb-c65c890ff15f",
+      "model_ownership": "user_owned",
+      "model_ref": {
+        "generation": 1,
+        "model_tag": "Model",
+        "schema_version": 1,
+        "server_instance_id": "public-test-epoch",
+        "session_id": "public-test-session"
+      },
+      "operation_id": "e8663266-5bc5-4753-8f48-f9f6d30ebcd2",
+      "project_id": "076bbd50-b9a0-4fea-9e12-725bb18c68df",
+      "request_hash": "1561eee67f0f4428f1ac79c7e60c33b74dd88458f43c7bf95f791af0f95a5e90",
+      "request_id": "source018-indices",
+      "revision": 0,
+      "server_ownership": "shared",
+      "session_id": "public-test-session"
+    },
+    "success": true
+  },
+  "current_g3_projection": {
+    "axis_metadata_complete": false,
+    "axis_metadata_source": "SolutionInfo.getSolnum(outer, strict) + getPNames/getPvals/getUnits",
+    "binding_complete": false,
+    "binding_source": "dataset property 'solution'/'data' resolved against model.sol().tags(); SolutionInfo.getSolnum(outer, strict)",
+    "dataset": "dset1",
+    "dataset_binding": {
+      "binding_complete": true,
+      "component": "comp1",
+      "dataset": "dset1",
+      "dataset_chain": [
+        "dset1"
+      ],
+      "dataset_edges": [],
+      "dataset_type": "Solution",
+      "error": null,
+      "geometry": "geom1",
+      "properties": {
+        "comp": "comp1",
+        "geom": "geom1",
+        "solution": "sol1"
+      },
+      "provenance": {
+        "dataset_tags": [
+          "dset1"
+        ],
+        "mutation_methods_called": [],
+        "read_only": true,
+        "solution_tags": [
+          "sol1"
+        ]
+      },
+      "read_errors": [],
+      "requested_solution": null,
+      "solution": "sol1",
+      "sources": {
+        "component": "dataset.comp -> modelNode.tags()/model.component()",
+        "geometry": "dataset.geom -> component.geom.tags()/getter",
+        "solution": "dataset.solution -> model.sol().tags()"
+      }
+    },
+    "inner_indices": [],
+    "level_names": [
+      "freq"
+    ],
+    "outer_indices": [],
+    "pair_mapping_complete": false,
+    "parameters": {
+      "by_pair": {}
+    },
+    "parameters_complete": false,
+    "parameters_source": "SolutionInfo.getPNames(int[][])/getPvals(int[][])/getUnits(int[][])",
+    "read_errors": [
+      {
+        "code": "SOLUTION_METADATA_ERROR",
+        "message": "{\"completed_at_ms\": \"1791846668882\", \"failure\": {\"cause_chain\": [{\"message\": \"Unknown_solution\", \"type\": \"com.comsol.util.exceptions.FlException\"}], \"code\": \"ENGINE_CALL_FAILED\", \"execution_state_unknown\": true, \"message\": \"FlException: \\u672a\\u77e5\\u89e3\\u3002\\n  - \\u6807\\u8bb0\", \"ok\": false}, \"ok\": false, \"queued_at_ms\": \"1791846668879\", \"request_id\": \"wrk-8e722962-16dd-4545-9826-99fc2115a1df\", \"started_at_ms\": \"1791846668879\", \"status\": \"FAILED\", \"type\": \"call\"}",
+        "method": "getSolnums"
+      },
+      {
+        "code": "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+        "message": "engine returned an empty outer axis; getSolnum(1,true) alone does not establish outer/inner pairs",
+        "method": "getOuterSolnum"
+      },
+      {
+        "allowlist_entry_required": null,
+        "code": "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+        "message": "outer/inner solution axes could not be read from the engine; no default index is invented and operations that select a solution axis stay refused",
+        "method": "SolutionInfo"
+      }
+    ],
+    "solnum_pairs": [],
+    "solution": "sol1",
+    "solution_count": 0,
+    "solver_sequence_parameter_observation": {
+      "attached": true,
+      "get_size": [
+        64057,
+        1
+      ],
+      "get_size_multi": [
+        1,
+        1
+      ],
+      "get_size_multi_getter": {
+        "method": "SolverSequence.getSizeMulti()",
+        "raw": [
+          1,
+          1
+        ],
+        "semantics": "[local solution count in multisolution, total solution number count] per COMSOL 6.4 doc7714/chunk23082",
+        "status": "CAPTURED"
+      },
+      "get_size_semantics": "[degrees_of_freedom, solution_number_count] per COMSOL 6.4 documentation",
+      "interpretation": "raw sequence-level complex values only; no outer/inner tuple mapping or complete parameter combinations inferred",
+      "parameter_rows": [
+        {
+          "imag": 0.0,
+          "name": "freq",
+          "parameter_index": 0,
+          "real": 193414489032258.03,
+          "solnum": 1,
+          "unit": "GHz"
+        }
+      ],
+      "parameter_units_complete": true,
+      "parameters_complete": false,
+      "pnames": [
+        "freq"
+      ],
+      "read_errors": [],
+      "receiver": "model.sol(<dataset-bound solution tag>)",
+      "sequence_type": "SolverSequence",
+      "solution_identity_matches_dataset_study": true,
+      "solution_info_count_scope": {
+        "getLevelNames": [
+          "freq"
+        ],
+        "getLevels": 1,
+        "getOuterSolnum": [],
+        "getOuterSolnum_semantics": "empty means no outer parameter/values per COMSOL 6.4 doc7709/chunk23066",
+        "read_errors": []
+      },
+      "solution_number_count": 1,
+      "solution_tag": "sol1",
+      "solution_type": "Parametric",
+      "solution_values": [
+        {
+          "imag_getter": {
+            "arguments": [
+              1
+            ],
+            "method": "SolverSequence.getPValsImag(int)",
+            "raw": [
+              0.0
+            ]
+          },
+          "real_getter": {
+            "arguments": [
+              1
+            ],
+            "method": "SolverSequence.getPVals(int)",
+            "raw": [
+              193414489032258.03
+            ]
+          },
+          "solnum": 1
+        }
+      ],
+      "source": "direct SolverSequence.getPNames/getSize/getPVals(int)/getPValsImag(int); supplemental to SolutionInfo",
+      "status": "OBSERVED_TYPED_COMPLEX_PARAMETER_VALUES",
+      "study": "std1",
+      "unit_observations": [
+        {
+          "arguments": [
+            "freq"
+          ],
+          "method": "SolutionInfo.getUnit(String)",
+          "name": "freq",
+          "value": "GHz"
+        }
+      ]
+    },
+    "study": "std1",
+    "time_axis_source": "steady: no time axis",
+    "time_values": []
+  },
+  "native": "NOT_RUN",
+  "original_recorded_sdk_boundary": {
+    "case": "actual018",
+    "original_job_execution_metadata": {
+      "execution_timeout_s": null,
+      "expected_revision": 0,
+      "idempotency_key": "w23-science-idem-a1bfe8be-49c0-4b14-84ed-39de2c874bbd",
+      "model_ref": {
+        "generation": 1,
+        "model_tag": "mcp_3813d35cc73c",
+        "schema_version": 1,
+        "server_instance_id": "cc7d53a1b4aced3df47b97d01c4d7418a4a9e69b7e209b25b9fb2ccf029896f2",
+        "session_id": "session-07aee15a4e49e23d7e9d7d78"
+      },
+      "project_id": "d8d801e9-ba5c-4d5e-aed4-dc3d0b2bb72c",
+      "queue_timeout_s": 60.0,
+      "request_id": "w23-science-req-fb4e2da1-0a1e-4268-8f64-16fc989e7b0c",
+      "rpc_timeout_s": 120.0,
+      "session_id": "session-07aee15a4e49e23d7e9d7d78"
+    },
+    "original_job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+    "original_terminal_job_status": "SUCCEEDED",
+    "raw_complete_ledger_reference": {
+      "bytes": 2101816,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r10/docs/full_project_execution/w23_overlap/evidence/native-run-20261013-018-saved-mph-zero-solve-candidate20-r10-final1/native-execute/managed_ledger_reconciliation.json",
+      "sha256": "f615085c5021d8ed24c02a25c120a63f1832a59f31bdcbd3c05c8d48c6db54fa"
+    },
+    "raw_terminal_reference": {
+      "bytes": 21441,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r10/docs/full_project_execution/w23_overlap/evidence/native-run-20261013-018-saved-mph-zero-solve-candidate20-r10-final1/native-execute/managed_solution_indices_dset1_job_terminal.json",
+      "sha256": "cb61b79da70f28890999902c9c58a2f16139e36c0a760ffe9a444202b789d5b5"
+    },
+    "selected_actual_getter_request_reply_pairs": [
+      {
+        "arg_python_types": [],
+        "args": [],
+        "method": "getPVals",
+        "original_observed_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 235,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [],
+              "generation": 2,
+              "handle": "h-78657236-4846-4074-82fc-35491692e4e8",
+              "method": "getPVals",
+              "request_id": "wrk-3bdd1f33-fcbd-4521-9071-b87131817ce5",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "observed",
+            "reply": {
+              "completed_at_ms": "1791846668718",
+              "ok": true,
+              "queued_at_ms": "1791846668712",
+              "request_id": "wrk-3bdd1f33-fcbd-4521-9071-b87131817ce5",
+              "result": [
+                193414489032258.03
+              ],
+              "started_at_ms": "1791846668712",
+              "status": "SUCCEEDED",
+              "type": "call"
+            },
+            "request_hash": "694f3a0a2ae2a5306e0f40d0dea0d6a18a0d2137b8381d760cd8d1d443c8ca28",
+            "request_id": "wrk-3bdd1f33-fcbd-4521-9071-b87131817ce5",
+            "status": "SUCCEEDED"
+          }
+        },
+        "original_submitted_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 234,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [],
+              "generation": 2,
+              "handle": "h-78657236-4846-4074-82fc-35491692e4e8",
+              "method": "getPVals",
+              "request_id": "wrk-3bdd1f33-fcbd-4521-9071-b87131817ce5",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "submitted",
+            "request_hash": "694f3a0a2ae2a5306e0f40d0dea0d6a18a0d2137b8381d760cd8d1d443c8ca28",
+            "request_id": "wrk-3bdd1f33-fcbd-4521-9071-b87131817ce5"
+          }
+        },
+        "request_hash": "694f3a0a2ae2a5306e0f40d0dea0d6a18a0d2137b8381d760cd8d1d443c8ca28",
+        "terminal_status": "SUCCEEDED"
+      },
+      {
+        "arg_python_types": [],
+        "args": [],
+        "method": "getSize",
+        "original_observed_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 283,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [],
+              "generation": 2,
+              "handle": "h-78657236-4846-4074-82fc-35491692e4e8",
+              "method": "getSize",
+              "request_id": "wrk-474a4c3a-ac74-4c26-873c-3f35332d0b4c",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "observed",
+            "reply": {
+              "completed_at_ms": "1791846668859",
+              "ok": true,
+              "queued_at_ms": "1791846668858",
+              "request_id": "wrk-474a4c3a-ac74-4c26-873c-3f35332d0b4c",
+              "result": [
+                64057,
+                1
+              ],
+              "started_at_ms": "1791846668858",
+              "status": "SUCCEEDED",
+              "type": "call"
+            },
+            "request_hash": "b5d3be7c99d066de75847d54fb6002de1df2c798ee90d304a68c6595e74e2b4e",
+            "request_id": "wrk-474a4c3a-ac74-4c26-873c-3f35332d0b4c",
+            "status": "SUCCEEDED"
+          }
+        },
+        "original_submitted_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 282,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [],
+              "generation": 2,
+              "handle": "h-78657236-4846-4074-82fc-35491692e4e8",
+              "method": "getSize",
+              "request_id": "wrk-474a4c3a-ac74-4c26-873c-3f35332d0b4c",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "submitted",
+            "request_hash": "b5d3be7c99d066de75847d54fb6002de1df2c798ee90d304a68c6595e74e2b4e",
+            "request_id": "wrk-474a4c3a-ac74-4c26-873c-3f35332d0b4c"
+          }
+        },
+        "request_hash": "b5d3be7c99d066de75847d54fb6002de1df2c798ee90d304a68c6595e74e2b4e",
+        "terminal_status": "SUCCEEDED"
+      },
+      {
+        "arg_python_types": [],
+        "args": [],
+        "method": "getSizeMulti",
+        "original_observed_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 285,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [],
+              "generation": 2,
+              "handle": "h-78657236-4846-4074-82fc-35491692e4e8",
+              "method": "getSizeMulti",
+              "request_id": "wrk-ba46316f-dfa4-4cd1-bd0a-1d59aa1b5595",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "observed",
+            "reply": {
+              "completed_at_ms": "1791846668861",
+              "ok": true,
+              "queued_at_ms": "1791846668860",
+              "request_id": "wrk-ba46316f-dfa4-4cd1-bd0a-1d59aa1b5595",
+              "result": [
+                1,
+                1
+              ],
+              "started_at_ms": "1791846668860",
+              "status": "SUCCEEDED",
+              "type": "call"
+            },
+            "request_hash": "1089a5da443498194cf8b13fb11acf12a38650c4a7b0f801ef4754fb83832647",
+            "request_id": "wrk-ba46316f-dfa4-4cd1-bd0a-1d59aa1b5595",
+            "status": "SUCCEEDED"
+          }
+        },
+        "original_submitted_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 284,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [],
+              "generation": 2,
+              "handle": "h-78657236-4846-4074-82fc-35491692e4e8",
+              "method": "getSizeMulti",
+              "request_id": "wrk-ba46316f-dfa4-4cd1-bd0a-1d59aa1b5595",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "submitted",
+            "request_hash": "1089a5da443498194cf8b13fb11acf12a38650c4a7b0f801ef4754fb83832647",
+            "request_id": "wrk-ba46316f-dfa4-4cd1-bd0a-1d59aa1b5595"
+          }
+        },
+        "request_hash": "1089a5da443498194cf8b13fb11acf12a38650c4a7b0f801ef4754fb83832647",
+        "terminal_status": "SUCCEEDED"
+      },
+      {
+        "arg_python_types": [],
+        "args": [],
+        "method": "getPNames",
+        "original_observed_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 287,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [],
+              "generation": 2,
+              "handle": "h-78657236-4846-4074-82fc-35491692e4e8",
+              "method": "getPNames",
+              "request_id": "wrk-5adbab33-363c-4e5c-a80e-7d1f07cb4cfd",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "observed",
+            "reply": {
+              "completed_at_ms": "1791846668862",
+              "ok": true,
+              "queued_at_ms": "1791846668861",
+              "request_id": "wrk-5adbab33-363c-4e5c-a80e-7d1f07cb4cfd",
+              "result": [
+                "freq"
+              ],
+              "started_at_ms": "1791846668861",
+              "status": "SUCCEEDED",
+              "type": "call"
+            },
+            "request_hash": "7bb17782a266e46e1c160809d9c639dcb3b1cebd9eb71d84ceafeabbe6a69ef1",
+            "request_id": "wrk-5adbab33-363c-4e5c-a80e-7d1f07cb4cfd",
+            "status": "SUCCEEDED"
+          }
+        },
+        "original_submitted_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 286,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [],
+              "generation": 2,
+              "handle": "h-78657236-4846-4074-82fc-35491692e4e8",
+              "method": "getPNames",
+              "request_id": "wrk-5adbab33-363c-4e5c-a80e-7d1f07cb4cfd",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "submitted",
+            "request_hash": "7bb17782a266e46e1c160809d9c639dcb3b1cebd9eb71d84ceafeabbe6a69ef1",
+            "request_id": "wrk-5adbab33-363c-4e5c-a80e-7d1f07cb4cfd"
+          }
+        },
+        "request_hash": "7bb17782a266e46e1c160809d9c639dcb3b1cebd9eb71d84ceafeabbe6a69ef1",
+        "terminal_status": "SUCCEEDED"
+      },
+      {
+        "arg_python_types": [
+          "int"
+        ],
+        "args": [
+          1
+        ],
+        "method": "getPVals",
+        "original_observed_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 289,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [
+                1
+              ],
+              "generation": 2,
+              "handle": "h-78657236-4846-4074-82fc-35491692e4e8",
+              "method": "getPVals",
+              "request_id": "wrk-cc57c70a-7bb8-40c7-b83a-26565a948d30",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "observed",
+            "reply": {
+              "completed_at_ms": "1791846668864",
+              "ok": true,
+              "queued_at_ms": "1791846668863",
+              "request_id": "wrk-cc57c70a-7bb8-40c7-b83a-26565a948d30",
+              "result": [
+                193414489032258.03
+              ],
+              "started_at_ms": "1791846668863",
+              "status": "SUCCEEDED",
+              "type": "call"
+            },
+            "request_hash": "670ea501b48dd5ad19d1a7e31ce6eb997d09b25a48bd944648445e0563aa21e4",
+            "request_id": "wrk-cc57c70a-7bb8-40c7-b83a-26565a948d30",
+            "status": "SUCCEEDED"
+          }
+        },
+        "original_submitted_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 288,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [
+                1
+              ],
+              "generation": 2,
+              "handle": "h-78657236-4846-4074-82fc-35491692e4e8",
+              "method": "getPVals",
+              "request_id": "wrk-cc57c70a-7bb8-40c7-b83a-26565a948d30",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "submitted",
+            "request_hash": "670ea501b48dd5ad19d1a7e31ce6eb997d09b25a48bd944648445e0563aa21e4",
+            "request_id": "wrk-cc57c70a-7bb8-40c7-b83a-26565a948d30"
+          }
+        },
+        "request_hash": "670ea501b48dd5ad19d1a7e31ce6eb997d09b25a48bd944648445e0563aa21e4",
+        "terminal_status": "SUCCEEDED"
+      },
+      {
+        "arg_python_types": [
+          "int"
+        ],
+        "args": [
+          1
+        ],
+        "method": "getPValsImag",
+        "original_observed_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 291,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [
+                1
+              ],
+              "generation": 2,
+              "handle": "h-78657236-4846-4074-82fc-35491692e4e8",
+              "method": "getPValsImag",
+              "request_id": "wrk-1b5f2e42-f297-47c1-8425-c58372bf04c6",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "observed",
+            "reply": {
+              "completed_at_ms": "1791846668866",
+              "ok": true,
+              "queued_at_ms": "1791846668865",
+              "request_id": "wrk-1b5f2e42-f297-47c1-8425-c58372bf04c6",
+              "result": [
+                0.0
+              ],
+              "started_at_ms": "1791846668865",
+              "status": "SUCCEEDED",
+              "type": "call"
+            },
+            "request_hash": "dd2f16d006fdea1e25c7a1ea6cab1c65bd25eff2e2ae1ce4050bbdca7f888b59",
+            "request_id": "wrk-1b5f2e42-f297-47c1-8425-c58372bf04c6",
+            "status": "SUCCEEDED"
+          }
+        },
+        "original_submitted_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 290,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [
+                1
+              ],
+              "generation": 2,
+              "handle": "h-78657236-4846-4074-82fc-35491692e4e8",
+              "method": "getPValsImag",
+              "request_id": "wrk-1b5f2e42-f297-47c1-8425-c58372bf04c6",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "submitted",
+            "request_hash": "dd2f16d006fdea1e25c7a1ea6cab1c65bd25eff2e2ae1ce4050bbdca7f888b59",
+            "request_id": "wrk-1b5f2e42-f297-47c1-8425-c58372bf04c6"
+          }
+        },
+        "request_hash": "dd2f16d006fdea1e25c7a1ea6cab1c65bd25eff2e2ae1ce4050bbdca7f888b59",
+        "terminal_status": "SUCCEEDED"
+      },
+      {
+        "arg_python_types": [],
+        "args": [],
+        "method": "getLevelNames",
+        "original_observed_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 295,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [],
+              "generation": 2,
+              "handle": "h-82cc873b-97b8-4205-b77d-020eb1e6130a",
+              "method": "getLevelNames",
+              "request_id": "wrk-3c3f8281-2164-45d8-bd4d-fe78b6928441",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "observed",
+            "reply": {
+              "completed_at_ms": "1791846668870",
+              "ok": true,
+              "queued_at_ms": "1791846668869",
+              "request_id": "wrk-3c3f8281-2164-45d8-bd4d-fe78b6928441",
+              "result": [
+                "freq"
+              ],
+              "started_at_ms": "1791846668869",
+              "status": "SUCCEEDED",
+              "type": "call"
+            },
+            "request_hash": "756cc8186704dca6253825bbaaef7e38db41354133056e6c7b8ed6a0d00a78d7",
+            "request_id": "wrk-3c3f8281-2164-45d8-bd4d-fe78b6928441",
+            "status": "SUCCEEDED"
+          }
+        },
+        "original_submitted_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 294,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [],
+              "generation": 2,
+              "handle": "h-82cc873b-97b8-4205-b77d-020eb1e6130a",
+              "method": "getLevelNames",
+              "request_id": "wrk-3c3f8281-2164-45d8-bd4d-fe78b6928441",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "submitted",
+            "request_hash": "756cc8186704dca6253825bbaaef7e38db41354133056e6c7b8ed6a0d00a78d7",
+            "request_id": "wrk-3c3f8281-2164-45d8-bd4d-fe78b6928441"
+          }
+        },
+        "request_hash": "756cc8186704dca6253825bbaaef7e38db41354133056e6c7b8ed6a0d00a78d7",
+        "terminal_status": "SUCCEEDED"
+      },
+      {
+        "arg_python_types": [],
+        "args": [],
+        "method": "getLevels",
+        "original_observed_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 297,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [],
+              "generation": 2,
+              "handle": "h-82cc873b-97b8-4205-b77d-020eb1e6130a",
+              "method": "getLevels",
+              "request_id": "wrk-a8d3319f-4322-41c1-805c-8388a2867fba",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "observed",
+            "reply": {
+              "completed_at_ms": "1791846668871",
+              "ok": true,
+              "queued_at_ms": "1791846668870",
+              "request_id": "wrk-a8d3319f-4322-41c1-805c-8388a2867fba",
+              "result": 1,
+              "started_at_ms": "1791846668870",
+              "status": "SUCCEEDED",
+              "type": "call"
+            },
+            "request_hash": "24e57da90aaa4ac946c42c1d89c521f8bb230d3e482801bc0f218480c384de6b",
+            "request_id": "wrk-a8d3319f-4322-41c1-805c-8388a2867fba",
+            "status": "SUCCEEDED"
+          }
+        },
+        "original_submitted_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 296,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [],
+              "generation": 2,
+              "handle": "h-82cc873b-97b8-4205-b77d-020eb1e6130a",
+              "method": "getLevels",
+              "request_id": "wrk-a8d3319f-4322-41c1-805c-8388a2867fba",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "submitted",
+            "request_hash": "24e57da90aaa4ac946c42c1d89c521f8bb230d3e482801bc0f218480c384de6b",
+            "request_id": "wrk-a8d3319f-4322-41c1-805c-8388a2867fba"
+          }
+        },
+        "request_hash": "24e57da90aaa4ac946c42c1d89c521f8bb230d3e482801bc0f218480c384de6b",
+        "terminal_status": "SUCCEEDED"
+      },
+      {
+        "arg_python_types": [],
+        "args": [],
+        "method": "getOuterSolnum",
+        "original_observed_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 299,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [],
+              "generation": 2,
+              "handle": "h-82cc873b-97b8-4205-b77d-020eb1e6130a",
+              "method": "getOuterSolnum",
+              "request_id": "wrk-e90acd27-93dc-4aa7-a5f9-9acfd140ebfd",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "observed",
+            "reply": {
+              "completed_at_ms": "1791846668873",
+              "ok": true,
+              "queued_at_ms": "1791846668872",
+              "request_id": "wrk-e90acd27-93dc-4aa7-a5f9-9acfd140ebfd",
+              "result": [],
+              "started_at_ms": "1791846668872",
+              "status": "SUCCEEDED",
+              "type": "call"
+            },
+            "request_hash": "732b9293043266c590e6e2d8651bb297aa8647c6b36ffaf2c2000a6eeb82b13b",
+            "request_id": "wrk-e90acd27-93dc-4aa7-a5f9-9acfd140ebfd",
+            "status": "SUCCEEDED"
+          }
+        },
+        "original_submitted_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 298,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [],
+              "generation": 2,
+              "handle": "h-82cc873b-97b8-4205-b77d-020eb1e6130a",
+              "method": "getOuterSolnum",
+              "request_id": "wrk-e90acd27-93dc-4aa7-a5f9-9acfd140ebfd",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "submitted",
+            "request_hash": "732b9293043266c590e6e2d8651bb297aa8647c6b36ffaf2c2000a6eeb82b13b",
+            "request_id": "wrk-e90acd27-93dc-4aa7-a5f9-9acfd140ebfd"
+          }
+        },
+        "request_hash": "732b9293043266c590e6e2d8651bb297aa8647c6b36ffaf2c2000a6eeb82b13b",
+        "terminal_status": "SUCCEEDED"
+      },
+      {
+        "arg_python_types": [],
+        "args": [],
+        "method": "getOuterSolnum",
+        "original_observed_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 301,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [],
+              "generation": 2,
+              "handle": "h-82cc873b-97b8-4205-b77d-020eb1e6130a",
+              "method": "getOuterSolnum",
+              "request_id": "wrk-309f3c4f-53c7-4add-af14-7d16d302f948",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "observed",
+            "reply": {
+              "completed_at_ms": "1791846668878",
+              "ok": true,
+              "queued_at_ms": "1791846668877",
+              "request_id": "wrk-309f3c4f-53c7-4add-af14-7d16d302f948",
+              "result": [],
+              "started_at_ms": "1791846668877",
+              "status": "SUCCEEDED",
+              "type": "call"
+            },
+            "request_hash": "732b9293043266c590e6e2d8651bb297aa8647c6b36ffaf2c2000a6eeb82b13b",
+            "request_id": "wrk-309f3c4f-53c7-4add-af14-7d16d302f948",
+            "status": "SUCCEEDED"
+          }
+        },
+        "original_submitted_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 300,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [],
+              "generation": 2,
+              "handle": "h-82cc873b-97b8-4205-b77d-020eb1e6130a",
+              "method": "getOuterSolnum",
+              "request_id": "wrk-309f3c4f-53c7-4add-af14-7d16d302f948",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "submitted",
+            "request_hash": "732b9293043266c590e6e2d8651bb297aa8647c6b36ffaf2c2000a6eeb82b13b",
+            "request_id": "wrk-309f3c4f-53c7-4add-af14-7d16d302f948"
+          }
+        },
+        "request_hash": "732b9293043266c590e6e2d8651bb297aa8647c6b36ffaf2c2000a6eeb82b13b",
+        "terminal_status": "SUCCEEDED"
+      },
+      {
+        "arg_python_types": [
+          "list"
+        ],
+        "args": [
+          []
+        ],
+        "method": "getSolnums",
+        "original_observed_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 303,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [
+                []
+              ],
+              "generation": 2,
+              "handle": "h-82cc873b-97b8-4205-b77d-020eb1e6130a",
+              "method": "getSolnums",
+              "request_id": "wrk-679cc389-f865-42f2-adda-6f6503358953",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "observed",
+            "reply": {
+              "completed_at_ms": "1791846668882",
+              "failure": {
+                "cause_chain": [
+                  {
+                    "message": "Unknown_solution",
+                    "type": "com.comsol.util.exceptions.FlException"
+                  }
+                ],
+                "code": "ENGINE_CALL_FAILED",
+                "execution_state_unknown": true,
+                "message": "FlException: \u672a\u77e5\u89e3\u3002\n  - \u6807\u8bb0",
+                "ok": false
+              },
+              "ok": false,
+              "queued_at_ms": "1791846668879",
+              "request_id": "wrk-679cc389-f865-42f2-adda-6f6503358953",
+              "started_at_ms": "1791846668879",
+              "status": "FAILED",
+              "type": "call"
+            },
+            "request_hash": "38d118d6d66a64ada1fb55d7d0ec5efcad14578320898d7964d15f51455c91a9",
+            "request_id": "wrk-679cc389-f865-42f2-adda-6f6503358953",
+            "status": "FAILED"
+          }
+        },
+        "original_submitted_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 302,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [
+                []
+              ],
+              "generation": 2,
+              "handle": "h-82cc873b-97b8-4205-b77d-020eb1e6130a",
+              "method": "getSolnums",
+              "request_id": "wrk-679cc389-f865-42f2-adda-6f6503358953",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "submitted",
+            "request_hash": "38d118d6d66a64ada1fb55d7d0ec5efcad14578320898d7964d15f51455c91a9",
+            "request_id": "wrk-679cc389-f865-42f2-adda-6f6503358953"
+          }
+        },
+        "request_hash": "38d118d6d66a64ada1fb55d7d0ec5efcad14578320898d7964d15f51455c91a9",
+        "terminal_status": "FAILED"
+      },
+      {
+        "arg_python_types": [
+          "int",
+          "bool"
+        ],
+        "args": [
+          1,
+          true
+        ],
+        "method": "getSolnum",
+        "original_observed_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 305,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [
+                1,
+                true
+              ],
+              "generation": 2,
+              "handle": "h-82cc873b-97b8-4205-b77d-020eb1e6130a",
+              "method": "getSolnum",
+              "request_id": "wrk-8a13c516-7a51-45b2-a008-975293caa58d",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "observed",
+            "reply": {
+              "completed_at_ms": "1791846668885",
+              "ok": true,
+              "queued_at_ms": "1791846668883",
+              "request_id": "wrk-8a13c516-7a51-45b2-a008-975293caa58d",
+              "result": [
+                1
+              ],
+              "started_at_ms": "1791846668883",
+              "status": "SUCCEEDED",
+              "type": "call"
+            },
+            "request_hash": "bdcfe1d31b662d6a3dfc598c26d4a80df28bc25b0b9f2db29a3a4163a01ef3ff",
+            "request_id": "wrk-8a13c516-7a51-45b2-a008-975293caa58d",
+            "status": "SUCCEEDED"
+          }
+        },
+        "original_submitted_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 304,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [
+                1,
+                true
+              ],
+              "generation": 2,
+              "handle": "h-82cc873b-97b8-4205-b77d-020eb1e6130a",
+              "method": "getSolnum",
+              "request_id": "wrk-8a13c516-7a51-45b2-a008-975293caa58d",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "submitted",
+            "request_hash": "bdcfe1d31b662d6a3dfc598c26d4a80df28bc25b0b9f2db29a3a4163a01ef3ff",
+            "request_id": "wrk-8a13c516-7a51-45b2-a008-975293caa58d"
+          }
+        },
+        "request_hash": "bdcfe1d31b662d6a3dfc598c26d4a80df28bc25b0b9f2db29a3a4163a01ef3ff",
+        "terminal_status": "SUCCEEDED"
+      },
+      {
+        "arg_python_types": [
+          "int",
+          "bool"
+        ],
+        "args": [
+          1,
+          true
+        ],
+        "method": "getSolnum",
+        "original_observed_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 307,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [
+                1,
+                true
+              ],
+              "generation": 2,
+              "handle": "h-82cc873b-97b8-4205-b77d-020eb1e6130a",
+              "method": "getSolnum",
+              "request_id": "wrk-169d55d9-73e6-45b4-b7d6-47742e296e74",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "observed",
+            "reply": {
+              "completed_at_ms": "1791846668888",
+              "ok": true,
+              "queued_at_ms": "1791846668886",
+              "request_id": "wrk-169d55d9-73e6-45b4-b7d6-47742e296e74",
+              "result": [
+                1
+              ],
+              "started_at_ms": "1791846668886",
+              "status": "SUCCEEDED",
+              "type": "call"
+            },
+            "request_hash": "bdcfe1d31b662d6a3dfc598c26d4a80df28bc25b0b9f2db29a3a4163a01ef3ff",
+            "request_id": "wrk-169d55d9-73e6-45b4-b7d6-47742e296e74",
+            "status": "SUCCEEDED"
+          }
+        },
+        "original_submitted_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 306,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [
+                1,
+                true
+              ],
+              "generation": 2,
+              "handle": "h-82cc873b-97b8-4205-b77d-020eb1e6130a",
+              "method": "getSolnum",
+              "request_id": "wrk-169d55d9-73e6-45b4-b7d6-47742e296e74",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "submitted",
+            "request_hash": "bdcfe1d31b662d6a3dfc598c26d4a80df28bc25b0b9f2db29a3a4163a01ef3ff",
+            "request_id": "wrk-169d55d9-73e6-45b4-b7d6-47742e296e74"
+          }
+        },
+        "request_hash": "bdcfe1d31b662d6a3dfc598c26d4a80df28bc25b0b9f2db29a3a4163a01ef3ff",
+        "terminal_status": "SUCCEEDED"
+      },
+      {
+        "arg_python_types": [
+          "list"
+        ],
+        "args": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "method": "getPNames",
+        "original_observed_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 309,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [
+                [
+                  [
+                    1,
+                    1
+                  ]
+                ]
+              ],
+              "generation": 2,
+              "handle": "h-82cc873b-97b8-4205-b77d-020eb1e6130a",
+              "method": "getPNames",
+              "request_id": "wrk-9f129aaa-95ba-467c-aa7d-f7be9b5fa9d7",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "observed",
+            "reply": {
+              "completed_at_ms": "1791846668891",
+              "failure": {
+                "cause_chain": [
+                  {
+                    "message": "Unknown_solution",
+                    "type": "com.comsol.util.exceptions.FlException"
+                  }
+                ],
+                "code": "ENGINE_CALL_FAILED",
+                "execution_state_unknown": true,
+                "message": "FlException: \u672a\u77e5\u89e3\u3002\n  - \u6807\u8bb0",
+                "ok": false
+              },
+              "ok": false,
+              "queued_at_ms": "1791846668888",
+              "request_id": "wrk-9f129aaa-95ba-467c-aa7d-f7be9b5fa9d7",
+              "started_at_ms": "1791846668888",
+              "status": "FAILED",
+              "type": "call"
+            },
+            "request_hash": "cce77f472ef361053d65041d2a3a8beb000ad91b59625326d5d17c95e28e46f4",
+            "request_id": "wrk-9f129aaa-95ba-467c-aa7d-f7be9b5fa9d7",
+            "status": "FAILED"
+          }
+        },
+        "original_submitted_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 308,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [
+                [
+                  [
+                    1,
+                    1
+                  ]
+                ]
+              ],
+              "generation": 2,
+              "handle": "h-82cc873b-97b8-4205-b77d-020eb1e6130a",
+              "method": "getPNames",
+              "request_id": "wrk-9f129aaa-95ba-467c-aa7d-f7be9b5fa9d7",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "submitted",
+            "request_hash": "cce77f472ef361053d65041d2a3a8beb000ad91b59625326d5d17c95e28e46f4",
+            "request_id": "wrk-9f129aaa-95ba-467c-aa7d-f7be9b5fa9d7"
+          }
+        },
+        "request_hash": "cce77f472ef361053d65041d2a3a8beb000ad91b59625326d5d17c95e28e46f4",
+        "terminal_status": "FAILED"
+      },
+      {
+        "arg_python_types": [
+          "list"
+        ],
+        "args": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "method": "getPvals",
+        "original_observed_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 311,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [
+                [
+                  [
+                    1,
+                    1
+                  ]
+                ]
+              ],
+              "generation": 2,
+              "handle": "h-82cc873b-97b8-4205-b77d-020eb1e6130a",
+              "method": "getPvals",
+              "request_id": "wrk-659ab689-06b0-4dbe-bb9b-c1e66fd49b4f",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "observed",
+            "reply": {
+              "completed_at_ms": "1791846668893",
+              "failure": {
+                "cause_chain": [
+                  {
+                    "message": "Unknown_solution",
+                    "type": "com.comsol.util.exceptions.FlException"
+                  }
+                ],
+                "code": "ENGINE_CALL_FAILED",
+                "execution_state_unknown": true,
+                "message": "FlException: \u672a\u77e5\u89e3\u3002\n  - \u6807\u8bb0",
+                "ok": false
+              },
+              "ok": false,
+              "queued_at_ms": "1791846668891",
+              "request_id": "wrk-659ab689-06b0-4dbe-bb9b-c1e66fd49b4f",
+              "started_at_ms": "1791846668891",
+              "status": "FAILED",
+              "type": "call"
+            },
+            "request_hash": "7aef5947c3d9a277e0cbe62dfbd6afa135283d10fef54548ae3fc48ceef5582b",
+            "request_id": "wrk-659ab689-06b0-4dbe-bb9b-c1e66fd49b4f",
+            "status": "FAILED"
+          }
+        },
+        "original_submitted_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 310,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [
+                [
+                  [
+                    1,
+                    1
+                  ]
+                ]
+              ],
+              "generation": 2,
+              "handle": "h-82cc873b-97b8-4205-b77d-020eb1e6130a",
+              "method": "getPvals",
+              "request_id": "wrk-659ab689-06b0-4dbe-bb9b-c1e66fd49b4f",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "submitted",
+            "request_hash": "7aef5947c3d9a277e0cbe62dfbd6afa135283d10fef54548ae3fc48ceef5582b",
+            "request_id": "wrk-659ab689-06b0-4dbe-bb9b-c1e66fd49b4f"
+          }
+        },
+        "request_hash": "7aef5947c3d9a277e0cbe62dfbd6afa135283d10fef54548ae3fc48ceef5582b",
+        "terminal_status": "FAILED"
+      },
+      {
+        "arg_python_types": [
+          "list"
+        ],
+        "args": [
+          [
+            [
+              1,
+              1
+            ]
+          ]
+        ],
+        "method": "getUnits",
+        "original_observed_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 313,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [
+                [
+                  [
+                    1,
+                    1
+                  ]
+                ]
+              ],
+              "generation": 2,
+              "handle": "h-82cc873b-97b8-4205-b77d-020eb1e6130a",
+              "method": "getUnits",
+              "request_id": "wrk-2e8a7f70-b0d3-4e7d-9ffc-8d006eeff682",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "observed",
+            "reply": {
+              "completed_at_ms": "1791846668896",
+              "failure": {
+                "cause_chain": [
+                  {
+                    "message": "Unknown_solution",
+                    "type": "com.comsol.util.exceptions.FlException"
+                  }
+                ],
+                "code": "ENGINE_CALL_FAILED",
+                "execution_state_unknown": true,
+                "message": "FlException: \u672a\u77e5\u89e3\u3002\n  - \u6807\u8bb0",
+                "ok": false
+              },
+              "ok": false,
+              "queued_at_ms": "1791846668894",
+              "request_id": "wrk-2e8a7f70-b0d3-4e7d-9ffc-8d006eeff682",
+              "started_at_ms": "1791846668894",
+              "status": "FAILED",
+              "type": "call"
+            },
+            "request_hash": "c70d76267a3be2b2c8333b236bb3edde981b17cf2a0ce6eb7dd27b6c2aab83b5",
+            "request_id": "wrk-2e8a7f70-b0d3-4e7d-9ffc-8d006eeff682",
+            "status": "FAILED"
+          }
+        },
+        "original_submitted_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 312,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [
+                [
+                  [
+                    1,
+                    1
+                  ]
+                ]
+              ],
+              "generation": 2,
+              "handle": "h-82cc873b-97b8-4205-b77d-020eb1e6130a",
+              "method": "getUnits",
+              "request_id": "wrk-2e8a7f70-b0d3-4e7d-9ffc-8d006eeff682",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "submitted",
+            "request_hash": "c70d76267a3be2b2c8333b236bb3edde981b17cf2a0ce6eb7dd27b6c2aab83b5",
+            "request_id": "wrk-2e8a7f70-b0d3-4e7d-9ffc-8d006eeff682"
+          }
+        },
+        "request_hash": "c70d76267a3be2b2c8333b236bb3edde981b17cf2a0ce6eb7dd27b6c2aab83b5",
+        "terminal_status": "FAILED"
+      },
+      {
+        "arg_python_types": [],
+        "args": [],
+        "method": "getLevelNames",
+        "original_observed_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 315,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [],
+              "generation": 2,
+              "handle": "h-82cc873b-97b8-4205-b77d-020eb1e6130a",
+              "method": "getLevelNames",
+              "request_id": "wrk-e9297120-9cf1-400a-b361-df3352a1c90e",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "observed",
+            "reply": {
+              "completed_at_ms": "1791846668897",
+              "ok": true,
+              "queued_at_ms": "1791846668896",
+              "request_id": "wrk-e9297120-9cf1-400a-b361-df3352a1c90e",
+              "result": [
+                "freq"
+              ],
+              "started_at_ms": "1791846668896",
+              "status": "SUCCEEDED",
+              "type": "call"
+            },
+            "request_hash": "756cc8186704dca6253825bbaaef7e38db41354133056e6c7b8ed6a0d00a78d7",
+            "request_id": "wrk-e9297120-9cf1-400a-b361-df3352a1c90e",
+            "status": "SUCCEEDED"
+          }
+        },
+        "original_submitted_event": {
+          "created_at": "2026-10-12 23:11:08",
+          "event": "worker_request",
+          "id": 314,
+          "job_id": "7026b882-c99f-4dc6-97f5-599f6b3c746d",
+          "metadata": {
+            "kind": "call",
+            "metadata": {
+              "args": [],
+              "generation": 2,
+              "handle": "h-82cc873b-97b8-4205-b77d-020eb1e6130a",
+              "method": "getLevelNames",
+              "request_id": "wrk-e9297120-9cf1-400a-b361-df3352a1c90e",
+              "type": "call"
+            },
+            "operation_id": "2fa930ea-1501-420d-8a21-edc71a76c73d",
+            "phase": "submitted",
+            "request_hash": "756cc8186704dca6253825bbaaef7e38db41354133056e6c7b8ed6a0d00a78d7",
+            "request_id": "wrk-e9297120-9cf1-400a-b361-df3352a1c90e"
+          }
+        },
+        "request_hash": "756cc8186704dca6253825bbaaef7e38db41354133056e6c7b8ed6a0d00a78d7",
+        "terminal_status": "SUCCEEDED"
+      }
+    ]
+  },
+  "real_solutionbinding": {
+    "axis_metadata_complete": false,
+    "binding_source": "SolutionInfo.getSolnum(outer, strict)",
+    "inner_indices": [],
+    "inner_indices_by_outer": {},
+    "level_names": [
+      "freq"
+    ],
+    "outer_indices": [],
+    "pair_mapping_complete": false,
+    "parameter_names": [],
+    "parameter_names_by_pair": {},
+    "parameter_units_by_pair": {},
+    "parameter_values_by_pair": {},
+    "read_errors": [
+      {
+        "code": "SOLUTION_METADATA_ERROR",
+        "message": "FlException: \u672a\u77e5\u89e3\u3002\n  - \u6807\u8bb0",
+        "method": "getSolnums"
+      },
+      {
+        "code": "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+        "message": "engine returned an empty outer axis; getSolnum(1,true) alone does not establish outer/inner pairs",
+        "method": "getOuterSolnum"
+      }
+    ],
+    "solnum_by_pair": {},
+    "solnum_pairs": []
+  },
+  "real_unchanged_science_protocol_count": {
+    "dataset_binding": {
+      "binding_complete": true,
+      "component": "comp1",
+      "dataset": "dset1",
+      "dataset_chain": [
+        "dset1"
+      ],
+      "dataset_edges": [],
+      "dataset_type": "Solution",
+      "error": null,
+      "geometry": "geom1",
+      "properties": {
+        "comp": "comp1",
+        "geom": "geom1",
+        "solution": "sol1"
+      },
+      "provenance": {
+        "dataset_tags": [
+          "dset1"
+        ],
+        "mutation_methods_called": [],
+        "read_only": true,
+        "solution_tags": [
+          "sol1"
+        ]
+      },
+      "read_errors": [],
+      "requested_solution": null,
+      "solution": "sol1",
+      "sources": {
+        "component": "dataset.comp -> modelNode.tags()/model.component()",
+        "geometry": "dataset.geom -> component.geom.tags()/getter",
+        "solution": "dataset.solution -> model.sol().tags()"
+      }
+    },
+    "dataset_solution_property": "sol1",
+    "dataset_tag": "dset1",
+    "get_size": [
+      64057,
+      1
+    ],
+    "get_size_multi": [
+      1,
+      1
+    ],
+    "outer_indices_inferred": false,
+    "parameters_complete": false,
+    "physical_frequency_hz": "NOT_CAPTURED",
+    "raw_parameter": {
+      "imag": 0.0,
+      "name": "freq",
+      "real": 193414489032258.03,
+      "unit": "GHz"
+    },
+    "raw_unit_semantics": "UNRESOLVED_GETTER_LABEL_NO_CONVERSION",
+    "science_acceptance": "NOT_EVALUATED",
+    "sequence_identity": {
+      "attached": true,
+      "sequence_type": "SolverSequence",
+      "solution_type": "Parametric",
+      "study_tag": "std1"
+    },
+    "sequence_value_reconciliation": {
+      "attached": true,
+      "get_size": [
+        64057,
+        1
+      ],
+      "get_size_multi": [
+        1,
+        1
+      ],
+      "parameters_complete": false,
+      "pnames": [
+        "freq"
+      ],
+      "scope": "raw solver-sequence identity/complex values/units only; SolutionInfo tuple mapping remains unchanged",
+      "sequence_type": "SolverSequence",
+      "solution_info_axis_metadata_complete": false,
+      "solution_tag": "sol1",
+      "solution_type": "Parametric",
+      "status": "PASS_JAVA_WORKER_RAW_SEQUENCE_READBACK_MATCH",
+      "study_tag": "std1",
+      "values": [
+        {
+          "parameters": [
+            {
+              "imag": 0.0,
+              "name": "freq",
+              "real": 193414489032258.03,
+              "unit": "GHz"
+            }
+          ],
+          "raw_values_match_exactly": true,
+          "solnum": 1
+        }
+      ]
+    },
+    "solution_info_axis_metadata_complete": false,
+    "solution_info_count_scope": {
+      "Java": {
+        "getLevelNames": [
+          "freq"
+        ],
+        "getLevels": 1,
+        "getOuterSolnum": [],
+        "getPNamesOuter": [],
+        "getPUnitsOuter": [],
+        "matrix_getter_errors": [
+          {
+            "argument_types": [
+              "int[][]"
+            ],
+            "arguments": [
+              [
+                [
+                  1,
+                  1
+                ]
+              ]
+            ],
+            "declared_return_type": "java.lang.String[][]",
+            "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u672a\u77e5\u89e3\u3002\nMessages:\n\t\u672a\u77e5\u89e3\u3002\n\t- \u6807\u8bb0\n",
+            "error_type": "com.comsol.util.exceptions.FlException",
+            "method": "getPNames",
+            "receiver": "SolutionInfo.getPNames(sol1)",
+            "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+            "status": "ERROR"
+          },
+          {
+            "argument_types": [
+              "int[][]"
+            ],
+            "arguments": [
+              [
+                [
+                  1,
+                  1
+                ]
+              ]
+            ],
+            "declared_return_type": "double[][]",
+            "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u672a\u77e5\u89e3\u3002\nMessages:\n\t\u672a\u77e5\u89e3\u3002\n\t- \u6807\u8bb0\n",
+            "error_type": "com.comsol.util.exceptions.FlException",
+            "method": "getPvals",
+            "receiver": "SolutionInfo.getPvals(sol1)",
+            "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+            "status": "ERROR"
+          },
+          {
+            "argument_types": [
+              "int[][]"
+            ],
+            "arguments": [
+              [
+                [
+                  1,
+                  1
+                ]
+              ]
+            ],
+            "declared_return_type": "double[][]",
+            "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u672a\u77e5\u89e3\u3002\nMessages:\n\t\u672a\u77e5\u89e3\u3002\n\t- \u6807\u8bb0\n",
+            "error_type": "com.comsol.util.exceptions.FlException",
+            "method": "getPvalsImag",
+            "receiver": "SolutionInfo.getPvalsImag(sol1)",
+            "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+            "status": "ERROR"
+          },
+          {
+            "argument_types": [
+              "int[][]"
+            ],
+            "arguments": [
+              [
+                [
+                  1,
+                  1
+                ]
+              ]
+            ],
+            "declared_return_type": "java.lang.String[][]",
+            "error": "Exception:\n\tcom.comsol.util.exceptions.FlException: \u672a\u77e5\u89e3\u3002\nMessages:\n\t\u672a\u77e5\u89e3\u3002\n\t- \u6807\u8bb0\n",
+            "error_type": "com.comsol.util.exceptions.FlException",
+            "method": "getUnits",
+            "receiver": "SolutionInfo.getUnits(sol1)",
+            "receiver_type": "com.comsol.clientapi.impl.SolutionInfoClient",
+            "status": "ERROR"
+          }
+        ],
+        "read_errors": []
+      },
+      "Worker": {
+        "getLevelNames": [
+          "freq"
+        ],
+        "getLevels": 1,
+        "getOuterSolnum": [],
+        "getOuterSolnum_semantics": "empty means no outer parameter/values per COMSOL 6.4 doc7709/chunk23066",
+        "read_errors": []
+      }
+    },
+    "solver_sequence_tag": "sol1",
+    "status": "PASS_EXACT_ATTACHED_MAIN_COUNT_SINGLETON",
+    "study_step_binding": {
+      "path": "st3",
+      "solver_sequence": "sol1",
+      "study": "std1",
+      "studystep": "freq",
+      "tree_order": 22
+    },
+    "study_step_tag": "freq",
+    "study_tag": "std1"
+  },
+  "source_only": true
+}

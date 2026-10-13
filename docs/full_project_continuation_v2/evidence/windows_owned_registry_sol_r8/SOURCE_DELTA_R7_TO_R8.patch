@@ -1,0 +1,1048 @@
+--- R7/comsol_mcp/_windows_owned_resources.py
++++ R8/comsol_mcp/_windows_owned_resources.py
+@@ -0,0 +1,112 @@
++"""Private in-memory ownership for actual synchronous native resource returns.
++
++No journal, persisted reconstruction, wire callback or launch/proof authority.
++"""
++from __future__ import annotations
++import ctypes as C
++import threading
++from ._execution_contract import ExecutionContractError
++
++_SEAL=object()
++class NativeResourceError(ExecutionContractError):pass
++
++def _fail(message):raise NativeResourceError('NATIVE_RESOURCE_RELEASE_UNKNOWN',message,safe_retry=False,stage='pre_dispatch')
++
++def _value(handle):
++    value=getattr(handle,'value',handle)
++    if isinstance(value,str):value=C.cast(handle,C.c_void_p).value
++    if type(value) is not int or value<=0 or value==C.c_void_p(-1).value:
++        _fail('native resource return is not a legal owned HANDLE/pointer')
++    return value
++
++class _OwnedResource:
++    def __init__(self,registry,adapter,handle,closer,mode,label,seq,keepalive,*,seal):
++        if seal is not _SEAL:_fail('resource requires private native acquisition provenance')
++        self._seal=seal;self.registry=registry;self.adapter=adapter;self.handle=handle
++        self.value=_value(handle);self.closer=closer;self.mode=mode;self.label=label;self.seq=seq
++        self.keepalive=keepalive;self.state='ACQUIRED';self.error=None;self.thread_id=threading.get_ident()
++    def release_owned(self,owner,*,retry=False):
++        r=self.registry
++        with r._lock:
++            if self._seal is not _SEAL or owner is not r.owner:
++                _fail('resource release requires the original registry owner')
++            if self.state=='RELEASED':return
++            if r._entries.get(self.seq) is not self:_fail('resource is not held by its original registry')
++            if self.state=='UNKNOWN' and not retry:
++                raise self.error
++            try:
++                result=self.closer(self.handle)
++                success=(bool(result) if self.mode=='BOOL' else not result if self.mode=='LOCALFREE'
++                         else result is None if self.mode=='VOID' else result is None or result is True)
++                if not success:_fail('native resource release was not confirmed')
++            except BaseException as error:
++                self.state='UNKNOWN';self.error=error;raise
++            self.state='RELEASED';r._entries.pop(self.seq);self.keepalive=()
++
++class _ResourceScope:
++    def __init__(self,registry,seq,*,seal):
++        if seal is not _SEAL:_fail('resource scope requires its registry')
++        self.registry=registry;self.seq=seq;self._seal=seal;self.thread_id=threading.get_ident()
++
++class NativeOwnedRegistry:
++    def __init__(self,owner,*,seal):
++        if seal is not _SEAL:_fail('registry requires its original native API owner')
++        self.owner=owner;self._seal=seal;self._entries={};self._seq=0;self._lock=threading.RLock()
++    def scope(self):
++        with self._lock:return _ResourceScope(self,self._seq,seal=_SEAL)
++    def acquire(self,adapter,handle,closer,*,mode='CHECKED',label='native_resource',keepalive=()):
++        if mode not in {'BOOL','LOCALFREE','VOID','CHECKED'} or not callable(closer):_fail('unsupported native release binding')
++        value=_value(handle)
++        with self._lock:
++            for entry in self._entries.values():
++                if entry.adapter is adapter and entry.value==value:
++                    return entry
++            self._seq+=1
++            # Keep the exact native return object/storage and bound original
++            # closer strongly held before any validation can raise.
++            entry=_OwnedResource(self,adapter,handle,closer,mode,label,self._seq,tuple(keepalive),seal=_SEAL)
++            self._entries[entry.seq]=entry;return entry
++    def find(self,adapter,handle):
++        value=_value(handle)
++        with self._lock:
++            return next((e for e in self._entries.values() if e.adapter is adapter and e.value==value),None)
++    def release(self,adapter,handle):
++        entry=self.find(adapter,handle)
++        if entry is None:_fail('no native acquisition registered for this exact adapter/handle')
++        return entry.release_owned(self.owner)
++    def drain(self,scope):
++        if type(scope) is not _ResourceScope or scope._seal is not _SEAL or scope.registry is not self:_fail('invalid resource scope')
++        errors=[]
++        with self._lock:entries=tuple(self._entries.values())
++        for entry in reversed(entries):
++            if entry.seq<=scope.seq or entry.thread_id!=scope.thread_id:continue
++            try:entry.release_owned(self.owner)
++            except BaseException as error:errors.append((entry.label,error))
++        return tuple(errors)
++    def unresolved(self):
++        with self._lock:return tuple(self._entries.values())
++    def retry_owned(self,entry,owner):
++        if type(entry) is not _OwnedResource or entry.registry is not self:_fail('metadata cannot create release authority')
++        return entry.release_owned(owner,retry=True)
++
++def registry_for(adapter):
++    existing=getattr(adapter,'_native_owned_registry',None)
++    if existing is None:
++        existing=NativeOwnedRegistry(adapter,seal=_SEAL);adapter._native_owned_registry=existing
++    if type(existing) is not NativeOwnedRegistry or existing._seal is not _SEAL:_fail('native API registry is not a private actual owner')
++    return existing
++
++def attach_registry(adapter,registry):
++    if type(registry) is not NativeOwnedRegistry or registry._seal is not _SEAL:_fail('wire data cannot attach an owner registry')
++    old=getattr(adapter,'_native_owned_registry',None)
++    if old is not None and old is not registry and registry_for(adapter).unresolved():_fail('native adapter already has a different retained owner')
++    adapter._native_owned_registry=registry
++
++def own(adapter,handle,closer,*,mode='CHECKED',label='native_resource',keepalive=()):
++    return registry_for(adapter).acquire(adapter,handle,closer,mode=mode,label=label,keepalive=keepalive)
++
++def handle_closer(adapter):
++    # Production direct ABI CloseHandle is captured. Explicit software adapters
++    # may supply their own checked OS boundary; never supplied by RPC/metadata.
++    fn=getattr(getattr(adapter,'k',None),'CloseHandle',None)
++    return (fn,'BOOL') if callable(fn) else (adapter.close_handle,'CHECKED')
+--- R7/comsol_mcp/_windows_parameter_publish.py
++++ R8/comsol_mcp/_windows_parameter_publish.py
+@@ -135,8 +135,21 @@
+         if not ok:
+             raise C.WinError(C.get_last_error())
+ 
++    def _ownership_registry(self):
++        # The worker also loads this helper as one standalone file. Only package
++        # calls or an explicitly attached private owner participate in launch
++        # ownership; a failed explicit binding must never silently downgrade.
++        if __package__:
++            from ._windows_owned_resources import registry_for
++        elif getattr(self, '_native_owned_registry', None) is not None:
++            from comsol_mcp._windows_owned_resources import registry_for
++        else:
++            return None
++        return registry_for(self)
++
+     def open(self, path, *, directory=False, create=False, metadata=False, add_file=False,
+              add_directory=False, read_control=False):
++        registry = self._ownership_registry()
+         access = 0 if metadata else (0x001000A0 if directory else 0xC0010000)
+         if read_control:
+             access |= 0x00020000  # READ_CONTROL for a read-only security descriptor query
+@@ -149,6 +162,8 @@
+         handle = self.k.CreateFileW(path, access, share, None, 1 if create else 3, flags, None)
+         if handle == C.c_void_p(-1).value:
+             raise C.WinError(C.get_last_error())
++        if registry is not None:
++            registry.acquire(self, handle, self._resource_closer(), label="security_path_root")
+         return handle
+ 
+     def _open_relative(self, parent_handle, leaf, *, directory=False, create=False, add_file=False,
+@@ -161,6 +176,7 @@
+         OBJ_DONT_REPARSE fails closed if name parsing encounters a reparse
+         point; FILE_OPEN_REPARSE_POINT also asks for the leaf object itself.
+         """
++        registry = self._ownership_registry()
+         encoded = leaf.encode('utf-16-le')
+         name_buffer = C.create_unicode_buffer(leaf)
+         name = _UnicodeString(len(encoded), len(encoded) + 2,
+@@ -198,9 +214,11 @@
+                 raise FileExistsError(183, "relative entry already exists", leaf)
+             dos_error = int(self.nt.RtlNtStatusToDosError(status))
+             raise C.WinError(dos_error)
++        if registry is not None:
++            registry.acquire(self, output, self._resource_closer(), label="relative_file")
+         expected_information = 2 if create else 1  # FILE_CREATED / FILE_OPENED
+         if int(io_status.Information) != expected_information:
+-            self.check(self.k.CloseHandle(output))
++            self.close(output)
+             raise PublishError("ACCESS_VIOLATION", "relative file open did not produce the requested object")
+         return output
+ 
+@@ -243,7 +261,11 @@
+             raise PublishError("ACCESS_VIOLATION", "security path exceeds the bounded component count")
+         for part in parts:
+             _component(part)
++        registry = self._ownership_registry()
++        scope = registry.scope() if registry is not None else None
+         handles = [self.open(drive + '\\', directory=True, metadata=True, read_control=True)]
++        if registry is not None:
++            registry.acquire(self, handles[0], self._resource_closer(), label="security_path_root")
+         try:
+             if not parts:
+                 if not directory:
+@@ -252,15 +274,20 @@
+             for index, part in enumerate(parts):
+                 is_directory = index < len(parts) - 1 or directory
+                 child = self._open_relative(handles[-1], part, directory=is_directory, read_control=True)
++                if registry is not None:
++                    registry.acquire(self, child, self._resource_closer(), label="security_path_child")
++                handles.append(child)
+                 self.info(child, directory=is_directory)
+-                handles.append(child)
+             return handles
+         except BaseException:
+-            for handle in reversed(handles):
+-                try:
+-                    self.close(handle)
+-                except BaseException:
+-                    pass
++            if registry is not None:
++                registry.drain(scope)  # Failed releases stay with the launch owner.
++            else:
++                for handle in reversed(handles):
++                    try:
++                        self.close(handle)
++                    except Exception:
++                        pass  # Standalone publication retains its original contract.
+             raise
+ 
+     def source_fingerprint(self, handle):
+@@ -297,8 +324,22 @@
+         except FileNotFoundError:
+             return False
+ 
++    def _resource_closer(self):
++        # A software OS-boundary override keeps its original callback. The
++        # production close wrapper captures the checked native closer.
++        if getattr(self.close, "__func__", None) is not getattr(type(self), "close", None):
++            return self.close
++        return self._close_native
++
++    def _close_native(self, handle):
++        self.check(self.k.CloseHandle(handle))
++
+     def close(self, handle):
+-        self.check(self.k.CloseHandle(handle))
++        registry = self._ownership_registry()
++        entry = registry.find(self, handle) if registry is not None else None
++        if entry is not None:
++            return entry.release_owned(registry.owner)
++        return self._close_native(handle)
+ 
+     def info(self, handle, *, directory=False):
+         info = _FileInfo(); self.check(self.k.GetFileInformationByHandle(handle, C.byref(info)))
+--- R7/comsol_mcp/_windows_t037.py
++++ R8/comsol_mcp/_windows_t037.py
+@@ -47,8 +47,8 @@
+     """A typed, fail-closed T037 platform/configuration refusal."""
+ 
+ 
+-def _refuse(code: str, message: str) -> None:
+-    raise WindowsT037Error(code, message)
++def _refuse(code: str, message: str, **details: Any) -> None:
++    raise WindowsT037Error(code, message, details=details or None)
+ 
+ 
+ @dataclass(frozen=True)
+@@ -680,17 +680,28 @@
+         handle = self.k.OpenProcess(self.PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+         if not handle:
+             self._check(False, "OpenProcess")
++        from ._windows_owned_resources import own
++        own(self,handle,self.k.CloseHandle,mode="BOOL",label="observed_process")
+         return handle
+ 
+-    def close_handle(self, handle: Any) -> None:
++    def _close_handle_native(self, handle: Any) -> None:
+         if handle and not self.k.CloseHandle(handle):
+             self._check(False, "CloseHandle")
++
++    def close_handle(self, handle: Any) -> None:
++        from ._windows_owned_resources import registry_for
++        if handle:
++            registry=registry_for(self);entry=registry.find(self,handle)
++            if entry is not None:return entry.release_owned(registry.owner)
++        return self._close_handle_native(handle)
+ 
+     def open_process_token(self, process: Any):
+         token = self.W.HANDLE()
+         self._check(self.a.OpenProcessToken(process, self.TOKEN_QUERY, self.C.byref(token)), "OpenProcessToken")
+         if not token.value:
+             _refuse(ERROR_UNSUPPORTED, "OpenProcessToken returned a null token handle")
++        from ._windows_owned_resources import own
++        own(self,token,self.k.CloseHandle,mode="BOOL",label="observed_process_token")
+         return token
+ 
+     def _token_buffer(self, token: Any, information_class: int, *, required: bool = True):
+@@ -719,10 +730,12 @@
+             _refuse(ERROR_UNSUPPORTED, "Win32 returned a SID with an unsupported size")
+         text = W.LPWSTR()
+         self._check(self.a.ConvertSidToStringSidW(pointer, C.byref(text)), "ConvertSidToStringSidW")
++        from ._windows_owned_resources import own
++        resource=own(self,C.cast(text,C.c_void_p),self.k.LocalFree,mode="LOCALFREE",label="sid_string",keepalive=(text,))
+         try:
+             value = text.value
+         finally:
+-            self.k.LocalFree(C.cast(text, C.c_void_p))
++            resource.release_owned(resource.registry.owner)
+         if not isinstance(value, str) or not _SID.fullmatch(value):
+             _refuse(ERROR_UNSUPPORTED, "Win32 SID could not be converted to canonical text")
+         return value.upper()
+@@ -979,6 +992,7 @@
+         self._api = api
+         self._job = None
+         self._closed = False
++        self._prebirth_observers = []
+         self._job_key = hashlib.sha256((profile.source_sha256 + "\0" + session_id).encode()).hexdigest()
+ 
+     def __call__(self, command: Sequence[str], **options: Any):
+@@ -1000,7 +1014,7 @@
+             _refuse(ERROR_POLICY_UNVERIFIED, "T037 session process factory is closed")
+         if os.name == "nt":
+             from ._windows_t037_resume import refuse_unverified_prebirth
+-            refuse_unverified_prebirth(self.profile)
++            refuse_unverified_prebirth(self.profile, owner=self)
+         _refuse(ERROR_POLICY_UNVERIFIED, "T037 prebirth native policy admission and child-proof issuer remain unverified")
+ 
+     def _infer_role(self, command: Sequence[str]) -> str:
+@@ -1022,7 +1036,13 @@
+         return self._job_key
+ 
+     def close(self) -> None:
++        from ._windows_owned_resources import registry_for
++        if registry_for(self).unresolved():
++            _refuse("NATIVE_RESOURCE_RELEASE_UNKNOWN", "factory-owned prebirth native observations remain unresolved")
+         if self._api is not None:
++            from ._windows_owned_resources import registry_for
++            if registry_for(self._api).unresolved():
++                _refuse("NATIVE_RESOURCE_RELEASE_UNKNOWN", "actual native acquisition registry has unresolved ancillary ownership")
+             from ._windows_t037_child import _PinnedParent, _PARENT_SEAL
+             retained_cleanup = getattr(self._api, "_retained_launch_cleanup", [])
+             def parent_release_confirmed(entry):
+@@ -1321,18 +1341,24 @@
+         if (not re.fullmatch(r"[A-Za-z]:", drive) or not tail.startswith("\\")
+                 or canonical.startswith("\\\\") or canonical.startswith("\\\\?\\")):
+             _refuse(ERROR_UNSUPPORTED, "T037 executable must be an ordinary local drive path")
++        from ._windows_owned_resources import registry_for,attach_registry,own
++        registry=registry_for(self);scope=registry.scope()
+         try:
+             from ._windows_parameter_publish import _API
+             api = _API()
++            attach_registry(api,registry)
+             parents = api.open_security_path(ntpath.dirname(canonical), directory=True)
++            closer=api._resource_closer() if hasattr(api,"_resource_closer") else api.close
++            for parent in parents:own(api,parent,closer,label="image_parent")
+             image = api.open_source(parents[-1], ntpath.basename(canonical))
++            own(api,image,closer,label="pinned_image")
+             identity, size, creation, written, links = api.source_fingerprint(image)
+             if size <= 0 or size > self.MAX_IMAGE_BYTES or links != 1:
+                 _refuse(ERROR_POLICY_UNVERIFIED, "T037 executable size/link count is outside its bounded identity check")
+             return api, parents, image, (identity, size, creation, written, links), canonical
+-        except WindowsT037Error:
+-            raise
+-        except Exception as exc:
++        except BaseException as exc:
++            registry.drain(scope)
++            if isinstance(exc,WindowsT037Error):raise
+             raise WindowsT037Error(ERROR_UNSUPPORTED, "T037 executable could not be pinned without reparse traversal") from exc
+ 
+     def _hash_image_handle(self, api: Any, handle: Any, size: int) -> str:
+@@ -1349,13 +1375,17 @@
+         return digest.hexdigest()
+ 
+     def hash_image(self, path: str) -> str:
+-        api, parents, image, fingerprint, _canonical = self._open_image(path)
++        from ._windows_owned_resources import registry_for,own,attach_registry
++        registry=registry_for(self);scope=registry.scope()
+         try:
++            api, parents, image, fingerprint, _canonical = self._open_image(path)
++            attach_registry(api,registry);closer=api._resource_closer() if hasattr(api,"_resource_closer") else api.close
++            for parent in parents:own(api,parent,closer,label="image_parent")
++            own(api,image,closer,label="pinned_image")
+             return self._hash_image_handle(api, image, fingerprint[1])
+         finally:
+-            api.close(image)
+-            for handle in reversed(parents):
+-                api.close(handle)
++            failures=registry.drain(scope)
++            if failures:raise failures[0][1]
+ 
+     def _stdio_source(self, value: Any, *, input_stream: bool):
+         import msvcrt
+@@ -1365,6 +1395,9 @@
+                                         None, self.OPEN_EXISTING, self.FILE_ATTRIBUTE_NORMAL, None)
+             if not handle or int(handle) == self.C.c_void_p(-1).value:
+                 self._check(False, "CreateFileW(NUL stdio)")
++            from ._windows_owned_resources import own,handle_closer
++            closer,mode=handle_closer(self)
++            own(self,handle,closer,mode=mode,label="owned_stdio_source")
+             return handle, True
+         if value in (subprocess.PIPE, subprocess.STDOUT):
+             _refuse(ERROR_UNSUPPORTED, "T037 child stdio pipes/sentinel fallback are not supported")
+@@ -1387,6 +1420,9 @@
+             0, True, self.DUPLICATE_SAME_ACCESS), "DuplicateHandle(stdio)")
+         if not output.value:
+             _refuse(ERROR_UNSUPPORTED, "DuplicateHandle returned a null stdio handle")
++        from ._windows_owned_resources import own,handle_closer
++        closer,mode=handle_closer(self)
++        own(self,output,closer,mode=mode,label="inherited_handle")
+         return output
+ 
+     def _environment_buffer(self, environment: Any):
+@@ -1416,6 +1452,9 @@
+         pointer = C.cast(storage, C.c_void_p)
+         self._check(self.k.InitializeProcThreadAttributeList(pointer, 2, 0, C.byref(size)),
+                     "InitializeProcThreadAttributeList")
++        from ._windows_owned_resources import own
++        resource=own(self,pointer,self.k.DeleteProcThreadAttributeList,mode="VOID",label="attribute_list",
++                     keepalive=(storage,security_capabilities,handles))
+         try:
+             self._check(self.k.UpdateProcThreadAttribute(pointer, 0,
+                 self.PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES, C.byref(security_capabilities),
+@@ -1424,7 +1463,7 @@
+                 self.PROC_THREAD_ATTRIBUTE_HANDLE_LIST, self.C.cast(handles, C.c_void_p),
+                 C.sizeof(handles), None, None), "UpdateProcThreadAttribute(HandleList)")
+         except BaseException:
+-            self.k.DeleteProcThreadAttributeList(pointer)
++            resource.release_owned(resource.registry.owner)
+             raise
+         return storage, pointer
+ 
+@@ -1451,7 +1490,13 @@
+         if not isinstance(executable, str) or not executable:
+             _refuse(ERROR_PROFILE_INVALID, "T037 lpApplicationName is missing")
+         expected_hash = profile.server_image_sha256 if role == "server" else profile.worker_image_sha256
++        from ._windows_owned_resources import registry_for,own,attach_registry,handle_closer
++        registry=registry_for(self);launch_scope=registry.scope()
+         image_api, parent_handles, image_handle, image_fingerprint, image_path = self._open_image(executable)
++        attach_registry(image_api,registry)
++        image_closer=image_api._resource_closer() if hasattr(image_api,"_resource_closer") else image_api.close
++        for parent in parent_handles:own(image_api,parent,image_closer,label="image_parent")
++        own(image_api,image_handle,image_closer,label="pinned_image")
+         inherited: list[Any] = []
+         duplicate_handles: list[Any] = []
+         sid_allocations: list[Any] = []
+@@ -1475,6 +1520,8 @@
+             token_access = 0x0008 | 0x0002 | 0x0001 | 0x0080 | 0x0100
+             self._check(self.a.OpenProcessToken(self.k.GetCurrentProcess(), token_access,
+                                                 C.byref(current_token)), "OpenProcessToken(service)")
++            native_closer,native_mode=handle_closer(self)
++            current_owner=own(self,current_token,native_closer,mode=native_mode,label="current_token")
+             try:
+                 service_observation = self.read_token(current_token)
+                 if service_observation.get("user_sid", "").casefold() != profile.service_account_sid.casefold():
+@@ -1482,11 +1529,13 @@
+                 # TOKEN_PRIMARY=1, SecurityImpersonation=2.
+                 self._check(self.a.DuplicateTokenEx(current_token, token_access, None, 2, 1,
+                                                      C.byref(primary_token)), "DuplicateTokenEx(primary)")
++                own(self,primary_token,native_closer,mode=native_mode,label="primary_token")
+             finally:
+-                self.close_handle(current_token)
++                current_owner.release_owned(registry.owner)
+ 
+             self._check(self.a.ConvertStringSidToSidW(profile.appcontainer_sid, C.byref(app_sid)),
+                         "ConvertStringSidToSidW(AppContainer)")
++            own(self,app_sid,self.k.LocalFree,mode="LOCALFREE",label="appcontainer_sid")
+             class SID_AND_ATTRIBUTES(C.Structure):
+                 _fields_ = [("Sid", C.c_void_p), ("Attributes", W.DWORD)]
+             class SECURITY_CAPABILITIES(C.Structure):
+@@ -1498,6 +1547,7 @@
+                 sid_pointer = C.c_void_p()
+                 self._check(self.a.ConvertStringSidToSidW(sid_text, C.byref(sid_pointer)),
+                             "ConvertStringSidToSidW(Capability)")
++                own(self,sid_pointer,self.k.LocalFree,mode="LOCALFREE",label="capability_sid")
+                 sid_allocations.append(sid_pointer)
+                 capability_rows[index].Sid = sid_pointer.value
+                 capability_rows[index].Attributes = 0x4  # SE_GROUP_ENABLED
+@@ -1513,13 +1563,15 @@
+                     stdio_map[name] = "stdout"
+                     continue
+                 source, owned = self._stdio_source(source_value, input_stream=is_stdin)
++                source_owner=own(self,source,native_closer,mode=native_mode,label="owned_stdio_source") if owned else None
+                 try:
+                     duplicate = self._duplicate_inheritable(source)
++                    own(self,duplicate,native_closer,mode=native_mode,label="inherited_handle")
+                     duplicate_handles.append(duplicate)
+                     stdio_map[name] = duplicate
+                 finally:
+-                    if owned:
+-                        self.close_handle(source)
++                    if source_owner is not None:
++                        source_owner.release_owned(registry.owner)
+             for name in ("stdin", "stdout", "stderr"):
+                 if stdio_map[name] == "stdout":
+                     stdio_map[name] = stdio_map["stdout"]
+@@ -1530,6 +1582,8 @@
+                     inherited.append(value)
+             handles_array = (W.HANDLE * len(inherited))(*inherited)
+             attr_storage, attribute_pointer = self._attribute_list(security_caps, handles_array)
++            own(self,attribute_pointer,self.k.DeleteProcThreadAttributeList,mode="VOID",label="attribute_list",
++                keepalive=(attr_storage,security_caps,handles_array))
+ 
+             class STARTUPINFOW(C.Structure):
+                 _fields_ = [("cb", W.DWORD), ("lpReserved", W.LPWSTR), ("lpDesktop", W.LPWSTR),
+@@ -1683,20 +1737,7 @@
+                     if not hasattr(self, "_retained_launch_cleanup"):
+                         self._retained_launch_cleanup = []
+                     self._retained_launch_cleanup.append((label, callback, args, error))
+-            if attribute_pointer:
+-                release("attribute_list", self.k.DeleteProcThreadAttributeList, attribute_pointer)
+-            if primary_token.value:
+-                release("primary_token", self.close_handle, primary_token)
+-            if app_sid.value:
+-                release("appcontainer_sid", self.k.LocalFree, app_sid, free_result=True)
+-            for sid in sid_allocations:
+-                if sid.value:
+-                    release("capability_sid", self.k.LocalFree, sid, free_result=True)
+-            for handle in reversed(duplicate_handles):
+-                release("inherited_handle", self.close_handle, handle)
+-            release("pinned_image", image_api.close, image_handle)
+-            for handle in reversed(parent_handles):
+-                release("image_parent", image_api.close, handle)
++            release_failures.extend(registry.drain(launch_scope))
+             if native_parent is not None:
+                 release("native_parent", native_parent.close)
+             if release_failures:
+--- R7/comsol_mcp/_windows_t037_acl.py
++++ R8/comsol_mcp/_windows_t037_acl.py
+@@ -88,17 +88,23 @@
+         attached=HANDLE()
+         self._check(self.a.OpenProcessToken(process,8,C.byref(attached)),'OpenProcessToken(actual child binding)')
+         if not attached:_fail('CHILD_ACL_TOKEN_INVALID','child token binding returned no handle')
++        from ._windows_owned_resources import own
++        resource=own(self, attached, self.k.CloseHandle, mode="BOOL", label="acl_bound_token")
+         try:
+             value=self.statistics(token)
+             if value!=self.statistics(attached):_fail('CHILD_ACL_TOKEN_INVALID','supplied token is not the actual child token')
+             return value
+-        finally:self.close_token(attached)
++        finally:resource.release_owned(resource.registry.owner)
+ 
+     def descriptor(self,handle):
++        resource=None
+         owner=C.c_void_p();group=C.c_void_p();dacl=C.c_void_p();sd=C.c_void_p()
+         try:
+             status=self.a.GetSecurityInfo(handle,1,7,C.byref(owner),C.byref(group),C.byref(dacl),None,C.byref(sd))
+             if status:_fail('CHILD_ACL_DESCRIPTOR_UNAVAILABLE','GetSecurityInfo failed',winerror=int(status))
++            if sd:
++                from ._windows_owned_resources import own
++                resource=own(self, sd, self.k.LocalFree, mode="LOCALFREE", label="acl_security_descriptor")
+             if not sd or not owner or not group:_fail('CHILD_ACL_DESCRIPTOR_INVALID','descriptor must contain owner and group')
+             size=int(self.a.GetSecurityDescriptorLength(sd))
+             if not 20<=size<=MAX_DESCRIPTOR:_fail('CHILD_ACL_DESCRIPTOR_INVALID','descriptor size is outside bound')
+@@ -110,7 +116,7 @@
+             if not parsed['dacl']['present'] or parsed['dacl']['null']:_fail('CHILD_ACL_NULL_DACL','canonical descriptor is grant-all')
+             yield sd,raw,canonical_security_descriptor_sha256(raw)
+         finally:
+-            if sd and self.k.LocalFree(sd):_fail('CHILD_ACL_RELEASE_UNKNOWN','LocalFree(descriptor) was not confirmed')
++            if resource is not None:resource.release_owned(resource.registry.owner)
+ 
+     def access(self,sd,impersonation_token,rights):
+         if not rights or any(r not in {'READ','WRITE','EXECUTE'} for r in rights):_fail('CHILD_ACL_RIGHTS_INVALID','rights are outside the admitted grammar')
+@@ -134,9 +140,15 @@
+         result=HANDLE()
+         self._check(self.a.DuplicateTokenEx(token,8,None,2,2,C.byref(result)),'DuplicateTokenEx(impersonation)')
+         if not result:_fail('CHILD_ACL_TOKEN_INVALID','token duplication returned no handle')
++        from ._windows_owned_resources import own
++        own(self, result, self.k.CloseHandle, mode="BOOL", label="acl_impersonation")
+         return result
+ 
+-    def close_token(self,token):self._check(self.k.CloseHandle(token),'CloseHandle(impersonation token)')
++    def close_token(self,token):
++        from ._windows_owned_resources import registry_for
++        registry=registry_for(self);entry=registry.find(self,token)
++        if entry is not None:return entry.release_owned(registry.owner)
++        self._check(self.k.CloseHandle(token),'CloseHandle(impersonation token)')
+ 
+ 
+ def check_suspended_child_dacl(profile,process_handle,token_handle,child_pid,launch_api,*,api=None):
+@@ -144,6 +156,11 @@
+     from ._windows_t037 import WindowsT037ProfileV2
+     if type(profile) is not WindowsT037ProfileV2:_fail('CHILD_ACL_PROFILE_REQUIRED','child AccessCheck requires the trusted v2 profile')
+     selected=api if api is not None else NativeChildAclApi()
++    from ._windows_owned_resources import registry_for, attach_registry, own
++    registry=registry_for(launch_api)
++    attach_registry(selected,registry)
++    attach_registry(selected.files,registry)
++    scope=registry.scope()
+     birth,exit_time=launch_api.process_times(process_handle)
+     if type(child_pid) is not int or child_pid<=0 or type(birth) is not int or birth<=0 or exit_time is not None:
+         _fail('CHILD_ACL_PROCESS_UNKNOWN','actual child PID/birth/exit is not a live suspended identity')
+@@ -156,6 +173,9 @@
+     child_grants=[g for g in profile.windows_policy.acl_grants if g.principal_sid.casefold()==profile.appcontainer_sid.casefold()]
+     if not child_grants:_fail('CHILD_ACL_PROFILE_REQUIRED','profile has no actual child ACL grants')
+     impersonation=selected.duplicate(token_handle)
++    closer=getattr(getattr(selected,"k",None),"CloseHandle",None)
++    impersonation_owner=own(selected,impersonation,closer if callable(closer) else selected.close_token,
++                           mode="BOOL" if callable(closer) else "CHECKED",label="acl_impersonation")
+     checks=[]
+     try:
+         for grant in child_grants:
+@@ -163,6 +183,8 @@
+             if attributes==0xffffffff or attributes&0x400:_fail('CHILD_ACL_PATH_INVALID','ACL path is missing or reparse')
+             directory=bool(attributes&0x10)
+             chain=selected.files.open_security_path(grant.path,directory=directory)
++            file_closer=selected.files._resource_closer() if hasattr(selected.files,"_resource_closer") else selected.files.close
++            chain_owners=[own(selected.files,h,file_closer,label="acl_path_component") for h in chain]
+             try:
+                 identities=[selected.files.info(h,directory=True if index<len(chain)-1 else directory)[0] for index,h in enumerate(chain)]
+                 descriptor=contextmanager(selected.descriptor)
+@@ -175,9 +197,15 @@
+                 if final!=identities:_fail('CHILD_ACL_PATH_CHANGED','pinned path chain identity changed')
+                 checks.append((grant.path,tuple(identities),digest,desired,granted))
+             finally:
+-                for handle in reversed(chain):selected.files.close(handle)
++                failures=[]
++                for resource in reversed(chain_owners):
++                    try:resource.release_owned(registry.owner)
++                    except BaseException as error:failures.append(error)
++                if failures:raise failures[0]
+         if (selected.bound_statistics(process_handle,token_handle)!=original or launch_api.read_token(token_handle)!=before
+                 or launch_api.process_times(process_handle)!=(birth,exit_time)):
+             _fail('CHILD_ACL_PROVENANCE_CHANGED','actual child/token provenance changed during DACL check')
+         return ChildDaclObservation(child_pid,birth,hashlib.sha256(original).hexdigest(),tuple(checks))
+-    finally:selected.close_token(impersonation)
++    finally:
++        failures=registry.drain(scope)
++        if failures:raise failures[0][1]
+--- R7/comsol_mcp/_windows_t037_child.py
++++ R8/comsol_mcp/_windows_t037_child.py
+@@ -65,6 +65,8 @@
+         snapshot=self.k.CreateToolhelp32Snapshot(2,0) # TH32CS_SNAPPROCESS only.
+         if not snapshot or int(snapshot)==C.c_void_p(-1).value:
+             _fail('CHILD_PARENT_UNKNOWN','Toolhelp process snapshot is unavailable')
++        from ._windows_owned_resources import own
++        resource=own(self,snapshot,self.k.CloseHandle,mode="BOOL",label="toolhelp_snapshot")
+         try:
+             entry=PROCESSENTRY32W();entry.dwSize=C.sizeof(entry)
+             ok=self.k.Process32FirstW(snapshot,C.byref(entry))
+@@ -80,7 +82,9 @@
+                 ok=self.k.Process32NextW(snapshot,C.byref(entry))
+             _fail('CHILD_PARENT_UNKNOWN','Toolhelp enumeration exceeded row budget')
+         finally:
+-            if not self.k.CloseHandle(snapshot):_fail('CHILD_OBSERVATION_RELEASE_UNKNOWN','Toolhelp snapshot close was not confirmed')
++            try:resource.release_owned(resource.registry.owner)
++            except Exception as error:
++                _fail('CHILD_OBSERVATION_RELEASE_UNKNOWN','Toolhelp snapshot release remains owned')
+ 
+ 
+ def observe_retained_child(process,profile,launch_api,*,parent=None,api=None):
+@@ -132,16 +136,23 @@
+         if seal is not _PARENT_SEAL:_fail('CHILD_PARENT_UNKNOWN','parent must come from the native handle producer')
+         self.launch_api=launch_api;self.query=query;self.pid=pid;self.handle=handle;self.birth=birth
+         self._seal=seal;self.closed=False
+-    def close(self):
++    def close(self, *, retry=False):
+         if not self.closed:
+-            self.launch_api.close_handle(self.handle)
++            resource=getattr(self,"_resource_owner",None)
++            if resource is not None:
++                resource.release_owned(resource.registry.owner,retry=retry)
++            else:
++                self.launch_api.close_handle(self.handle)
+             self.closed=True
+             getattr(self.launch_api,'_retained_parent_bindings',{}).pop(id(self),None)
+ 
+ def pin_native_parent(launch_api,*,api=None):
+     query=api if api is not None else NativeChildProcessApi()
++    from ._windows_owned_resources import attach_registry,registry_for
++    attach_registry(query,registry_for(launch_api))
+     pid=query.current_pid();handle=launch_api.open_process(pid)
+     parent=_PinnedParent(launch_api,query,pid,handle,None,seal=_PARENT_SEAL)
++    parent._resource_owner=registry_for(launch_api).find(launch_api,handle)
+     if not hasattr(launch_api,'_retained_parent_bindings'):launch_api._retained_parent_bindings={}
+     launch_api._retained_parent_bindings[id(parent)]=parent
+     try:
+--- R7/comsol_mcp/_windows_t037_resume.py
++++ R8/comsol_mcp/_windows_t037_resume.py
+@@ -68,15 +68,29 @@
+         return int(process._api.k.ResumeThread(process._thread_handle))
+ 
+ 
+-def refuse_unverified_prebirth(profile):
++def refuse_unverified_prebirth(profile, *, owner=None):
+     """Observe host/broker/policy only. No unborn child evidence is requested."""
+-    from ._windows_t037 import WindowsT037Observer,WindowsT037ProfileV2,windows_host_fingerprint
++    from ._windows_t037 import WindowsT037Observer,WindowsT037ProfileV2,T037SessionProcessFactory,windows_host_fingerprint
+     from ._windows_t037_native import WindowsNativePolicyAdapter
+     if type(profile) is not WindowsT037ProfileV2:
+         raise ExecutionContractError('T037_POLICY_UNVERIFIED','native static admission requires v2',safe_retry=False,stage='pre_dispatch')
++    if type(owner) is not T037SessionProcessFactory or owner.profile is not profile or owner._closed:
++        raise ExecutionContractError('T037_POLICY_UNVERIFIED','prebirth observation requires its private factory lifetime owner',
++            safe_retry=False,stage='pre_dispatch',details={'phase':'STATIC_HOST_BROKER_POLICY','reasons':['NATIVE_OBSERVATION_OWNER_REQUIRED']})
++    from ._windows_owned_resources import registry_for,attach_registry
++    registry=registry_for(owner)
++    scope=registry.scope()
+     observer=WindowsT037Observer()
+-    observation=WindowsNativePolicyAdapter().observe(profile,
+-        current_host_fingerprint=windows_host_fingerprint(),process_observer=observer)
++    # The API is genuinely its own read-only adapter, not impersonated as the
++    # launch API. Factory + shared typed registry hold original adapter/closer.
++    owner._prebirth_observers.append(observer)
++    attach_registry(observer.api,registry)
++    try:
++        observation=WindowsNativePolicyAdapter().observe(profile,
++            current_host_fingerprint=windows_host_fingerprint(),process_observer=observer)
++    finally:
++        failures=registry.drain(scope)
++        if failures:raise failures[0][1]
+     raise ExecutionContractError('T037_POLICY_UNVERIFIED','prebirth native policy requirements remain unverified',
+         safe_retry=False,stage='pre_dispatch',details={'phase':'STATIC_HOST_BROKER_POLICY',
+         'reasons':list(observation.reasons)+['JOB_REQUIRED_TARGET_UNAVAILABLE','MIC_UNVERIFIED',
+--- R7/tests/test_windows_child_binding.py
++++ R8/tests/test_windows_child_binding.py
+@@ -99,7 +99,7 @@
+     from comsol_mcp._execution_contract import ExecutionContractError
+     from tests.test_windows_child_acl import _observer
+     profile,*_=_observer();events=[]
+-    observer=object()
++    observer=SimpleNamespace(api=SimpleNamespace())
+     monkeypatch.setattr('comsol_mcp._windows_t037.WindowsT037Observer',lambda:observer)
+     monkeypatch.setattr('comsol_mcp._windows_t037.windows_host_fingerprint',lambda:'e'*64)
+     class Adapter:
+@@ -107,7 +107,9 @@
+             assert p is profile and process_observer is observer
+             events.append('actual_adapter_entrypoint');return SimpleNamespace(reasons=('WFP_EFFECTIVE_ARBITRATION_NOT_PROVEN',))
+     monkeypatch.setattr('comsol_mcp._windows_t037_native.WindowsNativePolicyAdapter',Adapter)
+-    with pytest.raises(ExecutionContractError) as captured:boundary.refuse_unverified_prebirth(profile)
++    from comsol_mcp._windows_t037 import T037SessionProcessFactory
++    owner=T037SessionProcessFactory(profile,"prebirth-owner")
++    with pytest.raises(ExecutionContractError) as captured:boundary.refuse_unverified_prebirth(profile,owner=owner)
+     assert captured.value.details['phase']=='STATIC_HOST_BROKER_POLICY'
+     assert events==['actual_adapter_entrypoint'] and boundary._pending=={}
+ 
+--- R7/tests/test_windows_owned_registry.py
++++ R8/tests/test_windows_owned_registry.py
+@@ -0,0 +1,320 @@
++"""Consolidated acquisition/release inventory; only SDK boundaries are synthetic."""
++from types import SimpleNamespace
++import ctypes as C,threading
++import pytest
++from comsol_mcp import _windows_owned_resources as owned
++from comsol_mcp import _windows_t037 as win,_windows_t037_acl as acl
++from comsol_mcp._session_server import OwnedServerLauncher,OwnedServerError
++from tests.test_windows_suspended_ownership import _launch_api,_create
++from tests.test_session_server import _startup_runtime
++
++
++def _factory_guard(profile,api):
++    factory=win.T037SessionProcessFactory(profile,'owned-registry-test',api=api);factory._job=300
++    with pytest.raises(win.WindowsT037Error) as error:factory.close()
++    assert error.value.code=='NATIVE_RESOURCE_RELEASE_UNKNOWN' and factory._job==300
++
++
++def _actual_gate(monkeypatch,original):
++    fake=acl.check_suspended_child_dacl
++    adapter=next(x.cell_contents for x in fake.__closure__ if hasattr(x.cell_contents,'bound_statistics'))
++    monkeypatch.setattr(acl,'check_suspended_child_dacl',original)
++    monkeypatch.setattr(acl,'NativeChildAclApi',lambda:adapter)
++    return adapter
++
++@pytest.mark.parametrize('fault',['current_token','owned_stdio','attribute_abort'])
++def test_prechild_original_returns_are_owned_before_any_subsequent_validation(monkeypatch,tmp_path,fault):
++    original=acl.check_suspended_child_dacl
++    profile,api,events,state=_launch_api(monkeypatch,cleanup_fail=True);_actual_gate(monkeypatch,original)
++    normal=api.close_handle
++    def close(handle):
++        value=getattr(handle,'value',handle)
++        if value==(55 if fault=='current_token' else 100) and fault!='attribute_abort':raise OSError('native release failed')
++        return normal(handle)
++    api.close_handle=close
++    if fault=='owned_stdio':api._stdio_source=lambda *a,**k:(100,True)
++    if fault=='attribute_abort':
++        monkeypatch.setattr(C,'get_last_error',lambda:122,raising=False)
++        def init(pointer,count,flags,out):C.cast(out,C.POINTER(C.c_size_t)).contents.value=32;return bool(pointer)
++        api.k.InitializeProcThreadAttributeList=init;api.k.UpdateProcThreadAttribute=lambda *a:0
++        def delete(pointer):raise OSError('attribute native delete failed')
++        api.k.DeleteProcThreadAttributeList=delete;api._attribute_list=win._Win32LaunchApi._attribute_list.__get__(api)
++    launcher=OwnedServerLauncher(process_factory=lambda *a,**k:_create(profile,api),platform_name='darwin')
++    with pytest.raises(OwnedServerError) as captured:launcher.start(_startup_runtime(tmp_path),'project','session')
++    assert not captured.value.uncertain and captured.value.handle is None and 'CREATE_SUSPENDED' not in events
++    entries=owned.registry_for(api).unresolved();assert len(entries)==1 and entries[0].state=='UNKNOWN'
++    assert entries[0].label=={'current_token':'current_token','owned_stdio':'owned_stdio_source','attribute_abort':'attribute_list'}[fault]
++    if fault=='attribute_abort':assert entries[0].keepalive and len(entries[0].keepalive[0])==32
++    _factory_guard(profile,api)
++
++@pytest.mark.parametrize('fault',['open_source','fingerprint','hash_close'])
++def test_image_root_registry_exists_before_open_source_fingerprint_and_hash_cleanup(monkeypatch,fault):
++    from comsol_mcp import _windows_parameter_publish as files_module
++    profile,api,events,state=_launch_api(monkeypatch);opened=[];attempted=[];failure={'on':True}
++    class Files:
++        def open_security_path(self,*a,**k):opened.extend([51,52]);return [51,52]
++        def open_source(self,*a):
++            if fault=='open_source':raise OSError('image open failed')
++            opened.append(53);return 53
++        def source_fingerprint(self,h):return ((1,2),10,3,4,2 if fault=='fingerprint' else 1)
++        def close(self,h):
++            attempted.append(h)
++            if failure['on'] and h==(53 if fault=='hash_close' else 52):raise OSError('native image close failed')
++    files=Files();monkeypatch.setattr(files_module,'_API',lambda:files)
++    api._open_image=win._Win32LaunchApi._open_image.__get__(api);api._hash_image_handle=lambda *a:profile.server_image_sha256
++    with pytest.raises(Exception):
++        if fault=='hash_close':api.hash_image(r'C:\review\server.exe')
++        else:api._open_image(r'C:\review\server.exe')
++    assert set(attempted)==set(opened)
++    entries=owned.registry_for(api).unresolved();assert len(entries)==1 and entries[0].adapter is files
++    _factory_guard(profile,api);failure['on']=False
++    owned.registry_for(api).retry_owned(entries[0],api)
++    assert not owned.registry_for(api).unresolved()
++
++@pytest.mark.parametrize('fault',['info','ancestor_close'])
++def test_security_child_is_registered_before_info_and_every_ancestor_close_is_attempted(fault):
++    from comsol_mcp import _windows_parameter_publish as files_module
++    api=files_module._API.__new__(files_module._API);closed=[]
++    api.open=lambda *a,**k:71;api._open_relative=lambda *a,**k:72
++    api.info=lambda *a,**k:(_ for _ in ()).throw(OSError('info failed'))
++    def close(h):
++        closed.append(h)
++        if fault=='ancestor_close' and h==71:raise OSError('ancestor close failed')
++    api.close=close
++    with pytest.raises(OSError):api.open_security_path(r'C:\review',directory=True)
++    assert closed==[72,71]
++    entries=owned.registry_for(api).unresolved()
++    assert (len(entries),entries[0].value if entries else None)==((1,71) if fault=='ancestor_close' else (0,None))
++
++
++def test_native_relative_open_registers_success_output_before_io_information_check():
++    from comsol_mcp import _windows_parameter_publish as files_module
++    api=files_module._API.__new__(files_module._API);attempted=[]
++    def create(out,access,attr,io,*args):
++        C.cast(out,C.POINTER(files_module.HANDLE)).contents.value=73
++        C.cast(io,C.POINTER(files_module._IoStatusBlock)).contents.Information=99
++        return 0
++    api.nt=SimpleNamespace(NtCreateFile=create);api.k=SimpleNamespace(CloseHandle=lambda h:attempted.append(h.value) or 0)
++    api.check=lambda ok:None if ok else (_ for _ in ()).throw(OSError('native CloseHandle false'))
++    with pytest.raises(OSError):api._open_relative(71,'child',directory=True)
++    entries=owned.registry_for(api).unresolved()
++    assert attempted==[73] and len(entries)==1 and entries[0].value==73 and entries[0].state=='UNKNOWN'
++
++@pytest.mark.parametrize('fault',['impersonation','chain'])
++def test_dacl_helper_joins_same_launch_registry_and_terminal_child_does_not_release_ancillary(monkeypatch,tmp_path,fault):
++    original=acl.check_suspended_child_dacl;profile,api,events,state=_launch_api(monkeypatch,cleanup_fail=True)
++    selected=_actual_gate(monkeypatch,original);attempted=[]
++    if fault=='impersonation':
++        normal=selected.close_token
++        def close(h):
++            attempted.append(h)
++            if h==88:raise OSError('actual impersonation release failed')
++            return normal(h)
++        selected.close_token=close
++    else:
++        normal=selected.files.close
++        def close(h):
++            attempted.append(h)
++            if h==11:raise OSError('actual chain release failed')
++            return normal(h)
++        selected.files.close=close
++    launcher=OwnedServerLauncher(process_factory=lambda *a,**k:_create(profile,api),platform_name='darwin')
++    with pytest.raises(OwnedServerError) as captured:launcher.start(_startup_runtime(tmp_path),'project','session')
++    holder=captured.value.handle;assert captured.value.uncertain and holder.process._owner is holder
++    registry=owned.registry_for(api)
++    assert registry is owned.registry_for(selected) is owned.registry_for(selected.files)
++    entries=registry.unresolved();assert len(entries)==1
++    if fault=='chain':assert 11 in attempted and 10 in attempted
++    state['cleanup_fail']=False;launcher.stop(holder);assert holder.process._closed
++    _factory_guard(profile,api)
++
++
++def test_sid_string_nonnull_localfree_retains_pointer_and_refuses_factory(monkeypatch):
++    profile,api,events,state=_launch_api(monkeypatch);storage=C.create_unicode_buffer('S-1-5-21-100-200-300-1001')
++    address=C.addressof(storage);calls=[]
++    api.a.IsValidSid=lambda p:1;api.a.GetLengthSid=lambda p:8
++    def convert(pointer,out):C.cast(out,C.POINTER(C.c_void_p)).contents.value=address;return 1
++    api.a.ConvertSidToStringSidW=convert;api.k.LocalFree=lambda p:calls.append(p.value) or p.value
++    with pytest.raises(owned.NativeResourceError):api._sid_text(C.c_void_p(99))
++    entries=owned.registry_for(api).unresolved();assert calls==[address] and entries[0].value==address
++    assert entries[0].mode=='LOCALFREE';_factory_guard(profile,api)
++
++
++def test_toolhelp_failed_close_retains_exact_snapshot_on_shared_launch_registry(monkeypatch):
++    from comsol_mcp import _windows_t037_child as child
++    query_class=child.NativeChildProcessApi
++    profile,api,events,state=_launch_api(monkeypatch);query=query_class.__new__(query_class)
++    def first(h,out):
++        row=C.cast(out,C.POINTER(child.PROCESSENTRY32W)).contents;row.th32ProcessID=456;row.th32ParentProcessID=55;return 1
++    query.k=SimpleNamespace(CreateToolhelp32Snapshot=lambda *a:81,Process32FirstW=first,CloseHandle=lambda h:0)
++    owned.attach_registry(query,owned.registry_for(api))
++    with pytest.raises(child.ChildObservationError):query.parent_pid(456)
++    entries=owned.registry_for(api).unresolved();assert len(entries)==1 and entries[0].value==81
++    assert entries[0].adapter is query;_factory_guard(profile,api)
++
++@pytest.mark.parametrize('fault',['bound_token','descriptor'])
++def test_acl_bound_token_and_descriptor_allocate_owner_before_validation(monkeypatch,fault):
++    from tests.test_windows_t037_native import _security_descriptor
++    profile,launch,events,state=_launch_api(monkeypatch);selected=acl.NativeChildAclApi.__new__(acl.NativeChildAclApi)
++    owned.attach_registry(selected,owned.registry_for(launch));closed=[]
++    if fault=='bound_token':
++        def token(p,access,out):C.cast(out,C.POINTER(acl.HANDLE)).contents.value=99;return 1
++        selected.a=SimpleNamespace(OpenProcessToken=token);selected.k=SimpleNamespace(CloseHandle=lambda h:closed.append(h.value) or 0)
++        selected.statistics=lambda t:b'actual-token-query'
++        with pytest.raises(owned.NativeResourceError):selected.bound_statistics(200,55)
++        expected=99
++    else:
++        raw=_security_descriptor();storage=C.create_string_buffer(raw);expected=C.addressof(storage)
++        def security(h,kind,flags,o,g,d,s,sd):
++            C.cast(sd,C.POINTER(C.c_void_p)).contents.value=expected
++            C.cast(o,C.POINTER(C.c_void_p)).contents.value=10;C.cast(g,C.POINTER(C.c_void_p)).contents.value=20;return 0
++        selected.a=SimpleNamespace(GetSecurityInfo=security,GetSecurityDescriptorLength=lambda sd:0)
++        selected.k=SimpleNamespace(LocalFree=lambda p:closed.append(p.value) or p.value)
++        with pytest.raises(Exception):list(selected.descriptor(77))
++    entries=owned.registry_for(launch).unresolved()
++    assert len(entries)==1 and entries[0].value==expected and closed==[expected]
++    _factory_guard(profile,launch)
++
++
++def test_registry_simultaneous_failures_attempt_every_release_retain_originals_and_reject_metadata():
++    api=object();adapter=SimpleNamespace();registry=owned.registry_for(adapter);attempted=[];state={'fail':True}
++    def close(handle):
++        attempted.append(handle)
++        if state['fail']:return False
++        return True
++    scope=registry.scope();entries=[registry.acquire(adapter,h,close,mode='BOOL',label=str(h)) for h in (10,11,12)]
++    failures=registry.drain(scope)
++    assert attempted==[12,11,10] and len(failures)==3 and len(registry.unresolved())==3
++    registry.drain(scope);assert attempted==[12,11,10] # Never silently retry UNKNOWN.
++    for fake in ({'handle':10,'closed':True},SimpleNamespace(registry=registry,state='RELEASED')):
++        with pytest.raises(owned.NativeResourceError):registry.retry_owned(fake,adapter)
++    with pytest.raises(owned.NativeResourceError):registry.retry_owned(entries[0],api)
++    state['fail']=False
++    for entry in entries:registry.retry_owned(entry,adapter);registry.retry_owned(entry,adapter)
++    assert attempted==[12,11,10,10,11,12] and not registry.unresolved()
++
++
++def test_same_api_scoped_cleanup_cannot_close_another_threads_acquisitions():
++    adapter=SimpleNamespace();registry=owned.registry_for(adapter);scope=registry.scope();calls=[]
++    mine=registry.acquire(adapter,10,lambda h:calls.append(h),label='mine')
++    other=[]
++    def acquire_other():other.append(registry.acquire(adapter,11,lambda h:calls.append(h),label='other'))
++    t=threading.Thread(target=acquire_other);t.start();t.join()
++    registry.drain(scope)
++    assert calls==[10] and registry.unresolved()==(other[0],)
++    registry.retry_owned(other[0],adapter);assert calls==[10,11]
++
++@pytest.mark.parametrize('fault',['normal','sid_free'])
++def test_actual_prebirth_factory_retains_original_observer_api_across_gc_and_explicit_retry(monkeypatch,fault):
++    import gc,weakref
++    from comsol_mcp import _windows_t037_resume as resume,_windows_t037_native as native
++    from tests.test_windows_t037_native import _FakeApi,FP
++    from tests.test_windows_host_change import _profile
++    from comsol_mcp._windows_t037_native import HANDLE,DWORD,BOOL
++    profile=win.WindowsT037ProfileV2(_profile(),'d'*64,{},'SOFTWARE_ONLY');factory=win.T037SessionProcessFactory(profile,'prebirth-live-owner')
++    api=win._Win32ReadOnlyApi.__new__(win._Win32ReadOnlyApi)
++    api.C=C;api.W=SimpleNamespace(HANDLE=HANDLE,DWORD=DWORD,BOOL=BOOL,LPWSTR=C.c_wchar_p)
++    text=C.create_unicode_buffer(profile.service_account_sid);address=C.addressof(text)
++    state={'fail':fault=='sid_free'};calls=[]
++    def free(pointer):calls.append(('free',pointer.value));return pointer.value if state['fail'] else None
++    def token(process,access,out):C.cast(out,C.POINTER(HANDLE)).contents.value=91;return 1
++    def info(token,kind,buffer,capacity,out):
++        size=4 if kind==29 else 16 if kind==2 else 24
++        C.cast(out,C.POINTER(DWORD)).contents.value=size
++        if buffer is None:return 0
++        C.memset(buffer,0,size)
++        if kind in {1,25}:C.cast(buffer,C.POINTER(C.c_void_p)).contents.value=int(C.cast(buffer,C.c_void_p).value)+16
++        return 1
++    def convert(pointer,out):C.cast(out,C.POINTER(C.c_void_p)).contents.value=address;return 1
++    api.k=SimpleNamespace(OpenProcess=lambda *a:90,CloseHandle=lambda h:calls.append(('close',getattr(h,'value',h))) or 1,
++        LocalFree=free)
++    api.a=SimpleNamespace(OpenProcessToken=token,GetTokenInformation=info,IsValidSid=lambda p:1,
++        GetLengthSid=lambda p:8,ConvertSidToStringSidW=convert)
++    api._check=lambda success,label:None if success else (_ for _ in ()).throw(OSError(label))
++    api.process_times=lambda handle:(123,None)
++    api.process_image_path=lambda handle:profile._launch_image('launcher').path
++    api.is_process_in_job=lambda *args:False
++    monkeypatch.setattr(C,'get_last_error',lambda:122,raising=False)
++    observer_class=win.WindowsT037Observer
++    observer=observer_class(platform_name='windows',api=api)
++    observer_ref=weakref.ref(observer);api_ref=weakref.ref(api)
++    observer_box=[observer]
++    def make_observer():return observer_box.pop()
++    monkeypatch.setattr(win,'WindowsT037Observer',make_observer)
++    monkeypatch.setattr(win,'windows_host_fingerprint',lambda:profile.host_fingerprint_sha256)
++    adapter_class=native.WindowsNativePolicyAdapter
++    monkeypatch.setattr(native,'WindowsNativePolicyAdapter',lambda:adapter_class(api=_FakeApi()))
++    with pytest.raises(Exception):resume.refuse_unverified_prebirth(profile,owner=factory)
++    registry=owned.registry_for(factory)
++    assert factory._prebirth_observers[0] is observer
++    assert owned.registry_for(api) is registry and registry.owner is factory
++    assert factory.profile.source_sha256==profile.source_sha256
++    assert ('close',90) in calls and ('close',91) in calls
++    del observer,api;gc.collect()
++    assert observer_ref() is not None and api_ref() is not None
++    if fault=='sid_free':
++        entries=registry.unresolved();assert len(entries)==1 and entries[0].value==address
++        assert entries[0].adapter is api_ref() and entries[0].closer is free
++        with pytest.raises(win.WindowsT037Error):factory.close()
++        state['fail']=False
++        registry.retry_owned(entries[0],factory);before=calls.count(('free',address))
++        registry.retry_owned(entries[0],factory)
++        assert calls.count(('free',address))==before==2
++    assert not registry.unresolved();factory.close();assert factory._closed
++
++
++def test_default_prebirth_cannot_spawn_a_temporary_native_observer_without_lifetime_owner(monkeypatch):
++    from comsol_mcp import _windows_t037_resume as resume
++    from tests.test_windows_host_change import _profile
++    def forbidden():raise AssertionError('native observer must not be created without private lifetime owner')
++    monkeypatch.setattr(win,'WindowsT037Observer',forbidden)
++    with pytest.raises(Exception) as error:resume.refuse_unverified_prebirth(win.WindowsT037ProfileV2(_profile(),'d'*64,{},'SOFTWARE_ONLY'))
++    assert error.value.details['reasons']==['NATIVE_OBSERVATION_OWNER_REQUIRED']
++
++
++def _standalone_publisher():
++    import importlib.util
++    from pathlib import Path
++    source=Path(win.__file__).with_name('_windows_parameter_publish.py')
++    spec=importlib.util.spec_from_file_location('standalone_parameter_publish_r8',source)
++    module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
++    assert not module.__package__
++    return module
++
++
++def test_standalone_spec_publication_keeps_single_file_sdk_contract(monkeypatch):
++    from contextlib import contextmanager
++    import hashlib
++    module=_standalone_publisher();api=module._API.__new__(module._API)
++    calls=[];payload=b'owned standalone control';data=bytearray()
++    def ntcreate(output,*args):
++        C.cast(output,C.POINTER(module.HANDLE)).contents.value=701
++        C.cast(args[2],C.POINTER(module._IoStatusBlock)).contents.Information=2
++        calls.append('create');return 0
++    api.nt=SimpleNamespace(NtCreateFile=ntcreate)
++    api.k=SimpleNamespace(CloseHandle=lambda h:calls.append(('close',h.value)) or 1)
++    api.exists_child=lambda *args:False
++    api.info=lambda *args:((2,3),len(data))
++    api.write=lambda handle,block:data.extend(block)
++    api.flush=lambda handle:None
++    api.rename=lambda *args:calls.append('rename')
++    api.readback=lambda handle:(hashlib.sha256(data).hexdigest(),len(data))
++    api.child_identity=lambda *args:(2,3)
++    @contextmanager
++    def pinned(*args,**kwargs):yield api,700,('control.bin',),()
++    monkeypatch.setattr(module,'pinned_parent',pinned)
++    result=module.publish('C:\\project','control.bin',payload,_api=api)
++    assert result['sha256']==hashlib.sha256(payload).hexdigest()
++    assert bytes(data)==payload and calls==['create','rename',('close',701)]
++    assert not hasattr(api,'_native_owned_registry')
++
++
++def test_standalone_explicit_invalid_registry_refuses_before_native_effect():
++    module=_standalone_publisher();api=module._API.__new__(module._API);calls=[]
++    api._native_owned_registry={'owner':'wire'}
++    api.k=SimpleNamespace(CreateFileW=lambda *args:calls.append('create') or 702,
++                          CloseHandle=lambda *args:calls.append('close') or 1)
++    api.nt=SimpleNamespace(NtCreateFile=lambda *args:calls.append('relative') or 0)
++    for operation in (lambda:api.open('C:\\x'),lambda:api._open_relative(700,'x'),lambda:api.close(702)):
++        with pytest.raises(owned.NativeResourceError):operation()
++    assert calls==[]
+--- R7/tests/test_windows_ownership_repair.py
++++ R8/tests/test_windows_ownership_repair.py
+@@ -49,8 +49,8 @@
+     assert process._handle==200 and process._thread_handle==201 and not process._closed
+     assert process is api._retained_children[id(process)] and 'RESUME' not in events
+     assert ('image',12) in calls and ('image',11) in calls and ('image',13) in calls and ('close',777) in calls
+-    if fault!='none':assert api._retained_launch_cleanup
+-    if fault=='all':assert len(api._retained_launch_cleanup)>=7
++    if fault!='none':assert api._native_owned_registry.unresolved() or getattr(api,'_retained_launch_cleanup',[]) 
++    if fault=='all':assert len(api._native_owned_registry.unresolved())+len(getattr(api,'_retained_launch_cleanup',[]))>=7
+     api.close_handle=original;state['cleanup_fail']=False
+     stopped=launcher.stop(error.handle)
+     assert stopped['exit_confirmed'] and process._closed

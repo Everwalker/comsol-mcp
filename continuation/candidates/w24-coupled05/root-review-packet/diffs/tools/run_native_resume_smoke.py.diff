@@ -1,0 +1,26 @@
+--- candidate04/tools/run_native_resume_smoke.py
++++ candidate05/tools/run_native_resume_smoke.py
+@@ -355,7 +355,7 @@
+         if pid_field != self.proc.pid or endpoint != f"127.0.0.1:{self.port}":
+             raise RuntimeError(f"refusing Worker connection: owned COMSOL endpoint is {endpoint!r}, pid={pid_field}; expected 127.0.0.1:{self.port}, pid={self.proc.pid}")
+ 
+-        self.process_identity = _process_snapshot(self.proc.pid)
++        self.process_identity = _process_snapshot(self.proc.pid) if admission_owner is None else _process_snapshot(self.proc.pid,admission_owner=admission_owner)
+         if self.process_identity is None:
+             raise RuntimeError("task-owned COMSOL PID identity could not be read")
+         self.process_identity = {**self.process_identity, "port": self.port}
+@@ -397,11 +397,13 @@
+             version = self.worker.client().getComsolVersion(
+                 rpc_timeout_s=admission_owner.before_effect("Worker_version",30.0),
+                 queue_timeout_s=admission_owner.wait_cap(30.0))
++        if admission_owner is not None and getattr(self.worker,"_coupled_admission_owner",None) is not admission_owner:
++            raise RuntimeError("owned Worker did not retain the same private admission owner")
+         version_identity = _engine_build_identity(version)
+         runtime = self.worker.runtime_metadata()
+         from comsol_mcp._g2_isolation import verify_owned_server
+         endpoint = f"127.0.0.1:{self.port}"
+-        proof = verify_owned_server(self.receipt_path, endpoint=endpoint, worker_pid=runtime.get("pid"))
++        proof = verify_owned_server(self.receipt_path, endpoint=endpoint, worker_pid=runtime.get("pid"),**({"admission_owner":admission_owner} if admission_owner is not None else {}))
+         metadata = {
+             "status": "WORKER_CONNECTED_LOOPBACK_PROOF_PASSED",
+             "engine_version": str(version),

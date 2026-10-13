@@ -1,0 +1,13 @@
+--- /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/comsol_mcp/_g3_common.py
++++ /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r15/comsol_mcp/_g3_common.py
+@@ -1724,6 +1724,10 @@
+             _call(node, "named", requested["tag"])
+         elif requested["kind"] == "explicit":
+             _call(node, "set", list(requested["entities"]))
++        elif requested["kind"] == "all" and scope is None:
++            # Original strict measure all compatibility. Point specs and their
++            # private ticket never authorize all or a global selection write.
++            _call(node, "all")
+         else:
+             raise ExecutionContractError("INVALID_SELECTION", "strict point selection requires named or explicit membership")
+     observed = {"geometry": _call(node, "geom"), "dimension": _call(node, "dim"),

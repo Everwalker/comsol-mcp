@@ -1,0 +1,11 @@
+# W26 memory admission handoff
+
+The memory admission unit is integrated in the current ControlDaemon path and has a frozen, exact-source snapshot at `local-preservation/w26_memory_admission_20261012_r1`. The source-scope SHA-256 is `6cf03914733365d3c7563070090c06c014a17ed027793543656ed3962787b9d4`; the full manifest is `SOURCE_FREEZE-r1.json`.
+
+The final strict-guarded regression ran 59 tests: 59 passed, 0 failed, 0 skipped. The evidence binds the current source files and runtime dependencies by SHA-256. It covers configured memory-only admission, successful disk+memory atomic reservation before RUNNING/Worker request, refusal rollback in either direction, terminal release after durable terminal, UNKNOWN retention across restart and across project identity, missing/low budget refusal, trusted startup config/CLI wiring, and admission with `execution_timeout_s: null`. The actual macOS read-only Mach/sysctl memory observation ran; there was no COMSOL or GUI launch. Windows native API execution remains NOT_RUN.
+
+The earlier 56-pass/1-fail disk-race run remains intact under `evidence/w26_memory_resources_r2/`. The live APFS test had an estimate of 65,536 bytes and observed only 57,344 bytes available at reservation time, a 40,960-byte reduction from the intended headroom while the test tree was active. The fixture was widened to use a 4 MiB estimate and an 8 MiB max task while preserving its first-admit/second-refuse assertion; production admission limits and calculation were unchanged. That corrected disk competition control passes in the final 59-test run.
+
+An intermediate 58-test run also remains preserved as `junit-r4.xml`: the newly added dual-resource success control exposed missing canonical operation metadata in the transaction callback and was therefore UNKNOWN before dispatch. The callback now returns its bound operation ID, trusted estimate, and host-observed classification; the targeted joint-success and memory-only controls pass, and the final 59-test suite passes.
+
+This is software-level admission, not a hard memory limit. `hard_cap_state` remains `NOT_OBSERVED`; Windows execution, native COMSOL science, per-process memory enforcement, Windows disk quota, and T037's policy verifier/proof issuer/SCM/WFP deployment remain open. See `MEMORY_RESOURCE_CONFIG.md` for the persisted profile contract and limitations.

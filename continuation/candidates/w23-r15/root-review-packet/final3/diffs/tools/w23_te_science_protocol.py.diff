@@ -1,0 +1,285 @@
+--- /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/tools/w23_te_science_protocol.py
++++ /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r15/tools/w23_te_science_protocol.py
+@@ -876,11 +876,38 @@
+     }
+ 
+ 
+-def bma_point_expressions(port_name: str) -> tuple[str, str, str]:
++def field_scheme_roles(field_scheme: str = "legacy") -> dict[str, Any]:
++    if field_scheme not in {"legacy", "emw_down"}:
++        raise ScienceProtocolError("unknown explicit field_scheme")
++    prefix = "ewfd" if field_scheme=="legacy" else "emw"
++    return {"signal_e":{a:f"{prefix}.E{a}" if field_scheme=="legacy" else f"down(emw.E{a})" for a in "xyz"},
++        "signal_h":{a:f"{prefix}.H{a}" if field_scheme=="legacy" else f"down(emw.H{a})" for a in "xyz"},
++        "mode_e":{i:{a:f"{prefix}.Emode{a}_{i}" for a in "xyz"} for i in ("1","2")},
++        "mode_h":{i:{a:f"{prefix}.Hmode{a}_{i}" for a in "xyz"} for i in ("1","2")},
++        "nx":"nx" if field_scheme=="legacy" else "emw.nx", "ny":"ny" if field_scheme=="legacy" else "emw.ny",
++        "prefix":prefix}
++
++
++def _require_field_matrix(raw: Mapping[str, Any], field_scheme: str, plane: str) -> None:
++    roles=field_scheme_roles(field_scheme)
++    _raw_expression_map(raw)
++    expected=list(roles["signal_e"].values())+list(roles["signal_h"].values())
++    ports=("2","1") if field_scheme=="legacy" else ("2",) if plane=="output_x8" else ("1",) if plane=="input_xminus10" else ()
++    if not ports:raise ScienceProtocolError("explicit field plane is not registered")
++    for port in ports:expected+=list(roles["mode_e"][port].values())+list(roles["mode_h"][port].values())
++    if field_scheme=="legacy":expected += ["ewfd.neff_1","ewfd.neff_2"]
++    expected += [roles["nx"],roles["ny"]]
++    actual=[row.get("expression") for row in raw.get("expressions",[]) if isinstance(row,Mapping)]
++    if actual!=expected:
++        raise ScienceProtocolError("complete producer field matrix differs from explicit field_scheme/plane; no relabel or missing-name fallback")
++
++
++def bma_point_expressions(port_name: str, *, field_scheme: str = "legacy") -> tuple[str, str, str]:
+     """Use only a validated native PortName; callers bind it to exact BMA store/dataset."""
+     if port_name not in {"1", "2"}:
+         raise ScienceProtocolError("BMA expression selection requires native PortName 1 or 2")
+-    return (f"emw.beta_{port_name}", f"emw.neff_{port_name}", "emw.k0")
++    prefix=field_scheme_roles(field_scheme)["prefix"]
++    return (f"{prefix}.beta_{port_name}", f"{prefix}.neff_{port_name}", f"{prefix}.k0")
+ 
+ 
+ def _require_requested_unit_application(
+@@ -1008,7 +1035,7 @@
+ def reconcile_bma_mode_point_readbacks(
+     bindings: Mapping[str, Any],
+     mode_point_receipts: Mapping[str, Mapping[str, Any]],
+-    main_frequency: Mapping[str, Any],
++    main_frequency: Mapping[str, Any], *, field_scheme: str = "legacy",
+ ) -> dict[str, Any]:
+     """Cross-check stored BMA lambda against production beta/neff/k0 values.
+ 
+@@ -1061,7 +1088,7 @@
+         if not isinstance(result_expressions, list) or not isinstance(units, Mapping):
+             raise ScienceProtocolError(f"{step} native expression-unit readback is unavailable")
+         expression_rows = {row.get("expression"): row for row in result_expressions if isinstance(row, Mapping)}
+-        expected_expressions = bma_point_expressions(binding["port_name"])
++        expected_expressions = bma_point_expressions(binding["port_name"], field_scheme=field_scheme)
+         if tuple(row.get("expression") for row in result_expressions) != expected_expressions:
+             raise ScienceProtocolError(f"{step} wrong-port or unordered BMA expression readback")
+         application = point.get("requested_unit_application")
+@@ -1080,12 +1107,12 @@
+             values_by_name[expression] = _finite_complex_row(row["real"][0], row["imag"][0], label=f"{step} {expression}")
+             if point["native_is_complex"] is False and values_by_name[expression].imag != 0.0:
+                 raise ScienceProtocolError(f"{step} native real-only scalar has nonzero imaginary value")
+-        if (units.get(beta_expression) != "1/m" or units.get("emw.k0") != "1/m"
++        if (units.get(beta_expression) != "1/m" or units.get(k0_expression) != "1/m"
+                 or units.get(neff_expression) not in {"1", ""}):
+             raise ScienceProtocolError(f"{step} native beta/neff/k0 expression units are not the documented 1/m, 1, 1/m")
+         beta = values_by_name[beta_expression]
+         neff = values_by_name[neff_expression]
+-        k0 = values_by_name["emw.k0"]
++        k0 = values_by_name[k0_expression]
+         beta_expected = 1j * lambda_value
+         beta_error = abs(beta - beta_expected) / max(abs(beta_expected), 1.0)
+         k0_error = abs(k0 - expected_k0) / max(abs(expected_k0), 1.0)
+@@ -1103,7 +1130,7 @@
+             "expressions": list(expected_expressions),
+             "beta": {"real": beta.real, "imag": beta.imag, "unit": units[beta_expression]},
+             "neff": {"real": neff.real, "imag": neff.imag, "unit": units[neff_expression]},
+-            "k0": {"real": k0.real, "imag": k0.imag, "unit": units["emw.k0"]},
++            "k0": {"real": k0.real, "imag": k0.imag, "unit": units[k0_expression]},
+             "observed_frequency_hz": frequency,
+             "formulae": {"beta_i": "beta_i=j*lambda", "neff_i": "neff_i=beta_i/k0",
+                          "k0": "2*pi*observed_main_frequency_hz/c"},
+@@ -1149,6 +1176,7 @@
+     scalar_frequency: bool = False,
+     scalar_bma_binding: Mapping[str, Any] | None = None,
+     expected_selection: Mapping[str, Any] | None = None,
++    field_scheme: str = "legacy",
+ ) -> dict[str, Any]:
+     """Decode one exact singleton through production result.at_points.
+ 
+@@ -1157,6 +1185,7 @@
+     bound the result sample allocation without claiming SolutionInfo tuple
+     completeness.
+     """
++    field_scheme_roles(field_scheme)
+     if not isinstance(result, Mapping):
+         raise ScienceProtocolError("production result.at_points response must be an object")
+     if type(scalar_frequency) is not bool:
+@@ -1179,7 +1208,7 @@
+                         and scalar_bma_binding.get("mode_frequency_expression") == "f0"
+                         and scalar_bma_binding.get("dataset_tag") == dataset_tag
+                         and scalar_bma_binding.get("store_solution_reference") == solution_tag
+-                        and tuple(expressions) == bma_point_expressions(port) and len(expected_points) == 1
++                        and tuple(expressions) == bma_point_expressions(port, field_scheme=field_scheme) and len(expected_points) == 1
+                         and list(expected_requested_units or []) == ["1/m", "1", "1/m"])
+         if not scalar_route:
+             raise ScienceProtocolError("real-only BMA route lacks exact validated native port/store/dataset/units")
+@@ -1348,7 +1377,7 @@
+     normal_status = "NOT_CAPTURED_BY_POINT_INTERPOLATION"
+     if require_x_plane_normal:
+         by_name = {row["expression"]: row for row in raw_rows}
+-        nx_row, ny_row = by_name.get("emw.nx"), by_name.get("emw.ny")
++        nx_row, ny_row = by_name.get(field_scheme_roles(field_scheme)["nx"]), by_name.get(field_scheme_roles(field_scheme)["ny"])
+         if (not isinstance(nx_row, Mapping) or not isinstance(ny_row, Mapping)
+                 or len(nx_row["real"]) != len(expected_points)
+                 or len(ny_row["real"]) != len(expected_points)):
+@@ -1389,7 +1418,7 @@
+     }
+ 
+ 
+-def _plane_coordinates(raw: Mapping[str, Any], *, expected_x_m: float) -> tuple[list[float], int, int]:
++def _plane_coordinates(raw: Mapping[str, Any], *, expected_x_m: float, field_scheme: str = "legacy") -> tuple[list[float], int, int]:
+     sample_count = raw.get("sample_count")
+     coordinates = raw.get("coordinates_m")
+     if (not isinstance(coordinates, list) or len(coordinates) != 2
+@@ -1403,7 +1432,7 @@
+     if not math.isclose(ys[0], -8e-6, rel_tol=0, abs_tol=1e-12) or not math.isclose(ys[-1], 8e-6, rel_tol=0, abs_tol=1e-12):
+         raise ScienceProtocolError("COMSOL coordinate readback does not cover the frozen y span in metres")
+     normals = _raw_expression_map(raw)
+-    nx, ny = normals.get("emw.nx"), normals.get("emw.ny")
++    nx, ny = normals.get(field_scheme_roles(field_scheme)["nx"]), normals.get(field_scheme_roles(field_scheme)["ny"])
+     if nx is None or ny is None:
+         raise ScienceProtocolError("native boundary normal nx/ny was not exported")
+     if any(abs(abs(value.real) - 1) > 1e-10 or abs(value.imag) > 1e-12 for value in nx):
+@@ -1433,12 +1462,14 @@
+     return [a * b - c * d for a, b, c, d in zip(ey, hz, ez, hy)]
+ 
+ 
+-def independent_integrals(output_raw: Mapping[str, Any], input_raw: Mapping[str, Any]) -> dict[str, Any]:
++def independent_integrals(output_raw: Mapping[str, Any], input_raw: Mapping[str, Any], *, field_scheme: str = "legacy") -> dict[str, Any]:
+     """Recompute all four overlap integrals from COMSOL-exported E/H arrays."""
++    _require_field_matrix(output_raw, field_scheme, "output_x8")
++    _require_field_matrix(input_raw, field_scheme, "input_xminus10")
+     if output_raw.get("plane") != "output_x8" or input_raw.get("plane") != "input_xminus10":
+         raise ScienceProtocolError("native raw exports are not bound to x=8 um and x=-10 um planes")
+-    y_out, native_out_nx, declared_out_sign = _plane_coordinates(output_raw, expected_x_m=8e-6)
+-    y_in, native_in_nx, declared_in_sign = _plane_coordinates(input_raw, expected_x_m=-10e-6)
++    y_out, native_out_nx, declared_out_sign = _plane_coordinates(output_raw, expected_x_m=8e-6, field_scheme=field_scheme)
++    y_in, native_in_nx, declared_in_sign = _plane_coordinates(input_raw, expected_x_m=-10e-6, field_scheme=field_scheme)
+     if y_out != y_in:
+         raise ScienceProtocolError("output and incident reference grids differ")
+     if output_raw.get("sample_count") != input_raw.get("sample_count"):
+@@ -1449,12 +1480,12 @@
+         raise ScienceProtocolError("declared normal_sign and native boundary normal do not both point along physical +x")
+     out = _raw_expression_map(output_raw)
+     inc = _raw_expression_map(input_raw)
+-    signal_e = {axis: f"down(emw.E{axis})" for axis in "xyz"}
+-    signal_h = {axis: f"down(emw.H{axis})" for axis in "xyz"}
+-    output_mode_e = {axis: f"emw.Emode{axis}_2" for axis in "xyz"}
+-    output_mode_h = {axis: f"emw.Hmode{axis}_2" for axis in "xyz"}
+-    incident_mode_e = {axis: f"emw.Emode{axis}_1" for axis in "xyz"}
+-    incident_mode_h = {axis: f"emw.Hmode{axis}_1" for axis in "xyz"}
++    signal_e = field_scheme_roles(field_scheme)["signal_e"]
++    signal_h = field_scheme_roles(field_scheme)["signal_h"]
++    output_mode_e = field_scheme_roles(field_scheme)["mode_e"]["2"]
++    output_mode_h = field_scheme_roles(field_scheme)["mode_h"]["2"]
++    incident_mode_e = field_scheme_roles(field_scheme)["mode_e"]["1"]
++    incident_mode_h = field_scheme_roles(field_scheme)["mode_h"]["1"]
+     signal_flux = _poynting_x(out, signal_e, signal_h)
+     mode_flux = _poynting_x(out, output_mode_e, output_mode_h)
+     incident_flux = _poynting_x(inc, incident_mode_e, incident_mode_h)
+@@ -1524,11 +1555,12 @@
+             "independent_provenance": independent.get("evidence_scope")}
+ 
+ 
+-def independent_capture_aperture_flux(output_raw: Mapping[str, Any]) -> dict[str, Any]:
++def independent_capture_aperture_flux(output_raw: Mapping[str, Any], *, field_scheme: str = "legacy") -> dict[str, Any]:
+     """Integrate signed native E/H flux over the frozen core-only x=8 aperture."""
++    _require_field_matrix(output_raw, field_scheme, "output_x8")
+     if output_raw.get("plane") != "output_x8" or output_raw.get("sample_count") != REFINED_SAMPLE_COUNT:
+         raise ScienceProtocolError("capture quadrature requires the 641-point native x=8 output field export")
+-    y, native_nx, declared_sign = _plane_coordinates(output_raw, expected_x_m=8e-6)
++    y, native_nx, declared_sign = _plane_coordinates(output_raw, expected_x_m=8e-6, field_scheme=field_scheme)
+     if native_nx * declared_sign != 1:
+         raise ScienceProtocolError("capture aperture normal does not follow the registered physical +x convention")
+     selected = [index for index, coordinate in enumerate(y)
+@@ -1540,11 +1572,11 @@
+             or not math.isclose(selected_y[-1], CAPTURE_Y_MAX_M, rel_tol=0, abs_tol=1e-12)):
+         raise ScienceProtocolError("native 641-point grid does not exactly cover the frozen core capture bounds")
+     fields = _raw_expression_map(output_raw)
+-    required = ("down(emw.Ey)", "down(emw.Ez)", "down(emw.Hy)", "down(emw.Hz)")
++    required = tuple(field_scheme_roles(field_scheme)[kind][axis] for kind in ("signal_e","signal_h") for axis in "yz")
+     if any(name not in fields for name in required):
+         raise ScienceProtocolError("capture quadrature is missing native signal E/H components")
+-    electric = {axis: f"down(emw.E{axis})" for axis in "xyz"}
+-    magnetic = {axis: f"down(emw.H{axis})" for axis in "xyz"}
++    electric = field_scheme_roles(field_scheme)["signal_e"]
++    magnetic = field_scheme_roles(field_scheme)["signal_h"]
+     flux_x = _poynting_x(fields, electric, magnetic)
+     values = [0.5 * (flux_x[index] * native_nx * declared_sign).real for index in selected]
+     result = _simpson_uniform_any(values, selected_y, label="capture aperture Poynting flux").real
+@@ -1694,7 +1726,7 @@
+ 
+ def software_global_phase_control(output_raw: Mapping[str, Any],
+                                   input_raw: Mapping[str, Any], *,
+-                                  phase_factor: complex = 1j) -> dict[str, Any]:
++                                  phase_factor: complex = 1j, field_scheme: str = "legacy") -> dict[str, Any]:
+     """Test a known signal-only phase rotation on exported native fields.
+ 
+     This is explicitly a software recomputation control. It does not replace
+@@ -1702,9 +1734,9 @@
+     """
+     if not isinstance(phase_factor, complex) or abs(abs(phase_factor) - 1.0) > 1e-12:
+         raise ScienceProtocolError("software global-phase control requires a unit-magnitude complex factor")
+-    base = independent_integrals(output_raw, input_raw)
++    base = independent_integrals(output_raw, input_raw, field_scheme=field_scheme)
+     fields = _raw_expression_map(output_raw)
+-    signal_names = {f"down(emw.E{axis})" for axis in "xyz"} | {f"down(emw.H{axis})" for axis in "xyz"}
++    signal_names = set(field_scheme_roles(field_scheme)["signal_e"].values()) | set(field_scheme_roles(field_scheme)["signal_h"].values())
+     if not signal_names.issubset(fields):
+         raise ScienceProtocolError("software phase control is missing one or more signal E/H components")
+     rotated = dict(output_raw)
+@@ -1722,7 +1754,7 @@
+             copied["imag"] = list(row["imag"])
+         rotated_rows.append(copied)
+     rotated["expressions"] = rotated_rows
+-    changed = independent_integrals(rotated, input_raw)
++    changed = independent_integrals(rotated, input_raw, field_scheme=field_scheme)
+     base_cross = complex(base["reciprocal_overlap_numerator"]["real"],
+                          base["reciprocal_overlap_numerator"]["imag"])
+     changed_cross = complex(changed["reciprocal_overlap_numerator"]["real"],
+@@ -1758,8 +1790,10 @@
+ 
+ 
+ def verify_native_phase_pair(case0: Mapping[str, Any], case90: Mapping[str, Any], *,
++                             field_scheme: str = "legacy",
+                              expected_factor: complex = EXPECTED_FIELD_PHASE_FACTOR) -> dict[str, Any]:
+     """Require input phase change to rotate signal while output reference stays fixed."""
++    field_scheme_roles(field_scheme)
+     for label, case in (("phase0", case0), ("phase90", case90)):
+         if case.get("phase_value") not in {"0[deg]", "90[deg]"}:
+             raise ScienceProtocolError(f"{label} lacks the exact frozen native Port phase setting")
+@@ -1777,15 +1811,17 @@
+         raise ScienceProtocolError("native phase pair is not bound to the x=8 um science receiver plane")
+     if raw0.get("sample_count") != raw90.get("sample_count"):
+         raise ScienceProtocolError("native phase pair uses different quadrature sample counts")
+-    y0, nx0, sign0 = _plane_coordinates(raw0, expected_x_m=8e-6)
+-    y90, nx90, sign90 = _plane_coordinates(raw90, expected_x_m=8e-6)
++    _require_field_matrix(raw0, field_scheme, "output_x8")
++    _require_field_matrix(raw90, field_scheme, "output_x8")
++    y0, nx0, sign0 = _plane_coordinates(raw0, expected_x_m=8e-6, field_scheme=field_scheme)
++    y90, nx90, sign90 = _plane_coordinates(raw90, expected_x_m=8e-6, field_scheme=field_scheme)
+     if (len(y0) != len(y90) or any(not math.isclose(a, b, rel_tol=0, abs_tol=1e-12)
+                                     for a, b in zip(y0, y90))
+             or nx0 != nx90 or sign0 != sign90):
+         raise ScienceProtocolError("native phase pair output fields are not bound to the same coordinates and oriented plane")
+     values0, values90 = _raw_expression_map(raw0), _raw_expression_map(raw90)
+-    signal_names = [f"down(emw.E{axis})" for axis in "xyz"] + [f"down(emw.H{axis})" for axis in "xyz"]
+-    mode_names = [f"emw.Emode{axis}_2" for axis in "xyz"] + [f"emw.Hmode{axis}_2" for axis in "xyz"]
++    signal_names = list(field_scheme_roles(field_scheme)["signal_e"].values()) + list(field_scheme_roles(field_scheme)["signal_h"].values())
++    mode_names = list(field_scheme_roles(field_scheme)["mode_e"]["2"].values()) + list(field_scheme_roles(field_scheme)["mode_h"]["2"].values())
+     ratios: list[complex] = []
+     mode_relative_errors: list[float] = []
+     for name in signal_names:
+@@ -1876,14 +1912,14 @@
+                                   "complex_field_representation": "full_physical_complex_phasor_including_reconstructed_envelope_phase"},
+             "output_surface": {"plane_id": "x8", "selection": {"component": "comp1", "geometry": "geom1", "tag": "selReceiverX8"}, "normal_sign": 1},
+             "signal": {"field_id": "signal", "source": {"dataset_id": "dset1", "solution_id": "sol1", "outer_index": 1, "inner_index": 1},
+-                       "fields": {"electric": {axis: f"down(emw.E{axis})" for axis in "xyz"}, "magnetic": {axis: f"down(emw.H{axis})" for axis in "xyz"}}},
++                       "fields": {"electric": field_scheme_roles("legacy")["signal_e"], "magnetic": field_scheme_roles("legacy")["signal_h"]}},
+             "reference_mode": {"mode_id": "output_mode_1", "mode_axis_parameter": "modeIndex",
+                                "source": {"dataset_id": "dset1", "solution_id": "sol1", "outer_index": 1, "inner_index": 1},
+-                               "fields": {"electric": {axis: f"emw.Emode{axis}_2" for axis in "xyz"}, "magnetic": {axis: f"emw.Hmode{axis}_2" for axis in "xyz"}}},
++                               "fields": {"electric": field_scheme_roles("legacy")["mode_e"]["2"], "magnetic": field_scheme_roles("legacy")["mode_h"]["2"]}},
+             "incident_reference": {"reference_id": "input_mode_1", "input_plane_id": "xminus10",
+                                    "selection": {"component": "comp1", "geometry": "geom1", "tag": "selInputPort"}, "normal_sign": -1,
+                                    "source": {"dataset_id": "dset1", "solution_id": "sol1", "outer_index": 1, "inner_index": 1},
+-                                   "fields": {"electric": {axis: f"emw.Emode{axis}_1" for axis in "xyz"}, "magnetic": {axis: f"emw.Hmode{axis}_1" for axis in "xyz"}}},
++                                   "fields": {"electric": field_scheme_roles("legacy")["mode_e"]["1"], "magnetic": field_scheme_roles("legacy")["mode_h"]["1"]}},
+             "power_floor": {"value": 1e-12, "unit": POWER_UNIT_2D},
+         }
+         if label == "caller_array_provenance":

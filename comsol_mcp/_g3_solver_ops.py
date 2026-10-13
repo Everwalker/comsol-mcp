@@ -708,17 +708,200 @@ def _recorded_exception_chain(job: Mapping[str, Any], events: Sequence[Mapping[s
                 chain = metadata.get(key)
                 if isinstance(chain, list):
                     return {"status": "CAPTURED", "source": f"event {event.get('id')} metadata.{key}", "items": chain}
+        if event.get("event") == "worker_request":
+            event_metadata = event.get("metadata")
+            worker_event = event_metadata if isinstance(event_metadata, Mapping) else event
+            reply = worker_event.get("reply")
+            failure = reply.get("failure") if isinstance(reply, Mapping) else None
+            if isinstance(failure, Mapping):
+                chain = failure.get("cause_chain")
+                if isinstance(chain, list) and chain:
+                    return {"status": "CAPTURED", "source": f"worker request {event.get('request_id')} failure.cause_chain",
+                            "items": chain[:32], "code": failure.get("code")}
+                if isinstance(failure.get("code"), str):
+                    return {"status": "ERROR_SUMMARY_ONLY",
+                            "source": f"worker request {event.get('request_id')} reply.failure",
+                            "items": [{"type": "WorkerFailure", "code": failure.get("code"),
+                                       "message": failure.get("message")}],
+                            "cause_chain_status": "NOT_CAPTURED"}
     if isinstance(error, Mapping) and error.get("code"):
         return {"status": "ERROR_SUMMARY_ONLY", "source": "stored result.error",
                 "items": [{"code": error.get("code"), "message": error.get("message")}]}
     return {"status": "NOT_CAPTURED", "source": None, "items": []}
 
 
+_PROGRESS_BINDING_FIELDS = (
+    "schema", "producer", "job_id", "operation_id", "request_id",
+    "request_hash", "idempotency_key", "project_id", "session_id", "model_ref",
+    "model_revision", "operation",
+)
+
+
+def _same_progress_binding(metadata: Mapping[str, Any], expected: Mapping[str, Any]) -> bool:
+    return all(metadata.get(key) == expected.get(key) for key in _PROGRESS_BINDING_FIELDS)
+
+
+def _progress_log_summary(job: Mapping[str, Any], events: Sequence[Mapping[str, Any]],
+                          project_id: str) -> dict[str, Any]:
+    """Verify the exact job-bound capture and its bounded chunks in a frozen snapshot."""
+    capture_events = [event for event in events
+                      if event.get("event") in {
+                          "COMSOLProgressCaptureRequested", "COMSOLProgressCaptureActivated",
+                          "COMSOLProgressCaptureActivationUnknown", "COMSOLProgressCaptureCompleted",
+                          "COMSOLProgressCaptureFailed", "COMSOLProgressChunk",
+                      }]
+    if not capture_events:
+        return {"status": "NOT_CAPTURED", "text": None,
+                "reason": "no job-bound COMSOL progress producer event is present"}
+
+    operation = job.get("operation")
+    op_metadata = operation.get("metadata") if isinstance(operation, Mapping) else None
+    job_metadata = job.get("metadata")
+    execution = op_metadata.get("execution") if isinstance(op_metadata, Mapping) else None
+    job_execution = job_metadata.get("execution") if isinstance(job_metadata, Mapping) else None
+    stored_operation = op_metadata.get("operation") if isinstance(op_metadata, Mapping) else None
+    stored_arguments = op_metadata.get("arguments") if isinstance(op_metadata, Mapping) else None
+    if stored_operation in {"study.run", "mesh.convergence_study"}:
+        bound_operation = stored_operation
+    elif (stored_operation in {"registry_call", "operation_call"}
+          and isinstance(stored_arguments, Mapping)
+          and stored_arguments.get("operation_id") in {"study.run", "mesh.convergence_study"}):
+        bound_operation = stored_arguments["operation_id"]
+    else:
+        bound_operation = None
+    if (not isinstance(operation, Mapping) or not isinstance(op_metadata, Mapping)
+            or not isinstance(execution, Mapping) or execution != job_execution
+            or operation.get("operation_id") != job.get("operation_id")
+            or execution.get("project_id") != project_id
+            or not isinstance(execution.get("session_id"), str) or not execution.get("session_id")
+            or not isinstance(execution.get("model_ref"), Mapping)
+            or type(execution.get("expected_revision")) is not int
+            or execution.get("expected_revision") < 0):
+        return {"status": "UNKNOWN", "text": None,
+                "reason": "durable job and operation do not share a complete project/model/revision binding"}
+    expected = {
+        "schema": "comsol-job-progress-capture/1",
+        "producer": "ModelUtil.showProgress(String)+showProgress(false)",
+        "job_id": job.get("job_id"),
+        "operation_id": job.get("operation_id"),
+        "request_id": operation.get("request_id"),
+        "request_hash": operation.get("request_hash"),
+        "idempotency_key": operation.get("idempotency_key"),
+        "project_id": project_id,
+        "session_id": execution.get("session_id"),
+        "model_ref": execution.get("model_ref"),
+        "model_revision": execution.get("expected_revision"),
+        "operation": bound_operation,
+    }
+    scoped = [event for event in capture_events if isinstance(event.get("metadata"), Mapping)]
+    metadata_rows = [event["metadata"] for event in scoped]
+    if (len(scoped) != len(capture_events)
+            or any(not _same_progress_binding(metadata, expected) for metadata in metadata_rows)):
+        return {"status": "UNKNOWN", "text": None,
+                "reason": "progress producer event identity differs from the exact durable job binding"}
+    capture_ids = {metadata.get("capture_id") for metadata in metadata_rows}
+    if len(capture_ids) != 1 or not isinstance(next(iter(capture_ids)), str):
+        return {"status": "UNKNOWN", "text": None,
+                "reason": "job snapshot has missing or conflicting progress capture identities"}
+    capture_id = next(iter(capture_ids))
+    event_names = {row.get("event") for row in scoped}
+    named = {name: [row["metadata"] for row in scoped if row.get("event") == name]
+             for name in event_names}
+    requests = named.get("COMSOLProgressCaptureRequested", [])
+    completed = named.get("COMSOLProgressCaptureCompleted", [])
+    failures = named.get("COMSOLProgressCaptureFailed", [])
+    activations = named.get("COMSOLProgressCaptureActivated", [])
+    activation_unknown = named.get("COMSOLProgressCaptureActivationUnknown", [])
+    chunks = named.get("COMSOLProgressChunk", [])
+    if len(requests) != 1 or len(completed) > 1 or len(activations) > 1 or len(activation_unknown) > 1:
+        return {"status": "UNKNOWN", "text": None, "capture_id": capture_id,
+                "reason": "progress capture has duplicate or incomplete lifecycle records"}
+    if failures or activation_unknown:
+        return {"status": "UNKNOWN", "text": None, "capture_id": capture_id,
+                "reason": "progress capture has a failed or uncertain Worker lifecycle receipt"}
+    if not completed:
+        status = "IN_PROGRESS" if job.get("status") in {"QUEUED", "STARTING", "RUNNING"} else "UNKNOWN"
+        return {"status": status, "text": None, "capture_id": capture_id,
+                "reason": "progress capture has no terminal disable/readback receipt"}
+    if len(activations) != 1 or activations[0].get("capture_state") != "ACTIVE":
+        return {"status": "UNKNOWN", "text": None, "capture_id": capture_id,
+                "reason": "progress capture completion has no unique activation receipt"}
+
+    summary = completed[0]
+    captured_bytes = summary.get("captured_bytes")
+    file_size = summary.get("file_size_bytes")
+    chunk_count = summary.get("chunk_count")
+    digest_value = summary.get("captured_sha256")
+    truncated = summary.get("truncated")
+    cleanup_verified = summary.get("cleanup_verified")
+    if (type(captured_bytes) is not int or captured_bytes < 0
+            or type(file_size) is not int or file_size < captured_bytes
+            or type(chunk_count) is not int or chunk_count != len(chunks)
+            or not isinstance(digest_value, str) or len(digest_value) != 64
+            or any(char not in "0123456789abcdef" for char in digest_value)
+            or type(truncated) is not bool or type(cleanup_verified) is not bool
+            or cleanup_verified is not True
+            or summary.get("scratch_retained") is not False
+            or summary.get("complete") is not (not truncated)
+            or summary.get("captured_sha256_scope") != ("prefix" if truncated else "complete_file")):
+        return {"status": "UNKNOWN", "text": None, "capture_id": capture_id,
+                "reason": "progress completion receipt has malformed size, digest, cleanup or truncation fields"}
+
+    ordered = sorted(chunks, key=lambda item: item.get("chunk_index", -1))
+    digest = hashlib.sha256()
+    offset = 0
+    for index, chunk in enumerate(ordered):
+        if (type(chunk.get("chunk_index")) is not int or chunk.get("chunk_index") != index
+                or type(chunk.get("byte_offset")) is not int or chunk.get("byte_offset") != offset
+                or type(chunk.get("byte_length")) is not int or not 1 <= chunk.get("byte_length") <= 8192
+                or chunk.get("content_encoding") != "base64"
+                or not isinstance(chunk.get("content_base64"), str)
+                or not isinstance(chunk.get("chunk_sha256"), str)):
+            return {"status": "UNKNOWN", "text": None, "capture_id": capture_id,
+                    "reason": "progress chunk sequence or encoding is malformed"}
+        try:
+            raw = base64.b64decode(chunk["content_base64"], validate=True)
+        except Exception:
+            return {"status": "UNKNOWN", "text": None, "capture_id": capture_id,
+                    "reason": "progress chunk is not valid base64"}
+        if (len(raw) != chunk["byte_length"]
+                or hashlib.sha256(raw).hexdigest() != chunk["chunk_sha256"]):
+            return {"status": "UNKNOWN", "text": None, "capture_id": capture_id,
+                    "reason": "progress chunk length or SHA-256 does not match its bytes"}
+        digest.update(raw)
+        offset += len(raw)
+    if (offset != captured_bytes or len(chunks) != chunk_count
+            or digest.hexdigest() != digest_value
+            or (not truncated and file_size != captured_bytes)
+            or (truncated and file_size <= captured_bytes)):
+        return {"status": "UNKNOWN", "text": None, "capture_id": capture_id,
+                "reason": "captured progress bytes do not match the terminal size/count/SHA-256 receipt"}
+    capture_state = summary.get("capture_state")
+    if capture_state not in {"CAPTURED", "CAPTURED_TRUNCATED", "NO_PROGRESS_TEXT"}:
+        return {"status": "UNKNOWN", "text": None, "capture_id": capture_id,
+                "reason": "progress producer returned an unsupported terminal state"}
+    if ((capture_state == "NO_PROGRESS_TEXT") != (captured_bytes == 0)
+            or (capture_state == "CAPTURED_TRUNCATED") != truncated):
+        return {"status": "UNKNOWN", "text": None, "capture_id": capture_id,
+                "reason": "progress terminal state conflicts with byte/truncation evidence"}
+    return {
+        "status": capture_state, "text": None, "capture_id": capture_id,
+        "producer": expected["producer"], "byte_length": captured_bytes,
+        "file_size_bytes": file_size, "sha256": digest_value,
+        "sha256_scope": summary["captured_sha256_scope"], "chunk_count": chunk_count,
+        "chunk_event": "COMSOLProgressChunk", "chunk_encoding": "base64",
+        "truncated": truncated, "cleanup_verified": True,
+        "reason": ("COMSOL emitted no progress text for this operation" if capture_state == "NO_PROGRESS_TEXT"
+                   else "bounded project-scoped COMSOL progress output was captured and verified"),
+    }
+
+
 def solver_log_read(store: Any, project_id: Any, arguments: Mapping[str, Any]) -> dict[str, Any]:
     """Read a project-owned snapshot page of durable job events.
 
-    OperationStore does not persist COMSOL stdout/stderr; that transcript and
-    any exception chain absent from stored metadata stay explicitly unavailable.
+    COMSOL progress output is available only when the exact job has a verified
+    private ModelUtil progress-sink lifecycle. Worker stderr and other jobs'
+    process output are never substituted for that capture.
     """
     args = _strict_object(arguments, {"job_id", "cursor", "limit"}, {"job_id"}, "solver.log_read arguments")
     project = _string(project_id, "project_id", max_length=256)
@@ -780,8 +963,7 @@ def solver_log_read(store: Any, project_id: Any, arguments: Mapping[str, Any]) -
         "events": page, "event_count": len(page), "next_cursor": next_cursor,
         "snapshot": {"status": snapshot.get("status"), "event_count": count, "last_event_id": last_id,
                      "id_sha256": id_hash, "events_sha256": events_hash},
-        "solver_output_log": {"status": "NOT_CAPTURED", "text": None,
-                              "reason": "OperationStore persists job events, not COMSOL stdout/stderr"},
+        "solver_output_log": _progress_log_summary(job, frozen, project),
         "exception_chain": _recorded_exception_chain(job, frozen),
     }
 

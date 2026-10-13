@@ -252,6 +252,7 @@ class ExecutionService:
         path_parameters: tuple[str, ...] = (),
         effect: str | None = None,
         _owned_branch_proof: Mapping[str, Any] | None = None,
+        terminal_model_close: bool = False,
     ) -> dict[str, Any]:
         """Call only after authorization, real selected-model check, and preflight.
 
@@ -274,7 +275,7 @@ class ExecutionService:
 
         if model_ref is None:
             if tool_name not in {
-                "model_create", "model_load", "server_connect", "server_disconnect", "server_start",
+                "model_list", "model_create", "model_load", "server_connect", "server_disconnect", "server_start",
                 "load_visible_main_model", "load_current_main_model", "start_visible_main_workflow",
                 "configure_single_main_workflow", "check_server_port", "workflow_info", "mcp_tool_audit",
                 # C05: a runtime-scoped capability/licence question is answered by
@@ -361,6 +362,67 @@ class ExecutionService:
                 "EXECUTION_STATE_UNKNOWN", "legacy callback raised after write dispatch",
                 stage="post_dispatch", details=details,
             ).with_cause(exc) from exc
+        if terminal_model_close and model_ref is not None and data.get("success") is True:
+            detail = data.get("data")
+            proof = isinstance(detail, Mapping) and (
+                detail.get("status") == "CLOSED"
+                and detail.get("model_ref") == model_ref.as_dict()
+                and detail.get("model_tag") == model_ref.model_tag
+                and detail.get("model_tag_absent") is True
+                and detail.get("other_model_tags_preserved") is True
+                and detail.get("terminal_close_verified") is True
+            )
+            if not proof:
+                self.ledger.finish(ticket, outcome="unknown", changed=True, fingerprint=None)
+                self.on_state_change({"state": "unknown", "model_ref": model_ref.as_dict(),
+                                      "operation_id": ticket.operation_id, "revision": self.ledger._models[model_ref.model_tag].revision,
+                                      "dirty": True, "reason": "terminal_model_close_readback_unverified"})
+                raise ExecutionContractError(
+                    "EXECUTION_STATE_UNKNOWN", "model.close lacks exact terminal removal readback",
+                    stage="post_dispatch", details={"safe_retry": False},
+                )
+            finished = self.ledger.finish(ticket, outcome="succeeded", changed=True, fingerprint=None)
+            self.ledger.retire_model(model_ref)
+            state_change = {
+                "state": "retired", "model_ref": model_ref.as_dict(),
+                "operation_id": ticket.operation_id, "revision": finished["revision"],
+                "dirty": False, "model_ownership": self.ledger.model_ownership.get(model_ref.model_tag),
+                "server_ownership": self.ledger.server_ownership,
+            }
+            try:
+                # Persist the retired binding as one final state.  If persistence
+                # fails, the prior durable active-ticket row remains an UNKNOWN
+                # fence rather than a clean live model.
+                self.on_state_change(state_change)
+            except Exception as exc:
+                state = self.ledger._models[model_ref.model_tag]
+                state.retired = False
+                state.dirty = True
+                state.fingerprint = None
+                raise ExecutionContractError(
+                    "EXECUTION_STATE_UNKNOWN", "model was removed but the retired binding did not persist",
+                    stage="post_dispatch", details={"cause_type": type(exc).__name__, "safe_retry": False},
+                ) from exc
+            envelope = {
+                "execution": {
+                    "session_id": self.ledger.session_id, "model_ref": model_ref.as_dict(),
+                    "revision": finished["revision"], "dirty": False,
+                    "server_ownership": self.ledger.server_ownership,
+                    "model_ownership": self.ledger.model_ownership.get(model_ref.model_tag),
+                    "cas_limit": "managed revision is not a COMSOL cross-client atomic CAS",
+                    "request_id": ticket.request_id, "operation_id": ticket.operation_id,
+                    "request_hash": ticket.request_hash,
+                },
+            }
+            preserved = dict(detail)
+            for name, value in data.items():
+                if name not in {"success", "data", "error"}:
+                    preserved.setdefault(name, value)
+            return {"success": True, "data": preserved, "error": None, **envelope}
+        if terminal_model_close and model_ref is None:
+            self.ledger.finish(ticket, outcome="unknown", changed=True)
+            raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "terminal close ticket has no exact ModelRef",
+                                         stage="post_dispatch", details={"safe_retry": False})
         try:
             after = self._snapshot(model_ref.model_tag)
         except Exception as exc:

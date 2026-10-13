@@ -1,0 +1,28 @@
+{
+  "actual_native_observations": [
+    "The one admitted setup ran and has terminal raw summary, saved template and reopen readback.",
+    "Exact configuration comparison reports no missing or changed keys but one added mesh_volume_observation key.",
+    "Separate mesh-volume comparison reports all six checks true and the same raw mesh hash d759184d2fce1ffb13d16aaaa28a1dd987d7f2add2f609c7536660e6a13487db at build and reopen.",
+    "Actual CLI remains FAIL_OR_INCOMPLETE; no scientific acceptance or revised PASS is claimed."
+  ],
+  "actual_summary": {
+    "error": "AssertionError: saved/reopened MPH configuration readbacks differ: {\"matches\": false, \"missing_keys\": [], \"added_keys\": [\"mesh_volume_observation\"], \"changed_keys\": [], \"compared_keys\": [\"axis_entity_ids\", \"domain_readbacks\", \"external_boundary_entity_count\", \"external_boundary_readbacks\", \"external_strain_readbacks\", \"geometry_axisymmetric\", \"geometry_bounding_box\", \"geometry_dimension\", \"geometry_domain_count\", \"geometry_entity_counts\", \"geometry_length_unit\", \"heat_readbacks\", \"material_tags\", \"mesh_tags\", \"ode_field_readbacks\", \"physics_tags\", \"solid_quasistatic_readback\", \"solver_readbacks\", \"solver_submissions\", \"study_tags\", \"study_time_readbacks\"], \"mesh_volume\": {\"matches\": true, \"checks\": {\"both_present\": true, \"same_project\": true, \"same_raw_mesh_sha256\": true, \"same_domain_triangle_columns\": true, \"same_domain_volume_readbacks\": true, \"stages_are_build_then_reopen\": true}, \"build_raw_mesh_sha256\": \"d759184d2fce1ffb13d16aaaa28a1dd987d7f2add2f609c7536660e6a13487db\", \"reopen_raw_mesh_sha256\": \"d759184d2fce1ffb13d16aaaa28a1dd987d7f2add2f609c7536660e6a13487db\"}}",
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current10/native-run-current10-001/summary.json",
+    "sha256": "7f9453dd6178724887e42faf4b0f32cccd85d5389352f51ead416007cd848ea1",
+    "status": "FAIL_OR_INCOMPLETE"
+  },
+  "at_utc": "2026-10-12T07:58:50.400634+00:00",
+  "finding_id": "W24-CONFIG-PROJECTION-01",
+  "goal": "ACTIVE_INCOMPLETE_NOT_ACCEPTED",
+  "priority": "P1",
+  "required_successor": [
+    "First preserve original raw evidence, actual saved MPH, immutable operations DB and exact owned cleanup, then clear only the actual terminal lane reservation by CAS.",
+    "Trace build/reopen normalization and projection callsites; consistently separate strictly validated derived observation provenance from physical configuration.",
+    "Keep exact physical configuration/missing/unknown/added-key rejection and the unchanged actual raw-mesh/domain-volume 1e-6 comparison. Never ignore arbitrary fields or invent build metadata.",
+    "Use current10 captured native build/reopen payloads and both mesh receipts for offline reproduction and positive corrected projection; add actual production negative controls for tampered, absent provenance and extra/changed physical config.",
+    "Preserve current10 original FAIL; a source correction or offline replay does not rewrite the original CLI execution. New native activity or scientific campaign requires its own exact reviewed admission."
+  ],
+  "schema": "comsol-mcp.root-current10-runtime-projection-finding/1",
+  "source_review_scope": "Prior Root source/offline review 6e34767c2344abd298cbbeec6374e2a2198922330b26de580e281afd0a723d2a closed the count-sum finding; this distinct runtime comparison issue remains open.",
+  "status": "CHANGES_REQUIRED_SCOPED_CONFIG_PROJECTION"
+}

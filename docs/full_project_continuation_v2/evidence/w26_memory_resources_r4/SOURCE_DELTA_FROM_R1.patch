@@ -1,0 +1,385 @@
+--- a/comsol_mcp/_w26_memory_resources.py (R1)
++++ b/comsol_mcp/_w26_memory_resources.py (R2)
+@@ -583,7 +583,8 @@
+         if self.platform not in {"macos", "windows"}:
+             _refuse("MEMORY_OBSERVER_UNSUPPORTED", "host memory observation is unsupported on this platform",
+                     platform=self.platform)
+-        self._injected = _api is not None or _host_id_reader is not None or _platform_name is not None
++        self._injected = (_api is not None or _host_id_reader is not None
++                          or _platform_name is not None or _clock is not time.monotonic_ns)
+         if self.platform == "macos":
+             if not self._injected and sys.platform != "darwin":
+                 _refuse("MEMORY_OBSERVER_UNSUPPORTED", "Darwin memory observation requires Darwin")
+@@ -663,6 +664,16 @@
+         _refuse("MEMORY_OBSERVATION_UNVERIFIED", "memory sample claims unsupported enforcement state")
+     if observation.platform != profile.platform or observation.host_id != profile.host_id:
+         _refuse("MEMORY_HOST_MISMATCH", "memory observation does not bind to the trusted host profile")
++    try:
++        current_clock_id = time.get_clock_info("monotonic").implementation
++    except Exception as exc:
++        _refuse("MEMORY_OBSERVATION_CLOCK_UNKNOWN", "current monotonic clock identity is unavailable",
++                cause_type=type(exc).__name__)
++    if observation.monotonic_clock_id != current_clock_id:
++        _refuse("MEMORY_OBSERVATION_CLOCK_UNKNOWN",
++                "memory observation uses a different monotonic clock implementation",
++                observed_clock_id=observation.monotonic_clock_id,
++                current_clock_id=current_clock_id)
+     if (type(observation.observed_monotonic_ns) is not int or type(now_monotonic_ns) is not int
+             or type(max_age_ns) is not int or max_age_ns <= 0
+             or now_monotonic_ns < observation.observed_monotonic_ns
+@@ -769,15 +780,69 @@
+     })).hexdigest()
+ 
+ 
++def _queued_abort_proves_never_dispatched(db: Any, job_id: str) -> bool:
++    """Recognize only OperationStore's durable QUEUED cancellation proof.
++
++    A terminal label alone is not evidence that the engine stopped. The
++    OperationStore emits this exact event atomically with QUEUED -> CANCELLED;
++    the same transaction boundary prevents it from racing past RUNNING.
++    """
++    try:
++        job_row = db.execute("SELECT metadata FROM jobs WHERE job_id=?", (job_id,)).fetchone()
++        if job_row is None:
++            return False
++        job_metadata = json.loads(job_row["metadata"] or "{}")
++        if not isinstance(job_metadata, Mapping) or job_metadata.get("engine_dispatched") is True:
++            return False
++        rows = db.execute(
++            "SELECT event,metadata FROM job_events WHERE job_id=? ORDER BY id", (job_id,),
++        ).fetchall()
++        events = []
++        proofs = []
++        for row in rows:
++            event = row["event"]
++            metadata = json.loads(row["metadata"] or "{}")
++            if not isinstance(event, str) or not isinstance(metadata, Mapping):
++                return False
++            if metadata.get("engine_dispatched") is True:
++                return False
++            events.append(event)
++            if (event == "CANCELLED" and metadata.get("engine_dispatched") is False
++                    and metadata.get("cancelled_while") == "QUEUED"
++                    and metadata.get("mode") == "QUEUED_ABORT"):
++                proofs.append(metadata)
++        return (len(proofs) == 1
++                and not any(event in {"RUNNING", "worker_request", "DISPATCH_INTENT"}
++                            for event in events))
++    except Exception:
++        return False
++
++
+ def _reserve_memory_in_transaction(*, store: Any, authority: Any, job_id: str,
+                                    profile: MemoryResourceProfile,
+-                                   observation: HostMemoryObservation, now_monotonic_ns: int,
++                                   observation: HostMemoryObservation,
+                                    max_age_ns: int) -> dict[str, Any]:
+     from . import _w26_os_resources as resources
+ 
+     if not store.db.in_transaction:
+         _refuse("MEMORY_RESERVATION_TRANSACTION_REQUIRED",
+                 "memory reservation must join the immediate OperationStore transaction")
++    try:
++        # Read freshness only after the caller has acquired SQLite's write
++        # transaction. Preparation may include a slow host observation or
++        # wait behind another writer, so its earlier timestamp is not useful
++        # for authorizing this durable reservation.
++        now_monotonic_ns = time.monotonic_ns()
++        current_clock_id = time.get_clock_info("monotonic").implementation
++    except Exception as exc:
++        _refuse("MEMORY_OBSERVATION_CLOCK_UNKNOWN", "reservation-time monotonic clock is unavailable",
++                cause_type=type(exc).__name__)
++    if (type(now_monotonic_ns) is not int or now_monotonic_ns <= 0
++            or observation.monotonic_clock_id != current_clock_id):
++        _refuse("MEMORY_OBSERVATION_CLOCK_UNKNOWN",
++                "reservation-time clock does not match the observed clock implementation",
++                observed_clock_id=observation.monotonic_clock_id,
++                current_clock_id=current_clock_id)
+     if type(profile) is not MemoryResourceProfile or not profile.trusted_startup_config:
+         _refuse("MEMORY_PROFILE_UNTRUSTED", "only a trusted startup memory profile may reserve memory")
+     context = resources._durable_job_context(store.db, job_id)
+@@ -917,7 +982,7 @@
+             if observation.host_id != self.profile.host_id or observation.platform != self.profile.platform:
+                 _refuse("MEMORY_HOST_MISMATCH", "fresh host observation differs from trusted startup profile")
+             return {"context": context, "profile": self.profile, "estimate_bytes": estimate,
+-                    "observation": observation, "now_monotonic_ns": time.monotonic_ns()}
++                    "observation": observation}
+ 
+     def reserve_prepared_in_transaction(self, job_id: str, prepared: Mapping[str, Any]) -> dict[str, Any]:
+         """Append a reservation inside the caller's existing immediate transaction."""
+@@ -942,11 +1007,9 @@
+         if profile is not self.profile or not isinstance(observation, HostMemoryObservation):
+             _refuse("MEMORY_RESERVATION_PREPARED_STATE_INVALID",
+                     "prepared profile or OS observation is not bound to this coordinator")
+-        now_ns = prepared.get("now_monotonic_ns")
+         result = _reserve_memory_in_transaction(
+             store=self.store, authority=self.authority, job_id=job_id, profile=profile,
+-            observation=observation, now_monotonic_ns=now_ns,
+-            max_age_ns=self.max_observation_age_ns,
++            observation=observation, max_age_ns=self.max_observation_age_ns,
+         )
+         return {**result,
+                 "operation_id": current["canonical_operation_id"],
+@@ -970,50 +1033,55 @@
+ 
+     def release_terminal_if_reserved(self, job_id: str) -> dict[str, Any] | None:
+         from . import _w26_os_resources as resources
+-        from ._operation_store import TERMINAL
+ 
+         with self.store.lock:
+-            states = _load_memory_reservations(self.store.db)
+-            matches = [(reservation_id, item) for reservation_id, (bound_job, item) in states.items()
+-                       if bound_job == job_id]
+-            if not matches:
+-                return None
+-            if len(matches) != 1:
+-                _refuse("MEMORY_RESERVATION_STATE_UNKNOWN", "job has multiple memory reservations")
+-            reservation_id, item = matches[0]
+-            if item["status"] == "RELEASED":
+-                return {"status": "RELEASED", "reservation_id": reservation_id, "idempotent": True}
+-            context = resources._durable_job_context(self.store.db, job_id)
+-            if (context["canonical_operation_id"] != item["operation_id"]
+-                    or context["project_id"] != item["project_id"]):
+-                _refuse("MEMORY_RESERVATION_IDENTITY_CONFLICT",
+-                        "durable job no longer matches its memory reservation")
+-            job = self.store.db.execute(
+-                "SELECT j.status AS job_status,o.status AS operation_status "
+-                "FROM jobs j JOIN operations o ON o.operation_id=j.operation_id WHERE j.job_id=?",
+-                (job_id,),
+-            ).fetchone()
+-            if job is None or job["job_status"] not in TERMINAL \
+-                    or job["operation_status"] != job["job_status"]:
+-                return {"status": "HELD_NONTERMINAL", "reservation_id": reservation_id,
+-                        "idempotent": False}
+-            released = dict(item)
+-            released["status"] = "RELEASED"
+-            from ._w26_os_resources import _canonical_json
+             try:
+                 self.store.db.execute("BEGIN IMMEDIATE")
+-                # Recheck after acquiring the write lock. The durable terminal
+-                # result remains primary if resource cleanup cannot be recorded.
++                states = _load_memory_reservations(self.store.db)
++                matches = [(reservation_id, item)
++                           for reservation_id, (bound_job, item) in states.items()
++                           if bound_job == job_id]
++                if not matches:
++                    self.store.db.execute("COMMIT")
++                    return None
++                if len(matches) != 1:
++                    _refuse("MEMORY_RESERVATION_STATE_UNKNOWN", "job has multiple memory reservations")
++                reservation_id, item = matches[0]
++                if item["status"] == "RELEASED":
++                    self.store.db.execute("COMMIT")
++                    return {"status": "RELEASED", "reservation_id": reservation_id, "idempotent": True}
++                context = resources._durable_job_context(self.store.db, job_id)
++                if (context["canonical_operation_id"] != item["operation_id"]
++                        or context["project_id"] != item["project_id"]):
++                    _refuse("MEMORY_RESERVATION_IDENTITY_CONFLICT",
++                            "durable job no longer matches its memory reservation")
+                 latest = self.store.db.execute(
+-                    "SELECT j.status AS job_status,o.status AS operation_status "
++                    "SELECT j.status AS job_status,o.status AS operation_status,j.metadata AS job_metadata "
+                     "FROM jobs j JOIN operations o ON o.operation_id=j.operation_id WHERE j.job_id=?",
+                     (job_id,),
+                 ).fetchone()
+-                if latest is None or latest["job_status"] not in TERMINAL \
++                if latest is None or latest["job_status"] not in {"SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED", "LOST"} \
+                         or latest["operation_status"] != latest["job_status"]:
+                     self.store.db.execute("ROLLBACK")
+                     return {"status": "HELD_NONTERMINAL", "reservation_id": reservation_id,
+                             "idempotent": False}
++                status = latest["job_status"]
++                if status in {"LOST", "EXPIRED"}:
++                    # These labels can be written by watchdog/recovery paths;
++                    # neither proves that an already-dispatched engine stopped.
++                    self.store.db.execute("COMMIT")
++                    return {"status": "HELD_QUIESCENCE_UNPROVEN",
++                            "reservation_id": reservation_id, "idempotent": False,
++                            "domain_status": status}
++                if status == "CANCELLED" and not _queued_abort_proves_never_dispatched(
++                        self.store.db, job_id):
++                    self.store.db.execute("COMMIT")
++                    return {"status": "HELD_DISPATCH_UNPROVEN",
++                            "reservation_id": reservation_id, "idempotent": False,
++                            "domain_status": status}
++                released = dict(item)
++                released["status"] = "RELEASED"
++                from ._w26_os_resources import _canonical_json
+                 self.store.db.execute("INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
+                                       (job_id, MEMORY_RESERVATION_EVENT, _canonical_json(released)))
+                 self.store.db.execute("COMMIT")
+--- a/tests/test_w26_memory_resources.py (R1)
++++ b/tests/test_w26_memory_resources.py (R2)
+@@ -29,7 +29,8 @@
+     return memory.HostMemoryObservation(
+         platform=platform, host_id=host, boot_id=boot_id,
+         boot_identity_semantics="PROTOCOL_FIXTURE_ONLY", provider_id="protocol-fixture-only",
+-        observed_monotonic_ns=observed_ns, monotonic_clock_id="mach_absolute_time()",
++        observed_monotonic_ns=observed_ns,
++        monotonic_clock_id=time.get_clock_info("monotonic").implementation,
+         total_physical_bytes=total, available_physical_bytes=available,
+         available_semantics="PROTOCOL_FIXTURE_ONLY", hard_cap_state="NOT_OBSERVED",
+         hard_cap_bytes=None, evidence_classification="SOFTWARE_TEST_SYNTHETIC",
+@@ -166,6 +167,12 @@
+             now_monotonic_ns=memory.MEMORY_OBSERVATION_MAX_AGE_NS + 2,
+         )
+     assert refused.value.code == "MEMORY_OBSERVATION_STALE"
++    wrong_clock = replace(observed, monotonic_clock_id="unrelated-monotonic-clock")
++    with pytest.raises(ExecutionContractError) as refused:
++        memory.assess_memory_admission(
++            profile, wrong_clock, "study.run", active_reserved_bytes=0, now_monotonic_ns=101,
++        )
++    assert refused.value.code == "MEMORY_OBSERVATION_CLOCK_UNKNOWN"
+ 
+ 
+ def test_unknown_and_other_project_reservations_share_host_wide_ledger():
+--- a/tests/test_w26_os_resources.py (R1)
++++ b/tests/test_w26_os_resources.py (R2)
+@@ -1601,6 +1601,147 @@
+ 
+ @pytest.mark.skipif(memory_resources._current_platform() != "macos",
+                     reason="native memory integration currently exercised on macOS; Windows kernel NOT_RUN")
++def test_stale_memory_observation_after_prepare_rolls_back_both_reservations_before_dispatch(
++        tmp_path, monkeypatch):
++    from types import SimpleNamespace
++    from comsol_mcp import _g3_ops
++
++    monkeypatch.setattr(_g3_ops, "REQUIRES_ISOLATION", frozenset())
++    memory_config = _write_memory_config(
++        tmp_path, operation="api.invoke", estimate=1, max_total=1024, max_task=1024,
++    )
++    daemon, request, _project, _project_id, _profile, _disk_config = _daemon_disk_environment(
++        tmp_path, allowed_operation="api.invoke", operation="api.invoke",
++        arguments=_dynamic_api_write_request(), memory_resource_config=memory_config,
++    )
++    monkeypatch.setattr(daemon.backend, "_require_g2_isolation",
++                        lambda: {"scope": "SOFTWARE_FIXTURE_ONLY"})
++    coordinator = daemon._memory_resource_coordinator
++    prepare = coordinator.prepare_queued_job
++    prepared_rows = []
++
++    def prepare_then_advance_clock(job_id):
++        prepared = prepare(job_id)
++        prepared_rows.append(prepared)
++        observed = prepared["observation"]
++        # Advance only the memory module's reservation-time clock after the
++        # native sample has been captured. Disk admission and daemon clocks
++        # remain real; no sleep or timing race is involved.
++        monkeypatch.setattr(memory_resources, "time", SimpleNamespace(
++            monotonic_ns=lambda: observed.observed_monotonic_ns
++            + coordinator.max_observation_age_ns + 1,
++            get_clock_info=time.get_clock_info,
++        ))
++        return prepared
++
++    monkeypatch.setattr(coordinator, "prepare_queued_job", prepare_then_advance_clock)
++    try:
++        result = daemon.dispatch(request)
++        assert prepared_rows and prepared_rows[0]["observation"]._attestation \
++            is memory_resources._NATIVE_OBSERVATION_ATTESTATION
++        assert result["success"] is False, result
++        assert result["error"]["code"] == "MEMORY_OBSERVATION_STALE", result
++        assert result["data"]["engine_dispatched"] is False
++        assert daemon.worker.submitted == []
++        job_id = result["execution"]["job_id"]
++        names = [row[0] for row in daemon.store.db.execute(
++            "SELECT event FROM job_events WHERE job_id=? ORDER BY id", (job_id,)).fetchall()]
++        assert "W26DiskReservation" not in names
++        assert "W26MemoryReservation" not in names
++        assert "W26DiskAdmission" not in names and "W26MemoryAdmission" not in names
++        assert "RUNNING" not in names and "worker_request" not in names
++        assert not any(bound_job == job_id for bound_job, _item in resources._load_reservations(
++            daemon.store.db).values())
++        assert not any(bound_job == job_id for bound_job, _item in memory_resources._load_memory_reservations(
++            daemon.store.db).values())
++    finally:
++        daemon.close()
++
++
++@pytest.mark.parametrize("terminal_status", ["LOST", "EXPIRED", "CANCELLED"])
++@pytest.mark.skipif(memory_resources._current_platform() != "macos",
++                    reason="native memory integration currently exercised on macOS; Windows kernel NOT_RUN")
++def test_dispatched_lost_or_expired_memory_reservation_stays_held(tmp_path, monkeypatch,
++                                                                  terminal_status):
++    from comsol_mcp import _g3_ops
++
++    monkeypatch.setattr(_g3_ops, "REQUIRES_ISOLATION", frozenset())
++    memory_config = _write_memory_config(
++        tmp_path, operation="parameter.set", estimate=1, max_total=1024, max_task=1024,
++    )
++    daemon, request, _project, _project_id, _profile, _disk_config = _daemon_disk_environment(
++        tmp_path, allowed_operation="parameter.set", operation="parameter.set",
++        memory_resource_config=memory_config, disk_enabled=False,
++    )
++    daemon.worker.readback_override = "mismatched-readback"
++    try:
++        result = daemon.dispatch(request)
++        assert result["success"] is False
++        job_id = result["execution"]["job_id"]
++        assert daemon.store.job(job_id)["status"] == "UNKNOWN"
++        assert daemon.worker.submitted
++        operation_id = result["execution"]["operation_id"]
++        daemon.store.db.execute("UPDATE jobs SET status=? WHERE job_id=?", (terminal_status, job_id))
++        daemon.store.db.execute("UPDATE operations SET status=? WHERE operation_id=?",
++                                (terminal_status, operation_id))
++        daemon.store.add_event(job_id, terminal_status, {
++            "operation_id": operation_id, "engine_dispatched": True,
++            "test_control": "dispatched terminal label without quiescence",
++        })
++
++        outcome = daemon._memory_resource_coordinator.release_terminal_if_reserved(job_id)
++        assert outcome is not None
++        expected_hold = ("HELD_DISPATCH_UNPROVEN" if terminal_status == "CANCELLED"
++                         else "HELD_QUIESCENCE_UNPROVEN")
++        assert outcome["status"] == expected_hold
++        assert outcome["reservation_id"]
++        assert outcome["idempotent"] is False
++        assert outcome["domain_status"] == terminal_status
++        rows = [item for bound_job, item in memory_resources._load_memory_reservations(
++            daemon.store.db).values() if bound_job == job_id]
++        assert len(rows) == 1 and rows[0]["status"] == "RESERVED"
++    finally:
++        daemon.close()
++
++
++@pytest.mark.skipif(memory_resources._current_platform() != "macos",
++                    reason="native memory integration currently exercised on macOS; Windows kernel NOT_RUN")
++def test_durable_queued_abort_proof_releases_memory_reservation_without_worker_send(tmp_path):
++    memory_config = _write_memory_config(
++        tmp_path, operation="parameter.set", estimate=1, max_total=1024, max_task=1024,
++    )
++    daemon, _request, _project, project_id, _profile, _disk_config = _daemon_disk_environment(
++        tmp_path, allowed_operation="parameter.set", operation="parameter.set",
++        memory_resource_config=memory_config, disk_enabled=False,
++    )
++    try:
++        queued = _queued_dispatch_job(daemon.store, project_id,
++                                     inner="parameter.set", wrapper="operation_call")
++        reserved = daemon._memory_resource_coordinator.reserve_queued_job(queued["job_id"])
++        assert reserved["status"] == "RESERVED"
++        cancelled, status, _job = daemon.store.cancel_queued(queued["job_id"])
++        assert cancelled and status == "CANCELLED"
++
++        outcome = daemon._memory_resource_coordinator.release_terminal_if_reserved(queued["job_id"])
++        assert outcome is not None and outcome["status"] == "RELEASED"
++        rows = [item for bound_job, item in memory_resources._load_memory_reservations(
++            daemon.store.db).values() if bound_job == queued["job_id"]]
++        assert len(rows) == 1 and rows[0]["status"] == "RELEASED"
++        assert daemon.worker.submitted == []
++        cancel_event = daemon.store.db.execute(
++            "SELECT metadata FROM job_events WHERE job_id=? AND event='CANCELLED'",
++            (queued["job_id"],),
++        ).fetchone()
++        assert cancel_event is not None
++        proof = json.loads(cancel_event["metadata"])
++        assert proof["engine_dispatched"] is False
++        assert proof["cancelled_while"] == "QUEUED" and proof["mode"] == "QUEUED_ABORT"
++    finally:
++        daemon.close()
++
++
++@pytest.mark.skipif(memory_resources._current_platform() != "macos",
++                    reason="native memory integration currently exercised on macOS; Windows kernel NOT_RUN")
+ def test_memory_unknown_reservation_survives_restart_and_counts_other_projects(tmp_path, monkeypatch):
+     from comsol_mcp import _g3_ops
+ 

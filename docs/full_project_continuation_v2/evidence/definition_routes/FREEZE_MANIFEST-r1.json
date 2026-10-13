@@ -1,0 +1,75 @@
+{
+  "format": "definition-validation-source-freeze/1",
+  "candidate_id": "definition-routes-20261012-r1",
+  "created_at": "2026-10-11T16:02:54.842928+00:00",
+  "git_head": "60464c85b429e649f4f80484473999e5365ad96a",
+  "status": "CANDIDATE_FROZEN_FOR_ROOT_REVIEW",
+  "scope": "Standalone helper and focused software tests for function.validate, selection.rebind, and definition.mapping_validate. No shared dispatcher/registry/Worker files.",
+  "source_files": [
+    {
+      "path": "comsol_mcp/_g3_definition_validation.py",
+      "size_bytes": 62354,
+      "sha256": "f988f3d958caf11dfa71446eed44c0190dc50c07de08f9a6aa28070593a0fce0"
+    },
+    {
+      "path": "tests/test_g3_definition_validation.py",
+      "size_bytes": 21822,
+      "sha256": "1e238606f8409ab819bc6e43460fadd4a2eec981e82ad9b294c653f269277066"
+    }
+  ],
+  "software_tests": {
+    "status": "PASS",
+    "command_scope": [
+      "tests/test_g3_definition_validation.py",
+      "tests/test_g3_w17.py",
+      "tests/test_g3_w13.py",
+      "tests/test_function_evaluate_contract.py"
+    ],
+    "tests": 250,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "time_seconds": 0.449,
+    "strict_network_guard": {
+      "path": "docs/full_project_continuation_v2/evidence/definition_routes/software-r1/network-guard.jsonl",
+      "records": 1,
+      "blocked_network_events": 0,
+      "raw_records": [
+        {
+          "detail": "None",
+          "event": "GUARD_ACTIVE_BEFORE_CHILD_ENTRYPOINT",
+          "label": "definition-r1",
+          "operation": "sitecustomize",
+          "pid": 1007,
+          "ppid": 2496,
+          "run_id": "definition-routes-20261011-r1",
+          "time_ns": 1791734363361306000
+        }
+      ]
+    },
+    "invocation": {
+      "path": "docs/full_project_continuation_v2/evidence/definition_routes/software-r1/invocation.json",
+      "size_bytes": 1605,
+      "sha256": "ff460d249b94361917eae6d7f7dd802c0343ce9c4cedd765b8ec3c0a29f16121"
+    }
+  },
+  "acceptance": {
+    "production_dispatch_integration": "DEFERRED_UNTIL_SHARED_SOURCE_OWNER_HANDOFF",
+    "native_comsol": "NOT_RUN",
+    "gui": "NOT_RUN",
+    "scientific_acceptance": "NOT_EVALUATED",
+    "mapping_destination_frame_property": "UNOBSERVED; evaluation frame spatial bound only",
+    "mapping_source_mesh_coverage": "UNVERIFIED",
+    "function_global_data_continuity": "UNVERIFIED",
+    "independent_reviewer": "PENDING",
+    "overall": "CANDIDATE_ONLY_NOT_ACCEPTED"
+  },
+  "scope_notes": [
+    "The arithmetic map evaluator is a labeled partial preview; only cpltag(x/y/z) sampled through result.at_points is an operator-value witness.",
+    "The actual evaluator requires an explicit dataset, solution tag, outer and inner pair, spatial destination frame, coordinate unit and expected source unit. The current result.at_points adapter refuses time/frequency/parameter selectors.",
+    "A successful finite sample set does not prove GeneralExtrusion source-mesh coverage, and COMSOL 6.4 GeneralExtrusion has no verified dstframe property.",
+    "Interpolation method order is reported separately from sampled data availability; boundary neighbors and caller-selected discontinuity probes are finite checks, never a global continuity guarantee.",
+    "Selection rebinding only targets an existing named Box/Ball with read-back geometry identity and exact geometry length unit; entity IDs are not claimed stable across geometry revisions.",
+    "All tests here use synthetic API-shaped fixtures; no COMSOL engine/model or GUI was started."
+  ]
+}

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from hashlib import sha256
+import os
 from pathlib import Path
 import threading
 import time
@@ -75,9 +76,16 @@ class FixtureDesktopAdapter:
         self.max_active_callbacks = 0
         self.preserve_source = True
         self.source_window_open = True
+        self.engine = None
         self.show_model_error: Exception | None = None
         self.show_model_calls: list[str] = []
         self.action_error: Exception | None = None
+        self.save_copy_delay_seconds: float | None = None
+        self.save_copy_never_completes = False
+        self._save_copy_state = "idle"
+        self._save_copy_completion_sequence: list[str] = []
+        self._save_copy_writer: threading.Thread | None = None
+        self.save_copy_hardlink_path: Path | None = None
 
     def status(self, runtime_id: str | None = None):
         return {"platform": "fixture", "permission_status": "AVAILABLE", "control_status": AVAILABLE,
@@ -111,6 +119,20 @@ class FixtureDesktopAdapter:
         self._claim_observed("desktop.capture")
         return {"verified": True, "region": region, "scope": "target_window", "artifact_id": "capture-1", "sha256": "c" * 64}
 
+    def shell_execute(self, identity: WindowIdentity, artifact: TrustedSourceArtifact):
+        self._claim_observed("desktop.shell_execute")
+        if self.engine is not None and self.engine.mutate_on_shell_execute:
+            current = self.engine.models[MODEL.model_ref]
+            self.engine.models[MODEL.model_ref] = ManagedModelSnapshot(
+                current.model_ref, current.server_endpoint, current.model_tag, "9" * 64,
+                current.revision,
+            )
+        output = "software fixture output"
+        return {"executed": True, "source_sha256": artifact.sha256,
+                "output_sha256": sha256(output.encode("utf-8")).hexdigest(),
+                "window_identity_fingerprint": identity.fingerprint(),
+                "gateway": "SOFTWARE_FIXTURE_ONLY"}
+
     def perform_action(self, identity: WindowIdentity, plan: DesktopActionPlan):
         self._claim_observed("desktop.action")
         self.callback_counts["desktop.action"] = self.callback_counts.get("desktop.action", 0) + 1
@@ -126,10 +148,39 @@ class FixtureDesktopAdapter:
             self.active_callbacks -= 1
         return {"verified": True, "action_id": plan.action_id}
 
-    def save_copy(self, identity: WindowIdentity, destination: Path):
+    def save_copy(self, identity: WindowIdentity, destination: Path, source=None):
         self._claim_observed("desktop.migrate_standalone")
-        destination.write_bytes(b"fixture save-copy bytes")
-        return SavedCopy(str(destination), sha256(destination.read_bytes()).hexdigest(), True, True, "source-fingerprint")
+        payload = b"fixture save-copy bytes"
+        if self.save_copy_delay_seconds is not None:
+            prefix = payload[:8]
+            destination.write_bytes(prefix)
+            self._save_copy_state = "busy"
+
+            def finish_delayed_copy():
+                time.sleep(self.save_copy_delay_seconds)
+                if self.save_copy_never_completes:
+                    return
+                with destination.open("ab") as stream:
+                    stream.write(payload[len(prefix):])
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                self._save_copy_state = "complete"
+
+            self._save_copy_writer = threading.Thread(target=finish_delayed_copy, daemon=True)
+            self._save_copy_writer.start()
+        else:
+            destination.write_bytes(payload)
+            self._save_copy_state = "idle"
+            self._save_copy_completion_sequence = ["busy", "complete"]
+        if self.save_copy_hardlink_path is not None:
+            os.link(destination, self.save_copy_hardlink_path)
+        return SavedCopy(str(destination), None, True, True, "source-fingerprint", None)
+
+    def save_copy_completion_state(self, identity: WindowIdentity, *, side_effect_started: bool = False):
+        self._claim_observed("desktop.migrate_standalone")
+        if self._save_copy_completion_sequence:
+            return self._save_copy_completion_sequence.pop(0)
+        return self._save_copy_state
 
     def verify_source_preserved(self, identity: WindowIdentity, source: DesktopModelObservation):
         return SourcePreservation(
@@ -202,9 +253,11 @@ class Harness:
         self.adapter.store = self.store
         self.engine = FixtureEngineQueue()
         self.engine.store = self.store
-        self.permissions = permissions if permissions is not None else {"READ", "HOST_CONTROL", "TRUSTED_CODE"}
+        self.adapter.engine = self.engine
+        self.permissions = permissions if permissions is not None else {"READ", "HOST_CONTROL", "TRUSTED_CODE", "PROJECT_WRITE"}
         self.clock_value = [0.0]
         self.save_root = tmp_path.resolve()
+        self.save_copy_publish_calls = 0
 
         def resolve_action(project_id, action):
             if action.get("action_id") != "safe.command" or action.get("target") != "window":
@@ -212,10 +265,30 @@ class Harness:
             return DesktopActionPlan("safe.command", bool(action.get("mutates_model", False)), {"target": "window"})
 
         def resolve_artifact(project_id, artifact_id):
-            return TrustedSourceArtifact(artifact_id, "e" * 64, 40, "project-artifact-store")
+            payload = b"public Java source"
+            return TrustedSourceArtifact(artifact_id, sha256(payload).hexdigest(), len(payload),
+                                         "project-artifact-store", payload)
 
         def authorize_save_copy(project_id, destination):
             return destination.is_relative_to(self.save_root)
+
+        def publish_save_copy(project_id, context, stage_root, stage_path, destination, receipt):
+            self.save_copy_publish_calls += 1
+            operation = self.store.get_operation(context.operation_id)
+            job = self.store.operation_job(context.operation_id)
+            assert operation["operation"] == "desktop.migrate_standalone" and operation["status"] == "RUNNING"
+            assert job["job_id"] == context.job_id and job["status"] == "RUNNING"
+            assert project_id == context.project_id == "proj-1"
+            if destination.exists():
+                raise DesktopOperationError("DESTINATION_EXISTS", "foreign file appeared before fixture publisher")
+            payload = stage_path.read_bytes()
+            assert sha256(payload).hexdigest() == receipt["sha256"]
+            assert len(payload) == receipt["size_bytes"]
+            with destination.open("xb") as output:
+                output.write(payload)
+            return {"path": str(destination), "sha256": receipt["sha256"],
+                    "size_bytes": receipt["size_bytes"], "operation_id": context.operation_id,
+                    "publication": "ARTIFACTSTORE_NO_CLOBBER", "file_identity": None}
 
         def resolve_permission(project_id, permission):
             return permission in self.permissions
@@ -228,11 +301,14 @@ class Harness:
             resolve_action=resolve_action,
             resolve_artifact=resolve_artifact,
             authorize_save_copy=authorize_save_copy,
+            publish_save_copy=publish_save_copy,
             handle_ttl_s=10,
             clock=clock or (lambda: self.clock_value[0]),
         )
 
     def close(self):
+        if self.adapter._save_copy_writer is not None:
+            self.adapter._save_copy_writer.join(timeout=5)
         self.store.close()
 
     def windows(self):
@@ -413,10 +489,9 @@ def test_all_catalog_handlers_are_durable_and_success_requires_verified_adapter_
             "source_artifact": "artifact-1", "expected_model_ref": "model-a-id",
         })
         assert shell["success"] is True
-        assert shell["data"]["source_sha256"] == "e" * 64
+        assert shell["data"]["source_sha256"] == sha256(b"public Java source").hexdigest()
         shell_calls = [call for call in harness.engine.calls if call[0] == "desktop.shell_execute"]
-        assert len(shell_calls) == 1
-        assert shell_calls[0][3].idempotency_key == "shell-1"
+        assert len(shell_calls) == 0  # the native Desktop shell is never substituted with an engine command
         assert harness.engine.calls[-1][0] == "desktop.binding.inspect"  # post-execution identity/fingerprint recheck
 
         standalone_token = harness.windows()[1]
@@ -439,6 +514,9 @@ def test_all_catalog_handlers_are_durable_and_success_requires_verified_adapter_
         assert migrated["data"]["source_window_identity"] == _window(2).identity.fingerprint()
         assert "WINDOW:2" not in harness.adapter.show_model_calls
         assert destination.is_file()
+        load_calls = [call for call in harness.engine.calls if call[0] == "model.load"]
+        assert len(load_calls) == 1
+        assert load_calls[0][1]["source_sha256"] == migrated["data"]["saved_copy"]["sha256"]
     finally:
         harness.close()
 
@@ -675,7 +753,8 @@ def test_standalone_migration_requires_save_copy_and_keeps_source_on_failure(tmp
         assert failed["success"] is False
         assert failed["error"]["code"] == "SOURCE_MODEL_NOT_PRESERVED"
         assert failed["execution"]["status"] == "UNKNOWN"
-        assert destination.is_file()
+        assert not destination.exists()
+        assert not [call for call in harness.engine.calls if call[0] == "model.load"]
         assert harness.adapter.source_window_open is True
         calls = len([call for call in harness.engine.calls if call[0] == "model.load"])
         replay = harness.coordinator.dispatch("desktop.migrate_standalone", {
@@ -716,6 +795,230 @@ def test_migration_returns_loaded_managed_model_without_switching_source_window(
         assert harness.adapter.source_window_open is True
     finally:
         harness.close()
+
+
+def test_migration_waits_for_profiled_completion_before_hash_publish_or_load(tmp_path):
+    """A writer paused beyond the old quiet window is not hashed or published early."""
+    harness = Harness(tmp_path)
+    try:
+        token = harness.windows()[0]
+        harness.adapter.models["WINDOW:1"] = DesktopModelObservation(
+            "STANDALONE", standalone_model_id="standalone-source-1",
+            fingerprint="source-fingerprint", dirty=True,
+        )
+        harness.adapter.save_copy_delay_seconds = 2.25
+        destination = tmp_path / "delayed-completion.mph"
+        result = harness.coordinator.dispatch("desktop.migrate_standalone", {
+            "project_id": "proj-1", "idempotency_key": "migration-delayed-completion",
+            "window_ref": token, "target_session_id": "session-target",
+            "save_policy": {"mode": "save_copy", "destination_path": str(destination), "overwrite": False},
+        })
+        assert result["success"] is True
+        assert destination.read_bytes() == b"fixture save-copy bytes"
+        assert result["data"]["saved_copy"]["sha256"] == sha256(b"fixture save-copy bytes").hexdigest()
+        assert len([call for call in harness.engine.calls if call[0] == "model.load"]) == 1
+        assert harness.adapter._save_copy_state == "complete"
+    finally:
+        harness.close()
+
+
+def test_migration_with_unconfirmed_native_completion_is_unknown_and_never_publishes(tmp_path, monkeypatch):
+    from comsol_mcp._desktop_service import DesktopCoordinator as CoordinatorType
+
+    harness = Harness(tmp_path)
+    try:
+        token = harness.windows()[0]
+        harness.adapter.models["WINDOW:1"] = DesktopModelObservation(
+            "STANDALONE", standalone_model_id="standalone-source-1",
+            fingerprint="source-fingerprint", dirty=True,
+        )
+        harness.adapter.save_copy_delay_seconds = 0.05
+        harness.adapter.save_copy_never_completes = True
+        original_wait = CoordinatorType.__dict__["_wait_for_save_copy_completion"]
+
+        def short_wait(self, lease_token, identity, *, timeout_s=120.0):
+            return original_wait(self, lease_token, identity, timeout_s=0.45)
+
+        monkeypatch.setattr(
+            CoordinatorType, "_wait_for_save_copy_completion", short_wait,
+        )
+        destination = tmp_path / "unconfirmed.mph"
+        result = harness.coordinator.dispatch("desktop.migrate_standalone", {
+            "project_id": "proj-1", "idempotency_key": "migration-no-completion",
+            "window_ref": token, "target_session_id": "session-target",
+            "save_policy": {"mode": "save_copy", "destination_path": str(destination), "overwrite": False},
+        })
+        assert result["success"] is False
+        assert result["error"]["code"] == "SAVE_COPY_COMPLETION_UNKNOWN"
+        assert result["error"]["safe_retry"] is False
+        assert result["execution"]["status"] == "UNKNOWN"
+        assert not destination.exists()
+        assert not [call for call in harness.engine.calls if call[0] == "model.load"]
+    finally:
+        harness.close()
+
+
+def test_migration_rejects_staged_hardlink_before_fchmod_publish_or_load(tmp_path, monkeypatch):
+    import tempfile
+    import comsol_mcp._desktop_service as desktop_service
+
+    tmp_path.chmod(0o700)
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
+    harness = Harness(tmp_path)
+    try:
+        token = harness.windows()[0]
+        harness.adapter.models["WINDOW:1"] = DesktopModelObservation(
+            "STANDALONE", standalone_model_id="standalone-source-1",
+            fingerprint="source-fingerprint", dirty=True,
+        )
+        hardlink = tmp_path / "unowned-hardlink.mph"
+        destination = tmp_path / "must-not-publish.mph"
+        harness.adapter.save_copy_hardlink_path = hardlink
+        fchmod_calls = []
+        monkeypatch.setattr(desktop_service.os, "fchmod", lambda *_args: fchmod_calls.append(True))
+        result = harness.coordinator.dispatch("desktop.migrate_standalone", {
+            "project_id": "proj-1", "idempotency_key": "migration-hardlink-stage",
+            "window_ref": token, "target_session_id": "session-target",
+            "save_policy": {"mode": "save_copy", "destination_path": str(destination), "overwrite": False},
+        })
+        assert result["success"] is False
+        assert result["error"]["code"] == "SAVE_COPY_UNVERIFIED"
+        assert result["execution"]["status"] == "UNKNOWN"
+        assert fchmod_calls == []
+        assert hardlink.read_bytes() == b"fixture save-copy bytes"
+        assert not destination.exists()
+        assert harness.save_copy_publish_calls == 0
+        assert not [call for call in harness.engine.calls if call[0] == "model.load"]
+    finally:
+        harness.close()
+
+
+def test_migration_source_id_change_after_load_is_unknown_and_never_replays(tmp_path):
+    from dataclasses import replace
+
+    harness = Harness(tmp_path)
+    try:
+        token = harness.windows()[0]
+        source = DesktopModelObservation("STANDALONE", standalone_model_id="standalone-source-1",
+                                         fingerprint="source-fingerprint", dirty=True)
+        harness.adapter.models["WINDOW:1"] = source
+        original_engine = harness.engine
+
+        def load_then_change_id(operation, arguments, model_ref, context):
+            result = original_engine(operation, arguments, model_ref, context)
+            if operation == "model.load":
+                harness.adapter.models["WINDOW:1"] = replace(source, standalone_model_id="standalone-source-2")
+            return result
+
+        harness.coordinator.engine_queue = load_then_change_id
+        destination = tmp_path / "source-id-drift.mph"
+        arguments = {
+            "project_id": "proj-1", "idempotency_key": "migration-source-id-drift", "window_ref": token,
+            "target_session_id": "session-target", "save_policy": {
+                "mode": "save_copy", "destination_path": str(destination), "overwrite": False,
+            },
+        }
+        failed = harness.coordinator.dispatch("desktop.migrate_standalone", arguments)
+        assert failed["success"] is False
+        assert failed["error"]["code"] == "SOURCE_MODEL_NOT_PRESERVED"
+        assert failed["execution"]["status"] == "UNKNOWN"
+        assert destination.is_file()
+        count = len([call for call in original_engine.calls if call[0] == "model.load"])
+        replay = harness.coordinator.dispatch("desktop.migrate_standalone", arguments)
+        assert replay == failed
+        assert len([call for call in original_engine.calls if call[0] == "model.load"]) == count == 1
+    finally:
+        harness.close()
+
+
+def test_private_save_copy_waits_for_delayed_writer_to_finish(tmp_path, monkeypatch):
+    """A transient partial UI Save Copy is not published as a complete file."""
+    import hashlib
+    import os
+    import tempfile
+    from comsol_mcp._desktop_service import (
+        DesktopDispatchContext,
+        _create_private_save_copy_stage,
+        _verified_private_save_copy_file,
+    )
+
+    tmp_path.chmod(0o700)
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
+    context = DesktopDispatchContext(
+        "desktop.migrate_standalone", "request-delayed", "op-delayed", "job-delayed",
+        "idempotency-delayed", "a" * 64, "proj-1",
+    )
+    stage_root, stage_identity = _create_private_save_copy_stage(context)
+    staged = stage_root / "model.mph"
+    full_bytes = b"partial MPH prefix" + b"completed writer tail" * 8192
+    staged.write_bytes(full_bytes[:len(b"partial MPH prefix")])
+    staged.chmod(0o600)
+    errors = []
+
+    def finish_later():
+        try:
+            time.sleep(0.28)
+            with staged.open("ab") as stream:
+                stream.write(full_bytes[len(b"partial MPH prefix"):])
+                stream.flush()
+                os.fsync(stream.fileno())
+        except Exception as exc:  # surfaced below as a test failure
+            errors.append(exc)
+
+    writer = threading.Thread(target=finish_later)
+    writer.start()
+    try:
+        receipt = _verified_private_save_copy_file(stage_root, staged, stage_identity,
+                                                   completion_verified=True, timeout_s=4)
+        writer.join(timeout=3)
+        assert not writer.is_alive() and not errors
+        assert receipt["size_bytes"] == len(full_bytes)
+        assert receipt["sha256"] == hashlib.sha256(full_bytes).hexdigest()
+    finally:
+        writer.join(timeout=3)
+
+
+def test_private_save_copy_rejects_named_file_replacement_during_pinned_hash(tmp_path, monkeypatch):
+    """Pinned bytes plus a substituted pathname remains UNKNOWN, never publishable."""
+    import hashlib
+    import os
+    import tempfile
+    import comsol_mcp._desktop_service as desktop_service
+
+    tmp_path.chmod(0o700)
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
+    context = desktop_service.DesktopDispatchContext(
+        "desktop.migrate_standalone", "request-race", "op-race", "job-race",
+        "idempotency-race", "b" * 64, "proj-1",
+    )
+    stage_root, stage_identity = desktop_service._create_private_save_copy_stage(context)
+    staged = stage_root / "model.mph"
+    original_bytes = b"owned model bytes" * 131072
+    staged.write_bytes(original_bytes)
+    staged.chmod(0o600)
+    before = staged.lstat()
+    original_read = os.read
+    replaced = False
+
+    def replace_name_after_hash_starts(fd, size):
+        nonlocal replaced
+        current = os.fstat(fd)
+        if not replaced and (current.st_dev, current.st_ino) == (before.st_dev, before.st_ino):
+            replaced = True
+            staged.rename(stage_root / "model.original")
+            staged.write_bytes(b"foreign replacement")
+            staged.chmod(0o600)
+        return original_read(fd, size)
+
+    monkeypatch.setattr(os, "read", replace_name_after_hash_starts)
+    with pytest.raises(desktop_service.DesktopOperationError) as caught:
+        desktop_service._verified_private_save_copy_file(stage_root, staged, stage_identity,
+                                                          completion_verified=True, timeout_s=4)
+    assert replaced
+    assert caught.value.code == "SAVE_COPY_CHANGED"
+    assert caught.value.safe_retry is False
+    assert (stage_root / "model.original").read_bytes() == original_bytes
+    assert staged.read_bytes() == b"foreign replacement"
 
 
 def test_second_live_coordinator_does_not_reconcile_another_owners_running_claim(tmp_path):
@@ -776,9 +1079,9 @@ def test_native_factory_is_not_a_fixture_and_keeps_control_capability_unsupporte
     status = adapter.status()
     assert status.get("control_status") == UNSUPPORTED_CONTROL
     assert status.get("native_evidence") == "NOT_RUN"
-    assert status.get("source_capabilities") == {"desktop.status": "PROCESS_WINDOW_IDENTITY_SOURCE_IMPLEMENTED"}
+    assert status.get("source_capabilities", {}).get("desktop.status") == "PROCESS_WINDOW_IDENTITY_SOURCE_IMPLEMENTED"
     assert status.get("operation_gaps", {}).get("desktop.capture", "").startswith("UNSUPPORTED_CONTROL")
-    with pytest.raises(DesktopOperationError, match="does not implement desktop.show_model"):
+    with pytest.raises(DesktopOperationError, match="selector profile"):
         adapter.show_model(_window().identity, MODEL)
-    with pytest.raises(DesktopOperationError, match="does not implement desktop.capture"):
+    with pytest.raises(DesktopOperationError):
         adapter.capture(_window().identity, "window")

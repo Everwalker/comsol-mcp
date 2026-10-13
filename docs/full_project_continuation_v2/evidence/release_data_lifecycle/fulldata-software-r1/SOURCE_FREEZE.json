@@ -1,0 +1,114 @@
+{
+  "created_utc": "2026-10-11T21:57:05.959592+00:00",
+  "existing_first_native_candidate": {
+    "native_status": "NOT_RUN",
+    "note": "Distinct from readback003; do not apply readback003 golden values.",
+    "path": "evidence/w21_closure/windows/reviewer64_reopen01/project/review_reopen.mph",
+    "sha256": "ee71658d66a92efc19c78de7742eb24c1ef3b16f1fb33b1d6814b1e79c96b9d6",
+    "size_bytes": 10725566
+  },
+  "git_head": "799bf7a0fa95313e7659f44d8ff40ff1678314d5",
+  "limitations": [
+    "No dependency installation/download/build occurred.",
+    "Python 3.14 is the local macOS arm64 builder candidate, not a CPython 3.12 wheelhouse substitute.",
+    "Target wheelhouse files are absent; uv archive-v0 extracted distributions are not flat wheel artifacts.",
+    "Windows, Intel macOS, and COMSOL native validation remain NOT_RUN."
+  ],
+  "owned_source_snapshot": {
+    "docs/full_project_continuation_v2/evidence/release_data_lifecycle/FULL_DATA_LIFECYCLE_CONTRACT.md": {
+      "bytes": 2039,
+      "sha256": "948add7daffdc7f9c0e4e5ba717a15fefb80b61474a7cd774558a0a22f79bcde",
+      "snapshot_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/fulldata-software-r1/source_snapshot/FULL_DATA_LIFECYCLE_CONTRACT.md",
+      "snapshot_sha256": "948add7daffdc7f9c0e4e5ba717a15fefb80b61474a7cd774558a0a22f79bcde"
+    },
+    "tests/test_release_data_lifecycle.py": {
+      "bytes": 31404,
+      "sha256": "4f4bba19c2f0baf6deb7a8971c981aa94328bdc7e30edbc83254070fa455e2b3",
+      "snapshot_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/fulldata-software-r1/source_snapshot/test_release_data_lifecycle.py",
+      "snapshot_sha256": "4f4bba19c2f0baf6deb7a8971c981aa94328bdc7e30edbc83254070fa455e2b3"
+    },
+    "tools/release_transition_lifecycle.py": {
+      "bytes": 42329,
+      "sha256": "79b8549fbb735654ba7578eea92ce199cbbeccc298c2cc2ae0af4305676a49db",
+      "snapshot_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/fulldata-software-r1/source_snapshot/release_transition_lifecycle.py",
+      "snapshot_sha256": "79b8549fbb735654ba7578eea92ce199cbbeccc298c2cc2ae0af4305676a49db"
+    }
+  },
+  "patch": {
+    "bytes": 40391,
+    "path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/fulldata-software-r1/OWNED_SOURCE.patch",
+    "sha256": "4adb0fe87b8c4e5f8966bbf9c24af591e2541ad193a63e92133e5265d7cd20f9"
+  },
+  "readback003_exact_model_preparation": {
+    "full_backup_archive_sha256": "460934ad4c319480e35438c64870e9981503778d6d256a56785019c8e20873f1",
+    "full_backup_manifest_sha256": "8e0dae2cd2475c7371a7559426afa6b29eed5afd75780bc0f2116e8a1b3179c4",
+    "native_status": "NOT_RUN",
+    "pointer_path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/READBACK003_RESTORED_MODEL_PREP_POINTER.json",
+    "pointer_sha256": "3dcab9baf0b59b9fddf66dfbd185c402d68cb74354ff6384b38cec37c18712af",
+    "restored_entry_sha256": "4a82937a50e84e9b5222aa63dd3a8fc827036eabf1c119436ea6b06ed42c9833",
+    "software_prep_receipt_sha256": "215140a17f26adbd34bfe813f501ce4d0831e293527c6b3d708d632eb1b484bc",
+    "source_model_sha256": "9999608757cff08cfe052b398c3de24b1e2e0603dc375db3d0cc5928f77c6346"
+  },
+  "release_cache_inventory": {
+    "path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/release-cache-inventory-r1.json",
+    "sha256": "8b1f477c3318a0e3fbeb1647ac3ae4e085076e9ed3a8c699c6175fc4a5fbc184",
+    "status": "READ_ONLY_INVENTORY_ONLY"
+  },
+  "schema": "comsol-mcp.release-data-lifecycle-source-freeze/1",
+  "scope": "owned release lifecycle tool/tests/docs plus exact readback003 software restore-prep pointer and read-only release cache inventory; no shared source changes claimed",
+  "status_separation": {
+    "current_project_version": "0.1.9",
+    "native_readback003_restore": "SOFTWARE_PREPARED_NATIVE_NOT_RUN",
+    "release_build_install_upgrade_rollback": "NOT_RUN",
+    "software_lifecycle": "PASS_SCOPED_SOFTWARE_FIXTURE",
+    "version_changed": false
+  },
+  "test_execution": {
+    "additional_test_source_binding": {
+      "basis": "same test source hash recorded in the later host_scoped_provider_security_r2 source-binding receipt; lifecycle run receipt did not separately enumerate this test file",
+      "tests/test_state_backup.py": "dff3310f448613e9b8b839a9eaca33be50182d6aa59e37b9c4084a315acdc157"
+    },
+    "command": "TMPDIR=/private/tmp /private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python -m pytest -q --junitxml=docs/full_project_continuation_v2/evidence/release_data_lifecycle/fulldata-software-r1/junit.xml tests/test_release_data_lifecycle.py tests/test_state_backup.py::test_full_backup_restore_rebinds_project_and_artifact_without_replaying_unknown tests/test_state_backup.py::test_full_restore_incomplete_rollback_fences_startup_then_explicit_recovery_clears_targets",
+    "junit": {
+      "bytes": 6140,
+      "errors": 0,
+      "failures": 0,
+      "path": "docs/full_project_continuation_v2/evidence/release_data_lifecycle/fulldata-software-r1/junit.xml",
+      "sha256": "dd92d8ec77e21ec7826942832ddb85babe1e54acb09f2b8251bc32176c1e05e0",
+      "skipped": 0,
+      "tests": 39
+    },
+    "network_guard_applied_to_fixture_children": false,
+    "runtime": {
+      "machine": "arm64",
+      "platform": "macOS-27.0-arm64-arm-64bit",
+      "python": "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python",
+      "python_version": "3.12.13"
+    },
+    "scope_limits": [
+      "software fixture only",
+      "no native COMSOL runtime or solver",
+      "not an installed-package transition",
+      "release install/upgrade/rollback NOT_RUN"
+    ],
+    "source_inputs_pre_and_post_sha256": {
+      "after": {
+        "comsol_mcp/_artifact_store.py": "52dbb0dba5305d974f6cd93b747093d076d753c30ec67e4159d437af87feb347",
+        "comsol_mcp/_operation_store.py": "d9d6c3d54ff4afc625f28f5e70595fd23f6a899e05863a9cdf0b05711a0808fa",
+        "comsol_mcp/_project_authority.py": "82b90c1157b242f80feb9079ac4b58e2a1295719a7a323a97532497a740181a8",
+        "comsol_mcp/_state_backup.py": "9ab50378fc7eab8c72def62beb0d7191ef68c25e1fa1ace717e0424294f3ba5c",
+        "tests/test_release_data_lifecycle.py": "4f4bba19c2f0baf6deb7a8971c981aa94328bdc7e30edbc83254070fa455e2b3",
+        "tools/release_transition_lifecycle.py": "79b8549fbb735654ba7578eea92ce199cbbeccc298c2cc2ae0af4305676a49db"
+      },
+      "before": {
+        "comsol_mcp/_artifact_store.py": "52dbb0dba5305d974f6cd93b747093d076d753c30ec67e4159d437af87feb347",
+        "comsol_mcp/_operation_store.py": "d9d6c3d54ff4afc625f28f5e70595fd23f6a899e05863a9cdf0b05711a0808fa",
+        "comsol_mcp/_project_authority.py": "82b90c1157b242f80feb9079ac4b58e2a1295719a7a323a97532497a740181a8",
+        "comsol_mcp/_state_backup.py": "9ab50378fc7eab8c72def62beb0d7191ef68c25e1fa1ace717e0424294f3ba5c",
+        "tests/test_release_data_lifecycle.py": "4f4bba19c2f0baf6deb7a8971c981aa94328bdc7e30edbc83254070fa455e2b3",
+        "tools/release_transition_lifecycle.py": "79b8549fbb735654ba7578eea92ce199cbbeccc298c2cc2ae0af4305676a49db"
+      }
+    },
+    "status": "PASS_SCOPED_SOFTWARE_FIXTURE"
+  }
+}

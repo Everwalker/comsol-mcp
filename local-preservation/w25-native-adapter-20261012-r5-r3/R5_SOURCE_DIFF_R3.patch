@@ -1,0 +1,789 @@
+--- a/comsol_mcp/_desktop_macos.py
++++ b/comsol_mcp/_desktop_macos.py
+@@ -11,11 +11,9 @@
+ from pathlib import Path
+ import platform
+ import re
+-import stat
+ import subprocess
+ import threading
+ import sys
+-import time
+ from typing import Any, Mapping
+ 
+ from ._desktop_service import (
+@@ -538,70 +536,6 @@
+         return {"save_dialog_confirmed": True, "destination": str(target),
+                 "profiled_selectors": sorted(required)}
+ 
+-    @staticmethod
+-    def _completed_file_sha256(path: Path, *, timeout_s: float = 120.0) -> str:
+-        """Wait for a new regular file to settle, then hash its pinned handle."""
+-        import hashlib
+-        deadline = time.monotonic() + timeout_s
+-        previous = None
+-        stable_reads = 0
+-        while time.monotonic() < deadline:
+-            try:
+-                named = path.lstat()
+-            except FileNotFoundError:
+-                previous = None
+-                stable_reads = 0
+-                time.sleep(0.25)
+-                continue
+-            except OSError as exc:
+-                raise DesktopOperationError("SAVE_COPY_UNVERIFIED", "Save Copy target could not be inspected", side_effect_started=True, safe_retry=False) from exc
+-            if stat.S_ISLNK(named.st_mode) or not stat.S_ISREG(named.st_mode):
+-                raise DesktopOperationError("SAVE_COPY_UNVERIFIED", "Save Copy target is not a regular non-linked file", side_effect_started=True, safe_retry=False)
+-            if named.st_size <= 0:
+-                previous = None
+-                stable_reads = 0
+-                time.sleep(0.25)
+-                continue
+-            identity = (named.st_dev, named.st_ino, named.st_size, named.st_mtime_ns, named.st_ctime_ns)
+-            if identity == previous:
+-                stable_reads += 1
+-            else:
+-                previous = identity
+-                stable_reads = 0
+-            if stable_reads >= 3:
+-                flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+-                try:
+-                    fd = os.open(path, flags)
+-                except OSError as exc:
+-                    raise DesktopOperationError("SAVE_COPY_UNVERIFIED", "Save Copy target could not be pinned for hashing", side_effect_started=True, safe_retry=False) from exc
+-                try:
+-                    before = os.fstat(fd)
+-                    before_identity = (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_ctime_ns)
+-                    if not stat.S_ISREG(before.st_mode) or before_identity != identity:
+-                        raise DesktopOperationError("SAVE_COPY_CHANGED", "Save Copy target changed before pinned hashing", side_effect_started=True, safe_retry=False)
+-                    digest = hashlib.sha256()
+-                    while True:
+-                        block = os.read(fd, 1024 * 1024)
+-                        if not block:
+-                            break
+-                        digest.update(block)
+-                    after = os.fstat(fd)
+-                    try:
+-                        named_after = path.lstat()
+-                    except OSError as exc:
+-                        raise DesktopOperationError("SAVE_COPY_CHANGED", "Save Copy target disappeared while hashing", side_effect_started=True, safe_retry=False) from exc
+-                    after_identity = (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns)
+-                    named_identity = (named_after.st_dev, named_after.st_ino, named_after.st_size, named_after.st_mtime_ns, named_after.st_ctime_ns)
+-                    if (after_identity != before_identity or named_identity != before_identity
+-                            or not stat.S_ISREG(named_after.st_mode)):
+-                        raise DesktopOperationError("SAVE_COPY_CHANGED", "Save Copy target changed during hashing", side_effect_started=True, safe_retry=False)
+-                    return digest.hexdigest()
+-                finally:
+-                    os.close(fd)
+-            time.sleep(0.25)
+-        raise DesktopOperationError("SAVE_COPY_TIMEOUT", "Save Copy target did not become a stable regular file before the bounded deadline", side_effect_started=True, safe_retry=False)
+-
+-
+ class MacOSAccessibilityObserver(MacOSMetadataAdapter):
+     """Product prerequisite provider only; all seven native controls stay unsupported."""
+ 
+@@ -823,9 +757,9 @@
+         from ._desktop_service import SavedCopy
+         from ._desktop_service import DesktopModelObservation
+         profile = self._profile(identity)
+-        required = {"save_copy", "save_path", "save_confirm"}
++        required = {"save_copy", "save_path", "save_confirm", "save_complete"}
+         if not required <= set(profile["selectors"]):
+-            raise DesktopOperationError("DESKTOP_SELECTOR_UNAVAILABLE", "profile lacks exact observed AX Save Copy dialog selectors", safe_retry=True)
++            raise DesktopOperationError("DESKTOP_SELECTOR_UNAVAILABLE", "profile lacks exact observed AX Save Copy and completion selectors", safe_retry=True)
+         destination = Path(destination)
+         if (not isinstance(source, DesktopModelObservation) or source.mode != "STANDALONE"
+                 or not source.active_model_label or not source.standalone_model_id
+@@ -836,18 +770,47 @@
+                 or before.standalone_model_id != source.standalone_model_id
+                 or before.fingerprint != source.fingerprint or before.dirty != source.dirty):
+             raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "standalone source changed before Save Copy", safe_retry=True)
++        if self.save_copy_completion_state(identity, side_effect_started=False) != "idle":
++            raise DesktopOperationError("SAVE_COPY_NOT_IDLE", "profiled Save Copy control is not in its observed idle state", safe_retry=True)
+         if (not destination.is_absolute() or destination.suffix.lower() != ".mph"
+                 or destination.resolve(strict=False) != destination
+                 or not destination.parent.is_dir() or destination.exists() or destination.is_symlink()):
+             raise DesktopOperationError("SAVE_COPY_PATH_REJECTED", "Save Copy requires a canonical new project-authorized MPH target", safe_retry=True)
+         self.gateway.save_copy(identity, {key: profile["selectors"][key] for key in required}, str(destination))
+-        digest = MacOSFrameworkGateway._completed_file_sha256(destination)
+         after = self.observe_model(identity)
+         if (after.mode != source.mode or after.active_model_label != source.active_model_label
+                 or after.standalone_model_id != source.standalone_model_id
+                 or after.dirty != source.dirty or after.fingerprint != source.fingerprint):
+             raise DesktopOperationError("SOURCE_MODEL_NOT_PRESERVED", "source model signal changed or lacks an exact preservation baseline", side_effect_started=True, safe_retry=False)
+-        return SavedCopy(str(destination), digest, True, bool(after.dirty), str(after.fingerprint))
++        return SavedCopy(str(destination), None, True, bool(after.dirty), str(after.fingerprint), None)
++
++    def save_copy_completion_state(self, identity, *, side_effect_started=False):
++        try:
++            profile = self._profile(identity)
++            selector = profile["selectors"].get("save_complete")
++            states = selector.get("states") if isinstance(selector, Mapping) else None
++            if not isinstance(states, Mapping) or set(states) != {"idle", "busy", "complete"}:
++                raise DesktopOperationError(
++                    "SAVE_COPY_COMPLETION_UNAVAILABLE",
++                    "profile lacks a distinct observed idle/busy/complete selector",
++                    category=UNSUPPORTED_CONTROL, side_effect_started=side_effect_started,
++                    safe_retry=not side_effect_started,
++                )
++            observed = self.gateway.read_selector(identity, selector)
++            for state, expected in states.items():
++                if observed == expected:
++                    return state
++            raise DesktopOperationError(
++                "SAVE_COPY_COMPLETION_UNKNOWN", "AX completion selector returned an unrecognized state",
++                category=UNSUPPORTED_CONTROL if not side_effect_started else MODEL_BINDING_UNKNOWN,
++                side_effect_started=side_effect_started, safe_retry=not side_effect_started,
++            )
++        except DesktopOperationError as exc:
++            if side_effect_started:
++                exc.side_effect_started = True
++                exc.safe_retry = False
++                exc.category = MODEL_BINDING_UNKNOWN
++            raise
+ 
+     def verify_source_preserved(self, identity, source):
+         from ._desktop_service import SourcePreservation
+--- a/comsol_mcp/_desktop_selector_profile.py
++++ b/comsol_mcp/_desktop_selector_profile.py
+@@ -245,14 +245,19 @@
+     if not isinstance(pattern, str) or pattern not in {"read", "value", "invoke", "selection"}:
+         raise DesktopOperationError("DESKTOP_PROFILE_INVALID", f"selector {selector_id!r} must declare a supported interaction pattern", safe_retry=True)
+     states = value.get("states")
+-    if selector_id in {"shell_busy", "model_dirty"}:
+-        expected_states = {"busy", "idle"} if selector_id == "shell_busy" else {"dirty", "clean"}
++    if selector_id in {"shell_busy", "model_dirty", "save_complete"}:
++        if selector_id == "shell_busy":
++            expected_states = {"busy", "idle"}
++        elif selector_id == "model_dirty":
++            expected_states = {"dirty", "clean"}
++        else:
++            expected_states = {"idle", "busy", "complete"}
+         if (not isinstance(states, Mapping) or set(states) != expected_states
+                 or not all(isinstance(states[key], str) and states[key] for key in expected_states)
+                 or len({states[key] for key in expected_states}) != len(expected_states)):
+             raise DesktopOperationError("DESKTOP_PROFILE_INVALID", f"{selector_id} requires exact distinct state readbacks", safe_retry=True)
+     elif states is not None:
+-        raise DesktopOperationError("DESKTOP_PROFILE_INVALID", "states are only accepted for shell_busy or model_dirty", safe_retry=True)
++        raise DesktopOperationError("DESKTOP_PROFILE_INVALID", "states are only accepted for shell_busy, model_dirty or save_complete", safe_retry=True)
+     if platform == "macos" and readback not in {"name", "value"}:
+         raise DesktopOperationError("DESKTOP_PROFILE_INVALID", f"AX selector {selector_id!r} declares an unsupported readback", safe_retry=True)
+     if selector_id in {"active_model_label", "active_server_endpoint", "standalone_model_id",
+@@ -262,6 +267,8 @@
+         raise DesktopOperationError("DESKTOP_PROFILE_INVALID", f"action selector {selector_id!r} must declare invoke or selection", safe_retry=True)
+     if selector_id == "save_path" and pattern != "value":
+         raise DesktopOperationError("DESKTOP_PROFILE_INVALID", "Save Copy path selector must declare ValuePattern", safe_retry=True)
++    if selector_id == "save_complete" and pattern != "read":
++        raise DesktopOperationError("DESKTOP_PROFILE_INVALID", "Save Copy completion selector must be read-only", safe_retry=True)
+     # Freeze the parsed values into plain, bounded JSON data.
+     result = {"selector_id": selector_id, "kind": expected_kind,
+               "properties": dict(properties), "readback": readback,
+@@ -314,6 +321,16 @@
+             raise DesktopOperationError("DESKTOP_PROFILE_DUPLICATE", "selector profile contains duplicate exact selectors", safe_retry=True)
+         fingerprints.add(fingerprint)
+         validated[selector_id] = item
++    save_selector_names = {"save_copy", "save_path", "save_confirm", "save_complete"}
++    if set(validated) & save_selector_names:
++        if not save_selector_names <= set(validated):
++            raise DesktopOperationError(
++                "DESKTOP_PROFILE_INVALID",
++                "Save Copy requires observed action, path, confirmation and completion selectors",
++                safe_retry=True,
++            )
++        if validated["save_complete"]["pattern"] != "read":
++            raise DesktopOperationError("DESKTOP_PROFILE_INVALID", "Save Copy completion must be a read-only observed selector", safe_retry=True)
+     if "shell_input" in validated or "shell_run" in validated or "shell_output" in validated or "shell_busy" in validated:
+         required_shell = {"shell_input", "shell_run", "shell_output", "shell_busy"}
+         if not required_shell <= set(validated):
+--- a/comsol_mcp/_desktop_service.py
++++ b/comsol_mcp/_desktop_service.py
+@@ -204,6 +204,7 @@
+     def select_node(self, identity: WindowIdentity, path: Any) -> Mapping[str, Any]: ...
+     def capture(self, identity: WindowIdentity, region: str) -> Mapping[str, Any]: ...
+     def perform_action(self, identity: WindowIdentity, plan: DesktopActionPlan) -> Mapping[str, Any]: ...
++    def save_copy_completion_state(self, identity: WindowIdentity, *, side_effect_started: bool = False) -> str: ...
+     def save_copy(self, identity: WindowIdentity, destination: Path, source: DesktopModelObservation) -> SavedCopy: ...
+     def verify_source_preserved(self, identity: WindowIdentity, source: DesktopModelObservation) -> SourcePreservation: ...
+     def shell_execute(self, identity: WindowIdentity, artifact: TrustedSourceArtifact) -> Mapping[str, Any]: ...
+@@ -257,8 +258,16 @@
+ 
+ def _verified_private_save_copy_file(stage_root: Path, path: Path,
+                                      stage_root_identity: Mapping[str, Any],
+-                                     *, timeout_s: float = 120.0) -> dict[str, Any]:
+-    """Wait for a stable Save Copy, then hash bytes from a pinned host-private handle."""
++                                     *, completion_verified: bool = False,
++                                     timeout_s: float = 120.0) -> dict[str, Any]:
++    """Hash a stable private Save Copy only after an observed UI completion transition.
++
++    File quiet time is a secondary byte-integrity check. It never establishes
++    that the native Save Copy operation finished; the coordinator must first
++    observe the profiled idle->busy->complete transition.
++    """
++    if completion_verified is not True:
++        raise DesktopOperationError("SAVE_COPY_COMPLETION_UNKNOWN", "native completion state was not observed by the serialized coordinator", side_effect_started=True, safe_retry=False)
+     if path.parent != stage_root or path.name != "model.mph":
+         raise DesktopOperationError("SAVE_COPY_STAGE_UNTRUSTED", "native Save Copy path escaped its exact task-private staging directory", side_effect_started=True, safe_retry=False)
+     deadline = time.monotonic() + timeout_s
+@@ -290,9 +299,9 @@
+                 stable_since = now
+         else:
+             previous, stable_since = current, None
+-        # Three adjacent samples only establish a 200 ms pause, which is too
+-        # short for native Save Copy writers that flush in bursts. Require a
+-        # bounded two-second quiet window before pinning and hashing.
++        # After the native profile has explicitly reported completion, require
++        # a bounded quiet window as a secondary check against asynchronous
++        # flushes. This quiet interval is not the completion signal.
+         if stable_since is not None and now - stable_since >= 2.0:
+             break
+         time.sleep(0.1)
+@@ -346,6 +355,14 @@
+         if (not stat.S_ISREG(before.st_mode)
+                 or (int(before.st_dev), int(before.st_ino), int(before.st_size)) != current[:3]):
+             raise DesktopOperationError("SAVE_COPY_CHANGED", "private Save Copy output changed before hashing", side_effect_started=True, safe_retry=False)
++        current_uid = os.getuid()
++        named_before_chmod = path.lstat()
++        if (int(before.st_uid) != current_uid or int(before.st_nlink) != 1
++                or stat.S_ISLNK(named_before_chmod.st_mode)
++                or not stat.S_ISREG(named_before_chmod.st_mode)
++                or (int(named_before_chmod.st_dev), int(named_before_chmod.st_ino))
++                != (int(before.st_dev), int(before.st_ino))):
++            raise DesktopOperationError("SAVE_COPY_UNVERIFIED", "staged file ownership, link count or named binding is unsafe before permission tightening", side_effect_started=True, safe_retry=False)
+         os.fchmod(fd, 0o600)
+         # fchmod intentionally tightens a newly-created file inside the
+         # already-private stage before ownership verification; bind subsequent
+@@ -1065,6 +1082,48 @@
+                 exc.side_effect_started = True
+             raise
+ 
++    def _wait_for_save_copy_completion(self, token: str, identity: WindowIdentity,
++                                       *, timeout_s: float = 120.0) -> None:
++        observer = getattr(self.adapter, "save_copy_completion_state", None)
++        if not callable(observer):
++            raise DesktopOperationError(
++                "SAVE_COPY_COMPLETION_UNAVAILABLE",
++                "native adapter has no observed Save Copy completion channel",
++                category=MODEL_BINDING_UNKNOWN, side_effect_started=True, safe_retry=False,
++            )
++        deadline = time.monotonic() + timeout_s
++        busy_seen = False
++        while time.monotonic() < deadline:
++            try:
++                current = self._revalidate(self._get_lease(token))
++                if current.identity != identity:
++                    raise DesktopOperationError(
++                        "WINDOW_IDENTITY_CHANGED", "Desktop window identity changed during Save Copy",
++                        category=MODEL_BINDING_UNKNOWN, side_effect_started=True, safe_retry=False,
++                    )
++                state = observer(identity, side_effect_started=True)
++            except DesktopOperationError as exc:
++                exc.side_effect_started = True
++                exc.safe_retry = False
++                if exc.category is None:
++                    exc.category = MODEL_BINDING_UNKNOWN
++                raise
++            if state == "busy":
++                busy_seen = True
++            elif state == "complete" and busy_seen:
++                return
++            elif state not in {"idle", "busy", "complete"}:
++                raise DesktopOperationError(
++                    "SAVE_COPY_COMPLETION_UNKNOWN", "profile returned an unrecognized Save Copy state",
++                    category=MODEL_BINDING_UNKNOWN, side_effect_started=True, safe_retry=False,
++                )
++            time.sleep(0.2)
++        raise DesktopOperationError(
++            "SAVE_COPY_COMPLETION_UNKNOWN",
++            "Save Copy did not produce the observed busy-to-complete transition within the bound",
++            category=MODEL_BINDING_UNKNOWN, side_effect_started=True, safe_retry=False,
++        )
++
+     def _migrate(self, project_id: str, token: str, observation: WindowObservation, args: Mapping[str, Any],
+                  record: Mapping[str, Any], context: DesktopDispatchContext,
+                  mark_effect: Callable[[], None]) -> dict[str, Any]:
+@@ -1087,6 +1146,19 @@
+         stage_path = stage_root / "model.mph"
+         if stage_path.exists() or stage_path.is_symlink():
+             raise DesktopOperationError("SAVE_COPY_STAGE_UNKNOWN", "private Save Copy staging leaf was not new", category=MODEL_BINDING_UNKNOWN, safe_retry=True)
++        completion_observer = getattr(self.adapter, "save_copy_completion_state", None)
++        if not callable(completion_observer):
++            raise DesktopOperationError(
++                "SAVE_COPY_COMPLETION_UNAVAILABLE",
++                "native adapter has no observed Save Copy completion channel",
++                category=UNSUPPORTED_CONTROL, safe_retry=True,
++            )
++        initial_completion_state = completion_observer(observation.identity, side_effect_started=False)
++        if initial_completion_state != "idle":
++            raise DesktopOperationError(
++                "SAVE_COPY_NOT_IDLE", "profiled Save Copy control is not in its observed idle state",
++                category=UNSUPPORTED_CONTROL, safe_retry=True,
++            )
+         mark_effect()
+         copy = self.adapter.save_copy(observation.identity, stage_path, source)
+         if (not isinstance(copy, SavedCopy) or Path(copy.path) != stage_path
+@@ -1094,7 +1166,19 @@
+             raise DesktopOperationError("SAVE_COPY_UNVERIFIED", "adapter did not return the exact private staging path and an optional valid SHA-256", category=MODEL_BINDING_UNKNOWN, side_effect_started=True)
+         if not copy.source_preserved or copy.source_dirty_after != source.dirty or copy.source_fingerprint_after != source.fingerprint:
+             raise DesktopOperationError("SOURCE_MODEL_NOT_PRESERVED", "save-copy changed or discarded the standalone source state", category=MODEL_BINDING_UNKNOWN, side_effect_started=True)
+-        stage_receipt = _verified_private_save_copy_file(stage_root, stage_path, stage_root_identity)
++        self._wait_for_save_copy_completion(token, observation.identity)
++        source_preservation = self.adapter.verify_source_preserved(observation.identity, source)
++        if (not isinstance(source_preservation, SourcePreservation) or not source_preservation.still_open
++                or source_preservation.standalone_model_id != source.standalone_model_id
++                or source_preservation.fingerprint != source.fingerprint
++                or source_preservation.dirty != source.dirty):
++            raise DesktopOperationError(
++                "SOURCE_MODEL_NOT_PRESERVED", "source identity or state changed before staged bytes could be trusted",
++                category=MODEL_BINDING_UNKNOWN, side_effect_started=True, safe_retry=False,
++            )
++        stage_receipt = _verified_private_save_copy_file(
++            stage_root, stage_path, stage_root_identity, completion_verified=True,
++        )
+         if ((copy.sha256 is not None and stage_receipt["sha256"] != copy.sha256)
+                 or (copy.size_bytes is not None and copy.size_bytes != stage_receipt["size_bytes"])):
+             raise DesktopOperationError("SAVE_COPY_HASH_MISMATCH", "saved copy bytes differ from the pinned native receipt", category=MODEL_BINDING_UNKNOWN, side_effect_started=True)
+--- a/comsol_mcp/_desktop_uia.py
++++ b/comsol_mcp/_desktop_uia.py
+@@ -47,7 +47,10 @@
+     [DllImport("kernel32.dll", SetLastError=true)] private static extern IntPtr OpenProcess(uint access, bool inherit, uint pid);
+     [DllImport("kernel32.dll", SetLastError=true)] private static extern bool GetProcessTimes(IntPtr process, out FILETIME creation, out FILETIME exit, out FILETIME kernel, out FILETIME user);
+     [DllImport("kernel32.dll", SetLastError=true)] private static extern uint WaitForSingleObject(IntPtr handle, uint milliseconds);
+-    [DllImport("kernel32.dll", SetLastError=true)] private static extern bool GetWindowThreadProcessId(IntPtr hwnd, out uint pid);
++    // GetWindowThreadProcessId is a user32 API returning the thread ID as a
++    // DWORD (zero means failure); BOOL marshaling here makes valid HWNDs look
++    // like a boolean success value and also changes the native declaration.
++    [DllImport("user32.dll", SetLastError=true)] private static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint pid);
+     [DllImport("kernel32.dll", SetLastError=true)] private static extern bool ProcessIdToSessionId(uint pid, out uint session);
+     [DllImport("advapi32.dll", SetLastError=true)] private static extern bool OpenProcessToken(IntPtr process, uint access, out IntPtr token);
+     [DllImport("advapi32.dll", SetLastError=true)] private static extern bool GetTokenInformation(IntPtr token, int infoClass, IntPtr info, uint length, out uint returned);
+--- a/comsol_mcp/_desktop_windows.py
++++ b/comsol_mcp/_desktop_windows.py
+@@ -20,6 +20,7 @@
+     UNSUPPORTED_CONTROL,
+     DesktopOperationError,
+     MetadataOnlyDesktopAdapter,
++    SavedCopy,
+     WindowIdentity,
+     WindowObservation,
+ )
+@@ -313,9 +314,9 @@
+ 
+     def save_copy(self, identity: WindowIdentity, destination: Path, source=None):
+         profile = self._profile(identity)
+-        required = {"save_copy", "save_path", "save_confirm"}
++        required = {"save_copy", "save_path", "save_confirm", "save_complete"}
+         if not required <= set(profile["selectors"]):
+-            raise DesktopOperationError("DESKTOP_SELECTOR_UNAVAILABLE", "profile lacks exact observed Save Copy and dialog selectors", safe_retry=True)
++            raise DesktopOperationError("DESKTOP_SELECTOR_UNAVAILABLE", "profile lacks exact observed Save Copy and completion selectors", safe_retry=True)
+         from ._desktop_service import DesktopModelObservation
+         if (not isinstance(source, DesktopModelObservation) or source.mode != "STANDALONE"
+                 or not isinstance(source.standalone_model_id, str) or not source.standalone_model_id
+@@ -328,10 +329,10 @@
+                 or before.active_model_label != source.active_model_label
+                 or before.fingerprint != source.fingerprint or before.dirty != source.dirty):
+             raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "standalone source changed before Save Copy", safe_retry=True)
++        if self.save_copy_completion_state(identity, side_effect_started=False) != "idle":
++            raise DesktopOperationError("SAVE_COPY_NOT_IDLE", "profiled Save Copy control is not in its observed idle state", safe_retry=True)
+         selectors = {name: profile["selectors"][name] for name in required}
+         self.gateway.save_copy(identity, selectors, str(destination))
+-        if not destination.is_file() or destination.is_symlink():
+-            raise DesktopOperationError("SAVE_COPY_UNVERIFIED", "UIA Save Copy produced no regular target file", side_effect_started=True, safe_retry=False)
+         after = self.observe_model(identity)
+         if (after.mode != source.mode or after.standalone_model_id != source.standalone_model_id
+                 or after.active_model_label != source.active_model_label or after.dirty != source.dirty
+@@ -340,7 +341,36 @@
+         # Completion, ownership and hash are established by the coordinator's
+         # pinned host-private staging verifier after UIA returns. Hashing a
+         # caller path here would race an unfinished or replaced Save Copy.
+-        return SavedCopy(str(destination), None, True, bool(after.dirty), str(after.fingerprint))
++        return SavedCopy(str(destination), None, True, bool(after.dirty), str(after.fingerprint), None)
++
++    def save_copy_completion_state(self, identity: WindowIdentity, *, side_effect_started: bool = False) -> str:
++        from ._desktop_service import UNSUPPORTED_CONTROL
++        try:
++            profile = self._profile(identity)
++            selector = profile["selectors"].get("save_complete")
++            states = selector.get("states") if isinstance(selector, dict) else None
++            if not isinstance(states, dict) or set(states) != {"idle", "busy", "complete"}:
++                raise DesktopOperationError(
++                    "SAVE_COPY_COMPLETION_UNAVAILABLE",
++                    "profile lacks a distinct observed idle/busy/complete selector",
++                    category=UNSUPPORTED_CONTROL, side_effect_started=side_effect_started,
++                    safe_retry=not side_effect_started,
++                )
++            observed = self.gateway.read(identity, selector)
++            for state, expected in states.items():
++                if observed == expected:
++                    return state
++            raise DesktopOperationError(
++                "SAVE_COPY_COMPLETION_UNKNOWN", "UIA completion selector returned an unrecognized state",
++                category=UNSUPPORTED_CONTROL if not side_effect_started else "MODEL_BINDING_UNKNOWN",
++                side_effect_started=side_effect_started, safe_retry=not side_effect_started,
++            )
++        except DesktopOperationError as exc:
++            if side_effect_started:
++                exc.side_effect_started = True
++                exc.safe_retry = False
++                exc.category = "MODEL_BINDING_UNKNOWN"
++            raise
+ 
+     def verify_source_preserved(self, identity: WindowIdentity, source):
+         from ._desktop_service import SourcePreservation
+--- a/tests/test_desktop_control_wiring.py
++++ b/tests/test_desktop_control_wiring.py
+@@ -355,7 +355,9 @@
+         stage_path = stage_root / "model.mph"
+         payload = b"synthetic native Save Copy bytes"
+         stage_path.write_bytes(payload)
+-        stage_receipt = _verified_private_save_copy_file(stage_root, stage_path, _root_identity)
++        stage_receipt = _verified_private_save_copy_file(
++            stage_root, stage_path, _root_identity, completion_verified=True,
++        )
+         token = daemon._desktop_request_scope.set(scope)
+         try:
+             result = daemon._publish_desktop_save_copy(
+@@ -375,7 +377,9 @@
+         raced_root, raced_root_identity = _create_private_save_copy_stage(raced_context)
+         raced_source = raced_root / "model.mph"
+         raced_source.write_bytes(b"second staged model")
+-        raced_receipt = _verified_private_save_copy_file(raced_root, raced_source, raced_root_identity)
++        raced_receipt = _verified_private_save_copy_file(
++            raced_root, raced_source, raced_root_identity, completion_verified=True,
++        )
+         import comsol_mcp._artifact_store as artifact_store
+         actual_publisher = artifact_store._publish_project_chunks_no_clobber
+ 
+--- a/tests/test_desktop_native_adapters_w25.py
++++ b/tests/test_desktop_native_adapters_w25.py
+@@ -75,6 +75,8 @@
+         "save_copy": _selector("windows", "save_copy", property_id="save-copy", pattern="invoke"),
+         "save_path": _selector("windows", "save_path", property_id="save-path", pattern="value", readback="value"),
+         "save_confirm": _selector("windows", "save_confirm", property_id="save-ok", pattern="invoke"),
++        "save_complete": _selector("windows", "save_complete", pattern="read", readback="value",
++                                    states={"idle": "Ready", "busy": "Saving", "complete": "Saved"}),
+     }
+     raw = json.dumps(_profile("windows", selectors=save_selectors), separators=(",", ":")).encode()
+     path = tmp_path / "profile.json"
+@@ -83,6 +85,12 @@
+     loaded = load_selector_profile(path, WINDOWS_ID, os_build="26100")
+     assert loaded["selectors"]["save_copy"]["pattern"] == "invoke"
+     assert loaded["profile_sha256"] == hashlib.sha256(raw).hexdigest()
++    incomplete_save_profile = _profile("windows", selectors={
++        key: value for key, value in save_selectors.items() if key != "save_complete"
++    })
++    with pytest.raises(DesktopOperationError, match="completion selectors"):
++        validate_profile(incomplete_save_profile, platform_name="windows",
++                          comsol_version=WINDOWS_ID.comsol_version, os_build="26100")
+     with pytest.raises(DesktopOperationError, match="strict UTF-8 JSON"):
+         _strict_json(b'{"schema":"x","schema":"y"}')
+     with pytest.raises(DesktopOperationError) as mismatch:
+@@ -298,6 +306,7 @@
+     assert "ProcessIdToSessionId(processId" in _POWERSHELL
+     assert "OpenProcessToken(process, TOKEN_QUERY" in _POWERSHELL
+     assert "GetWindowThreadProcessId(hwnd" in _POWERSHELL
++    assert '[DllImport("user32.dll", SetLastError=true)] private static extern uint GetWindowThreadProcessId' in _POWERSHELL
+     assert "function Invoke-Exact" in _POWERSHELL and "$pin.AssertTarget($windowHandle)" in _POWERSHELL
+     assert "finally {\n    $pin.Dispose()\n}" in _POWERSHELL
+ 
+@@ -314,6 +323,8 @@
+         "save_copy": _selector("windows", "save_copy", pattern="invoke"),
+         "save_path": _selector("windows", "save_path", pattern="value", readback="value"),
+         "save_confirm": _selector("windows", "save_confirm", pattern="invoke"),
++        "save_complete": _selector("windows", "save_complete", pattern="read", readback="value",
++                                    states={"idle": "Ready", "busy": "Saving", "complete": "Saved"}),
+     }
+     class Gateway:
+         def __init__(self):
+@@ -703,8 +714,11 @@
+     class Gateway:
+         def __init__(self):
+             self.saves = []
++            self.completion_values = ["Ready", "Saving", "Saved"]
+ 
+         def read_selector(self, _identity, selector):
++            if selector["selector_id"] == "save_complete":
++                return self.completion_values.pop(0) if self.completion_values else "Saved"
+             return {
+                 "active_model_label": "standalone-A",
+                 "standalone_model_id": "id-A",
+@@ -724,6 +738,8 @@
+         "save_copy": _selector("macos", "save_copy", pattern="invoke"),
+         "save_path": _selector("macos", "save_path", pattern="value", readback="value"),
+         "save_confirm": _selector("macos", "save_confirm", pattern="invoke"),
++        "save_complete": _selector("macos", "save_complete", pattern="read", readback="value",
++                                    states={"idle": "Ready", "busy": "Saving", "complete": "Saved"}),
+     }
+     gateway = Gateway()
+     adapter = MacOSDesktopAdapter(gateway=gateway)
+@@ -733,10 +749,46 @@
+     destination = tmp_path / "standalone-copy.mph"
+     result = adapter.save_copy(MAC_ID, destination, source)
+     assert result.path == str(destination)
+-    assert result.sha256 == hashlib.sha256(b"synthetic-mph-bytes").hexdigest()
++    assert result.sha256 is None and result.size_bytes is None
+     assert result.source_preserved is True and result.source_dirty_after is True
+-    assert gateway.saves == [(tuple(sorted({"save_copy", "save_path", "save_confirm"})), str(destination))]
++    assert gateway.saves == [(tuple(sorted({"save_copy", "save_path", "save_confirm", "save_complete"})), str(destination))]
++    assert adapter.save_copy_completion_state(MAC_ID, side_effect_started=True) == "busy"
++    assert adapter.save_copy_completion_state(MAC_ID, side_effect_started=True) == "complete"
+     with pytest.raises(DesktopOperationError) as stale:
+         adapter.save_copy(MAC_ID, tmp_path / "stale.mph", DesktopModelObservation("STANDALONE", active_model_label="other"))
+     assert stale.value.code == "MODEL_BINDING_UNKNOWN"
+     assert len(gateway.saves) == 1
++
++
++def test_platform_save_copy_requires_observed_completion_before_any_native_dialog_effect(tmp_path):
++    source = DesktopModelObservation("STANDALONE", standalone_model_id="id-A", active_model_label="model-A",
++                                     fingerprint="a" * 64, dirty=False)
++    selectors = {
++        "active_model_label": _selector("windows", "active_model_label", pattern="read", readback="value"),
++        "standalone_model_id": _selector("windows", "standalone_model_id", pattern="read", readback="value"),
++        "model_fingerprint": _selector("windows", "model_fingerprint", pattern="read", readback="value"),
++        "model_dirty": _selector("windows", "model_dirty", pattern="read", readback="value",
++                                 states={"dirty": "Dirty", "clean": "Clean"}),
++        "save_copy": _selector("windows", "save_copy", pattern="invoke"),
++        "save_path": _selector("windows", "save_path", pattern="value", readback="value"),
++        "save_confirm": _selector("windows", "save_confirm", pattern="invoke"),
++    }
++
++    class Gateway:
++        def __init__(self):
++            self.effects = []
++
++        def read(self, _identity, selector):
++            return {"active_model_label": "model-A", "standalone_model_id": "id-A",
++                    "model_fingerprint": "a" * 64, "model_dirty": "Clean"}[selector["selector_id"]]
++
++        def save_copy(self, *args):
++            self.effects.append(args)
++
++    gateway = Gateway()
++    adapter = WindowsDesktopAdapter(gateway=gateway)
++    adapter._profile = lambda _identity: {"selectors": selectors, "profile_sha256": "d" * 64}
++    with pytest.raises(DesktopOperationError) as caught:
++        adapter.save_copy(WINDOWS_ID, tmp_path / "must-not-write.mph", source)
++    assert caught.value.code == "DESKTOP_SELECTOR_UNAVAILABLE"
++    assert gateway.effects == []
+--- a/tests/test_desktop_service.py
++++ b/tests/test_desktop_service.py
+@@ -3,6 +3,7 @@
+ 
+ from dataclasses import dataclass
+ from hashlib import sha256
++import os
+ from pathlib import Path
+ import threading
+ import time
+@@ -79,6 +80,12 @@
+         self.show_model_error: Exception | None = None
+         self.show_model_calls: list[str] = []
+         self.action_error: Exception | None = None
++        self.save_copy_delay_seconds: float | None = None
++        self.save_copy_never_completes = False
++        self._save_copy_state = "idle"
++        self._save_copy_completion_sequence: list[str] = []
++        self._save_copy_writer: threading.Thread | None = None
++        self.save_copy_hardlink_path: Path | None = None
+ 
+     def status(self, runtime_id: str | None = None):
+         return {"platform": "fixture", "permission_status": "AVAILABLE", "control_status": AVAILABLE,
+@@ -143,9 +150,37 @@
+ 
+     def save_copy(self, identity: WindowIdentity, destination: Path, source=None):
+         self._claim_observed("desktop.migrate_standalone")
+-        destination.write_bytes(b"fixture save-copy bytes")
+-        payload = destination.read_bytes()
+-        return SavedCopy(str(destination), sha256(payload).hexdigest(), True, True, "source-fingerprint", len(payload))
++        payload = b"fixture save-copy bytes"
++        if self.save_copy_delay_seconds is not None:
++            prefix = payload[:8]
++            destination.write_bytes(prefix)
++            self._save_copy_state = "busy"
++
++            def finish_delayed_copy():
++                time.sleep(self.save_copy_delay_seconds)
++                if self.save_copy_never_completes:
++                    return
++                with destination.open("ab") as stream:
++                    stream.write(payload[len(prefix):])
++                    stream.flush()
++                    os.fsync(stream.fileno())
++                self._save_copy_state = "complete"
++
++            self._save_copy_writer = threading.Thread(target=finish_delayed_copy, daemon=True)
++            self._save_copy_writer.start()
++        else:
++            destination.write_bytes(payload)
++            self._save_copy_state = "idle"
++            self._save_copy_completion_sequence = ["busy", "complete"]
++        if self.save_copy_hardlink_path is not None:
++            os.link(destination, self.save_copy_hardlink_path)
++        return SavedCopy(str(destination), None, True, True, "source-fingerprint", None)
++
++    def save_copy_completion_state(self, identity: WindowIdentity, *, side_effect_started: bool = False):
++        self._claim_observed("desktop.migrate_standalone")
++        if self._save_copy_completion_sequence:
++            return self._save_copy_completion_sequence.pop(0)
++        return self._save_copy_state
+ 
+     def verify_source_preserved(self, identity: WindowIdentity, source: DesktopModelObservation):
+         return SourcePreservation(
+@@ -222,6 +257,7 @@
+         self.permissions = permissions if permissions is not None else {"READ", "HOST_CONTROL", "TRUSTED_CODE", "PROJECT_WRITE"}
+         self.clock_value = [0.0]
+         self.save_root = tmp_path.resolve()
++        self.save_copy_publish_calls = 0
+ 
+         def resolve_action(project_id, action):
+             if action.get("action_id") != "safe.command" or action.get("target") != "window":
+@@ -237,6 +273,7 @@
+             return destination.is_relative_to(self.save_root)
+ 
+         def publish_save_copy(project_id, context, stage_root, stage_path, destination, receipt):
++            self.save_copy_publish_calls += 1
+             operation = self.store.get_operation(context.operation_id)
+             job = self.store.operation_job(context.operation_id)
+             assert operation["operation"] == "desktop.migrate_standalone" and operation["status"] == "RUNNING"
+@@ -270,6 +307,8 @@
+         )
+ 
+     def close(self):
++        if self.adapter._save_copy_writer is not None:
++            self.adapter._save_copy_writer.join(timeout=5)
+         self.store.close()
+ 
+     def windows(self):
+@@ -714,7 +753,8 @@
+         assert failed["success"] is False
+         assert failed["error"]["code"] == "SOURCE_MODEL_NOT_PRESERVED"
+         assert failed["execution"]["status"] == "UNKNOWN"
+-        assert destination.is_file()
++        assert not destination.exists()
++        assert not [call for call in harness.engine.calls if call[0] == "model.load"]
+         assert harness.adapter.source_window_open is True
+         calls = len([call for call in harness.engine.calls if call[0] == "model.load"])
+         replay = harness.coordinator.dispatch("desktop.migrate_standalone", {
+@@ -753,6 +793,102 @@
+         assert destination.is_file()
+         assert harness.adapter.models["WINDOW:1"] == source
+         assert harness.adapter.source_window_open is True
++    finally:
++        harness.close()
++
++
++def test_migration_waits_for_profiled_completion_before_hash_publish_or_load(tmp_path):
++    """A writer paused beyond the old quiet window is not hashed or published early."""
++    harness = Harness(tmp_path)
++    try:
++        token = harness.windows()[0]
++        harness.adapter.models["WINDOW:1"] = DesktopModelObservation(
++            "STANDALONE", standalone_model_id="standalone-source-1",
++            fingerprint="source-fingerprint", dirty=True,
++        )
++        harness.adapter.save_copy_delay_seconds = 2.25
++        destination = tmp_path / "delayed-completion.mph"
++        result = harness.coordinator.dispatch("desktop.migrate_standalone", {
++            "project_id": "proj-1", "idempotency_key": "migration-delayed-completion",
++            "window_ref": token, "target_session_id": "session-target",
++            "save_policy": {"mode": "save_copy", "destination_path": str(destination), "overwrite": False},
++        })
++        assert result["success"] is True
++        assert destination.read_bytes() == b"fixture save-copy bytes"
++        assert result["data"]["saved_copy"]["sha256"] == sha256(b"fixture save-copy bytes").hexdigest()
++        assert len([call for call in harness.engine.calls if call[0] == "model.load"]) == 1
++        assert harness.adapter._save_copy_state == "complete"
++    finally:
++        harness.close()
++
++
++def test_migration_with_unconfirmed_native_completion_is_unknown_and_never_publishes(tmp_path, monkeypatch):
++    from comsol_mcp._desktop_service import DesktopCoordinator as CoordinatorType
++
++    harness = Harness(tmp_path)
++    try:
++        token = harness.windows()[0]
++        harness.adapter.models["WINDOW:1"] = DesktopModelObservation(
++            "STANDALONE", standalone_model_id="standalone-source-1",
++            fingerprint="source-fingerprint", dirty=True,
++        )
++        harness.adapter.save_copy_delay_seconds = 0.05
++        harness.adapter.save_copy_never_completes = True
++        original_wait = CoordinatorType.__dict__["_wait_for_save_copy_completion"]
++
++        def short_wait(self, lease_token, identity, *, timeout_s=120.0):
++            return original_wait(self, lease_token, identity, timeout_s=0.45)
++
++        monkeypatch.setattr(
++            CoordinatorType, "_wait_for_save_copy_completion", short_wait,
++        )
++        destination = tmp_path / "unconfirmed.mph"
++        result = harness.coordinator.dispatch("desktop.migrate_standalone", {
++            "project_id": "proj-1", "idempotency_key": "migration-no-completion",
++            "window_ref": token, "target_session_id": "session-target",
++            "save_policy": {"mode": "save_copy", "destination_path": str(destination), "overwrite": False},
++        })
++        assert result["success"] is False
++        assert result["error"]["code"] == "SAVE_COPY_COMPLETION_UNKNOWN"
++        assert result["error"]["safe_retry"] is False
++        assert result["execution"]["status"] == "UNKNOWN"
++        assert not destination.exists()
++        assert not [call for call in harness.engine.calls if call[0] == "model.load"]
++    finally:
++        harness.close()
++
++
++def test_migration_rejects_staged_hardlink_before_fchmod_publish_or_load(tmp_path, monkeypatch):
++    import tempfile
++    import comsol_mcp._desktop_service as desktop_service
++
++    tmp_path.chmod(0o700)
++    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
++    harness = Harness(tmp_path)
++    try:
++        token = harness.windows()[0]
++        harness.adapter.models["WINDOW:1"] = DesktopModelObservation(
++            "STANDALONE", standalone_model_id="standalone-source-1",
++            fingerprint="source-fingerprint", dirty=True,
++        )
++        hardlink = tmp_path / "unowned-hardlink.mph"
++        destination = tmp_path / "must-not-publish.mph"
++        harness.adapter.save_copy_hardlink_path = hardlink
++        fchmod_calls = []
++        monkeypatch.setattr(desktop_service.os, "fchmod", lambda *_args: fchmod_calls.append(True))
++        result = harness.coordinator.dispatch("desktop.migrate_standalone", {
++            "project_id": "proj-1", "idempotency_key": "migration-hardlink-stage",
++            "window_ref": token, "target_session_id": "session-target",
++            "save_policy": {"mode": "save_copy", "destination_path": str(destination), "overwrite": False},
++        })
++        assert result["success"] is False
++        assert result["error"]["code"] == "SAVE_COPY_UNVERIFIED"
++        assert result["execution"]["status"] == "UNKNOWN"
++        assert fchmod_calls == []
++        assert hardlink.read_bytes() == b"fixture save-copy bytes"
++        assert not destination.exists()
++        assert harness.save_copy_publish_calls == 0
++        assert not [call for call in harness.engine.calls if call[0] == "model.load"]
+     finally:
+         harness.close()
+ 
+@@ -832,7 +968,8 @@
+     writer = threading.Thread(target=finish_later)
+     writer.start()
+     try:
+-        receipt = _verified_private_save_copy_file(stage_root, staged, stage_identity, timeout_s=4)
++        receipt = _verified_private_save_copy_file(stage_root, staged, stage_identity,
++                                                   completion_verified=True, timeout_s=4)
+         writer.join(timeout=3)
+         assert not writer.is_alive() and not errors
+         assert receipt["size_bytes"] == len(full_bytes)
+@@ -875,7 +1012,8 @@
+ 
+     monkeypatch.setattr(os, "read", replace_name_after_hash_starts)
+     with pytest.raises(desktop_service.DesktopOperationError) as caught:
+-        desktop_service._verified_private_save_copy_file(stage_root, staged, stage_identity, timeout_s=4)
++        desktop_service._verified_private_save_copy_file(stage_root, staged, stage_identity,
++                                                          completion_verified=True, timeout_s=4)
+     assert replaced
+     assert caught.value.code == "SAVE_COPY_CHANGED"
+     assert caught.value.safe_retry is False

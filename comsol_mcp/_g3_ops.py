@@ -54,6 +54,10 @@ _MODULES = (
     "_w23_basis_v2_results",
     "_g3_metrics",
     "_g3_model_delivery",
+    "_g3_managed_models",
+    "_g3_definition_validation",
+    "_g3_model_domains",
+    "_g3_exports",
 )
 
 #: Effects for operations the design catalogue does not (yet) describe.  Every

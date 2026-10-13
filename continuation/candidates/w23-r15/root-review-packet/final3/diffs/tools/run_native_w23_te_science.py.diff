@@ -1,0 +1,38 @@
+--- /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r14/tools/run_native_w23_te_science.py
++++ /Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261013-candidate20-r15/tools/run_native_w23_te_science.py
+@@ -1572,7 +1572,9 @@
+ 
+ def build_mode_overlap_definition(source_map: Mapping[str, Any],
+                                   output_normal_sign: int,
+-                                  input_normal_sign: int) -> dict[str, Any]:
++                                  input_normal_sign: int, *, field_scheme: str = "legacy") -> dict[str, Any]:
++    from tools.w23_te_science_protocol import field_scheme_roles
++    roles = field_scheme_roles(field_scheme)
+     sources = source_map.get("sources")
+     if not isinstance(sources, Mapping):
+         raise ValueError("source map is missing resolved native sources")
+@@ -1582,8 +1584,10 @@
+             raise ValueError(f"source map lacks {role}")
+         return {key: item[key] for key in ("dataset_id", "solution_id", "outer_index", "inner_index")}
+     def fields(e_prefix: str, h_prefix: str, suffix: str = "") -> dict[str, Any]:
+-        return {"electric": {axis: (f"down(emw.{e_prefix}{axis})" if not suffix else f"emw.{e_prefix}{axis}{suffix}") for axis in "xyz"},
+-                "magnetic": {axis: (f"down(emw.{h_prefix}{axis})" if not suffix else f"emw.{h_prefix}{axis}{suffix}") for axis in "xyz"}}
++        if not suffix:
++            return {"electric":dict(roles["signal_e"]),"magnetic":dict(roles["signal_h"])}
++        port=suffix.removeprefix("_")
++        return {"electric":dict(roles["mode_e"][port]),"magnetic":dict(roles["mode_h"][port])}
+     return {
+         "schema_version": "1.0.0",
+         "phasor_convention": {
+@@ -2897,9 +2901,9 @@
+                     output641, input641)
+                 write_json(evidence / "software_global_phase_control.json", software_phase_control)
+             output_neff = _validate_mode_index(
+-                output641, "emw.neff_2", 2e-3 if mesh == "coarse" else 5e-4)
++                output641, "ewfd.neff_2", 2e-3 if mesh == "coarse" else 5e-4)
+             input_neff = _validate_mode_index(
+-                input641, "emw.neff_1", 2e-3 if mesh == "coarse" else 5e-4)
++                input641, "ewfd.neff_1", 2e-3 if mesh == "coarse" else 5e-4)
+             definition = build_mode_overlap_definition(
+                 source_receipt, int(output641["normal_sign"]), int(input641["normal_sign"]))
+             native_overlap, ref, revision = _native_overlap_call(

@@ -1,0 +1,156 @@
+{
+  "activation_plan": {
+    "from": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/install.staging",
+    "method": "pinned-parent renameatx_np(RENAME_EXCL), fail closed if unavailable or destination exists",
+    "must_not_add_to_recovered_runtime_or_system_site_packages": true,
+    "to": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/site"
+  },
+  "authorization_boundary": {
+    "COMSOL_launch_or_solver": "NOT_AUTHORIZED_NOT_RUN",
+    "GUI_observation_or_permission_prompt": "NOT_AUTHORIZED_NOT_RUN",
+    "actual_wheel_acquisition": "root-approved exact eight-wheel task-local candidate only; run only through normal managed execution review",
+    "task_local_directory_and_manifest_creation": "AUTHORIZED_GOAL_SCOPE"
+  },
+  "created_utc": "2026-10-12T04:07:18.886532+00:00",
+  "download_policy": {
+    "allowed_host": "files.pythonhosted.org",
+    "maximum_aggregate_body_bytes": 7388559,
+    "must_reverify_trusted_root_and_wheelhouse_identity_before_and_after": true,
+    "no_redirect_to_other_host": true,
+    "only_urls_from_exact_8_wheel_manifest": true,
+    "per_file_exact_size_and_sha256_required": true,
+    "per_file_exclusive_temp_then_no_clobber_link_publish": true
+  },
+  "install_argv": [
+    "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python3",
+    "-m",
+    "pip",
+    "install",
+    "--no-index",
+    "--no-deps",
+    "--only-binary=:all:",
+    "--require-hashes",
+    "--find-links",
+    "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/wheelhouse",
+    "--target",
+    "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/install.staging",
+    "-r",
+    "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/requirements-arm64.txt"
+  ],
+  "interpreter": {
+    "host_platform": "macOS arm64",
+    "install_mode": "pip --target into isolated empty child; no system/runtime environment mutation",
+    "path": "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python3",
+    "version": "3.12.13"
+  },
+  "requirements_file": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/requirements-arm64.txt",
+  "rollback": {
+    "method": "verify pinned T fd and task-root inode; no-replace renameatx_np(RENAME_EXCL) to unique sibling quarantine name; verify moved inode; if mismatch preserve both names and fence; no recursive deletion/pathname cleanup",
+    "no_overwrite": true,
+    "scope": "this exact task directory only"
+  },
+  "schema": "comsol-mcp.w25-arm64-task-runtime/2",
+  "status": "PREPARED_NO_DOWNLOAD_NO_INSTALL",
+  "subdirectories": {
+    "download.partial": {
+      "device": 16777231,
+      "inode": 14842241
+    },
+    "install.staging": {
+      "device": 16777231,
+      "inode": 14842239
+    },
+    "receipts": {
+      "device": 16777231,
+      "inode": 14842240
+    },
+    "wheelhouse": {
+      "device": 16777231,
+      "inode": 14842238
+    }
+  },
+  "task_directory_identity": {
+    "device": 16777231,
+    "inode": 14842237
+  },
+  "task_directory_leaf": "comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24",
+  "task_directory_security_sha256": null,
+  "task_directory_semantics": "posix-owner-mode+filesystem-ownership+no-extended-acl",
+  "trusted_parent_identity": {
+    "device": 16777231,
+    "inode": 297256
+  },
+  "trusted_parent_path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T",
+  "trusted_parent_semantics": "posix-owner-mode+filesystem-ownership+no-extended-acl",
+  "wheelhouse": {
+    "manifest_source": "docs/full_project_continuation_v2/evidence/w25-native-delivery-preparation-r1/macos-arm64-w25-runtime-candidate-r1.json",
+    "required_count": 8,
+    "required_total_bytes": 7388559,
+    "wheels": [
+      {
+        "filename": "psutil-5.9.8-cp38-abi3-macosx_11_0_arm64.whl",
+        "name": "psutil",
+        "sha256": "d16bbddf0693323b8c6123dd804100241da461e41d6e332fb0ba6058f630f8c8",
+        "size_bytes": 249898,
+        "url": "https://files.pythonhosted.org/packages/05/33/2d74d588408caedd065c2497bdb5ef83ce6082db01289a1e1147f6639802/psutil-5.9.8-cp38-abi3-macosx_11_0_arm64.whl",
+        "version": "5.9.8"
+      },
+      {
+        "filename": "pyobjc_core-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+        "name": "pyobjc-core",
+        "sha256": "122e6ad302a2abf5d4d4adb0156db751600ddf2768441696cba17b31323085e7",
+        "size_bytes": 6427637,
+        "url": "https://files.pythonhosted.org/packages/86/b2/bbf7f049880ab40d110e66f25122342a1f6c98d6fe3c59bb98985503c660/pyobjc_core-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+        "version": "12.2.2"
+      },
+      {
+        "filename": "pyobjc_framework_applicationservices-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+        "name": "pyobjc-framework-ApplicationServices",
+        "sha256": "5506bd6b5268a97fcb79b5b021f6cbbaaf5cdff3ec87094d8870268d8cf096ed",
+        "size_bytes": 32765,
+        "url": "https://files.pythonhosted.org/packages/00/ed/9d85751400f1cd23d71c824a57352ec4d216a8728255dc00c032c431d3ad/pyobjc_framework_applicationservices-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+        "version": "12.2.2"
+      },
+      {
+        "filename": "pyobjc_framework_cocoa-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+        "name": "pyobjc-framework-Cocoa",
+        "sha256": "e106f395531e67694376b0f1184612cbeea3ec8b9bf56b55ef41d026171d2a2d",
+        "size_bytes": 388117,
+        "url": "https://files.pythonhosted.org/packages/fd/2f/b67e73d8bc367e03fe7861cd9c49fff9dcfa6db83bc0630c0adcfb25b7fa/pyobjc_framework_cocoa-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+        "version": "12.2.2"
+      },
+      {
+        "filename": "pyobjc_framework_coremedia-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+        "name": "pyobjc-framework-CoreMedia",
+        "sha256": "84f5deee8d366bf73069a0525509637aa578ccd0e6688923b09999a8bc3077a8",
+        "size_bytes": 29421,
+        "url": "https://files.pythonhosted.org/packages/cd/26/de907d6ead970916b39787e52bed679945328161f2abac533515b2ac8934/pyobjc_framework_coremedia-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+        "version": "12.2.2"
+      },
+      {
+        "filename": "pyobjc_framework_coretext-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+        "name": "pyobjc-framework-CoreText",
+        "sha256": "a69611de569d92776e6391ca25492a5bbb4a05ba744006349e377a4fc5f7c8a5",
+        "size_bytes": 30120,
+        "url": "https://files.pythonhosted.org/packages/1c/88/e85a9268285fc0c28284dbdc869a27f5d3f2e436d2838221a6704b4f8eee/pyobjc_framework_coretext-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+        "version": "12.2.2"
+      },
+      {
+        "filename": "pyobjc_framework_quartz-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+        "name": "pyobjc-framework-Quartz",
+        "sha256": "7f668979d0c7320bf8f7ed6e030da578f93ab0f5dd619b295ec735cd8d5faa34",
+        "size_bytes": 219003,
+        "url": "https://files.pythonhosted.org/packages/ed/e4/8be95d2ff850f82fb55b44c63333a00a920bf8a73642e7d9c2f3638a26d2/pyobjc_framework_quartz-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+        "version": "12.2.2"
+      },
+      {
+        "filename": "pyobjc_framework_screencapturekit-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+        "name": "pyobjc-framework-ScreenCaptureKit",
+        "sha256": "5c81c68bc0399ad7ca6ccaa978574354a4da8fbb474527664fdbf08cc8f8abd5",
+        "size_bytes": 11598,
+        "url": "https://files.pythonhosted.org/packages/05/17/1bf74d227db0abc7ee8cd1d5affcdf8f81cdf514d14f6ce938b94f3b3d0f/pyobjc_framework_screencapturekit-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+        "version": "12.2.2"
+      }
+    ]
+  }
+}

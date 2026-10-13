@@ -1,0 +1,1446 @@
+{
+  "W": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-offline-venv-execution-r1-ch6jwesg",
+  "W_identity": {
+    "device": 16777231,
+    "inode": 28758065
+  },
+  "actual8commands_not_run": true,
+  "actual_command_plan": [
+    {
+      "argv": [
+        "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-liblzma-r2/cpython/bin/python3.12",
+        "-I",
+        "-B",
+        "-m",
+        "venv",
+        "--copies",
+        "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/w26-dependency-environments-r1/builder"
+      ],
+      "cap": 300,
+      "label": "builder-create",
+      "role_profile": null
+    },
+    {
+      "argv": [
+        "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/intel-liblzma-r2/cpython/bin/python3.12",
+        "-I",
+        "-B",
+        "-m",
+        "venv",
+        "--copies",
+        "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/w26-dependency-environments-r1/runtime"
+      ],
+      "cap": 300,
+      "label": "runtime-create",
+      "role_profile": null
+    },
+    {
+      "argv": [
+        "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/w26-dependency-environments-r1/builder/bin/python",
+        "-I",
+        "-B",
+        "-m",
+        "pip",
+        "install",
+        "--no-index",
+        "--only-binary=:all:",
+        "--require-hashes",
+        "--disable-pip-version-check",
+        "--no-input",
+        "--no-cache-dir",
+        "--find-links",
+        "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/w26-dependency-environments-r1/wheelhouse",
+        "-r",
+        "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/w26-dependency-environments-r1/inputs/requirements-backend.lock"
+      ],
+      "cap": 300,
+      "label": "builder-install",
+      "role_profile": null
+    },
+    {
+      "argv": [
+        "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/w26-dependency-environments-r1/runtime/bin/python",
+        "-I",
+        "-B",
+        "-m",
+        "pip",
+        "install",
+        "--no-index",
+        "--only-binary=:all:",
+        "--require-hashes",
+        "--disable-pip-version-check",
+        "--no-input",
+        "--no-cache-dir",
+        "--find-links",
+        "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/w26-dependency-environments-r1/wheelhouse",
+        "-r",
+        "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/w26-dependency-environments-r1/inputs/requirements-runtime.lock"
+      ],
+      "cap": 300,
+      "label": "runtime-install",
+      "role_profile": null
+    },
+    {
+      "argv": [
+        "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/w26-dependency-environments-r1/builder/bin/python",
+        "-I",
+        "-B",
+        "-m",
+        "pip",
+        "check"
+      ],
+      "cap": 180,
+      "label": "builder-check",
+      "role_profile": null
+    },
+    {
+      "argv": [
+        "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/w26-dependency-environments-r1/runtime/bin/python",
+        "-I",
+        "-B",
+        "-m",
+        "pip",
+        "check"
+      ],
+      "cap": 180,
+      "label": "runtime-check",
+      "role_profile": null
+    },
+    {
+      "argv": [
+        "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/w26-dependency-environments-r1/builder/bin/python",
+        "-I",
+        "-B",
+        "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-offline-venv-execution-r1-ch6jwesg/consumers.py",
+        "--role",
+        "builder",
+        "--context",
+        "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-offline-venv-execution-r1-ch6jwesg/CONTEXT.json",
+        "--context-sha",
+        "5e1d64a9f8c8ed44cdffff69b5b67e8a73fbd74faf41c508c0259d05ac6942a6"
+      ],
+      "cap": 180,
+      "label": "builder-profile",
+      "role_profile": "builder"
+    },
+    {
+      "argv": [
+        "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/w26-dependency-environments-r1/runtime/bin/python",
+        "-I",
+        "-B",
+        "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-offline-venv-execution-r1-ch6jwesg/consumers.py",
+        "--role",
+        "runtime",
+        "--context",
+        "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-offline-venv-execution-r1-ch6jwesg/CONTEXT.json",
+        "--context-sha",
+        "5e1d64a9f8c8ed44cdffff69b5b67e8a73fbd74faf41c508c0259d05ac6942a6"
+      ],
+      "cap": 180,
+      "label": "runtime-profile",
+      "role_profile": "runtime"
+    }
+  ],
+  "actual_input_refs": [
+    {
+      "bytes": 13427,
+      "dev": 16777231,
+      "inode": 28722481,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/annotated_types-0.8.0-py3-none-any.whl",
+      "sha256": "f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0",
+      "uid": 501
+    },
+    {
+      "bytes": 132079,
+      "dev": 16777231,
+      "inode": 28722486,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/anyio-4.15.1-py3-none-any.whl",
+      "sha256": "6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101",
+      "uid": 501
+    },
+    {
+      "bytes": 67548,
+      "dev": 16777231,
+      "inode": 28722491,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/attrs-26.1.0-py3-none-any.whl",
+      "sha256": "c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309",
+      "uid": 501
+    },
+    {
+      "bytes": 136983,
+      "dev": 16777231,
+      "inode": 28722498,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/certifi-2026.7.22-py3-none-any.whl",
+      "sha256": "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775",
+      "uid": 501
+    },
+    {
+      "bytes": 184719,
+      "dev": 16777231,
+      "inode": 17304260,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/archives/cffi-2.1.1-cp312-cp312-macosx_11_0_arm64.whl",
+      "sha256": "f81b3b8f3d4e343550fa4baa0e479bba9f2d29ce9c2e9b51d1ce1718d7442fcf",
+      "uid": 501
+    },
+    {
+      "bytes": 125251,
+      "dev": 16777231,
+      "inode": 28722505,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/click-8.5.0-py3-none-any.whl",
+      "sha256": "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360",
+      "uid": 501
+    },
+    {
+      "bytes": 4035307,
+      "dev": 16777231,
+      "inode": 28722524,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/cryptography-50.0.1-cp39-abi3-macosx_11_0_arm64.whl",
+      "sha256": "ca83d00d9e69cd5eb63f2e69c3a5a59e0cecae5ae14c6ae0b35830fe3b37bad0",
+      "uid": 501
+    },
+    {
+      "bytes": 37515,
+      "dev": 16777231,
+      "inode": 28722534,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/h11-0.16.0-py3-none-any.whl",
+      "sha256": "63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86",
+      "uid": 501
+    },
+    {
+      "bytes": 78784,
+      "dev": 16777231,
+      "inode": 28722539,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/httpcore-1.0.9-py3-none-any.whl",
+      "sha256": "2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55",
+      "uid": 501
+    },
+    {
+      "bytes": 73517,
+      "dev": 16777231,
+      "inode": 28722545,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/httpx-0.28.1-py3-none-any.whl",
+      "sha256": "d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad",
+      "uid": 501
+    },
+    {
+      "bytes": 8960,
+      "dev": 16777231,
+      "inode": 28722551,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/httpx_sse-0.4.3-py3-none-any.whl",
+      "sha256": "0ac1c9fe3c0afad2e0ebb25a934a59f4c7823b60792691f779fad2c5568830fc",
+      "uid": 501
+    },
+    {
+      "bytes": 69583,
+      "dev": 16777231,
+      "inode": 28722558,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/idna-3.20-py3-none-any.whl",
+      "sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+      "uid": 501
+    },
+    {
+      "bytes": 569654,
+      "dev": 16777231,
+      "inode": 28722563,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/jpype1-1.7.1-1-cp312-cp312-macosx_11_0_universal2.whl",
+      "sha256": "b3ddd9f9099202212a34679dfb95dda590bcfbd23289559d104e24abec9120d1",
+      "uid": 501
+    },
+    {
+      "bytes": 90630,
+      "dev": 16777231,
+      "inode": 28722570,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/jsonschema-4.26.0-py3-none-any.whl",
+      "sha256": "d489f15263b8d200f8387e64b4c3a75f06629559fb73deb8fdfb525f2dab50ce",
+      "uid": 501
+    },
+    {
+      "bytes": 18437,
+      "dev": 16777231,
+      "inode": 28722577,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/jsonschema_specifications-2025.9.1-py3-none-any.whl",
+      "sha256": "98802fee3a11ee76ecaca44429fda8a41bff98b00a0f2838151b113f210cc6fe",
+      "uid": 501
+    },
+    {
+      "bytes": 234581,
+      "dev": 16777231,
+      "inode": 28722582,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/mcp-1.30.0-py3-none-any.whl",
+      "sha256": "666edb5009503e1047c9d60346a756f94b261f05cc2625f23d41c728ffc484d0",
+      "uid": 501
+    },
+    {
+      "bytes": 65897,
+      "dev": 16777231,
+      "inode": 28722587,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/mph-1.4.0-py3-none-any.whl",
+      "sha256": "835835ac9d211601def50a6f8c61b783531e905d7165c8de7bf8a378a040c385",
+      "uid": 501
+    },
+    {
+      "bytes": 12009327,
+      "dev": 16777231,
+      "inode": 28722594,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/numpy-2.5.3-cp312-cp312-macosx_11_0_arm64.whl",
+      "sha256": "f59a878c33d6b88122d80d239bb3b845d58708750b0cb06a09aebb9b18ec696c",
+      "uid": 501
+    },
+    {
+      "bytes": 129956,
+      "dev": 16777231,
+      "inode": 28722612,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/packaging-26.3-py3-none-any.whl",
+      "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+      "uid": 501
+    },
+    {
+      "bytes": 48172,
+      "dev": 16777231,
+      "inode": 17304276,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/archives/pycparser-3.0-py3-none-any.whl",
+      "sha256": "b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992",
+      "uid": 501
+    },
+    {
+      "bytes": 472589,
+      "dev": 16777231,
+      "inode": 28722617,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/pydantic-2.13.5-py3-none-any.whl",
+      "sha256": "346a034f080da3755d8e9cb5e00e8b07de1d39e4f6e2c87d8ab7cafa0b269a73",
+      "uid": 501
+    },
+    {
+      "bytes": 1922874,
+      "dev": 16777231,
+      "inode": 28722624,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/pydantic_core-2.46.5-cp312-cp312-macosx_11_0_arm64.whl",
+      "sha256": "a39ac25a9a2fa4072efdb429833c4a4c8009a51ff9eea3eeae131713cd27991e",
+      "uid": 501
+    },
+    {
+      "bytes": 69413,
+      "dev": 16777231,
+      "inode": 28722629,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/pydantic_settings-2.15.0-py3-none-any.whl",
+      "sha256": "0ba092c291c94baceb5eff768aa0d56400a457585bc0175925a5a5510303da42",
+      "uid": 501
+    },
+    {
+      "bytes": 33680,
+      "dev": 16777231,
+      "inode": 28722634,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/pyjwt-2.15.0-py3-none-any.whl",
+      "sha256": "7a3742debf6b879e912dbb9819ceec1594be812452b78c5f2e2dfc56564954f8",
+      "uid": 501
+    },
+    {
+      "bytes": 22780,
+      "dev": 16777231,
+      "inode": 28722647,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/python_dotenv-1.2.3-py3-none-any.whl",
+      "sha256": "904552145e8bfed22162c09dab1c2b9b54fefa7b23ba780f4f26ca0316b0f0d9",
+      "uid": 501
+    },
+    {
+      "bytes": 30042,
+      "dev": 16777231,
+      "inode": 28722655,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/python_multipart-0.0.32-py3-none-any.whl",
+      "sha256": "ff6d3f776f16878c894e52e107296ffc890e913c611b1a4ec6c44e2821fe2e23",
+      "uid": 501
+    },
+    {
+      "bytes": 26766,
+      "dev": 16777231,
+      "inode": 28722662,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/referencing-0.37.0-py3-none-any.whl",
+      "sha256": "381329a9f99628c9069361716891d34ad94af76e461dcb0335825aecc7692231",
+      "uid": 501
+    },
+    {
+      "bytes": 338542,
+      "dev": 16777231,
+      "inode": 28722667,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/rpds_py-2026.6.3-cp312-cp312-macosx_11_0_arm64.whl",
+      "sha256": "538949e262e46caa31ac01bdb3c1e8f642622922cacbabbae6a8445d9dc33eaf",
+      "uid": 501
+    },
+    {
+      "bytes": 17122,
+      "dev": 16777231,
+      "inode": 28722676,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/sse_starlette-3.4.11-py3-none-any.whl",
+      "sha256": "c7b2244bdff016fe7f64e10075e89a3e6bbf899649cc89b0fe884b5545042453",
+      "uid": 501
+    },
+    {
+      "bytes": 78980,
+      "dev": 16777231,
+      "inode": 28722681,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/starlette-1.7.0-py3-none-any.whl",
+      "sha256": "67f8e99895493dd2911a03f11314af6ceebeae4e704bb9f43dfc6a9db151c93e",
+      "uid": 501
+    },
+    {
+      "bytes": 45571,
+      "dev": 16777231,
+      "inode": 28722688,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/typing_extensions-4.16.0-py3-none-any.whl",
+      "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+      "uid": 501
+    },
+    {
+      "bytes": 14750,
+      "dev": 16777231,
+      "inode": 28722693,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/typing_inspection-0.4.4-py3-none-any.whl",
+      "sha256": "65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147",
+      "uid": 501
+    },
+    {
+      "bytes": 87081,
+      "dev": 16777231,
+      "inode": 28722698,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/uvicorn-0.53.0-py3-none-any.whl",
+      "sha256": "e8dca71ec86dce5f04e333f0d56cdedf942446e6643b9cea1af0d6d3a02cb03e",
+      "uid": 501
+    },
+    {
+      "bytes": 249898,
+      "dev": 16777231,
+      "inode": 14859427,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/wheelhouse/psutil-5.9.8-cp38-abi3-macosx_11_0_arm64.whl",
+      "sha256": "d16bbddf0693323b8c6123dd804100241da461e41d6e332fb0ba6058f630f8c8",
+      "uid": 501
+    },
+    {
+      "bytes": 6427637,
+      "dev": 16777231,
+      "inode": 14859684,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/wheelhouse/pyobjc_core-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "sha256": "122e6ad302a2abf5d4d4adb0156db751600ddf2768441696cba17b31323085e7",
+      "uid": 501
+    },
+    {
+      "bytes": 32765,
+      "dev": 16777231,
+      "inode": 14859793,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/wheelhouse/pyobjc_framework_applicationservices-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "sha256": "5506bd6b5268a97fcb79b5b021f6cbbaaf5cdff3ec87094d8870268d8cf096ed",
+      "uid": 501
+    },
+    {
+      "bytes": 388117,
+      "dev": 16777231,
+      "inode": 14859822,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/wheelhouse/pyobjc_framework_cocoa-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "sha256": "e106f395531e67694376b0f1184612cbeea3ec8b9bf56b55ef41d026171d2a2d",
+      "uid": 501
+    },
+    {
+      "bytes": 29421,
+      "dev": 16777231,
+      "inode": 14859889,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/wheelhouse/pyobjc_framework_coremedia-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "sha256": "84f5deee8d366bf73069a0525509637aa578ccd0e6688923b09999a8bc3077a8",
+      "uid": 501
+    },
+    {
+      "bytes": 30120,
+      "dev": 16777231,
+      "inode": 14859894,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/wheelhouse/pyobjc_framework_coretext-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "sha256": "a69611de569d92776e6391ca25492a5bbb4a05ba744006349e377a4fc5f7c8a5",
+      "uid": 501
+    },
+    {
+      "bytes": 219003,
+      "dev": 16777231,
+      "inode": 14860047,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/wheelhouse/pyobjc_framework_quartz-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "sha256": "7f668979d0c7320bf8f7ed6e030da578f93ab0f5dd619b295ec735cd8d5faa34",
+      "uid": 501
+    },
+    {
+      "bytes": 11598,
+      "dev": 16777231,
+      "inode": 14860376,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w25-arm64-runtime-r2-37bd820ee138424b8946684619d5bb24/wheelhouse/pyobjc_framework_screencapturekit-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+      "sha256": "5c81c68bc0399ad7ca6ccaa978574354a4da8fbb474527664fdbf08cc8f8abd5",
+      "uid": 501
+    },
+    {
+      "bytes": 1201486,
+      "dev": 16777231,
+      "inode": 17304283,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-intel-inputs-r1-obneuyy4/archives/setuptools-80.9.0-py3-none-any.whl",
+      "sha256": "062d34222ad13e0cc312a4c02d73f059e86a4acbfbdea8f8f76b28c99f306922",
+      "uid": 501
+    },
+    {
+      "bytes": 33320,
+      "dev": 16777231,
+      "inode": 28722703,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-inputs-r1-z1oukebh/archives/wheel-0.48.0-py3-none-any.whl",
+      "sha256": "3217dcc807155e45db462d7ef2431f5ddda0d7273b700d05a67b271ceb1287ab",
+      "uid": 501
+    }
+  ],
+  "affected_controls": {
+    "fiveInfoTupleExamples": 5,
+    "methods": 21,
+    "raw": {
+      "bytes": 2364,
+      "dev": 16777243,
+      "inode": 1198893,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/TEST_MAIN.stderr",
+      "sha256": "072f77a262fa585a3545f897ee5d53ccf15eec5a7677d3e59fa4450845eac6b8",
+      "uid": 501
+    },
+    "scope": "SOFTWARE_PUBLIC_BOUNDARIES_NOT_TARGET_RUNTIME",
+    "total_checks": 25
+  },
+  "budget": {
+    "cleanup": 300,
+    "epoch": "controller main entry before preflight/Popen; shared dynamic elapsed, no reset",
+    "prepare": 600,
+    "profile": 180,
+    "whole": 1800
+  },
+  "controller": {
+    "bytes": 11662,
+    "dev": 16777231,
+    "inode": 28781056,
+    "mode": 420,
+    "nlink": 1,
+    "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-offline-venv-execution-r1-ch6jwesg/controller.py",
+    "sha256": "2dce314e31b9c5d12333edf02f6ef94b71e484f08bef832aabc39b6990dc3056",
+    "uid": 501
+  },
+  "effects": {
+    "COMSOL": 0,
+    "JVM_start": 0,
+    "network": 0,
+    "oldsource_write": 0,
+    "pip": 0,
+    "sandbox": 0,
+    "targetPython": 0,
+    "venv": 0,
+    "wheel_code": 0
+  },
+  "files": [
+    {
+      "bytes": 107070,
+      "dev": 16777243,
+      "inode": 1195633,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/CONTEXT.json",
+      "sha256": "5e1d64a9f8c8ed44cdffff69b5b67e8a73fbd74faf41c508c0259d05ac6942a6",
+      "uid": 501
+    },
+    {
+      "bytes": 823,
+      "dev": 16777243,
+      "inode": 1195632,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/CONTEXT.stderr",
+      "sha256": "de47e97c551403790b8f61770fbb4fbab0ebfcfae9fda301cab3c4daa65b5b7d",
+      "uid": 501
+    },
+    {
+      "bytes": 0,
+      "dev": 16777243,
+      "inode": 1195631,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/CONTEXT.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "uid": 501
+    },
+    {
+      "bytes": 0,
+      "dev": 16777243,
+      "inode": 1195644,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/CONTEXT_COMPLETE.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "uid": 501
+    },
+    {
+      "bytes": 105,
+      "dev": 16777243,
+      "inode": 1195643,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/CONTEXT_COMPLETE.stdout",
+      "sha256": "038ff15780a01d4a657064b468b7969eefdc60b2ae4d1e936d3e0082e40de93b",
+      "uid": 501
+    },
+    {
+      "bytes": 6159,
+      "dev": 16777243,
+      "inode": 1202450,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/DESIGN.md",
+      "sha256": "b4396bdefacd2aa2796eea4ddd409b08809bad404465840cf4a777398bceef2d",
+      "uid": 501
+    },
+    {
+      "bytes": 0,
+      "dev": 16777243,
+      "inode": 1197757,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/METADATA.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "uid": 501
+    },
+    {
+      "bytes": 761,
+      "dev": 16777243,
+      "inode": 1197756,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/METADATA.stdout",
+      "sha256": "1b624b0df5ada7109f8ee17283d6c16d3eceb11a6a28420bc63bfaf0fc6a64dc",
+      "uid": 501
+    },
+    {
+      "bytes": 166409,
+      "dev": 16777243,
+      "inode": 1198874,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/METADATA_SYSTEM_BINARY_PREIMAGE.json",
+      "sha256": "f8c247fe401ad8b6a881feadabcac5a360318c503715ea0a795e5bad4a3867ae",
+      "uid": 501
+    },
+    {
+      "bytes": 66,
+      "dev": 16777243,
+      "inode": 1195636,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/MPh.ini",
+      "sha256": "84069b8fce1834a6528ba0a9d76ab7ca15a3c906ac8c02332b62010f1809a29f",
+      "uid": 501
+    },
+    {
+      "bytes": 3895,
+      "dev": 16777243,
+      "inode": 1195649,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/PRIMARY_REFS.json",
+      "sha256": "5f142774b5f94e726313e05da7dd4bdcfdb194673f5ac1a63123a117ee16a260",
+      "uid": 501
+    },
+    {
+      "bytes": 12926,
+      "dev": 16777243,
+      "inode": 1195646,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/PRIMARY_com.apple.mobileassetd.sb",
+      "sha256": "622ca85102d4369ba487613c9bce3080fd6a6e8582ace2f9f14c573e591d56ec",
+      "uid": 501
+    },
+    {
+      "bytes": 2771,
+      "dev": 16777243,
+      "inode": 1195645,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/PRIMARY_mdworker-sizing.sb",
+      "sha256": "453d0a7a4a4cdcc60c397d0371826afbfc71fae3c2e8542fe01ff1d6d89dd022",
+      "uid": 501
+    },
+    {
+      "bytes": 409,
+      "dev": 16777243,
+      "inode": 1195647,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/PRIMARY_mph___init__.py",
+      "sha256": "f61e305ee24a8e6e7015bb29f685837c347adc98451f519eabdd8672c2ab748a",
+      "uid": 501
+    },
+    {
+      "bytes": 4398,
+      "dev": 16777243,
+      "inode": 1195648,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/PRIMARY_mph_config.py",
+      "sha256": "b5775f0792f7dc7629d8f102fb0a3bc0dcb19f3ca13cb25274816f49eab562b3",
+      "uid": 501
+    },
+    {
+      "bytes": 1884,
+      "dev": 16777243,
+      "inode": 1198889,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/TEST.stderr",
+      "sha256": "9a69f1b9b15354bca1bdf230d9ac26b4a64e74fa32efd4e4ed23b5306a48972b",
+      "uid": 501
+    },
+    {
+      "bytes": 0,
+      "dev": 16777243,
+      "inode": 1198888,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/TEST.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "uid": 501
+    },
+    {
+      "bytes": 2364,
+      "dev": 16777243,
+      "inode": 1198893,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/TEST_MAIN.stderr",
+      "sha256": "072f77a262fa585a3545f897ee5d53ccf15eec5a7677d3e59fa4450845eac6b8",
+      "uid": 501
+    },
+    {
+      "bytes": 794,
+      "dev": 16777243,
+      "inode": 1198892,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/TEST_MAIN.stdout",
+      "sha256": "809cccbfd1f572ce4d274f24d51e598b5365106d82aedb2a3abdf5e10bad9906",
+      "uid": 501
+    },
+    {
+      "bytes": 103,
+      "dev": 16777243,
+      "inode": 1195650,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/W_PATH.txt",
+      "sha256": "f17a5719037bf02b2e9c959252de6cb952568fe5f1d4957d6ce54db79cc93edb",
+      "uid": 501
+    },
+    {
+      "bytes": 3321,
+      "dev": 16777243,
+      "inode": 1193926,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/common.py",
+      "sha256": "94a5b742551ee9ef21224ee1abd3d415f73a1fff1447559d600242f6a7bf0c8f",
+      "uid": 501
+    },
+    {
+      "bytes": 2154,
+      "dev": 16777243,
+      "inode": 1195642,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/complete_context.py",
+      "sha256": "526cd272135a45c9628b8642d726b5d333325998be3ed211b6fba3fc72f7fa00",
+      "uid": 501
+    },
+    {
+      "bytes": 6734,
+      "dev": 16777243,
+      "inode": 1193929,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/consumers.py",
+      "sha256": "f566435bc56140c922ca50e23d0834f1f56f9f8eab545c2799951568fe67ec0d",
+      "uid": 501
+    },
+    {
+      "bytes": 11662,
+      "dev": 16777243,
+      "inode": 1195656,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/controller.py",
+      "sha256": "2dce314e31b9c5d12333edf02f6ef94b71e484f08bef832aabc39b6990dc3056",
+      "uid": 501
+    },
+    {
+      "bytes": 3938,
+      "dev": 16777243,
+      "inode": 1202451,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/freeze.py",
+      "sha256": "bbdeec20806e528ecdd57a8fa8d647ffed34d7a0c4abd6865177949f1d2af691",
+      "uid": 501
+    },
+    {
+      "bytes": 6160,
+      "dev": 16777243,
+      "inode": 1195630,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/prepare_context.py",
+      "sha256": "2173cd1fa97c56cf3553d1fb452d6047fce3f744d10292bf8640b201ac48dd1b",
+      "uid": 501
+    },
+    {
+      "bytes": 6160,
+      "dev": 16777243,
+      "inode": 1195641,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/prepare_context_FIRST_FAIL.py",
+      "sha256": "2173cd1fa97c56cf3553d1fb452d6047fce3f744d10292bf8640b201ac48dd1b",
+      "uid": 501
+    },
+    {
+      "bytes": 4885,
+      "dev": 16777243,
+      "inode": 1197755,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/prepare_metadata.py",
+      "sha256": "14b448e972071adec7297b5169b850cdbb75f56f455e2eb63881db3733cf02ee",
+      "uid": 501
+    },
+    {
+      "bytes": 360,
+      "dev": 16777243,
+      "inode": 1195635,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/requirements-backend.lock",
+      "sha256": "6f8b652ba4e1d8a0e040b2352e211f2d226acc9336a58c6229c874085643548a",
+      "uid": 501
+    },
+    {
+      "bytes": 4157,
+      "dev": 16777243,
+      "inode": 1195634,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/requirements-runtime.lock",
+      "sha256": "8e959dfb421c3c22352e768f7a63d12e3459aac93d8e6479e8eb5c5a01603b42",
+      "uid": 501
+    },
+    {
+      "bytes": 1894,
+      "dev": 16777243,
+      "inode": 1193927,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/stage_gate.py",
+      "sha256": "a3b3003be938f3d7719ce865768a4df72976504c4f01636b67492b00c30df18c",
+      "uid": 501
+    },
+    {
+      "bytes": 9555,
+      "dev": 16777243,
+      "inode": 1198887,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-venv-unit-r1/test_unit.py",
+      "sha256": "9674b2b5e71b902114f82c4eaaf0e340a38d30e8d21775f69eb991cba80b4c10",
+      "uid": 501
+    }
+  ],
+  "known_source_first_failure": "System-owned public SB primary rejected by user-only reader; source-only/0target effects; original trace/preimage retained; fixed exact system-primary reader only",
+  "last_argument": "Actual Root once64SHA not yet supplied, do not pass placeholder",
+  "metadata": {
+    "bytes": 166466,
+    "dev": 16777231,
+    "inode": 28781055,
+    "mode": 420,
+    "nlink": 1,
+    "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-offline-venv-execution-r1-ch6jwesg/METADATA.json",
+    "sha256": "d127ca09640f4f4d8af7927bead65e1e44a9a7ca8d9070d21d80c12570000b8e",
+    "uid": 501
+  },
+  "next_invocation_prefix": [
+    "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python3",
+    "-B",
+    "-u",
+    "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-offline-venv-execution-r1-ch6jwesg/controller.py",
+    "--binding-sha"
+  ],
+  "references": [
+    {
+      "bytes": 10260,
+      "dev": 16777243,
+      "inode": 1151413,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/acquire_exact_archives.py",
+      "sha256": "dde0f5c827af8e3675f2c6dee6b0792a1ae94e8d7f09be3b6f778857983df683",
+      "uid": 501
+    },
+    {
+      "bytes": 56451,
+      "dev": 16777243,
+      "inode": 1151410,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/security_snapshot/_host_scoped_provider.py",
+      "sha256": "11d8934dcdc6fccc1196248adec6afdea2ccf29f9b4769485ab756fbeaa1b1cf",
+      "uid": 501
+    },
+    {
+      "bytes": 22753,
+      "dev": 16777243,
+      "inode": 1151411,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/security_snapshot/_execution_contract.py",
+      "sha256": "dbb112cbbdef9a4d45f69c230123d4e9e57f7b71e337532d83989aa827e6c9e3",
+      "uid": 501
+    },
+    {
+      "bytes": 20098,
+      "dev": 16777243,
+      "inode": 1156931,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/intel_deps_stages.py",
+      "sha256": "8e38ccbb55da1462208b8f156b7795c16be568209afa6262484db1ac7aa4a1ca",
+      "uid": 501
+    },
+    {
+      "bytes": 9516,
+      "dev": 16777243,
+      "inode": 1156587,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/intel_deps_prepare.py",
+      "sha256": "4ca97eda83d6739175e63526fda1b7c7c42adf200471439a3c43ce8cd03c6f3e",
+      "uid": 501
+    },
+    {
+      "bytes": 7279,
+      "dev": 16777243,
+      "inode": 1157240,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/intel_binary_evidence.py",
+      "sha256": "2d8ed0d3fa397e1ac12f470e21182bec0793ab5903c09021b6973c638bf4afec",
+      "uid": 501
+    },
+    {
+      "bytes": 25965,
+      "dev": 16777243,
+      "inode": 1153485,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/cpython_universal2_stages.py",
+      "sha256": "735fe8009e23f74db836ea058fb45c8feade776a471afca69c16dc6347fe1947",
+      "uid": 501
+    },
+    {
+      "bytes": 12024,
+      "dev": 16777243,
+      "inode": 1152249,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/resume_exact_archives_r1.py",
+      "sha256": "4df454ec4eff12494e93ee1862d2ab5037a13218f8733f538fb6541fd8aa76be",
+      "uid": 501
+    },
+    {
+      "bytes": 7086,
+      "dev": 16777243,
+      "inode": 1187776,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-helper-successor-r2/strict_derived.py",
+      "sha256": "37040677548fd007a947385cdf7884cc77b2a9dee2324112a089f9efe7285ded",
+      "uid": 501
+    },
+    {
+      "bytes": 3653,
+      "dev": 16777243,
+      "inode": 1187777,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-helper-successor-r2/native_parser.py",
+      "sha256": "64181cb71c69f0ef490117175104d0a768cd0d8607e12be4fa61b836d23d7bb5",
+      "uid": 501
+    },
+    {
+      "bytes": 32531,
+      "dev": 16777243,
+      "inode": 1187834,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-helper-successor-r2/FREEZE_R2.json",
+      "sha256": "aab6a18ca1c450ff4c625ce30b334d27e5257f1089afde87cab5f9aaf8283b60",
+      "uid": 501
+    },
+    {
+      "bytes": 3676,
+      "dev": 16777243,
+      "inode": 1187780,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-helper-successor-r2/ORIGIN_BINDING.json",
+      "sha256": "56984855713d4011aa663d01d7272e8ce746cf84863812ebcbc911ca3438f696",
+      "uid": 501
+    },
+    {
+      "bytes": 1965,
+      "dev": 16777243,
+      "inode": 1187782,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-helper-successor-r2/ACCEPTED_CONTENT.json",
+      "sha256": "adaea23660ac183ee8ceb7536684a14af43257d6dc9ea657e1e9581860b5dc46",
+      "uid": 501
+    },
+    {
+      "bytes": 52681,
+      "dev": 16777243,
+      "inode": 1182257,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/ROOT_LIBLZMA_R2_ACTUAL_CHECK.json",
+      "sha256": "d350b5c72637d7529d5c8cc784180eb3ccb4dd3e6d182361557e7d42f8a5393c",
+      "uid": 501
+    },
+    {
+      "bytes": 1377325,
+      "dev": 16777243,
+      "inode": 1182209,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/LIBLZMA_EXECUTION_RESULT_R2.json",
+      "sha256": "6f61767373090652bdd3070251bebb39141aa309a0638490107c9ecd0e1fd65b",
+      "uid": 501
+    },
+    {
+      "bytes": 51102,
+      "dev": 16777243,
+      "inode": 1154757,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/ACQUISITION_ATTEMPT004_SUMMARY.json",
+      "sha256": "882b0ef473375bea3e7be0210a984629e54356943532f48f404f58c6f61ba0c4",
+      "uid": 501
+    },
+    {
+      "bytes": 6549,
+      "dev": 16777231,
+      "inode": 28704911,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-exact32-execution-r3-p09omcx9/actor.py",
+      "sha256": "9c1a268629cd6cb0f89850ecc5237f8d71435c22f0add71e8feb42712b6a1ac7",
+      "uid": 501
+    },
+    {
+      "bytes": 19839,
+      "dev": 16777243,
+      "inode": 1187812,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-helper-successor-r2/EXACT32_DOWNLOAD_MANIFEST.json",
+      "sha256": "dbb01ae18db48104c87cafc564999cac058e2af2cdd3f1fae6ac03b495bf5b61",
+      "uid": 501
+    },
+    {
+      "bytes": 0,
+      "dev": 16777243,
+      "inode": 1151412,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/security_snapshot/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "uid": 501
+    },
+    {
+      "bytes": 72343,
+      "dev": 16777243,
+      "inode": 1193554,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/ROOT_W26_EXACT32_ACTUAL_CHECK_R3.json",
+      "sha256": "a8c4156d8d39a0fc749053543a4c21fa4e6d6ac948a7859b2e2bed4c61af6f6f",
+      "uid": 501
+    },
+    {
+      "bytes": 56092,
+      "dev": 16777243,
+      "inode": 1193542,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-exact32-wrapper-r3/ACTUAL_EXECUTION_R3.json",
+      "sha256": "55df5104f63b09377456d2d5bc97d3b333404d629e4b6829ae5aab1e93ae8169",
+      "uid": 501
+    },
+    {
+      "bytes": 27017,
+      "dev": 16777243,
+      "inode": 1193639,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-input-closure-r1/FREEZE_R1.json",
+      "sha256": "310adad33bc02601f1bcabe6c018fb55d47a697df6b57fe3cefcd6f2345eea5a",
+      "uid": 501
+    },
+    {
+      "bytes": 131372,
+      "dev": 16777243,
+      "inode": 1193549,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-input-closure-r1/ACTUAL43_METADATA_CLOSURE.json",
+      "sha256": "df76796141d043c4fd3c37c6a9b53819596bf4fbf57a64b635ca4588227505a6",
+      "uid": 501
+    },
+    {
+      "bytes": 2130,
+      "dev": 16777243,
+      "inode": 1193638,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-input-closure-r1/BOOTSTRAP_PRIMARY.json",
+      "sha256": "9a5e6e0a4fd0129778c3b513b38aacd3a1b639b844aacc509a8724902a913e6f",
+      "uid": 501
+    },
+    {
+      "bytes": 279457,
+      "dev": 16777243,
+      "inode": 686125,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/uv.lock",
+      "sha256": "08b6b8fb1f6a7a110f45df7d9f3ac3dae3e343fddc1ce2ddae84e458c3130b3f",
+      "uid": 501
+    },
+    {
+      "bytes": 1656,
+      "dev": 16777243,
+      "inode": 685784,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/pyproject.toml",
+      "sha256": "f6f9356edc1c970e36c32a82cc8d9e71bd1a94d5a0e1552495a04ca7634ee107",
+      "uid": 501
+    },
+    {
+      "bytes": 3321,
+      "dev": 16777231,
+      "inode": 28781048,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-offline-venv-execution-r1-ch6jwesg/common.py",
+      "sha256": "94a5b742551ee9ef21224ee1abd3d415f73a1fff1447559d600242f6a7bf0c8f",
+      "uid": 501
+    },
+    {
+      "bytes": 1894,
+      "dev": 16777231,
+      "inode": 28781049,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-offline-venv-execution-r1-ch6jwesg/stage_gate.py",
+      "sha256": "a3b3003be938f3d7719ce865768a4df72976504c4f01636b67492b00c30df18c",
+      "uid": 501
+    },
+    {
+      "bytes": 6734,
+      "dev": 16777231,
+      "inode": 28781050,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-offline-venv-execution-r1-ch6jwesg/consumers.py",
+      "sha256": "f566435bc56140c922ca50e23d0834f1f56f9f8eab545c2799951568fe67ec0d",
+      "uid": 501
+    },
+    {
+      "bytes": 107070,
+      "dev": 16777231,
+      "inode": 28781051,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-offline-venv-execution-r1-ch6jwesg/CONTEXT.json",
+      "sha256": "5e1d64a9f8c8ed44cdffff69b5b67e8a73fbd74faf41c508c0259d05ac6942a6",
+      "uid": 501
+    },
+    {
+      "bytes": 360,
+      "dev": 16777231,
+      "inode": 28781052,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-offline-venv-execution-r1-ch6jwesg/requirements-backend.lock",
+      "sha256": "6f8b652ba4e1d8a0e040b2352e211f2d226acc9336a58c6229c874085643548a",
+      "uid": 501
+    },
+    {
+      "bytes": 4157,
+      "dev": 16777231,
+      "inode": 28781053,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-offline-venv-execution-r1-ch6jwesg/requirements-runtime.lock",
+      "sha256": "8e959dfb421c3c22352e768f7a63d12e3459aac93d8e6479e8eb5c5a01603b42",
+      "uid": 501
+    },
+    {
+      "bytes": 66,
+      "dev": 16777231,
+      "inode": 28781054,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-offline-venv-execution-r1-ch6jwesg/MPh.ini",
+      "sha256": "84069b8fce1834a6528ba0a9d76ab7ca15a3c906ac8c02332b62010f1809a29f",
+      "uid": 501
+    },
+    {
+      "bytes": 72343,
+      "dev": 16777243,
+      "inode": 1193554,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/ROOT_W26_EXACT32_ACTUAL_CHECK_R3.json",
+      "sha256": "a8c4156d8d39a0fc749053543a4c21fa4e6d6ac948a7859b2e2bed4c61af6f6f",
+      "uid": 501
+    },
+    {
+      "bytes": 27017,
+      "dev": 16777243,
+      "inode": 1193639,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-input-closure-r1/FREEZE_R1.json",
+      "sha256": "310adad33bc02601f1bcabe6c018fb55d47a697df6b57fe3cefcd6f2345eea5a",
+      "uid": 501
+    },
+    {
+      "bytes": 8730,
+      "dev": 16777243,
+      "inode": 1193631,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w26-offline-input-closure-r1/NEXT_OFFLINE_UNIT_PLAN.json",
+      "sha256": "576d29981d1ad246458c2572fb6ce056cc820bb925157ecd5f386ff92520a511",
+      "uid": 501
+    },
+    {
+      "bytes": 52681,
+      "dev": 16777243,
+      "inode": 1182257,
+      "mode": 384,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/ROOT_LIBLZMA_R2_ACTUAL_CHECK.json",
+      "sha256": "d350b5c72637d7529d5c8cc784180eb3ccb4dd3e6d182361557e7d42f8a5393c",
+      "uid": 501
+    },
+    {
+      "bytes": 12214,
+      "dev": 16777243,
+      "inode": 1166152,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/tls_cpython_checkpoint_r4.py",
+      "sha256": "414c61ce5b281de2782c9de11231dd070a292104a7fb1e1b99370d7629ac24db",
+      "uid": 501
+    }
+  ],
+  "root_binding_expected": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/ROOT_W26_OFFLINE_VENV_ONCE_BINDING_R1.json",
+    "schema": "comsol-w26-offline-venv-once/1",
+    "status": "GRANTED_ONCE_DEPENDENCY_VENVS_ONLY"
+  },
+  "root_source_review_expected": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1/ROOT_W26_OFFLINE_VENV_SOURCE_REVIEW_R1.json",
+    "status": "PASS_SOURCE_OFFLINE_DEPENDENCY_VENVS_ONLY"
+  },
+  "schema": "comsol-w26-offline-dependency-unit-source/1",
+  "status": "SOURCE_SOFTWARE_PREPARED_NOT_NATIVE_INSTALL_ADMISSION",
+  "work_files": [
+    {
+      "bytes": 107070,
+      "dev": 16777231,
+      "inode": 28781051,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-offline-venv-execution-r1-ch6jwesg/CONTEXT.json",
+      "sha256": "5e1d64a9f8c8ed44cdffff69b5b67e8a73fbd74faf41c508c0259d05ac6942a6",
+      "uid": 501
+    },
+    {
+      "bytes": 166466,
+      "dev": 16777231,
+      "inode": 28781055,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-offline-venv-execution-r1-ch6jwesg/METADATA.json",
+      "sha256": "d127ca09640f4f4d8af7927bead65e1e44a9a7ca8d9070d21d80c12570000b8e",
+      "uid": 501
+    },
+    {
+      "bytes": 66,
+      "dev": 16777231,
+      "inode": 28781054,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-offline-venv-execution-r1-ch6jwesg/MPh.ini",
+      "sha256": "84069b8fce1834a6528ba0a9d76ab7ca15a3c906ac8c02332b62010f1809a29f",
+      "uid": 501
+    },
+    {
+      "bytes": 3321,
+      "dev": 16777231,
+      "inode": 28781048,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-offline-venv-execution-r1-ch6jwesg/common.py",
+      "sha256": "94a5b742551ee9ef21224ee1abd3d415f73a1fff1447559d600242f6a7bf0c8f",
+      "uid": 501
+    },
+    {
+      "bytes": 6734,
+      "dev": 16777231,
+      "inode": 28781050,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-offline-venv-execution-r1-ch6jwesg/consumers.py",
+      "sha256": "f566435bc56140c922ca50e23d0834f1f56f9f8eab545c2799951568fe67ec0d",
+      "uid": 501
+    },
+    {
+      "bytes": 11662,
+      "dev": 16777231,
+      "inode": 28781056,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-offline-venv-execution-r1-ch6jwesg/controller.py",
+      "sha256": "2dce314e31b9c5d12333edf02f6ef94b71e484f08bef832aabc39b6990dc3056",
+      "uid": 501
+    },
+    {
+      "bytes": 360,
+      "dev": 16777231,
+      "inode": 28781052,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-offline-venv-execution-r1-ch6jwesg/requirements-backend.lock",
+      "sha256": "6f8b652ba4e1d8a0e040b2352e211f2d226acc9336a58c6229c874085643548a",
+      "uid": 501
+    },
+    {
+      "bytes": 4157,
+      "dev": 16777231,
+      "inode": 28781053,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-offline-venv-execution-r1-ch6jwesg/requirements-runtime.lock",
+      "sha256": "8e959dfb421c3c22352e768f7a63d12e3459aac93d8e6479e8eb5c5a01603b42",
+      "uid": 501
+    },
+    {
+      "bytes": 1894,
+      "dev": 16777231,
+      "inode": 28781049,
+      "mode": 420,
+      "nlink": 1,
+      "path": "/private/var/folders/4d/6pphmzkx5szf8dyqx7zhqh1r0000gn/T/comsol-w26-offline-venv-execution-r1-ch6jwesg/stage_gate.py",
+      "sha256": "a3b3003be938f3d7719ce865768a4df72976504c4f01636b67492b00c30df18c",
+      "uid": 501
+    }
+  ]
+}

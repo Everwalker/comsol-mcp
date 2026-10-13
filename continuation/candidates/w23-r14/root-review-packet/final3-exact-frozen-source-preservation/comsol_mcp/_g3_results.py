@@ -1,0 +1,8040 @@
+"""``result.sample_path``: the minimal result-sampling adapter (W16 acceptance
+infrastructure).
+
+Why this module exists
+----------------------
+The W16 acceptance chains of ``docs/comsol_mcp_design_v1/NEXT_GOAL_MAC_G3.md``
+(§8, T018/T019 chains A and B) drive a public MCP action named
+``result.sample_path``: ``tools/phase4_run_mcp.py`` samples the temperature
+along a line through the solved block and compares it with a pre-registered
+analytic reference.  The action sits in the ``result`` domain behind the G4
+implementation gate.  §8 authorises exactly this much and no more:
+
+    "使用现有求值/导出能力提供这些测试所需的最小结果。若需要一个最小采样或结果
+     绑定适配器，记录为 W16 验收基础设施；不顺势展开整个 W17 结果系统或 W18
+     绘图平台。"
+
+This module is therefore *not* the W17 results system: it is one line-sampling
+adapter built on one documented ephemeral COMSOL feature, and it refuses
+everything it did not verify offline.  It records the operations it wanted but
+could not use in ``ALLOWLIST_ADDITIONS`` / ``UNVERIFIED_PATHS`` and in the
+returned data.
+
+API provenance (COMSOL 6.4.0.293, installed under ``/Applications/COMSOL64``)
+-----------------------------------------------------------------------------
+Every engine call below is verified against one of two local sources:
+
+* ``javap -cp apiplugins/com.comsol.api_1.0.0.jar <class>`` of the installed
+  public API jar:
+  ``Model.result() -> Results``; ``Results.numerical() -> NumericalFeatureList``
+  (``create(String,String)``), ``Results.dataset() -> DatasetFeatureList``,
+  ``Results.tags()/remove(String)``; ``NumericalFeature.getData() ->
+  double[][][]``, ``getReal() -> double[][]``, ``isComplex()``,
+  ``setInterpolationCoordinates(double[][])``; ``PropFeature.set(String,String)``,
+  ``set(String,double[][])``, ``setIndex(String,String,int)``,
+  ``getString/getStringArray/getDoubleArray/getType``; ``Model.sol(String) ->
+  SolverSequence`` with ``getPVals() -> double[]`` and ``study() -> String``;
+  ``Study.feature()``; ``StudyFeature.type()``/``PropFeature.getType()``.
+* The local COMSOL 6.4 documentation corpus
+  (``/Users/everwalker/Documents/KnowledgeBases/COMSOL-6.4-KB/kb.py``):
+  * results API page **Interp** (``comsol_api_results.52.082.html``, sha256
+    ``156412ab29631518953b57d6948b88a0181bf5312984b1a0f9e840a6ad848421``):
+    ``model.result().numerical().create(<ftag>,"Interp")`` +
+    ``set(property,<value>)`` + ``getData()`` + ``getCoordinates()`` +
+    ``run()`` + ``isComplex()``; ``getData()`` "returns the real part of the
+    result, recomputing the feature if necessary ... ordered
+    ``result[expression][solnum][coordinates]``"; property table: ``coord``
+    ("the columns of the coord property are the coordinates for the evaluation
+    points"; rows = space dimension means global coordinates), ``data``,
+    ``expr``, ``unit``, ``solnum``, ``t`` ("the times to use, available when
+    the underlying solution is transient").
+  * results API page **Solution** (``comsol_api_results.52.156.html``, Table
+    7-146 "Valid Property/Value Pairs for Solution Datasets"): a Solution
+    dataset publishes ``solution`` ("The solution this dataset refers to",
+    default "First compatible solution") plus ``comp`` and ``geom``; ``geom`` is
+    "only applicable for components with more than one geometry", so the adapter
+    falls back to the single component/geometry of the model when the readback
+    is empty.  A dataset that publishes no ``solution`` property is refused
+    unless ``spec.solution`` names one explicitly.
+  * Programming Reference / Application Programming Guide (pages 275-281, 547,
+    876, 1032): ``setIndex("expr", ...)`` / ``setIndex("unit", ...)``,
+    ``model.sol(<tag>).getPVals()``, ``model.study(<tag>).feature(<ftag>)
+    .getString("tunit")``, and the SolutionInfo route for stored output times.
+  * The canonical stored-time route is ``SolutionInfo``
+    (``model.sol(<tag>).getSolutioninfo()`` -> ``getLevelNames()/getSolnum()/
+    getVals()/getOuterSolnum()``, documented in
+    ``comsol_api_solver.51.10.html``).  The G3.3 §4 (F04) fix publishes the four
+    accessors this module actually calls (``getSolutioninfo``,
+    ``getOuterSolnum``, ``getMaxInner``, ``getLevelNames`` - see
+    ``ALLOWLIST_ADDITIONS_PUBLISHED``) and ``dataset.solution_indices`` reads the
+    outer/inner axes from them instead of inventing an index; the remaining
+    SolutionInfo accessors and the EvaluationGroup route stay reported in
+    ``ALLOWLIST_ADDITIONS``.  ``result.sample_path`` keeps using the verified
+    substitutes it *can* call - the numerical feature's own transient ``t``
+    property, ``SolverSequence.getPVals()`` and the associated study step's
+    type/``tlist``/``tunit`` - and reports which one it used in
+    ``solution_axis.source``.  Nothing is ever invented: an axis that cannot be
+    read is reported as unavailable and the ``t`` column is omitted.
+
+Result contract (drives ``tools/phase4_run_mcp.py`` ``_check_chain_a`` /
+``_check_chain_b``)
+------------------------------------------------------------------------------------
+``data["samples"]`` is a list of row objects; ``data["time_values"]`` is the
+stored time list for a time-dependent dataset.
+
+* steady dataset -> one row per path point: ``x``, ``y``, ``z``, ``solnum``,
+  then one key per requested expression;
+* time-dependent dataset -> one row per (stored solution) x (path point), with
+  ``time`` and ``t`` carrying the solution time and ``time_values`` carrying the
+  same list once.
+
+The sample table publishes **one** time key, ``time``: the former ``t`` alias was
+removed because ``t`` and the temperature expression ``T`` differ only in case,
+so any case-insensitive reader (``_sample_series()`` in the driver resolves row
+keys that way) would resolve whichever key came first in the JSON object - i.e.
+the meaning of the table depended on field order.  Instead of ordering keys, the
+payload now carries ``columns``/``roles``: an unambiguous, order-independent
+column contract that names each key's role.  The coordinate columns are the
+requested path points (in the model length unit, echoed in ``data["units"]``);
+the engine's own ``getCoordinates()`` readback is attempted and reported in
+``coordinate_readback`` (``VERIFIED``/``MISMATCH``/``UNAVAILABLE``), and a
+mismatch is a failed *verification* (``verification_status = FAILED``) rather
+than a difference to ignore.  No unit conversion happens anywhere in this
+module.
+
+Expression names that would collide *exactly* with a column this adapter owns
+(``x``/``y``/``z``/``solnum``/``time``/``t``) are refused with
+``INVALID_REQUEST`` before the first engine call, as are two expressions that
+differ only in case, and an expression whose name differs only in case from a
+*published* column (e.g. ``Time`` or ``X``).  The rule compares against the
+published columns only: chain B samples the expression ``"T"`` on a transient
+dataset, and ``"t"`` is not ``"time"``, so that call stays legal and the table
+stays unambiguous under any key order.
+
+Mutation discipline (§4): the ephemeral ``Interp`` node is created, read and
+removed in this module; a failure after the create reports
+``status.execution_state_unknown`` / ``cleanup.cleanup_failed`` and never claims
+that nothing happened.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import math
+import os
+from pathlib import Path
+from typing import Any, Mapping, Sequence
+import uuid
+
+from ._execution_contract import PreWriteRefusal
+from ._g2_contract import ExecutionContractError, NodePath
+from ._g2_engine import _call, _worker_failure_code
+from ._artifact_store import ArtifactStore, trusted_project_root
+from ._result_budget import (
+    ResultBudgetRefused,
+    guarded_getdata,
+    plan_result_budget,
+)
+from ._g3_common import (
+    allowlist_rejected,
+    bound_model,
+    call_probe,
+    error_code_of,
+    geometry_length_unit,
+    geometry_sdim,
+    node_not_found,
+    operation_arguments,
+    reject_unknown_keys,
+    require_bool,
+    require_int,
+    require_mapping,
+    require_number,
+    require_string,
+    require_string_array,
+    resolve_path,
+    tag_list,
+)
+from ._probe_manage import (
+    _completion as _probe_completion,
+    _read_property as _probe_read_property,
+    _unwrap_property_value as _probe_unwrap_property_value,
+    _write_properties as _probe_write_properties,
+)
+
+# ---------------------------------------------------------------------------
+# vocabulary, limits and provenance
+# ---------------------------------------------------------------------------
+
+# These are limits on the numeric scalar payload admitted by the client-side
+# result adapter.  They are deliberately not presented as COMSOL/Worker peak
+# memory limits: JSON, Python object overhead, transport buffers, and the
+# engine's internal cache are outside this estimate and remain unmeasured.
+RESULT_NUMERIC_PAYLOAD_MAX_ELEMENTS = 1_000_000
+RESULT_NUMERIC_PAYLOAD_MAX_BYTES = 64 * 1024 * 1024
+W21_FIELD_READBACK_MAX_NUMERIC_SCALARS = 65_536
+W21_FIELD_READBACK_MAX_JSON_BYTES = 8 * 1024 * 1024
+
+OPERATION_ID = "result.sample_path"
+
+#: ``model.result().numerical().create(<ftag>,"Interp")`` - the type string is
+#: documented on the Interp page of the results API (see the module docstring).
+NUMERICAL_FEATURE_TYPE = "Interp"
+
+#: ``spec`` keys this adapter accepts.  Compared with the published
+#: ``common.schema.json#/$defs/EvaluationSpec`` (``additionalProperties: false``)
+#: the extras are exactly the flat ``dataset`` the W16 driver sends and the
+#: per-solution selection keys that ``_refuse_unsupported_options`` refuses with
+#: ``API_UNSUPPORTED`` instead of ignoring them.
+ACCEPTED_SPEC_KEYS: tuple[str, ...] = (
+    "expressions", "dataset", "solution", "units", "aggregate", "complex_mode",
+    "selection", "storage", "coordinate_frame", "weight_expression",
+    "inner", "outer", "time", "frequency", "parameters",
+)
+
+#: Accepted but not implemented: refused explicitly (§ "never approximate").
+REFUSED_SPEC_KEYS: tuple[str, ...] = ("inner", "outer", "time", "frequency", "parameters")
+
+#: ``storage="auto"`` keeps samples inline up to this element count and publishes a
+#: project-scoped artifact above it.  The delivered adapter hardcoded 1000 here; it
+#: is named now because the boundary is part of the answer the caller gets back.
+AUTO_ARTIFACT_ELEMENT_LIMIT = 1000
+
+#: ``spec.solution`` as an object is the published ``SolutionSpec``.
+ACCEPTED_SOLUTION_SPEC_KEYS: tuple[str, ...] = (
+    "dataset", "solution", "inner", "outer", "time", "frequency", "parameters",
+)
+
+#: Path kinds this adapter implements.  ``path_definition.kind`` is refused for
+#: anything else rather than silently reinterpreted.
+PATH_KINDS = ("line",)
+
+MIN_SAMPLE_POINTS = 2
+MAX_SAMPLE_POINTS = 10_000
+MAX_EXPRESSIONS = 32
+
+COORDINATE_COLUMNS = ("x", "y", "z")
+SOLUTION_INDEX_COLUMN = "solnum"
+TIME_COLUMN = "time"
+TIME_COLUMN_ALIAS = "t"
+
+EPHEMERAL_TAG_STEM = "cmssp"
+MAX_EPHEMERAL_TAG_ATTEMPTS = 1000
+
+#: Study steps that produce a time-dependent solution.  Source: the verified
+#: COMSOL 6.4 study-step table restated in ``_g3_w16.STUDY_STEP_TYPE_SOURCES``
+#: (``comsol_api_solver.51.81`` "Transient" = Time Dependent,
+#: ``comsol_api_solver.51.82`` "TimeDiscrete"); repeated here so this adapter
+#: does not import another workstream module for two names.
+TIME_DEPENDENT_STUDY_STEPS = frozenset({"Transient", "TimeDiscrete"})
+
+#: Encoding of a ``double[][]`` argument on the worker wire.  The worker reads
+#: ``java_signature`` (``_g2_contract`` TypedValue contract) to select the
+#: ``set(String,double[][])`` overload; the nested list alone would be ambiguous
+#: between the ``double[][]``/``int[][]``/``String[][]`` overloads.
+DOUBLE_MATRIX_SIGNATURE = "double[][]"
+DOUBLE_MATRIX_KIND = "float64"
+
+#: Worker allow-list entries this adapter would use if the Java worker published
+#: them.  They are *not* used (the implementations below never call them); they
+#: are reported so the gap is actionable.  See ``ALLOWLIST_ADDITIONS``.
+ALLOWLIST_ADDITIONS: tuple[str, ...] = (
+    # SolutionInfo (comsol_api_solver.51.10): the canonical stored output-time /
+    # level-name route; needs the accessor plus its methods.
+    # getLevels is now implemented in the Worker allow-list; its original
+    # R10 SolutionInfo provenance is retained as implemented getter metadata.
+    "getVals",
+    # EvaluationGroup (Application Programming Guide p.280): the documented
+    # "looplevelinput first/last + getReal()" route for output times.
+    "evaluationGroup",
+    "looplevelinput",
+)
+
+#: SolutionInfo route entries that were *published* by the G3.3 §4 (F04) fix and
+#: are now actually called by ``read_solution_binding``.  They are listed here
+#: (and kept out of ``ALLOWLIST_ADDITIONS``) because the Java worker allow-list
+#: and this adapter have to agree: a name reported as "missing" while the code
+#: dispatches it is exactly the silent-hole class the allow-list test forbids.
+#: javap -cp apiplugins/com.comsol.api_1.0.0.jar (COMSOL 6.4.0.293):
+#:   SolverSequence.getSolutioninfo() -> SolutionInfo
+#:   SolutionInfo.getOuterSolnum() -> int[]
+#:   SolutionInfo.getMaxInner(int[]) -> int
+#:   SolutionInfo.getLevelNames() -> String[]
+ALLOWLIST_ADDITIONS_PUBLISHED: tuple[str, ...] = (
+    # COMSOL 6.4 Study.getSolverSequences(String) is used only by the private
+    # initial-stage admission context to bind one solver sequence to its
+    # registered study target.
+    "getSolverSequences",
+    "getSolutioninfo",
+    "getOuterSolnum",
+    "getMaxInner",
+    "getLevelNames",
+)
+
+#: Solver-sequence introspection that the worker *does* publish but that this
+#: adapter deliberately does not call (it would only corroborate what the study
+#: step type already decides).  Recorded so the capability gap is not confused
+#: with the additions above.
+ALLOWLIST_AVAILABLE_UNUSED: tuple[str, ...] = (
+    "getSequenceType",
+    "getPNames",
+    "getParamVals",
+    "getParamNames",
+    "isAttached",
+)
+
+#: Paths deliberately not implemented by this adapter (W16 infrastructure only,
+#: per §8).  Recorded in the result so the boundary is explicit.
+UNVERIFIED_PATHS: tuple[dict[str, str], ...] = (
+    {"path": "spec.selection / spec.aggregate / spec.weight_expression",
+     "reason": "outside the minimal sampler; refused with API_UNSUPPORTED instead of approximated"},
+    {"path": "spec.solution.inner / .outer / .time / .frequency / .parameters",
+     "reason": "per-solution selection is not implemented; every stored solution is returned and "
+               "indexed by the 'solnum' column"},
+    {"path": "spec.complex_mode other than 'real'",
+     "reason": "NumericalFeature.getData() returns the real part (documented); no silent complex reshuffle"},
+    {"path": "path_definition kinds other than 'line'",
+     "reason": "only the line kind the W16 chains need is implemented"},
+    {"path": "coordinate readback via getCoordinates()",
+     "reason": "documented but not on the worker allow-list; the row coordinates are the requested path points"},
+)
+
+SUPPORTED_DATASET_TYPES: frozenset[str] = frozenset({
+    "Solution", "CutPoint3D", "CutPoint2D", "CutPoint1D",
+    "CutLine3D", "CutLine2D", "CutLine1D", "CutPlane",
+    "Join", "Revolution2D", "Revolution1D", "Mirror3D", "Mirror2D",
+    "Grid3D", "Grid2D", "Grid1D", "Edge3D", "Surface", "Volume",
+    "Parametric", "Receiver", "Average", "Integral",
+})
+
+SUPPORTED_NUMERICAL_TYPES: frozenset[str] = frozenset({
+    "EvalGlobal", "EvalPoint", "Eval",
+    "IntVolume", "IntSurface", "IntLine", "IntPoint",
+    "AvVolume", "AvSurface", "AvLine", "AvPoint",
+    "MaxVolume", "MaxSurface", "MaxLine", "MaxPoint",
+    "MinVolume", "MinSurface", "MinLine", "MinPoint",
+    "Interp",
+})
+
+COMPLEX_MODES: frozenset[str] = frozenset({"preserve", "real", "imag", "abs", "phase"})
+AGGREGATE_MODES: frozenset[str] = frozenset({"none", "global", "integral", "average", "minimum", "maximum", "std", "rms"})
+
+
+# ---------------------------------------------------------------------------
+# argument validation (all of it happens before the first engine call)
+# ---------------------------------------------------------------------------
+
+
+def _finite(value: Any, label: str) -> float:
+    number = require_number(value, label)
+    return float(number)
+
+
+def _point(value: Any, label: str) -> list[float]:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes, Mapping)):
+        raise ExecutionContractError("INVALID_REQUEST", f"{label} must be an array of numbers")
+    items = list(value)
+    if not items:
+        raise ExecutionContractError("INVALID_REQUEST", f"{label} must not be empty")
+    if len(items) > len(COORDINATE_COLUMNS):
+        raise ExecutionContractError(
+            "INVALID_REQUEST", f"{label} has {len(items)} coordinates; at most x/y/z are supported"
+        )
+    return [_finite(item, f"{label}[{index}]") for index, item in enumerate(items)]
+
+
+def _refuse_unsupported_options(spec: Mapping[str, Any]) -> None:
+    """Refuse the EvaluationSpec options this minimal sampler does not honour."""
+    aggregate = spec.get("aggregate")
+    if aggregate is not None and aggregate != "none":
+        raise ExecutionContractError(
+            "API_UNSUPPORTED",
+            f"spec.aggregate={aggregate!r} is not implemented by this minimal sampling adapter "
+            f"(it returns raw point samples; see UNVERIFIED_PATHS)",
+        )
+    complex_mode = spec.get("complex_mode")
+    if complex_mode is not None and complex_mode != "real":
+        raise ExecutionContractError(
+            "API_UNSUPPORTED",
+            f"spec.complex_mode={complex_mode!r} is not implemented; NumericalFeature.getData() returns "
+            f"the real part (documented) and this adapter never silently reshapes complex data",
+        )
+    storage = spec.get("storage")
+    if storage is not None and storage not in {"inline", "auto"}:
+        raise ExecutionContractError(
+            "API_UNSUPPORTED", f"spec.storage={storage!r} is not implemented by this adapter (samples are inline)"
+        )
+    for name in REFUSED_SPEC_KEYS + ("selection", "weight_expression", "coordinate_frame"):
+        if spec.get(name) is not None:
+            raise ExecutionContractError(
+                "API_UNSUPPORTED",
+                f"spec.{name} is not implemented by this minimal sampling adapter; "
+                f"the adapter always reads every stored solution of the dataset",
+            )
+
+
+def _validate_arguments(arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """Validate the operation body; refusal happens before any engine call.
+
+    The accepted shape is exactly what the W16 driver sends
+    (``spec.expressions``/``spec.dataset``/``spec.solution`` plus
+    ``path_definition``); ``spec.solution`` may also be the published
+    ``common.schema.json#/$defs/SolutionSpec`` object, whose unimplemented
+    per-solution fields (``inner``/``outer``/``time``/``frequency``/
+    ``parameters``) are refused with ``API_UNSUPPORTED`` rather than ignored.
+    ``ACCEPTED_SPEC_KEYS`` records the resulting vocabulary against the schema.
+    """
+    args = operation_arguments(arguments, ("spec", "path_definition"), ("spec", "path_definition"))
+    spec = require_mapping(args["spec"], "spec")
+    reject_unknown_keys(spec, ACCEPTED_SPEC_KEYS, "spec")
+    expressions = require_string_array(spec.get("expressions"), "spec.expressions")
+    if len(expressions) > MAX_EXPRESSIONS:
+        raise ExecutionContractError(
+            "INVALID_REQUEST", f"spec.expressions accepts at most {MAX_EXPRESSIONS} expressions"
+        )
+    _check_row_key_collisions(expressions)
+    _refuse_unsupported_options(spec)
+
+    dataset = spec.get("dataset")
+    solution = spec.get("solution")
+    if solution is not None and isinstance(solution, Mapping):
+        solution_spec = require_mapping(solution, "spec.solution")
+        reject_unknown_keys(solution_spec, ACCEPTED_SOLUTION_SPEC_KEYS, "spec.solution")
+        if dataset is None:
+            dataset = solution_spec.get("dataset")
+        solution = solution_spec.get("solution")
+        _refuse_unsupported_options({key: value for key, value in solution_spec.items() if key != "dataset"})
+    dataset_tag = require_string(dataset, "spec.dataset") if dataset is not None else None
+    if dataset_tag is None:
+        raise ExecutionContractError(
+            "INVALID_REQUEST",
+            "spec.dataset is required: this adapter binds the ephemeral Interp feature to a named dataset "
+            "(EvaluationSpec.SolutionSpec requires 'dataset')",
+        )
+    solution_tag = require_string(solution, "spec.solution") if solution is not None else None
+
+    units = spec.get("units")
+    expression_units: list[str] | None = None
+    if units is not None:
+        expression_units = require_string_array(units, "spec.units")
+        if len(expression_units) != len(expressions):
+            raise ExecutionContractError(
+                "INVALID_REQUEST",
+                f"spec.units has {len(expression_units)} entries for {len(expressions)} expressions",
+            )
+
+    path = require_mapping(args["path_definition"], "path_definition")
+    reject_unknown_keys(path, ("kind", "start", "end", "samples"), "path_definition")
+    kind = require_string(path.get("kind"), "path_definition.kind")
+    if kind not in PATH_KINDS:
+        raise ExecutionContractError(
+            "INVALID_REQUEST",
+            f"path_definition.kind {kind!r} is not supported; this adapter implements {list(PATH_KINDS)}",
+        )
+    start = _point(path.get("start"), "path_definition.start")
+    end = _point(path.get("end"), "path_definition.end")
+    if len(start) != len(end):
+        raise ExecutionContractError(
+            "INVALID_REQUEST",
+            f"path_definition.start has {len(start)} coordinates but end has {len(end)}",
+        )
+    samples = require_int(path.get("samples"), "path_definition.samples",
+                          minimum=MIN_SAMPLE_POINTS, maximum=MAX_SAMPLE_POINTS)
+    if start == end:
+        raise ExecutionContractError(
+            "INVALID_REQUEST", "path_definition.start and end are identical; the line is degenerate"
+        )
+    return {
+        "expressions": expressions,
+        "expression_units": expression_units,
+        "dataset": dataset_tag,
+        "solution": solution_tag,
+        "kind": kind,
+        "start": start,
+        "end": end,
+        "samples": samples,
+    }
+
+
+def _path_points(request: Mapping[str, Any]) -> list[list[float]]:
+    """Evenly spaced points from ``start`` to ``end`` (both endpoints included)."""
+    start, end, count = request["start"], request["end"], int(request["samples"])
+    points: list[list[float]] = []
+    for index in range(count):
+        fraction = index / (count - 1)
+        points.append([value + (end[axis] - value) * fraction for axis, value in enumerate(start)])
+    return points
+
+
+def _check_row_key_collisions(expressions: Sequence[str]) -> None:
+    """Refuse expression names that would collide with a column this adapter owns.
+
+    Two rules, both **order-independent**:
+
+    * an expression whose *exact* name is one of the keys this adapter writes
+      with a different value (``x``/``y``/``z``/``solnum``/``time``/``t``) is
+      refused - that would be one JSON key with two meanings;
+    * an expression whose name differs only in case from a *published* column
+      (``x``, ``y``, ``z``, ``solnum``, ``time``) is refused as well, because any
+      case-insensitive reader (the phase-4 driver's ``_sample_series`` resolves
+      row keys that way) would then pick whichever of the two keys comes first
+      in the JSON object - i.e. the meaning of the table would depend on field
+      order.  The comparison is deliberately against the *published* columns
+      only: the W16 chain-B call samples the expression ``T`` on a transient
+      dataset, and ``"t" != "time"`` case-insensitively, so ``T`` stays legal.
+
+    The time axis is published once, as ``time`` (see :data:`TIME_COLUMN`); the
+    former ``t`` alias was removed precisely because it made the table
+    order-dependent: ``t`` and the expression ``T`` differ only in case.
+    """
+    published = {*COORDINATE_COLUMNS, SOLUTION_INDEX_COLUMN, TIME_COLUMN}
+    reserved = {*published, TIME_COLUMN_ALIAS}
+    seen: dict[str, str] = {}
+    for expression in expressions:
+        key = expression.strip()
+        if key in reserved:
+            raise ExecutionContractError(
+                "INVALID_REQUEST",
+                f"expression name {expression!r} collides with a column this adapter publishes "
+                f"({sorted(reserved)}); rename it or request it through a dedicated evaluation action",
+            )
+        folded = key.lower()
+        if folded in {column.lower() for column in published}:
+            raise ExecutionContractError(
+                "INVALID_REQUEST",
+                f"expression name {expression!r} differs only in case from the published column "
+                f"{folded!r}; a case-insensitive reader of the sample table would resolve whichever "
+                f"key comes first, so the table's meaning would depend on JSON field order",
+            )
+        if folded in seen:
+            raise ExecutionContractError(
+                "INVALID_REQUEST",
+                f"expressions {seen[folded]!r} and {expression!r} differ only in case; the sample table "
+                f"cannot publish both (the driver resolves row keys case-insensitively)",
+            )
+        seen[folded] = expression
+
+
+# ---------------------------------------------------------------------------
+# engine helpers
+# ---------------------------------------------------------------------------
+
+
+def _record(node: Any, method: str, *args: Any, errors: list[dict[str, Any]]) -> Any:
+    """Call an optional accessor and *record* a refusal instead of hiding it."""
+    result = call_probe(node, method, *args)
+    if result["ok"]:
+        return result["value"]
+    detail = result.get("error") or {}
+    entry = {
+        "method": method,
+        "code": detail.get("code"),
+        "message": detail.get("message"),
+        "allowlist_entry_required": detail.get("allowlist_entry_required"),
+    }
+    if entry not in errors:
+        errors.append(entry)
+    return None
+
+
+def _string_or_none(node: Any, property_name: str, errors: list[dict[str, Any]]) -> str | None:
+    value = _record(node, "getString", property_name, errors=errors)
+    return value if isinstance(value, str) and value else None
+
+
+def _node_type(node: Any, errors: list[dict[str, Any]] | None = None) -> str | None:
+    val = _record(node, "getType", errors=errors if errors is not None else [])
+    return str(val) if isinstance(val, str) and val else None
+
+
+def _prop_value(node: Any, property_name: str) -> Any:
+    for method in ("getString", "getDouble", "getInt", "getBoolean", "getStringArray", "getDoubleArray"):
+        probe = call_probe(node, method, property_name)
+        if probe["ok"] and probe["value"] is not None:
+            return probe["value"]
+    return None
+
+
+
+
+def _call_recorded(node: Any, method: str, *args: Any, errors: list[dict[str, Any]]) -> Any:
+    """``_call`` for a step whose failure must carry its allow-list status."""
+    try:
+        return _call(node, method, *args)
+    except ExecutionContractError as exc:
+        entry = {
+            "method": method,
+            "code": exc.code,
+            "message": str(exc),
+            "allowlist_entry_required": method if allowlist_rejected(exc) else None,
+        }
+        if entry not in errors:
+            errors.append(entry)
+        raise
+
+
+def _solver_sequence_parameter_observation(
+    solution: Any,
+    solution_info: Any,
+    *,
+    study_tag: str | None,
+    solution_tag: str,
+) -> dict[str, Any]:
+    """Capture the SolverSequence's typed complex parameter axis separately.
+
+    COMSOL's direct SolverSequence getters are a supplemental raw observation;
+    they do not replace SolutionInfo's outer/inner tuple mapping and must never
+    turn ``parameters_complete`` into true.  ``getSize()`` is documented as
+    ``[degrees_of_freedom, solnums]``.  Each ``getPVals(solnum)`` and
+    ``getPValsImag(solnum)`` call uses the documented one-based solution number.
+    """
+    errors: list[dict[str, Any]] = []
+
+    def read(node: Any, method: str, *args: Any) -> Any:
+        return _record(node, method, *args, errors=errors)
+
+    type_value = read(solution, "getType")
+    sequence_type = read(solution, "getSequenceType")
+    attached = read(solution, "isAttached")
+    observed_study = read(solution, "study")
+    raw_size = read(solution, "getSize")
+    raw_size_multi = read(solution, "getSizeMulti")
+    raw_names = read(solution, "getPNames")
+    names = list(raw_names) if isinstance(raw_names, (list, tuple)) else None
+    size = list(raw_size) if isinstance(raw_size, (list, tuple)) else None
+    size_multi = list(raw_size_multi) if isinstance(raw_size_multi, (list, tuple)) else None
+    solnum_count: int | None = None
+    size_valid = (
+        size is not None and len(size) == 2
+        and all(type(item) is int and item >= 0 for item in size)
+    )
+    if not size_valid and raw_size is not None:
+        errors.append({"method": "getSize", "code": "SOLVER_SEQUENCE_SIZE_SHAPE_INVALID",
+                       "message": "getSize() must return exactly two nonnegative integers"})
+    if (size_multi is None or len(size_multi) != 2
+            or any(type(item) is not int or item < 0 for item in size_multi)):
+        if raw_size_multi is not None:
+            errors.append({"method": "getSizeMulti", "code": "SOLVER_SEQUENCE_SIZE_MULTI_SHAPE_INVALID",
+                           "message": "getSizeMulti() must return exactly two nonnegative integers"})
+        size_multi = None
+    if size_valid:
+        solnum_count = size[1]
+        if not 1 <= solnum_count <= 4096:
+            errors.append({"method": "getSize", "code": "SOLVER_SEQUENCE_SOLNUM_COUNT_UNSUPPORTED",
+                           "message": "documented getSize()[1] solution count must be in 1..4096"})
+            solnum_count = None
+    if names is not None and any(not isinstance(name, str) or not name for name in names):
+        errors.append({"method": "getPNames", "code": "SOLVER_SEQUENCE_PARAMETER_NAMES_INVALID",
+                       "message": "parameter names must be nonempty strings"})
+        names = None
+    elif names is None and raw_names is not None:
+        errors.append({"method": "getPNames", "code": "SOLVER_SEQUENCE_PARAMETER_NAMES_SHAPE_INVALID",
+                       "message": "getPNames() must return a string array"})
+
+    values_by_solnum: list[dict[str, Any]] = []
+    if solnum_count is not None:
+        for solnum in range(1, solnum_count + 1):
+            real = read(solution, "getPVals", solnum)
+            imag = read(solution, "getPValsImag", solnum)
+            real_values = list(real) if isinstance(real, (list, tuple)) else None
+            imag_values = list(imag) if isinstance(imag, (list, tuple)) else None
+            values_by_solnum.append({
+                "solnum": solnum,
+                "real_getter": {"method": "SolverSequence.getPVals(int)", "arguments": [solnum],
+                                "raw": real_values},
+                "imag_getter": {"method": "SolverSequence.getPValsImag(int)", "arguments": [solnum],
+                                "raw": imag_values},
+            })
+
+    units_by_name: dict[str, Any] = {}
+    unit_observations: list[dict[str, Any]] = []
+    if names is not None and solution_info is not None:
+        for name in names:
+            unit = read(solution_info, "getUnit", name)
+            units_by_name[name] = unit if isinstance(unit, str) and unit else None
+            unit_observations.append({"name": name, "method": "SolutionInfo.getUnit(String)",
+                                      "arguments": [name], "value": units_by_name[name]})
+    else:
+        units_by_name = {name: None for name in (names or [])}
+
+    count_scope_errors: list[dict[str, Any]] = []
+    level_names = _record(solution_info, "getLevelNames", errors=count_scope_errors) \
+        if solution_info is not None else None
+    levels = _record(solution_info, "getLevels", errors=count_scope_errors) \
+        if solution_info is not None else None
+    outer_solnums = _record(solution_info, "getOuterSolnum", errors=count_scope_errors) \
+        if solution_info is not None else None
+    count_scope = {
+        "getLevelNames": list(level_names) if isinstance(level_names, (list, tuple)) else level_names,
+        "getLevels": levels,
+        "getOuterSolnum": list(outer_solnums) if isinstance(outer_solnums, (list, tuple)) else outer_solnums,
+        "getOuterSolnum_semantics": "empty means no outer parameter/values per COMSOL 6.4 doc7709/chunk23066",
+        "read_errors": count_scope_errors,
+    }
+
+    rows: list[dict[str, Any]] = []
+    rows_shape_valid = names is not None and bool(names)
+    if rows_shape_valid:
+        for entry in values_by_solnum:
+            real = entry["real_getter"]["raw"]
+            imag = entry["imag_getter"]["raw"]
+            if (real is None or imag is None or len(real) != len(names)
+                    or len(imag) != len(names)):
+                rows_shape_valid = False
+                errors.append({"method": "getPVals/getPValsImag", "code": "SOLVER_SEQUENCE_PARAMETER_SHAPE_MISMATCH",
+                               "message": f"solution number {entry['solnum']} values do not match getPNames() length"})
+                continue
+            for index, name in enumerate(names):
+                rows.append({"solnum": entry["solnum"], "parameter_index": index,
+                             "name": name, "real": real[index], "imag": imag[index],
+                             "unit": units_by_name.get(name)})
+    units_complete = bool(names) and all(units_by_name.get(name) for name in names)
+    if errors:
+        status = "UNVERIFIED_WITH_READ_ERRORS"
+    elif not names:
+        status = "NO_PARAMETER_NAMES_REPORTED"
+    elif not rows_shape_valid:
+        status = "UNVERIFIED_SHAPE_MISMATCH"
+    elif not units_complete:
+        status = "OBSERVED_VALUES_UNITS_UNAVAILABLE"
+    else:
+        status = "OBSERVED_TYPED_COMPLEX_PARAMETER_VALUES"
+    return {
+        "status": status,
+        "source": "direct SolverSequence.getPNames/getSize/getPVals(int)/getPValsImag(int); supplemental to SolutionInfo",
+        "solution_tag": solution_tag,
+        "receiver": "model.sol(<dataset-bound solution tag>)",
+        "sequence_type": sequence_type if isinstance(sequence_type, str) else None,
+        "solution_type": type_value if isinstance(type_value, str) else None,
+        "attached": attached if isinstance(attached, bool) else None,
+        "study": observed_study if isinstance(observed_study, str) else study_tag,
+        "solution_identity_matches_dataset_study": (
+            observed_study == study_tag if isinstance(observed_study, str) and study_tag else None),
+        "get_size": size,
+        "get_size_semantics": "[degrees_of_freedom, solution_number_count] per COMSOL 6.4 documentation",
+        "get_size_multi": size_multi,
+        "get_size_multi_getter": {
+            "method": "SolverSequence.getSizeMulti()",
+            "status": "CAPTURED" if size_multi is not None else "ERROR",
+            "raw": size_multi if size_multi is not None else raw_size_multi,
+            "semantics": "[local solution count in multisolution, total solution number count] per COMSOL 6.4 doc7714/chunk23082",
+        },
+        "solution_info_count_scope": count_scope,
+        "solution_number_count": solnum_count,
+        "pnames": names,
+        "solution_values": values_by_solnum,
+        "unit_observations": unit_observations,
+        "parameter_rows": rows,
+        "parameter_units_complete": units_complete,
+        "parameters_complete": False,
+        "interpretation": "raw sequence-level complex values only; no outer/inner tuple mapping or complete parameter combinations inferred",
+        "read_errors": errors,
+    }
+
+
+def _unique_tag(existing: Sequence[str]) -> str:
+    taken = {str(item) for item in existing}
+    for index in range(1, MAX_EPHEMERAL_TAG_ATTEMPTS):
+        candidate = f"{EPHEMERAL_TAG_STEM}{index}"
+        if candidate not in taken:
+            return candidate
+    raise ExecutionContractError(
+        "EXECUTION_STATE_UNKNOWN",
+        f"no free ephemeral tag ({EPHEMERAL_TAG_STEM}1..{EPHEMERAL_TAG_STEM}{MAX_EPHEMERAL_TAG_ATTEMPTS - 1}) "
+        f"is available in the results tree",
+    )
+
+
+def _axis_values(value: Any, count: int) -> list[float] | None:
+    """Return ``count`` finite numbers, or ``None`` when the read is unusable."""
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes, Mapping)):
+        return None
+    items = list(value)
+    if len(items) != count:
+        return None
+    numbers: list[float] = []
+    for item in items:
+        if isinstance(item, bool) or not isinstance(item, (int, float)):
+            return None
+        number = float(item)
+        if not math.isfinite(number):
+            return None
+        numbers.append(number)
+    return numbers
+
+
+def _normalise_samples(raw: Any, expressions: Sequence[str], point_count: int) -> tuple[list[list[list[float]]], int]:
+    """Validate ``getData()`` -> ``[expression][solnum][coordinates]``.
+
+    The documented return type is a three-dimensional matrix
+    (``comsol_api_results.52.082.html``).  A two-dimensional ``[expression]
+    [coordinates]`` readback (single stored solution) is accepted as
+    ``solnum == 1`` instead of being misparsed as a missing dimension.
+    """
+    if not isinstance(raw, Sequence) or isinstance(raw, (str, bytes, Mapping)):
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            f"the Interp feature returned {type(raw).__name__} instead of the documented "
+            f"result[expression][solnum][coordinates] matrix",
+        )
+    series = list(raw)
+    if len(series) != len(expressions):
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            f"the Interp feature returned {len(series)} expression series for {len(expressions)} requested "
+            f"expressions",
+        )
+    rows: list[list[list[float]]] = []
+    solution_count: int | None = None
+    for expression_index, expression in enumerate(expressions):
+        block = series[expression_index]
+        if not isinstance(block, Sequence) or isinstance(block, (str, bytes, Mapping)):
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                f"the Interp feature returned a non-matrix block for expression {expression!r}",
+            )
+        block_items = list(block)
+        # rank-2 readback: [coordinates] for a single stored solution.
+        if block_items and all(isinstance(item, (int, float)) and not isinstance(item, bool) for item in block_items):
+            block_items = [block_items]
+        if not block_items:
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                f"the Interp feature returned no samples for expression {expression!r}",
+            )
+        if solution_count is None:
+            solution_count = len(block_items)
+        elif solution_count != len(block_items):
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                f"expression {expression!r} returned {len(block_items)} stored solutions while the first "
+                f"expression returned {solution_count}",
+            )
+        per_solution: list[list[float]] = []
+        for solnum_index, solution_block in enumerate(block_items):
+            if not isinstance(solution_block, Sequence) or isinstance(solution_block, (str, bytes, Mapping)):
+                raise ExecutionContractError(
+                    "EXECUTION_STATE_UNKNOWN",
+                    f"expression {expression!r} solution {solnum_index + 1} is not a coordinate vector",
+                )
+            values = list(solution_block)
+            if len(values) != point_count:
+                raise ExecutionContractError(
+                    "EXECUTION_STATE_UNKNOWN",
+                    f"expression {expression!r} solution {solnum_index + 1} returned {len(values)} "
+                    f"coordinates for {point_count} requested path points",
+                )
+            numbers: list[float] = []
+            for point_index, value in enumerate(values):
+                if isinstance(value, bool) or not isinstance(value, (int, float)):
+                    raise ExecutionContractError(
+                        "EXECUTION_STATE_UNKNOWN",
+                        f"expression {expression!r} solution {solnum_index + 1} point {point_index} is not "
+                        f"a number ({type(value).__name__})",
+                    )
+                number = float(value)
+                if not math.isfinite(number):
+                    raise ExecutionContractError(
+                        "EXECUTION_STATE_UNKNOWN",
+                        f"expression {expression!r} solution {solnum_index + 1} point {point_index} is not "
+                        f"finite ({number!r}); the path may leave the geometry",
+                    )
+                numbers.append(number)
+            per_solution.append(numbers)
+        rows.append(per_solution)
+    if solution_count is None:
+        raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "the Interp feature returned no stored solutions")
+    return rows, solution_count
+
+
+# ---------------------------------------------------------------------------
+# context resolution
+# ---------------------------------------------------------------------------
+
+
+def _normalise_coordinate_readback(raw: Any, points: Sequence[Sequence[float]], dimension: int,
+                                   errors: list[dict[str, Any]]) -> dict[str, Any]:
+    """Compare the engine's coordinate readback with the requested path points.
+
+    The documented ``getCoordinates()`` readback is the same
+    ``[space_dimension][points]`` matrix as the ``coord`` property.  A refusal
+    (the Worker does not publish the method yet - see ``ALLOWLIST_ADDITIONS``) is
+    reported as ``UNAVAILABLE`` with the recorded reason; a readback that does
+    not match the requested points is a **failed verification**, not a
+    difference to ignore, because it would mean the samples belong to different
+    coordinates than the caller asked for.
+    """
+    result: dict[str, Any] = {
+        "attempted": True,
+        "status": "UNAVAILABLE",
+        "method": "result.numerical(<tag>).getCoordinates()",
+        "coordinates": None,
+        "max_deviation": None,
+        "allowlist_entry_required": "getCoordinates",
+        "reason": None,
+    }
+    if raw is None:
+        recorded = [row for row in errors if row.get("method") == "getCoordinates"]
+        result["reason"] = (
+            recorded[-1].get("message") if recorded
+            else "the numerical feature did not publish getCoordinates()"
+        )
+        result["error_code"] = recorded[-1].get("code") if recorded else None
+        return result
+    try:
+        matrix = _coordinate_matrix(raw, dimension, len(points))
+    except ExecutionContractError as exc:
+        result.update(status="MISMATCH", reason=str(exc), error_code=exc.code)
+        return result
+    deviation = 0.0
+    for row_index, row in enumerate(matrix):
+        for point_index, value in enumerate(row):
+            deviation = max(deviation, abs(value - float(points[point_index][row_index])))
+    result["coordinates"] = matrix
+    result["max_deviation"] = deviation
+    tolerance = 1e-12 * max(1.0, max(abs(value) for row in matrix for value in row) if matrix else 1.0)
+    if deviation > tolerance:
+        result.update(status="MISMATCH", allowlist_entry_required=None,
+                      reason=(f"the engine readback differs from the requested path points by up to "
+                              f"{deviation!r}; the samples would not belong to the requested coordinates"))
+    else:
+        result.update(status="VERIFIED", allowlist_entry_required=None, reason=None)
+    return result
+
+
+def _coordinate_matrix(raw: Any, dimension: int, point_count: int) -> list[list[float]]:
+    """Validate the ``getCoordinates()`` readback as ``[dimension][points]``."""
+    if not isinstance(raw, Sequence) or isinstance(raw, (str, bytes, Mapping)):
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            f"getCoordinates() returned {type(raw).__name__} instead of the documented matrix",
+        )
+    rows = list(raw)
+    if len(rows) != dimension:
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            f"getCoordinates() returned {len(rows)} coordinate rows for a {dimension}D dataset",
+        )
+    matrix: list[list[float]] = []
+    for row in rows:
+        if not isinstance(row, Sequence) or isinstance(row, (str, bytes, Mapping)):
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN", "getCoordinates() returned a non-vector coordinate row"
+            )
+        values = list(row)
+        if len(values) != point_count:
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                f"getCoordinates() returned {len(values)} coordinates for {point_count} path points",
+            )
+        numbers: list[float] = []
+        for value in values:
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+                raise ExecutionContractError(
+                    "EXECUTION_STATE_UNKNOWN", f"getCoordinates() returned a non-finite coordinate ({value!r})"
+                )
+            numbers.append(float(value))
+        matrix.append(numbers)
+    return matrix
+
+
+def _require_dataset(results: Any, dataset_tag: str) -> Any:
+    container = call_probe(results, "dataset")
+    if not container["ok"]:
+        raise ExecutionContractError(
+            "API_UNSUPPORTED", "this results tree does not expose model.result().dataset()"
+        )
+    dataset_list = container["value"]
+    tags = tag_list(dataset_list)
+    if dataset_tag not in tags:
+        raise node_not_found(
+            f"solution dataset {dataset_tag!r} does not exist (available: {sorted(tags)})"
+        )
+    return _call(dataset_list, "get", dataset_tag)
+
+
+_DERIVED_DATASET_TYPES = frozenset({
+    "CutPoint1D", "CutPoint2D", "CutPoint3D",
+    "CutLine1D", "CutLine2D", "CutLine3D", "CutPlane", "Join",
+})
+
+
+def _resolve_dataset_binding(
+    model: Any,
+    dataset_tag: str,
+    *,
+    requested_solution: str | None = None,
+) -> dict[str, Any] | None:
+    """Read the shared dataset graph before using solution/geometry metadata."""
+    try:
+        from ._dataset_binding import resolve_dataset_binding
+        binding = resolve_dataset_binding(model, dataset_tag, requested_solution=requested_solution)
+    except Exception as exc:
+        # Every dataset type requires a resolved binding. A derived dataset's
+        # ``data`` property may name an upstream dataset, not a solution;
+        # neither that string nor requested solution membership proves binding.
+        return {
+            "dataset": dataset_tag,
+            "dataset_type": None,
+            "binding_complete": False,
+            "read_errors": [{"code": "DATASET_BINDING_UNAVAILABLE", "message": f"{type(exc).__name__}: {exc}"}],
+            "error": {"code": "DATASET_BINDING_UNAVAILABLE", "message": f"{type(exc).__name__}: {exc}"},
+        }
+    if not isinstance(binding, Mapping):
+        return {
+            "dataset": dataset_tag,
+            "dataset_type": None,
+            "binding_complete": False,
+            "read_errors": [{"code": "DATASET_BINDING_UNAVAILABLE", "message": "dataset resolver returned a non-mapping result"}],
+            "error": {"code": "DATASET_BINDING_UNAVAILABLE", "message": "dataset resolver returned a non-mapping result"},
+        }
+    return dict(binding)
+
+
+def _coordinate_context(
+    model: Any,
+    dataset_node: Any,
+    errors: list[dict[str, Any]],
+    *,
+    dataset_binding: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Resolve the dataset's geometry, its length unit and its space dimension."""
+    context: dict[str, Any] = {"component": None, "geometry": None, "length_unit": None,
+                               "space_dimension": None, "source": None}
+    binding_type = dataset_binding.get("dataset_type") if isinstance(dataset_binding, Mapping) else None
+    if binding_type is None:
+        try:
+            binding_type = _call(dataset_node, "getType")
+        except Exception:
+            binding_type = None
+    if isinstance(dataset_binding, Mapping) and dataset_binding.get("binding_complete") is not True:
+        # The resolver is authoritative for every dataset type.  Falling back
+        # to a direct ``comp``/``geom`` read after it reports a failed Solution
+        # binding can evaluate the wrong component or geometry while claiming
+        # success.  Derived datasets were already protected here; the same
+        # fail-closed rule applies to base Solution datasets and resolver
+        # failures with an unknown type.
+        detail = dataset_binding.get("error") or (
+            dataset_binding.get("read_errors")
+            or [{"code": "DATASET_BINDING_INCOMPLETE", "message": "dataset binding is incomplete"}]
+        )[0]
+        detail_message = detail.get("message", detail) if isinstance(detail, Mapping) else str(detail)
+        binding_errors = dataset_binding.get("read_errors") or []
+        if (
+            isinstance(detail, Mapping) and detail.get("code") == "SOLUTION_NOT_FOUND"
+        ) or any(
+            isinstance(item, Mapping) and item.get("code") == "SOLUTION_NOT_FOUND"
+            for item in binding_errors
+        ):
+            missing = next(
+                (item for item in binding_errors if isinstance(item, Mapping) and item.get("code") == "SOLUTION_NOT_FOUND"),
+                detail if isinstance(detail, Mapping) else None,
+            )
+            raise node_not_found(
+                missing.get("message", detail_message) if isinstance(missing, Mapping) else detail_message
+            )
+        raise ExecutionContractError(
+            "DATASET_BINDING_INCOMPLETE",
+            f"dataset binding is incomplete for type {binding_type!r}: {detail_message}",
+            details={"dataset_binding": dict(dataset_binding)},
+        )
+    component = None
+    geometry = None
+    if isinstance(dataset_binding, Mapping) and dataset_binding.get("binding_complete") is True:
+        component = dataset_binding.get("component")
+        geometry = dataset_binding.get("geometry")
+        if not component or not geometry:
+            raise ExecutionContractError(
+                "DATASET_BINDING_INCOMPLETE",
+                "complete dataset binding did not publish component and geometry",
+                details={"dataset_binding": dict(dataset_binding)},
+            )
+    elif dataset_binding is None:
+        # Callers that do not have a resolver witness cannot safely infer the
+        # spatial owner from direct properties.  Keep this explicit so a
+        # future adapter cannot accidentally reintroduce the old fallback.
+        raise ExecutionContractError(
+            "DATASET_BINDING_UNAVAILABLE",
+            "dataset binding resolver did not return a read-only binding witness",
+        )
+    if component and geometry:
+        binding_sources = dataset_binding.get("sources", {}) if isinstance(dataset_binding, Mapping) else {}
+        if (
+            isinstance(binding_sources, Mapping)
+            and isinstance(binding_sources.get("component"), str)
+            and "dataset.comp" in binding_sources.get("component", "")
+            and isinstance(binding_sources.get("geometry"), str)
+            and "dataset.geom" in binding_sources.get("geometry", "")
+        ):
+            context_source = "dataset.comp/dataset.geom"
+        elif (
+            isinstance(binding_sources, Mapping)
+            and isinstance(binding_sources.get("component"), str)
+            and "unique" in binding_sources.get("component", "")
+            and isinstance(binding_sources.get("geometry"), str)
+            and "unique" in binding_sources.get("geometry", "")
+        ):
+            context_source = "single component/geometry of the model"
+        else:
+            context_source = "resolved dataset binding graph"
+        context.update(
+            component=component,
+            geometry=geometry,
+            source=context_source,
+        )
+    else:
+        # A dataset that does not publish comp/geom still belongs to a component:
+        # use it only when the model has exactly one component and one geometry.
+        components = _record(model, "component", errors=errors)
+        try:
+            component_tags = tag_list(components) if components is not None else []
+        except ExecutionContractError:
+            component_tags = []
+        if len(component_tags) == 1:
+            comp_node = _call(model, "component", component_tags[0])
+            geometries = _record(comp_node, "geom", errors=errors)
+            try:
+                geometry_tags = tag_list(geometries) if geometries is not None else []
+            except ExecutionContractError:
+                geometry_tags = []
+            if len(geometry_tags) == 1:
+                context.update(component=component_tags[0], geometry=geometry_tags[0],
+                               source="single component/geometry of the model")
+    if context["component"] and context["geometry"]:
+        geometry_node = _call(_call(model, "component", context["component"]), "geom", context["geometry"])
+        context["length_unit"] = geometry_length_unit(geometry_node)
+        context["space_dimension"] = geometry_sdim(geometry_node)
+        # COMSOL 6.4 exposes the geometry truth through GeomSequence's
+        # isAxisymmetric().  Coordinate names and arbitrary boolean
+        # properties are not equivalent metadata: treating a failed read as
+        # ``False`` would silently omit the 2*pi*r measure factor.  Refuse the
+        # evaluation until the real accessor is available and returns a bool.
+        is_axi_getter = getattr(geometry_node, "isAxisymmetric", None)
+        if not callable(is_axi_getter):
+            raise ExecutionContractError(
+                "AXISYMMETRY_STATUS_UNAVAILABLE",
+                "geometry.isAxisymmetric() is required to determine the spatial measure",
+            )
+        try:
+            is_axi = is_axi_getter()
+        except Exception as exc:
+            raise ExecutionContractError(
+                "AXISYMMETRY_STATUS_UNAVAILABLE",
+                f"geometry.isAxisymmetric() failed: {type(exc).__name__}: {str(exc)[:500]}",
+            ) from exc
+        if not isinstance(is_axi, bool):
+            raise ExecutionContractError(
+                "AXISYMMETRY_STATUS_UNAVAILABLE",
+                "geometry.isAxisymmetric() did not return a boolean",
+            )
+        context["axisymmetric"] = is_axi
+    if isinstance(dataset_binding, Mapping):
+        context["dataset_binding"] = dict(dataset_binding)
+    return context
+
+
+def _check_point_dimension(request: Mapping[str, Any], context: Mapping[str, Any]) -> None:
+    """A global-coordinate ``coord`` matrix must have one row per space dimension.
+
+    The documented rule (Interp page): rows == space dimension means global
+    coordinates; fewer rows means the values are *parameter values on a face or
+    edge*.  Silently accepting a shorter vector would therefore change the
+    meaning of the sampling, so a mismatch is refused.
+    """
+    space_dimension = context.get("space_dimension")
+    if space_dimension is None:
+        return
+    if len(request["start"]) != space_dimension:
+        raise ExecutionContractError(
+            "INVALID_REQUEST",
+            f"path_definition.start has {len(request['start'])} coordinates but the dataset's geometry "
+            f"({context.get('component')}/{context.get('geometry')}) is {space_dimension}D; the Interp coord "
+            f"property only means global coordinates when its row count equals the space dimension",
+        )
+
+
+# ---------------------------------------------------------------------------
+# the solution axis (time steps)
+# ---------------------------------------------------------------------------
+
+
+def _require_solution(model: Any, solution_tag: str, errors: list[dict[str, Any]]) -> None:
+    """Resolve ``spec.solution`` before anything is written (identity only)."""
+    solutions = _record(model, "sol", errors=errors)
+    try:
+        tags = tag_list(solutions) if solutions is not None else []
+    except ExecutionContractError:
+        tags = []
+    if solution_tag not in tags:
+        raise node_not_found(
+            f"solution {solution_tag!r} does not exist (available: {sorted(tags)}); the ephemeral Interp "
+            f"feature is not created for an unknown solution",
+        )
+
+
+def _study_steps(model: Any, study_tag: str, errors: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], str | None]:
+    """Read the associated study's steps (tag, type, declared times and unit)."""
+    studies = _record(model, "study", errors=errors)
+    try:
+        study_tags = tag_list(studies) if studies is not None else []
+    except ExecutionContractError:
+        study_tags = []
+    if study_tag not in study_tags:
+        return [], "the associated study does not exist in this model"
+    study_node = _call(model, "study", study_tag)
+    features = _record(study_node, "feature", errors=errors)
+    if features is None:
+        return [], "the study does not expose feature()"
+    steps: list[dict[str, Any]] = []
+    for step_tag in tag_list(features):
+        step = _call(features, "get", step_tag)
+        step_type = _record(step, "getType", errors=errors)
+        # The declared output times are optional for this adapter (the stored
+        # values are preferred) and a ``tlist`` written as a range expression is
+        # legitimately not a double array, so its refusal is reported with the
+        # step instead of being mixed into the caller's hard failures.
+        declared_probe: list[dict[str, Any]] = []
+        declared = _record(step, "getDoubleArray", "tlist", errors=declared_probe)
+        steps.append({
+            "tag": step_tag,
+            "type": str(step_type) if isinstance(step_type, str) else None,
+            "declared_output_times": list(declared) if isinstance(declared, Sequence)
+            and not isinstance(declared, (str, bytes)) else None,
+            "declared_output_times_error": declared_probe[0] if declared_probe else None,
+            "declared_time_unit": _string_or_none(step, "tunit", errors),
+        })
+    return steps, None
+
+
+def _resolve_solution_axis(model: Any, feature: Any, request: Mapping[str, Any], solution_count: int,
+                           errors: list[dict[str, Any]]) -> dict[str, Any]:
+    """Resolve the per-stored-solution time axis without inventing values.
+
+    Sources, in the order the adapter trusts them:
+
+    1. the associated study step's type (``SolverSequence.study()`` ->
+       ``Study.feature().getType()``) decides whether the dataset is
+       time-dependent at all;
+    2. the stored values themselves - the Interp feature's documented ``t``
+       ("the times to use, available when the underlying solution is
+       transient") or ``SolverSequence.getPVals()``;
+    3. as a clearly labelled fallback the transient step's declared output
+       ``tlist`` (COMSOL stores the output times by interpolation from the
+       solver's time steps unless configured otherwise).
+
+    An axis that cannot be read is reported as unavailable; the ``t`` column is
+    then omitted rather than filled with a guess.
+    """
+    axis: dict[str, Any] = {
+        "time_dependent": None,
+        "status": "unavailable",
+        "source": None,
+        "values": None,
+        "unit": None,
+        "stored_solutions": solution_count,
+        "solution": request.get("solution"),
+        "study": None,
+        "study_steps": [],
+        "feature_times": None,
+        "solver_values": None,
+        "conflicts": [],
+        "reason": None,
+    }
+    solution_tag = request.get("solution")
+    if solution_tag is None:
+        axis["reason"] = ("spec.solution was not provided and the dataset publishes no 'solution' property; "
+                         "the stored solution axis cannot be attributed")
+        return axis
+
+    solutions = _record(model, "sol", errors=errors)
+    try:
+        solution_tags = tag_list(solutions) if solutions is not None else []
+    except ExecutionContractError:
+        solution_tags = []
+    if solution_tag not in solution_tags:
+        raise node_not_found(
+            f"solution {solution_tag!r} does not exist (available: {sorted(solution_tags)})"
+        )
+    solution_node = _call(model, "sol", solution_tag)
+
+    feature_times = _axis_values(_record(feature, "getDoubleArray", "t", errors=errors), solution_count)
+    solver_values = _axis_values(_record(solution_node, "getPVals", errors=errors), solution_count)
+    axis["feature_times"] = feature_times
+    axis["solver_values"] = solver_values
+
+    study_tag = _record(solution_node, "study", errors=errors)
+    steps: list[dict[str, Any]] = []
+    study_error: str | None = None
+    if isinstance(study_tag, str) and study_tag:
+        axis["study"] = study_tag
+        steps, study_error = _study_steps(model, study_tag, errors)
+        axis["study_steps"] = [{"tag": step["tag"], "type": step["type"]} for step in steps]
+    else:
+        study_error = "model.sol(<tag>).study() did not report an associated study"
+
+    decided: bool | None = None
+    if len(steps) == 1 and steps[0]["type"] is not None:
+        decided = steps[0]["type"] in TIME_DEPENDENT_STUDY_STEPS
+        if steps[0]["declared_time_unit"]:
+            axis["unit"] = steps[0]["declared_time_unit"]
+    elif len(steps) > 1:
+        study_error = (f"the associated study {study_tag!r} has {len(steps)} steps; this adapter cannot "
+                       f"attribute the dataset's solution to a single step")
+    elif not steps:
+        study_error = study_error or f"the associated study {study_tag!r} reports no steps"
+
+    if decided is False:
+        axis.update(time_dependent=False, status="not_time_dependent",
+                    reason=None if steps else study_error)
+        if feature_times is not None:
+            axis["conflicts"].append(
+                "the numerical feature published a 't' readback although the associated study step is not "
+                "time-dependent; the readback was not used as a time axis"
+            )
+        return axis
+
+    if decided is None and feature_times is not None:
+        # The feature's own transient-only property answered directly.
+        axis.update(time_dependent=True, status="verified", source="numerical_feature.t", values=feature_times)
+        if steps and steps[0]["declared_time_unit"]:
+            axis["unit"] = steps[0]["declared_time_unit"]
+        return axis
+
+    if decided is True:
+        if feature_times is not None:
+            axis.update(time_dependent=True, status="verified", source="numerical_feature.t", values=feature_times)
+            return axis
+        if solver_values is not None:
+            axis.update(time_dependent=True, status="verified", source="solver_sequence.getPVals",
+                        values=solver_values)
+            return axis
+        declared = steps[0]["declared_output_times"] if steps else None
+        declared_values = _axis_values(declared, solution_count)
+        if declared_values is not None:
+            axis.update(time_dependent=True, status="declared", source="study_step.tlist",
+                        values=declared_values,
+                        reason="the stored time values could not be read; the transient step's declared "
+                               "output times are used as the axis (COMSOL stores the output times by "
+                               "interpolation from the solver's time steps by default)")
+            return axis
+        axis.update(time_dependent=True, status="unavailable",
+                    reason="the dataset is time-dependent but neither the feature's 't' readback, "
+                           "getPVals() nor the step's tlist yielded one value per stored solution")
+        return axis
+
+    axis["reason"] = (study_error or "the stored solution axis could not be attributed") + \
+        "; no time column is published rather than a guessed one"
+    return axis
+
+
+# ---------------------------------------------------------------------------
+# the operation
+# ---------------------------------------------------------------------------
+
+
+def _remove_ephemeral(container: Any, tag: str, cleanup: dict[str, Any], errors: list[dict[str, Any]]) -> None:
+    """Remove the ephemeral node and verify the removal (never leave it behind silently)."""
+    try:
+        _call(container, "remove", tag)
+    except Exception as exc:  # noqa: BLE001 - the cleanup result is the evidence
+        cleanup["cleanup_failed"] = True
+        cleanup["error"] = {
+            "code": error_code_of(exc),
+            "message": f"the ephemeral numerical node {tag!r} could not be removed ({type(exc).__name__})",
+        }
+        errors.append({"method": "remove", "code": cleanup["error"]["code"],
+                       "message": cleanup["error"]["message"], "allowlist_entry_required": None})
+        return
+    try:
+        remaining = tag_list(container)
+    except Exception as exc:  # noqa: BLE001
+        cleanup["removed"] = True
+        cleanup["cleanup_failed"] = True
+        cleanup["error"] = {
+            "code": error_code_of(exc),
+            "message": f"{tag!r} was removed but the numerical feature list could not be re-read",
+        }
+        return
+    cleanup["removed"] = True
+    cleanup["verified_removed"] = tag not in remaining
+    if not cleanup["verified_removed"]:
+        cleanup["cleanup_failed"] = True
+        cleanup["error"] = {
+            "code": "EXECUTION_STATE_UNKNOWN",
+            "message": f"{tag!r} was removed but the numerical feature list still lists it",
+        }
+
+
+def _sample_with_feature(feature: Any, request: Mapping[str, Any], dataset_node: Any,
+                         context: Mapping[str, Any], model: Any,
+                         read_errors: list[dict[str, Any]]) -> dict[str, Any]:
+    """Configure the ephemeral Interp feature, read it and build the sample table."""
+    expressions = list(request["expressions"])
+    points = _path_points(request)
+    dimension = len(request["start"])
+    dataset_tag = request["dataset"]
+
+    _call(feature, "set", "data", dataset_tag)
+    data_readback = _record(feature, "getString", "data", errors=read_errors)
+    if isinstance(data_readback, str) and data_readback and data_readback != dataset_tag:
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            f"the ephemeral Interp feature reads back data={data_readback!r} instead of the requested "
+            f"dataset {dataset_tag!r}",
+        )
+    feature_type = _record(feature, "getType", errors=read_errors)
+    if isinstance(feature_type, str) and feature_type and feature_type != NUMERICAL_FEATURE_TYPE:
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            f"the created numerical feature reports type {feature_type!r} instead of {NUMERICAL_FEATURE_TYPE!r}",
+        )
+    for index, expression in enumerate(expressions):
+        _call(feature, "setIndex", "expr", expression, index)
+    expression_units = request.get("expression_units")
+    if expression_units:
+        for index, unit in enumerate(expression_units):
+            _call(feature, "setIndex", "unit", unit, index)
+
+    # coord: rows = space dimension, columns = evaluation points (Interp page).
+    coordinate_rows = [[point[axis] for point in points] for axis in range(dimension)]
+    coord_payload = {
+        "kind": DOUBLE_MATRIX_KIND,
+        "shape": [dimension, len(points)],
+        "data": coordinate_rows,
+        "java_signature": DOUBLE_MATRIX_SIGNATURE,
+    }
+    # COMSOL 6.4's verified Interp route is PropFeature.set("coord", double[][]).
+    # Do one native mutation only: a failed setter must not be followed by a
+    # second, unverified setter with a different API shape.
+    _call(feature, "set", "coord", coord_payload)
+
+    # ``run`` is the dispatch boundary for the requested sample.  If the
+    # engine rejects it, getData() would either report stale data or trigger an
+    # implicit recomputation, so propagate the failure and do not read it.
+    _call(feature, "run")
+
+    data_readback_error = None
+    raw = _call_recorded(feature, "getData", errors=read_errors)
+    try:
+        series, solution_count = _normalise_samples(raw, expressions, len(points))
+    except ExecutionContractError as exc:
+        data_readback_error = exc
+        raise
+    finally:
+        if data_readback_error is not None:
+            # make the readback state of the feature part of the failure record
+            read_errors.append({"method": "getData", "code": data_readback_error.code,
+                                "message": str(data_readback_error), "allowlist_entry_required": None})
+
+    complex_readback = _record(feature, "isComplex", errors=read_errors)
+    unit_readback = _record(feature, "getStringArray", "unit", errors=read_errors)
+    expr_readback = _record(feature, "getStringArray", "expr", errors=read_errors)
+    property_names = _record(feature, "properties", errors=read_errors)
+    # C07a: read the coordinates back from the engine instead of only echoing the
+    # requested points.  ``getCoordinates()`` is the documented readback; when the
+    # Worker does not publish it the refusal is recorded (never guessed) and the
+    # requested points stay the published coordinates, with the reason attached.
+    coordinates_readback = _record(feature, "getCoordinates", errors=read_errors)
+    coordinate_readback = _normalise_coordinate_readback(
+        coordinates_readback, points, dimension, read_errors
+    )
+
+    axis = _resolve_solution_axis(model, feature, request, solution_count, read_errors)
+    times: list[float] | None = axis["values"]
+    time_dependent = axis["time_dependent"]
+
+    declared_units = list(unit_readback) if isinstance(unit_readback, Sequence) \
+        and not isinstance(unit_readback, (str, bytes)) else []
+    expression_unit_map: dict[str, Any] = {}
+    for index, expression in enumerate(expressions):
+        value = declared_units[index] if index < len(declared_units) else None
+        expression_unit_map[expression] = str(value) if isinstance(value, str) and value else None
+
+    length_unit = context.get("length_unit")
+    units: dict[str, Any] = {column: length_unit for column in COORDINATE_COLUMNS[:dimension]}
+    units.update(expression_unit_map)
+    units[SOLUTION_INDEX_COLUMN] = "one-based index"
+
+    samples: list[dict[str, Any]] = []
+    for solnum_index in range(solution_count):
+        time_value = times[solnum_index] if times is not None else None
+        for point_index, point in enumerate(points):
+            row: dict[str, Any] = {}
+            for axis_index, column in enumerate(COORDINATE_COLUMNS[:dimension]):
+                row[column] = point[axis_index]
+            row[SOLUTION_INDEX_COLUMN] = solnum_index + 1
+            if time_value is not None:
+                row[TIME_COLUMN] = time_value
+            for expression_index, expression in enumerate(expressions):
+                row[expression] = series[expression_index][solnum_index][point_index]
+            samples.append(row)
+
+    if times is not None:
+        units[TIME_COLUMN] = axis["unit"]
+
+    # The column contract: role, unit and (for expression columns) the
+    # expression each key carries.  A reader resolves a column through this map
+    # instead of folding case, because the requested expression ``T`` and the
+    # time column ``time`` differ only in case for a case-insensitive scan.
+    columns: list[dict[str, Any]] = []
+    for column in COORDINATE_COLUMNS[:dimension]:
+        columns.append({"name": column, "role": "coordinate", "unit": length_unit})
+    columns.append({"name": SOLUTION_INDEX_COLUMN, "role": "solution_index", "unit": "one-based index"})
+    if times is not None:
+        columns.append({"name": TIME_COLUMN, "role": "time", "unit": axis["unit"]})
+    for expression in expressions:
+        columns.append({"name": expression, "role": "expression", "unit": expression_unit_map.get(expression)})
+    roles: dict[str, Any] = {
+        "coordinates": list(COORDINATE_COLUMNS[:dimension]),
+        "solution_index": SOLUTION_INDEX_COLUMN,
+        "time": TIME_COLUMN if times is not None else None,
+        "expressions": {expression: expression for expression in expressions},
+        "lookup": "row keys are exact: resolve a column through this map or through 'columns'",
+    }
+    case_only_pairs = sorted(
+        (left, right) for left in roles["coordinates"] + [SOLUTION_INDEX_COLUMN, TIME_COLUMN]
+        for right in expressions if left.lower() == right.lower()
+    )
+    if case_only_pairs:
+        # Refused by _check_row_key_collisions; kept as an explicit invariant so
+        # a future edit cannot publish a table whose meaning depends on key order.
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            f"the published row keys would be ambiguous under a case-insensitive lookup: {case_only_pairs}",
+        )
+
+    notes = [
+        "coordinates are the requested path points, expressed in the model length unit "
+        "(GeomSequence.lengthUnit()); this adapter never converts units",
+        "the sample table index 'solnum' is the one-based stored-solution index of the dataset, matching "
+        "COMSOL's one-based solution numbering",
+    ]
+    if times is not None:
+        notes.append(
+            f"rows are ordered by stored solution first and path point second; the time axis comes from "
+            f"{axis['source']} ({axis['status']})"
+        )
+    else:
+        notes.append(
+            "no time column is published for this dataset: "
+            + str(axis.get("reason") or "the dataset is not time-dependent")
+        )
+
+    return {
+        "samples": samples,
+        "sample_count": len(samples),
+        "points": {
+            "kind": request["kind"],
+            "start": list(request["start"]),
+            "end": list(request["end"]),
+            "count": len(points),
+            "dimension": dimension,
+            "coordinate_unit": length_unit,
+            "space_dimension": context.get("space_dimension"),
+        },
+        "expressions": expressions,
+        "expression_units": expression_unit_map,
+        "columns": columns,
+        "roles": roles,
+        "dataset": dataset_tag,
+        "solution": request.get("solution"),
+        "binding": {
+            "dataset": dataset_tag,
+            "solution": request.get("solution"),
+            "component": context.get("component"),
+            "geometry": context.get("geometry"),
+            "length_unit": length_unit,
+            "space_dimension": context.get("space_dimension"),
+            "content_context": context.get("source"),
+            "stored_solutions": solution_count,
+            "time_axis": {
+                "time_dependent": axis["time_dependent"],
+                "status": axis["status"],
+                "source": axis["source"],
+                "unit": axis["unit"],
+                "values": list(times) if times is not None else None,
+            },
+            "revision_required": False,
+        },
+        "unit_readback": {
+            "expression_units": expression_unit_map,
+            "coordinate_unit": length_unit,
+            "time_unit": axis["unit"],
+            "source": "model.result().numerical(<tag>).getStringArray(\"unit\") and GeomSequence.lengthUnit()",
+        },
+        "coordinate_readback": coordinate_readback,
+        "units": units,
+        "complex": bool(complex_readback) if isinstance(complex_readback, bool) else None,
+        "complex_mode": "real",
+        "time_values": list(times) if times is not None else None,
+        "time_steps": len(times) if times is not None else None,
+        "solution_axis": axis,
+        "ephemeral_feature": {
+            "tag": None,  # filled in by the caller
+            "type_id": NUMERICAL_FEATURE_TYPE,
+            "property_readback": {
+                "data": data_readback,
+                "expr": list(expr_readback) if isinstance(expr_readback, Sequence)
+                and not isinstance(expr_readback, (str, bytes)) else None,
+                "unit": declared_units or None,
+                "observed_properties": list(property_names) if isinstance(property_names, Sequence)
+                and not isinstance(property_names, (str, bytes)) else None,
+            },
+        },
+        "coordinate_source": "the requested path_definition points (coord property); a getCoordinates() "
+                             "readback needs the worker allow-list entry recorded in ALLOWLIST_ADDITIONS",
+        "unverified_paths": [dict(item) for item in UNVERIFIED_PATHS],
+        "notes": notes,
+    }
+
+
+def _readback_verification_status(readback_state: Any) -> str:
+    """Map the coordinate readback to the published verification vocabulary.
+
+    ``PASSED``/``FAILED``/``NOT_RUN`` are the same tokens the transaction and
+    mesh validators use, so one consumer rule reads every operation's
+    verification axis.  A readback that could not be attempted (the Worker does
+    not publish ``getCoordinates()``) is ``NOT_RUN``: no claim is made either
+    way, and it is never silently reported as a pass.
+    """
+    if not isinstance(readback_state, Mapping):
+        return "NOT_RUN"
+    status = readback_state.get("status")
+    if status == "VERIFIED":
+        return "PASSED"
+    if status == "MISMATCH":
+        return "FAILED"
+    return "NOT_RUN"
+
+
+def _status(payload: dict[str, Any] | None, cleanup: Mapping[str, Any],
+            engine_error: Mapping[str, Any] | None, created: bool, solution_count: int | None,
+            time_steps: int | None, readback_state: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    applied: list[str] = []
+    failed: list[dict[str, Any]] = []
+    not_executed: list[str] = []
+    if created:
+        applied.append("result.numerical.create(Interp)")
+    else:
+        not_executed.append("result.numerical.create(Interp)")
+    if engine_error is not None:
+        failed.append(dict(engine_error))
+    unknown = bool(cleanup.get("cleanup_failed"))
+    readback_status = (readback_state or {}).get("status")
+    readback_match: bool | None = None
+    if readback_status == "VERIFIED":
+        readback_match = True
+        applied.append("result.numerical.getCoordinates(verified)")
+    elif readback_status == "MISMATCH":
+        # The engine's own coordinates disagree with the requested path points:
+        # the samples would belong to a different geometry path, so the
+        # readback verification is recorded as failed rather than ignored.
+        readback_match = False
+        failed.append({
+            "code": "VERIFICATION_FAILED",
+            "message": str((readback_state or {}).get("reason")
+                           or "the coordinate readback did not confirm the requested path points"),
+        })
+    if payload is not None:
+        applied.extend(["result.numerical.set(coord)", "result.numerical.getData",
+                        "result.numerical.remove"])
+    elif created:
+        not_executed.append("result.numerical.getData")
+    if cleanup.get("verified_removed"):
+        applied.append("result.numerical.remove(verified)")
+    elif cleanup.get("created"):
+        failed.append({"code": cleanup.get("error", {}).get("code") if isinstance(cleanup.get("error"), Mapping)
+                       else "EXECUTION_STATE_UNKNOWN",
+                       "message": "the ephemeral numerical node was not verifiably removed"})
+        unknown = True
+
+    if unknown:
+        status = "EXECUTION_STATE_UNKNOWN"
+    elif failed:
+        status = "PARTIAL_FAILURE" if payload is not None else "FAILED"
+    elif payload is None:
+        status = "FAILED"
+        unknown = True
+    else:
+        status = "APPLIED"
+    return {
+        "ok": status == "APPLIED",
+        "status": status,
+        "partial_change": bool(created) or unknown or readback_match is False,
+        "execution_state_unknown": unknown,
+        "applied": applied,
+        "failed": failed,
+        "not_executed": not_executed,
+        "readback_match": readback_match,
+        "readback": {
+            "readable": payload is not None,
+            "sample_count": payload.get("sample_count") if payload else 0,
+            "stored_solutions": solution_count,
+            "time_steps": time_steps,
+        },
+        "engine_error": dict(engine_error) if engine_error is not None else None,
+    }
+
+
+def sample_path(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """Sample a line through a solved dataset; see the module docstring.
+
+    Returns the operation's ``data`` dictionary (the control plane owns the
+    ``{"success": ...}`` envelope).  Input and identity problems raise
+    ``ExecutionContractError`` before the first engine call; a failure *after*
+    the ephemeral node was created returns data carrying
+    ``status.execution_state_unknown`` / ``cleanup.cleanup_failed`` instead of
+    pretending nothing happened.
+    """
+    request = _validate_arguments(arguments)
+    read_errors: list[dict[str, Any]] = []
+    model = bound_model(worker, model_tag)
+    results = _call(model, "result")
+    dataset_node = _require_dataset(results, request["dataset"])
+
+    dataset_binding = _resolve_dataset_binding(
+        model,
+        str(request["dataset"]),
+        requested_solution=request.get("solution") if isinstance(request.get("solution"), str) else None,
+    )
+    dataset_solution = (
+        dataset_binding.get("solution")
+        if isinstance(dataset_binding, Mapping) and dataset_binding.get("solution")
+        else _string_or_none(dataset_node, "solution", read_errors)
+    )
+    if request["solution"] and dataset_solution and request["solution"] != dataset_solution:
+        raise ExecutionContractError(
+            "INVALID_REQUEST",
+            f"spec.solution {request['solution']!r} does not match dataset {request['dataset']!r}'s "
+            f"solution {dataset_solution!r}",
+        )
+    if request["solution"] is None and dataset_solution:
+        request["solution"] = dataset_solution
+    solution_tag = request.get("solution")
+    if solution_tag is None:
+        raise ExecutionContractError(
+            "INVALID_REQUEST",
+            f"the dataset {request['dataset']!r} does not publish a 'solution' property and spec.solution "
+            f"was not provided; the stored solution axis cannot be resolved",
+        )
+    context = _coordinate_context(model, dataset_node, read_errors, dataset_binding=dataset_binding)
+    _check_point_dimension(request, context)
+    _require_solution(model, solution_tag, read_errors)
+
+    numerical_list = _call(results, "numerical")
+    ephemeral_tag = _unique_tag(tag_list(numerical_list))
+    cleanup: dict[str, Any] = {
+        "tag": ephemeral_tag,
+        "type_id": NUMERICAL_FEATURE_TYPE,
+        "created": False,
+        "removed": False,
+        "verified_removed": False,
+        "cleanup_failed": False,
+        "error": None,
+    }
+    payload: dict[str, Any] | None = None
+    engine_error: dict[str, Any] | None = None
+    solution_count: int | None = None
+    time_steps: int | None = None
+
+    try:
+        _call(numerical_list, "create", ephemeral_tag, NUMERICAL_FEATURE_TYPE)
+        cleanup["created"] = True
+        feature = _call(numerical_list, "get", ephemeral_tag)
+        payload = _sample_with_feature(feature, request, dataset_node, context, model, read_errors)
+        payload["ephemeral_feature"]["tag"] = ephemeral_tag
+        solution_count = int(payload.get("solution_axis", {}).get("stored_solutions") or 0) or None
+        time_steps = payload.get("time_steps")
+    except ExecutionContractError as exc:
+        engine_error = {"code": exc.code, "message": str(exc), "safe_retry": exc.safe_retry}
+        if not cleanup["created"]:
+            # The create call failed: reconcile whether a node appeared anyway.
+            try:
+                if ephemeral_tag in tag_list(numerical_list):
+                    cleanup["created"] = True
+                    cleanup["reconciled"] = True
+            except ExecutionContractError:
+                cleanup["reconciled"] = None
+    finally:
+        if cleanup["created"]:
+            _remove_ephemeral(numerical_list, ephemeral_tag, cleanup, read_errors)
+
+    readback_state = (payload or {}).get("coordinate_readback")
+    status = _status(payload, cleanup, engine_error, cleanup["created"], solution_count, time_steps,
+                     readback_state if isinstance(readback_state, Mapping) else None)
+    data: dict[str, Any] = {
+        "cleanup": cleanup,
+        "status": status,
+        # The verification axis is separate from the execution axis: the samples
+        # may have been read correctly while the coordinate readback did not
+        # confirm them (or could not be attempted at all).
+        "verification_status": _readback_verification_status(readback_state),
+        "verification": {
+            "axis": "coordinate_readback",
+            "status": _readback_verification_status(readback_state),
+            "detail": readback_state if isinstance(readback_state, Mapping) else None,
+        },
+        "engine_error": engine_error,
+        "read_errors": read_errors,
+        "allowlist_entry_required": sorted({
+            str(item["allowlist_entry_required"]) for item in read_errors
+            if item.get("allowlist_entry_required")
+        }),
+        "allowlist_additions": list(ALLOWLIST_ADDITIONS),
+        "allowlist_available_unused": list(ALLOWLIST_AVAILABLE_UNUSED),
+        "unverified_paths": [dict(item) for item in UNVERIFIED_PATHS],
+        "solution": solution_tag,
+        "dataset": request["dataset"],
+    }
+    if payload is not None:
+        merged = dict(payload)
+        merged.pop("unverified_paths", None)
+        data = {**merged, **data, "notes": payload.get("notes") or []}
+    else:
+        data.update({
+            "samples": [],
+            "sample_count": 0,
+            "expressions": request["expressions"],
+            "points": {
+                "kind": request["kind"],
+                "start": list(request["start"]),
+                "end": list(request["end"]),
+                "count": int(request["samples"]),
+                "dimension": len(request["start"]),
+                "coordinate_unit": context.get("length_unit"),
+                "space_dimension": context.get("space_dimension"),
+            },
+            "time_values": None,
+            "solution_axis": None,
+            "notes": [
+                "no sample table was produced; see status.engine_error and cleanup for what happened and "
+                "whether an ephemeral node was left behind",
+            ],
+        })
+    return data
+
+
+# ---------------------------------------------------------------------------
+# W17 Dataset operations
+# ---------------------------------------------------------------------------
+
+def _dataset_tag(path: Any) -> str:
+    """Extract a dataset tag from a path argument (NodePath dict, string, or tag)."""
+    if isinstance(path, str):
+        if not path:
+            raise ExecutionContractError("INVALID_NODE_PATH", "dataset path cannot be empty")
+        return path
+    if isinstance(path, Mapping):
+        if "tag" in path and isinstance(path["tag"], str):
+            return path["tag"]
+        if "segments" in path and isinstance(path["segments"], Sequence) and path["segments"]:
+            for seg in reversed(path["segments"]):
+                if isinstance(seg, Mapping) and "tag" in seg:
+                    coll = seg.get("collection")
+                    if coll is not None and coll != "dataset":
+                        continue
+                    return str(seg["tag"])
+    raise ExecutionContractError("INVALID_NODE_PATH", f"cannot resolve dataset tag from {path!r}")
+
+
+def _dataset_container(model: Any) -> Any:
+    results_node = _call(model, "result")
+    return _call(results_node, "dataset")
+
+
+def _dataset_node_type(node: Any, *, tag: str | None = None) -> str:
+    """Read a dataset type before deciding which reference edges it owns.
+
+    Dataset graph validation is a pre-write proof.  A failed type read leaves
+    the edge schema unknown, so silently treating the node as a leaf would let
+    an unreadable ``data``/``data2`` reference bypass cycle and existence
+    checks.
+    """
+    try:
+        value = _call(node, "getType")
+    except Exception as exc:
+        raise PreWriteRefusal(
+            "DATASET_TYPE_UNREADABLE",
+            f"dataset {tag or '<unknown>'!r} type could not be read before reference validation",
+            details={"tag": tag, "cause_code": error_code_of(exc), "cause_message": str(exc)[:500]},
+        ) from exc
+    if not isinstance(value, str) or not value.strip():
+        raise PreWriteRefusal(
+            "DATASET_TYPE_UNREADABLE",
+            f"dataset {tag or '<unknown>'!r} returned no usable type before reference validation",
+            details={"tag": tag, "value_type": type(value).__name__},
+        )
+    return value.strip()
+
+
+def _dataset_property_inventory(node: Any) -> set[str] | None:
+    """Return the native property names, or ``None`` when that inventory failed.
+
+    An inventory that names no property is evidence that the property is
+    absent.  An unavailable inventory is different: required edge getters are
+    then attempted and any failure is surfaced as a validation refusal.
+    """
+    try:
+        raw = _call(node, "properties")
+    except Exception:
+        return None
+    if not isinstance(raw, Sequence) or isinstance(raw, (str, bytes, Mapping)):
+        return None
+    return {str(item) for item in raw if isinstance(item, str) and item}
+
+
+def _dataset_reference_value(node: Any, property_name: str, *, required: bool = False,
+                             required_edge: bool = False,
+                             node_type: str | None = None,
+                             property_inventory: set[str] | None = None,
+                             tag: str | None = None) -> str | None:
+    """Read one dataset reference with an explicit absent-vs-unreadable boundary.
+
+    ``properties()`` saying that a name is absent is a clean optional-property
+    result.  If the inventory is unavailable, a required graph edge must still
+    be read; a getter exception is never converted into ``None``.  This keeps a
+    failed native read from being mistaken for a leaf dataset.
+    """
+    if property_inventory is not None and property_name not in property_inventory:
+        if required_edge:
+            raise PreWriteRefusal(
+                "DATASET_REFERENCE_MISSING",
+                f"required dataset edge {property_name!r} is absent from {tag or '<unknown>'!r} native properties",
+                details={"tag": tag, "type_id": node_type, "property": property_name},
+            )
+        return None
+    try:
+        value = _call(node, "getString", property_name)
+    except Exception as exc:
+        if required or required_edge:
+            raise PreWriteRefusal(
+                "DATASET_REFERENCE_UNREADABLE",
+                f"required dataset reference {property_name!r} on {tag or '<unknown>'!r} "
+                "could not be read",
+                details={
+                    "tag": tag,
+                    "type_id": node_type,
+                    "property": property_name,
+                    "cause_code": error_code_of(exc),
+                    "cause_message": str(exc)[:500],
+                },
+            ) from exc
+        return None
+    if value is None or (isinstance(value, str) and not value.strip()):
+        if required or required_edge:
+            raise PreWriteRefusal(
+                "DATASET_REFERENCE_MISSING",
+                f"required dataset reference {property_name!r} on {tag or '<unknown>'!r} is empty",
+                details={"tag": tag, "type_id": node_type, "property": property_name},
+            )
+        return None
+    if not isinstance(value, str):
+        if required or required_edge:
+            raise PreWriteRefusal(
+                "DATASET_REFERENCE_UNREADABLE",
+                f"dataset reference {property_name!r} on {tag or '<unknown>'!r} is not a string",
+                details={"tag": tag, "type_id": node_type, "property": property_name,
+                         "value_type": type(value).__name__},
+            )
+        return None
+    return value.strip()
+
+
+def _dataset_edge_properties(type_id: str | None, *, property_inventory: set[str] | None = None,
+                              tag: str | None = None) -> tuple[str, ...]:
+    """Return only the dataset-reference properties for a native dataset type."""
+    if type_id == "Join":
+        return ("data", "data2")
+    if type_id in SUPPORTED_DATASET_TYPES - {"Solution"}:
+        return ("data",)
+    # Solution.data is a solver-sequence alias, not a dataset graph edge.
+    if type_id == "Solution":
+        return ()
+    # A plugin/unknown native dataset cannot be treated as a leaf merely
+    # because this adapter lacks its schema.  Refuse the graph proof until a
+    # release-specific type/property contract is supplied.
+    raise PreWriteRefusal(
+        "DATASET_GRAPH_UNVERIFIED",
+        f"dataset {tag or '<unknown>'!r} has unsupported type {type_id!r}; "
+        "its data/data2 edge semantics are not verified",
+        details={"tag": tag, "type_id": type_id,
+                 "property_inventory": sorted(property_inventory or set())},
+    )
+
+
+def _validate_dataset_graph(model: Any, *, candidate_tag: str,
+                            candidate_properties: Mapping[str, Any],
+                            existing_node: Any | None = None,
+                            candidate_type: str | None = None) -> None:
+    """Validate dataset references before the first create/set mutation.
+
+    ``data`` and Join's ``data2`` are directed upstream edges.  A candidate
+    update is evaluated together with the engine's current dataset tags, so a
+    missing reference or a cycle is rejected before COMSOL sees a setter.
+    """
+    container = _dataset_container(model)
+    tags = tag_list(container)
+    tag_set = set(tags)
+    edges: dict[str, list[str]] = {}
+    property_inventories: dict[str, set[str] | None] = {}
+    node_types: dict[str, str] = {}
+    for tag in tags:
+        node = _call(container, "get", tag)
+        node_type = _dataset_node_type(node, tag=tag)
+        node_types[tag] = node_type
+        property_inventory = _dataset_property_inventory(node)
+        property_inventories[tag] = property_inventory
+        refs: list[str] = []
+        for prop in _dataset_edge_properties(node_type, property_inventory=property_inventory, tag=tag):
+            value = _dataset_reference_value(
+                node,
+                prop,
+                required=True,
+                required_edge=True,
+                node_type=node_type,
+                property_inventory=property_inventory,
+                tag=tag,
+            )
+            if value is not None:
+                refs.append(value)
+        edges[tag] = refs
+    if candidate_type is None and existing_node is not None:
+        candidate_type = node_types.get(candidate_tag) or _dataset_node_type(existing_node, tag=candidate_tag)
+    candidate_edge_properties = _dataset_edge_properties(candidate_type, tag=candidate_tag)
+    candidate_refs: list[str] = []
+    for prop in candidate_edge_properties:
+        if prop in candidate_properties:
+            raw = candidate_properties.get(prop)
+            if isinstance(raw, str) and raw.strip():
+                candidate_refs.append(raw.strip())
+            continue
+        if existing_node is not None:
+            value = _dataset_reference_value(
+                existing_node,
+                prop,
+                required=True,
+                required_edge=True,
+                node_type=candidate_type,
+                property_inventory=property_inventories.get(candidate_tag),
+                tag=candidate_tag,
+            )
+            if value is not None:
+                candidate_refs.append(value)
+    for ref in candidate_refs:
+        # All derived dataset types must reference an actual dataset tag (or
+        # the candidate itself, which is rejected by the cycle walk below).
+        if ref not in tag_set and ref != candidate_tag:
+            raise node_not_found(f"dataset reference {ref!r} does not exist; existing datasets: {tags}")
+    edges[candidate_tag] = candidate_refs
+
+    visiting: set[str] = set()
+    visited: set[str] = set()
+
+    def visit(tag: str, chain: list[str]) -> None:
+        if tag in visiting:
+            start = chain.index(tag) if tag in chain else 0
+            cycle = chain[start:] + [tag]
+            raise PreWriteRefusal(
+                "DATASET_CYCLE_DETECTED",
+                f"dataset reference cycle detected: {' -> '.join(cycle)}",
+                details={"cycle": cycle},
+            )
+        if tag in visited:
+            return
+        visiting.add(tag)
+        for ref in edges.get(tag, []):
+            if ref in edges:
+                visit(ref, chain + [ref])
+        visiting.remove(tag)
+        visited.add(tag)
+
+    for tag in edges:
+        visit(tag, [tag])
+
+
+def _validate_dataset_component_refs(model: Any, properties: Mapping[str, Any],
+                                     *, existing_node: Any | None = None) -> None:
+    """Reject a missing component/geometry binding before a dataset mutation."""
+    component = properties.get("comp")
+    geometry = properties.get("geom")
+    existing_inventory = _dataset_property_inventory(existing_node) if existing_node is not None else None
+    existing_type = _dataset_node_type(existing_node) if existing_node is not None else None
+    if component is None and existing_node is not None:
+        component = _dataset_reference_value(
+            existing_node, "comp", required=True, node_type=existing_type,
+            property_inventory=existing_inventory,
+        )
+    if geometry is None and existing_node is not None:
+        geometry = _dataset_reference_value(
+            existing_node, "geom", required=True, node_type=existing_type,
+            property_inventory=existing_inventory,
+        )
+    if component is None:
+        return
+    if not isinstance(component, str) or not component.strip():
+        raise PreWriteRefusal("INVALID_REQUEST", "dataset comp must be a non-empty component tag")
+    component_tag = component.strip()
+    # Read the native component tag list before resolving the requested node.
+    # Calling model.component(missing_tag) first makes a pure validation error
+    # look like an unknown engine state in the managed worker.
+    component_container = _call(model, "component")
+    component_tags = tag_list(component_container)
+    if component_tag not in component_tags:
+        raise node_not_found(
+            f"component {component_tag!r} does not exist; existing components: {component_tags}",
+            details={"component": component_tag, "existing_components": component_tags},
+        )
+    component_node = _call(model, "component", component_tag)
+    if geometry is not None:
+        if not isinstance(geometry, str) or not geometry.strip():
+            raise PreWriteRefusal("INVALID_REQUEST", "dataset geom must be a non-empty geometry tag")
+        geometry_tag = geometry.strip()
+        geometry_container = _call(component_node, "geom")
+        geometry_tags = tag_list(geometry_container)
+        if geometry_tag not in geometry_tags:
+            raise node_not_found(
+                f"geometry {geometry_tag!r} does not exist in component {component_tag!r}; "
+                f"existing geometries: {geometry_tags}",
+                details={"component": component_tag, "geometry": geometry_tag,
+                         "existing_geometries": geometry_tags},
+            )
+        _call(component_node, "geom", geometry_tag)
+
+
+# The W17 catalogue declares dataset edit addresses as NodePath.  Keep the
+# resolver local to this module so a path ending in geometry/physics/feature is
+# never reduced to its last tag by accident.  Bare strings remain accepted by
+# ``_dataset_tag`` for the older result-evaluation helpers, but CRUD calls use
+# this typed resolver exclusively.
+_DATASET_PROPERTY_NAMES = frozenset({
+    "solution", "data", "comp", "geom", "pointx", "pointy", "pointz",
+    "x", "y", "z", "coord", "coords", "coordinates", "point", "expr",
+    "unit", "t", "tmin", "tmax", "numelem", "resolution", "method", "data2",
+    "solutions", "solutions2", "genmethod", "genpnpoint", "genpnvec", "planetype",
+    "quickplane", "quickx", "quicky", "quickz", "bounded", "pddir", "pdpoint",
+    "bndsnap", "snapping", "linevar", "normal", "tangent", "spacevars",
+    "selection", "genpoints", "genparaactive", "genparadist", "axis", "r", "phi", "plane",
+    "gridx", "gridy", "gridz", "filename", "localzphys", "localzrel", "locdef", "pointvar",
+    "regulargridx", "regulargridy", "regulargridz",
+    "posx", "posy", "posz", "xmin", "xmax", "ymin", "ymax", "zmin", "zmax",
+    "dataset", "join", "par1", "par2", "parameter", "filter", "frame",
+})
+
+# Dataset property names are not interchangeable across native dataset types.
+# In COMSOL 6.4 a CutPlane inherits its component/geometry binding through the
+# upstream ``data`` dataset; ``comp`` and ``geom`` are not CutPlane setters.
+# Keep this narrow type guard beside the general property allow-list so a
+# caller cannot partially create a plane and discover the invalid fields only
+# after the native setters have already run.
+_DATASET_TYPE_FORBIDDEN_PROPERTIES: dict[str, frozenset[str]] = {
+    "CutPlane": frozenset({"comp", "geom"}),
+}
+
+
+def _validate_dataset_type_properties(type_id: str, properties: Mapping[str, Any]) -> None:
+    forbidden = sorted(set(properties) & _DATASET_TYPE_FORBIDDEN_PROPERTIES.get(type_id, frozenset()))
+    if forbidden:
+        raise PreWriteRefusal(
+            "INVALID_REQUEST",
+            f"dataset type {type_id!r} does not expose native properties {forbidden}; "
+            "bind the dataset through its upstream data reference",
+            details={"type_id": type_id, "unsupported_properties": forbidden},
+        )
+
+
+def _dataset_path_target(worker: Any, model_tag: str, path: Any) -> tuple[dict[str, Any], str, Any, Any]:
+    """Resolve exactly ``model.result().dataset(<tag>)`` through NodePath."""
+    if not isinstance(path, Mapping):
+        raise PreWriteRefusal("INVALID_NODE_PATH", "dataset CRUD requires a NodePath object")
+    parsed = NodePath.from_wire(path, allow_empty=False)
+    if not parsed.segments or parsed.segments[0].accessor != "result":
+        raise PreWriteRefusal("INVALID_NODE_PATH", "dataset path must begin with the result accessor")
+    if any(segment.accessor is not None for segment in parsed.segments[1:]):
+        raise PreWriteRefusal("INVALID_NODE_PATH", "dataset path has an unsupported accessor after result")
+    final = parsed.segments[-1]
+    if final.collection != "dataset" or final.tag is None:
+        raise PreWriteRefusal("INVALID_NODE_PATH", "dataset path must end with collection='dataset' and a tag")
+    canonical = parsed.as_dict()
+    _canonical_from_engine, node = resolve_path(worker, model_tag, canonical, label="path")
+    model = bound_model(worker, model_tag)
+    container = _dataset_container(model)
+    tags = tag_list(container)
+    tag = str(final.tag)
+    if tag not in tags:
+        raise node_not_found(f"dataset {tag!r} does not exist; existing datasets: {tags}")
+    # Resolve through the owning collection as a second identity/readback
+    # check.  It also keeps fake and remote engines on the same path.
+    actual = _call(container, "get", tag)
+    if node is None:
+        node = actual
+    return canonical, tag, container, actual
+
+
+def _dataset_create_path(path: Any) -> tuple[dict[str, Any], str]:
+    """Validate a typed path for a not-yet-created dataset."""
+    if not isinstance(path, Mapping):
+        raise PreWriteRefusal("INVALID_NODE_PATH", "dataset create path must be a NodePath object")
+    parsed = NodePath.from_wire(path, allow_empty=False)
+    if not parsed.segments or parsed.segments[0].accessor != "result":
+        raise PreWriteRefusal("INVALID_NODE_PATH", "dataset path must begin with the result accessor")
+    if any(segment.accessor is not None for segment in parsed.segments[1:]):
+        raise PreWriteRefusal("INVALID_NODE_PATH", "dataset path has an unsupported accessor after result")
+    final = parsed.segments[-1]
+    if final.collection != "dataset" or final.tag is None:
+        raise PreWriteRefusal("INVALID_NODE_PATH", "dataset create path must end in dataset:<tag>")
+    return parsed.as_dict(), str(final.tag)
+
+
+def _normalise_result_definition(definition: Any, *, allowed: frozenset[str] = _DATASET_PROPERTY_NAMES) -> list[tuple[str, Any]]:
+    raw = require_mapping(definition, "definition")
+    if "properties" in raw:
+        if set(raw) != {"properties"}:
+            raise ExecutionContractError("INVALID_REQUEST", "definition.properties cannot be mixed with direct fields")
+        # Importing property_definition would permit a PropertySet row form;
+        # preserve that contract here as well without sending raw TypedValue
+        # wrappers to COMSOL.
+        from ._g3_common import property_definition
+        raw = property_definition(raw["properties"], "definition.properties")
+    unknown = sorted(set(raw) - allowed)
+    if unknown:
+        raise PreWriteRefusal(
+            "INVALID_REQUEST",
+            f"definition has unsupported properties: {unknown}",
+            details={"unsupported_properties": unknown},
+        )
+    return [(str(name), _probe_unwrap_property_value(value, f"definition.{name}")) for name, value in raw.items()]
+
+
+def _result_readback(node: Any, properties: Sequence[tuple[str, Any]]) -> dict[str, Any]:
+    rows: list[dict[str, Any]] = []
+    readable = True
+    match = True
+    for name, requested in properties:
+        row = _probe_read_property(node, name, requested)
+        rows.append({"property": name, **row})
+        readable = readable and bool(row.get("readable"))
+        match = match and bool(row.get("match"))
+    return {"readable": readable, "match": match, "properties": rows, "type_id": _node_type(node, [])}
+
+
+def _result_path(collection: str, tag: str) -> dict[str, Any]:
+    return {"segments": [{"accessor": "result"}, {"collection": collection, "tag": tag}]}
+
+
+def dataset_list(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """List all datasets in the model, along with their solutions, components and geometries."""
+    model = bound_model(worker, model_tag)
+    container = _dataset_container(model)
+    tags = tag_list(container)
+    fltr = arguments.get("filter")
+    filter_dict = require_mapping(fltr, "filter") if fltr is not None else {}
+    type_filter = filter_dict.get("type_id") or filter_dict.get("type")
+
+    items: list[dict[str, Any]] = []
+    errors: list[dict[str, Any]] = []
+    for tag in tags:
+        dset = _call(container, "get", tag)
+        type_id = _node_type(dset, errors)
+        sol = _string_or_none(dset, "solution", errors) or _string_or_none(dset, "data", errors)
+        comp = _string_or_none(dset, "comp", errors)
+        geom = _string_or_none(dset, "geom", errors)
+
+        if type_filter and type_id != type_filter:
+            continue
+
+        items.append({
+            "tag": tag,
+            "type_id": type_id,
+            "solution": sol,
+            "component": comp,
+            "geometry": geom,
+            "path": {"segments": [{"accessor": "result"}, {"collection": "dataset", "tag": tag}]},
+        })
+
+    return {
+        "datasets": items,
+        "count": len(items),
+        "tags": [item["tag"] for item in items],
+        "read_errors": errors,
+    }
+
+
+def dataset_create(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """Create a dataset node (e.g. Solution, CutPoint3D, CutLine3D, CutPlane, Join)."""
+    tag = require_string(arguments.get("tag"), "tag")
+    type_id = require_string(arguments.get("type_id"), "type_id")
+    if type_id not in SUPPORTED_DATASET_TYPES:
+        raise ExecutionContractError("API_UNSUPPORTED", f"dataset type {type_id!r} is not supported")
+    properties = _normalise_result_definition(arguments.get("definition", {}))
+
+    model = bound_model(worker, model_tag)
+    container = _dataset_container(model)
+    tags = tag_list(container)
+
+    if tag in tags:
+        raise ExecutionContractError("TAG_CONFLICT", f"dataset {tag!r} already exists")
+
+    candidate_definition = {name: value for name, value in properties}
+    _validate_dataset_type_properties(type_id, candidate_definition)
+    _validate_dataset_graph(model, candidate_tag=tag, candidate_properties=candidate_definition,
+                            candidate_type=type_id)
+    _validate_dataset_component_refs(model, candidate_definition)
+
+    applied: list[Any] = []
+    failed: list[Any] = []
+    not_executed: list[Any] = []
+    try:
+        dset = _call(container, "create", tag, type_id)
+    except Exception as exc:
+        failed.append({"step": "create", "error": {"code": getattr(exc, "code", "ENGINE_CALL_FAILED"), "message": str(exc)}})
+        not_executed.extend({"step": "property", "property": name} for name, _ in properties)
+        return {
+            "tag": tag, "type_id": type_id, "path": _result_path("dataset", tag), "created": False,
+            **_probe_completion(applied=applied, failed=failed, not_executed=not_executed,
+                                readback={"readable": False, "match": False}, execution_state_unknown=True),
+        }
+    applied.append({"step": "create", "method": "result.dataset.create", "requested": {"tag": tag, "type_id": type_id}})
+    updated_tags = tag_list(container)
+    if tag not in updated_tags or dset is None:
+        failed.append({"step": "create", "error": {"code": "EXECUTION_STATE_UNKNOWN", "message": "post-create dataset tag/node readback did not confirm the node"}})
+        not_executed.extend({"step": "property", "property": name} for name, _ in properties)
+        return {
+            "tag": tag, "type_id": type_id, "path": _result_path("dataset", tag), "created": True,
+            **_probe_completion(applied=applied, failed=failed, not_executed=not_executed,
+                                readback={"readable": False, "match": False, "tags": updated_tags}, execution_state_unknown=True),
+        }
+    prop_applied, prop_failed, prop_not_executed, prop_unknown = _probe_write_properties(dset, properties)
+    applied.extend(prop_applied)
+    failed.extend(prop_failed)
+    not_executed.extend(prop_not_executed)
+    readback = _result_readback(dset, properties)
+    readback["tags"] = updated_tags
+    type_readback = readback.get("type_id")
+    if type_readback is not None and type_readback != type_id:
+        failed.append({"step": "create", "error": {"code": "TYPE_CONFLICT", "message": f"created dataset type readback is {type_readback!r}, requested {type_id!r}"}})
+    result = {
+        "tag": tag, "type_id": type_id, "path": _result_path("dataset", tag), "created": True,
+        "definition": {name: value for name, value in properties},
+        **_probe_completion(applied=applied, failed=failed, not_executed=not_executed,
+                            readback=readback, execution_state_unknown=prop_unknown),
+    }
+    return result
+
+
+_DATASET_INSPECT_PROPERTY_LIMIT = 50
+
+
+def _dataset_inspect_property(node: Any, name: str) -> dict[str, Any]:
+    """Read one published dataset property without hiding getter failures."""
+    errors: list[dict[str, Any]] = []
+    first_success: str | None = None
+    value: Any = None
+    # COMSOL property types vary by dataset.  Try the documented scalar/string
+    # accessors in order, but retain every failed getter when no accessor can
+    # produce a value.  A successful getter returning null is still a readable
+    # property and must not be reported as a silent omission.
+    for method in ("getString", "getDouble", "getInt", "getBoolean", "getStringArray", "getDoubleArray"):
+        probe = call_probe(node, method, name)
+        if probe["ok"]:
+            if first_success is None:
+                first_success = method
+            if probe["value"] is not None:
+                return {"property": name, "readable": True, "method": method,
+                        "value": probe["value"], "errors": errors}
+            continue
+        detail = probe.get("error") or {
+            "code": "ENGINE_READ_FAILED", "message": f"{method} getter failed"
+        }
+        errors.append({"property": name, "method": method, **dict(detail)})
+    if first_success is not None:
+        return {"property": name, "readable": True, "method": first_success,
+                "value": value, "errors": errors}
+    return {"property": name, "readable": False, "method": None,
+            "value": None, "errors": errors}
+
+
+def _dataset_inspect_inventory(node: Any) -> tuple[list[str], bool, dict[str, Any] | None]:
+    """Read a bounded native property inventory and retain its read error."""
+    probe = call_probe(node, "properties")
+    if not probe["ok"]:
+        detail = probe.get("error") or {
+            "code": "ENGINE_READ_FAILED", "message": "properties() read failed"
+        }
+        return [], False, {"method": "properties", **dict(detail)}
+    raw = probe.get("value")
+    if not isinstance(raw, (list, tuple)) or not all(isinstance(item, str) for item in raw):
+        return [], False, {
+            "method": "properties",
+            "code": "PROPERTY_INVENTORY_MALFORMED",
+            "message": "properties() did not return an array of strings",
+        }
+    return [str(item) for item in raw], True, None
+
+
+def dataset_inspect(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """Inspect a dataset with graph binding and explicit read completeness."""
+    path = arguments.get("path")
+    canonical, tag, _container, dset = _dataset_path_target(worker, model_tag, path)
+    errors: list[dict[str, Any]] = []
+    type_id = _node_type(dset, errors)
+
+    # The graph resolver is the authority for a dataset's solution.  In
+    # particular, a derived dataset's ``data`` property is an upstream dataset
+    # reference, not the solution tag itself.
+    model = bound_model(worker, model_tag)
+    binding = _resolve_dataset_binding(model, str(tag))
+    binding = dict(binding) if isinstance(binding, Mapping) else {
+        "dataset": str(tag), "binding_complete": False,
+        "read_errors": [{"code": "DATASET_BINDING_UNAVAILABLE",
+                          "message": "dataset binding resolver returned no mapping"}],
+        "error": {"code": "DATASET_BINDING_UNAVAILABLE",
+                   "message": "dataset binding resolver returned no mapping"},
+    }
+    binding_errors = binding.get("read_errors")
+    if isinstance(binding_errors, Sequence) and not isinstance(binding_errors, (str, bytes, Mapping)):
+        for item in binding_errors:
+            if isinstance(item, Mapping) and dict(item) not in errors:
+                errors.append(dict(item))
+    if isinstance(binding.get("error"), Mapping) and dict(binding["error"]) not in errors:
+        errors.append(dict(binding["error"]))
+
+    inventory_names, inventory_readable, inventory_error = _dataset_inspect_inventory(dset)
+    if inventory_error is not None:
+        errors.append(dict(inventory_error))
+    inventory_total = len(inventory_names)
+    inventory_truncated = inventory_readable and inventory_total > _DATASET_INSPECT_PROPERTY_LIMIT
+    if inventory_truncated:
+        errors.append({
+            "code": "PROPERTY_INVENTORY_TRUNCATED",
+            "message": f"dataset property inventory exceeds the {_DATASET_INSPECT_PROPERTY_LIMIT}-property inspect limit",
+            "limit": _DATASET_INSPECT_PROPERTY_LIMIT,
+            "count": inventory_total,
+        })
+
+    # If properties() is unavailable, the graph resolver still gives us the
+    # properties it could read.  Use those as a bounded fallback, but retain
+    # inventory_complete=false so the response cannot look exhaustive.
+    binding_properties = binding.get("properties")
+    fallback_names = [str(name) for name in binding_properties] if isinstance(binding_properties, Mapping) else []
+    names_to_read = (
+        inventory_names[:_DATASET_INSPECT_PROPERTY_LIMIT]
+        if inventory_readable
+        else fallback_names[:_DATASET_INSPECT_PROPERTY_LIMIT]
+    )
+    property_rows: list[dict[str, Any]] = []
+    props: dict[str, Any] = {}
+    for name in names_to_read:
+        row = _dataset_inspect_property(dset, name)
+        property_rows.append(row)
+        if row.get("readable"):
+            props[name] = row.get("value")
+        else:
+            row_errors = row.get("errors")
+            if isinstance(row_errors, Sequence) and not isinstance(row_errors, (str, bytes, Mapping)):
+                for item in row_errors:
+                    if isinstance(item, Mapping):
+                        detail = dict(item)
+                        if detail not in errors:
+                            errors.append(detail)
+            elif not row_errors:
+                errors.append({"property": name, "code": "ENGINE_READ_FAILED",
+                               "message": f"property {name!r} could not be read"})
+
+    property_values_complete = all(bool(row.get("readable")) for row in property_rows)
+    inventory_complete = inventory_readable and not inventory_truncated
+    properties_complete = inventory_complete and property_values_complete
+    binding_complete = binding.get("binding_complete") is True
+    incomplete = bool(errors) or not binding_complete or not inventory_complete or not properties_complete
+    upstream_edges = [
+        dict(edge) for edge in (binding.get("dataset_edges") or [])
+        if isinstance(edge, Mapping) and edge.get("from") == tag
+    ]
+    upstream_reference = upstream_edges[0].get("to") if len(upstream_edges) == 1 else None
+    # A partial graph is useful evidence, but it is not an authoritative
+    # solution binding.  Do not publish the resolver's provisional solution
+    # when the complete chain was not proven.
+    solution = (
+        binding.get("solution")
+        if binding_complete and isinstance(binding.get("solution"), str)
+        else None
+    )
+    component = (
+        binding.get("component")
+        if binding_complete and isinstance(binding.get("component"), str)
+        else None
+    )
+    geometry = (
+        binding.get("geometry")
+        if binding_complete and isinstance(binding.get("geometry"), str)
+        else None
+    )
+    core_readable = isinstance(type_id, str) and bool(type_id)
+    status_token = "APPLIED" if core_readable else "UNKNOWN"
+    status = {
+        # Inspection can remain usable while its metadata is explicitly
+        # incomplete (for example, an unsolved dataset or a bounded property
+        # inventory).  Only an unreadable target/type is an execution-level
+        # unknown.
+        "ok": core_readable,
+        "status": status_token,
+        "execution_state_unknown": not core_readable,
+    }
+    property_inventory = {
+        "names": inventory_names,
+        "count": inventory_total,
+        "readable": inventory_readable,
+        "complete": inventory_complete,
+        "truncated": inventory_truncated,
+        "truncated_reason": "property_limit" if inventory_truncated else None,
+        "limit": _DATASET_INSPECT_PROPERTY_LIMIT,
+        "read_names": names_to_read,
+    }
+    readback = {
+        "readable": core_readable,
+        "match": None,
+        "properties": property_rows,
+        "inventory_complete": inventory_complete,
+        "binding_complete": binding_complete,
+    }
+    return {
+        "path": canonical,
+        "tag": tag,
+        "type_id": type_id,
+        "solution": solution,
+        "component": component,
+        "geometry": geometry,
+        "upstream_reference": upstream_reference,
+        "upstream_references": upstream_edges,
+        "dataset_binding": binding,
+        "binding_complete": binding_complete,
+        "properties": props,
+        "property_readback": property_rows,
+        "property_inventory": property_inventory,
+        "property_values_complete": property_values_complete,
+        "properties_complete": properties_complete,
+        "inventory_complete": inventory_complete,
+        "complete": not incomplete,
+        "inspection_complete": not incomplete,
+        "truncated": inventory_truncated,
+        "truncated_reason": "property_limit" if inventory_truncated else None,
+        "incomplete": incomplete,
+        "read_errors": errors,
+        "errors": errors,
+        "status": status,
+        "readback": readback,
+    }
+
+
+def dataset_update(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """Update dataset properties and bound solution."""
+    path = arguments.get("path")
+    properties = _normalise_result_definition(arguments.get("definition", {}))
+    canonical, tag, _container, dset = _dataset_path_target(worker, model_tag, path)
+    model = bound_model(worker, model_tag)
+    candidate_definition = {name: value for name, value in properties}
+    _validate_dataset_type_properties(_node_type(dset, []), candidate_definition)
+    _validate_dataset_graph(model, candidate_tag=tag, candidate_properties=candidate_definition,
+                            existing_node=dset, candidate_type=_node_type(dset, []))
+    _validate_dataset_component_refs(model, candidate_definition, existing_node=dset)
+    applied, failed, not_executed, execution_unknown = _probe_write_properties(dset, properties)
+    readback = _result_readback(dset, properties)
+    return {
+        "path": canonical, "tag": tag, "updated": True,
+        **_probe_completion(applied=applied, failed=failed, not_executed=not_executed,
+                            readback=readback, execution_state_unknown=execution_unknown),
+    }
+
+
+def dataset_remove(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """Remove a dataset node and verify removal."""
+    path = arguments.get("path")
+    canonical, tag, container, _dset = _dataset_path_target(worker, model_tag, path)
+    try:
+        _call(container, "remove", tag)
+    except Exception as exc:
+        return {"path": canonical, "tag": tag, "removed": False,
+                **_probe_completion(applied=[], failed=[{"step": "remove", "error": {"code": getattr(exc, "code", "ENGINE_CALL_FAILED"), "message": str(exc)}}], not_executed=[], readback={"readable": False, "match": False}, execution_state_unknown=True)}
+    remaining_tags = tag_list(container)
+    verified = tag not in remaining_tags
+    if not verified:
+        return {"path": canonical, "tag": tag, "removed": True,
+                **_probe_completion(applied=[{"step": "remove", "tag": tag}], failed=[{"step": "remove", "error": {"code": "EXECUTION_STATE_UNKNOWN", "message": "post-remove tag readback still contains the dataset"}}], not_executed=[], readback={"readable": False, "tags": remaining_tags, "match": False}, execution_state_unknown=True)}
+    return {"path": canonical, "tag": tag, "removed": True, "verified_removed": True,
+            "remaining_datasets": remaining_tags,
+            **_probe_completion(applied=[{"step": "remove", "tag": tag}], failed=[], not_executed=[], readback={"readable": True, "tags": remaining_tags, "match": True})}
+
+
+def dataset_solution_indices(worker: Any, model_tag: str, arguments: Mapping[str, Any], *,
+                            _w21_initial_stage_context: Any = None) -> dict[str, Any]:
+    """List available inner/outer solution indices, time steps and parameter combinations."""
+    path = arguments.get("path")
+    # Solution-axis inspection belongs to the existing numeric adapter.  Keep
+    # its historical tag/path acceptance here; typed CRUD validation is scoped
+    # to dataset create/inspect/update/remove above.
+    tag = _dataset_tag(path)
+    model = bound_model(worker, model_tag)
+    container = _dataset_container(model)
+    tags = tag_list(container)
+    if tag not in tags:
+        raise node_not_found(f"dataset {tag!r} does not exist; existing datasets: {tags}")
+
+    dset = _call(container, "get", tag)
+    dataset_binding = _resolve_dataset_binding(model, str(tag))
+    initial_stage_context = (
+        isinstance(_w21_initial_stage_context, Mapping)
+        and _w21_initial_stage_context.get("purpose") == "initial_stage_output"
+    )
+
+    def initial_dataset_metadata(solution: Any = None) -> dict[str, Any]:
+        type_probe = call_probe(dset, "getType")
+        frame_probe = call_probe(dset, "getString", "frametype")
+        if any(isinstance(probe.get("error"), Mapping)
+               and probe["error"].get("execution_state_unknown") is True
+               for probe in (type_probe, frame_probe)):
+            raise ExecutionContractError("EXECUTION_STATE_UNKNOWN",
+                                         "initial Solution dataset identity read is unresolved",
+                                         stage="post_dispatch")
+        dataset_type = type_probe.get("value") if type_probe.get("ok") else None
+        frame = frame_probe.get("value") if frame_probe.get("ok") else None
+        geometry_tag = dataset_binding.get("geometry") if isinstance(dataset_binding, Mapping) else None
+        geometry_probe = call_probe(_call(model, "geom", geometry_tag), "getSDim") \
+            if isinstance(geometry_tag, str) and geometry_tag else {"ok": False, "value": None, "error": None}
+        if isinstance(geometry_probe.get("error"), Mapping) \
+                and geometry_probe["error"].get("execution_state_unknown") is True:
+            raise ExecutionContractError("EXECUTION_STATE_UNKNOWN",
+                                         "initial geometry dimension read is unresolved",
+                                         stage="post_dispatch")
+        spatial_dimension = geometry_probe.get("value") if geometry_probe.get("ok") else None
+        valid = (
+            isinstance(dataset_binding, Mapping)
+            and dataset_binding.get("binding_complete") is True
+            and dataset_binding.get("dataset_type") == "Solution"
+            and dataset_type == "Solution"
+            and isinstance(dataset_binding.get("component"), str)
+            and bool(dataset_binding.get("component"))
+            and isinstance(dataset_binding.get("geometry"), str)
+            and bool(dataset_binding.get("geometry"))
+            and isinstance(solution, str) and bool(solution)
+            and frame in {"mesh", "material", "spatial", "geometry"}
+            and type(spatial_dimension) is int and 0 <= spatial_dimension <= 3
+        )
+        return {
+            "status": "VERIFIED" if valid else "UNVERIFIED",
+            "dataset": tag, "dataset_type": dataset_type,
+            "solution": solution,
+            "component": dataset_binding.get("component") if isinstance(dataset_binding, Mapping) else None,
+            "geometry": dataset_binding.get("geometry") if isinstance(dataset_binding, Mapping) else None,
+            "binding_complete": dataset_binding.get("binding_complete") is True
+                if isinstance(dataset_binding, Mapping) else False,
+            "frametype": frame if isinstance(frame, str) else None,
+            "spatial_dimension": spatial_dimension if type(spatial_dimension) is int else None,
+            "spatial_dimension_source": "GeometrySequence.getSDim()" if geometry_probe.get("ok") else None,
+            "frametype_source": "Solution dataset getString('frametype')" if frame_probe.get("ok") else None,
+            "frametype_error": None if frame_probe.get("ok") else frame_probe.get("error"),
+            "dataset_type_source": "dataset.getType()" if type_probe.get("ok") else None,
+        }
+
+    if not isinstance(dataset_binding, Mapping) or dataset_binding.get("binding_complete") is not True:
+        binding_errors = list(dataset_binding.get("read_errors") or []) if isinstance(dataset_binding, Mapping) else []
+        binding_error = dataset_binding.get("error") if isinstance(dataset_binding, Mapping) else None
+        if isinstance(binding_error, Mapping) and binding_error not in binding_errors:
+            binding_errors.insert(0, dict(binding_error))
+        failed_result = {
+            "dataset": tag,
+            "solution": dataset_binding.get("solution") if isinstance(dataset_binding, Mapping) else None,
+            "binding_complete": False,
+            "binding_source": "resolve_dataset_binding(model, dataset_tag)",
+            "time_values": [],
+            "inner_indices": [],
+            "outer_indices": [],
+            "parameters": {},
+            "solution_count": 0,
+            "dataset_binding": dict(dataset_binding) if isinstance(dataset_binding, Mapping) else None,
+            "read_errors": binding_errors,
+            "error": dict(binding_error) if isinstance(binding_error, Mapping) else {
+                "code": "DATASET_BINDING_INCOMPLETE",
+                "message": "dataset binding is incomplete; solution axes were not guessed from dataset properties",
+            },
+            "note": "dataset binding is incomplete; solution axes were not guessed from dataset.data or dataset.solution",
+        }
+        if initial_stage_context:
+            failed_result["w21_initial_stage_dataset"] = initial_dataset_metadata(
+                dataset_binding.get("solution") if isinstance(dataset_binding, Mapping) else None)
+        return failed_result
+    solution_tag = (
+        dataset_binding.get("solution")
+        if isinstance(dataset_binding, Mapping) and dataset_binding.get("solution")
+        else None
+    )
+
+    sol_list = _call(model, "sol")
+    all_sols = tag_list(sol_list)
+
+    if not solution_tag and len(all_sols) == 1:
+        solution_tag = all_sols[0]
+
+    if not solution_tag or solution_tag not in all_sols:
+        failed_result = {
+            "dataset": tag,
+            "solution": solution_tag,
+            "binding_complete": False,
+            "time_values": [],
+            "inner_indices": [],
+            "outer_indices": [],
+            "parameters": {},
+            "solution_count": 0,
+            "note": "no bound solution found for dataset",
+        }
+        if initial_stage_context:
+            failed_result["w21_initial_stage_dataset"] = initial_dataset_metadata(solution_tag)
+        return failed_result
+
+    sol_node = _call(sol_list, "get", solution_tag) if hasattr(sol_list, "get") else _call(model, "sol", solution_tag)
+
+    # §4: every metadata read below is either used or *reported*.  A failed read
+    # is never converted into a value: the earlier revision fabricated
+    # ``outer_indices = [1]`` and reported ``binding_complete = True`` while its
+    # two SolutionInfo calls were refused by the worker allow-list and the
+    # exception was swallowed, so the response claimed metadata it had never
+    # read.
+    read_errors: list[dict[str, Any]] = []
+
+    def _read(node: Any, method: str, *args: Any) -> Any:
+        try:
+            return _call_recorded(node, method, *args, errors=read_errors)
+        except ExecutionContractError:
+            return None
+
+    pvals = _read(sol_node, "getPVals")
+
+    # ``SolverSequence.study()`` is a *method*, not a string property: reading it
+    # with ``getString("study")`` always failed, so every dataset was classified
+    # as steady and a solved transient solution published no time axis at all.
+    # Verified live (isolated probe, then this op): ``model.sol("sol1").study()``
+    # is ``"std1"``, whose step type is ``Transient``.
+    study_tag = _record(sol_node, "study", errors=read_errors)
+    study_tag = study_tag if isinstance(study_tag, str) and study_tag else None
+    steps, study_error = _study_steps(model, study_tag, read_errors) if study_tag else ([], None)
+    is_transient = any(step.get("type") in TIME_DEPENDENT_STUDY_STEPS for step in steps)
+
+    time_values: list[float] = []
+    if is_transient and pvals:
+        time_values = [float(v) for v in pvals]
+    if time_values:
+        time_axis_source = "stored output times from SolverSequence.getPVals()"
+    elif is_transient:
+        time_axis_source = "unavailable: transient solution but getPVals() returned no values"
+    elif study_tag:
+        time_axis_source = "steady: no time axis"
+    else:
+        time_axis_source = ("unavailable: SolverSequence.study() did not name an associated study, so "
+                            "getPVals() is not published as a time axis"
+                            + (f" ({study_error})" if study_error else ""))
+
+    sol_info = _read(sol_node, "getSolutioninfo")
+    solver_sequence_observation = _solver_sequence_parameter_observation(
+        sol_node, sol_info, study_tag=study_tag, solution_tag=str(solution_tag))
+    read_errors.extend({**entry, "scope": "supplemental SolverSequence parameter observation"}
+                       for entry in solver_sequence_observation["read_errors"])
+    outer_indices: list[int] = []
+    inner_indices: list[int] = []
+    level_names: list[str] = []
+    typed_binding: dict[str, Any] | None = None
+    typed_mapping_available = bool(sol_info is not None and callable(getattr(sol_info, "getSolnum", None)))
+    if typed_mapping_available:
+        # SolutionInfo.getMaxInner is not a mapping: different outer levels can
+        # contain different inner counts.  Resolve every pair through the
+        # public getSolnum(outer, strict) route and retain its actual solnum.
+        try:
+            from ._solution_binding import SolutionBinding
+            typed_binding = SolutionBinding.resolve_solution_info(sol_info)
+            outer_indices = list(typed_binding.get("outer_indices", []))
+            inner_indices = list(typed_binding.get("inner_indices", []))
+            level_names = list(typed_binding.get("level_names", []))
+            read_errors.extend(list(typed_binding.get("read_errors", [])))
+        except ExecutionContractError as exc:
+            read_errors.append({"method": "SolutionInfo", "code": exc.code, "message": str(exc)})
+    elif sol_info is not None:
+        # Legacy workers expose only getOuterSolnum/getMaxInner.  Keep this
+        # compatibility response for inspection, but mark it explicitly as a
+        # legacy shape and never use it as a complete four-axis binding.
+        outers = _read(sol_info, "getOuterSolnum")
+        if outers:
+            outer_indices = [int(x) for x in outers]
+        levels = _read(sol_info, "getLevelNames")
+        if levels:
+            level_names = [str(x) for x in levels]
+        if outer_indices:
+            max_inner = _read(sol_info, "getMaxInner", outer_indices)
+            if max_inner is not None:
+                inner_indices = list(range(1, int(max_inner) + 1))
+
+    axis_metadata_complete = bool(outer_indices and inner_indices)
+    pair_mapping_complete = bool(typed_binding and typed_binding.get("pair_mapping_complete"))
+    if not axis_metadata_complete:
+        read_errors.append({
+            "method": "SolutionInfo",
+            "code": "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+            "message": "outer/inner solution axes could not be read from the engine; "
+                       "no default index is invented and operations that select a "
+                       "solution axis stay refused",
+            "allowlist_entry_required": None,
+        })
+
+    parameters: dict[str, Any] = {}
+    if typed_binding:
+        # Preserve pair identity in a nested response while providing a small
+        # name-oriented summary for clients that only need parameter columns.
+        parameters_by_pair: dict[str, Any] = {}
+        for pair in typed_binding.get("solnum_pairs", []):
+            key = f"{pair['outer']}:{pair['inner']}"
+            pair_key = (int(pair["outer"]), int(pair["inner"]))
+            names = typed_binding.get("parameter_names_by_pair", {}).get(pair_key, [])
+            values = typed_binding.get("parameter_values_by_pair", {}).get(pair_key, [])
+            units = typed_binding.get("parameter_units_by_pair", {}).get(pair_key, [])
+            row = {"names": list(names), "values": list(values), "units": list(units), "solnum": pair["solnum"]}
+            parameters_by_pair[key] = row
+            for name, value in zip(names, values):
+                parameters.setdefault(str(name), []).append(value)
+        parameters["by_pair"] = parameters_by_pair
+    else:
+        pnames = _read(sol_node, "getParamNames")
+        param_vals = _read(sol_node, "getParamVals")
+        if pnames and param_vals:
+            for n, v in zip(pnames, param_vals):
+                parameters[str(n)] = list(v) if isinstance(v, (list, tuple)) else v
+
+    result = {
+        "dataset": tag,
+        "solution": solution_tag,
+        "study": study_tag,
+        # A legacy SolutionInfo can expose an outer/inner shape without a
+        # proof that each pair maps to an actual stored solution number.  Keep
+        # the compatibility axes for diagnostics, but never call that shape a
+        # complete binding.  The typed route must prove both the axes and the
+        # pair mapping as well.
+        "binding_complete": bool(
+            solution_tag
+            and axis_metadata_complete
+            and pair_mapping_complete
+        ),
+        "binding_source": (
+            "dataset property 'solution'/'data' resolved against model.sol().tags(); "
+            + ("SolutionInfo.getSolnum(outer, strict)" if typed_mapping_available else "legacy getOuterSolnum()/getMaxInner")
+        ),
+        "axis_metadata_complete": axis_metadata_complete,
+        "pair_mapping_complete": pair_mapping_complete,
+        "axis_metadata_source": (
+            "SolutionInfo.getSolnum(outer, strict) + getPNames/getPvals/getUnits"
+            if typed_mapping_available else
+            "legacy SolverSequence.getSolutioninfo() + SolutionInfo.getOuterSolnum()/getMaxInner()/getLevelNames()"
+        ),
+        "time_values": time_values,
+        "time_axis_source": time_axis_source,
+        "inner_indices": inner_indices,
+        "outer_indices": outer_indices,
+        "level_names": level_names,
+        "parameters": parameters,
+        # §4: index-pairing two arrays is not proof of the full parameter
+        # combination, so completeness is reported instead of asserted (the
+        # combination map would need SolutionInfo.mapToSolnum()).
+        "parameters_complete": bool(typed_binding and typed_binding.get("parameter_values_by_pair")) if typed_mapping_available else False,
+        "parameters_source": (
+            "SolutionInfo.getPNames(int[][])/getPvals(int[][])/getUnits(int[][])"
+            if typed_mapping_available else "SolverSequence.getParamNames()/getParamVals() (index-paired)"
+        ),
+        "solver_sequence_parameter_observation": solver_sequence_observation,
+        "solution_count": len(typed_binding.get("solnum_pairs", [])) if typed_binding else (len(pvals) if pvals else len(inner_indices)),
+        "solnum_pairs": list(typed_binding.get("solnum_pairs", [])) if typed_binding else [],
+        "read_errors": read_errors,
+        "dataset_binding": dict(dataset_binding) if isinstance(dataset_binding, Mapping) else None,
+    }
+    if initial_stage_context:
+        result["w21_initial_stage_dataset"] = initial_dataset_metadata(solution_tag)
+        selected_tuple = _w21_initial_stage_context.get("selected_tuple")
+        if isinstance(selected_tuple, Mapping):
+            geometry_tag = dataset_binding.get("geometry") if isinstance(dataset_binding, Mapping) else None
+            expected_solution = dataset_binding.get("solution") if isinstance(dataset_binding, Mapping) else None
+            pairs = typed_binding.get("solnum_pairs", []) if isinstance(typed_binding, Mapping) else []
+            exact_pair = [row for row in pairs if isinstance(row, Mapping)
+                          and row.get("outer") == selected_tuple.get("outer")
+                          and row.get("inner") == selected_tuple.get("inner")
+                          and row.get("solnum") == selected_tuple.get("solnum")]
+            association: dict[str, Any] = {
+                "status": "UNVERIFIED", "source": "SolutionInfo.getISol(outer,inner) + SolverSequence.getMesh(geometry,iMulti)",
+                "dataset": tag, "solution": expected_solution,
+                "selected_tuple": dict(selected_tuple), "geometry": geometry_tag,
+                "mesh_tag": None,
+            }
+            if (selected_tuple.get("dataset") == tag
+                    and selected_tuple.get("solution") == expected_solution
+                    and len(exact_pair) == 1 and isinstance(geometry_tag, str) and geometry_tag):
+                index_probe = call_probe(sol_info, "getISol", int(selected_tuple["outer"]),
+                                         int(selected_tuple["inner"]),
+                                         include_engine_failure_details=True)
+                index_error = index_probe.get("error")
+                if isinstance(index_error, Mapping) and index_error.get("execution_state_unknown") is True:
+                    raise ExecutionContractError("EXECUTION_STATE_UNKNOWN",
+                                                 "SolutionInfo.getISol outcome is unresolved",
+                                                 stage="post_dispatch")
+                raw_indices = index_probe.get("value") if index_probe.get("ok") else None
+                if (isinstance(raw_indices, (list, tuple)) and len(raw_indices) == 2
+                        and all(type(item) is int and item >= 0 for item in raw_indices)):
+                    mesh_probe = call_probe(sol_node, "getMesh", geometry_tag, raw_indices[0],
+                                            include_engine_failure_details=True)
+                    mesh_error = mesh_probe.get("error")
+                    if isinstance(mesh_error, Mapping) and mesh_error.get("execution_state_unknown") is True:
+                        raise ExecutionContractError("EXECUTION_STATE_UNKNOWN",
+                                                     "SolverSequence.getMesh outcome is unresolved",
+                                                     stage="post_dispatch")
+                    mesh_tag = mesh_probe.get("value") if mesh_probe.get("ok") else None
+                    if isinstance(mesh_tag, str) and mesh_tag:
+                        association.update({
+                            "status": "VERIFIED", "solution_object_index_zero_based": raw_indices[0],
+                            "solution_index_within_object_zero_based": raw_indices[1],
+                            "mesh_tag": mesh_tag, "index_basis": "zero_based as returned by COMSOL public API",
+                            "topology": "UNVERIFIED", "dof_equivalence": "UNVERIFIED",
+                        })
+                    else:
+                        association["error"] = mesh_error
+                else:
+                    association["error"] = index_error
+            result["w21_initial_stage_mesh_association"] = association
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Complex Math and Evaluation Transformations
+# ---------------------------------------------------------------------------
+
+def _transform_complex_value(real_val: float, imag_val: float, mode: str) -> Any:
+    r = float(real_val)
+    i = float(imag_val)
+    if mode == "preserve":
+        return {"real": r, "imag": i}
+    if mode == "real":
+        return r
+    if mode == "imag":
+        return i
+    if mode == "abs":
+        return math.hypot(r, i)
+    if mode == "phase":
+        if r == 0.0 and i == 0.0:
+            return 0.0
+        return math.atan2(i, r)
+    raise ExecutionContractError("API_UNSUPPORTED", f"unsupported complex_mode {mode!r}")
+
+
+def _transform_complex_data(real_data: Any, imag_data: Any, mode: str, is_complex: bool | None = None) -> Any:
+    """Use the shared strict complex transformer for all result operations."""
+    from ._complex_transform import transform_complex_data
+    return transform_complex_data(real_data, imag_data, mode, is_complex=is_complex)
+
+
+def _effective_engine_expressions(
+    expressions: Sequence[str],
+    mode: str,
+    *,
+    before_statistics: bool,
+) -> list[str]:
+    """Bind one consistent field expression to every aggregate feature.
+
+    The result payload still names the caller's expressions.  These are the
+    engine expressions used to obtain the requested comparison field when the
+    transform is explicitly before statistics.
+    """
+    if not before_statistics:
+        return [str(expression) for expression in expressions]
+    from ._complex_transform import effective_engine_expression
+    return [effective_engine_expression(str(expression), mode) for expression in expressions]
+
+
+def _feature_complex_status(
+    feature: Any,
+    *,
+    outer: int | None = None,
+    use_outer_getters: bool = False,
+) -> bool:
+    """Read the complex flag before admitting any numeric getter.
+
+    Spatial aggregate NumericalFeatures expose an outer-aware overload.  A
+    no-argument ``isComplex()``/``getReal()`` read is scoped to the first outer
+    solution on COMSOL 6.4, even after ``outersolnum`` is selected, so aggregate
+    callers must opt into the verified overload explicitly.
+    """
+    try:
+        if use_outer_getters and outer is not None:
+            status = _call(feature, "isComplex", int(outer))
+        else:
+            status = _call(feature, "isComplex")
+    except Exception as exc:
+        raise ExecutionContractError("COMPLEX_STATUS_UNAVAILABLE", "NumericalFeature.isComplex() could not be read") from exc
+    if not isinstance(status, bool):
+        raise ExecutionContractError("COMPLEX_STATUS_UNAVAILABLE", "NumericalFeature.isComplex() did not return a boolean")
+    return status
+
+
+def _feature_coordinates_shape(feature: Any) -> dict[str, Any]:
+    """Read the shape-only Eval witness without transferring coordinate values."""
+    try:
+        witness = _call(feature, "getCoordinatesShape")
+    except Exception as exc:
+        raise ExecutionContractError(
+            "RAW_POINT_SHAPE_UNAVAILABLE",
+            "Eval numerical feature did not provide the verified getCoordinatesShape() witness",
+        ) from exc
+    if not isinstance(witness, Mapping):
+        raise ExecutionContractError(
+            "RAW_POINT_SHAPE_UNAVAILABLE",
+            "getCoordinatesShape() returned a non-mapping shape witness",
+        )
+    point_count = witness.get("point_count")
+    if isinstance(point_count, bool) or not isinstance(point_count, int) or point_count <= 0:
+        raise ExecutionContractError(
+            "RAW_POINT_SHAPE_UNAVAILABLE",
+            "getCoordinatesShape() did not return a positive integer point_count",
+        )
+    shape = witness.get("shape")
+    if not isinstance(shape, Sequence) or isinstance(shape, (str, bytes)) or len(shape) != 2:
+        raise ExecutionContractError(
+            "RAW_POINT_SHAPE_UNAVAILABLE",
+            "getCoordinatesShape() did not return a [dimension, point_count] shape",
+        )
+    if (
+        isinstance(shape[0], bool)
+        or not isinstance(shape[0], int)
+        or shape[0] <= 0
+        or isinstance(shape[1], bool)
+        or not isinstance(shape[1], int)
+        or shape[1] != point_count
+    ):
+        raise ExecutionContractError(
+            "RAW_POINT_SHAPE_UNAVAILABLE",
+            "getCoordinatesShape() returned an inconsistent dimension/point_count pair",
+        )
+    return dict(witness)
+
+
+def _feature_components(
+    feature: Any,
+    *,
+    budget_decision: Mapping[str, Any] | None = None,
+    outer: int | None = None,
+    use_outer_getters: bool = False,
+) -> tuple[Any, Any, bool, str]:
+    """Read a numerical feature with an explicit documented data layout.
+
+    When ``budget_decision`` is present, both raw array getters are guarded by
+    the C13 pre-getData admission.  A refused decision is deliberately not
+    treated as an ordinary ``getData`` API miss, since falling back to a raw
+    aggregate getter would bypass the numeric payload budget.
+    """
+    status = _feature_complex_status(
+        feature,
+        outer=outer,
+        use_outer_getters=use_outer_getters,
+    )
+
+    def _read_raw(method: str) -> Any:
+        if budget_decision is None:
+            return _call(feature, method)
+        try:
+            value = guarded_getdata(feature, budget_decision, method=method)
+        except ResultBudgetRefused:
+            raise
+        # Keep the decision auditable without pretending that this records a
+        # process or engine peak.  The planner's byte estimate remains only a
+        # numeric scalar payload estimate.
+        if isinstance(budget_decision, dict):
+            if method == "getData":
+                budget_decision["getdata_called"] = True
+            elif method == "getImagData":
+                budget_decision["imag_getdata_called"] = True
+        return value
+
+    real: Any
+    layout: str
+    if use_outer_getters and outer is not None and budget_decision is None:
+        try:
+            # Verified COMSOL 6.4 overload: getReal(false, outer).  The first
+            # boolean selects the native column-wise layout and the explicit
+            # outer label avoids the no-argument getter's silent outer-1 default.
+            real = _call(feature, "getReal", False, int(outer))
+            layout = "expression,solnum"
+        except Exception as exc:
+            raise ExecutionContractError(
+                "ENGINE_CALL_FAILED",
+                f"outer-aware numerical feature real data could not be read for outer {outer}",
+            ) from exc
+    else:
+        try:
+            real = _read_raw("getData")
+            layout = "expression,solnum,point"
+        except ResultBudgetRefused:
+            raise
+        except Exception:
+            try:
+                real = _call(feature, "getReal")
+                layout = "expression,solnum"
+            except Exception as exc:
+                raise ExecutionContractError("ENGINE_CALL_FAILED", "numerical feature real data could not be read") from exc
+    imag = None
+    if status:
+        try:
+            if use_outer_getters and outer is not None and budget_decision is None:
+                # Verified COMSOL 6.4 overload: getImag(outer).
+                imag = _call(feature, "getImag", int(outer))
+            else:
+                imag = _read_raw("getImagData")
+        except ResultBudgetRefused:
+            raise
+        except Exception:
+            if use_outer_getters and outer is not None and budget_decision is None:
+                raise ExecutionContractError(
+                    "COMPLEX_DATA_ERROR",
+                    f"outer-aware numerical feature imaginary data could not be read for outer {outer}",
+                )
+            try:
+                imag = _call(feature, "getImag")
+            except Exception as exc:
+                raise ExecutionContractError("COMPLEX_DATA_ERROR", "imaginary data missing for complex field") from exc
+    return real, imag, status, layout
+
+
+def _budget_refusal(
+    *,
+    operation: str,
+    feature_kind: str,
+    expression_count: int,
+    inner_count: int,
+    max_elements: int,
+    max_bytes: int,
+    reason_code: str,
+    reason: str,
+    point_count: int = 1,
+    point_count_verified: bool = False,
+    point_count_source: str | None = None,
+    solution_axes_verified: bool = True,
+    solution_axes_source: str | None = "validated-SolutionBinding",
+) -> dict[str, Any]:
+    """Build an auditable refusal when a metadata witness cannot be read."""
+    return {
+        "status": "BLOCKED",
+        "allowed": False,
+        "verification": "UNVERIFIED",
+        "reason_code": reason_code,
+        "reason": reason,
+        "operation": operation,
+        "feature_kind": feature_kind,
+        "raw_getter": "getData",
+        "raw_layout": "expression,solnum,vertex",
+        "pre_getdata": True,
+        "getdata_called": False,
+        "publish_allowed": False,
+        "budget_scope": "numeric_payload_only",
+        "limits": {
+            "max_elements": max_elements,
+            "max_bytes": max_bytes,
+            "max_numeric_payload_bytes": max_bytes,
+        },
+        "requested": {
+            "expression_count": expression_count,
+            "point_count": point_count,
+            "outer_count": 1,
+            "inner_count": inner_count,
+            "complex_components": None,
+            "scalar_bytes": 8,
+            "max_elements": max_elements,
+            "max_bytes": max_bytes,
+            "raw_point_upper_bound": None,
+            "raw_upper_bound_verified": False,
+            "raw_upper_bound_source": None,
+        },
+        "computed": None,
+        "metadata_sources": {
+            "expression": "validated-request-expressions",
+            "point_count": point_count_source,
+            "solution_axes": solution_axes_source if solution_axes_verified else None,
+            "raw_point_upper_bound": None,
+        },
+        "data_vector_count": {
+            "value": None,
+            "used_for_point_bound": False,
+            "interpretation": "observation only; never treated as coordinate count",
+        },
+    }
+
+
+def _make_result_budget_guard(
+    *,
+    operation: str,
+    feature_kind: str,
+    expressions: Sequence[str],
+    binding: Mapping[str, Any] | None,
+    single_solution_count_observation: Mapping[str, Any] | None = None,
+    point_count: int | None = None,
+    max_elements: int = RESULT_NUMERIC_PAYLOAD_MAX_ELEMENTS,
+    max_bytes: int = RESULT_NUMERIC_PAYLOAD_MAX_BYTES,
+    include_coordinate_scalars: bool = False,
+    records: list[dict[str, Any]] | None = None,
+) -> Any:
+    """Create a per-outer raw-array admission callback.
+
+    Each outer read is planned independently, while the remaining limits are
+    reduced after every successful read.  This keeps a later outer from
+    exceeding a whole-request limit even though COMSOL's inner ``solnum`` axis
+    is scoped to the selected outer.
+    """
+    consumed_elements = 0
+    consumed_bytes = 0
+    is_interp = feature_kind.strip().lower() in {"interp", "interpolation"}
+
+    def _append(decision: dict[str, Any]) -> dict[str, Any]:
+        if records is not None:
+            records.append(decision)
+        return decision
+
+    def _guard(feature: Any, outer: int | None) -> Mapping[str, Any]:
+        nonlocal consumed_elements, consumed_bytes
+
+        outer_indices = list(binding.get("outer_indices") or []) if isinstance(binding, Mapping) else []
+        inner_by_outer = binding.get("inner_indices_by_outer") if isinstance(binding, Mapping) else None
+        binding_verified = bool(
+            isinstance(binding, Mapping)
+            and binding.get("pair_mapping_complete") is True
+            and outer_indices
+            and isinstance(inner_by_outer, Mapping)
+        )
+        inner_values: list[Any] = []
+        if binding_verified and outer is not None:
+            try:
+                inner_values = list(inner_by_outer.get(int(outer), []))
+            except (TypeError, ValueError):
+                inner_values = []
+            if not inner_values:
+                binding_verified = False
+
+        # A direct detached Stored/Eigenfrequency sequence or the exact
+        # single-level attached Parametric/frequency sequence can prove a
+        # singleton numeric allocation bound without proving any outer/inner
+        # tuple mapping. This exception is count-only: no axis selectors or
+        # FieldArray coordinates are synthesized from it.
+        count_only_witness = bool(
+            isinstance(single_solution_count_observation, Mapping)
+            and single_solution_count_observation.get("status") in {
+                "VERIFIED_SINGLE_STORED_NUMERIC_COUNT",
+                "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT",
+            }
+            and single_solution_count_observation.get("numeric_solution_count") == 1
+            and single_solution_count_observation.get("solution_axes_pair_mapping_complete") is False
+        )
+        if not binding_verified and count_only_witness:
+            planned_solution_count = 1
+            solution_count_source = str(single_solution_count_observation.get("source"))
+        elif binding_verified:
+            planned_solution_count = len(inner_values)
+            solution_count_source = "validated-SolutionBinding.outer/inner-pairs"
+        else:
+            decision = _budget_refusal(
+                operation=operation,
+                feature_kind=feature_kind,
+                expression_count=len(expressions),
+                inner_count=1,
+                max_elements=max_elements,
+                max_bytes=max_bytes,
+                reason_code="SOLUTION_AXES_UNVERIFIED",
+                reason="outer/inner counts must come from a complete SolutionBinding before getData",
+                point_count=point_count or 1,
+                point_count_verified=point_count is not None,
+                point_count_source="validated-Interp-request-coordinates" if is_interp else None,
+                solution_axes_verified=False,
+                solution_axes_source=None,
+            )
+            raise ResultBudgetRefused(_append(decision))
+
+        complex_components = 2 if _feature_complex_status(feature) else 1
+        raw_point_count: int | None = None
+        raw_point_source: str | None = None
+        raw_bound_verified = False
+        shape_witness: dict[str, Any] | None = None
+        if is_interp:
+            if isinstance(point_count, bool) or not isinstance(point_count, int) or point_count <= 0:
+                decision = _budget_refusal(
+                    operation=operation,
+                    feature_kind=feature_kind,
+                    expression_count=len(expressions),
+                    inner_count=planned_solution_count,
+                    max_elements=max_elements,
+                    max_bytes=max_bytes,
+                    reason_code="POINT_COUNT_UNVERIFIED",
+                    reason="Interp point count must be a positive validated request count",
+                    point_count=point_count or 1,
+                    point_count_source=None,
+                )
+                raise ResultBudgetRefused(_append(decision))
+            raw_point_source = "validated-Interp-request-coordinates"
+        else:
+            try:
+                shape_witness = _feature_coordinates_shape(feature)
+                raw_point_count = int(shape_witness["point_count"])
+                raw_point_source = "native NumericalFeature.getCoordinatesShape()"
+                raw_bound_verified = True
+            except ExecutionContractError as exc:
+                decision = _budget_refusal(
+                    operation=operation,
+                    feature_kind=feature_kind,
+                    expression_count=len(expressions),
+                    inner_count=planned_solution_count,
+                    max_elements=max_elements,
+                    max_bytes=max_bytes,
+                    reason_code="RAW_POINT_SHAPE_UNAVAILABLE",
+                    reason=str(exc),
+                    point_count=1,
+                    point_count_source=None,
+                )
+                raise ResultBudgetRefused(_append(decision)) from exc
+
+        remaining_elements = max(1, max_elements - consumed_elements)
+        remaining_bytes = max(1, max_bytes - consumed_bytes)
+        decision = plan_result_budget(
+            expression_count=len(expressions),
+            point_count=raw_point_count if raw_point_count is not None else point_count,
+            outer_count=1,
+            inner_count=planned_solution_count,
+            max_elements=remaining_elements,
+            max_bytes=remaining_bytes,
+            operation=operation,
+            feature_kind=feature_kind,
+            raw_getter="getData",
+            raw_layout="expression,solnum,vertex",
+            expression_count_verified=True,
+            point_count_verified=True,
+            solution_axes_verified=True,
+            expression_source="validated-request-expressions",
+            point_count_source=raw_point_source,
+            # The planner's solution-axis witness is used as a numeric
+            # allocation bound here. The separate fields below preserve
+            # whether an outer/inner tuple mapping actually exists.
+            solution_axes_source=solution_count_source,
+            raw_point_upper_bound=raw_point_count,
+            raw_upper_bound_verified=raw_bound_verified,
+            raw_upper_bound_source=raw_point_source if raw_bound_verified else None,
+            complex_components=complex_components,
+        )
+        decision = _append(decision)
+        decision["solution_axes_verification_scope"] = (
+            "numeric_singleton_count_only" if count_only_witness else "outer_inner_tuple_mapping"
+        )
+        decision["solution_axes_pair_mapping_complete"] = bool(binding_verified)
+        decision["solution_count_observation"] = (
+            dict(single_solution_count_observation) if count_only_witness else None
+        )
+        if shape_witness is not None:
+            decision["raw_point_shape_witness"] = shape_witness
+        if decision.get("status") != "PASS" or decision.get("allowed") is not True:
+            raise ResultBudgetRefused(decision)
+        computed = decision.get("computed") or {}
+        if include_coordinate_scalars:
+            # W21's strict field response contains both field samples and the
+            # actual native coordinates. The shape-only Worker witness is
+            # available before getData(), so include coordinate numbers in the
+            # same hard cap before either large getter is called.
+            coordinate_scalars = int(shape_witness["shape"][0]) * int(shape_witness["shape"][1])
+            combined_elements = int(computed.get("elements", 0)) + coordinate_scalars
+            combined_bytes = int(computed.get("bytes", 0)) + coordinate_scalars * 8
+            if combined_elements > max_elements or combined_bytes > max_bytes:
+                decision.update({
+                    "status": "BLOCKED",
+                    "allowed": False,
+                    "publish_allowed": False,
+                    "reason_code": "FIELD_READBACK_LIMIT_EXCEEDED",
+                    "reason": "field values plus native coordinates exceed the strict W21 readback limit",
+                    "computed": {
+                        **dict(computed),
+                        "coordinate_scalars": coordinate_scalars,
+                        "combined_numeric_scalars": combined_elements,
+                        "combined_numeric_bytes": combined_bytes,
+                    },
+                    "limits": {
+                        "max_elements": max_elements,
+                        "max_bytes": max_bytes,
+                        "scope": "field_values_real_imag_plus_native_coordinates",
+                    },
+                })
+                raise ResultBudgetRefused(decision)
+            computed = {
+                **dict(computed),
+                "coordinate_scalars": coordinate_scalars,
+                "combined_numeric_scalars": combined_elements,
+                "combined_numeric_bytes": combined_bytes,
+            }
+            decision["computed"] = computed
+        consumed_elements += int(computed.get("elements", 0))
+        consumed_bytes += int(computed.get("bytes", 0))
+        decision["request_progress"] = {
+            "consumed_numeric_payload_elements": consumed_elements,
+            "consumed_numeric_payload_bytes": consumed_bytes,
+            "max_elements": max_elements,
+            "max_bytes": max_bytes,
+        }
+        return decision
+
+    return _guard
+
+
+def _normalise_evalpoint_components(
+    real: Any,
+    imag: Any,
+    *,
+    num_expressions: int,
+) -> tuple[Any, Any, int]:
+    """Normalise EvalPoint's ``[expression*point][inner]`` getter result.
+
+    COMSOL 6.4 does not provide IntPoint/AvPoint.  EvalPoint returns one row
+    per expression/selected point and one column per stored inner solution;
+    rows are grouped by expression.  Convert that documented native shape to
+    the normal ``[expression][inner][point]`` layout before any statistics.
+    """
+    if isinstance(real, Sequence) and not isinstance(real, (str, bytes)):
+        rows = list(real)
+    else:
+        rows = [real]
+    if not rows or len(rows) % num_expressions:
+        raise ExecutionContractError(
+            "FIELD_ARRAY_SHAPE_MISMATCH",
+            f"EvalPoint returned {len(rows)} rows for {num_expressions} expressions",
+        )
+    point_count = len(rows) // num_expressions
+
+    def _columns(row: Any) -> list[Any]:
+        if isinstance(row, Sequence) and not isinstance(row, (str, bytes)):
+            return list(row)
+        return [row]
+
+    columns = [_columns(row) for row in rows]
+    inner_count = len(columns[0])
+    if inner_count < 1 or any(len(row) != inner_count for row in columns):
+        raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "EvalPoint inner rows have inconsistent lengths")
+    real_out: list[list[list[Any]]] = []
+    for expression_index in range(num_expressions):
+        block = columns[expression_index * point_count : (expression_index + 1) * point_count]
+        real_out.append([
+            [block[point_index][inner_index] for point_index in range(point_count)]
+            for inner_index in range(inner_count)
+        ])
+
+    imag_out = None
+    if imag is not None:
+        imag_rows = list(imag) if isinstance(imag, Sequence) and not isinstance(imag, (str, bytes)) else [imag]
+        if len(imag_rows) != len(rows):
+            raise ExecutionContractError("COMPLEX_DATA_ERROR", "EvalPoint imaginary row count differs from real data")
+        imag_columns = [_columns(row) for row in imag_rows]
+        if any(len(row) != inner_count for row in imag_columns):
+            raise ExecutionContractError("COMPLEX_DATA_ERROR", "EvalPoint imaginary inner rows differ from real data")
+        imag_out = []
+        for expression_index in range(num_expressions):
+            block = imag_columns[expression_index * point_count : (expression_index + 1) * point_count]
+            imag_out.append([
+                [block[point_index][inner_index] for point_index in range(point_count)]
+                for inner_index in range(inner_count)
+            ])
+    return real_out, imag_out, point_count
+
+
+def _point_reduce(data: Any, operation: str) -> Any:
+    """Reduce the final point axis while retaining a singleton point axis."""
+    if isinstance(data, Mapping):
+        if set(data) >= {"real", "imag"}:
+            # A mapping at this level is one already-reduced complex scalar.
+            # Lists of such mappings are handled by the leaf branch below.
+            return {"real": float(data["real"]), "imag": float(data["imag"])}
+        raise ExecutionContractError("COMPLEX_DATA_ERROR", "complex point value lacks real/imag components")
+    if isinstance(data, Sequence) and not isinstance(data, (str, bytes)):
+        values = list(data)
+        if not values:
+            raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "point axis is empty")
+        # A leaf here is the point axis.  Higher axes contain nested lists.
+        if all(
+            (isinstance(item, Mapping) and set(item) >= {"real", "imag"})
+            or (not isinstance(item, (Sequence, Mapping)) and not isinstance(item, (str, bytes)))
+            for item in values
+        ):
+            if any(isinstance(item, Mapping) for item in values):
+                if not all(isinstance(item, Mapping) and set(item) >= {"real", "imag"} for item in values):
+                    raise ExecutionContractError("COMPLEX_DATA_ERROR", "point axis mixes real and complex values")
+                if operation in {"minimum", "maximum"}:
+                    raise ExecutionContractError(
+                        "COMPLEX_ORDER_UNDEFINED",
+                        "complex point extrema require complex_mode=real or abs",
+                    )
+                real_values = [float(item["real"]) for item in values]
+                imag_values = [float(item["imag"]) for item in values]
+                if operation == "sum":
+                    reduced = {"real": sum(real_values), "imag": sum(imag_values)}
+                elif operation == "count":
+                    reduced = {"real": float(len(values)), "imag": 0.0}
+                else:
+                    raise ExecutionContractError("API_UNSUPPORTED", f"unsupported complex point reduction {operation!r}")
+                return [reduced]
+            if any(isinstance(item, bool) or not isinstance(item, (int, float)) for item in values):
+                raise ExecutionContractError("INVALID_RESULT", "point values must be finite real numbers")
+            numbers = [float(item) for item in values]
+            if not all(math.isfinite(item) for item in numbers):
+                raise ExecutionContractError("INVALID_RESULT", "point values must be finite")
+            if operation == "sum":
+                reduced = sum(numbers)
+            elif operation == "minimum":
+                reduced = min(numbers)
+            elif operation == "maximum":
+                reduced = max(numbers)
+            elif operation == "count":
+                reduced = float(len(numbers))
+            else:
+                raise ExecutionContractError("API_UNSUPPORTED", f"unsupported point reduction {operation!r}")
+            return [reduced]
+        return [_point_reduce(item, operation) for item in values]
+    if isinstance(data, (int, float)) and not isinstance(data, bool):
+        return [float(data)]
+    raise ExecutionContractError("INVALID_RESULT", f"cannot reduce point data of type {type(data).__name__}")
+
+
+def _strict_singleton_value(value: Any, *, label: str) -> Any:
+    """Unwrap a result cell only when every remaining axis is singleton."""
+    if isinstance(value, Mapping):
+        if not {"real", "imag"}.issubset(set(value)):
+            raise ExecutionContractError("COMPLEX_DATA_ERROR", f"{label} complex value lacks real/imag components")
+        real = float(value["real"])
+        imag = float(value["imag"])
+        if not math.isfinite(real) or not math.isfinite(imag):
+            raise ExecutionContractError("INVALID_RESULT", f"{label} is not finite")
+        return {"real": real, "imag": imag}
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        values = list(value)
+        if len(values) != 1:
+            raise ExecutionContractError(
+                "FIELD_ARRAY_SHAPE_MISMATCH",
+                f"{label} has a non-singleton axis of length {len(values)}",
+            )
+        return _strict_singleton_value(values[0], label=label)
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ExecutionContractError("INVALID_RESULT", f"{label} is not numeric")
+    number = float(value)
+    if not math.isfinite(number):
+        raise ExecutionContractError("INVALID_RESULT", f"{label} is not finite")
+    return number
+
+
+def _numeric_literal(value: Any, *, unit: Any = None) -> str:
+    """Format a finite scalar for an engine expression, retaining its unit."""
+    if isinstance(value, Mapping):
+        raise ExecutionContractError("COMPLEX_DATA_ERROR", "a complex value needs the complex center expression")
+    number = float(value)
+    if not math.isfinite(number):
+        raise ExecutionContractError("INVALID_RESULT", "a centered mean is not finite")
+    literal = format(number, ".17g")
+    if unit not in (None, "", "1", "dimensionless"):
+        literal = f"({literal}[{unit}])"
+    return literal
+
+
+def _centered_square_expression(
+    expression: str,
+    mean_value: Any,
+    *,
+    unit: Any = None,
+) -> str:
+    """Construct ``|f-mean|^2`` with a dimensionally matched center."""
+    if isinstance(mean_value, Mapping):
+        if set(mean_value) < {"real", "imag"}:
+            raise ExecutionContractError("COMPLEX_DATA_ERROR", "complex mean lacks real/imag components")
+        real_literal = _numeric_literal(mean_value["real"], unit=unit)
+        imag_literal = _numeric_literal(mean_value["imag"], unit=unit)
+        centered = (
+            f"(real(({expression}))-{real_literal})"
+            f"+i*(imag(({expression}))-{imag_literal})"
+        )
+    else:
+        centered = f"(({expression})-{_numeric_literal(mean_value, unit=unit)})"
+    return f"abs(({centered}))^2"
+
+
+def _single_expression_cells(data: Any, *, num_expressions: int, label: str) -> list[Any]:
+    """Read one scalar cell per expression from a selected numerical result."""
+    rows = list(data) if isinstance(data, Sequence) and not isinstance(data, (str, bytes)) else [data]
+    if len(rows) != num_expressions:
+        raise ExecutionContractError(
+            "FIELD_ARRAY_SHAPE_MISMATCH",
+            f"{label} returned {len(rows)} expression rows, expected {num_expressions}",
+        )
+    return [
+        _strict_singleton_value(row, label=f"{label}[expression={index}]")
+        for index, row in enumerate(rows)
+    ]
+
+
+def _selected_inner_expression_cells(
+    data: Any,
+    *,
+    inner_labels: Sequence[Any],
+    inner: int,
+    num_expressions: int,
+    label: str,
+) -> list[Any]:
+    """Select one real inner solution from an outer-aware aggregate read.
+
+    COMSOL's ``getReal(false, outer)`` still returns the complete inner axis;
+    setting ``solnum`` on the feature does not guarantee that the getter
+    shrinks it.  The only safe scalarisation is therefore to locate the
+    requested actual inner label in the verified ``SolutionInfo`` axis and
+    select that column explicitly.
+    """
+    labels = [int(value) for value in inner_labels]
+    try:
+        position = labels.index(int(inner))
+    except (ValueError, TypeError) as exc:
+        raise ExecutionContractError(
+            "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+            f"inner solution {inner!r} is not present in the verified outer axis {labels!r}",
+        ) from exc
+    rows = list(data) if isinstance(data, Sequence) and not isinstance(data, (str, bytes)) else [data]
+    if len(rows) != num_expressions:
+        raise ExecutionContractError(
+            "FIELD_ARRAY_SHAPE_MISMATCH",
+            f"{label} returned {len(rows)} expression rows, expected {num_expressions}",
+        )
+    selected: list[Any] = []
+    for expression_index, row in enumerate(rows):
+        if isinstance(row, Sequence) and not isinstance(row, (str, bytes)):
+            values = list(row)
+            if len(values) != len(labels):
+                raise ExecutionContractError(
+                    "FIELD_ARRAY_SHAPE_MISMATCH",
+                    f"{label}[expression={expression_index}] inner axis has length {len(values)}, expected {len(labels)}",
+                )
+            selected.append(_strict_singleton_value(
+                values[position],
+                label=f"{label}[expression={expression_index},inner={inner}]",
+            ))
+        elif len(labels) == 1:
+            selected.append(_strict_singleton_value(
+                row,
+                label=f"{label}[expression={expression_index},inner={inner}]",
+            ))
+        else:
+            raise ExecutionContractError(
+                "FIELD_ARRAY_SHAPE_MISMATCH",
+                f"{label}[expression={expression_index}] has no explicit inner axis",
+            )
+    return selected
+
+
+def _feature_units(feature: Any, expressions: Sequence[str]) -> dict[str, Any]:
+    """Read expression units when the numerical feature publishes them."""
+    raw: Any = None
+    try:
+        raw = _call(feature, "getStringArray", "unit")
+    except Exception:
+        try:
+            raw = _call(feature, "getString", "unit")
+        except Exception:
+            return {}
+    if isinstance(raw, str):
+        values = [raw]
+    elif isinstance(raw, Sequence) and not isinstance(raw, (bytes, str)):
+        values = list(raw)
+    else:
+        return {}
+    if len(values) == 1 and len(expressions) > 1:
+        values = values * len(expressions)
+    if len(values) != len(expressions):
+        return {str(expression): None for expression in expressions}
+    return {
+        str(expression): (None if value is None or value == "" else str(value))
+        for expression, value in zip(expressions, values)
+    }
+
+
+def _global_parameter_context_unit_readback(model: Any, expression: str) -> dict[str, Any]:
+    """Retain ParamBase's unit result as a global-context diagnostic only.
+
+    ParamBase.evaluateUnit is scoped to the model's global parameter context.
+    A result does not establish the unit of a same-named local field expression
+    as evaluated by a numerical feature over a selected ROI and solution tuple.
+    It therefore never verifies the weighted expression's ROI-context unit.
+    """
+    result: dict[str, Any] = {
+        "status": "UNAVAILABLE",
+        "unit": None,
+        "expression": expression,
+        "source": "Model.param().evaluateUnit(expression)",
+        "scope": "global_parameter_context",
+    }
+    try:
+        parameters = _call(model, "param")
+        value = _call(parameters, "evaluateUnit", expression)
+    except Exception as exc:
+        result["unavailable_reason"] = type(exc).__name__
+        return result
+    if not isinstance(value, str) or not value.strip():
+        result["unavailable_reason"] = "native_unit_evaluator_returned_no_unit"
+        return result
+    result["unit"] = value.strip()
+    result["status"] = "READBACK_ONLY"
+    return result
+
+
+_STRICT_WEIGHT_INTEGRATION_ORDER = 4
+
+
+def _verify_weight_minimum_integration_order(feature: Any) -> int:
+    try:
+        properties = {str(item) for item in _call(feature, "properties")}
+    except Exception as exc:
+        raise ExecutionContractError("WEIGHT_SAMPLING_UNAVAILABLE", "native minimum property inventory is unavailable") from exc
+    if "intorder" not in properties:
+        raise ExecutionContractError("WEIGHT_SAMPLING_UNAVAILABLE", "native minimum feature does not expose intorder")
+    _call(feature, "set", "intorder", _STRICT_WEIGHT_INTEGRATION_ORDER)
+    try:
+        observed = _call(feature, "getInt", "intorder")
+    except Exception as exc:
+        raise ExecutionContractError("WEIGHT_SAMPLING_UNAVAILABLE", "native minimum integration order could not be read back") from exc
+    if isinstance(observed, bool) or not isinstance(observed, int) or observed != _STRICT_WEIGHT_INTEGRATION_ORDER:
+        raise ExecutionContractError("WEIGHT_SAMPLING_MISMATCH", "native minimum integration order differs from the declared rule")
+    return observed
+
+
+def _verify_weight_integral_rule(feature: Any, *, role: str) -> dict[str, Any]:
+    try:
+        properties = {str(item) for item in _call(feature, "properties")}
+    except Exception as exc:
+        raise ExecutionContractError("WEIGHT_SAMPLING_UNAVAILABLE", f"native {role} integral property inventory is unavailable") from exc
+    required = {"method", "intorderactive", "intorder"}
+    if not required <= properties:
+        raise ExecutionContractError("WEIGHT_SAMPLING_UNAVAILABLE", f"native {role} integral does not expose the required integration-rule properties")
+    _call(feature, "set", "method", "integration")
+    _call(feature, "set", "intorderactive", "on")
+    _call(feature, "set", "intorder", _STRICT_WEIGHT_INTEGRATION_ORDER)
+    try:
+        method = _call(feature, "getString", "method")
+        active = _call(feature, "getString", "intorderactive")
+        order = _call(feature, "getInt", "intorder")
+    except Exception as exc:
+        raise ExecutionContractError("WEIGHT_SAMPLING_UNAVAILABLE", f"native {role} integral rule could not be read back") from exc
+    if (method != "integration" or active != "on" or isinstance(order, bool)
+            or not isinstance(order, int) or order != _STRICT_WEIGHT_INTEGRATION_ORDER):
+        raise ExecutionContractError("WEIGHT_SAMPLING_MISMATCH", f"native {role} integral rule did not retain the declared integration method and order")
+    return {
+        "source": "native_numerical_feature_property_set_and_readback",
+        "method": method,
+        "intorderactive": active,
+        "intorder": order,
+    }
+
+
+def _solution_tuple_scalar_values(
+    values: Any,
+    binding: Mapping[str, Any],
+    *,
+    label: str,
+) -> dict[tuple[int, int, int], float]:
+    """Bind a canonical single-expression FieldArray payload to SolutionInfo tuples."""
+    outer_labels = list(binding.get("outer_indices") or [])
+    inner_by_outer = binding.get("inner_indices_by_outer") or {}
+    pairs = binding.get("solnum_pairs") or []
+    expression_rows = list(values) if isinstance(values, Sequence) and not isinstance(values, (str, bytes)) else [values]
+    if len(expression_rows) != 1 or not outer_labels or not pairs:
+        raise ExecutionContractError("SOLUTION_AXIS_METADATA_UNAVAILABLE", f"{label} has no exact single-expression solution binding")
+    outer_rows = list(expression_rows[0]) if isinstance(expression_rows[0], Sequence) and not isinstance(expression_rows[0], (str, bytes)) else [expression_rows[0]]
+    if len(outer_rows) != len(outer_labels):
+        raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", f"{label} outer axis differs from SolutionInfo")
+    output: dict[tuple[int, int, int], float] = {}
+    for pair in pairs:
+        if not isinstance(pair, Mapping):
+            raise ExecutionContractError("SOLUTION_AXIS_METADATA_UNAVAILABLE", f"{label} solution tuple is malformed")
+        outer, inner, solnum = pair.get("outer"), pair.get("inner"), pair.get("solnum")
+        if any(isinstance(value, bool) or not isinstance(value, int) or value < 1 for value in (outer, inner, solnum)):
+            raise ExecutionContractError("SOLUTION_AXIS_METADATA_UNAVAILABLE", f"{label} solution tuple is malformed")
+        key = (outer, inner, solnum)
+        if key in output or outer not in outer_labels:
+            raise ExecutionContractError("SOLUTION_AXIS_METADATA_UNAVAILABLE", f"{label} solution tuples are duplicated or unbound")
+        outer_position = outer_labels.index(outer)
+        inner_labels = list(inner_by_outer.get(outer, []))
+        if inner not in inner_labels:
+            raise ExecutionContractError("SOLUTION_AXIS_METADATA_UNAVAILABLE", f"{label} inner tuple is not in the exact outer axis")
+        inner_rows = list(outer_rows[outer_position]) if isinstance(outer_rows[outer_position], Sequence) and not isinstance(outer_rows[outer_position], (str, bytes)) else [outer_rows[outer_position]]
+        if len(inner_rows) != len(inner_labels):
+            raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", f"{label} inner axis differs from SolutionInfo")
+        cell = inner_rows[inner_labels.index(inner)]
+        point_values = list(cell) if isinstance(cell, Sequence) and not isinstance(cell, (str, bytes)) else [cell]
+        if len(point_values) != 1:
+            raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", f"{label} must contain exactly one scalar per solution tuple")
+        value = point_values[0]
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+            raise ExecutionContractError("INVALID_RESULT", f"{label} contains a non-finite or non-real tuple value")
+        output[key] = float(value)
+    if len(output) != len(pairs):
+        raise ExecutionContractError("SOLUTION_AXIS_METADATA_UNAVAILABLE", f"{label} does not cover every SolutionInfo tuple")
+    return output
+
+
+def _field_array_context(
+    binding: Mapping[str, Any],
+    expressions: Sequence[str],
+    *,
+    expression_units: Mapping[str, Any] | None = None,
+    length_unit: Any = None,
+    point_count: int = 1,
+    point_coordinates: Any = None,
+    point_coordinate_source: str | None = None,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    """Build JSON-safe FieldArray coordinates, units, and source metadata.
+
+    SolutionInfo's parameter metadata belongs to each ``(outer, inner)``
+    pair.  It therefore cannot be represented by inventing a fifth numeric
+    axis.  The canonical four axes remain rectangular while the pair records
+    are published in ``coords.parameters`` and ``metadata.solution_pairs``.
+    """
+    expressions_list = [str(item) for item in expressions]
+    outer_indices = [int(item) for item in (binding.get("outer_indices") or [])]
+    inner_indices = [int(item) for item in (binding.get("inner_indices") or [])]
+    names_by_pair = binding.get("parameter_names_by_pair") or {}
+    values_by_pair = binding.get("parameter_values_by_pair") or {}
+    units_by_pair = binding.get("parameter_units_by_pair") or {}
+    pair_records: list[dict[str, Any]] = []
+    time_values: list[Any] = []
+    frequency_values: list[Any] = []
+    time_unit: Any = None
+    frequency_unit: Any = None
+    for pair in binding.get("solnum_pairs") or []:
+        outer = int(pair["outer"])
+        inner = int(pair["inner"])
+        key = (outer, inner)
+        names = [str(name) for name in (names_by_pair.get(key) or []) if str(name)]
+        values = list(values_by_pair.get(key) or [])
+        raw_units = list(units_by_pair.get(key) or [])
+        parameter_values: dict[str, Any] = {}
+        parameter_units: dict[str, Any] = {}
+        for index, name in enumerate(names):
+            parameter_values[name] = values[index] if index < len(values) else None
+            unit = raw_units[index] if index < len(raw_units) else None
+            parameter_units[name] = None if unit in (None, "") else str(unit)
+            lower = name.lower()
+            if lower in {"t", "time"}:
+                time_values.append(parameter_values[name])
+                if time_unit is None:
+                    time_unit = parameter_units[name]
+            if lower in {"f", "freq", "frequency"}:
+                frequency_values.append(parameter_values[name])
+                if frequency_unit is None:
+                    frequency_unit = parameter_units[name]
+        pair_records.append({
+            "outer": outer,
+            "inner": inner,
+            "solnum": int(pair.get("solnum", inner)),
+            "parameters": parameter_values,
+            "parameter_units": parameter_units,
+        })
+
+    coords: dict[str, Any] = {
+        "expression": expressions_list,
+        "outer": outer_indices,
+        "inner": inner_indices,
+        "point": list(range(1, int(point_count) + 1)),
+        # These are metadata coordinate columns over the pair records, not
+        # additional data axes.  Keeping them explicit prevents callers from
+        # mistaking a parameter sweep for a globally enumerated solnum axis.
+        "parameters": [record["parameters"] for record in pair_records],
+        "params": [record["parameters"] for record in pair_records],
+    }
+    if time_values:
+        coords["time"] = time_values
+    if frequency_values:
+        coords["frequency"] = frequency_values
+    if point_coordinates is not None:
+        # FieldArray coordinates use one record per point, with the spatial
+        # components inside that record.  The COMSOL setter/readback API uses
+        # the opposite ``[dimension][point]`` matrix, so callers must transpose
+        # that engine-facing representation before publishing it here.
+        coords["spatial"] = point_coordinates
+
+    expression_unit_map = {
+        str(name): (None if value in (None, "") else str(value))
+        for name, value in (expression_units or {}).items()
+    }
+    units: dict[str, Any] = {
+        "expression": expression_unit_map,
+        "outer": "index",
+        "inner": "index",
+        "point": length_unit,
+        "parameters": {
+            name: unit
+            for record in pair_records
+            for name, unit in record["parameter_units"].items()
+            if unit is not None
+        },
+    }
+    if time_values:
+        units["time"] = time_unit
+    if frequency_values:
+        units["frequency"] = frequency_unit
+    metadata = {
+        "binding_source": binding.get("binding_source"),
+        "pair_mapping_complete": bool(binding.get("pair_mapping_complete")),
+        "solution_pairs": pair_records,
+        "parameter_names": list(binding.get("parameter_names") or []),
+        "expression_units": expression_unit_map,
+        "unit_readback_status": "VERIFIED" if expression_unit_map and all(value is not None for value in expression_unit_map.values()) else "UNVERIFIED",
+        "point_coordinate_source": point_coordinate_source or (
+            "request" if point_coordinates is not None else "numerical-feature"
+        ),
+    }
+    if time_values:
+        metadata["time_unit"] = time_unit
+    if frequency_values:
+        metadata["frequency_unit"] = frequency_unit
+    return coords, units, metadata
+
+
+def _field_array_with_values(
+    template: Any,
+    values: Any,
+    *,
+    is_complex: bool | None,
+    selectors: Mapping[str, Any] | None = None,
+) -> Any:
+    """Rebuild a typed field from final values, then apply solution selectors.
+
+    ``result.evaluate`` keeps the raw FieldArray as an axis/metadata template,
+    while aggregate branches replace its values with mean, variance, or RMS
+    data.  Reusing ``template.select`` would select the stale raw values and
+    overwrite those statistics.  This helper makes the ordering explicit and
+    keeps the four axes and their metadata attached to the final calculation.
+    """
+    from ._solution_binding import FieldArray
+
+    result = FieldArray(
+        values,
+        axes=template.axes,
+        coords=template.coords,
+        units=template.units,
+        metadata=template.metadata,
+        is_complex=is_complex,
+    )
+    if selectors:
+        result = result.select(**dict(selectors))
+    return result
+
+
+def _field_array_is_complex(
+    engine_is_complex: bool | None,
+    complex_mode: str,
+    aggregate: str = "none",
+) -> bool:
+    """Describe the published FieldArray value type, separate from raw status."""
+    if engine_is_complex is not True or complex_mode != "preserve":
+        return False
+    # Population standard deviation and RMS are real by definition after the
+    # modulus-square integration, even when the source field is complex.
+    return aggregate not in {"std", "rms"}
+
+
+def _axisymmetric_measure_readback(feature: Any, *, role: str) -> dict[str, Any]:
+    """Enable COMSOL's native axisymmetric measure and verify its readback.
+
+    A geometry ``isAxisymmetric()`` flag alone does not prove that a numerical
+    feature is integrating the revolved measure.  The operation is therefore
+    refused when the native property cannot be set and read back as ``on``.
+    """
+    try:
+        properties = {str(item) for item in _call(feature, "properties")}
+    except Exception as exc:
+        raise ExecutionContractError(
+            "AXISYMMETRY_READBACK_UNAVAILABLE",
+            f"{role} numerical feature properties could not be read",
+        ) from exc
+    property_name = next(
+        (name for name in ("intvolume", "intsurface") if name in properties),
+        None,
+    )
+    if property_name is None:
+        raise ExecutionContractError(
+            "AXISYMMETRY_READBACK_UNAVAILABLE",
+            f"{role} numerical feature exposes neither intvolume nor intsurface",
+        )
+    try:
+        _call(feature, "set", property_name, "on")
+    except Exception as exc:
+        raise ExecutionContractError(
+            "AXISYMMETRY_READBACK_UNAVAILABLE",
+            f"{role} could not enable native {property_name}=on",
+        ) from exc
+    try:
+        readback = _call(feature, "getString", property_name)
+    except Exception as exc:
+        raise ExecutionContractError(
+            "AXISYMMETRY_READBACK_UNAVAILABLE",
+            f"{role} native {property_name} readback is unavailable",
+        ) from exc
+    enabled = (
+        readback is True
+        or str(readback).strip().lower() in {"on", "true", "1"}
+    )
+    if not enabled:
+        raise ExecutionContractError(
+            "AXISYMMETRY_READBACK_MISMATCH",
+            f"{role} native {property_name} readback is {readback!r}, expected 'on'",
+        )
+    return {
+        "role": role,
+        "native_property": property_name,
+        "requested_value": "on",
+        "readback_value": readback,
+        "readback_verified": True,
+        "manual_radial_weighting": False,
+        "source": "NumericalFeature.set + getString",
+    }
+
+
+def _length_scale_to_geometry(input_unit: str, geometry_unit: Any) -> float:
+    """Convert an input coordinate magnitude into COMSOL geometry units."""
+    factors = {
+        "m": 1.0,
+        "cm": 1.0e-2,
+        "mm": 1.0e-3,
+        "um": 1.0e-6,
+        "µm": 1.0e-6,
+        "nm": 1.0e-9,
+    }
+    source = str(input_unit).strip()
+    target = str(geometry_unit or "").strip()
+    if source not in factors:
+        raise ExecutionContractError("API_UNSUPPORTED", f"coordinate_unit {input_unit!r} not supported")
+    if target not in factors:
+        raise ExecutionContractError(
+            "AXIS_METADATA_UNAVAILABLE",
+            f"geometry length unit {geometry_unit!r} is unavailable or unsupported",
+        )
+    return factors[source] / factors[target]
+
+
+def _feature_point_count(data: Any, layout: str) -> int:
+    """Read the point axis length from a documented numerical result layout."""
+    if not layout.endswith("point"):
+        return 1
+    rows = list(data) if isinstance(data, Sequence) and not isinstance(data, (str, bytes)) else [data]
+    if not rows:
+        raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "numerical feature returned no expression rows")
+    row = rows[0]
+    if layout.startswith("expression,outer"):
+        outer_rows = list(row) if isinstance(row, Sequence) and not isinstance(row, (str, bytes)) else [row]
+        if not outer_rows:
+            raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "numerical feature returned no outer rows")
+        inner_rows = list(outer_rows[0]) if isinstance(outer_rows[0], Sequence) and not isinstance(outer_rows[0], (str, bytes)) else [outer_rows[0]]
+        if not inner_rows:
+            raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "numerical feature returned no inner rows")
+        point_values = inner_rows[0]
+    else:
+        inner_rows = list(row) if isinstance(row, Sequence) and not isinstance(row, (str, bytes)) else [row]
+        if not inner_rows:
+            raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "numerical feature returned no solution rows")
+        point_values = inner_rows[0]
+    if not isinstance(point_values, Sequence) or isinstance(point_values, (str, bytes)):
+        return 1
+    return len(point_values)
+
+
+def _result_solution_binding(model: Any, solution_tag: Any, *,
+    _skip_empty_outer_tuple_diagnostic: bool = False,
+) -> dict[str, Any] | None:
+    """Return a typed SolutionInfo binding when the selected solution publishes it."""
+    if not isinstance(solution_tag, str) or not solution_tag:
+        return None
+    try:
+        from ._solution_binding import SolutionBinding
+        sol_list = _call(model, "sol")
+        if solution_tag not in tag_list(sol_list):
+            raise ExecutionContractError("NODE_NOT_FOUND", f"solution {solution_tag!r} is not present in model.sol()")
+        sol_node = _call(sol_list, "get", solution_tag)
+        info = _call(sol_node, "getSolutioninfo")
+        if not callable(getattr(info, "getSolnum", None)):
+            return None
+        from ._ephemeral_result_ticket import current_scope
+        scope = current_scope()
+        if scope is None:
+            return SolutionBinding.resolve_solution_info(info,
+                _skip_empty_outer_tuple_diagnostic=_skip_empty_outer_tuple_diagnostic)
+        with scope.supplemental_solution_info(info) as handled:
+            binding = SolutionBinding.resolve_solution_info(info,
+                _skip_empty_outer_tuple_diagnostic=_skip_empty_outer_tuple_diagnostic)
+            handled.append(binding)
+            return binding
+    except ExecutionContractError as exc:
+        if exc.code in {"API_UNSUPPORTED", "NODE_NOT_FOUND"}:
+            return None
+        raise
+
+
+def _single_stored_solution_count_observation(
+    model: Any,
+    dataset_binding: Mapping[str, Any] | None,
+    solution_tag: Any,
+) -> dict[str, Any]:
+    """Prove a bounded one-state allocation without inventing solution axes.
+
+    The existing detached Stored/Eigenfrequency case remains count-only.  The
+    one additional supported case is the exact attached frequency sequence:
+    Parametric/SolverSequence, one ``freq`` level, no outer-solution axis,
+    ``getSize()[1] == 1`` and ``getSizeMulti() == [1, 1]``.  Neither case
+    repairs SolutionInfo tuple metadata or enables outer/inner selectors or a
+    FieldArray.
+    """
+    base: dict[str, Any] = {
+        "status": "UNVERIFIED",
+        "numeric_solution_count": None,
+        "solution_axes_pair_mapping_complete": False,
+        "dataset": dataset_binding.get("dataset") if isinstance(dataset_binding, Mapping) else None,
+        "solution": solution_tag if isinstance(solution_tag, str) else None,
+        "source": None,
+        "observation": None,
+        "reasons": [],
+    }
+    sources = dataset_binding.get("sources") if isinstance(dataset_binding, Mapping) else None
+    source = (
+        isinstance(dataset_binding, Mapping)
+        and dataset_binding.get("binding_complete") is True
+        and dataset_binding.get("dataset_type") == "Solution"
+        and dataset_binding.get("dataset") is not None
+        and dataset_binding.get("solution") == solution_tag
+        and isinstance(sources, Mapping)
+        and sources.get("solution") == "dataset.solution -> model.sol().tags()"
+        and isinstance(solution_tag, str)
+        and bool(solution_tag)
+    )
+    if not source:
+        base["reasons"].append("dataset binding is not an exact direct Solution→model.sol membership witness")
+        return base
+
+    solutions = _call(model, "sol")
+    if solution_tag not in tag_list(solutions):
+        base["reasons"].append("dataset-bound solution tag is absent from model.sol().tags()")
+        return base
+    node = _call(solutions, "get", solution_tag)
+    info = _call(node, "getSolutioninfo")
+    identity_errors: list[dict[str, Any]] = []
+    study_tag = _record(node, "study", errors=identity_errors)
+    observation = _solver_sequence_parameter_observation(
+        node,
+        info,
+        study_tag=study_tag if isinstance(study_tag, str) and study_tag else None,
+        solution_tag=solution_tag,
+    )
+    base["observation"] = observation
+    reasons: list[str] = []
+    size = observation.get("get_size")
+    size_multi = observation.get("get_size_multi")
+    solution_info_scope = observation.get("solution_info_count_scope")
+    if not isinstance(solution_info_scope, Mapping):
+        solution_info_scope = {}
+    level_names = solution_info_scope.get("getLevelNames")
+    levels = solution_info_scope.get("getLevels")
+    outer_solnums = solution_info_scope.get("getOuterSolnum")
+    info_errors = solution_info_scope.get("read_errors")
+    if not isinstance(info_errors, list):
+        info_errors = [{"method": "SolutionInfo", "code": "COUNT_SCOPE_UNAVAILABLE"}]
+    names = observation.get("pnames")
+    values = observation.get("solution_values")
+    rows = observation.get("parameter_rows")
+    if identity_errors:
+        reasons.append("direct SolverSequence identity getter failed")
+    if observation.get("solution_identity_matches_dataset_study") is not True:
+        reasons.append("direct SolverSequence.study() identity was not stable across both reads")
+    if (
+        not isinstance(size, list)
+        or len(size) != 2
+        or any(type(item) is not int or item < 0 for item in size)
+        or size[0] <= 0
+        or size[1] != 1
+    ):
+        reasons.append("documented getSize()[1] did not prove exactly one solution number")
+    if observation.get("status") != "OBSERVED_TYPED_COMPLEX_PARAMETER_VALUES":
+        reasons.append("typed real/imaginary parameter values and units are not fully observed")
+    if (
+        not isinstance(values, list)
+        or len(values) != 1
+        or values[0].get("solnum") != 1
+        or values[0].get("real_getter", {}).get("raw") is None
+        or values[0].get("imag_getter", {}).get("raw") is None
+        or not isinstance(rows, list)
+        or len(rows) != 1
+        or rows[0].get("name") not in {"lambda", "freq"}
+        or not isinstance(rows[0].get("unit"), str)
+        or not rows[0]["unit"]
+    ):
+        reasons.append("one typed complex sequence row with a native unit was not read back")
+    else:
+        for component in (rows[0].get("real"), rows[0].get("imag")):
+            if (isinstance(component, bool) or not isinstance(component, (int, float))
+                    or not math.isfinite(float(component))):
+                reasons.append("typed sequence row contains a non-finite or non-numeric value")
+                break
+    stored_eigenfrequency = (
+        observation.get("solution_type") == "Eigenfrequency"
+        and observation.get("sequence_type") == "Stored"
+        and observation.get("attached") is False
+        and names == ["lambda"]
+        and isinstance(observation.get("study"), str)
+        and bool(observation["study"])
+        and len(rows or []) == 1
+        and (rows or [{}])[0].get("name") == "lambda"
+    )
+    attached_parametric_frequency = (
+        observation.get("solution_type") == "Parametric"
+        and observation.get("sequence_type") == "SolverSequence"
+        and observation.get("attached") is True
+        and names == ["freq"]
+        and isinstance(observation.get("study"), str)
+        and bool(observation["study"])
+        and len(rows or []) == 1
+        and (rows or [{}])[0].get("name") == "freq"
+        and (rows or [{}])[0].get("unit") in ("Hz", "GHz")
+        and size_multi == [1, 1]
+        and not info_errors
+        and type(levels) is int and levels == 1
+        and isinstance(level_names, (list, tuple))
+        and list(level_names) == ["freq"]
+        and isinstance(outer_solnums, (list, tuple))
+        and list(outer_solnums) == []
+    )
+    if attached_parametric_frequency:
+        # Attached frequency allocation requires actual same-model Study
+        # membership, not merely two equal nonempty solution.study() strings.
+        membership_errors: list[dict[str, Any]] = []
+        membership_tags = []
+        for _ in range(2):
+            collection = _record(model, "study", errors=membership_errors)
+            membership_tags.append(_record(collection, "tags", errors=membership_errors))
+        final_study = _record(node, "study", errors=membership_errors)
+        tag_rows_valid = all(
+            isinstance(tags, (list, tuple))
+            and all(isinstance(tag, str) and bool(tag) for tag in tags)
+            and len(set(tags)) == len(tags)
+            for tags in membership_tags
+        )
+        stable_tags = tag_rows_valid and list(membership_tags[0]) == list(membership_tags[1])
+        actual_member = stable_tags and observation.get("study") in membership_tags[0]
+        stable_study = final_study == study_tag == observation.get("study")
+        base["attached_study_membership"] = {
+            "source": "same model.study().tags() twice plus final dataset-bound SolverSequence.study()",
+            "study": observation.get("study"), "study_tags_before": membership_tags[0],
+            "study_tags_after": membership_tags[1], "solution_study_after": final_study,
+            "tags_complete": tag_rows_valid and not membership_errors,
+            "tags_stable": stable_tags, "study_identity_stable": stable_study,
+            "actual_member": bool(actual_member), "read_errors": membership_errors,
+            "status": "VERIFIED" if actual_member and stable_study and not membership_errors else "UNVERIFIED",
+        }
+        if membership_errors or not actual_member or not stable_study:
+            reasons.append("attached frequency study membership/getter identity is missing, unstable or unverified")
+    if reasons:
+        base["reasons"] = reasons
+        return base
+    if not stored_eigenfrequency and not attached_parametric_frequency:
+        base["reasons"] = [
+            "sequence is neither the exact detached Stored/Eigenfrequency lambda singleton nor the exact "
+            "attached Parametric/SolverSequence frequency singleton with one level, no outer axis, and getSizeMulti [1,1]"
+        ]
+        return base
+    if attached_parametric_frequency and (
+        not isinstance(size_multi, list) or len(size_multi) != 2
+        or any(type(item) is not int or item < 0 for item in size_multi)
+    ):
+        base["reasons"] = ["attached frequency sequence multisolution size is malformed"]
+        return base
+    witness_kind = (
+        "attached_parametric_frequency_singleton"
+        if attached_parametric_frequency else "stored_eigenfrequency_singleton"
+    )
+    base.update({
+        "status": ("VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT"
+                   if attached_parametric_frequency else "VERIFIED_SINGLE_STORED_NUMERIC_COUNT"),
+        "witness_kind": witness_kind,
+        "numeric_solution_count": 1,
+        "source": ("exact dataset.solution→model.sol().tags() binding plus direct Stored/Eigenfrequency "
+                   "getSize()[1]=1 and typed lambda singleton" if stored_eigenfrequency else
+                   "exact dataset.solution→model.sol().tags() binding plus attached Parametric/SolverSequence "
+                   "actual stable model.study().tags() membership and solution.study() identity, one freq level, empty getOuterSolnum(), getSize()[1]=1, "
+                   "getSizeMulti()==[1,1], and typed finite freq singleton with exact native Hz or GHz display label (raw value/unit unchanged)"),
+        "reasons": [],
+    })
+    return base
+
+
+def _merge_outer_feature_data(
+    rows: Sequence[tuple[Any, Any, str]],
+    binding: Mapping[str, Any],
+    *,
+    num_expressions: int,
+    layout: str,
+) -> tuple[Any, Any]:
+    """Combine one explicitly selected numerical result per outer level.
+
+    The engine solnum axis is scoped to the outer selected through
+    ``outersolnum``.  This routine therefore indexes rows by their position in
+    each outer's inner list, never by a global solnum dictionary.
+    """
+    outer_labels = list(binding.get("outer_indices") or [])
+    inner_by_outer = binding.get("inner_indices_by_outer") or {}
+    if len(rows) != len(outer_labels):
+        raise ExecutionContractError("SOLUTION_AXIS_ERROR", "one numerical read is required for every outer level")
+    real_out: list[list[list[list[Any]]]] = [[] for _ in range(num_expressions)]
+    imag_out: list[list[list[list[Any]]]] | None = None
+    if any(item[1] is not None for item in rows):
+        imag_out = [[] for _ in range(num_expressions)]
+    for outer_index, (real, imag, row_layout) in enumerate(rows):
+        if row_layout != layout:
+            raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "feature layout changed between outer reads")
+        raw = list(real) if isinstance(real, Sequence) and not isinstance(real, (str, bytes)) else [real]
+        if len(raw) != num_expressions:
+            raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", f"expected {num_expressions} expression rows, got {len(raw)}")
+        raw_imag = None
+        if imag is not None:
+            raw_imag = list(imag) if isinstance(imag, Sequence) and not isinstance(imag, (str, bytes)) else [imag]
+            if len(raw_imag) != num_expressions:
+                raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "imaginary expression count differs from real data")
+        outer = int(outer_labels[outer_index])
+        inner_values = list(inner_by_outer.get(outer, []))
+        if not inner_values:
+            raise ExecutionContractError("SOLUTION_AXIS_METADATA_UNAVAILABLE", f"outer {outer} has no inner metadata")
+        for expr_index in range(num_expressions):
+            expr_rows = list(raw[expr_index]) if isinstance(raw[expr_index], Sequence) and not isinstance(raw[expr_index], (str, bytes)) else [raw[expr_index]]
+            if len(expr_rows) != len(inner_values):
+                raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", f"outer {outer} expression {expr_index} has {len(expr_rows)} inner rows, expected {len(inner_values)}")
+            points = [list(value) if row_layout.endswith("point") and isinstance(value, Sequence) and not isinstance(value, (str, bytes)) else [value] for value in expr_rows]
+            real_out[expr_index].append(points)
+            if imag_out is not None:
+                if raw_imag is None:
+                    raise ExecutionContractError("COMPLEX_DATA_ERROR", "imaginary data missing for one outer level")
+                imag_rows = list(raw_imag[expr_index]) if isinstance(raw_imag[expr_index], Sequence) and not isinstance(raw_imag[expr_index], (str, bytes)) else [raw_imag[expr_index]]
+                if len(imag_rows) != len(inner_values):
+                    raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "imaginary inner rows differ from real rows")
+                imag_out[expr_index].append([
+                    list(value) if row_layout.endswith("point") and isinstance(value, Sequence) and not isinstance(value, (str, bytes)) else [value]
+                    for value in imag_rows
+                ])
+    return real_out, imag_out
+
+
+def _nested_divide(value: Any, denominator: Any) -> Any:
+    """Elementwise division with explicit scalar/array broadcasting."""
+    if isinstance(value, Mapping):
+        return {key: _nested_divide(item, denominator) for key, item in value.items()}
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        if isinstance(denominator, (int, float)) and not isinstance(denominator, bool):
+            return float(value) / float(denominator)
+        raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "scalar numerator cannot be divided by an array denominator")
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        if isinstance(denominator, Sequence) and not isinstance(denominator, (str, bytes)):
+            if len(denominator) == 1 and len(value) != 1:
+                # A measure feature is intentionally evaluated with one
+                # expression (the weight/constant 1); broadcast that explicit
+                # expression axis across every requested field expression.
+                return [_nested_divide(item, denominator[0]) for item in value]
+            if len(value) != len(denominator):
+                raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "numerator and denominator axes differ")
+            return [_nested_divide(v, d) for v, d in zip(value, denominator)]
+        return [_nested_divide(v, denominator) for v in value]
+    raise ExecutionContractError("INVALID_RESULT", f"cannot divide value of type {type(value).__name__}")
+
+
+def _nested_magnitude_squared(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        if "real" not in value or "imag" not in value:
+            raise ExecutionContractError("COMPLEX_DATA_ERROR", "preserved complex value lacks real/imag components")
+        return float(value["real"]) ** 2 + float(value["imag"]) ** 2
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return float(value) ** 2
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        return [_nested_magnitude_squared(item) for item in value]
+    raise ExecutionContractError("INVALID_RESULT", f"cannot compute magnitude of {type(value).__name__}")
+
+
+def _nested_subtract(a: Any, b: Any) -> Any:
+    if isinstance(a, Mapping):
+        if isinstance(b, Mapping):
+            return {key: _nested_subtract(a[key], b[key]) for key in ("real", "imag")}
+        return {"real": _nested_subtract(a["real"], b), "imag": a["imag"]}
+    if isinstance(a, (int, float)) and not isinstance(a, bool):
+        if isinstance(b, (int, float)) and not isinstance(b, bool):
+            return float(a) - float(b)
+        raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "mean and field values have different types")
+    if isinstance(a, Sequence) and not isinstance(a, (str, bytes)):
+        if isinstance(b, Sequence) and not isinstance(b, (str, bytes)):
+            if len(a) != len(b):
+                raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "mean and field axes differ")
+            return [_nested_subtract(x, y) for x, y in zip(a, b)]
+        return [_nested_subtract(x, b) for x in a]
+    raise ExecutionContractError("INVALID_RESULT", "cannot subtract non-numeric result")
+
+
+def _nested_binary(a: Any, b: Any, operation: Any) -> Any:
+    if isinstance(a, Mapping) or isinstance(b, Mapping):
+        return operation(a, b)
+    if isinstance(a, (int, float)) and not isinstance(a, bool):
+        if isinstance(b, (int, float)) and not isinstance(b, bool):
+            return operation(float(a), float(b))
+        raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "numeric axes have different types")
+    if isinstance(a, Sequence) and not isinstance(a, (str, bytes)):
+        if isinstance(b, Sequence) and not isinstance(b, (str, bytes)):
+            if len(a) != len(b):
+                raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "numeric axes have different lengths")
+            return [_nested_binary(x, y, operation) for x, y in zip(a, b)]
+        return [_nested_binary(x, b, operation) for x in a]
+    raise ExecutionContractError("INVALID_RESULT", "non-numeric array value")
+
+
+def _nested_sqrt(value: Any) -> Any:
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        number = float(value)
+        if not math.isfinite(number) or number < -1e-12:
+            raise ExecutionContractError("INVALID_RESULT", f"square-root argument is invalid: {number!r}")
+        return math.sqrt(0.0 if number < 0.0 else number)
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        return [_nested_sqrt(item) for item in value]
+    raise ExecutionContractError("INVALID_RESULT", "square-root argument is not numeric")
+
+
+def _nested_positive(value: Any) -> bool:
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return math.isfinite(float(value)) and float(value) > 0.0
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        return bool(value) and all(_nested_positive(item) for item in value)
+    return False
+
+
+def _run_bound_feature(
+    feature: Any,
+    binding: Mapping[str, Any] | None,
+    *,
+    num_expressions: int,
+    point_feature: bool = False,
+    budget_guard: Any | None = None,
+    outer_getters: bool = False,
+    strict_field_reader: Any | None = None,
+) -> tuple[Any, Any, bool, str]:
+    """Run a feature once per typed outer and return explicit layout data."""
+    if binding and len(binding.get("outer_indices", [])) > 1:
+        if strict_field_reader is not None:
+            raise ExecutionContractError(
+                "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+                "strict W21 field readback is limited to one exact outer/inner tuple",
+            )
+        rows: list[tuple[Any, Any, str]] = []
+        statuses: list[bool] = []
+        for outer in binding["outer_indices"]:
+            try:
+                _call(feature, "set", "outersolnum", int(outer))
+            except Exception as exc:
+                raise ExecutionContractError("SOLUTION_SELECTION_FAILED", f"could not select outer solution {outer}") from exc
+            _call(feature, "run")
+            budget_decision = budget_guard(feature, int(outer)) if budget_guard is not None else None
+            real, imag, status, layout = _feature_components(
+                feature,
+                budget_decision=budget_decision,
+                outer=int(outer),
+                use_outer_getters=outer_getters,
+            )
+            if point_feature:
+                real, imag, _ = _normalise_evalpoint_components(
+                    real, imag, num_expressions=num_expressions
+                )
+                layout = "expression,solnum,point"
+            rows.append((real, imag, layout))
+            statuses.append(status)
+        layout = rows[0][2]
+        real, imag = _merge_outer_feature_data(rows, binding, num_expressions=num_expressions, layout=layout)
+        if len(set(statuses)) != 1:
+            raise ExecutionContractError("COMPLEX_STATUS_UNAVAILABLE", "complex status changed between outer solutions")
+        return real, imag, bool(statuses[0]), "expression,outer,inner,point"
+    if binding and binding.get("outer_indices"):
+        outer = int(binding["outer_indices"][0])
+        if outer != 1:
+            try:
+                _call(feature, "set", "outersolnum", outer)
+            except Exception as exc:
+                raise ExecutionContractError("SOLUTION_SELECTION_FAILED", f"could not select outer solution {outer}") from exc
+    _call(feature, "run")
+    outer_label = None
+    if binding and binding.get("outer_indices"):
+        outer_label = int(binding["outer_indices"][0])
+    if strict_field_reader is not None:
+        return strict_field_reader(feature, outer_label, budget_guard)
+    budget_decision = budget_guard(feature, outer_label) if budget_guard is not None else None
+    real, imag, status, layout = _feature_components(
+        feature,
+        budget_decision=budget_decision,
+        outer=outer_label,
+        use_outer_getters=outer_getters,
+    )
+    if point_feature:
+        real, imag, _ = _normalise_evalpoint_components(
+            real, imag, num_expressions=num_expressions
+        )
+        layout = "expression,solnum,point"
+    return real, imag, status, layout
+
+
+
+def _count_elements(val: Any) -> int:
+    if val is None:
+        return 0
+    if isinstance(val, (int, float, str, bool)):
+        return 1
+    if isinstance(val, Mapping):
+        return sum(_count_elements(v) for v in val.values())
+    if isinstance(val, Sequence) and not isinstance(val, (str, bytes)):
+        return sum(_count_elements(item) for item in val)
+    return 0
+
+
+def _count_numeric_scalars(val: Any) -> int:
+    """Count only numeric payload leaves (including real/imag components)."""
+    if isinstance(val, bool):
+        return 0
+    if isinstance(val, (int, float)):
+        return 1
+    if isinstance(val, Mapping):
+        return sum(_count_numeric_scalars(item) for item in val.values())
+    if isinstance(val, Sequence) and not isinstance(val, (str, bytes, bytearray)):
+        return sum(_count_numeric_scalars(item) for item in val)
+    return 0
+
+
+def _strict_worker_field_payload_scalar_count(payload: Mapping[str, Any]) -> int:
+    """Count native numeric leaves actually returned by the Worker.
+
+    The strict `preserve` normalization may encode a known-real sample as
+    `{real: x, imag: 0}`. That zero is a Python representation detail; it was
+    not transmitted by the Worker and must not be compared with its raw
+    payload count. The normalized response is counted independently by
+    `_enforce_w21_field_response_limits`.
+    """
+    return sum(_count_numeric_scalars(payload.get(name))
+               for name in ("real", "imag", "coordinates"))
+
+
+def _validate_strict_worker_field_payload_count(payload: Mapping[str, Any], reported: int) -> int:
+    actual = _strict_worker_field_payload_scalar_count(payload)
+    if actual != reported:
+        raise ExecutionContractError(
+            "FIELD_READBACK_COUNT_MISMATCH",
+            "Worker-reported numeric scalar count differs from its raw real/imag/coordinate arrays",
+            details={"reported_numeric_scalar_count": reported,
+                     "raw_payload_numeric_scalar_count": actual},
+        )
+    return actual
+
+
+def _enforce_w21_field_response_limits(response: dict[str, Any]) -> tuple[int, int]:
+    """Apply the fixed W21 numeric and serialized-response limits."""
+    evidence = response.get("strict_field_readback")
+    if not isinstance(evidence, dict):
+        raise ExecutionContractError("FIELD_READBACK_INCOMPLETE", "strict field evidence is missing")
+    field = evidence.get("field_array")
+    coordinates = evidence.get("coordinates")
+    if not isinstance(field, Mapping) or not isinstance(coordinates, Mapping):
+        raise ExecutionContractError("FIELD_READBACK_INCOMPLETE", "field or coordinate payload is missing")
+    scalar_count = (
+        _count_numeric_scalars(field.get("values"))
+        + _count_numeric_scalars(coordinates.get("values"))
+    )
+    if scalar_count > W21_FIELD_READBACK_MAX_NUMERIC_SCALARS:
+        raise ExecutionContractError(
+            "FIELD_READBACK_LIMIT_EXCEEDED",
+            "strict W21 field values plus coordinates exceed the hard scalar limit",
+            details={"numeric_scalar_count": scalar_count,
+                     "max_numeric_scalars": W21_FIELD_READBACK_MAX_NUMERIC_SCALARS},
+        )
+    evidence["numeric_scalar_count_including_real_imag_and_coordinates"] = scalar_count
+    evidence["json_response_bytes"] = 0
+    response_bytes = 0
+    try:
+        # The evidence reports its own serialized size. Iterate to the tiny
+        # fixed point where that decimal field is included in the byte count.
+        for _ in range(4):
+            response_bytes = len(json.dumps(response, allow_nan=False, separators=(",", ":")).encode("utf-8"))
+            if evidence["json_response_bytes"] == response_bytes:
+                break
+            evidence["json_response_bytes"] = response_bytes
+    except (TypeError, ValueError) as exc:
+        raise ExecutionContractError(
+            "FIELD_READBACK_INVALID_NUMERIC",
+            "strict W21 field readback is not finite JSON data",
+        ) from exc
+    if response_bytes > W21_FIELD_READBACK_MAX_JSON_BYTES:
+        raise ExecutionContractError(
+            "FIELD_READBACK_LIMIT_EXCEEDED",
+            "strict W21 field response exceeds the hard JSON byte limit",
+            details={"json_response_bytes": response_bytes,
+                     "max_json_response_bytes": W21_FIELD_READBACK_MAX_JSON_BYTES},
+        )
+    evidence["json_response_bytes"] = response_bytes
+    return scalar_count, response_bytes
+
+
+def _strict_worker_readback_failure(exc: BaseException) -> ExecutionContractError:
+    """Preserve structured Worker failures without exposing raw field arrays."""
+    worker_code = _worker_failure_code(exc)
+    if not worker_code:
+        return ExecutionContractError(
+            "FIELD_READBACK_UNAVAILABLE",
+            "Worker could not return the bounded strict field/coordinate payload",
+        )
+
+    allowed_detail_keys = {
+        "numeric_scalar_count", "max_numeric_scalars", "json_payload_bytes",
+        "max_json_payload_bytes", "dimension", "point_count", "shape",
+    }
+    details: dict[str, Any] = {"source": "structured_worker_failure"}
+    seen: set[int] = set()
+    cause: BaseException | None = exc
+    while cause is not None and id(cause) not in seen:
+        seen.add(id(cause))
+        failure = getattr(cause, "failure", None)
+        if isinstance(failure, Mapping):
+            for key in allowed_detail_keys:
+                value = failure.get(key)
+                if key == "shape":
+                    if (isinstance(value, (list, tuple)) and len(value) <= 4
+                            and all(type(item) is int and 0 <= item <= W21_FIELD_READBACK_MAX_NUMERIC_SCALARS
+                                    for item in value)):
+                        details[key] = list(value)
+                elif type(value) is int and 0 <= value <= max(
+                    W21_FIELD_READBACK_MAX_NUMERIC_SCALARS,
+                    W21_FIELD_READBACK_MAX_JSON_BYTES,
+                ):
+                    details[key] = value
+            break
+        cause = cause.__cause__
+    return ExecutionContractError(
+        worker_code,
+        "Worker rejected the bounded strict field/coordinate readback",
+        details=details,
+    )
+
+
+def _call_strict_worker_field_readback(target_feature: Any) -> Any:
+    """Invoke the private Worker adapter and retain structured rejection codes."""
+    try:
+        return _call(target_feature, "getStrictFieldReadback")
+    except Exception as exc:
+        raise _strict_worker_readback_failure(exc) from exc
+
+
+def _set_strict_eval_selectors(feature: Any, dataset: str, outer: int, solnum: int) -> dict[str, Any]:
+    """Select one exact Eval dataset/tuple and verify both selector modes."""
+    dataset_readback = _call(feature, "getString", "data")
+    if dataset_readback != dataset:
+        raise ExecutionContractError(
+            "DATASET_SELECTION_MISMATCH",
+            "strict W21 Eval dataset readback differs from the requested exact dataset",
+        )
+    _call(feature, "set", "outerinput", "manual")
+    _call(feature, "set", "outersolnum", outer)
+    _call(feature, "set", "innerinput", "manual")
+    _call(feature, "set", "solnum", solnum)
+    observed = {
+        "dataset": dataset_readback,
+        "outerinput": _call(feature, "getString", "outerinput"),
+        "outersolnum": _call(feature, "getInt", "outersolnum"),
+        "innerinput": _call(feature, "getString", "innerinput"),
+        "solnum": _call(feature, "getInt", "solnum"),
+    }
+    expected = {
+        "dataset": dataset,
+        "outerinput": "manual",
+        "outersolnum": outer,
+        "innerinput": "manual",
+        "solnum": solnum,
+    }
+    if observed != expected:
+        raise ExecutionContractError(
+            "SOLUTION_SELECTION_MISMATCH",
+            "strict W21 transient Eval selector readback differs from the exact requested tuple",
+        )
+    return observed
+
+
+def _preview_values(val: Any, max_points: int = 4) -> Any:
+    if isinstance(val, (list, tuple)):
+        if len(val) <= max_points:
+            return [_preview_values(x, max_points) for x in val]
+        return [_preview_values(x, max_points) for x in val[:max_points]] + [f"... ({len(val) - max_points} more)"]
+    return val
+
+
+def _field_array_summary(fa: Any, max_preview_points: int = 4) -> dict[str, Any]:
+    from copy import deepcopy
+    if not hasattr(fa, "shape") or not hasattr(fa, "axes"):
+        if isinstance(fa, Mapping):
+            summary = {k: v for k, v in fa.items() if k not in ("values", "data")}
+            summary["preview"] = _preview_values(fa.get("values"), max_points=max_preview_points)
+            summary["storage"] = "artifact"
+            return summary
+        return {}
+    return {
+        "axes": list(fa.axes),
+        "shape": list(fa.shape),
+        "coords": {
+            k: (v[:max_preview_points] if isinstance(v, list) and len(v) > max_preview_points else v)
+            for k, v in fa.coords.items()
+        },
+        "units": deepcopy(fa.units),
+        "metadata": deepcopy(fa.metadata),
+        "is_complex": fa.is_complex,
+        "preview": _preview_values(fa.values, max_points=max_preview_points),
+        "storage": "artifact",
+    }
+
+
+def _export_to_artifact(
+    data: Any,
+    dataset_tag: str,
+    *,
+    eval_context: Mapping[str, Any] | None = None,
+    project_root: Path | None = None,
+    allow_overwrite: bool = False,
+) -> dict[str, Any]:
+    """Publish a large result payload as a project-scoped artifact.
+
+    The destination root is an explicit trusted backend/Worker context.  A dataset
+    label is retained as metadata, while the generated filename is opaque so a
+    label can never introduce path separators.  The store refuses failed/unknown
+    outcomes and publishes a completed, hashed temporary file atomically.
+    """
+    store = ArtifactStore(project_root=project_root)
+    file_name = f"result_{uuid.uuid4().hex}.json"
+    export = store.export_field_data(
+        f"g2_artifacts/results/{file_name}",
+        {"values": data, **(dict(eval_context or {}))},
+        "json",
+        allow_overwrite=allow_overwrite,
+    )
+    return {
+        "artifact_ref": export["file_path"],
+        "sha256": export["sha256"],
+        "byte_size": export["byte_size"],
+        "total_elements": _count_elements(data),
+        "storage": "artifact",
+        "chunk_info": export["chunk_info"],
+    }
+
+
+def verify_artifact_chunks(
+    file_path: str,
+    chunk_size: int = 1024 * 64,
+    expected_sha256: str | None = None,
+) -> tuple[bool, str]:
+    """Verify a file by streaming it in chunks, without ever holding the whole file.
+
+    The delivered version read the file twice with ``read_bytes`` and then joined a
+    list of all chunks in memory -- exactly the shape NEXT_GOAL refuses to call
+    chunked.  It now folds chunks into a rolling digest with a buffer of one chunk,
+    and it compares against a *pinned* digest when the caller supplies one; the
+    ``expected_sha256`` argument is the difference between a real verification and
+    hashing a file twice and noticing the two hashes agree.
+    """
+    p = Path(file_path)
+    if not p.is_file():
+        return False, f"file not found: {file_path}"
+    size = p.stat().st_size
+
+    digest = hashlib.sha256()
+    total = 0
+    with p.open("rb") as handle:
+        while True:
+            block = handle.read(chunk_size)
+            if not block:
+                break
+            digest.update(block)
+            total += len(block)
+    actual_hash = digest.hexdigest()
+
+    if total != size:
+        return False, actual_hash
+    if expected_sha256 is not None:
+        return (actual_hash == str(expected_sha256).lower()), actual_hash
+    return True, actual_hash
+
+
+# ---------------------------------------------------------------------------
+# W17 Result Evaluation (result.evaluate & result.at_points)
+# ---------------------------------------------------------------------------
+
+def result_evaluate(
+    worker: Any,
+    model_tag: str,
+    arguments: Mapping[str, Any],
+    *,
+    strict_metric_evidence: bool = False,
+    strict_field_readback: bool = False,
+    _w21_initial_output_context: Any = None,
+) -> dict[str, Any]:
+    """Global, point, line, surface, and volume evaluation with complex modes and statistics."""
+    spec = require_mapping(arguments.get("spec", {}), "spec")
+    expressions = require_string_array(spec.get("expressions"), "spec.expressions")
+    if not expressions:
+        raise ExecutionContractError("INVALID_REQUEST", "spec.expressions must contain at least one expression")
+
+    solution_spec = require_mapping(spec.get("solution", {}), "spec.solution")
+    dataset_tag = solution_spec.get("dataset")
+    if not dataset_tag:
+        raise ExecutionContractError("INVALID_REQUEST", "spec.solution.dataset is required")
+
+    aggregate = spec.get("aggregate", "none")
+    if aggregate not in AGGREGATE_MODES:
+        raise ExecutionContractError("API_UNSUPPORTED", f"aggregate mode {aggregate!r} is not supported; valid: {sorted(AGGREGATE_MODES)}")
+
+    complex_mode = spec.get("complex_mode", "preserve")
+    if complex_mode not in COMPLEX_MODES:
+        raise ExecutionContractError("API_UNSUPPORTED", f"complex_mode {complex_mode!r} is not supported; valid: {sorted(COMPLEX_MODES)}")
+
+    requested_transform_order = spec.get("complex_transform_order")
+    if requested_transform_order is None:
+        # A non-aggregated field is transformed after the engine read.  Every
+        # aggregate, including a weighted aggregate, defaults to the native
+        # scalar comparison field so mean/variance/RMS never mix arg(f) with
+        # f or abs(f) with abs(mean(f)).
+        requested_transform_order = (
+            "before"
+            if aggregate != "none" or spec.get("weight_expression") is not None
+            else "after"
+        )
+    if requested_transform_order not in {"before", "after"}:
+        raise ExecutionContractError(
+            "API_UNSUPPORTED",
+            f"complex_transform_order {requested_transform_order!r} is not supported; valid: ['before', 'after']",
+        )
+    if aggregate in {"minimum", "maximum"} and complex_mode == "preserve":
+        raise ExecutionContractError(
+            "COMPLEX_ORDER_UNDEFINED",
+            "complex extrema require complex_mode=real, imag, abs, or phase so the comparison quantity is explicit",
+        )
+    if (
+        requested_transform_order == "after"
+        and complex_mode != "preserve"
+        and aggregate in {"minimum", "maximum", "std", "rms"}
+    ):
+        raise ExecutionContractError(
+            "API_UNSUPPORTED",
+            f"complex_transform_order='after' is undefined for aggregate={aggregate!r} and complex_mode={complex_mode!r}; "
+            "use the default before-statistics order",
+        )
+    transform_before_statistics = requested_transform_order == "before"
+    effective_expressions = _effective_engine_expressions(
+        expressions,
+        complex_mode,
+        before_statistics=transform_before_statistics,
+    )
+
+    # Outer/inner are real axis selectors.  Time/frequency/parameter matching
+    # stays an explicit refusal until the corresponding SolutionInfo metadata
+    # is available; silently ignoring one of these fields would evaluate a
+    # different solution than the request names.
+    for name in ("time", "frequency", "parameters"):
+        if solution_spec.get(name) is not None or spec.get(name) is not None:
+            raise ExecutionContractError(
+                "API_UNSUPPORTED",
+                f"spec.solution.{name} matching is unavailable for this operation; request refused",
+            )
+
+    # §3: the denominator is M = ∫w dμ read from the engine.  A caller-supplied
+    # constant is refused outright: it is exactly the "hardcode the denominator"
+    # route the measure requirement exists to prevent.
+    if spec.get("denominator_measure") is not None:
+        raise ExecutionContractError(
+            "API_UNSUPPORTED",
+            "spec.denominator_measure is not accepted; the denominator M = ∫w dμ is read from the "
+            "engine over the same dataset/selection/solution axes as the numerator",
+        )
+
+    weight_expression = spec.get("weight_expression")
+    if weight_expression is not None and not isinstance(weight_expression, str):
+        raise ExecutionContractError(
+            "INVALID_REQUEST", "spec.weight_expression must be a COMSOL expression string"
+        )
+    if isinstance(weight_expression, str) and not weight_expression.strip():
+        raise ExecutionContractError("INVALID_REQUEST", "spec.weight_expression must not be empty")
+
+    storage = spec.get("storage", "auto")
+    if strict_field_readback:
+        if strict_metric_evidence:
+            raise ExecutionContractError("INVALID_REQUEST", "strict field readback and strict metric evidence are separate internal modes")
+        if aggregate != "none" or spec.get("complex_mode", "preserve") != "preserve":
+            raise ExecutionContractError("INVALID_REQUEST", "strict W21 field readback requires aggregate='none' and complex_mode='preserve'")
+        for selector in ("outer", "inner"):
+            value = solution_spec.get(selector)
+            if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+                raise ExecutionContractError("INVALID_REQUEST", f"strict W21 field readback requires one positive integer {selector} selector")
+        selection = spec.get("selection")
+        if not isinstance(selection, Mapping) or not all(
+            name in selection for name in ("component", "geometry", "entity_dimension", "kind")
+        ):
+            raise ExecutionContractError("INVALID_SELECTION", "strict W21 field readback requires a component-, geometry-, and dimension-bound selection")
+        if storage not in ("auto", "inline"):
+            raise ExecutionContractError("INVALID_REQUEST", "strict W21 field readback only supports bounded inline storage")
+        # Force inline result handling; this path has its own immutable hard
+        # limit and must never spill a partial/oversized read into an artifact.
+        storage = "inline"
+
+    model = bound_model(worker, model_tag)
+    results = _call(model, "result")
+    numerical_list = _call(results, "numerical")
+
+    # Verify dataset exists
+    dset_list = _call(results, "dataset")
+    if dataset_tag not in tag_list(dset_list):
+        raise node_not_found(f"dataset {dataset_tag!r} does not exist")
+
+    dset_node = _call(dset_list, "get", dataset_tag)
+    requested_solution = solution_spec.get("solution") if isinstance(solution_spec.get("solution"), str) else None
+    dataset_binding = _resolve_dataset_binding(
+        model,
+        str(dataset_tag),
+        requested_solution=requested_solution,
+    )
+    initial_dataset_evidence: dict[str, Any] | None = None
+    if (isinstance(_w21_initial_output_context, Mapping)
+            and _w21_initial_output_context.get("purpose") == "initial_stage_output"):
+        from ._g3_common import call_probe
+        type_probe = call_probe(dset_node, "getType", include_engine_failure_details=True)
+        frame_probe = call_probe(dset_node, "getString", "frametype",
+                                 include_engine_failure_details=True)
+        if any(isinstance(probe.get("error"), Mapping)
+               and probe["error"].get("execution_state_unknown") is True
+               for probe in (type_probe, frame_probe)):
+            raise ExecutionContractError("EXECUTION_STATE_UNKNOWN",
+                                         "initial output Solution dataset frame read is unresolved",
+                                         stage="post_dispatch")
+        actual_type = type_probe.get("value") if type_probe.get("ok") else None
+        actual_frame = frame_probe.get("value") if frame_probe.get("ok") else None
+        expected_identity = _w21_initial_output_context.get("dataset_identity")
+        expected_identity = expected_identity if isinstance(expected_identity, Mapping) else {}
+        actual_component = dataset_binding.get("component") if isinstance(dataset_binding, Mapping) else None
+        actual_geometry = dataset_binding.get("geometry") if isinstance(dataset_binding, Mapping) else None
+        valid_frame = (
+            actual_type == "Solution"
+            and isinstance(dataset_binding, Mapping)
+            and dataset_binding.get("binding_complete") is True
+            and actual_component == expected_identity.get("component")
+            and actual_geometry == expected_identity.get("geometry")
+            and dataset_tag == expected_identity.get("dataset")
+            and actual_frame in {"mesh", "material", "spatial", "geometry"}
+        )
+        initial_dataset_evidence = {
+            "status": "VERIFIED" if valid_frame else "UNVERIFIED",
+            "dataset": dataset_tag, "dataset_type": actual_type,
+            "solution": dataset_binding.get("solution") if isinstance(dataset_binding, Mapping) else None,
+            "component": actual_component, "geometry": actual_geometry,
+            "frametype": actual_frame if isinstance(actual_frame, str) else None,
+            "source": "Solution dataset getType() + getString('frametype') + native dataset binding",
+            "binding_complete": dataset_binding.get("binding_complete") is True
+                if isinstance(dataset_binding, Mapping) else False,
+            "expected_identity": dict(expected_identity),
+        }
+    if (
+        isinstance(dataset_binding, Mapping)
+        and isinstance(dataset_binding.get("error"), Mapping)
+        and dataset_binding["error"].get("code") == "SOLUTION_MISMATCH"
+    ):
+        raise ExecutionContractError(
+            "SOLUTION_MISMATCH",
+            str(dataset_binding["error"].get("message", "requested solution does not match dataset")),
+            details={"dataset_binding": dict(dataset_binding)},
+        )
+    # COMSOL 6.4 rejects a raw Eval numerical feature when its data dataset is
+    # Join.  Refuse before creating any numerical node; the supported Join
+    # paths are Interp point evaluation and the native Av*/Int* aggregate
+    # features.  Falling back to an upstream dataset would silently change the
+    # meaning of the requested difference/average.
+    dataset_type = dataset_binding.get("dataset_type") if isinstance(dataset_binding, Mapping) else None
+    if dataset_type is None:
+        try:
+            dataset_type = _call(dset_node, "getType")
+        except Exception:
+            dataset_type = None
+    if dataset_type == "Join" and aggregate == "none":
+        raise PreWriteRefusal(
+            "API_UNSUPPORTED",
+            "raw result.evaluate with aggregate='none' is unsupported for Join datasets; "
+            "use result.at_points or a supported spatial aggregate",
+            details={"dataset": dataset_tag, "dataset_type": "Join", "mutation_issued": False},
+        )
+    solution_tag = (
+        solution_spec.get("solution")
+        or (dataset_binding.get("solution") if isinstance(dataset_binding, Mapping) else None)
+        or _string_or_none(dset_node, "solution", [])
+        or _string_or_none(dset_node, "data", [])
+    )
+    solution_binding = _result_solution_binding(model, solution_tag)
+    strict_selection_enabled = strict_metric_evidence or strict_field_readback
+    if strict_selection_enabled:
+        strict_selection = spec.get("selection")
+        if strict_metric_evidence and aggregate in {"none", "global"}:
+            raise ExecutionContractError(
+                "API_UNSUPPORTED",
+                "strict metric evaluation requires an explicit spatial aggregate; global/none has no declared ROI measure",
+            )
+        if (not isinstance(solution_binding, Mapping) or solution_binding.get("pair_mapping_complete") is not True
+                or not solution_binding.get("solnum_pairs")):
+            raise ExecutionContractError(
+                "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+                "strict metric evaluation requires exact native (outer, inner, solnum) metadata",
+            )
+        if (not isinstance(strict_selection, Mapping) or
+                not all(name in strict_selection for name in ("component", "geometry", "entity_dimension", "kind"))):
+            raise ExecutionContractError(
+                "INVALID_SELECTION",
+                "strict metric evaluation requires a component-, geometry-, and dimension-bound selection",
+            )
+    strict_pair: dict[str, Any] | None = None
+    strict_selector_readback: dict[str, Any] | None = None
+    if strict_field_readback:
+        requested_outer = int(solution_spec["outer"])
+        requested_inner = int(solution_spec["inner"])
+        matching_pairs = [
+            pair for pair in solution_binding.get("solnum_pairs", [])
+            if isinstance(pair, Mapping)
+            and pair.get("outer") == requested_outer
+            and pair.get("inner") == requested_inner
+        ]
+        if len(matching_pairs) != 1:
+            raise ExecutionContractError(
+                "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+                "strict W21 field readback must resolve exactly one requested outer/inner tuple",
+            )
+        strict_pair = dict(matching_pairs[0])
+        if (isinstance(strict_pair.get("solnum"), bool)
+                or not isinstance(strict_pair.get("solnum"), int)
+                or strict_pair["solnum"] < 1):
+            raise ExecutionContractError(
+                "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+                "strict W21 field readback has no valid Solnum for the requested tuple",
+            )
+        strict_binding = dict(solution_binding)
+        strict_binding["outer_indices"] = [requested_outer]
+        strict_binding["inner_indices"] = [requested_inner]
+        strict_binding["inner_indices_by_outer"] = {requested_outer: [requested_inner]}
+        strict_binding["solnum_pairs"] = [strict_pair]
+        strict_binding["pair_mapping_complete"] = True
+        strict_binding["outer_count"] = 1
+        solution_binding = strict_binding
+    if solution_spec.get("outer") is not None and not solution_binding:
+        raise ExecutionContractError(
+            "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+            "outer selection requires SolutionInfo.getSolnum(outer, strict) metadata",
+        )
+    if solution_binding and not solution_binding.get("pair_mapping_complete") and (
+        solution_spec.get("outer") is not None or solution_spec.get("inner") is not None
+    ):
+        raise ExecutionContractError(
+            "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+            "outer/inner selection requires a complete real SolutionInfo pair mapping",
+        )
+
+    # Check spatial dimension & axisymmetry
+    context = _coordinate_context(model, dset_node, [], dataset_binding=dataset_binding)
+    if strict_selection_enabled:
+        requested_selection = spec["selection"]
+        if (context.get("component") != requested_selection.get("component")
+                or context.get("geometry") != requested_selection.get("geometry")):
+            raise ExecutionContractError(
+                "INVALID_SELECTION",
+                "metric selection component/geometry must match the dataset's resolved native component/geometry",
+            )
+    is_axisymmetric = bool(context.get("axisymmetric", False))
+
+    # Resolve MeasureSpec and feature type (F02, F03)
+    try:
+        from ._measure_spec import MeasureSpec
+    except Exception:
+        import sys
+        from pathlib import Path
+        repo_dir = str(Path(__file__).resolve().parent.parent) if "__file__" in globals() else "repository"
+        if repo_dir not in sys.path:
+            sys.path.insert(0, repo_dir)
+        from comsol_mcp._measure_spec import MeasureSpec
+
+    entity_dim = spec.get("entity_dim")
+    if entity_dim is None:
+        try:
+            dset_type = _call(dset_node, "getType")
+            if dset_type in ("CutPoint2D", "CutPoint3D"):
+                entity_dim = 0
+            elif dset_type in ("CutLine2D", "CutLine3D"):
+                entity_dim = 1
+            elif dset_type in ("CutPlane",):
+                entity_dim = 2
+        except Exception:
+            pass
+
+    ms = MeasureSpec(
+        aggregate=aggregate,
+        entity_dim=entity_dim,
+        space_dim=int(context.get("space_dimension", 3)),
+        is_axisymmetric=is_axisymmetric,
+        selection=spec.get("selection"),
+    )
+    feat_type = ms.feature_type
+
+    ephemeral_tag = _unique_tag(tag_list(numerical_list))
+    cleanup: dict[str, Any] = {
+        "tag": ephemeral_tag,
+        "type_id": feat_type,
+        "created": False,
+        "removed": False,
+        "cleanup_failed": False,
+        "error": None,
+    }
+    cleanup_records: list[dict[str, Any]] = [cleanup]
+
+    def _new_cleanup_record(tag: str, type_id: str) -> dict[str, Any]:
+        record = {
+            "tag": tag,
+            "type_id": type_id,
+            "created": False,
+            "removed": False,
+            "cleanup_failed": False,
+            "error": None,
+        }
+        cleanup_records.append(record)
+        return record
+
+    feature = None
+    engine_error = None
+    transformed = None
+    is_complex: bool | None = None
+    field_array_payload: Any = None
+    pending_field_selectors: dict[str, Any] = {}
+    strict_native_coordinates: list[list[float]] | None = None
+    strict_shape_witness: dict[str, Any] | None = None
+    strict_worker_payload_info: dict[str, Any] | None = None
+    raw_layout = "expression,solnum,point"
+    expression_units: dict[str, Any] = {}
+    result_budget_records: list[dict[str, Any]] = []
+    result_budget_guard = None
+    field_array_is_complex = False
+    axisymmetric_measure_evidence: list[dict[str, Any]] = []
+    strict_selection_evidence: list[dict[str, Any]] = []
+    weight_validation_minima: list[dict[str, Any]] = []
+    weight_integral_rule_readbacks: dict[str, dict[str, Any]] = {}
+    weight_unit_evidence: dict[str, Any] | None = None
+    denominator_tuple_values: dict[tuple[int, int, int], float] | None = None
+    # §3: reported in every outcome, including the failure path, so the response
+    # never depends on how far the aggregate block got before an error.
+    denominator_measure = None
+    cross_section_measure = None
+    denominator_source = None
+    # §3/C05: measured by the empty-selection guard below; pre-initialized because the
+    # response is built on the failure path too.
+    selection_measure = None
+    selection_measure_source = None
+    selection_measure_error = None
+
+    def _apply_feature_selection(target_feature: Any, role: str) -> None:
+        if not strict_selection_enabled:
+            ms.apply_selection(target_feature)
+            return
+        from ._g3_common import resolve_selection_entities, bind_strict_feature_selection
+        requested = dict(spec["selection"])
+        expected = resolve_selection_entities(worker, model_tag, requested)
+        record = bind_strict_feature_selection(worker, model_tag, target_feature, requested,
+            stage="before_numeric_read", expected=expected, apply=True)
+        normalized_entities = record["entities"]
+        if strict_selection_evidence and strict_selection_evidence[0]["entities"] != normalized_entities:
+            raise ExecutionContractError("SELECTION_READBACK_MISMATCH", "numerical features used different ROI membership")
+        strict_selection_evidence.append({"role":role,"feature_tag":str(_call(target_feature,"tag")),
+            "source":"actual_transient_numerical_feature",**{k:v for k,v in record.items() if k!="stage"}})
+
+    try:
+        feature = _call(numerical_list, "create", ephemeral_tag, feat_type)
+        cleanup["created"] = True
+
+        _call(feature, "set", "data", dataset_tag)
+        _call(feature, "set", "expr", effective_expressions)
+        if spec.get("units"):
+            _call(feature, "set", "unit", spec["units"])
+        _apply_feature_selection(feature, "primary")
+        if strict_field_readback:
+            assert strict_pair is not None
+            requested_outer = int(strict_pair["outer"])
+            requested_solnum = int(strict_pair["solnum"])
+            strict_selector_readback = _set_strict_eval_selectors(
+                feature, dataset_tag, requested_outer, requested_solnum
+            )
+
+        try:
+            feat_props = list(_call(feature, "properties"))
+            if "dataisaxisym" in feat_props:
+                if _call(feature, "getString", "dataisaxisym") == "on":
+                    is_axisymmetric = True
+        except Exception:
+            pass
+
+        axisymmetric_measure_required = is_axisymmetric and aggregate in (
+            "integral", "average", "std", "rms"
+        )
+        if axisymmetric_measure_required:
+            axisymmetric_measure_evidence.append(
+                _axisymmetric_measure_readback(feature, role="aggregate")
+            )
+
+        # Raw aggregate=none Eval reads are the only result path here that can
+        # expose the full [expression][solnum][vertex] payload.  Admit each
+        # outer read only after the typed solution axes and the native
+        # shape-only point witness have been verified.  Aggregate features and
+        # EvalPoint remain on their scalar/counting paths.
+        if aggregate == "none" and feat_type == "Eval":
+            result_budget_guard = _make_result_budget_guard(
+                operation="result.evaluate",
+                feature_kind="Eval",
+                expressions=expressions,
+                binding=solution_binding,
+                max_elements=(W21_FIELD_READBACK_MAX_NUMERIC_SCALARS
+                              if strict_field_readback else RESULT_NUMERIC_PAYLOAD_MAX_ELEMENTS),
+                max_bytes=(W21_FIELD_READBACK_MAX_JSON_BYTES
+                           if strict_field_readback else RESULT_NUMERIC_PAYLOAD_MAX_BYTES),
+                include_coordinate_scalars=strict_field_readback,
+                records=result_budget_records,
+            )
+            if strict_field_readback:
+                shape_budget_guard = result_budget_guard
+
+                def _strict_field_reader(target_feature: Any, outer: int | None, budget_guard: Any) -> tuple[Any, Any, bool, str]:
+                    nonlocal strict_native_coordinates, strict_shape_witness, strict_worker_payload_info
+                    assert shape_budget_guard is not None
+                    decision = budget_guard(target_feature, outer)
+                    witness = decision.get("raw_point_shape_witness")
+                    if not isinstance(witness, Mapping):
+                        raise ExecutionContractError(
+                            "RAW_POINT_SHAPE_UNAVAILABLE",
+                            "strict W21 field readback lost its pre-getData coordinate shape witness",
+                        )
+                    strict_shape_witness = dict(witness)
+                    payload = _call_strict_worker_field_readback(target_feature)
+                    if not isinstance(payload, Mapping):
+                        raise ExecutionContractError("FIELD_READBACK_INVALID_SHAPE", "Worker strict field payload is not an object")
+                    expected_complex = _call(target_feature, "isComplex")
+                    payload_complex = payload.get("is_complex")
+                    if not isinstance(expected_complex, bool) or payload_complex is not expected_complex:
+                        raise ExecutionContractError("COMPLEX_STATUS_UNAVAILABLE", "Worker strict field complex status changed")
+                    if payload.get("layout") != "expression,solnum,point":
+                        raise ExecutionContractError("FIELD_READBACK_INVALID_SHAPE", "Worker strict field payload has an unsupported layout")
+                    shape = payload.get("shape")
+                    if (not isinstance(shape, Sequence) or isinstance(shape, (str, bytes)) or len(shape) != 3
+                            or any(type(value) is not int or value < 1 for value in shape)):
+                        raise ExecutionContractError("FIELD_READBACK_INVALID_SHAPE", "Worker strict field payload has an invalid data shape")
+                    expected_dim, expected_points = witness["shape"]
+                    if (shape != [len(expressions), 1, expected_points]
+                            or shape[2] != expected_points
+                            or len(payload.get("coordinates", [])) != expected_dim
+                            or any(not isinstance(row, Sequence) or isinstance(row, (str, bytes))
+                                   or len(row) != expected_points for row in payload.get("coordinates", []))):
+                        raise ExecutionContractError(
+                            "FIELD_READBACK_SHAPE_MISMATCH",
+                            "Worker field/coordinate arrays do not match the exact tuple and preflight shape",
+                        )
+                    normalized_rows: list[list[float]] = []
+                    for row in payload["coordinates"]:
+                        normalized_row = []
+                        for value in row:
+                            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+                                raise ExecutionContractError(
+                                    "COORDINATE_READBACK_INVALID",
+                                    "native coordinate matrix contains a non-finite or non-numeric value",
+                                )
+                            normalized_row.append(float(value))
+                        normalized_rows.append(normalized_row)
+                    strict_native_coordinates = normalized_rows
+                    scalar_count = payload.get("numeric_scalar_count")
+                    payload_bytes = payload.get("json_payload_bytes")
+                    if (type(scalar_count) is not int or scalar_count < 0
+                            or scalar_count > W21_FIELD_READBACK_MAX_NUMERIC_SCALARS
+                            or type(payload_bytes) is not int or payload_bytes < 0
+                            or payload_bytes > W21_FIELD_READBACK_MAX_JSON_BYTES):
+                        raise ExecutionContractError("FIELD_READBACK_LIMIT_EXCEEDED", "Worker payload limit evidence is missing or over the hard cap")
+                    _validate_strict_worker_field_payload_count(payload, scalar_count)
+                    strict_worker_payload_info = {
+                        "numeric_scalar_count_including_real_imag_and_coordinates": scalar_count,
+                        "json_payload_bytes": payload_bytes,
+                        "max_numeric_scalars": W21_FIELD_READBACK_MAX_NUMERIC_SCALARS,
+                        "max_json_payload_bytes": W21_FIELD_READBACK_MAX_JSON_BYTES,
+                        "enforced_in": "PersistentComsolWorker before response encoding",
+                    }
+                    return payload["real"], payload.get("imag"), payload_complex, "expression,solnum,point"
+
+        # A numerical feature is scoped to one outer solution.  The helper
+        # selects each real outer label and preserves the feature's documented
+        # local inner axis; EvalPoint additionally normalises its native
+        # expression*point rows.
+        raw_real, raw_imag, is_complex, raw_layout = _run_bound_feature(
+            feature,
+            solution_binding,
+            num_expressions=len(expressions),
+            point_feature=ms.entity_dim == 0,
+            budget_guard=result_budget_guard,
+            outer_getters=feat_type not in {"Eval", "Interp", "EvalGlobal"},
+            strict_field_reader=(_strict_field_reader if strict_field_readback else None),
+        )
+        expression_units = _feature_units(feature, expressions)
+
+        if strict_metric_evidence and weight_expression is not None:
+            minimum_types = {
+                0: "EvalPoint",
+                1: "MinLine",
+                2: "MinSurface",
+                3: "MinVolume",
+            }
+            minimum_type = minimum_types.get(ms.entity_dim)
+            if minimum_type is None:
+                raise ExecutionContractError(
+                    "API_UNSUPPORTED",
+                    "strict weighted metric validation requires a 0D through 3D selection",
+                )
+            weight_tag = _unique_tag(tag_list(numerical_list))
+            weight_cleanup = _new_cleanup_record(weight_tag, minimum_type)
+            weight_feature = _call(numerical_list, "create", weight_tag, minimum_type)
+            weight_cleanup["created"] = True
+            _call(weight_feature, "set", "data", dataset_tag)
+            _call(weight_feature, "set", "expr", [weight_expression])
+            _apply_feature_selection(weight_feature, "weight_validation")
+
+            if ms.entity_dim > 0:
+                try:
+                    properties = {str(item) for item in _call(weight_feature, "properties")}
+                except Exception as exc:
+                    raise ExecutionContractError(
+                        "WEIGHT_SAMPLING_UNAVAILABLE",
+                        "native minimum feature property inventory is unavailable",
+                    ) from exc
+                if not {"points", "intorder"} <= properties:
+                    raise ExecutionContractError(
+                        "WEIGHT_SAMPLING_UNAVAILABLE",
+                        "native minimum feature does not expose points and integration-order properties",
+                    )
+                _call(weight_feature, "set", "points", "integration")
+                try:
+                    points_readback = _call(weight_feature, "getString", "points")
+                except Exception as exc:
+                    raise ExecutionContractError(
+                        "WEIGHT_SAMPLING_UNAVAILABLE",
+                        "native minimum feature sampling rule could not be read back",
+                    ) from exc
+                if points_readback != "integration":
+                    raise ExecutionContractError(
+                        "WEIGHT_SAMPLING_MISMATCH",
+                        "native minimum feature did not retain points=integration",
+                    )
+                minimum_order_readback = _verify_weight_minimum_integration_order(weight_feature)
+                sampling = {
+                    "method": "native_minimum_at_integration_points",
+                    "points_property_readback": points_readback,
+                    "minimum_intorder_readback": minimum_order_readback,
+                    "sampling_order": f"Gauss_integration_points_intorder_{minimum_order_readback}",
+                    "scope": "sampled_integration_points_only",
+                    "continuous_roi_nonnegativity": "NOT_PROVEN",
+                    "integral_rule_configuration": None,
+                    "actual_sample_coverage": "UNVERIFIED_NATIVE_GAUSS_POINT_IDENTITIES_NOT_EXPOSED",
+                }
+            else:
+                sampling = {
+                    "method": "native_EvalPoint_values_at_selected_point_entities",
+                    "points_property_readback": None,
+                    "minimum_intorder_readback": None,
+                    "sampling_order": "all_selected_point_entities",
+                    "scope": "selected_discrete_point_entities",
+                    "continuous_roi_nonnegativity": "NOT_APPLICABLE_TO_DISCRETE_SELECTION",
+                    "integral_rule_configuration": None,
+                    "actual_sample_coverage": "UNVERIFIED_POINT_ROW_TO_ENTITY_IDENTITY_NOT_EXPOSED",
+                }
+
+            try:
+                from ._solution_binding import SolutionBinding
+            except Exception:
+                from comsol_mcp._solution_binding import SolutionBinding
+            pair_by_key = {
+                (int(pair["outer"]), int(pair["inner"])): pair
+                for pair in solution_binding.get("solnum_pairs", [])
+                if isinstance(pair, Mapping)
+                and all(isinstance(pair.get(axis), int) and not isinstance(pair.get(axis), bool)
+                        for axis in ("outer", "inner", "solnum"))
+            }
+            expected_pair_keys = {
+                (int(pair["outer"]), int(pair["inner"]))
+                for pair in solution_binding.get("solnum_pairs", [])
+                if isinstance(pair, Mapping)
+            }
+            if not pair_by_key or set(pair_by_key) != expected_pair_keys:
+                raise ExecutionContractError(
+                    "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+                    "strict weight minimum requires unique native SolutionInfo tuple bindings",
+                )
+            for outer, inner in sorted(pair_by_key):
+                pair = pair_by_key[(outer, inner)]
+                try:
+                    _call(weight_feature, "set", "outersolnum", int(outer))
+                    _call(weight_feature, "set", "solnum", int(pair["solnum"]))
+                    _call(weight_feature, "run")
+                except Exception as exc:
+                    raise ExecutionContractError(
+                        "WEIGHT_MINIMUM_READBACK_FAILED",
+                        f"native weight minimum did not run for SolutionInfo tuple ({outer}, {inner})",
+                    ) from exc
+
+                if ms.entity_dim == 0:
+                    try:
+                        raw_weight = _call(weight_feature, "getData")
+                        normalized_weight, _unused_imag, point_count = _normalise_evalpoint_components(
+                            raw_weight, None, num_expressions=1
+                        )
+                    except Exception as exc:
+                        if isinstance(exc, ExecutionContractError):
+                            raise
+                        raise ExecutionContractError(
+                            "WEIGHT_MINIMUM_READBACK_FAILED",
+                            "native EvalPoint weight samples could not be read",
+                        ) from exc
+                    inner_labels = list((solution_binding.get("inner_indices_by_outer") or {}).get(outer, []))
+                    if inner not in inner_labels or point_count != len(strict_selection_evidence[-1]["entities"]):
+                        raise ExecutionContractError(
+                            "FIELD_ARRAY_SHAPE_MISMATCH",
+                            "native EvalPoint weights do not cover the exact selected points and solution tuple",
+                        )
+                    point_values = list(normalized_weight[0][inner_labels.index(inner)])
+                    if not point_values:
+                        raise ExecutionContractError("WEIGHT_MINIMUM_READBACK_FAILED", "native EvalPoint returned no selected point values")
+                    checked_values = []
+                    for value in point_values:
+                        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+                            raise ExecutionContractError("WEIGHT_MINIMUM_READBACK_FAILED", "native EvalPoint weight sample is non-finite or non-real")
+                        checked_values.append(float(value))
+                    minimum_value = min(checked_values)
+                else:
+                    try:
+                        raw_weight, imag_weight, is_weight_complex, _weight_layout = _feature_components(
+                            weight_feature, outer=outer, use_outer_getters=True
+                        )
+                    except Exception as exc:
+                        if isinstance(exc, ExecutionContractError):
+                            raise
+                        raise ExecutionContractError(
+                            "WEIGHT_MINIMUM_READBACK_FAILED",
+                            f"native weight minimum could not be read for SolutionInfo tuple ({outer}, {inner})",
+                        ) from exc
+                    if is_weight_complex or imag_weight is not None:
+                        raise ExecutionContractError("WEIGHT_MINIMUM_READBACK_FAILED", "native weight minimum is unexpectedly complex")
+                    inner_labels = list((solution_binding.get("inner_indices_by_outer") or {}).get(outer, []))
+                    cells = _selected_inner_expression_cells(
+                        raw_weight,
+                        inner_labels=inner_labels,
+                        inner=inner,
+                        num_expressions=1,
+                        label="native weight minimum",
+                    )
+                    minimum_value = cells[0]
+                    if isinstance(minimum_value, bool) or not isinstance(minimum_value, (int, float)) or not math.isfinite(float(minimum_value)):
+                        raise ExecutionContractError("WEIGHT_MINIMUM_READBACK_FAILED", "native weight minimum is non-finite or non-real")
+                    minimum_value = float(minimum_value)
+
+                if minimum_value < 0.0:
+                    raise ExecutionContractError(
+                        "NEGATIVE_WEIGHT_READBACK",
+                        f"native sampled weight minimum is negative at SolutionInfo tuple ({outer}, {inner})",
+                    )
+                property_units = _feature_units(weight_feature, [weight_expression])
+                unit_property_value = property_units.get(weight_expression)
+                if weight_unit_evidence is None:
+                    weight_unit_evidence = {
+                        "status": "UNVERIFIED",
+                        "roi_context_dimensionality": {
+                            "status": "UNVERIFIED",
+                            "expression": weight_expression,
+                            "scope": "selected_numerical_feature_expression_over_dataset_and_selection",
+                            "reason": "no unit evaluator binds the expression to the selected numerical-feature context",
+                        },
+                        "global_parameter_context_unit_readback": _global_parameter_context_unit_readback(
+                            model, weight_expression,
+                        ),
+                        "feature_unit_property_readback": {
+                            "value": unit_property_value,
+                            "source": "NumericalFeature.getStringArray('unit')",
+                            "interpretation": "configuration_readback_or_model_dependent_default",
+                            "dimensionality_verified": False,
+                        },
+                    }
+                weight_validation_minima.append({
+                    "outer": outer,
+                    "inner": inner,
+                    "solnum": int(pair["solnum"]),
+                    "minimum": float(minimum_value),
+                    "global_parameter_context_unit_readback": dict(
+                        weight_unit_evidence["global_parameter_context_unit_readback"]
+                    ),
+                })
+
+        if transform_before_statistics and complex_mode != "preserve":
+            if is_complex:
+                raise ExecutionContractError(
+                    "COMPLEX_DATA_ERROR",
+                    "a pre-statistics real/imag/abs/phase expression still reported complex data",
+                )
+            transformed = raw_real
+        else:
+            transformed = _transform_complex_data(raw_real, raw_imag, complex_mode, is_complex=is_complex)
+        if ms.entity_dim == 0:
+            point_operation = None
+            if aggregate in ("integral", "average", "std", "rms") or weight_expression:
+                point_operation = "sum"
+            elif aggregate in ("minimum", "maximum"):
+                point_operation = aggregate
+            if point_operation is not None:
+                transformed = _point_reduce(transformed, point_operation)
+        if solution_binding:
+            from ._solution_binding import FieldArray
+            point_axis_count = _feature_point_count(transformed, raw_layout)
+            aggregate_point_axis = aggregate != "none" or bool(weight_expression)
+            field_coords, field_units, field_metadata = _field_array_context(
+                solution_binding,
+                expressions,
+                expression_units=expression_units,
+                length_unit=("index" if aggregate_point_axis else context.get("length_unit")),
+                point_count=point_axis_count,
+                point_coordinate_source=("aggregate" if aggregate_point_axis else "numerical-feature"),
+            )
+            field_metadata.update({
+                "requested_expressions": list(expressions),
+                "evaluated_expressions": list(effective_expressions),
+                "complex_transform_order": requested_transform_order,
+            })
+            field_array_is_complex = _field_array_is_complex(
+                is_complex, complex_mode, aggregate
+            )
+            if raw_layout.startswith("expression,outer"):
+                field_array_payload = FieldArray(
+                    transformed,
+                    axes=("expression", "outer", "inner", "point"),
+                    coords=field_coords,
+                    units=field_units,
+                    metadata=field_metadata,
+                    is_complex=field_array_is_complex,
+                )
+            else:
+                # One-outer engine reads retain a scoped solnum axis.  Map it
+                # with the selected outer label; never flatten duplicate inner
+                # numbers from another outer into a global dictionary.
+                from ._solution_binding import SolutionBinding
+                selected_outer = (solution_binding.get("outer_indices") or [None])[0]
+                field_array_payload = SolutionBinding.field_array_from_engine(
+                    transformed,
+                    solution_binding,
+                    num_expressions=len(expressions),
+                    layout=raw_layout,
+                    selected_outer=selected_outer,
+                    coords=field_coords,
+                    units=field_units,
+                    metadata=field_metadata,
+                    is_complex=field_array_is_complex,
+                )
+
+            if field_array_payload is not None:
+                selectors: dict[str, Any] = {}
+                if solution_spec.get("outer") is not None:
+                    selectors["outer"] = solution_spec["outer"]
+                if solution_spec.get("inner") is not None:
+                    selectors["inner"] = solution_spec["inner"]
+                # Keep the full pair grid through measure/statistics.  In
+                # particular, centered variance must use the mean belonging
+                # to each real (outer, inner) pair before a response slice is
+                # applied.  The selectors are applied after all aggregates.
+                pending_field_selectors = selectors
+                transformed = field_array_payload.values
+
+        # Denominator measure and statistical calculation (F02, F03)
+        def _to_float(v: Any) -> float:
+            if isinstance(v, Mapping):
+                if set(v) >= {"real", "imag"} and float(v.get("imag", 0.0)) != 0.0:
+                    raise ExecutionContractError("INVALID_RESULT", "a complex aggregate cannot be reduced to one real measure")
+                v = v.get("real")
+            if isinstance(v, (list, tuple)):
+                if len(v) != 1:
+                    raise ExecutionContractError(
+                        "FIELD_ARRAY_SHAPE_MISMATCH",
+                        "a multi-expression or multi-solution result requires per-axis handling; only a fully singleton measure may be scalarised",
+                    )
+                # This is a proof of a singleton expression/solution/point
+                # result, not a first-element fallback.  Any non-singleton
+                # axis remains an explicit shape error above.
+                return _to_float(v[0])
+            if v is None:
+                raise ExecutionContractError("INVALID_RESULT", "numeric result is missing")
+            try:
+                number = float(v)
+            except (TypeError, ValueError) as exc:
+                raise ExecutionContractError("INVALID_RESULT", f"numeric result is not real: {v!r}") from exc
+            if not math.isfinite(number):
+                raise ExecutionContractError("INVALID_RESULT", f"numeric result is not finite: {number!r}")
+            return number
+
+        # ------------------------------------------------------------------
+        # §3/C05: an explicitly pinned selection that matches no entity is refused.
+        # COMSOL answers an out-of-range entity index with a healthy status and an empty
+        # aggregate, so an integral over domain 99 of a two-interval geometry came back as
+        # 0.0 with ``ok: true`` -- a vacuous success instead of a measure, and exactly the
+        # class of silent fallback this contract refuses.  The measure of the pinned
+        # selection is read from the engine and a zero measure fails the call; the
+        # statistical aggregates below already read their own measure and refuse zero.
+        selection_measure: float | None = None
+        selection_measure_source: str | None = None
+        selection_measure_error: str | None = None
+        selection = ms.selection
+        _pinned_selection = selection not in (None, "all") and not (
+            isinstance(selection, Mapping)
+            and bool(selection.get("all"))
+            and selection.get("kind") in (None, "all")
+            and "entities" not in selection
+        ) and not (
+            isinstance(selection, Mapping)
+            and selection.get("kind") == "all"
+            and "entities" not in selection
+        )
+        if _pinned_selection and ms.entity_dim >= 0 and aggregate in ("integral", "maximum", "minimum"):
+            guard_tag = f"{ephemeral_tag}_selmeasure"
+            guard_feat = None
+            guard_cleanup = _new_cleanup_record(guard_tag, ms.integral_feature_type)
+            try:
+                guard_feat = _call(numerical_list, "create", guard_tag, ms.integral_feature_type)
+                guard_cleanup["created"] = True
+                _call(guard_feat, "set", "data", dataset_tag)
+                _call(guard_feat, "set", "expr", ["1"])
+                _apply_feature_selection(guard_feat, "selection_guard")
+                if axisymmetric_measure_required:
+                    axisymmetric_measure_evidence.append(
+                        _axisymmetric_measure_readback(
+                            guard_feat, role="selection_guard"
+                        )
+                    )
+                if ms.entity_dim == 0:
+                    guard_real, guard_imag, guard_status, guard_layout = _run_bound_feature(
+                        guard_feat,
+                        solution_binding,
+                        num_expressions=1,
+                        point_feature=True,
+                        outer_getters=True,
+                    )
+                    if guard_status:
+                        raise ExecutionContractError("COMPLEX_DATA_ERROR", "point counting measure returned complex data")
+                    guard_field_array = None
+                    if solution_binding:
+                        from ._solution_binding import SolutionBinding
+                        guard_field_array = SolutionBinding.field_array_from_engine(
+                            _point_reduce(guard_real, "sum"),
+                            solution_binding,
+                            num_expressions=1,
+                            layout=guard_layout,
+                            selected_outer=(solution_binding.get("outer_indices") or [None])[0],
+                            is_complex=False,
+                        )
+                        selection_measure = guard_field_array.values
+                    else:
+                        selection_measure = _to_float(_point_reduce(guard_real, "sum"))
+                else:
+                    guard_real, guard_imag, guard_status, guard_layout = _run_bound_feature(
+                        guard_feat,
+                        solution_binding,
+                        num_expressions=1,
+                        outer_getters=True,
+                    )
+                    if guard_status:
+                        raise ExecutionContractError("COMPLEX_DATA_ERROR", "selection measure returned complex data")
+                    guard_field_array = None
+                    if solution_binding:
+                        from ._solution_binding import SolutionBinding
+                        guard_field_array = SolutionBinding.field_array_from_engine(
+                            guard_real,
+                            solution_binding,
+                            num_expressions=1,
+                            layout=guard_layout,
+                            selected_outer=(solution_binding.get("outer_indices") or [None])[0],
+                            is_complex=False,
+                        )
+                        selection_measure = guard_field_array.values
+                    else:
+                        selection_measure = _to_float(guard_real)
+                if guard_field_array is not None:
+                    guard_selectors: dict[str, Any] = {}
+                    if solution_spec.get("outer") is not None:
+                        guard_selectors["outer"] = solution_spec["outer"]
+                    if solution_spec.get("inner") is not None:
+                        guard_selectors["inner"] = solution_spec["inner"]
+                    if guard_selectors:
+                        selection_measure = guard_field_array.select(**guard_selectors).values
+                selection_measure_source = (
+                    "engine integral of 1 over the pinned selection "
+                    f"({ms.integral_feature_type})"
+                )
+            except Exception as exc:
+                selection_measure_error = f"{type(exc).__name__}: {exc}"
+            finally:
+                if guard_cleanup["created"] and not guard_cleanup["removed"]:
+                    _remove_ephemeral(numerical_list, guard_tag, guard_cleanup, [])
+            if (
+                selection_measure is None
+                or not _nested_positive(selection_measure)
+            ):
+                raise ExecutionContractError(
+                    "SELECTION_MATCHED_NO_ENTITIES",
+                    f"selection {selection!r} matches no entity of the dataset's geometry: the "
+                    f"engine measure of that selection is {selection_measure!r} "
+                    f"(read error {selection_measure_error!r}), so the aggregate would be a "
+                    f"vacuous 0 rather than a measure",
+                    details={
+                        "selection": selection,
+                        "aggregate": aggregate,
+                        "entity_dim": ms.entity_dim,
+                        "selection_measure": selection_measure,
+                        "selection_measure_error": selection_measure_error,
+                    },
+                )
+
+        if aggregate in ("average", "std", "rms") or weight_expression:
+            meas_tag = f"{ephemeral_tag}_meas"
+            meas_feat = None
+            meas_cleanup = _new_cleanup_record(meas_tag, ms.integral_feature_type)
+            m_raw = None
+            m_imag = None
+            m_status: bool | None = None
+            m_layout = "expression,solnum,point"
+            m_value: Any = None
+            m_read_error: str | None = None
+            # §3: the measure integrand is w for a weighted aggregate, 1 otherwise.
+            measure_expr = [weight_expression] if weight_expression else ["1"]
+            try:
+                meas_feat = _call(numerical_list, "create", meas_tag, ms.integral_feature_type)
+                meas_cleanup["created"] = True
+                _call(meas_feat, "set", "data", dataset_tag)
+                _call(meas_feat, "set", "expr", measure_expr)
+                _apply_feature_selection(meas_feat, "denominator")
+                if strict_metric_evidence and weight_expression is not None and ms.entity_dim > 0:
+                    weight_integral_rule_readbacks["denominator"] = _verify_weight_integral_rule(
+                        meas_feat, role="denominator",
+                    )
+                if axisymmetric_measure_required:
+                    axisymmetric_measure_evidence.append(
+                        _axisymmetric_measure_readback(
+                            meas_feat, role="denominator_measure"
+                        )
+                    )
+                m_raw, m_imag, m_status, m_layout = _run_bound_feature(
+                    meas_feat,
+                    solution_binding,
+                    num_expressions=1,
+                    point_feature=ms.entity_dim == 0,
+                    outer_getters=True,
+                )
+                if m_status:
+                    raise ExecutionContractError("COMPLEX_DATA_ERROR", "measure denominator is unexpectedly complex")
+                if solution_binding:
+                    from ._solution_binding import SolutionBinding
+                    m_field_array = SolutionBinding.field_array_from_engine(
+                        m_raw,
+                        solution_binding,
+                        num_expressions=1,
+                        layout=m_layout,
+                        selected_outer=(solution_binding.get("outer_indices") or [None])[0],
+                        is_complex=False,
+                    )
+                    m_value = m_field_array.values
+                else:
+                    m_value = m_raw
+                if ms.entity_dim == 0:
+                    m_value = _point_reduce(m_value, "sum")
+            except Exception as exc:
+                if (strict_metric_evidence and weight_expression is not None
+                        and isinstance(exc, ExecutionContractError)):
+                    raise
+                m_raw = None
+                m_value = None
+                m_read_error = f"{type(exc).__name__}: {exc}"
+
+            if is_axisymmetric and meas_feat is not None:
+                # Measure the meridional cross-section once, then restore the
+                # native revolved measure even when the temporary run/read
+                # fails.  A broad ``except: pass`` here used to leave
+                # ``intvolume``/``intsurface`` off while the surrounding
+                # aggregate continued with a stale denominator.
+                try:
+                    props = list(_call(meas_feat, "properties"))
+                except Exception as exc:
+                    raise ExecutionContractError(
+                        "AXISYMMETRY_RESTORE_FAILED",
+                        "axisymmetric measure property inventory could not be read before cross-section probing",
+                    ) from exc
+                native_property = next(
+                    (name for name in ("intvolume", "intsurface") if name in props),
+                    None,
+                )
+                if native_property is None:
+                    raise ExecutionContractError(
+                        "AXISYMMETRY_RESTORE_FAILED",
+                        "axisymmetric measure feature exposes neither intvolume nor intsurface during restoration",
+                    )
+                # Treat the setter as a potentially dispatched mutation: if
+                # it fails after entering the engine queue, the restoration
+                # attempt still has to run before the error is returned.
+                try:
+                    _call(meas_feat, "set", native_property, "off")
+                    _call(meas_feat, "run")
+                    try:
+                        cs_raw = _call(meas_feat, "getData")
+                    except Exception:
+                        cs_raw = _call(meas_feat, "getReal")
+                    cross_section_measure = _to_float(cs_raw)
+                finally:
+                    try:
+                        axisymmetric_measure_evidence.append(
+                            _axisymmetric_measure_readback(
+                                meas_feat, role="denominator_measure_restore"
+                            )
+                        )
+                        _call(meas_feat, "run")
+                    except Exception as restore_exc:
+                        raise ExecutionContractError(
+                            "AXISYMMETRY_RESTORE_FAILED",
+                            "axisymmetric native measure could not be restored and verified after cross-section probing",
+                            details={
+                                "native_property": native_property,
+                                "cause_code": error_code_of(restore_exc),
+                                "cause_message": str(restore_exc)[:500],
+                            },
+                        ) from restore_exc
+
+            m_val = m_value
+            if m_val is None or not _nested_positive(m_val):
+                # §3: the denominator is M = ∫w dμ read from the engine.  A failed
+                # read is reported and the operation fails; it is never replaced
+                # by 1.0 or by a caller-supplied constant.
+                raise ExecutionContractError(
+                    "ZERO_OR_INVALID_MEASURE",
+                    f"the spatial measure M = ∫w dμ could not be read from the engine "
+                    f"(value {m_val!r}, read error {m_read_error!r}); a hardcoded or "
+                    f"caller-supplied denominator is not accepted",
+                )
+            denominator_measure = m_val
+            if strict_metric_evidence and weight_expression is not None:
+                denominator_tuple_values = _solution_tuple_scalar_values(
+                    m_value,
+                    solution_binding,
+                    label="weighted denominator",
+                )
+                if any(value <= 0.0 for value in denominator_tuple_values.values()):
+                    raise ExecutionContractError(
+                        "ZERO_OR_INVALID_MEASURE",
+                        "weighted denominator must be strictly positive and finite for every exact selected solution tuple",
+                    )
+            denominator_source = (
+                f"engine integral of w={weight_expression!r} over the selection"
+                if weight_expression
+                else "engine integral of 1 over the selection"
+            )
+
+            # §3: a weighted aggregate uses the numerator ∫w·f dμ over the *same*
+            # dataset/selection/solution axes as the measure M = ∫w dμ.
+            num_tag = f"{ephemeral_tag}_num"
+            num_feat = None
+            num_cleanup = _new_cleanup_record(num_tag, ms.integral_feature_type)
+            num_layout = "expression,solnum,point"
+            if weight_expression:
+                try:
+                    num_feat = _call(numerical_list, "create", num_tag, ms.integral_feature_type)
+                    num_cleanup["created"] = True
+                    _call(num_feat, "set", "data", dataset_tag)
+                    _call(
+                        num_feat,
+                        "set",
+                        "expr",
+                        [f"({weight_expression})*({e})" for e in effective_expressions],
+                    )
+                    _apply_feature_selection(num_feat, "numerator")
+                    if strict_metric_evidence and ms.entity_dim > 0:
+                        weight_integral_rule_readbacks["numerator"] = _verify_weight_integral_rule(
+                            num_feat, role="numerator",
+                        )
+                    if axisymmetric_measure_required:
+                        axisymmetric_measure_evidence.append(
+                            _axisymmetric_measure_readback(
+                                num_feat, role="weighted_numerator"
+                            )
+                        )
+                    num_real, num_imag, num_status, num_layout = _run_bound_feature(
+                        num_feat,
+                        solution_binding,
+                        num_expressions=len(expressions),
+                        point_feature=ms.entity_dim == 0,
+                        outer_getters=True,
+                    )
+                    if transform_before_statistics and complex_mode != "preserve":
+                        if num_status:
+                            raise ExecutionContractError(
+                                "COMPLEX_DATA_ERROR",
+                                "a weighted pre-statistics transform still reported complex data",
+                            )
+                        num_transformed = num_real
+                    else:
+                        num_transformed = _transform_complex_data(
+                            num_real, num_imag, complex_mode, is_complex=num_status
+                        )
+                    if ms.entity_dim == 0:
+                        num_transformed = _point_reduce(num_transformed, "sum")
+                    if solution_binding:
+                        from ._solution_binding import SolutionBinding
+                        transformed = SolutionBinding.field_array_from_engine(
+                            num_transformed,
+                            solution_binding,
+                            num_expressions=len(expressions),
+                            layout=num_layout,
+                            selected_outer=(solution_binding.get("outer_indices") or [None])[0],
+                            is_complex=num_status,
+                        ).values
+                    else:
+                        transformed = num_transformed
+                except Exception as exc:
+                    if (strict_metric_evidence and isinstance(exc, ExecutionContractError)):
+                        raise
+                    raise ExecutionContractError(
+                        "ENGINE_CALL_FAILED",
+                        f"the weighted numerator ∫w·f dμ could not be evaluated: "
+                        f"{type(exc).__name__}: {exc}",
+                    )
+
+            if strict_metric_evidence and weight_expression is not None:
+                if ms.entity_dim > 0:
+                    expected_integral_rule = {
+                        "source": "native_numerical_feature_property_set_and_readback",
+                        "method": "integration",
+                        "intorderactive": "on",
+                        "intorder": _STRICT_WEIGHT_INTEGRATION_ORDER,
+                    }
+                    if (set(weight_integral_rule_readbacks) != {"denominator", "numerator"}
+                            or any(rule != expected_integral_rule for rule in weight_integral_rule_readbacks.values())):
+                        raise ExecutionContractError(
+                            "WEIGHT_SAMPLING_UNVERIFIED",
+                            "native numerator and denominator integration configurations do not match the minimum's declared integration rule",
+                        )
+                    sampling["integral_rule_configuration"] = {
+                        "status": "VERIFIED_MATCHING_METHOD_AND_ORDER_READBACKS",
+                        "minimum_points": "integration",
+                        "minimum_intorder": _STRICT_WEIGHT_INTEGRATION_ORDER,
+                        "numerator": dict(weight_integral_rule_readbacks["numerator"]),
+                        "denominator": dict(weight_integral_rule_readbacks["denominator"]),
+                        "actual_gauss_point_set_identity": "UNVERIFIED_NATIVE_POINT_IDENTITIES_NOT_EXPOSED",
+                    }
+                else:
+                    sampling["integral_rule_configuration"] = {
+                        "status": "DISCRETE_POINT_SELECTION_READBACK",
+                        "minimum_points": "all_selected_point_entities",
+                        "numerator": "EvalPoint_selected_entities",
+                        "denominator": "EvalPoint_selected_entities",
+                        "actual_point_row_to_entity_identity": "UNVERIFIED_NOT_EXPOSED",
+                    }
+
+            def _divide_by_measure(value: Any) -> Any:
+                return _nested_divide(value, denominator_measure)
+
+            # The aggregation feature used for the variance/square integrals: the
+            # weighted numerator when a weight is given, the measure feature
+            # otherwise.  The measure feature's ``expr`` is restored afterwards so
+            # the reported measure stays M = ∫w dμ.
+            aggregate_feature = num_feat if weight_expression else meas_feat
+
+            if aggregate == "average":
+                if weight_expression:
+                    transformed = _divide_by_measure(transformed)
+                elif feat_type.startswith("Av"):
+                    # The Av* feature already returns the mean over the selection;
+                    # dividing again would divide by the measure twice.  The rule
+                    # is the feature type, not a value comparison: the earlier
+                    # ``m_val != _to_float(raw_real)`` heuristic silently skipped
+                    # the division whenever the mean happened to equal the
+                    # measure (e.g. a constant field f ≡ V).
+                    pass
+                else:
+                    transformed = _divide_by_measure(transformed)
+
+            elif aggregate == "std":
+                if aggregate_feature is None:
+                    raise ExecutionContractError(
+                        "ZERO_OR_INVALID_MEASURE",
+                        "the centered variance integral needs the measure feature, which is "
+                        "not available",
+                    )
+                if feat_type.startswith("Av") and not weight_expression:
+                    mean_value = transformed
+                else:
+                    mean_value = _divide_by_measure(transformed)
+
+                def _mean_for_cell(expression_index: int, outer_position: int | None, inner_position: int | None) -> Any:
+                    if solution_binding is None:
+                        rows = list(mean_value) if isinstance(mean_value, Sequence) and not isinstance(mean_value, (str, bytes)) else [mean_value]
+                        if len(rows) == len(expressions):
+                            return _strict_singleton_value(
+                                rows[expression_index],
+                                label=f"mean[expression={expression_index}]",
+                            )
+                        if len(expressions) == 1:
+                            return _strict_singleton_value(mean_value, label="mean")
+                        raise ExecutionContractError(
+                            "FIELD_ARRAY_SHAPE_MISMATCH",
+                            "unbound multi-expression mean has no explicit expression axis",
+                        )
+                    if outer_position is None or inner_position is None:
+                        raise ExecutionContractError("SOLUTION_AXIS_ERROR", "a bound mean needs outer and inner positions")
+                    try:
+                        cell = mean_value[expression_index][outer_position][inner_position]
+                    except (IndexError, KeyError, TypeError) as exc:
+                        raise ExecutionContractError(
+                            "FIELD_ARRAY_SHAPE_MISMATCH",
+                            f"mean has no cell for expression={expression_index}, outer={outer_position}, inner={inner_position}",
+                        ) from exc
+                    return _strict_singleton_value(
+                        cell,
+                        label=f"mean[expression={expression_index},outer={outer_position},inner={inner_position}]",
+                    )
+
+                def _centered_exprs(outer_position: int | None, inner_position: int | None) -> list[str]:
+                    result: list[str] = []
+                    for expression_index, expression in enumerate(effective_expressions):
+                        mean_cell = _mean_for_cell(expression_index, outer_position, inner_position)
+                        unit = expression_units.get(expressions[expression_index])
+                        centered = _centered_square_expression(expression, mean_cell, unit=unit)
+                        if weight_expression:
+                            centered = f"({weight_expression})*({centered})"
+                        result.append(centered)
+                    return result
+
+                try:
+                    if solution_binding:
+                        outer_labels = list(solution_binding.get("outer_indices") or [])
+                        inner_by_outer = solution_binding.get("inner_indices_by_outer") or {}
+                        pair_by_key = {
+                            (int(pair["outer"]), int(pair["inner"])): pair
+                            for pair in solution_binding.get("solnum_pairs") or []
+                        }
+                        if not outer_labels or not pair_by_key:
+                            raise ExecutionContractError(
+                                "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+                                "centered variance requires complete outer/inner pair metadata",
+                            )
+                        centered_value = [
+                            [
+                                [[0.0] for _inner in inner_by_outer.get(int(outer), [])]
+                                for outer in outer_labels
+                            ]
+                            for _expression in expressions
+                        ]
+                        for outer_position, outer in enumerate(outer_labels):
+                            inner_labels = list(inner_by_outer.get(int(outer), []))
+                            for inner_position, inner in enumerate(inner_labels):
+                                pair = pair_by_key.get((int(outer), int(inner)))
+                                if pair is None:
+                                    raise ExecutionContractError(
+                                        "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+                                        f"missing SolutionInfo pair ({outer}, {inner}) for centered variance",
+                                    )
+                                _call(aggregate_feature, "set", "expr", _centered_exprs(outer_position, inner_position))
+                                try:
+                                    _call(aggregate_feature, "set", "outersolnum", int(pair["outer"]))
+                                    _call(aggregate_feature, "set", "solnum", int(pair["solnum"]))
+                                except Exception as exc:
+                                    raise ExecutionContractError(
+                                        "SOLUTION_SELECTION_FAILED",
+                                        f"could not select centered variance solution ({pair['outer']}, {pair['inner']})",
+                                    ) from exc
+                                _call(aggregate_feature, "run")
+                                centered_real, centered_imag, centered_status, _centered_layout = _feature_components(
+                                    aggregate_feature,
+                                    outer=int(pair["outer"]),
+                                    use_outer_getters=True,
+                                )
+                                if centered_status:
+                                    raise ExecutionContractError(
+                                        "COMPLEX_DATA_ERROR",
+                                        "centered variance integral returned complex data",
+                                    )
+                                if ms.entity_dim == 0:
+                                    centered_real, _unused_imag, _unused_points = _normalise_evalpoint_components(
+                                        centered_real,
+                                        centered_imag,
+                                        num_expressions=len(expressions),
+                                    )
+                                    centered_real = _point_reduce(centered_real, "sum")
+                                cells = _selected_inner_expression_cells(
+                                    centered_real,
+                                    inner_labels=inner_labels,
+                                    inner=int(inner),
+                                    num_expressions=len(expressions),
+                                    label="centered variance",
+                                )
+                                for expression_index, cell in enumerate(cells):
+                                    if isinstance(cell, Mapping):
+                                        raise ExecutionContractError(
+                                            "COMPLEX_DATA_ERROR",
+                                            "centered variance cell must be real",
+                                        )
+                                    centered_value[expression_index][outer_position][inner_position] = [float(cell)]
+                        sq_value = centered_value
+                    else:
+                        _call(aggregate_feature, "set", "expr", _centered_exprs(None, None))
+                        _call(aggregate_feature, "run")
+                        centered_real, centered_imag, centered_status, _centered_layout = _feature_components(aggregate_feature)
+                        if centered_status:
+                            raise ExecutionContractError(
+                                "COMPLEX_DATA_ERROR",
+                                "centered variance integral returned complex data",
+                            )
+                        if ms.entity_dim == 0:
+                            centered_real, _unused_imag, _unused_points = _normalise_evalpoint_components(
+                                centered_real,
+                                centered_imag,
+                                num_expressions=len(expressions),
+                            )
+                            centered_real = _point_reduce(centered_real, "sum")
+                        cells = _single_expression_cells(
+                            centered_real,
+                            num_expressions=len(expressions),
+                            label="centered variance",
+                        )
+                        sq_value = cells[0] if len(cells) == 1 else cells
+                except Exception as exc:
+                    if isinstance(exc, ExecutionContractError):
+                        raise
+                    raise ExecutionContractError(
+                        "ENGINE_CALL_FAILED",
+                        f"the centered variance integral ∫w|f-mean|² dμ could not be evaluated: "
+                        f"{type(exc).__name__}: {exc}",
+                    )
+                second_moment = _divide_by_measure(sq_value)
+                # The engine already integrated |f-mean|².  Do not subtract
+                # |mean|² from E|f|² here: for large nearly constant fields
+                # that cancellation creates a false non-zero std.
+                transformed = _nested_sqrt(second_moment)
+
+            elif aggregate == "rms":
+                if aggregate_feature is None:
+                    raise ExecutionContractError(
+                        "ZERO_OR_INVALID_MEASURE",
+                        "the square integral ∫w|f|² dμ needs the measure feature, which is not available",
+                    )
+                if weight_expression:
+                    sq_exprs = [f"({weight_expression})*abs(({e}))^2" for e in effective_expressions]
+                else:
+                    sq_exprs = [f"abs(({e}))^2" for e in effective_expressions]
+                try:
+                    _call(aggregate_feature, "set", "expr", sq_exprs)
+                    sq_real, sq_imag, sq_status, sq_layout = _run_bound_feature(
+                        aggregate_feature,
+                        solution_binding,
+                        num_expressions=len(expressions),
+                        point_feature=ms.entity_dim == 0,
+                        outer_getters=True,
+                    )
+                    if sq_status:
+                        raise ExecutionContractError("COMPLEX_DATA_ERROR", "|f|² second moment returned complex data")
+                    if solution_binding:
+                        from ._solution_binding import SolutionBinding
+                        sq_value = SolutionBinding.field_array_from_engine(
+                            sq_real,
+                            solution_binding,
+                            num_expressions=len(expressions),
+                            layout=sq_layout,
+                            selected_outer=(solution_binding.get("outer_indices") or [None])[0],
+                            is_complex=False,
+                        ).values
+                    else:
+                        sq_value = sq_real
+                    if ms.entity_dim == 0:
+                        sq_value = _point_reduce(sq_value, "sum")
+                except Exception as exc:
+                    raise ExecutionContractError(
+                        "ENGINE_CALL_FAILED",
+                        f"the square integral ∫w|f|² dμ could not be evaluated: "
+                        f"{type(exc).__name__}: {exc}",
+                    )
+                transformed = _nested_sqrt(_divide_by_measure(sq_value))
+
+            if meas_feat is not None:
+                if meas_cleanup["created"] and not meas_cleanup["removed"]:
+                    _remove_ephemeral(numerical_list, meas_tag, meas_cleanup, [])
+            if num_feat is not None:
+                if num_cleanup["created"] and not num_cleanup["removed"]:
+                    _remove_ephemeral(numerical_list, num_tag, num_cleanup, [])
+
+        # SolutionSpec index filtering (T021 / F04).  The aggregate/statistics
+        # branches above replace ``transformed`` with the evaluated mean,
+        # centered variance, or RMS.  Apply selectors to a FieldArray rebuilt
+        # from that final value; selecting the pre-aggregate payload here would
+        # silently put the original field back into a std/rms response.
+        if field_array_payload is not None:
+            field_array_payload = _field_array_with_values(
+                field_array_payload,
+                transformed,
+                is_complex=field_array_is_complex,
+                selectors=pending_field_selectors,
+            )
+            transformed = field_array_payload.values
+
+        inner_spec = solution_spec.get("inner")
+        if inner_spec is not None and field_array_payload is None:
+            try:
+                from ._solution_binding import SolutionBinding
+            except Exception:
+                from comsol_mcp._solution_binding import SolutionBinding
+
+            transformed = SolutionBinding.slice_solution_axis(
+                transformed, inner_spec, num_expressions=len(expressions)
+            )
+
+    except Exception as exc:
+        if isinstance(exc, ExecutionContractError):
+            raise
+        engine_error = str(exc)
+        transformed = None
+    finally:
+        for record in reversed(cleanup_records):
+            if record["created"] and not record["removed"]:
+                _remove_ephemeral(numerical_list, record["tag"], record, [])
+        cleanup["children"] = [record for record in cleanup_records if record is not cleanup]
+        cleanup["cleanup_failed"] = any(record.get("cleanup_failed") for record in cleanup_records)
+        if cleanup["cleanup_failed"] and cleanup.get("error") is None:
+            failed = next((record for record in cleanup_records if record.get("cleanup_failed")), None)
+            cleanup["error"] = failed.get("error") if failed else {"code": "EXECUTION_STATE_UNKNOWN", "message": "ephemeral cleanup failed"}
+
+    if field_array_payload is not None and transformed is not None:
+        field_array_payload = _field_array_with_values(
+            field_array_payload,
+            transformed,
+            is_complex=field_array_is_complex,
+        )
+
+    total_elements = _count_elements(transformed)
+    artifact_meta = None
+    if (
+        engine_error is None
+        and not cleanup["cleanup_failed"]
+        and (storage == "artifact" or (storage == "auto" and total_elements > AUTO_ARTIFACT_ELEMENT_LIMIT))
+    ):
+        artifact_eval_context: dict[str, Any] = {
+            "expressions": expressions,
+            "dataset": dataset_tag,
+            "solution": solution_tag,
+            "complex_mode": complex_mode,
+            "is_complex": is_complex,
+        }
+        if field_array_payload is not None:
+            artifact_eval_context["field_array"] = field_array_payload.to_dict()
+
+        artifact_meta = _export_to_artifact(
+            transformed,
+            dataset_tag,
+            project_root=trusted_project_root(worker),
+            eval_context=artifact_eval_context,
+        )
+        artifact_meta["auto_artifact_element_limit"] = AUTO_ARTIFACT_ELEMENT_LIMIT
+        artifact_meta["requested_storage"] = storage
+        result_payload = {
+            "artifact": artifact_meta,
+            "storage": "artifact",
+        }
+    else:
+        result_payload = {
+            "values": transformed,
+            "storage": "inline",
+        }
+
+    strict_metric_result = None
+    if strict_metric_evidence:
+        if field_array_payload is None or solution_binding is None:
+            raise ExecutionContractError(
+                "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+                "strict metric evaluation could not bind its result to a canonical FieldArray",
+                stage="post_dispatch",
+            )
+        if engine_error is not None or cleanup["cleanup_failed"]:
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                "strict metric evaluation did not complete with verified engine and cleanup status",
+                stage="post_dispatch",
+            )
+        if not strict_selection_evidence:
+            raise ExecutionContractError(
+                "SELECTION_READBACK_UNAVAILABLE",
+                "strict metric evaluation did not capture any transient-feature selection evidence",
+                stage="post_dispatch",
+            )
+        coords = field_array_payload.coords
+        selected_outer = coords.get("outer")
+        selected_inner = coords.get("inner")
+        if not isinstance(selected_outer, list) or not selected_outer or not isinstance(selected_inner, list) or not selected_inner:
+            raise ExecutionContractError(
+                "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+                "strict metric result has empty or unavailable selected outer/inner coordinates",
+                stage="post_dispatch",
+            )
+        pair_by_axis = {
+            (int(pair["outer"]), int(pair["inner"])): pair
+            for pair in solution_binding.get("solnum_pairs", [])
+            if isinstance(pair, Mapping) and isinstance(pair.get("outer"), int) and isinstance(pair.get("inner"), int)
+        }
+        selected_pairs = []
+        for outer in selected_outer:
+            for inner in selected_inner:
+                pair = pair_by_axis.get((int(outer), int(inner)))
+                if pair is None or isinstance(pair.get("solnum"), bool) or not isinstance(pair.get("solnum"), int):
+                    raise ExecutionContractError(
+                        "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+                        "strict metric result has no exact Solnum for a selected outer/inner tuple",
+                        stage="post_dispatch",
+                    )
+                selected_pairs.append({"outer": int(outer), "inner": int(inner), "solnum": int(pair["solnum"])})
+        strict_metric_result = {
+            "status": "VERIFIED",
+            "selection_source": "actual_transient_numerical_feature_readback",
+            "selection_features": strict_selection_evidence,
+            "selection_membership_identical": all(
+                record["entities"] == strict_selection_evidence[0]["entities"]
+                for record in strict_selection_evidence
+            ),
+            "selected_solution_pairs": selected_pairs,
+            "solution_pair_source": "SolutionInfo_outer_inner_solnum_mapping",
+            "expression_unit_readback": dict(expression_units),
+            "requested_solution": dict(solution_spec),
+            "dataset_binding": dict(dataset_binding) if isinstance(dataset_binding, Mapping) else None,
+        }
+        if weight_expression is not None:
+            minima_by_key = {
+                (row["outer"], row["inner"], row["solnum"]): row
+                for row in weight_validation_minima
+            }
+            selected_weight_rows = []
+            selected_denominator_rows = []
+            for pair in selected_pairs:
+                key = (pair["outer"], pair["inner"], pair["solnum"])
+                minimum_row = minima_by_key.get(key)
+                denominator_value = (denominator_tuple_values or {}).get(key)
+                if (minimum_row is None or denominator_value is None
+                        or not math.isfinite(float(denominator_value)) or float(denominator_value) <= 0.0):
+                    raise ExecutionContractError(
+                        "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+                        "weighted metric evidence does not cover every selected native solution tuple",
+                        stage="post_dispatch",
+                    )
+                selected_weight_rows.append({
+                    "outer": pair["outer"], "inner": pair["inner"], "solnum": pair["solnum"],
+                    "minimum": minimum_row["minimum"],
+                })
+                selected_denominator_rows.append({
+                    "outer": pair["outer"], "inner": pair["inner"], "solnum": pair["solnum"],
+                    "value": float(denominator_value),
+                })
+            if weight_unit_evidence is None:
+                weight_unit_evidence = {
+                    "status": "UNVERIFIED",
+                    "roi_context_dimensionality": {
+                        "status": "UNVERIFIED",
+                        "expression": weight_expression,
+                        "scope": "selected_numerical_feature_expression_over_dataset_and_selection",
+                        "reason": "no unit evaluator binds the expression to the selected numerical-feature context",
+                    },
+                    "global_parameter_context_unit_readback": {
+                        "status": "UNAVAILABLE",
+                        "unit": None,
+                        "expression": weight_expression,
+                        "source": "Model.param().evaluateUnit(expression)",
+                        "scope": "global_parameter_context",
+                        "unavailable_reason": "weight_expression_unit_was_not_evaluated",
+                    },
+                    "feature_unit_property_readback": {
+                        "value": None,
+                        "source": "NumericalFeature.getStringArray('unit')",
+                        "interpretation": "configuration_readback_or_model_dependent_default",
+                        "dimensionality_verified": False,
+                    },
+                }
+            required_roles = {"primary", "weight_validation", "denominator", "numerator"}
+            observed_roles = {row.get("role") for row in strict_selection_evidence if isinstance(row, Mapping)}
+            if not required_roles <= observed_roles:
+                raise ExecutionContractError(
+                    "SELECTION_READBACK_UNAVAILABLE",
+                    "weighted numerator, denominator, and minimum features must all read back the same ROI",
+                    stage="post_dispatch",
+                )
+            roi_context_unit = weight_unit_evidence.get("roi_context_dimensionality")
+            unit_verified = (
+                isinstance(roi_context_unit, Mapping)
+                and roi_context_unit.get("status") == "VERIFIED"
+                and roi_context_unit.get("unit") == "1"
+                and roi_context_unit.get("expression") == weight_expression
+                and roi_context_unit.get("scope") == "selected_numerical_feature_expression_over_dataset_and_selection"
+            )
+            sampling_status = "VERIFIED" if selected_weight_rows and all(row["minimum"] >= 0.0 for row in selected_weight_rows) else "INVALID"
+            denominator_status = "VERIFIED" if selected_denominator_rows and all(row["value"] > 0.0 for row in selected_denominator_rows) else "INVALID"
+            sample_coverage_verified = sampling.get("actual_sample_coverage") == "VERIFIED_EXACT_NATIVE_POINT_SET_IDENTITY"
+            weight_validation_status = (
+                "VERIFIED" if unit_verified and sampling_status == "VERIFIED" and denominator_status == "VERIFIED" and sample_coverage_verified
+                else "UNVERIFIED"
+            )
+            strict_metric_result["weight_validation"] = {
+                "status": weight_validation_status,
+                "expression": weight_expression,
+                "unit_evidence": dict(weight_unit_evidence),
+                "minimum": {
+                    "status": sampling_status,
+                    "source": (
+                        "EvalPoint.getData_native_samples"
+                        if ms.entity_dim == 0
+                        else f"{minimum_types[ms.entity_dim]}.getReal_native_minimum"
+                    ),
+                    "by_solution": selected_weight_rows,
+                    "sampling": sampling,
+                },
+                "denominator": {
+                    "status": denominator_status,
+                    "source": "native_integral_of_weight_over_same_dataset_and_ROI",
+                    "strictly_positive_finite": True,
+                    "by_solution": selected_denominator_rows,
+                },
+                "selection_roles": sorted(required_roles),
+                "same_dataset_solution_tuple_and_selection": True,
+            }
+
+    response = {
+        **result_payload,
+        "expressions": expressions,
+        "dataset": dataset_tag,
+        "solution": solution_tag,
+        "aggregate": aggregate,
+        "complex_mode": complex_mode,
+        "complex_transform_order": requested_transform_order,
+        "evaluated_expressions": list(effective_expressions),
+        "expression_units": dict(expression_units),
+        "is_complex": is_complex,
+        "field_array": (
+            _field_array_summary(field_array_payload)
+            if result_payload.get("storage") == "artifact" and field_array_payload is not None
+            else (field_array_payload.to_dict() if field_array_payload is not None else None)
+        ),
+        "solution_axes": {
+            "outer": list(solution_binding.get("outer_indices", [])) if solution_binding else [],
+            "inner": list(solution_binding.get("inner_indices", [])) if solution_binding else [],
+            "pair_mapping_complete": bool(solution_binding and solution_binding.get("pair_mapping_complete")),
+        },
+        "axisymmetric": is_axisymmetric,
+        "axisymmetric_measure_evidence": axisymmetric_measure_evidence,
+        "axisymmetric_factor_applied": bool(axisymmetric_measure_evidence),
+        "axisymmetric_applied_count": 1 if axisymmetric_measure_evidence else 0,
+        "revolved_measure": denominator_measure if is_axisymmetric else None,
+        "cross_section_measure": cross_section_measure,
+        "denominator_measure": denominator_measure if aggregate in ("average", "std", "rms") else None,
+        "selection_measure": selection_measure,
+        "selection_measure_source": selection_measure_source,
+        "denominator_source": denominator_source,
+        "total_elements": total_elements,
+        "result_budget": (
+            {
+                "status": (
+                    "PASS"
+                    if result_budget_records and all(
+                        record.get("status") == "PASS" and record.get("allowed") is True
+                        for record in result_budget_records
+                    ) and engine_error is None
+                    else ("BLOCKED" if result_budget_records or engine_error is not None else "UNVERIFIED")
+                ),
+                "limits": {
+                    "max_elements": RESULT_NUMERIC_PAYLOAD_MAX_ELEMENTS,
+                    "max_bytes": RESULT_NUMERIC_PAYLOAD_MAX_BYTES,
+                    "scope": "numeric_payload_only",
+                    "engine_internal_cache": "UNMEASURED",
+                },
+                "records": result_budget_records,
+                "publish_allowed": bool(
+                    result_budget_records
+                    and all(record.get("publish_allowed") is True for record in result_budget_records)
+                    and engine_error is None
+                    and not cleanup["cleanup_failed"]
+                ),
+            }
+            if aggregate == "none" and feat_type == "Eval"
+            else None
+        ),
+        "cleanup": cleanup,
+        **({"strict_metric_evidence": strict_metric_result} if strict_metric_result is not None else {}),
+        "status": {
+            "ok": engine_error is None and not cleanup["cleanup_failed"],
+            "engine_error": engine_error,
+            "cleanup_failed": cleanup["cleanup_failed"],
+            "execution_state_unknown": cleanup["cleanup_failed"],
+        },
+    }
+    if strict_field_readback:
+        if (field_array_payload is None or strict_pair is None
+                or strict_selector_readback is None or strict_native_coordinates is None
+                or strict_shape_witness is None or strict_worker_payload_info is None
+                or not strict_selection_evidence):
+            raise ExecutionContractError(
+                "FIELD_READBACK_INCOMPLETE",
+                "strict W21 field readback did not produce a complete field, selector, selection, and coordinate witness",
+                stage="post_dispatch",
+            )
+        if engine_error is not None or cleanup["cleanup_failed"]:
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                "strict W21 field readback did not complete with verified engine and cleanup status",
+                stage="post_dispatch",
+            )
+        field_payload = {
+            "values": field_array_payload.values,
+            "axes": list(field_array_payload.axes),
+            "shape": list(field_array_payload.shape),
+            "coords": field_array_payload.coords,
+            "units": field_array_payload.units,
+            "metadata": field_array_payload.metadata,
+            "is_complex": field_array_payload.is_complex,
+        }
+        field_evidence = {
+            "status": "VERIFIED",
+            "scope": "selected_source_field_values_and_native_coordinate_payload_only",
+            "solution_tuple": {
+                "outer": int(strict_pair["outer"]),
+                "inner": int(strict_pair["inner"]),
+                "solnum": int(strict_pair["solnum"]),
+                "source": "SolutionInfo.getSolnum(outer, strict)",
+            },
+            "selector_readback": dict(strict_selector_readback),
+            "selection_readback": strict_selection_evidence[0],
+            "expression_unit_readback": {
+                "values": dict(expression_units),
+                "source": "NumericalFeature.getStringArray('unit')",
+                "interpretation": "configured or model-dependent output units; not intrinsic field-unit verification",
+                "field_dimensionality": "UNVERIFIED",
+            },
+            "coordinates": {
+                "values": strict_native_coordinates,
+                "shape": list(strict_shape_witness["shape"]),
+                "source": "PersistentComsolWorker.getStrictFieldReadback -> NumericalFeature.getCoordinates()",
+                "coordinate_frame": (initial_dataset_evidence.get("frametype")
+                                      if isinstance(initial_dataset_evidence, Mapping)
+                                      and initial_dataset_evidence.get("status") == "VERIFIED"
+                                      else "UNVERIFIED"),
+                "coordinate_frame_status": ("VERIFIED" if isinstance(initial_dataset_evidence, Mapping)
+                                             and initial_dataset_evidence.get("status") == "VERIFIED"
+                                             else "UNVERIFIED"),
+                "coordinate_frame_source": (initial_dataset_evidence.get("source")
+                                             if isinstance(initial_dataset_evidence, Mapping) else None),
+                "dataset_identity": dict(initial_dataset_evidence)
+                    if isinstance(initial_dataset_evidence, Mapping) else None,
+            },
+            "field_array": field_payload,
+            "worker_payload_limits": dict(strict_worker_payload_info),
+            "limits": {
+                "max_numeric_scalars_including_real_imag_and_coordinates": W21_FIELD_READBACK_MAX_NUMERIC_SCALARS,
+                "max_json_response_bytes": W21_FIELD_READBACK_MAX_JSON_BYTES,
+                "engine_internal_memory": "UNMEASURED",
+            },
+        }
+        if initial_dataset_evidence is not None:
+            field_evidence["initial_stage_dataset_identity"] = dict(initial_dataset_evidence)
+        response["strict_field_readback"] = field_evidence
+        response["values"] = None
+        response["field_array"] = None
+        if isinstance(response.get("result_budget"), Mapping):
+            budget = dict(response["result_budget"])
+            budget["limits"] = {
+                "max_elements": W21_FIELD_READBACK_MAX_NUMERIC_SCALARS,
+                "max_bytes": W21_FIELD_READBACK_MAX_JSON_BYTES,
+                "scope": "field_values_real_imag_plus_native_coordinates_and_json_response",
+                "engine_internal_cache": "UNMEASURED",
+            }
+            response["result_budget"] = budget
+        _enforce_w21_field_response_limits(response)
+    return response
+
+
+
+def _requested_interp_properties(
+    feature: Any, expressions: Sequence[str], units: Sequence[str], *, stage: str,
+) -> dict[str, Any]:
+    """Bind requested numerical units to actual same-feature native property arrays.
+
+    COMSOL 6.4 Interp doc4485/chunks17293-17294 defines getData as the
+    interpolation result and unit as the unit used for its expression.
+    This is property/application evidence, not a standalone runtime proof
+    of a particular model or conversion. No fallback, broadcast or relabel.
+    """
+    try:
+        observed_expr = _call(feature, "getStringArray", "expr")
+        observed_unit = _call(feature, "getStringArray", "unit")
+    except Exception as exc:
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            f"Interp requested-unit {stage} native expr/unit getter failed: {exc}",
+        ) from exc
+    snapshots = {}
+    for name, observed, requested in (("expr", observed_expr, expressions),
+                                      ("unit", observed_unit, units)):
+        if (not isinstance(observed, Sequence) or isinstance(observed, (str, bytes))
+                or any(not isinstance(value, str) for value in observed)
+                or list(observed) != list(requested)):
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                f"Interp requested-unit {stage} {name} readback differs from exact requested array: "
+                f"observed={observed!r}, requested={list(requested)!r}",
+            )
+        snapshots[name] = list(observed)
+    return {"stage": stage, "expressions": snapshots["expr"], "units": snapshots["unit"],
+            "source": "same actual Interp NumericalFeature.getStringArray(expr/unit)",
+            "status": "VERIFIED_EXACT_NATIVE_ARRAYS"}
+
+
+def _validate_count_only_point_samples(data: Any, *, num_expressions: int,
+        point_count: int, raw_layout: str, count_observation: Mapping[str, Any] | None) -> None:
+    """Validate bounded native samples without introducing physical tuple axes."""
+    if (not isinstance(count_observation, Mapping)
+            or count_observation.get("status") not in {"VERIFIED_SINGLE_STORED_NUMERIC_COUNT", "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT"}
+            or type(count_observation.get("numeric_solution_count")) is not int
+            or count_observation["numeric_solution_count"] != 1
+            or count_observation.get("solution_axes_pair_mapping_complete") is not False):
+        raise ExecutionContractError("SOLUTION_AXIS_METADATA_UNAVAILABLE", "unmapped samples require independently verified singleton allocation")
+    if raw_layout not in {"expression,solnum,point", "expression,solnum"}:
+        raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "unmapped native sample layout is unsupported")
+    rows = lambda x: list(x) if isinstance(x, Sequence) and not isinstance(x, (str, bytes, Mapping)) else None
+    expressions = rows(data)
+    if expressions is None or len(expressions) != num_expressions:
+        raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "unmapped expression count differs from request")
+    for expression in expressions:
+        samples = rows(expression)
+        if samples is None or len(samples) != 1:
+            raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "unmapped native sample count differs from singleton allocation")
+        points = rows(samples[0]) if raw_layout.endswith("point") else [samples[0]]
+        if points is None or len(points) != point_count:
+            raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "unmapped point count differs from request")
+        for point in points:
+            values = list(point.values()) if isinstance(point, Mapping) and set(point) == {"real", "imag"} else [point]
+            if any(type(value) not in (int, float) or not math.isfinite(value) for value in values):
+                raise ExecutionContractError("COMPLEX_DATA_ERROR", "unmapped native sample is not finite numeric real/imag data")
+
+
+def result_at_points(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """Evaluate expressions at explicit spatial points with coordinate readback."""
+    spec = require_mapping(arguments.get("spec", {}), "spec")
+    points = arguments.get("points")
+    if not isinstance(points, Sequence) or not points:
+        raise ExecutionContractError("INVALID_REQUEST", "points must be a non-empty sequence")
+    coordinate_unit = arguments.get("coordinate_unit") or "m"
+    frame = arguments.get("frame") or "spatial"
+    if frame != "spatial":
+        # Frame support is a request contract decision.  Refuse it before
+        # binding the model or reading dataset metadata, so the caller has a
+        # validation-stage witness that no engine mutation/read was issued.
+        raise PreWriteRefusal(
+            "API_UNSUPPORTED",
+            f"coordinate frame {frame!r} not supported; only 'spatial' supported",
+            details={"frame": frame, "mutation_issued": False},
+        )
+
+    expressions = require_string_array(spec.get("expressions"), "spec.expressions")
+    requested_units = None
+    if spec.get("units") is not None:
+        raw_units = spec["units"]
+        if (not isinstance(raw_units, Sequence) or isinstance(raw_units, (str, bytes, Mapping))
+                or not raw_units
+                or any(not isinstance(unit, str) or not unit.strip() for unit in raw_units)):
+            raise ExecutionContractError("INVALID_REQUEST", "spec.units must be a nonempty ordered array of unit strings")
+        # Units may repeat across distinct expressions; unlike entity tags they are not a set.
+        requested_units = list(raw_units)
+        if len(requested_units) != len(expressions):
+            raise ExecutionContractError("INVALID_REQUEST", "spec.units must have exactly one unit per expression")
+    solution_spec = require_mapping(spec.get("solution", {}), "spec.solution")
+    dataset_tag = solution_spec.get("dataset")
+    if not dataset_tag:
+        raise ExecutionContractError("INVALID_REQUEST", "spec.solution.dataset is required")
+
+    point_selection = spec.get("selection")
+    if point_selection is not None:
+        from ._g3_common import validate_selection_spec
+        point_selection = validate_selection_spec(point_selection, allowed_kinds={"named", "explicit"})
+        if not all(k in point_selection for k in ("component", "geometry", "entity_dimension")):
+            raise ExecutionContractError("INVALID_SELECTION", "point selection requires component/geometry/dimension")
+        if spec.get("entity_dim") is not None and (type(spec["entity_dim"]) is not int or spec["entity_dim"] != point_selection["entity_dimension"]):
+            raise ExecutionContractError("INVALID_SELECTION", "point selection and entity_dim differ")
+    complex_mode = spec.get("complex_mode", "real")
+    if complex_mode not in COMPLEX_MODES:
+        raise ExecutionContractError("API_UNSUPPORTED", f"complex_mode {complex_mode!r} is not supported")
+    for name in ("time", "frequency", "parameters"):
+        if solution_spec.get(name) is not None or spec.get(name) is not None:
+            raise ExecutionContractError("API_UNSUPPORTED", f"spec.solution.{name} matching is unavailable for result.at_points")
+
+    dim = len(points[0]) if isinstance(points[0], Sequence) else len(points[0].keys())
+    point_count = len(points)
+    coord_matrix: list[list[float]] = [[] for _ in range(dim)]
+    for idx, pt in enumerate(points):
+        pt_dim = len(pt) if isinstance(pt, Sequence) else len(pt.keys())
+        if pt_dim != dim:
+            raise ExecutionContractError(
+                "COORDINATE_ERROR",
+                f"Point index {idx} has dimension {pt_dim}, expected {dim}",
+            )
+        if isinstance(pt, Sequence):
+            for d in range(dim):
+                v = float(pt[d])
+                if not math.isfinite(v):
+                    raise ExecutionContractError("INVALID_REQUEST", f"point coordinate must be finite, got {v}")
+                coord_matrix[d].append(v)
+        elif isinstance(pt, Mapping):
+            for d, k in enumerate(("x", "y", "z")[:dim]):
+                v = float(pt[k])
+                if not math.isfinite(v):
+                    raise ExecutionContractError("INVALID_REQUEST", f"point coordinate must be finite, got {v}")
+                coord_matrix[d].append(v)
+
+    model = bound_model(worker, model_tag)
+    results = _call(model, "result")
+    numerical_list = _call(results, "numerical")
+    dataset_list = _call(results, "dataset")
+    if dataset_tag not in tag_list(dataset_list):
+        raise node_not_found(f"dataset {dataset_tag!r} does not exist")
+    dset_node = _call(dataset_list, "get", dataset_tag)
+    errs: list[dict[str, Any]] = []
+    requested_solution = solution_spec.get("solution") if isinstance(solution_spec.get("solution"), str) else None
+    dataset_binding = _resolve_dataset_binding(
+        model,
+        str(dataset_tag),
+        requested_solution=requested_solution,
+    )
+    if (
+        isinstance(dataset_binding, Mapping)
+        and isinstance(dataset_binding.get("error"), Mapping)
+        and dataset_binding["error"].get("code") == "SOLUTION_MISMATCH"
+    ):
+        raise ExecutionContractError(
+            "SOLUTION_MISMATCH",
+            str(dataset_binding["error"].get("message", "requested solution does not match dataset")),
+            details={"dataset_binding": dict(dataset_binding)},
+        )
+    ctx = _coordinate_context(model, dset_node, errs, dataset_binding=dataset_binding)
+    sdim = ctx.get("space_dimension")
+    if sdim is not None and dim != sdim:
+        raise ExecutionContractError(
+            "DIMENSION_MISMATCH",
+            f"Point space dimension {dim} does not match model space dimension {sdim}",
+        )
+    solution_tag = (
+        solution_spec.get("solution")
+        or (dataset_binding.get("solution") if isinstance(dataset_binding, Mapping) else None)
+        or _string_or_none(dset_node, "solution", errs)
+        or _string_or_none(dset_node, "data", errs)
+    )
+    # Only the current sealed owned builtin point ticket may omit a redundant
+    # empty-outer convenience diagnostic. No request JSON or cached inventory
+    # certifies this: the original independent witness runs on this live model.
+    from ._ephemeral_result_ticket import current_scope
+    point_scope = current_scope()
+    single_solution_count_observation: dict[str, Any] | None = None
+    skip_empty_tuple_diagnostic = False
+    if (point_scope is not None and point_scope.entered and point_scope.binding.intact()
+            and point_scope.service.ledger.model_ownership.get(model_tag) == "mcp_owned"
+            and solution_spec.get("outer") is None and solution_spec.get("inner") is None):
+        single_solution_count_observation = _single_stored_solution_count_observation(
+            model, dataset_binding, solution_tag)
+        skip_empty_tuple_diagnostic = (
+            single_solution_count_observation.get("status") == "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT"
+            and single_solution_count_observation.get("witness_kind") == "attached_parametric_frequency_singleton"
+            and type(single_solution_count_observation.get("numeric_solution_count")) is int
+            and single_solution_count_observation["numeric_solution_count"] == 1
+            and single_solution_count_observation.get("solution_axes_pair_mapping_complete") is False)
+    solution_binding = _result_solution_binding(model, solution_tag,
+        _skip_empty_outer_tuple_diagnostic=skip_empty_tuple_diagnostic)
+    pair_mapping_complete = (isinstance(solution_binding, Mapping)
+                             and solution_binding.get("pair_mapping_complete") is True)
+    if (solution_spec.get("outer") is not None or solution_spec.get("inner") is not None) and not pair_mapping_complete:
+        raise ExecutionContractError("SOLUTION_AXIS_METADATA_UNAVAILABLE", "explicit outer/inner selection requires complete SolutionInfo mapping")
+    if not pair_mapping_complete and single_solution_count_observation is None:
+        single_solution_count_observation = _single_stored_solution_count_observation(
+            model, dataset_binding, solution_tag)
+
+    point_selection_expected = None
+    if point_selection is not None:
+        if ctx.get("component") != point_selection["component"] or ctx.get("geometry") != point_selection["geometry"]:
+            raise ExecutionContractError("SELECTION_DATASET_MISMATCH", "point selection component/geometry differs from dataset")
+        from ._g3_common import resolve_selection_entities
+        point_selection_expected = resolve_selection_entities(worker, model_tag, point_selection, _component_final_entity=True)
+    point_selection_evidence = {}
+    original_numerical_tags = tag_list(numerical_list)
+    from ._ephemeral_result_ticket import current_scope
+    ephemeral_scope = current_scope()
+    if ephemeral_scope is not None:
+        ephemeral_scope.original_container(numerical_list, original_numerical_tags)
+    ephemeral_tag = _unique_tag(original_numerical_tags)
+    cleanup: dict[str, Any] = {
+        "tag": ephemeral_tag,
+        "type_id": "Interp",
+        "created": False,
+        "removed": False,
+        "cleanup_failed": False,
+        "error": None,
+    }
+
+    feature = None
+    engine_error = None
+    transformed = None
+    expression_units: dict[str, str | None] = {}
+    requested_unit_evidence: dict[str, Any] | None = None
+    field_array_payload: Any = None
+    is_complex: bool | None = None
+    field_array_is_complex = False
+    readback_status = "UNAVAILABLE"
+    readback_coords = None
+    data_readback: Any = None
+    data_readback_status = "UNVERIFIED"
+    result_budget_records: list[dict[str, Any]] = []
+    result_budget_guard = _make_result_budget_guard(
+        operation="result.at_points",
+        feature_kind="Interp",
+        expressions=expressions,
+        binding=solution_binding,
+        single_solution_count_observation=single_solution_count_observation,
+        point_count=point_count,
+        records=result_budget_records,
+    )
+
+    try:
+        scale = _length_scale_to_geometry(coordinate_unit, ctx.get("length_unit"))
+        scaled_coord_matrix = [[x * scale for x in row] for row in coord_matrix]
+
+        feature = _call(numerical_list, "create", ephemeral_tag, "Interp")
+        cleanup["created"] = True
+        if ephemeral_scope is not None:
+            ephemeral_scope.created(feature, ephemeral_tag)
+
+        _call(feature, "set", "data", dataset_tag)
+        # A successful setter call is not proof that the native feature now
+        # targets this dataset.  Read the property back before requesting any
+        # values; an ignored setter or wrong feature property would otherwise
+        # publish values from an unrelated dataset while echoing the request.
+        try:
+            data_readback = _call(feature, "getString", "data")
+        except Exception as exc:
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                "Interp data property could not be read back after set('data')",
+            ) from exc
+        if not isinstance(data_readback, str) or data_readback != dataset_tag:
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                f"Interp data readback {data_readback!r} does not match dataset {dataset_tag!r}",
+            )
+        data_readback_status = "VERIFIED"
+        if point_selection is not None:
+            from ._g3_common import bind_strict_feature_selection
+            point_selection_evidence["before"] = bind_strict_feature_selection(worker, model_tag, feature, point_selection,
+                stage="before_numeric_read", expected=point_selection_expected, apply=True)
+        _call(feature, "set", "expr", expressions)
+        if requested_units is not None:
+            for index, unit in enumerate(requested_units):
+                _call(feature, "setIndex", "unit", unit, index)
+        _call(feature, "setInterpolationCoordinates", scaled_coord_matrix)
+        if requested_units is not None:
+            before_units = _requested_interp_properties(feature, expressions, requested_units, stage="before_numeric_read")
+        raw_real, raw_imag, is_complex, raw_layout = _run_bound_feature(
+            feature,
+            solution_binding if pair_mapping_complete else None,
+            num_expressions=len(expressions),
+            budget_guard=result_budget_guard,
+        )
+        if requested_units is not None:
+            after_units = _requested_interp_properties(feature, expressions, requested_units, stage="after_numeric_read")
+            requested_unit_evidence = {
+                "status": "VERIFIED_REQUESTED_UNITS_BEFORE_AND_AFTER_NUMERIC_READ",
+                "requested_expressions": list(expressions), "requested_units": list(requested_units),
+                "setter": "actual Interp NumericalFeature.setIndex(unit,requested,index)",
+                "before": before_units, "after": after_units,
+                "no_external_scaling_or_relabeling": True,
+            }
+            expression_units = dict(zip(after_units["expressions"], after_units["units"]))
+        else:
+            expression_units = _feature_units(feature, expressions)
+        if point_selection is not None:
+            point_selection_evidence["after"] = bind_strict_feature_selection(worker, model_tag, feature, point_selection,
+                stage="after_numeric_read", expected=point_selection_expected)
+            if point_selection_evidence["before"]["native_selection_readback"] != point_selection_evidence["after"]["native_selection_readback"]:
+                raise ExecutionContractError("SELECTION_READBACK_MISMATCH", "point selection changed during numeric read")
+        transformed = _transform_complex_data(raw_real, raw_imag, complex_mode, is_complex=is_complex)
+        if not pair_mapping_complete:
+            _validate_count_only_point_samples(transformed, num_expressions=len(expressions),
+                point_count=point_count, raw_layout=raw_layout,
+                count_observation=single_solution_count_observation)
+        if pair_mapping_complete:
+            from ._solution_binding import FieldArray, SolutionBinding
+            field_array_is_complex = _field_array_is_complex(
+                is_complex, complex_mode, "none"
+            )
+            # ``setInterpolationCoordinates`` and ``getCoordinates`` use
+            # COMSOL's dimension-major matrix.  FieldArray publishes the
+            # user-facing point coordinate records as ``[point][dimension]``.
+            field_point_coordinates = [
+                [scaled_coord_matrix[dimension][point] for dimension in range(dim)]
+                for point in range(point_count)
+            ]
+            # NumericalFeature.getData/getImagData expose a point axis, while
+            # getReal/getImag are aggregate ``[expression][solnum]`` reads.
+            # The latter cannot carry one value per requested interpolation
+            # point.  Do not attach all requested coordinates to a singleton
+            # aggregate result: that would manufacture a FieldArray shape and
+            # was the source of the public export coordinate-count failure.
+            if raw_layout.endswith("point"):
+                field_point_count = _feature_point_count(transformed, raw_layout)
+                if field_point_count != point_count:
+                    raise ExecutionContractError(
+                        "FIELD_ARRAY_SHAPE_MISMATCH",
+                        f"interpolation returned {field_point_count} points, expected {point_count}",
+                    )
+                field_point_coordinates_for_result = field_point_coordinates
+            else:
+                if point_count != 1:
+                    raise ExecutionContractError(
+                        "FIELD_ARRAY_SHAPE_MISMATCH",
+                        "NumericalFeature.getReal/getImag returned aggregate [expression,solnum] data; "
+                        "per-point FieldArray output requires getData/getImagData",
+                    )
+                field_point_count = 1
+                field_point_coordinates_for_result = field_point_coordinates[:1]
+            field_coords, field_units, field_metadata = _field_array_context(
+                solution_binding,
+                expressions,
+                expression_units=expression_units,
+                length_unit=ctx.get("length_unit"),
+                point_count=field_point_count,
+                point_coordinates=field_point_coordinates_for_result,
+                point_coordinate_source="request",
+            )
+            if raw_layout.startswith("expression,outer"):
+                field_array_payload = FieldArray(
+                    transformed,
+                    axes=("expression", "outer", "inner", "point"),
+                    coords=field_coords,
+                    units=field_units,
+                    metadata=field_metadata,
+                    is_complex=field_array_is_complex,
+                )
+            else:
+                field_array_payload = SolutionBinding.field_array_from_engine(
+                    transformed,
+                    solution_binding,
+                    num_expressions=len(expressions),
+                    layout=raw_layout,
+                    selected_outer=(solution_binding.get("outer_indices") or [None])[0],
+                    coords=field_coords,
+                    units=field_units,
+                    metadata=field_metadata,
+                    is_complex=field_array_is_complex,
+                )
+            selectors: dict[str, Any] = {}
+            if solution_spec.get("outer") is not None:
+                selectors["outer"] = solution_spec["outer"]
+            if solution_spec.get("inner") is not None:
+                selectors["inner"] = solution_spec["inner"]
+            if selectors:
+                field_array_payload = field_array_payload.select(**selectors)
+            transformed = field_array_payload.values
+
+        try:
+            readback_coords = _call(feature, "getCoordinates")
+            if readback_coords is not None:
+                if isinstance(readback_coords, Sequence) and len(readback_coords) == len(scaled_coord_matrix):
+                    match = True
+                    for r_row, s_row in zip(readback_coords, scaled_coord_matrix):
+                        if not isinstance(r_row, Sequence) or len(r_row) != len(s_row):
+                            match = False
+                            break
+                        if any(not math.isclose(float(r), float(s), rel_tol=1e-4, abs_tol=1e-5) for r, s in zip(r_row, s_row)):
+                            match = False
+                            break
+                    readback_status = "VERIFIED" if match else "MISMATCH"
+                else:
+                    readback_status = "MISMATCH"
+        except Exception:
+            readback_status = "UNAVAILABLE"
+
+
+    except Exception as exc:
+        if isinstance(exc, ExecutionContractError):
+            raise
+        engine_error = str(exc)
+        transformed = None
+    finally:
+        if cleanup["created"]:
+            _remove_ephemeral(numerical_list, ephemeral_tag, cleanup, [])
+
+    return {
+        "values": transformed,
+        "points": points,
+        "point_count": point_count,
+        "expressions": expressions,
+        # Publish the resolver's read-back witness alongside the requested
+        # dataset tag.  Consumers must be able to distinguish a native
+        # dataset binding from an echoed request, especially for derived
+        # datasets such as Join.
+        "dataset": dataset_tag,
+        "solution": solution_tag,
+        "binding_source": (
+            "resolve_dataset_binding(model, dataset_tag)"
+            if isinstance(dataset_binding, Mapping) else None
+        ),
+        "dataset_binding": (
+            dict(dataset_binding) if isinstance(dataset_binding, Mapping) else None
+        ),
+        "solution_axes": {
+            "pair_mapping_complete": bool(
+                isinstance(solution_binding, Mapping)
+                and solution_binding.get("pair_mapping_complete") is True
+            ),
+            "outer": list(solution_binding.get("outer_indices", [])) if pair_mapping_complete else [],
+            "inner": list(solution_binding.get("inner_indices", [])) if pair_mapping_complete else [],
+            "parameters_complete": bool(pair_mapping_complete and solution_binding.get("parameters_complete") is True),
+            "axis_metadata_complete": bool(pair_mapping_complete and solution_binding.get("axis_metadata_complete") is True),
+            "numeric_count_observation": (
+                dict(single_solution_count_observation)
+                if single_solution_count_observation is not None else None
+            ),
+            "interpretation": (
+            "numeric sample count may be bounded by a direct stored-solution observation; "
+            "a documented single-level attached frequency sequence may also bound one sample; "
+            "outer/inner tuple mapping remains unavailable"
+            if single_solution_count_observation is not None
+                and single_solution_count_observation.get("status") in {
+                    "VERIFIED_SINGLE_STORED_NUMERIC_COUNT",
+                    "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT",
+                }
+                else "only a complete SolutionBinding establishes outer/inner tuples"
+            ),
+        },
+        "feature_readback": {
+            "data": data_readback,
+            "data_status": data_readback_status,
+            "source": "NumericalFeature.getString('data') after set('data')",
+            "selection_application": point_selection_evidence,
+            **({"requested_unit_application": requested_unit_evidence} if requested_units is not None else {}),
+        },
+        "coordinate_unit": coordinate_unit,
+        "frame": frame,
+        "expression_units": dict(expression_units),
+        "expression_unit_source": "NumericalFeature.getStringArray('unit') after result.at_points evaluation",
+        "coordinate_readback": {
+            "status": readback_status,
+            "coordinates": readback_coords,
+            "unit": ctx.get("length_unit"),
+        },
+        "complex_mode": complex_mode,
+        "is_complex": is_complex,
+        "field_array": field_array_payload.to_dict() if field_array_payload is not None else None,
+        "result_budget": {
+            "status": (
+                "PASS"
+                if result_budget_records and all(
+                    record.get("status") == "PASS" and record.get("allowed") is True
+                    for record in result_budget_records
+                ) and engine_error is None
+                else ("BLOCKED" if result_budget_records or engine_error is not None else "UNVERIFIED")
+            ),
+            "limits": {
+                "max_elements": RESULT_NUMERIC_PAYLOAD_MAX_ELEMENTS,
+                "max_bytes": RESULT_NUMERIC_PAYLOAD_MAX_BYTES,
+                "scope": "numeric_payload_only",
+                "engine_internal_cache": "UNMEASURED",
+            },
+            "records": result_budget_records,
+            "publish_allowed": bool(
+                result_budget_records
+                and all(record.get("publish_allowed") is True for record in result_budget_records)
+                and engine_error is None
+                and not cleanup["cleanup_failed"]
+            ),
+        },
+        "cleanup": cleanup,
+        "status": {
+            "ok": engine_error is None and not cleanup["cleanup_failed"] and readback_status != "MISMATCH",
+            "engine_error": engine_error,
+            "cleanup_failed": cleanup["cleanup_failed"],
+            "verification_status": "PASSED" if readback_status == "VERIFIED" else ("FAILED" if readback_status == "MISMATCH" else "UNVERIFIED"),
+        },
+        "verification_status": "PASSED" if readback_status == "VERIFIED" else ("FAILED" if readback_status == "MISMATCH" else "UNVERIFIED"),
+    }
+
+
+# Retain the original built-in identity; generic callbacks and caller mappings
+# cannot create a read-ticket scope or certify the returned cleanup dictionary.
+_ORIGINAL_RESULT_AT_POINTS = result_at_points
+
+def result_at_points(worker, model_tag, arguments):
+    from ._ephemeral_result_ticket import current_scope
+    scope = current_scope()
+    if scope is not None:
+        scope.enter_builtin(worker, model_tag, arguments, _BUILTIN_RESULT_AT_POINTS)
+    data = _ORIGINAL_RESULT_AT_POINTS(worker, model_tag, arguments)
+    if scope is not None:
+        scope.finish_builtin(data)
+    return data
+
+_BUILTIN_RESULT_AT_POINTS = result_at_points
+
+# ---------------------------------------------------------------------------
+# W17 Probe / Derived Values & Table Management
+# ---------------------------------------------------------------------------
+
+def _result_feature_target(worker: Any, model_tag: str, path: Any, collection: str) -> tuple[dict[str, Any], str, Any, Any]:
+    """Resolve a typed ``result.<collection>(tag)`` path and its owner list."""
+    if not isinstance(path, Mapping):
+        raise PreWriteRefusal("INVALID_NODE_PATH", f"{collection} CRUD requires a NodePath object")
+    parsed = NodePath.from_wire(path, allow_empty=False)
+    if not parsed.segments or parsed.segments[0].accessor != "result":
+        raise PreWriteRefusal("INVALID_NODE_PATH", f"{collection} path must begin with the result accessor")
+    if any(segment.accessor is not None for segment in parsed.segments[1:]):
+        raise PreWriteRefusal("INVALID_NODE_PATH", f"{collection} path has an unsupported accessor after result")
+    final = parsed.segments[-1]
+    if final.collection != collection or final.tag is None:
+        raise PreWriteRefusal("INVALID_NODE_PATH", f"path must end with collection={collection!r} and a tag")
+    canonical = parsed.as_dict()
+    _canonical_from_engine, node = resolve_path(worker, model_tag, canonical, label="path")
+    model = bound_model(worker, model_tag)
+    owner = _call(_call(model, "result"), collection)
+    tags = tag_list(owner)
+    tag = str(final.tag)
+    if tag not in tags:
+        raise node_not_found(f"{collection} feature {tag!r} does not exist; existing: {tags}")
+    actual = _call(owner, "get", tag)
+    return canonical, tag, owner, actual if actual is not None else node
+
+
+def _result_feature_create_path(path: Any, collection: str) -> tuple[dict[str, Any], str]:
+    if not isinstance(path, Mapping):
+        raise PreWriteRefusal("INVALID_NODE_PATH", f"{collection} create path must be a NodePath object")
+    parsed = NodePath.from_wire(path, allow_empty=False)
+    if not parsed.segments or parsed.segments[0].accessor != "result":
+        raise PreWriteRefusal("INVALID_NODE_PATH", f"{collection} path must begin with the result accessor")
+    if any(segment.accessor is not None for segment in parsed.segments[1:]):
+        raise PreWriteRefusal("INVALID_NODE_PATH", f"{collection} path has an unsupported accessor after result")
+    final = parsed.segments[-1]
+    if final.collection != collection or final.tag is None:
+        raise PreWriteRefusal("INVALID_NODE_PATH", f"create path must end in {collection}:<tag>")
+    return parsed.as_dict(), str(final.tag)
+
+
+def _validate_result_feature_path(path: Any, collection: str) -> tuple[dict[str, Any], str]:
+    """Validate a typed result path without touching the engine."""
+    if not isinstance(path, Mapping):
+        raise PreWriteRefusal("INVALID_NODE_PATH", f"{collection} path must be a NodePath object")
+    parsed = NodePath.from_wire(path, allow_empty=False)
+    if not parsed.segments or parsed.segments[0].accessor != "result":
+        raise PreWriteRefusal("INVALID_NODE_PATH", f"{collection} path must begin with the result accessor")
+    if any(segment.accessor is not None for segment in parsed.segments[1:]):
+        raise PreWriteRefusal("INVALID_NODE_PATH", f"{collection} path has an unsupported accessor after result")
+    final = parsed.segments[-1]
+    if final.collection != collection or final.tag is None:
+        raise PreWriteRefusal("INVALID_NODE_PATH", f"path must end with collection={collection!r} and a tag")
+    return parsed.as_dict(), str(final.tag)
+
+
+_NUMERICAL_PROPERTY_NAMES = frozenset({
+    "expr", "data", "unit", "descr", "table", "solnum", "t", "method", "selection",
+    "window", "frame", "dataset", "coord", "edim", "exprs",
+})
+
+
+def _normalise_feature_definition(definition: Any, *, allowed: frozenset[str]) -> list[tuple[str, Any]]:
+    raw = require_mapping(definition, "definition")
+    if "properties" in raw:
+        if set(raw) != {"properties"}:
+            raise ExecutionContractError("INVALID_REQUEST", "definition.properties cannot be mixed with direct fields")
+        from ._g3_common import property_definition
+        raw = property_definition(raw["properties"], "definition.properties")
+    unknown = sorted(set(raw) - allowed - {"tag", "type_id"})
+    if unknown:
+        raise ExecutionContractError("INVALID_REQUEST", f"definition has unsupported properties: {unknown}")
+    return [(str(name), _probe_unwrap_property_value(value, f"definition.{name}"))
+            for name, value in raw.items() if name not in {"tag", "type_id"}]
+
+
+def _table_matrix(value: Any, label: str) -> list[list[Any]]:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes, Mapping)):
+        raise ExecutionContractError("INVALID_REQUEST", f"{label} must be a rectangular array")
+    rows = list(value)
+    if not rows:
+        return []
+    converted: list[list[Any]] = []
+    for r_index, row in enumerate(rows):
+        if not isinstance(row, Sequence) or isinstance(row, (str, bytes, Mapping)):
+            raise ExecutionContractError("INVALID_REQUEST", f"{label}[{r_index}] must be an array")
+        vals = [_probe_unwrap_property_value(item, f"{label}[{r_index}][{c_index}]") for c_index, item in enumerate(row)]
+        for c_index, item in enumerate(vals):
+            if isinstance(item, bool) or not isinstance(item, (int, float)) or not math.isfinite(float(item)):
+                raise ExecutionContractError("INVALID_REQUEST", f"{label}[{r_index}][{c_index}] must be finite numeric data")
+        converted.append(vals)
+    widths = {len(row) for row in converted}
+    if len(widths) > 1:
+        raise ExecutionContractError("INVALID_REQUEST", f"{label} must be rectangular")
+    return converted
+
+
+_TABLE_TARGET_UNSET = object()
+
+
+def _table_matrix_shape(value: Any) -> tuple[int, tuple[int, ...]] | None:
+    """Return a table matrix shape without treating malformed data as empty.
+
+    ``getImag()`` is a separate native read.  A complex table whose imaginary
+    matrix has a different shape must stay unreadable; turning a short matrix
+    into a row-by-row best effort would expose the real component as if it were
+    the complete table.
+    """
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes, Mapping)):
+        return None
+    rows = list(value)
+    widths: list[int] = []
+    for row in rows:
+        if not isinstance(row, Sequence) or isinstance(row, (str, bytes, Mapping)):
+            return None
+        widths.append(len(row))
+    return len(rows), tuple(widths)
+
+
+def _table_matrix_matches(actual: Any, expected: Any) -> bool:
+    """Compare native table matrices without accepting shape-only readback."""
+    if not isinstance(actual, Sequence) or isinstance(actual, (str, bytes, Mapping)):
+        return False
+    if not isinstance(expected, Sequence) or isinstance(expected, (str, bytes, Mapping)):
+        return False
+    actual_rows = list(actual)
+    expected_rows = list(expected)
+    if len(actual_rows) != len(expected_rows):
+        return False
+    for actual_row, expected_row in zip(actual_rows, expected_rows):
+        if not isinstance(actual_row, Sequence) or isinstance(actual_row, (str, bytes, Mapping)):
+            return False
+        if not isinstance(expected_row, Sequence) or isinstance(expected_row, (str, bytes, Mapping)):
+            return False
+        actual_values = list(actual_row)
+        expected_values = list(expected_row)
+        if len(actual_values) != len(expected_values):
+            return False
+        for actual_value, expected_value in zip(actual_values, expected_values):
+            # Native complex table accessors may be exposed as {real, imag}
+            # rows.  The real and imaginary matrices are compared separately.
+            if isinstance(actual_value, Mapping) and "real" in actual_value:
+                actual_value = actual_value.get("real")
+            if isinstance(expected_value, Mapping) and "real" in expected_value:
+                expected_value = expected_value.get("real")
+            if isinstance(actual_value, bool) or isinstance(expected_value, bool):
+                # ``bool`` is an ``int`` subclass in Python; it is not valid
+                # numeric table data and must never compare equal to 0/1.
+                return False
+            if isinstance(actual_value, (int, float)) and isinstance(expected_value, (int, float)):
+                # A table setter performs no arithmetic.  Native doubles must
+                # round-trip exactly; a tolerance would accept an ignored
+                # setter for small nonzero values (for example 0 vs 1e-13).
+                if actual_value != expected_value:
+                    return False
+            elif actual_value != expected_value:
+                return False
+    return True
+
+
+def _table_readback(node: Any, *, expected_data: Any = _TABLE_TARGET_UNSET,
+                    expected_imaginary: Any = _TABLE_TARGET_UNSET,
+                    expected_headers: Any = _TABLE_TARGET_UNSET,
+                    expected_tag: Any = _TABLE_TARGET_UNSET,
+                    expected_type: Any = _TABLE_TARGET_UNSET) -> dict[str, Any]:
+    """Read a table and compare only fields for which a target was supplied.
+
+    A plain inspection has no expected target and therefore publishes
+    ``match=None``.  ``True`` is reserved for a real post-write comparison;
+    this prevents a readable table query from being mistaken for proof of a
+    prior setter.
+    """
+    headers_probe = call_probe(node, "getColumnHeaders")
+    headers = list(headers_probe["value"]) if headers_probe["ok"] and isinstance(headers_probe["value"], (list, tuple)) else None
+    real_probe = call_probe(node, "getReal")
+    data_error = real_probe.get("error") if not real_probe["ok"] else None
+    if real_probe["ok"]:
+        real = real_probe["value"]
+    else:
+        data_probe = call_probe(node, "getTableData", True)
+        if not data_probe["ok"]:
+            data_probe = call_probe(node, "getTableData")
+        real = data_probe["value"] if data_probe["ok"] else None
+        data_error = data_probe.get("error") if not data_probe["ok"] else None
+    imag_probe = call_probe(node, "getImag")
+    imag = imag_probe["value"] if imag_probe["ok"] else None
+    complex_probe = call_probe(node, "isComplex")
+    is_complex = complex_probe["value"] if complex_probe["ok"] and isinstance(complex_probe["value"], bool) else None
+    tag_probe = None
+    actual_tag = None
+    if expected_tag is not _TABLE_TARGET_UNSET:
+        tag_probe = call_probe(node, "tag")
+        if tag_probe["ok"] and isinstance(tag_probe["value"], str) and tag_probe["value"]:
+            actual_tag = tag_probe["value"]
+    type_probe = None
+    actual_type = None
+    if expected_type is not _TABLE_TARGET_UNSET:
+        type_probe = call_probe(node, "getType")
+        if type_probe["ok"] and isinstance(type_probe["value"], str) and type_probe["value"]:
+            actual_type = type_probe["value"]
+
+    # A true native complex flag makes getImag() mandatory.  A failed or
+    # malformed imaginary read is not a readable real-only table.  Conversely,
+    # a native false flag is sufficient proof that no imaginary component is
+    # part of the table, even when the optional getImag() method is absent.
+    real_shape = _table_matrix_shape(real)
+    imag_shape = _table_matrix_shape(imag) if imag_probe["ok"] else None
+    imaginary_shape_error: dict[str, Any] | None = None
+    if is_complex is True and (not imag_probe["ok"] or imag is None):
+        imaginary_shape_error = imag_probe.get("error") or {
+            "code": "TABLE_IMAGINARY_UNREADABLE",
+            "message": "isComplex() reported a complex table but getImag() returned no data",
+        }
+    elif is_complex is not False and imag_probe["ok"] and imag is not None and real_shape != imag_shape:
+        imaginary_shape_error = {
+            "code": "TABLE_IMAGINARY_SHAPE_MISMATCH",
+            "message": f"real table shape {real_shape!r} differs from imaginary table shape {imag_shape!r}",
+        }
+    elif is_complex is None and (not imag_probe["ok"] or imag is None):
+        # Without either a complex flag or an imaginary getter, the caller
+        # cannot establish that a real-only table is what the engine returned.
+        imaginary_shape_error = imag_probe.get("error") or {
+            "code": "TABLE_COMPLEX_STATUS_UNREADABLE",
+            "message": "table complex status and imaginary data could not be read",
+        }
+    if real is None:
+        rows: Any = None
+    elif (
+        imag is not None
+        and isinstance(real, (list, tuple))
+        and isinstance(imag, (list, tuple))
+        and _table_matrix_shape(real) is not None
+        and _table_matrix_shape(imag) is not None
+    ):
+        rows = []
+        for r_index, row in enumerate(real):
+            irow = imag[r_index] if r_index < len(imag) else []
+            rows.append([
+                {"real": value, "imag": irow[c_index]}
+                if c_index < len(irow) else value
+                for c_index, value in enumerate(row)
+            ])
+    else:
+        rows = real
+
+    targets: dict[str, bool] = {}
+    if expected_data is not _TABLE_TARGET_UNSET:
+        targets["data"] = real is not None and _table_matrix_matches(real, expected_data)
+    if expected_imaginary is not _TABLE_TARGET_UNSET:
+        targets["imaginary"] = imag is not None and _table_matrix_matches(imag, expected_imaginary)
+    if expected_headers is not _TABLE_TARGET_UNSET:
+        targets["headers"] = headers is not None and headers == list(expected_headers)
+    if expected_tag is not _TABLE_TARGET_UNSET:
+        targets["tag"] = actual_tag is not None and actual_tag == expected_tag
+    if expected_type is not _TABLE_TARGET_UNSET:
+        targets["type_id"] = actual_type is not None and actual_type == expected_type
+    if targets:
+        # A target-scoped verification only requires the fields it is proving.
+        # In particular, an empty create must be able to prove tag/type even
+        # when the native empty table has no data rows or optional complex
+        # accessors yet.
+        target_readable = True
+        if expected_data is not _TABLE_TARGET_UNSET:
+            target_readable = target_readable and real is not None
+        if expected_imaginary is not _TABLE_TARGET_UNSET:
+            target_readable = target_readable and imag is not None
+        if expected_headers is not _TABLE_TARGET_UNSET:
+            target_readable = target_readable and headers_probe["ok"]
+        strict_complex_read = (
+            expected_data is not _TABLE_TARGET_UNSET
+            or expected_imaginary is not _TABLE_TARGET_UNSET
+        )
+    else:
+        # Unscoped get/list inspection still needs a complete native table
+        # readback; otherwise a failed getter would look like a real-only
+        # table with ``match=None``.
+        target_readable = headers_probe["ok"] and real is not None
+        strict_complex_read = True
+    if imaginary_shape_error is not None and strict_complex_read:
+        target_readable = False
+    if expected_tag is not _TABLE_TARGET_UNSET:
+        target_readable = target_readable and tag_probe is not None and tag_probe["ok"]
+    if expected_type is not _TABLE_TARGET_UNSET:
+        target_readable = target_readable and type_probe is not None and type_probe["ok"]
+    match: bool | None = None if not targets else (target_readable and all(targets.values()))
+    return {
+        "readable": target_readable,
+        "match": match,
+        "headers": headers,
+        "data": rows,
+        "imaginary": imag,
+        "tag": actual_tag,
+        "type_id": actual_type,
+        "header_readback": headers_probe.get("error"),
+        "data_readback": data_error,
+        "imaginary_readback": imaginary_shape_error or (imag_probe.get("error") if not imag_probe["ok"] else None),
+        "complex": is_complex,
+        "complex_readback": complex_probe.get("error") if not complex_probe["ok"] else None,
+        "tag_readback": tag_probe.get("error") if tag_probe is not None and not tag_probe["ok"] else None,
+        "type_readback": type_probe.get("error") if type_probe is not None and not type_probe["ok"] else None,
+        "match_details": targets or None,
+    }
+
+
+def _table_definition_targets(node: Any, definition: Mapping[str, Any], *,
+                              expected_tag: Any = _TABLE_TARGET_UNSET,
+                              expected_type: Any = _TABLE_TARGET_UNSET) -> dict[str, Any]:
+    """Read back every field requested by one table mutation in one proof.
+
+    Per-setter readbacks stop the mutation sequence at the first immediate
+    failure.  This final readback is still necessary because a later setter
+    (for example, a header setter) can alter an earlier data value.
+    """
+    expected_data = (
+        _table_matrix(definition["data"], "definition.data")
+        if "data" in definition else _TABLE_TARGET_UNSET
+    )
+    expected_imaginary = (
+        _table_matrix(definition["imaginary"], "definition.imaginary")
+        if "imaginary" in definition else _TABLE_TARGET_UNSET
+    )
+    expected_headers = list(definition["headers"]) if "headers" in definition else _TABLE_TARGET_UNSET
+    readback = _table_readback(
+        node,
+        expected_data=expected_data,
+        expected_imaginary=expected_imaginary,
+        expected_headers=expected_headers,
+        expected_tag=expected_tag,
+        expected_type=expected_type,
+    )
+    details = dict(readback.get("match_details") or {})
+    if "imaginary" in definition:
+        # A requested imaginary matrix is valid only when the native feature
+        # explicitly confirms that it is complex.  Matching numbers alone are
+        # not proof that COMSOL retained the complex table state.
+        complex_state = readback.get("complex")
+        if complex_state is not True:
+            details["complex"] = False if complex_state is False else None
+            if complex_state is None:
+                readback["readable"] = False
+                readback["match"] = None
+            else:
+                readback["match"] = False
+            readback["match_details"] = details
+    elif "data" in definition:
+        # A real-only setter must prove that a prior complex value was cleared.
+        # If the native flag remains true, compare a zero imaginary matrix; a
+        # false flag itself is the native proof of real-only storage.  When the
+        # flag is unavailable, an exact all-zero imaginary read is an equally
+        # explicit proof; an absent/failed imaginary read remains unknown.
+        complex_state = readback.get("complex")
+        if complex_state is None:
+            expected_real = _table_matrix(definition["data"], "definition.data")
+            zero_imaginary = [[0.0 for _ in row] for row in expected_real]
+            zero_match = readback.get("imaginary") is not None and _table_matrix_matches(
+                readback.get("imaginary"), zero_imaginary
+            )
+            details["real_only_zero_imaginary"] = zero_match
+            if not zero_match:
+                readback["readable"] = False
+                readback["match"] = None
+            else:
+                details["real_only_complex_status"] = None
+        elif complex_state is True:
+            expected_real = _table_matrix(definition["data"], "definition.data")
+            zero_imaginary = [[0.0 for _ in row] for row in expected_real]
+            zero_match = readback.get("imaginary") is not None and _table_matrix_matches(
+                readback.get("imaginary"), zero_imaginary
+            )
+            details["real_only_zero_imaginary"] = zero_match
+            if not zero_match:
+                readback["match"] = False
+        else:
+            details["real_only_complex_status"] = True
+        readback["match_details"] = details
+    return readback
+
+
+def _table_final_write_check(readback: Mapping[str, Any], failed: list[Any], *,
+                             unknown: bool) -> bool:
+    """Append a truthful final mismatch/unreadability failure, if needed."""
+    if readback.get("match") is True:
+        return unknown
+    readable = bool(readback.get("readable"))
+    failed.append({
+        "step": "final_readback",
+        "error": {
+            "code": "READBACK_MISMATCH" if readable else "EXECUTION_STATE_UNKNOWN",
+            "message": "final table readback did not confirm every requested value and identity field",
+        },
+        "readback": dict(readback),
+    })
+    return bool(unknown or not readable)
+
+
+def _table_write(node: Any, definition: Mapping[str, Any]) -> tuple[list[Any], list[Any], list[Any], bool]:
+    """Apply table data/header mutations once each, stopping on first error."""
+    applied: list[Any] = []
+    failed: list[Any] = []
+    not_executed: list[Any] = []
+    unknown = False
+    if "imaginary" in definition and "data" not in definition:
+        raise ExecutionContractError("INVALID_REQUEST", "definition.imaginary requires definition.data")
+    if "data" in definition:
+        data = _table_matrix(definition["data"], "definition.data")
+        imag = _table_matrix(definition["imaginary"], "definition.imaginary") if "imaginary" in definition else None
+        try:
+            if imag is None:
+                _call(node, "setTableData", data)
+            else:
+                if len(imag) != len(data) or any(len(a) != len(b) for a, b in zip(imag, data)):
+                    raise ExecutionContractError("INVALID_REQUEST", "definition.imaginary shape differs from data")
+                _call(node, "setTableData", data, imag)
+        except Exception as exc:
+            failed.append({"step": "data", "error": {"code": getattr(exc, "code", "ENGINE_CALL_FAILED"), "message": str(exc)}})
+            if "headers" in definition:
+                not_executed.append({"step": "headers"})
+            return applied, failed, not_executed, True
+        readback = _table_readback(
+            node,
+            expected_data=data,
+            expected_imaginary=imag if imag is not None else _TABLE_TARGET_UNSET,
+        )
+        # The COMSOL 6.4 TableBaseFeature exposes isComplex().  A complex
+        # setter must prove that flag and a real-only rewrite must prove that
+        # the flag is false or that every native imaginary cell is zero.
+        if imag is not None and readback.get("complex") is not True:
+            if readback.get("complex") is None:
+                readback["readable"] = False
+                readback["match"] = None
+            else:
+                readback["match"] = False
+                details = dict(readback.get("match_details") or {})
+                details["complex"] = False
+                readback["match_details"] = details
+        # A real-only rewrite of a previously complex table must not leave a
+        # stale imaginary matrix behind.  Verify zero imaginary values when
+        # the native getter is available.  If isComplex() is unavailable, an
+        # exact zero imaginary read can still prove a real-only result; an
+        # absent or nonzero imaginary read remains UNKNOWN/mismatched.
+        if imag is None:
+            if readback.get("complex") is None:
+                zero_imaginary = [[0.0 for _ in row] for row in data]
+                zero_match = readback.get("imaginary") is not None and _table_matrix_matches(
+                    readback.get("imaginary"), zero_imaginary
+                )
+                details = dict(readback.get("match_details") or {})
+                details["real_only_zero_imaginary"] = zero_match
+                readback["match_details"] = details
+                if not zero_match:
+                    readback["readable"] = False
+                    readback["match"] = None
+            elif readback.get("complex") is True:
+                zero_imaginary = [[0.0 for _ in row] for row in data]
+                readback = _table_readback(
+                    node,
+                    expected_data=data,
+                    expected_imaginary=zero_imaginary,
+                )
+            else:
+                details = dict(readback.get("match_details") or {})
+                details["real_only_complex_status"] = True
+                readback["match_details"] = details
+        applied.append({"step": "data", "requested_rows": len(data), "readback": readback})
+        if not readback.get("readable") or readback.get("match") is not True:
+            code = "EXECUTION_STATE_UNKNOWN" if not readback.get("readable") else "READBACK_MISMATCH"
+            failed.append({
+                "step": "data",
+                "error": {"code": code, "message": "table data readback did not confirm the requested real/imaginary values"},
+            })
+            if "headers" in definition:
+                not_executed.append({"step": "headers"})
+            unknown = not readback.get("readable")
+            return applied, failed, not_executed, unknown
+    if "headers" in definition:
+        headers = definition["headers"]
+        if not isinstance(headers, Sequence) or isinstance(headers, (str, bytes, Mapping)) or not all(isinstance(v, str) and v for v in headers):
+            raise ExecutionContractError("INVALID_REQUEST", "definition.headers must be a non-empty array of strings")
+        try:
+            _call(node, "setColumnHeaders", list(headers))
+        except Exception as exc:
+            failed.append({"step": "headers", "error": {"code": getattr(exc, "code", "ENGINE_CALL_FAILED"), "message": str(exc)}})
+            unknown = True
+            return applied, failed, not_executed, unknown
+        readback = _table_readback(node, expected_headers=list(headers))
+        applied.append({"step": "headers", "requested": list(headers), "readback": readback})
+        if not readback.get("readable") or readback.get("match") is not True:
+            code = "EXECUTION_STATE_UNKNOWN" if not readback.get("readable") else "READBACK_MISMATCH"
+            failed.append({
+                "step": "headers",
+                "error": {"code": code, "message": "table header readback did not confirm the requested headers"},
+            })
+            unknown = not readback.get("readable")
+    return applied, failed, not_executed, unknown
+
+def result_numerical_manage(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """Manage user-visible Numerical features with typed paths/readback."""
+    action = require_string(arguments.get("action"), "action")
+    if action not in {"list", "create", "get", "inspect", "update", "set", "run", "evaluate", "remove"}:
+        raise ExecutionContractError("INVALID_REQUEST", f"unknown numerical_manage action: {action!r}")
+    # Validate the entire request shape before resolving the model.  A bad
+    # property/path must not consume an engine call or create a partial node.
+    definition_raw = arguments.get("definition", {})
+    definition = require_mapping(definition_raw, "definition") if action != "list" else {}
+    prevalidated_properties: list[tuple[str, Any]] | None = None
+    prevalidated_create: tuple[dict[str, Any], str, str] | None = None
+    if action == "create":
+        if arguments.get("path") is not None:
+            create_path, create_tag = _result_feature_create_path(arguments["path"], "numerical")
+        else:
+            create_tag = require_string(definition["tag"], "definition.tag") if definition.get("tag") is not None else ""
+            create_path = _result_path("numerical", create_tag) if create_tag else {}
+        create_type = require_string(definition.get("type_id", "EvalGlobal"), "definition.type_id")
+        if create_type not in SUPPORTED_NUMERICAL_TYPES:
+            raise ExecutionContractError("API_UNSUPPORTED", f"numerical feature type {create_type!r} is not supported")
+        prevalidated_properties = _normalise_feature_definition(definition, allowed=_NUMERICAL_PROPERTY_NAMES)
+        prevalidated_create = (create_path, create_tag, create_type)
+    elif action in {"update", "set"}:
+        prevalidated_properties = _normalise_feature_definition(definition, allowed=_NUMERICAL_PROPERTY_NAMES)
+    elif action in {"get", "inspect", "run", "evaluate", "remove"}:
+        _validate_result_feature_path(arguments.get("path"), "numerical")
+    model = bound_model(worker, model_tag)
+    results = _call(model, "result")
+    numerical_list = _call(results, "numerical")
+    tags = tag_list(numerical_list)
+
+    if action == "list":
+        features: list[dict[str, Any]] = []
+        for tag in tags:
+            node = _call(numerical_list, "get", tag)
+            features.append({"tag": tag, "type_id": _node_type(node, []),
+                             "expr": _string_or_none(node, "expr", []),
+                             "dataset": _string_or_none(node, "data", []),
+                             "path": _result_path("numerical", tag)})
+        return {"action": "list", "features": features, "count": len(features), "tags": tags,
+                "readback": {"readable": True, "source": "engine.tags/get"}}
+
+    if action == "create":
+        if prevalidated_create is not None:
+            canonical, tag, type_id = prevalidated_create
+        else:  # defensive, the prevalidation branch above always sets this
+            tag = _unique_tag(tags)
+            canonical, type_id = _result_path("numerical", tag), "EvalGlobal"
+        if not tag:
+            tag = _unique_tag(tags)
+            canonical = _result_path("numerical", tag)
+        properties = prevalidated_properties or []
+        if tag in tags:
+            raise ExecutionContractError("TAG_CONFLICT", f"numerical feature {tag!r} already exists")
+        applied: list[Any] = []
+        failed: list[Any] = []
+        not_executed: list[Any] = []
+        try:
+            node = _call(numerical_list, "create", tag, type_id)
+        except Exception as exc:
+            failed.append({"step": "create", "error": {"code": getattr(exc, "code", "ENGINE_CALL_FAILED"), "message": str(exc)}})
+            not_executed.extend({"step": "property", "property": name} for name, _ in properties)
+            return {"action": action, "tag": tag, "type_id": type_id, "created": False,
+                    **_probe_completion(applied=applied, failed=failed, not_executed=not_executed, readback={"readable": False, "match": False}, execution_state_unknown=True)}
+        applied.append({"step": "create", "requested": {"tag": tag, "type_id": type_id}})
+        if tag not in tag_list(numerical_list):
+            failed.append({"step": "create", "error": {"code": "EXECUTION_STATE_UNKNOWN", "message": "post-create numerical tag readback did not confirm the node"}})
+            return {"action": action, "tag": tag, "type_id": type_id, "created": True,
+                    **_probe_completion(applied=applied, failed=failed, not_executed=[{"step": "property", "property": name} for name, _ in properties], readback={"readable": False, "match": False}, execution_state_unknown=True)}
+        prop_applied, prop_failed, prop_not_executed, prop_unknown = _probe_write_properties(node, properties)
+        applied.extend(prop_applied)
+        failed.extend(prop_failed)
+        not_executed.extend(prop_not_executed)
+        readback = _result_readback(node, properties)
+        return {"action": action, "tag": tag, "type_id": type_id, "created": True, "path": canonical,
+                **_probe_completion(applied=applied, failed=failed, not_executed=not_executed, readback=readback, execution_state_unknown=prop_unknown)}
+
+    canonical, tag, owner, node = _result_feature_target(worker, model_tag, arguments.get("path"), "numerical")
+    if action in {"get", "inspect"}:
+        props: dict[str, Any] = {}
+        names_probe = call_probe(node, "properties")
+        if names_probe["ok"] and isinstance(names_probe["value"], (list, tuple)):
+            for name in list(names_probe["value"])[:100]:
+                value = _prop_value(node, str(name))
+                if value is not None:
+                    props[str(name)] = value
+        return {"action": action, "tag": tag, "path": canonical, "type_id": _node_type(node, []), "properties": props,
+                "readback": {"readable": True, "properties": props}}
+    if action in {"update", "set"}:
+        properties = prevalidated_properties or []
+        applied, failed, not_executed, execution_unknown = _probe_write_properties(node, properties)
+        return {"action": action, "tag": tag, "path": canonical, "updated": True,
+                **_probe_completion(applied=applied, failed=failed, not_executed=not_executed,
+                                    readback=_result_readback(node, properties), execution_state_unknown=execution_unknown)}
+    if action in {"run", "evaluate"}:
+        try:
+            _call(node, "run")
+            data = _call(node, "getData")
+            return {"action": action, "tag": tag, "path": canonical, "data": data,
+                    "status": {"ok": True, "execution_state_unknown": False}}
+        except Exception as exc:
+            return {"action": action, "tag": tag, "path": canonical,
+                    "status": {"ok": False, "execution_state_unknown": True,
+                               "engine_error": {"code": getattr(exc, "code", "ENGINE_CALL_FAILED"), "message": str(exc)}}}
+    try:
+        _call(owner, "remove", tag)
+    except Exception as exc:
+        return {"action": action, "tag": tag, "path": canonical, "removed": False,
+                **_probe_completion(applied=[], failed=[{"step": "remove", "error": {"code": getattr(exc, "code", "ENGINE_CALL_FAILED"), "message": str(exc)}}], not_executed=[], readback={"readable": False, "match": False}, execution_state_unknown=True)}
+    remaining = tag_list(owner)
+    if tag in remaining:
+        return {"action": action, "tag": tag, "path": canonical, "removed": True,
+                **_probe_completion(applied=[{"step": "remove", "tag": tag}], failed=[{"step": "remove", "error": {"code": "EXECUTION_STATE_UNKNOWN", "message": "post-remove numerical tags still contain the feature"}}], not_executed=[], readback={"readable": False, "match": False, "tags": remaining}, execution_state_unknown=True)}
+    return {"action": action, "tag": tag, "path": canonical, "removed": True, "verified_removed": True,
+            **_probe_completion(applied=[{"step": "remove", "tag": tag}], failed=[], not_executed=[], readback={"readable": True, "match": True, "tags": remaining})}
+
+
+def result_table_manage(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """Manage user-visible tables with one verified mutation path per step."""
+    action = require_string(arguments.get("action"), "action")
+    if action not in {"list", "create", "get", "inspect", "set", "clear", "remove"}:
+        raise ExecutionContractError("INVALID_REQUEST", f"unknown table_manage action: {action!r}")
+    raw_definition = require_mapping(arguments.get("definition", {}), "definition") if action != "list" else {}
+    prevalidated_table_path: tuple[dict[str, Any], str] | None = None
+    if action == "create":
+        if arguments.get("path") is not None:
+            prevalidated_table_path = _result_feature_create_path(arguments["path"], "table")
+        unknown = set(raw_definition) - {"tag", "type_id", "data", "imaginary", "headers"}
+        if unknown:
+            raise ExecutionContractError("INVALID_REQUEST", f"definition has unsupported table fields: {sorted(unknown)}")
+        if "data" in raw_definition:
+            _table_matrix(raw_definition["data"], "definition.data")
+        if "imaginary" in raw_definition:
+            _table_matrix(raw_definition["imaginary"], "definition.imaginary")
+        if "imaginary" in raw_definition and "data" not in raw_definition:
+            raise ExecutionContractError("INVALID_REQUEST", "definition.imaginary requires definition.data")
+        if "data" in raw_definition and "imaginary" in raw_definition:
+            data_shape = _table_matrix(raw_definition["data"], "definition.data")
+            imaginary_shape = _table_matrix(raw_definition["imaginary"], "definition.imaginary")
+            if len(imaginary_shape) != len(data_shape) or any(
+                len(imag_row) != len(data_row)
+                for imag_row, data_row in zip(imaginary_shape, data_shape)
+            ):
+                raise ExecutionContractError("INVALID_REQUEST", "definition.imaginary shape differs from data")
+        if "headers" in raw_definition:
+            headers = raw_definition["headers"]
+            if not isinstance(headers, Sequence) or isinstance(headers, (str, bytes, Mapping)) or not all(isinstance(v, str) and v for v in headers):
+                raise ExecutionContractError("INVALID_REQUEST", "definition.headers must be an array of strings")
+        table_type = require_string(raw_definition.get("type_id", "Table"), "definition.type_id")
+        if table_type != "Table":
+            raise ExecutionContractError("API_UNSUPPORTED", f"table type {table_type!r} is not supported")
+    elif action == "set":
+        _validate_result_feature_path(arguments.get("path"), "table")
+        unknown = set(raw_definition) - {"data", "imaginary", "headers"}
+        if unknown:
+            raise ExecutionContractError("INVALID_REQUEST", f"definition has unsupported table fields: {sorted(unknown)}")
+        if "data" not in raw_definition and "headers" not in raw_definition:
+            raise ExecutionContractError("INVALID_REQUEST", "table.set requires data or headers")
+        if "data" in raw_definition:
+            _table_matrix(raw_definition["data"], "definition.data")
+        if "imaginary" in raw_definition:
+            _table_matrix(raw_definition["imaginary"], "definition.imaginary")
+        if "imaginary" in raw_definition and "data" not in raw_definition:
+            raise ExecutionContractError("INVALID_REQUEST", "definition.imaginary requires definition.data")
+        if "data" in raw_definition and "imaginary" in raw_definition:
+            data_shape = _table_matrix(raw_definition["data"], "definition.data")
+            imaginary_shape = _table_matrix(raw_definition["imaginary"], "definition.imaginary")
+            if len(imaginary_shape) != len(data_shape) or any(
+                len(imag_row) != len(data_row)
+                for imag_row, data_row in zip(imaginary_shape, data_shape)
+            ):
+                raise ExecutionContractError("INVALID_REQUEST", "definition.imaginary shape differs from data")
+    elif action in {"get", "inspect", "clear", "remove"}:
+        _validate_result_feature_path(arguments.get("path"), "table")
+    model = bound_model(worker, model_tag)
+    results = _call(model, "result")
+    table_list = _call(results, "table")
+    tags = tag_list(table_list)
+
+    if action == "list":
+        tables: list[dict[str, Any]] = []
+        unreadable: list[dict[str, Any]] = []
+        for tag in tags:
+            node = _call(table_list, "get", tag)
+            readback = _table_readback(node)
+            tables.append({"tag": tag, "path": _result_path("table", tag), "headers": readback.get("headers"), "readback": readback})
+            if not readback.get("readable"):
+                unreadable.append({
+                    "step": "readback",
+                    "tag": tag,
+                    "error": {
+                        "code": "EXECUTION_STATE_UNKNOWN",
+                        "message": "table list readback was not fully readable",
+                    },
+                    "readback": readback,
+                })
+        list_readback = {
+            "readable": not unreadable,
+            "match": None,
+            "source": "engine.tags/get",
+            "unreadable": [row["tag"] for row in unreadable],
+        }
+        response = {"action": action, "tables": tables, "count": len(tables), "tags": tags,
+                    "readback": list_readback}
+        if unreadable:
+            # A list is still a read-only operation, but a failed native getter
+            # must be visible in the public result instead of looking like a
+            # complete real-only table inventory.
+            response.update(_probe_completion(
+                applied=[], failed=unreadable, not_executed=[],
+                readback=list_readback, execution_state_unknown=True,
+            ))
+        return response
+
+    if action == "create":
+        if prevalidated_table_path is not None:
+            canonical, tag = prevalidated_table_path
+        else:
+            tag = require_string(raw_definition.get("tag"), "definition.tag") if raw_definition.get("tag") is not None else _unique_tag(tags)
+            canonical = _result_path("table", tag)
+        type_id = require_string(raw_definition.get("type_id", "Table"), "definition.type_id")
+        if tag in tags:
+            raise ExecutionContractError("TAG_CONFLICT", f"table {tag!r} already exists")
+        applied: list[Any] = []
+        failed: list[Any] = []
+        not_executed: list[Any] = []
+        try:
+            node = _call(table_list, "create", tag, type_id)
+        except Exception as exc:
+            failed.append({"step": "create", "error": {"code": getattr(exc, "code", "ENGINE_CALL_FAILED"), "message": str(exc)}})
+            return {"action": action, "tag": tag, "type_id": type_id, "created": False,
+                    **_probe_completion(applied=applied, failed=failed, not_executed=[], readback={"readable": False, "match": False}, execution_state_unknown=True)}
+        applied.append({"step": "create", "requested": {"tag": tag, "type_id": type_id}})
+        if tag not in tag_list(table_list):
+            failed.append({"step": "create", "error": {"code": "EXECUTION_STATE_UNKNOWN", "message": "post-create table tag readback did not confirm the node"}})
+            return {"action": action, "tag": tag, "type_id": type_id, "created": True,
+                    **_probe_completion(applied=applied, failed=failed, not_executed=[], readback={"readable": False, "match": False}, execution_state_unknown=True)}
+        data_applied, data_failed, data_not_executed, data_unknown = _table_write(node, raw_definition)
+        applied.extend(data_applied)
+        failed.extend(data_failed)
+        not_executed.extend(data_not_executed)
+        # Verify the actual engine identity and every requested table field in
+        # one final read.  A late header setter can alter previously written
+        # data, so the per-step readback above is not sufficient on its own.
+        readback = None
+        if not failed:
+            readback = _table_definition_targets(
+                node,
+                raw_definition,
+                expected_tag=tag,
+                expected_type=type_id,
+            )
+            data_unknown = _table_final_write_check(readback, failed, unknown=data_unknown)
+        else:
+            # The first failed setter is the stop boundary; preserve its
+            # target-scoped readback without issuing a second mutation or
+            # inventing an unscoped match value.
+            readback = next(
+                (step.get("readback") for step in reversed(applied)
+                 if isinstance(step, Mapping) and isinstance(step.get("readback"), Mapping)),
+                {"readable": False, "match": False},
+            )
+        return {"action": action, "tag": tag, "type_id": type_id, "path": canonical, "created": True,
+                **_probe_completion(applied=applied, failed=failed, not_executed=not_executed, readback=readback, execution_state_unknown=data_unknown)}
+
+    canonical, tag, owner, node = _result_feature_target(worker, model_tag, arguments.get("path"), "table")
+    if action in {"get", "inspect"}:
+        readback = _table_readback(node)
+        response = {"action": action, "tag": tag, "path": canonical, "headers": readback.get("headers"), "data": readback.get("data"),
+                    "imaginary": readback.get("imaginary"), "readback": readback}
+        if not readback.get("readable"):
+            response.update(_probe_completion(
+                applied=[],
+                failed=[{
+                    "step": "readback",
+                    "error": {
+                        "code": "EXECUTION_STATE_UNKNOWN",
+                        "message": "table readback was not fully readable",
+                    },
+                }],
+                not_executed=[],
+                readback=readback,
+                execution_state_unknown=True,
+            ))
+        return response
+    if action == "set":
+        applied, failed, not_executed, execution_unknown = _table_write(node, raw_definition)
+        if not failed:
+            readback = _table_definition_targets(node, raw_definition)
+            execution_unknown = _table_final_write_check(readback, failed, unknown=execution_unknown)
+        else:
+            readback = next(
+                (step.get("readback") for step in reversed(applied)
+                 if isinstance(step, Mapping) and isinstance(step.get("readback"), Mapping)),
+                {"readable": False, "match": False},
+            )
+        return {"action": action, "tag": tag, "path": canonical,
+                **_probe_completion(applied=applied, failed=failed, not_executed=not_executed,
+                                    readback=readback, execution_state_unknown=execution_unknown)}
+    if action == "clear":
+        try:
+            _call(node, "clearTableData")
+        except Exception as exc:
+            return {"action": action, "tag": tag, "path": canonical, "cleared": False,
+                    **_probe_completion(applied=[], failed=[{"step": "clear", "error": {"code": getattr(exc, "code", "ENGINE_CALL_FAILED"), "message": str(exc)}}], not_executed=[], readback={"readable": False, "match": False}, execution_state_unknown=True)}
+        readback = _table_readback(node, expected_data=[])
+        if not readback.get("readable") or readback.get("match") is not True:
+            code = "EXECUTION_STATE_UNKNOWN" if not readback.get("readable") else "READBACK_MISMATCH"
+            return {"action": action, "tag": tag, "path": canonical, "cleared": False,
+                    **_probe_completion(applied=[{"step": "clear", "readback": readback}], failed=[{"step": "clear", "error": {"code": code, "message": "clear readback did not confirm an empty table"}}], not_executed=[], readback=readback, execution_state_unknown=not readback.get("readable"))}
+        return {"action": action, "tag": tag, "path": canonical, "cleared": True,
+                **_probe_completion(applied=[{"step": "clear", "readback": readback}], failed=[], not_executed=[], readback=readback)}
+    try:
+        _call(owner, "remove", tag)
+    except Exception as exc:
+        return {"action": action, "tag": tag, "path": canonical, "removed": False,
+                **_probe_completion(applied=[], failed=[{"step": "remove", "error": {"code": getattr(exc, "code", "ENGINE_CALL_FAILED"), "message": str(exc)}}], not_executed=[], readback={"readable": False, "match": False}, execution_state_unknown=True)}
+    remaining = tag_list(owner)
+    if tag in remaining:
+        return {"action": action, "tag": tag, "path": canonical, "removed": True,
+                **_probe_completion(applied=[{"step": "remove", "tag": tag}], failed=[{"step": "remove", "error": {"code": "EXECUTION_STATE_UNKNOWN", "message": "post-remove table tags still contain the table"}}], not_executed=[], readback={"readable": False, "match": False, "tags": remaining}, execution_state_unknown=True)}
+    return {"action": action, "tag": tag, "path": canonical, "removed": True, "verified_removed": True,
+            **_probe_completion(applied=[{"step": "remove", "tag": tag}], failed=[], not_executed=[], readback={"readable": True, "match": True, "tags": remaining})}
+
+
+# ---------------------------------------------------------------------------
+# W17 Field Export (result.field_export)
+# ---------------------------------------------------------------------------
+
+def result_field_export(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+    """Export field data / solutions to local files with chunk pagination (T049)."""
+    spec = require_mapping(arguments.get("spec", {}), "spec")
+    fmt = require_string(arguments.get("format", "json"), "format").lower()
+    dest = require_string(arguments.get("destination"), "destination")
+    overwrite = require_bool(arguments.get("overwrite", False), "overwrite")
+    if fmt not in {"json", "csv"}:
+        # The format is a request-shape decision and is checked before the
+        # trusted root is resolved or result_evaluate can dispatch.  Preserve
+        # that fact in the managed witness so the public refusal stays a
+        # concrete API_UNSUPPORTED response instead of being wrapped as an
+        # execution-state UNKNOWN.
+        raise PreWriteRefusal(
+            "API_UNSUPPORTED",
+            f"Unsupported export format {fmt!r}; supported formats are 'json' and 'csv'",
+        )
+
+    # Resolve the destination *before* doing any work: the delivered version ran the
+    # whole evaluation first and only then discovered that the destination escapes the
+    # approved roots, so a refused export had already spent engine time and told the
+    # caller nothing until the end.  Containment is checked here, and the resolved path
+    # is what the store publishes.
+    store = ArtifactStore(project_root=trusted_project_root(worker))
+    planned_destination = store.resolve_safe_path(dest, allow_overwrite=overwrite)
+
+    export_spec = dict(spec)
+    export_spec["storage"] = "inline"
+    eval_res = result_evaluate(worker, model_tag, {"spec": export_spec})
+
+    return store.export_field_data(
+        str(planned_destination), eval_res, fmt=fmt, allow_overwrite=overwrite
+    )
+
+
+
+OPERATIONS: dict[str, Any] = {
+    "dataset.list": dataset_list,
+    "dataset.create": dataset_create,
+    "dataset.inspect": dataset_inspect,
+    "dataset.update": dataset_update,
+    "dataset.remove": dataset_remove,
+    "dataset.solution_indices": dataset_solution_indices,
+    "result.evaluate": result_evaluate,
+    "result.at_points": result_at_points,
+    "result.sample_path": sample_path,
+    "result.numerical_manage": result_numerical_manage,
+    "result.table_manage": result_table_manage,
+    "result.field_export": result_field_export,
+}
+
+#: Operation id -> the argument names this layer accepts (envelope fields such as
+#: ``model_ref``/``session_id`` pass through ``_g3_common.ENVELOPE_FIELDS``).
+OPERATION_ARGUMENTS: dict[str, tuple[str, ...]] = {
+    "dataset.list": ("filter",),
+    "dataset.create": ("tag", "type_id", "definition"),
+    "dataset.inspect": ("path",),
+    "dataset.update": ("path", "definition"),
+    "dataset.remove": ("path",),
+    "dataset.solution_indices": ("path",),
+    "result.evaluate": ("spec",),
+    "result.at_points": ("spec", "points", "coordinate_unit", "frame"),
+    "result.sample_path": ("spec", "path_definition"),
+    "result.numerical_manage": ("action", "path", "definition"),
+    "result.table_manage": ("action", "path", "definition"),
+    "result.field_export": ("spec", "format", "destination", "overwrite"),
+}
+
+#: Operation id -> arguments that must be present for the call to be meaningful.
+OPERATION_REQUIRED: dict[str, tuple[str, ...]] = {
+    "dataset.list": (),
+    "dataset.create": ("tag", "type_id", "definition"),
+    "dataset.inspect": ("path",),
+    "dataset.update": ("path", "definition"),
+    "dataset.remove": ("path",),
+    "dataset.solution_indices": ("path",),
+    "result.evaluate": ("spec",),
+    "result.at_points": ("spec", "points", "coordinate_unit", "frame"),
+    "result.sample_path": ("spec", "path_definition"),
+    "result.numerical_manage": ("action",),
+    "result.table_manage": ("action",),
+    "result.field_export": ("spec", "format", "destination"),
+}
+
+__all__ = [
+    "ACCEPTED_SPEC_KEYS",
+    "ACCEPTED_SOLUTION_SPEC_KEYS",
+    "AGGREGATE_MODES",
+    "ALLOWLIST_ADDITIONS",
+    "ALLOWLIST_AVAILABLE_UNUSED",
+    "COMPLEX_MODES",
+    "EPHEMERAL_TAG_STEM",
+    "MAX_EXPRESSIONS",
+    "MAX_SAMPLE_POINTS",
+    "MIN_SAMPLE_POINTS",
+    "NUMERICAL_FEATURE_TYPE",
+    "OPERATIONS",
+    "OPERATION_ARGUMENTS",
+    "OPERATION_ID",
+    "OPERATION_REQUIRED",
+    "PATH_KINDS",
+    "REFUSED_SPEC_KEYS",
+    "SUPPORTED_DATASET_TYPES",
+    "SUPPORTED_NUMERICAL_TYPES",
+    "TIME_DEPENDENT_STUDY_STEPS",
+    "UNVERIFIED_PATHS",
+    "dataset_create",
+    "dataset_inspect",
+    "dataset_list",
+    "dataset_remove",
+    "dataset_solution_indices",
+    "dataset_update",
+    "result_at_points",
+    "result_evaluate",
+    "result_field_export",
+    "result_numerical_manage",
+    "result_table_manage",
+    "sample_path",
+    "verify_artifact_chunks",
+]
+
+IMPLEMENTED_GETTER_PROVENANCE = {"getLevels": "R10 SolutionInfo comsol_api_solver.51.10; implemented by reviewed Native R7 Worker getter hunk"}

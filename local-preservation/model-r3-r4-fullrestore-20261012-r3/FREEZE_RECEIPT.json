@@ -1,0 +1,288 @@
+{
+  "concurrent_inputs_drifted_from_r2": [
+    "comsol_mcp/_w26_os_resources.py",
+    "tests/test_w26_os_resources.py"
+  ],
+  "focused_validation": {
+    "command": "TMPDIR=/private/tmp python312 -m py_compile comsol_mcp/_state_backup.py tests/test_state_backup.py && TMPDIR=/private/tmp python312 -m pytest tests/test_state_backup.py -q --junitxml=/private/tmp/state-backup-full-r3-recovery.xml",
+    "junit": {
+      "path": "evidence/junit-state-backup-r3.xml",
+      "sha256": "068f8a7cdf8b6ae8ef30e55ebad697b31bfad12828f1ba154c4d3da4bd22701a"
+    },
+    "py_compile": "PASS",
+    "result": "27 passed, 0 failed, 0 skipped"
+  },
+  "freeze_root": "local-preservation/model-r3-r4-fullrestore-20261012-r3",
+  "frozen_at_utc": "2026-10-11T20:22:12Z",
+  "platform_scope": {
+    "COMSOL_native": "NOT_RUN",
+    "POSIX": "macOS software tests use pinned directory/file descriptors, durable cleanup phases, no-replace quarantine rename, and descriptor-relative cleanup; final name operation is not inode-CAS against hostile same-UID races",
+    "Windows": "exact-handle recursive directory cleanup remains typed unavailable and fenced; Windows kernel NOT_RUN"
+  },
+  "prior_freeze": {
+    "path": "local-preservation/model-r3-r4-fullrestore-20261012-r2/FREEZE_RECEIPT.json",
+    "sha256": "bc71ea1ee91d10fed4ecf70aba44989437b07a61c0f1b691fcbf7964bea1811f"
+  },
+  "r1_and_r2_freezes_immutable": true,
+  "recovery_fault_controls": [
+    "PREPARED durable intent with exact quarantine rename completed before QUARANTINED journal write; reopened recover reconciles exact owned inode and completes cleanup",
+    "QUARANTINED tree cleanup interrupted after one listed child removal; reopened recover accepts only manifest-listed hash-matching subset and completes cleanup",
+    "REMOVE_INTENT durable before root rmdir; interruption after rmdir and before DONE journal write; reopened recover reconciles only when both original and quarantine leaves are absent",
+    "same-content foreign quarantine substitution is refused during recovery and remains byte/inode preserved"
+  ],
+  "schema": "comsol-mcp.model-r3-r4-fullrestore-freeze/3",
+  "source_count": 40,
+  "source_delta_from_r2": {
+    "bytes": 31153,
+    "changed_paths": [
+      "comsol_mcp/_state_backup.py",
+      "comsol_mcp/_w26_os_resources.py",
+      "tests/test_state_backup.py",
+      "tests/test_w26_os_resources.py"
+    ],
+    "path": "R2_TO_R3.patch",
+    "sha256": "9eddde0c03c9bcf0100c28315f4a791adc725081a08e5f699daad8dbef155d1f"
+  },
+  "source_files": {
+    "comsol_mcp/_comsol_progress_capture.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "84c87c9728edb0554bf094ae55f2288156f78f5f2a037a02088303e867223fd9",
+      "sha256": "84c87c9728edb0554bf094ae55f2288156f78f5f2a037a02088303e867223fd9",
+      "unchanged_from_r2": true
+    },
+    "comsol_mcp/_control_daemon.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "82adff5768f429350ae630cce45d0b367b0da6a3073155468cb39a919b370199",
+      "sha256": "82adff5768f429350ae630cce45d0b367b0da6a3073155468cb39a919b370199",
+      "unchanged_from_r2": true
+    },
+    "comsol_mcp/_domain_outcome.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "2b6fe962ce32437ad3bbc8e0ea0be01f9c76d78b84ebb37571dbf22b1511db6b",
+      "sha256": "2b6fe962ce32437ad3bbc8e0ea0be01f9c76d78b84ebb37571dbf22b1511db6b",
+      "unchanged_from_r2": true
+    },
+    "comsol_mcp/_execution_service.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "5ba2f22b4d0a59507164d2b9f5891845face36fc2f85ec6a27c4bd6fff2f20e2",
+      "sha256": "5ba2f22b4d0a59507164d2b9f5891845face36fc2f85ec6a27c4bd6fff2f20e2",
+      "unchanged_from_r2": true
+    },
+    "comsol_mcp/_g2_artifact_verify.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "ea050a723b67b06ff8ef3ad2b12d317669c3393ed2b8af545d3ba449c04676db",
+      "sha256": "ea050a723b67b06ff8ef3ad2b12d317669c3393ed2b8af545d3ba449c04676db",
+      "unchanged_from_r2": true
+    },
+    "comsol_mcp/_g2_registry.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "b44933b14790f5f6b60a733adbac9082654ec76261a08df8f45d7e1c1e9c5280",
+      "sha256": "b44933b14790f5f6b60a733adbac9082654ec76261a08df8f45d7e1c1e9c5280",
+      "unchanged_from_r2": true
+    },
+    "comsol_mcp/_g3_definition_validation.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "914756c51449d605fe98d1e6602793fa1b9a0f99eaef529f0097ed38dfb885ce",
+      "sha256": "914756c51449d605fe98d1e6602793fa1b9a0f99eaef529f0097ed38dfb885ce",
+      "unchanged_from_r2": true
+    },
+    "comsol_mcp/_g3_exports.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "519625eb060ab847fc76ec2b44c51679dfcdfe697a30bb82faba61bd3841cd7c",
+      "sha256": "519625eb060ab847fc76ec2b44c51679dfcdfe697a30bb82faba61bd3841cd7c",
+      "unchanged_from_r2": true
+    },
+    "comsol_mcp/_g3_managed_models.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "408fe130dbb8ac3ad36c1e3bea8968588675b4ce1ae8e4a3fd30624a45edb286",
+      "sha256": "408fe130dbb8ac3ad36c1e3bea8968588675b4ce1ae8e4a3fd30624a45edb286",
+      "unchanged_from_r2": true
+    },
+    "comsol_mcp/_g3_mesh_convergence_executor.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "06dbb670839d56d0096562083f90c146c4da3135ce9d4c25418d5c3a95c3aa3e",
+      "sha256": "06dbb670839d56d0096562083f90c146c4da3135ce9d4c25418d5c3a95c3aa3e",
+      "unchanged_from_r2": true
+    },
+    "comsol_mcp/_g3_model_delivery.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "9c6aa7c1de31e325dca21f49bec1df9351a642952869b215f47e50b092a65e80",
+      "sha256": "9c6aa7c1de31e325dca21f49bec1df9351a642952869b215f47e50b092a65e80",
+      "unchanged_from_r2": true
+    },
+    "comsol_mcp/_g3_model_domains.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "ea789f9d2e48e1e32254d2f2c346d2c27440bfb6f6e2f8af6a54469172210df8",
+      "sha256": "ea789f9d2e48e1e32254d2f2c346d2c27440bfb6f6e2f8af6a54469172210df8",
+      "unchanged_from_r2": true
+    },
+    "comsol_mcp/_g3_ops.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "d456796622636eeb6eab7b0176901892effc84261ae0d699a6dd801dbb31287a",
+      "sha256": "d456796622636eeb6eab7b0176901892effc84261ae0d699a6dd801dbb31287a",
+      "unchanged_from_r2": true
+    },
+    "comsol_mcp/_g3_solver_ops.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "bf8188154c68d08dcc64c23a11004d9360267951ccabcafe608cd0cdbcd0ee27",
+      "sha256": "bf8188154c68d08dcc64c23a11004d9360267951ccabcafe608cd0cdbcd0ee27",
+      "unchanged_from_r2": true
+    },
+    "comsol_mcp/_g3_w14.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "a6cfbf3cbd330701f04f05341bec0b62e08bb9c459a4b9e4ed57fbeb504aa8d6",
+      "sha256": "a6cfbf3cbd330701f04f05341bec0b62e08bb9c459a4b9e4ed57fbeb504aa8d6",
+      "unchanged_from_r2": true
+    },
+    "comsol_mcp/_g3_w16.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "1242cd85660cb59baf1d34b7d5bd08a025ef9cbd92f34bf9264c188d6dbc0708",
+      "sha256": "1242cd85660cb59baf1d34b7d5bd08a025ef9cbd92f34bf9264c188d6dbc0708",
+      "unchanged_from_r2": true
+    },
+    "comsol_mcp/_java_worker.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "ce9d517857f6f1f965bcba73c67f8bd9ffdeb3ae865aa19e4f6a24d4c1d69fc0",
+      "sha256": "ce9d517857f6f1f965bcba73c67f8bd9ffdeb3ae865aa19e4f6a24d4c1d69fc0",
+      "unchanged_from_r2": true
+    },
+    "comsol_mcp/_managed_backend.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "fb6cbf235a57d46bb9f4196816bddcf46d439c5524183ce0aa6939e670abbaf5",
+      "sha256": "fb6cbf235a57d46bb9f4196816bddcf46d439c5524183ce0aa6939e670abbaf5",
+      "unchanged_from_r2": true
+    },
+    "comsol_mcp/_state_backup.py": {
+      "attribution": "owned restartable full-restore cleanup journal recovery and deterministic process-interruption tests",
+      "r2_sha256": "be245f26ab63427a0bdfc9eebf5919e591c1ab93bf4d667c2952ae68a99ac564",
+      "sha256": "9ab50378fc7eab8c72def62beb0d7191ef68c25e1fa1ace717e0424294f3ba5c",
+      "unchanged_from_r2": false
+    },
+    "comsol_mcp/_w26_os_resources.py": {
+      "attribution": "concurrent Windows-agent resource integration input captured at this freeze; not an independently stable owned source",
+      "r2_sha256": "925e0ee4c86268fd7ee3c62770b0dc2f2b478c3a1229c09877ce46ad8480a15b",
+      "sha256": "ad6b6a71146569e8803c210a0783dec42823b2d2fdfaa9be5f80c480f089da76",
+      "unchanged_from_r2": false
+    },
+    "comsol_mcp/_windows_model_publish.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "45b3909296707a0d9c2d35777a7d443b338af9d27d6a30b248f0eaebcd2923d6",
+      "sha256": "45b3909296707a0d9c2d35777a7d443b338af9d27d6a30b248f0eaebcd2923d6",
+      "unchanged_from_r2": true
+    },
+    "comsol_mcp/_windows_parameter_publish.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "5a418434c3022069444db9924fcbe591342a3395bd911b088faff94f7d1d6073",
+      "sha256": "5a418434c3022069444db9924fcbe591342a3395bd911b088faff94f7d1d6073",
+      "unchanged_from_r2": true
+    },
+    "comsol_mcp/worker_java/PersistentComsolWorker.java": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "dfe202e623af961cad3e11b6d6cd00106d8ca594627358b8811047f47a7790ab",
+      "sha256": "dfe202e623af961cad3e11b6d6cd00106d8ca594627358b8811047f47a7790ab",
+      "unchanged_from_r2": true
+    },
+    "tests/test_artifact_verify.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "e633be9d6d8e92526ce66d84f63eee7697d867aa3b38167d7cdffb2f547e2276",
+      "sha256": "e633be9d6d8e92526ce66d84f63eee7697d867aa3b38167d7cdffb2f547e2276",
+      "unchanged_from_r2": true
+    },
+    "tests/test_comsol_progress_capture.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "54f6504a82591186c1424cc9358cc80fdf7f9c2fcd1f977819899454b23adcb6",
+      "sha256": "54f6504a82591186c1424cc9358cc80fdf7f9c2fcd1f977819899454b23adcb6",
+      "unchanged_from_r2": true
+    },
+    "tests/test_control_daemon.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "5c83687f97da339d6305e41aa4e70f246f4edec76100aaa7bdae02553acf56b1",
+      "sha256": "5c83687f97da339d6305e41aa4e70f246f4edec76100aaa7bdae02553acf56b1",
+      "unchanged_from_r2": true
+    },
+    "tests/test_control_daemon_projects.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "33fc418ff44d2a942dc6dc86e6f0fedb16fc3e4121ca7867a00e5343de0ecb38",
+      "sha256": "33fc418ff44d2a942dc6dc86e6f0fedb16fc3e4121ca7867a00e5343de0ecb38",
+      "unchanged_from_r2": true
+    },
+    "tests/test_control_daemon_sessions.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "94f78b7ff81c35b217e9b177971207ac95b37ded10a4ee5c6b7ff81b2eb7f12b",
+      "sha256": "94f78b7ff81c35b217e9b177971207ac95b37ded10a4ee5c6b7ff81b2eb7f12b",
+      "unchanged_from_r2": true
+    },
+    "tests/test_g3_definition_validation.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "9f8d304e08f4b0c0de6baadae02e869837b5c3f8af91481c862f8c8d6abdaec1",
+      "sha256": "9f8d304e08f4b0c0de6baadae02e869837b5c3f8af91481c862f8c8d6abdaec1",
+      "unchanged_from_r2": true
+    },
+    "tests/test_g3_exports.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "e00ca085fdd18c03308784dd02f809366e8110fc22d073a187f2972195b0c541",
+      "sha256": "e00ca085fdd18c03308784dd02f809366e8110fc22d073a187f2972195b0c541",
+      "unchanged_from_r2": true
+    },
+    "tests/test_g3_managed_models.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "16bd98f3cef224638b6d17e38d0909f76d70c41ed263a6ff2020801e75d89969",
+      "sha256": "16bd98f3cef224638b6d17e38d0909f76d70c41ed263a6ff2020801e75d89969",
+      "unchanged_from_r2": true
+    },
+    "tests/test_g3_mesh_convergence_executor.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "1a4d483fa5f431dde516b7a120f73cc98d4a98da18bebd2cc95a31cc06208697",
+      "sha256": "1a4d483fa5f431dde516b7a120f73cc98d4a98da18bebd2cc95a31cc06208697",
+      "unchanged_from_r2": true
+    },
+    "tests/test_g3_model_delivery.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "b5f9fa90e7a5b66345bec4f702bd78b707d305c97b95d47a21766cf2291a321b",
+      "sha256": "b5f9fa90e7a5b66345bec4f702bd78b707d305c97b95d47a21766cf2291a321b",
+      "unchanged_from_r2": true
+    },
+    "tests/test_g3_model_domains.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "ec6dd8d75d8155b5ee18508aa5bbd14c17e1141cd8546196090810e6da56cfe9",
+      "sha256": "ec6dd8d75d8155b5ee18508aa5bbd14c17e1141cd8546196090810e6da56cfe9",
+      "unchanged_from_r2": true
+    },
+    "tests/test_g3_w14.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "15d0b8180f10ec73d717ed29e51dcc4dde270854aa211a87b9af40583fd5105f",
+      "sha256": "15d0b8180f10ec73d717ed29e51dcc4dde270854aa211a87b9af40583fd5105f",
+      "unchanged_from_r2": true
+    },
+    "tests/test_java_worker.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "77551975df32106ee5f432eae98e74bf0da82fcc6bdade4845d9cc7c1b854ee2",
+      "sha256": "77551975df32106ee5f432eae98e74bf0da82fcc6bdade4845d9cc7c1b854ee2",
+      "unchanged_from_r2": true
+    },
+    "tests/test_state_backup.py": {
+      "attribution": "owned restartable full-restore cleanup journal recovery and deterministic process-interruption tests",
+      "r2_sha256": "9ff826479e0b65399093fef2957829a3adebc12f71e221bc86155886c6f3123c",
+      "sha256": "dff3310f448613e9b8b839a9eaca33be50182d6aa59e37b9c4084a315acdc157",
+      "unchanged_from_r2": false
+    },
+    "tests/test_w26_os_resources.py": {
+      "attribution": "concurrent Windows-agent resource integration input captured at this freeze; not an independently stable owned source",
+      "r2_sha256": "b2ed17245a4c55b28176297c94338278b41d05e2a2cadd0346fbbc773b03a0dd",
+      "sha256": "eb93b9aa2dc4528165500757181fb7a784a95fef66d250845226c9e013198f79",
+      "unchanged_from_r2": false
+    },
+    "tests/test_windows_model_publish.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "95cd115513e29d923cc6ae1f989337814bd6c43844c05ca25a51c4bb75be8f16",
+      "sha256": "95cd115513e29d923cc6ae1f989337814bd6c43844c05ca25a51c4bb75be8f16",
+      "unchanged_from_r2": true
+    },
+    "tests/test_windows_parameter_publish_native.py": {
+      "attribution": "integrated source snapshot unchanged from R2",
+      "r2_sha256": "cc281485330cdb2573f87897ba82204d653e749dee50066fa7859d9c82591317",
+      "sha256": "cc281485330cdb2573f87897ba82204d653e749dee50066fa7859d9c82591317",
+      "unchanged_from_r2": true
+    }
+  }
+}

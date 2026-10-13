@@ -1,0 +1,48 @@
+{
+  "schema": "WINDOWS_CHILD_DACL_PRIMARY_REFERENCE/1",
+  "read_date": "2026-10-12",
+  "references": [
+    {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-accesscheck",
+      "status": "READ_OFFICIAL_PRIMARY"
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/aclapi/nf-aclapi-getsecurityinfo",
+      "status": "READ_OFFICIAL_PRIMARY"
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-duplicatetokenex",
+      "status": "READ_OFFICIAL_PRIMARY"
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-mapgenericmask",
+      "status": "READ_OFFICIAL_PRIMARY"
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/fileio/file-security-and-access-rights",
+      "status": "READ_OFFICIAL_PRIMARY"
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-generic_mapping",
+      "status": "READ_OFFICIAL_PRIMARY"
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-privilege_set",
+      "status": "READ_OFFICIAL_PRIMARY"
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-token_statistics",
+      "status": "READ_OFFICIAL_PRIMARY"
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-gettokeninformation",
+      "status": "READ_OFFICIAL_PRIMARY"
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/winnt/ne-winnt-token_information_class",
+      "status": "READ_OFFICIAL_PRIMARY"
+    }
+  ],
+  "binding": "Actual child process HANDLE -> independently reopened token statistics -> duplicated impersonation token -> pinned descriptor -> native AccessCheck. NULL/absent DACL and privileges-used refused. Only READ_CONTROL owner/group/DACL; no SACL privilege or OS configuration mutation.",
+  "remaining": "DACL observation only; MIC, broader filesystem/network isolation and native/effective child proof NOT_VERIFIED."
+}

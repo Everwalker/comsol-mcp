@@ -1,0 +1,50 @@
+{
+  "schema": "comsol-w24-current09-preservation-metadata-correction-v2",
+  "created_at_utc": "2026-10-12T04:50:00Z",
+  "status": "APPEND_ONLY_CORRECTION; original reconciliation and source receipts unchanged",
+  "original_reconciliation": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/native-run-current09-001/W24_CURRENT09_PRESERVATION_RECONCILIATION.json",
+    "bytes": 21057,
+    "sha256": "9810331ee13afbf4dd8d198b88fc4656c1d9f30eb6243ab14b05b36e46b62421"
+  },
+  "correction": {
+    "field": "cleanup.elapsed_from_birth_seconds",
+    "original_value": 14.350344,
+    "original_receipt_value": 14.350344,
+    "interpretation": "The original duration equals summary.at_utc_end minus engine_birth_epoch. That summary end precedes the exact-owned-cleanup completion timestamp, so it excludes part of cleanup.",
+    "corrected_inclusive_elapsed_seconds": 15.505188941955566,
+    "calculation": "datetime.fromisoformat(exact_owned_cleanup_receipt.finished_utc).timestamp() - summary.engine_birth_epoch",
+    "evidence": [
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/native-run-current09-001/summary.json",
+        "bytes": 626797,
+        "sha256": "dfa727c7e33f841e725ccea310124d377563c92a4a7da8e77317194de1e3a460",
+        "json_pointer": "/engine_birth_epoch",
+        "value": 1791779753.0
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/native-run-current09-001/summary.json",
+        "bytes": 626797,
+        "sha256": "dfa727c7e33f841e725ccea310124d377563c92a4a7da8e77317194de1e3a460",
+        "json_pointer": "/at_utc_end",
+        "value": "2026-10-12T12:36:07.350344+08:00"
+      },
+      {
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current09/native-run-current09-001/exact_owned_cleanup_receipt.json",
+        "bytes": 535445,
+        "sha256": "3b0080580111e7600bf604cd00e73dacebf709bd55dc727703dc95a9ee6451c2",
+        "json_pointer": "/finished_utc",
+        "value": "2026-10-12T04:36:08.505189+00:00"
+      }
+    ],
+    "budget_limit_seconds": 900,
+    "within_budget": true
+  },
+  "unchanged_classification": {
+    "native_solve_submissions": 0,
+    "internal_solver_execution_count": "UNKNOWN",
+    "domain_state": "unknown",
+    "safe_retry": false,
+    "scientific_acceptance": "NOT_ACCEPTED"
+  }
+}

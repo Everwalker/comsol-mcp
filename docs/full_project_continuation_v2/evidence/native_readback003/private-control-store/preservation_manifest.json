@@ -1,0 +1,172 @@
+{
+  "schema": "native-readback-control-store-preservation-v1",
+  "status": "PASS_TERMINAL_SQLITE_STORES_PRESERVED_AND_QUERIED",
+  "created_at_utc": "2026-10-11T12:17:20.275806+00:00",
+  "activity_id": "native_readback003-20261011-001",
+  "private_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/native_readback003/private-control-store",
+  "workers": [
+    {
+      "worker": "worker_a",
+      "source_path": "/private/tmp/comsol-v2-native-readback-work-20261011-003/control-worker_a/operations.sqlite3",
+      "source_sha256": "f3732e3717126d852616e994ef9aedda1ca4be838bca0410166f5d0f171b3d86",
+      "source_size_bytes": 438272,
+      "byte_copy_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/native_readback003/private-control-store/control-worker_a/operations.sqlite3",
+      "byte_copy_sha256": "f3732e3717126d852616e994ef9aedda1ca4be838bca0410166f5d0f171b3d86",
+      "byte_copy_matches": true,
+      "logical_backup_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/native_readback003/private-control-store/control-worker_a/operations.logical-backup.sqlite3",
+      "logical_backup_sha256": "91942b61dd44c15e898f10368ce754762648c54c3ba87e876ce2480aaad5d41e",
+      "source_journal_mode": "wal",
+      "sidecars": [
+        {
+          "name": "operations.sqlite3-wal",
+          "present": true,
+          "copied_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/native_readback003/private-control-store/control-worker_a/operations.sqlite3-wal",
+          "size_bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "name": "operations.sqlite3-shm",
+          "present": true,
+          "copied_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/native_readback003/private-control-store/control-worker_a/operations.sqlite3-shm",
+          "size_bytes": 32768,
+          "sha256": "fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb"
+        }
+      ],
+      "job_status_counts": {
+        "SUCCEEDED": 5
+      },
+      "nonterminal_jobs": 0,
+      "job_records": [
+        {
+          "job_id": "78007727-4f75-4844-ad6a-a5a67dacec71",
+          "operation_id": "81c7a34e-830e-408d-9852-212cd264d79f",
+          "operation": "project.create",
+          "status": "SUCCEEDED",
+          "engine_dispatched": false,
+          "project_id": null,
+          "idempotency_key": "supplement-project-d2d50980-2ae1-4fcc-997b-cfb089552c4b"
+        },
+        {
+          "job_id": "6404f051-3ffa-4828-8a29-1e746ee110ef",
+          "operation_id": "05bb2306-4617-4066-8b5d-3b5ece6f42e4",
+          "operation": "server_connect",
+          "status": "SUCCEEDED",
+          "engine_dispatched": null,
+          "project_id": "d6b5bd3f-8c17-46b6-8b14-fcd3fdc565d3",
+          "idempotency_key": "supplement-connect-599a189a-63f9-4c94-a50e-b04c6dc19bb6"
+        },
+        {
+          "job_id": "4d3342e2-c873-4b97-84c2-707f6727372d",
+          "operation_id": "50c8f60d-8569-4b48-ae5d-8e0b7a978aa9",
+          "operation": "model_load",
+          "status": "SUCCEEDED",
+          "engine_dispatched": null,
+          "project_id": "d6b5bd3f-8c17-46b6-8b14-fcd3fdc565d3",
+          "idempotency_key": "native-readback-model-load-1e075377-eb11-407d-a7e1-3b03973d4108"
+        },
+        {
+          "job_id": "95982b26-7b20-41ce-955a-c75a8873d962",
+          "operation_id": "9ddb28f1-2b9a-4323-bae3-d893f90cd78f",
+          "operation": "result.at_points",
+          "status": "SUCCEEDED",
+          "engine_dispatched": null,
+          "project_id": "d6b5bd3f-8c17-46b6-8b14-fcd3fdc565d3",
+          "idempotency_key": "worker_a-real-ca12bb62-d95d-4ac9-8acf-faf05a6d11fd"
+        },
+        {
+          "job_id": "987e8c40-93e6-4e29-9628-118d79ff5e0c",
+          "operation_id": "d7f2aa80-59e5-4e59-80ab-bef235ad8518",
+          "operation": "result.at_points",
+          "status": "SUCCEEDED",
+          "engine_dispatched": null,
+          "project_id": "d6b5bd3f-8c17-46b6-8b14-fcd3fdc565d3",
+          "idempotency_key": "worker_a-imag-5353844b-5da5-43c2-bb43-80d38744dea1"
+        }
+      ]
+    },
+    {
+      "worker": "worker_b",
+      "source_path": "/private/tmp/comsol-v2-native-readback-work-20261011-003/control-worker_b/operations.sqlite3",
+      "source_sha256": "8c4cbc8615aa42f923db03770e2ae0188f489fc7a86f2a02c5f305e023cd5e09",
+      "source_size_bytes": 442368,
+      "byte_copy_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/native_readback003/private-control-store/control-worker_b/operations.sqlite3",
+      "byte_copy_sha256": "8c4cbc8615aa42f923db03770e2ae0188f489fc7a86f2a02c5f305e023cd5e09",
+      "byte_copy_matches": true,
+      "logical_backup_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/native_readback003/private-control-store/control-worker_b/operations.logical-backup.sqlite3",
+      "logical_backup_sha256": "f3d47be0977319cde32cb9eeb251d7976dff8ada32e78a850267e4b97b0f476a",
+      "source_journal_mode": "wal",
+      "sidecars": [
+        {
+          "name": "operations.sqlite3-wal",
+          "present": true,
+          "copied_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/native_readback003/private-control-store/control-worker_b/operations.sqlite3-wal",
+          "size_bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "name": "operations.sqlite3-shm",
+          "present": true,
+          "copied_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/native_readback003/private-control-store/control-worker_b/operations.sqlite3-shm",
+          "size_bytes": 32768,
+          "sha256": "fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb"
+        }
+      ],
+      "job_status_counts": {
+        "SUCCEEDED": 5
+      },
+      "nonterminal_jobs": 0,
+      "job_records": [
+        {
+          "job_id": "f5384d1a-6524-425e-aeb7-d97661814774",
+          "operation_id": "23e83d06-1692-4e1c-93ec-f758552525b2",
+          "operation": "project.create",
+          "status": "SUCCEEDED",
+          "engine_dispatched": false,
+          "project_id": null,
+          "idempotency_key": "supplement-project-c8d1cc2a-26f6-4c69-85cb-3b321e066f0d"
+        },
+        {
+          "job_id": "3e352f17-6189-4443-8fff-599dbf90e4ed",
+          "operation_id": "44e97471-d9cb-46da-9e34-e39405ef7e1e",
+          "operation": "server_connect",
+          "status": "SUCCEEDED",
+          "engine_dispatched": null,
+          "project_id": "188e90fc-1f37-4184-b803-307c8e81cca8",
+          "idempotency_key": "supplement-connect-5b93b3d7-e55c-4c2e-be40-26951840c61f"
+        },
+        {
+          "job_id": "d9c9c5d5-d10b-4140-bfe4-a1718378ea9d",
+          "operation_id": "039b9b74-65ba-4429-a81c-f10413232714",
+          "operation": "model_load",
+          "status": "SUCCEEDED",
+          "engine_dispatched": null,
+          "project_id": "188e90fc-1f37-4184-b803-307c8e81cca8",
+          "idempotency_key": "native-readback-model-load-027ff183-ddd2-47f4-ba9e-db54205e9b7b"
+        },
+        {
+          "job_id": "4003dc64-8ddd-4fea-8284-ff8f40ccb053",
+          "operation_id": "d5033ba6-429c-4d5f-bbe7-c309186737a5",
+          "operation": "result.at_points",
+          "status": "SUCCEEDED",
+          "engine_dispatched": null,
+          "project_id": "188e90fc-1f37-4184-b803-307c8e81cca8",
+          "idempotency_key": "worker_b-real-41b4e420-3867-48b7-87fd-a0a8e90b4e18"
+        },
+        {
+          "job_id": "48c2ee39-9b80-4c3c-be49-6fa0e91e947a",
+          "operation_id": "0be91d7e-9d68-4c45-a684-60c50a8ac9f1",
+          "operation": "result.at_points",
+          "status": "SUCCEEDED",
+          "engine_dispatched": null,
+          "project_id": "188e90fc-1f37-4184-b803-307c8e81cca8",
+          "idempotency_key": "worker_b-imag-5f72b299-8cf2-4ea6-9810-a92a2a20dfb6"
+        }
+      ]
+    }
+  ],
+  "sidecar_provenance": {
+    "initial_post_run_recursive_inventory": "operations.sqlite3-wal and operations.sqlite3-shm were not listed in the first post-run file inventory before SQLite forensic opens",
+    "capture_observation": "sidecars were present after subsequent read-only sqlite inspections; copied byte-for-byte to preserve the observed state",
+    "interpretation": "these sidecar bytes are post-run forensic artifacts and are not asserted to have been produced by native execution; the exact main DB bytes and SQLite logical backups are preserved separately"
+  }
+}

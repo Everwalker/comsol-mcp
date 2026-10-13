@@ -1,0 +1,1926 @@
+{
+  "source_only": true,
+  "SDK_boundary_fixtures": true,
+  "native": "NOT_RUN",
+  "proofs": [
+    {
+      "port": "1",
+      "same_original_child": "handle-16",
+      "private_consume": true,
+      "revision": 0,
+      "selection_records": {
+        "before_numeric_read": {
+          "stage": "before_numeric_read",
+          "component": "comp1",
+          "geometry": "geom1",
+          "entity_dimension": 1,
+          "kind": "named",
+          "tag": "selInputPort",
+          "entities": [
+            1,
+            3,
+            5
+          ],
+          "resolver_source": "component_named_selection",
+          "native_selection_readback": {
+            "geometry": "geom1",
+            "dimension": 1,
+            "named": "selInputPort",
+            "entities": [
+              1,
+              3,
+              5
+            ],
+            "is_inheriting": false
+          }
+        },
+        "after_numeric_read": {
+          "stage": "after_numeric_read",
+          "component": "comp1",
+          "geometry": "geom1",
+          "entity_dimension": 1,
+          "kind": "named",
+          "tag": "selInputPort",
+          "entities": [
+            1,
+            3,
+            5
+          ],
+          "resolver_source": "component_named_selection",
+          "native_selection_readback": {
+            "geometry": "geom1",
+            "dimension": 1,
+            "named": "selInputPort",
+            "entities": [
+              1,
+              3,
+              5
+            ],
+            "is_inheriting": false
+          }
+        }
+      },
+      "postread_changed_membership_consumer_refused": true,
+      "actual_sdk_calls": [
+        {
+          "tag": "Model",
+          "type": "model_snapshot",
+          "request_id": "wrk-6e2e2532-4889-4442-9919-9c30387bc25e"
+        },
+        {
+          "tag": "Model",
+          "type": "model_snapshot",
+          "request_id": "wrk-6bcf5d7c-1073-46d1-9f2d-cf79c90e68f1"
+        },
+        {
+          "type": "health"
+        },
+        {
+          "tag": "Model",
+          "type": "model_snapshot",
+          "request_id": "wrk-87cc37da-ad10-4cec-980f-45ed16cd8e78"
+        },
+        {
+          "tag": "Model",
+          "type": "model",
+          "request_id": "wrk-101e9507-30bd-412e-9173-74f77c9abc2e"
+        },
+        {
+          "handle": "handle-1",
+          "generation": 1,
+          "method": "result",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-e55ecbf5-6a15-4aa1-8113-c3a9bdb4d77f"
+        },
+        {
+          "handle": "handle-2",
+          "generation": 1,
+          "method": "numerical",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-08465091-f80a-4cf2-9078-2d77b19ddd17"
+        },
+        {
+          "handle": "handle-2",
+          "generation": 1,
+          "method": "dataset",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-e35476d9-ba7d-4538-8712-38743642c370"
+        },
+        {
+          "handle": "handle-4",
+          "generation": 1,
+          "method": "tags",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-300213f5-6adc-42c2-bcfc-14241f78f5e1"
+        },
+        {
+          "handle": "handle-4",
+          "generation": 1,
+          "method": "get",
+          "args": [
+            "dset1"
+          ],
+          "type": "call",
+          "request_id": "wrk-9ec921d6-189d-4082-a56b-99c29b9fa2ed"
+        },
+        {
+          "handle": "handle-1",
+          "generation": 1,
+          "method": "result",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-331e2abe-2542-4944-b3e5-98237425905d"
+        },
+        {
+          "handle": "handle-2",
+          "generation": 1,
+          "method": "dataset",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-cf03582b-655a-4826-8629-f61eafc648f1"
+        },
+        {
+          "handle": "handle-4",
+          "generation": 1,
+          "method": "tags",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-e06fd04c-7c4e-4ae9-a134-303cbc0a5cf8"
+        },
+        {
+          "handle": "handle-1",
+          "generation": 1,
+          "method": "sol",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-f5f2b2ca-e99e-46a4-93fb-572571bc9162"
+        },
+        {
+          "handle": "handle-6",
+          "generation": 1,
+          "method": "tags",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-082a3a31-6f70-40eb-b2ee-2ed6896e2648"
+        },
+        {
+          "handle": "handle-4",
+          "generation": 1,
+          "method": "get",
+          "args": [
+            "dset1"
+          ],
+          "type": "call",
+          "request_id": "wrk-36009f0d-a872-4ced-ba49-55af16214097"
+        },
+        {
+          "handle": "handle-5",
+          "generation": 1,
+          "method": "getType",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-6c47633b-f05b-43fc-a764-61cff27fc8b7"
+        },
+        {
+          "handle": "handle-5",
+          "generation": 1,
+          "method": "properties",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-9c45416c-9151-42ad-93ee-5b11c0ea3a1c"
+        },
+        {
+          "handle": "handle-5",
+          "generation": 1,
+          "method": "getString",
+          "args": [
+            "solution"
+          ],
+          "type": "call",
+          "request_id": "wrk-50ebf2fa-5384-405f-9272-0e47606585f1"
+        },
+        {
+          "handle": "handle-5",
+          "generation": 1,
+          "method": "properties",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-b6d0c359-ca0d-4cb1-84b4-c4c4b97e4f1c"
+        },
+        {
+          "handle": "handle-5",
+          "generation": 1,
+          "method": "properties",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-56bb21ac-9345-458f-9b48-c80646c95955"
+        },
+        {
+          "handle": "handle-5",
+          "generation": 1,
+          "method": "properties",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-95ef3d12-6999-47d6-a66d-9a5145faa2ae"
+        },
+        {
+          "handle": "handle-5",
+          "generation": 1,
+          "method": "getString",
+          "args": [
+            "comp"
+          ],
+          "type": "call",
+          "request_id": "wrk-3fe59ed7-2260-4f6f-91c0-eed850db43d9"
+        },
+        {
+          "handle": "handle-5",
+          "generation": 1,
+          "method": "properties",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-142ebad9-5cac-4fd3-bd93-047008878ac1"
+        },
+        {
+          "handle": "handle-5",
+          "generation": 1,
+          "method": "getString",
+          "args": [
+            "geom"
+          ],
+          "type": "call",
+          "request_id": "wrk-07c63deb-92fa-42ac-8358-62f4e19b117f"
+        },
+        {
+          "handle": "handle-1",
+          "generation": 1,
+          "method": "modelNode",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-943a7741-06d6-4b98-b0b5-ad8804e84734"
+        },
+        {
+          "handle": "handle-7",
+          "generation": 1,
+          "method": "tags",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-5186e76d-65d2-48dd-b2e1-75b6334774f2"
+        },
+        {
+          "handle": "handle-1",
+          "generation": 1,
+          "method": "component",
+          "args": [
+            "comp1"
+          ],
+          "type": "call",
+          "request_id": "wrk-ebb04efc-eb4d-4b31-8827-aec88f3d48df"
+        },
+        {
+          "handle": "handle-8",
+          "generation": 1,
+          "method": "geom",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-aeec1ebf-6903-40d8-94fd-e88d2e5130a1"
+        },
+        {
+          "handle": "handle-9",
+          "generation": 1,
+          "method": "tags",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-0093ae5e-680d-4a83-8857-e3a99cafcfff"
+        },
+        {
+          "handle": "handle-9",
+          "generation": 1,
+          "method": "get",
+          "args": [
+            "geom1"
+          ],
+          "type": "call",
+          "request_id": "wrk-d7095d0b-4ea2-4984-ad3e-abf6c65de26d"
+        },
+        {
+          "handle": "handle-1",
+          "generation": 1,
+          "method": "component",
+          "args": [
+            "comp1"
+          ],
+          "type": "call",
+          "request_id": "wrk-6a4f6b35-f90c-4853-8b20-0e8dda383477"
+        },
+        {
+          "handle": "handle-8",
+          "generation": 1,
+          "method": "geom",
+          "args": [
+            "geom1"
+          ],
+          "type": "call",
+          "request_id": "wrk-6308d85f-8e75-47ad-8abb-783fde17490d"
+        },
+        {
+          "handle": "handle-10",
+          "generation": 1,
+          "method": "lengthUnit",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-5a49c75d-ad35-4723-947a-884233dcc389"
+        },
+        {
+          "handle": "handle-10",
+          "generation": 1,
+          "method": "getSDim",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-db32a5fd-abbb-48a9-a6e4-075dd5b849f2"
+        },
+        {
+          "handle": "handle-10",
+          "generation": 1,
+          "method": "isAxisymmetric",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-ca798a7f-4580-4fcf-ae6a-52d70b319989"
+        },
+        {
+          "handle": "handle-1",
+          "generation": 1,
+          "method": "sol",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-d643b760-4e4a-4cdf-b930-5f54efbf2bd4"
+        },
+        {
+          "handle": "handle-6",
+          "generation": 1,
+          "method": "tags",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-11419e5b-4ce7-43cc-a80c-73f115b042af"
+        },
+        {
+          "handle": "handle-6",
+          "generation": 1,
+          "method": "get",
+          "args": [
+            "sol1"
+          ],
+          "type": "call",
+          "request_id": "wrk-d7969af0-0aeb-42ed-9c88-fa4210b07012"
+        },
+        {
+          "handle": "handle-11",
+          "generation": 1,
+          "method": "getSolutioninfo",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-ce2ba100-4f38-42e3-b8d0-04b7b8aae661"
+        },
+        {
+          "handle": "handle-12",
+          "generation": 1,
+          "method": "getOuterSolnum",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-3102cc56-9947-4fda-b984-150c9184efd3"
+        },
+        {
+          "handle": "handle-12",
+          "generation": 1,
+          "method": "getSolnums",
+          "args": [
+            []
+          ],
+          "type": "call",
+          "request_id": "wrk-628244be-106f-48fb-af9c-aaafa5aef2b0"
+        },
+        {
+          "handle": "handle-12",
+          "generation": 1,
+          "method": "getLevelNames",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-1a06c2a7-0ea8-4d90-a5b3-fb400df70e1c"
+        },
+        {
+          "handle": "handle-1",
+          "generation": 1,
+          "method": "sol",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-a7ab5178-1080-47e1-8097-97cee0ea90c9"
+        },
+        {
+          "handle": "handle-6",
+          "generation": 1,
+          "method": "tags",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-879731e9-32a8-4520-9452-17553d063379"
+        },
+        {
+          "handle": "handle-6",
+          "generation": 1,
+          "method": "get",
+          "args": [
+            "sol1"
+          ],
+          "type": "call",
+          "request_id": "wrk-b83eca60-8bcf-472b-b601-1d273f523e80"
+        },
+        {
+          "handle": "handle-11",
+          "generation": 1,
+          "method": "getSolutioninfo",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-64e63cda-adda-4be1-ba96-61468b8d87f5"
+        },
+        {
+          "handle": "handle-11",
+          "generation": 1,
+          "method": "study",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-5709878c-fc37-406c-b92e-6de35849c9ce"
+        },
+        {
+          "handle": "handle-11",
+          "generation": 1,
+          "method": "getType",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-dfdca96f-e0be-45e9-b2bb-627b9c06f607"
+        },
+        {
+          "handle": "handle-11",
+          "generation": 1,
+          "method": "getSequenceType",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-4fd514f2-2dc9-4aeb-8528-74de0054d9e3"
+        },
+        {
+          "handle": "handle-11",
+          "generation": 1,
+          "method": "isAttached",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-6dda1ac5-0a4d-4f94-adb6-f26fcb69cb1f"
+        },
+        {
+          "handle": "handle-11",
+          "generation": 1,
+          "method": "study",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-2d37b44a-aa38-426f-a715-0e2747325d82"
+        },
+        {
+          "handle": "handle-11",
+          "generation": 1,
+          "method": "getSize",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-793440fd-2aa1-4c63-9702-712f728602ae"
+        },
+        {
+          "handle": "handle-11",
+          "generation": 1,
+          "method": "getSizeMulti",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-faabc342-d030-4e8b-b5ad-074fd32827d8"
+        },
+        {
+          "handle": "handle-11",
+          "generation": 1,
+          "method": "getPNames",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-6af9a0f2-4b9d-4bf2-b75f-31416e7eeb47"
+        },
+        {
+          "handle": "handle-11",
+          "generation": 1,
+          "method": "getPVals",
+          "args": [
+            1
+          ],
+          "type": "call",
+          "request_id": "wrk-54fdd7d4-0d82-4c67-bc0a-d254638772c1"
+        },
+        {
+          "handle": "handle-11",
+          "generation": 1,
+          "method": "getPValsImag",
+          "args": [
+            1
+          ],
+          "type": "call",
+          "request_id": "wrk-dd12b2a8-4bb8-4ab0-b912-d9850c199588"
+        },
+        {
+          "handle": "handle-12",
+          "generation": 1,
+          "method": "getUnit",
+          "args": [
+            "freq"
+          ],
+          "type": "call",
+          "request_id": "wrk-1db8270a-a826-4809-be86-1231013b2fc0"
+        },
+        {
+          "handle": "handle-12",
+          "generation": 1,
+          "method": "getLevelNames",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-b202459c-35ec-45e6-b9d5-67e14f569207"
+        },
+        {
+          "handle": "handle-12",
+          "generation": 1,
+          "method": "getLevels",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-cb1b0ae5-594b-4d38-929b-05d7b476565a"
+        },
+        {
+          "handle": "handle-12",
+          "generation": 1,
+          "method": "getOuterSolnum",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-ce6b6c70-60ac-4239-bc16-3dbde19c1d19"
+        },
+        {
+          "handle": "handle-1",
+          "generation": 1,
+          "method": "study",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-16ab240b-a6cd-4c43-814f-2cef144a15b5"
+        },
+        {
+          "handle": "handle-13",
+          "generation": 1,
+          "method": "tags",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-a4ca0f43-4f45-4b14-9a3a-8d2f96e547c2"
+        },
+        {
+          "handle": "handle-1",
+          "generation": 1,
+          "method": "study",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-d3c13db1-c152-421b-bb99-4a79a439a41c"
+        },
+        {
+          "handle": "handle-13",
+          "generation": 1,
+          "method": "tags",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-bea7f024-d1f4-4809-8f4f-1b548626a534"
+        },
+        {
+          "handle": "handle-11",
+          "generation": 1,
+          "method": "study",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-c2647866-c5de-4a7b-90f1-53025db881fe"
+        },
+        {
+          "tag": "Model",
+          "type": "model",
+          "request_id": "wrk-4150a57d-ea8b-42c1-bd14-d1afcf6895e8"
+        },
+        {
+          "handle": "handle-1",
+          "generation": 1,
+          "method": "component",
+          "args": [
+            "comp1"
+          ],
+          "type": "call",
+          "request_id": "wrk-479abd31-ce24-4017-931f-c66b039577f1"
+        },
+        {
+          "handle": "handle-8",
+          "generation": 1,
+          "method": "selection",
+          "args": [
+            "selInputPort"
+          ],
+          "type": "call",
+          "request_id": "wrk-8fd7b2a2-bc0d-4fc2-b403-0042fcaabfa2"
+        },
+        {
+          "handle": "handle-14",
+          "generation": 1,
+          "method": "geom",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-837324d5-25c5-438b-8988-922f9af9ab7d"
+        },
+        {
+          "handle": "handle-14",
+          "generation": 1,
+          "method": "dim",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-e975b87f-e964-4b75-b405-a8158b030e97"
+        },
+        {
+          "handle": "handle-14",
+          "generation": 1,
+          "method": "entities",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-e27853c9-cfb9-492e-8140-9e3e48e618da"
+        },
+        {
+          "handle": "handle-3",
+          "generation": 1,
+          "method": "tags",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-78a977df-cd5f-43d6-9cd8-fa7fa1a58ac3"
+        },
+        {
+          "handle": "handle-3",
+          "generation": 1,
+          "method": "create",
+          "args": [
+            "cmssp1",
+            "Interp"
+          ],
+          "type": "call",
+          "request_id": "wrk-07aa3484-20a3-4049-a2b0-a1f51e47eee8"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "getType",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-ca5af5e2-760f-46b5-91c2-7b53137270f0"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "tag",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-42d09fd5-c6a5-489e-aa07-e772239f8169"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "set",
+          "args": [
+            "data",
+            "dset1"
+          ],
+          "type": "call",
+          "request_id": "wrk-be994712-ef34-4b9f-857e-233769299d58"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "getString",
+          "args": [
+            "data"
+          ],
+          "type": "call",
+          "request_id": "wrk-39818b68-0a66-4e7e-9425-b2049f88d233"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "selection",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-6ab1656b-dae3-4921-99ca-d87d7b4d96a6"
+        },
+        {
+          "handle": "handle-16",
+          "generation": 1,
+          "method": "geom",
+          "args": [
+            "geom1",
+            1
+          ],
+          "type": "call",
+          "request_id": "wrk-6461ea1c-ebcf-4429-84cb-3322dff9f03a"
+        },
+        {
+          "handle": "handle-16",
+          "generation": 1,
+          "method": "named",
+          "args": [
+            "selInputPort"
+          ],
+          "type": "call",
+          "request_id": "wrk-430ea34f-f166-407e-8766-6ab0fff65171"
+        },
+        {
+          "handle": "handle-16",
+          "generation": 1,
+          "method": "geom",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-59210b26-ab51-460c-b7cb-53702c7817f8"
+        },
+        {
+          "handle": "handle-16",
+          "generation": 1,
+          "method": "dim",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-0f66f7a6-8d51-4441-b0dc-dd024df86811"
+        },
+        {
+          "handle": "handle-16",
+          "generation": 1,
+          "method": "named",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-9cea5615-b318-4fdb-b525-24a671871361"
+        },
+        {
+          "handle": "handle-16",
+          "generation": 1,
+          "method": "entities",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-dd5dcdbc-1fb7-4d40-b97d-cc7f38a50e24"
+        },
+        {
+          "handle": "handle-16",
+          "generation": 1,
+          "method": "isInheriting",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-57c79d19-59b7-4a11-935e-1d7c5cd0b462"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "set",
+          "args": [
+            "expr",
+            [
+              "freq"
+            ]
+          ],
+          "type": "call",
+          "request_id": "wrk-4590ae65-b1c0-465e-9543-c86dc69a4e89"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "setIndex",
+          "args": [
+            "unit",
+            "Hz",
+            0
+          ],
+          "type": "call",
+          "request_id": "wrk-b546b60a-06f1-4592-ab0c-b4f11443a773"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "setInterpolationCoordinates",
+          "args": [
+            [
+              [
+                -10.0
+              ],
+              [
+                0.0
+              ]
+            ]
+          ],
+          "type": "call",
+          "request_id": "wrk-71792d7e-68dd-4405-aabb-2a2f46985fec"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "getStringArray",
+          "args": [
+            "expr"
+          ],
+          "type": "call",
+          "request_id": "wrk-8eb1e3d4-b68a-4d55-86cb-4cb23a36b814"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "getStringArray",
+          "args": [
+            "unit"
+          ],
+          "type": "call",
+          "request_id": "wrk-6af9f9ce-8d6e-4b7b-b788-6c151fc4cf7e"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "run",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-9e0ecbc4-d025-407f-b2c7-5d30804c4f05"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "isComplex",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-5f0924c0-8537-4296-b92c-e8c6f6881618"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "isComplex",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-786a3ce7-3570-439c-ae2d-fae4b847f6e0"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "getData",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-f4e280da-b015-4fb9-a26b-7005c5509a6b"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "getStringArray",
+          "args": [
+            "expr"
+          ],
+          "type": "call",
+          "request_id": "wrk-b6f7c581-c8b3-4580-9a8c-dc20d3991544"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "getStringArray",
+          "args": [
+            "unit"
+          ],
+          "type": "call",
+          "request_id": "wrk-016fba4b-4391-4e6a-b035-b96c3864ed0b"
+        },
+        {
+          "handle": "handle-16",
+          "generation": 1,
+          "method": "geom",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-0af05dbd-e24f-40c5-a216-a4b38c2062ec"
+        },
+        {
+          "handle": "handle-16",
+          "generation": 1,
+          "method": "dim",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-6e2ce68f-b60f-4bac-baa2-ab0a98bd30f2"
+        },
+        {
+          "handle": "handle-16",
+          "generation": 1,
+          "method": "named",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-216ce701-02b1-4f1c-b23a-14ef2e578eda"
+        },
+        {
+          "handle": "handle-16",
+          "generation": 1,
+          "method": "entities",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-c26de1b3-5570-4460-b5b8-1bbd6a048df8"
+        },
+        {
+          "handle": "handle-16",
+          "generation": 1,
+          "method": "isInheriting",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-d0a418c2-6f4f-4e88-b688-d13ad9830783"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "getCoordinates",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-be198bb1-e91f-4be7-a9d9-52ee41220be3"
+        },
+        {
+          "handle": "handle-3",
+          "generation": 1,
+          "method": "remove",
+          "args": [
+            "cmssp1"
+          ],
+          "type": "call",
+          "request_id": "wrk-c1db61d4-992e-4b56-8c56-526ad8260b73"
+        },
+        {
+          "handle": "handle-3",
+          "generation": 1,
+          "method": "tags",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-52b50b42-0e52-4990-b93d-f51bce5ec9c6"
+        },
+        {
+          "tag": "Model",
+          "type": "model_snapshot",
+          "request_id": "wrk-972bab68-4a5d-44d4-870f-f286af214a7b"
+        }
+      ]
+    },
+    {
+      "port": "2",
+      "same_original_child": "handle-16",
+      "private_consume": true,
+      "revision": 0,
+      "selection_records": {
+        "before_numeric_read": {
+          "stage": "before_numeric_read",
+          "component": "comp1",
+          "geometry": "geom1",
+          "entity_dimension": 1,
+          "kind": "named",
+          "tag": "selReceiverX8",
+          "entities": [
+            8,
+            10,
+            12
+          ],
+          "resolver_source": "component_named_selection",
+          "native_selection_readback": {
+            "geometry": "geom1",
+            "dimension": 1,
+            "named": "selReceiverX8",
+            "entities": [
+              8,
+              10,
+              12
+            ],
+            "is_inheriting": false
+          }
+        },
+        "after_numeric_read": {
+          "stage": "after_numeric_read",
+          "component": "comp1",
+          "geometry": "geom1",
+          "entity_dimension": 1,
+          "kind": "named",
+          "tag": "selReceiverX8",
+          "entities": [
+            8,
+            10,
+            12
+          ],
+          "resolver_source": "component_named_selection",
+          "native_selection_readback": {
+            "geometry": "geom1",
+            "dimension": 1,
+            "named": "selReceiverX8",
+            "entities": [
+              8,
+              10,
+              12
+            ],
+            "is_inheriting": false
+          }
+        }
+      },
+      "postread_changed_membership_consumer_refused": true,
+      "actual_sdk_calls": [
+        {
+          "tag": "Model",
+          "type": "model_snapshot",
+          "request_id": "wrk-97baef1f-c2b9-4a44-9777-c704cb1153ec"
+        },
+        {
+          "tag": "Model",
+          "type": "model_snapshot",
+          "request_id": "wrk-b5ee5d8a-ad95-4e9b-9e54-860e2705240b"
+        },
+        {
+          "tag": "Model",
+          "type": "model_snapshot",
+          "request_id": "wrk-3ef1706b-eb32-451c-a2d9-b48ba00e2ed8"
+        },
+        {
+          "tag": "Model",
+          "type": "model",
+          "request_id": "wrk-41f556af-2710-4fe4-b5e8-618dfb0b1fee"
+        },
+        {
+          "handle": "handle-1",
+          "generation": 1,
+          "method": "result",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-0506a7d0-8c10-48ac-aa19-6ca64df39370"
+        },
+        {
+          "handle": "handle-2",
+          "generation": 1,
+          "method": "numerical",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-3c334c37-9bdd-4adf-8fc1-62216064bd08"
+        },
+        {
+          "handle": "handle-2",
+          "generation": 1,
+          "method": "dataset",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-bba6e27c-9d83-453b-8ec7-d6f38ee21a63"
+        },
+        {
+          "handle": "handle-4",
+          "generation": 1,
+          "method": "tags",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-de1abdcc-4e0a-4a82-90b0-edc564e43149"
+        },
+        {
+          "handle": "handle-4",
+          "generation": 1,
+          "method": "get",
+          "args": [
+            "dset1"
+          ],
+          "type": "call",
+          "request_id": "wrk-aa400250-4ad7-4475-bd79-af007713099c"
+        },
+        {
+          "handle": "handle-1",
+          "generation": 1,
+          "method": "result",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-07271da9-332f-4a0c-a8dd-784886c04af8"
+        },
+        {
+          "handle": "handle-2",
+          "generation": 1,
+          "method": "dataset",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-9eebbe1a-afbe-4abf-b85f-f192edbfcf40"
+        },
+        {
+          "handle": "handle-4",
+          "generation": 1,
+          "method": "tags",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-48391542-6363-400b-af35-06ce83d36b80"
+        },
+        {
+          "handle": "handle-1",
+          "generation": 1,
+          "method": "sol",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-1ecd2abf-509e-4101-b23c-b35d6881636e"
+        },
+        {
+          "handle": "handle-6",
+          "generation": 1,
+          "method": "tags",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-f2f11ccc-219b-40bd-adb0-708503c52cd4"
+        },
+        {
+          "handle": "handle-4",
+          "generation": 1,
+          "method": "get",
+          "args": [
+            "dset1"
+          ],
+          "type": "call",
+          "request_id": "wrk-720bb1db-7a17-4606-bcd6-d0505b26de34"
+        },
+        {
+          "handle": "handle-5",
+          "generation": 1,
+          "method": "getType",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-ab5b9ad2-08cb-4c2c-809e-b7b6cbf0f7f4"
+        },
+        {
+          "handle": "handle-5",
+          "generation": 1,
+          "method": "properties",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-98f1f9ca-5801-4e5c-a77f-a2216b96af19"
+        },
+        {
+          "handle": "handle-5",
+          "generation": 1,
+          "method": "getString",
+          "args": [
+            "solution"
+          ],
+          "type": "call",
+          "request_id": "wrk-bd533e0b-ebc2-4840-a999-5dd913ac02f2"
+        },
+        {
+          "handle": "handle-5",
+          "generation": 1,
+          "method": "properties",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-faadf028-5483-47d5-b364-eebd7364886a"
+        },
+        {
+          "handle": "handle-5",
+          "generation": 1,
+          "method": "properties",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-497803ed-dc88-430c-bd4f-a099be43b36b"
+        },
+        {
+          "handle": "handle-5",
+          "generation": 1,
+          "method": "properties",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-18042ea0-fc3c-4c40-ab82-44019d64b616"
+        },
+        {
+          "handle": "handle-5",
+          "generation": 1,
+          "method": "getString",
+          "args": [
+            "comp"
+          ],
+          "type": "call",
+          "request_id": "wrk-1340b4e9-8f7e-4034-aad5-789750acea56"
+        },
+        {
+          "handle": "handle-5",
+          "generation": 1,
+          "method": "properties",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-cec7065d-478e-43a2-9e22-db247e3ed7d3"
+        },
+        {
+          "handle": "handle-5",
+          "generation": 1,
+          "method": "getString",
+          "args": [
+            "geom"
+          ],
+          "type": "call",
+          "request_id": "wrk-cb9c68f1-572d-4e61-a46b-3beeecf7b036"
+        },
+        {
+          "handle": "handle-1",
+          "generation": 1,
+          "method": "modelNode",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-3a8f700d-590c-4b1b-909f-4701303f44e0"
+        },
+        {
+          "handle": "handle-7",
+          "generation": 1,
+          "method": "tags",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-007696a4-98cf-4181-87b7-83589add3069"
+        },
+        {
+          "handle": "handle-1",
+          "generation": 1,
+          "method": "component",
+          "args": [
+            "comp1"
+          ],
+          "type": "call",
+          "request_id": "wrk-9bac0ce7-4a27-47c0-a7a6-d5a0550d4340"
+        },
+        {
+          "handle": "handle-8",
+          "generation": 1,
+          "method": "geom",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-788aebbb-6117-435b-8efa-3adfc29c0442"
+        },
+        {
+          "handle": "handle-9",
+          "generation": 1,
+          "method": "tags",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-a33a5db7-f097-4827-a4ed-777936def5c8"
+        },
+        {
+          "handle": "handle-9",
+          "generation": 1,
+          "method": "get",
+          "args": [
+            "geom1"
+          ],
+          "type": "call",
+          "request_id": "wrk-b1a05e2e-7a05-468b-a74a-2b478ddfa9c4"
+        },
+        {
+          "handle": "handle-1",
+          "generation": 1,
+          "method": "component",
+          "args": [
+            "comp1"
+          ],
+          "type": "call",
+          "request_id": "wrk-fdb64075-98e1-44fd-9756-8e67441cfbe2"
+        },
+        {
+          "handle": "handle-8",
+          "generation": 1,
+          "method": "geom",
+          "args": [
+            "geom1"
+          ],
+          "type": "call",
+          "request_id": "wrk-9587c4c9-11d7-406e-99f0-264c9bb39735"
+        },
+        {
+          "handle": "handle-10",
+          "generation": 1,
+          "method": "lengthUnit",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-8f79b2bc-f307-42db-8464-231b5bdbae1c"
+        },
+        {
+          "handle": "handle-10",
+          "generation": 1,
+          "method": "getSDim",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-7c947a8f-bfb6-421c-b1bd-56f145c1953b"
+        },
+        {
+          "handle": "handle-10",
+          "generation": 1,
+          "method": "isAxisymmetric",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-92513373-a2f3-460f-b490-c80c66dfe789"
+        },
+        {
+          "handle": "handle-1",
+          "generation": 1,
+          "method": "sol",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-e287726f-ef35-47f3-b77b-3be0d6003072"
+        },
+        {
+          "handle": "handle-6",
+          "generation": 1,
+          "method": "tags",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-cf8197b8-8b69-4364-9a71-d12fd227c6b7"
+        },
+        {
+          "handle": "handle-6",
+          "generation": 1,
+          "method": "get",
+          "args": [
+            "sol1"
+          ],
+          "type": "call",
+          "request_id": "wrk-3b150060-81d6-4e2e-96cb-3862192d17d3"
+        },
+        {
+          "handle": "handle-11",
+          "generation": 1,
+          "method": "getSolutioninfo",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-1b1b690e-24b3-4f07-86c4-d46c7c8a83ab"
+        },
+        {
+          "handle": "handle-12",
+          "generation": 1,
+          "method": "getOuterSolnum",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-a4b4c83f-e959-4b8f-a70d-b94856adb77c"
+        },
+        {
+          "handle": "handle-12",
+          "generation": 1,
+          "method": "getSolnums",
+          "args": [
+            []
+          ],
+          "type": "call",
+          "request_id": "wrk-41bbbc00-1f34-4d0b-8752-22b646dc009a"
+        },
+        {
+          "handle": "handle-12",
+          "generation": 1,
+          "method": "getLevelNames",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-bf68bf6d-89d5-4dc7-bee9-258ffde1e8d1"
+        },
+        {
+          "handle": "handle-1",
+          "generation": 1,
+          "method": "sol",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-a1b4da73-00ef-4ede-ab1c-0d10cfa6c1de"
+        },
+        {
+          "handle": "handle-6",
+          "generation": 1,
+          "method": "tags",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-b5e062e2-3e44-476e-a7f1-86e98c94b7b0"
+        },
+        {
+          "handle": "handle-6",
+          "generation": 1,
+          "method": "get",
+          "args": [
+            "sol1"
+          ],
+          "type": "call",
+          "request_id": "wrk-c5c09192-a10b-4e71-b354-eb18d0a40239"
+        },
+        {
+          "handle": "handle-11",
+          "generation": 1,
+          "method": "getSolutioninfo",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-3f13a146-4cd1-482e-b593-e30497ac6b94"
+        },
+        {
+          "handle": "handle-11",
+          "generation": 1,
+          "method": "study",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-8f564d08-1c60-44a4-9f29-ecd88b8d38fb"
+        },
+        {
+          "handle": "handle-11",
+          "generation": 1,
+          "method": "getType",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-fdbc4f4a-8fe4-49ee-8810-5eb8ab1db29f"
+        },
+        {
+          "handle": "handle-11",
+          "generation": 1,
+          "method": "getSequenceType",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-817103cd-68e3-472d-800e-3f80320d06de"
+        },
+        {
+          "handle": "handle-11",
+          "generation": 1,
+          "method": "isAttached",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-444f41d3-2715-49f0-8628-0e0ce5d6f2d7"
+        },
+        {
+          "handle": "handle-11",
+          "generation": 1,
+          "method": "study",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-2eceb1a6-d128-4bc8-a92c-bd01422ba1c1"
+        },
+        {
+          "handle": "handle-11",
+          "generation": 1,
+          "method": "getSize",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-8167eff9-7494-4c99-921e-a6c66bffa8e2"
+        },
+        {
+          "handle": "handle-11",
+          "generation": 1,
+          "method": "getSizeMulti",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-f7c5b0aa-e8cc-481e-b40b-4dd851ad9c40"
+        },
+        {
+          "handle": "handle-11",
+          "generation": 1,
+          "method": "getPNames",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-e155f09b-009f-4534-920f-8a17a4895d93"
+        },
+        {
+          "handle": "handle-11",
+          "generation": 1,
+          "method": "getPVals",
+          "args": [
+            1
+          ],
+          "type": "call",
+          "request_id": "wrk-060eb587-4487-46dd-afd2-276880a35049"
+        },
+        {
+          "handle": "handle-11",
+          "generation": 1,
+          "method": "getPValsImag",
+          "args": [
+            1
+          ],
+          "type": "call",
+          "request_id": "wrk-b49244ef-6f8c-4504-bf59-198f55f1e150"
+        },
+        {
+          "handle": "handle-12",
+          "generation": 1,
+          "method": "getUnit",
+          "args": [
+            "freq"
+          ],
+          "type": "call",
+          "request_id": "wrk-0aaea645-be6a-4c9c-ab35-e0107e0feb61"
+        },
+        {
+          "handle": "handle-12",
+          "generation": 1,
+          "method": "getLevelNames",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-1562d607-6cfe-4a7d-8563-71d13c075cc3"
+        },
+        {
+          "handle": "handle-12",
+          "generation": 1,
+          "method": "getLevels",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-5d8e96cf-8d29-41f5-bb66-d9d257ade73e"
+        },
+        {
+          "handle": "handle-12",
+          "generation": 1,
+          "method": "getOuterSolnum",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-f05a8afc-4b5e-40aa-89dd-36b5cd43ce08"
+        },
+        {
+          "handle": "handle-1",
+          "generation": 1,
+          "method": "study",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-5d66a36a-1dfc-490b-b32b-19720d0eaa44"
+        },
+        {
+          "handle": "handle-13",
+          "generation": 1,
+          "method": "tags",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-003121a6-ae7d-439f-bb0e-340ba4ce9800"
+        },
+        {
+          "handle": "handle-1",
+          "generation": 1,
+          "method": "study",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-21027d9b-fad0-4630-9807-f7317f1ed034"
+        },
+        {
+          "handle": "handle-13",
+          "generation": 1,
+          "method": "tags",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-9f9f78e2-806a-425e-a5f0-de7705227d95"
+        },
+        {
+          "handle": "handle-11",
+          "generation": 1,
+          "method": "study",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-810728e7-a2df-4e7e-831d-351a0d08ef09"
+        },
+        {
+          "tag": "Model",
+          "type": "model",
+          "request_id": "wrk-d3421325-6d4a-4671-ae80-ea04a20d70de"
+        },
+        {
+          "handle": "handle-1",
+          "generation": 1,
+          "method": "component",
+          "args": [
+            "comp1"
+          ],
+          "type": "call",
+          "request_id": "wrk-55800bdc-9780-42e7-8bbd-6ff378aa2105"
+        },
+        {
+          "handle": "handle-8",
+          "generation": 1,
+          "method": "selection",
+          "args": [
+            "selReceiverX8"
+          ],
+          "type": "call",
+          "request_id": "wrk-6fb1a157-f95b-4012-846f-fac9aecd9c9f"
+        },
+        {
+          "handle": "handle-14",
+          "generation": 1,
+          "method": "geom",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-508e669e-199f-46ef-a943-b5b393b3f7dc"
+        },
+        {
+          "handle": "handle-14",
+          "generation": 1,
+          "method": "dim",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-0b1748d5-4359-424c-afa3-6e34156158e5"
+        },
+        {
+          "handle": "handle-14",
+          "generation": 1,
+          "method": "entities",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-5f58b306-6246-458b-b652-d1b04022885e"
+        },
+        {
+          "handle": "handle-3",
+          "generation": 1,
+          "method": "tags",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-a493bd6e-2e5b-44b8-86b4-bcaf09f95b6c"
+        },
+        {
+          "handle": "handle-3",
+          "generation": 1,
+          "method": "create",
+          "args": [
+            "cmssp1",
+            "Interp"
+          ],
+          "type": "call",
+          "request_id": "wrk-a23d9adf-aa97-44f4-a983-725b78661689"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "getType",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-49a2ba5f-382e-4368-a13c-353ea927d905"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "tag",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-bd543574-3561-44a2-8d35-9b04e9204e7f"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "set",
+          "args": [
+            "data",
+            "dset1"
+          ],
+          "type": "call",
+          "request_id": "wrk-09c258c2-41c0-43d1-89c6-49ea74963d7b"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "getString",
+          "args": [
+            "data"
+          ],
+          "type": "call",
+          "request_id": "wrk-4975b40e-f6e4-4bc0-97d0-beef9ff16c72"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "selection",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-ac741421-2603-4c5a-9fec-665b61289495"
+        },
+        {
+          "handle": "handle-16",
+          "generation": 1,
+          "method": "geom",
+          "args": [
+            "geom1",
+            1
+          ],
+          "type": "call",
+          "request_id": "wrk-de971292-05f8-48f1-83d4-0bf8198b3ca6"
+        },
+        {
+          "handle": "handle-16",
+          "generation": 1,
+          "method": "named",
+          "args": [
+            "selReceiverX8"
+          ],
+          "type": "call",
+          "request_id": "wrk-c630531c-3251-41f2-bc1c-22433eed845d"
+        },
+        {
+          "handle": "handle-16",
+          "generation": 1,
+          "method": "geom",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-621c6946-3a8c-4c9c-aa92-33d33136d7cc"
+        },
+        {
+          "handle": "handle-16",
+          "generation": 1,
+          "method": "dim",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-e1fe1acb-5756-4a55-a328-220499951753"
+        },
+        {
+          "handle": "handle-16",
+          "generation": 1,
+          "method": "named",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-d534aaf3-6926-47b8-a2e8-1cb18d8ee4ed"
+        },
+        {
+          "handle": "handle-16",
+          "generation": 1,
+          "method": "entities",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-fbe2d77a-92b8-4ff9-bb91-e6eb05f89380"
+        },
+        {
+          "handle": "handle-16",
+          "generation": 1,
+          "method": "isInheriting",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-5ad0f885-6332-4774-8705-26b7eb7f54c4"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "set",
+          "args": [
+            "expr",
+            [
+              "freq"
+            ]
+          ],
+          "type": "call",
+          "request_id": "wrk-3c748c34-300d-4284-a916-bc8e81c498b2"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "setIndex",
+          "args": [
+            "unit",
+            "Hz",
+            0
+          ],
+          "type": "call",
+          "request_id": "wrk-8faabb46-ae5f-426a-8256-e243eb315080"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "setInterpolationCoordinates",
+          "args": [
+            [
+              [
+                -10.0
+              ],
+              [
+                0.0
+              ]
+            ]
+          ],
+          "type": "call",
+          "request_id": "wrk-92d16e25-bccc-4a07-9200-d297c8e41aaa"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "getStringArray",
+          "args": [
+            "expr"
+          ],
+          "type": "call",
+          "request_id": "wrk-aff18efa-e129-4279-8e5a-ee766ac6fd4a"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "getStringArray",
+          "args": [
+            "unit"
+          ],
+          "type": "call",
+          "request_id": "wrk-04d112b6-efcc-4962-ba15-d4131f46855b"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "run",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-d1d86163-ecea-4ea4-abc3-198a20e9e776"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "isComplex",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-4a87c268-2c5f-4770-b5ec-dfdd245ca404"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "isComplex",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-b2256d1b-0b06-4d33-aac5-f5e9e735fd6d"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "getData",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-c1d64bbc-8c6c-4e1a-8138-8c6213ac7c9b"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "getStringArray",
+          "args": [
+            "expr"
+          ],
+          "type": "call",
+          "request_id": "wrk-06b78d74-636f-4997-a7af-d158475d5001"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "getStringArray",
+          "args": [
+            "unit"
+          ],
+          "type": "call",
+          "request_id": "wrk-4cbeb9a9-64fd-4597-a0dc-343697aed78e"
+        },
+        {
+          "handle": "handle-16",
+          "generation": 1,
+          "method": "geom",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-266f0225-9cfa-49c5-989c-5ec4b7e94953"
+        },
+        {
+          "handle": "handle-16",
+          "generation": 1,
+          "method": "dim",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-8826f11d-a466-4921-9239-cf4d65e91900"
+        },
+        {
+          "handle": "handle-16",
+          "generation": 1,
+          "method": "named",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-2dd44713-d9ea-40d8-8215-327637cb7a1b"
+        },
+        {
+          "handle": "handle-16",
+          "generation": 1,
+          "method": "entities",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-fdb4c0aa-4b59-4364-bf17-88ad44a53eb3"
+        },
+        {
+          "handle": "handle-16",
+          "generation": 1,
+          "method": "isInheriting",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-328bac99-2b63-4e5a-9c08-733edc4fb5ca"
+        },
+        {
+          "handle": "handle-15",
+          "generation": 1,
+          "method": "getCoordinates",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-6c4bc18e-fbc7-47ec-a3dd-0963cefb9884"
+        },
+        {
+          "handle": "handle-3",
+          "generation": 1,
+          "method": "remove",
+          "args": [
+            "cmssp1"
+          ],
+          "type": "call",
+          "request_id": "wrk-dcb92f7d-c5c2-4516-9475-c902daee7e7c"
+        },
+        {
+          "handle": "handle-3",
+          "generation": 1,
+          "method": "tags",
+          "args": [],
+          "type": "call",
+          "request_id": "wrk-ded91ae4-c2f8-4742-92a5-241a736f3695"
+        },
+        {
+          "tag": "Model",
+          "type": "model_snapshot",
+          "request_id": "wrk-bd533d17-32ed-4033-b945-03d6877229e7"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+diff --git a/comsol_mcp/_control_daemon.py b/comsol_mcp/_control_daemon.py
+index cd198e7..52df2c1 100644
+--- a/comsol_mcp/_control_daemon.py
++++ b/comsol_mcp/_control_daemon.py
+@@ -88,11 +88,12 @@ SESSION_OPERATIONS = frozenset({
+     "session.recover",
+ })
+ EXPERIMENT_DURABLE_READS = frozenset({"experiment.inspect", "experiment.case_result"})
+-ARTIFACT_CONTROL_READS = frozenset({"artifact.list", "artifact.inspect", "artifact.verify"})
++ARTIFACT_CONTROL_READS = frozenset({"artifact.list", "artifact.inspect", "artifact.verify", "artifact.preview"})
+ ARTIFACT_READ_ALIASES = {
+     "artifact_list": "artifact.list",
+     "artifact_inspect": "artifact.inspect",
+     "artifact_verify": "artifact.verify",
++    "artifact_preview": "artifact.preview",
+ }
+ 
+ _PRESERVE_SERVER_PROCESS_IDENTITY = object()

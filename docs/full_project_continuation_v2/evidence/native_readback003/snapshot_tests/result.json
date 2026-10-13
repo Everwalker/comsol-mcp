@@ -1,0 +1,48 @@
+{
+  "created_at_utc": "2026-10-11T11:54:23.430954+00:00",
+  "source_freeze_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/native_readback003/SOURCE_FREEZE_r3.json",
+  "source_fingerprint": "5ad8c67a48e83241098c36cf0e51f7bf00bee1d3339604f0d2061f365e2853e6",
+  "snapshot_root": "/private/tmp/comsol-v2-native-readback-source-20261011-r3",
+  "test_scope_root": "/private/tmp/comsol-v2-native-readback-tests-20261011-r3",
+  "runtime": "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python",
+  "runtime_version": "Python 3.12.13",
+  "guard_log": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/native_readback003/snapshot_tests/network-guard.jsonl",
+  "guard_events": [
+    {
+      "detail": "None",
+      "event": "GUARD_ACTIVE_BEFORE_CHILD_ENTRYPOINT",
+      "label": "native-readback-r3-snapshot-tests",
+      "operation": "sitecustomize",
+      "pid": 36910,
+      "ppid": 36896,
+      "run_id": "native-readback-r3-snapshot-006",
+      "time_ns": 1791719662789380000
+    },
+    {
+      "detail": "None",
+      "event": "GUARD_ACTIVE_BEFORE_CHILD_ENTRYPOINT",
+      "label": "native-readback-r3-snapshot-tests",
+      "operation": "sitecustomize",
+      "pid": 36911,
+      "ppid": 36896,
+      "run_id": "native-readback-r3-snapshot-006",
+      "time_ns": 1791719662828455000
+    }
+  ],
+  "guard_entries_active_before_process_count": 2,
+  "denied_socket_call_count": 0,
+  "guard_setup_error_count": 0,
+  "import_probe": "comsol_mcp=/private/tmp/comsol-v2-native-readback-source-20261011-r3/comsol_mcp/__init__.py\nreadback_runner=/private/tmp/comsol-v2-native-readback-source-20261011-r3/tools/verify_native_resume_saved_artifact.py\nresume_oracle=/private/tmp/comsol-v2-native-readback-source-20261011-r3/tools/run_native_resume_smoke.py\n",
+  "import_probe_exit_code": 0,
+  "pytest_command": [
+    "/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "/private/tmp/comsol-v2-native-readback-tests-20261011-r3/tests/test_native_resume_smoke_runner.py",
+    "/private/tmp/comsol-v2-native-readback-tests-20261011-r3/tests/test_control_daemon_projects.py",
+    "/private/tmp/comsol-v2-native-readback-tests-20261011-r3/tests/test_project_authority.py"
+  ],
+  "pytest_exit_code": 0,
+  "status": "PASS"
+}

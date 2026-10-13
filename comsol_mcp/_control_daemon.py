@@ -33,7 +33,7 @@ from ._operation_store import (
 )
 from ._platform_process import process_identity, terminate_process_tree
 from ._desktop_platforms import create_native_metadata_adapter
-from ._desktop_service import DesktopCoordinator, DesktopOperationError
+from ._desktop_service import BLOCKED_PERMISSION, DesktopCoordinator, DesktopOperationError
 from ._project_authority import ProjectAuthority, PROJECT_OPERATIONS
 from ._session_context import (
     CanonicalSocket,
@@ -308,9 +308,29 @@ def configure_remote_backend(worker):
 class ControlDaemon:
     def __init__(self, home, *, service=None, registry=None, worker=None, project_root=None,
                  desktop_adapter=None, project_authorization_verifier=None,
+                 host_provider_config=None,
+                 disk_resource_config=None,
+                 memory_resource_config=None,
+                 windows_t037_profile=None,
                  session_runtime_resolver=None, session_worker_factory=None,
                  session_peer_observer=None, session_credentials_resolver=None,
                  session_server_launcher=None):
+        if host_provider_config is not None and project_authorization_verifier is not None:
+            raise ValueError("configure either the host provider file or an injected verifier, not both")
+        trusted_t037_profile = None
+        if windows_t037_profile is not None:
+            from ._windows_t037 import load_trusted_profile
+            trusted_t037_profile = load_trusted_profile(windows_t037_profile)
+        trusted_memory_config = None
+        if memory_resource_config is not None:
+            from ._w26_memory_resources import TrustedMemoryResourceConfig
+            trusted_memory_config = TrustedMemoryResourceConfig.load(memory_resource_config)
+        scoped_host_provider = project_authorization_verifier
+        owns_scoped_host_provider = False
+        if host_provider_config is not None:
+            from ._host_scoped_provider import load_host_scoped_provider
+            scoped_host_provider = load_host_scoped_provider(host_provider_config)
+            owns_scoped_host_provider = True
         self.home = Path(home)
         self.home.mkdir(mode=0o700, parents=True, exist_ok=True)
         self.store = OperationStore(self.home / "operations.sqlite3")
@@ -329,9 +349,34 @@ class ControlDaemon:
             workspace_root=self.backend.project_root,
             grant_ceiling=frozenset(self.backend.host_permission_ceiling),
             permission_provider=self._project_host_permissions,
-            authorization_verifier=project_authorization_verifier,
+            # The historic callback remains the project.policy_set verifier.
+            # A callable provider object may additionally expose the stricter
+            # ``verify_scope``/``resolve_destination`` host-delivery hooks;
+            # those are installed on ManagedBackend below and are never
+            # inferred from a plain nonempty authorization reference.
+            authorization_verifier=(scoped_host_provider if callable(scoped_host_provider) else None),
+        )
+        self._scoped_host_provider = scoped_host_provider
+        self._owns_scoped_host_provider = owns_scoped_host_provider
+        self._windows_t037_profile = trusted_t037_profile
+        self._windows_t037_profile_path = (
+            os.fspath(windows_t037_profile) if windows_t037_profile is not None else None
         )
         self.backend.project_authorizer = self.project_authority.authorize_operation
+        self.backend.scoped_host_provider = scoped_host_provider
+        self._disk_resource_coordinator = None
+        if disk_resource_config is not None:
+            from ._w26_os_resources import DiskResourceCoordinator, TrustedDiskResourceConfig
+            trusted_disk_config = TrustedDiskResourceConfig.load(disk_resource_config)
+            self._disk_resource_coordinator = DiskResourceCoordinator(
+                config=trusted_disk_config, store=self.store, authority=self.project_authority,
+            )
+        self._memory_resource_coordinator = None
+        if trusted_memory_config is not None:
+            from ._w26_memory_resources import MemoryResourceCoordinator
+            self._memory_resource_coordinator = MemoryResourceCoordinator(
+                config=trusted_memory_config, store=self.store, authority=self.project_authority,
+            )
         self.queue = ThreadPoolExecutor(max_workers=1, thread_name_prefix="comsol-engine-queue")
         self.session_registry = SessionRuntimeRegistry()
         self.session_scheduler = SessionEndpointScheduler()
@@ -361,6 +406,7 @@ class ControlDaemon:
         # launcher Popen handle and the host-observed process birth/listener.
         # Durable lifecycle rows deliberately do not recreate this handle.
         self._session_server_handles: dict[tuple[str, str], ManagedServerHandle] = {}
+        self._session_t037_process_factories: dict[tuple[str, str], Any] = {}
         self.desktop = DesktopCoordinator(
             store=self.store,
             adapter=desktop_adapter if desktop_adapter is not None else create_native_metadata_adapter(),
@@ -369,6 +415,8 @@ class ControlDaemon:
             resolve_action=self._resolve_desktop_action,
             resolve_artifact=self._resolve_desktop_artifact,
             authorize_save_copy=self._authorize_desktop_save_copy,
+            publish_capture=self._publish_desktop_capture,
+            publish_save_copy=self._publish_desktop_save_copy,
         )
         self._desktop_request_scope = ContextVar(f"desktop_request_{id(self)}", default=None)
         self._desktop_unpersisted_attempts = {}
@@ -518,6 +566,158 @@ class ControlDaemon:
                 self._control_dispatch_inflight -= 1
                 self._dispatch_condition.notify_all()
 
+    def _windows_t037_host_control_issuer(self, runtime):
+        """Create the trusted in-process issuer only inside the configured SCM service."""
+        from ._windows_t037 import WindowsT037ProfileV2
+        from ._host_scoped_provider import HostScopedProvider
+        from ._windows_t037_broker import ScmServiceRuntime, WindowsScmError, WindowsT037HostControlIssuer
+
+        profile = self._windows_t037_profile
+        provider = self._scoped_host_provider
+        if (type(profile) is not WindowsT037ProfileV2 or self._windows_t037_profile_path is None
+                or type(runtime) is not ScmServiceRuntime or not runtime.is_active
+                or runtime.service_name != profile.service_name):
+            raise WindowsScmError(
+                "HOST_CONTROL_SCM_RUNTIME_REQUIRED",
+                "host-control issuer requires the active configured SCM service runtime",
+                safe_retry=False, stage="validation",
+            )
+        if (type(provider) is not HostScopedProvider
+                or self.project_authority.authorization_verifier is not provider):
+            raise WindowsScmError(
+                "HOST_CONTROL_PROVIDER_REQUIRED",
+                "host-control issuer requires the pinned startup authorization provider",
+                safe_retry=False, stage="validation",
+            )
+        return WindowsT037HostControlIssuer(
+            authority=self.project_authority, provider=provider,
+            profile=profile.host_resource_profile,
+            profile_source_sha256=profile.source_sha256,
+        )
+
+    def _submit_scm_host_control(self, runtime, *, phase, plan, authorization_ref, receipt=None):
+        """Trusted ServiceMain route; ordinary RPC cannot call this capability."""
+        issuer = self._windows_t037_host_control_issuer(runtime)
+        request = issuer.issue(runtime, phase=phase, plan=plan,
+                               authorization_ref=authorization_ref, receipt=receipt)
+        return self._submit_internal_host_control(request)
+
+    def _submit_internal_host_control(self, request):
+        """Queue one sealed SCM-issued host mutation on the existing serial lane."""
+        from ._host_scoped_provider import HostScopedProvider
+        from ._w26_os_resources import HostChangePlan, AppliedHostChangeReceipt, HostChangeApproval, validate_host_change_plan
+        from ._windows_t037 import WindowsT037ProfileV2
+        from ._windows_t037_broker import InternalHostControlRequest, WindowsScmError
+
+        profile = self._windows_t037_profile
+        provider = self._scoped_host_provider
+        if (type(request) is not InternalHostControlRequest
+                or type(profile) is not WindowsT037ProfileV2
+                or type(provider) is not HostScopedProvider
+                or self._windows_t037_profile_path is None
+                or self.project_authority.authorization_verifier is not provider
+                or request.authority is not self.project_authority
+                or request.provider is not provider):
+            raise WindowsScmError(
+                "HOST_CONTROL_INTERNAL_REQUEST_REQUIRED",
+                "host mutations are accepted only through a sealed request from this daemon's SCM issuer",
+                safe_retry=False, stage="validation",
+            )
+        policy = profile.host_resource_profile.windows_isolation
+        if (policy is None or request.phase not in {"APPLY", "RESTORE"}
+                or request.project_id != profile.host_resource_profile.project_id
+                or request.profile_sha256 != profile.host_resource_profile.sha256
+                or request.profile_source_sha256 != profile.source_sha256
+                or request.runtime.service_name != policy.service_name
+                or type(request.plan) is not HostChangePlan):
+            raise WindowsScmError(
+                "HOST_CONTROL_REQUEST_BINDING_MISMATCH",
+                "internal request differs from the current daemon profile or exact service",
+                safe_retry=False, stage="validation",
+            )
+        plan_payload = validate_host_change_plan(request.plan)
+        if (plan_payload.get("project_id") != profile.host_resource_profile.project_id
+                or plan_payload.get("profile_sha256") != profile.host_resource_profile.sha256):
+            raise WindowsScmError(
+                "HOST_CONTROL_SCOPE_MISMATCH", "host-change plan is not bound to this daemon profile",
+                safe_retry=False, stage="validation",
+            )
+        if request.phase == "APPLY":
+            if (type(request.approval) is not HostChangeApproval
+                    or request.approval.plan_sha256 != request.plan.sha256
+                    or request.approval.authorization_ref != request.authorization_ref
+                    or request.receipt is not None):
+                raise WindowsScmError(
+                    "HOST_CONTROL_APPROVAL_MISMATCH", "apply ticket does not bind its exact plan and authorization",
+                    safe_retry=False, stage="validation",
+                )
+        elif (request.approval is not None or type(request.receipt) is not AppliedHostChangeReceipt
+              or request.receipt.plan_sha256 != request.plan.sha256):
+            raise WindowsScmError(
+                "HOST_CONTROL_RECEIPT_MISMATCH", "restore ticket does not bind the exact source receipt",
+                safe_retry=False, stage="validation",
+            )
+        # The provider rechecks expiry and the complete dynamic restore scope
+        # under OperationStore's SQLite write transaction immediately before
+        # admission. This check ensures the project grant is still live before
+        # spending the one-use service capability.
+        self.project_authority.authorize_operation(request.project_id, "host_control")
+        request.consume(service_name=policy.service_name,
+                        project_id=profile.host_resource_profile.project_id,
+                        profile_sha256=profile.host_resource_profile.sha256)
+        with self._dispatch_condition:
+            if self._closing:
+                raise WindowsScmError(
+                    "CONTROL_DAEMON_CLOSING", "host-control request cannot queue while the daemon is closing",
+                    safe_retry=False, stage="validation",
+                )
+            self._control_dispatch_inflight += 1
+        try:
+            future = self.queue.submit(self._execute_internal_host_control, request)
+        except BaseException:
+            with self._dispatch_condition:
+                self._control_dispatch_inflight -= 1
+                self._dispatch_condition.notify_all()
+            raise
+
+        def release_dispatch(_future):
+            with self._dispatch_condition:
+                self._control_dispatch_inflight -= 1
+                self._dispatch_condition.notify_all()
+
+        future.add_done_callback(release_dispatch)
+        return future
+
+    def _execute_internal_host_control(self, request):
+        from ._windows_t037 import WindowsT037ProfileV2, load_trusted_profile
+        from ._windows_host_change import WindowsHostChangeExecutor
+
+        profile = self._windows_t037_profile
+        if type(profile) is not WindowsT037ProfileV2 or self._windows_t037_profile_path is None:
+            raise ExecutionContractError("HOST_CONTROL_PROFILE_REQUIRED", "trusted T037 v2 profile is not configured")
+        current = load_trusted_profile(self._windows_t037_profile_path)
+        if (type(current) is not WindowsT037ProfileV2
+                or current.source_sha256 != request.profile_source_sha256
+                or current.host_resource_profile.sha256 != request.profile_sha256
+                or current.source_sha256 != profile.source_sha256):
+            raise ExecutionContractError("HOST_CONTROL_PROFILE_CHANGED", "trusted T037 profile changed before serial dispatch")
+        self.project_authority.authorize_operation(request.project_id, "host_control")
+        executor = WindowsHostChangeExecutor.from_trusted_profile_path(
+            store=self.store, authority=self.project_authority,
+            trusted_profile_path=self._windows_t037_profile_path,
+        )
+        if (executor.profile.sha256 != request.profile_sha256
+                or executor.provider is not request.provider
+                or executor.authority is not request.authority):
+            raise ExecutionContractError("HOST_CONTROL_EXECUTOR_BINDING_MISMATCH",
+                                         "native executor did not retain the exact daemon/profile/provider binding")
+        if request.phase == "APPLY":
+            return executor.apply(request.plan, approval=request.approval)
+        if request.phase == "RESTORE":
+            return executor.restore(request.plan, request.receipt,
+                                    authorization_ref=request.authorization_ref)
+        raise ExecutionContractError("HOST_CONTROL_PHASE_UNSUPPORTED", "internal host-control phase is unsupported")
+
     def _dispatch_admitted(self, request):
         try:
             if not isinstance(request, dict):
@@ -528,6 +728,22 @@ class ControlDaemon:
                 raise ExecutionContractError("INVALID_REQUEST", "invalid operation/arguments/execution")
             operation = SESSION_ALIASES.get(operation, operation)
             operation = ARTIFACT_READ_ALIASES.get(operation, operation)
+            nested_operation = operation
+            nested_arguments = arguments
+            for _ in range(8):
+                if nested_operation in {"host.change.apply", "host.change.restore",
+                                        "host_change_apply", "host_change_restore"}:
+                    raise ExecutionContractError(
+                        "HOST_CONTROL_INTERNAL_ONLY",
+                        "host mutations are accepted only through the trusted in-process SCM issuer",
+                    )
+                if nested_operation not in {"registry_call", "operation_call"}:
+                    break
+                inner = nested_arguments.get("operation_id") if isinstance(nested_arguments, dict) else None
+                inner_args = nested_arguments.get("arguments") if isinstance(nested_arguments, dict) else None
+                if not isinstance(inner, str) or not isinstance(inner_args, dict):
+                    break
+                nested_operation, nested_arguments = inner, inner_args
             if operation in ARTIFACT_CONTROL_READS:
                 return self._dispatch_artifact_control_read(operation, arguments, execution)
             if operation in {"experiment.stage_define", "experiment_stage_define"}:
@@ -586,6 +802,73 @@ class ControlDaemon:
                 validate_call(scoped_operation, scoped)
                 clean = {key: value for key, value in body.items() if key not in identities}
                 arguments = {"operation_id": scoped_operation, "arguments": clean} if nested_a else clean
+            managed_model_actions = {
+                "model.list", "model.create", "model.load", "model.tree", "model.save",
+                "model.clone", "model.close", "code.recipe_register", "code.recipe_run",
+                "export.report", "export.evidence_bundle",
+            }
+            if operation in managed_model_actions:
+                # Keep the frozen action schemas authoritative for domain
+                # arguments while making production identity/revision binding
+                # explicit in the outer execution envelope.  The catalog's
+                # historical model_ref string is metadata-only; the managed
+                # route accepts only the exact structured ModelRef.
+                from ._g2_registry import validate_call
+                scoped = dict(arguments)
+                identity_fields = ("project_id", "session_id", "model_ref", "expected_revision",
+                                   "idempotency_key", "request_id")
+                for field in identity_fields:
+                    if field in scoped and field in execution and scoped[field] != execution[field]:
+                        code = "IDEMPOTENCY_CONFLICT" if field == "idempotency_key" else "MODEL_IDENTITY_MISMATCH"
+                        raise ExecutionContractError(code, f"{operation} {field} conflicts with the execution envelope")
+                    if field in execution:
+                        scoped[field] = execution[field]
+                validate_call(operation, scoped)
+                for name in ("project_id", "session_id"):
+                    value = execution.get(name)
+                    if not isinstance(value, str) or not value:
+                        raise ExecutionContractError("MODEL_IDENTITY_REQUIRED", f"{operation} requires execution.{name}")
+                if operation not in {"model.list", "model.create", "model.load"}:
+                    raw_ref = execution.get("model_ref")
+                    if not isinstance(raw_ref, Mapping):
+                        raise ExecutionContractError("MODEL_IDENTITY_REQUIRED", f"{operation} requires an exact outer ModelRef")
+                    try:
+                        from ._execution_contract import model_ref_from_mapping
+                        model_ref_from_mapping(dict(raw_ref))
+                    except Exception as exc:
+                        raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", f"{operation} ModelRef is malformed") from exc
+                    revision = execution.get("expected_revision")
+                    if isinstance(revision, bool) or not isinstance(revision, int) or revision < 0:
+                        raise ExecutionContractError("REVISION_CONFLICT", f"{operation} requires a non-negative execution.expected_revision")
+                if operation in {"model.save", "model.clone", "model.close",
+                                 "code.recipe_register", "code.recipe_run", "model.create", "model.load",
+                                 "export.report", "export.evidence_bundle"}:
+                    key = execution.get("idempotency_key")
+                    if not isinstance(key, str) or not key:
+                        raise ExecutionContractError("INVALID_REQUEST", f"{operation} requires execution.idempotency_key")
+                arguments = {key: value for key, value in arguments.items() if key not in identity_fields}
+            if operation == "artifact.publish":
+                # This is project-scoped HOST_CONTROL.  Keep all identity in
+                # the outer envelope; the artifact list and destination are
+                # validated against the frozen catalog before durable queue
+                # admission, and no model/session is selected implicitly.
+                from ._g2_registry import validate_call
+                scoped = dict(arguments)
+                identity_fields = ("project_id", "idempotency_key", "request_id")
+                for field in identity_fields:
+                    if field in scoped and field in execution and scoped[field] != execution[field]:
+                        code = "IDEMPOTENCY_CONFLICT" if field == "idempotency_key" else "PROJECT_IDENTITY_MISMATCH"
+                        raise ExecutionContractError(code, f"artifact.publish {field} conflicts with the outer execution envelope")
+                    if field in execution:
+                        scoped[field] = execution[field]
+                if not isinstance(execution.get("project_id"), str) or not execution["project_id"]:
+                    raise ExecutionContractError("PROJECT_IDENTITY_REQUIRED", "artifact.publish requires outer execution.project_id")
+                if not isinstance(execution.get("idempotency_key"), str) or not execution["idempotency_key"]:
+                    raise ExecutionContractError("INVALID_REQUEST", "artifact.publish requires outer execution.idempotency_key")
+                if execution.get("session_id") is not None or execution.get("model_ref") is not None or execution.get("expected_revision") is not None:
+                    raise ExecutionContractError("INVALID_REQUEST", "artifact.publish is project-scoped and cannot select a session or model")
+                validate_call(operation, scoped)
+                arguments = {key: value for key, value in arguments.items() if key not in identity_fields}
             delivery_actions = {"model.dependencies", "model.package", "model.rebuild_target"}
             if operation in delivery_actions:
                 # These three G3 model actions have a stricter additive managed
@@ -697,6 +980,7 @@ class ControlDaemon:
             if (
                 operation not in self.backend.registry
                 and operation not in {"registry_call", "operation_call", "model_adopt", "model_inspect", "model.adopt", "model.inspect", "artifact.register"}
+                and operation != "code.execute_java"
                 and operation not in _g3_operations()
                 and operation not in unit_a_actions
             ):
@@ -736,7 +1020,7 @@ class ControlDaemon:
             # but never store the raw references in operation or job records.
             persisted_arguments = dict(arguments)
             persisted_execution = dict(execution)
-            if operation in {"runtime.license_checkout", "runtime.render_probe"}:
+            if operation in {"runtime.license_checkout", "runtime.render_probe", "model.close", "artifact.publish"}:
                 persisted_arguments.pop("authorization_ref_sha256", None)
                 persisted_execution.pop("authorization_ref_sha256", None)
                 authorization_hashes = []
@@ -4010,7 +4294,8 @@ class ControlDaemon:
         permissions = getattr(getattr(service, "ledger", None), "permissions", None)
         if not isinstance(permissions, set):
             return False
-        required = {"READ": "inspect", "HOST_CONTROL": "host_control", "TRUSTED_CODE": "trusted_code"}.get(permission)
+        required = {"READ": "inspect", "PROJECT_WRITE": "project_write",
+                    "HOST_CONTROL": "host_control", "TRUSTED_CODE": "trusted_code"}.get(permission)
         return required is not None and required in permissions
 
     def _desktop_parent_claim(self, context, *, migration=False):
@@ -4425,7 +4710,8 @@ class ControlDaemon:
             if witness["sha256"] != arguments.get("source_sha256"):
                 raise DesktopOperationError("SAVE_COPY_UNVERIFIED", "copy SHA differs from Coordinator receipt", safe_retry=False)
             return self.session_scheduler.submit(capture["runtime"], self._desktop_queued_load_copy, dict(arguments), context, capture, scope, witness).result()
-        if operation not in {"desktop.binding.resolve", "desktop.binding.inspect"}:
+        if operation not in {"desktop.binding.resolve", "desktop.binding.inspect",
+                             "desktop.binding.label_get", "desktop.binding.label_set"}:
             return self._reject_unavailable_desktop_engine_route(operation)
         if operation == "desktop.binding.resolve":
             try:
@@ -4467,7 +4753,8 @@ class ControlDaemon:
         backend = capture["backend"]
         # A native save/load or Shell provider still needs an approved single-
         # claim substep. Never substitute generic model.load/Java dispatch.
-        if operation not in {"desktop.binding.resolve", "desktop.binding.inspect"}:
+        if operation not in {"desktop.binding.resolve", "desktop.binding.inspect",
+                             "desktop.binding.label_get", "desktop.binding.label_set"}:
             return self._reject_unavailable_desktop_engine_route(operation)
         from ._execution_contract import model_ref_from_mapping
         if operation == "desktop.binding.resolve":
@@ -4494,7 +4781,8 @@ class ControlDaemon:
         service = backend.service
         if service is None or not backend.endpoint_key:
             return self._reject_unavailable_desktop_engine_route(operation)
-        self.project_authority.authorize_operation(project_id, "inspect")
+        required_authority = "host_control" if operation == "desktop.binding.label_set" else "inspect"
+        self.project_authority.authorize_operation(project_id, required_authority)
         attributed = backend.model_project_binding(model_ref.as_dict())
         if attributed.get("attribution") != "PROJECT_BOUND" or attributed.get("project_id") != project_id:
             raise DesktopOperationError("MODEL_IDENTITY_MISMATCH", "typed model is not attributed to this project", safe_retry=True)
@@ -4509,6 +4797,19 @@ class ControlDaemon:
                 same_parent = context.operation_id in self.desktop._active_operations
         if state.dirty or (state.active_operation_id is not None and not same_parent):
             raise DesktopOperationError("EXECUTION_STATE_UNKNOWN", "managed model requires reconciliation or has an active operation", safe_retry=False)
+        if operation in {"desktop.binding.label_get", "desktop.binding.label_set"}:
+            expected_revision = arguments.get("expected_revision")
+            if type(expected_revision) is not int or expected_revision != state.revision:
+                raise DesktopOperationError("REVISION_CONFLICT", "active-model label challenge requires the exact current ModelRef revision", safe_retry=True)
+            if service.ledger.model_ownership.get(model_ref.model_tag) != "mcp_owned":
+                raise DesktopOperationError("MODEL_OWNERSHIP_UNVERIFIED", "active-model label challenge is limited to an MCP-owned reversible copy", safe_retry=True)
+            if operation == "desktop.binding.label_set":
+                label = arguments.get("label")
+                if (set(arguments) != {"project_id", "expected_revision", "label"}
+                        or not isinstance(label, str) or not label or len(label) > 96 or "\x00" in label):
+                    raise DesktopOperationError("INVALID_REQUEST", "active-model challenge label is malformed", safe_retry=True)
+            elif set(arguments) != {"project_id", "expected_revision"}:
+                raise DesktopOperationError("INVALID_REQUEST", "label-get route contains unsupported fields", safe_retry=True)
         # inspect_evidence validates epoch and freshly reads the adapter's
         # documented parameters+shallow-tree fingerprint and external counter.
         # It neither creates a Desktop binding nor proves complete model/dirty
@@ -4523,6 +4824,37 @@ class ControlDaemon:
                 or snapshot.get("server_instance_id") != model_ref.server_instance_id
                 or not isinstance(snapshot.get("fingerprint"), str) or not snapshot["fingerprint"]):
             raise DesktopOperationError("MODEL_IDENTITY_MISMATCH", "fresh managed snapshot differs from typed reference", safe_retry=True)
+        if operation in {"desktop.binding.label_get", "desktop.binding.label_set"}:
+            if backend.worker is None:
+                raise DesktopOperationError("WORKER_BINDING_MISMATCH", "active-model label challenge requires the exact persistent Worker", safe_retry=True)
+            label = arguments.get("label")
+            set_label = operation == "desktop.binding.label_set"
+            with backend.context(context.operation_id, self._session_worker_event_callback(record)):
+                reply = service.execute_legacy(
+                    "api_invoke",
+                    lambda _args: self._desktop_label_callback(backend, model_ref, label, set_label=set_label),
+                    {"method": "label", "revision": expected_revision, "label": label if set_label else None},
+                    model_ref=model_ref,
+                    expected_revision=expected_revision if set_label else None,
+                    request_id=str(uuid4()),
+                    session_id=model_ref.session_id,
+                    effect="host_control" if set_label else "inspect",
+                )
+            if reply.get("success") is not True:
+                raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "Worker did not complete the exact active-model label operation", category=MODEL_BINDING_UNKNOWN, side_effect_started=set_label, safe_retry=not set_label)
+            response_data = reply.get("data") if isinstance(reply.get("data"), Mapping) else {}
+            returned_label = response_data.get("active_model_label")
+            if not isinstance(returned_label, str) or (set_label and returned_label != label):
+                raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "Worker active-model label operation lacks exact readback", category=MODEL_BINDING_UNKNOWN, side_effect_started=set_label, safe_retry=not set_label)
+            reply_execution = reply.get("execution") if isinstance(reply.get("execution"), Mapping) else {}
+            return {"success": True, "data": {
+                "model_ref": model_ref.as_dict(), "server_endpoint": backend.endpoint_key,
+                "model_tag": model_ref.model_tag, "fingerprint": snapshot["fingerprint"],
+                "revision": reply_execution.get("revision", state.revision),
+                "active_model_label": returned_label,
+                "model_ownership": service.ledger.model_ownership.get(model_ref.model_tag),
+                "operation": operation,
+            }, "execution": dict(reply_execution)}
         return {"success": True, "data": {
             "model_ref": actual_ref, "server_endpoint": backend.endpoint_key,
             "model_tag": model_ref.model_tag, "fingerprint": snapshot["fingerprint"],
@@ -4531,6 +4863,21 @@ class ControlDaemon:
             "cas_guarantee": snapshot.get("cas_guarantee"),
             "Desktop_model_binding": "UNVERIFIED_BY_MANAGED_INSPECTION_ALONE",
         }}
+
+    @staticmethod
+    def _desktop_label_callback(backend, model_ref, label, *, set_label):
+        """Fixed internal Worker route for one Model.label getter/setter only."""
+        model = backend.worker.client().model(model_ref.model_tag)
+        if set_label:
+            model.label(label)
+            readback = model.label()
+            if readback != label:
+                raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "Worker Model.label setter did not read back the exact value", side_effect_started=True, safe_retry=False)
+        else:
+            readback = model.label()
+        if not isinstance(readback, str) or not readback:
+            raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "Worker Model.label returned no exact string", side_effect_started=set_label, safe_retry=not set_label)
+        return {"success": True, "data": {"active_model_label": readback}}
 
     @staticmethod
     def _reject_unavailable_desktop_engine_route(operation: str) -> dict[str, Any]:
@@ -4555,9 +4902,124 @@ class ControlDaemon:
             current_host_identity=local_artifact_host_identity(),
             current_engine_host_identity=local_engine_host_identity(self.backend.endpoint_key),
             current_server_instance_id=service.ledger.server_instance_id,
+            max_size_bytes=512 * 1024,
         )
+        registration = self.store.get_metadata("artifacts", artifact_id)
+        if (not isinstance(registration, Mapping)
+                or registration.get("artifact_id") != record.get("artifact_id")
+                or registration.get("sha256") != record.get("sha256")
+                or registration.get("size") != record.get("size")
+                or registration.get("path") != record.get("relative_path")
+                or registration.get("role") != "java-source"
+                or registration.get("artifact_type") != "text/x-java-source"):
+            raise DesktopOperationError("SOURCE_ARTIFACT_UNVERIFIED", "desktop.shell_execute requires a registered java-source artifact", category=BLOCKED_PERMISSION, safe_retry=True)
+        from ._artifact_store import _assert_pinned_artifact_stable, _open_pinned_artifact
+        path = Path(record["path"])
+        handle, before = _open_pinned_artifact(path)
+        try:
+            if int(before.st_size) != record.get("size") or before.st_size > 512 * 1024:
+                raise DesktopOperationError("SOURCE_ARTIFACT_UNVERIFIED", "registered Java source size changed or exceeds the Desktop bound", category=BLOCKED_PERMISSION, safe_retry=True)
+            chunks = []
+            count = 0
+            while True:
+                block = handle.read(64 * 1024)
+                if not block:
+                    break
+                count += len(block)
+                if count > 512 * 1024:
+                    raise DesktopOperationError("SOURCE_ARTIFACT_UNVERIFIED", "registered Java source exceeds the Desktop bound", category=BLOCKED_PERMISSION, safe_retry=True)
+                chunks.append(block)
+            content = b"".join(chunks)
+            _assert_pinned_artifact_stable(path, before, os.fstat(handle.fileno()))
+        finally:
+            handle.close()
+        if len(content) != record["size"] or hashlib.sha256(content).hexdigest() != record["sha256"]:
+            raise DesktopOperationError("SOURCE_ARTIFACT_UNVERIFIED", "registered Java source bytes failed same-handle SHA-256 readback", category=BLOCKED_PERMISSION, safe_retry=True)
         return TrustedSourceArtifact(record["artifact_id"], record["sha256"], record["size"],
-                                     "registered-project-artifact:" + project_id)
+                                     "registered-project-artifact:" + project_id, content)
+
+    def _publish_desktop_capture(self, project_id, context, value):
+        """Publish exact captured bytes through the existing project artifact store."""
+        from ._artifact_store import (
+            local_artifact_host_identity,
+            local_engine_host_identity,
+            publish_parameter_table_bytes_no_clobber,
+            register_project_artifact,
+        )
+
+        record = self._desktop_parent_claim(context)
+        if record.get("operation") != "desktop.capture" or record.get("metadata", {}).get("project_id") != project_id:
+            raise DesktopOperationError("OWNER_UNVERIFIED", "capture publication has no exact active desktop.capture claim", safe_retry=False)
+        if not isinstance(value, Mapping):
+            raise DesktopOperationError("CAPTURE_UNVERIFIED", "capture publication requires a typed byte receipt", side_effect_started=True, safe_retry=False)
+        payload = value.get("image_bytes")
+        digest = value.get("sha256")
+        model_ref = value.get("model_ref")
+        width, height = value.get("width"), value.get("height")
+        if (not isinstance(payload, bytes) or not payload or len(payload) > 64 * 1024 * 1024
+                or not isinstance(digest, str) or hashlib.sha256(payload).hexdigest() != digest
+                or not isinstance(model_ref, Mapping)
+                or value.get("target_identity_fingerprint") != value.get("window_identity_fingerprint")
+                or type(width) is not int or type(height) is not int
+                or width <= 0 or height <= 0 or width > 8192 or height > 8192 or width * height > 12_000_000
+                or value.get("scope") != "target_window" or value.get("region") != "window"):
+            raise DesktopOperationError("CAPTURE_UNVERIFIED", "capture bytes, scope, or bound ModelRef failed publication preflight", side_effect_started=True, safe_retry=False)
+        try:
+            from ._execution_contract import model_ref_from_mapping
+            ref = model_ref_from_mapping(dict(model_ref))
+            capture = self._desktop_capture_backend(project_id, ref.session_id)
+            service = capture["service"]
+            if (service is None or service.ledger._state_for(ref).dirty
+                    or service.ledger.model_ownership.get(ref.model_tag) != "mcp_owned"):
+                raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "capture ModelRef is not a clean MCP-owned project model", safe_retry=False)
+            binding = capture["backend"].model_project_binding(ref.as_dict())
+            if binding.get("attribution") != "PROJECT_BOUND" or binding.get("project_id") != project_id:
+                raise DesktopOperationError("MODEL_IDENTITY_MISMATCH", "capture ModelRef is not bound to the requested project", safe_retry=False)
+            project = self.project_authority.authorize_operation(project_id, "project_write")
+            root = Path(project["workspace"]).resolve(strict=True)
+            host_identity = local_artifact_host_identity()
+            engine_identity = local_engine_host_identity(capture["backend"].endpoint_key)
+        except DesktopOperationError:
+            raise
+        except Exception as exc:
+            raise DesktopOperationError("CAPTURE_REGISTRATION_UNKNOWN", f"capture project/runtime binding could not be verified: {type(exc).__name__}", side_effect_started=True, safe_retry=False) from exc
+        suffix = ".png" if value.get("format") == "PNG" else ".bmp" if value.get("format") == "BMP" else None
+        if suffix is None:
+            raise DesktopOperationError("CAPTURE_FORMAT_UNSUPPORTED", "only PNG or BMP window capture bytes can be registered", side_effect_started=True, safe_retry=False)
+        source_relative = "desktop-capture-" + hashlib.sha256(context.operation_id.encode("utf-8")).hexdigest()[:32] + suffix
+        published = publish_parameter_table_bytes_no_clobber(root, source_relative, payload)
+        if published.get("sha256") != digest or published.get("size_bytes") != len(payload):
+            raise DesktopOperationError("CAPTURE_REGISTRATION_UNKNOWN", "project publisher did not verify captured bytes", side_effect_started=True, safe_retry=False)
+        registered = register_project_artifact(
+            root, self.store, source_relative,
+            project_id=project_id,
+            role="desktop_capture",
+            classification="project_private",
+            host_identity=host_identity,
+            engine_host_identity=engine_identity,
+            request_id=context.request_id,
+            registering_operation_id=context.operation_id,
+            artifact_type="image/png" if suffix == ".png" else "image/bmp",
+            format_version="desktop-window-capture/1",
+            provenance_fields={
+                "window_identity_fingerprint": value.get("window_identity_fingerprint"),
+                "target_model_ref": ref.as_dict(),
+                "capture_region": "window",
+                "capture_scope": "target_window",
+                "capture_profile_id": value.get("profile_id"),
+                "width": width,
+                "height": height,
+                "format": value.get("format"),
+            },
+        )
+        if (registered.get("sha256") != digest or registered.get("size") != len(payload)
+                or registered.get("artifact_id") != digest):
+            raise DesktopOperationError("CAPTURE_REGISTRATION_UNKNOWN", "registered capture receipt differs from exact source bytes", side_effect_started=True, safe_retry=False)
+        return {"artifact_id": registered["artifact_id"], "sha256": digest, "size": len(payload),
+                "path": registered["path"], "role": registered["role"],
+                "classification": registered["classification"],
+                "window_identity_fingerprint": value.get("window_identity_fingerprint"),
+                "target_model_ref": ref.as_dict()}
 
     def _authorize_desktop_save_copy(self, project_id, destination):
         from ._artifact_store import ArtifactStore
@@ -4567,6 +5029,70 @@ class ControlDaemon:
             return path == destination and destination.is_absolute() and not destination.exists()
         except (ExecutionContractError, OSError, ValueError, TypeError):
             return False
+
+    def _publish_desktop_save_copy(self, project_id, context, stage_root, stage_path,
+                                   destination, stage_receipt):
+        """No-clobber publish a native Save Copy from verified private staging."""
+        from ._artifact_store import ArtifactStore, publish_project_file_no_clobber
+
+        record = self._desktop_parent_claim(context, migration=True)
+        if (record.get("operation") != "desktop.migrate_standalone"
+                or record.get("metadata", {}).get("project_id") != project_id):
+            raise DesktopOperationError("OWNER_UNVERIFIED", "save-copy publication has no exact active migration claim", safe_retry=False)
+        if (not isinstance(stage_receipt, Mapping)
+                or not isinstance(stage_receipt.get("sha256"), str)
+                or type(stage_receipt.get("size_bytes")) is not int
+                or not isinstance(stage_receipt.get("file_identity"), Mapping)
+                or not isinstance(stage_receipt.get("stage_root_identity"), Mapping)):
+            raise DesktopOperationError("SAVE_COPY_UNVERIFIED", "save-copy publication requires the pinned stage hash, size and security identities", side_effect_started=True, safe_retry=False)
+        scope = self._desktop_request_scope.get()
+        try:
+            request = json.loads(scope["arguments_json"])
+            requested_destination = Path(request["save_policy"]["destination_path"]).expanduser().resolve(strict=False)
+            project = self.project_authority.authorize_operation(project_id, "project_write")
+            root = Path(project["workspace"]).resolve(strict=True)
+            final_path = ArtifactStore(root).resolve_safe_path(str(destination), allow_overwrite=False)
+            relative = final_path.relative_to(root).as_posix()
+        except DesktopOperationError:
+            raise
+        except Exception as exc:
+            raise DesktopOperationError("SAVE_COPY_PATH_REJECTED", "project authority could not bind the requested Save Copy destination", safe_retry=False) from exc
+        if (requested_destination != destination or final_path != destination
+                or destination.exists() or destination.is_symlink()):
+            raise DesktopOperationError("SAVE_COPY_PATH_REJECTED", "final Save Copy destination is not the exact new project-authorized request path", safe_retry=False)
+        try:
+            published = publish_project_file_no_clobber(
+                root, relative, stage_path,
+                expected_sha256=stage_receipt["sha256"],
+                expected_size=stage_receipt["size_bytes"],
+                owned_source_root=stage_root,
+                expected_source_identity=stage_receipt["file_identity"],
+                expected_source_root_identity=stage_receipt["stage_root_identity"],
+            )
+            # Publication has just created this exact leaf through the pinned
+            # no-clobber publisher; allow it for readback, then bind the digest
+            # and handle identity to the publication receipt below.
+            resolved = ArtifactStore(root).resolve_safe_path(relative, allow_overwrite=True)
+            from ._artifact_store import _hash_regular_artifact
+            digest, file_identity = _hash_regular_artifact(resolved)
+            if (digest != stage_receipt["sha256"] or file_identity["size"] != stage_receipt["size_bytes"]
+                    or file_identity["device"] != published.get("file_identity", {}).get("device")
+                    or file_identity["inode"] != published.get("file_identity", {}).get("inode")):
+                raise DesktopOperationError("SAVE_COPY_PUBLISH_UNKNOWN", "published final path does not name the exact no-clobber bytes", side_effect_started=True, safe_retry=False)
+        except DesktopOperationError:
+            raise
+        except Exception as exc:
+            raise DesktopOperationError("SAVE_COPY_PUBLISH_UNKNOWN", f"ArtifactStore Save Copy publication did not reach a verified outcome ({type(exc).__name__})", side_effect_started=True, safe_retry=False) from exc
+        return {
+            "path": str(destination), "sha256": published["sha256"],
+            "size_bytes": published["size_bytes"],
+            "file_identity": published.get("file_identity"),
+            "publication": "ARTIFACTSTORE_NO_CLOBBER",
+            "operation_id": context.operation_id,
+            "request_id": context.request_id,
+            "project_id": project_id,
+            "relative_path": relative,
+        }
 
     def _dispatch_catalog_job_control(self, inner_operation: str, inner_arguments: dict[str, Any], *, execution: dict[str, Any]) -> dict[str, Any]:
         return self._dispatch_catalog_job_control_impl(
@@ -4926,6 +5452,15 @@ class ControlDaemon:
         if not isinstance(request_id, str) or not request_id:
             raise ExecutionContractError("INVALID_REQUEST", "session.start request_id must be a non-empty string")
         session_id = "session-" + uuid4().hex
+        t037_factory = None
+        if self._windows_t037_profile is not None:
+            # T037 configuration is an opt-in security boundary. It must
+            # refuse before the durable job and before the launcher creates
+            # private directories or calls a process API when its policy is
+            # not natively verified.
+            self._require_t037_policy("session.start")
+            t037_factory = self._new_t037_session_factory(project_id, session_id)
+            t037_factory.preflight()
         from ._execution_contract import canonical_request_hash
         semantic_arguments = {"runtime_id": runtime_id, "options": {}, "resources": {}}
         request_hash = canonical_request_hash(
@@ -4948,6 +5483,8 @@ class ControlDaemon:
                 record, session_id=record.get("metadata", {}).get("session_id"),
             )
         session_id = record["metadata"]["session_id"]
+        if t037_factory is not None:
+            self._session_t037_process_factories[(project_id, session_id)] = t037_factory
         self._start_session_mutation_record(record, operation="session.start", session_id=session_id)
         key = (project_id, session_id)
         lifecycle = None
@@ -5025,9 +5562,11 @@ class ControlDaemon:
                 ), "FAILED")
 
             try:
-                handle = self.session_server_launcher.start(
-                    runtime, project_id, session_id, observation_sink=record_startup_observation,
-                )
+                launch_options = {"observation_sink": record_startup_observation}
+                if t037_factory is not None:
+                    launch_options["process_factory"] = t037_factory
+                handle = self.session_server_launcher.start(runtime, project_id, session_id,
+                                                            **launch_options)
                 if not isinstance(handle, ManagedServerHandle):
                     raise OwnedServerError("Server launcher returned an untrusted handle")
                 self._session_server_handles[key] = handle
@@ -5244,6 +5783,7 @@ class ControlDaemon:
                         or stop_evidence.get("birth") != identity.birth):
                     raise OwnedServerError("Server stop adapter returned incomplete exact-exit evidence",
                                            handle=handle, uncertain=True)
+                self._close_t037_session_factory(key)
                 stopped = self._updated_session_lifecycle(
                     lifecycle, state="STOPPED", client_state=lifecycle["client_state"],
                     worker_instance_id=lifecycle["worker_instance_id"], worker_epoch=lifecycle["worker_epoch"],
@@ -5300,6 +5840,24 @@ class ControlDaemon:
         credentials_ref = routed.get("credentials_ref")
         if credentials_ref is not None and (not isinstance(credentials_ref, str) or not credentials_ref.strip()):
             raise ExecutionContractError("INVALID_REQUEST", "credentials_ref must be a non-empty trusted reference")
+
+        t037_factory = None
+        if self._windows_t037_profile is not None:
+            self._require_t037_policy("session.connect")
+            if requested_session_id is None:
+                raise ExecutionContractError(
+                    "T037_POLICY_UNVERIFIED",
+                    "T037 session.connect requires the exact daemon-owned Server session identity",
+                    stage="validation", details={"dispatch_performed": False},
+                )
+            t037_factory = self._session_t037_process_factories.get((project_id, requested_session_id))
+            if t037_factory is None:
+                raise ExecutionContractError(
+                    "T037_POLICY_UNVERIFIED",
+                    "T037 session.connect has no retained same-session Server/Worker Job binding",
+                    stage="validation", details={"dispatch_performed": False},
+                )
+            t037_factory.preflight()
 
         self.project_authority.authorize_operation(project_id, "project_write")
         timeouts = self._timeouts(execution)
@@ -5478,6 +6036,7 @@ class ControlDaemon:
                     host_permission_ceiling=self._default_backend.host_permission_ceiling,
                 )
                 backend.project_authorizer = self.project_authority.authorize_operation
+                backend.scoped_host_provider = self._scoped_host_provider
                 self._session_backends[(project_id, session_id)] = backend
 
                 def worker_event(event):
@@ -5490,6 +6049,7 @@ class ControlDaemon:
                     credentials=credentials, rpc_timeout_s=timeouts["rpc_timeout_s"],
                     project_permissions=project_record.get("policy", {}).get("permissions", []),
                     server_ownership=server_ownership, owned_process=owned_process,
+                    worker_process_factory=t037_factory,
                 )
                 dispatched = True
                 worker = attached["worker"]
@@ -9592,6 +10152,16 @@ class ControlDaemon:
 
     def _dispatch_session_reconnect(self, routed: dict[str, Any], execution: dict[str, Any]) -> dict[str, Any]:
         project_id, session_id = routed["project_id"], routed["session_id"]
+        if self._windows_t037_profile is not None:
+            self._require_t037_policy("session.reconnect")
+            factory = self._session_t037_process_factories.get((project_id, session_id))
+            if factory is None:
+                raise ExecutionContractError(
+                    "T037_POLICY_UNVERIFIED",
+                    "T037 reconnect has no retained same-session Server/Worker Job binding",
+                    stage="validation", details={"dispatch_performed": False},
+                )
+            factory.preflight()
         self.project_authority.authorize_operation(project_id, "project_write")
         record, reused = self._begin_session_mutation("session.reconnect", routed, execution)
         if reused:
@@ -9854,6 +10424,7 @@ class ControlDaemon:
                     project_permissions=project_record.get("policy", {}).get("permissions", []),
                     existing_worker=worker, server_ownership=lifecycle["server_ownership"],
                     owned_process=owned_process,
+                    worker_process_factory=self._session_t037_process_factories.get((project_id, session_id)),
                 )
                 reply, peer = attached["reply"], attached["peer"]
                 if (reply["instance_id"] != lifecycle["worker_instance_id"]
@@ -11067,6 +11638,53 @@ class ControlDaemon:
             "TRUSTED_CODE": "trusted_code", "HOST_CONTROL": "host_control",
         }.get(str(effect).upper())
 
+    def _require_t037_policy(self, operation: str) -> None:
+        """Reject T037-bound work unless fresh native policy is fully verified."""
+        profile = self._windows_t037_profile
+        if profile is None:
+            return
+        from ._windows_t037 import ERROR_POLICY_UNVERIFIED, WindowsT037Observer
+        try:
+            assessment = WindowsT037Observer().assess_profile(
+                profile, workspace_root=profile.workspace_root,
+            )
+            reasons = list(assessment.reasons)
+            state = assessment.state
+        except ExecutionContractError as exc:
+            reasons = [exc.code]
+            state = "UNVERIFIED"
+        except Exception as exc:
+            reasons = [type(exc).__name__]
+            state = "UNVERIFIED"
+        if state != "VERIFIED" or reasons:
+            raise ExecutionContractError(
+                ERROR_POLICY_UNVERIFIED,
+                f"{operation} is refused because Windows T037 policy is not verified",
+                stage="validation",
+                details={"policy_state": "UNVERIFIED", "reason_codes": reasons[:32],
+                         "dispatch_performed": False},
+            )
+
+    def _new_t037_session_factory(self, project_id: str, session_id: str):
+        if self._windows_t037_profile is None:
+            return None
+        from ._windows_t037 import T037SessionProcessFactory
+        key = (project_id, session_id)
+        factory = self._session_t037_process_factories.get(key)
+        if factory is None:
+            factory = T037SessionProcessFactory(self._windows_t037_profile, session_id)
+        return factory
+
+    def _close_t037_session_factory(self, key: tuple[str, str]) -> None:
+        factory = self._session_t037_process_factories.get(key)
+        if factory is None:
+            return
+        close = getattr(factory, "close", None)
+        if not callable(close):
+            raise ExecutionContractError("T037_POLICY_UNVERIFIED", "T037 session factory has no exact Job close operation")
+        close()
+        self._session_t037_process_factories.pop(key, None)
+
     def _authorize_project_execution(self, operation: str, arguments: dict[str, Any], execution: dict[str, Any]) -> None:
         """Apply project policy to project-tagged work and exact ModelRefs."""
         from . import _g2_registry
@@ -11088,10 +11706,6 @@ class ControlDaemon:
                 raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "execution.project_id differs from the ModelRef project binding")
         elif binding and project_id is not None and scoped_operation not in {"model.adopt", "model_adopt"}:
             raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "UNATTRIBUTED ModelRef cannot be assigned by an operation")
-        if project_id is None:
-            return
-        if not isinstance(project_id, str) or not project_id:
-            raise ExecutionContractError("INVALID_REQUEST", "execution.project_id must be a nonempty string")
         entry = _g2_registry.BY_ID.get(scoped_operation)
         effect = entry.effect if entry is not None else None
         if effect is None:
@@ -11105,11 +11719,17 @@ class ControlDaemon:
         if scoped_operation in {"api.invoke", "api_invoke"}:
             from ._g2_public_api import routed_arguments, provisional_effect
             effect = provisional_effect(routed_arguments(operation, arguments))
+        permission = self._permission_for_effect(effect)
+        if permission == "trusted_code":
+            self._require_t037_policy(scoped_operation)
+        if project_id is None:
+            return
+        if not isinstance(project_id, str) or not project_id:
+            raise ExecutionContractError("INVALID_REQUEST", "execution.project_id must be a nonempty string")
         if scoped_operation in {"api.probe", "api_probe"}:
             from ._g2_checkpoint_ops import inner_permission
             probe_body = arguments["arguments"] if operation in {"registry_call", "operation_call"} else arguments
             self.project_authority.authorize_operation(project_id, inner_permission(probe_body))
-        permission = self._permission_for_effect(effect)
         if permission is None:
             raise ExecutionContractError("PROJECT_SCOPE_UNSUPPORTED", "project-scoped operation has no enforced effect mapping")
         self.project_authority.authorize_operation(project_id, permission)
@@ -11396,16 +12016,131 @@ class ControlDaemon:
                       and not self._job_quiescence_proven(job)]
         if unresolved and operation not in {"server_connect", "model_inspect"}:
             return self._finish(record, self._error("EXECUTION_STATE_UNKNOWN", "reconcile unfinished engine work before new operations"), "FAILED")
-        self.store.update_job(job_id, "RUNNING", {"queue_wait_s": now - submitted, "engine_started_at": time.time()})
+        disk_admission_required = False
+        memory_admission_required = False
+        disk_coordinator = self._disk_resource_coordinator
+        memory_coordinator = self._memory_resource_coordinator
+        disk_operation = operation
+        if operation in {"registry_call", "operation_call"}:
+            candidate = arguments.get("operation_id")
+            if isinstance(candidate, str):
+                disk_operation = candidate
+        if disk_coordinator is not None or memory_coordinator is not None:
+            try:
+                if disk_coordinator is not None:
+                    disk_admission_required = disk_coordinator.requires_reservation(
+                        project_id=execution.get("project_id"), operation_id=disk_operation,
+                    )
+                if memory_coordinator is not None:
+                    memory_admission_required = memory_coordinator.requires_reservation(
+                        project_id=execution.get("project_id"), operation_id=disk_operation,
+                    )
+                if disk_admission_required or memory_admission_required:
+                    # Recheck mutable project permission immediately before
+                    # the durable reservations, still before RUNNING/Worker.send.
+                    self._authorize_project_execution(operation, arguments, execution)
+                memory_prepared = (memory_coordinator.prepare_queued_job(job_id)
+                                   if memory_admission_required else None)
+                disk_admission = None
+                memory_admission = None
+                if disk_admission_required:
+                    callback = None
+                    if memory_admission_required:
+                        callback = lambda: memory_coordinator.reserve_prepared_in_transaction(
+                            job_id, memory_prepared,
+                        )
+                    disk_admission = disk_coordinator.reserve_queued_job(
+                        job_id, transactional_admission=callback,
+                    )
+                    memory_admission = disk_admission.pop("additional_admission", None)
+                elif memory_admission_required:
+                    memory_admission = memory_coordinator.reserve_queued_job(
+                        job_id, prepared=memory_prepared,
+                    )
+                if disk_admission_required:
+                    self.store.add_event(job_id, "W26DiskAdmission", {
+                        "status": "RESERVED",
+                        "operation_id": disk_admission["operation_id"],
+                        "reservation_id": disk_admission["reservation_id"],
+                        "requested_bytes": disk_admission["requested_bytes"],
+                        "trusted_estimate_bytes": disk_admission["trusted_estimate_bytes"],
+                        "disk_resource_profile_id": disk_admission["disk_resource_profile_id"],
+                        "profile_sha256": disk_admission["disk_resource_profile_sha256"],
+                        "host_id": disk_admission["host_id"], "storage_id": disk_admission["storage_id"],
+                        "enforcement": disk_admission["enforcement"],
+                        "evidence_classification": disk_admission["evidence_classification"],
+                        "engine_dispatched": False,
+                    })
+                if memory_admission_required:
+                    self.store.add_event(job_id, "W26MemoryAdmission", {
+                        "status": "RESERVED",
+                        "operation_id": memory_admission["operation_id"],
+                        "reservation_id": memory_admission["reservation_id"],
+                        "requested_bytes": memory_admission["requested_bytes"],
+                        "trusted_estimate_bytes": memory_admission["trusted_estimate_bytes"],
+                        "memory_resource_profile_id": memory_admission["memory_resource_profile_id"],
+                        "profile_sha256": memory_admission["memory_resource_profile_sha256"],
+                        "host_id": memory_admission["host_id"], "boot_id": memory_admission["boot_id"],
+                        "available_bytes": memory_admission["available_bytes"],
+                        "evidence_classification": memory_admission["evidence_classification"],
+                        "hard_cap_state": memory_admission["hard_cap_state"],
+                        "engine_dispatched": False,
+                    })
+            except ExecutionContractError as exc:
+                refusal = self._exception(exc)
+                refusal.setdefault("data", {}).update({
+                    "engine_dispatched": False,
+                    "resource_admission": "REFUSED",
+                })
+                return self._finish(record, refusal, "FAILED")
+            except Exception as exc:
+                self._log_exception()
+                return self._finish(record, self._error(
+                    "RESOURCE_ADMISSION_STATE_UNKNOWN",
+                    "resource reservation state could not be established before engine dispatch",
+                    data={"engine_dispatched": False, "resource_admission": "UNKNOWN",
+                          "cause_type": type(exc).__name__},
+                    execution_state_unknown=True, safe_retry=False,
+                ), "UNKNOWN")
+
+        resource_admission_required = disk_admission_required or memory_admission_required
+
+        running_metadata = {"queue_wait_s": now - submitted, "engine_started_at": time.time()}
+        if resource_admission_required:
+            transitioned, current_status, current_job = self.store.transition_status(
+                job_id, expected_statuses="QUEUED", new_status="RUNNING",
+                metadata=running_metadata, event_name="RUNNING",
+                event_meta={"operation_id": operation_id, "at": time.time(),
+                            "disk_reservation_precedes_worker": disk_admission_required,
+                            "memory_reservation_precedes_worker": memory_admission_required},
+            )
+            if not transitioned:
+                if current_status in {"CANCELLED", "FAILED", "EXPIRED", "LOST", "SUCCEEDED"}:
+                    self._release_terminal_resource_reservations(job_id)
+                    return ((current_job or {}).get("result") or self._error(
+                        "OPERATION_CANCELLED", "request reached a terminal state before disk-admitted dispatch",
+                        data={"status": current_status, "engine_dispatched": False}, safe_retry=True,
+                    ))
+                return self._finish(record, self._error(
+                    "RESOURCE_ADMISSION_STATE_UNKNOWN",
+                    "queued disk-admitted job changed before the RUNNING fence",
+                    data={"observed_status": current_status, "engine_dispatched": False},
+                    execution_state_unknown=True, safe_retry=False,
+                ), "UNKNOWN")
+        else:
+            self.store.update_job(job_id, "RUNNING", running_metadata)
         current_job = self.store.job(job_id)
         if current_job and current_job["status"] == "CANCELLED":
+            if resource_admission_required:
+                self._release_terminal_resource_reservations(job_id)
             return current_job.get("result") or self._error(
                 "OPERATION_CANCELLED",
                 "request was cancelled before engine execution",
                 data={"status": "CANCELLED", "engine_dispatched": False},
                 safe_retry=True,
             )
-        self.store.add_event(job_id, "RUNNING", {"operation_id": operation_id, "at": time.time()})
+        if not resource_admission_required:
+            self.store.add_event(job_id, "RUNNING", {"operation_id": operation_id, "at": time.time()})
         with self.lock:
             self.running[job_id] = {"started": now, "last_event": now, "timeouts": timeouts, "execution_warned": False, "progress_warned": False}
         def worker_event(event):
@@ -11449,6 +12184,15 @@ class ControlDaemon:
                 or error.get("code") in {"EXECUTION_STATE_UNKNOWN", "UNKNOWN"}
             )
             status = "UNKNOWN" if unknown else ("SUCCEEDED" if result["success"] else "FAILED")
+            if unknown:
+                # Some typed domain adapters report ambiguity in their
+                # `data.execution_state_unknown` receipt while supplying a
+                # concise error without the retry bit. Once the durable outer
+                # job is UNKNOWN, make the public retry contract explicit
+                # without replacing the domain's primary code or message.
+                result["execution_state_unknown"] = True
+                if isinstance(error, dict):
+                    error.setdefault("safe_retry", False)
             if result.get("execution", {}).get("dirty"):
                 # A completed callback with a dirty model is a failed operation;
                 # explicit model reconciliation is still required for next writes.
@@ -11493,7 +12237,60 @@ class ControlDaemon:
             return authoritative_result
         self.store.update_job(record["job_id"], authoritative_status, {"finished_observed_at": time.time()})
         self.store.add_event(record["job_id"], authoritative_status, {"operation_id": record["operation_id"], "at": time.time()})
+        if authoritative_status in {"SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED", "LOST"}:
+            self._release_terminal_resource_reservations(record["job_id"])
         return result
+
+    def _release_terminal_disk_reservation(self, job_id):
+        """Release disk accounting after a durable terminal write, never alter its result."""
+        coordinator = self._disk_resource_coordinator
+        if coordinator is None:
+            return
+        try:
+            outcome = coordinator.release_terminal_if_reserved(job_id)
+            if outcome is not None:
+                self.store.add_event(job_id, "W26DiskReservationReleased", {
+                    "status": outcome.get("status"),
+                    "reservation_id": outcome.get("reservation_id"),
+                    "idempotent": outcome.get("idempotent") is True,
+                    "evidence_classification": outcome.get("evidence_classification", "SOFTWARE_ONLY"),
+                })
+        except Exception as exc:
+            # The operation's durable terminal result is primary. Retain the
+            # reservation and record only a bounded cleanup diagnostic.
+            try:
+                self.store.add_event(job_id, "W26DiskReservationReleaseDeferred", {
+                    "cause_type": type(exc).__name__,
+                    "code": getattr(exc, "code", None),
+                    "reservation_retained": True,
+                })
+            except Exception:
+                pass
+
+    def _release_terminal_resource_reservations(self, job_id):
+        """Release host accounting after terminal persistence; UNKNOWN remains held."""
+        self._release_terminal_disk_reservation(job_id)
+        coordinator = self._memory_resource_coordinator
+        if coordinator is None:
+            return
+        try:
+            outcome = coordinator.release_terminal_if_reserved(job_id)
+            if outcome is not None:
+                self.store.add_event(job_id, "W26MemoryReservationReleased", {
+                    "status": outcome.get("status"),
+                    "reservation_id": outcome.get("reservation_id"),
+                    "idempotent": outcome.get("idempotent") is True,
+                    "evidence_classification": outcome.get("evidence_classification", "SOFTWARE_ONLY"),
+                })
+        except Exception as exc:
+            try:
+                self.store.add_event(job_id, "W26MemoryReservationReleaseDeferred", {
+                    "cause_type": type(exc).__name__,
+                    "code": getattr(exc, "code", None),
+                    "reservation_retained": True,
+                })
+            except Exception:
+                pass
 
     def _pending(self, record, **extra):
         job_id = record.get("job_id")
@@ -12078,6 +12875,7 @@ class ControlDaemon:
                             "owned Server stop adapter returned incomplete exact-exit evidence",
                             handle=handle, uncertain=True,
                         )
+                    self._close_t037_session_factory(key)
                     stopped = self._updated_session_lifecycle(
                         lifecycle, state="STOPPED", client_state=lifecycle["client_state"],
                         worker_instance_id=lifecycle.get("worker_instance_id"),
@@ -12148,12 +12946,24 @@ class ControlDaemon:
             try:
                 self.store.close()
             finally:
+                if self._owns_scoped_host_provider:
+                    close_provider = getattr(self._scoped_host_provider, "close", None)
+                    if callable(close_provider):
+                        try:
+                            close_provider()
+                        except Exception:
+                            pass
                 with self._dispatch_condition:
                     self._close_complete = True
                     self._dispatch_condition.notify_all()
 
 
-def serve(home):
+def serve(home, *, host_provider_config=None, disk_resource_config=None, memory_resource_config=None,
+          windows_t037_profile=None, _scm_runtime=None, _scm_bootstrap_request=None,
+          _scm_profile_source_sha256=None):
+    if _scm_bootstrap_request is not None and _scm_runtime is None:
+        from ._windows_t037_broker import WindowsScmError
+        raise WindowsScmError("SCM_BOOTSTRAP_SERVICE_REQUIRED", "bootstrap requests require the explicit SCM entrypoint")
     home = Path(home)
     home.mkdir(mode=0o700, parents=True, exist_ok=True)
     os.chmod(home, 0o700)
@@ -12165,7 +12975,52 @@ def serve(home):
         singleton.close()
         raise
     token = secrets.token_urlsafe(32)
-    daemon = ControlDaemon(home)
+    selected_provider_config = (host_provider_config if host_provider_config is not None
+                                else os.environ.get("COMSOL_MCP_HOST_PROVIDER_CONFIG"))
+    selected_disk_config = (disk_resource_config if disk_resource_config is not None
+                            else os.environ.get("COMSOL_MCP_DISK_RESOURCE_CONFIG"))
+    selected_memory_config = (memory_resource_config if memory_resource_config is not None
+                              else os.environ.get("COMSOL_MCP_MEMORY_RESOURCE_CONFIG"))
+    selected_t037_profile = (windows_t037_profile if windows_t037_profile is not None
+                             else os.environ.get("COMSOL_MCP_WINDOWS_T037_PROFILE"))
+    daemon_options = {}
+    if selected_provider_config is not None:
+        daemon_options["host_provider_config"] = selected_provider_config
+    if selected_disk_config is not None:
+        daemon_options["disk_resource_config"] = selected_disk_config
+    if selected_memory_config is not None:
+        daemon_options["memory_resource_config"] = selected_memory_config
+    if selected_t037_profile is not None:
+        daemon_options["windows_t037_profile"] = selected_t037_profile
+    try:
+        daemon = ControlDaemon(home, **daemon_options)
+    except Exception:
+        singleton.close()
+        raise
+    try:
+        return _serve_control_listener(home, daemon, token, _scm_runtime,
+                                       _scm_bootstrap_request, _scm_profile_source_sha256)
+    finally:
+        # Existing close drains accepted execution lanes and preserves UNKNOWN
+        # ownership. SCM STOP is not a solver cancellation or a host RESTORE.
+        if _scm_runtime is not None:
+            try:
+                daemon.close()
+            finally:
+                singleton.close()
+
+
+def _serve_control_listener(home, daemon, token, _scm_runtime, bootstrap_path, profile_source_sha256):
+    if _scm_runtime is not None:
+        from ._windows_t037 import WindowsT037ProfileV2
+        from ._windows_t037_broker import ScmServiceRuntime, WindowsScmError
+        profile = daemon._windows_t037_profile
+        if (type(_scm_runtime) is not ScmServiceRuntime
+                or type(profile) is not WindowsT037ProfileV2
+                or _scm_runtime.service_name != profile.service_name
+                or profile.source_sha256 != profile_source_sha256):
+            raise WindowsScmError("SCM_DAEMON_PROFILE_MISMATCH",
+                                  "SCM service does not bind the daemon's trusted v2 startup profile")
     daemon._control_singleton_lock_held = True
     class Handler(BaseHTTPRequestHandler):
         def do_POST(self):
@@ -12187,64 +13042,164 @@ def serve(home):
                 self.send_error(500, "internal control error")
         def log_message(self, *_): pass
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-    server.daemon_threads = True
-    temporary = home / "control.json.tmp"
-    endpoint = {"port": server.server_port, "token": token, "pid": os.getpid()}
-    start_epoch_ms = process_identity(os.getpid())["start_epoch_ms"]
-    if isinstance(start_epoch_ms, int):
-        endpoint["process_start_epoch_ms"] = start_epoch_ms
-    daemon_identity = {
-        "schema": _CONTROL_DAEMON_IDENTITY_SCHEMA,
-        "event": "DAEMON_READY",
-        "observed_at_utc": _utc_millis(),
-        "pid": os.getpid(),
-        "birth": f"start_epoch_ms:{start_epoch_ms}" if isinstance(start_epoch_ms, int) and start_epoch_ms > 0 else None,
-        "exit_code": None,
-        "exception_type": None,
-        "errno": None,
-        "winerror": None,
-        "error_category": None,
-    }
-    # This fixed-schema file is credential-free and diagnostic only. The
-    # authenticated endpoint/token remains exclusively in control.json.
-    _write_control_daemon_identity(home, daemon_identity)
-    temporary.write_text(json.dumps(endpoint))
-    os.chmod(temporary, 0o600)
-    temporary.replace(home / "control.json")
     try:
-        server.serve_forever()
-    except BaseException as exc:
-        exception_type = type(exc).__name__
-        if not _CONTROL_DAEMON_SAFE_TYPE_RE.fullmatch(exception_type):
-            exception_type = "UnclassifiedError"
-        errno_value = getattr(exc, "errno", None)
-        winerror_value = getattr(exc, "winerror", None)
-        serve_observation = {
-            **daemon_identity,
-            "event": "DAEMON_SERVE_FAILED",
+        server.daemon_threads = True
+        temporary = home / "control.json.tmp"
+        endpoint = {"port": server.server_port, "token": token, "pid": os.getpid()}
+        start_epoch_ms = process_identity(os.getpid())["start_epoch_ms"]
+        if isinstance(start_epoch_ms, int):
+            endpoint["process_start_epoch_ms"] = start_epoch_ms
+        daemon_identity = {
+            "schema": _CONTROL_DAEMON_IDENTITY_SCHEMA,
+            "event": "DAEMON_READY",
             "observed_at_utc": _utc_millis(),
+            "pid": os.getpid(),
+            "birth": f"start_epoch_ms:{start_epoch_ms}" if isinstance(start_epoch_ms, int) and start_epoch_ms > 0 else None,
             "exit_code": None,
-            "exception_type": exception_type,
-            "errno": errno_value if type(errno_value) is int else None,
-            "winerror": winerror_value if type(winerror_value) is int else None,
-            "error_category": "DAEMON_SERVE_LOOP_RAISED",
+            "exception_type": None,
+            "errno": None,
+            "winerror": None,
+            "error_category": None,
         }
+        # This fixed-schema file is credential-free and diagnostic only. The
+        # authenticated endpoint/token remains exclusively in control.json.
+        _write_control_daemon_identity(home, daemon_identity)
+        temporary.write_text(json.dumps(endpoint))
+        os.chmod(temporary, 0o600)
+        temporary.replace(home / "control.json")
+        stop_monitor = None
+        monitor_done = threading.Event()
+        bootstrap_failure = []
         try:
-            _write_control_daemon_identity(home, serve_observation)
-        except Exception:
-            pass
-        raise
-    else:
-        _write_control_daemon_identity(home, {
-            **daemon_identity,
-            "event": "DAEMON_SERVE_RETURNED",
-            "observed_at_utc": _utc_millis(),
-            "exit_code": None,
-            "error_category": "DAEMON_SERVE_LOOP_RETURNED",
-        })
+            if _scm_runtime is not None:
+                # SCM readiness follows actual daemon and endpoint initialization.
+                # This does not attest child isolation or native policy readiness.
+                _scm_runtime.mark_running()
+                daemon._windows_t037_host_control_issuer(_scm_runtime)
+                bootstrap_future = None
+                if bootstrap_path is not None:
+                    from ._windows_t037_bootstrap import submit_bootstrap
+                    bootstrap_future = submit_bootstrap(daemon, _scm_runtime, bootstrap_path)
+                    # Retain the actual accepted handle throughout shutdown.
+                    # Polling bounds observation only; it does not cancel the
+                    # serial lane or infer that a host effect did not happen.
+                    daemon._scm_bootstrap_future = bootstrap_future
+
+                def stop_service_listener():
+                    while not monitor_done.is_set():
+                        if bootstrap_future is not None and bootstrap_future.done():
+                            try:
+                                bootstrap_future.result()
+                            except BaseException as exc:
+                                bootstrap_failure.append(exc)
+                                server.shutdown()
+                                return
+                        if _scm_runtime.wait_for_stop(timeout=0.2):
+                            server.shutdown()
+                            return
+
+                stop_monitor = threading.Thread(target=stop_service_listener,
+                                                name="windows-scm-stop", daemon=True)
+                stop_monitor.start()
+            server.serve_forever()
+            if bootstrap_failure:
+                raise bootstrap_failure[0]
+        except BaseException as exc:
+            exception_type = type(exc).__name__
+            if not _CONTROL_DAEMON_SAFE_TYPE_RE.fullmatch(exception_type):
+                exception_type = "UnclassifiedError"
+            errno_value = getattr(exc, "errno", None)
+            winerror_value = getattr(exc, "winerror", None)
+            serve_observation = {
+                **daemon_identity,
+                "event": "DAEMON_SERVE_FAILED",
+                "observed_at_utc": _utc_millis(),
+                "exit_code": None,
+                "exception_type": exception_type,
+                "errno": errno_value if type(errno_value) is int else None,
+                "winerror": winerror_value if type(winerror_value) is int else None,
+                "error_category": "DAEMON_SERVE_LOOP_RAISED",
+            }
+            try:
+                _write_control_daemon_identity(home, serve_observation)
+            except Exception:
+                pass
+            raise
+        else:
+            _write_control_daemon_identity(home, {
+                **daemon_identity,
+                "event": "DAEMON_SERVE_RETURNED",
+                "observed_at_utc": _utc_millis(),
+                "exit_code": None,
+                "error_category": "DAEMON_SERVE_LOOP_RETURNED",
+            })
+        finally:
+            monitor_done.set()
+            if stop_monitor is not None:
+                stop_monitor.join(timeout=1)
+    finally:
+        if _scm_runtime is not None:
+            server.server_close()
+
+
+def serve_windows_scm_service(home, *, service_name, windows_t037_profile,
+                              host_provider_config=None, disk_resource_config=None,
+                              memory_resource_config=None, bootstrap_request=None):
+    """Explicit own-process SCM entrypoint; no console or vendor fallback."""
+    from ._windows_t037 import WindowsT037ProfileV2, load_trusted_profile
+    from ._windows_t037_broker import WindowsScmError, WindowsScmServiceBroker
+
+    selected_profile = (windows_t037_profile if windows_t037_profile is not None
+                        else os.environ.get("COMSOL_MCP_WINDOWS_T037_PROFILE"))
+    if selected_profile is None:
+        raise WindowsScmError("SCM_PROFILE_REQUIRED", "SCM startup requires a pinned trusted T037 v2 profile")
+    profile = load_trusted_profile(selected_profile)
+    if type(profile) is not WindowsT037ProfileV2 or profile.service_name != service_name:
+        raise WindowsScmError("SCM_PROFILE_SERVICE_MISMATCH",
+                              "SCM entrypoint service name differs from the trusted v2 profile")
+
+    def service_main(runtime):
+        return serve(home, host_provider_config=host_provider_config,
+                     disk_resource_config=disk_resource_config,
+                     memory_resource_config=memory_resource_config,
+                     windows_t037_profile=selected_profile, _scm_runtime=runtime,
+                     _scm_bootstrap_request=bootstrap_request,
+                     _scm_profile_source_sha256=profile.source_sha256)
+
+    return WindowsScmServiceBroker(service_name, service_main).run()
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--home", required=True)
+    parser.add_argument("--host-provider-config", default=None,
+                        help="host-only scoped grant/destination JSON file; may also use COMSOL_MCP_HOST_PROVIDER_CONFIG")
+    parser.add_argument("--disk-resource-config", default=None,
+                        help="trusted host disk admission JSON file; may also use COMSOL_MCP_DISK_RESOURCE_CONFIG")
+    parser.add_argument("--memory-resource-config", default=None,
+                        help="trusted host memory admission JSON file; may also use COMSOL_MCP_MEMORY_RESOURCE_CONFIG")
+    parser.add_argument("--windows-t037-profile", default=None,
+                        help="trusted Windows T037 startup profile; may also use COMSOL_MCP_WINDOWS_T037_PROFILE")
+    parser.add_argument("--windows-scm-service-name", default=None,
+                        help="explicit own-process SCM entrypoint; must match the trusted v2 profile")
+    parser.add_argument("--windows-scm-bootstrap-request", default=None,
+                        help="one explicitly configured pinned private request; SCM entrypoint only")
+    arguments = parser.parse_args(argv)
+    if arguments.windows_scm_bootstrap_request is not None and arguments.windows_scm_service_name is None:
+        parser.error("--windows-scm-bootstrap-request requires --windows-scm-service-name")
+    if arguments.windows_scm_service_name is not None:
+        return serve_windows_scm_service(
+            arguments.home, service_name=arguments.windows_scm_service_name,
+            host_provider_config=arguments.host_provider_config,
+            disk_resource_config=arguments.disk_resource_config,
+            memory_resource_config=arguments.memory_resource_config,
+            windows_t037_profile=arguments.windows_t037_profile,
+            bootstrap_request=arguments.windows_scm_bootstrap_request)
+    return serve(arguments.home, host_provider_config=arguments.host_provider_config,
+                 disk_resource_config=arguments.disk_resource_config,
+                 memory_resource_config=arguments.memory_resource_config,
+                 windows_t037_profile=arguments.windows_t037_profile)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--home", required=True)
-    serve(parser.parse_args().home)
+    main()

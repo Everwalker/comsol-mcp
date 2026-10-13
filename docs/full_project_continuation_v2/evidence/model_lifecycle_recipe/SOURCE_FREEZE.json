@@ -1,0 +1,143 @@
+{
+  "format": "managed-models-recipes-source-freeze/1",
+  "created_utc": "2026-10-11T17:31:35.350015+00:00",
+  "base_commit": "799bf7a0fa95313e7659f44d8ff40ff1678314d5",
+  "scope": [
+    "model.list",
+    "model.create",
+    "model.load",
+    "model.tree",
+    "model.save",
+    "model.clone",
+    "model.close",
+    "code.recipe_register",
+    "code.recipe_run"
+  ],
+  "source_files": [
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "size_bytes": 774407,
+      "sha256": "7cb72bc648a936d7ea5253eb8ba3e4044b15150375d013fbe607f62f98a031d5"
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "size_bytes": 224980,
+      "sha256": "3cc34ad773264e10a538ffea38c2b6a8f6831f2b35538475a1237c7b095312dc"
+    },
+    {
+      "path": "comsol_mcp/_g3_ops.py",
+      "size_bytes": 10272,
+      "sha256": "22c7b855653f14499a364f8aeb91d85bb3c34d49313c9227348e21b3f495a490"
+    },
+    {
+      "path": "comsol_mcp/_execution_service.py",
+      "size_bytes": 30057,
+      "sha256": "5ba2f22b4d0a59507164d2b9f5891845face36fc2f85ec6a27c4bd6fff2f20e2"
+    },
+    {
+      "path": "comsol_mcp/_domain_outcome.py",
+      "size_bytes": 49828,
+      "sha256": "f02ffbe8c22fbc830c910a41383e137a9a7b4eeb3279da84b22bfdf69c23aca3"
+    },
+    {
+      "path": "comsol_mcp/_java_worker.py",
+      "size_bytes": 64695,
+      "sha256": "3da3f1dc1481defafea3cf8938734ea9da9d41685dab2f80f8c8d567c782bc98"
+    },
+    {
+      "path": "comsol_mcp/worker_java/PersistentComsolWorker.java",
+      "size_bytes": 122001,
+      "sha256": "e6a5a1bb3311a95e86c4dc87b0146cdff1a7cc9db46952138ea4b2fbb46db332"
+    },
+    {
+      "path": "tests/test_java_worker.py",
+      "size_bytes": 46312,
+      "sha256": "dd8af14a200467427d2cb29d3bf93d9e85c81b4e2e0d20e7034c15676d4d4473"
+    },
+    {
+      "path": "comsol_mcp/_g3_managed_models.py",
+      "size_bytes": 62732,
+      "sha256": "3bd2c42c9108d03eba3159640fec3bc075c99bb70b2c4a226926ff186b1d6ec9"
+    },
+    {
+      "path": "tests/test_g3_managed_models.py",
+      "size_bytes": 32212,
+      "sha256": "33a23aead53d6f00d5acda1f937fc02605f663317c0d5009878d3a402186dbe5"
+    }
+  ],
+  "source_diff": {
+    "path": "MODEL_LIFECYCLE_RECIPE_SOURCE.patch",
+    "size_bytes": 132315,
+    "sha256": "8937f2cdb4cc0fb0da5a0f47e7f7e2850eec8cc3702107e49e9c494e81c50a64"
+  },
+  "software_validation": [
+    {
+      "name": "managed model and recipe routes / selected control, registry, permissions, artifact, W24 regressions",
+      "command": "TMPDIR=/private/tmp /private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python -m pytest -q tests/test_g3_managed_models.py tests/test_g3_model_delivery.py tests/test_control_daemon.py tests/test_control_daemon_projects.py tests/test_managed_backend.py tests/test_g2_security_guards.py tests/test_g2_w08_w12.py tests/test_g2_registry_packaging.py tests/test_model_catalog_adapters.py tests/test_w24_physical_controls.py tests/test_operation_store.py",
+      "result": "157 passed, 0 skipped, 0 failures",
+      "junit": {
+        "path": "docs/full_project_continuation_v2/evidence/model_delivery/final-affected/junit-model-managed-recipe.xml",
+        "sha256": "80b1c2b03059cfc2c8e9705aee97ddc0ad2ed5ebadbcd9fafc46fbe0674162b0",
+        "size_bytes": 23738,
+        "tests": 157,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "raw_command_record": "TMPDIR=/private/tmp /private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python -m pytest -q tests/test_g3_managed_models.py tests/test_g3_model_delivery.py tests/test_control_daemon.py tests/test_control_daemon_projects.py tests/test_managed_backend.py tests/test_g2_security_guards.py tests/test_g2_w08_w12.py tests/test_g2_registry_packaging.py tests/test_model_catalog_adapters.py tests/test_w24_physical_controls.py tests/test_operation_store.py"
+    },
+    {
+      "name": "W25 Desktop READY/non-ready fence and session lifecycle regressions",
+      "command": "PYTHONPATH=tests TMPDIR=/private/tmp /private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python -m pytest -q tests/test_desktop_managed_load_phase2b.py tests/test_desktop_service.py tests/test_control_daemon_sessions.py",
+      "result": "210 passed, 0 skipped, 0 failures",
+      "junit": {
+        "path": "docs/full_project_continuation_v2/evidence/model_delivery/final-affected/junit-lifecycle-fence.xml",
+        "sha256": "46ec23dbffd555cade31159c64713c2e8ceece066149adf948a3ed10605f58a2",
+        "size_bytes": 33279,
+        "tests": 210,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "raw_command_record": "PYTHONPATH=tests TMPDIR=/private/tmp /private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python -m pytest -q tests/test_desktop_managed_load_phase2b.py tests/test_desktop_service.py tests/test_control_daemon_sessions.py"
+    },
+    {
+      "name": "Persistent Java Worker software loopback regression; test proving new G3 domain methods are allowlisted was deselected pending Windows integration",
+      "command": "TMPDIR=/private/tmp /private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python -m pytest -q tests/test_java_worker.py -k \"not every_dispatched_engine_method_is_allowlisted\"",
+      "result": "40 passed, 1 skipped, 1 deselected, 0 failures",
+      "skip_deselected_reason": "Windows-only ACL test skipped on macOS; the allowlist inventory test remains for the Windows-owned _g3_model_domains.py methods objectNames/exportFinal/insert to be reviewed and integrated after this source handoff.",
+      "junit": {
+        "path": "docs/full_project_continuation_v2/evidence/model_delivery/final-affected/junit-java-worker.xml",
+        "sha256": "5e5a1d0019eb967c49f2fcb63c29ed0034889643abcc5478f1bff22c523e33cc",
+        "size_bytes": 6290,
+        "tests": 41,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      "raw_command_record": "TMPDIR=/private/tmp /private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python -m pytest -q tests/test_java_worker.py -k \"not every_dispatched_engine_method_is_allowlisted\""
+    }
+  ],
+  "acceptance_boundaries": {
+    "control_daemon_and_operation_store": "EXERCISED_WITH_SYNTHETIC_WORKER_FIXTURE",
+    "persistent_java_worker_loopback": "PASS_WITH_LOCAL_SOFTWARE_WORKER_ONLY",
+    "comsol_native_execution": "NOT_RUN",
+    "numerical_or_physical_acceptance": "NOT_CLAIMED",
+    "target_runtime_portability": "UNVERIFIED",
+    "independent_final_review": "PENDING",
+    "project_acceptance": "OPEN"
+  },
+  "negative_controls": [
+    "stale model revision refuses before Worker call",
+    "same idempotency key with changed close body returns IDEMPOTENCY_CONFLICT without duplicate removal",
+    "missing trusted_code permission refuses recipe_run before Worker execution",
+    "invalid recipe arguments refuse before Worker execution",
+    "tampered durable code_execute Worker event pair refuses recipe registration",
+    "forged durable test row and invalid recipe schema refused by focused unit tests"
+  ],
+  "notes": [
+    "The direct ControlDaemon route for code.execute_java is admitted only to its existing implementation; host execution_success is minted after Worker readback/source hash/model identity and before/after snapshot checks.",
+    "Recipe execution-smoke evidence comes only from durable same-project SUCCEEDED code.execute_java operations and exact Worker request-event pairs; it is not numerical or physical PASS.",
+    "The source diff captures all listed shared source at this checkpoint; ownership transfers to Windows after this freeze."
+  ]
+}

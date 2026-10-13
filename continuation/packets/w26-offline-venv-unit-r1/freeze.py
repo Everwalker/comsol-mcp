@@ -1,0 +1,19 @@
+import ast,json,hashlib,os,sys,difflib
+from pathlib import Path
+R=Path('/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2');D=Path(__file__).parent;A=D.parent/'w26-helper-successor-r2';X=D.parent/'w26-exact32-wrapper-r3';O=D.parent/'w26-offline-input-closure-r1';E=R/'repository/docs/full_project_continuation_v2/evidence/intel-builder-execution-r1';W=Path((D/'W_PATH.txt').read_text().strip());sys.path.insert(0,str(D));from common import raw_file,secure_dir
+m=json.loads(raw_file(W/'METADATA.json')[0]);assert not Path(m['context']['unit_root']).exists();secure_dir(W,m['W_identity'])
+for name in ['UNIT_ONCE_GUARD.json','CONTROLLER_BIRTH.json','TERMINAL.json','COMPLETE_NEW_UNIT_TREE.json']:assert not (W/name).exists()
+assert not list((W/'logs').iterdir())
+for p in list(D.glob('*.py'))+list(W.glob('*.py')):ast.parse(p.read_bytes(),filename=str(p))
+assert 'Ran 21 tests' in (D/'TEST_MAIN.stderr').read_text() and (D/'TEST_MAIN.stderr').read_text().rstrip().endswith('OK')
+for row in m['source_refs']+m['input_refs']+[m['bootstrap']]:raw_file(Path(row['path']),expected=row)
+for name in ['FREEZE_R1.json','ACTUAL43_METADATA_CLOSURE.json','NEXT_OFFLINE_UNIT_PLAN.json']:
+ # Previous material stays at original hash, including stale26.2 narrative.
+ original=json.loads(raw_file(O/'FREEZE_R1.json')[0]);entry=next((q for q in original['files'] if Path(q['path']).name==name),None)
+ if entry:assert raw_file(Path(entry['path']))[1]==entry
+copy_source=(E/'tls_cpython_checkpoint_r4.py').read_text();fn=next(n for n in ast.parse(copy_source).body if isinstance(n,ast.FunctionDef) and n.name=='copy_blob');current=(D/'common.py').read_text();own=next(n for n in ast.parse(current).body if isinstance(n,ast.FunctionDef) and n.name=='copy_blob');assert ast.get_source_segment(copy_source,fn)==ast.get_source_segment(current,own)
+files=[raw_file(p)[1] for p in sorted(D.iterdir()) if p.is_file() and p.name!='FREEZE_R1.json'];work=[raw_file(p)[1] for p in sorted(W.iterdir()) if p.is_file()]
+result={'schema':'comsol-w26-offline-dependency-unit-source/1','status':'SOURCE_SOFTWARE_PREPARED_NOT_NATIVE_INSTALL_ADMISSION','W':str(W),'W_identity':m['W_identity'],'metadata':raw_file(W/'METADATA.json')[1],'controller':raw_file(W/'controller.py')[1],'files':files,'work_files':work,'references':m['source_refs']+[raw_file(p)[1] for p in [E/'ROOT_W26_EXACT32_ACTUAL_CHECK_R3.json',O/'FREEZE_R1.json',O/'NEXT_OFFLINE_UNIT_PLAN.json',E/'ROOT_LIBLZMA_R2_ACTUAL_CHECK.json',E/'tls_cpython_checkpoint_r4.py']],'actual_input_refs':m['input_refs'],'actual_command_plan':m['commands'],'actual8commands_not_run':True,'budget':m['budget'],'affected_controls':{'methods':21,'fiveInfoTupleExamples':5,'total_checks':25,'raw':raw_file(D/'TEST_MAIN.stderr')[1],'scope':'SOFTWARE_PUBLIC_BOUNDARIES_NOT_TARGET_RUNTIME'},'effects':{'targetPython':0,'pip':0,'venv':0,'network':0,'sandbox':0,'COMSOL':0,'JVM_start':0,'wheel_code':0,'oldsource_write':0},'next_invocation_prefix':['/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python3','-B','-u',str(W/'controller.py'),'--binding-sha'],'last_argument':'Actual Root once64SHA not yet supplied, do not pass placeholder','root_binding_expected':{'path':str(E/'ROOT_W26_OFFLINE_VENV_ONCE_BINDING_R1.json'),'schema':'comsol-w26-offline-venv-once/1','status':'GRANTED_ONCE_DEPENDENCY_VENVS_ONLY'},'root_source_review_expected':{'path':str(E/'ROOT_W26_OFFLINE_VENV_SOURCE_REVIEW_R1.json'),'status':'PASS_SOURCE_OFFLINE_DEPENDENCY_VENVS_ONLY'},'known_source_first_failure':'System-owned public SB primary rejected by user-only reader; source-only/0target effects; original trace/preimage retained; fixed exact system-primary reader only'}
+p=D/'FREEZE_R1.json'
+with p.open('x') as f:json.dump(result,f,indent=2,sort_keys=True);f.write('\n');f.flush();os.fsync(f.fileno())
+print(raw_file(p)[1]);print('controller',result['controller']);print('metadata',result['metadata'])
