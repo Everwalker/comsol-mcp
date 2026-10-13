@@ -1,0 +1,146 @@
+{
+  "schema": "cv3-target-input-summary/1",
+  "reviewed_at": "2026-10-13T21:26:00.308039+00:00",
+  "status": "PASS_WINDOWS_INPUTS_INTEL_ONE_MISSING_NOT_HARDWARE",
+  "handoff": {
+    "path": "/private/tmp/cvw26-target-inputs-cd12ec6c810f/HANDOFF.json",
+    "bytes": 7629,
+    "sha256": "c688eab5bcdeb894edfc3d2f1c27f44026df14ed66c6bb8dba308404a061168a"
+  },
+  "windows": {
+    "wheels": 35,
+    "input_manifest": {
+      "path": "/private/tmp/cvw26-target-inputs-cd12ec6c810f/win_amd64/INPUTS_MANIFEST.json",
+      "sha256": "4610d98ea6e67aa17b0bbf68dcfc2762d697fc3110e4f21fb0c3a742e5326031",
+      "status": "PASS_LOCKED_TARGET_INPUT_METADATA_DAG_NOT_HARDWARE",
+      "wheels": 35,
+      "actual_metadata_dependency_decisions": 139,
+      "GETs": 7,
+      "reused": 28,
+      "pywin32_actual_proof": {
+        "name": "pywin32",
+        "version": "312",
+        "filename": "pywin32-312-cp312-cp312-win_amd64.whl",
+        "url": "https://files.pythonhosted.org/packages/03/d9/77040d3b43df3f3be32ea289433d660d2727f5ba327bc73be835127d9d60/pywin32-312-cp312-cp312-win_amd64.whl",
+        "sha256": "b457f6d628a47e8a7346ce22acb7e1a46a4a78b52e1d17e1af56871bd19a93bc",
+        "bytes": 6914841,
+        "origin": "CURRENT_UV_LOCK",
+        "reuse": null,
+        "target_check": true,
+        "extras": [],
+        "path": "/private/tmp/cvw26-target-inputs-cd12ec6c810f/win_amd64/wheelhouse/pywin32-312-cp312-cp312-win_amd64.whl",
+        "acquisition": "EXACT_OFFICIAL_UV_LOCK_URL_SIZE_SHA_GET",
+        "actual_metadata": {
+          "name": "pywin32",
+          "version": "312",
+          "requires_python": ">=3.9",
+          "requires_dist": [],
+          "provides_extra": [],
+          "actual_internal_tags": [
+            "cp312-cp312-win_amd64"
+          ],
+          "metadata_sha256": "77f53e90408dd3bdcf5f73a20d6548504313dee2ad34f8b3794b2202583a84b1",
+          "wheel_sha256": "ad1e507ec59c665de6adae409920fb15dd1dcd0c59de51c2a43a3bd0891f0cae",
+          "record_sha256": "1f48574109d1f4f2c18ef9d02e68420bdb20158c02944dd780ee98a8be213cf9",
+          "record_hashed_members_checked": 610,
+          "METADATA_WHEEL_RECORD": {
+            "METADATA": {
+              "archive_member": "pywin32-312.dist-info/METADATA",
+              "sha256": "77f53e90408dd3bdcf5f73a20d6548504313dee2ad34f8b3794b2202583a84b1"
+            },
+            "WHEEL": {
+              "archive_member": "pywin32-312.dist-info/WHEEL",
+              "sha256": "ad1e507ec59c665de6adae409920fb15dd1dcd0c59de51c2a43a3bd0891f0cae"
+            },
+            "RECORD": {
+              "archive_member": "pywin32-312.dist-info/RECORD",
+              "sha256": "1f48574109d1f4f2c18ef9d02e68420bdb20158c02944dd780ee98a8be213cf9"
+            }
+          }
+        },
+        "status": "PASS_ACTUAL_FILE_HASH_TAGS_METADATA_RECORD_NO_IMPORT"
+      }
+    },
+    "status": "PASS_METADATA_TAG_RECORD_DAG_ONLY"
+  },
+  "intel": {
+    "original_wheels": 38,
+    "original_missing": 2,
+    "accepted_new_same_version_psutil": {
+      "path": "/private/tmp/cvw26-target-inputs-cd12ec6c810f/macos_x86_64/psutil-primary-supplement/SUPPLEMENT.json",
+      "sha256": "01ee6d7b64fa17a2c4863dae184d11dde1fbed60efe81325f15da0d15ddc283f",
+      "version": "5.9.8",
+      "wheel": {
+        "path": "/private/tmp/cvw26-target-inputs-cd12ec6c810f/macos_x86_64/psutil-primary-supplement/psutil-5.9.8-cp36-abi3-macosx_10_9_x86_64.whl",
+        "name": "psutil",
+        "version": "5.9.8",
+        "filename": "psutil-5.9.8-cp36-abi3-macosx_10_9_x86_64.whl",
+        "bytes": 248702,
+        "sha256": "aee678c8720623dc456fa20659af736241f575d79429a0e5e9cf88ae0605cc81"
+      },
+      "tags": [
+        "cp36-abi3-macosx_10_9_x86_64"
+      ],
+      "RequiresDist": [
+        "ipaddress ; (python_version < \"3.0\") and extra == 'test'",
+        "mock ; (python_version < \"3.0\") and extra == 'test'",
+        "enum34 ; (python_version <= \"3.4\") and extra == 'test'",
+        "pywin32 ; (sys_platform == \"win32\") and extra == 'test'",
+        "wmi ; (sys_platform == \"win32\") and extra == 'test'"
+      ],
+      "actual_marker_decisions": [
+        {
+          "requirement": "ipaddress ; (python_version < \"3.0\") and extra == 'test'",
+          "extras_context": [
+            ""
+          ],
+          "applicable": false
+        },
+        {
+          "requirement": "mock ; (python_version < \"3.0\") and extra == 'test'",
+          "extras_context": [
+            ""
+          ],
+          "applicable": false
+        },
+        {
+          "requirement": "enum34 ; (python_version <= \"3.4\") and extra == 'test'",
+          "extras_context": [
+            ""
+          ],
+          "applicable": false
+        },
+        {
+          "requirement": "pywin32 ; (sys_platform == \"win32\") and extra == 'test'",
+          "extras_context": [
+            ""
+          ],
+          "applicable": false
+        },
+        {
+          "requirement": "wmi ; (sys_platform == \"win32\") and extra == 'test'",
+          "extras_context": [
+            ""
+          ],
+          "applicable": false
+        }
+      ],
+      "origin": "New Main authorized officialPyPI exactversion URL/size/SHA; not old uv/ARM pin; original2missing preserved"
+    },
+    "actual_available_wheels_with_overlay": 39,
+    "remaining_missing": [
+      "cryptography==50.0.1"
+    ],
+    "historical_provenance": {
+      "path": "/private/tmp/cvw26-target-inputs-cd12ec6c810f/CRYPTOGRAPHY_HISTORICAL_INPUT_AUDIT.json",
+      "sha256": "cfc3e9f41978b3b9389388e15e0c0b06865dbf6f95a73353e824bd5623e354f2"
+    },
+    "status": "INCOMPLETE_TARGET_INPUT_CLOSURE"
+  },
+  "GETs": 13,
+  "retries": 0,
+  "installed": "NOT_RUN",
+  "physical_targets": "NOT_DISCOVERED_WAITING_CONNECTION_DETAILS",
+  "native": "NOT_RUN",
+  "final_independent_review": "NOT_RUN"
+}

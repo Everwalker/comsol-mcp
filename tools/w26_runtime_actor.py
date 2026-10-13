@@ -27,14 +27,16 @@ _RETAINED = {}
 _OWNER_TOKEN = object()
 FULL_REBUILD='FULL_LOCKED_RUNTIME_REBUILD'
 CURRENT43='CURRENT43_DEPENDENCIES'
+APP_BUNDLE='CURRENT_APPLICATION_BUNDLE'
 
 def activity_scope(plan):
     kind=plan.get('activity_kind',FULL_REBUILD)
-    if kind not in (FULL_REBUILD,CURRENT43):raise RuntimeError('unknown W26 closed activity kind')
+    if kind not in (FULL_REBUILD,CURRENT43,APP_BUNDLE):raise RuntimeError('unknown W26 closed activity kind')
     scope={'activity_kind':kind,'budget_seconds':7200 if kind==FULL_REBUILD else 1800,
            'cleanup_reserve_seconds':600 if kind==FULL_REBUILD else 300,'max_make_parallelism':2 if kind==FULL_REBUILD else 0,
            'sampled_rss_stop_bytes':6*1024**3,'max_output_bytes':12*1024**3}
     if kind==CURRENT43:scope.update(prepare_cap_seconds=600,profile_cap_seconds=180)
+    if kind==APP_BUNDLE:scope.update(prepare_cap_seconds=600,build_cap_seconds=600,check_cap_seconds=180)
     for key,value in scope.items():
         if key in plan and (type(plan[key]) is not type(value) or plan[key]!=value):raise RuntimeError('W26 closed activity budget/profile differs')
     return scope
@@ -191,6 +193,7 @@ def source_fingerprints(kind=FULL_REBUILD):
     base = Path(__file__).parent
     names = ["w26_runtime_actor.py", "w26_rebuild_current_runtime.py", "w26_prepare_current_inputs.py", "_w26_original_process.py", "_w26_original_binary.py", "_w26_original_tls.py", "w26_runtime_sources.lock.json", "w26_hold_exec.py", "w26_current_runtime_profile.py"]
     if kind==CURRENT43:names+=['w26_dependency_unit.py','w26_dependency_stage.py','w26_dependency_profile.py','full_project_release.py']
+    if kind==APP_BUNDLE:names+=['w26_dependency_unit.py','w26_dependency_stage.py','w26_dependency_profile.py','full_project_release.py','w26_application_bundle.py','w26_application_stage.py']
     return {str(base/n): _helpers().raw_file(base/n)[1] for n in names}
 
 def prepare_actor(root,*,tag=None):
@@ -228,14 +231,15 @@ def gate(root, binding_path, binding_sha):
         helper.raw_file(Path(candidate[key]["path"]),expected=candidate[key])
     source=json.loads(helper.raw_file(Path(candidate["source"]["path"]),expected=candidate["source"])[0])
     for path,row in source.items():helper.raw_file(Path(path),expected=row)
-    required={"status":"MAIN_APPROVED_ONCE_W26_RUNTIME_REBUILD" if kind==FULL_REBUILD else 'MAIN_APPROVED_ONCE_W26_CURRENT43_DEPENDENCIES',
+    statuses={FULL_REBUILD:'W26_RUNTIME_REBUILD',CURRENT43:'W26_CURRENT43_DEPENDENCIES',APP_BUNDLE:'W26_APPLICATION_BUNDLE'}
+    required={"status":"MAIN_APPROVED_ONCE_"+statuses[kind],
         "candidate_sha256":candidate_record["sha256"],"root":str(root),"root_identity":candidate["root_identity"],
         **{k:v for k,v in scope.items() if k!='activity_kind'},"GUI":False,"COMSOL":False}
-    if kind==CURRENT43:required['activity_kind']=kind
+    if kind!=FULL_REBUILD:required['activity_kind']=kind
     if any(type(binding.get(k)) is not type(v) or binding.get(k)!=v for k,v in required.items()) or not isinstance(binding.get("nonce"),str) or len(binding["nonce"])<16:
         raise RuntimeError("fresh Main scope/source/root/budget/nonce binding differs")
     review_raw,review=helper.raw_file(root/"MAIN_SOURCE_REVIEW.json")
-    review_status='PASS_W26_RUNTIME_REBUILD_SOURCE_FOR_EXACT_CANDIDATE' if kind==FULL_REBUILD else 'PASS_W26_CURRENT43_DEPENDENCIES_SOURCE_FOR_EXACT_CANDIDATE'
+    review_status='PASS_'+statuses[kind]+'_SOURCE_FOR_EXACT_CANDIDATE'
     if review["sha256"]!=binding.get("review_sha256") or json.loads(review_raw).get("status")!=review_status or \
             json.loads(review_raw).get("candidate_sha256")!=candidate_record["sha256"]:
         raise RuntimeError("fresh Main exact-candidate source review missing")
@@ -556,6 +560,9 @@ def execute(root,binding_path,binding_sha):
     if activity_scope(candidate)['activity_kind']==CURRENT43:
         from tools.w26_dependency_unit import execute_dependencies
         return execute_dependencies(root,candidate,binding,binding_record,began=began,admission_token=_OWNER_TOKEN)
+    if activity_scope(candidate)['activity_kind']==APP_BUNDLE:
+        from tools.w26_application_bundle import execute_bundle
+        return execute_bundle(root,candidate,binding,binding_record,began=began,admission_token=_OWNER_TOKEN)
     plan=json.loads(helper.raw_file(Path(candidate['plan']['path']),expected=candidate['plan'])[0])
     prepared=json.loads(helper.raw_file(root/'PREPARED_SOURCES.json',expected=candidate['prepared'])[0])
     toolchain=json.loads(helper.raw_file(Path(candidate['toolchain']['path']),expected=candidate['toolchain'])[0])

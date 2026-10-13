@@ -2150,7 +2150,8 @@ def build_wheel(source: pathlib.Path, out: pathlib.Path, python: pathlib.Path,
     evidence.mkdir(parents=True, exist_ok=True)
     if any((evidence / name).exists() for name in ("wheel-build-log.json", "wheel-build-receipt.json", "source-snapshot-manifest.json")):
         raise ReleaseError(f"wheel build evidence already exists: {evidence}")
-    with tempfile.TemporaryDirectory(prefix="comsol-release-src-") as temp:
+    source_temp = controlled.temporary_source_directory() if controlled is not None else tempfile.TemporaryDirectory(prefix="comsol-release-src-")
+    with source_temp as temp:
         stage = pathlib.Path(temp) / "source"
         src = source_snapshot(source, stage)
         _json_write(evidence / "source-snapshot-manifest.json", {

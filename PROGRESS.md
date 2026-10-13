@@ -1,3 +1,17 @@
+# V3 当前执行状态 — 2026-10-13T21:26:00.308039+00:00
+
+Goal ACTIVE / INCOMPLETE / NOT_ACCEPTED。当前指针：`docs/full_project_continuation_v3/state/RESUME.json`。
+
+- R8 `f4f45073163eb47ff9bc1f71f1244a1aa63c7121` 已普通同步 GitHub main 并读回；app3 已验过的确切源码正在按显式清单同步。工作树中的 Lifecycle 与科学 recipe 修改另行开发，尚未接受。
+- 当前 0.1.10 是集成候选。APP app3：185 软件检查 PASS，42 版本检查 PASS、1 opt-in stdio fixture SKIP；实际2构建命令、153包文件匹配、42 wheel RECORD、54 bundle成员与原进程组收尾核验通过，均保持限定范围。
+- 真实 R6 全数据库、295事件、16操作与全4项目文件的升级/回退/非空卸载/恢复正在实现与测试。备份复用原注册2文件格式，并在同一迁移包校验另外2文件；不注入模拟历史。
+- Windows35依赖输入闭包校验通过；Intel39可用输入尚缺cryptography，正在按固定官方源码准备实际离线构建。实机连接资料待提供，硬件/native NOT_RUN。四个 PyObjC 主许可文本已取得，完整发行许可/原生组件清单仍需收口。
+- 三领域公共recipe实现正在补齐。多类Java源码采用可选明确entrypoint并绑定真实witness；W24采用可选原位入口，保留旧默认与原物理设置。当前无新的native recipe登记或科学PASS。
+- W23 r2 UNKNOWN/no-replay 与两个遗留进程的恢复授权仍pending，未发信号。新0.1.10 P0与W23准备记录保留；后续源变更需刷新真实输入，准备不计原生通过。原26/272/60/6、四原状态表、Mac6.3 SKIP保持。
+- 最终独立Reviewer尚未开始；完成安全可执行的集成和验证后冻结统一候选，再总审与整改。
+
+以下为各时点历史进度；其中“当前/最新/暂停”不覆盖上方执行指针。
+
 # V3 当前续跑 — 2026-10-13T20:04:51.998193+00:00
 
 Goal ACTIVE / INCOMPLETE / NOT_ACCEPTED。权威续跑指针：`docs/full_project_continuation_v3/state/RESUME.json`。以下原检查点及暂停文字保留为历史。
@@ -9,6 +23,16 @@ Goal ACTIVE / INCOMPLETE / NOT_ACCEPTED。权威续跑指针：`docs/full_projec
 - W24 专属源码选择集成、实际 SDK 编译和连接/模型身份修复证据保持限定范围；Main 接受当前非阻塞 UNKNOWN owner 保留/异常诊断修复，100受影响测试 PASS，663声明源前后一致；旧 r2 snapshot/freeze 保留但 stale，14槽与科学链 NOT_RUN。
 - W26 已恢复43锁定 wheel；final4全部41实际步骤、ARM完整required profile、禁止读取原安装目录的迁移验证及fat字节检查 PASS，9份原合格源码保全。当前43依赖源外离线实际8/8命令 PASS，Main核对两环境当前profile、原consumer全字节、8samePID OS拒网及8原进程组退出；212受影响软件 PASS。deps2诊断边界、deps3 module token首败与deps4初始fixture失败保留，修复后的deps4b资格与实际8证据分别绑定当前源。实际 Intel/Windows、application bundle/install、升级回退/非空卸载/全数据恢复和三领域 recipe 尚未完成。
 - Windows/Intel实机、W22–W24科学链、W25、W26完整交付及最终独立 Reviewer 均未完成；当前继续不依赖遗留 UNKNOWN 的可安全执行工作。
+
+
+# 后续当前状态 — 2026-10-13T21:06:07.768270+00:00
+
+- R8 `f4f45073163eb47ff9bc1f71f1244a1aa63c7121` 的136文件已普通同步 GitHub main 并独立读回。
+- 0.1.10为当前集成候选，pyproject、server VERSION与uv主项目一致；42必要版本检查PASS、1需显式开启的stdio fixture SKIP，旧0.1.9原件保留。
+- APP app3实际2buildcaptures/原2groups退出、OS拒网，153package byte MATCH、42nestedwheel RECORD和54bundlemember校验PASS，Main独立raw核对通过；仍非release。4缺嵌入license文本的官方PyObjC包已取得同版本primary notice输入，旧missing记录保留，42组件库存不夸称43。
+- 新0.1.10 P0 24/37-call准备与W23 freshSDK/831严格软件控制PASS；Rootonce未签、native NOT_RUN，旧r2 UNKNOWN等待直接人授权、未信号/未重放。
+- 当前继续实际应用安装/真实旧app升级回退/标记非空卸载/R6整库及四份项目文件恢复；现fullformat只注册2文件，完整迁移bundle补2未注册文件，保持现严格gate，不造注册或改历史jobs。整库源路径备份探针限定PASS，installedproduct restore仍NOT_RUN。
+- 实机、科学、完整跨平台交付和最终独立Reviewer未完成；Goal ACTIVE / INCOMPLETE / NOT_ACCEPTED。
 
 ---
 
