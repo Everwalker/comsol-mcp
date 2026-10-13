@@ -1,0 +1,55 @@
+--- root/comsol_mcp/_session_server.py
++++ w23-r15/comsol_mcp/_session_server.py
+@@ -107,6 +107,7 @@
+     start_epoch_ms: int | None = None
+     log_handle: Any = None
+     retired: bool = False
++    suspended_launch_recovery: Any = None
+ 
+ 
+ ListenerRow = tuple[int, CanonicalSocket]
+@@ -599,6 +600,23 @@
+         try:
+             process = selected_process_factory(command, **options)
+         except Exception as exc:
++            from ._windows_t037 import NativeSuspendedChildLaunchError
++            if type(exc) is NativeSuspendedChildLaunchError:
++                retained = ManagedServerHandle(process=None, runtime_id=runtime.runtime_id,
++                                               executable=executable, directories=directories, log_handle=log_handle)
++                retained.process = exc.transfer_to(retained)
++                retained.suspended_launch_recovery = retained.process
++                persistence_failed = False
++                try:
++                    emit_observation("STARTUP_UNKNOWN", pid=retained.process.pid,
++                                     child_handle=retained, exception=exc,
++                                     error_category="NATIVE_CHILD_CLEANUP_UNKNOWN")
++                except Exception:
++                    persistence_failed = True
++                raise _StartupObservationError(
++                    "native Server child creation/cleanup is uncertain; actual handle retained",
++                    handle=retained, uncertain=True, diagnostic_persistence_failed=persistence_failed,
++                    startup_exception_type=_safe_exception_type(exc)) from exc
+             try:
+                 log_handle.close()
+             except Exception:
+@@ -738,6 +756,20 @@
+         if not isinstance(handle, ManagedServerHandle) or handle.retired:
+             raise OwnedServerError("exact live owned Server handle is unavailable", uncertain=True)
+         process = handle.process
++        if handle.suspended_launch_recovery is not None:
++            from ._windows_t037 import is_native_suspended_child
++            if (handle.suspended_launch_recovery is not process or not is_native_suspended_child(process)):
++                raise OwnedServerError("simplified native cleanup capability is unavailable", handle=handle, uncertain=True)
++            try:
++                result = process.cleanup_owned(handle, timeout=timeout_s)
++            except Exception as exc:
++                raise OwnedServerError("native suspended Server cleanup is unconfirmed; owner retained",
++                                       handle=handle, uncertain=True) from exc
++            handle.retired = True
++            self._close_log(handle)
++            return {"pid": process.pid, "birth_filetime_100ns": process.birth_filetime_100ns,
++                    "exit_confirmed": True, "child_reaped": True, "returncode": result,
++                    "server_stopped": True, "never_resumed_native_child": True}
+         identity = handle.process_identity
+         endpoint = handle.endpoint
+         if (identity is None or endpoint is None or getattr(process, "pid", None) != identity.pid

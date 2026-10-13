@@ -1,0 +1,185 @@
+--- root/tests/test_windows_service_sid_native.py
++++ windows-r19/tests/test_windows_service_sid_native.py
+@@ -0,0 +1,182 @@
++"""Actual original SCM/policy/mutation classes against public synthetic SDK."""
++import ctypes as C
++import hashlib,os,gc,weakref
++from types import SimpleNamespace
++import pytest
++from comsol_mcp import _windows_service_sid_native as scm,_windows_service_sid as leaf
++from comsol_mcp import _windows_t037_native as native,_windows_t037_wfp as wfp,_windows_wfp_mutation_owner as owner
++from tests.test_windows_host_preflight_owner import Function
++from tests.test_windows_t037_native import _security_descriptor
++
++class SDK:
++    def __init__(self,baseline=0):
++        self.sid_type=baseline;self.calls=[];self.seq=200;self.keep=[];self.close_result=1;self.free_result=None
++        self.fault=None;self.primary=OSError('public-SCM-after-effect');self.account='McpService';self.service_type=16
++        self.pid=os.getpid();self.image_path=r'C:\COMSOL\launcher.exe';self.argv=[self.image_path,'--service'];self.binary='"'+self.image_path+'" --service';self.security=_security_descriptor();self.static=0
++        self.a=SimpleNamespace(**{n:Function(f) for n,f in {'OpenSCManagerW':self.manager,'OpenServiceW':self.service,'CloseServiceHandle':self.close,
++          'QueryServiceConfigW':self.config,'QueryServiceConfig2W':self.sid,'QueryServiceStatusEx':self.status,
++          'QueryServiceObjectSecurity':self.sd,'LookupAccountNameW':self.lookup,'ChangeServiceConfig2W':self.change}.items()})
++        self.allocation_sizes={}
++        self.k=SimpleNamespace(LocalFree=Function(self.free),LocalSize=Function(lambda h:self.allocation_sizes.get(getattr(h,'value',h),0)));self.shell=SimpleNamespace(CommandLineToArgvW=Function(self.commandline))
++    def manager(self,*args):self.seq+=1;self.calls.append(('manager',args[2]));return self.seq
++    def service(self,m,name,rights):self.seq+=1;self.calls.append(('service',name,rights));return self.seq
++    def close(self,h):self.calls.append(('close',getattr(h,'value',h)));return self.close_result
++    def free(self,h):self.calls.append(('free',getattr(h,'value',h)));return self.free_result
++    def reply(self,b,size,out,raw,writer=None):
++        C.cast(out,C.POINTER(C.c_uint32))[0]=len(raw)
++        if b is None:return 0
++        C.memmove(b,raw,len(raw))
++        if writer:writer(b)
++        return -1
++    def config(self,h,b,size,out):
++        raw=bytes(1024)
++        def writer(buf):
++            row=scm.Config.from_buffer(buf);row.service_type=self.service_type;row.start_type=3;row.error_control=1;row.tag=0
++            offset=C.sizeof(scm.Config)
++            for field,value in [('binary',self.binary),('account',self.account),('load_group',''),('display','Public service'),('dependencies','\0')]:
++                encoded=(value+'\0').encode('utf-16-le');C.memmove(C.addressof(buf)+offset,encoded,len(encoded));setattr(row,field,C.addressof(buf)+offset);offset+=len(encoded)
++            if self.fault=='pointer':row.binary=C.addressof(buf)+2048
++            if self.fault=='static_after' and self.sid_type==3:row.start_type=2
++        result=self.reply(b,size,out,raw,writer)
++        if b is not None and self.fault=='config_bool':return False
++        return result
++    def sid(self,h,level,b,size,out):
++        assert level==5;value=2 if self.fault=='sid_bits' else self.sid_type
++        return self.reply(b,size,out,value.to_bytes(4,'little'))
++    def status(self,h,kind,out,size,returned):
++        row=C.cast(out,C.POINTER(scm.Status)).contents;row.service_type=self.service_type;row.state=4;row.process_id=self.pid
++        C.cast(returned,C.POINTER(C.c_uint32))[0]=C.sizeof(scm.Status)
++        if self.fault=='status_false':return 0
++        return -1
++    def sd(self,h,flags,b,size,out):assert flags==7;return self.reply(b,size,out,self.security)
++    def lookup(self,system,account,sid,n,domain,dn,use):
++        raw=bytes((1,2,0,0,0,0,0,5))+(21).to_bytes(4,'little')+(1001 if account.startswith('NT SERVICE') else 1000).to_bytes(4,'little')
++        C.cast(n,C.POINTER(C.c_uint32))[0]=len(raw);C.cast(dn,C.POINTER(C.c_uint32))[0]=1;C.cast(use,C.POINTER(C.c_uint32))[0]=1
++        if sid is None:return 0
++        C.memmove(sid,raw,len(raw));domain.value='';return -1
++    def commandline(self,binary,out):
++        encoded=[(s+'\0').encode('utf-16-le') for s in self.argv]
++        storage=C.create_string_buffer(len(encoded)*C.sizeof(C.c_void_p)+sum(map(len,encoded)))
++        array=(C.c_void_p*len(encoded)).from_buffer(storage);offset=len(encoded)*C.sizeof(C.c_void_p)
++        for i,raw in enumerate(encoded):
++            array[i]=C.addressof(storage)+offset;C.memmove(C.addressof(storage)+offset,raw,len(raw));offset+=len(raw)
++        self.keep.append(storage);self.allocation_sizes[C.addressof(storage)]=len(storage)
++        C.cast(out,C.POINTER(C.c_int32))[0]=len(encoded);self.calls.append('argv');return C.cast(storage,C.POINTER(C.c_void_p))
++    def change(self,h,level,info):
++        assert level==5;value=C.cast(info,C.POINTER(scm.SidInfo)).contents.sid_type
++        self.calls.append(('change',value));self.sid_type=value
++        if self.fault=='change_io':raise self.primary
++        return False if self.fault=='change_bool' else 0 if self.fault=='change_false' else -1
++
++
++def actual(monkeypatch,sdk):
++    monkeypatch.setattr(C,'WinDLL',lambda name,**kw:sdk.shell,raising=False)
++    monkeypatch.setattr(C,'get_last_error',lambda:122,raising=False)
++    monkeypatch.setattr(C,'WinError',lambda error:OSError(error,'public SDK error'),raising=False)
++    reader=native.CtypesWindowsPolicyApi.__new__(native.CtypesWindowsPolicyApi);reader._advapi=sdk.a;reader._kernel32=sdk.k
++    adapter=wfp.CtypesWindowsWfpMutationApi.__new__(wfp.CtypesWindowsWfpMutationApi);adapter.api=reader
++    adapter._advapi=sdk.a;adapter._kernel32=sdk.k;adapter._fwpu=SimpleNamespace();owner.registry(adapter)
++    return adapter
++
++@pytest.mark.parametrize('baseline',[0,1])
++def test_actual_SCM_level5_samehandle_freshhandle_exactrestore(monkeypatch,baseline):
++    sdk=SDK(baseline);api=actual(monkeypatch,sdk)
++    before=scm.observe(api,'ComsolHost');after=scm.configure(api,'ComsolHost',before,3)
++    assert after=={**before,'sid_type':3};restored=scm.configure(api,'ComsolHost',after,baseline);assert restored==before
++    assert [r for r in sdk.calls if isinstance(r,tuple) and r[0]=='change']==[('change',3),('change',baseline)]
++    assert all(r[1]==1 for r in sdk.calls if isinstance(r,tuple) and r[0]=='manager')
++    assert set(r[2] for r in sdk.calls if isinstance(r,tuple) and r[0]=='service')=={0x20005,0x20007}
++    assert not owner.registry(api).unresolved()
++
++@pytest.mark.parametrize('fault',['pointer','config_bool','sid_bits','status_false'])
++def test_actual_private_reader_strict_buffer_pointer_types(monkeypatch,fault):
++    sdk=SDK();sdk.fault=fault;api=actual(monkeypatch,sdk)
++    with pytest.raises(Exception):scm.observe(api,'ComsolHost')
++    assert not [c for c in sdk.calls if isinstance(c,tuple) and c[0]=='change']
++    assert not owner.registry(api).unresolved()
++
++@pytest.mark.parametrize('fault',['change_io','change_bool','change_false','static_after'])
++def test_actual_after_effect_never_retry_or_rollback(monkeypatch,fault):
++    sdk=SDK();api=actual(monkeypatch,sdk);before=scm.observe(api,'ComsolHost');sdk.fault=fault
++    with pytest.raises(Exception):scm.configure(api,'ComsolHost',before,3)
++    assert sdk.sid_type==3 and [r for r in sdk.calls if isinstance(r,tuple) and r[0]=='change']==[('change',3)]
++    assert api._first_mutation_cause is sdk.primary if fault=='change_io' else api._first_mutation_cause is not None
++
++@pytest.mark.parametrize('bad',[False,0,2**31])
++def test_original_SCM_close_unknown_gc_samecloser_explicitcleanup(monkeypatch,bad):
++    sdk=SDK();api=actual(monkeypatch,sdk);sdk.close_result=bad
++    with pytest.raises(Exception):scm.observe(api,'ComsolHost')
++    r=owner.registry(api);ref=weakref.ref(api);del api;gc.collect();api=ref();assert api is r.owner and r.unresolved()
++    sdk.a.CloseServiceHandle=Function(lambda *args:pytest.fail('replacement closer'))
++    with pytest.raises(Exception):r.retry_owned(r.unresolved()[0],object())
++    sdk.close_result=-1
++    for e in reversed(r.unresolved()):r.retry_owned(e,api)
++    assert not r.unresolved()
++
++@pytest.mark.parametrize('bad',[True,-1,C.c_void_p(-1),2**(C.sizeof(C.c_void_p)*8)+7])
++def test_actual_bad_handle_retained_never_arbitrary_close(monkeypatch,bad):
++    sdk=SDK();sdk.a.OpenSCManagerW.callback=lambda *args:bad;api=actual(monkeypatch,sdk)
++    with pytest.raises(Exception):scm.observe(api,'ComsolHost')
++    r=owner.registry(api);assert r.unresolved()
++    for entry in r.unresolved():
++        with pytest.raises(Exception):r.retry_owned(entry,api)
++    assert not any(isinstance(c,tuple) and c[0]=='close' for c in sdk.calls)
++
++@pytest.mark.parametrize('bad',[False,0,1,2**32])
++def test_actual_LocalSize_strict_extent_and_original_localfree(monkeypatch,bad):
++    sdk=SDK();sdk.k.LocalSize.callback=lambda h:bad;api=actual(monkeypatch,sdk)
++    with pytest.raises(Exception):scm.observe(api,'ComsolHost')
++    assert not owner.registry(api).unresolved()
++    assert len([c for c in sdk.calls if isinstance(c,tuple) and c[0]=='free'])==1
++
++
++def test_actual_argv_pointer_wrong_localfree_keeps_original_validation_cause(monkeypatch):
++    sdk=SDK();original=sdk.commandline
++    def argv(binary,out):
++        pointer=original(binary,out);pointer[0]=C.c_void_p(7);return pointer
++    sdk.shell.CommandLineToArgvW.callback=argv;sdk.free_result=123;api=actual(monkeypatch,sdk)
++    with pytest.raises(Exception):scm.observe(api,'ComsolHost')
++    assert api._first_mutation_cause.code=='HOST_CHANGE_SCM_ABI_INVALID'
++    r=owner.registry(api);assert any(e.domain=='scm_leaf_local' for e in r.unresolved())
++    sdk.k.LocalFree=Function(lambda *args:pytest.fail('replacement localfree used'))
++    sdk.free_result=None
++    for entry in reversed(r.unresolved()):r.retry_owned(entry,api)
++    assert not r.unresolved()
++
++@pytest.mark.parametrize('field',['api','registry_owner','reader_registry'])
++def test_actual_foreign_api_or_registry_never_redirects_SCM(monkeypatch,field):
++    sdk=SDK();api=actual(monkeypatch,sdk);scm.observe(api,'ComsolHost');ctx=api._original_scm_leaf_context;r=owner.registry(api)
++    before=list(sdk.calls)
++    if field=='api':api.api=native.CtypesWindowsPolicyApi.__new__(native.CtypesWindowsPolicyApi)
++    elif field=='registry_owner':r.owner=object()
++    else:api.api._native_owned_registry=owner.registry(SimpleNamespace())
++    with pytest.raises(Exception):scm.observe(api,'ComsolHost')
++    assert sdk.calls==before
++    api.api=ctx['api'];r.owner=api;api.api._native_owned_registry=r
++
++@pytest.mark.parametrize('fault',['needed_too_large','size_query_true','needed_truncated'])
++def test_actual_query_size_requires_true_insufficient_buffer_and_bounded_extent(monkeypatch,fault):
++    sdk=SDK();original=sdk.config
++    def query(h,b,size,out):
++        result=original(h,b,size,out)
++        if b is None and fault=='needed_too_large':C.cast(out,C.POINTER(C.c_uint32))[0]=8193
++        if b is None and fault=='size_query_true':return 1
++        if b is None and fault=='needed_truncated':C.cast(out,C.POINTER(C.c_uint32))[0]=1
++        return result
++    sdk.a.QueryServiceConfigW.callback=query;api=actual(monkeypatch,sdk)
++    with pytest.raises(Exception):scm.observe(api,'ComsolHost')
++    assert not owner.registry(api).unresolved()
++    assert not any(isinstance(c,tuple) and c[0]=='change' for c in sdk.calls)
++
++
++def test_actual_direct_HANDLE_sdk_io_missing_return_keeps_owner_unreconciled(monkeypatch):
++    sdk=SDK();api=actual(monkeypatch,sdk)
++    def lost(*args):raise sdk.primary
++    sdk.a.OpenServiceW.callback=lost
++    with pytest.raises(OSError):scm.observe(api,'ComsolHost')
++    assert api._original_scm_leaf_context['pending_return']=='OpenServiceW'
++    assert api._first_mutation_cause is sdk.primary
++    assert not leaf.original_preflights_terminal(api)
++    before=list(sdk.calls)
++    with pytest.raises(Exception):scm.observe(api,'ComsolHost')
++    assert sdk.calls==before

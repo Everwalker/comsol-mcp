@@ -1,0 +1,334 @@
+"""Actual provider readonly helper/API/traversal/registry; public synthetic SDK."""
+import ctypes as C
+from ctypes import wintypes
+from pathlib import Path
+from types import SimpleNamespace
+import os,json,gc,weakref,hashlib
+import pytest
+from comsol_mcp import _host_scoped_provider as provider,_windows_parameter_publish as paths
+from comsol_mcp import _windows_host_preflight_owner as owned
+from comsol_mcp._execution_contract import ExecutionContractError
+
+
+class Function:
+    def __init__(self,callback):self.callback=callback;self.argtypes=None;self.restype=None
+    def __call__(self,*args):return self.callback(*args)
+
+
+class SDK:
+    def __init__(self):
+        self.calls=[];self.keep=[];self.handles={};self.seq=300;self.open_count=0;self.relative_count=0
+        self.close_result=1;self.local_result=None;self.fault=None;self.primary=OSError('public-after-write-IO')
+        self.volume=7;self.final_inode=22;self.current_directory=False
+        self.owner_sid=C.create_string_buffer(bytes((1,1,0,0,0,0,0,5))+bytes((18,0,0,0)))
+        self.acl=C.create_string_buffer(bytes(8));self.descriptor=C.create_string_buffer(b'public-descriptor')
+        self.keep += [self.owner_sid,self.acl,self.descriptor]
+        self.k=self.library({'GetCurrentProcess':lambda:-1,'CloseHandle':self.close,'LocalFree':self.free,
+           'CreateFileW':self.root,'GetFileInformationByHandle':self.info,'GetVolumePathNameW':self.volume_path,
+           'GetVolumeInformationW':self.volume_info})
+        self.nt=self.library({'NtCreateFile':self.relative,'RtlNtStatusToDosError':lambda status:5})
+        self.a=self.library({'OpenProcessToken':self.token,'GetTokenInformation':self.tokeninfo,
+           'ConvertStringSidToSidW':self.sid,'GetSecurityInfo':self.security,
+           'GetSecurityDescriptorDacl':self.dacl,'GetSecurityDescriptorLength':lambda p:len(b'public-descriptor'),
+           'GetAclInformation':self.aclinfo,'GetAce':lambda *a:0,'IsValidSid':lambda p:1,
+           'GetLengthSid':lambda p:12,'EqualSid':lambda p,q:1})
+    def library(self,callbacks):
+        class Lib:
+            def __getattr__(s,name):
+                fn=Function(callbacks.get(name,lambda *a:1));setattr(s,name,fn);return fn
+        lib=Lib()
+        for n,f in callbacks.items():setattr(lib,n,Function(f))
+        return lib
+    def address(self,p):return getattr(p,'value',p)
+    def close(self,p):self.calls.append(('close',self.address(p)));return self.close_result
+    def free(self,p):self.calls.append(('free',self.address(p)));return self.local_result
+    def volume_path(self,path,out,count):out.value='C:\\';self.calls.append('volume_path');return 1
+    def volume_info(self,path,name,count,serial,maximum,flags,fs,size):
+        C.cast(serial,C.POINTER(C.c_uint32))[0]=self.volume;C.cast(flags,C.POINTER(C.c_uint32))[0]=8;fs.value='NTFS';return 1
+    def token(self,process,access,out):
+        self.calls.append('token');C.cast(out,C.POINTER(C.c_void_p))[0]=C.c_void_p(100)
+        if self.fault=='token_io':raise self.primary
+        return False if self.fault=='token_bool' else 0 if self.fault=='token_false' else 1
+    def tokeninfo(self,token,kind,buffer,size,needed):
+        C.cast(needed,C.POINTER(C.c_uint32))[0]=32
+        if buffer is None:return 0
+        C.cast(buffer,C.POINTER(C.c_void_p))[0]=C.addressof(buffer)+16
+        C.memmove(C.addressof(buffer)+16,self.owner_sid,12)
+        return 1
+    def sid(self,text,out):
+        buffer=C.create_string_buffer(b'public-trusted-sid');self.keep.append(buffer)
+        C.cast(out,C.POINTER(C.c_void_p))[0]=C.cast(buffer,C.c_void_p)
+        self.calls.append(('sid',text))
+        if self.fault=='sid_io':raise self.primary
+        return False if self.fault=='sid_bool' else 0 if self.fault=='sid_false' else 1
+    def root(self,path,access,share,security,disposition,flags,template):
+        assert access & 0x20000 and share==3
+        self.open_count+=1;self.seq+=1;self.handles[self.seq]=(True,11)
+        self.calls.append(('root',self.seq));return self.seq
+    def relative(self,out,access,attributes,io_status,*args):
+        assert access & 0x20000
+        attrs=C.cast(attributes,C.POINTER(paths._ObjectAttributes)).contents
+        assert attrs.Attributes==0x1040 and self.address(attrs.RootDirectory) in self.handles
+        self.relative_count+=1;self.seq+=1
+        directory=bool(args[4]&1);inode=22 if not directory else 12
+        if self.fault=='second_identity' and self.open_count==2 and not directory:inode=99
+        if not directory:inode=self.final_inode if inode!=99 else 99
+        self.handles[self.seq]=(directory,inode)
+        C.cast(out,C.POINTER(C.c_void_p))[0]=C.c_void_p(self.seq)
+        C.cast(io_status,C.POINTER(paths._IoStatusBlock)).contents.Information=1
+        self.calls.append(('relative',self.seq))
+        if self.fault=='relative_io':raise self.primary
+        return False if self.fault=='relative_bool' else 0
+    def info(self,h,out):
+        isdir,inode=self.handles[self.address(h)];row=C.cast(out,C.POINTER(paths._FileInfo)).contents
+        row.attributes=16 if isdir else 128;row.volume=self.volume;row.index_low=inode&0xffffffff;row.index_high=inode>>32
+        return False if self.fault=='info_bool' else 1
+    def security(self,h,kind,flags,owner,group,dacl,sacl,descriptor):
+        assert kind==1 and flags==5 and group is None and sacl is None
+        C.cast(owner,C.POINTER(C.c_void_p))[0]=C.cast(self.owner_sid,C.c_void_p)
+        C.cast(dacl,C.POINTER(C.c_void_p))[0]=C.cast(self.acl,C.c_void_p)
+        C.cast(descriptor,C.POINTER(C.c_void_p))[0]=C.cast(self.descriptor,C.c_void_p)
+        self.calls.append(('security',self.address(h)))
+        if self.fault=='descriptor_io':raise self.primary
+        return False if self.fault=='descriptor_bool' else 5 if self.fault=='descriptor_status' else 0
+    def dacl(self,descriptor,present,dacl,defaulted):
+        C.cast(present,C.POINTER(C.c_int32))[0]=1
+        C.cast(dacl,C.POINTER(C.c_void_p))[0]=C.cast(self.acl,C.c_void_p)
+        C.cast(defaulted,C.POINTER(C.c_int32))[0]=0;return 1
+    def aclinfo(self,acl,out,size,kind):
+        C.cast(out,C.POINTER(C.c_uint32))[0]=0
+        C.cast(out,C.POINTER(C.c_uint32))[1]=8;return 1
+
+
+def install(monkeypatch,sdk):
+    monkeypatch.setattr(wintypes,'DWORD',C.c_uint32);monkeypatch.setattr(wintypes,'BOOL',C.c_int32)
+    monkeypatch.setattr(C,'WinDLL',lambda name,**kw:{'kernel32':sdk.k,'ntdll':sdk.nt,'advapi32':sdk.a}[name],raising=False)
+    monkeypatch.setattr(C,'WinError',lambda code=5:OSError(code,'public-native-error'),raising=False)
+    monkeypatch.setattr(C,'get_last_error',lambda:5,raising=False)
+    monkeypatch.setattr(paths,'os',SimpleNamespace(name='nt',fspath=os.fspath))
+
+
+def verify():return provider._verify_windows_private_path(Path('C:/host/private/config'),directory=False,expected_identity=None)
+
+
+def test_actual_double_original_security_path_success_metadata_and_borrowed_sid(monkeypatch):
+    sdk=SDK();install(monkeypatch,sdk);result=verify()
+    assert sdk.open_count==2 and sdk.relative_count==6
+    assert result['identity']['device']==7 and result['identity']['inode']==22
+    assert result['security_semantics']==provider.WINDOWS_PRIVATE_PATH_SECURITY_SEMANTICS
+    assert len(result['path_chain'])==4
+    closed=[x[1] for x in sdk.calls if isinstance(x,tuple) and x[0]=='close']
+    assert len(closed)==9 and len(set(closed))==9 and closed[-1]==100
+    freed=[x[1] for x in sdk.calls if isinstance(x,tuple) and x[0]=='free']
+    assert freed.count(C.addressof(sdk.descriptor))==8 and len(freed)==10
+    assert C.addressof(sdk.owner_sid) not in freed  # GetSecurityInfo owner and TokenUser SID are borrowed
+
+
+@pytest.mark.parametrize('fault',['token_io','token_bool','token_false','sid_io','sid_bool','sid_false','descriptor_io','descriptor_bool','descriptor_status','relative_io','relative_bool','info_bool','second_identity'])
+def test_actual_preflight_faults_no_security_pass_strong_gc_owner_and_exact_cleanup(monkeypatch,fault):
+    sdk=SDK();sdk.fault=fault;sdk.close_result=0;sdk.local_result=None if fault=='second_identity' else 123;install(monkeypatch,sdk)
+    initial={id(o) for o in owned.retained_original_owners()}
+    with pytest.raises(ExecutionContractError) as failure:verify()
+    candidates=[o for o in owned.retained_original_owners() if id(o) not in initial]
+    assert len(candidates)==1;owner=candidates[0];api=owner.api;r=owner.registry
+    assert r.owner is api and owner.entries() and failure.value.safe_retry is False
+    ref=weakref.ref(api);owner_ref=weakref.ref(owner)
+    del api,owner,r,candidates,failure
+    gc.collect();api=ref();owner=owner_ref()
+    assert api is not None and owner is not None and owner.api is api
+    assert owner in owned.retained_original_owners()  # actual private module root, not an external registry reference
+    if fault.endswith('_io'):assert owner.first_cause is sdk.primary
+    if fault=='second_identity':assert owner.first_cause.code=='AUTHORIZATION_STATE_UNKNOWN'
+    automatic_closes=[c[1] for c in sdk.calls if isinstance(c,tuple) and c[0]=='close']
+    assert len(automatic_closes)==len(set(automatic_closes))  # no automatic retry during nested failure unwinding
+    calls=list(sdk.calls)
+    with pytest.raises(ExecutionContractError):owned.cleanup_original(object())
+    assert sdk.calls==calls
+    sdk.k.CloseHandle=Function(lambda *_:pytest.fail('replaced close used'))
+    sdk.k.LocalFree=Function(lambda *_:pytest.fail('replaced free used'))
+    sdk.close_result=1;sdk.local_result=None
+    owned.cleanup_original(api);assert owned.confirmed_original_cleanup(owner)
+    final=list(sdk.calls)
+    with pytest.raises(ExecutionContractError):owned.cleanup_original(api)
+    with pytest.raises(ExecutionContractError):owned.hold_original(api)
+    assert sdk.calls==final
+
+
+def test_host_provider_load_and_grant_recheck_use_actual_double_path_preflight(tmp_path,monkeypatch):
+    from tests.test_host_scoped_provider import _write_config,_grant
+    from tests.test_windows_host_change import _profile
+    profile=_profile()
+    scope={'root':profile.root.as_dict(),'host_id':profile.host_id,'profile_sha256':profile.sha256,'plan_sha256':'a'*64,'phase':'APPLY','source_plan_sha256':None,'source_receipt_sha256':None};ref='public-ref';project='project-test';action='host.change.apply'
+    path=_write_config(tmp_path/'private-provider',{'schema':provider.CONFIG_SCHEMA,'destinations':[],
+        'grants':[_grant(project,action,ref,scope)]})
+    sdk=SDK();install(monkeypatch,sdk)
+    # Off-Windows fixture maps the real public stdio file to a synthetic Win32
+    # drive at the SDK boundary. All load/ACL/traversal/grant production methods run.
+    original=provider._verify_windows_private_path
+    def mapped(value,*,directory,expected_identity):
+        info=value.stat();sdk.volume=info.st_dev;sdk.final_inode=info.st_ino
+        original_info=sdk.info
+        def info_with_final(h,out):
+            result=original_info(h,out);row=C.cast(out,C.POINTER(paths._FileInfo)).contents
+            isdir,inode=sdk.handles[sdk.address(h)]
+            # Last directory component maps to the real provider directory.
+            if directory and inode==12:row.index_low=sdk.final_inode&0xffffffff;row.index_high=sdk.final_inode>>32
+            return result
+        sdk.k.GetFileInformationByHandle=Function(info_with_final)
+        try:return original(Path('C:/host/private' if directory else 'C:/host/private/config'),directory=directory,expected_identity=expected_identity)
+        finally:sdk.k.GetFileInformationByHandle=Function(original_info)
+    monkeypatch.setattr(provider,'_verify_windows_private_path',mapped)
+    monkeypatch.setattr(provider,'os',SimpleNamespace(**{n:getattr(os,n) for n in dir(os) if not n.startswith('__')}))
+    provider.os.name='nt'
+    result=provider.HostScopedProvider.load(path)
+    try:
+        assert result.verify_scope(project,action,scope,ref) is True
+        sdk.fault='descriptor_io';sdk.local_result=123
+        with pytest.raises(ExecutionContractError):result.verify_scope(project,action,scope,ref)
+        owner=next(o for o in reversed(owned.retained_original_owners()) if o.first_cause is sdk.primary)
+        sdk.local_result=None;sdk.fault=None;owned.cleanup_original(owner.api)
+        assert owned.confirmed_original_cleanup(owner)
+    finally:result.close()
+
+
+def test_error_after_all_actual_resources_released_still_retains_original_api_until_explicit_cleanup(monkeypatch):
+    sdk=SDK();sdk.fault='descriptor_io';install(monkeypatch,sdk)
+    before={id(o) for o in owned.retained_original_owners()}
+    with pytest.raises(ExecutionContractError):verify()
+    owner=next(o for o in owned.retained_original_owners() if id(o) not in before)
+    assert not owner.entries() and owner.first_cause is sdk.primary
+    calls=list(sdk.calls);ref=weakref.ref(owner.api);gc.collect();assert ref() is owner.api
+    owned.cleanup_original(owner.api)
+    assert sdk.calls==calls and owned.confirmed_original_cleanup(owner)
+
+
+def test_actual_controller_pending_sealed_request_owner_precedes_preflight_factory_and_cleanup(tmp_path,monkeypatch):
+    from comsol_mcp._control_daemon import ControlDaemon
+    from comsol_mcp._windows_t037 import WindowsT037ProfileV2
+    from comsol_mcp import _windows_host_change as changes
+    from comsol_mcp._windows_t037_broker import WindowsScmServiceBroker,WindowsT037HostControlIssuer,_SCM_TEST_API_TOKEN
+    from tests.test_windows_t037_broker import _ScmApi
+    from tests.test_windows_filter_group import profile_and_plan,executor
+    p,plan=profile_and_plan();exe,_,store,host_provider,authority=executor(tmp_path,monkeypatch,p,plan)
+    wrapper=WindowsT037ProfileV2(p,'a'*64,{},'SOFTWARE_ONLY')
+    daemon=ControlDaemon.__new__(ControlDaemon);daemon.store=store;daemon.project_authority=authority
+    daemon._windows_t037_profile=wrapper;daemon._windows_t037_profile_path='public-profile-path';daemon._retained_host_control_executors={}
+    sdk=SDK();sdk.fault='token_io';sdk.close_result=0;install(monkeypatch,sdk)
+    before={id(o) for o in owned.retained_original_owners()};holder={}
+    def loader(path):
+        assert daemon._retained_host_control_executors
+        return wrapper
+    def factory(cls,**kwargs):
+        assert next(iter(daemon._retained_host_control_executors.values()))['request'] is holder['request']
+        verify();pytest.fail('unknown preflight reached executor construction')
+    monkeypatch.setattr('comsol_mcp._windows_t037.load_trusted_profile',loader)
+    monkeypatch.setattr(changes.WindowsHostChangeExecutor,'from_trusted_profile_path',classmethod(factory))
+    scm=_ScmApi()
+    def main(runtime):
+        runtime.mark_running();issuer=WindowsT037HostControlIssuer(authority=authority,provider=host_provider,profile=p,profile_source_sha256=wrapper.source_sha256)
+        request=issuer.issue(runtime,phase='APPLY',plan=plan,authorization_ref='apply-once');holder['request']=request
+        request.consume(service_name=p.windows_isolation.service_name,project_id=p.project_id,profile_sha256=p.sha256)
+        with pytest.raises(ExecutionContractError):daemon._execute_internal_host_control(request)
+        assert scm.handler(1,0,None,None)==0
+    try:
+        WindowsScmServiceBroker._for_software_test(p.windows_isolation.service_name,main,api=scm,token=_SCM_TEST_API_TOKEN).run()
+        record=next(iter(daemon._retained_host_control_executors.values()));owner=next(o for o in owned.retained_original_owners() if id(o) not in before)
+        assert record['key'][0]=='pending' and record['executor'] is None and owner.first_cause is sdk.primary
+        assert store.db.execute('SELECT count(*) FROM jobs').fetchone()[0]==0
+        gc.collect();assert owner.api is owner.registry.owner
+        with pytest.raises(ExecutionContractError):daemon._reconcile_original_host_control_executor(holder['request'],None,original_preflight_owner=owner)
+        with pytest.raises(ExecutionContractError):daemon._reconcile_original_host_control_executor(holder['request'],None,original_preflight_owner=SimpleNamespace(retired=True))
+        sdk.close_result=1;owned.cleanup_original(owner.api)
+        calls=list(sdk.calls)
+        daemon._reconcile_original_host_control_executor(holder['request'],None,original_preflight_owner=owner)
+        assert not daemon._retained_host_control_executors and sdk.calls==calls
+        assert holder['request']._used is True and store.db.execute('SELECT count(*) FROM jobs').fetchone()[0]==0
+    finally:host_provider.close();store.close()
+
+
+@pytest.mark.parametrize('family',['handle','local'])
+def test_original_resource_entry_foreign_handle_or_api_cannot_redirect_closer(monkeypatch,family):
+    sdk=SDK();install(monkeypatch,sdk);api=paths._API();owner=owned.hold_original(api)
+    storage=C.c_void_p(100 if family=='handle' else C.addressof(sdk.descriptor))
+    original=owner.function('CloseHandle' if family=='handle' else 'LocalFree',api.k)
+    entry=owner.capture(storage,family=family,closer=original)
+    calls=list(sdk.calls)
+    entry.handle=entry.value+1
+    with pytest.raises(ExecutionContractError):owner.registry.retry_owned(entry,api)
+    assert sdk.calls==calls
+    entry.handle=entry.value
+    with pytest.raises(ExecutionContractError):owner.registry.retry_owned(entry,object())
+    assert sdk.calls==calls
+    owned.cleanup_original(api);assert owned.confirmed_original_cleanup(owner)
+
+
+@pytest.mark.parametrize('fault',['borrowed_outside','borrowed_truncated','needed_overflow','returned_length_short','token_invalid_handle','descriptor_invalid_pointer','close_boolean','localfree_boolean'])
+def test_actual_malformed_storage_and_return_domains_cannot_free_borrowed_or_arbitrary_values(monkeypatch,fault):
+    sdk=SDK();install(monkeypatch,sdk);before={id(o) for o in owned.retained_original_owners()}
+    tokeninfo=sdk.tokeninfo
+    if fault in {'borrowed_outside','borrowed_truncated','needed_overflow','returned_length_short'}:
+        def malformed_info(token,kind,buffer,size,needed):
+            result=tokeninfo(token,kind,buffer,size,needed)
+            if buffer is not None:
+                if fault=='borrowed_outside':C.cast(buffer,C.POINTER(C.c_void_p))[0]=C.c_void_p(9999)
+                elif fault=='borrowed_truncated':C.cast(buffer,C.POINTER(C.c_void_p))[0]=C.addressof(buffer)+30
+                else:C.cast(needed,C.POINTER(C.c_uint32))[0]=16 if fault=='returned_length_short' else 33
+            return result
+        sdk.a.GetTokenInformation=Function(malformed_info)
+    elif fault=='token_invalid_handle':
+        def invalid_token(process,access,out):C.cast(out,C.POINTER(C.c_void_p))[0]=C.c_void_p(-1);return 1
+        sdk.a.OpenProcessToken=Function(invalid_token)
+    elif fault=='descriptor_invalid_pointer':
+        def invalid_descriptor(*args):C.cast(args[7],C.POINTER(C.c_void_p))[0]=C.c_void_p(-1);return 0
+        sdk.a.GetSecurityInfo=Function(invalid_descriptor)
+    elif fault=='close_boolean':sdk.close_result=True
+    else:sdk.local_result=False
+    with pytest.raises(ExecutionContractError):verify()
+    owner=next(o for o in owned.retained_original_owners() if id(o) not in before)
+    assert not owner.retired
+    calls=list(sdk.calls)
+    if fault in {'token_invalid_handle','descriptor_invalid_pointer'}:
+        assert owner.entries()
+        with pytest.raises(ExecutionContractError):owned.cleanup_original(owner.api)
+        assert all(not (isinstance(c,tuple) and c[0] in {'close','free'} and c[1]==C.c_void_p(-1).value) for c in sdk.calls)
+    else:
+        sdk.close_result=1;sdk.local_result=None
+        owned.cleanup_original(owner.api);assert owned.confirmed_original_cleanup(owner)
+    assert all(not (isinstance(c,tuple) and c[0]=='free' and c[1] in {9999,100,C.addressof(sdk.owner_sid)}) for c in sdk.calls)
+
+
+def test_explicit_original_cleanup_cannot_close_live_borrowed_preflight_during_sdk_read(monkeypatch):
+    import threading
+    sdk=SDK();install(monkeypatch,sdk);entered=threading.Event();release=threading.Event();done=threading.Event()
+    original=sdk.security;once=[False];results=[];cleanup_errors=[]
+    def wait_read(*args):
+        result=original(*args)
+        if not once[0]:
+            once[0]=True;entered.set();assert release.wait(3)
+        return result
+    sdk.a.GetSecurityInfo=Function(wait_read)
+    before={id(o) for o in owned.retained_original_owners()}
+    thread=threading.Thread(target=lambda:results.append(verify()));thread.start();assert entered.wait(2)
+    owner=next(o for o in owned.retained_original_owners() if id(o) not in before)
+    calls=list(sdk.calls)
+    def cleanup():
+        try:owned.cleanup_original(owner.api)
+        except ExecutionContractError as e:cleanup_errors.append(e)
+        finally:done.set()
+    closer=threading.Thread(target=cleanup);closer.start()
+    assert not done.wait(.05) and sdk.calls==calls
+    release.set();thread.join(3);closer.join(3)
+    assert not thread.is_alive() and not closer.is_alive() and len(results)==1
+    assert owner.retired and not owner.entries() and len(cleanup_errors)==1
+    closed=[c[1] for c in sdk.calls if isinstance(c,tuple) and c[0]=='close']
+    assert len(closed)==len(set(closed))==9
+
+
+def test_existing_registry_resources_cannot_be_re_adopted_after_first_acquisition(monkeypatch):
+    from comsol_mcp._windows_owned_resources import registry_for
+    sdk=SDK();install(monkeypatch,sdk);api=paths._API();r=registry_for(api)
+    original=r.acquire(api,100,lambda handle:None,mode='VOID')
+    before=list(sdk.calls)
+    with pytest.raises(ExecutionContractError):owned.hold_original(api)
+    assert sdk.calls==before and r.unresolved()==(original,)
+    original.release_owned(api)

@@ -1,0 +1,14 @@
+--- root/comsol_mcp/_managed_backend.py
++++ windows-r19/comsol_mcp/_managed_backend.py
+@@ -3109,8 +3109,10 @@
+         if delivery_action and (expected_rev is None or expected_rev != current_rev):
+             raise ExecutionContractError("REVISION_CONFLICT", "model delivery expected_revision must exactly match the bound model",
+                                          stage="validation")
++        from ._ephemeral_result_ticket import new_binding
++        ephemeral_binding = new_binding(self, callback, function, ref) if operation == "result.at_points" else None
+         result = self.service.execute_legacy(alias, callback, body, model_ref=ref,
+-                expected_revision=expected_rev,
++                _ephemeral_binding=ephemeral_binding, expected_revision=expected_rev,
+                 request_id=execution.get("request_id") or str(operation_id), session_id=session, effect=effect,
+                 terminal_model_close=(operation == "model.close"))
+         if result.get("success") and ref is not None and operation != "model.close":

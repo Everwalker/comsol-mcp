@@ -133,10 +133,26 @@ class _API:
 
     def check(self, ok):
         if not ok:
+            owner = getattr(self, "_readonly_preflight_owner", None)
+            if owner is not None and getattr(owner, "_retained_service_sid_read", False):
+                raise owner._original_win_error(owner._original_get_last_error())
             raise C.WinError(C.get_last_error())
+
+    def _ownership_registry(self):
+        # The worker also loads this helper as one standalone file. Only package
+        # calls or an explicitly attached private owner participate in launch
+        # ownership; a failed explicit binding must never silently downgrade.
+        if __package__:
+            from ._windows_owned_resources import registry_for
+        elif getattr(self, '_native_owned_registry', None) is not None:
+            from comsol_mcp._windows_owned_resources import registry_for
+        else:
+            return None
+        return registry_for(self)
 
     def open(self, path, *, directory=False, create=False, metadata=False, add_file=False,
              add_directory=False, read_control=False):
+        registry = self._ownership_registry()
         access = 0 if metadata else (0x001000A0 if directory else 0xC0010000)
         if read_control:
             access |= 0x00020000  # READ_CONTROL for a read-only security descriptor query
@@ -146,9 +162,19 @@ class _API:
             access |= 0x4  # FILE_ADD_SUBDIRECTORY on a pinned directory parent
         share = 7 if metadata and not read_control else (3 if directory or read_control else 1)
         flags = 0x00200000 | (0x02000000 if directory else 0x80)
-        handle = self.k.CreateFileW(path, access, share, None, 1 if create else 3, flags, None)
+        preflight = getattr(self, '_readonly_preflight_owner', None)
+        if preflight is not None:
+            closer = preflight.function('CloseHandle', self.k)
+            create_fn = preflight.function('CreateFileW', self.k)
+            handle = create_fn(path, access, share, None, 1 if create else 3, flags, None)
+            if getattr(handle, 'value', handle) != C.c_void_p(-1).value:
+                preflight.capture(handle, family='handle', closer=closer, keepalive=(path,))
+        else:
+            handle = self.k.CreateFileW(path, access, share, None, 1 if create else 3, flags, None)
         if handle == C.c_void_p(-1).value:
             raise C.WinError(C.get_last_error())
+        if registry is not None:
+            registry.acquire(self, handle, self._resource_closer(), label="security_path_root")
         return handle
 
     def _open_relative(self, parent_handle, leaf, *, directory=False, create=False, add_file=False,
@@ -161,6 +187,7 @@ class _API:
         OBJ_DONT_REPARSE fails closed if name parsing encounters a reparse
         point; FILE_OPEN_REPARSE_POINT also asks for the leaf object itself.
         """
+        registry = self._ownership_registry()
         encoded = leaf.encode('utf-16-le')
         name_buffer = C.create_unicode_buffer(leaf)
         name = _UnicodeString(len(encoded), len(encoded) + 2,
@@ -185,9 +212,17 @@ class _API:
         share = 0x3 if directory or read_control or delete else (0x1 if create or read_data else 0x7)
         disposition = 2 if create else 1  # FILE_CREATE / FILE_OPEN
         options = (0x1 if directory else 0x40) | 0x20 | 0x00200000
-        status = int(self.nt.NtCreateFile(C.byref(output), access, C.byref(attributes),
-                                          C.byref(io_status), None, 0x80, share,
-                                          disposition, options, None, 0))
+        preflight = getattr(self, '_readonly_preflight_owner', None)
+        if preflight is not None:
+            from ._windows_host_preflight_owner import scalar
+            status = scalar(preflight.allocation_call('NtCreateFile', self.nt, output,
+                       C.byref(output), access, C.byref(attributes), C.byref(io_status),
+                       None, 0x80, share, disposition, options, None, 0, family='handle',
+                       keepalive=(name_buffer, name, attributes, io_status)), 'NTSTATUS')
+        else:
+            status = int(self.nt.NtCreateFile(C.byref(output), access, C.byref(attributes),
+                                              C.byref(io_status), None, 0x80, share,
+                                              disposition, options, None, 0))
         if status < 0:
             unsigned_status = status & 0xFFFFFFFF
             if unsigned_status == 0xC000050B:  # STATUS_REPARSE_POINT_ENCOUNTERED
@@ -198,9 +233,11 @@ class _API:
                 raise FileExistsError(183, "relative entry already exists", leaf)
             dos_error = int(self.nt.RtlNtStatusToDosError(status))
             raise C.WinError(dos_error)
+        if registry is not None:
+            registry.acquire(self, output, self._resource_closer(), label="relative_file")
         expected_information = 2 if create else 1  # FILE_CREATED / FILE_OPENED
         if int(io_status.Information) != expected_information:
-            self.check(self.k.CloseHandle(output))
+            self.close(output)
             raise PublishError("ACCESS_VIOLATION", "relative file open did not produce the requested object")
         return output
 
@@ -224,7 +261,7 @@ class _API:
     def open_source(self, parent_handle, leaf):
         return self._open_relative(parent_handle, leaf, read_data=True)
 
-    def open_security_path(self, path, *, directory):
+    def open_security_path(self, path, *, directory, read_data=False):
         """Open a canonical drive path component-by-component for READ_CONTROL.
 
         Every returned handle remains open so callers can inspect security on
@@ -243,7 +280,11 @@ class _API:
             raise PublishError("ACCESS_VIOLATION", "security path exceeds the bounded component count")
         for part in parts:
             _component(part)
+        registry = self._ownership_registry()
+        scope = registry.scope() if registry is not None else None
         handles = [self.open(drive + '\\', directory=True, metadata=True, read_control=True)]
+        if registry is not None:
+            registry.acquire(self, handles[0], self._resource_closer(), label="security_path_root")
         try:
             if not parts:
                 if not directory:
@@ -251,16 +292,27 @@ class _API:
                 return handles
             for index, part in enumerate(parts):
                 is_directory = index < len(parts) - 1 or directory
-                child = self._open_relative(handles[-1], part, directory=is_directory, read_control=True)
-                self.info(child, directory=is_directory)
+                child = self._open_relative(handles[-1], part, directory=is_directory, read_control=True,
+                                            read_data=read_data and not is_directory)
+                if registry is not None:
+                    registry.acquire(self, child, self._resource_closer(), label="security_path_child")
                 handles.append(child)
+                self.info(child, directory=is_directory)
             return handles
-        except BaseException:
-            for handle in reversed(handles):
-                try:
-                    self.close(handle)
-                except BaseException:
-                    pass
+        except BaseException as original_error:
+            preflight = getattr(self, '_readonly_preflight_owner', None)
+            if preflight is not None:
+                preflight.remember(original_error)
+                # The original outer preflight owner unwinds each acquired
+                # entry exactly once; a failed entry must never be retried here.
+            elif registry is not None:
+                registry.drain(scope)  # Failed releases stay with the launch owner.
+            else:
+                for handle in reversed(handles):
+                    try:
+                        self.close(handle)
+                    except Exception:
+                        pass  # Standalone publication retains its original contract.
             raise
 
     def source_fingerprint(self, handle):
@@ -297,11 +349,39 @@ class _API:
         except FileNotFoundError:
             return False
 
-    def close(self, handle):
+    def _resource_closer(self):
+        preflight = getattr(self, '_readonly_preflight_owner', None)
+        if preflight is not None:
+            return preflight.path_closer
+        # A software OS-boundary override keeps its original callback. The
+        # production close wrapper captures the checked native closer.
+        if getattr(self.close, "__func__", None) is not getattr(type(self), "close", None):
+            return self.close
+        return self._close_native
+
+    def _close_native(self, handle):
         self.check(self.k.CloseHandle(handle))
 
+    def close(self, handle):
+        preflight = getattr(self, '_readonly_preflight_owner', None)
+        if preflight is not None:
+            return preflight.release(handle, family='handle')
+        registry = self._ownership_registry()
+        entry = registry.find(self, handle) if registry is not None else None
+        if entry is not None:
+            return entry.release_owned(registry.owner)
+        return self._close_native(handle)
+
     def info(self, handle, *, directory=False):
-        info = _FileInfo(); self.check(self.k.GetFileInformationByHandle(handle, C.byref(info)))
+        info = _FileInfo()
+        preflight = getattr(self, '_readonly_preflight_owner', None)
+        if preflight is not None:
+            from ._windows_host_preflight_owner import scalar
+            if getattr(preflight, '_retained_service_sid_read', False):
+                preflight.hold(handle, info)
+            self.check(scalar(preflight.function('GetFileInformationByHandle', self.k)(handle, C.byref(info)), 'BOOL'))
+        else:
+            self.check(self.k.GetFileInformationByHandle(handle, C.byref(info)))
         if info.attributes & 0x400 or bool(info.attributes & 0x10) != directory:
             raise PublishError("ACCESS_VIOLATION", "export path must use ordinary files and directories without reparse points")
         return (int(info.volume), (int(info.index_high) << 32) | int(info.index_low)), (int(info.size_high) << 32) | int(info.size_low)

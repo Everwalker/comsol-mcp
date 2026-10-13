@@ -1,0 +1,113 @@
+--- root/tools/run_native_w24_cure_science.py
++++ w24-coupled05/tools/run_native_w24_cure_science.py
+@@ -4296,7 +4296,7 @@
+             "validation": validated}
+ 
+ 
+-def validate_template_receipt(receipt_path: Path) -> dict[str, Any]:
++def validate_template_receipt(receipt_path: Path, *, attachment_manifest: Path | None = None) -> dict[str, Any]:
+     """Verify an immutable configured native template without touching COMSOL."""
+     receipt_path = receipt_path.expanduser().resolve(strict=True)
+     receipt = _read_json(receipt_path, "configured template receipt")
+@@ -4335,7 +4335,11 @@
+     if template_path.stat().st_size != expected_size or sha256(template_path) != expected_sha:
+         raise CampaignError("configured template bytes no longer match their native receipt")
+ 
+-    build = _as_mapping(receipt.get("fixture_readback"), "fixture_readback")
++    attachment = None
++    if attachment_manifest is not None:
++        from tools.w24_setup_input_attachment import validate_attachment
++        attachment = validate_attachment(attachment_manifest, receipt_path)
++    build = _as_mapping(attachment["fixture_readback"] if attachment else receipt.get("fixture_readback"), "fixture_readback")
+     if (build.get("status") != "BUILT_NOT_SOLVED" or
+             build.get("geometry_dimension") != 2 or
+             build.get("geometry_axisymmetric") is not True or
+@@ -4377,6 +4381,7 @@
+     except RuntimeError as exc:
+         raise CampaignError(f"registered project artifact validation failed: {exc}") from exc
+     return {
++        "input_attachment": attachment,
+         "receipt_path": str(receipt_path),
+         "receipt_sha256": sha256(receipt_path),
+         "template_path": str(template_path),
+@@ -4405,6 +4410,10 @@
+     paths.extend([
+         Path(__file__).resolve(), SCIENCE_FIXTURE, V2_CONTROL_FIXTURE,
+         COUPON_FIXTURE, PLAN, SETUP_RUNNER,
++        REPO / "tools/w24_setup_input_attachment.py",
++        REPO / "tools/w24_witnessed_stress.py",
++        REPO / "tools/w24_v2_setup_readback.py",
++        REPO / "tools/w24_stable_shape_transfer.py",
+         REPO / "tools/w24_cure_law_v2.py",
+         REPO / "tools/w24_maxwell_branch_state.py",
+         REPO / "tools/w24_cure_v2_capture.py",
+@@ -4413,6 +4422,10 @@
+         REPO / "tools/run_native_w23_te_managed_preflight.py",
+         REPO / "tools/run_native_artifact_geometry.py",
+         REPO / "tests/test_w24_cure_science_runner.py",
++        REPO / "tests/test_w24_setup_input_attachment.py",
++        REPO / "tests/test_w24_witnessed_stress.py",
++        REPO / "tests/test_w24_v2_setup_readback.py",
++        REPO / "tests/test_w24_stable_shape_transfer.py",
+         REPO / "tests/test_w24_cure_law_v2.py",
+         REPO / "tests/test_w24_cure_v2_capture.py",
+         REPO / "tests/test_w24_cure_capture_link.py",
+@@ -4457,11 +4470,16 @@
+         os.close(directory_fd)
+ 
+ 
+-def prepare_campaign_candidate(template_receipt_path: Path, output_path: Path) -> dict[str, Any]:
++def prepare_campaign_candidate(template_receipt_path: Path, output_path: Path, *, attachment_manifest: Path | None = None) -> dict[str, Any]:
+     """Freeze a complete, unsolved setup input for later independent approval."""
+-    setup = validate_template_receipt(template_receipt_path)
++    setup = validate_template_receipt(template_receipt_path, attachment_manifest=attachment_manifest)
+     source_manifest = runtime_source_manifest()
+-    stress_components = map_stress_components(setup["equation_view_inventory"])
++    readiness_only = bool(setup.get("input_attachment")) and not setup["cure_law_v2_capture"]["enabled"]
++    if readiness_only:
++        from tools.w24_witnessed_stress import authenticate_current11_mapping
++        stress_components = authenticate_current11_mapping(attachment_manifest, template_receipt_path)
++    else:
++        stress_components = map_stress_components(setup["equation_view_inventory"])
+     candidate = freeze_campaign(
+         {"path": setup["template_path"], "size_bytes": setup["template_size_bytes"],
+          "sha256": setup["template_sha256"], "freeze_sha256": setup["setup_freeze_sha256"],
+@@ -4502,13 +4520,20 @@
+             "native_outputs_inside_workspace": True,
+         },
+     })
++    if setup.get("input_attachment"):
++        from tools.w24_stable_shape_transfer import stable_shape_transfer_requirements
++        candidate["stable_gel_shape_transfer"] = stable_shape_transfer_requirements()
++        candidate["input_attachment"] = setup["input_attachment"]
++        candidate["readiness"] = "NEEDS_NATIVE_V2_CONFIGURATION_AND_STABLE_GEL_SHAPE_TRANSFER"
++        candidate["status"] = "NEEDS_NATIVE_V2_CONFIGURATION_AND_STABLE_GEL_SHAPE_TRANSFER"
++        candidate["native_admission"] = "REFUSED_READINESS_ONLY_NO_ENGINE_BIRTH"
+     candidate.pop("freeze_sha256", None)
+     candidate["freeze_sha256"] = _canonical_json_sha256(candidate)
+     _write_new_json(output_path, candidate)
+     return {"status": candidate["status"], "path": str(output_path.resolve()),
+             "freeze_sha256": candidate["freeze_sha256"],
+             "file_sha256": sha256(output_path), "source_count": len(source_manifest),
+-            "study_run_submissions_authorized_by_candidate": MAX_STUDY_RUN_SUBMISSIONS,
++            "study_run_submissions_authorized_by_candidate": 0 if readiness_only else MAX_STUDY_RUN_SUBMISSIONS,
+             "approval_status": "NOT_APPROVED"}
+ 
+ 
+@@ -6003,6 +6028,7 @@
+     prepare = commands.add_parser("prepare", help="freeze the unsolved setup receipt for root review")
+     prepare.add_argument("--template-receipt", required=True)
+     prepare.add_argument("--candidate-out", required=True)
++    prepare.add_argument("--input-attachment-manifest")
+     execute = commands.add_parser("execute", help="execute one exact root-approved frozen campaign")
+     execute.add_argument("--template-receipt", required=True)
+     execute.add_argument("--candidate-freeze", required=True)
+@@ -6014,7 +6040,7 @@
+     try:
+         if args.command == "prepare":
+             try:
+-                result = prepare_campaign_candidate(Path(args.template_receipt), Path(args.candidate_out))
++                result = prepare_campaign_candidate(Path(args.template_receipt), Path(args.candidate_out), attachment_manifest=Path(args.input_attachment_manifest) if args.input_attachment_manifest else None)
+             except Exception as exc:
+                 raise PrebirthRefusal(f"candidate preparation refused before native execution: {type(exc).__name__}: {exc}") from exc
+         else:

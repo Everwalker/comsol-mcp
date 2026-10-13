@@ -140,6 +140,7 @@ def test_actual_bootstrap_scm_daemon_serial_lane_and_store_consumed_grant_never_
     # The native constructor seam remains explicitly SOFTWARE_ONLY, exercising
     # actual executor journaling without calling Windows or changing OS policy.
     daemon=ControlDaemon.__new__(ControlDaemon)
+    daemon._retained_host_control_executors={}
     daemon._windows_t037_profile=wrapper;daemon._windows_t037_profile_path='fixture-profile'
     daemon._scoped_host_provider=provider;daemon.project_authority=authority;daemon.store=store
     daemon.queue=ThreadPoolExecutor(max_workers=1)

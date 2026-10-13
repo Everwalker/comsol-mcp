@@ -1839,7 +1839,7 @@ def build_host_change_plan(profile: HostResourceProfile, *,
     """
     validate_profile(profile)
     if (not isinstance(change_manifest, (list, tuple)) or not change_manifest
-            or len(change_manifest) > MAX_HOST_PLAN_ACTIONS):
+            or len(change_manifest) > _host_plan_action_bound(change_manifest)):
         raise ValueError("change_manifest must contain a bounded set of exact actions")
     if not isinstance(operator_inputs, Mapping):
         raise ValueError("operator_inputs must be an object")
@@ -1948,6 +1948,11 @@ def build_host_change_plan(profile: HostResourceProfile, *,
     return HostChangePlan(serialized, digest)
 
 
+def _host_plan_action_bound(manifest):
+    from ._windows_filter_group import is_group
+    return MAX_HOST_PLAN_ACTIONS + 2 if is_group(manifest) else MAX_HOST_PLAN_ACTIONS
+
+
 def _validate_desired_resource(kind: str, desired: Mapping[str, Any],
                                profile: HostResourceProfile) -> None:
     fields = set(desired)
@@ -2012,6 +2017,10 @@ def _validate_desired_resource(kind: str, desired: Mapping[str, Any],
         if expected not in candidates:
             raise ValueError("windows_acl desired state is not an exact trusted profile grant")
     elif kind == "wfp_filter":
+        from ._windows_filter_group import SCHEMA, validate_member
+        if desired.get("schema") == SCHEMA:
+            validate_member(desired, profile)
+            return
         if profile.platform != "windows" or profile.windows_isolation is None:
             raise ValueError("WFP proposal requires the closed Windows isolation profile")
         if fields != {"filter_key", "provider_key", "sublayer_key", "action", "grant_sha256"}:
@@ -2075,6 +2084,10 @@ def _validate_desired_resource(kind: str, desired: Mapping[str, Any],
                 or not _is_sha256(desired["security_sha256"])):
             raise ValueError("wfp_sublayer desired state differs from the exact supported persistent-sublayer contract")
     elif kind == "windows_service":
+        if desired.get("schema") == "comsol-mcp.windows-service-sid-config/1":
+            from ._windows_service_sid import validate_desired
+            validate_desired(desired, profile)
+            return
         if profile.platform != "windows" or profile.windows_isolation is None:
             raise ValueError("Windows service proposal requires the closed Windows isolation profile")
         if fields != {"service_name", "service_start_name", "service_logon_sid", "service_sid", "service_sid_type"}:
@@ -2112,7 +2125,7 @@ def validate_host_change_plan(plan: Any) -> dict[str, Any]:
             or not isinstance(payload.get("plan_id"), str)
             or not _GUID_RE.fullmatch(payload.get("plan_id", ""))
             or not isinstance(payload.get("change_manifest"), list)
-            or not payload["change_manifest"] or len(payload["change_manifest"]) > MAX_HOST_PLAN_ACTIONS
+            or not payload["change_manifest"] or len(payload["change_manifest"]) > _host_plan_action_bound(payload["change_manifest"])
             or not isinstance(payload.get("backup_manifest"), list)
             or len(payload["backup_manifest"]) > MAX_HOST_PLAN_ACTIONS):
         _fail("HOST_PLAN_INVALID", "host change plan does not match the supported plan-only contract")

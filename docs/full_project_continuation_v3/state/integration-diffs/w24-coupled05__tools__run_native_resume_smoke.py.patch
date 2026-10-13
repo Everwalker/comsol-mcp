@@ -1,0 +1,102 @@
+--- root/tools/run_native_resume_smoke.py
++++ w24-coupled05/tools/run_native_resume_smoke.py
+@@ -301,9 +301,12 @@
+         append_event(self.event_log, "private_shadow_prepared", **metadata)
+         return metadata
+ 
+-    def start_and_verify_listener(self) -> dict[str, Any]:
++    def start_and_verify_listener(self, *, admission_owner: Any = None) -> dict[str, Any]:
+         from comsol_mcp._g2_isolation import _process_snapshot
+ 
++        if admission_owner is not None:
++            from tools.w24_coupled_admission import require_admission_owner
++            require_admission_owner(admission_owner,self)
+         port_file = self.runtime / "server.port"
+         command = [
+             str(self.shadow_root / "bin/comsol"), "mphserver",
+@@ -311,13 +314,19 @@
+             "-prefsdir", str(self.prefs), "-tmpdir", str(self.tmp),
+             "-recoverydir", str(self.recovery), "-login", "auto", "-silent", "-multi", "on",
+         ]
++        if admission_owner is not None:
++            admission_owner.prepare_server_birth()
+         self._server_log_handle = self.server_log.open("ab", buffering=0)
+         self.proc = subprocess.Popen(command, cwd=str(self.work), stdout=self._server_log_handle,
+                                      stderr=subprocess.STDOUT, text=True, start_new_session=True)
++        if admission_owner is not None:
++            admission_owner.on_server_birth()
+         append_event(self.event_log, "server_process_started", command=command, pid=self.proc.pid,
+                      work_dir=str(self.work), listener_precondition="no Worker connection until lsof confirms 127.0.0.1")
+         deadline = time.monotonic() + 45.0
+         while time.monotonic() < deadline:
++            if admission_owner is not None:
++                admission_owner.before_effect("listener_poll",0.2)
+             if self.proc.poll() is not None:
+                 try:
+                     self._server_log_handle.flush()
+@@ -332,13 +341,13 @@
+                         break
+                 except (OSError, ValueError):
+                     pass
+-            time.sleep(0.2)
++            time.sleep(0.2 if admission_owner is None else admission_owner.before_effect("listener_poll_wait",0.2))
+         if self.port is None:
+             raise TimeoutError(f"task-owned COMSOL server did not publish a listener port in 45s; log={self.server_log}")
+ 
+         probe_command = ["/usr/sbin/lsof", "-nP", "-a", "-p", str(self.proc.pid),
+                          f"-iTCP:{self.port}", "-sTCP:LISTEN"]
+-        probe = subprocess.run(probe_command, capture_output=True, text=True, check=False, timeout=10)
++        probe = subprocess.run(probe_command, capture_output=True, text=True, check=False, timeout=(10 if admission_owner is None else admission_owner.before_effect("owned_listener_lsof",10.0)))
+         lines = [line for line in probe.stdout.splitlines()[1:] if line.strip()]
+         if probe.returncode != 0 or len(lines) != 1:
+             raise RuntimeError(f"owned listener lsof did not return exactly one socket: rc={probe.returncode}, out={probe.stdout}, err={probe.stderr}")
+@@ -346,7 +355,7 @@
+         if pid_field != self.proc.pid or endpoint != f"127.0.0.1:{self.port}":
+             raise RuntimeError(f"refusing Worker connection: owned COMSOL endpoint is {endpoint!r}, pid={pid_field}; expected 127.0.0.1:{self.port}, pid={self.proc.pid}")
+ 
+-        self.process_identity = _process_snapshot(self.proc.pid)
++        self.process_identity = _process_snapshot(self.proc.pid) if admission_owner is None else _process_snapshot(self.proc.pid,admission_owner=admission_owner)
+         if self.process_identity is None:
+             raise RuntimeError("task-owned COMSOL PID identity could not be read")
+         self.process_identity = {**self.process_identity, "port": self.port}
+@@ -366,19 +375,35 @@
+         append_event(self.event_log, "loopback_listener_verified_before_worker", **listener)
+         return listener
+ 
+-    def start_worker(self) -> dict[str, Any]:
++    def start_worker(self, *, admission_owner: Any = None) -> dict[str, Any]:
+         if self.port is None or self.proc is None or self.proc.poll() is not None:
+             raise RuntimeError("task-owned listener is not available")
++        if admission_owner is not None:
++            from tools.w24_coupled_admission import require_admission_owner
++            require_admission_owner(admission_owner,self)
++            admission_owner.before_effect("Worker_startup",25.0)
+         paths = self.paths_type(self.shadow_root, JAVA11, private_prefs=self.prefs, project_root=self.project)
+         self.worker = self.worker_type(paths, state_dir=self.worker_state)
+-        startup = self.worker.start(startup_timeout_s=25.0)
+-        self.worker.client().connect(self.port, "127.0.0.1")
+-        version = self.worker.client().getComsolVersion()
++        if admission_owner is None:
++            startup = self.worker.start(startup_timeout_s=25.0)
++            self.worker.client().connect(self.port, "127.0.0.1")
++            version = self.worker.client().getComsolVersion()
++        else:
++            startup = self.worker.start(startup_timeout_s=admission_owner.before_effect("Worker_startup_wait",25.0),
++                                        admission_owner=admission_owner)
++            self.worker.client().connect(self.port,"127.0.0.1",
++                rpc_timeout_s=admission_owner.before_effect("Worker_connect",30.0),
++                queue_timeout_s=admission_owner.wait_cap(30.0))
++            version = self.worker.client().getComsolVersion(
++                rpc_timeout_s=admission_owner.before_effect("Worker_version",30.0),
++                queue_timeout_s=admission_owner.wait_cap(30.0))
++        if admission_owner is not None and getattr(self.worker,"_coupled_admission_owner",None) is not admission_owner:
++            raise RuntimeError("owned Worker did not retain the same private admission owner")
+         version_identity = _engine_build_identity(version)
+         runtime = self.worker.runtime_metadata()
+         from comsol_mcp._g2_isolation import verify_owned_server
+         endpoint = f"127.0.0.1:{self.port}"
+-        proof = verify_owned_server(self.receipt_path, endpoint=endpoint, worker_pid=runtime.get("pid"))
++        proof = verify_owned_server(self.receipt_path, endpoint=endpoint, worker_pid=runtime.get("pid"),**({"admission_owner":admission_owner} if admission_owner is not None else {}))
+         metadata = {
+             "status": "WORKER_CONNECTED_LOOPBACK_PROOF_PASSED",
+             "engine_version": str(version),

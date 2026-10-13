@@ -1,0 +1,238 @@
+{
+  "artifacts": {
+    "run_dir": "/private/tmp/cv3t-r3/test-efficiency/runs/20261013T161302Z-f38150a6",
+    "test_outputs": [
+      {
+        "bytes": 3597,
+        "path": "/private/tmp/cv3t-r3/test-efficiency/runs/20261013T161302Z-f38150a6/focus.log",
+        "sha256": "c57387669390deaf491289de17fdb6713b15df566805c15ecbece900ceba3521"
+      },
+      {
+        "bytes": 233808,
+        "path": "/private/tmp/cv3t-r3/test-efficiency/runs/20261013T161302Z-f38150a6/focus.junit.xml",
+        "sha256": "fef40d8e06342855d85f021254c4e0380ab7790ddd77aac0c14ce67ceb81dbc9"
+      },
+      {
+        "bytes": 22,
+        "path": "/private/tmp/cv3t-r3/test-efficiency/runs/20261013T161302Z-f38150a6/required_regression.log",
+        "sha256": "832dded4a74f49ccf82eeacf3212142e653fabc0e80a426f085267c25cb37e6a"
+      },
+      {
+        "bytes": 551,
+        "path": "/private/tmp/cv3t-r3/test-efficiency/runs/20261013T161302Z-f38150a6/required_regression.junit.xml",
+        "sha256": "2c5e29bfd93569ae68e065ed7b342b5c9a87e08759dd836e4d8b2758fd3ce447"
+      }
+    ]
+  },
+  "baseline_commit": "0644ea970688e02beda4be7069f67144b4bcf59e",
+  "candidate_fingerprint": "21257f60ac18d47081c61cd0492b5c3b612178ed93c57d9cbdc88ed14780e156",
+  "candidate_id": "v3-windows-r19-w23-r15-runtime-binding-r7",
+  "environment": {
+    "comsol_origin": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/comsol_mcp/__init__.py",
+    "controlled_environment_sha256": "dee75952aeff4089ae1bbd8c8f5e770cb010e93f9b646cd6ffd7a51bfcd94266",
+    "executable": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312/bin/python",
+    "prefix": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312",
+    "pytest_origin": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312/lib/python3.12/site-packages/pytest/__init__.py",
+    "pytest_version": "9.1.1",
+    "version": "3.12.13"
+  },
+  "errors": [],
+  "failures": [],
+  "native_acceptance": "NOT_RUN",
+  "preflight": "PASS",
+  "run_id": "20261013T161302Z-f38150a6",
+  "schema": "BOUNDED_TEST_RUN_V1",
+  "scratch": {
+    "appledouble": [],
+    "extended_attributes": "NOT_RUN_optional",
+    "filesystem_probe": "PASS",
+    "output_appledouble": [],
+    "output_root": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/test-efficiency",
+    "tmp_root": "/private/tmp/cv3t-r3",
+    "volume_identity": {
+      "device": "disk3s5",
+      "filesystem": "apfs",
+      "global_permissions_enabled": true,
+      "mount_path": "/System/Volumes/Data",
+      "scope": "software scratch identity; no native security certification",
+      "volume_uuid": "E93480A3-2D27-40C0-8BE5-0F9AE9FC0659"
+    }
+  },
+  "stages": [
+    {
+      "artifacts": {
+        "junit": {
+          "bytes": 233808,
+          "path": "/private/tmp/cv3t-r3/test-efficiency/runs/20261013T161302Z-f38150a6/focus.junit.xml",
+          "sha256": "fef40d8e06342855d85f021254c4e0380ab7790ddd77aac0c14ce67ceb81dbc9"
+        },
+        "log": {
+          "bytes": 3597,
+          "path": "/private/tmp/cv3t-r3/test-efficiency/runs/20261013T161302Z-f38150a6/focus.log",
+          "sha256": "c57387669390deaf491289de17fdb6713b15df566805c15ecbece900ceba3521"
+        }
+      },
+      "command": [
+        "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "-s",
+        "-p",
+        "no:cacheprovider",
+        "--junitxml",
+        "/private/tmp/cv3t-r3/test-efficiency/runs/20261013T161302Z-f38150a6/focus.junit.xml",
+        "tests/test_activity018_no_outer_transcript.py",
+        "tests/test_activity019_private_singleton_ticket.py",
+        "tests/test_activity021_definition_boundary_metadata.py",
+        "tests/test_activity022_boundary_selection_ticket.py",
+        "tests/test_activity022_r15_measure_all_and_literal_entry.py",
+        "tests/test_bounded_test_runner.py",
+        "tests/test_control_daemon.py",
+        "tests/test_control_daemon_projects.py",
+        "tests/test_ephemeral_result_ticket.py",
+        "tests/test_execution_service.py",
+        "tests/test_g3_common.py",
+        "tests/test_g3_managed_models.py",
+        "tests/test_g3_results.py",
+        "tests/test_host_scoped_provider.py",
+        "tests/test_managed_backend.py",
+        "tests/test_native_w23_saved_mph_diagnostic.py",
+        "tests/test_native_w23_te_science_protocol.py",
+        "tests/test_native_w23_te_science_runner.py",
+        "tests/test_operation_store.py",
+        "tests/test_operation_store_migrations.py",
+        "tests/test_runtime_observation_binding.py",
+        "tests/test_saved_mph_activity017_public_stack.py",
+        "tests/test_saved_mph_offline_materialization.py",
+        "tests/test_session_lifecycle.py",
+        "tests/test_session_server.py",
+        "tests/test_w23_managed_preflight.py",
+        "tests/test_windows_appcontainer.py",
+        "tests/test_windows_appcontainer_r19_owner.py",
+        "tests/test_windows_child_acl.py",
+        "tests/test_windows_child_binding.py",
+        "tests/test_windows_filter_group.py",
+        "tests/test_windows_host_change.py",
+        "tests/test_windows_host_identity_owner.py",
+        "tests/test_windows_host_preflight_owner.py",
+        "tests/test_windows_job_limits.py",
+        "tests/test_windows_job_release_routes.py",
+        "tests/test_windows_owned_registry.py",
+        "tests/test_windows_ownership_repair.py",
+        "tests/test_windows_policy_owner.py",
+        "tests/test_windows_preflight_lifetime.py",
+        "tests/test_windows_resource_owner.py",
+        "tests/test_windows_service_sid_backup.py",
+        "tests/test_windows_service_sid_controller.py",
+        "tests/test_windows_service_sid_native.py",
+        "tests/test_windows_service_sid_r17_contracts.py",
+        "tests/test_windows_suspended_ownership.py",
+        "tests/test_windows_t037_bootstrap.py",
+        "tests/test_windows_t037_broker.py",
+        "tests/test_windows_wfp_mutation_owner.py",
+        "tests/test_java_worker.py::test_java_worker_is_loopback_authenticated_and_reports_health",
+        "tests/test_java_worker.py::test_java_worker_keeps_original_request_queryable_after_nonblocking_submit",
+        "tests/test_java_worker.py::test_socket_worker_rejects_uncorrelated_task_replies_without_replay[wrong_id-False]",
+        "tests/test_java_worker.py::test_socket_worker_rejects_uncorrelated_task_replies_without_replay[missing_id-False]",
+        "tests/test_java_worker.py::test_socket_worker_rejects_uncorrelated_task_replies_without_replay[wrong_id-True]",
+        "tests/test_java_worker.py::test_socket_worker_accepts_exact_request_id_and_caches_task_reply",
+        "tests/test_java_worker.py::test_socket_worker_preserves_idless_protocol_rejection_diagnostics[status-missing-status-control-REQUEST_NOT_FOUND]",
+        "tests/test_java_worker.py::test_socket_worker_preserves_idless_protocol_rejection_diagnostics[submit-conflict-control-IDEMPOTENCY_KEY_CONFLICT]",
+        "tests/test_java_worker.py::test_socket_worker_preserves_idless_protocol_rejection_diagnostics[unknown-unknown-command-control-UNKNOWN_COMMAND]",
+        "tests/test_java_worker.py::test_java_worker_persists_private_endpoint_metadata",
+        "tests/test_java_worker.py::test_windows_acl_owner_rights_is_resolved_to_verified_owner",
+        "tests/test_java_worker.py::test_windows_acl_metadata_rejects_foreign_owner_and_broad_allow[foreign-owner]",
+        "tests/test_java_worker.py::test_windows_acl_metadata_rejects_foreign_owner_and_broad_allow[everyone-allow]",
+        "tests/test_java_worker.py::test_windows_jdk_executables_keep_space_containing_paths",
+        "tests/test_java_worker.py::test_windows_compile_uses_exe_semicolon_classpath_and_utf8_decoding",
+        "tests/test_java_worker.py::test_windows_classpath_prefers_complete_apiplugins_without_scanning_plugins",
+        "tests/test_java_worker.py::test_windows_classpath_uses_complete_plugins_only_when_apiplugins_is_incomplete",
+        "tests/test_java_worker.py::test_windows_classpath_rejects_partial_roots_instead_of_mixing",
+        "tests/test_java_worker.py::test_windows_classpath_missing_manifest_entry_fails_precisely",
+        "tests/test_java_worker.py::test_reused_worker_pid_with_different_creation_time_is_stale",
+        "tests/test_java_worker.py::test_windows_unverifiable_live_worker_never_starts_replacement",
+        "tests/test_java_worker.py::test_java_worker_reconnects_existing_endpoint_without_spawning_or_replaying",
+        "tests/test_java_worker.py::test_dead_owned_worker_increments_generation_before_replacement",
+        "tests/test_java_worker.py::test_same_request_id_with_different_body_is_rejected_without_replay",
+        "tests/test_java_worker.py::test_unknown_command_is_rejected_and_parallel_control_queries_remain_responsive",
+        "tests/test_java_worker.py::test_operation_context_publishes_request_linkage_and_redacts_credentials",
+        "tests/test_java_worker.py::test_generation_sync_updates_private_reconnect_record",
+        "tests/test_java_worker.py::test_remote_model_save_never_uses_empty_path_as_in_place_bypass",
+        "tests/test_java_worker.py::test_remote_model_save_rejects_paths_outside_configured_project_root",
+        "tests/test_java_worker.py::test_remote_model_save_case_copy_uses_no_clobber_python_policy_and_java_save_copy_true",
+        "tests/test_java_worker.py::test_atomic_source_export_fsync_uses_windows_writable_handle_and_retains_failed_source",
+        "tests/test_java_worker.py::test_remote_client_load_serializes_path_objects_as_strings",
+        "tests/test_java_worker.py::test_two_workers_cannot_own_the_same_global_endpoint_lock",
+        "tests/test_java_worker.py::TestWorkerAllowlist::test_every_dispatched_engine_method_is_allowlisted",
+        "tests/test_java_worker.py::TestWorkerAllowlist::test_progress_log_uses_a_private_typed_command_and_documented_modelutil_methods",
+        "tests/test_java_worker.py::test_remote_progress_sink_command_is_redacted_and_not_a_model_mutation",
+        "tests/test_java_worker.py::test_production_json_integer_parser_and_overload_dispatch"
+      ],
+      "errors": [],
+      "junit": {
+        "error_count": 0,
+        "executed": 1490,
+        "failure_count": 0,
+        "failures": [],
+        "reason": null,
+        "skipped": 0,
+        "status": "PASS",
+        "tests": 1490
+      },
+      "log_bytes_seen": 3597,
+      "log_error": null,
+      "log_truncated": false,
+      "name": "focus",
+      "returncode": 0,
+      "status": "PASS",
+      "timeout": false
+    },
+    {
+      "artifacts": {
+        "junit": {
+          "bytes": 551,
+          "path": "/private/tmp/cv3t-r3/test-efficiency/runs/20261013T161302Z-f38150a6/required_regression.junit.xml",
+          "sha256": "2c5e29bfd93569ae68e065ed7b342b5c9a87e08759dd836e4d8b2758fd3ce447"
+        },
+        "log": {
+          "bytes": 22,
+          "path": "/private/tmp/cv3t-r3/test-efficiency/runs/20261013T161302Z-f38150a6/required_regression.log",
+          "sha256": "832dded4a74f49ccf82eeacf3212142e653fabc0e80a426f085267c25cb37e6a"
+        }
+      },
+      "command": [
+        "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "-s",
+        "-p",
+        "no:cacheprovider",
+        "--junitxml",
+        "/private/tmp/cv3t-r3/test-efficiency/runs/20261013T161302Z-f38150a6/required_regression.junit.xml",
+        "tests/test_registration.py"
+      ],
+      "errors": [],
+      "junit": {
+        "error_count": 0,
+        "executed": 3,
+        "failure_count": 0,
+        "failures": [],
+        "reason": null,
+        "skipped": 0,
+        "status": "PASS",
+        "tests": 3
+      },
+      "log_bytes_seen": 22,
+      "log_error": null,
+      "log_truncated": false,
+      "name": "required_regression",
+      "returncode": 0,
+      "status": "PASS",
+      "timeout": false
+    }
+  ],
+  "status": "PASS",
+  "summary_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/test-efficiency/20261013T161302Z-f38150a6.summary.json"
+}

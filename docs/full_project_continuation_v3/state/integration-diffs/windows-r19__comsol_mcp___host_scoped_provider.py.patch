@@ -1,0 +1,298 @@
+--- root/comsol_mcp/_host_scoped_provider.py
++++ windows-r19/comsol_mcp/_host_scoped_provider.py
+@@ -411,6 +411,10 @@
+             "security_semantics": semantics}
+ 
+ 
++from ._windows_host_preflight_owner import serialized_original_preflight
++
++
++@serialized_original_preflight
+ def _win32_descriptor_digest(api, handle, *, directory: bool, require_daemon_owner: bool,
+                             daemon_sid, trusted_sids) -> tuple[str, str]:
+     """Read and validate an object DACL through its already pinned handle."""
+@@ -447,18 +451,22 @@
+     # SE_FILE_OBJECT=1, OWNER_SECURITY_INFORMATION=1,
+     # DACL_SECURITY_INFORMATION=4. READ_CONTROL on the opened handle suffices;
+     # no SACL privilege or write-security call is used.
+-    status = int(advapi.GetSecurityInfo(handle, 1, 1 | 4, C.byref(owner), None,
+-                                        C.byref(dacl), None, C.byref(descriptor)))
+-    if status != 0 or not descriptor.value:
+-        raise ExecutionContractError("HOST_PROVIDER_UNSUPPORTED", f"Windows security descriptor query failed ({status})")
+-    try:
+-        if not owner.value or not advapi.IsValidSid(owner):
++    from ._windows_host_preflight_owner import hold_original, scalar
++    actual_owner = hold_original(api)
++    primary = None
++    try:
++        status = scalar(actual_owner.allocation_call('GetSecurityInfo', advapi, descriptor,
++                          handle, 1, 1 | 4, C.byref(owner), None, C.byref(dacl), None,
++                          C.byref(descriptor), family='local', keepalive=(owner, dacl)), 'DWORD')
++        if status != 0 or not descriptor.value:
++            raise ExecutionContractError("HOST_PROVIDER_UNSUPPORTED", f"Windows security descriptor query failed ({status})")
++        if not owner.value or not scalar(advapi.IsValidSid(owner), 'BOOL'):
+             raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "Windows owner SID is absent or invalid")
+-        owner_trusted = any(advapi.EqualSid(owner, sid) for sid in trusted_sids)
+-        owner_is_daemon = bool(advapi.EqualSid(owner, daemon_sid))
++        owner_trusted = any(scalar(advapi.EqualSid(owner, sid), 'BOOL') for sid in trusted_sids)
++        owner_is_daemon = bool(scalar(advapi.EqualSid(owner, daemon_sid), 'BOOL'))
+         present = wintypes.BOOL()
+         dacl_defaulted = wintypes.BOOL()
+-        if not advapi.GetSecurityDescriptorDacl(descriptor, C.byref(present), C.byref(dacl), C.byref(dacl_defaulted)):
++        if not scalar(advapi.GetSecurityDescriptorDacl(descriptor, C.byref(present), C.byref(dacl), C.byref(dacl_defaulted)), 'BOOL'):
+             raise ExecutionContractError("HOST_PROVIDER_UNSUPPORTED", "Windows DACL could not be decoded")
+         if not present.value or not dacl.value:
+             raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "Windows null or absent DACL is not trusted")
+@@ -468,14 +476,14 @@
+                         ("AclBytesFree", wintypes.DWORD)]
+ 
+         size_info = _AclSizeInformation()
+-        if not advapi.GetAclInformation(dacl, C.byref(size_info), C.sizeof(size_info), 2):
++        if not scalar(advapi.GetAclInformation(dacl, C.byref(size_info), C.sizeof(size_info), 2), 'BOOL'):
+             raise ExecutionContractError("HOST_PROVIDER_UNSUPPORTED", "Windows DACL inventory could not be read")
+         if size_info.AceCount > 4096:
+             raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "Windows DACL exceeds the bounded ACE count")
+         ace_policy_rows = []
+         for index in range(int(size_info.AceCount)):
+             ace = C.c_void_p()
+-            if not advapi.GetAce(dacl, index, C.byref(ace)) or not ace.value:
++            if not scalar(advapi.GetAce(dacl, index, C.byref(ace)), 'BOOL') or not ace.value:
+                 raise ExecutionContractError("HOST_PROVIDER_UNSUPPORTED", "Windows DACL ACE could not be read")
+             header = C.string_at(ace, 4)
+             ace_type, ace_flags = header[0], header[1]
+@@ -491,25 +499,33 @@
+                 raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "Windows DACL ACE extends outside the ACL bounds")
+             sid_address = int(ace.value) + 8
+             sid = C.c_void_p(sid_address)
+-            if not advapi.IsValidSid(sid):
++            if not scalar(advapi.IsValidSid(sid), 'BOOL'):
+                 raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "Windows DACL contains an invalid ACE SID")
+-            sid_size = int(advapi.GetLengthSid(sid))
++            sid_size = scalar(advapi.GetLengthSid(sid), 'DWORD')
+             if ace_size != 8 + sid_size:
+                 raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "Windows DACL ACE length is noncanonical")
+             ace_policy_rows.append({"type": ace_type, "flags": ace_flags,
+-                                    "sid_trusted": any(advapi.EqualSid(sid, trusted) for trusted in trusted_sids)})
++                                    "sid_trusted": any(scalar(advapi.EqualSid(sid, trusted), 'BOOL') for trusted in trusted_sids)})
+         _validate_windows_acl_policy(owner_trusted=owner_trusted, owner_is_daemon=owner_is_daemon,
+                                      require_daemon_owner=require_daemon_owner,
+                                      dacl_present=bool(present.value and dacl.value),
+                                      ace_rows=ace_policy_rows)
+-        descriptor_size = int(advapi.GetSecurityDescriptorLength(descriptor))
++        descriptor_size = scalar(advapi.GetSecurityDescriptorLength(descriptor), 'DWORD')
+         if descriptor_size <= 0 or descriptor_size > 1024 * 1024:
+             raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "Windows security descriptor size is outside bounds")
+         digest = hashlib.sha256(C.string_at(descriptor, descriptor_size)).hexdigest()
+-        owner_text = "daemon" if advapi.EqualSid(owner, daemon_sid) else "trusted-host-admin"
++        owner_text = "daemon" if scalar(advapi.EqualSid(owner, daemon_sid), 'BOOL') else "trusted-host-admin"
+         return digest, owner_text
++    except BaseException as error:
++        primary = error
++        actual_owner.remember(error)
++        error._original_preflight_owner = actual_owner
++        raise
+     finally:
+-        kernel.LocalFree(descriptor)
++        if descriptor.value:
++            actual_owner.release(descriptor, family='local', primary=primary)
++        if primary is None and not actual_owner.entries():
++            actual_owner.reconcile()
+ 
+ 
+ def _validate_windows_acl_policy(*, owner_trusted: bool, owner_is_daemon: bool,
+@@ -530,6 +546,7 @@
+             raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "Windows DACL grants access to an untrusted SID")
+ 
+ 
++@serialized_original_preflight
+ def _windows_security_context(api):
+     C = ctypes
+     from ctypes import wintypes
+@@ -549,35 +566,45 @@
+     kernel.LocalFree.argtypes = [C.c_void_p]
+     kernel.LocalFree.restype = C.c_void_p
+ 
++    from ._windows_host_preflight_owner import hold_original, scalar, finish_original
++    actual_owner = hold_original(api)
+     token = C.c_void_p()
+-    if not advapi.OpenProcessToken(kernel.GetCurrentProcess(), 0x0008, C.byref(token)):
+-        raise ExecutionContractError("HOST_PROVIDER_UNSUPPORTED", "current daemon token SID could not be opened")
+     allocated = []
+     try:
++        if not scalar(actual_owner.allocation_call('OpenProcessToken', advapi, token,
++                      kernel.GetCurrentProcess(), 0x0008, C.byref(token), family='handle'), 'BOOL') or not token.value:
++            raise ExecutionContractError("HOST_PROVIDER_UNSUPPORTED", "current daemon token SID could not be opened")
+         needed = wintypes.DWORD()
+-        advapi.GetTokenInformation(token, 1, None, 0, C.byref(needed))  # TokenUser, size probe
++        scalar(actual_owner.function('GetTokenInformation', advapi)(token, 1, None, 0, C.byref(needed)), 'BOOL')  # TokenUser, size probe
+         if not needed.value or needed.value > 1024 * 1024:
+             raise ExecutionContractError("HOST_PROVIDER_UNSUPPORTED", "current daemon token SID size is invalid")
+         buffer = C.create_string_buffer(needed.value)
+-        if not advapi.GetTokenInformation(token, 1, buffer, needed.value, C.byref(needed)):
++        actual_owner.hold(token, buffer, needed)
++        if not scalar(actual_owner.function('GetTokenInformation', advapi)(token, 1, buffer, needed.value, C.byref(needed)), 'BOOL'):
+             raise ExecutionContractError("HOST_PROVIDER_UNSUPPORTED", "current daemon token SID could not be read")
+         class _SidAndAttributes(C.Structure):
+             _fields_ = [("Sid", C.c_void_p), ("Attributes", wintypes.DWORD)]
++        if needed.value < C.sizeof(_SidAndAttributes) or needed.value > len(buffer):
++            raise ExecutionContractError("HOST_PROVIDER_UNSUPPORTED", "TokenUser result exceeds its original buffer")
+         daemon_sid = C.cast(buffer, C.POINTER(_SidAndAttributes)).contents.Sid
+-        if not daemon_sid:
+-            raise ExecutionContractError("HOST_PROVIDER_UNSUPPORTED", "current daemon SID is absent")
++        start, end = C.addressof(buffer), C.addressof(buffer) + needed.value
++        if not daemon_sid or not start <= daemon_sid <= end - 8:
++            raise ExecutionContractError("HOST_PROVIDER_UNSUPPORTED", "current daemon SID is outside its original token buffer")
++        sid_header = C.string_at(daemon_sid, 8)
++        if sid_header[0] != 1 or sid_header[1] > 15 or daemon_sid + 8 + 4 * sid_header[1] > end:
++            raise ExecutionContractError("HOST_PROVIDER_UNSUPPORTED", "current daemon SID extent is invalid")
+         trusted = [C.c_void_p(daemon_sid)]
+         for textual_sid in ("S-1-5-18", "S-1-5-32-544"):
+             sid = C.c_void_p()
+-            if not advapi.ConvertStringSidToSidW(textual_sid, C.byref(sid)):
++            if not scalar(actual_owner.allocation_call('ConvertStringSidToSidW', advapi, sid,
++                          textual_sid, C.byref(sid), family='local'), 'BOOL') or not sid.value:
+                 raise ExecutionContractError("HOST_PROVIDER_UNSUPPORTED", "trusted Windows host SID could not be constructed")
+             allocated.append(sid)
+             trusted.append(sid)
+         return C.c_void_p(daemon_sid), trusted, (token, allocated, buffer)
+-    except BaseException:
+-        kernel.CloseHandle(token)
+-        for sid in allocated:
+-            kernel.LocalFree(sid)
++    except BaseException as error:
++        error._original_preflight_owner = actual_owner
++        finish_original(api, error)
+         raise
+ 
+ 
+@@ -585,6 +612,8 @@
+     C = ctypes
+     from ctypes import wintypes
+     kernel = api.k
++    from ._windows_host_preflight_owner import hold_original, scalar
++    actual_owner = hold_original(api)
+     kernel.GetVolumePathNameW.argtypes = [wintypes.LPCWSTR, wintypes.LPWSTR, wintypes.DWORD]
+     kernel.GetVolumePathNameW.restype = wintypes.BOOL
+     kernel.GetVolumeInformationW.argtypes = [wintypes.LPCWSTR, wintypes.LPWSTR, wintypes.DWORD,
+@@ -592,23 +621,53 @@
+                                               C.POINTER(wintypes.DWORD), wintypes.LPWSTR, wintypes.DWORD]
+     kernel.GetVolumeInformationW.restype = wintypes.BOOL
+     volume = C.create_unicode_buffer(32768)
+-    if not kernel.GetVolumePathNameW(str(path), volume, len(volume)):
++    if not scalar(actual_owner.function('GetVolumePathNameW', kernel)(str(path), volume, len(volume)), 'BOOL'):
+         raise ExecutionContractError("HOST_PROVIDER_UNSUPPORTED", "Windows volume for provider path could not be resolved")
+     filesystem = C.create_unicode_buffer(256)
+     serial, maximum_component, flags = wintypes.DWORD(), wintypes.DWORD(), wintypes.DWORD()
+-    if not kernel.GetVolumeInformationW(volume, None, 0, C.byref(serial), C.byref(maximum_component),
+-                                        C.byref(flags), filesystem, len(filesystem)):
++    if not scalar(actual_owner.function('GetVolumeInformationW', kernel)(volume, None, 0, C.byref(serial), C.byref(maximum_component),
++                                        C.byref(flags), filesystem, len(filesystem)), 'BOOL'):
+         raise ExecutionContractError("HOST_PROVIDER_UNSUPPORTED", "Windows volume ACL capability could not be read")
+     return bool(flags.value & 0x00000008), int(serial.value)  # FILE_PERSISTENT_ACLS
+ 
+ 
+ def _verify_windows_private_path(path: Path, *, directory: bool,
+-                                 expected_identity: Mapping[str, Any] | None) -> dict[str, Any]:
++                                 expected_identity: Mapping[str, Any] | None,
++                                 _retained_callback=None, _original_owner_callback=None) -> dict[str, Any]:
+     try:
+         from ._windows_parameter_publish import PublishError, _API
+         api = _API()
+     except Exception as exc:
+         raise ExecutionContractError("HOST_PROVIDER_UNSUPPORTED", "Windows handle-based ACL verifier is unavailable") from exc
++    from ._windows_host_preflight_owner import hold_original, finish_original
++    actual_owner = hold_original(api)
++    if _original_owner_callback is not None:
++        _original_owner_callback(actual_owner)
++    if _retained_callback is not None:
++        for name in ('ReadFile', 'GetFileInformationByHandle', 'CloseHandle'):
++            actual_owner.function(name, api.k)
++        import ctypes as _C
++        actual_owner._retained_service_sid_read = True
++        actual_owner._original_get_last_error = _C.get_last_error
++        actual_owner._original_win_error = _C.WinError
++    with actual_owner.registry._lock:
++        handles = []
++        primary = None
++        try:
++            return _verify_windows_private_path_owned(api, path, directory=directory,
++                                                     expected_identity=expected_identity,
++                                                     _retained_callback=_retained_callback)
++        except BaseException as error:
++            primary = error
++            actual_owner.remember(error)
++            error._original_preflight_owner = actual_owner
++            raise
++        finally:
++            finish_original(api, primary)
++
++
++def _verify_windows_private_path_owned(api, path, *, directory, expected_identity, _retained_callback=None):
++    from ._windows_parameter_publish import PublishError
+     persistent_acls, expected_volume = _windows_volume_has_persistent_acls(api, path)
+     if not persistent_acls:
+         raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "Windows volume does not provide persistent ACLs")
+@@ -616,7 +675,8 @@
+     token, allocated_sids, _token_buffer = cleanup
+     handles = []
+     try:
+-        handles = api.open_security_path(path, directory=directory)
++        handles = (api.open_security_path(path, directory=directory, read_data=True)
++                   if _retained_callback is not None else api.open_security_path(path, directory=directory))
+         if not handles:
+             raise ExecutionContractError("HOST_PROVIDER_UNSUPPORTED", "Windows path did not produce pinned handles")
+         descriptors: list[dict[str, Any]] = []
+@@ -649,31 +709,37 @@
+             if second_ids != descriptors:
+                 raise ExecutionContractError("AUTHORIZATION_STATE_UNKNOWN", "Windows private path chain changed during ACL verification")
+         finally:
+-            for handle in reversed(second):
+-                api.close(handle)
++            # Original-entry final cleanup below covers the complete second chain.
++            pass
+         identity = {**identities[-1], "security_sha256": hashlib.sha256(_canonical(descriptors)).hexdigest()}
+         if expected_identity is not None and dict(expected_identity) != identity:
+             raise ExecutionContractError("AUTHORIZATION_STATE_UNKNOWN", "Windows private path identity or ACL changed")
+-        return {"identity": identity, "security_sha256": identity["security_sha256"],
+-                "security_semantics": WINDOWS_PRIVATE_PATH_SECURITY_SEMANTICS,
+-                "path_chain": descriptors}
++        metadata = {"identity": identity, "security_sha256": identity["security_sha256"],
++                    "security_semantics": WINDOWS_PRIVATE_PATH_SECURITY_SEMANTICS,
++                    "path_chain": descriptors}
++        if _retained_callback is not None:
++            if directory:
++                raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "retained backup read requires an ordinary file")
++            try:
++                answer = _retained_callback(api, handles[-1], metadata)
++            except BaseException as original_read_error:
++                api._readonly_preflight_owner.remember(original_read_error)
++                raise
++            # The original complete ACL/name verifier runs again while the read
++            # handle and both first chains stay owned, before returning bytes.
++            after = _verify_windows_private_path_owned(api, path, directory=False,
++                                                       expected_identity=identity)
++            if after != metadata:
++                raise ExecutionContractError("AUTHORIZATION_STATE_UNKNOWN", "backup whole private path changed during read")
++            return answer
++        return metadata
+     except ExecutionContractError:
+         raise
+     except PublishError as exc:
+         raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "Windows provider path contains an unsupported or unsafe component") from exc
+     except Exception as exc:
+         raise ExecutionContractError("HOST_PROVIDER_UNSUPPORTED", "Windows handle-based ACL verification failed closed") from exc
+-    finally:
+-        if "api" in locals():
+-            for handle in reversed(handles):
+-                try:
+-                    api.close(handle)
+-                except Exception:
+-                    pass
+-        if "token" in locals() and token:
+-            api.k.CloseHandle(token)
+-        for sid in locals().get("allocated_sids", []):
+-            api.k.LocalFree(sid)
++
+ 
+ 
+ class HostScopedProvider:

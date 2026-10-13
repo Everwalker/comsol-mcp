@@ -1,0 +1,124 @@
+--- root/comsol_mcp/_windows_owned_resources.py
++++ windows-r19/comsol_mcp/_windows_owned_resources.py
+@@ -0,0 +1,121 @@
++"""Private in-memory ownership for actual synchronous native resource returns.
++
++No journal, persisted reconstruction, wire callback or launch/proof authority.
++"""
++from __future__ import annotations
++import ctypes as C
++import threading
++from ._execution_contract import ExecutionContractError
++
++_SEAL=object()
++class NativeResourceError(ExecutionContractError):pass
++
++def _fail(message,**details):raise NativeResourceError('NATIVE_RESOURCE_RELEASE_UNKNOWN',message,safe_retry=False,stage='pre_dispatch',details=details)
++
++def _value(handle):
++    value=getattr(handle,'value',handle)
++    if isinstance(value,str):value=C.cast(handle,C.c_void_p).value
++    if type(value) is not int or value<=0 or value==C.c_void_p(-1).value:
++        _fail('native resource return is not a legal owned HANDLE/pointer')
++    return value
++
++class _OwnedResource:
++    def __init__(self,registry,adapter,handle,closer,mode,label,seq,keepalive,domain,*,seal,capture_raw=False):
++        if seal is not _SEAL:_fail('resource requires private native acquisition provenance')
++        self._seal=seal;self.registry=registry;self.adapter=adapter;self.handle=handle
++        self.value=None if capture_raw else _value(handle);self.closer=closer;self.mode=mode;self.label=label;self.seq=seq
++        self.domain=domain;self.keepalive=keepalive;self.state='ACQUIRED';self.error=None;self.thread_id=threading.get_ident()
++    def release_owned(self,owner,*,retry=False):
++        r=self.registry
++        with r._lock:
++            if self._seal is not _SEAL or owner is not r.owner:
++                _fail('resource release requires the original registry owner')
++            if self.state=='RELEASED':return
++            if r._entries.get(self.seq) is not self:_fail('resource is not held by its original registry')
++            if self.state=='UNKNOWN' and not retry:
++                raise self.error
++            try:
++                result=self.closer(self.handle)
++                success=(bool(result) if self.mode=='BOOL' else not result if self.mode=='LOCALFREE'
++                         else type(getattr(result,'value',result)) is int and getattr(result,'value',result)==0 if self.mode=='DWORD0'
++                         else result is None if self.mode=='VOID' else result is None or result is True)
++                if not success:_fail('native resource release was not confirmed',native_release_result=getattr(result,'value',result))
++            except BaseException as error:
++                self.state='UNKNOWN';self.error=error;raise
++            self.state='RELEASED';r._entries.pop(self.seq);self.keepalive=()
++
++class _ResourceScope:
++    def __init__(self,registry,seq,*,seal):
++        if seal is not _SEAL:_fail('resource scope requires its registry')
++        self.registry=registry;self.seq=seq;self._seal=seal;self.thread_id=threading.get_ident()
++
++class NativeOwnedRegistry:
++    def __init__(self,owner,*,seal):
++        if seal is not _SEAL:_fail('registry requires its original native API owner')
++        self.owner=owner;self._seal=seal;self._entries={};self._seq=0;self._lock=threading.RLock()
++    def scope(self):
++        with self._lock:return _ResourceScope(self,self._seq,seal=_SEAL)
++    def acquire(self,adapter,handle,closer,*,mode='CHECKED',label='native_resource',keepalive=(),domain='native',value_reader=None):
++        if mode not in {'BOOL','LOCALFREE','VOID','CHECKED','DWORD0'} or not callable(closer):_fail('unsupported native release binding')
++        value=_value(handle) if value_reader is None else None
++        with self._lock:
++            for entry in self._entries.values():
++                if value is not None and entry.adapter is adapter and entry.value==value and entry.domain==domain:
++                    return entry
++            self._seq+=1
++            # Keep the exact native return object/storage and bound original
++            # closer strongly held before any validation can raise.
++            entry=_OwnedResource(self,adapter,handle,closer,mode,label,self._seq,tuple(keepalive),domain,seal=_SEAL,capture_raw=value_reader is not None)
++            self._entries[entry.seq]=entry
++            if value_reader is not None:
++                try:
++                    entry.value=_value(value_reader(handle))
++                    entry.handle=entry.value
++                except BaseException as exc:
++                    entry.state='UNKNOWN';entry.error=exc
++                    raise
++            return entry
++    def find(self,adapter,handle,*,domain='native'):
++        value=_value(handle)
++        with self._lock:
++            return next((e for e in self._entries.values() if e.adapter is adapter and e.value==value and e.domain==domain),None)
++    def release(self,adapter,handle):
++        entry=self.find(adapter,handle)
++        if entry is None:_fail('no native acquisition registered for this exact adapter/handle')
++        return entry.release_owned(self.owner)
++    def drain(self,scope):
++        if type(scope) is not _ResourceScope or scope._seal is not _SEAL or scope.registry is not self:_fail('invalid resource scope')
++        errors=[]
++        with self._lock:entries=tuple(self._entries.values())
++        for entry in reversed(entries):
++            if entry.seq<=scope.seq or entry.thread_id!=scope.thread_id:continue
++            try:entry.release_owned(self.owner)
++            except BaseException as error:errors.append((entry.label,error))
++        return tuple(errors)
++    def unresolved(self):
++        with self._lock:return tuple(self._entries.values())
++    def retry_owned(self,entry,owner):
++        if type(entry) is not _OwnedResource or entry.registry is not self:_fail('metadata cannot create release authority')
++        return entry.release_owned(owner,retry=True)
++
++def registry_for(adapter):
++    existing=getattr(adapter,'_native_owned_registry',None)
++    if existing is None:
++        existing=NativeOwnedRegistry(adapter,seal=_SEAL);adapter._native_owned_registry=existing
++    if type(existing) is not NativeOwnedRegistry or existing._seal is not _SEAL:_fail('native API registry is not a private actual owner')
++    return existing
++
++def attach_registry(adapter,registry):
++    if type(registry) is not NativeOwnedRegistry or registry._seal is not _SEAL:_fail('wire data cannot attach an owner registry')
++    old=getattr(adapter,'_native_owned_registry',None)
++    if old is not None and old is not registry and registry_for(adapter).unresolved():_fail('native adapter already has a different retained owner')
++    adapter._native_owned_registry=registry
++
++def own(adapter,handle,closer,*,mode='CHECKED',label='native_resource',keepalive=()):
++    return registry_for(adapter).acquire(adapter,handle,closer,mode=mode,label=label,keepalive=keepalive)
++
++def handle_closer(adapter):
++    # Production direct ABI CloseHandle is captured. Explicit software adapters
++    # may supply their own checked OS boundary; never supplied by RPC/metadata.
++    fn=getattr(getattr(adapter,'k',None),'CloseHandle',None)
++    return (fn,'BOOL') if callable(fn) else (adapter.close_handle,'CHECKED')

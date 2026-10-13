@@ -1,0 +1,233 @@
+--- root/tests/test_windows_wfp_mutation_owner.py
++++ windows-r19/tests/test_windows_wfp_mutation_owner.py
+@@ -0,0 +1,230 @@
++"""Production mutation API and original resource registry, synthetic SDK only."""
++import ctypes as C
++import gc
++from types import SimpleNamespace
++import weakref
++import pytest
++from comsol_mcp import _windows_t037_wfp as wfp, _windows_t037_native as native
++from comsol_mcp import _windows_wfp_mutation_owner as owner
++from comsol_mcp._execution_contract import ExecutionContractError
++from tests.test_windows_filter_group import profile_and_plan
++from comsol_mcp import _windows_host_change as changes
++
++
++class SDK:
++    def __init__(self):
++        self.calls=[];self.close_status=0;self.abort_status=0;self.free_result=None;self.local_result=None
++        self.open_result=0;self.begin_result=0;self.commit_result=0;self.open_error=None;self.commit_error=None
++        self.storage=[];self.filters={};self.next_id=21
++    def open(self,_s,_a,_b,_c,out):
++        self.calls.append('open');C.cast(out,C.POINTER(native.HANDLE))[0]=native.HANDLE(300)
++        if self.open_error:raise self.open_error
++        return self.open_result
++    def close(self,h):self.calls.append(('close',getattr(h,'value',h)));return self.close_status
++    def begin(self,h,flags):self.calls.append(('begin',flags));return self.begin_result
++    def commit(self,h):
++        self.calls.append('commit')
++        if self.commit_error:raise self.commit_error
++        return self.commit_result
++    def abort(self,h):self.calls.append('abort');return self.abort_status
++    def free(self,out):self.calls.append(('free',C.cast(out,C.POINTER(C.c_void_p))[0]));return self.free_result
++    def localfree(self,h):self.calls.append(('localfree',h.value));return self.local_result
++    def sid(self,text,out):
++        buf=C.create_string_buffer(b'public-synthetic-sid');self.storage.append(buf)
++        C.cast(out,C.POINTER(C.c_void_p))[0]=C.cast(buf,C.c_void_p);return 1
++    def appid(self,path,out):
++        data=(native.BYTE*4)(1,2,3,4);blob=native.FWP_BYTE_BLOB(4,data);self.storage += [data,blob]
++        C.cast(out,C.POINTER(C.POINTER(native.FWP_BYTE_BLOB)))[0]=C.pointer(blob);return 0
++    def add(self,engine,pointer,sd,out):
++        original=C.cast(pointer,C.POINTER(native.FWPM_FILTER0)).contents
++        original.filterId=self.next_id;self.next_id+=1;original.effectiveWeight=original.weight
++        key=native.CtypesWindowsPolicyApi._guid(None,original.filterKey)
++        self.filters[key]=original;self.storage += [original,pointer._obj]
++        C.cast(out,C.POINTER(C.c_uint64))[0]=original.filterId;self.calls.append(('add',key));return 0
++    def get(self,engine,key,out):
++        key=native.CtypesWindowsPolicyApi._guid(None,C.cast(key,C.POINTER(native.GUID)).contents)
++        if key not in self.filters:return wfp.FWP_E_FILTER_NOT_FOUND
++        C.cast(out,C.POINTER(C.POINTER(native.FWPM_FILTER0)))[0]=C.pointer(self.filters[key]);return 0
++    def delete(self,engine,key):
++        key=native.CtypesWindowsPolicyApi._guid(None,C.cast(key,C.POINTER(native.GUID)).contents)
++        self.calls.append(('delete',key));self.filters.pop(key);return 0
++
++
++def actual_api(sdk,profile=None):
++    reader=native.CtypesWindowsPolicyApi.__new__(native.CtypesWindowsPolicyApi)
++    reader.FWPM_TXN_READ_ONLY=1
++    reader._sid_string=lambda ptr:profile.windows_isolation.appcontainer_sid
++    reader._wfp_security_sha=lambda *args:'9'*64
++    reader._kernel32=SimpleNamespace(LocalFree=sdk.localfree)
++    reader._advapi=SimpleNamespace(ConvertStringSidToSidW=sdk.sid)
++    reader._fwpu=SimpleNamespace(FwpmEngineOpen0=sdk.open,FwpmEngineClose0=sdk.close,
++        FwpmTransactionBegin0=sdk.begin,FwpmTransactionCommit0=sdk.commit,FwpmTransactionAbort0=sdk.abort,
++        FwpmFreeMemory0=sdk.free,FwpmGetAppIdFromFileName0=sdk.appid,FwpmFilterAdd0=sdk.add,
++        FwpmFilterGetByKey0=sdk.get,FwpmFilterDeleteByKey0=sdk.delete)
++    api=wfp.CtypesWindowsWfpMutationApi.__new__(wfp.CtypesWindowsWfpMutationApi)
++    api.api=reader;api._fwpu=reader._fwpu;api._advapi=reader._advapi;api._kernel32=reader._kernel32
++    owner.registry(api);return api
++
++
++@pytest.mark.parametrize('zero',[True,False])
++def test_production_group_emission_sdk_pointer_readback_delete_all_four_layers(zero):
++    p,plan=profile_and_plan(zero_allows=zero);sdk=SDK();api=actual_api(sdk,p)
++    _,actions=changes._normalize_supported_actions(plan,p)
++    api._check_dependencies=lambda *args:None
++    for action in (a for a in actions if a['resource_kind']=='wfp_filter'):
++        row=api.create_filter(profile=p,action=action,expected_dependency_sha256='a'*64)
++        assert row['filter_id']>=21 and not owner.registry(api).unresolved()
++        api.delete_filter(profile=p,action=action,expected_resource_sha256=wfp.sha256(row),expected_dependency_sha256='a'*64)
++        assert not owner.registry(api).unresolved()
++    assert not sdk.filters
++    assert len([c for c in sdk.calls if isinstance(c,tuple) and c[0]=='add'])==len(p.windows_isolation.wfp_filter_keys)
++
++
++@pytest.mark.parametrize('fault',['open_io','open_bool','begin_bool','commit_bool','commit_io','close_bool','close_nonzero','abort_failure','free_void','localfree_nonzero'])
++def test_original_sdk_owner_retains_unknown_and_explicit_same_closer_cleanup(fault):
++    sdk=SDK();api=actual_api(sdk);cause=OSError('original-public-io');r=owner.registry(api)
++    if fault=='open_io':sdk.open_error=cause
++    elif fault=='open_bool':sdk.open_result=False
++    elif fault=='begin_bool':sdk.begin_result=False
++    elif fault=='commit_bool':sdk.commit_result=False
++    elif fault=='commit_io':sdk.commit_error=cause
++    elif fault=='close_bool':sdk.close_status=False
++    elif fault=='close_nonzero':sdk.close_status=5
++    elif fault=='abort_failure':sdk.abort_status=5
++    elif fault=='free_void':sdk.free_result=0
++    elif fault=='localfree_nonzero':sdk.local_result=123
++    def work(engine):
++        if fault=='abort_failure':raise cause
++        if fault in {'free_void','localfree_nonzero'}:
++            if fault=='free_void':
++                out=C.POINTER(native.FWP_BYTE_BLOB)();api._sdk_alloc('FwpmGetAppIdFromFileName0',out,'public',C.byref(out))
++                api._free(C.cast(out,C.c_void_p).value)
++            else:
++                out=C.c_void_p();api._convert_sid('S-1-1-0',sid_out=out);api._free_local(out)
++        return 'answer'
++    with pytest.raises((ExecutionContractError,OSError)):
++        api._session(readonly=False,callback=work)
++    if fault in {'close_bool','close_nonzero','abort_failure','free_void','localfree_nonzero'}:
++        assert r.unresolved();ref=weakref.ref(api);del api;gc.collect();api=ref();assert api is r.owner
++        before=list(sdk.calls)
++        with pytest.raises(ExecutionContractError):r.retry_owned(r.unresolved()[0],object())
++        assert sdk.calls==before
++        # DLL field replacement cannot redirect the already captured closer.
++        api._fwpu.FwpmEngineClose0=lambda *_:pytest.fail('replacement SDK close used')
++        api._fwpu.FwpmFreeMemory0=lambda *_:pytest.fail('replacement SDK free used')
++        api._kernel32.LocalFree=lambda *_:pytest.fail('replacement LocalFree used')
++        sdk.close_status=0;sdk.abort_status=0;sdk.free_result=None;sdk.local_result=None
++        for entry in reversed(r.unresolved()):r.retry_owned(entry,api)
++        assert not r.unresolved()
++        finished=list(sdk.calls)
++        for entry in list(r.unresolved()):r.retry_owned(entry,api)
++        assert sdk.calls==finished
++    if fault in {'open_io','commit_io','abort_failure'}:assert api._first_mutation_cause is cause
++
++
++def test_actual_allocating_io_capture_and_foreign_handle_never_arbitrary_free():
++    sdk=SDK();api=actual_api(sdk);primary=OSError('sdk-wrote-pointer-then-io')
++    def allocate(text,out):sdk.sid(text,out);raise primary
++    api._advapi.ConvertStringSidToSidW=allocate
++    pointer=C.c_void_p()
++    with pytest.raises(OSError):api._sdk_alloc('ConvertStringSidToSidW',pointer,'S-1-1-0',C.byref(pointer),local=True,bool_return=True)
++    r=owner.registry(api);entry=r.unresolved()[0];assert entry.value==pointer.value
++    sdk.local_result=123
++    with pytest.raises(ExecutionContractError):api._free_local(pointer,primary=primary)
++    assert api._first_mutation_cause is primary
++    entry.handle+=1;before=list(sdk.calls)
++    with pytest.raises(ExecutionContractError):r.retry_owned(entry,api)
++    assert sdk.calls==before
++    entry.handle=entry.value;sdk.local_result=None;r.retry_owned(entry,api);assert not r.unresolved()
++    with pytest.raises(ExecutionContractError):api._free_local(C.c_void_p(pointer.value))
++
++
++def test_actual_controller_store_mutator_gc_unknown_then_explicit_original_cleanup(tmp_path,monkeypatch):
++    from comsol_mcp._control_daemon import ControlDaemon
++    from comsol_mcp._windows_t037 import WindowsT037ProfileV2
++    from comsol_mcp._windows_t037_broker import WindowsScmServiceBroker,WindowsT037HostControlIssuer,_SCM_TEST_API_TOKEN
++    from tests.test_windows_t037_broker import _ScmApi
++    from tests.test_windows_t037_native import _security_descriptor
++    from tests.test_windows_filter_group import executor,GroupSDK
++    from comsol_mcp import _w26_os_resources as resources
++    p,plan=profile_and_plan();raw=_security_descriptor();sha=native.canonical_security_descriptor_sha256(raw)
++    payload=plan.as_dict()
++    for a in payload['change_manifest']:
++        if a['resource_kind'] in {'wfp_provider','wfp_sublayer'}:a['desired']['security_sha256']=sha
++    fields=['action_id','resource_kind','resource_name','operation','desired','baseline_identity','baseline_sha256','backup_path','backup_sha256']
++    plan=resources.build_host_change_plan(p,change_manifest=[{k:a.get(k) for k in fields} for a in payload['change_manifest']],operator_inputs={})
++    sdk=SDK();sdk.close_status=5;sdk.local_result=123;sdk.abort_status=5
++    api=actual_api(sdk,p);primary=OSError('actual-SDK-after-provider-effect');effect=[]
++    def descriptor(_sddl,_revision,out,size):
++        buf=C.create_string_buffer(raw);sdk.storage.append(buf)
++        C.cast(out,C.POINTER(C.c_void_p))[0]=C.cast(buf,C.c_void_p)
++        C.cast(size,C.POINTER(native.DWORD))[0]=len(raw);return 1
++    api._advapi.ConvertStringSecurityDescriptorToSecurityDescriptorW=descriptor
++    api._advapi.GetSecurityDescriptorLength=lambda pointer:len(raw)
++    api._fwpu.FwpmProviderGetByKey0=lambda *_:wfp.FWP_E_PROVIDER_NOT_FOUND
++    def add_provider(engine,pointer,sd):
++        assert C.cast(pointer,C.POINTER(native.FWPM_PROVIDER0)).contents.flags==1 and sd.value
++        effect.append('provider');sdk.calls.append('provider_add');raise primary
++    api._fwpu.FwpmProviderAdd0=add_provider
++    api.observe_snapshot=GroupSDK(p).observe_snapshot
++    exe,_,store,provider,authority=executor(tmp_path,monkeypatch,p,plan,api)
++    daemon=ControlDaemon.__new__(ControlDaemon);daemon.store=store;daemon.project_authority=authority
++    wrapper=WindowsT037ProfileV2(p,'a'*64,{'device':1,'inode':2},'SOFTWARE_FIXTURE_ONLY')
++    daemon._windows_t037_profile=wrapper;daemon._windows_t037_profile_path='public-synthetic-path'
++    daemon._retained_host_control_executors={};holder={}
++    def loader(path):
++        assert daemon._retained_host_control_executors  # before original preflight/constructor calls
++        return wrapper
++    monkeypatch.setattr('comsol_mcp._windows_t037.load_trusted_profile',loader)
++    monkeypatch.setattr(changes.WindowsHostChangeExecutor,'from_trusted_profile_path',classmethod(lambda cls,**kw:exe))
++    def main(runtime):
++        runtime.mark_running()
++        issuer=WindowsT037HostControlIssuer(authority=authority,provider=provider,profile=p,profile_source_sha256=wrapper.source_sha256)
++        request=issuer.issue(runtime,phase='APPLY',plan=plan,authorization_ref='apply-once')
++        request.consume(service_name=p.windows_isolation.service_name,project_id=p.project_id,profile_sha256=p.sha256)
++        holder['request']=request
++        with pytest.raises(ExecutionContractError):daemon._execute_internal_host_control(request)
++        scm.handler(1,0,None,None)
++    scm=_ScmApi()
++    broker=WindowsScmServiceBroker._for_software_test(p.windows_isolation.service_name,main,api=scm,token=_SCM_TEST_API_TOKEN)
++    try:
++        broker.run();assert effect==['provider'];assert store.db.execute('SELECT status FROM jobs').fetchone()[0]=='UNKNOWN'
++        record=next(iter(daemon._retained_host_control_executors.values()))
++        assert record['key'][0]=='admission' and record['executor'] is exe and record['request'] is holder['request']
++        r=owner.registry(api);assert owner.registry(api).owner is api and owner.registry(api.api) is r
++        assert {entry.domain for entry in r.unresolved()}=={'mutation_engine','mutation_transaction','mutation_local'}
++        assert api._first_mutation_cause is primary
++        assert sdk.calls.index('provider_add') < next(i for i,c in enumerate(sdk.calls) if isinstance(c,tuple) and c[0]=='localfree')
++        ref=weakref.ref(exe);del exe;gc.collect();retained=ref();assert retained is record['executor']
++        with pytest.raises(ExecutionContractError):daemon._reconcile_original_host_control_executor(holder['request'],retained)
++        calls=list(sdk.calls)
++        with pytest.raises(ExecutionContractError):daemon._execute_internal_host_control(holder['request'])
++        assert sdk.calls==calls and effect==['provider']
++        sdk.close_status=0;sdk.local_result=None;sdk.abort_status=0
++        for entry in reversed(r.unresolved()):r.retry_owned(entry,api)
++        assert not r.unresolved()
++        daemon._reconcile_original_host_control_executor(holder['request'],retained)
++        assert not daemon._retained_host_control_executors
++        assert store.db.execute('SELECT status FROM jobs').fetchone()[0]=='UNKNOWN'
++        assert len([c for c in sdk.calls if isinstance(c,tuple) and c[0]=='close'])==1
++    finally:provider.close();store.close()
++
++
++def test_malformed_actual_native_returns_remain_unknown_never_arbitrary_close():
++    sdk=SDK();api=actual_api(sdk)
++    def open_invalid(_s,_a,_b,_c,out):
++        C.cast(out,C.POINTER(native.HANDLE))[0]=native.HANDLE(-1)
++        return 0
++    api._fwpu.FwpmEngineOpen0=open_invalid
++    with pytest.raises(ExecutionContractError):api._session(readonly=False,callback=lambda h:None)
++    r=owner.registry(api);assert len(r.unresolved())==1
++    before=list(sdk.calls)
++    with pytest.raises(ExecutionContractError):r.retry_owned(r.unresolved()[0],api)
++    assert sdk.calls==before
++    sdk2=SDK();api2=actual_api(sdk2)
++    def alloc_invalid(text,out):C.cast(out,C.POINTER(C.c_void_p))[0]=C.c_void_p(-1);return 1
++    api2._advapi.ConvertStringSidToSidW=alloc_invalid;pointer=C.c_void_p()
++    with pytest.raises(ExecutionContractError):api2._sdk_alloc('ConvertStringSidToSidW',pointer,'S-1-1-0',C.byref(pointer),local=True,bool_return=True)
++    r2=owner.registry(api2);assert len(r2.unresolved())==1
++    with pytest.raises(ExecutionContractError):r2.retry_owned(r2.unresolved()[0],api2)
++    assert not sdk2.calls

@@ -1,0 +1,117 @@
+--- root/comsol_mcp/_windows_parameter_publish.py
++++ w23-r15/comsol_mcp/_windows_parameter_publish.py
+@@ -135,8 +135,21 @@
+         if not ok:
+             raise C.WinError(C.get_last_error())
+ 
++    def _ownership_registry(self):
++        # The worker also loads this helper as one standalone file. Only package
++        # calls or an explicitly attached private owner participate in launch
++        # ownership; a failed explicit binding must never silently downgrade.
++        if __package__:
++            from ._windows_owned_resources import registry_for
++        elif getattr(self, '_native_owned_registry', None) is not None:
++            from comsol_mcp._windows_owned_resources import registry_for
++        else:
++            return None
++        return registry_for(self)
++
+     def open(self, path, *, directory=False, create=False, metadata=False, add_file=False,
+              add_directory=False, read_control=False):
++        registry = self._ownership_registry()
+         access = 0 if metadata else (0x001000A0 if directory else 0xC0010000)
+         if read_control:
+             access |= 0x00020000  # READ_CONTROL for a read-only security descriptor query
+@@ -149,6 +162,8 @@
+         handle = self.k.CreateFileW(path, access, share, None, 1 if create else 3, flags, None)
+         if handle == C.c_void_p(-1).value:
+             raise C.WinError(C.get_last_error())
++        if registry is not None:
++            registry.acquire(self, handle, self._resource_closer(), label="security_path_root")
+         return handle
+ 
+     def _open_relative(self, parent_handle, leaf, *, directory=False, create=False, add_file=False,
+@@ -161,6 +176,7 @@
+         OBJ_DONT_REPARSE fails closed if name parsing encounters a reparse
+         point; FILE_OPEN_REPARSE_POINT also asks for the leaf object itself.
+         """
++        registry = self._ownership_registry()
+         encoded = leaf.encode('utf-16-le')
+         name_buffer = C.create_unicode_buffer(leaf)
+         name = _UnicodeString(len(encoded), len(encoded) + 2,
+@@ -198,9 +214,11 @@
+                 raise FileExistsError(183, "relative entry already exists", leaf)
+             dos_error = int(self.nt.RtlNtStatusToDosError(status))
+             raise C.WinError(dos_error)
++        if registry is not None:
++            registry.acquire(self, output, self._resource_closer(), label="relative_file")
+         expected_information = 2 if create else 1  # FILE_CREATED / FILE_OPENED
+         if int(io_status.Information) != expected_information:
+-            self.check(self.k.CloseHandle(output))
++            self.close(output)
+             raise PublishError("ACCESS_VIOLATION", "relative file open did not produce the requested object")
+         return output
+ 
+@@ -243,7 +261,11 @@
+             raise PublishError("ACCESS_VIOLATION", "security path exceeds the bounded component count")
+         for part in parts:
+             _component(part)
++        registry = self._ownership_registry()
++        scope = registry.scope() if registry is not None else None
+         handles = [self.open(drive + '\\', directory=True, metadata=True, read_control=True)]
++        if registry is not None:
++            registry.acquire(self, handles[0], self._resource_closer(), label="security_path_root")
+         try:
+             if not parts:
+                 if not directory:
+@@ -252,15 +274,20 @@
+             for index, part in enumerate(parts):
+                 is_directory = index < len(parts) - 1 or directory
+                 child = self._open_relative(handles[-1], part, directory=is_directory, read_control=True)
++                if registry is not None:
++                    registry.acquire(self, child, self._resource_closer(), label="security_path_child")
++                handles.append(child)
+                 self.info(child, directory=is_directory)
+-                handles.append(child)
+             return handles
+         except BaseException:
+-            for handle in reversed(handles):
+-                try:
+-                    self.close(handle)
+-                except BaseException:
+-                    pass
++            if registry is not None:
++                registry.drain(scope)  # Failed releases stay with the launch owner.
++            else:
++                for handle in reversed(handles):
++                    try:
++                        self.close(handle)
++                    except Exception:
++                        pass  # Standalone publication retains its original contract.
+             raise
+ 
+     def source_fingerprint(self, handle):
+@@ -297,8 +324,22 @@
+         except FileNotFoundError:
+             return False
+ 
++    def _resource_closer(self):
++        # A software OS-boundary override keeps its original callback. The
++        # production close wrapper captures the checked native closer.
++        if getattr(self.close, "__func__", None) is not getattr(type(self), "close", None):
++            return self.close
++        return self._close_native
++
++    def _close_native(self, handle):
++        self.check(self.k.CloseHandle(handle))
++
+     def close(self, handle):
+-        self.check(self.k.CloseHandle(handle))
++        registry = self._ownership_registry()
++        entry = registry.find(self, handle) if registry is not None else None
++        if entry is not None:
++            return entry.release_owned(registry.owner)
++        return self._close_native(handle)
+ 
+     def info(self, handle, *, directory=False):
+         info = _FileInfo(); self.check(self.k.GetFileInformationByHandle(handle, C.byref(info)))

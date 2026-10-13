@@ -1,0 +1,84 @@
+--- root/comsol_mcp/_windows_host_identity_owner.py
++++ w23-r15/comsol_mcp/_windows_host_identity_owner.py
+@@ -0,0 +1,81 @@
++"""Original PyHKEY -> integer HKEY transfer, never identity/proof authority."""
++import threading
++from types import SimpleNamespace
++from ._windows_owned_resources import registry_for,attach_registry,NativeResourceError
++_SEAL=object()
++_lock=threading.RLock()
++_standalone_owner=None
++
++def _fail(message):raise NativeResourceError('NATIVE_RESOURCE_RELEASE_UNKNOWN',message,safe_retry=False)
++
++class _HkeyHolder:
++    def __init__(self,key,close,*,seal):
++        if seal is not _SEAL:_fail('actual key transfer provenance required')
++        self.key=key;self.close_function=close;self._seal=seal
++        self.value=None;self.state='ACQUIRED';self.detached_return=None
++    def detach(self):
++        try:
++            result=self.key.Detach()
++            self.detached_return=result
++            if type(result) is not int or result!=self.value:
++                _fail('original PyHKEY Detach returned a different HKEY')
++        except BaseException:
++            self.state='TRANSFER_UNKNOWN'
++            raise
++        self.state='DETACHED'
++    def close(self,handle):
++        if self._seal is not _SEAL or handle!=self.value or self.state!='DETACHED':
++            _fail('original integer HKEY transfer is not confirmed; cannot close an empty PyHKEY')
++        # CPython CloseKey(PyHKEY) clears its field BEFORE RegCloseKey, even
++        # on failure. Use only the original detached integer for real retry.
++        return self.close_function(handle)
++
++class _StandaloneIdentityOwner:
++    def __init__(self,*,seal):
++        if seal is not _SEAL:_fail('private standalone identity owner required')
++        self._seal=seal;self.registry=registry_for(self)
++    def recover_owned(self,owner):
++        global _standalone_owner
++        with _lock:
++            if self._seal is not _SEAL or owner is not self or _standalone_owner is not self:
++                _fail('original standalone identity owner required')
++            errors=[]
++            for entry in reversed(self.registry.unresolved()):
++                try:self.registry.retry_owned(entry,self)
++                except BaseException as exc:errors.append(exc)
++            if errors:raise errors[0]
++            _standalone_owner=None
++
++def read_machine_guid(winreg,*,registry=None):
++    global _standalone_owner
++    with _lock:
++        standalone=registry is None
++        if standalone:
++            if _standalone_owner is not None:_fail('standalone identity owner still retains an original HKEY')
++            _standalone_owner=_StandaloneIdentityOwner(seal=_SEAL)
++            registry=_standalone_owner.registry
++        else:
++            # Validate the real sealed registry before OpenKey; never attach a
++            # global winreg module or replace another daemon's resource owner.
++            attach_registry(SimpleNamespace(),registry)
++            if any(entry.domain=='winreg' for entry in registry.unresolved()):
++                _fail('policy identity owner still retains an original HKEY')
++        scope=registry.scope()
++        try:
++            key=winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,r'SOFTWARE\Microsoft\Cryptography')
++            holder=_HkeyHolder(key,winreg.CloseKey,seal=_SEAL)
++            entry=registry.acquire(winreg,key,holder.close,mode='VOID',
++                label='machine_guid_hkey',domain='winreg',keepalive=(key,holder,winreg.CloseKey),value_reader=int)
++            holder.value=entry.value
++            try:
++                holder.detach()
++            except BaseException as exc:
++                entry.state='UNKNOWN';entry.error=exc
++                raise
++            try:
++                return winreg.QueryValueEx(holder.value,'MachineGuid')
++            finally:
++                entry.release_owned(registry.owner)
++        finally:
++            registry.drain(scope) # UNKNOWN never retries native close or Detach.
++            if standalone and not registry.unresolved():_standalone_owner=None

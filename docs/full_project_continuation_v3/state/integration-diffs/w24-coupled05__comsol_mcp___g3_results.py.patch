@@ -1,0 +1,263 @@
+--- root/comsol_mcp/_g3_results.py
++++ w24-coupled05/comsol_mcp/_g3_results.py
+@@ -240,7 +240,6 @@
+ ALLOWLIST_ADDITIONS: tuple[str, ...] = (
+     # SolutionInfo (comsol_api_solver.51.10): the canonical stored output-time /
+     # level-name route; needs the accessor plus its methods.
+-    "getLevels",
+     "getVals",
+     # EvaluationGroup (Application Programming Guide p.280): the documented
+     # "looplevelinput first/last + getReal()" route for output times.
+@@ -596,9 +595,11 @@
+     attached = read(solution, "isAttached")
+     observed_study = read(solution, "study")
+     raw_size = read(solution, "getSize")
++    raw_size_multi = read(solution, "getSizeMulti")
+     raw_names = read(solution, "getPNames")
+     names = list(raw_names) if isinstance(raw_names, (list, tuple)) else None
+     size = list(raw_size) if isinstance(raw_size, (list, tuple)) else None
++    size_multi = list(raw_size_multi) if isinstance(raw_size_multi, (list, tuple)) else None
+     solnum_count: int | None = None
+     size_valid = (
+         size is not None and len(size) == 2
+@@ -607,6 +608,12 @@
+     if not size_valid and raw_size is not None:
+         errors.append({"method": "getSize", "code": "SOLVER_SEQUENCE_SIZE_SHAPE_INVALID",
+                        "message": "getSize() must return exactly two nonnegative integers"})
++    if (size_multi is None or len(size_multi) != 2
++            or any(type(item) is not int or item < 0 for item in size_multi)):
++        if raw_size_multi is not None:
++            errors.append({"method": "getSizeMulti", "code": "SOLVER_SEQUENCE_SIZE_MULTI_SHAPE_INVALID",
++                           "message": "getSizeMulti() must return exactly two nonnegative integers"})
++        size_multi = None
+     if size_valid:
+         solnum_count = size[1]
+         if not 1 <= solnum_count <= 4096:
+@@ -646,6 +653,21 @@
+                                       "arguments": [name], "value": units_by_name[name]})
+     else:
+         units_by_name = {name: None for name in (names or [])}
++
++    count_scope_errors: list[dict[str, Any]] = []
++    level_names = _record(solution_info, "getLevelNames", errors=count_scope_errors) \
++        if solution_info is not None else None
++    levels = _record(solution_info, "getLevels", errors=count_scope_errors) \
++        if solution_info is not None else None
++    outer_solnums = _record(solution_info, "getOuterSolnum", errors=count_scope_errors) \
++        if solution_info is not None else None
++    count_scope = {
++        "getLevelNames": list(level_names) if isinstance(level_names, (list, tuple)) else level_names,
++        "getLevels": levels,
++        "getOuterSolnum": list(outer_solnums) if isinstance(outer_solnums, (list, tuple)) else outer_solnums,
++        "getOuterSolnum_semantics": "empty means no outer parameter/values per COMSOL 6.4 doc7709/chunk23066",
++        "read_errors": count_scope_errors,
++    }
+ 
+     rows: list[dict[str, Any]] = []
+     rows_shape_valid = names is not None and bool(names)
+@@ -687,6 +709,14 @@
+             observed_study == study_tag if isinstance(observed_study, str) and study_tag else None),
+         "get_size": size,
+         "get_size_semantics": "[degrees_of_freedom, solution_number_count] per COMSOL 6.4 documentation",
++        "get_size_multi": size_multi,
++        "get_size_multi_getter": {
++            "method": "SolverSequence.getSizeMulti()",
++            "status": "CAPTURED" if size_multi is not None else "ERROR",
++            "raw": size_multi if size_multi is not None else raw_size_multi,
++            "semantics": "[local solution count in multisolution, total solution number count] per COMSOL 6.4 doc7714/chunk23082",
++        },
++        "solution_info_count_scope": count_scope,
+         "solution_number_count": solnum_count,
+         "pnames": names,
+         "solution_values": values_by_solnum,
+@@ -3181,13 +3211,17 @@
+             if not inner_values:
+                 binding_verified = False
+ 
+-        # A direct, detached Stored/Eigenfrequency sequence can prove a
++        # A direct detached Stored/Eigenfrequency sequence or the exact
++        # single-level attached Parametric/frequency sequence can prove a
+         # singleton numeric allocation bound without proving any outer/inner
+-        # tuple mapping. This exception is intentionally count-only: no axis
+-        # selectors or FieldArray coordinates are synthesized from it.
++        # tuple mapping. This exception is count-only: no axis selectors or
++        # FieldArray coordinates are synthesized from it.
+         count_only_witness = bool(
+             isinstance(single_solution_count_observation, Mapping)
+-            and single_solution_count_observation.get("status") == "VERIFIED_SINGLE_STORED_NUMERIC_COUNT"
++            and single_solution_count_observation.get("status") in {
++                "VERIFIED_SINGLE_STORED_NUMERIC_COUNT",
++                "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT",
++            }
+             and single_solution_count_observation.get("numeric_solution_count") == 1
+             and single_solution_count_observation.get("solution_axes_pair_mapping_complete") is False
+         )
+@@ -4031,13 +4065,14 @@
+     dataset_binding: Mapping[str, Any] | None,
+     solution_tag: Any,
+ ) -> dict[str, Any]:
+-    """Prove a one-sample allocation bound without inventing solution axes.
+-
+-    This narrow witness is only for a direct ``Solution`` dataset bound to a
+-    detached, stored eigenfrequency sequence whose documented ``getSize()[1]``
+-    reports exactly one solution number.  It supports memory accounting for
+-    ``result.at_points``; it is not a SolutionInfo tuple mapping and cannot be
+-    used for outer/inner selectors or FieldArray coordinates.
++    """Prove a bounded one-state allocation without inventing solution axes.
++
++    The existing detached Stored/Eigenfrequency case remains count-only.  The
++    one additional supported case is the exact attached frequency sequence:
++    Parametric/SolverSequence, one ``freq`` level, no outer-solution axis,
++    ``getSize()[1] == 1`` and ``getSizeMulti() == [1, 1]``.  Neither case
++    repairs SolutionInfo tuple metadata or enables outer/inner selectors or a
++    FieldArray.
+     """
+     base: dict[str, Any] = {
+         "status": "UNVERIFIED",
+@@ -4081,20 +4116,24 @@
+     )
+     base["observation"] = observation
+     reasons: list[str] = []
+-    if identity_errors:
+-        reasons.append("direct SolverSequence.study() readback failed")
+     size = observation.get("get_size")
++    size_multi = observation.get("get_size_multi")
++    solution_info_scope = observation.get("solution_info_count_scope")
++    if not isinstance(solution_info_scope, Mapping):
++        solution_info_scope = {}
++    level_names = solution_info_scope.get("getLevelNames")
++    levels = solution_info_scope.get("getLevels")
++    outer_solnums = solution_info_scope.get("getOuterSolnum")
++    info_errors = solution_info_scope.get("read_errors")
++    if not isinstance(info_errors, list):
++        info_errors = [{"method": "SolutionInfo", "code": "COUNT_SCOPE_UNAVAILABLE"}]
+     names = observation.get("pnames")
+     values = observation.get("solution_values")
+     rows = observation.get("parameter_rows")
+-    if observation.get("solution_type") != "Eigenfrequency":
+-        reasons.append("direct SolverSequence.getType() is not Eigenfrequency")
+-    if observation.get("sequence_type") != "Stored":
+-        reasons.append("direct SolverSequence.getSequenceType() is not Stored")
+-    if observation.get("attached") is not False:
+-        reasons.append("direct SolverSequence.isAttached() did not prove a detached stored solution")
+-    if not isinstance(observation.get("study"), str) or not observation["study"]:
+-        reasons.append("direct SolverSequence.study() did not return a study tag")
++    if identity_errors:
++        reasons.append("direct SolverSequence identity getter failed")
++    if observation.get("solution_identity_matches_dataset_study") is not True:
++        reasons.append("direct SolverSequence.study() identity was not stable across both reads")
+     if (
+         not isinstance(size, list)
+         or len(size) != 2
+@@ -4103,8 +4142,6 @@
+         or size[1] != 1
+     ):
+         reasons.append("documented getSize()[1] did not prove exactly one solution number")
+-    if names != ["lambda"]:
+-        reasons.append("direct getPNames() did not return exactly the stored eigenfrequency parameter ['lambda']")
+     if observation.get("status") != "OBSERVED_TYPED_COMPLEX_PARAMETER_VALUES":
+         reasons.append("typed real/imaginary parameter values and units are not fully observed")
+     if (
+@@ -4115,26 +4152,74 @@
+         or values[0].get("imag_getter", {}).get("raw") is None
+         or not isinstance(rows, list)
+         or len(rows) != 1
+-        or rows[0].get("name") != "lambda"
++        or rows[0].get("name") not in {"lambda", "freq"}
+         or not isinstance(rows[0].get("unit"), str)
+         or not rows[0]["unit"]
+     ):
+-        reasons.append("one typed complex eigenfrequency row with a native unit was not read back")
++        reasons.append("one typed complex sequence row with a native unit was not read back")
+     else:
+         for component in (rows[0].get("real"), rows[0].get("imag")):
+-            if isinstance(component, bool) or not isinstance(component, (int, float)) or not math.isfinite(float(component)):
+-                reasons.append("typed eigenfrequency row contains a non-finite or non-numeric value")
++            if (isinstance(component, bool) or not isinstance(component, (int, float))
++                    or not math.isfinite(float(component))):
++                reasons.append("typed sequence row contains a non-finite or non-numeric value")
+                 break
++    stored_eigenfrequency = (
++        observation.get("solution_type") == "Eigenfrequency"
++        and observation.get("sequence_type") == "Stored"
++        and observation.get("attached") is False
++        and names == ["lambda"]
++        and isinstance(observation.get("study"), str)
++        and bool(observation["study"])
++        and len(rows or []) == 1
++        and (rows or [{}])[0].get("name") == "lambda"
++    )
++    attached_parametric_frequency = (
++        observation.get("solution_type") == "Parametric"
++        and observation.get("sequence_type") == "SolverSequence"
++        and observation.get("attached") is True
++        and names == ["freq"]
++        and isinstance(observation.get("study"), str)
++        and bool(observation["study"])
++        and len(rows or []) == 1
++        and (rows or [{}])[0].get("name") == "freq"
++        and (rows or [{}])[0].get("unit") == "Hz"
++        and size_multi == [1, 1]
++        and not info_errors
++        and type(levels) is int and levels == 1
++        and isinstance(level_names, (list, tuple))
++        and list(level_names) == ["freq"]
++        and isinstance(outer_solnums, (list, tuple))
++        and list(outer_solnums) == []
++    )
+     if reasons:
+         base["reasons"] = reasons
+         return base
++    if not stored_eigenfrequency and not attached_parametric_frequency:
++        base["reasons"] = [
++            "sequence is neither the exact detached Stored/Eigenfrequency lambda singleton nor the exact "
++            "attached Parametric/SolverSequence frequency singleton with one level, no outer axis, and getSizeMulti [1,1]"
++        ]
++        return base
++    if attached_parametric_frequency and (
++        not isinstance(size_multi, list) or len(size_multi) != 2
++        or any(type(item) is not int or item < 0 for item in size_multi)
++    ):
++        base["reasons"] = ["attached frequency sequence multisolution size is malformed"]
++        return base
++    witness_kind = (
++        "attached_parametric_frequency_singleton"
++        if attached_parametric_frequency else "stored_eigenfrequency_singleton"
++    )
+     base.update({
+-        "status": "VERIFIED_SINGLE_STORED_NUMERIC_COUNT",
++        "status": ("VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT"
++                   if attached_parametric_frequency else "VERIFIED_SINGLE_STORED_NUMERIC_COUNT"),
++        "witness_kind": witness_kind,
+         "numeric_solution_count": 1,
+-        "source": (
+-            "exact dataset.solution→model.sol().tags() binding plus direct Stored/Eigenfrequency "
+-            "SolverSequence.getSize()[1]=1 and one typed complex lambda row"
+-        ),
++        "source": ("exact dataset.solution→model.sol().tags() binding plus direct Stored/Eigenfrequency "
++                   "getSize()[1]=1 and typed lambda singleton" if stored_eigenfrequency else
++                   "exact dataset.solution→model.sol().tags() binding plus attached Parametric/SolverSequence "
++                   "study identity, one freq level, empty getOuterSolnum(), getSize()[1]=1, "
++                   "getSizeMulti()==[1,1], and typed finite freq[Hz] singleton"),
+         "reasons": [],
+     })
+     return base
+@@ -6776,10 +6861,14 @@
+                 if single_solution_count_observation is not None else None
+             ),
+             "interpretation": (
+-                "numeric sample count may be bounded by a direct stored-solution observation; "
+-                "outer/inner tuple mapping remains unavailable"
+-                if single_solution_count_observation is not None
+-                and single_solution_count_observation.get("status") == "VERIFIED_SINGLE_STORED_NUMERIC_COUNT"
++            "numeric sample count may be bounded by a direct stored-solution observation; "
++            "a documented single-level attached frequency sequence may also bound one sample; "
++            "outer/inner tuple mapping remains unavailable"
++            if single_solution_count_observation is not None
++                and single_solution_count_observation.get("status") in {
++                    "VERIFIED_SINGLE_STORED_NUMERIC_COUNT",
++                    "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT",
++                }
+                 else "only a complete SolutionBinding establishes outer/inner tuples"
+             ),
+         },

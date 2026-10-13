@@ -1,0 +1,23 @@
+--- root/comsol_mcp/_session_lifecycle.py
++++ w23-r15/comsol_mcp/_session_lifecycle.py
+@@ -218,7 +218,8 @@
+             found.append(record)
+         return sorted(found, key=lambda item: (item["updated_at"], item["session_id"]))
+ 
+-    def save(self, record: Mapping[str, Any], *, expected_revision: int | None = None) -> dict[str, Any]:
++    def save(self, record: Mapping[str, Any], *, expected_revision: int | None = None,
++             _finish_operation=None) -> dict[str, Any]:
+         proposed = validate_lifecycle_record(record)
+         if expected_revision is not None and (type(expected_revision) is not int or expected_revision < 1):
+             raise ValueError("expected_revision must be a positive integer")
+@@ -251,6 +252,10 @@
+             result = validate_lifecycle_record(updated)
+             return result
+ 
++        if _finish_operation is not None:
++            operation_id, status, operation_result = _finish_operation
++            return self._store.finish(operation_id, status=status, result=operation_result,
++                                      _lifecycle_update=(proposed["session_id"], update))
+         persisted = self._store.update_session_lifecycle(proposed["session_id"], update)
+         return deepcopy(result or validate_lifecycle_record(persisted))
+ 

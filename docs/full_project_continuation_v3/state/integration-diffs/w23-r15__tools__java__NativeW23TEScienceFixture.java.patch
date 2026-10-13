@@ -1,0 +1,1155 @@
+--- root/tools/java/NativeW23TEScienceFixture.java
++++ w23-r15/tools/java/NativeW23TEScienceFixture.java
+@@ -1,6 +1,9 @@
+ import com.comsol.model.Coordsys;
+ import com.comsol.model.GeomSequence;
+ import com.comsol.model.Model;
++import com.comsol.model.MaterialModel;
++import com.comsol.model.MeshFeature;
++import com.comsol.model.MeshSequence;
+ import com.comsol.model.NumericalFeature;
+ import com.comsol.model.ParameterEntity;
+ import com.comsol.model.PropFeature;
+@@ -12,10 +15,15 @@
+ import com.comsol.model.physics.Physics;
+ import com.comsol.model.physics.PhysicsFeature;
+ import com.comsol.model.physics.PhysicsField;
++import com.comsol.model.physics.FeatureInfo;
++import com.comsol.model.physics.FeatureInfoList;
++import com.comsol.model.physics.EquationViewParent;
+ import java.io.File;
++import java.lang.reflect.Array;
+ import java.util.ArrayList;
+ import java.util.Arrays;
+ import java.util.LinkedHashMap;
++import java.util.LinkedHashSet;
+ import java.util.List;
+ import java.util.Map;
+ 
+@@ -49,8 +57,10 @@
+         if ("save".equals(phase)) return save(model, args);
+         if ("identity".equals(phase)) return modelIdentity(model);
+         if ("solution_inventory".equals(phase)) return solutionInventory(model);
++        if ("saved_solution_diagnostic".equals(phase)) return savedSolutionDiagnostic(model);
++        if ("definition_boundary_metadata".equals(phase)) return definitionBoundaryMetadata(model);
+         if ("raw_fields".equals(phase)) return rawFields(model, args);
+-        throw new IllegalArgumentException("phase must be build, set_phase, set_mesh, save, identity, solution_inventory, or raw_fields");
++        throw new IllegalArgumentException("phase must be build, set_phase, set_mesh, save, identity, solution_inventory, saved_solution_diagnostic, or raw_fields");
+     }
+ 
+     private static Map<String, Object> build(Model model) {
+@@ -113,11 +123,19 @@
+         configureBma(bmaOutput, "2");
+         frequency.set("plist", "f0");
+ 
+-        model.component("comp1").mesh().create("mesh1", "geom1");
+-        model.component("comp1").mesh("mesh1").feature("size").set("custom", "on");
+-        model.component("comp1").mesh("mesh1").feature("size").set("hmax", "0.16[um]");
+-        model.component("comp1").mesh("mesh1").feature("size").set("hmin", "0.04[um]");
+-        model.component("comp1").mesh("mesh1").run();
++        MeshSequence mesh = model.component("comp1").mesh().create("mesh1", "geom1");
++        MeshFeature freeTri = mesh.create("ftri1", "FreeTri");
++        // Selection.all() operates in the selection's current dimension.
++        freeTri.selection().geom(2);
++        freeTri.selection().all();
++        int[] selectedMeshDomains = freeTri.selection().entities(2);
++        if (freeTri.selection().dim() != 2 || selectedMeshDomains.length != geom.getNDomains()
++                || selectedMeshDomains.length == 0)
++            throw new IllegalStateException("FreeTri must explicitly select every 2D geometry domain");
++        mesh.feature("size").set("custom", "on");
++        mesh.feature("size").set("hmax", "0.16[um]");
++        mesh.feature("size").set("hmin", "0.04[um]");
++        mesh.run();
+ 
+         Map<String, Object> result = new LinkedHashMap<>();
+         result.put("fixture_id", FIXTURE_ID);
+@@ -157,8 +175,7 @@
+                 inspect(bmaInput, new String[]{"PortName", "modeFreq", "neigs", "eigwhich", "shiftactive", "shift"}),
+                 inspect(bmaOutput, new String[]{"PortName", "modeFreq", "neigs", "eigwhich", "shiftactive", "shift"})));
+         result.put("frequency_step", inspect(frequency, new String[]{"plist"}));
+-        result.put("mesh", Map.of("tag", "mesh1", "hmax_um", 0.16, "hmin_um", 0.04,
+-                                   "elements", model.component("comp1").mesh("mesh1").getNumElem()));
++        result.put("mesh", meshReadback(mesh, freeTri, "coarse", geom.getNDomains()));
+         result.put("raw_field_variables", Arrays.asList(RAW_FIELDS));
+         result.put("native_overlap_route", "result.mode_overlap through managed operation_call; no caller arrays");
+         result.put("native_phase_control", Map.of("parameter", "phi_in", "property", "Thetap",
+@@ -194,15 +211,36 @@
+         if ("coarse".equals(level)) hmax = "0.16[um]";
+         else if ("fine".equals(level)) hmax = "0.08[um]";
+         else throw new IllegalArgumentException("mesh_level is frozen to coarse or fine");
+-        model.component("comp1").mesh("mesh1").feature("size").set("hmax", hmax);
+-        model.component("comp1").mesh("mesh1").run();
+-        String readback = model.component("comp1").mesh("mesh1").feature("size").getString("hmax");
+-        if (!hmax.equals(readback)) throw new IllegalStateException("mesh hmax readback differs from the frozen level");
++        MeshSequence mesh = model.component("comp1").mesh("mesh1");
++        MeshFeature freeTri = mesh.feature("ftri1");
++        mesh.feature("size").set("hmax", hmax);
++        mesh.run();
++        Map<String, Object> result = meshReadback(mesh, freeTri, level,
++                model.component("comp1").geom("geom1").getNDomains());
++        if (!hmax.equals(result.get("hmax")))
++            throw new IllegalStateException("mesh hmax readback differs from the frozen level");
++        return result;
++    }
++
++    private static Map<String, Object> meshReadback(MeshSequence mesh, MeshFeature freeTri,
++                                                    String level, int geometryDomainCount) {
++        int[] selectedDomains = freeTri.selection().entities(2);
++        List<Integer> selectedDomainIds = new ArrayList<>();
++        for (int domain : selectedDomains) selectedDomainIds.add(domain);
+         Map<String, Object> result = new LinkedHashMap<>();
+         result.put("mesh_level", level);
+-        result.put("hmax", readback);
+-        result.put("hmin", model.component("comp1").mesh("mesh1").feature("size").getString("hmin"));
+-        result.put("elements", model.component("comp1").mesh("mesh1").getNumElem());
++        result.put("hmax", mesh.feature("size").getString("hmax"));
++        result.put("hmin", mesh.feature("size").getString("hmin"));
++        result.put("elements", mesh.getNumElem());
++        result.put("tri_elements", mesh.getNumElem("tri"));
++        result.put("element_types", Arrays.asList(mesh.getTypes()));
++        result.put("mesh_is_empty", mesh.isEmpty());
++        result.put("mesh_is_complete", mesh.isComplete());
++        result.put("free_tri_tag", freeTri.tag());
++        result.put("free_tri_built", freeTri.isBuilt());
++        result.put("free_tri_selection_dimension", freeTri.selection().dim());
++        result.put("free_tri_selected_domains", selectedDomainIds);
++        result.put("geometry_domain_count", geometryDomainCount);
+         result.put("study_or_solver_invoked", false);
+         return result;
+     }
+@@ -255,26 +293,20 @@
+             studySteps.add(row);
+         }
+         String[] solverSequenceTags = model.study("std1").getSolverSequences("SolverSequence");
+-        List<String> allSolverTags = Arrays.asList(model.sol().tags());
+         List<Map<String, Object>> solverSequences = new ArrayList<>();
+-        for (String sequenceTag : allSolverTags) {
++        for (String sequenceTag : solverSequenceTags) {
+             SolverSequence sequence = model.sol(sequenceTag);
+             Map<String, Object> sequenceRow = new LinkedHashMap<>();
+             sequenceRow.put("tag", sequenceTag);
+-            captureSolverSequenceMetadata(sequence, sequenceRow);
+-            if (Arrays.asList(solverSequenceTags).contains(sequenceTag)) {
+-                List<Map<String, Object>> studyStepBindings = new ArrayList<>();
+-                List<Map<String, Object>> solverTree = new ArrayList<>();
+-                for (String featureTag : sequence.feature().tags()) {
+-                    collectSolverFeature(sequence.feature(featureTag), featureTag,
+-                            solverTree, studyStepBindings);
+-                }
+-                for (Map<String, Object> binding : studyStepBindings) {
+-                    binding.put("solver_sequence", sequenceTag);
+-                }
+-                sequenceRow.put("solver_tree_features", solverTree);
+-                sequenceRow.put("study_step_bindings_in_solver_tree_order", studyStepBindings);
+-            }
++            sequenceRow.put("feature_type", sequence.getType());
++            List<Map<String, Object>> studyStepBindings = new ArrayList<>();
++            List<Map<String, Object>> solverTree = new ArrayList<>();
++            for (String featureTag : sequence.feature().tags()) {
++                collectSolverFeature(sequence.feature(featureTag), featureTag,
++                        solverTree, studyStepBindings);
++            }
++            sequenceRow.put("solver_tree_features", solverTree);
++            sequenceRow.put("study_step_bindings_in_solver_tree_order", studyStepBindings);
+             solverSequences.add(sequenceRow);
+         }
+         List<Map<String, Object>> datasets = new ArrayList<>();
+@@ -294,7 +326,6 @@
+             datasets.add(row);
+         }
+         result.put("fixture_id", FIXTURE_ID);
+-        result.put("study_tag", "std1");
+         result.put("study_steps_in_configured_order", studySteps);
+         result.put("solver_sequences_for_study", solverSequences);
+         result.put("solver_sequence_query_type", "SolverSequence");
+@@ -308,19 +339,757 @@
+         return result;
+     }
+ 
++    /**
++     * Read-only diagnostic of a previously saved W23 model. This method only
++     * calls metadata/property getters; it never invokes Study.run, a solver
++     * sequence run method, sequence generation, solution mutation, or save.
++     */
++    // A read-only metadata phase. No feature/selection creation, setters,
++    // geometry run, numerical feature, save, Study.run, or SolverSequence.run.
++    private static final int METADATA_MAX_FEATURES = 32;
++    private static final int METADATA_MAX_INFO_TAGS = 8;
++    private static final int METADATA_MAX_ENTITIES = 512;
++    private static final int METADATA_MAX_ROWS = 16384;
++    private static final int METADATA_MAX_COLUMNS = 128;
++    private static final long METADATA_MAX_UTF8_BYTES = 8388608L;
++
++    private static void metadataStrings(String[] values, long[] budget) {
++        if (values == null) return;
++        if (values.length > METADATA_MAX_COLUMNS) throw new IllegalStateException("metadata column/tag count exceeds bound");
++        for (String value : values) if (value != null) {
++            budget[1] += value.getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
++            if (budget[1] > METADATA_MAX_UTF8_BYTES) throw new IllegalStateException("metadata UTF8 bytes exceeds bound");
++        }
++    }
++
++    private static void metadataOwner(EquationViewParent owner, String kind, String tag,
++            List<Object> tables, long[] budget) {
++        FeatureInfoList infos = owner.featureInfo();
++        String[] infoTags = infos.tags();
++        if (infoTags == null || infoTags.length > METADATA_MAX_INFO_TAGS) throw new IllegalStateException("metadata info tags unavailable/exceeds bound");
++        metadataStrings(infoTags, budget);
++        for (String infoTag : infoTags) {
++            FeatureInfo info = infos.get(infoTag);
++            String[][] table = info.getInfoTable("Expression", "recursive", "all");
++            if (table == null) throw new IllegalStateException("metadata Expression table unavailable");
++            budget[0] += table.length;
++            if (budget[0] > METADATA_MAX_ROWS) throw new IllegalStateException("metadata rows exceeds bound");
++            List<Object> rows = new ArrayList<>();
++            List<Integer> widths = new ArrayList<>();
++            for (String[] row : table) {
++                metadataStrings(row, budget);
++                rows.add(row == null ? null : new ArrayList<String>(Arrays.asList(row.clone())));
++                widths.add(row == null ? -1 : row.length);
++            }
++            Map<String, Object> entry = new LinkedHashMap<>();
++            entry.put("owner_kind", kind); entry.put("owner_tag", tag);
++            entry.put("info_tag", infoTag); entry.put("native_info_tag", info.tag());
++            entry.put("table_type", "Expression"); entry.put("options", List.of("recursive", "all"));
++            entry.put("column_labels", "API_NOT_EXPOSED_BY_GETINFOTABLE");
++            entry.put("raw_rows", rows); entry.put("row_widths", widths);
++            entry.put("status", "CAPTURED_ALL_NATIVE_COLUMNS_NOT_INTERPRETED");
++            tables.add(entry);
++        }
++    }
++
++    private static void metadataInts(int[] values) {
++        if (values == null || values.length > METADATA_MAX_ENTITIES) throw new IllegalStateException("metadata entity array unavailable/exceeds bound");
++    }
++
++    private static Map<String, Object> definitionBoundaryMetadata(Model model) {
++        long[] budget = new long[]{0L, 0L};
++        Map<String, Object> result = new LinkedHashMap<>();
++        result.put("diagnostic_phase", "definition_boundary_metadata");
++        List<Object> tables = new ArrayList<>();
++        List<Object> selections = new ArrayList<>();
++        result.put("definition_tables", tables); result.put("named_selections", selections);
++        try {
++        Physics physics = model.component("comp1").physics("ewfd");
++        GeomSequence geom = model.component("comp1").geom("geom1");
++        int dim = geom.getSDim(), boundaries = geom.getNBoundaries(), domains = geom.getNDomains();
++        if (dim != 2 || boundaries < 1 || boundaries > METADATA_MAX_ENTITIES || domains < 1 || domains > METADATA_MAX_ENTITIES)
++            throw new IllegalStateException("metadata exact 2D geometry/count exceeds bound");
++        result.put("component_tag", "comp1"); result.put("geometry_tag", "geom1");
++        result.put("physics_tag", physics.tag()); result.put("physics_name_raw", physics.name());
++        result.put("physics_scope_raw", physics.scope()); result.put("physics_type", physics.getType());
++        result.put("polarization_components_raw", physics.prop("components").getString("components"));
++        PhysicsField field = physics.field("electricfield");
++        result.put("electric_field_name_raw", field.field());
++        result.put("electric_field_components_raw", safeStringList(field.component()));
++        result.put("electric_field_fieldname_raw", safeStringList(field.fieldname()));
++        result.put("physics_selected_domain_entities", physics.selection().entities(2));
++        result.put("geometry_dimension", dim); result.put("geometry_boundary_count", boundaries);
++        result.put("geometry_domain_count", domains); result.put("geometry_bounding_box_raw", geom.getBoundingBox());
++        result.put("geometry_length_unit_raw", geom.lengthUnit());
++        int[][] upDown = geom.getUpDown();
++        if (upDown == null || upDown.length != 2) throw new IllegalStateException("metadata up/down array is not two rows");
++        metadataInts(upDown[0]); metadataInts(upDown[1]);
++        result.put("boundary_up_down_raw", upDown);
++        result.put("boundary_up_down_column_to_entity_mapping", "RAW_COLUMN_INDEX_ONLY_NO_UNDOCUMENTED_OFFSET_INFERRED");
++        metadataOwner(physics, "physics", "ewfd", tables, budget);
++        String[] features = physics.feature().tags();
++        if (features == null || features.length > METADATA_MAX_FEATURES) throw new IllegalStateException("metadata feature count unavailable/exceeds bound");
++        metadataStrings(features, budget);
++        for (String featureTag : features) metadataOwner(physics.feature(featureTag), "physics_feature", featureTag, tables, budget);
++        result.put("definition_tables", tables); result.put("definition_feature_tags", safeStringList(features));
++        for (String selectionTag : new String[]{"selReceiverX8", "selInputPort", "selCoreCaptureX8", "selCoreMaterial", "selPmlDomains", "selCladdingBottom", "selCladdingTop"}) {
++            SelectionFeature selection = model.component("comp1").selection(selectionTag);
++            int selectionDim = selection.dim();
++            if (selectionDim != 1 && selectionDim != 2) throw new IllegalStateException("metadata named selection dimension unexpected");
++            int[] entities = selection.entities(selectionDim); metadataInts(entities);
++            Map<String, Object> row = new LinkedHashMap<>();
++            row.put("selection_tag", selectionTag); row.put("native_tag", selection.tag());
++            row.put("geometry_raw", selection.geom()); row.put("dimension_raw", selectionDim);
++            row.put("entities_raw", entities); List<Object> adjacent = new ArrayList<>();
++            for (int entity : entities) {
++                if (entity < 1 || entity > (selectionDim == 1 ? boundaries : domains)) throw new IllegalStateException("metadata entity outside native count");
++                Map<String, Object> edge = new LinkedHashMap<>(); edge.put("entity", entity);
++                int targetDim = selectionDim == 1 ? 2 : 1;
++                int[] neighbors = geom.getAdj(selectionDim, targetDim, entity);
++                int[] orientations = geom.getAdjOrient(selectionDim, targetDim, entity);
++                metadataInts(neighbors); metadataInts(orientations);
++                edge.put("adjacent_dimension", targetDim); edge.put("adjacent_entities_raw", neighbors);
++                edge.put("adjacency_orientation_flags_raw", orientations);
++                if (selectionDim == 1) {
++                    double[] range = geom.edgeParamRange(entity);
++                    if (range == null || range.length != 2 || !Double.isFinite(range[0]) || !Double.isFinite(range[1])) throw new IllegalStateException("metadata edge range missing");
++                    double[] sample = {range[0], 0.5 * (range[0] + range[1]), range[1]};
++                    edge.put("edge_parameter_range_raw", range); edge.put("sample_parameter_raw", sample);
++                    edge.put("edge_coordinates_raw", geom.edgeX(entity, sample));
++                    edge.put("edge_normal_raw", geom.edgeNormal(entity, sample));
++                    edge.put("normal_scope", "GEOMETRIC_EDGE_NORMAL_NOT_ASSERTED_AS_SELECTED_PHYSICS_SIDE");
++                }
++                adjacent.add(edge);
++            }
++            row.put("adjacency_and_edge_samples_raw", adjacent); selections.add(row);
++        }
++        result.put("named_selections", selections);
++        List<Object> ports = new ArrayList<>();
++        for (String portTag : new String[]{"portIn", "portOut"}) {
++            PhysicsFeature port = physics.feature(portTag); int[] entities = port.selection().entities(1); metadataInts(entities);
++            Map<String, Object> row = new LinkedHashMap<>(); row.put("tag", portTag); row.put("type", port.getType());
++            row.put("PortName", port.getString("PortName")); row.put("entities_raw", entities);
++            ports.add(row);
++        }
++        result.put("ports", ports); result.put("definition_rows_total", budget[0]);
++        result.put("definition_UTF8_bytes_total", budget[1]);
++        result.put("limits", Map.of("max_features", METADATA_MAX_FEATURES, "max_info_tags", METADATA_MAX_INFO_TAGS,
++            "max_entities", METADATA_MAX_ENTITIES, "max_rows", METADATA_MAX_ROWS,
++            "max_columns", METADATA_MAX_COLUMNS, "max_UTF8_bytes", METADATA_MAX_UTF8_BYTES));
++        result.put("bound_scope", "CHECKS_BEFORE_LOOPS_AND_AFTER_NATIVE_TABLE_RETURN_NO_HARD_ENGINE_ALLOCATION_QUOTA");
++        result.put("numerical_feature_dispatch_count", 0); result.put("study_or_solver_invoked", false);
++        result.put("physics_or_selection_mutated", false); result.put("scientific_acceptance", "NOT_EVALUATED");
++        result.put("status", "READONLY_METADATA_CAPTURE_COMPLETE");
++        return result;
++        } catch (Throwable failure) {
++            result.put("status", "READ_FAILED_STOPPED_NO_FURTHER_GETTERS");
++            result.put("execution_state_unknown", true); result.put("safe_retry", false);
++            result.put("failure_type", failure.getClass().getName());
++            String message = String.valueOf(failure.getMessage());
++            result.put("failure_message", message.substring(0, Math.min(2048, message.length())));
++            result.put("captured_prefix_preserved", true);
++            result.put("scientific_acceptance", "NOT_EVALUATED");
++            // Metadata publication does not downgrade a failed native getter.
++            // The original runner rejects this status before any later read.
++            return result;
++        }
++    }
++
++    private static Map<String, Object> savedSolutionDiagnostic(Model model) {
++        Map<String, Object> result = new LinkedHashMap<>();
++        String studyTag = "std1";
++        com.comsol.model.Study study = model.study(studyTag);
++        String[] queryTypes = {
++            "All", "None", "SolverSequence", "CopySolution",
++            "ParametricStore", "Stored", "Parametric"
++        };
++        List<Map<String, Object>> queryRows = new ArrayList<>();
++        Map<String, List<String>> membership = new LinkedHashMap<>();
++        List<Map<String, Object>> configuredStudySteps = captureConfiguredStudySteps(study);
++        for (String queryType : queryTypes) {
++            Map<String, Object> row = new LinkedHashMap<>();
++            row.put("receiver", "model.study(" + studyTag + ")");
++            row.put("receiver_type", study.getClass().getName());
++            row.put("method", "Study.getSolverSequences");
++            row.put("declared_return_type", "java.lang.String[]");
++            row.put("argument_types", List.of("java.lang.String"));
++            row.put("arguments", List.of(queryType));
++            try {
++                String[] tags = study.getSolverSequences(queryType);
++                row.put("status", "CAPTURED");
++                row.put("actual_return_type", tags == null ? "null" : tags.getClass().getName());
++                row.put("return_value", tags == null ? null : safeStringList(tags));
++                if (tags != null) {
++                    for (String tag : tags) {
++                        membership.computeIfAbsent(tag, ignored -> new ArrayList<>()).add(queryType);
++                    }
++                }
++            } catch (Throwable error) {
++                row.put("status", "ERROR");
++                row.put("error_type", error.getClass().getName());
++                row.put("error", String.valueOf(error));
++            }
++            queryRows.add(row);
++        }
++
++        String[] allSolverTags = model.sol().tags();
++        List<Map<String, Object>> solverRows = new ArrayList<>();
++        if (allSolverTags != null) {
++            for (String solverTag : allSolverTags) {
++                SolverSequence sequence = null;
++                Map<String, Object> sequenceRow = new LinkedHashMap<>();
++                sequenceRow.put("tag", solverTag);
++                sequenceRow.put("study_type_query_memberships_observed",
++                        membership.getOrDefault(solverTag, List.of()));
++                try {
++                    sequence = model.sol(solverTag);
++                    sequenceRow.put("sequence_receiver_type", sequence.getClass().getName());
++                } catch (Throwable error) {
++                    sequenceRow.put("sequence_access_status", "ERROR");
++                    sequenceRow.put("sequence_access_error_type", error.getClass().getName());
++                    sequenceRow.put("sequence_access_error", String.valueOf(error));
++                }
++                if (sequence != null) {
++                    sequenceRow.put("sequence_type_getter", captureScalarRead(
++                            "model.sol(" + solverTag + ")", sequence, "getType",
++                            "java.lang.String", new String[0], new Object[0], sequence::getType));
++                    sequenceRow.put("sequence_kind_getter", captureScalarRead(
++                            "model.sol(" + solverTag + ")", sequence, "getSequenceType",
++                            "java.lang.String", new String[0], new Object[0], sequence::getSequenceType));
++                    sequenceRow.put("attached_study_getter", captureScalarRead(
++                            "model.sol(" + solverTag + ")", sequence, "study",
++                            "java.lang.String", new String[0], new Object[0], sequence::study));
++                    sequenceRow.put("is_attached_getter", captureScalarRead(
++                            "model.sol(" + solverTag + ")", sequence, "isAttached",
++                            "boolean", new String[0], new Object[0], sequence::isAttached));
++                    sequenceRow.put("parameter_names_getter", captureScalarRead(
++                            "model.sol(" + solverTag + ")", sequence, "getPNames",
++                            "java.lang.String[]", new String[0], new Object[0], sequence::getPNames));
++                    sequenceRow.put("direct_sequence_parameter_axis_observation",
++                            captureDirectSequenceParameterAxis(sequence, solverTag));
++                    sequenceRow.put("solver_tree", captureSolverTree(sequence));
++                    sequenceRow.put("solution_info", captureSolutionInfo(solverTag, sequence));
++                }
++                solverRows.add(sequenceRow);
++            }
++        }
++
++        List<Map<String, Object>> datasetRows = new ArrayList<>();
++        Map<String, Boolean> solutionTagsFromDatasets = new LinkedHashMap<>();
++        for (String datasetTag : model.result().dataset().tags()) {
++            Map<String, Object> row = new LinkedHashMap<>();
++            row.put("tag", datasetTag);
++            try {
++                Object dataset = model.result().dataset(datasetTag);
++                row.put("receiver_type", dataset.getClass().getName());
++                row.put("property_names", Arrays.asList(model.result().dataset(datasetTag).properties()));
++                Map<String, Object> selected = new LinkedHashMap<>();
++                for (String property : new String[]{"solution", "data", "solnum", "outersolnum"}) {
++                    Map<String, Object> value = new LinkedHashMap<>();
++                    try {
++                        boolean present = model.result().dataset(datasetTag).hasProperty(property);
++                        value.put("has_property", present);
++                        if (present) {
++                            value.put("value_type", model.result().dataset(datasetTag).getValueType(property));
++                            String raw = model.result().dataset(datasetTag).getString(property);
++                            value.put("getter", "Dataset.getString");
++                            value.put("status", "CAPTURED");
++                            value.put("return_value", raw);
++                            if ("solution".equals(property) && raw != null && !raw.isEmpty()) {
++                                solutionTagsFromDatasets.put(raw, Boolean.TRUE);
++                            }
++                        } else {
++                            value.put("status", "PROPERTY_ABSENT");
++                        }
++                    } catch (Throwable error) {
++                        value.put("status", "ERROR");
++                        value.put("error_type", error.getClass().getName());
++                        value.put("error", String.valueOf(error));
++                    }
++                    selected.put(property, value);
++                }
++                row.put("selected_properties", selected);
++            } catch (Throwable error) {
++                row.put("status", "ERROR");
++                row.put("error_type", error.getClass().getName());
++                row.put("error", String.valueOf(error));
++            }
++            datasetRows.add(row);
++        }
++
++        List<Map<String, Object>> datasetSolutionInfoRows = new ArrayList<>();
++        for (String solutionTag : solutionTagsFromDatasets.keySet()) {
++            Map<String, Object> row = new LinkedHashMap<>();
++            row.put("source", "exact Dataset.getString(\"solution\") readback");
++            row.put("solution_tag", solutionTag);
++            try {
++                SolverSequence sequence = model.sol(solutionTag);
++                row.put("solver_sequence_type", sequence.getClass().getName());
++                row.put("solution_info", captureSolutionInfo(solutionTag, sequence));
++            } catch (Throwable error) {
++                row.put("status", "ERROR");
++                row.put("error_type", error.getClass().getName());
++                row.put("error", String.valueOf(error));
++            }
++            datasetSolutionInfoRows.add(row);
++        }
++
++        result.put("fixture_id", FIXTURE_ID);
++        result.put("diagnostic_phase", "saved_solution_diagnostic");
++        result.put("study_tag", studyTag);
++        result.put("study_steps_in_configured_order", configuredStudySteps);
++        result.put("study_solver_sequence_queries", queryRows);
++        result.put("model_solver_sequence_tags", allSolverTags == null ? List.of() : safeStringList(allSolverTags));
++        result.put("solver_sequences", solverRows);
++        result.put("datasets", datasetRows);
++        result.put("dataset_solution_info", datasetSolutionInfoRows);
++        result.put("explicit_study_or_solver_run_calls_in_this_phase", 0);
++        result.put("internal_solver_execution_count", "UNKNOWN_NOT_INFERRED_FROM_READBACK");
++        result.put("native_scientific_acceptance", "NOT_ACCEPTED_DIAGNOSTIC_READBACK_ONLY");
++        return result;
++    }
++
++    private static List<Map<String, Object>> captureConfiguredStudySteps(
++            com.comsol.model.Study study) {
++        List<Map<String, Object>> rows = new ArrayList<>();
++        try {
++            String[] tags = study.feature().tags();
++            if (tags == null) return rows;
++            for (int order = 0; order < tags.length; order++) {
++                String tag = tags[order];
++                StudyFeature feature = study.feature(tag);
++                Map<String, Object> row = new LinkedHashMap<>();
++                row.put("tag", tag);
++                row.put("configured_order", order);
++                row.put("receiver_type", feature.getClass().getName());
++                row.put("feature_type_getter", captureRead(
++                        "model.study(std1).feature(" + tag + ")", feature, "getType",
++                        "java.lang.String", new String[0], new Object[0], feature::getType));
++                Map<String, Object> properties = new LinkedHashMap<>();
++                for (String property : new String[]{"PortName", "modeFreq", "plist"}) {
++                    properties.put(property, captureStudyStringProperty(feature, tag, property));
++                }
++                row.put("selected_properties", properties);
++                rows.add(row);
++            }
++        } catch (Throwable error) {
++            Map<String, Object> failure = new LinkedHashMap<>();
++            failure.put("status", "ERROR");
++            failure.put("error_type", error.getClass().getName());
++            failure.put("error", String.valueOf(error));
++            rows.add(failure);
++        }
++        return rows;
++    }
++
++    private static Map<String, Object> captureStudyStringProperty(
++            StudyFeature feature, String tag, String property) {
++        Map<String, Object> value = new LinkedHashMap<>();
++        value.put("property", property);
++        try {
++            boolean present = feature.hasProperty(property);
++            value.put("has_property", present);
++            if (!present) {
++                value.put("status", "PROPERTY_ABSENT");
++                return value;
++            }
++            value.put("value_type", feature.getValueType(property));
++            value.put("getter", "StudyFeature.getString");
++            value.put("return_value", feature.getString(property));
++            value.put("status", "CAPTURED");
++        } catch (Throwable error) {
++            value.put("status", "ERROR");
++            value.put("error_type", error.getClass().getName());
++            value.put("error", String.valueOf(error));
++        }
++        return value;
++    }
++
++    private static Map<String, Object> captureDirectSequenceParameterAxis(
++            SolverSequence sequence, String solverTag) {
++        Map<String, Object> result = new LinkedHashMap<>();
++        Object[] sizeHolder = new Object[1];
++        Object[] namesHolder = new Object[1];
++        result.put("get_size", captureRead("model.sol(" + solverTag + ")", sequence,
++                "getSize", "int[]", new String[0], new Object[0], () -> {
++                    int[] value = sequence.getSize(); sizeHolder[0] = value; return value;
++                }));
++        result.put("get_size_multi", captureRead("model.sol(" + solverTag + ")", sequence,
++                "getSizeMulti", "int[]", new String[0], new Object[0], () -> {
++                    return sequence.getSizeMulti();
++                }));
++        result.put("parameter_names", captureRead("model.sol(" + solverTag + ")", sequence,
++                "getPNames", "java.lang.String[]", new String[0], new Object[0], () -> {
++                    String[] value = sequence.getPNames(); namesHolder[0] = value; return value;
++                }));
++        int[] size = sizeHolder[0] instanceof int[] ? (int[]) sizeHolder[0] : null;
++        String[] names = namesHolder[0] instanceof String[] ? (String[]) namesHolder[0] : null;
++        List<Map<String, Object>> rows = new ArrayList<>();
++        List<Map<String, Object>> units = new ArrayList<>();
++        SolutionInfo observedInfo = null;
++        Object[] infoHolder = new Object[1];
++        result.put("solution_info_getter", captureRead("model.sol(" + solverTag + ")",
++                sequence, "getSolutioninfo", "com.comsol.model.SolutionInfo",
++                new String[0], new Object[0], () -> {
++                    SolutionInfo value = sequence.getSolutioninfo();
++                    infoHolder[0] = value;
++                    return value;
++                }));
++        if (infoHolder[0] instanceof SolutionInfo) observedInfo = (SolutionInfo) infoHolder[0];
++        final SolutionInfo info = observedInfo;
++        if (names != null && info != null) {
++            for (String name : names) {
++                Map<String, Object> unit = new LinkedHashMap<>();
++                unit.put("name", name);
++                unit.put("readback", captureRead("SolutionInfo(" + solverTag + ")", info,
++                        "getUnit", "java.lang.String", new String[]{"java.lang.String"},
++                        new Object[]{name}, () -> info.getUnit(name)));
++                units.add(unit);
++            }
++        }
++        result.put("parameter_units", units);
++        boolean rawValuesComplete = size != null && size.length == 2
++                && size[1] >= 1 && size[1] <= 4096
++                && names != null && names.length > 0 && names.length <= 64;
++        if (rawValuesComplete) {
++            for (int solnum = 1; solnum <= size[1]; solnum++) {
++                final int selectedSolnum = solnum;
++                Map<String, Object> value = new LinkedHashMap<>();
++                value.put("real", captureRead("model.sol(" + solverTag + ")", sequence,
++                        "getPVals", "double[]", new String[]{"int"}, new Object[]{selectedSolnum},
++                        () -> sequence.getPVals(selectedSolnum)));
++                value.put("imaginary", captureRead("model.sol(" + solverTag + ")", sequence,
++                        "getPValsImag", "double[]", new String[]{"int"}, new Object[]{selectedSolnum},
++                        () -> sequence.getPValsImag(selectedSolnum)));
++                value.put("solnum", selectedSolnum);
++                for (Map<String, Object> unit : units) {
++                    Object unitName = unit.get("name");
++                    Object unitReadback = unit.get("readback");
++                    Map<String, Object> unitRow = new LinkedHashMap<>();
++                    unitRow.put("name", unitName);
++                    if (unitReadback instanceof Map<?, ?>) {
++                        Map<?, ?> rawUnit = (Map<?, ?>) unitReadback;
++                        unitRow.put("status", rawUnit.get("status"));
++                        unitRow.put("value", rawUnit.get("return_value"));
++                        unitRow.put("error_type", rawUnit.get("error_type"));
++                        unitRow.put("error", rawUnit.get("error"));
++                    }
++                    value.computeIfAbsent("parameter_units", ignored -> new ArrayList<Map<String, Object>>());
++                    @SuppressWarnings("unchecked")
++                    List<Map<String, Object>> unitRows = (List<Map<String, Object>>) value.get("parameter_units");
++                    unitRows.add(unitRow);
++                }
++                rows.add(value);
++            }
++        }
++        boolean shapeComplete = rawValuesComplete;
++        for (Map<String, Object> value : rows) {
++            for (String component : new String[]{"real", "imaginary"}) {
++                Object rawCall = value.get(component);
++                if (!(rawCall instanceof Map<?, ?>)
++                        || !"CAPTURED".equals(((Map<?, ?>) rawCall).get("status"))) {
++                    shapeComplete = false;
++                    continue;
++                }
++                Object returned = ((Map<?, ?>) rawCall).get("return_value");
++                if (!(returned instanceof List<?>) || ((List<?>) returned).size() != names.length) {
++                    shapeComplete = false;
++                }
++            }
++            Object rawUnits = value.get("parameter_units");
++            if (!(rawUnits instanceof List<?>) || ((List<?>) rawUnits).size() != names.length) {
++                shapeComplete = false;
++            } else {
++                for (Object unitRow : (List<?>) rawUnits) {
++                    if (!(unitRow instanceof Map<?, ?>)
++                            || !"CAPTURED".equals(((Map<?, ?>) unitRow).get("status"))
++                            || !(((Map<?, ?>) unitRow).get("value") instanceof String)) {
++                        shapeComplete = false;
++                    }
++                }
++            }
++        }
++        result.put("status", shapeComplete
++                ? "RAW_TYPED_COMPLEX_VALUES_CAPTURED_NOT_INTERPRETED"
++                : "UNVERIFIED_DIRECT_SEQUENCE_SHAPE_OR_UNIT");
++        result.put("solution_numbers", rows);
++        result.put("get_size_semantics", "[degrees of freedom, solution number count] per COMSOL 6.4 doc7714/chunk23082");
++        result.put("get_size_multi_semantics", "[local solution count in multisolution, total solution number count] per COMSOL 6.4 doc7714/chunk23082");
++        result.put("interpretation", "direct SolverSequence one-based solnum reads only; no outer/inner tuple mapping or physical-axis role inferred");
++        return result;
++    }
++
++    private static Map<String, Object> captureSolutionInfo(String solverTag, SolverSequence sequence) {
++        Map<String, Object> result = new LinkedHashMap<>();
++        Object[] infoHolder = new Object[1];
++        Map<String, Object> infoGetter = captureRead(
++                "model.sol(" + solverTag + ")", sequence, "getSolutioninfo",
++                "com.comsol.model.SolutionInfo", new String[0], new Object[0], () -> {
++                    SolutionInfo info = sequence.getSolutioninfo();
++                    infoHolder[0] = info;
++                    return info;
++                });
++        result.put("solution_info_getter", infoGetter);
++        if (!(infoHolder[0] instanceof SolutionInfo)) {
++            result.put("metadata_calls", List.of());
++            result.put("observed_one_based_outer_inner_pairs", List.of());
++            result.put("solver_sequence_parameter_reads", List.of());
++            return result;
++        }
++        SolutionInfo info = (SolutionInfo) infoHolder[0];
++        result.put("solution_info_receiver_type", info.getClass().getName());
++        List<Map<String, Object>> calls = new ArrayList<>();
++        captureAndAdd(calls, "SolutionInfo.getLevelNames", info, "getLevelNames",
++                "java.lang.String[]", new String[0], new Object[0], info::getLevelNames);
++        captureAndAdd(calls, "SolutionInfo.getLevels", info, "getLevels",
++                "int", new String[0], new Object[0], info::getLevels);
++        captureAndAdd(calls, "SolutionInfo.getOuterSolnum", info, "getOuterSolnum",
++                "int[]", new String[0], new Object[0], info::getOuterSolnum);
++        captureAndAdd(calls, "SolutionInfo.getPNamesOuter", info, "getPNamesOuter",
++                "java.lang.String[]", new String[0], new Object[0], info::getPNamesOuter);
++        captureAndAdd(calls, "SolutionInfo.getPUnitsOuter", info, "getPUnitsOuter",
++                "java.lang.String[]", new String[0], new Object[0], info::getPUnitsOuter);
++        captureAndAdd(calls, "SolutionInfo.isStructured", info, "isStructured",
++                "boolean", new String[0], new Object[0], info::isStructured);
++        captureAndAdd(calls, "SolutionInfo.isValid", info, "isValid",
++                "boolean", new String[0], new Object[0], info::isValid);
++
++        int[] outers = null;
++        for (Map<String, Object> call : calls) {
++            if ("getOuterSolnum".equals(call.get("method"))
++                    && "CAPTURED".equals(call.get("status"))) {
++                Object raw = call.get("return_value");
++                if (raw instanceof List<?>) {
++                    List<?> values = (List<?>) raw;
++                    outers = new int[values.size()];
++                    for (int index = 0; index < values.size(); index++) {
++                        Object value = values.get(index);
++                        if (!(value instanceof Number)) { outers = null; break; }
++                        outers[index] = ((Number) value).intValue();
++                    }
++                }
++            }
++        }
++        List<List<Integer>> observedPairs = new ArrayList<>();
++        List<Map<String, Object>> sequenceValueRows = new ArrayList<>();
++        LinkedHashSet<Integer> outerProbes = new LinkedHashSet<>();
++        if (outers != null) {
++            for (int outer : outers) outerProbes.add(outer);
++        }
++        // Activity009 issued getSolnum(1,true) for this same SolutionInfo
++        // receiver. Keep that exact documented one-based probe even when
++        // getOuterSolnum() reports the documented empty-array/no-outer case.
++        outerProbes.add(1);
++        for (int outer : outerProbes) {
++            Object[] innerHolder = new Object[1];
++            Map<String, Object> innerCall = captureRead(
++                    "SolutionInfo(" + solverTag + ")", info, "getSolnum", "int[]",
++                    new String[]{"int", "boolean"}, new Object[]{outer, Boolean.TRUE},
++                    () -> {
++                        int[] values = info.getSolnum(outer, true);
++                        innerHolder[0] = values;
++                        return values;
++                    });
++            calls.add(innerCall);
++            final int sequenceOuter = outer;
++            captureAndAdd(calls, "SolutionInfo.getSol(" + solverTag + ")", info,
++                    "getSol", "java.lang.String", new String[]{"int"},
++                    new Object[]{sequenceOuter}, () -> info.getSol(sequenceOuter));
++            captureAndAdd(calls, "SolutionInfo.getSolverSequence(" + solverTag + ")", info,
++                    "getSolverSequence", "java.lang.String", new String[]{"int"},
++                    new Object[]{sequenceOuter}, () -> info.getSolverSequence(sequenceOuter));
++            if (!(innerHolder[0] instanceof int[])) continue;
++            for (int inner : (int[]) innerHolder[0]) {
++                List<Integer> pairRecord = Arrays.asList(outer, inner);
++                if (!observedPairs.contains(pairRecord)) observedPairs.add(pairRecord);
++                final int pairOuter = outer;
++                final int pairInner = inner;
++                Map<String, Object> sequenceValues = new LinkedHashMap<>();
++                sequenceValues.put("outer", pairOuter);
++                sequenceValues.put("inner_solnum", pairInner);
++                sequenceValues.put("real_parameter_values", captureScalarRead(
++                        "model.sol(" + solverTag + ")", sequence, "getPVals",
++                        "double[]", new String[]{"int"}, new Object[]{pairInner},
++                        () -> sequence.getPVals(pairInner)));
++                sequenceValues.put("imaginary_parameter_values", captureScalarRead(
++                        "model.sol(" + solverTag + ")", sequence, "getPValsImag",
++                        "double[]", new String[]{"int"}, new Object[]{pairInner},
++                        () -> sequence.getPValsImag(pairInner)));
++                sequenceValueRows.add(sequenceValues);
++                int[][] pair = new int[][]{{pairOuter, pairInner}};
++                captureAndAdd(calls, "SolutionInfo.getPNames(" + solverTag + ")", info,
++                        "getPNames", "java.lang.String[][]", new String[]{"int[][]"},
++                        new Object[]{pair}, () -> info.getPNames(pair));
++                captureAndAdd(calls, "SolutionInfo.getPvals(" + solverTag + ")", info,
++                        "getPvals", "double[][]", new String[]{"int[][]"},
++                        new Object[]{pair}, () -> info.getPvals(pair));
++                captureAndAdd(calls, "SolutionInfo.getPvalsImag(" + solverTag + ")", info,
++                        "getPvalsImag", "double[][]", new String[]{"int[][]"},
++                        new Object[]{pair}, () -> info.getPvalsImag(pair));
++                captureAndAdd(calls, "SolutionInfo.getUnits(" + solverTag + ")", info,
++                        "getUnits", "java.lang.String[][]", new String[]{"int[][]"},
++                        new Object[]{pair}, () -> info.getUnits(pair));
++                captureAndAdd(calls, "SolutionInfo.getISol(" + solverTag + ")", info,
++                        "getISol", "int[]", new String[]{"int", "int"},
++                        new Object[]{pairOuter, pairInner}, () -> info.getISol(pairOuter, pairInner));
++            }
++        }
++        result.put("observed_one_based_outer_inner_pairs", observedPairs);
++        result.put("solver_sequence_parameter_reads", sequenceValueRows);
++        result.put("metadata_calls", calls);
++        result.put("typed_matrix_argument_contract",
++                "COMSOL 6.4 documents each solnums[n] as one-based (outer,inner); the exact prior Activity009 probe is repeated on this receiver as int[][] {{1,1}} only when getSolnum(1,true) returns inner 1; no alternate matrix orientation is inferred");
++        return result;
++    }
++
++    private static Map<String, Object> captureSolverTree(SolverSequence sequence) {
++        Map<String, Object> result = new LinkedHashMap<>();
++        List<Map<String, Object>> rows = new ArrayList<>();
++        try {
++            String[] tags = sequence.feature().tags();
++            result.put("root_feature_tags", tags == null ? List.of() : safeStringList(tags));
++            if (tags != null) {
++                for (String tag : tags) {
++                    captureSolverFeature(sequence.feature(tag), tag, rows);
++                }
++            }
++            result.put("status", "CAPTURED");
++        } catch (Throwable error) {
++            result.put("status", "PARTIAL_OR_ERROR");
++            result.put("error_type", error.getClass().getName());
++            result.put("error", String.valueOf(error));
++        }
++        result.put("features", rows);
++        return result;
++    }
++
++    private static void captureSolverFeature(SolverFeature feature, String path,
++                                             List<Map<String, Object>> rows) {
++        Map<String, Object> row = new LinkedHashMap<>();
++        row.put("path", path);
++        row.put("tree_order", rows.size());
++        try {
++            String type = feature.getType();
++            row.put("feature_type", type);
++            row.put("receiver_type", feature.getClass().getName());
++            String[] properties = feature.properties();
++            row.put("property_names", properties == null ? List.of() : safeStringList(properties));
++            if ("StudyStep".equals(type)) {
++                captureStringProperty(feature, row, "study");
++                captureStringProperty(feature, row, "studystep");
++            }
++            if ("StoreSolution".equals(type) || "CopySolution".equals(type)) {
++                captureStringProperty(feature, row, "sol");
++            }
++        } catch (Throwable error) {
++            row.put("status", "PARTIAL_OR_ERROR");
++            row.put("error_type", error.getClass().getName());
++            row.put("error", String.valueOf(error));
++        }
++        rows.add(row);
++        try {
++            String[] children = feature.feature().tags();
++            row.put("child_tags", children == null ? List.of() : safeStringList(children));
++            if (children != null) {
++                for (String child : children) {
++                    captureSolverFeature(feature.feature(child), path + "/" + child, rows);
++                }
++            }
++        } catch (Throwable error) {
++            row.put("child_readback_status", "ERROR");
++            row.put("child_readback_error_type", error.getClass().getName());
++            row.put("child_readback_error", String.valueOf(error));
++        }
++    }
++
++    private static void captureStringProperty(SolverFeature feature, Map<String, Object> row,
++                                             String property) {
++        Map<String, Object> value = new LinkedHashMap<>();
++        try {
++            boolean present = feature.hasProperty(property);
++            value.put("has_property", present);
++            if (present) {
++                value.put("value_type", feature.getValueType(property));
++                value.put("getter", "SolverFeature.getString");
++                value.put("return_value", feature.getString(property));
++                value.put("status", "CAPTURED");
++            } else {
++                value.put("status", "PROPERTY_ABSENT");
++            }
++        } catch (Throwable error) {
++            value.put("status", "ERROR");
++            value.put("error_type", error.getClass().getName());
++            value.put("error", String.valueOf(error));
++        }
++        row.put("property_" + property, value);
++    }
++
++    private interface ReadOnlyCall { Object invoke() throws Throwable; }
++
++    private static void captureAndAdd(List<Map<String, Object>> rows, String receiver,
++                                      Object receiverObject, String method, String returnType,
++                                      String[] argumentTypes, Object[] arguments,
++                                      ReadOnlyCall call) {
++        rows.add(captureRead(receiver, receiverObject, method, returnType,
++                             argumentTypes, arguments, call));
++    }
++
++    private static Map<String, Object> captureScalarRead(String receiver, Object receiverObject,
++                                                         String method, String returnType,
++                                                         String[] argumentTypes, Object[] arguments,
++                                                         ReadOnlyCall call) {
++        return captureRead(receiver, receiverObject, method, returnType,
++                          argumentTypes, arguments, call);
++    }
++
++    private static Map<String, Object> captureRead(String receiver, Object receiverObject,
++                                                   String method, String returnType,
++                                                   String[] argumentTypes, Object[] arguments,
++                                                   ReadOnlyCall call) {
++        Map<String, Object> row = new LinkedHashMap<>();
++        row.put("receiver", receiver);
++        row.put("receiver_type", receiverObject == null ? "null" : receiverObject.getClass().getName());
++        row.put("method", method);
++        row.put("declared_return_type", returnType);
++        row.put("argument_types", Arrays.asList(argumentTypes));
++        row.put("arguments", rawValue(arguments));
++        try {
++            Object value = call.invoke();
++            row.put("status", "CAPTURED");
++            row.put("actual_return_type", value == null ? "null" : value.getClass().getName());
++            row.put("return_value", rawValue(value));
++        } catch (Throwable error) {
++            row.put("status", "ERROR");
++            row.put("error_type", error.getClass().getName());
++            row.put("error", String.valueOf(error));
++        }
++        return row;
++    }
++
++    private static Object rawValue(Object value) {
++        if (value == null) return null;
++        Class<?> type = value.getClass();
++        if (!type.isArray()) {
++            if (value instanceof String || value instanceof Number || value instanceof Boolean) return value;
++            return String.valueOf(value);
++        }
++        int length = Array.getLength(value);
++        List<Object> result = new ArrayList<>(length);
++        for (int index = 0; index < length; index++) result.add(rawValue(Array.get(value, index)));
++        return result;
++    }
++
+     private static void collectSolverFeature(SolverFeature feature, String path,
+                                              List<Map<String, Object>> tree,
+                                              List<Map<String, Object>> bindings) {
+         Map<String, Object> row = new LinkedHashMap<>();
+         row.put("path", path);
+-        row.put("tree_order", tree.size());
+         String type = feature.getType();
+         row.put("feature_type", type);
+         tree.add(row);
+         if ("StudyStep".equals(type)) {
+             Map<String, Object> binding = new LinkedHashMap<>();
+             binding.put("path", path);
+-            binding.put("tree_order", row.get("tree_order"));
+             binding.put("feature_type", type);
+             for (String property : new String[]{"study", "studystep"}) {
+                 if (feature.hasProperty(property)) {
+@@ -333,106 +1102,10 @@
+             }
+             bindings.add(binding);
+         }
+-        if ("StoreSolution".equals(type) && feature.hasProperty("sol")) {
+-            try {
+-                row.put("stored_solution_reference", feature.getString("sol"));
+-                row.put("stored_solution_reference_getter", "StoreSolution.getString('sol')");
+-            } catch (Throwable error) {
+-                row.put("stored_solution_reference_read_error", error.toString());
+-            }
+-        }
+         for (String childTag : feature.feature().tags()) {
+             collectSolverFeature(feature.feature(childTag), path + "/" + childTag,
+                     tree, bindings);
+         }
+-    }
+-
+-    private static void captureSolverSequenceMetadata(SolverSequence sequence,
+-                                                       Map<String, Object> row) {
+-        try { row.put("solution_type", sequence.getType()); }
+-        catch (Throwable error) { row.put("solution_type_read_error", error.toString()); }
+-        try { row.put("sequence_type", sequence.getSequenceType()); }
+-        catch (Throwable error) { row.put("sequence_type_read_error", error.toString()); }
+-        try { row.put("study_tag", sequence.study()); }
+-        catch (Throwable error) { row.put("study_tag_read_error", error.toString()); }
+-        try { row.put("attached", sequence.isAttached()); }
+-        catch (Throwable error) { row.put("attached_read_error", error.toString()); }
+-        int[] size = null;
+-        try {
+-            size = sequence.getSize();
+-            row.put("get_size", safeIntList(size));
+-            row.put("get_size_semantics", "COMSOL 6.4: [degrees_of_freedom, solution_number_count]");
+-        } catch (Throwable error) {
+-            row.put("get_size_read_error", error.toString());
+-        }
+-        String[] parameterNames = null;
+-        try {
+-            parameterNames = sequence.getPNames();
+-            row.put("pnames", safeStringList(parameterNames));
+-        } catch (Throwable error) {
+-            row.put("pnames_read_error", error.toString());
+-        }
+-        String sequenceType = null;
+-        try { sequenceType = sequence.getSequenceType(); }
+-        catch (Throwable ignored) { /* the first failure is already preserved above */ }
+-        String solutionType = null;
+-        try { solutionType = sequence.getType(); }
+-        catch (Throwable ignored) { /* the first failure is already preserved above */ }
+-        if (!"SolverSequence".equals(sequenceType) && !"Stored".equals(sequenceType)) {
+-            row.put("parameter_values_status", "NOT_APPLICABLE_BY_DOCUMENTED_SEQUENCE_TYPE");
+-            return;
+-        }
+-        if (size == null || size.length != 2 || size[1] < 1 || size[1] > 4096) {
+-            row.put("parameter_values_status", "UNVERIFIED_SIZE_SHAPE_OR_COUNT");
+-            return;
+-        }
+-        if (parameterNames == null || parameterNames.length == 0) {
+-            row.put("parameter_values_status", "UNVERIFIED_PARAMETER_NAMES_UNAVAILABLE");
+-            return;
+-        }
+-        List<Map<String, Object>> parameterValues = new ArrayList<>();
+-        SolutionInfo solutionInfo = null;
+-        try { solutionInfo = sequence.getSolutioninfo(); }
+-        catch (Throwable error) { row.put("solution_info_read_error", error.toString()); }
+-        for (int solnum = 1; solnum <= size[1]; solnum++) {
+-            Map<String, Object> valueRow = new LinkedHashMap<>();
+-            valueRow.put("solnum", solnum);
+-            try {
+-                double[] real = sequence.getPVals(solnum);
+-                valueRow.put("real", safeDoubleList(real));
+-            } catch (Throwable error) {
+-                valueRow.put("real_read_error", error.toString());
+-            }
+-            try {
+-                double[] imaginary = sequence.getPValsImag(solnum);
+-                valueRow.put("imaginary", safeDoubleList(imaginary));
+-            } catch (Throwable error) {
+-                valueRow.put("imaginary_read_error", error.toString());
+-            }
+-            List<Map<String, Object>> units = new ArrayList<>();
+-            for (String name : parameterNames) {
+-                Map<String, Object> unitRow = new LinkedHashMap<>();
+-                unitRow.put("name", name);
+-                if (solutionInfo == null) {
+-                    unitRow.put("status", "UNAVAILABLE_NO_SOLUTION_INFO");
+-                } else {
+-                    try {
+-                        unitRow.put("value", solutionInfo.getUnit(name));
+-                        unitRow.put("status", "OBSERVED");
+-                    } catch (Throwable error) {
+-                        unitRow.put("read_error", error.toString());
+-                        unitRow.put("status", "UNVERIFIED");
+-                    }
+-                }
+-                units.add(unitRow);
+-            }
+-            valueRow.put("parameter_units", units);
+-            parameterValues.add(valueRow);
+-        }
+-        row.put("parameter_values_by_solnum", parameterValues);
+-        row.put("parameter_values_status", "RAW_TYPED_COMPLEX_VALUES_CAPTURED_NOT_INTERPRETED");
+-        row.put("parameter_values_receiver", "model.sol(" + sequence.tag() + ")");
+-        row.put("parameter_axis_interpretation", "No outer/inner tuple mapping, unit conversion, or physical role inferred");
+     }
+ 
+     private static Map<String, Object> rawFields(Model model, Map<String, Object> args) {
+@@ -571,18 +1244,93 @@
+     private static void material(Model model, String tag, String selection, String eps) {
+         model.material().create(tag, "Common", "comp1");
+         model.material(tag).selection().named(selection);
+-        String[][] epsilon = {{eps, "0", "0"}, {"0", eps, "0"}, {"0", "0", eps}};
+-        String[][] mu = {{"1", "0", "0"}, {"0", "1", "0"}, {"0", "0", "1"}};
++        // COMSOL 6.4 accepts nine entries for a full tensor. These requested
++        // diagonal tensors are isotropic, so COMSOL may canonicalize them to
++        // a one-entry isotropic value on readback. The consumer records the
++        // actual property size and reconstructs only documented shapes; no
++        // nonsymmetric full-tensor ordering is claimed by this fixture.
++        String[] epsilon = {eps, "0", "0", "0", eps, "0", "0", "0", eps};
++        String[] mu = {"1", "0", "0", "0", "1", "0", "0", "0", "1"};
+         model.material(tag).propertyGroup("def").set("relpermittivity", epsilon);
+         model.material(tag).propertyGroup("def").set("relpermeability", mu);
++        model.material(tag).propertyGroup("def").set("electricconductivity", new String[] {"0[S/m]"});
+     }
+ 
+     private static Map<String, Object> materialReadback(Model model, String tag, String selection, String expectedEps) {
+-        List<List<String>> epsilon = stringMatrix(model.material(tag).propertyGroup("def").getStringMatrix("relpermittivity"));
+-        List<List<String>> mu = stringMatrix(model.material(tag).propertyGroup("def").getStringMatrix("relpermeability"));
++        MaterialModel group = model.material(tag).propertyGroup("def");
+         return Map.of("tag", tag, "selection", selection, "expected_diagonal_relative_permittivity", expectedEps,
+-                      "relative_permittivity", epsilon, "relative_permeability", mu,
+-                      "electric_lossless_assumption", "zero_imaginary_relative_permittivity_requested");
++                      "relative_permittivity", materialPropertyReadback(group, "relpermittivity"),
++                      "relative_permeability", materialPropertyReadback(group, "relpermeability"),
++                      "electric_conductivity", materialPropertyReadback(group, "electricconductivity"),
++                      "electric_lossless_assumption", "real_relative_permittivity_with_electric_conductivity_set_to_zero_S_per_m");
++    }
++
++    private static Map<String, Object> materialPropertyReadback(MaterialModel group, String property) {
++        Map<String, Object> result = new LinkedHashMap<>();
++        String valueType = group.getValueType(property);
++        result.put("value_type", valueType);
++        result.put("size_getter", "MaterialModel.size");
++        try {
++            int[] storedSize = group.size(property);
++            result.put("stored_size", storedSize == null ? null : integerList(storedSize));
++            result.put("stored_size_status", storedSize == null ? "UNVERIFIED_NULL_SIZE" : "CAPTURED");
++        } catch (Throwable error) {
++            result.put("stored_size", null);
++            result.put("stored_size_status", "UNVERIFIED_SIZE_ERROR");
++            result.put("stored_size_error", error.toString());
++        }
++        if ("String".equals(valueType)) {
++            String value = group.getString(property);
++            result.put("getter", "MaterialModel.getString");
++            result.put("raw_value", value);
++            result.put("raw_shape", List.of());
++            result.put("readback_status", value == null ? "UNVERIFIED_NULL_VALUE" : "CAPTURED");
++            return result;
++        }
++        if ("StringArray".equals(valueType)) {
++            String[] values = group.getStringArray(property);
++            result.put("getter", "MaterialModel.getStringArray");
++            result.put("raw_value", values == null ? null : safeStringList(values));
++            result.put("raw_shape", values == null ? null : List.of(values.length));
++            result.put("readback_status", values == null ? "UNVERIFIED_NULL_VALUE" : "CAPTURED");
++            return result;
++        }
++        if ("StringMatrix".equals(valueType)) {
++            String[][] values = group.getStringMatrix(property);
++            result.put("getter", "MaterialModel.getStringMatrix");
++            result.put("raw_value", values == null ? null : stringMatrix(values));
++            result.put("raw_shape", stringMatrixShape(values));
++            result.put("readback_status", values == null ? "UNVERIFIED_NULL_VALUE" : "CAPTURED");
++            return result;
++        }
++        result.put("getter", "UNAVAILABLE_UNSUPPORTED_VALUE_TYPE");
++        result.put("raw_value", null);
++        result.put("raw_shape", null);
++        result.put("readback_status", "UNVERIFIED_UNSUPPORTED_VALUE_TYPE");
++        return result;
++    }
++
++    private static List<Integer> stringMatrixShape(String[][] matrix) {
++        if (matrix == null) return null;
++        List<Integer> shape = new ArrayList<>();
++        shape.add(matrix.length);
++        int columns = matrix.length == 0 || matrix[0] == null ? -1 : matrix[0].length;
++        boolean rectangular = columns >= 0;
++        for (String[] row : matrix) {
++            if (row == null || row.length != columns) rectangular = false;
++        }
++        if (rectangular) {
++            shape.add(columns);
++        } else {
++            for (String[] row : matrix) shape.add(row == null ? -1 : row.length);
++        }
++        return shape;
++    }
++
++    private static List<Integer> integerList(int[] values) {
++        List<Integer> result = new ArrayList<>();
++        for (int value : values) result.add(value);
++        return result;
+     }
+ 
+     private static void configurePort(PhysicsFeature port, String number, boolean excited, boolean interior) {
+@@ -603,7 +1351,11 @@
+         bma.set("PortName", portNumber);
+         bma.set("modeFreq", "f0");
+         bma.set("neigs", 1);
+-        bma.set("eigwhich", "effective_mode_index");
++        // COMSOL 6.4 documents lm|lr|sr|li|si with lm as the shift-search default.
++        // Its ARPACK notes relate eigenvalues closest to shift to the largest
++        // eigenvalues of (A - shift*B)^-1 B. This selects a search method only;
++        // it does not establish the TE mode result or replace analytic acceptance.
++        bma.set("eigwhich", "lm");
+         bma.set("shiftactive", "on");
+         bma.set("shift", "1.54");
+     }
+@@ -693,10 +1445,4 @@
+         if (values != null) for (int value : values) result.add(value);
+         return result;
+     }
+-
+-    private static List<Double> safeDoubleList(double[] values) {
+-        List<Double> result = new ArrayList<>();
+-        if (values != null) for (double value : values) result.add(value);
+-        return result;
+-    }
+ }

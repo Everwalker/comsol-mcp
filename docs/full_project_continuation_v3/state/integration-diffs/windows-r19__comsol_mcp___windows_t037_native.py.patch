@@ -1,0 +1,276 @@
+--- root/comsol_mcp/_windows_t037_native.py
++++ windows-r19/comsol_mcp/_windows_t037_native.py
+@@ -518,7 +518,8 @@
+             observed_host = current_host_fingerprint
+         else:
+             from ._windows_t037 import windows_host_fingerprint
+-            observed_host = windows_host_fingerprint()
++            from ._windows_owned_resources import registry_for
++            observed_host = windows_host_fingerprint(resource_registry=registry_for(self.api))
+             if observed_host != current_host_fingerprint:
+                 _fail("T037_NATIVE_HOST_MISMATCH", "caller host fingerprint differs from the native host identity")
+         if observed_host != profile.host_fingerprint_sha256:
+@@ -908,6 +909,34 @@
+         self._bind_security()
+         self._validate_abi()
+ 
++    def _owned(self, handle, closer, *, mode, label, keepalive=(), domain="policy"):
++        from ._windows_owned_resources import registry_for
++        return registry_for(self).acquire(self, handle, closer, mode=mode,
++                                          label=label, keepalive=keepalive, domain=domain)
++
++    def _owned_memory(self, ptr, *, keepalive=()):
++        from ._windows_owned_resources import registry_for
++        entry = registry_for(self).find(self, ptr, domain="wfp_memory")
++        if entry is not None:
++            return entry
++        function = self._fwpu.FwpmFreeMemory0
++        def original_free(handle):
++            local = C.c_void_p(handle.value)
++            return function(C.byref(local))
++        return self._owned(ptr, original_free, mode="VOID", label="wfp_memory",
++                           domain="wfp_memory", keepalive=(function,*keepalive))
++
++    def _owned_engine(self, engine):
++        function = self._fwpu.FwpmEngineClose0
++        def original_close(handle):
++            from ._windows_owned_resources import registry_for
++            if any(entry.label.startswith("wfp_enum:") and engine in entry.keepalive
++                   for entry in registry_for(self).unresolved()):
++                _fail("T037_NATIVE_WFP_HANDLE_RELEASE_UNKNOWN", "enum owner still requires original WFP engine")
++            return function(handle)
++        return self._owned(engine, original_close, mode="DWORD0", label="wfp_engine",
++                           domain="wfp_engine", keepalive=(function,))
++
+     def _bind_scm(self) -> None:
+         a = self._advapi
+         a.OpenSCManagerW.argtypes = [LPCWSTR, LPCWSTR, DWORD]
+@@ -954,31 +983,36 @@
+         count = DWORD(0)
+         if not wts.WTSEnumerateSessionsW(None, 0, 1, C.byref(rows), C.byref(count)):
+             self._winerr("WTSEnumerateSessionsW")
++        rows_owner = self._owned(C.cast(rows,C.c_void_p), wts.WTSFreeMemory, mode="VOID", label="wts_rows", domain="wts_rows", keepalive=(rows,wts,kernel)) if rows else None
+         if count.value > 1024 or (count.value and not rows):
+-            if rows: wts.WTSFreeMemory(rows)
++            if rows_owner: rows_owner.release_owned(rows_owner.registry.owner)
+             _fail("T037_NATIVE_WTS_ABI_INVALID", "WTSEnumerateSessionsW returned an invalid count/pointer")
+         try:
+             active = [int(rows[index].SessionId) for index in range(count.value)
+                       if int(rows[index].State) == 0]  # WTSActive
+         finally:
+-            if rows: wts.WTSFreeMemory(rows)
++            if rows_owner: rows_owner.release_owned(rows_owner.registry.owner)
+         # Reuse the exact TOKEN_USER decoder used by the existing read-only
+         # observer, but close the WTS-owned primary token with CloseHandle.
+         from ._windows_t037 import _Win32ReadOnlyApi
+         token_reader = _Win32ReadOnlyApi()
++        from ._windows_owned_resources import registry_for, attach_registry
++        if not hasattr(self,"_token_readers"):self._token_readers=[]
++        self._token_readers.append(token_reader)
++        attach_registry(token_reader,registry_for(self))
+         output: list[str] = []
+         for session_id in active:
+             token = HANDLE()
+             if not wts.WTSQueryUserToken(session_id, C.byref(token)):
+                 self._winerr("WTSQueryUserToken(active session)")
++            token_owner = self._owned(token,kernel.CloseHandle,mode="BOOL",label="wts_token",domain="wts_token")
+             try:
+                 row = token_reader.read_token(token)
+                 if row.get("state") != "OBSERVED" or not row.get("user_sid"):
+                     _fail("T037_NATIVE_WTS_TOKEN_UNVERIFIED", "active WTS token lacks an observed user SID")
+                 output.append(str(row["user_sid"]))
+             finally:
+-                if token and not kernel.CloseHandle(token):
+-                    self._winerr("CloseHandle(WTS token)")
++                token_owner.release_owned(token_owner.registry.owner)
+         return tuple(output)
+ 
+     def _bind_wfp(self) -> None:
+@@ -1101,10 +1135,11 @@
+         text = LPWSTR()
+         if not self._advapi.ConvertSidToStringSidW(C.cast(sid, C.c_void_p), C.byref(text)):
+             self._winerr("ConvertSidToStringSidW")
++        text_owner=self._owned(C.cast(text,C.c_void_p),self._kernel32.LocalFree,mode="LOCALFREE",label="policy_sid",domain="localfree",keepalive=(text,sid,domain))
+         try:
+             value = text.value
+         finally:
+-            self._kernel32.LocalFree(C.cast(text, C.c_void_p))
++            text_owner.release_owned(text_owner.registry.owner)
+         if not isinstance(value, str) or not re.fullmatch(r"S-1-(?:[0-9]{1,2})-(?:[0-9]{1,10})(?:-[0-9]{1,10}){1,14}", value, re.I):
+             _fail("T037_NATIVE_SCM_IDENTITY_UNVERIFIED", "resolved service identity is not a canonical SID")
+         return value.upper()
+@@ -1131,6 +1166,10 @@
+                   cause=str(exc))
+         return descriptor_sha, "OWNER_DACL_CANONICAL_ACE_ORDER_READ_CONTROL"
+ 
++    def _service_sid_subject(self, service, context, entry):
++        from ._windows_service_sid_native import subject
++        return subject(self, service, context, entry)
++
+     def observe_service(self, service_name: str) -> dict[str, Any]:
+         class QUERY_SERVICE_CONFIGW(C.Structure):
+             _fields_ = [("dwServiceType", DWORD), ("dwStartType", DWORD),
+@@ -1147,6 +1186,8 @@
+         manager = self._advapi.OpenSCManagerW(None, None, self.SC_MANAGER_CONNECT)
+         if not manager:
+             self._winerr("OpenSCManagerW")
++        manager_owner=self._owned(manager,self._advapi.CloseServiceHandle,mode="BOOL",label="scm_manager",domain="scm")
++        service_owner=None
+         service = None
+         primary: BaseException | None = None
+         try:
+@@ -1154,6 +1195,7 @@
+                 self.SERVICE_QUERY_CONFIG | self.SERVICE_QUERY_STATUS | self.READ_CONTROL)
+             if not service:
+                 self._winerr("OpenServiceW")
++            service_owner=self._owned(service,self._advapi.CloseServiceHandle,mode="BOOL",label="scm_service",domain="scm")
+             config_buffer, config_size = self._query_buffer(
+                 lambda buf, size, needed: self._advapi.QueryServiceConfigW(service, buf, size, needed),
+                 "QueryServiceConfigW")
+@@ -1205,10 +1247,11 @@
+             raise
+         finally:
+             close_errors = []
+-            for handle, label in ((service, "service"), (manager, "SCM manager")):
+-                if handle:
++            for resource, label in ((service_owner, "service"), (manager_owner, "SCM manager")):
++                if resource:
+                     try:
+-                        closed = self._advapi.CloseServiceHandle(handle)
++                        resource.release_owned(resource.registry.owner)
++                        closed = True
+                     except BaseException as close_exc:
+                         close_errors.append({"handle": label,
+                                              "exception_type": type(close_exc).__name__})
+@@ -1234,13 +1277,15 @@
+         shell.CommandLineToArgvW.restype = C.POINTER(C.c_void_p)
+         argc = C.c_int32(0)
+         argv = shell.CommandLineToArgvW(command_line, C.byref(argc))
++        argv_owner=self._owned(C.cast(argv,C.c_void_p),self._kernel32.LocalFree,mode="LOCALFREE",label="policy_argv",domain="localfree",keepalive=(argv,)) if argv else None
+         if not argv or not 1 <= argc.value <= 4096:
++            if argv_owner:argv_owner.release_owned(argv_owner.registry.owner)
+             _fail("T037_NATIVE_SCM_ABI_INVALID", "CommandLineToArgvW returned an invalid argument vector")
+         try:
+             rows = tuple(_bounded_utf16(argv[index], "SCM command-line argument")
+                          for index in range(argc.value))
+         finally:
+-            self._kernel32.LocalFree(C.cast(argv, C.c_void_p))
++            argv_owner.release_owned(argv_owner.registry.owner)
+         if any(item is None for item in rows):
+             _fail("T037_NATIVE_SCM_ABI_INVALID", "SCM command line contains an invalid argument")
+         return tuple(str(item) for item in rows)
+@@ -1251,6 +1296,7 @@
+         status = fn(engine, C.byref(key), self.OWNER_SECURITY_INFORMATION |
+                     self.GROUP_SECURITY_INFORMATION | self.DACL_SECURITY_INFORMATION,
+                     None, None, None, None, C.byref(output))
++        if output.value:self._owned_memory(output)
+         if status != 0:
+             if output.value:
+                 self._free(output)
+@@ -1271,8 +1317,8 @@
+ 
+     def _free(self, ptr: C.c_void_p) -> None:
+         if ptr.value:
+-            local = C.c_void_p(ptr.value)
+-            self._fwpu.FwpmFreeMemory0(C.byref(local))
++            resource=self._owned_memory(ptr)
++            resource.release_owned(resource.registry.owner)
+ 
+     def _guid(self, value: GUID | None) -> str | None:
+         if value is None:
+@@ -1295,8 +1341,14 @@
+         # or provider/filter write is constructed by the read-only observer.
+         from types import SimpleNamespace
+         from ._windows_t037_wfp import CtypesWindowsWfpMutationApi
++        function=self._fwpu.FwpmGetAppIdFromFileName0
++        def actual_allocate(path, output):
++            status=function(path,output)
++            address=C.cast(output,C.POINTER(C.c_void_p)).contents.value
++            if address:self._owned_memory(C.c_void_p(address),keepalive=(output,function))
++            return status
+         reader = SimpleNamespace(
+-            _fwpu=self._fwpu, _check=self._wfpcheck,
++            _fwpu=SimpleNamespace(FwpmGetAppIdFromFileName0=actual_allocate), _check=self._wfpcheck,
+             _free=lambda address, primary=None: self._free(C.c_void_p(address)))
+         raw = CtypesWindowsWfpMutationApi._app_id_blob(reader, image_path)
+         return {"image_path": ntpath.normcase(ntpath.normpath(image_path)),
+@@ -1327,10 +1379,11 @@
+         text = LPWSTR()
+         if not self._advapi.ConvertSidToStringSidW(sid, C.byref(text)):
+             self._winerr("ConvertSidToStringSidW(WFP)")
++        text_owner=self._owned(C.cast(text,C.c_void_p),self._kernel32.LocalFree,mode="LOCALFREE",label="policy_sid",domain="localfree",keepalive=(text,))
+         try:
+             return str(text.value).upper()
+         finally:
+-            self._kernel32.LocalFree(C.cast(text, C.c_void_p))
++            text_owner.release_owned(text_owner.registry.owner)
+ 
+     def _display_data(self, value: FWPM_DISPLAY_DATA0, kind: str) -> dict[str, str | None]:
+         return {"name": _bounded_utf16(value.name, f"{kind} display name", nullable=True),
+@@ -1443,10 +1496,15 @@
+                     "ProviderContext": FWPM_PROVIDER_CONTEXT0, "Layer": FWPM_LAYER0}[kind]
+         enum_handle = HANDLE()
+         create_status = create(engine, None, C.byref(enum_handle))
++        enum_owner=None
++        if enum_handle.value:
++            enum_owner=self._owned(enum_handle,lambda handle:destroy(engine,handle),mode="DWORD0",
++                label="wfp_enum:"+kind,domain="wfp_enum:"+kind,keepalive=(engine,destroy))
+         if create_status != 0:
+             if enum_handle.value:
+                 try:
+-                    release_status = destroy(engine, enum_handle)
++                    enum_owner.release_owned(enum_owner.registry.owner)
++                    release_status = 0
+                 except BaseException as release_exc:
+                     _fail("T037_NATIVE_WFP_HANDLE_RELEASE_UNKNOWN",
+                           f"WFP {kind} enum-create failure left a handle whose release raised",
+@@ -1475,6 +1533,7 @@
+                     # this allocation's single release scope.
+                     enum_status = enum(engine, enum_handle, MAX_ENUM_PAGE,
+                                        C.byref(array), C.byref(count))
++                    if array.value:self._owned_memory(array)
+                     self._wfpcheck(enum_status, f"{kind}Enum0")
+                     budget.check_time()
+                     if count.value > MAX_ENUM_PAGE or (count.value and not array.value):
+@@ -1531,10 +1590,12 @@
+             raise
+         finally:
+             try:
+-                status = destroy(engine, enum_handle)
++                enum_owner.release_owned(enum_owner.registry.owner)
++                status = 0
+             except BaseException as release_exc:
+                 _fail("T037_NATIVE_WFP_HANDLE_RELEASE_UNKNOWN",
+                       f"WFP {kind} enumeration handle release raised an exception",
++                      destroy_status=getattr(release_exc,"details",{}).get("native_release_result"),
+                       release_exception_type=type(release_exc).__name__,
+                       primary_type=type(primary).__name__ if primary is not None else None,
+                       primary_code=getattr(primary, "code", None) if primary is not None else None)
+@@ -1556,10 +1617,12 @@
+         engine = HANDLE()
+         open_status = self._fwpu.FwpmEngineOpen0(
+             None, self.RPC_C_AUTHN_WINNT, None, None, C.byref(engine))
++        engine_owner=self._owned_engine(engine) if engine.value else None
+         if open_status != 0:
+             if engine.value:
+                 try:
+-                    close_status = self._fwpu.FwpmEngineClose0(engine)
++                    engine_owner.release_owned(engine_owner.registry.owner)
++                    close_status = 0
+                 except BaseException as close_exc:
+                     _fail("T037_NATIVE_WFP_HANDLE_RELEASE_UNKNOWN",
+                           "failed WFP engine open left a handle whose close raised",
+@@ -1667,10 +1730,12 @@
+                         )
+             transaction = False
+         try:
+-            close_status = self._fwpu.FwpmEngineClose0(engine)
++            engine_owner.release_owned(engine_owner.registry.owner)
++            close_status = 0
+         except BaseException as exc:
+             _fail("T037_NATIVE_WFP_HANDLE_RELEASE_UNKNOWN",
+                   "WFP engine close raised while releasing the read-only observation handle",
++                  close_status=getattr(exc,"details",{}).get("native_release_result"),
+                   close_exception_type=type(exc).__name__,
+                   primary_type=type(primary).__name__ if primary is not None else None,
+                   primary_code=getattr(primary, "code", None) if primary is not None else None)

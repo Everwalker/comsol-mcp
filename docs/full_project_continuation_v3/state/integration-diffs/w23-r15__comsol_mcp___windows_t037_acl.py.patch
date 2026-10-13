@@ -1,0 +1,214 @@
+--- root/comsol_mcp/_windows_t037_acl.py
++++ w23-r15/comsol_mcp/_windows_t037_acl.py
+@@ -0,0 +1,211 @@
++"""Actual child-token DACL observation on retained filesystem handles.
++
++This module reads security and evaluates AccessCheck. It does not change ACLs,
++impersonate a thread, elevate privileges, or issue isolation/resume proof.
++"""
++from __future__ import annotations
++import ctypes as C
++from dataclasses import dataclass
++import hashlib,json,ntpath,os
++from ._execution_contract import ExecutionContractError
++from ._windows_t037_native import (DWORD,BOOL,HANDLE,canonical_security_descriptor,
++                                     canonical_security_descriptor_sha256)
++MAX_DESCRIPTOR=1024*1024
++MAX_PRIVILEGES=64*1024
++
++class ChildAclError(ExecutionContractError):pass
++
++def _fail(code,message,**details):
++    raise ChildAclError(code,message,safe_retry=False,stage='pre_dispatch',details=details or None)
++
++class GENERIC_MAPPING(C.Structure):
++    _fields_=[('GenericRead',DWORD),('GenericWrite',DWORD),('GenericExecute',DWORD),('GenericAll',DWORD)]
++class LUID(C.Structure):
++    _fields_=[('LowPart',DWORD),('HighPart',C.c_int32)]
++class TOKEN_STATISTICS(C.Structure):
++    _fields_=[('TokenId',LUID),('AuthenticationId',LUID),('ExpirationTime',C.c_int64),
++              ('TokenType',DWORD),('ImpersonationLevel',DWORD),('DynamicCharged',DWORD),
++              ('DynamicAvailable',DWORD),('GroupCount',DWORD),('PrivilegeCount',DWORD),('ModifiedId',LUID)]
++
++@dataclass(frozen=True)
++class ChildDaclObservation:
++    child_pid:int
++    birth_filetime_100ns:int
++    token_statistics_sha256:str
++    checks:tuple
++    state:str='DACL_OBSERVED_NOT_ISOLATION_PROOF'
++    mandatory_integrity_state:str='NOT_VERIFIED'
++    isolation_state:str='NOT_VERIFIED'
++
++    def __post_init__(self):
++        if self.state!='DACL_OBSERVED_NOT_ISOLATION_PROOF' or self.mandatory_integrity_state!='NOT_VERIFIED' or self.isolation_state!='NOT_VERIFIED':
++            raise ValueError('DACL observation cannot mint isolation proof')
++
++class NativeChildAclApi:
++    def __init__(self):
++        if os.name!='nt':_fail('CHILD_ACL_WINDOWS_REQUIRED','actual AccessCheck requires Windows')
++        from ._windows_parameter_publish import _API
++        self.files=_API();self.a=C.WinDLL('advapi32',use_last_error=True);self.k=self.files.k
++        if C.sizeof(GENERIC_MAPPING)!=16 or C.sizeof(TOKEN_STATISTICS)!=56:
++            _fail('CHILD_ACL_ABI_INVALID','AccessCheck/token-statistics ABI is unsupported')
++        self.bind(self.a,self.k)
++
++    @staticmethod
++    def bind(a,k):
++        pp=C.POINTER(C.c_void_p)
++        signatures={
++            'GetSecurityInfo':([HANDLE,DWORD,DWORD,pp,pp,pp,pp,pp],DWORD),
++            'GetSecurityDescriptorLength':([C.c_void_p],DWORD),
++            'GetSecurityDescriptorDacl':([C.c_void_p,C.POINTER(BOOL),pp,C.POINTER(BOOL)],BOOL),
++            'GetTokenInformation':([HANDLE,DWORD,C.c_void_p,DWORD,C.POINTER(DWORD)],BOOL),
++            'OpenProcessToken':([HANDLE,DWORD,C.POINTER(HANDLE)],BOOL),
++            'DuplicateTokenEx':([HANDLE,DWORD,C.c_void_p,DWORD,DWORD,C.POINTER(HANDLE)],BOOL),
++            'MapGenericMask':([C.POINTER(DWORD),C.POINTER(GENERIC_MAPPING)],None),
++            'AccessCheck':([C.c_void_p,HANDLE,DWORD,C.POINTER(GENERIC_MAPPING),C.c_void_p,
++                            C.POINTER(DWORD),C.POINTER(DWORD),C.POINTER(BOOL)],BOOL),
++        }
++        try:
++            for name,(args,result) in signatures.items():
++                fn=getattr(a,name);fn.argtypes=args;fn.restype=result
++            k.LocalFree.argtypes=[C.c_void_p];k.LocalFree.restype=C.c_void_p
++            k.GetLastError.argtypes=[];k.GetLastError.restype=DWORD
++            k.CloseHandle.argtypes=[HANDLE];k.CloseHandle.restype=BOOL
++            k.GetProcessId.argtypes=[HANDLE];k.GetProcessId.restype=DWORD
++        except Exception as exc:_fail('CHILD_ACL_ABI_INVALID','required native AccessCheck export is unavailable',cause_type=type(exc).__name__)
++
++    def _check(self,ok,label):
++        if not ok:_fail('CHILD_ACL_NATIVE_API_FAILED',label+' failed',winerror=int(self.k.GetLastError()))
++
++    def statistics(self,token):
++        data=TOKEN_STATISTICS();needed=DWORD()
++        self._check(self.a.GetTokenInformation(token,10,C.byref(data),C.sizeof(data),C.byref(needed)),'GetTokenInformation(TokenStatistics)')
++        if needed.value!=C.sizeof(data):_fail('CHILD_ACL_ABI_INVALID','token statistics returned unexpected size')
++        return bytes(C.string_at(C.byref(data),C.sizeof(data)))
++
++    def process_id(self,process):return int(self.k.GetProcessId(process))
++
++    def bound_statistics(self,process,token):
++        attached=HANDLE()
++        self._check(self.a.OpenProcessToken(process,8,C.byref(attached)),'OpenProcessToken(actual child binding)')
++        if not attached:_fail('CHILD_ACL_TOKEN_INVALID','child token binding returned no handle')
++        from ._windows_owned_resources import own
++        resource=own(self, attached, self.k.CloseHandle, mode="BOOL", label="acl_bound_token")
++        try:
++            value=self.statistics(token)
++            if value!=self.statistics(attached):_fail('CHILD_ACL_TOKEN_INVALID','supplied token is not the actual child token')
++            return value
++        finally:resource.release_owned(resource.registry.owner)
++
++    def descriptor(self,handle):
++        resource=None
++        owner=C.c_void_p();group=C.c_void_p();dacl=C.c_void_p();sd=C.c_void_p()
++        try:
++            status=self.a.GetSecurityInfo(handle,1,7,C.byref(owner),C.byref(group),C.byref(dacl),None,C.byref(sd))
++            if status:_fail('CHILD_ACL_DESCRIPTOR_UNAVAILABLE','GetSecurityInfo failed',winerror=int(status))
++            if sd:
++                from ._windows_owned_resources import own
++                resource=own(self, sd, self.k.LocalFree, mode="LOCALFREE", label="acl_security_descriptor")
++            if not sd or not owner or not group:_fail('CHILD_ACL_DESCRIPTOR_INVALID','descriptor must contain owner and group')
++            size=int(self.a.GetSecurityDescriptorLength(sd))
++            if not 20<=size<=MAX_DESCRIPTOR:_fail('CHILD_ACL_DESCRIPTOR_INVALID','descriptor size is outside bound')
++            present=BOOL();defaulted=BOOL();actual_dacl=C.c_void_p()
++            self._check(self.a.GetSecurityDescriptorDacl(sd,C.byref(present),C.byref(actual_dacl),C.byref(defaulted)),'GetSecurityDescriptorDacl')
++            if not present.value or not actual_dacl:_fail('CHILD_ACL_NULL_DACL','absent or NULL DACL cannot establish confinement')
++            raw=C.string_at(sd,size)
++            parsed=canonical_security_descriptor(raw)
++            if not parsed['dacl']['present'] or parsed['dacl']['null']:_fail('CHILD_ACL_NULL_DACL','canonical descriptor is grant-all')
++            yield sd,raw,canonical_security_descriptor_sha256(raw)
++        finally:
++            if resource is not None:resource.release_owned(resource.registry.owner)
++
++    def access(self,sd,impersonation_token,rights):
++        if not rights or any(r not in {'READ','WRITE','EXECUTE'} for r in rights):_fail('CHILD_ACL_RIGHTS_INVALID','rights are outside the admitted grammar')
++        mask=DWORD(sum({'READ':0x80000000,'WRITE':0x40000000,'EXECUTE':0x20000000}[r] for r in set(rights)))
++        mapping=GENERIC_MAPPING(0x120089,0x120116,0x1200a0,0x1f01ff)
++        self.a.MapGenericMask(C.byref(mask),C.byref(mapping))
++        if not mask.value or mask.value&0xf0000000:_fail('CHILD_ACL_ABI_INVALID','generic access mask was not mapped')
++        length=DWORD(0);granted=DWORD();allowed=BOOL()
++        ok=self.a.AccessCheck(sd,impersonation_token,mask,C.byref(mapping),None,C.byref(length),C.byref(granted),C.byref(allowed))
++        if ok or self.k.GetLastError()!=122 or not 8<=length.value<=MAX_PRIVILEGES:
++            _fail('CHILD_ACL_PRIVILEGES_UNAVAILABLE','AccessCheck privilege-size probe did not return a bounded buffer')
++        buffer=C.create_string_buffer(length.value);capacity=length.value
++        self._check(self.a.AccessCheck(sd,impersonation_token,mask,C.byref(mapping),buffer,C.byref(length),C.byref(granted),C.byref(allowed)),'AccessCheck(actual child token)')
++        if not 8<=length.value<=capacity:_fail('CHILD_ACL_ABI_INVALID','AccessCheck wrote inconsistent privilege length')
++        used=int.from_bytes(buffer.raw[:4],'little')
++        if used or not allowed.value or granted.value&mask.value!=mask.value:
++            _fail('CHILD_ACL_RIGHTS_REFUSED','DACL does not grant the exact child rights without privileged bypass',privileges_used=used,desired_mask=mask.value,granted_mask=granted.value)
++        return mask.value,granted.value
++
++    def duplicate(self,token):
++        result=HANDLE()
++        self._check(self.a.DuplicateTokenEx(token,8,None,2,2,C.byref(result)),'DuplicateTokenEx(impersonation)')
++        if not result:_fail('CHILD_ACL_TOKEN_INVALID','token duplication returned no handle')
++        from ._windows_owned_resources import own
++        own(self, result, self.k.CloseHandle, mode="BOOL", label="acl_impersonation")
++        return result
++
++    def close_token(self,token):
++        from ._windows_owned_resources import registry_for
++        registry=registry_for(self);entry=registry.find(self,token)
++        if entry is not None:return entry.release_owned(registry.owner)
++        self._check(self.k.CloseHandle(token),'CloseHandle(impersonation token)')
++
++
++def check_suspended_child_dacl(profile,process_handle,token_handle,child_pid,launch_api,*,api=None):
++    from contextlib import contextmanager
++    from ._windows_t037 import WindowsT037ProfileV2
++    if type(profile) is not WindowsT037ProfileV2:_fail('CHILD_ACL_PROFILE_REQUIRED','child AccessCheck requires the trusted v2 profile')
++    selected=api if api is not None else NativeChildAclApi()
++    from ._windows_owned_resources import registry_for, attach_registry, own
++    registry=registry_for(launch_api)
++    attach_registry(selected,registry)
++    attach_registry(selected.files,registry)
++    scope=registry.scope()
++    birth,exit_time=launch_api.process_times(process_handle)
++    if type(child_pid) is not int or child_pid<=0 or type(birth) is not int or birth<=0 or exit_time is not None:
++        _fail('CHILD_ACL_PROCESS_UNKNOWN','actual child PID/birth/exit is not a live suspended identity')
++    if selected.process_id(process_handle)!=child_pid:_fail('CHILD_ACL_PROCESS_UNKNOWN','PID does not match the retained actual process handle')
++    original=selected.bound_statistics(process_handle,token_handle)
++    before=launch_api.read_token(token_handle)
++    if (before.get('state')!='OBSERVED' or before.get('is_appcontainer') is not True
++            or str(before.get('appcontainer_sid')).casefold()!=profile.appcontainer_sid.casefold()):
++        _fail('CHILD_ACL_TOKEN_INVALID','AccessCheck requires the actual child AppContainer token')
++    child_grants=[g for g in profile.windows_policy.acl_grants if g.principal_sid.casefold()==profile.appcontainer_sid.casefold()]
++    if not child_grants:_fail('CHILD_ACL_PROFILE_REQUIRED','profile has no actual child ACL grants')
++    impersonation=selected.duplicate(token_handle)
++    closer=getattr(getattr(selected,"k",None),"CloseHandle",None)
++    impersonation_owner=own(selected,impersonation,closer if callable(closer) else selected.close_token,
++                           mode="BOOL" if callable(closer) else "CHECKED",label="acl_impersonation")
++    checks=[]
++    try:
++        for grant in child_grants:
++            attributes=int(selected.files.k.GetFileAttributesW(grant.path))
++            if attributes==0xffffffff or attributes&0x400:_fail('CHILD_ACL_PATH_INVALID','ACL path is missing or reparse')
++            directory=bool(attributes&0x10)
++            chain=selected.files.open_security_path(grant.path,directory=directory)
++            file_closer=selected.files._resource_closer() if hasattr(selected.files,"_resource_closer") else selected.files.close
++            chain_owners=[own(selected.files,h,file_closer,label="acl_path_component") for h in chain]
++            try:
++                identities=[selected.files.info(h,directory=True if index<len(chain)-1 else directory)[0] for index,h in enumerate(chain)]
++                descriptor=contextmanager(selected.descriptor)
++                with descriptor(chain[-1]) as (sd,raw,digest):
++                    if digest!=grant.security_descriptor_sha256:_fail('CHILD_ACL_DESCRIPTOR_CHANGED','descriptor differs from the exact approved hash')
++                    desired,granted=selected.access(sd,impersonation,grant.rights)
++                with descriptor(chain[-1]) as (_,after_raw,after_digest):
++                    if after_raw!=raw or after_digest!=digest:_fail('CHILD_ACL_DESCRIPTOR_CHANGED','descriptor changed during AccessCheck')
++                final=[selected.files.info(h,directory=True if index<len(chain)-1 else directory)[0] for index,h in enumerate(chain)]
++                if final!=identities:_fail('CHILD_ACL_PATH_CHANGED','pinned path chain identity changed')
++                checks.append((grant.path,tuple(identities),digest,desired,granted))
++            finally:
++                failures=[]
++                for resource in reversed(chain_owners):
++                    try:resource.release_owned(registry.owner)
++                    except BaseException as error:failures.append(error)
++                if failures:raise failures[0]
++        if (selected.bound_statistics(process_handle,token_handle)!=original or launch_api.read_token(token_handle)!=before
++                or launch_api.process_times(process_handle)!=(birth,exit_time)):
++            _fail('CHILD_ACL_PROVENANCE_CHANGED','actual child/token provenance changed during DACL check')
++        return ChildDaclObservation(child_pid,birth,hashlib.sha256(original).hexdigest(),tuple(checks))
++    finally:
++        failures=registry.drain(scope)
++        if failures:raise failures[0][1]

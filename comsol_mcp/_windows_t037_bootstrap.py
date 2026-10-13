@@ -146,7 +146,9 @@ def parse_bootstrap(raw: bytes, profile) -> BootstrapRequest:
         r = value['receipt']
         if not isinstance(r, dict) or set(r) != {'plan_sha256', 'host_id', 'platform', 'actions', 'receipt_sha256'}:
             _fail('SCM_BOOTSTRAP_RECEIPT_INVALID', 'RESTORE requires the exact receipt envelope')
-        if not isinstance(r['actions'], list) or not 1 <= len(r['actions']) <= 3:
+        from ._windows_filter_group import is_group
+        group_restore = is_group(plan.as_dict()['change_manifest'])
+        if not isinstance(r['actions'], list) or not (6 <= len(r['actions']) <= 4098 if group_restore else 1 <= len(r['actions']) <= 3):
             _fail('SCM_BOOTSTRAP_RECEIPT_INVALID', 'RESTORE receipt actions are outside the supported bound')
         receipt = resources.AppliedHostChangeReceipt(r['plan_sha256'], r['host_id'], r['platform'],
                                                      tuple(r['actions']), r['receipt_sha256'])

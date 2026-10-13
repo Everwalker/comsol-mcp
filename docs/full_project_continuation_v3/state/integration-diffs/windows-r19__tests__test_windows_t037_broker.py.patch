@@ -1,0 +1,45 @@
+--- root/tests/test_windows_t037_broker.py
++++ windows-r19/tests/test_windows_t037_broker.py
+@@ -210,6 +210,7 @@
+             self.profile = profile
+             self.authority = daemon.project_authority
+             self.provider = daemon._scoped_host_provider
++            self.api = SimpleNamespace()  # actual original registry owner, no native acquisition
+ 
+         def apply(self, selected_plan, *, approval):
+             assert selected_plan is plan
+@@ -379,7 +380,7 @@
+     lock.close()
+ 
+ 
+-@pytest.mark.parametrize('bootstrap_state',['pending','failed'])
++@pytest.mark.parametrize('bootstrap_state',['pending','failed','late_failed','still_pending'])
+ def test_service_bootstrap_observation_retains_pending_handle_on_stop_and_reports_failures(
+         tmp_path,monkeypatch,bootstrap_state):
+     from comsol_mcp import _control_daemon as control
+@@ -402,9 +403,10 @@
+         def close(self):
+             assert self._scm_bootstrap_future is future
+             assert not future.cancelled()
+-            if bootstrap_state=='pending':
++            if bootstrap_state in {'pending','late_failed','still_pending'}:
+                 assert not future.done() # STOP observation has not inferred or canceled the host effect.
+-                future.set_result('software-drained-terminal')
++                if bootstrap_state=='pending':future.set_result('software-drained-terminal')
++                elif bootstrap_state=='late_failed':future.set_exception(RuntimeError('late drain failure'))
+             closed.append(True)
+     class Server:
+         server_port=12345
+@@ -424,10 +426,10 @@
+                           '--windows-scm-service-name','ComsolHost','--windows-scm-bootstrap-request','explicit-request'])
+         except BaseException as exc:errors.append(exc)
+     thread=threading.Thread(target=run);thread.start();assert entered.wait(2)
+-    if bootstrap_state=='pending':assert api.handler(SERVICE_CONTROL_STOP,0,None,None)==0
++    if bootstrap_state!='failed':assert api.handler(SERVICE_CONTROL_STOP,0,None,None)==0
+     thread.join(4);assert not thread.is_alive() and closed==[True]
+     assert not future.cancelled()
+-    if bootstrap_state=='failed':
++    if bootstrap_state!='pending':
+         assert len(errors)==1 and errors[0].code=='SCM_SERVICE_RUNTIME_FAILED'
+         assert api.status[-1].service_specific_exit_code==1
+     else:assert errors==[]

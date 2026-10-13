@@ -1,0 +1,115 @@
+--- root/comsol_mcp/_windows_host_change.py
++++ windows-r19/comsol_mcp/_windows_host_change.py
+@@ -3,7 +3,8 @@
+ The implemented WFP subset includes exact provider→sublayer→optional-filter
+ CREATE and receipt-bound reverse restore. A provider/sublayer plan uses the V2
+ per-resource OperationStore journal; the original filter-only V1 path remains
+-compatible. Public MCP routing is intentionally unchanged. Plans containing
++compatible. Explicit complete four-layer groups use sequence V3 with the same
++per-resource journal and exact reverse restore. Public MCP routing is unchanged. Plans containing
+ any other action/resource kind are refused before authorization consumption or
+ native mutation. A committed intent is never automatically replayed.
+ """
+@@ -115,6 +116,17 @@
+             or payload["host"] != {"platform": "windows", "host_id": trusted_profile.host_id}
+             or payload["profile"] != trusted_profile.as_dict()):
+         _error("HOST_CHANGE_PROFILE_SCOPE_MISMATCH", "plan does not bind the exact trusted startup profile/root/host")
++    from . import _windows_appcontainer as appcontainer
++    if appcontainer.is_leaf(payload['change_manifest']):
++        return payload, (appcontainer.normalize(payload, trusted_profile),)
++    from ._windows_service_sid import is_leaf, normalize
++    if is_leaf(payload["change_manifest"]):
++        return payload, (normalize(payload, trusted_profile),)
++    from ._windows_filter_group import is_group, normalize_actions
++    if is_group(payload["change_manifest"]):
++        actions = normalize_actions(payload, trusted_profile, plan.sha256)
++        for action in actions: action["group_plan_payload"] = payload
++        return payload, actions
+     source_actions = payload["change_manifest"]
+     if not 1 <= len(source_actions) <= 3:
+         _error("HOST_CHANGE_ACTION_SET_UNSUPPORTED",
+@@ -452,11 +464,14 @@
+                           "dependency_sha256": dependency_sha,
+                           "expected_resource_sha256": (expected_resources[action["action_id"]]
+                                                         if phase == "RESTORE" else None)})
+-    sequence = {"schema": "comsol-mcp.host-control-mutation-sequence/2",
++    from ._windows_filter_group import SCHEMA
++    group = any(item.get("desired", {}).get("schema") == SCHEMA for item in actions)
++    sequence = {"schema": "comsol-mcp.host-control-mutation-sequence/3" if group else "comsol-mcp.host-control-mutation-sequence/2",
+                 "phase": phase,
+                 "plan_sha256": admitted_plan_sha256 or actions[0]["plan_sha256"],
+                 "steps": step_rows}
+-    return {"schema": "comsol-mcp.windows-wfp-plan-baseline/2",
++    return {**({"filter_group_plan": actions[0]["group_plan_payload"]} if group else {}),
++            "schema": "comsol-mcp.windows-wfp-plan-baseline/2",
+             "snapshot_sha256": rows["snapshot_sha256"],
+             "dependency_sha256": dependency_sha,
+             "provider": dict(provider_expected), "sublayer": dict(sublayer_expected),
+@@ -476,7 +491,9 @@
+ 
+ def _receipt_payload_v2(plan: Any, profile: Any,
+                         actions: tuple[Mapping[str, Any], ...]) -> dict[str, Any]:
+-    return {"schema": "comsol-mcp.applied-host-change-receipt/2",
++    from ._windows_filter_group import is_group
++    schema = "comsol-mcp.applied-host-change-receipt/3" if is_group(plan.as_dict()["change_manifest"]) else "comsol-mcp.applied-host-change-receipt/2"
++    return {"schema": schema,
+             "plan_sha256": plan.sha256, "host_id": profile.host_id,
+             "platform": profile.platform, "actions": [dict(item) for item in actions]}
+ 
+@@ -634,6 +651,8 @@
+         baseline = _snapshot_sequence_dependencies(snapshot, self.profile, actions,
+                                                    phase="APPLY", admitted_plan_sha256=plan.sha256)
+         baseline["current_binding"] = current
++        if len(_canonical(baseline).encode("utf-8")) > resources.MAX_HOST_PLAN_BYTES:
++            _error("HOST_CHANGE_GROUP_BYTES_UNSUPPORTED", "whole baseline exceeds the original bounded plan budget")
+         return payload, actions, baseline, True
+ 
+     def _admit(self, *, phase: str, plan_sha256: str, approval: resources.HostChangeApproval,
+@@ -668,7 +687,10 @@
+                 or operation.get("job_id") != admission.get("job_id")):
+             _error("HOST_CHANGE_ADMISSION_UNKNOWN", "committed host admission did not read back its exact job/state",
+                    safe_retry=False, stage="execution")
+-        return _ExecutionAdmission(operation["operation_id"], job_id, admission["admission_id"])
++        accepted_admission = _ExecutionAdmission(operation["operation_id"], job_id, admission["admission_id"])
++        callback = getattr(self, "_on_original_host_admission", None)
++        if callback is not None: callback(self, accepted_admission)
++        return accepted_admission
+ 
+     def _start(self, admission: _ExecutionAdmission) -> None:
+         if self.store.host_control_admission_state(admission.admission_id) != "ADMITTED":
+@@ -791,6 +813,9 @@
+                 created[action["action_id"]] = dict(row)
+                 active_index = None
+ 
++            if any(action.get("desired", {}).get("schema") == "comsol-mcp.windows-wfp-filter-group-member/1" for action in actions):
++                _snapshot_sequence_dependencies(self.api.observe_snapshot(), self.profile, actions, phase="RESTORE",
++                    expected_resources={action["action_id"]: sha256(created[action["action_id"]]) for action in actions})
+             receipt_actions = tuple({
+                 "action_id": action["action_id"],
+                 "resource_kind": action["resource_kind"],
+@@ -933,6 +958,12 @@
+                             "step_index": active_index})
+ 
+     def apply(self, plan: Any, *, approval: resources.HostChangeApproval) -> resources.AppliedHostChangeReceipt:
++        from . import _windows_appcontainer as appcontainer
++        if appcontainer.is_leaf(plan.as_dict()["change_manifest"]):
++            return appcontainer.apply(self, plan, approval)
++        from ._windows_service_sid import is_leaf, apply
++        if is_leaf(plan.as_dict()["change_manifest"]):
++            return apply(self, plan, approval)
+         payload, actions, baseline, use_v2 = self._preflight_sequence(plan)
+         if use_v2:
+             return self._apply_sequence(plan, actions, baseline, approval=approval)
+@@ -997,6 +1028,12 @@
+                 not isinstance(authorization_ref, str) or not authorization_ref.strip()
+                 or len(authorization_ref) > 512 or any(ord(char) < 32 for char in authorization_ref)):
+             _error("HOST_CHANGE_APPROVAL_MISMATCH", "restore authorization reference is malformed")
++        from . import _windows_appcontainer as appcontainer
++        if appcontainer.is_leaf(plan.as_dict()['change_manifest']):
++            return appcontainer.restore(self, plan, receipt, approval=approval, authorization_ref=authorization_ref)
++        from ._windows_service_sid import is_leaf, restore
++        if is_leaf(plan.as_dict()["change_manifest"]):
++            return restore(self, plan, receipt, approval=approval, authorization_ref=authorization_ref)
+         _payload, actions = _normalize_supported_actions(plan, self.profile)
+         use_v2 = len(actions) > 1 or actions[0]["resource_kind"] != "wfp_filter"
+         if use_v2:

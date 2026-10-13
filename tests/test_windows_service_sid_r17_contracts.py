@@ -1,0 +1,125 @@
+"""Real sealed Controller/Store/Provider/SCM consumers for R16 two P2 repairs."""
+import ctypes as C
+import copy,hashlib,json
+from dataclasses import replace
+import pytest
+from comsol_mcp import _windows_service_sid as leaf,_windows_service_sid_native as scm,_w26_os_resources as resources,_windows_wfp_mutation_owner as owned
+from tests.test_windows_service_sid_controller import environment,dispatch
+from tests.test_windows_host_change import _write_provider,_grant
+
+
+@pytest.mark.parametrize('baseline,field,poison',[(0,('sid_type',),False),(1,('sid_type',),True),
+    (0,('sid_type',),0.0),(1,('sid_type',),1.0),(0,('tag',),False),(0,('service_type',),16.0),
+    (1,('status','process_id'),'finite_float_pid')])
+@pytest.mark.parametrize('target',['actual_backup','proposed_baseline','both'])
+def test_actual_entire_backup_and_proposed_baseline_type_preserved_preeffect(tmp_path,monkeypatch,baseline,field,poison,target):
+    env=environment(tmp_path,monkeypatch,baseline);p,plan,sdk,files,api,store,provider,authority,exe,daemon,wrapper=env;changed_provider=None
+    try:
+        document=json.loads(files.raw);source=plan.as_dict()['change_manifest'][0];prior=copy.deepcopy(source['proposed_baseline'])
+        def poison_subject(subject):
+            selected=subject
+            for key in field[:-1]:selected=selected[key]
+            value=float(selected[field[-1]]) if poison=='finite_float_pid' else poison
+            assert selected[field[-1]]==value and type(selected[field[-1]]) is not type(value)
+            selected[field[-1]]=value
+        if target in ('actual_backup','both'):poison_subject(document['subject'])
+        if target in ('proposed_baseline','both'):poison_subject(prior)
+        files.raw=leaf.canonical(document)
+        manifest={'action_id':source['action_id'],'resource_kind':source['resource_kind'],'resource_name':source['resource_name'],
+            'operation':'UPDATE','desired':source['desired'],'baseline_identity':prior,'baseline_sha256':source['proposed_baseline_sha256'],
+            'backup_path':source['proposed_backup_path'],'backup_sha256':hashlib.sha256(files.raw).hexdigest()}
+        approved=resources.build_host_change_plan(p,change_manifest=[manifest],operator_inputs={})
+        changed_provider=_write_provider(tmp_path/'typed-provider',p,[_grant(p,'host.change.apply','typed-once',approved.sha256,phase='APPLY')])
+        authority.authorization_verifier=changed_provider;exe.provider=changed_provider;env=list(env);env[1]=approved;env[6]=changed_provider
+        result=dispatch(env,ref='typed-once')
+        assert result['error'].code=='HOST_CHANGE_BACKUP_MISMATCH'
+        assert sdk.sid_type==baseline and store.db.execute('SELECT count(*) FROM jobs').fetchone()[0]==0
+        assert store.db.execute('SELECT count(*) FROM host_control_admissions').fetchone()[0]==0
+        # Original one-use authorization digest is recorded in the admission row.
+        assert store.db.execute('SELECT count(*) FROM host_control_admissions WHERE authorization_ref_sha256=?',
+                                (hashlib.sha256(b'typed-once').hexdigest(),)).fetchone()[0]==0
+        assert not any(isinstance(call,tuple) and call[0]=='change' for call in sdk.calls)
+        assert not owned.registry(api).unresolved()
+        daemon._reconcile_original_host_control_executor(result['request'],exe)
+    finally:
+        if changed_provider:changed_provider.close()
+        provider.close();store.close()
+
+
+def no_success_needed(sdk,name,value):
+    function=getattr(sdk.a,name);original=function.callback;calls=[]
+    def legal(*args):
+        result=original(*args)
+        success=(name=='QueryServiceStatusEx' or (args[1] is not None if name=='QueryServiceConfigW' else args[2] is not None))
+        if success:
+            assert result==-1
+            C.cast(args[-1],C.POINTER(C.c_uint32))[0]=value
+        calls.append((result,C.cast(args[-1],C.POINTER(C.c_uint32))[0],success))
+        return result
+    function.callback=legal;return calls
+
+
+@pytest.mark.parametrize('name',['QueryServiceConfigW','QueryServiceConfig2W','QueryServiceStatusEx','QueryServiceObjectSecurity'])
+@pytest.mark.parametrize('unspecified',[0,1,2**32-1])
+def test_actual_four_SCM_success_needed_unspecified_uses_owned_payload(tmp_path,monkeypatch,name,unspecified):
+    env=environment(tmp_path,monkeypatch);p,plan,sdk,files,api,store,provider,authority,exe,daemon,wrapper=env
+    calls=no_success_needed(sdk,name,unspecified)
+    try:
+        before=scm.observe(api,p.windows_isolation.service_name)
+        assert before['sid_type']==0 and not owned.registry(api).unresolved()
+        result=dispatch(env);assert 'error' not in result,repr(result.get('error'));receipt=result['result']
+        assert sdk.sid_type==3 and store.db.execute('SELECT status FROM jobs').fetchone()[0]=='SUCCEEDED'
+        assert json.loads(store.db.execute('SELECT result FROM operations').fetchone()[0])['host_change_state']=='CONFIGURED_UNVERIFIED_SYSTEM_RESTART_REQUIRED'
+        assert calls and all(value==unspecified for _result,value,success in calls if success)
+        if name!='QueryServiceStatusEx':assert any(result==0 and value>0 for result,value,success in calls if not success)
+        assert not daemon._retained_host_control_executors and not owned.registry(api).unresolved()
+        assert len([call for call in sdk.calls if isinstance(call,tuple) and call[0]=='change'])==1
+    finally:provider.close();store.close()
+
+
+@pytest.mark.parametrize('name',['QueryServiceConfigW','QueryServiceConfig2W','QueryServiceObjectSecurity'])
+@pytest.mark.parametrize('needed',[0,1,8193])
+def test_actual_invalid_first_needed_rejected_before_Controller_admission(tmp_path,monkeypatch,name,needed):
+    env=environment(tmp_path,monkeypatch);p,plan,sdk,files,api,store,provider,authority,exe,daemon,wrapper=env
+    fn=getattr(sdk.a,name);original=fn.callback
+    def invalid(*args):
+        result=original(*args);first=args[1] is None if name=='QueryServiceConfigW' else args[2] is None
+        if first:C.cast(args[-1],C.POINTER(C.c_uint32))[0]=needed
+        return result
+    fn.callback=invalid
+    try:
+        result=dispatch(env);assert result['error'].code=='HOST_CHANGE_SCM_ABI_INVALID'
+        assert sdk.sid_type==0 and store.db.execute('SELECT count(*) FROM jobs').fetchone()[0]==0
+        assert not any(isinstance(call,tuple) and call[0]=='change' for call in sdk.calls)
+        daemon._reconcile_original_host_control_executor(result['request'],exe)
+    finally:provider.close();store.close()
+
+@pytest.mark.parametrize('baseline',[0,1])
+def test_all_four_success_needed_unwritten_with_same_original_int_apply_restore(tmp_path,monkeypatch,baseline):
+    from tests import test_windows_service_sid_controller as controller
+    original=controller.environment;records=[]
+    def setup(*args,**kwargs):
+        env=original(*args,**kwargs);sdk=env[2]
+        for name in ('QueryServiceConfigW','QueryServiceConfig2W','QueryServiceStatusEx','QueryServiceObjectSecurity'):
+            records.append(no_success_needed(sdk,name,0))
+        return env
+    monkeypatch.setattr(controller,'environment',setup)
+    # Invoke the same original Controller/Store/Provider/SDK apply and restore
+    # positive body; no parallel state machine or validator substitution.
+    controller.test_actual_controller_store_intent_then_level5_positive_restore(tmp_path,monkeypatch,baseline)
+    assert all(any(success and result==-1 and needed==0 for result,needed,success in rows) for rows in records)
+
+@pytest.mark.parametrize('bad_pointer',['config','security'])
+def test_success_needed_zero_does_not_hide_actual_invalid_payload_pointer(tmp_path,monkeypatch,bad_pointer):
+    env=environment(tmp_path,monkeypatch);p,plan,sdk,files,api,store,provider,authority,exe,daemon,wrapper=env
+    if bad_pointer=='config':
+        sdk.fault='pointer';no_success_needed(sdk,'QueryServiceConfigW',0)
+    else:
+        raw=bytearray(sdk.security);raw[16:20]=(8192).to_bytes(4,'little');sdk.security=bytes(raw)
+        no_success_needed(sdk,'QueryServiceObjectSecurity',0)
+    try:
+        result=dispatch(env);assert result['error'].code=='HOST_CHANGE_SCM_ABI_INVALID'
+        assert store.db.execute('SELECT count(*) FROM host_control_admissions').fetchone()[0]==0 and sdk.sid_type==0
+        assert not any(isinstance(call,tuple) and call[0]=='change' for call in sdk.calls)
+        daemon._reconcile_original_host_control_executor(result['request'],exe)
+    finally:provider.close();store.close()

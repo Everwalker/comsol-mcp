@@ -1,0 +1,690 @@
+--- root/comsol_mcp/_managed_backend.py
++++ w24-coupled05/comsol_mcp/_managed_backend.py
+@@ -9,7 +9,6 @@
+ import json
+ import os
+ from pathlib import Path
+-import re
+ import socket
+ import tempfile
+ import time
+@@ -44,7 +43,6 @@
+     SessionEndpointIdentity,
+     SessionRuntimeConfig,
+     SessionRuntimeContext,
+-    active_session_context,
+     session_state_directory,
+ )
+ 
+@@ -254,14 +252,6 @@
+         self.docs_index = OfflineDocsIndex(self.home / "docs_index.sqlite3", allowed_roots=help_roots)
+         self.transactions = TransactionStore(self.home / "transactions.json")
+         self.service, self.worker = service, worker
+-        # Set by ControlDaemon after its project authority is initialized. This
+-        # trusted callable lets one admitted recipe pre-authorize every inner
+-        # step at the project boundary before its first model mutation.
+-        self.project_authorizer = None
+-        # ControlDaemon may install a trusted host provider object exposing
+-        # exact-scope authorization and registered destination resolution.
+-        # This stays backend-owned; request data cannot populate it.
+-        self.scoped_host_provider = None
+         self.session_worker_factory = session_worker_factory
+         self.session_peer_observer = session_peer_observer
+         self.registry = dict(registry) if registry is not None else collect_legacy_registry()
+@@ -385,82 +375,6 @@
+             return {"attribution": "UNATTRIBUTED", "project_id": None}
+         return {"attribution": "PROJECT_BOUND", "project_id": metadata["project_id"]}
+ 
+-    def _host_provider_verify_scope(self, project_id, action, scope, authorization_ref):
+-        provider = self.scoped_host_provider
+-        verifier = getattr(provider, "verify_scope", None)
+-        if not callable(verifier):
+-            raise ExecutionContractError("AUTHORIZATION_STATE_UNKNOWN", "trusted scoped host verifier is unavailable")
+-        return verifier(project_id, action, scope, authorization_ref)
+-
+-    def _verify_model_close_scope(self, project_id, action, model_ref, revision, destination_ref, authorization_ref):
+-        if action != "model.close" or destination_ref is not None:
+-            return False
+-        return self._host_provider_verify_scope(
+-            project_id, action,
+-            {"model_ref": dict(model_ref), "expected_revision": revision,
+-                "destination_ref": None}, authorization_ref,
+-        )
+-
+-    def _host_provider_resolve_destination(self, project_id, destination_ref):
+-        provider = self.scoped_host_provider
+-        resolver = getattr(provider, "resolve_destination", None)
+-        if not callable(resolver):
+-            raise ExecutionContractError("PUBLISH_UNAVAILABLE", "trusted registered destination resolver is unavailable")
+-        return resolver(project_id, destination_ref)
+-
+-    def _host_permission_check(self, project_id, permission):
+-        if permission != "host_control" or not callable(self.project_authorizer):
+-            return False
+-        self.project_authorizer(project_id, "host_control")
+-        return True
+-
+-    def _invoke_project_artifact_publish(self, arguments, execution, operation_id):
+-        """Dispatch project-scoped artifact.publish with daemon-installed capabilities."""
+-        from ._artifact_store import local_artifact_host_identity, local_engine_host_identity
+-        from ._g3_exports import artifact_publish
+-
+-        project_id = execution.get("project_id")
+-        request_id = execution.get("request_id")
+-        idempotency_key = execution.get("idempotency_key")
+-        if not isinstance(project_id, str) or not project_id:
+-            raise ExecutionContractError("PROJECT_IDENTITY_REQUIRED", "artifact.publish requires project_id")
+-        if not isinstance(request_id, str) or not request_id:
+-            raise ExecutionContractError("INVALID_REQUEST", "artifact.publish requires request_id")
+-        if not isinstance(idempotency_key, str) or not idempotency_key:
+-            raise ExecutionContractError("INVALID_REQUEST", "artifact.publish requires idempotency_key")
+-        if execution.get("model_ref") is not None or execution.get("session_id") is not None or execution.get("expected_revision") is not None:
+-            raise ExecutionContractError("INVALID_REQUEST", "artifact.publish cannot be bound to a model or session")
+-        provider = self.scoped_host_provider
+-        try:
+-            engine_host_identity = local_engine_host_identity(self.endpoint_key)
+-        except ExecutionContractError:
+-            # Project-scope publish may be available while no engine is
+-            # attached. Missing/non-loopback engine identity stays explicit
+-            # and schema-v2 resolution will fail closed if a provider exists;
+-            # a missing provider still returns the more direct unavailable
+-            # capability before touching artifacts.
+-            engine_host_identity = None
+-        context = {
+-            "project_root": str(self.project_root), "project_id": project_id,
+-            "operation_id": str(operation_id), "request_id": request_id,
+-            "idempotency_key": idempotency_key,
+-            "host_identity": local_artifact_host_identity(),
+-            "engine_host_identity": engine_host_identity,
+-            "operation_store": self.store, "backend": self,
+-            "host_permission_check": self._host_permission_check,
+-            "host_publish_destination_resolver": (
+-                self._host_provider_resolve_destination
+-                if callable(getattr(provider, "resolve_destination", None)) else None
+-            ),
+-            "host_authorization_scope_verifier": (
+-                self._host_provider_verify_scope
+-                if callable(getattr(provider, "verify_scope", None)) else None
+-            ),
+-        }
+-        data = artifact_publish(None, "", {**dict(arguments), "_managed_context": context})
+-        return {"success": True, "data": data,
+-                "execution": {"operation_id": operation_id, "request_id": request_id,
+-                              "idempotency_key": idempotency_key, "project_id": project_id}}
+     def _bind_model_project(self, model_ref, project_id):
+         key = self._model_project_key(model_ref)
+         existing = self.store.get_metadata("revisions", key)
+@@ -565,8 +479,7 @@
+                         event_callback, credentials: Mapping[str, Any] | None = None,
+                         rpc_timeout_s: float = 30.0, project_permissions=None,
+                         existing_worker=None, server_ownership: str = "shared",
+-                        owned_process: OwnedServerProcessIdentity | None = None,
+-                        worker_process_factory: Any | None = None):
++                        owned_process: OwnedServerProcessIdentity | None = None):
+         """Attach one private Worker to an already-listening endpoint.
+ 
+         This route never touches ``_server`` globals, mutates process
+@@ -621,7 +534,7 @@
+                 # Never call start() here: it may create a replacement child
+                 # after the original handle has become unreachable.
+                 worker = existing_worker
+-            elif self.session_worker_factory is not None and worker_process_factory is None:
++            elif self.session_worker_factory is not None:
+                 # This injection is reserved for deterministic tests/host
+                 # adapters. The default production path below always validates
+                 # the inspected installation, JDK and exact classpath.
+@@ -638,8 +551,7 @@
+                 observed_classpath = tuple(Path(item) for item in classpath.split(paths.classpath_separator) if item)
+                 if observed_classpath != runtime.classpath:
+                     raise ValueError("runtime classpath changed after trusted inspection")
+-                worker = PersistentJavaWorker(paths, state_dir=worker_state,
+-                                              process_factory=worker_process_factory)
++                worker = PersistentJavaWorker(paths, state_dir=worker_state)
+         except Exception as exc:
+             raise SessionConnectFailure(
+                 "RUNTIME_CONFIGURATION_REQUIRED", "local Worker runtime configuration failed validation",
+@@ -967,8 +879,6 @@
+         unit_a = NODE_ACTIONS | {"api.describe", "api.invoke", "checkpoint.branch", "api.probe", "checkpoint.diff", "model.compare"}
+         aliases = {name.replace(".", "_"): name for name in unit_a}
+         operation = aliases.get(operation, operation)
+-        if operation == "artifact.publish":
+-            return self._invoke_project_artifact_publish(arguments, execution, operation_id)
+         if operation in {"registry_call", "operation_call"} and arguments.get("operation_id") == "api.invoke":
+             from ._g2_public_api import routed_arguments
+             routed_arguments(operation, arguments)
+@@ -1013,15 +923,6 @@
+                     )
+             if inner in {"model.adopt", "model.inspect"}:
+                 nested_identity = {"project_id", "session_id", "model_ref", "expected_revision", "idempotency_key", "request_id"}
+-                present = sorted(nested_identity.intersection(supplied_args))
+-                if present:
+-                    raise ExecutionContractError(
+-                        "INVALID_REQUEST",
+-                        f"{inner} identity belongs in the outer execution envelope: {', '.join(present)}",
+-                    )
+-            if inner in {"model.dependencies", "model.package", "model.rebuild_target"}:
+-                nested_identity = {"project_id", "session_id", "model_ref", "expected_revision",
+-                                   "idempotency_key", "request_id"}
+                 present = sorted(nested_identity.intersection(supplied_args))
+                 if present:
+                     raise ExecutionContractError(
+@@ -1285,71 +1186,6 @@
+     def _g2_alias(operation: str) -> str:
+         return operation.replace(".", "_")
+ 
+-    def _invoke_g3_session_model(self, operation, arguments, execution, operation_id):
+-        """Run model list/create/load on the current Worker without selecting a hidden model."""
+-        from ._g3_ops import DISPATCH
+-        if self.service is None or self.worker is None:
+-            raise ExecutionContractError("ENGINE_UNRESPONSIVE", "a connected persistent Worker is required")
+-        if operation not in {"model.list", "model.create", "model.load"}:
+-            raise ExecutionContractError("UNSUPPORTED_OPERATION", f"not a session-scoped model operation: {operation}")
+-        if execution.get("model_ref") is not None or execution.get("expected_revision") is not None:
+-            raise ExecutionContractError("INVALID_REQUEST", f"{operation} is an unbound session operation")
+-        project_id = execution.get("project_id")
+-        session_id = execution.get("session_id")
+-        request_id = execution.get("request_id")
+-        idempotency_key = execution.get("idempotency_key")
+-        if not isinstance(project_id, str) or not project_id:
+-            raise ExecutionContractError("PROJECT_IDENTITY_REQUIRED", f"{operation} requires outer project_id")
+-        if session_id != self.service.ledger.session_id:
+-            raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "session mismatch")
+-        if not isinstance(request_id, str) or not request_id:
+-            raise ExecutionContractError("INVALID_REQUEST", f"{operation} requires outer request_id")
+-        if operation in {"model.create", "model.load"} and (not isinstance(idempotency_key, str) or not idempotency_key):
+-            raise ExecutionContractError("INVALID_REQUEST", f"{operation} requires outer idempotency_key")
+-        selected = active_session_context()
+-        if selected is not None and (selected.project_id != project_id or selected.session_id != session_id
+-                                     or selected.backend is not self or selected.worker is not self.worker
+-                                     or selected.service is not self.service):
+-            raise ExecutionContractError("WORKER_BINDING_MISMATCH", "active SessionRuntimeContext does not match this exact backend binding")
+-        from ._artifact_store import local_artifact_host_identity, local_engine_host_identity
+-        function = DISPATCH.get(operation)
+-        if function is None:
+-            raise ExecutionContractError("UNSUPPORTED_OPERATION", f"G3 operation is not executable: {operation}")
+-        body = self._g2_body(arguments, operation)
+-        context = {
+-            "project_root": str(self.project_root), "project_id": project_id,
+-            "operation_id": str(operation_id), "request_id": request_id,
+-            "idempotency_key": idempotency_key, "host_identity": local_artifact_host_identity(),
+-            "engine_host_identity": local_engine_host_identity(self.endpoint_key),
+-            "operation_store": self.store, "backend": self, "execution_service": self.service,
+-            "session_context": selected, "project_authorizer": self.project_authorizer,
+-        }
+-
+-        def callback(_args):
+-            data = function(self.worker, "", {**body, "_managed_context": context})
+-            return {"success": True, "data": data}
+-
+-        result = self.service.execute_legacy(
+-            self._g2_alias(operation), callback, body, model_ref=None,
+-            request_id=request_id, session_id=session_id,
+-        )
+-        result.setdefault("execution", {}).update({
+-            "project_id": project_id, "request_id": request_id, "operation_id": operation_id,
+-            "idempotency_key": idempotency_key,
+-        })
+-        data = result.get("data") if isinstance(result.get("data"), Mapping) else {}
+-        created_ref = data.get("model_ref")
+-        if result.get("success") is True and operation in {"model.create", "model.load"}:
+-            if not isinstance(created_ref, Mapping):
+-                raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", f"{operation} did not return its new ModelRef",
+-                                             stage="post_dispatch", details={"safe_retry": False})
+-            bound = model_ref_from_mapping(dict(created_ref))
+-            state = self.service.ledger._state_for(bound)
+-            result["execution"].update({"model_ref": bound.as_dict(), "revision": state.revision,
+-                                        "dirty": state.dirty, "model_ownership": "mcp_owned"})
+-        self.persist()
+-        return result
+-
+     @staticmethod
+     def _g2_nested_permission(effect: str) -> str:
+         permissions = {
+@@ -1361,54 +1197,6 @@
+             return permissions[str(effect).upper()]
+         except KeyError as exc:
+             raise ExecutionContractError("PERMISSION_DENIED", f"unclassified nested G2 effect: {effect!r}") from exc
+-
+-    def _code_execution_runtime_observation(self) -> dict[str, Any]:
+-        """Mint a host-side runtime observation for durable code execution.
+-
+-        This producer is deliberately separate from the Java return value:
+-        release/build comes from the existing exact model-delivery helper and
+-        Worker/server identity is compared with the live backend binding.
+-        Failure leaves a durable UNVERIFIED marker and does not rewrite the
+-        terminal outcome of the already-completed code execution.
+-        """
+-        observation: dict[str, Any] = {
+-            "schema": "comsol-worker-runtime-observation/v1",
+-            "status": "UNVERIFIED",
+-        }
+-        try:
+-            from ._g3_model_delivery import _current_version
+-            from ._runtime_installation import runtime_id_for_root
+-
+-            worker = self.worker
+-            service = self.service
+-            paths = getattr(worker, "paths", None)
+-            root = getattr(paths, "comsol_root", None)
+-            if root is None or service is None:
+-                raise ValueError("attached Worker installation or service is unavailable")
+-            version = _current_version(worker)
+-            runtime_id = runtime_id_for_root(root)
+-            identity = self.worker_identity
+-            health = worker.runtime_metadata()
+-            required = {
+-                "runtime_id": runtime_id,
+-                "worker_instance_id": health.get("instance_id") if isinstance(health, Mapping) else None,
+-                "connection_epoch": health.get("generation") if isinstance(health, Mapping) else None,
+-                "server_instance_id": service.ledger.server_instance_id,
+-                "endpoint": self.endpoint_key,
+-            }
+-            if (not isinstance(identity, Mapping) or any(identity.get(name) != value for name, value in required.items())
+-                    or not isinstance(health, Mapping) or health.get("connected") is not True
+-                    or health.get("server") != self.endpoint_key
+-                    or type(required["connection_epoch"]) is not int or required["connection_epoch"] < 1
+-                    or not all(isinstance(required[name], str) and required[name]
+-                               for name in ("runtime_id", "worker_instance_id", "server_instance_id", "endpoint"))):
+-                raise ValueError("live Worker identity differs from the backend binding")
+-            observation.update({"status": "OBSERVED", "comsol_version": version,
+-                                "runtime_identity": required})
+-        except Exception as exc:
+-            observation.update({"reason_code": getattr(exc, "code", None) or "RUNTIME_IDENTITY_UNVERIFIED",
+-                                "cause_type": type(exc).__name__})
+-        return observation
+ 
+     @staticmethod
+     def _validate_java_mode(operation: str, arguments: Mapping[str, Any]) -> None:
+@@ -1600,8 +1388,16 @@
+             raise ExecutionContractError("ISOLATION_PROOF_REQUIRED", "this G2 model mutation requires a configured owned-server isolation receipt")
+         if not self.endpoint_key:
+             raise ExecutionContractError("ISOLATION_PROOF_REQUIRED", "current COMSOL endpoint is not bound")
++        owner=getattr(self.worker,"_coupled_admission_owner",None) if self.worker is not None else None
++        if owner is not None:
++            from tools.w24_coupled_admission import require_admission_owner
++            owner=require_admission_owner(owner)
++            if owner.server.worker is not self.worker:
++                raise ExecutionContractError("ISOLATION_PROOF_REQUIRED","coupled G2 backend Worker receiver changed")
++            owner.before_effect("managed_G2_runtime_metadata",10.0)
+         runtime = self.worker.runtime_metadata() if self.worker is not None else {}
+-        return verify_owned_server(receipt, endpoint=self.endpoint_key, worker_pid=runtime.get("pid"))
++        return verify_owned_server(receipt,endpoint=self.endpoint_key,worker_pid=runtime.get("pid"),
++            **({"admission_owner":owner} if owner is not None else {}))
+ 
+     def _invoke_runtime_scoped(self, operation, arguments, execution, operation_id, event_callback=None):
+         """Route a runtime-scoped G3 operation without a model or a revision (C05).
+@@ -1866,16 +1662,6 @@
+     def _invoke_g2_model(self, operation, arguments, execution, operation_id, event_callback):
+         if self.service is None or self.worker is None:
+             raise ExecutionContractError("ENGINE_UNRESPONSIVE", "a connected persistent Worker is required")
+-        if operation in {"model.list", "model.create", "model.load"}:
+-            return self._invoke_g3_session_model(operation, arguments, execution, operation_id)
+-        if operation in {"model.tree", "model.save", "model.clone", "model.close",
+-                         "code.recipe_register", "code.recipe_run"}:
+-            if not isinstance(execution.get("model_ref"), Mapping):
+-                raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", f"{operation} requires an exact outer ModelRef")
+-            if not isinstance(execution.get("project_id"), str) or not execution.get("project_id"):
+-                raise ExecutionContractError("PROJECT_IDENTITY_REQUIRED", f"{operation} requires outer project_id")
+-            if execution.get("session_id") != self.service.ledger.session_id:
+-                raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "session mismatch")
+         if operation == "model.compare":
+             from ._g2_model_compare import invoke_compare
+             return invoke_compare(self, arguments, execution, operation_id)
+@@ -2232,39 +2018,6 @@
+                     "node.property_schema": "inspect", "node.property_get": "inspect", "node.inspect": "inspect", "node.children": "inspect", "node.find": "inspect",
+                     "code.execute_java": "trusted_code",
+                 }.get(operation, "compute" if operation.startswith("transaction.") else "inspect"))
+-        if operation == "code.execute_java" and isinstance(result, Mapping) and isinstance(result.get("data"), Mapping):
+-            execution_data = result["data"]
+-            worker_reply = execution_data.get("worker")
+-            worker_result = worker_reply.get("result") if isinstance(worker_reply, Mapping) else None
+-            before = execution_data.get("before")
+-            after = execution_data.get("after")
+-            source_sha256 = execution_data.get("source_sha256")
+-            entrypoint = execution_data.get("entrypoint")
+-            observed_success = bool(
+-                ref is not None and result.get("success") is True
+-                and isinstance(worker_reply, Mapping) and worker_reply.get("ok") is True
+-                and isinstance(worker_result, Mapping)
+-                and execution_data.get("readback") == worker_result
+-                and worker_result.get("executed") is True
+-                and worker_result.get("model_tag") == ref.model_tag
+-                and worker_result.get("source_sha256") == source_sha256
+-                and worker_result.get("entrypoint") == entrypoint
+-                and isinstance(source_sha256, str) and re.fullmatch(r"[0-9a-f]{64}", source_sha256)
+-                and isinstance(entrypoint, str) and bool(entrypoint)
+-                and isinstance(before, Mapping) and before.get("model_tag") == ref.model_tag
+-                and isinstance(before.get("fingerprint"), str) and bool(before.get("fingerprint"))
+-                and type(before.get("external_event_counter")) is int
+-                and isinstance(after, Mapping) and after.get("model_tag") == ref.model_tag
+-                and isinstance(after.get("fingerprint"), str) and bool(after.get("fingerprint"))
+-                and type(after.get("external_event_counter")) is int
+-            )
+-            if observed_success:
+-                # This flag is minted by the host only after the actual Worker
+-                # wrapper, exact source identity, ModelRef and before/after
+-                # readbacks agree.  Java source cannot set it by returning a
+-                # self-authored PASS field.
+-                execution_data["execution_success"] = True
+-                result.setdefault("execution", {})["runtime_observation"] = self._code_execution_runtime_observation()
+         if isolation is not None:
+             result.setdefault("data", {})["isolation_proof"] = isolation
+         return result
+@@ -2681,35 +2434,6 @@
+         function = DISPATCH.get(operation)
+         if function is None:
+             raise ExecutionContractError("UNSUPPORTED_OPERATION", f"G3 operation is not executable: {operation}")
+-        delivery_action = operation in {"model.dependencies", "model.package", "model.rebuild_target"}
+-        runtime_identity = None
+-        if delivery_action:
+-            # These production routes are always bound to the actual outer
+-            # project/session/ModelRef and an explicit observed model revision.
+-            missing = [name for name in ("project_id", "session_id", "model_ref", "request_id", "expected_revision")
+-                       if execution.get(name) is None]
+-            if missing:
+-                raise ExecutionContractError("MODEL_IDENTITY_MISMATCH",
+-                                             "model delivery requires outer managed identity: " + ", ".join(missing),
+-                                             stage="validation")
+-            if ref is None or not isinstance(execution.get("project_id"), str) or not execution["project_id"]:
+-                raise ExecutionContractError("PROJECT_IDENTITY_REQUIRED", "model delivery requires a bound project ModelRef",
+-                                             stage="validation")
+-            revision = execution.get("expected_revision")
+-            if isinstance(revision, bool) or not isinstance(revision, int) or revision < 0:
+-                raise ExecutionContractError("REVISION_CONFLICT", "model delivery requires a non-negative expected_revision",
+-                                             stage="validation")
+-            if operation in {"model.package", "model.rebuild_target"} and not (
+-                    isinstance(execution.get("idempotency_key"), str) and execution.get("idempotency_key")):
+-                raise ExecutionContractError("INVALID_REQUEST", f"{operation} requires outer idempotency_key",
+-                                             stage="validation")
+-            if operation == "model.rebuild_target":
+-                target_runtime_id = body.get("target_runtime_id")
+-                if not isinstance(target_runtime_id, str) or not target_runtime_id:
+-                    raise ExecutionContractError("INVALID_REQUEST", "target_runtime_id must be a nonempty exact runtime id",
+-                                                 stage="validation")
+-                from ._runtime_control import _validate_bound_runtime
+-                runtime_identity = _validate_bound_runtime(self.worker, self, target_runtime_id)
+         native_ticket_context = self._stage_native_context.get(None)
+         catalog_effect = str(EFFECTS.get(operation, "")).upper()
+         private_xmesh_ticket = False
+@@ -2738,14 +2462,7 @@
+             raise ExecutionContractError("PERMISSION_DENIED", f"unclassified G3 effect for operation {operation}")
+         isolation = (
+             self._require_g2_isolation()
+-            if ((operation in REQUIRES_ISOLATION
+-                 and effect in {"evaluate", "project_write", "compute", "state_write", "trusted_code"})
+-                # include_solution=false temporarily changes the bound Model's
+-                # documented excludeComputedDataInMph option and verifies its
+-                # restoration around saveCopy. Keep every package call inside
+-                # the owned-server isolation gate because the precheck cannot
+-                # prove whether the getter already matches before dispatch.
+-                or operation == "model.package")
++            if (operation in REQUIRES_ISOLATION and effect in {"evaluate", "project_write", "compute", "state_write", "trusted_code"})
+             else None
+         )
+         alias = ("w21_initial_variables_xmesh" if private_xmesh_ticket
+@@ -2794,138 +2511,11 @@
+             resume_preflight = self._preflight_study_resume(ref, body, execution, operation_id)
+ 
+         model_tag = ref.model_tag if ref is not None else ""
+-
+-        def close_bound_model(*, worker, model_tag, model_ref, expected_revision, discard_changes):
+-            """Remove exactly one model and prove terminal tag readback in this Worker lane."""
+-            state = self.service.ledger._state_for(ref)
+-            ticket_id = state.active_operation_id
+-            if (ref is None or model_tag != ref.model_tag or model_ref != ref.as_dict()
+-                    or state.revision != expected_revision or not isinstance(ticket_id, str) or not ticket_id):
+-                raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "close finalizer does not match the active model ticket",
+-                                             stage="validation")
+-            active_elsewhere = [item.ref.model_tag for item in self.service.ledger._models.values()
+-                                if not item.retired and item.active_operation_id is not None
+-                                and item.ref.model_tag != model_tag]
+-            if active_elsewhere:
+-                raise ExecutionContractError("ENGINE_BUSY", "another managed model has an active operation",
+-                                             stage="validation", details={"active_model_tags": sorted(active_elsewhere)})
+-            client = worker.client()
+-            before = {str(tag) for tag in client.tags()}
+-            if model_tag not in before:
+-                raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "exact model tag is absent before close dispatch",
+-                                             stage="validation")
+-            other_before = before - {model_tag}
+-            shared_probe = getattr(client, "modelsUsedByOtherClients", None)
+-            if not callable(shared_probe):
+-                raise ExecutionContractError("MODEL_SHARED_STATE_UNKNOWN",
+-                                             "Worker cannot verify whether another COMSOL client uses this model",
+-                                             stage="validation")
+-            try:
+-                shared_tags = shared_probe()
+-            except Exception as exc:
+-                raise ExecutionContractError("MODEL_SHARED_STATE_UNKNOWN",
+-                                             "cross-client model-use readback failed before close dispatch",
+-                                             stage="validation", details={"cause_type": type(exc).__name__}) from exc
+-            if (not isinstance(shared_tags, (list, tuple, set, frozenset))
+-                    or any(not isinstance(tag, str) or not tag for tag in shared_tags)):
+-                raise ExecutionContractError("MODEL_SHARED_STATE_UNKNOWN",
+-                                             "cross-client model-use readback had an invalid shape",
+-                                             stage="validation")
+-            if model_tag in shared_tags:
+-                raise ExecutionContractError("MODEL_SHARED_WITH_OTHER_CLIENT",
+-                                             "another COMSOL client is using the exact model tag",
+-                                             stage="validation", details={"model_tag": model_tag})
+-            try:
+-                client.remove(model_tag)
+-            except Exception as exc:
+-                raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "ModelUtil.remove was dispatched; close state is unknown",
+-                                             stage="post_dispatch", details={"cause_type": type(exc).__name__,
+-                                                                              "safe_retry": False}) from exc
+-            try:
+-                after = {str(tag) for tag in client.tags()}
+-            except Exception as exc:
+-                raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "model was removed but terminal tag readback failed",
+-                                             stage="post_dispatch", details={"cause_type": type(exc).__name__,
+-                                                                              "safe_retry": False}) from exc
+-            absent = model_tag not in after
+-            others_preserved = after == other_before
+-            if not absent or not others_preserved:
+-                raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "ModelUtil.remove did not prove exact single-tag removal",
+-                                             stage="post_dispatch", details={"model_tag_absent": absent,
+-                                                                              "other_tags_preserved": others_preserved,
+-                                                                              "safe_retry": False})
+-            return {"status": "CLOSED", "model_ref": ref.as_dict(), "model_tag": model_tag,
+-                    "discard_changes": discard_changes, "model_tag_absent": True,
+-                    "other_model_tags_preserved": True, "terminal_close_verified": True}
+-
+         def callback(_args: dict[str, Any]) -> dict[str, Any]:
+             from ._observation_store import observation_context, register_observation
+             def invoke_domain():
+                 domain_body = dict(body)
+                 checkpoint_info = None
+-                managed_context_action = delivery_action or operation in {
+-                    "model.tree", "model.save", "model.clone", "model.close",
+-                    "code.recipe_register", "code.recipe_run",
+-                    "export.report", "export.evidence_bundle",
+-                    "geometry.export", "geometry.repair", "material.import",
+-                    "physics.pde_manage", "mesh.import", "mesh.export",
+-                    "mesh.convergence_study",
+-                }
+-                if managed_context_action:
+-                    from ._artifact_store import local_artifact_host_identity, local_engine_host_identity
+-                    project_id = execution.get("project_id")
+-                    selected_context = active_session_context()
+-                    if (selected_context is not None
+-                            and (selected_context.project_id != project_id
+-                                 or selected_context.session_id != session
+-                                 or selected_context.backend is not self
+-                                 or selected_context.worker is not self.worker
+-                                 or selected_context.service is not self.service)):
+-                        raise ExecutionContractError("WORKER_BINDING_MISMATCH", "active SessionRuntimeContext does not match this exact model operation")
+-                    managed_context = {
+-                        "project_root": str(self.project_root),
+-                        "project_id": project_id,
+-                        "operation_id": str(operation_id),
+-                        "request_id": str(execution.get("request_id") or operation_id),
+-                        "idempotency_key": execution.get("idempotency_key"),
+-                        "model_ref": ref.as_dict(),
+-                        "source_revision": expected_rev,
+-                        "host_identity": local_artifact_host_identity(),
+-                        "engine_host_identity": local_engine_host_identity(self.endpoint_key),
+-                        "operation_store": self.store,
+-                        "_model_ref_object": ref,
+-                        "execution_service": self.service,
+-                        "_execution_service": self.service,
+-                        "backend": self,
+-                        "project_authorizer": self.project_authorizer,
+-                        "session_context": selected_context,
+-                    }
+-                    if operation == "model.close":
+-                        active_state = self.service.ledger._state_for(ref)
+-                        managed_context["close_lifecycle_ticket"] = active_state.active_operation_id
+-                        managed_context["close_bound_model"] = close_bound_model
+-                        provider = self.scoped_host_provider
+-                        managed_context["authorization_scope_verifier"] = (
+-                            self._verify_model_close_scope
+-                            if callable(getattr(provider, "verify_scope", None)) else None
+-                        )
+-                    if runtime_identity is not None:
+-                        managed_context["runtime_identity"] = runtime_identity
+-                        managed_context["target_runtime_id"] = body.get("target_runtime_id")
+-                    if operation == "mesh.convergence_study":
+-                        # These request-private capabilities are installed only
+-                        # after the outer project/model COMPUTE ticket is
+-                        # admitted. They reuse this Worker and serial lane; the
+-                        # domain adapter cannot accept a caller-supplied runner.
+-                        from ._g3_mesh_convergence_executor import build_mesh_convergence_callbacks
+-                        convergence = build_mesh_convergence_callbacks(
+-                            self, self.worker, ref, expected_rev, execution, str(operation_id))
+-                        managed_context["_mesh_convergence_preflight"] = convergence.preflight
+-                        managed_context["_mesh_convergence_case_executor"] = convergence.execute_case
+-                        managed_context["_mesh_convergence_budget_status"] = convergence.status
+-                    # Always replace a private field; callers never supply or
+-                    # inherit capabilities from an earlier request.
+-                    domain_body["_managed_context"] = managed_context
+                 if operation in {"parameter.import", "parameter.export"}:
+                     from ._artifact_store import (
+                         local_artifact_host_identity,
+@@ -2995,54 +2585,38 @@
+                 output_mode = self._stage_output_mode_context.get(None)
+                 native_context = self._stage_native_context.get(None)
+                 mesh_snapshot_mode = self._stage_mesh_snapshot_context.get(None)
+-                def dispatch_domain():
+-                    if operation == "result.evaluate" and output_mode == "strict_field_readback":
+-                        if (isinstance(native_context, Mapping)
+-                                and native_context.get("purpose") == "initial_stage_output"):
+-                            return function(
+-                                self.worker, model_tag, domain_body,
+-                                strict_field_readback=True,
+-                                _w21_initial_output_context=dict(native_context),
+-                            )
+-                        return function(self.worker, model_tag, domain_body, strict_field_readback=True)
+-                    if operation == "result.evaluate" and output_mode == "strict_metric_evidence":
+-                        return function(self.worker, model_tag, domain_body, strict_metric_evidence=True)
+-                    if (operation in {"study.inspect", "solver.inspect"}
+-                            and isinstance(native_context, Mapping)
+-                            and native_context.get("purpose") in {
+-                                "initial_stage_admission", "initial_stage_output"}):
+-                        return function(
++                if operation == "result.evaluate" and output_mode == "strict_field_readback":
++                    if (isinstance(native_context, Mapping)
++                            and native_context.get("purpose") == "initial_stage_output"):
++                        data = function(
+                             self.worker, model_tag, domain_body,
+-                            _w21_initial_stage_context=dict(native_context),
++                            strict_field_readback=True,
++                            _w21_initial_output_context=dict(native_context),
+                         )
+-                    if (operation == "dataset.solution_indices"
+-                            and isinstance(native_context, Mapping)
+-                            and native_context.get("purpose") == "initial_stage_output"):
+-                        return function(
+-                            self.worker, model_tag, domain_body,
+-                            _w21_initial_stage_context=dict(native_context),
+-                        )
+-                    if operation == "mesh.inspect" and isinstance(mesh_snapshot_mode, dict):
+-                        return function(self.worker, model_tag, domain_body,
+-                                        _strict_snapshot_mode=mesh_snapshot_mode)
+-                    return function(self.worker, model_tag, domain_body)
+-
+-                if operation in {"study.run", "mesh.convergence_study"}:
+-                    # This capture is request-private and stays inside the
+-                    # already admitted serialized callback.  The job binding
+-                    # comes only from durable host metadata; the caller cannot
+-                    # supply a job id or log path.
+-                    from ._comsol_progress_capture import ComsolProgressCapture
+-                    progress_capture = ComsolProgressCapture(
+-                        self.worker, self.store, self.project_root,
+-                        operation_id=str(operation_id), operation=operation,
+-                        execution=execution, model_ref=ref.as_dict(),
+-                        model_revision=expected_rev,
++                    else:
++                        data = function(self.worker, model_tag, domain_body, strict_field_readback=True)
++                elif operation == "result.evaluate" and output_mode == "strict_metric_evidence":
++                    data = function(self.worker, model_tag, domain_body, strict_metric_evidence=True)
++                elif (operation in {"study.inspect", "solver.inspect"}
++                      and isinstance(native_context, Mapping)
++                      and native_context.get("purpose") in {
++                          "initial_stage_admission", "initial_stage_output"}):
++                    data = function(
++                        self.worker, model_tag, domain_body,
++                        _w21_initial_stage_context=dict(native_context),
+                     )
+-                    with progress_capture:
+-                        data = dispatch_domain()
++                elif (operation == "dataset.solution_indices"
++                      and isinstance(native_context, Mapping)
++                      and native_context.get("purpose") == "initial_stage_output"):
++                    data = function(
++                        self.worker, model_tag, domain_body,
++                        _w21_initial_stage_context=dict(native_context),
++                    )
++                elif operation == "mesh.inspect" and isinstance(mesh_snapshot_mode, dict):
++                    data = function(self.worker, model_tag, domain_body,
++                                    _strict_snapshot_mode=mesh_snapshot_mode)
+                 else:
+-                    data = dispatch_domain()
++                    data = function(self.worker, model_tag, domain_body)
+                 if registered_import is not None and isinstance(data, dict):
+                     # The public identity remains the registered digest.  Do
+                     # not return the absolute Worker-visible filename from the
+@@ -3101,39 +2675,23 @@
+                     state = self.service.ledger._state_for(ref)
+                     if state.dirty or state.external_event_counter != state.observed_external_event_counter:
+                         raise ExecutionContractError("REVISION_CONFLICT", "model has external changes or is dirty; reconcile before evaluating")
+-                expected_rev = current_rev
++                    expected_rev = current_rev
+         else:
+             if supplied_rev is not None:
+                 raise ExecutionContractError("INVALID_REQUEST", "unbound operation cannot carry expected_revision")
+             expected_rev = None
+-        if delivery_action and (expected_rev is None or expected_rev != current_rev):
+-            raise ExecutionContractError("REVISION_CONFLICT", "model delivery expected_revision must exactly match the bound model",
+-                                         stage="validation")
+         result = self.service.execute_legacy(alias, callback, body, model_ref=ref,
+                 expected_revision=expected_rev,
+-                request_id=execution.get("request_id") or str(operation_id), session_id=session, effect=effect,
+-                terminal_model_close=(operation == "model.close"))
+-        if result.get("success") and ref is not None and operation != "model.close":
++                request_id=execution.get("request_id"), session_id=session, effect=effect)
++        if result.get("success") and ref is not None:
+             # Bind observations minted inside this serial operation to its
+             # final revision, after the service has accounted for mutations.
+             final_revision = self.service.ledger._state_for(ref).revision
+             for record in self.store.list_metadata("artifacts"):
+-                if (record.get("kind") == "w17_observation"
+-                        and record.get("producer") == operation_id
+-                        # A single outer mesh-convergence operation can mint
+-                        # observations on several durable owned branches. Only
+-                        # observations on the outer source model inherit its
+-                        # terminal revision; branch observations keep the exact
+-                        # revision used by their native metric readback.
+-                        and record.get("model_ref") == ref.as_dict()):
++                if record.get("kind") == "w17_observation" and record.get("producer") == operation_id:
+                     record["sample_revision"] = record["revision"]
+                     record["revision"] = final_revision
+                     self.store.persist_artifact(record["observation_id"], record)
+-        if delivery_action and ref is not None:
+-            data = result.get("data") if isinstance(result, Mapping) else None
+-            if isinstance(data, dict):
+-                data.setdefault("source_revision", expected_rev)
+-                data["final_revision"] = self.service.ledger._state_for(ref).revision
+         if isolation is not None:
+             result.setdefault("data", {})["isolation_proof"] = isolation
+         return result

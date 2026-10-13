@@ -1,3 +1,16 @@
+# V3 当前续跑 — 2026-10-14
+
+Goal ACTIVE / INCOMPLETE / NOT_ACCEPTED。权威续跑指针：`docs/full_project_continuation_v3/state/RESUME.json`。以下原检查点及暂停文字保留为历史。
+
+- 由固定 0644ea970688e02beda4be7069f67144b4bcf59e / tree 2b477e5d7c11dfb59b84994a54da114c7584e0e1 恢复 19,877 文件并校验；原 26/272/60/6 合同、历史 UNKNOWN/safe_retry=false 与两 Mac COMSOL6.3 USER_REQUESTED_SKIP 未改。
+- Windows R19 与 W23 r15 逐文件接入，保留较新的 owner、Job、SCM、WFP、Desktop 与交付安全路径；W24 专属改动尚待选择合并，完整 0.1.10 候选尚未形成。
+- runtime observation 在真实 attach 路径绑定原 Worker/service/安装/build/UUID/epoch/server/endpoint，分离安装身份和连接标签。相关负控纳入冻结 r7。
+- 冻结软件 r7 指纹 `21257f60ac18d47081c61cd0492b5c3b612178ed93c57d9cbdc88ed14780e156`：1,490 项整合 + 3 项注册回归 PASS，0 FAIL/ERROR/SKIP，前后指纹一致。证据 `docs/full_project_continuation_v3/state/SOFTWARE_INTEGRATION_R7.json`。先前失败和日志保留。
+- 19 class 经本机 COMSOL6.4.0.293 SDK / Java11 实际编译与 javap；此为编译证据。当前新原生链、W23/W24 数值与科学、其他目标机器、W25 实机、W26 完整安装/升级/回退/恢复和统一独立 Reviewer 仍待完成，不用软件 PASS 代替。
+- 下一步：同步本阶段、完成新建 normal MCP 原生链、W24 选择合并，持续执行原 W01–W26，最后冻结最终候选交独立 Reviewer，按实质问题循环整改。
+
+---
+
 # 当前源码接续检查点 — 2026-10-13
 
 **本轮源码收尾已完成；最后执行 GitHub main 普通同步，核对远端后按用户要求暂停。全项目 INCOMPLETE / NOT_ACCEPTED，不能标完成。** 用户原话：“这轮完成后，将进度同步到github main，包括所有异地开发需要的源码，完成后暂停”。再次收到明确续跑指令才开展下一轮。

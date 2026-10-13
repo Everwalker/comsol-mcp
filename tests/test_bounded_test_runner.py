@@ -11,6 +11,31 @@ import tools.run_bounded_tests as runner
 BASELINE = Path(runner.__file__).with_name("test_efficiency_baseline.json")
 
 
+def test_native_apfs_scratch_requires_observed_volume_and_retains_existing_files(tmp_path, monkeypatch):
+    output = tmp_path / "output"; output.mkdir()
+    scratch = tmp_path / "scratch"; scratch.mkdir()
+    retained = scratch / "existing-evidence"; retained.write_bytes(b"must survive")
+    monkeypatch.setattr(runner, "_native_apfs_identity", lambda _: None)
+    failed, errors = runner.scratch_probe(output, scratch, None, output, native_apfs=True)
+    assert failed["filesystem_probe"] == "BLOCKED" and errors
+    monkeypatch.setattr(runner, "_native_apfs_identity", lambda _: {"filesystem": "apfs", "volume_uuid": "fixture"})
+    passed, errors = runner.scratch_probe(output, scratch, None, output, native_apfs=True)
+    assert passed["filesystem_probe"] == "PASS" and not errors
+    assert retained.read_bytes() == b"must survive"
+
+
+def test_native_volume_probe_refuses_named_apfs_path_with_wrong_filesystem(tmp_path, monkeypatch):
+    import plistlib
+    def probe(args, **kwargs):
+        if args[0] == "/bin/df":
+            return b"Filesystem 512-blocks Used Available Capacity Mounted on\n/dev/disk99s1 100 10 90 10% /mock\n"
+        assert args == ["/usr/sbin/diskutil", "info", "-plist", "/dev/disk99s1"]
+        return plistlib.dumps({"FilesystemType": "exfat", "WritableVolume": True,
+                              "VolumeUUID": "fixture", "MountPoint": str(tmp_path)})
+    monkeypatch.setattr(runner.subprocess, "check_output", probe)
+    assert runner._native_apfs_identity(tmp_path / "apfs-by-name") is None
+
+
 def _candidate(tmp_path: Path, monkeypatch):
     root = runner.repo_root()
     data = json.loads(BASELINE.read_text(encoding="utf-8"))

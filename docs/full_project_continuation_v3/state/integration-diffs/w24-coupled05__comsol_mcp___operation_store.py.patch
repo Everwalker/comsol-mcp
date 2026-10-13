@@ -1,0 +1,1016 @@
+--- root/comsol_mcp/_operation_store.py
++++ w24-coupled05/comsol_mcp/_operation_store.py
+@@ -9,7 +9,7 @@
+ import time
+ from pathlib import Path
+ from typing import Any, Callable
+-from uuid import UUID, uuid4
++from uuid import uuid4
+ 
+ 
+ # ``resume_claims`` is an additive SQLite table.  Keep the on-disk version at
+@@ -61,26 +61,6 @@
+     ("status", "TEXT", 1, 0, None),
+     ("version", "INTEGER", 1, 0, None),
+     ("record_json", "TEXT", 1, 0, None),
+-    ("created_at", "TEXT", 1, 0, "CURRENT_TIMESTAMP"),
+-    ("updated_at", "TEXT", 1, 0, "CURRENT_TIMESTAMP"),
+-)
+-HOST_CONTROL_ADMISSION_TABLE_COLUMNS = (
+-    ("admission_id", "TEXT", 1, 1, None),
+-    ("operation_id", "TEXT", 1, 0, None),
+-    ("job_id", "TEXT", 1, 0, None),
+-    ("project_id", "TEXT", 1, 0, None),
+-    ("host_id", "TEXT", 1, 0, None),
+-    ("root_identity_json", "TEXT", 1, 0, None),
+-    ("profile_sha256", "TEXT", 1, 0, None),
+-    ("plan_sha256", "TEXT", 1, 0, None),
+-    ("source_plan_sha256", "TEXT", 0, 0, None),
+-    ("source_receipt_sha256", "TEXT", 0, 0, None),
+-    ("phase", "TEXT", 1, 0, None),
+-    ("authorization_ref_sha256", "TEXT", 1, 0, None),
+-    ("scope_sha256", "TEXT", 1, 0, None),
+-    ("baseline_json", "TEXT", 1, 0, None),
+-    ("baseline_sha256", "TEXT", 1, 0, None),
+-    ("state", "TEXT", 1, 0, None),
+     ("created_at", "TEXT", 1, 0, "CURRENT_TIMESTAMP"),
+     ("updated_at", "TEXT", 1, 0, "CURRENT_TIMESTAMP"),
+ )
+@@ -362,40 +342,6 @@
+                     or observed_attempt_columns != STAGE_ATTEMPT_TABLE_COLUMNS
+                     or not {("attempt_id",), ("idempotency_key",)} <= unique_attempt_columns):
+                 raise RuntimeError("invalid stage_attempts schema")
+-            # Privileged host mutations use a dedicated atomic admission row.
+-            # A generic operation/job row, even one named host.change.apply,
+-            # cannot authorize the internal executor without this binding.
+-            self.db.execute(
+-                "CREATE TABLE IF NOT EXISTS host_control_admissions("
+-                "admission_id TEXT PRIMARY KEY NOT NULL,operation_id TEXT NOT NULL UNIQUE,"
+-                "job_id TEXT NOT NULL UNIQUE,project_id TEXT NOT NULL,host_id TEXT NOT NULL,"
+-                "root_identity_json TEXT NOT NULL,profile_sha256 TEXT NOT NULL,plan_sha256 TEXT NOT NULL,"
+-                "source_plan_sha256 TEXT,source_receipt_sha256 TEXT,phase TEXT NOT NULL,"
+-                "authorization_ref_sha256 TEXT NOT NULL UNIQUE,scope_sha256 TEXT NOT NULL,"
+-                "baseline_json TEXT NOT NULL,baseline_sha256 TEXT NOT NULL,state TEXT NOT NULL,"
+-                "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+-                "updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"
+-            )
+-            host_object = self.db.execute(
+-                "SELECT type FROM sqlite_master WHERE name='host_control_admissions'"
+-            ).fetchone()
+-            observed_host_columns = tuple(
+-                (row[1], (row[2] or "").upper(), row[3], row[5], row[4])
+-                for row in self.db.execute("PRAGMA table_info(host_control_admissions)").fetchall()
+-            )
+-            unique_host_columns: set[tuple[str, ...]] = set()
+-            for index in self.db.execute("PRAGMA index_list(host_control_admissions)").fetchall():
+-                if index[2] != 1 or (len(index) > 4 and index[4] != 0):
+-                    continue
+-                name = str(index[1]).replace("'", "''")
+-                columns = self.db.execute(f"PRAGMA index_info('{name}')").fetchall()
+-                if len(columns) == 1 and columns[0][1] >= 0 and columns[0][2] is not None:
+-                    unique_host_columns.add((columns[0][2],))
+-            if (host_object is None or host_object[0] != "table"
+-                    or observed_host_columns != HOST_CONTROL_ADMISSION_TABLE_COLUMNS
+-                    or not {("admission_id",), ("operation_id",), ("job_id",),
+-                            ("authorization_ref_sha256",)} <= unique_host_columns):
+-                raise RuntimeError("invalid host_control_admissions schema")
+             self.db.execute("COMMIT")
+         except Exception:
+             self.db.execute("ROLLBACK")
+@@ -451,936 +397,6 @@
+             except Exception:
+                 self.db.execute("ROLLBACK")
+                 raise
+-
+-    def begin_host_control_operation(
+-        self,
+-        *,
+-        authority: Any,
+-        provider: Any,
+-        profile: Any,
+-        phase: str,
+-        plan_sha256: str,
+-        authorization_ref: str,
+-        baseline: dict[str, Any],
+-        source_plan_sha256: str | None = None,
+-        source_receipt_sha256: str | None = None,
+-    ) -> tuple[dict[str, Any], dict[str, Any]]:
+-        """Atomically authorize and admit one internal host-control operation.
+-
+-        This is intentionally separate from ``begin``. Caller-created generic
+-        operation/job metadata never creates a host-control admission. The
+-        trusted scoped provider is checked under the same SQLite write lock
+-        that consumes the one-use authorization-reference digest and stores
+-        the exact host/profile/root/plan binding plus its observed baseline.
+-        """
+-        from ._host_scoped_provider import HostScopedProvider, scope_sha256
+-        from ._project_authority import ProjectAuthority
+-        from ._w26_os_resources import (
+-            HostResourceProfile, ResourcePolicyError, _path_key,
+-            _sha256 as resource_sha256, validate_profile,
+-        )
+-
+-        if (type(authority) is not ProjectAuthority or authority.store is not self
+-                or type(provider) is not HostScopedProvider
+-                or authority.authorization_verifier is not provider
+-                or type(profile) is not HostResourceProfile):
+-            raise ResourcePolicyError(
+-                "HOST_CONTROL_TRUSTED_COMPONENT_REQUIRED",
+-                "host mutation admission requires the existing authority, pinned HostScopedProvider, and typed profile",
+-            )
+-        try:
+-            validate_profile(profile)
+-        except (TypeError, ValueError) as exc:
+-            raise ResourcePolicyError("HOST_CONTROL_PROFILE_INVALID", "host mutation profile is invalid") from exc
+-        if (profile.platform != "windows" or profile.windows_isolation is None
+-                or phase not in {"APPLY", "RESTORE"}
+-                or not isinstance(plan_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", plan_sha256)
+-                or not isinstance(authorization_ref, str) or not authorization_ref
+-                or len(authorization_ref) > 512
+-                or any(ord(char) < 32 for char in authorization_ref)
+-                or not isinstance(baseline, dict)):
+-            raise ResourcePolicyError("HOST_CONTROL_ADMISSION_INVALID", "host mutation admission fields are malformed")
+-        if phase == "APPLY":
+-            if source_plan_sha256 is not None or source_receipt_sha256 is not None:
+-                raise ResourcePolicyError("HOST_CONTROL_ADMISSION_INVALID", "apply admission cannot name a restore source")
+-            action = "host.change.apply"
+-        else:
+-            if (not isinstance(source_plan_sha256, str)
+-                    or not re.fullmatch(r"[0-9a-f]{64}", source_plan_sha256)
+-                    or not isinstance(source_receipt_sha256, str)
+-                    or not re.fullmatch(r"[0-9a-f]{64}", source_receipt_sha256)):
+-                raise ResourcePolicyError("HOST_CONTROL_ADMISSION_INVALID", "restore admission must bind its source plan and receipt")
+-            action = "host.change.restore"
+-        root_identity = profile.root.as_dict()
+-        scope = {
+-            "root": root_identity,
+-            "host_id": profile.host_id,
+-            "profile_sha256": profile.sha256,
+-            "plan_sha256": plan_sha256,
+-            "phase": phase,
+-            "source_plan_sha256": source_plan_sha256,
+-            "source_receipt_sha256": source_receipt_sha256,
+-        }
+-        try:
+-            scope_digest = scope_sha256(profile.project_id, action, scope)
+-            baseline_json = json.dumps(baseline, sort_keys=True, ensure_ascii=False,
+-                                       separators=(",", ":"), allow_nan=False)
+-        except (TypeError, ValueError, UnicodeEncodeError) as exc:
+-            raise ResourcePolicyError("HOST_CONTROL_ADMISSION_INVALID", "host baseline/scope is not canonical") from exc
+-        if len(baseline_json.encode("utf-8")) > 1024 * 1024:
+-            raise ResourcePolicyError("HOST_CONTROL_ADMISSION_INVALID", "host baseline exceeds its durable record bound")
+-        baseline_sha256 = hashlib.sha256(baseline_json.encode("utf-8")).hexdigest()
+-        authorization_ref_sha256 = hashlib.sha256(authorization_ref.encode("utf-8")).hexdigest()
+-        admission_id = str(uuid4())
+-        operation_id, job_id = str(uuid4()), str(uuid4())
+-        request_id = "host-control-" + str(uuid4())
+-        idempotency_key = "host-control-" + str(uuid4())
+-        operation_name = f"host.change.{phase.lower()}"
+-        root_path = root_identity["path"]
+-        request_hash = resource_sha256({
+-            "operation": operation_name,
+-            "project_id": profile.project_id,
+-            "host_id": profile.host_id,
+-            "root": root_identity,
+-            "profile_sha256": profile.sha256,
+-            "plan_sha256": plan_sha256,
+-            "phase": phase,
+-            "source_plan_sha256": source_plan_sha256,
+-            "source_receipt_sha256": source_receipt_sha256,
+-            "baseline_sha256": baseline_sha256,
+-            "scope_sha256": scope_digest,
+-        })
+-        internal_binding = {
+-            "schema": "comsol-mcp.internal-host-control-operation/1",
+-            "admission_id": admission_id,
+-            "phase": phase,
+-            "project_id": profile.project_id,
+-            "host_id": profile.host_id,
+-            "root_identity": root_identity,
+-            "profile_sha256": profile.sha256,
+-            "plan_sha256": plan_sha256,
+-            "source_plan_sha256": source_plan_sha256,
+-            "source_receipt_sha256": source_receipt_sha256,
+-        }
+-        metadata = {"operation": operation_name, "project_id": profile.project_id,
+-                    "project_root_identity": profile.root.file_id,
+-                    "project_root_volume_id": profile.root.volume_id,
+-                    "project_root_owner_id": profile.root.owner_id,
+-                    "host_id": profile.host_id, "host_control": internal_binding}
+-        try:
+-            with self.lock:
+-                self.db.execute("BEGIN IMMEDIATE")
+-                try:
+-                    # Recheck project permission, workspace binding, exact
+-                    # host/root/profile scope, and provider-observed expiry
+-                    # while the authorization ref is being consumed.
+-                    project = authority.authorize_operation(profile.project_id, "host_control")
+-                    if _path_key(project.get("workspace", ""), "windows") != _path_key(root_path, "windows"):
+-                        raise ResourcePolicyError("HOST_CONTROL_ROOT_AUTHORITY_MISMATCH",
+-                                                  "profile root differs from the authorized project workspace")
+-                    if provider.verify_scope(profile.project_id, action, scope, authorization_ref) is not True:
+-                        raise ResourcePolicyError("HOST_CONTROL_AUTHORIZATION_REQUIRED",
+-                                                  "the pinned host provider rejected this exact host mutation scope")
+-                    replay = self.db.execute(
+-                        "SELECT admission_id,phase,scope_sha256 FROM host_control_admissions "
+-                        "WHERE authorization_ref_sha256=?", (authorization_ref_sha256,),
+-                    ).fetchone()
+-                    if replay is not None:
+-                        raise ResourcePolicyError(
+-                            "HOST_CONTROL_AUTHORIZATION_REPLAYED",
+-                            "host mutation authorization reference was already consumed",
+-                            details={"admission_id": replay["admission_id"], "phase": replay["phase"]},
+-                        )
+-                    operation_metadata = json.dumps(metadata, sort_keys=True, ensure_ascii=False,
+-                                                    separators=(",", ":"), allow_nan=False)
+-                    timeouts = "{}"
+-                    self.db.execute(
+-                        "INSERT INTO operations(operation_id,request_id,idempotency_key,request_hash,operation,status,metadata,effective_timeouts) "
+-                        "VALUES(?,?,?,?,?,'QUEUED',?,?)",
+-                        (operation_id, request_id, idempotency_key, request_hash, operation_name,
+-                         operation_metadata, timeouts),
+-                    )
+-                    self.db.execute(
+-                        "INSERT INTO jobs(job_id,operation_id,status,metadata,effective_timeouts) "
+-                        "VALUES(?,?,'QUEUED',?,?)",
+-                        (job_id, operation_id, operation_metadata, timeouts),
+-                    )
+-                    self.db.execute(
+-                        "INSERT INTO host_control_admissions(admission_id,operation_id,job_id,project_id,host_id,"
+-                        "root_identity_json,profile_sha256,plan_sha256,source_plan_sha256,source_receipt_sha256,phase,"
+-                        "authorization_ref_sha256,scope_sha256,baseline_json,baseline_sha256,state) "
+-                        "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'ADMITTED')",
+-                        (admission_id, operation_id, job_id, profile.project_id, profile.host_id,
+-                         json.dumps(root_identity, sort_keys=True, ensure_ascii=False, separators=(",", ":")),
+-                         profile.sha256, plan_sha256, source_plan_sha256, source_receipt_sha256, phase,
+-                         authorization_ref_sha256, scope_digest, baseline_json, baseline_sha256),
+-                    )
+-                    self.db.execute(
+-                        "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
+-                        (job_id, "HostControlAdmissionCreated", json.dumps({
+-                            "schema": "comsol-mcp.internal-host-control-admission-event/1",
+-                            "admission_id": admission_id, "phase": phase,
+-                            "profile_sha256": profile.sha256, "plan_sha256": plan_sha256,
+-                            "scope_sha256": scope_digest,
+-                            "authorization_ref_sha256": authorization_ref_sha256,
+-                            "baseline_sha256": baseline_sha256,
+-                        }, sort_keys=True, separators=(",", ":"))),
+-                    )
+-                    self.db.execute("COMMIT")
+-                except BaseException:
+-                    if self.db.in_transaction:
+-                        self.db.execute("ROLLBACK")
+-                    raise
+-                operation_row = self.db.execute(
+-                    "SELECT * FROM operations WHERE operation_id=?", (operation_id,)
+-                ).fetchone()
+-                admission_row = self.db.execute(
+-                    "SELECT * FROM host_control_admissions WHERE admission_id=?", (admission_id,)
+-                ).fetchone()
+-                if operation_row is None or admission_row is None:
+-                    raise ResourcePolicyError("HOST_CONTROL_ADMISSION_READBACK_UNKNOWN",
+-                                              "committed host mutation admission failed exact readback")
+-                record = self._op(operation_row)
+-                record["job_id"] = job_id
+-                admission = dict(admission_row)
+-                if (record["status"] != "QUEUED" or admission["state"] != "ADMITTED"
+-                        or admission["authorization_ref_sha256"] != authorization_ref_sha256
+-                        or admission["baseline_sha256"] != baseline_sha256
+-                        or json.loads(admission["baseline_json"]) != baseline):
+-                    raise ResourcePolicyError("HOST_CONTROL_ADMISSION_READBACK_UNKNOWN",
+-                                              "committed host mutation admission differs from exact bytes")
+-                return record, admission
+-        except ResourcePolicyError:
+-            raise
+-        except Exception as exc:
+-            raise ResourcePolicyError("HOST_CONTROL_ADMISSION_UNKNOWN",
+-                                      "host mutation admission transaction failed closed",
+-                                      details={"cause_type": type(exc).__name__}) from exc
+-
+-    def append_host_control_mutation_event(
+-        self,
+-        *,
+-        admission_id: str,
+-        event: str,
+-        payload: dict[str, Any],
+-    ) -> dict[str, Any]:
+-        """Atomically append a hash-chained mutation event and advance its state.
+-
+-        The V1 filter-only WFP executor uses this before/after its native call.
+-        A committed intent is never replayed after a crash; only an exact
+-        readback event can move it to APPLIED/RESTORED. The durable event is
+-        stored in the existing OperationStore job ledger, not a side database.
+-        """
+-        from ._w26_os_resources import ResourcePolicyError
+-
+-        event_contracts = {
+-            "APPLY_INTENT": ("APPLY", "ADMITTED", "APPLY_INTENT",
+-                             {"action_id", "filter_key", "desired_identity_sha256", "dependency_sha256"}),
+-            "APPLY_READBACK_VERIFIED": ("APPLY", "APPLY_INTENT", "APPLIED",
+-                                        {"action_id", "filter_key", "desired_identity_sha256",
+-                                         "created_resource_sha256", "dependency_sha256"}),
+-            "RESTORE_INTENT": ("RESTORE", "ADMITTED", "RESTORE_INTENT",
+-                               {"action_id", "filter_key", "expected_resource_sha256", "dependency_sha256"}),
+-            "RESTORE_READBACK_VERIFIED": ("RESTORE", "RESTORE_INTENT", "RESTORED",
+-                                          {"action_id", "filter_key", "removed_resource_sha256",
+-                                           "expected_resource_sha256", "dependency_sha256"}),
+-            "RECOVERY_REQUIRED": (None, None, "RECOVERY_REQUIRED",
+-                                  {"reason_code", "failed_event", "action_id", "filter_key"}),
+-        }
+-        if (not isinstance(admission_id, str) or not admission_id
+-                or event not in event_contracts or not isinstance(payload, dict)):
+-            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
+-                                      "host mutation event identity or type is malformed")
+-        allowed_keys = event_contracts[event][3]
+-        if set(payload) != allowed_keys:
+-            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
+-                                      "host mutation event payload fields are outside the closed contract")
+-        digest_fields = {"desired_identity_sha256", "created_resource_sha256",
+-                         "expected_resource_sha256", "removed_resource_sha256", "dependency_sha256"}
+-        for key, value in payload.items():
+-            if key in digest_fields and (not isinstance(value, str)
+-                                         or re.fullmatch(r"[0-9a-f]{64}", value) is None):
+-                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
+-                                          "host mutation event digest is malformed")
+-            if key in {"action_id", "filter_key", "reason_code", "failed_event"} and (
+-                    not isinstance(value, str) or not value or len(value) > 256
+-                    or any(ord(char) < 32 for char in value)):
+-                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
+-                                          "host mutation event identifier is malformed")
+-        encoded_payload = json.dumps(payload, sort_keys=True, ensure_ascii=False,
+-                                     separators=(",", ":"), allow_nan=False)
+-        if len(encoded_payload.encode("utf-8")) > 16 * 1024:
+-            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
+-                                      "host mutation event payload exceeds its durable bound")
+-
+-        def canonical(value: Any) -> str:
+-            return json.dumps(value, sort_keys=True, ensure_ascii=False,
+-                              separators=(",", ":"), allow_nan=False)
+-
+-        def digest(value: Any) -> str:
+-            return hashlib.sha256(canonical(value).encode("utf-8")).hexdigest()
+-
+-        event_name = "HostControlMutationJournalV1"
+-        try:
+-            with self.lock:
+-                self.db.execute("BEGIN IMMEDIATE")
+-                try:
+-                    row = self.db.execute(
+-                        "SELECT a.*,j.job_id,j.operation_id,j.status AS job_status,j.metadata AS job_metadata,"
+-                        "o.status AS operation_status,o.operation,o.metadata AS operation_metadata "
+-                        "FROM host_control_admissions a "
+-                        "JOIN jobs j ON j.job_id=a.job_id AND j.operation_id=a.operation_id "
+-                        "JOIN operations o ON o.operation_id=a.operation_id "
+-                        "WHERE a.admission_id=?", (admission_id,),
+-                    ).fetchone()
+-                    if row is None:
+-                        raise ResourcePolicyError("HOST_CONTROL_ADMISSION_UNKNOWN",
+-                                                  "host mutation admission is absent from OperationStore")
+-                    if self.db.execute(
+-                            "SELECT 1 FROM job_events WHERE job_id=? AND event=? LIMIT 1",
+-                            (row["job_id"], "HostControlMutationJournalV2"),
+-                    ).fetchone() is not None:
+-                        raise ResourcePolicyError("HOST_CONTROL_JOURNAL_STATE_CONFLICT",
+-                                                  "V1 and V2 host mutation journals cannot be mixed")
+-                    try:
+-                        root_identity = json.loads(row["root_identity_json"])
+-                        job_metadata = json.loads(row["job_metadata"] or "{}")
+-                        operation_metadata = json.loads(row["operation_metadata"] or "{}")
+-                    except (TypeError, json.JSONDecodeError) as exc:
+-                        raise ResourcePolicyError("HOST_CONTROL_BINDING_UNKNOWN",
+-                                                  "host mutation durable scope metadata is malformed") from exc
+-                    binding = {
+-                        "schema": "comsol-mcp.internal-host-control-operation/1",
+-                        "admission_id": admission_id,
+-                        "phase": row["phase"],
+-                        "project_id": row["project_id"],
+-                        "host_id": row["host_id"],
+-                        "root_identity": root_identity,
+-                        "profile_sha256": row["profile_sha256"],
+-                        "plan_sha256": row["plan_sha256"],
+-                        "source_plan_sha256": row["source_plan_sha256"],
+-                        "source_receipt_sha256": row["source_receipt_sha256"],
+-                    }
+-                    for metadata in (job_metadata, operation_metadata):
+-                        if (metadata.get("host_control") != binding
+-                                or metadata.get("project_id") != row["project_id"]
+-                                or metadata.get("host_id") != row["host_id"]
+-                                or metadata.get("project_root_identity") != root_identity.get("file_id")
+-                                or metadata.get("project_root_volume_id") != root_identity.get("volume_id")
+-                                or metadata.get("project_root_owner_id") != root_identity.get("owner_id")):
+-                            raise ResourcePolicyError("HOST_CONTROL_BINDING_MISMATCH",
+-                                                      "job and operation no longer match the exact admitted host scope")
+-                    phase, required_state, new_state, _keys = event_contracts[event]
+-                    current_state = str(row["state"])
+-                    if row["job_status"] != "RUNNING" or row["operation_status"] != "RUNNING":
+-                        raise ResourcePolicyError("HOST_CONTROL_STATE_CONFLICT",
+-                                                  "host mutation journal can advance only while its admitted operation is RUNNING")
+-                    if event == "RECOVERY_REQUIRED":
+-                        if current_state not in {"APPLY_INTENT", "RESTORE_INTENT"}:
+-                            raise ResourcePolicyError("HOST_CONTROL_STATE_CONFLICT",
+-                                                      "recovery can only be recorded after a durable mutation intent")
+-                        if (payload["failed_event"] not in {"APPLY_INTENT", "RESTORE_INTENT"}
+-                                or payload["failed_event"] != current_state):
+-                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
+-                                                      "recovery event must identify the current exact durable intent")
+-                    elif row["phase"] != phase or current_state != required_state:
+-                        raise ResourcePolicyError("HOST_CONTROL_STATE_CONFLICT",
+-                                                  "host mutation event cannot replay or skip a durable state")
+-                    if row["operation"] != f"host.change.{str(row['phase']).lower()}":
+-                        raise ResourcePolicyError("HOST_CONTROL_BINDING_MISMATCH",
+-                                                  "admitted operation name differs from its privileged phase")
+-                    records = self.db.execute(
+-                        "SELECT id,metadata FROM job_events WHERE job_id=? AND event=? ORDER BY id",
+-                        (row["job_id"], event_name),
+-                    ).fetchall()
+-                    previous = "0" * 64
+-                    journal_state = "ADMITTED"
+-                    journal_action: str | None = None
+-                    journal_filter: str | None = None
+-                    journal_intent: dict[str, Any] | None = None
+-                    phase_events = {
+-                        "APPLY": {"APPLY_INTENT", "APPLY_READBACK_VERIFIED"},
+-                        "RESTORE": {"RESTORE_INTENT", "RESTORE_READBACK_VERIFIED"},
+-                    }[str(row["phase"])]
+-                    event_payload_keys = {name: contract[3] for name, contract in event_contracts.items()}
+-                    for sequence, record_row in enumerate(records):
+-                        try:
+-                            prior = json.loads(record_row["metadata"])
+-                        except (TypeError, json.JSONDecodeError) as exc:
+-                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                      "host mutation journal row is malformed") from exc
+-                        expected_fields = {"schema", "admission_id", "job_id", "operation_id", "project_id",
+-                                           "host_id", "root_identity", "profile_sha256", "plan_sha256",
+-                                           "source_plan_sha256", "source_receipt_sha256", "phase", "sequence",
+-                                           "previous_sha256", "event", "payload", "record_sha256"}
+-                        if (not isinstance(prior, dict) or set(prior) != expected_fields
+-                                or prior.get("schema") != "comsol-mcp.host-control-mutation-journal/1"
+-                                or prior.get("sequence") != sequence or type(prior.get("sequence")) is not int
+-                                or prior.get("previous_sha256") != previous
+-                                or prior.get("admission_id") != admission_id
+-                                or prior.get("job_id") != row["job_id"]
+-                                or prior.get("operation_id") != row["operation_id"]
+-                                or prior.get("project_id") != row["project_id"]
+-                                or prior.get("host_id") != row["host_id"]
+-                                or prior.get("root_identity") != root_identity
+-                                or prior.get("profile_sha256") != row["profile_sha256"]
+-                                or prior.get("plan_sha256") != row["plan_sha256"]
+-                                or prior.get("source_plan_sha256") != row["source_plan_sha256"]
+-                                or prior.get("source_receipt_sha256") != row["source_receipt_sha256"]
+-                                or prior.get("phase") != row["phase"]
+-                                or not isinstance(prior.get("payload"), dict)
+-                                or not isinstance(prior.get("record_sha256"), str)):
+-                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                      "host mutation journal chain binding is invalid")
+-                        body = {key: value for key, value in prior.items() if key != "record_sha256"}
+-                        if digest(body) != prior["record_sha256"]:
+-                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                      "host mutation journal record hash differs from its payload")
+-                        prior_event = prior["event"]
+-                        prior_payload = prior["payload"]
+-                        if (prior_event not in phase_events | {"RECOVERY_REQUIRED"}
+-                                or set(prior_payload) != event_payload_keys[prior_event]):
+-                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                      "host mutation journal has an impossible event or payload")
+-                        for key, value in prior_payload.items():
+-                            if key in digest_fields and (not isinstance(value, str)
+-                                                         or re.fullmatch(r"[0-9a-f]{64}", value) is None):
+-                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                          "host mutation journal contains a malformed digest")
+-                            if key in {"action_id", "filter_key", "reason_code", "failed_event"} and (
+-                                    not isinstance(value, str) or not value or len(value) > 256
+-                                    or any(ord(char) < 32 for char in value)):
+-                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                          "host mutation journal contains a malformed identifier")
+-                        if prior_event == "RECOVERY_REQUIRED":
+-                            if (journal_state not in {"APPLY_INTENT", "RESTORE_INTENT"}
+-                                    or prior_payload.get("failed_event") != journal_state
+-                                    or journal_intent is None
+-                                    or prior_payload.get("action_id") != journal_intent.get("action_id")
+-                                    or prior_payload.get("filter_key") != journal_intent.get("filter_key")):
+-                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                          "host recovery event does not match the preceding intent")
+-                            journal_state = "RECOVERY_REQUIRED"
+-                        elif prior_event == ("APPLY_INTENT" if row["phase"] == "APPLY" else "RESTORE_INTENT"):
+-                            if journal_state != "ADMITTED":
+-                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                          "host mutation intent is duplicated or out of sequence")
+-                            journal_state = prior_event
+-                            journal_intent = dict(prior_payload)
+-                        else:
+-                            expected_intent = "APPLY_INTENT" if row["phase"] == "APPLY" else "RESTORE_INTENT"
+-                            if (journal_state != expected_intent or journal_intent is None
+-                                    or prior_payload.get("action_id") != journal_intent.get("action_id")
+-                                    or prior_payload.get("filter_key") != journal_intent.get("filter_key")):
+-                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                          "host mutation readback has no matching durable intent")
+-                            if row["phase"] == "APPLY":
+-                                matching = (prior_payload.get("desired_identity_sha256")
+-                                            == journal_intent.get("desired_identity_sha256")
+-                                            and prior_payload.get("dependency_sha256")
+-                                            == journal_intent.get("dependency_sha256"))
+-                            else:
+-                                matching = (prior_payload.get("expected_resource_sha256")
+-                                            == journal_intent.get("expected_resource_sha256")
+-                                            and prior_payload.get("dependency_sha256")
+-                                            == journal_intent.get("dependency_sha256")
+-                                            and prior_payload.get("removed_resource_sha256")
+-                                            == journal_intent.get("expected_resource_sha256"))
+-                            if not matching:
+-                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                          "host readback does not confirm the exact intent resource/dependency")
+-                            journal_state = "APPLIED" if row["phase"] == "APPLY" else "RESTORED"
+-                        if (not isinstance(prior_payload.get("action_id"), str)
+-                                or not isinstance(prior_payload.get("filter_key"), str)
+-                                or (journal_action is not None and prior_payload["action_id"] != journal_action)
+-                                or (journal_filter is not None and prior_payload["filter_key"] != journal_filter)):
+-                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                      "host mutation journal action identity changed between events")
+-                        journal_action = prior_payload["action_id"]
+-                        journal_filter = prior_payload["filter_key"]
+-                        previous = prior["record_sha256"]
+-                    if journal_state != current_state:
+-                        raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                  "host mutation admission state differs from its journal history")
+-                    if records and (payload["action_id"] != journal_action
+-                                    or payload["filter_key"] != journal_filter):
+-                        raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
+-                                                  "host mutation event changed the action identity already journaled")
+-                    if event in {"APPLY_READBACK_VERIFIED", "RESTORE_READBACK_VERIFIED"}:
+-                        if journal_intent is None:
+-                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_STATE_UNKNOWN",
+-                                                      "host mutation readback has no durable intent")
+-                        if row["phase"] == "APPLY":
+-                            matching_current = (
+-                                payload.get("desired_identity_sha256") == journal_intent.get("desired_identity_sha256")
+-                                and payload.get("dependency_sha256") == journal_intent.get("dependency_sha256"))
+-                        else:
+-                            matching_current = (
+-                                payload.get("expected_resource_sha256") == journal_intent.get("expected_resource_sha256")
+-                                and payload.get("dependency_sha256") == journal_intent.get("dependency_sha256")
+-                                and payload.get("removed_resource_sha256") == journal_intent.get("expected_resource_sha256"))
+-                        if not matching_current:
+-                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
+-                                                      "host readback payload does not confirm the exact durable intent")
+-                    if event == "RECOVERY_REQUIRED" and (
+-                            journal_intent is None or payload.get("failed_event") != current_state
+-                            or payload.get("action_id") != journal_intent.get("action_id")
+-                            or payload.get("filter_key") != journal_intent.get("filter_key")):
+-                        raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
+-                                                  "recovery payload does not identify the current durable intent")
+-                    body = {
+-                        "schema": "comsol-mcp.host-control-mutation-journal/1",
+-                        "admission_id": admission_id, "job_id": row["job_id"],
+-                        "operation_id": row["operation_id"], "project_id": row["project_id"],
+-                        "host_id": row["host_id"], "root_identity": root_identity,
+-                        "profile_sha256": row["profile_sha256"], "plan_sha256": row["plan_sha256"],
+-                        "source_plan_sha256": row["source_plan_sha256"],
+-                        "source_receipt_sha256": row["source_receipt_sha256"],
+-                        "phase": row["phase"], "sequence": len(records),
+-                        "previous_sha256": previous, "event": event, "payload": payload,
+-                    }
+-                    record = {**body, "record_sha256": digest(body)}
+-                    self.db.execute(
+-                        "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
+-                        (row["job_id"], event_name, canonical(record)),
+-                    )
+-                    updated = self.db.execute(
+-                        "UPDATE host_control_admissions SET state=?,updated_at=CURRENT_TIMESTAMP "
+-                        "WHERE admission_id=? AND state=?",
+-                        (new_state, admission_id, current_state),
+-                    )
+-                    if updated.rowcount != 1:
+-                        raise ResourcePolicyError("HOST_CONTROL_STATE_CONFLICT",
+-                                                  "host mutation admission state changed during event append")
+-                    self.db.execute("COMMIT")
+-                except BaseException:
+-                    if self.db.in_transaction:
+-                        self.db.execute("ROLLBACK")
+-                    raise
+-                row = self.db.execute(
+-                    "SELECT id,metadata FROM job_events WHERE job_id=? AND event=? ORDER BY id DESC LIMIT 1",
+-                    (row["job_id"], event_name),
+-                ).fetchone()
+-                admission = self.db.execute(
+-                    "SELECT state FROM host_control_admissions WHERE admission_id=?", (admission_id,)
+-                ).fetchone()
+-                if (row is None or json.loads(row["metadata"]) != record
+-                        or admission is None or admission["state"] != new_state):
+-                    raise ResourcePolicyError("HOST_CONTROL_JOURNAL_READBACK_UNKNOWN",
+-                                              "durable host mutation event failed exact readback")
+-                return {"id": int(row["id"]), **record, "state": new_state}
+-        except ResourcePolicyError:
+-            raise
+-        except Exception as exc:
+-            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_UNKNOWN",
+-                                      "host mutation journal transaction failed closed",
+-                                      details={"cause_type": type(exc).__name__}) from exc
+-
+-    def append_host_control_mutation_step_event(
+-        self,
+-        *,
+-        admission_id: str,
+-        event: str,
+-        payload: dict[str, Any],
+-    ) -> dict[str, Any]:
+-        """Append one resource-scoped mutation step to the same durable ledger.
+-
+-        V2 keeps the existing host-control admission and SQLite job event chain,
+-        but binds an ordered, multi-resource plan in the admission baseline.
+-        Each resource has its own durable intent and exact readback record. A
+-        crash between them leaves the admission at that pending step; callers
+-        cannot skip it or replay the plan.
+-        """
+-        from ._w26_os_resources import ResourcePolicyError
+-
+-        event_contracts = {
+-            "APPLY_STEP_INTENT": ("APPLY", {"step_index", "action_id", "resource_kind", "resource_key",
+-                                                  "desired_identity_sha256", "dependency_sha256"}),
+-            "APPLY_STEP_READBACK_VERIFIED": ("APPLY", {"step_index", "action_id", "resource_kind", "resource_key",
+-                                                         "desired_identity_sha256", "created_resource_sha256",
+-                                                         "dependency_sha256"}),
+-            "RESTORE_STEP_INTENT": ("RESTORE", {"step_index", "action_id", "resource_kind", "resource_key",
+-                                                    "expected_resource_sha256", "dependency_sha256"}),
+-            "RESTORE_STEP_READBACK_VERIFIED": ("RESTORE", {"step_index", "action_id", "resource_kind", "resource_key",
+-                                                              "expected_resource_sha256", "removed_resource_sha256",
+-                                                              "dependency_sha256"}),
+-            "RECOVERY_REQUIRED": (None, {"reason_code", "failed_event", "step_index", "action_id",
+-                                          "resource_kind", "resource_key"}),
+-        }
+-        if (not isinstance(admission_id, str) or not admission_id
+-                or event not in event_contracts or not isinstance(payload, dict)
+-                or set(payload) != event_contracts[event][1]):
+-            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
+-                                      "V2 mutation event identity, type, or payload is outside the closed contract")
+-        digest_fields = {"desired_identity_sha256", "created_resource_sha256",
+-                         "expected_resource_sha256", "removed_resource_sha256", "dependency_sha256"}
+-        identifiers = {"action_id", "resource_kind", "resource_key", "reason_code", "failed_event"}
+-        for key, value in payload.items():
+-            if key in digest_fields and (not isinstance(value, str)
+-                                         or re.fullmatch(r"[0-9a-f]{64}", value) is None):
+-                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
+-                                          "V2 mutation event digest is malformed")
+-            if key == "step_index" and (type(value) is not int or value < 0 or value >= 16):
+-                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
+-                                          "V2 mutation step index is outside its bound")
+-            if key in identifiers and (not isinstance(value, str) or not value or len(value) > 256
+-                                       or any(ord(char) < 32 for char in value)):
+-                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
+-                                          "V2 mutation event identifier is malformed")
+-        encoded_payload = json.dumps(payload, sort_keys=True, ensure_ascii=False,
+-                                     separators=(",", ":"), allow_nan=False)
+-        if len(encoded_payload.encode("utf-8")) > 16 * 1024:
+-            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
+-                                      "V2 mutation event exceeds its durable bound")
+-
+-        def canonical(value: Any) -> str:
+-            return json.dumps(value, sort_keys=True, ensure_ascii=False,
+-                              separators=(",", ":"), allow_nan=False)
+-
+-        def digest(value: Any) -> str:
+-            return hashlib.sha256(canonical(value).encode("utf-8")).hexdigest()
+-
+-        event_name = "HostControlMutationJournalV2"
+-        try:
+-            with self.lock:
+-                self.db.execute("BEGIN IMMEDIATE")
+-                try:
+-                    row = self.db.execute(
+-                        "SELECT a.*,j.job_id,j.operation_id,j.status AS job_status,j.metadata AS job_metadata,"
+-                        "o.status AS operation_status,o.operation,o.metadata AS operation_metadata "
+-                        "FROM host_control_admissions a "
+-                        "JOIN jobs j ON j.job_id=a.job_id AND j.operation_id=a.operation_id "
+-                        "JOIN operations o ON o.operation_id=a.operation_id "
+-                        "WHERE a.admission_id=?", (admission_id,),
+-                    ).fetchone()
+-                    if row is None:
+-                        raise ResourcePolicyError("HOST_CONTROL_ADMISSION_UNKNOWN",
+-                                                  "V2 admission is absent from OperationStore")
+-                    if self.db.execute(
+-                            "SELECT 1 FROM job_events WHERE job_id=? AND event=? LIMIT 1",
+-                            (row["job_id"], "HostControlMutationJournalV1"),
+-                    ).fetchone() is not None:
+-                        raise ResourcePolicyError("HOST_CONTROL_JOURNAL_STATE_CONFLICT",
+-                                                  "V1 and V2 host mutation journals cannot be mixed")
+-                    try:
+-                        root_identity = json.loads(row["root_identity_json"])
+-                        job_metadata = json.loads(row["job_metadata"] or "{}")
+-                        operation_metadata = json.loads(row["operation_metadata"] or "{}")
+-                        baseline = json.loads(row["baseline_json"])
+-                    except (TypeError, json.JSONDecodeError) as exc:
+-                        raise ResourcePolicyError("HOST_CONTROL_BINDING_UNKNOWN",
+-                                                  "V2 admission scope or metadata is malformed") from exc
+-                    binding = {
+-                        "schema": "comsol-mcp.internal-host-control-operation/1",
+-                        "admission_id": admission_id,
+-                        "phase": row["phase"], "project_id": row["project_id"],
+-                        "host_id": row["host_id"], "root_identity": root_identity,
+-                        "profile_sha256": row["profile_sha256"], "plan_sha256": row["plan_sha256"],
+-                        "source_plan_sha256": row["source_plan_sha256"],
+-                        "source_receipt_sha256": row["source_receipt_sha256"],
+-                    }
+-                    for metadata in (job_metadata, operation_metadata):
+-                        if (metadata.get("host_control") != binding
+-                                or metadata.get("project_id") != row["project_id"]
+-                                or metadata.get("host_id") != row["host_id"]
+-                                or metadata.get("project_root_identity") != root_identity.get("file_id")
+-                                or metadata.get("project_root_volume_id") != root_identity.get("volume_id")
+-                                or metadata.get("project_root_owner_id") != root_identity.get("owner_id")):
+-                            raise ResourcePolicyError("HOST_CONTROL_BINDING_MISMATCH",
+-                                                      "V2 job and operation no longer match the exact admitted host scope")
+-                    if (row["operation"] != f"host.change.{str(row['phase']).lower()}"
+-                            or row["phase"] not in {"APPLY", "RESTORE"}
+-                            or row["job_status"] != "RUNNING" or row["operation_status"] != "RUNNING"):
+-                        raise ResourcePolicyError("HOST_CONTROL_STATE_CONFLICT",
+-                                                  "V2 mutation events require the exact admitted running operation")
+-                    if (not isinstance(baseline, dict)
+-                            or hashlib.sha256(canonical(baseline).encode("utf-8")).hexdigest()
+-                                != row["baseline_sha256"]):
+-                        raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                  "V2 baseline hash does not match its durable admission")
+-                    sequence = baseline.get("mutation_sequence")
+-                    if (not isinstance(sequence, dict)
+-                            or set(sequence) != {"schema", "phase", "plan_sha256", "steps"}
+-                            or sequence.get("schema") != "comsol-mcp.host-control-mutation-sequence/2"
+-                            or sequence.get("phase") != row["phase"]
+-                            or sequence.get("plan_sha256") != row["plan_sha256"]
+-                            or not isinstance(sequence.get("steps"), list)
+-                            or not 1 <= len(sequence["steps"]) <= 3):
+-                        raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                  "V2 admission lacks an exact bounded mutation sequence")
+-                    step_fields = {"step_index", "action_id", "resource_kind", "resource_key",
+-                                   "identity_sha256", "dependency_sha256", "expected_resource_sha256"}
+-                    expected_phase = str(row["phase"])
+-                    action_ids: set[str] = set()
+-                    resource_keys: set[str] = set()
+-                    step_kinds: list[str] = []
+-                    dependency_digests: set[str] = set()
+-                    for index, step in enumerate(sequence["steps"]):
+-                        if (not isinstance(step, dict) or set(step) != step_fields
+-                                or step.get("step_index") != index or type(step.get("step_index")) is not int
+-                                or not isinstance(step.get("action_id"), str) or not step["action_id"]
+-                                or step.get("resource_kind") not in {"wfp_provider", "wfp_sublayer", "wfp_filter"}
+-                                or not isinstance(step.get("resource_key"), str) or not step["resource_key"]
+-                                or any(not isinstance(step.get(key), str)
+-                                       or re.fullmatch(r"[0-9a-f]{64}", step[key]) is None
+-                                       for key in ("identity_sha256", "dependency_sha256"))
+-                                or (expected_phase == "APPLY" and step.get("expected_resource_sha256") is not None)
+-                                or (expected_phase == "RESTORE"
+-                                    and (not isinstance(step.get("expected_resource_sha256"), str)
+-                                         or re.fullmatch(r"[0-9a-f]{64}",
+-                                                         step["expected_resource_sha256"]) is None))):
+-                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                      "V2 admitted mutation step is malformed")
+-                        try:
+-                            parsed_key = "{" + str(UUID(step["resource_key"].strip("{}"))).upper() + "}"
+-                        except (AttributeError, TypeError, ValueError) as exc:
+-                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                      "V2 resource key is not a GUID") from exc
+-                        if parsed_key != step["resource_key"]:
+-                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                      "V2 resource key is not canonically encoded")
+-                        if step["action_id"] in action_ids or parsed_key in resource_keys:
+-                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                      "V2 sequence duplicates an action or resource key")
+-                        action_ids.add(step["action_id"])
+-                        resource_keys.add(parsed_key)
+-                        step_kinds.append(step["resource_kind"])
+-                        dependency_digests.add(step["dependency_sha256"])
+-                    apply_orders = (["wfp_provider", "wfp_sublayer"],
+-                                    ["wfp_provider", "wfp_sublayer", "wfp_filter"])
+-                    allowed_orders = (apply_orders if expected_phase == "APPLY"
+-                                      else tuple(list(reversed(order)) for order in apply_orders))
+-                    if step_kinds not in allowed_orders:
+-                        raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                  "V2 plan must use the exact provider/sublayer/filter dependency order")
+-                    if len(dependency_digests) != 1:
+-                        raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                  "V2 sequence does not share one exact dependency digest")
+-                    records = self.db.execute(
+-                        "SELECT id,metadata FROM job_events WHERE job_id=? AND event=? ORDER BY id",
+-                        (row["job_id"], event_name),
+-                    ).fetchall()
+-                    intent_name = f"{expected_phase}_STEP_INTENT"
+-                    verified_name = f"{expected_phase}_STEP_READBACK_VERIFIED"
+-                    previous = "0" * 64
+-                    state = "ADMITTED"
+-                    next_index = 0
+-                    pending: dict[str, Any] | None = None
+-                    for ordinal, record_row in enumerate(records):
+-                        try:
+-                            prior = json.loads(record_row["metadata"])
+-                        except (TypeError, json.JSONDecodeError) as exc:
+-                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                      "V2 journal row is malformed") from exc
+-                        expected_record_fields = {"schema", "admission_id", "job_id", "operation_id", "project_id",
+-                                                  "host_id", "root_identity", "profile_sha256", "plan_sha256",
+-                                                  "source_plan_sha256", "source_receipt_sha256", "phase", "sequence",
+-                                                  "previous_sha256", "event", "payload", "record_sha256"}
+-                        if (not isinstance(prior, dict) or set(prior) != expected_record_fields
+-                                or prior.get("schema") != "comsol-mcp.host-control-mutation-journal/2"
+-                                or prior.get("sequence") != ordinal or type(prior.get("sequence")) is not int
+-                                or prior.get("previous_sha256") != previous
+-                                or prior.get("admission_id") != admission_id
+-                                or prior.get("job_id") != row["job_id"]
+-                                or prior.get("operation_id") != row["operation_id"]
+-                                or prior.get("project_id") != row["project_id"]
+-                                or prior.get("host_id") != row["host_id"]
+-                                or prior.get("root_identity") != root_identity
+-                                or prior.get("profile_sha256") != row["profile_sha256"]
+-                                or prior.get("plan_sha256") != row["plan_sha256"]
+-                                or prior.get("source_plan_sha256") != row["source_plan_sha256"]
+-                                or prior.get("source_receipt_sha256") != row["source_receipt_sha256"]
+-                                or prior.get("phase") != expected_phase
+-                                or not isinstance(prior.get("payload"), dict)
+-                                or not isinstance(prior.get("record_sha256"), str)):
+-                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                      "V2 journal chain scope is invalid")
+-                        body = {key: value for key, value in prior.items() if key != "record_sha256"}
+-                        if digest(body) != prior["record_sha256"]:
+-                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                      "V2 journal record hash is invalid")
+-                        old_event, old_payload = prior["event"], prior["payload"]
+-                        if state == "RECOVERY_REQUIRED":
+-                            raise ResourcePolicyError(
+-                                "HOST_CONTROL_JOURNAL_STATE_CONFLICT",
+-                                "V2 recovery fence is absorbing; a later ordinary journal event is not permitted",
+-                            )
+-                        if old_event == "RECOVERY_REQUIRED":
+-                            expected_keys = event_contracts[old_event][1]
+-                            if (set(old_payload) != expected_keys or pending is None
+-                                    or old_payload.get("failed_event") != intent_name
+-                                    or old_payload.get("step_index") != pending.get("step_index")
+-                                    or old_payload.get("action_id") != pending.get("action_id")
+-                                    or old_payload.get("resource_kind") != pending.get("resource_kind")
+-                                    or old_payload.get("resource_key") != pending.get("resource_key")):
+-                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                          "V2 recovery marker does not bind the pending step")
+-                            state = "RECOVERY_REQUIRED"
+-                        elif old_event == intent_name:
+-                            if pending is not None or next_index >= len(sequence["steps"]):
+-                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                          "V2 journal duplicated or exceeded the admitted action order")
+-                            step = sequence["steps"][next_index]
+-                            fields = event_contracts[intent_name][1]
+-                            if (set(old_payload) != fields or old_payload.get("step_index") != next_index
+-                                    or old_payload.get("action_id") != step["action_id"]
+-                                    or old_payload.get("resource_kind") != step["resource_kind"]
+-                                    or old_payload.get("resource_key") != step["resource_key"]
+-                                    or old_payload.get("dependency_sha256") != step["dependency_sha256"]
+-                                    or (expected_phase == "APPLY"
+-                                        and old_payload.get("desired_identity_sha256") != step["identity_sha256"])
+-                                    or (expected_phase == "RESTORE"
+-                                        and old_payload.get("expected_resource_sha256") != step["expected_resource_sha256"])):
+-                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                          "V2 intent differs from the exact admitted ordered action")
+-                            pending = dict(old_payload)
+-                            state = f"{expected_phase}_STEP_INTENT:{next_index}"
+-                        elif old_event == verified_name:
+-                            if pending is None:
+-                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                          "V2 readback has no preceding durable intent")
+-                            fields = event_contracts[verified_name][1]
+-                            if any(old_payload.get(key) != pending.get(key)
+-                                   for key in fields - {"created_resource_sha256", "removed_resource_sha256"}):
+-                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                          "V2 readback differs from its exact pending intent")
+-                            observed_resource = old_payload.get(
+-                                "created_resource_sha256" if expected_phase == "APPLY" else "removed_resource_sha256")
+-                            if (set(old_payload) != fields
+-                                    or not isinstance(observed_resource, str)
+-                                    or re.fullmatch(r"[0-9a-f]{64}", observed_resource) is None
+-                                    or (expected_phase == "RESTORE"
+-                                        and observed_resource != pending.get("expected_resource_sha256"))):
+-                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                          "V2 readback does not prove the exact resource effect")
+-                            pending = None
+-                            next_index += 1
+-                            state = ("APPLIED" if expected_phase == "APPLY" else "RESTORED") \
+-                                if next_index == len(sequence["steps"]) else f"{expected_phase}_STEP_VERIFIED:{next_index - 1}"
+-                        else:
+-                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                      "V2 journal contains an unknown event")
+-                        previous = prior["record_sha256"]
+-                    if state != row["state"]:
+-                        raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+-                                                  "V2 admission state differs from its journal history")
+-                    if state == "RECOVERY_REQUIRED":
+-                        raise ResourcePolicyError(
+-                            "HOST_CONTROL_JOURNAL_STATE_CONFLICT",
+-                            "V2 recovery fence is absorbing; ordinary append cannot clear it",
+-                        )
+-                    phase_for_event = event_contracts[event][0]
+-                    if event == "RECOVERY_REQUIRED":
+-                        if (state == "RECOVERY_REQUIRED" or pending is None
+-                                or payload.get("failed_event") != intent_name
+-                                or payload.get("step_index") != pending.get("step_index")
+-                                or payload.get("action_id") != pending.get("action_id")
+-                                or payload.get("resource_kind") != pending.get("resource_kind")
+-                                or payload.get("resource_key") != pending.get("resource_key")):
+-                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_STATE_CONFLICT",
+-                                                      "V2 recovery event must identify the active durable intent")
+-                        new_state = "RECOVERY_REQUIRED"
+-                    else:
+-                        if phase_for_event != expected_phase:
+-                            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_STATE_CONFLICT",
+-                                                      "V2 event phase differs from the admitted operation")
+-                        step_index = payload["step_index"]
+-                        if event == intent_name:
+-                            if pending is not None or step_index != next_index or step_index >= len(sequence["steps"]):
+-                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_STATE_CONFLICT",
+-                                                          "V2 intent cannot skip, overlap, or replay a step")
+-                            step = sequence["steps"][step_index]
+-                            if (payload.get("action_id") != step["action_id"]
+-                                    or payload.get("resource_kind") != step["resource_kind"]
+-                                    or payload.get("resource_key") != step["resource_key"]
+-                                    or payload.get("dependency_sha256") != step["dependency_sha256"]
+-                                    or (expected_phase == "APPLY"
+-                                        and payload.get("desired_identity_sha256") != step["identity_sha256"])
+-                                    or (expected_phase == "RESTORE"
+-                                        and payload.get("expected_resource_sha256") != step["expected_resource_sha256"])):
+-                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
+-                                                          "V2 intent differs from the admitted action sequence")
+-                            new_state = f"{expected_phase}_STEP_INTENT:{step_index}"
+-                        else:
+-                            if pending is None:
+-                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_STATE_CONFLICT",
+-                                                          "V2 readback has no active durable intent")
+-                            fields = event_contracts[event][1]
+-                            if (set(payload) != fields
+-                                    or any(payload.get(key) != pending.get(key)
+-                                           for key in fields - {"created_resource_sha256", "removed_resource_sha256"})
+-                                    or (expected_phase == "RESTORE"
+-                                        and payload.get("removed_resource_sha256")
+-                                            != pending.get("expected_resource_sha256"))):
+-                                raise ResourcePolicyError("HOST_CONTROL_JOURNAL_INVALID",
+-                                                          "V2 readback does not match the exact durable intent")
+-                            new_state = ("APPLIED" if expected_phase == "APPLY" else "RESTORED") \
+-                                if next_index + 1 == len(sequence["steps"]) else \
+-                                f"{expected_phase}_STEP_VERIFIED:{next_index}"
+-                    body = {
+-                        "schema": "comsol-mcp.host-control-mutation-journal/2",
+-                        "admission_id": admission_id, "job_id": row["job_id"],
+-                        "operation_id": row["operation_id"], "project_id": row["project_id"],
+-                        "host_id": row["host_id"], "root_identity": root_identity,
+-                        "profile_sha256": row["profile_sha256"], "plan_sha256": row["plan_sha256"],
+-                        "source_plan_sha256": row["source_plan_sha256"],
+-                        "source_receipt_sha256": row["source_receipt_sha256"],
+-                        "phase": row["phase"], "sequence": len(records),
+-                        "previous_sha256": previous, "event": event, "payload": payload,
+-                    }
+-                    record = {**body, "record_sha256": digest(body)}
+-                    self.db.execute(
+-                        "INSERT INTO job_events(job_id,event,metadata) VALUES(?,?,?)",
+-                        (row["job_id"], event_name, canonical(record)),
+-                    )
+-                    updated = self.db.execute(
+-                        "UPDATE host_control_admissions SET state=?,updated_at=CURRENT_TIMESTAMP "
+-                        "WHERE admission_id=? AND state=?",
+-                        (new_state, admission_id, state),
+-                    )
+-                    if updated.rowcount != 1:
+-                        raise ResourcePolicyError("HOST_CONTROL_STATE_CONFLICT",
+-                                                  "V2 admission state changed while appending its event")
+-                    self.db.execute("COMMIT")
+-                except BaseException:
+-                    if self.db.in_transaction:
+-                        self.db.execute("ROLLBACK")
+-                    raise
+-                row = self.db.execute(
+-                    "SELECT id,metadata FROM job_events WHERE job_id=? AND event=? ORDER BY id DESC LIMIT 1",
+-                    (row["job_id"], event_name),
+-                ).fetchone()
+-                admission = self.db.execute(
+-                    "SELECT state FROM host_control_admissions WHERE admission_id=?", (admission_id,)
+-                ).fetchone()
+-                if (row is None or json.loads(row["metadata"]) != record
+-                        or admission is None or admission["state"] != new_state):
+-                    raise ResourcePolicyError("HOST_CONTROL_JOURNAL_READBACK_UNKNOWN",
+-                                              "committed V2 mutation event failed exact readback")
+-                return {"id": int(row["id"]), **record, "state": new_state}
+-        except ResourcePolicyError:
+-            raise
+-        except Exception as exc:
+-            raise ResourcePolicyError("HOST_CONTROL_JOURNAL_UNKNOWN",
+-                                      "V2 mutation journal transaction failed closed",
+-                                      details={"cause_type": type(exc).__name__}) from exc
+-
+-    def host_control_admission_state(self, admission_id: str) -> str:
+-        """Read the exact durable state of one internal host admission."""
+-        from ._w26_os_resources import ResourcePolicyError
+-
+-        if not isinstance(admission_id, str) or not admission_id:
+-            raise ResourcePolicyError("HOST_CONTROL_ADMISSION_INVALID",
+-                                      "host admission ID is malformed")
+-        with self.lock:
+-            row = self.db.execute(
+-                "SELECT state FROM host_control_admissions WHERE admission_id=?",
+-                (admission_id,),
+-            ).fetchone()
+-        if row is None or not isinstance(row["state"], str):
+-            raise ResourcePolicyError("HOST_CONTROL_ADMISSION_UNKNOWN",
+-                                      "host admission state could not be read")
+-        return row["state"]
+ 
+     def begin_resume(
+         self,

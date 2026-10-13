@@ -1,0 +1,117 @@
+--- root/tests/test_w24_current11_config_projection.py
++++ w24-coupled05/tests/test_w24_current11_config_projection.py
+@@ -0,0 +1,114 @@
++from __future__ import annotations
++import copy
++import hashlib
++import importlib.util
++import json
++from pathlib import Path
++import pytest
++from tools import run_native_w24_cure_preflight as runner
++
++FIXTURES = Path(__file__).parent / 'fixtures/w24_current10'
++RAW_SHAS = {'build': '5f23cadc69408dda8e2b8f32921b5d161251413fadcb7963e02542f42827c7a0',
++            'reopen': '42643eaa45f2258269af669bfed563844db4d29f314d86f7cfaabe3fe684f0c6'}
++
++
++def _actual_pair(tmp_path):
++    project, evidence = tmp_path/'project', tmp_path/'evidence'
++    project.mkdir(); evidence.mkdir()
++    values = []
++    for stage in ('build', 'reopen'):
++        raw = (FIXTURES/(stage+'_operation_result.json')).read_bytes()
++        assert hashlib.sha256(raw).hexdigest() == RAW_SHAS[stage]
++        response = json.loads(raw)
++        ref, revision = response['execution']['model_ref'], response['execution']['revision']
++        project_id = response['execution']['project_id']
++        readback = runner._java_action_readback(response, 'actual current10 '+stage)
++        epoch = runner._native_mesh_response_worker_epoch(response, project_id=project_id, model_ref=ref, revision=revision)
++        attached = runner._attach_mesh_volume_evidence(copy.deepcopy(readback), project_id=project_id,
++            model_ref=ref, revision=revision, stage=stage, project_workspace=project, evidence=evidence,
++            worker_epoch=epoch, source_response=response)
++        values.append(attached)
++    return values
++
++
++def test_real_current10_native_rows_preserve_historical_failure_and_pass_successor_projection_only(tmp_path):
++    build, reopen = _actual_pair(tmp_path)
++    historical_source = Path('/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-cure-preflight-20261012-current10-count-contract/repository/tools/run_native_w24_cure_preflight.py')
++    assert hashlib.sha256(historical_source.read_bytes()).hexdigest() == '83b8302601db6f496bd7b55b480bfcabf0078876a3c1402ead3c1bd556fef37e'
++    spec = importlib.util.spec_from_file_location('frozen_current10_projection', historical_source)
++    old = importlib.util.module_from_spec(spec); spec.loader.exec_module(old)
++    failure = old._compare_reopened_readback(build, reopen)
++    assert failure['matches'] is False and failure['added_keys'] == ['mesh_volume_observation']
++    comparison = runner._compare_reopened_readback(build, reopen)
++    assert comparison['matches'] is True
++    assert len(comparison['compared_keys']) == 21
++    assert not any(comparison['physical_field_schema'].values())
++    assert all(comparison['mesh_volume']['checks'].values())
++    assert comparison['mesh_volume']['build_raw_mesh_sha256'] == 'd759184d2fce1ffb13d16aaaa28a1dd987d7f2add2f609c7536660e6a13487db'
++    assert all(row['relative_volume_error'] < 1e-6 for row in build['domain_readbacks'].values())
++    assert build['mesh_volume_observation']['worker_epoch'] == reopen['mesh_volume_observation']['worker_epoch']
++    assert build['mesh_volume_observation']['model_ref']['generation'] == 1
++    assert reopen['mesh_volume_observation']['model_ref']['generation'] == 2
++
++
++@pytest.mark.parametrize('mutation', ['extra_after', 'extra_both', 'missing_physics', 'change_geometry', 'change_solver',
++                                     'missing_observation', 'missing_both_observations', 'extra_metadata',
++                                     'missing_epoch', 'changed_epoch', 'changed_ref', 'changed_revision',
++                                     'changed_stage', 'changed_hash', 'changed_domain_volume', 'missing_domain'])
++def test_real_configuration_or_metadata_changes_never_disappear_from_projection(tmp_path, mutation):
++    build, reopen = _actual_pair(tmp_path)
++    obs = reopen['mesh_volume_observation']
++    if mutation == 'extra_after': reopen['extra_physical_parameter'] = True
++    elif mutation == 'extra_both': build['extra_physical_parameter'] = reopen['extra_physical_parameter'] = True
++    elif mutation == 'missing_physics': reopen.pop('physics_tags')
++    elif mutation == 'change_geometry': reopen['geometry_domain_count'] = 3
++    elif mutation == 'change_solver': reopen['solver_readbacks']['new_solver'] = {}
++    elif mutation == 'missing_observation': reopen.pop('mesh_volume_observation')
++    elif mutation == 'missing_both_observations': build.pop('mesh_volume_observation'); reopen.pop('mesh_volume_observation')
++    elif mutation == 'extra_metadata': obs['unverified_metadata'] = True
++    elif mutation == 'missing_epoch': obs.pop('worker_epoch')
++    elif mutation == 'changed_epoch': obs['worker_epoch']['generation'] += 1
++    elif mutation == 'changed_ref': obs['model_ref']['model_tag'] = 'other_model'
++    elif mutation == 'changed_revision': obs['revision'] += 1
++    elif mutation == 'changed_stage': obs['stage'] = 'build'
++    elif mutation == 'changed_hash': obs['raw_mesh_sha256'] = '0'*64
++    elif mutation == 'changed_domain_volume': reopen['domain_readbacks']['gold']['volume_m3'] *= 1.01
++    else: reopen['domain_readbacks'].pop('gold')
++    assert runner._compare_reopened_readback(build, reopen)['matches'] is False
++
++
++@pytest.mark.parametrize('mutation', ['artifact_bytes', 'source_worker_epoch', 'raw_mesh', 'native_domain_rows', 'proof',
++                                     'binding', 'extra_artifact_field'])
++def test_resigned_artifact_content_still_must_match_actual_native_origin_and_recomputed_mesh(tmp_path, mutation):
++    build, reopen = _actual_pair(tmp_path)
++    obs = reopen['mesh_volume_observation']
++    paths = [Path(obs[key]) for key in ('project_artifact_path','evidence_artifact_path')]
++    payload = json.loads(paths[0].read_text())
++    if mutation == 'artifact_bytes':
++        paths[0].write_bytes(paths[0].read_bytes()+b' ')
++    else:
++        if mutation == 'source_worker_epoch': payload['native_response']['data']['after']['generation'] += 1
++        elif mutation == 'raw_mesh': payload['raw_mesh']['vertex_coordinates'][0][0] += 1e-7
++        elif mutation == 'native_domain_rows': payload['native_domain_readbacks']['gold']['entities'] = [1]
++        elif mutation == 'proof': payload['proof']['domain_readbacks']['gold']['volume_m3'] *= 1.01
++        elif mutation == 'binding': payload['binding']['revision'] += 1
++        else: payload['ignored_extra'] = 'must refuse'
++        data = json.dumps(payload,ensure_ascii=False,sort_keys=True,indent=2).encode()+b'\n'
++        for path in paths: path.write_bytes(data)
++        obs['artifact_sha256'] = hashlib.sha256(data).hexdigest()
++        obs['artifact_size_bytes'] = len(data)
++    assert runner._compare_reopened_readback(build,reopen)['matches'] is False
++
++
++@pytest.mark.parametrize('mutation', ['wrong_project', 'wrong_model_ref', 'wrong_revision', 'missing_audit', 'epoch_drift'])
++def test_actual_native_response_binding_rejects_missing_or_changed_identity(mutation):
++    response = json.loads((FIXTURES/'build_operation_result.json').read_text())
++    execution = copy.deepcopy(response['execution'])
++    if mutation == 'wrong_project': response['execution']['project_id'] = 'foreign'
++    elif mutation == 'wrong_model_ref': response['execution']['model_ref']['generation'] += 1
++    elif mutation == 'wrong_revision': response['execution']['revision'] += 1
++    elif mutation == 'missing_audit': response['data'].pop('after')
++    else: response['data']['after']['generation'] += 1
++    with pytest.raises(ValueError):
++        runner._native_mesh_response_worker_epoch(response,project_id=execution['project_id'],
++            model_ref=execution['model_ref'],revision=execution['revision'])

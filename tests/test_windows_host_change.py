@@ -1203,7 +1203,14 @@ def test_observer_and_mutator_load_localfree_only_from_kernel32(monkeypatch):
     monkeypatch.setattr(native, "CtypesWindowsPolicyApi", lambda: api)
     monkeypatch.setattr(wfp, "os", SimpleNamespace(name="nt"))
     mutation = wfp.CtypesWindowsWfpMutationApi()
-    mutation._free_local(wfp.C.c_void_p(0x1234))
+    def allocate_sid(_text, output):
+        wfp.C.cast(output, wfp.C.POINTER(wfp.C.c_void_p))[0] = wfp.C.c_void_p(0x1234)
+        return 1
+    mutation_libs["advapi32"].functions["ConvertStringSidToSidW"] = allocate_sid
+    pointer = wfp.C.c_void_p()
+    assert mutation._sdk_alloc("ConvertStringSidToSidW", pointer, "S-1-1-0",
+                               wfp.C.byref(pointer), local=True, bool_return=True) == 1
+    mutation._free_local(pointer)
     assert "LocalFree" not in mutation_libs["advapi32"].accessed
     assert "LocalFree" in mutation_libs["kernel32"].accessed
     assert mutation_libs["kernel32"].calls == ["LocalFree"]

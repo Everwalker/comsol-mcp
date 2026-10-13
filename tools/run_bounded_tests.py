@@ -25,6 +25,8 @@ MAX_STDOUT_BYTES = 2048
 MAX_ERROR_CHARS = 360
 MAX_FAILURES = 20
 STAGE_TIMEOUT_S = 300
+TEST_INPUT_ENV_NAMES = frozenset({"W23_OFFLINE_CLASS_TEST_SEED", "W23_OFFLINE_CLASS_TEST_RECEIPT",
+                                  "W23_OFFLINE_CLASS_TEST_EVIDENCE"})
 
 
 def repo_root() -> Path:
@@ -33,7 +35,7 @@ def repo_root() -> Path:
 
 def output_root(root: Path | None = None) -> Path:
     root = root or repo_root()
-    return root.parents[1] / "execution-scratch" / "test-efficiency"
+    return root.parent / "work" / "test-efficiency"
 
 
 def canonical_json(value: Any) -> bytes:
@@ -50,6 +52,21 @@ def sha256_file(path: Path) -> str:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def _test_input_hashes(data: dict[str, Any]) -> dict[str, str]:
+    values = data.get("test_input_sha256", {})
+    if not isinstance(values, dict) or len(values) > 256:
+        raise ValueError("test input hash map is invalid")
+    actual = {}
+    for path, expected in values.items():
+        if (not isinstance(path, str) or not Path(path).is_absolute()
+                or not isinstance(expected, str) or len(expected) != 64):
+            raise ValueError("test input path/hash is invalid")
+        actual[path] = sha256_file(Path(path))
+        if actual[path] != expected:
+            raise ValueError("test input bytes differ: " + path)
+    return actual
 
 
 def _git(root: Path, *args: str) -> str:
@@ -71,7 +88,8 @@ def _safe_repo_file(root: Path, relative: str) -> Path:
 
 
 def _safe_paths(values: Any, *, label: str, allow_nodes: bool = False) -> tuple[str, ...]:
-    if not isinstance(values, list) or not values or len(values) > 512:
+    limit = 1024 if label == "source_paths" else 512
+    if not isinstance(values, list) or not values or len(values) > limit:
         raise ValueError(f"{label} must be a nonempty bounded list")
     normalized = []
     for value in values:
@@ -127,6 +145,15 @@ def validate_baseline(
     errors: list[str] = []
     if data.get("schema") != BASELINE_SCHEMA:
         errors.append("baseline schema is missing or unsupported")
+    test_env = data.get("test_environment", {})
+    if (not isinstance(test_env, dict) or set(test_env) - TEST_INPUT_ENV_NAMES
+            or any(not isinstance(value, str) or "\0" in value or not Path(value).is_absolute()
+                   for value in test_env.values())):
+        errors.append("test input environment is invalid or includes non-input overrides")
+    try:
+        _test_input_hashes(data)
+    except (OSError, ValueError) as exc:
+        errors.append("test input fingerprint unavailable: " + str(exc))
     candidate_id = data.get("candidate_id")
     if not isinstance(candidate_id, str) or not candidate_id.strip() or len(candidate_id) > 96:
         errors.append("candidate id is missing or invalid")
@@ -233,7 +260,13 @@ def validate_baseline(
     if not isinstance(configured_tmp, str) or (tmp_root is not None and tmp_root.resolve() != Path(configured_tmp).resolve()):
         errors.append("runtime temp root differs from the pinned APFS volume")
     image_path = environment.get("image_path")
-    if not isinstance(image_path, str) or not image_path or not Path(image_path).is_absolute():
+    scratch_kind = environment.get("scratch_kind", "mounted_image")
+    if scratch_kind not in {"mounted_image", "native_apfs"}:
+        errors.append("scratch kind is unsupported")
+    if scratch_kind == "native_apfs":
+        if image_path is not None:
+            errors.append("native APFS scratch must not assert a mounted image identity")
+    elif not isinstance(image_path, str) or not image_path or not Path(image_path).is_absolute():
         errors.append("pinned scratch image path is missing or invalid")
     elif isinstance(configured_output, str) and not Path(image_path).resolve().is_relative_to(Path(configured_output).resolve()):
         errors.append("pinned scratch image is outside the project execution scratch root")
@@ -335,7 +368,37 @@ def _appledouble_entries(path: Path) -> list[str]:
     return sorted(found)[:MAX_FAILURES]
 
 
-def scratch_probe(output: Path, tmp_root: Path, image_path: Path, expected_output: Path) -> tuple[dict[str, Any], list[str]]:
+def _native_apfs_identity(path: Path) -> dict[str, Any] | None:
+    """Observe this host's volume; path names never certify a filesystem."""
+    try:
+        rows = subprocess.check_output(["/bin/df", "-P", str(path)], timeout=15,
+                                       stderr=subprocess.PIPE).decode("utf-8").splitlines()
+        if len(rows) != 2:
+            return None
+        device = rows[1].split()[0]
+        if not device.startswith("/dev/disk"):
+            return None
+        raw = subprocess.check_output(["/usr/sbin/diskutil", "info", "-plist", device], timeout=15,
+                                      stderr=subprocess.PIPE)
+        info = plistlib.loads(raw)
+        if (info.get("FilesystemType") != "apfs" or info.get("WritableVolume") is not True
+                or not isinstance(info.get("VolumeUUID"), str) or not info["VolumeUUID"]
+                or not isinstance(info.get("MountPoint"), str)):
+            return None
+        # macOS firmlinks (for example /private/tmp on the Data volume) do not
+        # become mount-prefix paths under realpath. Compare the actual device.
+        if path.stat().st_dev != Path(info["MountPoint"]).stat().st_dev:
+            return None
+        return {"filesystem": "apfs", "volume_uuid": info["VolumeUUID"],
+                "mount_path": info["MountPoint"], "device": info.get("DeviceIdentifier"),
+                "global_permissions_enabled": info.get("GlobalPermissionsEnabled"),
+                "scope": "software scratch identity; no native security certification"}
+    except (OSError, ValueError, IndexError, subprocess.SubprocessError, plistlib.InvalidFileException):
+        return None
+
+
+def scratch_probe(output: Path, tmp_root: Path, image_path: Path | None, expected_output: Path,
+                  *, native_apfs: bool = False) -> tuple[dict[str, Any], list[str]]:
     errors: list[str] = []
     if output.resolve() != expected_output.resolve():
         errors.append("evidence output root is not the frozen external SSD scratch path")
@@ -345,13 +408,16 @@ def scratch_probe(output: Path, tmp_root: Path, image_path: Path, expected_outpu
     tmp = tmp_root.resolve()
     if not tmp.is_dir():
         errors.append("APFS temp volume is missing or does not match the pinned mount")
-    if not image_path.is_file() or not image_path.resolve().is_relative_to(expected_output.resolve()):
+    if not native_apfs and (image_path is None or not image_path.is_file()
+                           or not image_path.resolve().is_relative_to(expected_output.resolve())):
         errors.append("pinned sparse image is missing from the external evidence root")
     if _appledouble_entries(tmp):
         errors.append("AppleDouble files already exist in the APFS temp root")
-    identity = _hdiutil_identity(image_path, tmp)
+    identity = (_native_apfs_identity(tmp) if native_apfs else
+                _hdiutil_identity(image_path, tmp) if image_path is not None else None)
     if identity is None:
-        errors.append("pinned APFS image is not mounted at the configured temp path")
+        errors.append("current writable APFS volume was not observed" if native_apfs
+                      else "pinned APFS image is not mounted at the configured temp path")
 
     result: dict[str, Any] = {
         "output_root": str(output.resolve()),
@@ -408,8 +474,13 @@ def candidate_fingerprint(
     if errors:
         return None, errors
     source_paths = tuple(data["source_paths"])
+    try:
+        test_inputs = _test_input_hashes(data)
+    except (OSError, ValueError) as exc:
+        return None, ["test input fingerprint changed or unavailable: " + str(exc)]
     payload = {
         "candidate_id": data["candidate_id"],
+        "test_input_sha256": test_inputs,
         "baseline_sha256": sha256_file(baseline_path),
         "baseline_commit": data["baseline_commit"],
         "source_sha256": {rel: sha256_file(_safe_repo_file(root, rel)) for rel in source_paths},
@@ -703,7 +774,8 @@ def main(argv: list[str] | None = None) -> int:
     configured_output = Path(str(environment.get("output_root") or evidence_root)).resolve()
     configured_tmp = Path(str(environment.get("tmp_root") or "/unconfigured"))
     tmp_root = configured_tmp.resolve()
-    image_path = Path(str(environment.get("image_path") or "/unconfigured"))
+    native_apfs = environment.get("scratch_kind") == "native_apfs"
+    image_path = None if native_apfs else Path(str(environment.get("image_path") or "/unconfigured"))
     python_path = Path(str(environment.get("python_executable") or "/unconfigured"))
     expected_output = output_root(root).resolve()
     evidence_root = configured_output if configured_output == expected_output else expected_output
@@ -717,7 +789,8 @@ def main(argv: list[str] | None = None) -> int:
         "candidate_fingerprint": None, "stages": [], "failures": [], "errors": [],
         "summary_path": str(summary_path), "artifacts": {},
     }
-    scratch, scratch_errors = scratch_probe(evidence_root, tmp_root, image_path, configured_output)
+    scratch, scratch_errors = scratch_probe(evidence_root, tmp_root, image_path, configured_output,
+                                           native_apfs=native_apfs)
     summary["scratch"] = scratch
     summary["errors"].extend(scratch_errors[:MAX_FAILURES])
     if scratch_errors:
@@ -749,6 +822,8 @@ def main(argv: list[str] | None = None) -> int:
         _write_summary(summary_path, summary)
         _emit_summary(summary)
         return 2
+
+    env.update(baseline.get("test_environment", {}))
 
     fingerprint, fingerprint_errors = candidate_fingerprint(
         root, baseline_path, baseline, identity, scratch, tmp_root,

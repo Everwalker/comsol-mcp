@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager, nullcontext
 from contextvars import ContextVar
-from dataclasses import replace
+from dataclasses import dataclass, replace
 import hashlib
 import ipaddress
 import json
@@ -62,6 +62,27 @@ class SessionConnectFailure(RuntimeError):
         self.worker = worker
         self.reply = dict(reply) if isinstance(reply, Mapping) else None
         self.runtime_metadata = dict(runtime_metadata) if isinstance(runtime_metadata, Mapping) else None
+
+
+@dataclass(frozen=True)
+class _RuntimeObservationBinding:
+    """Original attach context; never populated from an operation argument."""
+
+    worker: Any
+    service: Any
+    installation_runtime_id: str
+    runtime_id: str
+    worker_instance_id: str
+    connection_epoch: int
+    server_instance_id: str
+    endpoint: str
+    legacy: bool
+    comsol_version: str | None
+    configured_version: str | None
+
+    def identity(self) -> dict[str, Any]:
+        return {name: getattr(self, name) for name in (
+            "runtime_id", "worker_instance_id", "connection_epoch", "server_instance_id", "endpoint")}
 
 #: G3 (W13-W16) catalogue effect -> write-ticket effect classification.  The
 #: catalogue remains the single source of truth (``_g3_ops.EFFECTS``); this
@@ -267,6 +288,7 @@ class ManagedBackend:
         self.registry = dict(registry) if registry is not None else collect_legacy_registry()
         self.server_lock = None
         self.worker_identity = None
+        self._runtime_observation_binding = None
         self.endpoint_key = None
         self.cached = {"connected": False, "server_ownership": "shared",
                        "external_change_detection": _external_change_detection_metadata()}
@@ -796,6 +818,11 @@ class ManagedBackend:
             self.service = ExecutionService(ledger, Adapter(), project_root=self.project_root,
                                             on_state_change=lambda event: self.persist())
             self.endpoint_key = reply["server"]
+            self._bind_runtime_observation_context(
+                installation_root=runtime.installation_root, runtime_id=runtime.runtime_id,
+                worker_instance_id=instance, connection_epoch=generation,
+                server_instance_id=server_id, endpoint=reply["server"], legacy=False,
+                configured_version=runtime.comsol_version)
             self.cached = {
                 "connected": True,
                 "session_id": session_id,
@@ -910,6 +937,10 @@ class ManagedBackend:
             srv._client_connected = True
             srv._connected_host, srv._connected_port = canonical_host, port
             srv._server_started_by_mcp = False
+            self._bind_runtime_observation_context(
+                installation_root=getattr(getattr(self.worker, "paths", None), "comsol_root", None),
+                runtime_id="runtime-" + instance, worker_instance_id=instance,
+                connection_epoch=generation, server_instance_id=server_id, endpoint=key, legacy=True)
             self.cached = {"connected": True, "server_ownership": "shared", "endpoint": key,
                            "session_id": session_id, "server_instance_id": server_id,
                            "external_change_detection": _external_change_detection_metadata(),
@@ -1362,6 +1393,76 @@ class ManagedBackend:
         except KeyError as exc:
             raise ExecutionContractError("PERMISSION_DENIED", f"unclassified nested G2 effect: {effect!r}") from exc
 
+    def _bind_runtime_observation_context(self, *, installation_root, runtime_id,
+                                          worker_instance_id, connection_epoch,
+                                          server_instance_id, endpoint, legacy, configured_version=None):
+        # Missing installation data must not undo an otherwise completed attach.
+        # It leaves future runtime evidence UNVERIFIED, preserving the live owner.
+        self._runtime_observation_binding = None
+        if installation_root is None:
+            return
+        try:
+            from ._runtime_installation import runtime_id_for_root, inspect_installation
+            installation_id = runtime_id_for_root(installation_root)
+        except Exception:
+            return
+        version = None
+        try:
+            installed = inspect_installation(installation_id)
+            release = installed["installation"]["version"]
+            build = installed["installation"]["build"]
+            if (installed.get("status") == "OBSERVED" and release.get("status") == "OBSERVED"
+                    and build.get("status") == "OBSERVED" and type(build.get("value")) is int):
+                from ._g3_model_delivery import _pad_product_version
+                family = _pad_product_version(tuple(int(part) for part in release["value"].split(".")))
+                version = ".".join(str(part) for part in (*family, build["value"]))
+        except Exception:
+            pass # Preserve the original live attach; unavailable build stays UNVERIFIED.
+        self._runtime_observation_binding = _RuntimeObservationBinding(
+            self.worker, self.service, installation_id, runtime_id, worker_instance_id,
+            connection_epoch, server_instance_id, endpoint, legacy, version, configured_version)
+
+    def _bound_runtime_observation_identity(self, binding) -> dict[str, Any]:
+        from ._runtime_installation import runtime_id_for_root
+
+        if (type(binding) is not _RuntimeObservationBinding or binding.worker is not self.worker
+                or binding.service is not self.service or self.service is None):
+            raise PreWriteRefusal("RUNTIME_BINDING_UNAVAILABLE", "original attach context is unavailable")
+        health = self.worker.runtime_metadata()
+        original = binding.identity()
+        identity = self.worker_identity
+        mismatches = []
+        root = getattr(getattr(self.worker, "paths", None), "comsol_root", None)
+        if root is None or runtime_id_for_root(root) != binding.installation_runtime_id:
+            mismatches.append("installation_runtime_id")
+        if not isinstance(identity, Mapping):
+            mismatches.extend(original)
+        else:
+            mismatches.extend(name for name, value in original.items()
+                              if identity.get(name) != value or type(identity.get(name)) is not type(value))
+        if not isinstance(health, Mapping):
+            mismatches.append("worker_health")
+        else:
+            for observed, expected in (("instance_id", "worker_instance_id"), ("generation", "connection_epoch"), ("server", "endpoint")):
+                if health.get(observed) != original[expected] or type(health.get(observed)) is not type(original[expected]):
+                    mismatches.append(expected)
+            if health.get("connected") is not True:
+                mismatches.append("connected")
+            if binding.legacy and "runtime-" + str(health.get("instance_id")) != binding.runtime_id:
+                mismatches.append("runtime_id")
+        if self.service.ledger.server_instance_id != binding.server_instance_id:
+            mismatches.append("server_instance_id")
+        if self.endpoint_key != binding.endpoint:
+            mismatches.append("endpoint")
+        if (type(binding.connection_epoch) is not int or binding.connection_epoch < 1
+                or not all(isinstance(original[name], str) and original[name]
+                           for name in ("runtime_id", "worker_instance_id", "server_instance_id", "endpoint"))):
+            mismatches.append("original_identity")
+        if mismatches:
+            raise PreWriteRefusal("RUNTIME_IDENTITY_UNVERIFIED", "live Worker differs from original attach context",
+                                  details={"mismatched_fields": sorted(set(mismatches))})
+        return original
+
     def _code_execution_runtime_observation(self) -> dict[str, Any]:
         """Mint a host-side runtime observation for durable code execution.
 
@@ -1377,37 +1478,31 @@ class ManagedBackend:
         }
         try:
             from ._g3_model_delivery import _current_version
-            from ._runtime_installation import runtime_id_for_root
-
-            worker = self.worker
-            service = self.service
-            paths = getattr(worker, "paths", None)
-            root = getattr(paths, "comsol_root", None)
-            if root is None or service is None:
-                raise ValueError("attached Worker installation or service is unavailable")
-            version = _current_version(worker)
-            runtime_id = runtime_id_for_root(root)
-            identity = self.worker_identity
-            health = worker.runtime_metadata()
-            required = {
-                "runtime_id": runtime_id,
-                "worker_instance_id": health.get("instance_id") if isinstance(health, Mapping) else None,
-                "connection_epoch": health.get("generation") if isinstance(health, Mapping) else None,
-                "server_instance_id": service.ledger.server_instance_id,
-                "endpoint": self.endpoint_key,
-            }
-            if (not isinstance(identity, Mapping) or any(identity.get(name) != value for name, value in required.items())
-                    or not isinstance(health, Mapping) or health.get("connected") is not True
-                    or health.get("server") != self.endpoint_key
-                    or type(required["connection_epoch"]) is not int or required["connection_epoch"] < 1
-                    or not all(isinstance(required[name], str) and required[name]
-                               for name in ("runtime_id", "worker_instance_id", "server_instance_id", "endpoint"))):
-                raise ValueError("live Worker identity differs from the backend binding")
+            binding = self._runtime_observation_binding
+            required = self._bound_runtime_observation_identity(binding)
+            if binding.comsol_version is None:
+                raise PreWriteRefusal("RUNTIME_VERSION_UNAVAILABLE", "original installation build was not observed at attach")
+            if binding.configured_version is not None:
+                from ._g3_model_delivery import _version_parts, _explicit_build, _pad_product_version
+                parts = _version_parts(binding.configured_version)
+                actual = tuple(int(part) for part in binding.comsol_version.split("."))
+                if (parts is None or _pad_product_version(parts[:3]) != actual[:3]
+                        or (_explicit_build(binding.configured_version) is not None
+                            and _explicit_build(binding.configured_version) != actual[3])):
+                    raise PreWriteRefusal("RUNTIME_VERSION_MISMATCH", "configured runtime differs from original installation build")
+            version = _current_version(binding.worker)
+            if version != binding.comsol_version:
+                raise PreWriteRefusal("RUNTIME_VERSION_MISMATCH", "runtime build differs from original attach installation")
+            self._bound_runtime_observation_identity(binding)
             observation.update({"status": "OBSERVED", "comsol_version": version,
-                                "runtime_identity": required})
+                                "runtime_identity": required,
+                                "installation_runtime_id": binding.installation_runtime_id})
         except Exception as exc:
             observation.update({"reason_code": getattr(exc, "code", None) or "RUNTIME_IDENTITY_UNVERIFIED",
                                 "cause_type": type(exc).__name__})
+            details = getattr(exc, "details", None)
+            if isinstance(details, Mapping) and "mismatched_fields" in details:
+                observation["mismatched_fields"] = details["mismatched_fields"]
         return observation
 
     @staticmethod
@@ -3109,8 +3204,10 @@ class ManagedBackend:
         if delivery_action and (expected_rev is None or expected_rev != current_rev):
             raise ExecutionContractError("REVISION_CONFLICT", "model delivery expected_revision must exactly match the bound model",
                                          stage="validation")
+        from ._ephemeral_result_ticket import new_binding
+        ephemeral_binding = new_binding(self, callback, function, ref) if operation == "result.at_points" else None
         result = self.service.execute_legacy(alias, callback, body, model_ref=ref,
-                expected_revision=expected_rev,
+                _ephemeral_binding=ephemeral_binding, expected_revision=expected_rev,
                 request_id=execution.get("request_id") or str(operation_id), session_id=session, effect=effect,
                 terminal_model_close=(operation == "model.close"))
         if result.get("success") and ref is not None and operation != "model.close":

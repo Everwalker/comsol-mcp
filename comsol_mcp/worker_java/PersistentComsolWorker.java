@@ -64,7 +64,7 @@ public final class PersistentComsolWorker {
       "comments", "create", "createAutoSequences", "dataset", "descr", "disableUpdates",
       "feature", "geom", "get", "getAllowedPropertyValues", "getComsolVersion",
       "getEntityFromModelPath", "getFilePath", "getLastComputationDate",
-      "getLastComputationTime", "getLastComputationVersion", "getSize", "getPVals", "getReal",
+      "getLastComputationTime", "getLastComputationVersion", "getSize", "getSizeMulti", "getPVals", "getReal",
       "getData", "getImag", "getBoolean", "getBooleanArray", "getBooleanMatrix",
       "getDouble", "getDoubleArray", "getDoubleMatrix", "getInt", "getIntArray", "getIntMatrix",
       "getString", "getStringArray", "getStringMatrix", "getType", "getValueType",
@@ -171,7 +171,7 @@ public final class PersistentComsolWorker {
       // solver.solution_clear; the adapter requires exactly one sol:<tag>
       // NodePath and verifies isEmpty()/isInitialized() after dispatch.
       // COMSOL 6.4 API reference: SolverSequence.clearSolutionData().
-      "getSolutioninfo", "getOuterSolnum", "getMaxInner", "getLevelNames", "clearSolutionData",
+      "getSolutioninfo", "getOuterSolnum", "getMaxInner", "getLevelNames", "getLevels", "clearSolutionData",
       // G3.3 independent 6.4 javap verification: native geometry and per-solution metadata.
       "isAxisymmetric", "getSolnum", "getSolnums", "getPvals", "getUnits", "getUnit",
       "getPNamesOuter", "getPUnitsOuter", "getSolverSequence",

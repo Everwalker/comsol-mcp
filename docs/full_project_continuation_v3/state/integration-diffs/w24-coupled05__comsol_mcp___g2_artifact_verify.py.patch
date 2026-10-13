@@ -1,0 +1,425 @@
+--- root/comsol_mcp/_g2_artifact_verify.py
++++ w24-coupled05/comsol_mcp/_g2_artifact_verify.py
+@@ -1,12 +1,9 @@
+-"""Read-only verifier for supported offline release bundles and model packages.
++"""Read-only verifier for the supported ``comsol-mcp-full-release/1`` bundle.
+ 
+ The verifier parses ZIP, wheel, JSON, lock, and metadata bytes only. It does not
+ extract members, import bundled code, install wheels, or call a builder/runtime.
+ Unknown marker syntax and resource-limit hits remain incomplete instead of
+-being treated as successful validation. Registered COMSOL model packages have
+-their manifest, outer ZIP members, dependency hashes, and embedded MPH resources
+-checked within explicit read-only bounds; native compatibility and full
+-portability remain unverified.
++being treated as successful validation.
+ """
+ from __future__ import annotations
+ 
+@@ -16,7 +13,7 @@
+ import io
+ import json
+ import os
+-from pathlib import Path, PurePosixPath, PureWindowsPath
++from pathlib import Path, PurePosixPath
+ import re
+ import stat
+ from contextvars import ContextVar
+@@ -46,13 +43,8 @@
+ MAX_WHEEL_MEMBER_BYTES = 64 * 1024 * 1024
+ MAX_WHEEL_EXPANDED_BYTES = 256 * 1024 * 1024
+ MAX_BUNDLE_NESTED_EXPANDED_BYTES = 512 * 1024 * 1024
+-MAX_MODEL_PACKAGE_MPH_BYTES = MAX_ARCHIVE_BYTES
+-MAX_MODEL_PACKAGE_DEPENDENCY_BYTES = 64 * 1024 * 1024
+-MAX_MODEL_PACKAGE_MPH_ENTRIES = 20_000
+-MAX_MODEL_PACKAGE_MPH_MEMBER_BYTES = 64 * 1024 * 1024
+ MAX_FINDINGS = 100
+ _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+-_ABSOLUTE_PATH_TEXT = re.compile(r"(?<![A-Za-z0-9._-])/(?:[^\s\"']+/)*[^\s\"']+")
+ _PACKAGE_NAME_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$")
+ _VERSION_RE = re.compile(
+     r"^v?(?P<release>[0-9]+(?:\.[0-9]+)*)(?:(?P<pre>a|b|rc)(?P<pre_n>[0-9]+)?)?"
+@@ -81,9 +73,6 @@
+         self.format_schema = format_schema
+         self.target = target
+         self.python = python
+-        self.declared_comsol_version: str | None = None
+-        self.target_runtime_compatibility = "NOT_APPLICABLE"
+-        self.portability_status = "NOT_APPLICABLE"
+         self.member_integrity = "PASS"
+         self.dependency_closure = "PASS_DECLARED_TARGET"
+         self.target_format = "PASS_STATIC_TAGS"
+@@ -157,9 +146,6 @@
+             "target_format": self.target_format,
+             "declared_target": self.target,
+             "declared_python": self.python,
+-            "declared_comsol_version": self.declared_comsol_version,
+-            "target_runtime_compatibility": self.target_runtime_compatibility,
+-            "portability_status": self.portability_status,
+             "producer_trust": "UNVERIFIED_UNLESS_EXISTING_AUTHORITATIVE_PRODUCER_PROOF",
+             "native_compatibility": "NOT_RUN",
+             "native_components": self.native_components,
+@@ -1428,346 +1414,6 @@
+         _verify_components(report, package, selected, parsed_wheels)
+ 
+ 
+-def _package_object(value: Any, required: set[str], optional: set[str] = frozenset()) -> bool:
+-    return isinstance(value, dict) and required <= set(value) and not (set(value) - required - set(optional))
+-
+-
+-def _package_digest_size(value: Any, *, allow_zero: bool = True) -> bool:
+-    return (isinstance(value, dict) and set(value) == {"sha256", "size_bytes"}
+-            and isinstance(value.get("sha256"), str) and _SHA256_RE.fullmatch(value["sha256"]) is not None
+-            and isinstance(value.get("size_bytes"), int) and not isinstance(value.get("size_bytes"), bool)
+-            and (value["size_bytes"] >= 0 if allow_zero else value["size_bytes"] > 0))
+-
+-
+-def _package_relative_path(value: Any) -> str | None:
+-    if not isinstance(value, str) or not value or value.startswith("/") or PureWindowsPath(value).drive:
+-        return None
+-    try:
+-        return _safe_name(value)
+-    except ValueError:
+-        return None
+-
+-
+-def _contains_absolute_path_text(value: Any) -> bool:
+-    if isinstance(value, str):
+-        return (value.startswith("/") or PureWindowsPath(value).is_absolute()
+-                or _ABSOLUTE_PATH_TEXT.search(value) is not None)
+-    if isinstance(value, dict):
+-        return any(_contains_absolute_path_text(key) or _contains_absolute_path_text(item)
+-                   for key, item in value.items())
+-    if isinstance(value, list):
+-        return any(_contains_absolute_path_text(item) for item in value)
+-    return False
+-
+-
+-def _validate_model_package_manifest(manifest: dict[str, Any]) -> tuple[str | None, dict[str, dict[str, Any]]]:
+-    """Validate the closed manifest shape and return its expected file map."""
+-    root_keys = {
+-        "schema", "version", "format_version", "model", "contents", "embedded_dependencies",
+-        "resolved_project_dependencies", "file_references", "dependency_coverage", "unresolved_items",
+-        "external_code", "external_libraries_services", "portability_status",
+-        "absolute_paths_in_manifest", "save_semantics",
+-    }
+-    if set(manifest) != root_keys:
+-        return "manifest has missing or undeclared fields", {}
+-    if (manifest.get("schema") != "comsol-mcp-model-package" or type(manifest.get("version")) is not int
+-            or manifest.get("version") != 1 or manifest.get("format_version") != "comsol-mcp-model-package/1"):
+-        return "manifest schema or version is unsupported", {}
+-    model = manifest.get("model")
+-    if (not _package_object(model, {"model_ref", "source_revision", "comsol_version", "include_solution"})
+-            or not isinstance(model.get("model_ref"), dict)
+-            or set(model["model_ref"]) != {"schema_version", "session_id", "server_instance_id", "model_tag", "generation"}
+-            or type(model["model_ref"].get("schema_version")) is not int or model["model_ref"]["schema_version"] < 1
+-            or not all(isinstance(model["model_ref"].get(name), str) and model["model_ref"][name]
+-                       for name in ("session_id", "server_instance_id", "model_tag"))
+-            or type(model["model_ref"].get("generation")) is not int or model["model_ref"]["generation"] < 1
+-            or type(model.get("source_revision")) is not int or model["source_revision"] < 0
+-            or not isinstance(model.get("comsol_version"), str) or not model["comsol_version"].strip()
+-            or type(model.get("include_solution")) is not bool):
+-        return "manifest model declaration is malformed", {}
+-    contents = manifest.get("contents")
+-    if (not _package_object(contents, {"model.mph"})
+-            or not _package_digest_size(contents.get("model.mph"), allow_zero=False)):
+-        return "manifest model.mph hash/size declaration is malformed", {}
+-    dependencies = manifest.get("resolved_project_dependencies")
+-    if not isinstance(dependencies, list) or len(dependencies) > MAX_OUTER_ENTRIES:
+-        return "manifest dependency list is malformed or exceeds its row budget", {}
+-    expected_files: dict[str, dict[str, Any]] = {"model.mph": contents["model.mph"]}
+-    seen_project_paths: set[str] = set()
+-    for row in dependencies:
+-        if not _package_object(row, {"project_relative_path", "package_path", "sha256", "size_bytes"}):
+-            return "manifest project dependency record is malformed", {}
+-        source_path = _package_relative_path(row.get("project_relative_path"))
+-        package_path = _package_relative_path(row.get("package_path"))
+-        digest, size = row.get("sha256"), row.get("size_bytes")
+-        if (source_path is None or package_path is None or source_path in seen_project_paths
+-                or not isinstance(digest, str) or _SHA256_RE.fullmatch(digest) is None
+-                or type(size) is not int or size < 0):
+-            return "manifest project dependency path/hash/size is malformed or duplicated", {}
+-        expected_path = f"dependencies/{digest}/{hashlib.sha256(source_path.encode('utf-8')).hexdigest()[:16]}.bin"
+-        if package_path != expected_path:
+-            return "manifest project dependency path does not match its declared identity", {}
+-        if size > MAX_MODEL_PACKAGE_DEPENDENCY_BYTES:
+-            return "manifest project dependency exceeds the member budget", {}
+-        seen_project_paths.add(source_path)
+-        expected_files[package_path] = {"sha256": digest, "size_bytes": size}
+-    embedded = manifest.get("embedded_dependencies")
+-    if not isinstance(embedded, list) or len(embedded) > MAX_OUTER_ENTRIES:
+-        return "manifest embedded dependency list is malformed or exceeds its row budget", {}
+-    for row in embedded:
+-        if not isinstance(row, dict) or not isinstance(row.get("resource_tag"), str) or not row["resource_tag"]:
+-            return "manifest embedded dependency record is malformed", {}
+-        if row.get("resolution") == "VERIFIED_EMBEDDED_MPH_MEMBER":
+-            if (set(row) != {"resource_tag", "archive_member", "sha256", "size_bytes", "resolution"}
+-                    or _package_relative_path(row.get("archive_member")) is None
+-                    or not isinstance(row.get("sha256"), str) or _SHA256_RE.fullmatch(row["sha256"]) is None
+-                    or type(row.get("size_bytes")) is not int or row["size_bytes"] < 0):
+-                return "manifest embedded dependency hash/size declaration is malformed", {}
+-        elif row.get("state") == "UNVERIFIED":
+-            if (set(row) != {"resource_tag", "state", "archive_members", "reason"}
+-                    or not isinstance(row.get("archive_members"), list)
+-                    or not all(_package_relative_path(name) is not None for name in row["archive_members"])
+-                    or not isinstance(row.get("reason"), str)):
+-                return "manifest unresolved embedded dependency record is malformed", {}
+-        else:
+-            return "manifest embedded dependency resolution state is unsupported", {}
+-    references = manifest.get("file_references")
+-    if not isinstance(references, list) or len(references) > MAX_OUTER_ENTRIES:
+-        return "manifest file-reference list is malformed or exceeds its row budget", {}
+-    dependency_by_source = {row["project_relative_path"]: row for row in dependencies}
+-    for row in references:
+-        if not isinstance(row, dict):
+-            return "manifest file-reference entry is not an object", {}
+-        kind = row.get("kind")
+-        if kind == "function_data":
+-            required = {"kind", "tag", "function_type", "authorized_source", "verification"}
+-            optional = {"package_path"}
+-            if (not _package_object(row, required, optional)
+-                    or not isinstance(row.get("function_type"), str)):
+-                return "manifest function reference is malformed", {}
+-        elif kind == "cad_geometry":
+-            required = {"kind", "component", "geometry", "feature", "authorized_source", "verification"}
+-            optional = {"package_path"}
+-            if not _package_object(row, required, optional):
+-                return "manifest CAD reference is malformed", {}
+-        else:
+-            return "manifest file-reference kind is unsupported", {}
+-        source = row.get("authorized_source")
+-        if (not isinstance(source, dict) or not {"state", "project_relative_path"} <= set(source)
+-                or set(source) - {"state", "project_relative_path", "sha256", "size_bytes", "reason"}
+-                or source.get("state") not in {"VERIFIED", "AUTHORIZED_PROJECT_LOCAL", "MISSING", "UNVERIFIED"}):
+-            return "manifest authorized-source declaration is malformed", {}
+-        rel = source.get("project_relative_path")
+-        if rel is not None and _package_relative_path(rel) is None:
+-            return "manifest source path is not canonical project-relative", {}
+-        if source["state"] == "VERIFIED":
+-            dep = dependency_by_source.get(rel)
+-            if (dep is None or source.get("sha256") != dep["sha256"]
+-                    or source.get("size_bytes") != dep["size_bytes"]
+-                    or row.get("package_path") != dep["package_path"]):
+-                return "verified file reference is not bound to its packaged dependency", {}
+-        elif row.get("package_path") is not None:
+-            return "unverified file reference unexpectedly names packaged bytes", {}
+-    coverage = manifest.get("dependency_coverage")
+-    coverage_names = {"model_file_resource_api", "functions", "geometry_import_features", "external_code",
+-                      "external_libraries_services"}
+-    if (not _package_object(coverage, coverage_names)
+-            or any(value not in {"PASS_SCOPED", "PARTIAL", "UNVERIFIED"} for value in coverage.values())):
+-        return "manifest dependency coverage is malformed", {}
+-    unresolved = manifest.get("unresolved_items")
+-    if not isinstance(unresolved, list) or len(unresolved) > MAX_OUTER_ENTRIES:
+-        return "manifest unresolved-item list is malformed or exceeds its row budget", {}
+-    unresolved_allowed = {"kind", "state", "reason", "tag", "resource_tag", "component", "geometry", "feature", "archive_members"}
+-    for row in unresolved:
+-        if (not isinstance(row, dict) or not {"kind", "state", "reason"} <= set(row)
+-                or set(row) - unresolved_allowed or not all(isinstance(row.get(key), str) for key in ("kind", "state", "reason"))
+-                or ("archive_members" in row and (not isinstance(row["archive_members"], list)
+-                    or not all(_package_relative_path(value) is not None for value in row["archive_members"])) )):
+-            return "manifest unresolved-item record is malformed", {}
+-    for key in ("external_code", "external_libraries_services"):
+-        value = manifest.get(key)
+-        if (not _package_object(value, {"status", "reason"}) or value.get("status") != "UNVERIFIED"
+-                or not isinstance(value.get("reason"), str) or not value["reason"]):
+-            return f"manifest {key} declaration is malformed", {}
+-    if (manifest.get("portability_status") != "UNVERIFIED"
+-            or type(manifest.get("absolute_paths_in_manifest")) is not bool
+-            or manifest.get("absolute_paths_in_manifest") is not False
+-            or not isinstance(manifest.get("save_semantics"), str)):
+-        return "manifest portability or save-semantics declaration is malformed", {}
+-    if _contains_absolute_path_text(manifest):
+-        return "manifest contains an absolute path", {}
+-    return None, expected_files
+-
+-
+-def _verify_model_package_mph(report: _Report, stream: Any, embedded: list[dict[str, Any]]) -> None:
+-    try:
+-        with zipfile.ZipFile(stream, "r") as mph:
+-            infos = mph.infolist()
+-            if len(infos) > MAX_MODEL_PACKAGE_MPH_ENTRIES:
+-                report.mark_incomplete("MODEL_MPH_ENTRY_LIMIT", "embedded MPH exceeds the nested entry budget", category="dependency")
+-                return
+-            members: dict[str, zipfile.ZipInfo] = {}
+-            seen_names: set[str] = set()
+-            expanded = 0
+-            for info in infos:
+-                try:
+-                    name = _safe_name(info.orig_filename, is_directory=info.is_dir())
+-                except ValueError:
+-                    report.member_failure("UNSAFE_MPH_MEMBER", "embedded MPH contains an unsafe member name")
+-                    continue
+-                if name in seen_names or not _regular_member(info):
+-                    report.member_failure("INVALID_MPH_MEMBER", "embedded MPH contains a duplicate or special member", name)
+-                    continue
+-                seen_names.add(name)
+-                if info.is_dir():
+-                    continue
+-                expanded += info.file_size
+-                if info.file_size > MAX_MODEL_PACKAGE_MPH_MEMBER_BYTES:
+-                    report.mark_incomplete("MODEL_MPH_MEMBER_LIMIT", "embedded MPH member exceeds the per-member budget", category="dependency", member=name)
+-                members[name] = info
+-            if expanded > MAX_BUNDLE_NESTED_EXPANDED_BYTES:
+-                report.mark_incomplete("MODEL_MPH_EXPANDED_LIMIT", "embedded MPH exceeds the expanded-byte budget", category="dependency")
+-                return
+-            for row in embedded:
+-                if row.get("resolution") != "VERIFIED_EMBEDDED_MPH_MEMBER":
+-                    report.mark_incomplete("EMBEDDED_DEPENDENCY_UNVERIFIED", "manifest declares an unresolved embedded FileResource", category="dependency")
+-                    continue
+-                name = row["archive_member"]
+-                info = members.get(name)
+-                if info is None:
+-                    report.dependency_failure("MISSING_EMBEDDED_DEPENDENCY", "declared FileResource member is absent from model.mph", name)
+-                    continue
+-                if info.file_size > MAX_MODEL_PACKAGE_MPH_MEMBER_BYTES:
+-                    continue
+-                try:
+-                    size, digest, _crc, _ = _read_zip_member(
+-                        mph, info, limit=MAX_MODEL_PACKAGE_MPH_MEMBER_BYTES,
+-                    )
+-                except OverflowError:
+-                    report.mark_incomplete("MODEL_MPH_MEMBER_LIMIT", "embedded dependency exceeds the read budget", category="dependency", member=name)
+-                    continue
+-                except (zipfile.BadZipFile, RuntimeError, OSError, ValueError, zlib.error):
+-                    report.member_failure("MPH_MEMBER_READ_FAILURE", "embedded dependency member could not be read safely", name)
+-                    continue
+-                if size != row["size_bytes"] or digest != row["sha256"]:
+-                    report.dependency_failure("EMBEDDED_DEPENDENCY_HASH_MISMATCH", "embedded dependency bytes differ from the model package manifest", name)
+-    except (zipfile.BadZipFile, OSError, RuntimeError, ValueError, zlib.error):
+-        report.member_failure("INVALID_MPH_ARCHIVE", "declared model.mph is not a readable ZIP archive")
+-
+-
+-def _verify_model_package(report: _Report, archive: zipfile.ZipFile, record: Mapping[str, Any]) -> None:
+-    report.package_format = "COMSOL_MODEL_PACKAGE"
+-    report.format_schema = "comsol-mcp-model-package"
+-    report.target_runtime_compatibility = "UNVERIFIED"
+-    report.portability_status = "UNVERIFIED"
+-    try:
+-        infos = archive.infolist()
+-        if len(infos) > MAX_OUTER_ENTRIES:
+-            report.mark_incomplete("MODEL_PACKAGE_ENTRY_LIMIT", "model package exceeds the outer entry budget")
+-            report.dependency_closure = "INCOMPLETE"
+-            report.target_format = "INCOMPLETE"
+-            return
+-        by_name: dict[str, zipfile.ZipInfo] = {}
+-        expanded = 0
+-        for info in infos:
+-            try:
+-                name = _safe_name(info.orig_filename, is_directory=info.is_dir())
+-            except ValueError:
+-                report.member_failure("UNSAFE_MODEL_PACKAGE_MEMBER", "model package contains an unsafe member name")
+-                continue
+-            if name in by_name or info.is_dir() or not _regular_member(info):
+-                report.member_failure("INVALID_MODEL_PACKAGE_MEMBER", "model package contains a duplicate, directory, or special member", name)
+-                continue
+-            by_name[name] = info
+-            expanded += info.file_size
+-            if info.file_size > MAX_ARCHIVE_BYTES:
+-                report.mark_incomplete("MODEL_PACKAGE_MEMBER_LIMIT", "model package member exceeds the read budget", member=name)
+-        if expanded > MAX_OUTER_EXPANDED_BYTES:
+-            report.mark_incomplete("MODEL_PACKAGE_EXPANDED_LIMIT", "model package exceeds the expanded-byte budget")
+-            report.dependency_closure = "INCOMPLETE"
+-            report.target_format = "INCOMPLETE"
+-            return
+-        manifest_info = by_name.get("manifest.json")
+-        if manifest_info is None:
+-            report.member_failure("MISSING_MODEL_PACKAGE_MANIFEST", "model package manifest.json is missing")
+-            return
+-        if manifest_info.file_size > MAX_METADATA_BYTES:
+-            report.mark_incomplete("MODEL_PACKAGE_MANIFEST_LIMIT", "model package manifest exceeds the metadata budget")
+-            return
+-        try:
+-            _size, _digest, _crc, raw = _read_zip_member(
+-                archive, manifest_info, limit=MAX_METADATA_BYTES, keep=True,
+-            )
+-        except OverflowError:
+-            report.mark_incomplete("MODEL_PACKAGE_MANIFEST_LIMIT", "model package manifest exceeds the metadata budget")
+-            return
+-        except (zipfile.BadZipFile, RuntimeError, OSError, ValueError, zlib.error):
+-            report.member_failure("MODEL_PACKAGE_MANIFEST_READ_FAILURE", "model package manifest failed ZIP size/CRC validation", "manifest.json")
+-            return
+-        manifest = _json_object(raw or b"")
+-        if manifest is None:
+-            report.member_failure("INVALID_MODEL_PACKAGE_MANIFEST", "model package manifest is not strict UTF-8 JSON", "manifest.json")
+-            return
+-        shape_error, expected_files = _validate_model_package_manifest(manifest)
+-        if shape_error:
+-            report.member_failure("INVALID_MODEL_PACKAGE_MANIFEST", shape_error, "manifest.json")
+-            return
+-        model_version = manifest["model"]["comsol_version"]
+-        report.declared_comsol_version = model_version
+-        if record.get("format_version") != "comsol-mcp-model-package/1":
+-            report.mark_unsupported("UNSUPPORTED_MODEL_PACKAGE_VERSION", "registered model package format version is unsupported", category="member")
+-            return
+-        expected_names = {"manifest.json", *expected_files}
+-        if set(by_name) != expected_names:
+-            missing = sorted(expected_names - set(by_name))
+-            extra = sorted(set(by_name) - expected_names)
+-            if missing:
+-                report.member_failure("MISSING_MODEL_PACKAGE_MEMBER", "manifest-declared package member is missing", missing[0])
+-            if extra:
+-                report.member_failure("UNDECLARED_MODEL_PACKAGE_MEMBER", "model package contains an undeclared member", extra[0])
+-        if report.invalid:
+-            return
+-        for name, declared in expected_files.items():
+-            info = by_name[name]
+-            max_size = (MAX_MODEL_PACKAGE_MPH_BYTES if name == "model.mph"
+-                        else MAX_MODEL_PACKAGE_DEPENDENCY_BYTES)
+-            if info.file_size > max_size:
+-                report.mark_incomplete("MODEL_PACKAGE_MEMBER_LIMIT", "manifest-declared member exceeds its specific read budget", member=name)
+-                continue
+-            try:
+-                size, digest, _crc, _ = _read_zip_member(archive, info, limit=max_size)
+-            except OverflowError:
+-                report.mark_incomplete("MODEL_PACKAGE_MEMBER_LIMIT", "manifest-declared member exceeds its specific read budget", member=name)
+-                continue
+-            except (zipfile.BadZipFile, RuntimeError, OSError, ValueError, zlib.error):
+-                report.member_failure("MODEL_PACKAGE_MEMBER_READ_FAILURE", "manifest-declared member failed ZIP size/CRC validation", name)
+-                continue
+-            if size != declared["size_bytes"] or digest != declared["sha256"]:
+-                report.member_failure("MODEL_PACKAGE_MEMBER_HASH_MISMATCH", "package member bytes differ from the manifest SHA-256/size", name)
+-                if name.startswith("dependencies/"):
+-                    report.dependency_failure("PROJECT_DEPENDENCY_HASH_MISMATCH", "packaged project dependency differs from its declared identity", name)
+-        mph_info = by_name.get("model.mph")
+-        if mph_info is not None and mph_info.file_size <= MAX_MODEL_PACKAGE_MPH_BYTES:
+-            try:
+-                mph_stream = archive.open(mph_info, "r")
+-                with mph_stream:
+-                    _verify_model_package_mph(report, mph_stream, manifest["embedded_dependencies"])
+-            except (zipfile.BadZipFile, RuntimeError, OSError, ValueError, zlib.error):
+-                report.member_failure("INVALID_MPH_ARCHIVE", "declared model.mph could not be parsed safely")
+-        coverage = manifest["dependency_coverage"]
+-        if (manifest["unresolved_items"] or any(value != "PASS_SCOPED" for value in coverage.values())
+-                or any(row.get("resolution") == "UNVERIFIED" for row in manifest["embedded_dependencies"])
+-                or any(row.get("authorized_source", {}).get("state") != "VERIFIED"
+-                       for row in manifest["file_references"])):
+-            report.mark_incomplete("MODEL_DEPENDENCY_CLOSURE_UNVERIFIED", "manifest records unresolved or incomplete dependency inventory", category="dependency")
+-        report.mark_incomplete("MODEL_RUNTIME_COMPATIBILITY_UNVERIFIED", "declared COMSOL version was read, but target runtime compatibility was not executed", category="target")
+-        report.mark_incomplete("MODEL_PORTABILITY_UNVERIFIED", "external libraries, services, and platform portability are outside this verifier", category="target")
+-    except (zipfile.BadZipFile, RuntimeError, OSError, ValueError, zlib.error):
+-        report.member_failure("MODEL_PACKAGE_ZIP_READ_FAILURE", "model package ZIP could not be parsed safely")
+-        report.dependency_closure = "INCOMPLETE"
+-        report.target_format = "INCOMPLETE"
+-
+-
+ def verify_registered_bundle(project_root: str | Path, record: Mapping[str, Any], *,
+                              project_id: str, artifact_id: str,
+                              current_host_identity: str, current_engine_host_identity: str) -> dict[str, Any]:
+@@ -1805,17 +1451,6 @@
+             report.mark_incomplete("BUNDLE_RESOURCE_LIMIT", "registered archive exceeds the compressed-size budget")
+             report.dependency_closure = "INCOMPLETE"
+             report.target_format = "INCOMPLETE"
+-        elif record.get("role") == "model_package":
+-            try:
+-                handle.seek(0)
+-                with zipfile.ZipFile(handle, "r") as archive:
+-                    _verify_model_package(report, archive, record)
+-            except (zipfile.BadZipFile, RuntimeError, OSError, ValueError, zlib.error):
+-                report.package_format = "COMSOL_MODEL_PACKAGE"
+-                report.format_schema = "comsol-mcp-model-package"
+-                report.member_failure("MODEL_PACKAGE_ZIP_READ_FAILURE", "model package ZIP could not be parsed safely")
+-                report.dependency_closure = "INCOMPLETE"
+-                report.target_format = "INCOMPLETE"
+         else:
+             handle.seek(0)
+             prefix = handle.read(4)

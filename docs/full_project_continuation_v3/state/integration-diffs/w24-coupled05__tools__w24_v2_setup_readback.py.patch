@@ -1,0 +1,44 @@
+--- root/tools/w24_v2_setup_readback.py
++++ w24-coupled05/tools/w24_v2_setup_readback.py
+@@ -0,0 +1,41 @@
++"""Strict v2 setup comparison; no native admission or solved-state claims."""
++from tools.run_native_w24_cure_preflight import _compare_reopened_readback, _compare_configuration_values
++from tools.w24_cure_v2_capture import validate_cure_law_v2_contract_readback
++
++V2_FIELDS = {'cure_law_version','relative_exposure_dose','spatial_uv_readback',
++    'activation_readback','viscoelastic_readback','dose_solver_tolerance_readbacks',
++    'geometric_nonlinearity_readbacks','native_semantics','module_license'}
++
++class V2SetupError(ValueError): pass
++
++def _validate_v2(row):
++    validate_cure_law_v2_contract_readback(row)
++    if not V2_FIELDS <= set(row): raise V2SetupError('missing required v2 setup markers')
++    if type(row.get('native_study_run_calls')) is not int or row['native_study_run_calls'] != 0:
++        raise V2SetupError('setup must capture zero Study submissions')
++    if row['native_semantics'] != 'UNVERIFIED_FAIL_CLOSED' or row['module_license'] != 'UNVERIFIED_FAIL_CLOSED':
++        raise V2SetupError('configuration capture cannot certify native semantics or licensing')
++    flags=row['geometric_nonlinearity_readbacks']
++    if not isinstance(flags,dict) or set(flags)!={'stdUV','stdBake','stdCool'}:
++        raise V2SetupError('all three actual nonlinear Time solver getters are required')
++    sequences=set()
++    for flag in flags.values():
++        if not isinstance(flag,dict) or set(flag)!={'receiver_type','sequence_tag','feature_tag','property','getter','value','frame_mapping'} or flag['receiver_type']!='Time' or flag['property']!='geometricNonlinearity' or flag['getter']!='getString' or flag['value']!='on' or flag['frame_mapping']!='REQUIRES_FRESH_EQUATION_VIEW_NOT_INHERITED_FROM_V1' or not all(isinstance(flag[k],str) and flag[k] for k in ('sequence_tag','feature_tag')) or flag['sequence_tag'] in sequences:
++            raise V2SetupError('nonlinear flag has missing, ambiguous or wrong native provenance')
++        sequences.add(flag['sequence_tag'])
++
++def compare_v2_save_reopen(before, after):
++    """Retain v1 strict 21-field and mesh gates plus every explicit v2 field."""
++    _validate_v2(before);_validate_v2(after)
++    # Only the named, independently validated v2 fields are split for comparison.
++    # Unknown/missing physical fields remain rejected by the v1 closed schema.
++    legacy_before={k:v for k,v in before.items() if k not in V2_FIELDS and k!='native_study_run_calls'}
++    legacy_after={k:v for k,v in after.items() if k not in V2_FIELDS and k!='native_study_run_calls'}
++    physical=_compare_reopened_readback(legacy_before,legacy_after)
++    v2=_compare_configuration_values({k:before[k] for k in V2_FIELDS},{k:after[k] for k in V2_FIELDS})
++    return {'schema':'W24_V2_SETUP_REOPEN_COMPARISON_V1','matches':physical['matches'] and v2['matches'],
++        'physical_and_mesh':physical,'mesh_volume':physical['mesh_volume'],'v2_configuration':v2,
++        'status':'CONFIGURATION_COMPARISON_ONLY_REQUIRES_NATIVE_OPERATION_ORIGIN_AND_FRESH_CONTEXT',
++        'native_semantics':'UNVERIFIED','full_DOF_history':'NOT_CAPTURED',
++        'stable_gel_shape_transfer':'REQUIRED_NOT_SUPPLIED','scientific_acceptance':'NOT_ACCEPTED',
++        'Study_solver_authorized':0}

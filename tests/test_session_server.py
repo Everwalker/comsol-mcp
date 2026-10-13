@@ -7,8 +7,18 @@ from pathlib import Path
 import subprocess
 import sys
 import textwrap
+import tempfile
+import time
 
 import pytest
+
+
+@pytest.fixture
+def short_windows_root():
+    # Test the process boundary with a path admitted by the real conservative
+    # Windows budget, independently of pytest's long descriptive test names.
+    with tempfile.TemporaryDirectory(prefix="cvw-") as path:
+        yield Path(path).resolve()
 
 from comsol_mcp._platform_process import process_identity
 from comsol_mcp._session_context import (
@@ -265,13 +275,13 @@ def test_windows_server_budget_counts_exact_260_boundary_without_claiming_launch
         windows_owned_server_path_budget(state_root, "project", "session")
 
 
-def test_windows_owned_launcher_passes_exact_validated_executable_to_popen(tmp_path):
+def test_windows_owned_launcher_passes_exact_validated_executable_to_popen(tmp_path, short_windows_root):
     source = _installation(tmp_path / "installed")
     executable = source / "bin/win64/comsolmphserver.exe"
     executable.parent.mkdir(parents=True)
     executable.write_bytes(b"synthetic Windows launcher")
     state_root = runtime_state_root(
-        tmp_path.parent / "h" / "0123456789abcdef" / "control-private",
+        short_windows_root,
         platform_name="Windows",
     )
     runtime = SessionRuntimeConfig(
@@ -430,7 +440,7 @@ def test_owned_server_start_timeout_records_unknown_without_terminating_child(tm
     assert process.mutation_calls == []
 
 
-def test_owned_server_start_popen_failure_records_safe_type_and_no_pid(tmp_path, monkeypatch):
+def test_owned_server_start_popen_failure_records_safe_type_and_no_pid(tmp_path, monkeypatch, short_windows_root):
     runtime = _startup_runtime(tmp_path)
     sink_rows = []
 
@@ -474,7 +484,8 @@ def test_owned_server_start_popen_failure_records_safe_type_and_no_pid(tmp_path,
 
     windows_error = OSError("synthetic Windows create failure")
     windows_error.winerror = 1234
-    win_runtime = _startup_runtime(tmp_path / "win-error")
+    short_windows = short_windows_root
+    win_runtime = _startup_runtime(short_windows / "e")
 
     def fail_windows(*_args, **_kwargs):
         raise windows_error
@@ -485,7 +496,7 @@ def test_owned_server_start_popen_failure_records_safe_type_and_no_pid(tmp_path,
     assert win_row["exception_type"] == "OSError" and win_row["winerror"] == 1234
     win_caught = None
     try:
-        _launcher_for_startup(fail_windows).start(_startup_runtime(tmp_path / "win-error-metadata"), "project", "session")
+        _launcher_for_startup(fail_windows).start(_startup_runtime(short_windows / "m"), "project", "session")
     except OwnedServerError as exc:
         win_caught = exc
     assert win_caught is not None
@@ -603,28 +614,42 @@ def _real_loopback_child(tmp_path: Path):
     port_file = tmp_path / "port"
     code = textwrap.dedent(
         """
-        import http.server, pathlib, sys
-        class Quiet(http.server.BaseHTTPRequestHandler):
-            def do_GET(self):
-                self.send_response(200); self.end_headers(); self.wfile.write(b'ok')
-            def log_message(self, *args): pass
-        server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Quiet)
-        pathlib.Path(sys.argv[1]).write_text(str(server.server_port), encoding='ascii')
-        server.serve_forever()
+        import pathlib, socket, sys
+        # This fixture needs an owned listener, not HTTPServer's host-name/DNS
+        # discovery during initialization.
+        with socket.socket() as server:
+            server.bind(('127.0.0.1', 0))
+            server.listen()
+            target = pathlib.Path(sys.argv[1])
+            pending = target.with_suffix('.pending')
+            pending.write_text(str(server.getsockname()[1]), encoding='ascii')
+            pending.replace(target)
+            while True:
+                connection, _address = server.accept()
+                connection.close()
         """
     )
-    process = subprocess.Popen(
-        [sys.executable, "-c", code, str(port_file)],
-        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        start_new_session=True,
-    )
-    deadline = __import__("time").monotonic() + 5
-    while __import__("time").monotonic() < deadline and not port_file.exists():
-        if process.poll() is not None:
-            raise RuntimeError("harmless loopback child exited before port publication")
-        __import__("time").sleep(0.02)
-    assert port_file.exists()
-    return process, int(port_file.read_text(encoding="ascii"))
+    stderr_path = tmp_path / "loopback-child.stderr"
+    with stderr_path.open("wb") as stderr:
+        process = subprocess.Popen(
+            [sys.executable, "-c", code, str(port_file)],
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=stderr,
+            start_new_session=True,
+        )
+    try:
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline and not port_file.exists():
+            if process.poll() is not None:
+                raise RuntimeError("harmless loopback child exited before port publication: "
+                                   + stderr_path.read_text(encoding="utf-8"))
+            time.sleep(0.02)
+        assert port_file.exists(), stderr_path.read_text(encoding="utf-8")
+        return process, int(port_file.read_text(encoding="ascii"))
+    except BaseException:
+        if process.poll() is None:
+            process.terminate()
+        process.wait(timeout=3)
+        raise
 
 
 @pytest.mark.skipif(sys.platform not in {"darwin", "win32"}, reason="exact listener adapter is supported on Darwin and Windows")

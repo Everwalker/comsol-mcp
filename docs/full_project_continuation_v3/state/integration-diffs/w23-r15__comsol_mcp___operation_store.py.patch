@@ -1,0 +1,80 @@
+--- root/comsol_mcp/_operation_store.py
++++ w23-r15/comsol_mcp/_operation_store.py
+@@ -1500,7 +1500,7 @@
+             )
+             return job_id
+ 
+-    def finish(self, operation_id: str, *, status: str, result: dict[str, Any]) -> tuple[bool, str]:
++    def finish(self, operation_id: str, *, status: str, result: dict[str, Any], _lifecycle_update=None) -> tuple[bool, str]:
+         """Atomically record a result observation and synchronize its job status.
+ 
+         Returns ``(accepted, authoritative_status)`` so the caller can use the
+@@ -1557,6 +1557,9 @@
+                 )
+                 if operation.rowcount != 1 or job.rowcount != 1:
+                     raise KeyError(f"operation/job pair missing for {operation_id}")
++                if _lifecycle_update is not None:
++                    session_id, updater = _lifecycle_update
++                    self._update_session_lifecycle_in_transaction(session_id, updater)
+                 self.db.execute("COMMIT")
+                 return True, status
+             except Exception:
+@@ -3323,6 +3326,31 @@
+                 self.db.execute("ROLLBACK")
+                 raise
+ 
++    def _update_session_lifecycle_in_transaction(self, session_id, updater):
++        """Same lifecycle updater under an existing Store-owned write transaction."""
++        if not self.db.in_transaction:
++            raise RuntimeError("lifecycle update requires the existing Store write transaction")
++        row = self.db.execute(
++            "SELECT metadata FROM sessions WHERE session_id=?", (session_id,),
++        ).fetchone()
++        metadata = json.loads(row[0]) if row is not None else {}
++        if not isinstance(metadata, dict):
++            raise RuntimeError("persisted session metadata is malformed")
++        current = metadata.get("lifecycle")
++        if current is not None and not isinstance(current, dict):
++            raise RuntimeError("persisted lifecycle metadata is malformed")
++        replacement = updater(dict(current) if current is not None else None)
++        if not isinstance(replacement, dict):
++            raise TypeError("lifecycle updater must return an object")
++        metadata = dict(metadata)
++        metadata["lifecycle"] = replacement
++        self.db.execute(
++            "INSERT INTO sessions(session_id,metadata) VALUES(?,?) "
++            "ON CONFLICT(session_id) DO UPDATE SET metadata=excluded.metadata",
++            (session_id, json.dumps(metadata, sort_keys=True)),
++        )
++        return replacement
++
+     def update_session_lifecycle(self, session_id: str, updater) -> dict[str, Any]:
+         """Update only ``sessions.metadata.lifecycle`` under the store lock.
+ 
+@@ -3337,25 +3365,7 @@
+         with self.lock:
+             self.db.execute("BEGIN IMMEDIATE")
+             try:
+-                row = self.db.execute(
+-                    "SELECT metadata FROM sessions WHERE session_id=?", (session_id,),
+-                ).fetchone()
+-                metadata = json.loads(row[0]) if row is not None else {}
+-                if not isinstance(metadata, dict):
+-                    raise RuntimeError("persisted session metadata is malformed")
+-                current = metadata.get("lifecycle")
+-                if current is not None and not isinstance(current, dict):
+-                    raise RuntimeError("persisted lifecycle metadata is malformed")
+-                replacement = updater(dict(current) if current is not None else None)
+-                if not isinstance(replacement, dict):
+-                    raise TypeError("lifecycle updater must return an object")
+-                metadata = dict(metadata)
+-                metadata["lifecycle"] = replacement
+-                self.db.execute(
+-                    "INSERT INTO sessions(session_id,metadata) VALUES(?,?) "
+-                    "ON CONFLICT(session_id) DO UPDATE SET metadata=excluded.metadata",
+-                    (session_id, json.dumps(metadata, sort_keys=True)),
+-                )
++                replacement = self._update_session_lifecycle_in_transaction(session_id, updater)
+                 self.db.execute("COMMIT")
+                 return replacement
+             except BaseException:

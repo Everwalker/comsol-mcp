@@ -1,0 +1,232 @@
+--- root/comsol_mcp/_windows_parameter_publish.py
++++ w24-coupled05/comsol_mcp/_windows_parameter_publish.py
+@@ -135,16 +135,11 @@
+         if not ok:
+             raise C.WinError(C.get_last_error())
+ 
+-    def open(self, path, *, directory=False, create=False, metadata=False, add_file=False,
+-             add_directory=False, read_control=False):
++    def open(self, path, *, directory=False, create=False, metadata=False, add_file=False):
+         access = 0 if metadata else (0x001000A0 if directory else 0xC0010000)
+-        if read_control:
+-            access |= 0x00020000  # READ_CONTROL for a read-only security descriptor query
+         if directory and add_file:
+             access |= 0x2  # FILE_ADD_FILE on the final pinned parent only
+-        if directory and add_directory:
+-            access |= 0x4  # FILE_ADD_SUBDIRECTORY on a pinned directory parent
+-        share = 7 if metadata and not read_control else (3 if directory or read_control else 1)
++        share = 7 if metadata else (3 if directory else 1)
+         flags = 0x00200000 | (0x02000000 if directory else 0x80)
+         handle = self.k.CreateFileW(path, access, share, None, 1 if create else 3, flags, None)
+         if handle == C.c_void_p(-1).value:
+@@ -152,7 +147,7 @@
+         return handle
+ 
+     def _open_relative(self, parent_handle, leaf, *, directory=False, create=False, add_file=False,
+-                       add_directory=False, read_data=False, read_control=False, delete=False):
++                       read_data=False):
+         """Open exactly one child of a pinned directory object.
+ 
+         A full path assembled from checked ancestor names can start traversing
+@@ -170,20 +165,14 @@
+         output = HANDLE()
+         io_status = _IoStatusBlock()
+         access = 0x001000A0 if directory else (0x00100081 if read_data else 0x00100080)
+-        if read_control:
+-            access |= 0x00020000  # READ_CONTROL for a read-only security descriptor query
+-        if delete:
+-            access |= 0x00010000  # DELETE on this exact opened object
+         # Directory handles are traversable; file identity probes need only
+         # READ_ATTRIBUTES so execution permission is never requested.
+         if directory and add_file:
+             access |= 0x2  # FILE_ADD_FILE on the final publication parent
+-        if directory and add_directory:
+-            access |= 0x4  # FILE_ADD_SUBDIRECTORY on a pinned parent
+         if create:
+-            access = (0x00110080 if directory else 0x00110083)  # add/delete and read identity on created object
+-        share = 0x3 if directory or read_control or delete else (0x1 if create or read_data else 0x7)
+-        disposition = 2 if create else 1  # FILE_CREATE / FILE_OPEN
++            access = 0x00110083  # SYNCHRONIZE | DELETE | READ_ATTRIBUTES | WRITE_DATA | READ_DATA
++        share = 0x3 if directory else (0x1 if create or read_data else 0x7)
++        disposition = 1 if directory else (2 if create else 1)  # FILE_OPEN / FILE_CREATE
+         options = (0x1 if directory else 0x40) | 0x20 | 0x00200000
+         status = int(self.nt.NtCreateFile(C.byref(output), access, C.byref(attributes),
+                                           C.byref(io_status), None, 0x80, share,
+@@ -204,64 +193,14 @@
+             raise PublishError("ACCESS_VIOLATION", "relative file open did not produce the requested object")
+         return output
+ 
+-    def open_child_directory(self, parent_handle, leaf, *, add_file=False, add_directory=False):
+-        return self._open_relative(parent_handle, leaf, directory=True, add_file=add_file,
+-                                   add_directory=add_directory)
+-
+-    def open_child_directory_for_delete(self, parent_handle, leaf):
+-        return self._open_relative(parent_handle, leaf, directory=True, delete=True)
+-
+-    def open_child_file_for_delete(self, parent_handle, leaf):
+-        return self._open_relative(parent_handle, leaf, delete=True)
+-
+-    def create_child_directory(self, parent_handle, leaf):
+-        """Exclusively create one no-reparse directory relative to a pinned parent."""
+-        return self._open_relative(parent_handle, leaf, directory=True, create=True)
++    def open_child_directory(self, parent_handle, leaf, *, add_file=False):
++        return self._open_relative(parent_handle, leaf, directory=True, add_file=add_file)
+ 
+     def create_owned(self, parent_handle, leaf):
+         return self._open_relative(parent_handle, leaf, create=True)
+ 
+     def open_source(self, parent_handle, leaf):
+         return self._open_relative(parent_handle, leaf, read_data=True)
+-
+-    def open_security_path(self, path, *, directory):
+-        """Open a canonical drive path component-by-component for READ_CONTROL.
+-
+-        Every returned handle remains open so callers can inspect security on
+-        the exact traversed objects without releasing the parent chain. UNC,
+-        extended paths, and reparse components are deliberately unsupported.
+-        """
+-        raw = os.fspath(path).replace('/', '\\')
+-        drive, tail = ntpath.splitdrive(raw)
+-        if (not re.match(r'^[A-Za-z]:$', drive) or not tail.startswith('\\')
+-                or raw.startswith(('\\\\', '\\\\?\\'))):
+-            raise PublishError("ACCESS_VIOLATION", "security path requires an ordinary absolute drive path")
+-        if len(raw) >= 240:
+-            raise PublishError("ACCESS_VIOLATION", "security path exceeds the supported ordinary Windows path bound")
+-        parts = [part for part in tail[1:].split('\\') if part]
+-        if len(parts) > 128:
+-            raise PublishError("ACCESS_VIOLATION", "security path exceeds the bounded component count")
+-        for part in parts:
+-            _component(part)
+-        handles = [self.open(drive + '\\', directory=True, metadata=True, read_control=True)]
+-        try:
+-            if not parts:
+-                if not directory:
+-                    raise PublishError("ACCESS_VIOLATION", "drive root cannot be a provider file")
+-                return handles
+-            for index, part in enumerate(parts):
+-                is_directory = index < len(parts) - 1 or directory
+-                child = self._open_relative(handles[-1], part, directory=is_directory, read_control=True)
+-                self.info(child, directory=is_directory)
+-                handles.append(child)
+-            return handles
+-        except BaseException:
+-            for handle in reversed(handles):
+-                try:
+-                    self.close(handle)
+-                except BaseException:
+-                    pass
+-            raise
+ 
+     def source_fingerprint(self, handle):
+         info = _FileInfo(); self.check(self.k.GetFileInformationByHandle(handle, C.byref(info)))
+@@ -358,15 +297,14 @@
+ 
+ 
+ @contextmanager
+-def pinned_parent(project_root, destination, *, add_file=True, add_directory=False, _api=None):
++def pinned_parent(project_root, destination, *, add_file=True, _api=None):
+     """Hold every lexical directory ancestor without delete sharing."""
+     root, parts = validate_paths(project_root, destination)
+     api = _api or _API(); handles = []; names = []
+     current = root[:3]
+     try:
+         components = [*(root[3:].split('\\') if len(root) > 3 else []), *parts[:-1]]
+-        root_handle = api.open(current, directory=True, add_file=add_file and not components,
+-                               add_directory=add_directory)
++        root_handle = api.open(current, directory=True, add_file=add_file and not components)
+         handles.append(root_handle)
+         identity = api.info(root_handle, directory=True)[0]
+         if api.named_identity(current, directory=True) != identity:
+@@ -374,8 +312,7 @@
+         names.append((current, identity))
+         for index, part in enumerate(components):
+             handle = api.open_child_directory(handles[-1], part,
+-                                              add_file=add_file and index == len(components) - 1,
+-                                              add_directory=add_directory)
++                                              add_file=add_file and index == len(components) - 1)
+             handles.append(handle)
+             current = ntpath.join(current, part)
+             identity = api.info(handle, directory=True)[0]
+@@ -391,67 +328,6 @@
+             except OSError:
+                 if not pending:
+                     raise
+-
+-
+-def delete_exact_private_stage(stage_root, expected_root_identity, expected_file_identity,
+-                               *, source_name="model.mph", _api=None, _verify_security=None):
+-    """Delete a verified private stage using only pinned Windows handles.
+-
+-    The source file and stage directory are each opened relative to a pinned
+-    parent with DELETE access and without FILE_SHARE_DELETE. Identity and ACL
+-    evidence are checked before marking either handle for deletion. A nonempty
+-    directory or substituted leaf remains in place and raises a typed error.
+-    """
+-    if os.name != "nt":
+-        raise PublishError("NOT_IMPLEMENTED", "Windows private-stage cleanup requires Windows")
+-    if _verify_security is None:
+-        from ._host_scoped_provider import verify_private_path_security
+-        _verify_security = verify_private_path_security
+-
+-    path = os.fspath(stage_root)
+-    if (not isinstance(path, str) or not ntpath.isabs(path) or not ntpath.basename(path) or source_name != "model.mph"
+-            or not isinstance(expected_root_identity, dict)
+-            or not isinstance(expected_file_identity, dict)):
+-        raise PublishError("INVALID_REQUEST", "private-stage cleanup requires exact pinned directory/file identities")
+-    api = _api or _API()
+-    directory_handle = file_handle = None
+-    with pinned_parent(ntpath.dirname(path), ntpath.basename(path), add_file=False,
+-                       _api=api) as (_api_value, parent, parts, binding):
+-        if len(parts) != 1:
+-            raise PublishError("ACCESS_VIOLATION", "private-stage path must be a direct child of its pinned parent")
+-        try:
+-            directory_handle = api.open_child_directory_for_delete(parent, parts[0])
+-            directory_identity = api.info(directory_handle, directory=True)[0]
+-            if (directory_identity != (expected_root_identity.get("device"), expected_root_identity.get("inode"))
+-                    or _verify_security(path, directory=True,
+-                                        expected_identity=expected_root_identity).get("identity") != expected_root_identity):
+-                raise PublishError("ACCESS_VIOLATION", "private-stage directory identity or ACL changed before cleanup")
+-            file_handle = api.open_child_file_for_delete(directory_handle, source_name)
+-            file_fingerprint = api.source_fingerprint(file_handle)
+-            if (file_fingerprint[0] != (expected_file_identity.get("device"), expected_file_identity.get("inode"))
+-                    or file_fingerprint[1] <= 0 or file_fingerprint[4] != 1
+-                    or _verify_security(ntpath.join(path, source_name), directory=False,
+-                                        expected_identity=expected_file_identity).get("identity") != expected_file_identity):
+-                raise PublishError("ACCESS_VIOLATION", "private-stage file identity, link count, or ACL changed before cleanup")
+-            api.delete_owned(file_handle)
+-            api.close(file_handle)
+-            file_handle = None
+-            if api.exists_child(directory_handle, source_name):
+-                raise PublishError("ACCESS_VIOLATION", "private-stage source file remained after handle deletion")
+-            api.verify_named_binding(binding)
+-            if _verify_security(path, directory=True,
+-                                expected_identity=expected_root_identity).get("identity") != expected_root_identity:
+-                raise PublishError("ACCESS_VIOLATION", "private-stage directory changed before handle deletion")
+-            api.delete_owned(directory_handle)
+-            api.close(directory_handle)
+-            directory_handle = None
+-            if api.exists(path):
+-                raise PublishError("ACCESS_VIOLATION", "private-stage directory name was recreated during cleanup")
+-        finally:
+-            if file_handle is not None:
+-                api.close(file_handle)
+-            if directory_handle is not None:
+-                api.close(directory_handle)
+ 
+ 
+ def publish(project_root, destination, payload, *, _api=None):
+@@ -526,13 +402,7 @@
+                 api.close(handle); handle = None
+                 return {'relative_path': '/'.join(parts), 'sha256': digest, 'size_bytes': observed_size,
+                         'file_identity': {'device': identity[0], 'inode': identity[1]}}
+-            except Exception as cause:
+-                # The chunk iterable owns source reads and can fail with any
+-                # ordinary exception (including contract/runtime errors). Once
+-                # this publisher has created its destination handle, every such
+-                # failure must take the same-handle cleanup and typed-receipt
+-                # path. BaseException interruptions still pass through while the
+-                # finally block closes the handle.
++            except (OSError, PublishError) as cause:
+                 # No temp was created when CREATE_NEW failed; the publisher
+                 # therefore has no owned residual to remove or report unknown.
+                 cleanup = not owned_created and not committed

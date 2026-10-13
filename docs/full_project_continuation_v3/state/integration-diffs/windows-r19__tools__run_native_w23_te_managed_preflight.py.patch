@@ -1,0 +1,349 @@
+--- root/tools/run_native_w23_te_managed_preflight.py
++++ windows-r19/tools/run_native_w23_te_managed_preflight.py
+@@ -14,6 +14,7 @@
+ 
+ import argparse
+ import hashlib
++import ipaddress
+ import json
+ import os
+ import signal
+@@ -708,34 +709,107 @@
+     return rows
+ 
+ 
+-def _daemon_idle_proof(daemon: Any) -> dict[str, Any]:
++def _daemon_idle_proof(daemon: Any, *, worker_health: Any = None,
++                       expected_endpoint: str | None = None) -> dict[str, Any]:
++    """Prove no RPC is in flight without rewriting an UNKNOWN model outcome.
++
++    A durable UNKNOWN job is cleanup-idle only when every Worker request tied
++    to that same job has exactly one terminal observation and a fresh health
++    RPC confirms zero queued/running work on the exact connected endpoint.
++    The job and its domain result remain UNKNOWN.
++    """
+     if daemon is None:
+-        return {"idle": True, "reason": "daemon_not_created", "jobs": []}
++        return {"idle": True, "reason": "daemon_not_created", "jobs": [],
++                "worker_requests": [], "durable_unknown_preserved": True}
+     jobs = _all_project_jobs(daemon.store)
+-    nonterminal = [job for job in jobs if job.get("status") not in TERMINAL]
+     requests: list[dict[str, Any]] = []
+-    unresolved = False
++    submitted_by_id: dict[str, list[dict[str, Any]]] = {}
++    observed_by_id: dict[str, list[dict[str, Any]]] = {}
++    malformed: list[dict[str, Any]] = []
+     for job in jobs:
+-        events = _all_job_events(daemon.store, job["job_id"])
+-        submitted = {row.get("metadata", {}).get("request_id")
+-                     for row in events if row.get("event") == "worker_request"
+-                     and row.get("metadata", {}).get("phase") == "submitted"
+-                     and row.get("metadata", {}).get("request_id")}
+-        observed = {row.get("metadata", {}).get("request_id"): row.get("metadata", {}).get("status")
+-                    for row in events if row.get("event") == "worker_request"
+-                    and row.get("metadata", {}).get("phase") == "observed"
+-                    and row.get("metadata", {}).get("request_id")}
+-        for request_id in submitted:
+-            status = observed.get(request_id)
+-            requests.append({"job_id": job["job_id"], "request_id": request_id,
+-                             "observed_status": status})
+-            if status not in WORKER_TERMINAL:
+-                unresolved = True
+-    idle = not nonterminal and not unresolved
+-    return {"idle": idle,
+-            "reason": "all_jobs_and_worker_requests_terminal" if idle else "nonterminal_or_unknown_work",
+-            "jobs": jobs, "worker_requests": requests,
+-            "nonterminal_jobs": nonterminal}
++        job_id = str(job.get("job_id", ""))
++        for event in _all_job_events(daemon.store, job_id):
++            if event.get("event") != "worker_request":
++                continue
++            metadata = event.get("metadata")
++            request_id, phase, status = _worker_event_identity(metadata)
++            if not request_id or phase not in {"submitted", "observed"}:
++                malformed.append({"job_id": job_id, "event_id": event.get("id"),
++                                  "request_id": request_id, "phase": phase})
++                continue
++            record = {"job_id": job_id, "request_id": request_id,
++                      "phase": phase, "status": status}
++            target = submitted_by_id if phase == "submitted" else observed_by_id
++            target.setdefault(request_id, []).append(record)
++
++    terminal_ids: set[str] = set()
++    request_ids = set(submitted_by_id) | set(observed_by_id)
++    for request_id in sorted(request_ids):
++        submitted = submitted_by_id.get(request_id, [])
++        observed = observed_by_id.get(request_id, [])
++        same_job = (len({row["job_id"] for row in submitted + observed}) == 1)
++        terminal = (len(submitted) == 1 and len(observed) == 1 and same_job
++                    and observed[0].get("status") in WORKER_TERMINAL)
++        requests.append({"request_id": request_id,
++                         "job_ids": sorted({row["job_id"] for row in submitted + observed}),
++                         "submitted_count": len(submitted),
++                         "observed_count": len(observed),
++                         "observed_status": observed[0].get("status") if len(observed) == 1 else None,
++                         "terminal": terminal})
++        if terminal:
++            terminal_ids.add(request_id)
++
++    queued_or_running = [job for job in jobs if job.get("status") in {"QUEUED", "RUNNING"}]
++    unknown_jobs = [job for job in jobs
++                    if job.get("status") == "UNKNOWN"
++                    or _contains_unknown_domain_state(job.get("result"))]
++    other_nonterminal = [job for job in jobs
++                         if job.get("status") not in TERMINAL | {"UNKNOWN"}
++                         and job not in queued_or_running]
++    unknown_request_gaps = []
++    for job in unknown_jobs:
++        job_id = str(job.get("job_id", ""))
++        related = {request_id for request_id, rows in submitted_by_id.items()
++                   if any(row.get("job_id") == job_id for row in rows)}
++        if not related or not related.issubset(terminal_ids):
++            unknown_request_gaps.append({"job_id": job_id,
++                                         "submitted_request_ids": sorted(related),
++                                         "terminal_request_ids": sorted(related & terminal_ids)})
++
++    health = worker_health if isinstance(worker_health, dict) else None
++    endpoint_matches = bool(health and isinstance(expected_endpoint, str)
++                            and health.get("server") == expected_endpoint)
++    health_quiescent = bool(health and health.get("ok") is True
++                            and health.get("status") == "HEALTHY"
++                            and health.get("connected") is True
++                            and type(health.get("queued_or_running")) is int
++                            and health.get("queued_or_running") == 0
++                            and endpoint_matches)
++    rpc_unresolved = bool(malformed or len(terminal_ids) != len(request_ids))
++    unknown_gate = not unknown_jobs or (not unknown_request_gaps and health_quiescent)
++    idle = (not queued_or_running and not other_nonterminal and not rpc_unresolved
++            and unknown_gate)
++    return {
++        "idle": idle,
++        "reason": ("all_worker_rpcs_terminal_and_live_health_quiescent; durable UNKNOWN retained"
++                   if idle and unknown_jobs else
++                   "all_jobs_and_worker_requests_terminal" if idle else
++                   "nonterminal_or_unknown_work_not_proven_quiescent"),
++        "jobs": jobs,
++        "worker_requests": requests,
++        "queued_or_running_jobs": queued_or_running,
++        "other_nonterminal_jobs": other_nonterminal,
++        "durable_unknown_job_ids": [str(job.get("job_id", "")) for job in unknown_jobs],
++        "durable_unknown_preserved": True,
++        "unknown_job_request_gaps": unknown_request_gaps,
++        "worker_health": ({key: health.get(key) for key in
++                           ("ok", "status", "connected", "server", "queued_or_running", "instance_id")}
++                          if health else None),
++        "worker_health_matches_expected_endpoint": endpoint_matches,
++        "worker_health_quiescent": health_quiescent,
++        "malformed_worker_events": malformed,
++        "worker_rpcs_unresolved": rpc_unresolved,
++    }
+ 
+ 
+ def _current_owned_identity(server: Any, process_snapshot: Callable[[int], Any]) -> dict[str, Any] | None:
+@@ -770,6 +844,190 @@
+             and endpoint == f"127.0.0.1:{server.port}",
+             "command": command, "returncode": probe.returncode, "stdout": probe.stdout,
+             "stderr": probe.stderr, "pid": pid, "endpoint": endpoint}
++
++
++def _parse_numeric_tcp_endpoint(endpoint: str) -> dict[str, Any]:
++    """Parse one numeric lsof endpoint; names, wildcards, and malformed IPv6 fail closed."""
++    host: str
++    raw_port: str
++    bracketed = endpoint.startswith("[")
++    if bracketed:
++        closing = endpoint.find("]")
++        if closing <= 1 or endpoint[closing + 1:closing + 2] != ":":
++            return {"valid": False, "raw": endpoint, "reason": "malformed_bracketed_endpoint"}
++        host, raw_port = endpoint[1:closing], endpoint[closing + 2:]
++    else:
++        if endpoint.count(":") != 1:
++            return {"valid": False, "raw": endpoint, "reason": "unbracketed_or_malformed_ipv6_endpoint"}
++        host, raw_port = endpoint.rsplit(":", 1)
++    if not raw_port.isdigit() or "%" in host:
++        return {"valid": False, "raw": endpoint, "reason": "port_or_scoped_address_not_numeric"}
++    try:
++        address = ipaddress.ip_address(host)
++    except ValueError:
++        return {"valid": False, "raw": endpoint, "reason": "host_is_not_a_numeric_ip_address"}
++    if bracketed != (address.version == 6):
++        return {"valid": False, "raw": endpoint, "reason": "address_family_bracketing_mismatch"}
++    port_number = int(raw_port)
++    if not 1 <= port_number <= 65535:
++        return {"valid": False, "raw": endpoint, "reason": "port_out_of_range"}
++    mapped = address.ipv4_mapped if isinstance(address, ipaddress.IPv6Address) else None
++    loopback = bool(address.is_loopback or (mapped is not None and mapped.is_loopback))
++    return {"valid": True, "raw": endpoint, "host": str(address), "port": port_number,
++            "address_family": address.version, "loopback": loopback,
++            "ipv4_mapped_loopback": bool(mapped is not None and mapped.is_loopback)}
++
++
++def _port_socket_owners(port: int | None) -> dict[str, Any]:
++    """Require every live socket endpoint to parse numerically as loopback.
++
++    lsof can retain a task-owned ``(CLOSED)`` row after disconnect. Such a row
++    is preserved as inactive historical evidence and never counts as a live
++    client or contributes a PID to the active owner set.
++    """
++    if type(port) is not int or not 1 <= port <= 65535:
++        return {"safe": False, "reason": "port unavailable", "port": port, "pids": [], "rows": []}
++    command = ["/usr/sbin/lsof", "-nP", f"-iTCP:{port}"]
++    probe = subprocess.run(command, capture_output=True, text=True, timeout=10, check=False)
++    rows = [line for line in probe.stdout.splitlines()
++            if line.strip() and not line.lstrip().startswith("COMMAND")]
++    parsed: list[dict[str, Any]] = []
++    for line in rows:
++        fields = line.split()
++        try:
++            pid = int(fields[1])
++            tcp_index = fields.index("TCP")
++            socket_text = fields[tcp_index + 1]
++            state_token = fields[tcp_index + 2]
++        except (ValueError, IndexError):
++            parsed.append({"raw": line, "valid": False, "reason": "malformed_lsof_tcp_row"})
++            continue
++        state = state_token[1:-1] if state_token.startswith("(") and state_token.endswith(")") else None
++        row: dict[str, Any] = {"pid": pid, "socket": socket_text, "state": state, "raw": line}
++        if state not in {"LISTEN", "ESTABLISHED", "CLOSED"}:
++            row.update({"valid": False, "active": None, "reason": "unsupported_or_missing_tcp_state"})
++            parsed.append(row)
++            continue
++        parts = socket_text.split("->")
++        if state == "LISTEN":
++            if len(parts) != 1:
++                row.update({"valid": False, "active": True, "reason": "listener_has_remote_endpoint"})
++                parsed.append(row)
++                continue
++            local = _parse_numeric_tcp_endpoint(parts[0])
++            row.update({"local_endpoint": local, "remote_endpoint": None,
++                        "loopback_only": bool(local.get("valid") and local.get("loopback")),
++                        "active": True})
++            valid = (local.get("valid") is True and local.get("loopback") is True
++                     and local.get("port") == port)
++        elif state == "ESTABLISHED":
++            if len(parts) != 2:
++                row.update({"valid": False, "active": True, "reason": "established_socket_requires_two_endpoints"})
++                parsed.append(row)
++                continue
++            local, remote = (_parse_numeric_tcp_endpoint(parts[0]),
++                             _parse_numeric_tcp_endpoint(parts[1]))
++            endpoints = (local, remote)
++            row.update({"local_endpoint": local, "remote_endpoint": remote,
++                        "loopback_only": all(endpoint.get("valid") is True
++                                              and endpoint.get("loopback") is True
++                                              for endpoint in endpoints),
++                        "active": True})
++            valid = (row["loopback_only"] and port in {local.get("port"), remote.get("port")})
++        else:  # CLOSED is an inactive historical row, not a live peer proof.
++            if len(parts) != 2:
++                row.update({"valid": False, "active": False, "reason": "closed_socket_requires_two_numeric_endpoints"})
++                parsed.append(row)
++                continue
++            local, remote = (_parse_numeric_tcp_endpoint(parts[0]),
++                             _parse_numeric_tcp_endpoint(parts[1]))
++            row.update({"local_endpoint": local, "remote_endpoint": remote,
++                        "loopback_only": None, "active": False,
++                        "endpoint_semantics": "inactive_closed_history_only_not_used_as_live_loopback_or_client_proof"})
++            valid = (local.get("valid") is True and remote.get("valid") is True
++                     and port in {local.get("port"), remote.get("port")})
++        row["valid"] = valid
++        if not valid and not row.get("reason"):
++            row["reason"] = "numeric_endpoint_or_live_loopback_check_failed"
++        parsed.append(row)
++    pids = sorted({row["pid"] for row in parsed if row.get("valid") and row.get("active") is True})
++    historical_pids = sorted({row["pid"] for row in parsed if row.get("valid") and row.get("active") is False})
++    probe_ok = (probe.returncode in {0, 1} and not probe.stderr.strip()
++                and all(row.get("valid") for row in parsed))
++    return {"safe": probe_ok, "port": port, "command": command,
++            "returncode": probe.returncode, "stderr": probe.stderr,
++            "pids": pids, "rows": parsed,
++            "inactive_historical_pids": historical_pids,
++            "no_socket_rows": not parsed}
++
++
++def _listener_for_pid(port: int | None, pid: int | None) -> dict[str, Any]:
++    if type(port) is not int or type(pid) is not int:
++        return {"matches": False, "reason": "port or PID unavailable"}
++    command = ["/usr/sbin/lsof", "-nP", "-a", "-p", str(pid),
++               f"-iTCP:{port}", "-sTCP:LISTEN"]
++    probe = subprocess.run(command, capture_output=True, text=True, timeout=10, check=False)
++    rows = [line for line in probe.stdout.splitlines()
++            if line.strip() and not line.lstrip().startswith("COMMAND")]
++    owners = []
++    for line in rows:
++        fields = line.split()
++        try:
++            owner = int(fields[1])
++            endpoint = " ".join(fields[fields.index("TCP") + 1:]).split(" ", 1)[0]
++        except (ValueError, IndexError):
++            continue
++        owners.append({"pid": owner, "endpoint": endpoint, "raw": line})
++    return {"matches": (probe.returncode == 0 and len(owners) == 1
++                         and owners[0]["pid"] == pid
++                         and owners[0]["endpoint"] == f"127.0.0.1:{port}"),
++            "command": command, "returncode": probe.returncode,
++            "stdout": probe.stdout, "stderr": probe.stderr, "owners": owners}
++
++
++def _task_endpoint_identity_gate(server: Any, *, server_identity: dict[str, Any],
++                                 worker_identity: dict[str, Any] | None,
++                                 worker_port: int | None,
++                                 process_snapshot: Callable[[int], Any],
++                                 require_worker_peer: bool = False) -> dict[str, Any]:
++    """Require exact live children, their loopback listeners, and no foreign client."""
++    if server.proc is None or server.worker is None or worker_identity is None:
++        return {"safe": False, "reason": "owned server, Worker, or identity missing"}
++    worker_proc = getattr(server.worker, "_process", None)
++    if worker_proc is None:
++        return {"safe": False, "reason": "Worker has no task-owned child process"}
++    server_current = process_snapshot(server.proc.pid)
++    worker_current = process_snapshot(worker_proc.pid)
++    server_listener = _listener_matches(server)
++    worker_listener = _listener_for_pid(worker_port, worker_proc.pid)
++    server_sockets = _port_socket_owners(server.port)
++    expected_pids = {server.proc.pid, worker_proc.pid}
++    foreign_pids = sorted(set(server_sockets.get("pids", [])) - expected_pids)
++    worker_peer_seen = worker_proc.pid in server_sockets.get("pids", [])
++    safe = (server.proc.poll() is None and worker_proc.poll() is None
++            and _process_identity_matches(server_identity, server_current)
++            and _process_identity_matches(worker_identity, worker_current)
++            and worker_identity.get("pid") == worker_proc.pid
++            and server_listener.get("matches") is True
++            and worker_listener.get("matches") is True
++            and server_sockets.get("safe") is True
++            and server.proc.pid in server_sockets.get("pids", [])
++            and not foreign_pids
++            and (not require_worker_peer or worker_peer_seen))
++    return {"safe": safe,
++            "status": "PASS_EXACT_TASK_OWNERS_AND_LOOPBACK_CLIENT_SET"
++                      if safe else "BLOCKED_IDENTITY_LISTENER_OR_CLIENT_SET",
++            "server_expected": server_identity,
++            "server_current": server_current,
++            "worker_expected": worker_identity,
++            "worker_current": worker_current,
++            "server_listener": server_listener,
++            "worker_listener": worker_listener,
++            "server_sockets": server_sockets,
++            "expected_process_pids": sorted(expected_pids),
++            "foreign_client_pids": foreign_pids,
++            "worker_peer_seen": worker_peer_seen,
++            "require_worker_peer": require_worker_peer}
+ 
+ 
+ def _verify_cleanup(server: Any, original: dict[str, Any],
+@@ -927,6 +1185,15 @@
+     receipt["precleanup_inventory"] = inventory
+     if not inventory.get("probes_ok"):
+         receipt["reason"] = "fresh process/listener inventory failed"
++        write_json(evidence / "exact_owned_cleanup_receipt.json", receipt)
++        return receipt
++
++    endpoint_gate = _task_endpoint_identity_gate(
++        server, server_identity=server_identity, worker_identity=worker_identity,
++        worker_port=worker_port, process_snapshot=process_snapshot)
++    receipt["fresh_endpoint_identity_gate"] = endpoint_gate
++    if not endpoint_gate.get("safe"):
++        receipt["reason"] = "fresh exact process/listener/client ownership gate failed"
+         write_json(evidence / "exact_owned_cleanup_receipt.json", receipt)
+         return receipt
+ 

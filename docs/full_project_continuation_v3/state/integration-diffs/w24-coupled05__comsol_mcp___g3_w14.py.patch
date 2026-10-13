@@ -1,0 +1,160 @@
+--- root/comsol_mcp/_g3_w14.py
++++ w24-coupled05/comsol_mcp/_g3_w14.py
+@@ -77,11 +77,9 @@
+ definition.component_manage
+     ``model.component().create(<tag>[,<type>])`` with the documented type
+     vocabulary Component|ExtraDim|MeshComponent, ``remove(<tag>)``,
+-    ``getType()`` and ``copy(<newTag>,<tag>)``.  The COMSOL 6.4 API reference
+-    declares ``ModelNodeList`` as a ``ModelEntityList`` and documents its
+-    inherited copy signature; installed javap and the Worker allow-list confirm
+-    that the component-list receiver can dispatch it. ``duplicate`` remains
+-    unavailable because it is not in the Worker allow-list.
++    ``getType()`` (Programming Reference ``model.component()``).  ``copy`` is
++    refused: the Programming Reference page does not document a component copy
++    call sequence and the worker allow-list has no ``copy``/``duplicate``.
+ definition.coordinate_manage
+     ``coordSystem().create(<tag>,<gtag>,<type>)`` with the documented type
+     vocabulary (Mapping, VectorBase, Rotated, Boundary, Scaling, Cylindrical,
+@@ -107,9 +105,9 @@
+ Known, reported gaps (refused before the first write, never guessed):
+ ``axisymmetric`` geometry sequences (the documented setter
+ ``GeomSequence.axisymmetric(boolean)`` is not in the worker allow-list),
+-component ``duplicate`` (not in the worker allow-list), pair source/destination
+-binding, coordinate system ``coord()``/``isLinear()``/``isOrthonormal()``/``masterSystem()``
+-readback, geometry ``object()``/``problems()``/
++component ``copy``/``duplicate``, pair source/destination binding, coordinate
++system ``coord()``/``isLinear()``/``isOrthonormal()``/``masterSystem()``
++readback, geometry ``object()``/``objectNames()``/``problems()``/
+ ``isBuilt()``/``current()``/``angularUnit()`` readback, per-feature properties
+ of a type whose documented table was not retrieved offline (the engine's own
+ ``properties()`` enumeration is used as the name authority instead, and a name
+@@ -120,17 +118,15 @@
+ never edits Java): ``axisymmetric``, ``isAxisymmetric``, ``angularUnit``,
+ ``current``, ``isBuilt``, ``status``, ``problems``, ``problem``, ``message``,
+ ``hasError``, ``errors``, ``warnings``, ``object``, ``objects``, ``obj``,
+-``coord``, ``isLinear``, ``isOrthonormal``, ``masterSystem``,
++``objectNames``, ``coord``, ``isLinear``, ``isOrthonormal``, ``masterSystem``,
+ ``source``, ``destination``, ``type``, ``pairName``, ``swap``,
+ ``hasAutoSelection``, ``manualSelection``, ``searchMethod``, ``searchDist``,
+-``duplicate``.
++``copy``, ``duplicate``.
+ 
+ ``isAxisymmetric`` is now in the worker allow-list (the C07 axisymmetric
+ measure needs the native flag), so the geometry readback probes it for real
+ instead of claiming it is unavailable; the setter ``axisymmetric`` is still
+-refused before the first write. ``objectNames()`` is also available only on a
+-``GeomSequence`` receiver, and geometry inspection reads it through that
+-receiver-scoped worker entry.
++refused before the first write.
+ """
+ 
+ from __future__ import annotations
+@@ -479,17 +475,14 @@
+ #: Repaired 2026-09-20: ``current``, ``problems``, ``problem``, ``hasError`` and
+ #: ``type`` were added to the worker allow-list for the W15/W16 surface and were
+ #: removed here so this table keeps meaning "still absent from the worker".
+-#: ``copy`` was verified for the component-list receiver from
+-#: ``ModelNodeList extends ModelEntityList`` (COMSOL 6.4 API docs; installed
+-#: javap) and removed from this set in W14 repair work.
+ WORKER_UNAVAILABLE_METHODS = frozenset(
+     {
+         "axisymmetric", "angularUnit", "isBuilt",
+         "status", "message", "errors",
+-        "warnings", "obj", "coord",
++        "warnings", "obj", "objectNames", "coord",
+         "isLinear", "isOrthonormal", "masterSystem", "source", "destination",
+         "pairName", "swap", "hasAutoSelection", "manualSelection",
+-        "searchMethod", "searchDist", "duplicate",
++        "searchMethod", "searchDist", "copy", "duplicate",
+     }
+ )
+ 
+@@ -1048,14 +1041,14 @@
+     return {
+         "dimension": call_probe(sequence, "getSDim")["value"],
+         "length_unit": call_probe(sequence, "lengthUnit")["value"],
+-        "object_names": call_probe(sequence, "objectNames"),
+         "entity_counters": _geometry_counters(sequence),
+         "bounding_box": _geometry_bounding_box(sequence),
+         # ``isAxisymmetric`` is in the worker allow-list (C07 repair), so the
+         # state reports the native flag instead of a stale unavailable claim.
+         "axisymmetric_readback": call_probe(sequence, "isAxisymmetric"),
+         "unavailable": {
+-            name: _unavailable(name) for name in ("angularUnit", "current", "problems")
++            name: _unavailable(name)
++            for name in ("angularUnit", "current", "problems", "objectNames")
+         },
+     }
+ 
+@@ -2465,48 +2458,8 @@
+ 
+ 
+ def definition_component_manage(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+-    args = operation_arguments(arguments, ("action", "tag", "source_tag", "definition"), ("action",))
++    args = operation_arguments(arguments, ("action", "tag", "definition"), ("action",))
+     action = require_string(args["action"], "action", max_length=32)
+-    if action != "copy" and "source_tag" in args:
+-        raise ExecutionContractError("INVALID_REQUEST", "source_tag is accepted only for action 'copy'")
+-    if action == "copy":
+-        source_tag = validate_tag(args.get("source_tag"), "source_tag")
+-        new_tag = validate_tag(args.get("tag"), "tag")
+-        if source_tag == new_tag:
+-            raise tag_conflict("source_tag and tag must identify different components")
+-        container = _definition_list(worker, model_tag, "", "component")
+-        before = _definition_tags(container)
+-        if source_tag not in before:
+-            raise node_not_found(f"component {source_tag!r} does not exist")
+-        if new_tag in before:
+-            raise tag_conflict(f"component {new_tag!r} already exists")
+-        source_node = _call(container, "get", source_tag)
+-        source_type = _node_kind(source_node)
+-        _call(container, "copy", new_tag, source_tag)
+-        after = _definition_tags(container)
+-        if source_tag not in after or new_tag not in after:
+-            raise ExecutionContractError(
+-                "EXECUTION_STATE_UNKNOWN",
+-                "component copy was dispatched but source/target tag readback is incomplete",
+-            )
+-        copied_node = _call(container, "get", new_tag)
+-        copied_type = _node_kind(copied_node)
+-        if source_type is not None and copied_type is not None and copied_type != source_type:
+-            raise ExecutionContractError(
+-                "EXECUTION_STATE_UNKNOWN",
+-                "component copy target type readback differs from the source",
+-            )
+-        return {
+-            "action": action,
+-            "source_tag": source_tag,
+-            "tag": new_tag,
+-            "copy_method": "ModelEntityList.copy(newTag,tag)",
+-            "source_type_id": source_type,
+-            "type_readback": copied_type,
+-            "copied": True,
+-            "readback": {"tags": after, "source_preserved": source_tag in after,
+-                         "target_present": new_tag in after},
+-        }
+     definition = require_mapping(args.get("definition") or {}, "definition")
+     reject_unknown_keys(definition, ("type",), "definition")
+     if action == "list":
+@@ -2530,9 +2483,9 @@
+             "components": rows,
+             "readback": {"tags": [row["tag"] for row in rows]},
+             "notes": [
+-                "component(), create(<tag>), create(<tag>,<type>), remove(<tag>) and "
+-                "copy(<newTag>,<tag>) are verified through the COMSOL 6.4 ModelEntityList surface; "
+-                "duplicate remains unavailable in the Worker allow-list",
++                "component(), create(<tag>), create(<tag>,<type>) with the documented type vocabulary and "
++                "remove(<tag>) are the verified surface; component copy/duplicate is refused because the "
++                "Programming Reference page does not document a call sequence for it",
+             ],
+         }
+     if action == "create":
+@@ -2590,6 +2543,8 @@
+         removed = _definition_remove(worker, model_tag, "", "component", tag, display="component")
+         removed.pop("path", None)
+         return {"action": action, **removed}
++    if action == "copy":
++        raise _refuse_unavailable("copy", "copying a model component")
+     raise ExecutionContractError(
+         "INVALID_REQUEST", "action must be one of list/create/inspect/remove/copy"
+     )

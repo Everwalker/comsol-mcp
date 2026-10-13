@@ -1,0 +1,392 @@
+--- root/comsol_mcp/_g2_registry.py
++++ w24-coupled05/comsol_mcp/_g2_registry.py
+@@ -88,7 +88,6 @@
+     "project.create", "project.inspect", "project.contract_set",
+     "project.policy_set", "project.permissions", "project.state_export",
+     "experiment.inspect", "experiment.case_result", "experiment.stage_define", "experiment.stage_run",
+-    "solver.log_read",
+     # Durable project-scoped lifecycle snapshots and process-birth fenced
+     # owned Server lifecycle.
+     "session.list", "session.inspect", "session.health", "session.connect",
+@@ -311,21 +310,6 @@
+                 "outcomes": "setter, readback, unit, publication and registration failures retain applied/failed/not_executed and partial or unknown state",
+                 "limits": "8 MiB file, 4096 rows, bounded groups and text; no local expression evaluation or unit conversion",
+                 "verification_scope": "managed software path only; no COMSOL native success is implied",
+-            }
+-        if self.operation_id in {"model.dependencies", "model.package", "model.rebuild_target"}:
+-            result["data_schema"] = _model_delivery_data_schema(self.operation_id)
+-            result["runtime_dispatch_contract"] = {
+-                "handler": "single bound-model ManagedBackend callback through the existing ExecutionService/Worker queue",
+-                "entrypoints": [self.operation_id, self.mcp_tool_name, "registry_call", "operation_call"],
+-                "identity": "outer project/session/ModelRef/request identity plus exact expected_revision; caller private context is ignored",
+-                "worker_scope": "typed Model.file().archive() inventory and saveCopy package route; no resource() temporary path",
+-                "recipe": ("registered schema-v2 role=model_recipe artifact with strict version/runtime/products/steps; full model-scope READ/WRITE/EVALUATE/COMPUTE admission is prevalidated before dispatch"
+-                           if self.operation_id == "model.rebuild_target" else None),
+-                "publication": ("actual MPH plus manifest.json, streamed no-clobber project publication, SHA-256 and schema-v2 registration receipt"
+-                                if self.operation_id == "model.package" else None),
+-                "verification_scope": "software implementation; native COMSOL package/readback/solve acceptance remains separate",
+-                "limitations": ["external libraries/services/code are explicitly UNVERIFIED unless separately enumerated",
+-                                "file-backed recipe steps without a registered artifact resolver are rejected before engine dispatch"],
+             }
+         if self.operation_id in NODE_ACTIONS | {"api.describe", "api.invoke"}:
+             result["data_schema"] = _unit_a_data_schema(self.operation_id)
+@@ -395,34 +379,6 @@
+                 "engine_queue": "bypassed; project actions remain usable without a COMSOL connection" if self.operation_id.startswith("project.") else "bypassed",
+                 "nested_identity": "model/session/revision/idempotency/request identifiers are not nested action fields and are never copied from the outer execution envelope",
+                 "verification_scope": "control-plane software behavior only; no COMSOL solver capability implied",
+-            }
+-        if self.operation_id == "solver.log_read":
+-            result["runtime_dispatch_contract"] = {
+-                "handler": "ControlDaemon project-authorized stable OperationStore job-event snapshot",
+-                "entrypoints": [self.operation_id, self.mcp_tool_name, "registry_call", "operation_call"],
+-                "permissions": "inspect is checked before job or event lookup",
+-                "project_binding": "requested project_id must equal the outer execution project; both job and producer operation metadata must bind to it",
+-                "engine_queue": "bypassed for reads; managed study.run and mesh.convergence_study persist project-private progress chunks under their exact host job/request/model/revision binding",
+-                "paging": "opaque cursor binds the exact project/job, captured event prefix, snapshot count, digest, offset, and page limit",
+-                "solver_output_log": "conditional: a typed serialized Worker lifecycle redirects ModelUtil.showProgress(String) to a private per-job file, redirects to stdout and disables progress before readback, then stores at most 1 MiB of SHA-256-verified base64 chunks; the temporary file itself has no API-enforced size quota while the solve runs; trusted Java recipes remain NOT_CAPTURED because they may change the process-global sink",
+-                "exception_chain": "structured Worker throwable causes are retained when returned; otherwise only the exact failed Worker reply summary is reported, never inferred from stderr",
+-                "verification_scope": "bounded software producer/store binding and chunk integrity; useful output and COMSOL behavior still require a native solver run",
+-            }
+-            result["data_schema"] = {
+-                "type": "object",
+-                "required": ["job_id", "project_id", "events", "event_count", "next_cursor", "snapshot",
+-                             "solver_output_log", "exception_chain"],
+-                "properties": {
+-                    "job_id": {"type": "string"}, "project_id": {"type": "string"},
+-                    "job_status": {"type": ["string", "null"]},
+-                    "events": {"type": "array", "items": {"type": "object"}},
+-                    "event_count": {"type": "integer", "minimum": 0},
+-                    "next_cursor": {"type": ["string", "null"]},
+-                    "snapshot": {"type": "object"},
+-                    "solver_output_log": {"type": "object"},
+-                    "exception_chain": {"type": "object"},
+-                },
+-                "additionalProperties": False,
+             }
+         if self.operation_id in {"artifact.list", "artifact.inspect", "artifact.verify", "artifact.preview"}:
+             result["data_schema"] = (
+@@ -794,17 +750,6 @@
+         effective["oneOf"] = [{"required": ["before"], "not": {"required": ["after"]}}, {"required": ["after"], "not": {"required": ["before"]}}]
+     elif operation_id == "api.invoke":
+         properties["declared_effect"] = {"type": "string", "enum": ["READ", "WRITE"], "description": "Assertion only; the server determines actual effect from the reviewed exact capability."}
+-    if operation_id in {"model.dependencies", "model.rebuild_target"} and isinstance(properties, dict):
+-        # Additive managed-wire revision binding. The historical catalog copy
+-        # and its 272-action source contract are intentionally unchanged.
+-        properties["expected_revision"] = {"type": "integer", "minimum": 0}
+-        if operation_id == "model.dependencies":
+-            properties["verify_hashes"].setdefault("default", False)
+-            effective["required"] = list(dict.fromkeys([*effective.get("required", []), "expected_revision"]))
+-    if operation_id == "model.package" and isinstance(properties, dict):
+-        properties["include_solution"].setdefault("default", True)
+-    if operation_id == "model.rebuild_target" and isinstance(properties, dict):
+-        effective["required"] = list(dict.fromkeys([*effective.get("required", []), "expected_revision"]))
+     # The offline index adapter accepts optional provenance selectors when it
+     # writes a source.  Older catalog snapshots omitted them even though the
+     # production control path has always carried these fields.
+@@ -875,12 +820,6 @@
+             "type": "string", "pattern": "^(0|[1-9][0-9]*)$",
+             "description": "Zero-based decimal event offset cursor.",
+         }
+-    if operation_id == "solver.log_read" and isinstance(properties, dict):
+-        properties["cursor"] = {
+-            "type": "string", "maxLength": 4096,
+-            "description": "Opaque versioned cursor bound to the project, job, and exact captured event prefix.",
+-        }
+-        properties["limit"] = {"type": "integer", "minimum": 1, "maximum": 1000}
+     if operation_id == "job.cleanup" and isinstance(properties, dict):
+         properties["job_ids"] = {
+             "type": "array", "minItems": 1,
+@@ -926,11 +865,6 @@
+         required = effective.get("required")
+         if isinstance(required, list):
+             effective["required"] = [name for name in required if name != "tag"]
+-        if isinstance(properties, dict):
+-            properties["source_tag"] = {
+-                "type": "string", "minLength": 1,
+-                "description": "Existing component tag to copy; required only when action is copy.",
+-            }
+         effective["allOf"] = [
+             {"if": {"properties": {"action": {"const": "list"}}, "required": ["action"]},
+              "then": {"not": {"required": ["tag"]}},
+@@ -938,9 +872,6 @@
+                  "properties": {"action": {"enum": list(COMPONENT_MANAGE_TAGGED_ACTIONS)}},
+                  "required": ["tag"],
+              }},
+-            {"if": {"properties": {"action": {"const": "copy"}}, "required": ["action"]},
+-             "then": {"required": ["source_tag"]},
+-             "else": {"not": {"required": ["source_tag"]}}},
+         ]
+     return effective
+ 
+@@ -1060,8 +991,7 @@
+         "required": [
+             "data_schema_version", "project_id", "artifact_id", "format", "format_schema",
+             "format_verdict", "member_integrity", "dependency_closure", "target_format",
+-            "declared_target", "declared_python", "declared_comsol_version",
+-            "target_runtime_compatibility", "portability_status", "producer_trust", "native_compatibility",
++            "declared_target", "declared_python", "producer_trust", "native_compatibility",
+             "native_components", "findings", "source_note", "resource_budget_note",
+         ],
+         "additionalProperties": False,
+@@ -1080,9 +1010,6 @@
+             "target_format": {"type": "string", "enum": ["PASS_STATIC_TAGS", "FAIL", "INCOMPLETE"]},
+             "declared_target": {"type": ["string", "null"]},
+             "declared_python": {"type": ["string", "null"]},
+-            "declared_comsol_version": {"type": ["string", "null"]},
+-            "target_runtime_compatibility": {"type": "string", "enum": ["UNVERIFIED", "NOT_APPLICABLE"]},
+-            "portability_status": {"type": "string", "enum": ["UNVERIFIED", "NOT_APPLICABLE"]},
+             "producer_trust": {"type": "string", "const": "UNVERIFIED_UNLESS_EXISTING_AUTHORITATIVE_PRODUCER_PROOF"},
+             "native_compatibility": {"type": "string", "const": "NOT_RUN"},
+             "native_components": {"type": "array", "items": native_component},
+@@ -1160,238 +1087,6 @@
+         "properties": properties,
+         "additionalProperties": False,
+     }
+-
+-
+-def _model_delivery_data_schema(operation_id: str) -> dict[str, Any]:
+-    """Closed top-level response contracts for the three managed delivery actions."""
+-    sha = {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+-    revision = {"type": "integer", "minimum": 0}
+-    model_ref = {
+-        "type": "object",
+-        "required": ["schema_version", "session_id", "server_instance_id", "model_tag", "generation"],
+-        "properties": {
+-            "schema_version": {"type": "integer", "minimum": 1},
+-            "session_id": {"type": "string", "minLength": 1},
+-            "server_instance_id": {"type": "string", "minLength": 1},
+-            "model_tag": {"type": "string", "minLength": 1},
+-            "generation": {"type": "integer", "minimum": 1},
+-        },
+-        "additionalProperties": False,
+-    }
+-    common = {
+-        "domain_state": {"type": "string", "enum": ["succeeded", "failed", "partial", "unknown"]},
+-        "verification_status": {"type": "string"},
+-        "execution_state_unknown": {"type": "boolean"},
+-        "partial_change": {"type": "boolean"},
+-        "cleanup_failed": {"type": "boolean"},
+-        "dispatch_stage": {"type": "string"},
+-        "domain_outcome": {"type": "object"},
+-        "effect": {"type": "string"},
+-        "isolation_proof": {"type": "object"},
+-        "verified_outcome": {"type": "string"},
+-        "requires_model_reconciliation": {"type": "boolean"},
+-    }
+-    source_reference = {
+-        "type": "object",
+-        "required": ["state", "project_relative_path"],
+-        "properties": {
+-            "state": {"type": "string", "enum": ["VERIFIED", "AUTHORIZED_PROJECT_LOCAL", "MISSING", "UNVERIFIED"]},
+-            "project_relative_path": {"type": ["string", "null"]},
+-            "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+-            "size_bytes": {"type": "integer", "minimum": 0},
+-            "reason": {"type": "string"},
+-        },
+-        "additionalProperties": False,
+-    }
+-    function_reference = {
+-        "type": "object", "required": ["kind", "tag", "function_type", "authorized_source", "verification"],
+-        "properties": {"kind": {"const": "function_data"}, "tag": {"type": ["string", "null"]},
+-            "function_type": {"type": "string"}, "authorized_source": source_reference,
+-            "verification": {"type": "string"}, "package_path": {"type": "string"}},
+-        "additionalProperties": False,
+-    }
+-    cad_reference = {
+-        "type": "object", "required": ["kind", "component", "geometry", "feature", "authorized_source", "verification"],
+-        "properties": {"kind": {"const": "cad_geometry"}, "component": {"type": "string"},
+-            "geometry": {"type": "string"}, "feature": {"type": "string"},
+-            "authorized_source": source_reference, "verification": {"type": "string"},
+-            "package_path": {"type": "string"}},
+-        "additionalProperties": False,
+-    }
+-    resolved_dependency = {
+-        "type": "object", "required": ["project_relative_path", "package_path", "sha256", "size_bytes"],
+-        "properties": {"project_relative_path": {"type": "string"}, "package_path": {"type": "string"},
+-            "sha256": sha, "size_bytes": {"type": "integer", "minimum": 0}},
+-        "additionalProperties": False,
+-    }
+-    published_file_identity = {
+-        "type": "object", "required": ["device", "inode"],
+-        "properties": {"device": {"type": "integer", "minimum": 0},
+-            "inode": {"type": "integer", "minimum": 0}},
+-        "additionalProperties": False,
+-    }
+-    registered_file_identity = {
+-        "type": "object", "required": ["device", "inode", "size", "mtime_ns"],
+-        "properties": {"device": {"type": "integer", "minimum": 0},
+-            "inode": {"type": "integer", "minimum": 0}, "size": {"type": "integer", "minimum": 0},
+-            "mtime_ns": {"type": "integer", "minimum": 0}},
+-        "additionalProperties": False,
+-    }
+-    registration = {
+-        "type": "object",
+-        "required": ["schema_version", "artifact_id", "sha256", "path", "size", "file_identity",
+-                     "project_id", "project_root_identity", "host_identity", "engine_host_identity",
+-                     "role", "classification", "provenance", "reused"],
+-        "properties": {
+-            "schema_version": {"type": "integer", "const": 2}, "artifact_id": sha, "sha256": sha,
+-            "path": {"type": "string"}, "size": {"type": "integer", "minimum": 1},
+-            "file_identity": registered_file_identity, "project_id": {"type": "string"},
+-            "project_root_identity": sha, "host_identity": sha, "engine_host_identity": sha,
+-            "role": {"type": "string", "const": "model_package"},
+-            "classification": {"type": "string", "const": "project_local"},
+-            "provenance": {"type": "object", "required": ["source_project_relative_path", "request_id",
+-                "registering_operation_id", "source_sha256", "source_model_ref", "source_revision", "include_solution"],
+-                "properties": {"source_project_relative_path": {"type": "string"}, "request_id": {"type": "string"},
+-                    "registering_operation_id": {"type": "string", "const": "model.package"}, "source_sha256": sha,
+-                    "source_model_ref": model_ref, "source_revision": revision, "include_solution": {"type": "boolean"}},
+-                "additionalProperties": False},
+-            "artifact_type": {"type": "string", "const": "application/zip"},
+-            "format_version": {"type": "string", "const": "comsol-mcp-model-package/1"},
+-            "reused": {"type": "boolean"},
+-        },
+-        "additionalProperties": False,
+-    }
+-    publication_receipt = {
+-        "type": "object", "required": ["relative_path", "sha256", "size_bytes", "file_identity"],
+-        "properties": {"relative_path": {"type": "string"}, "sha256": sha,
+-            "size_bytes": {"type": "integer", "minimum": 1}, "file_identity": published_file_identity},
+-        "additionalProperties": False,
+-    }
+-    manifest_resource_verified = {
+-        "type": "object", "required": ["resource_tag", "archive_member", "sha256", "size_bytes", "resolution"],
+-        "properties": {"resource_tag": {"type": "string"}, "archive_member": {"type": "string"},
+-            "sha256": sha, "size_bytes": {"type": "integer", "minimum": 0},
+-            "resolution": {"type": "string", "const": "VERIFIED_EMBEDDED_MPH_MEMBER"}},
+-        "additionalProperties": False,
+-    }
+-    manifest_resource_unverified = {
+-        "type": "object", "required": ["resource_tag", "state", "archive_members", "reason"],
+-        "properties": {"resource_tag": {"type": "string"}, "state": {"type": "string", "const": "UNVERIFIED"},
+-            "archive_members": {"type": "array", "items": {"type": "string"}}, "reason": {"type": "string"}},
+-        "additionalProperties": False,
+-    }
+-    manifest_unresolved = {
+-        "type": "object", "required": ["kind", "state", "reason"],
+-        "properties": {"kind": {"type": "string"}, "state": {"type": "string"}, "reason": {"type": "string"},
+-            "tag": {"type": ["string", "null"]}, "resource_tag": {"type": "string"},
+-            "component": {"type": ["string", "null"]}, "geometry": {"type": ["string", "null"]},
+-            "feature": {"type": ["string", "null"]},
+-            "archive_members": {"type": "array", "items": {"type": "string"}}},
+-        "additionalProperties": False,
+-    }
+-    package_manifest = {
+-        "type": "object", "required": ["schema", "version", "format_version", "model", "contents",
+-            "embedded_dependencies", "resolved_project_dependencies", "file_references", "dependency_coverage",
+-            "unresolved_items", "external_code", "external_libraries_services", "portability_status",
+-            "absolute_paths_in_manifest", "save_semantics"],
+-        "properties": {
+-            "schema": {"type": "string", "const": "comsol-mcp-model-package"},
+-            "version": {"type": "integer", "const": 1},
+-            "format_version": {"type": "string", "const": "comsol-mcp-model-package/1"},
+-            "model": {"type": "object", "required": ["model_ref", "source_revision", "comsol_version", "include_solution"],
+-                "properties": {"model_ref": model_ref, "source_revision": revision,
+-                    "comsol_version": {"type": "string"}, "include_solution": {"type": "boolean"}},
+-                "additionalProperties": False},
+-            "contents": {"type": "object", "required": ["model.mph"], "properties": {
+-                "model.mph": {"type": "object", "required": ["sha256", "size_bytes"],
+-                    "properties": {"sha256": sha, "size_bytes": {"type": "integer", "minimum": 1}},
+-                    "additionalProperties": False}}, "additionalProperties": False},
+-            "embedded_dependencies": {"type": "array", "items": {"oneOf": [manifest_resource_verified, manifest_resource_unverified]}},
+-            "resolved_project_dependencies": {"type": "array", "items": resolved_dependency},
+-            "file_references": {"type": "array", "items": {"oneOf": [function_reference, cad_reference]}},
+-            "dependency_coverage": {"type": "object", "required": ["model_file_resource_api", "functions",
+-                "geometry_import_features", "external_code", "external_libraries_services"],
+-                "properties": {name: {"type": "string", "enum": ["PASS_SCOPED", "PARTIAL", "UNVERIFIED"]}
+-                    for name in ("model_file_resource_api", "functions", "geometry_import_features", "external_code",
+-                                 "external_libraries_services")}, "additionalProperties": False},
+-            "unresolved_items": {"type": "array", "items": manifest_unresolved},
+-            "external_code": {"type": "object", "required": ["status", "reason"],
+-                "properties": {"status": {"type": "string", "const": "UNVERIFIED"}, "reason": {"type": "string"}},
+-                "additionalProperties": False},
+-            "external_libraries_services": {"type": "object", "required": ["status", "reason"],
+-                "properties": {"status": {"type": "string", "const": "UNVERIFIED"}, "reason": {"type": "string"}},
+-                "additionalProperties": False},
+-            "portability_status": {"type": "string", "const": "UNVERIFIED"},
+-            "absolute_paths_in_manifest": {"type": "boolean", "const": False},
+-            "save_semantics": {"type": "string"},
+-        },
+-        "additionalProperties": False,
+-    }
+-    properties: dict[str, Any]
+-    required: list[str]
+-    if operation_id == "model.dependencies":
+-        coverage_value = {"type": "string", "enum": ["PASS_SCOPED", "PARTIAL", "UNVERIFIED"]}
+-        properties = {
+-            "data_schema_version": {"type": "integer", "const": 1}, "operation": {"const": operation_id},
+-            "status": {"type": "string", "const": "INCOMPLETE"}, "verify_hashes": {"type": "boolean"},
+-            "model_ref": model_ref, "source_revision": revision, "final_revision": revision,
+-            "coverage": {"type": "object", "required": ["model_file_resource_api", "functions", "geometry_import_features", "external_code", "external_libraries_services"],
+-                         "properties": {name: coverage_value for name in ("model_file_resource_api", "functions", "geometry_import_features", "external_code", "external_libraries_services")},
+-                         "additionalProperties": False},
+-            "file_resources": {"type": "array", "items": {"type": "object", "required": ["tag", "archive_members", "archive_status", "embedded_sha256", "embedded_size_bytes", "verification"],
+-                "properties": {"tag": {"type": "string"}, "archive_members": {"type": "array", "items": {"type": "string"}},
+-                    "archive_status": {"type": "string", "enum": ["ENUMERATED", "UNAVAILABLE"]}, "embedded_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+-                    "embedded_size_bytes": {"type": ["integer", "null"], "minimum": 0}, "verification": {"type": "string", "enum": ["UNVERIFIED", "VERIFIED_IN_SAVED_MPH", "UNVERIFIED_ARCHIVE_MEMBER_NOT_FOUND", "UNVERIFIED_MPH_READ_FAILED", "UNVERIFIED_MODEL_MPH_NOT_AUTHORIZED"]}}, "additionalProperties": False}},
+-            "file_references": {"type": "array", "items": {"oneOf": [function_reference, cad_reference]}},
+-            "unresolved_items": {"type": "array", "items": {"type": "object", "required": ["kind", "state", "reason"],
+-                "properties": {"kind": {"type": "string"}, "state": {"type": "string"}, "reason": {"type": "string"},
+-                    "tag": {"type": ["string", "null"]}, "component": {"type": ["string", "null"]}, "geometry": {"type": ["string", "null"]},
+-                    "feature": {"type": ["string", "null"]}, "resource_tag": {"type": "string"},
+-                    "archive_members": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": False}},
+-            "inventory_errors": {"type": "array", "items": {"type": "string"}},
+-            "scope_note": {"type": "string"}, **common,
+-        }
+-        required = ["data_schema_version", "operation", "status", "verify_hashes", "model_ref", "source_revision", "final_revision", "coverage", "file_resources", "file_references", "unresolved_items", "inventory_errors", "scope_note"]
+-    elif operation_id == "model.package":
+-        properties = {
+-            "data_schema_version": {"type": "integer", "const": 1}, "operation": {"const": operation_id},
+-            "status": {"type": "string", "const": "APPLIED"}, "ok": {"type": "boolean", "const": True},
+-            "source_revision": revision, "final_revision": revision, "destination": {"type": "string"},
+-            "sha256": sha, "size_bytes": {"type": "integer", "minimum": 1}, "mph_sha256": sha,
+-            "mph_size_bytes": {"type": "integer", "minimum": 1}, "include_solution": {"type": "boolean"},
+-            "artifact_registration": registration, "publication_receipt": publication_receipt,
+-            "resolved_project_dependencies": {"type": "array", "items": resolved_dependency},
+-            "manifest": package_manifest, "portability_status": {"type": "string", "const": "UNVERIFIED"},
+-            "safe_retry": {"type": "boolean", "const": False}, **common,
+-        }
+-        required = ["data_schema_version", "operation", "status", "ok", "source_revision", "final_revision", "destination", "sha256", "size_bytes", "mph_sha256", "mph_size_bytes", "include_solution", "resolved_project_dependencies", "artifact_registration", "publication_receipt", "manifest", "portability_status", "safe_retry"]
+-    else:
+-        properties = {
+-            "data_schema_version": {"type": "integer", "const": 1}, "operation": {"const": operation_id},
+-            "status": {"type": "string", "enum": ["APPLIED", "EXECUTION_STATE_UNKNOWN"]},
+-            "ok": {"type": "boolean"}, "partial_change": {"type": "boolean"},
+-            "execution_state_unknown": {"type": "boolean"}, "safe_retry": {"type": "boolean", "const": False},
+-            "completed_steps": {"type": "integer", "minimum": 0, "maximum": 128},
+-            "attempted_steps": {"type": "integer", "minimum": 1, "maximum": 128},
+-            "step_readbacks": {"type": "array", "items": {"type": "object"}},
+-            "failed_step": {"type": "object", "required": ["index", "operation_id", "failure_type"],
+-                "properties": {"index": {"type": "integer", "minimum": 0, "maximum": 127},
+-                    "operation_id": {"type": "string"}, "failure_type": {"type": "string"}},
+-                "additionalProperties": False}, "not_executed_steps": {"type": "string"},
+-            "source_revision": revision, "final_revision": revision,
+-            "runtime": {"type": "object", "required": ["runtime_id", "worker_install_identity", "endpoint", "server_instance_id", "comsol_version", "attachment"],
+-                "properties": {"runtime_id": {"type": "string"}, "worker_install_identity": {"type": "string"},
+-                    "endpoint": {"type": "string"}, "server_instance_id": {"type": "string"}, "comsol_version": {"type": "string"},
+-                    "attachment": {"type": "string", "const": "EXACT_CURRENT_WORKER"}}, "additionalProperties": False},
+-            "recipe_artifact": {"type": "object", "required": ["artifact_id", "sha256", "size_bytes"],
+-                "properties": {"artifact_id": sha, "sha256": sha, "size_bytes": {"type": "integer", "minimum": 1}, "role": {"type": "string"}}, "additionalProperties": False},
+-            "products": {"type": "array", "items": {"type": "object"}}, "model_ref": model_ref, **common,
+-        }
+-        required = ["data_schema_version", "operation", "status", "ok", "partial_change", "execution_state_unknown", "safe_retry", "completed_steps", "step_readbacks", "source_revision", "final_revision", "runtime", "recipe_artifact", "products", "model_ref"]
+-    return {"$schema": "https://json-schema.org/draft/2020-12/schema",
+-            "$id": f"https://comsol-mcp.local/schemas/{operation_id.replace('.', '-')}-data/1",
+-            "type": "object", "required": required, "properties": properties,
+-            "additionalProperties": False}
+ 
+ def _artifact_preview_options_schema() -> dict[str, Any]:
+     image_fields = {"max_width", "max_height"}
+@@ -1944,12 +1639,6 @@
+                 "INVALID_REQUEST",
+                 f"tag is required for action {action!r} (only 'list' enumerates the component container "
+                 "without naming one)")
+-        if action == "copy":
+-            source_tag = arguments.get("source_tag")
+-            if not isinstance(source_tag, str) or not source_tag:
+-                raise ExecutionContractError("INVALID_REQUEST", "source_tag is required for action 'copy'")
+-        elif "source_tag" in arguments:
+-            raise ExecutionContractError("INVALID_REQUEST", "source_tag is accepted only for action 'copy'")
+     if operation_id in {"node.children", "node.find"}:
+         budget = arguments.get("budget")
+         if budget is not None:

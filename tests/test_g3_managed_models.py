@@ -976,6 +976,12 @@ def test_control_daemon_model_routes_and_recipe_use_durable_worker_execution(tmp
         "runtime_id": runtime_id_for_root(install_root), "worker_instance_id": "worker-1",
         "connection_epoch": 1, "server_instance_id": "server-daemon", "endpoint": endpoint,
     }
+    # This software fixture supplies the trusted attach context explicitly;
+    # actual legacy/registered producers are tested in test_runtime_observation_binding.
+    daemon.backend._bind_runtime_observation_context(
+        installation_root=install_root, runtime_id=runtime_id_for_root(install_root),
+        worker_instance_id="worker-1", connection_epoch=1,
+        server_instance_id="server-daemon", endpoint=endpoint, legacy=False)
     daemon.backend.persist()
     monkeypatch.setattr(daemon.backend, "_require_g2_isolation", lambda: {"software_fixture": True})
     from comsol_mcp import _g2_engine

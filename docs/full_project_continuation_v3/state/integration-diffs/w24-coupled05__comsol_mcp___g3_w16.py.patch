@@ -1,0 +1,18 @@
+--- root/comsol_mcp/_g3_w16.py
++++ w24-coupled05/comsol_mcp/_g3_w16.py
+@@ -123,12 +123,11 @@
+ 
+ Known, reported gaps (refused before the first write, never guessed)
+ --------------------------------------------------------------------
+-* ``mesh.import``, ``study.initial_solution_set``/``study.sweep_manage``,
++* ``mesh.import``/``mesh.export``/``mesh.convergence_study``,
++  ``study.initial_solution_set``/``study.sweep_manage``,
+   ``solver.solution_inspect``/``solution_clear``/``solution_transfer``/
+   ``log_read``/``resource_configure`` are *not* part of the W16 scope and are
+-  not published by this module. ``mesh.export`` is available here, while
+-  ``mesh.convergence_study`` is wired through a separate private, in-lane
+-  owned-checkpoint executor.
++  not published by this module.
+ * The quality measure ``custom`` needs a user quality expression that this
+   layer never sets, so it is refused instead of silently evaluating the
+   default measure.

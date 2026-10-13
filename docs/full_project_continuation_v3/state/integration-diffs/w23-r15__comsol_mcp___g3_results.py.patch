@@ -1,0 +1,658 @@
+--- root/comsol_mcp/_g3_results.py
++++ w23-r15/comsol_mcp/_g3_results.py
+@@ -240,7 +240,8 @@
+ ALLOWLIST_ADDITIONS: tuple[str, ...] = (
+     # SolutionInfo (comsol_api_solver.51.10): the canonical stored output-time /
+     # level-name route; needs the accessor plus its methods.
+-    "getLevels",
++    # getLevels is now implemented in the Worker allow-list; its original
++    # R10 SolutionInfo provenance is retained as implemented getter metadata.
+     "getVals",
+     # EvaluationGroup (Application Programming Guide p.280): the documented
+     # "looplevelinput first/last + getReal()" route for output times.
+@@ -596,9 +597,11 @@
+     attached = read(solution, "isAttached")
+     observed_study = read(solution, "study")
+     raw_size = read(solution, "getSize")
++    raw_size_multi = read(solution, "getSizeMulti")
+     raw_names = read(solution, "getPNames")
+     names = list(raw_names) if isinstance(raw_names, (list, tuple)) else None
+     size = list(raw_size) if isinstance(raw_size, (list, tuple)) else None
++    size_multi = list(raw_size_multi) if isinstance(raw_size_multi, (list, tuple)) else None
+     solnum_count: int | None = None
+     size_valid = (
+         size is not None and len(size) == 2
+@@ -607,6 +610,12 @@
+     if not size_valid and raw_size is not None:
+         errors.append({"method": "getSize", "code": "SOLVER_SEQUENCE_SIZE_SHAPE_INVALID",
+                        "message": "getSize() must return exactly two nonnegative integers"})
++    if (size_multi is None or len(size_multi) != 2
++            or any(type(item) is not int or item < 0 for item in size_multi)):
++        if raw_size_multi is not None:
++            errors.append({"method": "getSizeMulti", "code": "SOLVER_SEQUENCE_SIZE_MULTI_SHAPE_INVALID",
++                           "message": "getSizeMulti() must return exactly two nonnegative integers"})
++        size_multi = None
+     if size_valid:
+         solnum_count = size[1]
+         if not 1 <= solnum_count <= 4096:
+@@ -646,6 +655,21 @@
+                                       "arguments": [name], "value": units_by_name[name]})
+     else:
+         units_by_name = {name: None for name in (names or [])}
++
++    count_scope_errors: list[dict[str, Any]] = []
++    level_names = _record(solution_info, "getLevelNames", errors=count_scope_errors) \
++        if solution_info is not None else None
++    levels = _record(solution_info, "getLevels", errors=count_scope_errors) \
++        if solution_info is not None else None
++    outer_solnums = _record(solution_info, "getOuterSolnum", errors=count_scope_errors) \
++        if solution_info is not None else None
++    count_scope = {
++        "getLevelNames": list(level_names) if isinstance(level_names, (list, tuple)) else level_names,
++        "getLevels": levels,
++        "getOuterSolnum": list(outer_solnums) if isinstance(outer_solnums, (list, tuple)) else outer_solnums,
++        "getOuterSolnum_semantics": "empty means no outer parameter/values per COMSOL 6.4 doc7709/chunk23066",
++        "read_errors": count_scope_errors,
++    }
+ 
+     rows: list[dict[str, Any]] = []
+     rows_shape_valid = names is not None and bool(names)
+@@ -687,6 +711,14 @@
+             observed_study == study_tag if isinstance(observed_study, str) and study_tag else None),
+         "get_size": size,
+         "get_size_semantics": "[degrees_of_freedom, solution_number_count] per COMSOL 6.4 documentation",
++        "get_size_multi": size_multi,
++        "get_size_multi_getter": {
++            "method": "SolverSequence.getSizeMulti()",
++            "status": "CAPTURED" if size_multi is not None else "ERROR",
++            "raw": size_multi if size_multi is not None else raw_size_multi,
++            "semantics": "[local solution count in multisolution, total solution number count] per COMSOL 6.4 doc7714/chunk23082",
++        },
++        "solution_info_count_scope": count_scope,
+         "solution_number_count": solnum_count,
+         "pnames": names,
+         "solution_values": values_by_solnum,
+@@ -3181,13 +3213,17 @@
+             if not inner_values:
+                 binding_verified = False
+ 
+-        # A direct, detached Stored/Eigenfrequency sequence can prove a
++        # A direct detached Stored/Eigenfrequency sequence or the exact
++        # single-level attached Parametric/frequency sequence can prove a
+         # singleton numeric allocation bound without proving any outer/inner
+-        # tuple mapping. This exception is intentionally count-only: no axis
+-        # selectors or FieldArray coordinates are synthesized from it.
++        # tuple mapping. This exception is count-only: no axis selectors or
++        # FieldArray coordinates are synthesized from it.
+         count_only_witness = bool(
+             isinstance(single_solution_count_observation, Mapping)
+-            and single_solution_count_observation.get("status") == "VERIFIED_SINGLE_STORED_NUMERIC_COUNT"
++            and single_solution_count_observation.get("status") in {
++                "VERIFIED_SINGLE_STORED_NUMERIC_COUNT",
++                "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT",
++            }
+             and single_solution_count_observation.get("numeric_solution_count") == 1
+             and single_solution_count_observation.get("solution_axes_pair_mapping_complete") is False
+         )
+@@ -4006,7 +4042,9 @@
+     return len(point_values)
+ 
+ 
+-def _result_solution_binding(model: Any, solution_tag: Any) -> dict[str, Any] | None:
++def _result_solution_binding(model: Any, solution_tag: Any, *,
++    _skip_empty_outer_tuple_diagnostic: bool = False,
++) -> dict[str, Any] | None:
+     """Return a typed SolutionInfo binding when the selected solution publishes it."""
+     if not isinstance(solution_tag, str) or not solution_tag:
+         return None
+@@ -4019,7 +4057,16 @@
+         info = _call(sol_node, "getSolutioninfo")
+         if not callable(getattr(info, "getSolnum", None)):
+             return None
+-        return SolutionBinding.resolve_solution_info(info)
++        from ._ephemeral_result_ticket import current_scope
++        scope = current_scope()
++        if scope is None:
++            return SolutionBinding.resolve_solution_info(info,
++                _skip_empty_outer_tuple_diagnostic=_skip_empty_outer_tuple_diagnostic)
++        with scope.supplemental_solution_info(info) as handled:
++            binding = SolutionBinding.resolve_solution_info(info,
++                _skip_empty_outer_tuple_diagnostic=_skip_empty_outer_tuple_diagnostic)
++            handled.append(binding)
++            return binding
+     except ExecutionContractError as exc:
+         if exc.code in {"API_UNSUPPORTED", "NODE_NOT_FOUND"}:
+             return None
+@@ -4031,13 +4078,14 @@
+     dataset_binding: Mapping[str, Any] | None,
+     solution_tag: Any,
+ ) -> dict[str, Any]:
+-    """Prove a one-sample allocation bound without inventing solution axes.
+-
+-    This narrow witness is only for a direct ``Solution`` dataset bound to a
+-    detached, stored eigenfrequency sequence whose documented ``getSize()[1]``
+-    reports exactly one solution number.  It supports memory accounting for
+-    ``result.at_points``; it is not a SolutionInfo tuple mapping and cannot be
+-    used for outer/inner selectors or FieldArray coordinates.
++    """Prove a bounded one-state allocation without inventing solution axes.
++
++    The existing detached Stored/Eigenfrequency case remains count-only.  The
++    one additional supported case is the exact attached frequency sequence:
++    Parametric/SolverSequence, one ``freq`` level, no outer-solution axis,
++    ``getSize()[1] == 1`` and ``getSizeMulti() == [1, 1]``.  Neither case
++    repairs SolutionInfo tuple metadata or enables outer/inner selectors or a
++    FieldArray.
+     """
+     base: dict[str, Any] = {
+         "status": "UNVERIFIED",
+@@ -4081,20 +4129,24 @@
+     )
+     base["observation"] = observation
+     reasons: list[str] = []
+-    if identity_errors:
+-        reasons.append("direct SolverSequence.study() readback failed")
+     size = observation.get("get_size")
++    size_multi = observation.get("get_size_multi")
++    solution_info_scope = observation.get("solution_info_count_scope")
++    if not isinstance(solution_info_scope, Mapping):
++        solution_info_scope = {}
++    level_names = solution_info_scope.get("getLevelNames")
++    levels = solution_info_scope.get("getLevels")
++    outer_solnums = solution_info_scope.get("getOuterSolnum")
++    info_errors = solution_info_scope.get("read_errors")
++    if not isinstance(info_errors, list):
++        info_errors = [{"method": "SolutionInfo", "code": "COUNT_SCOPE_UNAVAILABLE"}]
+     names = observation.get("pnames")
+     values = observation.get("solution_values")
+     rows = observation.get("parameter_rows")
+-    if observation.get("solution_type") != "Eigenfrequency":
+-        reasons.append("direct SolverSequence.getType() is not Eigenfrequency")
+-    if observation.get("sequence_type") != "Stored":
+-        reasons.append("direct SolverSequence.getSequenceType() is not Stored")
+-    if observation.get("attached") is not False:
+-        reasons.append("direct SolverSequence.isAttached() did not prove a detached stored solution")
+-    if not isinstance(observation.get("study"), str) or not observation["study"]:
+-        reasons.append("direct SolverSequence.study() did not return a study tag")
++    if identity_errors:
++        reasons.append("direct SolverSequence identity getter failed")
++    if observation.get("solution_identity_matches_dataset_study") is not True:
++        reasons.append("direct SolverSequence.study() identity was not stable across both reads")
+     if (
+         not isinstance(size, list)
+         or len(size) != 2
+@@ -4103,8 +4155,6 @@
+         or size[1] != 1
+     ):
+         reasons.append("documented getSize()[1] did not prove exactly one solution number")
+-    if names != ["lambda"]:
+-        reasons.append("direct getPNames() did not return exactly the stored eigenfrequency parameter ['lambda']")
+     if observation.get("status") != "OBSERVED_TYPED_COMPLEX_PARAMETER_VALUES":
+         reasons.append("typed real/imaginary parameter values and units are not fully observed")
+     if (
+@@ -4115,26 +4165,103 @@
+         or values[0].get("imag_getter", {}).get("raw") is None
+         or not isinstance(rows, list)
+         or len(rows) != 1
+-        or rows[0].get("name") != "lambda"
++        or rows[0].get("name") not in {"lambda", "freq"}
+         or not isinstance(rows[0].get("unit"), str)
+         or not rows[0]["unit"]
+     ):
+-        reasons.append("one typed complex eigenfrequency row with a native unit was not read back")
++        reasons.append("one typed complex sequence row with a native unit was not read back")
+     else:
+         for component in (rows[0].get("real"), rows[0].get("imag")):
+-            if isinstance(component, bool) or not isinstance(component, (int, float)) or not math.isfinite(float(component)):
+-                reasons.append("typed eigenfrequency row contains a non-finite or non-numeric value")
++            if (isinstance(component, bool) or not isinstance(component, (int, float))
++                    or not math.isfinite(float(component))):
++                reasons.append("typed sequence row contains a non-finite or non-numeric value")
+                 break
++    stored_eigenfrequency = (
++        observation.get("solution_type") == "Eigenfrequency"
++        and observation.get("sequence_type") == "Stored"
++        and observation.get("attached") is False
++        and names == ["lambda"]
++        and isinstance(observation.get("study"), str)
++        and bool(observation["study"])
++        and len(rows or []) == 1
++        and (rows or [{}])[0].get("name") == "lambda"
++    )
++    attached_parametric_frequency = (
++        observation.get("solution_type") == "Parametric"
++        and observation.get("sequence_type") == "SolverSequence"
++        and observation.get("attached") is True
++        and names == ["freq"]
++        and isinstance(observation.get("study"), str)
++        and bool(observation["study"])
++        and len(rows or []) == 1
++        and (rows or [{}])[0].get("name") == "freq"
++        and (rows or [{}])[0].get("unit") in ("Hz", "GHz")
++        and size_multi == [1, 1]
++        and not info_errors
++        and type(levels) is int and levels == 1
++        and isinstance(level_names, (list, tuple))
++        and list(level_names) == ["freq"]
++        and isinstance(outer_solnums, (list, tuple))
++        and list(outer_solnums) == []
++    )
++    if attached_parametric_frequency:
++        # Attached frequency allocation requires actual same-model Study
++        # membership, not merely two equal nonempty solution.study() strings.
++        membership_errors: list[dict[str, Any]] = []
++        membership_tags = []
++        for _ in range(2):
++            collection = _record(model, "study", errors=membership_errors)
++            membership_tags.append(_record(collection, "tags", errors=membership_errors))
++        final_study = _record(node, "study", errors=membership_errors)
++        tag_rows_valid = all(
++            isinstance(tags, (list, tuple))
++            and all(isinstance(tag, str) and bool(tag) for tag in tags)
++            and len(set(tags)) == len(tags)
++            for tags in membership_tags
++        )
++        stable_tags = tag_rows_valid and list(membership_tags[0]) == list(membership_tags[1])
++        actual_member = stable_tags and observation.get("study") in membership_tags[0]
++        stable_study = final_study == study_tag == observation.get("study")
++        base["attached_study_membership"] = {
++            "source": "same model.study().tags() twice plus final dataset-bound SolverSequence.study()",
++            "study": observation.get("study"), "study_tags_before": membership_tags[0],
++            "study_tags_after": membership_tags[1], "solution_study_after": final_study,
++            "tags_complete": tag_rows_valid and not membership_errors,
++            "tags_stable": stable_tags, "study_identity_stable": stable_study,
++            "actual_member": bool(actual_member), "read_errors": membership_errors,
++            "status": "VERIFIED" if actual_member and stable_study and not membership_errors else "UNVERIFIED",
++        }
++        if membership_errors or not actual_member or not stable_study:
++            reasons.append("attached frequency study membership/getter identity is missing, unstable or unverified")
+     if reasons:
+         base["reasons"] = reasons
+         return base
++    if not stored_eigenfrequency and not attached_parametric_frequency:
++        base["reasons"] = [
++            "sequence is neither the exact detached Stored/Eigenfrequency lambda singleton nor the exact "
++            "attached Parametric/SolverSequence frequency singleton with one level, no outer axis, and getSizeMulti [1,1]"
++        ]
++        return base
++    if attached_parametric_frequency and (
++        not isinstance(size_multi, list) or len(size_multi) != 2
++        or any(type(item) is not int or item < 0 for item in size_multi)
++    ):
++        base["reasons"] = ["attached frequency sequence multisolution size is malformed"]
++        return base
++    witness_kind = (
++        "attached_parametric_frequency_singleton"
++        if attached_parametric_frequency else "stored_eigenfrequency_singleton"
++    )
+     base.update({
+-        "status": "VERIFIED_SINGLE_STORED_NUMERIC_COUNT",
++        "status": ("VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT"
++                   if attached_parametric_frequency else "VERIFIED_SINGLE_STORED_NUMERIC_COUNT"),
++        "witness_kind": witness_kind,
+         "numeric_solution_count": 1,
+-        "source": (
+-            "exact dataset.solution→model.sol().tags() binding plus direct Stored/Eigenfrequency "
+-            "SolverSequence.getSize()[1]=1 and one typed complex lambda row"
+-        ),
++        "source": ("exact dataset.solution→model.sol().tags() binding plus direct Stored/Eigenfrequency "
++                   "getSize()[1]=1 and typed lambda singleton" if stored_eigenfrequency else
++                   "exact dataset.solution→model.sol().tags() binding plus attached Parametric/SolverSequence "
++                   "actual stable model.study().tags() membership and solution.study() identity, one freq level, empty getOuterSolnum(), getSize()[1]=1, "
++                   "getSizeMulti()==[1,1], and typed finite freq singleton with exact native Hz or GHz display label (raw value/unit unchanged)"),
+         "reasons": [],
+     })
+     return base
+@@ -5015,51 +5142,16 @@
+         if not strict_selection_enabled:
+             ms.apply_selection(target_feature)
+             return
+-        from ._g3_common import resolve_selection_entities, selection_state
+-
++        from ._g3_common import resolve_selection_entities, bind_strict_feature_selection
+         requested = dict(spec["selection"])
+         expected = resolve_selection_entities(worker, model_tag, requested)
+-        expected_entities = expected.get("entities") if isinstance(expected, Mapping) else None
+-        if (not isinstance(expected_entities, list) or not expected_entities or
+-                any(isinstance(item, bool) or not isinstance(item, int) or item < 1 for item in expected_entities)):
+-            raise ExecutionContractError("INVALID_SELECTION", "selection membership could not be read as a non-empty entity list")
+-        selection_node = _call(target_feature, "selection")
+-        _call(selection_node, "geom", requested["geometry"], requested["entity_dimension"])
+-        kind = requested["kind"]
+-        if kind == "named":
+-            _call(selection_node, "named", requested["tag"])
+-        elif kind == "explicit":
+-            _call(selection_node, "set", list(requested["entities"]))
+-        else:
+-            _call(selection_node, "all")
+-        observed = selection_state(selection_node)
+-        entities = observed.get("entities")
+-        if not isinstance(entities, list) or any(isinstance(item, bool) or not isinstance(item, int) for item in entities):
+-            raise ExecutionContractError("SELECTION_READBACK_UNAVAILABLE", "numerical feature selection entities could not be read back")
+-        if (observed.get("geometry") != requested["geometry"]
+-                or observed.get("dimension") != requested["entity_dimension"]
+-                or sorted(entities) != sorted(expected_entities)):
+-            raise ExecutionContractError("SELECTION_READBACK_MISMATCH", "numerical feature selection geometry, dimension, or members differ from the requested ROI")
+-        if kind == "named" and observed.get("named") != requested["tag"]:
+-            raise ExecutionContractError("SELECTION_READBACK_MISMATCH", "numerical feature named-selection readback differs from the requested tag")
+-        if observed.get("is_inheriting") is True:
+-            raise ExecutionContractError("SELECTION_READBACK_MISMATCH", "numerical feature unexpectedly reports an inherited selection")
+-        normalized_entities = sorted(entities)
++        record = bind_strict_feature_selection(worker, model_tag, target_feature, requested,
++            stage="before_numeric_read", expected=expected, apply=True)
++        normalized_entities = record["entities"]
+         if strict_selection_evidence and strict_selection_evidence[0]["entities"] != normalized_entities:
+             raise ExecutionContractError("SELECTION_READBACK_MISMATCH", "numerical features used different ROI membership")
+-        strict_selection_evidence.append({
+-            "role": role,
+-            "feature_tag": str(_call(target_feature, "tag")),
+-            "source": "actual_transient_numerical_feature",
+-            "component": requested["component"],
+-            "geometry": requested["geometry"],
+-            "entity_dimension": requested["entity_dimension"],
+-            "kind": kind,
+-            "tag": requested.get("tag"),
+-            "entities": normalized_entities,
+-            "resolver_source": expected.get("source"),
+-            "native_selection_readback": observed,
+-        })
++        strict_selection_evidence.append({"role":role,"feature_tag":str(_call(target_feature,"tag")),
++            "source":"actual_transient_numerical_feature",**{k:v for k,v in record.items() if k!="stage"}})
+ 
+     try:
+         feature = _call(numerical_list, "create", ephemeral_tag, feat_type)
+@@ -6474,6 +6566,69 @@
+ 
+ 
+ 
++def _requested_interp_properties(
++    feature: Any, expressions: Sequence[str], units: Sequence[str], *, stage: str,
++) -> dict[str, Any]:
++    """Bind requested numerical units to actual same-feature native property arrays.
++
++    COMSOL 6.4 Interp doc4485/chunks17293-17294 defines getData as the
++    interpolation result and unit as the unit used for its expression.
++    This is property/application evidence, not a standalone runtime proof
++    of a particular model or conversion. No fallback, broadcast or relabel.
++    """
++    try:
++        observed_expr = _call(feature, "getStringArray", "expr")
++        observed_unit = _call(feature, "getStringArray", "unit")
++    except Exception as exc:
++        raise ExecutionContractError(
++            "EXECUTION_STATE_UNKNOWN",
++            f"Interp requested-unit {stage} native expr/unit getter failed: {exc}",
++        ) from exc
++    snapshots = {}
++    for name, observed, requested in (("expr", observed_expr, expressions),
++                                      ("unit", observed_unit, units)):
++        if (not isinstance(observed, Sequence) or isinstance(observed, (str, bytes))
++                or any(not isinstance(value, str) for value in observed)
++                or list(observed) != list(requested)):
++            raise ExecutionContractError(
++                "EXECUTION_STATE_UNKNOWN",
++                f"Interp requested-unit {stage} {name} readback differs from exact requested array: "
++                f"observed={observed!r}, requested={list(requested)!r}",
++            )
++        snapshots[name] = list(observed)
++    return {"stage": stage, "expressions": snapshots["expr"], "units": snapshots["unit"],
++            "source": "same actual Interp NumericalFeature.getStringArray(expr/unit)",
++            "status": "VERIFIED_EXACT_NATIVE_ARRAYS"}
++
++
++def _validate_count_only_point_samples(data: Any, *, num_expressions: int,
++        point_count: int, raw_layout: str, count_observation: Mapping[str, Any] | None) -> None:
++    """Validate bounded native samples without introducing physical tuple axes."""
++    if (not isinstance(count_observation, Mapping)
++            or count_observation.get("status") not in {"VERIFIED_SINGLE_STORED_NUMERIC_COUNT", "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT"}
++            or type(count_observation.get("numeric_solution_count")) is not int
++            or count_observation["numeric_solution_count"] != 1
++            or count_observation.get("solution_axes_pair_mapping_complete") is not False):
++        raise ExecutionContractError("SOLUTION_AXIS_METADATA_UNAVAILABLE", "unmapped samples require independently verified singleton allocation")
++    if raw_layout not in {"expression,solnum,point", "expression,solnum"}:
++        raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "unmapped native sample layout is unsupported")
++    rows = lambda x: list(x) if isinstance(x, Sequence) and not isinstance(x, (str, bytes, Mapping)) else None
++    expressions = rows(data)
++    if expressions is None or len(expressions) != num_expressions:
++        raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "unmapped expression count differs from request")
++    for expression in expressions:
++        samples = rows(expression)
++        if samples is None or len(samples) != 1:
++            raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "unmapped native sample count differs from singleton allocation")
++        points = rows(samples[0]) if raw_layout.endswith("point") else [samples[0]]
++        if points is None or len(points) != point_count:
++            raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "unmapped point count differs from request")
++        for point in points:
++            values = list(point.values()) if isinstance(point, Mapping) and set(point) == {"real", "imag"} else [point]
++            if any(type(value) not in (int, float) or not math.isfinite(value) for value in values):
++                raise ExecutionContractError("COMPLEX_DATA_ERROR", "unmapped native sample is not finite numeric real/imag data")
++
++
+ def result_at_points(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+     """Evaluate expressions at explicit spatial points with coordinate readback."""
+     spec = require_mapping(arguments.get("spec", {}), "spec")
+@@ -6493,11 +6648,30 @@
+         )
+ 
+     expressions = require_string_array(spec.get("expressions"), "spec.expressions")
++    requested_units = None
++    if spec.get("units") is not None:
++        raw_units = spec["units"]
++        if (not isinstance(raw_units, Sequence) or isinstance(raw_units, (str, bytes, Mapping))
++                or not raw_units
++                or any(not isinstance(unit, str) or not unit.strip() for unit in raw_units)):
++            raise ExecutionContractError("INVALID_REQUEST", "spec.units must be a nonempty ordered array of unit strings")
++        # Units may repeat across distinct expressions; unlike entity tags they are not a set.
++        requested_units = list(raw_units)
++        if len(requested_units) != len(expressions):
++            raise ExecutionContractError("INVALID_REQUEST", "spec.units must have exactly one unit per expression")
+     solution_spec = require_mapping(spec.get("solution", {}), "spec.solution")
+     dataset_tag = solution_spec.get("dataset")
+     if not dataset_tag:
+         raise ExecutionContractError("INVALID_REQUEST", "spec.solution.dataset is required")
+ 
++    point_selection = spec.get("selection")
++    if point_selection is not None:
++        from ._g3_common import validate_selection_spec
++        point_selection = validate_selection_spec(point_selection, allowed_kinds={"named", "explicit"})
++        if not all(k in point_selection for k in ("component", "geometry", "entity_dimension")):
++            raise ExecutionContractError("INVALID_SELECTION", "point selection requires component/geometry/dimension")
++        if spec.get("entity_dim") is not None and (type(spec["entity_dim"]) is not int or spec["entity_dim"] != point_selection["entity_dimension"]):
++            raise ExecutionContractError("INVALID_SELECTION", "point selection and entity_dim differ")
+     complex_mode = spec.get("complex_mode", "real")
+     if complex_mode not in COMPLEX_MODES:
+         raise ExecutionContractError("API_UNSUPPORTED", f"complex_mode {complex_mode!r} is not supported")
+@@ -6565,17 +6739,48 @@
+         or _string_or_none(dset_node, "solution", errs)
+         or _string_or_none(dset_node, "data", errs)
+     )
+-    solution_binding = _result_solution_binding(model, solution_tag)
++    # Only the current sealed owned builtin point ticket may omit a redundant
++    # empty-outer convenience diagnostic. No request JSON or cached inventory
++    # certifies this: the original independent witness runs on this live model.
++    from ._ephemeral_result_ticket import current_scope
++    point_scope = current_scope()
+     single_solution_count_observation: dict[str, Any] | None = None
+-    if solution_spec.get("outer") is not None and not solution_binding:
+-        raise ExecutionContractError("SOLUTION_AXIS_METADATA_UNAVAILABLE", "outer selection requires SolutionInfo metadata")
+-    if solution_spec.get("inner") is not None and (not solution_binding or not solution_binding.get("pair_mapping_complete")):
+-        raise ExecutionContractError("SOLUTION_AXIS_METADATA_UNAVAILABLE", "inner selection requires complete SolutionInfo metadata")
+-    if not (isinstance(solution_binding, Mapping) and solution_binding.get("pair_mapping_complete") is True):
++    skip_empty_tuple_diagnostic = False
++    if (point_scope is not None and point_scope.entered and point_scope.binding.intact()
++            and point_scope.service.ledger.model_ownership.get(model_tag) == "mcp_owned"
++            and solution_spec.get("outer") is None and solution_spec.get("inner") is None):
+         single_solution_count_observation = _single_stored_solution_count_observation(
+             model, dataset_binding, solution_tag)
+-
+-    ephemeral_tag = _unique_tag(tag_list(numerical_list))
++        skip_empty_tuple_diagnostic = (
++            single_solution_count_observation.get("status") == "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT"
++            and single_solution_count_observation.get("witness_kind") == "attached_parametric_frequency_singleton"
++            and type(single_solution_count_observation.get("numeric_solution_count")) is int
++            and single_solution_count_observation["numeric_solution_count"] == 1
++            and single_solution_count_observation.get("solution_axes_pair_mapping_complete") is False)
++    solution_binding = _result_solution_binding(model, solution_tag,
++        _skip_empty_outer_tuple_diagnostic=skip_empty_tuple_diagnostic)
++    pair_mapping_complete = (isinstance(solution_binding, Mapping)
++                             and solution_binding.get("pair_mapping_complete") is True)
++    if (solution_spec.get("outer") is not None or solution_spec.get("inner") is not None) and not pair_mapping_complete:
++        raise ExecutionContractError("SOLUTION_AXIS_METADATA_UNAVAILABLE", "explicit outer/inner selection requires complete SolutionInfo mapping")
++    if not pair_mapping_complete and single_solution_count_observation is None:
++        single_solution_count_observation = _single_stored_solution_count_observation(
++            model, dataset_binding, solution_tag)
++
++    point_selection_expected = None
++    if point_selection is not None:
++        if ctx.get("component") != point_selection["component"] or ctx.get("geometry") != point_selection["geometry"]:
++            raise ExecutionContractError("SELECTION_DATASET_MISMATCH", "point selection component/geometry differs from dataset")
++        from ._g3_common import resolve_selection_entities
++        point_selection_expected = resolve_selection_entities(worker, model_tag, point_selection, _component_final_entity=True)
++    point_selection_evidence = {}
++    point_selection_node = None
++    original_numerical_tags = tag_list(numerical_list)
++    from ._ephemeral_result_ticket import current_scope
++    ephemeral_scope = current_scope()
++    if ephemeral_scope is not None:
++        ephemeral_scope.original_container(numerical_list, original_numerical_tags)
++    ephemeral_tag = _unique_tag(original_numerical_tags)
+     cleanup: dict[str, Any] = {
+         "tag": ephemeral_tag,
+         "type_id": "Interp",
+@@ -6589,6 +6794,7 @@
+     engine_error = None
+     transformed = None
+     expression_units: dict[str, str | None] = {}
++    requested_unit_evidence: dict[str, Any] | None = None
+     field_array_payload: Any = None
+     is_complex: bool | None = None
+     field_array_is_complex = False
+@@ -6613,6 +6819,8 @@
+ 
+         feature = _call(numerical_list, "create", ephemeral_tag, "Interp")
+         cleanup["created"] = True
++        if ephemeral_scope is not None:
++            ephemeral_scope.created(feature, ephemeral_tag)
+ 
+         _call(feature, "set", "data", dataset_tag)
+         # A successful setter call is not proof that the native feature now
+@@ -6632,17 +6840,47 @@
+                 f"Interp data readback {data_readback!r} does not match dataset {dataset_tag!r}",
+             )
+         data_readback_status = "VERIFIED"
++        if point_selection is not None:
++            from ._g3_common import bind_strict_feature_selection
++            point_selection_node = _call(feature, "selection")
++            point_selection_evidence["before"] = bind_strict_feature_selection(worker, model_tag, feature, point_selection,
++                stage="before_numeric_read", expected=point_selection_expected, apply=True, selection_node=point_selection_node)
+         _call(feature, "set", "expr", expressions)
++        if requested_units is not None:
++            for index, unit in enumerate(requested_units):
++                _call(feature, "setIndex", "unit", unit, index)
+         _call(feature, "setInterpolationCoordinates", scaled_coord_matrix)
++        if requested_units is not None:
++            before_units = _requested_interp_properties(feature, expressions, requested_units, stage="before_numeric_read")
+         raw_real, raw_imag, is_complex, raw_layout = _run_bound_feature(
+             feature,
+-            solution_binding,
++            solution_binding if pair_mapping_complete else None,
+             num_expressions=len(expressions),
+             budget_guard=result_budget_guard,
+         )
+-        expression_units = _feature_units(feature, expressions)
++        if requested_units is not None:
++            after_units = _requested_interp_properties(feature, expressions, requested_units, stage="after_numeric_read")
++            requested_unit_evidence = {
++                "status": "VERIFIED_REQUESTED_UNITS_BEFORE_AND_AFTER_NUMERIC_READ",
++                "requested_expressions": list(expressions), "requested_units": list(requested_units),
++                "setter": "actual Interp NumericalFeature.setIndex(unit,requested,index)",
++                "before": before_units, "after": after_units,
++                "no_external_scaling_or_relabeling": True,
++            }
++            expression_units = dict(zip(after_units["expressions"], after_units["units"]))
++        else:
++            expression_units = _feature_units(feature, expressions)
++        if point_selection is not None:
++            point_selection_evidence["after"] = bind_strict_feature_selection(worker, model_tag, feature, point_selection,
++                stage="after_numeric_read", expected=point_selection_expected, selection_node=point_selection_node)
++            if point_selection_evidence["before"]["native_selection_readback"] != point_selection_evidence["after"]["native_selection_readback"]:
++                raise ExecutionContractError("SELECTION_READBACK_MISMATCH", "point selection changed during numeric read")
+         transformed = _transform_complex_data(raw_real, raw_imag, complex_mode, is_complex=is_complex)
+-        if solution_binding:
++        if not pair_mapping_complete:
++            _validate_count_only_point_samples(transformed, num_expressions=len(expressions),
++                point_count=point_count, raw_layout=raw_layout,
++                count_observation=single_solution_count_observation)
++        if pair_mapping_complete:
+             from ._solution_binding import FieldArray, SolutionBinding
+             field_array_is_complex = _field_array_is_complex(
+                 is_complex, complex_mode, "none"
+@@ -6767,19 +7005,23 @@
+                 isinstance(solution_binding, Mapping)
+                 and solution_binding.get("pair_mapping_complete") is True
+             ),
+-            "outer": list(solution_binding.get("outer_indices", []))
+-                if isinstance(solution_binding, Mapping) else [],
+-            "inner": list(solution_binding.get("inner_indices", []))
+-                if isinstance(solution_binding, Mapping) else [],
++            "outer": list(solution_binding.get("outer_indices", [])) if pair_mapping_complete else [],
++            "inner": list(solution_binding.get("inner_indices", [])) if pair_mapping_complete else [],
++            "parameters_complete": bool(pair_mapping_complete and solution_binding.get("parameters_complete") is True),
++            "axis_metadata_complete": bool(pair_mapping_complete and solution_binding.get("axis_metadata_complete") is True),
+             "numeric_count_observation": (
+                 dict(single_solution_count_observation)
+                 if single_solution_count_observation is not None else None
+             ),
+             "interpretation": (
+-                "numeric sample count may be bounded by a direct stored-solution observation; "
+-                "outer/inner tuple mapping remains unavailable"
+-                if single_solution_count_observation is not None
+-                and single_solution_count_observation.get("status") == "VERIFIED_SINGLE_STORED_NUMERIC_COUNT"
++            "numeric sample count may be bounded by a direct stored-solution observation; "
++            "a documented single-level attached frequency sequence may also bound one sample; "
++            "outer/inner tuple mapping remains unavailable"
++            if single_solution_count_observation is not None
++                and single_solution_count_observation.get("status") in {
++                    "VERIFIED_SINGLE_STORED_NUMERIC_COUNT",
++                    "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT",
++                }
+                 else "only a complete SolutionBinding establishes outer/inner tuples"
+             ),
+         },
+@@ -6787,6 +7029,8 @@
+             "data": data_readback,
+             "data_status": data_readback_status,
+             "source": "NumericalFeature.getString('data') after set('data')",
++            "selection_application": point_selection_evidence,
++            **({"requested_unit_application": requested_unit_evidence} if requested_units is not None else {}),
+         },
+         "coordinate_unit": coordinate_unit,
+         "frame": frame,
+@@ -6833,6 +7077,22 @@
+         "verification_status": "PASSED" if readback_status == "VERIFIED" else ("FAILED" if readback_status == "MISMATCH" else "UNVERIFIED"),
+     }
+ 
++
++# Retain the original built-in identity; generic callbacks and caller mappings
++# cannot create a read-ticket scope or certify the returned cleanup dictionary.
++_ORIGINAL_RESULT_AT_POINTS = result_at_points
++
++def result_at_points(worker, model_tag, arguments):
++    from ._ephemeral_result_ticket import current_scope
++    scope = current_scope()
++    if scope is not None:
++        scope.enter_builtin(worker, model_tag, arguments, _BUILTIN_RESULT_AT_POINTS)
++    data = _ORIGINAL_RESULT_AT_POINTS(worker, model_tag, arguments)
++    if scope is not None:
++        scope.finish_builtin(data)
++    return data
++
++_BUILTIN_RESULT_AT_POINTS = result_at_points
+ 
+ # ---------------------------------------------------------------------------
+ # W17 Probe / Derived Values & Table Management
+@@ -7778,3 +8038,5 @@
+     "sample_path",
+     "verify_artifact_chunks",
+ ]
++
++IMPLEMENTED_GETTER_PROVENANCE = {"getLevels": "R10 SolutionInfo comsol_api_solver.51.10; implemented by reviewed Native R7 Worker getter hunk"}

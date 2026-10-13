@@ -1,0 +1,76 @@
+--- root/tools/run_native_w24_static_shape_setup.py
++++ w24-coupled05/tools/run_native_w24_static_shape_setup.py
+@@ -109,9 +109,14 @@
+     def __init__(self, *, daemon: Any, project_id: str, project_workspace: Path,
+                  project_create_response: Mapping[str, Any],
+                  parent_binding: ManagedModelBinding, source_manifest: Mapping[str, Any],
+-                 setup_runner: Any, evidence_dir: Path, timeout_s: float = 300.0):
++                 setup_runner: Any, evidence_dir: Path, timeout_s: float = 300.0,
++                 native_epoch_capability: Any = None):
+         if not isinstance(project_id, str) or not project_id:
+             raise CampaignError("static-shape runner requires the authoritative registered project id")
++        self.native_epoch_capability = native_epoch_capability
++        if native_epoch_capability is not None:
++            from tools.w24_native_epoch_capability import require_native_epoch_capability
++            require_native_epoch_capability(native_epoch_capability)
+         self.daemon = daemon
+         self.project_id = project_id
+         self.workspace = project_workspace.resolve(strict=True)
+@@ -160,20 +165,23 @@
+         return paths
+ 
+     def _verify_persisted_binding(self, binding: ManagedModelBinding) -> Mapping[str, Any]:
+-        registry = getattr(self.daemon, "session_registry", None)
+-        get_context = getattr(registry, "get", None)
+-        if not callable(get_context):
+-            raise CampaignError("ControlDaemon cannot resolve the exact registered project/session context")
+-        try:
+-            context = get_context(self.project_id, binding.session_id)
+-        except Exception as exc:
+-            raise CampaignError("the bound ModelRef session has no exact live registered runtime context") from exc
+-        if (getattr(context, "project_id", None) != self.project_id or
+-                getattr(context, "session_id", None) != binding.session_id):
+-            raise CampaignError("registered runtime context differs from the exact ModelRef project/session")
+-        backend = getattr(context, "backend", None)
+-        if backend is None:
+-            raise CampaignError("registered runtime context has no session-bound backend")
++        if self.native_epoch_capability is not None:
++            backend = self.native_epoch_capability.backend_for_binding(binding)
++        else:
++            registry = getattr(self.daemon, "session_registry", None)
++            get_context = getattr(registry, "get", None)
++            if not callable(get_context):
++                raise CampaignError("ControlDaemon cannot resolve the exact registered project/session context")
++            try:
++                context = get_context(self.project_id, binding.session_id)
++            except Exception as exc:
++                raise CampaignError("the bound ModelRef session has no exact live registered runtime context") from exc
++            if (getattr(context, "project_id", None) != self.project_id or
++                    getattr(context, "session_id", None) != binding.session_id):
++                raise CampaignError("registered runtime context differs from the exact ModelRef project/session")
++            backend = getattr(context, "backend", None)
++            if backend is None:
++                raise CampaignError("registered runtime context has no session-bound backend")
+         reader = getattr(backend, "model_project_binding", None)
+         if not callable(reader):
+             raise CampaignError("ControlDaemon cannot read the persisted ModelRef/project association")
+@@ -259,6 +267,8 @@
+                 _write_json_fsynced(Path(request_capture_path), capture_payload)
+             elif request_capture_metadata is not None:
+                 raise CampaignError("request capture metadata cannot be supplied without a durable capture path")
++            if self.native_epoch_capability is not None:
++                self.native_epoch_capability.as_evidence()
+             response = self.daemon.dispatch(request)
+         except BaseException as exc:
+             _append_jsonl_fsynced(self.rpc_journal, {
+@@ -271,6 +281,10 @@
+                 "response_type": type(response).__name__})
+             raise CampaignError(f"{operation} returned a non-object managed response; no retry")
+         self._record_response(call_id, response)
++        if self.native_epoch_capability is not None and operation == "operation_call" and arguments.get("operation_id") == "code.execute_java":
++            execution_response = response.get("execution", {})
++            self.native_epoch_capability.verify(response, model_ref=dict(binding.model_ref),
++                                                revision=execution_response.get("revision"))
+         worker_data = response.get("data", {}).get("worker") if isinstance(response.get("data"), Mapping) else None
+         terminal = (self.setup_runner._worker_request_terminal(response)
+                     if worker_required else response.get("success") is True)

@@ -407,6 +407,8 @@ class ControlDaemon:
         # Durable lifecycle rows deliberately do not recreate this handle.
         self._session_server_handles: dict[tuple[str, str], ManagedServerHandle] = {}
         self._session_t037_process_factories: dict[tuple[str, str], Any] = {}
+        self._retained_host_control_executors = {}
+        self._t037_policy_observation_owner = None
         self.desktop = DesktopCoordinator(
             store=self.store,
             adapter=desktop_adapter if desktop_adapter is not None else create_native_metadata_adapter(),
@@ -695,6 +697,29 @@ class ControlDaemon:
         profile = self._windows_t037_profile
         if type(profile) is not WindowsT037ProfileV2 or self._windows_t037_profile_path is None:
             raise ExecutionContractError("HOST_CONTROL_PROFILE_REQUIRED", "trusted T037 v2 profile is not configured")
+        key = ("pending", id(request))
+        if key in self._retained_host_control_executors or any(record["request"] is request for record in self._retained_host_control_executors.values()):
+            raise ExecutionContractError("HOST_CONTROL_OWNER_UNKNOWN", "original host request already retains its executor", safe_retry=False)
+        record = {"key": key, "request": request, "executor": None, "first_cause": None}
+        self._retained_host_control_executors[key] = record
+        try:
+            result = self._execute_registered_host_control(request, record)
+        except BaseException as error:
+            record["first_cause"] = error
+            # Keep actual executor/API/registry and exception frame even if failure precedes admission.
+            raise
+        else:
+            executor = record["executor"]
+            from ._windows_owned_resources import registry_for
+            from ._windows_service_sid import original_preflights_terminal
+            if executor is not None and not registry_for(executor.api).unresolved() and original_preflights_terminal(executor.api):
+                self._retained_host_control_executors.pop(record["key"], None)
+            return result
+
+    def _execute_registered_host_control(self, request, record):
+        from ._windows_t037 import WindowsT037ProfileV2, load_trusted_profile
+        from ._windows_host_change import WindowsHostChangeExecutor
+        profile = self._windows_t037_profile
         current = load_trusted_profile(self._windows_t037_profile_path)
         if (type(current) is not WindowsT037ProfileV2
                 or current.source_sha256 != request.profile_source_sha256
@@ -706,6 +731,17 @@ class ControlDaemon:
             store=self.store, authority=self.project_authority,
             trusted_profile_path=self._windows_t037_profile_path,
         )
+        record["executor"] = executor
+        from ._windows_wfp_mutation_owner import registry as mutation_registry
+        mutation_registry(executor.api)
+        def bind_admission(actual_executor, admission):
+            if actual_executor is not executor or record["executor"] is not executor:
+                raise ExecutionContractError("HOST_CONTROL_OWNER_UNKNOWN", "actual executor admission owner changed", safe_retry=False)
+            actual_key = ("admission", admission.job_id, admission.operation_id)
+            self._retained_host_control_executors[actual_key] = record
+            self._retained_host_control_executors.pop(record["key"], None)
+            record["key"] = actual_key
+        executor._on_original_host_admission = bind_admission
         if (executor.profile.sha256 != request.profile_sha256
                 or executor.provider is not request.provider
                 or executor.authority is not request.authority):
@@ -717,6 +753,34 @@ class ControlDaemon:
             return executor.restore(request.plan, request.receipt,
                                     authorization_ref=request.authorization_ref)
         raise ExecutionContractError("HOST_CONTROL_PHASE_UNSUPPORTED", "internal host-control phase is unsupported")
+
+    def _reconcile_original_host_control_executor(self, original_request, original_executor,
+                                                 *, original_preflight_owner=None):
+        """Private cleanup reconciliation only; never retry apply/restore or alter Store UNKNOWN."""
+        from ._windows_owned_resources import registry_for
+        records = [record for record in self._retained_host_control_executors.values()
+                   if record["request"] is original_request and record["executor"] is original_executor]
+        if len(records) != 1:
+            raise ExecutionContractError("HOST_CONTROL_OWNER_UNKNOWN", "original retained request/executor identity required", safe_retry=False)
+        if original_executor is None:
+            from ._windows_host_preflight_owner import confirmed_original_cleanup
+            cause = records[0]["first_cause"]
+            seen = set()
+            bound = False
+            while cause is not None and id(cause) not in seen:
+                seen.add(id(cause))
+                if getattr(cause, "_original_preflight_owner", None) is original_preflight_owner:
+                    bound = True
+                cause = cause.__cause__ or cause.__context__
+            if not bound or not confirmed_original_cleanup(original_preflight_owner):
+                raise ExecutionContractError("HOST_CONTROL_OWNER_UNKNOWN", "exact original preflight cleanup is not confirmed", safe_retry=False)
+            self._retained_host_control_executors.pop(records[0]["key"])
+            return
+        registry = registry_for(original_executor.api)
+        from ._windows_service_sid import original_preflights_terminal
+        if registry.owner is not original_executor.api or registry.unresolved() or not original_preflights_terminal(original_executor.api):
+            raise ExecutionContractError("HOST_CONTROL_OWNER_UNKNOWN", "original native resources remain unresolved", safe_retry=False)
+        self._retained_host_control_executors.pop(records[0]["key"])
 
     def _dispatch_admitted(self, request):
         try:
@@ -5460,7 +5524,11 @@ class ControlDaemon:
             # not natively verified.
             self._require_t037_policy("session.start")
             t037_factory = self._new_t037_session_factory(project_id, session_id)
-            t037_factory.preflight()
+            try:
+                t037_factory.preflight()
+            except BaseException:
+                self._discard_empty_t037_session_factory((project_id, session_id))
+                raise
         from ._execution_contract import canonical_request_hash
         semantic_arguments = {"runtime_id": runtime_id, "options": {}, "resources": {}}
         request_hash = canonical_request_hash(
@@ -5477,14 +5545,18 @@ class ControlDaemon:
                 timeouts=self._timeouts(execution),
             )
         except IdempotencyConflict as exc:
+            self._discard_empty_t037_session_factory((project_id, session_id))
             raise ExecutionContractError("IDEMPOTENCY_CONFLICT", str(exc)) from exc
+        except BaseException:
+            self._discard_empty_t037_session_factory((project_id, session_id))
+            raise
         if reused:
+            self._discard_empty_t037_session_factory((project_id, session_id))
             return record["result"] if record.get("result") is not None else self._pending(
                 record, session_id=record.get("metadata", {}).get("session_id"),
             )
-        session_id = record["metadata"]["session_id"]
-        if t037_factory is not None:
-            self._session_t037_process_factories[(project_id, session_id)] = t037_factory
+        if record["metadata"]["session_id"] != session_id:
+            raise ExecutionContractError("T037_POLICY_UNVERIFIED", "durable session differs from the original factory binding")
         self._start_session_mutation_record(record, operation="session.start", session_id=session_id)
         key = (project_id, session_id)
         lifecycle = None
@@ -5614,6 +5686,10 @@ class ControlDaemon:
                     )
                 if handle is not None:
                     self._session_server_handles[key] = handle
+                    try:
+                        self._record_retained_native_child(record, key, handle)
+                    except Exception as native_persist_exc:
+                        startup_error_summary["native_ownership_persist_error_type"] = type(native_persist_exc).__name__
                     endpoint = ({"host": handle.endpoint.address, "port": handle.endpoint.port}
                                 if handle.endpoint is not None else None)
                     durable_process = None
@@ -5705,6 +5781,11 @@ class ControlDaemon:
                 return self._finish(record, self._error("PROJECT_IDENTITY_MISMATCH", str(exc)), "FAILED")
             if lifecycle is None:
                 return self._finish(record, self._error("SESSION_NOT_FOUND", "session lifecycle record not found"), "FAILED")
+            key = (project_id, session_id)
+            retained_handle = self._session_server_handles.get(key)
+            native_result = self._stop_retained_native_server(record, lifecycle, key, retained_handle, authorization_digest)
+            if native_result is not None:
+                return native_result
             if lifecycle["state"] == "STOPPED":
                 return self._finish(record, {"success": True, "data": {
                     "project_id": project_id, "session_id": session_id,
@@ -6097,6 +6178,22 @@ class ControlDaemon:
                 dispatched = dispatched or exc.dispatched
                 if worker is not None:
                     self._session_worker_handles[(project_id, session_id)] = worker
+                from ._windows_t037 import is_native_retained_child
+                native_process = getattr(worker, "_process", None)
+                if is_native_retained_child(native_process) and native_process._owner is worker:
+                    persistence_error = None
+                    try:
+                        self._record_retained_native_child(record, (project_id, session_id), worker)
+                        self._remember_session_worker_child((project_id, session_id), worker)
+                        lifecycle = self.session_lifecycle.save(connection_lifecycle("UNKNOWN", "UNKNOWN"),
+                            expected_revision=lifecycle["revision"])
+                    except Exception as native_persist_exc:
+                        persistence_error = type(native_persist_exc).__name__
+                    return self._finish(record, self._error("EXECUTION_STATE_UNKNOWN", "native Worker birth/cleanup is uncertain; actual owner retained",
+                        data={"session_id": session_id, "engine_dispatched": bool(dispatched),
+                              "worker_handle_preserved": True, "child_effect_possible": True,
+                              "ownership_persist_error_type": persistence_error},
+                        execution_state_unknown=True, safe_retry=False), "UNKNOWN")
                 runtime_meta = exc.runtime_metadata or {}
                 remote_reply = exc.reply or {}
                 self._bind_session_job_to_worker(
@@ -6199,6 +6296,22 @@ class ControlDaemon:
             except Exception as exc:
                 if worker is not None:
                     self._session_worker_handles[(project_id, session_id)] = worker
+                from ._windows_t037 import is_native_retained_child
+                native_process = getattr(worker, "_process", None)
+                if is_native_retained_child(native_process) and native_process._owner is worker:
+                    persistence_error = None
+                    try:
+                        self._record_retained_native_child(record, (project_id, session_id), worker)
+                        self._remember_session_worker_child((project_id, session_id), worker)
+                        lifecycle = self.session_lifecycle.save(connection_lifecycle("UNKNOWN", "UNKNOWN"),
+                            expected_revision=lifecycle["revision"])
+                    except Exception as native_persist_exc:
+                        persistence_error = type(native_persist_exc).__name__
+                    return self._finish(record, self._error("EXECUTION_STATE_UNKNOWN", "native Worker birth/cleanup is uncertain; actual owner retained",
+                        data={"session_id": session_id, "engine_dispatched": bool(dispatched),
+                              "worker_handle_preserved": True, "child_effect_possible": True,
+                              "ownership_persist_error_type": persistence_error},
+                        execution_state_unknown=True, safe_retry=False), "UNKNOWN")
                 if dispatched:
                     try:
                         runtime_meta = worker.runtime_metadata() if worker is not None else {}
@@ -9885,6 +9998,10 @@ class ControlDaemon:
             if lifecycle is None:
                 return self._finish(record, self._error("SESSION_NOT_FOUND", "session lifecycle record not found"), "FAILED")
             retire_worker = routed.get("retire_worker", False) is True
+            if retire_worker:
+                native_cleanup = self._retire_retained_native_worker(record, lifecycle, (project_id, session_id))
+                if native_cleanup is not None:
+                    return native_cleanup
             if lifecycle["state"] == "DISCONNECTED":
                 if not retire_worker:
                     return self._finish(record, {"success": True, "data": {
@@ -11644,18 +11761,43 @@ class ControlDaemon:
         if profile is None:
             return
         from ._windows_t037 import ERROR_POLICY_UNVERIFIED, WindowsT037Observer
-        try:
-            assessment = WindowsT037Observer().assess_profile(
-                profile, workspace_root=profile.workspace_root,
-            )
-            reasons = list(assessment.reasons)
-            state = assessment.state
-        except ExecutionContractError as exc:
-            reasons = [exc.code]
+        from ._windows_policy_owner import new_policy_owner
+        # One independent policy owner, never rebound to a launch/session.
+        with self._session_connect_lock:
+            held = self._t037_policy_observation_owner
+            if held is not None:
+                raise ExecutionContractError(ERROR_POLICY_UNVERIFIED,
+                    "prior native policy observation still owns unresolved resources",
+                    details={"policy_state":"UNVERIFIED", "reason_codes":["NATIVE_POLICY_OWNER_RECOVERY_REQUIRED"],
+                             "dispatch_performed":False}, safe_retry=False)
+            owner = None
+            scope = None
+            reasons = []
             state = "UNVERIFIED"
-        except Exception as exc:
-            reasons = [type(exc).__name__]
-            state = "UNVERIFIED"
+            try:
+                observer = WindowsT037Observer()
+                owner = new_policy_owner(self, observer)
+                self._t037_policy_observation_owner = owner
+                scope = owner.registry.scope()
+                assessment = observer.assess_profile(profile, workspace_root=profile.workspace_root)
+                reasons = list(assessment.reasons)
+                state = assessment.state
+            except ExecutionContractError as exc:
+                reasons = [exc.code]
+                state = "UNVERIFIED"
+            except Exception as exc:
+                reasons = [type(exc).__name__]
+                state = "UNVERIFIED"
+            finally:
+                if owner is not None:
+                    if scope is not None:
+                        owner.registry.drain(scope)
+                    if owner.registry.unresolved():
+                        state = "UNVERIFIED"
+                        reasons = [*reasons, "NATIVE_POLICY_OWNER_RECOVERY_REQUIRED"]
+                    else:
+                        owner.released = True
+                        self._t037_policy_observation_owner = None
         if state != "VERIFIED" or reasons:
             raise ExecutionContractError(
                 ERROR_POLICY_UNVERIFIED,
@@ -11665,6 +11807,117 @@ class ControlDaemon:
                          "dispatch_performed": False},
             )
 
+    def _record_retained_native_child(self, record, key, owner):
+        from ._windows_t037 import is_native_retained_child
+        process = getattr(owner, "process", None) or getattr(owner, "_process", None)
+        if not is_native_retained_child(process) or process._owner is not owner:
+            return None
+        metadata = {**process.ownership_observation(), "project_id": key[0], "session_id": key[1],
+                    "operation_id": record["operation_id"], "job_id": record["job_id"]}
+        self.store.add_event(record["job_id"], "NativeChildOwnershipUnknown", metadata)
+        return metadata
+
+    def _retire_retained_native_worker(self, record, lifecycle, key):
+        from ._windows_t037 import is_native_suspended_child
+        worker = self._session_worker_handles.get(key)
+        process = getattr(worker, "_process", None)
+        if not is_native_suspended_child(process) or process._owner is not worker:
+            return None
+        # A private never-resumed capability has never acquired an engine
+        # endpoint/epoch. Its original HANDLE is the only cleanup authority.
+        try:
+            self._record_retained_native_child(record, key, worker)
+            self.store.add_event(record["job_id"], "NativeChildCleanupIntent", {
+                "project_id": key[0], "session_id": key[1], "pid": process.pid,
+                "birth_filetime_100ns": process.birth_filetime_100ns,
+                "never_resumed": True, "retire_worker": True})
+            worker.close()
+            if not process._closed or type(process.returncode) is not int:
+                raise RuntimeError("native Worker terminal HANDLE observation unavailable")
+            evidence = process.ownership_observation()
+            self.store.add_event(record["job_id"], "NativeChildExitConfirmed", evidence)
+            # A Server can share the factory Job; leave it to its own exact
+            # owner if still retained, never close that Job through this child.
+            if key not in self._session_server_handles:
+                self._close_t037_session_factory(key)
+            updated = self._updated_session_lifecycle(lifecycle, state="DISCONNECTED", client_state="RETIRED",
+                worker_instance_id=lifecycle["worker_instance_id"], worker_epoch=lifecycle["worker_epoch"],
+                server_instance_id=lifecycle["server_instance_id"])
+            process._pending_resource_release_jobs.add(record["job_id"])
+            resource_observation = {}
+            result = self._finish(record, {"success": True, "data": {
+                "project_id": key[0], "session_id": key[1], "state": "DISCONNECTED",
+                "client_state": "RETIRED", "server_stopped": False,
+                "native_child_exit_evidence": evidence}}, "SUCCEEDED",
+                _native_lifecycle_transition=(updated, lifecycle["revision"]),
+                _native_resource_release_observation=resource_observation)
+            if not self._native_terminal_resources_complete(process, record["job_id"], resource_observation):
+                worker._process = process
+                return result
+            self._session_worker_handles.pop(key, None)
+            self._session_worker_child_identities.pop(key, None)
+            return result
+        except Exception as exc:
+            # close may have confirmed exit before event/CAS delivery failed.
+            # Retain the same live sealed wrapper for explicit terminal retry.
+            if getattr(worker, "_process", None) is None:
+                worker._process = process
+            return self._finish(record, self._error("EXECUTION_STATE_UNKNOWN",
+                "native Worker cleanup or durable delivery is incomplete",
+                data={"session_id": key[1], "worker_handle_preserved": self._session_worker_handles.get(key) is worker,
+                      "child_effect_possible": True, "engine_dispatched": False},
+                execution_state_unknown=True, safe_retry=False, cause_type=type(exc).__name__), "UNKNOWN")
+
+    def _stop_retained_native_server(self, record, lifecycle, key, handle, authorization_digest):
+        from ._windows_t037 import is_native_suspended_child
+        process = getattr(handle, "process", None)
+        if (not is_native_suspended_child(process) or process._owner is not handle
+                or getattr(handle, "suspended_launch_recovery", None) is not process
+                or handle.runtime_id != lifecycle.get("runtime_id")):
+            return None
+        if key in self._session_worker_handles:
+            return self._finish(record, self._error("WORKER_BINDING_UNKNOWN", "retained Worker must be resolved before native Server cleanup",
+                data={"server_stopped": False}, safe_retry=False), "FAILED")
+        try:
+            self._record_retained_native_child(record, key, handle)
+            self.store.add_event(record["job_id"], "NativeChildCleanupIntent", {
+                "project_id": key[0], "session_id": key[1], "pid": process.pid,
+                "birth_filetime_100ns": process.birth_filetime_100ns,
+                "authorization_ref_sha256": authorization_digest, "never_resumed": True})
+            if handle.retired and process._closed and type(process.returncode) is int:
+                # Reuse only the live sealed wrapper's previously observed
+                # terminal result after a durable event/CAS write failed.
+                stopped = {"pid": process.pid, "birth_filetime_100ns": process.birth_filetime_100ns,
+                           "never_resumed_native_child": True, "exit_confirmed": True,
+                           "child_reaped": True, "returncode": process.returncode, "server_stopped": True}
+            else:
+                stopped = self.session_server_launcher.stop(handle)
+            if (stopped.get("never_resumed_native_child") is not True or stopped.get("exit_confirmed") is not True
+                    or stopped.get("child_reaped") is not True or stopped.get("pid") != process.pid):
+                raise RuntimeError("native cleanup returned incomplete actual-handle exit evidence")
+            self.store.add_event(record["job_id"], "NativeChildExitConfirmed", dict(stopped))
+            self._close_t037_session_factory(key)
+            updated = self._updated_session_lifecycle(lifecycle, state="STOPPED", client_state="DISCONNECTED",
+                server_state="STOPPED", server_ownership="unknown", server_process_identity=None,
+                worker_instance_id=None, worker_epoch=None, server_instance_id=None)
+            process._pending_resource_release_jobs.add(record["job_id"])
+            resource_observation = {}
+            result = self._finish(record, {"success": True, "data": {"project_id": key[0], "session_id": key[1],
+                "state": "STOPPED", "server_stopped": True, "native_child_exit_evidence": stopped}}, "SUCCEEDED",
+                _native_lifecycle_transition=(updated, lifecycle["revision"]),
+                _native_resource_release_observation=resource_observation)
+            if not self._native_terminal_resources_complete(process, record["job_id"], resource_observation):
+                return result
+            self._session_server_handles.pop(key, None)
+            return result
+        except Exception as exc:
+            return self._finish(record, self._error("EXECUTION_STATE_UNKNOWN", "native Server cleanup or durable state delivery is incomplete",
+                data={"server_stopped": process._closed and type(process.returncode) is int,
+                      "server_handle_preserved": key in self._session_server_handles,
+                      "job_retained": key in self._session_t037_process_factories,
+                      "native_cleanup_state": "EXIT_CONFIRMED" if process._closed and type(process.returncode) is int else "UNKNOWN"},
+                execution_state_unknown=True, safe_retry=False, cause_type=type(exc).__name__), "UNKNOWN")
+
     def _new_t037_session_factory(self, project_id: str, session_id: str):
         if self._windows_t037_profile is None:
             return None
@@ -11673,7 +11926,32 @@ class ControlDaemon:
         factory = self._session_t037_process_factories.get(key)
         if factory is None:
             factory = T037SessionProcessFactory(self._windows_t037_profile, session_id)
+            # Register the original object before any native preflight. This
+            # owner survives refusal, failed Store admission and caller GC.
+            self._session_t037_process_factories[key] = factory
         return factory
+
+    def _discard_empty_t037_session_factory(self, key: tuple[str, str]) -> None:
+        """Unregister only a proven empty prebirth temporary owner, without retry."""
+        from ._windows_t037 import T037SessionProcessFactory
+        from ._windows_owned_resources import registry_for
+        factory = self._session_t037_process_factories.get(key)
+        if type(factory) is not T037SessionProcessFactory or factory._job is not None:
+            return
+        if registry_for(factory).unresolved():
+            return
+        api = factory._api
+        if api is not None:
+            if registry_for(api).unresolved() or any(getattr(api, field, None) for field in (
+                "_retained_launch_cleanup", "_retained_parent_bindings",
+                "_unclassified_create_handles", "_retained_children",
+            )):
+                return
+        # With no Job/child/resource there is no native release to retry.
+        factory.close()
+        if self._session_t037_process_factories.get(key) is factory:
+            self._session_t037_process_factories.pop(key)
+
 
     def _close_t037_session_factory(self, key: tuple[str, str]) -> None:
         factory = self._session_t037_process_factories.get(key)
@@ -12217,10 +12495,16 @@ class ControlDaemon:
                 self.running.pop(job_id, None)
         return self._finish(record, result, status)
 
-    def _finish(self, record, result, status):
+    def _finish(self, record, result, status, *, _native_lifecycle_transition=None,
+                _native_resource_release_observation=None):
         execution = result.setdefault("execution", {})
         execution.update({key: record[key] for key in ("request_id", "operation_id", "request_hash", "idempotency_key", "job_id")})
-        accepted, authoritative_status = self.store.finish(record["operation_id"], status=status, result=result)
+        if _native_lifecycle_transition is None:
+            accepted, authoritative_status = self.store.finish(record["operation_id"], status=status, result=result)
+        else:
+            proposed, revision = _native_lifecycle_transition
+            accepted, authoritative_status = self.session_lifecycle.save(proposed, expected_revision=revision,
+                _finish_operation=(record["operation_id"], status, result))
         if not accepted:
             # F02: The store rejected this write because the job is already in a
             # terminal state.  Return the authoritative persistent result instead
@@ -12238,59 +12522,61 @@ class ControlDaemon:
         self.store.update_job(record["job_id"], authoritative_status, {"finished_observed_at": time.time()})
         self.store.add_event(record["job_id"], authoritative_status, {"operation_id": record["operation_id"], "at": time.time()})
         if authoritative_status in {"SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED", "LOST"}:
-            self._release_terminal_resource_reservations(record["job_id"])
+            released = self._release_terminal_resource_reservations(record["job_id"])
+            if _native_resource_release_observation is not None:
+                _native_resource_release_observation.update(released)
         return result
 
-    def _release_terminal_disk_reservation(self, job_id):
-        """Release disk accounting after a durable terminal write, never alter its result."""
-        coordinator = self._disk_resource_coordinator
+    def _release_terminal_accounting(self, job_id, coordinator, kind):
+        """Return exact release/held/diagnostic durability; ordinary finish stays compatible."""
         if coordinator is None:
-            return
+            return {"state": "COMPLETE", "reservation_state": "NOT_CONFIGURED", "diagnostic_durable": True}
         try:
             outcome = coordinator.release_terminal_if_reserved(job_id)
-            if outcome is not None:
-                self.store.add_event(job_id, "W26DiskReservationReleased", {
-                    "status": outcome.get("status"),
-                    "reservation_id": outcome.get("reservation_id"),
-                    "idempotent": outcome.get("idempotent") is True,
-                    "evidence_classification": outcome.get("evidence_classification", "SOFTWARE_ONLY"),
-                })
+            if outcome is None:
+                return {"state": "COMPLETE", "reservation_state": "ABSENT_AFTER_DURABLE_QUERY", "diagnostic_durable": True}
+            self.store.add_event(job_id, f"W26{kind}ReservationReleased", {
+                "status": outcome.get("status"), "reservation_id": outcome.get("reservation_id"),
+                "idempotent": outcome.get("idempotent") is True,
+                "evidence_classification": outcome.get("evidence_classification", "SOFTWARE_ONLY")})
+            complete = outcome.get("status") in {"RELEASED", "RELEASED_AFTER_QUIESCENCE"}
+            return {"state": "COMPLETE" if complete else "HELD",
+                    "reservation_state": outcome.get("status"), "diagnostic_durable": True}
         except Exception as exc:
-            # The operation's durable terminal result is primary. Retain the
-            # reservation and record only a bounded cleanup diagnostic.
+            durable = False
             try:
-                self.store.add_event(job_id, "W26DiskReservationReleaseDeferred", {
-                    "cause_type": type(exc).__name__,
-                    "code": getattr(exc, "code", None),
-                    "reservation_retained": True,
-                })
+                self.store.add_event(job_id, f"W26{kind}ReservationReleaseDeferred", {
+                    "cause_type": type(exc).__name__, "code": getattr(exc, "code", None),
+                    "reservation_retained": True})
+                durable = True
             except Exception:
                 pass
+            return {"state": "DEFERRED" if durable else "UNKNOWN", "diagnostic_durable": durable,
+                    "cause_type": type(exc).__name__}
+
+    def _release_terminal_disk_reservation(self, job_id):
+        return self._release_terminal_accounting(job_id, self._disk_resource_coordinator, "Disk")
 
     def _release_terminal_resource_reservations(self, job_id):
-        """Release host accounting after terminal persistence; UNKNOWN remains held."""
-        self._release_terminal_disk_reservation(job_id)
-        coordinator = self._memory_resource_coordinator
-        if coordinator is None:
-            return
-        try:
-            outcome = coordinator.release_terminal_if_reserved(job_id)
-            if outcome is not None:
-                self.store.add_event(job_id, "W26MemoryReservationReleased", {
-                    "status": outcome.get("status"),
-                    "reservation_id": outcome.get("reservation_id"),
-                    "idempotent": outcome.get("idempotent") is True,
-                    "evidence_classification": outcome.get("evidence_classification", "SOFTWARE_ONLY"),
-                })
-        except Exception as exc:
-            try:
-                self.store.add_event(job_id, "W26MemoryReservationReleaseDeferred", {
-                    "cause_type": type(exc).__name__,
-                    "code": getattr(exc, "code", None),
-                    "reservation_retained": True,
-                })
-            except Exception:
-                pass
+        """Required reservations stay held on any incomplete terminal observation."""
+        disk = self._release_terminal_disk_reservation(job_id)
+        memory = self._release_terminal_accounting(job_id, self._memory_resource_coordinator, "Memory")
+        states = {disk["state"], memory["state"]}
+        state = ("COMPLETE" if states == {"COMPLETE"} else "UNKNOWN" if "UNKNOWN" in states
+                 else "DEFERRED" if "DEFERRED" in states else "HELD")
+        return {"state": state, "disk": disk, "memory": memory}
+
+    def _native_terminal_resources_complete(self, process, job_id, current):
+        # Only an already validated original child capability reaches here.
+        # Job IDs were captured from actual accepted operations, never used to
+        # manufacture cleanup authority from persisted metadata.
+        for pending_job in tuple(process._pending_resource_release_jobs):
+            observation = (current if pending_job == job_id and current
+                           else self._release_terminal_resource_reservations(pending_job))
+            process._terminal_resource_release_observations[pending_job] = observation
+            if observation.get("state") == "COMPLETE":
+                process._pending_resource_release_jobs.remove(pending_job)
+        return not process._pending_resource_release_jobs
 
     def _pending(self, record, **extra):
         job_id = record.get("job_id")
@@ -13006,6 +13292,15 @@ def serve(home, *, host_provider_config=None, disk_resource_config=None, memory_
         if _scm_runtime is not None:
             try:
                 daemon.close()
+                # The accepted operation may finish only while close drains its
+                # serial lane, after the listener monitor has stopped.
+                accepted = getattr(daemon, "_scm_bootstrap_future", None)
+                if accepted is not None:
+                    from ._windows_t037_broker import WindowsScmError
+                    if not accepted.done():
+                        raise WindowsScmError("SCM_BOOTSTRAP_DRAIN_UNKNOWN",
+                                              "accepted bootstrap is still pending after daemon drain")
+                    accepted.result()  # Preserve the actual late exception.
             finally:
                 singleton.close()
 

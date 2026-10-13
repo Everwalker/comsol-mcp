@@ -1,0 +1,165 @@
+--- root/tests/test_host_scoped_provider.py
++++ windows-r19/tests/test_host_scoped_provider.py
+@@ -303,7 +303,8 @@
+             self.restype = None
+ 
+         def __call__(self, *args):
+-            return self.callback(*args)
++            result = self.callback(*args)
++            return int(result) if type(result) is bool else result
+ 
+     def library_for(expected_symbol):
+         calls = []
+@@ -388,6 +389,24 @@
+     )
+ 
+ 
++def _owned_metadata_fixture_path(api, handles):
++    from comsol_mcp._windows_host_preflight_owner import hold_original
++    owner = hold_original(api)
++    for handle in handles:
++        api.k.labels[handle.value] = handle.label
++        owner.capture(handle, family='handle', closer=owner.function('CloseHandle', api.k))
++    return handles
++
++
++def _owned_metadata_fixture_context(api):
++    import ctypes as C
++    from comsol_mcp._windows_host_preflight_owner import hold_original
++    owner = hold_original(api); token = C.c_void_p(100); sids = [C.c_void_p(201), C.c_void_p(202)]
++    owner.capture(token, family='handle', closer=owner.function('CloseHandle', api.k))
++    for sid in sids: owner.capture(sid, family='local', closer=owner.function('LocalFree', api.k))
++    return 'daemon-sid', ['daemon-sid', 'system-sid', 'admins-sid'], (token, sids, object())
++
++
+ def test_windows_verifier_mock_abi_checks_identity_hash_and_closes_handles(monkeypatch):
+     # Software-only mock ABI seam; this is not evidence of Windows kernel ACL behavior.
+     import comsol_mcp._host_scoped_provider as provider_module
+@@ -396,6 +415,7 @@
+     class Handle:
+         def __init__(self, identity, label):
+             self.identity, self.label = identity, label
++            self.value = id(self)
+ 
+     class Kernel:
+         def __init__(self):
+@@ -403,11 +423,14 @@
+             self.freed = []
+ 
+         def CloseHandle(self, handle):
+-            self.closed_tokens.append(handle)
+-            return True
++            value = getattr(handle, "value", handle)
++            label = self.labels.get(value)
++            if label is None: self.closed_tokens.append(value)
++            else: self.close_calls.append(label)
++            return 1
+ 
+         def LocalFree(self, handle):
+-            self.freed.append(handle)
++            self.freed.append(getattr(handle, "value", handle))
+             return None
+ 
+     class FakeApi:
+@@ -415,13 +438,14 @@
+             self.k = Kernel()
+             self.close_calls = []
+             self.opens = 0
++            self.k.labels = {}; self.k.close_calls = self.close_calls
+             self.second_final_inode = second_final_inode
+ 
+         def open_security_path(self, _path, *, directory):
+             self.opens += 1
+             final_inode = 22 if self.opens == 1 else self.second_final_inode
+-            return [Handle((7, 11), f"root-{self.opens}"),
+-                    Handle((7, final_inode), f"leaf-{self.opens}")]
++            return _owned_metadata_fixture_path(self, [Handle((7, 11), f"root-{self.opens}"),
++                    Handle((7, final_inode), f"leaf-{self.opens}")])
+ 
+         def info(self, handle, *, directory):
+             return handle.identity, 0
+@@ -433,8 +457,7 @@
+     monkeypatch.setattr(windows_publish, "_API", lambda: api)
+     monkeypatch.setattr(provider_module, "_windows_volume_has_persistent_acls", lambda _api, _path: (True, 7))
+     monkeypatch.setattr(provider_module, "_windows_security_context",
+-                        lambda _api: ("daemon-sid", ["daemon-sid", "system-sid", "admins-sid"],
+-                                      ("token", ["sid-system", "sid-admins"], object())))
++                        _owned_metadata_fixture_context)
+     monkeypatch.setattr(provider_module, "_win32_descriptor_digest",
+                         lambda _api, handle, **_kwargs: (hashlib.sha256(repr(handle.identity).encode()).hexdigest(), "daemon"))
+ 
+@@ -445,8 +468,8 @@
+     assert evidence["identity"]["inode"] == 22
+     assert len(evidence["security_sha256"]) == 64
+     assert len(api.close_calls) == 4
+-    assert api.k.closed_tokens == ["token"]
+-    assert api.k.freed == ["sid-system", "sid-admins"]
++    assert api.k.closed_tokens == [100]
++    assert api.k.freed == [202, 201]
+ 
+ 
+ def test_windows_verifier_mock_abi_rejects_replacement_and_releases_pins(monkeypatch):
+@@ -457,20 +480,28 @@
+     class Handle:
+         def __init__(self, identity, label):
+             self.identity, self.label = identity, label
++            self.value = id(self)
+ 
+     class Kernel:
+         def __init__(self):
+             self.closed_tokens = []
+             self.freed = []
+-        def CloseHandle(self, handle): self.closed_tokens.append(handle); return True
+-        def LocalFree(self, handle): self.freed.append(handle); return None
++        def CloseHandle(self, handle):
++            value = getattr(handle, "value", handle)
++            label = self.labels.get(value)
++            if label is None: self.closed_tokens.append(value)
++            else: self.close_calls.append(label)
++            return 1
++        def LocalFree(self, handle): self.freed.append(getattr(handle, "value", handle)); return None
+ 
+     class FakeApi:
+-        def __init__(self): self.k, self.close_calls, self.opens = Kernel(), [], 0
++        def __init__(self):
++            self.k, self.close_calls, self.opens = Kernel(), [], 0
++            self.k.labels = {}; self.k.close_calls = self.close_calls
+         def open_security_path(self, _path, *, directory):
+             self.opens += 1
+             leaf = 22 if self.opens == 1 else 99
+-            return [Handle((7, 11), f"root-{self.opens}"), Handle((7, leaf), f"leaf-{self.opens}")]
++            return _owned_metadata_fixture_path(self, [Handle((7, 11), f"root-{self.opens}"), Handle((7, leaf), f"leaf-{self.opens}")])
+         def info(self, handle, *, directory): return handle.identity, 0
+         def close(self, handle): self.close_calls.append(handle.label)
+ 
+@@ -478,8 +509,7 @@
+     monkeypatch.setattr(windows_publish, "_API", lambda: api)
+     monkeypatch.setattr(provider_module, "_windows_volume_has_persistent_acls", lambda _api, _path: (True, 7))
+     monkeypatch.setattr(provider_module, "_windows_security_context",
+-                        lambda _api: ("daemon-sid", ["daemon-sid", "system-sid", "admins-sid"],
+-                                      ("token", ["sid-system", "sid-admins"], object())))
++                        _owned_metadata_fixture_context)
+     monkeypatch.setattr(provider_module, "_win32_descriptor_digest",
+                         lambda _api, handle, **_kwargs: ("a" * 64, "daemon"))
+ 
+@@ -488,8 +518,8 @@
+                                     expected_identity=None)
+     assert replacement.value.code == "AUTHORIZATION_STATE_UNKNOWN"
+     assert len(api.close_calls) == 4
+-    assert api.k.closed_tokens == ["token"]
+-    assert api.k.freed == ["sid-system", "sid-admins"]
++    assert api.k.closed_tokens == [100]
++    assert api.k.freed == [202, 201]
+ 
+ 
+ @pytest.mark.parametrize(
+@@ -538,7 +568,8 @@
+             self.restype = None
+ 
+         def __call__(self, *args):
+-            return self.callback(*args)
++            result = self.callback(*args)
++            return int(result) if type(result) is bool else result
+ 
+     def address(pointer):
+         if isinstance(pointer, int):

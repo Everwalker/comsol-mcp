@@ -1,0 +1,109 @@
+--- root/tools/w24_witnessed_stress.py
++++ w24-coupled05/tools/w24_witnessed_stress.py
+@@ -0,0 +1,106 @@
++"""Versioned spatial Cauchy witnesses. Source validation never authorizes native work."""
++import hashlib
++from pathlib import Path
++from tools import w24_setup_input_attachment as attachment
++
++DECISION_SHA = '7201fb134afa884c8de2217b892d361bfda6005ffa6124c1e432423975047911'
++DECISION_PATH = Path('/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_coupled_science_candidate02/ROOT_STRESS_AND_COUPLED_EXECUTION_DECISION.json')
++INVENTORY_SHA = 'f217718fd1ea4d1173fd986aa724599c1e4043246a3264d85dc0703875b3246c'
++SCHEMA = 'W24_SPATIAL_CAUCHY_ROW_WITNESSES_V1'
++DOF_STATUS = 'NOT_ESTABLISHED_FROM_EQUATION_VIEW'
++ROLE_COMPONENTS = {'radial_normal': ('srr', 'SRR', 'rr'), 'hoop_normal': ('sphiphi', 'SPHIPHI', 'phiphi'), 'axial_normal': ('szz', 'SZZ', 'zz'), 'rz_shear': ('srz', 'SRZ', 'rz')}
++
++class StressWitnessError(ValueError): pass
++
++def _expected_row(symbol, definition, component):
++    return [None, 'solid.'+symbol, 'solid.'+definition, 'N/m^2',
++            '应力张量，'+component+' 分量', '域 1–4', '', '0',
++            '/solid/StressGroup/root.comp1.solid.s/',
++            '/固体力学/应力/应力张量 （空间坐标系）/', '线弹性材料 1',
++            '/PhysicsList/solid/PhysicsFeatureList/lemm1', 'comp1']
++
++def select_spatial_cauchy_rows(inventory):
++    """Select exact witnesses; this API intentionally supplies no source authority."""
++    if not isinstance(inventory, dict) or inventory.get('schema') != 'W24_COMSOL_EQUATION_VIEW_EXPRESSION_INVENTORY_V1' or inventory.get('status') != 'COMPLETE_NOT_EVALUATED' or inventory.get('complete') is not True or inventory.get('read_only') is not True or type(inventory.get('model_mutations')) is not int or inventory['model_mutations'] != 0 or type(inventory.get('study_run_calls')) is not int or inventory['study_run_calls'] != 0 or inventory.get('errors') != [] or inventory.get('component_tag') != 'comp1':
++        raise StressWitnessError('incomplete or invalid native EquationView envelope')
++    tables = inventory.get('feature_tables')
++    if not isinstance(tables, list) or type(inventory.get('feature_count')) is not int or len(tables) != inventory['feature_count']:
++        raise StressWitnessError('native feature table count mismatch')
++    all_rows = []
++    table_ids = set()
++    for table in tables:
++        if not isinstance(table, dict) or table.get('status') != 'READ' or not isinstance(table.get('raw_rows'), list) or type(table.get('row_count')) is not int or table['row_count'] != len(table['raw_rows']):
++            raise StressWitnessError('native raw row count or status mismatch')
++        identity = (table.get('physics_tag'), table.get('feature_tag'))
++        if not all(isinstance(x,str) and x for x in identity) or identity in table_ids:
++            raise StressWitnessError('duplicate or missing native feature identity')
++        table_ids.add(identity)
++        for index, row in enumerate(table['raw_rows']):
++            if not isinstance(row, list) or len(row) != 13:
++                raise StressWitnessError('EquationView row must retain all 13 cells')
++            all_rows.append((table, index, row))
++    if type(inventory.get('expression_row_count')) is not int or inventory['expression_row_count'] != len(all_rows):
++        raise StressWitnessError('native expression row count mismatch')
++    roles = {}
++    for role, (symbol, definition, component) in ROLE_COMPONENTS.items():
++        expected = _expected_row(symbol, definition, component)
++        matches = [(table,index,row) for table,index,row in all_rows if row[1] == expected[1]]
++        if len(matches) != 1:
++            raise StressWitnessError('missing or ambiguous exact stress expression '+expected[1])
++        table, index, row = matches[0]
++        if table['physics_tag'] != 'solid' or table['feature_tag'] != 'lemm1' or row != expected:
++            raise StressWitnessError('stress tensor/frame/unit/definition/raw witness mismatch '+expected[1])
++        roles[role] = {'expression':row[1], 'requested_evaluation_unit':'Pa',
++            'original_equation_view_unit':row[3], 'tensor_measure':'CAUCHY', 'frame':'SPATIAL',
++            'axisymmetric_component':component, 'definition':row[2], 'description':row[4],
++            'physics_tag':table['physics_tag'], 'feature_tag':table['feature_tag'],
++            'component_tag':row[12], 'raw_row_index':index, 'raw_row':list(row),
++            'dependent_dof_status':DOF_STATUS}
++    return {'schema':SCHEMA, 'status':'SOURCE_ONLY_REQUIRES_AUTHENTICATED_NATIVE_CONTEXT',
++            'roles':roles, 'native_numeric_values':'NOT_EVALUATED',
++            'dependent_dof_status':DOF_STATUS, 'Study_solver_authorized':0}
++
++def authenticate_current11_mapping(manifest_path, receipt_path):
++    """Authenticate immutable history only. Terminated ModelRefs cannot be reused."""
++    authenticated = attachment.validate_attachment(manifest_path, receipt_path)
++    import os
++    manifest_path = Path(manifest_path)
++    manifest_row = {'path':str(manifest_path), 'bytes':manifest_path.stat().st_size,
++                    'sha256':authenticated['attachment_sha256'], 'uid':os.getuid()}
++    manifest_raw, manifest_identity = attachment._read(manifest_row, manifest=True)
++    manifest = attachment._json(manifest_raw)
++    inventory_path = str(attachment.EVIDENCE/'native-run-current11-001'/'solid_equation_view_expression_inventory.json')
++    rows = [row for row in manifest['files'] if row['path'] == inventory_path]
++    if len(rows) != 1 or rows[0]['sha256'] != INVENTORY_SHA:
++        raise StressWitnessError('exact audited historical EquationView absent')
++    raw, _ = attachment._read(rows[0])
++    # The decision has a distinct Root-owned evidence scope, not current11 inputs.
++    # Do not import a native runner: independently require its exact canonical ordinary path.
++    if DECISION_PATH.is_symlink() or DECISION_PATH.resolve(strict=True) != DECISION_PATH:
++        raise StressWitnessError('Root decision path is noncanonical')
++    import os, stat
++    before=DECISION_PATH.lstat()
++    fd=os.open(DECISION_PATH,os.O_RDONLY|os.O_NOFOLLOW)
++    with os.fdopen(fd,'rb') as stream:
++        opened=os.fstat(stream.fileno()); decision_raw=stream.read(); after_open=os.fstat(stream.fileno())
++    after=DECISION_PATH.lstat()
++    key=lambda s:(s.st_dev,s.st_ino,s.st_uid,s.st_size,s.st_mtime_ns,s.st_ctime_ns)
++    if not stat.S_ISREG(before.st_mode) or before.st_uid!=os.getuid() or key(before)!=key(opened) or key(before)!=key(after_open) or key(before)!=key(after) or hashlib.sha256(decision_raw).hexdigest()!=DECISION_SHA:
++        raise StressWitnessError('Root decision bytes/identity mismatch')
++    decision=attachment._json(decision_raw)
++    result=select_spatial_cauchy_rows(attachment._json(raw))
++    if decision['actual_equation_view']['sha256'] != INVENTORY_SHA:
++        raise StressWitnessError('Root decision binds another EquationView')
++    for role,witness in result['roles'].items():
++        approved=decision['approved_mapping'][role]
++        for name in ('expression','requested_evaluation_unit','original_equation_view_unit','tensor_measure','frame','axisymmetric_component','definition','description','physics_tag','feature_tag','raw_row_index'):
++            if witness[name] != approved[name]: raise StressWitnessError('Root-approved historical witness differs')
++    _, final_manifest_identity = attachment._read(manifest_row, manifest=True)
++    if final_manifest_identity != manifest_identity:
++        raise StressWitnessError('input attachment changed during mapping authentication')
++    result.update(status='AUTHENTICATED_HISTORICAL_CONFIGURATION_MAPPING_NOT_EVALUATED',
++        root_decision_sha256=DECISION_SHA, root_decision_path=str(DECISION_PATH),
++        root_decision_bytes=len(decision_raw), input_attachment=authenticated,
++        equation_view_sha256=INVENTORY_SHA, historical_refs='TERMINATED_PROVENANCE_ONLY',
++        new_science_requirement='FRESH_V2_CONFIGURATION_EQUATION_VIEW_NONLINEAR_FLAG_AND_NEW_WORKER_MODEL_BINDING_REQUIRED')
++    return result

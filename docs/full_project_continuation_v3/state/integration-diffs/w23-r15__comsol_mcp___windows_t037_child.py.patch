@@ -1,0 +1,169 @@
+--- root/comsol_mcp/_windows_t037_child.py
++++ w23-r15/comsol_mcp/_windows_t037_child.py
+@@ -0,0 +1,166 @@
++"""Read actual retained child/parent handles; observations are never launch proof."""
++from __future__ import annotations
++import ctypes as C
++from dataclasses import dataclass
++import os
++from ._windows_t037_native import DWORD,BOOL,HANDLE
++from ._execution_contract import ExecutionContractError
++
++class ChildObservationError(ExecutionContractError):pass
++
++def _fail(code,message):
++    raise ChildObservationError(code,message,safe_retry=False,stage='pre_dispatch')
++
++# Windows WCHAR is 16 bits on all hosts; host ctypes.c_wchar is not its ABI.
++class PROCESSENTRY32W(C.Structure):
++    _fields_=[('dwSize',DWORD),('cntUsage',DWORD),('th32ProcessID',DWORD),
++              ('th32DefaultHeapID',C.c_size_t),('th32ModuleID',DWORD),('cntThreads',DWORD),
++              ('th32ParentProcessID',DWORD),('pcPriClassBase',C.c_int32),('dwFlags',DWORD),
++              ('szExeFile',C.c_uint16*260)]
++
++@dataclass(frozen=True)
++class RetainedChildObservation:
++    pid:int
++    birth_filetime_100ns:int
++    parent_pid:int
++    parent_birth_filetime_100ns:int
++    image_path:str
++    same_job:bool
++    job_snapshot:object
++    state:str='OBSERVED_NOT_NATIVE_PROOF'
++
++    def __post_init__(self):
++        if self.state!='OBSERVED_NOT_NATIVE_PROOF':raise ValueError('child observation cannot mint proof')
++
++class NativeChildProcessApi:
++    MAX_PROCESS_ROWS=65536
++    def __init__(self):
++        if os.name!='nt':_fail('CHILD_OBSERVATION_WINDOWS_REQUIRED','actual child process query requires Windows')
++        self.k=C.WinDLL('kernel32',use_last_error=True)
++        self.bind(self.k)
++
++    @staticmethod
++    def bind(k):
++        if C.sizeof(C.c_void_p)!=8 or C.sizeof(PROCESSENTRY32W)!=568 or PROCESSENTRY32W.szExeFile.offset!=44:
++            _fail('CHILD_OBSERVATION_ABI_UNSUPPORTED','only verified Windows x64 Toolhelp layout is supported')
++        rows={'GetCurrentProcessId':([],DWORD),'GetProcessId':([HANDLE],DWORD),
++              'CreateToolhelp32Snapshot':([DWORD,DWORD],HANDLE),
++              'Process32FirstW':([HANDLE,C.POINTER(PROCESSENTRY32W)],BOOL),
++              'Process32NextW':([HANDLE,C.POINTER(PROCESSENTRY32W)],BOOL),
++              'CloseHandle':([HANDLE],BOOL),'GetLastError':([],DWORD)}
++        for name,(args,result) in rows.items():
++            fn=getattr(k,name);fn.argtypes=args;fn.restype=result
++
++    def current_pid(self):
++        pid=int(self.k.GetCurrentProcessId())
++        if pid<=0:_fail('CHILD_PARENT_UNKNOWN','native broker PID is unavailable')
++        return pid
++
++    def process_pid(self,handle):
++        pid=int(self.k.GetProcessId(handle))
++        if pid<=0:_fail('CHILD_HANDLE_UNKNOWN','original process HANDLE identity unavailable')
++        return pid
++
++    def parent_pid(self,pid):
++        snapshot=self.k.CreateToolhelp32Snapshot(2,0) # TH32CS_SNAPPROCESS only.
++        if not snapshot or int(snapshot)==C.c_void_p(-1).value:
++            _fail('CHILD_PARENT_UNKNOWN','Toolhelp process snapshot is unavailable')
++        from ._windows_owned_resources import own
++        resource=own(self,snapshot,self.k.CloseHandle,mode="BOOL",label="toolhelp_snapshot")
++        try:
++            entry=PROCESSENTRY32W();entry.dwSize=C.sizeof(entry)
++            ok=self.k.Process32FirstW(snapshot,C.byref(entry))
++            for _ in range(self.MAX_PROCESS_ROWS):
++                if not ok:
++                    if self.k.GetLastError()!=18:_fail('CHILD_PARENT_UNKNOWN','Toolhelp enumeration failed')
++                    _fail('CHILD_PARENT_UNKNOWN','actual child absent from process snapshot')
++                if entry.dwSize!=C.sizeof(entry):_fail('CHILD_OBSERVATION_ABI_UNSUPPORTED','Toolhelp returned unexpected structure size')
++                if int(entry.th32ProcessID)==pid:
++                    parent=int(entry.th32ParentProcessID)
++                    if parent<=0:_fail('CHILD_PARENT_UNKNOWN','actual child parent PID is unavailable')
++                    return parent
++                ok=self.k.Process32NextW(snapshot,C.byref(entry))
++            _fail('CHILD_PARENT_UNKNOWN','Toolhelp enumeration exceeded row budget')
++        finally:
++            try:resource.release_owned(resource.registry.owner)
++            except Exception as error:
++                _fail('CHILD_OBSERVATION_RELEASE_UNKNOWN','Toolhelp snapshot release remains owned')
++
++
++def observe_retained_child(process,profile,launch_api,*,parent=None,api=None):
++    """Read the original process HANDLE, pin actual broker parent, recheck both.
++
++    Neither argv, MIC, full filesystem isolation nor effective WFP is asserted.
++    Profile and Job limits still require their separate exact policy producer.
++    """
++    from ._windows_t037 import is_native_suspended_child,WindowsT037ProfileV2
++    if (not is_native_suspended_child(process) or process._api is not launch_api
++            or process._owner is not launch_api or type(profile) is not WindowsT037ProfileV2):
++        _fail('CHILD_HANDLE_OWNER_UNKNOWN','only actual never-resumed child owner may observe creation binding')
++    selected=api if api is not None else NativeChildProcessApi()
++    if selected.process_pid(process._handle)!=process.pid:
++        _fail('CHILD_HANDLE_UNKNOWN','original process HANDLE does not match created PID')
++    own_parent = parent is None
++    if own_parent:
++        parent = pin_native_parent(launch_api, api=selected)
++    if (type(parent) is not _PinnedParent or parent._seal is not _PARENT_SEAL
++            or parent.launch_api is not launch_api or parent.closed):
++        _fail('CHILD_PARENT_UNKNOWN','child observation requires the pinned original parent capability')
++    selected=parent.query
++    parent_pid=parent.pid
++    try:
++        parent_birth,parent_exit=launch_api.process_times(parent.handle)
++        if parent_birth!=parent.birth:
++            _fail('CHILD_PARENT_UNKNOWN','original parent birth changed since precreation pin')
++        birth,exit_time=launch_api.process_times(process._handle)
++        if (type(birth) is not int or birth<=0 or birth!=process.birth_filetime_100ns
++                or exit_time is not None or parent_birth<=0 or parent_exit is not None or parent_birth>birth):
++            _fail('CHILD_BIRTH_UNKNOWN','actual live child and parent birth binding unavailable')
++        if selected.parent_pid(process.pid)!=parent_pid:
++            _fail('CHILD_PARENT_UNKNOWN','actual child parent is not the current broker')
++        image=launch_api.process_image_path(process._handle)
++        membership=launch_api.is_process_in_job(process._handle,process._job_handle)
++        if membership is not True:_fail('CHILD_JOB_UNKNOWN','child is not observed in the same retained Job')
++        job=launch_api.job_snapshot(process._job_handle)
++        if (selected.process_pid(process._handle)!=process.pid or selected.parent_pid(process.pid)!=parent_pid
++                or launch_api.process_times(process._handle)!=(birth,None)
++                or launch_api.process_times(parent.handle)!=(parent_birth,None)):
++            _fail('CHILD_BINDING_CHANGED','actual HANDLE/parent birth changed during child observation')
++        return RetainedChildObservation(process.pid,birth,parent_pid,parent_birth,image,True,job)
++    finally:
++        if own_parent:parent.close()
++
++_PARENT_SEAL=object()
++class _PinnedParent:
++    def __init__(self,launch_api,query,pid,handle,birth,*,seal):
++        if seal is not _PARENT_SEAL:_fail('CHILD_PARENT_UNKNOWN','parent must come from the native handle producer')
++        self.launch_api=launch_api;self.query=query;self.pid=pid;self.handle=handle;self.birth=birth
++        self._seal=seal;self.closed=False
++    def close(self, *, retry=False):
++        if not self.closed:
++            resource=getattr(self,"_resource_owner",None)
++            if resource is not None:
++                resource.release_owned(resource.registry.owner,retry=retry)
++            else:
++                self.launch_api.close_handle(self.handle)
++            self.closed=True
++            getattr(self.launch_api,'_retained_parent_bindings',{}).pop(id(self),None)
++
++def pin_native_parent(launch_api,*,api=None):
++    query=api if api is not None else NativeChildProcessApi()
++    from ._windows_owned_resources import attach_registry,registry_for
++    attach_registry(query,registry_for(launch_api))
++    pid=query.current_pid();handle=launch_api.open_process(pid)
++    parent=_PinnedParent(launch_api,query,pid,handle,None,seal=_PARENT_SEAL)
++    parent._resource_owner=registry_for(launch_api).find(launch_api,handle)
++    if not hasattr(launch_api,'_retained_parent_bindings'):launch_api._retained_parent_bindings={}
++    launch_api._retained_parent_bindings[id(parent)]=parent
++    try:
++        birth,exited=launch_api.process_times(handle)
++        if type(birth) is not int or birth<=0 or exited is not None:
++            _fail('CHILD_PARENT_UNKNOWN','original broker handle birth/liveness unavailable before creation')
++        parent.birth=birth
++        return parent
++    except BaseException:
++        parent.close()
++        raise

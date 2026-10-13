@@ -1,0 +1,3248 @@
+{
+  "schema": "full-project-v3-integration-decisions/1",
+  "base_commit": "0644ea970688e02beda4be7069f67144b4bcf59e",
+  "created_at": "2026-10-13T14:48:35.563647+00:00",
+  "scope": "One current production tree; all continuation frozen sources and original ledgers unchanged",
+  "phase": "WINDOWS_R19_W23_R15_INTEGRATION_W24_W26_PENDING",
+  "decisions": [
+    {
+      "path": "comsol_mcp/_artifact_store.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_artifact_store.py",
+          "candidate_sha256": "55fc9b5a71d9d57a4fb53365c65ea8df32106e549a129544bbe2c45bb9af7f55",
+          "root_sha256": "55fc9b5a71d9d57a4fb53365c65ea8df32106e549a129544bbe2c45bb9af7f55",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_artifact_store.py",
+          "candidate_sha256": "52dbb0dba5305d974f6cd93b747093d076d753c30ec67e4159d437af87feb347",
+          "root_sha256": "55fc9b5a71d9d57a4fb53365c65ea8df32106e549a129544bbe2c45bb9af7f55",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_artifact_store.py",
+          "candidate_sha256": "55fc9b5a71d9d57a4fb53365c65ea8df32106e549a129544bbe2c45bb9af7f55",
+          "root_sha256": "55fc9b5a71d9d57a4fb53365c65ea8df32106e549a129544bbe2c45bb9af7f55",
+          "observation": "SAME_BYTES"
+        }
+      ],
+      "selected": null,
+      "status": "KEEP_CURRENT_EXCEPT_SCOPED_W24_HOOKS_PENDING",
+      "rationale": "coupled05 retains an older public layer; do not delete current Desktop/model-package/delivery/identity/safety implementations. Port only actual admission/probe changes where required.",
+      "current_integrated_sha256": "55fc9b5a71d9d57a4fb53365c65ea8df32106e549a129544bbe2c45bb9af7f55"
+    },
+    {
+      "path": "comsol_mcp/_control_daemon.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_control_daemon.py",
+          "candidate_sha256": "efb9d39451cf1bb6153e63d15cb160f47cd533cc69e35d3113a4f8db531dc7e3",
+          "root_sha256": "c2d603907944489cf79328a2b471a6677737d1347f8f1729c55446886cfd5a0d",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_control_daemon.py",
+          "candidate_sha256": "fddce2933c3240aff2710aa934da2030b6de21283b7f8736ae8ac16ec928aeac",
+          "root_sha256": "c2d603907944489cf79328a2b471a6677737d1347f8f1729c55446886cfd5a0d",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_control_daemon.py",
+          "candidate_sha256": "279cfba307febba13be07eddd83d3564e3e2bf84ae894dfe8eff8addc21bc164",
+          "root_sha256": "c2d603907944489cf79328a2b471a6677737d1347f8f1729c55446886cfd5a0d",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "279cfba307febba13be07eddd83d3564e3e2bf84ae894dfe8eff8addc21bc164",
+      "current_integrated_sha256": "279cfba307febba13be07eddd83d3564e3e2bf84ae894dfe8eff8addc21bc164"
+    },
+    {
+      "path": "comsol_mcp/_desktop_capture.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_desktop_capture.py",
+          "candidate_sha256": "34abdab7926e461b8c9909d7deee12ce4cf34e0aa0e91f8030043c1c0e1e3ce7",
+          "root_sha256": "34abdab7926e461b8c9909d7deee12ce4cf34e0aa0e91f8030043c1c0e1e3ce7",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_desktop_capture.py",
+          "candidate_sha256": "914c2b59ed6b750705e81efa96dc2273dedb21872c67b197445175b4fbc0c114",
+          "root_sha256": "34abdab7926e461b8c9909d7deee12ce4cf34e0aa0e91f8030043c1c0e1e3ce7",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_desktop_capture.py",
+          "candidate_sha256": "34abdab7926e461b8c9909d7deee12ce4cf34e0aa0e91f8030043c1c0e1e3ce7",
+          "root_sha256": "34abdab7926e461b8c9909d7deee12ce4cf34e0aa0e91f8030043c1c0e1e3ce7",
+          "observation": "SAME_BYTES"
+        }
+      ],
+      "selected": null,
+      "status": "KEEP_CURRENT_EXCEPT_SCOPED_W24_HOOKS_PENDING",
+      "rationale": "coupled05 retains an older public layer; do not delete current Desktop/model-package/delivery/identity/safety implementations. Port only actual admission/probe changes where required.",
+      "current_integrated_sha256": "34abdab7926e461b8c9909d7deee12ce4cf34e0aa0e91f8030043c1c0e1e3ce7"
+    },
+    {
+      "path": "comsol_mcp/_desktop_macos.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_desktop_macos.py",
+          "candidate_sha256": "d968c5ca9dc04728a28f8c626c46ab7a2a335384264738cef78285fb04dedc74",
+          "root_sha256": "d968c5ca9dc04728a28f8c626c46ab7a2a335384264738cef78285fb04dedc74",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_desktop_macos.py",
+          "candidate_sha256": "9bdebd75c00abb20cb7f8e69c8e277fd653a6cbc52a07739dcc858ce7a963228",
+          "root_sha256": "d968c5ca9dc04728a28f8c626c46ab7a2a335384264738cef78285fb04dedc74",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_desktop_macos.py",
+          "candidate_sha256": "d968c5ca9dc04728a28f8c626c46ab7a2a335384264738cef78285fb04dedc74",
+          "root_sha256": "d968c5ca9dc04728a28f8c626c46ab7a2a335384264738cef78285fb04dedc74",
+          "observation": "SAME_BYTES"
+        }
+      ],
+      "selected": null,
+      "status": "KEEP_CURRENT_EXCEPT_SCOPED_W24_HOOKS_PENDING",
+      "rationale": "coupled05 retains an older public layer; do not delete current Desktop/model-package/delivery/identity/safety implementations. Port only actual admission/probe changes where required.",
+      "current_integrated_sha256": "d968c5ca9dc04728a28f8c626c46ab7a2a335384264738cef78285fb04dedc74"
+    },
+    {
+      "path": "comsol_mcp/_desktop_platforms.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_desktop_platforms.py",
+          "candidate_sha256": "4c50c4596cbc8d79dd610d66cada1deb38e400c607a5bb04b59f1766a9c76059",
+          "root_sha256": "4c50c4596cbc8d79dd610d66cada1deb38e400c607a5bb04b59f1766a9c76059",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_desktop_platforms.py",
+          "candidate_sha256": "5b4f687df3e0519a99cc4830c249b889b90b0022cfdefc5f4cef144bfc306fb7",
+          "root_sha256": "4c50c4596cbc8d79dd610d66cada1deb38e400c607a5bb04b59f1766a9c76059",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_desktop_platforms.py",
+          "candidate_sha256": "4c50c4596cbc8d79dd610d66cada1deb38e400c607a5bb04b59f1766a9c76059",
+          "root_sha256": "4c50c4596cbc8d79dd610d66cada1deb38e400c607a5bb04b59f1766a9c76059",
+          "observation": "SAME_BYTES"
+        }
+      ],
+      "selected": null,
+      "status": "KEEP_CURRENT_EXCEPT_SCOPED_W24_HOOKS_PENDING",
+      "rationale": "coupled05 retains an older public layer; do not delete current Desktop/model-package/delivery/identity/safety implementations. Port only actual admission/probe changes where required.",
+      "current_integrated_sha256": "4c50c4596cbc8d79dd610d66cada1deb38e400c607a5bb04b59f1766a9c76059"
+    },
+    {
+      "path": "comsol_mcp/_desktop_service.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_desktop_service.py",
+          "candidate_sha256": "491bf177380237862c275c26e71c3c485ec5312efc75f8eda141952d8a0e4d37",
+          "root_sha256": "491bf177380237862c275c26e71c3c485ec5312efc75f8eda141952d8a0e4d37",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_desktop_service.py",
+          "candidate_sha256": "77c180224edefa50b18ef3e7146089c6e68d658a847f55b8dde588fe0c57865f",
+          "root_sha256": "491bf177380237862c275c26e71c3c485ec5312efc75f8eda141952d8a0e4d37",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_desktop_service.py",
+          "candidate_sha256": "491bf177380237862c275c26e71c3c485ec5312efc75f8eda141952d8a0e4d37",
+          "root_sha256": "491bf177380237862c275c26e71c3c485ec5312efc75f8eda141952d8a0e4d37",
+          "observation": "SAME_BYTES"
+        }
+      ],
+      "selected": null,
+      "status": "KEEP_CURRENT_EXCEPT_SCOPED_W24_HOOKS_PENDING",
+      "rationale": "coupled05 retains an older public layer; do not delete current Desktop/model-package/delivery/identity/safety implementations. Port only actual admission/probe changes where required.",
+      "current_integrated_sha256": "491bf177380237862c275c26e71c3c485ec5312efc75f8eda141952d8a0e4d37"
+    },
+    {
+      "path": "comsol_mcp/_desktop_windows.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_desktop_windows.py",
+          "candidate_sha256": "10f8105e9b93aff5a717e294931d8b36680bf8560a0d21e43e1fb9c295ee5256",
+          "root_sha256": "10f8105e9b93aff5a717e294931d8b36680bf8560a0d21e43e1fb9c295ee5256",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_desktop_windows.py",
+          "candidate_sha256": "a652a89f18365fe87455ff2aae933274a809cbec77753304cdf085d75f7bf5e3",
+          "root_sha256": "10f8105e9b93aff5a717e294931d8b36680bf8560a0d21e43e1fb9c295ee5256",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_desktop_windows.py",
+          "candidate_sha256": "10f8105e9b93aff5a717e294931d8b36680bf8560a0d21e43e1fb9c295ee5256",
+          "root_sha256": "10f8105e9b93aff5a717e294931d8b36680bf8560a0d21e43e1fb9c295ee5256",
+          "observation": "SAME_BYTES"
+        }
+      ],
+      "selected": null,
+      "status": "KEEP_CURRENT_EXCEPT_SCOPED_W24_HOOKS_PENDING",
+      "rationale": "coupled05 retains an older public layer; do not delete current Desktop/model-package/delivery/identity/safety implementations. Port only actual admission/probe changes where required.",
+      "current_integrated_sha256": "10f8105e9b93aff5a717e294931d8b36680bf8560a0d21e43e1fb9c295ee5256"
+    },
+    {
+      "path": "comsol_mcp/_domain_outcome.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_domain_outcome.py",
+          "candidate_sha256": "2b6fe962ce32437ad3bbc8e0ea0be01f9c76d78b84ebb37571dbf22b1511db6b",
+          "root_sha256": "2b6fe962ce32437ad3bbc8e0ea0be01f9c76d78b84ebb37571dbf22b1511db6b",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_domain_outcome.py",
+          "candidate_sha256": "0aba689a0dd8803c204d117ae32b940bafb662f913f632b6cead03dc33bfe4d8",
+          "root_sha256": "2b6fe962ce32437ad3bbc8e0ea0be01f9c76d78b84ebb37571dbf22b1511db6b",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_domain_outcome.py",
+          "candidate_sha256": "2b6fe962ce32437ad3bbc8e0ea0be01f9c76d78b84ebb37571dbf22b1511db6b",
+          "root_sha256": "2b6fe962ce32437ad3bbc8e0ea0be01f9c76d78b84ebb37571dbf22b1511db6b",
+          "observation": "SAME_BYTES"
+        }
+      ],
+      "selected": null,
+      "status": "KEEP_CURRENT_EXCEPT_SCOPED_W24_HOOKS_PENDING",
+      "rationale": "coupled05 retains an older public layer; do not delete current Desktop/model-package/delivery/identity/safety implementations. Port only actual admission/probe changes where required.",
+      "current_integrated_sha256": "2b6fe962ce32437ad3bbc8e0ea0be01f9c76d78b84ebb37571dbf22b1511db6b"
+    },
+    {
+      "path": "comsol_mcp/_ephemeral_result_ticket.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_ephemeral_result_ticket.py",
+          "candidate_sha256": "952559539e56992aa06be9c7c4cfb3d3629c4f798582dba6aecbefdf5d92ccee",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_ephemeral_result_ticket.py",
+          "candidate_sha256": "327d3a9efa8d01edb6908a3a189c25c1d087c5018523686fd11998dedb9bbae4",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "w23-r15",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Adopt r15 strict component/final-entity selection, sealed temporary Interp ticket and explicit saved-point field scheme; Windows public ownership changes are coordinated in R19 selected modules.",
+      "integrated_sha256": "952559539e56992aa06be9c7c4cfb3d3629c4f798582dba6aecbefdf5d92ccee",
+      "current_integrated_sha256": "952559539e56992aa06be9c7c4cfb3d3629c4f798582dba6aecbefdf5d92ccee"
+    },
+    {
+      "path": "comsol_mcp/_execution_service.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_execution_service.py",
+          "candidate_sha256": "14c921b1ab068fd290f117207408dd5865079f613d835a3799e0198d27933f0a",
+          "root_sha256": "5ba2f22b4d0a59507164d2b9f5891845face36fc2f85ec6a27c4bd6fff2f20e2",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_execution_service.py",
+          "candidate_sha256": "e1dd344c2c39c3566721ec36ca0a27d6d05cc1df91b97751bbdfac807cd7a480",
+          "root_sha256": "5ba2f22b4d0a59507164d2b9f5891845face36fc2f85ec6a27c4bd6fff2f20e2",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_execution_service.py",
+          "candidate_sha256": "14c921b1ab068fd290f117207408dd5865079f613d835a3799e0198d27933f0a",
+          "root_sha256": "5ba2f22b4d0a59507164d2b9f5891845face36fc2f85ec6a27c4bd6fff2f20e2",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "14c921b1ab068fd290f117207408dd5865079f613d835a3799e0198d27933f0a",
+      "current_integrated_sha256": "14c921b1ab068fd290f117207408dd5865079f613d835a3799e0198d27933f0a"
+    },
+    {
+      "path": "comsol_mcp/_g2_artifact_verify.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_g2_artifact_verify.py",
+          "candidate_sha256": "ea050a723b67b06ff8ef3ad2b12d317669c3393ed2b8af545d3ba449c04676db",
+          "root_sha256": "ea050a723b67b06ff8ef3ad2b12d317669c3393ed2b8af545d3ba449c04676db",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_g2_artifact_verify.py",
+          "candidate_sha256": "7f481e11221d0233054a5443f6aa4d67ad2532dd559e3c718cd21aa977f9560e",
+          "root_sha256": "ea050a723b67b06ff8ef3ad2b12d317669c3393ed2b8af545d3ba449c04676db",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_g2_artifact_verify.py",
+          "candidate_sha256": "ea050a723b67b06ff8ef3ad2b12d317669c3393ed2b8af545d3ba449c04676db",
+          "root_sha256": "ea050a723b67b06ff8ef3ad2b12d317669c3393ed2b8af545d3ba449c04676db",
+          "observation": "SAME_BYTES"
+        }
+      ],
+      "selected": null,
+      "status": "KEEP_CURRENT_EXCEPT_SCOPED_W24_HOOKS_PENDING",
+      "rationale": "coupled05 retains an older public layer; do not delete current Desktop/model-package/delivery/identity/safety implementations. Port only actual admission/probe changes where required.",
+      "current_integrated_sha256": "ea050a723b67b06ff8ef3ad2b12d317669c3393ed2b8af545d3ba449c04676db"
+    },
+    {
+      "path": "comsol_mcp/_g2_isolation.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_g2_isolation.py",
+          "candidate_sha256": "dd2da52140d191bea3cd036fe5ab06782d9ff30c119686c13bde99c32d64580b",
+          "root_sha256": "dd2da52140d191bea3cd036fe5ab06782d9ff30c119686c13bde99c32d64580b",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_g2_isolation.py",
+          "candidate_sha256": "ccb6f0fb7810b653ac3055ebec608984ec032e8ed67ffcba153b3533ad70e1c7",
+          "root_sha256": "dd2da52140d191bea3cd036fe5ab06782d9ff30c119686c13bde99c32d64580b",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_g2_isolation.py",
+          "candidate_sha256": "dd2da52140d191bea3cd036fe5ab06782d9ff30c119686c13bde99c32d64580b",
+          "root_sha256": "dd2da52140d191bea3cd036fe5ab06782d9ff30c119686c13bde99c32d64580b",
+          "observation": "SAME_BYTES"
+        }
+      ],
+      "selected": null,
+      "status": "KEEP_CURRENT_EXCEPT_SCOPED_W24_HOOKS_PENDING",
+      "rationale": "coupled05 retains an older public layer; do not delete current Desktop/model-package/delivery/identity/safety implementations. Port only actual admission/probe changes where required.",
+      "current_integrated_sha256": "dd2da52140d191bea3cd036fe5ab06782d9ff30c119686c13bde99c32d64580b"
+    },
+    {
+      "path": "comsol_mcp/_g2_registry.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_g2_registry.py",
+          "candidate_sha256": "b44933b14790f5f6b60a733adbac9082654ec76261a08df8f45d7e1c1e9c5280",
+          "root_sha256": "b44933b14790f5f6b60a733adbac9082654ec76261a08df8f45d7e1c1e9c5280",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_g2_registry.py",
+          "candidate_sha256": "a91e21263fab5be96a8f9b1d17f61c6033b37135bf8eb0fd336a94ceb11744b1",
+          "root_sha256": "b44933b14790f5f6b60a733adbac9082654ec76261a08df8f45d7e1c1e9c5280",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_g2_registry.py",
+          "candidate_sha256": "b44933b14790f5f6b60a733adbac9082654ec76261a08df8f45d7e1c1e9c5280",
+          "root_sha256": "b44933b14790f5f6b60a733adbac9082654ec76261a08df8f45d7e1c1e9c5280",
+          "observation": "SAME_BYTES"
+        }
+      ],
+      "selected": null,
+      "status": "KEEP_CURRENT_EXCEPT_SCOPED_W24_HOOKS_PENDING",
+      "rationale": "coupled05 retains an older public layer; do not delete current Desktop/model-package/delivery/identity/safety implementations. Port only actual admission/probe changes where required.",
+      "current_integrated_sha256": "b44933b14790f5f6b60a733adbac9082654ec76261a08df8f45d7e1c1e9c5280"
+    },
+    {
+      "path": "comsol_mcp/_g3_common.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_g3_common.py",
+          "candidate_sha256": "e5aabe9a0118290ce167d1d9f6183b7edd60ba723bdb99f31e8a88fabdce68f8",
+          "root_sha256": "9b3e8dfff78966b35d78ee0aa25cb50098c3f2ae556161b8161fd2f44938b6d3",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_g3_common.py",
+          "candidate_sha256": "9b3e8dfff78966b35d78ee0aa25cb50098c3f2ae556161b8161fd2f44938b6d3",
+          "root_sha256": "9b3e8dfff78966b35d78ee0aa25cb50098c3f2ae556161b8161fd2f44938b6d3",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_g3_common.py",
+          "candidate_sha256": "9b3e8dfff78966b35d78ee0aa25cb50098c3f2ae556161b8161fd2f44938b6d3",
+          "root_sha256": "9b3e8dfff78966b35d78ee0aa25cb50098c3f2ae556161b8161fd2f44938b6d3",
+          "observation": "SAME_BYTES"
+        }
+      ],
+      "selected": "w23-r15",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Adopt r15 strict component/final-entity selection, sealed temporary Interp ticket and explicit saved-point field scheme; Windows public ownership changes are coordinated in R19 selected modules.",
+      "integrated_sha256": "e5aabe9a0118290ce167d1d9f6183b7edd60ba723bdb99f31e8a88fabdce68f8",
+      "current_integrated_sha256": "e5aabe9a0118290ce167d1d9f6183b7edd60ba723bdb99f31e8a88fabdce68f8"
+    },
+    {
+      "path": "comsol_mcp/_g3_ops.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_g3_ops.py",
+          "candidate_sha256": "d456796622636eeb6eab7b0176901892effc84261ae0d699a6dd801dbb31287a",
+          "root_sha256": "d456796622636eeb6eab7b0176901892effc84261ae0d699a6dd801dbb31287a",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_g3_ops.py",
+          "candidate_sha256": "31cb4600c75940e965e0d9ba4b97ced461ad94433972cb0ab3d848e12bbe28bd",
+          "root_sha256": "d456796622636eeb6eab7b0176901892effc84261ae0d699a6dd801dbb31287a",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_g3_ops.py",
+          "candidate_sha256": "d456796622636eeb6eab7b0176901892effc84261ae0d699a6dd801dbb31287a",
+          "root_sha256": "d456796622636eeb6eab7b0176901892effc84261ae0d699a6dd801dbb31287a",
+          "observation": "SAME_BYTES"
+        }
+      ],
+      "selected": null,
+      "status": "KEEP_CURRENT_EXCEPT_SCOPED_W24_HOOKS_PENDING",
+      "rationale": "coupled05 retains an older public layer; do not delete current Desktop/model-package/delivery/identity/safety implementations. Port only actual admission/probe changes where required.",
+      "current_integrated_sha256": "d456796622636eeb6eab7b0176901892effc84261ae0d699a6dd801dbb31287a"
+    },
+    {
+      "path": "comsol_mcp/_g3_results.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_g3_results.py",
+          "candidate_sha256": "4569fad29b6f7535e681db04a8442b7babd0f4a2600c0166ec935269072dcaa2",
+          "root_sha256": "2bd88ecf97d5892263079ef0e1dc319d718b5b126fa5f9cdebe85b40e1af0e6a",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_g3_results.py",
+          "candidate_sha256": "b2fc34679aa7202beef0100e4555d34c703e23b60fbf587403c50ff121ac9123",
+          "root_sha256": "2bd88ecf97d5892263079ef0e1dc319d718b5b126fa5f9cdebe85b40e1af0e6a",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_g3_results.py",
+          "candidate_sha256": "c5c4a2409d66115f36865415eafb50e03b1d4c90628ddbd787059c0a139e7f4e",
+          "root_sha256": "2bd88ecf97d5892263079ef0e1dc319d718b5b126fa5f9cdebe85b40e1af0e6a",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": "w23-r15",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Adopt r15 strict component/final-entity selection, sealed temporary Interp ticket and explicit saved-point field scheme; Windows public ownership changes are coordinated in R19 selected modules.",
+      "integrated_sha256": "4569fad29b6f7535e681db04a8442b7babd0f4a2600c0166ec935269072dcaa2",
+      "current_integrated_sha256": "4569fad29b6f7535e681db04a8442b7babd0f4a2600c0166ec935269072dcaa2"
+    },
+    {
+      "path": "comsol_mcp/_g3_w14.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_g3_w14.py",
+          "candidate_sha256": "a6cfbf3cbd330701f04f05341bec0b62e08bb9c459a4b9e4ed57fbeb504aa8d6",
+          "root_sha256": "a6cfbf3cbd330701f04f05341bec0b62e08bb9c459a4b9e4ed57fbeb504aa8d6",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_g3_w14.py",
+          "candidate_sha256": "33db916edd304734c0337bdf0aa40025122d1658bbea72c68d8c6009301e01f5",
+          "root_sha256": "a6cfbf3cbd330701f04f05341bec0b62e08bb9c459a4b9e4ed57fbeb504aa8d6",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_g3_w14.py",
+          "candidate_sha256": "a6cfbf3cbd330701f04f05341bec0b62e08bb9c459a4b9e4ed57fbeb504aa8d6",
+          "root_sha256": "a6cfbf3cbd330701f04f05341bec0b62e08bb9c459a4b9e4ed57fbeb504aa8d6",
+          "observation": "SAME_BYTES"
+        }
+      ],
+      "selected": null,
+      "status": "KEEP_CURRENT_EXCEPT_SCOPED_W24_HOOKS_PENDING",
+      "rationale": "coupled05 retains an older public layer; do not delete current Desktop/model-package/delivery/identity/safety implementations. Port only actual admission/probe changes where required.",
+      "current_integrated_sha256": "a6cfbf3cbd330701f04f05341bec0b62e08bb9c459a4b9e4ed57fbeb504aa8d6"
+    },
+    {
+      "path": "comsol_mcp/_g3_w16.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_g3_w16.py",
+          "candidate_sha256": "1242cd85660cb59baf1d34b7d5bd08a025ef9cbd92f34bf9264c188d6dbc0708",
+          "root_sha256": "1242cd85660cb59baf1d34b7d5bd08a025ef9cbd92f34bf9264c188d6dbc0708",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_g3_w16.py",
+          "candidate_sha256": "562f983aca0e4dcccba00ec9f804248ea238d6e0d2a2b8c82ce02012640a53d9",
+          "root_sha256": "1242cd85660cb59baf1d34b7d5bd08a025ef9cbd92f34bf9264c188d6dbc0708",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_g3_w16.py",
+          "candidate_sha256": "1242cd85660cb59baf1d34b7d5bd08a025ef9cbd92f34bf9264c188d6dbc0708",
+          "root_sha256": "1242cd85660cb59baf1d34b7d5bd08a025ef9cbd92f34bf9264c188d6dbc0708",
+          "observation": "SAME_BYTES"
+        }
+      ],
+      "selected": null,
+      "status": "KEEP_CURRENT_EXCEPT_SCOPED_W24_HOOKS_PENDING",
+      "rationale": "coupled05 retains an older public layer; do not delete current Desktop/model-package/delivery/identity/safety implementations. Port only actual admission/probe changes where required.",
+      "current_integrated_sha256": "1242cd85660cb59baf1d34b7d5bd08a025ef9cbd92f34bf9264c188d6dbc0708"
+    },
+    {
+      "path": "comsol_mcp/_host_scoped_provider.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_host_scoped_provider.py",
+          "candidate_sha256": "11d8934dcdc6fccc1196248adec6afdea2ccf29f9b4769485ab756fbeaa1b1cf",
+          "root_sha256": "11d8934dcdc6fccc1196248adec6afdea2ccf29f9b4769485ab756fbeaa1b1cf",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_host_scoped_provider.py",
+          "candidate_sha256": "aa32a6d3db1b4acdca1ac1d7a85dd1eac6880f268449904a9043e7414cd883c2",
+          "root_sha256": "11d8934dcdc6fccc1196248adec6afdea2ccf29f9b4769485ab756fbeaa1b1cf",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "aa32a6d3db1b4acdca1ac1d7a85dd1eac6880f268449904a9043e7414cd883c2",
+      "current_integrated_sha256": "aa32a6d3db1b4acdca1ac1d7a85dd1eac6880f268449904a9043e7414cd883c2"
+    },
+    {
+      "path": "comsol_mcp/_java_worker.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_java_worker.py",
+          "candidate_sha256": "42c2dc0eb018eb3fd58299b93fd1161ab6a3baae01f82d47d260a5e2e9270933",
+          "root_sha256": "a077b57b74e036ebd363b1a64e4b801a1000f57b3d7356d4238a331015f16710",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_java_worker.py",
+          "candidate_sha256": "f5680453a6da829afae6490b4dde7121d8d8def376beba9aca3d05c07d0a9bd9",
+          "root_sha256": "a077b57b74e036ebd363b1a64e4b801a1000f57b3d7356d4238a331015f16710",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_java_worker.py",
+          "candidate_sha256": "42c2dc0eb018eb3fd58299b93fd1161ab6a3baae01f82d47d260a5e2e9270933",
+          "root_sha256": "a077b57b74e036ebd363b1a64e4b801a1000f57b3d7356d4238a331015f16710",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "42c2dc0eb018eb3fd58299b93fd1161ab6a3baae01f82d47d260a5e2e9270933",
+      "current_integrated_sha256": "42c2dc0eb018eb3fd58299b93fd1161ab6a3baae01f82d47d260a5e2e9270933"
+    },
+    {
+      "path": "comsol_mcp/_managed_backend.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_managed_backend.py",
+          "candidate_sha256": "cc97b1440981af973610a2e9eb4907a8365b56aab617b5fb023be9c62070bf0a",
+          "root_sha256": "a8c79494db18de5ee4e01847d36bc5158bf65fa4416e93a9b65db058cb7a429c",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_managed_backend.py",
+          "candidate_sha256": "aabe45e20fa7789911a136af90c8f2637a91b33e4aeb13bec4e552bb3f6fade6",
+          "root_sha256": "a8c79494db18de5ee4e01847d36bc5158bf65fa4416e93a9b65db058cb7a429c",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_managed_backend.py",
+          "candidate_sha256": "cc97b1440981af973610a2e9eb4907a8365b56aab617b5fb023be9c62070bf0a",
+          "root_sha256": "a8c79494db18de5ee4e01847d36bc5158bf65fa4416e93a9b65db058cb7a429c",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "cc97b1440981af973610a2e9eb4907a8365b56aab617b5fb023be9c62070bf0a",
+      "current_integrated_sha256": "d6ca3c816cca1d34cbd9796b759aa75744950d7737643afb0bc2bafe779ea9c2"
+    },
+    {
+      "path": "comsol_mcp/_operation_store.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_operation_store.py",
+          "candidate_sha256": "fa080695ab6d82c077719b11f19ff177d08c822c020f5eac943abdd762b03d15",
+          "root_sha256": "2d33958f7e2ac22213c237f30d26f4b83887338af40af3be7e8e468940149a4c",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_operation_store.py",
+          "candidate_sha256": "d9d6c3d54ff4afc625f28f5e70595fd23f6a899e05863a9cdf0b05711a0808fa",
+          "root_sha256": "2d33958f7e2ac22213c237f30d26f4b83887338af40af3be7e8e468940149a4c",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_operation_store.py",
+          "candidate_sha256": "135dd6d809f160ccccf200a03c83b77399b2621619f8b9bde674f5e557f1370d",
+          "root_sha256": "2d33958f7e2ac22213c237f30d26f4b83887338af40af3be7e8e468940149a4c",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "135dd6d809f160ccccf200a03c83b77399b2621619f8b9bde674f5e557f1370d",
+      "current_integrated_sha256": "135dd6d809f160ccccf200a03c83b77399b2621619f8b9bde674f5e557f1370d"
+    },
+    {
+      "path": "comsol_mcp/_session_lifecycle.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_session_lifecycle.py",
+          "candidate_sha256": "dce3150c1d826f5d53206031e482493a96d1a30c64b95f135e16a18a9efd4ce7",
+          "root_sha256": "10d74f0d733365e4c66dba612568fe0fc47260581b0a29884279d6d0b9dd1121",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_session_lifecycle.py",
+          "candidate_sha256": "10d74f0d733365e4c66dba612568fe0fc47260581b0a29884279d6d0b9dd1121",
+          "root_sha256": "10d74f0d733365e4c66dba612568fe0fc47260581b0a29884279d6d0b9dd1121",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_session_lifecycle.py",
+          "candidate_sha256": "dce3150c1d826f5d53206031e482493a96d1a30c64b95f135e16a18a9efd4ce7",
+          "root_sha256": "10d74f0d733365e4c66dba612568fe0fc47260581b0a29884279d6d0b9dd1121",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "dce3150c1d826f5d53206031e482493a96d1a30c64b95f135e16a18a9efd4ce7",
+      "current_integrated_sha256": "dce3150c1d826f5d53206031e482493a96d1a30c64b95f135e16a18a9efd4ce7"
+    },
+    {
+      "path": "comsol_mcp/_session_server.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_session_server.py",
+          "candidate_sha256": "219160766f2cd2a17371bc16b5073e5cdbe5ee447a278ab35c3feee28c52951a",
+          "root_sha256": "d2c80b077a874d3f11f663225a7d421cc2b3016466f30074eb04b83e7a698c4f",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_session_server.py",
+          "candidate_sha256": "f6404e5fcf970446d8b10b16586b5e91d73ea2be5b36ddaa0caf25c6c21de8fd",
+          "root_sha256": "d2c80b077a874d3f11f663225a7d421cc2b3016466f30074eb04b83e7a698c4f",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_session_server.py",
+          "candidate_sha256": "219160766f2cd2a17371bc16b5073e5cdbe5ee447a278ab35c3feee28c52951a",
+          "root_sha256": "d2c80b077a874d3f11f663225a7d421cc2b3016466f30074eb04b83e7a698c4f",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "219160766f2cd2a17371bc16b5073e5cdbe5ee447a278ab35c3feee28c52951a",
+      "current_integrated_sha256": "219160766f2cd2a17371bc16b5073e5cdbe5ee447a278ab35c3feee28c52951a"
+    },
+    {
+      "path": "comsol_mcp/_solution_binding.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_solution_binding.py",
+          "candidate_sha256": "655715000630adc6a22d0cfa187e2bde3717c8e0e40d842e40793d78bf8a6e15",
+          "root_sha256": "0815aac9d118d9c51e4eb22386bead9b00b59085c5aee08195e41a0324c42e2a",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_solution_binding.py",
+          "candidate_sha256": "bc8f0c50af9d086a9dc4c0ac8d5376a884dcaa04fd46e069ac15dc160bcba490",
+          "root_sha256": "0815aac9d118d9c51e4eb22386bead9b00b59085c5aee08195e41a0324c42e2a",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_solution_binding.py",
+          "candidate_sha256": "0815aac9d118d9c51e4eb22386bead9b00b59085c5aee08195e41a0324c42e2a",
+          "root_sha256": "0815aac9d118d9c51e4eb22386bead9b00b59085c5aee08195e41a0324c42e2a",
+          "observation": "SAME_BYTES"
+        }
+      ],
+      "selected": "w23-r15",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Adopt r15 strict component/final-entity selection, sealed temporary Interp ticket and explicit saved-point field scheme; Windows public ownership changes are coordinated in R19 selected modules.",
+      "integrated_sha256": "655715000630adc6a22d0cfa187e2bde3717c8e0e40d842e40793d78bf8a6e15",
+      "current_integrated_sha256": "655715000630adc6a22d0cfa187e2bde3717c8e0e40d842e40793d78bf8a6e15"
+    },
+    {
+      "path": "comsol_mcp/_state_backup.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_state_backup.py",
+          "candidate_sha256": "9ab50378fc7eab8c72def62beb0d7191ef68c25e1fa1ace717e0424294f3ba5c",
+          "root_sha256": "9ab50378fc7eab8c72def62beb0d7191ef68c25e1fa1ace717e0424294f3ba5c",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_state_backup.py",
+          "candidate_sha256": "a1c33f6696f70ef085f39627fd582f6a898b3bbc92ab04fd1c0aacd12d936488",
+          "root_sha256": "9ab50378fc7eab8c72def62beb0d7191ef68c25e1fa1ace717e0424294f3ba5c",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_state_backup.py",
+          "candidate_sha256": "9ab50378fc7eab8c72def62beb0d7191ef68c25e1fa1ace717e0424294f3ba5c",
+          "root_sha256": "9ab50378fc7eab8c72def62beb0d7191ef68c25e1fa1ace717e0424294f3ba5c",
+          "observation": "SAME_BYTES"
+        }
+      ],
+      "selected": null,
+      "status": "KEEP_CURRENT_EXCEPT_SCOPED_W24_HOOKS_PENDING",
+      "rationale": "coupled05 retains an older public layer; do not delete current Desktop/model-package/delivery/identity/safety implementations. Port only actual admission/probe changes where required.",
+      "current_integrated_sha256": "9ab50378fc7eab8c72def62beb0d7191ef68c25e1fa1ace717e0424294f3ba5c"
+    },
+    {
+      "path": "comsol_mcp/_w26_os_resources.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_w26_os_resources.py",
+          "candidate_sha256": "15088d2fcfce57aebdd60feb40db3fbbc3d94098f5ba5c0fb8c5fcfabdd3a1d4",
+          "root_sha256": "15088d2fcfce57aebdd60feb40db3fbbc3d94098f5ba5c0fb8c5fcfabdd3a1d4",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_w26_os_resources.py",
+          "candidate_sha256": "7fbf94fd1f0f75ab4e65f5a51a78ed4ec055ce887861155180af0f0df8171dfb",
+          "root_sha256": "15088d2fcfce57aebdd60feb40db3fbbc3d94098f5ba5c0fb8c5fcfabdd3a1d4",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "7fbf94fd1f0f75ab4e65f5a51a78ed4ec055ce887861155180af0f0df8171dfb",
+      "current_integrated_sha256": "7fbf94fd1f0f75ab4e65f5a51a78ed4ec055ce887861155180af0f0df8171dfb"
+    },
+    {
+      "path": "comsol_mcp/_windows_appcontainer.py",
+      "sources": [
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_windows_appcontainer.py",
+          "candidate_sha256": "dd0c4ee8f710d2a8163e09249e6126a8c1d1ed630ddec5527ae9dc93622fde66",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "dd0c4ee8f710d2a8163e09249e6126a8c1d1ed630ddec5527ae9dc93622fde66",
+      "current_integrated_sha256": "dd0c4ee8f710d2a8163e09249e6126a8c1d1ed630ddec5527ae9dc93622fde66"
+    },
+    {
+      "path": "comsol_mcp/_windows_appcontainer_native.py",
+      "sources": [
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_windows_appcontainer_native.py",
+          "candidate_sha256": "9fb8c0173f5d096eb0774825814f74a9bdd80f4e95b85df6e0a9e83bafb15175",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "9fb8c0173f5d096eb0774825814f74a9bdd80f4e95b85df6e0a9e83bafb15175",
+      "current_integrated_sha256": "9fb8c0173f5d096eb0774825814f74a9bdd80f4e95b85df6e0a9e83bafb15175"
+    },
+    {
+      "path": "comsol_mcp/_windows_filter_group.py",
+      "sources": [
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_windows_filter_group.py",
+          "candidate_sha256": "966ff5fa3228e84cc38ca2aa841db3b9f984fbfe9834dd26a9c700f22652f87e",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "966ff5fa3228e84cc38ca2aa841db3b9f984fbfe9834dd26a9c700f22652f87e",
+      "current_integrated_sha256": "966ff5fa3228e84cc38ca2aa841db3b9f984fbfe9834dd26a9c700f22652f87e"
+    },
+    {
+      "path": "comsol_mcp/_windows_host_change.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_windows_host_change.py",
+          "candidate_sha256": "67bd94236ebc8bcb1c4c4acddd028e3b6a8dc6ff7d5f0dac778915b38b68dd21",
+          "root_sha256": "67bd94236ebc8bcb1c4c4acddd028e3b6a8dc6ff7d5f0dac778915b38b68dd21",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_windows_host_change.py",
+          "candidate_sha256": "c8daf247c7024161693c7c28f64347a53ff32ed206b0044d4c4e53f9eca231eb",
+          "root_sha256": "67bd94236ebc8bcb1c4c4acddd028e3b6a8dc6ff7d5f0dac778915b38b68dd21",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "c8daf247c7024161693c7c28f64347a53ff32ed206b0044d4c4e53f9eca231eb",
+      "current_integrated_sha256": "c8daf247c7024161693c7c28f64347a53ff32ed206b0044d4c4e53f9eca231eb"
+    },
+    {
+      "path": "comsol_mcp/_windows_host_identity_owner.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_windows_host_identity_owner.py",
+          "candidate_sha256": "8e819326ec6cb1726bb1e501f2bf9a049de84921a4d4ec02af62d08251547990",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_windows_host_identity_owner.py",
+          "candidate_sha256": "8e819326ec6cb1726bb1e501f2bf9a049de84921a4d4ec02af62d08251547990",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "8e819326ec6cb1726bb1e501f2bf9a049de84921a4d4ec02af62d08251547990",
+      "current_integrated_sha256": "8e819326ec6cb1726bb1e501f2bf9a049de84921a4d4ec02af62d08251547990"
+    },
+    {
+      "path": "comsol_mcp/_windows_host_preflight_owner.py",
+      "sources": [
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_windows_host_preflight_owner.py",
+          "candidate_sha256": "943f04db6bea5dff21c1b325e6eced787184d6c5072a9ff80cfed9c0de7fcdfa",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "943f04db6bea5dff21c1b325e6eced787184d6c5072a9ff80cfed9c0de7fcdfa",
+      "current_integrated_sha256": "943f04db6bea5dff21c1b325e6eced787184d6c5072a9ff80cfed9c0de7fcdfa"
+    },
+    {
+      "path": "comsol_mcp/_windows_job_limits.py",
+      "sources": [
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_windows_job_limits.py",
+          "candidate_sha256": "38db220f2e88971b3b09a929e4343223e32411289515a008464472fe070f7ee2",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "38db220f2e88971b3b09a929e4343223e32411289515a008464472fe070f7ee2",
+      "current_integrated_sha256": "38db220f2e88971b3b09a929e4343223e32411289515a008464472fe070f7ee2"
+    },
+    {
+      "path": "comsol_mcp/_windows_owned_resources.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_windows_owned_resources.py",
+          "candidate_sha256": "82db7815c97093b92d5936d0dbc34915064715d51ad48905ff554e720454f784",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_windows_owned_resources.py",
+          "candidate_sha256": "82db7815c97093b92d5936d0dbc34915064715d51ad48905ff554e720454f784",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "82db7815c97093b92d5936d0dbc34915064715d51ad48905ff554e720454f784",
+      "current_integrated_sha256": "82db7815c97093b92d5936d0dbc34915064715d51ad48905ff554e720454f784"
+    },
+    {
+      "path": "comsol_mcp/_windows_parameter_publish.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_windows_parameter_publish.py",
+          "candidate_sha256": "bf86875afb82695006f1a5c533075bf1ba4b03890cfa236866d59b39644cd112",
+          "root_sha256": "39b3da289880ab2fecfd1660bc2eacc2cd21d6d94f346daec5d6c096fa6ec06f",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/comsol_mcp/_windows_parameter_publish.py",
+          "candidate_sha256": "ce3b3ee5db08998b77929c93c7a57ecb958af65a67c7896910e493feef57ab53",
+          "root_sha256": "39b3da289880ab2fecfd1660bc2eacc2cd21d6d94f346daec5d6c096fa6ec06f",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_windows_parameter_publish.py",
+          "candidate_sha256": "447c5fa2cc3cd65adc7e18c4153c95e11c787654a9b0437023c7cc3be531e93c",
+          "root_sha256": "39b3da289880ab2fecfd1660bc2eacc2cd21d6d94f346daec5d6c096fa6ec06f",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "447c5fa2cc3cd65adc7e18c4153c95e11c787654a9b0437023c7cc3be531e93c",
+      "current_integrated_sha256": "447c5fa2cc3cd65adc7e18c4153c95e11c787654a9b0437023c7cc3be531e93c"
+    },
+    {
+      "path": "comsol_mcp/_windows_policy_owner.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_windows_policy_owner.py",
+          "candidate_sha256": "2d3cbca91e8a1145853f377af9ef9ffe27616038ee11efed2c93c2bd72d4edf5",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_windows_policy_owner.py",
+          "candidate_sha256": "2d3cbca91e8a1145853f377af9ef9ffe27616038ee11efed2c93c2bd72d4edf5",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "2d3cbca91e8a1145853f377af9ef9ffe27616038ee11efed2c93c2bd72d4edf5",
+      "current_integrated_sha256": "2d3cbca91e8a1145853f377af9ef9ffe27616038ee11efed2c93c2bd72d4edf5"
+    },
+    {
+      "path": "comsol_mcp/_windows_service_sid.py",
+      "sources": [
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_windows_service_sid.py",
+          "candidate_sha256": "573b859dc21ec87ab235c338d9aaf7803066e96fa12b437df316e7a4b3d2b384",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "573b859dc21ec87ab235c338d9aaf7803066e96fa12b437df316e7a4b3d2b384",
+      "current_integrated_sha256": "573b859dc21ec87ab235c338d9aaf7803066e96fa12b437df316e7a4b3d2b384"
+    },
+    {
+      "path": "comsol_mcp/_windows_service_sid_native.py",
+      "sources": [
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_windows_service_sid_native.py",
+          "candidate_sha256": "3975becc1ce3b85d24ce854974b7f1319e499c6debbf72b83b8b24403e22886a",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "3975becc1ce3b85d24ce854974b7f1319e499c6debbf72b83b8b24403e22886a",
+      "current_integrated_sha256": "3975becc1ce3b85d24ce854974b7f1319e499c6debbf72b83b8b24403e22886a"
+    },
+    {
+      "path": "comsol_mcp/_windows_t037.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_windows_t037.py",
+          "candidate_sha256": "0a80740cd894ea44ff7a91e7d548831adfa384afe046ba316bfff7aee8b3e8a8",
+          "root_sha256": "fefa4dcd61e67cd5c89c1caa3f74ad24628f5c7069c7110f5ae931d25fa4240e",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_windows_t037.py",
+          "candidate_sha256": "9b0b945ff1bd940c0582df59a53eddd3ec82a577ea41954a450fd4f484497260",
+          "root_sha256": "fefa4dcd61e67cd5c89c1caa3f74ad24628f5c7069c7110f5ae931d25fa4240e",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "9b0b945ff1bd940c0582df59a53eddd3ec82a577ea41954a450fd4f484497260",
+      "current_integrated_sha256": "9b0b945ff1bd940c0582df59a53eddd3ec82a577ea41954a450fd4f484497260"
+    },
+    {
+      "path": "comsol_mcp/_windows_t037_acl.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_windows_t037_acl.py",
+          "candidate_sha256": "5414f1a2875578c9ad2f9ebcc02e03356e0e5c9e0bbe03978dbe445cad0b482d",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_windows_t037_acl.py",
+          "candidate_sha256": "5414f1a2875578c9ad2f9ebcc02e03356e0e5c9e0bbe03978dbe445cad0b482d",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "5414f1a2875578c9ad2f9ebcc02e03356e0e5c9e0bbe03978dbe445cad0b482d",
+      "current_integrated_sha256": "5414f1a2875578c9ad2f9ebcc02e03356e0e5c9e0bbe03978dbe445cad0b482d"
+    },
+    {
+      "path": "comsol_mcp/_windows_t037_bootstrap.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_windows_t037_bootstrap.py",
+          "candidate_sha256": "1e79a5281f662a7b258b1f0b548d83a0065d499051c94e933e0f7af241e0ff7f",
+          "root_sha256": "1e79a5281f662a7b258b1f0b548d83a0065d499051c94e933e0f7af241e0ff7f",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_windows_t037_bootstrap.py",
+          "candidate_sha256": "eb51cdef6223c777efac95085ca2ae9667db1d04950e5837736530ea8308a5d9",
+          "root_sha256": "1e79a5281f662a7b258b1f0b548d83a0065d499051c94e933e0f7af241e0ff7f",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "eb51cdef6223c777efac95085ca2ae9667db1d04950e5837736530ea8308a5d9",
+      "current_integrated_sha256": "eb51cdef6223c777efac95085ca2ae9667db1d04950e5837736530ea8308a5d9"
+    },
+    {
+      "path": "comsol_mcp/_windows_t037_child.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_windows_t037_child.py",
+          "candidate_sha256": "ac0721c61d9ca7e4e57248e0c738ab9ae5e39bc32a748f557f60bfeb8b550db3",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_windows_t037_child.py",
+          "candidate_sha256": "ac0721c61d9ca7e4e57248e0c738ab9ae5e39bc32a748f557f60bfeb8b550db3",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "ac0721c61d9ca7e4e57248e0c738ab9ae5e39bc32a748f557f60bfeb8b550db3",
+      "current_integrated_sha256": "ac0721c61d9ca7e4e57248e0c738ab9ae5e39bc32a748f557f60bfeb8b550db3"
+    },
+    {
+      "path": "comsol_mcp/_windows_t037_native.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_windows_t037_native.py",
+          "candidate_sha256": "4e9dcab543afa8c72b9381bbfbf3bb2338a79c3873b797246a1235756923df47",
+          "root_sha256": "04df01d1ead0ab82a3bc7be62f9f0ee26b1f92505293096f7355957a0cf993b7",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_windows_t037_native.py",
+          "candidate_sha256": "d5ee5574f8a2a5f1a59fa4b6f203ec647592885927dd30ea1733c88f36e4fe29",
+          "root_sha256": "04df01d1ead0ab82a3bc7be62f9f0ee26b1f92505293096f7355957a0cf993b7",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "d5ee5574f8a2a5f1a59fa4b6f203ec647592885927dd30ea1733c88f36e4fe29",
+      "current_integrated_sha256": "15475e12c06205071e12411cf21ab7c0a59441a23d7b6254666b794371ec19a0"
+    },
+    {
+      "path": "comsol_mcp/_windows_t037_resume.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_windows_t037_resume.py",
+          "candidate_sha256": "074c7286deb9a2e2ee7d07b352242848b3515c5d3ec1da12ccf720e19678ab29",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_windows_t037_resume.py",
+          "candidate_sha256": "39095a91bdb370884bae49dce644acf9e881e2c6ba25dd0d78b62be13872a45d",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "39095a91bdb370884bae49dce644acf9e881e2c6ba25dd0d78b62be13872a45d",
+      "current_integrated_sha256": "39095a91bdb370884bae49dce644acf9e881e2c6ba25dd0d78b62be13872a45d"
+    },
+    {
+      "path": "comsol_mcp/_windows_t037_wfp.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/_windows_t037_wfp.py",
+          "candidate_sha256": "2f6a4bc166a7b9e0bfea0587b94984da6bc1f85b791c445799a636e9a2168cbd",
+          "root_sha256": "2f6a4bc166a7b9e0bfea0587b94984da6bc1f85b791c445799a636e9a2168cbd",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_windows_t037_wfp.py",
+          "candidate_sha256": "0db03c2829157949ffb2335cd28bafc45d1c0301fa5796b9b3b5babc373122ca",
+          "root_sha256": "2f6a4bc166a7b9e0bfea0587b94984da6bc1f85b791c445799a636e9a2168cbd",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "0db03c2829157949ffb2335cd28bafc45d1c0301fa5796b9b3b5babc373122ca",
+      "current_integrated_sha256": "0db03c2829157949ffb2335cd28bafc45d1c0301fa5796b9b3b5babc373122ca"
+    },
+    {
+      "path": "comsol_mcp/_windows_wfp_mutation_owner.py",
+      "sources": [
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/_windows_wfp_mutation_owner.py",
+          "candidate_sha256": "cf63509b33100660926aba940914415a61eecae8cbb376fe9407d0be1903bfdc",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "cf63509b33100660926aba940914415a61eecae8cbb376fe9407d0be1903bfdc",
+      "current_integrated_sha256": "cf63509b33100660926aba940914415a61eecae8cbb376fe9407d0be1903bfdc"
+    },
+    {
+      "path": "comsol_mcp/worker_java/PersistentComsolWorker.java",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/comsol_mcp/worker_java/PersistentComsolWorker.java",
+          "candidate_sha256": "2497cc2d9006ad714040f77e046ac2ede90ef4ed31106a3c78899cca530a6b35",
+          "root_sha256": "d4137668a03e0170159511cc1128c32fcae14c0e04034fd05a9a1aa41ea40665",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/comsol_mcp/worker_java/PersistentComsolWorker.java",
+          "candidate_sha256": "50b5d0a75c030f3ac3813c50c621afc419d830cc3b57f0f3cc6be075960fbd39",
+          "root_sha256": "d4137668a03e0170159511cc1128c32fcae14c0e04034fd05a9a1aa41ea40665",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/comsol_mcp/worker_java/PersistentComsolWorker.java",
+          "candidate_sha256": "2497cc2d9006ad714040f77e046ac2ede90ef4ed31106a3c78899cca530a6b35",
+          "root_sha256": "d4137668a03e0170159511cc1128c32fcae14c0e04034fd05a9a1aa41ea40665",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "2497cc2d9006ad714040f77e046ac2ede90ef4ed31106a3c78899cca530a6b35",
+      "current_integrated_sha256": "2497cc2d9006ad714040f77e046ac2ede90ef4ed31106a3c78899cca530a6b35"
+    },
+    {
+      "path": "tests/java/W24SolverSequenceDiagnosticsHarness.java",
+      "sources": [
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tests/java/W24SolverSequenceDiagnosticsHarness.java",
+          "candidate_sha256": "9de54588db2b6ca591c934c3c5ba5bb5ea4eed65695feaf7d98666bcc21356b4",
+          "root_sha256": "8fc272d9f266e6dfe49f53c3a889914bea5f1df418f82b0bca221cd8a8ba06c5",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null,
+      "current_integrated_sha256": "8fc272d9f266e6dfe49f53c3a889914bea5f1df418f82b0bca221cd8a8ba06c5"
+    },
+    {
+      "path": "tests/test_activity018_no_outer_transcript.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_activity018_no_outer_transcript.py",
+          "candidate_sha256": "aeb9d5fe3d3fda8d30e8e9c9046b7827e7c819b413bcaebd55005dc4e049c5d5",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "w23-r15",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Adopt r15 strict component/final-entity selection, sealed temporary Interp ticket and explicit saved-point field scheme; Windows public ownership changes are coordinated in R19 selected modules.",
+      "integrated_sha256": "aeb9d5fe3d3fda8d30e8e9c9046b7827e7c819b413bcaebd55005dc4e049c5d5",
+      "current_integrated_sha256": "dc42a3730ff27b7f4e12e76363d851de80a812b14cbbff6755f1c19ad3ae3097"
+    },
+    {
+      "path": "tests/test_activity019_private_singleton_ticket.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_activity019_private_singleton_ticket.py",
+          "candidate_sha256": "eda9f108ea3a5d1842517e1d1b5df397d9ebe067a632c8c3ecbe9c300cfac261",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "w23-r15",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Adopt r15 strict component/final-entity selection, sealed temporary Interp ticket and explicit saved-point field scheme; Windows public ownership changes are coordinated in R19 selected modules.",
+      "integrated_sha256": "eda9f108ea3a5d1842517e1d1b5df397d9ebe067a632c8c3ecbe9c300cfac261",
+      "current_integrated_sha256": "71eadb9958138b6c0b52941db902e202cdf9d81db37cae2cb8b8b8c9eabdd75f"
+    },
+    {
+      "path": "tests/test_activity021_definition_boundary_metadata.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_activity021_definition_boundary_metadata.py",
+          "candidate_sha256": "60c66536f5b949efb3534a0db43df1a9f051655994710e05da8cddb9bfdedceb",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "w23-r15",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Adopt r15 strict component/final-entity selection, sealed temporary Interp ticket and explicit saved-point field scheme; Windows public ownership changes are coordinated in R19 selected modules.",
+      "integrated_sha256": "60c66536f5b949efb3534a0db43df1a9f051655994710e05da8cddb9bfdedceb",
+      "current_integrated_sha256": "60c66536f5b949efb3534a0db43df1a9f051655994710e05da8cddb9bfdedceb"
+    },
+    {
+      "path": "tests/test_activity022_boundary_selection_ticket.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_activity022_boundary_selection_ticket.py",
+          "candidate_sha256": "5079dec5027d12d4a47a0482181a65dc12285488dadc8b8e708ee2b6b1df747f",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "w23-r15",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Adopt r15 strict component/final-entity selection, sealed temporary Interp ticket and explicit saved-point field scheme; Windows public ownership changes are coordinated in R19 selected modules.",
+      "integrated_sha256": "5079dec5027d12d4a47a0482181a65dc12285488dadc8b8e708ee2b6b1df747f",
+      "current_integrated_sha256": "5079dec5027d12d4a47a0482181a65dc12285488dadc8b8e708ee2b6b1df747f"
+    },
+    {
+      "path": "tests/test_activity022_r15_measure_all_and_literal_entry.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_activity022_r15_measure_all_and_literal_entry.py",
+          "candidate_sha256": "ee5ef819b9795f2f6d9059ab37cd374c46e10c4315cc0644e57446fb42429c29",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "w23-r15",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Adopt r15 strict component/final-entity selection, sealed temporary Interp ticket and explicit saved-point field scheme; Windows public ownership changes are coordinated in R19 selected modules.",
+      "integrated_sha256": "ee5ef819b9795f2f6d9059ab37cd374c46e10c4315cc0644e57446fb42429c29",
+      "current_integrated_sha256": "e13687365cb2eb45f1821fcf69bc332cc5f2c1e1e8a150f4b3c9101ce8e247c1"
+    },
+    {
+      "path": "tests/test_control_daemon_projects.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_control_daemon_projects.py",
+          "candidate_sha256": "33fc418ff44d2a942dc6dc86e6f0fedb16fc3e4121ca7867a00e5343de0ecb38",
+          "root_sha256": "33fc418ff44d2a942dc6dc86e6f0fedb16fc3e4121ca7867a00e5343de0ecb38",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tests/test_control_daemon_projects.py",
+          "candidate_sha256": "557b89cf275ec4fa6e200f4edae36f1ae5b9f31acaa513487df75242e2806d0b",
+          "root_sha256": "33fc418ff44d2a942dc6dc86e6f0fedb16fc3e4121ca7867a00e5343de0ecb38",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_control_daemon_projects.py",
+          "candidate_sha256": "33fc418ff44d2a942dc6dc86e6f0fedb16fc3e4121ca7867a00e5343de0ecb38",
+          "root_sha256": "33fc418ff44d2a942dc6dc86e6f0fedb16fc3e4121ca7867a00e5343de0ecb38",
+          "observation": "SAME_BYTES"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null,
+      "current_integrated_sha256": "33fc418ff44d2a942dc6dc86e6f0fedb16fc3e4121ca7867a00e5343de0ecb38"
+    },
+    {
+      "path": "tests/test_ephemeral_result_ticket.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_ephemeral_result_ticket.py",
+          "candidate_sha256": "7348e389c7ceb8581745516be198c66ced42afba6f208e7d70a92ff9558153df",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_ephemeral_result_ticket.py",
+          "candidate_sha256": "fe41c9376836e67155a3a0bb4c815a76a852a723a3ddda7e7de8a0ae247afd10",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "w23-r15",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Adopt r15 strict component/final-entity selection, sealed temporary Interp ticket and explicit saved-point field scheme; Windows public ownership changes are coordinated in R19 selected modules.",
+      "integrated_sha256": "7348e389c7ceb8581745516be198c66ced42afba6f208e7d70a92ff9558153df",
+      "current_integrated_sha256": "7348e389c7ceb8581745516be198c66ced42afba6f208e7d70a92ff9558153df"
+    },
+    {
+      "path": "tests/test_g3_results.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_g3_results.py",
+          "candidate_sha256": "946cc831bfe9310c6a64c56c7a789fd8c9ef317fecf6459ca84bf86fc9f0dc56",
+          "root_sha256": "177d2da5533aa7d15f1b0228c689eef5dd00b92139527e942361a659b3c5eec7",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_g3_results.py",
+          "candidate_sha256": "5a3ee48d1bf103cde71e0d808c53bac53ca45c3eef26a38b934c9fdf807d85a3",
+          "root_sha256": "177d2da5533aa7d15f1b0228c689eef5dd00b92139527e942361a659b3c5eec7",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": "w23-r15",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Adopt r15 strict component/final-entity selection, sealed temporary Interp ticket and explicit saved-point field scheme; Windows public ownership changes are coordinated in R19 selected modules.",
+      "integrated_sha256": "946cc831bfe9310c6a64c56c7a789fd8c9ef317fecf6459ca84bf86fc9f0dc56",
+      "current_integrated_sha256": "d38bf88100099626c3856dd7ac9acd6ae635a2577137123616b66c33c652d9b0"
+    },
+    {
+      "path": "tests/test_host_scoped_provider.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_host_scoped_provider.py",
+          "candidate_sha256": "7b4bcd6d8814c06c5213886765dc4c110b3099889747989c950e7ee63ab4ee9a",
+          "root_sha256": "7b4bcd6d8814c06c5213886765dc4c110b3099889747989c950e7ee63ab4ee9a",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_host_scoped_provider.py",
+          "candidate_sha256": "0048143096a61b447a4670e847fb29f9f0ecb02901094042d5ab9838d56a35c1",
+          "root_sha256": "7b4bcd6d8814c06c5213886765dc4c110b3099889747989c950e7ee63ab4ee9a",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "0048143096a61b447a4670e847fb29f9f0ecb02901094042d5ab9838d56a35c1",
+      "current_integrated_sha256": "0048143096a61b447a4670e847fb29f9f0ecb02901094042d5ab9838d56a35c1"
+    },
+    {
+      "path": "tests/test_managed_backend.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_managed_backend.py",
+          "candidate_sha256": "27883a5d1948308e64338183ded6caab66de92b9166d16d661b7639a6eacdc7c",
+          "root_sha256": "27883a5d1948308e64338183ded6caab66de92b9166d16d661b7639a6eacdc7c",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tests/test_managed_backend.py",
+          "candidate_sha256": "507bae5ff08ae0e9d11f87b1f6b3c3ce07ebcedf93502bab846fbd3a24d8a18a",
+          "root_sha256": "27883a5d1948308e64338183ded6caab66de92b9166d16d661b7639a6eacdc7c",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_managed_backend.py",
+          "candidate_sha256": "27883a5d1948308e64338183ded6caab66de92b9166d16d661b7639a6eacdc7c",
+          "root_sha256": "27883a5d1948308e64338183ded6caab66de92b9166d16d661b7639a6eacdc7c",
+          "observation": "SAME_BYTES"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null,
+      "current_integrated_sha256": "27883a5d1948308e64338183ded6caab66de92b9166d16d661b7639a6eacdc7c"
+    },
+    {
+      "path": "tests/test_native_w23_saved_mph_diagnostic.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_native_w23_saved_mph_diagnostic.py",
+          "candidate_sha256": "6ba9822e763a68571261d65235a3b9a0d03a0d0c982c3f45f1f36845d8b9e0ee",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "w23-r15",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Adopt r15 strict component/final-entity selection, sealed temporary Interp ticket and explicit saved-point field scheme; Windows public ownership changes are coordinated in R19 selected modules.",
+      "integrated_sha256": "6ba9822e763a68571261d65235a3b9a0d03a0d0c982c3f45f1f36845d8b9e0ee",
+      "current_integrated_sha256": "0e345b01364bf3c87dca3c54a9444f27b1651a588c9014152ab1e2e2be1c1d31"
+    },
+    {
+      "path": "tests/test_native_w23_te_science_protocol.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_native_w23_te_science_protocol.py",
+          "candidate_sha256": "3f0ab26fa74f8395871f05b06d384e8c8097bfc8c223e7fd026a082b018ae08f",
+          "root_sha256": "14d5445b1e8dd7442d832738c83ff714e1e09ba365d249133bb9aec02a1578ef",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_native_w23_te_science_protocol.py",
+          "candidate_sha256": "14d5445b1e8dd7442d832738c83ff714e1e09ba365d249133bb9aec02a1578ef",
+          "root_sha256": "14d5445b1e8dd7442d832738c83ff714e1e09ba365d249133bb9aec02a1578ef",
+          "observation": "SAME_BYTES"
+        }
+      ],
+      "selected": "w23-r15",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Adopt r15 strict component/final-entity selection, sealed temporary Interp ticket and explicit saved-point field scheme; Windows public ownership changes are coordinated in R19 selected modules.",
+      "integrated_sha256": "3f0ab26fa74f8395871f05b06d384e8c8097bfc8c223e7fd026a082b018ae08f",
+      "current_integrated_sha256": "3f0ab26fa74f8395871f05b06d384e8c8097bfc8c223e7fd026a082b018ae08f"
+    },
+    {
+      "path": "tests/test_native_w23_te_science_runner.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_native_w23_te_science_runner.py",
+          "candidate_sha256": "eeb637c515093587962ec26bea28437b7f3645089a0b4e2e1067b66783ff2f10",
+          "root_sha256": "a69a75e454c14de8008314b92d34f104a43bc9b43d187aa2bca773d57dcecfc7",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_native_w23_te_science_runner.py",
+          "candidate_sha256": "a69a75e454c14de8008314b92d34f104a43bc9b43d187aa2bca773d57dcecfc7",
+          "root_sha256": "a69a75e454c14de8008314b92d34f104a43bc9b43d187aa2bca773d57dcecfc7",
+          "observation": "SAME_BYTES"
+        }
+      ],
+      "selected": "w23-r15",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Adopt r15 strict component/final-entity selection, sealed temporary Interp ticket and explicit saved-point field scheme; Windows public ownership changes are coordinated in R19 selected modules.",
+      "integrated_sha256": "eeb637c515093587962ec26bea28437b7f3645089a0b4e2e1067b66783ff2f10",
+      "current_integrated_sha256": "eeb637c515093587962ec26bea28437b7f3645089a0b4e2e1067b66783ff2f10"
+    },
+    {
+      "path": "tests/test_operation_store_migrations.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_operation_store_migrations.py",
+          "candidate_sha256": "4c047bf9034138c41ab8b99271e90e61008a10053683a7302350d08215512e34",
+          "root_sha256": "4c047bf9034138c41ab8b99271e90e61008a10053683a7302350d08215512e34",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tests/test_operation_store_migrations.py",
+          "candidate_sha256": "e657341e8beaac4f9eb18b83a96b376fdab590c8c740456dfcc98ba2d7309a44",
+          "root_sha256": "4c047bf9034138c41ab8b99271e90e61008a10053683a7302350d08215512e34",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_operation_store_migrations.py",
+          "candidate_sha256": "4c047bf9034138c41ab8b99271e90e61008a10053683a7302350d08215512e34",
+          "root_sha256": "4c047bf9034138c41ab8b99271e90e61008a10053683a7302350d08215512e34",
+          "observation": "SAME_BYTES"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null,
+      "current_integrated_sha256": "4c047bf9034138c41ab8b99271e90e61008a10053683a7302350d08215512e34"
+    },
+    {
+      "path": "tests/test_run_native_w24_static_shape_science.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_run_native_w24_static_shape_science.py",
+          "candidate_sha256": "90700cef1af723fb6ea4e0b7b9848e65f7711d2588f378bcd196c9e585fb3aab",
+          "root_sha256": "90700cef1af723fb6ea4e0b7b9848e65f7711d2588f378bcd196c9e585fb3aab",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tests/test_run_native_w24_static_shape_science.py",
+          "candidate_sha256": "d641d83ac6451b28ffd36c1b7f395f62dd275afb5db0587aa1f0245fe42e376a",
+          "root_sha256": "90700cef1af723fb6ea4e0b7b9848e65f7711d2588f378bcd196c9e585fb3aab",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_run_native_w24_static_shape_science.py",
+          "candidate_sha256": "90700cef1af723fb6ea4e0b7b9848e65f7711d2588f378bcd196c9e585fb3aab",
+          "root_sha256": "90700cef1af723fb6ea4e0b7b9848e65f7711d2588f378bcd196c9e585fb3aab",
+          "observation": "SAME_BYTES"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null,
+      "current_integrated_sha256": "90700cef1af723fb6ea4e0b7b9848e65f7711d2588f378bcd196c9e585fb3aab"
+    },
+    {
+      "path": "tests/test_saved_mph_activity017_public_stack.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_saved_mph_activity017_public_stack.py",
+          "candidate_sha256": "6f059a2d9e99e39fe0e9d0779eb5a27de702d1f63a0732dfc344ad5303d7c230",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "w23-r15",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Adopt r15 strict component/final-entity selection, sealed temporary Interp ticket and explicit saved-point field scheme; Windows public ownership changes are coordinated in R19 selected modules.",
+      "integrated_sha256": "6f059a2d9e99e39fe0e9d0779eb5a27de702d1f63a0732dfc344ad5303d7c230",
+      "current_integrated_sha256": "6f059a2d9e99e39fe0e9d0779eb5a27de702d1f63a0732dfc344ad5303d7c230"
+    },
+    {
+      "path": "tests/test_saved_mph_offline_materialization.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_saved_mph_offline_materialization.py",
+          "candidate_sha256": "b9fcdd5d867b6b7fcd2999bf0c7de72e65cb376121b8ea2abadb0b77f33a3abe",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "w23-r15",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Adopt r15 strict component/final-entity selection, sealed temporary Interp ticket and explicit saved-point field scheme; Windows public ownership changes are coordinated in R19 selected modules.",
+      "integrated_sha256": "b9fcdd5d867b6b7fcd2999bf0c7de72e65cb376121b8ea2abadb0b77f33a3abe",
+      "current_integrated_sha256": "074e866bed9fee9feb95fd1a721c1dbe9ec7cc062cc51a034d2512f5714e9fe2"
+    },
+    {
+      "path": "tests/test_w23_managed_preflight.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_w23_managed_preflight.py",
+          "candidate_sha256": "a03ebade77cb8a7ae6d585daefc4aaeacb92e9d98ad92f28b799e6928cb4b1d4",
+          "root_sha256": "a03ebade77cb8a7ae6d585daefc4aaeacb92e9d98ad92f28b799e6928cb4b1d4",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tests/test_w23_managed_preflight.py",
+          "candidate_sha256": "2d5fa22bd7fb6211b9d4b47fff2417315d972b129ba49adb917f3a9a6b2a88dd",
+          "root_sha256": "a03ebade77cb8a7ae6d585daefc4aaeacb92e9d98ad92f28b799e6928cb4b1d4",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_w23_managed_preflight.py",
+          "candidate_sha256": "a03ebade77cb8a7ae6d585daefc4aaeacb92e9d98ad92f28b799e6928cb4b1d4",
+          "root_sha256": "a03ebade77cb8a7ae6d585daefc4aaeacb92e9d98ad92f28b799e6928cb4b1d4",
+          "observation": "SAME_BYTES"
+        }
+      ],
+      "selected": "w24-coupled05",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Update stale expectations to the current production quiescence reason and provide actual synthetic listener/client observations to exercise exact owned cleanup; no lifecycle gate removed.",
+      "integrated_sha256": "2d5fa22bd7fb6211b9d4b47fff2417315d972b129ba49adb917f3a9a6b2a88dd",
+      "current_integrated_sha256": "2d5fa22bd7fb6211b9d4b47fff2417315d972b129ba49adb917f3a9a6b2a88dd"
+    },
+    {
+      "path": "tests/test_w24_actual_default_epoch_capability.py",
+      "sources": [
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tests/test_w24_actual_default_epoch_capability.py",
+          "candidate_sha256": "ed249a2ceb5750bcf6118a3eb7295e76925180393f9640661fae7f60b6e4597a",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null
+    },
+    {
+      "path": "tests/test_w24_coupled_admission.py",
+      "sources": [
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tests/test_w24_coupled_admission.py",
+          "candidate_sha256": "05be03899700f9d214ff36ba9da73b311a706864701cf22c87b8e79b8060545a",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null
+    },
+    {
+      "path": "tests/test_w24_coupled_lifecycle_residuals.py",
+      "sources": [
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tests/test_w24_coupled_lifecycle_residuals.py",
+          "candidate_sha256": "0acc79d33562d2bd498f31fb473e2d870612549556d4de3afdd44ba11d0ae88f",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null
+    },
+    {
+      "path": "tests/test_w24_coupled_probe_propagation.py",
+      "sources": [
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tests/test_w24_coupled_probe_propagation.py",
+          "candidate_sha256": "1d5ffa808f558663d825f2622b4bb9dba830d8770d300768368b8381bf174610",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null
+    },
+    {
+      "path": "tests/test_w24_coupled_setup_unit.py",
+      "sources": [
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tests/test_w24_coupled_setup_unit.py",
+          "candidate_sha256": "6c00717b94bb8330fefd75b617334a3bb3d3bf998af062f2ac0db78460f4d9e3",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null
+    },
+    {
+      "path": "tests/test_w24_cure_coupon_fixture.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_w24_cure_coupon_fixture.py",
+          "candidate_sha256": "cfbe96de3b8a61dc9020803e003ca335b588cff0895559287f7417200840b60b",
+          "root_sha256": "cfbe96de3b8a61dc9020803e003ca335b588cff0895559287f7417200840b60b",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tests/test_w24_cure_coupon_fixture.py",
+          "candidate_sha256": "bef3a7b223e1d25aec59ebeeb64089ab0b3f00fb53505771ed5a2259f75a3c52",
+          "root_sha256": "cfbe96de3b8a61dc9020803e003ca335b588cff0895559287f7417200840b60b",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_w24_cure_coupon_fixture.py",
+          "candidate_sha256": "cfbe96de3b8a61dc9020803e003ca335b588cff0895559287f7417200840b60b",
+          "root_sha256": "cfbe96de3b8a61dc9020803e003ca335b588cff0895559287f7417200840b60b",
+          "observation": "SAME_BYTES"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null,
+      "current_integrated_sha256": "cfbe96de3b8a61dc9020803e003ca335b588cff0895559287f7417200840b60b"
+    },
+    {
+      "path": "tests/test_w24_cure_preflight_runner.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_w24_cure_preflight_runner.py",
+          "candidate_sha256": "3b7127c3d0afd159744b06da4966c6d10641bb82395fce5ce4543a6d25e46bbb",
+          "root_sha256": "3b7127c3d0afd159744b06da4966c6d10641bb82395fce5ce4543a6d25e46bbb",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tests/test_w24_cure_preflight_runner.py",
+          "candidate_sha256": "ab53405e7eb69b5a89fd6f67fd25eaecd8c3530f53347ebfe4ed8931ac0b8984",
+          "root_sha256": "3b7127c3d0afd159744b06da4966c6d10641bb82395fce5ce4543a6d25e46bbb",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_w24_cure_preflight_runner.py",
+          "candidate_sha256": "3b7127c3d0afd159744b06da4966c6d10641bb82395fce5ce4543a6d25e46bbb",
+          "root_sha256": "3b7127c3d0afd159744b06da4966c6d10641bb82395fce5ce4543a6d25e46bbb",
+          "observation": "SAME_BYTES"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null,
+      "current_integrated_sha256": "3b7127c3d0afd159744b06da4966c6d10641bb82395fce5ce4543a6d25e46bbb"
+    },
+    {
+      "path": "tests/test_w24_current11_config_projection.py",
+      "sources": [
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tests/test_w24_current11_config_projection.py",
+          "candidate_sha256": "9de1116509c7c92fa3596db3aff407b6f2caec99a3a3453c615778cc77b9f950",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null
+    },
+    {
+      "path": "tests/test_w24_native_mesh_volume.py",
+      "sources": [
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tests/test_w24_native_mesh_volume.py",
+          "candidate_sha256": "9798a72cd675bd6493342758d43a707724420f0e7ce8084982c876d9a3f38837",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null
+    },
+    {
+      "path": "tests/test_w24_setup_input_attachment.py",
+      "sources": [
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tests/test_w24_setup_input_attachment.py",
+          "candidate_sha256": "8f436da86c8e6cd022f356c5d7cc566a397748de61e7e1d8f9fd3adf9b391f0b",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null
+    },
+    {
+      "path": "tests/test_w24_stable_shape_transfer.py",
+      "sources": [
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tests/test_w24_stable_shape_transfer.py",
+          "candidate_sha256": "6f28687d43191c8a92e530f0f6528a9456a5fccfc16b722143707071439afdb7",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null
+    },
+    {
+      "path": "tests/test_w24_v2_setup_readback.py",
+      "sources": [
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tests/test_w24_v2_setup_readback.py",
+          "candidate_sha256": "61cb4df4ebbd5c5e3e2b3ca4fba504cb7ac3762617c4336c4c7a86593744ed09",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null
+    },
+    {
+      "path": "tests/test_w24_witnessed_stress.py",
+      "sources": [
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tests/test_w24_witnessed_stress.py",
+          "candidate_sha256": "284f6611f7a00f333afb890a394f164c333e7c8357f32d24c1c76eba6888b746",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null
+    },
+    {
+      "path": "tests/test_windows_appcontainer.py",
+      "sources": [
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_windows_appcontainer.py",
+          "candidate_sha256": "a9fc3cc5cd8877fc23df189e053296c21fdcb618c141d4c827434c8c38a11afe",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "a9fc3cc5cd8877fc23df189e053296c21fdcb618c141d4c827434c8c38a11afe",
+      "current_integrated_sha256": "a9fc3cc5cd8877fc23df189e053296c21fdcb618c141d4c827434c8c38a11afe"
+    },
+    {
+      "path": "tests/test_windows_appcontainer_r19_owner.py",
+      "sources": [
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_windows_appcontainer_r19_owner.py",
+          "candidate_sha256": "c4ce3375750bed84d5eab4e5f11f354413c5872e4b988601febf76f237119ba6",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "c4ce3375750bed84d5eab4e5f11f354413c5872e4b988601febf76f237119ba6",
+      "current_integrated_sha256": "cf985d73040b8009caacef5de6bb6448907aa7e6781976c81dcac7ede6835836"
+    },
+    {
+      "path": "tests/test_windows_child_acl.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_windows_child_acl.py",
+          "candidate_sha256": "4cac67b4ba716edf00a9edaa400a751d118437985d88d4eed1cc3151b3138e4a",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_windows_child_acl.py",
+          "candidate_sha256": "4cac67b4ba716edf00a9edaa400a751d118437985d88d4eed1cc3151b3138e4a",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "4cac67b4ba716edf00a9edaa400a751d118437985d88d4eed1cc3151b3138e4a",
+      "current_integrated_sha256": "4cac67b4ba716edf00a9edaa400a751d118437985d88d4eed1cc3151b3138e4a"
+    },
+    {
+      "path": "tests/test_windows_child_binding.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_windows_child_binding.py",
+          "candidate_sha256": "fe33932d5f698508be8056100d99b35cd383f7e80cc5f34d321a738566dd9339",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_windows_child_binding.py",
+          "candidate_sha256": "b60f16c6dd323d72fcbe510aec2e4bdcecc7e1a14e78af5351de47a7a7ffca14",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "b60f16c6dd323d72fcbe510aec2e4bdcecc7e1a14e78af5351de47a7a7ffca14",
+      "current_integrated_sha256": "b60f16c6dd323d72fcbe510aec2e4bdcecc7e1a14e78af5351de47a7a7ffca14"
+    },
+    {
+      "path": "tests/test_windows_filter_group.py",
+      "sources": [
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_windows_filter_group.py",
+          "candidate_sha256": "3f540312887bb71d85d85f6a930f541adfff08bdee8dd5a282872c3f3f8ab834",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "3f540312887bb71d85d85f6a930f541adfff08bdee8dd5a282872c3f3f8ab834",
+      "current_integrated_sha256": "3f540312887bb71d85d85f6a930f541adfff08bdee8dd5a282872c3f3f8ab834"
+    },
+    {
+      "path": "tests/test_windows_host_change.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_windows_host_change.py",
+          "candidate_sha256": "d79b4c2b64e90c8367004c9fc7168cfd0cb145e93bba24897c6fad6ea8ffbb58",
+          "root_sha256": "d79b4c2b64e90c8367004c9fc7168cfd0cb145e93bba24897c6fad6ea8ffbb58",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_windows_host_change.py",
+          "candidate_sha256": "0d1c6ee9ab8a61ee3835ca70d214812adf1c212187e680fd1f2f310354485abc",
+          "root_sha256": "d79b4c2b64e90c8367004c9fc7168cfd0cb145e93bba24897c6fad6ea8ffbb58",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "0d1c6ee9ab8a61ee3835ca70d214812adf1c212187e680fd1f2f310354485abc",
+      "current_integrated_sha256": "0d1c6ee9ab8a61ee3835ca70d214812adf1c212187e680fd1f2f310354485abc"
+    },
+    {
+      "path": "tests/test_windows_host_identity_owner.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_windows_host_identity_owner.py",
+          "candidate_sha256": "6263e6bf38952c9a4348b402b7db177cd443329fd5942b3f1d36b7d701d4b39e",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_windows_host_identity_owner.py",
+          "candidate_sha256": "6263e6bf38952c9a4348b402b7db177cd443329fd5942b3f1d36b7d701d4b39e",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "6263e6bf38952c9a4348b402b7db177cd443329fd5942b3f1d36b7d701d4b39e",
+      "current_integrated_sha256": "6263e6bf38952c9a4348b402b7db177cd443329fd5942b3f1d36b7d701d4b39e"
+    },
+    {
+      "path": "tests/test_windows_host_preflight_owner.py",
+      "sources": [
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_windows_host_preflight_owner.py",
+          "candidate_sha256": "de089e1fd9291f25819c943be2da4d66c2e1a9a8624ba32b1ad365b944ab19d4",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "de089e1fd9291f25819c943be2da4d66c2e1a9a8624ba32b1ad365b944ab19d4",
+      "current_integrated_sha256": "de089e1fd9291f25819c943be2da4d66c2e1a9a8624ba32b1ad365b944ab19d4"
+    },
+    {
+      "path": "tests/test_windows_job_limits.py",
+      "sources": [
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_windows_job_limits.py",
+          "candidate_sha256": "9fc0bd9046ec48854d6c203355a3bc84d8f716fe331a06d439a85ec295086d3e",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "9fc0bd9046ec48854d6c203355a3bc84d8f716fe331a06d439a85ec295086d3e",
+      "current_integrated_sha256": "9fc0bd9046ec48854d6c203355a3bc84d8f716fe331a06d439a85ec295086d3e"
+    },
+    {
+      "path": "tests/test_windows_job_release_routes.py",
+      "sources": [
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_windows_job_release_routes.py",
+          "candidate_sha256": "8ca43a87891d56f8f64c801850f48eeb6a6ed11066a5d9f7d76890d1e5d16c15",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "8ca43a87891d56f8f64c801850f48eeb6a6ed11066a5d9f7d76890d1e5d16c15",
+      "current_integrated_sha256": "8ca43a87891d56f8f64c801850f48eeb6a6ed11066a5d9f7d76890d1e5d16c15"
+    },
+    {
+      "path": "tests/test_windows_owned_registry.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_windows_owned_registry.py",
+          "candidate_sha256": "b1fb1c38f6a0a17c4c11bf372b861584f37f9e55ec684db2ca9f4db193c27c80",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_windows_owned_registry.py",
+          "candidate_sha256": "05022a03e93c7675f0a0d9815c67dfd06ffb4a9512da43602185f80e09b8388f",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "05022a03e93c7675f0a0d9815c67dfd06ffb4a9512da43602185f80e09b8388f",
+      "current_integrated_sha256": "05022a03e93c7675f0a0d9815c67dfd06ffb4a9512da43602185f80e09b8388f"
+    },
+    {
+      "path": "tests/test_windows_ownership_repair.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_windows_ownership_repair.py",
+          "candidate_sha256": "57c0d16940efe32f49ba0ef080d0375ed7010f493020e1c3ebba1914875e1a95",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_windows_ownership_repair.py",
+          "candidate_sha256": "57c0d16940efe32f49ba0ef080d0375ed7010f493020e1c3ebba1914875e1a95",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "57c0d16940efe32f49ba0ef080d0375ed7010f493020e1c3ebba1914875e1a95",
+      "current_integrated_sha256": "4f64d9318896c44f48b87c5902c46013e7dd54c7e4bcc27d18e473b8e686b6fd"
+    },
+    {
+      "path": "tests/test_windows_policy_owner.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_windows_policy_owner.py",
+          "candidate_sha256": "e6ed01a18a9f6c53d9d28a22d46b878040610f23930fe0b1ba8a4c83906aea2f",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_windows_policy_owner.py",
+          "candidate_sha256": "e6ed01a18a9f6c53d9d28a22d46b878040610f23930fe0b1ba8a4c83906aea2f",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "e6ed01a18a9f6c53d9d28a22d46b878040610f23930fe0b1ba8a4c83906aea2f",
+      "current_integrated_sha256": "e6ed01a18a9f6c53d9d28a22d46b878040610f23930fe0b1ba8a4c83906aea2f"
+    },
+    {
+      "path": "tests/test_windows_preflight_lifetime.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_windows_preflight_lifetime.py",
+          "candidate_sha256": "2ecdbeb1bcf978df1d2a73e75be9b4dafc2dcce302a281983435ddfc786462e1",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_windows_preflight_lifetime.py",
+          "candidate_sha256": "2ecdbeb1bcf978df1d2a73e75be9b4dafc2dcce302a281983435ddfc786462e1",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "2ecdbeb1bcf978df1d2a73e75be9b4dafc2dcce302a281983435ddfc786462e1",
+      "current_integrated_sha256": "2ecdbeb1bcf978df1d2a73e75be9b4dafc2dcce302a281983435ddfc786462e1"
+    },
+    {
+      "path": "tests/test_windows_resource_owner.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_windows_resource_owner.py",
+          "candidate_sha256": "04b64c76706109bcee05297de0f051984a5f7c1f1d577423f53e24e02ba2f57e",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_windows_resource_owner.py",
+          "candidate_sha256": "cdab9859e835cf75e955c1d247bab1f45e04e0b9b6cef1d60a47c65551abf728",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "cdab9859e835cf75e955c1d247bab1f45e04e0b9b6cef1d60a47c65551abf728",
+      "current_integrated_sha256": "cdab9859e835cf75e955c1d247bab1f45e04e0b9b6cef1d60a47c65551abf728"
+    },
+    {
+      "path": "tests/test_windows_service_sid_backup.py",
+      "sources": [
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_windows_service_sid_backup.py",
+          "candidate_sha256": "dcd50aa4addf0ca4994d1d661ff496e08ee21c2376c7f2ba2c29566b27f3ecaf",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "dcd50aa4addf0ca4994d1d661ff496e08ee21c2376c7f2ba2c29566b27f3ecaf",
+      "current_integrated_sha256": "19d9d704618fd0253bc7084aee39b8c465178b10bd60085b774483d0b49fc6cc"
+    },
+    {
+      "path": "tests/test_windows_service_sid_controller.py",
+      "sources": [
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_windows_service_sid_controller.py",
+          "candidate_sha256": "1b6b086e35c2e85e3024ef0c1041fde41d39a426f1ee9044b1c80868846eaf75",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "1b6b086e35c2e85e3024ef0c1041fde41d39a426f1ee9044b1c80868846eaf75",
+      "current_integrated_sha256": "1b6b086e35c2e85e3024ef0c1041fde41d39a426f1ee9044b1c80868846eaf75"
+    },
+    {
+      "path": "tests/test_windows_service_sid_native.py",
+      "sources": [
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_windows_service_sid_native.py",
+          "candidate_sha256": "6b54a852f1d1fc918d1e90833c1dfc0040eb4cc4364a2f49dcb223ba3f0208b6",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "6b54a852f1d1fc918d1e90833c1dfc0040eb4cc4364a2f49dcb223ba3f0208b6",
+      "current_integrated_sha256": "6b54a852f1d1fc918d1e90833c1dfc0040eb4cc4364a2f49dcb223ba3f0208b6"
+    },
+    {
+      "path": "tests/test_windows_service_sid_r17_contracts.py",
+      "sources": [
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_windows_service_sid_r17_contracts.py",
+          "candidate_sha256": "1e84bdde97d508b59e965ed6928966f0ed9c1b1265af092319a5c7bb2a3878ba",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "1e84bdde97d508b59e965ed6928966f0ed9c1b1265af092319a5c7bb2a3878ba",
+      "current_integrated_sha256": "1e84bdde97d508b59e965ed6928966f0ed9c1b1265af092319a5c7bb2a3878ba"
+    },
+    {
+      "path": "tests/test_windows_suspended_ownership.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_windows_suspended_ownership.py",
+          "candidate_sha256": "d20e90f94162a09c0827815755beb7eb820a40cc18624b6bfeb22c08e1294c42",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_windows_suspended_ownership.py",
+          "candidate_sha256": "e840e46225931e01788c694fa4227836faa0753de88f952324b6868590ea2756",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "e840e46225931e01788c694fa4227836faa0753de88f952324b6868590ea2756",
+      "current_integrated_sha256": "e840e46225931e01788c694fa4227836faa0753de88f952324b6868590ea2756"
+    },
+    {
+      "path": "tests/test_windows_t037_bootstrap.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_windows_t037_bootstrap.py",
+          "candidate_sha256": "b7d4e5befb74b1ae85fbb1d799254c2a1de4316ae2bca6d6aee5c3f8834049ae",
+          "root_sha256": "b7d4e5befb74b1ae85fbb1d799254c2a1de4316ae2bca6d6aee5c3f8834049ae",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_windows_t037_bootstrap.py",
+          "candidate_sha256": "6d7f68e55027a414f2bf3d7e7a24fd00bd0e3a7459af51c532e27175271a0fc6",
+          "root_sha256": "b7d4e5befb74b1ae85fbb1d799254c2a1de4316ae2bca6d6aee5c3f8834049ae",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "6d7f68e55027a414f2bf3d7e7a24fd00bd0e3a7459af51c532e27175271a0fc6",
+      "current_integrated_sha256": "6d7f68e55027a414f2bf3d7e7a24fd00bd0e3a7459af51c532e27175271a0fc6"
+    },
+    {
+      "path": "tests/test_windows_t037_broker.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/test_windows_t037_broker.py",
+          "candidate_sha256": "d409acbebecf26741377240bb8ad16b65bf0c81acd4818ae01a6a0740a3b50ac",
+          "root_sha256": "c92089c4acae3b6e1fb2a5477006c659fef2a4704aef52625464c5f4cde416db",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_windows_t037_broker.py",
+          "candidate_sha256": "3a5b7fe74595707f0f976903584401217f0594da432267f94d10e50540b1645f",
+          "root_sha256": "c92089c4acae3b6e1fb2a5477006c659fef2a4704aef52625464c5f4cde416db",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "3a5b7fe74595707f0f976903584401217f0594da432267f94d10e50540b1645f",
+      "current_integrated_sha256": "3a5b7fe74595707f0f976903584401217f0594da432267f94d10e50540b1645f"
+    },
+    {
+      "path": "tests/test_windows_wfp_mutation_owner.py",
+      "sources": [
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tests/test_windows_wfp_mutation_owner.py",
+          "candidate_sha256": "6c109191d0362f464946626dd3cd8f2b5c492a49f6546ebadbbf9c73a0aa842e",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "6c109191d0362f464946626dd3cd8f2b5c492a49f6546ebadbbf9c73a0aa842e",
+      "current_integrated_sha256": "6c109191d0362f464946626dd3cd8f2b5c492a49f6546ebadbbf9c73a0aa842e"
+    },
+    {
+      "path": "tools/java/NativeW23TEScienceFixture.java",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tools/java/NativeW23TEScienceFixture.java",
+          "candidate_sha256": "63be8fa15063b914f9f37cd09cd4fe048f18c6a37c856820f44737bb4857e23e",
+          "root_sha256": "b7c4bc1dff30f4ec31093d8c0f1beeb0e0ffa2dec2d7c4f1712fb71ee796628f",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": "w23-r15",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Adopt r15 strict component/final-entity selection, sealed temporary Interp ticket and explicit saved-point field scheme; Windows public ownership changes are coordinated in R19 selected modules.",
+      "integrated_sha256": "63be8fa15063b914f9f37cd09cd4fe048f18c6a37c856820f44737bb4857e23e",
+      "current_integrated_sha256": "63be8fa15063b914f9f37cd09cd4fe048f18c6a37c856820f44737bb4857e23e"
+    },
+    {
+      "path": "tools/java/W24CureCouponFixture.java",
+      "sources": [
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tools/java/W24CureCouponFixture.java",
+          "candidate_sha256": "34679240783a8b11ffaf97e8aa51291880e7f65a54b616218764c8a1982e0fb0",
+          "root_sha256": "79f4ba8fffd86a8a363e57bd769daa86e06704c49801c4da2475ae80a78b476b",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null,
+      "current_integrated_sha256": "79f4ba8fffd86a8a363e57bd769daa86e06704c49801c4da2475ae80a78b476b"
+    },
+    {
+      "path": "tools/run_native_resume_smoke.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tools/run_native_resume_smoke.py",
+          "candidate_sha256": "fb086c01ba6b9e48f78415bf092877d2b9cab9011c13f8613b48c0ae75e67180",
+          "root_sha256": "fb086c01ba6b9e48f78415bf092877d2b9cab9011c13f8613b48c0ae75e67180",
+          "observation": "SAME_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tools/run_native_resume_smoke.py",
+          "candidate_sha256": "7972f8382e5cf0b6bbc1413f7e62a882179a575624cb4186fa839fc8b04feada",
+          "root_sha256": "fb086c01ba6b9e48f78415bf092877d2b9cab9011c13f8613b48c0ae75e67180",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null,
+      "current_integrated_sha256": "fb086c01ba6b9e48f78415bf092877d2b9cab9011c13f8613b48c0ae75e67180"
+    },
+    {
+      "path": "tools/run_native_w23_saved_mph_diagnostic.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tools/run_native_w23_saved_mph_diagnostic.py",
+          "candidate_sha256": "050b83c67f7b2a9887b87d936dba3d4057ff2bab6a0cc9b5afe861955f54261e",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tools/run_native_w23_saved_mph_diagnostic.py",
+          "candidate_sha256": "d2506e212e1de652174704f4c66521e8555ed1ea8216f3d2db8238b47e88b547",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": "w23-r15",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Adopt r15 strict component/final-entity selection, sealed temporary Interp ticket and explicit saved-point field scheme; Windows public ownership changes are coordinated in R19 selected modules.",
+      "integrated_sha256": "050b83c67f7b2a9887b87d936dba3d4057ff2bab6a0cc9b5afe861955f54261e",
+      "current_integrated_sha256": "4c45f98335e44770d510f2f069ce5667b3c9d80b2b8565f88481d6e4762428b0"
+    },
+    {
+      "path": "tools/run_native_w23_te_managed_preflight.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tools/run_native_w23_te_managed_preflight.py",
+          "candidate_sha256": "b249524c65ed0f68fcf79139897e699e51cd05643fb6aa18fa29f92689d8cb52",
+          "root_sha256": "2a319f30b0b0c1a647e7eff0b2591260ccc99072f01cdc0ec1213eb6bf2a8810",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tools/run_native_w23_te_managed_preflight.py",
+          "candidate_sha256": "30fb15a9339b4dfd8dce904921ee84d4636bc719c8da59c86b27a046fa07549a",
+          "root_sha256": "2a319f30b0b0c1a647e7eff0b2591260ccc99072f01cdc0ec1213eb6bf2a8810",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tools/run_native_w23_te_managed_preflight.py",
+          "candidate_sha256": "b249524c65ed0f68fcf79139897e699e51cd05643fb6aa18fa29f92689d8cb52",
+          "root_sha256": "2a319f30b0b0c1a647e7eff0b2591260ccc99072f01cdc0ec1213eb6bf2a8810",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": "windows-r19",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Preserve R19 original handle/executor retention, native owner/preflight/ACL/Job/SCM/WFP fixes and their matching software controls. Shared execution/Worker changes identical to r15 are retained once.",
+      "integrated_sha256": "b249524c65ed0f68fcf79139897e699e51cd05643fb6aa18fa29f92689d8cb52",
+      "current_integrated_sha256": "b249524c65ed0f68fcf79139897e699e51cd05643fb6aa18fa29f92689d8cb52"
+    },
+    {
+      "path": "tools/run_native_w23_te_science.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tools/run_native_w23_te_science.py",
+          "candidate_sha256": "c5f5037cbba01061b1e9a5d72441f3b1a5ef802bebd4e0fd0023b43ca192ecab",
+          "root_sha256": "fa5aee370bf4f1de2cb15692f6a3d24a15c2dde70a7e94eff00e397f286e8d00",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tools/run_native_w23_te_science.py",
+          "candidate_sha256": "951ac8b5e44c873c5ce17d533744a289b261bedbe48bd9cdce458c798593fade",
+          "root_sha256": "fa5aee370bf4f1de2cb15692f6a3d24a15c2dde70a7e94eff00e397f286e8d00",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": "w23-r15",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Adopt r15 strict component/final-entity selection, sealed temporary Interp ticket and explicit saved-point field scheme; Windows public ownership changes are coordinated in R19 selected modules.",
+      "integrated_sha256": "c5f5037cbba01061b1e9a5d72441f3b1a5ef802bebd4e0fd0023b43ca192ecab",
+      "current_integrated_sha256": "c5f5037cbba01061b1e9a5d72441f3b1a5ef802bebd4e0fd0023b43ca192ecab"
+    },
+    {
+      "path": "tools/run_native_w24_cure_preflight.py",
+      "sources": [
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tools/run_native_w24_cure_preflight.py",
+          "candidate_sha256": "397f49a30415b2440783e63fade99018d8ede1e2e0646e28edc3e1efa22214e1",
+          "root_sha256": "78690f5a0e6465e5f35205a81cdf02fbae940d06fb74558e5ecdc3444e4ab8a4",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null,
+      "current_integrated_sha256": "78690f5a0e6465e5f35205a81cdf02fbae940d06fb74558e5ecdc3444e4ab8a4"
+    },
+    {
+      "path": "tools/run_native_w24_cure_science.py",
+      "sources": [
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tools/run_native_w24_cure_science.py",
+          "candidate_sha256": "66273705fbb62fcac70227fc43219145d81e0f4fe1f08a0f37cb854d8fcf5c58",
+          "root_sha256": "9cfbe11ef1cc7dac885385ff6c9553cd731f303962093008c3a02c93729eaa99",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null,
+      "current_integrated_sha256": "9cfbe11ef1cc7dac885385ff6c9553cd731f303962093008c3a02c93729eaa99"
+    },
+    {
+      "path": "tools/run_native_w24_static_shape_setup.py",
+      "sources": [
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tools/run_native_w24_static_shape_setup.py",
+          "candidate_sha256": "a448b3ea8b8b26ee69841aaf279d477fa6a40583fd2fe742f5b4e916a92973cf",
+          "root_sha256": "47f12e8d8296efd67cd66ad2319bcb093260dddfa99763a2f50ec65b60a25da5",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null,
+      "current_integrated_sha256": "47f12e8d8296efd67cd66ad2319bcb093260dddfa99763a2f50ec65b60a25da5"
+    },
+    {
+      "path": "tools/run_native_w24_static_shape_setup_campaign.py",
+      "sources": [
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tools/run_native_w24_static_shape_setup_campaign.py",
+          "candidate_sha256": "d50e10000372d4a522d2ecd6d50ffaabcc79f5a3acd636a335a5cb511696cbfb",
+          "root_sha256": "71dda633418a228a700243be8954437d2fab9cbbbfb602d90bf3752f2df70f3f",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null,
+      "current_integrated_sha256": "71dda633418a228a700243be8954437d2fab9cbbbfb602d90bf3752f2df70f3f"
+    },
+    {
+      "path": "tools/w23_te_science_protocol.py",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tools/w23_te_science_protocol.py",
+          "candidate_sha256": "5daa420a01cee230f174198851a8f73a2fcd8193323c60e741927db59cdb6962",
+          "root_sha256": "454be3bf1d4aa14cb97af3c6cdf01c2686d71dac0c972a3d9e1f12761dfce2f2",
+          "observation": "DIFFERENT_BYTES"
+        },
+        {
+          "candidate": "windows-r19",
+          "included_path": "continuation/candidates/windows-r19/candidate/tools/w23_te_science_protocol.py",
+          "candidate_sha256": "1ad302ff4a15d78bb520d2c4c268e7baa1ebd4f341efa099e58ff706be2e0dcf",
+          "root_sha256": "454be3bf1d4aa14cb97af3c6cdf01c2686d71dac0c972a3d9e1f12761dfce2f2",
+          "observation": "DIFFERENT_BYTES"
+        }
+      ],
+      "selected": "w23-r15",
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Adopt r15 strict component/final-entity selection, sealed temporary Interp ticket and explicit saved-point field scheme; Windows public ownership changes are coordinated in R19 selected modules.",
+      "integrated_sha256": "5daa420a01cee230f174198851a8f73a2fcd8193323c60e741927db59cdb6962",
+      "current_integrated_sha256": "5daa420a01cee230f174198851a8f73a2fcd8193323c60e741927db59cdb6962"
+    },
+    {
+      "path": "tools/w24_coupled_admission.py",
+      "sources": [
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tools/w24_coupled_admission.py",
+          "candidate_sha256": "cec4c320fa9a65fdd78ab9b8b6b38db30adcf5d862ea80a3cc19359c0b4427ea",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null
+    },
+    {
+      "path": "tools/w24_coupled_setup_unit.py",
+      "sources": [
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tools/w24_coupled_setup_unit.py",
+          "candidate_sha256": "74b2d6cfbe561c66d1fdec1700920fba063ac889df8f559796a09bd08033da96",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null
+    },
+    {
+      "path": "tools/w24_native_epoch_capability.py",
+      "sources": [
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tools/w24_native_epoch_capability.py",
+          "candidate_sha256": "8f804fe67a30db1660fcfdd7eab6420417630ed396c3b6fffdd564817959a1ab",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null
+    },
+    {
+      "path": "tools/w24_setup_input_attachment.py",
+      "sources": [
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tools/w24_setup_input_attachment.py",
+          "candidate_sha256": "33ae0b5540194c64a787fb72cd4e6c77a4341a9c0e3c83e2e79ab6adba39c88c",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null
+    },
+    {
+      "path": "tools/w24_stable_shape_transfer.py",
+      "sources": [
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tools/w24_stable_shape_transfer.py",
+          "candidate_sha256": "896c7ef635ed4d449c8458c1e41e2a0ad2108a63c6329349ad16072bc8338b8c",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null
+    },
+    {
+      "path": "tools/w24_v2_setup_readback.py",
+      "sources": [
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tools/w24_v2_setup_readback.py",
+          "candidate_sha256": "4e94cd835cb6511f28f12ffd4b9bbd85983f0c1b5b1d16bf2326c7fe29504d7b",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null
+    },
+    {
+      "path": "tools/w24_witnessed_stress.py",
+      "sources": [
+        {
+          "candidate": "w24-coupled05",
+          "included_path": "continuation/candidates/w24-coupled05/repository/tools/w24_witnessed_stress.py",
+          "candidate_sha256": "ebbe3c311c668385a06a568a938934b469e16160e5e362bad2b3c28cde57fbe1",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "selected": null,
+      "status": "PENDING_W24_LOGICAL_MERGE",
+      "rationale": null
+    },
+    {
+      "path": "tests/fixtures/w23_activity011_normalized_saved_mph_inventory.json",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/fixtures/w23_activity011_normalized_saved_mph_inventory.json",
+          "candidate_sha256": "ead5c898adf8106faacc81ee5aa8b645ff4adbb459dda9ccfdffc4930888a03a",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Historical raw/typed or literal-script fixture used only as static data by adopted r15 software controls; exact public bytes preserved. No historical launcher is executed.",
+      "integrated_sha256": "ead5c898adf8106faacc81ee5aa8b645ff4adbb459dda9ccfdffc4930888a03a",
+      "current_integrated_sha256": "ead5c898adf8106faacc81ee5aa8b645ff4adbb459dda9ccfdffc4930888a03a"
+    },
+    {
+      "path": "tests/fixtures/w23_activity014/ACTUAL_OPERATIONSTORE_HZ_REQUEST.json",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/fixtures/w23_activity014/ACTUAL_OPERATIONSTORE_HZ_REQUEST.json",
+          "candidate_sha256": "77bf74e1bfcee7f70d854585768c157cb1c4de0b99334901f8257389fe32fd0b",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Historical raw/typed or literal-script fixture used only as static data by adopted r15 software controls; exact public bytes preserved. No historical launcher is executed.",
+      "integrated_sha256": "77bf74e1bfcee7f70d854585768c157cb1c4de0b99334901f8257389fe32fd0b",
+      "current_integrated_sha256": "77bf74e1bfcee7f70d854585768c157cb1c4de0b99334901f8257389fe32fd0b"
+    },
+    {
+      "path": "tests/fixtures/w23_activity014/PROVENANCE.json",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/fixtures/w23_activity014/PROVENANCE.json",
+          "candidate_sha256": "aab17458ef47e251702ee08ab09d5b1e5c49a9636bbd03148f30278e810904c1",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Historical raw/typed or literal-script fixture used only as static data by adopted r15 software controls; exact public bytes preserved. No historical launcher is executed.",
+      "integrated_sha256": "aab17458ef47e251702ee08ab09d5b1e5c49a9636bbd03148f30278e810904c1",
+      "current_integrated_sha256": "aab17458ef47e251702ee08ab09d5b1e5c49a9636bbd03148f30278e810904c1"
+    },
+    {
+      "path": "tests/fixtures/w23_activity014/ROOT_SINGLETON_COUNT_NATIVE_LABEL_DECISION.json",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/fixtures/w23_activity014/ROOT_SINGLETON_COUNT_NATIVE_LABEL_DECISION.json",
+          "candidate_sha256": "6186e3c111d556b707a03551a7aa8719bed3ab538bc240f1fa7a47554bda4173",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Historical raw/typed or literal-script fixture used only as static data by adopted r15 software controls; exact public bytes preserved. No historical launcher is executed.",
+      "integrated_sha256": "6186e3c111d556b707a03551a7aa8719bed3ab538bc240f1fa7a47554bda4173",
+      "current_integrated_sha256": "6186e3c111d556b707a03551a7aa8719bed3ab538bc240f1fa7a47554bda4173"
+    },
+    {
+      "path": "tests/fixtures/w23_activity014/physical_frequency_Hz_terminal_response.json",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/fixtures/w23_activity014/physical_frequency_Hz_terminal_response.json",
+          "candidate_sha256": "2b428e475b30b9e549c48bceb8cacdd005495e513634158f75788d99a9ef04b9",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Historical raw/typed or literal-script fixture used only as static data by adopted r15 software controls; exact public bytes preserved. No historical launcher is executed.",
+      "integrated_sha256": "2b428e475b30b9e549c48bceb8cacdd005495e513634158f75788d99a9ef04b9",
+      "current_integrated_sha256": "2b428e475b30b9e549c48bceb8cacdd005495e513634158f75788d99a9ef04b9"
+    },
+    {
+      "path": "tests/fixtures/w23_activity015/ACTUAL_HZ_JOB_ALL_WORKER_EVENTS.json",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/fixtures/w23_activity015/ACTUAL_HZ_JOB_ALL_WORKER_EVENTS.json",
+          "candidate_sha256": "11b9e2690b6505b17cb1ad9d466f00ee72710348a59bcaa0ee5f76975e6e888c",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Historical raw/typed or literal-script fixture used only as static data by adopted r15 software controls; exact public bytes preserved. No historical launcher is executed.",
+      "integrated_sha256": "11b9e2690b6505b17cb1ad9d466f00ee72710348a59bcaa0ee5f76975e6e888c",
+      "current_integrated_sha256": "11b9e2690b6505b17cb1ad9d466f00ee72710348a59bcaa0ee5f76975e6e888c"
+    },
+    {
+      "path": "tests/fixtures/w23_activity015/PROVENANCE.json",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/fixtures/w23_activity015/PROVENANCE.json",
+          "candidate_sha256": "f07be3a8ae899ce70226a2a2ced7e440a36f2cf43116cffc3c6af1289cc437b9",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Historical raw/typed or literal-script fixture used only as static data by adopted r15 software controls; exact public bytes preserved. No historical launcher is executed.",
+      "integrated_sha256": "f07be3a8ae899ce70226a2a2ced7e440a36f2cf43116cffc3c6af1289cc437b9",
+      "current_integrated_sha256": "f07be3a8ae899ce70226a2a2ced7e440a36f2cf43116cffc3c6af1289cc437b9"
+    },
+    {
+      "path": "tests/fixtures/w23_activity015/ROOT_ACTIVITY015_COUNT_ONLY_PUBLICATION_DECISION.json",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/fixtures/w23_activity015/ROOT_ACTIVITY015_COUNT_ONLY_PUBLICATION_DECISION.json",
+          "candidate_sha256": "c1c8b56d80e6137b223db3d92096a1f51abef86992ba396fd3adadb9c88d6129",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Historical raw/typed or literal-script fixture used only as static data by adopted r15 software controls; exact public bytes preserved. No historical launcher is executed.",
+      "integrated_sha256": "c1c8b56d80e6137b223db3d92096a1f51abef86992ba396fd3adadb9c88d6129",
+      "current_integrated_sha256": "c1c8b56d80e6137b223db3d92096a1f51abef86992ba396fd3adadb9c88d6129"
+    },
+    {
+      "path": "tests/fixtures/w23_activity015/managed_solution_indices_dset1_terminal_response.json",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/fixtures/w23_activity015/managed_solution_indices_dset1_terminal_response.json",
+          "candidate_sha256": "8d078b87bcfbf129a9ed5e80b063754dec9305b9a116051f2963dd6e0b4fc5eb",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Historical raw/typed or literal-script fixture used only as static data by adopted r15 software controls; exact public bytes preserved. No historical launcher is executed.",
+      "integrated_sha256": "8d078b87bcfbf129a9ed5e80b063754dec9305b9a116051f2963dd6e0b4fc5eb",
+      "current_integrated_sha256": "8d078b87bcfbf129a9ed5e80b063754dec9305b9a116051f2963dd6e0b4fc5eb"
+    },
+    {
+      "path": "tests/fixtures/w23_activity015/physical_frequency_Hz_terminal_response.json",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/fixtures/w23_activity015/physical_frequency_Hz_terminal_response.json",
+          "candidate_sha256": "c17f0aea93f4540a7facc8ad21614fb1df93768673b232f535a02eac5c6365dd",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Historical raw/typed or literal-script fixture used only as static data by adopted r15 software controls; exact public bytes preserved. No historical launcher is executed.",
+      "integrated_sha256": "c17f0aea93f4540a7facc8ad21614fb1df93768673b232f535a02eac5c6365dd",
+      "current_integrated_sha256": "c17f0aea93f4540a7facc8ad21614fb1df93768673b232f535a02eac5c6365dd"
+    },
+    {
+      "path": "tests/fixtures/w23_activity018/ACTUAL_DSET1_TYPED_TRANSCRIPT_AND_INVENTORY.json",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/fixtures/w23_activity018/ACTUAL_DSET1_TYPED_TRANSCRIPT_AND_INVENTORY.json",
+          "candidate_sha256": "360ff2fd03504bca94aef5ad866abe03889ee8c15e8e28ff7f1415b15872b0fe",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Historical raw/typed or literal-script fixture used only as static data by adopted r15 software controls; exact public bytes preserved. No historical launcher is executed.",
+      "integrated_sha256": "360ff2fd03504bca94aef5ad866abe03889ee8c15e8e28ff7f1415b15872b0fe",
+      "current_integrated_sha256": "360ff2fd03504bca94aef5ad866abe03889ee8c15e8e28ff7f1415b15872b0fe"
+    },
+    {
+      "path": "tests/fixtures/w23_activity019/ACTUAL018_019_PORT_DATASET_TYPED_PROJECTIONS.json",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/fixtures/w23_activity019/ACTUAL018_019_PORT_DATASET_TYPED_PROJECTIONS.json",
+          "candidate_sha256": "9b5c090429937aa7e13fc726079ba2681b50e36eeff59c60a4f88587f9e681fe",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Historical raw/typed or literal-script fixture used only as static data by adopted r15 software controls; exact public bytes preserved. No historical launcher is executed.",
+      "integrated_sha256": "9b5c090429937aa7e13fc726079ba2681b50e36eeff59c60a4f88587f9e681fe",
+      "current_integrated_sha256": "9b5c090429937aa7e13fc726079ba2681b50e36eeff59c60a4f88587f9e681fe"
+    },
+    {
+      "path": "tests/fixtures/w23_activity019/ACTUAL_019_HZ_TYPED_TICKET_PROJECTION.json",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/fixtures/w23_activity019/ACTUAL_019_HZ_TYPED_TICKET_PROJECTION.json",
+          "candidate_sha256": "7cd1c55d601a2c510014f93c2a700c1b18e711b753e3731480e39536e8359384",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Historical raw/typed or literal-script fixture used only as static data by adopted r15 software controls; exact public bytes preserved. No historical launcher is executed.",
+      "integrated_sha256": "7cd1c55d601a2c510014f93c2a700c1b18e711b753e3731480e39536e8359384",
+      "current_integrated_sha256": "7cd1c55d601a2c510014f93c2a700c1b18e711b753e3731480e39536e8359384"
+    },
+    {
+      "path": "tests/fixtures/w23_activity020/ALL_THREE_ACTUAL020_POINT_JOBS_ORIGINAL_TYPED_EVENTS.json",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/fixtures/w23_activity020/ALL_THREE_ACTUAL020_POINT_JOBS_ORIGINAL_TYPED_EVENTS.json",
+          "candidate_sha256": "01f7c23efbf051b8080a3e1fc289492a3bc0e77de9c4b8769fa38ad0df594afc",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Historical raw/typed or literal-script fixture used only as static data by adopted r15 software controls; exact public bytes preserved. No historical launcher is executed.",
+      "integrated_sha256": "01f7c23efbf051b8080a3e1fc289492a3bc0e77de9c4b8769fa38ad0df594afc",
+      "current_integrated_sha256": "01f7c23efbf051b8080a3e1fc289492a3bc0e77de9c4b8769fa38ad0df594afc"
+    },
+    {
+      "path": "tests/fixtures/w23_activity021/ACTUAL021_DEFINITION_BOUNDARY_RAW.json",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/fixtures/w23_activity021/ACTUAL021_DEFINITION_BOUNDARY_RAW.json",
+          "candidate_sha256": "ab6bbea6828ae36fd592bd4476227c857b3549904f8bb717d8175fb4cbf45565",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Historical raw/typed or literal-script fixture used only as static data by adopted r15 software controls; exact public bytes preserved. No historical launcher is executed.",
+      "integrated_sha256": "ab6bbea6828ae36fd592bd4476227c857b3549904f8bb717d8175fb4cbf45565",
+      "current_integrated_sha256": "ab6bbea6828ae36fd592bd4476227c857b3549904f8bb717d8175fb4cbf45565"
+    },
+    {
+      "path": "tests/fixtures/w23_activity022/ACTUAL_R14_WRONG_LITERAL_ENTRY.zsh",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/tests/fixtures/w23_activity022/ACTUAL_R14_WRONG_LITERAL_ENTRY.zsh",
+          "candidate_sha256": "a2e0bb52a5e2e34342125f5ada460cb98339030163ecacb3cfcfd8f4b8a78864",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Historical raw/typed or literal-script fixture used only as static data by adopted r15 software controls; exact public bytes preserved. No historical launcher is executed.",
+      "integrated_sha256": "a2e0bb52a5e2e34342125f5ada460cb98339030163ecacb3cfcfd8f4b8a78864",
+      "current_integrated_sha256": "a2e0bb52a5e2e34342125f5ada460cb98339030163ecacb3cfcfd8f4b8a78864"
+    },
+    {
+      "path": "docs/full_project_execution/w23_overlap/references/PRIMARY_INTERP_GETDATA_17293.json",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/docs/full_project_execution/w23_overlap/references/PRIMARY_INTERP_GETDATA_17293.json",
+          "candidate_sha256": "ce8d9d26f66a25c9d6d239d22daec3f3a93b6b9858c974e4ab8a2231f187653c",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Exact primary COMSOL API references required by r15 source closure, preserved as reference data without native acceptance.",
+      "integrated_sha256": "ce8d9d26f66a25c9d6d239d22daec3f3a93b6b9858c974e4ab8a2231f187653c",
+      "current_integrated_sha256": "ce8d9d26f66a25c9d6d239d22daec3f3a93b6b9858c974e4ab8a2231f187653c"
+    },
+    {
+      "path": "docs/full_project_execution/w23_overlap/references/PRIMARY_INTERP_UNIT_17294.json",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/docs/full_project_execution/w23_overlap/references/PRIMARY_INTERP_UNIT_17294.json",
+          "candidate_sha256": "bdf26ff2aa32e04fba1407c8a4fac40d83ab6086e1d9b5aa83c9354e5f85accb",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Exact primary COMSOL API references required by r15 source closure, preserved as reference data without native acceptance.",
+      "integrated_sha256": "bdf26ff2aa32e04fba1407c8a4fac40d83ab6086e1d9b5aa83c9354e5f85accb",
+      "current_integrated_sha256": "bdf26ff2aa32e04fba1407c8a4fac40d83ab6086e1d9b5aa83c9354e5f85accb"
+    },
+    {
+      "path": "docs/full_project_execution/w23_overlap/references/PRIMARY_NUMERICAL_GETDATA_22986.json",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/docs/full_project_execution/w23_overlap/references/PRIMARY_NUMERICAL_GETDATA_22986.json",
+          "candidate_sha256": "ffab7eab32f93ed44171a64454140adaaca2739d834491c6aee34abf04fe87f5",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Exact primary COMSOL API references required by r15 source closure, preserved as reference data without native acceptance.",
+      "integrated_sha256": "ffab7eab32f93ed44171a64454140adaaca2739d834491c6aee34abf04fe87f5",
+      "current_integrated_sha256": "ffab7eab32f93ed44171a64454140adaaca2739d834491c6aee34abf04fe87f5"
+    },
+    {
+      "path": "docs/full_project_execution/w23_overlap/references/activity022/PRIMARY_3627_12452.json",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/docs/full_project_execution/w23_overlap/references/activity022/PRIMARY_3627_12452.json",
+          "candidate_sha256": "44186dde2b8f22b910a147edbcbebb226cbf0f6b8997944be7e28d959b3c692b",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Exact primary COMSOL API references required by r15 source closure, preserved as reference data without native acceptance.",
+      "integrated_sha256": "44186dde2b8f22b910a147edbcbebb226cbf0f6b8997944be7e28d959b3c692b",
+      "current_integrated_sha256": "44186dde2b8f22b910a147edbcbebb226cbf0f6b8997944be7e28d959b3c692b"
+    },
+    {
+      "path": "docs/full_project_execution/w23_overlap/references/activity022/PRIMARY_4485_17294.json",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/docs/full_project_execution/w23_overlap/references/activity022/PRIMARY_4485_17294.json",
+          "candidate_sha256": "bdf26ff2aa32e04fba1407c8a4fac40d83ab6086e1d9b5aa83c9354e5f85accb",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Exact primary COMSOL API references required by r15 source closure, preserved as reference data without native acceptance.",
+      "integrated_sha256": "bdf26ff2aa32e04fba1407c8a4fac40d83ab6086e1d9b5aa83c9354e5f85accb",
+      "current_integrated_sha256": "bdf26ff2aa32e04fba1407c8a4fac40d83ab6086e1d9b5aa83c9354e5f85accb"
+    },
+    {
+      "path": "docs/full_project_execution/w23_overlap/references/activity022/PRIMARY_5034_18106.json",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/docs/full_project_execution/w23_overlap/references/activity022/PRIMARY_5034_18106.json",
+          "candidate_sha256": "cfad12c9329cbf866fb562d4c8e4cf02e1899235a6afce9d52bc604c708fbded",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Exact primary COMSOL API references required by r15 source closure, preserved as reference data without native acceptance.",
+      "integrated_sha256": "cfad12c9329cbf866fb562d4c8e4cf02e1899235a6afce9d52bc604c708fbded",
+      "current_integrated_sha256": "cfad12c9329cbf866fb562d4c8e4cf02e1899235a6afce9d52bc604c708fbded"
+    },
+    {
+      "path": "docs/full_project_execution/w23_overlap/references/activity022/PRIMARY_7623_22921.json",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/docs/full_project_execution/w23_overlap/references/activity022/PRIMARY_7623_22921.json",
+          "candidate_sha256": "15edeed1e2973153cf514aa98c3559733e6e147db19ebe66708dcdacc908903a",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Exact primary COMSOL API references required by r15 source closure, preserved as reference data without native acceptance.",
+      "integrated_sha256": "15edeed1e2973153cf514aa98c3559733e6e147db19ebe66708dcdacc908903a",
+      "current_integrated_sha256": "15edeed1e2973153cf514aa98c3559733e6e147db19ebe66708dcdacc908903a"
+    },
+    {
+      "path": "docs/full_project_execution/w23_overlap/references/activity022/PRIMARY_7700_23053.json",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/docs/full_project_execution/w23_overlap/references/activity022/PRIMARY_7700_23053.json",
+          "candidate_sha256": "1a8a5c64abd150812ba6b19e987d8d7ee9e743a0400328dcea3061f0ba0323db",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Exact primary COMSOL API references required by r15 source closure, preserved as reference data without native acceptance.",
+      "integrated_sha256": "1a8a5c64abd150812ba6b19e987d8d7ee9e743a0400328dcea3061f0ba0323db",
+      "current_integrated_sha256": "1a8a5c64abd150812ba6b19e987d8d7ee9e743a0400328dcea3061f0ba0323db"
+    },
+    {
+      "path": "docs/full_project_execution/w23_overlap/references/activity022/SDK_COMMAND.json",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/docs/full_project_execution/w23_overlap/references/activity022/SDK_COMMAND.json",
+          "candidate_sha256": "086d25431aa0f6f5ff39c6ef83010f78f1710a25d2ef8bd33abdb9c616c36221",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Exact primary COMSOL API references required by r15 source closure, preserved as reference data without native acceptance.",
+      "integrated_sha256": "086d25431aa0f6f5ff39c6ef83010f78f1710a25d2ef8bd33abdb9c616c36221",
+      "current_integrated_sha256": "086d25431aa0f6f5ff39c6ef83010f78f1710a25d2ef8bd33abdb9c616c36221"
+    },
+    {
+      "path": "docs/full_project_execution/w23_overlap/references/activity022/SDK_NUMERICAL_SELECTION.javap.stderr.txt",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/docs/full_project_execution/w23_overlap/references/activity022/SDK_NUMERICAL_SELECTION.javap.stderr.txt",
+          "candidate_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Exact primary COMSOL API references required by r15 source closure, preserved as reference data without native acceptance.",
+      "integrated_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "current_integrated_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/full_project_execution/w23_overlap/references/activity022/SDK_NUMERICAL_SELECTION.javap.stdout.txt",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/docs/full_project_execution/w23_overlap/references/activity022/SDK_NUMERICAL_SELECTION.javap.stdout.txt",
+          "candidate_sha256": "6d29cb3c53e7801d0546fa38b34ed44a2b8f02b875b1e24e23c3729ccc84f550",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Exact primary COMSOL API references required by r15 source closure, preserved as reference data without native acceptance.",
+      "integrated_sha256": "6d29cb3c53e7801d0546fa38b34ed44a2b8f02b875b1e24e23c3729ccc84f550",
+      "current_integrated_sha256": "6d29cb3c53e7801d0546fa38b34ed44a2b8f02b875b1e24e23c3729ccc84f550"
+    },
+    {
+      "path": "docs/full_project_execution/w23_overlap/references/activity022/SDK_PARENT_SELECTION.javap.stderr.txt",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/docs/full_project_execution/w23_overlap/references/activity022/SDK_PARENT_SELECTION.javap.stderr.txt",
+          "candidate_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Exact primary COMSOL API references required by r15 source closure, preserved as reference data without native acceptance.",
+      "integrated_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "current_integrated_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/full_project_execution/w23_overlap/references/activity022/SDK_PARENT_SELECTION.javap.stdout.txt",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/docs/full_project_execution/w23_overlap/references/activity022/SDK_PARENT_SELECTION.javap.stdout.txt",
+          "candidate_sha256": "c50755c7fc41f9141b4dfa86f710e1a66d8c7bb0f0765ee42ccec0de56dd3896",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Exact primary COMSOL API references required by r15 source closure, preserved as reference data without native acceptance.",
+      "integrated_sha256": "c50755c7fc41f9141b4dfa86f710e1a66d8c7bb0f0765ee42ccec0de56dd3896",
+      "current_integrated_sha256": "c50755c7fc41f9141b4dfa86f710e1a66d8c7bb0f0765ee42ccec0de56dd3896"
+    },
+    {
+      "path": "docs/full_project_execution/w23_overlap/references/activity022/SDK_SELECTION_ENTITY.javap.stdout.txt",
+      "selected": "w23-r15",
+      "sources": [
+        {
+          "candidate": "w23-r15",
+          "included_path": "continuation/candidates/w23-r15/docs/full_project_execution/w23_overlap/references/activity022/SDK_SELECTION_ENTITY.javap.stdout.txt",
+          "candidate_sha256": "e4df2c56f9ea6a38de13e239b6bee9946cbd6bb98d26e398cd4769155ec1b6aa",
+          "root_sha256": null,
+          "observation": "CANDIDATE_ONLY"
+        }
+      ],
+      "status": "INTEGRATED_SOFTWARE_R7_PASS_NATIVE_UNVERIFIED",
+      "rationale": "Exact primary COMSOL API references required by r15 source closure, preserved as reference data without native acceptance.",
+      "integrated_sha256": "e4df2c56f9ea6a38de13e239b6bee9946cbd6bb98d26e398cd4769155ec1b6aa",
+      "current_integrated_sha256": "e4df2c56f9ea6a38de13e239b6bee9946cbd6bb98d26e398cd4769155ec1b6aa"
+    }
+  ],
+  "required_tests": "Changed Windows and W23 controls plus shared backend/daemon/store/session/registration/results regression",
+  "native_status": "NOT_RUN",
+  "final_acceptance": "NOT_ACCEPTED",
+  "software_evidence": "docs/full_project_continuation_v3/state/SOFTWARE_INTEGRATION_R7.json",
+  "software_fingerprint": "21257f60ac18d47081c61cd0492b5c3b612178ed93c57d9cbdc88ed14780e156",
+  "updated_at": "2026-10-13T16:11:56.113533+00:00",
+  "main_repairs": {
+    "comsol_mcp/_managed_backend.py": "immutable attach-time runtime observation identity; canonical installation separated from runtime catalog label",
+    "comsol_mcp/_g3_managed_models.py": "current-worker runtime observation requires same live immutable binding",
+    "comsol_mcp/_windows_t037_native.py": "read-only application-id bridge routes allocation through original SDK owner",
+    "tools/run_bounded_tests.py": "task-owned APFS software scratch, explicit bounded external test inputs, source fingerprint before/after; original production security retained",
+    "tools/run_native_w23_saved_mph_diagnostic.py": "resolve exact published parent closure; no historical activity replay",
+    "tests": "portable exact published fixtures and strict guard negative controls; original counts/thresholds untouched"
+  }
+}

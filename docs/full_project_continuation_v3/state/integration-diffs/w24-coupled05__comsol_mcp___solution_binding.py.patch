@@ -1,0 +1,31 @@
+--- root/comsol_mcp/_solution_binding.py
++++ w24-coupled05/comsol_mcp/_solution_binding.py
+@@ -191,21 +191,14 @@
+                     # is still being attempted; a successful fallback must
+                     # not be reported as an incomplete binding.
+                     diagnostic_errors.append({"method": "getSolnums", "code": "SOLUTION_METADATA_ERROR", "message": str(exc)[:500]})
+-            # For stationary/transient solutions COMSOL 6.4 may return an
+-            # empty getOuterSolnum() even though the documented strict query
+-            # for outer=1 succeeds.  This is an engine-confirmed single outer,
+-            # not a fabricated default: only accept it after getSolnum(1,true)
+-            # returns at least one real inner number.
+-            get_one = getattr(solution_info, "getSolnum", None)
+-            if callable(get_one):
+-                try:
+-                    probe = get_one(1, True)
+-                    if _normalise_ints(probe, what="getSolnum(1, true)"):
+-                        return [1], errors
+-                except Exception as exc:
+-                    errors.append({"method": "getSolnum", "outer": 1, "code": "SOLUTION_AXIS_METADATA_UNAVAILABLE", "message": str(exc)[:500]})
++            # An empty getOuterSolnum() is an observed no-outer-axis state in
++            # COMSOL 6.4 (SolutionInfo API doc7709/chunk23066).  A strict
++            # getSolnum(1,true) probe may still return an inner solution, but
++            # that does not establish an outer parameter/value or a
++            # (outer,inner) pair.  Preserve that probe elsewhere as raw
++            # diagnostic evidence; never promote it into outer_indices=[1].
+             errors.extend(diagnostic_errors)
+-            errors.append({"method": "getOuterSolnum", "code": "SOLUTION_AXIS_METADATA_UNAVAILABLE", "message": "engine returned an empty outer axis and getSolnums([]) did not expose tuples"})
++            errors.append({"method": "getOuterSolnum", "code": "SOLUTION_AXIS_METADATA_UNAVAILABLE", "message": "engine returned an empty outer axis; getSolnum(1,true) alone does not establish outer/inner pairs"})
+         return labels, errors
+ 
+     @staticmethod

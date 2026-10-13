@@ -1,0 +1,10 @@
+--- root/tests/test_operation_store_migrations.py
++++ w24-coupled05/tests/test_operation_store_migrations.py
+@@ -103,7 +103,6 @@
+     after_names = {row[1] for row in after_objects}
+     assert after_names - {row[1] for row in before_objects} == {
+         "resume_claims", "projects", "stage_attempts", "idx_stage_attempt_scope",
+-        "host_control_admissions", "idx_operations_request_id", "idx_artifacts_v2_project_scope",
+     }
+     assert [row[1] for row in store.db.execute("PRAGMA table_info(stage_attempts)")] == [
+         "attempt_id", "scope_digest", "stage_id", "idempotency_key", "request_hash",

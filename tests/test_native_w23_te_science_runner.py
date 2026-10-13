@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import json
 import copy
+from pathlib import Path
 
 import pytest
 
+from comsol_mcp._java_worker import PersistentJavaWorker
 from tools import run_native_w23_te_science as runner
 
 
@@ -39,6 +41,87 @@ def _dataset(tag: str, solution: str, *, mode_axis: bool):
          "parameters": {"by_pair": {"1:1": {
              "names": names, "values": values, "units": units, "solnum": 1}}}},
     )
+
+
+def _mesh_readback(level: str = "coarse"):
+    hmax = "0.16[um]" if level == "coarse" else "0.08[um]"
+    return {
+        "mesh_level": level,
+        "hmax": hmax,
+        "hmin": "0.04[um]",
+        "elements": 1200,
+        "tri_elements": 1200,
+        "element_types": ["tri"],
+        "mesh_is_empty": False,
+        "mesh_is_complete": True,
+        "free_tri_tag": "ftri1",
+        "free_tri_built": True,
+        "free_tri_selection_dimension": 2,
+        "free_tri_selected_domains": [1, 2, 3, 4, 5, 6],
+        "geometry_domain_count": 6,
+        "study_or_solver_invoked": False,
+    }
+
+
+def test_native_mesh_readback_requires_full_domain_freetri_and_frozen_sizes():
+    coarse = runner.validate_mesh_readback(_mesh_readback(), "coarse")
+    fine = runner.validate_mesh_readback(_mesh_readback("fine"), "fine")
+    assert coarse["status"] == "PASS_NATIVE_FULL_DOMAIN_FREETRI_MESH_READBACK"
+    assert coarse["triangle_element_count"] > 0
+    assert coarse["full_2d_domain_coverage_by_selection_and_count"] is True
+    assert fine["actual_hmax"] == "0.08[um]"
+    assert fine["actual_hmin"] == "0.04[um]"
+
+
+def test_native_mesh_readback_rejects_activity005_actual_zero_element_readback():
+    # Activity005 reported a real integer zero after a successful set_mesh Worker
+    # operation. That remains a failure fixture, not evidence of an empty mesh
+    # being scientifically acceptable.
+    actual_activity005_readback = {
+        "elements": 0,
+        "hmax": "0.16[um]",
+        "hmin": "0.04[um]",
+        "mesh_level": "coarse",
+        "study_or_solver_invoked": False,
+    }
+    with pytest.raises(ValueError, match="total element count must be a positive integer"):
+        runner.validate_mesh_readback(actual_activity005_readback, "coarse")
+
+
+@pytest.mark.parametrize("change, message", [
+    (lambda row: row.update(elements=0), "total element count"),
+    (lambda row: row.update(elements=True), "total element count"),
+    (lambda row: row.update(tri_elements=0), "FreeTri element count"),
+    (lambda row: row.update(tri_elements=1201), "FreeTri element count"),
+    (lambda row: row.update(mesh_is_empty=True), "isEmpty"),
+    (lambda row: row.update(mesh_is_complete=False), "isComplete"),
+    (lambda row: row.update(free_tri_built=False), "FreeTri generator"),
+    (lambda row: row.update(free_tri_selection_dimension=1), "dimension-2"),
+    (lambda row: row.update(free_tri_selected_domains=[1, 2]), "full 2D geometry domain count"),
+    (lambda row: row.update(free_tri_selected_domains=[1, 2, 3, 4, 5, 5]), "unique"),
+    (lambda row: row.update(element_types=["quad"]), "include the FreeTri triangle type"),
+    (lambda row: row.update(hmax="0.20[um]"), "hmax/hmin"),
+    (lambda row: row.update(hmin="0.02[um]"), "hmax/hmin"),
+    (lambda row: row.update(study_or_solver_invoked=True), "no-study/no-solver"),
+])
+def test_native_mesh_readback_fails_closed_on_incomplete_or_mismatched_evidence(change, message):
+    readback = _mesh_readback()
+    change(readback)
+    with pytest.raises(ValueError, match=message):
+        runner.validate_mesh_readback(readback, "coarse")
+
+
+def test_science_fixture_uses_explicit_full_domain_freetri_and_native_mesh_statistics():
+    assert runner.CANDIDATE_ID == "W23-TE-PLANAR-TE-SCIENCE-17"
+    fixture_source = (runner.REPO / "tools/java/NativeW23TEScienceFixture.java").read_text()
+    assert 'mesh.create("ftri1", "FreeTri")' in fixture_source
+    assert "freeTri.selection().geom(2);" in fixture_source
+    assert "freeTri.selection().all()" in fixture_source
+    assert fixture_source.index("freeTri.selection().geom(2);") < fixture_source.index("freeTri.selection().all();")
+    assert "freeTri.selection().entities(2)" in fixture_source
+    assert 'mesh.getNumElem("tri")' in fixture_source
+    assert "mesh.isEmpty()" in fixture_source
+    assert "mesh.isComplete()" in fixture_source
 
 
 def test_study_call_plan_separates_four_submissions_from_configured_steps():
@@ -494,21 +577,44 @@ def test_direct_rpc_journal_separates_managed_requests_and_keeps_unknown_termina
 
 def test_study_run_budget_counts_only_run_calls_inside_study_run_jobs():
     metadata = {"phase": "submitted", "kind": "call",
-                "metadata": {"type": "call", "method": "run"}}
+                "metadata": {"type": "call", "method": "run",
+                              "request_id": "activity007-worker-request-178"}}
     assert runner._is_study_run_job({"operation": {"operation": "study.run"}})
+    assert runner._is_study_run_job({"operation": {
+        "operation": "operation_call",
+        "metadata": {"arguments": {"operation_id": "study.run"}}}})
     assert not runner._is_study_run_job({"operation": {"operation": "result.mode_overlap"}})
 
     class Store:
         def list_jobs(self, offset=0, limit=1000, project_id=None):
             rows = [
-                {"job_id": "study-job", "status": "SUCCEEDED",
-                 "operation": {"operation": "study.run"}},
+                {"job_id": "activity007-job", "operation_id": "activity007-operation",
+                 "status": "UNKNOWN", "operation": {
+                     "operation": "operation_call", "status": "UNKNOWN",
+                     "request_id": "activity007-operation-request",
+                     "metadata": {"arguments": {"operation_id": "study.run"},
+                                  "execution": {"request_id": "activity007-operation-request",
+                                                "expected_revision": 4}},
+                     "result": {"data": {
+                         "execution_state_unknown": True,
+                         "domain_outcome": {"state": "unknown", "failure": {
+                             "code": "ENGINE_CALL_FAILED", "safe_retry": False}}}}},
+                 "result": {"data": {
+                     "execution_state_unknown": True,
+                     "domain_outcome": {"state": "unknown", "failure": {
+                         "code": "ENGINE_CALL_FAILED", "safe_retry": False}}}}},
                 {"job_id": "overlap-job", "status": "SUCCEEDED",
                  "operation": {"operation": "result.mode_overlap"}},
             ]
             return rows[offset:offset + limit]
 
         def events(self, job_id, offset=0, limit=1000):
+            if job_id == "activity007-job":
+                return [
+                    {"id": 178, "event": "worker_request", "metadata": metadata},
+                    {"id": 179, "event": "worker_request", "metadata": {
+                        **metadata, "phase": "observed", "status": "FAILED"}},
+                ]
             return [{"event": "worker_request", "metadata": metadata}]
 
     class Preflight:
@@ -524,7 +630,317 @@ def test_study_run_budget_counts_only_run_calls_inside_study_run_jobs():
 
     rows = runner._actual_science_study_run_submissions(Daemon(), Preflight())
     assert len(rows) == 1
-    assert rows[0]["job_id"] == "study-job"
+    row = rows[0]
+    assert row["job_id"] == "activity007-job"
+    assert row["request_id"] == "activity007-worker-request-178"
+    assert row["status"] == "UNKNOWN"
+    assert row["domain_state"] == "unknown"
+    assert row["execution_state_unknown"] is True
+    assert row["safe_retry"] is False
+    assert row["operation_request_id"] == "activity007-operation-request"
+    assert row["operation_execution_request_id"] == "activity007-operation-request"
+    assert row["worker_event_id"] == 178
+    assert row["worker_event_method"] == "run"
+    projected = runner._runner_study_submission_records(rows)
+    assert len(projected) == 1
+    assert projected[0]["durable_job_status"] == "UNKNOWN"
+    assert projected[0]["domain_state"] == "unknown"
+    assert projected[0]["safe_retry"] is False
+    assert projected[0]["worker_event"]["metadata"]["method"] == "run"
+
+
+def _canonical_study_run_test_row(job_id, request_id, worker_event_id):
+    return {
+        "job_id": job_id, "request_id": request_id,
+        "worker_event_id": worker_event_id,
+        "operation": "study.run", "operation_id": f"operation-{job_id}",
+        "operation_request_id": f"outer-{job_id}",
+        "worker_event_phase": "submitted", "worker_event_method": "run",
+        "worker_event": {"phase": "submitted", "metadata": {
+            "request_id": request_id, "method": "run"}},
+    }
+
+
+def test_study_run_canonical_ordinal_projection_rejects_missing_duplicate_identity():
+    missing_event_id = _canonical_study_run_test_row("job-a", "worker-a", None)
+    with pytest.raises(ValueError, match="positive worker_event_id"):
+        runner._runner_study_submission_records([missing_event_id])
+
+    duplicate_event_id = [
+        _canonical_study_run_test_row("job-a", "worker-a", 41),
+        _canonical_study_run_test_row("job-b", "worker-b", 41),
+    ]
+    with pytest.raises(ValueError, match="repeats an event or job/request identity"):
+        runner._runner_study_submission_records(duplicate_event_id)
+
+    duplicate_job_request = [
+        _canonical_study_run_test_row("job-a", "worker-a", 41),
+        _canonical_study_run_test_row("job-a", "worker-a", 42),
+    ]
+    with pytest.raises(ValueError, match="repeats an event or job/request identity"):
+        runner._runner_study_submission_records(duplicate_job_request)
+
+
+def _real_pending_operation_store_study_run(tmp_path, monkeypatch, *, prior_submissions=0):
+    from types import SimpleNamespace
+
+    from comsol_mcp._operation_store import OperationStore
+    from tools import run_native_w23_te_managed_preflight as preflight
+
+    project_id = "project-test-activity008-r2"
+    monkeypatch.setattr(preflight, "PROJECT_ID", project_id)
+    store = OperationStore(tmp_path / "pending-study-run.sqlite3")
+    prior_jobs = []
+    for index in range(prior_submissions):
+        operation, _ = store.begin(
+            request_id=f"prior-outer-study-request-{index}",
+            idempotency_key=f"prior-outer-study-idempotency-{index}",
+            request_hash=f"prior-study-request-hash-{index}",
+            operation="operation_call",
+            metadata={
+                "project_id": project_id,
+                "arguments": {"operation_id": "study.run",
+                              "arguments": {"study": "std1", "timeout_s": 5}},
+                "execution": {"project_id": project_id,
+                              "request_id": f"prior-outer-study-request-{index}"},
+            },
+        )
+        prior_jobs.append((index, operation["job_id"]))
+    # Event IDs deliberately follow creation order. The newest-first job page
+    # will therefore return these rows in the opposite order once a later
+    # pending dispatch is appended during wait.
+    for index, prior_job_id in prior_jobs:
+        worker_request_id = f"prior-worker-study-request-{index}"
+        store.add_event(prior_job_id, "worker_request", {
+            "phase": "submitted", "kind": "call", "status": "RUNNING",
+            "request_id": worker_request_id,
+            "metadata": {"type": "call", "method": "run",
+                         "request_id": worker_request_id},
+        })
+        terminal_result = {
+            "success": True,
+            "data": {"job_id": prior_job_id, "execution_state_unknown": False,
+                     "domain_outcome": {"state": "succeeded"}},
+            "execution": {"job_id": prior_job_id},
+        }
+        store.update_job(prior_job_id, "SUCCEEDED", result=terminal_result)
+    operation, created = store.begin(
+        request_id="outer-study-request-r2",
+        idempotency_key="outer-study-idempotency-r2",
+        request_hash="activity008-r2-request-hash",
+        operation="operation_call",
+        metadata={
+            "project_id": project_id,
+            "arguments": {"operation_id": "study.run",
+                          "arguments": {"study": "std1", "timeout_s": 5}},
+            "execution": {"project_id": project_id,
+                          "request_id": "outer-study-request-r2"},
+        },
+    )
+    assert created is False
+    job_id = operation["job_id"]
+    store.update_job(job_id, "RUNNING")
+    daemon = SimpleNamespace(store=store)
+    response = {"success": True, "data": {"job_id": job_id, "status": "PENDING"},
+                "execution": {"job_id": job_id}}
+    return daemon, preflight, store, job_id, response
+
+
+def test_pending_dispatch_reconciles_late_worker_event_after_same_job_wait(
+        tmp_path, monkeypatch):
+    daemon, preflight, store, job_id, pending_response = (
+        _real_pending_operation_store_study_run(
+            tmp_path, monkeypatch, prior_submissions=2))
+    before_rows = runner._actual_science_study_run_submissions(daemon, preflight)
+    assert len(before_rows) == 2
+    before_ids = {(row["job_id"], row["request_id"]) for row in before_rows}
+    before_wait = runner._reconcile_study_run_dispatch(
+        daemon, preflight, response_job_id=job_id, before_identities=before_ids)
+    assert before_wait["status"] == "UNVERIFIED_POST_WAIT_ACCOUNTING_STOP"
+    assert before_wait["submission_count_for_dispatch"] == "UNKNOWN"
+
+    terminal_response = {
+        "success": True,
+        "data": {"job_id": job_id, "domain_outcome": {"state": "succeeded"}},
+        "execution": {"job_id": job_id},
+    }
+    worker_request_id = "worker-study-run-request-r2"
+    worker_submitted = {
+        "phase": "submitted", "kind": "call", "status": "RUNNING",
+        "request_id": worker_request_id,
+        "metadata": {"type": "call", "method": "run",
+                     "request_id": worker_request_id},
+    }
+    sleep_calls = []
+
+    def persist_submission_during_wait(_seconds):
+        sleep_calls.append(1)
+        store.add_event(job_id, "worker_request", worker_submitted)
+        worker_observed = {
+            "phase": "observed", "kind": "call", "status": "SUCCEEDED",
+            "request_id": worker_request_id,
+            "metadata": {"type": "call", "method": "run", "status": "SUCCEEDED",
+                         "request_id": worker_request_id},
+        }
+        store.add_event(job_id, "worker_request", worker_observed)
+        store.update_job(job_id, "SUCCEEDED", result=terminal_response)
+
+    monkeypatch.setattr(runner.time, "sleep", persist_submission_during_wait)
+    terminal = runner._wait_job(
+        daemon, pending_response, deadline_epoch=runner.time.time() + 10,
+        cleanup_reserve_s=0, label="pending_study_run_r2", evidence=tmp_path)
+    assert terminal["success"] is True
+    assert len(sleep_calls) == 1
+
+    after_wait = runner._reconcile_study_run_dispatch(
+        daemon, preflight, response_job_id=job_id, before_identities=before_ids)
+    assert after_wait["status"] == "PASS_ONE_DURABLE_WORKER_SUBMISSION_BOUND_TO_DISPATCH_JOB"
+    assert after_wait["response_job_id"] == job_id
+    assert after_wait["response_job_status"] == "SUCCEEDED"
+    assert after_wait["response_job_is_study_run"] is True
+    assert after_wait["submission_count_for_dispatch"] == 1
+    assert len(after_wait["response_job_worker_submissions"]) == 1
+    assert after_wait["response_job_worker_submissions"][0]["request_id"] == worker_request_id
+    assert "ordinal" not in after_wait["response_job_worker_submissions"][0]
+    accounting = {"status": after_wait["status"], "post_wait_reconciliation": after_wait}
+    runner._require_terminal_study_run_success_before_accounting(
+        {"require_success": runner._operation_succeeded}, terminal_response,
+        "pending Study.run positive control", accounting,
+        expected_total_dispatch_count=3)
+    with pytest.raises(RuntimeError, match="cumulative durable submission count is unverified"):
+        runner._require_terminal_study_run_success_before_accounting(
+            {"require_success": runner._operation_succeeded}, terminal_response,
+            "cumulative submission mismatch negative control", accounting,
+            expected_total_dispatch_count=4)
+
+    canonical_records = runner._runner_study_submission_records(
+        after_wait["all_durable_submissions"])
+    # OperationStore's job page is newest-first. The canonical ordinal must
+    # instead follow global Worker event IDs and stay attached to exact IDs.
+    raw_event_ids = [row["worker_event_id"] for row in after_wait["all_durable_submissions"]]
+    assert raw_event_ids == sorted(raw_event_ids, reverse=True)
+    assert [row["worker_event_id"] for row in canonical_records] == sorted(raw_event_ids)
+    assert [row["ordinal"] for row in canonical_records] == [1, 2, 3]
+
+    phase_calls = []
+    def fake_save(_daemon, ref, revision, fixture_name, case_id, _helpers, **kwargs):
+        phase_calls.append(("save", case_id))
+        path = kwargs["project_workspace"] / "provisional.mph"
+        path.write_bytes(b"offline-test-placeholder")
+        receipt = {"status": kwargs["receipt_status"], "path": str(path),
+                   "bytes": path.stat().st_size, "sha256": runner.sha256_file(path),
+                   "scientific_acceptance": kwargs["scientific_acceptance"]}
+        return path, receipt, ref, revision + 1
+
+    def fake_fixture_call(_daemon, ref, revision, fixture_name, args, _helpers, **kwargs):
+        phase_calls.append((args["phase"], kwargs["label"]))
+        assert args == {"phase": "solution_inventory"}
+        return {"status": "SYNTHETIC_ZERO_SOLVE_INVENTORY_ENTRY"}, ref, revision + 1
+
+    monkeypatch.setattr(runner, "_save_case_model", fake_save)
+    monkeypatch.setattr(runner, "_fixture_call", fake_fixture_call)
+    terminal_response["execution"]["model_ref"] = {
+        "model_tag": "testModel", "session_id": "test-session"}
+    terminal_response["execution"]["revision"] = 7
+    provisional_saved_models = {}
+    summary = {}
+    completion = runner._complete_terminal_study_run_case(
+        daemon, {"require_success": runner._operation_succeeded},
+        terminal_response=terminal_response, accounting=accounting,
+        expected_total_dispatch_count=3, post_wait_reconciliation=after_wait,
+        study_submissions=canonical_records, response_job_id=job_id,
+        case_id="coarse-phase0", completed_case_count=1,
+        ref={"model_tag": "oldModel", "session_id": "test-session"}, revision=6,
+            fixture_name="NativeW23TEScienceFixture.java",
+            project_workspace=tmp_path, deadline_epoch=runner.time.time()+600,
+        evidence=tmp_path, summary=summary,
+        provisional_saved_models=provisional_saved_models)
+    assert completion["submission"]["ordinal"] == 3
+    assert completion["submission"]["worker_event_id"] == raw_event_ids[0]
+    assert completion["response_job_worker_submission"]["job_id"] == job_id
+    assert phase_calls == [
+        ("save", "coarse-phase0_provisional"),
+        ("solution_inventory", "solution_inventory_coarse-phase0"),
+    ]
+    assert completion["inventory"]["status"] == "SYNTHETIC_ZERO_SOLVE_INVENTORY_ENTRY"
+    assert provisional_saved_models["coarse-phase0"]["scientific_acceptance"] == "NOT_ACCEPTED"
+    assert summary["native_scientific_acceptance"] == "NOT_ACCEPTED"
+    assert len(runner._actual_science_study_run_submissions(daemon, preflight)) == 3
+
+    wrong_job = runner._reconcile_study_run_dispatch(
+        daemon, preflight, response_job_id="not-the-dispatch-response-job",
+        before_identities=before_ids)
+    assert wrong_job["status"] == "UNVERIFIED_POST_WAIT_ACCOUNTING_STOP"
+
+
+def test_pending_unknown_without_durable_submission_stays_unknown_not_zero(
+        tmp_path, monkeypatch):
+    daemon, preflight, store, job_id, pending_response = (
+        _real_pending_operation_store_study_run(tmp_path, monkeypatch))
+    before_ids = set()
+
+    def become_unknown_during_wait(_seconds):
+        store.update_job(job_id, "UNKNOWN", result={
+            "success": False,
+            "data": {"job_id": job_id, "execution_state_unknown": True,
+                     "domain_outcome": {"state": "unknown", "failure": {
+                         "code": "ENGINE_CALL_FAILED", "safe_retry": False}}},
+            "error": {"message": "ORIGINAL_UNKNOWN_SENTINEL", "safe_retry": False},
+            "execution": {"job_id": job_id},
+        })
+
+    monkeypatch.setattr(runner.time, "sleep", become_unknown_during_wait)
+    terminal = runner._wait_job(
+        daemon, pending_response, deadline_epoch=runner.time.time() + 10,
+        cleanup_reserve_s=0, label="pending_unknown_r2", evidence=tmp_path)
+    reconciliation = runner._reconcile_study_run_dispatch(
+        daemon, preflight, response_job_id=job_id, before_identities=before_ids)
+    assert terminal["success"] is False
+    assert reconciliation["response_job_status"] == "UNKNOWN"
+    assert reconciliation["status"] == "UNVERIFIED_POST_WAIT_ACCOUNTING_STOP"
+    assert reconciliation["submission_count_for_dispatch"] == "UNKNOWN"
+    with pytest.raises(RuntimeError, match="ORIGINAL_UNKNOWN_SENTINEL"):
+        runner._require_terminal_study_run_success_before_accounting(
+            {"require_success": runner._operation_succeeded}, terminal,
+            "Study.run negative control",
+            {"status": reconciliation["status"], "post_wait_reconciliation": reconciliation},
+            expected_total_dispatch_count=1)
+
+
+def test_pending_worker_dispatch_preserves_original_failure_before_accounting_mismatch(
+        tmp_path, monkeypatch):
+    daemon, preflight, store, job_id, pending_response = (
+        _real_pending_operation_store_study_run(tmp_path, monkeypatch))
+    before_ids = set()
+    worker_request_id = "worker-failed-study-run-request-r2"
+    failed_response = {
+        "success": False,
+        "data": {"job_id": job_id, "domain_outcome": {"state": "failed"}},
+        "error": {"code": "ENGINE_CALL_FAILED", "message": "ORIGINAL_COMSOL_FAILURE_SENTINEL"},
+        "execution": {"job_id": job_id},
+    }
+    def fail_during_wait(_seconds):
+        store.add_event(job_id, "worker_request", {
+            "phase": "submitted", "kind": "call", "status": "RUNNING",
+            "request_id": worker_request_id,
+            "metadata": {"type": "call", "method": "run",
+                         "request_id": worker_request_id},
+        })
+        store.update_job(job_id, "FAILED", result=failed_response)
+
+    monkeypatch.setattr(runner.time, "sleep", fail_during_wait)
+    terminal = runner._wait_job(
+        daemon, pending_response, deadline_epoch=runner.time.time() + 10,
+        cleanup_reserve_s=0, label="pending_failure_r2", evidence=tmp_path)
+    reconciliation = runner._reconcile_study_run_dispatch(
+        daemon, preflight, response_job_id=job_id, before_identities=before_ids)
+    assert reconciliation["status"] == "PASS_ONE_DURABLE_WORKER_SUBMISSION_BOUND_TO_DISPATCH_JOB"
+    assert reconciliation["response_job_status"] == "FAILED"
+    with pytest.raises(RuntimeError, match="ORIGINAL_COMSOL_FAILURE_SENTINEL"):
+        runner._require_terminal_study_run_success_before_accounting(
+            {"require_success": runner._operation_succeeded}, terminal,
+            "Study.run native failure control", {"status": "UNVERIFIED_POST_WAIT_ACCOUNTING_STOP"},
+            expected_total_dispatch_count=2)
 
 
 def test_worker_events_for_job_reads_all_pages():
@@ -589,3 +1005,437 @@ def test_execute_rejects_bad_freeze_before_any_process_or_evidence_directory(tmp
         runner.execute(freeze_path, "0" * 64, approval_path, work, evidence)
     assert not work.exists()
     assert not evidence.exists()
+
+
+def _material_getter(value_type: str, raw, *, stored_size=None):
+    size_getter = "MaterialModel.size"
+    if value_type == "StringArray":
+        return {"value_type": value_type, "getter": "MaterialModel.getStringArray",
+                "raw_value": raw, "raw_shape": [len(raw)], "size_getter": size_getter,
+                "stored_size": stored_size if stored_size is not None else ([1, 1] if len(raw) == 1 else [3, 3]),
+                "stored_size_status": "CAPTURED", "readback_status": "CAPTURED"}
+    if value_type == "String":
+        return {"value_type": value_type, "getter": "MaterialModel.getString",
+                "raw_value": raw, "raw_shape": [], "size_getter": size_getter,
+                "stored_size": stored_size if stored_size is not None else [1, 1],
+                "stored_size_status": "CAPTURED", "readback_status": "CAPTURED"}
+    return {"value_type": value_type, "getter": "MaterialModel.getStringMatrix",
+            "raw_value": raw, "raw_shape": [len(raw), len(raw[0]) if raw else 0],
+            "size_getter": size_getter, "stored_size": stored_size if stored_size is not None else [3, 3],
+            "stored_size_status": "CAPTURED", "readback_status": "CAPTURED"}
+
+
+def _valid_material_build():
+    rows = []
+    for tag, selection, epsilon in (
+            ("matCore", "selCoreMaterial", "n_core^2"),
+            ("matCladdingBottom", "selCladdingBottom", "n_clad^2"),
+            ("matCladdingTop", "selCladdingTop", "n_clad^2")):
+        rows.append({
+            "tag": tag,
+            "selection": selection,
+            "expected_diagonal_relative_permittivity": epsilon,
+            "relative_permittivity": _material_getter("StringArray", [
+                epsilon, "0", "0", "0", epsilon, "0", "0", "0", epsilon]),
+            "relative_permeability": _material_getter("StringMatrix", [
+                ["1", "0", "0"], ["0", "1", "0"], ["0", "0", "1"]]),
+            "electric_conductivity": _material_getter("StringArray", ["0[S/m]"]),
+            "electric_lossless_assumption": (
+                "real_relative_permittivity_with_electric_conductivity_set_to_zero_S_per_m"),
+        })
+    return {"materials": rows}
+
+
+@pytest.mark.parametrize(("value_type", "raw", "stored_size"), [
+    ("StringArray", ["0[S/m]"], [1, 1]),
+    ("StringArray", ["0[S/m]"], [3, 3]),
+    ("String", "0[S/m]", [1, 1]),
+])
+def test_lossless_material_gate_accepts_exact_finite_zero_conductivity_for_every_material(
+        value_type, raw, stored_size):
+    build = _valid_material_build()
+    for row in build["materials"]:
+        row["electric_conductivity"] = _material_getter(
+            value_type, copy.deepcopy(raw), stored_size=stored_size)
+    gate = runner.validate_material_tensor_readback(build)
+    assert gate["electric_conductivity_is_finite_zero_S_per_m_for_every_material"] is True
+    for material in gate["materials"]:
+        assert material["electric_conductivity_raw_shape"] == (
+            [1] if value_type == "StringArray" else [])
+        assert material["electric_conductivity_stored_size"] == stored_size
+        assert material["electric_conductivity_value_S_per_m"] == 0.0
+        assert material["electric_conductivity_finite_zero_verified"] is True
+
+
+@pytest.mark.parametrize("mutation, message", [
+    (lambda payload: payload["raw_value"].__setitem__(0, "0.1[S/m]"), "must be finite zero"),
+    (lambda payload: payload["raw_value"].__setitem__(0, "NaN[S/m]"), "finite numeric zero"),
+    (lambda payload: payload["raw_value"].__setitem__(0, "0[1/s]"), "finite numeric zero"),
+    (lambda payload: payload.update(value_type="Unknown"), "expected matching String/getString"),
+    (lambda payload: payload.update(raw_shape=[1, 1]), "expected matching String/getString"),
+    (lambda payload: payload.update(stored_size=[3, 1]), "MaterialModel.size must be captured"),
+    (lambda payload: payload.update(readback_status="UNVERIFIED_NULL_VALUE"), "not captured"),
+    (lambda payload: payload.update(stored_size_status="UNVERIFIED_SIZE_ERROR"), "MaterialModel.size must be captured"),
+])
+def test_lossless_material_gate_rejects_unverified_nonzero_or_malformed_conductivity(mutation, message):
+    build = _valid_material_build()
+    mutation(build["materials"][0]["electric_conductivity"])
+    with pytest.raises(ValueError, match=message):
+        runner.validate_material_tensor_readback(build)
+
+
+@pytest.mark.parametrize("raw", ["1e-400[S/m]", "1e9999[S/m]", "-1e-400[S/m]"])
+def test_lossless_material_gate_rejects_decimal_underflow_and_float_overflow(raw):
+    build = _valid_material_build()
+    build["materials"][0]["electric_conductivity"] = _material_getter(
+        "StringArray", [raw])
+    with pytest.raises(ValueError, match="conductivity must be finite zero S/m"):
+        runner.validate_material_tensor_readback(build)
+
+
+def test_material_tensor_gate_accepts_only_metadata_bound_documented_shapes():
+    build = _valid_material_build()
+    gate = runner.validate_material_tensor_readback(build)
+    assert gate["status"] == "PASS_NATIVE_MATERIAL_TENSOR_AND_LOSSLESS_CONDUCTIVITY_READBACK"
+    assert gate["physical_tensor_diagonal_and_zero_off_diagonal_verified"] is True
+    assert gate["electric_conductivity_is_finite_zero_S_per_m_for_every_material"] is True
+    core = next(row for row in gate["materials"] if row["tag"] == "matCore")
+    assert core["relative_permittivity_value_type"] == "StringArray"
+    assert core["relative_permittivity_raw_shape"] == [9]
+    assert core["relative_permittivity_stored_size"] == [3, 3]
+    assert core["relative_permeability_value_type"] == "StringMatrix"
+    assert core["relative_permeability_raw_shape"] == [3, 3]
+    assert core["relative_permeability_stored_size"] == [3, 3]
+    assert core["electric_conductivity_value_type"] == "StringArray"
+    assert core["electric_conductivity_raw_shape"] == [1]
+    assert core["electric_conductivity_stored_size"] == [1, 1]
+    assert core["electric_conductivity_value_S_per_m"] == 0.0
+    assert core["electric_conductivity_finite_zero_verified"] is True
+    assert gate["string_array_index_order"].startswith("COMSOL 6.4 documented column-wise")
+
+
+@pytest.mark.parametrize("stored_size", ([1, 1], [3, 3]))
+def test_material_tensor_gate_reconstructs_only_canonical_isotropic_one_entry_for_captured_property_sizes(stored_size):
+    build = _valid_material_build()
+    for row in build["materials"]:
+        epsilon = row["expected_diagonal_relative_permittivity"]
+        row["relative_permittivity"] = _material_getter("StringArray", [epsilon], stored_size=stored_size)
+        row["relative_permeability"] = _material_getter("StringArray", ["1"], stored_size=stored_size)
+
+    gate = runner.validate_material_tensor_readback(build)
+    assert gate["status"] == "PASS_NATIVE_MATERIAL_TENSOR_AND_LOSSLESS_CONDUCTIVITY_READBACK"
+    assert gate["physical_tensor_diagonal_and_zero_off_diagonal_verified"] is True
+    for row in gate["materials"]:
+        assert row["relative_permittivity_reconstruction"] == (
+            "StringArray-isotropic-one-entry-property-size-1x1" if stored_size == [1, 1]
+            else "StringArray-isotropic-one-entry-property-size-3x3")
+        assert row["relative_permittivity_raw_shape"] == [1]
+        assert row["relative_permittivity_stored_size"] == stored_size
+        assert row["relative_permeability_reconstruction"] == (
+            "StringArray-isotropic-one-entry-property-size-1x1" if stored_size == [1, 1]
+            else "StringArray-isotropic-one-entry-property-size-3x3")
+        assert row["relative_permeability_diagonal"] == "1"
+
+
+@pytest.mark.parametrize("stored_size", ([1, 1], [3, 3]))
+def test_material_tensor_gate_reconstructs_string_scalar_with_either_documented_property_size(stored_size):
+    build = _valid_material_build()
+    for row in build["materials"]:
+        epsilon = row["expected_diagonal_relative_permittivity"]
+        row["relative_permittivity"] = _material_getter("String", epsilon, stored_size=stored_size)
+        row["relative_permeability"] = _material_getter("String", "1", stored_size=stored_size)
+
+    gate = runner.validate_material_tensor_readback(build)
+    assert gate["status"] == "PASS_NATIVE_MATERIAL_TENSOR_AND_LOSSLESS_CONDUCTIVITY_READBACK"
+    assert gate["physical_tensor_diagonal_and_zero_off_diagonal_verified"] is True
+    assert all(row["relative_permittivity_stored_size"] == stored_size for row in gate["materials"])
+    assert all(row["relative_permeability_diagonal"] == "1" for row in gate["materials"])
+
+
+def test_material_tensor_gate_reconstructs_documented_string_scalar_only_as_isotropic():
+    build = _valid_material_build()
+    for row in build["materials"]:
+        epsilon = row["expected_diagonal_relative_permittivity"]
+        row["relative_permittivity"] = _material_getter("String", epsilon)
+        row["relative_permeability"] = _material_getter("String", "1")
+
+    gate = runner.validate_material_tensor_readback(build)
+    assert gate["status"] == "PASS_NATIVE_MATERIAL_TENSOR_AND_LOSSLESS_CONDUCTIVITY_READBACK"
+    assert all(row["relative_permittivity_reconstruction"] == "String-isotropic-scalar-property-size-1x1"
+               for row in gate["materials"])
+
+
+@pytest.mark.parametrize("stored_size", ([1, 3], [3, 1], [2, 2], [1, 9]))
+def test_material_tensor_gate_rejects_single_scalar_for_unapproved_property_size(stored_size):
+    build = _valid_material_build()
+    for row in build["materials"]:
+        epsilon = row["expected_diagonal_relative_permittivity"]
+        row["relative_permittivity"] = _material_getter("StringArray", [epsilon], stored_size=stored_size)
+        row["relative_permeability"] = _material_getter("StringArray", ["1"], stored_size=stored_size)
+    with pytest.raises(ValueError, match=r"StringArray requires exact isotropic raw_shape \[1\]"):
+        runner.validate_material_tensor_readback(build)
+
+
+@pytest.mark.parametrize("stored_size", ([1, 3], [3, 1], [2, 2], [1, 9]))
+def test_material_tensor_gate_rejects_string_scalar_for_unapproved_property_size(stored_size):
+    build = _valid_material_build()
+    for row in build["materials"]:
+        epsilon = row["expected_diagonal_relative_permittivity"]
+        row["relative_permittivity"] = _material_getter("String", epsilon, stored_size=stored_size)
+        row["relative_permeability"] = _material_getter("String", "1", stored_size=stored_size)
+    with pytest.raises(ValueError, match=r"String scalar requires raw_shape \[\] and captured size \[1,1\] or \[3,3\]"):
+        runner.validate_material_tensor_readback(build)
+
+
+@pytest.mark.parametrize("mutation, message", [
+    (lambda payload: payload.update(raw_shape=[]), r"StringArray requires exact isotropic raw_shape \[1\]"),
+    (lambda payload: payload.update(stored_size=[1, 3]), r"StringArray requires exact isotropic raw_shape \[1\]"),
+    (lambda payload: payload.update(stored_size=[3, 1]), r"StringArray requires exact isotropic raw_shape \[1\]"),
+    (lambda payload: payload.update(stored_size=[2, 2]), r"StringArray requires exact isotropic raw_shape \[1\]"),
+    (lambda payload: payload.update(stored_size=[1, 9]), r"StringArray requires exact isotropic raw_shape \[1\]"),
+    (lambda payload: payload.update(readback_status="UNVERIFIED_NULL_VALUE"), "getter readback is not captured"),
+])
+def test_material_tensor_gate_rejects_one_entry_unless_raw_shape_size_and_getter_are_exact(
+    mutation, message,
+):
+    build = _valid_material_build()
+    for row in build["materials"]:
+        epsilon = row["expected_diagonal_relative_permittivity"]
+        row["relative_permittivity"] = _material_getter("StringArray", [epsilon])
+        row["relative_permeability"] = _material_getter("StringArray", ["1"])
+    mutation(build["materials"][0]["relative_permittivity"])
+    with pytest.raises(ValueError, match=message):
+        runner.validate_material_tensor_readback(build)
+
+
+@pytest.mark.parametrize("mutate, message", [
+    (lambda row: row["relative_permittivity"].update(raw_shape=[3, 3]), r"StringArray requires exact isotropic raw_shape \[1\]"),
+    (lambda row: row["relative_permittivity"].update(value_type="Unknown"), "unsupported or mismatched"),
+    (lambda row: row["relative_permeability"].update(raw_shape=[3, 2]), "StringMatrix requires actual 3x3"),
+    (lambda row: row["relative_permeability"]["raw_value"][0].__setitem__(1, "0.01"), r"relpermeability\[0,1\]"),
+    (lambda row: row["relative_permittivity"]["raw_value"].__setitem__(4, "n_core"), r"relpermittivity\[1,1\]"),
+    (lambda row: row["relative_permittivity"].update(stored_size=[1, 1]), r"StringArray requires exact isotropic raw_shape \[1\]"),
+    (lambda row: row["relative_permittivity"].update(stored_size=[3, 3, 1]), "two positive integer dimensions"),
+    (lambda row: row["relative_permittivity"].pop("stored_size"), "two positive integer dimensions"),
+])
+def test_material_tensor_gate_rejects_wrong_metadata_shape_or_physical_entries(mutate, message):
+    build = _valid_material_build()
+    mutate(build["materials"][0])
+    with pytest.raises(ValueError, match=message):
+        runner.validate_material_tensor_readback(build)
+
+
+def test_fixture_material_source_uses_nine_entry_vectors_and_typed_getter_dispatch():
+    source = (Path(__file__).parents[1] / "tools/java/NativeW23TEScienceFixture.java").read_text(
+        encoding="utf-8")
+    assert 'String[] epsilon = {eps, "0", "0", "0", eps, "0", "0", "0", eps};' in source
+    assert 'String[] mu = {"1", "0", "0", "0", "1", "0", "0", "0", "1"};' in source
+    assert '.set("relpermittivity", epsilon)' in source
+    assert '.set("relpermeability", mu)' in source
+    assert '.set("electricconductivity", new String[] {"0[S/m]"})' in source
+    assert 'materialPropertyReadback(group, "electricconductivity")' in source
+    assert '"real_relative_permittivity_with_electric_conductivity_set_to_zero_S_per_m"' in source
+    assert 'String valueType = group.getValueType(property);' in source
+    assert 'group.getStringArray(property)' in source
+    assert 'group.getStringMatrix(property)' in source
+    assert 'group.getString(property)' in source
+    assert 'int[] storedSize = group.size(property);' in source
+    assert 'result.put("size_getter", "MaterialModel.size");' in source
+    assert 'result.put("stored_size"' in source
+    assert 'result.put("raw_shape"' in source
+    assert "String[][] epsilon" not in source
+
+
+def test_durable_unknown_cleanup_idle_requires_terminal_rpc_fresh_health_and_exact_endpoint():
+    from tools import run_native_w23_te_managed_preflight as preflight
+
+    job = {"job_id": "job-unknown", "status": "UNKNOWN",
+           "result": {"domain_state": "unknown", "safe_retry": False}}
+    events = [
+        {"id": 1, "event": "worker_request", "metadata": {
+            "request_id": "fixture-rpc", "phase": "submitted", "status": "RUNNING"}},
+        {"id": 2, "event": "worker_request", "metadata": {
+            "request_id": "fixture-rpc", "phase": "observed", "status": "FAILED"}},
+    ]
+
+    class Store:
+        def list_jobs(self, offset=0, limit=1000, project_id=None):
+            return [job][offset:offset + limit]
+
+        def events(self, job_id, offset=0, limit=1000):
+            return events[offset:offset + limit]
+
+    class Daemon:
+        store = Store()
+
+    health = {"ok": True, "status": "HEALTHY", "connected": True,
+              "server": "127.0.0.1:61926", "queued_or_running": 0}
+    proof = preflight._daemon_idle_proof(
+        Daemon(), worker_health=health, expected_endpoint="127.0.0.1:61926")
+    assert proof["idle"] is True
+    assert proof["durable_unknown_preserved"] is True
+    assert proof["durable_unknown_job_ids"] == ["job-unknown"]
+    assert job["status"] == "UNKNOWN" and job["result"]["safe_retry"] is False
+
+    assert preflight._daemon_idle_proof(Daemon())["idle"] is False
+    assert preflight._daemon_idle_proof(
+        Daemon(), worker_health=health, expected_endpoint="127.0.0.1:61927")["idle"] is False
+    assert preflight._daemon_idle_proof(
+        Daemon(), worker_health=dict(health, queued_or_running=1),
+        expected_endpoint="127.0.0.1:61926")["idle"] is False
+
+    original_events = list(events)
+    events[:] = original_events[:1]
+    assert preflight._daemon_idle_proof(
+        Daemon(), worker_health=health, expected_endpoint="127.0.0.1:61926")["idle"] is False
+    events[:] = original_events
+    events.extend(original_events)
+    assert preflight._daemon_idle_proof(
+        Daemon(), worker_health=health, expected_endpoint="127.0.0.1:61926")["idle"] is False
+    events[:] = original_events
+    job["status"] = "RUNNING"
+    assert preflight._daemon_idle_proof(
+        Daemon(), worker_health=health, expected_endpoint="127.0.0.1:61926")["idle"] is False
+
+
+def test_socket_owner_gate_parses_both_numeric_loopback_endpoints(monkeypatch):
+    from types import SimpleNamespace
+    from tools import run_native_w23_te_managed_preflight as preflight
+
+    output = "\n".join((
+        "COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME",
+        "java 101 everwalker 59u IPv6 0x1 0t0 TCP 127.0.0.1:61926 (LISTEN)",
+        "java 101 everwalker 60u IPv6 0x2 0t0 TCP 127.0.0.1:61926->127.0.0.10:61953 (ESTABLISHED)",
+        "java 102 everwalker 61u IPv6 0x3 0t0 TCP [::ffff:127.0.0.1]:61953->[::1]:61926 (ESTABLISHED)",
+    ))
+    monkeypatch.setattr(preflight.subprocess, "run", lambda *args, **kwargs:
+                        SimpleNamespace(returncode=0, stdout=output, stderr=""))
+    receipt = preflight._port_socket_owners(61926)
+    assert receipt["safe"] is True
+    assert receipt["pids"] == [101, 102]
+    assert all(row["valid"] and row["active"] is True for row in receipt["rows"])
+    assert receipt["rows"][1]["remote_endpoint"]["host"] == "127.0.0.10"
+    assert receipt["rows"][1]["remote_endpoint"]["loopback"] is True
+    assert receipt["rows"][2]["local_endpoint"]["ipv4_mapped_loopback"] is True
+
+
+@pytest.mark.parametrize("socket_text, state", [
+    ("127.0.0.1:61926->8.8.8.8:443", "ESTABLISHED"),
+    ("127.0.0.1:61926->[::1:443", "ESTABLISHED"),
+    ("127.0.0.1:61926->[not-an-ip]:443", "ESTABLISHED"),
+    ("*:61926", "LISTEN"),
+    ("127.0.0.1:61926->127.0.0.1:61953", "CLOSE_WAIT"),
+])
+def test_socket_owner_gate_blocks_external_malformed_wildcard_or_unknown_state(
+        monkeypatch, socket_text, state):
+    from types import SimpleNamespace
+    from tools import run_native_w23_te_managed_preflight as preflight
+
+    output = "COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME\n"
+    output += f"java 101 everwalker 59u IPv6 0x1 0t0 TCP {socket_text} ({state})\n"
+    monkeypatch.setattr(preflight.subprocess, "run", lambda *args, **kwargs:
+                        SimpleNamespace(returncode=0, stdout=output, stderr=""))
+    receipt = preflight._port_socket_owners(61926)
+    assert receipt["safe"] is False
+    assert receipt["pids"] == []
+    assert receipt["rows"][0]["valid"] is False
+
+
+def test_socket_owner_gate_keeps_actual_closed_ipv6_form_as_inactive_history(monkeypatch):
+    from types import SimpleNamespace
+    from tools import run_native_w23_te_managed_preflight as preflight
+
+    output = "\n".join((
+        "COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME",
+        "java 101 everwalker 59u IPv6 0x1 0t0 TCP 127.0.0.1:61926 (LISTEN)",
+        "java 999 everwalker 174u IPv6 0x2 0t0 TCP [::127.0.0.1]:61926->[::127.0.0.1]:61953 (CLOSED)",
+    ))
+    monkeypatch.setattr(preflight.subprocess, "run", lambda *args, **kwargs:
+                        SimpleNamespace(returncode=0, stdout=output, stderr=""))
+    receipt = preflight._port_socket_owners(61926)
+    assert receipt["safe"] is True
+    assert receipt["pids"] == [101]
+    assert receipt["inactive_historical_pids"] == [999]
+    closed = receipt["rows"][1]
+    assert closed["state"] == "CLOSED" and closed["active"] is False
+    assert closed["loopback_only"] is None
+    assert closed["endpoint_semantics"] == (
+        "inactive_closed_history_only_not_used_as_live_loopback_or_client_proof")
+    assert closed["local_endpoint"]["host"] == "::7f00:1"
+    assert closed["local_endpoint"]["loopback"] is False
+
+
+def test_bma_uses_documented_shift_search_enum_without_relaxing_science_gates():
+    fixture = Path(runner.FIXTURE).read_text(encoding="utf-8")
+    assert 'bma.set("eigwhich", "lm")' in fixture
+    assert 'bma.set("shiftactive", "on")' in fixture
+    assert 'bma.set("shift", "1.54")' in fixture
+    assert 'bma.set("neigs", 1)' in fixture
+    assert runner.EXPECTED_NEFF_TE0 == 1.540405036791
+    assert runner.MAX_STUDY_RUN_CALLS == 4
+    assert runner.CANDIDATE_ID == "W23-TE-PLANAR-TE-SCIENCE-17"
+    assert runner.PROJECT_LABEL == "W23 managed planar TE science candidate 17"
+
+
+def test_remote_client_disconnect_decodes_worker_result_and_owned_close_api():
+    worker = object.__new__(PersistentJavaWorker)
+    sent = {}
+    result = {"connected": False, "generation": 3, "instance_id": "worker-instance-test"}
+
+    def submit(kind, payload, *, request_id=None, rpc_timeout_s=None):
+        sent.update({"kind": kind, "payload": payload, "request_id": request_id,
+                     "rpc_timeout_s": rpc_timeout_s})
+        return {"ok": True, "status": "SUCCEEDED", "result": dict(result)}
+
+    worker.submit = submit
+    decoded = worker.client().disconnect(request_id="disconnect-test", rpc_timeout_s=2.0)
+    assert sent == {"kind": "disconnect", "payload": {}, "request_id": "disconnect-test",
+                    "rpc_timeout_s": 2.0}
+    assert decoded == result  # production RemoteClient returns the decoded result, not its wire envelope
+
+    class OwnedChild:
+        pid = 43210
+        def __init__(self):
+            self.returncode = None
+            self.terminated = False
+        def poll(self):
+            return self.returncode
+        def terminate(self):
+            self.terminated = True
+            self.returncode = 0
+        def wait(self, timeout=None):
+            self.returncode = 0
+            return self.returncode
+
+    import threading
+    child = OwnedChild()
+    worker._lock = threading.RLock()
+    worker._process = child
+    worker._port = 23456
+    worker._generation = 3
+    worker._classes_dir = Path("classes")
+    worker.close()
+    assert child.terminated is True
+    assert worker._process is None
+    assert worker._port is None
+    assert worker._generation is None
+    assert worker._classes_dir is None
+
+
+def test_worker_disconnect_verification_requires_same_identity_and_direct_result_shape():
+    before = {"ok": True, "status": "HEALTHY", "instance_id": "worker-1",
+              "generation": 2, "connected": True, "queued_or_running": 0}
+    direct_result = {"connected": False, "instance_id": "worker-1", "generation": 3}
+    after = {"ok": True, "status": "HEALTHY", "instance_id": "worker-1",
+             "generation": 3, "connected": False, "queued_or_running": 0}
+    assert runner._worker_disconnect_verified(direct_result, before, after) is True
+    assert runner._worker_disconnect_verified(
+        {"ok": True, "status": "SUCCEEDED", "result": direct_result}, before, after) is False
+    assert runner._worker_disconnect_verified(
+        dict(direct_result, instance_id="other-worker"), before, after) is False
+    assert runner._worker_disconnect_verified(
+        dict(direct_result, generation=4), before, after) is False
+    assert runner._worker_disconnect_verified(
+        direct_result, before, dict(after, connected=True)) is False
+    assert runner._worker_disconnect_verified(
+        direct_result, dict(before, queued_or_running=False), after) is False

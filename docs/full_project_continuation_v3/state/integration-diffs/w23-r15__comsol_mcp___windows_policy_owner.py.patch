@@ -1,0 +1,29 @@
+--- root/comsol_mcp/_windows_policy_owner.py
++++ w23-r15/comsol_mcp/_windows_policy_owner.py
+@@ -0,0 +1,26 @@
++"""Daemon-held non-wire owner for read-only policy observations, never proof."""
++from ._windows_owned_resources import registry_for,attach_registry,NativeResourceError
++_SEAL=object()
++class _PolicyObservationOwner:
++    def __init__(self,daemon,observer,*,seal):
++        if seal is not _SEAL:raise NativeResourceError('T037_POLICY_UNVERIFIED','private policy owner required')
++        self._seal=seal;self.daemon=daemon;self.observer=observer
++        self.registry=registry_for(self);self.released=False
++        api=getattr(observer,'api',None)
++        if api is not None:attach_registry(api,self.registry)
++    def recover_owned(self,daemon):
++        if self._seal is not _SEAL or daemon is not self.daemon:
++            raise NativeResourceError('T037_POLICY_UNVERIFIED','original policy owner required')
++        # Serialize explicit recovery with every new policy observation.
++        with daemon._session_connect_lock:
++            if daemon._t037_policy_observation_owner is not self:
++                raise NativeResourceError('T037_POLICY_UNVERIFIED','original policy owner required')
++            errors=[]
++            for entry in reversed(self.registry.unresolved()):
++                try:self.registry.retry_owned(entry,self)
++                except BaseException as exc:errors.append(exc)
++            if errors:raise errors[0]
++            self.released=True
++            daemon._t037_policy_observation_owner=None
++
++def new_policy_owner(daemon,observer):return _PolicyObservationOwner(daemon,observer,seal=_SEAL)

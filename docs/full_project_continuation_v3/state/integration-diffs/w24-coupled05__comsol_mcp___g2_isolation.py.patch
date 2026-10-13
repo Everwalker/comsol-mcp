@@ -1,0 +1,141 @@
+--- root/comsol_mcp/_g2_isolation.py
++++ w24-coupled05/comsol_mcp/_g2_isolation.py
+@@ -60,18 +60,33 @@
+         )
+ 
+ 
+-def _run_mac_probe(command: list[str]) -> subprocess.CompletedProcess[str]:
++def _run_mac_probe(command: list[str], *, timeout_s: float | None = None, admission_owner: Any = None) -> subprocess.CompletedProcess[str]:
+     _require_mac_isolation_adapter()
+-    try:
+-        return subprocess.run(command, text=True, encoding="utf-8", errors="replace",
+-                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+-    except OSError as exc:
+-        raise ExecutionContractError("ISOLATION_PROOF_UNAVAILABLE", "macOS process/socket probe is unavailable") from exc
+-
+-
+-def _mac_process_snapshot(pid: int) -> dict[str, Any] | None:
++    if timeout_s is not None and (type(timeout_s) not in (int,float) or not 0 < timeout_s < float("inf")):
++        raise ValueError("private process probe timeout must be finite positive")
++    owner=None
++    if admission_owner is not None:
++        from tools.w24_coupled_admission import require_admission_owner
++        owner=require_admission_owner(admission_owner)
++        timeout_s=owner.before_effect('G2_native_'+command[0],timeout_s or 10.0)
++    try:
++        result=subprocess.run(command, text=True, encoding="utf-8", errors="replace",
++                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
++                              **({"timeout":timeout_s} if timeout_s is not None else {}))
++        if owner is not None:owner.wait_cap(1.01)
++        return result
++    except BaseException as exc:
++        if owner is not None:owner.fail('G2_native_probe_failed_or_late',exc)
++        if owner is not None and isinstance(exc,TimeoutError):raise
++        if isinstance(exc,OSError):
++            raise ExecutionContractError("ISOLATION_PROOF_UNAVAILABLE", "macOS process/socket probe is unavailable") from exc
++        raise
++
++
++def _mac_process_snapshot(pid: int, *, timeout_s: float | None = None, admission_owner: Any = None) -> dict[str, Any] | None:
+     _require_mac_isolation_adapter()
+-    result = _run_mac_probe(["/bin/ps", "-p", str(pid), "-o", "pid=,ppid=,lstart=,command="])
++    command=["/bin/ps", "-p", str(pid), "-o", "pid=,ppid=,lstart=,command="]
++    result = _run_mac_probe(command) if timeout_s is None and admission_owner is None else _run_mac_probe(command,timeout_s=timeout_s,**({"admission_owner":admission_owner} if admission_owner is not None else {}))
+     line = result.stdout.strip()
+     fields = line.split()
+     if result.returncode != 0 or len(fields) < 8:
+@@ -116,17 +131,20 @@
+     return None
+ 
+ 
+-def _process_snapshot(pid: int) -> dict[str, Any] | None:
++def _process_snapshot(pid: int, *, timeout_s: float | None = None, admission_owner: Any = None) -> dict[str, Any] | None:
+     if type(pid) is not int or pid <= 1:
+         return None
++    if admission_owner is not None and sys.platform!="darwin":
++        raise ExecutionContractError("UNSUPPORTED_PLATFORM","coupled native probe owner requires macOS")
+     if sys.platform == "win32" or os.name == "nt":
+         return _windows_process_snapshot(pid)
+-    return _mac_process_snapshot(pid)
+-
+-
+-def _mac_socket_rows(port: int) -> list[dict[str, Any]]:
++    return _mac_process_snapshot(pid) if timeout_s is None and admission_owner is None else _mac_process_snapshot(pid,timeout_s=timeout_s,**({"admission_owner":admission_owner} if admission_owner is not None else {}))
++
++
++def _mac_socket_rows(port: int, *, admission_owner: Any = None) -> list[dict[str, Any]]:
+     _require_mac_isolation_adapter()
+-    result = _run_mac_probe(["/usr/sbin/lsof", "-nP", f"-iTCP:{port}"])
++    command=["/usr/sbin/lsof", "-nP", f"-iTCP:{port}"]
++    result = _run_mac_probe(command) if admission_owner is None else _run_mac_probe(command,admission_owner=admission_owner)
+     if result.returncode not in (0, 1) or result.stderr.strip():
+         raise ExecutionContractError("ISOLATION_PROOF_UNAVAILABLE", "could not inspect COMSOL listener sockets")
+     rows: list[dict[str, Any]] = []
+@@ -206,12 +224,14 @@
+     return rows
+ 
+ 
+-def _socket_rows(port: int) -> list[dict[str, Any]]:
++def _socket_rows(port: int, *, admission_owner: Any = None) -> list[dict[str, Any]]:
+     if type(port) is not int or not 1 <= port <= 65535:
+         raise ExecutionContractError("INVALID_REQUEST", "socket probe port is invalid")
++    if admission_owner is not None and sys.platform!="darwin":
++        raise ExecutionContractError("UNSUPPORTED_PLATFORM","coupled native socket probe owner requires macOS")
+     if sys.platform == "win32" or os.name == "nt":
+         return _windows_socket_rows(port)
+-    return _mac_socket_rows(port)
++    return _mac_socket_rows(port) if admission_owner is None else _mac_socket_rows(port,admission_owner=admission_owner)
+ 
+ 
+ _LOOPBACK_ENDPOINT_RE = re.compile(r"^127\.0\.0\.1:(?P<port>[0-9]+)$")
+@@ -740,18 +760,26 @@
+     }
+ 
+ 
+-def verify_owned_server(receipt_path: str | Path, *, endpoint: str, worker_pid: int | None = None) -> dict[str, Any]:
++def verify_owned_server(receipt_path: str | Path, *, endpoint: str, worker_pid: int | None = None, admission_owner: Any = None) -> dict[str, Any]:
+     """Return proof metadata or raise a structured fail-closed error."""
+     if sys.platform == "darwin":
+         _require_mac_isolation_adapter()
+     else:
+         _require_isolation_adapter()
++    if admission_owner is not None:
++        from tools.w24_coupled_admission import require_admission_owner
++        owner=require_admission_owner(admission_owner)
++        owner.before_effect('G2_owned_server_verification',10.0)
++        if sys.platform!='darwin':
++            raise ExecutionContractError('UNSUPPORTED_PLATFORM','coupled G2 verification requires macOS')
+     path = Path(receipt_path).expanduser().resolve()
+     try:
+         receipt = json.loads(path.read_text(encoding="utf-8"))
+     except (OSError, json.JSONDecodeError) as exc:
+         raise ExecutionContractError("ISOLATION_PROOF_UNAVAILABLE", "configured isolation receipt is unreadable") from exc
+     if isinstance(receipt, Mapping) and _remote_addr_valve_mode(receipt):
++        if admission_owner is not None:
++            raise ExecutionContractError("ISOLATION_PROOF_REQUIRED","coupled owner requires original local-loopback receipt")
+         if receipt.get("status") != "RUNNING":
+             raise ExecutionContractError("ISOLATION_PROOF_REQUIRED", "remote_addr_valve receipt is not a running owned receipt")
+         return _verify_remote_addr_valve(receipt_path=path, receipt=receipt, endpoint=endpoint, worker_pid=worker_pid)
+@@ -763,7 +791,12 @@
+     pid, birth, command_hash = process.get("pid"), process.get("birth"), process.get("command_sha256")
+     if type(pid) is not int or not isinstance(birth, str) or not isinstance(command_hash, str):
+         raise ExecutionContractError("ISOLATION_PROOF_REQUIRED", "isolation receipt process identity is incomplete")
+-    observed = _process_snapshot(pid)
++    if admission_owner is not None:
++        if (owner.server.proc is not owner.handles.get('server') or pid!=owner.server.proc.pid
++                or owner.server.port is None or endpoint!=f'127.0.0.1:{owner.server.port}'
++                or owner.handles.get('worker') is None or worker_pid!=owner.handles['worker'].pid):
++            raise ExecutionContractError('ISOLATION_PROOF_REQUIRED','coupled G2 receipt/endpoint/Worker differs from original owner')
++    observed = _process_snapshot(pid) if admission_owner is None else _process_snapshot(pid,admission_owner=admission_owner)
+     if observed is None or observed["birth"] != birth or observed["command_sha256"] != command_hash:
+         raise ExecutionContractError("ISOLATION_PROOF_REQUIRED", "owned COMSOL process identity no longer matches receipt")
+     lowered = observed["command"].lower()
+@@ -780,7 +813,7 @@
+                 raise ExecutionContractError("ISOLATION_PROOF_REQUIRED", "receipt endpoint does not match current endpoint")
+         except (TypeError, ValueError) as exc:
+             raise ExecutionContractError("ISOLATION_PROOF_REQUIRED", "receipt endpoint port is invalid") from exc
+-    rows = _socket_rows(port)
++    rows = _socket_rows(port) if admission_owner is None else _socket_rows(port,admission_owner=admission_owner)
+     listeners = [row for row in rows if row["state"] == "LISTEN"]
+     if len(listeners) != 1 or listeners[0]["pid"] != pid or listeners[0]["endpoint"] != expected:
+         raise ExecutionContractError("ISOLATION_PROOF_REQUIRED", "COMSOL listener is not exactly the owned IPv4 loopback endpoint")

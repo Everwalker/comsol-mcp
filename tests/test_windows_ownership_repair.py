@@ -1,0 +1,149 @@
+from types import SimpleNamespace
+import ctypes as C
+import subprocess
+import pytest
+from comsol_mcp import _windows_t037 as win
+from comsol_mcp import _windows_t037_acl as acl
+from comsol_mcp._session_server import OwnedServerLauncher,OwnedServerError
+from tests.test_windows_suspended_ownership import _launch_api,_create,_unknown
+from tests.test_session_server import _startup_runtime
+from tests.test_session_server_control import _make_daemon,_start,_stop
+
+@pytest.mark.parametrize('fault',['none','primary_token','image','image_parent','attribute','sid','inherited','native_parent','all'])
+def test_all_ancillary_production_cleanup_failures_preserve_same_created_child_handoff(monkeypatch,tmp_path,fault):
+    real_gate=acl.check_suspended_child_dacl
+    profile,api,events,state=_launch_api(monkeypatch,cleanup_fail=True)
+    fake_gate=acl.check_suspended_child_dacl
+    adapter=next(cell.cell_contents for cell in fake_gate.__closure__ if hasattr(cell.cell_contents,'bound_statistics'))
+    monkeypatch.setattr(acl,'check_suspended_child_dacl',real_gate)
+    monkeypatch.setattr(acl,'NativeChildAclApi',lambda:adapter)
+    calls=[];original=api.close_handle
+    def close(handle):
+        value=handle.value if hasattr(handle,'value') else handle;calls.append(('close',value))
+        if (value==56 and fault in {'primary_token','all'}) or (value==101 and fault in {'inherited','all'}) or (value==777 and fault in {'native_parent','all'}):raise OSError('ancillary close failed')
+        return original(handle)
+    api.close_handle=close
+    opened=api._open_image
+    def image(path):
+        adapter,parents,h,fp,name=opened(path);parents=[11,13];normal=adapter.close
+        def release(target):
+            calls.append(('image',target))
+            if (target==12 and fault in {'image','all'}) or (target in {11,13} and fault in {'image_parent','all'}):raise OSError('image close failed')
+            return normal(target)
+        adapter.close=release;return adapter,parents,h,fp,name
+    api._open_image=image
+    def attribute(pointer):
+        calls.append(('attribute',123))
+        if fault in {'attribute','all'}:raise OSError('attribute release failed')
+    api.k.DeleteProcThreadAttributeList=attribute
+    def sid(pointer):
+        calls.append(('sid',77))
+        return 77 if fault in {'sid','all'} else None
+    api.k.LocalFree=sid
+    launcher=OwnedServerLauncher(process_factory=lambda *a,**k:_create(profile,api),platform_name='darwin')
+    with pytest.raises(OwnedServerError) as captured:launcher.start(_startup_runtime(tmp_path),'project','session')
+    error=captured.value
+    assert error.uncertain and error.handle is not None
+    process=error.handle.process
+    assert process._owner is error.handle and process.pid==456 and process.birth_filetime_100ns==123
+    assert process._handle==200 and process._thread_handle==201 and not process._closed
+    assert process is api._retained_children[id(process)] and 'RESUME' not in events
+    assert ('image',12) in calls and ('image',11) in calls and ('image',13) in calls and ('close',777) in calls
+    if fault!='none':assert api._native_owned_registry.unresolved() or getattr(api,'_retained_launch_cleanup',[])
+    if fault=='all':assert len(api._native_owned_registry.unresolved())+len(getattr(api,'_retained_launch_cleanup',[]))>=7
+    api.close_handle=original;state['cleanup_fail']=False
+    stopped=launcher.stop(error.handle)
+    assert stopped['exit_confirmed'] and process._closed
+
+
+def _trigger(daemon,fault,role):
+    if fault=='operation':sql="BEFORE UPDATE OF status ON operations WHEN NEW.status='SUCCEEDED'"
+    elif fault=='finish_event':sql="BEFORE INSERT ON job_events WHEN NEW.event='SUCCEEDED'"
+    elif fault=='job':sql="BEFORE UPDATE OF status ON jobs WHEN NEW.status='SUCCEEDED'"
+    else:
+        path='state' if role=='server' else 'client_state';target='STOPPED' if role=='server' else 'RETIRED'
+        sql=f"BEFORE UPDATE OF metadata ON sessions WHEN json_extract(NEW.metadata,'$.lifecycle.{path}')='{target}'"
+    daemon.store.db.execute('CREATE TRIGGER native_terminal_failure '+sql+" BEGIN SELECT RAISE(ABORT,'actual SQLite terminal failure'); END")
+
+@pytest.mark.parametrize('fault',['none','operation','job','lifecycle','finish_event'])
+def test_server_real_sqlite_terminal_failure_preserves_owner_and_atomic_unknown_until_commit(monkeypatch,tmp_path,fault):
+    profile,api,events,state=_launch_api(monkeypatch,cleanup_fail=True)
+    launcher=OwnedServerLauncher(process_factory=lambda *a,**k:_create(profile,api),platform_name='darwin')
+    daemon,project,*_=_make_daemon(tmp_path,monkeypatch,server_launcher=launcher)
+    try:
+        started=_start(daemon,project);sid=started['data']['session_id'];key=(project,sid)
+        owner=daemon._session_server_handles[key];process=owner.process;state['cleanup_fail']=False
+        if fault!='none':_trigger(daemon,fault,'server')
+        stopped=_stop(daemon,project,sid,key='sqlite-terminal-'+fault)
+        if fault=='finish_event':
+            assert stopped['success'] and daemon._session_server_handles[key] is owner
+            assert daemon.session_lifecycle.get(project,sid)['state']=='STOPPED'
+            assert daemon.store.job(stopped['execution']['job_id'])['status']=='SUCCEEDED'
+            daemon.store.db.execute('DROP TRIGGER native_terminal_failure')
+            stopped=_stop(daemon,project,sid,key='sqlite-postcommit-retry')
+        elif fault!='none':
+            assert not stopped['success'] and stopped['error']['execution_state_unknown'] is True,stopped
+            assert daemon._session_server_handles[key] is owner and owner.process is process
+            assert daemon.session_lifecycle.get(project,sid)['state']=='UNKNOWN'
+            assert daemon.store.job(stopped['execution']['job_id'])['status']=='UNKNOWN'
+            assert stopped['data']['server_handle_preserved'] is True and process._closed
+            count=len([e for e in events if isinstance(e,tuple) and e[0]=='terminate'])
+            daemon.store.db.execute('DROP TRIGGER native_terminal_failure')
+            stopped=_stop(daemon,project,sid,key='sqlite-terminal-retry-'+fault)
+            assert len([e for e in events if isinstance(e,tuple) and e[0]=='terminate'])==count
+        assert stopped['success'] and stopped['data']['native_child_exit_evidence']['exit_confirmed'] is True
+        assert not stopped['data'].get('already_stopped') and key not in daemon._session_server_handles
+        assert daemon.session_lifecycle.get(project,sid)['state']=='STOPPED'
+    finally:daemon.close()
+
+@pytest.mark.parametrize('fault',['none','operation','job','lifecycle','finish_event'])
+def test_worker_real_sqlite_terminal_failure_preserves_owner_and_atomic_unknown_until_commit(monkeypatch,tmp_path,fault):
+    from comsol_mcp._java_worker import PersistentJavaWorker
+    profile,api,events,state,error=_unknown(monkeypatch)
+    paths=SimpleNamespace(validate=lambda:None,classpath=lambda:('fixture','hash',1,'jars'),
+        compilation_cache_fingerprint=lambda *args:('cache',{}),executable=lambda name:name,
+        private_prefs=None,classpath_separator=':',resolved_global_lock_root=tmp_path)
+    def factory(*a,**k):raise error
+    worker=PersistentJavaWorker(paths,state_dir=tmp_path/'worker',process_factory=factory)
+    monkeypatch.setattr(subprocess,'run',lambda *a,**k:SimpleNamespace(returncode=0,stderr=''))
+    daemon,project,*_=_make_daemon(tmp_path,monkeypatch,worker=worker)
+    try:
+        started=daemon.dispatch({'operation':'session.connect','arguments':{'project_id':project,'runtime_id':'fixture-runtime',
+            'endpoint':{'host':'127.0.0.1','port':2040},'idempotency_key':'sqlite-worker-start'},'execution':{}})
+        sid=started['data']['session_id'];key=(project,sid);process=worker._process;state['cleanup_fail']=False
+        def retire(label):return daemon.dispatch({'operation':'session.disconnect','arguments':{'project_id':project,
+            'session_id':sid,'retire_worker':True,'idempotency_key':label},'execution':{}})
+        if fault!='none':_trigger(daemon,fault,'worker')
+        retired=retire('sqlite-worker-terminal-'+fault)
+        if fault=='finish_event':
+            assert retired['success'] and daemon._session_worker_handles[key] is worker and worker._process is process
+            assert daemon.session_lifecycle.get(project,sid)['client_state']=='RETIRED'
+            assert daemon.store.job(retired['execution']['job_id'])['status']=='SUCCEEDED'
+            daemon.store.db.execute('DROP TRIGGER native_terminal_failure')
+            retired=retire('sqlite-worker-postcommit-retry')
+        elif fault!='none':
+            assert not retired['success'] and retired['error']['execution_state_unknown'] is True,retired
+            assert daemon._session_worker_handles[key] is worker and worker._process is process and process._owner is worker
+            assert retired['data']['worker_handle_preserved'] is True and process._closed
+            assert daemon.session_lifecycle.get(project,sid)['state']=='UNKNOWN'
+            assert daemon.store.job(retired['execution']['job_id'])['status']=='UNKNOWN'
+            count=len([e for e in events if isinstance(e,tuple) and e[0]=='terminate'])
+            daemon.store.db.execute('DROP TRIGGER native_terminal_failure')
+            retired=retire('sqlite-worker-terminal-retry-'+fault)
+            assert len([e for e in events if isinstance(e,tuple) and e[0]=='terminate'])==count
+        assert retired['success'] and retired['data']['client_state']=='RETIRED'
+        assert key not in daemon._session_worker_handles and worker._process is None
+        assert daemon.session_lifecycle.get(project,sid)['client_state']=='RETIRED'
+    finally:daemon.close()
+
+
+def test_ancillary_handle_release_cannot_be_cleared_by_closed_metadata(monkeypatch):
+    profile,api,events,state=_launch_api(monkeypatch)
+    class FakeClosed:
+        closed=True
+        def close(self):pass
+    fake=FakeClosed();api._retained_launch_cleanup=[('native_parent',fake.close,(),RuntimeError('unknown'))]
+    factory=win.T037SessionProcessFactory(profile,'session-fake-release',api=api);factory._job=300
+    with pytest.raises(win.WindowsT037Error) as refused:factory.close()
+    assert refused.value.code=='NATIVE_LAUNCH_RELEASE_UNKNOWN' and factory._job==300
+    assert len(api._retained_launch_cleanup)==1

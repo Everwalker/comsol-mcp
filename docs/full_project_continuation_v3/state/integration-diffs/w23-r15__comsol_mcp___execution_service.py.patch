@@ -1,0 +1,34 @@
+--- root/comsol_mcp/_execution_service.py
++++ w23-r15/comsol_mcp/_execution_service.py
+@@ -253,6 +253,7 @@
+         effect: str | None = None,
+         _owned_branch_proof: Mapping[str, Any] | None = None,
+         terminal_model_close: bool = False,
++        _ephemeral_binding: Any = None,
+     ) -> dict[str, Any]:
+         """Call only after authorization, real selected-model check, and preflight.
+ 
+@@ -336,8 +337,11 @@
+         except Exception as exc:
+             self.ledger.finish(ticket, outcome="failed", changed=False)
+             raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "state persistence failed before engine dispatch") from exc
+-        try:
+-            data = self._decode_callback(callback(args))
++        ephemeral_scope = None
++        try:
++            from ._ephemeral_result_ticket import ticket_scope
++            with ticket_scope(_ephemeral_binding, ticket, self, callback, args) as ephemeral_scope:
++                data = self._decode_callback(callback(args))
+         except Exception as exc:
+             # A legacy callback cannot prove it made no engine-side mutation.
+             # Keep the fail-closed unknown state, but never swallow the original
+@@ -444,6 +448,9 @@
+         outcome, changed = final_state(data, engine_changed=changed_engine)
+         if _function_evaluate_read_ticket_proven(tool_name, effect, data, outcome, changed_engine):
+             changed = False
++        if (tool_name == "result_at_points" and effect == "evaluate" and ephemeral_scope is not None
++                and ephemeral_scope.consume(data, outcome, changed_engine, callback)):
++            changed = False
+         if tool_name == "checkpoint_branch" and effect == "project_write" and outcome == "succeeded":
+             if not changed_engine and self._owned_branch_proven(_owned_branch_proof, data, model_ref, snapshot, after):
+                 changed = False

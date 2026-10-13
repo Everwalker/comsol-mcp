@@ -1,0 +1,128 @@
+--- root/comsol_mcp/_operation_store.py
++++ windows-r19/comsol_mcp/_operation_store.py
+@@ -1101,13 +1101,22 @@
+                     sequence = baseline.get("mutation_sequence")
+                     if (not isinstance(sequence, dict)
+                             or set(sequence) != {"schema", "phase", "plan_sha256", "steps"}
+-                            or sequence.get("schema") != "comsol-mcp.host-control-mutation-sequence/2"
++                            or sequence.get("schema") not in {"comsol-mcp.host-control-mutation-sequence/2", "comsol-mcp.host-control-mutation-sequence/3", "comsol-mcp.host-control-mutation-sequence/4", "comsol-mcp.host-control-mutation-sequence/5"}
+                             or sequence.get("phase") != row["phase"]
+                             or sequence.get("plan_sha256") != row["plan_sha256"]
+                             or not isinstance(sequence.get("steps"), list)
+-                            or not 1 <= len(sequence["steps"]) <= 3):
++                            or not (1 <= len(sequence["steps"]) <= 3 if sequence.get("schema") == "comsol-mcp.host-control-mutation-sequence/2" else (6 <= len(sequence["steps"]) <= 4098 if sequence.get("schema") == "comsol-mcp.host-control-mutation-sequence/3" else len(sequence["steps"]) == 1))):
+                         raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+                                                   "V2 admission lacks an exact bounded mutation sequence")
++                    if sequence["schema"] == "comsol-mcp.host-control-mutation-sequence/3":
++                        from ._windows_filter_group import validate_journal_group
++                        validate_journal_group(baseline, dict(row))
++                    if sequence["schema"] == "comsol-mcp.host-control-mutation-sequence/4":
++                        from ._windows_service_sid import validate_journal_leaf
++                        validate_journal_leaf(baseline, dict(row))
++                    if sequence["schema"] == "comsol-mcp.host-control-mutation-sequence/5":
++                        from ._windows_appcontainer import validate_journal_leaf as validate_appcontainer_leaf
++                        validate_appcontainer_leaf(baseline, dict(row))
+                     step_fields = {"step_index", "action_id", "resource_kind", "resource_key",
+                                    "identity_sha256", "dependency_sha256", "expected_resource_sha256"}
+                     expected_phase = str(row["phase"])
+@@ -1119,7 +1128,7 @@
+                         if (not isinstance(step, dict) or set(step) != step_fields
+                                 or step.get("step_index") != index or type(step.get("step_index")) is not int
+                                 or not isinstance(step.get("action_id"), str) or not step["action_id"]
+-                                or step.get("resource_kind") not in {"wfp_provider", "wfp_sublayer", "wfp_filter"}
++                                or step.get("resource_kind") not in ({"appcontainer_profile"} if sequence["schema"] == "comsol-mcp.host-control-mutation-sequence/5" else {"windows_service"} if sequence["schema"] == "comsol-mcp.host-control-mutation-sequence/4" else {"wfp_provider", "wfp_sublayer", "wfp_filter"})
+                                 or not isinstance(step.get("resource_key"), str) or not step["resource_key"]
+                                 or any(not isinstance(step.get(key), str)
+                                        or re.fullmatch(r"[0-9a-f]{64}", step[key]) is None
+@@ -1150,6 +1159,13 @@
+                                     ["wfp_provider", "wfp_sublayer", "wfp_filter"])
+                     allowed_orders = (apply_orders if expected_phase == "APPLY"
+                                       else tuple(list(reversed(order)) for order in apply_orders))
++                    if sequence["schema"] == "comsol-mcp.host-control-mutation-sequence/3":
++                        order = ["wfp_provider", "wfp_sublayer"] + ["wfp_filter"] * (len(sequence["steps"]) - 2)
++                        allowed_orders = [order if expected_phase == "APPLY" else list(reversed(order))]
++                    if sequence["schema"] == "comsol-mcp.host-control-mutation-sequence/4":
++                        allowed_orders = [["windows_service"]]
++                    if sequence["schema"] == "comsol-mcp.host-control-mutation-sequence/5":
++                        allowed_orders = [["appcontainer_profile"]] if expected_phase == "APPLY" else []
+                     if step_kinds not in allowed_orders:
+                         raise ResourcePolicyError("HOST_CONTROL_JOURNAL_CORRUPT",
+                                                   "V2 plan must use the exact provider/sublayer/filter dependency order")
+@@ -1500,7 +1516,7 @@
+             )
+             return job_id
+ 
+-    def finish(self, operation_id: str, *, status: str, result: dict[str, Any]) -> tuple[bool, str]:
++    def finish(self, operation_id: str, *, status: str, result: dict[str, Any], _lifecycle_update=None) -> tuple[bool, str]:
+         """Atomically record a result observation and synchronize its job status.
+ 
+         Returns ``(accepted, authoritative_status)`` so the caller can use the
+@@ -1557,6 +1573,9 @@
+                 )
+                 if operation.rowcount != 1 or job.rowcount != 1:
+                     raise KeyError(f"operation/job pair missing for {operation_id}")
++                if _lifecycle_update is not None:
++                    session_id, updater = _lifecycle_update
++                    self._update_session_lifecycle_in_transaction(session_id, updater)
+                 self.db.execute("COMMIT")
+                 return True, status
+             except Exception:
+@@ -3323,6 +3342,31 @@
+                 self.db.execute("ROLLBACK")
+                 raise
+ 
++    def _update_session_lifecycle_in_transaction(self, session_id, updater):
++        """Same lifecycle updater under an existing Store-owned write transaction."""
++        if not self.db.in_transaction:
++            raise RuntimeError("lifecycle update requires the existing Store write transaction")
++        row = self.db.execute(
++            "SELECT metadata FROM sessions WHERE session_id=?", (session_id,),
++        ).fetchone()
++        metadata = json.loads(row[0]) if row is not None else {}
++        if not isinstance(metadata, dict):
++            raise RuntimeError("persisted session metadata is malformed")
++        current = metadata.get("lifecycle")
++        if current is not None and not isinstance(current, dict):
++            raise RuntimeError("persisted lifecycle metadata is malformed")
++        replacement = updater(dict(current) if current is not None else None)
++        if not isinstance(replacement, dict):
++            raise TypeError("lifecycle updater must return an object")
++        metadata = dict(metadata)
++        metadata["lifecycle"] = replacement
++        self.db.execute(
++            "INSERT INTO sessions(session_id,metadata) VALUES(?,?) "
++            "ON CONFLICT(session_id) DO UPDATE SET metadata=excluded.metadata",
++            (session_id, json.dumps(metadata, sort_keys=True)),
++        )
++        return replacement
++
+     def update_session_lifecycle(self, session_id: str, updater) -> dict[str, Any]:
+         """Update only ``sessions.metadata.lifecycle`` under the store lock.
+ 
+@@ -3337,25 +3381,7 @@
+         with self.lock:
+             self.db.execute("BEGIN IMMEDIATE")
+             try:
+-                row = self.db.execute(
+-                    "SELECT metadata FROM sessions WHERE session_id=?", (session_id,),
+-                ).fetchone()
+-                metadata = json.loads(row[0]) if row is not None else {}
+-                if not isinstance(metadata, dict):
+-                    raise RuntimeError("persisted session metadata is malformed")
+-                current = metadata.get("lifecycle")
+-                if current is not None and not isinstance(current, dict):
+-                    raise RuntimeError("persisted lifecycle metadata is malformed")
+-                replacement = updater(dict(current) if current is not None else None)
+-                if not isinstance(replacement, dict):
+-                    raise TypeError("lifecycle updater must return an object")
+-                metadata = dict(metadata)
+-                metadata["lifecycle"] = replacement
+-                self.db.execute(
+-                    "INSERT INTO sessions(session_id,metadata) VALUES(?,?) "
+-                    "ON CONFLICT(session_id) DO UPDATE SET metadata=excluded.metadata",
+-                    (session_id, json.dumps(metadata, sort_keys=True)),
+-                )
++                replacement = self._update_session_lifecycle_in_transaction(session_id, updater)
+                 self.db.execute("COMMIT")
+                 return replacement
+             except BaseException:

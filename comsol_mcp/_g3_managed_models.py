@@ -1330,6 +1330,18 @@ def _test_runtime_observation(context: Mapping[str, Any], record: Mapping[str, A
                 or identity.get("endpoint") != getattr(backend, "endpoint_key", None)
                 or binding.get("session_id") != service.ledger.session_id):
             return None
+        # New producers bind installation identity separately from the catalog
+        # label. Preserve original historical v1 provenance, while requiring
+        # this new witness to agree with its still-live trusted attach context.
+        if "installation_runtime_id" in observation:
+            attached = getattr(backend, "_runtime_observation_binding", None)
+            if (attached is None or observation["installation_runtime_id"] != attached.installation_runtime_id
+                    or observation["comsol_version"] != attached.comsol_version):
+                return None
+            try:
+                backend._bound_runtime_observation_identity(attached)
+            except Exception:
+                return None
     return {"comsol_version": expected_version,
             "runtime_identity": {name: identity.get(name) for name in identity_fields}}
 

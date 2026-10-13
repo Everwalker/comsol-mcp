@@ -1,0 +1,155 @@
+--- root/tests/test_w24_actual_default_epoch_capability.py
++++ w24-coupled05/tests/test_w24_actual_default_epoch_capability.py
+@@ -0,0 +1,152 @@
++"""Actual Controller/default connection/managed Java/Store; only Worker SDK is fake."""
++from pathlib import Path
++from contextlib import nullcontext
++from types import SimpleNamespace
++import json
++import pytest
++from comsol_mcp._control_daemon import ControlDaemon
++from comsol_mcp._session_context import SessionContextMissing
++from tools.run_native_resume_smoke import _dispatch
++from tools.w24_native_epoch_capability import _mint_from_actual_cure_response,_verify_origin,_capture_original_cure_receiver
++from tools.run_native_w24_cure_preflight import _native_mesh_response_worker_epoch
++OUT=None
++
++class Worker:
++    connected=True
++    generation=7
++    def __init__(self):self.calls=[]
++    def start(self):self.calls.append('start')
++    def close(self):self.calls.append('close')
++    def health(self):return {'connected':self.connected,'server':'127.0.0.1:56388'}
++    def runtime_metadata(self):return {'instance_id':'sdk-worker','generation':7,'connected':self.connected,'server':'127.0.0.1:56388'}
++    def connect(self,port,host,**kwargs):
++        self.connected=True
++        return {'connected':True,'server':f'{host}:{port}','instance_id':'sdk-worker','generation':7,'engine_version':'6.4.0.293'}
++    def operation_context(self,*a,**kw):return nullcontext()
++    def client(self):return self
++    def create(self,name):return self.model("cure-model")
++    def model(self,tag):return SimpleNamespace(java=SimpleNamespace(tag=lambda:tag))
++    def backend_snapshot(self,tag):
++        return {'model_tag':tag,'fingerprint':'sdk-fingerprint','external_event_counter':0,
++          'server_instance_id':'127.0.0.1:56388','generation':7,'instance_id':'sdk-worker','worker_instance_id':'sdk-worker'}
++    def execute_java(self,model_tag,source,entrypoint,arguments,**kw):
++        self.calls.append({'java':arguments,'entrypoint':entrypoint,'model_tag':model_tag})
++        return {'ok':True,'status':'SUCCEEDED','result':{'executed':True,'readback':{'status':'BUILT_NOT_SOLVED','solver_submissions':0}}}
++
++@pytest.mark.parametrize("receiver",["default_backend","registered_session"])
++@pytest.mark.parametrize("drift",[None,"worker_object","instance","generation","raw_endpoint","compatibility_hash","store_kind","store_epoch","store_result"])
++def test_actual_controller_backend_mints_exact_native_epoch(monkeypatch,tmp_path,receiver,drift):
++    OUT=tmp_path/"artifacts";OUT.mkdir()
++    import comsol_mcp._server as server
++    import comsol_mcp._managed_backend as managed
++    # OS resolver boundary is synthetic; no DNS/socket request is attempted.
++    monkeypatch.setattr(managed.socket,'gethostbyname',lambda host:'127.0.0.1' if host=='127.0.0.1' else pytest.fail('unexpected host'))
++    for name in ('_remote_client_factory','_client','_client_connected','_connected_host','_connected_port','_server_started_by_mcp','_current_model'):
++        monkeypatch.setattr(server,name,getattr(server,name),raising=False)
++    monkeypatch.setenv('COMSOL_ROOT',str(tmp_path));monkeypatch.setenv('COMSOL_JAVA_HOME',str(tmp_path))
++    monkeypatch.setenv('COMSOL_MCP_TRUSTED_CODE','1')
++    projects=tmp_path/'projects';projects.mkdir();worker=Worker()
++    def create(arguments):
++        from comsol_mcp._model import _set_current_model,_mark_mcp_owned_model
++        model=worker.model('cure-model');_mark_mcp_owned_model(model);_set_current_model(model,origin='SDK-created')
++        return {'success':True,'data':{'model_tag':'cure-model'}}
++    from comsol_mcp._session_context import SessionRuntimeConfig,CanonicalSocket
++    def runtime_resolver(runtime_id,project_id,session_id,project_root,state_root):
++        return SessionRuntimeConfig(runtime_id=runtime_id,comsol_version='6.4.0.293',
++            installation_root=tmp_path,java_executable=tmp_path/'bin/java',classpath=(tmp_path/'client.jar',),
++            preferences_dir=tmp_path/'prefs',session_state_root=state_root)
++    def worker_factory(runtime,state):return worker
++    def peer_observer(worker,port,metadata):return CanonicalSocket('127.0.0.1',port)
++    daemon=ControlDaemon(tmp_path/'control',worker=worker,project_root=projects,
++        registry={'model_create':create,'server_connect':lambda args:None},
++        session_runtime_resolver=runtime_resolver,session_worker_factory=worker_factory,
++        session_peer_observer=peer_observer)
++    try:
++        made=daemon.dispatch({'operation':'project.create','arguments':{'label':'review','workspace':'review',
++            'policy':{'permissions':['inspect','project_write','compute','trusted_code']}},
++            'execution':{'request_id':'project','idempotency_key':'project'}})
++        assert made['success'],made
++        project=made['data']['project'];pid=project['project_id'];workspace=Path(project['workspace'])
++        (workspace/'W24CureCouponFixture.java').write_text('public class W24CureCouponFixture { public static Object run(Object model, Object arguments) { return null; } }')
++        if receiver=='default_backend':
++            connection=_dispatch(daemon,'server_connect',{'host':'127.0.0.1','port':56388},project_id=pid,idempotency_key='connect')
++            assert connection['success'],connection
++            bound=_dispatch(daemon,'model_create',{'name':'w24_cure_template'},project_id=pid,idempotency_key='create',request_id='create')
++        else:
++            worker.connected=False
++            connection=daemon.dispatch({'operation':'session.connect','arguments':{'project_id':pid,
++                'runtime_id':'runtime-sdk-fixture','endpoint':{'host':'127.0.0.1','port':56388},
++                'idempotency_key':'registered-connect'},'execution':{'request_id':'registered-connect'}})
++            assert connection['success'],connection
++            session_id=connection['data']['session_id']
++            bound=daemon.dispatch({'operation':'model_create','arguments':{'name':'w24_cure_template'},
++                'execution':{'project_id':pid,'session_id':session_id,'request_id':'create','idempotency_key':'create'}})
++        (OUT/'model_create_response.json').write_text(json.dumps(bound,indent=2)+'\n')
++        assert bound['success'],bound
++        ref=bound['execution']['model_ref']
++        context=daemon._execution_session_context({'project_id':pid,'session_id':ref['session_id']})
++        assert (context is None)==(receiver=='default_backend')
++        backend=daemon._default_backend if context is None else context.backend
++        java_arguments={'operation_id':'code.execute_java','arguments':{
++          'source_artifact':'W24CureCouponFixture.java','entrypoint':'W24CureCouponFixture#run',
++          'arguments':{'phase':'build_v2','mu_scale':1.0},'mode':'trusted'}}
++        public=_dispatch(daemon,'operation_call',java_arguments,project_id=pid,ref=ref,
++          revision=bound['execution']['revision'],idempotency_key='public-build-v2',request_id='public-build-v2')
++        assert public['success'] is False and public['error']['code']=='ISOLATION_PROOF_REQUIRED'
++        (OUT/'PUBLIC_JAVA_GATE_REFUSAL.json').write_text(json.dumps(public,indent=2)+'\n')
++        # We do not cross/mint the native isolation gate. This subsequent SDK
++        # helper/Store fixture tests only the source's post-admission mint path.
++        # Controller connection, model binding, Store, Java helper and mint are
++        # actual production objects; numerical/SDK reply is synthetic.
++        execution={'project_id':pid,'session_id':ref['session_id'],'model_ref':ref,'request_id':'post-gate-sdk-fixture',
++          'expected_revision':bound['execution']['revision']}
++        runtime=daemon._runtime_binding_for_request(context,execution)
++        op,_=daemon.store.begin(request_id=execution['request_id'],idempotency_key=execution['request_id'],
++          request_hash='source-software-fixture-only',operation='operation_call',
++          metadata={'operation':'operation_call','arguments':java_arguments,'execution':execution,'runtime_binding':runtime})
++        original_receiver=_capture_original_cure_receiver(daemon,project_id=pid,model_ref=ref)
++        with backend.project_root_scope(workspace):
++            response=backend._run_g2_action('code.execute_java',ref['model_tag'],java_arguments['arguments'],op['operation_id'])
++        response['execution']={**execution,'operation_id':op['operation_id'],'job_id':op['job_id'],
++          'revision':bound['execution']['revision']+1}
++        daemon.store.finish(op['operation_id'],status='SUCCEEDED',result=response)
++        origin=_verify_origin(daemon,response,project_id=pid)
++        epoch=_native_mesh_response_worker_epoch(response,project_id=pid,model_ref=ref,revision=response['execution']['revision'])
++        assert origin['metadata']['runtime_binding']['kind']==receiver
++        assert epoch['generation']==7 and ref['generation']==1
++        assert len(daemon.session_registry.list_for_project(pid))==(0 if receiver=='default_backend' else 1)
++        if drift:
++            before_calls=list(worker.calls)
++            if drift=='worker_object':backend.worker=Worker()
++            elif drift=='instance':backend.worker_identity['worker_instance_id']='foreign'
++            elif drift=='generation':backend.worker_identity['connection_epoch']=8
++            elif drift=='raw_endpoint':backend.worker_identity['endpoint']='127.0.0.1:56389'
++            elif drift=='compatibility_hash':backend.worker_identity['server_instance_id']='f'*64
++            elif drift=='store_result':response['data']['after']['generation']=8
++            else:
++                metadata=daemon.store.get_operation(op['operation_id'])['metadata']
++                if drift=='store_kind':metadata['runtime_binding']['kind']='registered_session' if receiver=='default_backend' else 'default_backend'
++                else:metadata['runtime_binding']['worker_epoch']=8
++                daemon.store.db.execute('update operations set metadata=? where operation_id=?',
++                    (json.dumps(metadata),op['operation_id']));daemon.store.db.commit()
++            with pytest.raises(Exception):
++                _mint_from_actual_cure_response(daemon,response,project_id=pid,model_ref=ref,
++                    revision=response['execution']['revision'],original_receiver=original_receiver)
++            assert worker.calls==before_calls
++            return
++        capability=_mint_from_actual_cure_response(daemon,response,project_id=pid,model_ref=ref,revision=response['execution']['revision'],original_receiver=original_receiver)
++        assert capability.as_evidence()==epoch
++        assert capability._backend is backend and capability._worker is worker
++        assert len(daemon.session_registry.list_for_project(pid))==(0 if receiver=='default_backend' else 1)
++        actual=daemon.store.get_operation(response['execution']['operation_id'])
++        assert actual['result']==response and actual['status']=='SUCCEEDED'
++        result={'status':'ACTUAL_CONTROLLER_DEFAULT_BACKEND_CAPABILITY_ACCEPTED_SOURCE_FIXTURE_ONLY',
++           'production_entrypoints':['ControlDaemon.dispatch(server_connect/model_create only)','ManagedBackend.connect','ManagedBackend._run_g2_action(post-admission SDK fixture)',
++              'OperationStore.get_operation','_mint_from_actual_cure_response'],
++           'connection_route':'server_connect','runtime_binding':origin['metadata']['runtime_binding'],
++           'registry_context_count':len(daemon.session_registry.list_for_project(pid)),'exception':None,'before_new_static_route':True,
++           'public_java_gate':'ISOLATION_PROOF_REQUIRED; no gate bypass or native proof minted',
++           'post_admission_Store_fixture_terminal':'SUCCEEDED','ModelRef_generation':ref['generation'],'Worker_generation':epoch['generation'],
++           'response':response,'native_run':'NOT_RUN','solver_calls':0}
++        (OUT/'ACTUAL_LEGACY_MINT_RESULT.json').write_text(json.dumps(result,indent=2)+'\n')
++    finally:daemon.close()

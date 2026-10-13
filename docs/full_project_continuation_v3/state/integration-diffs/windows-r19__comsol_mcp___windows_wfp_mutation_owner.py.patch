@@ -1,0 +1,124 @@
+--- root/comsol_mcp/_windows_wfp_mutation_owner.py
++++ windows-r19/comsol_mcp/_windows_wfp_mutation_owner.py
+@@ -0,0 +1,121 @@
++"""Original WFP mutation SDK returns held by the existing native registry."""
++from __future__ import annotations
++import ctypes as C
++from ._execution_contract import ExecutionContractError
++from ._windows_owned_resources import registry_for,attach_registry
++
++
++def fail(message):raise ExecutionContractError('WFP_NATIVE_RELEASE_UNKNOWN',message,safe_retry=False,stage='execution')
++def remember_cause(api, error):
++    if error is not None and getattr(api, '_first_mutation_cause', None) is None:
++        api._first_mutation_cause = error
++
++def status(value):
++    v=getattr(value,'value',value)
++    if type(v) is not int or not 0<=v<=2**32-1:fail('native SDK DWORD return malformed')
++    return v
++
++def function(api,name):
++    calls=getattr(api,'_captured_mutation_sdk',None)
++    if calls is None:calls={};api._captured_mutation_sdk=calls
++    if name not in calls:
++        dll=api._kernel32 if name=='LocalFree' else api._advapi if name.startswith('Convert') else api._fwpu
++        calls[name]=getattr(dll,name)
++    return calls[name]
++
++def registry(api):
++    r=registry_for(api)
++    if getattr(api,'api',None) is not None:attach_registry(api.api,r)
++    return r
++
++def allocation_call(api,name,output,*args,bool_return=False,local=False):
++    """Capture exact native output storage even if the SDK raises after writing it."""
++    r=registry(api);fn=function(api,name)
++    closer=function(api,'LocalFree' if local else 'FwpmFreeMemory0')
++    primary=None
++    try:return fn(*args)
++    except BaseException as e:primary=e;raise
++    finally:
++        address=C.cast(output,C.c_void_p).value if not isinstance(output,C.c_void_p) else output.value
++        if address:
++            entry = None
++            def release(handle):
++                if r.owner is not api or entry is None or entry.adapter is not api or r._entries.get(entry.seq) is not entry:
++                    fail('original native allocation owner/entry changed')
++                if type(handle) is not int or handle!=address or handle<=0 or handle==C.c_void_p(-1).value:fail('foreign native allocation handle')
++                if local:
++                    result=closer(C.c_void_p(handle))
++                    raw=getattr(result,'value',result)
++                    if raw is not None and (type(raw) is not int or raw!=0):fail('original LocalFree not confirmed')
++                else:
++                    pointer=C.c_void_p(handle)
++                    if closer(C.byref(pointer)) is not None:fail('original FwpmFreeMemory0 VOID return malformed')
++            entry = r.acquire(api,address,release,mode='VOID',label='mutation_local' if local else 'mutation_wfp_memory',
++                keepalive=(output,primary),domain='mutation_local' if local else 'mutation_wfp_memory',value_reader=lambda actual:actual)
++
++def release_allocation(api,address,*,local=False):
++    r=registry(api);domain='mutation_local' if local else 'mutation_wfp_memory'
++    entry=r.find(api,address,domain=domain)
++    if entry is None:fail('metadata/unregistered pointer cannot create release authority')
++    entry.release_owned(api)
++
++
++def session(api,readonly,callback):
++    from ._windows_t037_native import HANDLE,CtypesWindowsPolicyApi
++    r=registry(api)
++    if r.unresolved():fail('original native mutation owner requires explicit cleanup before another SDK session')
++    engine=HANDLE();open_fn=function(api,'FwpmEngineOpen0');close_fn=function(api,'FwpmEngineClose0')
++    begin=function(api,'FwpmTransactionBegin0');commit=function(api,'FwpmTransactionCommit0');abort=function(api,'FwpmTransactionAbort0')
++    tx={'state':'UNCLASSIFIED'};engine_entry=None;transaction=None;first=None;answer=None
++    try:
++        try:opened=open_fn(None,CtypesWindowsPolicyApi.RPC_C_AUTHN_WINNT,None,None,C.byref(engine))
++        finally:
++            if engine.value:
++                acquired=engine.value
++                def close_original(handle):
++                    if type(acquired) is not int or acquired<=0 or acquired==C.c_void_p(-1).value or engine_entry is None or r.owner is not api or engine_entry.adapter is not api or r._entries.get(engine_entry.seq) is not engine_entry or getattr(handle,'value',handle)!=acquired:fail('foreign engine owner/handle')
++                    if any(e is not engine_entry for e in r.unresolved()):fail('original native allocations/transaction remain owned')
++                    if status(close_fn(handle))!=0:fail('original engine close failed')
++                engine_entry=r.acquire(api,engine,close_original,mode='VOID',label='mutation_engine',keepalive=(engine,tx),domain='mutation_engine',value_reader=lambda actual:actual.value)
++        api._check(status(opened),'FwpmEngineOpen0')
++        if engine_entry is None:fail('native open succeeded without original engine handle')
++        def release_tx(handle):
++            if r.owner is not api or transaction.adapter is not api or r._entries.get(transaction.seq) is not transaction or getattr(handle,'value',handle)!=acquired:fail('foreign transaction engine/owner')
++            if tx['state'] not in {'COMMITTED','ABORTED','NOT_STARTED'}:
++                if status(abort(handle))!=0:fail('original transaction abort failed')
++                tx['state']='ABORTED'
++        transaction=r.acquire(api,engine,release_tx,mode='VOID',label='mutation_transaction',keepalive=(engine_entry,tx),domain='mutation_transaction')
++        tx['state']='UNKNOWN'
++        started=status(begin(engine,api.api.FWPM_TXN_READ_ONLY if readonly else 0))
++        if started!=0:tx['state']='NOT_STARTED'
++        api._check(started,'FwpmTransactionBegin0');tx['state']='OPEN'
++        api._active_mutation_engine_entry=engine_entry
++        answer=callback(engine)
++        committed=status(commit(engine))
++        api._check(committed,'FwpmTransactionCommit0');tx['state']='COMMITTED'
++    except BaseException as error:
++        first=error;remember_cause(api,error)
++    finally:
++        # No release retries. Each failed original entry stays strongly registered.
++        if transaction is not None:
++            try:transaction.release_owned(api)
++            except BaseException as error:
++                if first is None:first=error
++        if engine_entry is not None:
++            try:engine_entry.release_owned(api)
++            except BaseException as error:
++                if first is None:first=error
++        api._active_mutation_engine_entry=None
++    if first is not None:
++        api._first_mutation_cause=getattr(api,'_first_mutation_cause',None) or first
++        if r.unresolved():
++            error=ExecutionContractError('WFP_SESSION_RELEASE_UNKNOWN','original mutation resources retained; explicit original cleanup required',safe_retry=False,stage='execution',details={'first_cause_code':getattr(first,'code',None) or type(first).__name__})
++            error._native_mutation_owner=api;error._first_cause=api._first_mutation_cause
++            raise error from first
++        raise first
++    return answer
++
++
++def hold_buffers(api,*objects):
++    entry=getattr(api,'_active_mutation_engine_entry',None)
++    if entry is not None:entry.keepalive=(*entry.keepalive,*objects)

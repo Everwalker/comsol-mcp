@@ -1,0 +1,207 @@
+--- root/tools/run_native_w24_static_shape_setup_campaign.py
++++ w24-coupled05/tools/run_native_w24_static_shape_setup_campaign.py
+@@ -23,7 +23,7 @@
+ REPO = Path(__file__).resolve().parents[1]
+ BASE_COMMIT = "a365420814b9159230364ad953ee13e8db9cc9be"
+ EVIDENCE_ROOT = REPO / "docs/full_project_execution/w24/evidence"
+-EXPECTED_PYTHON = Path("/private/tmp/comsol-mcp-w25-py312-20260926T2155Z/bin/python")
++EXPECTED_PYTHON = Path("/private/tmp/comsol-v2-runtime-20261011-new/comsol-mcp-recovery-runtime-20261004-001/python312/bin/python")
+ EXPLICIT_SITE_PACKAGES = (EXPECTED_PYTHON.parent.parent / "lib" /
+                           f"python{sys.version_info.major}.{sys.version_info.minor}" / "site-packages")
+ INSTALL_ROOT = Path("/Applications/COMSOL64/Multiphysics")
+@@ -694,7 +694,10 @@
+                  threshold_bytes: int = RSS_STOP_BYTES,
+                  interval_seconds: float = SAMPLE_INTERVAL_SECONDS,
+                  ps_runner: Callable[..., Any] = subprocess.run,
+-                 identity_reader: Callable[[int], Mapping[str, Any]] | None = None):
++                 identity_reader: Callable[[int], Mapping[str, Any]] | None = None,
++                 probe_timeout_reader: Callable[[float], float] | None = None,
++                 include_owned_descendants: bool = False,
++                 session_reader: Callable[[int], int] | None = None):
+         from comsol_mcp._platform_process import process_identity
+ 
+         if type(server_pid) is not int or server_pid <= 1 or type(server_birth_ms) is not int or server_birth_ms <= 0:
+@@ -708,6 +711,12 @@
+         self.threshold_bytes = int(threshold_bytes)
+         self.interval_seconds = float(interval_seconds)
+         self.ps_runner = ps_runner
++        self.probe_timeout_reader = probe_timeout_reader
++        self.include_owned_descendants = include_owned_descendants
++        self.owned_children = {}
++        self.owned_groups = {server_pid: server_birth_ms} if include_owned_descendants else {}
++        self.retired_owned_leaders = set()
++        self.session_reader = session_reader or os.getsid
+         self.identity_reader = identity_reader or process_identity
+         self.worker_required_live = False
+         self.expected_worker_pid: int | None = None
+@@ -743,6 +752,24 @@
+             self.expected_worker_pid = pid
+             self.expected_worker_birth_ms = birth_ms
+             self.worker_required_live = True
++            if self.include_owned_descendants:self.owned_groups[pid]=birth_ms
++
++    def bind_owned_child(self, process: Any, birth_ms: int) -> None:
++        if type(getattr(process,"pid",None)) is not int or type(birth_ms) is not int or birth_ms<=0:
++            raise CandidateError("owned RSS child requires its actual Popen/birth")
++        with self._lock:
++            self.owned_children[process.pid]=(process,birth_ms)
++            if self.include_owned_descendants:self.owned_groups[process.pid]=birth_ms
++
++    def retire_owned_child(self, process: Any) -> None:
++        with self._lock:
++            saved=self.owned_children.get(process.pid)
++            if saved is None or saved[0] is not process or process.poll() is None:
++                raise CandidateError("RSS child cannot retire without its exact terminal Popen")
++            # A reaped leader does not retire its original private process group.
++            # Fresh complete group absence in sample_once is the only RSS release.
++            if self.include_owned_descendants:self.retired_owned_leaders.add(process.pid)
++            else:del self.owned_children[process.pid]
+ 
+     def _record(self, payload: Mapping[str, Any]) -> None:
+         _append(self.events_path, {"event": "rss_sample", **dict(payload)})
+@@ -756,21 +783,32 @@
+         actual_interval = (None if self.last_sample_monotonic is None else
+                            max(0.0, sample_started - self.last_sample_monotonic))
+         self.last_sample_monotonic = sample_started
+-        command = ["/bin/ps", "-axo", "pid=,ppid=,rss=,command="]
++        command = ["/bin/ps", "-axo", "pid=,ppid=,pgid=,rss=,command=" if self.include_owned_descendants else "pid=,ppid=,rss=,command="]
+         try:
+             result = self.ps_runner(command, capture_output=True, text=True,
+-                                    check=False, timeout=10)
++                                    check=False, timeout=(10 if self.probe_timeout_reader is None else self.probe_timeout_reader(10.0)))
+             if result.returncode != 0 or result.stderr.strip():
+                 raise CandidateError("scoped RSS ps probe failed")
+             rows: dict[int, dict[str, Any]] = {}
++            all_rows = {}
+             worker_pids: list[int] = []
+             worker_prefix = str(self.worker_search_root).lower()
++            observer_seen = False
+             for line in result.stdout.splitlines():
+-                fields = line.strip().split(None, 3)
+-                if len(fields) < 4 or not fields[0].isdigit() or not fields[1].isdigit() or not fields[2].isdigit():
++                fields = line.strip().split(None, 4 if self.include_owned_descendants else 3)
++                required = 5 if self.include_owned_descendants else 4
++                numeric = 4 if self.include_owned_descendants else 3
++                if len(fields)<required or not all(x.isdigit() for x in fields[:numeric]):
++                    if self.include_owned_descendants and line.strip():
++                        raise CandidateError("complete owned-group RSS process row is malformed")
+                     continue
+-                pid, ppid, rss_kib = int(fields[0]), int(fields[1]), int(fields[2])
+-                command_text = fields[3]
++                pid,ppid=int(fields[0]),int(fields[1])
++                pgid=int(fields[2]) if self.include_owned_descendants else None
++                rss_kib=int(fields[3] if self.include_owned_descendants else fields[2])
++                command_text=fields[4] if self.include_owned_descendants else fields[3]
++                if pid==os.getpid():observer_seen=True
++                all_rows[pid]={"pid":pid,"ppid":ppid,"rss_bytes":rss_kib*1024,
++                               **({"pgid":pgid} if self.include_owned_descendants else {})}
+                 if pid == self.server_pid:
+                     rows[pid] = {"kind": "server", "pid": pid, "ppid": ppid,
+                                  "rss_bytes": rss_kib * 1024}
+@@ -801,6 +839,51 @@
+                     raise CandidateError("RSS sample does not match the exact connected Worker Popen birth")
+                 rows[pid]["start_epoch_ms"] = identity["start_epoch_ms"]
+             server_row["start_epoch_ms"] = self.server_birth_ms
++            if self.include_owned_descendants:
++                if not observer_seen:raise CandidateError("complete group RSS sample omitted observing CLI")
++                for pid,row in all_rows.items():
++                    if pid<=1:continue
++                    try:row['sid']=self.session_reader(pid)
++                    except ProcessLookupError:
++                        if self.identity_reader(pid).get('alive') is not False:
++                            raise CandidateError("live process session identity unavailable in complete owned RSS sample")
++                        row['sid']=None
++                    if type(row.get('sid')) is not int and row.get('sid') is not None:
++                        raise CandidateError("native RSS session identity is not a typed integer")
++                if all_rows[self.server_pid].get('pgid')!=self.server_pid or all_rows[self.server_pid].get('sid')!=self.server_pid:
++                    raise CandidateError("original Server private PGID/SID changed")
++                for pid in worker_pids:
++                    if all_rows[pid].get('pgid')!=pid or all_rows[pid].get('sid')!=pid:
++                        raise CandidateError("original Worker private PGID/SID changed")
++                with self._lock:
++                    children=dict(self.owned_children);groups=dict(self.owned_groups)
++                for pid,(process,birth_ms) in children.items():
++                    if process.poll() is not None:continue
++                    ident=self.identity_reader(pid)
++                    if (pid not in all_rows or ident.get("alive") is not True or
++                            ident.get("start_epoch_ms")!=birth_ms or all_rows[pid].get("pgid")!=pid):
++                        raise CandidateError("owned child RSS Popen/birth/private group unavailable or changed")
++                    rows[pid]={**all_rows[pid],"kind":"owned_child","start_epoch_ms":birth_ms}
++                for pgid,birth_ms in groups.items():
++                    members=[row for row in all_rows.values() if row.get("pgid")==pgid or row.get("sid")==pgid]
++                    for member in members:
++                        pid=member["pid"];ident=self.identity_reader(pid)
++                        if (ident.get("alive") is not True or type(ident.get("start_epoch_ms")) is not int
++                                or ident["start_epoch_ms"]<birth_ms):
++                            raise CandidateError("original owned-group member RSS birth identity unavailable or predates group")
++                        rows[pid]={**member,"kind":rows.get(pid,{}).get("kind","owned_group_descendant"),
++                                   "start_epoch_ms":ident["start_epoch_ms"],"original_owned_pgid":pgid,"original_owned_sid":pgid}
++                    if not members and pgid in children and children[pgid][0].poll() is not None:
++                        with self._lock:
++                            self.owned_children.pop(pgid,None);self.owned_groups.pop(pgid,None)
++                            self.retired_owned_leaders.discard(pgid)
++                owned=set(rows)
++                changed=True
++                while changed:
++                    changed=False
++                    for pid,row in all_rows.items():
++                        if pid not in owned and row["ppid"] in owned:
++                            owned.add(pid);rows[pid]={**row,"kind":"owned_descendant"};changed=True
+             total = sum(int(row["rss_bytes"]) for row in rows.values())
+             status = "RSS_THRESHOLD_REACHED" if total >= self.threshold_bytes else "SAMPLED_WITHIN_THRESHOLD"
+             sample = {"schema": "W24_SETUP_RSS_SAMPLE_V1",
+@@ -839,11 +922,11 @@
+         while not self._stop.wait(self.interval_seconds):
+             self.sample_once()
+ 
+-    def stop(self) -> None:
++    def stop(self, *, timeout_seconds: float | None = None) -> None:
+         self._stop.set()
+         thread = self._thread
+         if thread is not None:
+-            thread.join(timeout=max(12.0, self.interval_seconds * 12))
++            thread.join(timeout=(max(12.0, self.interval_seconds * 12) if timeout_seconds is None else timeout_seconds))
+             if thread.is_alive():
+                 with self._lock:
+                     self.stop_reason = self.stop_reason or "RSS_MONITOR_THREAD_DID_NOT_STOP"
+@@ -967,7 +1050,11 @@
+ 
+     def __init__(self, daemon: Any, *, monitor: SampledRssMonitor,
+                  deadline_monotonic: float, events_path: Path,
+-                 workspace: Path, project_id: str):
++                 workspace: Path, project_id: str, native_epoch_capability: Any = None):
++        self.native_epoch_capability = native_epoch_capability
++        if native_epoch_capability is not None:
++            from tools.w24_native_epoch_capability import require_native_epoch_capability
++            require_native_epoch_capability(native_epoch_capability)
+         self._daemon = daemon
+         self.monitor = monitor
+         self.deadline_monotonic = deadline_monotonic
+@@ -1119,6 +1206,9 @@
+             "SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED", "LOST"}
+ 
+     def dispatch(self, request: Mapping[str, Any]) -> dict[str, Any]:
++        if self.native_epoch_capability is not None:
++            from tools.w24_native_epoch_capability import require_native_epoch_capability
++            require_native_epoch_capability(self.native_epoch_capability)
+         if not isinstance(request, Mapping):
+             raise CandidateError("setup dispatch request must be a mapping")
+         operation = request.get("operation")
+@@ -1244,6 +1334,17 @@
+                 self.unknown = True
+                 raise CandidateError("Worker-backed setup route lacks terminal SUCCEEDED status")
+ 
++        if self.native_epoch_capability is not None and operation == "operation_call" and arguments.get("operation_id") == "code.execute_java":
++            try:
++                self.native_epoch_capability.verify(response,
++                    model_ref=dict(execution["model_ref"]), revision=response.get("execution", {}).get("revision"))
++            except BaseException as exc:
++                self.unknown = True
++                _append(self.events_path, {"event": "actual_native_epoch_guard_failed",
++                    "request_id": request_id, "operation": operation, "error": str(exc),
++                    "durable_operation_state_rewritten": False, "stop_all_follow_on_routes": True})
++                raise CandidateError("actual Java epoch/origin guard failed; no follow-on route") from exc
++
+         if operation == "model.adopt":
+             execution = response.get("execution")
+             ref = execution.get("model_ref") if isinstance(execution, Mapping) else None

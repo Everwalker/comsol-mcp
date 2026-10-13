@@ -1,0 +1,55 @@
+--- root/comsol_mcp/_java_worker.py
++++ w23-r15/comsol_mcp/_java_worker.py
+@@ -418,9 +418,20 @@
+             environment = dict(os.environ); environment["COMSOL_MCP_WORKER_TOKEN"] = self._token
+             log = (self.state_dir / "worker.stderr.log").open("a", encoding="utf-8")
+             factory = self._process_factory or subprocess.Popen
+-            self._process = factory(command, text=True, stdout=subprocess.DEVNULL, stderr=log,
+-                                    env=environment, start_new_session=True)
+-            log.close()
++            try:
++                self._process = factory(command, text=True, stdout=subprocess.DEVNULL, stderr=log,
++                                        env=environment, start_new_session=True)
++            except Exception as exc:
++                from ._windows_t037 import NativeSuspendedChildLaunchError
++                if type(exc) is NativeSuspendedChildLaunchError:
++                    self._process = exc.transfer_to(self)
++                    self._port = self._generation = None
++                    unknown = JavaWorkerError("native Worker child cleanup is uncertain; actual owner retained")
++                    unknown.execution_state_unknown = True
++                    raise unknown from exc
++                raise
++            finally:
++                log.close()
+             deadline = time.monotonic() + startup_timeout_s
+             ready: dict[str, Any] | None = None
+             while time.monotonic() < deadline:
+@@ -630,6 +641,8 @@
+         if queue_timeout_s is not None:
+             body["queue_timeout_ms"] = max(0, int(queue_timeout_s * 1000))
+         identifier = str(body["request_id"])
++        from ._ephemeral_result_ticket import before_submit, after_submit
++        ephemeral_audit = before_submit(self, kind, body)
+         self._emit_request_event("submitted", request_id=identifier, kind=kind, payload=body)
+         try:
+             reply = self._request(body, timeout_s=rpc_timeout_s)
+@@ -640,6 +653,7 @@
+             self._emit_request_event("unresponsive", request_id=identifier, kind=kind, payload=body, status="UNKNOWN", error=str(exc))
+             raise
+         self._emit_request_event("observed", request_id=identifier, kind=kind, payload=body, status=reply.get("status", ""), reply=_redact(reply))
++        after_submit(ephemeral_audit, self, reply)
+         return reply
+ 
+     def health(self, *, timeout_s: float = 1.0) -> dict[str, Any]:
+@@ -865,7 +879,10 @@
+     def close(self) -> None:
+         # Only the child started by this instance is eligible for termination. No COMSOL server is touched.
+         with self._lock:
+-            if self._process is not None and self._process.poll() is None:
++            from ._windows_t037 import _RetainedSuspendedChild
++            if type(self._process) is _RetainedSuspendedChild:
++                self._process.cleanup_owned(self, timeout=3)
++            elif self._process is not None and self._process.poll() is None:
+                 self._process.terminate()
+                 try: self._process.wait(timeout=3)
+                 except subprocess.TimeoutExpired: self._process.kill(); self._process.wait(timeout=3)

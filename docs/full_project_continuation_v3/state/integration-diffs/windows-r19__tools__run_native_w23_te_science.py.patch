@@ -1,0 +1,1289 @@
+--- root/tools/run_native_w23_te_science.py
++++ windows-r19/tools/run_native_w23_te_science.py
+@@ -20,10 +20,12 @@
+ import json
+ import math
+ import os
++import re
+ import subprocess
+ import sys
+ import time
+ import traceback
++from decimal import Decimal, InvalidOperation
+ from datetime import datetime, timedelta, timezone
+ from pathlib import Path
+ from typing import Any, Callable, Mapping
+@@ -42,8 +44,8 @@
+ RESUME_HELPERS = REPO / "tools/run_native_resume_smoke.py"
+ PLAN = REPO / "docs/full_project_execution/w23_overlap/W23_TE_FIXTURE_PROPOSAL.md"
+ EVIDENCE_ROOT = REPO / "docs/full_project_execution/w23_overlap/evidence"
+-CANDIDATE_ID = "W23-TE-PLANAR-TE-SCIENCE-09"
+-PROJECT_LABEL = "W23 managed planar TE science candidate 09"
++CANDIDATE_ID = "W23-TE-PLANAR-TE-SCIENCE-17"
++PROJECT_LABEL = "W23 managed planar TE science candidate 17"
+ PROJECT_ID: str | None = None  # Set only from the runtime project.create response.
+ APPROVAL_STATUS = "ROOT_APPROVED_FOR_EXACT_FROZEN_CANDIDATE"
+ SOURCE_MAP_DIGEST_SEMANTICS = (
+@@ -60,6 +62,10 @@
+     {"case_id": "fine-phase0", "mesh_level": "fine", "phase_value": "0[deg]"},
+     {"case_id": "fine-phase90", "mesh_level": "fine", "phase_value": "90[deg]"},
+ )
++MESH_LEVEL_SPECS: dict[str, tuple[str, str]] = {
++    "coarse": ("0.16[um]", "0.04[um]"),
++    "fine": ("0.08[um]", "0.04[um]"),
++}
+ STUDY_TAG = "std1"
+ CONFIGURED_STUDY_STEPS = (
+     {"tag": "bmaInput", "feature_type": "BoundaryModeAnalysis", "port_name": "1",
+@@ -300,6 +306,37 @@
+         "reconciliation_project_id": observed,
+         "source": "immutable successful project.create receipt",
+     }
++
++
++def _worker_disconnect_verified(disconnect_result: Any, health_before: Any,
++                                health_after: Any) -> bool:
++    """Validate the decoded RemoteClient result and same Worker generation."""
++    if not all(isinstance(value, Mapping)
++               for value in (disconnect_result, health_before, health_after)):
++        return False
++    instance_id = health_before.get("instance_id")
++    before_generation = health_before.get("generation")
++    result_generation = disconnect_result.get("generation")
++    return bool(
++        health_before.get("ok") is True
++        and health_before.get("status") == "HEALTHY"
++        and type(health_before.get("queued_or_running")) is int
++        and health_before.get("queued_or_running") == 0
++        and type(before_generation) is int
++        and isinstance(instance_id, str) and instance_id
++        and disconnect_result.get("connected") is False
++        and disconnect_result.get("instance_id") == instance_id
++        and type(result_generation) is int
++        and result_generation == before_generation + 1
++        and health_after.get("ok") is True
++        and health_after.get("status") == "HEALTHY"
++        and health_after.get("connected") is False
++        and type(health_after.get("queued_or_running")) is int
++        and health_after.get("queued_or_running") == 0
++        and health_after.get("instance_id") == instance_id
++        and type(health_after.get("generation")) is int
++        and health_after.get("generation") == result_generation
++    )
+ 
+ 
+ def _cleanup_authorization(project_receipt: Mapping[str, Any] | None,
+@@ -792,6 +829,28 @@
+                 "scope": "software-only recomputation; never substitutes for native input Port phase solves",
+             },
+             "native_reopen_integral_relative_tolerance": 1e-8,
++            "material_tensor_readback": {
++                "setter_storage_form": "9-entry String[] requested for the symmetric diagonal tensor; COMSOL may canonicalize an isotropic tensor to one entry",
++                "getter_selection": "getValueType selects matching getString, getStringArray, or getStringMatrix; MaterialModel.size is captured for every property",
++                "getter_capture_status_required": "readback_status must be CAPTURED and MaterialModel.size must be CAPTURED before reconstructing a physical tensor",
++                "accepted_isotropic_canonical_shape": "String/getString with raw shape [], or StringArray/getStringArray with exactly one string and raw shape [1]; in either case require captured MaterialModel.size exactly [1,1] or [3,3], preserve the literal returned size, and reconstruct only as isotropic after exact value checks",
++                "accepted_string_array_shape": "exactly nine entries, raw shape [9], and stored size dimensions whose product is nine; reconstructed with documented column-wise tensor readback",
++                "accepted_string_matrix_shape": "exactly 3x3, raw shape [3,3], stored size [3,3], preserved as returned",
++                "required_relative_permittivity": "reconstructed 3x3 tensor with expected expression on the diagonal and zero off-diagonal",
++                "required_relative_permeability": "reconstructed 3x3 identity tensor",
++                "required_electric_conductivity": "COMSOL 6.4 electricconductivity property is set explicitly to a typed one-entry StringArray [0[S/m]] and read back via matching typed getter; require captured size [1,1] or [3,3], exact raw shape/value, finite numeric zero S/m for core and both cladding regions.",
++                "source_basis": "COMSOL 6.4 model.material() documentation (doc4111/chunk16782, SHA-256 80ae61bc99d91b2e91aaeff7c91406bae0a768c7fbadef5b8efe95db33c262ab) permits one value for isotropic matrix properties and describes MaterialModel.size dimensions; Programming Reference 6.4 p.152 defines typed array/matrix getters and column-wise matrix reads. Native Activity004 receipt (material_tensor_raw_readback.json SHA-256 e54058da73b8f6bd7024d760dcd8673cd2e902c651cf9f7b17d07bc0aaf1e5f7) observed all six isotropic properties as StringArray/getStringArray raw_shape [1] while MaterialModel.size returned [3,3]. This demonstrates logical property dimensions are not identical to typed getter storage shape. Admit only exact one-string scalar representations with captured size [1,1] or [3,3], retain that literal size, and then apply the unchanged physical matrix entry checks. The same-repo W15 adapter reconstructs one-entry isotropic values. No whole-object equality or nonsymmetric tensor ordering is claimed.",
++                "lossless_material_source_basis": "The COMSOL 6.4 Wave Optics optically_anisotropic_waveguide example (doc22410/chunk98325, source SHA-256 08b5d145ac8adf123ca0e48c74593c6062ecfa21130efc9b033376f8416b9c2c, PDF p.9) uses real relative permittivity, relative permeability 1, and zero S/m electric conductivity for a lossless dielectric. Programming Reference 6.4 doc3626/chunk10909 (SHA-256 5b7f23ad2eae77f59d71935f4f6c9b6b9ede380dc34da065181841e512bbc105, PDF p.154) maps Electric conductivity to API key electricconductivity; LiveLink doc11652/chunk33714 (SHA-256 1045cdfbcaf7cca0b9c12c065a094a76071607878e5777692fc93313c86b91fd, PDF p.17) demonstrates MaterialModel.set with a StringArray conductivity value. Activity007's native exception explicitly reported missing sigma, so candidate16 supplies the documented zero-loss property without changing epsilon/mu or numeric science criteria.",
++            },
++            "mesh_readback": {
++                "generator": "FreeTri",
++                "generator_tag": "ftri1",
++                "selection_rule": "Selection.all() on the FreeTri selection's current dimension; require dimension 2 and selected 2D domain count equal to geometry.getNDomains()",
++                "required_native_readbacks": ["free_tri_built=true", "mesh_is_complete=true", "mesh_is_empty=false", "elements>0", "tri_elements>0", "element_types includes tri"],
++                "frozen_level_size_um": {level: {"hmax": values[0], "hmin": values[1]}
++                                         for level, values in MESH_LEVEL_SPECS.items()},
++                "api_basis": "COMSOL 6.4 FreeTri doc4379/chunk17131 SHA-256 a47a086e293788556ca136312089ba1aee148566543a316ef7e4c55cd5809b7b says FreeTri creates unstructured triangular mesh in 2D and accepts a domain selection; Selection doc7700/chunk23052 SHA-256 451cce8061404cde87fb8fe72d85ae1a1a4c3a7887f4e779a73916f8a24184d6 defines all() as selecting all geometric entities in the current dimension; same-install COMSOL 6.4 javap confirms MeshSequence.getNumElem(String), getTypes(), isEmpty(), and isComplete(). The COMSOL API index doc7308/chunk22383 SHA-256 dd456cb13f9f715e5a596270dbc401427ee9069a4682b36095fea86a217297ce defines MeshSequence.isComplete() as checking that the entire selected geometry has a mesh. Activity005 preserved an actual integer elements=0 from a mesh sequence with no explicit generator; this remains a negative control and is not treated as mesh success.",
++            },
+         },
+         "evidence_policy": {
+             "durable_worker_ledger_and_direct_rpc_journal_both_required_for_cleanup": True,
+@@ -1081,7 +1140,16 @@
+     if not isinstance(job, Mapping):
+         return False
+     operation = job.get("operation")
+-    return isinstance(operation, Mapping) and operation.get("operation") == "study.run"
++    if not isinstance(operation, Mapping):
++        return False
++    # OperationStore.job() attaches the outer operation row here. For the
++    # managed route its column is "operation_call"; the requested engine
++    # operation is nested in that row's persisted request metadata.
++    if operation.get("operation") == "study.run":
++        return True
++    metadata = operation.get("metadata")
++    arguments = metadata.get("arguments") if isinstance(metadata, Mapping) else None
++    return isinstance(arguments, Mapping) and arguments.get("operation_id") == "study.run"
+ 
+ 
+ def _actual_science_study_run_submissions(daemon: Any, preflight: Any) -> list[dict[str, Any]]:
+@@ -1096,9 +1164,241 @@
+         for event in events:
+             metadata = event.get("metadata")
+             if event.get("event") == "worker_request" and preflight._is_native_study_run_submission(metadata):
++                operation = job.get("operation")
++                operation_metadata = operation.get("metadata") if isinstance(operation, Mapping) else None
++                arguments = (operation_metadata.get("arguments")
++                             if isinstance(operation_metadata, Mapping) else None)
++                operation_execution = operation_metadata.get("execution") if isinstance(
++                    operation_metadata, Mapping) else None
++                result = job.get("result")
++                result_data = result.get("data") if isinstance(result, Mapping) else None
++                domain_outcome = result_data.get("domain_outcome") if isinstance(result_data, Mapping) else None
++                domain_failure = domain_outcome.get("failure") if isinstance(domain_outcome, Mapping) else None
++                safe_retry = None
++                if isinstance(domain_outcome, Mapping) and type(domain_outcome.get("safe_retry")) is bool:
++                    safe_retry = domain_outcome["safe_retry"]
++                elif isinstance(domain_failure, Mapping) and type(domain_failure.get("safe_retry")) is bool:
++                    safe_retry = domain_failure["safe_retry"]
++                worker_metadata = metadata.get("metadata") if isinstance(metadata, Mapping) else None
+                 rows.append({"job_id": job_id, "operation": "study.run",
+-                             "status": job.get("status"), "worker_event": metadata})
++                             "operation_id": job.get("operation_id"),
++                             "status": job.get("status"),
++                             "operation_status": operation.get("status") if isinstance(operation, Mapping) else None,
++                             "operation_request_id": operation.get("request_id") if isinstance(operation, Mapping) else None,
++                             "requested_operation_id": arguments.get("operation_id") if isinstance(arguments, Mapping) else None,
++                             "operation_execution_request_id": operation_execution.get("request_id") if isinstance(operation_execution, Mapping) else None,
++                             "worker_event_id": event.get("id"),
++                             "worker_event_phase": metadata.get("phase") if isinstance(metadata, Mapping) else None,
++                             "worker_event_method": worker_metadata.get("method") if isinstance(worker_metadata, Mapping) else None,
++                             "request_id": worker_metadata.get("request_id") if isinstance(worker_metadata, Mapping) else None,
++                             "domain_state": domain_outcome.get("state") if isinstance(domain_outcome, Mapping) else None,
++                             "execution_state_unknown": result_data.get("execution_state_unknown") if isinstance(result_data, Mapping) else None,
++                             "safe_retry": safe_retry,
++                             "worker_event": metadata})
+     return rows
++
++
++def _reconcile_study_run_dispatch(
++        daemon: Any, preflight: Any, *, response_job_id: str | None,
++        before_identities: set[tuple[Any, Any]]) -> dict[str, Any]:
++    """Reconcile a single dispatch against its same durable job after waiting.
++
++    A managed dispatch can return a pending job before the Worker submission
++    event has reached OperationStore. Calls before the one permitted wait are
++    provisional; the call after that wait (including when it raises) is the
++    final event snapshot bound to the response's exact durable job identity.
++    """
++    result: dict[str, Any] = {
++        "response_job_id": response_job_id,
++        "status": "UNVERIFIED_POST_WAIT_ACCOUNTING_STOP",
++        "all_durable_submissions": [],
++        "new_durable_submissions_for_this_dispatch": [],
++        "response_job_status": None,
++        "response_job_operation_id": None,
++        "response_job_operation_status": None,
++        "response_job_operation_request_id": None,
++        "response_job_is_study_run": False,
++        "submission_count_for_dispatch": "UNKNOWN",
++        "reconciliation_error": None,
++    }
++    try:
++        all_rows = _actual_science_study_run_submissions(daemon, preflight)
++    except BaseException as exc:
++        result["reconciliation_error"] = f"{type(exc).__name__}: {exc}"
++        return result
++    result["all_durable_submissions"] = all_rows
++    new_rows = [row for row in all_rows
++                if (row.get("job_id"), row.get("request_id")) not in before_identities]
++    result["new_durable_submissions_for_this_dispatch"] = new_rows
++    result["submission_count_for_dispatch"] = len(new_rows) if new_rows else "UNKNOWN"
++    if response_job_id is None:
++        result["reconciliation_error"] = "dispatch response has no durable job identity"
++        return result
++    try:
++        job = daemon.store.job(response_job_id)
++    except BaseException as exc:
++        result["reconciliation_error"] = f"{type(exc).__name__}: {exc}"
++        return result
++    if not isinstance(job, Mapping):
++        result["reconciliation_error"] = "response job row is missing after wait"
++        return result
++    operation = job.get("operation")
++    operation = operation if isinstance(operation, Mapping) else {}
++    operation_metadata = operation.get("metadata")
++    operation_metadata = operation_metadata if isinstance(operation_metadata, Mapping) else {}
++    operation_execution = operation_metadata.get("execution")
++    operation_execution = operation_execution if isinstance(operation_execution, Mapping) else {}
++    result.update({
++        "response_job_status": job.get("status"),
++        "response_job_operation_id": job.get("operation_id"),
++        "response_job_operation_status": operation.get("status"),
++        "response_job_operation_request_id": operation.get("request_id"),
++        "response_job_execution_request_id": operation_execution.get("request_id"),
++        "response_job_is_study_run": _is_study_run_job(job),
++    })
++    response_rows = [row for row in new_rows if row.get("job_id") == response_job_id]
++    result["response_job_worker_submissions"] = response_rows
++    identity_bound = (
++        len(new_rows) == 1 and len(response_rows) == 1
++        and result["response_job_is_study_run"] is True
++        and response_rows[0].get("operation_id") == job.get("operation_id")
++    )
++    if identity_bound:
++        result["status"] = "PASS_ONE_DURABLE_WORKER_SUBMISSION_BOUND_TO_DISPATCH_JOB"
++    else:
++        result["reconciliation_error"] = (
++            "post-wait durable Worker submission count or response-job binding is not exactly one")
++    return result
++
++
++def _require_terminal_study_run_success_before_accounting(
++        helpers: Mapping[str, Any], terminal_response: Mapping[str, Any],
++        label: str, accounting: Mapping[str, Any], *,
++        expected_total_dispatch_count: int) -> None:
++    """Keep a real terminal COMSOL failure primary over local count mismatch."""
++    helpers["require_success"](terminal_response, label)
++    reconciliation = accounting.get("post_wait_reconciliation")
++    rows = reconciliation.get("all_durable_submissions") if isinstance(reconciliation, Mapping) else None
++    if (not isinstance(rows, list)
++            or len(rows) != expected_total_dispatch_count):
++        raise RuntimeError(
++            "Study.run cumulative durable submission count is unverified; stop without another submission")
++    if accounting.get("status") != "PASS_ONE_DURABLE_WORKER_SUBMISSION_BOUND_TO_DISPATCH_JOB":
++        raise RuntimeError("Study.run durable dispatch accounting is unverified; stop without another submission")
++
++
++def _runner_study_submission_records(rows: list[Mapping[str, Any]]) -> list[dict[str, Any]]:
++    """Project durable Worker events in stable event order into runner records.
++
++    OperationStore pages jobs newest-first, while each job's event page is
++    oldest-first. Sorting by the globally unique persisted event id makes the
++    display-only ordinal independent of job-page order and later insertions.
++    """
++    if not isinstance(rows, list):
++        raise TypeError("durable Study.run submissions must be a list")
++    validated: list[tuple[int, Mapping[str, Any]]] = []
++    seen_event_ids: set[int] = set()
++    seen_identities: set[tuple[str, str]] = set()
++    for row in rows:
++        if not isinstance(row, Mapping):
++            raise ValueError("durable study.run Worker submission row is malformed")
++        request_id = row.get("request_id")
++        job_id = row.get("job_id")
++        event_id = row.get("worker_event_id")
++        if not isinstance(job_id, str) or not job_id or not isinstance(request_id, str) or not request_id:
++            raise ValueError("durable study.run Worker submission lacks exact job/request identity")
++        if type(event_id) is not int or event_id <= 0:
++            raise ValueError("durable study.run Worker submission lacks an exact positive worker_event_id")
++        if row.get("operation") != "study.run" or row.get("worker_event_phase") != "submitted" \
++                or row.get("worker_event_method") != "run":
++            raise ValueError("durable study.run row is not an exact submitted Worker method=run event")
++        if not isinstance(row.get("operation_id"), str) or not row.get("operation_id"):
++            raise ValueError("durable study.run Worker submission lacks its exact operation identity")
++        identity = (job_id, request_id)
++        if event_id in seen_event_ids or identity in seen_identities:
++            raise ValueError("durable study.run Worker submission repeats an event or job/request identity")
++        worker_event = row.get("worker_event")
++        if not isinstance(worker_event, Mapping):
++            raise ValueError("durable study.run Worker submission has no preserved event payload")
++        event_metadata = worker_event.get("metadata")
++        if (not isinstance(event_metadata, Mapping)
++                or event_metadata.get("request_id") != request_id
++                or event_metadata.get("method") != "run"
++                or worker_event.get("phase") != "submitted"):
++            raise ValueError("durable study.run Worker event payload disagrees with its indexed identity")
++        seen_event_ids.add(event_id)
++        seen_identities.add(identity)
++        validated.append((event_id, row))
++
++    validated.sort(key=lambda item: item[0])
++    records: list[dict[str, Any]] = []
++    for ordinal, (event_id, row) in enumerate(validated, 1):
++        request_id = row["request_id"]
++        job_id = row["job_id"]
++        records.append({
++            "ordinal": ordinal,
++            "worker_event_id": event_id,
++            "at_utc": utc_now(),
++            "job_id": job_id,
++            "operation": "study.run",
++            "request_id": request_id,
++            "operation_id": row.get("operation_id"),
++            "operation_request_id": row.get("operation_request_id"),
++            "durable_job_status": row.get("status"),
++            "durable_operation_status": row.get("operation_status"),
++            "domain_state": row.get("domain_state"),
++            "execution_state_unknown": row.get("execution_state_unknown"),
++            "safe_retry": row.get("safe_retry"),
++            "worker_event": row.get("worker_event"),
++            "method": "model.study('std1').run()",
++        })
++    return records
++
++
++def _bind_response_job_study_submission(
++        response_rows: Any, runner_records: list[Mapping[str, Any]], *,
++        response_job_id: str | None, response_operation_id: Any,
++        response_operation_request_id: Any) -> tuple[dict[str, Any], dict[str, Any]]:
++    """Join the raw dispatch row to its enriched record by durable identity.
++
++    Raw OperationStore rows intentionally have no runner ordinal. The response
++    row is authoritative for which job completed; the ordinal is only copied
++    from the canonical, globally event-ordered projection after an exact join.
++    """
++    if not isinstance(response_job_id, str) or not response_job_id:
++        raise ValueError("Study.run response has no exact durable job identity")
++    if not isinstance(response_operation_id, str) or not response_operation_id:
++        raise ValueError("Study.run response job has no exact operation identity")
++    if not isinstance(response_operation_request_id, str) or not response_operation_request_id:
++        raise ValueError("Study.run response job has no exact operation request identity")
++    if not isinstance(response_rows, list) or len(response_rows) != 1:
++        raise ValueError("Study.run response job does not have exactly one raw durable Worker submission")
++    raw = response_rows[0]
++    if not isinstance(raw, Mapping):
++        raise ValueError("Study.run response-job Worker submission row is malformed")
++    job_id, request_id, event_id = (raw.get("job_id"), raw.get("request_id"),
++                                    raw.get("worker_event_id"))
++    if (job_id != response_job_id or raw.get("operation_id") != response_operation_id
++            or raw.get("operation_request_id") != response_operation_request_id
++            or raw.get("operation") != "study.run"
++            or raw.get("worker_event_phase") != "submitted"
++            or raw.get("worker_event_method") != "run"
++            or type(event_id) is not int or event_id <= 0
++            or not isinstance(request_id, str) or not request_id):
++        raise ValueError("raw Study.run response row does not match exact job/operation/request/event identity")
++    matches = [record for record in runner_records
++               if isinstance(record, Mapping)
++               and record.get("job_id") == job_id
++               and record.get("request_id") == request_id
++               and record.get("worker_event_id") == event_id]
++    if len(matches) != 1:
++        raise ValueError("raw Study.run response row has no unique canonical runner record")
++    record = matches[0]
++    if (record.get("operation_id") != response_operation_id
++            or record.get("operation_request_id") != response_operation_request_id
++            or type(record.get("ordinal")) is not int or record["ordinal"] <= 0):
++        raise ValueError("canonical Study.run runner record does not preserve response identity")
++    return dict(raw), dict(record)
+ 
+ 
+ def _count_worker_requests(daemon: Any) -> int:
+@@ -1358,6 +1658,288 @@
+     }
+ 
+ 
++def validate_material_tensor_readback(build: Mapping[str, Any]) -> dict[str, Any]:
++    """Reconstruct only documented getter forms with matching stored-size evidence."""
++    if not isinstance(build, Mapping):
++        raise ValueError("native fixture build receipt is not an object")
++    rows = build.get("materials")
++    if not isinstance(rows, list):
++        raise ValueError("fixture build receipt lacks material getter readbacks")
++    expected = {
++        "matCore": ("selCoreMaterial", "n_core^2"),
++        "matCladdingBottom": ("selCladdingBottom", "n_clad^2"),
++        "matCladdingTop": ("selCladdingTop", "n_clad^2"),
++    }
++    by_tag: dict[str, Mapping[str, Any]] = {}
++    for row in rows:
++        if not isinstance(row, Mapping) or not isinstance(row.get("tag"), str):
++            raise ValueError("material readback row is malformed")
++        if row["tag"] in by_tag:
++            raise ValueError("material readback contains duplicate tags")
++        by_tag[row["tag"]] = row
++    if set(by_tag) != set(expected):
++        raise ValueError("material readback does not contain the exact frozen core and cladding materials")
++
++    def require_finite_zero_conductivity(payload: Any, *, tag: str) -> dict[str, Any]:
++        if not isinstance(payload, Mapping):
++            raise ValueError(f"UNVERIFIED {tag} electricconductivity: typed getter payload is missing")
++        if payload.get("readback_status") != "CAPTURED":
++            raise ValueError(f"UNVERIFIED {tag} electricconductivity: typed getter readback is not captured")
++        stored_size = payload.get("stored_size")
++        if (payload.get("size_getter") != "MaterialModel.size"
++                or payload.get("stored_size_status") != "CAPTURED"
++                or stored_size not in ([1, 1], [3, 3])):
++            raise ValueError(
++                f"UNVERIFIED {tag} electricconductivity: MaterialModel.size must be captured as [1,1] or [3,3]")
++
++        value_type, getter = payload.get("value_type"), payload.get("getter")
++        raw, shape = payload.get("raw_value"), payload.get("raw_shape")
++        if (value_type == "String" and getter == "MaterialModel.getString"
++                and isinstance(raw, str) and shape == []):
++            values = [raw]
++            form = "String-scalar"
++        elif (value_type == "StringArray" and getter == "MaterialModel.getStringArray"
++              and isinstance(raw, list) and len(raw) == 1
++              and all(isinstance(value, str) for value in raw) and shape == [1]):
++            values = raw
++            form = "StringArray-one-entry-scalar"
++        else:
++            raise ValueError(
++                f"UNVERIFIED {tag} electricconductivity: expected matching String/getString raw_shape [] or StringArray/getStringArray raw_shape [1]")
++
++        for value in values:
++            match = re.fullmatch(
++                r"\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)\s*(?:\[([^\]]+)\])?\s*",
++                value)
++            if match is None or (match.group(2) is not None and match.group(2).strip() != "S/m"):
++                raise ValueError(
++                    f"UNVERIFIED {tag} electricconductivity: expected a finite numeric zero in native S/m units, got {value!r}")
++            try:
++                exact_numeric = Decimal(match.group(1))
++            except InvalidOperation as exc:
++                raise ValueError(
++                    f"UNVERIFIED {tag} electricconductivity: conductivity is not a valid decimal value, got {value!r}") from exc
++            if not exact_numeric.is_finite():
++                raise ValueError(
++                    f"UNVERIFIED {tag} electricconductivity: conductivity must be finite zero S/m, got {value!r}")
++            try:
++                numeric = float(exact_numeric)
++            except (OverflowError, ValueError) as exc:
++                raise ValueError(
++                    f"UNVERIFIED {tag} electricconductivity: conductivity is outside finite numeric range, got {value!r}") from exc
++            # Decimal comparison prevents tiny nonzero values (for example
++            # 1e-400) from underflowing to float(0.0) and passing this gate.
++            if not math.isfinite(numeric) or exact_numeric != Decimal(0):
++                raise ValueError(
++                    f"UNVERIFIED {tag} electricconductivity: conductivity must be finite zero S/m, got {value!r}")
++        return {"value_type": value_type, "getter": getter,
++                "raw_shape": list(shape), "stored_size": list(stored_size),
++                "size_getter": payload.get("size_getter"), "raw_value": list(values),
++                "reconstruction": form, "numeric_value_S_per_m": 0.0,
++                "finite": True, "zero": True}
++
++    def reconstruct_tensor(payload: Any, *, tag: str, property_name: str) -> tuple[list[list[str]], dict[str, Any]]:
++        if not isinstance(payload, Mapping):
++            raise ValueError(f"UNVERIFIED {tag} {property_name}: getter payload is missing")
++        value_type, getter = payload.get("value_type"), payload.get("getter")
++        raw, shape = payload.get("raw_value"), payload.get("raw_shape")
++        stored_size = payload.get("stored_size")
++        if payload.get("readback_status") != "CAPTURED":
++            raise ValueError(f"UNVERIFIED {tag} {property_name}: typed getter readback is not captured")
++        if (payload.get("size_getter") != "MaterialModel.size"
++                or payload.get("stored_size_status") != "CAPTURED"
++                or not isinstance(stored_size, list) or len(stored_size) != 2
++                or any(type(dimension) is not int or dimension <= 0 for dimension in stored_size)):
++            raise ValueError(
++                f"UNVERIFIED {tag} {property_name}: MaterialModel.size must return two positive integer dimensions")
++
++        def size_product_is(expected: int) -> bool:
++            return stored_size[0] * stored_size[1] == expected
++
++        def has_exact_integer_shape(expected_shape: list[int]) -> bool:
++            return (isinstance(shape, list) and len(shape) == len(expected_shape)
++                    and all(type(dimension) is int for dimension in shape)
++                    and shape == expected_shape)
++        scalar_property_size = stored_size in ([1, 1], [3, 3])
++        if value_type == "String" and getter == "MaterialModel.getString":
++            if not isinstance(raw, str) or shape != [] or not scalar_property_size:
++                raise ValueError(
++                    f"UNVERIFIED {tag} {property_name}: String scalar requires raw_shape [] and captured size [1,1] or [3,3]")
++            matrix = [[raw if r == c else "0" for c in range(3)] for r in range(3)]
++            form = ("String-isotropic-scalar-property-size-1x1" if stored_size == [1, 1]
++                    else "String-isotropic-scalar-property-size-3x3")
++        elif value_type == "StringArray" and getter == "MaterialModel.getStringArray":
++            if (not isinstance(raw, list) or any(not isinstance(value, str) for value in raw)):
++                raise ValueError(f"UNVERIFIED {tag} {property_name}: StringArray values are malformed")
++            if len(raw) == 1 and has_exact_integer_shape([1]) and scalar_property_size:
++                # COMSOL may expose the canonical one-value isotropic storage
++                # shape [1] for a property whose MaterialModel.size is [3,3].
++                # Preserve both raw shape and literal API size, then validate all
++                # nine reconstructed physical entries below.
++                matrix = [[raw[0] if r == c else "0" for c in range(3)] for r in range(3)]
++                form = ("StringArray-isotropic-one-entry-property-size-1x1" if stored_size == [1, 1]
++                        else "StringArray-isotropic-one-entry-property-size-3x3")
++            elif len(raw) == 9 and has_exact_integer_shape([9]) and size_product_is(9):
++                # Programming Reference 6.4 p.152 specifies column-wise matrix
++                # readback. This fixture uses symmetric diagonal tensors, so no
++                # nonsymmetric ordering claim is needed.
++                matrix = [[raw[column * 3 + row] for column in range(3)] for row in range(3)]
++                form = "StringArray-nine-column-wise"
++            else:
++                raise ValueError(
++                    f"UNVERIFIED {tag} {property_name}: StringArray requires exact isotropic raw_shape [1] with stored size [1,1] or [3,3], or full raw_shape [9] with size product 9")
++        elif value_type == "StringMatrix" and getter == "MaterialModel.getStringMatrix":
++            if (not isinstance(raw, list) or len(raw) != 3
++                    or any(not isinstance(row, list) or len(row) != 3 for row in raw)
++                    or any(not isinstance(cell, str) for row in raw for cell in row)
++                    or not has_exact_integer_shape([3, 3]) or stored_size != [3, 3]):
++                raise ValueError(
++                    f"UNVERIFIED {tag} {property_name}: StringMatrix requires actual 3x3 strings, raw_shape [3,3], and stored size [3,3]")
++            matrix = [list(row) for row in raw]
++            form = "StringMatrix-three-by-three"
++        else:
++            raise ValueError(
++                f"UNVERIFIED {tag} {property_name}: unsupported or mismatched value_type/getter {value_type!r}/{getter!r}")
++        return matrix, {"value_type": value_type, "getter": getter,
++                        "raw_shape": list(shape), "stored_size": list(stored_size),
++                        "size_getter": payload.get("size_getter"), "reconstruction": form}
++
++    checked = []
++    for tag, (selection, expected_eps) in expected.items():
++        row = by_tag[tag]
++        if row.get("selection") != selection:
++            raise ValueError(f"{tag} material selection readback differs from the frozen selection")
++        if row.get("expected_diagonal_relative_permittivity") != expected_eps:
++            raise ValueError(f"{tag} expected permittivity expression differs from the frozen material")
++        eps_matrix, eps_form = reconstruct_tensor(row.get("relative_permittivity"), tag=tag,
++                                                  property_name="relpermittivity")
++        mu_matrix, mu_form = reconstruct_tensor(row.get("relative_permeability"), tag=tag,
++                                                property_name="relpermeability")
++        conductivity_form = require_finite_zero_conductivity(
++            row.get("electric_conductivity"), tag=tag)
++        if row.get("electric_lossless_assumption") != (
++                "real_relative_permittivity_with_electric_conductivity_set_to_zero_S_per_m"):
++            raise ValueError(f"UNVERIFIED {tag}: fixture did not declare the frozen lossless material model")
++        for property_name, matrix, diagonal in (
++                ("relpermittivity", eps_matrix, expected_eps),
++                ("relpermeability", mu_matrix, "1")):
++            for r in range(3):
++                for c in range(3):
++                    wanted = diagonal if r == c else "0"
++                    if matrix[r][c] != wanted:
++                        raise ValueError(
++                            f"{tag} {property_name}[{r},{c}] read back as {matrix[r][c]!r}, expected {wanted!r}")
++        checked.append({"tag": tag, "selection": selection,
++                        "relative_permittivity_value_type": eps_form["value_type"],
++                        "relative_permittivity_getter": eps_form["getter"],
++                        "relative_permittivity_raw_shape": eps_form["raw_shape"],
++                        "relative_permittivity_stored_size": eps_form["stored_size"],
++                        "relative_permittivity_reconstruction": eps_form["reconstruction"],
++                        "relative_permittivity_diagonal": expected_eps,
++                        "relative_permeability_value_type": mu_form["value_type"],
++                        "relative_permeability_getter": mu_form["getter"],
++                        "relative_permeability_raw_shape": mu_form["raw_shape"],
++                        "relative_permeability_stored_size": mu_form["stored_size"],
++                        "relative_permeability_reconstruction": mu_form["reconstruction"],
++                        "relative_permeability_diagonal": "1",
++                        "electric_conductivity_value_type": conductivity_form["value_type"],
++                        "electric_conductivity_getter": conductivity_form["getter"],
++                        "electric_conductivity_raw_shape": conductivity_form["raw_shape"],
++                        "electric_conductivity_stored_size": conductivity_form["stored_size"],
++                        "electric_conductivity_reconstruction": conductivity_form["reconstruction"],
++                        "electric_conductivity_raw_value": conductivity_form["raw_value"],
++                        "electric_conductivity_value_S_per_m": conductivity_form["numeric_value_S_per_m"],
++                        "electric_conductivity_finite_zero_verified": True,
++                        "off_diagonal_entries": "all exactly 0"})
++    return {
++        "status": "PASS_NATIVE_MATERIAL_TENSOR_AND_LOSSLESS_CONDUCTIVITY_READBACK",
++        "requested_storage_form": "9-entry String[] for symmetric diagonal fixture values; COMSOL may canonicalize isotropic tensors to a one-entry stored form",
++        "string_array_index_order": "COMSOL 6.4 documented column-wise readback; no nonsymmetric ordering claim is made",
++        "material_count": len(checked), "materials": checked,
++        "physical_tensor_diagonal_and_zero_off_diagonal_verified": True,
++        "electric_conductivity_is_finite_zero_S_per_m_for_every_material": True,
++    }
++
++
++def validate_mesh_readback(readback: Mapping[str, Any], expected_level: str) -> dict[str, Any]:
++    """Require the frozen FreeTri, full-domain, native mesh readback for one level."""
++    if not isinstance(readback, Mapping):
++        raise ValueError("native mesh readback is not an object")
++    if expected_level not in MESH_LEVEL_SPECS:
++        raise ValueError(f"unsupported frozen mesh level {expected_level!r}")
++    expected_hmax, expected_hmin = MESH_LEVEL_SPECS[expected_level]
++    if readback.get("mesh_level") != expected_level:
++        raise ValueError("native mesh readback does not match the requested frozen mesh level")
++    if readback.get("hmax") != expected_hmax or readback.get("hmin") != expected_hmin:
++        raise ValueError("native mesh hmax/hmin readback differs from the frozen mesh level")
++    elements = readback.get("elements")
++    if type(elements) is not int or elements <= 0:
++        raise ValueError(f"native mesh total element count must be a positive integer; got {elements!r}")
++    tri_elements = readback.get("tri_elements")
++    if type(tri_elements) is not int or tri_elements <= 0 or tri_elements > elements:
++        raise ValueError(f"native FreeTri element count must be a positive integer no greater than total elements; got {tri_elements!r}")
++    if readback.get("mesh_is_empty") is not False:
++        raise ValueError("native MeshSequence.isEmpty() must read back false")
++    if readback.get("mesh_is_complete") is not True:
++        raise ValueError("native MeshSequence.isComplete() must prove the selected geometry is meshed")
++    if readback.get("free_tri_tag") != "ftri1" or readback.get("free_tri_built") is not True:
++        raise ValueError("native FreeTri generator ftri1 must exist and report built")
++    if type(readback.get("free_tri_selection_dimension")) is not int \
++            or readback.get("free_tri_selection_dimension") != 2:
++        raise ValueError("FreeTri must read back an explicit dimension-2 domain selection")
++    domain_count = readback.get("geometry_domain_count")
++    domains = readback.get("free_tri_selected_domains")
++    if type(domain_count) is not int or domain_count <= 0 or not isinstance(domains, list):
++        raise ValueError("native FreeTri geometry/domain selection readback is missing")
++    if (any(type(domain) is not int or domain <= 0 for domain in domains)
++            or len(set(domains)) != len(domains) or len(domains) != domain_count):
++        raise ValueError("FreeTri selected-domain IDs must be unique and cover the full 2D geometry domain count")
++    element_types = readback.get("element_types")
++    if (not isinstance(element_types, list)
++            or any(not isinstance(element_type, str) for element_type in element_types)
++            or "tri" not in element_types):
++        raise ValueError("native mesh element types must include the FreeTri triangle type 'tri'")
++    if readback.get("study_or_solver_invoked") is not False:
++        raise ValueError("mesh readback must remain a no-study/no-solver operation")
++    return {
++        "status": "PASS_NATIVE_FULL_DOMAIN_FREETRI_MESH_READBACK",
++        "mesh_level": expected_level,
++        "expected_hmax": expected_hmax,
++        "actual_hmax": readback.get("hmax"),
++        "expected_hmin": expected_hmin,
++        "actual_hmin": readback.get("hmin"),
++        "total_element_count": elements,
++        "triangle_element_count": tri_elements,
++        "element_types": list(element_types),
++        "mesh_is_empty": False,
++        "mesh_is_complete": True,
++        "free_tri_tag": "ftri1",
++        "free_tri_built": True,
++        "free_tri_selection_dimension": 2,
++        "free_tri_selected_domains": list(domains),
++        "geometry_domain_count": domain_count,
++        "full_2d_domain_coverage_by_selection_and_count": True,
++        "study_or_solver_invoked": False,
++    }
++
++
++def _require_and_record_mesh_readback(readback: Mapping[str, Any], expected_level: str,
++                                      *, evidence: Path, label: str) -> dict[str, Any]:
++    try:
++        gate = validate_mesh_readback(readback, expected_level)
++    except (TypeError, ValueError) as exc:
++        write_json(evidence / f"{label}_mesh_readback_gate.json", {
++            "status": "FAIL_NATIVE_FULL_DOMAIN_FREETRI_MESH_READBACK",
++            "mesh_level": expected_level,
++            "error": str(exc),
++            "raw_readback": readback,
++            "study_or_solver_invoked": False,
++        })
++        raise RuntimeError(f"native mesh readback failed its frozen gate for {label}: {exc}") from exc
++    write_json(evidence / f"{label}_mesh_readback_gate.json", gate)
++    return gate
++
++
+ def _managed_call(daemon: Any, operation_id: str, arguments: dict[str, Any],
+                   ref: dict[str, Any], revision: int, *, deadline_epoch: float,
+                   evidence: Path, label: str, timeout_cap_s: float = 300.0,
+@@ -1571,7 +2153,9 @@
+ def _save_case_model(daemon: Any, ref: dict[str, Any], revision: int,
+                      fixture_name: str, case_id: str, helpers: Mapping[str, Any], *,
+                      project_workspace: Path, deadline_epoch: float,
+-                     evidence: Path) -> tuple[Path, dict[str, Any], dict[str, Any], int]:
++                     evidence: Path, receipt_status: str = "PASS_MODEL_SAVED",
++                     artifact_role: str = "science_case_model",
++                     scientific_acceptance: str = "NOT_ASSESSED") -> tuple[Path, dict[str, Any], dict[str, Any], int]:
+     project_root = project_workspace.resolve(strict=True)
+     if not project_root.is_dir():
+         raise RuntimeError("registered science project workspace is not a directory")
+@@ -1582,13 +2166,98 @@
+         daemon, ref, revision, fixture_name, {"phase": "save", "path": str(path)},
+         helpers, deadline_epoch=deadline_epoch, evidence=evidence,
+         label=f"save_{case_id}")
++    if readback.get("study_or_solver_invoked") is not False:
++        raise RuntimeError("COMSOL Model.save readback does not prove a no-study/no-solver save phase")
+     if not path.is_file() or path.stat().st_size <= 0:
+         raise RuntimeError("COMSOL Model.save did not produce a nonempty case MPH")
+-    receipt = {"status": "PASS_MODEL_SAVED", "case_id": case_id,
++    receipt = {"status": receipt_status, "artifact_role": artifact_role,
++               "scientific_acceptance": scientific_acceptance, "case_id": case_id,
+                "path": str(path), "bytes": path.stat().st_size,
+                "sha256": sha256_file(path), "java_save_readback": readback}
+     write_json(evidence / f"saved_{case_id}.json", receipt)
+     return path, receipt, ref, revision
++
++
++def _complete_terminal_study_run_case(
++        daemon: Any, helpers: Mapping[str, Any], *,
++        terminal_response: Mapping[str, Any], accounting: Mapping[str, Any],
++        expected_total_dispatch_count: int, post_wait_reconciliation: Mapping[str, Any],
++        study_submissions: list[dict[str, Any]], response_job_id: str,
++        case_id: str, completed_case_count: int, ref: dict[str, Any], revision: int,
++        fixture_name: str, project_workspace: Path, deadline_epoch: float,
++        evidence: Path, summary: dict[str, Any],
++        provisional_saved_models: dict[str, dict[str, Any]]) -> dict[str, Any]:
++    """Bind one succeeded run, save a provisional MPH, then enter readback.
++
++    This keeps the raw response row separate from its canonical runner record,
++    makes the saved file available before post-solve analysis can fail, and
++    starts only the existing zero-solve solution-inventory call afterward.
++    """
++    _require_terminal_study_run_success_before_accounting(
++        helpers, terminal_response, f"Study.run {case_id}", accounting,
++        expected_total_dispatch_count=expected_total_dispatch_count)
++    raw_row, submission = _bind_response_job_study_submission(
++        post_wait_reconciliation.get("response_job_worker_submissions"),
++        study_submissions,
++        response_job_id=response_job_id,
++        response_operation_id=post_wait_reconciliation.get("response_job_operation_id"),
++        response_operation_request_id=post_wait_reconciliation.get(
++            "response_job_operation_request_id"))
++    observed_status = _assert_call_event_terminal(daemon, {
++        "job_id": raw_row["job_id"], "request_id": raw_row["request_id"]})
++    ref, revision = _update_ref(terminal_response, daemon, ref, revision)
++    append_jsonl(evidence / "events.jsonl", {
++        "at_utc": utc_now(), "event": "study_run_case_terminal_succeeded",
++        "case_id": case_id, "submission_ordinal": submission["ordinal"],
++        "worker_event_id": submission["worker_event_id"],
++        "job_id": raw_row["job_id"], "request_id": raw_row["request_id"],
++        "worker_status": observed_status,
++        "study_run_call_count": len(study_submissions),
++        "solver_execution_count": "NOT_DERIVED"})
++
++    if time.time() >= deadline_epoch - CLEANUP_RESERVE_S:
++        raise TimeoutError("birth deadline entered cleanup reserve before provisional model save")
++    provisional_id = f"{case_id}_provisional"
++    provisional_path, provisional_receipt, ref, revision = _save_case_model(
++        daemon, ref, revision, fixture_name, provisional_id, helpers,
++        project_workspace=project_workspace, deadline_epoch=deadline_epoch,
++        evidence=evidence,
++        receipt_status="CAPTURED_PROVISIONAL_MPH_BEFORE_SOLUTION_READBACK",
++        artifact_role="provisional_model_capture_only",
++        scientific_acceptance="NOT_ACCEPTED")
++    provisional_saved_models[case_id] = {
++        **provisional_receipt,
++        "path": str(provisional_path),
++        "parent_case_id": case_id,
++        "study_run_submission": submission,
++        "scientific_acceptance": "NOT_ACCEPTED",
++    }
++    summary.update({
++        "status": "NATIVE_STUDY_CASE_TERMINAL_PROVISIONAL_MODEL_CAPTURED",
++        "study_or_solver_invoked": True,
++        "study_run_submission_count": len(study_submissions),
++        "study_run_terminal_case_count": completed_case_count,
++        "active_case": case_id,
++        "provisional_saved_models": dict(provisional_saved_models),
++        "latest_case_provisional_model": provisional_saved_models[case_id],
++        "native_scientific_acceptance": "NOT_ACCEPTED",
++    })
++    write_json(evidence / "summary.json", summary)
++
++    inventory, ref, revision = _fixture_call(
++        daemon, ref, revision, fixture_name,
++        {"phase": "solution_inventory"}, helpers,
++        deadline_epoch=deadline_epoch, evidence=evidence,
++        label=f"solution_inventory_{case_id}")
++    return {
++        "response_job_worker_submission": raw_row,
++        "submission": submission,
++        "observed_status": observed_status,
++        "provisional_saved_model": provisional_saved_models[case_id],
++        "inventory": inventory,
++        "ref": ref,
++        "revision": revision,
++    }
+ 
+ 
+ def _create_project_bound_model(daemon: Any, name: str, evidence: Path) -> tuple[dict[str, Any], int, dict[str, Any]]:
+@@ -1769,13 +2438,16 @@
+     worker_identity_capture: dict[str, Any] = {}
+     server_identity: dict[str, Any] | None = None
+     deadline_epoch: float | None = None
++    birth_epoch: float | None = None
+     fixture_dispatched = False
+     study_dispatch_started = False
++    study_dispatch_attempt_count = 0
+     original_add_event: Callable[..., Any] | None = None
+     study_submissions: list[dict[str, Any]] = []
+     direct_journal = DirectRpcJournal(evidence / "direct_worker_rpcs.jsonl")
+     successful_cases: dict[str, dict[str, Any]] = {}
+     saved_models: dict[str, dict[str, Any]] = {}
++    provisional_saved_models: dict[str, dict[str, Any]] = {}
+     opened_started = False
+     project_create_receipt: dict[str, Any] | None = None
+     immutable_run_project_id: str | None = None
+@@ -1901,6 +2573,12 @@
+         build, ref, revision = _fixture_call(
+             daemon, ref, revision, FIXTURE.name, {"phase": "build"}, helpers,
+             deadline_epoch=deadline_epoch, evidence=evidence, label="fixture_build")
++        write_json(evidence / "material_tensor_raw_readback.json", {
++            "status": "CAPTURED_BEFORE_VALIDATION",
++            "value_types_and_getters_captured": True,
++            "materials": build.get("materials") if isinstance(build, Mapping) else None,
++            "raw_values_and_getter_shapes_preserved": True,
++        })
+         if (build.get("fixture_id") != "w23_planar_te_numeric_port_science_v1"
+                 or build.get("status") != "BUILT_CONFIGURED_NOT_SOLVED"
+                 or build.get("science_plane", {}).get("x_um") != 8.0
+@@ -1908,6 +2586,10 @@
+             raise RuntimeError("native fixture readback does not prove the frozen x=8 science plane and no x=10 reuse")
+         if build.get("study_or_solver_invoked") is not False:
+             raise RuntimeError("fixture build unexpectedly claims or performs a study/solver invocation")
++        _require_and_record_mesh_readback(build.get("mesh"), "coarse", evidence=evidence,
++                                          label="fixture_build")
++        material_gate = validate_material_tensor_readback(build)
++        write_json(evidence / "material_tensor_readback_gate.json", material_gate)
+         capture_selection = validate_capture_aperture_readback(build)
+         write_json(evidence / "capture_aperture_native_selection.json", capture_selection)
+         pre_solve_inventory, ref, revision = _fixture_call(
+@@ -1986,52 +2668,191 @@
+                     {"phase": "set_mesh", "mesh_level": mesh}, helpers,
+                     deadline_epoch=deadline_epoch, evidence=evidence,
+                     label=f"set_mesh_{case_id}")
+-                if mesh_readback.get("mesh_level") != mesh or not mesh_readback.get("elements"):
+-                    raise RuntimeError(f"native mesh readback is incomplete for {case_id}")
++                _require_and_record_mesh_readback(
++                    mesh_readback, mesh, evidence=evidence, label=f"set_mesh_{case_id}")
+                 last_mesh = mesh
+             if _source_files() != freeze["source_files"]:
+                 raise RuntimeError("frozen runtime source changed during native run; stopping before Study.run")
+             remaining = deadline_epoch - time.time() - CLEANUP_RESERVE_S
+             if remaining <= 0:
+                 raise TimeoutError("birth deadline entered cleanup reserve before Study.run")
+-            before_count = len(study_submissions)
++            pre_dispatch_rows = _actual_science_study_run_submissions(daemon, preflight)
++            study_submissions[:] = _runner_study_submission_records(pre_dispatch_rows)
++            local_counter_before_dispatch = len(study_submissions)
++            before_identities = {(row["job_id"], row["request_id"])
++                                 for row in study_submissions}
++            if len(study_submissions) >= MAX_STUDY_RUN_CALLS:
++                raise RuntimeError("durable Study.run submission ceiling reached before dispatch")
+             study_dispatch_started = True
+-            run_response = _dispatch(
+-                daemon, "operation_call",
+-                {"operation_id": "study.run",
+-                 "arguments": {"study": helpers["_study_node_path"](STUDY_TAG),
+-                               "timeout_s": max(1.0, remaining)}},
+-                project_id=_active_project_id(), ref=ref, revision=revision,
+-                timeout_s=min(1500.0, remaining))
+-            if len(study_submissions) != before_count + 1:
+-                raise RuntimeError("study.run operation did not persist exactly one pre-send Worker submission")
+-            submission = study_submissions[-1]
+-            terminal_response = _wait_job(
+-                daemon, {"execution": {"job_id": submission["job_id"]}},
+-                deadline_epoch=deadline_epoch, cleanup_reserve_s=CLEANUP_RESERVE_S,
+-                label=f"study_run_{case_id}", evidence=evidence)
+-            observed_status = _assert_call_event_terminal(daemon, submission)
+-            helpers["require_success"](terminal_response, f"Study.run {case_id}")
+-            ref, revision = _update_ref(terminal_response, daemon, ref, revision)
+-            append_jsonl(evidence / "events.jsonl", {
+-                "at_utc": utc_now(), "event": "study_run_case_terminal_succeeded",
+-                "case_id": case_id, "submission_ordinal": submission["ordinal"],
+-                "job_id": submission["job_id"], "request_id": submission["request_id"],
+-                "worker_status": observed_status,
+-                "study_run_call_count": len(study_submissions),
+-                "solver_execution_count": "NOT_DERIVED"})
+-            write_json(evidence / "summary.json", {
+-                **summary, "status": "NATIVE_STUDY_CASE_TERMINAL",
+-                "study_or_solver_invoked": True,
+-                "study_run_submission_count": len(study_submissions),
+-                "completed_case_count": case_index + 1,
+-                "active_case": case_id})
+-
+-            inventory, ref, revision = _fixture_call(
+-                daemon, ref, revision, FIXTURE.name,
+-                {"phase": "solution_inventory"}, helpers,
+-                deadline_epoch=deadline_epoch, evidence=evidence,
+-                label=f"solution_inventory_{case_id}")
++            study_dispatch_attempt_count += 1
++            dispatch_exception: BaseException | None = None
++            run_response = None
++            try:
++                run_response = _dispatch(
++                    daemon, "operation_call",
++                    {"operation_id": "study.run",
++                     "arguments": {"study": helpers["_study_node_path"](STUDY_TAG),
++                                   "timeout_s": max(1.0, remaining)}},
++                    project_id=_active_project_id(), ref=ref, revision=revision,
++                    timeout_s=min(1500.0, remaining))
++            except BaseException as exc:
++                dispatch_exception = exc
++            local_counter_after_dispatch = len(study_submissions)
++            response_job_id = _job_id(run_response) if isinstance(run_response, Mapping) else None
++            pre_wait_reconciliation = _reconcile_study_run_dispatch(
++                daemon, preflight, response_job_id=response_job_id,
++                before_identities=before_identities)
++            pre_wait_rows = pre_wait_reconciliation["all_durable_submissions"]
++            try:
++                study_submissions[:] = _runner_study_submission_records(pre_wait_rows)
++            except BaseException:
++                # Keep the last known counter only as a provisional observation;
++                # the final durable read after the one wait is authoritative.
++                pass
++            accounting_status = (
++                "DISPATCH_EXCEPTION_NO_FINAL_WAIT_RECONCILIATION"
++                if dispatch_exception is not None else
++                "WAITING_FOR_TERMINAL_DURABLE_RECONCILIATION")
++            accounting = {
++                "status": accounting_status,
++                "count_basis": "durable study.run operation job plus exact Worker phase=submitted, kind=call, metadata.type=call, metadata.method=run event",
++                "case_id": case_id,
++                "dispatch_started": True,
++                "dispatch_exception": (f"{type(dispatch_exception).__name__}: {dispatch_exception}"
++                                       if dispatch_exception is not None else None),
++                "response_job_id": response_job_id,
++                "pre_dispatch_durable_submission_count": len(pre_dispatch_rows),
++                "pre_wait_observed_durable_submission_count": len(pre_wait_rows),
++                "pre_wait_reconciliation": pre_wait_reconciliation,
++                "new_durable_submissions_for_this_dispatch": pre_wait_reconciliation[
++                    "new_durable_submissions_for_this_dispatch"],
++                "runner_pre_send_counter_before_dispatch": local_counter_before_dispatch,
++                "runner_pre_send_counter_after_dispatch_before_wait": local_counter_after_dispatch,
++                "runner_counter_matched_pre_wait_observation": (
++                    local_counter_after_dispatch == len(pre_wait_rows)),
++                "durable_count_controls_budget_and_retry_decision": True,
++                "no_retry_or_second_dispatch_after_this_attempt": True,
++                "wait_job_call_count_maximum": 1,
++            }
++            write_json(evidence / f"study_run_dispatch_accounting_{case_id}.json", accounting)
++            write_json(evidence / "study_run_submission_count.json", {
++                "count": (len(pre_wait_rows)
++                          if len(pre_wait_rows) >= study_dispatch_attempt_count else "UNKNOWN"),
++                "observed_durable_worker_event_count": len(pre_wait_rows),
++                "maximum": MAX_STUDY_RUN_CALLS,
++                "count_basis": accounting["count_basis"],
++                "submissions": pre_wait_rows,
++                "latest_dispatch_status": accounting_status,
++                "unknown_after_dispatch_is_not_reported_as_zero": True,
++                "final_reconciliation_pending_until_same_job_wait_terminal": True,
++            })
++            if dispatch_exception is not None:
++                # Durable evidence is already captured; keep the original dispatch
++                # exception and never retry this idempotency identity.
++                raise dispatch_exception
++            if not isinstance(run_response, Mapping):
++                raise RuntimeError("Study.run dispatch returned no object response; no retry is permitted")
++            if response_job_id is None:
++                raise RuntimeError("Study.run dispatch response lacks a durable job identity; no retry is permitted")
++            terminal_response: Mapping[str, Any] | None = None
++            wait_exception: BaseException | None = None
++            try:
++                # Exactly one wait is made for the dispatch response's job ID.
++                terminal_response = _wait_job(
++                    daemon, run_response,
++                    deadline_epoch=deadline_epoch, cleanup_reserve_s=CLEANUP_RESERVE_S,
++                    label=f"study_run_{case_id}", evidence=evidence)
++            except BaseException as exc:
++                wait_exception = exc
++            # The Worker event can be persisted after the dispatch returned a
++            # pending response. Re-read this same job and its events only after
++            # the one wait has terminated or raised; never issue another call.
++            post_wait_reconciliation = _reconcile_study_run_dispatch(
++                daemon, preflight, response_job_id=response_job_id,
++                before_identities=before_identities)
++            durable_after_rows = post_wait_reconciliation["all_durable_submissions"]
++            cumulative_count_matches_attempts = (
++                len(durable_after_rows) == study_dispatch_attempt_count)
++            if not cumulative_count_matches_attempts:
++                post_wait_reconciliation["status"] = (
++                    "UNVERIFIED_CUMULATIVE_STUDY_RUN_SUBMISSION_COUNT_STOP")
++                post_wait_reconciliation["reconciliation_error"] = (
++                    "cumulative durable Worker submission rows do not equal dispatch attempts")
++            try:
++                study_submissions[:] = _runner_study_submission_records(durable_after_rows)
++            except BaseException as exc:
++                post_wait_reconciliation["status"] = "UNVERIFIED_POST_WAIT_ACCOUNTING_STOP"
++                post_wait_reconciliation["reconciliation_error"] = (
++                    f"{type(exc).__name__}: {exc}")
++            accounting.update({
++                "status": post_wait_reconciliation["status"],
++                "final_reconciliation_stage": "AFTER_SAME_RESPONSE_JOB_WAIT_TERMINAL_OR_EXCEPTION",
++                "wait_job_call_count": 1,
++                "wait_job_exception": (f"{type(wait_exception).__name__}: {wait_exception}"
++                                       if wait_exception is not None else None),
++                "wait_job_returned_response": isinstance(terminal_response, Mapping),
++                "post_wait_observed_durable_submission_count": len(durable_after_rows),
++                "cumulative_dispatch_attempt_count": study_dispatch_attempt_count,
++                "cumulative_durable_count_matches_dispatch_attempts": cumulative_count_matches_attempts,
++                "post_wait_reconciliation": post_wait_reconciliation,
++                "new_durable_submissions_for_this_dispatch": post_wait_reconciliation[
++                    "new_durable_submissions_for_this_dispatch"],
++                "submission_count_for_dispatch": post_wait_reconciliation[
++                    "submission_count_for_dispatch"],
++                "runner_counter_matched_post_wait_durable_count": (
++                    len(study_submissions) == len(durable_after_rows)),
++                "durable_count_controls_budget_and_retry_decision": True,
++                "no_retry_or_second_dispatch_after_this_attempt": True,
++            })
++            if wait_exception is not None:
++                # Preserve the original wait failure (including timeout/UNKNOWN)
++                # after recording the best available same-job evidence.
++                write_json(evidence / f"study_run_dispatch_accounting_{case_id}.json", accounting)
++                count = (len(durable_after_rows)
++                         if len(durable_after_rows) >= study_dispatch_attempt_count else "UNKNOWN")
++                write_json(evidence / "study_run_submission_count.json", {
++                    "count": count,
++                    "observed_durable_worker_event_count": len(durable_after_rows),
++                    "maximum": MAX_STUDY_RUN_CALLS,
++                    "count_basis": accounting["count_basis"],
++                    "submissions": durable_after_rows,
++                    "latest_dispatch_status": accounting["status"],
++                    "unknown_after_dispatch_is_not_reported_as_zero": True,
++                    "final_reconciliation_pending_until_same_job_wait_terminal": False,
++                })
++                raise wait_exception
++            if not isinstance(terminal_response, Mapping):
++                raise RuntimeError("Study.run same-job wait returned no terminal response; no retry is permitted")
++            write_json(evidence / f"study_run_dispatch_accounting_{case_id}.json", accounting)
++            count = (len(durable_after_rows)
++                     if len(durable_after_rows) == study_dispatch_attempt_count else "UNKNOWN")
++            write_json(evidence / "study_run_submission_count.json", {
++                "count": count,
++                "observed_durable_worker_event_count": len(durable_after_rows),
++                "maximum": MAX_STUDY_RUN_CALLS,
++                "count_basis": accounting["count_basis"],
++                "submissions": durable_after_rows,
++                "latest_dispatch_status": accounting["status"],
++                "unknown_after_dispatch_is_not_reported_as_zero": True,
++                "final_reconciliation_pending_until_same_job_wait_terminal": False,
++            })
++            completed_run = _complete_terminal_study_run_case(
++                daemon, helpers,
++                terminal_response=terminal_response, accounting=accounting,
++                expected_total_dispatch_count=study_dispatch_attempt_count,
++                post_wait_reconciliation=post_wait_reconciliation,
++                study_submissions=study_submissions,
++                response_job_id=response_job_id, case_id=case_id,
++                completed_case_count=case_index + 1, ref=ref, revision=revision,
++                fixture_name=FIXTURE.name, project_workspace=project_workspace,
++                deadline_epoch=deadline_epoch, evidence=evidence, summary=summary,
++                provisional_saved_models=provisional_saved_models)
++            raw_submission = completed_run["response_job_worker_submission"]
++            submission = completed_run["submission"]
++            observed_status = completed_run["observed_status"]
++            provisional_model = completed_run["provisional_saved_model"]
++            inventory = completed_run["inventory"]
++            ref, revision = completed_run["ref"], completed_run["revision"]
+             binding_receipt = validate_study_inventory(inventory)
+             solver_step_map = _solver_step_map(binding_receipt)
+             dataset_receipt, ref, revision = _dataset_inventory(
+@@ -2101,6 +2922,8 @@
+                 "output_port_phase": phase_readback["output_reference_phase_readback"],
+                 "mesh_level": mesh, "mesh_readback": mesh_readback,
+                 "study_run_submission": submission,
++                "response_job_raw_worker_submission": raw_submission,
++                "provisional_saved_model": provisional_model,
+                 "terminal_worker_status": observed_status,
+                 "study_step_solver_bindings": binding_receipt,
+                 "native_sources": source_receipt,
+@@ -2253,6 +3076,7 @@
+             "native_phase_controls": phase_checks,
+             "native_route_negative_control": route_negative,
+             "saved_models": saved_models,
++            "provisional_saved_models": provisional_saved_models,
+             "saved_reopen_check": "PASS",
+             "upstream_power_balance": "NOT_CLAIMED",
+             "pml_power_balance": "NOT_CLAIMED",
+@@ -2272,11 +3096,13 @@
+                         "error": f"{type(exc).__name__}: {exc}",
+                         "traceback": traceback.format_exc(),
+                         "study_run_submission_count": len(study_submissions),
++                        "provisional_saved_models": dict(provisional_saved_models),
+                         "native_result": "UNKNOWN_OR_NOT_RUN"})
+         write_json(evidence / "failure.json", {
+             "status": "FAIL_OR_INCOMPLETE",
+             "error": summary["error"], "traceback": summary["traceback"],
+             "study_run_submissions": study_submissions,
++            "provisional_saved_models": dict(provisional_saved_models),
+             "no_retry": True,
+         })
+     finally:
+@@ -2313,13 +3139,69 @@
+             except BaseException as exc:
+                 summary["store_callback_restore_error"] = f"{type(exc).__name__}: {exc}"
+                 summary["status"] = "FAIL_OR_INCOMPLETE"
++        durable_study_rows: list[dict[str, Any]] | None = None
++        durable_study_count: int | str = 0
++        if daemon is not None:
++            try:
++                durable_study_rows = _actual_science_study_run_submissions(
++                    daemon, helpers["preflight_module"])
++                study_submissions[:] = _runner_study_submission_records(durable_study_rows)
++                observed_count = len(durable_study_rows)
++                durable_study_count = ("UNKNOWN" if observed_count < study_dispatch_attempt_count
++                                        else observed_count)
++            except BaseException as exc:
++                durable_study_rows = None
++                durable_study_count = "UNKNOWN" if study_dispatch_attempt_count else 0
++                summary["study_run_accounting_reconciliation_error"] = f"{type(exc).__name__}: {exc}"
++        elif study_dispatch_attempt_count:
++            durable_study_count = "UNKNOWN"
++        write_json(evidence / "study_run_submission_count.json", {
++            "count": durable_study_count,
++            "observed_durable_worker_event_count": (len(durable_study_rows)
++                                                     if durable_study_rows is not None else "UNAVAILABLE"),
++            "dispatch_attempt_count": study_dispatch_attempt_count,
++            "maximum": MAX_STUDY_RUN_CALLS,
++            "count_basis": "durable study.run job plus exact Worker phase=submitted method=run events",
++            "submissions": durable_study_rows if durable_study_rows is not None else study_submissions,
++            "unknown_after_dispatch_is_not_reported_as_zero": True,
++        })
++        summary["study_run_submission_count"] = durable_study_count
++        summary["study_run_dispatch_attempt_count"] = study_dispatch_attempt_count
++        summary["study_run_submission_count_basis"] = "durable_operation_and_worker_events"
++        summary["provisional_saved_models"] = dict(provisional_saved_models)
+         managed_reconciliation = None
+         direct_reconciliation = None
+         cleanup_gates = None
+         cleanup_authorization = None
+         idle = None
++        live_worker_health = None
++        endpoint_identity_gate = None
++        worker_disconnect_receipt: dict[str, Any] = {"status": "NOT_ATTEMPTED"}
+         if daemon is not None:
+             try:
++                preflight_module = helpers["preflight_module"]
++                if server is not None and server.proc is not None:
++                    endpoint_identity_gate = preflight_module._task_endpoint_identity_gate(
++                        server, server_identity=server_identity or {},
++                        worker_identity=worker_identity, worker_port=worker_port,
++                        process_snapshot=helpers["_process_snapshot"],
++                        require_worker_peer=True)
++                    write_json(evidence / "cleanup_endpoint_identity_gate.json",
++                               endpoint_identity_gate)
++                    if endpoint_identity_gate.get("safe") is True:
++                        try:
++                            live_worker_health = server.worker.health(timeout_s=5.0)
++                            write_json(evidence / "cleanup_worker_health_before_disconnect.json", {
++                                "observed_at_utc": utc_now(),
++                                "request": "direct Worker health RPC; no model or solver call",
++                                "response": live_worker_health,
++                                "expected_endpoint": f"127.0.0.1:{server.port}",
++                            })
++                        except BaseException as exc:
++                            write_json(evidence / "cleanup_worker_health_before_disconnect.json", {
++                                "observed_at_utc": utc_now(), "status": "HEALTH_UNKNOWN",
++                                "error": f"{type(exc).__name__}: {exc}",
++                            })
+                 managed_reconciliation = helpers["preflight_module"]._ledger_reconciliation(daemon)
+                 try:
+                     managed_reconciliation["sqlite_snapshot"] = helpers["preflight_module"]._backup_operation_store(
+@@ -2329,34 +3211,85 @@
+                 write_json(evidence / "managed_ledger_reconciliation.json", managed_reconciliation)
+                 direct_events = read_jsonl(direct_journal.path)
+                 direct_reconciliation = helpers["reconcile_direct_rpc_events"](direct_events)
+-                write_json(evidence / "direct_rpc_reconciliation.json", direct_reconciliation)
++                write_json(evidence / "direct_rpc_reconciliation_before_disconnect.json", direct_reconciliation)
+                 cleanup_gates = helpers["combine_cleanup_gates"](managed_reconciliation,
+                                                                  direct_reconciliation)
+-                idle = helpers["preflight_module"]._daemon_idle_proof(daemon)
++                idle = helpers["preflight_module"]._daemon_idle_proof(
++                    daemon, worker_health=live_worker_health,
++                    expected_endpoint=(f"127.0.0.1:{server.port}"
++                                       if server is not None and server.port is not None else None))
+                 cleanup_authorization = _cleanup_authorization(
+                     project_create_receipt, immutable_run_project_id,
+                     helpers["preflight_module"], managed_reconciliation,
+                     cleanup_gates, idle)
+-                write_json(evidence / "cleanup_gates.json", {
++                write_json(evidence / "cleanup_gates_before_disconnect.json", {
+                     "combined": cleanup_gates, "daemon_idle_proof": idle,
+                     "durable_domain_unknown_preserved": managed_reconciliation.get("durable_result"),
+                 })
+-                write_json(evidence / "cleanup_project_scope.json", cleanup_authorization)
++                write_json(evidence / "cleanup_project_scope_before_disconnect.json", cleanup_authorization)
+             except BaseException as exc:
+                 summary["ledger_reconciliation_error"] = f"{type(exc).__name__}: {exc}"
+                 summary["status"] = "FAIL_OR_INCOMPLETE"
+         cleanup = {"status": "NOT_STARTED"}
+         if server is not None and server.proc is not None:
+             safe = bool(cleanup_authorization
+-                        and cleanup_authorization.get("safe_for_owned_cleanup") is True)
++                        and cleanup_authorization.get("safe_for_owned_cleanup") is True
++                        and endpoint_identity_gate
++                        and endpoint_identity_gate.get("safe") is True
++                        and idle
++                        and idle.get("idle") is True
++                        and idle.get("worker_health_quiescent") is True)
+             if safe:
+                 try:
+-                    cleanup = helpers["preflight_module"]._exact_owned_cleanup(
+-                        server, server_identity=server_identity or {},
+-                        worker_identity=worker_identity, worker_port=worker_port,
+-                        process_snapshot=helpers["_process_snapshot"],
+-                        reconciliation=managed_reconciliation,
+-                        evidence=evidence, require_fixture_terminal=False)
++                    disconnect_request_id = f"w23-cleanup-disconnect-{uuid4()}"
++                    # PersistentJavaWorker exposes disconnect through its production
++                    # RemoteClient facade, which returns the decoded Worker result mapping.
++                    disconnect_response = server.worker.client().disconnect(
++                        request_id=disconnect_request_id, rpc_timeout_s=10.0)
++                    health_after_disconnect = server.worker.health(timeout_s=5.0)
++                    worker_disconnect_ok = _worker_disconnect_verified(
++                        disconnect_response, live_worker_health, health_after_disconnect)
++                    worker_disconnect_receipt = {
++                        "status": "PASS_WORKER_DISCONNECTED_QUIESCENT"
++                                  if worker_disconnect_ok else "BLOCKED_WORKER_DISCONNECT_NOT_CONFIRMED",
++                        "request_id": disconnect_request_id,
++                        "decoded_remote_client_result": disconnect_response,
++                        "health_before_disconnect": live_worker_health,
++                        "post_disconnect_health": health_after_disconnect,
++                        "durable_unknown_preserved": True,
++                    }
++                    write_json(evidence / "cleanup_worker_disconnect.json", worker_disconnect_receipt)
++                    direct_reconciliation = helpers["reconcile_direct_rpc_events"](
++                        read_jsonl(direct_journal.path))
++                    cleanup_gates = helpers["combine_cleanup_gates"](
++                        managed_reconciliation, direct_reconciliation)
++                    cleanup_authorization = _cleanup_authorization(
++                        project_create_receipt, immutable_run_project_id,
++                        helpers["preflight_module"], managed_reconciliation,
++                        cleanup_gates, idle)
++                    write_json(evidence / "direct_rpc_reconciliation.json", direct_reconciliation)
++                    write_json(evidence / "cleanup_gates.json", {
++                        "combined": cleanup_gates, "daemon_idle_proof": idle,
++                        "durable_domain_unknown_preserved": managed_reconciliation.get("durable_result"),
++                        "worker_disconnect": worker_disconnect_receipt,
++                    })
++                    write_json(evidence / "cleanup_project_scope.json", cleanup_authorization)
++                    if worker_disconnect_ok and cleanup_authorization.get("safe_for_owned_cleanup") is True:
++                        cleanup = helpers["preflight_module"]._exact_owned_cleanup(
++                            server, server_identity=server_identity or {},
++                            worker_identity=worker_identity, worker_port=worker_port,
++                            process_snapshot=helpers["_process_snapshot"],
++                            reconciliation=managed_reconciliation,
++                            evidence=evidence, require_fixture_terminal=False)
++                    else:
++                        cleanup = {
++                            "status": "LEFT_RUNNING_ACTIVE_OR_UNKNOWN",
++                            "reason": "fresh Worker disconnect/health or terminal RPC reconciliation did not pass",
++                            "durable_unknown_preserved": True,
++                            "worker_disconnect": worker_disconnect_receipt,
++                            "cleanup_authorization": cleanup_authorization,
++                        }
++                        write_json(evidence / "exact_owned_cleanup_receipt.json", cleanup)
+                 except BaseException as exc:
+                     cleanup = {"status": "CLEANUP_UNVERIFIED",
+                                "error": f"{type(exc).__name__}: {exc}",
+@@ -2369,12 +3302,14 @@
+                     "status": "LEFT_RUNNING_ACTIVE_OR_UNKNOWN",
+                     "server_pid": server.proc.pid, "port": server.port,
+                     "project_scope": project_scope,
++                    "endpoint_identity_gate": endpoint_identity_gate,
++                    "worker_health_quiescent": bool(idle and idle.get("worker_health_quiescent")),
+                     "managed_ledger_safe": bool(managed_reconciliation and managed_reconciliation.get("safe_for_owned_cleanup")),
+                     "direct_rpc_safe": bool(direct_reconciliation and direct_reconciliation.get("safe_for_owned_cleanup")),
+                     "daemon_idle": bool(idle and idle.get("idle")),
+-                    "action": ("no signal; project receipt, active ledger filter, and paged reconciliation IDs do not match"
+-                               if not project_scope or project_scope.get("cleanup_allowed") is not True
+-                               else "no signal; both ledgers terminal and daemon idle were not proven"),
++                    "action": ("no disconnect or signal; fresh exact process/listener/client identity gate failed"
++                               if not endpoint_identity_gate or endpoint_identity_gate.get("safe") is not True
++                               else "no disconnect or signal; fresh connected Worker health, exact RPC terminality, project scope, or idle proof failed"),
+                     "durable_domain_unknown_preserved": (
+                         managed_reconciliation.get("durable_result") if managed_reconciliation else "UNAVAILABLE"),
+                 }
+@@ -2395,15 +3330,32 @@
+             except BaseException as exc:
+                 summary["daemon_close_error"] = f"{type(exc).__name__}: {exc}"
+                 summary["status"] = "FAIL_OR_INCOMPLETE"
+-        if not study_submissions and not study_dispatch_started:
++        if study_dispatch_attempt_count == 0:
+             summary["study_or_solver_invoked"] = False
+-        elif study_submissions:
++        elif durable_study_rows and study_submissions:
+             summary["study_or_solver_invoked"] = True
+         else:
+             summary["study_or_solver_invoked"] = "UNKNOWN"
+-        summary["study_run_submission_count"] = len(study_submissions)
+         summary["actual_solver_execution_count"] = "UNKNOWN_INTERNAL_SOLVER_STEPS_NOT_INFERRED"
+         summary["cleanup"] = cleanup
++        if birth_epoch is not None:
++            finished_epoch = time.time()
++            elapsed = max(0.0, finished_epoch - birth_epoch)
++            over_budget = elapsed > MAX_BIRTH_BUDGET_S
++            summary["birth_inclusive_budget"] = {
++                "birth_epoch": birth_epoch,
++                "deadline_epoch": deadline_epoch,
++                "finished_epoch_includes_cleanup": finished_epoch,
++                "elapsed_seconds_includes_cleanup": elapsed,
++                "max_seconds": MAX_BIRTH_BUDGET_S,
++                "cleanup_reserve_seconds": CLEANUP_RESERVE_S,
++                "budget_exceeded": over_budget,
++                "over_budget_seconds": max(0.0, elapsed - MAX_BIRTH_BUDGET_S),
++                "deadline_was_not_reset": True,
++            }
++            if over_budget:
++                summary["status"] = "FAIL_OR_INCOMPLETE"
++                summary["budget_status"] = "OVER_BUDGET_INCLUDING_CLEANUP"
+         summary["finished_utc"] = utc_now()
+         summary["direct_rpc_reconciliation"] = direct_reconciliation
+         summary["managed_ledger_reconciliation"] = (

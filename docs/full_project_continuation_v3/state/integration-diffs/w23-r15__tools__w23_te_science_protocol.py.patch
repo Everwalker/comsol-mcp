@@ -1,0 +1,1098 @@
+--- root/tools/w23_te_science_protocol.py
++++ w23-r15/tools/w23_te_science_protocol.py
+@@ -203,6 +203,245 @@
+                    _as_finite_float(imag, f"{label}.imag"))
+ 
+ 
++def _capture_value(row: Any, *, label: str) -> Any:
++    if not isinstance(row, Mapping) or row.get("status") != "CAPTURED" or "return_value" not in row:
++        raise ScienceProtocolError(f"{label} is not an exact captured Java getter value")
++    return row["return_value"]
++
++
++def _raw_java_sequence(row: Mapping[str, Any]) -> dict[str, Any]:
++    """Normalize the fixture's direct Java getters without inventing axes."""
++    tag = row.get("tag")
++    direct = row.get("direct_sequence_parameter_axis_observation")
++    if not isinstance(tag, str) or not tag or not isinstance(direct, Mapping):
++        raise ScienceProtocolError("Java SolverSequence row lacks its exact tag or direct parameter-axis observation")
++    get_type = _capture_value(row.get("sequence_type_getter"), label=f"{tag}.getType")
++    sequence_type = _capture_value(row.get("sequence_kind_getter"), label=f"{tag}.getSequenceType")
++    study = _capture_value(row.get("attached_study_getter"), label=f"{tag}.study")
++    attached = _capture_value(row.get("is_attached_getter"), label=f"{tag}.isAttached")
++    size = _capture_value(direct.get("get_size"), label=f"{tag}.getSize")
++    size_multi = _capture_value(direct.get("get_size_multi"), label=f"{tag}.getSizeMulti")
++    names = _capture_value(direct.get("parameter_names"), label=f"{tag}.getPNames")
++    if (not isinstance(size, list) or len(size) != 2
++            or any(type(item) is not int or item < 0 for item in size)
++            or not isinstance(size_multi, list) or len(size_multi) != 2
++            or any(type(item) is not int or item < 0 for item in size_multi)
++            or not isinstance(names, list) or not names
++            or any(not isinstance(name, str) or not name for name in names)):
++        raise ScienceProtocolError(f"{tag} direct sequence dimensions/names are not exact typed arrays")
++
++    raw_numbers = direct.get("solution_numbers")
++    if not isinstance(raw_numbers, list) or len(raw_numbers) != size[1]:
++        raise ScienceProtocolError(f"{tag} direct sequence values do not cover its documented solnum count")
++    values: list[dict[str, Any]] = []
++    for index, number in enumerate(raw_numbers, start=1):
++        if not isinstance(number, Mapping) or number.get("solnum") != index:
++            raise ScienceProtocolError(f"{tag} direct sequence solnum order is not the documented one-based order")
++        real = _capture_value(number.get("real"), label=f"{tag}.getPVals({index})")
++        imag = _capture_value(number.get("imaginary"), label=f"{tag}.getPValsImag({index})")
++        units_raw = number.get("parameter_units")
++        if (not isinstance(real, list) or not isinstance(imag, list)
++                or len(real) != len(names) or len(imag) != len(names)
++                or not isinstance(units_raw, list) or len(units_raw) != len(names)):
++            raise ScienceProtocolError(f"{tag} direct sequence row {index} has mismatched typed parameter arrays")
++        units: list[dict[str, Any]] = []
++        for name, unit in zip(names, units_raw):
++            if not isinstance(unit, Mapping) or unit.get("name") != name:
++                raise ScienceProtocolError(f"{tag} direct unit row does not match parameter {name!r}")
++            units.append({"name": name,
++                          "status": "OBSERVED" if unit.get("status") == "CAPTURED" else "ERROR",
++                          "value": unit.get("value"),
++                          "raw_status": unit.get("status"),
++                          "error": unit.get("error")})
++        values.append({"solnum": index, "real": real, "imaginary": imag,
++                       "parameter_units": units})
++
++    info = row.get("solution_info")
++    if not isinstance(info, Mapping):
++        raise ScienceProtocolError(f"{tag} lacks the exact same-tag SolutionInfo capture")
++    metadata_calls = info.get("metadata_calls")
++    if not isinstance(metadata_calls, list):
++        raise ScienceProtocolError(f"{tag} SolutionInfo getter journal is missing")
++    by_method = {call.get("method"): call for call in metadata_calls if isinstance(call, Mapping)}
++    for method in ("getLevelNames", "getLevels", "getOuterSolnum"):
++        if method not in by_method:
++            raise ScienceProtocolError(f"{tag} SolutionInfo.{method} is not in the raw getter journal")
++    scope = {
++        "getLevelNames": _capture_value(by_method["getLevelNames"], label=f"{tag}.getLevelNames"),
++        "getLevels": _capture_value(by_method["getLevels"], label=f"{tag}.getLevels"),
++        "getOuterSolnum": _capture_value(by_method["getOuterSolnum"], label=f"{tag}.getOuterSolnum"),
++        "getPNamesOuter": (_capture_value(by_method["getPNamesOuter"],
++                                            label=f"{tag}.getPNamesOuter")
++                            if isinstance(by_method.get("getPNamesOuter"), Mapping)
++                            and by_method["getPNamesOuter"].get("status") == "CAPTURED"
++                            else None),
++        "getPUnitsOuter": (_capture_value(by_method["getPUnitsOuter"],
++                                            label=f"{tag}.getPUnitsOuter")
++                            if isinstance(by_method.get("getPUnitsOuter"), Mapping)
++                            and by_method["getPUnitsOuter"].get("status") == "CAPTURED"
++                            else None),
++        "read_errors": [dict(call) for call in metadata_calls
++                        if isinstance(call, Mapping) and call.get("status") == "ERROR"
++                        and call.get("method") in {"getLevelNames", "getLevels", "getOuterSolnum"}],
++        "matrix_getter_errors": [dict(call) for call in metadata_calls
++                                  if isinstance(call, Mapping) and call.get("status") == "ERROR"
++                                  and call.get("method") in {"getPNames", "getPvals", "getPvalsImag", "getUnits"}],
++    }
++    return {
++        "tag": tag,
++        "sequence_type": sequence_type,
++        "solution_type": get_type,
++        "study_tag": study,
++        "attached": attached,
++        "get_size": list(size),
++        "get_size_multi": list(size_multi),
++        "pnames": list(names),
++        "parameter_values_status": direct.get("status"),
++        "parameter_values_by_solnum": values,
++        "solution_info_count_scope": scope,
++        "solution_info_axis_metadata_complete": False,
++        "parameters_complete": False,
++        "raw_getter_source": "COMSOL 6.4 direct SolverSequence/ SolutionInfo typed getter receipts",
++    }
++
++
++def normalize_saved_mph_diagnostic_inventory(
++    java_readback: Mapping[str, Any],
++    production_dataset_rows: Sequence[Mapping[str, Any]],
++    solution_index_receipts: Sequence[Mapping[str, Any]],
++) -> dict[str, Any]:
++    """Build strict resolver inputs from raw fixture and managed API receipts.
++
++    This is a representation-only normalization. It retains the failed
++    SolutionInfo matrix calls and never upgrades tuple completeness.
++    """
++    if not isinstance(java_readback, Mapping):
++        raise ScienceProtocolError("raw Java saved-MPH readback must be an object")
++    if (java_readback.get("diagnostic_phase") != "saved_solution_diagnostic"
++            or java_readback.get("explicit_study_or_solver_run_calls_in_this_phase") != 0
++            or java_readback.get("internal_solver_execution_count") != "UNKNOWN_NOT_INFERRED_FROM_READBACK"):
++        raise ScienceProtocolError("raw Java readback does not carry the frozen zero-explicit-run diagnostic boundary")
++    study_tag = java_readback.get("study_tag")
++    configured = java_readback.get("study_steps_in_configured_order")
++    sequence_rows = java_readback.get("solver_sequences")
++    datasets = java_readback.get("datasets")
++    if (not isinstance(study_tag, str) or not study_tag
++            or not isinstance(configured, list) or not isinstance(sequence_rows, list)
++            or not isinstance(datasets, list) or not isinstance(production_dataset_rows, Sequence)
++            or not isinstance(solution_index_receipts, Sequence)):
++        raise ScienceProtocolError("raw Java and managed dataset inventories are incomplete")
++
++    study_steps: list[dict[str, Any]] = []
++    for row in configured:
++        if not isinstance(row, Mapping) or not isinstance(row.get("tag"), str):
++            raise ScienceProtocolError("configured study-step capture is malformed")
++        type_row = row.get("feature_type_getter")
++        feature_type = _capture_value(type_row, label=f"study.feature({row['tag']}).getType")
++        properties = row.get("selected_properties")
++        if not isinstance(properties, Mapping):
++            raise ScienceProtocolError("configured study-step selected property capture is missing")
++        normalized = {"tag": row["tag"], "feature_type": feature_type,
++                      "configured_order": row.get("configured_order")}
++        for name in ("PortName", "modeFreq", "plist"):
++            value = properties.get(name)
++            if not isinstance(value, Mapping):
++                raise ScienceProtocolError(f"study step {row['tag']} lacks {name} property capture")
++            if value.get("status") == "CAPTURED":
++                normalized[name] = _capture_value(value, label=f"study.feature({row['tag']}).{name}")
++            elif value.get("status") == "PROPERTY_ABSENT":
++                normalized[name] = None
++            else:
++                raise ScienceProtocolError(f"study step {row['tag']} {name} property readback failed")
++        study_steps.append(normalized)
++
++    normalized_sequences: list[dict[str, Any]] = []
++    for raw_seq in sequence_rows:
++        if not isinstance(raw_seq, Mapping):
++            raise ScienceProtocolError("raw Java SolverSequence list contains a malformed row")
++        sequence = _raw_java_sequence(raw_seq)
++        solver_tree = raw_seq.get("solver_tree")
++        if not isinstance(solver_tree, Mapping) or solver_tree.get("status") != "CAPTURED":
++            raise ScienceProtocolError(f"{sequence['tag']} solver-tree capture is incomplete")
++        raw_features = solver_tree.get("features")
++        if not isinstance(raw_features, list):
++            raise ScienceProtocolError(f"{sequence['tag']} solver-tree feature rows are missing")
++        features: list[dict[str, Any]] = []
++        bindings: list[dict[str, Any]] = []
++        for raw_feature in raw_features:
++            if not isinstance(raw_feature, Mapping) or type(raw_feature.get("tree_order")) is not int:
++                raise ScienceProtocolError(f"{sequence['tag']} solver-tree row lacks its captured order")
++            feature = {key: raw_feature.get(key) for key in
++                       ("path", "tree_order", "feature_type", "property_names")}
++            if raw_feature.get("feature_type") in {"StoreSolution", "CopySolution"}:
++                prop = raw_feature.get("property_sol")
++                if isinstance(prop, Mapping) and prop.get("status") == "CAPTURED":
++                    feature["stored_solution_reference"] = _capture_value(
++                        prop, label=f"{sequence['tag']} {raw_feature.get('path')}.sol")
++                    feature["stored_solution_reference_getter"] = "StoreSolution.getString('sol')"
++                else:
++                    feature["stored_solution_reference"] = None
++                    feature["stored_solution_reference_getter"] = "StoreSolution.getString('sol')"
++                    feature["stored_solution_reference_read_error"] = (
++                        dict(prop) if isinstance(prop, Mapping) else {"status": "MISSING"})
++            if raw_feature.get("feature_type") == "StudyStep":
++                study_prop = raw_feature.get("property_study")
++                step_prop = raw_feature.get("property_studystep")
++                study_value = (_capture_value(study_prop, label=f"{sequence['tag']} StudyStep.study")
++                               if isinstance(study_prop, Mapping) and study_prop.get("status") == "CAPTURED"
++                               else None)
++                step_value = (_capture_value(step_prop, label=f"{sequence['tag']} StudyStep.studystep")
++                              if isinstance(step_prop, Mapping) and step_prop.get("status") == "CAPTURED"
++                              else None)
++                bindings.append({"study": study_value, "studystep": step_value,
++                                 "solver_sequence": sequence["tag"],
++                                 "tree_order": raw_feature["tree_order"],
++                                 "path": raw_feature.get("path")})
++            features.append(feature)
++        sequence["solver_tree_features"] = features
++        sequence["study_step_bindings_in_solver_tree_order"] = bindings
++        normalized_sequences.append(sequence)
++
++    raw_java_dataset_by_tag: dict[str, Mapping[str, Any]] = {}
++    for row in datasets:
++        if not isinstance(row, Mapping) or not isinstance(row.get("tag"), str):
++            raise ScienceProtocolError("raw Java dataset capture contains a malformed row")
++        if row["tag"] in raw_java_dataset_by_tag:
++            raise ScienceProtocolError("raw Java dataset capture contains duplicate tags")
++        raw_java_dataset_by_tag[row["tag"]] = row
++
++    production_by_tag: dict[str, Mapping[str, Any]] = {}
++    for row in production_dataset_rows:
++        if not isinstance(row, Mapping) or not isinstance(row.get("tag"), str):
++            raise ScienceProtocolError("production dataset.list contains a malformed row")
++        if row["tag"] in production_by_tag:
++            raise ScienceProtocolError("production dataset.list contains duplicate tags")
++        production_by_tag[row["tag"]] = row
++    if set(raw_java_dataset_by_tag) != set(production_by_tag):
++        raise ScienceProtocolError("direct Java and managed dataset tag sets differ")
++    for tag, java_dataset in raw_java_dataset_by_tag.items():
++        prop = java_dataset.get("selected_properties", {}).get("solution")
++        production_solution = production_by_tag[tag].get("solution")
++        if (not isinstance(prop, Mapping) or prop.get("status") != "CAPTURED"
++                or _capture_value(prop, label=f"dataset({tag}).solution") != production_solution):
++            raise ScienceProtocolError(f"direct Java and managed dataset solution properties differ for {tag}")
++
++    return {
++        "study_inventory": {"study_tag": study_tag,
++                            "study_steps_in_configured_order": study_steps,
++                            "solver_sequences_for_study": normalized_sequences,
++                            "study_solver_sequence_queries": java_readback.get("study_solver_sequence_queries")},
++        "dataset_inventory": {"datasets": list(production_dataset_rows),
++                              "solution_index_receipts": list(solution_index_receipts)},
++        "raw_java_sequences": normalized_sequences,
++        "raw_java_datasets": raw_java_dataset_by_tag,
++        "study_run_dispatches": 0,
++        "solver_run_dispatches": 0,
++        "internal_solver_execution_count": "UNKNOWN_NOT_INFERRED_FROM_READBACK",
++        "parameters_complete": False,
++        "solution_info_axis_metadata_complete": False,
++    }
++
++
+ def reconcile_stored_sequence_parameter_observation(
+     java_sequence: Mapping[str, Any], worker_observation: Mapping[str, Any],
+ ) -> dict[str, Any]:
+@@ -224,6 +463,7 @@
+         ("study_tag", "study"),
+         ("attached", "attached"),
+         ("get_size", "get_size"),
++        ("get_size_multi", "get_size_multi"),
+         ("pnames", "pnames"),
+     )
+     mismatches = {
+@@ -311,6 +551,7 @@
+         "attached": java_sequence.get("attached"),
+         "study_tag": java_sequence.get("study_tag"),
+         "get_size": list(size), "pnames": list(names),
++        "get_size_multi": list(java_sequence.get("get_size_multi") or []),
+         "parameters_complete": False,
+         "solution_info_axis_metadata_complete": False,
+         "values": comparisons,
+@@ -351,8 +592,15 @@
+            or not isinstance(row.get("modeFreq"), str) or not row["modeFreq"].strip()
+            for row in bma_steps):
+         raise ScienceProtocolError("each BMA step must preserve its actual PortName and modeFreq properties")
+-    if len({str(row["PortName"]) for row in bma_steps}) != len(bma_steps):
+-        raise ScienceProtocolError("BMA steps do not bind unique native PortName properties")
++    bma_by_tag = {row["tag"]: row for row in bma_steps}
++    if (set(bma_by_tag) != {"bmaInput", "bmaOutput"}
++            or {str(row["PortName"]) for row in bma_steps} != {"1", "2"}
++            or any(row.get("modeFreq") != "f0" for row in bma_steps)):
++        raise ScienceProtocolError("saved W23 BMA steps do not retain exact bmaInput/bmaOutput PortName 1/2 and modeFreq=f0")
++    frequency_steps = [row for row in study_steps if row.get("tag") == "freq"]
++    if (len(frequency_steps) != 1 or frequency_steps[0].get("feature_type") != "Frequency"
++            or frequency_steps[0].get("plist") != "f0"):
++        raise ScienceProtocolError("saved W23 study does not retain its exact Frequency step with plist=f0")
+ 
+     attached_sequences = [row for row in sequences if isinstance(row, Mapping)
+                           and row.get("sequence_type") == "SolverSequence"
+@@ -486,20 +734,492 @@
+     }
+ 
+ 
++def resolve_main_frequency_dataset(
++    study_inventory: Mapping[str, Any], dataset_inventory: Mapping[str, Any],
++) -> dict[str, Any]:
++    """Bind the one main BMA frequency state without inventing outer=1.
++
++    The count proof is a strict singleton for the exact attached main
++    SolverSequence. ``SolutionInfo`` tuple completeness remains false; an
++    empty ``getOuterSolnum`` is preserved as no outer axis.
++    """
++    if not isinstance(study_inventory, Mapping) or not isinstance(dataset_inventory, Mapping):
++        raise ScienceProtocolError("main-frequency inputs must be objects")
++    study_tag = study_inventory.get("study_tag")
++    sequences = study_inventory.get("solver_sequences_for_study")
++    steps = study_inventory.get("study_steps_in_configured_order")
++    receipts = dataset_inventory.get("solution_index_receipts")
++    if (not isinstance(study_tag, str) or not study_tag or not isinstance(sequences, list)
++            or not isinstance(steps, list) or not isinstance(receipts, list)):
++        raise ScienceProtocolError("main-frequency inventory is incomplete")
++    main_rows = [row for row in sequences if isinstance(row, Mapping)
++                 and row.get("sequence_type") == "SolverSequence"
++                 and row.get("solution_type") == "Parametric"
++                 and row.get("study_tag") == study_tag and row.get("attached") is True]
++    if len(main_rows) != 1:
++        raise ScienceProtocolError("saved W23 study must have exactly one attached Parametric SolverSequence")
++    main = main_rows[0]
++    tag = main.get("tag")
++    if not isinstance(tag, str) or not tag:
++        raise ScienceProtocolError("attached main SolverSequence has no exact native tag")
++    bindings = main.get("study_step_bindings_in_solver_tree_order")
++    tree = main.get("solver_tree_features")
++    if not isinstance(bindings, list) or not isinstance(tree, list):
++        raise ScienceProtocolError("attached main SolverSequence lacks ordered StudyStep/tree readback")
++    matching_frequency_step = [row for row in bindings if isinstance(row, Mapping)
++                               and row.get("study") == study_tag
++                               and row.get("studystep") == "freq"
++                               and row.get("solver_sequence") == tag]
++    if len(matching_frequency_step) != 1:
++        raise ScienceProtocolError("Frequency step is not exactly bound to the attached main SolverSequence")
++    binding = matching_frequency_step[0]
++    tree_matches = [row for row in tree if isinstance(row, Mapping)
++                    and row.get("path") == binding.get("path")
++                    and row.get("tree_order") == binding.get("tree_order")
++                    and row.get("feature_type") == "StudyStep"]
++    if len(tree_matches) != 1:
++        raise ScienceProtocolError("Frequency StudyStep binding does not match the actual ordered solver-tree feature")
++
++    dataset_matches: list[Mapping[str, Any]] = []
++    for receipt in receipts:
++        if not isinstance(receipt, Mapping):
++            raise ScienceProtocolError("solution-index receipt is malformed")
++        dataset = receipt.get("dataset")
++        indices = receipt.get("solution_indices")
++        if (isinstance(dataset, Mapping) and dataset.get("type_id", "").lower() == "solution"
++                and dataset.get("solution") == tag and isinstance(indices, Mapping)):
++            dataset_matches.append(receipt)
++    if len(dataset_matches) != 1:
++        raise ScienceProtocolError("attached main SolverSequence must bind to exactly one production Solution dataset")
++    receipt = dataset_matches[0]
++    dataset = receipt["dataset"]
++    indices = receipt["solution_indices"]
++    dataset_tag = dataset.get("tag")
++    dataset_binding = indices.get("dataset_binding")
++    worker = indices.get("solver_sequence_parameter_observation")
++    if (not isinstance(dataset_tag, str) or not dataset_tag
++            or not isinstance(dataset_binding, Mapping)
++            or dataset_binding.get("binding_complete") is not True
++            or dataset_binding.get("dataset") != dataset_tag
++            or dataset_binding.get("dataset_type") != "Solution"
++            or dataset_binding.get("solution") != tag
++            or not isinstance(worker, Mapping)):
++        raise ScienceProtocolError("frequency Solution dataset lacks an exact production dataset.solution binding/readback")
++    reconciled = reconcile_stored_sequence_parameter_observation(main, worker)
++    observation = worker.get("solution_info_count_scope")
++    java_scope = main.get("solution_info_count_scope")
++    if not isinstance(observation, Mapping) or not isinstance(java_scope, Mapping):
++        raise ScienceProtocolError("frequency singleton lacks both Java and Worker SolutionInfo count-scope getters")
++    expected_scope = {"getLevelNames": ["freq"], "getLevels": 1, "getOuterSolnum": []}
++    for label, scope in (("Java", java_scope), ("Worker", observation)):
++        for key, value in expected_scope.items():
++            if scope.get(key) != value:
++                raise ScienceProtocolError(f"{label} SolutionInfo {key} does not prove the exact no-outer freq singleton")
++        if scope.get("read_errors"):
++            raise ScienceProtocolError(f"{label} SolutionInfo frequency count-scope getter contains errors")
++    if (java_scope.get("getPNamesOuter") != [] or java_scope.get("getPUnitsOuter") != []):
++        raise ScienceProtocolError("Java SolutionInfo did not capture exact empty outer parameter name/unit arrays")
++    java_size = main.get("get_size")
++    if (not isinstance(java_size, list) or len(java_size) != 2
++            or any(type(item) is not int for item in java_size)
++            or java_size[0] <= 0 or java_size[1] != 1
++            or main.get("get_size_multi") != [1, 1]
++            or main.get("pnames") != ["freq"]
++            or main.get("parameter_values_status") != "RAW_TYPED_COMPLEX_VALUES_CAPTURED_NOT_INTERPRETED"
++            or worker.get("status") != "OBSERVED_TYPED_COMPLEX_PARAMETER_VALUES"
++            or worker.get("get_size_multi") != [1, 1]
++            or worker.get("pnames") != ["freq"]
++            or worker.get("parameters_complete") is not False
++            or indices.get("parameters_complete") is not False
++            or indices.get("axis_metadata_complete") is not False):
++        raise ScienceProtocolError("frequency sequence is not a strict one-state/no-tuple-completeness witness")
++    direct_values = main.get("parameter_values_by_solnum")
++    worker_values = worker.get("solution_values")
++    if (not isinstance(direct_values, list) or len(direct_values) != 1
++            or not isinstance(worker_values, list) or len(worker_values) != 1):
++        raise ScienceProtocolError("frequency sequence does not expose exactly one raw numeric solution")
++    params = reconciled.get("values")
++    if (not isinstance(params, list) or len(params) != 1
++            or not isinstance(params[0].get("parameters"), list)
++            or len(params[0]["parameters"]) != 1
++            or params[0]["parameters"][0].get("name") != "freq"
++            or not isinstance(params[0]["parameters"][0].get("unit"), str)
++            or not params[0]["parameters"][0].get("unit")):
++        raise ScienceProtocolError("Java and Worker raw frequency getter values/labels do not reconcile as one exact scalar")
++    parameter = params[0]["parameters"][0]
++    frequency_real = _as_finite_float(parameter.get("real"), "observed main frequency")
++    frequency_imag = _as_finite_float(parameter.get("imag"), "observed main frequency imaginary part")
++    if frequency_real <= 0 or frequency_imag != 0.0:
++        raise ScienceProtocolError("raw main frequency getter is not a positive real singleton")
++    return {
++        "status": "PASS_EXACT_ATTACHED_MAIN_COUNT_SINGLETON",
++        "study_tag": study_tag,
++        "study_step_tag": "freq",
++        "study_step_binding": dict(binding),
++        "solver_sequence_tag": tag,
++        "sequence_identity": {key: main.get(key) for key in
++                               ("sequence_type", "solution_type", "study_tag", "attached")},
++        "dataset_tag": dataset_tag,
++        "dataset_solution_property": tag,
++        "dataset_binding": dict(dataset_binding),
++        "raw_parameter": dict(parameter),
++        "raw_unit_semantics": "UNRESOLVED_GETTER_LABEL_NO_CONVERSION",
++        "physical_frequency_hz": "NOT_CAPTURED",
++        "get_size": list(java_size),
++        "get_size_multi": list(main["get_size_multi"]),
++        "solution_info_count_scope": {"Java": dict(java_scope), "Worker": dict(observation)},
++        "sequence_value_reconciliation": reconciled,
++        "solution_info_axis_metadata_complete": False,
++        "parameters_complete": False,
++        "outer_indices_inferred": False,
++        "science_acceptance": "NOT_EVALUATED",
++    }
++
++
++def field_scheme_roles(field_scheme: str = "legacy") -> dict[str, Any]:
++    if field_scheme not in {"legacy", "emw_down"}:
++        raise ScienceProtocolError("unknown explicit field_scheme")
++    prefix = "ewfd" if field_scheme=="legacy" else "emw"
++    return {"signal_e":{a:f"{prefix}.E{a}" if field_scheme=="legacy" else f"down(emw.E{a})" for a in "xyz"},
++        "signal_h":{a:f"{prefix}.H{a}" if field_scheme=="legacy" else f"down(emw.H{a})" for a in "xyz"},
++        "mode_e":{i:{a:f"{prefix}.Emode{a}_{i}" for a in "xyz"} for i in ("1","2")},
++        "mode_h":{i:{a:f"{prefix}.Hmode{a}_{i}" for a in "xyz"} for i in ("1","2")},
++        "nx":"nx" if field_scheme=="legacy" else "emw.nx", "ny":"ny" if field_scheme=="legacy" else "emw.ny",
++        "prefix":prefix}
++
++
++def _require_field_matrix(raw: Mapping[str, Any], field_scheme: str, plane: str) -> None:
++    roles=field_scheme_roles(field_scheme)
++    _raw_expression_map(raw)
++    expected=list(roles["signal_e"].values())+list(roles["signal_h"].values())
++    ports=("2","1") if field_scheme=="legacy" else ("2",) if plane=="output_x8" else ("1",) if plane=="input_xminus10" else ()
++    if not ports:raise ScienceProtocolError("explicit field plane is not registered")
++    for port in ports:expected+=list(roles["mode_e"][port].values())+list(roles["mode_h"][port].values())
++    if field_scheme=="legacy":expected += ["ewfd.neff_1","ewfd.neff_2"]
++    expected += [roles["nx"],roles["ny"]]
++    actual=[row.get("expression") for row in raw.get("expressions",[]) if isinstance(row,Mapping)]
++    if actual!=expected:
++        raise ScienceProtocolError("complete producer field matrix differs from explicit field_scheme/plane; no relabel or missing-name fallback")
++
++
++def bma_point_expressions(port_name: str, *, field_scheme: str = "legacy") -> tuple[str, str, str]:
++    """Use only a validated native PortName; callers bind it to exact BMA store/dataset."""
++    if port_name not in {"1", "2"}:
++        raise ScienceProtocolError("BMA expression selection requires native PortName 1 or 2")
++    prefix=field_scheme_roles(field_scheme)["prefix"]
++    return (f"{prefix}.beta_{port_name}", f"{prefix}.neff_{port_name}", f"{prefix}.k0")
++
++
++def _require_requested_unit_application(
++    application: Any, expressions: Sequence[str], units: Sequence[str],
++) -> None:
++    if (not isinstance(application, Mapping)
++            or application.get("status") != "VERIFIED_REQUESTED_UNITS_BEFORE_AND_AFTER_NUMERIC_READ"
++            or application.get("requested_expressions") != list(expressions)
++            or application.get("requested_units") != list(units)
++            or len(units) != len(expressions)
++            or application.get("setter") != "actual Interp NumericalFeature.setIndex(unit,requested,index)"
++            or application.get("no_external_scaling_or_relabeling") is not True):
++        raise ScienceProtocolError("production Interp lacks exact requested-unit application proof")
++    for key, stage in (("before", "before_numeric_read"), ("after", "after_numeric_read")):
++        observed = application.get(key)
++        if (not isinstance(observed, Mapping)
++                or observed.get("status") != "VERIFIED_EXACT_NATIVE_ARRAYS"
++                or observed.get("stage") != stage
++                or observed.get("expressions") != list(expressions)
++                or observed.get("units") != list(units)
++                or observed.get("source") != "same actual Interp NumericalFeature.getStringArray(expr/unit)"):
++            raise ScienceProtocolError("production Interp requested-unit native expr/unit arrays changed or incomplete")
++
++
++def verify_frequency_unit_scaling(
++    hz: Mapping[str, Any], ghz: Mapping[str, Any],
++    contexts: Sequence[Mapping[str, Any]],
++) -> dict[str, Any]:
++    """Compare two actual numerical results; never publish a converted/relabeled result."""
++    points = (hz, ghz)
++    if not isinstance(contexts, Sequence) or len(contexts) != 2:
++        raise ScienceProtocolError("native frequency unit control needs two exact call contexts")
++    first_identity = None
++    first_points = None
++    raw = []
++    for point, unit, context in zip(points, ("Hz", "GHz"), contexts):
++        if (not isinstance(point, Mapping) or point.get("status") != "PRODUCTION_NATIVE_COMPLEX_POINT_READBACK"
++                or point.get("dataset") != "dset1" or point.get("solution") != "sol1"
++                or point.get("sample_count") != 1 or point.get("expression_units") != {"freq": unit}
++                or type(point.get("native_is_complex")) is not bool
++                or not isinstance(context, Mapping)
++                or context.get("model_ref_before") != context.get("model_ref_after")
++                or context.get("revision_before") != context.get("revision_after")
++                or context.get("worker_epoch_before") != context.get("worker_epoch_after")):
++            raise ScienceProtocolError("native frequency unit control data/model/revision/Worker epoch changed or unverified")
++        model_ref, epoch = context.get("model_ref_before"), context.get("worker_epoch_before")
++        if (not isinstance(model_ref, Mapping) or not model_ref.get("model_tag")
++                or not model_ref.get("session_id") or not model_ref.get("server_instance_id")
++                or type(model_ref.get("generation")) is not int or model_ref["generation"] <= 0
++                or type(context.get("revision_before")) is not int
++                or not isinstance(epoch, Mapping) or not epoch.get("instance_id")
++                or type(epoch.get("generation")) is not int or epoch["generation"] <= 0
++                or not epoch.get("server")):
++            raise ScienceProtocolError("native frequency unit control lacks actual model or Worker epoch identity")
++        identity = (dict(model_ref), context["revision_before"], dict(epoch))
++        if first_identity is None: first_identity = identity
++        elif identity != first_identity:
++            raise ScienceProtocolError("native dual-unit frequency reads do not share ModelRef/revision/Worker epoch")
++        coords = point.get("coordinates_m")
++        if (not isinstance(coords, list) or len(coords) != 2
++                or any(not isinstance(row, list) or len(row) != 1 for row in coords)):
++            raise ScienceProtocolError("native frequency unit control coordinate shape is invalid")
++        for row in coords: _as_finite_float(row[0], "native frequency-control coordinate")
++        if first_points is None: first_points = coords
++        elif coords != first_points:
++            raise ScienceProtocolError("native frequency unit control coordinates changed")
++        _require_requested_unit_application(point.get("requested_unit_application"), ["freq"], [unit])
++        rows = point.get("expressions")
++        if (not isinstance(rows, list) or len(rows) != 1 or rows[0].get("expression") != "freq"
++                or len(rows[0].get("real", [])) != 1 or len(rows[0].get("imag", [])) != 1):
++            raise ScienceProtocolError("native frequency unit control scalar shape changed")
++        value = _finite_complex_row(rows[0]["real"][0], rows[0]["imag"][0], label=f"actual native freq[{unit}]")
++        if value.real <= 0:
++            raise ScienceProtocolError("native frequency unit control real part is not positive")
++        if point["native_is_complex"] is False and value.imag != 0.0:
++            raise ScienceProtocolError("native real-only frequency unit control has nonzero imaginary value")
++        raw.append(value)
++    scale = 1e9
++    tolerance = 1e-12
++    real_ok = math.isclose(raw[0].real, raw[1].real * scale, rel_tol=tolerance, abs_tol=0.0)
++    imag_ok = math.isclose(raw[0].imag, raw[1].imag * scale, rel_tol=tolerance, abs_tol=0.0)
++    if not real_ok or not imag_ok:
++        raise ScienceProtocolError("NATIVE_UNIT_SCALING_UNVERIFIED: actual getData Hz/GHz values do not scale by 1e9; no physical frequency acceptance, escalate to Root")
++    return {"status": "PASS_ACTUAL_NATIVE_FREQ_HZ_GHZ_SCALING", "scale_relation": "freq_Hz=1e9*freq_GHz",
++            "relative_tolerance": tolerance, "absolute_tolerance": 0.0,
++            "native_raw_values": [{"unit": unit, "real": value.real, "imag": value.imag}
++                                  for unit, value in zip(("Hz", "GHz"), raw)],
++            "contexts": [dict(context) for context in contexts], "coordinates_m": first_points,
++            "converted_or_relabeled_data_created": False, "science_acceptance": "NOT_EVALUATED"}
++
++
++def resolve_physical_frequency_point_readback(
++    point: Mapping[str, Any], count_witness: Mapping[str, Any],
++) -> dict[str, Any]:
++    """Read Hz from the same native Interp value/unit; raw getter labels stay separate."""
++    if (not isinstance(point, Mapping) or not isinstance(count_witness, Mapping)
++            or count_witness.get("status") != "PASS_EXACT_ATTACHED_MAIN_COUNT_SINGLETON"
++            or point.get("status") != "PRODUCTION_NATIVE_COMPLEX_POINT_READBACK"
++            or point.get("dataset") != count_witness.get("dataset_tag")
++            or point.get("solution") != count_witness.get("solver_sequence_tag")
++            or point.get("sample_count") != 1
++            or type(point.get("native_is_complex")) is not bool
++            or point.get("expression_units") != {"freq": "Hz"}
++            or not isinstance(point.get("requested_unit_application"), Mapping)
++            or point["requested_unit_application"].get("status") != "VERIFIED_REQUESTED_UNITS_BEFORE_AND_AFTER_NUMERIC_READ"
++            or point["requested_unit_application"].get("requested_expressions") != ["freq"]
++            or point["requested_unit_application"].get("requested_units") != ["Hz"]):
++        raise ScienceProtocolError("physical frequency requires exact native dataset/solution scalar freq[Hz]")
++    _require_requested_unit_application(point.get("requested_unit_application"), ["freq"], ["Hz"])
++    rows = point.get("expressions")
++    if (not isinstance(rows, list) or len(rows) != 1 or rows[0].get("expression") != "freq"
++            or len(rows[0].get("real", [])) != 1 or len(rows[0].get("imag", [])) != 1):
++        raise ScienceProtocolError("physical frequency numerical scalar shape is invalid")
++    frequency = _finite_complex_row(rows[0]["real"][0], rows[0]["imag"][0], label="native freq[Hz]")
++    if frequency.real <= 0 or frequency.imag != 0:
++        raise ScienceProtocolError("physical frequency must be native positive real Hz")
++    return {"status": "PASS_NATIVE_NUMERICAL_FREQUENCY_HZ",
++            "dataset_tag": point["dataset"], "solution_tag": point["solution"],
++            "frequency_hz": frequency.real, "frequency_imag_hz": frequency.imag,
++            "frequency_unit": "Hz", "count_witness": dict(count_witness),
++            "basis": "production Interp requested Hz + actual numerical value/unit readback",
++            "getter_unit_conversion_applied": False, "science_acceptance": "NOT_EVALUATED"}
++
++
++def reconcile_bma_mode_point_readbacks(
++    bindings: Mapping[str, Any],
++    mode_point_receipts: Mapping[str, Mapping[str, Any]],
++    main_frequency: Mapping[str, Any], *, field_scheme: str = "legacy",
++) -> dict[str, Any]:
++    """Cross-check stored BMA lambda against production beta/neff/k0 values.
++
++    The applicable COMSOL Wave Optics relation is beta_i=j*lambda and
++    neff_i=beta_i/k0. This check requires the captured StoreSolution/StudyStep
++    provenance, observed units, and the attached main frequency witness; it
++    never infers an outer/inner tuple or a unit from a tag/value.
++    """
++    if (not isinstance(bindings, Mapping) or bindings.get("status") != "PASS_BMA_STUDY_STORE_DATASET_BINDINGS"
++            or not isinstance(mode_point_receipts, Mapping)
++            or not isinstance(main_frequency, Mapping)
++            or main_frequency.get("status") != "PASS_NATIVE_NUMERICAL_FREQUENCY_HZ"):
++        raise ScienceProtocolError("BMA mode formula check lacks exact study/store/dataset and main-frequency witnesses")
++    rows = bindings.get("bindings")
++    if not isinstance(rows, list) or {row.get("study_step_tag") for row in rows if isinstance(row, Mapping)} != {"bmaInput", "bmaOutput"}:
++        raise ScienceProtocolError("BMA formula check requires exact input and output StoreSolution bindings")
++    frequency = _as_finite_float(main_frequency.get("frequency_hz"), "main frequency Hz")
++    if main_frequency.get("frequency_unit") != "Hz" or frequency <= 0:
++        raise ScienceProtocolError("main frequency is not an observed positive Hz value")
++    c_m_s = 299_792_458.0
++    expected_k0 = 2.0 * math.pi * frequency / c_m_s
++    output: list[dict[str, Any]] = []
++    expected_tags = {"bmaInput": "1", "bmaOutput": "2"}
++    for binding in rows:
++        if not isinstance(binding, Mapping):
++            raise ScienceProtocolError("BMA binding row is malformed")
++        step = binding.get("study_step_tag")
++        if step not in expected_tags or binding.get("port_name") != expected_tags[step]:
++            raise ScienceProtocolError("BMA formula row does not match the exact input/output port role")
++        if binding.get("mode_frequency_expression") != "f0":
++            raise ScienceProtocolError("BMA modeFreq no longer binds to the captured f0 expression")
++        point = mode_point_receipts.get(step)
++        if (not isinstance(point, Mapping)
++                or point.get("status") != "PRODUCTION_NATIVE_COMPLEX_POINT_READBACK"
++                or point.get("dataset") != binding.get("dataset_tag")
++                or point.get("solution") != binding.get("store_solution_reference")
++                or point.get("sample_count") != 1
++                or type(point.get("native_is_complex")) is not bool):
++            raise ScienceProtocolError(f"{step} result.at_points readback is not bound to its exact stored BMA dataset")
++        observation = binding.get("sequence_parameter_observation")
++        values = observation.get("values") if isinstance(observation, Mapping) else None
++        params = values[0].get("parameters") if isinstance(values, list) and len(values) == 1 and isinstance(values[0], Mapping) else None
++        if (not isinstance(params, list) or len(params) != 1
++                or params[0].get("name") != "lambda"
++                or not isinstance(params[0].get("unit"), str) or not params[0].get("unit")):
++            raise ScienceProtocolError(f"{step} stored BMA sequence lacks one reconciled raw lambda getter")
++        lambda_value = _finite_complex_row(params[0].get("real"), params[0].get("imag"), label=f"{step} lambda")
++        result_expressions = point.get("expressions")
++        units = point.get("expression_units")
++        if not isinstance(result_expressions, list) or not isinstance(units, Mapping):
++            raise ScienceProtocolError(f"{step} native expression-unit readback is unavailable")
++        expression_rows = {row.get("expression"): row for row in result_expressions if isinstance(row, Mapping)}
++        expected_expressions = bma_point_expressions(binding["port_name"], field_scheme=field_scheme)
++        if tuple(row.get("expression") for row in result_expressions) != expected_expressions:
++            raise ScienceProtocolError(f"{step} wrong-port or unordered BMA expression readback")
++        application = point.get("requested_unit_application")
++        if (not isinstance(application, Mapping)
++                or application.get("status") != "VERIFIED_REQUESTED_UNITS_BEFORE_AND_AFTER_NUMERIC_READ"
++                or application.get("requested_expressions") != list(expected_expressions)
++                or application.get("requested_units") != ["1/m", "1", "1/m"]):
++            raise ScienceProtocolError(f"{step} lacks exact native requested-unit application proof")
++        _require_requested_unit_application(application, expected_expressions, ["1/m", "1", "1/m"])
++        beta_expression, neff_expression, k0_expression = expected_expressions
++        values_by_name: dict[str, complex] = {}
++        for expression in expected_expressions:
++            row = expression_rows.get(expression)
++            if not isinstance(row, Mapping) or len(row.get("real", [])) != 1 or len(row.get("imag", [])) != 1:
++                raise ScienceProtocolError(f"{step} saved readback omitted a scalar {expression} value")
++            values_by_name[expression] = _finite_complex_row(row["real"][0], row["imag"][0], label=f"{step} {expression}")
++            if point["native_is_complex"] is False and values_by_name[expression].imag != 0.0:
++                raise ScienceProtocolError(f"{step} native real-only scalar has nonzero imaginary value")
++        if (units.get(beta_expression) != "1/m" or units.get(k0_expression) != "1/m"
++                or units.get(neff_expression) not in {"1", ""}):
++            raise ScienceProtocolError(f"{step} native beta/neff/k0 expression units are not the documented 1/m, 1, 1/m")
++        beta = values_by_name[beta_expression]
++        neff = values_by_name[neff_expression]
++        k0 = values_by_name[k0_expression]
++        beta_expected = 1j * lambda_value
++        beta_error = abs(beta - beta_expected) / max(abs(beta_expected), 1.0)
++        k0_error = abs(k0 - expected_k0) / max(abs(expected_k0), 1.0)
++        neff_expected = beta / k0 if abs(k0) > 0 else complex(float("nan"), float("nan"))
++        neff_error = abs(neff - neff_expected) / max(abs(neff_expected), 1.0)
++        if not all(math.isfinite(value) for value in (beta_error, k0_error, neff_error)):
++            raise ScienceProtocolError(f"{step} beta/neff/k0 cross-check contains non-finite values")
++        if beta_error > 1e-8 or k0_error > 1e-8 or neff_error > 1e-8:
++            raise ScienceProtocolError(f"{step} native BMA formula cross-check exceeds roundoff allowance: beta={beta_error}, k0={k0_error}, neff={neff_error}")
++        output.append({
++            "study_step_tag": step, "port_name": binding["port_name"],
++            "dataset_tag": binding["dataset_tag"], "solution_tag": binding["store_solution_reference"],
++            "lambda_raw_getter": {"real": lambda_value.real, "imag": lambda_value.imag, "unit_label": params[0]["unit"],
++                                  "physical_dimension": "UNRESOLVED_NUMERIC_CONSISTENCY_ONLY"},
++            "expressions": list(expected_expressions),
++            "beta": {"real": beta.real, "imag": beta.imag, "unit": units[beta_expression]},
++            "neff": {"real": neff.real, "imag": neff.imag, "unit": units[neff_expression]},
++            "k0": {"real": k0.real, "imag": k0.imag, "unit": units[k0_expression]},
++            "observed_frequency_hz": frequency,
++            "formulae": {"beta_i": "beta_i=j*lambda", "neff_i": "neff_i=beta_i/k0",
++                         "k0": "2*pi*observed_main_frequency_hz/c"},
++            "relative_residuals": {"beta_vs_j_lambda": beta_error,
++                                    "k0_vs_frequency": k0_error,
++                                    "neff_vs_beta_over_k0": neff_error},
++            "status": "PASS_BMA_FORMULA_CROSSCHECK_ONLY",
++            "science_acceptance": "NOT_EVALUATED",
++        })
++    return {"status": "PASS_BMA_FORMULA_CROSSCHECK_ONLY", "bindings": output,
++            "basis": "COMSOL Wave Optics Users Guide doc26574/chunk112469 PDF p.91; actual StudyStep/StoreSolution/dataset provenance and native expressions",
++            "science_acceptance": "NOT_EVALUATED"}
++
++
++def _require_point_selection_application(result: Mapping[str, Any], expected_selection: Mapping[str, Any]) -> None:
++    application = result.get("feature_readback", {}).get("selection_application")
++    if not isinstance(application, Mapping) or set(application)!={"before", "after"}:
++        raise ScienceProtocolError("field point readback lacks actual before/after transient selection")
++    entities = [8,10,12] if expected_selection.get("tag")=="selReceiverX8" else [1,3,5] if expected_selection.get("tag")=="selInputPort" else None
++    if entities is None:raise ScienceProtocolError("field plane selection is not registered")
++    before = after = None
++    for stage,key in [("before_numeric_read","before"),("after_numeric_read","after")]:
++        record = application[key];observed = record.get("native_selection_readback") if isinstance(record,Mapping) else None
++        if (not isinstance(observed,Mapping) or record.get("stage")!=stage or record.get("component")!=expected_selection["component"]
++            or record.get("geometry")!=expected_selection["geometry"] or record.get("entity_dimension")!=1
++            or record.get("kind")!="named" or record.get("tag")!=expected_selection["tag"]
++            or observed.get("geometry")!="geom1" or type(observed.get("dimension")) is not int or observed["dimension"]!=1
++            or observed.get("named")!=expected_selection["tag"] or observed.get("entities")!=entities
++            or observed.get("is_inheriting") is not False):
++            raise ScienceProtocolError("field transient selection identity/membership/inheritance mismatch")
++        if key=="before":before=observed
++        else:after=observed
++    if before!=after:raise ScienceProtocolError("field transient selection changed during point read")
++
+ def decode_production_complex_point_readback(
+     result: Mapping[str, Any], *, dataset_tag: str, solution_tag: str,
+     expressions: Sequence[str], expected_points: Sequence[Sequence[float]],
+     expected_solution_count: int, plane_id: str,
++    expected_count_witness: Mapping[str, Any] | None = None,
++    expected_expression_units: Mapping[str, str | Sequence[str]] | None = None,
++    require_x_plane_normal: bool = False,
++    expected_requested_units: Sequence[str] | None = None,
++    scalar_frequency: bool = False,
++    scalar_bma_binding: Mapping[str, Any] | None = None,
++    expected_selection: Mapping[str, Any] | None = None,
++    field_scheme: str = "legacy",
+ ) -> dict[str, Any]:
+-    """Decode one exact stored solution through the public result.at_points path."""
++    """Decode one exact singleton through production result.at_points.
++
++    ``expected_points`` are expressed in the coordinate unit reported by the
++    native geometry readback.  A count-only attached-frequency witness may
++    bound the result sample allocation without claiming SolutionInfo tuple
++    completeness.
++    """
++    field_scheme_roles(field_scheme)
+     if not isinstance(result, Mapping):
+         raise ScienceProtocolError("production result.at_points response must be an object")
++    if type(scalar_frequency) is not bool:
++        raise ScienceProtocolError("scalar frequency route marker must be an actual bool")
++    scalar_route = False
++    if scalar_frequency:
++        scalar_route = (scalar_bma_binding is None and tuple(expressions) == ("freq",)
++                        and dataset_tag == "dset1" and solution_tag == "sol1" and len(expected_points) == 1
++                        and list(expected_requested_units or []) in (["Hz"], ["GHz"])
++                        and isinstance(expected_count_witness, Mapping)
++                        and expected_count_witness.get("status") == "PASS_EXACT_ATTACHED_MAIN_COUNT_SINGLETON")
++        if not scalar_route:
++            raise ScienceProtocolError("real-only frequency route lacks its exact captured singleton/unit binding")
++    if scalar_bma_binding is not None:
++        port = scalar_bma_binding.get("port_name") if isinstance(scalar_bma_binding, Mapping) else None
++        expected_step = {"1": "bmaInput", "2": "bmaOutput"}.get(port)
++        scalar_route = (not scalar_frequency and expected_step is not None
++                        and scalar_bma_binding.get("status") == "VERIFIED_STEP_STORE_DATASET_BINDING_ONLY"
++                        and scalar_bma_binding.get("study_step_tag") == expected_step
++                        and scalar_bma_binding.get("mode_frequency_expression") == "f0"
++                        and scalar_bma_binding.get("dataset_tag") == dataset_tag
++                        and scalar_bma_binding.get("store_solution_reference") == solution_tag
++                        and tuple(expressions) == bma_point_expressions(port, field_scheme=field_scheme) and len(expected_points) == 1
++                        and list(expected_requested_units or []) == ["1/m", "1", "1/m"])
++        if not scalar_route:
++            raise ScienceProtocolError("real-only BMA route lacks exact validated native port/store/dataset/units")
++    native_is_complex = result.get("is_complex")
+     status = result.get("status")
+     cleanup = result.get("cleanup")
+     if (not isinstance(status, Mapping) or status.get("ok") is not True
+             or not isinstance(cleanup, Mapping) or cleanup.get("cleanup_failed") is True
+             or result.get("complex_mode") != "preserve"
+-            or result.get("is_complex") is not True):
++            or type(native_is_complex) is not bool
++            or (native_is_complex is False and not scalar_route)):
+         raise ScienceProtocolError("production result.at_points did not return a clean complex-preserve result")
+     if result.get("dataset") != dataset_tag or result.get("solution") != solution_tag:
+         raise ScienceProtocolError("production result.at_points did not retain the exact dataset/solution identity")
+@@ -509,18 +1229,56 @@
+         raise ScienceProtocolError("production result.at_points lacks exact native dataset.solution binding")
+     axes = result.get("solution_axes")
+     count_observation = axes.get("numeric_count_observation") if isinstance(axes, Mapping) else None
++    count_statuses = {
++        "VERIFIED_SINGLE_STORED_NUMERIC_COUNT",
++        "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT",
++    }
+     if (not isinstance(axes, Mapping)
+             or axes.get("pair_mapping_complete") is not False
+             or not isinstance(count_observation, Mapping)
+-            or count_observation.get("status") != "VERIFIED_SINGLE_STORED_NUMERIC_COUNT"
++            or count_observation.get("status") not in count_statuses
+             or count_observation.get("numeric_solution_count") != 1
+             or count_observation.get("dataset") != dataset_tag
+             or count_observation.get("solution") != solution_tag
+             or not isinstance(count_observation.get("source"), str)
+             or not count_observation.get("source")):
+         raise ScienceProtocolError(
+-            "production point readback lacks the exact stored-solution numeric singleton witness; "
++            "production point readback lacks the exact numeric singleton witness; "
+             "outer/inner SolutionInfo mapping must remain explicitly incomplete")
++    if count_observation.get("status") == "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT":
++        observation = count_observation.get("observation")
++        count_scope = observation.get("solution_info_count_scope") if isinstance(observation, Mapping) else None
++        parameter_rows = observation.get("parameter_rows") if isinstance(observation, Mapping) else None
++        if (not isinstance(expected_count_witness, Mapping)
++                or expected_count_witness.get("status") != "PASS_EXACT_ATTACHED_MAIN_COUNT_SINGLETON"
++                or expected_count_witness.get("dataset_tag") != dataset_tag
++                or expected_count_witness.get("solver_sequence_tag") != solution_tag
++                or not isinstance(observation, Mapping)
++                or observation.get("sequence_type") != "SolverSequence"
++                or observation.get("solution_type") != "Parametric"
++                or observation.get("attached") is not True
++                or observation.get("study") != expected_count_witness.get("study_tag")
++                or observation.get("solution_identity_matches_dataset_study") is not True
++                or observation.get("get_size") != expected_count_witness.get("get_size")
++                or observation.get("get_size_multi") != [1, 1]
++                or observation.get("pnames") != ["freq"]
++                or not isinstance(count_scope, Mapping)
++                or count_scope.get("getLevelNames") != ["freq"]
++                or count_scope.get("getLevels") != 1
++                or count_scope.get("getOuterSolnum") != []
++                or count_scope.get("read_errors")
++                or not isinstance(parameter_rows, list) or len(parameter_rows) != 1
++                or parameter_rows[0].get("name") != "freq"
++                or parameter_rows[0].get("unit") != expected_count_witness.get("raw_parameter", {}).get("unit")):
++            raise ScienceProtocolError("attached result.at_points singleton does not match the independently resolved main frequency dataset witness")
++        parameter_row = parameter_rows[0]
++        observed_frequency = _as_finite_float(parameter_row.get("real"),
++                                              "attached point-readback frequency")
++        observed_frequency_imag = _as_finite_float(parameter_row.get("imag"),
++                                                   "attached point-readback frequency imaginary part")
++        if (observed_frequency != expected_count_witness.get("raw_parameter", {}).get("real")
++                or observed_frequency_imag != expected_count_witness.get("raw_parameter", {}).get("imag")):
++            raise ScienceProtocolError("attached point-readback frequency values differ from direct Java/Worker witness")
+     budget = result.get("result_budget")
+     records = budget.get("records") if isinstance(budget, Mapping) else None
+     if (not isinstance(budget, Mapping) or budget.get("status") != "PASS"
+@@ -541,6 +1299,11 @@
+             or feature_readback.get("data_status") != "VERIFIED"
+             or feature_readback.get("data") != dataset_tag):
+         raise ScienceProtocolError("production Interp did not verify its native data dataset")
++    if expected_requested_units is not None:
++        _require_requested_unit_application(feature_readback.get("requested_unit_application"),
++                                            expressions, expected_requested_units)
++        if result.get("expression_units") != dict(zip(expressions, expected_requested_units)):
++            raise ScienceProtocolError("production numerical units differ from actual requested-unit feature witness")
+     coordinate_readback = result.get("coordinate_readback")
+     if not isinstance(coordinate_readback, Mapping) or coordinate_readback.get("status") != "VERIFIED":
+         raise ScienceProtocolError("production Interp coordinate readback is not verified")
+@@ -569,7 +1332,7 @@
+ 
+     if (isinstance(expected_solution_count, bool) or type(expected_solution_count) is not int
+             or expected_solution_count != 1):
+-        raise ScienceProtocolError("this readback route requires exactly one observed stored solution number")
++        raise ScienceProtocolError("this readback route requires exactly one observed native solution number")
+     if result.get("point_count") != len(expected_points):
+         raise ScienceProtocolError("production result point_count differs from the requested sample count")
+     actual_expressions = result.get("expressions")
+@@ -578,6 +1341,19 @@
+             or not expressions or list(actual_expressions or []) != list(expressions)
+             or not isinstance(values, list) or len(values) != len(expressions)):
+         raise ScienceProtocolError("production complex point values do not match the exact expression list")
++    actual_units = result.get("expression_units")
++    if expected_expression_units is not None:
++        if not isinstance(actual_units, Mapping):
++            raise ScienceProtocolError("production complex point readback has no native expression-unit map")
++        for expression in expressions:
++            allowed = expected_expression_units.get(expression)
++            unit = actual_units.get(expression)
++            allowed_values = (list(allowed) if isinstance(allowed, Sequence)
++                              and not isinstance(allowed, (str, bytes)) else [allowed])
++            if (not isinstance(unit, str) or not allowed_values
++                    or unit not in allowed_values):
++                raise ScienceProtocolError(
++                    f"production expression {expression!r} unit {unit!r} is not in the exact frozen unit set {allowed_values!r}")
+     raw_rows: list[dict[str, Any]] = []
+     for expression, expression_values in zip(expressions, values):
+         if (not isinstance(expression, str) or not isinstance(expression_values, list)
+@@ -590,28 +1366,59 @@
+             if not isinstance(value, Mapping) or not {"real", "imag"} <= set(value):
+                 raise ScienceProtocolError(f"complex result for {expression!r} point {point_index} lacks real/imag")
+             item = _finite_complex_row(value.get("real"), value.get("imag"), label=expression)
++            if native_is_complex is False and item.imag != 0.0:
++                raise ScienceProtocolError("native real-only scalar contains a nonzero imaginary value")
+             row["real"].append(item.real)
+             row["imag"].append(item.imag)
+         raw_rows.append(row)
++    if expected_selection is not None:
++        _require_point_selection_application(result, expected_selection)
++    normal_sign: int | None = None
++    normal_status = "NOT_CAPTURED_BY_POINT_INTERPOLATION"
++    if require_x_plane_normal:
++        by_name = {row["expression"]: row for row in raw_rows}
++        nx_row, ny_row = by_name.get(field_scheme_roles(field_scheme)["nx"]), by_name.get(field_scheme_roles(field_scheme)["ny"])
++        if (not isinstance(nx_row, Mapping) or not isinstance(ny_row, Mapping)
++                or len(nx_row["real"]) != len(expected_points)
++                or len(ny_row["real"]) != len(expected_points)):
++            raise ScienceProtocolError("x-plane field sample lacks the exact native nx/ny normal readbacks")
++        nx = [_finite_complex_row(real, imag, label="nx")
++              for real, imag in zip(nx_row["real"], nx_row["imag"])]
++        ny = [_finite_complex_row(real, imag, label="ny")
++              for real, imag in zip(ny_row["real"], ny_row["imag"])]
++        if (any(abs(abs(value.real) - 1.0) > 1e-10 or abs(value.imag) > 1e-12 for value in nx)
++                or any(abs(value.real) > 1e-10 or abs(value.imag) > 1e-12 for value in ny)
++                or len({1 if value.real > 0 else -1 for value in nx}) != 1):
++            raise ScienceProtocolError("native x-plane normals are not a constant unit x normal")
++        normal_sign = 1 if nx[0].real > 0 else -1
++        if expected_selection is not None and normal_sign != (1 if expected_selection["tag"]=="selReceiverX8" else -1):
++            raise ScienceProtocolError("native normal direction differs from exact physics plane")
++        normal_status = "VERIFIED_FROM_NATIVE_NX_NY"
+     return {
+         "status": "PRODUCTION_NATIVE_COMPLEX_POINT_READBACK",
+-        "scope": "exact dataset-bound single stored solution; sample identity/values only, not a native integral or scientific acceptance",
++        "scope": "exact dataset-bound single numeric solution; sample identity/values only, not a native integral or scientific acceptance",
+         "operation": "result.at_points",
+         "dataset": dataset_tag, "solution": solution_tag,
+         "plane": plane_id,
+         "sample_count": len(expected_points),
+         "complex_readback": True,
++        "native_is_complex": native_is_complex,
++        "real_only_scalar_route": scalar_route and native_is_complex is False,
+         "coordinates_m": coordinates_m,
+         "coordinate_geometry_unit": coordinate_unit,
++        **({"requested_unit_application": dict(feature_readback["requested_unit_application"])}
++           if expected_requested_units is not None else {}),
+         "expression_units": dict(result.get("expression_units") or {}),
+         "expressions": raw_rows,
+-        "normal_sign": None,
+-        "normal_status": "NOT_CAPTURED_BY_POINT_INTERPOLATION",
++        "normal_sign": normal_sign,
++        "native_normal_x": normal_sign,
++        "normal_sign_source": "native result.at_points nx readback" if require_x_plane_normal else None,
++        "normal_status": normal_status,
+         "science_acceptance": "NOT_EVALUATED",
+     }
+ 
+ 
+-def _plane_coordinates(raw: Mapping[str, Any], *, expected_x_m: float) -> tuple[list[float], int, int]:
++def _plane_coordinates(raw: Mapping[str, Any], *, expected_x_m: float, field_scheme: str = "legacy") -> tuple[list[float], int, int]:
+     sample_count = raw.get("sample_count")
+     coordinates = raw.get("coordinates_m")
+     if (not isinstance(coordinates, list) or len(coordinates) != 2
+@@ -625,7 +1432,7 @@
+     if not math.isclose(ys[0], -8e-6, rel_tol=0, abs_tol=1e-12) or not math.isclose(ys[-1], 8e-6, rel_tol=0, abs_tol=1e-12):
+         raise ScienceProtocolError("COMSOL coordinate readback does not cover the frozen y span in metres")
+     normals = _raw_expression_map(raw)
+-    nx, ny = normals.get("nx"), normals.get("ny")
++    nx, ny = normals.get(field_scheme_roles(field_scheme)["nx"]), normals.get(field_scheme_roles(field_scheme)["ny"])
+     if nx is None or ny is None:
+         raise ScienceProtocolError("native boundary normal nx/ny was not exported")
+     if any(abs(abs(value.real) - 1) > 1e-10 or abs(value.imag) > 1e-12 for value in nx):
+@@ -655,12 +1462,14 @@
+     return [a * b - c * d for a, b, c, d in zip(ey, hz, ez, hy)]
+ 
+ 
+-def independent_integrals(output_raw: Mapping[str, Any], input_raw: Mapping[str, Any]) -> dict[str, Any]:
++def independent_integrals(output_raw: Mapping[str, Any], input_raw: Mapping[str, Any], *, field_scheme: str = "legacy") -> dict[str, Any]:
+     """Recompute all four overlap integrals from COMSOL-exported E/H arrays."""
++    _require_field_matrix(output_raw, field_scheme, "output_x8")
++    _require_field_matrix(input_raw, field_scheme, "input_xminus10")
+     if output_raw.get("plane") != "output_x8" or input_raw.get("plane") != "input_xminus10":
+         raise ScienceProtocolError("native raw exports are not bound to x=8 um and x=-10 um planes")
+-    y_out, native_out_nx, declared_out_sign = _plane_coordinates(output_raw, expected_x_m=8e-6)
+-    y_in, native_in_nx, declared_in_sign = _plane_coordinates(input_raw, expected_x_m=-10e-6)
++    y_out, native_out_nx, declared_out_sign = _plane_coordinates(output_raw, expected_x_m=8e-6, field_scheme=field_scheme)
++    y_in, native_in_nx, declared_in_sign = _plane_coordinates(input_raw, expected_x_m=-10e-6, field_scheme=field_scheme)
+     if y_out != y_in:
+         raise ScienceProtocolError("output and incident reference grids differ")
+     if output_raw.get("sample_count") != input_raw.get("sample_count"):
+@@ -671,12 +1480,12 @@
+         raise ScienceProtocolError("declared normal_sign and native boundary normal do not both point along physical +x")
+     out = _raw_expression_map(output_raw)
+     inc = _raw_expression_map(input_raw)
+-    signal_e = {axis: f"ewfd.E{axis}" for axis in "xyz"}
+-    signal_h = {axis: f"ewfd.H{axis}" for axis in "xyz"}
+-    output_mode_e = {axis: f"ewfd.Emode{axis}_2" for axis in "xyz"}
+-    output_mode_h = {axis: f"ewfd.Hmode{axis}_2" for axis in "xyz"}
+-    incident_mode_e = {axis: f"ewfd.Emode{axis}_1" for axis in "xyz"}
+-    incident_mode_h = {axis: f"ewfd.Hmode{axis}_1" for axis in "xyz"}
++    signal_e = field_scheme_roles(field_scheme)["signal_e"]
++    signal_h = field_scheme_roles(field_scheme)["signal_h"]
++    output_mode_e = field_scheme_roles(field_scheme)["mode_e"]["2"]
++    output_mode_h = field_scheme_roles(field_scheme)["mode_h"]["2"]
++    incident_mode_e = field_scheme_roles(field_scheme)["mode_e"]["1"]
++    incident_mode_h = field_scheme_roles(field_scheme)["mode_h"]["1"]
+     signal_flux = _poynting_x(out, signal_e, signal_h)
+     mode_flux = _poynting_x(out, output_mode_e, output_mode_h)
+     incident_flux = _poynting_x(inc, incident_mode_e, incident_mode_h)
+@@ -746,11 +1555,12 @@
+             "independent_provenance": independent.get("evidence_scope")}
+ 
+ 
+-def independent_capture_aperture_flux(output_raw: Mapping[str, Any]) -> dict[str, Any]:
++def independent_capture_aperture_flux(output_raw: Mapping[str, Any], *, field_scheme: str = "legacy") -> dict[str, Any]:
+     """Integrate signed native E/H flux over the frozen core-only x=8 aperture."""
++    _require_field_matrix(output_raw, field_scheme, "output_x8")
+     if output_raw.get("plane") != "output_x8" or output_raw.get("sample_count") != REFINED_SAMPLE_COUNT:
+         raise ScienceProtocolError("capture quadrature requires the 641-point native x=8 output field export")
+-    y, native_nx, declared_sign = _plane_coordinates(output_raw, expected_x_m=8e-6)
++    y, native_nx, declared_sign = _plane_coordinates(output_raw, expected_x_m=8e-6, field_scheme=field_scheme)
+     if native_nx * declared_sign != 1:
+         raise ScienceProtocolError("capture aperture normal does not follow the registered physical +x convention")
+     selected = [index for index, coordinate in enumerate(y)
+@@ -762,11 +1572,11 @@
+             or not math.isclose(selected_y[-1], CAPTURE_Y_MAX_M, rel_tol=0, abs_tol=1e-12)):
+         raise ScienceProtocolError("native 641-point grid does not exactly cover the frozen core capture bounds")
+     fields = _raw_expression_map(output_raw)
+-    required = ("ewfd.Ey", "ewfd.Ez", "ewfd.Hy", "ewfd.Hz")
++    required = tuple(field_scheme_roles(field_scheme)[kind][axis] for kind in ("signal_e","signal_h") for axis in "yz")
+     if any(name not in fields for name in required):
+         raise ScienceProtocolError("capture quadrature is missing native signal E/H components")
+-    electric = {axis: f"ewfd.E{axis}" for axis in "xyz"}
+-    magnetic = {axis: f"ewfd.H{axis}" for axis in "xyz"}
++    electric = field_scheme_roles(field_scheme)["signal_e"]
++    magnetic = field_scheme_roles(field_scheme)["signal_h"]
+     flux_x = _poynting_x(fields, electric, magnetic)
+     values = [0.5 * (flux_x[index] * native_nx * declared_sign).real for index in selected]
+     result = _simpson_uniform_any(values, selected_y, label="capture aperture Poynting flux").real
+@@ -916,7 +1726,7 @@
+ 
+ def software_global_phase_control(output_raw: Mapping[str, Any],
+                                   input_raw: Mapping[str, Any], *,
+-                                  phase_factor: complex = 1j) -> dict[str, Any]:
++                                  phase_factor: complex = 1j, field_scheme: str = "legacy") -> dict[str, Any]:
+     """Test a known signal-only phase rotation on exported native fields.
+ 
+     This is explicitly a software recomputation control. It does not replace
+@@ -924,9 +1734,9 @@
+     """
+     if not isinstance(phase_factor, complex) or abs(abs(phase_factor) - 1.0) > 1e-12:
+         raise ScienceProtocolError("software global-phase control requires a unit-magnitude complex factor")
+-    base = independent_integrals(output_raw, input_raw)
++    base = independent_integrals(output_raw, input_raw, field_scheme=field_scheme)
+     fields = _raw_expression_map(output_raw)
+-    signal_names = {f"ewfd.E{axis}" for axis in "xyz"} | {f"ewfd.H{axis}" for axis in "xyz"}
++    signal_names = set(field_scheme_roles(field_scheme)["signal_e"].values()) | set(field_scheme_roles(field_scheme)["signal_h"].values())
+     if not signal_names.issubset(fields):
+         raise ScienceProtocolError("software phase control is missing one or more signal E/H components")
+     rotated = dict(output_raw)
+@@ -944,7 +1754,7 @@
+             copied["imag"] = list(row["imag"])
+         rotated_rows.append(copied)
+     rotated["expressions"] = rotated_rows
+-    changed = independent_integrals(rotated, input_raw)
++    changed = independent_integrals(rotated, input_raw, field_scheme=field_scheme)
+     base_cross = complex(base["reciprocal_overlap_numerator"]["real"],
+                          base["reciprocal_overlap_numerator"]["imag"])
+     changed_cross = complex(changed["reciprocal_overlap_numerator"]["real"],
+@@ -980,8 +1790,10 @@
+ 
+ 
+ def verify_native_phase_pair(case0: Mapping[str, Any], case90: Mapping[str, Any], *,
++                             field_scheme: str = "legacy",
+                              expected_factor: complex = EXPECTED_FIELD_PHASE_FACTOR) -> dict[str, Any]:
+     """Require input phase change to rotate signal while output reference stays fixed."""
++    field_scheme_roles(field_scheme)
+     for label, case in (("phase0", case0), ("phase90", case90)):
+         if case.get("phase_value") not in {"0[deg]", "90[deg]"}:
+             raise ScienceProtocolError(f"{label} lacks the exact frozen native Port phase setting")
+@@ -999,15 +1811,17 @@
+         raise ScienceProtocolError("native phase pair is not bound to the x=8 um science receiver plane")
+     if raw0.get("sample_count") != raw90.get("sample_count"):
+         raise ScienceProtocolError("native phase pair uses different quadrature sample counts")
+-    y0, nx0, sign0 = _plane_coordinates(raw0, expected_x_m=8e-6)
+-    y90, nx90, sign90 = _plane_coordinates(raw90, expected_x_m=8e-6)
++    _require_field_matrix(raw0, field_scheme, "output_x8")
++    _require_field_matrix(raw90, field_scheme, "output_x8")
++    y0, nx0, sign0 = _plane_coordinates(raw0, expected_x_m=8e-6, field_scheme=field_scheme)
++    y90, nx90, sign90 = _plane_coordinates(raw90, expected_x_m=8e-6, field_scheme=field_scheme)
+     if (len(y0) != len(y90) or any(not math.isclose(a, b, rel_tol=0, abs_tol=1e-12)
+                                     for a, b in zip(y0, y90))
+             or nx0 != nx90 or sign0 != sign90):
+         raise ScienceProtocolError("native phase pair output fields are not bound to the same coordinates and oriented plane")
+     values0, values90 = _raw_expression_map(raw0), _raw_expression_map(raw90)
+-    signal_names = [f"ewfd.E{axis}" for axis in "xyz"] + [f"ewfd.H{axis}" for axis in "xyz"]
+-    mode_names = [f"ewfd.Emode{axis}_2" for axis in "xyz"] + [f"ewfd.Hmode{axis}_2" for axis in "xyz"]
++    signal_names = list(field_scheme_roles(field_scheme)["signal_e"].values()) + list(field_scheme_roles(field_scheme)["signal_h"].values())
++    mode_names = list(field_scheme_roles(field_scheme)["mode_e"]["2"].values()) + list(field_scheme_roles(field_scheme)["mode_h"]["2"].values())
+     ratios: list[complex] = []
+     mode_relative_errors: list[float] = []
+     for name in signal_names:
+@@ -1098,14 +1912,14 @@
+                                   "complex_field_representation": "full_physical_complex_phasor_including_reconstructed_envelope_phase"},
+             "output_surface": {"plane_id": "x8", "selection": {"component": "comp1", "geometry": "geom1", "tag": "selReceiverX8"}, "normal_sign": 1},
+             "signal": {"field_id": "signal", "source": {"dataset_id": "dset1", "solution_id": "sol1", "outer_index": 1, "inner_index": 1},
+-                       "fields": {"electric": {axis: f"ewfd.E{axis}" for axis in "xyz"}, "magnetic": {axis: f"ewfd.H{axis}" for axis in "xyz"}}},
++                       "fields": {"electric": field_scheme_roles("legacy")["signal_e"], "magnetic": field_scheme_roles("legacy")["signal_h"]}},
+             "reference_mode": {"mode_id": "output_mode_1", "mode_axis_parameter": "modeIndex",
+                                "source": {"dataset_id": "dset1", "solution_id": "sol1", "outer_index": 1, "inner_index": 1},
+-                               "fields": {"electric": {axis: f"ewfd.Emode{axis}_2" for axis in "xyz"}, "magnetic": {axis: f"ewfd.Hmode{axis}_2" for axis in "xyz"}}},
++                               "fields": {"electric": field_scheme_roles("legacy")["mode_e"]["2"], "magnetic": field_scheme_roles("legacy")["mode_h"]["2"]}},
+             "incident_reference": {"reference_id": "input_mode_1", "input_plane_id": "xminus10",
+                                    "selection": {"component": "comp1", "geometry": "geom1", "tag": "selInputPort"}, "normal_sign": -1,
+                                    "source": {"dataset_id": "dset1", "solution_id": "sol1", "outer_index": 1, "inner_index": 1},
+-                                   "fields": {"electric": {axis: f"ewfd.Emode{axis}_1" for axis in "xyz"}, "magnetic": {axis: f"ewfd.Hmode{axis}_1" for axis in "xyz"}}},
++                                   "fields": {"electric": field_scheme_roles("legacy")["mode_e"]["1"], "magnetic": field_scheme_roles("legacy")["mode_h"]["1"]}},
+             "power_floor": {"value": 1e-12, "unit": POWER_UNIT_2D},
+         }
+         if label == "caller_array_provenance":

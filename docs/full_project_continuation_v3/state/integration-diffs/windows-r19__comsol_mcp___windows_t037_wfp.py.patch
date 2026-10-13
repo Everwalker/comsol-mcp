@@ -1,0 +1,353 @@
+--- root/comsol_mcp/_windows_t037_wfp.py
++++ windows-r19/comsol_mcp/_windows_t037_wfp.py
+@@ -4,9 +4,10 @@
+ creation with exact SDDL/readback, plus persistent PERMIT filters at the
+ outbound IPv4 ALE_AUTH_CONNECT layer tied to one exact configured application,
+ AppContainer SID, protocol, local/remote CIDR and remote port. Deletion is
+-receipt-hash-bound and requires complete child enumeration. It does not block
+-traffic, install callouts, or claim effective firewall arbitration or T037
+-isolation.
++receipt-hash-bound and requires complete child enumeration. An explicitly
++versioned group branch adds four package-only default BLOCK filters and exact
++TCP/UDP IPv4/IPv6 allows. Neither branch installs callouts or claims effective
++firewall arbitration or T037 isolation.
+ 
+ All Win32 APIs are late-bound and use fixed-width SDK structures imported
+ from the read-only T037 observer. Importing on another platform is safe;
+@@ -164,6 +165,36 @@
+         self._advapi = self.api._advapi
+         self._kernel32 = self.api._kernel32
+         self._bind_mutation()
++        from ._windows_wfp_mutation_owner import registry
++        registry(self)
++
++    def _appcontainer_no_impersonation(self):
++        from ._windows_appcontainer_native import no_impersonation
++        return no_impersonation(self)
++
++    def _appcontainer_create(self, policy, subject):
++        from ._windows_appcontainer_native import create
++        return create(self, policy, subject)
++
++    def _service_sid_observe(self, name):
++        from ._windows_service_sid_native import observe, hash_image
++        row = observe(self, name)
++        row['image_sha256'] = hash_image(self, row['service_binary_image_path'])
++        return row
++
++    def _service_sid_configure(self, name, expected, target):
++        from ._windows_service_sid_native import configure, hash_image
++        image_sha = hash_image(self, expected['service_binary_image_path'])
++        if image_sha != expected['image_sha256']:
++            from ._windows_service_sid import fail
++            fail('HOST_CHANGE_SCM_IMAGE_CHANGED', 'pinned service launcher image changed before effect')
++        native_expected = {k:v for k,v in expected.items() if k != 'image_sha256'}
++        row = configure(self, name, native_expected, target)
++        row['image_sha256'] = hash_image(self, row['service_binary_image_path'])
++        if row['image_sha256'] != image_sha:
++            from ._windows_service_sid import fail
++            fail('HOST_CHANGE_SCM_IMAGE_CHANGED', 'pinned service launcher image changed after effect')
++        return row
+ 
+     def _bind_mutation(self) -> None:
+         f = self._fwpu
+@@ -206,108 +237,42 @@
+             _fail(code, f"Windows Filtering Platform {field} failed",
+                   details={"status": int(status)}, stage="execution")
+ 
+-    def _free(self, pointer: int | None, *, primary: BaseException | None = None) -> None:
+-        if not pointer:
+-            return
+-        try:
+-            handle = C.c_void_p(int(pointer))
+-            self._fwpu.FwpmFreeMemory0(C.byref(handle))
+-        except BaseException as exc:
+-            _fail("WFP_ALLOCATION_RELEASE_UNKNOWN", "WFP-owned allocation could not be released",
+-                  details={"release_type": type(exc).__name__,
+-                           "primary_type": type(primary).__name__ if primary is not None else None},
+-                  stage="execution")
+-
+-    def _free_local(self, pointer: C.c_void_p, *, primary: BaseException | None = None) -> None:
+-        if not pointer.value:
+-            return
+-        try:
+-            result = self._kernel32.LocalFree(pointer)
+-            if result:
+-                _fail("WFP_LOCAL_ALLOCATION_RELEASE_UNKNOWN", "LocalFree did not release a WFP local allocation",
+-                      details={"primary_type": type(primary).__name__ if primary is not None else None},
+-                      stage="execution")
+-        except WindowsWfpMutationError:
+-            raise
+-        except BaseException as exc:
+-            _fail("WFP_LOCAL_ALLOCATION_RELEASE_UNKNOWN", "LocalFree raised while releasing a WFP local allocation",
+-                  details={"release_type": type(exc).__name__,
+-                           "primary_type": type(primary).__name__ if primary is not None else None},
+-                  stage="execution")
+-
+-    def _session(self, *, readonly: bool, callback):
+-        f = self._fwpu
+-        engine = native.HANDLE()
+-        status = f.FwpmEngineOpen0(None, native.CtypesWindowsPolicyApi.RPC_C_AUTHN_WINNT,
+-                                   None, None, C.byref(engine))
+-        if int(status) != 0:
+-            if engine.value:
+-                try:
+-                    close_status = int(f.FwpmEngineClose0(engine))
+-                except BaseException as close_exc:
+-                    _fail("WFP_SESSION_RELEASE_UNKNOWN", "failed WFP open returned a handle that could not be closed",
+-                          details={"open_status": int(status), "close_type": type(close_exc).__name__},
+-                          stage="execution")
+-                if close_status != 0:
+-                    _fail("WFP_SESSION_RELEASE_UNKNOWN", "failed WFP open returned a handle that could not be closed",
+-                          details={"open_status": int(status), "close_status": close_status}, stage="execution")
+-            self._check(status, "FwpmEngineOpen0")
+-        if not engine.value:
+-            _fail("WFP_NATIVE_ABI_INVALID", "FwpmEngineOpen0 returned a null engine handle", stage="execution")
+-        transaction = False
+-        primary: BaseException | None = None
+-        result = None
+-        cleanup_errors: list[tuple[str, int | str]] = []
+-        try:
+-            flags = self.api.FWPM_TXN_READ_ONLY if readonly else 0
+-            status = f.FwpmTransactionBegin0(engine, flags)
+-            self._check(status, "FwpmTransactionBegin0")
+-            transaction = True
+-            result = callback(engine)
+-            status = f.FwpmTransactionCommit0(engine)
+-            if int(status) != 0:
+-                # A failed commit does not prove whether BFE applied the write.
+-                _fail("WFP_COMMIT_OUTCOME_UNKNOWN", "WFP transaction commit outcome is unknown",
+-                      details={"status": int(status)}, stage="execution")
+-            transaction = False
+-        except BaseException as exc:
+-            primary = exc
+-            if transaction:
+-                try:
+-                    abort_status = int(f.FwpmTransactionAbort0(engine))
+-                    if abort_status != 0:
+-                        cleanup_errors.append(("abort_status", abort_status))
+-                except BaseException as abort_exc:
+-                    cleanup_errors.append(("abort_type", type(abort_exc).__name__))
+-                transaction = False
+-        finally:
+-            if transaction:
+-                try:
+-                    abort_status = int(f.FwpmTransactionAbort0(engine))
+-                    if abort_status != 0:
+-                        cleanup_errors.append(("abort_status", abort_status))
+-                except BaseException as abort_exc:
+-                    cleanup_errors.append(("abort_type", type(abort_exc).__name__))
+-            try:
+-                close_status = int(f.FwpmEngineClose0(engine))
+-                if close_status != 0:
+-                    cleanup_errors.append(("close_status", close_status))
+-            except BaseException as close_exc:
+-                cleanup_errors.append(("close_type", type(close_exc).__name__))
+-        if primary is not None or cleanup_errors:
+-            if cleanup_errors:
+-                _fail("WFP_CLEANUP_OUTCOME_UNKNOWN", "WFP transaction/session cleanup could not be verified",
+-                      details={"primary_code": getattr(primary, "code", None),
+-                               "primary_type": type(primary).__name__ if primary is not None else None,
+-                               "cleanup": cleanup_errors}, stage="execution")
+-            assert primary is not None
+-            raise primary
+-        return result
++    def _sdk_status(self, name, *args):
++        from ._windows_wfp_mutation_owner import function, status
++        return status(function(self, name)(*args))
++
++    def _sdk_alloc(self, name, output, *args, local=False, bool_return=False):
++        from ._windows_wfp_mutation_owner import allocation_call, status, fail
++        result = allocation_call(self, name, output, *args, local=local)
++        if bool_return:
++            value = getattr(result, "value", result)
++            if type(value) is not int or not -(2**31) <= value < 2**31:
++                fail("native SDK BOOL return malformed")
++            return value
++        return status(result)
++
++    def _free(self, pointer, *, primary=None):
++        if pointer:
++            from ._windows_wfp_mutation_owner import release_allocation, remember_cause
++            import sys
++            remember_cause(self, primary or sys.exception())
++            release_allocation(self, int(pointer))
++
++    def _free_local(self, pointer, *, primary=None):
++        if pointer.value:
++            from ._windows_wfp_mutation_owner import release_allocation, remember_cause
++            import sys
++            remember_cause(self, primary or sys.exception())
++            release_allocation(self, pointer.value, local=True)
++
++    def _session(self, *, readonly, callback):
++        from ._windows_wfp_mutation_owner import session
++        return session(self, readonly, callback)
+ 
+     def _provider_row(self, engine: Any, key: str) -> dict[str, Any]:
+         pointer = C.POINTER(native.FWPM_PROVIDER0)()
+         guid = guid_struct(key)
+-        status = int(self._fwpu.FwpmProviderGetByKey0(engine, C.byref(guid), C.byref(pointer)))
++        status = int(self._sdk_alloc('FwpmProviderGetByKey0', pointer, engine, C.byref(guid), C.byref(pointer)))
+         if status != 0 or not pointer:
+             if pointer:
+                 self._free(C.cast(pointer, C.c_void_p).value)
+@@ -329,7 +294,7 @@
+     def _sublayer_row(self, engine: Any, key: str) -> dict[str, Any]:
+         pointer = C.POINTER(native.FWPM_SUBLAYER0)()
+         guid = guid_struct(key)
+-        status = int(self._fwpu.FwpmSubLayerGetByKey0(engine, C.byref(guid), C.byref(pointer)))
++        status = int(self._sdk_alloc('FwpmSubLayerGetByKey0', pointer, engine, C.byref(guid), C.byref(pointer)))
+         if status != 0 or not pointer:
+             if pointer:
+                 self._free(C.cast(pointer, C.c_void_p).value)
+@@ -352,7 +317,7 @@
+     def _provider_row_or_none(self, engine: Any, key: str) -> dict[str, Any] | None:
+         pointer = C.POINTER(native.FWPM_PROVIDER0)()
+         guid = guid_struct(key)
+-        status = int(self._fwpu.FwpmProviderGetByKey0(engine, C.byref(guid), C.byref(pointer)))
++        status = int(self._sdk_alloc('FwpmProviderGetByKey0', pointer, engine, C.byref(guid), C.byref(pointer)))
+         if status == 0 and pointer:
+             try:
+                 item = pointer.contents
+@@ -383,7 +348,7 @@
+     def _sublayer_row_or_none(self, engine: Any, key: str) -> dict[str, Any] | None:
+         pointer = C.POINTER(native.FWPM_SUBLAYER0)()
+         guid = guid_struct(key)
+-        status = int(self._fwpu.FwpmSubLayerGetByKey0(engine, C.byref(guid), C.byref(pointer)))
++        status = int(self._sdk_alloc('FwpmSubLayerGetByKey0', pointer, engine, C.byref(guid), C.byref(pointer)))
+         if status == 0 and pointer:
+             try:
+                 item = pointer.contents
+@@ -468,8 +433,7 @@
+         output_size = native.DWORD(0)
+         primary: BaseException | None = None
+         try:
+-            ok = self._advapi.ConvertStringSecurityDescriptorToSecurityDescriptorW(
+-                sddl, 1, C.byref(pointer), C.byref(output_size))
++            ok = self._sdk_alloc('ConvertStringSecurityDescriptorToSecurityDescriptorW', pointer, sddl, 1, C.byref(pointer), C.byref(output_size), local=True, bool_return=True)
+             if not ok or not pointer.value:
+                 _fail("WFP_SECURITY_SDDL_INVALID",
+                       "security descriptor conversion failed before any WFP mutation",
+@@ -550,8 +514,10 @@
+                       stage="execution")
+             provider = self._provider_object(desired)
+             with self._security_descriptor(desired["security_sddl"], desired["security_sha256"]) as sd:
+-                status = int(self._fwpu.FwpmProviderAdd0(engine, C.byref(provider), sd))
+-            self._check(status, "FwpmProviderAdd0", code="WFP_PROVIDER_ADD_FAILED")
++                from ._windows_wfp_mutation_owner import hold_buffers
++                hold_buffers(self, provider, sd)
++                status = int(self._sdk_status('FwpmProviderAdd0', engine, C.byref(provider), sd))
++                self._check(status, "FwpmProviderAdd0", code="WFP_PROVIDER_ADD_FAILED")
+             row = self._provider_row_or_none(engine, desired["provider_key"])
+             return self._validate_provider_row(row, desired)
+ 
+@@ -581,8 +547,10 @@
+                       stage="execution")
+             sublayer = self._sublayer_object(desired)
+             with self._security_descriptor(desired["security_sddl"], desired["security_sha256"]) as sd:
+-                status = int(self._fwpu.FwpmSubLayerAdd0(engine, C.byref(sublayer), sd))
+-            self._check(status, "FwpmSubLayerAdd0", code="WFP_SUBLAYER_ADD_FAILED")
++                from ._windows_wfp_mutation_owner import hold_buffers
++                hold_buffers(self, sublayer, sd)
++                status = int(self._sdk_status('FwpmSubLayerAdd0', engine, C.byref(sublayer), sd))
++                self._check(status, "FwpmSubLayerAdd0", code="WFP_SUBLAYER_ADD_FAILED")
+             row = self._sublayer_row_or_none(engine, desired["sublayer_key"])
+             return self._validate_sublayer_row(row, desired)
+ 
+@@ -621,7 +589,7 @@
+                       stage="execution")
+             self._validate_sublayer_row(current, desired)
+             guid = guid_struct(desired["sublayer_key"])
+-            status = int(self._fwpu.FwpmSubLayerDeleteByKey0(engine, C.byref(guid)))
++            status = int(self._sdk_status('FwpmSubLayerDeleteByKey0', engine, C.byref(guid)))
+             self._check(status, "FwpmSubLayerDeleteByKey0", code="WFP_SUBLAYER_DELETE_FAILED")
+             if self._sublayer_row_or_none(engine, desired["sublayer_key"]) is not None:
+                 _fail("WFP_SUBLAYER_DELETE_READBACK_MISMATCH", "WFP sublayer remained in its delete transaction",
+@@ -656,7 +624,7 @@
+                       stage="execution")
+             self._validate_provider_row(current, desired)
+             guid = guid_struct(desired["provider_key"])
+-            status = int(self._fwpu.FwpmProviderDeleteByKey0(engine, C.byref(guid)))
++            status = int(self._sdk_status('FwpmProviderDeleteByKey0', engine, C.byref(guid)))
+             self._check(status, "FwpmProviderDeleteByKey0", code="WFP_PROVIDER_DELETE_FAILED")
+             if self._provider_row_or_none(engine, desired["provider_key"]) is not None:
+                 _fail("WFP_PROVIDER_DELETE_READBACK_MISMATCH", "WFP provider remained in its delete transaction",
+@@ -670,7 +638,7 @@
+     def _filter_row_or_none(self, engine: Any, key: str) -> dict[str, Any] | None:
+         pointer = C.POINTER(native.FWPM_FILTER0)()
+         guid = guid_struct(key)
+-        status = int(self._fwpu.FwpmFilterGetByKey0(engine, C.byref(guid), C.byref(pointer)))
++        status = int(self._sdk_alloc('FwpmFilterGetByKey0', pointer, engine, C.byref(guid), C.byref(pointer)))
+         if status == 0 and pointer:
+             try:
+                 return self.api._filter_row(engine, pointer.contents)
+@@ -699,7 +667,7 @@
+         output = C.POINTER(native.FWP_BYTE_BLOB)()
+         primary: BaseException | None = None
+         try:
+-            status = int(self._fwpu.FwpmGetAppIdFromFileName0(image_path, C.byref(output)))
++            status = int(self._sdk_alloc('FwpmGetAppIdFromFileName0', output, image_path, C.byref(output)))
+             if status != 0 or not output:
+                 self._check(status, "FwpmGetAppIdFromFileName0")
+                 _fail("WFP_NATIVE_ABI_INVALID", "application-ID lookup succeeded without an app blob",
+@@ -733,6 +701,9 @@
+ 
+     def create_filter(self, *, profile: Any, action: Mapping[str, Any],
+                       expected_dependency_sha256: str) -> dict[str, Any]:
++        from ._windows_filter_group import SCHEMA, create_filter as create_group_filter
++        if action.get("desired", {}).get("schema") == SCHEMA:
++            return create_group_filter(self, profile, action, expected_dependency_sha256)
+         policy = profile.windows_isolation
+         grant = action["grant"]
+         marker = _canonical({"schema": "comsol-mcp.t037-owned-wfp-filter/1",
+@@ -770,8 +741,7 @@
+         primary: BaseException | None = None
+         app_id_bytes = None
+         try:
+-            status = int(self._fwpu.FwpmGetAppIdFromFileName0(
+-                grant["application_path"], C.byref(app_blob_ptr)))
++            status = int(self._sdk_alloc('FwpmGetAppIdFromFileName0', app_blob_ptr, grant["application_path"], C.byref(app_blob_ptr)))
+             if status != 0 or not app_blob_ptr:
+                 # If the API returned an allocation alongside an error, the
+                 # common finally block releases it exactly once.
+@@ -797,8 +767,9 @@
+             if guid_key(self.api._guid(filter_obj.filterKey)) != guid_key(action["filter_key"]):
+                 _fail("WFP_NATIVE_ABI_INVALID", "filter key layout changed before FwpmFilterAdd0",
+                       stage="execution")
+-            status = int(self._fwpu.FwpmFilterAdd0(
+-                engine, C.byref(filter_obj), None, C.byref(filter_id)))
++            from ._windows_wfp_mutation_owner import hold_buffers
++            hold_buffers(self, filter_obj, conditions, backing, app_id_bytes)
++            status = int(self._sdk_status('FwpmFilterAdd0', engine, C.byref(filter_obj), None, C.byref(filter_id)))
+             if status != 0:
+                 self._check(status, "FwpmFilterAdd0", code="WFP_FILTER_ADD_FAILED")
+             if not 0 < int(filter_id.value) <= 0xffffffffffffffff:
+@@ -837,7 +808,7 @@
+                       stage="execution")
+ 
+     def _convert_sid(self, sid_text: str, *, sid_out: C.c_void_p) -> None:
+-        if not self._advapi.ConvertStringSidToSidW(sid_text, C.byref(sid_out)) or not sid_out.value:
++        if not self._sdk_alloc('ConvertStringSidToSidW', sid_out, sid_text, C.byref(sid_out), local=True, bool_return=True) or not sid_out.value:
+             _fail("WFP_PACKAGE_SID_UNAVAILABLE", "AppContainer SID could not be converted for the WFP package condition",
+                   details={"winerror": int(C.get_last_error())}, stage="execution")
+ 
+@@ -1008,6 +979,9 @@
+     def delete_filter(self, *, profile: Any, action: Mapping[str, Any],
+                       expected_resource_sha256: str,
+                       expected_dependency_sha256: str) -> None:
++        from ._windows_filter_group import SCHEMA, delete_filter as delete_group_filter
++        if action.get("desired", {}).get("schema") == SCHEMA:
++            return delete_group_filter(self, profile, action, expected_resource_sha256, expected_dependency_sha256)
+         def write(engine):
+             self._check_dependencies(engine, profile, expected_dependency_sha256)
+             current = self._filter_row_or_none(engine, action["filter_key"])
+@@ -1021,7 +995,7 @@
+                                             expected_app_blob=app_blob,
+                                             expected_package_sid=grant["principal_sid"])
+             guid = guid_struct(action["filter_key"])
+-            status = int(self._fwpu.FwpmFilterDeleteByKey0(engine, C.byref(guid)))
++            status = int(self._sdk_status('FwpmFilterDeleteByKey0', engine, C.byref(guid)))
+             self._check(status, "FwpmFilterDeleteByKey0", code="WFP_FILTER_DELETE_FAILED")
+             if self._filter_row_or_none(engine, action["filter_key"]) is not None:
+                 _fail("WFP_FILTER_DELETE_READBACK_MISMATCH", "WFP filter remained present in its delete transaction",

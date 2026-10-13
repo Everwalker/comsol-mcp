@@ -1113,7 +1113,7 @@ def all_entities_of_dimension(component: Any, entity_dimension: int) -> list[int
     return require_entity_id_array(raw, "entities()", allow_empty=True)
 
 
-def resolve_selection_entities(worker: Any, model_tag: str, spec: Any) -> dict[str, Any]:
+def resolve_selection_entities(worker: Any, model_tag: str, spec: Any, *, _component_final_entity: bool = False) -> dict[str, Any]:
     """Resolve a SelectionSpec to a concrete entity list through verified reads.
 
     ``named``  - ``component.selection(<tag>)`` (a ``SelectionFeature``), or the
@@ -1137,7 +1137,7 @@ def resolve_selection_entities(worker: Any, model_tag: str, spec: Any) -> dict[s
         component = resolved["component"]
         comp = component_node(worker, model_tag, component)
         geometry = resolved.get("geometry")
-        if geometry:
+        if geometry and not _component_final_entity:
             geom = _call(comp, "geom", geometry)
             node = _call(geom, "selection", resolved["tag"])
             objects_probe = call_probe(node, "objects")
@@ -1182,15 +1182,26 @@ def resolve_selection_entities(worker: Any, model_tag: str, spec: Any) -> dict[s
                 "source": "geom_named_selection",
             }
         node = _call(comp, "selection", resolved["tag"])
+        if not _component_final_entity:
+            return {"kind":kind,"component":component,"selection_tag":resolved["tag"],
+                "entity_dimension":selection_dimension(node,resolved.get("entity_dimension")),
+                "entities":require_entity_id_array(_call(node,"entities"),"entities()",allow_empty=True),
+                "entity_count":None,"source":"component_named_selection","geometry":probe_geometry_tag(node)}
+        actual_geometry = _call(node, "geom")
+        actual_dimension = _call(node, "dim")
+        if geometry is not None and actual_geometry != geometry:
+            raise ExecutionContractError("SELECTION_READBACK_MISMATCH", "component named selection geometry differs from request")
+        if resolved.get("entity_dimension") is not None and actual_dimension != resolved["entity_dimension"]:
+            raise ExecutionContractError("SELECTION_READBACK_MISMATCH", "component named selection dimension differs from request")
         return {
             "kind": kind,
             "component": component,
             "selection_tag": resolved["tag"],
-            "entity_dimension": selection_dimension(node, resolved.get("entity_dimension")),
+            "entity_dimension": actual_dimension,
             "entities": require_entity_id_array(_call(node, "entities"), "entities()", allow_empty=True),
             "entity_count": None,
             "source": "component_named_selection",
-            "geometry": probe_geometry_tag(node),
+            "geometry": actual_geometry,
         }
     if kind == "explicit":
         entities = resolved["entities"]
@@ -1694,3 +1705,43 @@ __all__ = [
     "validate_selection_spec",
     "validate_tag",
 ]
+
+
+def bind_strict_feature_selection(worker: Any, model_tag: str, feature: Any, requested: Mapping[str, Any], *, stage: str, expected: Mapping[str, Any] | None = None, apply: bool = False, selection_node: Any = None) -> dict[str, Any]:
+    """Bind/read one transient numerical feature selection; every getter fails closed."""
+    resolved = dict(expected) if expected is not None else resolve_selection_entities(worker, model_tag, requested, _component_final_entity=True)
+    entities = resolved.get("entities")
+    if not isinstance(entities, list) or not entities or any(type(v) is not int or v < 1 for v in entities):
+        raise ExecutionContractError("INVALID_SELECTION", "strict selection has no verified nonempty entity membership")
+    node = selection_node if selection_node is not None else _call(feature, "selection")
+    from ._ephemeral_result_ticket import current_scope
+    scope = current_scope()
+    if scope is not None:
+        scope.selection_child(node, requested, resolved)
+    if apply:
+        _call(node, "geom", requested["geometry"], requested["entity_dimension"])
+        if requested["kind"] == "named":
+            _call(node, "named", requested["tag"])
+        elif requested["kind"] == "explicit":
+            _call(node, "set", list(requested["entities"]))
+        elif requested["kind"] == "all" and scope is None:
+            # Original strict measure all compatibility. Point specs and their
+            # private ticket never authorize all or a global selection write.
+            _call(node, "all")
+        else:
+            raise ExecutionContractError("INVALID_SELECTION", "strict point selection requires named or explicit membership")
+    observed = {"geometry": _call(node, "geom"), "dimension": _call(node, "dim"),
+                "named": _call(node, "named"), "entities": _call(node, "entities"),
+                "is_inheriting": _call(node, "isInheriting")}
+    actual = observed["entities"]
+    if (observed["geometry"] != requested["geometry"] or type(observed["dimension"]) is not int
+        or observed["dimension"] != requested["entity_dimension"] or not isinstance(actual, (list, tuple))
+        or any(type(v) is not int or v < 1 for v in actual) or sorted(actual) != sorted(entities)
+        or observed["is_inheriting"] is not False
+        or requested["kind"] == "named" and observed["named"] != requested["tag"]):
+        raise ExecutionContractError("SELECTION_READBACK_MISMATCH", "transient feature geometry/dimension/named/membership/inheritance differs")
+    record = {"stage": stage, "component": requested["component"], "geometry": requested["geometry"],
+              "entity_dimension": requested["entity_dimension"], "kind": requested["kind"], "tag": requested.get("tag"),
+              "entities": sorted(actual), "resolver_source": resolved.get("source"), "native_selection_readback": observed}
+    if scope is not None:scope.selection_observed(node, stage, record)
+    return record

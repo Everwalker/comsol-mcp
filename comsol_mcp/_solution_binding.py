@@ -137,7 +137,7 @@ class SolutionBinding:
         raise ExecutionContractError("DATASET_CHAIN_TOO_DEEP", f"dataset chain exceeds {max_depth} nodes")
 
     @staticmethod
-    def _outer_labels(solution_info: Any, outer_indices: Sequence[int] | None, outer_count: int | None) -> tuple[list[int], list[dict[str, Any]]]:
+    def _outer_labels(solution_info: Any, outer_indices: Sequence[int] | None, outer_count: int | None, *, _skip_empty_outer_tuple_diagnostic: bool = False) -> tuple[list[int], list[dict[str, Any]]]:
         errors: list[dict[str, Any]] = []
         if outer_indices is not None:
             labels = _unique_ints(_normalise_ints(outer_indices, what="outer_indices"), what="outer_indices")
@@ -163,7 +163,7 @@ class SolutionBinding:
         except ExecutionContractError as exc:
             errors.append({"method": "getOuterSolnum", "code": exc.code, "message": str(exc)})
             return [], errors
-        if not labels:
+        if not labels and not _skip_empty_outer_tuple_diagnostic:
             # COMSOL may publish no labels through getOuterSolnum().  The
             # documented getSolnums(String[]) route can still return the real
             # (outer, inner) tuples; use it when available instead of inventing
@@ -191,21 +191,16 @@ class SolutionBinding:
                     # is still being attempted; a successful fallback must
                     # not be reported as an incomplete binding.
                     diagnostic_errors.append({"method": "getSolnums", "code": "SOLUTION_METADATA_ERROR", "message": str(exc)[:500]})
-            # For stationary/transient solutions COMSOL 6.4 may return an
-            # empty getOuterSolnum() even though the documented strict query
-            # for outer=1 succeeds.  This is an engine-confirmed single outer,
-            # not a fabricated default: only accept it after getSolnum(1,true)
-            # returns at least one real inner number.
-            get_one = getattr(solution_info, "getSolnum", None)
-            if callable(get_one):
-                try:
-                    probe = get_one(1, True)
-                    if _normalise_ints(probe, what="getSolnum(1, true)"):
-                        return [1], errors
-                except Exception as exc:
-                    errors.append({"method": "getSolnum", "outer": 1, "code": "SOLUTION_AXIS_METADATA_UNAVAILABLE", "message": str(exc)[:500]})
+            # An empty getOuterSolnum() is an observed no-outer-axis state in
+            # COMSOL 6.4 (SolutionInfo API doc7709/chunk23066).  A strict
+            # getSolnum(1,true) probe may still return an inner solution, but
+            # that does not establish an outer parameter/value or a
+            # (outer,inner) pair.  Preserve that probe elsewhere as raw
+            # diagnostic evidence; never promote it into outer_indices=[1].
             errors.extend(diagnostic_errors)
-            errors.append({"method": "getOuterSolnum", "code": "SOLUTION_AXIS_METADATA_UNAVAILABLE", "message": "engine returned an empty outer axis and getSolnums([]) did not expose tuples"})
+            errors.append({"method": "getOuterSolnum", "code": "SOLUTION_AXIS_METADATA_UNAVAILABLE", "message": "engine returned an empty outer axis; getSolnum(1,true) alone does not establish outer/inner pairs"})
+        if not labels and _skip_empty_outer_tuple_diagnostic:
+            errors.append({"method": "getOuterSolnum", "code": "SOLUTION_AXIS_METADATA_UNAVAILABLE", "message": "observed empty outer axis; optional tuple diagnostic skipped for verified private singleton read"})
         return labels, errors
 
     @staticmethod
@@ -215,6 +210,7 @@ class SolutionBinding:
         outer_indices: Sequence[int] | None = None,
         outer_count: int | None = None,
         strict: bool = True,
+        _skip_empty_outer_tuple_diagnostic: bool = False,
     ) -> dict[str, Any]:
         """Read real ``(outer, inner) -> solnum`` and parameter metadata.
 
@@ -225,7 +221,8 @@ class SolutionBinding:
         """
         if solution_info is None:
             raise ExecutionContractError("SOLUTION_METADATA_ERROR", "SolutionInfo is required")
-        labels, errors = SolutionBinding._outer_labels(solution_info, outer_indices, outer_count)
+        labels, errors = SolutionBinding._outer_labels(solution_info, outer_indices, outer_count,
+            _skip_empty_outer_tuple_diagnostic=_skip_empty_outer_tuple_diagnostic)
         pairs: list[dict[str, int]] = []
         inner_by_outer: dict[int, list[int]] = {}
         solnum_by_pair: dict[tuple[int, int], int] = {}

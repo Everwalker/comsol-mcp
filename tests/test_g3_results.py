@@ -32,7 +32,7 @@ from typing import Any, Mapping, Sequence
 
 import pytest
 
-from comsol_mcp._execution_contract import ExecutionContractError
+from comsol_mcp._execution_contract import ExecutionContractError, PreWriteRefusal
 
 from comsol_mcp import _g3_results as results
 from comsol_mcp._g3_ops import (
@@ -290,6 +290,10 @@ class FSolver(FNode):
         self._guard("getSize", ())
         return self._read("getSize")
 
+    def getSizeMulti(self) -> Any:
+        self._guard("getSizeMulti", ())
+        return self._read("getSizeMulti")
+
     def getSequenceType(self) -> Any:
         self._guard("getSequenceType", ())
         return self._read("getSequenceType")
@@ -305,14 +309,33 @@ class FSolver(FNode):
 
 class FSolutionInfo(Entity):
     def __init__(self, units: Mapping[str, str], **kwargs: Any) -> None:
+        props = kwargs.pop("props", None)
         super().__init__(**kwargs)
         self.units = dict(units)
+        self.props = dict(props or {})
+
+    def _read(self, name: str) -> Any:
+        if name not in self.props:
+            raise FakeEngineError(f"no such property {name!r}")
+        return self.props[name]
 
     def getUnit(self, name: str) -> str:
         self._guard("getUnit", (name,))
         if name not in self.units:
             raise FakeEngineError(f"missing unit for parameter {name}")
         return self.units[name]
+
+    def getLevelNames(self) -> Any:
+        self._guard("getLevelNames", ())
+        return self._read("getLevelNames")
+
+    def getLevels(self) -> Any:
+        self._guard("getLevels", ())
+        return self._read("getLevels")
+
+    def getOuterSolnum(self) -> Any:
+        self._guard("getOuterSolnum", ())
+        return self._read("getOuterSolnum")
 
 
 class FInterp(FNode):
@@ -394,6 +417,10 @@ def build_tree(*, times: Sequence[float] | None = None, feature_times: Any = Non
                solver_parameter_rows: Mapping[int, tuple[Sequence[float], Sequence[float]]] | None = None,
                solver_parameter_units: Mapping[str, str] | None = None,
                solver_size: Sequence[int] | None = None,
+               solver_size_multi: Sequence[int] | None = None,
+               solver_level_names: Sequence[str] | None = None,
+               solver_levels: int | None = None,
+               solver_outer_solnums: Sequence[int] | None = None,
                solver_type: str = "SolverSequence", solver_sequence_type: str = "SolverSequence",
                solver_attached: bool = True,
                sdim: int = 3, length_unit: str = "m", interp_kwargs: Mapping[str, Any] | None = None,
@@ -430,11 +457,18 @@ def build_tree(*, times: Sequence[float] | None = None, feature_times: Any = Non
     parameter_rows = dict(solver_parameter_rows or {})
     if solver_size is None:
         solver_size = (100, max(1, len(parameter_rows)))
-    info = register(FSolutionInfo(solver_parameter_units or {})) if solver_parameter_units is not None else None
+    info = register(FSolutionInfo(solver_parameter_units or {}, props={
+        "getLevelNames": list(solver_level_names or solver_parameter_names),
+        "getLevels": 1 if solver_levels is None else solver_levels,
+        "getOuterSolnum": list([1] if solver_outer_solnums is None else solver_outer_solnums),
+    })) if solver_parameter_units is not None else None
+    if solver_size_multi is None:
+        solver_size_multi = (1, int(solver_size[1]))
     solver = register(FSolver(tag=solution_tag, type_id=solver_type,
                               props={"getPVals": solver_values,
                                      "getPNames": list(solver_parameter_names),
                                      "getSize": list(solver_size),
+                                     "getSizeMulti": list(solver_size_multi),
                                      "getSequenceType": solver_sequence_type,
                                      "isAttached": solver_attached},
                               parameter_rows=parameter_rows, solution_info=info,
@@ -1210,6 +1244,106 @@ def test_result_at_points_publishes_native_expression_units_and_verified_complex
     assert {"getImagData", "getCoordinates", "setInterpolationCoordinates"} <= (methods | modelutil)
 
 
+def _attached_frequency_tree(*, solver_size=(100, 1), solver_size_multi=(1, 1),
+                             names=("freq",), levels=1, level_names=("freq",),
+                             outer_solnums=(), dataset_solution="sol1"):
+    return build_tree(
+        sdim=2, length_unit="m",
+        dataset_props={"solution": dataset_solution, "comp": "comp1", "geom": "geom1"},
+        solver_parameter_names=names,
+        solver_parameter_rows={1: ((193414489032258.03,), (0.0,))},
+        solver_parameter_units={name: "Hz" for name in names},
+        solver_size=solver_size, solver_size_multi=solver_size_multi,
+        solver_level_names=level_names, solver_levels=levels,
+        solver_outer_solnums=outer_solnums,
+        solver_type="Parametric", solver_sequence_type="SolverSequence",
+        solver_attached=True, complex_=True,
+    )
+
+
+def test_result_at_points_allows_only_documented_attached_frequency_singleton(monkeypatch) -> None:
+    tree = _attached_frequency_tree()
+    real = [[[1.0, 2.0]]]
+    imag = [[[0.5, -0.25]]]
+    coordinates = [[0.0, 1.0], [0.0, 0.0]]
+    tree.numerical.factory = lambda tag, kind: FInterp(
+        tag, kind, complex_=True,
+        props={"data": None, "expr": [], "unit": ["V/m"], "coord": None})
+
+    def set_interpolation_coordinates(self, values):
+        self._guard("setInterpolationCoordinates", (values,))
+        self.coords = values
+        self.values = real
+
+    monkeypatch.setattr(FInterp, "setInterpolationCoordinates", set_interpolation_coordinates,
+                        raising=False)
+    monkeypatch.setattr(FInterp, "getImagData", lambda self: imag, raising=False)
+    monkeypatch.setattr(FInterp, "getCoordinates", lambda self: self.coords, raising=False)
+    result = results.result_at_points(tree.worker, "Model", {
+        "points": [[0.0, 0.0], [1.0, 0.0]], "coordinate_unit": "m",
+        "spec": {"expressions": ["ewfd.Ez"], "solution": {"dataset": "dset1"},
+                 "complex_mode": "preserve"},
+    })
+    assert result["status"]["ok"] is True, result["status"]
+    observation = result["solution_axes"]["numeric_count_observation"]
+    assert observation["status"] == "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT"
+    assert observation["witness_kind"] == "attached_parametric_frequency_singleton"
+    assert observation["numeric_solution_count"] == 1
+    assert observation["solution_axes_pair_mapping_complete"] is False
+    assert observation["observation"]["get_size_multi"] == [1, 1]
+    assert observation["observation"]["solution_info_count_scope"] == {
+        "getLevelNames": ["freq"], "getLevels": 1, "getOuterSolnum": [],
+        "getOuterSolnum_semantics": "empty means no outer parameter/values per COMSOL 6.4 doc7709/chunk23066",
+        "read_errors": [],
+    }
+    assert result["solution_axes"]["pair_mapping_complete"] is False
+    assert result["field_array"] is None
+    assert result["values"] == [[[{"real": 1.0, "imag": 0.5},
+                                  {"real": 2.0, "imag": -0.25}]]]
+
+
+@pytest.mark.parametrize("mutation", [
+    {"solver_size_multi": (2, 1)},
+    {"solver_size": (100, 2)},
+    {"names": ("freq", "temperature")},
+    {"levels": 2, "level_names": ("freq", "parameter")},
+    {"outer_solnums": (1,)},
+    {"dataset_solution": "missing_solution"},
+])
+def test_result_at_points_rejects_attached_frequency_multistate_or_wrong_binding_before_getdata(
+    monkeypatch, mutation
+) -> None:
+    tree = _attached_frequency_tree(**mutation)
+    created: list[FInterp] = []
+    tree.numerical.factory = lambda tag, kind: created.append(FInterp(
+        tag, kind, complex_=True,
+        props={"data": None, "expr": [], "unit": ["V/m"], "coord": None})) or created[-1]
+    monkeypatch.setattr(FInterp, "setInterpolationCoordinates", lambda self, values: setattr(self, "coords", values), raising=False)
+    monkeypatch.setattr(FInterp, "getImagData", lambda self: [[[]]], raising=False)
+    monkeypatch.setattr(FInterp, "getCoordinates", lambda self: self.coords, raising=False)
+    if mutation.get("dataset_solution") == "missing_solution":
+        with pytest.raises(PreWriteRefusal, match="not in model.sol"):
+            results.result_at_points(tree.worker, "Model", {
+                "points": [[0.0, 0.0]], "coordinate_unit": "m",
+                "spec": {"expressions": ["ewfd.Ez"], "solution": {"dataset": "dset1"},
+                         "complex_mode": "preserve"},
+            })
+        assert not created
+        return
+    result = results.result_at_points(tree.worker, "Model", {
+        "points": [[0.0, 0.0]], "coordinate_unit": "m",
+        "spec": {"expressions": ["ewfd.Ez"], "solution": {"dataset": "dset1"},
+                 "complex_mode": "preserve"},
+    })
+    assert result["status"]["ok"] is False
+    assert result["result_budget"]["status"] == "BLOCKED"
+    assert result["result_budget"]["records"][0]["reason_code"] == "SOLUTION_AXES_UNVERIFIED"
+    assert result["result_budget"]["records"][0]["getdata_called"] is False
+    assert result["solution_axes"]["pair_mapping_complete"] is False
+    assert result["solution_axes"]["numeric_count_observation"]["status"] == "UNVERIFIED"
+    assert created and "getData" not in created[0].methods()
+
+
 @pytest.mark.parametrize(
     ("sequence_type", "solver_type", "attached", "solver_size", "rows"),
     [
@@ -1821,3 +1955,604 @@ def test_allowlist_findings_and_unverified_paths_are_reported_in_the_operation_d
     assert any(item["path"].startswith("coordinate readback") for item in data["unverified_paths"])
     assert any("SolutionInfo" in item["path"] or "solution" in item["path"] for item in data["unverified_paths"])
     assert isinstance(data["read_errors"], list) and isinstance(data["allowlist_entry_required"], list)
+
+
+
+def _requested_unit_point_tree(monkeypatch):
+    tree = _attached_frequency_tree()
+    nodes = []
+    def factory(tag, kind):
+        node = FInterp(tag, kind, complex_=True,
+                       props={"data": None, "expr": [], "unit": ["GHz"], "coord": None})
+        nodes.append(node)
+        return node
+    tree.numerical.factory = factory
+    def coords(self, matrix):
+        self._guard("setInterpolationCoordinates", (matrix,))
+        self.coords = matrix
+        self.values = [[[193414489032258.03]]]
+    monkeypatch.setattr(FInterp, "setInterpolationCoordinates", coords, raising=False)
+    monkeypatch.setattr(FInterp, "getImagData", lambda self: [[[0.0]]], raising=False)
+    monkeypatch.setattr(FInterp, "getCoordinates", lambda self: self.coords, raising=False)
+    args = {"points": [[0.0, 0.0]], "coordinate_unit": "m", "spec": {
+        "expressions": ["freq"], "units": ["Hz"], "solution": {"dataset": "dset1"}, "complex_mode": "preserve"}}
+    return tree, nodes, args
+
+
+def test_actual_at_points_applies_requested_units_before_getdata_and_preserves_native_receipts(monkeypatch):
+    tree, nodes, args = _requested_unit_point_tree(monkeypatch)
+    result = results.result_at_points(tree.worker, "Model", args)
+    assert result["status"]["ok"] is True
+    assert result["expression_units"] == {"freq": "Hz"}
+    proof = result["feature_readback"]["requested_unit_application"]
+    assert proof["before"]["units"] == proof["after"]["units"] == ["Hz"]
+    assert proof["before"]["expressions"] == proof["after"]["expressions"] == ["freq"]
+    methods = [row[0] for row in nodes[0].calls]
+    assert methods.index("setIndex") < methods.index("getData")
+    assert tree.numerical.items == {}
+
+
+@pytest.mark.parametrize("mode", ["setter_failure", "setter_ignored", "expr_missing", "expr_extra", "expr_wrong",
+                                  "unit_missing", "unit_extra", "unit_getter_failure", "expr_getter_failure",
+                                  "unit_after_drift", "expr_after_drift"])
+def test_requested_unit_at_points_refuses_actual_setter_or_getter_failure_and_drift(monkeypatch, mode):
+    tree, nodes, args = _requested_unit_point_tree(monkeypatch)
+    old_set = FInterp.setIndex
+    old_get = FInterp.getStringArray
+    old_data = FInterp.getData
+    def set_index(self, name, value, index):
+        if mode == "setter_failure": raise FakeEngineError("unit setter failed")
+        if mode == "setter_ignored": return
+        old_set(self, name, value, index)
+    def get_array(self, name):
+        value = old_get(self, name)
+        if name == "expr":
+            if mode == "expr_missing": return []
+            if mode == "expr_extra": return list(value) + ["f0"]
+            if mode == "expr_wrong": return ["f0"]
+            if mode == "expr_getter_failure": raise FakeEngineError("expr getter failed")
+        if name == "unit":
+            if mode == "unit_missing": return []
+            if mode == "unit_extra": return list(value) + ["Hz"]
+            if mode == "unit_getter_failure": raise FakeEngineError("unit getter failed")
+        return value
+    def get_data(self):
+        value = old_data(self)
+        if mode == "unit_after_drift": self.props["unit"] = ["GHz"]
+        if mode == "expr_after_drift": self.props["expr"] = ["f0"]
+        return value
+    monkeypatch.setattr(FInterp, "setIndex", set_index)
+    monkeypatch.setattr(FInterp, "getStringArray", get_array)
+    monkeypatch.setattr(FInterp, "getData", get_data)
+    with pytest.raises(results.ExecutionContractError, match="setIndex" if mode == "setter_failure" else "requested-unit"):
+        results.result_at_points(tree.worker, "Model", args)
+    if not mode.endswith("after_drift"):
+        assert "getData" not in nodes[0].methods()
+    assert tree.numerical.items == {}
+
+
+@pytest.mark.parametrize("units", [[], ["Hz", "Hz"], "Hz", [None]])
+def test_requested_unit_array_is_validated_before_any_native_call(monkeypatch, units):
+    tree, nodes, args = _requested_unit_point_tree(monkeypatch)
+    args["spec"]["units"] = units
+    with pytest.raises(results.ExecutionContractError):
+        results.result_at_points(tree.worker, "Model", args)
+    assert nodes == []
+
+
+def test_at_points_without_units_retains_original_getter_semantics(monkeypatch):
+    tree, nodes, args = _requested_unit_point_tree(monkeypatch)
+    del args["spec"]["units"]
+    result = results.result_at_points(tree.worker, "Model", args)
+    assert result["status"]["ok"] is True
+    assert result["expression_units"] == {"freq": "GHz"}
+    assert "requested_unit_application" not in result["feature_readback"]
+    assert "setIndex" not in nodes[0].methods()
+
+
+
+@pytest.mark.parametrize("mutation", [None, "missing", "before_unit", "after_unit", "before_expr", "after_expr", "extra_unit", "missing_unit"])
+def test_w23_decoder_consumes_actual_requested_unit_native_adapter_witness(monkeypatch, mutation):
+    import copy
+    from tools import w23_te_science_protocol as protocol
+    tree, nodes, args = _requested_unit_point_tree(monkeypatch)
+    native = results.result_at_points(tree.worker, "Model", args)
+    count = {"status": "PASS_EXACT_ATTACHED_MAIN_COUNT_SINGLETON", "dataset_tag": "dset1",
+             "solver_sequence_tag": "sol1", "study_tag": "std1", "get_size": [100, 1],
+             "raw_parameter": {"name": "freq", "real": 193414489032258.03, "imag": 0.0, "unit": "Hz"}}
+    application = native["feature_readback"]["requested_unit_application"]
+    if mutation == "missing": native["feature_readback"].pop("requested_unit_application")
+    elif mutation == "before_unit": application["before"]["units"] = ["GHz"]
+    elif mutation == "after_unit": application["after"]["units"] = ["GHz"]
+    elif mutation == "before_expr": application["before"]["expressions"] = ["f0"]
+    elif mutation == "after_expr": application["after"]["expressions"] = ["f0"]
+    elif mutation == "extra_unit": application["after"]["units"] = ["Hz", "Hz"]
+    elif mutation == "missing_unit": application["after"]["units"] = []
+    def decode():
+        return protocol.decode_production_complex_point_readback(native, dataset_tag="dset1", solution_tag="sol1",
+            expressions=["freq"], expected_points=[[0.0,0.0]], expected_solution_count=1,
+            plane_id="physical_frequency", expected_count_witness=count,
+            expected_expression_units={"freq": "Hz"}, expected_requested_units=["Hz"], field_scheme="emw_down")
+    if mutation:
+        with pytest.raises(protocol.ScienceProtocolError, match="requested-unit"):
+            decode()
+    else:
+        point = decode()
+        physical = protocol.resolve_physical_frequency_point_readback(point, count)
+        assert physical["frequency_hz"] == 193414489032258.03
+        assert physical["getter_unit_conversion_applied"] is False
+        malformed = copy.deepcopy(point)
+        malformed["requested_unit_application"]["after"]["units"] = ["GHz"]
+        with pytest.raises(protocol.ScienceProtocolError, match="requested-unit"):
+            protocol.resolve_physical_frequency_point_readback(malformed, count)
+
+
+def test_at_points_multiple_port2_expressions_apply_each_exact_unit_index(monkeypatch):
+    tree, nodes, args = _requested_unit_point_tree(monkeypatch)
+    args["spec"]["expressions"] = ["ewfd.beta_2", "ewfd.neff_2", "ewfd.k0"]
+    args["spec"]["units"] = ["1/m", "1", "1/m"]
+    def coords(self, matrix):
+        self._guard("setInterpolationCoordinates", (matrix,))
+        self.coords = matrix
+        self.values = [[[6.0e6]], [[1.5]], [[4.0e6]]]
+    monkeypatch.setattr(FInterp, "setInterpolationCoordinates", coords, raising=False)
+    monkeypatch.setattr(FInterp, "getImagData", lambda self: [[[0.0]], [[0.0]], [[0.0]]], raising=False)
+    native = results.result_at_points(tree.worker, "Model", args)
+    assert native["status"]["ok"] is True
+    assert native["expression_units"] == {"ewfd.beta_2": "1/m", "ewfd.neff_2": "1", "ewfd.k0": "1/m"}
+    assert [arguments for method, arguments in nodes[0].calls if method == "setIndex"] == [
+        ("unit", "1/m", 0), ("unit", "1", 1), ("unit", "1/m", 2)]
+    proof = native["feature_readback"]["requested_unit_application"]
+    assert proof["before"]["expressions"] == proof["after"]["expressions"] == args["spec"]["expressions"]
+    assert proof["before"]["units"] == proof["after"]["units"] == args["spec"]["units"]
+
+
+@pytest.mark.parametrize("mutation", [None, "missing", "nonbool", "imag", "field_route", "wrong_expr", "wrong_dataset"])
+def test_real_only_frequency_uses_actual_production_adapter_and_narrow_decoder(monkeypatch, mutation):
+    from tools import w23_te_science_protocol as protocol
+    tree, nodes, args = _requested_unit_point_tree(monkeypatch)
+    original_factory = tree.numerical.factory
+    def real_factory(tag, kind):
+        node = original_factory(tag, kind)
+        node.complex_ = False
+        return node
+    tree.numerical.factory = real_factory
+    native = results.result_at_points(tree.worker, "Model", args)
+    assert native["is_complex"] is False
+    assert native["values"][0][0][0]["imag"] == 0
+    count = {"status": "PASS_EXACT_ATTACHED_MAIN_COUNT_SINGLETON", "dataset_tag": "dset1",
+             "solver_sequence_tag": "sol1", "study_tag": "std1", "get_size": [100, 1],
+             "raw_parameter": {"name": "freq", "real": 193414489032258.03, "imag": 0.0, "unit": "Hz"}}
+    if mutation == "missing": native.pop("is_complex")
+    elif mutation == "nonbool": native["is_complex"] = 0
+    elif mutation == "imag": native["values"][0][0][0]["imag"] = 1e-30
+    expr = ["f0"] if mutation == "wrong_expr" else ["freq"]
+    dataset = "dset2" if mutation == "wrong_dataset" else "dset1"
+    def decode():
+        return protocol.decode_production_complex_point_readback(native, dataset_tag=dataset, solution_tag="sol1",
+            expressions=expr, expected_points=[[0.0,0.0]], expected_solution_count=1,
+            plane_id="physical_frequency", expected_count_witness=count,
+            expected_expression_units={"freq": "Hz"}, expected_requested_units=["Hz"],
+            scalar_frequency=mutation != "field_route", field_scheme="emw_down")
+    if mutation:
+        with pytest.raises(protocol.ScienceProtocolError): decode()
+    else:
+        point = decode()
+        assert point["native_is_complex"] is False
+        assert point["real_only_scalar_route"] is True
+        assert protocol.resolve_physical_frequency_point_readback(point, count)["frequency_hz"] == 193414489032258.03
+
+
+@pytest.mark.parametrize("port", ["1", "2"])
+@pytest.mark.parametrize("mutation", [None, "wrong_port", "no_binding", "wrong_store", "imag", "missing", "nonbool"])
+def test_real_only_port_scalars_require_actual_adapter_flag_and_exact_validated_binding(monkeypatch, port, mutation):
+    from tools import w23_te_science_protocol as protocol
+    tree, nodes, args = _requested_unit_point_tree(monkeypatch)
+    original_factory = tree.numerical.factory
+    def real_factory(tag, kind):
+        node = original_factory(tag, kind)
+        node.complex_ = False
+        return node
+    tree.numerical.factory = real_factory
+    args["spec"]["expressions"] = list(protocol.bma_point_expressions(port, field_scheme="emw_down"))
+    args["spec"]["units"] = ["1/m", "1", "1/m"]
+    def coords(self, matrix):
+        self.coords = matrix
+        self.values = [[[6e6]], [[1.5]], [[4e6]]]
+    monkeypatch.setattr(FInterp, "setInterpolationCoordinates", coords, raising=False)
+    monkeypatch.setattr(FInterp, "getImagData", lambda self: [[[0.0]], [[0.0]], [[0.0]]], raising=False)
+    native = results.result_at_points(tree.worker, "Model", args)
+    assert native["is_complex"] is False
+    count = {"status": "PASS_EXACT_ATTACHED_MAIN_COUNT_SINGLETON", "dataset_tag": "dset1",
+             "solver_sequence_tag": "sol1", "study_tag": "std1", "get_size": [100, 1],
+             "raw_parameter": {"name": "freq", "real": 193414489032258.03, "imag": 0.0, "unit": "Hz"}}
+    binding = {"status": "VERIFIED_STEP_STORE_DATASET_BINDING_ONLY", "port_name": port,
+               "study_step_tag": {"1": "bmaInput", "2": "bmaOutput"}[port], "mode_frequency_expression": "f0",
+               "dataset_tag": "dset1", "store_solution_reference": "sol1"}
+    if mutation == "wrong_port": binding["port_name"] = "2" if port == "1" else "1"
+    elif mutation == "no_binding": binding = None
+    elif mutation == "wrong_store": binding["store_solution_reference"] = "sol2"
+    elif mutation == "imag": native["values"][1][0][0]["imag"] = 1e-30
+    elif mutation == "missing": native.pop("is_complex")
+    elif mutation == "nonbool": native["is_complex"] = "False"
+    def decode():
+        return protocol.decode_production_complex_point_readback(native, dataset_tag="dset1", solution_tag="sol1",
+            expressions=args["spec"]["expressions"], expected_points=[[0,0]], expected_solution_count=1,
+            plane_id="bma_scalar", expected_count_witness=count,
+            expected_expression_units=dict(zip(args["spec"]["expressions"], args["spec"]["units"])),
+            expected_requested_units=args["spec"]["units"], scalar_bma_binding=binding, field_scheme="emw_down")
+    if mutation:
+        with pytest.raises(protocol.ScienceProtocolError): decode()
+    else:
+        point = decode()
+        assert point["native_is_complex"] is False and point["real_only_scalar_route"] is True
+        assert [row["imag"] for row in point["expressions"]] == [[0], [0], [0]]
+
+
+def _real_public_points_daemon(tmp_path, monkeypatch, tree):
+    from types import SimpleNamespace
+    from contextlib import nullcontext
+    from comsol_mcp._control_daemon import ControlDaemon
+    from comsol_mcp._execution_service import ExecutionService
+    from comsol_mcp._execution_contract import SessionLedger
+    from comsol_mcp._managed_backend import ManagedBackend
+    # Only the OS/server isolation witness is synthetic. Keep the public
+    # registry/schema/body conversion, daemon/SQLite/revision and adapter real.
+    monkeypatch.setattr(ManagedBackend, "_require_g2_isolation", lambda self:{"status":"SYNTHETIC_OS_BOUNDARY_ONLY"})
+    root = tmp_path / "public-project-root";root.mkdir()
+    snapshot = lambda tag:{"model_tag":tag,"server_instance_id":"public-test-epoch","fingerprint":"synthetic-stable","external_event_counter":0}
+    service = ExecutionService(SessionLedger("public-test-session","public-test-epoch"),SimpleNamespace(model_snapshot=snapshot),project_root=root)
+    service.ledger.permissions.update({"inspect","project_write","compute"})
+    ref = service.bind_model("Model")["execution"]["model_ref"]
+    worker = tree.worker
+    worker.operation_context = lambda *args,**kwargs:nullcontext()
+    worker.backend_snapshot = snapshot
+    daemon = ControlDaemon(tmp_path/"public-control",service=service,registry={},worker=worker,project_root=root)
+    daemon.backend.worker_identity = {"connection_epoch":1,"worker_instance_id":"synthetic-point-worker","server_instance_id":"public-test-epoch"}
+    created = daemon.dispatch({"operation":"project.create","arguments":{"label":"W23 public points regression","workspace":str(root/"points"),"policy":{"permissions":["inspect","project_write","compute"],"timeouts":{}}},"execution":{"request_id":"create","idempotency_key":"create"}})
+    assert created["success"] is True
+    project = created["data"]["project"]["project_id"]
+    daemon.backend._bind_model_project(ref,project);daemon.backend.persist()
+    return daemon,ref,project
+
+
+@pytest.mark.parametrize("case", ["freq_Hz","freq_GHz","field_8_321","field_8_641","field_minus10_321","field_minus10_641","port1","port2"])
+def test_real_control_daemon_public_object_payload_reaches_actual_interp_adapter(tmp_path, monkeypatch, case):
+    from tools import run_native_w23_saved_mph_diagnostic as runner
+    tree,nodes,args = _requested_unit_point_tree(monkeypatch)
+    import copy
+    if case.startswith("freq"):
+        dataset,solution,expr,units,points = "dset1","sol1",["freq"],[case.split("_")[1]],[[-10.0,0.0]]
+    elif case.startswith("field"):
+        _,x,n = case.split("_");port="1" if x=="minus10" else "2";dataset,solution,expr,units = "dset1","sol1",list(runner.plane_field_expressions(port)),list(runner.plane_field_units(port))
+        points = runner._field_points(-10.0 if x == "minus10" else 8.0,int(n))
+    else:
+        port = case[-1];dataset,solution = ("dset2","sol2") if port == "1" else ("dset3","sol3")
+        expr,units = list(runner.protocol.bma_point_expressions(port, field_scheme="emw_down")),["1/m","1","1/m"]
+        points = [[-10.0 if port == "1" else 8.0,0.0]]
+        tree.datasets.items[dataset] = FNode(tag=dataset,type_id="Solution",props={"solution":solution})
+        solver = copy.deepcopy(tree.solver);solver.tag_ = solution
+        tree.model.collections["sol"].items[solution] = solver
+    def coordinates(self,matrix):
+        self.coords = matrix
+        self.values = [[[1.0]*len(matrix[0])] for _ in expr]
+    monkeypatch.setattr(FInterp,"setInterpolationCoordinates",coordinates,raising=False)
+    monkeypatch.setattr(FInterp,"getImagData",lambda self:[[[0.0]*len(self.coords[0])] for _ in expr],raising=False)
+    if case.startswith("field"):
+        from tests.test_activity022_boundary_selection_ticket import install_boundary_selection_fixture
+        install_boundary_selection_fixture(tree,monkeypatch)
+    daemon,ref,project = _real_public_points_daemon(tmp_path,monkeypatch,tree)
+    spec = {"expressions":expr,"solution":{"dataset":dataset,"solution":solution},"complex_mode":"preserve"}
+    if units is not None:spec["units"] = units
+    if case.startswith("field"):spec.update(selection=runner.plane_selection(port),entity_dim=1)
+    body = {"spec":spec,"points":runner._public_points(points),"coordinate_unit":"um","frame":"spatial"}
+    request = {"operation":"operation_call","arguments":{"operation_id":"result.at_points","arguments":body},"execution":{"project_id":project,"session_id":ref["session_id"],"model_ref":ref,"expected_revision":0,"request_id":"public-points","idempotency_key":"public-points","rpc_timeout_s":30,"queue_timeout_s":30,"execution_timeout_s":None}}
+    runner._set_dispatch_allowlist(daemon,tmp_path/"closed-public-journal.jsonl")
+    response = daemon.dispatch(request)
+    job_id = response.get("execution",{}).get("job_id")
+    if job_id:
+        import time
+        response = runner.science._wait_job(daemon,response,deadline_epoch=time.time()+20,cleanup_reserve_s=1,label="public-points",evidence=tmp_path)
+    assert response["success"] is True,response
+    data = runner._response_body(response)
+    assert nodes and data["status"]["ok"] is True
+    if units is not None:
+        assert data["feature_readback"]["requested_unit_application"]["before"]["units"] == units
+    assert data["coordinate_readback"]["coordinates"] == [[point[axis]*1e-6 for point in points] for axis in (0,1)]
+    assert data["coordinate_readback"]["unit"] == "m"
+    assert data["coordinate_unit"] == "um"
+
+
+def test_actual_public_validator_reproduces_activity012_array_refusal_before_interp(tmp_path,monkeypatch):
+    import time
+    from tools import run_native_w23_saved_mph_diagnostic as runner
+    tree,nodes,_ = _requested_unit_point_tree(monkeypatch)
+    daemon,ref,project = _real_public_points_daemon(tmp_path,monkeypatch,tree)
+    body = {"spec":{"expressions":["freq"],"units":["Hz"],"solution":{"dataset":"dset1","solution":"sol1"},"complex_mode":"preserve"},"points":[[-10.0,0.0]],"coordinate_unit":"um","frame":"spatial"}
+    request = {"operation":"operation_call","arguments":{"operation_id":"result.at_points","arguments":body},"execution":{"project_id":project,"session_id":ref["session_id"],"model_ref":ref,"expected_revision":0,"request_id":"old-array","idempotency_key":"old-array","rpc_timeout_s":30,"queue_timeout_s":30,"execution_timeout_s":None}}
+    response = daemon.dispatch(request)
+    response = runner.science._wait_job(daemon,response,deadline_epoch=time.time()+20,cleanup_reserve_s=1,label="old-array",evidence=tmp_path)
+    assert response["success"] is False
+    assert response["error"]["code"] == "INVALID_REQUEST"
+    assert "points[0] must be an object" in response["error"]["message"]
+    assert nodes == []
+
+@pytest.mark.parametrize("mutation",["old_array","missing_x","extra_z","unknown_key","missing_unit","wrong_unit","wrong_frame","nan","infinity","bool","wrong_dimension"])
+def test_closed_public_activity_payload_refuses_malformed_coordinates_before_real_daemon_dispatch(tmp_path,monkeypatch,mutation):
+    from tools import run_native_w23_saved_mph_diagnostic as runner
+    tree,nodes,_ = _requested_unit_point_tree(monkeypatch)
+    daemon,ref,project = _real_public_points_daemon(tmp_path,monkeypatch,tree)
+    calls=[];original=daemon.dispatch
+    def observe(request):calls.append(request);return original(request)
+    daemon.dispatch=observe
+    runner._set_dispatch_allowlist(daemon,tmp_path/"denied.jsonl")
+    body={"spec":{"expressions":["freq"],"units":["Hz"],"solution":{"dataset":"dset1","solution":"sol1"},"complex_mode":"preserve"},"points":[{"x":-10.0,"y":0.0}],"coordinate_unit":"um","frame":"spatial"}
+    if mutation=="old_array":body["points"]=[[-10,0]]
+    elif mutation=="missing_x":body["points"][0].pop("x")
+    elif mutation=="extra_z":body["points"][0]["z"]=0
+    elif mutation=="unknown_key":body["points"][0]["bogus"]=0
+    elif mutation=="missing_unit":body.pop("coordinate_unit")
+    elif mutation=="wrong_unit":body["coordinate_unit"]="m"
+    elif mutation=="wrong_frame":body["frame"]="material"
+    elif mutation=="nan":body["points"][0]["y"]=float("nan")
+    elif mutation=="infinity":body["points"][0]["y"]=float("inf")
+    elif mutation=="bool":body["points"][0]["y"]=False
+    elif mutation=="wrong_dimension":body["points"][0]={"x":-10.0}
+    with pytest.raises(RuntimeError,match="blocked"):
+        daemon.dispatch({"operation":"operation_call","arguments":{"operation_id":"result.at_points","arguments":body},"execution":{"project_id":project,"session_id":ref["session_id"],"model_ref":ref,"expected_revision":0,"request_id":"deny","idempotency_key":"deny"}})
+    assert calls == [] and nodes == []
+
+
+def _activity014_native_observation():
+    import json
+    from pathlib import Path
+    p=Path(__file__).parent/'fixtures/w23_activity014/physical_frequency_Hz_terminal_response.json'
+    return json.loads(p.read_bytes())['data']['solution_axes']['numeric_count_observation']['observation']
+
+
+def _activity014_replay_tree(monkeypatch):
+    observation=_activity014_native_observation()
+    tree,nodes,args=_requested_unit_point_tree(monkeypatch)
+    tree.solver.props['getSize']=observation['get_size']
+    tree.solver.props['getSizeMulti']=observation['get_size_multi']
+    tree.solver.props['getPNames']=observation['pnames']
+    tree.solver.props['getSequenceType']=observation['sequence_type']
+    tree.solver.props['isAttached']=observation['attached']
+    raw=observation['solution_values'][0]
+    tree.solver.parameter_rows={1:(tuple(raw['real_getter']['raw']),tuple(raw['imag_getter']['raw']))}
+    info=tree.solver.solution_info
+    info.units={'freq':observation['parameter_rows'][0]['unit']}
+    scope=observation['solution_info_count_scope']
+    for key in ('getLevelNames','getLevels','getOuterSolnum'):info.props[key]=scope[key]
+    return tree,nodes,args,observation
+
+
+def test_actual014_raw_reproduces_original_r5_exact_label_rejection(monkeypatch):
+    import importlib.util
+    from pathlib import Path
+    old=Path('/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261012-candidate20-r5/comsol_mcp/_g3_results.py')
+    spec=importlib.util.spec_from_file_location('comsol_mcp._activity014_frozen_r5_results',old)
+    import hashlib
+    assert hashlib.sha256(old.read_bytes()).hexdigest()=='cb9949f2055e969d3bedb19cac1df31f6e3bdfa710c78d749e2363f5ff3c1de3'
+    module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+    tree,nodes,args,observation=_activity014_replay_tree(monkeypatch)
+    binding=results._resolve_dataset_binding(tree.model,'dset1')
+    before=module._single_stored_solution_count_observation(tree.model,binding,'sol1')
+    assert before['status']=='UNVERIFIED'
+    assert before['observation']['parameter_rows']==observation['parameter_rows']
+    after=results._single_stored_solution_count_observation(tree.model,binding,'sol1')
+    assert after['status']=='VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT'
+    assert after['observation']['parameter_rows']==observation['parameter_rows']
+    assert not after['solution_axes_pair_mapping_complete'] and not after['observation']['parameters_complete']
+    assert not nodes
+
+
+@pytest.mark.parametrize('native_label',['Hz','GHz'])
+def test_real_public_route_native_singleton_label_controls_budget_only(tmp_path,monkeypatch,native_label):
+    import time
+    from tools import run_native_w23_saved_mph_diagnostic as runner
+    tree,nodes,args,observation=_activity014_replay_tree(monkeypatch)
+    tree.solver.solution_info.units['freq']=native_label
+    daemon,ref,project=_real_public_points_daemon(tmp_path,monkeypatch,tree)
+    body={'spec':{'expressions':['freq'],'units':['Hz'],'solution':{'dataset':'dset1','solution':'sol1'},'complex_mode':'preserve'},'points':[{'x':-10.0,'y':0.0}],'coordinate_unit':'um','frame':'spatial'}
+    request={'operation':'operation_call','arguments':{'operation_id':'result.at_points','arguments':body},'execution':{'project_id':project,'session_id':ref['session_id'],'model_ref':ref,'expected_revision':0,'request_id':'native-label','idempotency_key':'native-label','rpc_timeout_s':30,'queue_timeout_s':30,'execution_timeout_s':None}}
+    runner._set_dispatch_allowlist(daemon,tmp_path/'closed-native-label-journal.jsonl')
+    response=daemon.dispatch(request)
+    if response.get('execution',{}).get('job_id'):response=runner.science._wait_job(daemon,response,deadline_epoch=time.time()+20,cleanup_reserve_s=1,label='native-label',evidence=tmp_path)
+    assert response['success'] is True,response
+    data=runner._response_body(response);count=data['solution_axes']['numeric_count_observation']
+    assert count['attached_study_membership']['status']=='VERIFIED'
+    assert count['attached_study_membership']['study_tags_before']==count['attached_study_membership']['study_tags_after']==['std1']
+    assert count['numeric_solution_count']==1 and count['observation']['parameter_rows'][0]['unit']==native_label
+    assert count['observation']['parameter_rows'][0]['real']==observation['parameter_rows'][0]['real']
+    assert count['observation']['parameters_complete'] is False
+    assert count['solution_axes_pair_mapping_complete'] is False
+    assert data['solution_axes']['inner']==data['solution_axes']['outer']==[]
+    assert data['field_array'] is None and not data['solution_axes']['pair_mapping_complete']
+    budget=data['result_budget']['records'][0]
+    assert budget['status']=='PASS' and budget['solution_axes_verification_scope']=='numeric_singleton_count_only'
+    assert data['feature_readback']['requested_unit_application']['before']['units']==['Hz']
+    assert 'getData' in nodes[0].methods()
+
+
+@pytest.mark.parametrize('mutation',['MHz','1/m','empty_unit','count2','size_multi2','outer1','levels2','wrong_study','unstable_study','wrong_identity','not_attached','wrong_type','nonfinite','tag_getter_error','tags_drift','tags_duplicate','tags_wrong_shape','last_study_drift','nonstring_unit'])
+def test_actual014_count_only_negative_controls_zero_getdata(monkeypatch,mutation):
+    tree,nodes,args,observation=_activity014_replay_tree(monkeypatch)
+    if mutation in ('MHz','1/m','empty_unit'):tree.solver.solution_info.units['freq']='' if mutation=='empty_unit' else mutation
+    elif mutation=='count2':tree.solver.props['getSize']=[64057,2]
+    elif mutation=='size_multi2':tree.solver.props['getSizeMulti']=[2,1]
+    elif mutation=='outer1':tree.solver.solution_info.props['getOuterSolnum']=[1]
+    elif mutation=='levels2':tree.solver.solution_info.props['getLevels']=2
+    elif mutation=='wrong_study':tree.solver.study=lambda *args:'missing_study'
+    elif mutation=='unstable_study':
+        values=iter(['std1','missing_study']);tree.solver.study=lambda *args:next(values,'missing_study')
+    elif mutation=='wrong_identity':tree.datasets.items['dset1'].props['solution']='missing_solution'
+    elif mutation=='not_attached':tree.solver.props['isAttached']=False
+    elif mutation=='wrong_type':tree.solver.type_id='Stationary'
+    elif mutation=='nonfinite':tree.solver.parameter_rows={1:((float('nan'),),(0.0,))}
+    elif mutation=='nonstring_unit':tree.solver.solution_info.units['freq']=['GHz']
+    elif mutation=='tag_getter_error':
+        def fail(): raise FakeEngineError('native study tags getter unavailable')
+        tree.model.collections['study'].tags=fail
+    elif mutation=='tags_drift':
+        tags=iter([['std1'],['missing_study']]);tree.model.collections['study'].tags=lambda:next(tags,['missing_study'])
+    elif mutation=='tags_duplicate':tree.model.collections['study'].tags=lambda:['std1','std1']
+    elif mutation=='tags_wrong_shape':tree.model.collections['study'].tags=lambda:'std1'
+    elif mutation=='last_study_drift':
+        values=iter(['std1','std1','missing_study']);tree.solver.study=lambda *args:next(values,'missing_study')
+    try:data=results.result_at_points(tree.worker,'Model',args)
+    except PreWriteRefusal:
+        assert mutation=='wrong_identity';assert not nodes;return
+    assert data['status']['ok'] is False
+    assert data['result_budget']['records'][0]['getdata_called'] is False
+    assert not any('getData' in node.methods() for node in nodes)
+
+
+def test_detached_stored_count_path_does_not_require_new_attached_study_membership():
+    tree=build_tree(sdim=2,length_unit='m',solver_parameter_names=['lambda'],
+        solver_parameter_rows={1:((193.4e12,),(-2.5e9,))},solver_parameter_units={'lambda':'1/m'},
+        solver_size=(100,1),solver_type='Eigenfrequency',solver_sequence_type='Stored',solver_attached=False)
+    def forbidden():raise AssertionError('new attached Study tags guard must not run for detached Stored count')
+    tree.model.collections['study'].tags=forbidden
+    binding=results._resolve_dataset_binding(tree.model,'dset1')
+    count=results._single_stored_solution_count_observation(tree.model,binding,'sol1')
+    assert count['status']=='VERIFIED_SINGLE_STORED_NUMERIC_COUNT'
+    assert count['solution_axes_pair_mapping_complete'] is False
+    assert 'attached_study_membership' not in count
+
+
+def _activity015_partial_tree(monkeypatch):
+    import json
+    from pathlib import Path
+    base=Path(__file__).parent/'fixtures/w23_activity015'
+    job=json.loads((base/'ACTUAL_HZ_JOB_ALL_WORKER_EVENTS.json').read_bytes())
+    def replies(method):
+        return [e['metadata']['reply'] for e in job['events'] if e.get('metadata',{}).get('metadata',{}).get('method')==method and e['metadata'].get('phase')=='observed']
+    tree,nodes,args,observation=_activity014_replay_tree(monkeypatch)
+    geometry=tree.components.items['comp1'].collections['geom'].items['geom1']
+    geometry.lengthUnit=lambda *args:geometry._guard('lengthUnit',args) or replies('lengthUnit')[0]['result']
+    # SDK method availability is itself significant: actual remote SolutionInfo
+    # exposes getSolnum even when no outer/inner tuples are established.
+    info=tree.solver.solution_info
+    def getsolnum(outer,strict):
+        info._guard('getSolnum',(outer,strict))
+        raise FakeEngineError('no actual015 outer tuple; cannot manufacture mapping')
+    def getsolnums(names):
+        info._guard('getSolnums',(names,))
+        raise FakeEngineError(replies('getSolnums')[0]['failure']['message'])
+    info.getSolnum=getsolnum
+    info.getSolnums=getsolnums
+    getdata=replies('getData')[0]['result']
+    def factory(tag,kind):
+        node=FInterp(tag,kind,complex_=False,props={'data':None,'expr':[],'unit':['GHz'],'coord':None})
+        nodes.append(node);return node
+    tree.numerical.factory=factory
+    def coordinates(self,matrix):
+        self._guard('setInterpolationCoordinates',(matrix,));self.coords=matrix;self.values=getdata
+    monkeypatch.setattr(FInterp,'setInterpolationCoordinates',coordinates,raising=False)
+    args['points']=[[-10.0,0.0]];args['coordinate_unit']='um';args['spec']['solution']['solution']='sol1'
+    partial=results._result_solution_binding(tree.model,'sol1')
+    assert isinstance(partial,dict) and partial and partial['pair_mapping_complete'] is False
+    return tree,nodes,args,partial
+
+
+def test_actual015_partial_resolver_reproduces_original_r6_publication_failure(monkeypatch):
+    import importlib.util,hashlib
+    from pathlib import Path
+    from tests._published_history import published_source
+    source=published_source('w23-saved-mph-science-readback-20261012-candidate20-r6/comsol_mcp/_g3_results.py')
+    import json
+    spec=importlib.util.spec_from_file_location('comsol_mcp._actual015_frozen_r6',source)
+    old=importlib.util.module_from_spec(spec);spec.loader.exec_module(old)
+    tree,nodes,args,partial=_activity015_partial_tree(monkeypatch)
+    with pytest.raises(ExecutionContractError,match='outer/inner metadata is incomplete'):
+        old.result_at_points(tree.worker,'Model',args)
+    assert 'getData' in nodes[0].methods()
+    assert partial['pair_mapping_complete'] is False
+
+
+def test_real_public_route_non_none_partial_binding_publishes_only_unmapped_native_samples(tmp_path,monkeypatch):
+    import time
+    from tools import run_native_w23_saved_mph_diagnostic as runner
+    tree,nodes,args,partial=_activity015_partial_tree(monkeypatch)
+    daemon,ref,project=_real_public_points_daemon(tmp_path,monkeypatch,tree)
+    body={'spec':args['spec'],'points':[{'x':-10.0,'y':0.0}],'coordinate_unit':'um','frame':'spatial'}
+    request={'operation':'operation_call','arguments':{'operation_id':'result.at_points','arguments':body},'execution':{'project_id':project,'session_id':ref['session_id'],'model_ref':ref,'expected_revision':0,'request_id':'partial-publication','idempotency_key':'partial-publication','rpc_timeout_s':30,'queue_timeout_s':30,'execution_timeout_s':None}}
+    runner._set_dispatch_allowlist(daemon,tmp_path/'closed-partial-publication.jsonl')
+    response=daemon.dispatch(request)
+    if response.get('execution',{}).get('job_id'):response=runner.science._wait_job(daemon,response,deadline_epoch=time.time()+20,cleanup_reserve_s=1,label='partial-publication',evidence=tmp_path)
+    assert response['success'] is True,response
+    data=runner._response_body(response)
+    assert data['values']==[[[{'real':193414489032258.03,'imag':0.0}]]]
+    assert data['field_array'] is None
+    for key in ('pair_mapping_complete','parameters_complete','axis_metadata_complete'):assert data['solution_axes'][key] is False
+    assert data['solution_axes']['outer']==data['solution_axes']['inner']==[]
+    assert data['is_complex'] is False
+    assert data['coordinate_readback']=={'status':'VERIFIED','coordinates':[[-10.0],[0.0]],'unit':'µm'}
+    assert data['feature_readback']['requested_unit_application']['before']['units']==['Hz']
+    assert data['feature_readback']['requested_unit_application']['after']['units']==['Hz']
+    assert data['result_budget']['records'][0]['solution_axes_verification_scope']=='numeric_singleton_count_only'
+
+
+@pytest.mark.parametrize('selector',['outer','inner'])
+def test_partial_binding_explicit_selector_refused_before_create_run_getdata(monkeypatch,selector):
+    tree,nodes,args,partial=_activity015_partial_tree(monkeypatch);args['spec']['solution'][selector]=1
+    with pytest.raises(ExecutionContractError,match='complete SolutionInfo mapping'):
+        results.result_at_points(tree.worker,'Model',args)
+    assert not nodes
+
+
+@pytest.mark.parametrize('mutation',['extra_point','extra_sample','extra_expression','nonfinite','cross_solution','oversize_budget'])
+def test_partial_binding_count_samples_strict_shape_binding_and_budget(monkeypatch,mutation):
+    tree,nodes,args,partial=_activity015_partial_tree(monkeypatch)
+    if mutation=='cross_solution':args['spec']['solution']['solution']='sol2'
+    elif mutation=='oversize_budget':args['points']=[[-10.0,0.0]]*(results.RESULT_NUMERIC_PAYLOAD_MAX_ELEMENTS+1)
+    else:
+        values={'extra_point':[[[1.0,2.0]]],'extra_sample':[[[1.0],[2.0]]],'extra_expression':[[[1.0]],[[2.0]]],'nonfinite':[[[float('nan')]]]}[mutation]
+        def coords(self,matrix):self.coords=matrix;self.values=values
+        monkeypatch.setattr(FInterp,'setInterpolationCoordinates',coords,raising=False)
+    try:result=results.result_at_points(tree.worker,'Model',args)
+    except ExecutionContractError:
+        if mutation in ('cross_solution','oversize_budget'):assert not nodes or not any('getData' in n.methods() for n in nodes)
+        return
+    assert result['status']['ok'] is False
+    if mutation=='oversize_budget':assert result['result_budget']['records'][0]['getdata_called'] is False
+
+
+def test_canonical_complete_binding_still_uses_actual_fieldarray(monkeypatch):
+    tree,nodes,args,partial=_activity015_partial_tree(monkeypatch)
+    info=tree.solver.solution_info
+    info.props['getOuterSolnum']=[1]
+    info.getSolnum=lambda outer,strict:[1]
+    complete=results._result_solution_binding(tree.model,'sol1')
+    assert complete['pair_mapping_complete'] is True
+    data=results.result_at_points(tree.worker,'Model',args)
+    assert data['status']['ok'] is True,data
+    assert data['field_array'] is not None and data['solution_axes']['pair_mapping_complete'] is True
+
+
+@pytest.mark.parametrize('property_name',['expr','unit'])
+def test_partial_publication_still_rejects_native_pre_post_requested_property_drift(monkeypatch,property_name):
+    tree,nodes,args,partial=_activity015_partial_tree(monkeypatch)
+    original=FInterp.getStringArray;counts={'expr':0,'unit':0}
+    def getter(self,key):
+        counts[key]=counts.get(key,0)+1
+        if key==property_name and counts[key]==2:return ['wrong-expression' if key=='expr' else 'MHz']
+        return original(self,key)
+    monkeypatch.setattr(FInterp,'getStringArray',getter)
+    with pytest.raises(ExecutionContractError):results.result_at_points(tree.worker,'Model',args)
+    assert 'getData' in nodes[0].methods()
+
+
+@pytest.mark.parametrize('selector',['outer','inner'])
+def test_real_public_selector_on_partial_binding_has_zero_create_run_getdata(tmp_path,monkeypatch,selector):
+    import time
+    from tools import run_native_w23_saved_mph_diagnostic as runner
+    tree,nodes,args,partial=_activity015_partial_tree(monkeypatch)
+    daemon,ref,project=_real_public_points_daemon(tmp_path,monkeypatch,tree)
+    spec=dict(args['spec']);spec['solution']=dict(spec['solution'],**{selector:[1]})
+    body={'spec':spec,'points':[{'x':-10.0,'y':0.0}],'coordinate_unit':'um','frame':'spatial'}
+    response=daemon.dispatch({'operation':'operation_call','arguments':{'operation_id':'result.at_points','arguments':body},'execution':{'project_id':project,'session_id':ref['session_id'],'model_ref':ref,'expected_revision':0,'request_id':'partial-selector','idempotency_key':'partial-selector','rpc_timeout_s':30,'queue_timeout_s':30,'execution_timeout_s':None}})
+    if response.get('execution',{}).get('job_id'):response=runner.science._wait_job(daemon,response,deadline_epoch=time.time()+20,cleanup_reserve_s=1,label='partial-selector',evidence=tmp_path)
+    assert response['success'] is False and not nodes
+    assert 'complete SolutionInfo mapping' in str(response)

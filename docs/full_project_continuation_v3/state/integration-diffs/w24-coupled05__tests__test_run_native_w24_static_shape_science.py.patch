@@ -1,0 +1,11 @@
+--- root/tests/test_run_native_w24_static_shape_science.py
++++ w24-coupled05/tests/test_run_native_w24_static_shape_science.py
+@@ -1045,7 +1045,7 @@
+         tmp_path, monkeypatch, worker_state)
+     daemon, service = daemons[0], services[0]
+     from comsol_mcp import _model_ops
+-    from comsol_mcp import _server as srv
++    from comsol_mcp._server import session_server as srv
+     monkeypatch.setattr(_model_ops, "_model_tree_data", lambda _model: {
+         "components": ["comp1"], "component_details": [], "parameters": [],
+         "studies": ["stdShape"], "solutions": ["sol1"], "datasets": [], "results": [],

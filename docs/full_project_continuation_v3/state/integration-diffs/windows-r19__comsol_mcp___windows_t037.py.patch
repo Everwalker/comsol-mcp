@@ -1,0 +1,844 @@
+--- root/comsol_mcp/_windows_t037.py
++++ windows-r19/comsol_mcp/_windows_t037.py
+@@ -29,6 +29,7 @@
+ 
+ PROFILE_SCHEMA = "comsol-mcp.windows-t037-profile/1"
+ PROFILE_SCHEMA_V2 = "comsol-mcp.windows-t037-profile/2"
++PROFILE_SCHEMA_V3 = "comsol-mcp.windows-t037-profile/3"
+ MAX_PROFILE_BYTES = 64 * 1024
+ MAX_SIDS = 64
+ MAX_JOB_PIDS = 4096
+@@ -47,8 +48,8 @@
+     """A typed, fail-closed T037 platform/configuration refusal."""
+ 
+ 
+-def _refuse(code: str, message: str) -> None:
+-    raise WindowsT037Error(code, message)
++def _refuse(code: str, message: str, **details: Any) -> None:
++    raise WindowsT037Error(code, message, details=details or None)
+ 
+ 
+ @dataclass(frozen=True)
+@@ -96,6 +97,8 @@
+     source_sha256: str
+     source_identity: Mapping[str, Any]
+     security_semantics: str
++    job_limits: Any = None
++    wrapper_schema: str = PROFILE_SCHEMA_V2
+ 
+     @property
+     def profile_id(self) -> str:
+@@ -155,6 +158,12 @@
+ 
+     @property
+     def sha256(self) -> str:
++        if self.wrapper_schema == PROFILE_SCHEMA_V3:
++            from ._windows_job_limits import require_limits
++            return hashlib.sha256(json.dumps({"schema": PROFILE_SCHEMA_V3,
++                "host_resource_profile_sha256": self.host_resource_profile.sha256,
++                "job_limits": require_limits(self).as_dict()}, sort_keys=True,
++                separators=(",", ":"), allow_nan=False).encode()).hexdigest()
+         return self.host_resource_profile.sha256
+ 
+     @property
+@@ -169,7 +178,7 @@
+ 
+     def as_safe_dict(self) -> dict[str, Any]:
+         policy = self.host_resource_profile.windows_isolation
+-        return {
++        result = {
+             "schema": PROFILE_SCHEMA_V2,
+             "profile_id": self.profile_id,
+             "host_fingerprint_sha256": self.host_fingerprint_sha256,
+@@ -192,6 +201,13 @@
+             "security_semantics": self.security_semantics,
+             "verification_state": "NOT_VERIFIED",
+         }
++
++        if self.wrapper_schema == PROFILE_SCHEMA_V3:
++            from ._windows_job_limits import require_limits
++            targets = require_limits(self)
++            result.update(schema=PROFILE_SCHEMA_V3, profile_sha256=self.sha256,
++                          job_limits=targets.as_dict(), job_limits_sha256=targets.sha256)
++        return result
+ 
+ 
+ def parse_profile_document(document: Any, *, source_sha256: str,
+@@ -277,6 +293,24 @@
+         if sum(row.role == role for row in host_profile.launch_images) != 1:
+             _refuse(ERROR_PROFILE_INVALID, f"T037 v2 requires exactly one {role} launch binding")
+     return WindowsT037ProfileV2(host_profile, source_sha256, dict(source_identity or {}), security_semantics)
++
++
++def parse_profile_v3_document(document: Any, *, source_sha256: str,
++                              source_identity: Mapping[str, Any] | None = None,
++                              security_semantics: str = "UNVERIFIED") -> WindowsT037ProfileV2:
++    from ._windows_job_limits import parse_job_limits
++    if not isinstance(document, Mapping) or document.get("schema") != PROFILE_SCHEMA_V3:
++        _refuse(ERROR_PROFILE_INVALID, "T037 v3 profile schema is unsupported")
++    if "job_limits" not in document or document["job_limits"] is None:
++        _refuse("JOB_LIMITS_NOT_CONFIGURED", "T037 v3 explicit Job targets are not configured")
++    if set(document) != {"schema", "host_resource_profile", "job_limits"}:
++        _refuse(ERROR_PROFILE_INVALID, "T037 v3 profile must use its exact closed wrapper")
++    targets = parse_job_limits(document["job_limits"])
++    previous = parse_profile_v2_document({"schema": PROFILE_SCHEMA_V2,
++        "host_resource_profile": document["host_resource_profile"]}, source_sha256=source_sha256,
++        source_identity=source_identity, security_semantics=security_semantics)
++    return WindowsT037ProfileV2(previous.host_resource_profile, previous.source_sha256,
++        previous.source_identity, previous.security_semantics, targets, PROFILE_SCHEMA_V3)
+ 
+ 
+ def load_trusted_profile(path: str | os.PathLike[str], *,
+@@ -340,6 +374,9 @@
+                     document, source_sha256=digest, source_identity=expected_identity,
+                     security_semantics=before["security_semantics"],
+                 )
++            elif isinstance(document, Mapping) and document.get("schema") == PROFILE_SCHEMA_V3:
++                profile = parse_profile_v3_document(document, source_sha256=digest,
++                    source_identity=expected_identity, security_semantics=before["security_semantics"])
+             else:
+                 _refuse(ERROR_PROFILE_INVALID, "T037 profile schema version is unsupported")
+         finally:
+@@ -366,14 +403,14 @@
+     return hmac.compare_digest(left.encode("ascii"), right.encode("ascii"))
+ 
+ 
+-def windows_host_fingerprint() -> str:
++def windows_host_fingerprint(*, resource_registry=None) -> str:
+     """Hash the local MachineGuid and computer name; never return raw values."""
+     if os.name != "nt":
+         _refuse(ERROR_UNSUPPORTED, "Windows machine identity is unavailable on this platform")
+     try:
+         import winreg
+-        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Cryptography") as key:
+-            machine_guid, value_type = winreg.QueryValueEx(key, "MachineGuid")
++        from ._windows_host_identity_owner import read_machine_guid
++        machine_guid, value_type = read_machine_guid(winreg,registry=resource_registry)
+         if value_type != winreg.REG_SZ or not isinstance(machine_guid, str) or not machine_guid:
+             _refuse(ERROR_UNSUPPORTED, "Windows MachineGuid registry value is malformed")
+         computer = platform.node()
+@@ -382,7 +419,7 @@
+         canonical = ("COMSOL-MCP-WINDOWS-T037-V1\0" + computer.casefold() + "\0"
+                      + machine_guid.casefold()).encode("utf-8")
+         return hashlib.sha256(canonical).hexdigest()
+-    except WindowsT037Error:
++    except ExecutionContractError:
+         raise
+     except Exception as exc:
+         raise WindowsT037Error(ERROR_UNSUPPORTED, "Windows host identity could not be read") from exc
+@@ -552,7 +589,8 @@
+         binding, ACL grant comparison and vendor/loopback compatibility still
+         lack a trusted issuer, so readiness remains UNVERIFIED.
+         """
+-        host_fp = windows_host_fingerprint()
++        from ._windows_owned_resources import registry_for
++        host_fp = windows_host_fingerprint(resource_registry=registry_for(self.api))
+         current = self.api.current_process_token()
+         service_sid = current.get("user_sid")
+         # The current process SID is not evidence of the interactive account
+@@ -585,7 +623,14 @@
+             )
+         try:
+             from ._windows_t037_native import WindowsNativePolicyAdapter
+-            observation = WindowsNativePolicyAdapter().observe(
++            adapter = WindowsNativePolicyAdapter()
++            # Keep the actual nested adapter/API alive before its first SDK read.
++            from ._windows_owned_resources import registry_for, attach_registry
++            if not hasattr(self, "_native_policy_adapters"):
++                self._native_policy_adapters = []
++            self._native_policy_adapters.append(adapter)
++            attach_registry(adapter.api, registry_for(self.api))
++            observation = adapter.observe(
+                 profile, current_host_fingerprint=host_fp, process_observer=self,
+             )
+         except ExecutionContractError as exc:
+@@ -680,17 +725,28 @@
+         handle = self.k.OpenProcess(self.PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+         if not handle:
+             self._check(False, "OpenProcess")
++        from ._windows_owned_resources import own
++        own(self,handle,self.k.CloseHandle,mode="BOOL",label="observed_process")
+         return handle
+ 
+-    def close_handle(self, handle: Any) -> None:
++    def _close_handle_native(self, handle: Any) -> None:
+         if handle and not self.k.CloseHandle(handle):
+             self._check(False, "CloseHandle")
++
++    def close_handle(self, handle: Any) -> None:
++        from ._windows_owned_resources import registry_for
++        if handle:
++            registry=registry_for(self);entry=registry.find(self,handle)
++            if entry is not None:return entry.release_owned(registry.owner)
++        return self._close_handle_native(handle)
+ 
+     def open_process_token(self, process: Any):
+         token = self.W.HANDLE()
+         self._check(self.a.OpenProcessToken(process, self.TOKEN_QUERY, self.C.byref(token)), "OpenProcessToken")
+         if not token.value:
+             _refuse(ERROR_UNSUPPORTED, "OpenProcessToken returned a null token handle")
++        from ._windows_owned_resources import own
++        own(self,token,self.k.CloseHandle,mode="BOOL",label="observed_process_token")
+         return token
+ 
+     def _token_buffer(self, token: Any, information_class: int, *, required: bool = True):
+@@ -719,10 +775,12 @@
+             _refuse(ERROR_UNSUPPORTED, "Win32 returned a SID with an unsupported size")
+         text = W.LPWSTR()
+         self._check(self.a.ConvertSidToStringSidW(pointer, C.byref(text)), "ConvertSidToStringSidW")
++        from ._windows_owned_resources import own
++        resource=own(self,C.cast(text,C.c_void_p),self.k.LocalFree,mode="LOCALFREE",label="sid_string",keepalive=(text,))
+         try:
+             value = text.value
+         finally:
+-            self.k.LocalFree(C.cast(text, C.c_void_p))
++            resource.release_owned(resource.registry.owner)
+         if not isinstance(value, str) or not _SID.fullmatch(value):
+             _refuse(ERROR_UNSUPPORTED, "Win32 SID could not be converted to canonical text")
+         return value.upper()
+@@ -979,6 +1037,7 @@
+         self._api = api
+         self._job = None
+         self._closed = False
++        self._prebirth_observers = []
+         self._job_key = hashlib.sha256((profile.source_sha256 + "\0" + session_id).encode()).hexdigest()
+ 
+     def __call__(self, command: Sequence[str], **options: Any):
+@@ -989,7 +1048,7 @@
+         self._api = api
+         role = self._infer_role(command)
+         if self._job is None:
+-            self._job = api.create_job()
++            self._job = api.create_job(profile=self.profile)
+         return api.create_suspended_appcontainer_child(
+             command, options, profile=self.profile, job=self._job, role=role,
+         )
+@@ -998,7 +1057,10 @@
+         """Refuse before directory/file/child side effects until native proof exists."""
+         if self._closed:
+             _refuse(ERROR_POLICY_UNVERIFIED, "T037 session process factory is closed")
+-        _refuse(ERROR_POLICY_UNVERIFIED, "T037 native policy verifier and launch-proof issuer are not implemented")
++        if os.name == "nt":
++            from ._windows_t037_resume import refuse_unverified_prebirth
++            refuse_unverified_prebirth(self.profile, owner=self)
++        _refuse(ERROR_POLICY_UNVERIFIED, "T037 prebirth native policy admission and child-proof issuer remain unverified")
+ 
+     def _infer_role(self, command: Sequence[str]) -> str:
+         if not isinstance(command, Sequence) or isinstance(command, (str, bytes)) or not command:
+@@ -1019,10 +1081,42 @@
+         return self._job_key
+ 
+     def close(self) -> None:
+-        self._closed = True
++        from ._windows_owned_resources import registry_for
++        if registry_for(self).unresolved():
++            _refuse("NATIVE_RESOURCE_RELEASE_UNKNOWN", "factory-owned prebirth native observations remain unresolved")
++        if self._api is not None:
++            from ._windows_owned_resources import registry_for
++            if any(not (entry.adapter is self._api and entry.value == self._job
++                        and entry.label == "owned_session_job" and entry.state == "ACQUIRED")
++                   for entry in registry_for(self._api).unresolved()):
++                _refuse("NATIVE_RESOURCE_RELEASE_UNKNOWN", "actual native acquisition registry has unresolved ancillary ownership")
++            from ._windows_t037_child import _PinnedParent, _PARENT_SEAL
++            retained_cleanup = getattr(self._api, "_retained_launch_cleanup", [])
++            def parent_release_confirmed(entry):
++                parent = getattr(entry[1], "__self__", None)
++                return (entry[0] == "native_parent" and type(parent) is _PinnedParent
++                        and parent._seal is _PARENT_SEAL and parent.launch_api is self._api
++                        and parent.closed is True)
++            def token_release_confirmed(entry):
++                token = getattr(entry[1], "__self__", None)
++                return (entry[0] == "child_token" and type(token) is _RetainedChildToken
++                        and token._seal is _NATIVE_CHILD_TOKEN_SEAL and token._api is self._api
++                        and token.closed is True)
++            retained_cleanup[:] = [entry for entry in retained_cleanup
++                if not parent_release_confirmed(entry) and not token_release_confirmed(entry)]
++            if retained_cleanup:
++                _refuse("NATIVE_LAUNCH_RELEASE_UNKNOWN", "actual ancillary launch cleanup remains owned and unconfirmed")
++            if any(not parent.closed for parent in getattr(self._api, "_retained_parent_bindings", {}).values()):
++                _refuse("NATIVE_PARENT_RELEASE_UNKNOWN", "actual pinned parent HANDLE remains owned after release failure")
++            if getattr(self._api, "_unclassified_create_handles", None):
++                _refuse("NATIVE_CHILD_CREATION_UNKNOWN", "unclassified native creation handles block Job close")
++            for process in getattr(self._api, "_retained_children", {}).values():
++                if type(process.poll()) is not int:
++                    _refuse("NATIVE_CHILD_CLEANUP_UNKNOWN", "session Job/owner remains retained while child exit is unknown")
+         if self._job is not None and self._api is not None:
+             self._api.close_job(self._job)
+             self._job = None
++        self._closed = True
+ 
+ 
+ class _Win32ChildProcess:
+@@ -1062,6 +1156,150 @@
+             self.close()
+         except Exception:
+             pass
++
++
++_NATIVE_SUSPENDED_CHILD_SEAL = object()
++
++
++class NativeSuspendedChildLaunchError(WindowsT037Error):
++    """Non-wire ownership handoff for an actual retained CreateProcess child."""
++    def __init__(self, process, cause, cleanup_error, *, seal):
++        if (seal is not _NATIVE_SUSPENDED_CHILD_SEAL or type(process) is not _RetainedSuspendedChild
++                or getattr(process, "_seal", None) is not _NATIVE_SUSPENDED_CHILD_SEAL):
++            _refuse(ERROR_POLICY_UNVERIFIED, "native launch recovery requires an actual retained child capability")
++        super().__init__("NATIVE_CHILD_CLEANUP_UNKNOWN", "suspended child cleanup is unconfirmed; original owner retained",
++                         details={"pid": process.pid, "birth_filetime_100ns": process.birth_filetime_100ns,
++                                  "effect_possible": True, "never_resumed": process.never_resumed,
++                                  "cause_type": type(cause).__name__, "cleanup_error_type": type(cleanup_error).__name__})
++        self._process = process
++        self._seal = seal
++
++    def transfer_to(self, owner):
++        if self._seal is not _NATIVE_SUSPENDED_CHILD_SEAL:
++            _refuse(ERROR_POLICY_UNVERIFIED, "launch recovery capability is invalid")
++        self._process.transfer_owner(self._process._api, owner)
++        return self._process
++
++
++_NATIVE_CHILD_TOKEN_SEAL = object()
++
++class _RetainedChildToken:
++    """Actual token owner bound to the original native child, never wire-minted."""
++    def __init__(self, api, handle, process, *, seal):
++        if (seal is not _NATIVE_CHILD_TOKEN_SEAL or type(process) is not _RetainedSuspendedChild
++                or process._seal is not _NATIVE_SUSPENDED_CHILD_SEAL or process._api is not api):
++            _refuse("NATIVE_CHILD_TOKEN_OWNER_UNKNOWN", "token requires actual native child provenance")
++        self._api, self._handle, self._process = api, handle, process
++        self._seal = seal
++        self.closed = False
++
++    def release_owned(self, owner):
++        if owner is not self._api or self._seal is not _NATIVE_CHILD_TOKEN_SEAL:
++            _refuse("NATIVE_CHILD_TOKEN_OWNER_UNKNOWN", "only the original native API owner may release this token")
++        if not self.closed:
++            self._api.close_handle(self._handle)
++            self.closed = True
++        getattr(self._api, "_retained_child_tokens", {}).pop(id(self), None)
++
++
++class _RetainedSuspendedChild(_Win32ChildProcess):
++    """Unique actual HANDLE owner; metadata cannot enable simplified cleanup."""
++    def __init__(self, api, handle, pid, args, thread_handle, job, *, seal, creation_confirmed=True):
++        if seal is not _NATIVE_SUSPENDED_CHILD_SEAL:
++            _refuse(ERROR_POLICY_UNVERIFIED, "retained child requires native creation provenance")
++        self._api, self._handle = api, handle
++        self.pid = pid if type(pid) is int and pid > 0 else None
++        self.args = list(args)
++        self.returncode = None
++        self._closed = False
++        self._creation_confirmed = creation_confirmed is True
++        self._seal = seal
++        self._thread_handle = thread_handle
++        self._job_handle = job
++        self._owner = api
++        self._resume_attempted = False
++        self._pending_resource_release_jobs = set()
++        self._terminal_resource_release_observations = {}
++        self._ownership_lock = __import__('threading').RLock()
++        try:
++            if not self._creation_confirmed:
++                raise ValueError("creation response was not confirmed")
++            birth, exited = api.process_times(handle)
++            self.birth_filetime_100ns = birth if type(birth) is int and birth > 0 else None
++        except Exception:
++            self.birth_filetime_100ns = None
++
++    @property
++    def never_resumed(self):
++        return self._seal is _NATIVE_SUSPENDED_CHILD_SEAL and self._creation_confirmed and not self._resume_attempted
++
++    def poll(self):
++        if not self._creation_confirmed:
++            _refuse("NATIVE_CHILD_CREATION_UNKNOWN", "unconfirmed creation handle is not terminal/ownership evidence")
++        return super().poll()
++
++    def transfer_owner(self, expected, owner):
++        with self._ownership_lock:
++            if self._owner is not expected or owner is None or owner is expected:
++                _refuse("NATIVE_CHILD_OWNER_TRANSFER_REFUSED", "actual child has already transferred its owner")
++            self._owner = owner
++
++    def note_resume_attempt(self):
++        with self._ownership_lock:
++            self._resume_attempted = True
++
++    def ownership_observation(self):
++        if self._seal is not _NATIVE_SUSPENDED_CHILD_SEAL:
++            _refuse(ERROR_POLICY_UNVERIFIED, "native ownership provenance is missing")
++        return {"schema": "comsol-mcp.retained-native-child/1", "pid": self.pid,
++                "birth_filetime_100ns": self.birth_filetime_100ns,
++                "creation_response_confirmed": self._creation_confirmed,
++                "resume_attempted": self._resume_attempted, "effect_possible": True,
++                "never_resumed": self.never_resumed,
++                "terminal_state": "EXIT_CONFIRMED" if type(self.returncode) is int else "UNKNOWN"}
++
++    def cleanup_owned(self, owner, timeout=5):
++        with self._ownership_lock:
++            if self._owner is not owner or not self.never_resumed:
++                _refuse("NATIVE_CHILD_OWNER_REQUIRED", "simplified cleanup requires the exact never-resumed owner")
++            if self._closed:
++                return self.returncode
++            if self.poll() is None:
++                self.terminate()
++                self.wait(timeout=timeout)
++            if type(self.poll()) is not int:
++                _refuse("NATIVE_CHILD_CLEANUP_UNKNOWN", "actual child exit has not been confirmed")
++            self.close_owned(owner)
++            return self.returncode
++
++    def close_owned(self, owner):
++        with self._ownership_lock:
++            if self._owner is not owner:
++                _refuse("NATIVE_CHILD_OWNER_REQUIRED", "only the actual transferred owner may close the child")
++            if self._closed:
++                return
++            if type(self.poll()) is not int:
++                _refuse("NATIVE_CHILD_CLEANUP_UNKNOWN", "process handle cannot be closed before confirmed exit")
++            if self._thread_handle:
++                self._api.close_handle(self._thread_handle)
++                self._thread_handle = None
++            super().close()
++
++    def close(self):
++        _refuse("NATIVE_CHILD_OWNER_REQUIRED", "retained child close requires the explicit unique owner")
++
++    def __del__(self):
++        pass # GC is never ownership/recovery evidence and cannot release this handle.
++
++
++def is_native_suspended_child(process):
++    return (type(process) is _RetainedSuspendedChild
++            and getattr(process, "_seal", None) is _NATIVE_SUSPENDED_CHILD_SEAL
++            and process.never_resumed)
++
++
++def is_native_retained_child(process):
++    return type(process) is _RetainedSuspendedChild and getattr(process, "_seal", None) is _NATIVE_SUSPENDED_CHILD_SEAL
+ 
+ 
+ class _Win32LaunchApi(_Win32ReadOnlyApi):
+@@ -1099,6 +1337,8 @@
+         self.k.GetCurrentProcess.restype = W.HANDLE
+         self.k.CreateJobObjectW.argtypes = [C.c_void_p, W.LPCWSTR]
+         self.k.CreateJobObjectW.restype = W.HANDLE
++        self.k.SetInformationJobObject.argtypes = [W.HANDLE, C.c_int, C.c_void_p, W.DWORD]
++        self.k.SetInformationJobObject.restype = W.BOOL
+         self.k.AssignProcessToJobObject.argtypes = [W.HANDLE, W.HANDLE]
+         self.k.AssignProcessToJobObject.restype = W.BOOL
+         self.k.ResumeThread.argtypes = [W.HANDLE]
+@@ -1133,14 +1373,13 @@
+             C.c_void_p, C.c_void_p]
+         self.a.CreateProcessAsUserW.restype = W.BOOL
+ 
+-    def create_job(self):
+-        job = self.k.CreateJobObjectW(None, None)
+-        if not job:
+-            self._check(False, "CreateJobObjectW")
+-        return job
++    def create_job(self, *, profile=None):
++        from ._windows_job_limits import create_owned_job
++        return create_owned_job(self, profile)
+ 
+     def close_job(self, handle: Any) -> None:
+-        self.close_handle(handle)
++        from ._windows_job_limits import close_owned_job
++        close_owned_job(self, handle)
+ 
+     def _open_image(self, path: str):
+         if not isinstance(path, str) or "\x00" in path:
+@@ -1150,18 +1389,24 @@
+         if (not re.fullmatch(r"[A-Za-z]:", drive) or not tail.startswith("\\")
+                 or canonical.startswith("\\\\") or canonical.startswith("\\\\?\\")):
+             _refuse(ERROR_UNSUPPORTED, "T037 executable must be an ordinary local drive path")
++        from ._windows_owned_resources import registry_for,attach_registry,own
++        registry=registry_for(self);scope=registry.scope()
+         try:
+             from ._windows_parameter_publish import _API
+             api = _API()
++            attach_registry(api,registry)
+             parents = api.open_security_path(ntpath.dirname(canonical), directory=True)
++            closer=api._resource_closer() if hasattr(api,"_resource_closer") else api.close
++            for parent in parents:own(api,parent,closer,label="image_parent")
+             image = api.open_source(parents[-1], ntpath.basename(canonical))
++            own(api,image,closer,label="pinned_image")
+             identity, size, creation, written, links = api.source_fingerprint(image)
+             if size <= 0 or size > self.MAX_IMAGE_BYTES or links != 1:
+                 _refuse(ERROR_POLICY_UNVERIFIED, "T037 executable size/link count is outside its bounded identity check")
+             return api, parents, image, (identity, size, creation, written, links), canonical
+-        except WindowsT037Error:
+-            raise
+-        except Exception as exc:
++        except BaseException as exc:
++            registry.drain(scope)
++            if isinstance(exc,WindowsT037Error):raise
+             raise WindowsT037Error(ERROR_UNSUPPORTED, "T037 executable could not be pinned without reparse traversal") from exc
+ 
+     def _hash_image_handle(self, api: Any, handle: Any, size: int) -> str:
+@@ -1178,13 +1423,17 @@
+         return digest.hexdigest()
+ 
+     def hash_image(self, path: str) -> str:
+-        api, parents, image, fingerprint, _canonical = self._open_image(path)
++        from ._windows_owned_resources import registry_for,own,attach_registry
++        registry=registry_for(self);scope=registry.scope()
+         try:
++            api, parents, image, fingerprint, _canonical = self._open_image(path)
++            attach_registry(api,registry);closer=api._resource_closer() if hasattr(api,"_resource_closer") else api.close
++            for parent in parents:own(api,parent,closer,label="image_parent")
++            own(api,image,closer,label="pinned_image")
+             return self._hash_image_handle(api, image, fingerprint[1])
+         finally:
+-            api.close(image)
+-            for handle in reversed(parents):
+-                api.close(handle)
++            failures=registry.drain(scope)
++            if failures:raise failures[0][1]
+ 
+     def _stdio_source(self, value: Any, *, input_stream: bool):
+         import msvcrt
+@@ -1194,6 +1443,9 @@
+                                         None, self.OPEN_EXISTING, self.FILE_ATTRIBUTE_NORMAL, None)
+             if not handle or int(handle) == self.C.c_void_p(-1).value:
+                 self._check(False, "CreateFileW(NUL stdio)")
++            from ._windows_owned_resources import own,handle_closer
++            closer,mode=handle_closer(self)
++            own(self,handle,closer,mode=mode,label="owned_stdio_source")
+             return handle, True
+         if value in (subprocess.PIPE, subprocess.STDOUT):
+             _refuse(ERROR_UNSUPPORTED, "T037 child stdio pipes/sentinel fallback are not supported")
+@@ -1216,6 +1468,9 @@
+             0, True, self.DUPLICATE_SAME_ACCESS), "DuplicateHandle(stdio)")
+         if not output.value:
+             _refuse(ERROR_UNSUPPORTED, "DuplicateHandle returned a null stdio handle")
++        from ._windows_owned_resources import own,handle_closer
++        closer,mode=handle_closer(self)
++        own(self,output,closer,mode=mode,label="inherited_handle")
+         return output
+ 
+     def _environment_buffer(self, environment: Any):
+@@ -1245,6 +1500,9 @@
+         pointer = C.cast(storage, C.c_void_p)
+         self._check(self.k.InitializeProcThreadAttributeList(pointer, 2, 0, C.byref(size)),
+                     "InitializeProcThreadAttributeList")
++        from ._windows_owned_resources import own
++        resource=own(self,pointer,self.k.DeleteProcThreadAttributeList,mode="VOID",label="attribute_list",
++                     keepalive=(storage,security_capabilities,handles))
+         try:
+             self._check(self.k.UpdateProcThreadAttribute(pointer, 0,
+                 self.PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES, C.byref(security_capabilities),
+@@ -1253,12 +1511,14 @@
+                 self.PROC_THREAD_ATTRIBUTE_HANDLE_LIST, self.C.cast(handles, C.c_void_p),
+                 C.sizeof(handles), None, None), "UpdateProcThreadAttribute(HandleList)")
+         except BaseException:
+-            self.k.DeleteProcThreadAttributeList(pointer)
++            resource.release_owned(resource.registry.owner)
+             raise
+         return storage, pointer
+ 
+     def create_suspended_appcontainer_child(self, command: Sequence[str], options: Mapping[str, Any], *,
+                                              profile: WindowsT037Profile, job: Any, role: str):
++        from ._windows_job_limits import require_configured_job
++        require_configured_job(self, job, profile)
+         C, W = self.C, self.W
+         if role not in {"server", "worker"}:
+             _refuse(ERROR_PROFILE_INVALID, "T037 child role is unsupported")
+@@ -1280,15 +1540,24 @@
+         if not isinstance(executable, str) or not executable:
+             _refuse(ERROR_PROFILE_INVALID, "T037 lpApplicationName is missing")
+         expected_hash = profile.server_image_sha256 if role == "server" else profile.worker_image_sha256
++        from ._windows_owned_resources import registry_for,own,attach_registry,handle_closer
++        registry=registry_for(self);launch_scope=registry.scope()
+         image_api, parent_handles, image_handle, image_fingerprint, image_path = self._open_image(executable)
++        attach_registry(image_api,registry)
++        image_closer=image_api._resource_closer() if hasattr(image_api,"_resource_closer") else image_api.close
++        for parent in parent_handles:own(image_api,parent,image_closer,label="image_parent")
++        own(image_api,image_handle,image_closer,label="pinned_image")
+         inherited: list[Any] = []
+         duplicate_handles: list[Any] = []
+         sid_allocations: list[Any] = []
+         app_sid = C.c_void_p()
+         primary_token = W.HANDLE()
+         process_handle = thread_handle = None
++        retained_child = None
++        native_parent = None
+         attribute_pointer = None
+         image_verified = False
++        launch_release_failures = []
+         try:
+             if not _constant_digest_equal(self._hash_image_handle(image_api, image_handle,
+                                                                    image_fingerprint[1]), expected_hash):
+@@ -1301,6 +1570,8 @@
+             token_access = 0x0008 | 0x0002 | 0x0001 | 0x0080 | 0x0100
+             self._check(self.a.OpenProcessToken(self.k.GetCurrentProcess(), token_access,
+                                                 C.byref(current_token)), "OpenProcessToken(service)")
++            native_closer,native_mode=handle_closer(self)
++            current_owner=own(self,current_token,native_closer,mode=native_mode,label="current_token")
+             try:
+                 service_observation = self.read_token(current_token)
+                 if service_observation.get("user_sid", "").casefold() != profile.service_account_sid.casefold():
+@@ -1308,11 +1579,13 @@
+                 # TOKEN_PRIMARY=1, SecurityImpersonation=2.
+                 self._check(self.a.DuplicateTokenEx(current_token, token_access, None, 2, 1,
+                                                      C.byref(primary_token)), "DuplicateTokenEx(primary)")
++                own(self,primary_token,native_closer,mode=native_mode,label="primary_token")
+             finally:
+-                self.close_handle(current_token)
++                current_owner.release_owned(registry.owner)
+ 
+             self._check(self.a.ConvertStringSidToSidW(profile.appcontainer_sid, C.byref(app_sid)),
+                         "ConvertStringSidToSidW(AppContainer)")
++            own(self,app_sid,self.k.LocalFree,mode="LOCALFREE",label="appcontainer_sid")
+             class SID_AND_ATTRIBUTES(C.Structure):
+                 _fields_ = [("Sid", C.c_void_p), ("Attributes", W.DWORD)]
+             class SECURITY_CAPABILITIES(C.Structure):
+@@ -1324,6 +1597,7 @@
+                 sid_pointer = C.c_void_p()
+                 self._check(self.a.ConvertStringSidToSidW(sid_text, C.byref(sid_pointer)),
+                             "ConvertStringSidToSidW(Capability)")
++                own(self,sid_pointer,self.k.LocalFree,mode="LOCALFREE",label="capability_sid")
+                 sid_allocations.append(sid_pointer)
+                 capability_rows[index].Sid = sid_pointer.value
+                 capability_rows[index].Attributes = 0x4  # SE_GROUP_ENABLED
+@@ -1339,13 +1613,15 @@
+                     stdio_map[name] = "stdout"
+                     continue
+                 source, owned = self._stdio_source(source_value, input_stream=is_stdin)
++                source_owner=own(self,source,native_closer,mode=native_mode,label="owned_stdio_source") if owned else None
+                 try:
+                     duplicate = self._duplicate_inheritable(source)
++                    own(self,duplicate,native_closer,mode=native_mode,label="inherited_handle")
+                     duplicate_handles.append(duplicate)
+                     stdio_map[name] = duplicate
+                 finally:
+-                    if owned:
+-                        self.close_handle(source)
++                    if source_owner is not None:
++                        source_owner.release_owned(registry.owner)
+             for name in ("stdin", "stdout", "stderr"):
+                 if stdio_map[name] == "stdout":
+                     stdio_map[name] = stdio_map["stdout"]
+@@ -1356,6 +1632,8 @@
+                     inherited.append(value)
+             handles_array = (W.HANDLE * len(inherited))(*inherited)
+             attr_storage, attribute_pointer = self._attribute_list(security_caps, handles_array)
++            own(self,attribute_pointer,self.k.DeleteProcThreadAttributeList,mode="VOID",label="attribute_list",
++                keepalive=(attr_storage,security_caps,handles_array))
+ 
+             class STARTUPINFOW(C.Structure):
+                 _fields_ = [("cb", W.DWORD), ("lpReserved", W.LPWSTR), ("lpDesktop", W.LPWSTR),
+@@ -1388,26 +1666,64 @@
+             if options.get("start_new_session", False):
+                 flags |= self.CREATE_NEW_PROCESS_GROUP
+             process_info = PROCESS_INFORMATION()
+-            self._check(self.a.CreateProcessAsUserW(
++            from ._windows_t037_child import pin_native_parent
++            native_parent = pin_native_parent(self)
++            creation_parameters = (image_path, tuple(command), command_line.value)
++            require_configured_job(self, job, profile)
++            created = self.a.CreateProcessAsUserW(
+                 primary_token, image_path, command_line, None, None, True, flags,
+                 C.cast(environment, C.c_void_p) if environment is not None else None,
+-                cwd, C.byref(startup), C.byref(process_info)),
+-                "CreateProcessAsUserW(STARTUPINFOEX/SecurityCapabilities)")
++                cwd, C.byref(startup), C.byref(process_info))
+             process_handle, thread_handle = process_info.hProcess, process_info.hThread
+-            if not process_handle or not thread_handle or int(process_info.dwProcessId) <= 0:
++            complete = bool(created and process_handle and thread_handle and int(process_info.dwProcessId) > 0)
++            if process_handle or thread_handle:
++                retained_child = _RetainedSuspendedChild(
++                    self, process_handle, int(process_info.dwProcessId), command, thread_handle, job,
++                    seal=_NATIVE_SUSPENDED_CHILD_SEAL, creation_confirmed=complete)
++                retained_child._launch_profile_sha256 = profile.sha256
++                retained_child._launch_role = role
++                retained_child._resume_epoch = 0
++                retained_child._creation_parameters = creation_parameters
++                retained_child._creation_parameter_digests = {
++                    "classification": "ACTUAL_CREATEPROCESS_PARAMETERS_NOT_REMOTE_READBACK",
++                    "argv_sha256": hashlib.sha256(json.dumps(creation_parameters[1],
++                        ensure_ascii=False, separators=(",", ":")).encode("utf-8")).hexdigest(),
++                    "command_line_sha256": hashlib.sha256(creation_parameters[2].encode("utf-16-le")).hexdigest(),
++                    "application_name_sha256": hashlib.sha256(creation_parameters[0].encode("utf-16-le")).hexdigest(),
++                }
++                retained_child._parent_binding = native_parent
++            self._check(created, "CreateProcessAsUserW(STARTUPINFOEX/SecurityCapabilities)")
++            if not complete:
+                 _refuse(ERROR_UNSUPPORTED, "CreateProcessAsUserW returned incomplete process identity")
++            require_configured_job(self, job, profile)
+             self._check(self.k.AssignProcessToJobObject(job, process_handle), "AssignProcessToJobObject(shared session job)")
+ 
++            if image_api.source_fingerprint(image_handle) != image_fingerprint:
++                _refuse(ERROR_POLICY_UNVERIFIED, "pinned image file identity changed during native creation")
+             observed_path = self.process_image_path(process_handle)
+             if ntpath.normcase(ntpath.abspath(observed_path)) != ntpath.normcase(image_path):
+                 _refuse(ERROR_POLICY_UNVERIFIED, "suspended process image path differs from the pinned executable")
+             child_token = W.HANDLE()
+-            self._check(self.a.OpenProcessToken(process_handle, self.TOKEN_QUERY, C.byref(child_token)),
++            self._check(self.a.OpenProcessToken(process_handle, self.TOKEN_QUERY | 0x2, C.byref(child_token)),
+                         "OpenProcessToken(suspended child)")
++            token_owner = _RetainedChildToken(self, child_token, retained_child, seal=_NATIVE_CHILD_TOKEN_SEAL)
++            if not hasattr(self, "_retained_child_tokens"):
++                self._retained_child_tokens = {}
++            self._retained_child_tokens[id(token_owner)] = token_owner
+             try:
+                 observed = self.read_token(child_token)
++                from ._windows_t037_acl import check_suspended_child_dacl
++                self._last_child_dacl_observation = check_suspended_child_dacl(
++                    profile, process_handle, child_token, int(process_info.dwProcessId), self)
+             finally:
+-                self.close_handle(child_token)
++                try:
++                    token_owner.release_owned(self)
++                except BaseException as error:
++                    launch_release_failures.append(("child_token", error))
++                    if not hasattr(self, "_retained_launch_cleanup"):
++                        self._retained_launch_cleanup = []
++                    self._retained_launch_cleanup.append(("child_token", token_owner.release_owned, (self,), error))
++                    raise
+             if (observed.get("state") != "OBSERVED" or observed.get("is_appcontainer") is not True
+                     or observed.get("user_sid", "").casefold() != profile.service_account_sid.casefold()
+                     or observed.get("appcontainer_sid", "").casefold() != profile.appcontainer_sid.casefold()
+@@ -1418,7 +1734,18 @@
+             birth, _exit = self.process_times(process_handle)
+             if birth <= 0:
+                 _refuse(ERROR_UNSUPPORTED, "suspended child birth identity is unavailable")
+-            resumed = int(self.k.ResumeThread(thread_handle))
++            # DACL observation is not MIC/WFP/quota/vendor or a child-bound
++            # launch proof. Even a direct low-level call must fail before Resume.
++            from ._windows_t037_child import observe_retained_child
++            child_binding = observe_retained_child(retained_child, profile, self, parent=native_parent)
++            if (image_api.source_fingerprint(image_handle) != image_fingerprint
++                    or not _constant_digest_equal(self._hash_image_handle(image_api, image_handle,
++                                                                         image_fingerprint[1]), expected_hash)):
++                _refuse(ERROR_POLICY_UNVERIFIED, "pinned image file changed during child observations")
++            from ._windows_t037_resume import issue_native_resume, resume_native_child
++            capability = issue_native_resume(retained_child, profile, child_binding,
++                                             self._last_child_dacl_observation)
++            resumed = resume_native_child(retained_child, capability)
+             if resumed == 0xFFFFFFFF:
+                 self._check(False, "ResumeThread(exact suspended main thread)")
+             if resumed != 1:
+@@ -1428,46 +1755,59 @@
+             process = _Win32ChildProcess(self, process_handle, int(process_info.dwProcessId), command)
+             process_handle = None
+             return process
+-        except BaseException:
+-            # Never return a child whose token/job/image state is unknown.  It
+-            # is still suspended until every check passes.
+-            if process_handle:
++        except BaseException as cause:
++            if retained_child is not None:
+                 try:
+-                    self.k.TerminateProcess(process_handle, 1)
+-                    self.k.WaitForSingleObject(process_handle, 5000)
+-                except Exception:
+-                    pass
+-            if thread_handle:
+-                try:
+-                    self.close_handle(thread_handle)
+-                except Exception:
+-                    pass
+-            if process_handle:
+-                try:
+-                    self.close_handle(process_handle)
+-                except Exception:
+-                    pass
++                    retained_child.cleanup_owned(self, timeout=5)
++                except BaseException as cleanup_error:
++                    if not hasattr(self, "_retained_children"):
++                        self._retained_children = {}
++                    self._retained_children[id(retained_child)] = retained_child
++                    raise NativeSuspendedChildLaunchError(
++                        retained_child, cause, cleanup_error, seal=_NATIVE_SUSPENDED_CHILD_SEAL) from cause
++                finally:
++                    # The wrapper owns both native process/thread handles.
++                    process_handle = thread_handle = None
++            elif process_handle or thread_handle:
++                # No validated CreateProcess identity exists for a malformed
++                # partial response. Do not infer safe cleanup or PID ownership.
++                self._unclassified_create_handles = (process_handle, thread_handle)
++                _refuse("NATIVE_CHILD_CREATION_UNKNOWN", "partial native creation handles require owned recovery")
+             raise
+         finally:
+-            if attribute_pointer:
+-                self.k.DeleteProcThreadAttributeList(attribute_pointer)
+-            if primary_token.value:
+-                self.close_handle(primary_token)
+-            if app_sid.value:
+-                self.k.LocalFree(app_sid)
+-            for sid in sid_allocations:
+-                if sid.value:
+-                    self.k.LocalFree(sid)
+-            for handle in reversed(duplicate_handles):
++            pending_error = sys.exc_info()[1]
++            release_failures = launch_release_failures
++            def release(label, callback, *args, free_result=False):
+                 try:
+-                    self.close_handle(handle)
+-                except Exception:
+-                    pass
+-            try:
+-                image_api.close(image_handle)
+-            finally:
+-                for handle in reversed(parent_handles):
+-                    image_api.close(handle)
++                    result = callback(*args)
++                    if free_result and result:
++                        raise RuntimeError("native allocation release was not confirmed")
++                except BaseException as error:
++                    release_failures.append((label, error))
++                    # Retain the actual adapter/call target and original handle,
++                    # never a wire/PID reconstruction or a silent retry.
++                    if not hasattr(self, "_retained_launch_cleanup"):
++                        self._retained_launch_cleanup = []
++                    self._retained_launch_cleanup.append((label, callback, args, error))
++            release_failures.extend(registry.drain(launch_scope))
++            if native_parent is not None:
++                release("native_parent", native_parent.close)
++            if release_failures:
++                diagnostics = tuple({"stage": label, "exception_type": type(error).__name__}
++                                    for label, error in release_failures)
++                if retained_child is not None:
++                    if not hasattr(self, "_retained_children"):
++                        self._retained_children = {}
++                    self._retained_children[id(retained_child)] = retained_child
++                    handoff = NativeSuspendedChildLaunchError(retained_child,
++                        pending_error or release_failures[0][1], release_failures[0][1],
++                        seal=_NATIVE_SUSPENDED_CHILD_SEAL)
++                    handoff.original_launch_error = pending_error
++                    handoff.cleanup_failures = diagnostics
++                    handoff.details["ancillary_cleanup_failures"] = diagnostics
++                    raise handoff from release_failures[0][1]
++                _refuse("NATIVE_LAUNCH_RELEASE_UNKNOWN", "native launch ancillary handles remain owned",
++                        ancillary_cleanup_failures=diagnostics)
+ 
+     def poll_process(self, process: Any) -> int | None:
+         result = int(self.k.WaitForSingleObject(process, 0))
+@@ -1503,7 +1843,7 @@
+     """Create a deterministic plan-only host change manifest."""
+     if profile is None:
+         _refuse(ERROR_PROFILE_INVALID, "a trusted profile is required to render the T037 changes plan")
+-    return {
++    result = {
+         "schema": "comsol-mcp.windows-t037-change-manifest/1",
+         "profile_id": profile.profile_id,
+         "profile_sha256": profile.source_sha256,
+@@ -1530,6 +1870,16 @@
+         "restore_state": "NOT_RUN",
+         "native_windows_state": "NOT_RUN",
+     }
++
++    if type(profile) is WindowsT037ProfileV2 and profile.wrapper_schema == PROFILE_SCHEMA_V3:
++        from ._windows_job_limits import require_limits
++        result["profile_wrapper_schema"] = PROFILE_SCHEMA_V3
++        result["job_limits_sha256"] = require_limits(profile).sha256
++        for item in result["changes"]:
++            if item["id"] == "job-memory":
++                item.update(state="TARGET_CONFIGURED_NATIVE_NOT_RUN", targets=require_limits(profile).as_dict(),
++                    reason="explicit committed-memory/active-process targets; owned Job SDK path implemented, native not run; no isolation proof")
++    return result
+ 
+ 
+ def apply_changes_manifest(_manifest: Mapping[str, Any], *, _approval: Any = None) -> None:
