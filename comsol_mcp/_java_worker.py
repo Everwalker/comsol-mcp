@@ -532,22 +532,41 @@ class PersistentJavaWorker:
         owner = getattr(self, "_coupled_admission_owner", None)
         if owner is not None:
             timeout_s = owner.worker_transport_cap(str(data.get("type")), 30.0 if timeout_s is None else timeout_s)
+        transport_stage = "connect"
         try:
             with socket.create_connection(("127.0.0.1", self._port), timeout=5.0 if timeout_s is None else timeout_s) as conn:
                 conn.settimeout(timeout_s)
                 stream = conn.makefile("rwb")
+                transport_stage = "authentication"
                 stream.write((json.dumps({"token": self._token}) + "\n").encode()); stream.flush()
                 auth = json.loads(stream.readline())
                 if not auth.get("ok"):
-                    raise JavaWorkerError(str(auth))
+                    raise JavaWorkerError(str(auth), reply={"status": "UNKNOWN", "execution_state_unknown": True,
+                        "request_id": request_id, "transport_stage": transport_stage, "reason": "authentication_rejected"})
+                transport_stage = "request_write"
                 stream.write((json.dumps(data, separators=(",", ":")) + "\n").encode()); stream.flush()
+                transport_stage = "reply_read"
                 reply = json.loads(stream.readline())
         except (TimeoutError, socket.timeout) as exc:
             if request_id:
-                self._known_requests[str(request_id)] = {"request_id": request_id, "status": "UNKNOWN", "reason": "rpc_timeout"}
-            raise JavaWorkerTimeout("RPC timeout; worker request may still be executing; query the original request_id") from exc
+                self._known_requests.setdefault(str(request_id), {"request_id": request_id, "status": "UNKNOWN", "reason": "rpc_timeout"})
+            raise JavaWorkerTimeout("RPC timeout; worker request may still be executing; query the original request_id",
+                reply={"status": "UNKNOWN", "execution_state_unknown": True, "request_id": request_id,
+                       "transport_stage": transport_stage, "errno": getattr(exc, "errno", None)}) from exc
+        except (json.JSONDecodeError, UnicodeDecodeError, TypeError, AttributeError) as exc:
+            diagnostic = {"status": "UNKNOWN", "execution_state_unknown": True, "request_id": request_id,
+                          "reason": "protocol_error", "transport_stage": transport_stage,
+                          "cause_type": type(exc).__name__}
+            if request_id:
+                self._known_requests.setdefault(str(request_id), dict(diagnostic))
+            raise JavaWorkerError(str(exc), reply=diagnostic) from exc
         except OSError as exc:
-            raise JavaWorkerError("ENGINE_UNRESPONSIVE: Worker endpoint could not be reached") from exc
+            diagnostic = {"status": "UNKNOWN", "execution_state_unknown": True, "request_id": request_id,
+                          "reason": "transport_error", "transport_stage": transport_stage, "errno": exc.errno}
+            if request_id:
+                self._known_requests.setdefault(str(request_id), dict(diagnostic))
+            raise JavaWorkerError(f"ENGINE_UNRESPONSIVE: Worker endpoint could not be reached (stage={transport_stage}, errno={exc.errno})",
+                                  reply=diagnostic) from exc
         correlated = self._validate_request_reply(data, reply)
         self._sync_generation(reply)
         if request_id is not None and correlated:
@@ -690,6 +709,12 @@ class PersistentJavaWorker:
             self._emit_request_event("unknown", request_id=identifier, kind=kind, payload=body, status="UNKNOWN", error=str(exc))
             raise
         except JavaWorkerError as exc:
+            # No correlated return reached submit. Preserve the original cause,
+            # but make its already-recorded UNKNOWN visible to every consumer.
+            # Correlated SDK FAILED replies return normally and are observed.
+            exc.reply.update(status="UNKNOWN", execution_state_unknown=True, request_id=identifier)
+            exc.execution_state_unknown = True
+            self._known_requests.setdefault(identifier, dict(exc.reply))
             self._emit_request_event("unresponsive", request_id=identifier, kind=kind, payload=body, status="UNKNOWN", error=str(exc))
             raise
         self._emit_request_event("observed", request_id=identifier, kind=kind, payload=body, status=reply.get("status", ""), reply=_redact(reply))
@@ -866,7 +891,8 @@ class PersistentJavaWorker:
                 or type(result["method"]) is not str or result["method"] != method
                 or type(result["parameters"]) is not list or result["parameters"] != list(parameter_types)
                 or type(result["return_type"]) is not str or result["return_type"] != return_type
-                or type(result["runtime_version"]) is not str or result["runtime_version"] != _D2_COMSOL_VERSION):
+                or type(result["runtime_version"]) is not str
+                or not _d2_observed_version_matches(result["runtime_version"])):
             raise JavaWorkerError("D2 read reply signature, version, or generation differs from its exact contract", reply=reply)
         value = _decode_d2_typed_value(result["value"], self, node._generation)
         if method == "tags":
@@ -913,7 +939,7 @@ class PersistentJavaWorker:
                 or type(result.get("generation")) is not int or result["generation"] != node._generation
                 or type(result.get("tag")) is not str or result["tag"] != tag
                 or result.get("semantic_operation") != "NodeGroupList.ungroup(String)"
-                or result.get("runtime_version") != _D2_COMSOL_VERSION):
+                or not _d2_observed_version_matches(result.get("runtime_version"))):
             raise JavaWorkerError("D2 ungroup reply has invalid type, signature, version, or generation", reply=reply)
         return dict(result)
 
@@ -973,7 +999,7 @@ def _d2_read_signature(method: Any, args: tuple[Any, ...]) -> tuple[str, tuple[s
 def _require_d2_public_signature(descriptor: Mapping[str, Any], interface: str, method: str,
                                  parameters: tuple[str, ...], returns: str) -> None:
     if (not isinstance(descriptor, Mapping) or type(descriptor.get("runtime_version")) is not str
-            or descriptor.get("runtime_version") != _D2_COMSOL_VERSION):
+            or not _d2_observed_version_matches(descriptor.get("runtime_version"))):
         raise JavaWorkerError("D2 public receiver has no exact supported COMSOL version")
     interfaces = descriptor.get("interfaces")
     methods = descriptor.get("methods")
@@ -989,6 +1015,16 @@ def _require_d2_public_signature(descriptor: Mapping[str, Any], interface: str, 
                 and type(row.get("returns")) is str and row["returns"] == returns):
             return
     raise JavaWorkerError(f"D2 public receiver lacks exact {interface}.{method}{parameters} -> {returns}")
+
+
+def _d2_observed_version_matches(raw: Any) -> bool:
+    """Compare an observed private D2 version without rewriting its raw value."""
+    from ._g2_public_api import normalize_public_runtime_version
+    try:
+        semantic_version, _declaration_format = normalize_public_runtime_version(raw)
+    except ValueError:
+        return False
+    return semantic_version == _D2_COMSOL_VERSION
 
 
 def _d2_success_result(reply: Any, command: str) -> dict[str, Any]:

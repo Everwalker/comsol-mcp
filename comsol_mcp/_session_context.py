@@ -92,6 +92,10 @@ class OwnedServerProcessIdentity:
     executable: str
     listener_sockets: tuple[CanonicalSocket, ...]
     start_epoch_ms: int | None = None
+    launch_argv_sha256: str | None = None
+    executable_sha256: str | None = None
+    runtime_id: str | None = None
+    server_np: int | None = None
 
     def __post_init__(self) -> None:
         if type(self.pid) is not int or self.pid <= 0:
@@ -103,6 +107,18 @@ class OwnedServerProcessIdentity:
             raise ValueError("owned process identity requires an immutable listener socket tuple")
         if self.start_epoch_ms is not None and (type(self.start_epoch_ms) is not int or self.start_epoch_ms <= 0):
             raise ValueError("owned process start_epoch_ms must be a positive integer or null")
+        if (self.launch_argv_sha256 is not None
+                and (type(self.launch_argv_sha256) is not str or len(self.launch_argv_sha256) != 64
+                     or any(char not in "0123456789abcdef" for char in self.launch_argv_sha256))):
+            raise ValueError("owned Server launch argv digest must be lowercase SHA-256 or null")
+        if (self.executable_sha256 is not None
+                and (type(self.executable_sha256) is not str or len(self.executable_sha256) != 64
+                     or any(char not in "0123456789abcdef" for char in self.executable_sha256))):
+            raise ValueError("owned Server executable digest must be lowercase SHA-256 or null")
+        if self.runtime_id is not None and (type(self.runtime_id) is not str or not self.runtime_id):
+            raise ValueError("owned Server runtime identity must be a non-empty string or null")
+        if self.server_np is not None and (type(self.server_np) is not int or not 1 <= self.server_np <= 64):
+            raise ValueError("owned Server server_np must be an integer in [1, 64] or null")
 
     def attests_peer(self, peer: CanonicalSocket) -> bool:
         """Match exact listeners or same-family wildcard listeners at this port."""

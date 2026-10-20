@@ -282,6 +282,12 @@ def is_mutation_call(method: str, args: Sequence[Any] = (), command: str = "call
             return False
         return True
 
+    # The R26 Physics identity probe uses only the deprecated no-argument
+    # Physics.identifier() getter. The Worker enforces the exact Physics
+    # receiver. Any overload (including identifier(String)) remains a write.
+    if method == "identifier":
+        return command != "call" or len(args) != 0
+
     # Check explicit mutation prefixes first
     if method.startswith(MUTATION_METHOD_PREFIXES):
         return True

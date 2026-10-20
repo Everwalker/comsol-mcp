@@ -92,10 +92,11 @@ def validate_node_action(operation: str, arguments: Mapping[str, Any]) -> dict[s
     return body
 
 
-def _public_require(worker: Any, node: Any, interface: str, method: str, parameters: tuple[str, ...]):
+def _public_require(worker: Any, node: Any, interface: str, method: str, parameters: tuple[str, ...],
+                    returns: str | None = None):
     from ._g2_public_api import VERSION, describe_receiver, supports
     descriptor = describe_receiver(worker, node)
-    if descriptor["runtime_version"] != VERSION or not supports(descriptor, interface, method, parameters):
+    if descriptor["runtime_version"] != VERSION or not supports(descriptor, interface, method, parameters, returns):
         raise PreWriteRefusal("API_UNSUPPORTED", f"actual public receiver has no reviewed {interface}.{method}{parameters}")
     return descriptor
 
@@ -579,17 +580,165 @@ def _parse_search_budget(value: Any) -> dict[str, Any]:
     return budget
 
 
-def _collect_children(worker: Any, node: Any) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int]:
+_MODEL_ENTITY_LIST = "com.comsol.model.ModelEntityList"
+_ORDER_WITNESS_MAX_MEMBERS = 500
+
+
+def _order_failure(stage: str, exc: Exception | None = None, *, code: str | None = None,
+                   message: str | None = None) -> dict[str, Any]:
+    detail = message if message is not None else (str(exc) if exc is not None else "")
+    if len(detail) > 600:
+        detail = detail[:600] + "…(truncated)"
+    error_code = code or getattr(exc, "code", None) or (type(exc).__name__ if exc is not None else "UNVERIFIED")
+    return {"stage": stage, "code": str(error_code),
+            "error_type": type(exc).__name__ if exc is not None else None,
+            "message": detail}
+
+
+def _solver_feature_order_witness(worker: Any, solver_node: Any, solver_path: Mapping[str, Any],
+                                  children: list[dict[str, Any]], *, listing_complete: bool
+                                  ) -> tuple[dict[str, Any], int]:
+    """Read one actual solver feature-list order twice through its typed receiver.
+
+    Child display order remains the existing tag-sorted order. The witness is
+    separate and never inferred from that display list. The two stable samples
+    are not an atomic snapshot relative to other clients.
+    """
+    calls = 0
+    base = {"schema": "COMSOL_MODEL_ENTITY_LIST_INDEX_ORDER_WITNESS_V1",
+            "order_status": "UNVERIFIED", "path": dict(solver_path), "collection": "feature",
+            "max_members": _ORDER_WITNESS_MAX_MEMBERS,
+            "sample_atomicity": "TWO_STABLE_SAMPLES_NOT_ATOMIC_TO_OTHER_CLIENTS",
+            "receiver_reused_for_all_reads": True,
+            "tags_before": None, "index_samples": [], "tags_after": None,
+            "ordered_tags": None, "tag_indices": None, "receiver": None,
+            "provenance_failure": None}
+
+    def fail(stage: str, exc: Exception | None = None, *, code: str | None = None,
+             message: str | None = None) -> tuple[dict[str, Any], int]:
+        result = dict(base)
+        result["provenance_failure"] = _order_failure(stage, exc, code=code, message=message)
+        return result, calls
+
+    if not listing_complete:
+        return fail("children_listing", code="CHILDREN_LISTING_INCOMPLETE",
+                    message="the filtered public child listing is incomplete or paginated")
+    try:
+        calls += 1
+        collection = _call(solver_node, "feature")
+    except Exception as exc:
+        return fail("feature_collection", exc)
+    if collection is None:
+        return fail("feature_collection", code="COLLECTION_PROBE_FAILED",
+                    message="feature accessor returned null")
+    try:
+        calls += 1
+        descriptor = _public_require(worker, collection, _MODEL_ENTITY_LIST, "index",
+                                     ("java.lang.String",), returns="int")
+    except Exception as exc:
+        return fail("public_descriptor", exc)
+    try:
+        calls += 1
+        raw_tags = _call(collection, "tags")
+    except Exception as exc:
+        return fail("tags_before", exc)
+
+    def exact_tags(value: Any) -> list[str] | None:
+        if (not isinstance(value, (list, tuple)) or
+                not all(type(tag) is str and tag for tag in value) or
+                len(set(value)) != len(value)):
+            return None
+        return list(value)
+
+    tags_before = exact_tags(raw_tags)
+    if tags_before is None:
+        return fail("tags_before", code="INVALID_TAG_INVENTORY",
+                    message="ModelEntityList.tags() must return unique nonempty strings")
+    base["tags_before"] = list(tags_before)
+    if len(tags_before) > _ORDER_WITNESS_MAX_MEMBERS:
+        return fail("member_bound", code="ORDER_WITNESS_MEMBER_LIMIT",
+                    message=f"feature list has {len(tags_before)} members; index witness limit is {_ORDER_WITNESS_MAX_MEMBERS}")
+    child_tags = [row.get("tag") for row in children]
+    if (any(type(tag) is not str or not tag for tag in child_tags) or
+            sorted(child_tags) != sorted(tags_before)):
+        return fail("children_tag_binding", code="CHILDREN_TAG_SET_MISMATCH",
+                    message="the exact solver feature tags differ from the filtered node.children listing")
+
+    def read_sample(stage: str) -> list[dict[str, Any]]:
+        nonlocal calls
+        sample: list[dict[str, Any]] = []
+        base["index_samples"].append(sample)
+        for tag in tags_before:
+            calls += 1
+            value = _call(collection, "index", tag)
+            if type(value) is not int:
+                raise ExecutionContractError("INVALID_ORDER_INDEX",
+                    f"index({tag!r}) returned {type(value).__name__}, expected exact int")
+            if value < 0:
+                raise ExecutionContractError("INVALID_ORDER_INDEX",
+                    f"index({tag!r}) returned negative index {value}")
+            sample.append({"tag": tag, "index": value})
+        values = [row["index"] for row in sample]
+        if len(set(values)) != len(values) or sorted(values) != list(range(len(tags_before))):
+            raise ExecutionContractError("INVALID_ORDER_INDEX",
+                f"{stage} indices are not a unique contiguous 0..n-1 permutation")
+        return sample
+
+    try:
+        first = read_sample("index_sample_1")
+    except Exception as exc:
+        return fail("index_sample_1", exc)
+    try:
+        second = read_sample("index_sample_2")
+    except Exception as exc:
+        return fail("index_sample_2", exc)
+    if first != second:
+        return fail("index_stability", code="INDEX_SAMPLE_CHANGED",
+                    message="ModelEntityList.index(String) changed between the two samples")
+    try:
+        calls += 1
+        raw_after = _call(collection, "tags")
+    except Exception as exc:
+        return fail("tags_after", exc)
+    tags_after = exact_tags(raw_after)
+    base["tags_after"] = list(tags_after) if tags_after is not None else None
+    if tags_after != tags_before:
+        return fail("tags_stability", code="TAG_INVENTORY_CHANGED",
+                    message="ModelEntityList.tags() changed between the before/after observations")
+
+    ordered = [row["tag"] for row in sorted(first, key=lambda row: row["index"])]
+    worker_generation = getattr(worker, "generation", None)
+    base.update({"order_status": "VERIFIED_STABLE_TWO_SAMPLES",
+                 "receiver": {"interface": _MODEL_ENTITY_LIST, "method": "index",
+                              "parameters": ["java.lang.String"], "returns": "int",
+                              "runtime_version": descriptor["runtime_version"],
+                              "runtime_version_raw": descriptor["runtime_version_raw"],
+                              "runtime_version_format": descriptor["runtime_version_format"],
+                              "java_type": getattr(collection, "java_type", None),
+                              "worker_generation": worker_generation if type(worker_generation) is int else None},
+                 "tag_indices": first, "ordered_tags": ordered})
+    return base, calls
+
+
+def _collect_children(worker: Any, node: Any, *, collection: str | None = None) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int]:
     """Return (rows, errors, rpc_calls) for one node.
 
     Production workers expose ``probe_children`` (one engine-side batch).
     Fixture/plain workers fall back to per-collection proxy probing; that path
-    is intentionally more chatty and reports its actual call count.
+    is intentionally more chatty and reports its actual call count. An
+    explicit collection filter is applied before either worker path; omitting
+    it preserves the original all-collection probe and its completeness rules.
     """
+    candidates = ([dict(row) for row in COLLECTION_CANDIDATES]
+                  if collection is None else
+                  [dict(row) for row in COLLECTION_CANDIDATES
+                   if row["collection"] == collection])
+    if not candidates:
+        raise ExecutionContractError("INVALID_REQUEST", "collection is not a supported child collection")
     batch = getattr(worker, "probe_children", None)
     if callable(batch):
-        return _children_from_batch_reply(batch(node, list(COLLECTION_CANDIDATES)))
-    return _probe_children_via_node(node)
+        return _children_from_batch_reply(batch(node, candidates))
+    return _probe_children_via_node(node, candidates)
 
 
 def _normalise_child_row(row: Any) -> dict[str, Any] | None:
@@ -624,11 +773,11 @@ def _children_from_batch_reply(reply: Any) -> tuple[list[dict[str, Any]], list[d
     return rows, _normalise_child_errors(reply.get("errors")), 1
 
 
-def _probe_children_via_node(node: Any) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int]:
+def _probe_children_via_node(node: Any, candidates: list[Mapping[str, str]] | None = None) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int]:
     rows: list[dict[str, Any]] = []
     errors: list[dict[str, Any]] = []
     rpc = 0
-    for spec in COLLECTION_CANDIDATES:
+    for spec in (COLLECTION_CANDIDATES if candidates is None else candidates):
         collection, method = spec["collection"], spec["method"]
         rpc += 1
         try:
@@ -769,14 +918,45 @@ def _walk_fixture(worker: Any, node: Any, query: Mapping[str, Any], budget: Mapp
     return {"results": results, "errors": errors, "visited": visited, "complete": complete, "truncated_reason": truncated}
 
 
-def inspect_node(worker: Any, model_tag: str, path: Mapping[str, Any], *, include_values: bool = False) -> dict[str, Any]:
+def inspect_node(worker: Any, model_tag: str, path: Mapping[str, Any], *, include_values: bool = False,
+                 include_properties: bool = True) -> dict[str, Any]:
+    if type(include_values) is not bool:
+        raise ExecutionContractError("INVALID_REQUEST", "include_values must be a boolean")
+    if type(include_properties) is not bool:
+        raise ExecutionContractError("INVALID_REQUEST", "include_properties must be a boolean")
+    if include_values and not include_properties:
+        raise ExecutionContractError(
+            "INVALID_REQUEST", "include_values requires include_properties=true")
     model = _model(worker, model_tag)
     node = resolve_node_path(model, path)
-    result: dict[str, Any] = {"path": NodePath.from_wire(path).as_dict()}
+    parsed_path = NodePath.from_wire(path)
+    result: dict[str, Any] = {"path": parsed_path.as_dict()}
     for field, method in (("tag", "tag"), ("label", "label"), ("type_id", "getType")):
         try: result[field] = str(_call(node, method))
         except ExecutionContractError: result[field] = None
-    result["properties"] = property_schema_from_engine(node)["properties"]
+    if include_properties:
+        result["properties"] = property_schema_from_engine(node)["properties"]
+    else:
+        result["properties_requested"] = False
+        result["properties_status"] = "NOT_REQUESTED"
+        if parsed_path.segments and parsed_path.segments[-1].collection == "physics":
+            try:
+                identifier = _call(node, "identifier")
+            except ExecutionContractError as exc:
+                if exc.code != "API_UNSUPPORTED":
+                    raise
+                result.update({
+                    "identifier": None,
+                    "identifier_status": "UNAVAILABLE",
+                    "identifier_unavailable_reason": "API_UNSUPPORTED",
+                })
+            else:
+                if isinstance(identifier, str) and identifier.strip():
+                    result.update({"identifier": identifier, "identifier_status": "OBSERVED",
+                                   "identifier_unavailable_reason": None})
+                else:
+                    result.update({"identifier": None, "identifier_status": "UNAVAILABLE",
+                                   "identifier_unavailable_reason": "INVALID_OR_EMPTY_READBACK"})
     if include_values:
         # Reuse the authoritative typed getter path.  Generic PropFeature.get
         # is intentionally not used: it can collapse an empty vector and an
@@ -787,7 +967,8 @@ def inspect_node(worker: Any, model_tag: str, path: Mapping[str, Any], *, includ
 
 
 def children_node(worker: Any, model_tag: str, path: Mapping[str, Any], *, cursor: str | None = None,
-                  limit: int = 100, model_revision: int | None = None) -> dict[str, Any]:
+                  limit: int = 100, model_revision: int | None = None,
+                  collection: str | None = None) -> dict[str, Any]:
     """List every child of one node with per-level pagination.
 
     One worker batch per call on the production path.  ``complete`` is true
@@ -799,13 +980,23 @@ def children_node(worker: Any, model_tag: str, path: Mapping[str, Any], *, curso
     """
     if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 500:
         raise ExecutionContractError("INVALID_REQUEST", "limit must be between 1 and 500")
+    if collection is not None and (not isinstance(collection, str)
+                                   or collection not in {row["collection"] for row in COLLECTION_CANDIDATES}):
+        raise ExecutionContractError("INVALID_REQUEST", "collection is not a supported child collection")
     model = _model(worker, model_tag)
     node = resolve_node_path(model, path)
     parsed = NodePath.from_wire(path)
-    rows, errors, rpc_calls = _collect_children(worker, node)
+    rows, errors, rpc_calls = _collect_children(worker, node, collection=collection)
+    if collection is not None and (
+            any(row.get("collection") != collection for row in rows)
+            or any(row.get("collection") != collection for row in errors)):
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN", "worker children probe returned a collection outside the requested filter")
     rows.sort(key=lambda row: (row["collection"], row.get("tag") or ""))
     list_hash = _sha256_json(rows)
-    scope_hash = _sha256_json(parsed.as_dict())
+    scope = (parsed.as_dict() if collection is None else
+             {"path": parsed.as_dict(), "collection_filter": collection})
+    scope_hash = _sha256_json(scope)
     offset = 0
     if cursor is not None:
         payload = _cursor_decode(cursor)
@@ -823,9 +1014,21 @@ def children_node(worker: Any, model_tag: str, path: Mapping[str, Any], *, curso
         payload.update({"list_sha256": list_hash, "offset": next_offset, "total": len(rows)})
         next_cursor = _cursor_encode(payload)
     complete = next_cursor is None and not errors
-    return {"path": parsed.as_dict(), "children": page, "next_cursor": next_cursor,
-            "total": len(rows), "complete": complete, "truncated": next_cursor is not None,
-            "incomplete": bool(errors), "errors": errors, "rpc_calls": rpc_calls}
+    collection_order = None
+    if (collection == "feature" and len(parsed.segments) == 1
+            and parsed.segments[0].collection == "sol"):
+        collection_order, order_rpc_calls = _solver_feature_order_witness(
+            worker, node, parsed.as_dict(), rows,
+            listing_complete=(complete and cursor is None))
+        rpc_calls += order_rpc_calls
+    result = {"path": parsed.as_dict(), "children": page, "next_cursor": next_cursor,
+              "total": len(rows), "complete": complete, "truncated": next_cursor is not None,
+              "incomplete": bool(errors), "errors": errors, "rpc_calls": rpc_calls}
+    if collection is not None:
+        result["collection_filter"] = collection
+    if collection_order is not None:
+        result["collection_order"] = collection_order
+    return result
 
 
 def find_nodes(worker: Any, model_tag: str, query: Mapping[str, Any], *, root: Mapping[str, Any] | None = None,
@@ -884,7 +1087,8 @@ def find_nodes(worker: Any, model_tag: str, query: Mapping[str, Any], *, root: M
 
 
 def property_schema(worker: Any, model_tag: str, path: Mapping[str, Any], name: str | None = None) -> dict[str, Any]:
-    return property_schema_from_engine(resolve_node_path(_model(worker, model_tag), path), name)
+    return property_schema_from_engine(resolve_node_path(_model(worker, model_tag), path), name,
+                                        probe_has_property=name is not None)
 
 
 def property_get(worker: Any, model_tag: str, path: Mapping[str, Any], names: list[str]) -> dict[str, Any]:

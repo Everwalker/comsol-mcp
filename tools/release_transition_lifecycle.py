@@ -115,6 +115,8 @@ def dig(rows): return hashlib.sha256(json.dumps(rows,sort_keys=True,separators=(
 print(json.dumps({'installed_version':d.version,'package_root':str(pkg),'package_fingerprint':{'files':rows,'digest':dig(rows)},'distribution_fingerprint':{'distributions':distributions,'digest':dig(distributions)},'metadata_members':headers,'marker_environment':default_environment(),'capture_errors':{}}))
 '''
 
+SEALED_PHASE_SCRIPT = "import runpy,sys; helper,descriptor,sha,phase=sys.argv[1:]; sys.argv=[helper,'--descriptor',descriptor,'--sha',sha,'--phase',phase]; runpy.run_path(helper,run_name='__main__')"
+
 
 DATA_SCRIPT = r'''
 import hashlib,json,pathlib,sqlite3,sys
@@ -355,6 +357,15 @@ class Lifecycle:
     def __init__(self, args: Any, release: Any, evidence: pathlib.Path,
                  old_lock: pathlib.Path, new_lock: pathlib.Path, sandbox: str):
         self.release, self.evidence, self.sandbox = release, evidence, sandbox
+        self.external_descriptor = getattr(args, 'external_sealed_descriptor', None)
+        self.external_descriptor_sha = getattr(args, 'external_sealed_descriptor_sha', None)
+        if getattr(self, 'external_descriptor', None) is not None:
+            if getattr(args, 'synthetic_data', False):
+                raise release.ReleaseError('external sealed and synthetic lifecycle modes are mutually exclusive')
+            from tools import w26_sealed_data
+            descriptor, self.external_closure = w26_sealed_data.descriptor(self.external_descriptor, self.external_descriptor_sha)
+            if pathlib.Path(args.work_root) != pathlib.Path(descriptor['unit_root'])/'transition-work':
+                raise release.ReleaseError('sealed lifecycle work root differs from exact descriptor')
         self.steps: list[dict[str, Any]] = []
         self.failures: list[str] = []
         self.bootstrap: dict[str, str] | None = None
@@ -388,7 +399,9 @@ class Lifecycle:
         self.model_input = pathlib.Path(__file__).resolve().parents[1] / "evidence/w21_closure/windows/reviewer64_reopen01/project/review_reopen.mph"
         self.model_sha256 = "ee71658d66a92efc19c78de7742eb24c1ef3b16f1fb33b1d6814b1e79c96b9d6"
         self.model_size_bytes = 10_725_566
-        if (not self.model_input.is_file() or self.model_input.is_symlink()
+        if getattr(self, 'external_descriptor', None) is not None:
+            self.home = args.work_root/'sealed-control-home'
+        elif (not self.model_input.is_file() or self.model_input.is_symlink()
                 or self.release.sha256_file(self.model_input) != self.model_sha256
                 or self.model_input.stat().st_size != self.model_size_bytes):
             raise release.ReleaseError("fixed, reviewed COMSOL 6.4 model input is missing or changed")
@@ -495,17 +508,33 @@ class Lifecycle:
             return False
 
     def seed_old(self, py: pathlib.Path) -> None:
+        if getattr(self, 'external_descriptor', None) is not None:
+            self.checked('old-code-sealed-readonly-query', py, SEALED_PHASE_SCRIPT,
+                         self.external_arguments('old-read'))
+            return
         seed = self.checked("old-code-seed", py, DATA_SCRIPT, ["seed", str(self.home), str(self.seed)])
         self.seed_sha256 = seed["seed_sha256"]
         self.verify_seed()
 
     def verify_seed(self) -> None:
+        if getattr(self, 'external_descriptor', None) is not None:
+            from tools import w26_sealed_data
+            w26_sealed_data.descriptor(self.external_descriptor, self.external_descriptor_sha)
+            return
         if self.release.sha256_file(self.seed) != self.seed_sha256:
             self.failures.append("old-generated-seed-changed")
             raise self.release.ReleaseError("old-generated data evidence changed")
 
     def candidate_phase(self, py: pathlib.Path) -> None:
         self.verify_seed()
+        if getattr(self, 'external_descriptor', None) is not None:
+            result=self.checked('candidate-production-sealed-backup',py,SEALED_PHASE_SCRIPT,
+                                self.external_arguments('candidate-backup'))
+            self.backup_verified=result['backup']
+            self.backup_manifest_sha256=self.release.sha256_file(self.backup_manifest)
+            self.external_migration_bundle=result['migration_bundle']
+            self.candidate_pass=True
+            return
         self.project_artifact = self.checked(
             "project-authority-mph-registration", py, FULL_DATA_SCRIPT,
             ["register", str(self.home), str(self.workspace_root), str(self.model_input),
@@ -553,6 +582,14 @@ class Lifecycle:
         self.candidate_pass = True
 
     def restore_candidate(self, py: pathlib.Path) -> None:
+        if getattr(self, 'external_descriptor', None) is not None:
+            self.verify_seed()
+            if self.backup_verified is None:raise self.release.ReleaseError('sealed restore without actual verified backup')
+            result=self.checked('candidate-production-whole4-restore',py,SEALED_PHASE_SCRIPT,
+                                self.external_arguments('restore'))
+            self.full_restore_receipt=result
+            self.restore_pass=True
+            return
         if self.backup_verified is None:
             self.failures.append("restore-without-verified-backup")
             return
@@ -613,6 +650,21 @@ class Lifecycle:
         self.restore_pass = True
 
     def finish(self, py: pathlib.Path, package_pass: bool, identity_pass: bool) -> dict[str, Any]:
+        if getattr(self, 'external_descriptor', None) is not None:
+            if identity_pass and self.restore_pass:
+                result=self.checked('old-independent-sealed-restored-query',py,SEALED_PHASE_SCRIPT,
+                                    self.external_arguments('old-restored-read'))
+                self.restored_pass=result['success'] is True
+            passed=package_pass and identity_pass and self.candidate_pass and self.restore_pass and self.restored_pass and not self.failures
+            return {'status':'PASS_DISPOSABLE_CODE_DATA_LIFECYCLE' if passed else 'FAIL_OR_UNKNOWN_DATA_LIFECYCLE',
+                    'input_mode':'REAL_SEALED_R6_NO_SYNTHETIC_ROWS',
+                    'historical_old_whole_environment':'UNVERIFIED_CURRENT43_TEST_BASELINE',
+                    'package':'PASS' if package_pass else 'FAIL_OR_UNKNOWN','code_identity':'PASS' if identity_pass else 'FAIL_OR_UNKNOWN',
+                    'data':'PASS' if passed else 'FAIL_OR_UNKNOWN','offline':'PASS_PROCESS_ISOLATED' if passed else 'FAIL_OR_UNKNOWN',
+                    'steps':self.steps,'failures':self.failures,'installed_identity_checks':self.identities,
+                    'backup_storage':self.backup_verified,'full_restore':self.full_restore_receipt,
+                    'migration_bundle':getattr(self,'external_migration_bundle',None),
+                    'native':'NOT_RUN','science':'NOT_RUN','release_acceptance':'NOT_RUN','matrix_acceptance':'NOT_RUN'}
         if identity_pass and self.restore_pass:
             try:
                 self.verify_seed()
@@ -678,3 +730,6 @@ class Lifecycle:
                 "restored_storage_before_old_open": getattr(self, "restored_storage", None),
                 "backup_vs_restored_storage": differences,
                 "restore_semantics": "production full restore rebinds a verified ledger plus every registered project file into a new empty home/workspace; candidate ArtifactStore readback and old-code historical-ledger reopen are separate; native model reopen and solve remain NOT_RUN"}
+
+    def external_arguments(self, phase: str) -> list[str]:
+        return [str(pathlib.Path(__file__).with_name('w26_sealed_data.py')),str(self.external_descriptor),str(self.external_descriptor_sha),phase]

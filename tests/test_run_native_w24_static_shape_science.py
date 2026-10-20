@@ -31,53 +31,13 @@ def _sha(path: Path) -> str:
 
 
 def _shape_readback(case: str, model_tag: str, configuration_id: str = "baseline") -> dict[str, Any]:
-    configuration = next(row for row in sensitivity_configurations()
-                          if row.configuration_id == configuration_id)
-    wetting = ({"sel_wet_flat_base": [10]} if case == "flat" else {
-        "sel_wet_mesa_top": [10], "sel_wet_mesa_side": [11], "sel_wet_lower_base": [12]})
-    return {
-        "status": "STATIC_SHAPE_NATIVE_CONFIGURATION_READBACK", "native_acceptance": "NOT_RUN",
-        "case_id": case, "configuration_id": configuration_id,
-        "model_tag": model_tag, "geometry_dimension": 2,
-        "geometry_axisymmetric": True, "geometry_domain_count": 2,
-        "glue_domain_ids": [1], "gas_domain_ids": [2], "multiphase_domain_ids": [1, 2],
-        "substrate_wetting_selections": wetting,
-        "wetted_wall_features": [{"feature_tag": f"ww{index}", "surface_selection": name,
-                                   "boundary_ids": ids, "contact_angle_expression": "thetaSubstrate"}
-                                  for index, (name, ids) in enumerate(wetting.items())],
-        "axis_boundary_ids": [1], "flow_compressibility": "incompressible",
-        "pressure_reference_value": "0[Pa]", "multiphase_volume_fraction_definition": "pf",
-        "phase1_material_link": "matGlue", "phase2_material_link": "matGas",
-        "surface_tension_enabled": "on", "surface_tension_mode": "userdef",
-        "surface_tension_expression": "sigma0", "phase1_initial_value": "Fluid1phipf",
-        "phase2_initial_value": "Fluid2phipf", "phase1_initial_selection": [1],
-        "phase2_initial_selection": [2], "phase_initialization_step_type": "PhaseInitialization",
-        "transient_step_type": "Transient", "bdf_output_time_policy": "strict",
-        "output_mode": "tsteps", "stored_time_steps_policy": 1,
-        "parameter_values_and_units": {
-            "rhoGlue": {"value_si": 1200.0, "unit": "kg/m^3"},
-            "muGlue": {"value_si": 1.0, "unit": "Pa*s"},
-            "rhoGas": {"value_si": 1.2, "unit": "kg/m^3"},
-            "muGas": {"value_si": 0.018, "unit": "Pa*s"},
-            "sigma0": {"value_si": 0.03, "unit": "N/m"},
-            "epsPF": {"value_si": configuration.epsilon_m, "unit": "m"},
-            "Rdrop": {"value_si": 500e-6, "unit": "m"},
-        },
-        "configuration_readback": {
-            "configuration_id": configuration_id,
-            "mesh": {"mesh_tag": "mesh1", "custom": True,
-                     "hmax_m": configuration.mesh_hmax_m,
-                     "hmin_m": configuration.mesh_hmin_m},
-            "maximum_step_s": configuration.maximum_step_s,
-        },
-        "solution_state_readback": {
-            "status": "NO_STORED_SOLUTION_DATA",
-            "readback_method": "SolverSequence.getSize() [degrees_of_freedom, stored_solution_count]",
-            "solver_sequences": [{"solver_sequence_tag": "sol1", "degrees_of_freedom": 0,
-                                  "stored_solution_count": 0}],
-        },
-        "study_run_calls_this_action": 0,
-    }
+    # Reuse the setup suite's complete readback contract. This keeps synthetic
+    # historical receipts aligned with the production schema, including the
+    # documented, non-editable default Wetted Wall remainder and R11 solver
+    # initialization-state evidence.
+    from tests.test_w24_static_shape_managed import _readback as managed_setup_readback
+
+    return managed_setup_readback(model_tag, case, configuration_id)
 
 
 def _write_setup_receipt(path: Path, runner, case: str, binding: ManagedModelBinding) -> str:
@@ -466,7 +426,8 @@ class _FakeRunner:
 
     @staticmethod
     def _validate_no_stored_solution_data(value):
-        assert value == {"status": "NO_STORED_SOLUTION_DATA"}
+        assert value["status"] == "NO_STORED_SOLUTION_DATA"
+        assert value["solver_sequences"][0]["solutions_empty"] is True
         return value
 
     def _java_action(self, binding, *, source_role, entrypoint, arguments):

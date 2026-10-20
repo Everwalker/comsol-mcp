@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import ipaddress
 import json
+import ntpath
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -40,6 +41,23 @@ _ACCESS_LOG_LINE_RE = re.compile(
 
 def _sha256_text(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _sha256_argv(argv: Any) -> str:
+    if (type(argv) not in (list, tuple) or not argv
+            or any(type(arg) is not str or "\x00" in arg for arg in argv)):
+        raise ValueError("argument vector is malformed")
+    return hashlib.sha256(json.dumps(
+        list(argv), ensure_ascii=False, separators=(",", ":"),
+    ).encode("utf-8")).hexdigest()
 
 
 def _require_mac_isolation_adapter() -> None:
@@ -858,6 +876,609 @@ def verify_owned_server(receipt_path: str | Path, *, endpoint: str, worker_pid: 
             "endpoint": expected, "listener": listeners[0], "worker_pid": worker_pid,
             "established_client_pids": sorted({row["pid"] for row in clients}),
             "proof_scope": "owned process identity + exact IPv4 loopback listener + connected-client observation"}
+
+
+def _session_isolation_refusal(message: str, *, code: str = "ISOLATION_PROOF_REQUIRED",
+                               details: Mapping[str, Any] | None = None) -> ExecutionContractError:
+    return ExecutionContractError(
+        code, message, stage="validation",
+        details={"isolation_adapter": "active_session_owned_popen_socket",
+                 "target_operation_dispatched": False,
+                 "worker_operation_dispatched": False,
+                 **(dict(details) if isinstance(details, Mapping) else {})},
+    )
+
+
+def _verify_macos_live_command(pid: int, argv: Any, *, label: str,
+                              timeout_s: float = 2.0, admission_owner: Any = None) -> None:
+    if type(timeout_s) not in (int, float) or not 0 < timeout_s < float("inf"):
+        raise _session_isolation_refusal("the live command probe requires a finite positive timeout")
+    if (type(argv) not in (list, tuple) or not argv
+            or any(type(arg) is not str or "\x00" in arg for arg in argv)):
+        raise _session_isolation_refusal(f"the retained {label} startup command is malformed")
+    try:
+        observed = _process_snapshot(pid, timeout_s=timeout_s, admission_owner=admission_owner)
+    except Exception as exc:
+        raise _session_isolation_refusal(
+            f"the live {label} command identity probe failed",
+            code="ISOLATION_PROOF_UNAVAILABLE",
+            details={"cause_type": type(exc).__name__},
+        ) from exc
+    command = observed.get("command") if isinstance(observed, Mapping) else None
+    command_sha256 = observed.get("command_sha256") if isinstance(observed, Mapping) else None
+    if (not isinstance(observed, Mapping) or observed.get("pid") != pid
+            or not isinstance(command, str) or not command
+            or command_sha256 != _sha256_text(command)):
+        raise _session_isolation_refusal(
+            f"the live {label} command identity is unavailable",
+            code="ISOLATION_PROOF_UNAVAILABLE",
+        )
+    expected = " ".join(" ".join(argv).split())
+    if command != expected:
+        raise _session_isolation_refusal(f"the live {label} command differs from its retained startup identity")
+
+
+def _session_popen_alive(process: Any, pid: int, *, label: str) -> None:
+    if type(process) is not subprocess.Popen or type(pid) is not int or pid <= 1:
+        raise _session_isolation_refusal(
+            f"the reviewed macOS adapter requires the exact retained {label} subprocess.Popen owner",
+            code="ISOLATION_PROOF_UNAVAILABLE",
+            details={"owner_type": type(process).__name__, "platform_scope": "macOS_only"},
+        )
+    if getattr(process, "pid", None) != pid or not callable(getattr(process, "poll", None)):
+        raise _session_isolation_refusal(f"the retained {label} Popen identity changed")
+    try:
+        returncode = process.poll()
+    except Exception as exc:
+        raise _session_isolation_refusal(
+            f"the retained {label} Popen state could not be read",
+            code="ISOLATION_PROOF_UNAVAILABLE", details={"cause_type": type(exc).__name__},
+        ) from exc
+    if returncode is not None:
+        raise _session_isolation_refusal(f"the retained {label} process is terminal")
+
+
+def _verify_windows_session_owned_server(context: Any, *, backend: Any, worker: Any,
+                                          service: Any) -> dict[str, Any]:
+    """Verify the exact Windows T037 HANDLE owners and their read-only socket pair."""
+    from ._platform_process import process_identity
+    from ._runtime_installation import runtime_id_for_root
+    from ._windows_t037 import _Win32ChildProcess, _native_g2_session_launch_owner
+    from ._session_server import _server_directories, build_server_command
+    from ._session_context import (
+        CanonicalSocket, OwnedServerProcessIdentity, SessionRuntimeContext,
+        session_state_directory,
+    )
+
+    if not isinstance(context, SessionRuntimeContext):
+        raise _session_isolation_refusal("an exact active SessionRuntimeContext is required")
+    if context.backend is not backend or context.worker is not worker or context.service is not service:
+        raise _session_isolation_refusal("active SessionRuntimeContext does not match this exact backend/Worker/service")
+    if (context.server_ownership != "mcp_managed" or context.server_started_by_mcp is not True
+            or context.client_connected is not True or context.client_retired is not False):
+        raise _session_isolation_refusal("the selected session is not an active MCP-managed Server binding")
+    if (not isinstance(context.project_id, str) or not context.project_id
+            or not isinstance(context.session_id, str) or not context.session_id
+            or not isinstance(context.worker_instance_id, str) or not context.worker_instance_id
+            or not isinstance(context.runtime.runtime_id, str) or not context.runtime.runtime_id):
+        raise _session_isolation_refusal("the selected session/project/runtime identity is incomplete")
+    ledger = getattr(service, "ledger", None)
+    if (getattr(ledger, "session_id", None) != context.session_id
+            or getattr(ledger, "server_ownership", None) != "mcp_managed"):
+        raise _session_isolation_refusal("active service ledger does not match the selected owned session")
+    if (backend.service is not service or backend.worker is not worker
+            or not isinstance(getattr(backend, "worker_identity", None), Mapping)):
+        raise _session_isolation_refusal("the active ManagedBackend binding is incomplete")
+    from ._managed_backend import _RuntimeObservationBinding
+    binding = getattr(backend, "_runtime_observation_binding", None)
+    if (type(binding) is not _RuntimeObservationBinding
+            or binding.worker is not worker or binding.service is not service
+            or binding.runtime_id != context.runtime.runtime_id
+            or binding.worker_instance_id != context.worker_instance_id
+            or binding.connection_epoch != context.worker_epoch
+            or binding.server_instance_id != ledger.server_instance_id
+            or binding.endpoint != f"127.0.0.1:{context.endpoint.port}"
+            or binding.legacy is not False
+            or binding.installation_runtime_id != runtime_id_for_root(context.runtime.installation_root)):
+        raise _session_isolation_refusal("the Worker identity is not bound to this exact installed session runtime")
+    try:
+        if Path(context.project_root).resolve() != Path(backend.project_root).resolve():
+            raise _session_isolation_refusal("active project root differs from the registered session")
+    except (OSError, TypeError, ValueError) as exc:
+        raise _session_isolation_refusal("registered project root cannot be resolved",
+            code="ISOLATION_PROOF_UNAVAILABLE", details={"cause_type": type(exc).__name__}) from exc
+
+    identity_binding = backend.worker_identity
+    if (identity_binding.get("server_ownership") != "mcp_managed"
+            or identity_binding.get("runtime_id") != context.runtime.runtime_id
+            or identity_binding.get("worker_instance_id") != context.worker_instance_id
+            or identity_binding.get("connection_epoch") != context.worker_epoch
+            or identity_binding.get("server_instance_id") != ledger.server_instance_id):
+        raise _session_isolation_refusal("backend Worker/server identity differs from the selected session epoch")
+    endpoint_identity = context.endpoint
+    if (endpoint_identity.host != "127.0.0.1" or type(endpoint_identity.port) is not int
+            or not 1 <= endpoint_identity.port <= 65535
+            or type(endpoint_identity.worker_epoch) is not int or endpoint_identity.worker_epoch <= 0
+            or not isinstance(endpoint_identity.observed_peer, CanonicalSocket)
+            or endpoint_identity.observed_peer != CanonicalSocket("127.0.0.1", endpoint_identity.port)):
+        raise _session_isolation_refusal("the selected endpoint is not a bounded IPv4 loopback identity")
+    port = endpoint_identity.port
+    endpoint = f"127.0.0.1:{port}"
+    if (backend.endpoint_key != endpoint or identity_binding.get("endpoint") != endpoint
+            or context.connected_host != "127.0.0.1" or context.connected_port != port):
+        raise _session_isolation_refusal("active backend/context endpoint differs from the selected loopback endpoint")
+
+    server_identity = context.process_identity
+    server_process = context.server_handle
+    if (type(server_process) is not _Win32ChildProcess
+            or not isinstance(server_identity, OwnedServerProcessIdentity)
+            or endpoint_identity.owned_process is not server_identity
+            or type(server_identity.start_epoch_ms) is not int or server_identity.start_epoch_ms <= 0
+            or server_identity.birth != f"start_epoch_ms:{server_identity.start_epoch_ms}"
+            or server_identity.listener_sockets != (CanonicalSocket("127.0.0.1", port),)):
+        raise _session_isolation_refusal("the exact owned Server HANDLE birth/listener is incomplete")
+    server_owner = _native_g2_session_launch_owner(server_process)
+    worker_process = getattr(worker, "_process", None)
+    worker_owner = _native_g2_session_launch_owner(worker_process)
+    if (server_owner is None or worker_owner is None
+            or server_owner.role != "server" or worker_owner.role != "worker"
+            or server_identity.pid != server_owner.pid
+            or server_owner.session_factory is not worker_owner.session_factory
+            or server_owner.api is not worker_owner.api
+            or server_owner.job_handle is not worker_owner.job_handle
+            or server_owner.profile is not worker_owner.profile
+            or server_owner.profile_sha256 != worker_owner.profile_sha256
+            or server_owner.session_factory.session_id != context.session_id
+            or server_owner.session_factory._api is not server_owner.api
+            or server_owner.session_factory._job is not server_owner.job_handle
+            or server_owner.session_factory.profile is not server_owner.profile):
+        raise _session_isolation_refusal("Server/Worker do not share the exact original T037 API, factory, Job and profile")
+
+    worker_pid = worker_owner.pid
+    if (worker_process is not binding.worker_process
+            or binding.worker_native_owner is not worker_owner
+            or binding.worker_process_pid != worker_pid
+            or type(binding.worker_process_start_epoch_ms) is not int
+            or binding.worker_process_start_epoch_ms <= 0
+            or binding.worker_process_argv_sha256 != worker_owner.argv_sha256
+            or tuple(getattr(worker_process, "args", ())) != worker_owner.argv
+            or type(getattr(worker, "generation", None)) is not int
+            or binding.connection_epoch != worker.generation
+            or context.worker_epoch != worker.generation):
+        raise _session_isolation_refusal("the exact Worker HANDLE, launch argv, birth or attach epoch changed")
+
+    session_home = session_state_directory(
+        context.runtime.session_state_root, context.project_id, context.session_id,
+    ).resolve(strict=True)
+    expected_state = (session_home / "worker").resolve(strict=True)
+    worker_state = getattr(worker, "state_dir", None)
+    if (not isinstance(worker_state, (str, os.PathLike)) or Path(worker_state).is_symlink()
+            or ntpath.normcase(str(Path(worker_state).resolve(strict=True))) != ntpath.normcase(str(expected_state))
+            or binding.worker_state_dir is None
+            or ntpath.normcase(binding.worker_state_dir) != ntpath.normcase(str(expected_state))):
+        raise _session_isolation_refusal("the Worker state directory differs from this exact project/session")
+
+    directories = _server_directories(session_home / "owned-server")
+    expected_server_argv = build_server_command(
+        directories, platform_name="win32", validate_launcher=False,
+        server_np=server_identity.server_np,
+    )
+    if (server_owner.argv != tuple(expected_server_argv)
+            or server_identity.launch_argv_sha256 != _sha256_argv(expected_server_argv)
+            or server_identity.launch_argv_sha256 != server_owner.argv_sha256
+            or server_identity.runtime_id != context.runtime.runtime_id
+            or ntpath.normcase(server_identity.executable) != ntpath.normcase(server_owner.image_path)
+            or server_identity.executable_sha256 != server_owner.image_sha256):
+        raise _session_isolation_refusal("Server launch image/argv is not the exact private session/runtime command")
+
+    api = server_owner.api
+    profile = server_owner.profile
+    job = server_owner.job_handle
+    from ._windows_job_limits import require_limits, FLAGS
+    limits = require_limits(profile)
+    try:
+        job_state = api.job_snapshot(job)
+        job_pids = job_state.get("process_ids") if isinstance(job_state, Mapping) else None
+        if (not isinstance(job_state, Mapping) or job_state.get("state") != "OBSERVED"
+                or type(job_pids) is not list or len(job_pids) != len(set(job_pids))
+                or any(type(pid) is not int or pid <= 1 for pid in job_pids)
+                or server_owner.pid not in job_pids or worker_pid not in job_pids
+                or len(job_pids) > limits.active_process_limit
+                or job_state.get("process_count") != len(job_pids)
+                or job_state.get("limit_flags") != FLAGS
+                or job_state.get("active_process_limit") != limits.active_process_limit
+                or job_state.get("process_memory_limit_bytes") != limits.process_memory_limit_bytes
+                or job_state.get("job_memory_limit_bytes") != limits.job_memory_limit_bytes
+                or job_state.get("kill_on_job_close") is not False
+                or job_state.get("breakaway_allowed") is not False
+                or job_state.get("silent_breakaway_allowed") is not False
+                or not api.is_process_in_job(server_owner.process_handle, job)
+                or not api.is_process_in_job(worker_owner.process_handle, job)):
+            raise _session_isolation_refusal("original shared Job membership/limits do not match the exact Server and Worker owners")
+    except ExecutionContractError:
+        raise
+    except Exception as exc:
+        raise _session_isolation_refusal("original shared Job readback is unavailable",
+            code="ISOLATION_PROOF_UNAVAILABLE", details={"cause_type": type(exc).__name__}) from exc
+
+    def handle_birth(owner, label):
+        birth, exited = owner.api.process_times(owner.process_handle)
+        epoch_ms = birth // 10000 - 11644473600000
+        if (birth != owner.birth_filetime_100ns or exited is not None
+                or owner.process.poll() is not None or epoch_ms <= 0):
+            raise _session_isolation_refusal(f"original {label} HANDLE birth changed or process is terminal")
+        observed = process_identity(owner.pid, platform_name="nt")
+        if (not isinstance(observed, Mapping) or observed.get("alive") is not True
+                or observed.get("start_epoch_ms") != epoch_ms):
+            raise _session_isolation_refusal(f"original {label} PID no longer matches its exact HANDLE birth")
+        snap = _windows_process_snapshot(owner.pid)
+        expected_command = subprocess.list2cmdline(list(owner.argv))
+        if (not isinstance(snap, Mapping) or snap.get("pid") != owner.pid
+                or snap.get("command") != expected_command
+                or snap.get("command_sha256") != _sha256_text(expected_command)):
+            raise _session_isolation_refusal(f"live {label} command differs from its sealed native launch argv")
+        return epoch_ms
+
+    server_start = handle_birth(server_owner, "Server")
+    worker_start = handle_birth(worker_owner, "Worker")
+    if (server_start != server_identity.start_epoch_ms
+            or worker_start != binding.worker_process_start_epoch_ms):
+        raise _session_isolation_refusal("Server or Worker live kernel birth differs from its attach record")
+    rows = _windows_socket_rows(port)
+    if not isinstance(rows, list) or len(rows) != 3:
+        raise _session_isolation_refusal("Windows endpoint socket inventory contains missing or extra rows")
+    listeners = [row for row in rows if isinstance(row, Mapping) and row.get("state") == "LISTEN"]
+    established = [row for row in rows if isinstance(row, Mapping) and row.get("state") == "ESTABLISHED"]
+    if (len(listeners) != 1 or len(established) != 2
+            or listeners[0].get("pid") != server_owner.pid
+            or _loopback_port(listeners[0].get("local_endpoint")) != port
+            or any(row.get("pid") not in {server_owner.pid, worker_pid} for row in established)):
+        raise _session_isolation_refusal("Windows endpoint is shared or its listener/client ownership changed")
+    server_pairs, worker_pairs = [], []
+    for row in established:
+        local, remote = _row_connection(row)
+        local_port, remote_port = _loopback_port(local), _loopback_port(remote)
+        if local_port is None or remote_port is None:
+            raise _session_isolation_refusal("an established Windows endpoint is not an IPv4 loopback socket pair")
+        if row.get("pid") == server_owner.pid and local_port == port:
+            server_pairs.append((local_port, remote_port))
+        elif row.get("pid") == worker_pid and remote_port == port:
+            worker_pairs.append((local_port, remote_port))
+        else:
+            raise _session_isolation_refusal("an established Windows socket is not the exact Server/Worker direction")
+    if (len(server_pairs) != 1 or len(worker_pairs) != 1
+            or server_pairs[0][1] != worker_pairs[0][0]
+            or worker_pairs[0][1] != port):
+        raise _session_isolation_refusal("the exact bidirectional Server-to-Worker IPv4 socket pair is absent")
+    if (context.server_handle is not server_process or context.process_identity is not server_identity
+            or context.worker is not worker or backend.worker is not worker
+            or backend.service is not service or worker.generation != context.worker_epoch):
+        raise _session_isolation_refusal("active SessionRuntimeContext changed during endpoint verification")
+    if handle_birth(server_owner, "Server") != server_start or handle_birth(worker_owner, "Worker") != worker_start:
+        raise _session_isolation_refusal("Server or Worker HANDLE birth changed during endpoint verification")
+    return {
+        "verified": True,
+        "proof_scope": "active SessionRuntimeContext + sealed original T037 Server/Worker HANDLEs + shared configured Job + exact Windows IPv4 loopback listener and bidirectional Worker socket pair",
+        "project_id": context.project_id,
+        "session_id": context.session_id,
+        "runtime_id": context.runtime.runtime_id,
+        "worker_instance_id": context.worker_instance_id,
+        "worker_epoch": context.worker_epoch,
+        "server_pid": server_owner.pid,
+        "server_birth_filetime_100ns": server_owner.birth_filetime_100ns,
+        "server_start_epoch_ms": server_start,
+        "worker_pid": worker_pid,
+        "worker_birth_filetime_100ns": worker_owner.birth_filetime_100ns,
+        "worker_start_epoch_ms": worker_start,
+        "endpoint": endpoint,
+        "listener": dict(listeners[0]),
+        "worker_client_ephemeral_port": worker_pairs[0][0],
+        "established_client_pids": sorted({row["pid"] for row in established}),
+        "worker_health_rpc_performed": False,
+    }
+
+
+def verify_session_owned_server(context: Any, *, backend: Any, worker: Any,
+                                service: Any) -> dict[str, Any]:
+    """Prove an exact registered native session owns the live COMSOL/Worker socket pair.
+
+    This route uses the daemon's immutable SessionRuntimeContext, retained
+    Server Popen and OwnedServerProcessIdentity. Windows T037 CreateProcess
+    Windows support uses only the sealed original T037 API/HANDLE owner and
+    existing read-only process/socket probes. This route does not consult a
+    process global, environment variable, or
+    request-supplied receipt. The Worker UUID, epoch, startup Popen and state
+    directory are bound through the exact original in-process Worker object;
+    no health RPC is sent before the requested model operation.
+    """
+    try:
+        _require_isolation_adapter()
+        if sys.platform == "win32" or os.name == "nt":
+            return _verify_windows_session_owned_server(
+                context, backend=backend, worker=worker, service=service,
+            )
+        if sys.platform != "darwin" or os.name == "nt":
+            raise _session_isolation_refusal(
+                "the session-owned G2 process adapter is unavailable on this platform",
+                code="UNSUPPORTED_PLATFORM",
+                details={"platform": sys.platform, "platform_scope": "macOS_only"},
+            )
+        from ._platform_process import process_identity
+        from ._runtime_installation import runtime_id_for_root
+        from ._session_server import (
+            _server_directories, build_server_command, owned_server_preferences_directory,
+        )
+        from ._session_context import (
+            CanonicalSocket, OwnedServerProcessIdentity, SessionRuntimeContext,
+            session_state_directory,
+        )
+
+        if not isinstance(context, SessionRuntimeContext):
+            raise _session_isolation_refusal("an exact active SessionRuntimeContext is required")
+        if context.backend is not backend or context.worker is not worker or context.service is not service:
+            raise _session_isolation_refusal("active SessionRuntimeContext does not match this exact backend/Worker/service")
+        if (context.server_ownership != "mcp_managed" or context.server_started_by_mcp is not True
+                or context.client_connected is not True or context.client_retired is not False):
+            raise _session_isolation_refusal("the selected session is not an active MCP-managed Server binding")
+        if (not isinstance(context.project_id, str) or not context.project_id
+                or not isinstance(context.session_id, str) or not context.session_id
+                or not isinstance(context.worker_instance_id, str) or not context.worker_instance_id
+                or not isinstance(context.runtime.runtime_id, str) or not context.runtime.runtime_id):
+            raise _session_isolation_refusal("the selected session/project/runtime identity is incomplete")
+        if (getattr(getattr(service, "ledger", None), "session_id", None) != context.session_id
+                or getattr(getattr(service, "ledger", None), "server_ownership", None) != "mcp_managed"):
+            raise _session_isolation_refusal("active service ledger does not match the selected owned session")
+        if (not hasattr(backend, "worker_identity") or not isinstance(backend.worker_identity, Mapping)
+                or backend.service is not service or backend.worker is not worker):
+            raise _session_isolation_refusal("the active ManagedBackend binding is incomplete")
+        from ._managed_backend import _RuntimeObservationBinding
+        worker_binding = getattr(backend, "_runtime_observation_binding", None)
+        if (type(worker_binding) is not _RuntimeObservationBinding
+                or worker_binding.worker is not worker or worker_binding.service is not service
+                or worker_binding.runtime_id != context.runtime.runtime_id
+                or worker_binding.worker_instance_id != context.worker_instance_id
+                or worker_binding.connection_epoch != context.worker_epoch
+                or worker_binding.server_instance_id != service.ledger.server_instance_id
+                or worker_binding.endpoint != f"127.0.0.1:{context.endpoint.port}"
+                or worker_binding.legacy is not False
+                or worker_binding.installation_runtime_id != runtime_id_for_root(context.runtime.installation_root)):
+            raise _session_isolation_refusal(
+                "the Worker UUID/epoch is not bound to this exact Worker object and installed runtime",
+            )
+        try:
+            if Path(context.project_root).resolve() != Path(backend.project_root).resolve():
+                raise _session_isolation_refusal("the active backend project root differs from the registered session")
+        except (OSError, TypeError, ValueError) as exc:
+            raise _session_isolation_refusal(
+                "the registered session project root cannot be resolved",
+                code="ISOLATION_PROOF_UNAVAILABLE", details={"cause_type": type(exc).__name__},
+            ) from exc
+        identity_binding = backend.worker_identity
+        if (identity_binding.get("server_ownership") != "mcp_managed"
+                or identity_binding.get("runtime_id") != context.runtime.runtime_id
+                or identity_binding.get("worker_instance_id") != context.worker_instance_id
+                or identity_binding.get("connection_epoch") != context.worker_epoch
+                or identity_binding.get("server_instance_id") != service.ledger.server_instance_id):
+            raise _session_isolation_refusal("backend Worker/server binding differs from the selected session epoch")
+
+        endpoint_identity = context.endpoint
+        if (endpoint_identity.host != "127.0.0.1" or type(endpoint_identity.port) is not int
+                or not 1 <= endpoint_identity.port <= 65535 or type(endpoint_identity.worker_epoch) is not int
+                or endpoint_identity.worker_epoch <= 0 or not isinstance(endpoint_identity.observed_peer, CanonicalSocket)):
+            raise _session_isolation_refusal("the selected session endpoint is not a bounded IPv4 loopback identity")
+        port = endpoint_identity.port
+        endpoint = f"127.0.0.1:{port}"
+        if (backend.endpoint_key != endpoint or identity_binding.get("endpoint") != endpoint
+                or context.connected_host != "127.0.0.1" or context.connected_port != port):
+            raise _session_isolation_refusal("active backend/context endpoint differs from the selected loopback endpoint")
+
+        server_identity = context.process_identity
+        server_process = context.server_handle
+        if (not isinstance(server_identity, OwnedServerProcessIdentity)
+                or endpoint_identity.owned_process is not server_identity
+                or server_identity.start_epoch_ms is None
+                or server_identity.birth != f"start_epoch_ms:{server_identity.start_epoch_ms}"
+                or server_identity.listener_sockets != (CanonicalSocket("127.0.0.1", port),)
+                or not server_identity.attests_peer(endpoint_identity.observed_peer)
+                or endpoint_identity.observed_peer != CanonicalSocket("127.0.0.1", port)):
+            raise _session_isolation_refusal("the exact owned Server birth/listener does not attest the selected endpoint")
+        session_home = session_state_directory(
+            context.runtime.session_state_root, context.project_id, context.session_id,
+        ).resolve(strict=True)
+        server_directories = _server_directories(session_home / "owned-server")
+        server_command = build_server_command(
+            server_directories, platform_name="darwin", validate_launcher=False,
+            server_np=server_identity.server_np,
+        )
+        if (server_identity.runtime_id != context.runtime.runtime_id
+                or server_identity.launch_argv_sha256 != _sha256_argv(server_command)):
+            raise _session_isolation_refusal(
+                "the owned Server launch record is not bound to this runtime and exact command",
+            )
+        try:
+            preferences = owned_server_preferences_directory(
+                context.runtime, context.project_id, context.session_id,
+                server_identity, platform_name="darwin",
+            )
+        except Exception as exc:
+            raise _session_isolation_refusal(
+                "the owned Server identity does not resolve to this exact session/runtime installation",
+                details={"cause_type": type(exc).__name__},
+            ) from exc
+        expected_preferences = server_directories.preferences.resolve(strict=True)
+        executable = Path(server_identity.executable).resolve(strict=True)
+        source_executable = (Path(context.runtime.installation_root).resolve(strict=True)
+                             / "bin" / "comsol").resolve(strict=True)
+        private_executable_sha = _sha256_file(executable) if executable.is_file() else None
+        source_executable_sha = _sha256_file(source_executable) if source_executable.is_file() else None
+        if (preferences != expected_preferences or executable != Path(server_command[0]).resolve(strict=True)
+                or private_executable_sha is None or source_executable_sha is None
+                or private_executable_sha != source_executable_sha
+                or private_executable_sha != server_identity.executable_sha256):
+            raise _session_isolation_refusal(
+                "the private Server executable differs from the runtime/session launcher sealed at process birth",
+            )
+        _session_popen_alive(server_process, server_identity.pid, label="Server")
+        try:
+            server_birth_before = process_identity(server_identity.pid)
+        except Exception as exc:
+            raise _session_isolation_refusal(
+                "the Server kernel birth could not be read", code="ISOLATION_PROOF_UNAVAILABLE",
+                details={"cause_type": type(exc).__name__},
+            ) from exc
+        if (not isinstance(server_birth_before, Mapping) or server_birth_before.get("alive") is not True
+                or server_birth_before.get("start_epoch_ms") != server_identity.start_epoch_ms):
+            raise _session_isolation_refusal("the original Server Popen no longer matches its kernel birth")
+        argv = getattr(server_process, "args", None)
+        if (type(argv) not in (list, tuple) or not argv
+                or any(type(arg) is not str or "\x00" in arg for arg in argv)):
+            raise _session_isolation_refusal("the original Server Popen has no exact launcher argv")
+        if list(argv) != server_command or _sha256_argv(argv) != server_identity.launch_argv_sha256:
+            raise _session_isolation_refusal("the original Server Popen command differs from the exact owned runtime/session launch")
+
+        worker_process = getattr(worker, "_process", None)
+        worker_pid = getattr(worker_process, "pid", None)
+        _session_popen_alive(worker_process, worker_pid, label="Worker")
+        worker_state = getattr(worker, "state_dir", None)
+        expected_worker_state = session_home / "worker"
+        if (not isinstance(worker_state, (str, os.PathLike))
+                or Path(worker_state).is_symlink()
+                or Path(worker_state).resolve(strict=True) != expected_worker_state.resolve(strict=True)):
+            raise _session_isolation_refusal("the exact Worker state directory differs from this project/session")
+        if (worker_binding.worker_process is not worker_process
+                or worker_binding.worker_process_pid != worker_pid
+                or type(worker_binding.worker_process_start_epoch_ms) is not int
+                or worker_binding.worker_process_start_epoch_ms <= 0
+                or worker_binding.worker_state_dir != str(expected_worker_state.resolve(strict=True))
+                or type(getattr(worker, "generation", None)) is not int
+                or worker_binding.connection_epoch != worker.generation):
+            raise _session_isolation_refusal("the retained Worker process/state/connection epoch differs from its fixed attach binding")
+        worker_args = getattr(worker_process, "args", None)
+        if (type(worker_args) not in (list, tuple)
+                or any(type(arg) is not str or "\x00" in arg for arg in worker_args)
+                or _sha256_argv(worker_args) != worker_binding.worker_process_argv_sha256):
+            raise _session_isolation_refusal("the exact Worker Popen startup command changed after attach")
+        owner = getattr(worker, "_coupled_admission_owner", None)
+        if owner is not None:
+            from tools.w24_coupled_admission import require_admission_owner
+            owner = require_admission_owner(owner)
+            owner_server = getattr(owner, "server", None)
+            owner_handles = getattr(owner, "handles", None)
+            if (owner_server is None or owner_server.worker is not worker
+                    or owner_server.proc is not server_process or owner_server.port != port
+                    or not isinstance(owner_handles, Mapping)
+                    or set(owner_handles) != {"server", "worker"}
+                    or owner_handles.get("server") is not server_process
+                    or owner_handles.get("worker") is not worker_process):
+                raise _session_isolation_refusal("coupled admission owner differs from the selected session Popen/endpoint")
+            owner.before_effect("managed_G2_session_process_birth", 2.0)
+        _verify_macos_live_command(worker_pid, worker_args, label="Worker",
+                                   timeout_s=2.0, admission_owner=owner)
+        if getattr(worker, "generation", None) != context.worker_epoch:
+            raise _session_isolation_refusal("the exact Worker object has a different connection epoch")
+        try:
+            worker_birth_before = process_identity(worker_pid)
+        except Exception as exc:
+            raise _session_isolation_refusal(
+                "the Worker kernel birth could not be read", code="ISOLATION_PROOF_UNAVAILABLE",
+                details={"cause_type": type(exc).__name__},
+            ) from exc
+        worker_start = worker_birth_before.get("start_epoch_ms") if isinstance(worker_birth_before, Mapping) else None
+        if (not isinstance(worker_birth_before, Mapping) or worker_birth_before.get("alive") is not True
+                or type(worker_start) is not int or worker_start <= 0
+                or worker_start != worker_binding.worker_process_start_epoch_ms):
+            raise _session_isolation_refusal("the exact Worker Popen has no live kernel birth")
+
+        if owner is not None:
+            owner.wait_cap(1.01)
+        rows = _socket_rows(port, admission_owner=owner) if owner is not None else _socket_rows(port)
+        if not isinstance(rows, list) or len(rows) != 3:
+            raise _session_isolation_refusal("the endpoint socket inventory contains missing or extra client rows")
+        listeners = [row for row in rows if isinstance(row, Mapping) and row.get("state") == "LISTEN"]
+        established = [row for row in rows if isinstance(row, Mapping) and row.get("state") == "ESTABLISHED"]
+        if (len(listeners) != 1 or len(established) != 2
+                or listeners[0].get("pid") != server_identity.pid
+                or listeners[0].get("endpoint") != endpoint
+                or listeners[0].get("local_endpoint") not in (None, endpoint)
+                or any(row.get("pid") not in {server_identity.pid, worker_pid} for row in established)):
+            raise _session_isolation_refusal("the endpoint is shared or its exact listener/client ownership changed")
+        server_pairs: list[tuple[int, int]] = []
+        worker_pairs: list[tuple[int, int]] = []
+        for row in established:
+            local, remote = _row_connection(row)
+            local_port = _loopback_port(local)
+            remote_port = _loopback_port(remote)
+            if local_port is None or remote_port is None:
+                raise _session_isolation_refusal("an established endpoint is not an IPv4 loopback socket pair")
+            if row.get("pid") == server_identity.pid and local_port == port:
+                server_pairs.append((local_port, remote_port))
+            elif row.get("pid") == worker_pid and remote_port == port:
+                worker_pairs.append((local_port, remote_port))
+            else:
+                raise _session_isolation_refusal("an established socket is not the exact Server/Worker direction")
+        if (len(server_pairs) != 1 or len(worker_pairs) != 1
+                or server_pairs[0][1] != worker_pairs[0][0]
+                or worker_pairs[0][1] != port):
+            raise _session_isolation_refusal("the exact bidirectional Server-to-Worker socket pair is not present")
+
+        # Close the observation window against PID reuse, handle replacement,
+        # Worker epoch drift, or a listener/client swap during the read.
+        _session_popen_alive(server_process, server_identity.pid, label="Server")
+        _session_popen_alive(worker_process, worker_pid, label="Worker")
+        if (context.server_handle is not server_process or context.process_identity is not server_identity
+                or context.worker is not worker or backend.worker is not worker
+                or backend.service is not service or getattr(worker, "generation", None) != context.worker_epoch):
+            raise _session_isolation_refusal("the active session binding changed during endpoint verification")
+        if owner is not None:
+            owner.before_effect("managed_G2_session_process_birth_recheck", 2.0)
+        try:
+            server_birth_after = process_identity(server_identity.pid)
+            worker_birth_after = process_identity(worker_pid)
+        except Exception as exc:
+            raise _session_isolation_refusal(
+                "process birth changed or became unavailable during endpoint verification",
+                code="ISOLATION_PROOF_UNAVAILABLE", details={"cause_type": type(exc).__name__},
+            ) from exc
+        if (not isinstance(server_birth_after, Mapping) or server_birth_after.get("alive") is not True
+                or server_birth_after.get("start_epoch_ms") != server_identity.start_epoch_ms
+                or not isinstance(worker_birth_after, Mapping) or worker_birth_after.get("alive") is not True
+                or worker_birth_after.get("start_epoch_ms") != worker_start):
+            raise _session_isolation_refusal("Server or Worker kernel birth changed during endpoint verification")
+        _verify_macos_live_command(worker_pid, worker_args, label="Worker",
+                                   timeout_s=2.0, admission_owner=owner)
+        if owner is not None:
+            owner.wait_cap(1.01)
+        return {
+            "verified": True,
+            "proof_scope": "active SessionRuntimeContext + same ManagedBackend/Worker/service + original Server Popen/kernel birth + exact IPv4 loopback listener + live bidirectional Worker socket pair",
+            "project_id": context.project_id,
+            "session_id": context.session_id,
+            "runtime_id": context.runtime.runtime_id,
+            "worker_instance_id": context.worker_instance_id,
+            "worker_epoch": context.worker_epoch,
+            "server_pid": server_identity.pid,
+            "server_birth": server_identity.birth,
+            "server_start_epoch_ms": server_identity.start_epoch_ms,
+            "worker_pid": worker_pid,
+            "worker_start_epoch_ms": worker_start,
+            "endpoint": endpoint,
+            "listener": dict(listeners[0]),
+            "worker_client_ephemeral_port": worker_pairs[0][0],
+            "established_client_pids": sorted({row["pid"] for row in established}),
+            "worker_health_rpc_performed": False,
+        }
+    except ExecutionContractError as exc:
+        if exc.stage == "validation":
+            raise
+        raise _session_isolation_refusal(
+            "owned-session isolation proof failed before target operation dispatch",
+            code=exc.code, details={**exc.details, "cause_stage": exc.stage},
+        ) from exc
+    except Exception as exc:
+        raise _session_isolation_refusal(
+            "owned-session process/socket proof is unavailable before target operation dispatch",
+            code="ISOLATION_PROOF_UNAVAILABLE", details={"cause_type": type(exc).__name__},
+        ) from exc
 
 
 def configured_receipt() -> Path | None:

@@ -64,6 +64,16 @@ SOURCE_DISTRIBUTION_CLASSES = {"LOCAL_RECOVERY_ONLY", "PUBLIC_SOURCE_CANDIDATE"}
 USER_SCOPE_DECISIONS_PATH = "repository/docs/full_project_execution/USER_SCOPE_DECISIONS.json"
 OPENSSL_402_SOURCE_URL = "https://www.openssl.org/source/openssl-4.0.2.tar.gz"
 OPENSSL_402_SOURCE_SHA256 = "736b467530f916737b7031310ccb21d8218c6229e61e8e160cd1d3458cd543a8"
+HISTORICAL_INTEL_PROFILE = "historical-prebuilt-intel-cryptography-50.0.1-r1"
+HISTORICAL_INTEL_PROFILE_SCHEMA = "W26_INTEL_HISTORICAL_PREBUILT_TARGET_INPUT_V1"
+HISTORICAL_INTEL_STATIC_AUDIT_SHA256 = "b4391cd170b4f4d513da11f34d75a58a12966565ed903b7704f7b7bcf882f3cc"
+HISTORICAL_INTEL_ARCHIVE_SHA256 = "66c5ad0fd9089c721071d199835506a0e9544ccb2ed7e729239a24baa04e1521"
+HISTORICAL_INTEL_WHEEL_SHA256 = "aaadaf6690ed20966ab3fa3fdac6a5797a46d9bfdbdce4889dc5f6facf280696"
+HISTORICAL_INTEL_PROVENANCE_SHA256 = "b56d17cd67c2a6fb95e68f385a0dee57ce615fca06d6f336f9a28207c251666c"
+HISTORICAL_INTEL_LICENSE_SHA256 = "7d5450cb2d142651b8afa315b5f238efc805dad827d91ba367d8516bc9d49e7a"
+HISTORICAL_INTEL_SDIST_SHA256 = "5dd9bda1c12b4162f6ff568eeb5e0ff956c28d14406e875cfe8a63a2d414ff20"
+HISTORICAL_INTEL_OPENSSL_SHA256 = OPENSSL_402_SOURCE_SHA256
+HISTORICAL_INTEL_EXTENSION_SHA256 = "5dce9ec31c9f2ad2c80667edfe35a7dc0fd6eedec941aaecf82971e0df67a77e"
 TARGETS = {
     "win_amd64": {"platform": ("win_amd64", "any"), "pip_platforms": ("win_amd64",), "python": "3.12",
                    "markers": {"sys_platform": "win32", "platform_system": "Windows", "platform_machine": "AMD64", "os_name": "nt"}},
@@ -626,6 +636,119 @@ def verify_derived_wheel(provenance_path: pathlib.Path, wheel_path: pathlib.Path
             "source_lock_sha256": lock_sha}
 
 
+def verify_historical_prebuilt_wheel(profile: dict[str, Any], provenance_path: pathlib.Path,
+                                     wheel_path: pathlib.Path, source_lock: pathlib.Path,
+                                     openssl_license_path: pathlib.Path, target: str) -> dict[str, Any]:
+    """Revalidate the one finite archived Intel input profile at packaging time.
+
+    This deliberately does not call the historical artifact a current build and
+    does not relax ``verify_derived_wheel`` or its old default contract.
+    """
+    if target != "macos_x86_64":
+        raise ReleaseError("historical prebuilt cryptography input is only valid for macos_x86_64")
+    if (not isinstance(profile, dict) or profile.get("schema") != HISTORICAL_INTEL_PROFILE_SCHEMA
+            or profile.get("profile") != HISTORICAL_INTEL_PROFILE
+            or profile.get("status") != "PASS_STATIC_INPUT_VALIDATION_ONLY"):
+        raise ReleaseError("historical Intel profile is missing or has an unknown identity")
+    provenance_path = provenance_path.resolve(strict=True)
+    wheel_path = wheel_path.resolve(strict=True)
+    source_lock = source_lock.resolve(strict=True)
+    openssl_license_path = openssl_license_path.resolve(strict=True)
+    rows = profile.get("members", {})
+    copies = (("wheel_copy", wheel_path, HISTORICAL_INTEL_WHEEL_SHA256, False),
+              ("provenance_copy", provenance_path, HISTORICAL_INTEL_PROVENANCE_SHA256, True),
+              ("license_copy", openssl_license_path, HISTORICAL_INTEL_LICENSE_SHA256, True))
+    for key, path, digest, bind_path in copies:
+        record = profile.get(key)
+        if (not isinstance(record, dict) or bind_path and record.get("path") != str(path)
+                or record.get("sha256") != digest or record.get("bytes") != path.stat().st_size
+                or sha256_file(path) != digest):
+            raise ReleaseError(f"historical Intel {key} does not bind the exact packaged input")
+    expected_members = {
+        "wheel": ("wheelhouse/cryptography-50.0.1-cp312-abi3-macosx_12_0_x86_64.whl", 3982449, HISTORICAL_INTEL_WHEEL_SHA256),
+        "provenance": ("evidence/cryptography-x86-derived-provenance.json", 9003, HISTORICAL_INTEL_PROVENANCE_SHA256),
+        "license": ("licenses/openssl-4.0.2-LICENSE.txt", 10175, HISTORICAL_INTEL_LICENSE_SHA256),
+    }
+    if set(rows) != set(expected_members):
+        raise ReleaseError("historical Intel archive member map has an unexpected shape")
+    for name, (member, size, digest) in expected_members.items():
+        row = rows[name]
+        if row != {"member": member, "bytes": size, "sha256": digest}:
+            raise ReleaseError(f"historical Intel {name} archive member does not match the finite profile")
+    archive_record = profile.get("archive_record", {})
+    if (archive_record.get("bytes") != 27409151
+            or archive_record.get("sha256") != HISTORICAL_INTEL_ARCHIVE_SHA256
+            or profile.get("archive_sha256") != HISTORICAL_INTEL_ARCHIVE_SHA256
+            or profile.get("independent_main_static_audit_sha256") != HISTORICAL_INTEL_STATIC_AUDIT_SHA256):
+        raise ReleaseError("historical Intel archive or independent static-audit identity differs")
+    current_lock_record = profile.get("current_uv_lock_record", {})
+    lock_sha = sha256_file(source_lock)
+    if (current_lock_record.get("bytes") != source_lock.stat().st_size
+            or current_lock_record.get("sha256") != lock_sha
+            or profile.get("current_uv_lock_sdist_sha256") != HISTORICAL_INTEL_SDIST_SHA256
+            or profile.get("historical_build_full_lock_matches_current") is not False):
+        raise ReleaseError("historical Intel profile is not bound to this current uv.lock and locked sdist")
+    locked = _locked_package(source_lock, "cryptography", "50.0.1")
+    locked_sdist = str(locked.get("sdist", {}).get("hash", "")).removeprefix("sha256:")
+    if locked_sdist != HISTORICAL_INTEL_SDIST_SHA256:
+        raise ReleaseError("current uv.lock cryptography sdist differs from historical Intel profile")
+    if (provenance_path.stat().st_size != 9003 or sha256_file(provenance_path) != HISTORICAL_INTEL_PROVENANCE_SHA256
+            or openssl_license_path.stat().st_size != 10175
+            or sha256_file(openssl_license_path) != HISTORICAL_INTEL_LICENSE_SHA256):
+        raise ReleaseError("historical Intel provenance or OpenSSL license bytes differ")
+    try:
+        provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ReleaseError(f"historical Intel provenance is missing or invalid: {exc}") from exc
+    native = provenance.get("native_component", {})
+    source = provenance.get("source", {})
+    if (provenance.get("schema") != "comsol-mcp-derived-wheel/1"
+            or provenance.get("status") != "BUILD_CANDIDATE"
+            or provenance.get("target") != target
+            or provenance.get("package", {}).get("name") != "cryptography"
+            or provenance.get("package", {}).get("version") != "50.0.1"
+            or source.get("sha256") != HISTORICAL_INTEL_SDIST_SHA256
+            or provenance.get("source_lock", {}).get("sdist_sha256") != HISTORICAL_INTEL_SDIST_SHA256
+            or native.get("name") != "OpenSSL" or native.get("version") != "4.0.2"
+            or native.get("source_sha256") != HISTORICAL_INTEL_OPENSSL_SHA256
+            or native.get("linkage") != "static" or native.get("license") != "Apache-2.0"
+            or provenance.get("upstream_source_patched") is not False
+            or provenance.get("build", {}).get("cargo_locked") is not True
+            or provenance.get("build", {}).get("environment", {}).get("CARGO_NET_OFFLINE") != "true"):
+        raise ReleaseError("historical Intel provenance source, build, or license claims differ")
+    wheel_row = provenance.get("wheel", {})
+    meta = wheel_metadata(wheel_path)
+    dist, version, _tags = _wheel_dist_version(wheel_path)
+    expected_tag = "cp312-abi3-macosx_12_0_x86_64"
+    if (wheel_row.get("filename") != wheel_path.name
+            or wheel_row.get("sha256") != HISTORICAL_INTEL_WHEEL_SHA256
+            or wheel_row.get("bytes") != 3982449
+            or dist != "cryptography" or version != "50.0.1"
+            or meta["normalized_name"] != dist or meta["version"] != version
+            or meta["wheel_tags"] != [expected_tag] or wheel_row.get("tag") != expected_tag
+            or not wheel_target_check(wheel_path.name, target)
+            or not wheel_tag_identity_matches(wheel_path, meta)):
+        raise ReleaseError("historical Intel wheel identity or target tag differs")
+    audit = profile.get("native_static_audit", {})
+    if (audit.get("architecture") != "x86_64" or audit.get("filetype") != "MH_DYLIB"
+            or audit.get("minimum_os") != [12, 0, 0] or audit.get("RPATH") != []
+            or audit.get("extension_sha256") != HISTORICAL_INTEL_EXTENSION_SHA256
+            or audit.get("dynamic_libraries") != ["/usr/lib/libiconv.2.dylib", "/usr/lib/libSystem.B.dylib"]
+            or audit.get("executed") is not False):
+        raise ReleaseError("historical Intel static Mach-O audit summary differs")
+    license_row = native.get("license_file", {})
+    if (license_row.get("sha256") != HISTORICAL_INTEL_LICENSE_SHA256
+            or license_row.get("bytes") != openssl_license_path.stat().st_size):
+        raise ReleaseError("historical Intel OpenSSL license claim differs")
+    return {"profile": HISTORICAL_INTEL_PROFILE, "archive_sha256": HISTORICAL_INTEL_ARCHIVE_SHA256,
+            "static_audit_sha256": HISTORICAL_INTEL_STATIC_AUDIT_SHA256,
+            "provenance": provenance, "provenance_sha256": HISTORICAL_INTEL_PROVENANCE_SHA256,
+            "provenance_filename": provenance_path.name, "wheel": wheel_row,
+            "native_component": native, "license_path": openssl_license_path,
+            "source_lock_sha256": lock_sha, "source_sdist_sha256": locked_sdist,
+            "historical_build_full_lock_matches_current": False, "native_static_audit": audit}
+
+
 def compose_derived_wheel_lock(requirements: pathlib.Path, wheel: pathlib.Path,
                               source_lock: pathlib.Path, provenance: pathlib.Path,
                               openssl_license: pathlib.Path, target: str,
@@ -732,7 +855,11 @@ def _without_timestamps(value: Any) -> Any:
 def create_bundle_manifest(bundle: pathlib.Path, target: str, requirements: pathlib.Path,
                            source_lock: pathlib.Path | None, output_dir: pathlib.Path,
                            derived_provenance: pathlib.Path | None = None,
-                           openssl_license: pathlib.Path | None = None) -> dict[str, Any]:
+                           openssl_license: pathlib.Path | None = None,
+                           primary_notice_manifest: pathlib.Path | None = None,
+                           historical_prebuilt_profile: dict[str, Any] | None = None,
+                           historical_provenance: pathlib.Path | None = None,
+                           historical_openssl_license: pathlib.Path | None = None) -> dict[str, Any]:
     bundle = bundle.resolve(strict=True)
     requirements = requirements.resolve(strict=True)
     output_dir = output_dir.resolve()
@@ -742,8 +869,15 @@ def create_bundle_manifest(bundle: pathlib.Path, target: str, requirements: path
         raise ReleaseError("bundle and requirements lock must exist")
     if (derived_provenance is None) != (openssl_license is None):
         raise ReleaseError("derived wheel manifests require both provenance and the OpenSSL license file")
+    historical_args = (historical_prebuilt_profile, historical_provenance, historical_openssl_license)
+    if any(item is not None for item in historical_args) and not all(item is not None for item in historical_args):
+        raise ReleaseError("historical prebuilt wheel manifests require profile, provenance, and OpenSSL license")
+    if derived_provenance is not None and any(item is not None for item in historical_args):
+        raise ReleaseError("derived and historical prebuilt wheel profiles are mutually exclusive")
     if derived_provenance is not None and source_lock is None:
         raise ReleaseError("derived wheel provenance requires the source uv.lock")
+    if any(item is not None for item in historical_args) and source_lock is None:
+        raise ReleaseError("historical prebuilt wheel profile requires the source uv.lock")
     if output_dir == bundle or bundle in output_dir.parents:
         raise ReleaseError("manifest output must be outside the wheelhouse")
     output_files = [output_dir / n for n in ("PACKAGE_MANIFEST.json", "SBOM.cdx.json", "LICENSES.json")]
@@ -757,6 +891,7 @@ def create_bundle_manifest(bundle: pathlib.Path, target: str, requirements: path
         raise ReleaseError("wheelhouse is empty")
     pins = parse_hash_requirements(requirements, target)
     derived = None
+    historical = None
     if derived_provenance is not None and source_lock is not None and openssl_license is not None:
         try:
             provenance_doc = json.loads(derived_provenance.read_text(encoding="utf-8"))
@@ -768,10 +903,19 @@ def create_bundle_manifest(bundle: pathlib.Path, target: str, requirements: path
             raise ReleaseError(f"derived wheel provenance is missing or invalid: {exc}") from exc
         derived = verify_derived_wheel(derived_provenance, bundle / derived_wheel_name,
                                        source_lock, openssl_license, target)
+    if historical_prebuilt_profile is not None:
+        historical = verify_historical_prebuilt_wheel(
+            historical_prebuilt_profile, historical_provenance,
+            bundle / "cryptography-50.0.1-cp312-abi3-macosx_12_0_x86_64.whl",
+            source_lock, historical_openssl_license, target)
     if derived is not None:
         derived_pin = pins.get("cryptography")
         if derived_pin is None or derived_pin["version"] != "50.0.1" or derived["wheel"]["sha256"] not in derived_pin["hashes"]:
             raise ReleaseError("derived cryptography wheel SHA256 is absent from the target requirements lock")
+    if historical is not None:
+        historical_pin = pins.get("cryptography")
+        if historical_pin is None or historical_pin["version"] != "50.0.1" or historical["wheel"]["sha256"] not in historical_pin["hashes"]:
+            raise ReleaseError("historical cryptography wheel SHA256 is absent from the target requirements lock")
     components = []
     found: set[str] = set()
     for wheel in wheels:
@@ -798,6 +942,14 @@ def create_bundle_manifest(bundle: pathlib.Path, target: str, requirements: path
                 {"name": "release.origin", "value": "derived-from-locked-sdist"},
                 {"name": "release.source.sdist-sha256", "value": derived["provenance"]["source"]["sha256"]},
                 {"name": "release.build-provenance-sha256", "value": derived["provenance_sha256"]},
+            ])
+        if historical is not None and dist == "cryptography":
+            properties.extend([
+                {"name": "release.origin", "value": "historical-prebuilt-input"},
+                {"name": "release.archive.sha256", "value": historical["archive_sha256"]},
+                {"name": "release.static-audit.sha256", "value": historical["static_audit_sha256"]},
+                {"name": "release.source.sdist-sha256", "value": historical["source_sdist_sha256"]},
+                {"name": "release.provenance.sha256", "value": historical["provenance_sha256"]},
             ])
         components.append({"type": "library", "name": meta["name"], "version": meta["version"],
                            "purl": f"pkg:pypi/{meta['normalized_name']}@{meta['version']}",
@@ -826,11 +978,13 @@ def create_bundle_manifest(bundle: pathlib.Path, target: str, requirements: path
                "license_files": meta["license_files"]}
         manifest["wheels"].append(row)
         licenses["components"].append({k: row[k] for k in ("name", "version", "license", "license_classifiers", "license_files")})
-    if derived is not None:
-        native = derived["native_component"]
+    if derived is not None or historical is not None:
+        component_source = derived if derived is not None else historical
+        native = component_source["native_component"]
+        license_source_path = openssl_license if derived is not None else historical_openssl_license
         license_record = {"path": "licenses/openssl-4.0.2-LICENSE.txt",
-                          "bytes": openssl_license.stat().st_size,
-                          "sha256": sha256_file(openssl_license)}
+                          "bytes": license_source_path.stat().st_size,
+                          "sha256": sha256_file(license_source_path)}
         component = {"type": "library", "name": native["name"], "version": native["version"],
                      "purl": f"pkg:generic/openssl@{native['version']}",
                      "hashes": [{"alg": "SHA-256", "content": native["source_sha256"]}],
@@ -846,18 +1000,66 @@ def create_bundle_manifest(bundle: pathlib.Path, target: str, requirements: path
         licenses["components"].append({"name": native["name"], "version": native["version"],
                                        "license": native["license"], "license_classifiers": [],
                                        "license_files": [license_record]})
-        manifest["derived_wheel"] = {
-            "package": "cryptography==50.0.1", "wheel": derived["wheel"],
-            "provenance": {"filename": derived["provenance_filename"], "sha256": derived["provenance_sha256"]},
-            "source_lock_sha256": derived["source_lock_sha256"],
-            "native_component": {"name": native["name"], "version": native["version"],
-                                  "source_sha256": native["source_sha256"], "linkage": native["linkage"],
-                                  "license": native["license"], "license_file": license_record},
-        }
+        if derived is not None:
+            manifest["derived_wheel"] = {
+                "package": "cryptography==50.0.1", "wheel": derived["wheel"],
+                "provenance": {"filename": derived["provenance_filename"], "sha256": derived["provenance_sha256"]},
+                "source_lock_sha256": derived["source_lock_sha256"],
+                "native_component": {"name": native["name"], "version": native["version"],
+                                      "source_sha256": native["source_sha256"], "linkage": native["linkage"],
+                                      "license": native["license"], "license_file": license_record},
+            }
+        else:
+            manifest["historical_prebuilt_wheel"] = {
+                "profile": historical["profile"], "origin": "historical-prebuilt-input",
+                "archive_sha256": historical["archive_sha256"],
+                "independent_static_audit_sha256": historical["static_audit_sha256"],
+                "package": "cryptography==50.0.1", "wheel": historical["wheel"],
+                "provenance": {"filename": historical["provenance_filename"],
+                               "sha256": historical["provenance_sha256"]},
+                "current_source_lock_sha256": historical["source_lock_sha256"],
+                "current_source_sdist_sha256": historical["source_sdist_sha256"],
+                "historical_build_full_lock_matches_current": False,
+                "native_component": {"name": native["name"], "version": native["version"],
+                                      "source_sha256": native["source_sha256"], "linkage": native["linkage"],
+                                      "license": native["license"], "license_file": license_record},
+                "native_static_audit": historical["native_static_audit"],
+                "execution_or_installation_verified": False,
+            }
+    notice_inputs = {}
+    if primary_notice_manifest is not None:
+        from tools.w26_primary_notices import notice_payloads
+        notice_inputs = notice_payloads(primary_notice_manifest)
+        present = {normalized_name(row["name"]): row for row in manifest["wheels"]}
+        if not set(notice_inputs).issubset(present):
+            raise ReleaseError("primary notice package absent from target wheelhouse")
+        manifest["primary_notices"] = []
+        for name, notice in sorted(notice_inputs.items()):
+            row = present[name]
+            if row["version"] != "12.2.2" or row["sha256"] != notice["wheel_sha256"]:
+                raise ReleaseError("primary notice does not bind the actual same-version wheel")
+            record = {"path": notice["relative_path"], "bytes": len(notice["license_bytes"]),
+                      "sha256": hashlib.sha256(notice["license_bytes"]).hexdigest(),
+                      "provenance": notice["provenance"]}
+            manifest["primary_notices"].append(record)
+            component = next(item for item in licenses["components"] if normalized_name(item["name"]) == name)
+            component["primary_source_notices"] = [record]
+            sbom_component = next(item for item in components if normalized_name(item["name"]) == name)
+            sbom_component["properties"].append({"name": "release.primary-notice.sha256", "value": record["sha256"]})
     sbom = {"bomFormat": "CycloneDX", "specVersion": "1.5", "version": 1,
             "metadata": {"timestamp": utc_now(), "component": {"type": "application", "name": "comsol-mcp-offline-bundle", "version": "candidate"}},
             "components": components}
     output_dir.mkdir(parents=True, exist_ok=True)
+    if notice_inputs:
+        notice_root = output_dir / "notices"
+        if notice_root.exists() or notice_root.is_symlink():
+            raise ReleaseError("primary notice output requires fresh no-clobber directory")
+        notice_root.mkdir(mode=0o700)
+    for notice in notice_inputs.values():
+        destination = output_dir / notice["relative_path"]
+        destination.parent.mkdir(mode=0o700, exist_ok=False)
+        with destination.open("xb") as stream:
+            stream.write(notice["license_bytes"])
     _json_write(output_dir / "SBOM.cdx.json", sbom)
     _json_write(output_dir / "LICENSES.json", licenses)
     manifest["evidence_files"] = {
@@ -956,7 +1158,11 @@ def package_wheelhouse_bundle(wheelhouse: pathlib.Path, requirements: pathlib.Pa
                               build_evidence: pathlib.Path,
                               tool_path: pathlib.Path | None = None,
                               derived_provenance: pathlib.Path | None = None,
-                              openssl_license: pathlib.Path | None = None) -> dict[str, Any]:
+                              openssl_license: pathlib.Path | None = None,
+                              primary_notice_manifest: pathlib.Path | None = None,
+                              historical_prebuilt_profile: dict[str, Any] | None = None,
+                              historical_provenance: pathlib.Path | None = None,
+                              historical_openssl_license: pathlib.Path | None = None) -> dict[str, Any]:
     """Package a target wheelhouse and its complete install/audit metadata."""
     wheelhouse = wheelhouse.resolve(strict=True)
     requirements = requirements.resolve(strict=True)
@@ -967,9 +1173,17 @@ def package_wheelhouse_bundle(wheelhouse: pathlib.Path, requirements: pathlib.Pa
     tool_path = (tool_path or pathlib.Path(__file__)).resolve(strict=True)
     if (derived_provenance is None) != (openssl_license is None):
         raise ReleaseError("derived wheel bundles require both provenance and the OpenSSL license file")
+    historical_args = (historical_prebuilt_profile, historical_provenance, historical_openssl_license)
+    if any(item is not None for item in historical_args) and not all(item is not None for item in historical_args):
+        raise ReleaseError("historical prebuilt wheel bundles require profile, provenance, and OpenSSL license")
+    if derived_provenance is not None and any(item is not None for item in historical_args):
+        raise ReleaseError("derived and historical prebuilt wheel profiles are mutually exclusive")
     if derived_provenance is not None:
         derived_provenance = derived_provenance.resolve(strict=True)
         openssl_license = openssl_license.resolve(strict=True)
+    if historical_provenance is not None:
+        historical_provenance = historical_provenance.resolve(strict=True)
+        historical_openssl_license = historical_openssl_license.resolve(strict=True)
     archive_path = archive_path.resolve()
     evidence_dir.mkdir(parents=True, exist_ok=True)
     if target not in TARGETS:
@@ -1012,13 +1226,17 @@ def package_wheelhouse_bundle(wheelhouse: pathlib.Path, requirements: pathlib.Pa
         raise ReleaseError("wheelhouse manifest source lock hash does not match the selected source lock")
     if (package_manifest.get("derived_wheel") is not None) != (derived_provenance is not None):
         raise ReleaseError("derived wheel manifest and bundle inputs disagree")
+    if (package_manifest.get("historical_prebuilt_wheel") is not None) != (historical_prebuilt_profile is not None):
+        raise ReleaseError("historical prebuilt wheel manifest and bundle inputs disagree")
     if derived_provenance is not None:
         if package_manifest.get("derived_wheel", {}).get("provenance", {}).get("sha256") != sha256_file(derived_provenance):
             raise ReleaseError("derived wheel provenance hash does not match the package manifest")
     # Re-audit immediately before packaging so an altered wheel cannot ride on an old manifest.
     with tempfile.TemporaryDirectory(prefix=f"manifest-recheck-{target}-", dir=evidence_dir) as temp:
         verified = create_bundle_manifest(wheelhouse, target, requirements, source_lock,
-                                          pathlib.Path(temp) / "metadata", derived_provenance, openssl_license)
+                                          pathlib.Path(temp) / "metadata", derived_provenance, openssl_license,
+                                          primary_notice_manifest, historical_prebuilt_profile,
+                                          historical_provenance, historical_openssl_license)
         rechecked_metadata = pathlib.Path(temp) / "metadata"
         rechecked_sbom = json.loads((rechecked_metadata / "SBOM.cdx.json").read_text(encoding="utf-8"))
         rechecked_licenses = json.loads((rechecked_metadata / "LICENSES.json").read_text(encoding="utf-8"))
@@ -1026,6 +1244,10 @@ def package_wheelhouse_bundle(wheelhouse: pathlib.Path, requirements: pathlib.Pa
         raise ReleaseError("wheelhouse contents changed since the supplied package manifest")
     if verified.get("derived_wheel") != package_manifest.get("derived_wheel"):
         raise ReleaseError("derived wheel/component metadata changed since the supplied package manifest")
+    if verified.get("historical_prebuilt_wheel") != package_manifest.get("historical_prebuilt_wheel"):
+        raise ReleaseError("historical prebuilt wheel/component metadata changed since the supplied package manifest")
+    if verified.get("primary_notices") != package_manifest.get("primary_notices"):
+        raise ReleaseError("primary notice provenance changed since the supplied manifest")
     for filename, expected in (("SBOM.cdx.json", rechecked_sbom), ("LICENSES.json", rechecked_licenses)):
         try:
             supplied = json.loads((metadata_dir / filename).read_text(encoding="utf-8"))
@@ -1063,6 +1285,19 @@ def package_wheelhouse_bundle(wheelhouse: pathlib.Path, requirements: pathlib.Pa
             ("evidence/cryptography-x86-derived-provenance.json", derived_provenance),
             ("licenses/openssl-4.0.2-LICENSE.txt", openssl_license),
         ])
+    if historical_provenance is not None and historical_openssl_license is not None:
+        files.extend([
+            ("evidence/cryptography-x86-historical-prebuilt-provenance.json", historical_provenance),
+            ("licenses/openssl-4.0.2-LICENSE.txt", historical_openssl_license),
+        ])
+    for notice in package_manifest.get("primary_notices", []):
+        relative = notice["path"]
+        if safe_relative(relative) != relative or not relative.startswith("notices/"):
+            raise ReleaseError("unsafe primary notice bundle path")
+        path = metadata_dir / relative
+        if path.is_symlink() or not path.is_file() or path.stat().st_size != notice["bytes"] or sha256_file(path) != notice["sha256"]:
+            raise ReleaseError("primary notice payload changed since manifest")
+        files.append((relative, path))
     bundle_wheels, bundle_metadata_sidecars = flat_wheel_inventory(wheelhouse)
     files.extend((f"wheelhouse/{wheel.name}", wheel) for wheel in bundle_wheels)
     install_notes = (
@@ -2459,11 +2694,68 @@ def _windows_process_rows_guard(rows: Any, root_text: str, current_pid: int) -> 
     return {"status": "CLEAR", "reason": "all process rows were complete and no process references the install root", "pids": []}
 
 
+def _framework_prerequisite_guard(root: pathlib.Path) -> dict[str, Any] | None:
+    """Observed Darwin framework launchers lose the lexical venv process path."""
+    if sys.platform != "darwin":
+        return None
+    config = root / "pyvenv.cfg"
+    if not config.exists() and not config.is_symlink():
+        return None  # Normal process inventory still decides; no safety PASS inferred.
+    try:
+        if config.is_symlink() or config.absolute() != config.resolve(strict=True):
+            raise ValueError("venv configuration is not a canonical regular file")
+        fd = os.open(config, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        try:
+            first = os.fstat(fd)
+            if (not stat_module.S_ISREG(first.st_mode) or first.st_uid != os.getuid()
+                    or first.st_nlink != 1 or first.st_mode & 0o022 or first.st_size > 16384):
+                raise ValueError("venv configuration ownership or mode differs")
+            raw = os.read(fd, 16385)
+            identity = lambda st: (st.st_dev, st.st_ino, st.st_uid, st.st_mode, st.st_nlink,
+                                   st.st_size, st.st_mtime_ns, st.st_ctime_ns)
+            if (len(raw) != first.st_size or identity(first) != identity(os.fstat(fd))
+                    or identity(first) != identity(config.lstat())):
+                raise ValueError("venv configuration changed while observed")
+        finally:
+            os.close(fd)
+        fields = {}
+        for line in raw.decode("utf-8").splitlines():
+            if not line.strip():
+                continue
+            key, separator, value = line.partition("=")
+            key, value = key.strip(), value.strip()
+            if not separator or not key or key in fields:
+                raise ValueError("venv configuration fields are malformed or repeated")
+            fields[key] = value
+        for key in ("home", "executable"):
+            text = fields.get(key)
+            if not text:
+                continue
+            path = pathlib.Path(text)
+            if not path.is_absolute():
+                raise ValueError("base-runtime metadata path is not absolute")
+            observed = path.resolve(strict=True)
+            if any(part.endswith(".framework") for part in observed.parts):
+                return {"status": "UNKNOWN", "pids": [],
+                        "reason": "Darwin Framework launcher can hide the venv path from process inventory; safe uninstall is unverified",
+                        "prerequisite": {"kind": "OBSERVED_FRAMEWORK_BASE_RUNTIME", "field": key,
+                                         "path": str(observed), "pyvenv_cfg_sha256": hashlib.sha256(raw).hexdigest(),
+                                         "safe_uninstall": "BLOCKED_UNKNOWN"}}
+    except (OSError, ValueError, UnicodeError) as exc:
+        return {"status": "UNKNOWN", "pids": [],
+                "reason": "venv base-runtime metadata cannot establish uninstall safety: " + str(exc)}
+    return None
+
+
 def _process_guard(root: pathlib.Path) -> dict[str, Any]:
     """Fail closed if a process may still be using the isolated interpreter."""
     root_text = os.path.normcase(str(root)).replace("\\", "/")
     if pathlib.Path(sys.prefix).resolve(strict=False) == root:
         return {"status": "BUSY", "reason": "release command is running from the install being removed", "pids": [os.getpid()]}
+
+    prerequisite = _framework_prerequisite_guard(root)
+    if prerequisite is not None:
+        return prerequisite
 
     if os.name == "nt":
         powershell = shutil.which("powershell.exe") or shutil.which("pwsh.exe")
@@ -2474,7 +2766,7 @@ def _process_guard(root: pathlib.Path) -> dict[str, Any]:
             "ConvertTo-Json -InputObject $rows -Compress"
         )
         try:
-            proc = subprocess.run([powershell, "-NoProfile", "-NonInteractive", "-Command", script],
+            proc = _capture([powershell, "-NoProfile", "-NonInteractive", "-Command", script],
                                   capture_output=True, text=True, timeout=15)
         except (OSError, subprocess.TimeoutExpired):
             return {"status": "UNKNOWN", "reason": "PowerShell process inventory failed or timed out", "pids": []}
@@ -2487,7 +2779,7 @@ def _process_guard(root: pathlib.Path) -> dict[str, Any]:
         return _windows_process_rows_guard(rows, root_text, os.getpid())
 
     try:
-        proc = subprocess.run(["ps", "-axo", "pid=,ppid=,command="], capture_output=True, text=True, timeout=15)
+        proc = _capture(["ps", "-axo", "pid=,ppid=,command="], capture_output=True, text=True, timeout=15)
     except (OSError, subprocess.TimeoutExpired):
         return {"status": "UNKNOWN", "reason": "ps process inventory failed or timed out", "pids": []}
     if proc.returncode != 0 or proc.stderr.strip():
@@ -2684,11 +2976,16 @@ print(json.dumps({'python':sys.version.split()[0],'executable':sys.executable,'p
     passed = bool(parsed and identity["exit_code"] == 0 and check["exit_code"] == 0 and
                   inside_prefix and parsed["entry_points"] and parsed["entry_point_exists"] and parsed["java_sources"] and
                   parsed["action_catalogs"] and parsed["schemas"])
+    uninstall_support = _framework_prerequisite_guard(isolated_cwd)
+    if uninstall_support is not None:
+        uninstall_support = {**uninstall_support, "status": "BLOCKED_UNKNOWN"}
     return {"schema": SCHEMA, "status": "PASS" if passed else "FAIL",
             "native_engine": "NOT_PROBED", "capabilities": "UNVERIFIED",
             "source": "installed environment only", "identity": parsed,
             "installed_under_prefix": inside_prefix,
-            "import": identity, "pip_check": check}
+            "import": identity, "pip_check": check,
+            "uninstall_safety_support": uninstall_support or {
+                "status": "NOT_CHECKED", "reason": "actual process guard is required before uninstall"}}
 
 
 def package_fingerprint(venv_python: pathlib.Path) -> dict[str, Any]:
@@ -2793,12 +3090,15 @@ def offline_install(args: argparse.Namespace, script: pathlib.Path) -> dict[str,
         listener.settimeout(0.25)
         port = listener.getsockname()[1]
         profile = args.evidence / "network-deny.sb"
+        controlled = _CONTROLLED_LAUNCH.get()
+        if controlled is not None:
+            controlled.before_offline_install(args, script, listener, profile)
         with profile.open("x", encoding="utf-8") as stream:
             stream.write("(version 1)\n(deny network*)\n(allow default)\n")
         child_argv = [str(args.python), str(script), "_offline_child", "--python", str(args.python),
                       "--requirements", str(args.requirements), "--wheelhouse", str(args.wheelhouse),
                       "--venv", str(args.venv), "--port", str(port)]
-        proc = subprocess.run([sandbox, "-f", str(profile), *child_argv], capture_output=True, text=True)
+        proc = _capture([sandbox, "-f", str(profile), *child_argv], capture_output=True, text=True)
         try:
             accepted, _ = listener.accept()
             accepted.close()

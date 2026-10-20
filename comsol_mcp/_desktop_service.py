@@ -71,12 +71,17 @@ class DesktopOperationError(RuntimeError):
         category: str = UNSUPPORTED_CONTROL,
         side_effect_started: bool = False,
         safe_retry: bool = False,
+        diagnostics: Mapping[str, Any] | None = None,
     ) -> None:
         super().__init__(message)
         self.code = code
         self.category = category
         self.side_effect_started = side_effect_started
         self.safe_retry = safe_retry
+        # Optional low-level evidence is kept separate from the user-facing
+        # message so platform adapters can preserve exact failure context
+        # without encouraging callers to retry a terminal operation.
+        self.diagnostics = dict(diagnostics or {})
 
 
 @dataclass(frozen=True, slots=True)
@@ -827,6 +832,14 @@ class DesktopCoordinator:
                 self._verify_binding_after_action(project_id, token, observation, binding, context, side_effect_started=True)
                 return self._success({"selected_path": value["selected_path"], "model_ref": binding.model_ref.as_dict()}, operation=operation, record=record)
             if operation == "desktop.capture":
+                capture_preflight = getattr(self.adapter, "preflight_capture", None)
+                if callable(capture_preflight):
+                    # Platform-specific read permission (notably macOS Screen
+                    # Recording) must be checked before an active-label
+                    # challenge can mutate the managed revision or the
+                    # durable effect marker is advanced. capture() rechecks
+                    # permission immediately before issuing the platform API.
+                    capture_preflight(observation.identity, str(args["region"]))
                 binding, _ = self._verified_binding(project_id, token, observation, context, mark_effect=mark_effect)
                 mark_effect()
                 value = self.adapter.capture(observation.identity, str(args["region"]))
@@ -903,6 +916,7 @@ class DesktopCoordinator:
             self._assert_model_match(desktop, snapshot)
             active_label = None
         elif desktop.mode == "UNVERIFIED" and isinstance(desktop.active_model_label, str) and desktop.active_model_label:
+            self._assert_challenge_server_endpoint_match(desktop, snapshot)
             snapshot, active_label = self._challenge_active_model(
                 project_id, token, observation.identity, snapshot, context,
                 expected_ui_label=desktop.active_model_label, mark_effect=mark_effect,
@@ -991,6 +1005,9 @@ class DesktopCoordinator:
         before = self._engine_snapshot("desktop.binding.inspect", {"project_id": project_id}, snapshot.model_ref, context)
         if before.model_ref != snapshot.model_ref or before.fingerprint != snapshot.fingerprint:
             raise DesktopOperationError("MODEL_IDENTITY_MISMATCH", "managed ModelRef or fingerprint changed before show_model", category=MODEL_BINDING_UNKNOWN, safe_retry=True)
+        show_preflight = getattr(self.adapter, "preflight_show_model", None)
+        if callable(show_preflight):
+            show_preflight(observation.identity, before)
         mark_effect()
         value = self.adapter.show_model(observation.identity, snapshot)
         if not isinstance(value, Mapping) or value.get("verified") is not True:
@@ -1004,6 +1021,7 @@ class DesktopCoordinator:
         if after.mode == "SERVER":
             self._assert_model_match(after, snapshot, side_effect_started=True)
         elif after.mode == "UNVERIFIED" and isinstance(after.active_model_label, str) and after.active_model_label:
+            self._assert_challenge_server_endpoint_match(after, managed_after, side_effect_started=True)
             managed_after, active_label = self._challenge_active_model(
                 project_id, token, after_observation.identity, managed_after, context,
                 expected_ui_label=after.active_model_label,
@@ -1038,6 +1056,7 @@ class DesktopCoordinator:
                     self._bindings.pop(token, None)
                 raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "current Desktop model observation no longer matches the verified binding", category=MODEL_BINDING_UNKNOWN, safe_retry=True)
         elif desktop.mode == "UNVERIFIED" and binding.active_model_label is not None:
+            self._assert_challenge_server_endpoint_match(desktop, current)
             if mark_effect is None:
                 raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "native binding verification requires a durable effect marker", safe_retry=True)
             challenged, active_label = self._challenge_active_model(
@@ -1069,6 +1088,12 @@ class DesktopCoordinator:
             if desktop.mode == "SERVER":
                 self._assert_model_match(desktop, ManagedModelSnapshot(binding.model_ref, binding.server_endpoint, binding.model_tag, binding.fingerprint_at_bind), side_effect_started=side_effect_started)
             elif desktop.mode == "UNVERIFIED" and binding.active_model_label is not None:
+                self._assert_challenge_server_endpoint_match(
+                    desktop,
+                    ManagedModelSnapshot(binding.model_ref, binding.server_endpoint,
+                                         binding.model_tag, binding.fingerprint_at_bind),
+                    side_effect_started=side_effect_started,
+                )
                 _challenged, active_label = self._challenge_active_model(
                     project_id, token, current.identity, model, context,
                     expected_ui_label=desktop.active_model_label,
@@ -1307,6 +1332,27 @@ class DesktopCoordinator:
         if (desktop.mode != "SERVER" or desktop.server_endpoint != managed.server_endpoint
                 or desktop.model_tag != managed.model_tag):
             raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "Desktop current server endpoint/model tag does not match the managed ModelRef", category=MODEL_BINDING_UNKNOWN, side_effect_started=side_effect_started, safe_retry=not side_effect_started)
+
+    def _assert_challenge_server_endpoint_match(
+        self, desktop: DesktopModelObservation, managed: ManagedModelSnapshot,
+        *, side_effect_started: bool = False,
+    ) -> None:
+        """Require native endpoint evidence before using the active-label challenge.
+
+        A Worker label nonce proves the UI is showing the managed model only
+        after the UI's observed server endpoint has independently matched the
+        managed endpoint.  Label-only observations cannot establish that
+        server-bound identity.
+        """
+        endpoint = desktop.server_endpoint
+        if not isinstance(endpoint, str) or not endpoint or endpoint != managed.server_endpoint:
+            raise DesktopOperationError(
+                "MODEL_BINDING_UNKNOWN",
+                "active-model label challenge requires an exact observed Desktop server endpoint match",
+                category=MODEL_BINDING_UNKNOWN,
+                side_effect_started=side_effect_started,
+                safe_retry=not side_effect_started,
+            )
 
     def _engine_snapshot(self, operation: str, arguments: Mapping[str, Any], model_ref: ModelRef,
                          context: DesktopDispatchContext) -> ManagedModelSnapshot:

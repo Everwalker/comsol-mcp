@@ -19,6 +19,7 @@ import math
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import sysconfig
@@ -61,6 +62,8 @@ EXPRESSION_CANDIDATE_RULE = (
     "solid.s[a-z0-9_]* identifier; optional component cues are "
     "hoop/radial/circumferential/azimuthal; full raw rows are preserved; discovery only"
 )
+MAX_EXPRESSION_INVENTORY_BYTES = 64 * 1024 * 1024
+_OS_OPEN_SUPPORTS_DIR_FD = os.open in os.supports_dir_fd
 SOURCE_PATHS = {
     "coupled_admission_owner": REPO / "tools/w24_coupled_admission.py",
     "native_epoch_capability": REPO / "tools/w24_native_epoch_capability.py",
@@ -1329,28 +1332,173 @@ def _stress_candidate_cues(row: list[Any]) -> list[str]:
     return cues
 
 
-def _verify_expression_inventory(receipt: dict[str, Any], output_path: Path) -> dict[str, Any]:
-    """Verify the complete standalone native Expression-table artifact."""
-    output_path = output_path.expanduser().absolute()
+def _expression_inventory_directory_identity(metadata: os.stat_result) -> tuple[int, ...]:
+    return (metadata.st_dev, metadata.st_ino, metadata.st_mode,
+            metadata.st_uid, metadata.st_nlink)
+
+
+def _expression_inventory_file_identity(metadata: os.stat_result) -> tuple[int, ...]:
+    return (metadata.st_dev, metadata.st_ino, metadata.st_mode,
+            metadata.st_uid, metadata.st_nlink, metadata.st_size,
+            metadata.st_mtime_ns, metadata.st_ctime_ns)
+
+
+def _read_bound_expression_inventory(workspace: Path, output_path: Path,
+                                     expected_size: int) -> bytes:
+    """Open below pinned directory descriptors and reject replacement/mutation."""
+    nofollow = getattr(os, "O_NOFOLLOW", None)
+    directory_flag = getattr(os, "O_DIRECTORY", None)
+    if (not isinstance(nofollow, int) or not isinstance(directory_flag, int) or
+            not _OS_OPEN_SUPPORTS_DIR_FD):
+        raise RuntimeError("platform cannot enforce no-follow directory-relative artifact reads")
+
     try:
-        metadata = output_path.lstat()
+        relative_target = output_path.relative_to(workspace)
+    except ValueError as exc:
+        raise RuntimeError("native expression inventory artifact escaped its registered project workspace") from exc
+    if not relative_target.parts:
+        raise RuntimeError("native expression inventory target must be a file below its registered workspace")
+
+    directory_flags = os.O_RDONLY | nofollow | directory_flag
+    file_flags = os.O_RDONLY | nofollow
+    directory_fds: list[int] = []
+    directory_records: list[tuple[Path, int, tuple[int, ...]]] = []
+    file_fd: int | None = None
+    try:
+        root_fd = os.open(workspace, directory_flags)
+        directory_fds.append(root_fd)
+        root_opened = os.fstat(root_fd)
+        root_named = workspace.lstat()
+        if (not stat.S_ISDIR(root_named.st_mode) or
+                _expression_inventory_directory_identity(root_named) !=
+                _expression_inventory_directory_identity(root_opened) or
+                root_opened.st_uid != os.getuid() or
+                workspace.resolve(strict=True) != workspace):
+            raise RuntimeError("registered expression inventory workspace changed during descriptor open")
+        directory_records.append((workspace, root_fd,
+                                  _expression_inventory_directory_identity(root_opened)))
+
+        cursor = workspace
+        parent_fd = root_fd
+        for part in relative_target.parts[:-1]:
+            cursor = cursor / part
+            child_fd = os.open(part, directory_flags, dir_fd=parent_fd)
+            directory_fds.append(child_fd)
+            child_opened = os.fstat(child_fd)
+            child_named = cursor.lstat()
+            if (not stat.S_ISDIR(child_named.st_mode) or
+                    _expression_inventory_directory_identity(child_named) !=
+                    _expression_inventory_directory_identity(child_opened) or
+                    child_opened.st_uid != os.getuid() or
+                    cursor.resolve(strict=True) != cursor):
+                raise RuntimeError("native expression inventory parent changed during descriptor open")
+            directory_records.append((cursor, child_fd,
+                                      _expression_inventory_directory_identity(child_opened)))
+            parent_fd = child_fd
+
+        target_name = relative_target.parts[-1]
+        named_before = output_path.lstat()
+        if (not stat.S_ISREG(named_before.st_mode) or
+                named_before.st_uid != os.getuid() or named_before.st_nlink != 1 or
+                named_before.st_size != expected_size or
+                named_before.st_size > MAX_EXPRESSION_INVENTORY_BYTES or
+                output_path.resolve(strict=True) != output_path):
+            raise RuntimeError("native expression inventory target is not a bounded owned regular file")
+
+        file_fd = os.open(target_name, file_flags, dir_fd=parent_fd)
+        file_opened = os.fstat(file_fd)
+        named_after_open = output_path.lstat()
+        if (not stat.S_ISREG(file_opened.st_mode) or
+                file_opened.st_uid != os.getuid() or file_opened.st_nlink != 1 or
+                file_opened.st_size != expected_size or
+                _expression_inventory_file_identity(named_before) !=
+                _expression_inventory_file_identity(file_opened) or
+                _expression_inventory_file_identity(named_after_open) !=
+                _expression_inventory_file_identity(file_opened) or
+                output_path.resolve(strict=True) != output_path):
+            raise RuntimeError("native expression inventory target changed during descriptor open")
+
+        chunks: list[bytes] = []
+        remaining = expected_size
+        while remaining:
+            chunk = os.read(file_fd, min(65536, remaining))
+            if not chunk:
+                raise RuntimeError("native expression inventory ended before its reviewed receipt size")
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        if os.read(file_fd, 1):
+            raise RuntimeError("native expression inventory exceeds its reviewed receipt size")
+        data = b"".join(chunks)
+
+        file_after_read = os.fstat(file_fd)
+        named_after_read = output_path.lstat()
+        if (not stat.S_ISREG(file_after_read.st_mode) or
+                _expression_inventory_file_identity(file_opened) !=
+                _expression_inventory_file_identity(file_after_read) or
+                _expression_inventory_file_identity(named_after_read) !=
+                _expression_inventory_file_identity(file_after_read) or
+                output_path.resolve(strict=True) != output_path):
+            raise RuntimeError("native expression inventory file identity or metadata changed during verification")
+
+        for directory_path, directory_fd, identity in directory_records:
+            named_directory = directory_path.lstat()
+            opened_directory = os.fstat(directory_fd)
+            if (not stat.S_ISDIR(named_directory.st_mode) or
+                    _expression_inventory_directory_identity(named_directory) != identity or
+                    _expression_inventory_directory_identity(opened_directory) != identity or
+                    directory_path.resolve(strict=True) != directory_path):
+                raise RuntimeError("registered expression inventory directory identity changed during verification")
+        return data
     except OSError as exc:
-        raise RuntimeError(f"native expression inventory artifact is unavailable: {exc}") from exc
-    if os.path.islink(output_path) or not output_path.is_file():
-        raise RuntimeError("native expression inventory must be a regular non-symlink file")
-    output_path = output_path.resolve(strict=True)
-    if not output_path.as_posix().startswith("/private/tmp/comsol-mcp-w24-cure-"):
-        raise RuntimeError("native expression inventory artifact escaped its private W24 work tree")
+        raise RuntimeError(f"native expression inventory no-follow read failed: {exc}") from exc
+    finally:
+        if file_fd is not None:
+            try:
+                os.close(file_fd)
+            except OSError:
+                pass
+        for directory_fd in reversed(directory_fds):
+            try:
+                os.close(directory_fd)
+            except OSError:
+                pass
+
+
+def _verify_expression_inventory(receipt: dict[str, Any], output_path: Path, *,
+                                expected_workspace: Path) -> tuple[dict[str, Any], bytes]:
+    """Verify the complete standalone native Expression-table artifact."""
+    workspace = Path(expected_workspace)
+    if (not workspace.is_absolute() or
+            Path(os.path.normpath(str(workspace))) != workspace):
+        raise RuntimeError("registered expression inventory workspace must be absolute and normalized")
+    try:
+        workspace_metadata = workspace.lstat()
+    except OSError as exc:
+        raise RuntimeError(f"registered expression inventory workspace is unavailable: {exc}") from exc
+    if (stat.S_ISLNK(workspace_metadata.st_mode) or
+            not stat.S_ISDIR(workspace_metadata.st_mode) or
+            workspace.resolve(strict=True) != workspace):
+        raise RuntimeError("registered expression inventory workspace is not canonical and non-symlink")
+
+    output_path = Path(output_path)
+    if (not output_path.is_absolute() or
+            Path(os.path.normpath(str(output_path))) != output_path):
+        raise RuntimeError("native expression inventory target must be absolute and normalized")
+    if receipt.get("output_root") != str(workspace):
+        raise RuntimeError("native expression inventory receipt output_root differs from the registered workspace")
+    if receipt.get("path") != str(output_path):
+        raise RuntimeError("native expression inventory receipt path differs from the requested target")
     if receipt.get("status") != "NATIVE_EXPRESSION_INVENTORY_SAVED_NOT_EVALUATED":
         raise RuntimeError(f"native Equation View inventory is incomplete: {receipt.get('status')}")
     if (receipt.get("complete") is not True or receipt.get("read_only") is not True or
             receipt.get("model_mutations") != 0 or receipt.get("study_run_calls") != 0):
         raise RuntimeError("native Equation View receipt does not prove complete read-only zero-solve capture")
-    if receipt.get("path") != str(output_path):
-        raise RuntimeError("native Equation View receipt path differs from the requested artifact")
-    data = output_path.read_bytes()
-    if (isinstance(receipt.get("size_bytes"), bool) or
-            receipt.get("size_bytes") != len(data) or
+    expected_size = receipt.get("size_bytes")
+    if (isinstance(expected_size, bool) or not isinstance(expected_size, int) or
+            not 1 <= expected_size <= MAX_EXPRESSION_INVENTORY_BYTES):
+        raise RuntimeError("native expression inventory receipt size exceeds the bounded read limit")
+    data = _read_bound_expression_inventory(workspace, output_path, expected_size)
+    if (expected_size != len(data) or
             receipt.get("sha256") != hashlib.sha256(data).hexdigest()):
         raise RuntimeError("native Equation View artifact byte count or SHA-256 differs from its receipt")
     try:
@@ -1408,7 +1556,7 @@ def _verify_expression_inventory(receipt: dict[str, Any], output_path: Path) -> 
             artifact.get("stress_candidate_row_count") != candidates or
             artifact.get("errors") != []):
         raise RuntimeError("native Equation View JSON summary disagrees with the full stored rows")
-    return {
+    verified = {
         "path": str(output_path),
         "size_bytes": len(data),
         "sha256": hashlib.sha256(data).hexdigest(),
@@ -1418,6 +1566,7 @@ def _verify_expression_inventory(receipt: dict[str, Any], output_path: Path) -> 
         "status": artifact["status"],
         "scope": "complete raw Solid Mechanics Equation View table inventory; candidates are not evaluated variables",
     }
+    return verified, data
 
 
 def _verify_registered_template_files(receipt: dict[str, Any], template_path: Path,
@@ -2124,6 +2273,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "arguments": {"source_artifact": FIXTURE.name,
                           "entrypoint": "W24CureCouponFixture#run",
                           "arguments": {"phase": "expression_inventory",
+                                        "output_root": str(project_workspace.resolve(strict=True)),
                                         "output_path": str(expression_inventory_path)},
                           "mode": "trusted"},
         }, project_id=project_id, ref=model_ref, revision=revision,
@@ -2137,20 +2287,21 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 revision=expression_response.get("execution", {}).get("revision"))
         expression_receipt = _java_action_readback(
             expression_response, "native Solid Mechanics Equation View inventory")
-        expression_inventory = _verify_expression_inventory(
-            expression_receipt, expression_inventory_path)
+        expression_inventory, inventory_bytes = _verify_expression_inventory(
+            expression_receipt, expression_inventory_path,
+            expected_workspace=project_workspace.resolve(strict=True))
         durable_inventory_path = evidence / "solid_equation_view_expression_inventory.json"
-        inventory_bytes = expression_inventory_path.read_bytes()
         with durable_inventory_path.open("xb") as stream:
             stream.write(inventory_bytes)
             stream.flush()
             os.fsync(stream.fileno())
-        expression_inventory["registered_project_path"] = str(expression_inventory_path.resolve(strict=True))
+        expression_inventory["registered_project_path"] = str(expression_inventory_path)
         expression_inventory["evidence_copy_path"] = str(durable_inventory_path.resolve(strict=True))
-        expression_inventory["path"] = str(expression_inventory_path.resolve(strict=True))
+        expression_inventory["path"] = str(expression_inventory_path)
         if (sha256(durable_inventory_path) != expression_inventory["sha256"] or
-                sha256(expression_inventory_path) != expression_inventory["sha256"]):
+                hashlib.sha256(inventory_bytes).hexdigest() != expression_inventory["sha256"]):
             raise RuntimeError("registered project and evidence copies of Equation View bytes differ from the native artifact SHA-256")
+        original_equation_view = json.loads(inventory_bytes.decode("utf-8"))
         model_ref = expression_response["execution"]["model_ref"]
         revision = int(expression_response["execution"]["revision"])
         write_json(evidence / "native_expression_inventory_receipt.json", {
@@ -2285,6 +2436,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "arguments": {"source_artifact": FIXTURE.name,
                           "entrypoint": "W24CureCouponFixture#run",
                           "arguments": {"phase": "expression_inventory",
+                                        "output_root": str(project_workspace.resolve(strict=True)),
                                         "output_path": str(reopened_inventory_path)},
                           "mode": "trusted"},
         }, project_id=project_id, ref=model_ref, revision=revision,
@@ -2298,12 +2450,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 revision=reopened_expression_response.get("execution", {}).get("revision"))
         reopened_expression_java_receipt = _java_action_readback(
             reopened_expression_response, "reopened W24 Solid Mechanics Equation View inventory")
-        reopened_expression_inventory = _verify_expression_inventory(
-            reopened_expression_java_receipt, reopened_inventory_path)
-        original_equation_view = json.loads(
-            durable_inventory_path.read_text(encoding="utf-8"))
-        reopened_equation_view = json.loads(
-            reopened_inventory_path.read_text(encoding="utf-8"))
+        reopened_expression_inventory, reopened_inventory_bytes = _verify_expression_inventory(
+            reopened_expression_java_receipt, reopened_inventory_path,
+            expected_workspace=project_workspace.resolve(strict=True))
+        reopened_equation_view = json.loads(reopened_inventory_bytes.decode("utf-8"))
         equation_tables_match = (
             original_equation_view.get("feature_tables") ==
             reopened_equation_view.get("feature_tables"))
@@ -2311,15 +2461,17 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             raise AssertionError("Solid Mechanics Equation View rows changed across MPH save/reopen")
         durable_reopened_inventory = evidence / "solid_equation_view_expression_inventory_reopened.json"
         with durable_reopened_inventory.open("xb") as stream:
-            stream.write(reopened_inventory_path.read_bytes())
+            stream.write(reopened_inventory_bytes)
             stream.flush()
             os.fsync(stream.fileno())
-        if sha256(durable_reopened_inventory) != reopened_expression_inventory["sha256"]:
+        if (sha256(durable_reopened_inventory) != reopened_expression_inventory["sha256"] or
+                hashlib.sha256(reopened_inventory_bytes).hexdigest() !=
+                reopened_expression_inventory["sha256"]):
             raise RuntimeError("durable reopened Equation View artifact differs from native table bytes")
         reopened_expression_inventory.update({
-            "registered_project_path": str(reopened_inventory_path.resolve(strict=True)),
+            "registered_project_path": str(reopened_inventory_path),
             "evidence_copy_path": str(durable_reopened_inventory.resolve(strict=True)),
-            "path": str(reopened_inventory_path.resolve(strict=True)),
+            "path": str(reopened_inventory_path),
             "matches_pre_save_feature_tables": True,
         })
         write_json(evidence / "native_reopened_expression_inventory_receipt.json", {

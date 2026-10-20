@@ -120,7 +120,9 @@ def test_actual_double_original_security_path_success_metadata_and_borrowed_sid(
     closed=[x[1] for x in sdk.calls if isinstance(x,tuple) and x[0]=='close']
     assert len(closed)==9 and len(set(closed))==9 and closed[-1]==100
     freed=[x[1] for x in sdk.calls if isinstance(x,tuple) and x[0]=='free']
-    assert freed.count(C.addressof(sdk.descriptor))==8 and len(freed)==10
+    assert freed.count(C.addressof(sdk.descriptor))==8 and len(freed)==16
+    installer_sid='S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464'
+    assert sdk.calls.count(('sid',installer_sid))==6  # exactly 3 ancestors x 2 chains; neither private leaf
     assert C.addressof(sdk.owner_sid) not in freed  # GetSecurityInfo owner and TokenUser SID are borrowed
 
 
@@ -165,7 +167,7 @@ def test_host_provider_load_and_grant_recheck_use_actual_double_path_preflight(t
     # Off-Windows fixture maps the real public stdio file to a synthetic Win32
     # drive at the SDK boundary. All load/ACL/traversal/grant production methods run.
     original=provider._verify_windows_private_path
-    def mapped(value,*,directory,expected_identity):
+    def mapped(value,*,directory,expected_identity,_internal_stdio_observer=None):
         info=value.stat();sdk.volume=info.st_dev;sdk.final_inode=info.st_ino
         original_info=sdk.info
         def info_with_final(h,out):
@@ -175,7 +177,25 @@ def test_host_provider_load_and_grant_recheck_use_actual_double_path_preflight(t
             if directory and inode==12:row.index_low=sdk.final_inode&0xffffffff;row.index_high=sdk.final_inode>>32
             return result
         sdk.k.GetFileInformationByHandle=Function(info_with_final)
-        try:return original(Path('C:/host/private' if directory else 'C:/host/private/config'),directory=directory,expected_identity=expected_identity)
+        # Explicit SDK-only CRT/native metadata seam; the full production
+        # stdio observer runs and never acquires/closes this borrowed FD.
+        import sys,stat
+        def borrowed(fd):
+            st=os.fstat(fd);handle=800000+fd;sdk.handles[handle]=(stat.S_ISDIR(st.st_mode),st.st_ino);return handle
+        monkeypatch.setitem(sys.modules,'msvcrt',SimpleNamespace(get_osfhandle=borrowed))
+        def full(handle,kind,out,size):
+            isdir,inode=sdk.handles[sdk.address(handle)]
+            if directory and inode==12:inode=sdk.final_inode
+            if kind==18:
+                v=C.cast(out,C.POINTER(paths._FullIdInfo)).contents;v.volume=sdk.volume
+                for index,byte in enumerate(inode.to_bytes(16,'little')):v.file_id[index]=byte
+            elif kind==0:
+                v=C.cast(out,C.POINTER(paths._BasicInfo)).contents;v.attributes=16 if isdir else 128;v.created=1;v.changed=2;v.written=3
+            elif kind==1:
+                v=C.cast(out,C.POINTER(paths._StandardInfo)).contents;v.directory=isdir;v.links=1;v.size=info.st_size
+            return 1
+        sdk.k.GetFileInformationByHandleEx=Function(full)
+        try:return original(Path('C:/host/private' if directory else 'C:/host/private/config'),directory=directory,expected_identity=expected_identity,_internal_stdio_observer=_internal_stdio_observer)
         finally:sdk.k.GetFileInformationByHandle=Function(original_info)
     monkeypatch.setattr(provider,'_verify_windows_private_path',mapped)
     monkeypatch.setattr(provider,'os',SimpleNamespace(**{n:getattr(os,n) for n in dir(os) if not n.startswith('__')}))

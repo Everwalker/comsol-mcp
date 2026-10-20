@@ -34,6 +34,227 @@ EXPECTED_WET_SELECTIONS = {
     "flat": {"sel_wet_flat_base"},
     "step": {"sel_wet_mesa_top", "sel_wet_mesa_side", "sel_wet_lower_base"},
 }
+SOLVER_SEQUENCE_QUERY_TYPES = (
+    "All", "SolverSequence", "CopySolution", "ParametricStore", "Stored", "Parametric", "None",
+)
+
+
+def _captured_value(row: Any, label: str) -> Any:
+    if not isinstance(row, Mapping) or row.get("status") != "READ":
+        raise CampaignError(f"generated solver-chain {label} capture is not a successful read")
+    return row.get("value")
+
+
+def _typed_string_property(scope: Any, name: str, label: str) -> str:
+    properties = scope.get("properties") if isinstance(scope, Mapping) else None
+    row = properties.get(name) if isinstance(properties, Mapping) else None
+    if not isinstance(row, Mapping):
+        raise CampaignError(f"generated solver-chain {label}.{name} is missing typed property evidence")
+    if (_captured_value(row.get("has_property_capture"), f"{label}.{name}.hasProperty") is not True or
+            row.get("listed_in_properties") is not True or
+            _captured_value(row.get("declared_type_capture"), f"{label}.{name}.getValueType") != "String" or
+            row.get("value_reader") != "getString" or
+            row.get("value_status") != "READ_BY_DECLARED_TYPE"):
+        raise CampaignError(f"generated solver-chain {label}.{name} lacks exact declared String readback")
+    _captured_value(row.get("allowed_values_capture"), f"{label}.{name}.getAllowedPropertyValues")
+    value = _captured_value(row.get("value_capture"), f"{label}.{name}.getString")
+    if not isinstance(value, str):
+        raise CampaignError(f"generated solver-chain {label}.{name} value is not a String")
+    return value
+
+
+def _typed_string_from_feature(feature: Any, scope_name: str, property_name: str,
+                               label: str) -> str:
+    scope = feature.get(scope_name) if isinstance(feature, Mapping) else None
+    return _typed_string_property(scope, property_name, label)
+
+
+def _flatten_feature_tree(tree: Any, label: str) -> list[Mapping[str, Any]]:
+    if not isinstance(tree, Mapping) or tree.get("capture_status") != "CAPTURED":
+        raise CampaignError(f"generated solver-chain {label} feature tree is incomplete")
+    tags = _captured_value(tree.get("tags_capture"), f"{label}.feature.tags")
+    nodes = tree.get("nodes")
+    if (not isinstance(tags, list) or any(not isinstance(tag, str) or not tag for tag in tags) or
+            len(tags) != len(set(tags)) or not isinstance(nodes, list) or len(nodes) != len(tags)):
+        raise CampaignError(f"generated solver-chain {label} feature tags/nodes are inconsistent")
+    flattened: list[Mapping[str, Any]] = []
+    seen_tags: set[str] = set()
+    for index, node in enumerate(nodes):
+        if (not isinstance(node, Mapping) or node.get("tag") != tags[index] or
+                node.get("resolution_status") != "READ" or node.get("capture_status") != "CAPTURED"):
+            raise CampaignError(f"generated solver-chain {label} contains an unread or reordered feature")
+        if node["tag"] in seen_tags:
+            raise CampaignError(f"generated solver-chain {label} repeats a feature tag")
+        seen_tags.add(node["tag"])
+        _captured_value(node.get("type_capture"), f"{label}.{node['tag']}.getType")
+        flattened.append(node)
+        child = node.get("child_feature_tree")
+        flattened.extend(_flatten_feature_tree(child, f"{label}.{node['tag']}"))
+    return flattened
+
+
+def _validate_generated_study_solver_chain(chain: Any, *, expected_solver_tags: Any = None,
+                                           expected_attached_tag: Any = None,
+                                           expected_stored_tag: Any = None) -> dict[str, Any]:
+    """Independently validate actual typed COMSOL topology before setup acceptance."""
+    if (not isinstance(chain, Mapping) or
+            chain.get("schema") != "W24_GENERATED_STUDY_SOLVER_CHAIN_R2" or
+            chain.get("study_tag") != "stdShape" or
+            chain.get("status") != "PHASE_INIT_TO_TIME_CHAIN_VALIDATED" or
+            chain.get("semantic_findings") != [] or
+            chain.get("native_acceptance") != "NOT_RUN" or
+            chain.get("study_run_calls") != 0 or chain.get("solver_run_calls") != 0 or
+            chain.get("model_save_calls") != 0 or chain.get("result_evaluation_calls") != 0):
+        raise CampaignError("generated phase-init/store/transient chain is not a complete unsolved topology readback")
+
+    step_tags = _captured_value(chain.get("study_step_tags_capture"), "study.feature.tags")
+    if step_tags != ["phasei", "time"] or chain.get("study_step_tags") != step_tags:
+        raise CampaignError("generated study step order does not exactly identify phasei then time")
+    steps = chain.get("study_steps")
+    initialization = chain.get("study_step_initialization_readback")
+    if not isinstance(steps, list) or len(steps) != 2 or not isinstance(initialization, Mapping):
+        raise CampaignError("generated study step typed initialization readback is incomplete")
+    step_by_tag = {row.get("requested_tag"): row for row in steps if isinstance(row, Mapping)}
+    if set(step_by_tag) != {"phasei", "time"}:
+        raise CampaignError("generated study step rows do not match the exact two-step study")
+    expected_initialization = {
+        "phasei": {"initmethod": "init", "initstudy": "zero", "useinitsol": "off"},
+        "time": {"initmethod": "sol", "initstudy": "stdShape", "useinitsol": "off"},
+    }
+    for tag, expected_type in (("phasei", "PhaseInitialization"), ("time", "Transient")):
+        row = step_by_tag[tag]
+        if (row.get("resolution_status") != "READ" or
+                _captured_value(row.get("type_capture"), f"study.{tag}.getType") != expected_type):
+            raise CampaignError(f"generated study step {tag} is not the exact expected feature type")
+        reported = initialization.get(tag)
+        if not isinstance(reported, Mapping):
+            raise CampaignError(f"generated study step {tag} initialization summary is missing")
+        for prop, expected in expected_initialization[tag].items():
+            actual = _typed_string_property(
+                row.get("properties"), prop, f"study.{tag}")
+            if reported.get(prop) != actual or actual != expected:
+                raise CampaignError(f"generated study step {tag} typed initialization {prop} differs from its exact contract")
+
+    query_types = chain.get("sequence_query_types")
+    query_rows = chain.get("sequence_query_rows")
+    if query_types != list(SOLVER_SEQUENCE_QUERY_TYPES) or not isinstance(query_rows, list) or len(query_rows) != len(query_types):
+        raise CampaignError("generated solver sequence query inventory is incomplete")
+    query_values: dict[str, list[str]] = {}
+    for query_type, row in zip(query_types, query_rows):
+        if not isinstance(row, Mapping) or row.get("query_type") != query_type:
+            raise CampaignError("generated solver sequence query rows are reordered or malformed")
+        value = _captured_value(row.get("capture"), f"getSolverSequences({query_type})")
+        if (not isinstance(value, list) or any(not isinstance(tag, str) or not tag for tag in value) or
+                len(value) != len(set(value)) or len(value) > 128):
+            raise CampaignError(f"generated solver sequence query {query_type} returned invalid tags")
+        query_values[query_type] = value
+    global_tags = _captured_value(chain.get("global_solver_tags_capture"), "model.sol.tags")
+    if (not isinstance(global_tags, list) or any(not isinstance(tag, str) or not tag for tag in global_tags) or
+            len(global_tags) != len(set(global_tags)) or set(global_tags) != set(query_values["All"])):
+        raise CampaignError("All solver sequence tags do not match the complete model.sol inventory")
+    expected_union = list(dict.fromkeys(tag for query_type in query_types for tag in query_values[query_type]))
+    expected_union = list(dict.fromkeys(expected_union + global_tags))
+    if chain.get("sequence_tag_union") != expected_union or len(expected_union) > 128:
+        raise CampaignError("generated solver sequence union omits, duplicates, or invents a tag")
+    if expected_solver_tags is not None and expected_solver_tags != expected_union:
+        raise CampaignError("outer setup readback sequence inventory differs from the captured full union")
+
+    records = chain.get("sequence_records")
+    if not isinstance(records, list) or len(records) != len(expected_union):
+        raise CampaignError("generated solver sequence records are not one-for-one with the full tag union")
+    record_by_tag: dict[str, Mapping[str, Any]] = {}
+    valid_attached: list[tuple[str, str]] = []
+    invalid_attached: list[str] = []
+    allowed_types = set(SOLVER_SEQUENCE_QUERY_TYPES[1:])
+    for record in records:
+        if not isinstance(record, Mapping):
+            raise CampaignError("generated solver sequence record is malformed")
+        tag = record.get("requested_tag")
+        if not isinstance(tag, str) or tag in record_by_tag or tag not in expected_union:
+            raise CampaignError("generated solver sequence records contain duplicate or unexpected tags")
+        record_by_tag[tag] = record
+        if record.get("resolution_status") != "READ" or record.get("capture_complete") is not True:
+            raise CampaignError(f"generated solver sequence {tag} has incomplete identity capture")
+        if _captured_value(record.get("tag_capture"), f"solver.{tag}.tag") != tag:
+            raise CampaignError(f"generated solver sequence {tag} did not resolve to its requested tag")
+        sequence_type = _captured_value(record.get("sequence_type_capture"), f"solver.{tag}.getSequenceType")
+        if sequence_type not in allowed_types or tag not in query_values.get(sequence_type, []):
+            raise CampaignError(f"generated solver sequence {tag} classification disagrees with typed query results")
+        attached = _captured_value(record.get("attached_capture"), f"solver.{tag}.isAttached")
+        associated_study = _captured_value(record.get("study_capture"), f"solver.{tag}.study")
+        if type(attached) is not bool or not isinstance(associated_study, str):
+            raise CampaignError(f"generated solver sequence {tag} attachment readback is malformed")
+        if attached:
+            if associated_study != "stdShape":
+                raise CampaignError(f"unexpected generated solver sequence {tag} is attached to another study")
+            nodes = _flatten_feature_tree(record.get("feature_tree_capture"), f"solver.{tag}")
+            roles: dict[str, list[int]] = {name: [] for name in
+                ("phase-step", "phase-vars", "stationary", "store", "time-step", "time-vars", "time")}
+            store_ref: str | None = None
+            for index, node in enumerate(nodes):
+                feature_type = _captured_value(node.get("type_capture"), f"solver.{tag}.{node.get('tag')}.getType")
+                if feature_type == "StudyStep":
+                    study_ref = _typed_string_from_feature(
+                        node, "study_step_reference_properties", "study", f"solver.{tag}.{node.get('tag')}.study-step-ref")
+                    step_ref = _typed_string_from_feature(
+                        node, "study_step_reference_properties", "studystep", f"solver.{tag}.{node.get('tag')}.study-step-ref")
+                    if study_ref == "stdShape" and step_ref == "phasei": roles["phase-step"].append(index)
+                    if study_ref == "stdShape" and step_ref == "time": roles["time-step"].append(index)
+                elif feature_type == "Variables":
+                    control = _typed_string_from_feature(
+                        node, "initial_source_properties", "control", f"solver.{tag}.{node.get('tag')}.variables")
+                    if control == "phasei": roles["phase-vars"].append(index)
+                    if control == "time": roles["time-vars"].append(index)
+                elif feature_type == "Stationary": roles["stationary"].append(index)
+                elif feature_type == "StoreSolution":
+                    roles["store"].append(index)
+                    store_ref = _typed_string_from_feature(
+                        node, "store_solution_properties", "sol", f"solver.{tag}.{node.get('tag')}.store-solution")
+                elif feature_type == "Time": roles["time"].append(index)
+            if any(len(indices) != 1 for indices in roles.values()):
+                invalid_attached.append(tag)
+                continue
+            ordered = [roles[key][0] for key in
+                       ("phase-step", "phase-vars", "stationary", "store", "time-step", "time-vars", "time")]
+            if ordered != sorted(ordered) or not isinstance(store_ref, str) or not store_ref:
+                invalid_attached.append(tag)
+                continue
+            phase_node, time_node = nodes[roles["phase-vars"][0]], nodes[roles["time-vars"][0]]
+            phase_control = _typed_string_from_feature(phase_node, "initial_source_properties", "control", f"solver.{tag}.phase-variables")
+            phase_method = _typed_string_from_feature(phase_node, "initial_source_properties", "initmethod", f"solver.{tag}.phase-variables")
+            phase_solution = _typed_string_from_feature(phase_node, "initial_source_properties", "initsol", f"solver.{tag}.phase-variables")
+            phase_use = _typed_string_from_feature(phase_node, "initial_source_properties", "initsoluse", f"solver.{tag}.phase-variables")
+            time_control = _typed_string_from_feature(time_node, "initial_source_properties", "control", f"solver.{tag}.time-variables")
+            time_method = _typed_string_from_feature(time_node, "initial_source_properties", "initmethod", f"solver.{tag}.time-variables")
+            time_solution = _typed_string_from_feature(time_node, "initial_source_properties", "initsol", f"solver.{tag}.time-variables")
+            time_use = _typed_string_from_feature(time_node, "initial_source_properties", "initsoluse", f"solver.{tag}.time-variables")
+            if ((phase_control, phase_method, phase_solution, phase_use) != ("phasei", "init", "zero", "current") or
+                    (time_control, time_method, time_solution, time_use) != ("time", "sol", tag, store_ref)):
+                invalid_attached.append(tag)
+                continue
+            valid_attached.append((tag, store_ref))
+    if set(record_by_tag) != set(expected_union):
+        raise CampaignError("generated solver sequence records omit a queried solver sequence")
+    if len(valid_attached) != 1 or invalid_attached:
+        raise CampaignError("generated phase-init/store/transient attached sequence is not unique")
+    selected_tag, stored_tag = valid_attached[0]
+    stored_rows = query_values["Stored"]
+    stored_record = record_by_tag.get(stored_tag)
+    if (stored_rows != [stored_tag] or stored_record is None or
+            _captured_value(stored_record.get("sequence_type_capture"), f"solver.{stored_tag}.getSequenceType") != "Stored" or
+            _captured_value(stored_record.get("attached_capture"), f"solver.{stored_tag}.isAttached") is not False):
+        raise CampaignError("StoreSolution.sol does not resolve uniquely to the detached Stored sequence")
+    if (chain.get("attached_chain_candidate_tags") != [selected_tag] or
+            chain.get("attached_chain_failure_tags") != [] or
+            chain.get("selected_attached_sequence_tag") != selected_tag or
+            chain.get("store_solution_output_tag") != stored_tag):
+        raise CampaignError("generated solver-chain semantic summary disagrees with raw typed topology")
+    if expected_attached_tag is not None and selected_tag != expected_attached_tag:
+        raise CampaignError("outer setup attached sequence differs from the typed topology")
+    if expected_stored_tag is not None and stored_tag != expected_stored_tag:
+        raise CampaignError("outer setup stored sequence differs from the typed StoreSolution reference")
+    return {"attached_sequence_tag": selected_tag, "stored_output_tag": stored_tag,
+            "sequence_tags": expected_union}
 
 
 def _sha256(path: Path) -> str:
@@ -444,38 +665,145 @@ class StaticShapeManagedRunner:
             not isinstance(gas_ids, list) or len(gas_ids) != 1 or glue_ids == gas_ids or
             not isinstance(multiphase_ids, list) or set(multiphase_ids) != set(glue_ids + gas_ids)):
             raise CampaignError("native static-shape glue/gas/material domain mappings are not exact and distinct")
-        if len(result.get("wetted_wall_features", [])) != len(EXPECTED_WET_SELECTIONS[expected_case]):
-            raise CampaignError("native static-shape readback has the wrong number of Wetted Wall features")
+        if any(type(value) is not int or value <= 0 for value in glue_ids + gas_ids + multiphase_ids):
+            raise CampaignError("native static-shape domain mappings contain invalid entity IDs")
+        expected_default_wetted_wall = {
+            "feature_tag": "ww1",
+            "feature_type": "WettedWall",
+            "classification": "COMSOL_6_4_DEFAULT_ALL_NOT_OVERRIDDEN_SELECTION_DOC_5838_CHUNK_19242",
+            "selection_status": "DOCUMENTED_DEFAULT_NOT_EDITABLE",
+        }
+        default_wetted_wall = result.get("default_wetted_wall_feature_metadata")
+        if not isinstance(default_wetted_wall, Mapping) or dict(default_wetted_wall) != expected_default_wetted_wall:
+            raise CampaignError("native readback does not distinguish the documented default Wetted Wall remainder")
         wall_features = result.get("wetted_wall_features")
-        if (not isinstance(wall_features, list) or
+        expected_wall_count = len(EXPECTED_WET_SELECTIONS[expected_case])
+        expected_custom_tags = {f"wwshape{index}" for index in range(1, expected_wall_count + 1)}
+        if not isinstance(wall_features, list) or len(wall_features) != expected_wall_count:
+            raise CampaignError("native static-shape readback has the wrong exact custom Wetted Wall count")
+        wall_tags = [row.get("feature_tag") for row in wall_features if isinstance(row, Mapping)]
+        if (len(wall_tags) != expected_wall_count or len(set(wall_tags)) != expected_wall_count or
+            set(wall_tags) != expected_custom_tags or
             {row.get("surface_selection") for row in wall_features if isinstance(row, Mapping)} != set(wetting) or
-            any(row.get("contact_angle_expression") != "thetaSubstrate" for row in wall_features
+            any(row.get("feature_type") != "WettedWall" or
+                row.get("contact_angle_expression") != "thetaSubstrate" for row in wall_features
                 if isinstance(row, Mapping))):
-            raise CampaignError("native Wetted Wall feature mapping does not cover the named physical surfaces")
+            raise CampaignError("native custom Wetted Wall mapping does not exactly cover the named physical surfaces")
         wall_by_surface = {row["surface_selection"]: row for row in wall_features
                            if isinstance(row, Mapping) and isinstance(row.get("surface_selection"), str)}
-        if any(wall_by_surface[name].get("boundary_ids") != ids for name, ids in wetting.items()):
-            raise CampaignError("native Wetted Wall feature boundary IDs differ from their named substrate selections")
-        if result.get("flow_compressibility") != "incompressible" or result.get("pressure_reference_value") != "0[Pa]":
+        custom_wall_ids: set[int] = set()
+        for name, expected_ids in wetting.items():
+            row = wall_by_surface[name]
+            ids = row.get("boundary_ids")
+            if (not isinstance(ids, list) or not ids or ids != expected_ids or
+                any(type(value) is not int or value <= 0 for value in ids) or
+                len(ids) != len(set(ids)) or custom_wall_ids.intersection(ids)):
+                raise CampaignError("native custom Wetted Wall boundary selections are incomplete or overlapping")
+            custom_wall_ids.update(ids)
+        if (result.get("flow_compressibility") != "Incompressible" or
+            result.get("gravity_enabled") is not False or
+            result.get("pressure_reference_value") != "0[Pa]"):
             raise CampaignError("native closed-cavity flow pressure/compressibility configuration is incomplete")
         if (result.get("multiphase_volume_fraction_definition") != "pf" or
             result.get("phase1_material_link") != "matGlue" or result.get("phase2_material_link") != "matGas" or
             result.get("surface_tension_mode") != "userdef" or
             result.get("surface_tension_expression") != "sigma0"):
             raise CampaignError("native two-phase material/surface-tension configuration is incomplete")
-        if (result.get("phase1_initial_value") != "Fluid1phipf" or
-            result.get("phase2_initial_value") != "Fluid2phipf" or
-            result.get("phase1_initial_selection") != glue_ids or
-            result.get("phase2_initial_selection") != gas_ids):
-            raise CampaignError("native phase initialization does not map one distinct fluid domain per phase")
+        phase_model_tag = result.get("phase_field_model_tag")
+        if (result.get("phase_field_model_type") != "PhaseFieldModel" or
+            not isinstance(phase_model_tag, str) or not phase_model_tag.strip() or
+            result.get("phase_field_chi_option") != "userdef" or
+            result.get("phase_field_chi_value_type") != "String" or
+            result.get("phase_field_chi_expression") != "chiPF"):
+            raise CampaignError("native Phase Field model semantic/configuration readback is incomplete")
+        initial_identity_fields = (
+            "phase1_initial_feature_tag", "phase1_initial_feature_type",
+            "phase2_initial_feature_tag", "phase2_initial_feature_type")
+        if any(not isinstance(result.get(field), str) or not result[field].strip()
+               for field in initial_identity_fields):
+            raise CampaignError("native Phase Field initial-value feature identity readback is incomplete")
+        if (result["phase1_initial_feature_tag"] == result["phase2_initial_feature_tag"] or
+            result.get("phase1_initial_feature_type") != "init" or
+            result.get("phase2_initial_feature_type") != "initFluid2" or
+            result.get("phase1_initial_values_option") != "SpecifyPhase" or
+            result.get("phase2_initial_values_option") != "SpecifyPhase" or
+            result.get("phase1_initial_value") != "Fluid1phipf" or
+            result.get("phase2_initial_value") != "Fluid2phipf"):
+            raise CampaignError("native Phase Field initial-value feature types or fluid semantics differ")
+
+        all_domains = sorted(glue_ids + gas_ids)
+        def exact_domain_ids(field: str, expected: list[int]) -> list[int]:
+            value = result.get(field)
+            if (not isinstance(value, list) or
+                    any(type(item) is not int or item <= 0 for item in value) or
+                    len(value) != len(set(value)) or set(value) != set(expected)):
+                raise CampaignError(f"native Phase Field initial selection {field} is not exact")
+            return value
+
+        exact_domain_ids("all_domain_ids", all_domains)
+        exact_domain_ids("phase_field_domain_ids", all_domains)
+
+        if (result.get("phase1_initial_raw_input_entities_read_status") != "READ" or
+                set(exact_domain_ids("phase1_initial_raw_input_domain_ids", all_domains)) != set(all_domains) or
+                result.get("phase1_initial_raw_named_selection_tag") != "" or
+                result.get("phase1_initial_effective_domain_ids") != glue_ids or
+                result.get("phase1_initial_selection") != glue_ids or
+                result.get("phase1_initial_default_feature_classification") !=
+                    "NOT_EXPOSED_BY_READ_ONLY_API_METADATA" or
+                result.get("phase1_initial_selection_semantics") !=
+                    "COMSOL_6_4_DEFAULT_SELECTION_ALL_ENTITIES_NOT_OVERRIDDEN_BY_SAME_LEVEL_NODE_DOC_5838_CHUNK_19242"):
+            raise CampaignError("native default Fluid1 selection provenance or derived remainder is incomplete")
+        default_getter_ids = result.get("phase1_initial_selection_entities_readback")
+        if (not isinstance(default_getter_ids, list) or
+                any(type(item) is not int or item <= 0 for item in default_getter_ids) or
+                len(default_getter_ids) != len(set(default_getter_ids))):
+            raise CampaignError("native default Fluid1 selection getter readback is malformed")
+        default_getter_set = set(default_getter_ids)
+        if default_getter_set == set(all_domains):
+            expected_source, expected_direct = (
+                "DOCUMENTED_DEFAULT_REMAINDER_DERIVED_FROM_ALL_MINUS_FLUID2_OVERRIDE", False)
+        elif default_getter_set == set(glue_ids):
+            expected_source, expected_direct = (
+                "DIRECT_SELECTION_GETTER_REMAINDER_MATCHING_DOCUMENTED_DEFAULT", True)
+        else:
+            raise CampaignError("native default Fluid1 selection getter is neither the full base nor its remainder")
+        if (result.get("phase1_initial_effective_domain_source") != expected_source or
+                result.get("phase1_initial_effective_domain_is_direct_readback") is not expected_direct):
+            raise CampaignError("native default Fluid1 domain derivation provenance contradicts its getter")
+
+        if (result.get("phase2_initial_raw_input_entities_read_status") != "READ" or
+                exact_domain_ids("phase2_initial_raw_input_domain_ids", gas_ids) != gas_ids or
+                result.get("phase2_initial_raw_named_selection_tag") != "sel_gas_domain" or
+                exact_domain_ids("phase2_initial_selection_entities_readback", gas_ids) != gas_ids or
+                exact_domain_ids("phase2_initial_effective_domain_ids", gas_ids) != gas_ids or
+                result.get("phase2_initial_effective_domain_source") != "DIRECT_NAMED_SELECTION_READBACK" or
+                result.get("phase2_initial_effective_domain_is_direct_readback") is not True or
+                exact_domain_ids("phase1_initial_selection", glue_ids) != glue_ids or
+                exact_domain_ids("phase2_initial_selection", gas_ids) != gas_ids):
+            raise CampaignError("native explicit Fluid2 gas override or two-domain partition is incomplete")
         if (result.get("phase_initialization_step_type") != "PhaseInitialization" or
             result.get("transient_step_type") != "Transient" or
+            result.get("study_step_order") != ["phasei", "time"] or
+            result.get("time_initialization_method") != "sol" or
+            result.get("time_initialization_study") != "stdShape" or
+            result.get("use_initial_solution") != "off" or
+            result.get("use_user_tolerance") != "on" or
+            result.get("relative_tolerance") != "1e-4" or
+            result.get("time_list_expression") != "range(0[s],tCapillary/2,20*tCapillary)" or
+            result.get("time_solver_output_owner") != "GENERATED_TIME_SOLVER_FEATURE" or
+            not isinstance(result.get("time_solver_feature_tag"), str) or
+            not result.get("time_solver_feature_tag") or
             result.get("bdf_output_time_policy") != "strict" or
             result.get("output_mode") != "tsteps" or
             result.get("stored_time_steps_policy") != 1):
-            raise CampaignError("native phase-init/transient/stored-time setup readback is incomplete")
-        if not (str(result.get("surface_tension_enabled", "")).lower() in {"on", "1", "true"}):
-            raise CampaignError("native two-phase surface-tension force is not enabled")
+            raise CampaignError("native phase-init/transient/Time-Solver domain readback is incomplete")
+        _validate_generated_study_solver_chain(
+            result.get("generated_study_solver_chain"),
+            expected_solver_tags=result.get("solver_sequence_tags"),
+            expected_attached_tag=result.get("attached_solver_sequence_tag"),
+            expected_stored_tag=result.get("stored_solution_output_tag"))
+        if result.get("surface_tension_enabled") is not True:
+            raise CampaignError("native two-phase surface-tension force is not the exact JSON Boolean true")
         parameter_rows = result.get("parameter_values_and_units")
         expected_parameters = {
             "rhoGlue": (1200.0, "kg/m^3"), "muGlue": (1.0, "Pa*s"),
@@ -522,21 +850,23 @@ class StaticShapeManagedRunner:
     def _validate_no_stored_solution_data(value: Any) -> dict[str, Any]:
         if not isinstance(value, Mapping) or value.get("status") != "NO_STORED_SOLUTION_DATA":
             raise CampaignError("native solver-sequence readback did not establish an empty solution state")
-        if value.get("readback_method") != "SolverSequence.getSize() [degrees_of_freedom, stored_solution_count]":
+        if value.get("readback_method") != (
+                "SolverSequence.isEmpty() [associated solution data]; "
+                "SolverSequence.isInitialized() [solution initialization state]"):
             raise CampaignError("native solution-state evidence omitted its exact documented readback method")
         rows = value.get("solver_sequences")
-        if not isinstance(rows, list):
+        if not isinstance(rows, list) or not rows:
             raise CampaignError("native solution-state evidence omitted the solver-sequence inventory")
         seen: set[str] = set()
         for row in rows:
             if not isinstance(row, Mapping):
                 raise CampaignError("native solver-sequence inventory contains an invalid row")
             tag = row.get("solver_sequence_tag")
-            dofs, stored = row.get("degrees_of_freedom"), row.get("stored_solution_count")
             if (not isinstance(tag, str) or not tag or tag in seen or
-                    isinstance(dofs, bool) or type(dofs) is not int or dofs != 0 or
-                    isinstance(stored, bool) or type(stored) is not int or stored != 0):
-                raise CampaignError("native solver-sequence readback is nonempty, inconsistent, or ambiguous")
+                    row.get("readback_status") != "EMPTY" or
+                    row.get("solutions_empty") is not True or
+                    type(row.get("solution_initialized")) is not bool):
+                raise CampaignError("native solver-sequence readback is nonempty, incomplete, or ambiguous")
             seen.add(tag)
         return dict(value)
 
@@ -555,15 +885,36 @@ class StaticShapeManagedRunner:
         target = _project_path(self.workspace, target, must_exist=False)
 
         parent = self.parent_binding
+        selection_trace_path = self.evidence_dir / (
+            f"w24_selection_stage_{configuration_id}_{case_id}_{uuid4().hex}.jsonl")
         parent, build_response, build = self._java_action(
             parent, source_role="fixture", entrypoint="W24StaticShapeFixture#run",
             arguments={"action": "build", "case_id": case_id,
-                       "configuration_id": configuration_id})
+                       "configuration_id": configuration_id,
+                       "selection_diagnostic_path": str(selection_trace_path)})
         if (build.get("status") != "BUILT_NOT_SOLVED" or build.get("case_id") != case_id or
             build.get("configuration_id") != configuration_id or
             build.get("study_run_calls") != 0 or build.get("phase_initialization_executed") is not False or
             build.get("native_acceptance") != "NOT_RUN"):
             raise CampaignError("static-shape Java builder did not return the exact unsolved/no-solve status")
+        study_build = build.get("study_readback")
+        if not isinstance(study_build, Mapping):
+            raise CampaignError("static-shape Java builder omitted generated study/solver readback")
+        build_chain = _validate_generated_study_solver_chain(
+            study_build.get("generated_study_solver_chain"),
+            expected_solver_tags=study_build.get("solver_sequence_tags"),
+            expected_attached_tag=study_build.get("attached_solver_sequence_tag"),
+            expected_stored_tag=study_build.get("stored_solution_output_tag"))
+        if (study_build.get("status") != "UNSOLVED_CHAIN_CONFIGURED" or
+                study_build.get("study_step_order") != ["phasei", "time"] or
+                study_build.get("time_initialization_method") != "sol" or
+                study_build.get("time_initialization_study") != "stdShape" or
+                study_build.get("use_initial_solution") != "off" or
+                study_build.get("study_run_calls") != 0 or
+                study_build.get("phase_initialization_executed") is not False or
+                study_build.get("time_solver_settings_configured") is not True or
+                build_chain["attached_sequence_tag"] != study_build.get("attached_solver_sequence_tag")):
+            raise CampaignError("static-shape builder did not preserve the verified default initialization chain")
         native_tag = build.get("model_tag")
         if not isinstance(native_tag, str) or not native_tag:
             raise CampaignError("static-shape builder did not return its actual new native model tag")
@@ -590,13 +941,64 @@ class StaticShapeManagedRunner:
             save.get("sha256") != artifact_hash):
             raise CampaignError("saved project MPH size/hash does not match native Java save readback")
 
-        # Reopen only through the path-authorized production model_load route.
-        loaded_response = self._dispatch("model_load", {"path": str(target)},
-                                         session_id=self.parent_binding.session_id,
-                                         worker_required=True)
-        loaded = ManagedModelBinding.from_load_response(loaded_response, project_id=self.project_id)
+        # Register the exact saved bytes, then use the managed G3 loader.  The
+        # legacy path model_load can adopt the still-open model, so it cannot
+        # establish a disk roundtrip for this slot.
+        source_relative = target.relative_to(self.workspace).as_posix()
+        register_request_id = f"w24-shape-register-request-{uuid4()}"
+        register_idempotency_key = f"w24-shape-register-{uuid4()}"
+        register_response = self._dispatch("operation_call", {
+            "operation_id": "artifact.register",
+            "arguments": {
+                "project_id": self.project_id,
+                "path": source_relative,
+                "role": "saved_model",
+                "classification": "project_local",
+                "artifact_type": "application/vnd.comsol.mph",
+                "format_version": "comsol-mph-savecopy/1",
+                "idempotency_key": register_idempotency_key,
+                "request_id": register_request_id,
+            },
+        }, session_id=self.parent_binding.session_id, worker_required=False,
+            idempotency_key=register_idempotency_key, request_id=register_request_id)
+        registration = register_response.get("data")
+        if not isinstance(registration, Mapping):
+            raise CampaignError("public artifact.register omitted its saved-model registration result")
+        artifact_id = registration.get("artifact_id")
+        registered_relative = f"g2_artifacts/registered/{artifact_hash}.mph"
+        registered_path = _project_path(self.workspace, self.workspace / registered_relative,
+                                        must_exist=True)
+        if (artifact_id != artifact_hash
+                or registration.get("sha256") != artifact_hash
+                or registration.get("size") != target.stat().st_size
+                or registration.get("path") != registered_relative
+                or registration.get("role") != "saved_model"
+                or registration.get("classification") != "project_local"
+                or registration.get("artifact_type") != "application/vnd.comsol.mph"
+                or registration.get("format_version") != "comsol-mph-savecopy/1"
+                or registered_path.is_symlink() or not registered_path.is_file()
+                or registered_path.stat().st_size != target.stat().st_size
+                or _sha256(registered_path) != artifact_hash):
+            raise CampaignError("artifact.register did not preserve the exact hash-verified saved MPH bytes")
+
+        load_response = self._dispatch("model.load", {"artifact_id": artifact_id},
+                                       session_id=self.parent_binding.session_id,
+                                       worker_required=True)
+        loaded = ManagedModelBinding.from_load_response(load_response, project_id=self.project_id)
+        load_data = load_response.get("data")
+        load_execution = load_response.get("execution")
+        if (not isinstance(load_data, Mapping) or not isinstance(load_execution, Mapping)
+                or load_data.get("status") != "LOADED"
+                or load_data.get("project_id") != self.project_id
+                or load_data.get("artifact_id") != artifact_id
+                or load_data.get("sha256") != artifact_hash
+                or load_data.get("size_bytes") != target.stat().st_size
+                or load_data.get("ownership") != "mcp_owned"
+                or load_execution.get("model_ownership") != "mcp_owned"
+                or loaded.model_tag == native_tag):
+            raise CampaignError("managed model.load did not return a distinct MCP-owned tag for the exact saved artifact")
         if loaded.session_id != self.parent_binding.session_id:
-            raise CampaignError("managed shape model_load returned a different Worker session")
+            raise CampaignError("managed shape model.load returned a different Worker session")
         persisted = self._verify_persisted_binding(loaded)
         loaded, reopened_identity = self._inspect(loaded)
         # The trusted Java readback returns a new managed revision even when
@@ -637,6 +1039,26 @@ class StaticShapeManagedRunner:
             "save_readback": dict(save),
             "project_artifact": {"path": str(target), "size_bytes": target.stat().st_size,
                                  "sha256": artifact_hash},
+            "registered_project_artifact": {
+                "artifact_id": artifact_id,
+                "path": str(registered_path),
+                "relative_path": registered_relative,
+                "size_bytes": registered_path.stat().st_size,
+                "sha256": _sha256(registered_path),
+                "role": registration.get("role"),
+                "classification": registration.get("classification"),
+                "artifact_type": registration.get("artifact_type"),
+                "format_version": registration.get("format_version"),
+                "provenance": dict(registration.get("provenance", {}))
+                              if isinstance(registration.get("provenance"), Mapping) else None,
+                "registration_operation_id": register_response.get("execution", {}).get("operation_id")
+                                             if isinstance(register_response.get("execution"), Mapping) else None,
+                "registration_job_id": register_response.get("execution", {}).get("job_id")
+                                       if isinstance(register_response.get("execution"), Mapping) else None,
+                "registration_request_id": register_request_id,
+                "registration_idempotency_key": register_idempotency_key,
+            },
+            "managed_load_response": dict(load_response),
             "reopened_configuration_readback_binding": reopened_readback_binding,
             "reopened_model_binding": loaded.as_record(),
             "persisted_reopened_project_binding": dict(persisted),

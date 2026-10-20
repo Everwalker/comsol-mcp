@@ -7,6 +7,8 @@ captures only the exact target window.  COMSOL Java Shell remains Windows-only.
 from __future__ import annotations
 
 import os
+import hashlib
+import json
 import math
 from pathlib import Path
 import platform
@@ -14,7 +16,9 @@ import re
 import subprocess
 import threading
 import sys
-from typing import Any, Mapping
+import time
+from dataclasses import dataclass
+from typing import Any, Mapping, Sequence
 
 from ._desktop_service import (
     BLOCKED_PERMISSION,
@@ -26,6 +30,13 @@ from ._desktop_service import (
 )
 from ._desktop_platforms import versioned_native_profile
 from ._desktop_selector_profile import load_selector_profile
+
+
+AX_MESSAGING_TIMEOUT_SECONDS = 5.0
+AX_SELECTOR_SEARCH_BUDGET_SECONDS = 30.0
+AX_TREE_READ_BUDGET_SECONDS = 30.0
+AX_SELECTOR_ATTRIBUTE_NAMES_LIMIT = 256
+MAX_TASK_OWNED_QUARTZ_WINDOWS_PER_INVENTORY = 16
 
 
 def _require_screencapturekit_14() -> None:
@@ -163,6 +174,248 @@ class MacOSMetadataAdapter(MetadataOnlyDesktopAdapter):
         return str(value) if value else None
 
 
+def macos_process_command_sha256(executable: str, argv: Sequence[str]) -> str:
+    """Hash the exact observed executable path and argv without retaining either."""
+    if not isinstance(executable, str) or not executable.startswith("/") or \
+            not isinstance(argv, Sequence) or isinstance(argv, (str, bytes)) or \
+            not argv or any(not isinstance(item, str) for item in argv):
+        raise ValueError("process command identity must contain an absolute executable and string argv")
+    raw = json.dumps([executable, list(argv)], ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
+
+
+@dataclass(frozen=True, slots=True)
+class TaskOwnedMacOSProcessIdentity:
+    """Frozen supervisor observation for one member of a task-owned process tree.
+
+    The launcher actor must create these rows from the exact Popen process tree
+    after recording process birth, UID, session/group, executable, and command
+    digest. ``bundle_identifier`` and ``comsol_version`` bind descendants to the
+    verified COMSOL application bundle that created the tree.
+    """
+
+    process_id: int
+    process_birth: str
+    real_uid: int
+    parent_pid: int
+    process_group_id: int
+    session_id: int
+    executable_path: str
+    command_sha256: str
+    bundle_identifier: str
+    comsol_version: str
+
+    def __post_init__(self) -> None:
+        if isinstance(self.process_id, bool) or not isinstance(self.process_id, int) or self.process_id <= 0:
+            raise ValueError("owned process PID must be positive")
+        if not isinstance(self.process_birth, str) or not re.fullmatch(r"[0-9]+\.[0-9]{6}", self.process_birth):
+            raise ValueError("owned process birth must be a six-decimal process start time")
+        for name in ("real_uid", "parent_pid", "process_group_id", "session_id"):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                raise ValueError(f"owned process {name} must be a nonnegative integer")
+        if self.parent_pid <= 0 or self.process_group_id <= 0 or self.session_id <= 0:
+            raise ValueError("owned process parent/group/session identity is incomplete")
+        if not isinstance(self.executable_path, str) or not self.executable_path.startswith("/"):
+            raise ValueError("owned process executable path must be absolute")
+        if not isinstance(self.command_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", self.command_sha256):
+            raise ValueError("owned process command digest must be lowercase SHA-256")
+        if self.bundle_identifier != "com.comsol.comsol":
+            raise ValueError("owned process is not bound to the COMSOL Multiphysics bundle")
+        if not isinstance(self.comsol_version, str) or not self.comsol_version or self.comsol_version == "UNVERIFIED":
+            raise ValueError("owned process COMSOL bundle version is unverified")
+
+
+class TaskOwnedMacOSWindowObserver(MacOSMetadataAdapter):
+    """PID/birth-pinned window observer for a single supervised COMSOL launch.
+
+    Construction binds to the exact live Popen child retained by this Python
+    supervisor; an integer supervisor PID or serialized launch descriptor is
+    not an ownership token. That same handle must remain live through inventory.
+    Quartz returns a session-wide list, so this observer reads only OwnerPID for
+    foreign rows and discards them immediately. It reads WindowNumber only for
+    a process row whose live birth/UID/session/group/executable/command digest
+    still matches the launch supervisor's frozen ownership record. Titles,
+    bounds, owner names, AX trees, and pixels are never requested here.
+    """
+
+    def __init__(self, owned_processes: Sequence[TaskOwnedMacOSProcessIdentity], *, original_root: subprocess.Popen):
+        if sys.platform != "darwin":
+            raise DesktopOperationError("UNSUPPORTED_PLATFORM", "task-owned macOS window identity is available only on macOS", category=UNSUPPORTED_CONTROL)
+        if type(original_root) is not subprocess.Popen:
+            raise ValueError("task-owned observation requires the original Popen root handle")
+        root_pid = original_root.pid
+        if isinstance(root_pid, bool) or not isinstance(root_pid, int) or root_pid <= 0:
+            raise ValueError("original Popen root PID must be positive")
+        supervisor_pid = os.getpid()
+        self._original_root = original_root
+        self._root_pid = root_pid
+        self._supervisor_pid = supervisor_pid
+        self._assert_original_root_live()
+        if not isinstance(owned_processes, Sequence) or isinstance(owned_processes, (str, bytes)) or \
+                not 1 <= len(owned_processes) <= 64 or \
+                any(not isinstance(row, TaskOwnedMacOSProcessIdentity) for row in owned_processes):
+            raise ValueError("owned process snapshot must contain 1 to 64 typed rows")
+        by_pid = {row.process_id: row for row in owned_processes}
+        if len(by_pid) != len(owned_processes):
+            raise ValueError("owned process snapshot contains duplicate PIDs")
+        if supervisor_pid in by_pid:
+            raise ValueError("supervisor PID cannot be a child in its owned process snapshot")
+        root = by_pid.get(root_pid)
+        if root is None or root.parent_pid != supervisor_pid:
+            raise ValueError("owned process snapshot must match the original Popen root spawned by this supervisor")
+        if sum(row.parent_pid == supervisor_pid for row in owned_processes) != 1:
+            raise ValueError("owned process snapshot must have exactly one direct supervisor child")
+        if root.process_group_id != root.process_id or root.session_id != root.process_id:
+            raise ValueError("owned Popen root must own its isolated process group and session")
+        for row in owned_processes:
+            if row.real_uid != os.getuid() or row.process_group_id != root.process_group_id or \
+                    row.session_id != root.session_id or \
+                    (row.process_id != root.process_id and row.parent_pid not in by_pid):
+                raise ValueError("owned process snapshot has mismatched UID, group, session, or parent")
+            if row.process_id == root.process_id:
+                continue
+            ancestors = {row.process_id}
+            parent_pid = row.parent_pid
+            while parent_pid != root.process_id:
+                if parent_pid in ancestors or parent_pid not in by_pid:
+                    raise ValueError("owned process snapshot has a cycle or an unrooted descendant")
+                ancestors.add(parent_pid)
+                parent_pid = by_pid[parent_pid].parent_pid
+        self._owned_processes = by_pid
+        self._assert_original_root_live()
+
+    def _assert_original_root_live(self) -> None:
+        """Retain and require the same live child handle through observation."""
+        try:
+            if type(self._original_root) is not subprocess.Popen or \
+                    self._original_root.pid != self._root_pid or self._original_root.poll() is not None:
+                raise DesktopOperationError(
+                    "WINDOW_IDENTITY_UNKNOWN", "original task-owned Popen root is terminal or changed", safe_retry=True,
+                )
+        except DesktopOperationError:
+            raise
+        except Exception as exc:
+            raise DesktopOperationError(
+                "WINDOW_IDENTITY_UNKNOWN", "original task-owned Popen handle is unavailable", safe_retry=True,
+            ) from exc
+
+    @staticmethod
+    def _process_record(pid: int):
+        try:
+            import psutil
+            return psutil.Process(pid)
+        except Exception as exc:
+            raise DesktopOperationError(
+                "WINDOW_IDENTITY_UNKNOWN", "task-owned process identity is unavailable", safe_retry=True,
+            ) from exc
+
+    def _assert_process_current(self, expected: TaskOwnedMacOSProcessIdentity) -> None:
+        """Fail closed before reading window metadata if any process identity drifted."""
+        process = self._process_record(expected.process_id)
+        try:
+            birth = f"{process.create_time():.6f}"
+            real_uid = process.uids().real
+            parent_pid = process.ppid()
+            executable = process.exe()
+            argv = process.cmdline()
+            process_group_id = os.getpgid(expected.process_id)
+            session_id = os.getsid(expected.process_id)
+        except Exception as exc:
+            raise DesktopOperationError(
+                "WINDOW_IDENTITY_UNKNOWN", "task-owned process identity could not be revalidated", safe_retry=True,
+            ) from exc
+        if birth != expected.process_birth or real_uid != expected.real_uid or \
+                parent_pid != expected.parent_pid or process_group_id != expected.process_group_id or \
+                session_id != expected.session_id or executable != expected.executable_path or \
+                macos_process_command_sha256(executable, argv) != expected.command_sha256:
+            raise DesktopOperationError(
+                "WINDOW_IDENTITY_UNKNOWN", "task-owned process birth, UID, command, or session changed", safe_retry=True,
+            )
+
+    def enumerate_windows(self, runtime_id: str | None = None) -> list[WindowObservation]:
+        rows = self._collect_owned_window_observations(runtime_id)
+        if len(rows) > 1:
+            raise DesktopOperationError("WINDOW_IDENTITY_UNKNOWN", "task-owned COMSOL process tree has multiple visible windows", safe_retry=True)
+        return rows
+
+    def _collect_owned_window_observations(self, runtime_id: str | None = None) -> list[WindowObservation]:
+        """Collect owned Quartz identity rows for the bounded task actor only.
+
+        This metadata-only internal path preserves the original Popen root and
+        full process validation on both sides of the inventory. Public window
+        enumeration remains strict and refuses more than one owned row; callers
+        of this internal collector may persist ambiguity, but must not select or
+        access AX while it is present.
+        """
+        self._assert_original_root_live()
+        try:
+            return self._enumerate_windows_for_live_root(runtime_id)
+        finally:
+            # The exact Popen object is held by this observer. A process exit
+            # during inventory invalidates the observation; no PID takeover is
+            # adopted or reconstructed.
+            self._assert_original_root_live()
+
+    def _enumerate_windows_for_live_root(self, runtime_id: str | None = None) -> list[WindowObservation]:
+        if __import__("sys").platform != "darwin":
+            raise DesktopOperationError("UNSUPPORTED_PLATFORM", "macOS Desktop metadata is available only on macOS", category=UNSUPPORTED_CONTROL)
+        try:
+            import Quartz
+        except ImportError as exc:
+            raise DesktopOperationError("WINDOW_METADATA_UNAVAILABLE", "Quartz is required for task-owned macOS window identity", category=UNSUPPORTED_CONTROL) from exc
+
+        for expected in self._owned_processes.values():
+            self._assert_process_current(expected)
+        infos = Quartz.CGWindowListCopyWindowInfo(
+            Quartz.kCGWindowListOptionOnScreenOnly | Quartz.kCGWindowListExcludeDesktopElements,
+            Quartz.kCGNullWindowID,
+        ) or []
+        rows: list[WindowObservation] = []
+        seen_window_ids: set[int] = set()
+        for item in infos:
+            # OwnerPID is the sole property read for a foreign window row.
+            try:
+                raw_pid = item.get(Quartz.kCGWindowOwnerPID, 0)
+                if isinstance(raw_pid, bool) or not isinstance(raw_pid, int):
+                    continue
+                expected = self._owned_processes.get(raw_pid)
+                if expected is None:
+                    continue
+                self._assert_process_current(expected)
+                raw_window_id = item.get(Quartz.kCGWindowNumber, 0)
+                if isinstance(raw_window_id, bool) or not isinstance(raw_window_id, int) or raw_window_id <= 0:
+                    raise DesktopOperationError("WINDOW_IDENTITY_UNKNOWN", "owned task window handle is malformed", safe_retry=True)
+                if raw_window_id in seen_window_ids:
+                    raise DesktopOperationError("WINDOW_IDENTITY_UNKNOWN", "owned task window handle is ambiguous", safe_retry=True)
+                seen_window_ids.add(raw_window_id)
+                if len(rows) >= MAX_TASK_OWNED_QUARTZ_WINDOWS_PER_INVENTORY:
+                    raise DesktopOperationError(
+                        "WINDOW_IDENTITY_UNKNOWN",
+                        "task-owned Quartz inventory exceeds the fixed retained-row cap",
+                        safe_retry=True,
+                    )
+                identity = WindowIdentity(
+                    platform="macos",
+                    native_window_id=f"CGWindow:{raw_window_id}",
+                    process_id=expected.process_id,
+                    process_birth=expected.process_birth,
+                    login_id=f"uid:{expected.real_uid}",
+                    desktop_session_id=f"process-session:{expected.session_id}",
+                    comsol_version=expected.comsol_version,
+                )
+                rows.append(WindowObservation(identity=identity, title="", control_status=UNSUPPORTED_CONTROL))
+            except DesktopOperationError:
+                raise
+            except Exception as exc:
+                raise DesktopOperationError(
+                    "WINDOW_IDENTITY_UNKNOWN", "task-owned Quartz window identity is incomplete", safe_retry=True,
+                ) from exc
+        for expected in self._owned_processes.values():
+            self._assert_process_current(expected)
+        return rows
+
+
 class MacOSFrameworkGateway:
     """Lazy product framework calls; this gateway never selects a COMSOL control.
 
@@ -213,19 +466,35 @@ class MacOSFrameworkGateway:
     @staticmethod
     def _wait_callback(start, *, timeout_s=15.0):
         complete = threading.Event()
-        result = {}
+        result = {"accepting": True, "value": None, "error": None}
+        result_lock = threading.Lock()
 
         def callback(value, error):
-            result["value"] = value
-            result["error"] = error
-            complete.set()
+            with result_lock:
+                if not result["accepting"]:
+                    return
+                result["value"] = value
+                result["error"] = error
+                complete.set()
 
         start(callback)
         if not complete.wait(timeout_s):
-            raise DesktopOperationError("SCREEN_CAPTURE_TIMEOUT", "ScreenCaptureKit completion callback exceeded its bounded deadline", safe_retry=True)
-        if result.get("error") is not None:
+            # ScreenCaptureKit does not expose cancellation for these callback
+            # requests. Stop retaining any late image/error and leave the
+            # already-dispatched capture outcome terminal/uncertain.
+            with result_lock:
+                result["accepting"] = False
+                result["value"] = None
+                result["error"] = None
+            raise DesktopOperationError("SCREEN_CAPTURE_TIMEOUT", "ScreenCaptureKit completion callback exceeded its bounded deadline; late results are discarded", safe_retry=False)
+        with result_lock:
+            result["accepting"] = False
+            value, error = result["value"], result["error"]
+            result["value"] = None
+            result["error"] = None
+        if error is not None:
             raise DesktopOperationError("SCREEN_CAPTURE_FAILED", "ScreenCaptureKit reported a capture error", safe_retry=True)
-        return result.get("value")
+        return value
 
     def capture_window(self, identity):
         """Capture the exact observed SCWindow, never a display or desktop."""
@@ -338,12 +607,155 @@ class MacOSFrameworkGateway:
             "permission_scope": "ACTUAL_PRODUCT_CALLER_ONLY_NOT_CUA_CERTIFICATION",
         }
 
-    def attribute(self, element, name):
+    @staticmethod
+    def _ax_error_name(code):
+        return {
+            -25200: "failure",
+            -25201: "illegal_argument",
+            -25202: "invalid_ui_element",
+            -25203: "invalid_ui_element_observer",
+            -25204: "cannot_complete",
+            -25205: "attribute_unsupported",
+            -25206: "action_unsupported",
+            -25207: "notification_unsupported",
+            -25208: "not_implemented",
+            -25209: "notification_already_registered",
+            -25210: "notification_not_registered",
+            -25211: "api_disabled",
+            -25212: "no_value",
+            -25213: "parameterized_attribute_unsupported",
+            -25214: "not_enough_precision",
+        }.get(code, "unknown")
+
+    def _set_ax_messaging_timeout(self, element, *, timeout_s=None):
+        """Bound one exact AX element IPC; never use the global/system timeout."""
         accessibility, _ = self._load()
+        setter = getattr(accessibility, "AXUIElementSetMessagingTimeout", None)
+        if not callable(setter):
+            raise DesktopOperationError(
+                "AX_TIMEOUT_UNAVAILABLE",
+                "Accessibility runtime lacks the per-element messaging timeout API",
+                safe_retry=True,
+            )
+        timeout = AX_MESSAGING_TIMEOUT_SECONDS if timeout_s is None else min(
+            float(timeout_s), AX_MESSAGING_TIMEOUT_SECONDS
+        )
+        if not math.isfinite(timeout) or timeout <= 0:
+            raise DesktopOperationError("AX_OPERATION_TIMEOUT", "Accessibility operation budget expired", safe_retry=True)
+        try:
+            result = setter(element, float(timeout))
+        except Exception as exc:
+            raise DesktopOperationError(
+                "AX_TIMEOUT_UNAVAILABLE",
+                "Accessibility per-element messaging timeout could not be configured",
+                safe_retry=True,
+            ) from exc
+        if isinstance(result, bool) or not isinstance(result, int) or result != 0:
+            raise DesktopOperationError(
+                "AX_TIMEOUT_UNAVAILABLE",
+                "Accessibility rejected the per-element messaging timeout",
+                safe_retry=True,
+                diagnostics={"kind": "AX_TIMEOUT_SETUP", "ax_error_code": result if isinstance(result, int) else None},
+            )
+
+    def attribute(self, element, name, *, scope="owned_window_tree", timeout_s=None):
+        accessibility, _ = self._load()
+        self._set_ax_messaging_timeout(element, timeout_s=timeout_s)
         error, value = accessibility.AXUIElementCopyAttributeValue(element, name, None)
         if error != 0:
-            raise DesktopOperationError("AX_ATTRIBUTE_UNAVAILABLE", f"Accessibility attribute unavailable: {name}", safe_retry=True)
+            try:
+                code = int(error)
+            except (TypeError, ValueError, OverflowError):
+                code = None
+            # Only narrowly scoped readiness reads can be transient. The
+            # caller still has to revalidate the exact owned Quartz window
+            # and original process identity before every retry.
+            readiness_attribute = (
+                (name == "AXWindows" and scope == "application_window_map")
+                or (name in {"AXPosition", "AXSize"} and scope == "window_association")
+            )
+            readiness_transient = readiness_attribute and code in {-25204, -25212}
+            error_name = self._ax_error_name(code) if code is not None else "malformed"
+            diagnostics = {
+                "kind": "AX_ERROR",
+                "ax_error_code": code,
+                "ax_error_name": error_name,
+                "attribute": str(name),
+                "scope": str(scope),
+                "readiness_transient": readiness_transient,
+            }
+            raise DesktopOperationError(
+                "AX_ATTRIBUTE_TRANSIENT" if readiness_transient else "AX_ATTRIBUTE_UNAVAILABLE",
+                f"Accessibility attribute read failed ({error_name}, {code}): {name} in {scope}",
+                safe_retry=False,
+                diagnostics=diagnostics,
+            )
         return value
+
+    def supported_attribute_names(self, element, *, timeout_s=None):
+        """Return a small, validated AX attribute-name list for one element."""
+        accessibility, _ = self._load()
+        copier = getattr(accessibility, "AXUIElementCopyAttributeNames", None)
+        if not callable(copier):
+            raise DesktopOperationError(
+                "AX_ATTRIBUTE_NAMES_UNAVAILABLE",
+                "Accessibility runtime lacks the per-element attribute-name API",
+                safe_retry=False,
+            )
+        self._set_ax_messaging_timeout(element, timeout_s=timeout_s)
+        try:
+            result = copier(element, None)
+        except Exception as exc:
+            raise DesktopOperationError(
+                "AX_ATTRIBUTE_NAMES_UNAVAILABLE",
+                "Accessibility attribute names could not be read from the exact element",
+                safe_retry=False,
+            ) from exc
+        if not isinstance(result, (tuple, list)) or len(result) != 2:
+            raise DesktopOperationError(
+                "AX_ATTRIBUTE_NAMES_MALFORMED",
+                "Accessibility returned a malformed attribute-name result",
+                safe_retry=False,
+            )
+        error, names = result
+        if isinstance(error, bool) or not isinstance(error, int) or error != 0:
+            code = error if isinstance(error, int) and not isinstance(error, bool) else None
+            raise DesktopOperationError(
+                "AX_ATTRIBUTE_NAMES_UNAVAILABLE",
+                "Accessibility could not prove the exact element's supported attributes",
+                safe_retry=False,
+                diagnostics={"kind": "AX_ERROR", "ax_error_code": code,
+                             "ax_error_name": self._ax_error_name(code) if code is not None else "malformed",
+                             "scope": "selector_search"},
+            )
+        if names is None or isinstance(names, (str, bytes, bytearray, Mapping)) or not callable(getattr(names, "__getitem__", None)):
+            raise DesktopOperationError(
+                "AX_ATTRIBUTE_NAMES_MALFORMED",
+                "Accessibility attribute names are absent, malformed, duplicated, or over the fixed bound",
+                safe_retry=False,
+                diagnostics={"scope": "selector_search", "attribute_name_limit": AX_SELECTOR_ATTRIBUTE_NAMES_LIMIT},
+            )
+        try:
+            name_count = len(names)
+            if name_count > AX_SELECTOR_ATTRIBUTE_NAMES_LIMIT:
+                raise ValueError("attribute-name array exceeds its fixed bound")
+            normalized_names = tuple(names[index] for index in range(name_count))
+        except Exception as exc:
+            raise DesktopOperationError(
+                "AX_ATTRIBUTE_NAMES_MALFORMED",
+                "Accessibility attribute names could not be read as a bounded array",
+                safe_retry=False,
+                diagnostics={"scope": "selector_search", "attribute_name_limit": AX_SELECTOR_ATTRIBUTE_NAMES_LIMIT},
+            ) from exc
+        if (any(not isinstance(name, str) or not name or "\x00" in name for name in normalized_names)
+                or len(set(normalized_names)) != len(normalized_names)):
+            raise DesktopOperationError(
+                "AX_ATTRIBUTE_NAMES_MALFORMED",
+                "Accessibility attribute names contain malformed or duplicate entries",
+                safe_retry=False,
+                diagnostics={"scope": "selector_search", "attribute_name_limit": AX_SELECTOR_ATTRIBUTE_NAMES_LIMIT},
+            )
+        return normalized_names
 
     def _point(self, value, kind):
         accessibility, _ = self._load()
@@ -366,48 +778,112 @@ class MacOSFrameworkGateway:
         info = matches[0]
         bounds = info.get(quartz.kCGWindowBounds, {})
         expected = (bounds.get("X"), bounds.get("Y"), bounds.get("Width"), bounds.get("Height"))
-        if any(value is None for value in expected):
+        if not self._valid_window_geometry(expected):
             raise DesktopOperationError("WINDOW_IDENTITY_UNKNOWN", "Quartz window bounds incomplete", safe_retry=True)
         app = accessibility.AXUIElementCreateApplication(identity.process_id)
-        windows = self.attribute(app, "AXWindows") or []
+        windows = self.attribute(app, "AXWindows", scope="application_window_map") or []
         observed = []
         for window in windows:
             try:
-                position = self._point(self.attribute(window, "AXPosition"), accessibility.kAXValueCGPointType)
-                size = self._point(self.attribute(window, "AXSize"), accessibility.kAXValueCGSizeType)
-                title = str(self.attribute(window, "AXTitle") or "")
+                position = self._point(self.attribute(window, "AXPosition", scope="window_association"), accessibility.kAXValueCGPointType)
+                size = self._point(self.attribute(window, "AXSize", scope="window_association"), accessibility.kAXValueCGSizeType)
+                title = str(self.attribute(window, "AXTitle", scope="window_association") or "")
                 geometry = (position.x, position.y, size.width, size.height)
+                if not self._valid_window_geometry(geometry):
+                    raise DesktopOperationError(
+                        "WINDOW_IDENTITY_UNKNOWN", "Accessibility window geometry is empty or malformed",
+                        safe_retry=False,
+                        diagnostics={"scope": "window_association", "attribute": "AXPosition/AXSize"},
+                    )
                 if geometry == expected and title == str(info.get(quartz.kCGWindowName) or ""):
                     observed.append(window)
-            except DesktopOperationError:
+            except DesktopOperationError as exc:
+                # Unsupported/disabled AX errors are terminal evidence. Do not
+                # hide them as an absent window or retry a broader inventory.
+                if exc.diagnostics.get("kind") == "AX_ERROR":
+                    raise
                 continue
         if len(observed) != 1:
             raise DesktopOperationError("WINDOW_IDENTITY_UNKNOWN", "CG/AX association is absent or ambiguous; no focused-window fallback", safe_retry=True)
         return observed[0]
+
+    @staticmethod
+    def _valid_window_geometry(geometry):
+        """Require finite coordinates and positive dimensions for CG/AX association."""
+        import math
+
+        if not isinstance(geometry, (tuple, list)) or len(geometry) != 4:
+            return False
+        values = []
+        for value in geometry:
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                return False
+            number = float(value)
+            if not math.isfinite(number):
+                return False
+            values.append(number)
+        return values[2] > 0 and values[3] > 0
 
     def window_tree(self, identity, *, max_depth=4, max_nodes=128):
         """Read only one associated window. Metadata is not a model binding."""
         if type(max_depth) is not int or not 0 <= max_depth <= 8 or type(max_nodes) is not int or not 1 <= max_nodes <= 512:
             raise DesktopOperationError("INVALID_REQUEST", "bounded AX inventory limits are invalid", safe_retry=True)
         root = self.target_window(identity)
+        deadline = time.monotonic() + AX_TREE_READ_BUDGET_SECONDS
+
+        def read_attribute(element, name):
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise DesktopOperationError("AX_TREE_TIMEOUT", "bounded AX metadata read exceeded its total time budget", safe_retry=True)
+            return self.attribute(element, name, scope="owned_window_tree", timeout_s=remaining)
+
         result = []
         omitted = False
         pending = [(root, 0, ())]
         while pending and len(result) < max_nodes:
             element, depth, path = pending.pop()
             attributes = {}
+            attribute_observations = {}
             for name in ("AXRole", "AXSubrole", "AXIdentifier", "AXTitle", "AXDescription", "AXEnabled"):
                 try:
-                    value = self.attribute(element, name)
+                    value = read_attribute(element, name)
                     if isinstance(value, (str, bool)):
                         attributes[name] = value[:512] if isinstance(value, str) else value
-                except DesktopOperationError:
-                    continue
-            result.append({"path": list(path), "attributes": attributes})
+                except DesktopOperationError as exc:
+                    diagnostics = exc.diagnostics
+                    if not (diagnostics.get("kind") == "AX_ERROR"
+                            and diagnostics.get("ax_error_code") in {-25205, -25212}):
+                        raise
+                    code = diagnostics["ax_error_code"]
+                    attribute_observations[name] = {
+                        "status": "ATTRIBUTE_UNSUPPORTED" if code == -25205 else "NO_VALUE",
+                        "ax_error_code": code,
+                        "ax_error_name": diagnostics.get("ax_error_name"),
+                        "scope": "owned_window_tree",
+                    }
+            node = {"path": list(path), "attributes": attributes,
+                    "attribute_observations": attribute_observations}
             try:
-                children = self.attribute(element, "AXChildren") or []
-            except DesktopOperationError:
+                children = read_attribute(element, "AXChildren") or []
+            except DesktopOperationError as exc:
+                diagnostics = exc.diagnostics
+                if not (diagnostics.get("kind") == "AX_ERROR"
+                        and diagnostics.get("ax_error_code") in {-25205, -25212}):
+                    raise
                 children = []
+                code = diagnostics["ax_error_code"]
+                node["children_observation"] = {
+                    "status": "ATTRIBUTE_UNSUPPORTED" if code == -25205 else "NO_VALUE",
+                    "ax_error_code": code,
+                    "ax_error_name": diagnostics.get("ax_error_name"),
+                    "scope": "owned_window_tree",
+                }
+                # The metadata interface did not prove whether descendants
+                # exist, so this tree cannot support completeness claims.
+                omitted = True
+            else:
+                node["children_observation"] = {"status": "OBSERVED", "child_count": len(children)}
+            result.append(node)
             available = max(0, max_nodes - len(result) - len(pending))
             if children and depth >= max_depth:
                 omitted = True
@@ -423,32 +899,114 @@ class MacOSFrameworkGateway:
             raise DesktopOperationError("DESKTOP_PROFILE_MISMATCH", "macOS adapter received a non-AX selector", safe_retry=True)
         root = self.target_window(identity)
         properties = selector.get("properties", {})
+        if (not isinstance(properties, Mapping)
+                or not {"identifier", "role"} <= set(properties)
+                or set(properties) - {"identifier", "role", "subrole", "title"}):
+            raise DesktopOperationError("DESKTOP_PROFILE_INVALID", "AX selector properties are malformed", safe_retry=True)
         matches = []
         pending = [root]
         seen = 0
+        property_attributes = {"identifier": "AXIdentifier", "role": "AXRole",
+                              "subrole": "AXSubrole", "title": "AXTitle"}
+        required = {"identifier", "role"}
+
+        def read_attribute(element, name):
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise DesktopOperationError("DESKTOP_SELECTOR_TIMEOUT", "AX selector search exceeded its total time budget", safe_retry=True)
+            return self.attribute(element, name, scope="selector_search", timeout_s=remaining)
+
+        deadline = time.monotonic() + AX_SELECTOR_SEARCH_BUDGET_SECONDS
         while pending and seen < 4096:
             element = pending.pop()
             seen += 1
-            try:
-                observed = {
-                    "identifier": self.attribute(element, "AXIdentifier"),
-                    "role": self.attribute(element, "AXRole"),
-                }
-                if "subrole" in properties:
-                    observed["subrole"] = self.attribute(element, "AXSubrole")
-                if "title" in properties:
-                    observed["title"] = self.attribute(element, "AXTitle")
+            observed = {}
+            unavailable = set()
+            for key in properties:
+                try:
+                    observed[key] = read_attribute(element, property_attributes[key])
+                except DesktopOperationError as exc:
+                    diagnostics = exc.diagnostics
+                    if (diagnostics.get("kind") == "AX_ERROR"
+                            and diagnostics.get("ax_error_code") in {-25205, -25212}):
+                        unavailable.add(key)
+                    else:
+                        raise
+            required_match = not (required & unavailable) and all(
+                observed.get(key) == properties[key] for key in required
+            )
+            if required_match:
+                unknown_optional = (set(properties) - required) & unavailable
+                if unknown_optional:
+                    raise DesktopOperationError(
+                        "DESKTOP_SELECTOR_MATCH_UNKNOWN",
+                        "AX selector cardinality is unknown because a matching element lacks a profiled optional attribute",
+                        safe_retry=True,
+                    )
                 if all(observed.get(key) == value for key, value in properties.items()):
                     matches.append(element)
-                children = self.attribute(element, "AXChildren") or []
-                remaining = max(0, 4096 - seen - len(pending))
-                if len(children) > remaining:
-                    raise DesktopOperationError("DESKTOP_SELECTOR_TREE_LIMIT", "AX selector search exceeds its fixed 4096-node bound", safe_retry=True)
-                pending.extend(reversed(children))
+            try:
+                children_value = read_attribute(element, "AXChildren")
             except DesktopOperationError as exc:
-                if exc.code == "DESKTOP_SELECTOR_TREE_LIMIT":
+                diagnostics = exc.diagnostics
+                if (diagnostics.get("kind") == "AX_ERROR"
+                        and diagnostics.get("ax_error_code") == -25205):
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        raise DesktopOperationError(
+                            "DESKTOP_SELECTOR_TIMEOUT",
+                            "AX selector search exceeded its total time budget before proving a semantic leaf",
+                            safe_retry=True,
+                        ) from exc
+                    try:
+                        supported_names = self.supported_attribute_names(element, timeout_s=remaining)
+                    except DesktopOperationError as names_exc:
+                        raise DesktopOperationError(
+                            "DESKTOP_SELECTOR_TREE_INCOMPLETE",
+                            "AX selector search cannot prove uniqueness because leaf attributes are unknown",
+                            safe_retry=True,
+                            diagnostics={"scope": "selector_search", "child_tree_status": "ATTRIBUTE_NAMES_UNVERIFIED",
+                                         "attribute_names_error": names_exc.code},
+                        ) from names_exc
+                    if "AXChildren" not in supported_names:
+                        children_value = []
+                    else:
+                        raise DesktopOperationError(
+                            "DESKTOP_SELECTOR_TREE_INCOMPLETE",
+                            "AXChildren is listed as supported but its value could not be read",
+                            safe_retry=True,
+                            diagnostics={"scope": "selector_search", "child_tree_status": "SUPPORTED_VALUE_UNREADABLE",
+                                         "ax_error_code": diagnostics.get("ax_error_code"),
+                                         "ax_error_name": diagnostics.get("ax_error_name")},
+                        ) from exc
+                elif (diagnostics.get("kind") == "AX_ERROR"
+                        and diagnostics.get("ax_error_code") == -25212):
+                    raise DesktopOperationError(
+                        "DESKTOP_SELECTOR_TREE_INCOMPLETE",
+                        "AX selector search cannot prove uniqueness while a target-window subtree is unreadable",
+                        safe_retry=True,
+                        diagnostics={"scope": "selector_search", "child_tree_status": diagnostics.get("ax_error_name")},
+                    ) from exc
+                else:
                     raise
-                continue
+            if children_value is None or isinstance(children_value, (str, bytes, bytearray, Mapping)):
+                raise DesktopOperationError(
+                    "DESKTOP_SELECTOR_TREE_INCOMPLETE",
+                    "AX selector search received no verifiable child sequence",
+                    safe_retry=True,
+                )
+            try:
+                children = list(children_value)
+            except (TypeError, ValueError) as exc:
+                raise DesktopOperationError(
+                    "DESKTOP_SELECTOR_TREE_INCOMPLETE",
+                    "AX selector search received a malformed child sequence",
+                    safe_retry=True,
+                ) from exc
+            remaining = max(0, 4096 - seen - len(pending))
+            if len(children) > remaining:
+                raise DesktopOperationError("DESKTOP_SELECTOR_TREE_LIMIT", "AX selector search exceeds its fixed 4096-node bound", safe_retry=True)
+            pending.extend(reversed(children))
         if pending or seen >= 4096:
             raise DesktopOperationError("DESKTOP_SELECTOR_TREE_LIMIT", "AX selector search was incomplete at the node bound", safe_retry=True)
         if len(matches) != 1:
@@ -480,9 +1038,11 @@ class MacOSFrameworkGateway:
                 raise DesktopOperationError("DESKTOP_SELECTOR_UNSUPPORTED", "this Accessibility runtime does not expose the selection action constant", safe_retry=True)
         else:
             raise DesktopOperationError("DESKTOP_SELECTOR_UNSUPPORTED", "AX action profile must declare invoke or selection", safe_retry=True)
+        self._set_ax_messaging_timeout(element)
         error, names = accessibility.AXUIElementCopyActionNames(element, None)
         if error != 0 or not names or action not in names:
             raise DesktopOperationError("DESKTOP_SELECTOR_UNSUPPORTED", "observed AX element does not expose the profile's exact action", safe_retry=True)
+        self._set_ax_messaging_timeout(element)
         result = accessibility.AXUIElementPerformAction(element, action)
         if result != 0:
             raise DesktopOperationError("DESKTOP_ACTION_UNVERIFIED", "AX action failed", side_effect_started=True, safe_retry=False)
@@ -503,11 +1063,30 @@ class MacOSFrameworkGateway:
         setter = getattr(accessibility, "AXUIElementSetAttributeValue", None)
         if not callable(setter):
             raise DesktopOperationError("DESKTOP_SELECTOR_UNSUPPORTED", "Accessibility value assignment API is unavailable", safe_retry=True)
+        self._set_ax_messaging_timeout(element)
         result = setter(element, "AXValue", value)
         if result != 0:
             raise DesktopOperationError("DESKTOP_VALUE_SET_FAILED", "Accessibility rejected the profiled destination field", side_effect_started=True, safe_retry=False)
-        error, readback = accessibility.AXUIElementCopyAttributeValue(element, "AXValue", None)
-        if error != 0 or readback != value:
+        try:
+            readback = self.attribute(element, "AXValue", scope="selector_readback")
+        except DesktopOperationError as exc:
+            raise DesktopOperationError(
+                "DESKTOP_VALUE_READBACK_UNKNOWN",
+                "Accessibility accepted the destination but exact value readback failed",
+                side_effect_started=True,
+                safe_retry=False,
+                diagnostics={"scope": "selector_readback", "cause_code": exc.code,
+                             "cause_kind": exc.diagnostics.get("kind")},
+            ) from exc
+        except Exception as exc:
+            raise DesktopOperationError(
+                "DESKTOP_VALUE_READBACK_UNKNOWN",
+                "Accessibility accepted the destination but exact value readback failed",
+                side_effect_started=True,
+                safe_retry=False,
+                diagnostics={"scope": "selector_readback", "cause_type": type(exc).__name__},
+            ) from exc
+        if readback != value:
             raise DesktopOperationError("DESKTOP_VALUE_READBACK_UNKNOWN", "Save Copy destination did not read back exactly", side_effect_started=True, safe_retry=False)
         return {"set": True, "selector_id": selector.get("selector_id"), "readback": readback}
 
@@ -665,11 +1244,22 @@ class MacOSDesktopAdapter(MacOSAccessibilityObserver):
                                        fingerprint=fingerprint, dirty=dirty,
                                        active_model_label=label)
 
-    def show_model(self, identity, snapshot):
+    def preflight_show_model(self, identity, snapshot):
+        """Refuse before any UI effect unless post-show binding evidence exists."""
         profile = self._profile(identity)
-        selector = profile["selectors"].get("show_model")
-        if selector is None:
+        selectors = profile["selectors"]
+        if "show_model" not in selectors:
             raise DesktopOperationError("DESKTOP_SELECTOR_UNAVAILABLE", "no observed macOS current-model selector is installed", safe_retry=True)
+        if not {"active_model_label", "active_server_endpoint"} <= set(selectors):
+            raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "show_model requires the observed active label and exact server endpoint selectors", safe_retry=True)
+        if not isinstance(getattr(snapshot, "server_endpoint", None), str) or not snapshot.server_endpoint:
+            raise DesktopOperationError("MODEL_BINDING_UNKNOWN", "show_model requires a typed managed server endpoint", safe_retry=True)
+        return {"ready": True, "profile_sha256": profile["profile_sha256"]}
+
+    def show_model(self, identity, snapshot):
+        self.preflight_show_model(identity, snapshot)
+        profile = self._profile(identity)
+        selector = profile["selectors"]["show_model"]
         self.gateway.perform_selector(identity, selector)
         return {"verified": True, "target_model_ref": snapshot.model_ref.as_dict(), "profile_sha256": profile["profile_sha256"]}
 
@@ -735,14 +1325,19 @@ class MacOSDesktopAdapter(MacOSAccessibilityObserver):
         return DesktopActionPlan(action_id, descriptor["mutates_model"],
                                  {"profile_sha256": profile["profile_sha256"], "descriptor": descriptor})
 
-    def capture(self, identity, region):
-        from ._desktop_capture import capture_macos_screen_capture_kit_window
+    def preflight_capture(self, identity, region):
+        """Check non-prompting prerequisites before a binding challenge/effect marker."""
         if region != "window":
             raise DesktopOperationError("CAPTURE_SCOPE_REJECTED", "macOS capture currently supports only the exact ScreenCaptureKit window filter", safe_retry=True)
         _require_screencapturekit_14()
         permission = self.gateway.permissions()
         if permission.get("screen_capture_allowed") is not True:
             raise DesktopOperationError("PERMISSION_REQUIRED", "macOS Screen Recording permission is unavailable", category=BLOCKED_PERMISSION, safe_retry=True)
+        return {"ready": True, "scope": "target_window", "permission_scope": permission.get("permission_scope")}
+
+    def capture(self, identity, region):
+        from ._desktop_capture import capture_macos_screen_capture_kit_window
+        self.preflight_capture(identity, region)
         image = capture_macos_screen_capture_kit_window(identity, gateway=self.gateway)
         return {"verified": True, "region": image.region, "scope": image.scope,
                 "format": image.format, "width": image.width, "height": image.height,

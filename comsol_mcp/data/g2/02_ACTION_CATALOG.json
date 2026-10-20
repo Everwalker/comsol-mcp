@@ -1995,7 +1995,7 @@
       "mcp_tool_name": "node_inspect",
       "domain": "node",
       "purpose": "读取类型、标签、属性、选择、子集合",
-      "arguments_signature": "path:NodePath,include_values:bool?",
+      "arguments_signature": "path:NodePath,include_values:bool?,include_properties:bool?",
       "effect": "READ",
       "scope": "model",
       "gate": "G2",
@@ -2027,6 +2027,9 @@
           },
           "include_values": {
             "type": "boolean"
+          },
+          "include_properties": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -2043,14 +2046,14 @@
         "normal_path",
         "failure_is_truthful"
       ],
-      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read."
+      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read. Identity-only calls may set include_properties=false; include_values requires include_properties=true."
     },
     {
       "operation_id": "node.children",
       "mcp_tool_name": "node_children",
       "domain": "node",
       "purpose": "列出指定节点的子集合和对象",
-      "arguments_signature": "path:NodePath,cursor:str?,limit:int?",
+      "arguments_signature": "path:NodePath,collection:str?,cursor:str?,limit:int?",
       "effect": "READ",
       "scope": "model",
       "gate": "G2",
@@ -2085,6 +2088,34 @@
           },
           "limit": {
             "type": "integer"
+          },
+          "collection": {
+            "type": "string",
+            "enum": [
+              "component",
+              "geom",
+              "mesh",
+              "physics",
+              "material",
+              "propertyGroup",
+              "func",
+              "variable",
+              "selection",
+              "coordSystem",
+              "cpl",
+              "pair",
+              "multiphysics",
+              "feature",
+              "study",
+              "sol",
+              "dataset",
+              "numerical",
+              "table",
+              "export",
+              "view",
+              "extraDim"
+            ],
+            "description": "Optional child collection filter. Omission preserves all-collection probing and completeness; a selected collection narrows probes and binds pagination cursors to that filter."
           }
         },
         "required": [
@@ -2099,7 +2130,9 @@
       "required_tests": [
         "schema_valid",
         "normal_path",
-        "failure_is_truthful"
+        "failure_is_truthful",
+        "filtered_children",
+        "filtered_cursor_scope"
       ],
       "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read."
     },
@@ -3471,6 +3504,11 @@
             "items": {
               "type": "string"
             }
+          },
+          "entrypoint": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
           }
         },
         "required": [

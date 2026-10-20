@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import hashlib
 import json
+import re
 from typing import Any, Mapping
 
 from ._execution_contract import ExecutionContractError, permission_for_effect
@@ -15,6 +16,38 @@ DOC = "api/com/comsol/model/ModelEntity.html"
 DOC_SHA = "1e996ce8d28a6570a103c8bf341ca83f057cf8a90ece216b09d0cec192d7c2bf"
 IDENTITY_FIELDS = frozenset({"project_id", "session_id", "model_ref", "expected_revision", "idempotency_key", "request_id"})
 API_FIELDS = frozenset({"path", "method", "arguments", "java_signature", "declared_effect"})
+
+_VERSION_COMPONENT = r"(?:0|[1-9][0-9]*)"
+_CANONICAL_RUNTIME_VERSION = re.compile(
+    rf"{_VERSION_COMPONENT}\.{_VERSION_COMPONENT}\.{_VERSION_COMPONENT}\.{_VERSION_COMPONENT}"
+)
+_COMSOL_BUILD_DECLARATION = re.compile(
+    rf"COMSOL Multiphysics (?P<release>{_VERSION_COMPONENT}\.{_VERSION_COMPONENT}(?:\.{_VERSION_COMPONENT})?) "
+    rf"\((?P<build_label>开发版本|Build): (?P<build>{_VERSION_COMPONENT})\)"
+)
+
+
+def normalize_public_runtime_version(raw: Any) -> tuple[str, str]:
+    """Parse only complete, closed COMSOL version declarations.
+
+    The semantic four-component version is derived only from the observed raw
+    descriptor. Callers compare that result with their reviewed VERSION after
+    this boundary; no expected value is used to construct the observation.
+    """
+    if type(raw) is not str or not raw or len(raw) > 256:
+        raise ValueError("COMSOL runtime version must be a bounded nonempty string")
+    if _CANONICAL_RUNTIME_VERSION.fullmatch(raw):
+        return raw, "CANONICAL_FOUR_PART"
+    match = _COMSOL_BUILD_DECLARATION.fullmatch(raw)
+    if match is None:
+        raise ValueError("COMSOL runtime version is not a complete recognized declaration")
+    release_parts = match.group("release").split(".")
+    if len(release_parts) == 2:
+        release_parts.append("0")
+    semantic_version = ".".join((*release_parts, match.group("build")))
+    declaration_format = ("COMSOL_ZH_DEVELOPMENT_BUILD" if match.group("build_label") == "开发版本"
+                          else "COMSOL_ENGLISH_BUILD")
+    return semantic_version, declaration_format
 
 
 @dataclass(frozen=True)
@@ -134,6 +167,12 @@ def describe_receiver(worker: Any, node: Any) -> dict[str, Any]:
             or not all(isinstance(item, str) for item in descriptor["interfaces"])
             or not isinstance(descriptor.get("methods"), list)):
         _refuse("Worker returned invalid public receiver metadata", "EXECUTION_STATE_UNKNOWN")
+    raw_version = descriptor["runtime_version"]
+    try:
+        semantic_version, declaration_format = normalize_public_runtime_version(raw_version)
+    except ValueError:
+        _refuse("Worker returned an unsupported or ambiguous COMSOL runtime version declaration",
+                "API_UNSUPPORTED")
     methods = []
     for row in descriptor["methods"]:
         if (not isinstance(row, Mapping) or not isinstance(row.get("interface"), str)
@@ -142,7 +181,9 @@ def describe_receiver(worker: Any, node: Any) -> dict[str, Any]:
                 or not isinstance(row.get("returns"), str)):
             _refuse("Worker returned invalid public signature metadata", "EXECUTION_STATE_UNKNOWN")
         methods.append(dict(row))
-    return {"runtime_version": descriptor["runtime_version"], "interfaces": list(descriptor["interfaces"]), "methods": methods}
+    return {"runtime_version": semantic_version, "runtime_version_raw": raw_version,
+            "runtime_version_format": declaration_format,
+            "interfaces": list(descriptor["interfaces"]), "methods": methods}
 
 
 def supports(descriptor: Mapping[str, Any], owner: str, method: str, parameters: tuple[str, ...], returns: str | None = None) -> bool:

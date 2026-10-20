@@ -28,15 +28,19 @@ _OWNER_TOKEN = object()
 FULL_REBUILD='FULL_LOCKED_RUNTIME_REBUILD'
 CURRENT43='CURRENT43_DEPENDENCIES'
 APP_BUNDLE='CURRENT_APPLICATION_BUNDLE'
+APP_LIFECYCLE='CURRENT_APPLICATION_LIFECYCLE'
+INTEL_DERIVED='CURRENT_INTEL_DERIVED_WHEEL'
 
 def activity_scope(plan):
     kind=plan.get('activity_kind',FULL_REBUILD)
-    if kind not in (FULL_REBUILD,CURRENT43,APP_BUNDLE):raise RuntimeError('unknown W26 closed activity kind')
+    if kind not in (FULL_REBUILD,CURRENT43,APP_BUNDLE,APP_LIFECYCLE,INTEL_DERIVED):raise RuntimeError('unknown W26 closed activity kind')
     scope={'activity_kind':kind,'budget_seconds':7200 if kind==FULL_REBUILD else 1800,
            'cleanup_reserve_seconds':600 if kind==FULL_REBUILD else 300,'max_make_parallelism':2 if kind==FULL_REBUILD else 0,
            'sampled_rss_stop_bytes':6*1024**3,'max_output_bytes':12*1024**3}
     if kind==CURRENT43:scope.update(prepare_cap_seconds=600,profile_cap_seconds=180)
     if kind==APP_BUNDLE:scope.update(prepare_cap_seconds=600,build_cap_seconds=600,check_cap_seconds=180)
+    if kind==APP_LIFECYCLE:scope.update(budget_seconds=3600,cleanup_reserve_seconds=600,prepare_cap_seconds=600,install_cap_seconds=600,readback_cap_seconds=180,restore_cap_seconds=600)
+    if kind==INTEL_DERIVED:scope.update(budget_seconds=3600,cleanup_reserve_seconds=180,prepare_cap_seconds=600,max_make_parallelism=2,max_output_bytes=8*1024**3,minimum_free_bytes=8*1024**3)
     for key,value in scope.items():
         if key in plan and (type(plan[key]) is not type(value) or plan[key]!=value):raise RuntimeError('W26 closed activity budget/profile differs')
     return scope
@@ -194,6 +198,9 @@ def source_fingerprints(kind=FULL_REBUILD):
     names = ["w26_runtime_actor.py", "w26_rebuild_current_runtime.py", "w26_prepare_current_inputs.py", "_w26_original_process.py", "_w26_original_binary.py", "_w26_original_tls.py", "w26_runtime_sources.lock.json", "w26_hold_exec.py", "w26_current_runtime_profile.py"]
     if kind==CURRENT43:names+=['w26_dependency_unit.py','w26_dependency_stage.py','w26_dependency_profile.py','full_project_release.py']
     if kind==APP_BUNDLE:names+=['w26_dependency_unit.py','w26_dependency_stage.py','w26_dependency_profile.py','full_project_release.py','w26_application_bundle.py','w26_application_stage.py']
+    if kind in {APP_BUNDLE,APP_LIFECYCLE}:names+=['w26_application_sources.lock.json']
+    if kind==APP_LIFECYCLE:names+=['w26_dependency_unit.py','w26_dependency_stage.py','w26_dependency_profile.py','full_project_release.py','w26_application_bundle.py','w26_application_stage.py','release_transition_lifecycle.py','w26_sealed_data.py','w26_application_lifecycle.py','w26_lifecycle_stage.py']
+    if kind==INTEL_DERIVED:names+=['w26_intel_derived.py','w26_intel_derived_stage.py','w26_dependency_stage.py','full_project_release.py']
     return {str(base/n): _helpers().raw_file(base/n)[1] for n in names}
 
 def prepare_actor(root,*,tag=None):
@@ -231,7 +238,7 @@ def gate(root, binding_path, binding_sha):
         helper.raw_file(Path(candidate[key]["path"]),expected=candidate[key])
     source=json.loads(helper.raw_file(Path(candidate["source"]["path"]),expected=candidate["source"])[0])
     for path,row in source.items():helper.raw_file(Path(path),expected=row)
-    statuses={FULL_REBUILD:'W26_RUNTIME_REBUILD',CURRENT43:'W26_CURRENT43_DEPENDENCIES',APP_BUNDLE:'W26_APPLICATION_BUNDLE'}
+    statuses={FULL_REBUILD:'W26_RUNTIME_REBUILD',CURRENT43:'W26_CURRENT43_DEPENDENCIES',APP_BUNDLE:'W26_APPLICATION_BUNDLE',APP_LIFECYCLE:'W26_APPLICATION_LIFECYCLE',INTEL_DERIVED:'W26_INTEL_DERIVED_WHEEL'}
     required={"status":"MAIN_APPROVED_ONCE_"+statuses[kind],
         "candidate_sha256":candidate_record["sha256"],"root":str(root),"root_identity":candidate["root_identity"],
         **{k:v for k,v in scope.items() if k!='activity_kind'},"GUI":False,"COMSOL":False}
@@ -487,7 +494,7 @@ class RuntimeOwner:
             rss=sum(row[3]*1024 for row in rows if row[2]==self.process.pid or row[0]==os.getpid())
         sample={'elapsed_seconds':time.monotonic()-self.began,'rss_bytes':rss,'output_bytes':output,'hard_OS_cap':False}
         self.samples.append(sample)
-        if rss>6*1024**3 or output>12*1024**3:
+        if rss>self.scope['sampled_rss_stop_bytes'] or output>self.scope['max_output_bytes']:
             self.stop_reason='SAMPLED_RESOURCE_STOP_NO_NEW_EFFECT_OR_UNPROVEN_SIGNAL'
             raise RuntimeError(self.stop_reason)
         return sample
@@ -531,7 +538,8 @@ def run_owned_stage(owner,logsfd,index,label,argv,cwd,env,cap,binding,plan,*,san
 
 def retain_first_failure(owner,logsfd,exc,completed,*,stem='BUILD'):
     unknown=isinstance(exc,original.StageUnknown)
-    owner.first_cause=exc.original_cause if unknown and exc.original_cause is not None else exc
+    if owner.first_cause is None:
+        owner.first_cause=exc.original_cause if unknown and exc.original_cause is not None else exc
     if unknown:
         owner.observe_only=True;owner.stop_reason=owner.stop_reason or 'UNKNOWN_RETAIN_ORIGINAL_OWNER_NO_NEXT_STAGE'
     def safe_text(error):
@@ -563,6 +571,12 @@ def execute(root,binding_path,binding_sha):
     if activity_scope(candidate)['activity_kind']==APP_BUNDLE:
         from tools.w26_application_bundle import execute_bundle
         return execute_bundle(root,candidate,binding,binding_record,began=began,admission_token=_OWNER_TOKEN)
+    if activity_scope(candidate)['activity_kind']==APP_LIFECYCLE:
+        from tools.w26_application_lifecycle import execute_lifecycle
+        return execute_lifecycle(root,candidate,binding,binding_record,began=began,admission_token=_OWNER_TOKEN)
+    if activity_scope(candidate)['activity_kind']==INTEL_DERIVED:
+        from tools.w26_intel_derived import execute_intel
+        return execute_intel(root,candidate,binding,binding_record,began=began,admission_token=_OWNER_TOKEN)
     plan=json.loads(helper.raw_file(Path(candidate['plan']['path']),expected=candidate['plan'])[0])
     prepared=json.loads(helper.raw_file(root/'PREPARED_SOURCES.json',expected=candidate['prepared'])[0])
     toolchain=json.loads(helper.raw_file(Path(candidate['toolchain']['path']),expected=candidate['toolchain'])[0])

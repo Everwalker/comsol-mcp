@@ -55,6 +55,16 @@ def _cause_record(exc: BaseException) -> dict[str, Any]:
     return record
 
 
+def _observed_version_matches(raw: Any) -> bool:
+    """Compare a closed semantic version derived from the observed raw value."""
+    from ._g2_public_api import normalize_public_runtime_version
+    try:
+        semantic_version, _declaration_format = normalize_public_runtime_version(raw)
+    except ValueError:
+        return False
+    return semantic_version == COMSOL_VERSION
+
+
 def _prewrite(exc: BaseException, message: str) -> PreWriteRefusal:
     code = getattr(exc, "code", None)
     if type(code) is not str or not code:
@@ -93,7 +103,7 @@ def _descriptor(worker: Any, value: Any, required: set[str], label: str) -> dict
         raise PreWriteRefusal("API_UNSUPPORTED", f"{label} public descriptor is not an object")
     interfaces = descriptor.get("interfaces")
     if (type(descriptor.get("runtime_version")) is not str
-            or descriptor["runtime_version"] != COMSOL_VERSION
+            or not _observed_version_matches(descriptor["runtime_version"])
             or type(interfaces) is not list
             or any(type(item) is not str for item in interfaces)
             or not required.issubset(set(interfaces))):
@@ -380,7 +390,7 @@ def execute(worker: Any, prepared: Mapping[str, Any], current_model: Any,
                 or type(dispatch.get("generation")) is not int or dispatch["generation"] != generation
                 or type(dispatch.get("tag")) is not str or dispatch["tag"] != tag
                 or dispatch.get("semantic_operation") != "NodeGroupList.ungroup(String)"
-                or dispatch.get("runtime_version") != COMSOL_VERSION):
+                or not _observed_version_matches(dispatch.get("runtime_version"))):
             raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "private ungroup dispatch reply is malformed",
                                          stage="post_dispatch", details={"dispatch_reply": dict(dispatch) if isinstance(dispatch, Mapping) else repr(dispatch)})
         data["mutation_dispatch"] = dict(dispatch)

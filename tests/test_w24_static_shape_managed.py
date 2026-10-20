@@ -22,6 +22,110 @@ SESSION_ID = "session-w24-shape-test"
 SERVER_INSTANCE = "server-instance-shape-test"
 
 
+def _capture(value: Any) -> dict[str, Any]:
+    return {"operation": "synthetic-fixture-only", "status": "READ", "value": value}
+
+
+def _property_row(name: str, value: str, *, allowed: list[str] | None = None) -> dict[str, Any]:
+    return {
+        "property_name": name,
+        "has_property_capture": _capture(True),
+        "listed_in_properties": True,
+        "declared_type_capture": _capture("String"),
+        "allowed_values_capture": _capture(allowed),
+        "value_reader": "getString",
+        "value_capture": _capture(value),
+        "value_status": "READ_BY_DECLARED_TYPE",
+    }
+
+
+def _property_scope(values: Mapping[str, str]) -> dict[str, Any]:
+    return {
+        "property_inventory_capture": _capture(list(values)),
+        "properties": {name: _property_row(name, value) for name, value in values.items()},
+    }
+
+
+def _feature_node(tag: str, feature_type: str, *, scope: str | None = None,
+                  values: Mapping[str, str] | None = None) -> dict[str, Any]:
+    node: dict[str, Any] = {
+        "tag": tag, "path": tag, "resolution_status": "READ", "capture_status": "CAPTURED",
+        "type_capture": _capture(feature_type),
+        "child_feature_tree": {"capture_status": "CAPTURED", "tags_capture": _capture([]), "nodes": []},
+    }
+    if scope is not None and values is not None:
+        node[scope] = _property_scope(values)
+    return node
+
+
+def _generated_chain() -> dict[str, Any]:
+    attached_tag, stored_tag = "solPhaseGraph", "solStoredGraph"
+    query_values = {
+        "All": [attached_tag, stored_tag], "SolverSequence": [], "CopySolution": [],
+        "ParametricStore": [], "Stored": [stored_tag], "Parametric": [], "None": [attached_tag],
+    }
+    query_types = ["All", "SolverSequence", "CopySolution", "ParametricStore",
+                   "Stored", "Parametric", "None"]
+    sequence_tags = ["phaseStepNode", "phaseVariablesNode", "stationaryNode", "storeNode",
+                     "timeStepNode", "timeVariablesNode", "transientNode"]
+    nodes = [
+        _feature_node(sequence_tags[0], "StudyStep", scope="study_step_reference_properties",
+                     values={"study": "stdShape", "studystep": "phasei"}),
+        _feature_node(sequence_tags[1], "Variables", scope="initial_source_properties",
+                     values={"control": "phasei", "initmethod": "init", "initsol": "zero",
+                             "initsoluse": "current"}),
+        _feature_node(sequence_tags[2], "Stationary"),
+        _feature_node(sequence_tags[3], "StoreSolution", scope="store_solution_properties",
+                     values={"sol": stored_tag}),
+        _feature_node(sequence_tags[4], "StudyStep", scope="study_step_reference_properties",
+                     values={"study": "stdShape", "studystep": "time"}),
+        _feature_node(sequence_tags[5], "Variables", scope="initial_source_properties",
+                     values={"control": "time", "initmethod": "sol", "initsol": attached_tag,
+                             "initsoluse": stored_tag}),
+        _feature_node(sequence_tags[6], "Time"),
+    ]
+    attached = {
+        "requested_tag": attached_tag, "resolution_status": "READ", "capture_complete": True,
+        "tag_capture": _capture(attached_tag), "sequence_type_capture": _capture("None"),
+        "attached_capture": _capture(True), "study_capture": _capture("stdShape"),
+        "feature_tree_capture": {"capture_status": "CAPTURED", "tags_capture": _capture(sequence_tags),
+                                 "nodes": nodes},
+    }
+    stored = {
+        "requested_tag": stored_tag, "resolution_status": "READ", "capture_complete": True,
+        "tag_capture": _capture(stored_tag), "sequence_type_capture": _capture("Stored"),
+        "attached_capture": _capture(False), "study_capture": _capture("stdShape"),
+        "feature_tree_capture": {"capture_status": "CAPTURED", "tags_capture": _capture([]), "nodes": []},
+    }
+    steps = []
+    initialization = {}
+    for tag, feature_type in (("phasei", "PhaseInitialization"), ("time", "Transient")):
+        props = ({"initmethod": "init", "initstudy": "zero", "useinitsol": "off"}
+                 if tag == "phasei" else
+                 {"initmethod": "sol", "initstudy": "stdShape", "useinitsol": "off"})
+        steps.append({"requested_tag": tag, "resolution_status": "READ",
+                      "type_capture": _capture(feature_type), "properties": _property_scope(props)})
+        initialization[tag] = props
+    return {
+        "schema": "W24_GENERATED_STUDY_SOLVER_CHAIN_R2", "study_tag": "stdShape",
+        "study_step_tags_capture": _capture(["phasei", "time"]),
+        "study_step_tags": ["phasei", "time"], "study_steps": steps,
+        "study_step_initialization_readback": initialization,
+        "sequence_query_types": query_types,
+        "sequence_query_rows": [{"query_type": name, "capture": _capture(query_values[name])}
+                                for name in query_types],
+        "global_solver_tags_capture": _capture([attached_tag, stored_tag]),
+        "global_solver_tags": [attached_tag, stored_tag],
+        "sequence_tag_union": [attached_tag, stored_tag],
+        "sequence_records": [attached, stored],
+        "attached_chain_candidate_tags": [attached_tag], "attached_chain_failure_tags": [],
+        "selected_attached_sequence_tag": attached_tag, "store_solution_output_tag": stored_tag,
+        "semantic_findings": [], "status": "PHASE_INIT_TO_TIME_CHAIN_VALIDATED",
+        "native_acceptance": "NOT_RUN", "study_run_calls": 0, "solver_run_calls": 0,
+        "model_save_calls": 0, "result_evaluation_calls": 0,
+    }
+
+
 def _model_ref(tag: str) -> dict[str, Any]:
     return {"model_tag": tag, "session_id": SESSION_ID,
             "server_instance_id": SERVER_INSTANCE, "generation": 1}
@@ -46,38 +150,82 @@ def _readback(tag: str, case_id: str, configuration_id: str = "baseline") -> dic
         "gas_domain_ids": [2],
         "multiphase_domain_ids": [1, 2],
         "substrate_wetting_selections": wetting,
-        "wetted_wall_features": [{"feature_tag": f"ww{i}", "surface_selection": name,
-                                   "boundary_ids": ids,
+        "default_wetted_wall_feature_metadata": {
+            "feature_tag": "ww1", "feature_type": "WettedWall",
+            "classification": "COMSOL_6_4_DEFAULT_ALL_NOT_OVERRIDDEN_SELECTION_DOC_5838_CHUNK_19242",
+            "selection_status": "DOCUMENTED_DEFAULT_NOT_EDITABLE",
+        },
+        "wetted_wall_features": [{"feature_tag": f"wwshape{index + 1}", "feature_type": "WettedWall",
+                                   "surface_selection": name, "boundary_ids": ids,
                                    "contact_angle_expression": "thetaSubstrate"}
-                                  for i, (name, ids) in enumerate(wetting.items())],
+                                  for index, (name, ids) in enumerate(wetting.items())],
         "glue_density_expression": "rhoGlue",
         "gas_density_expression": "rhoGas",
         "glue_viscosity_expression": "muGlue",
         "gas_viscosity_expression": "muGas",
-        "phase_field_type": "PhaseFieldInFluids",
+        "phase_field_type": "PhaseField",
+        "phase_field_model_tag": "pfm_resolved_native_tag",
         "phase_field_model_type": "PhaseFieldModel",
         "phase_field_epsilon_expression": "epsPF",
+        "phase_field_chi_option": "userdef",
+        "phase_field_chi_value_type": "String",
         "phase_field_chi_expression": "chiPF",
-        "phase1_initial_selection": [1],
+        "phase1_initial_feature_tag": "init_phase1_resolved",
+        "phase1_initial_feature_type": "init",
+        "phase1_initial_values_option": "SpecifyPhase",
         "phase1_initial_value": "Fluid1phipf",
-        "phase2_initial_selection": [2],
+        "phase2_initial_feature_tag": "init_phase2_resolved",
+        "phase2_initial_feature_type": "initFluid2",
+        "phase2_initial_values_option": "SpecifyPhase",
         "phase2_initial_value": "Fluid2phipf",
+        "all_domain_ids": [1, 2],
+        "phase_field_domain_ids": [1, 2],
+        "phase1_initial_raw_input_domain_ids": [1, 2],
+        "phase1_initial_raw_input_entities_read_status": "READ",
+        "phase1_initial_raw_named_selection_tag": "",
+        "phase1_initial_selection_entities_readback": [1, 2],
+        "phase1_initial_effective_domain_ids": [1],
+        "phase1_initial_effective_domain_source": "DOCUMENTED_DEFAULT_REMAINDER_DERIVED_FROM_ALL_MINUS_FLUID2_OVERRIDE",
+        "phase1_initial_effective_domain_is_direct_readback": False,
+        "phase1_initial_selection_semantics":
+            "COMSOL_6_4_DEFAULT_SELECTION_ALL_ENTITIES_NOT_OVERRIDDEN_BY_SAME_LEVEL_NODE_DOC_5838_CHUNK_19242",
+        "phase1_initial_default_feature_classification": "NOT_EXPOSED_BY_READ_ONLY_API_METADATA",
+        "phase1_initial_selection": [1],
+        "phase2_initial_raw_input_domain_ids": [2],
+        "phase2_initial_raw_input_entities_read_status": "READ",
+        "phase2_initial_raw_named_selection_tag": "sel_gas_domain",
+        "phase2_initial_selection_entities_readback": [2],
+        "phase2_initial_effective_domain_ids": [2],
+        "phase2_initial_effective_domain_source": "DIRECT_NAMED_SELECTION_READBACK",
+        "phase2_initial_effective_domain_is_direct_readback": True,
+        "phase2_initial_selection": [2],
         "flow_type": "LaminarFlow",
-        "flow_compressibility": "incompressible",
-        "gravity_enabled": "off",
+        "flow_compressibility": "Incompressible",
+        "gravity_enabled": False,
         "pressure_reference_type": "PressurePointConstraint",
         "pressure_reference_value": "0[Pa]",
         "pressure_reference_point_ids": [8],
         "multiphase_volume_fraction_definition": "pf",
         "phase1_material_link": "matGlue",
         "phase2_material_link": "matGas",
-        "surface_tension_enabled": "on",
+        "surface_tension_enabled": True,
         "surface_tension_mode": "userdef",
         "surface_tension_expression": "sigma0",
         "phase_initialization_step_type": "PhaseInitialization",
         "transient_step_type": "Transient",
         "time_list_expression": "range(0[s],tCapillary/2,20*tCapillary)",
-        "solver_sequence_tags": ["sol1"],
+        "solver_sequence_tags": ["solPhaseGraph", "solStoredGraph"],
+        "study_step_order": ["phasei", "time"],
+        "time_initialization_method": "sol",
+        "time_initialization_study": "stdShape",
+        "use_initial_solution": "off",
+        "use_user_tolerance": "on",
+        "relative_tolerance": "1e-4",
+        "generated_study_solver_chain": _generated_chain(),
+        "attached_solver_sequence_tag": "solPhaseGraph",
+        "stored_solution_output_tag": "solStoredGraph",
+        "time_solver_feature_tag": "t1",
+        "time_solver_output_owner": "GENERATED_TIME_SOLVER_FEATURE",
         "bdf_output_time_policy": "strict",
         "output_mode": "tsteps",
         "stored_time_steps_policy": 1,
@@ -102,9 +250,11 @@ def _readback(tag: str, case_id: str, configuration_id: str = "baseline") -> dic
         "mesh_tags": ["mesh1"],
         "solution_state_readback": {
             "status": "NO_STORED_SOLUTION_DATA",
-            "readback_method": "SolverSequence.getSize() [degrees_of_freedom, stored_solution_count]",
-            "solver_sequences": [{"solver_sequence_tag": "sol1", "degrees_of_freedom": 0,
-                                  "stored_solution_count": 0}],
+            "readback_method": (
+                "SolverSequence.isEmpty() [associated solution data]; "
+                "SolverSequence.isInitialized() [solution initialization state]"),
+            "solver_sequences": [{"solver_sequence_tag": "sol1", "readback_status": "EMPTY",
+                                  "solutions_empty": True, "solution_initialized": False}],
         },
         "study_run_calls_this_action": 0,
     }
@@ -166,6 +316,12 @@ class FakePage(list):
 class FakeStore:
     def __init__(self):
         self.jobs: list[dict[str, Any]] = []
+        self.artifacts: dict[str, dict[str, Any]] = {}
+
+    def get_metadata(self, table: str, key: str):
+        assert table == "artifacts"
+        value = self.artifacts.get(key)
+        return dict(value) if value is not None else None
 
     def list_jobs(self, *, offset: int, limit: int, project_id: str):
         rows = [row for row in self.jobs if row.get("project_id") == project_id]
@@ -185,9 +341,10 @@ class FakeDaemon:
         self.backend.bind(self.parent)
         self.calls: list[tuple[str, dict[str, Any]]] = []
         self.build_outcome = "SUCCEEDED"
+        self.invalid_build_chain = False
         self.mutate_reopen = False
         self.bad_save_hash = False
-        self.solution_state_size = (0, 0)
+        self.solution_state_empty = True
         self._shape_tag = "shape-native-tag"
         self._loaded_tag = "shape-reopened-tag"
         self._readback_count = 0
@@ -216,8 +373,55 @@ class FakeDaemon:
             self.backend.bind(ref)
             return self._worker_response(True, "SUCCEEDED", ref, execution,
                                          {"model_tag": self._loaded_tag})
+        if operation == "model.load":
+            artifact_id = arguments["artifact_id"]
+            relative = f"g2_artifacts/registered/{artifact_id}.mph"
+            registered = self.workspace / relative
+            record = self.store.get_metadata("artifacts", artifact_id)
+            if (not registered.is_file() or record is None
+                    or hashlib.sha256(registered.read_bytes()).hexdigest() != artifact_id):
+                return {"success": False}
+            ref = _model_ref(self._loaded_tag)
+            self.backend.bind(ref)
+            response = self._worker_response(True, "SUCCEEDED", ref, execution,
+                {"status": "LOADED", "project_id": execution["project_id"],
+                 "model_tag": self._loaded_tag, "artifact_id": artifact_id,
+                 "sha256": artifact_id, "size_bytes": registered.stat().st_size,
+                 "ownership": "mcp_owned"})
+            response["execution"]["model_ownership"] = "mcp_owned"
+            response["execution"]["request_id"] = execution["request_id"]
+            response["execution"]["idempotency_key"] = execution["idempotency_key"]
+            return response
         if operation != "operation_call":
             raise AssertionError(f"unexpected production operation: {operation}")
+        if arguments["operation_id"] == "artifact.register":
+            body = arguments["arguments"]
+            source = self.workspace / body["path"]
+            digest = hashlib.sha256(source.read_bytes()).hexdigest()
+            relative = f"g2_artifacts/registered/{digest}.mph"
+            registered = self.workspace / relative
+            registered.parent.mkdir(parents=True, exist_ok=True)
+            registered.write_bytes(source.read_bytes())
+            operation_id = f"fake-register-{digest}"
+            provenance = {"source_project_relative_path": body["path"],
+                          "source_sha256": digest,
+                          "request_id": body["request_id"],
+                          "registering_operation_id": operation_id}
+            record = {"artifact_id": digest, "sha256": digest,
+                      "path": relative, "size": registered.stat().st_size,
+                      "project_id": body["project_id"], "role": body["role"],
+                      "classification": body["classification"],
+                      "artifact_type": body["artifact_type"],
+                      "format_version": body["format_version"],
+                      "provenance": provenance}
+            self.store.artifacts[digest] = record
+            return {"success": True,
+                    "data": {**record, "host_scope": "local_loopback_engine_and_current_project"},
+                    "execution": {"operation_id": operation_id,
+                                  "job_id": f"fake-job-{digest}",
+                                  "project_id": body["project_id"],
+                                  "request_id": body["request_id"],
+                                  "idempotency_key": body["idempotency_key"]}}
         assert arguments["operation_id"] == "code.execute_java"
         java = arguments["arguments"]
         entrypoint = java["entrypoint"]
@@ -233,6 +437,21 @@ class FakeDaemon:
                       "case_id": case_id, "configuration_id": action_args.get("configuration_id", "baseline"),
                       "model_tag": self._shape_tag,
                       "study_run_calls": 0, "phase_initialization_executed": False}
+            chain = _generated_chain()
+            nested["study_readback"] = {
+                "status": "UNSOLVED_CHAIN_CONFIGURED", "study_step_order": ["phasei", "time"],
+                "time_initialization_method": "sol", "time_initialization_study": "stdShape",
+                "use_initial_solution": "off", "study_run_calls": 0,
+                "phase_initialization_executed": False, "time_solver_settings_configured": True,
+                "generated_study_solver_chain": chain,
+                "solver_sequence_tags": chain["sequence_tag_union"],
+                "attached_solver_sequence_tag": chain["selected_attached_sequence_tag"],
+                "stored_solution_output_tag": chain["store_solution_output_tag"],
+            }
+            if self.invalid_build_chain:
+                nested["study_readback"]["generated_study_solver_chain"]["sequence_records"][0][
+                    "feature_tree_capture"]["nodes"][3]["store_solution_properties"]["properties"][
+                    "sol"]["value_capture"]["value"] = "solInvented"
             return self._java_response(nested, ref, execution, revision)
         assert entrypoint == "W24StaticShapeReadback#run"
         action = action_args["action"]
@@ -241,8 +460,9 @@ class FakeDaemon:
             self._readback_count += 1
             nested = _readback(self._loaded_tag if ref["model_tag"] == self._loaded_tag else self._shape_tag,
                                case_id, action_args.get("expected_configuration_id", "baseline"))
-            nested["solution_state_readback"]["solver_sequences"][0]["degrees_of_freedom"] = self.solution_state_size[0]
-            nested["solution_state_readback"]["solver_sequences"][0]["stored_solution_count"] = self.solution_state_size[1]
+            nested["solution_state_readback"]["solver_sequences"][0]["solutions_empty"] = self.solution_state_empty
+            nested["solution_state_readback"]["solver_sequences"][0]["readback_status"] = (
+                "EMPTY" if self.solution_state_empty else "NONEMPTY")
             if self.mutate_reopen and self._readback_count > 1:
                 nested["maximum_step_s"] *= 2
                 nested["configuration_readback"]["maximum_step_s"] *= 2
@@ -259,10 +479,13 @@ class FakeDaemon:
                                     "sha256": digest, "solution_data_present": False,
                                     "solution_state_readback": {
                                         "status": "NO_STORED_SOLUTION_DATA",
-                                        "readback_method": "SolverSequence.getSize() [degrees_of_freedom, stored_solution_count]",
+                                        "readback_method": (
+                                            "SolverSequence.isEmpty() [associated solution data]; "
+                                            "SolverSequence.isInitialized() [solution initialization state]"),
                                         "solver_sequences": [{"solver_sequence_tag": "sol1",
-                                                              "degrees_of_freedom": 0,
-                                                              "stored_solution_count": 0}]},
+                                                              "readback_status": "EMPTY",
+                                                              "solutions_empty": True,
+                                                              "solution_initialized": False}]},
                                     "study_run_calls_this_action": 0}, ref, execution, revision)
 
     @staticmethod
@@ -304,6 +527,40 @@ def _setup(tmp_path: Path, *, daemon: FakeDaemon | None = None,
         source_manifest=source_manifest, setup_runner=FakeSetupRunner(), evidence_dir=evidence)
     return runner, fake, workspace
 
+def test_campaign_factory_creates_exclusive_private_evidence_child_for_real_managed_runner(tmp_path):
+    from tools.run_native_w24_static_shape_setup_campaign import _new_static_shape_managed_runner
+
+    workspace = tmp_path / "registered-project"
+    workspace.mkdir()
+    run_dir = tmp_path / "native-run"
+    run_dir.mkdir()
+    evidence = run_dir / "static_shape_managed"
+    source_manifest = prepare_project_sources(workspace)
+    daemon = FakeDaemon(workspace)
+    project_create_response = {"success": True, "data": {"project": {
+        "project_id": PROJECT_ID, "workspace": str(workspace)}}}
+    parent = ManagedModelBinding(PROJECT_ID, SESSION_ID, daemon.parent, 0)
+
+    runner = _new_static_shape_managed_runner(
+        daemon=daemon, project_id=PROJECT_ID, project_workspace=workspace,
+        project_create_response=project_create_response, parent_binding=parent,
+        source_manifest=source_manifest, setup_runner=FakeSetupRunner(),
+        evidence_dir=evidence, timeout_s=300.0)
+
+    assert type(runner) is StaticShapeManagedRunner
+    assert runner.evidence_dir == evidence.resolve(strict=True)
+    assert evidence.stat().st_mode & 0o777 == 0o700
+    assert runner.response_dir.is_dir()
+    assert runner.response_dir.stat().st_mode & 0o777 == 0o700
+    assert daemon.calls == []
+
+    with pytest.raises(FileExistsError):
+        _new_static_shape_managed_runner(
+            daemon=daemon, project_id=PROJECT_ID, project_workspace=workspace,
+            project_create_response=project_create_response, parent_binding=parent,
+            source_manifest=source_manifest, setup_runner=FakeSetupRunner(),
+            evidence_dir=evidence, timeout_s=300.0)
+
 
 def test_source_copy_is_hash_bound_and_existing_exact_copy_is_reusable(tmp_path):
     workspace = tmp_path / "registered"
@@ -332,17 +589,159 @@ def test_managed_flat_shape_build_save_and_reopen_use_exact_production_bindings(
     assert Path(result["project_artifact"]["path"]).is_relative_to(workspace)
     operations = [operation for operation, _ in daemon.calls]
     assert operations == ["operation_call", "model.adopt", "model.inspect",
-                          "operation_call", "operation_call", "model_load",
-                          "model.inspect", "operation_call"]
+                          "operation_call", "operation_call", "operation_call",
+                          "model.load", "model.inspect", "operation_call"]
     assert all("study.run" not in operation for operation in operations)
     save_request = next(request for operation, request in daemon.calls
                         if operation == "operation_call" and
                         request["arguments"]["arguments"]["entrypoint"] == "W24StaticShapeReadback#run" and
                         request["arguments"]["arguments"]["arguments"].get("action") == "save")
     assert save_request["arguments"]["arguments"]["arguments"]["path"].startswith(str(workspace))
-    load_request = next(request for operation, request in daemon.calls if operation == "model_load")
+    register_request = next(request for operation, request in daemon.calls
+                            if operation == "operation_call" and
+                            request["arguments"]["operation_id"] == "artifact.register")
+    load_request = next(request for operation, request in daemon.calls if operation == "model.load")
     assert load_request["execution"]["session_id"] == SESSION_ID
+    assert load_request["arguments"]["artifact_id"] == hashlib.sha256(
+        Path(result["registered_project_artifact"]["path"]).read_bytes()).hexdigest()
+    assert register_request["arguments"]["arguments"]["path"] == "outputs/static_shape_flat.mph"
 
+
+def test_build_chain_gate_rejects_bad_store_reference_before_model_adoption(tmp_path):
+    runner, daemon, _workspace = _setup(tmp_path)
+    daemon.invalid_build_chain = True
+
+    with pytest.raises(CampaignError):
+        runner.build_save_reopen("flat")
+
+    operations = [operation for operation, _request in daemon.calls]
+    assert operations == ["operation_call"]
+
+
+@pytest.mark.parametrize(("field", "bad_value"), [
+    ("gravity_enabled", "off"),
+    ("gravity_enabled", 0),
+    ("surface_tension_enabled", "on"),
+    ("surface_tension_enabled", 1),
+    ("flow_compressibility", "incompressible"),
+])
+def test_shape_readback_rejects_boolean_aliases_and_wrong_enum_case(field, bad_value):
+    result = _readback("shape-native-tag", "flat")
+    result[field] = bad_value
+
+    with pytest.raises(CampaignError):
+        StaticShapeManagedRunner._validate_shape_readback(result, "flat")
+
+
+@pytest.mark.parametrize(("field", "bad_value"), [
+    ("study_step_order", ["time", "phasei"]),
+    ("time_initialization_method", "init"),
+    ("time_initialization_study", "phasei"),
+    ("use_initial_solution", "on"),
+    ("use_user_tolerance", "off"),
+    ("relative_tolerance", "1e-3"),
+    ("time_solver_feature_tag", ""),
+    ("time_solver_output_owner", "TRANSIENT_STUDY_FEATURE"),
+])
+def test_shape_readback_rejects_study_solver_property_domain_drift(field, bad_value):
+    result = _readback("shape-native-tag", "flat")
+    result[field] = bad_value
+
+    with pytest.raises(CampaignError):
+        StaticShapeManagedRunner._validate_shape_readback(result, "flat")
+
+
+@pytest.mark.parametrize("mutate", [
+    lambda chain: chain["sequence_records"][0]["feature_tree_capture"]["nodes"][3][
+        "store_solution_properties"]["properties"]["sol"].update(value_capture=_capture("solInvented")),
+    lambda chain: chain["sequence_records"][0]["feature_tree_capture"]["nodes"][3][
+        "store_solution_properties"]["properties"]["sol"].update(declared_type_capture=_capture("Int")),
+    lambda chain: chain["sequence_records"][0]["feature_tree_capture"]["nodes"][5][
+        "initial_source_properties"]["properties"]["initsol"].update(value_capture=_capture("solWrong")),
+    lambda chain: chain["sequence_records"][0]["feature_tree_capture"]["nodes"][0][
+        "study_step_reference_properties"]["properties"]["studystep"].update(value_capture=_capture("time")),
+    lambda chain: chain["sequence_query_rows"][4]["capture"].update(value=["solWrongStored"]),
+    lambda chain: chain["study_step_initialization_readback"]["time"].update(initstudy="zero"),
+    lambda chain: chain["sequence_records"][1]["attached_capture"].update(value=True),
+    lambda chain: chain["sequence_records"][0].__setitem__("capture_complete", False),
+])
+def test_generated_chain_gate_rejects_typed_reference_and_topology_drift(mutate):
+    result = _readback("shape-native-tag", "flat")
+    chain = json.loads(json.dumps(result["generated_study_solver_chain"]))
+    mutate(chain)
+    result["generated_study_solver_chain"] = chain
+    with pytest.raises(CampaignError):
+        StaticShapeManagedRunner._validate_shape_readback(result, "flat")
+
+
+def test_phase_field_default_remainder_and_fluid2_override_are_provenance_checked():
+    result = _readback("shape-native-tag", "flat")
+    StaticShapeManagedRunner._validate_shape_readback(result, "flat")
+
+    direct_default = json.loads(json.dumps(result))
+    direct_default["phase1_initial_selection_entities_readback"] = [1]
+    direct_default["phase1_initial_effective_domain_source"] = (
+        "DIRECT_SELECTION_GETTER_REMAINDER_MATCHING_DOCUMENTED_DEFAULT")
+    direct_default["phase1_initial_effective_domain_is_direct_readback"] = True
+    StaticShapeManagedRunner._validate_shape_readback(direct_default, "flat")
+
+    mutations = [
+        ("phase1_initial_raw_input_domain_ids", [1]),
+        ("phase1_initial_raw_named_selection_tag", "sel_glue_domain"),
+        ("phase1_initial_default_feature_classification", "DEFAULT"),
+        ("phase1_initial_selection_entities_readback", [2]),
+        ("phase2_initial_raw_named_selection_tag", ""),
+        ("phase2_initial_effective_domain_ids", [1]),
+        ("phase1_initial_feature_type", "InitialValues"),
+        ("phase2_initial_feature_type", "init"),
+    ]
+    for field, value in mutations:
+        changed = json.loads(json.dumps(result))
+        changed[field] = value
+        with pytest.raises(CampaignError):
+            StaticShapeManagedRunner._validate_shape_readback(changed, "flat")
+
+
+def test_wetted_wall_default_and_custom_inventory_are_separate_and_exact():
+    result = _readback("shape-native-tag", "flat")
+    StaticShapeManagedRunner._validate_shape_readback(result, "flat")
+
+    mutations = [
+        ("feature_tag", "wwshape1"),
+        ("feature_type", "Generic"),
+        ("classification", "CUSTOM_EDITABLE_SELECTION"),
+        ("selection_status", "MUTATED"),
+    ]
+    for field, value in mutations:
+        changed = json.loads(json.dumps(result))
+        changed["default_wetted_wall_feature_metadata"][field] = value
+        with pytest.raises(CampaignError):
+            StaticShapeManagedRunner._validate_shape_readback(changed, "flat")
+
+    extra_default_count = json.loads(json.dumps(result))
+    extra_default_count["wetted_wall_features"].append({
+        "feature_tag": "ww1", "feature_type": "WettedWall",
+        "surface_selection": "sel_wet_flat_base", "boundary_ids": [10],
+        "contact_angle_expression": "thetaSubstrate",
+    })
+    with pytest.raises(CampaignError):
+        StaticShapeManagedRunner._validate_shape_readback(extra_default_count, "flat")
+
+    wrong_custom = json.loads(json.dumps(result))
+    wrong_custom["wetted_wall_features"][0]["feature_tag"] = "ww2"
+    with pytest.raises(CampaignError):
+        StaticShapeManagedRunner._validate_shape_readback(wrong_custom, "flat")
+
+    wrong_angle = json.loads(json.dumps(result))
+    wrong_angle["wetted_wall_features"][0]["contact_angle_expression"] = "90[deg]"
+    with pytest.raises(CampaignError):
+        StaticShapeManagedRunner._validate_shape_readback(wrong_angle, "flat")
+
+    overlapping = _readback("shape-native-tag", "step")
+    overlapping["substrate_wetting_selections"]["sel_wet_mesa_side"] = [10]
+    overlapping["wetted_wall_features"][1]["boundary_ids"] = [10]
+    with pytest.raises(CampaignError, match="overlap"):
+        StaticShapeManagedRunner._validate_shape_readback(overlapping, "step")
 
 def test_managed_step_shape_uses_all_three_named_wetting_surfaces(tmp_path):
     runner, _, _ = _setup(tmp_path, case_id="step")
@@ -438,28 +837,47 @@ def test_save_hash_mismatch_stops_before_managed_reopen(tmp_path):
     daemon.bad_save_hash = True
     with pytest.raises(CampaignError, match="size/hash"):
         runner.build_save_reopen("flat")
-    assert "model_load" not in [operation for operation, _ in daemon.calls]
+    assert "model.load" not in [operation for operation, _ in daemon.calls]
 
 
 def test_managed_setup_refuses_preexisting_stored_solution_without_clearing_it(tmp_path):
     runner, daemon, _ = _setup(tmp_path)
-    daemon.solution_state_size = (100, 1)
+    daemon.solution_state_empty = False
 
     with pytest.raises(CampaignError, match="solver-sequence readback"):
         runner.build_save_reopen("flat")
 
     assert [operation for operation, _ in daemon.calls].count("operation_call") == 2
-    assert "model_load" not in [operation for operation, _ in daemon.calls]
+    assert "model.load" not in [operation for operation, _ in daemon.calls]
     assert not list((tmp_path / "registered-project" / "outputs").glob("*.mph"))
 
 
-@pytest.mark.parametrize("size", [(0, 1), (1, 0), (-1, 0)])
-def test_solution_state_readback_rejects_inconsistent_or_negative_sizes(size):
+def test_solution_state_readback_accepts_exact_uninitialized_sequence():
+    value = {
+        "status": "NO_STORED_SOLUTION_DATA",
+        "readback_method": (
+            "SolverSequence.isEmpty() [associated solution data]; "
+            "SolverSequence.isInitialized() [solution initialization state]"),
+        "solver_sequences": [{"solver_sequence_tag": "sol1", "readback_status": "EMPTY",
+                              "solutions_empty": True, "solution_initialized": False}],
+    }
+    assert StaticShapeManagedRunner._validate_no_stored_solution_data(value) == value
+
+
+@pytest.mark.parametrize("row", [
+    {"solver_sequence_tag": "sol1", "readback_status": "NONEMPTY",
+     "solutions_empty": False, "solution_initialized": True},
+    {"solver_sequence_tag": "sol1", "readback_status": "EMPTY",
+     "solutions_empty": True, "solution_initialized": "false"},
+    {"solver_sequence_tag": "sol1", "readback_status": "EMPTY",
+     "solution_empty": True, "solution_initialized": False},
+])
+def test_solution_state_readback_rejects_nonempty_or_incomplete_status(row):
     value = {"status": "NO_STORED_SOLUTION_DATA",
-             "readback_method": "SolverSequence.getSize() [degrees_of_freedom, stored_solution_count]",
-             "solver_sequences": [{"solver_sequence_tag": "sol1",
-                                   "degrees_of_freedom": size[0],
-                                   "stored_solution_count": size[1]}]}
+             "readback_method": (
+                 "SolverSequence.isEmpty() [associated solution data]; "
+                 "SolverSequence.isInitialized() [solution initialization state]"),
+             "solver_sequences": [row]}
     with pytest.raises(CampaignError, match="solver-sequence readback"):
         StaticShapeManagedRunner._validate_no_stored_solution_data(value)
 
@@ -469,7 +887,7 @@ def test_reopened_native_configuration_must_match_the_saved_model(tmp_path):
     daemon.mutate_reopen = True
     with pytest.raises(CampaignError, match="maximum step differs|changed after managed save/reopen"):
         runner.build_save_reopen("flat")
-    assert [operation for operation, _ in daemon.calls].count("model_load") == 1
+    assert [operation for operation, _ in daemon.calls].count("model.load") == 1
 
 
 @pytest.mark.parametrize("bad_value", [float("nan"), float("inf"), -float("inf"), True])

@@ -40,6 +40,7 @@ class Entity:
     def __init__(self,tag='a',type_id='Rectangle'):
         self.tag_value=tag;self.type_id=type_id;self.comment='';self.display='label-'+tag;self.flag=True;self.calls=[]
         self.values={'flag':True,'empty':[],'matrix':[[1.0]],'expr':'a+b'};self.sel=Selection()
+        self.metadata_calls=[];self.presence_overrides={}
     def feature(self,tag=None):return self.list if tag is None else self.list.items[tag]
     def getType(self):return self.type_id
     def tag(self):return self.tag_value
@@ -54,12 +55,24 @@ class Entity:
     def isActive(self):return self.flag
     def selection(self,*args):return self.sel
     def properties(self):return list(self.values)
-    def getValueType(self,name):return {'flag':'Boolean','empty':'DoubleArray','matrix':'DoubleMatrix','expr':'String'}.get(name,'FutureType')
-    def getAllowedPropertyValues(self,name):return None
+    def hasProperty(self,name):
+        self.metadata_calls.append(('hasProperty',name))
+        if name in self.presence_overrides:
+            value=self.presence_overrides[name]
+            if isinstance(value,BaseException):raise value
+            return value
+        return name in self.values
+    def getValueType(self,name):
+        self.metadata_calls.append(('getValueType',name))
+        return {'flag':'Boolean','empty':'DoubleArray','matrix':'DoubleMatrix','expr':'String',
+                'PortName':'String','PortType':'String','PortOrientation':'String'}.get(name,'FutureType')
+    def getAllowedPropertyValues(self,name):
+        self.metadata_calls.append(('getAllowedPropertyValues',name))
+        return {'PortName':['1','2'],'PortType':['Numeric','Periodic']}.get(name)
     def getBoolean(self,name):return self.values[name]
     def getDoubleArray(self,name):return self.values[name]
     def getDoubleMatrix(self,name):return self.values[name]
-    def getString(self,name):return self.values[name]
+    def getString(self,name):self.metadata_calls.append(('getString',name));return self.values[name]
     def set(self,name,value):self.calls.append(('set',name,value));self.values[name]=value['data']
 
 class Collection:
@@ -346,6 +359,33 @@ def test_compiled_public_receiver_exact_signature_worker_software_only(tmp_path)
     assert executed.returncode==0,executed.stdout+executed.stderr
     assert executed.stdout.strip()=='PUBLIC_RECEIVER_EXACT_SIGNATURE_SOFTWARE_PASS'
 
+
+def test_model_entity_list_index_is_typed_receiver_only_and_dispatches_primitive_int(tmp_path):
+    """SDK proxy control for R31; no COMSOL Worker/model is started."""
+    import os, subprocess
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    jdk = Path('/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home')
+    comsol_root = Path('/Applications/COMSOL64/Multiphysics')
+    from comsol_mcp._java_worker import JavaWorkerPaths
+    classpath, _manifest_sha, jar_count, _jar_content_sha = JavaWorkerPaths(
+        comsol_root, jdk, project_root=root).classpath()
+    assert jar_count == 25
+    classes = tmp_path / 'model-entity-list-index-classes'
+    classes.mkdir()
+    source = root / 'comsol_mcp/worker_java/PersistentComsolWorker.java'
+    harness = root / 'tests/java/PersistentComsolWorkerModelEntityListIndexHarness.java'
+    compiled = subprocess.run(
+        [str(jdk / 'bin/javac'), '-encoding', 'UTF-8', '-classpath', classpath, '-d', str(classes),
+         str(source), str(harness)], cwd=root, capture_output=True, text=True, timeout=120)
+    assert compiled.returncode == 0, compiled.stdout + compiled.stderr
+    executed = subprocess.run(
+        [str(jdk / 'bin/java'), '-cp', str(classes) + os.pathsep + classpath,
+         'comsol_mcp.worker_java.PersistentComsolWorkerModelEntityListIndexHarness'],
+        cwd=root, capture_output=True, text=True, timeout=30)
+    assert executed.returncode == 0, executed.stdout + executed.stderr
+    assert executed.stdout.strip() == 'MODEL_ENTITY_LIST_INDEX_TYPED_RECEIVER_DISPATCH_SOFTWARE_PASS'
+
 def test_actual_python_submit_descriptor_route_and_unknown_command_preflight(monkeypatch):
     from comsol_mcp._java_worker import PersistentJavaWorker,RemoteJava,JavaWorkerError
     worker=object.__new__(PersistentJavaWorker);worker._generation=3;requests=[];events=[]
@@ -379,3 +419,50 @@ def test_selection_untyped_entity_readback_is_explicit_incomplete(backend,monkey
     b,w,ref,tickets=backend;monkeypatch.setattr(w.model_node.list.items['a'].sel,'entities',lambda:[1.5])
     out=b.invoke('node.selection_get',{'path':path('a')},execution(ref),'read',None)
     assert out['success'];assert out['data']['complete'] is False;assert out['data']['selection']['entities'] is None;assert out['data']['selection']['entities_error'];assert out['data']['errors'];assert not tickets
+
+
+def _operation_call(backend,ref,operation,arguments,key):
+    execution_context=execution(ref)
+    execution_context.update({'idempotency_key':key,'request_id':key})
+    return backend.invoke('operation_call',{'operation_id':operation,'arguments':arguments},
+                          execution_context,key,None)
+
+
+def test_named_public_property_schema_reads_has_property_before_typed_metadata_and_get(backend):
+    b,w,ref,tickets=backend;node=w.model_node.list.items['a'];node.values['PortName']='1'
+    schema=_operation_call(b,ref,'node.property_schema',{'path':path('a'),'name':'PortName'},'port-schema')
+    assert schema['success'],schema
+    assert schema['data']['has_property'] is True
+    assert schema['data']['value_type']=='String'
+    assert schema['data']['allowed_values']==['1','2']
+    assert node.metadata_calls[:3]==[
+        ('hasProperty','PortName'),('getValueType','PortName'),('getAllowedPropertyValues','PortName')]
+
+    typed=_operation_call(b,ref,'node.property_get',{'path':path('a'),'names':['PortName']},'port-get')
+    assert typed['success'],typed
+    assert typed['data']['properties']==[
+        {'name':'PortName','value':{'kind':'string','shape':[],'data':'1',
+                                    'java_signature':'java.lang.String'}}]
+    assert ('getString','PortName') in node.metadata_calls
+    assert node.calls==[] and tickets==[]
+
+
+def test_named_public_property_schema_reports_absent_or_unknown_before_metadata(backend):
+    b,w,ref,tickets=backend;node=w.model_node.list.items['a']
+    absent=_operation_call(b,ref,'node.property_schema',
+                           {'path':path('a'),'name':'PortOrientation'},'missing-schema')
+    assert absent['success'],absent
+    assert absent['data']['has_property'] is False
+    assert absent['data']['metadata_status']=='ABSENT'
+    assert node.metadata_calls==[('hasProperty','PortOrientation')]
+
+    node.metadata_calls.clear()
+    node.presence_overrides['PortOrientation']=RuntimeError('presence probe unavailable')
+    unknown=_operation_call(b,ref,'node.property_schema',
+                            {'path':path('a'),'name':'PortOrientation'},'unknown-schema')
+    assert unknown['success'],unknown
+    assert unknown['data']['has_property'] is None
+    assert unknown['data']['metadata_status']=='UNKNOWN'
+    assert node.metadata_calls==[('hasProperty','PortOrientation')]
+    assert node.calls==[] and tickets==[]
+

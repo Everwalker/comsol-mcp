@@ -10,8 +10,14 @@ import stat
 import sys
 from uuid import UUID
 
-SCHEMA = "FRESH_NATIVE_RUNTIME_SOURCE_V1"
-KEYS = {"schema", "activity_id", "namespace", "source", "python", "comsol", "jdk", "budget", "binding_sha256"}
+SCHEMA_V1 = "FRESH_NATIVE_RUNTIME_SOURCE_V1"
+SCHEMA_V2 = "FRESH_NATIVE_RUNTIME_SOURCE_V2"
+# Keep the public compatibility names on V1. W23 and existing callers remain
+# V1 unless they explicitly request the new launcher-identity binding.
+SCHEMA = SCHEMA_V1
+KEYS_V1 = {"schema", "activity_id", "namespace", "source", "python", "comsol", "jdk", "budget", "binding_sha256"}
+KEYS_V2 = KEYS_V1 | {"runtime_argv0"}
+KEYS = KEYS_V1
 
 class BindingError(ValueError):
     pass
@@ -47,6 +53,36 @@ def namespace(path: Path):
     if not stat.S_ISDIR(st.st_mode) or st.st_uid != os.getuid() or stat.S_IMODE(st.st_mode) != 0o700:
         raise BindingError("namespace must be owned mode 0700 directory")
 
+def _capture_runtime_argv0(*, repo: Path,
+                           expected_module: str | None) -> dict[str, str]:
+    """Capture the actual no-site runtime binary, optionally pinning creation's module entry."""
+    argv = getattr(sys, "orig_argv", None)
+    if (not getattr(sys.flags, "no_site", False) or not isinstance(argv, list)
+            or len(argv) < 2 or not all(isinstance(item, str) for item in argv[:2])
+            or argv[1] != "-S"):
+        raise BindingError("V2 runtime identity requires an explicit no-site -S caller")
+    try:
+        launcher = Path(argv[0]).resolve(strict=True)
+    except (IndexError, OSError, RuntimeError) as exc:
+        raise BindingError("V2 launcher path is unavailable") from exc
+    if not launcher.is_file():
+        raise BindingError("V2 original argv0 is not a runtime binary file")
+    if expected_module is not None:
+        if len(argv) < 4 or argv[1:4] != ["-S", "-m", expected_module]:
+            raise BindingError("V2 binding creation requires the exact no-site -m caller")
+        try:
+            actual_script = Path(sys.argv[0]).resolve(strict=True)
+        except (IndexError, OSError, RuntimeError) as exc:
+            raise BindingError("V2 module caller path is unavailable") from exc
+        expected_script = repo.resolve(strict=True) / (expected_module.replace(".", "/") + ".py")
+        if actual_script != expected_script:
+            raise BindingError("V2 binding creation module path differs")
+    return {
+        "source": "sys.orig_argv[0]",
+        "path": str(launcher),
+        "sha256": hashlib.sha256(launcher.read_bytes()).hexdigest(),
+    }
+
 def source_inventory(repo: Path):
     root = repo.resolve(strict=True)
     files = {}
@@ -67,7 +103,9 @@ def source_inventory(repo: Path):
     files["pyproject.toml"] = {"bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()}
     return {"root": str(root), "files": files, "sha256": digest(files)}
 
-def observe(python: Path, packages: Path, install: Path, jdk: Path, repo: Path):
+def observe(python: Path, packages: Path, install: Path, jdk: Path, repo: Path,
+            *, runtime_argv0_module: str | None = None,
+            validate_runtime_argv0: bool = False):
     from comsol_mcp._java_worker import JavaWorkerPaths
     if python.resolve(strict=True) != Path(sys.executable).resolve(strict=True) or sys.version_info[:2] != (3, 12):
         raise BindingError("declared Python differs from actual Python 3.12 interpreter")
@@ -89,19 +127,28 @@ def observe(python: Path, packages: Path, install: Path, jdk: Path, repo: Path):
     metadata = {str(p.relative_to(packages)): hashlib.sha256(p.read_bytes()).hexdigest()
                 for p in sorted(packages.glob("*.dist-info/*")) if p.name in {"METADATA", "RECORD"} and p.is_file()}
     _, manifest, count, jars = paths.classpath()
-    return {
+    result = {
         "python": {"entry": str(python), "resolved": str(python.resolve(strict=True)), "prefix": str(prefix), "observed_prefix": str(Path(sys.prefix).resolve()), "version": sys.version.split()[0], "site_packages": str(packages), "no_site": bool(sys.flags.no_site), "executable_sha256": hashlib.sha256(python.resolve(strict=True).read_bytes()).hexdigest(), "distribution_metadata_sha256": digest(metadata)},
         "comsol": {"root": str(install.resolve(strict=True)), "version": paths.comsol_version_info(), "exact_build": match.group(1).decode(), "readme_sha256": hashlib.sha256(readme_bytes).hexdigest(), "classpath_manifest_sha256": manifest, "jar_count": count, "jar_content_sha256": jars},
         "jdk": {"home": str(jdk.resolve(strict=True)), "version": jdk_identity},
     }
+    if runtime_argv0_module is not None or validate_runtime_argv0:
+        result["runtime_argv0"] = _capture_runtime_argv0(
+            repo=repo, expected_module=runtime_argv0_module)
+    return result
 
-def create(*, repo, authority, activity_id, python, packages, install, jdk, budget):
+def create(*, repo, authority, activity_id, python, packages, install, jdk, budget,
+           schema=SCHEMA_V1):
     # UUID is a fresh activity identity; historical numbered identities cannot be replayed.
     if str(UUID(activity_id)) != activity_id:
         raise BindingError("activity must be a canonical fresh UUID")
+    if schema not in {SCHEMA_V1, SCHEMA_V2}:
+        raise BindingError("unsupported runtime binding schema")
     namespace(authority.parent)
-    observed = observe(python, packages, install, jdk, repo)
-    body = {"schema": SCHEMA, "activity_id": activity_id, "namespace": str(authority.parent), "source": source_inventory(repo), **observed, "budget": budget}
+    runtime_module = "tools.native_runtime_binding" if schema == SCHEMA_V2 else None
+    observed = observe(python, packages, install, jdk, repo,
+                       runtime_argv0_module=runtime_module)
+    body = {"schema": schema, "activity_id": activity_id, "namespace": str(authority.parent), "source": source_inventory(repo), **observed, "budget": budget}
     packet = {**body, "binding_sha256": digest(body)}
     with authority.open("xb") as stream:
         stream.write(json.dumps(packet, sort_keys=True, indent=2, allow_nan=False).encode()); stream.flush(); os.fsync(stream.fileno())
@@ -109,7 +156,9 @@ def create(*, repo, authority, activity_id, python, packages, install, jdk, budg
     return packet
 
 def validate(packet, *, repo, budget, install=None, jdk=None):
-    if not isinstance(packet, dict) or set(packet) != KEYS or packet["schema"] != SCHEMA:
+    schema = packet.get("schema") if isinstance(packet, dict) else None
+    expected_keys = KEYS_V1 if schema == SCHEMA_V1 else KEYS_V2 if schema == SCHEMA_V2 else None
+    if not isinstance(packet, dict) or expected_keys is None or set(packet) != expected_keys:
         raise BindingError("fresh binding schema is closed")
     if str(UUID(packet["activity_id"])) != packet["activity_id"]:
         raise BindingError("fresh activity UUID required")
@@ -121,7 +170,9 @@ def validate(packet, *, repo, budget, install=None, jdk=None):
         raise BindingError("current source closure differs")
     install = install or Path(packet["comsol"]["root"])
     jdk = jdk or Path(packet["jdk"]["home"])
-    current = observe(Path(packet["python"]["entry"]), Path(packet["python"]["site_packages"]), install, jdk, repo)
+    current = observe(Path(packet["python"]["entry"]), Path(packet["python"]["site_packages"]),
+                      install, jdk, repo,
+                      validate_runtime_argv0=(schema == SCHEMA_V2))
     if any(packet[k] != current[k] for k in current):
         raise BindingError("Python/COMSOL/JDK identity differs from immutable binding")
     return packet
@@ -154,8 +205,9 @@ def main(argv=None):
     else:
         from tools.run_native_w23_saved_mph_diagnostic import fresh_budget
         budget = fresh_budget()
-    result = create(repo=args.repo, authority=args.authority, activity_id=args.activity_id, python=args.python, packages=args.site_packages, install=args.comsol_root, jdk=args.jdk11, budget=budget)
-    print(json.dumps({"binding_sha256": result["binding_sha256"], "native": "NOT_RUN", "authority": str(args.authority)}))
+    schema = SCHEMA_V2 if args.phase == "w24-setup" else SCHEMA_V1
+    result = create(repo=args.repo, authority=args.authority, activity_id=args.activity_id, python=args.python, packages=args.site_packages, install=args.comsol_root, jdk=args.jdk11, budget=budget, schema=schema)
+    print(json.dumps({"schema": result["schema"], "binding_sha256": result["binding_sha256"], "native": "NOT_RUN", "authority": str(args.authority)}))
     return 0
 
 if __name__ == "__main__":

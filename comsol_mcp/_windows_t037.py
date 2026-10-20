@@ -1051,6 +1051,7 @@ class T037SessionProcessFactory:
             self._job = api.create_job(profile=self.profile)
         return api.create_suspended_appcontainer_child(
             command, options, profile=self.profile, job=self._job, role=role,
+            session_factory=self,
         )
 
     def preflight(self) -> None:
@@ -1150,12 +1151,91 @@ class _Win32ChildProcess:
         if not self._closed:
             self._api.close_handle(self._handle)
             self._closed = True
+            owners = getattr(self._api, "_g2_session_launch_owners", None)
+            if isinstance(owners, dict):
+                owners.pop(id(self), None)
 
     def __del__(self):  # pragma: no cover - normal lifecycle owns this handle
         try:
             self.close()
         except Exception:
             pass
+
+
+_G2_SESSION_LAUNCH_OWNER_SEAL = object()
+
+
+class _Win32G2SessionLaunchOwner:
+    """Sealed receipt for a successful exact-handle T037 session launch."""
+
+    __slots__ = ("_seal", "process", "api", "process_handle", "pid",
+                 "birth_filetime_100ns", "argv", "argv_sha256", "job_handle",
+                 "profile", "profile_sha256", "role", "image_path",
+                 "image_sha256", "session_factory")
+
+    def __setattr__(self, name, value):
+        if hasattr(self, name):
+            raise AttributeError("sealed T037 session launch provenance is immutable")
+        object.__setattr__(self, name, value)
+
+    def __init__(self, *, api, process, handle, birth_filetime_100ns, argv,
+                 job_handle, profile, role, image_path, image_sha256,
+                 session_factory, seal):
+        if (seal is not _G2_SESSION_LAUNCH_OWNER_SEAL
+                or type(api) is not _Win32LaunchApi
+                or type(process) is not _Win32ChildProcess
+                or process._api is not api or process._handle is not handle
+                or process.pid <= 1 or type(birth_filetime_100ns) is not int
+                or birth_filetime_100ns <= 0
+                or session_factory is None
+                or type(session_factory) is not T037SessionProcessFactory
+                or session_factory._api is not api or session_factory._job is not job_handle
+                or session_factory.profile is not profile):
+            _refuse(ERROR_POLICY_UNVERIFIED, "G2 session provenance requires the successful original T037 HANDLE launch")
+        if (type(argv) not in (tuple, list) or not argv
+                or any(type(value) is not str or "\x00" in value for value in argv)
+                or role not in {"server", "worker"}
+                or not isinstance(image_path, str) or not image_path
+                or not isinstance(image_sha256, str) or len(image_sha256) != 64):
+            _refuse(ERROR_POLICY_UNVERIFIED, "G2 session provenance has malformed native launch identity")
+        self._seal = seal
+        self.process = process
+        self.api = api
+        self.process_handle = handle
+        self.pid = process.pid
+        self.birth_filetime_100ns = birth_filetime_100ns
+        self.argv = tuple(argv)
+        self.argv_sha256 = hashlib.sha256(json.dumps(
+            list(argv), ensure_ascii=False, separators=(",", ":"),
+        ).encode("utf-8")).hexdigest()
+        self.job_handle = job_handle
+        self.profile = profile
+        self.profile_sha256 = profile.sha256
+        self.role = role
+        self.image_path = image_path
+        self.image_sha256 = image_sha256
+        self.session_factory = session_factory
+
+
+def _native_g2_session_launch_owner(process):
+    """Return only the API-registered owner minted at the successful launch return."""
+    if type(process) is not _Win32ChildProcess:
+        return None
+    api = getattr(process, "_api", None)
+    owners = getattr(api, "_g2_session_launch_owners", None)
+    owner = owners.get(id(process)) if type(owners) is dict else None
+    if (type(owner) is not _Win32G2SessionLaunchOwner
+            or owner._seal is not _G2_SESSION_LAUNCH_OWNER_SEAL
+            or owner.process is not process or owner.api is not api
+            or owner.process_handle is not process._handle or owner.pid != process.pid
+            or process._closed or owner.profile_sha256 != owner.profile.sha256
+            or type(owner.session_factory) is not T037SessionProcessFactory
+            or owner.session_factory._api is not api
+            or owner.session_factory._job is not owner.job_handle
+            or owner.session_factory.profile is not owner.profile
+            or owner.session_factory._closed):
+        return None
+    return owner
 
 
 _NATIVE_SUSPENDED_CHILD_SEAL = object()
@@ -1516,9 +1596,15 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
         return storage, pointer
 
     def create_suspended_appcontainer_child(self, command: Sequence[str], options: Mapping[str, Any], *,
-                                             profile: WindowsT037Profile, job: Any, role: str):
+                                             profile: WindowsT037Profile, job: Any, role: str,
+                                             session_factory: Any = None):
         from ._windows_job_limits import require_configured_job
         require_configured_job(self, job, profile)
+        if session_factory is not None and (
+                type(session_factory) is not T037SessionProcessFactory
+                or session_factory._api is not self or session_factory.profile is not profile
+                or session_factory._job is not job or session_factory._closed):
+            _refuse(ERROR_POLICY_UNVERIFIED, "G2 session owner differs from the exact original T037 factory/profile/job")
         C, W = self.C, self.W
         if role not in {"server", "worker"}:
             _refuse(ERROR_PROFILE_INVALID, "T037 child role is unsupported")
@@ -1754,6 +1840,17 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
             thread_handle = None
             process = _Win32ChildProcess(self, process_handle, int(process_info.dwProcessId), command)
             process_handle = None
+            if session_factory is not None:
+                owner = _Win32G2SessionLaunchOwner(
+                    api=self, process=process, handle=process._handle,
+                    birth_filetime_100ns=birth, argv=tuple(command), job_handle=job,
+                    profile=profile, role=role, image_path=image_path,
+                    image_sha256=expected_hash, session_factory=session_factory,
+                    seal=_G2_SESSION_LAUNCH_OWNER_SEAL,
+                )
+                if not hasattr(self, "_g2_session_launch_owners"):
+                    self._g2_session_launch_owners = {}
+                self._g2_session_launch_owners[id(process)] = owner
             return process
         except BaseException as cause:
             if retained_child is not None:

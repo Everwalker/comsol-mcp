@@ -20,7 +20,7 @@ import json
 import pytest
 
 from comsol_mcp._execution_contract import ExecutionContractError
-from comsol_mcp._g2_engine import children_node, find_nodes
+from comsol_mcp._g2_engine import COLLECTION_CANDIDATES, _solver_feature_order_witness, children_node, find_nodes
 
 
 class _Container:
@@ -197,6 +197,285 @@ def test_children_fallback_path_skips_unsupported_collections_silently():
     assert [row["collection"] for row in result["children"]] == ["material"]
     assert result["errors"] == []
     assert result["rpc_calls"] > 1  # fixture probing is per-collection
+
+
+def test_requested_collection_filters_batch_and_fallback_before_probing():
+    root = _FakeNode(children={
+        "component": {"comp1": _FakeNode(tag="comp1")},
+        "physics": {"ewfd": _FakeNode(tag="ewfd")},
+        "material": {"mat1": _FakeNode(tag="mat1")},
+    })
+
+    class _RecordingBatchWorker(_BatchWorker):
+        def __init__(self, node):
+            super().__init__(node)
+            self.requested = []
+
+        def probe_children(self, node, candidates, *, request_id=None, rpc_timeout_s=None):
+            self.requested.append(tuple(row["collection"] for row in candidates))
+            return super().probe_children(node, candidates, request_id=request_id,
+                                          rpc_timeout_s=rpc_timeout_s)
+
+    worker = _RecordingBatchWorker(root)
+    filtered = children_node(worker, "m", {"segments": []}, limit=100,
+                             collection="physics")
+    assert filtered["children"] == [{"collection": "physics", "tag": "ewfd"}]
+    assert filtered["collection_filter"] == "physics"
+    assert filtered["complete"] is True and filtered["errors"] == []
+    assert worker.requested[0] == ("physics",)
+
+    unfiltered = children_node(worker, "m", {"segments": []}, limit=100)
+    assert {row["collection"] for row in unfiltered["children"]} == {
+        "component", "physics", "material"}
+    assert "collection_filter" not in unfiltered
+    assert worker.requested[1] == tuple(row["collection"] for row in COLLECTION_CANDIDATES)
+
+    fallback = children_node(_FixtureWorker(root), "m", {"segments": []}, limit=100,
+                             collection="material")
+    assert fallback["children"] == [{"collection": "material", "tag": "mat1"}]
+    assert fallback["collection_filter"] == "material"
+    assert fallback["rpc_calls"] == 2  # exactly one accessor and one tags call
+
+
+def test_filtered_children_cursor_is_bound_to_the_requested_collection():
+    node = _FakeNode(children={
+        "feature": {f"f{i}": _FakeNode(tag=f"f{i}") for i in range(5)},
+        "physics": {f"p{i}": _FakeNode(tag=f"p{i}") for i in range(5)},
+    })
+    worker = _BatchWorker(node)
+    first = children_node(worker, "m", {"segments": []}, limit=2,
+                          model_revision=4, collection="feature")
+    assert first["collection_filter"] == "feature"
+    assert first["truncated"] is True and first["next_cursor"]
+    second = children_node(worker, "m", {"segments": []}, limit=2,
+                           model_revision=4, collection="feature", cursor=first["next_cursor"])
+    assert second["collection_filter"] == "feature"
+    assert {row["tag"] for row in first["children"]}.isdisjoint(
+        row["tag"] for row in second["children"])
+    assert second["total"] == 5
+    for changed_collection in ("physics", None):
+        with pytest.raises(ExecutionContractError) as exc:
+            children_node(worker, "m", {"segments": []}, limit=2,
+                          model_revision=4, collection=changed_collection,
+                          cursor=first["next_cursor"])
+        assert exc.value.code == "CURSOR_STALE"
+
+
+class _IndexFeatureList:
+    def __init__(self, node, tags, indices, *, change_after_first=False, after_tags=None):
+        self.node = node
+        self.native_tags = list(tags)
+        self.indices = dict(indices)
+        self.change_after_first = change_after_first
+        self.after_tags = after_tags
+        self.index_error = None
+        self.tags_calls = 0
+        self.index_calls = 0
+
+    def tags(self):
+        self.tags_calls += 1
+        if self.after_tags is not None and self.tags_calls >= 3:
+            return list(self.after_tags)
+        return list(self.native_tags)
+
+    def get(self, tag):
+        return self.node.children["feature"][tag]
+
+    def index(self, tag):
+        self.index_calls += 1
+        if self.index_error is not None:
+            raise RuntimeError(self.index_error)
+        if self.change_after_first and self.index_calls > len(self.native_tags):
+            changed = dict(self.indices)
+            first, second = self.native_tags[:2]
+            changed[first], changed[second] = changed[second], changed[first]
+            return changed[tag]
+        return self.indices[tag]
+
+
+class _IndexedSolverNode(_FakeNode):
+    def __init__(self, children=None, **kwargs):
+        super().__init__(children=children, **kwargs)
+        self.index_list = _IndexFeatureList(self, ["zeta", "alpha", "mid"],
+                                            {"zeta": 1, "alpha": 2, "mid": 0})
+
+    def feature(self, *args):
+        if args:
+            return self.children["feature"][args[0]]
+        return self.index_list
+
+
+class _OrderWorker(_BatchWorker):
+    def __init__(self, node, *, descriptor=None, error_rows=None):
+        super().__init__(node)
+        self.descriptor_calls = 0
+        self.descriptor = descriptor
+        self.error_rows = list(error_rows or [])
+
+    def probe_children(self, node, candidates, *, request_id=None, rpc_timeout_s=None):
+        self.children_calls += 1
+        reply = _probe(node, candidates)
+        if self.error_rows:
+            reply["errors"] = list(self.error_rows)
+        return reply
+
+    def describe_public(self, node):
+        self.descriptor_calls += 1
+        if self.descriptor is not None:
+            return self.descriptor
+        return {"runtime_version": "6.4.0.293",
+                "interfaces": ["com.comsol.model.ModelEntityList"],
+                "methods": [{"interface": "com.comsol.model.ModelEntityList",
+                             "method": "index", "parameters": ["java.lang.String"],
+                             "returns": "int"}]}
+
+
+def test_solver_feature_order_witness_uses_typed_native_indices_twice_and_keeps_display_sort():
+    solver = _IndexedSolverNode(
+        children={"feature": {tag: _FakeNode(tag=tag) for tag in ["zeta", "alpha", "mid"]}},
+        tag="sol1", type_id="SolverSequence")
+    root = _FakeNode(children={"sol": {"sol1": solver}})
+    worker = _OrderWorker(root)
+    result = children_node(worker, "m", {"segments": [{"collection": "sol", "tag": "sol1"}]},
+                          limit=20, collection="feature")
+    assert [row["tag"] for row in result["children"]] == ["alpha", "mid", "zeta"]
+    witness = result["collection_order"]
+    assert witness["order_status"] == "VERIFIED_STABLE_TWO_SAMPLES"
+    assert witness["ordered_tags"] == ["mid", "zeta", "alpha"]
+    assert witness["sample_atomicity"] == "TWO_STABLE_SAMPLES_NOT_ATOMIC_TO_OTHER_CLIENTS"
+    assert witness["receiver_reused_for_all_reads"] is True
+    assert witness["index_samples"][0] == witness["index_samples"][1]
+    assert solver.index_list.index_calls == 6
+    assert worker.descriptor_calls == 1
+    assert result["complete"] is True
+    assert result["rpc_calls"] == 11  # child batch plus 4 typed setup/read calls and 2 passes over 3 tags
+
+
+@pytest.mark.parametrize("case", ["changed", "duplicate", "missing", "boolean", "float", "tags_changed", "proxy_error"])
+def test_solver_feature_order_bad_samples_fail_closed_without_changing_child_listing(case):
+    solver = _IndexedSolverNode(
+        children={"feature": {tag: _FakeNode(tag=tag) for tag in ["zeta", "alpha", "mid"]}},
+        tag="sol1", type_id="SolverSequence")
+    if case == "changed":
+        solver.index_list.change_after_first = True
+    elif case == "duplicate":
+        solver.index_list.indices = {"zeta": 1, "alpha": 1, "mid": 0}
+    elif case == "missing":
+        solver.index_list.indices = {"zeta": -1, "alpha": 1, "mid": 0}
+    elif case == "boolean":
+        solver.index_list.indices = {"zeta": True, "alpha": 1, "mid": 0}
+    elif case == "float":
+        solver.index_list.indices = {"zeta": 1.0, "alpha": 2, "mid": 0}
+    elif case == "tags_changed":
+        solver.index_list.after_tags = ["zeta", "mid", "alpha"]
+    elif case == "proxy_error":
+        solver.index_list.index_error = "controlled proxy index failure"
+    root = _FakeNode(children={"sol": {"sol1": solver}})
+    worker = _OrderWorker(root)
+    result = children_node(worker, "m", {"segments": [{"collection": "sol", "tag": "sol1"}]},
+                          limit=20, collection="feature")
+    assert [row["tag"] for row in result["children"]] == ["alpha", "mid", "zeta"]
+    assert result["complete"] is True and result["errors"] == []
+    assert result["collection_order"]["order_status"] == "UNVERIFIED"
+    assert result["collection_order"]["provenance_failure"]
+    if case == "proxy_error":
+        failure = result["collection_order"]["provenance_failure"]
+        assert failure["stage"] == "index_sample_1"
+        assert "controlled proxy index failure" in failure["message"]
+
+
+@pytest.mark.parametrize("descriptor", [
+    {"runtime_version": "6.4.0.293", "interfaces": ["com.comsol.model.ModelEntityList"],
+     "methods": [{"interface": "com.comsol.model.ModelEntityList", "method": "index",
+                  "parameters": ["java.lang.String"], "returns": "java.lang.Integer"}]},
+    {"runtime_version": "6.4.0.293", "interfaces": ["foreign.List"],
+     "methods": [{"interface": "foreign.List", "method": "index",
+                  "parameters": ["java.lang.String"], "returns": "int"}]},
+])
+def test_solver_feature_order_wrong_descriptor_fails_closed(descriptor):
+    solver = _IndexedSolverNode(
+        children={"feature": {tag: _FakeNode(tag=tag) for tag in ["zeta", "alpha", "mid"]}},
+        tag="sol1", type_id="SolverSequence")
+    root = _FakeNode(children={"sol": {"sol1": solver}})
+    worker = _OrderWorker(root, descriptor=descriptor)
+    result = children_node(worker, "m", {"segments": [{"collection": "sol", "tag": "sol1"}]},
+                          limit=20, collection="feature")
+    assert result["complete"] is True
+    assert result["collection_order"]["order_status"] == "UNVERIFIED"
+    assert result["collection_order"]["provenance_failure"]["stage"] == "public_descriptor"
+    assert solver.index_list.index_calls == 0
+
+
+def test_order_witness_is_not_attempted_for_non_solver_path_or_incomplete_listing():
+    solver = _IndexedSolverNode(
+        children={"feature": {tag: _FakeNode(tag=tag) for tag in ["zeta", "alpha", "mid"]}},
+        tag="sol1", type_id="SolverSequence")
+    root = _FakeNode(children={"sol": {"sol1": solver},
+                               "study": {"std1": _FakeNode(children={"feature": {"f1": _FakeNode(tag="f1")}},
+                                                           tag="std1", type_id="Study")}})
+    worker = _OrderWorker(root)
+    study_result = children_node(worker, "m", {"segments": [{"collection": "study", "tag": "std1"}]},
+                                 collection="feature")
+    assert "collection_order" not in study_result
+    assert worker.descriptor_calls == 0
+
+    failing_worker = _OrderWorker(root, error_rows=[{"collection": "feature", "code": "TAGS_PROBE_FAILED",
+                                                      "message": "source listing getter failed"}])
+    incomplete = children_node(failing_worker, "m",
+                               {"segments": [{"collection": "sol", "tag": "sol1"}]},
+                               collection="feature")
+    assert incomplete["complete"] is False
+    assert incomplete["errors"][0]["message"] == "source listing getter failed"
+    assert incomplete["collection_order"]["order_status"] == "UNVERIFIED"
+    assert incomplete["collection_order"]["provenance_failure"]["stage"] == "children_listing"
+    assert failing_worker.descriptor_calls == 0
+
+
+def test_solver_feature_order_refuses_more_than_500_before_any_index_call():
+    tags = [f"f{index:04d}" for index in range(501)]
+    solver = _IndexedSolverNode(
+        children={"feature": {tag: _FakeNode(tag=tag) for tag in tags}},
+        tag="sol1", type_id="SolverSequence")
+    solver.index_list.native_tags = list(tags)
+    solver.index_list.indices = {tag: index for index, tag in enumerate(tags)}
+    worker = _OrderWorker(_FakeNode())
+    rows = [{"collection": "feature", "tag": tag} for tag in tags]
+    witness, calls = _solver_feature_order_witness(
+        worker, solver, {"segments": [{"collection": "sol", "tag": "sol1"}]},
+        rows, listing_complete=True)
+    assert witness["order_status"] == "UNVERIFIED"
+    assert witness["provenance_failure"]["code"] == "ORDER_WITNESS_MEMBER_LIMIT"
+    assert solver.index_list.index_calls == 0
+    assert calls == 3  # actual feature receiver, typed descriptor, tags inventory
+
+
+def test_filtered_children_rejects_unknown_collections_and_cross_filter_rows():
+    node = _FakeNode(children={"physics": {"ewfd": _FakeNode(tag="ewfd")}})
+    worker = _BatchWorker(node)
+    for invalid in ("unsupported", True, 3):
+        with pytest.raises(ExecutionContractError) as exc:
+            children_node(worker, "m", {"segments": []}, collection=invalid)
+        assert exc.value.code == "INVALID_REQUEST"
+    assert worker.children_calls == 0
+
+    class _LeakyBatchWorker(_BatchWorker):
+        def probe_children(self, node, candidates, *, request_id=None, rpc_timeout_s=None):
+            return {"children": [{"collection": "material", "tag": "mat1"}], "errors": []}
+
+    with pytest.raises(ExecutionContractError) as exc:
+        children_node(_LeakyBatchWorker(node), "m", {"segments": []},
+                      collection="physics")
+    assert exc.value.code == "EXECUTION_STATE_UNKNOWN"
+
+    class _LeakyErrorWorker(_BatchWorker):
+        def probe_children(self, node, candidates, *, request_id=None, rpc_timeout_s=None):
+            return {"children": [], "errors": [{"collection": "material",
+                                                  "code": "PROBE_FAILED"}]}
+
+    with pytest.raises(ExecutionContractError) as exc:
+        children_node(_LeakyErrorWorker(node), "m", {"segments": []},
+                      collection="physics")
+    assert exc.value.code == "EXECUTION_STATE_UNKNOWN"
 
 
 def test_children_probe_error_is_reported_not_swallowed():

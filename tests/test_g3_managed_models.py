@@ -954,7 +954,8 @@ def test_control_daemon_dirty_close_requires_configured_exact_scope_provider(tmp
         daemon.close()
 
 
-def test_control_daemon_model_routes_and_recipe_use_durable_worker_execution(tmp_path, monkeypatch):
+@pytest.mark.parametrize("explicit_entrypoint", [False, True])
+def test_control_daemon_model_routes_and_recipe_use_durable_worker_execution(tmp_path, monkeypatch, explicit_entrypoint):
     """Exercise the real public dispatcher, serial queue and OperationStore.
 
     The Worker is synthetic software evidence only; this test never launches
@@ -1125,7 +1126,7 @@ def test_control_daemon_model_routes_and_recipe_use_durable_worker_execution(tmp
 
         source = project_root / "src" / "Recipe.java"
         source.parent.mkdir(parents=True)
-        source.write_text("public final class Recipe { public static Object run() { return 42; } }\n",
+        source.write_text("public final class Recipe { public static Object run() { return 42; } }\n" + ("// class comment\nclass Companion {}\n" if explicit_entrypoint else ""),
                           encoding="utf-8")
         source_record = register_project_artifact(
             project_root, daemon.store, "src/Recipe.java", project_id=project_id, role="java-source",
@@ -1151,8 +1152,20 @@ def test_control_daemon_model_routes_and_recipe_use_durable_worker_execution(tmp
                     "submitted", "observed"}
 
         current_revision = service.ledger._models["mcp1"].revision
+        if explicit_entrypoint:
+            executed_count = len(worker.executions)
+            wrong_entry = _dispatch_managed(daemon, "code.recipe_register", {
+                "source_artifact": source_record["artifact_id"], "entrypoint": "Companion",
+                "input_schema": {"type": "object"}, "test_refs": [execute["execution"]["operation_id"]],
+            }, project_id=project_id, session_id=session_id, model_ref=ref, revision=current_revision,
+               request_id="recipe-wrong-real-entry", idempotency_key="recipe-wrong-real-entry")
+            assert wrong_entry["success"] is False
+            assert wrong_entry["error"]["code"] == "RECIPE_TEST_UNVERIFIED"
+            assert len(worker.executions) == executed_count
+
         recipe = _dispatch_managed(daemon, "code.recipe_register", {
             "source_artifact": source_record["artifact_id"],
+            **({"entrypoint": "Recipe"} if explicit_entrypoint else {}),
             "input_schema": {"type": "object", "properties": {"count": {"type": "integer"}},
                              "required": ["count"], "additionalProperties": False},
             "test_refs": [execute["execution"]["operation_id"]],
@@ -1255,6 +1268,7 @@ def test_control_daemon_model_routes_and_recipe_use_durable_worker_execution(tmp
         daemon.store.add_event(job_id, "worker_request", forged_event)
         tampered = _dispatch_managed(daemon, "code.recipe_register", {
             "source_artifact": source_record["artifact_id"],
+            **({"entrypoint": "Recipe"} if explicit_entrypoint else {}),
             "input_schema": {"type": "object", "properties": {"count": {"type": "integer"}},
                              "required": ["count"], "additionalProperties": False},
             "test_refs": [execute["execution"]["operation_id"]],

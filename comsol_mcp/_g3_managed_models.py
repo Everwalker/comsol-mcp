@@ -1244,7 +1244,7 @@ def _strict_json(raw: bytes, *, code: str) -> dict[str, Any]:
     return value
 
 
-def _resolve_recipe_source(context: Mapping[str, Any], source_id: Any) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+def _resolve_recipe_source(context: Mapping[str, Any], source_id: Any, entrypoint: str = "") -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     resolved = _resolve_registered(context, source_id, max_size=2 * 1024 * 1024)
     record = context["operation_store"].get_metadata("artifacts", resolved["artifact_id"])
     if (not isinstance(record, Mapping) or record.get("schema_version") != 2
@@ -1261,7 +1261,17 @@ def _resolve_recipe_source(context: Mapping[str, Any], source_id: Any) -> tuple[
         raise PreWriteRefusal("ARTIFACT_HASH_MISMATCH", "registered Java source bytes differ from its content address")
     from ._g2_code import describe_source
     try:
-        description = describe_source(context["project_root"], resolved["relative_path"])
+        description = describe_source(context["project_root"], resolved["relative_path"], entrypoint)
+        if entrypoint:
+            # Comments/literals and nested declarations must not force an inferred
+            # entrypoint. Explicit class identity still must exist in this source.
+            code = re.sub(r'//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', " ", raw.decode("utf-8"), flags=re.S)
+            declared = set(re.findall(r"\b(?:class|interface|record)\s+([A-Za-z_$][\w$]*)", code))
+            class_name = description["entrypoint"].split("#", 1)[0]
+            package = re.search(r"\bpackage\s+([\w.]+)\s*;", code)
+            prefix = package.group(1) + "." if package else ""
+            if not class_name.startswith(prefix) or class_name[len(prefix):] not in declared:
+                raise PreWriteRefusal("INVALID_REQUEST", "explicit recipe entrypoint class is not declared in this source")
     except ExecutionContractError as exc:
         raise PreWriteRefusal(exc.code, str(exc), details=dict(exc.details)) from exc
     if description["source_sha256"] != resolved["sha256"]:
@@ -1372,6 +1382,42 @@ def _worker_source_path_matches(source_artifact: Any, registered_relative_path: 
     return False
 
 
+def _durable_java_test_arguments(record: Mapping[str, Any] | None,
+                                 metadata: Mapping[str, Any] | None,
+                                 project_id: str) -> tuple[Any, bool]:
+    """Project only an exact persisted public wrapper; never caller runtime claims."""
+    if not isinstance(record, Mapping) or not isinstance(metadata, Mapping):
+        return None, False
+    operation = record.get("operation")
+    arguments = metadata.get("arguments")
+    if operation == "code.execute_java":
+        return arguments, metadata.get("operation") == operation
+    if (operation not in {"operation_call", "registry_call"}
+            or metadata.get("operation") != operation
+            or not isinstance(arguments, Mapping)
+            or set(arguments) != {"operation_id", "arguments"}
+            or arguments.get("operation_id") != "code.execute_java"):
+        return None, False
+    inner = arguments.get("arguments")
+    execution = metadata.get("execution")
+    if (not isinstance(inner, Mapping) or not isinstance(execution, Mapping)
+            or not isinstance(execution.get("project_id"), str)
+            or execution.get("project_id") != project_id):
+        return None, False
+    # The stored execution remains authority. Optional body claims must agree,
+    # including JSON types (True must not equal generation 1).
+    for claim in ("project_id", "session_id", "model_ref"):
+        if claim in inner:
+            if claim not in execution:
+                return None, False
+            try:
+                if json.dumps(inner[claim], sort_keys=True, allow_nan=False) != json.dumps(execution[claim], sort_keys=True, allow_nan=False):
+                    return None, False
+            except (TypeError, ValueError):
+                return None, False
+    return inner, True
+
+
 def _validate_test_refs(context: Mapping[str, Any], refs: Any, *, source_sha256: str,
                         source_artifact_id: str, source_path: str, entrypoint: str,
                         expected_version: str, require_current_worker: bool) -> list[dict[str, Any]]:
@@ -1385,7 +1431,7 @@ def _validate_test_refs(context: Mapping[str, Any], refs: Any, *, source_sha256:
         record = store.get_operation(ref)
         metadata = record.get("metadata") if isinstance(record, Mapping) else None
         stored_execution = metadata.get("execution") if isinstance(metadata, Mapping) else None
-        arguments = metadata.get("arguments") if isinstance(metadata, Mapping) else None
+        arguments, durable_java_operation = _durable_java_test_arguments(record, metadata, context["project_id"])
         result = record.get("result") if isinstance(record, Mapping) else None
         data = result.get("data") if isinstance(result, Mapping) else None
         result_execution = result.get("execution") if isinstance(result, Mapping) else None
@@ -1401,12 +1447,14 @@ def _validate_test_refs(context: Mapping[str, Any], refs: Any, *, source_sha256:
                            and source_record.get("path") == source_path)
         worker_execution_observed = False
         job_id = record.get("job_id") if isinstance(record, Mapping) else None
+        try:
+            job_record = store.operation_job(ref) if hasattr(store, "operation_job") else None
+        except Exception:
+            job_record = None
         if not isinstance(job_id, str) or not job_id:
-            try:
-                job_record = store.operation_job(ref) if hasattr(store, "operation_job") else None
-            except Exception:
-                job_record = None
             job_id = job_record.get("job_id") if isinstance(job_record, Mapping) else None
+        job_terminal = (isinstance(job_record, Mapping) and job_record.get("status") == "SUCCEEDED"
+                        and job_record.get("operation_id") == ref and job_record.get("job_id") == job_id)
         if isinstance(job_id, str) and job_id:
             try:
                 event_rows = store.events(job_id, offset=0, limit=1000)
@@ -1437,10 +1485,10 @@ def _validate_test_refs(context: Mapping[str, Any], refs: Any, *, source_sha256:
                     and sent_payload.get("tag") == model_ref.get("model_tag")
                 )
         evidence_checks = {
-            "operation_terminal": isinstance(record, Mapping) and record.get("status") == "SUCCEEDED"
-                                  and record.get("operation") == "code.execute_java",
+            "operation_terminal": job_terminal and isinstance(record, Mapping) and record.get("status") == "SUCCEEDED"
+                                  and (record.get("operation") == "code.execute_java" or durable_java_operation),
             "project_and_arguments": isinstance(metadata, Mapping)
-                                     and metadata.get("operation") == "code.execute_java"
+                                     and durable_java_operation
                                      and isinstance(stored_execution, Mapping)
                                      and stored_execution.get("project_id") == context["project_id"]
                                      and isinstance(arguments, Mapping)
@@ -1526,11 +1574,14 @@ def _validate_input_schema(schema: Any) -> dict[str, Any]:
 
 
 def recipe_register(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
-    body, context = _arguments(arguments, {"source_artifact", "input_schema", "test_refs"})
+    body, context = _arguments(arguments, {"source_artifact", "input_schema", "test_refs", "entrypoint"})
+    if "entrypoint" in body and (not isinstance(body["entrypoint"], str) or not body["entrypoint"].strip()
+                                 or len(body["entrypoint"]) > 256):
+        raise PreWriteRefusal("INVALID_REQUEST", "explicit recipe entrypoint must be a nonempty bounded string")
     _model_state(context, model_tag)
     _require_context(context, "project_root", "project_id", "operation_store", "host_identity",
                      "engine_host_identity", "request_id", "operation_id", "model_ref", "source_revision")
-    resolved, _record, description = _resolve_recipe_source(context, body.get("source_artifact"))
+    resolved, _record, description = _resolve_recipe_source(context, body.get("source_artifact"), body.get("entrypoint", ""))
     input_schema = _validate_input_schema(body.get("input_schema"))
     from ._g3_model_delivery import _current_version
     exact_version = _current_version(worker)
@@ -1657,7 +1708,7 @@ def recipe_run(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dic
                               details={"actual_comsol_version": actual_version,
                                        "admitted_comsol_versions": recipe["runtime"]["comsol_versions"]})
     source_id = recipe["source"]["artifact_id"]
-    source, _source_record, description = _resolve_recipe_source(context, source_id)
+    source, _source_record, description = _resolve_recipe_source(context, source_id, recipe["source"]["entrypoint"])
     if description["source_sha256"] != recipe["source"]["sha256"] or description["entrypoint"] != recipe["source"]["entrypoint"]:
         raise PreWriteRefusal("ARTIFACT_HASH_MISMATCH", "recipe source no longer matches the registered source SHA/entrypoint")
     evidence = _validate_test_refs(context, recipe["test_refs"], source_sha256=source["sha256"],

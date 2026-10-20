@@ -12,6 +12,8 @@ import sys
 import pytest
 
 from comsol_mcp import _g2_registry as registry
+from comsol_mcp._execution_contract import ExecutionContractError
+from comsol_mcp._g2_engine import COLLECTION_CANDIDATES
 
 
 def _workspace_catalog() -> Path:
@@ -60,9 +62,41 @@ def test_catalog_selector_has_only_legacy_workspace_fallback(monkeypatch, tmp_pa
     assert registry._select_catalog_path() == workspace
 
 
+def test_node_children_collection_filter_is_published_and_validated():
+    described = registry.operation_describe("node.children")
+    schema = described["input_schema"]
+    collection_schema = schema["properties"]["collection"]
+    expected = [row["collection"] for row in COLLECTION_CANDIDATES]
+    assert collection_schema["type"] == "string"
+    assert collection_schema["enum"] == expected
+    assert "collection" not in schema["required"]
+
+    static_catalog = json.loads(_package_catalog().read_text(encoding="utf-8"))
+    operation = next(row for row in static_catalog["operations"]
+                     if row["operation_id"] == "node.children")
+    assert operation["arguments_signature"] == "path:NodePath,collection:str?,cursor:str?,limit:int?"
+    assert operation["input_schema"]["properties"]["collection"]["enum"] == expected
+    assert "collection" not in operation["input_schema"]["required"]
+    assert {"filtered_children", "filtered_cursor_scope"} <= set(operation["required_tests"])
+
+    registry.validate_call(
+        "node.children", {"path": {"segments": []}, "collection": "physics"},
+        allow_unbound_identity=True)
+    registry.validate_call(
+        "node.children", {"path": {"segments": []}}, allow_unbound_identity=True)
+    for invalid in ("unreviewed", None, True):
+        with pytest.raises(ExecutionContractError) as exc:
+            registry.validate_call(
+                "node.children", {"path": {"segments": []}, "collection": invalid},
+                allow_unbound_identity=True)
+        assert exc.value.code == "INVALID_REQUEST"
+
+
 def test_pyproject_declares_catalog_as_package_data():
     project = (Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8")
-    assert 'comsol_mcp = ["phase1_java/*.java", "worker_java/*.java", "data/g2/*.json"]' in project
+    import tomllib
+    patterns = tomllib.loads(project)["tool"]["setuptools"]["package-data"]["comsol_mcp"]
+    assert {"phase1_java/*.java", "worker_java/*.java", "data/g2/*.json", "data/science_recipes/*.json", "data/science_recipes/java/*.java", "data/science_recipes/w22_source/*.txt"} <= set(patterns)
 
 
 def test_registry_imports_from_isolated_package_tree_without_checkout(tmp_path):

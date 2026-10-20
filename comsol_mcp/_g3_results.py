@@ -211,6 +211,9 @@ PATH_KINDS = ("line",)
 MIN_SAMPLE_POINTS = 2
 MAX_SAMPLE_POINTS = 10_000
 MAX_EXPRESSIONS = 32
+NATIVE_DEFAULT_ALLOWED_EXPRESSIONS = frozenset({
+    "emw.neff_1", "emw.neff_2", "emw.nx", "emw.ny",
+})
 
 COORDINATE_COLUMNS = ("x", "y", "z")
 SOLUTION_INDEX_COLUMN = "solnum"
@@ -578,6 +581,7 @@ def _solver_sequence_parameter_observation(
     *,
     study_tag: str | None,
     solution_tag: str,
+    stationary_count_only: bool = False,
 ) -> dict[str, Any]:
     """Capture the SolverSequence's typed complex parameter axis separately.
 
@@ -599,6 +603,7 @@ def _solver_sequence_parameter_observation(
     raw_size = read(solution, "getSize")
     raw_size_multi = read(solution, "getSizeMulti")
     raw_names = read(solution, "getPNames")
+    stationary_count_candidate = stationary_count_only and (type_value == "Stationary" or type_value is None)
     names = list(raw_names) if isinstance(raw_names, (list, tuple)) else None
     size = list(raw_size) if isinstance(raw_size, (list, tuple)) else None
     size_multi = list(raw_size_multi) if isinstance(raw_size_multi, (list, tuple)) else None
@@ -622,16 +627,16 @@ def _solver_sequence_parameter_observation(
             errors.append({"method": "getSize", "code": "SOLVER_SEQUENCE_SOLNUM_COUNT_UNSUPPORTED",
                            "message": "documented getSize()[1] solution count must be in 1..4096"})
             solnum_count = None
-    if names is not None and any(not isinstance(name, str) or not name for name in names):
+    if not stationary_count_candidate and names is not None and any(not isinstance(name, str) or not name for name in names):
         errors.append({"method": "getPNames", "code": "SOLVER_SEQUENCE_PARAMETER_NAMES_INVALID",
                        "message": "parameter names must be nonempty strings"})
         names = None
-    elif names is None and raw_names is not None:
+    elif not stationary_count_candidate and names is None and raw_names is not None:
         errors.append({"method": "getPNames", "code": "SOLVER_SEQUENCE_PARAMETER_NAMES_SHAPE_INVALID",
                        "message": "getPNames() must return a string array"})
 
     values_by_solnum: list[dict[str, Any]] = []
-    if solnum_count is not None:
+    if not stationary_count_candidate and solnum_count is not None:
         for solnum in range(1, solnum_count + 1):
             real = read(solution, "getPVals", solnum)
             imag = read(solution, "getPValsImag", solnum)
@@ -647,13 +652,13 @@ def _solver_sequence_parameter_observation(
 
     units_by_name: dict[str, Any] = {}
     unit_observations: list[dict[str, Any]] = []
-    if names is not None and solution_info is not None:
+    if not stationary_count_candidate and names is not None and solution_info is not None:
         for name in names:
             unit = read(solution_info, "getUnit", name)
             units_by_name[name] = unit if isinstance(unit, str) and unit else None
             unit_observations.append({"name": name, "method": "SolutionInfo.getUnit(String)",
                                       "arguments": [name], "value": units_by_name[name]})
-    else:
+    elif not stationary_count_candidate:
         units_by_name = {name: None for name in (names or [])}
 
     count_scope_errors: list[dict[str, Any]] = []
@@ -670,6 +675,47 @@ def _solver_sequence_parameter_observation(
         "getOuterSolnum_semantics": "empty means no outer parameter/values per COMSOL 6.4 doc7709/chunk23066",
         "read_errors": count_scope_errors,
     }
+
+    # A stationary solution with the R9-observed blank parameter-name marker
+    # must be witnessed from its raw allocation/count metadata. Calling
+    # getPVals/getPValsImag or getUnit would reinterpret that marker as a real
+    # parameter and adds no count evidence. This opt-in branch is used only by
+    # the bounded count observer below; the shared general-purpose observer
+    # keeps its existing typed-parameter behavior.
+    if stationary_count_candidate:
+        raw_pnames = list(raw_names) if isinstance(raw_names, (list, tuple)) else raw_names
+        return {
+            "status": ("OBSERVED_STATIONARY_COUNT_ONLY_INPUTS" if type_value == "Stationary"
+                       else "UNVERIFIED_STATIONARY_TYPE_READ_ERROR"),
+            "stationary_count_only_candidate": True,
+            "source": "direct SolverSequence.getType/getSequenceType/isAttached/study/getSize/getSizeMulti/getPNames and SolutionInfo count-scope getters; raw R9 shape only",
+            "solution_tag": solution_tag,
+            "receiver": "model.sol(<dataset-bound solution tag>)",
+            "sequence_type": sequence_type if isinstance(sequence_type, str) else None,
+            "solution_type": type_value if isinstance(type_value, str) else None,
+            "attached": attached if isinstance(attached, bool) else None,
+            "study": observed_study if isinstance(observed_study, str) else study_tag,
+            "solution_identity_matches_dataset_study": (
+                observed_study == study_tag if isinstance(observed_study, str) and study_tag else None),
+            "get_size": size if size is not None else raw_size,
+            "get_size_raw": raw_size,
+            "get_size_semantics": "[degrees_of_freedom, solution_number_count] per COMSOL 6.4 doc7714/chunk23082",
+            "get_size_multi": size_multi if size_multi is not None else raw_size_multi,
+            "get_size_multi_getter": {
+                "method": "SolverSequence.getSizeMulti()",
+                "status": "CAPTURED" if size_multi is not None else "ERROR",
+                "raw": size_multi if size_multi is not None else raw_size_multi,
+                "semantics": "[local solution count in multisolution, total solution number count] per COMSOL 6.4 doc7714/chunk23082",
+            },
+            "solution_info_count_scope": count_scope,
+            "solution_number_count": size[1] if size is not None and len(size) == 2 else None,
+            "pnames": raw_pnames,
+            "parameter_rows": [],
+            "parameter_units_complete": False,
+            "parameters_complete": False,
+            "interpretation": "raw empty-string getPNames marker preserved exactly; not interpreted as a parameter name or unit",
+            "read_errors": errors,
+        }
 
     rows: list[dict[str, Any]] = []
     rows_shape_valid = names is not None and bool(names)
@@ -3223,7 +3269,9 @@ def _make_result_budget_guard(
             and single_solution_count_observation.get("status") in {
                 "VERIFIED_SINGLE_STORED_NUMERIC_COUNT",
                 "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT",
+                "VERIFIED_SINGLE_ATTACHED_STATIONARY_NUMERIC_COUNT",
             }
+            and type(single_solution_count_observation.get("numeric_solution_count")) is int
             and single_solution_count_observation.get("numeric_solution_count") == 1
             and single_solution_count_observation.get("solution_axes_pair_mapping_complete") is False
         )
@@ -3785,6 +3833,7 @@ def _field_array_context(
     point_count: int = 1,
     point_coordinates: Any = None,
     point_coordinate_source: str | None = None,
+    native_default_unit_expressions: Sequence[str] = (),
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     """Build JSON-safe FieldArray coordinates, units, and source metadata.
 
@@ -3856,8 +3905,9 @@ def _field_array_context(
         # that engine-facing representation before publishing it here.
         coords["spatial"] = point_coordinates
 
+    native_default_unit_names = {str(name) for name in native_default_unit_expressions}
     expression_unit_map = {
-        str(name): (None if value in (None, "") else str(value))
+        str(name): (None if value is None or (value == "" and str(name) not in native_default_unit_names) else str(value))
         for name, value in (expression_units or {}).items()
     }
     units: dict[str, Any] = {
@@ -3892,6 +3942,29 @@ def _field_array_context(
     if frequency_values:
         metadata["frequency_unit"] = frequency_unit
     return coords, units, metadata
+
+
+def validate_native_default_unit_requests(expressions: Any, requested_units: Any) -> None:
+    """Keep literal empty-unit requests closed to four exact W23 built-ins.
+
+    The managed gateway calls this during catalog validation so an invalid
+    empty unit is rejected before it creates an operation/job record. The
+    adapter calls it again at its own boundary as defense in depth.
+    """
+    if (not isinstance(requested_units, Sequence)
+            or isinstance(requested_units, (str, bytes, Mapping))
+            or not any(unit == "" for unit in requested_units)):
+        return
+    expression_list = require_string_array(expressions, "spec.expressions")
+    if len(requested_units) != len(expression_list):
+        raise ExecutionContractError("INVALID_REQUEST", "spec.units must have exactly one unit per expression")
+    invalid = [expression for expression, unit in zip(expression_list, requested_units)
+               if unit == "" and expression not in NATIVE_DEFAULT_ALLOWED_EXPRESSIONS]
+    if invalid:
+        raise ExecutionContractError(
+            "INVALID_REQUEST",
+            "empty spec.units is a native-default request supported only for exact built-in emw.neff_1/emw.neff_2/emw.nx/emw.ny expressions",
+        )
 
 
 def _field_array_with_values(
@@ -4126,8 +4199,102 @@ def _single_stored_solution_count_observation(
         info,
         study_tag=study_tag if isinstance(study_tag, str) and study_tag else None,
         solution_tag=solution_tag,
+        stationary_count_only=True,
     )
     base["observation"] = observation
+    if observation.get("stationary_count_only_candidate") is True:
+        reasons: list[str] = []
+        if identity_errors:
+            reasons.append("dataset-bound stationary identity getter failed")
+        if observation.get("read_errors"):
+            reasons.append("direct stationary allocation/count getter failed")
+        if observation.get("solution_type") != "Stationary":
+            reasons.append("direct SolverSequence.getType() did not read back Stationary")
+        if observation.get("sequence_type") != "SolverSequence":
+            reasons.append("direct SolverSequence.getSequenceType() did not read back SolverSequence")
+        if observation.get("attached") is not True:
+            reasons.append("stationary SolverSequence is not verified attached")
+        if (not isinstance(study_tag, str) or not study_tag
+                or observation.get("study") != study_tag
+                or observation.get("solution_identity_matches_dataset_study") is not True):
+            reasons.append("stationary SolverSequence.study() identity differs from the direct dataset-bound read")
+
+        size = observation.get("get_size")
+        if (not isinstance(size, (list, tuple)) or len(size) != 2
+                or any(type(value) is not int for value in size)
+                or size[0] <= 0 or size[1] != 1):
+            reasons.append("direct getSize() did not prove a positive DOF count and exactly one solution number")
+        size_multi = observation.get("get_size_multi")
+        if (not isinstance(size_multi, (list, tuple)) or list(size_multi) != [1, 1]
+                or any(type(value) is not int for value in size_multi)):
+            reasons.append("direct getSizeMulti() did not read back the exact singleton [1,1]")
+        pnames = observation.get("pnames")
+        if (not isinstance(pnames, (list, tuple)) or len(pnames) != 1
+                or type(pnames[0]) is not str or pnames[0] != ""):
+            reasons.append("raw getPNames() did not read back exactly the R9 empty-string marker")
+        count_scope = observation.get("solution_info_count_scope")
+        if not isinstance(count_scope, Mapping):
+            count_scope = {}
+        level_names = count_scope.get("getLevelNames")
+        levels = count_scope.get("getLevels")
+        outer_solnums = count_scope.get("getOuterSolnum")
+        if count_scope.get("read_errors"):
+            reasons.append("SolutionInfo count-scope getter failed")
+        if (not isinstance(level_names, (list, tuple)) or list(level_names) != []):
+            reasons.append("SolutionInfo.getLevelNames() did not read back an empty level-name list")
+        if type(levels) is not int or levels != 0:
+            reasons.append("SolutionInfo.getLevels() did not read back exact integer zero")
+        if (not isinstance(outer_solnums, (list, tuple)) or list(outer_solnums) != []):
+            reasons.append("SolutionInfo.getOuterSolnum() did not read back an empty outer axis")
+
+        membership_errors: list[dict[str, Any]] = []
+        membership_tags: list[Any] = []
+        final_study = None
+        if isinstance(study_tag, str) and study_tag and isinstance(observation.get("study"), str) and observation["study"]:
+            for _ in range(2):
+                collection = _record(model, "study", errors=membership_errors)
+                membership_tags.append(_record(collection, "tags", errors=membership_errors)
+                                       if collection is not None else None)
+            final_study = _record(node, "study", errors=membership_errors)
+        tag_rows_valid = all(
+            isinstance(tags, (list, tuple))
+            and all(type(tag) is str and bool(tag) for tag in tags)
+            and len(set(tags)) == len(tags)
+            for tags in membership_tags
+        )
+        stable_tags = tag_rows_valid and len(membership_tags) == 2 and list(membership_tags[0]) == list(membership_tags[1])
+        actual_member = stable_tags and observation.get("study") in membership_tags[0]
+        stable_study = final_study == study_tag == observation.get("study")
+        base["attached_study_membership"] = {
+            "source": "same model.study().tags() twice plus final dataset-bound SolverSequence.study()",
+            "study": observation.get("study"),
+            "study_tags_before": membership_tags[0] if membership_tags else None,
+            "study_tags_after": membership_tags[1] if len(membership_tags) > 1 else None,
+            "solution_study_after": final_study,
+            "tags_complete": tag_rows_valid and not membership_errors,
+            "tags_stable": stable_tags,
+            "study_identity_stable": stable_study,
+            "actual_member": bool(actual_member),
+            "read_errors": membership_errors,
+            "status": "VERIFIED" if actual_member and stable_study and not membership_errors else "UNVERIFIED",
+        }
+        if membership_errors or not actual_member or not stable_study:
+            reasons.append("actual stationary study membership/identity was not stable and verified")
+        if reasons:
+            base["reasons"] = reasons
+            return base
+
+        base.update({
+            "status": "VERIFIED_SINGLE_ATTACHED_STATIONARY_NUMERIC_COUNT",
+            "witness_kind": "attached_stationary_count_only_singleton",
+            "numeric_solution_count": 1,
+            "source": ("exact dataset.solution→model.sol().tags() binding plus attached Stationary/SolverSequence identity, "
+                       "positive getSize()[0], getSize()[1]=1, getSizeMulti()==[1,1], exact raw getPNames()==[''], "
+                       "SolutionInfo levels=0/level names=[]/outer=[] and stable same-model Study membership"),
+            "reasons": [],
+        })
+        return base
+
     reasons: list[str] = []
     size = observation.get("get_size")
     size_multi = observation.get("get_size_multi")
@@ -6605,7 +6772,11 @@ def _validate_count_only_point_samples(data: Any, *, num_expressions: int,
         point_count: int, raw_layout: str, count_observation: Mapping[str, Any] | None) -> None:
     """Validate bounded native samples without introducing physical tuple axes."""
     if (not isinstance(count_observation, Mapping)
-            or count_observation.get("status") not in {"VERIFIED_SINGLE_STORED_NUMERIC_COUNT", "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT"}
+            or count_observation.get("status") not in {
+                "VERIFIED_SINGLE_STORED_NUMERIC_COUNT",
+                "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT",
+                "VERIFIED_SINGLE_ATTACHED_STATIONARY_NUMERIC_COUNT",
+            }
             or type(count_observation.get("numeric_solution_count")) is not int
             or count_observation["numeric_solution_count"] != 1
             or count_observation.get("solution_axes_pair_mapping_complete") is not False):
@@ -6653,12 +6824,15 @@ def result_at_points(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
         raw_units = spec["units"]
         if (not isinstance(raw_units, Sequence) or isinstance(raw_units, (str, bytes, Mapping))
                 or not raw_units
-                or any(not isinstance(unit, str) or not unit.strip() for unit in raw_units)):
+                or any(not isinstance(unit, str) or (unit != "" and not unit.strip()) for unit in raw_units)):
             raise ExecutionContractError("INVALID_REQUEST", "spec.units must be a nonempty ordered array of unit strings")
+        # Exact '' explicitly requests COMSOL's model-dependent native default.
+        # It is not a dimensionless alias and never matches a nonempty request.
         # Units may repeat across distinct expressions; unlike entity tags they are not a set.
         requested_units = list(raw_units)
         if len(requested_units) != len(expressions):
             raise ExecutionContractError("INVALID_REQUEST", "spec.units must have exactly one unit per expression")
+        validate_native_default_unit_requests(expressions, requested_units)
     solution_spec = require_mapping(spec.get("solution", {}), "spec.solution")
     dataset_tag = solution_spec.get("dataset")
     if not dataset_tag:
@@ -6752,8 +6926,14 @@ def result_at_points(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
         single_solution_count_observation = _single_stored_solution_count_observation(
             model, dataset_binding, solution_tag)
         skip_empty_tuple_diagnostic = (
-            single_solution_count_observation.get("status") == "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT"
-            and single_solution_count_observation.get("witness_kind") == "attached_parametric_frequency_singleton"
+            single_solution_count_observation.get("status") in {
+                "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT",
+                "VERIFIED_SINGLE_ATTACHED_STATIONARY_NUMERIC_COUNT",
+            }
+            and single_solution_count_observation.get("witness_kind") in {
+                "attached_parametric_frequency_singleton",
+                "attached_stationary_count_only_singleton",
+            }
             and type(single_solution_count_observation.get("numeric_solution_count")) is int
             and single_solution_count_observation["numeric_solution_count"] == 1
             and single_solution_count_observation.get("solution_axes_pair_mapping_complete") is False)
@@ -6863,6 +7043,7 @@ def result_at_points(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
             requested_unit_evidence = {
                 "status": "VERIFIED_REQUESTED_UNITS_BEFORE_AND_AFTER_NUMERIC_READ",
                 "requested_expressions": list(expressions), "requested_units": list(requested_units),
+                "native_default_unit_expressions": [expr for expr, unit in zip(expressions, requested_units) if unit == ""],
                 "setter": "actual Interp NumericalFeature.setIndex(unit,requested,index)",
                 "before": before_units, "after": after_units,
                 "no_external_scaling_or_relabeling": True,
@@ -6923,7 +7104,16 @@ def result_at_points(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
                 point_count=field_point_count,
                 point_coordinates=field_point_coordinates_for_result,
                 point_coordinate_source="request",
+                native_default_unit_expressions=(
+                    [expr for expr, unit in zip(expressions, requested_units) if unit == ""]
+                    if requested_units is not None else []
+                ),
             )
+            if requested_units is not None and "" in requested_units:
+                field_metadata["native_default_unit_expressions"] = [
+                    expr for expr, unit in zip(expressions, requested_units) if unit == ""
+                ]
+                field_metadata["native_default_unit_semantics"] = "native default or undefined; not dimensionless evidence"
             if raw_layout.startswith("expression,outer"):
                 field_array_payload = FieldArray(
                     transformed,
@@ -7021,6 +7211,7 @@ def result_at_points(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
                 and single_solution_count_observation.get("status") in {
                     "VERIFIED_SINGLE_STORED_NUMERIC_COUNT",
                     "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT",
+                    "VERIFIED_SINGLE_ATTACHED_STATIONARY_NUMERIC_COUNT",
                 }
                 else "only a complete SolutionBinding establishes outer/inner tuples"
             ),

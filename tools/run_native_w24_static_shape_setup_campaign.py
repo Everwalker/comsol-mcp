@@ -10,6 +10,9 @@ import json
 import math
 import os
 import re
+import shlex
+import shutil
+import stat
 import subprocess
 import sys
 import tarfile
@@ -30,6 +33,7 @@ EXPLICIT_SITE_PACKAGES = (EXPECTED_PYTHON.parent.parent / "lib" /
 INSTALL_ROOT = Path("/Applications/COMSOL64/Multiphysics")
 JAVA11 = Path("/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home")
 JAVA_TOOL_OPTIONS = "-XX:ActiveProcessorCount=2 -Xms128m -Xmx1024m"
+JCMD_OPTION_ENV_KEYS = ("JAVA_TOOL_OPTIONS", "_JAVA_OPTIONS", "JDK_JAVA_OPTIONS")
 RSS_STOP_BYTES = 6 * 1024**3
 MAX_OUTPUT_BYTES = 10 * 1024**3
 MAX_SINGLE_MPH_BYTES = 1024**3
@@ -44,9 +48,15 @@ FREEZE_FILE = "candidate_freeze.json"
 FREEZE_SCHEMA = "W24_STATIC_SHAPE_SETUP_CAMPAIGN_FREEZE_V1"
 TERMINAL_JOB_STATES = {"SUCCEEDED", "FAILED", "EXPIRED", "LOST", "CANCELLED"}
 WORKER_CLEANUP_TERMINAL = {"SUCCEEDED", "FAILED", "EXPIRED", "CANCELLED"}
+LEGACY_STORE_TERMINAL_PROOF_OPERATIONS = frozenset({
+    "model_create", "model.adopt", "model_load", "model.load", "model.inspect",
+})
 OVERLAY_PATHS = {
     "tools/run_native_w24_static_shape_setup_campaign.py",
+    "tools/run_native_w24_static_shape_setup.py",
     "tests/test_run_native_w24_static_shape_setup_campaign.py",
+    "tests/test_w24_static_shape_managed.py",
+    "tests/test_w24_operation_store_terminal_proof.py",
 }
 EXTRA_PATHS = {
     "pyproject.toml",
@@ -63,10 +73,12 @@ EXTRA_PATHS = {
     "tests/test_w24_static_shape_sensitivity.py",
 }
 ROUTES = [
-    "project.create and project.inspect before server birth",
-    "one production ControlDaemon.dispatch(session.connect)",
+    "project.create and project.inspect before server birth with host_control scoped to this new private project",
+    "one production ControlDaemon.dispatch(session.start) through the fixed W24 OwnedServerLauncher adapter",
+    "one production ControlDaemon.dispatch(session.connect) using the exact returned session_id and endpoint",
     "session.inspect; one model_create seed",
-    "14 config-major build/save/reopen/full-readback setup slots",
+    "14 config-major build/save/readback setup slots; register each exact saved MPH through artifact.register, then call managed model.load(artifact_id), require one fresh MCP-owned tag, and compare full post-load readback; every fixture build carries one unique selection_diagnostic_path in the current private static_shape_managed directory, exact configuration/case UUID basename, absent before dispatch",
+    "per setup slot: one artifact.register and one managed model.load; this adds one public operation per slot versus legacy model_load while preserving the 14-slot and 0-solve budget",
     "complete OperationStore/job/Worker-request reconciliation",
     "session.disconnect(retire_worker=true) only after terminal safe ledger",
     "session.inspect retirement readback; exact task Popen server stop",
@@ -78,9 +90,14 @@ CONFIGURATION_ORDER = [
 SETUP_BUDGET = {
     "schema_version": 1,
     "planned_setup_receipts": 14,
+    "planned_public_slot_route_calls": 126,
+    "public_slot_route_count_delta_vs_legacy_path_load": 14,
     "configuration_order": CONFIGURATION_ORDER,
     "case_order": ["flat", "step"],
     "max_task_owned_comsol_servers": 1,
+    "max_session_start_calls": 1,
+    "max_session_connect_calls": 1,
+    "max_session_stop_calls": 1,
     "max_managed_workers": 1,
     "max_solver_threads": 2,
     "max_gui_processes": 0,
@@ -91,6 +108,10 @@ SETUP_BUDGET = {
     "solver_calls": 0,
     "max_single_unsolved_mph_bytes": MAX_SINGLE_MPH_BYTES,
     "max_total_project_output_bytes": MAX_OUTPUT_BYTES,
+    "project_output_byte_accounting": (
+        "count every regular file in outputs/ and g2_artifacts/registered/; each completed slot "
+        "accounts for both its saved MPH and the byte-identical registered MPH copy"
+    ),
     "rss_sampled_admission_stop_threshold_bytes": RSS_STOP_BYTES,
     "rss_sample_interval_seconds": SAMPLE_INTERVAL_SECONDS,
     "rss_limit_semantics": (
@@ -110,12 +131,61 @@ SETUP_BUDGET = {
     ),
 }
 
+SCHEMA_ONLY_ROUTES = [
+    "project.create and project.inspect before server birth with exact private host_control grant",
+    "one production ControlDaemon.dispatch(session.start) through the fixed W24 OwnedServerLauncher adapter",
+    "one production ControlDaemon.dispatch(session.connect) using the exact returned session_id and endpoint",
+    "session.inspect; exactly one model_create seed; exactly one trusted W24StaticShapeFixture property_schema_only call on that ModelRef",
+    "capture declared type, finite allowed values, and non-mutating scalar/expression values for exactly eight named properties",
+    "no Study.run, solver, geometry build, MPH save/reopen, or result evaluation",
+    "complete OperationStore/job/Worker-request reconciliation",
+    "session.disconnect(retire_worker=true) only after terminal safe ledger",
+    "session.inspect retirement readback; exact task Popen server stop",
+]
+SCHEMA_ONLY_BUDGET = {
+    **SETUP_BUDGET,
+    "execution_mode": "property_schema_only",
+    "planned_setup_receipts": 0,
+    "configuration_order": [],
+    "case_order": [],
+    "max_solver_threads": 0,
+    "wall_seconds_from_server_birth_including_cleanup": 1200,
+    "max_single_unsolved_mph_bytes": 0,
+    "max_total_project_output_bytes": 0,
+    "model_create_calls": 1,
+    "trusted_java_calls": 1,
+    "schema_probe_calls": 1,
+    "schema_probe_properties": 8,
+    "geometry_configuration_calls": 2,
+    "geometry_build_calls": 0,
+    "physics_property_set_calls": 0,
+    "study_run_submissions": 0,
+    "solver_calls": 0,
+    "max_gui_processes": 0,
+    "future_science_binding_policy": (
+        "diagnostic-only model is retired on the same Worker; no MPH or cross-epoch science binding is produced"
+    ),
+}
+EXECUTION_MODE_SETUP14 = "setup14"
+EXECUTION_MODE_SCHEMA_ONLY = "property_schema_only"
+
 class CandidateError(RuntimeError):
     pass
 
 
 class OutcomeUnknown(CandidateError):
     """A persisted operation intent lacks a confirmed terminal response."""
+
+    def __init__(self, message: str, *, response: Mapping[str, Any] | None = None,
+                 request_id: str | None = None, idempotency_key: str | None = None):
+        super().__init__(message)
+        self.response = dict(response) if isinstance(response, Mapping) else None
+        self.request_id = request_id
+        self.idempotency_key = idempotency_key
+
+
+class JvmLimitsReadbackHold(CandidateError):
+    """The live child could not be proved to have the frozen effective JVM limits."""
 
 
 def _json_bytes(value: Any) -> bytes:
@@ -129,6 +199,15 @@ def _json_hash(value: Any) -> str:
 
 def _sha_bytes(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
+
+
+def _model_load_expected_ownership(load_mode: Any) -> str:
+    """Map the public legacy loader's two explicit outcomes to their owner class."""
+    if load_mode == "adopted-by-path":
+        return "user_owned"
+    if load_mode == "loaded":
+        return "mcp_owned"
+    raise CandidateError("model_load returned an unsupported or missing load_mode")
 
 
 def _sha_file(path: Path) -> str:
@@ -305,7 +384,10 @@ CAMPAIGN_DEPENDENCIES = {
     "comsol_mcp._control_daemon": ("ControlDaemon",),
     "comsol_mcp._g2_isolation": ("_process_snapshot",),
     "comsol_mcp._platform_process": ("process_identity",),
-    "tools.run_native_resume_smoke": ("NativeLoopbackServer", "_is_native_study_run_submission"),
+    "comsol_mcp._session_context": ("runtime_state_root", "session_state_directory"),
+    "comsol_mcp._session_server": ("ManagedServerHandle", "OwnedServerError", "OwnedServerLauncher",
+                                     "_server_directories", "build_server_command"),
+    "tools.run_native_resume_smoke": ("_is_native_study_run_submission",),
     "tools.run_native_w24_cure_preflight": (
         "_actual_study_run_submissions", "_project_job_inventory",
         "_worker_request_activity_inventory", "_worker_request_terminal"),
@@ -374,6 +456,103 @@ def build_setup_slots() -> list[dict[str, Any]]:
     ]
 
 
+def _execution_contract(mode: str) -> tuple[dict[str, Any], list[str], list[dict[str, Any]]]:
+    if mode == EXECUTION_MODE_SETUP14:
+        return SETUP_BUDGET, ROUTES, build_setup_slots()
+    if mode == EXECUTION_MODE_SCHEMA_ONLY:
+        return SCHEMA_ONLY_BUDGET, SCHEMA_ONLY_ROUTES, []
+    raise CandidateError(f"unsupported frozen W24 execution mode: {mode!r}")
+
+
+def _validate_schema_probe_result(value: Any, *, expected_model_tag: str) -> dict[str, Any]:
+    expected = {
+        "LaminarFlow.PhysicalModelProperty.IncludeGravity": "IncludeGravity",
+        "LaminarFlow.PhysicalModelProperty.Compressibility": "Compressibility",
+        "PhaseField.PhaseFieldModel.chiOption": "chiOption",
+        "PhaseField.PhaseFieldModel.chi": "chi",
+        "PhaseField.PhaseFieldModel.epsilon_pf": "epsilon_pf",
+        "TwoPhaseFlowPhaseField.IncludeSurfaceTension": "IncludeSurfaceTension",
+        "TwoPhaseFlowPhaseField.SurfaceTensionCoefficient": "SurfaceTensionCoefficient",
+        "TwoPhaseFlowPhaseField.sigma": "sigma",
+    }
+    if (not isinstance(value, Mapping) or
+            value.get("status") != "SCHEMA_ONLY_DEFAULTS_CAPTURED_NOT_SOLVED" or
+            value.get("action") != "property_schema_only" or
+            value.get("model_tag") != expected_model_tag or
+            value.get("physics_tags") != ["spf", "pf"] or
+            value.get("physics_types") != ["LaminarFlow", "PhaseField"] or
+            value.get("coupling_tag") != "tpf1" or
+            value.get("coupling_type") != "TwoPhaseFlowPhaseField" or
+            value.get("study_tags") != [] or value.get("solver_tags") != [] or
+            value.get("physics_property_set_calls") != 0 or value.get("study_run_calls") != 0 or
+            value.get("solver_calls") != 0 or value.get("model_save_calls") != 0 or
+            value.get("result_evaluation_calls") != 0 or
+            value.get("native_acceptance") != "NOT_RUN"):
+        raise CandidateError("schema-only Java result differs from the exact unsolved property-probe contract")
+    geometry = value.get("geometry_setup")
+    if (not isinstance(geometry, Mapping) or geometry.get("dimension") != 2 or
+            geometry.get("length_unit") != "m" or geometry.get("length_unit_setter_calls") != 1 or
+            geometry.get("axisymmetric") is not True or geometry.get("axisymmetric_setter_calls") != 1 or
+            geometry.get("geometry_build_calls") != 0):
+        raise CandidateError("schema-only geometry setup differs from the exact partial-fixture scope")
+    properties = value.get("properties")
+    if not isinstance(properties, Mapping) or set(properties) != set(expected):
+        raise CandidateError("schema-only Java result omitted or added a requested property")
+    for key, property_name in expected.items():
+        row = properties.get(key)
+        if (not isinstance(row, Mapping) or row.get("property_name") != property_name or
+                type(row.get("has_property")) is not bool):
+            raise CandidateError(f"schema-only result has malformed presence metadata for {property_name}")
+        value_type = row.get("declared_type")
+        if row["has_property"]:
+            if not isinstance(value_type, str) or not value_type:
+                raise CandidateError(f"schema-only result omitted declared type for {property_name}")
+            allowed = row.get("allowed_values")
+            if allowed is not None and (not isinstance(allowed, list) or
+                    not all(isinstance(item, str) for item in allowed) or len(allowed) != len(set(allowed))):
+                raise CandidateError(f"schema-only result has malformed finite values for {property_name}")
+            state = row.get("value_status")
+            if state not in {"READ_WITH_DECLARED_TYPE_GETTER", "UNSUPPORTED_DECLARED_TYPE"}:
+                raise CandidateError(f"schema-only result has malformed value status for {property_name}")
+            if state == "UNSUPPORTED_DECLARED_TYPE":
+                if (row.get("value_representation") != "unsupported_declared_type" or
+                        row.get("value_reader") is not None or row.get("value") is not None or
+                        row.get("expression_value") is not None):
+                    raise CandidateError(f"unsupported property {property_name} must remain uninterpreted")
+            elif value_type == "Double":
+                if (row.get("value_reader") != "getString" or
+                        row.get("value_representation") != "expression_as_string" or
+                        (row.get("value") is not None and not isinstance(row.get("value"), str)) or
+                        row.get("expression_value") != row.get("value")):
+                    raise CandidateError(f"Double property {property_name} was not preserved as raw expression text")
+            elif value_type == "Boolean":
+                if (row.get("value_reader") != "getBoolean" or type(row.get("value")) is not bool or
+                        row.get("value_representation") != "typed_scalar" or
+                        row.get("expression_value") is not None):
+                    raise CandidateError(f"Boolean property {property_name} was not read by its Boolean getter")
+            elif value_type == "String":
+                if (row.get("value_reader") != "getString" or
+                        (row.get("value") is not None and not isinstance(row.get("value"), str)) or
+                        row.get("value_representation") != "typed_scalar" or
+                        row.get("expression_value") is not None):
+                    raise CandidateError(f"String property {property_name} was not read by its String getter")
+            else:
+                raise CandidateError(f"schema-only result attempted an unapproved getter for {property_name}")
+        elif (row.get("value_status") != "PROPERTY_ABSENT" or value_type is not None or
+              row.get("allowed_values") is not None or row.get("value_reader") is not None or
+              row.get("value") is not None or row.get("value_representation") is not None or
+              row.get("expression_value") is not None):
+            raise CandidateError(f"absent property {property_name} has non-absent schema/value data")
+    return {"status": "SCHEMA_ONLY_RESULT_VALIDATED_NOT_SOLVED",
+            "property_count": len(expected), "model_tag": expected_model_tag,
+            "study_run_submissions": 0, "solver_calls": 0,
+            "physics_property_set_calls": 0,
+            "geometry_length_unit_setter_calls": 1,
+            "geometry_axisymmetric_setter_calls": 1,
+            "geometry_build_calls": 0, "model_saves": 0,
+            "native_acceptance": "NOT_RUN"}
+
+
 def _compile_sources(repo: Path, output: Path, install: Path, jdk: Path) -> dict[str, Any]:
     from comsol_mcp._java_worker import JavaWorkerPaths
     if output.exists():
@@ -407,8 +586,13 @@ def _compile_sources(repo: Path, output: Path, install: Path, jdk: Path) -> dict
 
 def prepare_candidate(*, repo: Path, evidence: Path,
                       install: Path = INSTALL_ROOT, jdk: Path = JAVA11,
-                      runtime_authority: Path | None = None) -> dict[str, Any]:
-    binding = (fresh_runtime.load(runtime_authority, repo=repo, budget=SETUP_BUDGET, install=install, jdk=jdk)
+                      runtime_authority: Path | None = None,
+                      schema_probe_only: bool = False) -> dict[str, Any]:
+    if type(schema_probe_only) is not bool:
+        raise CandidateError("schema_probe_only must be an exact Boolean")
+    mode = EXECUTION_MODE_SCHEMA_ONLY if schema_probe_only else EXECUTION_MODE_SETUP14
+    budget, routes, slots = _execution_contract(mode)
+    binding = (fresh_runtime.load(runtime_authority, repo=repo, budget=budget, install=install, jdk=jdk)
                if runtime_authority is not None else None)
     if binding is None and (Path(sys.executable).resolve(strict=True) != EXPECTED_PYTHON.resolve(strict=True) or
             sys.version_info[:2] != (3, 12)):
@@ -420,13 +604,18 @@ def prepare_candidate(*, repo: Path, evidence: Path,
         raise CandidateError("offline candidate evidence path must be new below W24 evidence")
     dependency_preflight = preflight_campaign_dependencies(repo, binding=binding) if binding else preflight_campaign_dependencies(repo)
     source_before = _fresh_source_inventory(repo, binding) if binding else _source_inventory(repo)
-    evidence.mkdir(parents=True, exist_ok=False)
+    evidence.mkdir(mode=0o700, parents=True, exist_ok=False)
+    # Runtime evidence is written beneath this directory during execute. Keep
+    # the parent owner-private and writable; freeze individual prepared inputs
+    # below instead of chmodding the whole evidence tree read-only.
+    os.chmod(evidence, 0o700)
     compiled = _compile_sources(repo, evidence / "offline_compile/classes", install, jdk)
     source_after = _fresh_source_inventory(repo, binding) if binding else _source_inventory(repo)
     if source_before != source_after or compiled["status"] != "COMPILE_PASS":
         raise CandidateError("source changed or offline Java compilation failed")
     freeze_body = {
         "schema": FREEZE_SCHEMA, "status": "PREPARED_SETUP_ONLY_NOT_NATIVE",
+        "execution_mode": mode,
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
         "source": source_after,
         "runtime": {
@@ -445,10 +634,10 @@ def prepare_candidate(*, repo: Path, evidence: Path,
         "dependency_preflight": dependency_preflight,
         "compile": {k: v for k, v in compiled.items()
                     if k not in {"stdout", "stderr", "command"}},
-        "budget": SETUP_BUDGET, "routes": ROUTES,
-        "ordered_setup_slots": build_setup_slots(),
+        "budget": budget, "routes": routes,
+        "ordered_setup_slots": slots,
         "scientific_status": "NOT_RUN",
-        "cross_epoch_binding_warning": SETUP_BUDGET["future_science_binding_policy"],
+        "cross_epoch_binding_warning": budget["future_science_binding_policy"],
         "candidate_evidence_dir": str(evidence.resolve()),
     }
     if binding:
@@ -456,11 +645,61 @@ def prepare_candidate(*, repo: Path, evidence: Path,
     freeze = {**freeze_body, "candidate_sha256": _json_hash(freeze_body)}
     _write_new(evidence / FREEZE_FILE, freeze)
     _write_new(evidence / "offline_compile.json", compiled)
+    _seal_prepared_candidate_inputs(evidence)
     return freeze
 
 
+def _seal_prepared_candidate_inputs(evidence: Path) -> None:
+    """Freeze prepared files while preserving the private runtime-output parent.
+
+    The execute path must create ``native-setup-run`` under ``evidence`` after
+    reviewing the inputs. Files and directory identity are sealed separately:
+    regular inputs become read-only (0400), while every owned directory remains
+    private and searchable (0700). This preserves the production evidence parent
+    needed by the existing append-only run receipt path.
+    """
+    root = Path(evidence)
+    try:
+        root_stat = root.lstat()
+    except OSError as exc:
+        raise CandidateError("prepared evidence root is unavailable") from exc
+    if (stat.S_ISLNK(root_stat.st_mode) or not stat.S_ISDIR(root_stat.st_mode)
+            or root_stat.st_uid != os.getuid()):
+        raise CandidateError("prepared evidence root must be a nonsymlink directory owned by this user")
+    identity = (root_stat.st_dev, root_stat.st_ino, root_stat.st_uid)
+    try:
+        paths = sorted(root.rglob("*"), key=lambda item: len(item.parts), reverse=True)
+        for path in paths:
+            item_stat = path.lstat()
+            if item_stat.st_uid != os.getuid() or stat.S_ISLNK(item_stat.st_mode):
+                raise CandidateError("prepared evidence contains an aliased or foreign-owned path")
+            if stat.S_ISREG(item_stat.st_mode):
+                path.chmod(0o400, follow_symlinks=False)
+            elif stat.S_ISDIR(item_stat.st_mode):
+                path.chmod(0o700, follow_symlinks=False)
+            else:
+                raise CandidateError("prepared evidence contains a non-file/non-directory path")
+        root.chmod(0o700, follow_symlinks=False)
+    except OSError as exc:
+        raise CandidateError("prepared evidence permissions could not be secured") from exc
+    final_root = root.lstat()
+    if (final_root.st_dev, final_root.st_ino, final_root.st_uid) != identity or stat.S_IMODE(final_root.st_mode) != 0o700:
+        raise CandidateError("prepared evidence root identity or private writable mode changed")
+    for path in root.rglob("*"):
+        item_stat = path.lstat()
+        if stat.S_ISREG(item_stat.st_mode):
+            if item_stat.st_mode & 0o222:
+                raise CandidateError("prepared evidence input remains writable")
+        elif stat.S_ISDIR(item_stat.st_mode):
+            if stat.S_IMODE(item_stat.st_mode) != 0o700:
+                raise CandidateError("prepared evidence directory lost its private traversal mode")
+        else:
+            raise CandidateError("prepared evidence changed during permission verification")
+
+
 def verify_candidate(*, repo: Path, evidence: Path,
-                     reviewed_sha256: str) -> dict[str, Any]:
+                     reviewed_sha256: str,
+                     schema_probe_only: bool | None = None) -> dict[str, Any]:
     freeze_path = evidence / FREEZE_FILE
     if freeze_path.is_symlink() or not freeze_path.is_file():
         raise CandidateError("candidate freeze is missing/aliased")
@@ -471,33 +710,102 @@ def verify_candidate(*, repo: Path, evidence: Path,
             freeze.get("candidate_sha256") != _json_hash(body) or
             reviewed_sha256 != freeze.get("candidate_sha256")):
         raise CandidateError("reviewed SHA does not match the frozen candidate")
+    mode = freeze.get("execution_mode", EXECUTION_MODE_SETUP14)
+    if schema_probe_only is not None and type(schema_probe_only) is not bool:
+        raise CandidateError("schema_probe_only review mode must be an exact Boolean")
+    requested_mode = mode
+    if schema_probe_only is not None:
+        requested_mode = EXECUTION_MODE_SCHEMA_ONLY if schema_probe_only else EXECUTION_MODE_SETUP14
+    if requested_mode != mode:
+        raise CandidateError("requested execution mode differs from the reviewed frozen mode")
+    budget, routes, slots = _execution_contract(mode)
     binding = freeze.get("fresh_runtime_binding")
     if binding is not None:
-        fresh_runtime.validate(binding, repo=repo, budget=SETUP_BUDGET)
+        fresh_runtime.validate(binding, repo=repo, budget=budget)
         fresh_runtime.scoped_path(binding, evidence)
     source = _fresh_source_inventory(repo, binding) if binding is not None else _source_inventory(repo)
     if (source != freeze.get("source") or
-            freeze.get("budget") != SETUP_BUDGET or freeze.get("routes") != ROUTES):
-        raise CandidateError("source closure, route allowlist, or budget changed after review")
+            freeze.get("budget") != budget or freeze.get("routes") != routes or
+            freeze.get("ordered_setup_slots") != slots):
+        raise CandidateError("source closure, route allowlist, execution mode, slots, or budget changed after review")
     current_dependencies = preflight_campaign_dependencies(repo, binding=binding) if binding else preflight_campaign_dependencies(repo)
     if current_dependencies != freeze.get("dependency_preflight"):
         raise CandidateError("pre-birth dependency closure differs from the reviewed candidate")
     return freeze
 
 
-def fresh_scoped_inventory() -> dict[str, Any]:
+def _same_controller_argv(observed: Any, expected: Any, *,
+                          allowed_argv0: list[str] | None = None) -> bool:
+    if (not isinstance(observed, list) or not isinstance(expected, list)
+            or len(observed) != len(expected) or len(expected) <= 4
+            or not all(isinstance(item, str) for item in [*observed, *expected])
+            or observed[1:] != expected[1:]):
+        return False
+    if allowed_argv0 is None:
+        # Preserve the V1 frontend comparison behavior for non-W24 callers.
+        return Path(observed[0]).resolve(strict=True) == Path(expected[0]).resolve(strict=True)
+    return (all(isinstance(path, str) and Path(path).is_absolute() for path in allowed_argv0)
+            and expected[0] in allowed_argv0 and observed[0] in allowed_argv0)
+
+
+def _controller_inventory_context(repo: Path, evidence: Path, work: Path,
+                                  binding: Mapping[str, Any], reviewed_sha256: str,
+                                  *, budget: Mapping[str, Any],
+                                  schema_probe_only: bool) -> dict[str, Any]:
+    """Called only after the original fresh candidate/runtime/environment gates."""
+    from comsol_mcp._platform_process import process_identity
+    if type(schema_probe_only) is not bool:
+        raise CandidateError("W24 controller inventory requires the exact reviewed execution-mode budget")
+    execution_mode = (EXECUTION_MODE_SCHEMA_ONLY if schema_probe_only
+                      else EXECUTION_MODE_SETUP14)
+    expected_budget, _, _ = _execution_contract(execution_mode)
+    if not isinstance(budget, Mapping) or dict(budget) != expected_budget:
+        raise CandidateError("W24 controller inventory budget differs from its exact execution mode")
+    if binding.get("schema") != fresh_runtime.SCHEMA_V2:
+        raise CandidateError("W24 native controller exclusion requires the V2 runtime argv0 binding")
+    runtime_argv0 = binding.get("runtime_argv0")
+    if (not isinstance(runtime_argv0, Mapping)
+            or set(runtime_argv0) != {"source", "path", "sha256"}
+            or runtime_argv0.get("source") != "sys.orig_argv[0]"
+            or not isinstance(runtime_argv0.get("path"), str)
+            or not isinstance(runtime_argv0.get("sha256"), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", runtime_argv0["sha256"])):
+        raise CandidateError("W24 V2 runtime argv0 identity is malformed")
+    launcher = Path(runtime_argv0["path"])
+    if (not launcher.is_absolute() or launcher.resolve(strict=True) != launcher
+            or hashlib.sha256(launcher.read_bytes()).hexdigest() != runtime_argv0["sha256"]):
+        raise CandidateError("W24 V2 runtime argv0 path/hash differs from its immutable binding")
+    frontend_entry = binding.get("python", {}).get("entry")
+    if not isinstance(frontend_entry, str) or not Path(frontend_entry).is_absolute():
+        raise CandidateError("W24 V2 frontend entry is not an absolute bound path")
+    execute_plan = _build_exact_execute_plan_from_binding(
+        repo=repo, evidence=evidence, work=work, reviewed_sha256=reviewed_sha256,
+        binding=binding, schema_probe_only=schema_probe_only)
+    literal = execute_plan.get("argv")
+    if not isinstance(literal, list) or not literal or not all(isinstance(item, str) for item in literal):
+        raise CandidateError("source-bound W24 execute plan has no exact controller argv")
+    identity = process_identity(os.getpid())
+    if not isinstance(identity, Mapping) or identity.get('alive') is not True or type(identity.get('start_epoch_ms')) is not int or identity['start_epoch_ms'] <= 0:
+        raise CandidateError('current original controller birth is unavailable')
+    return {'literal_argv': literal, 'start_epoch_ms': identity['start_epoch_ms'],
+            'binding_schema': binding['schema'], 'frontend_entry': frontend_entry,
+            'runtime_argv0': dict(runtime_argv0)}
+
+
+def fresh_scoped_inventory(*, controller_context: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """Observe process/listener scope without emitting argv or full user paths."""
     from comsol_mcp._platform_process import process_identity
-    ps_cmd = ["/bin/ps", "-axo", "pid=,ppid=,lstart=,command="]
+    ps_cmd = ["/bin/ps", "-axo", "pid=,ppid=,uid=,lstart=,command=" if controller_context is not None else "pid=,ppid=,lstart=,command="]
     ps = subprocess.run(ps_cmd, capture_output=True, text=True,
                         check=False, timeout=15)
     matched: dict[int, dict[str, Any]] = {}
     install = str(INSTALL_ROOT).lower()
     for line in ps.stdout.splitlines():
-        fields = line.strip().split(None, 7)
-        if len(fields) < 8 or not fields[0].isdigit() or not fields[1].isdigit():
+        command_index = 8 if controller_context is not None else 7
+        fields = line.strip().split(None, command_index)
+        if len(fields) < command_index + 1 or not fields[0].isdigit() or not fields[1].isdigit():
             continue
-        pid, ppid, command = int(fields[0]), int(fields[1]), fields[7]
+        pid, ppid, command = int(fields[0]), int(fields[1]), fields[command_index]
         lowered = command.lower()
         kind = ("java_worker" if "persistentcomsolworker" in lowered else
                 "comsol_server" if "mphserver" in lowered or
@@ -514,6 +822,9 @@ def fresh_scoped_inventory() -> dict[str, Any]:
             "kind": kind, "pid": pid, "ppid": ppid,
             "identity_status": "IDENTITY_UNKNOWN",
         }
+        if controller_context is not None and pid == os.getpid():
+            row['observed_uid'] = int(fields[2]) if fields[2].isdigit() else None
+            row['command_sha256'] = _sha_bytes(command.encode())
         try:
             ident = process_identity(pid)
         except Exception as exc:
@@ -536,6 +847,8 @@ def fresh_scoped_inventory() -> dict[str, Any]:
                     if type(birth) is int:
                         row["observed_start_epoch_ms"] = birth
         matched[pid] = row
+        if controller_context is not None and pid == os.getpid():
+            row['_controller_command'] = command
     lsof_cmd = ["/usr/sbin/lsof", "-nP", "-iTCP", "-sTCP:LISTEN"]
     lsof = subprocess.run(lsof_cmd, capture_output=True, text=True,
                           check=False, timeout=15)
@@ -552,6 +865,57 @@ def fresh_scoped_inventory() -> dict[str, Any]:
         if endpoint:
             listeners.append({"kind": matched[pid]["kind"], "pid": pid,
                               "endpoint": endpoint})
+    excluded_controller = None
+    controller_okay = controller_context is None
+    if controller_context is not None:
+        row = matched.get(os.getpid())
+        excluded_controller = {'status': 'CURRENT_CONTROLLER_NOT_EXCLUDED', 'pid': os.getpid()}
+        try:
+            import jpype
+            literal = controller_context['literal_argv']
+            context_schema = controller_context.get('binding_schema')
+            if context_schema == fresh_runtime.SCHEMA_V2:
+                expected_context = {'literal_argv', 'start_epoch_ms', 'binding_schema',
+                                    'frontend_entry', 'runtime_argv0'}
+                runtime_argv0 = controller_context['runtime_argv0']
+                frontend_entry = controller_context['frontend_entry']
+                runtime_path = runtime_argv0.get('path') if isinstance(runtime_argv0, Mapping) else None
+                runtime_sha = runtime_argv0.get('sha256') if isinstance(runtime_argv0, Mapping) else None
+                runtime_path_obj = Path(runtime_path) if isinstance(runtime_path, str) else None
+                allowed_argv0 = [frontend_entry, runtime_path]
+                launcher_identity_okay = (set(runtime_argv0) == {'source', 'path', 'sha256'}
+                    and runtime_argv0.get('source') == 'sys.orig_argv[0]'
+                    and isinstance(runtime_path, str) and Path(runtime_path).is_absolute()
+                    and runtime_path_obj.resolve(strict=True) == runtime_path_obj
+                    and isinstance(runtime_sha, str) and re.fullmatch(r'[0-9a-f]{64}', runtime_sha)
+                    and hashlib.sha256(runtime_path_obj.read_bytes()).hexdigest() == runtime_sha
+                    and isinstance(sys.orig_argv, list) and bool(sys.orig_argv)
+                    and Path(sys.orig_argv[0]).resolve(strict=True) == runtime_path_obj)
+            else:
+                expected_context = {'literal_argv', 'start_epoch_ms'}
+                allowed_argv0 = None
+                launcher_identity_okay = context_schema is None
+            controller_okay = (set(controller_context) == expected_context
+                and launcher_identity_okay
+                and (context_schema is None or context_schema == fresh_runtime.SCHEMA_V2)
+                and (context_schema is None or frontend_entry == literal[0])
+                and literal[1:5] == ['-S', '-m', 'tools.run_native_w24_static_shape_setup_campaign', 'execute']
+                and sys.flags.no_site and Path(sys.argv[0]).resolve(strict=True) == Path(__file__).resolve(strict=True)
+                and _same_controller_argv(list(sys.orig_argv), literal, allowed_argv0=allowed_argv0) and not jpype.isJVMStarted()
+                and row is not None and row['identity_status'] == 'VERIFIED_ALIVE'
+                and row.get('observed_uid') == os.getuid()
+                and row.get('start_epoch_ms') == controller_context['start_epoch_ms']
+                and _same_controller_argv(shlex.split(row['_controller_command']), literal,
+                                          allowed_argv0=allowed_argv0)
+                and not any(listener['pid'] == os.getpid() for listener in listeners))
+        except (KeyError, TypeError, ValueError, OSError):
+            controller_okay = False
+        if controller_okay:
+            matched.pop(os.getpid())
+            excluded_controller = {k: v for k, v in row.items() if k != '_controller_command'}
+            excluded_controller['status'] = 'EXACT_CURRENT_PYTHON_CONTROLLER_EXCLUDED_NO_JVM_NO_LISTENER'
+        for row in matched.values():
+            row.pop('_controller_command', None)
     processes = sorted(matched.values(), key=lambda row: row["pid"])
     okay = ps.returncode == 0 and lsof.returncode == 0 and not ps.stderr.strip() and not lsof.stderr.strip()
     identity_complete = all(row.get("identity_status") == "VERIFIED_ALIVE"
@@ -573,7 +937,8 @@ def fresh_scoped_inventory() -> dict[str, Any]:
         },
         "matching_processes": processes, "matching_listeners": listeners,
         "process_identity_complete": identity_complete,
-        "fresh_quiescent_for_scope": okay and identity_complete and not processes and not listeners,
+        "fresh_quiescent_for_scope": okay and controller_okay and identity_complete and not processes and not listeners,
+        **({'excluded_controller': excluded_controller} if controller_context is not None else {}),
         "limitations": "one scoped instant only; repeat immediately before any native birth",
     }
 
@@ -665,19 +1030,461 @@ def _lsof_listener(pid: int, port: int) -> dict[str, Any]:
             "rows": parsed}
 
 
-def _start_rss_monitor(monitor_box: dict[str, Any], proc: Any,
-                       identity: Mapping[str, Any], worker_search_root: Path,
-                       events_path: Path) -> None:
-    """Start sampling immediately after the exact task-owned server Popen birth."""
-    if monitor_box.get("monitor") is not None:
-        raise CandidateError("RSS monitor already exists; server birth is single-use")
-    pid = getattr(proc, "pid", None)
-    birth = identity.get("start_epoch_ms")
-    if type(pid) is not int or type(birth) is not int:
-        raise CandidateError("RSS monitoring requires the exact Popen PID and birth epoch")
-    monitor = SampledRssMonitor(server_pid=pid, server_birth_ms=birth,
-                               worker_search_root=worker_search_root,
-                               events_path=events_path)
+_EXPECTED_EFFECTIVE_JVM_FLAGS = {
+    "ActiveProcessorCount": 2,
+    "InitialHeapSize": 134217728,
+    "MaxHeapSize": 1073741824,
+}
+
+
+def _jcmd_observer_environment(
+        parent_environment: Mapping[str, str] | None = None
+        ) -> tuple[dict[str, str], dict[str, Any]]:
+    """Copy the caller environment for jcmd only, removing JVM option banners."""
+    source = dict(os.environ if parent_environment is None else parent_environment)
+    if any(not isinstance(key, str) or not isinstance(value, str)
+           for key, value in source.items()):
+        raise CandidateError("jcmd observer environment must contain only string keys and values")
+    stripped = set(JCMD_OPTION_ENV_KEYS)
+    observer = {key: value for key, value in source.items() if key not in stripped}
+    if set(observer) != (set(source) - stripped) or any(key in observer for key in JCMD_OPTION_ENV_KEYS):
+        raise CandidateError("jcmd observer environment did not remove only pinned JVM option variables")
+    preserved_keys = (
+        "TMPDIR", "TMP", "TEMP", "HOME", "PATH", "JAVA_HOME", "COMSOL_JAVA_HOME",
+        "COMSOL_ROOT", "COMSOL_PREFS_DIR", "COMSOL_PROJECT_ROOT",
+        "COMSOL_SERVER_MCP_HOME", "COMSOL_MCP_TRUSTED_CODE",
+        "COMSOL_MCP_ISOLATION_RECEIPT", "COMSOL_SERVER_VERSION", "PYTHONPATH",
+    )
+    receipt = {
+        "schema": "W24_JCMD_OBSERVER_ENV_V1",
+        "status": "ONLY_JCMD_OPTION_INJECTION_VARIABLES_REMOVED",
+        "scope": "exact pinned-jcmd observer subprocess only; COMSOL Server and Worker launch environments are unchanged",
+        "removed_variable_names": list(JCMD_OPTION_ENV_KEYS),
+        "present_in_parent": [key for key in JCMD_OPTION_ENV_KEYS if key in source],
+        "absent_in_observer": [key for key in JCMD_OPTION_ENV_KEYS if key not in observer],
+        "preserved_required_runtime_variable_names": [key for key in preserved_keys if key in source],
+        "preserved_required_runtime_values_unchanged": all(
+            observer.get(key) == source.get(key) for key in preserved_keys if key in source),
+        "all_other_environment_keys_and_values_preserved": observer == {
+            key: value for key, value in source.items() if key not in stripped},
+        "parent_environment_mutated": False,
+    }
+    if receipt["absent_in_observer"] != list(JCMD_OPTION_ENV_KEYS) or not all(
+            receipt[key] for key in ("preserved_required_runtime_values_unchanged",
+                                     "all_other_environment_keys_and_values_preserved")):
+        raise CandidateError("jcmd observer environment preservation proof failed")
+    return observer, receipt
+
+
+def _rewrite_private_mphserver_ini(installed_ini: Path, shadow_ini: Path) -> dict[str, Any]:
+    """Apply the reviewed limits to one byte-identical, task-private INI copy."""
+    for path, label in ((installed_ini, "installed"), (shadow_ini, "private shadow")):
+        try:
+            metadata = path.lstat()
+        except OSError as exc:
+            raise CandidateError(f"{label} mphserver INI is unavailable") from exc
+        if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
+            raise CandidateError(f"{label} mphserver INI must be a regular non-symlink file")
+    installed_before = installed_ini.read_bytes()
+    private_before = shadow_ini.read_bytes()
+    if installed_before != private_before:
+        raise CandidateError("private mphserver INI was not an exact copy before the reviewed edit")
+    installed_hash = _sha_bytes(installed_before)
+    private_mode = stat.S_IMODE(shadow_ini.stat().st_mode)
+    try:
+        lines = private_before.decode("utf-8", "strict").splitlines(keepends=True)
+    except UnicodeDecodeError as exc:
+        raise CandidateError("mphserver INI is not valid UTF-8") from exc
+    xms_rows: list[int] = []
+    xmx_rows: list[int] = []
+    processor_rows: list[int] = []
+    allowed_existing_xx = {"-XX:MaxMetaspaceSize=1g", "-XX:-SplitIfBlocks"}
+    unknown_xx_rows: list[int] = []
+    for index, raw in enumerate(lines):
+        value = raw.rstrip("\r\n").strip()
+        if not value or value.startswith("#"):
+            continue
+        if value.startswith("-Xms"):
+            xms_rows.append(index)
+        if value.startswith("-Xmx"):
+            xmx_rows.append(index)
+        if value.startswith("-XX:ActiveProcessorCount"):
+            processor_rows.append(index)
+        if value.startswith("-XX:") and value not in allowed_existing_xx:
+            unknown_xx_rows.append(index)
+    if ([lines[index].rstrip("\r\n").strip() for index in xms_rows] != ["-Xms40m"] or
+            [lines[index].rstrip("\r\n").strip() for index in xmx_rows] != ["-Xmx2g"] or
+            processor_rows or unknown_xx_rows):
+        raise CandidateError("mphserver INI has absent, duplicate, or conflicting reviewed JVM options")
+
+    def newline_of(line: str) -> str:
+        if line.endswith("\r\n"):
+            return "\r\n"
+        if line.endswith("\n"):
+            return "\n"
+        if line.endswith("\r"):
+            return "\r"
+        return ""
+
+    xms_index, xmx_index = xms_rows[0], xmx_rows[0]
+    xms_newline, xmx_newline = newline_of(lines[xms_index]), newline_of(lines[xmx_index])
+    lines[xms_index] = ("-XX:ActiveProcessorCount=2" + (xms_newline or "\n") +
+                        "-Xms128m" + xms_newline)
+    lines[xmx_index] = "-Xmx1024m" + xmx_newline
+    rewritten = "".join(lines).encode("utf-8")
+    temporary = shadow_ini.with_name(f".{shadow_ini.name}.w24-{uuid4().hex}.tmp")
+    try:
+        with temporary.open("xb") as stream:
+            stream.write(rewritten)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.chmod(temporary, private_mode)
+        os.replace(temporary, shadow_ini)
+    finally:
+        try:
+            temporary.unlink()
+        except FileNotFoundError:
+            pass
+    installed_after = installed_ini.read_bytes()
+    private_after = shadow_ini.read_bytes()
+    if (_sha_bytes(installed_after) != installed_hash or
+            private_after != rewritten or
+            stat.S_IMODE(shadow_ini.stat().st_mode) != private_mode):
+        raise CandidateError("private INI edit failed integrity or installed-source preservation checks")
+    return {
+        "status": "PRIVATE_MPH_SERVER_INI_PATCHED_INSTALLED_SOURCE_UNCHANGED",
+        "installed_path": str(installed_ini),
+        "private_path": str(shadow_ini),
+        "installed_sha256_before": installed_hash,
+        "installed_sha256_after": _sha_bytes(installed_after),
+        "private_sha256_before": _sha_bytes(private_before),
+        "private_sha256_after": _sha_bytes(private_after),
+        "private_mode_before": oct(private_mode),
+        "private_mode_after": oct(stat.S_IMODE(shadow_ini.stat().st_mode)),
+        "replaced_options": {"-Xms40m": "-Xms128m", "-Xmx2g": "-Xmx1024m"},
+        "added_options": ["-XX:ActiveProcessorCount=2"],
+        "install_tree_mutated": False,
+    }
+
+
+def _canonical_executable_identity(path: Path) -> dict[str, Any]:
+    try:
+        canonical = path.resolve(strict=True)
+        metadata = canonical.stat()
+        if not stat.S_ISREG(metadata.st_mode) or not os.access(canonical, os.X_OK):
+            raise CandidateError("expected Java executable is not an executable regular file")
+        return {"path": str(canonical), "device": int(metadata.st_dev),
+                "inode": int(metadata.st_ino), "sha256": _sha_file(canonical)}
+    except (OSError, RuntimeError) as exc:
+        raise CandidateError("expected Java executable identity is unavailable") from exc
+
+
+def _parse_text_executable_identity(stdout: str, *, pid: int,
+                                    expected_path: Path) -> dict[str, Any]:
+    """Select the exact Java text vnode from lsof's field output."""
+    rows: list[dict[str, Any]] = []
+    current: dict[str, Any] = {"pid": None}
+    for line in stdout.splitlines():
+        if not line:
+            continue
+        tag, value = line[0], line[1:]
+        if tag == "p":
+            if current.get("path") is not None:
+                rows.append(current)
+            current = {"pid": int(value) if value.isdigit() else None}
+        elif tag == "f":
+            if current.get("path") is not None:
+                rows.append(current)
+            current = {"pid": current.get("pid"), "fd": value}
+        elif tag == "D":
+            try:
+                current["device"] = int(value, 0)
+            except ValueError:
+                current["device"] = None
+        elif tag == "i":
+            current["inode"] = int(value) if value.isdigit() else None
+        elif tag == "n":
+            current["path"] = value
+    if current.get("path") is not None:
+        rows.append(current)
+    canonical_expected = expected_path.resolve(strict=True)
+    matches = []
+    for row in rows:
+        path = row.get("path")
+        try:
+            canonical = Path(path).resolve(strict=True) if isinstance(path, str) else None
+        except (OSError, RuntimeError):
+            canonical = None
+        if row.get("pid") == pid and row.get("fd") == "txt" and canonical == canonical_expected:
+            matches.append(row)
+    if len(matches) != 1:
+        raise CandidateError("lsof did not identify exactly one expected Java text executable")
+    row = matches[0]
+    metadata = canonical_expected.stat()
+    digest = _sha_file(canonical_expected)
+    if (row.get("device") != int(metadata.st_dev) or
+            row.get("inode") != int(metadata.st_ino)):
+        raise CandidateError("Java text executable device/inode differs from the pinned COMSOL Java")
+    return {"path": str(canonical_expected), "device": int(metadata.st_dev),
+            "inode": int(metadata.st_ino), "sha256": digest}
+
+
+def _read_text_executable_identity(pid: int, expected_path: Path) -> dict[str, Any]:
+    command = ["/usr/sbin/lsof", "-nP", "-a", "-p", str(pid), "-d", "txt", "-FnDfi"]
+    result = subprocess.run(command, capture_output=True, text=True,
+                            check=False, timeout=15)
+    if result.returncode != 0 or result.stderr.strip():
+        raise CandidateError("lsof could not read the exact server text executable")
+    return {**_parse_text_executable_identity(result.stdout, pid=pid,
+                                               expected_path=expected_path),
+            "command": command,
+            "stdout_sha256": _sha_bytes(result.stdout.encode()),
+            "stderr_sha256": _sha_bytes(result.stderr.encode())}
+
+
+def _read_process_uid(pid: int) -> int:
+    command = ["/bin/ps", "-p", str(pid), "-o", "pid=,uid="]
+    result = subprocess.run(command, capture_output=True, text=True,
+                            check=False, timeout=10)
+    if result.returncode != 0 or result.stderr.strip():
+        raise CandidateError("fresh process UID query failed")
+    rows = [line.split() for line in result.stdout.splitlines() if line.strip()]
+    if len(rows) != 1 or len(rows[0]) != 2 or not all(item.isdigit() for item in rows[0]):
+        raise CandidateError("fresh process UID query was ambiguous")
+    observed_pid, uid = map(int, rows[0])
+    if observed_pid != pid:
+        raise CandidateError("fresh process UID query returned another PID")
+    return uid
+
+
+def _validate_frozen_server_identity(expected: Mapping[str, Any],
+                                     current: Mapping[str, Any], *,
+                                     proc: Any, original_proc: Any) -> None:
+    if proc is not original_proc or getattr(proc, "pid", None) != expected.get("pid") or proc.poll() is not None:
+        raise CandidateError("server stop does not retain the original live Popen")
+    if list(getattr(proc, "args", [])) != expected.get("launch_command"):
+        raise CandidateError("original server Popen argv changed before TERM")
+    for key in ("pid", "uid", "birth", "start_epoch_ms", "process_snapshot_birth",
+                "post_exec_command_sha256",
+                "launch_command_sha256", "java_executable", "post_exec_argv",
+                "argv0_display", "allowed_argv0_labels", "argv0_role",
+                "listener", "launch_command", "server_paths"):
+        if current.get(key) != expected.get(key):
+            raise CandidateError(f"server process identity changed before TERM: {key}")
+
+
+def _validate_server_birth_domains(*, pid: int, snapshot: Mapping[str, Any],
+                                   live_identity: Mapping[str, Any],
+                                   core_birth: str, core_start_epoch_ms: int) -> dict[str, Any]:
+    """Validate Core's epoch birth and preserve the OS snapshot's native birth label separately."""
+    process_snapshot_birth = snapshot.get("birth")
+    if (snapshot.get("pid") != pid or not isinstance(process_snapshot_birth, str) or
+            not process_snapshot_birth or process_snapshot_birth != process_snapshot_birth.strip() or
+            "\n" in process_snapshot_birth or "\r" in process_snapshot_birth):
+        raise CandidateError("OS process snapshot birth label is missing or malformed")
+    if (type(core_start_epoch_ms) is not int or core_start_epoch_ms <= 0 or
+            core_birth != f"start_epoch_ms:{core_start_epoch_ms}"):
+        raise CandidateError("Core server birth is not bound to its exact start epoch")
+    if (live_identity.get("alive") is not True or
+            type(live_identity.get("start_epoch_ms")) is not int or
+            live_identity.get("start_epoch_ms") != core_start_epoch_ms):
+        raise CandidateError("live process epoch differs from the retained Core server birth")
+    return {"birth": core_birth, "start_epoch_ms": core_start_epoch_ms,
+            "process_snapshot_birth": process_snapshot_birth}
+
+
+def _build_g2_owned_server_receipt(*, handle: Any,
+                                   observer_identity: Mapping[str, Any],
+                                   process_snapshot: Mapping[str, Any],
+                                   project_id: str, session_id: str,
+                                   activity_id: str, candidate_sha256: str) -> dict[str, Any]:
+    """Project the verified original Core handle into G2's strict OS receipt schema."""
+    from comsol_mcp._session_context import OwnedServerProcessIdentity
+    from comsol_mcp._session_server import ManagedServerHandle
+
+    if (not isinstance(handle, ManagedServerHandle) or handle.retired or
+            handle.process is None or handle.process.poll() is not None or
+            not isinstance(handle.process_identity, OwnedServerProcessIdentity) or
+            handle.endpoint is None):
+        raise CandidateError("G2 receipt requires the same live non-retired Core ManagedServerHandle")
+    pid = handle.process.pid
+    core_birth = handle.process_identity.birth
+    core_start = handle.start_epoch_ms
+    port = handle.endpoint.port
+    expected_listener = {"pid": pid, "endpoint": f"127.0.0.1:{port}"}
+    from comsol_mcp._session_context import CanonicalSocket
+    core_listener = CanonicalSocket("127.0.0.1", port)
+    snapshot_birth = process_snapshot.get("birth")
+    command = process_snapshot.get("command")
+    command_sha = process_snapshot.get("command_sha256")
+    java = observer_identity.get("java_executable")
+    if (process_snapshot.get("pid") != pid or
+            observer_identity.get("status") != "CORE_MANAGED_ORIGINAL_POPEN_JAVA_IDENTITY_FROZEN" or
+            observer_identity.get("pid") != pid or observer_identity.get("birth") != core_birth or
+            observer_identity.get("start_epoch_ms") != core_start or
+            observer_identity.get("process_snapshot_birth") != snapshot_birth or
+            observer_identity.get("post_exec_command_sha256") != command_sha or
+            observer_identity.get("listener") != expected_listener or
+            observer_identity.get("uid") != os.getuid() or
+            not isinstance(java, Mapping) or not isinstance(java.get("path"), str) or
+            not re.fullmatch(r"[0-9a-f]{64}", str(java.get("sha256", "")))):
+        raise CandidateError("G2 receipt inputs differ from the frozen Core/Java/loopback identity")
+    if (type(pid) is not int or pid <= 1 or type(port) is not int or not 1 <= port <= 65535 or
+            handle.endpoint.address != "127.0.0.1" or
+            handle.process_identity.pid != pid or
+            handle.process_identity.start_epoch_ms != core_start or
+            handle.process_identity.listener_sockets != (core_listener,) or
+            not isinstance(core_birth, str) or core_birth != f"start_epoch_ms:{core_start}" or
+            type(core_start) is not int or core_start <= 0 or
+            not isinstance(snapshot_birth, str) or not snapshot_birth.strip() or
+            snapshot_birth != snapshot_birth.strip() or "\n" in snapshot_birth or "\r" in snapshot_birth or
+            not isinstance(command, str) or _sha_bytes(command.encode()) != command_sha or
+            not isinstance(command_sha, str) or not re.fullmatch(r"[0-9a-f]{64}", command_sha)):
+        raise CandidateError("G2 receipt OS birth/command/endpoint tuple is malformed")
+    if (not isinstance(project_id, str) or not re.fullmatch(r"[0-9a-f-]{36}", project_id) or
+            not isinstance(session_id, str) or not re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", session_id) or
+            not isinstance(activity_id, str) or not re.fullmatch(r"[0-9a-f-]{36}", activity_id) or
+            not isinstance(candidate_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", candidate_sha256)):
+        raise CandidateError("G2 receipt must retain its exact W24 project/session/candidate binding")
+    if (not isinstance(observer_identity.get("post_exec_argv"), list) or
+            not observer_identity.get("post_exec_argv") or
+            "comsol" not in command.lower() or
+            not any(token.lower() == "mphserver" or "serverapplication" in token.lower()
+                    for token in observer_identity["post_exec_argv"])):
+        raise CandidateError("G2 receipt does not bind a verified COMSOL Server command")
+    return {
+        "schema": "COMSOL_MCP_OWNED_SERVER_ISOLATION_RECEIPT_V1",
+        "status": "RUNNING",
+        "process": {"pid": pid, "birth": snapshot_birth,
+                    "command_sha256": command_sha, "port": port},
+        "owner_binding": {"project_id": project_id, "session_id": session_id,
+                          "activity_id": activity_id,
+                          "candidate_sha256": candidate_sha256,
+                          "core_birth": core_birth,
+                          "core_start_epoch_ms": core_start,
+                          "core_executable": handle.process_identity.executable,
+                          "server_uid": observer_identity["uid"],
+                          "post_exec_command_sha256": command_sha,
+                          "java_executable": dict(java),
+                          "listener": expected_listener},
+    }
+
+
+def _parse_effective_jvm_flags(stdout: str) -> dict[str, int]:
+    values: dict[str, int] = {}
+    for name in _EXPECTED_EFFECTIVE_JVM_FLAGS:
+        matches = re.findall(
+            rf"(?m)^\s*[A-Za-z_][A-Za-z0-9_]*\s+{re.escape(name)}\s*[:=]+\s*(\d+)(?:\s|$)",
+            stdout)
+        if len(matches) != 1:
+            raise CandidateError(f"jcmd output does not contain exactly one valid {name} value")
+        values[name] = int(matches[0])
+    if values != _EXPECTED_EFFECTIVE_JVM_FLAGS:
+        raise CandidateError("effective JVM CPU/heap limits differ from the frozen budget")
+    return values
+
+
+def _read_effective_jvm_limits(*, pid: int, jcmd: Path,
+                               identity_reader: Callable[[], Mapping[str, Any]],
+                               expected_identity: Mapping[str, Any],
+                               evidence_path: Path | None = None) -> dict[str, Any]:
+    try:
+        if jcmd.name != "jcmd" or jcmd.parent.name != "bin" or jcmd.is_symlink():
+            raise CandidateError("jcmd path is not a regular binary in the pinned JDK bin directory")
+        jcmd_identity = _canonical_executable_identity(jcmd)
+        jdk_home = jcmd.parent.parent.resolve(strict=True)
+        if not Path(jcmd_identity["path"]).is_relative_to(jdk_home):
+            raise CandidateError("jcmd executable resolved outside its pinned JDK home")
+    except Exception as exc:
+        hold = {"status": "EFFECTIVE_JVM_LIMITS_READBACK_HOLD",
+                "pid": pid, "command": [str(jcmd), str(pid), "VM.flags", "-all"],
+                "phase": "jcmd_executable_identity", "identity_before": None,
+                "identity_after": None, "jcmd_exit_code": None,
+                "stdout_sha256": _sha_bytes(b""), "stdout_bytes": 0,
+                "stderr_sha256": _sha_bytes(b""),
+                "error_type": type(exc).__name__, "error": _hold_text(exc)}
+        if evidence_path is not None:
+            _write_new(evidence_path, hold)
+        raise JvmLimitsReadbackHold(f"effective JVM limit readback held at jcmd identity: {exc}") from exc
+    command = [jcmd_identity["path"], str(pid), "VM.flags", "-all"]
+    before: dict[str, Any] | None = None
+    after: dict[str, Any] | None = None
+    result: Any = None
+    observer_environment: dict[str, str] | None = None
+    observer_environment_receipt: dict[str, Any] | None = None
+    phase = "observer_environment"
+    try:
+        observer_environment, observer_environment_receipt = _jcmd_observer_environment()
+        phase = "pre_read_identity"
+        before = dict(identity_reader())
+        if before != dict(expected_identity):
+            raise CandidateError("jcmd pre-read process identity differs from the frozen child")
+        phase = "jcmd_vm_flags_all"
+        command_error = None
+        try:
+            result = subprocess.run(command, capture_output=True, text=True,
+                                    check=False, timeout=30, env=observer_environment)
+        except Exception as exc:
+            command_error = exc
+        phase = "post_read_identity"
+        after = dict(identity_reader())
+        if after != dict(expected_identity) or after != before:
+            raise CandidateError("child process identity changed during jcmd readback")
+        if command_error is not None:
+            raise CandidateError(f"pinned Java 11 jcmd invocation failed: {type(command_error).__name__}: {command_error}") from command_error
+        phase = "effective_flag_parse"
+        if result.returncode != 0 or result.stderr.strip():
+            raise CandidateError("pinned Java 11 jcmd VM.flags -all failed")
+        values = _parse_effective_jvm_flags(result.stdout)
+    except Exception as exc:
+        stdout_value = (result.stdout if result is not None else
+                        getattr(locals().get("command_error"), "stdout", ""))
+        stderr_value = (result.stderr if result is not None else
+                        getattr(locals().get("command_error"), "stderr", ""))
+        stdout = stdout_value.decode("utf-8", "replace") if isinstance(stdout_value, bytes) else stdout_value if isinstance(stdout_value, str) else ""
+        stderr = stderr_value.decode("utf-8", "replace") if isinstance(stderr_value, bytes) else stderr_value if isinstance(stderr_value, str) else ""
+        hold = {"status": "EFFECTIVE_JVM_LIMITS_READBACK_HOLD",
+                "pid": pid, "command": command, "phase": phase,
+                "jcmd_executable": jcmd_identity, "jdk_home": str(jdk_home),
+                "identity_before": before, "identity_after": after,
+                "jcmd_exit_code": getattr(result, "returncode", None),
+                "stdout_sha256": _sha_bytes(stdout.encode()),
+                "stdout_bytes": len(stdout.encode()),
+                "stderr_sha256": _sha_bytes(stderr.encode()),
+                "observer_environment": observer_environment_receipt,
+                "error_type": type(exc).__name__, "error": _hold_text(exc)}
+        if evidence_path is not None:
+            _write_new(evidence_path, hold)
+        raise JvmLimitsReadbackHold(f"effective JVM limit readback held at {phase}: {exc}") from exc
+    receipt = {"status": "EFFECTIVE_JVM_LIMITS_VERIFIED",
+               "pid": pid, "command": command,
+               "jcmd_executable": jcmd_identity, "jdk_home": str(jdk_home),
+               "stdout_sha256": _sha_bytes(result.stdout.encode()),
+               "stdout_bytes": len(result.stdout.encode()),
+               "stderr_sha256": _sha_bytes(result.stderr.encode()),
+               "jcmd_exit_code": result.returncode,
+               "identity_before": before, "identity_after": after,
+               "observer_environment": observer_environment_receipt,
+               "effective_flags": values}
+    if evidence_path is not None:
+        _write_new(evidence_path, receipt)
+    return receipt
+
+
+def _start_rss_monitor_from_core_observation(
+        monitor_box: dict[str, SampledRssMonitor], payload: Mapping[str, Any],
+        worker_search_root: Path, events_path: Path) -> None:
+    """Start observation from Core's birth event; never resolve or adopt a PID."""
+    if payload.get("event") != "BIRTH_OBSERVED" or monitor_box.get("monitor") is not None:
+        raise CandidateError("Core birth observation is duplicated or out of phase")
+    pid = payload.get("pid")
+    birth = payload.get("birth")
+    match = re.fullmatch(r"start_epoch_ms:(\d+)", birth) if isinstance(birth, str) else None
+    if type(pid) is not int or pid <= 1 or match is None or int(match.group(1)) <= 0:
+        raise CandidateError("Core did not provide a typed original Popen birth identity")
+    monitor = SampledRssMonitor(server_pid=pid, server_birth_ms=int(match.group(1)),
+                                worker_search_root=worker_search_root,
+                                events_path=events_path)
     monitor_box["monitor"] = monitor
     monitor.start()
 
@@ -718,6 +1525,10 @@ def _capture_hold_handles(server: Any, daemon: Any, first_cause: BaseException |
         state = {"server": server, "daemon": daemon, "server_process": getattr(server, "_original_server_popen", None), "server_pid": getattr(server, "_original_server_pid", None),
                  "workers": {}, "backends": {}, "collections": {}, "diagnostics": [],
                  "first_cause": first_cause, "complete": False, "graph_changed": False,
+                 "server_handle": getattr(server, "managed_handle", None),
+                 "server_key": ((getattr(server, "managed_project_id", None),
+                                  getattr(server, "managed_session_id", None))
+                                 if getattr(server, "managed_project_id", None) is not None else None),
                  "default_backend": getattr(daemon, "_default_backend", None), "services": {}}
         server._unknown_hold_state = state
     if state["first_cause"] is None:
@@ -741,6 +1552,31 @@ def _capture_hold_handles(server: Any, daemon: Any, first_cause: BaseException |
                     if state["collections"][name] is not collection:
                         raise CandidateError("original registered owner collection changed")
                 workers = dict(daemon._session_worker_handles)
+                server_handles = dict(daemon._session_server_handles)
+                current_server_handle = getattr(server, "managed_handle", None)
+                current_server_key = ((getattr(server, "managed_project_id", None),
+                                       getattr(server, "managed_session_id", None))
+                                      if getattr(server, "managed_project_id", None) is not None else None)
+                if state["server_handle"] is None and current_server_handle is not None:
+                    state["server_handle"] = current_server_handle
+                    state["server_key"] = current_server_key
+                if (state["server_handle"] is not current_server_handle or
+                        state["server_key"] != current_server_key):
+                    raise CandidateError("original Core ManagedServerHandle binding changed")
+                if current_server_handle is None:
+                    server_owner_exact = (not server_handles and
+                                          getattr(server, "_server_birth_attempted", False) is not True)
+                else:
+                    server_owner_exact = (
+                        current_server_key is not None and
+                        len(server_handles) == 1 and
+                        server_handles.get(current_server_key) is current_server_handle and
+                        current_server_handle.process is getattr(server, "_original_server_popen", None) and
+                        current_server_handle.process is getattr(server, "proc", None) and
+                        current_server_handle.process.pid == getattr(server, "_original_server_pid", None) and
+                        getattr(getattr(server, "launcher", None), "_handles", {}).get(current_server_key)
+                        is current_server_handle
+                    )
                 for key, backend in daemon._session_backends.items():
                     state["backends"].setdefault(key, backend)
                     if state["backends"][key] is not backend:
@@ -762,7 +1598,7 @@ def _capture_hold_handles(server: Any, daemon: Any, first_cause: BaseException |
                     elif saved[0] is not worker or saved[1] is not process:
                         raise CandidateError("original registered Worker/Popen changed")
                 complete = (not daemon._control_dispatch_inflight and not daemon._worker_admission_inflight
-                            and not daemon.running and not daemon._session_server_handles)
+                            and not daemon.running and server_owner_exact)
                 for worker, process, proof, original_pid in state["workers"].values():
                     complete = complete and process is not None and isinstance(proof, Mapping) and proof.get("worker") is worker and proof.get("process") is process and proof.get("pid") == original_pid and type(proof.get("start_epoch_ms")) is int and proof["start_epoch_ms"] > 0
                 for key, backend in state["backends"].items():
@@ -1139,122 +1975,760 @@ class SampledRssMonitor:
                 raise CandidateError("RSS monitor thread did not stop; preserve all live process handles")
 
 
+def _w24_private_tree_manifest(root: Path) -> dict[str, dict[str, Any]]:
+    """Hash an installation subtree without following links."""
+    if root.is_symlink() or not root.is_dir():
+        raise CandidateError("private COMSOL architecture tree must be a real directory")
+    rows: dict[str, dict[str, Any]] = {}
+    for path in sorted(root.rglob("*")):
+        relative = path.relative_to(root).as_posix()
+        metadata = path.lstat()
+        if stat.S_ISLNK(metadata.st_mode):
+            rows[relative] = {"kind": "symlink", "target": os.readlink(path)}
+        elif stat.S_ISDIR(metadata.st_mode):
+            rows[relative] = {"kind": "directory", "mode": stat.S_IMODE(metadata.st_mode)}
+        elif stat.S_ISREG(metadata.st_mode):
+            rows[relative] = {"kind": "file", "bytes": metadata.st_size,
+                              "mode": stat.S_IMODE(metadata.st_mode),
+                              "sha256": _sha_file(path)}
+        else:
+            raise CandidateError("COMSOL architecture tree contains a special file")
+    return rows
+
+
+class W24FixedDarwinSetupProcessFactory:
+    """Narrow OwnedServerLauncher process-factory adapter for one W24 session."""
+
+    def __init__(self, *, install_root: Path, owned_server_root: Path,
+                 evidence: Path, popen: Callable[..., Any] = subprocess.Popen,
+                 server_np: int = 2):
+        if type(server_np) is not int or server_np != 2:
+            raise CandidateError("W24 fixed Darwin setup requires the exact reviewed server_np=2")
+        self.install_root = install_root.resolve(strict=True)
+        self.owned_server_root = owned_server_root.resolve(strict=False)
+        self.evidence = evidence
+        self.popen = popen
+        self.server_np = server_np
+        self.launch_command: list[str] | None = None
+
+    def _prepare_private_arch(self, private_installation: Path) -> dict[str, Any]:
+        installed_arch = self.install_root / "bin/macarm64"
+        shadow_arch = private_installation / "bin/macarm64"
+        if (installed_arch.is_symlink() or not installed_arch.is_dir() or
+                shadow_arch.is_symlink() is not True or
+                shadow_arch.resolve(strict=True) != installed_arch.resolve(strict=True)):
+            raise CandidateError("OwnedServerLauncher macarm64 path is not the exact installed symlink")
+        installed_before = _w24_private_tree_manifest(installed_arch)
+        installed_ini = installed_arch / "comsolmphserver.ini"
+        if installed_ini.is_symlink() or not installed_ini.is_file():
+            raise CandidateError("installed COMSOL server INI is missing or aliased")
+        installed_ini_before = _sha_file(installed_ini)
+        shadow_arch.unlink()
+        shutil.copytree(installed_arch, shadow_arch, symlinks=True, copy_function=shutil.copy2)
+        if shadow_arch.is_symlink() or _w24_private_tree_manifest(shadow_arch) != installed_before:
+            raise CandidateError("private macarm64 copy differs from the installed source tree")
+        patch = _rewrite_private_mphserver_ini(installed_ini, shadow_arch / "comsolmphserver.ini")
+        installed_after = _w24_private_tree_manifest(installed_arch)
+        installed_ini_after = _sha_file(installed_ini)
+        if installed_after != installed_before or installed_ini_after != installed_ini_before:
+            raise CandidateError("installed COMSOL macarm64 bytes changed during private overlay")
+        return {"schema": "W24_PRIVATE_MACARM64_SETUP_OVERLAY_V1",
+                "status": "PRIVATE_COPY_PATCHED_INSTALLED_BYTES_UNCHANGED",
+                "installed_arch": str(installed_arch), "private_arch": str(shadow_arch),
+                "installed_tree_sha256": _json_hash(installed_before),
+                "installed_tree_sha256_after": _json_hash(installed_after),
+                "installed_ini_sha256_before": installed_ini_before,
+                "installed_ini_sha256_after": installed_ini_after,
+                "private_tree_sha256_before_ini_patch": _json_hash(installed_before),
+                "private_ini_patch": patch,
+                "install_tree_mutated": False}
+
+    def __call__(self, command: list[str], **options: Any) -> Any:
+        """Validate and stage before birth, then return the original Popen directly."""
+        if sys.platform != "darwin":
+            raise CandidateError("the fixed W24 owned-server process factory is Darwin-only")
+        cwd = Path(options.get("cwd", ""))
+        if cwd.is_symlink() or cwd.resolve(strict=True) != self.owned_server_root:
+            raise CandidateError("OwnedServerLauncher cwd differs from the exact reviewed session root")
+        private_installation = self.owned_server_root / "installation"
+        from comsol_mcp._session_server import _server_directories, build_server_command
+        expected = build_server_command(_server_directories(self.owned_server_root),
+                                        platform_name="darwin", validate_launcher=False,
+                                        server_np=self.server_np)
+        if (not isinstance(command, list) or command != expected or
+                command[0] != str(private_installation / "bin/comsol") or
+                command[1:2] != ["mphserver"] or
+                command.count("-np") != 1 or
+                command[command.index("-np") + 1] != str(self.server_np)):
+            raise CandidateError("OwnedServerLauncher command differs from the fixed W24 start plan")
+        overlay = self._prepare_private_arch(private_installation)
+        self.launch_command = list(command)
+        receipt = {**overlay, "launch_command": list(command),
+                   "popen_options": sorted(options),
+                   "popen_environment_mutated": False,
+                   "requested_server_np": self.server_np,
+                   "fixed_np_arguments": ["-np", str(self.server_np)]}
+        _write_new(self.evidence / "private_shadow_w24_jvm_overlay.json", receipt)
+        # No logging, readback, or diagnostic step is allowed after child birth here.
+        return self.popen(command, **options)
+
+
+def _w24_owned_server_authorization_ref(*, reviewed_sha256: str,
+                                        binding: Mapping[str, Any] | None,
+                                        plan: Mapping[str, Any] | None) -> str:
+    """Bind the stop audit reference to this exact candidate, execute plan, and consumed once."""
+    if binding is None:
+        raise CandidateError("W24 host-control lifecycle requires the fresh runtime binding")
+    if (not isinstance(plan, Mapping) or
+            plan.get("candidate_sha256") != reviewed_sha256 or
+            plan.get("runtime_binding_sha256") != binding.get("binding_sha256") or
+            plan.get("require_new_external_root_approval_and_once") is not True):
+        raise CandidateError("W24 host-control reference lacks the exact candidate execute plan")
+    namespace = Path(binding.get("namespace", ""))
+    once_path = namespace / "W24_ONCE.json"
+    fresh_runtime.scoped_path(binding, once_path)
+    try:
+        metadata = once_path.lstat()
+        once_raw = once_path.read_bytes()
+        once = json.loads(once_raw)
+    except (OSError, json.JSONDecodeError) as exc:
+        raise CandidateError("W24 consumed-once receipt is unavailable for host-control binding") from exc
+    if (once_path.is_symlink() or not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1 or
+            once.get("schema") != "W24_FRESH_ONCE_V2" or
+            once.get("candidate_sha256") != reviewed_sha256):
+        raise CandidateError("W24 consumed-once receipt differs from the reviewed candidate")
+    activity = binding.get("activity_id")
+    binding_sha = binding.get("binding_sha256")
+    if (not isinstance(activity, str) or not activity or
+            not isinstance(binding_sha, str) or not re.fullmatch(r"[0-9a-f]{64}", binding_sha)):
+        raise CandidateError("W24 authorization reference lacks exact activity/binding identity")
+    plan_sha = _json_hash(plan)
+    once_sha = _sha_bytes(once_raw)
+    reference = (f"w24-owned-server:{activity}:{reviewed_sha256}:"
+                 f"{binding_sha}:{plan_sha}:{once_sha}")
+    if len(reference) > 512:
+        raise CandidateError("W24 plan/once-bound authorization reference exceeds the schema limit")
+    return reference
+
+
+class W24SetupOwnedServerLauncher:
+    """W24-only wrapper around the production OwnedServerLauncher owner."""
+
+    def __init__(self, *, install_root: Path, evidence: Path,
+                 installation_binding: Mapping[str, Any] | None = None,
+                 observer: Any, on_birth_observation: Callable[[Mapping[str, Any]], None] | None = None,
+                 process_identity_reader: Callable[[int], Mapping[str, Any]] | None = None,
+                 listener_reader: Callable[[int], Any] | None = None,
+                 popen: Callable[..., Any] = subprocess.Popen):
+        from comsol_mcp._session_server import OwnedServerLauncher
+
+        self.install_root = install_root.resolve(strict=True)
+        self.installation_binding = dict(installation_binding) if isinstance(installation_binding, Mapping) else None
+        self.evidence = evidence
+        self.observer = observer
+        self.on_birth_observation = on_birth_observation
+        self._popen = popen
+        self.server_np = 2
+        self._core = OwnedServerLauncher(
+            process_identity_reader=process_identity_reader or __import__(
+                "comsol_mcp._platform_process", fromlist=["process_identity"]).process_identity,
+            listener_reader=listener_reader, platform_name="darwin", server_np=self.server_np,
+            ready_timeout_s=45.0, poll_interval_s=0.2)
+        self._project_id: str | None = None
+        self._workspace: Path | None = None
+        self._candidate_sha256: str | None = None
+        self._activity_id: str | None = None
+        self._handles: dict[tuple[str, str], Any] = {}
+        self._factories: dict[tuple[str, str], W24FixedDarwinSetupProcessFactory] = {}
+        self._started = False
+
+    def _verify_frozen_installation_identity(self, runtime: Any) -> dict[str, Any]:
+        """Verify catalog version and full frozen release identity before Server birth."""
+        from comsol_mcp._java_worker import JavaWorkerPaths
+        from comsol_mcp._runtime_installation import inspect_installation, runtime_id_for_root
+
+        frozen = self.installation_binding
+        required = {"root", "exact_build", "readme_sha256", "classpath_manifest_sha256",
+                    "jar_count", "jar_content_sha256"}
+        if not isinstance(frozen, Mapping) or required - set(frozen):
+            raise CandidateError("W24 session.start requires the full fresh frozen COMSOL installation identity")
+        exact_build = frozen.get("exact_build")
+        if exact_build != "6.4.0.293":
+            raise CandidateError("W24 frozen COMSOL build must remain exactly 6.4.0.293")
+        catalog_version = ".".join(exact_build.split(".")[:-1])
+        if (not isinstance(frozen.get("root"), str) or
+                not isinstance(frozen.get("readme_sha256"), str) or
+                not re.fullmatch(r"[0-9a-f]{64}", frozen["readme_sha256"]) or
+                not isinstance(frozen.get("classpath_manifest_sha256"), str) or
+                not re.fullmatch(r"[0-9a-f]{64}", frozen["classpath_manifest_sha256"]) or
+                type(frozen.get("jar_count")) is not int or frozen["jar_count"] != 25 or
+                not isinstance(frozen.get("jar_content_sha256"), str) or
+                not re.fullmatch(r"[0-9a-f]{64}", frozen["jar_content_sha256"])):
+            raise CandidateError("W24 frozen COMSOL build/README/JAR identity is malformed or incomplete")
+        try:
+            frozen_root = Path(frozen["root"]).resolve(strict=True)
+            runtime_root = Path(runtime.installation_root).resolve(strict=True)
+            runtime_id = runtime.runtime_id
+        except (AttributeError, OSError, TypeError, ValueError) as exc:
+            raise CandidateError("W24 resolved runtime identity is incomplete") from exc
+        if (frozen_root != self.install_root or runtime_root != frozen_root or
+                runtime_id != runtime_id_for_root(frozen_root) or
+                runtime.comsol_version != catalog_version):
+            raise CandidateError("W24 resolved runtime root/catalog version differs from its frozen installation")
+
+        try:
+            inspected = inspect_installation(runtime_id)["installation"]
+        except Exception as exc:
+            raise CandidateError("W24 production installation inspection failed before Server birth") from exc
+        if (inspected.get("runtime_id") != runtime_id or inspected.get("root") != str(frozen_root) or
+                inspected.get("metadata_only") is not True or inspected.get("comsol_started") is not False or
+                inspected.get("license_checked_out") is not False):
+            raise CandidateError("W24 inspected installation identity is not exact metadata-only evidence")
+        version = inspected.get("version")
+        build = inspected.get("build")
+        if (not isinstance(version, Mapping) or version.get("status") != "OBSERVED" or
+                version.get("value") != catalog_version or
+                not isinstance(build, Mapping) or build.get("status") != "OBSERVED" or
+                build.get("value") != 293):
+            raise CandidateError("W24 installed catalog version or exact build differs from its frozen identity")
+
+        readme_path = frozen_root / "readme.txt"
+        if readme_path.is_symlink() or not readme_path.is_file():
+            raise CandidateError("W24 exact-build README is unavailable or aliased")
+        readme_bytes = readme_path.read_bytes()
+        readme_match = re.search(rb"^COMSOL\s+([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)\s+README\b",
+                                 readme_bytes, re.MULTILINE)
+        if (readme_match is None or readme_match.group(1).decode("ascii") != exact_build or
+                _sha_bytes(readme_bytes) != frozen["readme_sha256"]):
+            raise CandidateError("W24 installed README differs from the exact frozen 6.4.0.293 identity")
+
+        java_executable = Path(runtime.java_executable).resolve(strict=True)
+        jdk_home = java_executable.parent.parent
+        paths = JavaWorkerPaths(frozen_root, jdk_home, project_root=frozen_root)
+        try:
+            classpath, manifest_sha, jar_count, jar_sha = paths.classpath()
+        except Exception as exc:
+            raise CandidateError("W24 production classpath/JAR identity could not be inspected before Server birth") from exc
+        try:
+            actual_classpath = tuple(Path(item).resolve(strict=True)
+                                     for item in classpath.split(paths.classpath_separator))
+            runtime_classpath = tuple(Path(item).resolve(strict=True) for item in runtime.classpath)
+        except (OSError, TypeError, ValueError) as exc:
+            raise CandidateError("W24 resolved runtime classpath is unavailable or malformed") from exc
+        if (manifest_sha != frozen["classpath_manifest_sha256"] or
+                jar_count != frozen["jar_count"] or jar_sha != frozen["jar_content_sha256"] or
+                actual_classpath != runtime_classpath):
+            raise CandidateError("W24 installed classpath/JAR identity differs from the frozen candidate")
+        return {
+            "status": "W24_RESOLVED_RUNTIME_AND_FROZEN_INSTALLATION_IDENTITY_VERIFIED_PREBIRTH",
+            "runtime_id": runtime_id, "catalog_version": version["value"],
+            "exact_build": exact_build, "installation_root": str(frozen_root),
+            "readme_sha256": _sha_bytes(readme_bytes),
+            "classpath_manifest_sha256": manifest_sha, "jar_count": jar_count,
+            "jar_content_sha256": jar_sha, "server_birth_performed": False,
+            "comsol_started_by_inspector": inspected["comsol_started"],
+            "license_checked_out_by_inspector": inspected["license_checked_out"],
+        }
+
+    def bind_reviewed_project(self, *, project_id: str, workspace: Path,
+                              authorized_root: Path, candidate_sha256: str,
+                              activity_id: str, authorization_ref: str) -> None:
+        if self._project_id is not None or self._started:
+            raise CandidateError("W24 owned-server adapter project binding is immutable and single-use")
+        if (not isinstance(project_id, str) or not project_id or
+                not re.fullmatch(r"[0-9a-f-]{36}", project_id) or
+                not re.fullmatch(r"[0-9a-f]{64}", candidate_sha256) or
+                not isinstance(activity_id, str) or not activity_id or
+                not isinstance(authorization_ref, str) or
+                not authorization_ref.startswith(f"w24-owned-server:{activity_id}:{candidate_sha256}:") or
+                len(authorization_ref) > 512):
+            raise CandidateError("W24 owned-server adapter is not bound to a reviewed project/candidate")
+        if self.installation_binding is None:
+            raise CandidateError("W24 owned-server adapter lacks the fresh frozen installation identity")
+        root = authorized_root.resolve(strict=True)
+        target = workspace.resolve(strict=True)
+        if workspace.is_symlink() or not target.is_relative_to(root) or target == root:
+            raise CandidateError("W24 owned-server host_control scope is not the exact new private project")
+        self._project_id, self._workspace = project_id, target
+        self._candidate_sha256, self._activity_id = candidate_sha256, activity_id
+        self.authorization_ref = authorization_ref
+
+    def start(self, runtime: Any, project_id: str, session_id: str, *,
+              observation_sink: Callable[[Mapping[str, Any]], None] | None = None,
+              process_factory: Callable[..., Any] | None = None) -> Any:
+        from comsol_mcp._session_context import runtime_state_root, session_state_directory
+        from comsol_mcp._session_server import OwnedServerError
+
+        if (sys.platform != "darwin" or not self._project_id or
+                project_id != self._project_id or self._started):
+            raise CandidateError("W24 session.start refused an unreviewed project, platform, runtime, or repeat")
+        if process_factory is not None:
+            raise CandidateError("W24 launcher does not accept caller-supplied process factories")
+        if self._bound_mcp_home is None:
+            raise CandidateError("W24 launcher is not bound to the exact private ControlDaemon home")
+        prebirth_identity = self._verify_frozen_installation_identity(runtime)
+        expected_state_root = runtime_state_root(self._bound_mcp_home, platform_name="darwin")
+        session_root = session_state_directory(runtime.session_state_root, project_id, session_id)
+        owned_root = session_root / "owned-server"
+        if runtime.session_state_root.resolve(strict=True) != expected_state_root.resolve(strict=True):
+            raise CandidateError("W24 session runtime state root differs from its bound private ControlDaemon")
+        _write_new(self.evidence / "server_prebirth_installation_identity.json", {
+            **prebirth_identity, "project_id": project_id, "session_id": session_id,
+            "candidate_sha256": self._candidate_sha256, "activity_id": self._activity_id,
+        })
+        factory = W24FixedDarwinSetupProcessFactory(
+            install_root=self.install_root, owned_server_root=owned_root,
+            evidence=self.evidence, popen=self._popen, server_np=self.server_np)
+        key = (project_id, session_id)
+        self._started = True
+        self._factories[key] = factory
+
+        def combined_observation(payload: Mapping[str, Any]) -> None:
+            if observation_sink is not None:
+                observation_sink(payload)
+            if (payload.get("event") == "BIRTH_OBSERVED" and
+                    self.on_birth_observation is not None):
+                self.on_birth_observation(payload)
+
+        try:
+            handle = self._core.start(runtime, project_id, session_id,
+                                      observation_sink=combined_observation,
+                                      process_factory=factory)
+        except BaseException as exc:
+            handle = getattr(exc, "handle", None)
+            if handle is not None:
+                self._handles[key] = handle
+                try:
+                    self.observer.bind_managed_handle(self, project_id, session_id, handle)
+                except BaseException:
+                    raise OwnedServerError("W24 observer binding failed after Server birth; exact Core handle retained",
+                                           handle=handle, uncertain=True) from None
+            raise
+        self._handles[key] = handle
+        try:
+            self.observer.bind_managed_handle(self, project_id, session_id, handle)
+        except BaseException:
+            raise OwnedServerError("W24 observer binding failed after ready; exact Core handle retained",
+                                   handle=handle, uncertain=True) from None
+        return handle
+
+    @property
+    def _core_home(self) -> Path | None:
+        return getattr(self, "_bound_mcp_home", None)
+
+    def bind_control_home(self, home: Path) -> None:
+        if self._started:
+            raise CandidateError("W24 ControlDaemon home must bind before session.start")
+        self._bound_mcp_home = home.resolve(strict=False)
+
+    def verify(self, handle: Any) -> Any:
+        from comsol_mcp._session_server import OwnedServerError
+
+        exact = [(key, value) for key, value in self._handles.items() if value is handle]
+        if len(exact) != 1 or self.observer.managed_handle is not handle:
+            raise OwnedServerError("W24 verify requires the exact original ManagedServerHandle", handle=handle, uncertain=True)
+        identity = self._core.verify(handle)
+        self.observer.verify_managed_server_identity()
+        return identity
+
+    def stop(self, handle: Any, *, timeout_s: float = 30.0) -> dict[str, Any]:
+        from comsol_mcp._session_server import ManagedServerHandle, OwnedServerError
+
+        exact = [(key, value) for key, value in self._handles.items() if value is handle]
+        if (len(exact) != 1 or not isinstance(handle, ManagedServerHandle) or handle.retired or
+                self.observer.managed_handle is not handle):
+            raise OwnedServerError("W24 stop requires the exact original live ManagedServerHandle", handle=handle, uncertain=True)
+        identity = self._core.verify(handle)
+        before = self.observer.verify_managed_server_identity()
+        process = handle.process
+        try:
+            process.terminate()
+            returncode = process.wait(timeout=min(max(float(timeout_s), 0.1), 30.0))
+        except subprocess.TimeoutExpired as exc:
+            raise OwnedServerError("W24 Server did not exit after one SIGTERM; no SIGKILL fallback", handle=handle, uncertain=True) from exc
+        except BaseException as exc:
+            raise OwnedServerError("W24 exact Popen SIGTERM/reap failed; original owner retained", handle=handle, uncertain=True) from exc
+        if process.poll() is None or type(returncode) is not int:
+            raise OwnedServerError("W24 Server Popen terminal status is unconfirmed", handle=handle, uncertain=True)
+        endpoint = handle.endpoint
+        listeners = list(self._core.listener_reader(endpoint.port)) if endpoint is not None else None
+        if listeners:
+            raise OwnedServerError("W24 loopback listener remains after the original Popen exited", handle=handle, uncertain=True)
+        handle.retired = True
+        self._core._close_log(handle)
+        return {"status": "W24_EXACT_OWNED_SERVER_SIGTERM_REAPED",
+                "pid": identity.pid, "birth": identity.birth,
+                "start_epoch_ms": identity.start_epoch_ms,
+                "postexec_identity_before_term": before,
+                "signal": "SIGTERM", "sigkill_used": False,
+                "returncode": returncode, "child_reaped": True,
+                "listener_absent": True, "server_stopped": True}
+
+
 class W24StaticShapeSetupServer:
-    """Published private-shadow helper with the reviewed COMSOL -np 2 birth."""
+    """W24 read-only adapter over ControlDaemon's exact ManagedServerHandle."""
 
     def __init__(self, work: Path, evidence: Path, *, event_log: Path,
-                 on_birth: Callable[[Any, Mapping[str, Any]], None] | None = None):
-        from tools.run_native_resume_smoke import NativeLoopbackServer
-
-        self._base = NativeLoopbackServer(work, evidence, event_log=event_log)
-        self.__dict__.update(self._base.__dict__)
-        self.on_birth = on_birth
+                 jdk: Path = JAVA11):
+        self.work = work
+        self.evidence = evidence
+        self.event_log = event_log
+        self.shadow_root = work / "unbound-owned-server-installation"
+        self.runtime = work / "unbound-owned-server-runtime"
+        self.prefs = self.runtime / "preferences"
+        self.tmp = self.runtime / "tmp"
+        self.recovery = self.runtime / "recovery"
+        self.project = work / "project"
+        self.worker_state = work / "worker-state"
+        self.receipt_path = work / "isolation_receipt.json"
+        self.server_log = work / "unbound-owned-server.log"
+        self.proc = None
+        self.port: int | None = None
+        self.process_identity: dict[str, Any] | None = None
         self.birth_monotonic: float | None = None
         self.server_snapshot: dict[str, Any] | None = None
-        self._server_birth_attempted = False
+        self.server_postexec_identity: dict[str, Any] | None = None
+        self._server_java_text_observation: dict[str, Any] | None = None
+        self._private_ini_receipt: dict[str, Any] | None = None
+        self._server_log_handle = None
         self._original_server_popen = None
         self._original_server_pid = None
+        self._server_birth_attempted = False
+        self.launch_command: list[str] | None = None
+        self.java_executable_identity: dict[str, Any] | None = None
+        self.managed_handle = None
+        self.managed_project_id: str | None = None
+        self.managed_session_id: str | None = None
+        self.launcher: W24SetupOwnedServerLauncher | None = None
+        self.jdk = jdk
 
     def prepare_shadow(self) -> dict[str, Any]:
-        return self._base.prepare_shadow()
+        if sys.platform != "darwin":
+            raise CandidateError("W24 setup is frozen for Darwin only")
+        if not INSTALL_ROOT.is_dir() or not self.jdk.is_dir():
+            raise CandidateError("the pinned COMSOL 6.4 tree or Java 11 tools are unavailable")
+        if self.project.exists() or self.project.is_symlink():
+            raise CandidateError("W24 project root must be a new task-private directory")
+        self.project.mkdir(mode=0o700, parents=False, exist_ok=False)
+        return {"status": "CORE_OWNED_SERVER_SHADOW_WILL_BE_CREATED_BY_SESSION_START",
+                "project_root": str(self.project.resolve(strict=True)),
+                "independent_server_shadow_created": False,
+                "installed_tree_mutated": False}
 
-    def start_and_verify_listener(self) -> dict[str, Any]:
+    def bind_managed_handle(self, launcher: W24SetupOwnedServerLauncher,
+                            project_id: str, session_id: str, handle: Any) -> None:
+        from comsol_mcp._session_server import ManagedServerHandle
+        key = (project_id, session_id)
+        if (not isinstance(handle, ManagedServerHandle) or
+                launcher._handles.get(key) is not handle or
+                self.managed_handle is not None and self.managed_handle is not handle):
+            raise CandidateError("W24 observer must bind the exact Core-registered ManagedServerHandle")
+        if handle.process is None or type(getattr(handle.process, "pid", None)) is not int:
+            raise CandidateError("Core ManagedServerHandle lacks its original Popen object")
+        self.launcher = launcher
+        self.managed_handle = handle
+        self.managed_project_id = project_id
+        self.managed_session_id = session_id
+        self.proc = handle.process
+        self._original_server_popen = handle.process
+        self._original_server_pid = handle.process.pid
+        self.port = handle.endpoint.port if handle.endpoint is not None else None
+        self.process_identity = None
+        if handle.endpoint is not None and handle.process_identity is not None:
+            self.process_identity = {
+                "pid": handle.process_identity.pid,
+                "birth": handle.process_identity.birth,
+                "start_epoch_ms": handle.start_epoch_ms,
+                "endpoint": {"host": handle.endpoint.address, "port": handle.endpoint.port},
+                "runtime_id": handle.runtime_id,
+            }
+        self.server_snapshot = {
+            "pid": handle.process_identity.pid if handle.process_identity is not None else handle.process.pid,
+            "birth": handle.process_identity.birth if handle.process_identity is not None else None,
+            "start_epoch_ms": handle.start_epoch_ms,
+            "uid": os.getuid(),
+        }
+        self.shadow_root = handle.directories.private_installation
+        self.runtime = handle.directories.runtime
+        self.prefs = handle.directories.preferences
+        self.tmp = handle.directories.temporary
+        self.recovery = handle.directories.recovery
+        self.server_log = handle.directories.log_file
+        self._server_log_handle = handle.log_handle
+        factory = launcher._factories.get(key)
+        self.launch_command = (list(factory.launch_command)
+                               if factory is not None and isinstance(factory.launch_command, list)
+                               else None)
+        self._server_birth_attempted = True
+        self.birth_monotonic = self.birth_monotonic or time.monotonic()
+
+    def bind_from_original_daemon(self, daemon: Any, project_id: str,
+                                  *, request_id: str, idempotency_key: str) -> str | None:
+        """Resolve the durable start identity or retain the sole exact Core handle."""
+        jobs = None
+        try:
+            jobs_result = daemon.store.list_jobs(project_id=project_id, limit=1000)
+            jobs = jobs_result if isinstance(jobs_result, list) else getattr(jobs_result, "items", None)
+        except BaseException:
+            jobs = None
+        matches = []
+        if isinstance(jobs, list):
+            for job in jobs:
+                operation = job.get("operation") if isinstance(job, Mapping) else None
+                if (not isinstance(operation, Mapping) or operation.get("operation") != "session.start" or
+                        operation.get("request_id") != request_id or
+                        operation.get("idempotency_key") != idempotency_key):
+                    continue
+                metadata = operation.get("metadata")
+                job_metadata = job.get("metadata")
+                session_id = (metadata.get("session_id") if isinstance(metadata, Mapping) else None)
+                if not isinstance(session_id, str) and isinstance(job_metadata, Mapping):
+                    session_id = job_metadata.get("session_id")
+                matches.append(session_id)
+        if len(matches) == 1 and isinstance(matches[0], str) and matches[0]:
+            session_id = matches[0]
+            key = (project_id, session_id)
+            handle = daemon._session_server_handles.get(key)
+            if handle is not None:
+                if self.launcher is None or self.launcher._handles.get(key) is not handle:
+                    raise CandidateError("ControlDaemon handle differs from the original W24 launcher owner")
+                self.bind_managed_handle(self.launcher, project_id, session_id, handle)
+                self.owner_binding_resolution = "EXACT_DURABLE_SESSION_START_OPERATION"
+            return session_id
+
+        # This daemon and adapter are fresh and permit exactly one session.start.
+        # If durable lookup itself is unavailable or its response was lost,
+        # retain only the sole object registered by both original owners.
+        daemon_handles = getattr(daemon, "_session_server_handles", {})
+        launcher_handles = getattr(self.launcher, "_handles", {}) if self.launcher is not None else {}
+        daemon_keys = [key for key in daemon_handles if isinstance(key, tuple) and key[0] == project_id]
+        launcher_keys = [key for key in launcher_handles if isinstance(key, tuple) and key[0] == project_id]
+        if (self.launcher is None or getattr(self.launcher, "_started", False) is not True or
+                self.launcher._project_id != project_id or len(daemon_keys) != 1 or
+                len(launcher_keys) != 1 or daemon_keys != launcher_keys):
+            raise CandidateError("original session.start identity does not resolve to one exact Core owner")
+        key = daemon_keys[0]
+        handle = daemon_handles[key]
+        if launcher_handles.get(key) is not handle:
+            raise CandidateError("same-daemon Core and W24 launcher handle objects differ")
+        self.bind_managed_handle(self.launcher, project_id, str(key[1]), handle)
+        self.owner_binding_resolution = "SOLE_CORE_HANDLE_IN_FRESH_W24_DAEMON"
+        return str(key[1])
+
+    def _observe_server_identity(self) -> tuple[dict[str, Any], dict[str, Any]]:
         from comsol_mcp._g2_isolation import _process_snapshot
         from comsol_mcp._platform_process import process_identity
 
-        if self.proc is not None:
-            raise CandidateError("task-owned server may be born only once")
-        port_file = self.runtime / "server.port"
-        command = [str(self.shadow_root / "bin/comsol"), "mphserver", "-np", "2",
-                   "-port", "0", "-portfile", str(port_file),
-                   "-prefsdir", str(self.prefs), "-tmpdir", str(self.tmp),
-                   "-recoverydir", str(self.recovery), "-login", "auto",
-                   "-silent", "-multi", "on"]
-        log_handle = self.server_log.open("ab", buffering=0)
-        self._server_log_handle = log_handle
-        self._server_birth_attempted = True
-        self.proc = subprocess.Popen(command, cwd=str(self.work), env=dict(os.environ),
-                                     stdin=subprocess.DEVNULL, stdout=log_handle,
-                                     stderr=subprocess.STDOUT, text=True,
-                                     start_new_session=True)
-        self._original_server_popen = self.proc
-        self._original_server_pid = self.proc.pid
-        self.birth_monotonic = time.monotonic()
-        identity = _process_snapshot(self.proc.pid)
-        if not isinstance(identity, Mapping) or identity.get("pid") != self.proc.pid:
-            raise CandidateError("task server Popen birth/command identity is unavailable")
+        handle = self.managed_handle
+        if (handle is None or self.launcher is None or self.proc is not self._original_server_popen or
+                self.proc is not handle.process or self.proc.pid != self._original_server_pid or
+                self.proc.poll() is not None or self.port is None or
+                handle.endpoint is None or handle.process_identity is None or
+                handle.endpoint.port != self.port):
+            raise CandidateError("W24 identity check lacks the same live Core ManagedServerHandle/Popen")
+        key = (self.managed_project_id, self.managed_session_id)
+        if key not in self.launcher._handles or self.launcher._handles[key] is not handle:
+            raise CandidateError("W24 launcher registry no longer contains the original Core handle")
+        snapshot = _process_snapshot(self.proc.pid)
         epoch = process_identity(self.proc.pid)
-        if (not isinstance(epoch, Mapping) or epoch.get("alive") is not True or
-                type(epoch.get("start_epoch_ms")) is not int or epoch["start_epoch_ms"] <= 0):
-            raise CandidateError("task server Popen start epoch is unavailable")
-        self.server_snapshot = {**dict(identity), "start_epoch_ms": epoch["start_epoch_ms"]}
-        if self.on_birth is not None:
-            self.on_birth(self.proc, self.server_snapshot)
-        _append(self.event_log, {"event": "server_popen_birth",
-                                 "at_utc": datetime.now(timezone.utc).isoformat(),
-                                 "pid": self.proc.pid, "birth": identity.get("birth"),
-                                 "command_sha256": identity.get("command_sha256"),
-                                 "argv": command, "required_np": 2})
-        deadline = time.monotonic() + 45.0
-        while time.monotonic() < deadline:
-            if self.proc.poll() is not None:
-                raise CandidateError(f"task-owned COMSOL server exited {self.proc.returncode}; log={self.server_log}")
-            if port_file.is_file() and not port_file.is_symlink():
-                try:
-                    port = int(port_file.read_text(encoding="utf-8").strip())
-                    if 1 <= port <= 65535:
-                        self.port = port
-                        break
-                except (OSError, ValueError):
-                    pass
-            time.sleep(0.2)
-        if self.port is None:
-            raise TimeoutError(f"task-owned COMSOL server did not publish a listener port in 45s; log={self.server_log}")
-        listener_deadline = time.monotonic() + 15.0
-        probe: dict[str, Any] | None = None
-        row: dict[str, Any] | None = None
-        while time.monotonic() < listener_deadline:
-            if self.proc.poll() is not None:
-                raise CandidateError(f"task-owned COMSOL server exited before listener proof; log={self.server_log}")
-            probe = _lsof_listener(self.proc.pid, self.port)
-            if (probe["exit_code"] == 0 and len(probe["rows"]) == 1 and
-                    probe["rows"][0] == {"pid": self.proc.pid,
-                                         "endpoint": f"127.0.0.1:{self.port}"}):
-                row = probe["rows"][0]
-                break
-            time.sleep(0.2)
-        if row is None or probe is None:
-            raise CandidateError("lsof did not prove exactly one IPv4 loopback listener for the task Popen")
-        self.process_identity = dict(self.server_snapshot)
-        self.process_identity["port"] = self.port
-        receipt = {"schema_version": 2, "status": "RUNNING",
-                   "process": {"pid": self.proc.pid,
-                               "birth": self.server_snapshot.get("birth"),
-                               "command_sha256": self.server_snapshot.get("command_sha256"),
-                               "port": self.port}}
-        _write_new(self.receipt_path, receipt)
-        listener = {"status": "LOOPBACK_LISTENER_VERIFIED_BEFORE_WORKER",
+        if (not isinstance(snapshot, Mapping) or snapshot.get("pid") != self.proc.pid or
+                not isinstance(epoch, Mapping) or epoch.get("alive") is not True or
+                type(epoch.get("start_epoch_ms")) is not int or
+                epoch["start_epoch_ms"] != handle.start_epoch_ms or
+                epoch["start_epoch_ms"] != handle.process_identity.start_epoch_ms):
+            raise CandidateError("fresh OS process identity differs from the retained Core handle birth")
+        birth_domains = _validate_server_birth_domains(
+            pid=self.proc.pid, snapshot=snapshot, live_identity=epoch,
+            core_birth=handle.process_identity.birth,
+            core_start_epoch_ms=handle.start_epoch_ms)
+        if (not isinstance(snapshot.get("command"), str) or
+                _sha_bytes(snapshot["command"].encode()) != snapshot.get("command_sha256")):
+            raise CandidateError("fresh server command hash does not bind its observed argv")
+        uid = _read_process_uid(self.proc.pid)
+        if uid != os.getuid():
+            raise CandidateError("live Core-owned COMSOL process UID differs from the task user")
+        private_root = handle.directories.private_installation.resolve(strict=True)
+        installed_java = (private_root / "java/macarm64/jre/Contents/Home/bin/java").resolve(strict=True)
+        if not installed_java.is_relative_to(INSTALL_ROOT.resolve(strict=True)):
+            raise CandidateError("server Java resolved outside the pinned COMSOL installation")
+        java_identity = _canonical_executable_identity(installed_java)
+        java_query = _read_text_executable_identity(self.proc.pid, installed_java)
+        if {k: java_query.get(k) for k in ("path", "device", "inode", "sha256")} != java_identity:
+            raise CandidateError("live mapped Java executable differs from the pinned private-install Java")
+        listener_query = _lsof_listener(self.proc.pid, self.port)
+        expected_listener = {"pid": self.proc.pid, "endpoint": f"127.0.0.1:{self.port}"}
+        if (listener_query.get("exit_code") != 0 or listener_query.get("stderr_sha256") != _sha_bytes(b"") or
+                listener_query.get("rows") != [expected_listener] or
+                list(self.launch_command or []) != list(getattr(self.proc, "args", []))):
+            raise CandidateError("exact Popen argv or loopback listener differs from the fixed W24 owner")
+        argv = shlex.split(snapshot["command"])
+        launcher_path = str((private_root / "bin/comsol").resolve(strict=True))
+        allowed_argv0 = [launcher_path, java_identity["path"]]
+        if not argv or argv[0] not in allowed_argv0:
+            raise CandidateError("server argv0 is neither the exact private launcher nor pinned Java label")
+        required_flags = ("-XX:ActiveProcessorCount=2", "-XX:ParallelGCThreads=2",
+                          "-XX:CICompilerCount=2", "-Xms128m", "-Xmx1024m")
+        if any(argv.count(flag) != 1 for flag in required_flags):
+            raise CandidateError("server Java argv lacks exactly one reviewed CPU/heap limit set")
+        if (sum(token.startswith("-Xms") for token in argv) != 1 or
+                sum(token.startswith("-Xmx") for token in argv) != 1 or
+                sum(token.startswith("-XX:ActiveProcessorCount") for token in argv) != 1 or
+                sum(token.startswith("-XX:ParallelGCThreads") for token in argv) != 1 or
+                sum(token.startswith("-XX:CICompilerCount") for token in argv) != 1):
+            raise CandidateError("server Java argv contains a conflicting CPU/heap limit")
+        allowed_xx = set(required_flags[:3]) | {"-XX:MaxMetaspaceSize=1g", "-XX:-SplitIfBlocks"}
+        if any(token.startswith("-XX:") and token not in allowed_xx for token in argv):
+            raise CandidateError("server Java argv contains an unapproved XX option")
+        expected_paths = {
+            "comsol_root": str(private_root),
+            "tomcat_root": str(private_root / "bin/tomcat"),
+            "port_file": str(handle.directories.port_file),
+            "prefs_dir": str(handle.directories.preferences),
+            "tmp_dir": str(handle.directories.temporary),
+            "recovery_dir": str(handle.directories.recovery),
+        }
+        for key, value in (("-Dcs.root", expected_paths["comsol_root"]),
+                           ("-Dcatalina.home", expected_paths["tomcat_root"]),
+                           ("-Djava.io.tmpdir", expected_paths["tmp_dir"])):
+            if argv.count(f"{key}={value}") != 1:
+                raise CandidateError(f"server Java argv does not bind exact {key} path")
+        for flag, value in (("-np", "2"), ("-port", "0"),
+                            ("-portfile", expected_paths["port_file"]),
+                            ("-prefsdir", expected_paths["prefs_dir"]),
+                            ("-tmpdir", expected_paths["tmp_dir"]),
+                            ("-recoverydir", expected_paths["recovery_dir"]),
+                            ("-login", "auto"), ("-multi", "on")):
+            positions = [i for i, token in enumerate(argv) if token == flag]
+            if len(positions) != 1 or positions[0] + 1 >= len(argv) or argv[positions[0] + 1] != value:
+                raise CandidateError(f"server Java argv does not bind exact {flag} argument")
+        if argv.count("-silent") != 1 or argv.count("com.comsol.util.application.ServerApplication") != 1:
+            raise CandidateError("server Java argv lacks the fixed silent COMSOL server entrypoint")
+        launch_hash = _json_hash(self.launch_command)
+        current = {
+            "status": "CORE_MANAGED_ORIGINAL_POPEN_JAVA_IDENTITY_FROZEN",
+            "pid": self.proc.pid, "uid": uid, **birth_domains,
+            "launch_command_sha256": launch_hash,
+            "post_exec_command_sha256": snapshot["command_sha256"],
+            "post_exec_argv": argv,
+            "argv0_display": argv[0],
+            "allowed_argv0_labels": allowed_argv0,
+            "argv0_role": "PRIVATE_COMSOL_LAUNCHER_DISPLAY" if argv[0] == launcher_path else "PINNED_JAVA_DISPLAY",
+            "java_executable": java_query,
+            "listener": expected_listener,
+            "launch_command": list(self.launch_command),
+            "server_paths": expected_paths,
+        }
+        detail = {"process_snapshot": dict(snapshot), "process_identity": dict(epoch),
+                  "process_uid": uid, "java_text_executable": java_query,
+                  "listener_query": listener_query}
+        return current, detail
+
+    def verify_managed_server_identity(self) -> dict[str, Any]:
+        current, detail = self._observe_server_identity()
+        if self.server_postexec_identity is None:
+            self.server_postexec_identity = current
+            self.server_snapshot = {
+                "pid": current["pid"], "birth": current["birth"],
+                "start_epoch_ms": current["start_epoch_ms"],
+                "process_snapshot_birth": current["process_snapshot_birth"],
+                "uid": current["uid"],
+                "launch_command_sha256": current["launch_command_sha256"],
+            }
+            self.java_executable_identity = dict(current["java_executable"])
+            self._server_java_text_observation = dict(current["java_executable"])
+            self.process_identity = {**current, "port": self.port}
+        else:
+            _validate_frozen_server_identity(
+                self.server_postexec_identity, current,
+                proc=self.proc, original_proc=self._original_server_popen)
+        return {"identity": current, "detail": detail}
+
+    def start_and_verify_listener(self) -> dict[str, Any]:
+        if self.managed_handle is None or self.launcher is None:
+            raise CandidateError("session.start did not return the original ready ManagedServerHandle")
+        verified = self.verify_managed_server_identity()
+        identity = verified["identity"]
+        listener = {"status": "CORE_OWNED_LOOPBACK_AND_W24_POSTEXEC_IDENTITY_VERIFIED",
                     "pid": self.proc.pid, "port": self.port,
-                    "endpoint": row["endpoint"], "lsof_command": probe["command"],
-                    "lsof_stdout_sha256": probe["stdout_sha256"],
-                    "isolation_receipt": str(self.receipt_path),
-                    "process_identity": {key: receipt["process"][key]
-                                         for key in ("pid", "birth", "command_sha256")}}
+                    "endpoint": f"127.0.0.1:{self.port}",
+                    "process_identity": identity,
+                    "post_exec_observation": verified["detail"]}
         _write_new(self.evidence / "pre_worker_listener.json", listener)
+        _append(self.event_log, {"event": "server_birth_listener_confirmed",
+                                 "pid": self.proc.pid, "port": self.port,
+                                 "birth": identity["birth"],
+                                 "process_snapshot_birth": identity["process_snapshot_birth"],
+                                 "launch_command_sha256": identity["launch_command_sha256"],
+                                 "post_exec_command_sha256": identity["post_exec_command_sha256"]})
         return listener
 
     def require_server_java_options(self) -> dict[str, Any]:
+        if not isinstance(self.server_postexec_identity, Mapping):
+            raise CandidateError("effective JVM check lacks the frozen Core-handle post-exec identity")
         payload = self.server_log.read_bytes()
         text = payload.decode("utf-8", "replace")
         matched = f"Picked up JAVA_TOOL_OPTIONS: {JAVA_TOOL_OPTIONS}" in text
-        evidence = {"status": "JAVA_TOOL_OPTIONS_OBSERVED" if matched else "JAVA_TOOL_OPTIONS_NOT_OBSERVED",
-                    "path": str(self.server_log), "sha256": _sha_bytes(payload),
-                    "bytes": len(payload), "required_options": JAVA_TOOL_OPTIONS,
-                    "observed": matched}
-        if not matched:
-            raise CandidateError("actual COMSOL server log did not confirm the frozen JAVA_TOOL_OPTIONS")
+        echo = {"status": "JAVA_TOOL_OPTIONS_ECHO_PRESENT_DIAGNOSTIC" if matched else "JAVA_TOOL_OPTIONS_ECHO_ABSENT_DIAGNOSTIC",
+                "path": str(self.server_log), "sha256": _sha_bytes(payload),
+                "bytes": len(payload), "required_options": JAVA_TOOL_OPTIONS,
+                "observed": matched}
+        verified = self.verify_managed_server_identity()
+        limits = _read_effective_jvm_limits(
+            pid=self.proc.pid, jcmd=self.jdk / "bin/jcmd",
+            identity_reader=lambda: self.verify_managed_server_identity()["identity"],
+            expected_identity=self.server_postexec_identity,
+            evidence_path=self.evidence / "server_jvm_limits_readback.json")
+        evidence = {"status": "SERVER_EFFECTIVE_JVM_LIMITS_VERIFIED",
+                    "log_echo_diagnostic": echo,
+                    "identity_probe_before_jcmd": verified["detail"],
+                    "effective_jvm_limits": limits}
         _write_new(self.evidence / "server_java_options_readback.json", evidence)
         return evidence
+
+    def write_g2_isolation_receipt(self) -> dict[str, Any]:
+        """Write and immediately verify the exact G2 receipt before Worker birth."""
+        from comsol_mcp._g2_isolation import verify_owned_server
+
+        if (self.managed_handle is None or self.launcher is None or
+                self.managed_project_id is None or self.managed_session_id is None or
+                self.server_postexec_identity is None or self.port is None):
+            raise CandidateError("G2 receipt requires the exact reviewed Core owner and frozen server identity")
+        expected_path = (self.work / "isolation_receipt.json").resolve(strict=False)
+        configured = os.environ.get("COMSOL_MCP_ISOLATION_RECEIPT")
+        if (self.receipt_path.resolve(strict=False) != expected_path or
+                not isinstance(configured, str) or
+                Path(configured).resolve(strict=False) != expected_path or
+                Path(configured).is_symlink() or self.receipt_path.exists() or
+                self.receipt_path.is_symlink()):
+            raise CandidateError("G2 receipt path is not the one fresh reviewed task-private configured path")
+        verified = self.verify_managed_server_identity()
+        identity = verified["identity"]
+        detail = verified["detail"]
+        snapshot = detail.get("process_snapshot")
+        if not isinstance(snapshot, Mapping):
+            raise CandidateError("G2 receipt lacks the current verified OS process snapshot")
+        record = _build_g2_owned_server_receipt(
+            handle=self.managed_handle, observer_identity=identity,
+            process_snapshot=snapshot, project_id=self.managed_project_id,
+            session_id=self.managed_session_id,
+            activity_id=str(self.launcher._activity_id or ""),
+            candidate_sha256=str(self.launcher._candidate_sha256 or ""))
+        digest = _write_new(self.receipt_path, record)
+        endpoint = f"127.0.0.1:{self.port}"
+        proof = verify_owned_server(self.receipt_path, endpoint=endpoint)
+        if not isinstance(proof, Mapping) or proof.get("verified") is not True:
+            raise CandidateError("production G2 verifier did not confirm the new pre-Worker receipt")
+        result = {"status": "W24_G2_OWNED_SERVER_RECEIPT_VERIFIED_BEFORE_WORKER",
+                  "path": str(self.receipt_path.resolve(strict=True)),
+                  "sha256": digest, "endpoint": endpoint,
+                  "record": record, "production_consumer_proof": proof,
+                  "worker_born": False}
+        _write_new(self.evidence / "g2_isolation_receipt_readback.json", result)
+        _append(self.event_log, {"event": "g2_server_isolation_receipt_verified",
+                                 "pid": self.proc.pid, "port": self.port,
+                                 "receipt_sha256": digest,
+                                 "worker_born": False})
+        return result
 
 
 class BudgetedSetupDaemon:
@@ -1262,7 +2736,9 @@ class BudgetedSetupDaemon:
 
     def __init__(self, daemon: Any, *, monitor: SampledRssMonitor,
                  deadline_monotonic: float, events_path: Path,
-                 workspace: Path, project_id: str, native_epoch_capability: Any = None):
+                 workspace: Path, project_id: str, native_epoch_capability: Any = None,
+                 schema_probe_only: bool = False,
+                 selection_diagnostic_dir: Path | None = None):
         self.native_epoch_capability = native_epoch_capability
         if native_epoch_capability is not None:
             from tools.w24_native_epoch_capability import require_native_epoch_capability
@@ -1273,13 +2749,28 @@ class BudgetedSetupDaemon:
         self.events_path = events_path
         self.workspace = workspace.resolve(strict=True)
         self.project_id = project_id
+        self.selection_diagnostic_dir = (Path(selection_diagnostic_dir)
+            if selection_diagnostic_dir is not None else None)
+        if self.selection_diagnostic_dir is not None and (
+                not self.selection_diagnostic_dir.is_absolute() or
+                self.selection_diagnostic_dir.resolve(strict=False) != self.selection_diagnostic_dir or
+                self.selection_diagnostic_dir.name != "static_shape_managed"):
+            raise CandidateError("selection diagnostics require the canonical current-run static_shape_managed directory")
+        self.selection_diagnostic_paths: set[Path] = set()
         self.slot: tuple[str, str] | None = None
         self.slot_stage: str | None = None
         self.slot_model_tag: str | None = None
         self.slot_artifact: dict[str, Any] | None = None
+        self.slot_adopt_binding: dict[str, Any] | None = None
+        self.slot_load_binding: dict[str, Any] | None = None
         self.completed_slots: set[tuple[str, str]] = set()
         self.unknown = False
         self.bootstrap_model_create_used = False
+        if type(schema_probe_only) is not bool:
+            raise CandidateError("schema_probe_only mode must be an exact Boolean")
+        self.schema_probe_only = schema_probe_only
+        self.schema_probe_completed = False
+        self.schema_probe_result: dict[str, Any] | None = None
 
     @property
     def store(self) -> Any:
@@ -1299,6 +2790,8 @@ class BudgetedSetupDaemon:
         self.slot_stage = "begin"
         self.slot_model_tag = None
         self.slot_artifact = None
+        self.slot_adopt_binding = None
+        self.slot_load_binding = None
 
     def clear_slot(self) -> None:
         if self.slot is not None and self.slot_stage == "readback_complete":
@@ -1307,11 +2800,48 @@ class BudgetedSetupDaemon:
         self.slot_stage = None
         self.slot_model_tag = None
         self.slot_artifact = None
+        self.slot_adopt_binding = None
+        self.slot_load_binding = None
 
     def _remaining_rpc(self) -> float:
         return _remaining_admission_rpc(self.deadline_monotonic, float(RPC_CAP_SECONDS))
 
+    def _reserve_selection_diagnostic_path(self, value: Any, *, configuration_id: str,
+                                           case_id: str) -> Path:
+        directory = self.selection_diagnostic_dir
+        if directory is None or not isinstance(value, str) or not value:
+            raise CandidateError("fixture build requires its private selection diagnostic path")
+        path = Path(value)
+        if (not path.is_absolute() or str(path) != value or
+                path.resolve(strict=False) != path or path.parent != directory):
+            raise CandidateError("selection diagnostic path must be canonical under the current run's private directory")
+        try:
+            directory_stat = directory.lstat()
+        except OSError as exc:
+            raise CandidateError("current run selection diagnostic directory is unavailable") from exc
+        if (stat.S_ISLNK(directory_stat.st_mode) or not stat.S_ISDIR(directory_stat.st_mode) or
+                directory_stat.st_uid != os.getuid() or stat.S_IMODE(directory_stat.st_mode) != 0o700 or
+                directory.resolve(strict=True) != directory):
+            raise CandidateError("current run selection diagnostic directory must be canonical owner-private mode 0700")
+        expected_name = re.fullmatch(
+            rf"w24_selection_stage_{re.escape(configuration_id)}_{re.escape(case_id)}_[0-9a-f]{{32}}[.]jsonl",
+            path.name)
+        if expected_name is None:
+            raise CandidateError("selection diagnostic basename must bind the active configuration, case, and UUID")
+        try:
+            path.lstat()
+        except FileNotFoundError:
+            pass
+        else:
+            raise CandidateError("selection diagnostic target must be absent and non-aliased before dispatch")
+        if path in self.selection_diagnostic_paths:
+            raise CandidateError("selection diagnostic path cannot be reused across setup slots")
+        self.selection_diagnostic_paths.add(path)
+        return path
+
     def _validate_operation(self, operation: Any, arguments: Any) -> None:
+        if self.unknown:
+            raise CandidateError("an earlier setup call is UNKNOWN; no new route may be dispatched")
         if not isinstance(operation, str) or not isinstance(arguments, Mapping):
             raise CandidateError("setup dispatch requires an operation and object arguments")
         blocked = {"study.run", "study_run", "solve", "solver.run", "model.solve",
@@ -1335,28 +2865,53 @@ class BudgetedSetupDaemon:
                 raise CandidateError("model.inspect is allowed only as the exact active-slot identity readback")
             return
         if operation == "model_load":
-            if self.slot is None or not isinstance(arguments.get("path"), str):
-                raise CandidateError("model_load is allowed only for the active slot's saved MPH")
-            target = Path(arguments["path"])
-            try:
-                resolved = target.resolve(strict=True)
-            except OSError as exc:
-                raise CandidateError("model_load target is not an existing saved artifact") from exc
-            try:
-                output_root = (self.workspace / "outputs").resolve(strict=True)
-            except OSError as exc:
-                raise CandidateError("registered outputs directory is unavailable") from exc
-            if (target.is_symlink() or resolved.parent != output_root or
-                    resolved.suffix.lower() != ".mph"):
-                raise CandidateError("model_load target escaped the registered outputs directory")
-            if (self.slot_stage != "saved" or self.slot_artifact is None or
-                    resolved != Path(self.slot_artifact["path"]) or
-                    _sha_file(resolved) != self.slot_artifact["sha256"]):
-                raise CandidateError("model_load must reopen the exact unchanged MPH saved in this slot")
+            raise CandidateError("legacy model_load may adopt an already-open path and cannot prove disk reopen; use registered artifact model.load")
+        if operation == "model.load":
+            if (self.slot is None or self.slot_stage != "registered" or
+                    not isinstance(self.slot_artifact, Mapping) or
+                    dict(arguments) != {"artifact_id": self.slot_artifact.get("artifact_id")} or
+                    not isinstance(self.slot_artifact.get("artifact_id"), str)):
+                raise CandidateError("model.load requires the exact registered artifact from the active saved slot")
             return
         if operation == "operation_call":
-            if self.slot is None or arguments.get("operation_id") != "code.execute_java":
-                raise CandidateError("only reviewed Java setup/readback calls are permitted inside a slot")
+            if self.schema_probe_only:
+                body = arguments.get("arguments")
+                if (self.slot is not None or self.schema_probe_completed or
+                        arguments.get("operation_id") != "code.execute_java" or
+                        not isinstance(body, Mapping) or set(body) != {"source_artifact", "entrypoint", "arguments", "mode"} or
+                        body.get("source_artifact") != "W24StaticShapeFixture.java" or
+                        body.get("entrypoint") != "W24StaticShapeFixture#run" or
+                        body.get("mode") != "trusted" or
+                        body.get("arguments") != {"action": "property_schema_only"}):
+                    raise CandidateError("schema-only mode permits exactly one trusted property_schema_only call on its reviewed fixture")
+                return
+            if self.slot is None:
+                raise CandidateError("setup operation_call is permitted only inside an active slot")
+            if arguments.get("operation_id") == "artifact.register":
+                body = arguments.get("arguments")
+                if not isinstance(body, Mapping) or self.slot_stage != "saved":
+                    raise CandidateError("artifact.register is permitted only for the just-saved active-slot MPH")
+                artifact = self.slot_artifact
+                if not isinstance(artifact, Mapping):
+                    raise CandidateError("artifact.register has no exact saved-slot artifact binding")
+                expected_relative = Path(artifact["path"]).relative_to(self.workspace).as_posix()
+                expected = {
+                    "project_id": self.project_id,
+                    "path": expected_relative,
+                    "role": "saved_model",
+                    "classification": "project_local",
+                    "artifact_type": "application/vnd.comsol.mph",
+                    "format_version": "comsol-mph-savecopy/1",
+                }
+                if (set(body) != set(expected) | {"idempotency_key", "request_id"} or
+                        any(body.get(key) != value for key, value in expected.items()) or
+                        not isinstance(body.get("idempotency_key"), str) or not body["idempotency_key"] or
+                        not isinstance(body.get("request_id"), str) or not body["request_id"] or
+                        _sha_file(Path(artifact["path"])) != artifact.get("sha256")):
+                    raise CandidateError("artifact.register differs from the exact saved-slot path, format, hash, or project")
+                return
+            if arguments.get("operation_id") != "code.execute_java":
+                raise CandidateError("only reviewed Java setup/readback or exact artifact registration calls are permitted inside a slot")
             body = arguments.get("arguments")
             if not isinstance(body, Mapping) or body.get("mode") != "trusted":
                 raise CandidateError("trusted Java call envelope is malformed")
@@ -1371,8 +2926,11 @@ class BudgetedSetupDaemon:
                 expected = {"action": "build", "case_id": case,
                             "configuration_id": cfg}
                 if (self.slot_stage != "begin" or role_file != "W24StaticShapeFixture.java" or
-                        dict(nested) != expected):
-                    raise CandidateError("fixture build differs from the active preregistered slot")
+                        set(nested) != set(expected) | {"selection_diagnostic_path"} or
+                        any(nested.get(key) != value for key, value in expected.items())):
+                    raise CandidateError("fixture build differs from the active preregistered slot and closed diagnostic contract")
+                self._reserve_selection_diagnostic_path(
+                    nested.get("selection_diagnostic_path"), configuration_id=cfg, case_id=case)
             elif entrypoint == "W24StaticShapeReadback#run":
                 action = nested.get("action")
                 if role_file != "W24StaticShapeReadback.java":
@@ -1417,6 +2975,729 @@ class BudgetedSetupDaemon:
         return isinstance(worker, Mapping) and worker.get("status") in {
             "SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED", "LOST"}
 
+    def _terminal_proof_context_snapshot(self, execution: Mapping[str, Any]) -> dict[str, Any]:
+        """Capture the exact registered session binding for a possible local proof.
+
+        This is deliberately a read-only observation.  It is only consulted when
+        one of the three frozen legacy model routes returns without a Worker
+        envelope; ordinary Worker envelopes keep their existing contract.
+        """
+        project_id, session_id = execution.get("project_id"), execution.get("session_id")
+        if (not isinstance(project_id, str) or not project_id
+                or not isinstance(session_id, str) or not session_id):
+            raise CandidateError("operation-store proof requires exact outer project/session identity")
+        registry = self.session_registry
+        context = registry.get(project_id, session_id)
+        if (context.project_id != project_id or context.session_id != session_id
+                or context.backend is None or context.service is None or context.worker is None
+                or context.client is None or context.client_retired is True
+                or context.client_connected is not True):
+            raise CandidateError("operation-store proof requires a live exact registered Worker context")
+        backend, service, worker, client = context.backend, context.service, context.worker, context.client
+        if (getattr(backend, "service", None) is not service
+                or getattr(backend, "worker", None) is not worker):
+            raise CandidateError("registered session service/backend/Worker pointers do not agree")
+        selected_backend = getattr(self._daemon, "_session_backends", {}).get((project_id, session_id))
+        selected_worker = getattr(self._daemon, "_session_worker_handles", {}).get((project_id, session_id))
+        if selected_backend is not backend or selected_worker is not worker:
+            raise CandidateError("registered session backend or retained Worker handle changed")
+        ledger = getattr(service, "ledger", None)
+        endpoint = getattr(context, "endpoint", None)
+        endpoint_peer = getattr(endpoint, "observed_peer", None)
+        endpoint_host, endpoint_port = getattr(endpoint, "host", None), getattr(endpoint, "port", None)
+        worker_epoch = getattr(context, "worker_epoch", None)
+        endpoint_worker_epoch = getattr(endpoint, "worker_epoch", None)
+        worker_instance_id = getattr(context, "worker_instance_id", None)
+        server_instance_id = getattr(ledger, "server_instance_id", None)
+        if (getattr(ledger, "session_id", None) != session_id
+                or not isinstance(server_instance_id, str) or not server_instance_id
+                or type(worker_epoch) is not int or worker_epoch < 1
+                or type(endpoint_worker_epoch) is not int or endpoint_worker_epoch != worker_epoch
+                or not isinstance(worker_instance_id, str) or not worker_instance_id
+                or not isinstance(endpoint_host, str) or not endpoint_host
+                or type(endpoint_port) is not int or not 1 <= endpoint_port <= 65535
+                or endpoint_peer is None or getattr(endpoint_peer, "port", None) != endpoint_port):
+            raise CandidateError("registered session endpoint, server, or Worker identity is incomplete")
+        identity = getattr(backend, "worker_identity", None)
+        endpoint_key = getattr(backend, "endpoint_key", None)
+        expected_endpoint_key = (f"[{endpoint_host}]:{endpoint_port}" if ":" in endpoint_host
+                                 else f"{endpoint_host}:{endpoint_port}")
+        if (not isinstance(identity, Mapping)
+                or identity.get("worker_instance_id") != worker_instance_id
+                or type(identity.get("connection_epoch")) is not int
+                or identity.get("connection_epoch") != worker_epoch
+                or identity.get("server_instance_id") != server_instance_id
+                or identity.get("endpoint") != expected_endpoint_key):
+            raise CandidateError("backend Worker identity differs from the registered session")
+        if endpoint_key != expected_endpoint_key:
+            raise CandidateError("backend endpoint differs from the registered session endpoint")
+        lifecycle = self._daemon.session_lifecycle.get(project_id, session_id)
+        if (not isinstance(lifecycle, Mapping)
+                or lifecycle.get("state") != "CONNECTED"
+                or lifecycle.get("client_state") != "CONNECTED"
+                or lifecycle.get("project_id") != project_id
+                or lifecycle.get("session_id") != session_id
+                or lifecycle.get("worker_instance_id") != worker_instance_id
+                or type(lifecycle.get("worker_epoch")) is not int
+                or lifecycle.get("worker_epoch") != worker_epoch
+                or lifecycle.get("server_instance_id") != server_instance_id
+                or lifecycle.get("endpoint") != {"host": endpoint_host, "port": endpoint_port}):
+            raise CandidateError("persisted session lifecycle does not attest the live registered Worker")
+        return {
+            "context": context,
+            "backend": backend,
+            "service": service,
+            "ledger": ledger,
+            "worker": worker,
+            "client": client,
+            "project_id": project_id,
+            "session_id": session_id,
+            "worker_epoch": worker_epoch,
+            "worker_instance_id": worker_instance_id,
+            "server_instance_id": server_instance_id,
+            "endpoint_host": endpoint_host,
+            "endpoint_port": endpoint_port,
+            "endpoint_peer": endpoint_peer,
+            "endpoint_owned_process": getattr(endpoint, "owned_process", None),
+            "endpoint": endpoint,
+            "backend_endpoint_key": endpoint_key,
+            "backend_worker_identity": dict(identity),
+            "lifecycle": dict(lifecycle),
+        }
+
+    @staticmethod
+    def _assert_same_terminal_proof_context(before: Mapping[str, Any],
+                                            after: Mapping[str, Any]) -> None:
+        """Require one registered service/Worker receiver to span the route."""
+        for key in ("context", "backend", "service", "ledger", "worker", "client", "endpoint",
+                    "endpoint_peer", "endpoint_owned_process"):
+            if after.get(key) is not before.get(key):
+                raise CandidateError(f"registered session {key} object changed across the route")
+        stable_fields = (
+            "project_id", "session_id", "worker_epoch", "worker_instance_id",
+            "server_instance_id", "endpoint_host", "endpoint_port",
+            "backend_endpoint_key", "backend_worker_identity", "lifecycle",
+        )
+        if any(after.get(key) != before.get(key) for key in stable_fields):
+            raise CandidateError("registered session identity or lifecycle changed across the route")
+
+    @staticmethod
+    def _validate_requested_model_ref_context(execution: Mapping[str, Any],
+                                              context: Mapping[str, Any]) -> None:
+        """Reject an inspect ref that belongs to the default or another session ledger."""
+        from comsol_mcp._execution_contract import model_ref_from_mapping
+        ref_value = execution.get("model_ref")
+        if not isinstance(ref_value, Mapping):
+            raise CandidateError("model.inspect request omitted its exact registered-session ModelRef")
+        try:
+            model_ref = model_ref_from_mapping(dict(ref_value))
+            state = context["ledger"]._state_for(model_ref)
+        except Exception as exc:
+            raise CandidateError("model.inspect ModelRef is not registered in the exact session ledger") from exc
+        if (model_ref.session_id != context.get("session_id")
+                or model_ref.server_instance_id != context.get("server_instance_id")
+                or state.ref != model_ref):
+            raise CandidateError("model.inspect ModelRef belongs to a foreign registered-session context")
+
+    def _validate_registered_artifact(self, request: Mapping[str, Any],
+                                      response: Mapping[str, Any]) -> dict[str, Any]:
+        """Bind artifact.register to the exact saved slot and durable registered copy."""
+        data = response.get("data")
+        execution = response.get("execution")
+        routed_arguments = request.get("arguments")
+        outer = request.get("execution")
+        nested = routed_arguments.get("arguments") if isinstance(routed_arguments, Mapping) else None
+        artifact = self.slot_artifact
+        if (self.slot is None or self.slot_stage != "saved"
+                or not isinstance(artifact, Mapping)
+                or not isinstance(data, Mapping) or not isinstance(execution, Mapping)
+                or not isinstance(nested, Mapping) or not isinstance(outer, Mapping)
+                or routed_arguments.get("operation_id") != "artifact.register"):
+            raise CandidateError("artifact.register lacks its exact just-saved active-slot request/response")
+        source_path = Path(str(artifact.get("path", "")))
+        try:
+            source_relative = source_path.resolve(strict=True).relative_to(self.workspace).as_posix()
+        except (OSError, ValueError) as exc:
+            raise CandidateError("artifact.register source escaped the registered project workspace") from exc
+        source_digest = artifact.get("sha256")
+        source_size = artifact.get("size_bytes")
+        request_id = outer.get("request_id")
+        idempotency_key = outer.get("idempotency_key")
+        if (not isinstance(source_digest, str) or re.fullmatch(r"[0-9a-f]{64}", source_digest) is None
+                or type(source_size) is not int or source_size <= 0
+                or source_path.is_symlink() or source_path.stat().st_size != source_size
+                or _sha_file(source_path) != source_digest):
+            raise CandidateError("artifact.register source no longer matches the saved Java MPH witness")
+        expected_body = {
+            "project_id": self.project_id, "path": source_relative,
+            "role": "saved_model", "classification": "project_local",
+            "artifact_type": "application/vnd.comsol.mph",
+            "format_version": "comsol-mph-savecopy/1",
+            "idempotency_key": idempotency_key, "request_id": request_id,
+        }
+        if (dict(nested) != expected_body
+                or outer.get("project_id") != self.project_id
+                or outer.get("session_id") != self._terminal_proof_context_snapshot(outer).get("session_id")
+                or execution.get("project_id") != self.project_id
+                or execution.get("request_id") != request_id
+                or execution.get("idempotency_key") != idempotency_key
+                or not isinstance(request_id, str) or not request_id
+                or not isinstance(idempotency_key, str) or not idempotency_key):
+            raise CandidateError("artifact.register identity or exact saved-slot request differs from its registered project")
+        artifact_id = data.get("artifact_id")
+        expected_relative = f"g2_artifacts/registered/{source_digest}.mph"
+        registered_relative = data.get("path")
+        try:
+            registered_path = (self.workspace / str(registered_relative)).resolve(strict=True)
+            registered_path.relative_to(self.workspace)
+        except (OSError, ValueError) as exc:
+            raise CandidateError("artifact.register returned a missing or out-of-project registered MPH") from exc
+        if (artifact_id != source_digest or data.get("sha256") != source_digest
+                or data.get("size") != source_size or registered_relative != expected_relative
+                or registered_path.is_symlink() or not registered_path.is_file()
+                or registered_path.stat().st_size != source_size
+                or _sha_file(registered_path) != source_digest
+                or data.get("role") != "saved_model"
+                or data.get("classification") != "project_local"
+                or data.get("artifact_type") != "application/vnd.comsol.mph"
+                or data.get("format_version") != "comsol-mph-savecopy/1"
+                or data.get("host_scope") != "local_loopback_engine_and_current_project"):
+            raise CandidateError("artifact.register response does not bind the exact hash-verified registered MPH")
+        provenance = data.get("provenance")
+        if (not isinstance(provenance, Mapping)
+                or provenance.get("source_project_relative_path") != source_relative
+                or provenance.get("source_sha256") != source_digest
+                or provenance.get("request_id") != request_id
+                or provenance.get("registering_operation_id") != execution.get("operation_id")):
+            raise CandidateError("artifact.register provenance does not bind this exact saved file and public operation")
+        metadata = self.store.get_metadata("artifacts", artifact_id)
+        required_metadata = {
+            "artifact_id": artifact_id, "sha256": source_digest,
+            "size": source_size, "path": expected_relative,
+            "project_id": self.project_id, "role": "saved_model",
+            "classification": "project_local",
+            "artifact_type": "application/vnd.comsol.mph",
+            "format_version": "comsol-mph-savecopy/1",
+            "provenance": dict(provenance),
+        }
+        if not isinstance(metadata, Mapping) or any(metadata.get(key) != value
+                                                    for key, value in required_metadata.items()):
+            raise CandidateError("artifact.register durable metadata differs from the exact public registration response")
+        return {
+            **dict(artifact), "artifact_id": artifact_id,
+            "registered_relative_path": expected_relative,
+            "registered_path": str(registered_path),
+            "registered_size_bytes": source_size,
+            "registered_sha256": source_digest,
+            "registration_provenance": dict(provenance),
+            "registration_operation_id": execution.get("operation_id"),
+            "registration_job_id": execution.get("job_id"),
+            "registration_request_id": request_id,
+            "registration_idempotency_key": idempotency_key,
+        }
+
+    def _validate_managed_artifact_load_binding(self, request: Mapping[str, Any],
+                                                response: Mapping[str, Any],
+                                                context_before: Mapping[str, Any]) -> dict[str, Any]:
+        """Require model.load to create one new MCP-owned ModelRef from the registered MPH."""
+        data = response.get("data")
+        execution = response.get("execution")
+        request_arguments = request.get("arguments")
+        request_execution = request.get("execution")
+        artifact = self.slot_artifact
+        if (not isinstance(data, Mapping) or not isinstance(execution, Mapping)
+                or not isinstance(request_arguments, Mapping)
+                or not isinstance(request_execution, Mapping)
+                or not isinstance(artifact, Mapping)
+                or self.slot is None or self.slot_stage != "registered"):
+            raise CandidateError("model.load lacks the exact registered active-slot artifact context")
+        artifact_id = artifact.get("artifact_id")
+        if (not isinstance(artifact_id, str) or re.fullmatch(r"[0-9a-f]{64}", artifact_id) is None
+                or dict(request_arguments) != {"artifact_id": artifact_id}
+                or request_execution.get("model_ref") is not None
+                or request_execution.get("expected_revision") is not None
+                or request_execution.get("project_id") != self.project_id
+                or request_execution.get("session_id") != context_before.get("session_id")
+                or execution.get("project_id") != self.project_id
+                or execution.get("session_id") != context_before.get("session_id")
+                or execution.get("request_id") != request_execution.get("request_id")
+                or execution.get("idempotency_key") != request_execution.get("idempotency_key")):
+            raise CandidateError("model.load request/response is not bound to the exact registered project artifact and session")
+        if (data.get("status") != "LOADED"
+                or data.get("project_id") != self.project_id
+                or data.get("artifact_id") != artifact_id
+                or data.get("sha256") != artifact.get("registered_sha256")
+                or data.get("size_bytes") != artifact.get("registered_size_bytes")
+                or data.get("ownership") != "mcp_owned"):
+            raise CandidateError("model.load response does not report the exact registered MPH as a fresh MCP-owned load")
+        try:
+            from comsol_mcp._execution_contract import model_ref_from_mapping
+            ref_value = execution.get("model_ref")
+            predecessor_value = self.slot_adopt_binding.get("model_ref") if isinstance(self.slot_adopt_binding, Mapping) else None
+            if not isinstance(ref_value, Mapping) or not isinstance(predecessor_value, Mapping):
+                raise CandidateError("model.load or its preceding build/adopt chain omitted the exact ModelRef")
+            model_ref = model_ref_from_mapping(dict(ref_value))
+            predecessor_ref = model_ref_from_mapping(dict(predecessor_value))
+            ledger = context_before["ledger"]
+            model_state = ledger._state_for(model_ref)
+            ownership = ledger.model_ownership.get(model_ref.model_tag)
+        except CandidateError:
+            raise
+        except Exception as exc:
+            raise CandidateError("model.load ModelRef is not registered in the exact session ledger") from exc
+        if (dict(ref_value) != model_ref.as_dict()
+                or model_state.ref != model_ref or model_state.dirty
+                or model_ref.session_id != context_before.get("session_id")
+                or model_ref.server_instance_id != context_before.get("server_instance_id")
+                or model_ref.model_tag == predecessor_ref.model_tag
+                or predecessor_ref.session_id != model_ref.session_id
+                or predecessor_ref.server_instance_id != model_ref.server_instance_id
+                or data.get("model_tag") != model_ref.model_tag
+                or execution.get("model_ownership") != "mcp_owned"
+                or ownership != "mcp_owned"):
+            raise CandidateError("model.load did not produce the exact fresh MCP-owned session tag")
+        return {
+            "source_operation": "model.load",
+            "load_mode": "registered-artifact-fresh-tag",
+            "slot": list(self.slot or ()), "project_id": self.project_id,
+            "session_id": model_ref.session_id,
+            "server_instance_id": model_ref.server_instance_id,
+            "model_ref": model_ref.as_dict(), "model_ownership": "mcp_owned",
+            "loaded_artifact": dict(artifact),
+            "operation_id": execution.get("operation_id"),
+            "job_id": execution.get("job_id"), "request_id": execution.get("request_id"),
+        }
+
+    def _validate_model_load_binding(self, request: Mapping[str, Any], response: Mapping[str, Any],
+                                    context_before: Mapping[str, Any]) -> dict[str, Any]:
+        """Bind model_load to the exact saved slot and its mode-specific owner semantics.
+
+        The public legacy loader has two distinct results: ``loaded`` creates a
+        fresh MCP-owned model, while ``adopted-by-path`` selects the already
+        loaded model that was just saved.  The latter is rebound by the managed
+        backend and therefore has the same tag with the next ledger generation
+        and remains user-owned.  Neither branch accepts a foreign ModelRef.
+        """
+        data = response.get("data")
+        execution = response.get("execution")
+        request_arguments = request.get("arguments")
+        request_execution = request.get("execution")
+        artifact = self.slot_artifact
+        if (not isinstance(data, Mapping) or not isinstance(execution, Mapping)
+                or not isinstance(request_arguments, Mapping)
+                or not isinstance(request_execution, Mapping)
+                or not isinstance(artifact, Mapping)
+                or self.slot is None or self.slot_stage != "saved"):
+            raise CandidateError("model_load lacks the exact active saved-slot request/response context")
+        artifact_path = artifact.get("path")
+        if (not isinstance(artifact_path, str) or not artifact_path
+                or dict(request_arguments) != {"path": artifact_path}
+                or data.get("requested_path") != artifact_path
+                or data.get("file_path") != artifact_path
+                or request_execution.get("model_ref") is not None
+                or request_execution.get("expected_revision") is not None):
+            raise CandidateError("model_load did not reopen the exact unbound saved artifact path")
+        if (request_execution.get("project_id") != self.project_id
+                or request_execution.get("project_id") != context_before.get("project_id")
+                or request_execution.get("session_id") != context_before.get("session_id")
+                or execution.get("project_id") != self.project_id
+                or execution.get("project_id") != context_before.get("project_id")
+                or execution.get("session_id") != request_execution.get("session_id")):
+            raise CandidateError("model_load request/response differs from the exact registered project/session")
+        if (not isinstance(self.slot_adopt_binding, Mapping)
+                or self.slot_adopt_binding.get("source_operation") != "model.adopt"
+                or self.slot_adopt_binding.get("slot") != list(self.slot or ())
+                or self.slot_adopt_binding.get("project_id") != self.project_id
+                or self.slot_adopt_binding.get("session_id") != context_before.get("session_id")
+                or self.slot_adopt_binding.get("server_instance_id") != context_before.get("server_instance_id")
+                or self.slot_adopt_binding.get("model_ownership") != "user_owned"):
+            raise CandidateError("model_load lacks its exact preceding active-slot user-owned adopt binding")
+        try:
+            from comsol_mcp._execution_contract import model_ref_from_mapping
+            ref_value = execution.get("model_ref")
+            predecessor_value = self.slot_adopt_binding.get("model_ref")
+            if not isinstance(ref_value, Mapping) or not isinstance(predecessor_value, Mapping):
+                raise CandidateError("model_load or its adopt predecessor omitted the exact ModelRef")
+            model_ref = model_ref_from_mapping(dict(ref_value))
+            predecessor_ref = model_ref_from_mapping(dict(predecessor_value))
+            ledger = context_before["ledger"]
+            model_state = ledger._state_for(model_ref)
+            ownership = ledger.model_ownership.get(model_ref.model_tag)
+        except CandidateError:
+            raise
+        except Exception as exc:
+            raise CandidateError("model_load ModelRef is not registered in the exact session ledger") from exc
+        if (dict(ref_value) != model_ref.as_dict()
+                or model_state.ref != model_ref
+                or model_ref.session_id != context_before.get("session_id")
+                or model_ref.server_instance_id != context_before.get("server_instance_id")
+                or data.get("model_tag") != model_ref.model_tag):
+            raise CandidateError("model_load ModelRef is not the exact registered session model")
+
+        load_mode = data.get("load_mode")
+        expected_ownership = _model_load_expected_ownership(load_mode)
+        if load_mode == "adopted-by-path":
+            if (predecessor_ref.session_id != model_ref.session_id
+                    or predecessor_ref.server_instance_id != model_ref.server_instance_id
+                    or predecessor_ref.model_tag != model_ref.model_tag
+                    or model_ref.generation != predecessor_ref.generation + 1):
+                raise CandidateError("adopted-by-path model_load differs from the exact rebound active-slot model")
+        elif load_mode == "loaded":
+            if (predecessor_ref.session_id != model_ref.session_id
+                    or predecessor_ref.server_instance_id != model_ref.server_instance_id
+                    or predecessor_ref.model_tag == model_ref.model_tag):
+                raise CandidateError("loaded model_load is not a distinct new active-session model")
+        if (execution.get("model_ownership") != expected_ownership
+                or ownership != expected_ownership):
+            raise CandidateError("model_load ownership does not match its exact public load_mode")
+        return {
+            "source_operation": "model_load", "load_mode": load_mode,
+            "slot": list(self.slot or ()), "project_id": self.project_id,
+            "session_id": model_ref.session_id,
+            "server_instance_id": model_ref.server_instance_id,
+            "model_ref": model_ref.as_dict(), "model_ownership": expected_ownership,
+            "loaded_artifact": dict(artifact),
+            "operation_id": execution.get("operation_id"),
+            "job_id": execution.get("job_id"), "request_id": execution.get("request_id"),
+        }
+
+    @staticmethod
+    def _expected_load_binding_ownership(predecessor: Mapping[str, Any]) -> str:
+        source_operation = predecessor.get("source_operation")
+        if source_operation == "model.load":
+            if predecessor.get("load_mode") != "registered-artifact-fresh-tag":
+                raise CandidateError("model.inspect predecessor is not an exact registered-artifact fresh-tag load")
+            expected = "mcp_owned"
+        elif source_operation == "model_load":
+            expected = _model_load_expected_ownership(predecessor.get("load_mode"))
+        else:
+            raise CandidateError("model.inspect predecessor is not an exact managed load binding")
+        if predecessor.get("model_ownership") != expected:
+            raise CandidateError("managed load predecessor ownership differs from its exact load mode")
+        return expected
+
+    def _operation_store_terminal_pair_proof(
+        self,
+        *, operation: str, request: Mapping[str, Any], response: Any,
+        store: Any, context_before: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Derive a wrapper-local terminal gate from exact durable store evidence."""
+        if operation not in LEGACY_STORE_TERMINAL_PROOF_OPERATIONS:
+            raise CandidateError("operation is outside the exact legacy store-proof allowlist")
+        if (not isinstance(response, Mapping) or response.get("success") is not True
+                or response.get("error") not in (None, {})
+                or response.get("execution_state_unknown") is True):
+            raise CandidateError("public route response is not an unambiguous success")
+        data = response.get("data")
+        execution = response.get("execution")
+        request_execution = request.get("execution")
+        if (not isinstance(data, Mapping) or "worker" in data
+                or data.get("execution_state_unknown") is True
+                or not isinstance(execution, Mapping)
+                or not isinstance(request_execution, Mapping)):
+            raise CandidateError("fallback is allowed only when the public Worker key is genuinely absent")
+
+        # Re-resolve the current registration, then compare object identity and
+        # immutable semantic fields against the exact pre-dispatch snapshot.
+        after = self._terminal_proof_context_snapshot(request_execution)
+        self._assert_same_terminal_proof_context(context_before, after)
+
+        identity_fields = ("operation_id", "job_id", "request_id", "idempotency_key", "request_hash")
+        route_identity = {field: execution.get(field) for field in identity_fields}
+        if any(not isinstance(value, str) or not value for value in route_identity.values()):
+            raise CandidateError("public route response omitted exact durable operation identity")
+        if (execution.get("project_id") != context_before.get("project_id")
+                or execution.get("session_id") != context_before.get("session_id")
+                or request_execution.get("project_id") != context_before.get("project_id")
+                or request_execution.get("session_id") != context_before.get("session_id")
+                or execution.get("request_id") != request_execution.get("request_id")
+                or execution.get("idempotency_key") != request_execution.get("idempotency_key")):
+            raise CandidateError("public request/response identity differs from the registered session")
+
+        operation_row = store.get_operation(route_identity["operation_id"])
+        job_by_operation = store.operation_job(route_identity["operation_id"])
+        job_row = store.job(route_identity["job_id"])
+        if not isinstance(operation_row, Mapping) or not isinstance(job_by_operation, Mapping) or not isinstance(job_row, Mapping):
+            raise CandidateError("OperationStore did not return the exact operation/job pair")
+        if (operation_row.get("operation_id") != route_identity["operation_id"]
+                or operation_row.get("operation") != operation
+                or operation_row.get("status") != "SUCCEEDED"
+                or operation_row.get("request_id") != route_identity["request_id"]
+                or operation_row.get("idempotency_key") != route_identity["idempotency_key"]
+                or operation_row.get("request_hash") != route_identity["request_hash"]
+                or job_by_operation.get("job_id") != route_identity["job_id"]
+                or job_by_operation.get("operation_id") != route_identity["operation_id"]
+                or job_by_operation.get("status") != "SUCCEEDED"
+                or job_row.get("job_id") != route_identity["job_id"]
+                or job_row.get("operation_id") != route_identity["operation_id"]
+                or job_row.get("status") != "SUCCEEDED"):
+            raise CandidateError("durable operation/job identity is mismatched or nonterminal")
+        raw_public = dict(response)
+        if (operation_row.get("result") != raw_public
+                or job_by_operation.get("result") != raw_public
+                or job_row.get("result") != raw_public):
+            raise CandidateError("stored result does not exactly match the raw public route response")
+        op_metadata = operation_row.get("metadata")
+        job_metadata = job_row.get("metadata")
+        if not isinstance(op_metadata, Mapping) or not isinstance(job_metadata, Mapping):
+            raise CandidateError("durable operation metadata is missing")
+        durable_execution = op_metadata.get("execution")
+        runtime_binding = op_metadata.get("runtime_binding")
+        expected_arguments = request.get("arguments")
+        if (op_metadata.get("operation") != operation
+                or op_metadata.get("arguments") != expected_arguments
+                or job_metadata.get("operation") != op_metadata.get("operation")
+                or job_metadata.get("arguments") != op_metadata.get("arguments")
+                or job_metadata.get("execution") != op_metadata.get("execution")
+                or job_metadata.get("runtime_binding") != op_metadata.get("runtime_binding")
+                or not isinstance(durable_execution, Mapping)
+                or dict(durable_execution) != dict(request_execution)
+                or not isinstance(runtime_binding, Mapping)
+                or runtime_binding.get("kind") != "registered_session"
+                or runtime_binding.get("project_id") != context_before.get("project_id")
+                or runtime_binding.get("session_id") != context_before.get("session_id")
+                or type(runtime_binding.get("worker_epoch")) is not int
+                or runtime_binding.get("worker_epoch") != context_before.get("worker_epoch")
+                or runtime_binding.get("worker_instance_id") != context_before.get("worker_instance_id")):
+            raise CandidateError("durable request metadata is not bound to the exact registered session")
+
+        snapshot = store.collect_job_event_snapshot(route_identity["job_id"])
+        if (not isinstance(snapshot, Mapping) or snapshot.get("complete") is not True
+                or snapshot.get("status") != "COMPLETE"
+                or snapshot.get("job_id") != route_identity["job_id"]
+                or snapshot.get("job_row_count") != 1
+                or snapshot.get("terminal_sentinel_checked") is not True
+                or snapshot.get("terminal_sentinel_count") != 0
+                or snapshot.get("issues") != []
+                or snapshot.get("expected_event_count") != snapshot.get("fetched_event_count")
+                or snapshot.get("fetched_event_count") != len(snapshot.get("events", []))):
+            raise CandidateError("complete bounded OperationStore job-event snapshot is unavailable")
+        event_rows = snapshot.get("events")
+        if not isinstance(event_rows, list):
+            raise CandidateError("OperationStore event snapshot has an invalid row list")
+        worker_rows = [row for row in event_rows if isinstance(row, Mapping) and row.get("event") == "worker_request"]
+        if not worker_rows:
+            raise CandidateError("no terminal Worker request pairs exist for the exact operation")
+        rows_by_request: dict[str, dict[str, Mapping[str, Any]]] = {}
+        for row in worker_rows:
+            metadata = row.get("metadata")
+            if (not isinstance(metadata, Mapping)
+                    or row.get("job_id") != route_identity["job_id"]
+                    or metadata.get("operation_id") != route_identity["operation_id"]):
+                raise CandidateError("Worker event belongs to a foreign or malformed durable operation")
+            request_id = metadata.get("request_id")
+            phase = metadata.get("phase")
+            kind = metadata.get("kind")
+            request_hash = metadata.get("request_hash")
+            inner_metadata = metadata.get("metadata")
+            if (not isinstance(request_id, str) or not request_id
+                    or phase not in {"submitted", "observed"}
+                    or not isinstance(kind, str) or not kind
+                    or not isinstance(request_hash, str) or re.fullmatch(r"[0-9a-f]{64}", request_hash) is None
+                    or not isinstance(inner_metadata, Mapping)
+                    or inner_metadata.get("request_id") != request_id
+                    or request_id in rows_by_request and phase in rows_by_request[request_id]):
+                raise CandidateError("Worker event has a duplicate, malformed, or nonterminal phase")
+            rows_by_request.setdefault(request_id, {})[phase] = row
+            row_id = row.get("id")
+            if type(row_id) is not int or row_id <= 0:
+                raise CandidateError("Worker event is missing an exact durable row identity")
+        for phase_rows in rows_by_request.values():
+            if set(phase_rows) != {"submitted", "observed"}:
+                raise CandidateError("Worker request is missing its submitted/observed terminal pair")
+            submitted_row, observed_row = phase_rows["submitted"], phase_rows["observed"]
+            submitted, observed = submitted_row["metadata"], observed_row["metadata"]
+            submitted_inner, observed_inner = submitted.get("metadata"), observed.get("metadata")
+            reply = observed.get("reply")
+            if (submitted.get("kind") != observed.get("kind")
+                    or submitted.get("request_hash") != observed.get("request_hash")
+                    or submitted_inner != observed_inner
+                    or observed.get("status") != "SUCCEEDED"
+                    or not isinstance(reply, Mapping)
+                    or reply.get("request_id") != observed.get("request_id")
+                    or reply.get("status") != "SUCCEEDED"
+                    or reply.get("ok") is not True):
+                raise CandidateError("Worker submitted/observed receipt pair is not exactly terminal SUCCEEDED")
+            if submitted_row["id"] >= observed_row["id"]:
+                raise CandidateError("Worker observed receipt does not follow its submitted receipt")
+
+        from comsol_mcp._execution_contract import model_ref_from_mapping
+        response_execution = execution
+        model_ref_value = response_execution.get("model_ref")
+        if operation in {"model_create", "model.adopt", "model_load", "model.load"}:
+            if not isinstance(model_ref_value, Mapping) or data.get("model_tag") != model_ref_value.get("model_tag"):
+                raise CandidateError("model route result omitted the exact model tag/ModelRef pair")
+        elif operation == "model.inspect":
+            model_ref_value = request_execution.get("model_ref")
+            if response_execution.get("model_ref") != model_ref_value:
+                raise CandidateError("model.inspect result differs from its exact outer ModelRef")
+        try:
+            model_ref = model_ref_from_mapping(dict(model_ref_value))
+            model_state = context_before["service"].ledger._state_for(model_ref)
+        except Exception as exc:
+            raise CandidateError("route ModelRef is not registered in the exact session ledger") from exc
+        ledger_ownership = context_before["service"].ledger.model_ownership.get(model_ref.model_tag)
+        if operation == "model_create":
+            expected_ownership = "mcp_owned"
+            if (model_ref.model_tag != data.get("model_tag")
+                    or execution.get("model_ownership") != expected_ownership
+                    or ledger_ownership != expected_ownership):
+                raise CandidateError("created ModelRef is not the exact MCP-owned session model")
+        elif operation == "model_load":
+            self._validate_model_load_binding(request, response, context_before)
+        elif operation == "model.load":
+            self._validate_managed_artifact_load_binding(request, response, context_before)
+        elif operation == "model.adopt":
+            if (self.slot_stage != "built"
+                    or model_ref.model_tag != self.slot_model_tag
+                    or execution.get("project_id") != context_before.get("project_id")
+                    or execution.get("session_id") != context_before.get("session_id")
+                    or execution.get("model_ownership") != "user_owned"
+                    or ledger_ownership != "user_owned"):
+                raise CandidateError("model.adopt result is not the exact active-slot registered-session user model")
+        elif operation == "model.inspect":
+            if self.slot_stage == "adopted":
+                predecessor = self.slot_adopt_binding
+                expected_ownership = "user_owned"
+                predecessor_kind = "model.adopt"
+            elif self.slot_stage == "loaded":
+                predecessor = self.slot_load_binding
+                if not isinstance(predecessor, Mapping):
+                    raise CandidateError("model.inspect lacks its exact managed load binding")
+                expected_ownership = self._expected_load_binding_ownership(predecessor)
+                predecessor_kind = str(predecessor.get("source_operation"))
+            else:
+                raise CandidateError("model.inspect has no exact active-slot adopt/load predecessor")
+            if not isinstance(predecessor, Mapping):
+                raise CandidateError(f"model.inspect lacks its exact {predecessor_kind} ModelRef binding")
+            predecessor_ref = predecessor.get("model_ref")
+            observed_ref = data.get("model_identity")
+            if (not isinstance(predecessor_ref, Mapping)
+                    or not isinstance(observed_ref, Mapping)
+                    or dict(predecessor_ref) != model_ref.as_dict()
+                    or request_execution.get("model_ref") != model_ref.as_dict()
+                    or execution.get("model_ref") != model_ref.as_dict()
+                    or dict(observed_ref) != model_ref.as_dict()
+                    or predecessor.get("slot") != list(self.slot or ())
+                    or predecessor.get("project_id") != context_before.get("project_id")
+                    or predecessor.get("session_id") != context_before.get("session_id")
+                    or predecessor.get("server_instance_id") != context_before.get("server_instance_id")
+                    or predecessor.get("model_ownership") != expected_ownership
+                    or execution.get("model_ownership") != expected_ownership
+                    or ledger_ownership != expected_ownership):
+                raise CandidateError(f"model.inspect differs from the exact {predecessor_kind} identity/ownership chain")
+        if (model_ref.session_id != context_before.get("session_id")
+                or model_ref.server_instance_id != context_before.get("server_instance_id")
+                or model_ref.model_tag != data.get("model_tag", model_ref.model_tag)
+                or model_state.ref != model_ref):
+            raise CandidateError("route ModelRef does not bind to the exact session/service model state")
+
+        pair_rows = []
+        for request_id, phase_rows in sorted(rows_by_request.items()):
+            submitted_row, observed_row = phase_rows["submitted"], phase_rows["observed"]
+            submitted = submitted_row["metadata"]
+            pair_rows.append({
+                "request_id": request_id,
+                "kind": submitted.get("kind"),
+                "request_hash": submitted.get("request_hash"),
+                "submitted_event_id": submitted_row["id"],
+                "observed_event_id": observed_row["id"],
+            })
+        proof_body = {
+            "schema": "W24_OPERATION_STORE_TERMINAL_PAIR_PROOF_V1",
+            "proof_kind": "operation_store_terminal_pair",
+            "source": "local_control_daemon_operation_store_and_registered_context",
+            "operation": operation,
+            "operation_identity": route_identity,
+            "project_id": context_before["project_id"],
+            "session_id": context_before["session_id"],
+            "worker_instance_id": context_before["worker_instance_id"],
+            "worker_epoch": context_before["worker_epoch"],
+            "server_instance_id": context_before["server_instance_id"],
+            "endpoint": {"host": context_before["endpoint_host"],
+                         "port": context_before["endpoint_port"],
+                         "observed_peer": {"address": context_before["endpoint_peer"].address,
+                                           "port": context_before["endpoint_peer"].port}},
+            "worker_request_pair_count": len(pair_rows),
+            "worker_request_pairs": pair_rows,
+            "job_event_snapshot_sha256": snapshot.get("events_sha256"),
+            "context_identity_sha256": _sha_bytes(json.dumps({
+                "project_id": context_before["project_id"], "session_id": context_before["session_id"],
+                "worker_instance_id": context_before["worker_instance_id"],
+                "worker_epoch": context_before["worker_epoch"],
+                "server_instance_id": context_before["server_instance_id"],
+                "endpoint_host": context_before["endpoint_host"],
+                "endpoint_port": context_before["endpoint_port"],
+            }, sort_keys=True, separators=(",", ":")).encode("utf-8")),
+            "raw_public_response_sha256": _sha_bytes(json.dumps(
+                raw_public, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+                allow_nan=False).encode("utf-8")),
+        }
+        proof_body["proof_sha256"] = _sha_bytes(json.dumps(
+            proof_body, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+            allow_nan=False).encode("utf-8"))
+        return proof_body
+
+    def _validate_model_inspect_binding(self, request_execution: Mapping[str, Any],
+                                        response: Mapping[str, Any],
+                                        context_before: Mapping[str, Any]) -> None:
+        """Require model.inspect to preserve the exact active-slot ModelRef chain."""
+        if self.slot_stage == "adopted":
+            predecessor = self.slot_adopt_binding
+            expected_ownership = "user_owned"
+            predecessor_kind = "model.adopt"
+        elif self.slot_stage == "loaded":
+            predecessor = self.slot_load_binding
+            if not isinstance(predecessor, Mapping):
+                raise CandidateError("model.inspect lacks its exact managed load binding")
+            expected_ownership = self._expected_load_binding_ownership(predecessor)
+            predecessor_kind = str(predecessor.get("source_operation"))
+        else:
+            raise CandidateError("model.inspect has no exact active-slot adopt/load predecessor")
+        if not isinstance(predecessor, Mapping):
+            raise CandidateError(f"model.inspect lacks its exact {predecessor_kind} ModelRef binding")
+        data = response.get("data")
+        execution = response.get("execution")
+        if not isinstance(data, Mapping) or not isinstance(execution, Mapping):
+            raise CandidateError("model.inspect omitted its public identity envelope")
+        try:
+            from comsol_mcp._execution_contract import model_ref_from_mapping
+            ref_value = request_execution.get("model_ref")
+            if not isinstance(ref_value, Mapping):
+                raise CandidateError("model.inspect request omitted its exact ModelRef")
+            model_ref = model_ref_from_mapping(dict(ref_value))
+            model_state = context_before["ledger"]._state_for(model_ref)
+            ledger_ownership = context_before["ledger"].model_ownership.get(model_ref.model_tag)
+        except CandidateError:
+            raise
+        except Exception as exc:
+            raise CandidateError("model.inspect ModelRef is not registered in the active session ledger") from exc
+        predecessor_ref = predecessor.get("model_ref")
+        observed_ref = data.get("model_identity")
+        expected_project = self.project_id
+        expected_session = request_execution.get("session_id")
+        if (not isinstance(predecessor_ref, Mapping)
+                or not isinstance(observed_ref, Mapping)
+                or dict(predecessor_ref) != model_ref.as_dict()
+                or dict(ref_value) != model_ref.as_dict()
+                or execution.get("model_ref") != model_ref.as_dict()
+                or dict(observed_ref) != model_ref.as_dict()
+                or predecessor.get("slot") != list(self.slot or ())
+                or predecessor.get("project_id") != expected_project
+                or request_execution.get("project_id") != expected_project
+                or execution.get("project_id") != expected_project
+                or predecessor.get("session_id") != expected_session
+                or model_ref.session_id != expected_session
+                or execution.get("session_id") != expected_session
+                or predecessor.get("server_instance_id") != model_ref.server_instance_id
+                or model_ref.server_instance_id != context_before.get("server_instance_id")
+                or data.get("model_tag", model_ref.model_tag) != model_ref.model_tag
+                or model_state.ref != model_ref
+                or predecessor.get("model_ownership") != expected_ownership
+                or execution.get("model_ownership") != expected_ownership
+                or ledger_ownership != expected_ownership):
+            raise CandidateError(f"model.inspect differs from the exact {predecessor_kind} identity/ownership chain")
+
     def dispatch(self, request: Mapping[str, Any]) -> dict[str, Any]:
         if self.native_epoch_capability is not None:
             from tools.w24_native_epoch_capability import require_native_epoch_capability
@@ -1455,6 +3736,16 @@ class BudgetedSetupDaemon:
             raise CandidateError("managed setup route requires nonempty stable operation identity")
         routed["arguments"] = routed_arguments
         routed["execution"] = execution
+        is_artifact_registration = (operation == "operation_call"
+                                    and routed_arguments.get("operation_id") == "artifact.register")
+        if is_artifact_registration:
+            registration_body = routed_arguments.get("arguments")
+            if (not isinstance(registration_body, Mapping)
+                    or registration_body.get("project_id") != self.project_id
+                    or registration_body.get("request_id") != execution.get("request_id")
+                    or registration_body.get("idempotency_key") != execution.get("idempotency_key")
+                    or execution.get("project_id") != self.project_id):
+                raise CandidateError("artifact.register nested and outer project/request identities must match exactly")
         identity_hash = _sha_bytes(request_id.encode("utf-8"))
         route_dir = self.events_path.parent / "managed_routes"
         route_dir.mkdir(parents=True, exist_ok=True)
@@ -1467,9 +3758,28 @@ class BudgetedSetupDaemon:
             "persisted_before_dispatch": True,
             "created_at_utc": datetime.now(timezone.utc).isoformat(),
         })
+        terminal_context_before = None
+        terminal_context_capture_error = None
+        if operation in LEGACY_STORE_TERMINAL_PROOF_OPERATIONS or is_artifact_registration:
+            try:
+                terminal_context_before = self._terminal_proof_context_snapshot(execution)
+            except Exception as exc:
+                terminal_context_capture_error = f"{type(exc).__name__}: {exc}"
+        registered_context_operations = {"model.adopt", "model.inspect", "model_load", "model.load"}
+        if operation in registered_context_operations:
+            if terminal_context_before is None:
+                raise CandidateError(terminal_context_capture_error or
+                                     "route requires an exact pre-dispatch registered session context")
+            if (execution.get("project_id") != terminal_context_before.get("project_id")
+                    or execution.get("session_id") != terminal_context_before.get("session_id")):
+                raise CandidateError("route execution identity differs from the exact registered session context")
+            if operation == "model.inspect":
+                self._validate_requested_model_ref_context(execution, terminal_context_before)
         if operation == "model_create":
             self.bootstrap_model_create_used = True
-        worker_required = operation in {"model_create", "model.inspect", "model_load", "operation_call"}
+        worker_required = (operation in {"model_create", "model.adopt", "model.inspect", "model_load", "model.load"}
+                           or (operation == "operation_call"
+                               and routed_arguments.get("operation_id") != "artifact.register"))
         try:
             response = self._daemon.dispatch(routed)
         except BaseException as exc:
@@ -1489,6 +3799,10 @@ class BudgetedSetupDaemon:
                                        "idempotency_key": idempotency_key,
                                        "error_type": type(exc).__name__, "error": str(exc)})
             raise
+        gate_response = response
+        terminal_pair_proof = None
+        terminal_pair_failure = None
+        terminal_context_failure = None
         worker_status = None
         data = response.get("data") if isinstance(response, Mapping) else None
         worker = data.get("worker") if isinstance(data, Mapping) else None
@@ -1513,10 +3827,43 @@ class BudgetedSetupDaemon:
         except BaseException as exc:
             self.unknown = True
             raise CandidateError("managed setup result could not be durably recorded; preserve the original operation") from exc
+        if operation in registered_context_operations or is_artifact_registration:
+            try:
+                terminal_context_after = self._terminal_proof_context_snapshot(execution)
+                self._assert_same_terminal_proof_context(terminal_context_before, terminal_context_after)
+            except Exception as exc:
+                terminal_context_failure = f"{type(exc).__name__}: {exc}"
+        if (worker_required and operation in LEGACY_STORE_TERMINAL_PROOF_OPERATIONS
+                and isinstance(response, Mapping) and isinstance(data, Mapping)
+                and "worker" not in data):
+            try:
+                if terminal_context_before is None:
+                    raise CandidateError(terminal_context_capture_error or
+                                         "pre-dispatch registered session snapshot is unavailable")
+                terminal_pair_proof = self._operation_store_terminal_pair_proof(
+                    operation=operation, request=routed, response=response,
+                    store=self.store, context_before=terminal_context_before,
+                )
+                proof_path = route_dir / f"{identity_hash}_terminal_pair_proof.json"
+                _write_new(proof_path, terminal_pair_proof)
+                gate_data = dict(data)
+                gate_data["worker"] = {
+                    "status": "SUCCEEDED",
+                    "proof_kind": "operation_store_terminal_pair",
+                    "proof_sha256": terminal_pair_proof["proof_sha256"],
+                }
+                # This is a wrapper-local gate copy.  The public response above,
+                # the raw route-result receipt, and OperationStore.result retain
+                # their exact original shape and bytes.
+                gate_response = {**response, "data": gate_data}
+                worker_status = "SUCCEEDED"
+            except Exception as exc:
+                terminal_pair_failure = f"{type(exc).__name__}: {exc}"
         uncertain = (not isinstance(response, Mapping) or
                      response.get("execution_state_unknown") is True or
                      (isinstance(data, Mapping) and data.get("execution_state_unknown") is True) or
-                     (worker_required and not self._worker_terminal(response)))
+                     terminal_context_failure is not None or
+                     (worker_required and not self._worker_terminal(gate_response)))
         if uncertain:
             self.unknown = True
         _append(self.events_path, {"event": "setup_dispatch_returned",
@@ -1526,6 +3873,10 @@ class BudgetedSetupDaemon:
                                    "idempotency_key": idempotency_key,
                                    "success": response.get("success") is True if isinstance(response, Mapping) else False,
                                    "worker_status": worker_status,
+                                   "terminal_proof_kind": (terminal_pair_proof.get("proof_kind")
+                                                           if isinstance(terminal_pair_proof, Mapping) else None),
+                                   "terminal_proof_failure": terminal_pair_failure,
+                                   "registered_context_failure": terminal_context_failure,
                                    "execution_state_unknown": uncertain,
                                    "remaining_budget_seconds": max(0.0, self.deadline_monotonic - time.monotonic()),
                                    "rss_stop_reason": self.monitor.stop_reason})
@@ -1540,11 +3891,18 @@ class BudgetedSetupDaemon:
                 raise CandidateError("Worker-backed setup route failed; preserve the original Worker and do not follow up")
             return response
         if worker_required:
-            data = response.get("data")
-            worker = data.get("worker") if isinstance(data, Mapping) else None
+            gate_data = gate_response.get("data")
+            worker = gate_data.get("worker") if isinstance(gate_data, Mapping) else None
             if not isinstance(worker, Mapping) or worker.get("status") != "SUCCEEDED":
                 self.unknown = True
                 raise CandidateError("Worker-backed setup route lacks terminal SUCCEEDED status")
+
+        if operation == "model.inspect":
+            try:
+                self._validate_model_inspect_binding(execution, response, terminal_context_before)
+            except CandidateError:
+                self.unknown = True
+                raise
 
         if self.native_epoch_capability is not None and operation == "operation_call" and arguments.get("operation_id") == "code.execute_java":
             try:
@@ -1558,18 +3916,70 @@ class BudgetedSetupDaemon:
                 raise CandidateError("actual Java epoch/origin guard failed; no follow-on route") from exc
 
         if operation == "model.adopt":
-            execution = response.get("execution")
-            ref = execution.get("model_ref") if isinstance(execution, Mapping) else None
-            if not isinstance(ref, Mapping) or ref.get("model_tag") != self.slot_model_tag:
+            route_execution = response.get("execution")
+            data = response.get("data")
+            ref = route_execution.get("model_ref") if isinstance(route_execution, Mapping) else None
+            try:
+                from comsol_mcp._execution_contract import model_ref_from_mapping
+                model_ref = model_ref_from_mapping(dict(ref)) if isinstance(ref, Mapping) else None
+                ledger = terminal_context_before["ledger"]
+                model_state = ledger._state_for(model_ref) if model_ref is not None else None
+                ownership = ledger.model_ownership.get(model_ref.model_tag) if model_ref is not None else None
+            except Exception as exc:
                 self.unknown = True
-                raise CandidateError("model.adopt returned a different tag; preserve the active Worker")
+                raise CandidateError("model.adopt returned a ModelRef not registered in the active session ledger") from exc
+            if (model_ref is None or not isinstance(data, Mapping)
+                    or model_ref.model_tag != self.slot_model_tag
+                    or data.get("model_tag") != self.slot_model_tag
+                    or route_execution.get("project_id") != self.project_id
+                    or execution.get("project_id") != self.project_id
+                    or route_execution.get("session_id") != execution.get("session_id")
+                    or model_ref.session_id != route_execution.get("session_id")
+                    or model_ref.server_instance_id != terminal_context_before["server_instance_id"]
+                    or model_state.ref != model_ref
+                    or route_execution.get("model_ownership") != "user_owned"
+                    or ownership != "user_owned"):
+                self.unknown = True
+                raise CandidateError("model.adopt did not return the exact active-slot user-owned ModelRef")
+            self.slot_adopt_binding = {
+                "source_operation": "model.adopt", "slot": list(self.slot or ()),
+                "project_id": route_execution["project_id"], "session_id": route_execution["session_id"],
+                "server_instance_id": model_ref.server_instance_id,
+                "model_ref": model_ref.as_dict(), "model_ownership": ownership,
+                "operation_id": route_execution.get("operation_id"),
+                "job_id": route_execution.get("job_id"), "request_id": route_execution.get("request_id"),
+            }
             self.slot_stage = "adopted"
         elif operation == "model.inspect":
             self.slot_stage = ("pre_save_inspected" if self.slot_stage == "adopted"
                                else "reopened_inspected")
         elif operation == "model_load":
+            try:
+                self.slot_load_binding = self._validate_model_load_binding(
+                    routed, response, terminal_context_before,
+                )
+            except CandidateError:
+                self.unknown = True
+                raise
+            self.slot_stage = "loaded"
+        elif operation == "model.load":
+            try:
+                self.slot_load_binding = self._validate_managed_artifact_load_binding(
+                    routed, response, terminal_context_before,
+                )
+            except CandidateError:
+                self.unknown = True
+                raise
             self.slot_stage = "loaded"
         elif operation == "operation_call":
+            if routed_arguments.get("operation_id") == "artifact.register":
+                try:
+                    self.slot_artifact = self._validate_registered_artifact(routed, response)
+                except CandidateError:
+                    self.unknown = True
+                    raise
+                self.slot_stage = "registered"
+                return response
             data = response.get("data")
             envelope = data.get("readback") if isinstance(data, Mapping) else None
             nested_result = envelope.get("readback") if isinstance(envelope, Mapping) else None
@@ -1577,7 +3987,17 @@ class BudgetedSetupDaemon:
             entrypoint = body.get("entrypoint") if isinstance(body, Mapping) else None
             java_arguments = body.get("arguments") if isinstance(body, Mapping) else None
             action = java_arguments.get("action") if isinstance(java_arguments, Mapping) else None
-            if entrypoint == "W24StaticShapeFixture#run":
+            if self.schema_probe_only:
+                if (entrypoint != "W24StaticShapeFixture#run" or
+                        java_arguments != {"action": "property_schema_only"} or
+                        not isinstance(nested_result, Mapping) or
+                        nested_result.get("action") != "property_schema_only" or
+                        not isinstance(nested_result.get("model_tag"), str)):
+                    self.unknown = True
+                    raise CandidateError("schema-only Worker response lacks its exact terminal fixture result")
+                self.schema_probe_result = dict(nested_result)
+                self.schema_probe_completed = True
+            elif entrypoint == "W24StaticShapeFixture#run":
                 tag = nested_result.get("model_tag") if isinstance(nested_result, Mapping) else None
                 if not isinstance(tag, str) or not tag:
                     self.unknown = True
@@ -1645,6 +4065,30 @@ def validate_current_epoch_binding(binding: Any, *, project_id: str,
     return dict(binding)
 
 
+def _owned_server_start_identity(response: Mapping[str, Any], *, project_id: str,
+                                 runtime_id: str) -> dict[str, Any]:
+    data = response.get("data") if isinstance(response, Mapping) else None
+    endpoint = data.get("endpoint") if isinstance(data, Mapping) else None
+    identity = data.get("server_process_identity") if isinstance(data, Mapping) else None
+    session_id = data.get("session_id") if isinstance(data, Mapping) else None
+    if (response.get("success") is not True or not isinstance(data, Mapping) or
+            data.get("project_id") != project_id or data.get("runtime_id") != runtime_id or
+            data.get("server_ownership") != "mcp_managed" or
+            data.get("loopback_only_verified") is not True or
+            not isinstance(session_id, str) or not session_id or
+            not isinstance(endpoint, Mapping) or endpoint.get("host") != "127.0.0.1" or
+            type(endpoint.get("port")) is not int or not 1 <= endpoint["port"] <= 65535 or
+            not isinstance(identity, Mapping) or identity.get("runtime_id") != runtime_id or
+            identity.get("endpoint") != dict(endpoint) or
+            type(identity.get("pid")) is not int or identity["pid"] <= 1 or
+            not isinstance(identity.get("birth"), str) or not identity["birth"]):
+        raise CandidateError("session.start did not return the exact new owned-server lifecycle binding")
+    return {"project_id": project_id, "runtime_id": runtime_id,
+            "session_id": session_id, "endpoint": dict(endpoint),
+            "server_process_identity": dict(identity),
+            "server_listener_sockets": data.get("server_listener_sockets")}
+
+
 def _session_identity(response: Mapping[str, Any], *, project_id: str,
                       expected_port: int) -> dict[str, Any]:
     data = response.get("data")
@@ -1682,16 +4126,37 @@ def _require_connected_inspect(response: Mapping[str, Any], session: Mapping[str
     data = response.get("data")
     lifecycle = data.get("lifecycle") if isinstance(data, Mapping) else None
     binding = data.get("worker_binding") if isinstance(data, Mapping) else None
+    expected_project = session.get("project_id")
+    expected_session = session.get("session_id")
+    expected_endpoint = session.get("endpoint")
+    expected_server = session.get("server_instance_id")
+    expected_worker = session.get("worker_instance_id")
+    expected_epoch = session.get("worker_epoch")
     if (response.get("success") is not True or not isinstance(data, Mapping) or
-            data.get("project_id") != session.get("project_id") or
             data.get("runtime_live") is not True or not isinstance(lifecycle, Mapping) or
-            not isinstance(binding, Mapping) or lifecycle.get("session_id") != session.get("session_id") or
+            not isinstance(binding, Mapping) or
+            not isinstance(expected_project, str) or not expected_project or
+            not isinstance(expected_session, str) or not expected_session or
+            not isinstance(expected_endpoint, Mapping) or set(expected_endpoint) != {"host", "port"} or
+            expected_endpoint.get("host") != "127.0.0.1" or
+            type(expected_endpoint.get("port")) is not int or
+            not 1 <= expected_endpoint["port"] <= 65535 or
+            not isinstance(expected_server, str) or not expected_server or
+            not isinstance(expected_worker, str) or not expected_worker or
+            type(expected_epoch) is not int or expected_epoch < 1 or
+            lifecycle.get("project_id") != expected_project or
+            lifecycle.get("session_id") != expected_session or
             lifecycle.get("state") != "CONNECTED" or
-            lifecycle.get("worker_instance_id") != session.get("worker_instance_id") or
-            lifecycle.get("worker_epoch") != session.get("worker_epoch") or
-            binding.get("worker_instance_id") != session.get("worker_instance_id") or
-            binding.get("worker_epoch") != session.get("worker_epoch")):
-        raise CandidateError("session.inspect did not confirm the exact connected Worker epoch")
+            lifecycle.get("endpoint") != dict(expected_endpoint) or
+            lifecycle.get("server_instance_id") != expected_server or
+            lifecycle.get("worker_instance_id") != expected_worker or
+            type(lifecycle.get("worker_epoch")) is not int or
+            lifecycle.get("worker_epoch") != expected_epoch or
+            binding.get("worker_instance_id") != expected_worker or
+            type(binding.get("worker_epoch")) is not int or
+            binding.get("worker_epoch") != expected_epoch or
+            binding.get("server_lane") != "owned"):
+        raise CandidateError("session.inspect did not confirm the exact connected Worker epoch and owned server binding")
     return dict(response)
 
 
@@ -1748,7 +4213,8 @@ def _direct_dispatch(daemon: Any, evidence: Path, *, operation: str,
                 "at_utc": datetime.now(timezone.utc).isoformat(),
             })
         finally:
-            raise OutcomeUnknown(f"ControlDaemon {operation} raised after persisted intent; do not replay") from exc
+            raise OutcomeUnknown(f"ControlDaemon {operation} raised after persisted intent; do not replay",
+                             request_id=request_id, idempotency_key=key) from exc
     if not isinstance(response, Mapping):
         _write_new(route_dir / f"{stem}_result.json", {
             "schema": "W24_SETUP_DIRECT_ROUTE_RESULT_V1",
@@ -1756,7 +4222,8 @@ def _direct_dispatch(daemon: Any, evidence: Path, *, operation: str,
             "idempotency_key": key, "response_type": type(response).__name__,
             "response_repr": repr(response), "terminal_identity": False,
         })
-        raise OutcomeUnknown(f"ControlDaemon {operation} returned a non-object result; do not replay")
+        raise OutcomeUnknown(f"ControlDaemon {operation} returned a non-object result; do not replay",
+                             request_id=request_id, idempotency_key=key)
     try:
         _write_new(route_dir / f"{stem}_result.json",
                    {"schema": "W24_SETUP_DIRECT_ROUTE_RESULT_V1",
@@ -1764,11 +4231,15 @@ def _direct_dispatch(daemon: Any, evidence: Path, *, operation: str,
                     "idempotency_key": key, "response": dict(response),
                     "at_utc": datetime.now(timezone.utc).isoformat()})
     except BaseException as exc:
-        raise OutcomeUnknown(f"ControlDaemon {operation} returned but durable response receipt failed; do not replay") from exc
+        raise OutcomeUnknown(f"ControlDaemon {operation} returned but durable response receipt failed; do not replay",
+                             response=dict(response), request_id=request_id,
+                             idempotency_key=key) from exc
     data = response.get("data")
     if (response.get("execution_state_unknown") is True or
             isinstance(data, Mapping) and data.get("execution_state_unknown") is True):
-        raise OutcomeUnknown(f"ControlDaemon {operation} returned UNKNOWN; preserve the original operation identity")
+        raise OutcomeUnknown(f"ControlDaemon {operation} returned UNKNOWN; preserve the original operation identity",
+                             response=dict(response), request_id=request_id,
+                             idempotency_key=key)
     return dict(response)
 
 
@@ -1781,7 +4252,10 @@ def _project_create_before_birth(daemon: Any, authorized_root: Path,
 
     host_grants = _require_trusted_code_host_grant(daemon)
     create_id, create_key = _request_ids("project-create")
-    policy = {"permissions": ["inspect", "project_write", "compute", "trusted_code"]}
+    if ("host_control" not in host_grants.get("startup_ceiling", []) or
+            "host_control" not in host_grants.get("effective_host_permissions", [])):
+        raise CandidateError("W24 private owned-server activity lacks an explicit deployment host_control grant")
+    policy = {"permissions": ["inspect", "project_write", "compute", "trusted_code", "host_control"]}
     create_arguments = {
         "label": "W24 static-shape setup campaign",
         "workspace": PROJECT_WORKSPACE,
@@ -1828,7 +4302,8 @@ def _project_create_before_birth(daemon: Any, authorized_root: Path,
             inspected.get("project_id") != project_id or inspected.get("workspace") != workspace or
             not isinstance(inspect_permissions, list) or
             set(inspect_permissions) != set(policy["permissions"]) or
-            not isinstance(effective, list) or "trusted_code" not in effective):
+            not isinstance(effective, list) or
+            not {"trusted_code", "host_control"} <= set(effective)):
         raise OutcomeUnknown("production project.inspect failed exact project/policy readback")
     created = {"status": "PROJECT_CREATED_BEFORE_ENGINE_BIRTH",
                "project_id": project_id, "workspace": workspace,
@@ -1877,13 +4352,51 @@ def _verify_worker_java_options(worker_state: Path) -> dict[str, Any]:
     payload = log_path.read_bytes()
     text = payload.decode("utf-8", "replace")
     matched = f"Picked up JAVA_TOOL_OPTIONS: {JAVA_TOOL_OPTIONS}" in text
-    evidence = {"status": "JAVA_TOOL_OPTIONS_OBSERVED" if matched else "JAVA_TOOL_OPTIONS_NOT_OBSERVED",
+    evidence = {"status": "JAVA_TOOL_OPTIONS_ECHO_PRESENT_DIAGNOSTIC" if matched else "JAVA_TOOL_OPTIONS_ECHO_ABSENT_DIAGNOSTIC",
                 "path": str(log_path), "sha256": _sha_bytes(payload),
                 "bytes": len(payload), "required_options": JAVA_TOOL_OPTIONS,
                 "observed": matched}
-    if not matched:
-        raise CandidateError("actual Worker stderr did not confirm the frozen JAVA_TOOL_OPTIONS")
     return evidence
+
+
+def _worker_jvm_identity(worker: Any, worker_identity: Mapping[str, Any],
+                         start_epoch_ms: int) -> dict[str, Any]:
+    from comsol_mcp._g2_isolation import _process_snapshot
+    from comsol_mcp._platform_process import process_identity
+
+    proc = getattr(worker, "_process", None)
+    pid = getattr(proc, "pid", None)
+    if (proc is None or type(pid) is not int or pid <= 1 or proc.poll() is not None or
+            worker_identity.get("pid") != pid):
+        raise CandidateError("Worker JVM gate lost the exact registered Popen handle")
+    snapshot = _process_snapshot(pid)
+    epoch = process_identity(pid)
+    if (not isinstance(snapshot, Mapping) or snapshot.get("pid") != pid or
+            snapshot.get("birth") != worker_identity.get("birth") or
+            snapshot.get("command_sha256") != worker_identity.get("command_sha256") or
+            not isinstance(epoch, Mapping) or epoch.get("alive") is not True or
+            epoch.get("start_epoch_ms") != start_epoch_ms):
+        raise CandidateError("Worker JVM identity differs from its registered Popen birth snapshot")
+    uid = _read_process_uid(pid)
+    if uid != os.getuid():
+        raise CandidateError("Worker JVM UID differs from the exact task owner")
+    return {"pid": pid, "uid": uid, "birth": snapshot["birth"],
+            "start_epoch_ms": start_epoch_ms,
+            "command_sha256": snapshot["command_sha256"]}
+
+
+def _verify_worker_jvm_limits(worker: Any, worker_identity: Mapping[str, Any],
+                              start_epoch_ms: int, jdk: Path,
+                              evidence_path: Path | None = None) -> dict[str, Any]:
+    pid = getattr(getattr(worker, "_process", None), "pid", None)
+    if type(pid) is not int:
+        raise CandidateError("Worker JVM limit check lacks the exact registered Popen PID")
+    expected = _worker_jvm_identity(worker, worker_identity, start_epoch_ms)
+    return _read_effective_jvm_limits(
+        pid=pid, jcmd=jdk / "bin/jcmd",
+        identity_reader=lambda: _worker_jvm_identity(worker, worker_identity,
+                                                       start_epoch_ms),
+        expected_identity=expected, evidence_path=evidence_path)
 
 
 def _model_create_binding(response: Mapping[str, Any], *, project_id: str,
@@ -1932,49 +4445,6 @@ def _terminal_campaign_ledger(daemon: Any, project_id: str) -> dict[str, Any]:
             "worker_request_activity": workers,
             "study_run_submissions": study_runs,
             "study_run_submission_count": len(study_runs)}
-
-
-def _stop_exact_server(server: Any, expected: Mapping[str, Any], port: int,
-                       *, timeout_seconds: float = 30.0) -> dict[str, Any]:
-    """TERM only; timeout retains the exact Popen and all evidence."""
-    proc = getattr(server, "proc", None)
-    if proc is None or getattr(proc, "pid", None) != expected.get("pid"):
-        raise CandidateError("server stop lacks the exact task Popen handle")
-    if type(expected.get("start_epoch_ms")) is not int or expected["start_epoch_ms"] <= 0:
-        raise CandidateError("server stop lacks a fresh Popen birth epoch")
-    from comsol_mcp._platform_process import process_identity
-    from comsol_mcp._g2_isolation import _process_snapshot
-
-    if proc.poll() is None:
-        observed = process_identity(proc.pid)
-        if (not isinstance(observed, Mapping) or observed.get("alive") is not True or
-                observed.get("start_epoch_ms") != expected["start_epoch_ms"]):
-            raise CandidateError("server PID/birth changed before TERM; exact process retained")
-        snapshot = _process_snapshot(proc.pid)
-        if (not isinstance(snapshot, Mapping) or
-                snapshot.get("birth") != expected.get("birth") or
-                snapshot.get("command_sha256") != expected.get("command_sha256")):
-            raise CandidateError("server command/birth snapshot changed before TERM; exact process retained")
-        listener = _lsof_listener(proc.pid, port)
-        if (listener.get("exit_code") != 0 or listener.get("rows") !=
-                [{"pid": proc.pid, "endpoint": f"127.0.0.1:{port}"}]):
-            raise CandidateError("server stop lacks the exact owned loopback listener proof")
-        proc.terminate()
-        try:
-            proc.wait(timeout=timeout_seconds)
-        except subprocess.TimeoutExpired as exc:
-            raise CandidateError("server did not exit after SIGTERM; no SIGKILL fallback, handle retained") from exc
-    if proc.poll() is None:
-        raise CandidateError("server child remains live after TERM wait")
-    after = _lsof_listener(proc.pid, port)
-    if after.get("rows"):
-        raise CandidateError("server listener remains after exact child exit")
-    return {"status": "STOPPED_AND_REAPED", "pid": proc.pid,
-            "start_epoch_ms": expected["start_epoch_ms"],
-            "signal": "SIGTERM", "sigkill_used": False,
-            "child_exit_confirmed": True, "child_reaped": True,
-            "listener_absent": True, "post_stop_lsof_exit_code": after.get("exit_code"),
-            "post_stop_lsof_stdout_sha256": after.get("stdout_sha256")}
 
 
 def _validate_slot_receipt(result: Mapping[str, Any], *, slot: Mapping[str, Any],
@@ -2029,8 +4499,46 @@ def _validate_slot_receipt(result: Mapping[str, Any], *, slot: Mapping[str, Any]
     if (size <= 0 or size > MAX_SINGLE_MPH_BYTES or
             artifact.get("size_bytes") != size or artifact.get("sha256") != digest):
         raise CandidateError("saved MPH exceeds its slot budget or differs from native save hash/size")
+    registered = result.get("registered_project_artifact")
+    expected_registered_relative = f"g2_artifacts/registered/{digest}.mph"
+    if not isinstance(registered, Mapping):
+        raise CandidateError("setup receipt omitted the exact public artifact.register result")
+    registered_path = Path(str(registered.get("path", "")))
+    try:
+        registered_resolved = registered_path.resolve(strict=True)
+        registered_resolved.relative_to(workspace.resolve(strict=True))
+    except (OSError, ValueError) as exc:
+        raise CandidateError("registered MPH copy is missing or escaped the exact project workspace") from exc
+    provenance = registered.get("provenance")
+    expected_source_relative = resolved.relative_to(workspace.resolve(strict=True)).as_posix()
+    registration_operation = registered.get("registration_operation_id")
+    registration_request = registered.get("registration_request_id")
+    registration_idempotency = registered.get("registration_idempotency_key")
+    if (registered_path.is_symlink() or not registered_resolved.is_file()
+            or registered.get("artifact_id") != digest
+            or registered.get("relative_path") != expected_registered_relative
+            or registered_resolved.relative_to(workspace.resolve(strict=True)).as_posix() != expected_registered_relative
+            or registered.get("size_bytes") != size or registered_resolved.stat().st_size != size
+            or registered.get("sha256") != digest or _sha_file(registered_resolved) != digest
+            or registered.get("role") != "saved_model"
+            or registered.get("classification") != "project_local"
+            or registered.get("artifact_type") != "application/vnd.comsol.mph"
+            or registered.get("format_version") != "comsol-mph-savecopy/1"
+            or not isinstance(provenance, Mapping)
+            or provenance.get("source_project_relative_path") != expected_source_relative
+            or provenance.get("source_sha256") != digest
+            or provenance.get("registering_operation_id") != registration_operation
+            or provenance.get("request_id") != registration_request
+            or not isinstance(registration_operation, str) or not registration_operation
+            or not isinstance(registration_request, str) or not registration_request
+            or not isinstance(registration_idempotency, str) or not registration_idempotency):
+        raise CandidateError("setup receipt registered MPH does not bind the exact saved source, metadata, and registration provenance")
     return {"artifact": {"path": str(resolved), "size_bytes": size,
                          "sha256": digest},
+            "registered_artifact": {"path": str(registered_resolved),
+                                    "size_bytes": size, "sha256": digest,
+                                    "artifact_id": digest},
+            "accounted_output_bytes": 2 * size,
             "model_tags": [row["model_tag"] for row in checked_bindings[1:3]],
             "bindings": checked_bindings,
             "setup_science_status": "NOT_RUN",
@@ -2040,13 +4548,12 @@ def _validate_slot_receipt(result: Mapping[str, Any], *, slot: Mapping[str, Any]
 def _expected_child_environment(work: Path, repo: Path, binding: Mapping[str, Any] | None = None) -> dict[str, str]:
     site_packages = (Path(binding["python"]["site_packages"]) if binding else EXPLICIT_SITE_PACKAGES).resolve(strict=True)
     return {
-        "COMSOL_ROOT": str(work / "comsol-shadow"),
         "COMSOL_JAVA_HOME": str((Path(binding["jdk"]["home"]) if binding else JAVA11).resolve(strict=True)),
         "JAVA_HOME": str((Path(binding["jdk"]["home"]) if binding else JAVA11).resolve(strict=True)),
-        "COMSOL_PREFS_DIR": str(work / "runtime/prefs"),
         "COMSOL_PROJECT_ROOT": str(work / "project"),
         "COMSOL_SERVER_MCP_HOME": str(work / "mcp-home"),
         "COMSOL_MCP_TRUSTED_CODE": "1",
+        "COMSOL_MCP_HOST_CONTROL": "1",
         "COMSOL_MCP_ISOLATION_RECEIPT": str(work / "isolation_receipt.json"),
         "COMSOL_SERVER_VERSION": "6.4.0.293",
         "JAVA_TOOL_OPTIONS": JAVA_TOOL_OPTIONS,
@@ -2065,6 +4572,7 @@ def _verify_execution_environment(work: Path, repo: Path, binding: Mapping[str, 
     return {"status": "ISOLATED_CANDIDATE_ENVIRONMENT_MATCHED",
             "environment_variables": {key: value for key, value in expected.items()
                                        if key != "JAVA_TOOL_OPTIONS"},
+            "omitted_legacy_shared_runtime_variables": ["COMSOL_ROOT", "COMSOL_PREFS_DIR"],
             "java_tool_options_sha256": _sha_bytes(JAVA_TOOL_OPTIONS.encode()),
             "parent_process_environment_mutated": False,
             "worker_java_tool_options_source": "inherited from this exact isolated candidate process by PersistentJavaWorker Popen env copy",
@@ -2075,6 +4583,10 @@ def _verify_frozen_runtime(repo: Path, freeze: Mapping[str, Any],
                            install: Path, jdk: Path) -> dict[str, Any]:
     from comsol_mcp._java_worker import JavaWorkerPaths
 
+    mode = freeze.get("execution_mode", EXECUTION_MODE_SETUP14)
+    budget, _, _ = _execution_contract(mode)
+    if freeze.get("budget") != budget:
+        raise CandidateError("frozen runtime budget differs from the candidate execution mode")
     paths = JavaWorkerPaths(install, jdk, project_root=repo)
     classpath, manifest_hash, jar_count, jar_hash = paths.classpath()
     recorded = freeze.get("compile", {})
@@ -2092,7 +4604,7 @@ def _verify_frozen_runtime(repo: Path, freeze: Mapping[str, Any],
         raise CandidateError("external JDK differs from the frozen candidate")
     binding = freeze.get("fresh_runtime_binding")
     if binding is not None:
-        fresh_runtime.validate(binding, repo=repo, budget=SETUP_BUDGET, install=install, jdk=jdk)
+        fresh_runtime.validate(binding, repo=repo, budget=budget, install=install, jdk=jdk)
         compiled_root = Path(freeze["candidate_evidence_dir"]) / "offline_compile/classes"
         actual_classes = {}
         for path in sorted(compiled_root.rglob("*.class")):
@@ -2116,27 +4628,35 @@ def _verify_frozen_runtime(repo: Path, freeze: Mapping[str, Any],
             "classpath_entry_count": len([entry for entry in classpath.split(paths.classpath_separator) if entry])}
 
 
-def _check_process_size(work: Path) -> dict[str, Any]:
-    output = work / "project/science/outputs"
+def _check_process_size(work: Path, *, max_single_mph_bytes: int = MAX_SINGLE_MPH_BYTES,
+                        max_total_output_bytes: int = MAX_OUTPUT_BYTES) -> dict[str, Any]:
+    if (type(max_single_mph_bytes) is not int or max_single_mph_bytes < 0 or
+            type(max_total_output_bytes) is not int or max_total_output_bytes < 0):
+        raise CandidateError("output byte budgets must be non-negative integers")
+    project = work / "project/science"
+    output_dirs = ((project / "outputs", "outputs"),
+                   (project / "g2_artifacts/registered", "g2_artifacts/registered"))
     rows: list[dict[str, Any]] = []
     total = 0
-    if output.exists():
-        if output.is_symlink() or not output.is_dir():
-            raise CandidateError("project outputs directory became an alias or non-directory")
-        for path in sorted(output.iterdir()):
+    for directory, scope in output_dirs:
+        if not directory.exists():
+            continue
+        if directory.is_symlink() or not directory.is_dir():
+            raise CandidateError(f"project output area became an alias or non-directory: {scope}")
+        for path in sorted(directory.iterdir()):
             if path.is_symlink() or not path.is_file():
-                raise CandidateError("project output directory contains a symlink/non-file")
+                raise CandidateError(f"project output area contains a symlink/non-file: {scope}")
             size = path.stat().st_size
             total += size
-            rows.append({"name": path.name, "size_bytes": size,
-                         "sha256": _sha_file(path)})
-            if path.suffix.lower() == ".mph" and size > MAX_SINGLE_MPH_BYTES:
-                raise CandidateError(f"MPH exceeds the 1 GiB per-file cap: {path.name}")
-    if total > MAX_OUTPUT_BYTES:
-        raise CandidateError("aggregate project outputs exceed the 10 GiB candidate cap")
+            rows.append({"path": path.relative_to(project).as_posix(),
+                         "size_bytes": size, "sha256": _sha_file(path)})
+            if path.suffix.lower() == ".mph" and size > max_single_mph_bytes:
+                raise CandidateError(f"MPH exceeds the frozen per-file cap: {path.relative_to(project)}")
+    if total > max_total_output_bytes:
+        raise CandidateError("aggregate project outputs exceed the frozen candidate cap")
     return {"files": rows, "total_bytes": total,
-            "max_single_mph_bytes": MAX_SINGLE_MPH_BYTES,
-            "max_total_project_output_bytes": MAX_OUTPUT_BYTES}
+            "max_single_mph_bytes": max_single_mph_bytes,
+            "max_total_project_output_bytes": max_total_output_bytes}
 
 
 def _safe_session_from_lifecycle(daemon: Any, project_id: str,
@@ -2204,6 +4724,46 @@ def _validate_disconnected_session_inspect(response: Mapping[str, Any], *,
         raise CandidateError("session.inspect did not prove this exact retired session and Worker epoch")
 
 
+def _retire_owned_server_without_worker(*, daemon: Any, server: Any,
+                                        monitor: SampledRssMonitor | None,
+                                        project_id: str, server_session: Mapping[str, Any],
+                                        run_dir: Path, timeout_seconds: float) -> dict[str, Any]:
+    ledger = _terminal_campaign_ledger(daemon, project_id)
+    _write_new(run_dir / "pre_retirement_ledger.json", ledger)
+    if ledger.get("safe_to_retire") is not True:
+        raise CandidateError("durable ledger is not terminal before no-Worker Server stop")
+    key = (project_id, str(server_session["session_id"]))
+    if (daemon._session_worker_handles.get(key) is not None or
+            key in daemon._session_backends or
+            daemon._session_server_handles.get(key) is not server.managed_handle):
+        raise CandidateError("public no-Worker session.stop lacks the exact isolated owned-server lifecycle")
+    if monitor is not None:
+        monitor.set_worker_required_live(False)
+        monitor.sample_once()
+        monitor.stop()
+    response = _direct_dispatch(
+        daemon, run_dir, operation="session.stop",
+        arguments={"session_id": str(server_session["session_id"]),
+                   "authorization_ref": server.launcher.authorization_ref},
+        project_id=project_id, session_id=str(server_session["session_id"]),
+        request_label="session_stop_owned_server_without_worker",
+        timeout_seconds=min(30.0, timeout_seconds))
+    data = response.get("data") if isinstance(response, Mapping) else None
+    evidence = data.get("stop_evidence") if isinstance(data, Mapping) else None
+    if (response.get("success") is not True or not isinstance(data, Mapping) or
+            data.get("state") != "STOPPED" or not isinstance(evidence, Mapping) or
+            evidence.get("server_stopped") is not True or evidence.get("child_reaped") is not True or
+            evidence.get("listener_absent") is not True or evidence.get("sigkill_used") is not False or
+            evidence.get("pid") != server.proc.pid or
+            evidence.get("birth") != server.managed_handle.process_identity.birth):
+        raise CandidateError("public session.stop failed to retire the exact disconnected owned Server")
+    _write_new(run_dir / "server_stop_receipt.json", dict(evidence))
+    daemon.close()
+    return {"status": "PUBLIC_SESSION_STOP_REAPED_WITHOUT_WORKER",
+            "pre_retirement_ledger_sha256": _sha_file(run_dir / "pre_retirement_ledger.json"),
+            "server_stop_sha256": _sha_file(run_dir / "server_stop_receipt.json")}
+
+
 def _retire_worker_and_server(*, daemon: Any, server: Any,
                               monitor: SampledRssMonitor,
                               project_id: str, session: Mapping[str, Any],
@@ -2240,25 +4800,29 @@ def _retire_worker_and_server(*, daemon: Any, server: Any,
     _write_new(run_dir / "disconnected_session_inspect.json", inspect)
     monitor.sample_once()
     monitor.stop()
+    stop_response = _direct_dispatch(
+        daemon, run_dir, operation="session.stop",
+        arguments={"session_id": str(session["session_id"]),
+                   "authorization_ref": server.launcher.authorization_ref},
+        project_id=project_id, session_id=str(session["session_id"]),
+        request_label="session_stop_owned_server", timeout_seconds=min(30.0, timeout))
+    stop_data = stop_response.get("data") if isinstance(stop_response, Mapping) else None
+    stopped = stop_data.get("stop_evidence") if isinstance(stop_data, Mapping) else None
+    if (stop_response.get("success") is not True or not isinstance(stopped, Mapping) or
+            stop_data.get("state") != "STOPPED" or stopped.get("server_stopped") is not True or
+            stopped.get("child_reaped") is not True or stopped.get("listener_absent") is not True or
+            stopped.get("pid") != server.proc.pid or
+            stopped.get("birth") != server.managed_handle.process_identity.birth or
+            stopped.get("sigkill_used") is not False):
+        raise CandidateError("public session.stop did not retire the exact W24 ManagedServerHandle")
+    _write_new(run_dir / "server_stop_receipt.json", dict(stopped))
     close_status = "RETURNED"
     try:
         daemon.close()
     except BaseException as exc:
         close_status = f"FAILED:{type(exc).__name__}:{exc}"
-        raise CandidateError("ControlDaemon close failed after Worker retirement; server handle retained") from exc
-    if not isinstance(server.process_identity, Mapping):
-        raise CandidateError("exact server process identity is unavailable after Worker retirement")
-    expected = {"pid": server.proc.pid if server.proc is not None else None,
-                "start_epoch_ms": server.process_identity.get("start_epoch_ms"),
-                "birth": server.process_identity.get("birth"),
-                "command_sha256": server.process_identity.get("command_sha256")}
-    stopped = _stop_exact_server(server, expected, int(server.port), timeout_seconds=min(30.0, timeout))
-    try:
-        server._server_log_handle.close()
-    except Exception:
-        pass
-    _write_new(run_dir / "server_stop_receipt.json", stopped)
-    return {"status": "EXACT_WORKER_RETIRED_SERVER_TERM_REAPED",
+        raise CandidateError("ControlDaemon close failed after public owned-server stop") from exc
+    return {"status": "EXACT_WORKER_RETIRED_PUBLIC_SESSION_STOP_REAPED",
             "pre_retirement_ledger_sha256": _sha_file(run_dir / "pre_retirement_ledger.json"),
             "worker_retirement_proof_sha256": _sha_file(run_dir / "worker_retirement_proof.json"),
             "disconnected_inspect_sha256": _sha_file(run_dir / "disconnected_session_inspect.json"),
@@ -2301,9 +4865,11 @@ def _unknown_hold(*, daemon: Any, server: Any, monitor: SampledRssMonitor | None
             "candidate_sha256": candidate_sha256, "project_id": project_id,
             "session": dict(session) if isinstance(session, Mapping) else None,
             "lifecycle": lifecycle, "registered_contexts": context_rows,
+            "server_owner_binding_resolution": getattr(server, "owner_binding_resolution", None),
             "server_popen": {"pid": server.proc.pid if server.proc is not None else None,
                              "birth": server.server_snapshot.get("birth") if server.server_snapshot else None,
-                             "command_sha256": server.server_snapshot.get("command_sha256") if server.server_snapshot else None,
+                             "launch_command_sha256": server.server_snapshot.get("launch_command_sha256") if server.server_snapshot else None,
+                             "post_exec_identity": getattr(server, "server_postexec_identity", None),
                              "returncode": server.proc.poll() if server.proc is not None else None,
                              "port": server.port},
             "rss_stop_reason": (monitor.stop_reason if monitor is not None
@@ -2321,27 +4887,57 @@ def _unknown_hold(*, daemon: Any, server: Any, monitor: SampledRssMonitor | None
         first_cause=first_cause, run_dir=run_dir, stop_event=stop_event)
 
 
+def _new_static_shape_managed_runner(*, daemon: Any, project_id: str,
+                                    project_workspace: Path,
+                                    project_create_response: Mapping[str, Any],
+                                    parent_binding: Any,
+                                    source_manifest: Mapping[str, Any],
+                                    setup_runner: Any, evidence_dir: Path,
+                                    timeout_s: float) -> Any:
+    """Reserve a fresh private evidence child, then construct the real runner."""
+    from tools.run_native_w24_static_shape_setup import StaticShapeManagedRunner
+
+    # This is an owned leaf for one exact runner construction. Never adopt or
+    # reuse a path left by another activity, even if it is already a directory.
+    evidence_dir.mkdir(mode=0o700, parents=False, exist_ok=False)
+    return StaticShapeManagedRunner(
+        daemon=daemon, project_id=project_id, project_workspace=project_workspace,
+        project_create_response=project_create_response, parent_binding=parent_binding,
+        source_manifest=source_manifest, setup_runner=setup_runner,
+        evidence_dir=evidence_dir, timeout_s=timeout_s)
+
+
 def execute_candidate(*, repo: Path, evidence: Path, work: Path,
                       reviewed_sha256: str,
-                      install: Path = INSTALL_ROOT, jdk: Path = JAVA11) -> dict[str, Any]:
-    """Execute exactly the reviewed 14-slot setup-only campaign.
+                      install: Path = INSTALL_ROOT, jdk: Path = JAVA11,
+                      schema_probe_only: bool = False) -> dict[str, Any]:
+    """Execute the exact frozen setup14 or one-shot zero-study schema mode.
 
-    This function is intentionally never invoked during software-only review.
-    It requires an explicit candidate SHA, a new private work path, the exact
-    environment contract, a fresh scoped inventory, and zero-solve route guards.
+    Native entry requires an explicit candidate SHA, a new private work path,
+    the exact environment contract, a fresh scoped inventory, and the existing
+    owner/UNKNOWN cleanup guards.  Schema mode dispatches one registered model
+    and one trusted metadata-only Java entrypoint.
     """
+    if type(schema_probe_only) is not bool:
+        raise CandidateError("schema_probe_only execution flag must be an exact Boolean")
     # Validate authority/source before isolation and before any native process birth.
     freeze_raw = json.loads(fresh_runtime.read_owned(evidence / FREEZE_FILE), object_pairs_hook=fresh_runtime._pairs)
+    frozen_mode = freeze_raw.get("execution_mode", EXECUTION_MODE_SETUP14)
+    mode = EXECUTION_MODE_SCHEMA_ONLY if schema_probe_only else EXECUTION_MODE_SETUP14
+    if frozen_mode != mode:
+        raise CandidateError("execute flag differs from the reviewed frozen execution mode")
+    budget, routes, planned_slots = _execution_contract(mode)
     binding = freeze_raw.get("fresh_runtime_binding")
     if binding is not None:
-        fresh_runtime.validate(binding, repo=repo, budget=SETUP_BUDGET, install=install, jdk=jdk)
+        fresh_runtime.validate(binding, repo=repo, budget=budget, install=install, jdk=jdk)
         fresh_runtime.scoped_path(binding, evidence)
         fresh_runtime.scoped_path(binding, work, absent=True)
         if work != Path(binding["namespace"])/"work":
             raise CandidateError("fresh work must equal immutable namespace/work")
     python_isolation = configure_archive_python(repo, binding=binding) if binding else configure_archive_python(repo)
     freeze = verify_candidate(repo=repo, evidence=evidence,
-                              reviewed_sha256=reviewed_sha256)
+                              reviewed_sha256=reviewed_sha256,
+                              schema_probe_only=schema_probe_only)
     if freeze.get("source", {}).get("checkout_kind") != ("fresh_host_source_closure" if binding else "git_archive_plus_explicit_overlay"):
         raise CandidateError("native setup may execute only from the frozen published git archive plus overlay")
     if Path.cwd().resolve(strict=True) != repo.resolve(strict=True):
@@ -2358,6 +4954,19 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
             not work.resolve().is_relative_to(Path("/private/tmp"))):
         raise CandidateError("candidate work path must be new and below the frozen private temporary prefix")
     environment_receipt = _verify_execution_environment(work, repo, binding) if binding else _verify_execution_environment(work, repo)
+    controller_context = (_controller_inventory_context(
+        repo, evidence, work, binding, reviewed_sha256, budget=budget,
+        schema_probe_only=schema_probe_only)
+                          if binding is not None else None)
+    execution_plan = (_build_exact_execute_plan_from_binding(
+        repo=repo, evidence=evidence, work=work,
+        reviewed_sha256=reviewed_sha256, binding=binding,
+        schema_probe_only=schema_probe_only)
+        if binding is not None else None)
+    host_control_authorization_ref = (
+        _w24_owned_server_authorization_ref(
+            reviewed_sha256=reviewed_sha256, binding=binding, plan=execution_plan)
+        if binding is not None else None)
     if binding is None and work.parent.resolve(strict=True) != Path("/private/tmp").resolve(strict=True):
         raise CandidateError("candidate work directory must be a direct private /private/tmp child")
     work.mkdir(mode=0o700, parents=False, exist_ok=False)
@@ -2376,11 +4985,20 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
     _write_new(run_dir / "runtime_recheck.json", runtime_recheck)
     _write_new(run_dir / "candidate_environment.json", environment_receipt)
     monitor_box: dict[str, SampledRssMonitor] = {}
-    worker_root = work / "mcp-home/session-runtime-state/sessions"
-    server = W24StaticShapeSetupServer(
-        work, run_dir, event_log=events_path,
-        on_birth=lambda proc, ident: _start_rss_monitor(
-            monitor_box, proc, ident, worker_root, events_path))
+    control_home = work / "mcp-home"
+    worker_root = control_home / "session-runtime-state/sessions"
+    server = W24StaticShapeSetupServer(work, run_dir, event_log=events_path, jdk=jdk)
+
+    def observe_core_server_birth(payload: Mapping[str, Any]) -> None:
+        server.birth_monotonic = time.monotonic()
+        _start_rss_monitor_from_core_observation(
+            monitor_box, payload, worker_root, events_path)
+
+    owned_server_launcher = W24SetupOwnedServerLauncher(
+        install_root=install, evidence=run_dir,
+        installation_binding=(binding.get("comsol") if isinstance(binding, Mapping) else None),
+        observer=server, on_birth_observation=observe_core_server_birth)
+    server.launcher = owned_server_launcher
     daemon = None
     gate: BudgetedSetupDaemon | None = None
     monitor: SampledRssMonitor | None = None
@@ -2388,6 +5006,8 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
     project_response: dict[str, Any] | None = None
     project_creation: dict[str, Any] | None = None
     session: dict[str, Any] | None = None
+    server_session: dict[str, Any] | None = None
+    session_start_request: tuple[str, str] | None = None
     worker_state = "NEVER_DISPATCHED"
     setup_receipts: list[dict[str, Any]] = []
     model_tags: set[str] = set()
@@ -2396,10 +5016,13 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
     error: dict[str, Any] | None = None
     first_cause: BaseException | None = None
     cleanup: dict[str, Any] | None = None
-    slots = build_setup_slots()
+    schema_probe_result: dict[str, Any] | None = None
+    schema_probe_validation: dict[str, Any] | None = None
+    slots = planned_slots
     receipt_base: dict[str, Any] = {
         "schema": "W24_STATIC_SHAPE_SETUP_CAMPAIGN_RUN_V1",
-        "status": "RUNNING_SETUP_ONLY",
+        "execution_mode": mode,
+        "status": "RUNNING_SCHEMA_ONLY" if schema_probe_only else "RUNNING_SETUP_ONLY",
         "candidate_sha256": reviewed_sha256,
         "base_commit": None if binding else BASE_COMMIT,
         "activity_id": binding["activity_id"] if binding else None,
@@ -2410,51 +5033,37 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
         "python_isolation": python_isolation,
         "runtime_recheck": runtime_recheck,
         "runtime_module_origins": origins,
-        "route_allowlist": ROUTES,
+        "route_allowlist": routes,
+        "resource_budget": budget,
         "planned_slots": slots,
         "planned_slot_count": len(slots),
         "study_run_calls": 0, "solver_calls": 0,
+        "physics_property_set_calls": 0 if schema_probe_only else None,
         "native_scientific_acceptance": "NOT_RUN",
-        "future_science_binding_policy": SETUP_BUDGET["future_science_binding_policy"],
+        "future_science_binding_policy": budget["future_science_binding_policy"],
     }
     _append(events_path, {"event": "candidate_execution_start",
                           "at_utc": datetime.now(timezone.utc).isoformat(),
                           "candidate_sha256": reviewed_sha256,
+                          "execution_mode": mode,
                           "planned_slots": len(slots)})
 
-    def stop_server_known() -> dict[str, Any] | None:
-        nonlocal monitor
-        if server.proc is None:
-            return None
-        expected_snapshot = server.server_snapshot
-        if not isinstance(expected_snapshot, Mapping):
-            raise CandidateError("server Popen exists without birth/command identity; preserve exact handle")
-        if monitor is not None:
-            monitor.stop()
-        expected = {"pid": server.proc.pid,
-                    "start_epoch_ms": expected_snapshot.get("start_epoch_ms"),
-                    "birth": expected_snapshot.get("birth"),
-                    "command_sha256": expected_snapshot.get("command_sha256")}
-        if type(server.port) is not int:
-            raise CandidateError("server has no verified port; preserve exact Popen until identity is reconciled")
-        stopped = _stop_exact_server(server, expected, int(server.port))
-        try:
-            server._server_log_handle.close()
-        except Exception:
-            pass
-        _write_new(run_dir / "server_stop_receipt.json", stopped)
-        return stopped
 
     try:
-        if len(slots) != 14 or len({row["configuration_id"] for row in slots}) != 7:
+        if mode == EXECUTION_MODE_SETUP14 and (
+                len(slots) != 14 or len({row["configuration_id"] for row in slots}) != 7):
             raise CandidateError("frozen variant-aware setup matrix must contain exactly seven configs by two cases")
+        if mode == EXECUTION_MODE_SCHEMA_ONLY and (slots or budget.get("schema_probe_calls") != 1):
+            raise CandidateError("frozen schema-only mode must contain zero setup slots and exactly one probe call")
         if work.resolve() != work or (binding is None and work.parent.resolve(strict=True) != Path("/private/tmp").resolve(strict=True)):
             raise CandidateError("candidate work path is not canonical private temporary storage")
         shadow_receipt = server.prepare_shadow()
         _append(events_path, {"event": "private_shadow_prepared",
                               "receipt_sha256": _json_hash(shadow_receipt)})
         from comsol_mcp._control_daemon import ControlDaemon
-        daemon = ControlDaemon(work / "mcp-home", project_root=server.project)
+        daemon = ControlDaemon(control_home, project_root=server.project,
+                               session_server_launcher=owned_server_launcher)
+        owned_server_launcher.bind_control_home(control_home)
         try:
             project_creation, project_response = _project_create_before_birth(
                 daemon, server.project, run_dir)
@@ -2466,6 +5075,12 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
             raise
         project_id = str(project_creation["project_id"])
         workspace = Path(project_creation["workspace"]).resolve(strict=True)
+        owned_server_launcher.bind_reviewed_project(
+            project_id=project_id, workspace=workspace,
+            authorized_root=server.project, candidate_sha256=reviewed_sha256,
+            activity_id=str(binding["activity_id"]) if binding else _sha_bytes(str(reviewed_sha256).encode()),
+            authorization_ref=host_control_authorization_ref or
+                f"w24-owned-server:test:{reviewed_sha256}:{'0' * 128}")
         from tools.run_native_w24_static_shape_setup import prepare_project_sources
         source_manifest = prepare_project_sources(
             workspace,
@@ -2478,7 +5093,8 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
                               "project_create_response_sha256": _json_hash(project_response)})
 
         try:
-            inventory = fresh_scoped_inventory()
+            inventory = (fresh_scoped_inventory(controller_context=controller_context)
+                         if controller_context is not None else fresh_scoped_inventory())
         except BaseException as exc:
             inventory = {"schema": "W24_SETUP_FRESH_SCOPED_INVENTORY_V1",
                          "status": "INVENTORY_UNAVAILABLE",
@@ -2493,49 +5109,115 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
             status = "REFUSED_PREBIRTH_INVENTORY_UNAVAILABLE_OR_NONQUIESCENT"
             raise CandidateError("fresh scoped COMSOL/Worker/listener inventory is unavailable or non-quiescent")
 
+        from comsol_mcp._runtime_installation import runtime_id_for_root
+        runtime_id = runtime_id_for_root(install)
+        start_request_id, start_idempotency_key = _request_ids("session_start_owned_server")
+        session_start_request = (start_request_id, start_idempotency_key)
+        worker_state = "UNKNOWN_SERVER_START"
+        try:
+            start_response = _direct_dispatch(
+                daemon, run_dir, operation="session.start",
+                arguments={"runtime_id": runtime_id, "options": {}, "resources": {}},
+                project_id=project_id, request_label="session_start_owned_server",
+                timeout_seconds=45.0, request_id=start_request_id,
+                idempotency_key=start_idempotency_key)
+        except OutcomeUnknown as exc:
+            try:
+                server.bind_from_original_daemon(
+                    daemon, project_id, request_id=start_request_id,
+                    idempotency_key=start_idempotency_key)
+            except BaseException as bind_exc:
+                _hold_diagnostic({"diagnostics": []}, "session_start_owner_binding", bind_exc)
+            status = "UNKNOWN_SESSION_START"
+            error = {"type": type(exc).__name__, "message": str(exc),
+                     "stage": "session.start", "outcome": "UNKNOWN_NO_REPLAY",
+                     "request_id": start_request_id,
+                     "idempotency_key": start_idempotency_key}
+            raise
+        start_data = start_response.get("data") if isinstance(start_response, Mapping) else None
+        if (start_response.get("success") is not True and
+                start_response.get("execution_state_unknown") is not True and
+                isinstance(start_data, Mapping) and
+                start_data.get("server_birth_performed") is False):
+            worker_state = "NEVER_DISPATCHED"
+            status = "SESSION_START_FAILED_BEFORE_SERVER_BIRTH"
+            raise CandidateError("public session.start proved refusal before any server child birth")
+        try:
+            server_session = _owned_server_start_identity(
+                start_response, project_id=project_id, runtime_id=runtime_id)
+            server.bind_managed_handle(
+                owned_server_launcher, project_id, server_session["session_id"],
+                daemon._session_server_handles[(project_id, server_session["session_id"])])
+            if (server.managed_handle.process_identity is None or
+                    server_session["server_process_identity"].get("pid") != server.proc.pid or
+                    server_session["server_process_identity"].get("birth") !=
+                    server.managed_handle.process_identity.birth or
+                    server_session["endpoint"] != {"host": "127.0.0.1", "port": server.port}):
+                raise CandidateError("session.start response does not bind the exact original Core handle")
+        except BaseException as exc:
+            try:
+                server.bind_from_original_daemon(
+                    daemon, project_id, request_id=start_request_id,
+                    idempotency_key=start_idempotency_key)
+            except BaseException:
+                pass
+            status = "UNKNOWN_SESSION_START"
+            worker_state = "UNKNOWN_SERVER_START"
+            error = {"type": type(exc).__name__, "message": _hold_text(exc),
+                     "stage": "session.start_identity", "outcome": "UNKNOWN_NO_REPLAY"}
+            raise
         listener = server.start_and_verify_listener()
         monitor = monitor_box.get("monitor")
         if monitor is None or server.birth_monotonic is None or type(server.port) is not int:
-            raise CandidateError("server birth/listener/watchdog evidence is incomplete")
-        deadline = server.birth_monotonic + MAX_WALL_SECONDS
+            worker_state = "UNKNOWN_SERVER_START"
+            status = "UNKNOWN_SESSION_START"
+            raise CandidateError("Core session.start returned without exact original-birth RSS monitoring")
+        deadline = server.birth_monotonic + budget["wall_seconds_from_server_birth_including_cleanup"]
         _write_new(run_dir / "server_birth_listener.json", {
             "schema": "W24_SETUP_SERVER_BIRTH_LISTENER_V1",
-            "status": "Popen_BIRTH_AND_LOOPBACK_LISTENER_VERIFIED",
+            "status": "CORE_MANAGED_HANDLE_POSTEXEC_JAVA_AND_LOOPBACK_LISTENER_VERIFIED",
+            "project_id": project_id, "session_id": server_session["session_id"],
+            "server_process_identity": server_session["server_process_identity"],
             "process": {"pid": server.proc.pid,
                         "birth": server.server_snapshot.get("birth"),
                         "start_epoch_ms": server.server_snapshot.get("start_epoch_ms"),
-                        "command_sha256": server.server_snapshot.get("command_sha256")},
-            "listener": listener, "command": [str(server.shadow_root / "bin/comsol"),
-                                                 "mphserver", "-np", "2", "-port", "0",
-                                                 "-portfile", str(server.runtime / "server.port"),
-                                                 "-prefsdir", str(server.prefs), "-tmpdir", str(server.tmp),
-                                                 "-recoverydir", str(server.recovery),
-                                                 "-login", "auto", "-silent", "-multi", "on"],
+                        "uid": server.server_snapshot.get("uid"),
+                        "launch_command_sha256": server.server_snapshot.get("launch_command_sha256"),
+                        "post_exec_command_sha256": server.server_postexec_identity.get("post_exec_command_sha256"),
+                        "java_executable": server.java_executable_identity,
+                        "post_exec_identity": server.server_postexec_identity},
+            "listener": listener, "command": server.launch_command,
             "max_wall_deadline_monotonic": deadline,
-            "max_wall_seconds_including_cleanup": MAX_WALL_SECONDS,
-            "resource_budget": SETUP_BUDGET,
+            "max_wall_seconds_including_cleanup": budget["wall_seconds_from_server_birth_including_cleanup"],
+            "resource_budget": budget,
         })
         _append(events_path, {"event": "server_birth_listener_confirmed",
                               "pid": server.proc.pid, "port": server.port,
                               "birth": server.server_snapshot.get("birth"),
-                              "command_sha256": server.server_snapshot.get("command_sha256")})
-        status = "RUNNING_SETUP_ONLY"
+                              "launch_command_sha256": server.server_snapshot.get("launch_command_sha256"),
+                              "post_exec_command_sha256": server.server_postexec_identity.get("post_exec_command_sha256")})
+        status = "RUNNING_SCHEMA_ONLY" if schema_probe_only else "RUNNING_SETUP_ONLY"
         server_java_options = server.require_server_java_options()
         _append(events_path, {"event": "server_jvm_options_confirmed",
                               "receipt_sha256": _json_hash(server_java_options)})
+        g2_isolation_receipt = server.write_g2_isolation_receipt()
+        _append(events_path, {"event": "g2_server_isolation_receipt_confirmed",
+                              "receipt_sha256": g2_isolation_receipt["sha256"],
+                              "worker_born": False})
         if monitor.stop_reason:
             status = "STOPPED_RSS_OR_MONITOR_ADMISSION_BEFORE_WORKER"
             raise CandidateError(f"resource watchdog blocked Worker birth: {monitor.stop_reason}")
 
-        from comsol_mcp._runtime_installation import runtime_id_for_root
         connect_timeout = _remaining_admission_rpc(deadline, float(RPC_CAP_SECONDS))
         worker_state = "UNKNOWN_CONNECT_ATTEMPT"
         try:
             connect = _direct_dispatch(
                 daemon, run_dir, operation="session.connect",
-                arguments={"runtime_id": runtime_id_for_root(install),
-                           "endpoint": {"host": "127.0.0.1", "port": int(server.port)}},
-                project_id=project_id, request_label="session_connect",
+                arguments={"runtime_id": runtime_id,
+                           "session_id": server_session["session_id"],
+                           "endpoint": dict(server_session["endpoint"])},
+                project_id=project_id, session_id=server_session["session_id"],
+                request_label="session_connect",
                 timeout_seconds=connect_timeout)
         except BaseException as exc:
             status = "UNKNOWN_SESSION_CONNECT"
@@ -2557,6 +5239,10 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
                                   else "; preserve the original ambiguous session operation"))
         session = _session_identity(connect, project_id=project_id,
                                     expected_port=int(server.port))
+        if session.get("session_id") != server_session.get("session_id"):
+            worker_state = "CONNECTED_UNVERIFIED"
+            status = "UNKNOWN_SESSION_CONNECT"
+            raise CandidateError("session.connect returned a different session.start lifecycle identity")
         worker_state = "CONNECTED_UNVERIFIED"
         context, worker, worker_identity, worker_state_dir = _worker_identity_from_context(
             daemon, project_id, session)
@@ -2573,7 +5259,13 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
             "project_id": project_id, "session_id": session["session_id"],
             "worker_instance_id": session["worker_instance_id"],
             "worker_epoch": session["worker_epoch"]})
-        worker_java_options = _verify_worker_java_options(worker_state_dir)
+        worker_echo_diagnostic = _verify_worker_java_options(worker_state_dir)
+        worker_jvm_limits = _verify_worker_jvm_limits(
+            worker, worker_identity, worker_birth_ms, jdk,
+            evidence_path=run_dir / "worker_jvm_limits_readback.json")
+        worker_java_options = {"status": "WORKER_EFFECTIVE_JVM_LIMITS_VERIFIED",
+                               "log_echo_diagnostic": worker_echo_diagnostic,
+                               "effective_jvm_limits": worker_jvm_limits}
         _write_new(run_dir / "worker_java_options_readback.json", worker_java_options)
         connected_inspect = _direct_dispatch(
             daemon, run_dir, operation="session.inspect",
@@ -2601,7 +5293,9 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
             session_id=session["session_id"])
         gate = BudgetedSetupDaemon(daemon, monitor=monitor,
             deadline_monotonic=deadline, events_path=events_path,
-            workspace=workspace, project_id=project_id)
+            workspace=workspace, project_id=project_id,
+            schema_probe_only=schema_probe_only,
+            selection_diagnostic_dir=run_dir / "static_shape_managed")
         model_request_id, model_idempotency_key = _request_ids("model-create-parent")
         model_create = gate.dispatch({
             "operation": "model_create",
@@ -2621,101 +5315,181 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
             gate.unknown = True
             status = "STOPPED_UNKNOWN"
             raise
-        from tools.run_native_w24_static_shape_setup import StaticShapeManagedRunner
-        from tools import run_native_w24_cure_preflight as preflight_helpers
-        setup_adapter = preflight_helpers
-        managed_runner = StaticShapeManagedRunner(
-            daemon=gate, project_id=project_id, project_workspace=workspace,
-            project_create_response=project_response,
-            parent_binding=parent_binding, source_manifest=source_manifest,
-            setup_runner=setup_adapter, evidence_dir=run_dir / "static_shape_managed",
-            timeout_s=float(RPC_CAP_SECONDS))
+        if schema_probe_only:
+            if not gate or slots:
+                raise CandidateError("schema-only route requires the existing owner gate and an empty setup matrix")
+            source_rows = source_manifest.get("sources") if isinstance(source_manifest, Mapping) else None
+            if not isinstance(source_rows, Mapping):
+                raise CandidateError("schema-only route lacks the prepared project source manifest")
+            frozen_rows = freeze.get("source", {}).get("source_files")
+            if not isinstance(frozen_rows, Mapping):
+                raise CandidateError("schema-only route lacks the frozen source map")
+            for role, relative in (("fixture", "tools/java/W24StaticShapeFixture.java"),
+                                   ("readback", "tools/java/W24StaticShapeReadback.java")):
+                project_row = source_rows.get(role)
+                frozen_row = frozen_rows.get(relative)
+                if (not isinstance(project_row, Mapping) or not isinstance(frozen_row, Mapping) or
+                        project_row.get("sha256") != frozen_row.get("sha256")):
+                    raise CandidateError(f"schema-only project {role} source differs from the frozen candidate")
+            if monitor.stop_reason:
+                status = "STOPPED_RSS_OR_MONITOR_ADMISSION_BEFORE_SCHEMA_PROBE"
+                raise CandidateError(f"resource watchdog blocked the schema probe: {monitor.stop_reason}")
+            request_id, idempotency_key = _request_ids("schema-only-property-read")
+            schema_response = gate.dispatch({
+                "operation": "operation_call",
+                "arguments": {"operation_id": "code.execute_java", "arguments": {
+                    "source_artifact": "W24StaticShapeFixture.java",
+                    "entrypoint": "W24StaticShapeFixture#run",
+                    "arguments": {"action": "property_schema_only"},
+                    "mode": "trusted"}},
+                "execution": {"project_id": project_id,
+                              "session_id": session["session_id"],
+                              "model_ref": dict(parent_binding.model_ref),
+                              "expected_revision": parent_binding.revision,
+                              "request_id": request_id,
+                              "idempotency_key": idempotency_key,
+                              "rpc_timeout_s": float(RPC_CAP_SECONDS),
+                              "queue_timeout_s": 60.0,
+                              "execution_timeout_s": float(RPC_CAP_SECONDS)}})
+            response_data = schema_response.get("data")
+            response_envelope = response_data.get("readback") if isinstance(response_data, Mapping) else None
+            schema_probe_result = response_envelope.get("readback") if isinstance(response_envelope, Mapping) else None
+            schema_probe_validation = _validate_schema_probe_result(
+                schema_probe_result, expected_model_tag=parent_binding.model_tag)
+            if gate.schema_probe_completed is not True:
+                gate.unknown = True
+                raise CandidateError("the single schema-only Worker call did not close its one-call gate")
+            output_inventory = _check_process_size(
+                work, max_single_mph_bytes=budget["max_single_unsolved_mph_bytes"],
+                max_total_output_bytes=budget["max_total_project_output_bytes"])
+            if output_inventory["total_bytes"] != 0:
+                raise CandidateError("schema-only action produced a project output artifact")
+            _write_new(run_dir / "schema_only_property_result.json", {
+                "schema": "W24_SCHEMA_ONLY_PROPERTY_RESULT_V1",
+                "status": schema_probe_validation["status"],
+                "candidate_sha256": reviewed_sha256,
+                "source_closure_sha256": freeze["source"]["source_closure_sha256"],
+                "model_tag": parent_binding.model_tag,
+                "request_id": request_id,
+                "idempotency_key": idempotency_key,
+                "validated": schema_probe_validation,
+                "observed": schema_probe_result,
+                "project_output_inventory": output_inventory,
+                "study_run_submissions": 0, "solver_calls": 0,
+                "physics_property_set_calls": 0,
+                "geometry_length_unit_setter_calls": 1,
+                "geometry_axisymmetric_setter_calls": 1,
+                "geometry_build_calls": 0,
+                "native_acceptance": "NOT_RUN"})
+            _append(events_path, {"event": "schema_only_property_result_persisted",
+                                  "request_id": request_id,
+                                  "source_closure_sha256": freeze["source"]["source_closure_sha256"],
+                                  "property_count": schema_probe_validation["property_count"],
+                                  "study_run_submissions": 0, "solver_calls": 0,
+                                  "physics_property_set_calls": 0,
+                                  "geometry_build_calls": 0,
+                                  "native_acceptance": "NOT_RUN"})
+            status = "SCHEMA_ONLY_DIAGNOSTIC_COMPLETE_NOT_SOLVED"
+        else:
+            from tools import run_native_w24_cure_preflight as preflight_helpers
+            setup_adapter = preflight_helpers
+            managed_runner = _new_static_shape_managed_runner(
+                daemon=gate, project_id=project_id, project_workspace=workspace,
+                project_create_response=project_response,
+                parent_binding=parent_binding, source_manifest=source_manifest,
+                setup_runner=setup_adapter, evidence_dir=run_dir / "static_shape_managed",
+                timeout_s=float(RPC_CAP_SECONDS))
 
-        for slot in slots:
+            for slot in slots:
+                if gate.unknown:
+                    status = "STOPPED_UNKNOWN"
+                    break
+                if monitor.stop_reason:
+                    status = "STOPPED_RSS_OR_MONITOR_ADMISSION"
+                    break
+                if time.monotonic() >= deadline - CLEANUP_RESERVE_SECONDS:
+                    status = "STOPPED_WALL_BUDGET_CLEANUP_RESERVE"
+                    break
+                gate.set_slot(slot["configuration_id"], slot["case_id"])
+                slot_dir_name = f"{slot['submission_index']:02d}_{slot['configuration_id']}_{slot['case_id']}"
+                try:
+                    result = managed_runner.build_save_reopen(
+                        slot["case_id"], slot["configuration_id"])
+                    if gate.slot_stage != "readback_complete":
+                        gate.unknown = True
+                        status = "STOPPED_UNKNOWN"
+                        raise CandidateError("slot returned without the complete staged build/save/reopen/readback route")
+                    validation = _validate_slot_receipt(
+                        result, slot=slot, project_id=project_id, session=session,
+                        workspace=workspace, expected_sources=source_manifest.get("sources", {}),
+                        receiver_anchor=receiver_anchor, backend=receiver_backend)
+                    if any(tag in model_tags for tag in validation["model_tags"]):
+                        raise CandidateError("two preregistered setup slots resolved to a duplicate native model tag")
+                    model_tags.update(validation["model_tags"])
+                    total_outputs += validation["accounted_output_bytes"]
+                    if total_outputs > MAX_OUTPUT_BYTES:
+                        raise CandidateError("aggregate saved and registered 14-slot MPH bytes exceed the 10 GiB candidate cap")
+                    slot_path = run_dir / "sensitivity_setup_receipts" / f"{slot_dir_name}.json"
+                    receipt_hash = _write_new(slot_path, result)
+                    ledger = _terminal_campaign_ledger(daemon, project_id)
+                    ledger_path = run_dir / "slot_ledgers" / f"{slot_dir_name}.json"
+                    ledger_hash = _write_new(ledger_path, ledger)
+                    if ledger.get("safe_to_retire") is not True:
+                        gate.unknown = True
+                        status = "STOPPED_LEDGER_ACTIVE_OR_UNKNOWN"
+                        raise CandidateError("slot ended without a fully terminal OperationStore/Worker ledger")
+                    size_inventory = _check_process_size(work)
+                    _append(events_path, {"event": "setup_slot_receipt_persisted",
+                                          "submission_index": slot["submission_index"],
+                                          "configuration_id": slot["configuration_id"],
+                                          "case_id": slot["case_id"],
+                                          "receipt": str(slot_path),
+                                          "receipt_sha256": receipt_hash,
+                                          "ledger_receipt": str(ledger_path),
+                                          "ledger_sha256": ledger_hash,
+                                          "artifact": validation["artifact"],
+                                          "registered_artifact": validation["registered_artifact"],
+                                          "resource_bytes": size_inventory["total_bytes"],
+                                          "worker_epoch": session["worker_epoch"],
+                                          "binding_validity_after_retirement":
+                                              "HISTORICAL_ONLY_REQUIRES_NEW_WORKER_RE_ADMISSION"})
+                    setup_receipts.append({"submission_index": slot["submission_index"],
+                                           "configuration_id": slot["configuration_id"],
+                                           "case_id": slot["case_id"],
+                                           "receipt_path": str(slot_path),
+                                           "receipt_sha256": receipt_hash,
+                                           "ledger_path": str(ledger_path),
+                                           "ledger_sha256": ledger_hash,
+                                           "artifact": validation["artifact"],
+                                           "registered_artifact": validation["registered_artifact"],
+                                           "binding_validity_after_retirement":
+                                               "HISTORICAL_ONLY_REQUIRES_NEW_WORKER_RE_ADMISSION"})
+                finally:
+                    gate.clear_slot()
+                if monitor.stop_reason:
+                    status = "STOPPED_RSS_OR_MONITOR_ADMISSION"
+                    break
             if gate.unknown:
                 status = "STOPPED_UNKNOWN"
-                break
-            if monitor.stop_reason:
-                status = "STOPPED_RSS_OR_MONITOR_ADMISSION"
-                break
-            if time.monotonic() >= deadline - CLEANUP_RESERVE_SECONDS:
-                status = "STOPPED_WALL_BUDGET_CLEANUP_RESERVE"
-                break
-            gate.set_slot(slot["configuration_id"], slot["case_id"])
-            slot_dir_name = f"{slot['submission_index']:02d}_{slot['configuration_id']}_{slot['case_id']}"
-            try:
-                result = managed_runner.build_save_reopen(
-                    slot["case_id"], slot["configuration_id"])
-                if gate.slot_stage != "readback_complete":
-                    gate.unknown = True
-                    status = "STOPPED_UNKNOWN"
-                    raise CandidateError("slot returned without the complete staged build/save/reopen/readback route")
-                validation = _validate_slot_receipt(
-                    result, slot=slot, project_id=project_id, session=session,
-                    workspace=workspace, expected_sources=source_manifest.get("sources", {}),
-                    receiver_anchor=receiver_anchor, backend=receiver_backend)
-                if any(tag in model_tags for tag in validation["model_tags"]):
-                    raise CandidateError("two preregistered setup slots resolved to a duplicate native model tag")
-                model_tags.update(validation["model_tags"])
-                total_outputs += validation["artifact"]["size_bytes"]
-                if total_outputs > MAX_OUTPUT_BYTES:
-                    raise CandidateError("aggregate 14-slot MPH artifacts exceed the 10 GiB candidate cap")
-                slot_path = run_dir / "sensitivity_setup_receipts" / f"{slot_dir_name}.json"
-                receipt_hash = _write_new(slot_path, result)
-                ledger = _terminal_campaign_ledger(daemon, project_id)
-                ledger_path = run_dir / "slot_ledgers" / f"{slot_dir_name}.json"
-                ledger_hash = _write_new(ledger_path, ledger)
-                if ledger.get("safe_to_retire") is not True:
-                    gate.unknown = True
-                    status = "STOPPED_LEDGER_ACTIVE_OR_UNKNOWN"
-                    raise CandidateError("slot ended without a fully terminal OperationStore/Worker ledger")
-                size_inventory = _check_process_size(work)
-                _append(events_path, {"event": "setup_slot_receipt_persisted",
-                                      "submission_index": slot["submission_index"],
-                                      "configuration_id": slot["configuration_id"],
-                                      "case_id": slot["case_id"],
-                                      "receipt": str(slot_path),
-                                      "receipt_sha256": receipt_hash,
-                                      "ledger_receipt": str(ledger_path),
-                                      "ledger_sha256": ledger_hash,
-                                      "artifact": validation["artifact"],
-                                      "resource_bytes": size_inventory["total_bytes"],
-                                      "worker_epoch": session["worker_epoch"],
-                                      "binding_validity_after_retirement":
-                                          "HISTORICAL_ONLY_REQUIRES_NEW_WORKER_RE_ADMISSION"})
-                setup_receipts.append({"submission_index": slot["submission_index"],
-                                       "configuration_id": slot["configuration_id"],
-                                       "case_id": slot["case_id"],
-                                       "receipt_path": str(slot_path),
-                                       "receipt_sha256": receipt_hash,
-                                       "ledger_path": str(ledger_path),
-                                       "ledger_sha256": ledger_hash,
-                                       "artifact": validation["artifact"],
-                                       "binding_validity_after_retirement":
-                                           "HISTORICAL_ONLY_REQUIRES_NEW_WORKER_RE_ADMISSION"})
-            finally:
-                gate.clear_slot()
-            if monitor.stop_reason:
-                status = "STOPPED_RSS_OR_MONITOR_ADMISSION"
-                break
-        if gate.unknown:
-            status = "STOPPED_UNKNOWN"
-        elif (len(setup_receipts) == len(slots) and
-              len(gate.completed_slots) == len(slots)):
-            status = "SETUP_14_OF_14_COMPLETE_SCIENCE_NOT_RUN"
-        elif status == "RUNNING_SETUP_ONLY":
-            status = "STOPPED_BEFORE_14_OF_14"
+            elif (len(setup_receipts) == len(slots) and
+                  len(gate.completed_slots) == len(slots)):
+                status = "SETUP_14_OF_14_COMPLETE_SCIENCE_NOT_RUN"
+            elif status == "RUNNING_SETUP_ONLY":
+                status = "STOPPED_BEFORE_14_OF_14"
     except BaseException as exc:
         first_cause = first_cause or exc
         error = {"type": type(exc).__name__, "message": _hold_text(exc),
                  "traceback": traceback.format_exc(limit=20)}
-        if status == "RUNNING_SETUP_ONLY":
-            status = "FAILED_SETUP_ONLY"
+        if isinstance(exc, JvmLimitsReadbackHold):
+            status = "HOLD_EFFECTIVE_JVM_LIMITS_READBACK"
+        elif status in {"RUNNING_SETUP_ONLY", "RUNNING_SCHEMA_ONLY"}:
+            status = "FAILED_SETUP_ONLY" if mode == EXECUTION_MODE_SETUP14 else "FAILED_SCHEMA_ONLY"
 
     monitor = monitor or monitor_box.get("monitor")
-    is_unknown = (worker_state in {"UNKNOWN_CONNECT_ATTEMPT", "CONNECTED_UNVERIFIED", "UNKNOWN"} or
+    is_unknown = (worker_state in {"UNKNOWN_SERVER_START", "UNKNOWN_CONNECT_ATTEMPT", "CONNECTED_UNVERIFIED", "UNKNOWN"} or
                   (gate is not None and gate.unknown) or
-                  status in {"UNKNOWN_SESSION_CONNECT", "STOPPED_UNKNOWN", "STOPPED_LEDGER_ACTIVE_OR_UNKNOWN"})
+                  isinstance(first_cause, JvmLimitsReadbackHold) or
+                  status in {"UNKNOWN_SESSION_START", "UNKNOWN_SESSION_CONNECT", "STOPPED_UNKNOWN", "STOPPED_LEDGER_ACTIVE_OR_UNKNOWN"})
     if is_unknown:
         try:
             _unknown_hold(daemon=daemon, server=server,
@@ -2739,7 +5513,8 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
             cleanup = _retire_worker_and_server(
                 daemon=daemon, server=server, monitor=monitor,
                 project_id=str(project_id), session=session, run_dir=run_dir,
-                deadline_monotonic=(server.birth_monotonic or time.monotonic()) + MAX_WALL_SECONDS)
+                deadline_monotonic=(server.birth_monotonic or time.monotonic()) +
+                    budget["wall_seconds_from_server_birth_including_cleanup"])
         except BaseException as exc:
             error = {**(error or {}), "cleanup_error": f"{type(exc).__name__}: {_hold_text(exc)}"}
             status = "CONNECTED_STATE_PRESERVED_CLEANUP_BLOCKED"
@@ -2755,22 +5530,31 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
                     first_cause=first_cause, run_dir=run_dir)
             status = "FAIL_UNKNOWN_PRESERVED_ORIGINAL_CHILDREN_TERMINAL"
     else:
-        if daemon is not None:
+        if (daemon is not None and project_id is not None and
+                server_session is not None and server.managed_handle is not None and
+                worker_state in {"NEVER_DISPATCHED", "NEVER_CONNECTED"}):
+            try:
+                cleanup = _retire_owned_server_without_worker(
+                    daemon=daemon, server=server, monitor=monitor,
+                    project_id=project_id, server_session=server_session,
+                    run_dir=run_dir,
+                    timeout_seconds=max(1.0, min(30.0, budget["wall_seconds_from_server_birth_including_cleanup"])))
+            except BaseException as exc:
+                error = {**(error or {}), "public_session_stop_error":
+                         f"{type(exc).__name__}: {_hold_text(exc)}"}
+                status = "SERVER_HANDLE_PRESERVED_CLEANUP_BLOCKED"
+                _unknown_hold(daemon=daemon, server=server, monitor=monitor,
+                              run_dir=run_dir, work=work, project_id=project_id,
+                              session=server_session, candidate_sha256=reviewed_sha256,
+                              reason=error["public_session_stop_error"], first_cause=first_cause or exc)
+        elif daemon is not None:
             try:
                 daemon.close()
                 cleanup = {"control_daemon_close": "RETURNED"}
             except BaseException as exc:
                 error = {**(error or {}), "control_daemon_close_error":
-                         f"{type(exc).__name__}: {exc}"}
+                         f"{type(exc).__name__}: {_hold_text(exc)}"}
                 status = "PRECONNECT_DAEMON_CLOSE_BLOCKED"
-        if server.proc is not None and server.proc.poll() is None:
-            try:
-                cleanup = {**(cleanup or {}), "server": stop_server_known()}
-            except BaseException as exc:
-                error = {**(error or {}), "server_stop_error": f"{type(exc).__name__}: {exc}"}
-                status = "SERVER_HANDLE_PRESERVED_CLEANUP_BLOCKED"
-                if daemon is not None and project_id is not None:
-                    _hold_forever_with_handles(monitor, server=server, daemon=daemon, first_cause=first_cause, run_dir=run_dir)
 
     receipt = {**receipt_base,
                "status": status,
@@ -2783,11 +5567,17 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
                "worker_state": worker_state,
                "server_process": ({"pid": server.proc.pid,
                                    "birth": server.server_snapshot.get("birth") if server.server_snapshot else None,
-                                   "command_sha256": server.server_snapshot.get("command_sha256") if server.server_snapshot else None,
+                                   "launch_command_sha256": server.server_snapshot.get("launch_command_sha256") if server.server_snapshot else None,
+                                   "post_exec_identity": server.server_postexec_identity,
                                    "port": server.port,
                                    "returncode": server.proc.poll()} if server.proc is not None else None),
-               "resource_limits": SETUP_BUDGET,
-               "resource_summary": _check_process_size(work) if work.exists() else None,
+               "resource_limits": budget,
+               "resource_summary": (_check_process_size(
+                   work, max_single_mph_bytes=budget["max_single_unsolved_mph_bytes"],
+                   max_total_output_bytes=budget["max_total_project_output_bytes"])
+                   if work.exists() else None),
+               "schema_probe_result": schema_probe_result,
+               "schema_probe_validation": schema_probe_validation,
                "rss_stop_reason": monitor.stop_reason if monitor is not None else None,
                "rss_last_sample": monitor.last_sample if monitor is not None else None,
                "cleanup": cleanup,
@@ -2803,6 +5593,26 @@ def execute_candidate(*, repo: Path, evidence: Path, work: Path,
     return receipt
 
 
+def _build_exact_execute_plan_from_binding(*, repo: Path, evidence: Path, work: Path,
+                                           reviewed_sha256: str,
+                                           binding: Mapping[str, Any],
+                                           schema_probe_only: bool = False) -> dict[str, Any]:
+    fresh_runtime.scoped_path(binding, work, absent=True)
+    if work != Path(binding["namespace"])/"work":
+        raise CandidateError("fresh work must equal immutable namespace/work")
+    if type(schema_probe_only) is not bool:
+        raise CandidateError("execute-plan schema mode must be an exact Boolean")
+    argv = [binding["python"]["entry"], "-S", "-m", "tools.run_native_w24_static_shape_setup_campaign", "execute",
+            "--evidence", str(evidence), "--work", str(work), "--reviewed-candidate-sha256", reviewed_sha256,
+            "--comsol-root", binding["comsol"]["root"], "--jdk11", binding["jdk"]["home"]]
+    if schema_probe_only:
+        argv.append("--schema-only")
+    return {"argv": argv, "argv_sha256": _json_hash(argv), "cwd": str(repo.resolve(strict=True)),
+            "environment": _expected_child_environment(work, repo, binding), "candidate_sha256": reviewed_sha256,
+            "runtime_binding_sha256": binding["binding_sha256"], "activity_id": binding["activity_id"],
+            "require_new_external_root_approval_and_once": True, "native": "NOT_RUN"}
+
+
 def fresh_exact_execute_plan(*, repo: Path, evidence: Path, work: Path,
                              reviewed_sha256: str) -> dict[str, Any]:
     """No native action; Main binds these bytes to a new external once wrapper."""
@@ -2810,16 +5620,11 @@ def fresh_exact_execute_plan(*, repo: Path, evidence: Path, work: Path,
     binding = freeze.get("fresh_runtime_binding")
     if binding is None:
         raise CandidateError("fresh exact entry requires a fresh host runtime binding")
-    fresh_runtime.scoped_path(binding, work, absent=True)
-    if work != Path(binding["namespace"])/"work":
-        raise CandidateError("fresh work must equal immutable namespace/work")
-    argv = [binding["python"]["entry"], "-S", "-m", "tools.run_native_w24_static_shape_setup_campaign", "execute",
-            "--evidence", str(evidence), "--work", str(work), "--reviewed-candidate-sha256", reviewed_sha256,
-            "--comsol-root", binding["comsol"]["root"], "--jdk11", binding["jdk"]["home"]]
-    return {"argv": argv, "argv_sha256": _json_hash(argv), "cwd": str(repo.resolve(strict=True)),
-            "environment": _expected_child_environment(work, repo, binding), "candidate_sha256": reviewed_sha256,
-            "runtime_binding_sha256": binding["binding_sha256"], "activity_id": binding["activity_id"],
-            "require_new_external_root_approval_and_once": True, "native": "NOT_RUN"}
+    schema_probe_only = freeze.get("execution_mode", EXECUTION_MODE_SETUP14) == EXECUTION_MODE_SCHEMA_ONLY
+    return _build_exact_execute_plan_from_binding(
+        repo=repo, evidence=evidence, work=work,
+        reviewed_sha256=reviewed_sha256, binding=binding,
+        schema_probe_only=schema_probe_only)
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -2830,12 +5635,16 @@ def _parser() -> argparse.ArgumentParser:
     prepare = sub.add_parser("prepare", help="offline source audit and Java compile; starts no process")
     prepare.add_argument("--evidence", required=True, type=Path)
     prepare.add_argument("--runtime-authority", type=Path)
+    prepare.add_argument("--schema-only", action="store_true",
+                         help="freeze the one-call property-schema diagnostic instead of the 14-slot campaign")
     prepare.add_argument("--comsol-root", type=Path, default=INSTALL_ROOT)
     prepare.add_argument("--jdk11", type=Path, default=JAVA11)
     execute = sub.add_parser("execute", help="run only the separately reviewed setup-only candidate")
     execute.add_argument("--evidence", required=True, type=Path)
     execute.add_argument("--work", required=True, type=Path)
     execute.add_argument("--reviewed-candidate-sha256", required=True)
+    execute.add_argument("--schema-only", action="store_true",
+                         help="execute only the frozen one-call property-schema diagnostic")
     execute.add_argument("--comsol-root", type=Path, default=INSTALL_ROOT)
     execute.add_argument("--jdk11", type=Path, default=JAVA11)
     return parser
@@ -2850,21 +5659,26 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.command == "prepare":
             result = prepare_candidate(repo=REPO, evidence=args.evidence,
-                install=args.comsol_root, jdk=args.jdk11, runtime_authority=args.runtime_authority)
+                install=args.comsol_root, jdk=args.jdk11, runtime_authority=args.runtime_authority,
+                schema_probe_only=args.schema_only)
             print(json.dumps({"status": result["status"],
                               "candidate_sha256": result["candidate_sha256"],
+                              "execution_mode": result.get("execution_mode", EXECUTION_MODE_SETUP14),
                               "evidence_dir": result["candidate_evidence_dir"],
                               "source_closure_sha256": result["source"]["source_closure_sha256"],
                               "planned_setup_slots": len(result["ordered_setup_slots"]),
+                              "schema_probe_calls": result["budget"].get("schema_probe_calls", 0),
                               "study_run_submissions": result["budget"]["study_run_submissions"],
                               "solver_calls": result["budget"]["solver_calls"]},
                              indent=2, ensure_ascii=False))
             return 0
         result = execute_candidate(repo=REPO, evidence=args.evidence,
             work=args.work, reviewed_sha256=args.reviewed_candidate_sha256,
-            install=args.comsol_root, jdk=args.jdk11)
+            install=args.comsol_root, jdk=args.jdk11, schema_probe_only=args.schema_only)
         print(json.dumps(result, indent=2, ensure_ascii=False, default=str))
-        return 0 if result.get("status") == "SETUP_14_OF_14_COMPLETE_SCIENCE_NOT_RUN" else 1
+        success_states = {"SETUP_14_OF_14_COMPLETE_SCIENCE_NOT_RUN",
+                          "SCHEMA_ONLY_DIAGNOSTIC_COMPLETE_NOT_SOLVED"}
+        return 0 if result.get("status") in success_states else 1
     except Exception as exc:
         print(json.dumps({"status": "CANDIDATE_GATE_FAILED",
                           "error_type": type(exc).__name__, "error": str(exc)},

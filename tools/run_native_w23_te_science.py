@@ -25,6 +25,7 @@ import subprocess
 import sys
 import time
 import traceback
+import xml.etree.ElementTree as ET
 from decimal import Decimal, InvalidOperation
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -53,6 +54,41 @@ SOURCE_MAP_DIGEST_SEMANTICS = (
     "keys sorted, compact separators, ensure_ascii=false")
 SOURCE_MANIFEST_FILE_DIGEST_SEMANTICS = (
     "SHA-256 of the exact raw UTF-8 bytes in source_manifest.json")
+CURRENT_FULL_OFFLINE_MODE = "CURRENT_FULL_OFFLINE_V1"
+CURRENT_FULL_OFFLINE_GATES = (
+    "runtime_imports", "software_negative_controls", "pip_check",
+    "stdio_initialize_tools_list", "comsol64_jdk11_javac_javap",
+)
+W23_R13_BASE_ROOT = Path("/private/tmp/cv3n-w23-zero8-r13-b2cd449e")
+W23_R13_BASE_SOURCE_MANIFEST_SHA256 = "ce650bf70ad704f38b243bb63fbf73cf6cc2985f01490f88a7e9e96f673f079a"
+W23_R13_BASE_SOURCE_MAP_SHA256 = "3543f72172c673a6c6b4b70741433f47716c260be48e172cc45aff9ae7ef34b6"
+W23_R13_BASE_JUNIT_SHA256 = "17f232b6a0ec5cc7e37d3a6dc45aaf25c44bc6136b8b528d271d8cf06914b2e9"
+W23_R13_BASE_COMPILE_SHA256 = "b4c8009219555b390b52933e85f10d4858b6897f5bfaa7603d3fd9fbb6c82623"
+W23_R13_BASE_ACTIVITY_ID = "b2cd449e-ecdb-4e6f-9df3-a1b69056882f"
+W23_R13_BASE_CANDIDATE_ID = "W23-TE-SAVED-MPH-ZERO-SOLVE-READBACK-21"
+W23_R13_BASE_CANDIDATE_REVISION = "candidate21-r2"
+W23_R13_BASE_SOURCE_COUNT = 448
+W23_R13_BASE_TEST_COUNT = 860
+W23_R13_ALLOWED_COMMON_SOURCE_DELTA = frozenset({
+    "comsol_mcp/_g3_results.py",
+    "tests/test_g3_results.py",
+    "tests/test_native_w23_te_science_protocol.py",
+    # R19 adds focused controls for attempted-versus-verified saved-MPH point reads.
+    "tests/test_native_w23_saved_mph_diagnostic.py",
+    # R20 adds an inactive loopback TIME_WAIT parser class without relaxing owner or ledger gates.
+    "tests/test_native_w23_te_science_runner.py",
+    "tools/run_native_w23_saved_mph_diagnostic.py",
+    "tools/run_native_w23_te_managed_preflight.py",
+    "tools/run_native_w23_te_science.py",
+    "tools/w23_te_science_protocol.py",
+})
+W23_R13_ALLOWED_ADDED_SOURCE_DELTA = frozenset({
+    "tests/test_interp_native_default_units.py",
+})
+W23_R13_JAVA_SOURCE_SHA256 = {
+    "comsol_mcp/worker_java/PersistentComsolWorker.java": "6e2f2889655d60b1233b9324826c7058779a4bb9ea2f5ee0b1ce1764375a03d6",
+    "tools/java/NativeW23TEScienceFixture.java": "63be8fa15063b914f9f37cd09cd4fe048f18c6a37c856820f44737bb4857e23e",
+}
 MAX_STUDY_RUN_CALLS = 4
 MAX_BIRTH_BUDGET_S = 1800.0
 CLEANUP_RESERVE_S = 120.0
@@ -682,26 +718,69 @@ def _compile_sources(output: Path) -> dict[str, Any]:
     }
 
 
-def _pip_dependency_check() -> dict[str, Any]:
+def _pip_dependency_check(*, runtime_binding: Mapping[str, Any] | None = None,
+                          runtime_budget: Mapping[str, Any] | None = None) -> dict[str, Any]:
     if not PYTHON_FOR_PIP.is_file():
         raise FileNotFoundError(f"trusted pip executable missing: {PYTHON_FOR_PIP}")
-    if Path(sys.executable).resolve() != EXPECTED_PYTHON.resolve():
-        raise RuntimeError(f"runner Python is not the reviewed task venv: {sys.executable}")
-    command = [str(PYTHON_FOR_PIP), "-m", "pip", "--python", sys.executable, "check"]
+    if runtime_binding is None:
+        if Path(sys.executable).resolve() != EXPECTED_PYTHON.resolve():
+            raise RuntimeError(f"runner Python is not the reviewed task venv: {sys.executable}")
+        python_entry = str(sys.executable)
+        status = "PASS_TASK_VENV_PIP_CHECK"
+    else:
+        if not isinstance(runtime_budget, Mapping):
+            raise RuntimeError("fresh runtime-bound pip check requires its exact phase budget")
+        from tools import native_runtime_binding as fresh_runtime
+        fresh_runtime.validate(runtime_binding, repo=REPO, budget=dict(runtime_budget),
+                               install=INSTALL_ROOT, jdk=JAVA11)
+        entry = runtime_binding.get("python", {}).get("entry")
+        if (not isinstance(entry, str) or not entry
+                or Path(sys.executable).resolve() != Path(entry).resolve()):
+            raise RuntimeError("runner Python differs from the validated fresh runtime binding")
+        python_entry = entry
+        status = "PASS_FRESH_RUNTIME_BOUND_PIP_CHECK"
+    command = [str(PYTHON_FOR_PIP), "-m", "pip", "--python", python_entry, "check"]
     result = subprocess.run(command, cwd=REPO, text=True, capture_output=True,
                             timeout=60, check=False)
-    receipt = {"command": command, "python_executable": sys.executable,
+    receipt = {"command": command, "python_executable": python_entry,
                "python_version": sys.version, "returncode": result.returncode,
                "stdout": result.stdout, "stderr": result.stderr}
+    if runtime_binding is not None:
+        receipt["runtime_binding_sha256"] = runtime_binding.get("binding_sha256")
     if result.returncode != 0:
-        raise RuntimeError("reviewed task-venv production dependency check failed")
-    return {"status": "PASS_TASK_VENV_PIP_CHECK", **receipt}
+        if runtime_binding is None:
+            raise RuntimeError("reviewed task-venv production dependency check failed")
+        raise RuntimeError("validated fresh-runtime production dependency check failed")
+    return {"status": status, **receipt}
 
 
-def offline_preflight(output: Path) -> dict[str, Any]:
+def offline_preflight(output: Path, *,
+                      current_source_files: Mapping[str, Any] | None = None,
+                      runtime_binding: Mapping[str, Any] | None = None,
+                      runtime_budget: Mapping[str, Any] | None = None) -> dict[str, Any]:
     output.mkdir(parents=True, exist_ok=False)
     receipt: dict[str, Any] = {"status": "RUNNING_OFFLINE_GATES", "gates": {},
                                "native_process_started": False, "native_study_run_calls": 0}
+    current_full = current_source_files is not None
+    current_map_sha = None
+    if current_full:
+        if not isinstance(current_source_files, Mapping) or not current_source_files:
+            raise RuntimeError("current-full offline gates require the exact nonempty current source map")
+        current_map_sha = _source_manifest_sha256(current_source_files)
+        if runtime_binding is not None and not isinstance(runtime_budget, Mapping):
+            raise RuntimeError("current-full offline gates require the fresh binding phase budget")
+        receipt.update({"mode": CURRENT_FULL_OFFLINE_MODE,
+                        "source_manifest_sha256": current_map_sha,
+                        "source_count": len(current_source_files)})
+
+    def persist_progress() -> None:
+        if current_full:
+            receipt["gate_source_manifest_sha256"] = {
+                name: current_map_sha for name in receipt["gates"]}
+            receipt["gate_receipt_sha256"] = {
+                name: sha256_json(value) for name, value in receipt["gates"].items()}
+        write_json(output / "offline_preflight_progress.json", receipt)
+
     current_gate = "runtime_imports"
     try:
         helpers = _runtime_helper_imports()
@@ -710,20 +789,21 @@ def offline_preflight(output: Path) -> dict[str, Any]:
             "helper_names": sorted(helpers),
             "result_mode_overlap_published": True,
         }
-        write_json(output / "offline_preflight_progress.json", receipt)
+        persist_progress()
         current_gate = "software_negative_controls"
         from tools.w23_te_science_protocol import run_negative_controls
         negative_controls = run_negative_controls()
         receipt["gates"][current_gate] = negative_controls
-        write_json(output / "offline_preflight_progress.json", receipt)
+        persist_progress()
         current_gate = "pip_check"
-        pip = _pip_dependency_check()
+        pip = _pip_dependency_check(runtime_binding=runtime_binding,
+                                    runtime_budget=runtime_budget)
         receipt["gates"][current_gate] = pip
-        write_json(output / "offline_preflight_progress.json", receipt)
+        persist_progress()
         current_gate = "stdio_initialize_tools_list"
         stdio = _actual_stdio_preflight(output / "stdio")
         receipt["gates"][current_gate] = stdio
-        write_json(output / "offline_preflight_progress.json", receipt)
+        persist_progress()
         current_gate = "comsol64_jdk11_javac_javap"
         compile_receipt = _compile_sources(output / "compile")
         receipt["gates"][current_gate] = compile_receipt
@@ -731,12 +811,13 @@ def offline_preflight(output: Path) -> dict[str, Any]:
                         "runtime_imports": receipt["gates"]["runtime_imports"],
                         "software_negative_controls": negative_controls,
                         "pip_check": pip, "stdio": stdio, "compile": compile_receipt})
-        write_json(output / "offline_preflight_progress.json", receipt)
+        persist_progress()
         return receipt
     except BaseException as exc:
         receipt.update({"status": "FAIL_OFFLINE_GATE", "failed_gate": current_gate,
                         "error": f"{type(exc).__name__}: {exc}",
                         "traceback": traceback.format_exc()})
+        persist_progress()
         write_json(output / "offline_preflight_failure.json", receipt)
         raise
 
@@ -2361,13 +2442,494 @@ def _compare_reopen_integrals(before: Mapping[str, Any], after: Mapping[str, Any
             "tolerance_relative": tolerance, "integrals": rows}
 
 
+def _junit_counts(path: Path) -> dict[str, int]:
+    try:
+        root = ET.parse(path).getroot()
+    except (OSError, ET.ParseError) as exc:
+        raise RuntimeError(f"JUnit receipt is absent or invalid XML: {path}") from exc
+    suites = [node for node in root.iter() if node.tag.rsplit("}", 1)[-1] == "testsuite"]
+    if root.tag.rsplit("}", 1)[-1] == "testsuite" and root not in suites:
+        suites.insert(0, root)
+    if not suites:
+        raise RuntimeError(f"JUnit receipt contains no testsuite: {path}")
+    totals = {name: 0 for name in ("tests", "failures", "errors", "skipped")}
+    for suite in suites:
+        for name in totals:
+            try:
+                totals[name] += int(suite.attrib.get(name, "0"))
+            except ValueError as exc:
+                raise RuntimeError(f"JUnit suite has an invalid {name} count: {path}") from exc
+    return totals
+
+
+def _candidate_receipt_path(candidate_root: Path, relative: Any, label: str) -> Path:
+    if (not isinstance(relative, str) or not relative or Path(relative).is_absolute()
+            or ".." in Path(relative).parts):
+        raise RuntimeError(f"focused offline {label} path is not a candidate-relative path")
+    root = candidate_root.resolve()
+    path = root / relative
+    cursor = root
+    for component in Path(relative).parts:
+        cursor = cursor / component
+        if cursor.is_symlink():
+            raise RuntimeError(f"focused offline {label} path crosses a symlink: {relative}")
+    if not path.is_file() or not path.resolve().is_relative_to(root):
+        raise RuntimeError(f"focused offline {label} is absent or escapes its candidate: {relative}")
+    return path
+
+
+def _candidate_receipt_directory(candidate_root: Path, relative: Any, label: str) -> Path:
+    if (not isinstance(relative, str) or not relative or Path(relative).is_absolute()
+            or ".." in Path(relative).parts):
+        raise RuntimeError(f"focused offline {label} path is not a candidate-relative path")
+    root = candidate_root.resolve()
+    path = root / relative
+    cursor = root
+    for component in Path(relative).parts:
+        cursor = cursor / component
+        if cursor.is_symlink():
+            raise RuntimeError(f"focused offline {label} path crosses a symlink: {relative}")
+    if not path.is_dir() or not path.resolve().is_relative_to(root):
+        raise RuntimeError(f"focused offline {label} is absent or escapes its candidate: {relative}")
+    return path
+
+
+def _source_content_row(row: Any, *, label: str) -> tuple[int, str]:
+    if not isinstance(row, Mapping):
+        raise RuntimeError(f"{label} source manifest row is malformed")
+    size, digest = row.get("bytes"), row.get("sha256")
+    if (not isinstance(size, int) or isinstance(size, bool) or size < 0
+            or not isinstance(digest, str) or len(digest) != 64
+            or any(char not in "0123456789abcdef" for char in digest)):
+        raise RuntimeError(f"{label} source manifest row lacks exact byte/hash identity")
+    return size, digest
+
+
+def _validate_inherited_offline_delta(freeze_path: Path,
+                                      freeze: Mapping[str, Any]) -> dict[str, Any]:
+    """Validate explicit R13 inheritance plus current focused W23 gate evidence."""
+    gates = freeze.get("offline_preflight")
+    pointer = gates.get("focused_delta_receipt") if isinstance(gates, Mapping) else None
+    if not isinstance(pointer, Mapping):
+        raise RuntimeError("inherited offline gates lack the focused delta receipt pointer")
+    receipt_path = _candidate_receipt_path(
+        freeze_path.parent, pointer.get("path"), "delta receipt")
+    if sha256_file(receipt_path) != pointer.get("sha256"):
+        raise RuntimeError("focused delta receipt SHA-256 differs from the frozen pointer")
+    try:
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise RuntimeError("focused delta receipt is not valid UTF-8 JSON") from exc
+    if (not isinstance(receipt, Mapping)
+            or receipt.get("schema_version") != 1
+            or receipt.get("status") != "PASS_OFFLINE_BASE_INHERITED_PLUS_FOCUSED_DELTA"
+            or receipt.get("candidate_id") != freeze.get("candidate_id")
+            or receipt.get("candidate_revision") != freeze.get("candidate_revision")
+            or receipt.get("activity_id") != freeze.get("activity_id")):
+        raise RuntimeError("focused delta receipt identity/status does not match the frozen candidate")
+
+    base_root = W23_R13_BASE_ROOT
+    base_manifest_path = base_root / "prepare/source_manifest.json"
+    base_junit_path = base_root / "prepare/offline_gates/activity024_focused_junit.xml"
+    if (base_manifest_path.is_symlink() or not base_manifest_path.is_file()
+            or sha256_file(base_manifest_path) != W23_R13_BASE_SOURCE_MANIFEST_SHA256):
+        raise RuntimeError("pinned R13 source manifest is missing or has been tampered with")
+    if (base_junit_path.is_symlink() or not base_junit_path.is_file()
+            or sha256_file(base_junit_path) != W23_R13_BASE_JUNIT_SHA256):
+        raise RuntimeError("pinned R13 860-test JUnit is missing or has been tampered with")
+    try:
+        base_manifest = json.loads(base_manifest_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise RuntimeError("pinned R13 source manifest is invalid JSON") from exc
+    base_files = base_manifest.get("source_files") if isinstance(base_manifest, Mapping) else None
+    if (base_manifest.get("schema_version") != 1
+            or base_manifest.get("source_count") != W23_R13_BASE_SOURCE_COUNT
+            or base_manifest.get("source_manifest_sha256") != W23_R13_BASE_SOURCE_MAP_SHA256
+            or not isinstance(base_files, Mapping)
+            or len(base_files) != W23_R13_BASE_SOURCE_COUNT
+            or _source_manifest_sha256(base_files) != W23_R13_BASE_SOURCE_MAP_SHA256):
+        raise RuntimeError("pinned R13 source manifest does not match the approved 448-file map")
+    base_junit_counts = _junit_counts(base_junit_path)
+    if base_junit_counts != {"tests": W23_R13_BASE_TEST_COUNT,
+                             "failures": 0, "errors": 0, "skipped": 0}:
+        raise RuntimeError("pinned R13 JUnit is not the exact 860/0/0/0 base suite")
+    expected_base = {
+        "candidate_id": W23_R13_BASE_CANDIDATE_ID,
+        "candidate_revision": W23_R13_BASE_CANDIDATE_REVISION,
+        "activity_id": W23_R13_BASE_ACTIVITY_ID,
+        "source_manifest_path": str(base_manifest_path),
+        "source_manifest_sha256": W23_R13_BASE_SOURCE_MANIFEST_SHA256,
+        "source_map_sha256": W23_R13_BASE_SOURCE_MAP_SHA256,
+        "source_count": W23_R13_BASE_SOURCE_COUNT,
+        "junit_path": str(base_junit_path),
+        "junit_sha256": W23_R13_BASE_JUNIT_SHA256,
+        "junit_counts": base_junit_counts,
+        "compile_receipt_sha256": W23_R13_BASE_COMPILE_SHA256,
+    }
+    if receipt.get("inherited_base") != expected_base:
+        raise RuntimeError("focused delta receipt is missing or changes the pinned R13 baseline identity")
+
+    current_files = freeze.get("source_files")
+    current_map_sha = freeze.get("source_manifest_sha256")
+    if (not isinstance(current_files, Mapping)
+            or not isinstance(current_map_sha, str)
+            or _source_manifest_sha256(current_files) != current_map_sha
+            or receipt.get("candidate_source_manifest_sha256") != current_map_sha):
+        raise RuntimeError("focused delta receipt is not bound to the exact current frozen source map")
+    base_names, current_names = set(base_files), set(current_files)
+    common_changes = []
+    for name in sorted(base_names & current_names):
+        before = _source_content_row(base_files[name], label=f"R13 {name}")
+        after = _source_content_row(current_files[name], label=f"candidate {name}")
+        if before != after:
+            common_changes.append({"path": name, "base_bytes": before[0],
+                                  "base_sha256": before[1], "candidate_bytes": after[0],
+                                  "candidate_sha256": after[1]})
+    additions = []
+    for name in sorted(current_names - base_names):
+        size, digest = _source_content_row(current_files[name], label=f"candidate {name}")
+        additions.append({"path": name, "candidate_bytes": size, "candidate_sha256": digest})
+    removals = sorted(base_names - current_names)
+    actual_delta = {"common_path_changes": common_changes,
+                    "added_paths": additions, "removed_paths": removals}
+    if actual_delta != receipt.get("source_delta"):
+        raise RuntimeError("current source delta differs from the frozen allowlist or its byte/hash rows")
+    if ({row["path"] for row in common_changes} != W23_R13_ALLOWED_COMMON_SOURCE_DELTA
+            or {row["path"] for row in additions} != W23_R13_ALLOWED_ADDED_SOURCE_DELTA
+            or removals):
+        raise RuntimeError("W23 candidate contains a source change outside the exact pre-frozen allowlist")
+
+    focus = receipt.get("focused_tests")
+    if not isinstance(focus, Mapping):
+        raise RuntimeError("focused delta receipt lacks current candidate test evidence")
+    test_receipt_path = _candidate_receipt_path(
+        freeze_path.parent, focus.get("receipt_path"), "JUnit invocation receipt")
+    if sha256_file(test_receipt_path) != focus.get("receipt_sha256"):
+        raise RuntimeError("focused JUnit invocation receipt was changed after freezing")
+    try:
+        test_receipt = json.loads(test_receipt_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise RuntimeError("focused JUnit invocation receipt is invalid JSON") from exc
+    if (not isinstance(test_receipt, Mapping)
+            or test_receipt.get("status") != "PASS_FOCUSED_STRICT_GUARDED_JUNIT"
+            or test_receipt.get("returncode") != 0
+            or test_receipt.get("candidate_source_manifest_sha256") != current_map_sha):
+        raise RuntimeError("focused tests did not pass on the exact current candidate source map")
+    junit_path = _candidate_receipt_path(
+        freeze_path.parent, focus.get("junit_path"), "focused JUnit")
+    if test_receipt.get("junit_path") != str(junit_path):
+        raise RuntimeError("focused test receipt JUnit path differs from the frozen candidate-relative path")
+    if (sha256_file(junit_path) != focus.get("junit_sha256")
+            or test_receipt.get("junit_sha256") != focus.get("junit_sha256")):
+        raise RuntimeError("focused JUnit file is absent or its SHA-256 differs from the receipt")
+    focused_counts = _junit_counts(junit_path)
+    if (focused_counts["tests"] < 25 or focused_counts["failures"]
+            or focused_counts["errors"] or focused_counts["skipped"]):
+        raise RuntimeError("current focused JUnit does not pass at least 25 affected controls")
+    test_paths = test_receipt.get("test_paths")
+    if not isinstance(test_paths, list):
+        raise RuntimeError("focused test receipt lacks its executed test path list")
+    executed_test_files = {
+        str(item).split("::", 1)[0] for item in test_paths if isinstance(item, str)
+    }
+    for relative in (
+            "tests/test_interp_native_default_units.py",
+            "tests/test_native_w23_te_science_protocol.py",
+            "tests/test_native_w23_saved_mph_diagnostic.py",
+            "tests/test_native_w23_te_science_runner.py",
+            "tests/test_g3_results.py"):
+        source_row = current_files.get(relative)
+        if not isinstance(source_row, Mapping) or source_row.get("path") not in executed_test_files:
+            raise RuntimeError(f"focused suite does not execute the affected control {relative}")
+
+    guard_path = _candidate_receipt_path(
+        freeze_path.parent, focus.get("network_guard_path"), "strict network-guard log")
+    if sha256_file(guard_path) != focus.get("network_guard_sha256"):
+        raise RuntimeError("strict network-guard log was changed after freezing")
+    guard_rows = []
+    try:
+        for line in guard_path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                guard_rows.append(json.loads(line))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise RuntimeError("strict network-guard log is invalid JSONL") from exc
+    if (not guard_rows or guard_rows[0].get("event") != "GUARD_ACTIVE_BEFORE_CHILD_ENTRYPOINT"
+            or any(row.get("event") in {"DENIED_BEFORE_SOCKET_OPERATION", "GUARD_SETUP_ERROR"}
+                   for row in guard_rows)):
+        raise RuntimeError("focused candidate tests lack active, no-deny strict network-guard evidence")
+    guard_receipt = test_receipt.get("network_guard")
+    if (not isinstance(guard_receipt, Mapping)
+            or guard_receipt.get("status") != "ACTIVE_NO_DENY_OR_SETUP_ERROR"
+            or guard_receipt.get("path") != str(guard_path)
+            or guard_receipt.get("sha256") != focus.get("network_guard_sha256")
+            or guard_receipt.get("event_count") != len(guard_rows)):
+        raise RuntimeError("focused test receipt does not match strict network-guard evidence")
+    return {
+        "status": "PASS_OFFLINE_BASE_INHERITED_PLUS_FOCUSED_DELTA",
+        "inherited_base": expected_base,
+        "current_source_manifest_sha256": current_map_sha,
+        "source_delta": actual_delta,
+        "focused_test_counts": focused_counts,
+        "strict_network_guard_event_count": len(guard_rows),
+    }
+
+
+def _validate_current_full_offline_receipts(
+        freeze_path: Path, freeze: Mapping[str, Any],
+        gates: Mapping[str, Any]) -> dict[str, Any]:
+    """Validate a fresh complete offline gate set against the exact current map."""
+    source_files = freeze.get("source_files")
+    source_map_sha = freeze.get("source_manifest_sha256")
+    if (not isinstance(source_files, Mapping) or not source_files
+            or not isinstance(source_map_sha, str)
+            or _source_manifest_sha256(source_files) != source_map_sha
+            or gates.get("source_manifest_sha256") != source_map_sha
+            or gates.get("source_count") != len(source_files)):
+        raise RuntimeError("current-full offline receipts do not bind the exact frozen source map")
+    for relative, row in source_files.items():
+        _source_content_row(row, label=f"current-full source {relative}")
+        if not isinstance(relative, str) or Path(relative).is_absolute() or ".." in Path(relative).parts:
+            raise RuntimeError("current-full source map contains a noncanonical relative path")
+        path_value = row.get("path") if isinstance(row, Mapping) else None
+        if not isinstance(path_value, str) or not Path(path_value).is_absolute():
+            raise RuntimeError(f"current-full source map lacks an absolute file path: {relative}")
+        source_path = Path(path_value)
+        try:
+            resolved = source_path.resolve(strict=True)
+        except (OSError, RuntimeError, ValueError) as exc:
+            raise RuntimeError(f"current-full source is unavailable: {relative}") from exc
+        if (source_path.is_symlink() or not resolved.is_file()
+                or resolved.stat().st_size != row.get("bytes")
+                or sha256_file(resolved) != row.get("sha256")):
+            raise RuntimeError(f"current-full source differs from its frozen map: {relative}")
+
+    full_pointer = gates.get("current_full_receipt")
+    if not isinstance(full_pointer, Mapping):
+        raise RuntimeError("current-full offline gate receipt pointer is missing")
+    progress_path = _candidate_receipt_path(
+        freeze_path.parent, full_pointer.get("path"), "current-full gate progress")
+    if sha256_file(progress_path) != full_pointer.get("sha256"):
+        raise RuntimeError("current-full gate progress changed after freezing")
+    try:
+        full_receipt = json.loads(progress_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise RuntimeError("current-full gate progress is invalid JSON") from exc
+    if (not isinstance(full_receipt, Mapping)
+            or full_receipt != gates.get("current_full_gate_receipt")
+            or full_receipt.get("status") != "PASS_ALL_OFFLINE_GATES"
+            or full_receipt.get("mode") != CURRENT_FULL_OFFLINE_MODE
+            or full_receipt.get("source_manifest_sha256") != source_map_sha
+            or full_receipt.get("source_count") != len(source_files)):
+        raise RuntimeError("current-full gate progress does not match its frozen receipt/map")
+    gate_rows = full_receipt.get("gates")
+    bound_sources = full_receipt.get("gate_source_manifest_sha256")
+    bound_receipts = full_receipt.get("gate_receipt_sha256")
+    if (not isinstance(gate_rows, Mapping) or set(gate_rows) != set(CURRENT_FULL_OFFLINE_GATES)
+            or not isinstance(bound_sources, Mapping)
+            or not isinstance(bound_receipts, Mapping)
+            or set(bound_sources) != set(CURRENT_FULL_OFFLINE_GATES)
+            or set(bound_receipts) != set(CURRENT_FULL_OFFLINE_GATES)):
+        raise RuntimeError("current-full offline preflight is missing a required gate receipt")
+    for name in CURRENT_FULL_OFFLINE_GATES:
+        if (bound_sources.get(name) != source_map_sha
+                or bound_receipts.get(name) != sha256_json(gate_rows[name])):
+            raise RuntimeError(f"current-full {name} receipt is not bound to the frozen source map")
+    expected_statuses = {
+        "runtime_imports": "PASS_EXECUTE_HELPER_IMPORTS",
+        "software_negative_controls": "PASS_SOFTWARE_NEGATIVE_CONTROLS",
+        "stdio_initialize_tools_list": "PASS_REAL_PRODUCTION_STDIO_INITIALIZE_TOOLS_LIST",
+        "comsol64_jdk11_javac_javap": "PASS_COMSOL_64_JDK11_COMPILE_AND_JAVAP",
+    }
+    for name, expected_status in expected_statuses.items():
+        if not isinstance(gate_rows.get(name), Mapping) or gate_rows[name].get("status") != expected_status:
+            raise RuntimeError(f"current-full offline gate did not pass: {name}")
+    pip_status = gate_rows.get("pip_check", {}).get("status") if isinstance(gate_rows.get("pip_check"), Mapping) else None
+    if pip_status not in {"PASS_TASK_VENV_PIP_CHECK", "PASS_FRESH_RUNTIME_BOUND_PIP_CHECK"}:
+        raise RuntimeError("current-full pip dependency receipt is not a successful reviewed runtime check")
+    aliases = {
+        "runtime_imports": "runtime_imports",
+        "software_negative_controls": "software_negative_controls",
+        "pip_check": "pip_check",
+        "stdio": "stdio_initialize_tools_list",
+        "compile": "comsol64_jdk11_javac_javap",
+    }
+    for alias, name in aliases.items():
+        if full_receipt.get(alias) != gate_rows[name] or gates.get(alias) != gate_rows[name]:
+            raise RuntimeError(f"current-full {alias} gate alias differs from its source-bound receipt")
+
+    compile_receipt = gates.get("compile")
+    compiled = compile_receipt.get("compiled_sources") if isinstance(compile_receipt, Mapping) else None
+    if not isinstance(compiled, Mapping):
+        raise RuntimeError("current-full compile receipt lacks compiled source identities")
+    for label, relative in (
+            ("persistent_worker", "comsol_mcp/worker_java/PersistentComsolWorker.java"),
+            ("science_fixture", "tools/java/NativeW23TEScienceFixture.java")):
+        source_row = source_files.get(relative)
+        compiled_row = compiled.get(label)
+        if (not isinstance(source_row, Mapping) or not isinstance(compiled_row, Mapping)
+                or compiled_row.get("source_sha256") != source_row.get("sha256")
+                or compiled_row.get("source") != source_row.get("path")):
+            raise RuntimeError(f"current-full compile receipt differs from frozen Java source: {relative}")
+    compile_pointer = gates.get("compile_receipt")
+    if not isinstance(compile_pointer, Mapping):
+        raise RuntimeError("current-full compile receipt file pointer is missing")
+    compile_path = _candidate_receipt_path(
+        freeze_path.parent, compile_pointer.get("path"), "current-full compile receipt")
+    if (sha256_file(compile_path) != compile_pointer.get("sha256")
+            or json.loads(compile_path.read_text(encoding="utf-8")) != compile_receipt):
+        raise RuntimeError("current-full compile receipt file differs from the frozen source-bound result")
+
+    focus_pointer = gates.get("focused_delta_receipt")
+    if not isinstance(focus_pointer, Mapping):
+        raise RuntimeError("current-full focused delta receipt pointer is missing")
+    focus_path = _candidate_receipt_path(
+        freeze_path.parent, focus_pointer.get("path"), "current-full focused delta receipt")
+    if sha256_file(focus_path) != focus_pointer.get("sha256"):
+        raise RuntimeError("current-full focused delta receipt changed after freezing")
+    try:
+        focused = json.loads(focus_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise RuntimeError("current-full focused delta receipt is invalid JSON") from exc
+    if (not isinstance(focused, Mapping)
+            or focused.get("status") != "PASS_FOCUSED_DELTA_CURRENT_FULL_SOURCE_MAP"
+            or focused.get("candidate_source_manifest_sha256") != source_map_sha
+            or "inherited_base" in focused or "source_delta" in focused):
+        raise RuntimeError("focused delta tests are not bound to the current full source map")
+    test_pointer = focused.get("focused_tests")
+    if not isinstance(test_pointer, Mapping):
+        raise RuntimeError("current-full focused test receipt pointer is missing")
+    test_path = _candidate_receipt_path(
+        freeze_path.parent, test_pointer.get("receipt_path"), "current-full focused test receipt")
+    if sha256_file(test_path) != test_pointer.get("receipt_sha256"):
+        raise RuntimeError("current-full focused test receipt changed after freezing")
+    try:
+        test_receipt = json.loads(test_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise RuntimeError("current-full focused test receipt is invalid JSON") from exc
+    if (not isinstance(test_receipt, Mapping)
+            or test_receipt.get("status") != "PASS_FOCUSED_STRICT_GUARDED_JUNIT"
+            or test_receipt.get("returncode") != 0
+            or test_receipt.get("candidate_source_manifest_sha256") != source_map_sha):
+        raise RuntimeError("strict guarded focused suite did not pass on the current source map")
+    test_paths = test_receipt.get("test_paths")
+    if not isinstance(test_paths, list):
+        raise RuntimeError("current-full focused test receipt lacks its executed source files")
+    executed_test_files = {str(item).split("::", 1)[0] for item in test_paths
+                           if isinstance(item, str)}
+    required_test_sources = (
+        "tests/test_w23_r21_direction_discovery.py",
+        "tests/test_unit_a_node_public_api.py",
+        "tests/test_native_w23_te_science_protocol.py",
+        "tests/test_native_w23_saved_mph_diagnostic.py",
+        "tests/test_native_w23_te_science_runner.py",
+        "tests/test_g3_results.py",
+        "tests/test_interp_native_default_units.py",
+        "tests/test_g2_registry_packaging.py",
+        "tests/test_g2_security_guards.py",
+    )
+    for relative in required_test_sources:
+        source_row = source_files.get(relative)
+        if (not isinstance(source_row, Mapping)
+                or source_row.get("path") not in executed_test_files):
+            raise RuntimeError(f"current-full focused suite omits the source-bound test file {relative}")
+    loopback_path = ("tests/test_w23_r21_direction_discovery.py::"
+                     "test_science_dispatch_uses_actual_registered_session_runtime_after_public_model_load")
+    if loopback_path not in test_receipt.get("excluded_test_paths", []):
+        raise RuntimeError("registered Core loopback control was not separated from strict guarded tests")
+    junit_path = _candidate_receipt_path(
+        freeze_path.parent, test_pointer.get("junit_path"), "current-full focused JUnit")
+    if (test_receipt.get("junit_path") != str(junit_path)
+            or sha256_file(junit_path) != test_pointer.get("junit_sha256")
+            or test_receipt.get("junit_sha256") != test_pointer.get("junit_sha256")):
+        raise RuntimeError("current-full focused JUnit path or hash differs from its receipt")
+    counts = _junit_counts(junit_path)
+    if counts["tests"] < 25 or counts["failures"] or counts["errors"] or counts["skipped"]:
+        raise RuntimeError("current-full strict guarded JUnit did not pass 25+ focused tests")
+    guard_path = _candidate_receipt_path(
+        freeze_path.parent, test_pointer.get("network_guard_path"), "current-full strict network guard")
+    if sha256_file(guard_path) != test_pointer.get("network_guard_sha256"):
+        raise RuntimeError("current-full strict network guard log changed after freezing")
+    try:
+        guard_rows = [json.loads(line) for line in guard_path.read_text(encoding="utf-8").splitlines()
+                      if line.strip()]
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise RuntimeError("current-full strict network guard log is invalid JSONL") from exc
+    if (not guard_rows or guard_rows[0].get("event") != "GUARD_ACTIVE_BEFORE_CHILD_ENTRYPOINT"
+            or any(row.get("event") in {"DENIED_BEFORE_SOCKET_OPERATION", "GUARD_SETUP_ERROR"}
+                   for row in guard_rows)):
+        raise RuntimeError("current-full strict guarded suite lacks active no-deny isolation evidence")
+    guard_receipt = test_receipt.get("network_guard")
+    if (not isinstance(guard_receipt, Mapping)
+            or guard_receipt.get("status") != "ACTIVE_NO_DENY_OR_SETUP_ERROR"
+            or guard_receipt.get("path") != str(guard_path)
+            or guard_receipt.get("sha256") != test_pointer.get("network_guard_sha256")
+            or guard_receipt.get("event_count") != len(guard_rows)):
+        raise RuntimeError("current-full strict guard summary differs from its raw log")
+    loopback = focused.get("registered_core_loopback")
+    if (not isinstance(loopback, Mapping)
+            or loopback.get("status") not in {
+                "NOT_RUN_DEFERRED_POST_W24_TERMINAL",
+                "PASS_SEPARATE_REGISTERED_CORE_LOOPBACK"}):
+        raise RuntimeError("registered Core loopback result is not separately classified")
+    if loopback.get("strict_network_guard_enabled") is not False or loopback.get("counted_in_guarded_junit") is not False:
+        raise RuntimeError("registered Core loopback control was mixed into the strict guarded JUnit")
+    return {
+        "status": "PASS_CURRENT_FULL_SOURCE_BOUND_OFFLINE_GATES",
+        "source_manifest_sha256": source_map_sha,
+        "gate_count": len(CURRENT_FULL_OFFLINE_GATES),
+        "focused_test_count": counts["tests"],
+        "strict_network_guard_event_count": len(guard_rows),
+        "registered_core_loopback": loopback.get("status"),
+    }
+
+
 def _check_offline_receipts(freeze_path: Path, freeze: Mapping[str, Any]) -> dict[str, Any]:
     gates = freeze.get("offline_preflight")
-    if not isinstance(gates, Mapping) or gates.get("status") != "PASS_ALL_OFFLINE_GATES":
-        raise RuntimeError("frozen candidate lacks successful complete offline gates")
+    if not isinstance(gates, Mapping):
+        raise RuntimeError("frozen candidate lacks offline-gate receipts")
+    gate_status = gates.get("status")
+    if gate_status == "PASS_ALL_OFFLINE_GATES":
+        inherited_delta = None
+    elif gate_status == "PASS_OFFLINE_BASE_INHERITED_PLUS_FOCUSED_DELTA":
+        inherited_delta = _validate_inherited_offline_delta(freeze_path, freeze)
+    else:
+        raise RuntimeError("frozen candidate lacks successful complete or explicitly inherited offline gates")
     compile_receipt = gates.get("compile")
     if not isinstance(compile_receipt, Mapping):
         raise RuntimeError("frozen candidate has no COMSOL/JDK compile receipt")
+    current_full = None
+    if gates.get("mode") == CURRENT_FULL_OFFLINE_MODE:
+        current_full = _validate_current_full_offline_receipts(freeze_path, freeze, gates)
+    elif gates.get("mode") is not None:
+        raise RuntimeError("frozen candidate uses an unknown offline-gate mode")
+    if inherited_delta is not None:
+        compile_path = freeze_path.parent / "offline_gates" / "compile.json"
+        if (compile_path.is_symlink() or not compile_path.is_file()
+                or sha256_file(compile_path) != W23_R13_BASE_COMPILE_SHA256
+                or json.loads(compile_path.read_text(encoding="utf-8")) != compile_receipt):
+            raise RuntimeError("inherited Java compile receipt differs from the pinned R13 compile evidence")
+        for relative, expected_sha in W23_R13_JAVA_SOURCE_SHA256.items():
+            current = freeze.get("source_files", {}).get(relative)
+            if not isinstance(current, Mapping):
+                raise RuntimeError(f"candidate source map omits inherited Java source {relative}")
+            source_path = Path(str(current.get("path", "")))
+            if (source_path.is_symlink() or not source_path.is_file()
+                    or source_path.stat().st_size != current.get("bytes")
+                    or sha256_file(source_path) != expected_sha
+                    or current.get("sha256") != expected_sha):
+                raise RuntimeError(f"inherited Java source SHA differs in the current snapshot: {relative}")
+        compiled = compile_receipt.get("compiled_sources")
+        source_expectations = {
+            "persistent_worker": W23_R13_JAVA_SOURCE_SHA256[
+                "comsol_mcp/worker_java/PersistentComsolWorker.java"],
+            "science_fixture": W23_R13_JAVA_SOURCE_SHA256[
+                "tools/java/NativeW23TEScienceFixture.java"],
+        }
+        if (not isinstance(compiled, Mapping)
+                or any(not isinstance(compiled.get(label), Mapping)
+                       or compiled[label].get("source_sha256") != expected
+                       for label, expected in source_expectations.items())):
+            raise RuntimeError("inherited Java source hashes differ from the exact R13 compile receipt")
     from comsol_mcp._java_worker import JavaWorkerPaths
     paths = JavaWorkerPaths(INSTALL_ROOT, JAVA11, project_root=REPO)
     _classpath, manifest_sha, jar_count, jar_fingerprint = paths.classpath()
@@ -2377,7 +2939,11 @@ def _check_offline_receipts(freeze_path: Path, freeze: Mapping[str, Any]) -> dic
     observed = (manifest_sha, jar_count, jar_fingerprint)
     if observed != expected:
         raise RuntimeError("installed COMSOL client classpath changed after frozen javac/javap validation")
-    compiled_root = freeze_path.parent / "offline_gates" / "compile"
+    if current_full is not None:
+        compiled_root = _candidate_receipt_directory(
+            freeze_path.parent, gates.get("compile_artifact_root"), "current-full compile output root")
+    else:
+        compiled_root = freeze_path.parent / "offline_gates" / "compile"
     classes: dict[str, Any] = {}
     for label, receipt in compile_receipt.get("compiled_sources", {}).items():
         if not isinstance(receipt, Mapping):
@@ -2393,10 +2959,15 @@ def _check_offline_receipts(freeze_path: Path, freeze: Mapping[str, Any]) -> dic
         if not seen:
             raise RuntimeError(f"frozen Java compile output is empty for {label}")
         classes[label] = {"class_count": len(seen), "class_dir": str(class_dir)}
-    return {"status": "PASS_FROZEN_CLASSPATH_AND_CLASS_OUTPUT_REVALIDATED",
-            "classpath_manifest_sha256": manifest_sha, "classpath_jar_count": jar_count,
-            "classpath_jar_content_fingerprint_sha256": jar_fingerprint,
-            "compiled_class_outputs": classes}
+    material = {"status": "PASS_FROZEN_CLASSPATH_AND_CLASS_OUTPUT_REVALIDATED",
+                "classpath_manifest_sha256": manifest_sha, "classpath_jar_count": jar_count,
+                "classpath_jar_content_fingerprint_sha256": jar_fingerprint,
+                "compiled_class_outputs": classes}
+    if inherited_delta is not None:
+        material["inherited_offline_delta"] = inherited_delta
+    if current_full is not None:
+        material["current_full_offline_gates"] = current_full
+    return material
 
 
 def execute(freeze_path: Path, freeze_sha256: str, approval_path: Path,

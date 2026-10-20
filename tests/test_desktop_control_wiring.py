@@ -484,7 +484,8 @@ def test_control_daemon_label_challenge_uses_durable_worker_lane_and_restores_ex
 
     daemon.backend.worker = Worker()
     adapter = AvailableWindowAdapter()
-    adapter.observe_model = lambda _identity: DesktopModelObservation("UNVERIFIED", active_model_label=label["value"])
+    adapter.observe_model = lambda _identity: DesktopModelObservation(
+        "UNVERIFIED", server_endpoint="127.0.0.1:2036", active_model_label=label["value"])
     daemon.desktop.adapter = adapter
     try:
         status = daemon.dispatch({"operation": "desktop.status", "arguments": {"project_id": "p"}, "execution": {}})
@@ -543,7 +544,8 @@ def test_label_challenge_refuses_nonowned_or_uncertain_model_before_worker_mutat
 
     daemon.backend.worker = Worker()
     adapter = AvailableWindowAdapter()
-    adapter.observe_model = lambda _identity: DesktopModelObservation("UNVERIFIED", active_model_label=label["value"])
+    adapter.observe_model = lambda _identity: DesktopModelObservation(
+        "UNVERIFIED", server_endpoint="127.0.0.1:2036", active_model_label=label["value"])
     daemon.desktop.adapter = adapter
     try:
         status = daemon.dispatch({"operation": "desktop.status", "arguments": {"project_id": "p"}, "execution": {}})
@@ -597,7 +599,8 @@ def test_label_challenge_readback_loss_is_unknown_and_idempotency_prevents_retry
     adapter = AvailableWindowAdapter()
     # The UI never reflects the nonce, which makes the challenge fail closed;
     # the Worker still restores the original label through the same queue.
-    adapter.observe_model = lambda _identity: DesktopModelObservation("UNVERIFIED", active_model_label="owned-copy")
+    adapter.observe_model = lambda _identity: DesktopModelObservation(
+        "UNVERIFIED", server_endpoint="127.0.0.1:2036", active_model_label="owned-copy")
     daemon.desktop.adapter = adapter
     try:
         status = daemon.dispatch({"operation": "desktop.status", "arguments": {"project_id": "p"}, "execution": {}})

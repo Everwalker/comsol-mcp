@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -187,7 +188,7 @@ def owned_server_preferences_directory(
         directories = _server_directories(owned_root_real)
         command = build_server_command(
             directories, platform_name=platform_name or sys.platform,
-            validate_launcher=False,
+            validate_launcher=False, server_np=process_identity.server_np,
         )
         expected_executable = Path(command[0]).resolve(strict=True)
         observed_executable = Path(process_identity.executable).resolve(strict=True)
@@ -300,8 +301,19 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+_MAX_OWNED_SERVER_NP = 64
+
+
+def _validate_server_np(server_np: int | None) -> int | None:
+    if server_np is None:
+        return None
+    if type(server_np) is not int or not 1 <= server_np <= _MAX_OWNED_SERVER_NP:
+        raise OwnedServerError(f"owned Server server_np must be an integer in [1, {_MAX_OWNED_SERVER_NP}] or null")
+    return server_np
+
+
 def build_server_command(directories: ServerDirectories, *, platform_name: str | None = None,
-                         validate_launcher: bool = True) -> list[str]:
+                         validate_launcher: bool = True, server_np: int | None = None) -> list[str]:
     selected = platform_name or sys.platform
     root = directories.private_installation
     if selected in {"darwin", "mac", "macos"}:
@@ -314,8 +326,10 @@ def build_server_command(directories: ServerDirectories, *, platform_name: str |
         raise OwnedServerError("owned COMSOL Server launcher is not verified for this platform")
     if validate_launcher and not launcher.is_file():
         raise OwnedServerError("private COMSOL Server launcher is missing")
+    selected_np = _validate_server_np(server_np)
+    np_arguments = ["-np", str(selected_np)] if selected_np is not None else []
     return [
-        *prefix,
+        *prefix, *np_arguments,
         "-port", "0", "-portfile", str(directories.port_file),
         "-prefsdir", str(directories.preferences), "-tmpdir", str(directories.temporary),
         "-recoverydir", str(directories.recovery), "-login", "auto", "-silent", "-multi", "on",
@@ -331,7 +345,7 @@ def _utf16_units_with_nul(value: str) -> int:
 
 
 def windows_owned_server_path_budget(session_state_root: Path, project_id: str,
-                                     session_id: str) -> dict[str, Any]:
+                                     session_id: str, *, server_np: int | None = None) -> dict[str, Any]:
     """Preflight every Windows-owned Server path before any child can start.
 
     The 260-unit path bound is a conservative compatibility guard for COMSOL's
@@ -343,7 +357,7 @@ def windows_owned_server_path_budget(session_state_root: Path, project_id: str,
     root = session_root / "owned-server"
     directories = _server_directories(root)
     command = build_server_command(
-        directories, platform_name="windows", validate_launcher=False,
+        directories, platform_name="windows", validate_launcher=False, server_np=server_np,
     )
     state_root = Path(session_state_root)
     server_home = state_root.parent.parent
@@ -520,11 +534,13 @@ class OwnedServerLauncher:
                  process_identity_reader: ProcessIdentityReader = process_identity,
                  listener_reader: Callable[[int], Iterable[ListenerRow]] | None = None,
                  platform_name: str | None = None,
+                 server_np: int | None = None,
                  ready_timeout_s: float = 45.0,
                  poll_interval_s: float = 0.2):
         self.process_factory = process_factory
         self.process_identity_reader = process_identity_reader
         self.platform_name = platform_name or sys.platform
+        self.server_np = _validate_server_np(server_np)
         self.listener_reader = listener_reader or (
             lambda port: listener_rows(port, platform_name=self.platform_name)
         )
@@ -543,10 +559,12 @@ class OwnedServerLauncher:
             # and before any process API or fallback can run.
             preflight()
         if self.platform_name in {"win32", "nt", "windows"}:
-            windows_owned_server_path_budget(runtime.session_state_root, project_id, session_id)
+            windows_owned_server_path_budget(runtime.session_state_root, project_id, session_id,
+                                             server_np=self.server_np)
         directories = create_server_directories(runtime, project_id, session_id)
         prepare_private_loopback_installation(runtime.installation_root, directories.private_installation)
-        command = build_server_command(directories, platform_name=self.platform_name)
+        command = build_server_command(directories, platform_name=self.platform_name,
+                                       server_np=self.server_np)
         # Resolve the executable before CreateProcess so no fallible path
         # lookup can occur in the interval between a child birth and retaining
         # its exact Popen handle.
@@ -696,6 +714,12 @@ class OwnedServerLauncher:
             identity = OwnedServerProcessIdentity(
                 pid=process_pid, birth=birth, executable=executable,
                 listener_sockets=listeners, start_epoch_ms=start_epoch_ms,
+                launch_argv_sha256=hashlib.sha256(json.dumps(
+                    list(command), ensure_ascii=False, separators=(",", ":"),
+                ).encode("utf-8")).hexdigest(),
+                executable_sha256=_sha256(Path(executable)),
+                runtime_id=runtime.runtime_id,
+                server_np=self.server_np,
             )
             handle.endpoint = endpoint
             handle.process_identity = identity

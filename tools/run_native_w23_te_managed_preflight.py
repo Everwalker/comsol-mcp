@@ -893,9 +893,11 @@ def _parse_numeric_tcp_endpoint(endpoint: str) -> dict[str, Any]:
 def _port_socket_owners(port: int | None, *, admission_owner: Any = None) -> dict[str, Any]:
     """Require every live socket endpoint to parse numerically as loopback.
 
-    lsof can retain a task-owned ``(CLOSED)`` row after disconnect. Such a row
-    is preserved as inactive historical evidence and never counts as a live
-    client or contributes a PID to the active owner set.
+    lsof can retain task-owned ``(CLOSED)`` or kernel ``(TIME_WAIT)`` rows
+    after disconnect. Such rows are preserved as inactive historical evidence
+    and never count as a live client or contribute a PID to the active owner
+    set. TIME_WAIT is classified separately; it says nothing about job/RPC
+    terminal state, which is enforced by the independent ledger gates.
     """
     if type(port) is not int or not 1 <= port <= 65535:
         return {"safe": False, "reason": "port unavailable", "port": port, "pids": [], "rows": []}
@@ -917,7 +919,7 @@ def _port_socket_owners(port: int | None, *, admission_owner: Any = None) -> dic
             continue
         state = state_token[1:-1] if state_token.startswith("(") and state_token.endswith(")") else None
         row: dict[str, Any] = {"pid": pid, "socket": socket_text, "state": state, "raw": line}
-        if state not in {"LISTEN", "ESTABLISHED", "CLOSED"}:
+        if state not in {"LISTEN", "ESTABLISHED", "CLOSED", "TIME_WAIT"}:
             row.update({"valid": False, "active": None, "reason": "unsupported_or_missing_tcp_state"})
             parsed.append(row)
             continue
@@ -947,18 +949,33 @@ def _port_socket_owners(port: int | None, *, admission_owner: Any = None) -> dic
                                               for endpoint in endpoints),
                         "active": True})
             valid = (row["loopback_only"] and port in {local.get("port"), remote.get("port")})
-        else:  # CLOSED is an inactive historical row, not a live peer proof.
+        else:  # CLOSED and TIME_WAIT are inactive history, never live peer proof.
             if len(parts) != 2:
-                row.update({"valid": False, "active": False, "reason": "closed_socket_requires_two_numeric_endpoints"})
+                row.update({"valid": False, "active": False,
+                            "reason": f"{state.lower()}_socket_requires_two_numeric_endpoints"})
                 parsed.append(row)
                 continue
             local, remote = (_parse_numeric_tcp_endpoint(parts[0]),
                              _parse_numeric_tcp_endpoint(parts[1]))
             row.update({"local_endpoint": local, "remote_endpoint": remote,
-                        "loopback_only": None, "active": False,
-                        "endpoint_semantics": "inactive_closed_history_only_not_used_as_live_loopback_or_client_proof"})
-            valid = (local.get("valid") is True and remote.get("valid") is True
-                     and port in {local.get("port"), remote.get("port")})
+                        "loopback_only": (bool(local.get("valid") and local.get("loopback")
+                                          and remote.get("valid") and remote.get("loopback"))
+                                          if state == "TIME_WAIT" else None),
+                        "active": False,
+                        "endpoint_semantics": (
+                            "inactive_kernel_time_wait_only_not_used_as_live_loopback_or_client_proof"
+                            if state == "TIME_WAIT" else
+                            "inactive_closed_history_only_not_used_as_live_loopback_or_client_proof")})
+            if state == "TIME_WAIT":
+                # Only accept a fully parsed loopback tuple involving the
+                # guarded port. Unknown, malformed, and external endpoints
+                # remain fail-closed even though TIME_WAIT is inactive.
+                valid = (local.get("valid") is True and remote.get("valid") is True
+                         and local.get("loopback") is True and remote.get("loopback") is True
+                         and port in {local.get("port"), remote.get("port")})
+            else:
+                valid = (local.get("valid") is True and remote.get("valid") is True
+                         and port in {local.get("port"), remote.get("port")})
         row["valid"] = valid
         if not valid and not row.get("reason"):
             row["reason"] = "numeric_endpoint_or_live_loopback_check_failed"

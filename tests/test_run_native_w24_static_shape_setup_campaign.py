@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from contextlib import contextmanager
 import subprocess
+import sys
 import threading
 import time
 from pathlib import Path
@@ -12,6 +14,13 @@ from typing import Any
 import pytest
 
 from tools import run_native_w24_static_shape_setup_campaign as campaign
+
+
+def _synthetic_adapter_binding(root: Path) -> dict[str, Any]:
+    """Test-only frozen identity for lifecycle tests whose validator is stubbed."""
+    return {"root": str(root.resolve()), "exact_build": "6.4.0.293",
+            "readme_sha256": "a" * 64, "classpath_manifest_sha256": "b" * 64,
+            "jar_count": 25, "jar_content_sha256": "c" * 64}
 
 
 class _Monitor:
@@ -28,14 +37,156 @@ class _Daemon:
     def __init__(self, responses: list[dict[str, Any]] | None = None):
         self.responses = list(responses or [])
         self.calls: list[dict[str, Any]] = []
-        self.store = object()
-        self.session_registry = object()
+        self.store = _ArtifactMetadataStore()
+        self.service = SimpleNamespace(ledger=_FakeLedger())
+        self.worker = SimpleNamespace(instance_id="fake-worker", worker_generation=1)
+        self.client = object()
+        self.endpoint = SimpleNamespace(
+            host="127.0.0.1", port=25432, worker_epoch=1,
+            observed_peer=SimpleNamespace(address="127.0.0.1", port=25432),
+            owned_process=None,
+        )
+        self.backend = SimpleNamespace(
+            service=self.service, worker=self.worker, endpoint_key="127.0.0.1:25432",
+            worker_identity={
+                "worker_instance_id": self.worker.instance_id,
+                "connection_epoch": 1, "server_instance_id": self.service.ledger.server_instance_id,
+                "endpoint": "127.0.0.1:25432",
+            },
+        )
+        self.context = SimpleNamespace(
+            project_id="project-1", session_id=self.service.ledger.session_id,
+            backend=self.backend, service=self.service, worker=self.worker, client=self.client,
+            client_retired=False, client_connected=True, endpoint=self.endpoint,
+            worker_epoch=1, worker_instance_id=self.worker.instance_id,
+        )
+        self.session_registry = _FakeRegistry(self.context)
+        self._session_backends = {("project-1", self.context.session_id): self.backend}
+        self._session_worker_handles = {("project-1", self.context.session_id): self.worker}
+        self.session_lifecycle = _FakeLifecycle(self.context)
 
     def dispatch(self, request):
         self.calls.append(request)
+        operation = request.get("operation")
+        arguments = request.get("arguments", {})
+        execution = request.get("execution", {})
+        if (operation == "operation_call"
+                and arguments.get("operation_id") == "artifact.register"):
+            body = arguments["arguments"]
+            source = self.workspace / body["path"]
+            digest = hashlib.sha256(source.read_bytes()).hexdigest()
+            relative = f"g2_artifacts/registered/{digest}.mph"
+            target = self.workspace / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(source.read_bytes())
+            operation_id = f"test-artifact-register-{digest}"
+            provenance = {"source_project_relative_path": body["path"],
+                          "source_sha256": digest,
+                          "request_id": body["request_id"],
+                          "registering_operation_id": operation_id}
+            record = {"artifact_id": digest, "sha256": digest,
+                      "path": relative, "size": target.stat().st_size,
+                      "project_id": body["project_id"], "role": body["role"],
+                      "classification": body["classification"],
+                      "artifact_type": body["artifact_type"],
+                      "format_version": body["format_version"],
+                      "provenance": provenance}
+            self.store.metadata[digest] = record
+            return {"success": True, "data": {**record,
+                    "host_scope": "local_loopback_engine_and_current_project"},
+                    "execution": {"operation_id": operation_id,
+                                  "project_id": execution.get("project_id"),
+                                  "session_id": execution.get("session_id"),
+                                  "request_id": execution.get("request_id"),
+                                  "idempotency_key": execution.get("idempotency_key")}}
         if self.responses:
-            return self.responses.pop(0)
+            response = self.responses.pop(0)
+            if operation in {"model.adopt", "model_load", "model.load"}:
+                execution = response.get("execution", {})
+                ref = execution.get("model_ref")
+                ownership = execution.get("model_ownership")
+                if isinstance(ref, dict) and isinstance(ownership, str):
+                    self.service.ledger.bind(ref, ownership)
+            if operation == "model.load":
+                queued_execution = response.setdefault("execution", {})
+                ref = queued_execution.get("model_ref")
+                artifact_id = arguments.get("artifact_id")
+                record = self.store.get_metadata("artifacts", artifact_id)
+                if not isinstance(ref, dict) or not isinstance(record, dict):
+                    return {"success": False, "execution_state_unknown": True,
+                            "data": {"worker": {"status": "UNKNOWN"}}}
+                self.service.ledger.bind(ref, "mcp_owned")
+                queued_data = response.setdefault("data", {})
+                queued_data.update({"status": "LOADED", "project_id": execution.get("project_id"),
+                                    "model_tag": ref["model_tag"], "artifact_id": artifact_id,
+                                    "sha256": artifact_id, "size_bytes": record["size"],
+                                    "ownership": "mcp_owned"})
+                queued_execution.update({"project_id": execution.get("project_id"),
+                                         "session_id": execution.get("session_id"),
+                                         "request_id": request.get("execution", {}).get("request_id"),
+                                         "idempotency_key": request.get("execution", {}).get("idempotency_key"),
+                                         "model_ownership": "mcp_owned"})
+            return response
         return {"success": True, "data": {"worker": {"status": "SUCCEEDED"}}}
+
+
+class _FakeLedger:
+    server_instance_id = "server-1"
+    session_id = "session-1"
+
+    def __init__(self):
+        self.states: dict[str, Any] = {}
+        self.model_ownership: dict[str, str] = {}
+
+    def bind(self, ref: dict[str, Any], ownership: str) -> None:
+        from comsol_mcp._execution_contract import model_ref_from_mapping
+
+        model_ref = model_ref_from_mapping(ref)
+        self.states[model_ref.model_tag] = SimpleNamespace(ref=model_ref, dirty=False)
+        self.model_ownership[model_ref.model_tag] = ownership
+
+    def _state_for(self, model_ref):
+        state = self.states.get(model_ref.model_tag)
+        if state is None or state.ref != model_ref:
+            raise KeyError("model reference is not bound")
+        return state
+
+
+class _ArtifactMetadataStore:
+    def __init__(self):
+        self.metadata: dict[str, dict[str, Any]] = {}
+
+    def get_metadata(self, table: str, key: str):
+        assert table == "artifacts"
+        value = self.metadata.get(key)
+        return dict(value) if value is not None else None
+
+
+class _FakeRegistry:
+    def __init__(self, context):
+        self.context = context
+
+    def get(self, project_id, session_id):
+        if (project_id, session_id) != (self.context.project_id, self.context.session_id):
+            raise KeyError("fake session context missing")
+        return self.context
+
+
+class _FakeLifecycle:
+    def __init__(self, context):
+        self.context = context
+
+    def get(self, project_id, session_id):
+        context = self.context
+        if (project_id, session_id) != (context.project_id, context.session_id):
+            return None
+        return {
+            "state": "CONNECTED", "client_state": "CONNECTED",
+            "project_id": project_id, "session_id": session_id,
+            "worker_instance_id": context.worker_instance_id, "worker_epoch": context.worker_epoch,
+            "server_instance_id": context.backend.service.ledger.server_instance_id,
+            "endpoint": {"host": context.endpoint.host, "port": context.endpoint.port},
+        }
 
 
 def _gate(tmp_path: Path, daemon: _Daemon | None = None):
@@ -43,11 +194,22 @@ def _gate(tmp_path: Path, daemon: _Daemon | None = None):
     workspace.mkdir(exist_ok=True)
     events = tmp_path / "events.jsonl"
     events.write_bytes(b"")
+    selection_dir = tmp_path / "run_dir" / "static_shape_managed"
+    selection_dir.parent.mkdir()
+    selection_dir.mkdir(mode=0o700)
+    actual_daemon = daemon or _Daemon()
+    actual_daemon.workspace = workspace.resolve()
     return campaign.BudgetedSetupDaemon(
-        daemon or _Daemon(), monitor=_Monitor(),
+        actual_daemon, monitor=_Monitor(),
         deadline_monotonic=time.monotonic() + campaign.MAX_WALL_SECONDS,
         events_path=events, workspace=workspace, project_id="project-1",
+        selection_diagnostic_dir=selection_dir,
     )
+
+
+def _selection_trace_path(gate, configuration_id: str, case_id: str) -> str:
+    return str(gate.selection_diagnostic_dir / (
+        f"w24_selection_stage_{configuration_id}_{case_id}_{campaign.uuid4().hex}.jsonl"))
 
 
 def _operation_call(entrypoint: str, role: str, arguments: dict[str, Any]) -> dict[str, Any]:
@@ -68,6 +230,57 @@ def _java_response(readback: dict[str, Any], *, status: str = "SUCCEEDED") -> di
                    "result": {"readback": readback}},
         "readback": {"executed": True, "readback": readback},
     }}
+
+
+def test_connected_inspect_accepts_exact_public_r14_production_shape():
+    fixture_path = Path(__file__).parent / "fixtures/w24_r14_public_session_inspect.json"
+    fixture_bytes = fixture_path.read_bytes()
+    assert hashlib.sha256(fixture_bytes).hexdigest() == (
+        "67697cc452bf27bbac87bf9d487ea0d7d69a5641d5077c5e1c6857c5f405996d"
+    )
+    fixture = json.loads(fixture_bytes)
+    assert fixture["schema"] == "W24_R14_PUBLIC_SESSION_INSPECT_PRODUCTION_SHAPE_FIXTURE_V1"
+    assert fixture["provenance"]["connect_route_receipt_sha256"] == (
+        "b8f48fb4efb93f465ef43daae7e4f7538767bf05e920a8661ce4c1c4e4336247"
+    )
+    assert fixture["provenance"]["inspect_route_receipt_sha256"] == (
+        "619ac46ddacfe2b4c2b82472c04390817e6cd772cf1f32941a13777e7357425e"
+    )
+    connect = fixture["connect_response"]
+    inspect = fixture["inspect_response"]
+    session = campaign._session_identity(
+        connect, project_id=connect["data"]["project_id"], expected_port=55427,
+    )
+    assert "project_id" not in inspect["data"]
+    assert inspect["data"]["lifecycle"]["project_id"] == session["project_id"]
+    assert inspect["data"]["lifecycle"]["session_id"] == session["session_id"]
+    assert inspect["data"]["lifecycle"]["endpoint"] == session["endpoint"]
+    assert inspect["data"]["lifecycle"]["server_instance_id"] == session["server_instance_id"]
+    assert inspect["data"]["lifecycle"]["worker_instance_id"] == session["worker_instance_id"]
+    assert inspect["data"]["lifecycle"]["worker_epoch"] == session["worker_epoch"]
+    assert inspect["data"]["worker_binding"]["worker_instance_id"] == session["worker_instance_id"]
+    assert inspect["data"]["worker_binding"]["worker_epoch"] == session["worker_epoch"]
+    assert inspect["data"]["worker_binding"]["server_lane"] == "owned"
+    assert campaign._require_connected_inspect(inspect, session) == inspect
+
+    mutations = [
+        ("project", ("lifecycle", "project_id"), "foreign-project"),
+        ("session", ("lifecycle", "session_id"), "foreign-session"),
+        ("endpoint", ("lifecycle", "endpoint"), {"host": "127.0.0.1", "port": 55428}),
+        ("server_instance", ("lifecycle", "server_instance_id"), "foreign-server"),
+        ("lifecycle_worker_uuid", ("lifecycle", "worker_instance_id"), "foreign-worker"),
+        ("binding_worker_uuid", ("worker_binding", "worker_instance_id"), "foreign-worker"),
+        ("lifecycle_epoch", ("lifecycle", "worker_epoch"), session["worker_epoch"] + 1),
+        ("binding_epoch", ("worker_binding", "worker_epoch"), session["worker_epoch"] + 1),
+        ("lifecycle_bool_epoch", ("lifecycle", "worker_epoch"), True),
+        ("binding_bool_epoch", ("worker_binding", "worker_epoch"), True),
+        ("server_lane", ("worker_binding", "server_lane"), "unknown"),
+    ]
+    for _case, (section, key), value in mutations:
+        invalid = json.loads(json.dumps(inspect))
+        invalid["data"][section][key] = value
+        with pytest.raises(campaign.CandidateError, match="exact connected Worker epoch and owned server binding"):
+            campaign._require_connected_inspect(invalid, session)
 
 
 def test_setup_slots_are_the_exact_preregistered_fourteen_with_no_solve_budget():
@@ -158,6 +371,124 @@ def test_campaign_receipt_acceptance_route_rejects_prior_worker_epoch(tmp_path, 
         assert worker.disconnect_calls == 0
     finally:
         daemon.close()
+
+
+def _slot_receipt_fixture(tmp_path: Path):
+    workspace = tmp_path / "project"
+    outputs = workspace / "outputs"
+    registered_root = workspace / "g2_artifacts" / "registered"
+    outputs.mkdir(parents=True)
+    registered_root.mkdir(parents=True)
+    payload = b"synthetic saved MPH bytes for receipt validation"
+    digest = hashlib.sha256(payload).hexdigest()
+    source = outputs / "static_shape_flat.mph"
+    registered = registered_root / f"{digest}.mph"
+    source.write_bytes(payload)
+    registered.write_bytes(payload)
+    fixture_sha, readback_sha = "f" * 64, "e" * 64
+    binding = {"project_id": "project-receipt", "session_id": "session-receipt",
+               "model_tag": "tag-receipt",
+               "model_ref": {"session_id": "session-receipt",
+                             "server_instance_id": "server-receipt",
+                             "generation": 1, "model_tag": "tag-receipt"},
+               "revision": 0}
+    registration_operation = "operation-artifact-register"
+    registration_request = "request-artifact-register"
+    result = {
+        "status": "MANAGED_BUILD_SAVE_REOPEN_READBACK_COMPLETE",
+        "configuration_id": "baseline", "case_id": "flat",
+        "project_id": "project-receipt", "native_acceptance": "NOT_RUN",
+        "phase_initialization_executed": False,
+        "study_run_submission_count": 0, "study_run_submissions": [],
+        "parent_model_binding": binding, "new_model_binding": binding,
+        "reopened_model_binding": binding,
+        "reopened_configuration_readback_binding": binding,
+        "readback_comparison": {"matches": True},
+        "source_sha256": {"fixture": fixture_sha, "readback": readback_sha},
+        "project_artifact": {"path": str(source), "size_bytes": len(payload),
+                             "sha256": digest},
+        "registered_project_artifact": {
+            "artifact_id": digest, "path": str(registered),
+            "relative_path": f"g2_artifacts/registered/{digest}.mph",
+            "size_bytes": len(payload), "sha256": digest,
+            "role": "saved_model", "classification": "project_local",
+            "artifact_type": "application/vnd.comsol.mph",
+            "format_version": "comsol-mph-savecopy/1",
+            "provenance": {"source_project_relative_path": "outputs/static_shape_flat.mph",
+                           "source_sha256": digest,
+                           "request_id": registration_request,
+                           "registering_operation_id": registration_operation},
+            "registration_operation_id": registration_operation,
+            "registration_request_id": registration_request,
+            "registration_idempotency_key": "idem-artifact-register",
+        },
+    }
+    session = {"session_id": "session-receipt", "server_instance_id": "server-receipt",
+               "worker_epoch": 1, "worker_instance_id": "worker-receipt"}
+    sources = {"fixture": {"sha256": fixture_sha},
+               "readback": {"sha256": readback_sha}}
+    return workspace, result, session, sources, payload
+
+
+def test_setup_slot_receipt_accounts_saved_and_registered_mph_bytes(tmp_path, monkeypatch):
+    workspace, result, session, sources, payload = _slot_receipt_fixture(tmp_path)
+    monkeypatch.setattr(campaign, "validate_current_epoch_binding",
+                        lambda binding, **_kwargs: dict(binding))
+    validated = campaign._validate_slot_receipt(
+        result, slot={"configuration_id": "baseline", "case_id": "flat"},
+        project_id="project-receipt", session=session, workspace=workspace,
+        expected_sources=sources)
+    assert validated["artifact"]["size_bytes"] == len(payload)
+    assert validated["registered_artifact"]["sha256"] == validated["artifact"]["sha256"]
+    assert validated["accounted_output_bytes"] == 2 * len(payload)
+    _budget, _routes, slots = campaign._execution_contract(campaign.EXECUTION_MODE_SETUP14)
+    assert campaign.SETUP_BUDGET["planned_public_slot_route_calls"] == 9 * len(slots) == 126
+    assert campaign.SETUP_BUDGET["public_slot_route_count_delta_vs_legacy_path_load"] == len(slots) == 14
+    assert campaign.SETUP_BUDGET["max_total_project_output_bytes"] == 10 * 1024**3
+    assert "both its saved MPH and the byte-identical registered MPH copy" in (
+        campaign.SETUP_BUDGET["project_output_byte_accounting"])
+
+
+@pytest.mark.parametrize("damage", [
+    "registered_digest", "registered_path", "source_path", "registering_operation",
+])
+def test_setup_slot_receipt_rejects_unbound_registered_mph_copy(tmp_path, monkeypatch, damage):
+    workspace, result, session, sources, _payload = _slot_receipt_fixture(tmp_path)
+    registered = result["registered_project_artifact"]
+    if damage == "registered_digest":
+        registered["sha256"] = "0" * 64
+    elif damage == "registered_path":
+        registered["relative_path"] = "g2_artifacts/registered/foreign.mph"
+    elif damage == "source_path":
+        registered["provenance"]["source_project_relative_path"] = "outputs/other.mph"
+    elif damage == "registering_operation":
+        registered["registration_operation_id"] = "different-operation"
+    monkeypatch.setattr(campaign, "validate_current_epoch_binding",
+                        lambda binding, **_kwargs: dict(binding))
+    with pytest.raises(campaign.CandidateError, match="registered MPH does not bind"):
+        campaign._validate_slot_receipt(
+            result, slot={"configuration_id": "baseline", "case_id": "flat"},
+            project_id="project-receipt", session=session, workspace=workspace,
+            expected_sources=sources)
+
+
+def test_project_output_budget_counts_the_registered_mph_copy(tmp_path):
+    from tools.run_native_w24_static_shape_setup_campaign import _check_process_size
+
+    science = tmp_path / "project" / "science"
+    output = science / "outputs" / "one.mph"
+    registered = science / "g2_artifacts" / "registered" / ("a" * 64 + ".mph")
+    output.parent.mkdir(parents=True)
+    registered.parent.mkdir(parents=True)
+    output.write_bytes(b"12345678")
+    registered.write_bytes(b"12345678")
+    inventory = _check_process_size(tmp_path, max_total_output_bytes=16)
+    assert inventory["total_bytes"] == 16
+    assert {row["path"] for row in inventory["files"]} == {
+        "outputs/one.mph", f"g2_artifacts/registered/{'a' * 64}.mph",
+    }
+    with pytest.raises(campaign.CandidateError, match="aggregate project outputs"):
+        _check_process_size(tmp_path, max_total_output_bytes=15)
 
 
 def _scoped_inventory_command_results(monkeypatch, *, ps_stdout: str,
@@ -355,15 +686,32 @@ def test_setup_route_state_machine_requires_build_save_exact_reopen_and_full_rea
     payload = b"test artifact fixture bytes"
     saved.write_bytes(payload)
     digest = hashlib.sha256(payload).hexdigest()
+    adopted_ref = {"schema_version": 1, "session_id": "session-1", "server_instance_id": "server-1",
+                   "model_tag": "native-tag-flat", "generation": 1}
+    loaded_ref = {**adopted_ref, "model_tag": "native-tag-flat-reopened", "generation": 1}
     daemon = _Daemon([
         _java_response({"model_tag": "native-tag-flat"}),
-        {"success": True, "execution": {"model_ref": {"model_tag": "native-tag-flat"}}},
-        {"success": True, "data": {"worker": {"status": "SUCCEEDED"}}},
+        {"success": True, "data": {"worker": {"status": "SUCCEEDED"},
+                                     "model_tag": "native-tag-flat"},
+         "execution": {"project_id": "project-1", "session_id": "session-1",
+                       "model_ref": adopted_ref, "model_ownership": "user_owned"}},
+        {"success": True, "data": {"worker": {"status": "SUCCEEDED"},
+                                     "model_tag": "native-tag-flat", "model_identity": adopted_ref},
+         "execution": {"project_id": "project-1", "session_id": "session-1",
+                       "model_ref": adopted_ref, "model_ownership": "user_owned"}},
         _java_response({"status": "READBACK"}),
         _java_response({"status": "SAVED_UNSOLVED_STATIC_SHAPE_MODEL",
                         "path": str(saved), "size_bytes": len(payload), "sha256": digest}),
-        {"success": True, "data": {"worker": {"status": "SUCCEEDED"}}},
-        {"success": True, "data": {"worker": {"status": "SUCCEEDED"}}},
+        {"success": True, "data": {"worker": {"status": "SUCCEEDED"},
+                                     "model_tag": "native-tag-flat-reopened",
+                                     "load_mode": "loaded",
+                                     "file_path": str(saved), "requested_path": str(saved)},
+         "execution": {"project_id": "project-1", "session_id": "session-1",
+                       "model_ref": loaded_ref, "model_ownership": "mcp_owned"}},
+        {"success": True, "data": {"worker": {"status": "SUCCEEDED"},
+                                     "model_tag": "native-tag-flat-reopened", "model_identity": loaded_ref},
+         "execution": {"project_id": "project-1", "session_id": "session-1",
+                       "model_ref": loaded_ref, "model_ownership": "mcp_owned"}},
         _java_response({"status": "READBACK"}),
     ])
     gate = _gate(tmp_path, daemon)
@@ -372,30 +720,47 @@ def test_setup_route_state_machine_requires_build_save_exact_reopen_and_full_rea
     gate.set_slot("baseline", "flat")
     gate.dispatch(_operation_call("W24StaticShapeFixture#run", "W24StaticShapeFixture.java",
                                   {"action": "build", "case_id": "flat",
-                                   "configuration_id": "baseline"}))
+                                   "configuration_id": "baseline",
+                                   "selection_diagnostic_path": _selection_trace_path(gate, "baseline", "flat")} ))
     assert gate.slot_stage == "built"
     with pytest.raises(campaign.CandidateError):
         gate.dispatch(_operation_call("W24StaticShapeFixture#run", "W24StaticShapeFixture.java",
                                       {"action": "build", "case_id": "flat",
-                                       "configuration_id": "baseline"}))
+                                       "configuration_id": "baseline",
+                                   "selection_diagnostic_path": _selection_trace_path(gate, "baseline", "flat")} ))
     gate.dispatch({"operation": "model.adopt", "arguments": {"server_model_tag": "native-tag-flat"},
-                   "execution": {}})
+                   "execution": {"project_id": "project-1", "session_id": "session-1"}})
     gate.dispatch({"operation": "model.inspect", "arguments": {"detail": "summary"},
-                   "execution": {}})
+                   "execution": {"project_id": "project-1", "session_id": "session-1",
+                                 "model_ref": adopted_ref}})
     gate.dispatch(_operation_call("W24StaticShapeReadback#run", "W24StaticShapeReadback.java",
                                   {"action": "readback", "expected_configuration_id": "baseline"}))
     gate.dispatch(_operation_call("W24StaticShapeReadback#run", "W24StaticShapeReadback.java",
                                   {"action": "save", "workspace_path": str(workspace),
                                    "path": str(saved)}))
     assert gate.slot_stage == "saved"
-    gate.dispatch({"operation": "model_load", "arguments": {"path": str(saved)},
-                   "execution": {}})
+    register_key = "artifact-register-flat"
+    gate.dispatch({"operation": "operation_call",
+                   "arguments": {"operation_id": "artifact.register", "arguments": {
+                       "project_id": "project-1", "path": "outputs/static_shape_flat.mph",
+                       "role": "saved_model", "classification": "project_local",
+                       "artifact_type": "application/vnd.comsol.mph",
+                       "format_version": "comsol-mph-savecopy/1",
+                       "request_id": register_key, "idempotency_key": register_key}},
+                   "execution": {"project_id": "project-1", "session_id": "session-1",
+                                 "request_id": register_key, "idempotency_key": register_key}})
+    load_key = "registered-artifact-load"
+    gate.dispatch({"operation": "model.load",
+                   "arguments": {"artifact_id": digest},
+                   "execution": {"project_id": "project-1", "session_id": "session-1",
+                                 "request_id": load_key, "idempotency_key": load_key}})
     gate.dispatch({"operation": "model.inspect", "arguments": {"detail": "summary"},
-                   "execution": {}})
+                   "execution": {"project_id": "project-1", "session_id": "session-1",
+                                 "model_ref": loaded_ref}})
     gate.dispatch(_operation_call("W24StaticShapeReadback#run", "W24StaticShapeReadback.java",
                                   {"action": "readback", "expected_configuration_id": "baseline"}))
     assert gate.slot_stage == "readback_complete"
-    assert len(daemon.calls) == 8
+    assert len(daemon.calls) == 9
     gate.clear_slot()
     assert ("baseline", "flat") in gate.completed_slots
     with pytest.raises(campaign.CandidateError, match="duplicated"):
@@ -415,7 +780,7 @@ def test_model_load_refuses_saved_artifact_changed_after_java_sha_readback(tmp_p
     gate.slot_artifact = {"path": str(artifact), "size_bytes": len(original),
                           "sha256": hashlib.sha256(original).hexdigest()}
     artifact.write_bytes(b"changed after save verification")
-    with pytest.raises(campaign.CandidateError, match="unchanged MPH"):
+    with pytest.raises(campaign.CandidateError, match="legacy model_load may adopt"):
         gate.dispatch({"operation": "model_load", "arguments": {"path": str(artifact)},
                        "execution": {}})
     assert daemon.calls == []
@@ -428,7 +793,8 @@ def test_unknown_setup_call_is_not_replayed_or_followed_by_another_route(tmp_pat
     gate.set_slot("baseline", "flat")
     build = _operation_call("W24StaticShapeFixture#run", "W24StaticShapeFixture.java",
                             {"action": "build", "case_id": "flat",
-                             "configuration_id": "baseline"})
+                             "configuration_id": "baseline",
+                                   "selection_diagnostic_path": _selection_trace_path(gate, "baseline", "flat")} )
     with pytest.raises(campaign.CandidateError, match="terminal identity"):
         gate.dispatch(build)
     with pytest.raises(campaign.CandidateError, match="earlier setup call is UNKNOWN"):
@@ -453,7 +819,8 @@ def test_terminal_failed_worker_mutation_stops_without_followup(tmp_path):
     gate.set_slot("baseline", "flat")
     build = _operation_call("W24StaticShapeFixture#run", "W24StaticShapeFixture.java",
                             {"action": "build", "case_id": "flat",
-                             "configuration_id": "baseline"})
+                             "configuration_id": "baseline",
+                                   "selection_diagnostic_path": _selection_trace_path(gate, "baseline", "flat")} )
     with pytest.raises(campaign.CandidateError, match="Worker-backed setup route failed"):
         gate.dispatch(build)
     with pytest.raises(campaign.CandidateError, match="UNKNOWN"):
@@ -491,6 +858,7 @@ def test_prebirth_project_routes_use_real_control_daemon_with_persisted_identity
     from comsol_mcp._control_daemon import ControlDaemon
 
     monkeypatch.setenv("COMSOL_MCP_TRUSTED_CODE", "1")
+    monkeypatch.setenv("COMSOL_MCP_HOST_CONTROL", "1")
     authorized_root = tmp_path / "authorized-project-root"
     authorized_root.mkdir()
     evidence = tmp_path / "evidence"
@@ -513,6 +881,39 @@ def test_prebirth_project_routes_use_real_control_daemon_with_persisted_identity
         assert rows[1]["request"]["operation"] == "project.inspect"
     finally:
         daemon.close()
+
+
+def test_rss_monitor_starts_only_from_core_original_popen_birth_event(monkeypatch, tmp_path):
+    captured = {}
+
+    class FakeMonitor:
+        def __init__(self, *, server_pid, server_birth_ms, worker_search_root, events_path):
+            captured.update(server_pid=server_pid, server_birth_ms=server_birth_ms,
+                            worker_search_root=worker_search_root, events_path=events_path)
+
+        def start(self):
+            captured["started"] = True
+
+    monkeypatch.setattr(campaign, "SampledRssMonitor", FakeMonitor)
+    box = {}
+    root = tmp_path / "worker-root"
+    events = tmp_path / "events.jsonl"
+    with pytest.raises(campaign.CandidateError, match="duplicated or out of phase"):
+        campaign._start_rss_monitor_from_core_observation(
+            box, {"event": "PROCESS_CREATED", "pid": 77142,
+                  "birth": "start_epoch_ms:1791995409828"}, root, events)
+    assert captured == {}
+
+    campaign._start_rss_monitor_from_core_observation(
+        box, {"event": "BIRTH_OBSERVED", "pid": 77142,
+              "birth": "start_epoch_ms:1791995409828"}, root, events)
+    assert captured == {"server_pid": 77142, "server_birth_ms": 1791995409828,
+                        "worker_search_root": root, "events_path": events, "started": True}
+    assert set(box) == {"monitor"}
+    with pytest.raises(campaign.CandidateError, match="duplicated or out of phase"):
+        campaign._start_rss_monitor_from_core_observation(
+            box, {"event": "BIRTH_OBSERVED", "pid": 77142,
+                  "birth": "start_epoch_ms:1791995409828"}, root, events)
 
 
 def test_sampled_rss_sums_only_exact_server_and_private_worker_and_stops_at_threshold(tmp_path):
@@ -699,7 +1100,7 @@ def _sqlite_control_daemon_with_stub_worker(tmp_path, monkeypatch):
         assert runtime_id == "fixture-runtime"
         home = session_state_directory(state_root, project_id, session_id)
         return SessionRuntimeConfig(
-            runtime_id=runtime_id, comsol_version="6.4.0.293",
+            runtime_id=runtime_id, comsol_version="6.4.0",
             installation_root=tmp_path / "synthetic-comsol",
             java_executable=tmp_path / "synthetic-jdk/bin/java",
             classpath=(tmp_path / "synthetic-comsol/client.jar",),
@@ -766,24 +1167,45 @@ def test_exact_campaign_cleanup_uses_real_sqlite_daemon_and_stub_worker_only(tmp
         def close(self):
             self.closed = True
 
+    process = SimpleNamespace(pid=654321)
+    frozen_server_identity = {
+        "status": "CORE_MANAGED_ORIGINAL_POPEN_JAVA_IDENTITY_FROZEN",
+        "pid": 654321, "uid": 501, "birth": "start_epoch_ms:1800000000456",
+        "start_epoch_ms": 1_800_000_000_456,
+        "launch_command_sha256": "a" * 64,
+        "post_exec_command_sha256": "b" * 64,
+        "post_exec_argv": ["/bundle/java", "com.comsol.util.application.ServerApplication"],
+        "java_executable": {"path": "/bundle/java", "device": 1, "inode": 2,
+                             "sha256": "c" * 64},
+        "listener": {"pid": 654321, "endpoint": "127.0.0.1:2047"},
+        "launch_command": ["/shadow/bin/comsol", "mphserver"],
+        "server_paths": {},
+    }
+    handle = SimpleNamespace(
+        process=process,
+        process_identity=SimpleNamespace(birth=frozen_server_identity["birth"],
+                                          start_epoch_ms=frozen_server_identity["start_epoch_ms"]),
+    )
     server = SimpleNamespace(
-        proc=SimpleNamespace(pid=654321), port=2047,
-        process_identity={"pid": 654321, "start_epoch_ms": 1_800_000_000_456,
-                          "birth": "Sep 27 12:00:00 2026",
-                          "command_sha256": "b" * 64},
-        _server_log_handle=LogHandle(),
+        proc=process, _original_server_popen=process, port=2047,
+        managed_handle=handle, process_identity={**frozen_server_identity, "port": 2047},
+        server_postexec_identity=frozen_server_identity,
+        launcher=SimpleNamespace(authorization_ref="w24-owned-server:test-bound-reference"),
     )
     stop_calls = []
+    direct_dispatch = campaign._direct_dispatch
 
-    def stop_exact_server(observed_server, expected, port, *, timeout_seconds):
-        stop_calls.append((observed_server, expected, port, timeout_seconds))
-        return {"status": "STOPPED_AND_REAPED", "pid": expected["pid"],
-                "start_epoch_ms": expected["start_epoch_ms"],
-                "signal": "SIGTERM", "sigkill_used": False,
-                "child_exit_confirmed": True, "child_reaped": True,
-                "listener_absent": True}
+    def route(daemon_arg, evidence, **kwargs):
+        if kwargs.get("operation") == "session.stop":
+            stop_calls.append(kwargs)
+            return {"success": True, "data": {"state": "STOPPED", "server_stopped": True,
+                "stop_evidence": {"status": "W24_EXACT_OWNED_SERVER_SIGTERM_REAPED",
+                    "pid": process.pid, "birth": handle.process_identity.birth,
+                    "server_stopped": True, "child_reaped": True,
+                    "listener_absent": True, "sigkill_used": False}}}
+        return direct_dispatch(daemon_arg, evidence, **kwargs)
 
-    monkeypatch.setattr(campaign, "_stop_exact_server", stop_exact_server)
+    monkeypatch.setattr(campaign, "_direct_dispatch", route)
     monitor = Monitor()
     session = connected["data"]
     try:
@@ -792,7 +1214,7 @@ def test_exact_campaign_cleanup_uses_real_sqlite_daemon_and_stub_worker_only(tmp
             project_id=project["project_id"], session=session,
             run_dir=run_dir, deadline_monotonic=time.monotonic() + 600,
         )
-        assert result["status"] == "EXACT_WORKER_RETIRED_SERVER_TERM_REAPED"
+        assert result["status"] == "EXACT_WORKER_RETIRED_PUBLIC_SESSION_STOP_REAPED"
         assert campaign.json.loads((run_dir / "pre_retirement_ledger.json").read_text())[
             "safe_to_retire"] is True
         proof = campaign.json.loads((run_dir / "worker_retirement_proof.json").read_text())
@@ -803,10 +1225,1576 @@ def test_exact_campaign_cleanup_uses_real_sqlite_daemon_and_stub_worker_only(tmp
         assert worker.disconnect_calls == worker.close_calls == 1
         assert worker._process.wait_calls == 1
         assert monitor.worker_required_live is False and monitor.stopped
-        assert len(stop_calls) == 1 and server._server_log_handle.closed
+        assert len(stop_calls) == 1 and stop_calls[0]["operation"] == "session.stop"
+        assert stop_calls[0]["session_id"] == session["session_id"]
         assert len(list((run_dir / "direct_routes").glob("*_intent.json"))) == 2
         assert len(list((run_dir / "direct_routes").glob("*_result.json"))) == 2
         assert daemon.store.path.is_file()
         assert (tmp_path / "control-daemon").is_dir()
     finally:
         daemon.close()
+
+@pytest.fixture(params=['setup14', 'schema_only'])
+def exact_controller_inventory(monkeypatch, request):
+    import os,sys,sysconfig,tempfile,shutil
+    from comsol_mcp import _platform_process
+    jpype=sys.modules.get('jpype')
+    if jpype is None:
+        jpype=SimpleNamespace(isJVMStarted=lambda:False)
+        monkeypatch.setitem(sys.modules,'jpype',jpype)
+    repo=Path(campaign.__file__).resolve().parents[1]
+    namespace=Path(tempfile.mkdtemp(prefix='w24-controller-test-',dir='/private/tmp'))
+    request.addfinalizer(lambda: shutil.rmtree(namespace))
+    runtime_path=Path(sys.executable).resolve(strict=True)
+    budget=(campaign.SETUP_BUDGET if request.param=='setup14'
+            else campaign.SCHEMA_ONLY_BUDGET)
+    packet={
+        'schema':campaign.fresh_runtime.SCHEMA_V2,
+        'namespace':str(namespace),
+        'activity_id':'cd392815-1307-478c-8b73-f2f16df419ae',
+        'binding_sha256':'a'*64,
+        'python':{'entry':sys.executable,
+                  'site_packages':sysconfig.get_paths()['purelib']},
+        'comsol':{'root':str(campaign.INSTALL_ROOT.resolve(strict=True))},
+        'jdk':{'home':str(campaign.JAVA11.resolve(strict=True))},
+        'runtime_argv0':{'source':'sys.orig_argv[0]','path':str(runtime_path),
+                         'sha256':hashlib.sha256(runtime_path.read_bytes()).hexdigest()},
+    }
+    start_epoch_ms=1800000000123
+    monkeypatch.setattr(_platform_process,'process_identity',
+                        lambda pid:{'alive':True,'start_epoch_ms':start_epoch_ms})
+    context=campaign._controller_inventory_context(
+        repo=repo,evidence=namespace/'evidence',work=namespace/'work',
+        binding=packet,reviewed_sha256='b'*64,budget=budget,
+        schema_probe_only=(request.param=='schema_only'))
+    literal=context['literal_argv']
+    monkeypatch.setattr(sys,'orig_argv',literal)
+    monkeypatch.setattr(sys,'argv',[str(Path(campaign.__file__)),'execute'])
+    monkeypatch.setattr(sys,'flags',SimpleNamespace(no_site=True))
+    monkeypatch.setattr(jpype,'isJVMStarted',lambda:False)
+    return context,literal
+
+
+@pytest.mark.parametrize('case',['framework_ps','frontend_ps','foreign_path','hash','source','tail','mode_flag','other_pid','listener'])
+def test_v2_controller_identity_uses_only_pinned_frontend_or_runtime_argv0(monkeypatch,exact_controller_inventory,case):
+    import os,sys,jpype
+    from comsol_mcp import _platform_process
+    base,literal=exact_controller_inventory;pid=os.getpid();uid=os.getuid()
+    runtime_path=Path(sys.executable).resolve(strict=True)
+    runtime={'source':'sys.orig_argv[0]','path':str(runtime_path),
+             'sha256':hashlib.sha256(runtime_path.read_bytes()).hexdigest()}
+    context={**base,'binding_schema':campaign.fresh_runtime.SCHEMA_V2,
+             'frontend_entry':literal[0],'runtime_argv0':runtime}
+    actual=[runtime['path'],*literal[1:]]
+    monkeypatch.setattr(sys,'orig_argv',actual)
+    command_argv=list(actual)
+    if case=='frontend_ps':command_argv[0]=literal[0]
+    elif case=='foreign_path':command_argv[0]='/foreign/unpinned-python'
+    elif case=='source':context['runtime_argv0']={**runtime,'source':'unbound-sys.argv'}
+    elif case=='tail':command_argv.append('--foreign-tail')
+    elif case=='mode_flag':
+        if literal[-1]=='--schema-only':command_argv=command_argv[:-1]
+        else:command_argv.append('--schema-only')
+    elif case=='hash':
+        context['runtime_argv0']={**runtime,'sha256':'0'*64}
+    elif case=='other_pid':pid+=1
+    elif case=='listener':pass
+    observed=[runtime['path'],*command_argv[1:]]
+    monkeypatch.setattr(sys,'orig_argv',observed)
+    command=' '.join(command_argv)
+    ps=f'{pid} 123 {uid} Wed Oct 14 12:00:00 2026 {command}\n'
+    listener=(f'python {pid} fixture 5u IPv4 0x0 0t0 TCP 127.0.0.1:1234 (LISTEN)\n'
+              if case=='listener' else None)
+    _scoped_inventory_command_results(monkeypatch,ps_stdout=ps,lsof_stdout=listener)
+    result=campaign.fresh_scoped_inventory(controller_context=context)
+    if case in {'framework_ps','frontend_ps'}:
+        assert result['fresh_quiescent_for_scope'] is True
+        assert result['matching_processes']==[]
+        assert result['excluded_controller']['status']=='EXACT_CURRENT_PYTHON_CONTROLLER_EXCLUDED_NO_JVM_NO_LISTENER'
+    else:
+        assert result['fresh_quiescent_for_scope'] is False
+        assert result['excluded_controller']['status']=='CURRENT_CONTROLLER_NOT_EXCLUDED'
+        assert result['matching_processes']
+
+
+def test_w24_controller_context_requires_and_carries_v2_runtime_identity(monkeypatch,request):
+    import sys,sysconfig,tempfile,shutil
+    from comsol_mcp import _platform_process
+    repo=Path(campaign.__file__).resolve().parents[1]
+    namespace=Path(tempfile.mkdtemp(prefix='w24-controller-binding-test-',dir='/private/tmp'))
+    request.addfinalizer(lambda: shutil.rmtree(namespace))
+    launcher=Path(sys.executable).resolve(strict=True)
+    packet={'schema':campaign.fresh_runtime.SCHEMA_V2,'namespace':str(namespace),
+        'activity_id':'cd392815-1307-478c-8b73-f2f16df419ae','binding_sha256':'c'*64,
+        'python':{'entry':sys.executable,
+                  'site_packages':sysconfig.get_paths()['purelib']},
+        'comsol':{'root':str(campaign.INSTALL_ROOT.resolve(strict=True))},
+        'jdk':{'home':str(campaign.JAVA11.resolve(strict=True))},
+        'runtime_argv0':{'source':'sys.orig_argv[0]','path':str(launcher),
+                         'sha256':hashlib.sha256(launcher.read_bytes()).hexdigest()}}
+    monkeypatch.setattr(_platform_process,'process_identity',
+        lambda pid:{'alive':True,'start_epoch_ms':1_800_000_000_123})
+    evidence=namespace/'evidence';work=namespace/'work'
+    context=campaign._controller_inventory_context(
+        repo=repo,evidence=evidence,work=work,binding=packet,reviewed_sha256='a'*64,
+        budget=campaign.SETUP_BUDGET,schema_probe_only=False)
+    assert context['binding_schema']==campaign.fresh_runtime.SCHEMA_V2
+    assert context['frontend_entry']==packet['python']['entry']
+    assert context['runtime_argv0']==packet['runtime_argv0']
+    assert context['literal_argv'][0]==packet['python']['entry']
+    expected_setup14=[sys.executable,'-S','-m','tools.run_native_w24_static_shape_setup_campaign',
+        'execute','--evidence',str(evidence),'--work',str(work),
+        '--reviewed-candidate-sha256','a'*64,'--comsol-root',packet['comsol']['root'],
+        '--jdk11',packet['jdk']['home']]
+    assert context['literal_argv']==expected_setup14
+    schema_context=campaign._controller_inventory_context(
+        repo=repo,evidence=evidence,work=work,binding=packet,reviewed_sha256='a'*64,
+        budget=campaign.SCHEMA_ONLY_BUDGET,schema_probe_only=True)
+    assert schema_context['literal_argv']==expected_setup14+['--schema-only']
+    with pytest.raises(campaign.CandidateError,match='requires the exact reviewed execution-mode budget'):
+        campaign._controller_inventory_context(
+            repo=repo,evidence=evidence,work=work,binding=packet,reviewed_sha256='a'*64,
+            budget=campaign.SETUP_BUDGET,schema_probe_only='future_mode')
+    bad_budget={**campaign.SETUP_BUDGET,'geometry_build_calls':99}
+    with pytest.raises(campaign.CandidateError,match='budget differs'):
+        campaign._controller_inventory_context(
+            repo=repo,evidence=evidence,work=work,binding=packet,reviewed_sha256='a'*64,
+            budget=bad_budget,schema_probe_only=False)
+    packet['schema']=campaign.fresh_runtime.SCHEMA_V1
+    with pytest.raises(campaign.CandidateError,match='requires the V2'):
+        campaign._controller_inventory_context(
+            repo=repo,evidence=evidence,work=work,binding=packet,reviewed_sha256='a'*64,
+            budget=campaign.SETUP_BUDGET,schema_probe_only=False)
+    packet['schema']=campaign.fresh_runtime.SCHEMA_V2
+    for identity_change in ({'source':'unbound-argv0'}, {'sha256':'0'*64}):
+        drifted={**packet,'runtime_argv0':{**packet['runtime_argv0'],**identity_change}}
+        with pytest.raises(campaign.CandidateError,match='argv0 identity|malformed|path/hash'):
+            campaign._controller_inventory_context(
+                repo=repo,evidence=evidence,work=work,binding=drifted,
+                reviewed_sha256='a'*64,budget=campaign.SETUP_BUDGET,
+                schema_probe_only=False)
+
+@pytest.mark.parametrize('case',['correct','foreign','uid','birth','unknown','argv','malformed','self-listener','JVM','wrong-role'])
+def test_exact_controller_scope_keeps_every_uncertain_or_foreign_row(monkeypatch,exact_controller_inventory,case):
+    import os,sys,jpype
+    from comsol_mcp import _platform_process
+    context,literal=exact_controller_inventory;pid=os.getpid();uid=os.getuid();command=' '.join(literal)
+    if case=='foreign':pid+=1
+    elif case=='uid':uid+=1
+    elif case=='birth':monkeypatch.setattr(_platform_process,'process_identity',lambda pid:{'alive':True,'start_epoch_ms':context['start_epoch_ms']+1})
+    elif case=='unknown':monkeypatch.setattr(_platform_process,'process_identity',lambda pid:{'alive':True,'start_epoch_ms':None})
+    elif case=='argv':command+=' --foreign-extra'
+    elif case=='malformed':command+=' "'
+    elif case=='JVM':monkeypatch.setattr(jpype,'isJVMStarted',lambda:True)
+    elif case=='wrong-role':monkeypatch.setattr(sys,'argv',['/foreign/entry.py','execute'])
+    ps=f'{pid} 123 {uid} Wed Oct 14 12:00:00 2026 {command}\n'
+    listeners=f'python {pid} fixture 5u IPv4 0x0 0t0 TCP 127.0.0.1:1234 (LISTEN)\n' if case=='self-listener' else None
+    _scoped_inventory_command_results(monkeypatch,ps_stdout=ps,lsof_stdout=listeners)
+    result=campaign.fresh_scoped_inventory(controller_context=context)
+    assert result['commands']['ps'][2]=='pid=,ppid=,uid=,lstart=,command='
+    if case=='correct':
+        assert result['fresh_quiescent_for_scope'] is True and result['matching_processes']==[]
+        assert result['excluded_controller']['pid']==os.getpid() and result['excluded_controller']['observed_uid']==os.getuid()
+        assert result['excluded_controller']['command_sha256']==hashlib.sha256(command.encode()).hexdigest()
+    else:
+        assert result['fresh_quiescent_for_scope'] is False and [r['pid'] for r in result['matching_processes']]==[pid]
+        assert result['excluded_controller']['status']=='CURRENT_CONTROLLER_NOT_EXCLUDED'
+
+
+def test_default_inventory_does_not_enable_current_controller_exception(monkeypatch,exact_controller_inventory):
+    import os
+    _,literal=exact_controller_inventory
+    _scoped_inventory_command_results(monkeypatch,ps_stdout=f'{os.getpid()} 123 Wed Oct 14 12:00:00 2026 '+ ' '.join(literal)+'\n')
+    result=campaign.fresh_scoped_inventory()
+    assert result['fresh_quiescent_for_scope'] is False and len(result['matching_processes'])==1
+    assert 'excluded_controller' not in result
+
+
+def test_private_mphserver_ini_rewrite_preserves_source_and_unrelated_lines(tmp_path):
+    installed = tmp_path / "install" / "comsolmphserver.ini"
+    shadow = tmp_path / "shadow" / "comsolmphserver.ini"
+    installed.parent.mkdir()
+    shadow.parent.mkdir()
+    original = (b"# retained header\n-vm\n../../java/macarm64/jre/Contents/Home/lib/server/libjvm.dylib\n"
+                b"-Djava.awt.headless=true\n-Xss4m\n-Xms40m\n-Xmx2g\n"
+                b"-XX:MaxMetaspaceSize=1g\n")
+    installed.write_bytes(original)
+    shadow.write_bytes(original)
+    installed.chmod(0o755)
+    shadow.chmod(0o755)
+
+    receipt = campaign._rewrite_private_mphserver_ini(installed, shadow)
+
+    assert receipt["status"] == "PRIVATE_MPH_SERVER_INI_PATCHED_INSTALLED_SOURCE_UNCHANGED"
+    assert receipt["installed_sha256_before"] == receipt["installed_sha256_after"]
+    assert installed.read_bytes() == original
+    assert shadow.read_bytes() == original.replace(
+        b"-Xms40m\n-Xmx2g\n",
+        b"-XX:ActiveProcessorCount=2\n-Xms128m\n-Xmx1024m\n")
+    assert shadow.stat().st_mode & 0o777 == 0o755
+
+
+@pytest.mark.parametrize(
+    "contents",
+    [
+        b"-Xms40m\n-Xms40m\n-Xmx2g\n",
+        b"-Xms40m\n-Xmx2g\n-XX:ActiveProcessorCount=4\n",
+        b"-Xms40m\n-Xmx2g\n-XX:ParallelGCThreads=1\n",
+        b"-Xms40m\n-Xmx2g\n-XX:InitialHeapSize=268435456\n",
+        b"-Xms40m\n-Xmx2g\n-XX:MaxRAMPercentage=25\n",
+        b"-Xms40m\n-Xmx1g\n",
+        b"-Xmx2g\n",
+    ],
+)
+def test_private_mphserver_ini_rejects_absent_duplicate_or_conflicting_options(tmp_path, contents):
+    installed = tmp_path / "installed.ini"
+    shadow = tmp_path / "shadow.ini"
+    installed.write_bytes(contents)
+    shadow.write_bytes(contents)
+    with pytest.raises(campaign.CandidateError, match="absent, duplicate, or conflicting"):
+        campaign._rewrite_private_mphserver_ini(installed, shadow)
+    assert installed.read_bytes() == contents
+    assert shadow.read_bytes() == contents
+
+
+def test_private_mphserver_ini_rejects_symlink_source_or_shadow(tmp_path):
+    installed = tmp_path / "installed.ini"
+    installed.write_bytes(b"-Xms40m\n-Xmx2g\n")
+    target = tmp_path / "target.ini"
+    target.write_bytes(installed.read_bytes())
+    shadow = tmp_path / "shadow.ini"
+    shadow.symlink_to(target)
+    with pytest.raises(campaign.CandidateError, match="regular non-symlink"):
+        campaign._rewrite_private_mphserver_ini(installed, shadow)
+    assert target.read_bytes() == installed.read_bytes()
+
+
+def test_w24_fixed_factory_copies_only_exact_private_arch_and_returns_popen_result(
+        monkeypatch, tmp_path):
+    monkeypatch.setattr(campaign.sys, "platform", "darwin")
+    install = tmp_path / "install"
+    installed_arch = install / "bin/macarm64"
+    installed_arch.mkdir(parents=True)
+    original = b"-Xms40m\n-Xmx2g\n-Dunrelated=preserved\n"
+    installed_ini = installed_arch / "comsolmphserver.ini"
+    installed_ini.write_bytes(original)
+    (installed_arch / "helper.txt").write_text("payload")
+    (installed_arch / "helper-link").symlink_to("helper.txt")
+    owned_root = tmp_path / "owned-server"
+    private_bin = owned_root / "installation/bin"
+    private_bin.mkdir(parents=True)
+    (private_bin / "comsol").write_text("private launcher")
+    (private_bin / "macarm64").symlink_to(installed_arch, target_is_directory=True)
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    from comsol_mcp._session_server import _server_directories, build_server_command
+
+    command = build_server_command(_server_directories(owned_root), platform_name="darwin",
+                                   validate_launcher=False, server_np=2)
+    options = {"cwd": str(owned_root), "env": {"JAVA_TOOL_OPTIONS": campaign.JAVA_TOOL_OPTIONS}}
+    sentinel = object()
+    calls = []
+
+    def fake_popen(argv, **kwargs):
+        calls.append((list(argv), dict(kwargs)))
+        return sentinel
+
+    factory = campaign.W24FixedDarwinSetupProcessFactory(
+        install_root=install, owned_server_root=owned_root,
+        evidence=evidence, popen=fake_popen)
+    result = factory(command, **options)
+
+    assert result is sentinel
+    assert len(calls) == 1
+    called, called_options = calls[0]
+    assert called == command
+    assert factory.launch_command == command
+    assert called_options == options
+    assert options["env"]["JAVA_TOOL_OPTIONS"] == campaign.JAVA_TOOL_OPTIONS
+    copied_arch = private_bin / "macarm64"
+    assert copied_arch.is_dir() and not copied_arch.is_symlink()
+    assert (copied_arch / "helper-link").is_symlink()
+    assert (copied_arch / "helper-link").resolve() == (copied_arch / "helper.txt").resolve()
+    assert installed_ini.read_bytes() == original
+    assert (copied_arch / "comsolmphserver.ini").read_bytes() == (
+        b"-XX:ActiveProcessorCount=2\n-Xms128m\n-Xmx1024m\n-Dunrelated=preserved\n")
+    receipt = campaign.json.loads((evidence / "private_shadow_w24_jvm_overlay.json").read_text())
+    assert receipt["status"] == "PRIVATE_COPY_PATCHED_INSTALLED_BYTES_UNCHANGED"
+    assert receipt["installed_ini_sha256_before"] == receipt["installed_ini_sha256_after"]
+    assert receipt["requested_server_np"] == 2
+    assert receipt["fixed_np_arguments"] == ["-np", "2"]
+
+
+def test_w24_fixed_factory_rejects_foreign_private_arch_before_popen(monkeypatch, tmp_path):
+    monkeypatch.setattr(campaign.sys, "platform", "darwin")
+    install = tmp_path / "install"
+    expected_arch = install / "bin/macarm64"
+    expected_arch.mkdir(parents=True)
+    (expected_arch / "comsolmphserver.ini").write_text("-Xms40m\n-Xmx2g\n")
+    foreign_arch = tmp_path / "foreign/macarm64"
+    foreign_arch.mkdir(parents=True)
+    (foreign_arch / "comsolmphserver.ini").write_text("-Xms40m\n-Xmx2g\n")
+    owned_root = tmp_path / "owned-server"
+    private_bin = owned_root / "installation/bin"
+    private_bin.mkdir(parents=True)
+    (private_bin / "comsol").write_text("launcher")
+    (private_bin / "macarm64").symlink_to(foreign_arch, target_is_directory=True)
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    from comsol_mcp._session_server import _server_directories, build_server_command
+    called = []
+    factory = campaign.W24FixedDarwinSetupProcessFactory(
+        install_root=install, owned_server_root=owned_root, evidence=evidence,
+        popen=lambda *args, **kwargs: called.append(args))
+    command = build_server_command(_server_directories(owned_root), platform_name="darwin",
+                                   validate_launcher=False, server_np=2)
+    with pytest.raises(campaign.CandidateError, match="exact installed symlink"):
+        factory(command, cwd=str(owned_root))
+    assert called == []
+
+
+@pytest.mark.parametrize("server_np", [True, 1, 0, 3, 65])
+def test_w24_fixed_factory_rejects_any_np_other_than_exact_two(tmp_path, server_np):
+    install = tmp_path / "install"
+    install.mkdir()
+    owned_root = tmp_path / "owned-server"
+    owned_root.mkdir()
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    with pytest.raises(campaign.CandidateError, match="exact reviewed server_np=2"):
+        campaign.W24FixedDarwinSetupProcessFactory(
+            install_root=install, owned_server_root=owned_root, evidence=evidence,
+            server_np=server_np)
+
+
+def test_w24_fixed_factory_rejects_builder_command_drift_before_arch_or_popen(monkeypatch, tmp_path):
+    monkeypatch.setattr(campaign.sys, "platform", "darwin")
+    install = tmp_path / "install"
+    install.mkdir()
+    owned_root = tmp_path / "owned-server"
+    owned_root.mkdir()
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    calls = []
+    factory = campaign.W24FixedDarwinSetupProcessFactory(
+        install_root=install, owned_server_root=owned_root, evidence=evidence,
+        popen=lambda *args, **kwargs: calls.append((args, kwargs)))
+    from comsol_mcp._session_server import _server_directories, build_server_command
+    wrong_default = build_server_command(_server_directories(owned_root), platform_name="darwin",
+                                         validate_launcher=False)
+    with pytest.raises(campaign.CandidateError, match="fixed W24 start plan"):
+        factory(wrong_default, cwd=str(owned_root))
+    assert calls == []
+
+
+def test_text_executable_identity_parser_pins_exact_lsof_java_text_vnode(tmp_path):
+    java = tmp_path / "java"
+    java.write_bytes(b"java fixture")
+    java.chmod(0o755)
+    identity = campaign._canonical_executable_identity(java)
+    stdout = ("p77123\nftxt\nD" + hex(identity["device"]) + "\n" +
+              "i" + str(identity["inode"]) + "\nn" + identity["path"] + "\n")
+    parsed = campaign._parse_text_executable_identity(stdout, pid=77123,
+                                                       expected_path=java)
+    assert parsed == identity
+    duplicate = stdout + stdout.replace("p77123", "p77123", 1)
+    with pytest.raises(campaign.CandidateError, match="exactly one"):
+        campaign._parse_text_executable_identity(duplicate, pid=77123,
+                                                  expected_path=java)
+
+
+
+def test_w24_stop_authorization_ref_binds_exact_plan_and_consumed_once(tmp_path):
+    import tempfile
+
+    with tempfile.TemporaryDirectory(prefix="w24-auth-ref-", dir="/private/tmp") as root:
+        namespace = Path(root)
+        once = {"schema": "W24_FRESH_ONCE_V2", "candidate_sha256": "a" * 64,
+                "nonce": "do-not-copy-this-value"}
+        (namespace / "W24_ONCE.json").write_text(campaign.json.dumps(once, sort_keys=True))
+        binding = {"namespace": str(namespace), "activity_id": "w24-test-activity",
+                   "binding_sha256": "b" * 64}
+        plan = {"argv": ["python", "-S", "candidate"], "argv_sha256": "c" * 64,
+                "candidate_sha256": "a" * 64, "runtime_binding_sha256": "b" * 64,
+                "require_new_external_root_approval_and_once": True}
+
+        reference = campaign._w24_owned_server_authorization_ref(
+            reviewed_sha256="a" * 64, binding=binding, plan=plan)
+
+        assert reference.startswith("w24-owned-server:w24-test-activity:" + "a" * 64 + ":" + "b" * 64 + ":")
+        assert campaign._json_hash(plan) in reference
+        assert campaign._sha_file(namespace / "W24_ONCE.json") in reference
+        assert "do-not-copy-this-value" not in reference
+
+
+def _managed_server_observer_fixture(tmp_path, monkeypatch):
+    import os
+    import shlex
+    import comsol_mcp._g2_isolation as isolation
+    import comsol_mcp._platform_process as platform_process
+    from comsol_mcp._session_context import CanonicalSocket, OwnedServerProcessIdentity
+    from comsol_mcp._session_server import ManagedServerHandle, _server_directories, build_server_command
+
+    install = tmp_path / "install"
+    java = install / "java/macarm64/jre/Contents/Home/bin/java"
+    java.parent.mkdir(parents=True)
+    java.write_bytes(b"harmless pinned Java fixture\n")
+    java.chmod(0o755)
+    private_root = tmp_path / "session/owned-server/installation"
+    (private_root / "bin").mkdir(parents=True)
+    (private_root / "bin/comsol").write_text("private launcher\n")
+    (private_root / "bin/tomcat").mkdir()
+    (private_root / "java").symlink_to(install / "java", target_is_directory=True)
+    dirs = _server_directories(private_root.parent)
+    endpoint = CanonicalSocket("127.0.0.1", 55222)
+    launch = [str(private_root / "bin/comsol"), "mphserver", "-np", "2",
+              "-port", "0", "-portfile", str(dirs.port_file),
+              "-prefsdir", str(dirs.preferences), "-tmpdir", str(dirs.temporary),
+              "-recoverydir", str(dirs.recovery), "-login", "auto", "-silent", "-multi", "on"]
+
+    class Process:
+        pid = 77123
+        args = list(launch)
+        returncode = None
+
+        def poll(self):
+            return self.returncode
+
+    process = Process()
+    birth = "start_epoch_ms:1800000000456"
+    identity = OwnedServerProcessIdentity(
+        pid=process.pid, birth=birth, executable=str((private_root / "bin/comsol").resolve()),
+        listener_sockets=(endpoint,), start_epoch_ms=1_800_000_000_456, server_np=2)
+    handle = ManagedServerHandle(
+        process=process, runtime_id="fixture-runtime", executable=identity.executable,
+        directories=dirs, endpoint=endpoint, process_identity=identity,
+        start_epoch_ms=identity.start_epoch_ms, log_handle=None)
+    project_id, session_id = "12345678-1234-1234-1234-123456789abc", "session-test"
+    factory = SimpleNamespace(launch_command=list(launch))
+    launcher = SimpleNamespace(_handles={(project_id, session_id): handle},
+                               _factories={(project_id, session_id): factory})
+    server = campaign.W24StaticShapeSetupServer(tmp_path / "work", tmp_path / "evidence",
+                                                 event_log=tmp_path / "events.jsonl")
+    campaign.INSTALL_ROOT = install
+
+    java_identity = campaign._canonical_executable_identity(java)
+    probe = {
+        "argv": [str(private_root / "bin/comsol"),
+                 f"-Dcs.root={private_root}",
+                 f"-Dcatalina.home={private_root / 'bin/tomcat'}",
+                 f"-Djava.io.tmpdir={dirs.temporary}",
+                 "-XX:ActiveProcessorCount=2", "-XX:ParallelGCThreads=2",
+                 "-XX:CICompilerCount=2", "-Xms128m", "-Xmx1024m",
+                 "-np", "2", "-port", "0", "-portfile", str(dirs.port_file),
+                 "-prefsdir", str(dirs.preferences), "-tmpdir", str(dirs.temporary),
+                 "-recoverydir", str(dirs.recovery), "-login", "auto", "-silent",
+                 "-multi", "on", "com.comsol.util.application.ServerApplication"],
+        "birth": birth, "process_snapshot_birth": "Wed Oct 14 23:05:06 2026",
+        "start_epoch_ms": identity.start_epoch_ms,
+        "uid": os.getuid(),
+        "java": dict(java_identity),
+        "listener": [{"pid": process.pid, "endpoint": "127.0.0.1:55222"}],
+    }
+
+    def current_snapshot(pid):
+        command = shlex.join(probe["argv"])
+        return {"pid": pid, "birth": probe["process_snapshot_birth"], "command": command,
+                "command_sha256": hashlib.sha256(command.encode()).hexdigest()}
+
+    monkeypatch.setattr(isolation, "_process_snapshot", current_snapshot)
+    monkeypatch.setattr(platform_process, "process_identity",
+                        lambda pid: {"alive": True, "start_epoch_ms": probe["start_epoch_ms"]})
+    monkeypatch.setattr(campaign, "_read_process_uid", lambda pid: probe["uid"])
+    monkeypatch.setattr(campaign, "_read_text_executable_identity",
+                        lambda pid, path: {**probe["java"], "command": ["/usr/sbin/lsof"],
+                                           "stdout_sha256": "a" * 64,
+                                           "stderr_sha256": hashlib.sha256(b"").hexdigest()})
+    monkeypatch.setattr(campaign, "_lsof_listener",
+                        lambda pid, port: {"exit_code": 0, "stderr_sha256": hashlib.sha256(b"").hexdigest(),
+                                           "rows": list(probe["listener"]), "command": ["/usr/sbin/lsof"],
+                                           "stdout_sha256": "b" * 64})
+    server.bind_managed_handle(launcher, project_id, session_id, handle)
+    return server, probe, launcher, handle, process
+
+
+def test_w24_postexec_observer_freezes_same_core_handle_and_exact_java(monkeypatch, tmp_path):
+    server, probe, launcher, handle, process = _managed_server_observer_fixture(tmp_path, monkeypatch)
+    frozen = server.verify_managed_server_identity()
+    assert frozen["identity"]["status"] == "CORE_MANAGED_ORIGINAL_POPEN_JAVA_IDENTITY_FROZEN"
+    assert server.managed_handle is handle and server.proc is process
+    assert launcher._handles[(server.managed_project_id, server.managed_session_id)] is handle
+    assert frozen["identity"]["java_executable"]["path"].endswith("/bin/java")
+    assert frozen["identity"]["birth"] == handle.process_identity.birth
+    assert frozen["identity"]["birth"] != frozen["identity"]["process_snapshot_birth"]
+    campaign._validate_frozen_server_identity(
+        server.server_postexec_identity, frozen["identity"], proc=process, original_proc=process)
+
+
+@pytest.mark.parametrize("case", [
+    "foreign_root", "foreign_argv0", "wrong_listener", "changed_birth",
+    "changed_java_inode", "wrong_heap", "changed_popen_argv", "wrong_uid",
+    "changed_postexec_command",
+])
+def test_w24_postexec_observer_rejects_root_argv_endpoint_or_identity_drift(
+        monkeypatch, tmp_path, case):
+    server, probe, _launcher, _handle, process = _managed_server_observer_fixture(tmp_path, monkeypatch)
+    server.verify_managed_server_identity()
+    if case == "foreign_root":
+        probe["argv"][1] = "-Dcs.root=/foreign"
+    elif case == "foreign_argv0":
+        probe["argv"][0] = "/foreign/comsol"
+    elif case == "wrong_listener":
+        probe["listener"] = [{"pid": process.pid, "endpoint": "[::1]:55222"}]
+    elif case == "changed_birth":
+        probe["process_snapshot_birth"] = "Thu Oct 15 23:05:06 2026"
+    elif case == "changed_java_inode":
+        probe["java"]["inode"] += 1
+    elif case == "wrong_heap":
+        probe["argv"][probe["argv"].index("-Xmx1024m")] = "-Xmx2g"
+    elif case == "changed_popen_argv":
+        process.args = [*process.args, "--foreign"]
+    elif case == "wrong_uid":
+        probe["uid"] += 1
+    elif case == "changed_postexec_command":
+        probe["argv"].append("--changed")
+    with pytest.raises(campaign.CandidateError):
+        server.verify_managed_server_identity()
+
+
+@pytest.mark.skipif(sys.platform != "darwin", reason="R12 Core/process birth adapter is Darwin-specific")
+def test_real_harmless_popen_keeps_core_epoch_and_ps_lstart_in_separate_domains(tmp_path):
+    import sys as _sys
+    import time as _time
+    import comsol_mcp._g2_isolation as isolation
+    from comsol_mcp._platform_process import process_identity
+    from comsol_mcp._session_server import _birth_identity
+
+    process = subprocess.Popen([_sys.executable, "-c", "import time; time.sleep(60)"],
+                               stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                               stderr=subprocess.DEVNULL, start_new_session=True)
+    try:
+        core_birth, core_start_ms = _birth_identity(process.pid, process_identity)
+        snapshot = isolation._process_snapshot(process.pid)
+        live_identity = process_identity(process.pid)
+        assert snapshot is not None and live_identity.get("alive") is True
+        assert core_birth == f"start_epoch_ms:{core_start_ms}"
+        assert snapshot["birth"] != core_birth
+        normalized = campaign._validate_server_birth_domains(
+            pid=process.pid, snapshot=snapshot, live_identity=live_identity,
+            core_birth=core_birth, core_start_epoch_ms=core_start_ms)
+        assert normalized == {"birth": core_birth, "start_epoch_ms": core_start_ms,
+                              "process_snapshot_birth": snapshot["birth"]}
+        expected = {"pid": process.pid, "birth": core_birth,
+                    "start_epoch_ms": core_start_ms,
+                    "process_snapshot_birth": snapshot["birth"], "launch_command": list(process.args)}
+        changed = {**expected, "process_snapshot_birth": snapshot["birth"] + " changed"}
+        with pytest.raises(campaign.CandidateError, match="process_snapshot_birth"):
+            campaign._validate_frozen_server_identity(
+                expected, changed, proc=process, original_proc=process)
+        with pytest.raises(campaign.CandidateError, match="epoch differs"):
+            campaign._validate_server_birth_domains(
+                pid=process.pid, snapshot=snapshot, live_identity={
+                    "alive": True, "start_epoch_ms": core_start_ms + 1},
+                core_birth=core_birth, core_start_epoch_ms=core_start_ms)
+    finally:
+        if process.poll() is None:
+            process.terminate()
+        process.wait(timeout=5)
+
+
+def test_w24_launcher_stop_timeout_never_calls_kill(monkeypatch, tmp_path):
+    server, _probe, old_launcher, handle, process = _managed_server_observer_fixture(tmp_path, monkeypatch)
+    from comsol_mcp._session_server import OwnedServerError
+
+    class TimeoutProcess:
+        def __init__(self, original):
+            self.pid = original.pid
+            self.args = list(original.args)
+            self.returncode = None
+            self.terminate_calls = 0
+            self.kill_calls = 0
+        def poll(self): return self.returncode
+        def terminate(self): self.terminate_calls += 1
+        def wait(self, timeout=None): raise subprocess.TimeoutExpired("w24-test", timeout)
+        def kill(self): self.kill_calls += 1
+
+    timed = TimeoutProcess(process)
+    handle.process = timed
+    server.proc = timed
+    server._original_server_popen = timed
+    fake_core = SimpleNamespace(
+        verify=lambda _handle: handle.process_identity,
+        listener_reader=lambda _port: [],
+        _close_log=lambda _handle: None)
+    w24 = campaign.W24SetupOwnedServerLauncher.__new__(campaign.W24SetupOwnedServerLauncher)
+    w24._handles = {(server.managed_project_id, server.managed_session_id): handle}
+    w24._core = fake_core
+    w24.observer = server
+    with pytest.raises(OwnedServerError, match="no SIGKILL fallback"):
+        w24.stop(handle, timeout_s=0.1)
+    assert timed.terminate_calls == 1
+    assert timed.kill_calls == 0
+    assert handle.retired is False
+
+
+def test_unknown_hold_accepts_exact_server_handle_retained_by_same_daemon():
+    import threading
+
+    from comsol_mcp._session_server import ManagedServerHandle
+
+    process = SimpleNamespace(pid=77129, poll=lambda: None)
+    handle = SimpleNamespace(process=process)
+    project_id, session_id = "12345678-1234-1234-1234-123456789abc", "session-held"
+    key = (project_id, session_id)
+    server = SimpleNamespace(
+        managed_handle=handle, managed_project_id=project_id, managed_session_id=session_id,
+        _original_server_popen=process, _original_server_pid=process.pid, proc=process,
+        _server_birth_attempted=True, server_snapshot={"birth": "start_epoch_ms:1800000000000"},
+        launcher=SimpleNamespace(_handles={key: handle}),
+    )
+    daemon = SimpleNamespace(
+        _default_backend=None, _session_connect_lock=threading.RLock(),
+        _control_dispatch_inflight=0, _worker_admission_inflight=0,
+        running={}, _session_worker_handles={}, _session_backends={},
+        _session_worker_child_identities={}, _session_server_handles={key: handle},
+    )
+    state = campaign._capture_hold_handles(server, daemon)
+    assert state["server_handle"] is handle
+    assert state["server_key"] == key
+    assert state["complete"] is True
+    assert state["server_process"] is process
+
+
+def test_lost_session_start_response_resolves_exact_store_session_and_same_handle(tmp_path):
+    from comsol_mcp._operation_store import OperationStore
+    from comsol_mcp._session_context import CanonicalSocket, OwnedServerProcessIdentity
+    from comsol_mcp._session_server import ManagedServerHandle, _server_directories, build_server_command
+
+    project_id = "12345678-1234-1234-1234-123456789abc"
+    session_id = "session-lost-response"
+    request_id, idempotency_key = "session-start-request-exact", "session-start-idempotency-exact"
+    store = OperationStore(tmp_path / "operations.sqlite3")
+    store.begin(request_id=request_id, idempotency_key=idempotency_key,
+                request_hash="a" * 64, operation="session.start",
+                metadata={"project_id": project_id, "session_id": session_id,
+                          "runtime_id": "fixture-runtime"})
+    process = SimpleNamespace(pid=77141, poll=lambda: None)
+    endpoint = CanonicalSocket("127.0.0.1", 19041)
+    process_identity = OwnedServerProcessIdentity(
+        pid=process.pid, birth="start_epoch_ms:1800000000410",
+        executable=str(tmp_path / "private/bin/comsol"),
+        listener_sockets=(endpoint,), start_epoch_ms=1_800_000_000_410, server_np=2)
+    handle = ManagedServerHandle(
+        process=process, runtime_id="fixture-runtime",
+        executable=process_identity.executable,
+        directories=_server_directories(tmp_path / "owned-server"),
+        endpoint=endpoint, process_identity=process_identity,
+        start_epoch_ms=process_identity.start_epoch_ms)
+    key = (project_id, session_id)
+    launch_command = build_server_command(
+        _server_directories(tmp_path / "owned-server"), platform_name="darwin",
+        validate_launcher=False, server_np=2)
+    launcher = SimpleNamespace(
+        _handles={key: handle},
+        _factories={key: SimpleNamespace(launch_command=launch_command)})
+    server = campaign.W24StaticShapeSetupServer(tmp_path / "work", tmp_path / "evidence",
+                                                 event_log=tmp_path / "events.jsonl")
+    server.launcher = launcher
+    daemon = SimpleNamespace(store=store, _session_server_handles={key: handle})
+    try:
+        observed_session = server.bind_from_original_daemon(
+            daemon, project_id, request_id=request_id,
+            idempotency_key=idempotency_key)
+        assert observed_session == session_id
+        assert server.managed_handle is handle
+        assert server.proc is handle.process
+        assert server._original_server_popen is handle.process
+        state = campaign._capture_hold_handles(server, SimpleNamespace(
+            _default_backend=None, _session_connect_lock=__import__("threading").RLock(),
+            _control_dispatch_inflight=0, _worker_admission_inflight=0, running={},
+            _session_worker_handles={}, _session_backends={},
+            _session_worker_child_identities={}, _session_server_handles={key: handle}))
+        assert state["server_handle"] is handle and state["complete"] is True
+    finally:
+        store.close()
+
+
+def test_lost_session_start_response_fallback_retains_sole_core_handle_when_store_read_fails(
+        tmp_path):
+    project_id = "12345678-1234-1234-1234-123456789abc"
+    session_id = "session-lost-response-store-unavailable"
+    key = (project_id, session_id)
+    process = SimpleNamespace(pid=77142, poll=lambda: None)
+    from comsol_mcp._session_server import ManagedServerHandle, _server_directories
+    handle = ManagedServerHandle(
+        process=process, runtime_id="fixture-runtime", executable="/private/tmp/comsol",
+        directories=_server_directories(tmp_path / "owned-server"))
+    launcher = SimpleNamespace(_started=True, _project_id=project_id,
+                               _handles={key: handle}, _factories={})
+    server = campaign.W24StaticShapeSetupServer(tmp_path / "work", tmp_path / "evidence",
+                                                 event_log=tmp_path / "events.jsonl")
+    server.launcher = launcher
+
+    class Store:
+        def list_jobs(self, **_kwargs):
+            raise OSError("synthetic durable lookup unavailable")
+
+    daemon = SimpleNamespace(store=Store(), _session_server_handles={key: handle})
+    observed = server.bind_from_original_daemon(
+        daemon, project_id, request_id="lost-start-request",
+        idempotency_key="lost-start-idempotency")
+    assert observed == session_id
+    assert server.managed_handle is handle and server.proc is process
+    assert server.owner_binding_resolution == "SOLE_CORE_HANDLE_IN_FRESH_W24_DAEMON"
+
+
+@pytest.mark.parametrize("failure_mode", ["birth_sink", "startup_diagnostic"])
+@pytest.mark.skipif(sys.platform != "darwin", reason="W24 process adapter is Darwin-only")
+def test_w24_postbirth_diagnostic_failure_retains_real_harmless_popen(
+        monkeypatch, tmp_path, failure_mode):
+    import os
+    import sys
+    import comsol_mcp._session_server as session_server
+    from comsol_mcp._session_context import SessionRuntimeConfig, runtime_state_root
+
+    install = tmp_path / "install"
+    arch = install / "bin/macarm64"
+    arch.mkdir(parents=True)
+    (arch / "comsolmphserver.ini").write_text("-Xms40m\n-Xmx2g\n")
+    conf = install / "bin/servers/webbridge/conf"
+    conf.mkdir(parents=True)
+    (conf / "server.xml").write_text(
+        '<Server><Service><Connector port="2036" address="0.0.0.0" /></Service></Server>')
+    (install / "bin/comsol").write_text("#!/bin/sh\nexit 0\n")
+    (install / "bin/comsol").chmod(0o755)
+    java = install / "java/macarm64/jre/Contents/Home/bin/java"
+    java.parent.mkdir(parents=True)
+    java.write_text("#!/bin/sh\nexit 0\n")
+    java.chmod(0o755)
+    control_home = tmp_path / "control"
+    state_root = runtime_state_root(control_home, platform_name="darwin")
+    state_root.mkdir(parents=True)
+    project_id = "12345678-1234-1234-1234-123456789abc"
+    session_id = "session-postbirth-test"
+    runtime = SessionRuntimeConfig(
+        runtime_id="fixture-runtime", comsol_version="6.4.0",
+        installation_root=install, java_executable=java,
+        classpath=(install / "client.jar",),
+        preferences_dir=state_root / "preferences", session_state_root=state_root)
+    control_home.mkdir(parents=True, exist_ok=True)
+    (tmp_path / "project-root").mkdir()
+    workspace = tmp_path / "project-root/science"
+    workspace.mkdir()
+    events = tmp_path / "events.jsonl"
+    events.write_bytes(b"")
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    server = campaign.W24StaticShapeSetupServer(tmp_path / "work", evidence,
+                                                  event_log=events, jdk=tmp_path / "jdk")
+    harmless = "import time; time.sleep(60)"
+
+    def harmless_popen(_command, **options):
+        return subprocess.Popen([sys.executable, "-c", harmless], **options)
+
+    def fail_birth_observation(_payload):
+        raise OSError("synthetic observer diagnostic failure")
+
+    launcher = campaign.W24SetupOwnedServerLauncher(
+        install_root=install, evidence=evidence,
+        installation_binding=_synthetic_adapter_binding(install), observer=server,
+        on_birth_observation=(fail_birth_observation if failure_mode == "birth_sink" else None),
+        popen=harmless_popen)
+    monkeypatch.setattr(launcher, "_verify_frozen_installation_identity",
+                        lambda runtime: {"status": "TEST_ONLY_PREBIRTH_IDENTITY",
+                                         "runtime_id": runtime.runtime_id,
+                                         "server_birth_performed": False})
+    server.launcher = launcher
+    launcher.bind_control_home(control_home)
+    launcher.bind_reviewed_project(
+        project_id=project_id, workspace=workspace,
+        authorized_root=tmp_path / "project-root", candidate_sha256="a" * 64,
+        activity_id="test-activity",
+        authorization_ref="w24-owned-server:test-activity:" + "a" * 64 + ":" + "b" * 192)
+    if failure_mode == "startup_diagnostic":
+        original_writer = session_server.write_startup_diagnostic
+
+        def fail_birth_diagnostic(root, payload):
+            if payload.get("event") == "BIRTH_OBSERVED":
+                raise OSError("synthetic diagnostic file failure")
+            return original_writer(root, payload)
+
+        monkeypatch.setattr(session_server, "write_startup_diagnostic", fail_birth_diagnostic)
+    try:
+        with pytest.raises(session_server.OwnedServerError) as caught:
+            launcher.start(runtime, project_id, session_id)
+        retained = caught.value.handle
+        assert retained is not None
+        assert launcher._handles[(project_id, session_id)] is retained
+        assert server.managed_handle is retained
+        assert server.proc is retained.process
+        assert retained.process.poll() is None
+    finally:
+        retained = launcher._handles.get((project_id, session_id))
+        process = getattr(retained, "process", None)
+        if process is not None and process.poll() is None:
+            process.terminate()
+            process.wait(timeout=5)
+
+
+def test_public_owned_start_connect_and_stop_use_exact_same_preferences_and_core_handle(
+        monkeypatch, tmp_path):
+    import os
+    import json
+    import shlex
+    import comsol_mcp._g2_isolation as isolation
+    import comsol_mcp._platform_process as platform_process
+    import comsol_mcp._session_server as session_server
+    from comsol_mcp._control_daemon import ControlDaemon
+    from comsol_mcp._session_context import (
+        CanonicalSocket, SessionRuntimeConfig, runtime_state_root,
+        session_state_directory,
+    )
+    from tests.test_session_server_control import _AttachedWorker, _sleeping_child
+
+    monkeypatch.setenv("COMSOL_MCP_TRUSTED_CODE", "1")
+    monkeypatch.setenv("COMSOL_MCP_HOST_CONTROL", "1")
+    install = tmp_path / "install"
+    arch = install / "bin/macarm64"
+    arch.mkdir(parents=True)
+    (arch / "comsolmphserver.ini").write_text("-Xms40m\n-Xmx2g\n")
+    conf = install / "bin/servers/webbridge/conf"
+    conf.mkdir(parents=True)
+    (conf / "server.xml").write_text(
+        '<Server><Service><Connector port="2036" address="0.0.0.0" /></Service></Server>')
+    (install / "bin/comsol").write_text("#!/bin/sh\nexit 0\n")
+    (install / "bin/comsol").chmod(0o755)
+    java = install / "java/macarm64/jre/Contents/Home/bin/java"
+    java.parent.mkdir(parents=True)
+    java.write_text("#!/bin/sh\nexit 0\n")
+    java.chmod(0o755)
+    monkeypatch.setattr(campaign, "INSTALL_ROOT", install)
+
+    project_root = tmp_path / "project-root"
+    project_root.mkdir()
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    events = tmp_path / "events.jsonl"
+    events.write_bytes(b"")
+    control_home = tmp_path / "control-home"
+    test_jdk = tmp_path / "jdk"
+    test_jdk.mkdir()
+    (tmp_path / "work").mkdir()
+    isolation_receipt = tmp_path / "work" / "isolation_receipt.json"
+    monkeypatch.setenv("COMSOL_MCP_ISOLATION_RECEIPT", str(isolation_receipt))
+    server = campaign.W24StaticShapeSetupServer(tmp_path / "work", evidence,
+                                                  event_log=events, jdk=test_jdk)
+    server.prepare_shadow()
+    worker_process = _sleeping_child()
+    worker = _AttachedWorker(worker_process)
+    original_worker_connect = worker.connect
+    def worker_connect_with_build(port, host, **kwargs):
+        return {**original_worker_connect(port, host, **kwargs),
+                "engine_version": "6.4.0", "engine_build": "293"}
+    worker.connect = worker_connect_with_build
+    worker_runtimes = []
+    active = {"process": None, "argv": None, "birth": 1_800_000_000_333, "port": 19031}
+
+    def process_reader(pid):
+        process = active["process"]
+        return {"alive": process is not None and process.pid == pid and process.poll() is None,
+                "start_epoch_ms": active["birth"] if process is not None and process.pid == pid else None}
+
+    def listener_reader(port):
+        process = active["process"]
+        if process is not None and process.poll() is None and port == active["port"]:
+            return [(process.pid, CanonicalSocket("127.0.0.1", port))]
+        return []
+
+    def fake_popen(command, **options):
+        active["argv"] = list(command)
+        port_file = Path(command[command.index("-portfile") + 1])
+        port_file.write_text(str(active["port"]))
+        class FakeServerPopen:
+            pid = 890031
+            args = list(command)
+            returncode = None
+            terminate_calls = 0
+            kill_calls = 0
+            def poll(self):
+                return self.returncode
+            def terminate(self):
+                self.terminate_calls += 1
+                self.returncode = -15
+            def wait(self, timeout=None):
+                return self.returncode
+            def kill(self):
+                self.kill_calls += 1
+                self.returncode = -9
+        process = FakeServerPopen()
+        active["process"] = process
+        return process
+
+    def runtime_resolver(runtime_id, project_id, session_id, _project_workspace, state_root):
+        assert runtime_id == "fixture-runtime"
+        home = session_state_directory(state_root, project_id, session_id)
+        return SessionRuntimeConfig(
+            runtime_id=runtime_id, comsol_version="6.4.0",
+            installation_root=install, java_executable=java,
+            classpath=(install / "client.jar",),
+            preferences_dir=home / "preferences", session_state_root=state_root)
+
+    launcher = campaign.W24SetupOwnedServerLauncher(
+        install_root=install, evidence=evidence,
+        installation_binding=_synthetic_adapter_binding(install), observer=server,
+        process_identity_reader=process_reader, listener_reader=listener_reader,
+        popen=fake_popen)
+    monkeypatch.setattr(launcher, "_verify_frozen_installation_identity",
+                        lambda runtime: {"status": "TEST_ONLY_PREBIRTH_IDENTITY",
+                                         "runtime_id": runtime.runtime_id,
+                                         "server_birth_performed": False})
+    server.launcher = launcher
+    daemon = ControlDaemon(
+        control_home, project_root=server.project,
+        session_runtime_resolver=runtime_resolver,
+        session_worker_factory=lambda runtime, _worker_state: (
+            worker_runtimes.append(runtime) or worker),
+        session_peer_observer=lambda _worker, port, _metadata: CanonicalSocket("127.0.0.1", port),
+        session_server_launcher=launcher)
+    launcher.bind_control_home(control_home)
+    try:
+        project_creation, _project_response = campaign._project_create_before_birth(
+            daemon, server.project, evidence)
+        project_id = project_creation["project_id"]
+        workspace = Path(project_creation["workspace"])
+        launcher.bind_reviewed_project(
+            project_id=project_id, workspace=workspace, authorized_root=server.project,
+            candidate_sha256="a" * 64, activity_id="12345678-1234-4234-8234-123456789abc",
+            authorization_ref=("w24-owned-server:12345678-1234-4234-8234-123456789abc:" +
+                              "a" * 64 + ":" + "b" * 192))
+
+        def fake_verify_owned_server(receipt_path, *, endpoint, worker_pid=None, admission_owner=None):
+            assert Path(receipt_path).resolve() == isolation_receipt.resolve()
+            assert endpoint == f"127.0.0.1:{active['port']}"
+            assert worker_pid is None and admission_owner is None
+            record = json.loads(Path(receipt_path).read_text())
+            assert record["status"] == "RUNNING"
+            assert record["process"]["pid"] == active["process"].pid
+            assert record["process"]["port"] == active["port"]
+            assert record["owner_binding"]["session_id"] == server.managed_session_id
+            assert worker_runtimes == []
+            return {"verified": True, "pid": active["process"].pid,
+                    "endpoint": endpoint, "established_client_pids": []}
+
+        monkeypatch.setattr(isolation, "verify_owned_server", fake_verify_owned_server)
+
+        def server_java_argv():
+            command = active["argv"]
+            private_root = Path(command[0]).parent.parent
+            port_file = command[command.index("-portfile") + 1]
+            prefs = command[command.index("-prefsdir") + 1]
+            tmp = command[command.index("-tmpdir") + 1]
+            recovery = command[command.index("-recoverydir") + 1]
+            return [command[0], f"-Dcs.root={private_root}",
+                    f"-Dcatalina.home={private_root / 'bin/tomcat'}",
+                    f"-Djava.io.tmpdir={tmp}",
+                    "-XX:ActiveProcessorCount=2", "-XX:ParallelGCThreads=2",
+                    "-XX:CICompilerCount=2", "-Xms128m", "-Xmx1024m",
+                    *command[2:], "com.comsol.util.application.ServerApplication"]
+
+        def process_snapshot(pid):
+            text = shlex.join(server_java_argv())
+            return {"pid": pid, "birth": f"start_epoch_ms:{active['birth']}",
+                    "command": text, "command_sha256": hashlib.sha256(text.encode()).hexdigest()}
+
+        monkeypatch.setattr(isolation, "_process_snapshot", process_snapshot)
+        monkeypatch.setattr(platform_process, "process_identity", process_reader)
+        monkeypatch.setattr(campaign, "_read_process_uid", lambda _pid: os.getuid())
+        monkeypatch.setattr(
+            campaign, "_read_text_executable_identity",
+            lambda _pid, expected: {**campaign._canonical_executable_identity(expected),
+                                    "command": ["/usr/sbin/lsof"],
+                                    "stdout_sha256": "a" * 64,
+                                    "stderr_sha256": hashlib.sha256(b"").hexdigest()})
+        monkeypatch.setattr(
+            campaign, "_lsof_listener",
+            lambda pid, port: {"exit_code": 0, "stderr_sha256": hashlib.sha256(b"").hexdigest(),
+                               "rows": ([{"pid": pid, "endpoint": f"127.0.0.1:{port}"}]
+                                        if active["process"].poll() is None and port == active["port"] else []),
+                               "command": ["/usr/sbin/lsof"], "stdout_sha256": "b" * 64})
+
+        def fake_jcmd_limits(**kwargs):
+            assert kwargs["pid"] == active["process"].pid
+            before = kwargs["identity_reader"]()
+            assert before == kwargs["expected_identity"]
+            after = kwargs["identity_reader"]()
+            assert after == kwargs["expected_identity"]
+            campaign._write_new(kwargs["evidence_path"], {"status": "TEST_EFFECTIVE_LIMITS_READBACK"})
+            return {"status": "TEST_EFFECTIVE_LIMITS_READBACK",
+                    "values": dict(campaign._EXPECTED_EFFECTIVE_JVM_FLAGS)}
+        monkeypatch.setattr(campaign, "_read_effective_jvm_limits", fake_jcmd_limits)
+
+        start_id, start_key = campaign._request_ids("integration_session_start")
+        start_response = campaign._direct_dispatch(
+            daemon, evidence, operation="session.start",
+            arguments={"runtime_id": "fixture-runtime", "options": {}, "resources": {}},
+            project_id=project_id, request_label="integration_session_start",
+            timeout_seconds=30.0, request_id=start_id, idempotency_key=start_key)
+        server_session = campaign._owned_server_start_identity(
+            start_response, project_id=project_id, runtime_id="fixture-runtime")
+        handle = daemon._session_server_handles[(project_id, server_session["session_id"])]
+        expected_launch = session_server.build_server_command(
+            handle.directories, platform_name="darwin", server_np=2)
+        assert active["argv"] == expected_launch
+        assert handle.process_identity is not None and handle.process_identity.server_np == 2
+        assert handle.process_identity.launch_argv_sha256 == hashlib.sha256(
+            json.dumps(expected_launch, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        server.bind_managed_handle(launcher, project_id, server_session["session_id"], handle)
+        server.start_and_verify_listener()
+        server.require_server_java_options()
+        monkeypatch.setenv("COMSOL_MCP_ISOLATION_RECEIPT", str(tmp_path / "wrong-receipt.json"))
+        with pytest.raises(campaign.CandidateError, match="G2 receipt path"):
+            server.write_g2_isolation_receipt()
+        assert not isolation_receipt.exists()
+        monkeypatch.setenv("COMSOL_MCP_ISOLATION_RECEIPT", str(isolation_receipt))
+        g2_receipt = server.write_g2_isolation_receipt()
+        assert g2_receipt["status"] == "W24_G2_OWNED_SERVER_RECEIPT_VERIFIED_BEFORE_WORKER"
+        assert g2_receipt["worker_born"] is False
+        assert isolation_receipt.is_file()
+        original_receipt = isolation_receipt.read_bytes()
+        with pytest.raises(campaign.CandidateError, match="G2 receipt path"):
+            server.write_g2_isolation_receipt()
+        assert isolation_receipt.read_bytes() == original_receipt
+
+        connected = campaign._direct_dispatch(
+            daemon, evidence, operation="session.connect",
+            arguments={"runtime_id": "fixture-runtime",
+                       "session_id": server_session["session_id"],
+                       "endpoint": dict(server_session["endpoint"])},
+            project_id=project_id, session_id=server_session["session_id"],
+            request_label="integration_session_connect", timeout_seconds=30.0)
+        session = campaign._session_identity(
+            connected, project_id=project_id, expected_port=active["port"])
+        assert session["session_id"] == server_session["session_id"]
+        assert len(worker_runtimes) == 1
+        assert worker_runtimes[0].preferences_dir == handle.directories.preferences.resolve()
+        assert worker_runtimes[0].preferences_dir != daemon._session_runtime_configs[
+            (project_id, server_session["session_id"])].preferences_dir
+
+        class Monitor:
+            stop_reason = None
+            last_sample = {"status": "TEST_ONLY"}
+            def set_worker_required_live(self, _value): pass
+            def sample_once(self): return self.last_sample
+            def stop(self): pass
+
+        result = campaign._retire_worker_and_server(
+            daemon=daemon, server=server, monitor=Monitor(),
+            project_id=project_id, session=session, run_dir=evidence,
+            deadline_monotonic=time.monotonic() + 60)
+        assert result["status"] == "EXACT_WORKER_RETIRED_PUBLIC_SESSION_STOP_REAPED"
+        assert active["process"].terminate_calls == 1
+        assert active["process"].kill_calls == 0
+        assert handle.retired is True
+    finally:
+        daemon.close()
+        if worker_process.poll() is None:
+            worker_process.terminate()
+            worker_process.wait(timeout=5)
+
+
+def test_child_environment_has_only_owned_session_runtime_inputs(tmp_path, monkeypatch):
+    repo = Path(__file__).resolve().parents[1]
+    monkeypatch.setattr(
+        campaign, "EXPLICIT_SITE_PACKAGES",
+        Path("/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312/lib/python3.12/site-packages"))
+    env = campaign._expected_child_environment(tmp_path / "work", repo)
+    assert "COMSOL_ROOT" not in env
+    assert "COMSOL_PREFS_DIR" not in env
+    assert env["COMSOL_MCP_ISOLATION_RECEIPT"] == str(tmp_path / "work" / "isolation_receipt.json")
+    assert env["COMSOL_JAVA_HOME"] == env["JAVA_HOME"]
+    assert {"COMSOL_PROJECT_ROOT", "COMSOL_SERVER_MCP_HOME", "COMSOL_MCP_TRUSTED_CODE",
+            "COMSOL_MCP_HOST_CONTROL", "COMSOL_MCP_ISOLATION_RECEIPT"}.issubset(env)
+
+
+@pytest.mark.skipif(sys.platform != "darwin", reason="production runtime installation resolver targets macOS")
+def test_production_runtime_resolver_version_domain_and_adapter_prebirth_identity_gates(
+        tmp_path, monkeypatch):
+    import os
+    import json
+    import hashlib
+    import subprocess as subprocess_module
+    from comsol_mcp._control_daemon import ControlDaemon
+    from comsol_mcp._java_worker import JavaWorkerPaths
+    from comsol_mcp._runtime_installation import inspect_installation, runtime_id_for_root
+
+    def make_install(root: Path):
+        root.mkdir(parents=True)
+        launcher = root / "bin/macarm64/comsollauncher"
+        launcher.parent.mkdir(parents=True)
+        launcher.write_text("fixture executable; never launched\n", encoding="utf-8")
+        launcher.chmod(0o700)
+        (root / "readme.txt").write_bytes(b"COMSOL 6.4.0.293 README\nfixture metadata only\n")
+        classpath_names = [f"apiplugins/client_{index:02d}.jar" for index in range(25)]
+        manifest = root / "bin/comsolclientpath.txt"
+        manifest.parent.mkdir(parents=True, exist_ok=True)
+        manifest.write_text("\n".join(classpath_names) + "\n", encoding="utf-8")
+        for index, relative in enumerate(classpath_names):
+            jar = root / relative
+            jar.parent.mkdir(parents=True, exist_ok=True)
+            jar.write_bytes(f"test-jar-{index:02d}".encode("ascii"))
+        jdk = tmp_path / f"jdk-{root.name}"
+        java = jdk / "bin/java"
+        javac = jdk / "bin/javac"
+        java.parent.mkdir(parents=True)
+        java.write_text("fixture Java entry; never launched\n", encoding="utf-8")
+        javac.write_text("fixture javac entry; never launched\n", encoding="utf-8")
+        (jdk / "release").write_text(
+            'JAVA_VERSION="11.0.31"\nIMPLEMENTOR="Amazon.com Inc."\nOS_ARCH="aarch64"\n',
+            encoding="utf-8")
+        paths = JavaWorkerPaths(root, jdk, project_root=root)
+        _classpath, manifest_sha, jar_count, jar_sha = paths.classpath()
+        binding = {"root": str(root.resolve()), "exact_build": "6.4.0.293",
+                   "readme_sha256": hashlib.sha256((root / "readme.txt").read_bytes()).hexdigest(),
+                   "classpath_manifest_sha256": manifest_sha,
+                   "jar_count": jar_count, "jar_content_sha256": jar_sha}
+        return root, jdk, binding
+
+    install, jdk, binding = make_install(tmp_path / "install-293")
+    other_install, other_jdk, other_binding = make_install(tmp_path / "other-install-293")
+    assert other_binding["exact_build"] == binding["exact_build"]
+    assert other_binding["readme_sha256"] == binding["readme_sha256"]
+    control_home = tmp_path / "control-home"
+    control_home.mkdir()
+    workspace_root = tmp_path / "project-root"
+    workspace = workspace_root / "science"
+    workspace.mkdir(parents=True)
+    project_id = "11111111-1111-4111-8111-111111111111"
+    activity_id = "22222222-2222-4222-8222-222222222222"
+    candidate_sha = "a" * 64
+    monkeypatch.setenv("COMSOL_JAVA_HOME", str(jdk))
+    monkeypatch.setenv("JAVA_HOME", str(jdk))
+    spawn_attempts = []
+    def forbidden_spawn(*args, **kwargs):
+        spawn_attempts.append((args, kwargs))
+        raise AssertionError("production prebirth resolver/adapter attempted a process spawn")
+    monkeypatch.setattr(subprocess_module, "Popen", forbidden_spawn)
+
+    def resolve(root: Path, root_jdk: Path, session_id: str):
+        monkeypatch.setenv("COMSOL_JAVA_HOME", str(root_jdk))
+        monkeypatch.setenv("JAVA_HOME", str(root_jdk))
+        runtime_id = runtime_id_for_root(root)
+        inspected = inspect_installation(runtime_id)["installation"]
+        daemon = object.__new__(ControlDaemon)
+        daemon.home = control_home
+        daemon.session_runtime_resolver = None
+        runtime = daemon._resolve_session_runtime(runtime_id, project_id, session_id, workspace)
+        return inspected, runtime
+
+    inspected, runtime = resolve(install, jdk, "session-good")
+    assert inspected["version"]["value"] == "6.4.0"
+    assert inspected["build"]["value"] == 293
+    assert runtime.comsol_version == inspected["version"]["value"]
+    assert runtime.comsol_version != binding["exact_build"]
+    events = tmp_path / "events.jsonl"
+    events.write_bytes(b"")
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    server = campaign.W24StaticShapeSetupServer(tmp_path / "work", evidence, event_log=events, jdk=jdk)
+    popen_calls = []
+    launcher = campaign.W24SetupOwnedServerLauncher(
+        install_root=install, evidence=evidence, installation_binding=binding,
+        observer=server, popen=lambda *args, **kwargs: popen_calls.append((args, kwargs)))
+    server.launcher = launcher
+    launcher.bind_control_home(control_home)
+    launcher.bind_reviewed_project(
+        project_id=project_id, workspace=workspace, authorized_root=workspace_root,
+        candidate_sha256=candidate_sha, activity_id=activity_id,
+        authorization_ref=f"w24-owned-server:{activity_id}:{candidate_sha}:" + "b" * 192)
+    verified = launcher._verify_frozen_installation_identity(runtime)
+    assert verified["status"] == "W24_RESOLVED_RUNTIME_AND_FROZEN_INSTALLATION_IDENTITY_VERIFIED_PREBIRTH"
+    assert verified["catalog_version"] == "6.4.0"
+    assert verified["exact_build"] == "6.4.0.293"
+    assert verified["jar_count"] == 25
+
+    core_calls = []
+    class ReachedCoreStart(Exception):
+        pass
+    def core_start_spy(*args, **kwargs):
+        core_calls.append((args, kwargs))
+        raise ReachedCoreStart("prebirth checks passed; Core start intercepted before any Popen")
+    launcher._core.start = core_start_spy
+
+    # The exact same catalog version is insufficient when the full build changes.
+    original_readme = (install / "readme.txt").read_bytes()
+    (install / "readme.txt").write_bytes(b"COMSOL 6.4.0.294 README\nfixture changed build\n")
+    with pytest.raises(campaign.CandidateError, match="build|README"):
+        launcher.start(runtime, project_id, "session-wrong-build")
+    assert core_calls == [] and popen_calls == []
+    assert not (evidence / "server_prebirth_installation_identity.json").exists()
+    (install / "readme.txt").write_bytes(original_readme)
+
+    # A separate valid 6.4.0.293 installation still fails the frozen-root binding.
+    other_inspected, other_runtime = resolve(other_install, other_jdk, "session-wrong-root")
+    assert other_inspected["build"]["value"] == 293
+    with pytest.raises(campaign.CandidateError, match="root/catalog version"):
+        launcher.start(other_runtime, project_id, "session-wrong-root")
+    assert core_calls == [] and popen_calls == []
+
+    # The 25-JAR frozen fingerprint is independently enforced at the same prebirth gate.
+    jar = install / "apiplugins/client_00.jar"
+    original_jar = jar.read_bytes()
+    jar.write_bytes(b"tampered-00")
+    with pytest.raises(campaign.CandidateError, match="classpath/JAR"):
+        launcher.start(runtime, project_id, "session-wrong-jar")
+    assert core_calls == [] and popen_calls == []
+    assert not (evidence / "server_prebirth_installation_identity.json").exists()
+    jar.write_bytes(original_jar)
+
+    # Correct catalog/build/root/README/JAR identity reaches Core only after the prebirth receipt.
+    with pytest.raises(ReachedCoreStart, match="intercepted before any Popen"):
+        launcher.start(runtime, project_id, "session-good-prebirth")
+    assert len(core_calls) == 1 and popen_calls == [] and not spawn_attempts
+    identity_receipt = json.loads((evidence / "server_prebirth_installation_identity.json").read_text())
+    assert identity_receipt["status"] == "W24_RESOLVED_RUNTIME_AND_FROZEN_INSTALLATION_IDENTITY_VERIFIED_PREBIRTH"
+    assert identity_receipt["catalog_version"] == "6.4.0"
+    assert identity_receipt["exact_build"] == "6.4.0.293"
+    assert identity_receipt["jar_count"] == 25
+    assert identity_receipt["server_birth_performed"] is False
+    assert not spawn_attempts
+
+
+@pytest.mark.skipif(sys.platform != "darwin", reason="production G2 process/socket probe is macOS-only")
+def test_production_g2_consumer_accepts_core_receipt_and_rejects_identity_mutations(tmp_path):
+    import json
+    import shlex
+    import socket
+    import os
+    import comsol_mcp._g2_isolation as isolation
+    import comsol_mcp._platform_process as platform_process
+    from comsol_mcp._execution_contract import ExecutionContractError
+    from comsol_mcp._session_context import CanonicalSocket, OwnedServerProcessIdentity
+    from comsol_mcp._session_server import ManagedServerHandle, _server_directories
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as reservation:
+        reservation.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        reservation.bind(("127.0.0.1", 0))
+        port = reservation.getsockname()[1]
+    script = ("import socket,sys,time; s=socket.socket(); s.setsockopt(socket.SOL_SOCKET, "
+              "socket.SO_REUSEADDR,1); s.bind(('127.0.0.1',int(sys.argv[1]))); s.listen(8); "
+              "time.sleep(120)")
+    process = subprocess.Popen([sys.executable, "-c", script, str(port), "COMSOL", "mphserver"],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        deadline = time.monotonic() + 10
+        snapshot = None
+        previous_snapshot = None
+        stable_command_reads = 0
+        while time.monotonic() < deadline:
+            current_snapshot = isolation._process_snapshot(process.pid)
+            rows = isolation._socket_rows(port)
+            listener_ready = any(row["pid"] == process.pid and row["state"] == "LISTEN"
+                                 and row["local_endpoint"] == f"127.0.0.1:{port}"
+                                 for row in rows)
+            if (current_snapshot is not None and previous_snapshot is not None and
+                    current_snapshot["birth"] == previous_snapshot["birth"] and
+                    current_snapshot["command_sha256"] == previous_snapshot["command_sha256"]):
+                stable_command_reads += 1
+            else:
+                stable_command_reads = 0
+            if listener_ready and stable_command_reads >= 2:
+                snapshot = current_snapshot
+                break
+            previous_snapshot = current_snapshot
+            time.sleep(0.05)
+        assert snapshot is not None
+        assert "comsol" in snapshot["command"].lower()
+        assert "mphserver" in snapshot["command"].lower()
+        live = platform_process.process_identity(process.pid)
+        assert live["alive"] is True and type(live["start_epoch_ms"]) is int
+        core_birth = f"start_epoch_ms:{live['start_epoch_ms']}"
+        endpoint = CanonicalSocket("127.0.0.1", port)
+        handle = ManagedServerHandle(
+            process=process, runtime_id="runtime-test", executable=str(Path(sys.executable).resolve()),
+            directories=_server_directories(tmp_path / "owned-server"), endpoint=endpoint,
+            process_identity=OwnedServerProcessIdentity(
+                pid=process.pid, birth=core_birth, executable=str(Path(sys.executable).resolve()),
+                listener_sockets=(endpoint,), start_epoch_ms=live["start_epoch_ms"]),
+            start_epoch_ms=live["start_epoch_ms"])
+        java_identity = campaign._canonical_executable_identity(Path(sys.executable))
+        observer = {
+            "status": "CORE_MANAGED_ORIGINAL_POPEN_JAVA_IDENTITY_FROZEN",
+            "pid": process.pid, "uid": os.getuid(), "birth": core_birth,
+            "start_epoch_ms": live["start_epoch_ms"],
+            "process_snapshot_birth": snapshot["birth"],
+            "post_exec_command_sha256": snapshot["command_sha256"],
+            "post_exec_argv": shlex.split(snapshot["command"]),
+            "java_executable": java_identity,
+            "listener": {"pid": process.pid, "endpoint": f"127.0.0.1:{port}"},
+        }
+        good = campaign._build_g2_owned_server_receipt(
+            handle=handle, observer_identity=observer, process_snapshot=snapshot,
+            project_id="11111111-1111-4111-8111-111111111111",
+            session_id="22222222-2222-4222-8222-222222222222",
+            activity_id="33333333-3333-4333-8333-333333333333",
+            candidate_sha256="a" * 64)
+        receipt_path = tmp_path / "good-isolation-receipt.json"
+        receipt_path.write_text(json.dumps(good), encoding="utf-8")
+        proof = isolation.verify_owned_server(receipt_path, endpoint=f"127.0.0.1:{port}")
+        assert proof["verified"] is True
+        assert proof["established_client_pids"] == []
+
+        bad_birth = json.loads(json.dumps(good))
+        bad_birth["process"]["birth"] = core_birth
+        bad_birth_path = tmp_path / "bad-core-birth.json"
+        bad_birth_path.write_text(json.dumps(bad_birth), encoding="utf-8")
+        with pytest.raises(ExecutionContractError, match="identity no longer matches"):
+            isolation.verify_owned_server(bad_birth_path, endpoint=f"127.0.0.1:{port}")
+
+        bad_command = json.loads(json.dumps(good))
+        bad_command["process"]["command_sha256"] = "b" * 64
+        bad_command_path = tmp_path / "bad-command-hash.json"
+        bad_command_path.write_text(json.dumps(bad_command), encoding="utf-8")
+        with pytest.raises(ExecutionContractError, match="identity no longer matches"):
+            isolation.verify_owned_server(bad_command_path, endpoint=f"127.0.0.1:{port}")
+
+        with pytest.raises(ExecutionContractError, match="does not match current endpoint"):
+            isolation.verify_owned_server(receipt_path, endpoint=f"127.0.0.1:{port + 1}")
+
+        bad_listener = json.loads(json.dumps(good))
+        bad_listener["process"]["port"] = port + 1
+        bad_listener_path = tmp_path / "bad-listener-port.json"
+        bad_listener_path.write_text(json.dumps(bad_listener), encoding="utf-8")
+        with pytest.raises(ExecutionContractError, match="does not match current endpoint"):
+            isolation.verify_owned_server(bad_listener_path, endpoint=f"127.0.0.1:{port}")
+    finally:
+        if process.poll() is None:
+            process.terminate()
+            process.wait(timeout=5)
+
+
+def test_effective_jvm_flags_parser_requires_exact_cpu_and_heap_values():
+    output = ("12345:\n"
+              "intx ActiveProcessorCount = 2 {product}\n"
+              "size_t InitialHeapSize := 134217728 {product}\n"
+              "size_t MaxHeapSize = 1073741824 {product}\n")
+    assert campaign._parse_effective_jvm_flags(output) == campaign._EXPECTED_EFFECTIVE_JVM_FLAGS
+    with pytest.raises(campaign.CandidateError, match="exactly one"):
+        campaign._parse_effective_jvm_flags(output + "intx ActiveProcessorCount = 4 {product}\n")
+    with pytest.raises(campaign.CandidateError, match="exactly one"):
+        campaign._parse_effective_jvm_flags(output.replace("size_t MaxHeapSize = 1073741824 {product}\n", ""))
+    with pytest.raises(campaign.CandidateError, match="differ from the frozen"):
+        campaign._parse_effective_jvm_flags(output.replace("ActiveProcessorCount = 2", "ActiveProcessorCount = 4"))
+
+
+def test_jcmd_limits_reader_binds_same_child_identity_before_and_after(monkeypatch, tmp_path):
+    import os
+
+    jcmd = tmp_path / "jdk/bin/jcmd"
+    jcmd.parent.mkdir(parents=True)
+    jcmd.write_bytes(b"pinned harmless jcmd test fixture")
+    jcmd.chmod(0o755)
+    private_tmp = tmp_path / "private-runtime-tmp"
+    private_tmp.mkdir()
+    parent_values = {
+        "JAVA_TOOL_OPTIONS": campaign.JAVA_TOOL_OPTIONS,
+        "_JAVA_OPTIONS": "-Dobserver.test.java_options=1",
+        "JDK_JAVA_OPTIONS": "-Dobserver.test.jdk_options=1",
+        "TMPDIR": str(private_tmp),
+        "JAVA_HOME": str(tmp_path / "jdk"),
+        "COMSOL_ROOT": str(tmp_path / "comsol-shadow"),
+        "COMSOL_MCP_ISOLATION_RECEIPT": str(tmp_path / "isolation_receipt.json"),
+        "PYTHONPATH": "candidate-source:explicit-site-packages",
+    }
+    for key, value in parent_values.items():
+        monkeypatch.setenv(key, value)
+    parent_environment = dict(os.environ)
+    command = [str(jcmd.resolve()), "1234", "VM.flags", "-all"]
+    expected = {"pid": 1234, "uid": 501, "birth": "birth", "start_epoch_ms": 99}
+    output = ("1234:\nintx ActiveProcessorCount = 2 {product}\n"
+              "size_t InitialHeapSize = 134217728 {product}\n"
+              "size_t MaxHeapSize = 1073741824 {product}\n")
+    calls = []
+    monkeypatch.setattr(campaign.subprocess, "run", lambda argv, **kwargs: (
+        calls.append((list(argv), kwargs)) or subprocess.CompletedProcess(
+            args=argv, returncode=0, stdout=output, stderr="")))
+    reads = []
+
+    def identity_reader():
+        reads.append(1)
+        return dict(expected)
+
+    proof = campaign._read_effective_jvm_limits(
+        pid=1234, jcmd=jcmd, identity_reader=identity_reader,
+        expected_identity=expected, evidence_path=tmp_path / "jcmd-proof.json")
+    assert len(calls) == 1 and calls[0][0] == command
+    observer_environment = calls[0][1]["env"]
+    assert all(key not in observer_environment for key in campaign.JCMD_OPTION_ENV_KEYS)
+    assert {key: observer_environment[key] for key in parent_values if key not in campaign.JCMD_OPTION_ENV_KEYS} == {
+        key: value for key, value in parent_values.items() if key not in campaign.JCMD_OPTION_ENV_KEYS}
+    assert observer_environment == {
+        key: value for key, value in parent_environment.items()
+        if key not in campaign.JCMD_OPTION_ENV_KEYS}
+    assert dict(os.environ) == parent_environment
+    assert len(reads) == 2
+    assert proof["status"] == "EFFECTIVE_JVM_LIMITS_VERIFIED"
+    assert proof["effective_flags"] == campaign._EXPECTED_EFFECTIVE_JVM_FLAGS
+    env_proof = proof["observer_environment"]
+    assert env_proof["removed_variable_names"] == list(campaign.JCMD_OPTION_ENV_KEYS)
+    assert env_proof["present_in_parent"] == list(campaign.JCMD_OPTION_ENV_KEYS)
+    assert env_proof["absent_in_observer"] == list(campaign.JCMD_OPTION_ENV_KEYS)
+    assert {"TMPDIR", "JAVA_HOME", "COMSOL_ROOT", "COMSOL_MCP_ISOLATION_RECEIPT", "PYTHONPATH"}.issubset(
+        env_proof["preserved_required_runtime_variable_names"])
+    assert env_proof["preserved_required_runtime_values_unchanged"] is True
+    saved = campaign.json.loads((tmp_path / "jcmd-proof.json").read_text())
+    assert saved["effective_flags"] == proof["effective_flags"]
+    assert saved["observer_environment"] == env_proof
+
+
+def test_jcmd_limits_reader_still_rejects_any_stderr_after_env_scrub(monkeypatch, tmp_path):
+    jcmd = tmp_path / "jdk/bin/jcmd"
+    jcmd.parent.mkdir(parents=True)
+    jcmd.write_bytes(b"pinned harmless jcmd test fixture")
+    jcmd.chmod(0o755)
+    for key in campaign.JCMD_OPTION_ENV_KEYS:
+        monkeypatch.setenv(key, "-Dobserver.test=1")
+    expected = {"pid": 1234, "uid": 501, "birth": "birth", "start_epoch_ms": 99}
+    output = ("1234:\nintx ActiveProcessorCount = 2 {product}\n"
+              "size_t InitialHeapSize = 134217728 {product}\n"
+              "size_t MaxHeapSize = 1073741824 {product}\n")
+    calls = []
+
+    def unexpected_stderr(argv, **kwargs):
+        calls.append((list(argv), kwargs))
+        return subprocess.CompletedProcess(
+            args=argv, returncode=0, stdout=output, stderr="unexpected diagnostic text\n")
+
+    monkeypatch.setattr(campaign.subprocess, "run", unexpected_stderr)
+    with pytest.raises(campaign.JvmLimitsReadbackHold, match="jcmd VM.flags -all failed"):
+        campaign._read_effective_jvm_limits(
+            pid=1234, jcmd=jcmd,
+            identity_reader=lambda: dict(expected), expected_identity=expected,
+            evidence_path=tmp_path / "jcmd-stderr-hold.json")
+    assert len(calls) == 1
+    assert all(key not in calls[0][1]["env"] for key in campaign.JCMD_OPTION_ENV_KEYS)
+    hold = campaign.json.loads((tmp_path / "jcmd-stderr-hold.json").read_text())
+    assert hold["phase"] == "effective_flag_parse"
+    assert hold["stderr_sha256"] == hashlib.sha256(b"unexpected diagnostic text\n").hexdigest()
+    assert hold["observer_environment"]["absent_in_observer"] == list(campaign.JCMD_OPTION_ENV_KEYS)
+
+
+@pytest.mark.skipif(
+    sys.platform != "darwin" or not (campaign.JAVA11 / "bin/jcmd").is_file(),
+    reason="requires the exact macOS W24 Corretto 11 jcmd binary",
+)
+def test_real_pinned_jcmd_help_proves_only_observer_env_is_scrubbed(tmp_path):
+    import os
+
+    jcmd = campaign.JAVA11 / "bin/jcmd"
+    inherited_environment = dict(os.environ)
+    inherited_environment["JAVA_TOOL_OPTIONS"] = campaign.JAVA_TOOL_OPTIONS
+    inherited_environment["_JAVA_OPTIONS"] = "-Dobserver.test.java_options=1"
+    inherited_environment["JDK_JAVA_OPTIONS"] = "-Dobserver.test.jdk_options=1"
+    observer_environment, environment_proof = campaign._jcmd_observer_environment(
+        inherited_environment)
+    command = [str(jcmd.resolve(strict=True)), "-h"]
+
+    inherited_result = subprocess.run(
+        command, capture_output=True, text=True, check=False, timeout=30,
+        env=inherited_environment)
+    observer_result = subprocess.run(
+        command, capture_output=True, text=True, check=False, timeout=30,
+        env=observer_environment)
+
+    assert inherited_result.returncode == 0
+    assert "Picked up JAVA_TOOL_OPTIONS" in inherited_result.stderr
+    assert observer_result.returncode == 0
+    assert observer_result.stdout.strip()
+    assert observer_result.stderr == ""
+    assert command[-1] == "-h" and len(command) == 2
+    assert not any(token.isdigit() for token in command[1:])
+
+    for name, value in (
+            ("inherited.stdout.txt", inherited_result.stdout),
+            ("inherited.stderr.txt", inherited_result.stderr),
+            ("observer.stdout.txt", observer_result.stdout),
+            ("observer.stderr.txt", observer_result.stderr)):
+        (tmp_path / name).write_text(value, encoding="utf-8")
+    proof = {
+        "schema": "W24_REAL_JCMD_HELP_OBSERVER_ENV_PROOF_V1",
+        "status": "HELP_ONLY_BANNER_REPRODUCED_AND_REMOVED_FOR_OBSERVER",
+        "command": command,
+        "target_pid": None,
+        "jcmd_list_or_vm_flags_command": False,
+        "process_attach_performed": False,
+        "inherited": {
+            "returncode": inherited_result.returncode,
+            "stdout_sha256": campaign._sha_bytes(inherited_result.stdout.encode()),
+            "stdout_bytes": len(inherited_result.stdout.encode()),
+            "stderr_sha256": campaign._sha_bytes(inherited_result.stderr.encode()),
+            "stderr_bytes": len(inherited_result.stderr.encode()),
+        },
+        "observer": {
+            "returncode": observer_result.returncode,
+            "stdout_sha256": campaign._sha_bytes(observer_result.stdout.encode()),
+            "stdout_bytes": len(observer_result.stdout.encode()),
+            "stderr_sha256": campaign._sha_bytes(observer_result.stderr.encode()),
+            "stderr_bytes": len(observer_result.stderr.encode()),
+        },
+        "observer_environment": environment_proof,
+        "raw_output_files": [
+            "inherited.stdout.txt", "inherited.stderr.txt",
+            "observer.stdout.txt", "observer.stderr.txt",
+        ],
+    }
+    (tmp_path / "jcmd-help-proof.json").write_text(
+        campaign.json.dumps(proof, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def test_jcmd_limits_reader_fails_closed_on_identity_change(monkeypatch, tmp_path):
+    jcmd = tmp_path / "jdk/bin/jcmd"
+    jcmd.parent.mkdir(parents=True)
+    jcmd.write_bytes(b"pinned harmless jcmd test fixture")
+    jcmd.chmod(0o755)
+    expected = {"pid": 1234, "uid": 501, "birth": "birth", "start_epoch_ms": 99}
+    output = ("1234:\nintx ActiveProcessorCount = 2 {product}\n"
+              "size_t InitialHeapSize = 134217728 {product}\n"
+              "size_t MaxHeapSize = 1073741824 {product}\n")
+    monkeypatch.setattr(campaign.subprocess, "run", lambda argv, **kwargs:
+        subprocess.CompletedProcess(args=argv, returncode=0, stdout=output, stderr=""))
+    observations = iter([dict(expected), {**expected, "start_epoch_ms": 100}])
+    with pytest.raises(campaign.JvmLimitsReadbackHold, match="identity changed during jcmd"):
+        campaign._read_effective_jvm_limits(
+            pid=1234, jcmd=jcmd, identity_reader=lambda: next(observations),
+            expected_identity=expected, evidence_path=tmp_path / "jcmd-hold.json")
+    hold = campaign.json.loads((tmp_path / "jcmd-hold.json").read_text())
+    assert hold["status"] == "EFFECTIVE_JVM_LIMITS_READBACK_HOLD"
+    assert hold["phase"] == "post_read_identity"
+
+
+def test_jcmd_invocation_error_still_rechecks_child_and_persists_hold(monkeypatch, tmp_path):
+    jcmd = tmp_path / "jdk/bin/jcmd"
+    jcmd.parent.mkdir(parents=True)
+    jcmd.write_bytes(b"pinned harmless jcmd test fixture")
+    jcmd.chmod(0o755)
+    expected = {"pid": 1234, "uid": 501, "birth": "birth", "start_epoch_ms": 99}
+    reads = []
+
+    def identity_reader():
+        reads.append(1)
+        return dict(expected)
+
+    def failed_run(argv, **_kwargs):
+        raise subprocess.TimeoutExpired(argv, 30, output=b"partial stdout", stderr=b"partial stderr")
+
+    monkeypatch.setattr(campaign.subprocess, "run", failed_run)
+    with pytest.raises(campaign.JvmLimitsReadbackHold, match="invocation failed"):
+        campaign._read_effective_jvm_limits(
+            pid=1234, jcmd=jcmd, identity_reader=identity_reader,
+            expected_identity=expected, evidence_path=tmp_path / "jcmd-hold.json")
+    assert len(reads) == 2
+    hold = campaign.json.loads((tmp_path / "jcmd-hold.json").read_text())
+    assert hold["status"] == "EFFECTIVE_JVM_LIMITS_READBACK_HOLD"
+    assert hold["identity_before"] == hold["identity_after"] == expected
+    assert hold["stdout_sha256"] == hashlib.sha256(b"partial stdout").hexdigest()
+    assert hold["stderr_sha256"] == hashlib.sha256(b"partial stderr").hexdigest()

@@ -96,8 +96,10 @@ def test_security_child_is_registered_before_info_and_every_ancestor_close_is_at
     assert (len(entries),entries[0].value if entries else None)==((1,71) if fault=='ancestor_close' else (0,None))
 
 
-def test_native_relative_open_registers_success_output_before_io_information_check():
+def test_native_relative_open_registers_success_output_before_io_information_check(monkeypatch):
     from comsol_mcp import _windows_parameter_publish as files_module
+    monkeypatch.setattr(C,'get_last_error',lambda:5,raising=False)
+    monkeypatch.setattr(C,'WinError',lambda code:OSError(code,'native CloseHandle false'),raising=False)
     api=files_module._API.__new__(files_module._API);attempted=[]
     def create(out,access,attr,io,*args):
         C.cast(out,C.POINTER(files_module.HANDLE)).contents.value=73

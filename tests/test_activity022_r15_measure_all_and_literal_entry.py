@@ -57,19 +57,30 @@ def _actual_entry_reference(tmp_path):
     assert runner.sha256_file(frozen)==m['freeze']['sha256']
     f=json.loads(frozen.read_text())
     a=json.loads((packet/'ROOT_APPROVAL_EXPECTED_FIELDS_REFERENCE_ONLY.json').read_text())['expected_approval_fields']
-    a['candidate_revision']=runner.CANDIDATE_REVISION # synthetic current identity, not a Root approval
+    approval_name=f"ROOT_APPROVAL_ACTIVITY{runner.ACTIVITY_ID.rsplit('-',1)[1]}.json"
+    old_approval_names=('ROOT_APPROVAL_ACTIVITY021.json','ROOT_APPROVAL_ACTIVITY022.json')
     current=str(runner.REPO)
-    m=json.loads(json.dumps(m).replace(str(old),current))
-    f=json.loads(json.dumps(f).replace(str(old),current))
-    a=json.loads(json.dumps(a).replace(str(old),current));a['native_argv_sha256']=runner.sha256_json(m['exact_native_invocation']['argv'])
-    p=tmp_path/'literal.zsh';p.write_text((Path(__file__).parent/'fixtures/w23_activity022/ACTUAL_R14_WRONG_LITERAL_ENTRY.zsh').read_text().replace(str(old),current))
+    old_root=str(old)
+    for old_approval_name in old_approval_names:
+        m=json.loads(json.dumps(m).replace(old_root,current).replace(old_approval_name,approval_name))
+        f=json.loads(json.dumps(f).replace(old_root,current).replace(old_approval_name,approval_name))
+    f['activity_id']=runner.ACTIVITY_ID;f['candidate_id']=runner.CANDIDATE_ID;f['candidate_revision']=runner.CANDIDATE_REVISION
+    a=json.loads(json.dumps(a).replace(str(old),current))
+    a['activity_id']=runner.ACTIVITY_ID;a['candidate_id']=runner.CANDIDATE_ID;a['candidate_revision']=runner.CANDIDATE_REVISION
+    a['native_argv_sha256']=runner.sha256_json(m['exact_native_invocation']['argv'])
+    a['exact_native_invocation']={
+        'argv':m['exact_native_invocation']['argv'],
+        'cwd':m['exact_native_invocation']['cwd'],
+        'environment':runner._native_environment(f.get('fresh_runtime_binding')),
+    }
+    p=tmp_path/'literal.zsh';p.write_text((Path(__file__).parent/'fixtures/w23_activity022/ACTUAL_R14_WRONG_LITERAL_ENTRY.zsh').read_text().replace(old_root,current))
     return p,m,f,a
 
 
 def test_actual_r14_literal_mismatch_reproduced_and_original_four_arg_guard_passes_only_exact_script(tmp_path):
     p,m,f,a=_actual_entry_reference(tmp_path)
     with pytest.raises(RuntimeError,match='literal script argv differs'):runner._validate_literal_capture_entry(p,m,a,f,m['freeze']['sha256'])
-    p.write_text(p.read_text().replace('ROOT_APPROVAL_ACTIVITY021.json','ROOT_APPROVAL_ACTIVITY022.json'))
+    p.write_text(p.read_text().replace('ROOT_APPROVAL_ACTIVITY021.json',f"ROOT_APPROVAL_ACTIVITY{runner.ACTIVITY_ID.rsplit('-',1)[1]}.json"))
     receipt=runner._validate_literal_capture_entry(p,m,a,f,m['freeze']['sha256'])
     assert receipt['actual_argv']==m['exact_native_invocation']['argv']
     assert receipt['actual_approval_path']==f['approval_path_expected']
@@ -78,7 +89,7 @@ def test_actual_r14_literal_mismatch_reproduced_and_original_four_arg_guard_pass
 
 @pytest.mark.parametrize('fault',['approval-test','symlink-test','cwd','extraexec','expansion'])
 def test_actual_fixed_script_guards_cannot_be_hidden_by_matching_metadata(tmp_path,fault):
-    p,m,f,a=_actual_entry_reference(tmp_path);text=p.read_text().replace('ROOT_APPROVAL_ACTIVITY021.json','ROOT_APPROVAL_ACTIVITY022.json')
+    p,m,f,a=_actual_entry_reference(tmp_path);text=p.read_text().replace('ROOT_APPROVAL_ACTIVITY021.json',f"ROOT_APPROVAL_ACTIVITY{runner.ACTIVITY_ID.rsplit('-',1)[1]}.json")
     if fault=='approval-test':text=text.replace('test -f '+f['approval_path_expected'],'test -f /private/tmp/foreign.json')
     elif fault=='symlink-test':text=text.replace('test ! -L '+f['approval_path_expected'],'test ! -L /private/tmp/foreign.json')
     elif fault=='cwd':text=text.replace('cd '+m['exact_native_invocation']['cwd'],'cd /private/tmp')

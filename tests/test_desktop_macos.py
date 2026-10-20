@@ -22,9 +22,12 @@ class AX:
     def AXUIElementCreateApplication(self, pid):
         self.calls.append(('application',pid))
         return {'AXWindows':self.windows}
+    def AXUIElementSetMessagingTimeout(self, _element, timeout):
+        assert 0 < timeout <= 5.0
+        return 0
     def AXUIElementCopyAttributeValue(self, element, name, _):
         self.calls.append(('attribute',name))
-        return (0,element[name]) if name in element else (1,None)
+        return (0,element[name]) if name in element else (-25212,None)
     def AXValueGetValue(self, value, kind, _):
         return True,value
 
@@ -55,6 +58,73 @@ def test_gateway_lazy_until_explicit_probe():
     g.permissions()
     assert calls==['load']
 
+
+@pytest.mark.parametrize("code,name,transient", [
+    (-25204, "cannot_complete", True),
+    (-25212, "no_value", True),
+    (-25205, "attribute_unsupported", False),
+    (-25211, "api_disabled", False),
+])
+def test_axwindows_error_retains_numeric_code_attribute_scope_and_retry_class(code, name, transient):
+    ax, q = AX(), Q()
+    ax.AXUIElementCopyAttributeValue = lambda *_args: (code, None)
+    gateway = MacOSFrameworkGateway(lambda: (ax, q))
+    with pytest.raises(DesktopOperationError) as caught:
+        gateway.attribute({}, "AXWindows", scope="application_window_map")
+    error = caught.value
+    assert error.diagnostics == {
+        "kind": "AX_ERROR", "ax_error_code": code, "ax_error_name": name,
+        "attribute": "AXWindows", "scope": "application_window_map",
+        "readiness_transient": transient,
+    }
+    assert error.safe_retry is False
+    assert str(code) in str(error) and "AXWindows" in str(error) and "application_window_map" in str(error)
+
+
+def test_axwindows_no_value_is_not_transient_outside_application_window_map():
+    ax, q = AX(), Q()
+    ax.AXUIElementCopyAttributeValue = lambda *_args: (-25212, None)
+    gateway = MacOSFrameworkGateway(lambda: (ax, q))
+    with pytest.raises(DesktopOperationError) as caught:
+        gateway.attribute({}, "AXChildren", scope="owned_window_tree")
+    assert caught.value.diagnostics["ax_error_code"] == -25212
+    assert caught.value.diagnostics["attribute"] == "AXChildren"
+    assert caught.value.diagnostics["scope"] == "owned_window_tree"
+    assert caught.value.diagnostics["readiness_transient"] is False
+
+
+@pytest.mark.parametrize("attribute,scope,code,name,transient", [
+    ("AXPosition", "window_association", -25204, "cannot_complete", True),
+    ("AXSize", "window_association", -25212, "no_value", True),
+    ("AXPosition", "window_association", -25205, "attribute_unsupported", False),
+    ("AXSize", "owned_window_tree", -25212, "no_value", False),
+    ("AXWindows", "window_association", -25204, "cannot_complete", False),
+])
+def test_exact_window_geometry_readiness_errors_are_structured_and_narrow(
+        attribute, scope, code, name, transient):
+    ax, q = AX(), Q()
+    ax.AXUIElementCopyAttributeValue = lambda *_args: (code, None)
+    gateway = MacOSFrameworkGateway(lambda: (ax, q))
+    with pytest.raises(DesktopOperationError) as caught:
+        gateway.attribute({}, attribute, scope=scope)
+    assert caught.value.diagnostics == {
+        "kind": "AX_ERROR", "ax_error_code": code, "ax_error_name": name,
+        "attribute": attribute, "scope": scope, "readiness_transient": transient,
+    }
+
+
+@pytest.mark.parametrize("geometry", [
+    (10, 20, 0, 90), (10, 20, -1, 90), (10, 20, 100, 0),
+    (10, 20, float("nan"), 90), (10, 20, 100, float("inf")),
+    (10, 20, True, 90),
+])
+def test_window_association_rejects_empty_or_nonfinite_geometry(gateway, geometry):
+    g, ax, q = gateway
+    ax.window["AXPosition"] = SimpleNamespace(x=geometry[0], y=geometry[1])
+    ax.window["AXSize"] = SimpleNamespace(width=geometry[2], height=geometry[3])
+    with pytest.raises(DesktopOperationError):
+        g.window_tree(ID)
+
 def test_missing_framework_does_not_prompt_or_enable_control():
     def missing():raise ImportError('fixture missing')
     a=MacOSAccessibilityObserver(gateway=MacOSFrameworkGateway(missing))
@@ -78,6 +148,53 @@ def test_tree_reads_exact_associated_window_not_other_app_or_model(gateway):
     assert q.calls[-1]==('single-window',8,7)
     assert ('application',123) in ax.calls
     assert not any('Value' in str(call) for call in ax.calls)
+
+
+def test_optional_node_attribute_unsupported_is_explicit_and_does_not_claim_control(gateway):
+    g, ax, _q = gateway
+    original = ax.AXUIElementCopyAttributeValue
+    def copy(element, name, options):
+        if name == 'AXSubrole':return -25205, None
+        return original(element, name, options)
+    ax.AXUIElementCopyAttributeValue = copy
+    value = g.window_tree(ID)
+    node = value['nodes'][0]
+    assert value['truncated'] is False
+    assert node['attribute_observations']['AXSubrole'] == {
+        'status':'ATTRIBUTE_UNSUPPORTED','ax_error_code':-25205,
+        'ax_error_name':'attribute_unsupported','scope':'owned_window_tree'}
+    assert value['model_binding']=='UNVERIFIED'
+    assert 'control_status' not in value
+
+
+@pytest.mark.parametrize('code,name', [(-25205,'ATTRIBUTE_UNSUPPORTED'),(-25212,'NO_VALUE')])
+def test_unavailable_children_are_recorded_and_prevent_complete_tree_claim(gateway,code,name):
+    g, ax, _q = gateway
+    original = ax.AXUIElementCopyAttributeValue
+    def copy(element, attribute, options):
+        if attribute == 'AXChildren':return code, None
+        return original(element, attribute, options)
+    ax.AXUIElementCopyAttributeValue = copy
+    value = g.window_tree(ID)
+    assert value['truncated'] is True
+    assert value['nodes'][0]['children_observation'] == {
+        'status':name,'ax_error_code':code,'ax_error_name':'attribute_unsupported' if code==-25205 else 'no_value',
+        'scope':'owned_window_tree'}
+
+
+@pytest.mark.parametrize('code', [-25204, -25211, -25202])
+def test_nonoptional_ax_errors_remain_terminal_during_tree_inventory(gateway,code):
+    g, ax, _q = gateway
+    original = ax.AXUIElementCopyAttributeValue
+    def copy(element, name, options):
+        if name == 'AXDescription':return code, None
+        return original(element, name, options)
+    ax.AXUIElementCopyAttributeValue = copy
+    with pytest.raises(DesktopOperationError) as caught:
+        g.window_tree(ID)
+    assert caught.value.diagnostics['ax_error_code'] == code
+    assert caught.value.diagnostics['attribute'] == 'AXDescription'
+    assert caught.value.diagnostics['scope'] == 'owned_window_tree'
 
 @pytest.mark.parametrize('case',['permission','wrong_pid','wrong_window','bounds','title','ambiguous','missing_windows','missing_geometry'])
 def test_mapping_failure_is_no_focused_window_fallback(gateway,case):

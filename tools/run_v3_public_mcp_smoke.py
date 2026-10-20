@@ -97,6 +97,18 @@ def verify_runtime_producer(value: dict, attached: dict, runtime_id: str, ref: d
     return observation
 
 
+def public_arguments(operation: str, supplied: dict, request_id: str) -> dict:
+    body = dict(supplied)
+    if operation in {"model.package", "model.rebuild_target", "study.run"}:
+        identity = {"project_id", "session_id", "model_ref", "expected_revision", "idempotency_key", "request_id"}
+        return {name: value for name, value in body.items() if name not in identity}
+    if operation != "model.inspect":
+        body.setdefault("request_id", request_id)
+    if "idempotency_key" in body:
+        body["idempotency_key"] = request_id
+    return body
+
+
 def source_identity(source: Path, freeze: dict) -> dict:
     paths = {p.relative_to(source).as_posix() for p in (source / "comsol_mcp").rglob("*")
              if p.is_file() and "__pycache__" not in p.parts}
@@ -116,17 +128,41 @@ async def run(args) -> int:
     from mcp.client.stdio import stdio_client
     import psutil
 
+    science = bool(getattr(args, "science_recipes", False))
+    cost = bool(getattr(args, "checkpoint_cost_cycle", False))
+    thermal = bool(getattr(args, "thermal_benchmark", False))
+    if thermal and any((science,cost,args.package_cycle,args.parameter_io,args.parameter_csv,args.runtime_observation)):
+        raise RuntimeError("T044 thermal benchmark has a separate fixed two-study budget")
+    if cost and any((science,args.package_cycle,args.parameter_io,args.parameter_csv,args.runtime_observation)):
+        raise RuntimeError("T050 cost cycle has a separate fixed budget and cannot combine modes")
+    if science and any((args.package_cycle,args.parameter_io,args.parameter_csv,args.runtime_observation)):
+        raise RuntimeError("science recipes have a separate closed zero-solve budget")
     if args.package_cycle and (args.parameter_io or args.parameter_csv or args.runtime_observation):
         raise RuntimeError("package cycle has its own frozen budget and cannot be combined with other optional modes")
 
     source = args.source.resolve(strict=True)
     freeze = json.loads(args.freeze.read_text(encoding="utf-8"))
     before = source_identity(source, freeze)
-    fixture = Path(__file__).resolve().parent / ("java/P0ExportJava.java" if args.package_cycle else "java/P0ParameterReadback.java")
-    fixture_bytes = fixture.read_bytes() if args.runtime_observation or args.package_cycle else None
+    science_module = science_plan = None
+    if science:
+        import science_recipe_cycle as science_module
+        fixed_helper = Path(__file__).resolve().with_name("science_recipe_cycle.py")
+        if Path(science_module.__file__).resolve() != fixed_helper:
+            raise RuntimeError("fixed science helper import origin differs")
+        science_plan = science_module.validate_plan(args.science_plan, args.science_plan_sha256,
+            source=source, runtime=args.runtime, installation=args.installation, java_home=args.java_home)
+        for relative in ("tools/run_v3_public_mcp_smoke.py", "tools/science_recipe_cycle.py", "tools/p0_owned_control_entry.py", "tools/p0_original_controller_hold.py"):
+            actual=Path(__file__).resolve().parent / Path(relative).name
+            if digest(actual)!=science_plan["files"][relative]:raise RuntimeError("actual fixed helper/owner import bytes differ from source closure")
+    fixture = Path(__file__).resolve().parent / ("java/T044ThermalFixture.java" if thermal else ("java/T050CostModelFixture.java" if cost else ("java/P0ExportJava.java" if args.package_cycle else "java/P0ParameterReadback.java")))
+    fixture_bytes = fixture.read_bytes() if args.runtime_observation or args.package_cycle or cost or thermal else None
     fixture_sha = hashlib.sha256(fixture_bytes).hexdigest() if fixture_bytes is not None else None
     package_helper = Path(__file__).resolve().parent / "p0_package_cycle.py"
     package_helper_sha = digest(package_helper) if args.package_cycle else None
+    cost_helper = Path(__file__).resolve().parent / "t050_checkpoint_cost_cycle.py"
+    cost_helper_sha = digest(cost_helper) if cost else None
+    thermal_helper = Path(__file__).resolve().parent / "t044_thermal_benchmark.py"
+    thermal_helper_sha = digest(thermal_helper) if thermal else None
     # A caller selects a new activity namespace, never an old fixed entry.
     root = args.runtime.absolute()
     if root.exists() or root.is_symlink() or root.parent.resolve() != Path("/private/tmp"):
@@ -138,21 +174,33 @@ async def run(args) -> int:
         if path.stat().st_uid != os.getuid() or path.stat().st_mode & 0o077:
             raise RuntimeError("activity directory ownership or mode is not private")
     started = time.monotonic()
-    action_seconds = 300 if args.package_cycle else 180
-    public_call_budget = 37 if args.package_cycle else 24
+    action_seconds = 510 if thermal else (2160 if science else (600 if cost else (300 if args.package_cycle else 180)))
+    cleanup_seconds = 240 if science else 90
+    public_call_budget = 30 if thermal else (science_plan["budget"]["public_calls"] if science else (33 if cost else (37 if args.package_cycle else 24)))
     summary = {"schema": "V3_PUBLIC_MCP_NATIVE_SMOKE_V1", "activity_id": root.name,
                "created_at": datetime.now(timezone.utc).isoformat(), "status": "RUNNING",
                "source": before, "runtime": str(root), "calls": [],
-               "budget": {"action_seconds": action_seconds, "cleanup_seconds": 90,
+               "budget": {"action_seconds": action_seconds, "cleanup_seconds": cleanup_seconds,
                           "public_calls": public_call_budget, "servers": 1, "workers": 1,
-                          "explicit_study_or_solver_calls": 0, "gui_calls": 0},
+                          "explicit_study_or_solver_calls": 2 if thermal else 0, "gui_calls": 0},
                "science_acceptance": "NOT_RUN", "release_acceptance": "NOT_RUN",
                "original_unknown_replay": False}
     harness_hash = digest(Path(__file__).resolve())
     summary["harness_sha256"] = harness_hash
     summary["optional_modes"] = {"csv": args.parameter_csv, "runtime_observation": args.runtime_observation,
                                  "package_cycle": args.package_cycle,
-                                 "java_source_sha256": fixture_sha, "package_helper_sha256": package_helper_sha}
+                                 "java_source_sha256": fixture_sha, "package_helper_sha256": package_helper_sha,
+                                 "checkpoint_cost_cycle": cost, "cost_helper_sha256": cost_helper_sha}
+    if thermal:
+        summary["optional_modes"].update(thermal_benchmark=True, thermal_helper_sha256=thermal_helper_sha)
+        summary["budget"].update(max_owned_models=2, birth_including_cleanup_seconds=600,
+                                additional_protocol_initialize_list_tools_calls=2)
+    if cost:
+        summary["budget"].update(max_owned_models=2, sampled_workspace_byte_cap=256*1024*1024,
+            additional_protocol_initialize_list_tools_calls=2, sampled_disk_cap_not_OS_quota=True)
+    if science:
+        summary["budget"].update(science_plan["budget"])
+        summary["science_literal_plan_sha256"] = args.science_plan_sha256
     summary_path = evidence / "SUMMARY.json"
     write(summary_path, summary)
     install = args.installation.resolve(strict=True)
@@ -178,7 +226,7 @@ async def run(args) -> int:
                COMSOL_MCP_HOST_CONTROL="1", COMSOL_MCP_TOOL_PROFILE="full",
                COMSOL_MCP_ISOLATION_RECEIPT=str(root / "isolation.json"),
                PYTHONPATH=str(source), PYTHONDONTWRITEBYTECODE="1", TMPDIR=str(root))
-    if args.runtime_observation or args.package_cycle:
+    if args.runtime_observation or args.package_cycle or science or cost or thermal:
         env["COMSOL_MCP_TRUSTED_CODE"] = "1"
     owner_entry = Path(__file__).resolve().parent / "p0_owned_control_entry.py"
     owner_helper = Path(__file__).resolve().parent / "p0_original_controller_hold.py"
@@ -199,22 +247,24 @@ async def run(args) -> int:
     # Popen is retained before diagnostic observations can fail.
     summary["controller"] = {"pid": controller.pid, "original_popen_retained": True}
     project_id = session_id = model_ref = None
+    runtime_id = endpoint = None
     server_started = connected = stopped = uncertain = False
     firstcause = None
+    science_cleanup = []
     def failure(exc):
         nonlocal firstcause
         if firstcause is None:
             firstcause = exc
-            summary.update(status="FAIL", failure_type=type(exc).__name__, failure=str(exc))
+            summary.update(status="FAIL", failure_type=type(exc).__name__, failure=science_module.safe_text(exc) if science else str(exc))
         else:
-            summary.setdefault("secondary_failures", []).append({"type": type(exc).__name__, "error": str(exc)})
+            summary.setdefault("secondary_failures", []).append({"type": type(exc).__name__, "error": science_module.safe_text(exc) if science else str(exc)})
     def notify_hold():
         try:
             publish_hold(root, owner_binding, firstcause or RuntimeError("public cleanup not confirmed"))
         except FileExistsError:
             pass
         except BaseException as exc:
-            summary.setdefault("hold_diagnostics", []).append({"type": type(exc).__name__, "error": str(exc)})
+            summary.setdefault("hold_diagnostics", []).append({"type": type(exc).__name__, "error": science_module.safe_text(exc) if science else str(exc)})
     native_pids: list[int] = []
     endpoint_file = home / "control-private/control.json"
     try:
@@ -232,7 +282,7 @@ async def run(args) -> int:
         parameters = StdioServerParameters(command=sys.executable,
                     args=["-m", "comsol_mcp.mcp_server"], cwd=str(source), env=env)
         async with stdio_client(parameters, errlog=transport_log) as (read, output):
-            async with ClientSession(read, output, read_timeout_seconds=timedelta(seconds=80)) as client:
+            async with ClientSession(read, output, read_timeout_seconds=timedelta(seconds=science_plan["budget"]["transport_read_timeout_seconds"] if science else 80)) as client:
                 await client.initialize()
                 tools = await client.list_tools()
                 write(evidence / "MCP_TOOLS.json", tools.model_dump(mode="json"))
@@ -243,14 +293,28 @@ async def run(args) -> int:
                     nonlocal uncertain
                     if uncertain:
                         raise RuntimeError("P0 uncertain outcome prohibits every next public operation")
-                    cap = action_seconds + 90 if cleanup else action_seconds
+                    cap = action_seconds + cleanup_seconds if cleanup else action_seconds
                     remaining = started + cap - time.monotonic()
                     if remaining <= 1 or len(summary["calls"]) >= public_call_budget:
                         raise TimeoutError("activity public-call/time budget exhausted")
+                    if science:
+                        index = len(summary["calls"])
+                        science_module.check_closure(source, science_plan)
+                        science_module.check_call_order(science_plan,index,operation,cleanup=cleanup,
+                            cleanup_history=science_cleanup,connected=connected)
+                        bindings={'$PROJECT_ID':project_id,'$SESSION_ID':session_id,'$RUNTIME_ID':runtime_id if index else None,
+                                  '$ENDPOINT':endpoint if server_started else None}
+                        if cleanup:
+                            slot=next(slot for slot in science_plan['literal_cleanup_calls'] if slot['operation']==operation)
+                            science_module.check_literal_body(slot,body,bindings)
+                            science_cleanup.append(operation)
+                        elif index<len(science_plan['literal_base_calls']):
+                            science_module.check_literal_body(science_plan['literal_base_calls'][index],body,bindings)
                     key = root.name + "-" + str(len(summary["calls"])) + "-" + uuid4().hex
                     execution = {"request_id": key, "idempotency_key": key,
                                  "rpc_timeout_s": min(60, remaining - 1),
                                  "queue_timeout_s": 15, "execution_timeout_s": min(120, remaining - 1)}
+                    if science:execution.update(science_module.execution_timeouts(remaining))
                     if project_id is not None:
                         execution["project_id"] = project_id
                     if session_id is not None:
@@ -260,13 +324,7 @@ async def run(args) -> int:
                     if revision is not None:
                         execution["expected_revision"] = revision
                     # Transport envelope and catalog body have the same request identity.
-                    body = dict(body)
-                    # Current public model.inspect schema deliberately carries
-                    # identity only in execution, unlike the historical catalog.
-                    if operation != "model.inspect":
-                        body.setdefault("request_id", key)
-                    if "idempotency_key" in body:
-                        body["idempotency_key"] = key
+                    body = public_arguments(operation, body, key)
                     record = {"operation": operation, "request_id": key, "state": "SUBMITTED"}
                     summary["calls"].append(record)
                     write(summary_path, summary)
@@ -299,7 +357,7 @@ async def run(args) -> int:
                     runtime_id = installations[0]["runtime_id"]
                     await call("runtime.inspect", {"runtime_id": runtime_id})
                     created = await call("project.create", {"label": root.name, "workspace": "native-smoke",
-                               "policy": {"permissions": ["inspect", "project_write", "compute", "host_control"] + (["trusted_code"] if args.runtime_observation or args.package_cycle else [])}, "idempotency_key": "new"})
+                               "policy": {"permissions": ["inspect", "project_write", "compute", "host_control"] + (["trusted_code"] if args.runtime_observation or args.package_cycle or science or cost or thermal else [])}, "idempotency_key": "new"})
                     project_id = created["data"]["project"]["project_id"]
                     workspace = Path(created["data"]["project"]["workspace"]).resolve(strict=True)
                     if not workspace.is_relative_to(project_root.resolve()):
@@ -326,116 +384,150 @@ async def run(args) -> int:
                     health = await call("session.health", {"project_id": project_id, "session_id": session_id})
                     summary["health"] = health["data"]
                     model = await call("model.create", {"project_id": project_id, "session_id": session_id,
-                                "label": "v3-native-smoke", "dimension": 2, "idempotency_key": "new"})
+                                "label": "science-W22-witness" if science else "v3-native-smoke", **({} if science else {"dimension": 2}), "idempotency_key": "new"})
                     model_ref = model["data"]["model_ref"]
                     revision = model["execution"]["revision"]
                     common = {"project_id": project_id, "session_id": session_id, "model_ref": model_ref}
-                    updated = await call("parameter.set", {**common, "expected_revision": revision, "idempotency_key": "new",
-                                "parameters": [{"name": "v3_marker", "expression": "2.5[mm]", "description": "V3 public MCP native smoke"}]}, ref=model_ref, revision=revision)
-                    revision = updated["execution"]["revision"]
-                    listed = await call("parameter.list", common, ref=model_ref)
-                    parameters = [row for group in listed["data"].get("groups", [])
-                                  for row in group.get("parameters", [])]
-                    marker = [row for row in parameters if row.get("name") == "v3_marker"]
-                    if len(marker) != 1 or marker[0].get("expression") != "2.5[mm]" or marker[0].get("description") != "V3 public MCP native smoke":
-                        raise RuntimeError("native parameter expression readback differs")
-                    summary["parameter_readback"] = marker[0]
-                    summary["parameter_unit_acceptance"] = "UNVERIFIED" if marker[0].get("unit_error") else "OBSERVED"
-                    if args.parameter_io:
-                        if marker[0].get("unit_error") is not None or not isinstance(marker[0].get("unit"), str):
-                            raise RuntimeError("native parameter unit evaluation is not observed")
-                        exported = await call("parameter.export", {**common, "expected_revision": revision,
-                                  "idempotency_key": "new", "format": "json", "destination": "parameters.json"},
-                                  ref=model_ref, revision=revision)
-                        summary["parameter_export"] = exported["data"]
-                        revision = exported["execution"]["revision"]
-                        changed = await call("parameter.set", {**common, "expected_revision": revision,
-                                  "idempotency_key": "new", "parameters": [{"name": "v3_marker", "expression": "4[mm]", "description": "temporary changed value"}]},
-                                  ref=model_ref, revision=revision)
-                        revision = changed["execution"]["revision"]
-                        imported = await call("parameter.import", {**common, "expected_revision": revision,
-                                   "idempotency_key": "new", "format": "json", "artifact_id": exported["data"]["artifact_id"]},
-                                   ref=model_ref, revision=revision)
-                        summary["parameter_import"] = imported["data"]
-                        revision = imported["execution"]["revision"]
-                        actual = await call("parameter.get", {**common, "names": ["v3_marker"], "evaluate": True}, ref=model_ref)
-                        readback = actual["data"]["parameters"]
-                        if len(readback) != 1 or readback[0].get("expression") != "2.5[mm]" or readback[0].get("description") != "V3 public MCP native smoke" or readback[0].get("unit_error") is not None or readback[0].get("evaluated", {}).get("data") != 0.0025:
-                            raise RuntimeError("native parameter export/import expression, description, unit or value roundtrip differs")
-                        summary["parameter_io_acceptance"] = "PASS_NATIVE_JSON_ROUNDTRIP_WITH_GLOBAL_PARAMBASE_EVALUATION"
-                        summary["parameter_evaluated_readback"] = readback[0]
-                    expression, evaluated = "2.5[mm]", 0.0025
-                    if args.parameter_csv:
-                        exported = await call("parameter.export", {**common, "expected_revision": revision,
-                            "idempotency_key": "new", "format": "csv", "destination": "parameters.csv"}, ref=model_ref, revision=revision)
-                        revision = exported["execution"]["revision"]
-                        original_csv = verify_artifact(workspace, exported["data"], exported=True)
-                        changed_path = workspace / "parameters-modified.csv"
-                        with changed_path.open("x", encoding="utf-8", newline="") as handle:
-                            handle.write(changed_csv(original_csv.read_text(encoding="utf-8")))
-                        registered = await call("artifact.register", {"project_id": project_id, "idempotency_key": "new",
-                            "path": changed_path.name, "role": "parameter_source", "classification": "project_private"})
-                        verify_artifact(workspace, registered["data"])
-                        imported = await call("parameter.import", {**common, "expected_revision": revision,
-                            "idempotency_key": "new", "format": "csv", "artifact_id": registered["data"]["artifact_id"]}, ref=model_ref, revision=revision)
-                        revision = imported["execution"]["revision"]
-                        if imported["data"].get("source_sha256") != registered["data"]["sha256"]:
-                            raise RuntimeError("CSV import is not bound to modified registered source SHA")
-                        actual = await call("parameter.get", {**common, "names": ["v3_marker"], "evaluate": True}, ref=model_ref)
-                        expression, evaluated = "5.5[mm]", 0.0055
-                        verify_artifact(workspace, exported["data"], exported=True)
-                        verify_artifact(workspace, registered["data"])
-                        summary["parameter_csv_readback"] = verify_parameter(actual, expression, "V3 CSV modified, quoted roundtrip", evaluated)
-                        summary["parameter_csv"] = {"export": exported["data"], "modified_registration": registered["data"], "import": imported["data"], "acceptance": "PASS_NATIVE_MODIFIED_CSV_ROUNDTRIP"}
-                    if args.runtime_observation:
-                        source_path = workspace / fixture.name
-                        with source_path.open("xb") as handle:
-                            handle.write(fixture_bytes)
-                        registered = await call("artifact.register", {"project_id": project_id, "idempotency_key": "new",
-                            "path": fixture.name, "role": "java-source", "classification": "project_private"})
-                        verify_artifact(workspace, registered["data"])
-                        if registered["data"]["sha256"] != fixture_sha:
-                            raise RuntimeError("registered Java source differs from prebirth fixture")
-                        execute = await call("code.execute_java", {**common, "expected_revision": revision, "idempotency_key": "new",
-                            "source_artifact": registered["data"]["path"], "entrypoint": "P0ParameterReadback", "arguments": {}, "mode": "trusted", "timeout_s": 30}, ref=model_ref, revision=revision)
-                        revision = execute["execution"]["revision"]
-                        if execute["data"].get("before") != execute["data"].get("after"):
-                            raise RuntimeError("read-only Java changed the bounded backend snapshot")
-                        summary["runtime_observation_producer"] = verify_runtime_producer(execute, attached["data"], runtime_id, model_ref, fixture_sha, expression, evaluated)
-                        recipe = await call("code.recipe_register", {**common, "expected_revision": revision, "idempotency_key": "new",
-                            "source_artifact": registered["data"]["artifact_id"], "input_schema": {"type": "object", "additionalProperties": False},
-                            "test_refs": [execute["execution"]["operation_id"]]}, ref=model_ref, revision=revision)
-                        revision = recipe["execution"]["revision"]
-                        accepted = recipe["data"]["test_refs"]
-                        if (len(accepted) != 1 or accepted[0].get("test_ref") != execute["execution"]["operation_id"]
-                                or accepted[0].get("source_sha256") != fixture_sha or accepted[0].get("scope") != "EXECUTION_SMOKE"
-                                or accepted[0].get("comsol_version") != summary["runtime_observation_producer"]["comsol_version"]
-                                or accepted[0].get("runtime_identity") != summary["runtime_observation_producer"]["runtime_identity"]):
-                            raise RuntimeError("production strict consumer did not accept exact durable code evidence")
-                        summary["runtime_observation_consumer"] = recipe["data"]
-                        summary["runtime_observation_acceptance"] = "PASS_NATIVE_PRODUCER_AND_STRICT_RECIPE_CONSUMER"
-                    if args.package_cycle:
-                        spec = importlib.util.spec_from_file_location("p0_package_cycle", package_helper)
-                        package_module = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(package_module)
-                        if digest(package_helper) != package_helper_sha:
-                            raise RuntimeError("package client helper changed since prebirth")
-                        model_ref, revision = await package_module.run_cycle(call, workspace=workspace, project_id=project_id, session_id=session_id,
-                            model_ref=model_ref, revision=revision, runtime_id=runtime_id, fixture=fixture_bytes, summary=summary,
-                            attached=attached["data"],
-                            evidence=evidence, verify_artifact=verify_artifact, verify_parameter=verify_parameter, digest=digest)
-                        common = {"project_id": project_id, "session_id": session_id, "model_ref": model_ref}
-                    await call("model.inspect", {"detail": "summary"}, ref=model_ref)
-                    saved = await call("model.save", {**common, "expected_revision": revision, "idempotency_key": "new",
-                                       "destination": "v3-native-smoke.mph", "overwrite": False, "include_solution": False}, ref=model_ref, revision=revision)
-                    summary["saved_model"] = saved["data"]
-                    saved_path = workspace / saved["data"]["destination"]
-                    if saved_path.is_symlink() or not saved_path.is_file() or digest(saved_path) != saved["data"]["sha256"] or saved_path.stat().st_size != saved["data"]["size_bytes"]:
-                        raise RuntimeError("actual saved MPH bytes differ from public registered artifact")
-                    summary["saved_artifact_hash_verified"] = True
-                    summary["status"] = "PASS_PUBLIC_BUILD_READ_SAVE"
+                    if thermal:
+                        spec = importlib.util.spec_from_file_location("t044_thermal_benchmark", thermal_helper)
+                        thermal_module = importlib.util.module_from_spec(spec); spec.loader.exec_module(thermal_module)
+                        if digest(thermal_helper) != thermal_helper_sha:
+                            raise RuntimeError("fixed T044 helper changed before dispatch")
+                        model_ref, revision = await thermal_module.run_cycle(call, workspace=workspace,
+                            project_id=project_id, session_id=session_id, model_ref=model_ref, revision=revision,
+                            fixture=fixture_bytes, summary=summary, verify_artifact=verify_artifact, digest=digest,
+                            runtime_id=runtime_id, attached=attached["data"])
+                        summary["status"] = "PASS_PUBLIC_BUILD_READ_SAVE"
+                    elif science:
+                        model_ref, revision = await science_module.run_cycle(call, source=source, plan_value=science_plan,
+                            workspace=workspace, project_id=project_id, session_id=session_id,
+                            model_ref=model_ref, revision=revision, summary=summary, evidence=evidence,
+                            verify_artifact=verify_artifact,runtime_id=runtime_id,attached=attached["data"])
+                        summary["status"] = "PASS_PUBLIC_RECIPE_UNSOLVED_BUILD_READ_SAVE"
+                    else:
+                        updated = await call("parameter.set", {**common, "expected_revision": revision, "idempotency_key": "new",
+                                    "parameters": [{"name": "v3_marker", "expression": "2.5[mm]", "description": "V3 public MCP native smoke"}]}, ref=model_ref, revision=revision)
+                        revision = updated["execution"]["revision"]
+                        listed = await call("parameter.list", common, ref=model_ref)
+                        parameters = [row for group in listed["data"].get("groups", [])
+                                      for row in group.get("parameters", [])]
+                        marker = [row for row in parameters if row.get("name") == "v3_marker"]
+                        if len(marker) != 1 or marker[0].get("expression") != "2.5[mm]" or marker[0].get("description") != "V3 public MCP native smoke":
+                            raise RuntimeError("native parameter expression readback differs")
+                        summary["parameter_readback"] = marker[0]
+                        summary["parameter_unit_acceptance"] = "UNVERIFIED" if marker[0].get("unit_error") else "OBSERVED"
+                        if args.parameter_io:
+                            if marker[0].get("unit_error") is not None or not isinstance(marker[0].get("unit"), str):
+                                raise RuntimeError("native parameter unit evaluation is not observed")
+                            exported = await call("parameter.export", {**common, "expected_revision": revision,
+                                      "idempotency_key": "new", "format": "json", "destination": "parameters.json"},
+                                      ref=model_ref, revision=revision)
+                            summary["parameter_export"] = exported["data"]
+                            revision = exported["execution"]["revision"]
+                            changed = await call("parameter.set", {**common, "expected_revision": revision,
+                                      "idempotency_key": "new", "parameters": [{"name": "v3_marker", "expression": "4[mm]", "description": "temporary changed value"}]},
+                                      ref=model_ref, revision=revision)
+                            revision = changed["execution"]["revision"]
+                            imported = await call("parameter.import", {**common, "expected_revision": revision,
+                                       "idempotency_key": "new", "format": "json", "artifact_id": exported["data"]["artifact_id"]},
+                                       ref=model_ref, revision=revision)
+                            summary["parameter_import"] = imported["data"]
+                            revision = imported["execution"]["revision"]
+                            actual = await call("parameter.get", {**common, "names": ["v3_marker"], "evaluate": True}, ref=model_ref)
+                            readback = actual["data"]["parameters"]
+                            if len(readback) != 1 or readback[0].get("expression") != "2.5[mm]" or readback[0].get("description") != "V3 public MCP native smoke" or readback[0].get("unit_error") is not None or readback[0].get("evaluated", {}).get("data") != 0.0025:
+                                raise RuntimeError("native parameter export/import expression, description, unit or value roundtrip differs")
+                            summary["parameter_io_acceptance"] = "PASS_NATIVE_JSON_ROUNDTRIP_WITH_GLOBAL_PARAMBASE_EVALUATION"
+                            summary["parameter_evaluated_readback"] = readback[0]
+                        expression, evaluated = "2.5[mm]", 0.0025
+                        if args.parameter_csv:
+                            exported = await call("parameter.export", {**common, "expected_revision": revision,
+                                "idempotency_key": "new", "format": "csv", "destination": "parameters.csv"}, ref=model_ref, revision=revision)
+                            revision = exported["execution"]["revision"]
+                            original_csv = verify_artifact(workspace, exported["data"], exported=True)
+                            changed_path = workspace / "parameters-modified.csv"
+                            with changed_path.open("x", encoding="utf-8", newline="") as handle:
+                                handle.write(changed_csv(original_csv.read_text(encoding="utf-8")))
+                            registered = await call("artifact.register", {"project_id": project_id, "idempotency_key": "new",
+                                "path": changed_path.name, "role": "parameter_source", "classification": "project_private"})
+                            verify_artifact(workspace, registered["data"])
+                            imported = await call("parameter.import", {**common, "expected_revision": revision,
+                                "idempotency_key": "new", "format": "csv", "artifact_id": registered["data"]["artifact_id"]}, ref=model_ref, revision=revision)
+                            revision = imported["execution"]["revision"]
+                            if imported["data"].get("source_sha256") != registered["data"]["sha256"]:
+                                raise RuntimeError("CSV import is not bound to modified registered source SHA")
+                            actual = await call("parameter.get", {**common, "names": ["v3_marker"], "evaluate": True}, ref=model_ref)
+                            expression, evaluated = "5.5[mm]", 0.0055
+                            verify_artifact(workspace, exported["data"], exported=True)
+                            verify_artifact(workspace, registered["data"])
+                            summary["parameter_csv_readback"] = verify_parameter(actual, expression, "V3 CSV modified, quoted roundtrip", evaluated)
+                            summary["parameter_csv"] = {"export": exported["data"], "modified_registration": registered["data"], "import": imported["data"], "acceptance": "PASS_NATIVE_MODIFIED_CSV_ROUNDTRIP"}
+                        if args.runtime_observation:
+                            source_path = workspace / fixture.name
+                            with source_path.open("xb") as handle:
+                                handle.write(fixture_bytes)
+                            registered = await call("artifact.register", {"project_id": project_id, "idempotency_key": "new",
+                                "path": fixture.name, "role": "java-source", "classification": "project_private"})
+                            verify_artifact(workspace, registered["data"])
+                            if registered["data"]["sha256"] != fixture_sha:
+                                raise RuntimeError("registered Java source differs from prebirth fixture")
+                            execute = await call("code.execute_java", {**common, "expected_revision": revision, "idempotency_key": "new",
+                                "source_artifact": registered["data"]["path"], "entrypoint": "P0ParameterReadback", "arguments": {}, "mode": "trusted", "timeout_s": 30}, ref=model_ref, revision=revision)
+                            revision = execute["execution"]["revision"]
+                            if execute["data"].get("before") != execute["data"].get("after"):
+                                raise RuntimeError("read-only Java changed the bounded backend snapshot")
+                            summary["runtime_observation_producer"] = verify_runtime_producer(execute, attached["data"], runtime_id, model_ref, fixture_sha, expression, evaluated)
+                            recipe = await call("code.recipe_register", {**common, "expected_revision": revision, "idempotency_key": "new",
+                                "source_artifact": registered["data"]["artifact_id"], "input_schema": {"type": "object", "additionalProperties": False},
+                                "test_refs": [execute["execution"]["operation_id"]]}, ref=model_ref, revision=revision)
+                            revision = recipe["execution"]["revision"]
+                            accepted = recipe["data"]["test_refs"]
+                            if (len(accepted) != 1 or accepted[0].get("test_ref") != execute["execution"]["operation_id"]
+                                    or accepted[0].get("source_sha256") != fixture_sha or accepted[0].get("scope") != "EXECUTION_SMOKE"
+                                    or accepted[0].get("comsol_version") != summary["runtime_observation_producer"]["comsol_version"]
+                                    or accepted[0].get("runtime_identity") != summary["runtime_observation_producer"]["runtime_identity"]):
+                                raise RuntimeError("production strict consumer did not accept exact durable code evidence")
+                            summary["runtime_observation_consumer"] = recipe["data"]
+                            summary["runtime_observation_acceptance"] = "PASS_NATIVE_PRODUCER_AND_STRICT_RECIPE_CONSUMER"
+                        if cost:
+                            spec = importlib.util.spec_from_file_location("t050_checkpoint_cost_cycle", cost_helper)
+                            cost_module = importlib.util.module_from_spec(spec)
+                            spec.loader.exec_module(cost_module)
+                            if digest(cost_helper) != cost_helper_sha:
+                                raise RuntimeError("fixed T050 helper changed before dispatch")
+                            model_ref, revision = await cost_module.run_cycle(call, workspace=workspace,
+                                project_id=project_id, session_id=session_id, model_ref=model_ref, revision=revision,
+                                fixture=fixture_bytes, summary=summary, verify_artifact=verify_artifact, digest=digest,
+                                runtime_id=runtime_id, attached=attached["data"])
+                            common = {"project_id": project_id, "session_id": session_id, "model_ref": model_ref}
+                        if args.package_cycle:
+                            spec = importlib.util.spec_from_file_location("p0_package_cycle", package_helper)
+                            package_module = importlib.util.module_from_spec(spec)
+                            spec.loader.exec_module(package_module)
+                            if digest(package_helper) != package_helper_sha:
+                                raise RuntimeError("package client helper changed since prebirth")
+                            model_ref, revision = await package_module.run_cycle(call, workspace=workspace, project_id=project_id, session_id=session_id,
+                                model_ref=model_ref, revision=revision, runtime_id=runtime_id, fixture=fixture_bytes, summary=summary,
+                                attached=attached["data"],
+                                evidence=evidence, verify_artifact=verify_artifact, verify_parameter=verify_parameter, digest=digest)
+                            common = {"project_id": project_id, "session_id": session_id, "model_ref": model_ref}
+                        await call("model.inspect", {"detail": "summary"}, ref=model_ref)
+                        saved = await call("model.save", {**common, "expected_revision": revision, "idempotency_key": "new",
+                                           "destination": "v3-native-smoke.mph", "overwrite": False, "include_solution": False}, ref=model_ref, revision=revision)
+                        summary["saved_model"] = saved["data"]
+                        saved_path = workspace / saved["data"]["destination"]
+                        if saved_path.is_symlink() or not saved_path.is_file() or digest(saved_path) != saved["data"]["sha256"] or saved_path.stat().st_size != saved["data"]["size_bytes"]:
+                            raise RuntimeError("actual saved MPH bytes differ from public registered artifact")
+                        summary["saved_artifact_hash_verified"] = True
+                        if cost:
+                            final_disk = cost_module.sample_disk(workspace)
+                            summary["t050_cost_cycle"]["disk_samples"].append({"operation": "model.save(final)", **final_disk})
+                            summary["t050_cost_cycle"]["sampled_peak_workspace_bytes"] = max(row["sampled_bytes"] for row in summary["t050_cost_cycle"]["disk_samples"])
+                        summary["status"] = "PASS_PUBLIC_BUILD_READ_SAVE"
                 except BaseException as exc:
                     failure(exc)
+                    if science and summary.get("science_effect_started"):
+                        uncertain = True  # any post-builder proof failure retains original owner
                     if summary["calls"] and summary["calls"][-1]["state"] == "SUBMITTED":
                         uncertain = True
                 finally:
@@ -474,7 +566,10 @@ async def run(args) -> int:
                 and digest(owner_entry) == owner_binding["entry_sha256"]
                 and digest(owner_helper) == owner_binding["holder_sha256"]
                 and (package_helper_sha is None or digest(package_helper) == package_helper_sha)
-                and (fixture_sha is None or digest(fixture) == fixture_sha))
+                and (fixture_sha is None or digest(fixture) == fixture_sha)
+                and (cost_helper_sha is None or digest(cost_helper) == cost_helper_sha)
+                and (thermal_helper_sha is None or digest(thermal_helper) == thermal_helper_sha)
+                and (not science or all(digest(source / p) == sha for p,sha in science_plan["files"].items())))
             summary["installed_server_xml_unchanged"] = digest(xml) == installed_hash
             summary["protected_state_unchanged"] = all(digest(Path(p)) == h for p, h in protected.items())
         except BaseException as exc:
@@ -496,16 +591,27 @@ async def run(args) -> int:
         summary["controller_exit_code"] = controller.poll()
         summary["observed_native_pids_after"] = [{"pid": pid, "alive": psutil.pid_exists(pid)} for pid in native_pids]
         summary["elapsed_seconds"] = time.monotonic() - started
-        if summary["status"] == "PASS_PUBLIC_BUILD_READ_SAVE" and (
+        if cost and summary["status"] == "PASS_PUBLIC_BUILD_READ_SAVE" and stopped:
+            try:
+                summary["t050_save_cost_acceptance"] = cost_module.audit_terminal_database(home, evidence,
+                    summary["t050_cost_cycle"]["batch_operation_ids"])
+            except BaseException as exc:
+                failure(exc)
+                summary.update(status="FAIL")
+        if summary["status"] in {"PASS_PUBLIC_BUILD_READ_SAVE", "PASS_PUBLIC_RECIPE_UNSOLVED_BUILD_READ_SAVE"} and (
             not stopped or not summary["harness_unchanged"] or not summary["installed_server_xml_unchanged"] or not summary["protected_state_unchanged"]
-            or any(row["alive"] for row in summary["observed_native_pids_after"])):
+            or any(row["alive"] for row in summary["observed_native_pids_after"])
+            or (cost and (summary["elapsed_seconds"] > 690 or len(summary["calls"]) != 33))
+            or (thermal and (summary["elapsed_seconds"] > 600 or len(summary["calls"]) != 30))
+            or (science and (summary["elapsed_seconds"] > science_plan["budget"]["birth_including_cleanup_seconds"]
+                or len(summary["calls"]) != public_call_budget))):
             summary.update(status="FAIL", failure="cleanup or preserved input verification incomplete")
         write(summary_path, summary)
         log.close()
         print(json.dumps({"status": summary["status"], "evidence": str(summary_path),
                           "calls": len(summary["calls"]), "cleanup": stopped,
                           "source_commit": freeze["source_commit"]}, sort_keys=True), flush=True)
-    return 0 if summary["status"] == "PASS_PUBLIC_BUILD_READ_SAVE" else 1
+    return 0 if summary["status"] in {"PASS_PUBLIC_BUILD_READ_SAVE", "PASS_PUBLIC_RECIPE_UNSOLVED_BUILD_READ_SAVE"} else 1
 
 
 def main() -> int:
@@ -520,6 +626,11 @@ def main() -> int:
     parser.add_argument("--parameter-csv", action="store_true", help="export actual CSV, modify a separate file, register SHA, import and read back")
     parser.add_argument("--runtime-observation", action="store_true", help="execute owned parameter-read-only Java through trusted_code and register its durable recipe test")
     parser.add_argument("--package-cycle", action="store_true", help="one separate bounded geometry preview/package/export-source/typed-rebuild/registered-MPH-restore activity")
+    parser.add_argument("--checkpoint-cost-cycle", action="store_true", help="fixed original T050 bounded4096parameter128geometry cost/restore mode")
+    parser.add_argument("--thermal-benchmark", action="store_true", help="fixed T044 1D20/40mesh two public stationary study.run benchmark; 600s includes90cleanup")
+    parser.add_argument("--science-recipes", action="store_true", help="fixed separately approved zero-solve domain recipe mode")
+    parser.add_argument("--science-plan", type=Path, help="owner-private source/input/literal plan prepared by fixed science_recipe_cycle")
+    parser.add_argument("--science-plan-sha256", default="")
     return asyncio.run(run(parser.parse_args()))
 
 

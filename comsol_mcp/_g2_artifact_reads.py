@@ -226,7 +226,104 @@ def _producer_job(store: Any, record: Mapping[str, Any], *, project_id: str) -> 
     return {"job_id": job_id, "status": status}
 
 
+def _capture_project_host(daemon, project_id, project_root):
+    from ._artifact_store import local_engine_host_identity
+    try:
+        keys = {key for key in daemon._session_backends if key[0] == project_id}
+        keys.update((project_id, ctx.session_id) for ctx in daemon.session_registry.list_for_project(project_id))
+        # Project-filtered session metadata lookup; never scan artifact rows or
+        # route through an unscoped list_metadata fallback used by legacy reads.
+        with daemon.store.lock:
+            if daemon.store.db.execute("SELECT 1 FROM sessions WHERE NOT json_valid(metadata) LIMIT 1").fetchone():
+                raise ValueError("persisted session metadata cannot prove lane absence")
+            persisted = daemon.store.db.execute(
+                "SELECT session_id FROM sessions WHERE json_valid(metadata) "
+                "AND json_extract(metadata, '$.lifecycle.project_id') = ?", (project_id,),
+            ).fetchall()
+        keys.update((project_id, row[0]) for row in persisted)
+        captures = []
+        if keys:
+            for _, session in sorted(keys):
+                lifecycle = daemon.session_lifecycle.get(project_id, session)
+                key = (project_id, session)
+                if (isinstance(lifecycle, Mapping) and lifecycle.get("state") == "STOPPED"
+                        and lifecycle.get("client_state") == "RETIRED"
+                        and lifecycle.get("server_state") == "STOPPED"
+                        and lifecycle.get("server_process_identity") is None
+                        and lifecycle.get("server_instance_id") is None):
+                    contexts = daemon.session_registry.list_for_project(project_id)
+                    backend = daemon._session_backends.get(key)
+                    worker = getattr(backend, "worker", None)
+                    if ((backend is not None and (backend.project_root.resolve() != project_root.resolve()
+                                or backend.service is None or backend.service.ledger.session_id != session))
+                            or any(ctx.session_id == session for ctx in contexts)
+                            or key in daemon._session_worker_handles or key in daemon._session_server_handles
+                            or (worker is not None and (not hasattr(worker, "_process")
+                                or worker._process is not None))):
+                        raise ValueError("stopped historical lane retains unresolved original objects")
+                    continue  # This proven history supplies no endpoint identity.
+                capture = daemon._desktop_capture_backend(project_id, session, load=False)
+                if capture["runtime"] is None or capture["runtime"].project_root.resolve() != project_root.resolve():
+                    raise ValueError("registered project root/binding unavailable")
+                runtime = capture["runtime"]
+                endpoint = runtime.endpoint
+                host = endpoint.host
+                expected_endpoint = f"[{host}]:{endpoint.port}" if ":" in host and not host.startswith("[") else f"{host}:{endpoint.port}"
+                lifecycle = daemon.session_lifecycle.get(project_id, session)
+                if (capture["endpoint"] != expected_endpoint or endpoint.worker_epoch != capture["epoch"]
+                        or lifecycle.get("endpoint") != {"host": endpoint.host, "port": endpoint.port}
+                        or capture["backend"].worker_identity.get("endpoint") != capture["endpoint"]):
+                    raise ValueError("registered endpoint identity differs")
+                captures.append(capture)
+            identities = {local_engine_host_identity(c["endpoint"]) for c in captures}
+            if len(identities) != 1:
+                raise ValueError("registered engine host identity conflicts")
+            return next(iter(identities)), keys, captures, None
+        backend = daemon._default_backend
+        endpoint = getattr(backend, "endpoint_key", None)
+        return local_engine_host_identity(endpoint), keys, captures, (backend, endpoint)
+    except ExecutionContractError:
+        raise
+    except Exception as exc:
+        raise ExecutionContractError("ARTIFACT_HOST_UNVERIFIED", "registered project engine host binding is unavailable") from exc
+
+
+def _recheck_project_host(daemon, project_id, project_root, proof):
+    identity, keys, captures, legacy = proof
+    current = _capture_project_host(daemon, project_id, project_root)
+    if current[0] != identity or current[1] != keys:
+        raise ExecutionContractError("ARTIFACT_HOST_UNVERIFIED", "project engine host binding changed")
+    try:
+        for capture in captures:
+            daemon._desktop_recheck_backend(capture, health=False)
+        if legacy is not None and (daemon._default_backend is not legacy[0]
+                or daemon._default_backend.endpoint_key != legacy[1]):
+            raise ValueError("legacy endpoint changed")
+    except Exception as exc:
+        raise ExecutionContractError("ARTIFACT_HOST_UNVERIFIED", "project engine host binding changed") from exc
+
+
 def dispatch(daemon: Any, operation: str, arguments: dict[str, Any], execution: dict[str, Any]) -> dict[str, Any]:
+    from ._g2_registry import validate_call
+    validate_call(operation, arguments)
+    if _IDENTITY_FIELDS.intersection(arguments):
+        names = ", ".join(sorted(_IDENTITY_FIELDS.intersection(arguments)))
+        raise ExecutionContractError("INVALID_REQUEST", f"{operation} does not accept nested model identity fields: {names}")
+    project_id = arguments.get("project_id")
+    if not isinstance(project_id, str) or not project_id:
+        raise ExecutionContractError("PROJECT_IDENTITY_REQUIRED", f"{operation} requires project_id")
+    if execution.get("project_id") is not None and execution.get("project_id") != project_id:
+        raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", f"{operation} project_id differs from the execution envelope")
+    project = daemon.project_authority.authorize_operation(project_id, "inspect")
+    project_root = Path(project["workspace"])
+    proof = _capture_project_host(daemon, project_id, project_root)
+    _recheck_project_host(daemon, project_id, project_root, proof)
+    result = _dispatch(daemon, operation, arguments, execution, engine_host_identity=proof[0])
+    _recheck_project_host(daemon, project_id, project_root, proof)
+    return result
+
+
+def _dispatch(daemon: Any, operation: str, arguments: dict[str, Any], execution: dict[str, Any], *, engine_host_identity: str) -> dict[str, Any]:
     """Execute one admitted host-only artifact read after project authorization."""
     from ._artifact_store import (
         local_artifact_host_identity,
@@ -255,8 +352,6 @@ def dispatch(daemon: Any, operation: str, arguments: dict[str, Any], execution: 
     project_root = Path(project["workspace"])
     root_identity = identify_project_root(project_root)
     host_identity = local_artifact_host_identity()
-    configured_backend = daemon._default_backend
-    engine_host_identity = local_engine_host_identity(getattr(configured_backend, "endpoint_key", None))
     request_id = outer_request_id if outer_request_id is not None else body_request_id
 
     if operation == "artifact.list":

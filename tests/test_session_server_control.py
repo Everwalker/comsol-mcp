@@ -510,6 +510,77 @@ def test_public_owned_server_start_attach_disconnect_retire_stop(tmp_path, monke
             worker_process.terminate(); worker_process.wait(timeout=3)
 
 
+@pytest.mark.skipif(sys.platform not in {"darwin", "win32"}, reason="exact process/listener proof adapter is supported on Darwin and Windows")
+def test_w24_connected_inspect_checker_accepts_actual_control_daemon_response(tmp_path, monkeypatch):
+    from tools import run_native_w24_static_shape_setup_campaign as campaign
+
+    class VersionedAttachedWorker(_AttachedWorker):
+        def connect(self, port, host, **kwargs):
+            reply = super().connect(port, host, **kwargs)
+            reply["engine_version"] = "6.4.0"
+            reply["engine_build"] = "293"
+            return reply
+
+    worker_process = _sleeping_child()
+    worker = VersionedAttachedWorker(worker_process)
+    daemon = None
+    try:
+        daemon, project_id, server_command, _installed_xml, _installed_hash = _make_daemon(
+            tmp_path, monkeypatch, worker_factory=lambda _runtime, _state: worker,
+        )
+        started = _start(daemon, project_id, key="w24-inspect-contract-start")
+        assert started["success"] is True, started
+        session_id = started["data"]["session_id"]
+        endpoint = started["data"]["endpoint"]
+        server_process = server_command.processes[0]
+
+        connected = daemon.dispatch({
+            "operation": "session.connect",
+            "arguments": {
+                "project_id": project_id, "session_id": session_id,
+                "runtime_id": "fixture-runtime", "endpoint": endpoint,
+                "idempotency_key": "w24-inspect-contract-connect",
+            },
+            "execution": {},
+        })
+        assert connected["success"] is True, connected
+        session = campaign._session_identity(
+            connected, project_id=project_id, expected_port=endpoint["port"],
+        )
+
+        inspected = daemon.dispatch({
+            "operation": "session.inspect",
+            "arguments": {"project_id": project_id, "session_id": session_id},
+            "execution": {},
+        })
+        assert inspected["success"] is True, inspected
+        assert "project_id" not in inspected["data"]
+        assert inspected["data"]["lifecycle"]["project_id"] == project_id
+        assert inspected["data"]["runtime_live"] is True
+        assert inspected["data"]["worker_binding"] == {
+            "worker_instance_id": session["worker_instance_id"],
+            "worker_epoch": session["worker_epoch"],
+            "server_lane": "owned",
+        }
+        assert campaign._require_connected_inspect(inspected, session) == inspected
+
+        disconnected = daemon.dispatch({
+            "operation": "session.disconnect",
+            "arguments": {"project_id": project_id, "session_id": session_id,
+                          "idempotency_key": "w24-inspect-contract-disconnect",
+                          "retire_worker": True},
+            "execution": {},
+        })
+        assert disconnected["success"] is True, disconnected
+        stopped = _stop(daemon, project_id, session_id, key="w24-inspect-contract-stop")
+        assert stopped["success"] is True, stopped
+        assert server_process.poll() is not None
+        assert worker_process.poll() is not None
+    finally:
+        if daemon is not None:
+            daemon.close()
+
+
 def test_session_start_requires_host_control_before_any_child_birth(tmp_path, monkeypatch):
     daemon = None
     try:

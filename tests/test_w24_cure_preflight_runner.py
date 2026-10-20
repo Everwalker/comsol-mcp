@@ -1012,6 +1012,7 @@ def _expression_inventory_fixture(root: Path):
     output.write_bytes(data)
     receipt = {
         "status": "NATIVE_EXPRESSION_INVENTORY_SAVED_NOT_EVALUATED",
+        "output_root": str(root),
         "path": str(output),
         "size_bytes": len(data),
         "sha256": hashlib.sha256(data).hexdigest(),
@@ -1032,11 +1033,14 @@ def test_w24_expression_inventory_verifies_full_raw_table_hash_and_candidates():
     root.mkdir()
     try:
         output, receipt, _artifact = _expression_inventory_fixture(root)
-        verified = runner._verify_expression_inventory(receipt, output)
+        verified, verified_bytes = runner._verify_expression_inventory(
+            receipt, output, expected_workspace=root)
         assert verified["status"] == "COMPLETE_NOT_EVALUATED"
         assert verified["expression_row_count"] == 3
         assert verified["stress_candidate_row_count"] == 2
         assert verified["sha256"] == receipt["sha256"]
+        assert len(verified_bytes) == receipt["size_bytes"]
+        assert hashlib.sha256(verified_bytes).hexdigest() == receipt["sha256"]
     finally:
         shutil.rmtree(root)
 
@@ -1052,7 +1056,8 @@ def test_w24_expression_inventory_rejects_truncated_native_feature_rows():
         receipt["size_bytes"] = len(data)
         receipt["sha256"] = hashlib.sha256(data).hexdigest()
         try:
-            runner._verify_expression_inventory(receipt, output)
+            runner._verify_expression_inventory(
+                receipt, output, expected_workspace=root)
         except RuntimeError as exc:
             assert "row count is incomplete" in str(exc)
         else:

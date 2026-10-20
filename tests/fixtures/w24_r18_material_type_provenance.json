@@ -1,0 +1,21 @@
+{
+  "claim": "The Material.materialType(String) API accepts the exact case-sensitive value nonSolid for a non-solid material. The Material.materialType() getter returns String and is used for strict readback.",
+  "comsol_version": "6.4.0.293",
+  "official_documentation": [
+    {
+      "chunk_id": "chunk16779",
+      "document_id": "doc4111",
+      "source_sha256": "80ae61bc99d91b2e91aaeff7c91406bae0a768c7fbadef5b8efe95db33c262ab",
+      "supports": "Accepted material type spelling is nonSolid."
+    },
+    {
+      "chunk_id": "chunk22923",
+      "document_id": "doc7624",
+      "source_sha256": "2809a9300c7bed64c9289b9815f5ba072ec7555b48bdbc75c24e092d22196fdf",
+      "supports": "materialType() returns a String for exact readback."
+    }
+  ],
+  "schema": "W24_R18_MATERIAL_TYPE_COMSOL64_SOURCE_PROVENANCE_V1",
+  "scope": "source/software evidence only; no COMSOL model was executed by this provenance fixture",
+  "source_fix": "Set both glue and gas materials to nonSolid and reject success unless both getters return exactly nonSolid."
+}

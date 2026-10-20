@@ -394,12 +394,30 @@ def _file_fingerprint(info: os.stat_result) -> tuple[int, int, int, int, int]:
 def _assert_opened_path_security(path: Path, fd: int, info: os.stat_result, *, directory: bool,
                                  expected_identity: Mapping[str, Any] | None = None) -> dict[str, Any]:
     if os.name == "nt":
-        evidence = _verify_windows_private_path(path, directory=directory,
-                                                expected_identity=expected_identity)
-        identity = evidence["identity"]
-        if (int(info.st_dev), int(info.st_ino)) != (identity["device"], identity["inode"]):
-            raise ExecutionContractError("AUTHORIZATION_STATE_UNKNOWN", "Windows stdio object differs from the verified ACL handle")
-        return evidence
+        import msvcrt
+        from ._windows_host_preflight_owner import scalar
+        # This fd is borrowed from its existing Python owner. No registry
+        # acquisition/adoption/close or caller-declared metadata comparison.
+        def observe(api, leaf, full_getter):
+            get_handle = msvcrt.get_osfhandle
+            fstat = os.fstat
+            before = fstat(fd)
+            handle = ctypes.c_void_p(get_handle(fd))
+            pinned = full_getter(leaf, directory=directory)
+            borrowed = full_getter(handle, directory=directory)
+            if pinned[0] != borrowed[0]:
+                raise ExecutionContractError("AUTHORIZATION_STATE_UNKNOWN", "Windows stdio and pinned leaf full identities differ")
+            if full_getter(leaf, directory=directory) != pinned or full_getter(handle, directory=directory) != borrowed:
+                raise ExecutionContractError("AUTHORIZATION_STATE_UNKNOWN", "Windows original object metadata changed during stdio observation")
+            after = fstat(fd)
+            fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+            signature = lambda value: tuple(getattr(value, field) for field in fields)
+            if (signature(info) != signature(before) or signature(before) != signature(after)
+                    or get_handle(fd) != handle.value):
+                raise ExecutionContractError("AUTHORIZATION_STATE_UNKNOWN", "Windows original stdio descriptor changed or was reused")
+        return _verify_windows_private_path(path, directory=directory,
+                                             expected_identity=expected_identity,
+                                             _internal_stdio_observer=observe)
     _assert_posix_owner_and_mount(fd, info, "host-scoped private path")
     identity = {"device": int(info.st_dev), "inode": int(info.st_ino)}
     if expected_identity is not None and dict(expected_identity) != identity:
@@ -416,7 +434,7 @@ from ._windows_host_preflight_owner import serialized_original_preflight
 
 @serialized_original_preflight
 def _win32_descriptor_digest(api, handle, *, directory: bool, require_daemon_owner: bool,
-                            daemon_sid, trusted_sids) -> tuple[str, str]:
+                            daemon_sid, trusted_sids, pinned_ancestor_traversal: bool = False) -> tuple[str, str]:
     """Read and validate an object DACL through its already pinned handle."""
     C = ctypes
     from ctypes import wintypes
@@ -448,6 +466,9 @@ def _win32_descriptor_digest(api, handle, *, directory: bool, require_daemon_own
     owner = C.c_void_p()
     dacl = C.c_void_p()
     descriptor = C.c_void_p()
+    ancestor_sid = C.c_void_p()
+    if pinned_ancestor_traversal and (not directory or require_daemon_owner):
+        raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "pinned ancestor traversal role requires a directory before the private root")
     # SE_FILE_OBJECT=1, OWNER_SECURITY_INFORMATION=1,
     # DACL_SECURITY_INFORMATION=4. READ_CONTROL on the opened handle suffices;
     # no SACL privilege or write-security call is used.
@@ -464,6 +485,15 @@ def _win32_descriptor_digest(api, handle, *, directory: bool, require_daemon_own
             raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "Windows owner SID is absent or invalid")
         owner_trusted = any(scalar(advapi.EqualSid(owner, sid), 'BOOL') for sid in trusted_sids)
         owner_is_daemon = bool(scalar(advapi.EqualSid(owner, daemon_sid), 'BOOL'))
+        owner_is_trustedinstaller = False
+        if pinned_ancestor_traversal:
+            advapi.ConvertStringSidToSidW.argtypes = [wintypes.LPCWSTR, C.POINTER(C.c_void_p)]
+            advapi.ConvertStringSidToSidW.restype = wintypes.BOOL
+            if not scalar(actual_owner.allocation_call('ConvertStringSidToSidW', advapi, ancestor_sid,
+                          "S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464",
+                          C.byref(ancestor_sid), family='local'), 'BOOL') or not ancestor_sid.value:
+                raise ExecutionContractError("HOST_PROVIDER_UNSUPPORTED", "fixed ancestor owner SID could not be constructed")
+            owner_is_trustedinstaller = bool(scalar(advapi.EqualSid(owner, ancestor_sid), 'BOOL'))
         present = wintypes.BOOL()
         dacl_defaulted = wintypes.BOOL()
         if not scalar(advapi.GetSecurityDescriptorDacl(descriptor, C.byref(present), C.byref(dacl), C.byref(dacl_defaulted)), 'BOOL'):
@@ -505,11 +535,13 @@ def _win32_descriptor_digest(api, handle, *, directory: bool, require_daemon_own
             if ace_size != 8 + sid_size:
                 raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "Windows DACL ACE length is noncanonical")
             ace_policy_rows.append({"type": ace_type, "flags": ace_flags,
-                                    "sid_trusted": any(scalar(advapi.EqualSid(sid, trusted), 'BOOL') for trusted in trusted_sids)})
+                                    "sid_trusted": any(scalar(advapi.EqualSid(sid, trusted), 'BOOL') for trusted in trusted_sids),
+                                    "access_mask": int.from_bytes(C.string_at(ace, 8)[4:8], "little")})
         _validate_windows_acl_policy(owner_trusted=owner_trusted, owner_is_daemon=owner_is_daemon,
                                      require_daemon_owner=require_daemon_owner,
                                      dacl_present=bool(present.value and dacl.value),
-                                     ace_rows=ace_policy_rows)
+                                     ace_rows=ace_policy_rows, pinned_ancestor_traversal=pinned_ancestor_traversal,
+                                     owner_is_trustedinstaller=owner_is_trustedinstaller)
         descriptor_size = scalar(advapi.GetSecurityDescriptorLength(descriptor), 'DWORD')
         if descriptor_size <= 0 or descriptor_size > 1024 * 1024:
             raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "Windows security descriptor size is outside bounds")
@@ -524,15 +556,20 @@ def _win32_descriptor_digest(api, handle, *, directory: bool, require_daemon_own
     finally:
         if descriptor.value:
             actual_owner.release(descriptor, family='local', primary=primary)
+        if ancestor_sid.value:
+            actual_owner.release(ancestor_sid, family='local', primary=primary)
         if primary is None and not actual_owner.entries():
             actual_owner.reconcile()
 
 
 def _validate_windows_acl_policy(*, owner_trusted: bool, owner_is_daemon: bool,
                                  require_daemon_owner: bool, dacl_present: bool,
-                                 ace_rows: list[Mapping[str, Any]]) -> None:
+                                 ace_rows: list[Mapping[str, Any]], pinned_ancestor_traversal: bool = False,
+                                 owner_is_trustedinstaller: bool = False) -> None:
     """Pure policy gate for Windows ACL parsing; it does not emulate Win32."""
-    if not owner_trusted:
+    if pinned_ancestor_traversal and require_daemon_owner:
+        raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "pinned ancestor traversal cannot grant private ownership")
+    if not owner_trusted and not (pinned_ancestor_traversal and owner_is_trustedinstaller):
         raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "Windows path component owner is not a trusted host SID")
     if require_daemon_owner and not owner_is_daemon:
         raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "Windows provider file or private directory must be owned by the daemon SID")
@@ -543,7 +580,27 @@ def _validate_windows_acl_policy(*, owner_trusted: bool, owner_is_daemon: bool,
         if type(ace_type) is not int or ace_type not in (0, 1) or type(ace_flags) is not int or ace_flags & ~0x1F:
             raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "Windows DACL contains an unsupported ACE type or flags")
         if ace_type == 0 and row.get("sid_trusted") is not True:
-            raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "Windows DACL grants access to an untrusted SID")
+            if not pinned_ancestor_traversal:
+                raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "Windows DACL grants access to an untrusted SID")
+            mask = row.get("access_mask")
+            if type(mask) is not int or not 0 <= mask <= 0xFFFFFFFF:
+                raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "Windows ancestor ACE mask is absent or malformed")
+            if mask & ~0xF01F01FF:
+                raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "Windows ancestor ACE contains unknown or maximum-access bits")
+            # INHERIT_ONLY is ineffective here. Every child is independently
+            # rechecked; this never authorizes a private descendant ACL.
+            if ace_flags & 0x08:
+                continue
+            # PINNED_ANCESTOR_TRAVERSAL_WITH_CHILD_CREATE: existing edges
+            # remain pinned without SHARE_DELETE; ADD_FILE/ADD_SUBDIRECTORY
+            # permits new siblings, never replacement of the opened edge.
+            # FILE_GENERIC_READ=0x120089, FILE_GENERIC_EXECUTE=0x1200a0.
+            # No deny ACE is used to cancel an untrusted write grant.
+            mapped = mask & ~(0x80000000 | 0x20000000)
+            if mask & 0x80000000: mapped |= 0x120089
+            if mask & 0x20000000: mapped |= 0x1200A0
+            if mapped & ~0x1200AF:
+                raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "Windows pinned ancestor traversal grants mutation or unknown access to an untrusted SID")
 
 
 @serialized_original_preflight
@@ -633,7 +690,8 @@ def _windows_volume_has_persistent_acls(api, path: Path) -> tuple[bool, int]:
 
 def _verify_windows_private_path(path: Path, *, directory: bool,
                                  expected_identity: Mapping[str, Any] | None,
-                                 _retained_callback=None, _original_owner_callback=None) -> dict[str, Any]:
+                                 _retained_callback=None, _original_owner_callback=None,
+                                 _internal_stdio_observer=None) -> dict[str, Any]:
     try:
         from ._windows_parameter_publish import PublishError, _API
         api = _API()
@@ -656,7 +714,8 @@ def _verify_windows_private_path(path: Path, *, directory: bool,
         try:
             return _verify_windows_private_path_owned(api, path, directory=directory,
                                                      expected_identity=expected_identity,
-                                                     _retained_callback=_retained_callback)
+                                                     _retained_callback=_retained_callback,
+                                                     _internal_stdio_observer=_internal_stdio_observer)
         except BaseException as error:
             primary = error
             actual_owner.remember(error)
@@ -666,7 +725,29 @@ def _verify_windows_private_path(path: Path, *, directory: bool,
             finish_original(api, primary)
 
 
-def _verify_windows_private_path_owned(api, path, *, directory, expected_identity, _retained_callback=None):
+def _windows_original_full_getter(api):
+    """Freeze the original readonly SDK getter; reuse native production ABI."""
+    from ._windows_parameter_publish import _FullIdInfo, _BasicInfo, _StandardInfo
+    from ._windows_host_preflight_owner import hold_original, scalar
+    owner = hold_original(api)
+    getter = owner.function("GetFileInformationByHandleEx", api.k)
+    def read(handle, *, directory):
+        full, basic, standard = _FullIdInfo(), _BasicInfo(), _StandardInfo()
+        for kind, output in ((18, full), (0, basic), (1, standard)):
+            if not scalar(getter(handle, kind, ctypes.byref(output), ctypes.sizeof(output)), "BOOL"):
+                raise ExecutionContractError("HOST_PROVIDER_UNSUPPORTED", "original full identity SDK query failed")
+        file_id = int.from_bytes(bytes(full.file_id), "little")
+        if (basic.attributes & 0x400 or bool(basic.attributes & 0x10) != directory
+                or bool(standard.directory) != directory or standard.delete_pending
+                or standard.size < 0 or not file_id or standard.links < 1):
+            raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "full identity requires an ordinary non-pending object")
+        return ((int(full.volume), file_id), int(standard.size), int(basic.created),
+                int(basic.changed), int(basic.written), int(standard.links))
+    return read
+
+
+def _verify_windows_private_path_owned(api, path, *, directory, expected_identity, _retained_callback=None,
+                                      _internal_stdio_observer=None):
     from ._windows_parameter_publish import PublishError
     persistent_acls, expected_volume = _windows_volume_has_persistent_acls(api, path)
     if not persistent_acls:
@@ -679,6 +760,8 @@ def _verify_windows_private_path_owned(api, path, *, directory, expected_identit
                    if _retained_callback is not None else api.open_security_path(path, directory=directory))
         if not handles:
             raise ExecutionContractError("HOST_PROVIDER_UNSUPPORTED", "Windows path did not produce pinned handles")
+        full_getter = _windows_original_full_getter(api) if _internal_stdio_observer is not None else None
+        original_full = []
         descriptors: list[dict[str, Any]] = []
         identities: list[dict[str, int]] = []
         for index, handle in enumerate(handles):
@@ -688,7 +771,10 @@ def _verify_windows_private_path_owned(api, path, *, directory, expected_identit
                 raise ExecutionContractError("AUTHORIZATION_STATE_UNKNOWN", "Windows path handle is on a different volume than the ACL capability probe")
             digest, owner = _win32_descriptor_digest(api, handle, directory=is_directory,
                                                       require_daemon_owner=index == len(handles) - 1,
-                                                      daemon_sid=daemon_sid, trusted_sids=trusted_sids)
+                                                      daemon_sid=daemon_sid, trusted_sids=trusted_sids,
+                                                      **({"pinned_ancestor_traversal": True} if index < len(handles) - 1 else {}))
+            if full_getter is not None:
+                original_full.append(full_getter(handle, directory=is_directory))
             identities.append({"device": int(volume), "inode": int(file_index)})
             descriptors.append({"identity": identities[-1], "descriptor_sha256": digest, "owner": owner})
         # Re-open by pinned component traversal while the first chain remains
@@ -696,6 +782,7 @@ def _verify_windows_private_path_owned(api, path, *, directory, expected_identit
         second = api.open_security_path(path, directory=directory)
         try:
             second_ids = []
+            second_full = []
             for index, handle in enumerate(second):
                 is_directory = index < len(second) - 1 or directory
                 (volume, file_index), _ = api.info(handle, directory=is_directory)
@@ -703,10 +790,13 @@ def _verify_windows_private_path_owned(api, path, *, directory, expected_identit
                     raise ExecutionContractError("AUTHORIZATION_STATE_UNKNOWN", "Windows path moved to a volume without verified ACL capability")
                 digest, owner = _win32_descriptor_digest(api, handle, directory=is_directory,
                                                           require_daemon_owner=index == len(second) - 1,
-                                                          daemon_sid=daemon_sid, trusted_sids=trusted_sids)
+                                                          daemon_sid=daemon_sid, trusted_sids=trusted_sids,
+                                                          **({"pinned_ancestor_traversal": True} if index < len(second) - 1 else {}))
+                if full_getter is not None:
+                    second_full.append(full_getter(handle, directory=is_directory))
                 second_ids.append({"identity": {"device": int(volume), "inode": int(file_index)},
                                    "descriptor_sha256": digest, "owner": owner})
-            if second_ids != descriptors:
+            if second_ids != descriptors or full_getter is not None and second_full != original_full:
                 raise ExecutionContractError("AUTHORIZATION_STATE_UNKNOWN", "Windows private path chain changed during ACL verification")
         finally:
             # Original-entry final cleanup below covers the complete second chain.
@@ -717,6 +807,20 @@ def _verify_windows_private_path_owned(api, path, *, directory, expected_identit
         metadata = {"identity": identity, "security_sha256": identity["security_sha256"],
                     "security_semantics": WINDOWS_PRIVATE_PATH_SECURITY_SEMANTICS,
                     "path_chain": descriptors}
+        if _internal_stdio_observer is not None:
+            _internal_stdio_observer(api, handles[-1], full_getter)
+            # Original chains remain live: no metadata change or descriptor
+            # substitution may occur across the borrowed-fd observer.
+            for chain, before in ((handles, original_full), (second, second_full)):
+                for index, handle in enumerate(chain):
+                    is_directory = index < len(chain) - 1 or directory
+                    digest, _ = _win32_descriptor_digest(api, handle, directory=is_directory,
+                        require_daemon_owner=index == len(chain) - 1,
+                        daemon_sid=daemon_sid, trusted_sids=trusted_sids,
+                        **({"pinned_ancestor_traversal": True} if index < len(chain) - 1 else {}))
+                    if (full_getter(handle, directory=is_directory) != before[index]
+                            or digest != descriptors[index]["descriptor_sha256"]):
+                        raise ExecutionContractError("AUTHORIZATION_STATE_UNKNOWN", "original private path changed across stdio observation")
         if _retained_callback is not None:
             if directory:
                 raise ExecutionContractError("HOST_PROVIDER_CONFIG_INVALID", "retained backup read requires an ordinary file")
@@ -728,7 +832,8 @@ def _verify_windows_private_path_owned(api, path, *, directory, expected_identit
             # The original complete ACL/name verifier runs again while the read
             # handle and both first chains stay owned, before returning bytes.
             after = _verify_windows_private_path_owned(api, path, directory=False,
-                                                       expected_identity=identity)
+                                                       expected_identity=identity,
+                                                       _internal_stdio_observer=_internal_stdio_observer)
             if after != metadata:
                 raise ExecutionContractError("AUTHORIZATION_STATE_UNKNOWN", "backup whole private path changed during read")
             return answer
@@ -1013,3 +1118,36 @@ class HostScopedProvider:
 
 def load_host_scoped_provider(value: str | os.PathLike[str]) -> HostScopedProvider:
     return HostScopedProvider.load(value)
+
+
+def _verify_windows_owned_handle_security(api, handle, *, directory: bool,
+                                         require_daemon_owner: bool = True, pinned_ancestor_traversal: bool = False) -> str:
+    """Query the original owned READ_CONTROL handle without reopening its name.
+
+    Token/SID/descriptor allocations have a separate original preflight owner;
+    that owner never acquires or closes the borrowed cleanup handle.
+    """
+    from ._windows_parameter_publish import _API
+    from ._windows_owned_resources import registry_for
+    from ._windows_host_preflight_owner import hold_original, finish_original
+    entry = registry_for(api).find(api, handle)
+    if entry is None or entry.state != "ACQUIRED":
+        raise ExecutionContractError("AUTHORIZATION_STATE_UNKNOWN", "ACL query requires an original live owned handle")
+    query = _API()
+    owner = hold_original(query)
+    primary = None
+    try:
+        daemon_sid, trusted, keepalive = _windows_security_context(query)
+        owner.hold(keepalive[0], api, entry, handle)
+        digest, _sid = _win32_descriptor_digest(query, handle, directory=directory,
+            require_daemon_owner=require_daemon_owner, daemon_sid=daemon_sid, trusted_sids=trusted,
+            **({"pinned_ancestor_traversal": True} if pinned_ancestor_traversal else {}))
+        if registry_for(api).find(api, handle) is not entry or entry.state != "ACQUIRED":
+            raise ExecutionContractError("AUTHORIZATION_STATE_UNKNOWN", "original ACL handle ownership changed")
+        return digest
+    except BaseException as exc:
+        primary = exc
+        owner.remember(exc)
+        raise
+    finally:
+        finish_original(query, primary)

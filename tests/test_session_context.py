@@ -47,6 +47,24 @@ def _process(pid: int, birth: str, *listeners: CanonicalSocket) -> OwnedServerPr
     )
 
 
+@pytest.mark.parametrize("server_np", [True, 0, -1, 65, 1.0])
+def test_owned_server_identity_np_is_bounded_and_rejects_non_integer_values(server_np):
+    with pytest.raises(ValueError, match="server_np"):
+        OwnedServerProcessIdentity(
+            pid=123, birth="birth", executable="/opt/comsol/bin/comsolmphserver",
+            listener_sockets=(CanonicalSocket("127.0.0.1", 2036),), server_np=server_np)
+
+
+def test_owned_server_identity_keeps_default_np_unset_and_accepts_bounded_value():
+    endpoint = CanonicalSocket("127.0.0.1", 2036)
+    default = _process(123, "birth", endpoint)
+    bounded = OwnedServerProcessIdentity(
+        pid=124, birth="birth-2", executable="/opt/comsol/bin/comsolmphserver",
+        listener_sockets=(endpoint,), server_np=2)
+    assert default.server_np is None
+    assert bounded.server_np == 2
+
+
 _AUTO_PEER = object()
 
 

@@ -1496,3 +1496,38 @@ def test_transition_check_keeps_candidate_cleanup_failure_distinct_from_rollback
     assert result["candidate_only_distribution_names_removed_confirmed"] == []
     assert "candidate-dep" in state
     assert result["status"] == "FAIL_ROLLBACK_CLEANUP"
+
+
+def test_framework_base_metadata_blocks_guard_before_inventory_or_delete(tmp_path,monkeypatch):
+    root=tmp_path/'venv';_make_marked_install(root)
+    framework=tmp_path/'Python.framework/Versions/3.12/bin';framework.mkdir(parents=True)
+    (root/'pyvenv.cfg').write_text('home = '+str(framework)+'\n',encoding='utf-8')
+    # Update the explicit software ownership baseline after creating this fixture.
+    release._record_install_inventory(root/'bin/python')
+    monkeypatch.setattr(release.sys,'platform','darwin')
+    monkeypatch.setattr(release,'_capture',lambda *a,**kw:pytest.fail('known Framework refusal cannot inventory or delete'))
+    guard=release._process_guard(root)
+    assert guard['status']=='UNKNOWN' and guard['prerequisite']['kind']=='OBSERVED_FRAMEWORK_BASE_RUNTIME'
+    result=release.uninstall_venv(root,tmp_path/'evidence',confirm=True)
+    assert result['status']=='BLOCKED_UNKNOWN' and root.is_dir() and (root/'bin/python').is_file()
+
+
+@pytest.mark.parametrize('tamper',['symlink','duplicate','missing-base'])
+def test_framework_metadata_uncertainty_never_becomes_clear(tmp_path,monkeypatch,tamper):
+    root=tmp_path/'venv';root.mkdir();config=root/'pyvenv.cfg'
+    if tamper=='symlink':
+        other=tmp_path/'foreign';other.write_text('home = /usr/bin\n');config.symlink_to(other)
+    elif tamper=='duplicate':config.write_text('home = /usr/bin\nhome = /usr/bin\n')
+    else:config.write_text('executable = '+str(tmp_path/'missing-python')+'\n')
+    monkeypatch.setattr(release.sys,'platform','darwin');monkeypatch.setattr(release,'_capture',lambda *a,**kw:pytest.fail('uncertain metadata cannot inventory'))
+    assert release._process_guard(root)['status']=='UNKNOWN'
+
+
+def test_doctor_exposes_framework_uninstall_refusal_from_venv_metadata(tmp_path,monkeypatch):
+    root=tmp_path/'venv';(root/'bin').mkdir(parents=True);python=root/'bin/python';python.write_text('synthetic executable')
+    framework=tmp_path/'Python.framework/Versions/3.12/bin';framework.mkdir(parents=True);(root/'pyvenv.cfg').write_text('home = '+str(framework)+'\n')
+    monkeypatch.setattr(release.sys,'platform','darwin')
+    monkeypatch.setattr(release,'run_record',lambda *args,**kwargs:{'exit_code':1,'stdout':'','stderr':'synthetic no application installed'})
+    result=release.doctor(python)
+    assert result['status']=='FAIL' and result['uninstall_safety_support']['status']=='BLOCKED_UNKNOWN'
+    assert result['uninstall_safety_support']['prerequisite']['kind']=='OBSERVED_FRAMEWORK_BASE_RUNTIME'

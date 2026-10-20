@@ -2144,7 +2144,7 @@ def test_real_only_frequency_uses_actual_production_adapter_and_narrow_decoder(m
 
 
 @pytest.mark.parametrize("port", ["1", "2"])
-@pytest.mark.parametrize("mutation", [None, "wrong_port", "no_binding", "wrong_store", "imag", "missing", "nonbool"])
+@pytest.mark.parametrize("mutation", [None, "native_default", "wrong_port", "no_binding", "wrong_store", "imag", "missing", "nonbool"])
 def test_real_only_port_scalars_require_actual_adapter_flag_and_exact_validated_binding(monkeypatch, port, mutation):
     from tools import w23_te_science_protocol as protocol
     tree, nodes, args = _requested_unit_point_tree(monkeypatch)
@@ -2155,7 +2155,7 @@ def test_real_only_port_scalars_require_actual_adapter_flag_and_exact_validated_
         return node
     tree.numerical.factory = real_factory
     args["spec"]["expressions"] = list(protocol.bma_point_expressions(port, field_scheme="emw_down"))
-    args["spec"]["units"] = ["1/m", "1", "1/m"]
+    args["spec"]["units"] = ["1/m", "", "1/m"] if mutation == "native_default" else ["1/m", "1", "1/m"]
     def coords(self, matrix):
         self.coords = matrix
         self.values = [[[6e6]], [[1.5]], [[4e6]]]
@@ -2163,6 +2163,12 @@ def test_real_only_port_scalars_require_actual_adapter_flag_and_exact_validated_
     monkeypatch.setattr(FInterp, "getImagData", lambda self: [[[0.0]], [[0.0]], [[0.0]]], raising=False)
     native = results.result_at_points(tree.worker, "Model", args)
     assert native["is_complex"] is False
+    if mutation is None:
+        legacy_unit_proof = native["feature_readback"]["requested_unit_application"]
+        assert legacy_unit_proof["requested_units"] == ["1/m", "1", "1/m"]
+        # This is an actual adapter-produced explicit-unit proof. Historical
+        # receipts do not carry the later optional native-default declaration.
+        legacy_unit_proof.pop("native_default_unit_expressions")
     count = {"status": "PASS_EXACT_ATTACHED_MAIN_COUNT_SINGLETON", "dataset_tag": "dset1",
              "solver_sequence_tag": "sol1", "study_tag": "std1", "get_size": [100, 1],
              "raw_parameter": {"name": "freq", "real": 193414489032258.03, "imag": 0.0, "unit": "Hz"}}
@@ -2181,12 +2187,14 @@ def test_real_only_port_scalars_require_actual_adapter_flag_and_exact_validated_
             plane_id="bma_scalar", expected_count_witness=count,
             expected_expression_units=dict(zip(args["spec"]["expressions"], args["spec"]["units"])),
             expected_requested_units=args["spec"]["units"], scalar_bma_binding=binding, field_scheme="emw_down")
-    if mutation:
+    if mutation not in (None, "native_default"):
         with pytest.raises(protocol.ScienceProtocolError): decode()
     else:
         point = decode()
         assert point["native_is_complex"] is False and point["real_only_scalar_route"] is True
         assert [row["imag"] for row in point["expressions"]] == [[0], [0], [0]]
+        if mutation == "native_default":
+            assert native["feature_readback"]["requested_unit_application"]["native_default_unit_expressions"] == [f"emw.neff_{port}"]
 
 
 def _real_public_points_daemon(tmp_path, monkeypatch, tree):
@@ -2216,7 +2224,7 @@ def _real_public_points_daemon(tmp_path, monkeypatch, tree):
     return daemon,ref,project
 
 
-@pytest.mark.parametrize("case", ["freq_Hz","freq_GHz","field_8_321","field_8_641","field_minus10_321","field_minus10_641","port1","port2"])
+@pytest.mark.parametrize("case", ["freq_Hz","freq_GHz","field_8_641","field_minus10_641","port1","port2"])
 def test_real_control_daemon_public_object_payload_reaches_actual_interp_adapter(tmp_path, monkeypatch, case):
     from tools import run_native_w23_saved_mph_diagnostic as runner
     tree,nodes,args = _requested_unit_point_tree(monkeypatch)
@@ -2228,7 +2236,7 @@ def test_real_control_daemon_public_object_payload_reaches_actual_interp_adapter
         points = runner._field_points(-10.0 if x == "minus10" else 8.0,int(n))
     else:
         port = case[-1];dataset,solution = ("dset2","sol2") if port == "1" else ("dset3","sol3")
-        expr,units = list(runner.protocol.bma_point_expressions(port, field_scheme="emw_down")),["1/m","1","1/m"]
+        expr,units = list(runner.protocol.bma_point_expressions(port, field_scheme="emw_down")),list(runner.mode_units(port).values())
         points = [[-10.0 if port == "1" else 8.0,0.0]]
         tree.datasets.items[dataset] = FNode(tag=dataset,type_id="Solution",props={"solution":solution})
         solver = copy.deepcopy(tree.solver);solver.tag_ = solution

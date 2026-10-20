@@ -826,6 +826,13 @@ class ControlDaemon:
                 if not isinstance(inner, str) or not isinstance(inner_args, dict):
                     break
                 nested_operation, nested_arguments = inner, inner_args
+            if nested_operation == "result.at_points" and isinstance(nested_arguments, dict):
+                # This request-dependent unit rule must fail before durable
+                # operation/job admission, not only later inside the adapter.
+                from ._g3_results import validate_native_default_unit_requests
+                point_spec = nested_arguments.get("spec")
+                if isinstance(point_spec, Mapping):
+                    validate_native_default_unit_requests(point_spec.get("expressions"), point_spec.get("units"))
             if operation in ARTIFACT_CONTROL_READS:
                 return self._dispatch_artifact_control_read(operation, arguments, execution)
             if operation in {"experiment.stage_define", "experiment_stage_define"}:
@@ -13354,6 +13361,12 @@ def _serve_control_listener(home, daemon, token, _scm_runtime, bootstrap_path, p
             except (BrokenPipeError, ConnectionResetError):
                 pass  # The durable job keeps running when its caller disappears.
             except Exception:
+                try:
+                    daemon._log_exception()
+                except Exception:
+                    # Diagnostics are best-effort; they must not replace the
+                    # stable transport response or cause request replay.
+                    pass
                 self.send_error(500, "internal control error")
         def log_message(self, *_): pass
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)

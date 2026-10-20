@@ -9,7 +9,7 @@ ledger is verified or the old file set is restored.
 from __future__ import annotations
 
 import argparse
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from datetime import datetime, timezone
 import hashlib
 import importlib.metadata
@@ -191,11 +191,210 @@ def _locked_home(value: str | os.PathLike[str]) -> Iterator[Path]:
         lock.close()
 
 
-def _readonly_connection(path: Path) -> sqlite3.Connection:
+def _sqlite_source_signature(value: os.stat_result) -> tuple[int, ...]:
+    return (value.st_dev, value.st_ino, value.st_mode, value.st_uid, value.st_nlink,
+            value.st_size, value.st_mtime_ns, value.st_ctime_ns)
+
+
+def _sqlite_source_member(path: Path) -> dict[str, Any] | None:
+    if os.name == "nt":
+        from ._windows_state_restore import source_member
+        return source_member(path)
+    _reject_symlink_components(path, "readonly SQLite source")
     try:
-        return sqlite3.connect(path.as_uri() + "?mode=ro", uri=True, timeout=5.0, isolation_level=None)
+        named = path.lstat()
+    except FileNotFoundError:
+        return None
+    if (not stat.S_ISREG(named.st_mode) or named.st_nlink < 1 or named.st_mode & 0o022
+            or (hasattr(os, "getuid") and named.st_uid != os.getuid())):
+        raise StateBackupError("DATABASE_SOURCE_UNSAFE", "readonly SQLite source is not a private regular file")
+    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    try:
+        first = os.fstat(descriptor)
+        if _sqlite_source_signature(first) != _sqlite_source_signature(named):
+            raise StateBackupError("DATABASE_SOURCE_CHANGED", "readonly SQLite source identity changed")
+        digest = hashlib.sha256()
+        while block := os.read(descriptor, 1024 * 1024):
+            digest.update(block)
+        last = os.fstat(descriptor)
+        if (_sqlite_source_signature(first) != _sqlite_source_signature(last)
+                or _sqlite_source_signature(first) != _sqlite_source_signature(path.lstat())):
+            raise StateBackupError("DATABASE_SOURCE_CHANGED", "readonly SQLite source changed during observation")
+        return {"signature": _sqlite_source_signature(first), "sha256": digest.hexdigest()}
+    finally:
+        os.close(descriptor)
+
+
+def _sqlite_source_closure(path: Path) -> dict[str, Any]:
+    result = {suffix: _sqlite_source_member(Path(str(path) + suffix)) for suffix in ("", "-wal", "-shm")}
+    if result[""] is None:
+        raise StateBackupError("DATABASE_REQUIRED", "readonly SQLite source database disappeared")
+    return result
+
+
+def _copy_sqlite_snapshot_member(source: Path, target: Path, expected: dict[str, Any]) -> None:
+    if os.name == "nt":
+        from ._windows_state_restore import copy_snapshot_member
+        return copy_snapshot_member(source, target, expected)
+    descriptor = os.open(source, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    output = None
+    try:
+        first = os.fstat(descriptor)
+        if _sqlite_source_signature(first) != expected["signature"]:
+            raise StateBackupError("DATABASE_SOURCE_CHANGED", "readonly SQLite source changed before copy")
+        output = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        digest = hashlib.sha256()
+        while block := os.read(descriptor, 1024 * 1024):
+            digest.update(block)
+            view = memoryview(block)
+            while view:
+                written = os.write(output, view)
+                if written <= 0:
+                    raise OSError("private SQLite copy write made no progress")
+                view = view[written:]
+        os.fsync(output)
+        if (digest.hexdigest() != expected["sha256"]
+                or _sqlite_source_signature(os.fstat(descriptor)) != expected["signature"]
+                or _sqlite_source_signature(source.lstat()) != expected["signature"]):
+            raise StateBackupError("DATABASE_SOURCE_CHANGED", "readonly SQLite source changed while copying")
+    finally:
+        os.close(descriptor)
+        if output is not None:
+            os.close(output)
+
+
+def _before_sqlite_snapshot_cleanup(root: Path) -> None:
+    """Deterministic race seam after member handles have been pinned."""
+
+
+def _cleanup_sqlite_snapshot(root: Path, identity: tuple[int, ...]) -> None:
+    if os.name == "nt":
+        from ._windows_state_restore import cleanup_snapshot
+        return cleanup_snapshot(root, identity)
+    _reject_symlink_components(root, "private SQLite snapshot")
+    named = root.lstat()
+    key = lambda value: (value.st_dev, value.st_ino, value.st_uid, value.st_mode)
+    if key(named) != identity or not stat.S_ISDIR(named.st_mode):
+        raise StateBackupError("DATABASE_COPY_CLEANUP_UNKNOWN", "private SQLite snapshot directory identity changed")
+    descriptor = os.open(root, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0))
+    members: dict[str, tuple[int, tuple[int, ...]]] = {}
+    try:
+        if key(os.fstat(descriptor)) != identity:
+            raise StateBackupError("DATABASE_COPY_CLEANUP_UNKNOWN", "private SQLite snapshot directory substituted")
+        names = os.listdir(root)
+        if not set(names) <= {DATABASE_NAME, DATABASE_NAME + "-wal", DATABASE_NAME + "-shm", DATABASE_NAME + "-journal"}:
+            raise StateBackupError("DATABASE_COPY_CLEANUP_UNKNOWN", "private SQLite snapshot has an unexpected member")
+        for name in names:
+            handle = os.open(name, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0), dir_fd=descriptor)
+            try:
+                before = os.fstat(handle)
+                bound = os.stat(name, dir_fd=descriptor, follow_symlinks=False)
+                if (not stat.S_ISREG(before.st_mode) or before.st_nlink != 1 or before.st_uid != named.st_uid
+                        or before.st_mode & 0o022 or _sqlite_source_signature(before) != _sqlite_source_signature(bound)):
+                    raise StateBackupError("DATABASE_COPY_CLEANUP_UNKNOWN", "private SQLite snapshot member is unsafe or substituted")
+                members[name] = (handle, _sqlite_source_signature(before))
+            except BaseException:
+                os.close(handle)
+                raise
+        _before_sqlite_snapshot_cleanup(root)
+        if key(root.lstat()) != identity or key(os.fstat(descriptor)) != identity or set(os.listdir(root)) != set(names):
+            raise StateBackupError("DATABASE_COPY_CLEANUP_UNKNOWN", "private SQLite snapshot path or membership substituted before cleanup")
+        # Verify the whole closure before deleting any member, then each original
+        # handle/name binding immediately before its unlink.
+        for name, (handle, first) in members.items():
+            if (_sqlite_source_signature(os.fstat(handle)) != first
+                    or _sqlite_source_signature(os.stat(name, dir_fd=descriptor, follow_symlinks=False)) != first):
+                raise StateBackupError("DATABASE_COPY_CLEANUP_UNKNOWN", "private SQLite snapshot named member changed")
+        for name, (handle, first) in members.items():
+            check = os.open(name, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0), dir_fd=descriptor)
+            try:
+                if (key(root.lstat()) != identity or key(os.fstat(descriptor)) != identity
+                        or _sqlite_source_signature(os.fstat(check)) != first
+                        or _sqlite_source_signature(os.fstat(handle)) != first
+                        or _sqlite_source_signature(os.stat(name, dir_fd=descriptor, follow_symlinks=False)) != first):
+                    raise StateBackupError("DATABASE_COPY_CLEANUP_UNKNOWN", "private SQLite snapshot unlink binding changed")
+                os.unlink(name, dir_fd=descriptor)
+            finally:
+                os.close(check)
+    finally:
+        for handle, _ in members.values():
+            os.close(handle)
+        os.close(descriptor)
+    if key(root.lstat()) != identity:
+        raise StateBackupError("DATABASE_COPY_CLEANUP_UNKNOWN", "private SQLite snapshot path changed before removal")
+    root.rmdir()
+
+
+class _PrivateReadonlyConnection(sqlite3.Connection):
+    """A query-only connection owning exactly its exclusive temporary copy."""
+
+    def close(self) -> None:
+        super().close()
+        root = getattr(self, "_snapshot_root", None)
+        if root is not None:
+            _cleanup_sqlite_snapshot(root, self._snapshot_identity)
+            self._snapshot_root = None
+
+
+def _private_readonly_connection(path: Path) -> sqlite3.Connection:
+    before = _sqlite_source_closure(path)
+    if os.name == "nt":
+        from ._windows_state_restore import private_copy_root
+        root, identity = private_copy_root()
+    else:
+        root = Path(tempfile.mkdtemp(prefix=".sqlite-readonly-copy-")).resolve(strict=True)
+        os.chmod(root, 0o700)
+        value = root.lstat()
+        identity = (value.st_dev, value.st_ino, value.st_uid, value.st_mode)
+    connection = None
+    try:
+        # DB and WAL form one stable observed closure. SHM is reconstructible;
+        # only the private SQLite copy may initialize it.
+        for suffix in ("", "-wal"):
+            if before[suffix] is not None:
+                _copy_sqlite_snapshot_member(Path(str(path) + suffix), root / (DATABASE_NAME + suffix), before[suffix])
+        if _sqlite_source_closure(path) != before:
+            raise StateBackupError("DATABASE_SOURCE_CHANGED", "SQLite DB/WAL/SHM closure changed across copying")
+        connection = sqlite3.connect((root / DATABASE_NAME).as_uri() + "?mode=rw", uri=True,
+                                     timeout=5.0, isolation_level=None, factory=_PrivateReadonlyConnection)
+        connection._snapshot_root = root
+        connection._snapshot_identity = identity
+        connection.execute("PRAGMA query_only=ON")
+        connection.execute("SELECT name FROM sqlite_master LIMIT 1").fetchall()
+        return connection
+    except BaseException as original_failure:
+        try:
+            if connection is not None:
+                connection.close()
+            else:
+                _cleanup_sqlite_snapshot(root, identity)
+        except BaseException as cleanup_failure:
+            failure = StateBackupError("DATABASE_COPY_CLEANUP_UNKNOWN",
+                                       "private SQLite failure and cleanup uncertainty are both retained",
+                                       recovery_path=str(root))
+            failure.original_cause = original_failure
+            failure.cleanup_failure = cleanup_failure
+            raise failure from original_failure
+        raise
+
+
+def _readonly_connection(path: Path) -> sqlite3.Connection:
+    connection = None
+    try:
+        connection = sqlite3.connect(path.as_uri() + "?mode=ro", uri=True, timeout=5.0, isolation_level=None)
+        # Probe an actual read before returning. SQLite can open a fresh WAL
+        # header yet reject its first query when the readonly VFS lacks SHM.
+        connection.execute("SELECT name FROM sqlite_master LIMIT 1").fetchall()
+        return connection
     except sqlite3.Error as exc:
-        raise StateBackupError("DATABASE_OPEN_FAILED", "SQLite database could not be opened read-only") from exc
+        if connection is not None:
+            connection.close()
+        if getattr(exc, "sqlite_errorcode", -1) & 0xff != sqlite3.SQLITE_CANTOPEN:
+            raise StateBackupError("DATABASE_OPEN_FAILED", "SQLite database could not be opened read-only") from exc
+        try:
+            return _private_readonly_connection(path)
+        except sqlite3.Error as fallback_error:
+            raise StateBackupError("DATABASE_OPEN_FAILED", "private SQLite snapshot could not be read") from fallback_error
 
 
 def _integrity_check(connection: sqlite3.Connection) -> None:
@@ -254,7 +453,8 @@ def _sha256(path: Path) -> str:
 
 def _fsync_file(path: Path) -> None:
     try:
-        with path.open("rb") as stream:
+        # Windows CRT commit needs write access to this already-owned output.
+        with path.open("r+b" if os.name == "nt" else "rb") as stream:
             os.fsync(stream.fileno())
     except OSError as exc:
         raise StateBackupError("DURABILITY_FAILED", "a database or receipt file could not be flushed") from exc
@@ -438,6 +638,7 @@ def create_backup(
         raise StateBackupError("DESTINATION_IN_CONTROL_HOME", "backup manifest must be outside the control home")
 
     target_created = False
+    preserve_generated_target = False
     manifest_created = False
     source: sqlite3.Connection | None = None
     target_db: sqlite3.Connection | None = None
@@ -451,8 +652,9 @@ def create_backup(
             _integrity_check(source)
             # Exclusive creation closes the TOCTOU gap between path checking and
             # SQLite's normal O_CREAT open behavior.
-            descriptor = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-            os.close(descriptor)
+            if any(Path(str(target) + suffix).exists() or Path(str(target) + suffix).is_symlink() for suffix in _BACKUP_SIDECAR_SUFFIXES):
+                raise StateBackupError("DESTINATION_EXISTS", "new backup target has a pre-existing sidecar")
+            target_birth = _exclusive_empty_file(target)
             target_created = True
             target_db = sqlite3.connect(target, timeout=5.0, isolation_level=None)
             source.backup(target_db)
@@ -463,6 +665,11 @@ def create_backup(
             target_schema = _inspect_schema(target_db)
             if target_schema != source_schema:
                 raise StateBackupError("BACKUP_SCHEMA_MISMATCH", "online backup schema differs from its source")
+            try:
+                standalone_cleanup = _finish_owned_standalone_sqlite(target, target_db, target_birth)
+            except BaseException:
+                preserve_generated_target = True
+                raise
             target_db.close()
             target_db = None
             source.close()
@@ -488,7 +695,8 @@ def create_backup(
             _publish_new_manifest_atomic(manifest_path, payload)
             manifest_created = True
             return {"success": True, "operation": "backup", "manifest": payload,
-                    "backup_path": str(target), "manifest_path": str(manifest_path)}
+                    "backup_path": str(target), "manifest_path": str(manifest_path),
+                    "standalone_sidecar_cleanup": standalone_cleanup}
     except Exception as exc:
         if target_db is not None:
             try:
@@ -503,7 +711,7 @@ def create_backup(
         publication_uncertain = isinstance(exc, _PublishedManifestError)
         if manifest_created:
             manifest_path.unlink(missing_ok=True)
-        if target_created and not publication_uncertain:
+        if target_created and not publication_uncertain and not preserve_generated_target:
             for path in (target, *(Path(str(target) + suffix) for suffix in _SIDECAR_SUFFIXES)):
                 try:
                     path.unlink(missing_ok=True)
@@ -748,6 +956,101 @@ def _tar_add_pinned_file(archive: tarfile.TarFile, path: Path, member_name: str,
         handle.close()
 
 
+def _sqlite_owned_file_identity(value: os.stat_result) -> tuple[int, ...]:
+    return (value.st_dev, value.st_ino, value.st_uid, value.st_mode, value.st_nlink)
+
+
+def _before_standalone_shm_unlink(target: Path, shm: Path) -> None:
+    """Deterministic race seam; no effects in production."""
+
+
+def _finish_owned_standalone_sqlite(target: Path, connection: sqlite3.Connection,
+                                    born_identity: tuple[int, ...]) -> dict[str, Any]:
+    """Remove only this exclusive generated DELETE target's orphaned SHM."""
+    if os.name == "nt":
+        from ._windows_state_restore import finish_standalone
+        return finish_standalone(target, connection, born_identity)
+    shm = Path(str(target) + "-shm")
+    wal = Path(str(target) + "-wal")
+    journal = Path(str(target) + "-journal")
+    if journal.exists() or journal.is_symlink():
+        raise StateBackupError("BACKUP_SIDECAR_REMAINS", "generated standalone target has an unexpected journal")
+    if wal.exists() or wal.is_symlink():
+        raise StateBackupError("BACKUP_SIDECAR_REMAINS", "generated standalone target still has WAL")
+    if not shm.exists() and not shm.is_symlink():
+        return {"action": "NO_SHM", "WAL_absent": True}
+    _reject_symlink_components(target, "generated standalone target")
+    _reject_symlink_components(shm, "generated standalone SHM")
+    parent = target.parent
+    parent_before = parent.lstat()
+    if (not stat.S_ISDIR(parent_before.st_mode) or parent_before.st_mode & 0o022
+            or parent_before.st_uid != os.getuid()):
+        raise StateBackupError("DATABASE_TARGET_CHANGED", "generated target parent permissions are unsafe")
+    parent_key = lambda v: (v.st_dev, v.st_ino, v.st_uid, v.st_mode)
+    directory = os.open(parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    target_fd = None
+    shm_fd = None
+    locked = False
+    try:
+        if parent_key(os.fstat(directory)) != parent_key(parent_before):
+            raise StateBackupError("DATABASE_TARGET_CHANGED", "generated target parent changed")
+        target_fd = os.open(target.name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=directory)
+        pinned_target = os.fstat(target_fd)
+        if (not stat.S_ISREG(pinned_target.st_mode) or _sqlite_owned_file_identity(pinned_target) != born_identity
+                or pinned_target.st_nlink != 1 or pinned_target.st_mode & 0o022
+                or pinned_target.st_uid != os.getuid()):
+            raise StateBackupError("DATABASE_TARGET_CHANGED", "generated target differs from its exclusive birth")
+        shm_fd = os.open(shm.name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=directory)
+        pinned_shm = os.fstat(shm_fd)
+        if (not stat.S_ISREG(pinned_shm.st_mode) or pinned_shm.st_nlink != 1
+                or pinned_shm.st_mode & 0o022 or pinned_shm.st_uid != pinned_target.st_uid):
+            raise StateBackupError("DATABASE_TARGET_CHANGED", "generated SHM is not an owned regular file")
+        connection.execute("BEGIN EXCLUSIVE")
+        locked = True
+        if str(connection.execute("PRAGMA journal_mode").fetchone()[0]).lower() != "delete":
+            raise StateBackupError("BACKUP_JOURNAL_MODE_FAILED", "generated target no longer has DELETE journal mode")
+        if os.pread(target_fd, 20, 0)[18:20] != b"\x01\x01":
+            raise StateBackupError("BACKUP_JOURNAL_MODE_FAILED", "generated target header is not standalone DELETE")
+        _integrity_check(connection)
+        schema = _inspect_schema(connection)
+        history = _history_fingerprint(connection)
+        before = {"target": _sqlite_source_member(target), "SHM": _sqlite_source_member(shm),
+                  "schema_version": schema, "history_sha256": history}
+        _before_standalone_shm_unlink(target, shm)
+        if journal.exists() or journal.is_symlink():
+            raise StateBackupError("BACKUP_SIDECAR_REMAINS", "journal appeared before generated SHM cleanup")
+        if wal.exists() or wal.is_symlink():
+            raise StateBackupError("BACKUP_SIDECAR_REMAINS", "WAL appeared before generated SHM cleanup")
+        if (parent_key(parent.lstat()) != parent_key(parent_before)
+                or parent_key(os.fstat(directory)) != parent_key(parent_before)
+                or _sqlite_source_signature(os.stat(target.name, dir_fd=directory, follow_symlinks=False)) != _sqlite_source_signature(os.fstat(target_fd))
+                or _sqlite_owned_file_identity(os.fstat(target_fd)) != born_identity
+                or _sqlite_source_signature(os.stat(shm.name, dir_fd=directory, follow_symlinks=False)) != _sqlite_source_signature(pinned_shm)
+                or _sqlite_source_signature(os.fstat(shm_fd)) != _sqlite_source_signature(pinned_shm)
+                or _sqlite_source_member(target) != before["target"]
+                or _sqlite_source_member(shm) != before["SHM"]):
+            raise StateBackupError("DATABASE_TARGET_CHANGED", "generated target or SHM was replaced or changed")
+        os.unlink(shm.name, dir_fd=directory)
+        _integrity_check(connection)
+        if _inspect_schema(connection) != schema or _history_fingerprint(connection) != history:
+            raise StateBackupError("DATABASE_TARGET_CHANGED", "generated database changed during SHM cleanup")
+        if _sqlite_source_member(target) != before["target"] or wal.exists() or shm.exists() or wal.is_symlink() or shm.is_symlink():
+            raise StateBackupError("BACKUP_SIDECAR_REMAINS", "generated standalone identity or sidecar gate failed")
+        return {"action": "REMOVED_OWNED_ORPHAN_SHM", "before": before,
+                "after": {"target": before["target"], "WAL_absent": True, "SHM_absent": True},
+                "exclusive_SQLite_transaction": True}
+    except sqlite3.Error as exc:
+        raise StateBackupError("STANDALONE_TARGET_BUSY", "generated SQLite target could not prove an exclusive transaction") from exc
+    finally:
+        if locked:
+            connection.execute("ROLLBACK")
+        if target_fd is not None:
+            os.close(target_fd)
+        if shm_fd is not None:
+            os.close(shm_fd)
+        os.close(directory)
+
+
 def _online_snapshot_database(source_path: Path, destination: Path) -> dict[str, Any]:
     source: sqlite3.Connection | None = None
     target: sqlite3.Connection | None = None
@@ -755,8 +1058,9 @@ def _online_snapshot_database(source_path: Path, destination: Path) -> dict[str,
         source = _readonly_connection(source_path)
         source_version = _inspect_schema(source)
         _integrity_check(source)
-        descriptor = os.open(destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-        os.close(descriptor)
+        if any(Path(str(destination) + suffix).exists() or Path(str(destination) + suffix).is_symlink() for suffix in _BACKUP_SIDECAR_SUFFIXES):
+            raise StateBackupError("DESTINATION_EXISTS", "new snapshot target has a pre-existing sidecar")
+        target_birth = _exclusive_empty_file(destination)
         target = sqlite3.connect(destination, timeout=5.0, isolation_level=None)
         source.backup(target)
         mode = target.execute("PRAGMA journal_mode=DELETE").fetchone()[0]
@@ -766,14 +1070,17 @@ def _online_snapshot_database(source_path: Path, destination: Path) -> dict[str,
         if _inspect_schema(target) != source_version:
             raise StateBackupError("BACKUP_SCHEMA_MISMATCH", "full backup database schema differs from its source")
         history_sha256 = _history_fingerprint(target)
+        standalone_cleanup = _finish_owned_standalone_sqlite(destination, target, target_birth)
         target.close()
         target = None
         source.close()
         source = None
+        if any(Path(str(destination) + suffix).exists() or Path(str(destination) + suffix).is_symlink() for suffix in _BACKUP_SIDECAR_SUFFIXES):
+            raise StateBackupError("BACKUP_SIDECAR_REMAINS", "generated full snapshot did not remain standalone after connection close")
         _fsync_file(destination)
         return {"sha256": _sha256(destination), "size_bytes": destination.stat().st_size,
                 "schema_version": source_version, "integrity_check": "ok",
-                "history_sha256": history_sha256}
+                "history_sha256": history_sha256, "standalone_sidecar_cleanup": standalone_cleanup}
     finally:
         if target is not None:
             target.close()
@@ -829,6 +1136,7 @@ def create_full_backup(
             assert_no_pending_restore(locked)
             database = _database_paths(locked, required=True)["database"]
             database_entry = _online_snapshot_database(database, snapshot)
+            standalone_cleanup = database_entry.pop("standalone_sidecar_cleanup")
             connection = _readonly_connection(snapshot)
             try:
                 projects = _project_rows_for_backup(connection)
@@ -906,7 +1214,7 @@ def create_full_backup(
                     "manifest_path": str(manifest_path), "archive_sha256": archive_sha256,
                     "archive_size_bytes": archive_size, "file_count": len(files),
                     "project_count": len(project_entries), "durable_history_sha256": database_entry["history_sha256"],
-                    "manifest": sidecar}
+                    "manifest": sidecar, "standalone_sidecar_cleanup": standalone_cleanup}
     except Exception as exc:
         receipt = {"schema": "comsol-mcp.full-state-backup-failure/1", "created_utc": _utc_now(),
                    "target": target.name, "manifest_target": manifest_path.name, "published_archive": published,
@@ -976,22 +1284,43 @@ def _verify_backup(
         raise
 
 
-def _exclusive_empty_file(path: Path) -> None:
+def _exclusive_empty_file(path: Path) -> tuple[int, ...]:
+    if os.name == "nt":
+        from ._windows_state_restore import birth_file
+        return birth_file(path)
     try:
         descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        born = _sqlite_owned_file_identity(os.fstat(descriptor))
         os.close(descriptor)
+        return born
     except FileExistsError as exc:
         raise StateBackupError("DESTINATION_EXISTS", "staging database path already exists") from exc
     except OSError as exc:
         raise StateBackupError("STAGING_CREATE_FAILED", "staging database could not be created") from exc
 
 
-def _finalize_database(path: Path, *, migrate: bool) -> None:
+def _close_windows_database_owner(owner: Any, primary: BaseException | None) -> None:
+    try:
+        owner.close()
+    except BaseException as secondary:
+        from ._windows_state_restore import retain_unknown
+        retain_unknown(None,primary if primary is not None else secondary,owner=owner)
+        failure = StateBackupError("RESTORE_ROLLBACK_INCOMPLETE", "original database owner close remains unknown")
+        failure.original_cause = primary if primary is not None else secondary
+        failure.original_database_owner = owner
+        failure.cleanup_failure = secondary
+        raise failure from secondary
+
+
+def _finalize_database(path: Path, *, migrate: bool, fresh_birth: tuple[int, ...] | None = None) -> dict[str, Any] | None:
     if migrate:
         from ._operation_store import OperationStore
 
         store = OperationStore(path)
-        store.close()
+        if os.name == "nt":
+            _close_windows_database_owner(store, None)
+        else:
+            store.close()
     connection = sqlite3.connect(path, timeout=5.0, isolation_level=None)
     try:
         connection.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchall()
@@ -1000,17 +1329,28 @@ def _finalize_database(path: Path, *, migrate: bool) -> None:
             raise StateBackupError("STAGE_FINALIZE_FAILED", "staged database did not enter DELETE journal mode")
         _integrity_check(connection)
         _inspect_schema(connection, allow_legacy_v1=False)
+        cleanup = (_finish_owned_standalone_sqlite(path, connection, fresh_birth)
+                   if fresh_birth is not None else None)
     finally:
-        connection.close()
+        if os.name == "nt":
+            _close_windows_database_owner(connection, sys.exc_info()[1])
+        else:
+            connection.close()
     for suffix in _SIDECAR_SUFFIXES:
         sidecar = Path(str(path) + suffix)
         if sidecar.exists() or sidecar.is_symlink():
             raise StateBackupError("STAGE_SIDECAR_REMAINS", "staged database is not a standalone file")
     _fsync_file(path)
     _fsync_directory(path.parent)
+    return cleanup
 
 
 def _copy_file_exclusive(source: Path, target: Path) -> None:
+    if os.name == "nt":
+        from ._windows_state_restore import source_member, copy_snapshot_member
+        proof = source_member(source)
+        if proof is None:raise StateBackupError("RECOVERY_COPY_FAILED", "Windows recovery source missing")
+        return copy_snapshot_member(source, target, proof)
     _reject_symlink_components(source, "recovery source")
     digest_before = _sha256(source)
     _exclusive_empty_file(target)
@@ -1086,8 +1426,11 @@ def _model_publication_journals(home: Path) -> list[tuple[str, Any]]:
             _copy_file_exclusive(wal, Path(str(snapshot) + "-wal"))
         # SHM is reconstructible from DB/WAL and can change merely because a
         # reader opens. Keep it out of the private copy and preserve live bytes.
-        connection = sqlite3.connect(f"file:{snapshot.as_posix()}?mode=ro", uri=True, timeout=5.0)
+        # SQLite may need to initialize WAL/SHM even for a read-only query.
+        # This exclusive private copy is writable; the live DB/WAL never is.
+        connection = sqlite3.connect(f"file:{snapshot.as_posix()}?mode=rw", uri=True, timeout=5.0)
         try:
+            connection.execute("PRAGMA query_only=ON")
             exists = connection.execute(
                 "SELECT 1 FROM sqlite_master WHERE type='table' AND name='revisions'"
             ).fetchone()
@@ -1250,7 +1593,7 @@ def _rollback_restore(home: Path, journal: dict[str, Any]) -> Path:
 
 def _stage_backup(home: Path, backup: Path) -> Path:
     stage = home / f".{DATABASE_NAME}.stage-{uuid4().hex}"
-    _exclusive_empty_file(stage)
+    fresh_birth = _exclusive_empty_file(stage)
     source: sqlite3.Connection | None = None
     target: sqlite3.Connection | None = None
     try:
@@ -1261,9 +1604,9 @@ def _stage_backup(home: Path, backup: Path) -> Path:
         target = None
         source.close()
         source = None
-        _finalize_database(stage, migrate=True)
+        _finalize_database(stage, migrate=True, fresh_birth=fresh_birth)
         return stage
-    except Exception:
+    except Exception as exc:
         if target is not None:
             try:
                 target.close()
@@ -1274,6 +1617,9 @@ def _stage_backup(home: Path, backup: Path) -> Path:
                 source.close()
             except sqlite3.Error:
                 pass
+        if isinstance(exc, StateBackupError) and exc.code in {"DATABASE_TARGET_CHANGED", "STANDALONE_TARGET_BUSY", "BACKUP_SIDECAR_REMAINS", "BACKUP_JOURNAL_MODE_FAILED"}:
+            exc.recovery_path = str(stage)
+            raise
         for candidate in (stage, *(Path(str(stage) + suffix) for suffix in _SIDECAR_SUFFIXES)):
             try:
                 candidate.unlink(missing_ok=True)
@@ -1652,23 +1998,8 @@ def _directory_identity_beneath(root: Path, relative: str, *,
                                 expected_root_identity: Mapping[str, Any] | None = None) -> dict[str, int]:
     parts = _safe_relative_parts(relative)
     if os.name == "nt":
-        from ._windows_parameter_publish import _API, pinned_parent
-        api = _API()
-        with pinned_parent(root, relative, add_directory=True, _api=api) as (
-                api, parent, _, binding):
-            expected = (_directory_identity(root) if expected_root_identity is None
-                        else (expected_root_identity.get("device"), expected_root_identity.get("inode")))
-            if binding[0][1] != expected:
-                raise StateBackupError("RESTORE_TARGET_CHANGED", "Windows directory root differs from its journal")
-            handle = api.open_child_directory(parent, parts[-1])
-            try:
-                identity = api.info(handle, directory=True)[0]
-                api.verify_named_binding(binding)
-                if api.named_identity(str(root.joinpath(*parts)), directory=True) != identity:
-                    raise StateBackupError("RESTORE_TARGET_CHANGED", "Windows directory name differs from its pinned handle")
-                return {"device": int(identity[0]), "inode": int(identity[1])}
-            finally:
-                api.close(handle)
+        from ._windows_state_restore import directory_identity
+        return directory_identity(root, relative, expected=expected_root_identity)
     descriptors: list[int] = []
     links: list[tuple[int, str, dict[str, int]]] = []
     try:
@@ -1752,43 +2083,8 @@ def _create_directory_tree(root: Path, relative: str, *,
         if existing_components != 0 or type(existing_components) is not int:
             raise StateBackupError("RESTORE_STAGE_UNSAFE", "existing directory prefix count is invalid")
     if os.name == "nt":
-        from ._windows_parameter_publish import _API
-        api = _API()
-        handles = []
-        try:
-            handle = api.open(str(root), directory=True, add_directory=True)
-            handles.append(handle)
-            root_id = api.info(handle, directory=True)[0]
-            expected = (_directory_identity(root) if expected_root_identity is None
-                        else (expected_root_identity.get("device"), expected_root_identity.get("inode")))
-            if root_id != expected:
-                raise StateBackupError("RESTORE_TARGET_CHANGED", "Windows restore root identity changed before directory creation")
-            current = handle
-            cursor = root
-            for index, part in enumerate(parts):
-                child = (api.open_child_directory(current, part, add_directory=True)
-                         if index < existing_components else api.create_child_directory(current, part))
-                handles.append(child)
-                identity = api.info(child, directory=True)[0]
-                cursor = cursor / part
-                if api.named_identity(str(cursor), directory=True) != identity:
-                    raise StateBackupError("RESTORE_TARGET_CHANGED", "Windows created directory name differs from its handle")
-                current = child
-            final = api.info(handles[-1], directory=True)[0]
-            return {"device": int(final[0]), "inode": int(final[1])}
-        except FileExistsError as exc:
-            raise StateBackupError("RESTORE_STAGE_COLLISION", "restore staging directory already exists") from exc
-        except StateBackupError:
-            raise
-        except Exception as exc:
-            raise StateBackupError("RESTORE_STAGE_UNSAFE", "Windows handle-relative directory creation failed") from exc
-        finally:
-            for handle in reversed(handles):
-                try:
-                    api.close(handle)
-                except OSError:
-                    pass
-
+        from ._windows_state_restore import create_tree
+        return create_tree(root, relative, expected=expected_root_identity, existing=existing_components)
     descriptors: list[int] = []
     links: list[tuple[int, str, dict[str, int]]] = []
     try:
@@ -1837,36 +2133,9 @@ def _rename_directory_noreplace(source_root: Path, source_relative: str,
     source_parts = _safe_relative_parts(source_relative)
     destination_parts = _safe_relative_parts(destination_relative)
     if os.name == "nt":
-        from ._windows_parameter_publish import _API, pinned_parent
-        api = _API()
-        with pinned_parent(source_root, source_relative, add_directory=True, _api=api) as (
-                api, source_parent, _, source_binding):
-            with pinned_parent(destination_root, destination_relative, add_directory=True, _api=api) as (
-                    api, destination_parent, _, destination_binding):
-                expected_source = (source_identity.get("device"), source_identity.get("inode"))
-                actual_source = api.open_child_directory(source_parent, source_parts[-1])
-                try:
-                    if api.info(actual_source, directory=True)[0] != expected_source:
-                        raise StateBackupError("RESTORE_TARGET_CHANGED", "Windows source directory identity changed before install")
-                    if source_binding[0][1] != (
-                            source_root_identity.get("device"), source_root_identity.get("inode")):
-                        raise StateBackupError("RESTORE_TARGET_CHANGED", "Windows source root identity changed")
-                    if destination_binding[0][1] != (
-                            destination_root_identity.get("device"), destination_root_identity.get("inode")):
-                        raise StateBackupError("RESTORE_TARGET_CHANGED", "Windows destination root identity changed")
-                    api.rename(actual_source, destination_parent, destination_parts[-1])
-                    installed = api.open_child_directory(destination_parent, destination_parts[-1])
-                    try:
-                        if api.info(installed, directory=True)[0] != expected_source:
-                            raise StateBackupError("RESTORE_TARGET_CHANGED", "Windows installed directory differs from its exact source handle")
-                    finally:
-                        api.close(installed)
-                    api.verify_named_binding(source_binding)
-                    api.verify_named_binding(destination_binding)
-                finally:
-                    api.close(actual_source)
-        return
-
+        from ._windows_state_restore import rename_directory
+        return rename_directory(source_root, source_relative, destination_root, destination_relative,
+            source_id=source_identity, source_root_id=source_root_identity, dest_root_id=destination_root_identity)
     source_fds: list[int] = []
     destination_fds: list[int] = []
     source_links: list[tuple[int, str, dict[str, int]]] = []
@@ -1940,7 +2209,7 @@ def _rename_directory_noreplace(source_root: Path, source_relative: str,
 def _write_tar_member_exclusive(archive: tarfile.TarFile, info: tarfile.TarInfo,
                                 target: Path, *, trusted_root: Path,
                                 expected_root_identity: Mapping[str, Any] | None,
-                                expected_sha256: str, expected_size: int) -> None:
+                                expected_sha256: str, expected_size: int, capture_birth: bool = False) -> tuple[int, ...] | None:
     """Stream one verified tar member through pinned root/parent handles."""
     try:
         relative = target.relative_to(trusted_root).as_posix()
@@ -1951,57 +2220,12 @@ def _write_tar_member_exclusive(archive: tarfile.TarFile, info: tarfile.TarInfo,
     if source is None:
         raise StateBackupError("FULL_BACKUP_MEMBER_INVALID", "archive member cannot be read")
     if os.name == "nt":
-        from ._windows_parameter_publish import _API, pinned_parent
-        api = _API()
+        from ._windows_state_restore import write_member
         try:
-            with pinned_parent(trusted_root, relative, add_file=True, _api=api) as (api, parent, _, binding):
-                root_identity = binding[0][1]
-                expected = (_directory_identity(trusted_root) if expected_root_identity is None
-                            else (expected_root_identity.get("device"), expected_root_identity.get("inode")))
-                if root_identity != expected:
-                    raise StateBackupError("RESTORE_TARGET_CHANGED", "Windows pinned extraction root differs from its journal")
-                handle = None
-                digest = hashlib.sha256()
-                total = 0
-                try:
-                    handle = api.create_owned(parent, parts[-1])
-                    while True:
-                        block = source.read(1024 * 1024)
-                        if not block:
-                            break
-                        total += len(block)
-                        if total > expected_size or total > MAX_FULL_BACKUP_FILE_BYTES:
-                            raise StateBackupError("FULL_BACKUP_MEMBER_MISMATCH", "archive member expanded past its declared size")
-                        digest.update(block)
-                        api.write(handle, block)
-                    api.flush(handle)
-                    if total != expected_size or digest.hexdigest() != expected_sha256:
-                        raise StateBackupError("FULL_BACKUP_MEMBER_HASH_MISMATCH", "archive member bytes differ from the manifest")
-                    read_hash, read_size = api.readback(handle)
-                    identity = api.source_fingerprint(handle)
-                    if read_hash != expected_sha256 or read_size != expected_size or identity[1] != expected_size:
-                        raise StateBackupError("FULL_BACKUP_MEMBER_HASH_MISMATCH", "Windows staged member failed same-handle readback")
-                    api.verify_named_binding(binding)
-                    if api.child_identity(parent, parts[-1]) != identity[0]:
-                        raise StateBackupError("RESTORE_TARGET_CHANGED", "Windows staged member name differs from its pinned handle")
-                except Exception as exc:
-                    if handle is not None:
-                        try:
-                            api.delete_owned(handle)
-                        except Exception as cleanup_exc:
-                            raise StateBackupError("RESTORE_STAGE_CLEANUP_UNKNOWN", "owned Windows staged member could not be safely removed") from cleanup_exc
-                    raise
-                finally:
-                    if handle is not None:
-                        api.close(handle)
-        except StateBackupError:
-            raise
-        except Exception as exc:
-            raise StateBackupError("RESTORE_STAGE_UNSAFE", "Windows handle-relative member extraction failed") from exc
+            return write_member(source, trusted_root, relative, expected_root=expected_root_identity,
+                                sha=expected_sha256, size=expected_size, capture_birth=capture_birth)
         finally:
             source.close()
-        return
-
     descriptors: list[int] = []
     links: list[tuple[int, str, dict[str, int]]] = []
     descriptor: int | None = None
@@ -2058,6 +2282,8 @@ def _write_tar_member_exclusive(archive: tarfile.TarFile, info: tarfile.TarInfo,
             raise StateBackupError("RESTORE_TARGET_CHANGED", "restore output name no longer identifies its opened file")
         _verify_posix_directory_links(links)
         os.fsync(current)
+        if capture_birth:
+            return _sqlite_owned_file_identity(final_info)
     except StateBackupError:
         if descriptor is not None and current >= 0 and created_identity is not None:
             try:
@@ -2090,6 +2316,9 @@ def _write_tar_member_exclusive(archive: tarfile.TarFile, info: tarfile.TarInfo,
 def _tree_file_inventory(root: Path) -> dict[str, tuple[str, int]]:
     from ._artifact_store import _hash_regular_artifact
 
+    if os.name == "nt":
+        from ._windows_state_restore import tree_inventory
+        return tree_inventory(root)
     if root.is_symlink() or not root.is_dir():
         raise StateBackupError("RECOVERY_PATH_INVALID", "full restore directory is missing or unsafe")
     files: dict[str, tuple[str, int]] = {}
@@ -2292,12 +2521,11 @@ def _remove_exact_directory(root: Path, relative: str, *, expected_identity: Map
                             allow_subset: bool = False, journal_home: Path,
                             journal: dict[str, Any], journal_root_relative: str = "") -> None:
     if os.name == "nt":
-        # The current Windows publisher can pin and move a directory handle,
-        # but the installed helper does not expose safe recursive deletion by
-        # that exact handle. Keep the durable recovery fence instead of
-        # resolving a pathname for deletion.
-        raise StateBackupError("RESTORE_CLEANUP_UNAVAILABLE",
-                               "Windows exact-handle recursive directory cleanup is unavailable; recovery remains fenced")
+        from ._windows_state_restore import remove_directory
+        return remove_directory(root, relative, expected_identity=expected_identity,
+            expected_root_identity=expected_root_identity, expected_files=expected_files,
+            allow_subset=allow_subset, journal_home=journal_home, journal=journal,
+            journal_root_relative=journal_root_relative)
     expected = {"device": expected_identity.get("device"), "inode": expected_identity.get("inode")}
     root_expected = {"device": expected_root_identity.get("device"),
                      "inode": expected_root_identity.get("inode")}
@@ -2517,6 +2745,9 @@ def _remove_exact_directory(root: Path, relative: str, *, expected_identity: Map
 
 
 def _directory_identity(path: Path) -> dict[str, int]:
+    if os.name == "nt":
+        from ._windows_state_restore import directory_identity
+        return directory_identity(path)
     try:
         info = path.lstat()
     except OSError as exc:
@@ -2662,7 +2893,23 @@ def _validate_rebound_database(database: Path, manifest: Mapping[str, Any], work
                 if result["sha256"] != file["sha256"] or result["size"] != file["size_bytes"]:
                     raise StateBackupError("ARTIFACT_HASH_MISMATCH", "ArtifactStore did not resolve the restored file identity")
     finally:
-        store.close()
+        if os.name == "nt":
+            _close_windows_database_owner(store, sys.exc_info()[1])
+        else:
+            store.close()
+
+
+def _windows_restore_invariants(path: Path) -> tuple[int, str, str]:
+    """Logical whole-stage data and schema, independent of WAL/DELETE headers."""
+    connection = _readonly_connection(path)
+    try:
+        _integrity_check(connection)
+        whole = hashlib.sha256()
+        for statement in connection.iterdump():
+            whole.update(statement.encode("utf-8") + b"\n")
+        return _inspect_schema(connection, allow_legacy_v1=False), _history_fingerprint(connection), whole.hexdigest()
+    finally:
+        _close_windows_database_owner(connection, sys.exc_info()[1])
 
 
 def _read_full_restore_journal(home: Path) -> dict[str, Any]:
@@ -2867,7 +3114,11 @@ def _rollback_full_restore(home: Path, journal: dict[str, Any]) -> Path:
         if (not isinstance(expected_db, str) or db_path.is_symlink() or not db_path.is_file()
                 or _sha256(db_path) != expected_db):
             raise StateBackupError("RESTORE_TARGET_CHANGED", "installed control database changed before rollback")
-        db_path.unlink()
+        if os.name == "nt":
+            from ._windows_state_restore import remove_file
+            remove_file(db_path, sha=expected_db, birth=journal.get("windows_database_birth"))
+        else:
+            db_path.unlink()
     for suffix in _SIDECAR_SUFFIXES:
         sidecar = Path(str(db_path) + suffix)
         if sidecar.exists() or sidecar.is_symlink():
@@ -2878,7 +3129,11 @@ def _rollback_full_restore(home: Path, journal: dict[str, Any]) -> Path:
         expected_stage = journal.get("staged_database_sha256")
         if staged_db.is_symlink() or not staged_db.is_file() or not isinstance(expected_stage, str) or _sha256(staged_db) != expected_stage:
             raise StateBackupError("RECOVERY_HASH_MISMATCH", "staged control database changed before recovery")
-        staged_db.unlink()
+        if os.name == "nt":
+            from ._windows_state_restore import remove_file
+            remove_file(staged_db, sha=expected_stage, birth=journal.get("windows_database_birth"))
+        else:
+            staged_db.unlink()
     _archive_full_restore_journal(home, recovery, journal, "ROLLED_BACK_TO_EMPTY_TARGET")
     return recovery
 
@@ -2914,7 +3169,9 @@ def restore_full_backup(
         pass
     from ._artifact_store import _assert_pinned_artifact_stable, _open_pinned_artifact, local_artifact_host_identity
 
-    with _locked_home(normalized_home) as locked:
+    from ._windows_state_restore import restore_scope, assert_no_unknown
+    scope = restore_scope(normalized_home,target_workspace) if os.name == "nt" else nullcontext()
+    with scope, _locked_home(normalized_home) as locked:
         assert_no_pending_restore(locked)
         _restore_empty_home(locked)
         _restore_empty_workspace(target_workspace)
@@ -2948,11 +3205,13 @@ def restore_full_backup(
                 by_member = {info.name: info for info in infos.values()}
                 db_info = by_member[manifest["database"]["member"]]
                 staged_db = recovery / DATABASE_NAME
-                _write_tar_member_exclusive(archive, db_info, staged_db,
+                staged_birth = _write_tar_member_exclusive(archive, db_info, staged_db,
                                             trusted_root=recovery,
                                             expected_root_identity=recovery_identity,
                                             expected_sha256=manifest["database"]["sha256"],
-                                            expected_size=manifest["database"]["size_bytes"])
+                                            expected_size=manifest["database"]["size_bytes"], capture_birth=True)
+                if os.name == "nt":
+                    journal["windows_database_birth"] = staged_birth
                 journal["staged_database_sha256"] = _sha256(staged_db)
                 if manifest["projects"]:
                     journal["staged_projects_parent_identity"] = _create_directory_tree(
@@ -2964,6 +3223,7 @@ def restore_full_backup(
                         expected_root_identity=journal["workspace_stage_identity"], existing_components=1)
                     journal["staged_project_directory_identities"][relative] = identity
                     _full_journal_write(locked, journal)
+                staged_file_parents: dict[str, dict[str, int]] = {}
                 for file in manifest["files"]:
                     info = by_member[file["member"]]
                     project = next(item for item in manifest["projects"] if item["project_id"] == file["project_id"])
@@ -2971,11 +3231,16 @@ def restore_full_backup(
                     file_parent = str(Path(str(file["relative_path"])).parent).replace("\\", "/")
                     parent_parts = () if file_parent in {"", "."} else tuple(file_parent.split("/"))
                     project_parts = tuple(project_relative.split("/"))
-                    if parent_parts:
-                        _create_directory_tree(stage,
-                            "/".join((*project_parts, *parent_parts)),
-                            expected_root_identity=journal["workspace_stage_identity"],
-                            existing_components=len(project_parts))
+                    for depth in range(1, len(parent_parts) + 1):
+                        relative_parent = "/".join((*project_parts, *parent_parts[:depth]))
+                        if relative_parent not in staged_file_parents:
+                            staged_file_parents[relative_parent] = _create_directory_tree(
+                                stage, relative_parent,
+                                expected_root_identity=journal["workspace_stage_identity"],
+                                existing_components=len(project_parts) + depth - 1)
+                        elif _directory_identity_beneath(stage, relative_parent,
+                                expected_root_identity=journal["workspace_stage_identity"]) != staged_file_parents[relative_parent]:
+                            raise StateBackupError("RESTORE_TARGET_CHANGED", "this restore's previously created file parent was replaced")
                     target = stage / project["target_workspace_relative"] / file["relative_path"]
                     _write_tar_member_exclusive(archive, info, target,
                                                 trusted_root=stage,
@@ -3039,7 +3304,7 @@ def restore_full_backup(
             journal["staged_database_sha256"] = _sha256(staged_db)
             journal["phase"] = "DATABASE_REBOUND"
             _full_journal_write(locked, journal)
-            _finalize_database(staged_db, migrate=True)
+            standalone_cleanup = _finalize_database(staged_db, migrate=True, fresh_birth=staged_birth)
             journal["staged_database_sha256"] = _sha256(staged_db)
             journal["phase"] = "DATABASE_FINALIZED"
             _full_journal_write(locked, journal)
@@ -3049,14 +3314,30 @@ def restore_full_backup(
                     raise StateBackupError("HISTORY_HASH_MISMATCH", "ledger history changed during project rebind")
             finally:
                 rebound_connection.close()
+            windows_invariants = _windows_restore_invariants(staged_db) if os.name == "nt" else None
             _validate_rebound_database(staged_db, manifest, target_workspace, target_host)
+            if os.name == "nt":
+                # OperationStore's actual validator re-enters WAL mode. Only
+                # after it confirms close may this owned stage be finalized.
+                journal["staged_database_sha256"] = _sha256(staged_db)
+                _full_journal_write(locked, journal)
+                standalone_cleanup = _finalize_database(staged_db, migrate=False, fresh_birth=staged_birth)
+                if _windows_restore_invariants(staged_db) != windows_invariants:
+                    raise StateBackupError("HISTORY_HASH_MISMATCH", "Windows validator/finalize changed whole staged data or schema")
+                journal["staged_database_sha256"] = _sha256(staged_db)
+                _full_journal_write(locked, journal)
             journal["installed_database_sha256"] = _sha256(staged_db)
             journal["staged_database_sha256"] = journal["installed_database_sha256"]
             journal["phase"] = "DATABASE_INSTALL_PENDING"
             _full_journal_write(locked, journal)
             live_db = locked / DATABASE_NAME
             try:
-                os.link(staged_db, live_db)
+                if os.name == "nt":
+                    from ._windows_state_restore import install_file
+                    install_file(staged_db, live_db, sha=journal["installed_database_sha256"],
+                                 birth=journal.get("windows_database_birth"))
+                else:
+                    os.link(staged_db, live_db)
             except FileExistsError as exc:
                 raise StateBackupError("RESTORE_TARGET_CHANGED", "control database destination appeared during restore") from exc
             except OSError as exc:
@@ -3083,10 +3364,17 @@ def restore_full_backup(
                     "durable_history_sha256": manifest["durable_history_sha256"],
                     "project_count": len(manifest["projects"]), "file_count": len(manifest["files"]),
                     "rebind_audit_path": str(recovery / "rebind-audit.json"),
+                    "standalone_sidecar_cleanup": standalone_cleanup,
                     "recovery_directory": str(recovery), "daemon_started": False,
                     "worker_or_model_bindings_revived": False, "operation_replay_performed": False,
                     "next_step": "configure the restored workspace root, attach a verified runtime, then explicitly load registered models"}
         except Exception as exc:
+            if os.name == "nt" and getattr(exc, "original_database_owner", None) is not None:
+                # Preserve this original connection/store and the pending
+                # journal. No rollback effects while its close is UNKNOWN.
+                raise
+            if os.name == "nt":
+                assert_no_unknown(locked,target_workspace)
             try:
                 current = _read_full_restore_journal(locked)
                 recovery = _rollback_full_restore(locked, current)
@@ -3114,12 +3402,17 @@ def restore_full_backup(
 def recover_full_restore(home: str | os.PathLike[str], *, confirm: bool) -> dict[str, Any]:
     if confirm is not True:
         raise StateBackupError("CONFIRM_REQUIRED", "full restore recovery requires the explicit --confirm flag")
-    with _locked_home(home) as locked:
+    normalized_home = _existing_directory(home, "control home")
+    from ._windows_state_restore import restore_scope, assert_no_unknown
+    scope = restore_scope(normalized_home) if os.name == "nt" else nullcontext()
+    with scope, _locked_home(normalized_home) as locked:
         path = locked / ACTIVE_FULL_RESTORE_JOURNAL
         _reject_symlink_components(path, "full restore journal")
         if not path.exists():
             raise StateBackupError("NO_PENDING_RESTORE", "no pending full restore journal exists")
         journal = _read_full_restore_journal(locked)
+        if os.name == "nt":
+            assert_no_unknown(locked,journal.get("workspace_root"))
         recovery = _rollback_full_restore(locked, journal)
         return {"success": True, "operation": "full_recover", "recovery_directory": str(recovery),
                 "daemon_started": False, "worker_or_model_bindings_revived": False}

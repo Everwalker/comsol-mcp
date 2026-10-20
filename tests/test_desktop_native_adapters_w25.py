@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import base64
+import gc
 import hashlib
 import json
 import os
@@ -10,6 +11,7 @@ import struct
 import sys
 import zlib
 from types import SimpleNamespace
+import weakref
 
 import pytest
 
@@ -19,7 +21,7 @@ from comsol_mcp._desktop_selector_profile import (
     PROFILE_SCHEMA, _require_security_evidence, _strict_json,
     load_selector_profile, validate_profile,
 )
-from comsol_mcp._desktop_service import DesktopModelObservation, DesktopOperationError, TrustedSourceArtifact, WindowIdentity
+from comsol_mcp._desktop_service import DesktopModelObservation, DesktopOperationError, TrustedSourceArtifact, WindowIdentity, WindowObservation, UNSUPPORTED_CONTROL
 from comsol_mcp._desktop_uia import WindowsUIAutomationGateway, _POWERSHELL
 from comsol_mcp._desktop_windows import WindowsDesktopAdapter
 
@@ -239,6 +241,322 @@ def test_selector_profile_rejects_duplicate_selectors_and_unobserved_states():
     bad["selectors"] = {"model_dirty": dict(dirty, states={"dirty": "same", "clean": "same"})}
     with pytest.raises(DesktopOperationError):
         validate_profile(bad, platform_name="macos", comsol_version=MAC_ID.comsol_version, os_build="23G93")
+
+
+def test_macos_show_model_preflight_is_operation_specific_and_endpoint_bound():
+    class Observer:
+        def enumerate_windows(self, _runtime_id=None):
+            return [WindowObservation(MAC_ID, "display hint", UNSUPPORTED_CONTROL)]
+
+    adapter = MacOSDesktopAdapter(gateway=SimpleNamespace(), identity_observer=Observer())
+    label = _selector("macos", "active_model_label", pattern="read", readback="value")
+    show = _selector("macos", "show_model", pattern="invoke")
+    adapter._profile = lambda _identity: {
+        "selectors": {"active_model_label": label, "show_model": show},
+        "profile_sha256": "a" * 64,
+    }
+    # Preserve the frozen profile scope: unrelated selectors are not required
+    # globally just to list the window. show_model has its own post-bind gate.
+    assert adapter.enumerate_windows()[0].control_status == "AVAILABLE"
+    with pytest.raises(DesktopOperationError) as missing_endpoint:
+        adapter.preflight_show_model(MAC_ID, SimpleNamespace(server_endpoint="127.0.0.1:2036"))
+    assert missing_endpoint.value.code == "MODEL_BINDING_UNKNOWN"
+
+    endpoint = _selector("macos", "active_server_endpoint", pattern="read", readback="value")
+    adapter._profile = lambda _identity: {
+        "selectors": {"active_model_label": label, "active_server_endpoint": endpoint, "show_model": show},
+        "profile_sha256": "a" * 64,
+    }
+    assert adapter.preflight_show_model(MAC_ID, SimpleNamespace(server_endpoint="127.0.0.1:2036")) == {
+        "ready": True, "profile_sha256": "a" * 64,
+    }
+
+
+def test_macos_selector_search_rejects_unreadable_subtree_even_after_one_match(monkeypatch):
+    found = {"identifier": "target", "role": "AXButton", "children": []}
+    hidden = {"identifier": "other", "role": "AXGroup", "children_unknown": True}
+    root = {"identifier": "root", "role": "AXWindow", "children": [found, hidden]}
+
+    class AX:
+        def __init__(self):
+            self.actions = []
+
+        def AXUIElementSetMessagingTimeout(self, _element, timeout):
+            assert timeout == 5.0
+            return 0
+
+        def AXUIElementCopyAttributeValue(self, element, name, _parameter):
+            if name == "AXChildren" and element.get("children_unknown"):
+                return -25212, None
+            key = {"AXIdentifier": "identifier", "AXRole": "role", "AXChildren": "children"}[name]
+            return 0, element.get(key)
+
+        def AXUIElementCopyActionNames(self, _element, _names):
+            self.actions.append("names")
+            return 0, ["AXPress"]
+
+        def AXUIElementPerformAction(self, _element, _action):
+            self.actions.append("perform")
+            return 0
+
+    ax = AX()
+    gateway = MacOSFrameworkGateway(lambda: (ax, SimpleNamespace()))
+    monkeypatch.setattr(gateway, "target_window", lambda _identity: root)
+    selector = {"kind": "ax", "pattern": "invoke", "properties": {"identifier": "target", "role": "AXButton"}}
+    with pytest.raises(DesktopOperationError) as caught:
+        gateway.perform_selector(MAC_ID, selector)
+    assert caught.value.code == "DESKTOP_SELECTOR_TREE_INCOMPLETE"
+    assert ax.actions == []
+
+
+def test_macos_selector_search_accepts_leaf_only_when_names_prove_children_absent(monkeypatch):
+    class NSArrayLike:
+        def __init__(self, values):
+            self.values = tuple(values)
+
+        def __len__(self):
+            return len(self.values)
+
+        def __getitem__(self, index):
+            return self.values[index]
+
+    target = {"identifier": "target", "role": "AXButton", "children_unsupported": True,
+              "supported_names": NSArrayLike(["AXIdentifier", "AXRole", "AXEnabled"])}
+    root = {"identifier": "root", "role": "AXWindow", "children": [target]}
+
+    class AX:
+        def __init__(self):
+            self.actions = []
+            self.attribute_name_reads = []
+            self.last_timeout_element = None
+
+        def AXUIElementSetMessagingTimeout(self, element, timeout):
+            assert timeout == 5.0
+            self.last_timeout_element = element
+            return 0
+
+        def AXUIElementCopyAttributeValue(self, element, name, _parameter):
+            if name == "AXChildren" and element.get("children_unsupported"):
+                return -25205, None
+            key = {"AXIdentifier": "identifier", "AXRole": "role", "AXChildren": "children"}[name]
+            return 0, element.get(key)
+
+        def AXUIElementCopyAttributeNames(self, element, _names):
+            assert self.last_timeout_element is element
+            self.attribute_name_reads.append(element)
+            return 0, element["supported_names"]
+
+        def AXUIElementCopyActionNames(self, _element, _names):
+            return 0, ["AXPress"]
+
+        def AXUIElementPerformAction(self, element, _action):
+            self.actions.append(element)
+            return 0
+
+    ax = AX()
+    gateway = MacOSFrameworkGateway(lambda: (ax, SimpleNamespace()))
+    monkeypatch.setattr(gateway, "target_window", lambda _identity: root)
+    selector = {"kind": "ax", "pattern": "invoke", "properties": {"identifier": "target", "role": "AXButton"}}
+    result = gateway.perform_selector(MAC_ID, selector)
+    assert result["performed"] is True
+    assert ax.attribute_name_reads == [target]
+    assert ax.actions == [target]
+
+
+def test_macos_selector_search_rejects_supported_but_unreadable_children(monkeypatch):
+    found = {"identifier": "target", "role": "AXButton", "children": []}
+    hidden = {"identifier": "other", "role": "AXGroup", "children_unsupported": True,
+              "supported_names": ["AXIdentifier", "AXRole", "AXChildren"]}
+    root = {"identifier": "root", "role": "AXWindow", "children": [found, hidden]}
+
+    class AX:
+        def __init__(self):
+            self.actions = []
+
+        def AXUIElementSetMessagingTimeout(self, _element, _timeout):
+            return 0
+
+        def AXUIElementCopyAttributeValue(self, element, name, _parameter):
+            if name == "AXChildren" and element.get("children_unsupported"):
+                return -25205, None
+            key = {"AXIdentifier": "identifier", "AXRole": "role", "AXChildren": "children"}[name]
+            return 0, element.get(key)
+
+        def AXUIElementCopyAttributeNames(self, element, _names):
+            return 0, element["supported_names"]
+
+        def AXUIElementCopyActionNames(self, _element, _names):
+            self.actions.append("names")
+            return 0, ["AXPress"]
+
+        def AXUIElementPerformAction(self, _element, _action):
+            self.actions.append("perform")
+            return 0
+
+    ax = AX()
+    gateway = MacOSFrameworkGateway(lambda: (ax, SimpleNamespace()))
+    monkeypatch.setattr(gateway, "target_window", lambda _identity: root)
+    selector = {"kind": "ax", "pattern": "invoke", "properties": {"identifier": "target", "role": "AXButton"}}
+    with pytest.raises(DesktopOperationError) as caught:
+        gateway.perform_selector(MAC_ID, selector)
+    assert caught.value.code == "DESKTOP_SELECTOR_TREE_INCOMPLETE"
+    assert caught.value.diagnostics["child_tree_status"] == "SUPPORTED_VALUE_UNREADABLE"
+    assert ax.actions == []
+
+
+@pytest.mark.parametrize("names_result", [
+    pytest.param((0, None), id="missing-array"),
+    pytest.param((0, ["AXIdentifier", 3]), id="malformed-entry"),
+    pytest.param((-25204, None), id="messaging-failure"),
+    pytest.param((0, [f"AXAttribute{i}" for i in range(257)]), id="over-limit"),
+])
+def test_macos_selector_search_fails_closed_when_leaf_names_are_not_proven(monkeypatch, names_result):
+    target = {"identifier": "target", "role": "AXButton", "children_unsupported": True}
+    root = {"identifier": "root", "role": "AXWindow", "children": [target]}
+
+    class AX:
+        def __init__(self):
+            self.actions = []
+
+        def AXUIElementSetMessagingTimeout(self, _element, _timeout):
+            return 0
+
+        def AXUIElementCopyAttributeValue(self, element, name, _parameter):
+            if name == "AXChildren" and element.get("children_unsupported"):
+                return -25205, None
+            key = {"AXIdentifier": "identifier", "AXRole": "role", "AXChildren": "children"}[name]
+            return 0, element.get(key)
+
+        def AXUIElementCopyAttributeNames(self, _element, _names):
+            return names_result
+
+        def AXUIElementCopyActionNames(self, _element, _names):
+            self.actions.append("names")
+            return 0, ["AXPress"]
+
+        def AXUIElementPerformAction(self, _element, _action):
+            self.actions.append("perform")
+            return 0
+
+    ax = AX()
+    gateway = MacOSFrameworkGateway(lambda: (ax, SimpleNamespace()))
+    monkeypatch.setattr(gateway, "target_window", lambda _identity: root)
+    selector = {"kind": "ax", "pattern": "invoke", "properties": {"identifier": "target", "role": "AXButton"}}
+    with pytest.raises(DesktopOperationError) as caught:
+        gateway.perform_selector(MAC_ID, selector)
+    assert caught.value.code == "DESKTOP_SELECTOR_TREE_INCOMPLETE"
+    assert ax.actions == []
+
+
+def test_macos_value_readback_failure_after_successful_set_is_uncertain_no_retry(monkeypatch):
+    target = {"identifier": "save-path", "role": "AXTextField", "children": []}
+
+    class AX:
+        def __init__(self):
+            self.setter_calls = []
+
+        def AXUIElementSetMessagingTimeout(self, _element, _timeout):
+            return 0
+
+        def AXUIElementCopyAttributeValue(self, element, name, _parameter):
+            if name == "AXValue":
+                return -25204, None
+            key = {"AXIdentifier": "identifier", "AXRole": "role", "AXChildren": "children"}[name]
+            return 0, element.get(key)
+
+        def AXUIElementSetAttributeValue(self, element, name, value):
+            self.setter_calls.append((element, name, value))
+            return 0
+
+    ax = AX()
+    gateway = MacOSFrameworkGateway(lambda: (ax, SimpleNamespace()))
+    monkeypatch.setattr(gateway, "target_window", lambda _identity: target)
+    selector = {"kind": "ax", "pattern": "value", "properties": {"identifier": "save-path", "role": "AXTextField"}}
+    with pytest.raises(DesktopOperationError) as caught:
+        gateway.set_selector_value(MAC_ID, selector, "/tmp/new.mph")
+    assert caught.value.code == "DESKTOP_VALUE_READBACK_UNKNOWN"
+    assert caught.value.side_effect_started is True
+    assert caught.value.safe_retry is False
+    assert caught.value.diagnostics["cause_code"] == "AX_ATTRIBUTE_UNAVAILABLE"
+    assert len(ax.setter_calls) == 1
+
+
+def test_macos_ax_action_timeout_is_reported_as_uncertain_without_retry(monkeypatch):
+    target = {"identifier": "target", "role": "AXButton", "children": []}
+
+    class AX:
+        def __init__(self):
+            self.actions = []
+
+        def AXUIElementSetMessagingTimeout(self, _element, _timeout):
+            return 0
+
+        def AXUIElementCopyAttributeValue(self, element, name, _parameter):
+            key = {"AXIdentifier": "identifier", "AXRole": "role", "AXChildren": "children"}[name]
+            return 0, element.get(key)
+
+        def AXUIElementCopyActionNames(self, _element, _names):
+            return 0, ["AXPress"]
+
+        def AXUIElementPerformAction(self, _element, _action):
+            self.actions.append("attempted")
+            return -25204
+
+    ax = AX()
+    gateway = MacOSFrameworkGateway(lambda: (ax, SimpleNamespace()))
+    monkeypatch.setattr(gateway, "target_window", lambda _identity: target)
+    selector = {"kind": "ax", "pattern": "invoke", "properties": {"identifier": "target", "role": "AXButton"}}
+    with pytest.raises(DesktopOperationError) as caught:
+        gateway.perform_selector(MAC_ID, selector)
+    assert caught.value.code == "DESKTOP_ACTION_UNVERIFIED"
+    assert caught.value.side_effect_started is True
+    assert caught.value.safe_retry is False
+    assert ax.actions == ["attempted"]
+
+
+def test_macos_ax_metadata_total_budget_expires_before_unbounded_read(monkeypatch):
+    import comsol_mcp._desktop_macos as macos_module
+
+    calls = []
+    times = iter((0.0, 31.0))
+    monkeypatch.setattr(macos_module, "time", SimpleNamespace(monotonic=lambda: next(times)))
+    ax = SimpleNamespace(AXUIElementCopyAttributeValue=lambda *_args: calls.append("read") or (0, []))
+    gateway = MacOSFrameworkGateway(lambda: (ax, SimpleNamespace()))
+    monkeypatch.setattr(gateway, "target_window", lambda _identity: {})
+    with pytest.raises(DesktopOperationError) as caught:
+        gateway.window_tree(MAC_ID)
+    assert caught.value.code == "AX_TREE_TIMEOUT"
+    assert calls == []
+
+
+def test_macos_ax_access_requires_per_element_timeout_api_before_remote_call():
+    calls = []
+    ax = SimpleNamespace(AXUIElementCopyAttributeValue=lambda *_args: calls.append("read") or (0, "value"))
+    gateway = MacOSFrameworkGateway(lambda: (ax, SimpleNamespace()))
+    with pytest.raises(DesktopOperationError) as caught:
+        gateway.attribute({}, "AXTitle")
+    assert caught.value.code == "AX_TIMEOUT_UNAVAILABLE"
+    assert calls == []
+
+
+def test_screencapture_timeout_discards_late_callback_result():
+    pending = []
+
+    class Payload:
+        pass
+
+    gateway = MacOSFrameworkGateway()
+    with pytest.raises(DesktopOperationError) as caught:
+        gateway._wait_callback(lambda callback: pending.append(callback), timeout_s=0.001)
+    assert caught.value.code == "SCREEN_CAPTURE_TIMEOUT"
+    assert caught.value.safe_retry is False
+    assert len(pending) == 1
+    payload = Payload()
+    reference = weakref.ref(payload)
+    pending[0](payload, None)
+    del payload
+    gc.collect()
+    assert reference() is None
 
 
 def test_profile_loader_refuses_missing_profile_before_any_platform_probe():
@@ -599,6 +917,25 @@ def test_macos_adapter_capture_returns_only_exact_window_scope(monkeypatch):
     assert wrong_region.value.code == "CAPTURE_SCOPE_REJECTED"
 
 
+def test_macos_capture_permission_preflight_does_not_load_capture_frameworks(monkeypatch):
+    calls = []
+
+    class Gateway:
+        def permissions(self):
+            calls.append("permission")
+            return {"screen_capture_allowed": False}
+
+    gateway = Gateway()
+    adapter = MacOSDesktopAdapter(gateway=gateway)
+    monkeypatch.setattr("comsol_mcp._desktop_macos.sys.platform", "darwin")
+    monkeypatch.setattr("comsol_mcp._desktop_macos.platform.mac_ver", lambda: ("14.2", ("", "", ""), ""))
+    with pytest.raises(DesktopOperationError) as caught:
+        adapter.preflight_capture(MAC_ID, "window")
+    assert caught.value.code == "PERMISSION_REQUIRED"
+    assert caught.value.category == "BLOCKED_PERMISSION"
+    assert calls == ["permission"]
+
+
 def test_macos_capture_refuses_pre_screencapturekit_os_before_permission_or_api(monkeypatch):
     class Gateway:
         calls = 0
@@ -667,6 +1004,10 @@ def test_macos_gateway_sets_only_exact_profiled_ax_value_and_reads_it_back(monke
             self.value = ""
             self.calls = []
 
+        def AXUIElementSetMessagingTimeout(self, _element, timeout):
+            self.calls.append(("timeout", timeout))
+            return 0
+
         def AXUIElementSetAttributeValue(self, element, name, value):
             self.calls.append(("set", name, value))
             element[name] = value
@@ -683,10 +1024,11 @@ def test_macos_gateway_sets_only_exact_profiled_ax_value_and_reads_it_back(monke
     selector = _selector("macos", "save_path", pattern="value", readback="value")
     result = gateway.set_selector_value(MAC_ID, selector, "/project/copy.mph")
     assert result == {"set": True, "selector_id": "save_path", "readback": "/project/copy.mph"}
-    assert ax.calls == [("set", "AXValue", "/project/copy.mph"), ("read", "AXValue")]
+    assert ax.calls == [("timeout", 5.0), ("set", "AXValue", "/project/copy.mph"),
+                        ("timeout", 5.0), ("read", "AXValue")]
     with pytest.raises(DesktopOperationError):
         gateway.set_selector_value(MAC_ID, dict(selector, pattern="read"), "/project/copy.mph")
-    assert len(ax.calls) == 2
+    assert len(ax.calls) == 4
 
 
 def test_macos_gateway_save_copy_uses_only_three_observed_selectors(tmp_path, monkeypatch):
@@ -792,3 +1134,36 @@ def test_platform_save_copy_requires_observed_completion_before_any_native_dialo
         adapter.save_copy(WINDOWS_ID, tmp_path / "must-not-write.mph", source)
     assert caught.value.code == "DESKTOP_SELECTOR_UNAVAILABLE"
     assert gateway.effects == []
+
+
+@pytest.mark.parametrize("platform", ["windows", "macos"])
+@pytest.mark.parametrize("endpoint", ["127.0.0.1:2036", "127.0.0.1:9999", None],
+                         ids=["exact", "mismatch", "absent"])
+def test_native_active_server_endpoint_observation_is_preserved_for_binding_gate(monkeypatch, platform, endpoint):
+    selectors = {
+        "active_model_label": _selector(platform, "active_model_label", pattern="read", readback="value"),
+    }
+    if endpoint is not None:
+        selectors["active_server_endpoint"] = _selector(
+            platform, "active_server_endpoint", pattern="read", readback="value",
+        )
+
+    class Gateway:
+        def read(self, _identity, selector):
+            return {"active_model_label": "owned-copy", "active_server_endpoint": endpoint}[selector["selector_id"]]
+
+        def read_selector(self, _identity, selector):
+            return {"active_model_label": "owned-copy", "active_server_endpoint": endpoint}[selector["selector_id"]]
+
+    if platform == "windows":
+        adapter = WindowsDesktopAdapter(gateway=Gateway())
+        identity = WINDOWS_ID
+    else:
+        adapter = MacOSDesktopAdapter(gateway=Gateway())
+        identity = MAC_ID
+    monkeypatch.setattr(adapter, "_profile", lambda _identity: {"selectors": selectors})
+
+    observed = adapter.observe_model(identity)
+    assert observed.mode == "UNVERIFIED"
+    assert observed.active_model_label == "owned-copy"
+    assert observed.server_endpoint == endpoint

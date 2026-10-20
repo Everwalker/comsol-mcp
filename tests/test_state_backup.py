@@ -1085,3 +1085,19 @@ def test_startup_gate_refuses_any_pending_restore_journal(tmp_path):
     with pytest.raises(StateBackupError) as exc:
         assert_no_pending_restore(home)
     assert exc.value.code == "RESTORE_RECOVERY_REQUIRED"
+
+
+def test_full_restore_registered_siblings_reuses_only_its_created_parent(tmp_path):
+    from comsol_mcp._artifact_store import register_project_artifact, local_artifact_host_identity, local_engine_host_identity
+    home=tmp_path/'home';work=tmp_path/'work';project_id,_,_,project=_seed_full_state(home,work)
+    project_root=Path(project['workspace']);source=project_root/'inputs/second.mph'
+    with zipfile.ZipFile(source,'w') as archive:archive.writestr('model/second.txt','distinct second registered software fixture')
+    store=OperationStore(home/DATABASE_NAME)
+    try:
+        register_project_artifact(project_root,store,'inputs/second.mph',project_id=project_id,role='saved_model',classification='project_local',host_identity=local_artifact_host_identity(),engine_host_identity=local_engine_host_identity('127.0.0.1:2040'),request_id='second-artifact',registering_operation_id='artifact.register',artifact_type='application/vnd.comsol.mph',format_version='comsol-mph-savecopy/1')
+    finally:store.close()
+    out=tmp_path/'out';out.mkdir();backed=create_full_backup(home,out/'full.tar');assert backed['file_count']==2
+    target=tmp_path/'target';workspace=tmp_path/'restored';target.mkdir();workspace.mkdir()
+    restored=restore_full_backup(target,workspace,backed['archive_path'],backed['manifest_path'],confirm=True)
+    assert restored['file_count']==2 and restored['durable_history_sha256']==backed['durable_history_sha256']
+    assert len(list(workspace.rglob('g2_artifacts/registered/*.mph')))==2

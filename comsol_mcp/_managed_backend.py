@@ -11,6 +11,8 @@ import os
 from pathlib import Path
 import re
 import socket
+import subprocess
+import sys
 import tempfile
 import time
 from typing import Any, Mapping
@@ -79,6 +81,12 @@ class _RuntimeObservationBinding:
     legacy: bool
     comsol_version: str | None
     configured_version: str | None
+    worker_process: Any
+    worker_process_pid: int | None
+    worker_process_start_epoch_ms: int | None
+    worker_process_argv_sha256: str | None
+    worker_state_dir: str | None
+    worker_native_owner: Any | None = None
 
     def identity(self) -> dict[str, Any]:
         return {name: getattr(self, name) for name in (
@@ -1418,9 +1426,79 @@ class ManagedBackend:
                 version = ".".join(str(part) for part in (*family, build["value"]))
         except Exception:
             pass # Preserve the original live attach; unavailable build stays UNVERIFIED.
+        worker_process = getattr(self.worker, "_process", None)
+        worker_process_pid = None
+        worker_process_start_epoch_ms = None
+        worker_process_argv_sha256 = None
+        worker_state_dir = None
+        worker_native_owner = None
+        if sys.platform == "darwin" and os.name != "nt" and type(worker_process) is subprocess.Popen:
+            try:
+                process_pid = worker_process.pid
+                args = worker_process.args
+                if (type(process_pid) is int and process_pid > 1
+                        and type(args) in (list, tuple) and args
+                        and all(type(arg) is str and "\x00" not in arg for arg in args)
+                        and worker_process.poll() is None):
+                    from ._platform_process import process_identity
+                    observed = process_identity(process_pid, platform_name="darwin")
+                    if (isinstance(observed, Mapping) and observed.get("alive") is True
+                            and type(observed.get("start_epoch_ms")) is int
+                            and observed["start_epoch_ms"] > 0):
+                        worker_process_pid = process_pid
+                        worker_process_start_epoch_ms = observed["start_epoch_ms"]
+                        worker_process_argv_sha256 = hashlib.sha256(json.dumps(
+                            list(args), ensure_ascii=False, separators=(",", ":"),
+                        ).encode("utf-8")).hexdigest()
+                        state_dir = getattr(self.worker, "state_dir", None)
+                        if isinstance(state_dir, (str, os.PathLike)) and not Path(state_dir).is_symlink():
+                            worker_state_dir = str(Path(state_dir).resolve(strict=True))
+            except Exception:
+                # The attach itself remains authoritative for its live Worker;
+                # the new G2 adapter will refuse if this optional fixed birth
+                # binding could not be recorded.
+                worker_process_pid = None
+                worker_process_start_epoch_ms = None
+                worker_process_argv_sha256 = None
+                worker_state_dir = None
+        elif (sys.platform == "win32" or os.name == "nt"):
+            try:
+                from ._windows_t037 import _native_g2_session_launch_owner
+                from ._platform_process import process_identity
+                owner = _native_g2_session_launch_owner(worker_process)
+                if owner is not None and owner.role == "worker":
+                    birth, exited = owner.api.process_times(owner.process_handle)
+                    start_epoch_ms = birth // 10000 - 11644473600000
+                    process_pid = owner.pid
+                    observed = process_identity(process_pid, platform_name="nt")
+                    args = owner.argv
+                    if (exited is None and birth == owner.birth_filetime_100ns
+                            and worker_process.poll() is None
+                            and isinstance(observed, Mapping) and observed.get("alive") is True
+                            and observed.get("start_epoch_ms") == start_epoch_ms
+                            and type(start_epoch_ms) is int and start_epoch_ms > 0
+                            and tuple(getattr(worker_process, "args", ())) == args):
+                        state_dir = getattr(self.worker, "state_dir", None)
+                        if (isinstance(state_dir, (str, os.PathLike))
+                                and not Path(state_dir).is_symlink()):
+                            worker_process_pid = process_pid
+                            worker_process_start_epoch_ms = start_epoch_ms
+                            worker_process_argv_sha256 = owner.argv_sha256
+                            worker_state_dir = str(Path(state_dir).resolve(strict=True))
+                            worker_native_owner = owner
+            except Exception:
+                # Keep attach ownership authoritative; G2 remains closed unless
+                # this exact HANDLE, birth, argv and private state are bound.
+                worker_process_pid = None
+                worker_process_start_epoch_ms = None
+                worker_process_argv_sha256 = None
+                worker_state_dir = None
+                worker_native_owner = None
         self._runtime_observation_binding = _RuntimeObservationBinding(
             self.worker, self.service, installation_id, runtime_id, worker_instance_id,
-            connection_epoch, server_instance_id, endpoint, legacy, version, configured_version)
+            connection_epoch, server_instance_id, endpoint, legacy, version, configured_version,
+            worker_process, worker_process_pid, worker_process_start_epoch_ms,
+            worker_process_argv_sha256, worker_state_dir, worker_native_owner)
 
     def _bound_runtime_observation_identity(self, binding) -> dict[str, Any]:
         from ._runtime_installation import runtime_id_for_root
@@ -1690,11 +1768,33 @@ class ManagedBackend:
         self.worker.start()
 
     def _require_g2_isolation(self) -> dict[str, Any]:
+        selected = active_session_context()
+        if selected is not None and sys.platform == "darwin" and os.name != "nt":
+            from ._g2_isolation import verify_session_owned_server
+            return verify_session_owned_server(
+                selected, backend=self, worker=self.worker, service=self.service,
+            )
+
+        # The new session-owned process adapter is scoped to macOS. Windows
+        # HANDLE owners and all unsupported platforms remain available only
+        # through the pre-existing explicit receipt adapter; a failed macOS
+        # session proof never falls back to that process-global path.
         receipt = configured_receipt()
         if receipt is None:
-            raise ExecutionContractError("ISOLATION_PROOF_REQUIRED", "this G2 model mutation requires a configured owned-server isolation receipt")
+            raise ExecutionContractError(
+                "ISOLATION_PROOF_REQUIRED",
+                "this G2 model mutation requires an active owned session or an explicit legacy isolation receipt",
+                stage="validation",
+                details={"target_operation_dispatched": False,
+                         "worker_operation_dispatched": False,
+                         "legacy_receipt_required": True},
+            )
         if not self.endpoint_key:
-            raise ExecutionContractError("ISOLATION_PROOF_REQUIRED", "current COMSOL endpoint is not bound")
+            raise ExecutionContractError(
+                "ISOLATION_PROOF_REQUIRED", "current COMSOL endpoint is not bound",
+                stage="validation", details={"target_operation_dispatched": False,
+                                               "worker_operation_dispatched": False},
+            )
         owner = getattr(self.worker, "_coupled_admission_owner", None) if self.worker is not None else None
         if owner is not None:
             from tools.w24_coupled_admission import require_admission_owner
@@ -2156,6 +2256,18 @@ class ManagedBackend:
             try:
                 tree = _model_tree_data(model)
             except Exception as exc:
+                from ._java_worker import JavaWorkerError, JavaWorkerTimeout
+                if isinstance(exc, JavaWorkerError) and (
+                        isinstance(exc, JavaWorkerTimeout) or exc.execution_state_unknown
+                        or exc.reply.get("status") == "UNKNOWN"):
+                    details = {"cause_type": type(exc).__name__}
+                    for key in ("request_id", "transport_stage", "errno"):
+                        if key in exc.reply:
+                            details[key] = exc.reply[key]
+                    raise ExecutionContractError(
+                        "EXECUTION_STATE_UNKNOWN", "COMSOL model structure request state is unknown",
+                        safe_retry=False, details=details, stage="post_dispatch",
+                    ) from exc
                 raise ExecutionContractError(
                     "MODEL_INSPECTION_UNAVAILABLE",
                     "COMSOL model structure readback failed",
@@ -3261,8 +3373,11 @@ class ManagedBackend:
         return result
 
     def _run_g2_action(self, operation: str, model_tag: str, body: dict[str, Any], operation_id: str, *, model_revision: int | None = None) -> dict[str, Any]:
-        if operation == "node.inspect": data = inspect_node(self.worker, model_tag, body.get("path", {}), include_values=bool(body.get("include_values", False)))
-        elif operation == "node.children": data = children_node(self.worker, model_tag, body.get("path", {}), cursor=body.get("cursor"), limit=body.get("limit", 100), model_revision=model_revision)
+        if operation == "node.inspect": data = inspect_node(
+            self.worker, model_tag, body.get("path", {}),
+            include_values=body.get("include_values", False),
+            include_properties=body.get("include_properties", True))
+        elif operation == "node.children": data = children_node(self.worker, model_tag, body.get("path", {}), cursor=body.get("cursor"), limit=body.get("limit", 100), model_revision=model_revision, collection=body.get("collection"))
         elif operation == "node.find": data = find_nodes(self.worker, model_tag, body.get("query", {}), root=body.get("root"), limit=body.get("limit", 100), cursor=body.get("cursor"), model_revision=model_revision, budget=body.get("budget"))
         elif operation == "node.property_schema": data = property_schema(self.worker, model_tag, body.get("path", {}), body.get("name"))
         elif operation == "node.property_get": data = property_get(self.worker, model_tag, body.get("path", {}), body.get("names", []))
@@ -3773,6 +3888,12 @@ class ManagedBackend:
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
         if metadata.get("sha256") and digest != metadata["sha256"]:
             raise ExecutionContractError("ARTIFACT_MISSING", "checkpoint hash does not match durable metadata")
+        old_binding = self.model_project_binding(ref.as_dict())
+        trusted_project = old_binding.get("project_id") if old_binding.get("attribution") == "PROJECT_BOUND" else None
+        requested_project = execution.get("project_id")
+        if (trusted_project is not None and (not isinstance(trusted_project, str) or not trusted_project
+                or requested_project != trusted_project)) or (trusted_project is None and requested_project is not None):
+            raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "checkpoint restore requires the original exact ModelRef project binding")
         old_tag = ref.model_tag
         new_tag = "mcp_restore_" + str(metadata.get("sha256", operation_id))[:16]
         if new_tag in {str(tag) for tag in self.worker.client().tags()}:
@@ -3784,14 +3905,36 @@ class ManagedBackend:
             _set_current_model(new_model, origin="checkpoint-restore", requested_path=str(path))
             old_ref = ref.as_dict()
             bound = self.service.bind_model(new_tag, ownership="mcp_owned")
-        except Exception:
+        except Exception as exc:
+            newly_bound = self.service.ledger._models.get(new_tag)
+            if newly_bound is not None:
+                # bind_model may already own the new exact ref when its state
+                # persistence callback fails. Keep it; do not remove/adopt it.
+                state.dirty = True
+                newly_bound.dirty = True
+                raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "checkpoint restore binding failed after load",
+                    stage="post_dispatch", details={"cause_type": type(exc).__name__, "old_model_ref": ref.as_dict(),
+                        "model_ref": newly_bound.ref.as_dict(), "safe_retry": False}) from exc
             try:
                 self.worker.client().remove(new_tag)
             except Exception as cleanup_exc:
                 raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "restore target cleanup failed after checkpoint bind failure") from cleanup_exc
             raise
-        self.service.ledger.retire_model(ref)
-        self.persist()
+        try:
+            if trusted_project is not None:
+                self._bind_model_project(bound["execution"]["model_ref"], trusted_project)
+            self.service.ledger.retire_model(ref)
+            self.persist()
+        except Exception as exc:
+            # The original SDK load/bind already happened. Preserve both
+            # objects and dirty the actual states; never claim a safe retry.
+            for tag in (old_tag, new_tag):
+                state = self.service.ledger._models.get(tag)
+                if state is not None:
+                    state.dirty = True
+            raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "checkpoint restore project binding persistence failed after load",
+                stage="post_dispatch", details={"cause_type": type(exc).__name__, "old_model_ref": old_ref,
+                    "model_ref": bound["execution"]["model_ref"], "safe_retry": False}) from exc
         return {"success": True, "data": {"checkpoint_id": checkpoint_id, "restored_path": str(path), "old_model_ref": old_ref, "model_ref": bound["execution"]["model_ref"], "generation_advanced": True,
             "dirty_override": dirty_override,
             "restore_scope": metadata.get("restore_scope", {"model_settings": True, "solution": False, "external_dependencies": False, "gui_state": "unknown"})}, "execution": bound["execution"]}

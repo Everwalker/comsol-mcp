@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Prepare and execute one bounded, zero-explicit-solve W23 saved-MPH readback.
+"""Prepare and execute one bounded, zero-solve W23 saved-MPH read-only audit.
 
-This runner reopens only the exact Activity009 provisional MPH in a fresh,
-task-owned project. It compares managed dataset.solution_indices with direct
-typed Java readback, resolves documented BMA/store/dataset bindings, and uses
-the production result.at_points route to read saved fields only. It never
-submits Study.run or a solver run and never saves or modifies the source model.
+The R21 direction-discovery candidate reopens only the exact Activity009
+provisional MPH in a fresh task-owned project, enumerates actual Port/BMA and
+solver/dataset links through public node reads, and recomputes prior R20 signed
+observables offline. It never evaluates fields, submits Study/solver work, or
+modifies/resaves the source model.
 """
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ import hashlib
 import importlib
 import json
 import math
+import re
 import stat
 import os
 import shutil
@@ -25,10 +26,11 @@ import traceback
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from tools import native_runtime_binding as fresh_runtime
 from tools.w23_original_owner_hold import W23OriginalOwnerHold
+from tools import w23_direction_discovery as direction
 from tools import run_native_w23_te_science as science
 from tools import w23_te_science_protocol as protocol
 
@@ -38,13 +40,15 @@ FIXTURE = REPO / "tools/java/NativeW23TEScienceFixture.java"
 PLAN = REPO / "docs/full_project_execution/w23_overlap/W23_TE_FIXTURE_PROPOSAL.md"
 TEST = REPO / "tests/test_native_w23_saved_mph_diagnostic.py"
 EVIDENCE_ROOT = REPO / "docs/full_project_execution/w23_overlap/evidence"
-ACTIVITY_ID = "w23-saved-mph-zero-solve-readback-20261013-022"
-CANDIDATE_ID = "W23-TE-SAVED-MPH-ZERO-SOLVE-READBACK-20"
-CANDIDATE_REVISION = "candidate20-r15"
-PROJECT_LABEL = f"W23 Activity009 saved-MPH zero-solve diagnostic {ACTIVITY_ID} {CANDIDATE_REVISION}"
+ACTIVITY_ID = "w23-saved-mph-direction-discovery-20261015-001"
+CANDIDATE_ID = "W23-TE-PORT-BMA-DIRECTION-DISCOVERY-READONLY-23"
+CANDIDATE_REVISION = "candidate23-direction-r1"
+PROJECT_LABEL = f"W23 Activity009 saved-MPH Port/BMA direction discovery {ACTIVITY_ID} {CANDIDATE_REVISION}"
 SOURCE_MODEL = Path("/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_009_candidate17_r2/private-control-store/activity009-r2/saved-models/w23_coarse-phase0_provisional.mph")
 SOURCE_MODEL_SHA256 = "cba0c1d404003c4e60a20b04316cb1456c38cc2b45596dc2dc29bbed62674a8c"
 SOURCE_MODEL_BYTES = 13_795_478
+R20_DIRECTION_REPORT = Path("/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w23-zero8-r20/MODE_DIRECTION_SIGNED_POWER_REPORT_R1.json")
+R20_DIRECTION_REPORT_SHA256 = "d6e00907e77b4a6d331a54e6b8ccb84d1eb7cbc19377b440231624cd157e9b38"
 SOURCE_RECONCILIATION = Path("/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_009_candidate17_r2/ACTIVITY009_R2_RECONCILIATION.json")
 SOURCE_RECONCILIATION_SHA256 = "9e2fe93acbc4a67bc0f87c8c93b2a02e695f03ea3ffcda9512a2eab99dcca7a3"
 ROOT_PRESERVATION_CHECK = Path("/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w23_native_run_20261012_009_candidate17_r2/ROOT_PRESERVATION_CLEANUP_CHECK009_R2.json")
@@ -53,9 +57,12 @@ ACTIVITY010_PRESERVATION_CHECK = Path("/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONT
 ACTIVITY010_PRESERVATION_CHECK_SHA256 = "871bc390e64136c5c2b0caaf7a07a6ddc4d8a3169b41cef899718a2446b04492"
 MAX_BIRTH_SECONDS = 1800.0
 CLEANUP_RESERVE_SECONDS = 120.0
+MAX_RESULT_AT_POINTS_CALLS = 8
+MAX_R21_RESULT_AT_POINTS_CALLS = 0
 ALLOWED_MANAGED_OPERATIONS = frozenset({
-    "server_connect", "model_load", "model.inspect",
-    "dataset.list", "dataset.solution_indices", "operation_call",
+    "server_connect", "model_load", "model.inspect", "dataset.list",
+    "dataset.solution_indices",
+    "operation_call",
 })
 ALLOWED_OPERATION_CALL_IDS = frozenset({"code.execute_java", "result.at_points"})
 STUDY_SEQUENCE_TYPES = (
@@ -65,12 +72,66 @@ STUDY_SEQUENCE_TYPES = (
 def fresh_budget() -> dict[str, Any]:
     return {"max_owned_server_processes": 1, "max_worker_sessions": 1,
             "max_gui_processes": 0, "max_study_run_calls": 0, "max_solver_run_calls": 0,
+            "max_result_at_points_calls": MAX_R21_RESULT_AT_POINTS_CALLS,
             "max_seconds_from_server_birth": int(MAX_BIRTH_SECONDS),
             "cleanup_reserve_seconds": int(CLEANUP_RESERVE_SECONDS), "diagnostic_only": True}
 
+
+def direction_graph_is_resolved(graph: Mapping[str, Any], *,
+                                expected_prefix: str = direction.EXPECTED_W23_FIELD_PREFIX) -> bool:
+    """Return whether the public-read graph clears the diagnostic completeness gate."""
+    if not isinstance(graph, Mapping):
+        return False
+    waves = graph.get("electromagnetic_waves")
+    namespace = waves.get("namespace_correlation") if isinstance(waves, Mapping) else None
+    ports = graph.get("port_name_binding_status")
+    bindings = graph.get("bma_solution_bindings")
+    return (
+        isinstance(namespace, Mapping)
+        and direction.physics_namespace_is_resolved(namespace, expected_prefix=expected_prefix)
+        and isinstance(ports, Mapping) and bool(ports)
+        and all(value == "UNIQUE_EXACT_PORT_NAME" for value in ports.values())
+        and isinstance(bindings, list) and bool(bindings)
+        and all(row.get("status") == "UNIQUE_EXACT_LINK"
+                for row in bindings if isinstance(row, Mapping))
+        and all(isinstance(row, Mapping) for row in bindings)
+    )
+
 def _activity(freeze: Mapping[str, Any]) -> str:
     binding = freeze.get("fresh_runtime_binding")
-    return ("w23-saved-mph-zero-solve-readback-" + binding["activity_id"]) if binding else ACTIVITY_ID
+    return ("w23-saved-mph-direction-discovery-" + binding["activity_id"]) if binding else ACTIVITY_ID
+
+
+def _fresh_candidate_identity(binding: Mapping[str, Any]) -> dict[str, str]:
+    activity_token = binding.get("activity_id")
+    if not isinstance(activity_token, str):
+        raise RuntimeError("fresh candidate identity requires the validated canonical activity UUID")
+    try:
+        canonical_activity_token = str(UUID(activity_token))
+    except ValueError as exc:
+        raise RuntimeError("fresh candidate identity requires the validated canonical activity UUID") from exc
+    if canonical_activity_token != activity_token:
+        raise RuntimeError("fresh candidate identity requires the validated canonical activity UUID")
+    activity_id = "w23-saved-mph-direction-discovery-" + activity_token
+    candidate_id = "W23-TE-PORT-BMA-DIRECTION-DISCOVERY-" + activity_token
+    candidate_revision = "candidate-" + activity_token + "-direction-r1"
+    return {
+        "activity_id": activity_id,
+        "candidate_id": candidate_id,
+        "candidate_revision": candidate_revision,
+        "project_label": f"W23 Activity009 saved-MPH Port/BMA direction discovery {activity_id} {candidate_revision}",
+        "activity_token": activity_token,
+    }
+
+
+def _bind_fresh_candidate_identity(binding: Mapping[str, Any]) -> dict[str, str]:
+    identity = _fresh_candidate_identity(binding)
+    global ACTIVITY_ID, CANDIDATE_ID, CANDIDATE_REVISION, PROJECT_LABEL
+    ACTIVITY_ID = identity["activity_id"]
+    CANDIDATE_ID = identity["candidate_id"]
+    CANDIDATE_REVISION = identity["candidate_revision"]
+    PROJECT_LABEL = identity["project_label"]
+    return identity
 
 
 def plane_field_expressions(port: str) -> tuple[str, ...]:
@@ -87,10 +148,18 @@ FIELD_UNITS = {
     **{f"down(emw.H{axis})": "A/m" for axis in "xyz"},
     **{f"emw.Emode{axis}_{suffix}": "V/m" for axis in "xyz" for suffix in ("1", "2")},
     **{f"emw.Hmode{axis}_{suffix}": "A/m" for axis in "xyz" for suffix in ("1", "2")},
+    # The consumer accepts either the historical explicit unit "1" or the
+    # exact native-default empty string for these normal expressions. The
+    # requested-unit witness binds which path was used; it does not equate them.
     "emw.nx": ("1", ""), "emw.ny": ("1", ""),
 }
 def plane_field_units(port: str) -> tuple[str, ...]:
-    return tuple(FIELD_UNITS[e] if isinstance(FIELD_UNITS[e], str) else FIELD_UNITS[e][0] for e in plane_field_expressions(port))
+    return tuple("" if e in {"emw.nx", "emw.ny"} else FIELD_UNITS[e]
+                 for e in plane_field_expressions(port))
+def plane_field_legacy_units(port: str) -> tuple[str, ...]:
+    """Retain the old explicit normal-unit request for stored consumers."""
+    return tuple("1" if e in {"emw.nx", "emw.ny"} else FIELD_UNITS[e]
+                 for e in plane_field_expressions(port))
 FIELD_REQUESTED_UNITS = plane_field_units("2")
 def plane_selection(port: str) -> dict[str, Any]:
     return {"kind":"named","component":"comp1","geometry":"geom1","entity_dimension":1,
@@ -145,14 +214,22 @@ def _source_files() -> dict[str, dict[str, Any]]:
         rows[path.relative_to(REPO).as_posix()] = {"path": str(path.resolve()), "bytes": path.stat().st_size, "sha256": sha256_file(path)}
     additional = (
         Path(__file__).resolve(),
+        (REPO / "tools/w23_direction_discovery.py").resolve(),
         (REPO / "tools/native_runtime_binding.py").resolve(),
         (REPO / "tests/test_native_w23_saved_mph_diagnostic.py").resolve(),
+        (REPO / "tests/test_w23_r21_direction_discovery.py").resolve(),
         (REPO / "tests/test_w23_fresh_import_home.py").resolve(),
         (REPO / "tools/w23_original_owner_hold.py").resolve(),
         (REPO / "tests/test_w23_original_owner_hold.py").resolve(),
         (REPO / "tests/test_native_w23_te_science_protocol.py").resolve(),
         (REPO / "tests/test_native_w23_te_science_runner.py").resolve(),
+        (REPO / "tests/test_unit_a_node_public_api.py").resolve(),
+        (REPO / "tests/test_g2_registry_packaging.py").resolve(),
+        (REPO / "tests/test_g2_security_guards.py").resolve(),
+        (REPO / "docs/comsol_mcp_design_v1/02_ACTION_CATALOG.json").resolve(),
+        (REPO / "docs/full_project_execution/contract/02_ACTION_CATALOG.json").resolve(),
         (REPO / "tests/test_g3_results.py").resolve(),
+        (REPO / "tests/test_interp_native_default_units.py").resolve(),
         (REPO / "docs/comsol_mcp_design_v1/common.schema.json").resolve(),
         PLAN.resolve(),
         (REPO / "tests/test_saved_mph_offline_materialization.py").resolve(),
@@ -192,13 +269,66 @@ def _source_digest(rows: Mapping[str, Any]) -> str:
     return science._source_manifest_sha256(rows)
 
 
+def _validate_diagnostic_scope(freeze: Mapping[str, Any]) -> None:
+    limits = freeze.get("limits")
+    plan = freeze.get("read_only_call_plan")
+    if not isinstance(limits, Mapping) or not isinstance(plan, Mapping):
+        raise RuntimeError("R21 freeze lacks closed direction-discovery limits or read-only call plan")
+    if plan.get("mode") == "direction_discovery_only":
+        try:
+            direction.validate_direction_limits(plan)
+        except direction.DirectionDiscoveryError as exc:
+            raise RuntimeError(str(exc)) from exc
+        if (limits.get("max_result_at_points_calls") != MAX_R21_RESULT_AT_POINTS_CALLS
+                or limits.get("max_study_run_calls") != 0
+                or limits.get("max_solver_run_calls") != 0
+                or plan.get("native_operation_budget") != {
+                    "Study.run": 0, "solver.run": 0, "result.at_points": 0,
+                    "node.property_set": 0, "code.execute_java": 0, "model.save": 0}
+                or plan.get("legacy_r20_point_call_limit") != MAX_RESULT_AT_POINTS_CALLS
+                or plan.get("offline_quadrature") != {
+                    "method": "composite Simpson", "coarse_points": 641,
+                    "fine_points": 1281, "relative_tolerance": 1e-3}
+                or protocol.INTEGRAL_RELATIVE_TOLERANCE != 1e-3):
+            raise RuntimeError("R21 must be zero-point/zero-Study/zero-solver with the R20 641/1281 Simpson 1e-3 protocol retained offline")
+        return
+    # The prior R20 saved-MPH candidate keeps its exact eight result-point
+    # contract. R21's stricter budget is selected only by its explicit mode.
+    expected_slots = ["freq_Hz", "freq_GHz", "fields_output_x8_641", "fields_output_x8_1281",
+                      "fields_input_xminus10_641", "fields_input_xminus10_1281",
+                      "mode_point_bmaInput", "mode_point_bmaOutput"]
+    expected_quadrature = {"method": "composite Simpson", "coarse_points": 641,
+                           "fine_points": 1281, "relative_tolerance": 1e-3}
+    if (limits.get("max_result_at_points_calls") != MAX_RESULT_AT_POINTS_CALLS
+            or limits.get("max_study_run_calls") != 0 or limits.get("max_solver_run_calls") != 0
+            or plan.get("ordered_point_slots") != expected_slots
+            or plan.get("quadrature_refinement") != expected_quadrature
+            or protocol.INTEGRAL_RELATIVE_TOLERANCE != 1e-3):
+        raise RuntimeError("legacy saved-MPH readback must preserve its eight 641/1281 point slots and Simpson 1e-3 tolerance")
+
+
 def _assert_source_inputs() -> dict[str, Any]:
     references = {
         "source_model": (SOURCE_MODEL, SOURCE_MODEL_BYTES, SOURCE_MODEL_SHA256),
         "source_reconciliation": (SOURCE_RECONCILIATION, None, SOURCE_RECONCILIATION_SHA256),
         "root_preservation_check": (ROOT_PRESERVATION_CHECK, None, ROOT_PRESERVATION_CHECK_SHA256),
         "activity010_preservation_check": (ACTIVITY010_PRESERVATION_CHECK, None, ACTIVITY010_PRESERVATION_CHECK_SHA256),
+        "r20_direction_report": (R20_DIRECTION_REPORT, None, R20_DIRECTION_REPORT_SHA256),
     }
+    prior_direction = json.loads(R20_DIRECTION_REPORT.read_text(encoding="utf-8"))
+    field_rows = prior_direction.get("raw_EH_mode_and_signal_Poynting", {}).get("field_files")
+    if not isinstance(field_rows, list) or len(field_rows) != 4:
+        raise RuntimeError("frozen R20 direction report must identify exactly four raw field files")
+    for row in field_rows:
+        if not isinstance(row, Mapping) or row.get("plane") not in {"input", "output"}:
+            raise RuntimeError("frozen R20 direction report has a malformed field-file row")
+        count = row.get("sample_count")
+        if type(count) is not int or count not in protocol.SAVED_MPH_QUADRATURE_SAMPLE_COUNTS:
+            raise RuntimeError("frozen R20 direction report field grid differs from 641/1281")
+        label = f"r20_{row['plane']}_{count}"
+        if label in references:
+            raise RuntimeError("frozen R20 direction report contains a duplicate field row")
+        references[label] = (Path(row["field_file"]), None, row.get("field_file_sha256"))
     result: dict[str, Any] = {}
     for label, (path, expected_bytes, expected_sha) in references.items():
         if not path.is_file() or path.is_symlink():
@@ -210,6 +340,28 @@ def _assert_source_inputs() -> dict[str, Any]:
         result[label] = {"path": str(path), "bytes": observed_bytes,
                          "sha256": observed_sha, "status": "PASS_EXACT_INPUT_IDENTITY"}
     return result
+
+
+def _offline_r20_direction_report() -> dict[str, Any]:
+    """Recompute signed direction observables from exact preserved R20 arrays only."""
+    prior = json.loads(R20_DIRECTION_REPORT.read_text(encoding="utf-8"))
+    rows = prior["raw_EH_mode_and_signal_Poynting"]["field_files"]
+    raw_fields: dict[int, dict[str, Path]] = {}
+    expected_hashes: dict[str, str] = {}
+    for row in rows:
+        count = int(row["sample_count"])
+        plane = "input" if row["plane"] == "input" else "output"
+        if count not in raw_fields:
+            raw_fields[count] = {}
+        if plane in raw_fields[count]:
+            raise RuntimeError("frozen R20 direction report has a duplicate plane/grid raw field")
+        path = Path(row["field_file"])
+        raw_fields[count][plane] = path
+        expected_hashes[str(path)] = str(row["field_file_sha256"])
+    return direction.offline_signed_poynting_report(
+        raw_fields=raw_fields, expected_hashes=expected_hashes,
+        prior_report=R20_DIRECTION_REPORT,
+        expected_prior_sha256=R20_DIRECTION_REPORT_SHA256)
 
 
 def _native_argv(freeze_path: Path, freeze_sha256: str, approval_path: Path,
@@ -307,7 +459,7 @@ def _validate_literal_capture_entry(script_path: Path, metadata: Mapping[str, An
         "script_sha256":sha256_file(script_path),"actual_approval_path":path,"native":"NOT_RUN","Rootapproval":"REFERENCE_ONLY"}
 
 
-def _strict_test_environment(evidence: Path) -> dict[str, str]:
+def _strict_test_environment(evidence: Path, *, activity_id: str | None = None) -> dict[str, str]:
     guard = Path("/Volumes/SSD/Comsol-MCP/execution-scratch/temp-loss-runtime-recovery-20261004-001/builder-preparation022/network-guard")
     if not guard.is_dir():
         raise FileNotFoundError(f"required strict offline test guard is unavailable: {guard}")
@@ -315,14 +467,293 @@ def _strict_test_environment(evidence: Path) -> dict[str, str]:
     env["TMPDIR"] = "/private/tmp"
     env["PYTHONPATH"] = os.pathsep.join((str(guard), str(REPO)))
     env["CODEX_NETWORK_GUARD_LOG"] = str(evidence / "diagnostic-network-guard.jsonl")
-    env["CODEX_NETWORK_GUARD_LABEL"] = f"w23_{ACTIVITY_ID}_{CANDIDATE_REVISION}_focused"
-    env["CODEX_NETWORK_GUARD_RUN_ID"] = f"{ACTIVITY_ID}-{CANDIDATE_REVISION}-focused-001"
+    activity_id = activity_id or ACTIVITY_ID
+    env["CODEX_NETWORK_GUARD_LABEL"] = f"w23_{activity_id}_{CANDIDATE_REVISION}_focused"
+    env["CODEX_NETWORK_GUARD_RUN_ID"] = f"{activity_id}-{CANDIDATE_REVISION}-focused-001"
     return env
 
 
-def _compile_and_test(evidence: Path, *, binding: Mapping[str, Any] | None = None) -> dict[str, Any]:
+def _r13_inherited_base_record() -> dict[str, Any]:
+    base_root = science.W23_R13_BASE_ROOT
+    manifest_path = base_root / "prepare/source_manifest.json"
+    junit_path = base_root / "prepare/offline_gates/activity024_focused_junit.xml"
+    compile_path = base_root / "prepare/offline_gates/compile.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    junit_counts = science._junit_counts(junit_path)
+    if (sha256_file(manifest_path) != science.W23_R13_BASE_SOURCE_MANIFEST_SHA256
+            or sha256_file(junit_path) != science.W23_R13_BASE_JUNIT_SHA256
+            or sha256_file(compile_path) != science.W23_R13_BASE_COMPILE_SHA256
+            or manifest.get("source_manifest_sha256") != science.W23_R13_BASE_SOURCE_MAP_SHA256
+            or manifest.get("source_count") != science.W23_R13_BASE_SOURCE_COUNT
+            or junit_counts != {"tests": science.W23_R13_BASE_TEST_COUNT,
+                                "failures": 0, "errors": 0, "skipped": 0}):
+        raise RuntimeError("pinned R13 baseline source/JUnit/compile identity changed")
+    return {
+        "candidate_id": science.W23_R13_BASE_CANDIDATE_ID,
+        "candidate_revision": science.W23_R13_BASE_CANDIDATE_REVISION,
+        "activity_id": science.W23_R13_BASE_ACTIVITY_ID,
+        "source_manifest_path": str(manifest_path),
+        "source_manifest_sha256": science.W23_R13_BASE_SOURCE_MANIFEST_SHA256,
+        "source_map_sha256": science.W23_R13_BASE_SOURCE_MAP_SHA256,
+        "source_count": science.W23_R13_BASE_SOURCE_COUNT,
+        "junit_path": str(junit_path),
+        "junit_sha256": science.W23_R13_BASE_JUNIT_SHA256,
+        "junit_counts": junit_counts,
+        "compile_receipt_sha256": science.W23_R13_BASE_COMPILE_SHA256,
+    }
+
+
+def _source_delta_from_r13(current_files: Mapping[str, Any]) -> dict[str, Any]:
+    base_path = science.W23_R13_BASE_ROOT / "prepare/source_manifest.json"
+    base = json.loads(base_path.read_text(encoding="utf-8"))["source_files"]
+    common_changes = []
+    for name in sorted(set(base) & set(current_files)):
+        before = science._source_content_row(base[name], label=f"R13 {name}")
+        after = science._source_content_row(current_files[name], label=f"candidate {name}")
+        if before != after:
+            common_changes.append({"path": name, "base_bytes": before[0],
+                                  "base_sha256": before[1], "candidate_bytes": after[0],
+                                  "candidate_sha256": after[1]})
+    additions = []
+    for name in sorted(set(current_files) - set(base)):
+        size, digest = science._source_content_row(current_files[name], label=f"candidate {name}")
+        additions.append({"path": name, "candidate_bytes": size, "candidate_sha256": digest})
+    return {"common_path_changes": common_changes, "added_paths": additions,
+            "removed_paths": sorted(set(base) - set(current_files))}
+
+
+def _run_focused_delta_tests(offline: Path, *, binding: Mapping[str, Any] | None,
+                             current_full: bool = False,
+                             expected_source_manifest_sha256: str | None = None) -> dict[str, Any]:
+    if current_full:
+        test_paths = [
+            REPO / "tests/test_interp_native_default_units.py",
+            REPO / "tests/test_w23_r21_direction_discovery.py",
+            REPO / "tests/test_unit_a_node_public_api.py::test_named_public_property_schema_reads_has_property_before_typed_metadata_and_get",
+            REPO / "tests/test_unit_a_node_public_api.py::test_named_public_property_schema_reports_absent_or_unknown_before_metadata",
+            REPO / "tests/test_native_w23_te_science_protocol.py::test_requested_native_default_allowlist_includes_only_exact_neff_and_xy_normals",
+            REPO / "tests/test_native_w23_te_science_protocol.py::test_bma_neff_native_default_is_exact_and_legacy_dimensionless_request_stays_valid",
+            REPO / "tests/test_native_w23_te_science_protocol.py::test_saved_mph_641_to_1281_quadrature_refinement_is_a_separate_explicit_gate",
+            REPO / "tests/test_native_w23_te_science_protocol.py::test_inherited_offline_delta_validator_positive_and_negative_controls",
+            REPO / "tests/test_native_w23_te_science_protocol.py::test_current_full_offline_receipt_positive_and_negative_controls",
+            REPO / "tests/test_native_w23_te_science_protocol.py::test_offline_preflight_current_full_binds_gate_hashes_same_map",
+            REPO / "tests/test_native_w23_saved_mph_diagnostic.py::test_saved_field_and_bma_point_reads_allow_only_the_frozen_dataset_grid_and_expressions",
+            REPO / "tests/test_native_w23_saved_mph_diagnostic.py::test_direction_freeze_binds_zero_reads_and_preserved_offline_quadrature",
+            REPO / "tests/test_native_w23_saved_mph_diagnostic.py::test_saved_mph_freeze_binds_641_1281_eight_reads_zero_solve_and_fixed_tolerance",
+            REPO / "tests/test_native_w23_saved_mph_diagnostic.py::test_direction_discovery_mode_never_opens_or_stages_java_fixture",
+            REPO / "tests/test_native_w23_saved_mph_diagnostic.py::test_current_full_runner_packages_source_bound_gate_receipt",
+            REPO / "tests/test_native_w23_saved_mph_diagnostic.py::test_fresh_direction_identity_uses_binding_uuid_instead_of_old_static_ids",
+            REPO / "tests/test_native_w23_saved_mph_diagnostic.py::test_legacy_fixture_stage_restores_exact_private_copy_for_legacy_mode",
+            REPO / "tests/test_native_w23_saved_mph_diagnostic.py::test_legacy_fixture_stage_refuses_existing_target_and_wrong_frozen_hash",
+            REPO / "tests/test_native_w23_saved_mph_diagnostic.py::test_completed_point_projection_keeps_verified_calls_separate_from_unknown_attempts",
+            REPO / "tests/test_native_w23_saved_mph_diagnostic.py::test_query_once_persists_unknown_point_attempt_without_completed_native_call",
+            REPO / "tests/test_native_w23_saved_mph_diagnostic.py::test_outer_guard_retains_any_live_original_popen_for_blocked_or_unknown_cleanup",
+            REPO / "tests/test_native_w23_saved_mph_diagnostic.py::test_outer_guard_does_not_hold_when_all_original_children_are_already_terminal",
+            REPO / "tests/test_native_w23_saved_mph_diagnostic.py::test_outer_guard_treats_unobservable_original_children_as_active",
+            REPO / "tests/test_native_w23_te_science_runner.py::test_socket_owner_gate_keeps_loopback_time_wait_inactive_and_not_a_worker_peer",
+            REPO / "tests/test_native_w23_te_science_runner.py::test_socket_owner_gate_rejects_external_time_wait_even_when_state_is_inactive",
+            REPO / "tests/test_native_w23_te_science_runner.py::test_direct_rpc_journal_separates_managed_requests_and_keeps_unknown_terminal_blocker",
+            REPO / "tests/test_native_w23_te_science_runner.py::test_durable_unknown_cleanup_idle_requires_terminal_rpc_fresh_health_and_exact_endpoint",
+            REPO / "tests/test_g3_results.py::test_w23_decoder_consumes_actual_requested_unit_native_adapter_witness",
+            REPO / "tests/test_g3_results.py::test_real_only_port_scalars_require_actual_adapter_flag_and_exact_validated_binding",
+            REPO / "tests/test_g2_registry_packaging.py",
+            REPO / "tests/test_g2_security_guards.py",
+        ]
+    else:
+        test_paths = [
+        REPO / "tests/test_interp_native_default_units.py",
+        REPO / "tests/test_w23_r21_direction_discovery.py",
+        REPO / "tests/test_native_w23_te_science_protocol.py::test_requested_native_default_allowlist_includes_only_exact_neff_and_xy_normals",
+        REPO / "tests/test_native_w23_te_science_protocol.py::test_bma_neff_native_default_is_exact_and_legacy_dimensionless_request_stays_valid",
+        REPO / "tests/test_native_w23_te_science_protocol.py::test_saved_mph_641_to_1281_quadrature_refinement_is_a_separate_explicit_gate",
+        REPO / "tests/test_native_w23_te_science_protocol.py::test_inherited_offline_delta_validator_positive_and_negative_controls",
+        REPO / "tests/test_native_w23_saved_mph_diagnostic.py::test_saved_field_and_bma_point_reads_allow_only_the_frozen_dataset_grid_and_expressions",
+        REPO / "tests/test_native_w23_saved_mph_diagnostic.py::test_direction_freeze_binds_zero_reads_and_preserved_offline_quadrature",
+        REPO / "tests/test_native_w23_saved_mph_diagnostic.py::test_saved_mph_freeze_binds_641_1281_eight_reads_zero_solve_and_fixed_tolerance",
+        REPO / "tests/test_native_w23_saved_mph_diagnostic.py::test_completed_point_projection_keeps_verified_calls_separate_from_unknown_attempts",
+        REPO / "tests/test_native_w23_saved_mph_diagnostic.py::test_query_once_persists_unknown_point_attempt_without_completed_native_call",
+        REPO / "tests/test_native_w23_saved_mph_diagnostic.py::test_outer_guard_retains_any_live_original_popen_for_blocked_or_unknown_cleanup",
+        REPO / "tests/test_native_w23_saved_mph_diagnostic.py::test_outer_guard_does_not_hold_when_all_original_children_are_already_terminal",
+        REPO / "tests/test_native_w23_saved_mph_diagnostic.py::test_outer_guard_treats_unobservable_original_children_as_active",
+        REPO / "tests/test_native_w23_te_science_runner.py::test_socket_owner_gate_keeps_loopback_time_wait_inactive_and_not_a_worker_peer",
+        REPO / "tests/test_native_w23_te_science_runner.py::test_socket_owner_gate_rejects_external_time_wait_even_when_state_is_inactive",
+        REPO / "tests/test_native_w23_te_science_runner.py::test_direct_rpc_journal_separates_managed_requests_and_keeps_unknown_terminal_blocker",
+        REPO / "tests/test_native_w23_te_science_runner.py::test_durable_unknown_cleanup_idle_requires_terminal_rpc_fresh_health_and_exact_endpoint",
+        REPO / "tests/test_g3_results.py::test_w23_decoder_consumes_actual_requested_unit_native_adapter_witness",
+        REPO / "tests/test_g3_results.py::test_real_only_port_scalars_require_actual_adapter_flag_and_exact_validated_binding",
+    ]
+    entry = binding["python"]["entry"] if binding else str(EXPECTED_PYTHON)
+    junit_path = offline / "focused_delta_junit.xml"
+    command = [entry, "-m", "pytest", "-q", "-p", "no:cacheprovider",
+               *(str(path) for path in test_paths)]
+    excluded_test_paths = []
+    if current_full:
+        # The registered Core loopback test is separately classified. A strict
+        # network-guard EPERM is environmental, so isolation remains enabled.
+        command.extend(["-k", "not test_science_dispatch_uses_actual_registered_session_runtime_after_public_model_load"])
+        excluded_test_paths.append(
+            "tests/test_w23_r21_direction_discovery.py::test_science_dispatch_uses_actual_registered_session_runtime_after_public_model_load")
+    command.extend(["--junitxml", str(junit_path)])
+    binding_activity = binding["activity_id"] if binding else ACTIVITY_ID
+    env = _strict_test_environment(offline, activity_id=binding_activity)
+    guard_log = Path(env["CODEX_NETWORK_GUARD_LOG"])
+    guard_log.touch(exist_ok=False)
+    result = subprocess.run(command, cwd=REPO, env=env, text=True,
+                            capture_output=True, timeout=600, check=False)
+    (offline / "focused-delta-pytest.stdout.txt").write_text(result.stdout, encoding="utf-8")
+    (offline / "focused-delta-pytest.stderr.txt").write_text(result.stderr, encoding="utf-8")
+    if not junit_path.is_file():
+        raise RuntimeError("affected-control pytest run did not write its JUnit result")
+    counts = science._junit_counts(junit_path)
+    guard_rows = []
+    for line in guard_log.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            guard_rows.append(json.loads(line))
+    guard_sha = sha256_file(guard_log)
+    guard_status = ("ACTIVE_NO_DENY_OR_SETUP_ERROR" if (
+        guard_rows and guard_rows[0].get("event") == "GUARD_ACTIVE_BEFORE_CHILD_ENTRYPOINT"
+        and not any(row.get("event") in {"DENIED_BEFORE_SOCKET_OPERATION", "GUARD_SETUP_ERROR"}
+                    for row in guard_rows)) else "FAIL_NOT_ACTIVE_OR_DENIED")
+    source_manifest_sha256 = _source_digest(_source_files())
+    source_map_stable = (expected_source_manifest_sha256 is None
+                         or source_manifest_sha256 == expected_source_manifest_sha256)
+    focused = {
+        "status": "PASS_FOCUSED_STRICT_GUARDED_JUNIT" if result.returncode == 0 else "FAIL_FOCUSED_STRICT_GUARDED_JUNIT",
+        "command": command, "cwd": str(REPO), "strict_guard_enabled": True,
+        "returncode": result.returncode,
+        "test_count": counts["tests"], "failures": counts["failures"],
+        "errors": counts["errors"], "skipped": counts["skipped"],
+        "test_paths": [str(path) for path in test_paths],
+        "excluded_test_paths": excluded_test_paths,
+        "candidate_source_manifest_sha256": source_manifest_sha256,
+        "junit_path": str(junit_path), "junit_sha256": sha256_file(junit_path),
+        "network_guard": {
+            "status": guard_status, "path": str(guard_log),
+            "sha256": guard_sha, "event_count": len(guard_rows),
+            "events": [row.get("event") for row in guard_rows],
+        },
+    }
+    write_json(offline / "diagnostic_junit_receipt.json", focused)
+    if (result.returncode != 0 or counts["tests"] < 25 or counts["failures"]
+            or counts["errors"] or counts["skipped"]):
+        raise RuntimeError(f"affected W23 control suite did not pass 25+ tests; see {offline}")
+    if guard_status != "ACTIVE_NO_DENY_OR_SETUP_ERROR":
+        raise RuntimeError(f"strict offline test guard did not prove active/no-deny state; see {guard_log}")
+    if not source_map_stable:
+        raise RuntimeError("current source map changed between offline preflight and focused tests")
+    activity_id = ("w23-saved-mph-direction-discovery-" + binding_activity
+                   if binding else ACTIVITY_ID)
+    if current_full:
+        delta_receipt = {
+            "schema_version": 1,
+            "status": "PASS_FOCUSED_DELTA_CURRENT_FULL_SOURCE_MAP",
+            "candidate_id": CANDIDATE_ID,
+            "candidate_revision": CANDIDATE_REVISION,
+            "activity_id": activity_id,
+            "candidate_source_manifest_sha256": source_manifest_sha256,
+            "focused_tests": {
+                "receipt_path": "offline_gates/diagnostic_junit_receipt.json",
+                "receipt_sha256": sha256_file(offline / "diagnostic_junit_receipt.json"),
+                "junit_path": "offline_gates/focused_delta_junit.xml",
+                "junit_sha256": sha256_file(junit_path),
+                "network_guard_path": "offline_gates/diagnostic-network-guard.jsonl",
+                "network_guard_sha256": guard_sha,
+            },
+            "registered_core_loopback": {
+                "status": "NOT_RUN_DEFERRED_POST_W24_TERMINAL",
+                "test_path": excluded_test_paths[0],
+                "strict_network_guard_enabled": False,
+                "counted_in_guarded_junit": False,
+            },
+        }
+    else:
+        delta_receipt = {
+            "schema_version": 1,
+            "status": "PASS_OFFLINE_BASE_INHERITED_PLUS_FOCUSED_DELTA",
+            "candidate_id": CANDIDATE_ID,
+            "candidate_revision": CANDIDATE_REVISION,
+            "activity_id": activity_id,
+            "candidate_source_manifest_sha256": source_manifest_sha256,
+            "inherited_base": _r13_inherited_base_record(),
+            "source_delta": _source_delta_from_r13(_source_files()),
+            "focused_tests": {
+                "receipt_path": "offline_gates/diagnostic_junit_receipt.json",
+                "receipt_sha256": sha256_file(offline / "diagnostic_junit_receipt.json"),
+                "junit_path": "offline_gates/focused_delta_junit.xml",
+                "junit_sha256": sha256_file(junit_path),
+                "network_guard_path": "offline_gates/diagnostic-network-guard.jsonl",
+                "network_guard_sha256": guard_sha,
+            },
+        }
+    write_json(offline / "focused_delta_receipt.json", delta_receipt)
+    if current_full:
+        return {
+            "status": "PASS_FOCUSED_DELTA_CURRENT_FULL_SOURCE_MAP",
+            "focused_delta_receipt": {
+                "path": "offline_gates/focused_delta_receipt.json",
+                "sha256": sha256_file(offline / "focused_delta_receipt.json"),
+            },
+            "registered_core_loopback": delta_receipt["registered_core_loopback"],
+        }
+    return {
+        "status": "PASS_OFFLINE_BASE_INHERITED_PLUS_FOCUSED_DELTA",
+        "compile": json.loads((offline / "compile.json").read_text(encoding="utf-8")),
+        "focused_delta_receipt": {
+            "path": "offline_gates/focused_delta_receipt.json",
+            "sha256": sha256_file(offline / "focused_delta_receipt.json"),
+        },
+    }
+
+
+def _compile_and_test(evidence: Path, *, binding: Mapping[str, Any] | None = None,
+                      current_source_files: Mapping[str, Any] | None = None) -> dict[str, Any]:
     offline = evidence / "offline_gates"
     offline.mkdir(parents=True, exist_ok=False)
+    if current_source_files is not None:
+        if binding is None:
+            raise RuntimeError("current-full direction preparation requires a newly validated runtime binding")
+        source_manifest_sha256 = _source_digest(current_source_files)
+        current_full_root = offline / "current_full"
+        full_gates = science.offline_preflight(
+            current_full_root, current_source_files=current_source_files,
+            runtime_binding=binding, runtime_budget=fresh_budget())
+        if (full_gates.get("status") != "PASS_ALL_OFFLINE_GATES"
+                or full_gates.get("source_manifest_sha256") != source_manifest_sha256):
+            raise RuntimeError("complete current-full offline preflight did not bind the exact candidate source map")
+        compile_receipt = full_gates.get("compile")
+        if not isinstance(compile_receipt, Mapping):
+            raise RuntimeError("current-full offline preflight did not compile the current Java sources")
+        compile_path = current_full_root / "compile.json"
+        write_json(compile_path, compile_receipt)
+        focused = _run_focused_delta_tests(
+            offline, binding=binding, current_full=True,
+            expected_source_manifest_sha256=source_manifest_sha256)
+        if _source_files() != current_source_files:
+            raise RuntimeError("candidate source closure changed during current-full offline/focused gates")
+        progress_path = current_full_root / "offline_preflight_progress.json"
+        return {
+            "status": "PASS_ALL_OFFLINE_GATES",
+            "mode": science.CURRENT_FULL_OFFLINE_MODE,
+            "source_manifest_sha256": source_manifest_sha256,
+            "source_count": len(current_source_files),
+            "current_full_gate_receipt": full_gates,
+            "current_full_receipt": {
+                "path": "offline_gates/current_full/offline_preflight_progress.json",
+                "sha256": sha256_file(progress_path),
+            },
+            "compile": dict(compile_receipt),
+            "runtime_imports": full_gates["runtime_imports"],
+            "software_negative_controls": full_gates["software_negative_controls"],
+            "pip_check": full_gates["pip_check"],
+            "stdio": full_gates["stdio"],
+            "compile_receipt": {
+                "path": "offline_gates/current_full/compile.json",
+                "sha256": sha256_file(compile_path),
+            },
+            "compile_artifact_root": "offline_gates/current_full/compile",
+            "focused_delta_receipt": focused["focused_delta_receipt"],
+            "registered_core_loopback": focused["registered_core_loopback"],
+        }
     imports = science._runtime_helper_imports()
     import_receipt = {
         "status": "PASS_EXISTING_PRODUCTION_HELPER_IMPORTS",
@@ -343,117 +774,48 @@ def _compile_and_test(evidence: Path, *, binding: Mapping[str, Any] | None = Non
         dependency = science._pip_dependency_check()
     write_json(offline / "pip_dependency_check.json", dependency)
     compile_output = offline / "compile"
-    compile_receipt = science._compile_sources(compile_output)
-    write_json(offline / "compile.json", compile_receipt)
-    test_paths = [
-        REPO / "tests/test_native_w23_saved_mph_diagnostic.py",
-        REPO / "tests/test_w23_fresh_import_home.py",
-        REPO / "tests/test_w23_original_owner_hold.py",
-        REPO / "tests/test_native_w23_te_science_protocol.py",
-        REPO / "tests/test_native_w23_te_science_runner.py",
-        REPO / "tests/test_g3_results.py",
-        REPO / "tests/test_ephemeral_result_ticket.py",
-        REPO / "tests/test_saved_mph_activity017_public_stack.py",
-        REPO / "tests/test_saved_mph_offline_materialization.py",
-        REPO / "tests/test_dataset_binding.py",
-        REPO / "tests/test_g3_r03_csv_four_axis.py",
-        REPO / "tests/test_activity018_no_outer_transcript.py",
-        REPO / "tests/test_activity019_private_singleton_ticket.py",
-        REPO / "tests/test_activity021_definition_boundary_metadata.py",
-        REPO / "tests/test_activity022_boundary_selection_ticket.py",
-        REPO / "tests/test_activity022_r15_measure_all_and_literal_entry.py",
-        REPO / "tests/test_g3_common.py",
-        REPO / "tests/test_g3_3_core_numeric_contracts.py",
-        REPO / "tests/test_g3_3_remediation.py",
-        REPO / "tests/test_g3_metrics.py",
-    ]
-    if binding:
-        test_paths.append(REPO / "tests/test_native_runtime_binding.py")
-    command = [str(binding["python"]["entry"] if binding else EXPECTED_PYTHON), "-m", "pytest", "-q",
-               *(str(path) for path in test_paths),
-               "--junitxml", str(offline / f"activity{ACTIVITY_ID.rsplit('-',1)[1]}_focused_junit.xml")]
-    env = _strict_test_environment(offline)
-    env["W23_OFFLINE_CLASS_TEST_SEED"] = str(compile_output)
-    env["W23_OFFLINE_CLASS_TEST_RECEIPT"] = str(offline / "compile.json")
-    # These two legacy-mode materialization controls intentionally exercise
-    # the preserved historical preparation path policy, even during fresh prep.
-    env["W23_OFFLINE_CLASS_TEST_EVIDENCE"] = str(EVIDENCE_ROOT / "fresh-runtime-materialization-controls" / binding["activity_id"] if binding else evidence / "materialization-controls")
-    env["W23_ACTIVITY022_SELECTION_CAPTURE"] = str(offline / "selection_child_private_audit_controls")
-    env["W23_ACTIVITY021_METADATA_CAPTURE"] = str(offline / "actual020_and_metadata_source_controls")
-    env["W23_ACTIVITY020_TICKET_CAPTURE"] = str(offline / "actual019_private_ticket_controls")
-    env["W23_ACTIVITY019_TRANSCRIPT_CAPTURE"] = str(offline / "actual018_transcript_controls")
-    env["W23_ACTIVITY017_SOFTWARE_CAPTURE"] = str(offline / "actual_public_stack")
-    guard_log = Path(env["CODEX_NETWORK_GUARD_LOG"])
-    guard_log.touch(exist_ok=False)
-    result = subprocess.run(command, cwd=REPO, env=env, text=True,
-                            capture_output=True, timeout=600, check=False)
-    (offline / "diagnostic_pytest.stdout.txt").write_text(result.stdout, encoding="utf-8")
-    (offline / "diagnostic_pytest.stderr.txt").write_text(result.stderr, encoding="utf-8")
-    test_receipt = {
-        "status": "PASS_FOCUSED_STRICT_GUARDED_JUNIT" if result.returncode == 0 else "FAIL_FOCUSED_STRICT_GUARDED_JUNIT",
-        "command": command, "cwd": str(REPO), "strict_guard_enabled": True,
-        "environment": {key: env[key] for key in (
-            "TMPDIR", "PYTHONPATH", "CODEX_NETWORK_GUARD_LOG",
-            "CODEX_NETWORK_GUARD_LABEL", "CODEX_NETWORK_GUARD_RUN_ID")},
-        "returncode": result.returncode,
-        "stdout_path": str(offline / "diagnostic_pytest.stdout.txt"),
-        "stderr_path": str(offline / "diagnostic_pytest.stderr.txt"),
-        "junit_path": str(offline / f"activity{ACTIVITY_ID.rsplit('-',1)[1]}_focused_junit.xml"),
-        "junit_sha256": sha256_file(offline / f"activity{ACTIVITY_ID.rsplit('-',1)[1]}_focused_junit.xml") if (offline / f"activity{ACTIVITY_ID.rsplit('-',1)[1]}_focused_junit.xml").is_file() else None,
-        "test_paths": [str(path) for path in test_paths],
-        "network_guard_sha256": sha256_file(Path(env["PYTHONPATH"].split(os.pathsep)[0]) / "sitecustomize.py"),
-    }
-    guard_rows = []
-    if guard_log.is_file():
-        for line in guard_log.read_text(encoding="utf-8").splitlines():
-            if not line.strip():
-                continue
-            guard_rows.append(json.loads(line))
-    test_receipt["network_guard"] = {
-        "status": "ACTIVE_NO_DENY_OR_SETUP_ERROR" if (
-            guard_rows and guard_rows[0].get("event") == "GUARD_ACTIVE_BEFORE_CHILD_ENTRYPOINT"
-            and not any(row.get("event") in {"DENIED_BEFORE_SOCKET_OPERATION", "GUARD_SETUP_ERROR"}
-                        for row in guard_rows)) else "FAIL_NOT_ACTIVE_OR_DENIED",
-        "path": str(guard_log), "sha256": sha256_file(guard_log),
-        "event_count": len(guard_rows),
-        "events": [row.get("event") for row in guard_rows],
-    }
-    write_json(offline / "diagnostic_junit_receipt.json", test_receipt)
-    if test_receipt["network_guard"]["status"] != "ACTIVE_NO_DENY_OR_SETUP_ERROR":
-        raise RuntimeError(f"strict offline test guard did not prove active/no-deny state; see {guard_log}")
-    if result.returncode != 0:
-        raise RuntimeError(f"focused offline strict-guard tests failed; see {offline}")
-    return {"runtime_imports": import_receipt, "pip_dependency_check": dependency,
-            "compile": compile_receipt, "focused_tests": test_receipt,
-            "status": "PASS_ALL_OFFLINE_GATES"}
+    base_compile = science.W23_R13_BASE_ROOT / "prepare/offline_gates/compile.json"
+    base_class_tree = science.W23_R13_BASE_ROOT / "prepare/offline_gates/compile"
+    _r13_inherited_base_record()
+    if compile_output.exists():
+        raise FileExistsError(f"inherited class output target already exists: {compile_output}")
+    shutil.copytree(base_class_tree, compile_output)
+    shutil.copyfile(base_compile, offline / "compile.json")
+    return {"runtime_imports": import_receipt,
+            "pip_dependency_check": dependency,
+            **_run_focused_delta_tests(offline, binding=binding)}
 
 
 def prepare(evidence: Path, *, work: Path, execution_evidence: Path,
             runtime_authority: Path | None = None) -> dict[str, Any]:
-    binding = (fresh_runtime.load(runtime_authority, repo=REPO, budget=fresh_budget(),
-               install=science.INSTALL_ROOT, jdk=science.JAVA11) if runtime_authority else None)
-    if binding:
-        if binding["python"]["no_site"]:
-            raise RuntimeError("W23 focused guard requires normal site startup")
-        for path in (evidence, work, execution_evidence):
-            fresh_runtime.scoped_path(binding, path, absent=True)
-        if len({evidence,work,execution_evidence}) != 3 or work != Path(binding["namespace"])/"work":
-            raise RuntimeError("fresh W23 paths must be distinct and work exactly namespace/work")
-    activity_id = "w23-saved-mph-zero-solve-readback-" + binding["activity_id"] if binding else ACTIVITY_ID
-    if binding is None and not evidence.as_posix().startswith(str(EVIDENCE_ROOT.resolve()) + "/"):
-        raise ValueError("--evidence must be a new directory below the candidate W23 evidence root")
+    if runtime_authority is None:
+        raise RuntimeError("current-full direction preparation requires a fresh runtime binding; old activity identities are not replayable")
+    binding = fresh_runtime.load(runtime_authority, repo=REPO, budget=fresh_budget(),
+                                 install=science.INSTALL_ROOT, jdk=science.JAVA11)
+    identity = _bind_fresh_candidate_identity(binding)
+    if binding["python"]["no_site"]:
+        raise RuntimeError("W23 focused guard requires normal site startup")
+    for path in (evidence, work, execution_evidence):
+        fresh_runtime.scoped_path(binding, path, absent=True)
+    if len({evidence,work,execution_evidence}) != 3 or work != Path(binding["namespace"])/"work":
+        raise RuntimeError("fresh W23 paths must be distinct and work exactly namespace/work")
+    activity_id = identity["activity_id"]
     if evidence.exists():
         raise FileExistsError(f"candidate evidence already exists: {evidence}")
     evidence.mkdir(parents=True, exist_ok=False)
     input_refs = _assert_source_inputs()
+    direction_report_path = evidence / "offline_r20_signed_poynting_replay.json"
+    direction_report = _offline_r20_direction_report()
+    write_json(direction_report_path, direction_report)
     source_before = _source_files()
-    gates = _compile_and_test(evidence, binding=binding) if binding else _compile_and_test(evidence)
+    gates = _compile_and_test(evidence, binding=binding,
+                              current_source_files=source_before)
     source_after = _source_files()
     if source_before != source_after:
         raise RuntimeError("frozen W23 source closure changed during offline gates")
     manifest_artifact = science._write_source_manifest_artifact(evidence, source_after)
     freeze_path = evidence / "freeze.json"
-    approval_path = evidence / f"ROOT_APPROVAL_ACTIVITY{activity_id.rsplit('-',1)[1]}.json"
+    approval_path = evidence / f"ROOT_APPROVAL_ACTIVITY{identity['activity_token']}.json"
     freeze: dict[str, Any] = {
         "schema_version": 1,
         "activity_id": activity_id,
@@ -461,20 +823,25 @@ def prepare(evidence: Path, *, work: Path, execution_evidence: Path,
         "candidate_revision": CANDIDATE_REVISION,
         "status": "FROZEN_AWAITING_ROOT_APPROVAL",
         "created_at_utc": utc_now(),
-        "scope": "Reopen one preserved Activity009 W23 provisional MPH in a new registered project; reconcile exact Study/SolverSequence/StoreSolution/Dataset bindings and one attached raw count-only singleton and separate requested-unit physical freq[Hz] numerical witness, then read saved complex fields and BMA beta/neff/k0 only through the production result.at_points API. No Study.run or solver.run is dispatched.",
+        "scope": "Open the exact preserved Activity009 W23 provisional MPH once in a new registered project; discover the actual ElectromagneticWaves physics tag, Port feature properties, BoundaryModeAnalysis PortName/modeFreq properties, and explicit StudyStep/StoreSolution/Dataset.solution links through the public read-only node.children/node.inspect/node.property_schema/node.property_get APIs. Recompute only the preserved R20 641/1281 raw E/H direction observables offline. No result.at_points, Study.run, solver.run, setter, save, default, or sign/tolerance inference is dispatched.",
         "scope_limits": {
             "diagnostic_only": True,
             "saved_artifact_readback_only": True,
             "native_scientific_acceptance": "NOT_ACCEPTED",
-            "field_and_mode_readback": "READ_ONLY_SAVED_SOLUTION_RESULT_AT_POINTS",
+            "field_and_mode_readback": "REUSE_FROZEN_R20_RAW_FIELDS_OFFLINE_ONLY",
             "study_or_solver_execution": "PROHIBITED",
             "explicit_study_run_dispatches": 0,
             "explicit_solver_run_dispatches": 0,
+            "result_at_points_dispatches": 0,
             "internal_solver_execution_count": "UNKNOWN_NOT_INFERRED_FROM_READBACK",
             "no_role_guessing": True,
             "no_outer_inner_tuple_inference": True,
             "no_frequency_inference_from_config_or_tag": True,
             "no_saved_model_mutation_or_resave": True,
+            "no_h_only_flip": True,
+            "no_sign_convention_guess": True,
+            "no_tolerance_change": True,
+            "no_grid_densification": True,
             "no_companion_full_recovery_model": True,
         },
         "target": {
@@ -504,6 +871,13 @@ def prepare(evidence: Path, *, work: Path, execution_evidence: Path,
                 "sha256": ACTIVITY010_PRESERVATION_CHECK_SHA256,
                 "scope": "Activity010 artifact/ledger preservation and captured owned cleanup only; no scientific acceptance",
             },
+        },
+        "direction_discovery_inputs": input_refs,
+        "offline_direction_report": {
+            "path": str(direction_report_path),
+            "sha256": sha256_file(direction_report_path),
+            "status": direction_report.get("status"),
+            "scope": "frozen R20 raw E/H arrays replayed offline only; no old R20 runtime/UNKNOWN calls",
         },
         "official_api_basis": {
             "solution_info": {
@@ -551,7 +925,7 @@ def prepare(evidence: Path, *, work: Path, execution_evidence: Path,
         "limits": {
             "max_owned_server_processes": 1,
             "max_worker_sessions": 1,
-            "max_result_at_points_calls": 8,
+            "max_result_at_points_calls": MAX_R21_RESULT_AT_POINTS_CALLS,
             "max_gui_processes": 0,
             "max_study_run_calls": 0,
             "max_solver_run_calls": 0,
@@ -559,25 +933,51 @@ def prepare(evidence: Path, *, work: Path, execution_evidence: Path,
             "cleanup_reserve_seconds": int(CLEANUP_RESERVE_SECONDS),
             "retry_unknown_or_nonterminal_worker_request": False,
             "stop_after_first_unknown_or_nonterminal_worker_request": True,
-            "managed_operation_allowlist": ["server_connect", "model_load", "model.inspect", "dataset.list", "dataset.solution_indices", "operation_call/code.execute_java(saved_solution_diagnostic only)", "operation_call/result.at_points(exact public {x,y} objects with um/spatial: four dset1/sol1 field grids with exact ordered FIELD_REQUESTED_UNITS [V/m,A/m,1], two dset1/sol1 freq reads requested Hz/GHz, dset2/sol2 and dset3/sol3 beta/neff/k0 port centers requested [1/m,1,1/m]; exactly eight slots)"],
+            "managed_operation_allowlist": ["server_connect", "model_load", "model.inspect(summary)", "operation_call/node.children", "operation_call/node.inspect", "operation_call/node.property_schema(named property only)", "operation_call/node.property_get(one allowlisted property only)"],
         },
         "read_only_call_plan": {
-            "ordered_point_slots": ["freq_Hz", "freq_GHz", "fields_output_x8_321", "fields_output_x8_641", "fields_input_xminus10_321", "fields_input_xminus10_641", "mode_point_bmaInput", "mode_point_bmaOutput"],
+            "mode": "direction_discovery_only",
+            "Study.run": 0,
+            "solver.run": 0,
+            "result.at_points": 0,
+            "max_public_operation_calls": direction.MAX_DIRECTION_CALLS,
+            "max_children_per_list": direction.MAX_CHILDREN_PER_LIST,
+            "allowed_operation_call_ids": sorted(direction.READONLY_OPERATION_IDS),
+            "root_model_path": {"segments": []},
+            "component_path": {"segments": [{"collection": "component", "tag": "comp1"}]},
+            "physics_interface_type": "ElectromagneticWaves",
+            "field_variable_prefix": "emw",
+            "physics_namespace_correlation": "capture Physics.tag/getType/identifier through public node children/inspect; keep tag separate, correlate the complete unique documented Physics Name/Scope identifier with frozen emw metadata, and fail closed for unavailable, wrong, malformed, or ambiguous identifiers; no field values evaluated",
+            "port_properties": list(direction.PORT_PROPERTIES),
+            "boundary_mode_analysis_properties": list(direction.BMA_PROPERTIES),
+            "study_step_properties": list(direction.STUDY_STEP_PROPERTIES),
+            "store_solution_properties": list(direction.STORE_SOLUTION_PROPERTIES),
+            "dataset_properties": list(direction.DATASET_PROPERTIES),
+            "property_sequence": "For each exact named property: node.property_schema must return has_property true, known getValueType/getter/kind/rank, and unique finite allowed string values if present before exactly one typed node.property_get. Absent/unknown/ambiguous properties are preserved and never read through a guessed getter.",
+            "same_version_api_evidence": {
+                "ModelEntityList": {"doc_id": 7644, "chunk_id": 22964, "sha256": "463ef0c4e8b2b7315e8950bd576f4b783718c75308307cef0a4d584d86b835ab", "finding": "tags() returns a string array with tags of all entities."},
+                "PhysicsList": {"doc_id": 7669, "chunk_id": 23008, "sha256": "d1b397ef5d78f9447c6f6be572302f6ef5e291e769261d69d8ffdaf3a00fdb25", "finding": "PhysicsList extends ModelEntityList<Physics>."},
+                "Physics": {"doc_id": 7757, "chunk_id": 23152, "sha256": "d0de70997a9ea928edd8f1d207f926ce82c3849e5846c20189d28d67cd9273fc", "finding": "Physics.getType() returns the type identifier; tag() is inherited from ModelEntity."},
+                "PhysicsFeature": {"doc_id": 7758, "chunk_id": 23153, "sha256": "9eeb763b12eb4d5f6eaff7561381bb200aab2150165063410a4e9fa3592b5e7c", "finding": "PhysicsFeature exposes getType() and inherits ParameterEntity public property methods."},
+                "PropFeature": {"doc_id": 7675, "chunk_id": 23018, "sha256": "befb8cc1c0e3df1ce74d2fa2cd1377e73d378e5c26170558e9f40dc255cc3bc3", "finding": "hasProperty(name) reports support; getValueType(name) names the typed getter; properties() returns property names."},
+                "ParameterEntity": {"doc_id": 7668, "chunk_id": 23005, "sha256": "d48a6bc07e9862244a7fd496246477200d065a661ae69605de4ef3ae7e678539", "finding": "getAllowedPropertyValues(name) returns finite String[] values or null; typed getters expose declared Java types."},
+                "Port_UI_guidance": {"doc_id": 24404, "chunks": [104652, 104653], "sha256": "aea018dcf88874ad63cb91d2b0a92c9d43b09fb3dadeb309888154be97fc4dc8", "finding": "Wave Excitation On is source/inport and Off is listener; this does not assign positive global-x to ForwardPort."},
+                "Port_Mode_Field_Variables": {"doc_id": 24354, "chunk_id": 104589, "sha256": "d568ce649f47507fb6de28d2276d7a9774a9d0073a45d72ec107ec7b6f9c0bdb", "finding": "Emode/Hmode are numeric Port BMA fields; mode directions still require signed E/H witnesses."},
+            },
+            "feature_discovery": "Enumerate actual physics/study/solver/dataset tags through complete node.children pages; classify exact types through node.inspect; bind PortName to Port features, BMA features to StudyStep.study/studystep, StoreSolution.sol, and Dataset.solution by exact strings only. No positional/index inference.",
+            "solver_tree_limits": {"maximum_solver_sequences": direction.MAX_ROOT_ENTITIES, "maximum_features_per_list": direction.MAX_FEATURES_PER_PARENT, "maximum_nodes": direction.MAX_SOLVER_TREE_NODES, "maximum_depth": direction.MAX_SOLVER_TREE_DEPTH},
             "project_create_before_birth_permissions": ["inspect", "project_write", "trusted_code"],
-            "load_method": "production managed model_load for the registered project; ModelRef/revision and backend project binding verified",
-            "model_input_preparation": "copy exact 009 preserved MPH SHA/size into new registered project workspace; do not write source artifact",
-            "managed_dataset_readback": "dataset.list then dataset.solution_indices once per native Solution dataset, terminal wait at most once per dispatched job",
-            "java_readback": "one code.execute_java call with phase=saved_solution_diagnostic; same exact SolutionInfo receiver receives documented int[][] row tuples derived only from getSolnum(outer,true); on each same observed solver-sequence tag capture typed getSize/getSizeMulti/getPNames/getPVals/getPValsImag/getUnit and exact level/outer metadata. Preserve SolutionInfo matrix errors and keep tuple completeness false.",
-            "study_tree_readback": "query all seven documented Study.getSolverSequences types; capture exact sequence tags/types/attached-study/tree plus StoreSolution/CopySolution sol properties and Dataset solution links",
-            "main_count_singleton_witness": "count-only raw numeric/unit-label evidence; accept only exact native Hz/GHz display labels without changing raw values/units; no physical unit interpretation; require one exact attached Parametric/SolverSequence bound by StudyStep.study/studystep and production dataset.solution; production singleton additionally requires complete stable actual model.study().tags() membership and final solution.study() identity with raw getter evidence; Java and Worker getSize/getSizeMulti/getPNames/getPVals/getPValsImag/getUnit must match; SolutionInfo getLevelNames=[freq], getLevels=1, getOuterSolnum=[], getPNamesOuter=[], getPUnitsOuter=[]; leave parameters_complete and axis_metadata_complete false and never synthesize outer=1",
-            "physical_frequency_witness": "two sequential dset1/sol1 result.at_points of freq at [-10,0] um with EvaluationSpec.units=[Hz] and [GHz]; same actual ModelRef/revision and Worker instance/generation/server epoch; require both actual real/imag native numerical values scale by 1e9 at reltol1e-12 abstol0; identical raw values with changed labels FAIL/UNVERIFIED and escalate Root; actual production Interp applies per-expression setIndex(unit) and verifies exact native getStringArray(expr/unit) arrays before and after numeric read; those arrays bind the actual value/Hz label, data, expression and coordinate readback; no external scaling or getter relabeling",
-            "bma_mode_witness": "require bmaInput/bmaOutput configured PortName 1/2 and modeFreq=f0; map their solver StudyStep to exact following StoreSolution.sol and one managed Solution dataset; reconcile one stored raw lambda getter (unit label preserved, numerical consistency only) with production result.at_points beta_1/neff_1 for native PortName1 and beta_2/neff_2 for native PortName2 plus common k0; request units [1/m,1,1/m] and reject wrong-port expressions even if numeric values match, and cross-check beta=j*lambda, neff=beta/k0, k0=2*pi*observed_freq/c",
-            "public_point_contract": "Production public points are exact coordinate objects {x:number,y:number}, coordinate_unit=um, frame=spatial. Internal coordinate matrices and all frozen physical grids are unchanged; closedallowlist rejects arrays/extra/missingkeys/wrongdim/unit/nonfinite/bool before dispatch.",
-            "field_readback": "production dset1/sol1: fourteen exact expressions per plane; six down(emw.E/H) domain-side aliases, only the plane own six boundary-only emw.Emode/Hmode suffix1 input or2 output without domain operators, and emw.nx/ny native physics normals. Bind original Interp selection child to comp1/geom1/dimension1 selInputPort orselReceiverX8; require strict before/after selection geometry/dimension/named/membership/isInheriting=False plus same original ticket/provenance, ModelRef/revision/Worker epoch, requested unit arrays and complete complex coordinates. No substituted zeros. Preserve original321/641 Simpson/phase/reciprocity/PowerFloor/refinement/eta thresholds.",
-            "literal_field_plans": [{"port":port,"x_um":x,"selection":plane_selection(port),"expected_entities":[1,3,5] if port=="1" else [8,10,12],"expressions":list(plane_field_expressions(port)),"units":list(plane_field_units(port)),"grids":[{"count":n,"points":_public_points(_field_points(x,n))} for n in (321,641)]} for port,x in (("1",-10.0),("2",8.0))],
-            "source_definition_evidence": {"activity021_raw_relative":"tests/fixtures/w23_activity021/ACTUAL021_DEFINITION_BOUNDARY_RAW.json","sha256":sha256_file(REPO / "tests/fixtures/w23_activity021/ACTUAL021_DEFINITION_BOUNDARY_RAW.json"),"scope":"actual definitions and selected physicalside invariants only; not numerical Interp acceptance"},
-            "forbidden": ["Study.run", "sol.run*", "sequence generation", "model save", "result.mode_overlap", "outer/inner selector inference", "formal W23 scientific acceptance"],
-            "saved_mph_reopen": "the one initial model_load opens the saved MPH; no model.save or second reopen is allowed",
+            "load_method": "one production managed model_load in the exact registered task-owned project; bind ModelRef/revision/project/session/server/worker epoch",
+            "model_input_preparation": "copy exact preserved Activity009 MPH SHA/size into the task-owned project workspace; never write or resave the source model",
+            "native_operation_budget": {"Study.run": 0, "solver.run": 0, "result.at_points": 0, "node.property_set": 0, "code.execute_java": 0, "model.save": 0},
+            "legacy_r20_point_call_limit": MAX_RESULT_AT_POINTS_CALLS,
+            "offline_quadrature": {"method": "composite Simpson", "coarse_points": protocol.SAVED_MPH_SAMPLE_COUNT,
+                                   "fine_points": protocol.SAVED_MPH_REFINED_SAMPLE_COUNT,
+                                   "relative_tolerance": protocol.INTEGRAL_RELATIVE_TOLERANCE},
+            "frozen_r20_signed_power_report_sha256": R20_DIRECTION_REPORT_SHA256,
+            "signed_direction_observables": "Offline replay of only the four exact R20 641/1281 decoded E/H arrays; report global Px and native nx*Px outward n.S separately. This does not infer excitation phase or accept science.",
+            "nonchanges": ["no H-only flip", "no normal inversion", "no sign convention guess", "no tolerance relaxation", "no grid densification", "no formula change", "no scientific acceptance upgrade"],
+            "retry_policy": "one dispatch per exact read slot; retain and stop on any failed/unknown/nonterminal operation; no replay or reconciliation of old R20 UNKNOWN",
         },
         "work_path": str(work),
         "execution_evidence_path": str(execution_evidence),
@@ -590,6 +990,7 @@ def prepare(evidence: Path, *, work: Path, execution_evidence: Path,
         "offline_preflight": gates,
         "native_acceptance": "NOT_RUN",
     }
+    _validate_diagnostic_scope(freeze)
     if binding:
         freeze["fresh_runtime_binding"] = binding
     # A freeze is publishable only when its own relative compiler tree exists.
@@ -612,12 +1013,10 @@ def prepare(evidence: Path, *, work: Path, execution_evidence: Path,
         "source_count": len(source_after),
         "source_bytes": sum(int(row["bytes"]) for row in source_after.values()),
         "source_changes_from_activity010_base": [
-            "tools/w23_te_science_protocol.py: exact attached raw count-only no-outer singleton plus separate native Interp freq[Hz] witness, BMA StoreSolution formula cross-check, and strict production complex point-readback unit/shape/normal validation",
-            "tools/run_native_w23_saved_mph_diagnostic.py: Current frozen activity exact requested-unit/per-port result.at_points allowlist, zero-Study field/mode reads, independent quadrature and saved-mode readback gates",
-            "tests/test_native_w23_te_science_protocol.py: positive/negative tests for frequency singleton, dataset/study binding, BMA formulas, native units and incomplete axes",
-            "tests/test_native_w23_te_science_runner.py: unchanged production science-runner contract regression included because readback helpers are shared",
-            "tests/test_native_w23_saved_mph_diagnostic.py and tests/test_g3_results.py: guard, dispatch, attached count-only, and no-axis-fabrication controls",
-            "docs/full_project_execution/w23_overlap/W23_TE_FIXTURE_PROPOSAL.md: append current frozen activity successor criteria; Activity010 failure/evidence remains unchanged",
+            "tools/w23_direction_discovery.py: exact bounded public node graph traversal, schema-before-get typing, no inference on absent/ambiguous fields, and exact Port/BMA/StudyStep/StoreSolution/Dataset link matching",
+            "tools/run_native_w23_saved_mph_diagnostic.py: R21 fresh direction-only mode with zero result.at_points, Study.run, solver.run, setter, Java execution, and save dispatches; reuse the original-Popen cleanup owner",
+            "tests/test_w23_r21_direction_discovery.py: allowlist, property-schema gate, typed-value, incomplete-child, tag-correlation, and zero-solve controls",
+            "frozen R20 report and four R20 641/1281 raw E/H exports: exact offline replay only; prior runtime/UNKNOWN is never queried or reconciled",
         ],
         "previous_activity009_preservation_check": input_refs["root_preservation_check"],
         "previous_activity010_preservation_check": input_refs["activity010_preservation_check"],
@@ -638,14 +1037,15 @@ def prepare(evidence: Path, *, work: Path, execution_evidence: Path,
         "native_scientific_acceptance": "NOT_RUN; diagnostic readback only",
         "prior_activity009": "FAIL_OR_INCOMPLETE; one durable Study.run SUCCEEDED then postprocessing failed; no replay",
     }
-    write_json(evidence / f"ACTIVITY{activity_id.rsplit('-',1)[1]}_REVIEW_PACKET.json", packet)
+    packet_path = evidence / f"ACTIVITY{identity['activity_token']}_REVIEW_PACKET.json"
+    write_json(evidence / packet_path, packet)
     receipt = {
         "status": "PREPARED_AWAITING_ROOT_REVIEW_AND_EXACT_ADMISSION",
         "activity_id": activity_id, "candidate_id": CANDIDATE_ID,
         "candidate_revision": CANDIDATE_REVISION,
         "freeze_path": str(freeze_path), "freeze_sha256": freeze_sha,
-        "packet_path": str(evidence / f"ACTIVITY{activity_id.rsplit('-',1)[1]}_REVIEW_PACKET.json"),
-        "packet_sha256": sha256_file(evidence / f"ACTIVITY{activity_id.rsplit('-',1)[1]}_REVIEW_PACKET.json"),
+        "packet_path": str(evidence / packet_path),
+        "packet_sha256": sha256_file(evidence / packet_path),
         "source_count": len(source_after),
         "study_run_dispatches_allowed": 0, "solver_run_dispatches_allowed": 0,
         "native_process_started": False,
@@ -659,18 +1059,31 @@ def _validate_freeze(freeze_path: Path, expected_sha256: str) -> dict[str, Any]:
     if not freeze_path.is_file() or sha256_file(freeze_path) != expected_sha256:
         raise RuntimeError("freeze path is absent or its SHA-256 does not match the exact reviewed candidate")
     freeze = json.loads(freeze_path.read_text(encoding="utf-8"))
+    binding = freeze.get("fresh_runtime_binding")
+    if binding is not None:
+        fresh_runtime.validate(binding, repo=REPO, budget=fresh_budget(), install=science.INSTALL_ROOT, jdk=science.JAVA11)
+        fresh_runtime.scoped_path(binding, freeze_path.parent)
+        _bind_fresh_candidate_identity(binding)
     if (freeze.get("status") != "FROZEN_AWAITING_ROOT_APPROVAL"
             or freeze.get("activity_id") != _activity(freeze)
             or freeze.get("candidate_id") != CANDIDATE_ID
             or freeze.get("candidate_revision") != CANDIDATE_REVISION
             or freeze.get("source_manifest_sha256") != _source_digest(freeze.get("source_files", {}))):
         raise RuntimeError("freeze identity/status/source-map digest is invalid")
-    binding = freeze.get("fresh_runtime_binding")
-    if binding is not None:
-        fresh_runtime.validate(binding, repo=REPO, budget=fresh_budget(), install=science.INSTALL_ROOT, jdk=science.JAVA11)
-        fresh_runtime.scoped_path(binding, freeze_path.parent)
+    _validate_diagnostic_scope(freeze)
     if _source_files() != freeze.get("source_files"):
         raise RuntimeError("candidate source closure changed after freeze")
+    if freeze.get("direction_discovery_inputs") != _assert_source_inputs():
+        raise RuntimeError("R21 saved-MPH or frozen R20 direction inputs changed after freeze")
+    offline_ref = freeze.get("offline_direction_report")
+    expected_offline = freeze_path.parent / "offline_r20_signed_poynting_replay.json"
+    if (not isinstance(offline_ref, Mapping) or Path(str(offline_ref.get("path"))) != expected_offline
+            or not expected_offline.is_file() or expected_offline.is_symlink()
+            or sha256_file(expected_offline) != offline_ref.get("sha256")):
+        raise RuntimeError("R21 offline R20 direction report is absent or differs from its frozen exact hash")
+    recomputed_offline = _offline_r20_direction_report()
+    if sha256_json(recomputed_offline) != sha256_json(json.loads(expected_offline.read_text(encoding="utf-8"))):
+        raise RuntimeError("offline replay of preserved R20 field arrays differs from the frozen direction report")
     science._validate_source_manifest_artifact(freeze_path, freeze)
     # Recheck the actual freeze parent, including metadata-only successors.
     science._check_offline_receipts(freeze_path, freeze)
@@ -690,6 +1103,9 @@ def _validate_approval(approval: Mapping[str, Any], freeze: Mapping[str, Any],
         "max_owned_server_processes": 1, "max_worker_sessions": 1,
         "max_gui_processes": 0, "max_study_run_calls": 0,
         "max_solver_run_calls": 0,
+        "max_result_at_points_calls": (MAX_R21_RESULT_AT_POINTS_CALLS
+                                       if freeze.get("read_only_call_plan", {}).get("mode") == "direction_discovery_only"
+                                       else MAX_RESULT_AT_POINTS_CALLS),
         "max_seconds_from_server_birth": int(MAX_BIRTH_SECONDS),
         "cleanup_reserve_seconds": int(CLEANUP_RESERVE_SECONDS),
         "retry_unknown_or_nonterminal_worker_request": False,
@@ -737,24 +1153,77 @@ def _allowed_diagnostic_dispatch(request: Mapping[str, Any]) -> bool:
     operation_arguments = arguments.get("arguments")
     if operation_id == "result.at_points":
         return _allowed_saved_point_read(operation_arguments)
-    if (operation_id != "code.execute_java"
-            or not isinstance(operation_arguments, Mapping)
+    if (operation_id != "code.execute_java" or not isinstance(operation_arguments, Mapping)
             or set(operation_arguments) != {"source_artifact", "entrypoint", "arguments", "mode"}):
         return False
     fixture_arguments = operation_arguments.get("arguments")
-    return (
-        operation_arguments.get("source_artifact") == FIXTURE.name
-        and operation_arguments.get("entrypoint") == "NativeW23TEScienceFixture#run"
-        and operation_arguments.get("mode") == "trusted"
-        and isinstance(fixture_arguments, Mapping)
-        and fixture_arguments.get("phase") == "saved_solution_diagnostic"
-        and set(fixture_arguments) == {"phase"}
-    )
+    return (operation_arguments.get("source_artifact") == FIXTURE.name
+            and operation_arguments.get("entrypoint") == "NativeW23TEScienceFixture#run"
+            and operation_arguments.get("mode") == "trusted"
+            and isinstance(fixture_arguments, Mapping)
+            and dict(fixture_arguments) == {"phase": "saved_solution_diagnostic"})
+
+
+def _allowed_direction_discovery_dispatch(request: Mapping[str, Any], *,
+                                         expected_model_path: Path | None = None,
+                                         expected_project_id: str | None = None,
+                                         expected_model_ref: Mapping[str, Any] | None = None,
+                                         expected_revision: int | None = None) -> bool:
+    if not isinstance(request, Mapping) or set(request) != {"operation", "arguments", "execution"}:
+        return False
+    operation = request.get("operation")
+    arguments = request.get("arguments")
+    execution = request.get("execution")
+    if (not isinstance(arguments, Mapping) or not isinstance(execution, Mapping)
+            or not isinstance(expected_project_id, str) or not expected_project_id):
+        return False
+    if operation in {"server_connect", "model_load"}:
+        if expected_model_ref is not None or expected_revision is not None:
+            return False
+        if not direction.valid_science_execution_envelope(
+                execution, expected_project_id=expected_project_id,
+                require_model_context=False):
+            return False
+        timeout = 30.0 if operation == "server_connect" else 120.0
+        if type(execution.get("rpc_timeout_s")) is not float or execution["rpc_timeout_s"] != timeout:
+            return False
+        if operation == "server_connect":
+            return (set(arguments) == {"host", "port"}
+                    and arguments.get("host") == "127.0.0.1"
+                    and type(arguments.get("port")) is int and 1 <= arguments["port"] <= 65535)
+        path = arguments.get("path") if set(arguments) == {"path"} else None
+        return (expected_model_path is not None and isinstance(path, str)
+                and Path(path) == expected_model_path
+                and Path(path).name == "activity009-coarse-phase0-provisional.mph")
+    if operation == "model.inspect":
+        return (set(arguments) == {"detail"} and arguments.get("detail") == "summary"
+                and type(execution.get("rpc_timeout_s")) is float
+                and execution.get("rpc_timeout_s") == 60.0
+                and direction.valid_science_execution_envelope(
+                    execution, expected_project_id=expected_project_id,
+                    expected_model_ref=expected_model_ref,
+                    expected_revision=expected_revision, require_model_context=True))
+    if operation == "operation_call":
+        return direction.allowed_direction_dispatch(
+            request, expected_project_id=expected_project_id,
+            expected_model_ref=expected_model_ref,
+            expected_revision=expected_revision)
+    return False
+
+
+def _bind_direction_dispatch_context(daemon: Any, project_id: str,
+                                    model_ref: Mapping[str, Any], revision: int) -> None:
+    context = getattr(daemon, "_w23_r21_direction_dispatch_context", None)
+    if (not isinstance(context, dict) or context.get("project_id") != project_id
+            or not isinstance(model_ref, Mapping) or type(revision) is not int or revision < 0):
+        raise RuntimeError("R21 dispatch identity context is not bound to the exact registered project/model revision")
+    context["model_ref"] = dict(model_ref)
+    context["revision"] = revision
 
 
 def _field_points(x_um: float, sample_count: int) -> list[list[float]]:
-    if sample_count not in {protocol.SAMPLE_COUNT, protocol.REFINED_SAMPLE_COUNT}:
-        raise ValueError("field sample count is outside the frozen 321/641 grid")
+    if sample_count not in protocol.SAVED_MPH_QUADRATURE_SAMPLE_COUNTS:
+        raise ValueError(f"field sample count is outside the frozen saved-MPH {protocol.SAVED_MPH_QUADRATURE_SAMPLE_COUNTS} grid")
     return [[x_um, -8.0 + 16.0 * index / (sample_count - 1)]
             for index in range(sample_count)]
 
@@ -799,7 +1268,7 @@ def _allowed_saved_point_read(raw_arguments: Any) -> bool:
         for port,x in (("1",-10.0),("2",8.0)):
             if (expressions==list(plane_field_expressions(port)) and spec.get("units")==list(plane_field_units(port))
                 and spec.get("selection")==plane_selection(port) and type(spec.get("entity_dim")) is int and spec["entity_dim"]==1):
-                return any(points==_public_points(_field_points(x,count)) for count in (protocol.SAMPLE_COUNT,protocol.REFINED_SAMPLE_COUNT))
+                return any(points==_public_points(_field_points(x,count)) for count in protocol.SAVED_MPH_QUADRATURE_SAMPLE_COUNTS)
     if (dataset, solution_tag) == ("dset1", "sol1") and expressions == list(FREQUENCY_EXPRESSIONS):
         return points == _public_points([[-10.0, 0.0]]) and spec.get("units") in (["Hz"], ["GHz"])
     if (dataset, solution_tag) in {("dset2", "sol2"), ("dset3", "sol3")}:
@@ -840,12 +1309,48 @@ def _set_dispatch_allowlist(daemon: Any, journal_path: Path, *, allow=None) -> N
 
 def _query_once(daemon: Any, operation: str, arguments: dict[str, Any],
                 ref: dict[str, Any], revision: int, *, project_id: str,
-                deadline_epoch: float, evidence: Path, label: str) -> tuple[dict[str, Any], dict[str, Any], int]:
-    response = science._dispatch(daemon, operation, arguments,
-                                 project_id=project_id, ref=ref, revision=revision,
-                                 timeout_s=min(120.0, max(1.0, deadline_epoch - time.time() - CLEANUP_RESERVE_SECONDS)))
+                deadline_epoch: float, evidence: Path, label: str,
+                summary: dict[str, Any] | None = None,
+                point_read_attempt: bool = False) -> tuple[dict[str, Any], dict[str, Any], int]:
+    track_point = (point_read_attempt and summary is not None and operation == "operation_call"
+                   and isinstance(arguments, Mapping)
+                   and arguments.get("operation_id") == "result.at_points")
+    attempt: dict[str, Any] | None = None
+    if track_point:
+        attempts = summary.get("point_read_attempts")
+        if not isinstance(attempts, list) or any(
+                isinstance(row, Mapping) and row.get("label") == label for row in attempts):
+            raise RuntimeError(f"{label} attempted-call projection is missing or duplicated")
+        attempt = {"ordinal": len(attempts) + 1, "label": label,
+                   "operation_id": "result.at_points", "status": "DISPATCH_INVOKED",
+                   "verified_completed": False,
+                   "dispatch_response": None, "terminal_status": None,
+                   "native_scientific_acceptance": "NOT_EVALUATED"}
+        attempts.append(attempt)
+        summary["result_at_points_attempt_count"] = len(attempts)
+        summary["result_at_points_verified_completed_count"] = len(summary.get("native_calls", []))
+        write_json(evidence / "summary.json", summary)
+    try:
+        response = science._dispatch(daemon, operation, arguments,
+                                     project_id=project_id, ref=ref, revision=revision,
+                                     timeout_s=min(120.0, max(1.0, deadline_epoch - time.time() - CLEANUP_RESERVE_SECONDS)))
+    except BaseException as exc:
+        if attempt is not None:
+            attempt.update({"status": "DISPATCH_INVOKED_NO_RESPONSE",
+                            "error": f"{type(exc).__name__}: {exc}"})
+            write_json(evidence / "summary.json", summary)
+        raise
     write_json(evidence / f"{label}_dispatch_response.json", response)
     job_id = science._job_id(response)
+    if attempt is not None:
+        dispatch_path = evidence / f"{label}_dispatch_response.json"
+        attempt.update({"status": "DISPATCH_RESPONSE_RECEIVED",
+                        "job_id": job_id,
+                        "dispatch_success": response.get("success") is True,
+                        "dispatch_response": {"path": str(dispatch_path),
+                                              "bytes": dispatch_path.stat().st_size,
+                                              "sha256": sha256_file(dispatch_path)}})
+        write_json(evidence / "summary.json", summary)
     if job_id is not None:
         response = science._wait_job(daemon, response,
                                      deadline_epoch=deadline_epoch,
@@ -854,12 +1359,110 @@ def _query_once(daemon: Any, operation: str, arguments: dict[str, Any],
     write_json(evidence / f"{label}_terminal_response.json", response)
     if job_id is not None:
         job = daemon.store.job(job_id)
+        if attempt is not None:
+            terminal_path = evidence / f"{label}_job_terminal.json"
+            attempt["terminal_status"] = job.get("status") if isinstance(job, Mapping) else None
+            attempt["status"] = attempt["terminal_status"] or "TERMINAL_STATUS_UNAVAILABLE"
+            if terminal_path.is_file():
+                attempt["job_terminal_receipt"] = {"path": str(terminal_path),
+                    "bytes": terminal_path.stat().st_size, "sha256": sha256_file(terminal_path)}
+            summary["result_at_points_attempt_count"] = len(summary["point_read_attempts"])
+            summary["result_at_points_verified_completed_count"] = len(summary.get("native_calls", []))
+            write_json(evidence / "summary.json", summary)
         if not isinstance(job, Mapping) or job.get("status") not in {"SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED", "UNKNOWN", "LOST"}:
             raise RuntimeError(f"{label} did not reach a durable terminal job state; do not issue another request")
         if job.get("status") in {"UNKNOWN", "QUEUED", "RUNNING"}:
             raise RuntimeError(f"{label} durable job is {job.get('status')}; stop issuing requests")
+    elif attempt is not None:
+        attempt["terminal_status"] = "SUCCEEDED_INLINE" if response.get("success") is True else "INLINE_ERROR"
+        attempt["status"] = attempt["terminal_status"]
+        summary["result_at_points_attempt_count"] = len(summary["point_read_attempts"])
+        summary["result_at_points_verified_completed_count"] = len(summary.get("native_calls", []))
+        write_json(evidence / "summary.json", summary)
     new_ref, new_revision = science._update_ref(response, daemon, ref, revision)
     return response, new_ref, new_revision
+
+
+def _stage_legacy_fixture_once(project_workspace: Path, evidence: Path, *,
+                               direction_only: bool,
+                               expected_source_sha256: str | None) -> dict[str, Any]:
+    """Stage the exact Java source only for the legacy saved-MPH diagnostic path."""
+    if direction_only:
+        return {"status": "SKIPPED_DIRECTION_DISCOVERY_ONLY", "staged": False,
+                "source_opened": False, "code_execute_java": 0}
+    source = FIXTURE
+    if (not source.is_absolute() or source.resolve(strict=True) != source
+            or source.is_symlink()):
+        raise ValueError("legacy Java fixture source must be a canonical ordinary file")
+    if (not isinstance(expected_source_sha256, str)
+            or not re.fullmatch(r"[0-9a-f]{64}", expected_source_sha256)):
+        raise ValueError("legacy Java fixture lacks its exact frozen source SHA-256")
+    target = project_workspace / source.name
+    if not project_workspace.is_dir() or project_workspace.resolve(strict=True) != project_workspace:
+        raise ValueError("registered project workspace must be canonical before fixture staging")
+    if target.exists() or target.is_symlink():
+        raise FileExistsError(f"refusing to reuse preexisting Java fixture stage: {target}")
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    source_fd = os.open(source, flags)
+    try:
+        before = os.fstat(source_fd)
+        if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1 or before.st_uid != os.getuid():
+            raise ValueError("legacy Java fixture source identity is not an owner-bound regular file")
+        chunks = []
+        while True:
+            block = os.read(source_fd, 1024 * 1024)
+            if not block:
+                break
+            chunks.append(block)
+        raw = b"".join(chunks)
+        after = os.fstat(source_fd)
+        path_after = os.lstat(source)
+        signature = lambda row: (row.st_dev, row.st_ino, row.st_mode, row.st_uid,
+                                 row.st_nlink, row.st_size, row.st_mtime_ns, row.st_ctime_ns)
+        if (signature(before) != signature(after) or signature(before) != signature(path_after)
+                or len(raw) != before.st_size):
+            raise RuntimeError("legacy Java fixture source changed while being read")
+    finally:
+        os.close(source_fd)
+    source_sha = hashlib.sha256(raw).hexdigest()
+    if source_sha != expected_source_sha256:
+        raise RuntimeError("legacy Java fixture source differs from the frozen source manifest")
+    target_fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL
+                        | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    try:
+        view = memoryview(raw)
+        while view:
+            written = os.write(target_fd, view)
+            if written <= 0:
+                raise OSError("short write while staging the legacy Java fixture")
+            view = view[written:]
+        os.fsync(target_fd)
+        target_state = os.fstat(target_fd)
+    finally:
+        os.close(target_fd)
+    staged_raw = target.read_bytes()
+    staged_sha = hashlib.sha256(staged_raw).hexdigest()
+    if (len(staged_raw) != len(raw) or staged_sha != expected_source_sha256
+            or not stat.S_ISREG(target_state.st_mode) or target_state.st_uid != os.getuid()
+            or stat.S_IMODE(target_state.st_mode) != 0o600):
+        raise RuntimeError("staged Java fixture failed exact frozen-byte or private-mode verification")
+    workspace_fd = os.open(project_workspace, os.O_RDONLY
+                           | getattr(os, "O_DIRECTORY", 0)
+                           | getattr(os, "O_NOFOLLOW", 0))
+    try:
+        os.fsync(workspace_fd)
+    finally:
+        os.close(workspace_fd)
+    receipt = {
+        "status": "PASS_EXACT_LEGACY_JAVA_FIXTURE_STAGED",
+        "source": str(source), "source_bytes": len(raw), "source_sha256": source_sha,
+        "staged": str(target), "staged_bytes": len(staged_raw),
+        "staged_sha256": staged_sha, "staged_mode": stat.S_IMODE(target_state.st_mode),
+        "exact_copy": True, "staged_for_mode": "legacy_saved_mph_diagnostic",
+        "source_opened_read_only": True,
+    }
+    write_json(evidence / "fixture_stage.json", receipt)
+    return receipt
 
 
 def _copy_input_into_registered_workspace(source: Path, workspace: Path,
@@ -912,6 +1515,9 @@ def _load_saved_model_once(daemon: Any, model_path: Path, helpers: Mapping[str, 
             or binding.get("project_id") != project_id):
         raise RuntimeError("model_load response is not bound to the exact registered diagnostic project")
     model_tag = str(data.get("model_tag") if isinstance(data, Mapping) else ref.get("model_tag"))
+    if (isinstance(read_plan_mode := getattr(daemon, "_w23_r21_direction_dispatch_context", None), dict)
+            and read_plan_mode.get("project_id") == project_id):
+        _bind_direction_dispatch_context(daemon, project_id, ref, revision)
     inspect = science._dispatch(daemon, "model.inspect", {"detail": "summary"},
                                 project_id=project_id, ref=dict(ref), revision=revision,
                                 timeout_s=60.0)
@@ -934,11 +1540,58 @@ def _response_body(response: Mapping[str, Any]) -> dict[str, Any]:
     return science._operation_body(response)
 
 
+def _direction_public_read_once(daemon: Any, operation_id: str,
+                                operation_arguments: Mapping[str, Any],
+                                ref: dict[str, Any], revision: int, *,
+                                project_id: str, deadline_epoch: float,
+                                evidence: Path, summary: dict[str, Any]
+                                ) -> tuple[dict[str, Any], dict[str, Any], int]:
+    attempts = summary.setdefault("direction_discovery_calls", [])
+    if not isinstance(attempts, list) or len(attempts) >= direction.MAX_DIRECTION_CALLS:
+        raise RuntimeError("R21 public read call budget is exhausted; no further dispatch is allowed")
+    if time.time() >= deadline_epoch - CLEANUP_RESERVE_SECONDS:
+        raise TimeoutError("R21 public read reached the cleanup reserve; no further dispatch is allowed")
+    ordinal = len(attempts) + 1
+    label = f"direction_{ordinal:03d}_{operation_id.replace('.', '_')}"
+    request = direction.operation_call(operation_id, operation_arguments)
+    _bind_direction_dispatch_context(daemon, project_id, ref, revision)
+    attempt = {"ordinal": ordinal, "label": label, "operation_id": operation_id,
+               "arguments": dict(operation_arguments), "status": "DISPATCH_INVOKED",
+               "before_model_ref": dict(ref), "before_revision": revision,
+               "dispatch_response": None, "terminal_response": None}
+    attempts.append(attempt)
+    summary["direction_discovery_call_count"] = len(attempts)
+    write_json(evidence / "summary.json", summary)
+    try:
+        response, new_ref, new_revision = _query_once(
+            daemon, "operation_call", request, ref, revision,
+            project_id=project_id, deadline_epoch=deadline_epoch,
+            evidence=evidence, label=label)
+    except BaseException as exc:
+        attempt.update({"status": "DISPATCHED_NO_VERIFIED_TERMINAL",
+                        "error": f"{type(exc).__name__}: {exc}"})
+        write_json(evidence / "summary.json", summary)
+        raise
+    body = _response_body(response)
+    body_path = evidence / f"{label}_body.json"
+    write_json(body_path, body)
+    dispatch_path = evidence / f"{label}_dispatch_response.json"
+    terminal_path = evidence / f"{label}_terminal_response.json"
+    attempt.update({"status": "SUCCEEDED_PUBLIC_READ",
+                    "after_model_ref": dict(new_ref), "after_revision": new_revision,
+                    "dispatch_response": {"path": str(dispatch_path), "sha256": sha256_file(dispatch_path)},
+                    "terminal_response": {"path": str(terminal_path), "sha256": sha256_file(terminal_path)},
+                    "body": {"path": str(body_path), "sha256": sha256_file(body_path)}})
+    write_json(evidence / "summary.json", summary)
+    return body, new_ref, new_revision
+
+
 def _at_points_once(daemon: Any, *, dataset: str, solution: str,
                     expressions: tuple[str, ...], points: list[list[float]],
                     ref: dict[str, Any], revision: int, project_id: str,
                     deadline_epoch: float, evidence: Path, label: str,
-                    requested_units: tuple[str, ...] | None = None, selection: Mapping[str, Any] | None = None
+                    requested_units: tuple[str, ...] | None = None, selection: Mapping[str, Any] | None = None,
+                    summary: dict[str, Any] | None = None
                     ) -> tuple[dict[str, Any], dict[str, Any], int]:
     arguments = {
         "spec": {"expressions": list(expressions),
@@ -954,15 +1607,27 @@ def _at_points_once(daemon: Any, *, dataset: str, solution: str,
     request = {"operation_id": "result.at_points", "arguments": arguments}
     if not _allowed_saved_point_read(arguments):
         raise RuntimeError(f"{label} point readback is outside the exact saved-MPH allowlist")
+    attempts_before = summary.get("point_read_attempts") if isinstance(summary, Mapping) else None
+    if (not isinstance(attempts_before, list)
+            or len(attempts_before) >= MAX_RESULT_AT_POINTS_CALLS):
+        raise RuntimeError(f"{label} would exceed or cannot prove the frozen {MAX_RESULT_AT_POINTS_CALLS}-call result.at_points budget")
     before_ref, before_revision = dict(ref), revision
     before_worker_identity = dict(daemon.backend.worker_identity or {})
     response, ref, revision = _query_once(
         daemon, "operation_call", request, ref, revision,
         project_id=project_id, deadline_epoch=deadline_epoch,
-        evidence=evidence, label=label)
+        evidence=evidence, label=label, summary=summary, point_read_attempt=summary is not None)
     body = _response_body(response)
+    job_id = science._job_id(response)
+    durable_job_status = "SUCCEEDED_INLINE"
+    if job_id is not None:
+        job = daemon.store.job(job_id)
+        durable_job_status = job.get("status") if isinstance(job, Mapping) else None
+        if durable_job_status != "SUCCEEDED":
+            raise RuntimeError(f"{label} result.at_points lacks a durable SUCCEEDED job receipt")
     write_json(evidence / f"{label}_native_result_raw.json", {
         "request": request, "response": response, "body": body,
+        "durable_job_id": job_id, "durable_job_status": durable_job_status,
         "scope": "read-only saved solution result.at_points; no Study.run or solver.run",
         "native_scientific_acceptance": "NOT_EVALUATED",
     })
@@ -974,10 +1639,122 @@ def _at_points_once(daemon: Any, *, dataset: str, solution: str,
     return body, ref, revision
 
 
+def _append_completed_point_projection(summary: dict[str, Any], evidence: Path,
+                                       label: str) -> dict[str, Any]:
+    """Persist one exact successful raw+decoded point receipt before the next slot.
+
+    This is an incremental evidence index only. It never upgrades a readback to
+    scientific acceptance, and an UNKNOWN/nonterminal operation cannot satisfy
+    the raw terminal-status checks below.
+    """
+    raw_path = evidence / f"{label}_native_result_raw.json"
+    decoded_path = evidence / f"{label}_decoded.json"
+    if not raw_path.is_file() or not decoded_path.is_file():
+        raise RuntimeError(f"{label} lacks both durable raw and decoded result receipts")
+    try:
+        raw = json.loads(raw_path.read_text(encoding="utf-8"))
+        decoded = json.loads(decoded_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"{label} raw/decoded result receipt is unreadable") from exc
+    request = raw.get("request") if isinstance(raw, Mapping) else None
+    response = raw.get("response") if isinstance(raw, Mapping) else None
+    body = raw.get("body") if isinstance(raw, Mapping) else None
+    arguments = request.get("arguments") if isinstance(request, Mapping) else None
+    spec = arguments.get("spec") if isinstance(arguments, Mapping) else None
+    expressions = spec.get("expressions") if isinstance(spec, Mapping) else None
+    solution = spec.get("solution") if isinstance(spec, Mapping) else None
+    durable_status = raw.get("durable_job_status") if isinstance(raw, Mapping) else None
+    if (not isinstance(request, Mapping) or request.get("operation_id") != "result.at_points"
+            or not isinstance(arguments, Mapping) or not isinstance(spec, Mapping)
+            or not isinstance(expressions, list) or not expressions
+            or not isinstance(solution, Mapping)
+            or not isinstance(response, Mapping) or response.get("success") is not True
+            or not isinstance(body, Mapping)
+            or durable_status not in {"SUCCEEDED", "SUCCEEDED_INLINE"}
+            or science._job_id(response) != raw.get("durable_job_id")
+            or raw.get("native_scientific_acceptance") != "NOT_EVALUATED"
+            or not isinstance(decoded, Mapping)
+            or decoded.get("status") != "PRODUCTION_NATIVE_COMPLEX_POINT_READBACK"
+            or decoded.get("operation") != "result.at_points"
+            or decoded.get("science_acceptance") != "NOT_EVALUATED"
+            or decoded.get("dataset") != solution.get("dataset")
+            or decoded.get("solution") != solution.get("solution")
+            or [row.get("expression") for row in decoded.get("expressions", [])
+                if isinstance(row, Mapping)] != expressions):
+        raise RuntimeError(f"{label} cannot be projected as a succeeded, decoded readback-only call")
+    requested_units = spec.get("units")
+    if requested_units is not None:
+        requested_application = decoded.get("requested_unit_application")
+        if (not isinstance(requested_units, list)
+                or not isinstance(requested_application, Mapping)
+                or requested_application.get("requested_expressions") != expressions
+                or requested_application.get("requested_units") != requested_units
+                or decoded.get("expression_units") != dict(zip(expressions, requested_units))):
+            raise RuntimeError(f"{label} decoded units differ from its exact public request")
+    calls = summary.get("native_calls")
+    if not isinstance(calls, list) or any(
+            isinstance(row, Mapping) and row.get("label") == label for row in calls):
+        raise RuntimeError(f"{label} projection list is missing or already contains this call")
+    attempts = summary.get("point_read_attempts")
+    attempt = next((row for row in attempts if isinstance(row, Mapping)
+                    and row.get("label") == label), None) if isinstance(attempts, list) else None
+    dispatch_receipt = attempt.get("dispatch_response") if isinstance(attempt, Mapping) else None
+    dispatch_path = Path(dispatch_receipt.get("path", "")) if isinstance(dispatch_receipt, Mapping) else None
+    dispatch_response: Mapping[str, Any] | None = None
+    if (dispatch_path is not None and dispatch_path == evidence / f"{label}_dispatch_response.json"
+            and dispatch_path.is_file()
+            and dispatch_receipt.get("sha256") == sha256_file(dispatch_path)):
+        try:
+            observed_dispatch = json.loads(dispatch_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            observed_dispatch = None
+        dispatch_response = observed_dispatch if isinstance(observed_dispatch, Mapping) else None
+    if (not isinstance(attempt, dict)
+            or attempt.get("status") not in {"SUCCEEDED", "SUCCEEDED_INLINE"}
+            or attempt.get("terminal_status") not in {"SUCCEEDED", "SUCCEEDED_INLINE"}
+            or attempt.get("job_id") != raw.get("durable_job_id")
+            or not isinstance(dispatch_response, Mapping)
+            or dispatch_response.get("success") is not True
+            or science._job_id(dispatch_response) != attempt.get("job_id")):
+        raise RuntimeError(f"{label} lacks a succeeded matching dispatch attempt receipt")
+    projection = {
+        "ordinal": len(calls) + 1,
+        "label": label,
+        "status": "SUCCEEDED_RAW_AND_DECODED_READBACK_ONLY",
+        "operation_id": "result.at_points",
+        "job_id": raw.get("durable_job_id"),
+        "dataset": decoded["dataset"], "solution": decoded["solution"],
+        "sample_count": decoded["sample_count"],
+        "expression_units": dict(decoded.get("expression_units") or {}),
+        "requested_units": list(requested_units) if requested_units is not None else None,
+        "raw_native_result": {"path": str(raw_path), "bytes": raw_path.stat().st_size,
+                              "sha256": sha256_file(raw_path)},
+        "decoded_result": {"path": str(decoded_path), "bytes": decoded_path.stat().st_size,
+                           "sha256": sha256_file(decoded_path)},
+        "native_scientific_acceptance": "NOT_EVALUATED",
+    }
+    calls.append(projection)
+    attempt["verified_completed"] = True
+    attempt["verification_status"] = "SUCCEEDED_RAW_AND_DECODED_READBACK_ONLY"
+    attempt["decoded_result"] = dict(projection["decoded_result"])
+    summary["result_at_points_attempt_count"] = len(attempts)
+    summary["result_at_points_verified_completed_count"] = len(calls)
+    try:
+        write_json(evidence / "summary.json", summary)
+    except BaseException:
+        calls.pop()
+        attempt["verified_completed"] = False
+        attempt.pop("verification_status", None)
+        attempt.pop("decoded_result", None)
+        raise
+    return projection
+
+
 def _frequency_readback_once(
     daemon: Any, server: Any, *, requested_unit: str, ref: dict[str, Any], revision: int,
     project_id: str, deadline_epoch: float, evidence: Path, count_witness: Mapping[str, Any],
     expected_context: Mapping[str, Any] | None = None,
+    summary: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], int]:
     if requested_unit not in {"Hz", "GHz"}:
         raise RuntimeError("frequency-control unit is outside the frozen Hz/GHz pair")
@@ -1009,7 +1786,7 @@ def _frequency_readback_once(
         daemon, dataset="dset1", solution="sol1", expressions=FREQUENCY_EXPRESSIONS,
         points=[[-10.0, 0.0]], ref=ref, revision=revision, project_id=project_id,
         deadline_epoch=deadline_epoch, evidence=evidence, label=label,
-        requested_units=(requested_unit,))
+        requested_units=(requested_unit,), summary=summary)
     after_epoch = epoch("after")
     context = {"model_ref_before": before_ref, "model_ref_after": dict(ref),
                "revision_before": before_revision, "revision_after": revision,
@@ -1232,8 +2009,21 @@ def validate_definition_boundary_metadata(readback: Mapping[str, Any]) -> dict[s
         "definitions_interpreted": False, "boundary_side_chosen": False, "native_field_or_port_values": "NOT_RUN"}
 
 
-def _set_native_dispatch_guard(daemon: Any, journal: Path) -> None:
-    _set_dispatch_allowlist(daemon, journal)
+def _set_native_dispatch_guard(daemon: Any, journal: Path, *, direction_only: bool = False,
+                               expected_model_path: Path | None = None,
+                               expected_project_id: str | None = None) -> None:
+    if direction_only:
+        if not isinstance(expected_project_id, str) or not expected_project_id:
+            raise ValueError("direction-only guard requires the exact registered project ID")
+        context = {"project_id": expected_project_id, "model_ref": None, "revision": None}
+        daemon._w23_r21_direction_dispatch_context = context
+        allow = lambda request: _allowed_direction_discovery_dispatch(
+            request, expected_model_path=expected_model_path,
+            expected_project_id=context["project_id"],
+            expected_model_ref=context["model_ref"], expected_revision=context["revision"])
+    else:
+        allow = _allowed_diagnostic_dispatch
+    _set_dispatch_allowlist(daemon, journal, allow=allow)
 
 
 def _validate_private_read_input(path: Path, label: str, *, candidate_only: bool) -> None:
@@ -1246,11 +2036,11 @@ def _validate_private_read_input(path: Path, label: str, *, candidate_only: bool
 
 
 def _expected_work_path() -> Path:
-    # Both identity values are frozen source constants checked in _validate_freeze.
-    suffix = ACTIVITY_ID.removeprefix("w23-saved-mph-zero-solve-readback-")
+    # This legacy no-binding path remains only for the explicitly preserved readback route.
+    suffix = ACTIVITY_ID.removeprefix("w23-saved-mph-direction-discovery-")
     if suffix == ACTIVITY_ID or "/" in suffix or "/" in CANDIDATE_REVISION:
         raise RuntimeError("invalid frozen activity/revision identity")
-    return Path("/private/tmp") / ("comsol-mcp-w23-te-saved-mph-zero-solve-readback-" + suffix + "-" + CANDIDATE_REVISION)
+    return Path("/private/tmp") / ("comsol-mcp-w23-direction-discovery-" + suffix + "-" + CANDIDATE_REVISION)
 
 
 def _validate_fresh_execution_paths(freeze: Mapping[str, Any], work: Path, evidence: Path) -> None:
@@ -1344,13 +2134,33 @@ def _execute_native_campaign(helpers: Mapping[str, Any], freeze_path: Path,
         owner.cause(exc)
         failure = exc
         result = owner.summary
-    observed = owner.observe()
-    unsafe = result.get("cleanup_status") in {"LEFT_RUNNING_ACTIVE_OR_UNKNOWN", "CLEANUP_UNVERIFIED"}
-    if not owner.terminal(observed) and result.get("cleanup_status") == "CLEANUP_VERIFIED_EXACT_OWNED_PIDS_AND_PORTS_ABSENT":
+    try:
+        observed = owner.observe()
+    except BaseException as exc:
+        owner.cause(exc)
+        owner.diagnostic("outer_original_child_observation", exc)
+        observed = {"worker": {"created": None, "state": "OBSERVATION_UNKNOWN"},
+                    "server": {"created": None, "state": "OBSERVATION_UNKNOWN"}}
+    try:
+        original_children_terminal = owner.terminal(observed)
+    except BaseException as exc:
+        owner.cause(exc)
+        owner.diagnostic("outer_original_child_terminal_gate", exc)
+        original_children_terminal = False
+    cleanup_verified = (result.get("cleanup_status") ==
+                        "CLEANUP_VERIFIED_EXACT_OWNED_PIDS_AND_PORTS_ABSENT")
+    # The cleanup enum is produced by a separate body. Any new, missing, or
+    # blocked status must still reach the original-Popen owner if a child is
+    # live or unobservable. A positive cleanup receipt cannot override that
+    # original-Popen observation.
+    unsafe = not original_children_terminal
+    if unsafe and cleanup_verified:
         owner.cause(RuntimeError("normal cleanup receipt contradicts original child Popen observation"))
         result["cleanup_status"] = "CLEANUP_UNVERIFIED"
+        if isinstance(owner.summary, dict):
+            owner.summary["cleanup_status"] = "CLEANUP_UNVERIFIED"
         unsafe = True
-    if unsafe or (failure is not None and not owner.terminal(observed)):
+    if unsafe:
         result = owner.run()  # Never returns while an original child is alive/unobservable.
         try:
             finished = time.time()
@@ -1392,10 +2202,13 @@ def _execute_native_campaign_body(helpers: Mapping[str, Any], freeze_path: Path,
         "study_run_dispatch_count": 0, "solver_run_dispatch_count": 0,
         "actual_internal_solver_execution_count": "UNKNOWN_NOT_INFERRED_FROM_READBACK",
         "server_birth": None, "server_pid": None, "worker_pid": None,
-        "cleanup_status": "NOT_STARTED", "native_calls": [],
+        "cleanup_status": "NOT_STARTED", "native_calls": [], "point_read_attempts": [],
+        "result_at_points_attempt_count": 0,
+        "result_at_points_verified_completed_count": 0,
     }
     owner.summary = summary
     write_json(evidence / "summary.json", summary)
+    direction_only = freeze.get("read_only_call_plan", {}).get("mode") == "direction_discovery_only"
     preflight = helpers["preflight_module"]
     server = None
     authority_daemon = None
@@ -1521,7 +2334,13 @@ def _execute_native_campaign_body(helpers: Mapping[str, Any], freeze_path: Path,
         daemon = helpers["ControlDaemon"](work / "control", worker=server.worker,
                                           project_root=server.project)
         owner.bind_daemon(daemon)
-        _set_native_dispatch_guard(daemon, managed_dispatch_journal)
+        project_workspace = science._project_science_workspace(project_receipt)
+        expected_staged_model = project_workspace / "inputs" / "activity009-coarse-phase0-provisional.mph"
+        _set_native_dispatch_guard(
+            daemon, managed_dispatch_journal,
+            direction_only=direction_only,
+            expected_model_path=expected_staged_model,
+            expected_project_id=project_id)
         connection = science._dispatch(daemon, "server_connect",
                                        {"host": "127.0.0.1", "port": server.port},
                                        project_id=project_id, timeout_s=30.0)
@@ -1530,18 +2349,12 @@ def _execute_native_campaign_body(helpers: Mapping[str, Any], freeze_path: Path,
                 or connection.get("data", {}).get("endpoint") != f"127.0.0.1:{server.port}"):
             raise RuntimeError("managed server_connect failed exact task-owned loopback binding")
         owner.capture_attach()
-        project_workspace = science._project_science_workspace(project_receipt)
-        staged_fixture = project_workspace / FIXTURE.name
-        if staged_fixture.exists():
-            raise FileExistsError(staged_fixture)
-        shutil.copyfile(FIXTURE, staged_fixture)
-        if sha256_file(staged_fixture) != sha256_file(FIXTURE):
-            raise RuntimeError("staged Java diagnostic fixture hash differs from frozen source")
-        write_json(evidence / "fixture_stage.json", {
-            "source": str(FIXTURE), "source_sha256": sha256_file(FIXTURE),
-            "staged": str(staged_fixture), "staged_sha256": sha256_file(staged_fixture),
-            "exact_copy": True,
-        })
+        fixture_manifest = freeze.get("source_files", {}).get("tools/java/NativeW23TEScienceFixture.java")
+        expected_fixture_sha = (fixture_manifest.get("sha256")
+                                if isinstance(fixture_manifest, Mapping) else None)
+        _stage_legacy_fixture_once(project_workspace, evidence,
+                                  direction_only=direction_only,
+                                  expected_source_sha256=expected_fixture_sha)
         staged_model = _copy_input_into_registered_workspace(SOURCE_MODEL,
                                                              project_workspace, evidence)
         ref, revision, model_tag = _load_saved_model_once(daemon, staged_model,
@@ -1551,6 +2364,56 @@ def _execute_native_campaign_body(helpers: Mapping[str, Any], freeze_path: Path,
                         "model_ref": ref, "model_revision": revision,
                         "project_id": project_id})
         write_json(evidence / "summary.json", summary)
+        if freeze.get("read_only_call_plan", {}).get("mode") == "direction_discovery_only":
+            def public_read(operation_id: str, arguments: Mapping[str, Any]):
+                nonlocal ref, revision
+                body, ref, revision = _direction_public_read_once(
+                    daemon, operation_id, arguments, ref, revision,
+                    project_id=project_id, deadline_epoch=float(deadline_epoch),
+                    evidence=evidence, summary=summary)
+                return body
+
+            graph = direction.discover_direction_graph(public_read)
+            graph_path = evidence / "public_direction_graph.json"
+            write_json(graph_path, graph)
+            actual_study_rows = science._actual_science_study_run_submissions(
+                daemon, preflight)
+            study_audit = {
+                "rows": actual_study_rows,
+                "observed_durable_study_run_submission_count": len(actual_study_rows),
+                "required_count": 0,
+                "status": "PASS_ZERO_EXPLICIT_STUDY_RUN_SUBMISSIONS"
+                         if not actual_study_rows else "FAIL_FORBIDDEN_STUDY_RUN_SUBMISSION_OBSERVED",
+                "solver_run_dispatch_count": 0,
+                "result_at_points_dispatch_count": 0,
+                "internal_solver_execution_count": "UNKNOWN_NOT_INFERRED_FROM_READBACK",
+            }
+            write_json(evidence / "study_run_submission_audit.json", study_audit)
+            if actual_study_rows:
+                raise RuntimeError("forbidden Study.run submission was persisted during R21 read-only discovery")
+            expected_prefix = freeze.get("read_only_call_plan", {}).get("field_variable_prefix")
+            resolved = direction_graph_is_resolved(graph, expected_prefix=expected_prefix)
+            summary.update({
+                "status": "DIRECTION_GRAPH_CAPTURED_NOT_SCIENCE_ACCEPTED" if resolved
+                          else "DIRECTION_GRAPH_INCOMPLETE_OR_AMBIGUOUS_NOT_SCIENCE_ACCEPTED",
+                "direction_discovery_status": graph["status"],
+                "direction_graph_path": str(graph_path),
+                "direction_graph_sha256": sha256_file(graph_path),
+                "direction_namespace_status": graph["electromagnetic_waves"]["namespace_correlation"]["status"],
+                "port_name_binding_status": graph["port_name_binding_status"],
+                "bma_solution_binding_statuses": [row["status"] for row in graph["bma_solution_bindings"]],
+                "offline_signed_poynting_report": freeze["offline_direction_report"],
+                "direction_discovery_call_count": len(summary.get("direction_discovery_calls", [])),
+                "study_run_dispatch_count": 0,
+                "study_run_durable_submission_count": 0,
+                "solver_run_dispatch_count": 0,
+                "result_at_points_attempt_count": 0,
+                "result_at_points_verified_completed_count": 0,
+                "actual_internal_solver_execution_count": "UNKNOWN_NOT_INFERRED_FROM_READBACK",
+                "native_scientific_acceptance": "NOT_ACCEPTED_DIAGNOSTIC_READBACK_ONLY",
+            })
+            write_json(evidence / "summary.json", summary)
+            return summary
         if time.time() >= deadline_epoch - CLEANUP_RESERVE_SECONDS:
             raise TimeoutError("diagnostic work reached cleanup reserve before dataset inventory")
         dataset_response, ref, revision = _query_once(
@@ -1653,17 +2516,16 @@ def _execute_native_campaign_body(helpers: Mapping[str, Any], freeze_path: Path,
 
         decoded_fields: dict[str, dict[int, Mapping[str, Any]]] = {
             "output_x8": {}, "input_xminus10": {}}
-        point_read_dispatches = 0
         frequency_hz, hz_context, ref, revision = _frequency_readback_once(
             daemon, server, requested_unit="Hz", ref=ref, revision=revision,
             project_id=project_id, deadline_epoch=float(deadline_epoch), evidence=evidence,
-            count_witness=main_frequency)
-        point_read_dispatches += 1
+            count_witness=main_frequency, summary=summary)
+        _append_completed_point_projection(summary, evidence, "physical_frequency_Hz")
         frequency_ghz, ghz_context, ref, revision = _frequency_readback_once(
             daemon, server, requested_unit="GHz", ref=ref, revision=revision,
             project_id=project_id, deadline_epoch=float(deadline_epoch), evidence=evidence,
-            count_witness=main_frequency, expected_context=hz_context)
-        point_read_dispatches += 1
+            count_witness=main_frequency, expected_context=hz_context, summary=summary)
+        _append_completed_point_projection(summary, evidence, "physical_frequency_GHz")
         frequency_scaling = protocol.verify_frequency_unit_scaling(
             frequency_hz, frequency_ghz, [hz_context, ghz_context])
         write_json(evidence / "physical_frequency_actual_native_unit_scaling.json", frequency_scaling)
@@ -1671,7 +2533,7 @@ def _execute_native_campaign_body(helpers: Mapping[str, Any], freeze_path: Path,
         write_json(evidence / "physical_frequency_native_numerical_witness.json", physical_frequency)
 
         for plane_id, x_um in (("output_x8", 8.0), ("input_xminus10", -10.0)):
-            for sample_count in (protocol.SAMPLE_COUNT, protocol.REFINED_SAMPLE_COUNT):
+            for sample_count in protocol.SAVED_MPH_QUADRATURE_SAMPLE_COUNTS:
                 if time.time() >= deadline_epoch - CLEANUP_RESERVE_SECONDS:
                     raise TimeoutError("saved-field readback reached cleanup reserve; remaining native reads stopped")
                 port = "2" if plane_id == "output_x8" else "1"
@@ -1683,8 +2545,8 @@ def _execute_native_campaign_body(helpers: Mapping[str, Any], freeze_path: Path,
                     expressions=expressions,
                     points=_field_points(x_um, sample_count), ref=ref, revision=revision,
                     project_id=project_id, deadline_epoch=float(deadline_epoch),
-                    evidence=evidence, label=label, requested_units=requested_units, selection=plane_selection(port))
-                point_read_dispatches += 1
+                    evidence=evidence, label=label, requested_units=requested_units,
+                    selection=plane_selection(port), summary=summary)
                 decoded = protocol.decode_production_complex_point_readback(
                     point_body, dataset_tag="dset1", solution_tag="sol1",
                     expressions=expressions,
@@ -1696,6 +2558,7 @@ def _execute_native_campaign_body(helpers: Mapping[str, Any], freeze_path: Path,
                     require_x_plane_normal=True, expected_selection=plane_selection(port), field_scheme="emw_down")
                 decoded_fields[plane_id][sample_count] = decoded
                 write_json(evidence / f"{label}_decoded.json", decoded)
+                _append_completed_point_projection(summary, evidence, label)
 
         mode_point_readbacks: dict[str, Mapping[str, Any]] = {}
         for step in ("bmaInput", "bmaOutput"):
@@ -1714,8 +2577,7 @@ def _execute_native_campaign_body(helpers: Mapping[str, Any], freeze_path: Path,
                 points=[[MODE_DATASETS[dataset_tag][3], 0.0]],
                 ref=ref, revision=revision, project_id=project_id,
                 deadline_epoch=float(deadline_epoch), evidence=evidence, label=label,
-                requested_units=tuple(actual_mode_units.values()))
-            point_read_dispatches += 1
+                requested_units=tuple(actual_mode_units.values()), summary=summary)
             decoded = protocol.decode_production_complex_point_readback(
                 point_body, dataset_tag=dataset_tag, solution_tag=solution_tag,
                 expressions=mode_expressions,
@@ -1725,6 +2587,7 @@ def _execute_native_campaign_body(helpers: Mapping[str, Any], freeze_path: Path,
                 expected_requested_units=tuple(actual_mode_units.values()), scalar_bma_binding=binding, field_scheme="emw_down")
             mode_point_readbacks[step] = decoded
             write_json(evidence / f"{label}_decoded.json", decoded)
+            _append_completed_point_projection(summary, evidence, label)
         bma_formula_check = protocol.reconcile_bma_mode_point_readbacks(
             bma_bindings, mode_point_readbacks, physical_frequency, field_scheme="emw_down")
         write_json(evidence / "bma_mode_formula_crosscheck.json", bma_formula_check)
@@ -1735,14 +2598,16 @@ def _execute_native_campaign_body(helpers: Mapping[str, Any], freeze_path: Path,
         write_json(evidence / "saved_bma_neff_checks.json", neff_checks)
 
         independent = {}
-        for sample_count in (protocol.SAMPLE_COUNT, protocol.REFINED_SAMPLE_COUNT):
+        for sample_count in protocol.SAVED_MPH_QUADRATURE_SAMPLE_COUNTS:
             independent[sample_count] = protocol.independent_integrals(
                 decoded_fields["output_x8"][sample_count],
                 decoded_fields["input_xminus10"][sample_count], field_scheme="emw_down")
             write_json(evidence / f"saved_field_independent_integrals_{sample_count}.json",
                        independent[sample_count])
         refinement = protocol.compare_quadrature_refinement(
-            independent[protocol.SAMPLE_COUNT], independent[protocol.REFINED_SAMPLE_COUNT])
+            independent[protocol.SAVED_MPH_SAMPLE_COUNT],
+            independent[protocol.SAVED_MPH_REFINED_SAMPLE_COUNT],
+            sample_counts=protocol.SAVED_MPH_QUADRATURE_SAMPLE_COUNTS)
         write_json(evidence / "saved_field_quadrature_refinement.json", refinement)
         summary.update({"status": "SAVED_MPH_READBACK_GATES_CAPTURED_NOT_FORMAL_SCIENCE_ACCEPTED",
                         "fixture_status": java_readback.get("diagnostic_phase"),
@@ -1750,7 +2615,8 @@ def _execute_native_campaign_body(helpers: Mapping[str, Any], freeze_path: Path,
                         "main_frequency_witness_status": main_frequency["status"],
                         "bma_binding_status": bma_bindings["status"],
                         "bma_formula_crosscheck_status": bma_formula_check["status"],
-                        "field_point_read_dispatch_count": point_read_dispatches,
+                        "result_at_points_attempt_count": len(summary["point_read_attempts"]),
+                        "result_at_points_verified_completed_count": len(summary["native_calls"]),
                         "study_run_dispatch_count": 0,
                         "solver_run_dispatch_count": 0,
                         "study_run_durable_submission_count": 0,
@@ -1913,6 +2779,17 @@ def _execute_native_campaign_body(helpers: Mapping[str, Any], freeze_path: Path,
         summary["cleanup_gates"] = cleanup_gates
         summary["cleanup_authorization"] = cleanup_authorization
         summary["worker_disconnect"] = disconnect_receipt
+        attempts = summary.get("point_read_attempts")
+        calls = summary.get("native_calls")
+        attempts = attempts if isinstance(attempts, list) else []
+        calls = calls if isinstance(calls, list) else []
+        summary["result_at_points_attempt_count"] = len(attempts)
+        summary["result_at_points_verified_completed_count"] = len(calls)
+        summary["result_at_points_unknown_or_nonterminal_count"] = sum(
+            1 for row in attempts if isinstance(row, Mapping) and row.get("status") in {
+                "UNKNOWN", "QUEUED", "RUNNING", "DISPATCH_INVOKED",
+                "DISPATCH_INVOKED_NO_RESPONSE", "DISPATCH_RESPONSE_RECEIVED",
+                "TERMINAL_STATUS_UNAVAILABLE"})
         summary["observed_internal_solver_count"] = "UNKNOWN_NOT_INFERRED_FROM_READBACK"
         summary["explicit_study_or_solver_execution_allowed"] = False
         summary["native_scientific_acceptance"] = "NOT_ACCEPTED_DIAGNOSTIC_READBACK_ONLY"

@@ -1207,7 +1207,7 @@ def _model_tree_data(model: Any) -> dict[str, Any]:
         "file_path": _safe_model_path(model),
         "components": components,
         "component_details": component_details,
-        "parameters": [row["name"] for row in _parameter_rows(model)],
+        "parameters": [str(name) for name in java.param().varnames()],
         "studies": [str(tag) for tag in java.study().tags()],
         "solutions": [str(tag) for tag in java.sol().tags()],
         "datasets": [str(tag) for tag in java.result().dataset().tags()],

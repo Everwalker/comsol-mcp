@@ -12,9 +12,13 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 
-SAMPLE_COUNT = 321  # Coarse composite Simpson grid: 320 even intervals.
-REFINED_SAMPLE_COUNT = 641  # Fine grid doubles intervals while preserving endpoints.
-QUADRATURE_SAMPLE_COUNTS = (SAMPLE_COUNT, REFINED_SAMPLE_COUNT)
+SAMPLE_COUNT = 321  # Existing full-science coarse grid: 320 even intervals.
+REFINED_SAMPLE_COUNT = 641  # Existing full-science fine grid doubles intervals.
+SAVED_MPH_SAMPLE_COUNT = 641  # Zero-solve saved-MPH refinement starts from prior fine grid.
+SAVED_MPH_REFINED_SAMPLE_COUNT = 1281  # New zero-solve refinement doubles intervals.
+SAVED_MPH_QUADRATURE_SAMPLE_COUNTS = (SAVED_MPH_SAMPLE_COUNT, SAVED_MPH_REFINED_SAMPLE_COUNT)
+QUADRATURE_SAMPLE_COUNTS = tuple(sorted({SAMPLE_COUNT, REFINED_SAMPLE_COUNT,
+                                         *SAVED_MPH_QUADRATURE_SAMPLE_COUNTS}))
 INTEGRAL_RELATIVE_TOLERANCE = 1e-3
 PHASE_FIELD_RELATIVE_TOLERANCE = 1e-3
 PHASE_INTEGRAL_RELATIVE_TOLERANCE = 1e-3
@@ -23,6 +27,11 @@ POWER_UNIT_2D = "W/m"
 CAPTURE_APERTURE_ID = "receiver_core_aperture"
 CAPTURE_Y_MIN_M = -0.5e-6
 CAPTURE_Y_MAX_M = 0.5e-6
+BMA_LEGACY_REQUESTED_UNITS = ("1/m", "1", "1/m")
+BMA_NATIVE_DEFAULT_NEFF_REQUESTED_UNITS = ("1/m", "", "1/m")
+NATIVE_DEFAULT_ALLOWED_EXPRESSIONS = frozenset({
+    "emw.neff_1", "emw.neff_2", "emw.nx", "emw.ny",
+})
 
 
 class ScienceProtocolError(ValueError):
@@ -921,6 +930,20 @@ def _require_requested_unit_application(
             or application.get("setter") != "actual Interp NumericalFeature.setIndex(unit,requested,index)"
             or application.get("no_external_scaling_or_relabeling") is not True):
         raise ScienceProtocolError("production Interp lacks exact requested-unit application proof")
+    native_defaults = [expression for expression, unit in zip(expressions, units) if unit == ""]
+    unsupported = [expression for expression in native_defaults
+                   if expression not in NATIVE_DEFAULT_ALLOWED_EXPRESSIONS]
+    if unsupported:
+        raise ScienceProtocolError(
+            "production Interp empty-unit request is outside the exact built-in native-default allowlist")
+    if native_defaults:
+        if application.get("native_default_unit_expressions") != native_defaults:
+            raise ScienceProtocolError(
+                "production Interp native-default unit request is not bound to its exact expressions")
+    elif ("native_default_unit_expressions" in application
+          and application["native_default_unit_expressions"] != []):
+        raise ScienceProtocolError(
+            "production Interp proof declares native-default expressions for a nonblank unit request")
     for key, stage in (("before", "before_numeric_read"), ("after", "after_numeric_read")):
         observed = application.get(key)
         if (not isinstance(observed, Mapping)
@@ -1095,9 +1118,11 @@ def reconcile_bma_mode_point_readbacks(
         if (not isinstance(application, Mapping)
                 or application.get("status") != "VERIFIED_REQUESTED_UNITS_BEFORE_AND_AFTER_NUMERIC_READ"
                 or application.get("requested_expressions") != list(expected_expressions)
-                or application.get("requested_units") != ["1/m", "1", "1/m"]):
+                or application.get("requested_units") not in (
+                    list(BMA_LEGACY_REQUESTED_UNITS), list(BMA_NATIVE_DEFAULT_NEFF_REQUESTED_UNITS))):
             raise ScienceProtocolError(f"{step} lacks exact native requested-unit application proof")
-        _require_requested_unit_application(application, expected_expressions, ["1/m", "1", "1/m"])
+        requested_units = application["requested_units"]
+        _require_requested_unit_application(application, expected_expressions, requested_units)
         beta_expression, neff_expression, k0_expression = expected_expressions
         values_by_name: dict[str, complex] = {}
         for expression in expected_expressions:
@@ -1108,8 +1133,11 @@ def reconcile_bma_mode_point_readbacks(
             if point["native_is_complex"] is False and values_by_name[expression].imag != 0.0:
                 raise ScienceProtocolError(f"{step} native real-only scalar has nonzero imaginary value")
         if (units.get(beta_expression) != "1/m" or units.get(k0_expression) != "1/m"
-                or units.get(neff_expression) not in {"1", ""}):
-            raise ScienceProtocolError(f"{step} native beta/neff/k0 expression units are not the documented 1/m, 1, 1/m")
+                or units.get(neff_expression) != requested_units[1]):
+            raise ScienceProtocolError(
+                f"{step} beta/k0 units must stay 1/m and neff readback must equal its exact requested unit "
+                "('1' legacy or '' native default)"
+            )
         beta = values_by_name[beta_expression]
         neff = values_by_name[neff_expression]
         k0 = values_by_name[k0_expression]
@@ -1209,7 +1237,8 @@ def decode_production_complex_point_readback(
                         and scalar_bma_binding.get("dataset_tag") == dataset_tag
                         and scalar_bma_binding.get("store_solution_reference") == solution_tag
                         and tuple(expressions) == bma_point_expressions(port, field_scheme=field_scheme) and len(expected_points) == 1
-                        and list(expected_requested_units or []) == ["1/m", "1", "1/m"])
+                        and list(expected_requested_units or []) in (
+                            list(BMA_LEGACY_REQUESTED_UNITS), list(BMA_NATIVE_DEFAULT_NEFF_REQUESTED_UNITS)))
         if not scalar_route:
             raise ScienceProtocolError("real-only BMA route lacks exact validated native port/store/dataset/units")
     native_is_complex = result.get("is_complex")
@@ -1394,7 +1423,7 @@ def decode_production_complex_point_readback(
         if expected_selection is not None and normal_sign != (1 if expected_selection["tag"]=="selReceiverX8" else -1):
             raise ScienceProtocolError("native normal direction differs from exact physics plane")
         normal_status = "VERIFIED_FROM_NATIVE_NX_NY"
-    return {
+    decoded = {
         "status": "PRODUCTION_NATIVE_COMPLEX_POINT_READBACK",
         "scope": "exact dataset-bound single numeric solution; sample identity/values only, not a native integral or scientific acceptance",
         "operation": "result.at_points",
@@ -1416,6 +1445,14 @@ def decode_production_complex_point_readback(
         "normal_status": normal_status,
         "science_acceptance": "NOT_EVALUATED",
     }
+    native_default_expressions = [
+        expression for expression, unit in zip(expressions, expected_requested_units or ())
+        if unit == ""
+    ]
+    if native_default_expressions:
+        decoded["native_default_unit_expressions"] = native_default_expressions
+        decoded["native_default_unit_semantics"] = "native default or undefined; not dimensionless evidence"
+    return decoded
 
 
 def _plane_coordinates(raw: Mapping[str, Any], *, expected_x_m: float, field_scheme: str = "legacy") -> tuple[list[float], int, int]:
@@ -1499,7 +1536,7 @@ def independent_integrals(output_raw: Mapping[str, Any], input_raw: Mapping[str,
     return {
         "status": "SOFTWARE_RECOMPUTED_FROM_NATIVE_RAW_FIELDS",
         "evidence_scope": "independent quadrature of exported native E/H; not itself a native result",
-        "integration": "composite Simpson, registered 321 or 641 point grid",
+        "integration": f"composite Simpson, registered {output_raw['sample_count']}-point grid",
         "unit": POWER_UNIT_2D,
         "output_native_normal_x": native_out_nx,
         "output_normal_sign": declared_out_sign,
@@ -1559,7 +1596,7 @@ def independent_capture_aperture_flux(output_raw: Mapping[str, Any], *, field_sc
     """Integrate signed native E/H flux over the frozen core-only x=8 aperture."""
     _require_field_matrix(output_raw, field_scheme, "output_x8")
     if output_raw.get("plane") != "output_x8" or output_raw.get("sample_count") != REFINED_SAMPLE_COUNT:
-        raise ScienceProtocolError("capture quadrature requires the 641-point native x=8 output field export")
+        raise ScienceProtocolError(f"capture quadrature requires the {REFINED_SAMPLE_COUNT}-point native x=8 output field export")
     y, native_nx, declared_sign = _plane_coordinates(output_raw, expected_x_m=8e-6, field_scheme=field_scheme)
     if native_nx * declared_sign != 1:
         raise ScienceProtocolError("capture aperture normal does not follow the registered physical +x convention")
@@ -1570,7 +1607,7 @@ def independent_capture_aperture_flux(output_raw: Mapping[str, Any], *, field_sc
     selected_y = [y[index] for index in selected]
     if (not math.isclose(selected_y[0], CAPTURE_Y_MIN_M, rel_tol=0, abs_tol=1e-12)
             or not math.isclose(selected_y[-1], CAPTURE_Y_MAX_M, rel_tol=0, abs_tol=1e-12)):
-        raise ScienceProtocolError("native 641-point grid does not exactly cover the frozen core capture bounds")
+        raise ScienceProtocolError(f"native {REFINED_SAMPLE_COUNT}-point grid does not exactly cover the frozen core capture bounds")
     fields = _raw_expression_map(output_raw)
     required = tuple(field_scheme_roles(field_scheme)[kind][axis] for kind in ("signal_e","signal_h") for axis in "yz")
     if any(name not in fields for name in required):
@@ -1611,7 +1648,7 @@ def compare_native_capture_flux(native: Mapping[str, Any], independent: Mapping[
     if (independent_integrals.get("status") != "SOFTWARE_RECOMPUTED_FROM_NATIVE_RAW_FIELDS"
             or independent_integrals.get("unit") != POWER_UNIT_2D
             or independent_integrals.get("sample_count") != REFINED_SAMPLE_COUNT):
-        raise ScienceProtocolError("independent incident-power receipt is not the registered 641-point native-field recomputation")
+        raise ScienceProtocolError(f"independent incident-power receipt is not the registered {REFINED_SAMPLE_COUNT}-point native-field recomputation")
     region, numerator = capture.get("region"), capture.get("numerator")
     if not isinstance(region, Mapping) or not isinstance(numerator, Mapping):
         raise ScienceProtocolError("native capture result omitted region or signed-flux numerator")
@@ -1698,12 +1735,16 @@ def compare_native_capture_flux(native: Mapping[str, Any], independent: Mapping[
 
 
 def compare_quadrature_refinement(coarse: Mapping[str, Any], fine: Mapping[str, Any], *,
-                                  tolerance: float = INTEGRAL_RELATIVE_TOLERANCE) -> dict[str, Any]:
-    """Require registered 321/641 Simpson estimates to converge independently."""
-    if coarse.get("status") != "SOFTWARE_RECOMPUTED_FROM_NATIVE_RAW_FIELDS" or coarse.get("sample_count") != SAMPLE_COUNT:
-        raise ScienceProtocolError("coarse quadrature receipt is not the registered 321-point recomputation")
-    if fine.get("status") != "SOFTWARE_RECOMPUTED_FROM_NATIVE_RAW_FIELDS" or fine.get("sample_count") != REFINED_SAMPLE_COUNT:
-        raise ScienceProtocolError("fine quadrature receipt is not the registered 641-point recomputation")
+                                  tolerance: float = INTEGRAL_RELATIVE_TOLERANCE,
+                                  sample_counts: tuple[int, int] = (SAMPLE_COUNT, REFINED_SAMPLE_COUNT)) -> dict[str, Any]:
+    """Require one of the two registered 321/641 or saved-MPH 641/1281 pairs."""
+    if sample_counts not in {(SAMPLE_COUNT, REFINED_SAMPLE_COUNT), SAVED_MPH_QUADRATURE_SAMPLE_COUNTS}:
+        raise ScienceProtocolError("quadrature comparison must use the registered full-science or saved-MPH pair")
+    coarse_count, fine_count = sample_counts
+    if coarse.get("status") != "SOFTWARE_RECOMPUTED_FROM_NATIVE_RAW_FIELDS" or coarse.get("sample_count") != coarse_count:
+        raise ScienceProtocolError(f"coarse quadrature receipt is not the registered {coarse_count}-point recomputation")
+    if fine.get("status") != "SOFTWARE_RECOMPUTED_FROM_NATIVE_RAW_FIELDS" or fine.get("sample_count") != fine_count:
+        raise ScienceProtocolError(f"fine quadrature receipt is not the registered {fine_count}-point recomputation")
     errors: dict[str, float] = {}
     for key in ("signal_power", "reference_mode_power", "incident_reference_power"):
         left = complex(_as_finite_float(coarse.get(key), f"coarse {key}"), 0)
@@ -1718,10 +1759,10 @@ def compare_quadrature_refinement(coarse: Mapping[str, Any], fine: Mapping[str, 
                     _as_finite_float(right_row.get("imag"), "fine overlap imag"))
     errors["reciprocal_overlap_numerator"] = abs(right - left) / max(abs(right), 1e-30)
     if any(error > tolerance for error in errors.values()):
-        raise ScienceProtocolError(f"321-to-641 quadrature refinement did not meet the frozen tolerance: {errors}")
-    return {"status": "PASS_321_TO_641_QUADRATURE_REFINEMENT", "tolerance_relative": tolerance,
-            "relative_errors": errors, "coarse_points": SAMPLE_COUNT,
-            "fine_points": REFINED_SAMPLE_COUNT}
+        raise ScienceProtocolError(f"{coarse_count}-to-{fine_count} quadrature refinement did not meet the frozen tolerance: {errors}")
+    return {"status": f"PASS_{coarse_count}_TO_{fine_count}_QUADRATURE_REFINEMENT", "tolerance_relative": tolerance,
+            "relative_errors": errors, "coarse_points": coarse_count,
+            "fine_points": fine_count}
 
 
 def software_global_phase_control(output_raw: Mapping[str, Any],

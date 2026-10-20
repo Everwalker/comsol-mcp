@@ -117,3 +117,30 @@ def test_public_typed_recipe_registration_reaches_strict_rebuild_preflight(tmp_p
         assert worker.models["m"].calls == []
     finally:
         daemon.close()
+
+
+@pytest.mark.parametrize("operation", ["artifact.preview", "artifact.verify"])
+def test_package_project_only_hostreads_use_actual_public_admission(tmp_path, operation):
+    from tests.test_artifact_preview import _new_daemon, _register, _png
+    daemon, project_id, workspace = _new_daemon(tmp_path)
+    try:
+        path = workspace / "inputs" / "geometry.png"
+        path.write_bytes(_png(1, 1, [bytes([255, 0, 0, 255])]))
+        artifact_id = _register(daemon, project_id, "inputs/geometry.png")
+        body = {"artifact_id": artifact_id}
+        if operation == "artifact.preview":
+            body["options"] = {"schema_version": 1, "kind": "image", "max_width": 128, "max_height": 128}
+        arguments = cycle.action_arguments(operation, body, project_id, "must-not-be-dispatched")
+        assert arguments == {"project_id": project_id, **body}
+        request = {"operation": "operation_call", "arguments": {"operation_id": operation, "arguments": arguments},
+                   "execution": {"project_id": project_id}}
+        result = daemon.dispatch(request)
+        assert result["success"] is True, result
+        request["arguments"]["arguments"] = {**arguments, "session_id": "injected-session"}
+        refused = daemon.dispatch(request)
+        assert refused["success"] is False
+        assert refused["error"]["code"] == "INVALID_REQUEST"
+        assert "session_id" in refused["error"]["message"]
+        assert cycle.action_arguments("artifact.register", body, project_id, "s")["session_id"] == "s"
+    finally:
+        daemon.close()

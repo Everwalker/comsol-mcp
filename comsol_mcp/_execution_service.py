@@ -8,6 +8,7 @@ from contextvars import ContextVar
 from pathlib import Path
 from typing import Any, Protocol
 import json
+import hashlib
 
 from ._execution_contract import (
     ExecutionContractError,
@@ -22,6 +23,78 @@ from ._domain_outcome import (
     classify_envelope,
     final_state,
 )
+
+
+_FINGERPRINT_COMPONENT_KEYS = frozenset({
+    "schema_version", "tag", "label", "file_path", "time_modified_epoch_ms", "parameters",
+})
+_FINGERPRINT_PARAMETER_KEYS = frozenset({"name", "expression"})
+_SIGNED_LONG_MAX = (1 << 63) - 1
+
+
+def _java_string_sort_key(value: str) -> bytes:
+    """Match Java String.compareTo ordering over UTF-16 code units."""
+    return value.encode("utf-16-be", errors="strict")
+
+
+def _validated_fingerprint_components(value: Any, *, model_tag: str, fingerprint: str) -> dict[str, Any]:
+    """Validate the versioned raw witness and prove it hashes to the legacy digest."""
+    def invalid() -> ExecutionContractError:
+        return ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            "Worker fingerprint components are missing or invalid",
+        )
+
+    if not isinstance(value, Mapping) or set(value) != _FINGERPRINT_COMPONENT_KEYS:
+        raise invalid()
+    schema_version = value.get("schema_version")
+    if type(schema_version) is not int or schema_version != 1:
+        raise invalid()
+    tag, label, file_path = value.get("tag"), value.get("label"), value.get("file_path")
+    if (not isinstance(tag, str) or not tag or tag != model_tag
+            or not isinstance(label, str) or not isinstance(file_path, str)
+            or any("\x00" in item for item in (tag, label, file_path))):
+        raise invalid()
+    time_modified = value.get("time_modified_epoch_ms")
+    if type(time_modified) is not int or not 0 <= time_modified <= _SIGNED_LONG_MAX:
+        raise invalid()
+    raw_parameters = value.get("parameters")
+    if not isinstance(raw_parameters, list):
+        raise invalid()
+    rows: list[dict[str, str]] = []
+    names: list[str] = []
+    for row in raw_parameters:
+        if not isinstance(row, Mapping) or set(row) != _FINGERPRINT_PARAMETER_KEYS:
+            raise invalid()
+        name, expression = row.get("name"), row.get("expression")
+        if (not isinstance(name, str) or not name or not isinstance(expression, str)
+                or "\x00" in name or "\x00" in expression):
+            raise invalid()
+        names.append(name)
+        rows.append({"name": name, "expression": expression})
+    try:
+        ordered_names = sorted(names, key=_java_string_sort_key)
+    except (UnicodeError, ValueError):
+        raise invalid() from None
+    if len(names) != len(set(names)) or names != ordered_names:
+        raise invalid()
+    try:
+        source = (tag + "\x00" + label + "\x00" + file_path + "\x00"
+                  + str(time_modified) + "\x00"
+                  + "".join(f"{row['name']}={row['expression']}\x00" for row in rows))
+        computed = hashlib.sha256(source.encode("utf-8", errors="strict")).hexdigest()
+    except (UnicodeError, ValueError):
+        raise invalid() from None
+    if not isinstance(fingerprint, str) or computed != fingerprint:
+        raise invalid()
+    return {
+        "schema_version": 1,
+        "tag": tag,
+        "label": label,
+        "file_path": file_path,
+        "time_modified_epoch_ms": time_modified,
+        "parameters": rows,
+    }
 
 
 def _outcome_error(data: Mapping[str, Any], outcome: Any = None) -> dict[str, Any] | None:
@@ -225,6 +298,9 @@ class ExecutionService:
                 "external_event_counter": snapshot["external_event_counter"],
                 "coverage": "parameters+shallow_tree_identity",
                 "cas_guarantee": "NONE",
+                "fingerprint_components_status": snapshot["fingerprint_components_status"],
+                **({"fingerprint_components": snapshot["fingerprint_components"]}
+                   if snapshot["fingerprint_components_status"] == "AVAILABLE_V1" else {}),
             },
         }
 
@@ -537,7 +613,14 @@ class ExecutionService:
             raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "adapter did not provide a valid external event counter")
         if not isinstance(raw.get("fingerprint"), str) or not raw["fingerprint"]:
             raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "adapter did not provide a fingerprint")
-        return {"fingerprint": raw["fingerprint"], "external_event_counter": counter}
+        snapshot = {"fingerprint": raw["fingerprint"], "external_event_counter": counter,
+                    "fingerprint_components_status": "UNAVAILABLE_LEGACY"}
+        if "fingerprint_components" in raw:
+            snapshot["fingerprint_components"] = _validated_fingerprint_components(
+                raw["fingerprint_components"], model_tag=model_tag, fingerprint=raw["fingerprint"],
+            )
+            snapshot["fingerprint_components_status"] = "AVAILABLE_V1"
+        return snapshot
 
     def _metadata(self, model_ref: ModelRef) -> dict[str, Any]:
         state = self.ledger._state_for(model_ref)

@@ -3,14 +3,17 @@ package comsol_mcp.worker_java;
 import com.sun.security.auth.module.NTSystem;
 import com.comsol.model.Model;
 import com.comsol.model.ModelEntity;
+import com.comsol.model.ModelEntityList;
 import com.comsol.model.NodeGroup;
 import com.comsol.model.NodeGroupList;
 import com.comsol.model.PrimitiveModelEntity;
 import com.comsol.model.GeomObjectSelection;
 import com.comsol.model.GeomSequence;
 import com.comsol.model.MaterialList;
+import com.comsol.model.MaterialModel;
 import com.comsol.model.MeshSequence;
 import com.comsol.model.ModelParam;
+import com.comsol.model.physics.Physics;
 import com.comsol.model.NumericalFeature;
 import com.comsol.model.ResultParam;
 import com.comsol.model.SolverFeature;
@@ -24,6 +27,8 @@ import java.io.*;
 import java.lang.reflect.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.charset.CodingErrorAction;
+import java.nio.charset.CharacterCodingException;
 import java.nio.file.*;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.UserPrincipal;
@@ -42,6 +47,12 @@ import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
+import javax.tools.SimpleJavaFileObject;
+import com.sun.source.tree.ClassTree;
+import com.sun.source.tree.CompilationUnitTree;
+import com.sun.source.tree.Tree;
+import com.sun.source.util.JavacTask;
+import java.nio.file.attribute.BasicFileAttributes;
 
 /**
  * A deliberately small, persistent, local-only COMSOL API worker.
@@ -54,6 +65,12 @@ import javax.tools.ToolProvider;
  */
 public final class PersistentComsolWorker {
   private static final String D2_COMSOL_VERSION = "6.4.0.293";
+  private static final String D2_VERSION_COMPONENT = "(?:0|[1-9][0-9]*)";
+  private static final java.util.regex.Pattern D2_CANONICAL_VERSION = java.util.regex.Pattern.compile(
+      D2_VERSION_COMPONENT + "\\." + D2_VERSION_COMPONENT + "\\." + D2_VERSION_COMPONENT + "\\." + D2_VERSION_COMPONENT);
+  private static final java.util.regex.Pattern D2_BUILD_DECLARATION = java.util.regex.Pattern.compile(
+      "COMSOL Multiphysics (" + D2_VERSION_COMPONENT + "\\." + D2_VERSION_COMPONENT
+          + "(?:\\." + D2_VERSION_COMPONENT + ")?) \\((?:开发版本|Build): (" + D2_VERSION_COMPONENT + ")\\)");
   private static final Set<String> D2_METADATA_METHODS = new HashSet<>(Arrays.asList(
       "nodeGroup", "tags", "size", "get", "feature", "getAfter",
       "getContainer", "resolveModelPath", "ungroup"));
@@ -68,7 +85,7 @@ public final class PersistentComsolWorker {
       "getData", "getImag", "getBoolean", "getBooleanArray", "getBooleanMatrix",
       "getDouble", "getDoubleArray", "getDoubleMatrix", "getInt", "getIntArray", "getIntMatrix",
       "getString", "getStringArray", "getStringMatrix", "getType", "getValueType",
-      "getEntryKeys", "getEntryKeyIndex",
+      "getEntryKeys", "getEntryKeyIndex", "identifier",
       // G3 geometry export/repair and registered material import.  COMSOL
       // 6.4 public API docs: GeomSequence.objectNames()/exportFinal(String)
       // (GeomSequence.html SHA-256 047a6aeebc08362e81db383f1b758b688303a702b26a7d020e18146fa63ad661)
@@ -496,17 +513,76 @@ public final class PersistentComsolWorker {
   private Object modelSnapshot(Map<String, Object> request) throws Exception {
     ensureConnected(); String tag = string(request.get("tag")); if (tag.isEmpty()) throw new IllegalArgumentException("model tag required");
     Model model = ModelUtil.model(tag);
-    String[] parameterNames = model.param().varnames(); Arrays.sort(parameterNames);
-    StringBuilder parameterFingerprint = new StringBuilder();
-    for (String name : parameterNames) parameterFingerprint.append(name).append('=').append(model.param().get(name)).append('\u0000');
-    String source = tag + "\u0000" + model.label() + "\u0000" + model.getFilePath() + "\u0000" + model.timeModified() + "\u0000" + parameterFingerprint;
-    if (source.isEmpty()) throw new IllegalStateException("MODEL_FINGERPRINT_UNAVAILABLE");
-    return map("tag", tag, "model_tag", tag, "fingerprint", sha256(source), "fingerprint_scope", Arrays.asList("tag", "label", "file_path", "time_modified", "parameters"),
-        "cas_limit", "control-plane revision plus observed change events; not COMSOL atomic CAS", "external_event_counter", changedByTag.computeIfAbsent(tag, ignored -> new AtomicLong()).get(),
+    ModelParam parameterSet = model.param();
+    String label = model.label();
+    String filePath = model.getFilePath();
+    long timeModified = model.timeModified();
+    String[] parameterNames = parameterSet.varnames(); Arrays.sort(parameterNames);
+    String[] parameterExpressions = new String[parameterNames.length];
+    for (int i = 0; i < parameterNames.length; i++) {
+      if (parameterNames[i] == null || parameterNames[i].isEmpty())
+        throw new IllegalStateException("MODEL_FINGERPRINT_PARAMETER_NAMES_INVALID");
+      parameterExpressions[i] = parameterSet.get(parameterNames[i]);
+    }
+    Map<String, String> sortedParameterExpressions = parameterExpressionsFromSample(
+        parameterNames, parameterExpressions);
+    Map<String, Object> fingerprintValue = modelFingerprintFromSample(tag, label, filePath,
+        timeModified, sortedParameterExpressions);
+    if (String.valueOf(fingerprintValue.get("fingerprint")).isEmpty())
+      throw new IllegalStateException("MODEL_FINGERPRINT_UNAVAILABLE");
+    long externalEventCounter = changedByTag.computeIfAbsent(tag, ignored -> new AtomicLong()).get();
+    return map("tag", tag, "model_tag", tag, "fingerprint", fingerprintValue.get("fingerprint"),
+        "fingerprint_components", fingerprintValue.get("fingerprint_components"),
+        "fingerprint_scope", Arrays.asList("tag", "label", "file_path", "time_modified", "parameters"),
+        "cas_limit", "control-plane revision plus observed change events; not COMSOL atomic CAS", "external_event_counter", externalEventCounter,
         "changed_tags", new ArrayList<>(changedTags), "server_instance_id", serverIdentity, "worker_instance_id", instanceId, "instance_id", instanceId, "generation", generation.get());
   }
+
+  /** Validate and bind each sampled expression to its sorted name exactly once. */
+  static Map<String, String> parameterExpressionsFromSample(String[] names, String[] expressions) {
+    if (names == null || expressions == null || names.length != expressions.length)
+      throw new IllegalStateException("MODEL_FINGERPRINT_PARAMETER_VALUES_INVALID");
+    TreeMap<String, String> sorted = new TreeMap<>();
+    for (int i = 0; i < names.length; i++) {
+      String name = names[i], expression = expressions[i];
+      if (name == null || name.isEmpty() || expression == null || sorted.containsKey(name))
+        throw new IllegalStateException("MODEL_FINGERPRINT_PARAMETER_VALUES_INVALID");
+      sorted.put(name, expression);
+    }
+    return new LinkedHashMap<>(sorted);
+  }
+
+  /** Build the legacy digest and its raw witness from one already sampled value set. */
+  static Map<String, Object> modelFingerprintFromSample(String tag, String label, String filePath,
+                                                        long timeModified,
+                                                        Map<String, String> parameterExpressions) throws Exception {
+    if (tag == null || tag.isEmpty() || label == null || filePath == null || timeModified < 0
+        || tag.indexOf('\u0000') >= 0 || label.indexOf('\u0000') >= 0 || filePath.indexOf('\u0000') >= 0
+        || parameterExpressions == null)
+      throw new IllegalStateException("MODEL_FINGERPRINT_COMPONENTS_INVALID");
+    TreeMap<String, String> sortedParameters = new TreeMap<>(parameterExpressions);
+    if (sortedParameters.size() != parameterExpressions.size())
+      throw new IllegalStateException("MODEL_FINGERPRINT_PARAMETER_NAMES_INVALID");
+    StringBuilder source = new StringBuilder();
+    source.append(tag).append('\u0000').append(label).append('\u0000').append(filePath)
+        .append('\u0000').append(timeModified).append('\u0000');
+    List<Object> parameterRows = new ArrayList<>();
+    for (Map.Entry<String, String> entry : sortedParameters.entrySet()) {
+      String name = entry.getKey(), expression = entry.getValue();
+      if (name == null || name.isEmpty() || expression == null
+          || name.indexOf('\u0000') >= 0 || expression.indexOf('\u0000') >= 0)
+        throw new IllegalStateException("MODEL_FINGERPRINT_PARAMETER_VALUES_INVALID");
+      source.append(name).append('=').append(expression).append('\u0000');
+      parameterRows.add(map("name", name, "expression", expression));
+    }
+    Map<String, Object> components = map("schema_version", 1, "tag", tag, "label", label,
+        "file_path", filePath, "time_modified_epoch_ms", timeModified, "parameters", parameterRows);
+    return map("fingerprint", sha256(source.toString()), "fingerprint_components", components);
+  }
   private Object compileJava(Map<String, Object> request) throws Exception {
-    SourceSpec source = sourceSpec(request);
+    return compileJava(sourceSpec(request));
+  }
+  private Object compileJava(SourceSpec source) throws Exception {
     String key = source.sha256 + "|" + source.entrypoint;
     CompiledArtifact existing = compiledArtifacts.get(key);
     if (existing != null && Files.isDirectory(existing.classes)) {
@@ -519,20 +595,9 @@ public final class PersistentComsolWorker {
     if (compiler == null) throw new WorkerFailure("COMPILE_UNAVAILABLE", "the Worker JVM does not expose javac", map("source_sha256", source.sha256, "entrypoint", source.entrypoint, "diagnostics", Collections.emptyList()));
     Path classes = codeRoot.resolve(source.sha256.substring(0, 24));
     Files.createDirectories(classes);
-    DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
-    boolean success;
-    try (StandardJavaFileManager manager = compiler.getStandardFileManager(diagnostics, Locale.ROOT, StandardCharsets.UTF_8)) {
-      Iterable<? extends JavaFileObject> files = manager.getJavaFileObjectsFromFiles(Collections.singletonList(source.path.toFile()));
-      List<String> options = Arrays.asList("-encoding", "UTF-8", "-classpath", System.getProperty("java.class.path", ""), "-d", classes.toString());
-      JavaCompiler.CompilationTask task = compiler.getTask(null, manager, diagnostics, options, null, files);
-      success = Boolean.TRUE.equals(task.call());
-    }
-    List<Object> diagnosticRows = new ArrayList<>();
-    for (Diagnostic<? extends JavaFileObject> item : diagnostics.getDiagnostics()) {
-      diagnosticRows.add(map("kind", item.getKind().name(), "source", item.getSource() == null ? "" : item.getSource().getName(),
-          "line", item.getLineNumber(), "column", item.getColumnNumber(), "start", item.getStartPosition(), "end", item.getEndPosition(),
-          "message", item.getMessage(Locale.ROOT)));
-    }
+    Map<String,Object> compilation = compileSnapshot(source, classes);
+    boolean success = Boolean.TRUE.equals(compilation.get("compiled"));
+    List<?> diagnosticRows = (List<?>)compilation.get("diagnostics");
     if (!success) throw new WorkerFailure("COMPILE_ERROR", "Java compilation failed", map("source_sha256", source.sha256, "entrypoint", source.entrypoint, "diagnostics", diagnosticRows, "artifact", classes.toString()));
     compiledArtifacts.put(key, new CompiledArtifact(classes, source.sha256, source.entrypoint));
     return map("compiled", true, "source_sha256", source.sha256, "entrypoint", source.entrypoint,
@@ -546,7 +611,7 @@ public final class PersistentComsolWorker {
     SourceSpec source = sourceSpec(request);
     String key = source.sha256 + "|" + source.entrypoint;
     CompiledArtifact artifact = compiledArtifacts.get(key);
-    if (artifact == null || !Files.isDirectory(artifact.classes)) { compileJava(request); artifact = compiledArtifacts.get(key); }
+    if (artifact == null || !Files.isDirectory(artifact.classes)) { compileJava(source); artifact = compiledArtifacts.get(key); }
     if (artifact == null) throw new WorkerFailure("COMPILE_ERROR", "compiled Java artifact is unavailable");
     Model model = ModelUtil.model(tag); // identity is resolved inside the same serial Worker queue
     String className = source.entrypoint;
@@ -572,21 +637,116 @@ public final class PersistentComsolWorker {
       return map("executed", true, "model_tag", tag, "source_sha256", source.sha256, "entrypoint", source.entrypoint, "readback", encode(value));
     }
   }
-  private SourceSpec sourceSpec(Map<String, Object> request) throws Exception {
+  private static JavaFileObject snapshotFile(SourceSpec source, String filename) {
+    return new SimpleJavaFileObject(source.path.resolveSibling(filename).toUri(), JavaFileObject.Kind.SOURCE) {
+      @Override public CharSequence getCharContent(boolean ignoreEncodingErrors) { return source.text; }
+    };
+  }
+  /** Actual javac AST chooses the compilation unit name; the entrypoint never chooses it. */
+  private static Map<String,Object> compileSnapshot(SourceSpec source, Path classes) throws Exception {
+    JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+    if (compiler == null) throw new WorkerFailure("COMPILE_UNAVAILABLE", "the Worker JVM does not expose javac");
+    String filename = source.path.getFileName().toString();
+    List<String> publicTypes = new ArrayList<>();
+    try (StandardJavaFileManager manager = compiler.getStandardFileManager(null, Locale.ROOT, StandardCharsets.UTF_8)) {
+      DiagnosticCollector<JavaFileObject> parseDiagnostics = new DiagnosticCollector<>();
+      JavacTask parser = (JavacTask)compiler.getTask(null, manager, parseDiagnostics,
+          Arrays.asList("-proc:none"), null, Collections.singletonList(snapshotFile(source, "RegisteredSource.java")));
+      Iterable<? extends CompilationUnitTree> units = parser.parse();
+      for (Diagnostic<? extends JavaFileObject> diagnostic : parseDiagnostics.getDiagnostics()) {
+        if (diagnostic.getKind() == Diagnostic.Kind.ERROR)
+          return map("compiled", false, "diagnostics", sourceDiagnostics(source, parseDiagnostics));
+      }
+      for (CompilationUnitTree unit : units) {
+        for (Tree type : unit.getTypeDecls()) {
+          if (type instanceof ClassTree && ((ClassTree)type).getModifiers().getFlags().contains(javax.lang.model.element.Modifier.PUBLIC))
+            publicTypes.add(((ClassTree)type).getSimpleName().toString());
+        }
+      }
+    }
+    // No public declaration retains the legacy basename. Multiple declarations must fail javac normally.
+    if (publicTypes.size() == 1) filename = publicTypes.get(0) + ".java";
+    DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
+    boolean success;
+    try (StandardJavaFileManager manager = compiler.getStandardFileManager(diagnostics, Locale.ROOT, StandardCharsets.UTF_8)) {
+      List<String> options = Arrays.asList("-encoding", "UTF-8", "-classpath", System.getProperty("java.class.path", ""), "-d", classes.toString());
+      success = Boolean.TRUE.equals(compiler.getTask(null, manager, diagnostics, options, null,
+          Collections.singletonList(snapshotFile(source, filename))).call());
+    }
+    return map("compiled", success, "diagnostics", sourceDiagnostics(source, diagnostics));
+  }
+  private static List<Object> sourceDiagnostics(SourceSpec source, DiagnosticCollector<JavaFileObject> diagnostics) {
+    List<Object> rows = new ArrayList<>();
+    for (Diagnostic<? extends JavaFileObject> item : diagnostics.getDiagnostics()) {
+      rows.add(map("kind", item.getKind().name(), "source", source.path.toString(),
+          "compilation_source", item.getSource() == null ? "" : item.getSource().getName(),
+          "line", item.getLineNumber(), "column", item.getColumnNumber(), "start", item.getStartPosition(), "end", item.getEndPosition(),
+          "message", item.getMessage(Locale.ROOT)));
+    }
+    return rows;
+  }
+  private static boolean sameDirectoryIdentity(BasicFileAttributes a, BasicFileAttributes b) {
+    return a.isDirectory() && b.isDirectory() && !a.isSymbolicLink() && !b.isSymbolicLink()
+        && Objects.equals(a.fileKey(), b.fileKey()) && a.creationTime().equals(b.creationTime());
+  }
+  private static boolean sameSourceIdentity(BasicFileAttributes a, BasicFileAttributes b) {
+    return a.isRegularFile() == b.isRegularFile() && a.isDirectory() == b.isDirectory()
+        && Objects.equals(a.fileKey(), b.fileKey()) && a.size() == b.size()
+        && a.lastModifiedTime().equals(b.lastModifiedTime()) && a.creationTime().equals(b.creationTime());
+  }
+  private static SourceSpec sourceSpec(Map<String, Object> request) throws Exception {
     String raw = string(request.get("source_artifact"));
     if (raw.isEmpty()) throw new WorkerFailure("ARTIFACT_MISSING", "source_artifact is required");
     Path path = Paths.get(raw).toAbsolutePath().normalize();
-    if (Files.isSymbolicLink(path) || !Files.isRegularFile(path) || !path.getFileName().toString().endsWith(".java"))
+    Map<Path,BasicFileAttributes> parents = new LinkedHashMap<>();
+    for (Path parent = path.getParent(); parent != null; parent = parent.getParent()) {
+      BasicFileAttributes attrs = Files.readAttributes(parent, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+      if (!attrs.isDirectory() || attrs.isSymbolicLink()) throw new WorkerFailure("ARTIFACT_MISSING", "source ancestry must be ordinary directories");
+      parents.put(parent, attrs);
+    }
+    BasicFileAttributes before = Files.readAttributes(path, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+    if (!before.isRegularFile() || before.isSymbolicLink() || !path.getFileName().toString().endsWith(".java"))
       throw new WorkerFailure("ARTIFACT_MISSING", "source artifact must be a regular Java file");
-    byte[] bytes = Files.readAllBytes(path);
-    String text = new String(bytes, StandardCharsets.UTF_8);
+    if (before.size() > 2 * 1024 * 1024) throw new WorkerFailure("INVALID_REQUEST", "source artifact exceeds the 2 MiB source limit");
+    byte[] bytes;
+    try (FileChannel channel = FileChannel.open(path, StandardOpenOption.READ, LinkOption.NOFOLLOW_LINKS)) {
+      if (channel.size() != before.size()) throw new WorkerFailure("ARTIFACT_MISSING", "source changed before snapshot");
+      ByteArrayOutputStream output = new ByteArrayOutputStream();
+      java.nio.ByteBuffer buffer = java.nio.ByteBuffer.allocate(8192);
+      while (channel.read(buffer) != -1) {
+        buffer.flip(); output.write(buffer.array(), 0, buffer.remaining()); buffer.clear();
+        if (output.size() > 2 * 1024 * 1024) throw new WorkerFailure("INVALID_REQUEST", "source artifact exceeds the 2 MiB source limit");
+      }
+      bytes = output.toByteArray();
+    }
+    BasicFileAttributes after = Files.readAttributes(path, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+    if (bytes.length != before.size() || !sameSourceIdentity(before, after))
+      throw new WorkerFailure("ARTIFACT_MISSING", "source changed during snapshot");
+    for (Map.Entry<Path,BasicFileAttributes> parent : parents.entrySet()) {
+      BasicFileAttributes afterParent = Files.readAttributes(parent.getKey(), BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+      if (!sameDirectoryIdentity(parent.getValue(), afterParent)) throw new WorkerFailure("ARTIFACT_MISSING", "source ancestry changed during snapshot");
+    }
+    String digest = sha256Bytes(bytes);
+    String basename = path.getFileName().toString();
+    if (basename.matches("[0-9a-f]{64}\\.java") && !basename.substring(0, 64).equals(digest))
+      throw new WorkerFailure("ARTIFACT_MISSING", "content-addressed source SHA does not match its bytes");
     String entrypoint = string(request.get("entrypoint"));
+    String text;
+    try {
+      text = StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
+          .onUnmappableCharacter(CodingErrorAction.REPORT).decode(java.nio.ByteBuffer.wrap(bytes)).toString();
+    } catch (CharacterCodingException invalidEncoding) {
+      throw new WorkerFailure("COMPILE_ERROR", "Java source contains invalid UTF-8", map(
+          "source_sha256", digest, "entrypoint", entrypoint,
+          "diagnostics", Collections.singletonList(map("kind", "ERROR", "source", path.toString(),
+              "line", -1L, "column", -1L, "start", -1L, "end", -1L, "message", "Java source contains invalid UTF-8"))));
+    }
     if (entrypoint.isEmpty()) {
       java.util.regex.Matcher cls = java.util.regex.Pattern.compile("(?:class|interface|record)\\s+([A-Za-z_$][\\w$]*)").matcher(text);
       if (!cls.find()) throw new WorkerFailure("INVALID_REQUEST", "source has no Java class entrypoint");
       entrypoint = cls.group(1);
     }
-    return new SourceSpec(path, text, sha256Bytes(bytes), entrypoint);
+    return new SourceSpec(path, text, digest, entrypoint);
   }
   @SuppressWarnings("unchecked")
   private Object modelUtil(Map<String, Object> request) throws Exception {
@@ -776,8 +936,27 @@ public final class PersistentComsolWorker {
     if (claimed != generation.get()) throw new IllegalStateException("STALE_WORKER_HANDLE");
     String handle = string(request.get("handle")); Object target = handles.get(handle);
     if (target == null) throw new IllegalArgumentException("UNKNOWN_WORKER_HANDLE");
-    String method = string(request.get("method")); if (!METHODS.contains(method)) throw new SecurityException("METHOD_REJECTED");
+    String method = string(request.get("method"));
     List<Object> args = list(request.get("args"));
+    // W23 R31: expose only the exact read-only ModelEntityList.index(String)
+    // operation. It deliberately remains outside both generic method sets;
+    // the receiver, primitive-int descriptor, and sole String argument are
+    // checked here and by the same predicate used for publicDescribe.
+    if ("index".equals(method)) return readModelEntityListIndex(target, args);
+    // A material tensor proof needs the logical stored dimensions in addition
+    // to the typed getter's raw array shape.  Keep this exact String overload
+    // outside METHODS so no unrelated receiver's size overload is exposed.
+    if ("size".equals(method)) return readMaterialModelSize(target, args);
+    if (!METHODS.contains(method)) throw new SecurityException("METHOD_REJECTED");
+    if ("identifier".equals(method)) {
+      // COMSOL 6.4.0.293 Physics.identifier() is deprecated in favor of
+      // ModelEntity.tag(). Keep only the exact Physics zero-argument getter;
+      // the overloaded identifier(String) setter and every other receiver
+      // remain outside the Worker reflection surface. Official API reference:
+      // local KB doc 7757, chunk 23152, Physics.html SHA-256
+      // d0de70997a9ea928edd8f1d207f926ce82c3849e5846c20189d28d67cd9273fc.
+      if (!(target instanceof Physics) || !args.isEmpty()) throw new SecurityException("METHOD_REJECTED");
+    }
     if ("objectNames".equals(method)) {
       if (!(target instanceof GeomSequence) || !args.isEmpty()) throw new SecurityException("METHOD_REJECTED");
     }
@@ -1583,9 +1762,24 @@ public final class PersistentComsolWorker {
     }
   }
 
+  static String normalizeD2RuntimeVersion(String raw) {
+    if (raw == null || raw.isEmpty() || raw.codePointCount(0, raw.length()) > 256)
+      throw new IllegalArgumentException("COMSOL runtime version must be a bounded nonempty string");
+    if (D2_CANONICAL_VERSION.matcher(raw).matches()) return raw;
+    java.util.regex.Matcher declaration = D2_BUILD_DECLARATION.matcher(raw);
+    if (!declaration.matches())
+      throw new IllegalArgumentException("COMSOL runtime version is not a complete recognized declaration");
+    String release = declaration.group(1);
+    if (release.split("\\.").length == 2) release += ".0";
+    return release + "." + declaration.group(2);
+  }
+
   private static String requireD2RuntimeVersion() {
     String actual = ModelUtil.getComsolVersion();
-    if (!D2_COMSOL_VERSION.equals(actual))
+    String semantic = null;
+    try { semantic = normalizeD2RuntimeVersion(actual); }
+    catch (IllegalArgumentException ignored) { /* Fail closed below; retain the raw observed value only on success. */ }
+    if (!D2_COMSOL_VERSION.equals(semantic))
       throw new WorkerFailure("API_UNSUPPORTED", "D2 API route requires COMSOL " + D2_COMSOL_VERSION);
     return actual;
   }
@@ -1780,24 +1974,82 @@ public final class PersistentComsolWorker {
     if (number(request.get("generation"), -1) != generation.get()) throw new IllegalStateException("STALE_WORKER_HANDLE");
     Object target = handles.get(string(request.get("handle")));
     if (target == null) throw new IllegalArgumentException("UNKNOWN_WORKER_HANDLE");
-    Map<String, Object> descriptor = publicReceiverMetadata(target.getClass());
+    Map<String, Object> descriptor = publicReceiverMetadata(target);
     descriptor.put("runtime_version", ModelUtil.getComsolVersion());
     return descriptor;
   }
   private static Map<String, Object> publicReceiverMetadata(Class<?> type) {
+    return publicReceiverMetadata(type, null);
+  }
+  private static Map<String, Object> publicReceiverMetadata(Object target) {
+    return publicReceiverMetadata(target.getClass(), target);
+  }
+  private static Map<String, Object> publicReceiverMetadata(Class<?> type, Object target) {
     Set<Class<?>> interfaces = new TreeSet<>(Comparator.comparing(Class::getName));
     publicInterfaces(type, interfaces);
     List<String> names = new ArrayList<>(); List<Object> methods = new ArrayList<>();
     for (Class<?> iface : interfaces) {
       names.add(iface.getName());
       for (Method method : iface.getMethods()) {
-        if ((!METHODS.contains(method.getName()) && !D2_METADATA_METHODS.contains(method.getName())) || Modifier.isStatic(method.getModifiers())) continue;
+        boolean typedIndex = target != null && modelEntityListIndexCapability(target, method, null);
+        boolean typedMaterialSize = target != null && materialModelSizeCapability(target, method, null);
+        if ((!METHODS.contains(method.getName()) && !D2_METADATA_METHODS.contains(method.getName())
+            && !typedIndex && !typedMaterialSize) || Modifier.isStatic(method.getModifiers())) continue;
+        if ("identifier".equals(method.getName())
+            && (iface != Physics.class || method.getParameterCount() != 0
+                || method.getReturnType() != String.class)) continue;
         List<String> parameters = new ArrayList<>();
         for (Class<?> parameter : method.getParameterTypes()) parameters.add(parameter.getName());
         methods.add(map("interface", iface.getName(), "method", method.getName(), "parameters", parameters, "returns", method.getReturnType().getName()));
       }
     }
     return map("interfaces", names, "methods", methods);
+  }
+  private static boolean modelEntityListIndexCapability(Object target, Method method, List<?> args) {
+    if (!(target instanceof ModelEntityList<?>) || method == null
+        || method.getDeclaringClass() != ModelEntityList.class
+        || !"index".equals(method.getName())
+        || method.getReturnType() != int.class
+        || !Arrays.equals(method.getParameterTypes(), new Class<?>[]{String.class})) return false;
+    return args == null || (args.size() == 1 && args.get(0) instanceof String);
+  }
+  private static Object readModelEntityListIndex(Object target, List<?> args) {
+    try {
+      Method method = ModelEntityList.class.getMethod("index", String.class);
+      if (!modelEntityListIndexCapability(target, method, args))
+        throw new SecurityException("METHOD_REJECTED");
+      return Integer.valueOf(((ModelEntityList<?>) target).index((String) args.get(0)));
+    } catch (NoSuchMethodException unavailable) {
+      throw new SecurityException("METHOD_REJECTED");
+    }
+  }
+  private static boolean materialModelSizeCapability(Object target, Method method, List<?> args) {
+    if (!(target instanceof MaterialModel) || method == null || Modifier.isStatic(method.getModifiers())
+        || !"size".equals(method.getName()) || method.getReturnType() != int[].class
+        || !Arrays.equals(method.getParameterTypes(), new Class<?>[]{String.class})) return false;
+    if (args != null && (args.size() != 1 || !(args.get(0) instanceof String)
+        || ((String) args.get(0)).isEmpty())) return false;
+    try {
+      return MaterialModel.class.getMethod("size", String.class).equals(method);
+    } catch (NoSuchMethodException unavailable) {
+      return false;
+    }
+  }
+  private static Object readMaterialModelSize(Object target, List<?> args) throws Exception {
+    try {
+      Method method = MaterialModel.class.getMethod("size", String.class);
+      if (!materialModelSizeCapability(target, method, args)) throw new SecurityException("METHOD_REJECTED");
+      int[] dimensions = ((MaterialModel) target).size((String) args.get(0));
+      if (dimensions == null || dimensions.length != 2
+          || dimensions[0] <= 0 || dimensions[1] <= 0) {
+        throw new WorkerFailure("EXECUTION_STATE_UNKNOWN",
+            "MaterialModel.size(String) returned null or nonpositive dimensions");
+      }
+      return dimensions;
+    } catch (NoSuchMethodException unavailable) {
+      throw new WorkerFailure("API_UNSUPPORTED",
+          "MaterialModel.size(String) is absent from the compiled COMSOL interface", null, unavailable);
+    }
   }
   private static List<Method> publicMethods(Class<?> type) {
     LinkedHashMap<String, Method> out = new LinkedHashMap<>();

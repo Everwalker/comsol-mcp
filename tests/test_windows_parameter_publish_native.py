@@ -113,6 +113,35 @@ class PathControls(unittest.TestCase):
         self.assertEqual(caught.exception.code, "ACCESS_VIOLATION")
         self.assertEqual(foreign.deleted, [])
 
+    def test_cleanup_verified_race_keeps_injected_and_original_path_states_distinct(self):
+        with tempfile.TemporaryDirectory(prefix='comsol-race-cleanup-state-') as scratch:
+            base = Path(scratch)
+            original = base / 'original'; original.mkdir()
+            assert_cleanup_verified_race_state(self, original, injected=False)
+            self.assertTrue(original.is_dir())
+
+            target = base / 'outside'; target.mkdir()
+            junction = base / 'owned-junction-entry'; junction.mkdir()
+            with self.assertRaises(AssertionError):
+                assert_cleanup_verified_race_state(self, junction, injected=True)
+            junction.rmdir()
+            assert_cleanup_verified_race_state(self, junction, injected=True)
+            self.assertTrue(target.is_dir())
+            self.assertEqual(list(target.iterdir()), [])
+
+
+def assert_cleanup_verified_race_state(test_case, victim, *, injected):
+    """Check the post-cleanup entry appropriate to the race-injection state."""
+    if injected:
+        # lexists/lstat observes the owned junction itself without following
+        # it to the outside target, and remains correct after unlink.
+        test_case.assertFalse(os.path.lexists(victim), "owned junction remains after cleanup")
+    else:
+        # With no injected reparse point, the original directory still exists
+        # and must remain empty.
+        test_case.assertTrue(victim.is_dir(), "original directory disappeared without injection")
+        test_case.assertEqual(list(victim.iterdir()), [], "original directory changed without injection")
+
 
 @unittest.skipUnless(os.name == 'nt', 'requires actual Windows kernel/filesystem')
 class NativeControls(unittest.TestCase):
@@ -257,7 +286,6 @@ class NativeControls(unittest.TestCase):
         outside_name = os.path.normcase(ntpath.normpath(final_path(outside_handle)))
 
         fsctl_set_reparse_point = 0x000900A4
-        fsctl_delete_reparse_point = 0x000900A8
         mount_point_tag = 0xA0000003
         injected = {'value': False}
 
@@ -322,14 +350,33 @@ class NativeControls(unittest.TestCase):
             elif race_error.details.get('cleanup_verified'):
                 self.assertEqual(list(victim.iterdir()), [])
         finally:
-            if injected['value']:
-                device_io(api, fsctl_delete_reparse_point,
-                          mount_point_tag.to_bytes(4, 'little') + b'\x00\x00\x00\x00')
-            api.close(outside_handle)
-            api.close(attacker)
-        self.assertEqual(list(outside.iterdir()), [])
-        if race_receipt is None and race_error is not None and race_error.details.get('cleanup_verified'):
-            self.assertEqual(list(victim.iterdir()), [])
+            try:
+                if injected['value']:
+                    api.close(attacker)
+                    attacker = None
+                    # Remove only the owned junction itself; Windows does not
+                    # remove or traverse its target for this directory operation.
+                    cleanup_error = None
+                    try:
+                        os.rmdir(victim)
+                    except BaseException as error:
+                        # Still close/check the outside target before reporting
+                        # the cleanup failure; otherwise this safety invariant
+                        # would be skipped when rmdir fails.
+                        cleanup_error = error
+            finally:
+                try:
+                    api.close(outside_handle)
+                finally:
+                    if attacker is not None:
+                        api.close(attacker)
+            self.assertEqual(list(outside.iterdir()), [])
+            if injected['value'] and cleanup_error is not None:
+                raise cleanup_error
+        if injected['value']:
+            assert_cleanup_verified_race_state(self, victim, injected=True)
+        elif race_receipt is None and race_error is not None and race_error.details.get('cleanup_verified'):
+            assert_cleanup_verified_race_state(self, victim, injected=False)
 
 
 if __name__ == '__main__':

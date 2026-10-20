@@ -1,0 +1,1032 @@
+from __future__ import annotations
+
+from contextlib import contextmanager
+import hashlib
+import json
+from pathlib import Path
+import time
+from uuid import uuid4
+import zipfile
+
+import pytest
+
+from comsol_mcp._control_daemon import ControlDaemon
+from comsol_mcp._execution_contract import SessionLedger
+from comsol_mcp._execution_service import ExecutionService
+from comsol_mcp._managed_backend import ManagedBackend
+from comsol_mcp._session_context import (
+    CanonicalSocket, SessionEndpointIdentity, SessionRuntimeConfig,
+    SessionRuntimeContext,
+)
+from comsol_mcp._session_lifecycle import new_lifecycle_record
+from tools.run_native_w24_static_shape_setup_campaign import (
+    BudgetedSetupDaemon, CandidateError, LEGACY_STORE_TERMINAL_PROOF_OPERATIONS,
+    SampledRssMonitor, _sha_file,
+)
+
+
+class _SyntheticModel:
+    def __init__(self, worker: "_SyntheticWorker", tag: str, label: str):
+        self.worker = worker
+        self._tag = tag
+        self._label = label
+        self.java = self
+
+    def tag(self):
+        return self.worker.client_handle.call("call", {"method": "tag", "tag": self._tag}, self._tag)
+
+    def label(self, *args):
+        if args:
+            self._label = str(args[0])
+            self.worker.client_handle.call("call", {"method": "label", "tag": self._tag,
+                                                     "args": list(args)}, self._label)
+            return self
+        return self.worker.client_handle.call("call", {"method": "label", "tag": self._tag}, self._label)
+
+    def getFilePath(self):
+        return self.worker.client_handle.call("call", {"method": "getFilePath", "tag": self._tag},
+                                              getattr(self, "_path", ""))
+
+    def component(self, *_args):
+        return self
+
+    def geom(self, *_args):
+        return self
+
+    def mesh(self, *_args):
+        return self
+
+    def physics(self, *_args):
+        return self
+
+    def material(self, *_args):
+        return self
+
+    def param(self):
+        return self
+
+    def study(self):
+        return self
+
+    def sol(self):
+        return self
+
+    def result(self):
+        return self
+
+    def dataset(self):
+        return self
+
+    def tags(self):
+        return self.worker.client_handle.call("call", {"method": "tags", "tag": self._tag}, [])
+
+    def varnames(self):
+        return self.worker.client_handle.call("call", {"method": "varnames", "tag": self._tag}, [])
+
+
+class _SyntheticClient:
+    def __init__(self, worker: "_SyntheticWorker"):
+        self.worker = worker
+        self.load_paths: list[str] = []
+
+    def call(self, kind: str, metadata: dict, result):
+        request_id = f"wrk-{uuid4()}"
+        payload = {"type": kind, "request_id": request_id, **metadata}
+        request_hash = hashlib.sha256(json.dumps(
+            {"kind": kind, "metadata": payload}, sort_keys=True,
+            separators=(",", ":"),
+        ).encode()).hexdigest()
+        event = {"request_id": request_id, "kind": kind,
+                 "operation_id": self.worker.active_operation_id,
+                 "request_hash": request_hash, "metadata": payload}
+        callback = self.worker.event_callback
+        if callable(callback):
+            callback({"phase": "submitted", **event})
+        self.worker.request_count += 1
+        reply = {"ok": True, "status": "SUCCEEDED", "request_id": request_id,
+                 "result": result}
+        if callable(callback):
+            callback({"phase": "observed", "status": "SUCCEEDED",
+                      "reply": reply, **event})
+        return result
+
+    def tags(self):
+        return self.call("modelutil", {"method": "tags"}, sorted(self.worker.models))
+
+    def models(self):
+        models = list(self.worker.models.values())
+        event_rows = [{"tag": model._tag, "label": model._label,
+                       "file_path": getattr(model, "_path", "")} for model in models]
+        self.call("modelutil", {"method": "models"}, event_rows)
+        return models
+
+    def create(self, label: str):
+        tag = self.call("modelutil", {"method": "uniquetag", "args": ["mcp"]},
+                        f"mcp{len(self.worker.models) + 1}")
+        model = _SyntheticModel(self.worker, tag, label)
+        self.worker.models[tag] = model
+        self.call("modelutil", {"method": "create", "args": [tag]}, {"tag": tag})
+        model.label(label)
+        return model
+
+    def load(self, path: str):
+        self.load_paths.append(str(path))
+        tag = self.call("modelutil", {"method": "uniquetag", "args": ["mcp_load"]},
+                        f"mcp_load{len(self.worker.models) + 1}")
+        model = _SyntheticModel(self.worker, tag, Path(path).name)
+        model._path = str(path)
+        self.worker.models[tag] = model
+        self.call("modelutil", {"method": "load", "args": [tag, str(path)]}, {"tag": tag})
+        return model
+
+    def model(self, tag: str):
+        return self.worker.models[tag]
+
+
+class _SyntheticWorker:
+    """Worker-shaped test seam that emits the production submitted/observed event contract."""
+
+    def __init__(self):
+        self.instance_id = "worker-proof-1"
+        self.worker_generation = 1
+        self.active_operation_id = ""
+        self.event_callback = None
+        self.models: dict[str, _SyntheticModel] = {}
+        self.request_count = 0
+        self.client_handle = _SyntheticClient(self)
+
+    def client(self):
+        return self.client_handle
+
+    @contextmanager
+    def operation_context(self, operation_id, on_request_event=None):
+        previous = self.active_operation_id, self.event_callback
+        self.active_operation_id, self.event_callback = operation_id, on_request_event
+        try:
+            yield
+        finally:
+            self.active_operation_id, self.event_callback = previous
+
+    def model_snapshot(self, tag: str):
+        if tag not in self.models:
+            raise KeyError(tag)
+        model = self.models[tag]
+        result = {"model_tag": tag,
+                  "fingerprint": f"synthetic:{tag}:{model._label}",
+                  "external_event_counter": 0}
+        return self.client_handle.call("call", {"method": "modelSnapshot", "tag": tag}, result)
+
+    backend_snapshot = model_snapshot
+
+    def close(self):
+        return None
+
+
+def _new_environment(tmp_path: Path, monkeypatch, *, worker_epoch: int = 2,
+                     separate_registered_service: bool = False):
+    projects = tmp_path / "projects"
+    projects.mkdir()
+    session_id, server_id = "session-proof", "server-proof"
+    default_worker = _SyntheticWorker()
+    default_session_id = "default-service-session" if separate_registered_service else session_id
+    default_server_id = "default-service-server" if separate_registered_service else server_id
+    default_service = ExecutionService(
+        SessionLedger(default_session_id, default_server_id,
+                      permissions={"inspect", "project_write", "compute"}),
+        default_worker, project_root=projects,
+    )
+    daemon = ControlDaemon(tmp_path / "control", service=default_service,
+                           worker=default_worker, project_root=projects)
+    endpoint = "127.0.0.1:25432"
+    default_worker.worker_generation = worker_epoch
+    daemon.backend.endpoint_key = endpoint
+    daemon.backend.worker_identity = {
+        "runtime_id": "synthetic-runtime", "worker_instance_id": default_worker.instance_id,
+        "connection_epoch": worker_epoch, "server_instance_id": default_server_id, "endpoint": endpoint,
+    }
+    created = daemon.dispatch({
+        "operation": "project.create",
+        "arguments": {"label": "proof", "workspace": "proof",
+                      "policy": {"permissions": ["inspect", "project_write", "compute"]}},
+        "execution": {"request_id": "proof-project-create", "idempotency_key": "proof-project-create"},
+    })
+    assert created["success"] is True, created
+    project_id = created["data"]["project"]["project_id"]
+    workspace = Path(created["data"]["project"]["workspace"])
+    if separate_registered_service:
+        worker = _SyntheticWorker()
+        service = ExecutionService(
+            SessionLedger(session_id, server_id,
+                          permissions={"inspect", "project_write", "compute"}),
+            worker, project_root=projects,
+        )
+        backend = ManagedBackend(
+            tmp_path / "registered-session-backend", daemon.store,
+            service=service, registry=daemon.backend.registry, worker=worker,
+            project_root=projects,
+        )
+    else:
+        worker, service, backend = default_worker, default_service, daemon.backend
+    worker.worker_generation = worker_epoch
+    backend.endpoint_key = endpoint
+    backend.worker_identity = {
+        "runtime_id": "synthetic-runtime", "worker_instance_id": worker.instance_id,
+        "connection_epoch": worker_epoch, "server_instance_id": server_id, "endpoint": endpoint,
+    }
+    runtime_root = tmp_path / "synthetic-runtime"
+    runtime = SessionRuntimeConfig(
+        runtime_id="synthetic-runtime", comsol_version="6.4.0.293",
+        installation_root=runtime_root / "comsol", java_executable=runtime_root / "java",
+        classpath=(runtime_root / "client.jar",), preferences_dir=runtime_root / "prefs",
+        session_state_root=runtime_root / "sessions",
+    )
+    context = SessionRuntimeContext(
+        project_id=project_id, session_id=session_id, project_root=workspace,
+        runtime=runtime,
+        endpoint=SessionEndpointIdentity(
+            "127.0.0.1", 25432, worker_epoch,
+            observed_peer=CanonicalSocket("127.0.0.1", 25432),
+        ),
+        backend=backend, worker_instance_id=worker.instance_id,
+        worker=worker, service=service, client=worker.client(), client_connected=True,
+        server_ownership="shared",
+    )
+    daemon.session_registry.register(context)
+    daemon._session_backends[(project_id, session_id)] = backend
+    daemon._session_worker_handles[(project_id, session_id)] = worker
+    daemon.session_lifecycle.save(new_lifecycle_record(
+        project_id=project_id, session_id=session_id, state="CONNECTED",
+        runtime_id=runtime.runtime_id,
+        endpoint={"host": "127.0.0.1", "port": 25432},
+        client_state="CONNECTED", server_state="SHARED", server_ownership="shared",
+        worker_instance_id=worker.instance_id, worker_epoch=worker_epoch,
+        server_instance_id=server_id,
+    ))
+    events_path = tmp_path / "evidence" / "events.jsonl"
+    events_path.parent.mkdir(parents=True)
+    monitor = SampledRssMonitor(server_pid=2, server_birth_ms=1,
+                                worker_search_root=tmp_path, events_path=events_path)
+    wrapper = BudgetedSetupDaemon(
+        daemon, monitor=monitor, deadline_monotonic=time.monotonic() + 3600,
+        events_path=events_path, workspace=workspace, project_id=project_id,
+    )
+    return daemon, wrapper, worker, project_id, session_id, context, events_path
+
+
+def _create_request(project_id: str, session_id: str):
+    return {
+        "operation": "model_create",
+        "arguments": {"name": "w24_static_shape_setup_parent"},
+        "execution": {
+            "project_id": project_id, "session_id": session_id,
+            "request_id": "w24-proof-model-create",
+            "idempotency_key": "w24-proof-model-create",
+        },
+    }
+
+
+def _adopt_java_created_user_model(wrapper, worker, project_id: str, session_id: str):
+    tag = f"javaBuilt{uuid4().hex}"
+    request_key = f"adopt-{uuid4()}"
+    worker.models[tag] = _SyntheticModel(worker, tag, "synthetic Java-built model")
+    wrapper.set_slot("baseline", "flat")
+    wrapper.slot_stage = "built"
+    wrapper.slot_model_tag = tag
+    adopted = wrapper.dispatch({
+        "operation": "model.adopt", "arguments": {"server_model_tag": tag},
+        "execution": {"project_id": project_id, "session_id": session_id,
+                      "request_id": request_key, "idempotency_key": request_key},
+    })
+    assert adopted["success"] is True, adopted
+    assert adopted["data"]["model_tag"] == tag
+    assert adopted["execution"]["model_ownership"] == "user_owned"
+    assert wrapper.slot_adopt_binding["model_ref"] == adopted["execution"]["model_ref"]
+    return tag, adopted
+
+
+def _inspect_request(project_id: str, session_id: str, ref: dict, *, suffix="inspect"):
+    key = f"w24-proof-{suffix}-{uuid4()}"
+    return {
+        "operation": "model.inspect", "arguments": {"detail": "summary"},
+        "execution": {"project_id": project_id, "session_id": session_id,
+                      "model_ref": dict(ref), "request_id": key,
+                      "idempotency_key": key},
+    }
+
+
+def test_real_control_daemon_model_create_uses_store_terminal_pair_local_gate(tmp_path, monkeypatch):
+    daemon, wrapper, worker, project_id, session_id, _context, events_path = _new_environment(tmp_path, monkeypatch)
+    try:
+        response = wrapper.dispatch(_create_request(project_id, session_id))
+        assert response["success"] is True, response
+        assert "worker" not in response["data"]
+        assert worker.request_count > 0
+
+        operation_id = response["execution"]["operation_id"]
+        job_id = response["execution"]["job_id"]
+        operation = daemon.store.get_operation(operation_id)
+        job = daemon.store.job(job_id)
+        assert operation["status"] == job["status"] == "SUCCEEDED"
+        assert operation["result"] == response
+        assert response["execution"]["model_ref"]["generation"] == 1
+        assert "worker" not in operation["result"]["data"]
+        snapshot = daemon.store.collect_job_event_snapshot(job_id)
+        pairs = [row for row in snapshot["events"] if row["event"] == "worker_request"]
+        proof_paths = list((events_path.parent / "managed_routes").glob("*_terminal_pair_proof.json"))
+        assert len(proof_paths) == 1
+        proof = json.loads(proof_paths[0].read_text())
+        assert proof["proof_kind"] == "operation_store_terminal_pair"
+        assert proof["operation_identity"]["operation_id"] == operation_id
+        assert proof["operation_identity"]["job_id"] == job_id
+        assert proof["worker_epoch"] == 2
+        assert proof["worker_request_pair_count"] == worker.request_count
+        assert len(pairs) == 2 * worker.request_count
+        raw_route_result = json.loads(proof_paths[0].with_name(
+            proof_paths[0].name.replace("_terminal_pair_proof.json", "_result.json")
+        ).read_text())
+        assert raw_route_result["response"] == response
+        assert "worker" not in raw_route_result["response"]["data"]
+    finally:
+        daemon.close()
+
+
+def test_real_control_daemon_model_inspect_uses_store_terminal_pair_local_gate(tmp_path, monkeypatch):
+    daemon, wrapper, worker, project_id, session_id, _context, events_path = _new_environment(tmp_path, monkeypatch)
+    try:
+        tag, adopted = _adopt_java_created_user_model(wrapper, worker, project_id, session_id)
+        assert _context.service.ledger.model_ownership[tag] == "user_owned"
+        inspected = wrapper.dispatch(_inspect_request(
+            project_id, session_id, adopted["execution"]["model_ref"], suffix="adopted-inspect"))
+        assert inspected["success"] is True, inspected
+        assert "worker" not in inspected["data"]
+        assert inspected["execution"]["model_ownership"] == "user_owned"
+        proof_paths = sorted((events_path.parent / "managed_routes").glob("*_terminal_pair_proof.json"))
+        proofs = [json.loads(path.read_text()) for path in proof_paths]
+        assert sorted(proof["operation"] for proof in proofs) == ["model.adopt", "model.inspect"]
+        proof = next(proof for proof in proofs if proof["operation"] == "model.inspect")
+        assert proof["proof_kind"] == "operation_store_terminal_pair"
+        assert proof["worker_request_pair_count"] > 0
+        proof_path = next(path for path in proof_paths
+                          if json.loads(path.read_text())["operation"] == "model.inspect")
+        raw_result = json.loads(proof_path.with_name(
+            proof_path.name.replace("_terminal_pair_proof.json", "_result.json")
+        ).read_text())["response"]
+        assert raw_result["execution"]["model_ref"] == adopted["execution"]["model_ref"]
+        assert raw_result["data"]["model_identity"] == adopted["execution"]["model_ref"]
+    finally:
+        daemon.close()
+
+
+def test_worker_envelope_cannot_bypass_exact_adopted_model_inspect_binding(tmp_path, monkeypatch):
+    daemon, wrapper, worker, project_id, session_id, context, events_path = _new_environment(
+        tmp_path, monkeypatch,
+    )
+    try:
+        _tag, adopted = _adopt_java_created_user_model(wrapper, worker, project_id, session_id)
+        original_dispatch = daemon.dispatch
+        dispatch_count = 0
+
+        def wrong_identity_with_worker_terminal(request):
+            nonlocal dispatch_count
+            dispatch_count += 1
+            response = original_dispatch(request)
+            if request.get("operation") == "model.inspect":
+                changed = json.loads(json.dumps(response))
+                changed_data = changed.setdefault("data", {})
+                changed_data["worker"] = {"status": "SUCCEEDED"}
+                changed_data["model_identity"]["generation"] += 1
+                return changed
+            return response
+
+        monkeypatch.setattr(daemon, "dispatch", wrong_identity_with_worker_terminal)
+        with pytest.raises(CandidateError, match="exact model.adopt identity/ownership chain"):
+            wrapper.dispatch(_inspect_request(
+                project_id, session_id, adopted["execution"]["model_ref"],
+                suffix="worker-envelope-wrong-generation",
+            ))
+        assert wrapper.unknown is True
+        assert dispatch_count == 1
+        existing_proofs = [json.loads(path.read_text()) for path in
+                           (events_path.parent / "managed_routes").glob("*_terminal_pair_proof.json")]
+        assert [proof["operation"] for proof in existing_proofs] == ["model.adopt"]
+        with pytest.raises(CandidateError, match="earlier setup call is UNKNOWN"):
+            wrapper.dispatch(_inspect_request(
+                project_id, session_id, adopted["execution"]["model_ref"],
+                suffix="worker-envelope-no-retry",
+            ))
+        assert dispatch_count == 1
+    finally:
+        daemon.close()
+
+
+def test_setup_gate_rejects_legacy_model_load_before_any_route_dispatch(tmp_path, monkeypatch):
+    daemon, wrapper, worker, project_id, session_id, _context, events_path = _new_environment(tmp_path, monkeypatch)
+    try:
+        outputs = Path(wrapper.workspace) / "outputs"
+        outputs.mkdir()
+        model_path = outputs / "static_shape_flat.mph"
+        model_path.write_bytes(b"synthetic software-only MPH placeholder")
+        _tag, adopted = _adopt_java_created_user_model(wrapper, worker, project_id, session_id)
+        assert adopted["execution"]["model_ownership"] == "user_owned"
+        wrapper.slot_stage = "saved"
+        wrapper.slot_artifact = {"path": str(model_path), "sha256": _sha_file(model_path),
+                                 "size_bytes": model_path.stat().st_size}
+        before_requests = worker.request_count
+        with pytest.raises(CandidateError, match="cannot prove disk reopen"):
+            wrapper.dispatch({
+                "operation": "model_load", "arguments": {"path": str(model_path)},
+                "execution": {"project_id": project_id, "session_id": session_id,
+                              "request_id": "w24-proof-model-load",
+                              "idempotency_key": "w24-proof-model-load"},
+            })
+        assert worker.request_count == before_requests
+        assert wrapper.unknown is False
+        assert wrapper.slot_load_binding is None
+        assert len(list((events_path.parent / "managed_routes").glob("*_result.json"))) == 1
+    finally:
+        daemon.close()
+
+
+def _register_saved_mph_through_public_route(wrapper, project_id: str, session_id: str,
+                                             model_path: Path):
+    key = f"w24-register-saved-mph-{uuid4()}"
+    relative = model_path.relative_to(wrapper.workspace).as_posix()
+    body = {
+        "project_id": project_id, "path": relative,
+        "role": "saved_model", "classification": "project_local",
+        "artifact_type": "application/vnd.comsol.mph",
+        "format_version": "comsol-mph-savecopy/1",
+        "request_id": key, "idempotency_key": key,
+    }
+    return wrapper.dispatch({
+        "operation": "operation_call",
+        "arguments": {"operation_id": "artifact.register", "arguments": body},
+        "execution": {"project_id": project_id, "session_id": session_id,
+                      "request_id": key, "idempotency_key": key},
+    })
+
+
+def _saved_mph_zip(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr("model/fixture.txt", "synthetic software-only saved model")
+
+
+def test_real_control_daemon_public_register_then_managed_load_proves_fresh_tag(tmp_path, monkeypatch):
+    daemon, wrapper, worker, project_id, session_id, context, events_path = _new_environment(
+        tmp_path, monkeypatch, separate_registered_service=True,
+    )
+    try:
+        tag, adopted = _adopt_java_created_user_model(wrapper, worker, project_id, session_id)
+        model_path = Path(wrapper.workspace) / "outputs" / "static_shape_flat.mph"
+        _saved_mph_zip(model_path)
+        wrapper.slot_stage = "saved"
+        wrapper.slot_artifact = {"path": str(model_path),
+                                 "sha256": _sha_file(model_path),
+                                 "size_bytes": model_path.stat().st_size}
+
+        registered = _register_saved_mph_through_public_route(
+            wrapper, project_id, session_id, model_path)
+        assert registered["success"] is True, registered
+        artifact_id = registered["data"]["artifact_id"]
+        assert artifact_id == _sha_file(model_path)
+        registered_path = Path(wrapper.workspace) / registered["data"]["path"]
+        assert registered_path.read_bytes() == model_path.read_bytes()
+        assert daemon.store.get_metadata("artifacts", artifact_id)["path"] == registered["data"]["path"]
+
+        before_tags = set(worker.models)
+        wrong_key = f"w24-wrong-artifact-{uuid4()}"
+        with pytest.raises(CandidateError, match="exact registered artifact"):
+            wrapper.dispatch({
+                "operation": "model.load", "arguments": {"artifact_id": "a" * 64},
+                "execution": {"project_id": project_id, "session_id": session_id,
+                              "request_id": wrong_key, "idempotency_key": wrong_key},
+            })
+        assert set(worker.models) == before_tags
+        assert wrapper.unknown is False
+
+        load_key = f"w24-managed-artifact-load-{uuid4()}"
+        loaded = wrapper.dispatch({
+            "operation": "model.load", "arguments": {"artifact_id": artifact_id},
+            "execution": {"project_id": project_id, "session_id": session_id,
+                          "request_id": load_key, "idempotency_key": load_key},
+        })
+        assert loaded["success"] is True, loaded
+        loaded_ref = loaded["execution"]["model_ref"]
+        assert loaded_ref["model_tag"] not in before_tags
+        assert loaded_ref["model_tag"] != tag
+        assert loaded["data"]["artifact_id"] == artifact_id
+        assert loaded["data"]["sha256"] == artifact_id
+        assert loaded["data"]["ownership"] == "mcp_owned"
+        assert loaded["execution"]["model_ownership"] == "mcp_owned"
+        assert context.service.ledger.model_ownership[loaded_ref["model_tag"]] == "mcp_owned"
+        assert worker.client_handle.load_paths == [str(registered_path)]
+        assert wrapper.slot_load_binding["load_mode"] == "registered-artifact-fresh-tag"
+        assert wrapper.slot_load_binding["loaded_artifact"]["artifact_id"] == artifact_id
+
+        inspected = wrapper.dispatch(_inspect_request(
+            project_id, session_id, loaded_ref, suffix="fresh-artifact-load-inspect"))
+        assert inspected["success"] is True, inspected
+        assert inspected["execution"]["model_ownership"] == "mcp_owned"
+        proofs = [json.loads(path.read_text()) for path in
+                  (events_path.parent / "managed_routes").glob("*_terminal_pair_proof.json")]
+        load_proof = next(proof for proof in proofs if proof["operation"] == "model.load")
+        assert load_proof["proof_kind"] == "operation_store_terminal_pair"
+        assert load_proof["worker_request_pair_count"] > 0
+        load_proof_path = next(path for path in
+            (events_path.parent / "managed_routes").glob("*_terminal_pair_proof.json")
+            if json.loads(path.read_text())["operation"] == "model.load")
+        load_result_path = load_proof_path.with_name(
+            load_proof_path.name.replace("_terminal_pair_proof.json", "_result.json"))
+        load_raw = json.loads(load_result_path.read_text())
+        assert load_raw["response"]["data"]["artifact_id"] == artifact_id
+        assert adopted["execution"]["model_ownership"] == "user_owned"
+    finally:
+        daemon.close()
+
+
+def test_managed_load_rejects_worker_tag_reuse_without_claiming_reopen(tmp_path, monkeypatch):
+    daemon, wrapper, worker, project_id, session_id, _context, _events_path = _new_environment(
+        tmp_path, monkeypatch,
+    )
+    try:
+        tag, _adopted = _adopt_java_created_user_model(wrapper, worker, project_id, session_id)
+        model_path = Path(wrapper.workspace) / "outputs" / "static_shape_flat.mph"
+        _saved_mph_zip(model_path)
+        wrapper.slot_stage = "saved"
+        wrapper.slot_artifact = {"path": str(model_path),
+                                 "sha256": _sha_file(model_path),
+                                 "size_bytes": model_path.stat().st_size}
+        registered = _register_saved_mph_through_public_route(
+            wrapper, project_id, session_id, model_path)
+        assert registered["success"] is True, registered
+        artifact_id = registered["data"]["artifact_id"]
+        calls_before = worker.request_count
+        monkeypatch.setattr(worker.client_handle, "load",
+                            lambda _path: worker.models[tag])
+        load_key = f"w24-managed-cached-tag-negative-{uuid4()}"
+        with pytest.raises(CandidateError):
+            wrapper.dispatch({
+                "operation": "model.load", "arguments": {"artifact_id": artifact_id},
+                "execution": {"project_id": project_id, "session_id": session_id,
+                              "request_id": load_key, "idempotency_key": load_key},
+            })
+        assert wrapper.unknown is True
+        assert worker.request_count > calls_before
+        assert set(worker.models) == {tag}
+        assert wrapper.slot_load_binding is None
+    finally:
+        daemon.close()
+
+
+def _actual_r11_model_load_fixture():
+    fixture_path = (Path(__file__).parent / "fixtures" /
+                    "w24_r11_model_load_adopted_by_path_response.json")
+    return json.loads(fixture_path.read_text(encoding="utf-8"))
+
+
+def _actual_r11_load_consumer(fake_self=None):
+    from tools.run_native_w24_static_shape_setup_campaign import BudgetedSetupDaemon
+    fixture = _actual_r11_model_load_fixture()
+    if fake_self is None:
+        fake_self = object.__new__(BudgetedSetupDaemon)
+    fake_self.project_id = fixture["project_id"]
+    fake_self.slot = tuple(fixture["slot"])
+    fake_self.slot_stage = "saved"
+    fake_self.slot_artifact = dict(fixture["saved_artifact"])
+    fake_self.slot_adopt_binding = dict(fixture["predecessor_adopt_binding"])
+    session_id = fixture["session_id"]
+    server_id = fixture["server_instance_id"]
+    ledger = SessionLedger(session_id, server_id,
+                           permissions={"inspect", "project_write", "compute"})
+    prior = fixture["predecessor_adopt_binding"]["model_ref"]
+    first = ledger.bind_model(prior["model_tag"], ownership="user_owned")
+    current = ledger.bind_model(prior["model_tag"], ownership="user_owned")
+    assert first.as_dict() == prior
+    assert current.as_dict() == fixture["response"]["execution"]["model_ref"]
+    context_before = {
+        "project_id": fixture["project_id"], "session_id": session_id,
+        "server_instance_id": server_id, "ledger": ledger,
+    }
+    request = fixture["request"]
+    response = fixture["response"]
+    return fake_self, request, response, context_before
+
+
+def test_actual_r11_adopted_by_path_response_binds_exact_user_owned_generation():
+    from tools.run_native_w24_static_shape_setup_campaign import BudgetedSetupDaemon
+
+    wrapper, request, response, context = _actual_r11_load_consumer()
+    binding = wrapper._validate_model_load_binding(request, response, context)
+    assert binding["source_operation"] == "model_load"
+    assert binding["load_mode"] == "adopted-by-path"
+    assert binding["model_ownership"] == "user_owned"
+    assert binding["model_ref"] == response["execution"]["model_ref"]
+    assert binding["loaded_artifact"] == wrapper.slot_artifact
+    assert BudgetedSetupDaemon._expected_load_binding_ownership(binding) == "user_owned"
+
+
+@pytest.mark.parametrize("damage", [
+    "wrong_execution_owner", "wrong_load_mode", "changed_generation",
+    "foreign_server", "wrong_file_path", "wrong_requested_path",
+    "foreign_predecessor", "foreign_ledger",
+])
+def test_actual_r11_adopted_by_path_response_rejects_identity_or_mode_drift(damage):
+    import copy
+    from tools.run_native_w24_static_shape_setup_campaign import BudgetedSetupDaemon
+
+    wrapper, request, response, context = _actual_r11_load_consumer()
+    request = copy.deepcopy(request)
+    response = copy.deepcopy(response)
+    if damage == "wrong_execution_owner":
+        response["execution"]["model_ownership"] = "mcp_owned"
+    elif damage == "wrong_load_mode":
+        response["data"]["load_mode"] = "loaded"
+    elif damage == "changed_generation":
+        response["execution"]["model_ref"]["generation"] += 1
+    elif damage == "foreign_server":
+        response["execution"]["model_ref"]["server_instance_id"] = "foreign-server"
+    elif damage == "wrong_file_path":
+        response["data"]["file_path"] = "/foreign/static_shape_flat.mph"
+    elif damage == "wrong_requested_path":
+        request["arguments"]["path"] = "/foreign/static_shape_flat.mph"
+    elif damage == "foreign_predecessor":
+        wrapper.slot_adopt_binding["model_ref"]["session_id"] = "foreign-session"
+    elif damage == "foreign_ledger":
+        foreign = SessionLedger("foreign-session", "foreign-server",
+                                permissions={"inspect", "project_write", "compute"})
+        for _ in range(2):
+            foreign.bind_model("w24shape_baseline_flat1", ownership="user_owned")
+        context["ledger"] = foreign
+        context["session_id"] = "foreign-session"
+        context["server_instance_id"] = "foreign-server"
+    with pytest.raises(CandidateError):
+        wrapper._validate_model_load_binding(request, response, context)
+
+
+def test_setup_gate_does_not_mislabel_adopted_by_path_as_disk_reopen(tmp_path, monkeypatch):
+    daemon, wrapper, worker, project_id, session_id, context, events_path = _new_environment(
+        tmp_path, monkeypatch,
+    )
+    try:
+        outputs = Path(wrapper.workspace) / "outputs"
+        outputs.mkdir()
+        model_path = outputs / "static_shape_flat.mph"
+        model_path.write_bytes(b"synthetic software-only saved artifact")
+        tag = f"savedByPath{uuid4().hex}"
+        model = _SyntheticModel(worker, tag, "saved slot model")
+        model._path = str(model_path)
+        worker.models[tag] = model
+        wrapper.set_slot("baseline", "flat")
+        wrapper.slot_model_tag = tag
+        wrapper.slot_stage = "built"
+        adopted = wrapper.dispatch({
+            "operation": "model.adopt", "arguments": {"server_model_tag": tag},
+            "execution": {"project_id": project_id, "session_id": session_id,
+                          "request_id": "adopt-before-path-load", "idempotency_key": "adopt-before-path-load"},
+        })
+        assert adopted["success"] is True, adopted
+        assert adopted["execution"]["model_ownership"] == "user_owned"
+        wrapper.slot_stage = "saved"
+        wrapper.slot_artifact = {"path": str(model_path), "sha256": _sha_file(model_path),
+                                 "size_bytes": model_path.stat().st_size}
+
+        before = worker.request_count
+        with pytest.raises(CandidateError, match="cannot prove disk reopen"):
+            wrapper.dispatch({
+                "operation": "model_load", "arguments": {"path": str(model_path)},
+                "execution": {"project_id": project_id, "session_id": session_id,
+                              "request_id": "load-existing-saved-path", "idempotency_key": "load-existing-saved-path"},
+            })
+        assert worker.request_count == before
+        assert wrapper.slot_load_binding is None
+        assert context.service.ledger._models[tag].ref.as_dict() == adopted["execution"]["model_ref"]
+        assert context.service.ledger.model_ownership[tag] == "user_owned"
+    finally:
+        daemon.close()
+
+
+def test_registered_service_adopt_and_inspect_do_not_fall_back_to_default_service(tmp_path, monkeypatch):
+    daemon, wrapper, worker, project_id, session_id, context, events_path = _new_environment(
+        tmp_path, monkeypatch, separate_registered_service=True,
+    )
+    try:
+        default_service = daemon.service
+        assert default_service is not context.service
+        assert default_service.ledger.session_id != context.service.ledger.session_id
+        tag, adopted = _adopt_java_created_user_model(wrapper, worker, project_id, session_id)
+        assert context.service.ledger.model_ownership[tag] == "user_owned"
+        assert tag not in default_service.ledger.model_ownership
+        assert default_service.ledger._models == {}
+        inspected = wrapper.dispatch(_inspect_request(
+            project_id, session_id, adopted["execution"]["model_ref"], suffix="split-adopted-inspect"))
+        assert inspected["success"] is True, inspected
+        assert inspected["execution"]["model_ownership"] == "user_owned"
+        assert default_service.ledger._models == {}
+        assert worker.request_count > 0
+        assert daemon.worker.request_count == 0
+        proofs = [json.loads(path.read_text()) for path in
+                  (events_path.parent / "managed_routes").glob("*_terminal_pair_proof.json")]
+        assert sorted(proof["operation"] for proof in proofs) == ["model.adopt", "model.inspect"]
+    finally:
+        daemon.close()
+
+
+def test_registered_service_legacy_load_is_refused_without_default_service_fallback(tmp_path, monkeypatch):
+    daemon, wrapper, worker, project_id, session_id, context, events_path = _new_environment(
+        tmp_path, monkeypatch, separate_registered_service=True,
+    )
+    try:
+        default_service = daemon.service
+        assert default_service is not context.service
+        outputs = Path(wrapper.workspace) / "outputs"
+        outputs.mkdir()
+        model_path = outputs / "static_shape_flat.mph"
+        model_path.write_bytes(b"synthetic software-only MPH placeholder")
+        _tag, adopted = _adopt_java_created_user_model(wrapper, worker, project_id, session_id)
+        assert adopted["execution"]["model_ownership"] == "user_owned"
+        wrapper.slot_stage = "saved"
+        wrapper.slot_artifact = {"path": str(model_path), "sha256": _sha_file(model_path),
+                                 "size_bytes": model_path.stat().st_size}
+        before = worker.request_count
+        with pytest.raises(CandidateError, match="cannot prove disk reopen"):
+            wrapper.dispatch({
+                "operation": "model_load", "arguments": {"path": str(model_path)},
+                "execution": {"project_id": project_id, "session_id": session_id,
+                              "request_id": "split-service-load", "idempotency_key": "split-service-load"},
+            })
+        assert worker.request_count == before
+        assert wrapper.slot_load_binding is None
+        assert default_service.ledger._models == {}
+        proofs = [json.loads(path.read_text()) for path in
+                  (events_path.parent / "managed_routes").glob("*_terminal_pair_proof.json")]
+        assert sorted(proof["operation"] for proof in proofs) == ["model.adopt"]
+    finally:
+        daemon.close()
+
+
+def test_registered_context_wrong_backend_is_rejected_before_adopt_dispatch(tmp_path, monkeypatch):
+    daemon, wrapper, worker, project_id, session_id, context, events_path = _new_environment(
+        tmp_path, monkeypatch, separate_registered_service=True,
+    )
+    try:
+        wrapper.set_slot("baseline", "flat")
+        wrapper.slot_stage = "built"
+        tag = f"javaBuilt{uuid4().hex}"
+        wrapper.slot_model_tag = tag
+        worker.models[tag] = _SyntheticModel(worker, tag, "synthetic Java-built model")
+        daemon._session_backends[(project_id, session_id)] = daemon.backend
+        before_requests = worker.request_count
+        before_jobs = daemon.store.list_jobs(project_id=project_id).total
+        request_id = f"wrong-selected-context-{uuid4()}"
+        with pytest.raises(CandidateError, match="registered session backend"):
+            wrapper.dispatch({
+                "operation": "model.adopt", "arguments": {"server_model_tag": tag},
+                "execution": {"project_id": project_id, "session_id": session_id,
+                              "request_id": request_id, "idempotency_key": request_id},
+            })
+        assert wrapper.unknown is False
+        assert worker.request_count == before_requests
+        assert daemon.store.list_jobs(project_id=project_id).total == before_jobs
+        routes = events_path.parent / "managed_routes"
+        assert len(list(routes.glob("*_intent.json"))) == 1
+        assert list(routes.glob("*_result.json")) == []
+    finally:
+        daemon.close()
+
+
+def test_default_service_model_ref_is_rejected_before_registered_inspect_dispatch(tmp_path, monkeypatch):
+    daemon, wrapper, worker, project_id, session_id, context, events_path = _new_environment(
+        tmp_path, monkeypatch, separate_registered_service=True,
+    )
+    try:
+        tag, _adopted = _adopt_java_created_user_model(wrapper, worker, project_id, session_id)
+        foreign = daemon.service.ledger.bind_model("default-only-model").as_dict()
+        before_requests = worker.request_count
+        before_results = len(list((events_path.parent / "managed_routes").glob("*_result.json")))
+        with pytest.raises(CandidateError, match="not registered in the exact session ledger|foreign registered-session context"):
+            wrapper.dispatch(_inspect_request(project_id, session_id, foreign, suffix="default-foreign-ref"))
+        assert wrapper.unknown is False
+        assert worker.request_count == before_requests
+        assert tag in context.service.ledger.model_ownership
+        assert "default-only-model" not in context.service.ledger.model_ownership
+        assert len(list((events_path.parent / "managed_routes").glob("*_result.json"))) == before_results
+    finally:
+        daemon.close()
+
+
+def test_registered_context_replacement_during_adopt_is_unknown_without_inspect_fallback(tmp_path, monkeypatch):
+    daemon, wrapper, worker, project_id, session_id, context, events_path = _new_environment(
+        tmp_path, monkeypatch, separate_registered_service=True,
+    )
+    original_dispatch = daemon.dispatch
+    replaced = False
+
+    def replace_registered_context_after_dispatch(request):
+        nonlocal replaced
+        response = original_dispatch(request)
+        if request.get("operation") == "model.adopt" and not replaced:
+            replaced = True
+            daemon.session_registry.remove(project_id, session_id, expected=context)
+            daemon.session_registry.register(SessionRuntimeContext(
+                project_id=project_id, session_id=session_id, project_root=context.project_root,
+                runtime=context.runtime, endpoint=context.endpoint, backend=context.backend,
+                worker_instance_id=context.worker_instance_id, worker=context.worker,
+                service=context.service, client=context.client, client_connected=True,
+                server_ownership=context.server_ownership,
+            ))
+        return response
+
+    monkeypatch.setattr(daemon, "dispatch", replace_registered_context_after_dispatch)
+    try:
+        wrapper.set_slot("baseline", "flat")
+        wrapper.slot_stage = "built"
+        tag = f"javaBuilt{uuid4().hex}"
+        wrapper.slot_model_tag = tag
+        worker.models[tag] = _SyntheticModel(worker, tag, "synthetic Java-built model")
+        request_id = f"context-replaced-adopt-{uuid4()}"
+        with pytest.raises(CandidateError, match="terminal identity"):
+            wrapper.dispatch({
+                "operation": "model.adopt", "arguments": {"server_model_tag": tag},
+                "execution": {"project_id": project_id, "session_id": session_id,
+                              "request_id": request_id, "idempotency_key": request_id},
+            })
+        assert wrapper.unknown is True
+        assert replaced is True
+        assert worker.request_count > 0
+        routes = events_path.parent / "managed_routes"
+        route_results = list(routes.glob("*_result.json"))
+        assert len(route_results) == 1
+        event_rows = [json.loads(line) for line in events_path.read_text().splitlines()]
+        returned = [row for row in event_rows if row.get("event") == "setup_dispatch_returned"]
+        assert len(returned) == 1
+        assert "context object changed" in returned[0]["registered_context_failure"]
+        proofs = [json.loads(path.read_text()) for path in routes.glob("*_terminal_pair_proof.json")]
+        assert proofs == []
+    finally:
+        daemon.close()
+
+
+@pytest.mark.parametrize("damage", [
+    "foreign_tag", "changed_generation", "foreign_session", "foreign_server",
+    "foreign_project", "wrong_predecessor_ownership", "wrong_ledger_ownership",
+    "missing_predecessor",
+])
+def test_real_control_daemon_adopt_inspect_rejects_wrong_or_missing_predecessor_chain(
+    tmp_path, monkeypatch, damage,
+):
+    daemon, wrapper, worker, project_id, session_id, context, events_path = _new_environment(
+        tmp_path, monkeypatch,
+    )
+    try:
+        tag, adopted = _adopt_java_created_user_model(wrapper, worker, project_id, session_id)
+        if damage == "foreign_tag":
+            wrapper.slot_adopt_binding["model_ref"]["model_tag"] = "foreign-model"
+        elif damage == "changed_generation":
+            wrapper.slot_adopt_binding["model_ref"]["generation"] += 1
+        elif damage == "foreign_session":
+            wrapper.slot_adopt_binding["session_id"] = "foreign-session"
+        elif damage == "foreign_server":
+            wrapper.slot_adopt_binding["server_instance_id"] = "foreign-server"
+        elif damage == "foreign_project":
+            wrapper.slot_adopt_binding["project_id"] = "foreign-project"
+        elif damage == "wrong_predecessor_ownership":
+            wrapper.slot_adopt_binding["model_ownership"] = "mcp_owned"
+        elif damage == "wrong_ledger_ownership":
+            context.service.ledger.model_ownership[tag] = "mcp_owned"
+        elif damage == "missing_predecessor":
+            wrapper.slot_adopt_binding = None
+
+        before = worker.request_count
+        with pytest.raises(CandidateError):
+            wrapper.dispatch(_inspect_request(
+                project_id, session_id, adopted["execution"]["model_ref"], suffix=damage))
+        assert wrapper.unknown is True
+        assert worker.request_count > before
+        proofs = list((events_path.parent / "managed_routes").glob("*_terminal_pair_proof.json"))
+        assert len(proofs) == 1
+        assert json.loads(proofs[0].read_text())["operation"] == "model.adopt"
+        requests_after_unknown = worker.request_count
+        with pytest.raises(CandidateError):
+            wrapper.dispatch(_inspect_request(
+                project_id, session_id, adopted["execution"]["model_ref"], suffix=f"{damage}-retry"))
+        assert worker.request_count == requests_after_unknown
+        route_results = list((events_path.parent / "managed_routes").glob("*_result.json"))
+        assert len(route_results) == 2  # adopt and the one inspect attempt; no retry route
+    finally:
+        daemon.close()
+
+
+@pytest.mark.parametrize("damage", [
+    "corrupt_event", "missing_observed", "context_replaced", "bad_worker_envelope",
+    "store_identity", "runtime_binding", "runtime_binding_bool", "stored_result",
+])
+def test_unproven_or_nonmissing_worker_terminal_fails_closed_without_followup(
+    tmp_path, monkeypatch, damage,
+):
+    daemon, wrapper, worker, project_id, session_id, context, events_path = _new_environment(
+        tmp_path, monkeypatch, worker_epoch=1 if damage == "runtime_binding_bool" else 2,
+    )
+    dispatch_calls = 0
+    original_dispatch = daemon.dispatch
+
+    def injected_dispatch(request):
+        nonlocal dispatch_calls
+        dispatch_calls += 1
+        response = original_dispatch(request)
+        if damage == "context_replaced":
+            daemon.session_registry.remove(project_id, session_id, expected=context)
+            daemon.session_registry.register(SessionRuntimeContext(
+                project_id=project_id, session_id=session_id, project_root=context.project_root,
+                runtime=context.runtime, endpoint=context.endpoint, backend=context.backend,
+                worker_instance_id=context.worker_instance_id, worker=context.worker,
+                service=context.service, client=context.client, client_connected=True,
+                server_ownership=context.server_ownership,
+            ))
+        if damage == "bad_worker_envelope":
+            changed = dict(response)
+            changed_data = dict(response["data"])
+            changed_data["worker"] = {"status": "UNKNOWN"}
+            changed["data"] = changed_data
+            return changed
+        if damage in {"store_identity", "runtime_binding", "runtime_binding_bool", "stored_result"}:
+            original_get_operation = daemon.store.get_operation
+
+            def corrupted_operation(operation_id):
+                row = original_get_operation(operation_id)
+                if row is None:
+                    return None
+                row = dict(row)
+                row["metadata"] = dict(row.get("metadata", {}))
+                if damage == "store_identity":
+                    row["request_hash"] = "0" * 64
+                elif damage in {"runtime_binding", "runtime_binding_bool"}:
+                    row["metadata"]["runtime_binding"] = dict(row["metadata"]["runtime_binding"])
+                    row["metadata"]["runtime_binding"]["worker_epoch"] = (
+                        True if damage == "runtime_binding_bool"
+                        else row["metadata"]["runtime_binding"]["worker_epoch"] + 1
+                    )
+                elif damage == "stored_result":
+                    row["result"] = dict(row["result"])
+                    row["result"]["data"] = dict(row["result"]["data"])
+                    row["result"]["data"]["model_tag"] = "different-tag"
+                return row
+
+            monkeypatch.setattr(daemon.store, "get_operation", corrupted_operation)
+        return response
+
+    monkeypatch.setattr(daemon, "dispatch", injected_dispatch)
+    if damage in {"corrupt_event", "missing_observed"}:
+        original_snapshot = daemon.store.collect_job_event_snapshot
+
+        def corrupted_snapshot(job_id, **kwargs):
+            snapshot = original_snapshot(job_id, **kwargs)
+            copied = json.loads(json.dumps(snapshot))
+            for row in copied["events"]:
+                metadata = row.get("metadata", {})
+                if row.get("event") == "worker_request" and metadata.get("phase") == "observed":
+                    if damage == "corrupt_event":
+                        metadata["request_hash"] = "0" * 64
+                    else:
+                        copied["events"].remove(row)
+                    break
+            return copied
+
+        monkeypatch.setattr(daemon.store, "collect_job_event_snapshot", corrupted_snapshot)
+
+    try:
+        jobs_before = daemon.store.list_jobs(project_id=project_id).total
+        with pytest.raises(CandidateError):
+            wrapper.dispatch(_create_request(project_id, session_id))
+        assert wrapper.unknown is True
+        assert dispatch_calls == 1
+        assert daemon.store.list_jobs(project_id=project_id).total == jobs_before + 1
+        assert worker.request_count > 0
+        raw_route_paths = list((events_path.parent / "managed_routes").glob("*_result.json"))
+        assert len(raw_route_paths) == 1
+        raw_response = json.loads(raw_route_paths[0].read_text())["response"]
+        model_row = daemon.store.get_operation(raw_response["execution"]["operation_id"])
+        assert model_row["operation"] == "model_create"
+        assert model_row["status"] == "SUCCEEDED"
+        request_count_after_route = worker.request_count
+        with pytest.raises(CandidateError):
+            wrapper.dispatch(_create_request(project_id, session_id))
+        assert dispatch_calls == 1
+        assert daemon.store.list_jobs(project_id=project_id).total == jobs_before + 1
+        assert worker.request_count == request_count_after_route
+        proof_paths = list((events_path.parent / "managed_routes").glob("*_terminal_pair_proof.json"))
+        if damage == "bad_worker_envelope":
+            assert proof_paths == []
+            # The actual ControlDaemon's durable result remains the original raw result.
+            assert "worker" not in model_row["result"]["data"]
+        else:
+            assert proof_paths == []
+    finally:
+        daemon.close()
+
+
+def test_fallback_allowlist_is_exact_legacy_model_set():
+    assert LEGACY_STORE_TERMINAL_PROOF_OPERATIONS == {
+        "model_create", "model.adopt", "model_load", "model.load", "model.inspect",
+    }
+    assert "operation_call" not in LEGACY_STORE_TERMINAL_PROOF_OPERATIONS

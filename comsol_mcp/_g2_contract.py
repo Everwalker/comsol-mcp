@@ -443,7 +443,8 @@ def _reject_nonfinite_engine_value(value: Any) -> None:
             _reject_nonfinite_engine_value(child)
 
 
-def property_schema_from_engine(node: Any, name: str | None = None) -> dict[str, Any]:
+def property_schema_from_engine(node: Any, name: str | None = None, *,
+                               probe_has_property: bool = False) -> dict[str, Any]:
     """Read COMSOL PropFeature metadata without guessing unsupported types."""
     try:
         names = [str(item) for item in (node.properties() if name is None else [name])]
@@ -452,6 +453,32 @@ def property_schema_from_engine(node: Any, name: str | None = None) -> dict[str,
     rows: list[dict[str, Any]] = []
     for prop in names:
         row: dict[str, Any] = {"name": prop}
+        presence: bool | None = None
+        if probe_has_property:
+            # The named read-only schema route can prove presence before a
+            # caller asks for a typed getter. Keep this opt-in so unrelated
+            # setter/default metadata paths retain their established behavior.
+            try:
+                observed = getattr(node, "hasProperty")(prop)
+                presence = observed if type(observed) is bool else None
+            except Exception:
+                presence = None
+            row["has_property"] = presence
+            if presence is False:
+                row.update({"value_type": None, "allowed_values": None,
+                            "kind": None, "shape_rank": None, "getter": None,
+                            "java_signature": None, "metadata_status": "ABSENT"})
+            elif presence is None:
+                row.update({"value_type": None, "allowed_values": None,
+                            "kind": None, "shape_rank": None, "getter": None,
+                            "java_signature": None, "metadata_status": "UNKNOWN"})
+            if presence is not True:
+                try:
+                    row["type_id"] = str(node.getType())
+                except Exception:
+                    row["type_id"] = None
+                rows.append(row)
+                continue
         for field, method in (("value_type", "getValueType"), ("allowed_values", "getAllowedPropertyValues")):
             try:
                 raw = getattr(node, method)(prop)

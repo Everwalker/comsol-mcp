@@ -1,6 +1,7 @@
 import com.comsol.model.GeomSequence;
 import com.comsol.model.MeshSequence;
 import com.comsol.model.Model;
+import com.comsol.model.util.ModelUtil;
 import com.comsol.model.Study;
 import com.comsol.model.StudyFeature;
 import com.comsol.model.SolverSequence;
@@ -18,6 +19,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
@@ -98,6 +100,27 @@ public final class W24CureCouponFixture {
     private static final int MAX_SOLVER_DIAGNOSTIC_ERROR_CHARS = 160;
 
     private W24CureCouponFixture() { }
+
+    /** Explicit in-place recipe adapter; historical run/default behavior is unchanged. */
+    public static Object runInPlace(Model model, Map<String, Object> args) {
+        if (model == null || args == null || !Boolean.TRUE.equals(args.get("in_place")))
+            throw new IllegalArgumentException("in-place build requires explicit mode and target");
+        Object expected = args.get("expected_model_tag");
+        if (!(expected instanceof String) || ((String) expected).isBlank() ||
+            !model.tag().equals(expected) || !java.util.Arrays.asList(ModelUtil.tags()).contains(model.tag()))
+            throw new IllegalArgumentException("in-place target must be the exact registered injected model");
+        String phase = String.valueOf(args.get("phase"));
+        if (!("build".equals(phase) || "build_v2".equals(phase)))
+            throw new IllegalArgumentException("in-place recipe builds only; no study action");
+        if (model.component().tags().length != 0 || model.geom().tags().length != 0 ||
+            model.func().tags().length != 0 || model.variable().tags().length != 0 ||
+            model.material().tags().length != 0 || model.study().tags().length != 0 ||
+            model.sol().tags().length != 0 || model.param().varnames().length != 0 ||
+            model.mesh().tags().length != 0 || model.physics().tags().length != 0 ||
+            model.selection().tags().length != 0 || model.result().tags().length != 0)
+            throw new IllegalStateException("in-place build requires a fresh empty model");
+        return run(model, args);
+    }
 
     public static Object run(Model model, Map<String, Object> args) {
         String phase = String.valueOf(args.getOrDefault("phase", "build"));
@@ -449,18 +472,7 @@ public final class W24CureCouponFixture {
      * properties and never evaluates a stress expression.
      */
     private static Map<String, Object> expressionInventory(Model model, Map<String, Object> args) {
-        String pathText = String.valueOf(args.getOrDefault("output_path", ""));
-        if (pathText.isBlank()) {
-            throw new IllegalArgumentException("expression_inventory requires output_path");
-        }
-        Path output = Path.of(pathText).toAbsolutePath().normalize();
-        Path parent = output.getParent();
-        if (parent == null || !output.toString().startsWith(
-                "/private/tmp/comsol-mcp-w24-cure-") || !Files.isDirectory(parent) ||
-                Files.exists(output)) {
-            throw new IllegalArgumentException(
-                "expression inventory must be a new file under the task-owned W24 private work tree");
-        }
+        Path output = requireExpressionInventoryTarget(args);
 
         String[] observedPhysicsTags = model.component(COMPONENT).physics().tags();
         List<Object> featureTables = new ArrayList<>();
@@ -546,7 +558,7 @@ public final class W24CureCouponFixture {
 
         byte[] bytes = (toJson(inventory) + "\n").getBytes(StandardCharsets.UTF_8);
         try (FileChannel channel = FileChannel.open(output, StandardOpenOption.CREATE_NEW,
-                StandardOpenOption.WRITE)) {
+                StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS)) {
             ByteBuffer buffer = ByteBuffer.wrap(bytes);
             while (buffer.hasRemaining()) channel.write(buffer);
             channel.force(true);
@@ -557,6 +569,7 @@ public final class W24CureCouponFixture {
         receipt.put("status", complete
             ? "NATIVE_EXPRESSION_INVENTORY_SAVED_NOT_EVALUATED"
             : "NATIVE_EXPRESSION_INVENTORY_INCOMPLETE_NOT_EVALUATED");
+        receipt.put("output_root", Path.of((String) args.get("output_root")).toString());
         receipt.put("path", output.toString());
         receipt.put("size_bytes", bytes.length);
         receipt.put("sha256", sha256(bytes));
@@ -569,6 +582,49 @@ public final class W24CureCouponFixture {
         receipt.put("model_mutations", 0);
         receipt.put("study_run_calls", 0);
         return receipt;
+    }
+
+    /** Require an explicit, user-selected existing work directory and a fresh file below it. */
+    private static Path requireExpressionInventoryTarget(Map<String, Object> args) {
+        Object rootValue = args.get("output_root");
+        Object outputValue = args.get("output_path");
+        if (!(rootValue instanceof String) || ((String) rootValue).isBlank() ||
+            !(outputValue instanceof String) || ((String) outputValue).isBlank()) {
+            throw new IllegalArgumentException(
+                "expression_inventory requires explicit output_root and output_path");
+        }
+
+        Path root = Path.of((String) rootValue);
+        Path output = Path.of((String) outputValue);
+        if (!root.isAbsolute() || !root.equals(root.normalize()) ||
+            !output.isAbsolute() || !output.equals(output.normalize())) {
+            throw new IllegalArgumentException(
+                "expression inventory paths must be absolute and normalized");
+        }
+
+        try {
+            if (Files.isSymbolicLink(root) ||
+                !Files.isDirectory(root, LinkOption.NOFOLLOW_LINKS) ||
+                !root.toRealPath().equals(root)) {
+                throw new IllegalArgumentException(
+                    "expression inventory output_root must be an existing non-aliased directory");
+            }
+            Path parent = output.getParent();
+            if (parent == null || output.equals(root) || !output.startsWith(root) ||
+                !Files.isDirectory(parent, LinkOption.NOFOLLOW_LINKS) ||
+                !parent.toRealPath().equals(parent)) {
+                throw new IllegalArgumentException(
+                    "expression inventory output_path must be a new file below output_root");
+            }
+            if (Files.exists(output, LinkOption.NOFOLLOW_LINKS)) {
+                throw new IllegalArgumentException(
+                    "expression inventory output_path already exists; overwrite is forbidden");
+            }
+            return output;
+        } catch (IOException exception) {
+            throw new IllegalArgumentException(
+                "expression inventory paths could not be verified without following aliases", exception);
+        }
     }
 
     /**

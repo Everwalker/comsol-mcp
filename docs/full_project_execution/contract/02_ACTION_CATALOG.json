@@ -1987,7 +1987,7 @@
       "mcp_tool_name": "node_inspect",
       "domain": "node",
       "purpose": "读取类型、标签、属性、选择、子集合",
-      "arguments_signature": "path:NodePath,include_values:bool?",
+      "arguments_signature": "path:NodePath,include_values:bool?,include_properties:bool?",
       "effect": "READ",
       "scope": "model",
       "gate": "G2",
@@ -2019,6 +2019,9 @@
           },
           "include_values": {
             "type": "boolean"
+          },
+          "include_properties": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -2035,7 +2038,7 @@
         "normal_path",
         "failure_is_truthful"
       ],
-      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read."
+      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read. Identity-only calls may set include_properties=false; include_values requires include_properties=true."
     },
     {
       "operation_id": "node.children",

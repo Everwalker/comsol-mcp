@@ -675,7 +675,7 @@ def test_windows_descriptor_digest_calls_real_ctypes_path_with_correct_outputs_a
         assert len(digest) == 64 and owner_name == "daemon"
 
 
-def test_windows_pinned_child_requests_read_control_access():
+def test_windows_pinned_child_requests_read_control_access(monkeypatch):
     # Test the real _API access-mask construction through a narrow Native API shim.
     import ctypes as C
     import comsol_mcp._windows_parameter_publish as windows_publish
@@ -690,11 +690,21 @@ def test_windows_pinned_child_requests_read_control_access():
             C.cast(io_status, C.POINTER(windows_publish._IoStatusBlock)).contents.Information = 1
             return 0
 
+    class Kernel:
+        def CloseHandle(self, handle):
+            observed["closed"] = handle.value
+            return 1
+    monkeypatch.setattr(C, "get_last_error", lambda: 5, raising=False)
+    monkeypatch.setattr(C, "WinError", lambda value: OSError(value, "software boundary error"), raising=False)
     api.nt = Native()
-    api.k = object()
+    api.k = Kernel()
     handle = api._open_relative(C.c_void_p(0xB22), "config.json", read_control=True)
-    assert handle.value == 0xA11
-    assert observed["access"] == (0x00100080 | 0x00020000)
+    try:
+        assert handle.value == 0xA11
+        assert observed["access"] == (0x00100080 | 0x00020000)
+    finally:
+        api.close(handle)
+    assert observed["closed"] == 0xA11
 
 
 def test_provider_constant_time_compares_both_digests_for_each_bounded_grant(tmp_path, monkeypatch):

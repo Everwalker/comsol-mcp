@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import re
+import stat
 from pathlib import Path
 
 import pytest
@@ -198,7 +200,7 @@ def _point_dispatch(dataset: str, solution: str, expressions: list[str], points:
 
 def test_saved_field_and_bma_point_reads_allow_only_the_frozen_dataset_grid_and_expressions():
     for x in (-10.0, 8.0):
-        for count in (321, 641):
+        for count in protocol.SAVED_MPH_QUADRATURE_SAMPLE_COUNTS:
             from tools.run_native_w23_saved_mph_diagnostic import plane_field_expressions
             request = _point_dispatch("dset1", "sol1", list(plane_field_expressions("1" if x==-10 else "2")),
                                       _field_points(x, count))
@@ -206,18 +208,160 @@ def test_saved_field_and_bma_point_reads_allow_only_the_frozen_dataset_grid_and_
     for dataset, solution, x in (("dset2", "sol2", -10.0), ("dset3", "sol3", 8.0)):
         assert _allowed_diagnostic_dispatch(
             _point_dispatch(dataset, solution, list(protocol.bma_point_expressions("1" if dataset == "dset2" else "2", field_scheme="emw_down")), [[x, 0.0]])) is True
+        blank_neff = _point_dispatch(dataset, solution,
+            list(protocol.bma_point_expressions("1" if dataset == "dset2" else "2", field_scheme="emw_down")),
+            [[x, 0.0]])
+        blank_neff["arguments"]["arguments"]["spec"]["units"] = ["1/m", "", "1/m"]
+        assert _allowed_diagnostic_dispatch(blank_neff) is False
 
+    prior_full_science_321_grid = [
+        [8.0, -8.0 + 16.0 * index / (protocol.SAMPLE_COUNT - 1)]
+        for index in range(protocol.SAMPLE_COUNT)
+    ]
     denied = [
-        _point_dispatch("dset3", "sol3", list(RAW_FIELD_EXPRESSIONS), _field_points(8.0, 321)),
-        _point_dispatch("dset1", "sol1", list(RAW_FIELD_EXPRESSIONS), _field_points(8.0, 321)[:-1]),
-        _point_dispatch("dset1", "sol1", list(RAW_FIELD_EXPRESSIONS)[:-1], _field_points(8.0, 321)),
-        _point_dispatch("dset1", "sol1", list(RAW_FIELD_EXPRESSIONS), _field_points(8.0, 321),
+        _point_dispatch("dset3", "sol3", list(RAW_FIELD_EXPRESSIONS), _field_points(8.0, protocol.SAVED_MPH_SAMPLE_COUNT)),
+        _point_dispatch("dset1", "sol1", list(RAW_FIELD_EXPRESSIONS), prior_full_science_321_grid),
+        _point_dispatch("dset1", "sol1", list(RAW_FIELD_EXPRESSIONS), _field_points(8.0, protocol.SAVED_MPH_SAMPLE_COUNT)[:-1]),
+        _point_dispatch("dset1", "sol1", list(RAW_FIELD_EXPRESSIONS)[:-1], _field_points(8.0, protocol.SAVED_MPH_SAMPLE_COUNT)),
+        _point_dispatch("dset1", "sol1", list(RAW_FIELD_EXPRESSIONS), _field_points(8.0, protocol.SAVED_MPH_SAMPLE_COUNT),
                         complex_mode="real"),
         _point_dispatch("dset2", "sol2", list(MODE_POINT_EXPRESSIONS), [[-10.0, 0.25]]),
         _point_dispatch("dset2", "sol3", list(MODE_POINT_EXPRESSIONS), [[-10.0, 0.0]]),
     ]
     for request in denied:
         assert _allowed_diagnostic_dispatch(request) is False
+
+
+def test_saved_mph_freeze_binds_641_1281_eight_reads_zero_solve_and_fixed_tolerance():
+    from tools import run_native_w23_saved_mph_diagnostic as runner
+
+    slots = [
+        "freq_Hz", "freq_GHz", "fields_output_x8_641", "fields_output_x8_1281",
+        "fields_input_xminus10_641", "fields_input_xminus10_1281",
+        "mode_point_bmaInput", "mode_point_bmaOutput",
+    ]
+    freeze = {
+        "limits": {"max_result_at_points_calls": 8, "max_study_run_calls": 0,
+                   "max_solver_run_calls": 0},
+        "read_only_call_plan": {
+            "ordered_point_slots": slots,
+            "quadrature_refinement": {"method": "composite Simpson", "coarse_points": 641,
+                                      "fine_points": 1281, "relative_tolerance": 1e-3},
+        },
+    }
+    runner._validate_diagnostic_scope(freeze)
+    freeze["read_only_call_plan"]["quadrature_refinement"]["relative_tolerance"] = 1e-2
+    with pytest.raises(RuntimeError, match="1e-3"):
+        runner._validate_diagnostic_scope(freeze)
+
+
+def test_saved_mph_point_budget_blocks_ninth_dispatch_before_control_request(monkeypatch, tmp_path):
+    from tools import run_native_w23_saved_mph_diagnostic as runner
+
+    def must_not_dispatch(*args, **kwargs):
+        raise AssertionError("a ninth result.at_points call reached the control boundary")
+
+    monkeypatch.setattr(runner, "_query_once", must_not_dispatch)
+    summary = {"point_read_attempts": [{"ordinal": index} for index in range(8)]}
+    with pytest.raises(RuntimeError, match="frozen 8-call result.at_points budget"):
+        runner._at_points_once(
+            object(), dataset="dset1", solution="sol1",
+            expressions=runner.plane_field_expressions("2"),
+            points=runner._field_points(8.0, runner.protocol.SAVED_MPH_SAMPLE_COUNT),
+            ref={}, revision=0, project_id="project-test", deadline_epoch=0,
+            evidence=tmp_path, label="ninth_slot", requested_units=runner.plane_field_units("2"),
+            selection=runner.plane_selection("2"), summary=summary,
+        )
+
+
+def test_completed_point_projection_keeps_verified_calls_separate_from_unknown_attempts(tmp_path):
+    from tools import run_native_w23_saved_mph_diagnostic as runner
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    job_id = "job-succeeded"
+    dispatch_path = evidence / "freq_dispatch_response.json"
+    runner.write_json(dispatch_path, {"success": True, "execution": {"job_id": job_id}})
+    attempt = {"ordinal": 1, "label": "freq", "operation_id": "result.at_points",
+               "status": "SUCCEEDED", "terminal_status": "SUCCEEDED", "job_id": job_id,
+               "verified_completed": False,
+               "dispatch_response": {"path": str(dispatch_path),
+                                     "bytes": dispatch_path.stat().st_size,
+                                     "sha256": runner.sha256_file(dispatch_path)}}
+    summary = {"native_calls": [], "point_read_attempts": [attempt]}
+    request = {"operation_id": "result.at_points", "arguments": {"spec": {
+        "expressions": ["freq"], "units": ["Hz"],
+        "solution": {"dataset": "dset1", "solution": "sol1"}}}}
+    response = {"success": True, "execution": {"job_id": job_id}}
+    raw_path = evidence / "freq_native_result_raw.json"
+    decoded_path = evidence / "freq_decoded.json"
+    runner.write_json(raw_path, {"request": request, "response": response,
+        "body": {"point_count": 1}, "durable_job_id": job_id,
+        "durable_job_status": "SUCCEEDED", "native_scientific_acceptance": "NOT_EVALUATED"})
+    decoded = {"status": "PRODUCTION_NATIVE_COMPLEX_POINT_READBACK",
+        "operation": "result.at_points", "science_acceptance": "NOT_EVALUATED",
+        "dataset": "dset1", "solution": "sol1", "sample_count": 1,
+        "expressions": [{"expression": "freq"}], "expression_units": {"freq": "Hz"},
+        "requested_unit_application": {"requested_expressions": ["freq"],
+                                       "requested_units": ["Hz"]}}
+    runner.write_json(decoded_path, decoded)
+
+    projection = runner._append_completed_point_projection(summary, evidence, "freq")
+
+    assert projection["status"] == "SUCCEEDED_RAW_AND_DECODED_READBACK_ONLY"
+    assert projection["native_scientific_acceptance"] == "NOT_EVALUATED"
+    assert attempt["verified_completed"] is True
+    persisted = json.loads((evidence / "summary.json").read_text(encoding="utf-8"))
+    assert persisted["result_at_points_attempt_count"] == 1
+    assert persisted["result_at_points_verified_completed_count"] == 1
+    assert len(persisted["native_calls"]) == 1
+
+    unknown_id = "job-unknown"
+    unknown_dispatch = evidence / "unknown_dispatch_response.json"
+    runner.write_json(unknown_dispatch, {"success": True, "execution": {"job_id": unknown_id}})
+    unknown_attempt = {"ordinal": 2, "label": "unknown", "operation_id": "result.at_points",
+        "status": "UNKNOWN", "terminal_status": "UNKNOWN", "job_id": unknown_id,
+        "verified_completed": False,
+        "dispatch_response": {"path": str(unknown_dispatch),
+                              "bytes": unknown_dispatch.stat().st_size,
+                              "sha256": runner.sha256_file(unknown_dispatch)}}
+    summary["point_read_attempts"].append(unknown_attempt)
+    unknown_raw = dict(json.loads(raw_path.read_text(encoding="utf-8")))
+    unknown_raw.update({"response": {"success": False, "execution": {"job_id": unknown_id}},
+                        "durable_job_id": unknown_id, "durable_job_status": "UNKNOWN"})
+    runner.write_json(evidence / "unknown_native_result_raw.json", unknown_raw)
+    runner.write_json(evidence / "unknown_decoded.json", decoded)
+    with pytest.raises(RuntimeError, match="succeeded, decoded"):
+        runner._append_completed_point_projection(summary, evidence, "unknown")
+    assert unknown_attempt["verified_completed"] is False
+    assert len(summary["native_calls"]) == 1
+
+
+def test_query_once_persists_unknown_point_attempt_without_completed_native_call(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from tools import run_native_w23_saved_mph_diagnostic as runner
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    job_id = "job-unknown"
+    dispatch = {"success": True, "execution": {"job_id": job_id}}
+    terminal = {"success": False, "execution": {"job_id": job_id},
+                "error": {"code": "EXECUTION_STATE_UNKNOWN"}}
+    store = SimpleNamespace(job=lambda value: {"job_id": value, "status": "UNKNOWN"})
+    daemon = SimpleNamespace(store=store)
+    monkeypatch.setattr(runner.science, "_dispatch", lambda *args, **kwargs: dispatch)
+    monkeypatch.setattr(runner.science, "_wait_job", lambda *args, **kwargs: terminal)
+    summary = {"native_calls": [], "point_read_attempts": []}
+    with pytest.raises(RuntimeError, match="durable job is UNKNOWN"):
+        runner._query_once(daemon, "operation_call",
+            {"operation_id": "result.at_points", "arguments": {"spec": {"units": ["1/m"]}}},
+            {"session_id": "session"}, 0, project_id="project", deadline_epoch=10**12,
+            evidence=evidence, label="unknown", summary=summary, point_read_attempt=True)
+
+    persisted = json.loads((evidence / "summary.json").read_text(encoding="utf-8"))
+    assert persisted["result_at_points_attempt_count"] == 1
+    assert persisted["result_at_points_verified_completed_count"] == 0
+    assert persisted["point_read_attempts"][0]["status"] == "UNKNOWN"
+    assert persisted["point_read_attempts"][0]["verified_completed"] is False
+    assert persisted["native_calls"] == []
 
 
 def test_native_argv_unsets_offline_guard_and_uses_candidate_only_pythonpath():
@@ -269,6 +413,9 @@ def test_saved_frequency_and_port_units_are_exact_allowlist():
     assert not _allowed_diagnostic_dispatch(wrong_port)
     correct = _point_dispatch("dset3", "sol3", ["emw.beta_2", "emw.neff_2", "emw.k0"], [[8.0, 0.0]])
     assert _allowed_diagnostic_dispatch(correct)
+    wrong_native_default = _point_dispatch("dset3", "sol3", ["emw.beta_2", "emw.neff_2", "emw.k0"], [[8.0, 0.0]])
+    wrong_native_default["arguments"]["arguments"]["spec"]["units"] = ["", "1", "1/m"]
+    assert not _allowed_diagnostic_dispatch(wrong_native_default)
     correct["arguments"]["arguments"]["spec"].pop("units")
     assert not _allowed_diagnostic_dispatch(correct)
 
@@ -291,9 +438,159 @@ def test_top_level_native_cli_failure_keeps_stdout_stderr(tmp_path, monkeypatch)
     assert not args.evidence.exists()
 
 
+@pytest.mark.parametrize(
+    "cleanup_status",
+    [None, "CLEANUP_BLOCKED", "FUTURE_UNRECOGNIZED_CLEANUP_STATE",
+     "LEFT_RUNNING_ACTIVE_OR_UNKNOWN", "CLEANUP_UNVERIFIED",
+     "CLEANUP_VERIFIED_EXACT_OWNED_PIDS_AND_PORTS_ABSENT"],
+)
+def test_outer_guard_retains_any_live_original_popen_for_blocked_or_unknown_cleanup(
+        monkeypatch, tmp_path, cleanup_status):
+    import subprocess
+    import sys
+    import time
+    from types import SimpleNamespace
+    from tools import run_native_w23_saved_mph_diagnostic as runner
+
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    child_handles = []
+
+    def return_blocked_with_live_original_popen(_helpers, _freeze_path, _freeze_sha,
+                                                _approval, _saved_model, _work,
+                                                _evidence, _freeze, owner):
+        child = subprocess.Popen(
+            [sys.executable, "-c", "import time; time.sleep(0.45)"],
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL, close_fds=True)
+        child_handles.append(child)
+        server = SimpleNamespace(proc=child, worker=None)
+        owner.bind_server(server)
+        owner.capture_server()
+        result = {"status": "FAIL_OR_INCOMPLETE",
+                  "cleanup_status": cleanup_status,
+                  "native_scientific_acceptance": "NOT_ACCEPTED_DIAGNOSTIC_READBACK_ONLY"}
+        owner.summary = result
+        assert child.poll() is None
+        return result
+
+    monkeypatch.setattr(runner, "_execute_native_campaign_body",
+                        return_blocked_with_live_original_popen)
+    started = time.monotonic()
+    try:
+        result = runner._execute_native_campaign(
+            {}, tmp_path / "freeze.json", "f" * 64, {},
+            tmp_path / "saved.mph", tmp_path / "work", evidence,
+            {"source_manifest_sha256": "a" * 64})
+        child = child_handles[0]
+        assert child.poll() is not None
+        assert time.monotonic() - started >= 0.30
+        assert result["status"] == "FAIL_OR_INCOMPLETE_ORIGINAL_OWNER_HOLD"
+        assert result["standard_exact_cleanup"] == "UNVERIFIED"
+        assert result["owner_hold"]["original_objects_retained"] is True
+        assert result["owner_hold"]["sdk_and_managed_admission_fenced"] is True
+        assert result["owner_hold"]["hold_unresolved"] is False
+        if cleanup_status == "CLEANUP_VERIFIED_EXACT_OWNED_PIDS_AND_PORTS_ABSENT":
+            assert result["cleanup_status"] == "CLEANUP_UNVERIFIED"
+            assert "contradicts original child Popen" in result["owner_hold"]["first_cause"]["error"]
+        else:
+            assert result["cleanup_status"] == cleanup_status
+    finally:
+        for child in child_handles:
+            if child.poll() is None:
+                child.wait(timeout=2)
+
+
+def test_outer_guard_does_not_hold_when_all_original_children_are_already_terminal(
+        monkeypatch, tmp_path):
+    import subprocess
+    import sys
+    from types import SimpleNamespace
+    from tools import run_native_w23_saved_mph_diagnostic as runner
+
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+
+    def return_terminal_original_popen(_helpers, _freeze_path, _freeze_sha,
+                                       _approval, _saved_model, _work,
+                                       _evidence, _freeze, owner):
+        child = subprocess.Popen(
+            [sys.executable, "-c", "pass"], stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, close_fds=True)
+        child.wait(timeout=5)
+        owner.bind_server(SimpleNamespace(proc=child, worker=None))
+        owner.capture_server()
+        result = {"status": "FAIL_OR_INCOMPLETE", "cleanup_status": "CLEANUP_BLOCKED"}
+        owner.summary = result
+        return result
+
+    monkeypatch.setattr(runner, "_execute_native_campaign_body",
+                        return_terminal_original_popen)
+    result = runner._execute_native_campaign(
+        {}, tmp_path / "freeze.json", "f" * 64, {},
+        tmp_path / "saved.mph", tmp_path / "work", evidence,
+        {"source_manifest_sha256": "a" * 64})
+    assert result["status"] == "FAIL_OR_INCOMPLETE"
+    assert result["cleanup_status"] == "CLEANUP_BLOCKED"
+    assert "owner_hold" not in result
+
+
+def test_outer_guard_treats_unobservable_original_children_as_active(monkeypatch, tmp_path):
+    import subprocess
+    import sys
+    from types import SimpleNamespace
+    from tools import run_native_w23_saved_mph_diagnostic as runner
+
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    child_handles = []
+
+    def return_with_unobservable_original_popen(_helpers, _freeze_path, _freeze_sha,
+                                                _approval, _saved_model, _work,
+                                                _evidence, _freeze, owner):
+        child = subprocess.Popen(
+            [sys.executable, "-c", "import time; time.sleep(0.35)"],
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL, close_fds=True)
+        child_handles.append(child)
+        owner.bind_server(SimpleNamespace(proc=child, worker=None))
+        owner.capture_server()
+        original_observe = owner.observe
+        observations = []
+
+        def fail_first_observation():
+            if not observations:
+                observations.append(True)
+                raise OSError("synthetic original Popen observation gap")
+            return original_observe()
+
+        owner.observe = fail_first_observation
+        result = {"status": "FAIL_OR_INCOMPLETE", "cleanup_status": "CLEANUP_BLOCKED"}
+        owner.summary = result
+        assert child.poll() is None
+        return result
+
+    monkeypatch.setattr(runner, "_execute_native_campaign_body",
+                        return_with_unobservable_original_popen)
+    try:
+        result = runner._execute_native_campaign(
+            {}, tmp_path / "freeze.json", "f" * 64, {},
+            tmp_path / "saved.mph", tmp_path / "work", evidence,
+            {"source_manifest_sha256": "a" * 64})
+        assert child_handles[0].poll() is not None
+        assert result["status"] == "FAIL_OR_INCOMPLETE_ORIGINAL_OWNER_HOLD"
+        assert result["standard_exact_cleanup"] == "UNVERIFIED"
+        assert any(row["phase"] == "outer_original_child_observation"
+                   for row in result["owner_hold"]["diagnostic_errors"])
+    finally:
+        for child in child_handles:
+            if child.poll() is None:
+                child.wait(timeout=2)
+
+
 
 def test_field_allowlist_requires_exact_explicit_units():
-    request = _point_dispatch("dset1", "sol1", list(RAW_FIELD_EXPRESSIONS), _field_points(8.0, 321))
+    request = _point_dispatch("dset1", "sol1", list(RAW_FIELD_EXPRESSIONS), _field_points(8.0, protocol.SAVED_MPH_SAMPLE_COUNT))
     assert _allowed_diagnostic_dispatch(request)
     request["arguments"]["arguments"]["spec"].pop("units")
     assert not _allowed_diagnostic_dispatch(request)
@@ -367,7 +664,7 @@ def _actual_execute_prebirth_fixture(monkeypatch, *, filesystem_case=False):
         assert runner.sha256_file(Path(record["source"]))==record["source_sha256"]
     shutil.copytree(compile_root,folder/"offline_gates"/"compile")
     source=runner._source_files();manifest=runner.science._write_source_manifest_artifact(folder,source)
-    freeze={"status":"FROZEN_AWAITING_ROOT_APPROVAL","activity_id":runner.ACTIVITY_ID,"candidate_id":runner.CANDIDATE_ID,"candidate_revision":runner.CANDIDATE_REVISION,"source_files":source,"source_manifest_sha256":runner._source_digest(source),"source_manifest_artifact":manifest,"work_path":str(work),"execution_evidence_path":str(evidence),"read_only_call_plan":{"ordered_point_slots":["freq_Hz","freq_GHz","field4","mode2"]},"offline_preflight":{"status":"PASS_ALL_OFFLINE_GATES","compile":copy.deepcopy(compile_receipt)}}
+    freeze={"status":"FROZEN_AWAITING_ROOT_APPROVAL","activity_id":runner.ACTIVITY_ID,"candidate_id":runner.CANDIDATE_ID,"candidate_revision":runner.CANDIDATE_REVISION,"source_files":source,"source_manifest_sha256":runner._source_digest(source),"source_manifest_artifact":manifest,"work_path":str(work),"execution_evidence_path":str(evidence),"limits":{"max_result_at_points_calls":runner.MAX_RESULT_AT_POINTS_CALLS,"max_study_run_calls":0,"max_solver_run_calls":0},"read_only_call_plan":{"ordered_point_slots":["freq_Hz","freq_GHz","fields_output_x8_641","fields_output_x8_1281","fields_input_xminus10_641","fields_input_xminus10_1281","mode_point_bmaInput","mode_point_bmaOutput"],"quadrature_refinement":{"method":"composite Simpson","coarse_points":runner.protocol.SAVED_MPH_SAMPLE_COUNT,"fine_points":runner.protocol.SAVED_MPH_REFINED_SAMPLE_COUNT,"relative_tolerance":runner.protocol.INTEGRAL_RELATIVE_TOLERANCE}},"offline_preflight":{"status":"PASS_ALL_OFFLINE_GATES","compile":copy.deepcopy(compile_receipt)}}
     freeze_path=folder/"freeze.json";runner.write_json(freeze_path,freeze)
     # Every target mutation starts behind a real successful material/source gate.
     runner._validate_freeze(freeze_path,runner.sha256_file(freeze_path))
@@ -379,7 +676,7 @@ def _actual_execute_prebirth_fixture(monkeypatch, *, filesystem_case=False):
     approval_path=folder/"reference-only-native-sentinel-approval.json"
     def approval_for(path=work,target=evidence):
         digest=runner.sha256_file(freeze_path);argv=runner._native_argv(freeze_path,digest,approval_path,runner.SOURCE_MODEL,path,target)
-        approval={"status":"ROOT_APPROVED_FOR_EXACT_FROZEN_CANDIDATE","activity_id":runner.ACTIVITY_ID,"candidate_id":runner.CANDIDATE_ID,"candidate_revision":runner.CANDIDATE_REVISION,"freeze_sha256":digest,"source_manifest_sha256":freeze["source_manifest_sha256"],"native_argv_sha256":runner.sha256_json(argv),"max_owned_server_processes":1,"max_worker_sessions":1,"max_gui_processes":0,"max_study_run_calls":0,"max_solver_run_calls":0,"max_seconds_from_server_birth":1800,"cleanup_reserve_seconds":120,"retry_unknown_or_nonterminal_worker_request":False,"read_only_call_plan_sha256":runner.sha256_json(freeze["read_only_call_plan"]),"exact_native_invocation":{"argv":argv,"cwd":str(runner.REPO),"environment":{"TMPDIR":"/private/tmp","PYTHONPATH":str(runner.REPO),"CODEX_NETWORK_GUARD_LOG":None,"CODEX_NETWORK_GUARD_LABEL":None,"CODEX_NETWORK_GUARD_RUN_ID":None}},"issued_by":"SYNTHETIC_EXECUTE_PREBIRTH_TEST_ONLY_NATIVE_BOUNDARY_REPLACED"}
+        approval={"status":"ROOT_APPROVED_FOR_EXACT_FROZEN_CANDIDATE","activity_id":runner.ACTIVITY_ID,"candidate_id":runner.CANDIDATE_ID,"candidate_revision":runner.CANDIDATE_REVISION,"freeze_sha256":digest,"source_manifest_sha256":freeze["source_manifest_sha256"],"native_argv_sha256":runner.sha256_json(argv),"max_owned_server_processes":1,"max_worker_sessions":1,"max_gui_processes":0,"max_study_run_calls":0,"max_solver_run_calls":0,"max_result_at_points_calls":runner.MAX_RESULT_AT_POINTS_CALLS,"max_seconds_from_server_birth":1800,"cleanup_reserve_seconds":120,"retry_unknown_or_nonterminal_worker_request":False,"read_only_call_plan_sha256":runner.sha256_json(freeze["read_only_call_plan"]),"exact_native_invocation":{"argv":argv,"cwd":str(runner.REPO),"environment":{"TMPDIR":"/private/tmp","PYTHONPATH":str(runner.REPO),"CODEX_NETWORK_GUARD_LOG":None,"CODEX_NETWORK_GUARD_LABEL":None,"CODEX_NETWORK_GUARD_RUN_ID":None}},"issued_by":"SYNTHETIC_EXECUTE_PREBIRTH_TEST_ONLY_NATIVE_BOUNDARY_REPLACED"}
         runner.write_json(approval_path,approval)
         return digest
     monkeypatch.setenv("TMPDIR","/private/tmp");monkeypatch.setenv("PYTHONPATH",str(runner.REPO))
@@ -496,3 +793,226 @@ def test_production_cli_negative_raw_traceback_preserves_original_prebirth_refus
         runner.main()
     assert not handoffs and not evidence.exists()
     assert "exact frozen activity/revision canonical path" in evidence.with_name(evidence.name+".cli.stderr.bin").read_text()
+
+
+def test_direction_freeze_binds_zero_reads_and_preserved_offline_quadrature():
+    from tools import run_native_w23_saved_mph_diagnostic as runner
+
+    freeze = {
+        "limits": {"max_result_at_points_calls": 0, "max_study_run_calls": 0,
+                   "max_solver_run_calls": 0},
+        "read_only_call_plan": {
+            "mode": "direction_discovery_only", "max_public_operation_calls": 192,
+            "max_children_per_list": 128,
+            "allowed_operation_call_ids": ["node.children", "node.inspect", "node.property_get", "node.property_schema"],
+            "Study.run": 0, "solver.run": 0, "result.at_points": 0,
+            "native_operation_budget": {"Study.run": 0, "solver.run": 0, "result.at_points": 0,
+                                         "node.property_set": 0, "code.execute_java": 0, "model.save": 0},
+            "legacy_r20_point_call_limit": 8,
+            "offline_quadrature": {"method": "composite Simpson", "coarse_points": 641,
+                                   "fine_points": 1281, "relative_tolerance": 1e-3},
+        },
+    }
+    runner._validate_diagnostic_scope(freeze)
+    freeze["read_only_call_plan"]["offline_quadrature"]["relative_tolerance"] = 1e-2
+    with pytest.raises(RuntimeError, match="1e-3"):
+        runner._validate_diagnostic_scope(freeze)
+
+
+def test_legacy_fixture_stage_restores_exact_private_copy_for_legacy_mode(tmp_path, monkeypatch):
+    from tools import run_native_w23_saved_mph_diagnostic as runner
+
+    source = tmp_path / "NativeW23TEScienceFixture.java"
+    payload = b"synthetic-legacy-fixture-source"
+    source.write_bytes(payload)
+    monkeypatch.setattr(runner, "FIXTURE", source)
+    workspace = tmp_path / "registered-science"
+    workspace.mkdir()
+    evidence = tmp_path / "evidence"
+
+    receipt = runner._stage_legacy_fixture_once(
+        workspace, evidence, direction_only=False,
+        expected_source_sha256=runner.sha256_file(source))
+    target = workspace / source.name
+    saved = json.loads((evidence / "fixture_stage.json").read_text())
+    assert receipt["status"] == "PASS_EXACT_LEGACY_JAVA_FIXTURE_STAGED"
+    assert receipt["exact_copy"] is True and receipt["source_opened_read_only"] is True
+    assert receipt["source_sha256"] == receipt["staged_sha256"] == runner.sha256_file(source)
+    assert receipt["source_bytes"] == receipt["staged_bytes"] == len(payload)
+    assert receipt["staged_for_mode"] == "legacy_saved_mph_diagnostic"
+    assert saved == receipt
+    assert target.read_bytes() == payload
+    assert stat.S_IMODE(target.stat().st_mode) == 0o600
+
+
+def test_direction_discovery_mode_never_opens_or_stages_java_fixture(tmp_path, monkeypatch):
+    from tools import run_native_w23_saved_mph_diagnostic as runner
+
+    source = tmp_path / "missing-fixture.java"
+    workspace = tmp_path / "registered-science"
+    workspace.mkdir()
+    evidence = tmp_path / "evidence"
+    monkeypatch.setattr(runner, "FIXTURE", source)
+
+    receipt = runner._stage_legacy_fixture_once(
+        workspace, evidence, direction_only=True, expected_source_sha256=None)
+    assert receipt == {"status": "SKIPPED_DIRECTION_DISCOVERY_ONLY",
+                       "staged": False, "source_opened": False,
+                       "code_execute_java": 0}
+    assert not source.exists()
+    assert not (workspace / source.name).exists()
+    assert not evidence.exists()
+
+
+def test_legacy_fixture_stage_refuses_existing_target_and_wrong_frozen_hash(tmp_path, monkeypatch):
+    from tools import run_native_w23_saved_mph_diagnostic as runner
+
+    source = tmp_path / "NativeW23TEScienceFixture.java"
+    payload = b"synthetic-fixture-source"
+    source.write_bytes(payload)
+    monkeypatch.setattr(runner, "FIXTURE", source)
+    workspace = tmp_path / "registered-science"
+    workspace.mkdir()
+    evidence = tmp_path / "evidence"
+    target = workspace / source.name
+    target.write_bytes(b"preexisting target")
+
+    with pytest.raises(FileExistsError):
+        runner._stage_legacy_fixture_once(
+            workspace, evidence, direction_only=False,
+            expected_source_sha256=runner.sha256_file(source))
+    assert target.read_bytes() == b"preexisting target"
+    target.unlink()
+    with pytest.raises(RuntimeError, match="frozen source manifest"):
+        runner._stage_legacy_fixture_once(
+            workspace, evidence, direction_only=False,
+            expected_source_sha256="0" * 64)
+    assert not target.exists()
+    assert not (evidence / "fixture_stage.json").exists()
+
+
+
+
+def test_current_full_runner_packages_source_bound_gate_receipt(tmp_path, monkeypatch):
+    from tools import run_native_w23_saved_mph_diagnostic as runner
+
+    candidate_source = tmp_path / "source" / "candidate.py"
+    candidate_source.parent.mkdir()
+    candidate_source.write_text("candidate source identity\n", encoding="utf-8")
+    source_files = {
+        "candidate.py": {
+            "path": str(candidate_source.resolve()),
+            "bytes": candidate_source.stat().st_size,
+            "sha256": runner.sha256_file(candidate_source),
+        }
+    }
+    source_map_sha = runner._source_digest(source_files)
+    compile_receipt = {
+        "status": "PASS_COMSOL_64_JDK11_COMPILE_AND_JAVAP",
+        "compiled_sources": {},
+    }
+    gate_rows = {
+        "runtime_imports": {"status": "PASS_EXECUTE_HELPER_IMPORTS"},
+        "software_negative_controls": {"status": "PASS_SOFTWARE_NEGATIVE_CONTROLS"},
+        "pip_check": {"status": "PASS_FRESH_RUNTIME_BOUND_PIP_CHECK"},
+        "stdio_initialize_tools_list": {
+            "status": "PASS_REAL_PRODUCTION_STDIO_INITIALIZE_TOOLS_LIST"},
+        "comsol64_jdk11_javac_javap": compile_receipt,
+    }
+    full = {
+        "status": "PASS_ALL_OFFLINE_GATES",
+        "mode": runner.science.CURRENT_FULL_OFFLINE_MODE,
+        "source_manifest_sha256": source_map_sha,
+        "source_count": 1,
+        "gates": gate_rows,
+        "runtime_imports": gate_rows["runtime_imports"],
+        "software_negative_controls": gate_rows["software_negative_controls"],
+        "pip_check": gate_rows["pip_check"],
+        "stdio": gate_rows["stdio_initialize_tools_list"],
+        "compile": compile_receipt,
+        "gate_source_manifest_sha256": {
+            name: source_map_sha for name in gate_rows
+        },
+        "gate_receipt_sha256": {
+            name: runner.science.sha256_json(value) for name, value in gate_rows.items()
+        },
+    }
+    seen = {}
+
+    def offline_preflight(path, **kwargs):
+        seen["path"] = path
+        seen["kwargs"] = kwargs
+        path.mkdir(parents=True, exist_ok=False)
+        runner.science.write_json(path / "offline_preflight_progress.json", full)
+        return full
+
+    def focused_tests(offline, **kwargs):
+        seen["focused_offline"] = offline
+        seen["focused_kwargs"] = kwargs
+        receipt = {
+            "status": "PASS_FOCUSED_DELTA_CURRENT_FULL_SOURCE_MAP",
+            "candidate_source_manifest_sha256": source_map_sha,
+            "registered_core_loopback": {
+                "status": "NOT_RUN_DEFERRED_POST_W24_TERMINAL",
+                "test_path": "tests/test_w23_r21_direction_discovery.py::core-loopback",
+                "strict_network_guard_enabled": False,
+                "counted_in_guarded_junit": False,
+            },
+        }
+        receipt_path = offline / "focused_delta_receipt.json"
+        runner.write_json(receipt_path, receipt)
+        return {
+            "status": "PASS_FOCUSED_DELTA_CURRENT_FULL_SOURCE_MAP",
+            "focused_delta_receipt": {
+                "path": "offline_gates/focused_delta_receipt.json",
+                "sha256": runner.sha256_file(receipt_path),
+            },
+            "registered_core_loopback": receipt["registered_core_loopback"],
+        }
+
+    monkeypatch.setattr(runner.science, "offline_preflight", offline_preflight)
+    monkeypatch.setattr(runner, "_run_focused_delta_tests", focused_tests)
+    monkeypatch.setattr(runner, "_source_files", lambda: source_files)
+    binding = {"binding_sha256": "c" * 64}
+    result = runner._compile_and_test(
+        tmp_path / "candidate-evidence",
+        binding=binding,
+        current_source_files=source_files)
+
+    assert seen["kwargs"] == {
+        "current_source_files": source_files,
+        "runtime_binding": binding,
+        "runtime_budget": runner.fresh_budget(),
+    }
+    assert seen["focused_kwargs"] == {
+        "binding": binding,
+        "current_full": True,
+        "expected_source_manifest_sha256": source_map_sha,
+    }
+    assert result["status"] == "PASS_ALL_OFFLINE_GATES"
+    assert result["mode"] == runner.science.CURRENT_FULL_OFFLINE_MODE
+    assert result["source_manifest_sha256"] == source_map_sha
+    assert result["current_full_gate_receipt"] == full
+    assert "inherited_base" not in result and "source_delta" not in result
+    progress = tmp_path / "candidate-evidence/offline_gates/current_full/offline_preflight_progress.json"
+    assert result["current_full_receipt"]["sha256"] == runner.sha256_file(progress)
+    assert result["compile"] == compile_receipt
+    assert result["compile_receipt"]["sha256"] == runner.sha256_file(
+        tmp_path / "candidate-evidence/offline_gates/current_full/compile.json")
+    assert result["registered_core_loopback"]["status"] == "NOT_RUN_DEFERRED_POST_W24_TERMINAL"
+
+
+
+def test_fresh_direction_identity_uses_binding_uuid_instead_of_old_static_ids():
+    from uuid import uuid4
+    from tools import run_native_w23_saved_mph_diagnostic as runner
+
+    token = str(uuid4())
+    identity = runner._fresh_candidate_identity({"activity_id": token})
+    assert identity["activity_id"] == "w23-saved-mph-direction-discovery-" + token
+    assert identity["candidate_id"] == "W23-TE-PORT-BMA-DIRECTION-DISCOVERY-" + token
+    assert identity["candidate_revision"] == "candidate-" + token + "-direction-r1"
+    assert identity["candidate_id"] != runner.CANDIDATE_ID
+    assert identity["candidate_revision"] != runner.CANDIDATE_REVISION
+    with pytest.raises(RuntimeError, match="canonical activity UUID"):
+        runner._fresh_candidate_identity({"activity_id": "20261015-001"})

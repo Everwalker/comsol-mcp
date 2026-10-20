@@ -421,6 +421,173 @@ def test_bind_requires_live_endpoint_and_model_tag_crosscheck_not_title(tmp_path
         harness.close()
 
 
+@pytest.mark.parametrize("platform", ["windows", "macos"])
+@pytest.mark.parametrize(
+    ("observed_endpoint", "accepted"),
+    [(ENDPOINT, True), ("127.0.0.1:9999", False), (None, False)],
+    ids=["exact-endpoint", "mismatched-endpoint", "missing-endpoint"],
+)
+def test_label_challenge_binding_requires_exact_server_endpoint_before_worker_mutation(
+    tmp_path, monkeypatch, platform, observed_endpoint, accepted,
+):
+    identity = WindowIdentity(
+        platform, f"WINDOW:{platform}", 1700, f"birth:{platform}", "uid:test-user",
+        f"session:{platform}", "6.4.0.293",
+    )
+    harness = Harness(tmp_path, windows=[WindowObservation(identity, "COMSOL fixture", AVAILABLE)])
+    harness.adapter.models[identity.native_window_id] = DesktopModelObservation(
+        "UNVERIFIED", server_endpoint=observed_endpoint, active_model_label="owned-copy",
+    )
+    challenge_calls = []
+
+    def challenge(project_id, token, observed_identity, snapshot, context, *, expected_ui_label=None, mark_effect=None):
+        challenge_calls.append((observed_identity.platform, snapshot.server_endpoint, expected_ui_label))
+        return snapshot, expected_ui_label
+
+    monkeypatch.setattr(harness.coordinator, "_challenge_active_model", challenge)
+    try:
+        token = harness.windows()[0]
+        result = harness.bind(token, key=f"endpoint-challenge-{platform}-{accepted}-{observed_endpoint}")
+        if accepted:
+            assert result["success"] is True
+            assert challenge_calls == [(platform, ENDPOINT, "owned-copy")]
+            assert result["data"]["binding_evidence"]["server_endpoint"] == ENDPOINT
+        else:
+            assert result["success"] is False
+            assert result["error"]["code"] == "MODEL_BINDING_UNKNOWN"
+            assert challenge_calls == []
+            assert [operation for operation, *_ in harness.engine.calls] == [
+                "desktop.binding.resolve", "desktop.binding.inspect",
+            ]
+    finally:
+        harness.close()
+
+
+def test_existing_label_challenge_binding_rechecks_endpoint_before_any_action_mutation(tmp_path, monkeypatch):
+    identity = WindowIdentity(
+        "macos", "WINDOW:macos-endpoint-recheck", 1710, "birth:endpoint-recheck",
+        "uid:test-user", "session:endpoint-recheck", "6.4.0.293",
+    )
+    harness = Harness(tmp_path, windows=[WindowObservation(identity, "COMSOL fixture", AVAILABLE)])
+    harness.adapter.models[identity.native_window_id] = DesktopModelObservation(
+        "UNVERIFIED", server_endpoint=ENDPOINT, active_model_label="owned-copy",
+    )
+    challenge_calls = []
+
+    def challenge(project_id, token, observed_identity, snapshot, context, *, expected_ui_label=None, mark_effect=None):
+        challenge_calls.append((observed_identity.process_id, snapshot.server_endpoint, expected_ui_label))
+        return snapshot, expected_ui_label
+
+    monkeypatch.setattr(harness.coordinator, "_challenge_active_model", challenge)
+    try:
+        token = harness.windows()[0]
+        assert harness.bind(token, key="initial-endpoint-binding")["success"] is True
+        assert len(challenge_calls) == 1
+
+        # If the endpoint selector later becomes unavailable, an existing
+        # label-based binding must not perform another Worker label challenge.
+        harness.adapter.models[identity.native_window_id] = DesktopModelObservation(
+            "UNVERIFIED", active_model_label="owned-copy",
+        )
+        result = harness.coordinator.dispatch("desktop.action", _action_args(token, "endpoint-disappeared"))
+        assert result["success"] is False
+        assert result["error"]["code"] == "MODEL_BINDING_UNKNOWN"
+        assert result["execution"]["status"] == "FAILED"
+        assert _ops(harness, "endpoint-disappeared")[1] == "FAILED"
+        assert len(challenge_calls) == 1
+        assert not harness.adapter.callback_counts.get("desktop.action")
+        assert not any(operation.startswith("desktop.binding.label_") for operation, *_ in harness.engine.calls)
+    finally:
+        harness.close()
+
+
+@pytest.mark.parametrize("platform", ["windows", "macos"])
+@pytest.mark.parametrize("observed_endpoint", ["127.0.0.1:9999", None], ids=["mismatch", "missing"])
+def test_post_show_label_challenge_endpoint_failure_keeps_started_effect_unknown(
+    tmp_path, monkeypatch, platform, observed_endpoint,
+):
+    identity = WindowIdentity(
+        platform, f"WINDOW:show-{platform}", 1800, f"birth:show-{platform}", "uid:test-user",
+        f"session:show-{platform}", "6.4.0.293",
+    )
+    harness = Harness(tmp_path, windows=[WindowObservation(identity, "COMSOL fixture", AVAILABLE)])
+    harness.adapter.models[identity.native_window_id] = DesktopModelObservation(
+        "UNVERIFIED", server_endpoint=observed_endpoint, active_model_label="owned-copy",
+    )
+    shown = []
+    challenge_calls = []
+    guard_classification = []
+
+    def show_model(observed_identity, snapshot):
+        shown.append((observed_identity.platform, snapshot.server_endpoint))
+        harness.adapter.models[observed_identity.native_window_id] = DesktopModelObservation(
+            "UNVERIFIED", server_endpoint=observed_endpoint, active_model_label="owned-copy",
+        )
+        return {"verified": True}
+
+    def challenge(project_id, token, observed_identity, snapshot, context, *, expected_ui_label=None, mark_effect=None):
+        challenge_calls.append((observed_identity.platform, expected_ui_label))
+        return snapshot, expected_ui_label
+
+    original_guard = harness.coordinator._assert_challenge_server_endpoint_match
+
+    def capture_guard(desktop, managed, *, side_effect_started=False):
+        try:
+            return original_guard(desktop, managed, side_effect_started=side_effect_started)
+        except DesktopOperationError as error:
+            guard_classification.append((error.side_effect_started, error.safe_retry))
+            raise
+
+    monkeypatch.setattr(harness.adapter, "show_model", show_model)
+    monkeypatch.setattr(harness.coordinator, "_challenge_active_model", challenge)
+    monkeypatch.setattr(harness.coordinator, "_assert_challenge_server_endpoint_match", capture_guard)
+    try:
+        token = harness.windows()[0]
+        result = harness.coordinator.dispatch("desktop.show_model", {
+            "project_id": "proj-1", "idempotency_key": f"post-show-endpoint-{platform}-{observed_endpoint}",
+            "window_ref": token, "model_ref": "model-a-id",
+        })
+        assert result["success"] is False
+        assert result["execution"]["status"] == "UNKNOWN"
+        assert result["error"]["safe_retry"] is False
+        assert shown == [(platform, ENDPOINT)]
+        assert challenge_calls == []
+        assert guard_classification == [(True, False)]
+        assert not any(operation.startswith("desktop.binding.label_") for operation, *_ in harness.engine.calls)
+    finally:
+        harness.close()
+
+
+def test_show_model_endpoint_preflight_fails_before_effect_marker_or_ui_callback(tmp_path):
+    harness = Harness(tmp_path)
+    try:
+        token = harness.windows()[0]
+        calls = []
+
+        def deny_show_preflight(identity, snapshot):
+            calls.append((identity.process_id, snapshot.server_endpoint))
+            raise DesktopOperationError(
+                "MODEL_BINDING_UNKNOWN", "profile lacks the endpoint selector required for post-show binding",
+                category=MODEL_BINDING_UNKNOWN, safe_retry=True,
+            )
+
+        harness.adapter.preflight_show_model = deny_show_preflight
+        result = harness.coordinator.dispatch("desktop.show_model", {
+            "project_id": "proj-1", "idempotency_key": "show-model-no-endpoint-profile",
+            "window_ref": token, "model_ref": "model-a-id",
+        })
+        assert result["success"] is False
+        assert result["error"]["code"] == "MODEL_BINDING_UNKNOWN"
+        assert result["error"]["safe_retry"] is True
+        assert result["execution"]["status"] == "FAILED"
+        assert _ops(harness, "show-model-no-endpoint-profile")[1] == "FAILED"
+        assert calls == [(1001, ENDPOINT)]
+        assert harness.adapter.show_model_calls == []
+        assert not any(operation.startswith("desktop.binding.label_") for operation, *_ in harness.engine.calls)
+    finally:
+        harness.close()
+
+
 def test_model_fingerprint_is_rechecked_before_ui_side_effect_and_after_shell_execute(tmp_path):
     harness = Harness(tmp_path)
     try:
@@ -724,6 +891,36 @@ def test_capture_never_expands_to_full_desktop_and_adapter_cannot_fake_success(t
             assert _ops(bad, "capture-bad")[1] == "UNKNOWN"
         finally:
             bad.close()
+    finally:
+        harness.close()
+
+
+def test_capture_permission_preflight_precedes_model_binding_challenge_and_effect_marker(tmp_path):
+    harness = Harness(tmp_path)
+    try:
+        token = harness.windows()[0]
+        calls = []
+
+        def deny_capture_permission(identity, region):
+            calls.append((identity.process_id, region))
+            raise DesktopOperationError(
+                "PERMISSION_REQUIRED", "Screen Recording permission is unavailable",
+                category=BLOCKED_PERMISSION, safe_retry=True,
+            )
+
+        harness.adapter.preflight_capture = deny_capture_permission
+        result = harness.coordinator.dispatch("desktop.capture", {
+            "project_id": "proj-1", "idempotency_key": "capture-preflight-denied",
+            "window_ref": token, "region": "window",
+        })
+        assert result["success"] is False
+        assert result["error"]["code"] == "PERMISSION_REQUIRED"
+        assert result["error"]["safe_retry"] is True
+        assert result["execution"]["status"] == "FAILED"
+        assert _ops(harness, "capture-preflight-denied")[1] == "FAILED"
+        assert calls == [(1001, "window")]
+        assert harness.engine.calls == []
+        assert harness.adapter.callback_counts.get("desktop.capture", 0) == 0
     finally:
         harness.close()
 

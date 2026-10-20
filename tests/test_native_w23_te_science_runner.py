@@ -1365,6 +1365,70 @@ def test_socket_owner_gate_keeps_actual_closed_ipv6_form_as_inactive_history(mon
     assert closed["local_endpoint"]["loopback"] is False
 
 
+def test_socket_owner_gate_keeps_loopback_time_wait_inactive_and_not_a_worker_peer(monkeypatch):
+    from types import SimpleNamespace
+    from tools import run_native_w23_te_managed_preflight as preflight
+
+    output = "\n".join((
+        "COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME",
+        "java 101 everwalker 59u IPv6 0x1 0t0 TCP 127.0.0.1:61926 (LISTEN)",
+        "java 101 everwalker 174u IPv6 0x2 0t0 TCP 127.0.0.1:61926->127.0.0.1:61953 (TIME_WAIT)",
+    ))
+    monkeypatch.setattr(preflight.subprocess, "run", lambda *args, **kwargs:
+                        SimpleNamespace(returncode=0, stdout=output, stderr=""))
+    monkeypatch.setattr(preflight, "_listener_matches", lambda *args, **kwargs:
+                        {"matches": True})
+    monkeypatch.setattr(preflight, "_listener_for_pid", lambda *args, **kwargs:
+                        {"matches": True})
+    monkeypatch.setattr(preflight, "_process_identity_matches", lambda *args, **kwargs: True)
+
+    receipt = preflight._port_socket_owners(61926)
+    assert receipt["safe"] is True
+    assert receipt["pids"] == [101]
+    assert receipt["inactive_historical_pids"] == [101]
+    time_wait = receipt["rows"][1]
+    assert time_wait["state"] == "TIME_WAIT"
+    assert time_wait["active"] is False
+    assert time_wait["valid"] is True
+    assert time_wait["loopback_only"] is True
+    assert time_wait["endpoint_semantics"] == (
+        "inactive_kernel_time_wait_only_not_used_as_live_loopback_or_client_proof")
+
+    server = SimpleNamespace(
+        proc=SimpleNamespace(pid=101, poll=lambda: None),
+        worker=SimpleNamespace(_process=SimpleNamespace(pid=102, poll=lambda: None)),
+        port=61926,
+    )
+    process_snapshot = lambda pid: {"pid": pid}
+    identity_gate = preflight._task_endpoint_identity_gate(
+        server, server_identity={"pid": 101}, worker_identity={"pid": 102},
+        worker_port=61927, process_snapshot=process_snapshot, require_worker_peer=True)
+    assert identity_gate["safe"] is False
+    assert identity_gate["worker_peer_seen"] is False
+
+    after_disconnect_gate = preflight._task_endpoint_identity_gate(
+        server, server_identity={"pid": 101}, worker_identity={"pid": 102},
+        worker_port=61927, process_snapshot=process_snapshot, require_worker_peer=False)
+    assert after_disconnect_gate["safe"] is True
+    assert after_disconnect_gate["server_sockets"]["rows"][1]["active"] is False
+
+
+def test_socket_owner_gate_rejects_external_time_wait_even_when_state_is_inactive(monkeypatch):
+    from types import SimpleNamespace
+    from tools import run_native_w23_te_managed_preflight as preflight
+
+    output = "COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME\n"
+    output += "java 101 everwalker 174u IPv6 0x2 0t0 TCP 127.0.0.1:61926->8.8.8.8:443 (TIME_WAIT)\n"
+    monkeypatch.setattr(preflight.subprocess, "run", lambda *args, **kwargs:
+                        SimpleNamespace(returncode=0, stdout=output, stderr=""))
+    receipt = preflight._port_socket_owners(61926)
+    assert receipt["safe"] is False
+    assert receipt["pids"] == []
+    assert receipt["rows"][0]["state"] == "TIME_WAIT"
+    assert receipt["rows"][0]["active"] is False
+    assert receipt["rows"][0]["valid"] is False
+
+
 def test_bma_uses_documented_shift_search_enum_without_relaxing_science_gates():
     fixture = Path(runner.FIXTURE).read_text(encoding="utf-8")
     assert 'bma.set("eigwhich", "lm")' in fixture

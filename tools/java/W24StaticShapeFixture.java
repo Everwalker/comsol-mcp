@@ -1,9 +1,13 @@
 import com.comsol.model.GeomFeature;
 import com.comsol.model.GeomSequence;
 import com.comsol.model.Material;
+import com.comsol.model.MeshFeature;
 import com.comsol.model.MeshSequence;
 import com.comsol.model.Model;
+import com.comsol.model.ParameterEntity;
+import com.comsol.model.PropFeature;
 import com.comsol.model.Study;
+import com.comsol.model.StudyFeature;
 import com.comsol.model.SolverFeature;
 import com.comsol.model.SolverFeatureList;
 import com.comsol.model.SolverSequence;
@@ -11,6 +15,16 @@ import com.comsol.model.physics.MultiphysicsCoupling;
 import com.comsol.model.physics.Physics;
 import com.comsol.model.physics.PhysicsFeature;
 import com.comsol.model.util.ModelUtil;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.PosixFilePermission;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -19,6 +33,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 
 /**
  * W24 synthetic static glue-shape setup fixture.
@@ -48,11 +63,140 @@ public final class W24StaticShapeFixture {
     private static final double THETA_WALL = Math.PI / 3.0;
     private static final double BOUNDARY_TOL = 1e-9;
     private static final double DOMAIN_PROBE_HALF_WIDTH = 0.5e-6;
+    private static final int MAX_SELECTION_TRACE_EVENTS = 1024;
+
+    /** Private, append-only execution breadcrumbs for bounded fixture operations. */
+    private static final class SelectionTrace implements AutoCloseable {
+        @FunctionalInterface
+        private interface TraceCall<T> { T run(); }
+
+        private final FileChannel channel;
+        private int events;
+
+        private SelectionTrace(FileChannel channel) { this.channel = channel; }
+
+        static SelectionTrace open(Object suppliedPath) {
+            if (suppliedPath == null) return new SelectionTrace(null);
+            if (!(suppliedPath instanceof String)) {
+                throw new IllegalArgumentException("selection trace requires a private evidence path");
+            }
+            try {
+                Path path = Paths.get((String) suppliedPath);
+                if (!path.isAbsolute() || !path.normalize().equals(path) ||
+                    !String.valueOf(path.getFileName()).matches("w24_selection_stage_[A-Za-z0-9_-]{1,96}[.]jsonl")) {
+                    throw new IllegalArgumentException("selection trace path is not the exact absolute private evidence target");
+                }
+                Path parent = path.getParent();
+                if (parent == null || !Files.isDirectory(parent, LinkOption.NOFOLLOW_LINKS) ||
+                    Files.isSymbolicLink(parent) || !parent.toRealPath().equals(parent) ||
+                    Files.exists(path, LinkOption.NOFOLLOW_LINKS)) {
+                    throw new IllegalArgumentException("selection trace parent is not the fresh real private directory");
+                }
+                if (parent.getFileSystem().supportedFileAttributeViews().contains("posix")) {
+                    Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(parent, LinkOption.NOFOLLOW_LINKS);
+                    if (permissions.contains(PosixFilePermission.GROUP_READ) ||
+                        permissions.contains(PosixFilePermission.GROUP_WRITE) ||
+                        permissions.contains(PosixFilePermission.GROUP_EXECUTE) ||
+                        permissions.contains(PosixFilePermission.OTHERS_READ) ||
+                        permissions.contains(PosixFilePermission.OTHERS_WRITE) ||
+                        permissions.contains(PosixFilePermission.OTHERS_EXECUTE)) {
+                        throw new IllegalArgumentException("selection trace directory is not owner-private");
+                    }
+                }
+                SelectionTrace trace = new SelectionTrace(FileChannel.open(path,
+                    StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE));
+                trace.record("trace.start", "start");
+                return trace;
+            } catch (IOException ex) {
+                throw new IllegalStateException("could not create private selection trace", ex);
+            }
+        }
+
+        void record(String stage, String phase) {
+            if (channel == null) return;
+            if (events >= MAX_SELECTION_TRACE_EVENTS || stage == null ||
+                !stage.matches("[A-Za-z0-9_.-]{1,96}") ||
+                !("start".equals(phase) || "before".equals(phase) || "after".equals(phase))) {
+                throw new IllegalStateException("selection trace exceeded its fixed safe envelope");
+            }
+            appendLine("{\"sequence\":" + (++events) + ",\"stage\":" + jsonQuote(stage) +
+                ",\"phase\":" + jsonQuote(phase) + "}");
+        }
+
+        void recordFailure(String stage, Throwable failure) {
+            if (channel == null) return;
+            if (events >= MAX_SELECTION_TRACE_EVENTS || stage == null ||
+                !stage.matches("[A-Za-z0-9_.-]{1,96}") || failure == null) {
+                throw new IllegalStateException("selection trace exceeded its fixed safe envelope");
+            }
+            String message = failure.getMessage();
+            appendLine("{\"sequence\":" + (++events) + ",\"stage\":" + jsonQuote(stage) +
+                ",\"phase\":\"error\",\"exception_class\":" +
+                jsonQuote(failure.getClass().getName()) + ",\"exception_message\":" +
+                jsonQuote(message == null ? "" : message) + "}");
+        }
+
+        <T> T call(String stage, TraceCall<T> operation) {
+            record(stage, "before");
+            try {
+                T value = operation.run();
+                record(stage, "after");
+                return value;
+            } catch (RuntimeException | Error failure) {
+                recordFailure(stage, failure);
+                throw failure;
+            }
+        }
+
+        private static String jsonQuote(String value) {
+            StringBuilder out = new StringBuilder(value.length() + 2).append('"');
+            for (int i = 0; i < value.length(); i++) {
+                char c = value.charAt(i);
+                switch (c) {
+                    case '"': out.append("\\\""); break;
+                    case '\\': out.append("\\\\"); break;
+                    case '\b': out.append("\\b"); break;
+                    case '\f': out.append("\\f"); break;
+                    case '\n': out.append("\\n"); break;
+                    case '\r': out.append("\\r"); break;
+                    case '\t': out.append("\\t"); break;
+                    default:
+                        if (c < 0x20) out.append(String.format("\\u%04x", (int) c));
+                        else out.append(c);
+                }
+            }
+            return out.append('"').toString();
+        }
+
+        private void appendLine(String value) {
+            byte[] bytes = (value + "\n").getBytes(StandardCharsets.UTF_8);
+            try {
+                ByteBuffer buffer = ByteBuffer.wrap(bytes);
+                while (buffer.hasRemaining()) channel.write(buffer);
+            } catch (IOException ex) {
+                throw new IllegalStateException("could not append private selection trace", ex);
+            }
+        }
+
+        @Override public void close() {
+            if (channel == null) return;
+            try { channel.force(false); channel.close(); } catch (IOException ignored) { }
+        }
+    }
 
     private W24StaticShapeFixture() { }
 
     public static Object run(Model parent, Map<String, Object> args) {
         String action = String.valueOf(args.getOrDefault("action", "build"));
+        if ("study_initialization_transfer_schema_only".equals(action)) {
+            return readStudyInitializationTransferSchema(parent, args);
+        }
+        if ("property_schema_only".equals(action)) {
+            return readFreshPropertySchemaDefaults(parent, args);
+        }
+        if ("initial_feature_metadata_only".equals(action)) {
+            return readFreshInitialFeatureMetadata(parent, args);
+        }
         if (!"build".equals(action)) {
             throw new IllegalArgumentException("unsupported static-shape action: " + action);
         }
@@ -61,24 +205,1267 @@ public final class W24StaticShapeFixture {
             throw new IllegalArgumentException("case_id must be exactly flat or step");
         }
         String configurationId = String.valueOf(args.getOrDefault("configuration_id", "baseline"));
-        return build(parent, caseId, configuration(configurationId));
+        SelectionTrace trace = SelectionTrace.open(args.get("selection_diagnostic_path"));
+        try {
+            return build(parent, caseId, configuration(configurationId), false, trace);
+        } finally {
+            trace.close();
+        }
     }
 
-    private static Map<String, Object> build(Model parent, String caseId, Configuration configuration) {
-        Set<String> priorModelTags = new HashSet<>(Arrays.asList(ModelUtil.tags()));
-        Model created = ModelUtil.createUnique("w24shape_" + configuration.id + "_" + caseId);
-        String modelTag = null;
-        for (String candidate : ModelUtil.tags()) {
-            if (!priorModelTags.contains(candidate) &&
-                candidate.startsWith("w24shape_" + configuration.id + "_" + caseId)) {
-                if (modelTag != null) {
-                    throw new IllegalStateException("COMSOL created multiple static-shape models");
+    /**
+     * Read default property schemas from an exact fresh task-owned model.
+     * This branch creates only the two physics objects and their coupling; it
+     * does not set properties, build geometry, create a study/solver, save, or
+     * evaluate the model.
+     */
+    private static Map<String, Object> readFreshPropertySchemaDefaults(
+            Model parent, Map<String, Object> args) {
+        if (parent == null || args == null || args.size() != 1 ||
+            !"property_schema_only".equals(args.get("action"))) {
+            throw new IllegalArgumentException("schema-only probe requires its exact action envelope");
+        }
+        if (parent.component().tags().length != 0 || parent.geom().tags().length != 0 ||
+            parent.func().tags().length != 0 || parent.variable().tags().length != 0 ||
+            parent.material().tags().length != 0 || parent.study().tags().length != 0 ||
+            parent.sol().tags().length != 0 || parent.param().varnames().length != 0 ||
+            parent.mesh().tags().length != 0 || parent.physics().tags().length != 0 ||
+            parent.selection().tags().length != 0 || parent.result().tags().length != 0) {
+            throw new IllegalStateException("schema-only probe requires the exact fresh empty registered model");
+        }
+
+        parent.component().create(COMPONENT);
+        GeomSequence geom = parent.component(COMPONENT).geom().create(GEOMETRY, 2);
+        geom.lengthUnit("m");
+        geom.axisymmetric(true);
+
+        Physics flow = parent.component(COMPONENT).physics().create("spf", "LaminarFlow", GEOMETRY);
+        ParameterEntity physicalModel = flow.prop("PhysicalModelProperty");
+        Map<String, Object> gravity = readDeclaredPropertyDefault(physicalModel, "IncludeGravity");
+        Map<String, Object> compressibility = readDeclaredPropertyDefault(physicalModel, "Compressibility");
+
+        Physics phaseField = parent.component(COMPONENT).physics().create("pf", "PhaseField", GEOMETRY);
+        PhysicsFeature phaseFieldModel = resolvePhaseFieldModel(phaseField);
+        Map<String, Object> chiOption = readDeclaredPropertyDefault(phaseFieldModel, "chiOption");
+        Map<String, Object> chi = readDeclaredPropertyDefault(phaseFieldModel, "chi");
+        Map<String, Object> epsilon = readDeclaredPropertyDefault(phaseFieldModel, "epsilon_pf");
+
+        MultiphysicsCoupling coupling = parent.component(COMPONENT).multiphysics()
+            .create("tpf1", "TwoPhaseFlowPhaseField", 2);
+        Map<String, Object> surfaceTension = readDeclaredPropertyDefault(coupling, "IncludeSurfaceTension");
+        Map<String, Object> surfaceTensionCoefficient = readDeclaredPropertyDefault(coupling, "SurfaceTensionCoefficient");
+        Map<String, Object> surfaceTensionValue = readDeclaredPropertyDefault(coupling, "sigma");
+
+        Map<String, Object> properties = new LinkedHashMap<>();
+        properties.put("LaminarFlow.PhysicalModelProperty.IncludeGravity", gravity);
+        properties.put("LaminarFlow.PhysicalModelProperty.Compressibility", compressibility);
+        properties.put("PhaseField.PhaseFieldModel.chiOption", chiOption);
+        properties.put("PhaseField.PhaseFieldModel.chi", chi);
+        properties.put("PhaseField.PhaseFieldModel.epsilon_pf", epsilon);
+        properties.put("TwoPhaseFlowPhaseField.IncludeSurfaceTension", surfaceTension);
+        properties.put("TwoPhaseFlowPhaseField.SurfaceTensionCoefficient", surfaceTensionCoefficient);
+        properties.put("TwoPhaseFlowPhaseField.sigma", surfaceTensionValue);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("status", "SCHEMA_ONLY_DEFAULTS_CAPTURED_NOT_SOLVED");
+        result.put("action", "property_schema_only");
+        result.put("model_tag", parent.tag());
+        result.put("physics_tags", Arrays.asList(flow.tag(), phaseField.tag()));
+        result.put("physics_types", Arrays.asList(flow.getType(), phaseField.getType()));
+        result.put("coupling_tag", coupling.tag());
+        result.put("coupling_type", coupling.getType());
+        Map<String, Object> geometrySetup = new LinkedHashMap<>();
+        geometrySetup.put("dimension", 2);
+        geometrySetup.put("length_unit", "m");
+        geometrySetup.put("length_unit_setter_calls", 1);
+        geometrySetup.put("axisymmetric", true);
+        geometrySetup.put("axisymmetric_setter_calls", 1);
+        geometrySetup.put("geometry_build_calls", 0);
+        result.put("geometry_setup", geometrySetup);
+        result.put("properties", properties);
+        result.put("physics_property_set_calls", 0);
+        result.put("study_run_calls", 0);
+        result.put("solver_calls", 0);
+        result.put("study_tags", Arrays.asList(parent.study().tags()));
+        result.put("solver_tags", Arrays.asList(parent.sol().tags()));
+        result.put("model_save_calls", 0);
+        result.put("result_evaluation_calls", 0);
+        result.put("native_acceptance", "NOT_RUN");
+        return result;
+    }
+
+    /**
+     * Bounded read-only probe for the COMSOL-generated Phase Initialization to
+     * Transient solver topology. It builds only the two-domain flat geometry,
+     * Phase Field selection, two ordered study steps, and one attached default
+     * solver sequence. Study/solver properties are never set and no study,
+     * solver, save, or result evaluation method is called.
+     */
+    private static Map<String, Object> readStudyInitializationTransferSchema(
+            Model parent, Map<String, Object> args) {
+        if (parent == null || args == null || args.size() != 1 ||
+            !"study_initialization_transfer_schema_only".equals(args.get("action"))) {
+            throw new IllegalArgumentException("study initialization probe requires its exact action envelope");
+        }
+        if (parent.component().tags().length != 0 || parent.geom().tags().length != 0 ||
+            parent.func().tags().length != 0 || parent.variable().tags().length != 0 ||
+            parent.material().tags().length != 0 || parent.study().tags().length != 0 ||
+            parent.sol().tags().length != 0 || parent.param().varnames().length != 0 ||
+            parent.mesh().tags().length != 0 || parent.physics().tags().length != 0 ||
+            parent.selection().tags().length != 0 || parent.result().tags().length != 0) {
+            throw new IllegalStateException("study initialization probe requires the exact fresh empty registered model");
+        }
+
+        parent.component().create(COMPONENT);
+        GeomSequence geom = parent.component(COMPONENT).geom().create(GEOMETRY, 2);
+        geom.lengthUnit("m");
+        geom.axisymmetric(true);
+        int[] glueDomainIds;
+        int[] gasDomainIds;
+        int[] allDomainIds;
+        Physics phaseField;
+        try (SelectionTrace trace = SelectionTrace.open(null)) {
+            buildTwoFluidGeometry(geom, "flat", trace);
+            glueDomainIds = createDomainProbe(parent, "sel_glue_domain",
+                R_DROP * 0.5, H_FLAT * 0.5, trace);
+            gasDomainIds = createDomainProbe(parent, "sel_gas_domain",
+                R_BOX * 0.75, H_BOX * 0.5, trace);
+            if (geom.getSDim() != 2 || !geom.isAxisymmetric() || geom.getNDomains() != 2 ||
+                glueDomainIds.length != 1 || gasDomainIds.length != 1 ||
+                glueDomainIds[0] == gasDomainIds[0]) {
+                throw new IllegalStateException("study initialization probe did not reproduce the exact flat two-domain geometry");
+            }
+            allDomainIds = sortedUnion(glueDomainIds, gasDomainIds);
+            phaseField = createPhaseFieldPhysics(parent, allDomainIds, trace);
+        }
+
+        Study study = parent.study().create("stdShape");
+        study.create("phasei", "PhaseInitialization");
+        study.create("time", "Transient");
+        Map<String, Object> studyStepTagsCapture = probeCapture(
+            "study.stdShape.feature.tags", () -> study.feature().tags());
+        List<?> stepTagValues = probeListValue(studyStepTagsCapture);
+        List<Map<String, Object>> studySteps = new ArrayList<>();
+        String[] stepPropertyNames = new String[]{"initmethod", "initstudy", "useinitsol"};
+        int stepLimit = Math.min(stepTagValues.size(), 32);
+        for (int i = 0; i < stepLimit; i++) {
+            Object item = stepTagValues.get(i);
+            if (!(item instanceof String)) continue;
+            String stepTag = (String) item;
+            Map<String, Object> step = new LinkedHashMap<>();
+            step.put("requested_tag", stepTag);
+            try {
+                StudyFeature feature = study.feature(stepTag);
+                step.put("resolution_status", "READ");
+                step.put("tag_capture", probeCapture("study.step." + stepTag + ".tag", feature::tag));
+                step.put("type_capture", probeCapture("study.step." + stepTag + ".type", feature::getType));
+                step.put("property_inventory_capture", probeCapture(
+                    "study.step." + stepTag + ".properties", feature::properties));
+                step.put("properties", captureProbeProperties(feature, stepPropertyNames));
+            } catch (RuntimeException ex) {
+                step.put("resolution_status", "READ_ERROR");
+                step.put("resolution_error", initialFeatureError(ex));
+            }
+            studySteps.add(step);
+        }
+
+        Map<String, Object> sequenceGeneration = probeCapture(
+            "study.stdShape.createAutoSequences.sol", () -> {
+                study.createAutoSequences("sol"); return "COMPLETED";
+            });
+        String[] sequenceQueryTypes = new String[]{
+            "All", "SolverSequence", "CopySolution", "ParametricStore", "Stored", "Parametric", "None"};
+        List<Map<String, Object>> sequenceQueries = new ArrayList<>();
+        Set<String> sequenceTagUnion = new java.util.LinkedHashSet<>();
+        boolean queryArraysWellFormed = true;
+        for (String queryType : sequenceQueryTypes) {
+            Map<String, Object> query = new LinkedHashMap<>();
+            query.put("query_type", queryType);
+            Map<String, Object> capture = probeCapture(
+                "study.stdShape.getSolverSequences." + queryType,
+                () -> study.getSolverSequences(queryType));
+            query.put("capture", capture);
+            Object raw = probeValue(capture);
+            if ("READ".equals(capture.get("status")) && raw instanceof List<?>) {
+                List<?> values = (List<?>) raw;
+                if (values.size() > 128) {
+                    query.put("bounded_tag_count_status", "EXCEEDS_128_TAG_CAP");
+                    queryArraysWellFormed = false;
                 }
-                modelTag = candidate;
+                for (Object value : values) {
+                    if (!(value instanceof String) || ((String) value).isEmpty()) {
+                        queryArraysWellFormed = false;
+                    } else if (sequenceTagUnion.size() < 128) {
+                        sequenceTagUnion.add((String) value);
+                    } else {
+                        queryArraysWellFormed = false;
+                    }
+                }
+            } else {
+                queryArraysWellFormed = false;
+            }
+            sequenceQueries.add(query);
+        }
+        Map<String, Object> globalSequenceTagsCapture = probeCapture(
+            "model.sol.tags", () -> parent.sol().tags());
+        Object globalRaw = probeValue(globalSequenceTagsCapture);
+        boolean globalTagsWithinBound = true;
+        if (globalRaw instanceof List<?>) {
+            if (((List<?>) globalRaw).size() > 128) globalTagsWithinBound = false;
+            for (Object value : (List<?>) globalRaw) {
+                if (value instanceof String && !((String) value).isEmpty() &&
+                    sequenceTagUnion.size() < 128) {
+                    sequenceTagUnion.add((String) value);
+                } else if (!(value instanceof String) || ((String) value).isEmpty()) {
+                    globalTagsWithinBound = false;
+                } else {
+                    globalTagsWithinBound = false;
+                }
+            }
+        } else {
+            globalTagsWithinBound = false;
+        }
+        List<Map<String, Object>> sequenceRecords = new ArrayList<>();
+        int[] featureNodeCount = new int[]{0};
+        for (String sequenceTag : sequenceTagUnion) {
+            sequenceRecords.add(captureSolverSequenceTopology(parent, sequenceTag, featureNodeCount));
+        }
+
+        // Findings are derived only after every bounded raw sequence query and per-sequence
+        // metadata/feature tree has been captured. They never discard the captured arrays.
+        List<String> findings = new ArrayList<>();
+        if (!queryArraysWellFormed) findings.add("SEQUENCE_QUERY_ARRAY_ERROR_OR_BOUND_EXCEEDED");
+        if (!globalTagsWithinBound) findings.add("GLOBAL_SOLVER_TAG_ARRAY_ERROR_OR_BOUND_EXCEEDED");
+        if (!"READ".equals(sequenceGeneration.get("status"))) findings.add("AUTO_SEQUENCE_GENERATION_READ_ERROR");
+        if (!Arrays.equals(stepTagValues.toArray(new String[0]), new String[]{"phasei", "time"})) {
+            findings.add("STUDY_STEP_ORDER_OR_TAG_READBACK_DIFFERS");
+        }
+        if (sequenceRecords.isEmpty()) findings.add("NO_SEQUENCE_TAGS_CAPTURED");
+        if (sequenceRecords.size() != 1) findings.add("SEQUENCE_CARDINALITY_REQUIRES_SEPARATE_TOPOLOGY_REVIEW");
+        int variablesFeatureCount = 0;
+        int timeFeatureCount = 0;
+        for (Map<String, Object> sequence : sequenceRecords) {
+            String tag = String.valueOf(sequence.get("requested_tag"));
+            if (!Boolean.TRUE.equals(sequence.get("capture_complete"))) {
+                findings.add("SEQUENCE_METADATA_INCOMPLETE:" + tag);
+            }
+            Object sequenceType = probeValue((Map<String, Object>) sequence.get("sequence_type_capture"));
+            Object attached = probeValue((Map<String, Object>) sequence.get("attached_capture"));
+            Object associatedStudy = probeValue((Map<String, Object>) sequence.get("study_capture"));
+            if (!(sequenceType instanceof String) || !Arrays.asList(
+                    "SolverSequence", "CopySolution", "ParametricStore", "Stored", "Parametric", "None")
+                    .contains(sequenceType)) {
+                findings.add("SEQUENCE_TYPE_UNCLASSIFIED:" + tag);
+            }
+            if (!Boolean.TRUE.equals(attached)) findings.add("SEQUENCE_NOT_ATTACHED:" + tag);
+            if (!"stdShape".equals(associatedStudy)) findings.add("SEQUENCE_STUDY_REFERENCE_DIFFERS:" + tag);
+            Map<String, Object> featureTree = (Map<String, Object>) sequence.get("feature_tree_capture");
+            variablesFeatureCount += countCapturedFeatureType(featureTree, "Variables");
+            timeFeatureCount += countCapturedFeatureType(featureTree, "Time");
+        }
+        if (variablesFeatureCount == 0) findings.add("NO_VARIABLES_FEATURE_CAPTURED");
+        if (timeFeatureCount == 0) findings.add("NO_TIME_FEATURE_CAPTURED");
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("schema", "W24_STUDY_INITIALIZATION_TRANSFER_SCHEMA_R2");
+        result.put("status", findings.isEmpty() ?
+            "STUDY_INITIALIZATION_TOPOLOGY_CAPTURED_NOT_SOLVED" :
+            "STUDY_INITIALIZATION_TOPOLOGY_CAPTURED_WITH_FINDINGS_NOT_SOLVED");
+        result.put("capture_phase", "ALL_RAW_SEQUENCE_AND_FEATURE_METADATA_BEFORE_SEMANTIC_FINDINGS");
+        result.put("semantic_findings", findings);
+        result.put("native_acceptance", "NOT_RUN");
+        result.put("action", "study_initialization_transfer_schema_only");
+        result.put("model_tag", parent.tag());
+        result.put("geometry_dimension", geom.getSDim());
+        result.put("geometry_axisymmetric", geom.isAxisymmetric());
+        result.put("geometry_domain_count", geom.getNDomains());
+        result.put("glue_domain_ids", boxed(glueDomainIds));
+        result.put("gas_domain_ids", boxed(gasDomainIds));
+        result.put("phase_field_tag", phaseField.tag());
+        result.put("phase_field_type", phaseField.getType());
+        result.put("phase_field_domain_ids", boxed(phaseField.selection().entities(2)));
+        result.put("study_tag", "stdShape");
+        result.put("study_step_tags_capture", studyStepTagsCapture);
+        result.put("study_steps", studySteps);
+        result.put("sequence_generation_capture", sequenceGeneration);
+        result.put("sequence_query_types", Arrays.asList(sequenceQueryTypes));
+        result.put("sequence_query_rows", sequenceQueries);
+        result.put("global_solver_tags_capture", globalSequenceTagsCapture);
+        result.put("sequence_records", sequenceRecords);
+        result.put("sequence_tag_union", new ArrayList<>(sequenceTagUnion));
+        result.put("geometry_length_unit_setter_calls", 1);
+        result.put("geometry_axisymmetric_setter_calls", 1);
+        result.put("geometry_build_calls", 1);
+        result.put("phase_field_selection_set_calls", 2);
+        result.put("physics_property_set_calls", 0);
+        result.put("study_create_calls", 1);
+        result.put("study_step_create_calls", 2);
+        result.put("solver_sequence_create_calls", 1);
+        result.put("study_property_set_calls", 0);
+        result.put("solver_property_set_calls", 0);
+        result.put("study_run_calls", 0);
+        result.put("solver_run_calls", 0);
+        result.put("solver_calls", 0);
+        result.put("model_save_calls", 0);
+        result.put("result_evaluation_calls", 0);
+        result.put("initialization_execution_calls", 0);
+        result.put("interpretation_scope", "PROPERTY_AND_GENERATED_TOPOLOGY_READBACK_ONLY_NO_NUMERICAL_INITIALIZATION");
+        return result;
+    }
+
+    private static int countCapturedFeatureType(Map<String, Object> tree, String expectedType) {
+        int count = 0;
+        Object rawNodes = tree == null ? null : tree.get("nodes");
+        if (!(rawNodes instanceof List<?>)) return 0;
+        for (Object rawNode : (List<?>) rawNodes) {
+            if (!(rawNode instanceof Map<?, ?>)) continue;
+            Map<?, ?> node = (Map<?, ?>) rawNode;
+            Object type = probeValue((Map<String, Object>) node.get("type_capture"));
+            if (expectedType.equals(type)) count++;
+            Object children = node.get("child_feature_tree");
+            if (children instanceof Map<?, ?>) {
+                count += countCapturedFeatureType((Map<String, Object>) children, expectedType);
             }
         }
-        if (modelTag == null) {
-            throw new IllegalStateException("COMSOL did not register the unique static-shape model");
+        return count;
+    }
+
+    private static Map<String, Object> probeCapture(String operation, Supplier<?> call) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("operation", operation);
+        try {
+            row.put("status", "READ");
+            row.put("value", probeJsonValue(call.get()));
+        } catch (RuntimeException ex) {
+            row.put("status", "READ_ERROR");
+            row.put("error", initialFeatureError(ex));
+        }
+        return row;
+    }
+
+    private static Object probeValue(Map<String, Object> capture) {
+        return capture != null && "READ".equals(capture.get("status")) ? capture.get("value") : null;
+    }
+
+    private static List<?> probeListValue(Map<String, Object> capture) {
+        Object value = probeValue(capture);
+        return value instanceof List<?> ? (List<?>) value : Collections.emptyList();
+    }
+
+    private static Object probeJsonValue(Object value) {
+        if (value == null || value instanceof String || value instanceof Boolean || value instanceof Number) return value;
+        if (value instanceof String[]) return new ArrayList<>(Arrays.asList(((String[]) value).clone()));
+        if (value instanceof int[]) {
+            List<Integer> items = new ArrayList<>(); for (int item : (int[]) value) items.add(item); return items;
+        }
+        if (value instanceof long[]) {
+            List<Long> items = new ArrayList<>(); for (long item : (long[]) value) items.add(item); return items;
+        }
+        if (value instanceof double[]) {
+            List<Double> items = new ArrayList<>(); for (double item : (double[]) value) items.add(item); return items;
+        }
+        if (value instanceof boolean[]) {
+            List<Boolean> items = new ArrayList<>(); for (boolean item : (boolean[]) value) items.add(item); return items;
+        }
+        if (value instanceof Object[]) {
+            List<Object> items = new ArrayList<>(); for (Object item : (Object[]) value) items.add(probeJsonValue(item)); return items;
+        }
+        if (value instanceof List<?>) {
+            List<Object> items = new ArrayList<>(); for (Object item : (List<?>) value) items.add(probeJsonValue(item)); return items;
+        }
+        String text = String.valueOf(value);
+        return text.length() > 512 ? text.substring(0, 512) : text;
+    }
+
+    private static Map<String, Object> captureProbeProperties(PropFeature feature, String[] names) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        Map<String, Object> inventory = probeCapture("properties", feature::properties);
+        result.put("property_inventory_capture", inventory);
+        Set<String> available = new HashSet<>();
+        Object rawInventory = probeValue(inventory);
+        if (rawInventory instanceof List<?>) {
+            for (Object item : (List<?>) rawInventory) if (item instanceof String) available.add((String) item);
+        }
+        Map<String, Object> rows = new LinkedHashMap<>();
+        for (String name : names) {
+            Map<String, Object> property = new LinkedHashMap<>();
+            property.put("property_name", name);
+            Map<String, Object> has = probeCapture("hasProperty:" + name, () -> feature.hasProperty(name));
+            property.put("has_property_capture", has);
+            property.put("listed_in_properties", available.contains(name));
+            Object hasValue = probeValue(has);
+            if (!(hasValue instanceof Boolean) || !((Boolean) hasValue)) {
+                property.put("declared_type_capture", null);
+                property.put("allowed_values_capture", null);
+                property.put("value_capture", null);
+                property.put("value_reader", null);
+                property.put("value_status", hasValue instanceof Boolean ? "PROPERTY_ABSENT" : "HAS_PROPERTY_READ_ERROR");
+                rows.put(name, property);
+                continue;
+            }
+            Map<String, Object> type = probeCapture("getValueType:" + name, () -> feature.getValueType(name));
+            Map<String, Object> allowed = probeCapture("getAllowedPropertyValues:" + name,
+                () -> feature.getAllowedPropertyValues(name));
+            property.put("declared_type_capture", type);
+            property.put("allowed_values_capture", allowed);
+            Object typeValue = probeValue(type);
+            String valueReader = null;
+            Supplier<?> getter = null;
+            if ("String".equals(typeValue)) { valueReader = "getString"; getter = () -> feature.getString(name); }
+            else if ("Boolean".equals(typeValue)) { valueReader = "getBoolean"; getter = () -> feature.getBoolean(name); }
+            else if ("Int".equals(typeValue)) { valueReader = "getInt"; getter = () -> feature.getInt(name); }
+            else if ("Double".equals(typeValue)) { valueReader = "getString_expression"; getter = () -> feature.getString(name); }
+            else if ("StringArray".equals(typeValue)) { valueReader = "getStringArray"; getter = () -> feature.getStringArray(name); }
+            else if ("BooleanArray".equals(typeValue)) { valueReader = "getBooleanArray"; getter = () -> feature.getBooleanArray(name); }
+            else if ("IntArray".equals(typeValue)) { valueReader = "getIntArray"; getter = () -> feature.getIntArray(name); }
+            else if ("DoubleArray".equals(typeValue)) { valueReader = "getDoubleArray"; getter = () -> feature.getDoubleArray(name); }
+            property.put("value_reader", valueReader);
+            Map<String, Object> value = getter == null ? null : probeCapture(valueReader + ":" + name, getter);
+            property.put("value_capture", value);
+            property.put("value_status", value == null ? "TYPE_RECORDED_VALUE_NOT_INTERPRETED" :
+                "READ".equals(value.get("status")) ? "READ_BY_DECLARED_TYPE" : "VALUE_READ_ERROR");
+            rows.put(name, property);
+        }
+        result.put("properties", rows);
+        return result;
+    }
+
+    private static Map<String, Object> captureSolverSequenceTopology(
+            Model model, String sequenceTag, int[] nodeCount) {
+        Map<String, Object> record = new LinkedHashMap<>();
+        record.put("requested_tag", sequenceTag);
+        try {
+            SolverSequence sequence = model.sol(sequenceTag);
+            record.put("resolution_status", "READ");
+            record.put("tag_capture", probeCapture("solver." + sequenceTag + ".tag", sequence::tag));
+            record.put("sequence_type_capture", probeCapture(
+                "solver." + sequenceTag + ".getSequenceType", sequence::getSequenceType));
+            record.put("attached_capture", probeCapture(
+                "solver." + sequenceTag + ".isAttached", sequence::isAttached));
+            record.put("study_capture", probeCapture("solver." + sequenceTag + ".study", sequence::study));
+            record.put("feature_tree_capture", captureSolverFeatureTree(
+                sequence.feature(), sequenceTag, "", nodeCount, 0));
+            boolean complete = "READ".equals(record.get("resolution_status")) &&
+                "READ".equals(((Map<?, ?>) record.get("sequence_type_capture")).get("status")) &&
+                "READ".equals(((Map<?, ?>) record.get("attached_capture")).get("status")) &&
+                "READ".equals(((Map<?, ?>) record.get("study_capture")).get("status"));
+            record.put("capture_complete", complete);
+        } catch (RuntimeException ex) {
+            record.put("resolution_status", "READ_ERROR");
+            record.put("resolution_error", initialFeatureError(ex));
+            record.put("capture_complete", false);
+        }
+        return record;
+    }
+
+    /** Read and validate the generated initialization-to-transient solver graph. */
+    @SuppressWarnings("unchecked")
+    public static Map<String, Object> inspectGeneratedStudySolverChain(Model model, Study study) {
+        if (model == null || study == null) throw new IllegalArgumentException("model/study is required");
+        String studyTag = study.tag();
+        List<String> findings = new ArrayList<>();
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("schema", "W24_GENERATED_STUDY_SOLVER_CHAIN_R2");
+        result.put("study_tag", studyTag);
+        Map<String, Object> stepTagsCapture = probeCapture("study." + studyTag + ".feature.tags",
+            () -> study.feature().tags());
+        result.put("study_step_tags_capture", stepTagsCapture);
+        List<String> stepTags = stringsFromCapture(stepTagsCapture);
+        result.put("study_step_tags", stepTags);
+        if (!Arrays.asList("phasei", "time").equals(stepTags)) findings.add("STUDY_STEP_ORDER_OR_TAG_READBACK_DIFFERS");
+        List<Map<String, Object>> steps = new ArrayList<>();
+        Map<String, Map<String, Object>> stepInitialization = new LinkedHashMap<>();
+        for (String stepTag : stepTags) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("requested_tag", stepTag);
+            try {
+                StudyFeature feature = study.feature(stepTag);
+                row.put("resolution_status", "READ");
+                row.put("type_capture", probeCapture("study." + studyTag + ".step." + stepTag + ".type", feature::getType));
+                row.put("properties", captureProbeProperties(feature,
+                    new String[]{"initmethod", "initstudy", "useinitsol"}));
+                Map<String, Object> scope = (Map<String, Object>) row.get("properties");
+                Map<String, Object> properties = (Map<String, Object>) scope.get("properties");
+                Map<String, Object> initialization = new LinkedHashMap<>();
+                for (String name : new String[]{"initmethod", "initstudy", "useinitsol"}) {
+                    initialization.put(name, readTypedCapturedString((Map<String, Object>) properties.get(name)));
+                }
+                stepInitialization.put(stepTag, initialization);
+            } catch (RuntimeException ex) {
+                row.put("resolution_status", "READ_ERROR");
+                row.put("resolution_error", initialFeatureError(ex));
+                findings.add("STUDY_STEP_METADATA_INCOMPLETE:" + stepTag);
+            }
+            steps.add(row);
+        }
+        result.put("study_steps", steps);
+        result.put("study_step_initialization_readback", stepInitialization);
+        for (String stepTag : new String[]{"phasei", "time"}) {
+            Map<String, Object> initialization = stepInitialization.get(stepTag);
+            Map<String, Object> stepRecord = null;
+            for (Map<String, Object> candidate : steps) {
+                if (stepTag.equals(candidate.get("requested_tag"))) stepRecord = candidate;
+            }
+            String expectedType = "phasei".equals(stepTag) ? "PhaseInitialization" : "Transient";
+            String expectedMethod = "phasei".equals(stepTag) ? "init" : "sol";
+            String expectedStudy = "phasei".equals(stepTag) ? "zero" : studyTag;
+            String actualType = stepRecord == null ? null :
+                stringCapture((Map<String, Object>) stepRecord.get("type_capture"));
+            if (initialization == null || stepRecord == null || !"READ".equals(stepRecord.get("resolution_status")) ||
+                !expectedType.equals(actualType) || !expectedMethod.equals(initialization.get("initmethod")) ||
+                !expectedStudy.equals(initialization.get("initstudy")) || !"off".equals(initialization.get("useinitsol"))) {
+                findings.add("STUDY_STEP_INITIALIZATION_READBACK_DIFFERS:" + stepTag);
+            }
+        }
+
+        String[] queryTypes = new String[]{"All", "SolverSequence", "CopySolution", "ParametricStore",
+            "Stored", "Parametric", "None"};
+        List<Map<String, Object>> queryRows = new ArrayList<>();
+        Map<String, List<String>> queryValues = new LinkedHashMap<>();
+        Set<String> tags = new java.util.LinkedHashSet<>();
+        for (String queryType : queryTypes) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("query_type", queryType);
+            Map<String, Object> capture = probeCapture("study." + studyTag + ".getSolverSequences." + queryType,
+                () -> study.getSolverSequences(queryType));
+            row.put("capture", capture);
+            Object value = probeValue(capture);
+            if (!(value instanceof List<?>) || ((List<?>) value).size() > 128) {
+                findings.add("SEQUENCE_QUERY_CAPTURE_INVALID:" + queryType);
+            } else {
+                List<String> values = stringsFromCapture(capture);
+                if (values.size() != ((List<?>) value).size() || new HashSet<>(values).size() != values.size()) {
+                    findings.add("SEQUENCE_QUERY_TAGS_INVALID:" + queryType);
+                }
+                queryValues.put(queryType, values);
+                tags.addAll(values);
+            }
+            queryRows.add(row);
+        }
+        result.put("sequence_query_types", Arrays.asList(queryTypes));
+        result.put("sequence_query_rows", queryRows);
+        Map<String, Object> globalCapture = probeCapture("model.sol.tags", () -> model.sol().tags());
+        result.put("global_solver_tags_capture", globalCapture);
+        List<String> globalTags = stringsFromCapture(globalCapture);
+        result.put("global_solver_tags", globalTags);
+        if (new HashSet<>(queryValues.getOrDefault("All", Collections.emptyList())).size() !=
+                queryValues.getOrDefault("All", Collections.emptyList()).size() ||
+            !new HashSet<>(queryValues.getOrDefault("All", Collections.emptyList())).equals(new HashSet<>(globalTags))) {
+            findings.add("STUDY_ALL_QUERY_AND_MODEL_SOL_TAGS_DIFFER");
+        }
+        tags.addAll(globalTags);
+        result.put("sequence_tag_union", new ArrayList<>(tags));
+        if (tags.size() > 128) findings.add("SEQUENCE_UNION_EXCEEDS_BOUND");
+        List<Map<String, Object>> records = new ArrayList<>();
+        int[] nodeCount = new int[]{0};
+        int captureLimit = Math.min(tags.size(), 128);
+        int index = 0;
+        for (String tag : tags) {
+            if (index++ >= captureLimit) break;
+            records.add(captureSolverSequenceTopology(model, tag, nodeCount));
+        }
+        result.put("sequence_records", records);
+        if (nodeCount[0] > 128) findings.add("SEQUENCE_FEATURE_NODE_BOUND_EXCEEDED");
+
+        Map<String, Map<String, Object>> recordsByTag = new LinkedHashMap<>();
+        List<String> validAttachedTags = new ArrayList<>();
+        List<String> invalidAttachedTags = new ArrayList<>();
+        Map<String, String> storeReferences = new LinkedHashMap<>();
+        for (Map<String, Object> record : records) {
+            String tag = String.valueOf(record.get("requested_tag"));
+            recordsByTag.put(tag, record);
+            if (!Boolean.TRUE.equals(record.get("capture_complete"))) {
+                findings.add("SEQUENCE_IDENTITY_CAPTURE_INCOMPLETE:" + tag);
+            }
+            Map<String, Object> featureTree = (Map<String, Object>) record.get("feature_tree_capture");
+            if (featureTree == null || !"CAPTURED".equals(featureTree.get("capture_status"))) {
+                findings.add("SEQUENCE_FEATURE_TREE_CAPTURE_INCOMPLETE:" + tag);
+            }
+            String sequenceType = stringCapture((Map<String, Object>) record.get("sequence_type_capture"));
+            if (sequenceType == null || !Arrays.asList(queryTypes).subList(1, queryTypes.length).contains(sequenceType)) {
+                findings.add("SEQUENCE_TYPE_UNCLASSIFIED:" + tag);
+            } else if (!queryValues.getOrDefault(sequenceType, Collections.emptyList()).contains(tag)) {
+                findings.add("SEQUENCE_TYPE_QUERY_MISMATCH:" + tag);
+            }
+            Boolean attached = booleanCapture((Map<String, Object>) record.get("attached_capture"));
+            String associatedStudy = stringCapture((Map<String, Object>) record.get("study_capture"));
+            if (attached == null || associatedStudy == null) {
+                findings.add("SEQUENCE_ATTACHMENT_READBACK_INCOMPLETE:" + tag);
+            }
+            if (Boolean.TRUE.equals(attached) && studyTag.equals(associatedStudy)) {
+                List<String> chainFindings = initializationChainFindings(record, studyTag);
+                if (chainFindings.isEmpty()) {
+                    validAttachedTags.add(tag);
+                    storeReferences.put(tag, storeSolutionReference(record));
+                } else {
+                    invalidAttachedTags.add(tag);
+                    findings.addAll(chainFindings);
+                }
+            } else if (Boolean.TRUE.equals(attached)) {
+                findings.add("UNEXPECTED_ATTACHED_SEQUENCE_STUDY:" + tag);
+            }
+        }
+        if (validAttachedTags.size() != 1 || !invalidAttachedTags.isEmpty()) {
+            findings.add("ATTACHED_INITIALIZATION_CHAIN_NOT_UNIQUE");
+        }
+        String selectedTag = validAttachedTags.size() == 1 && invalidAttachedTags.isEmpty() ? validAttachedTags.get(0) : null;
+        String storedTag = selectedTag == null ? null : storeReferences.get(selectedTag);
+        if (selectedTag != null) {
+            Map<String, Object> stored = recordsByTag.get(storedTag);
+            if (storedTag == null || !queryValues.getOrDefault("Stored", Collections.emptyList()).equals(
+                    Collections.singletonList(storedTag)) || stored == null ||
+                !"Stored".equals(stringCapture((Map<String, Object>) stored.get("sequence_type_capture"))) ||
+                !Boolean.FALSE.equals(booleanCapture((Map<String, Object>) stored.get("attached_capture")))) {
+                findings.add("STORE_SOLUTION_REFERENCE_NOT_UNIQUELY_RESOLVED_TO_STORED_SEQUENCE");
+            }
+        }
+        result.put("attached_chain_candidate_tags", validAttachedTags);
+        result.put("attached_chain_failure_tags", invalidAttachedTags);
+        result.put("selected_attached_sequence_tag", selectedTag);
+        result.put("store_solution_output_tag", storedTag);
+        result.put("semantic_findings", findings);
+        result.put("status", findings.isEmpty() ? "PHASE_INIT_TO_TIME_CHAIN_VALIDATED" :
+            "CHAIN_CAPTURED_WITH_FINDINGS_NOT_SOLVED");
+        result.put("native_acceptance", "NOT_RUN");
+        result.put("study_run_calls", 0);
+        result.put("solver_run_calls", 0);
+        result.put("model_save_calls", 0);
+        result.put("result_evaluation_calls", 0);
+        return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<String> initializationChainFindings(Map<String, Object> record, String studyTag) {
+        List<String> findings = new ArrayList<>();
+        List<Map<String, Object>> nodes = new ArrayList<>();
+        flattenSolverFeatureNodes((Map<String, Object>) record.get("feature_tree_capture"), nodes);
+        List<Integer> phaseSteps = new ArrayList<>(), timeSteps = new ArrayList<>();
+        List<Integer> phaseVariables = new ArrayList<>(), timeVariables = new ArrayList<>();
+        List<Integer> stationary = new ArrayList<>(), stores = new ArrayList<>(), times = new ArrayList<>();
+        for (int i = 0; i < nodes.size(); i++) {
+            Map<String, Object> node = nodes.get(i);
+            String type = stringCapture((Map<String, Object>) node.get("type_capture"));
+            if ("StudyStep".equals(type)) {
+                String study = featureStringProperty(node, "study_step_reference_properties", "study");
+                String step = featureStringProperty(node, "study_step_reference_properties", "studystep");
+                if (studyTag.equals(study) && "phasei".equals(step)) phaseSteps.add(i);
+                if (studyTag.equals(study) && "time".equals(step)) timeSteps.add(i);
+            } else if ("Variables".equals(type)) {
+                String control = featureStringProperty(node, "initial_source_properties", "control");
+                if ("phasei".equals(control)) phaseVariables.add(i);
+                if ("time".equals(control)) timeVariables.add(i);
+            } else if ("Stationary".equals(type)) stationary.add(i);
+            else if ("StoreSolution".equals(type)) stores.add(i);
+            else if ("Time".equals(type)) times.add(i);
+        }
+        String sequenceTag = String.valueOf(record.get("requested_tag"));
+        if (phaseSteps.size() != 1 || timeSteps.size() != 1 || phaseVariables.size() != 1 ||
+            timeVariables.size() != 1 || stationary.size() != 1 || stores.size() != 1 || times.size() != 1) {
+            findings.add("ATTACHED_SEQUENCE_CHAIN_ROLE_CARDINALITY:" + sequenceTag);
+            return findings;
+        }
+        int[] order = new int[]{phaseSteps.get(0), phaseVariables.get(0), stationary.get(0), stores.get(0),
+            timeSteps.get(0), timeVariables.get(0), times.get(0)};
+        for (int i = 1; i < order.length; i++) {
+            if (order[i - 1] >= order[i]) {
+                findings.add("ATTACHED_SEQUENCE_CHAIN_ORDER:" + sequenceTag);
+                break;
+            }
+        }
+        Map<String, Object> phaseVars = nodes.get(phaseVariables.get(0));
+        Map<String, Object> timeVars = nodes.get(timeVariables.get(0));
+        Map<String, Object> store = nodes.get(stores.get(0));
+        if (!"init".equals(featureStringProperty(phaseVars, "initial_source_properties", "initmethod")) ||
+            !"zero".equals(featureStringProperty(phaseVars, "initial_source_properties", "initsol")) ||
+            !"current".equals(featureStringProperty(phaseVars, "initial_source_properties", "initsoluse"))) {
+            findings.add("PHASE_INITIALIZATION_VARIABLES_DEFAULTS_DIFFER:" + sequenceTag);
+        }
+        String storeTag = featureStringProperty(store, "store_solution_properties", "sol");
+        if (!"sol".equals(featureStringProperty(timeVars, "initial_source_properties", "initmethod")) ||
+            !sequenceTag.equals(featureStringProperty(timeVars, "initial_source_properties", "initsol")) ||
+            storeTag == null || !storeTag.equals(featureStringProperty(timeVars, "initial_source_properties", "initsoluse"))) {
+            findings.add("TRANSIENT_VARIABLES_STORE_REFERENCE_MISMATCH:" + sequenceTag);
+        }
+        Map<String, Object> prop = featurePropertyRow(store, "store_solution_properties", "sol");
+        if (prop == null || !Boolean.TRUE.equals(propertyCaptureValue(prop, "has_property_capture")) ||
+            !"String".equals(propertyCaptureValue(prop, "declared_type_capture")) ||
+            !"READ_BY_DECLARED_TYPE".equals(prop.get("value_status"))) {
+            findings.add("STORE_SOLUTION_REFERENCE_NOT_TYPED_READ:" + sequenceTag);
+        }
+        return findings;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void flattenSolverFeatureNodes(Map<String, Object> tree, List<Map<String, Object>> nodes) {
+        if (tree == null || !(tree.get("nodes") instanceof List<?>)) return;
+        for (Object value : (List<?>) tree.get("nodes")) {
+            if (!(value instanceof Map<?, ?>)) continue;
+            Map<String, Object> node = (Map<String, Object>) value;
+            nodes.add(node);
+            Object child = node.get("child_feature_tree");
+            if (child instanceof Map<?, ?>) flattenSolverFeatureNodes((Map<String, Object>) child, nodes);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> featurePropertyRow(Map<String, Object> feature, String scope, String name) {
+        Object rawScope = feature.get(scope);
+        if (!(rawScope instanceof Map<?, ?>)) return null;
+        Object rawProperties = ((Map<?, ?>) rawScope).get("properties");
+        if (!(rawProperties instanceof Map<?, ?>)) return null;
+        Object row = ((Map<?, ?>) rawProperties).get(name);
+        return row instanceof Map<?, ?> ? (Map<String, Object>) row : null;
+    }
+
+    private static Object propertyCaptureValue(Map<String, Object> row, String captureName) {
+        Object capture = row.get(captureName);
+        return capture instanceof Map<?, ?> ? probeValue((Map<String, Object>) capture) : null;
+    }
+
+    private static String featureStringProperty(Map<String, Object> feature, String scope, String name) {
+        Map<String, Object> row = featurePropertyRow(feature, scope, name);
+        Object value = row == null ? null : propertyCaptureValue(row, "value_capture");
+        return value instanceof String ? (String) value : null;
+    }
+
+    private static String storeSolutionReference(Map<String, Object> record) {
+        List<Map<String, Object>> nodes = new ArrayList<>();
+        flattenSolverFeatureNodes((Map<String, Object>) record.get("feature_tree_capture"), nodes);
+        for (Map<String, Object> node : nodes) {
+            if ("StoreSolution".equals(stringCapture((Map<String, Object>) node.get("type_capture")))) {
+                return featureStringProperty(node, "store_solution_properties", "sol");
+            }
+        }
+        return null;
+    }
+
+    private static String readTypedCapturedString(Map<String, Object> property) {
+        if (property == null || !"String".equals(propertyCaptureValue(property, "declared_type_capture")) ||
+            !Boolean.TRUE.equals(propertyCaptureValue(property, "has_property_capture")) ||
+            !"READ_BY_DECLARED_TYPE".equals(property.get("value_status"))) return null;
+        Object value = propertyCaptureValue(property, "value_capture");
+        return value instanceof String ? (String) value : null;
+    }
+
+    private static String stringCapture(Map<String, Object> capture) {
+        Object value = probeValue(capture);
+        return value instanceof String ? (String) value : null;
+    }
+
+    private static Boolean booleanCapture(Map<String, Object> capture) {
+        Object value = probeValue(capture);
+        return value instanceof Boolean ? (Boolean) value : null;
+    }
+
+    private static List<String> stringsFromCapture(Map<String, Object> capture) {
+        Object value = probeValue(capture);
+        if (!(value instanceof List<?>)) return Collections.emptyList();
+        List<String> result = new ArrayList<>();
+        for (Object item : (List<?>) value) if (item instanceof String) result.add((String) item);
+        return result;
+    }
+
+    private static Map<String, Object> captureSolverFeatureTree(
+            SolverFeatureList list, String sequenceTag, String parentPath,
+            int[] nodeCount, int depth) {
+        Map<String, Object> tree = new LinkedHashMap<>();
+        tree.put("sequence_tag", sequenceTag);
+        tree.put("parent_path", parentPath);
+        Map<String, Object> tagsCapture = probeCapture(
+            "solver." + sequenceTag + ".features." + parentPath + ".tags", list::tags);
+        tree.put("tags_capture", tagsCapture);
+        Object tagsRaw = probeValue(tagsCapture);
+        List<Map<String, Object>> nodes = new ArrayList<>();
+        if (!(tagsRaw instanceof List<?>)) {
+            tree.put("nodes", nodes);
+            tree.put("capture_status", "FEATURE_TAG_READ_ERROR");
+            return tree;
+        }
+        List<?> tags = (List<?>) tagsRaw;
+        if (tags.size() > 128) tree.put("tag_count_status", "EXCEEDS_128_TAG_CAP");
+        for (Object item : tags) {
+            if (!(item instanceof String)) continue;
+            String tag = (String) item;
+            Map<String, Object> node = new LinkedHashMap<>();
+            node.put("tag", tag);
+            node.put("path", parentPath.isEmpty() ? tag : parentPath + "/" + tag);
+            if (depth > 16 || nodeCount[0] >= 128) {
+                node.put("capture_status", depth > 16 ? "DEPTH_CAP" : "NODE_CAP");
+                nodes.add(node);
+                continue;
+            }
+            nodeCount[0]++;
+            try {
+                SolverFeature feature = list.get(tag);
+                node.put("resolution_status", "READ");
+                Map<String, Object> typeCapture = probeCapture(
+                    "solver." + sequenceTag + "." + node.get("path") + ".getType", feature::getType);
+                node.put("type_capture", typeCapture);
+                Object type = probeValue(typeCapture);
+                Map<String, Object> propertyInventory = probeCapture(
+                    "solver." + sequenceTag + "." + node.get("path") + ".properties", feature::properties);
+                node.put("property_inventory_capture", propertyInventory);
+                Object propertyNames = probeValue(propertyInventory);
+                List<String> studyReferenceNames = new ArrayList<>();
+                if (propertyNames instanceof List<?>) {
+                    for (Object propertyName : (List<?>) propertyNames) {
+                        if (!(propertyName instanceof String)) continue;
+                        String lower = ((String) propertyName).toLowerCase(java.util.Locale.ROOT);
+                        if (lower.contains("study") || lower.contains("step")) {
+                            studyReferenceNames.add((String) propertyName);
+                        }
+                    }
+                }
+                node.put("study_step_reference_property_names", studyReferenceNames);
+                node.put("study_step_reference_properties",
+                    captureProbeProperties(feature, studyReferenceNames.toArray(new String[0])));
+                if ("Variables".equals(type)) {
+                    node.put("initial_source_properties", captureProbeProperties(feature,
+                        new String[]{"control", "initmethod", "initsol", "initsoluse", "useinitsol"}));
+                } else if ("Time".equals(type)) {
+                    node.put("time_settings", captureProbeProperties(feature,
+                        new String[]{"timemethod", "tunit", "tstepsbdf", "tout", "tstepsstore",
+                                     "maxstepconstraintbdf", "maxstepbdf"}));
+                } else if ("StoreSolution".equals(type)) {
+                    node.put("store_solution_properties", captureProbeProperties(feature, new String[]{"sol"}));
+                }
+                SolverFeatureList childList = feature.feature();
+                Map<String, Object> childTree = captureSolverFeatureTree(
+                    childList, sequenceTag, String.valueOf(node.get("path")), nodeCount, depth + 1);
+                node.put("child_feature_tree", childTree);
+                node.put("capture_status", "CAPTURED");
+            } catch (RuntimeException ex) {
+                node.put("capture_status", "READ_ERROR");
+                node.put("capture_error", initialFeatureError(ex));
+            }
+            nodes.add(node);
+        }
+        tree.put("nodes", nodes);
+        tree.put("capture_status", "CAPTURED");
+        return tree;
+    }
+
+    private static Map<String, Object> readProbeProperties(PropFeature feature, String[] names) {
+        Map<String, Object> properties = new LinkedHashMap<>();
+        String[] available = feature.properties();
+        if (available == null || available.length > 512) {
+            throw new IllegalStateException("study/solver property name inventory is unavailable or exceeds 512 entries");
+        }
+        Set<String> availableSet = new HashSet<>(Arrays.asList(available));
+        for (String name : names) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("property_name", name);
+            boolean present = feature.hasProperty(name);
+            row.put("has_property", present);
+            row.put("listed_in_properties", availableSet.contains(name));
+            if (!present) {
+                row.put("declared_type", null);
+                row.put("allowed_values", null);
+                row.put("value_reader", null);
+                row.put("value_status", "PROPERTY_ABSENT");
+                row.put("value", null);
+                properties.put(name, row);
+                continue;
+            }
+            String declaredType = feature.getValueType(name);
+            row.put("declared_type", declaredType);
+            String[] allowed = feature.getAllowedPropertyValues(name);
+            row.put("allowed_values", allowed == null ? null : Arrays.asList(allowed.clone()));
+            Object value = null;
+            String reader = null;
+            if ("String".equals(declaredType)) {
+                value = feature.getString(name); reader = "getString";
+            } else if ("Boolean".equals(declaredType)) {
+                value = feature.getBoolean(name); reader = "getBoolean";
+            } else if ("Double".equals(declaredType)) {
+                value = feature.getString(name); reader = "getString_expression";
+            } else if ("Int".equals(declaredType)) {
+                value = feature.getInt(name); reader = "getInt";
+            }
+            row.put("value_reader", reader);
+            row.put("value_status", reader == null ? "TYPE_RECORDED_VALUE_NOT_INTERPRETED" : "READ_BY_DECLARED_TYPE");
+            row.put("value", value);
+            properties.put(name, row);
+        }
+        return properties;
+    }
+
+    private static void collectStudyInitializationSolverFeatures(
+            SolverFeatureList list, String parentPath, String sequenceTag,
+            List<Map<String, Object>> rows, int depth) {
+        if (depth > 16 || rows.size() > 128) {
+            throw new IllegalStateException("generated solver feature tree exceeded its bounded depth/node count");
+        }
+        String[] tags = list.tags();
+        if (tags == null || tags.length > 128) {
+            throw new IllegalStateException("generated solver feature list is unavailable or exceeds 128 nodes");
+        }
+        for (String tag : tags) {
+            if (rows.size() >= 128) {
+                throw new IllegalStateException("generated solver feature tree exceeds 128 nodes");
+            }
+            SolverFeature feature = list.get(tag);
+            String path = parentPath.isEmpty() ? tag : parentPath + "/" + tag;
+            String type = feature.getType();
+            String[] childTags = feature.feature().tags();
+            if (childTags == null || childTags.length > 128) {
+                throw new IllegalStateException("generated solver child list is unavailable or exceeds 128 entries");
+            }
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("path", path);
+            row.put("tag", tag);
+            row.put("type", type);
+            row.put("child_tags", Arrays.asList(childTags));
+            if ("Variables".equals(type)) {
+                row.put("initial_source_properties", readProbeProperties(feature,
+                    new String[]{"control", "initmethod", "initsol", "initsoluse", "useinitsol"}));
+            } else if ("Time".equals(type)) {
+                row.put("time_settings", readProbeProperties(feature,
+                    new String[]{"timemethod", "tunit", "tstepsbdf", "tout", "tstepsstore",
+                                 "maxstepconstraintbdf", "maxstepbdf"}));
+            }
+            rows.add(row);
+            if (childTags.length > 0) {
+                collectStudyInitializationSolverFeatures(feature.feature(), path,
+                    sequenceTag, rows, depth + 1);
+            }
+        }
+    }
+
+    private static Map<String, Object> readDeclaredPropertyDefault(ParameterEntity entity, String name) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("property_name", name);
+        boolean present = entity != null && entity.hasProperty(name);
+        row.put("has_property", present);
+        if (!present) {
+            row.put("declared_type", null);
+            row.put("allowed_values", null);
+            row.put("value_status", "PROPERTY_ABSENT");
+            row.put("value_reader", null);
+            row.put("value", null);
+            row.put("expression_value", null);
+            return row;
+        }
+        String declaredType = entity.getValueType(name);
+        row.put("declared_type", declaredType);
+        String[] allowedValues = entity.getAllowedPropertyValues(name);
+        row.put("allowed_values", allowedValues == null ? null : Arrays.asList(allowedValues.clone()));
+        Object value = null;
+        String reader = null;
+        if ("Boolean".equals(declaredType)) {
+            value = entity.getBoolean(name);
+            reader = "getBoolean";
+        } else if ("String".equals(declaredType)) {
+            value = entity.getString(name);
+            reader = "getString";
+        } else if ("Double".equals(declaredType)) {
+            // Read the stored expression as text; never evaluate or coerce it
+            // merely to inspect the declared Double property.
+            value = entity.getString(name);
+            reader = "getString";
+        }
+        row.put("value_status", reader == null ? "UNSUPPORTED_DECLARED_TYPE" : "READ_WITH_DECLARED_TYPE_GETTER");
+        row.put("value_reader", reader);
+        row.put("value", value);
+        row.put("value_representation", "Double".equals(declaredType) ? "expression_as_string" :
+            (reader == null ? "unsupported_declared_type" : "typed_scalar"));
+        // Keep generic Double declarations as raw expression text; String
+        // declarations stay typed scalar values and are never converted.
+        row.put("expression_value", "Double".equals(declaredType) ? value : null);
+        return row;
+    }
+
+    /**
+     * Bounded R10 Phase Field feature diagnosis. Rebuilds the exact flat
+     * two-domain geometry, creates only the Phase Field interface, and reads
+     * feature metadata. It never writes initial-value properties or feature
+     * selections and never creates or runs a Study or solver.
+     */
+    private static Map<String, Object> readFreshInitialFeatureMetadata(
+            Model parent, Map<String, Object> args) {
+        if (parent == null || args == null || args.size() != 2 ||
+            !"initial_feature_metadata_only".equals(args.get("action")) ||
+            !"flat".equals(args.get("case_id"))) {
+            throw new IllegalArgumentException(
+                "metadata probe requires exactly action=initial_feature_metadata_only and case_id=flat");
+        }
+        if (parent.component().tags().length != 0 || parent.geom().tags().length != 0 ||
+            parent.func().tags().length != 0 || parent.variable().tags().length != 0 ||
+            parent.material().tags().length != 0 || parent.study().tags().length != 0 ||
+            parent.sol().tags().length != 0 || parent.param().varnames().length != 0 ||
+            parent.mesh().tags().length != 0 || parent.physics().tags().length != 0 ||
+            parent.selection().tags().length != 0 || parent.result().tags().length != 0) {
+            throw new IllegalStateException("metadata probe requires the exact fresh empty registered model");
+        }
+        parent.component().create(COMPONENT);
+        GeomSequence geom = parent.component(COMPONENT).geom().create(GEOMETRY, 2);
+        geom.lengthUnit("m");
+        geom.axisymmetric(true);
+        int[] glueDomainIds;
+        int[] gasDomainIds;
+        int[] allDomainIds;
+        Physics phaseField;
+        try (SelectionTrace trace = SelectionTrace.open(null)) {
+            buildTwoFluidGeometry(geom, "flat", trace);
+            glueDomainIds = createDomainProbe(parent, "sel_glue_domain",
+                R_DROP * 0.5, H_FLAT * 0.5, trace);
+            gasDomainIds = createDomainProbe(parent, "sel_gas_domain",
+                R_BOX * 0.75, H_BOX * 0.5, trace);
+            if (geom.getSDim() != 2 || !geom.isAxisymmetric() || geom.getNDomains() != 2 ||
+                glueDomainIds.length != 1 || gasDomainIds.length != 1 ||
+                glueDomainIds[0] == gasDomainIds[0]) {
+                throw new IllegalStateException("metadata probe did not reproduce the exact flat two-domain geometry");
+            }
+            allDomainIds = sortedUnion(glueDomainIds, gasDomainIds);
+            phaseField = createPhaseFieldPhysics(parent, allDomainIds, trace);
+        }
+        Map<String, Object> inventory = readInitialFeatureMetadata(phaseField);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("schema", "W24_PHASEFIELD_INITIAL_FEATURE_METADATA_R1");
+        result.put("status", "METADATA_ONLY_COMPLETED_NOT_SOLVED");
+        result.put("native_acceptance", "NOT_RUN");
+        result.put("action", "initial_feature_metadata_only");
+        result.put("model_tag", parent.tag());
+        result.put("case_id", "flat");
+        result.put("geometry_dimension", geom.getSDim());
+        result.put("geometry_axisymmetric", geom.isAxisymmetric());
+        result.put("geometry_domain_count", geom.getNDomains());
+        result.put("glue_domain_ids", boxed(glueDomainIds));
+        result.put("gas_domain_ids", boxed(gasDomainIds));
+        result.put("all_domain_ids", boxed(allDomainIds));
+        result.put("phase_field_tag", phaseField.tag());
+        result.put("phase_field_type", phaseField.getType());
+        result.put("phase_field_domain_ids", boxed(phaseField.selection().entities(2)));
+        result.put("initial_feature_inventory", inventory);
+        result.put("geometry_build_calls", 1);
+        result.put("phase_field_selection_set_calls", 2);
+        result.put("study_create_calls", 0);
+        result.put("study_run_calls", 0);
+        result.put("solver_create_calls", 0);
+        result.put("solver_run_calls", 0);
+        result.put("solver_calls", 0);
+        result.put("model_save_calls", 0);
+        result.put("save_calls", 0);
+        result.put("result_evaluation_calls", 0);
+        result.put("initial_feature_property_set_calls", 0);
+        result.put("initial_feature_selection_set_calls", 0);
+        result.put("source_declared_scope", Map.of(
+            "geometry_build_calls", 1, "phase_field_selection_set_calls", 2,
+            "study_create_calls", 0, "study_run_calls", 0,
+            "solver_create_calls", 0, "solver_run_calls", 0, "save_calls", 0,
+            "result_evaluation_calls", 0, "initial_feature_property_set_calls", 0,
+            "initial_feature_selection_set_calls", 0));
+        result.put("study_tags", Arrays.asList(parent.study().tags()));
+        result.put("solver_tags", Arrays.asList(parent.sol().tags()));
+        return result;
+    }
+
+    private static Map<String, Object> readInitialFeatureMetadata(Physics phaseField) {
+        Map<String, Object> inventory = new LinkedHashMap<>();
+        String[] tags = phaseField.feature().tags();
+        inventory.put("feature_count_observed", tags == null ? null : tags.length);
+        inventory.put("feature_limit", 64);
+        inventory.put("feature_tags_inspected", 0);
+        inventory.put("is_complete", false);
+        inventory.put("metadata_status", "TAG_INVENTORY_UNAVAILABLE");
+        inventory.put("features", Collections.emptyList());
+        if (tags == null) return inventory;
+        if (tags.length > 64) {
+            inventory.put("metadata_status", "TAG_BUDGET_EXCEEDED");
+            return inventory;
+        }
+        List<Map<String, Object>> rows = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        boolean valid = true;
+        for (int index = 0; index < tags.length; index++) {
+            String tag = tags[index];
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("feature_order_index", index);
+            row.put("tag", tag);
+            row.put("default_feature_classification", "NOT_EXPOSED_BY_READ_ONLY_API_METADATA");
+            row.put("override_adjusted_domain_coverage", "NOT_EXPOSED_BY_SELECTION_READBACK");
+            if (tag == null || tag.trim().isEmpty() || tag.length() > 128 || !seen.add(tag)) {
+                valid = false;
+                row.put("feature_resolution_status", "MALFORMED_OR_DUPLICATE_TAG");
+                rows.add(row);
+                continue;
+            }
+            try {
+                PhysicsFeature feature = phaseField.feature(tag);
+                if (feature == null || !tag.equals(feature.tag())) {
+                    valid = false;
+                    row.put("feature_resolution_status", "TAG_OBJECT_MISMATCH");
+                } else {
+                    row.put("feature_resolution_status", "RESOLVED_EXACT_TAG");
+                    boolean rowComplete = true;
+                    try {
+                        String type = feature.getType();
+                        row.put("type", type);
+                        row.put("type_read_status", type == null || type.trim().isEmpty() ? "EMPTY" : "READ");
+                        rowComplete = type != null && !type.trim().isEmpty();
+                    } catch (RuntimeException ex) {
+                        row.put("type_read_status", "READ_ERROR");
+                        row.put("type_read_error", initialFeatureError(ex));
+                        rowComplete = false;
+                    }
+                    Map<String, Object> option = readInitialFeatureProperty(feature, "InitialValuesOption");
+                    Map<String, Object> fluid = readInitialFeatureProperty(feature, "FluidInDomain");
+                    Map<String, Object> selection = readInitialFeatureSelection(feature);
+                    row.put("initial_values_option", option);
+                    row.put("fluid_in_domain", fluid);
+                    row.put("selection", selection);
+                    rowComplete = rowComplete && initialFeaturePropertyComplete(option) &&
+                        initialFeaturePropertyComplete(fluid) && "READ".equals(selection.get("selection_read_status"));
+                    row.put("row_metadata_complete", rowComplete);
+                    if (!rowComplete) valid = false;
+                }
+            } catch (RuntimeException ex) {
+                valid = false;
+                row.put("feature_resolution_status", "READ_ERROR");
+                row.put("feature_read_error", initialFeatureError(ex));
+            }
+            rows.add(row);
+        }
+        inventory.put("features", rows);
+        inventory.put("feature_tags_inspected", rows.size());
+        inventory.put("is_complete", valid);
+        inventory.put("metadata_status", valid ? "COMPLETE" : "TAG_INVENTORY_HAS_ERRORS");
+        return inventory;
+    }
+
+    private static boolean initialFeaturePropertyComplete(Map<String, Object> property) {
+        if ("ABSENT".equals(property.get("read_status"))) return true;
+        if (!"String".equals(property.get("declared_type"))) return false;
+        Object valueStatus = property.get("value_read_status");
+        Object allowedStatus = property.get("allowed_values_read_status");
+        return "READ".equals(valueStatus) &&
+            ("READ".equals(allowedStatus) || "NO_FINITE_ENUM_REPORTED".equals(allowedStatus));
+    }
+
+    private static Map<String, Object> readInitialFeatureProperty(PhysicsFeature feature, String name) {
+        Map<String, Object> property = new LinkedHashMap<>();
+        property.put("property_name", name);
+        try {
+            boolean present = feature.hasProperty(name);
+            property.put("present", present);
+            if (!present) {
+                property.put("read_status", "ABSENT");
+                return property;
+            }
+            String declaredType = feature.getValueType(name);
+            property.put("declared_type", declaredType);
+            if (!"String".equals(declaredType)) {
+                property.put("read_status", "PRESENT_NON_STRING_ENUM_NOT_READ");
+                return property;
+            }
+            try {
+                property.put("value", feature.getString(name));
+                property.put("value_read_status", "READ");
+            } catch (RuntimeException ex) {
+                property.put("value_read_status", "READ_ERROR");
+                property.put("value_read_error", initialFeatureError(ex));
+            }
+            try {
+                String[] allowed = feature.getAllowedPropertyValues(name);
+                property.put("allowed_values", allowed == null ? null : Arrays.asList(allowed));
+                property.put("allowed_values_read_status",
+                    allowed == null ? "NO_FINITE_ENUM_REPORTED" : "READ");
+            } catch (RuntimeException ex) {
+                property.put("allowed_values_read_status", "READ_ERROR");
+                property.put("allowed_values_read_error", initialFeatureError(ex));
+            }
+        } catch (RuntimeException ex) {
+            property.put("read_status", "READ_ERROR");
+            property.put("read_error", initialFeatureError(ex));
+        }
+        return property;
+    }
+
+    private static Map<String, Object> readInitialFeatureSelection(PhysicsFeature feature) {
+        Map<String, Object> selection = new LinkedHashMap<>();
+        try {
+            selection.put("raw_named_selection_tag", feature.selection().named());
+            selection.put("geometry", feature.selection().geom());
+            int dimension = feature.selection().dim();
+            selection.put("entity_dimension", dimension);
+            if (dimension == 2) {
+                int[] rawInputEntities = feature.selection().inputEntities();
+                selection.put("raw_input_domain_ids",
+                    rawInputEntities == null ? null : boxed(rawInputEntities));
+                selection.put("raw_input_domain_ids_read_status",
+                    rawInputEntities == null ? "NOT_EXPOSED_FOR_SELECTION_KIND" : "READ");
+                selection.put("effective_domain_ids", boxed(feature.selection().entities(2)));
+                selection.put("effective_domain_ids_read_status", "READ");
+            } else {
+                selection.put("raw_input_domain_ids", null);
+                selection.put("raw_input_domain_ids_read_status", "NOT_A_DOMAIN_SELECTION");
+                selection.put("effective_domain_ids", Collections.emptyList());
+                selection.put("effective_domain_ids_read_status", "NOT_A_DOMAIN_SELECTION");
+            }
+            selection.put("selection_read_status", "READ");
+        } catch (RuntimeException ex) {
+            selection.put("selection_read_status", "READ_ERROR");
+            selection.put("selection_read_error", initialFeatureError(ex));
+        }
+        return selection;
+    }
+
+    private static Map<String, Object> initialFeatureError(RuntimeException ex) {
+        Map<String, Object> error = new LinkedHashMap<>();
+        error.put("exception_type", ex.getClass().getName());
+        String message = String.valueOf(ex.getMessage());
+        error.put("message", message.length() > 256 ? message.substring(0, 256) : message);
+        return error;
+    }
+
+    /** Optional public recipe entry: mutate only the exact fresh injected model. */
+    public static Object runInPlace(Model parent, Map<String, Object> args) {
+        if (parent == null || args == null || !Boolean.TRUE.equals(args.get("in_place")))
+            throw new IllegalArgumentException("in-place build requires the explicit mode and target");
+        Object expected = args.get("expected_model_tag");
+        if (!(expected instanceof String) || ((String) expected).isBlank() ||
+            !parent.tag().equals(expected) || !Arrays.asList(ModelUtil.tags()).contains(parent.tag()))
+            throw new IllegalArgumentException("in-place target must be the exact registered injected model");
+        if (!"build".equals(args.get("action")))
+            throw new IllegalArgumentException("in-place entry only builds, never submits a study");
+        String caseId = String.valueOf(args.get("case_id"));
+        if (!("flat".equals(caseId) || "step".equals(caseId)))
+            throw new IllegalArgumentException("case_id must be exactly flat or step");
+        Configuration selected = configuration(String.valueOf(args.get("configuration_id")));
+        if (parent.component().tags().length != 0 || parent.geom().tags().length != 0 ||
+            parent.func().tags().length != 0 || parent.variable().tags().length != 0 ||
+            parent.material().tags().length != 0 || parent.study().tags().length != 0 ||
+            parent.sol().tags().length != 0 || parent.param().varnames().length != 0 ||
+            parent.mesh().tags().length != 0 || parent.physics().tags().length != 0 ||
+            parent.selection().tags().length != 0 || parent.result().tags().length != 0)
+            throw new IllegalStateException("in-place build requires a fresh empty model");
+        SelectionTrace trace = SelectionTrace.open(args.get("selection_diagnostic_path"));
+        try {
+            return build(parent, caseId, selected, true, trace);
+        } finally {
+            trace.close();
+        }
+    }
+
+    private static Map<String, Object> build(Model parent, String caseId, Configuration configuration,
+                                             boolean inPlace, SelectionTrace trace) {
+        Model created;
+        String modelTag;
+        if (inPlace) {
+            created = parent;
+            modelTag = parent.tag();
+        } else {
+            Set<String> priorModelTags = new HashSet<>(Arrays.asList(ModelUtil.tags()));
+            created = ModelUtil.createUnique("w24shape_" + configuration.id + "_" + caseId);
+            modelTag = null;
+            for (String candidate : ModelUtil.tags()) {
+                if (!priorModelTags.contains(candidate) &&
+                    candidate.startsWith("w24shape_" + configuration.id + "_" + caseId)) {
+                    if (modelTag != null) throw new IllegalStateException("COMSOL created multiple static-shape models");
+                    modelTag = candidate;
+                }
+            }
+            if (modelTag == null) throw new IllegalStateException("COMSOL did not register the unique static-shape model");
         }
 
         boolean complete = false;
@@ -89,25 +1476,25 @@ public final class W24StaticShapeFixture {
             GeomSequence geom = model.component(COMPONENT).geom().create(GEOMETRY, 2);
             geom.lengthUnit("m");
             geom.axisymmetric(true);
-            buildTwoFluidGeometry(geom, caseId);
+            buildTwoFluidGeometry(geom, caseId, trace);
             if (geom.getSDim() != 2 || !geom.isAxisymmetric() || geom.getNDomains() != 2) {
                 throw new IllegalStateException("static-shape geometry must be exactly two 2-D axisymmetric fluid domains");
             }
 
             int[] glueDomainIds = createDomainProbe(model, "sel_glue_domain",
                 caseId.equals("flat") ? R_DROP * 0.5 : R_MESA * 0.5,
-                caseId.equals("flat") ? H_FLAT * 0.5 : H_MESA + (Z_STEP_TOP - H_MESA) * 0.5);
-            int[] gasDomainIds = createDomainProbe(model, "sel_gas_domain", R_BOX * 0.75, H_BOX * 0.5);
+                caseId.equals("flat") ? H_FLAT * 0.5 : H_MESA + (Z_STEP_TOP - H_MESA) * 0.5, trace);
+            int[] gasDomainIds = createDomainProbe(model, "sel_gas_domain", R_BOX * 0.75, H_BOX * 0.5, trace);
             if (glueDomainIds.length != 1 || gasDomainIds.length != 1 ||
                 glueDomainIds[0] == gasDomainIds[0] || geom.getNDomains() != 2) {
                 throw new IllegalStateException("glue/gas selections do not resolve to two distinct domains");
             }
             int[] allDomainIds = sortedUnion(glueDomainIds, gasDomainIds);
 
-            Map<String, int[]> wetSelections = createWettingSelections(model, caseId);
+            Map<String, int[]> wetSelections = createWettingSelections(model, caseId, trace);
             assertDisjointAndExact(wetSelections, caseId.equals("step") ? 3 : 1);
             int[] axisIds = createBoundaryBox(model, "sel_axis", -BOUNDARY_TOL,
-                BOUNDARY_TOL, -BOUNDARY_TOL, H_BOX + BOUNDARY_TOL);
+                BOUNDARY_TOL, -BOUNDARY_TOL, H_BOX + BOUNDARY_TOL, trace);
             if (axisIds.length == 0) {
                 throw new IllegalStateException("axis boundary probe did not resolve the symmetry axis");
             }
@@ -117,12 +1504,13 @@ public final class W24StaticShapeFixture {
                 }
             }
 
-            Map<String, Object> materialReadback = addMaterials(model, allDomainIds);
-            Map<String, Object> physicsReadback = addPhysics(model, caseId, glueDomainIds,
-                gasDomainIds, wetSelections);
-            addShapeMetricDefinitions(model);
-            Map<String, Object> meshReadback = addMesh(model, configuration);
-            Map<String, Object> studyReadback = addUnsolvedStudy(model, configuration);
+            Physics phaseField = createPhaseFieldPhysics(model, allDomainIds, trace);
+            Map<String, Object> materialReadback = addMaterials(model, allDomainIds, phaseField, trace);
+            Map<String, Object> physicsReadback = addPhysics(model, phaseField, caseId,
+                glueDomainIds, gasDomainIds, wetSelections, trace);
+            addShapeMetricDefinitions(model, trace);
+            Map<String, Object> meshReadback = addMesh(model, configuration, trace);
+            Map<String, Object> studyReadback = addUnsolvedStudy(model, configuration, trace);
 
             double flatVolume = Math.PI * square(R_DROP) * H_FLAT;
             double actualInitialVolume = caseId.equals("flat")
@@ -166,7 +1554,7 @@ public final class W24StaticShapeFixture {
             complete = true;
             return result;
         } finally {
-            if (!complete) ModelUtil.remove(modelTag);
+            if (!complete && !inPlace) ModelUtil.remove(modelTag);
         }
     }
 
@@ -191,7 +1579,7 @@ public final class W24StaticShapeFixture {
         model.param().set("tShapeEnd", "20*tCapillary");
     }
 
-    private static void buildTwoFluidGeometry(GeomSequence geom, String caseId) {
+    private static void buildTwoFluidGeometry(GeomSequence geom, String caseId, SelectionTrace trace) {
         if ("flat".equals(caseId)) {
             solidPolygon(geom, "glue", new double[]{0.0, R_DROP, R_DROP, 0.0},
                 new double[]{0.0, 0.0, H_FLAT, H_FLAT});
@@ -207,7 +1595,9 @@ public final class W24StaticShapeFixture {
                 new double[]{Z_STEP_TOP, Z_STEP_TOP, 0.0, 0.0, H_BOX, H_BOX});
         }
         geom.feature().create("uni1", "Union");
+        trace.record("geometry.union.input.set", "before");
         geom.feature("uni1").selection("input").set(new String[]{"glue", "gas"});
+        trace.record("geometry.union.input.set", "after");
         geom.feature("uni1").set("intbnd", "on");
         geom.feature("fin").set("action", "union");
         geom.run();
@@ -223,19 +1613,33 @@ public final class W24StaticShapeFixture {
         polygon.set("y", z);
     }
 
-    private static int[] createDomainProbe(Model model, String tag, double r, double z) {
+    private static int[] createDomainProbe(Model model, String tag, double r, double z, SelectionTrace trace) {
         double half = DOMAIN_PROBE_HALF_WIDTH;
+        trace.record("selection." + tag + ".create", "before");
         model.component(COMPONENT).selection().create(tag, "Box");
+        trace.record("selection." + tag + ".create", "after");
+        trace.record("selection." + tag + ".entitydim", "before");
         model.component(COMPONENT).selection(tag).set("entitydim", 2);
+        trace.record("selection." + tag + ".entitydim", "after");
+        trace.record("selection." + tag + ".xmin", "before");
         model.component(COMPONENT).selection(tag).set("xmin", r - half);
+        trace.record("selection." + tag + ".xmin", "after");
+        trace.record("selection." + tag + ".xmax", "before");
         model.component(COMPONENT).selection(tag).set("xmax", r + half);
+        trace.record("selection." + tag + ".xmax", "after");
+        trace.record("selection." + tag + ".ymin", "before");
         model.component(COMPONENT).selection(tag).set("ymin", z - half);
+        trace.record("selection." + tag + ".ymin", "after");
+        trace.record("selection." + tag + ".ymax", "before");
         model.component(COMPONENT).selection(tag).set("ymax", z + half);
+        trace.record("selection." + tag + ".ymax", "after");
+        trace.record("selection." + tag + ".condition", "before");
         model.component(COMPONENT).selection(tag).set("condition", "intersects");
+        trace.record("selection." + tag + ".condition", "after");
         return model.component(COMPONENT).selection(tag).entities(2);
     }
 
-    private static Map<String, int[]> createWettingSelections(Model model, String caseId) {
+    private static Map<String, int[]> createWettingSelections(Model model, String caseId, SelectionTrace trace) {
         Map<String, double[]> bounds = new LinkedHashMap<>();
         if ("flat".equals(caseId)) {
             // Apply the same contact-angle law to the wettable substrate even
@@ -254,18 +1658,18 @@ public final class W24StaticShapeFixture {
         Map<String, int[]> selected = new LinkedHashMap<>();
         for (Map.Entry<String, double[]> entry : bounds.entrySet()) {
             double[] b = entry.getValue();
-            int[] ids = createBoundaryBox(model, entry.getKey(), b[0], b[1], b[2], b[3]);
+            int[] ids = createBoundaryBox(model, entry.getKey(), b[0], b[1], b[2], b[3], trace);
             if (ids.length == 0) {
                 throw new IllegalStateException("substrate surface did not map to any boundary: " +
                     entry.getKey() + " -> " + Arrays.toString(ids));
             }
             selected.put(entry.getKey(), ids);
         }
-        assertWettingCoverage(model, selected, caseId);
+        assertWettingCoverage(model, selected, caseId, trace);
         return selected;
     }
 
-    private static void assertWettingCoverage(Model model, Map<String, int[]> selections, String caseId) {
+    private static void assertWettingCoverage(Model model, Map<String, int[]> selections, String caseId, SelectionTrace trace) {
         Map<String, double[][]> physicalSegments = new LinkedHashMap<>();
         if ("flat".equals(caseId)) {
             physicalSegments.put("sel_wet_flat_base", new double[][]{
@@ -290,7 +1694,7 @@ public final class W24StaticShapeFixture {
                     double z = segment[2] + fraction * dz;
                     double halfWidth = Math.min(DOMAIN_PROBE_HALF_WIDTH, length / 40.0);
                     int[] pointProbe = createBoundaryBox(model, "sel_wet_probe_" + (++probeIndex),
-                        r - halfWidth, r + halfWidth, z - halfWidth, z + halfWidth, "intersects");
+                        r - halfWidth, r + halfWidth, z - halfWidth, z + halfWidth, "intersects", trace);
                     if (pointProbe.length == 0 || !isSubset(pointProbe, allowedIds)) {
                         throw new IllegalStateException("substrate wetting selection has a gap or includes a nonmatching edge: " +
                             entry.getKey() + " at (r,z)=" + r + "," + z +
@@ -303,21 +1707,35 @@ public final class W24StaticShapeFixture {
     }
 
     private static int[] createBoundaryBox(Model model, String tag, double rMin, double rMax,
-                                            double zMin, double zMax) {
-        return createBoundaryBox(model, tag, rMin, rMax, zMin, zMax, "inside");
+                                            double zMin, double zMax, SelectionTrace trace) {
+        return createBoundaryBox(model, tag, rMin, rMax, zMin, zMax, "inside", trace);
     }
 
     private static int[] createBoundaryBox(Model model, String tag, double rMin, double rMax,
-                                            double zMin, double zMax, String condition) {
+                                            double zMin, double zMax, String condition, SelectionTrace trace) {
+        trace.record("selection." + tag + ".create", "before");
         model.component(COMPONENT).selection().create(tag, "Box");
+        trace.record("selection." + tag + ".create", "after");
+        trace.record("selection." + tag + ".entitydim", "before");
         model.component(COMPONENT).selection(tag).set("entitydim", 1);
+        trace.record("selection." + tag + ".entitydim", "after");
+        trace.record("selection." + tag + ".xmin", "before");
         model.component(COMPONENT).selection(tag).set("xmin", rMin);
+        trace.record("selection." + tag + ".xmin", "after");
+        trace.record("selection." + tag + ".xmax", "before");
         model.component(COMPONENT).selection(tag).set("xmax", rMax);
+        trace.record("selection." + tag + ".xmax", "after");
+        trace.record("selection." + tag + ".ymin", "before");
         model.component(COMPONENT).selection(tag).set("ymin", zMin);
+        trace.record("selection." + tag + ".ymin", "after");
+        trace.record("selection." + tag + ".ymax", "before");
         model.component(COMPONENT).selection(tag).set("ymax", zMax);
+        trace.record("selection." + tag + ".ymax", "after");
         // Strict containment selects the aggregate physical surface; local
         // intersects probes below verify that every expected segment is covered.
+        trace.record("selection." + tag + ".condition", "before");
         model.component(COMPONENT).selection(tag).set("condition", condition);
+        trace.record("selection." + tag + ".condition", "after");
         return model.component(COMPONENT).selection(tag).entities(1);
     }
 
@@ -346,22 +1764,54 @@ public final class W24StaticShapeFixture {
         return true;
     }
 
-    private static Map<String, Object> addMaterials(Model model, int[] expectedDomainIds) {
+    private static Physics createPhaseFieldPhysics(Model model, int[] expectedDomainIds, SelectionTrace trace) {
+        if (contains(model.component(COMPONENT).physics().tags(), "pf")) {
+            throw new IllegalStateException("fresh static-shape model already contains Phase Field physics pf");
+        }
+        Physics phaseField = model.component(COMPONENT).physics()
+            .create("pf", "PhaseField", GEOMETRY);
+        trace.record("phaseField.selection.geom", "before");
+        phaseField.selection().geom(GEOMETRY, 2);
+        trace.record("phaseField.selection.geom", "after");
+        trace.record("phaseField.selection.all", "before");
+        phaseField.selection().all();
+        trace.record("phaseField.selection.all", "after");
+        if (!"pf".equals(phaseField.tag()) ||
+            !"PhaseField".equals(phaseField.getType()) ||
+            !sameIds(expectedDomainIds, phaseField.selection().entities(2))) {
+            throw new IllegalStateException("fresh Phase Field physics identity/domain readback mismatch");
+        }
+        return phaseField;
+    }
+
+    private static Map<String, Object> addMaterials(Model model, int[] expectedDomainIds,
+            Physics phaseField, SelectionTrace trace) {
+        if (phaseField == null || !"pf".equals(phaseField.tag()) ||
+            !"PhaseField".equals(phaseField.getType()) ||
+            !contains(model.component(COMPONENT).physics().tags(), phaseField.tag()) ||
+            !sameIds(expectedDomainIds, phaseField.selection().entities(2))) {
+            throw new IllegalStateException("multiphase material requires the exact prior Phase Field physics over both domains");
+        }
+        String phaseFieldTag = phaseField.tag();
         Map<String, Object> parameterReadback = readbackMaterialParameters(model);
         Material glue = model.material().create("matGlue", "Common");
-        glue.materialType("NON_SOLID");
+        glue.materialType("nonSolid");
         glue.propertyGroup("def").set("density", "rhoGlue");
         glue.propertyGroup("def").set("dynamicviscosity", "muGlue");
 
         Material gas = model.material().create("matGas", "Common");
-        gas.materialType("NON_SOLID");
+        gas.materialType("nonSolid");
         gas.propertyGroup("def").set("density", "rhoGas");
         gas.propertyGroup("def").set("dynamicviscosity", "muGas");
 
         Material multiphase = model.component(COMPONENT).material().create("mpmat1", "Multiphase");
+        trace.record("multiphase.selection.geom", "before");
         multiphase.selection().geom(GEOMETRY, 2);
+        trace.record("multiphase.selection.geom", "after");
+        trace.record("multiphase.selection.all", "before");
         multiphase.selection().all();
-        multiphase.set("vfDefinition", "pf");
+        trace.record("multiphase.selection.all", "after");
+        multiphase.set("vfDefinition", phaseFieldTag);
         if (!contains(multiphase.feature().tags(), "phase1")) {
             multiphase.feature().create("phase1", "PhaseLink", COMPONENT);
         }
@@ -370,13 +1820,16 @@ public final class W24StaticShapeFixture {
         }
         multiphase.feature("phase1").set("link", "matGlue");
         multiphase.feature("phase2").set("link", "matGas");
-        if (!"rhoGlue".equals(glue.propertyGroup("def").getString("density")) ||
+        if (!"nonSolid".equals(glue.materialType()) ||
+            !"nonSolid".equals(gas.materialType()) ||
+            !"rhoGlue".equals(glue.propertyGroup("def").getString("density")) ||
             !"muGlue".equals(glue.propertyGroup("def").getString("dynamicviscosity")) ||
             !"rhoGas".equals(gas.propertyGroup("def").getString("density")) ||
             !"muGas".equals(gas.propertyGroup("def").getString("dynamicviscosity")) ||
+            !phaseFieldTag.equals(multiphase.getString("vfDefinition")) ||
             !"matGlue".equals(multiphase.feature("phase1").getString("link")) ||
             !"matGas".equals(multiphase.feature("phase2").getString("link"))) {
-            throw new IllegalStateException("two-fluid material expressions or phase links failed readback");
+            throw new IllegalStateException("two-fluid material types, expressions, or phase links failed readback");
         }
         int[] materialDomainIds = multiphase.selection().entities(2);
         if (!sameIds(expectedDomainIds, materialDomainIds)) {
@@ -392,6 +1845,7 @@ public final class W24StaticShapeFixture {
         readback.put("gas_density_expression", gas.propertyGroup("def").getString("density"));
         readback.put("gas_dynamic_viscosity_expression", gas.propertyGroup("def").getString("dynamicviscosity"));
         readback.put("multiphase_type", multiphase.getType());
+        readback.put("phase_field_physics_tag", phaseFieldTag);
         readback.put("multiphase_volume_fraction_definition", multiphase.getString("vfDefinition"));
         readback.put("phase1_material_link", multiphase.feature("phase1").getString("link"));
         readback.put("phase2_material_link", multiphase.feature("phase2").getString("link"));
@@ -427,72 +1881,241 @@ public final class W24StaticShapeFixture {
         readback.put(name, row);
     }
 
-    private static Map<String, Object> addPhysics(Model model, String caseId,
-            int[] glueDomainIds, int[] gasDomainIds, Map<String, int[]> wetSelections) {
+    static PhysicsFeature resolvePhaseFieldModel(Physics phaseField) {
+        if (phaseField == null || !"PhaseField".equals(phaseField.getType())) {
+            throw new IllegalStateException("Phase Field model resolution requires exact PhaseField physics");
+        }
+        String[] featureTags = phaseField.feature().tags();
+        if (featureTags == null || featureTags.length == 0 || featureTags.length > 64) {
+            throw new IllegalStateException("Phase Field feature tag inventory is unavailable or exceeds its bound");
+        }
+        Set<String> seenTags = new HashSet<>();
+        PhysicsFeature resolved = null;
+        for (String tag : featureTags) {
+            if (tag == null || tag.trim().isEmpty() || tag.length() > 128 || !seenTags.add(tag)) {
+                throw new IllegalStateException("Phase Field feature tag inventory is malformed or ambiguous");
+            }
+            PhysicsFeature feature = phaseField.feature(tag);
+            if (feature == null || !tag.equals(feature.tag())) {
+                throw new IllegalStateException("Phase Field feature tag did not resolve to its exact feature object");
+            }
+            if ("PhaseFieldModel".equals(feature.getType())) {
+                if (resolved != null) {
+                    throw new IllegalStateException("Phase Field exposes multiple PhaseFieldModel features");
+                }
+                resolved = feature;
+            }
+        }
+        if (resolved == null) {
+            throw new IllegalStateException("Phase Field exposes no semantic PhaseFieldModel feature");
+        }
+        return resolved;
+    }
+
+    static void requirePropertyValueType(ParameterEntity feature, String name, String expectedType) {
+        if (feature == null || !feature.hasProperty(name)) {
+            throw new IllegalStateException("required COMSOL property is absent: " + name);
+        }
+        String observedType = feature.getValueType(name);
+        if (!expectedType.equals(observedType)) {
+            throw new IllegalStateException("COMSOL property value type differs for " + name +
+                ": expected " + expectedType + ", got " + observedType);
+        }
+    }
+
+    static void requireStringEnumProperty(ParameterEntity feature, String name, String expectedValue) {
+        requirePropertyValueType(feature, name, "String");
+        String[] allowedValues = feature.getAllowedPropertyValues(name);
+        if (allowedValues == null || !contains(allowedValues, expectedValue)) {
+            throw new IllegalStateException("COMSOL finite enum metadata does not permit exact " + name +
+                " value " + expectedValue);
+        }
+    }
+
+    private static void requireExactStringEnumProperty(ParameterEntity feature, String name,
+            String expectedValue, String... expectedAllowedValues) {
+        requirePropertyValueType(feature, name, "String");
+        String[] observedAllowedValues = feature.getAllowedPropertyValues(name);
+        Set<String> expected = new HashSet<>(Arrays.asList(expectedAllowedValues));
+        Set<String> observed = observedAllowedValues == null ? Collections.emptySet() :
+            new HashSet<>(Arrays.asList(observedAllowedValues));
+        if (observedAllowedValues == null || observed.size() != observedAllowedValues.length ||
+            expected.size() != expectedAllowedValues.length ||
+            !expected.equals(observed) || !expected.contains(expectedValue) ||
+            !expectedValue.equals(feature.getString(name))) {
+            throw new IllegalStateException("COMSOL property type, exact enum set, or current value differs for " + name);
+        }
+    }
+
+    static Map<String, PhysicsFeature> resolvePhaseInitialValueFeatures(Physics phaseField) {
+        String[] featureTags = phaseField.feature().tags();
+        if (featureTags == null || featureTags.length > 64) {
+            throw new IllegalStateException("Phase Field feature tag inventory is unavailable or exceeds its bound");
+        }
+        Set<String> seenTags = new HashSet<>();
+        Map<String, PhysicsFeature> byFluid = new LinkedHashMap<>();
+        for (String tag : featureTags) {
+            if (tag == null || tag.trim().isEmpty() || tag.length() > 128 || !seenTags.add(tag)) {
+                throw new IllegalStateException("Phase Field feature tag inventory is malformed or ambiguous");
+            }
+            PhysicsFeature feature = phaseField.feature(tag);
+            if (feature == null || !tag.equals(feature.tag())) {
+                throw new IllegalStateException("Phase Field feature tag did not resolve to its exact feature object");
+            }
+            boolean hasFluid = feature.hasProperty("FluidInDomain");
+            boolean hasInitialValueOption = feature.hasProperty("InitialValuesOption");
+            String featureType = feature.getType();
+            boolean initialFeatureType = "init".equals(featureType) || "initFluid2".equals(featureType);
+            if (hasFluid != hasInitialValueOption || initialFeatureType != hasFluid) {
+                throw new IllegalStateException("Phase Field initial-value feature properties are incomplete");
+            }
+            if (!hasFluid) continue;
+            String fluid = feature.getString("FluidInDomain");
+            String expectedType = "Fluid1phipf".equals(fluid) ? "init" :
+                ("Fluid2phipf".equals(fluid) ? "initFluid2" : null);
+            if (expectedType == null || !expectedType.equals(featureType)) {
+                throw new IllegalStateException("Phase Field initial-value feature has an unknown type or fluid semantic");
+            }
+            requireExactStringEnumProperty(feature, "InitialValuesOption", "SpecifyPhase",
+                "SpecifyPhase", "UserDefined");
+            requireExactStringEnumProperty(feature, "FluidInDomain", fluid,
+                "Fluid1phipf", "Fluid2phipf");
+            if (byFluid.put(fluid, feature) != null) {
+                throw new IllegalStateException("duplicate Phase Field initial-value mapping for " + fluid);
+            }
+        }
+        if (byFluid.size() != 2 || !byFluid.containsKey("Fluid1phipf") ||
+            !byFluid.containsKey("Fluid2phipf")) {
+            throw new IllegalStateException("Phase Field must expose exactly one initial-value feature for each fluid");
+        }
+        return byFluid;
+    }
+
+    private static Map<String, Object> addPhysics(Model model, Physics phaseField, String caseId,
+            int[] glueDomainIds, int[] gasDomainIds, Map<String, int[]> wetSelections,
+            SelectionTrace trace) {
+        if (phaseField == null || !"pf".equals(phaseField.tag()) ||
+            !"PhaseField".equals(phaseField.getType())) {
+            throw new IllegalStateException("physics setup requires the exact earlier Phase Field physics object");
+        }
         Physics spf = model.component(COMPONENT).physics().create("spf", "LaminarFlow", GEOMETRY);
+        trace.record("laminarFlow.selection.geom", "before");
         spf.selection().geom(GEOMETRY, 2);
+        trace.record("laminarFlow.selection.geom", "after");
+        trace.record("laminarFlow.selection.all", "before");
         spf.selection().all();
-        spf.prop("PhysicalModel").set("IncludeGravity", "off");
-        spf.prop("PhysicalModel").set("Compressibility", "incompressible");
-        Map<String, Object> pressureReference = addClosedCavityPressureReference(model, spf);
-        if (!"incompressible".equals(spf.prop("PhysicalModel").getString("Compressibility"))) {
-            throw new IllegalStateException("closed-cavity Laminar Flow must read back as incompressible");
+        trace.record("laminarFlow.selection.all", "after");
+        ParameterEntity physicalModel = spf.prop("PhysicalModelProperty");
+        requireStringEnumProperty(physicalModel, "IncludeGravity", "0");
+        requireStringEnumProperty(physicalModel, "Compressibility", "Incompressible");
+        physicalModel.set("IncludeGravity", "0");
+        physicalModel.set("Compressibility", "Incompressible");
+        String gravitySwitch = physicalModel.getString("IncludeGravity");
+        boolean gravityEnabled = "1".equals(gravitySwitch);
+        String compressibility = physicalModel.getString("Compressibility");
+        Map<String, Object> pressureReference = addClosedCavityPressureReference(model, spf, trace);
+        if (!"0".equals(gravitySwitch) || gravityEnabled || !"Incompressible".equals(compressibility)) {
+            throw new IllegalStateException("closed-cavity Laminar Flow gravity/compressibility typed readback differs");
         }
 
-        Physics pf = model.component(COMPONENT).physics().create("pf", "PhaseFieldInFluids", GEOMETRY);
-        pf.selection().geom(GEOMETRY, 2);
-        pf.selection().all();
-        PhysicsFeature phaseFieldModel = pf.feature("pfm1");
+        Physics pf = phaseField;
+        PhysicsFeature phaseFieldModel = resolvePhaseFieldModel(pf);
+        requireStringEnumProperty(phaseFieldModel, "chiOption", "userdef");
+        requirePropertyValueType(phaseFieldModel, "chi", "String");
+        requirePropertyValueType(phaseFieldModel, "epsilon_pf", "String");
         phaseFieldModel.set("epsilon_pf", "epsPF");
+        phaseFieldModel.set("chiOption", "userdef");
+        String chiOption = phaseFieldModel.getString("chiOption");
+        if (!"userdef".equals(chiOption)) {
+            throw new IllegalStateException("Phase Field chiOption did not retain exact userdef mode");
+        }
         phaseFieldModel.set("chi", "chiPF");
+        String chiExpression = phaseFieldModel.getString("chi");
+        if (!"chiPF".equals(chiExpression)) {
+            throw new IllegalStateException("Phase Field chi expression did not retain exact chiPF expression");
+        }
 
-        PhysicsFeature initGlue = pf.feature("init1");
+        Map<String, PhysicsFeature> phaseInitialValues = resolvePhaseInitialValueFeatures(pf);
+        PhysicsFeature initGlue = phaseInitialValues.get("Fluid1phipf");
+        PhysicsFeature initGas = phaseInitialValues.get("Fluid2phipf");
         initGlue.set("InitialValuesOption", "SpecifyPhase");
         initGlue.set("FluidInDomain", "Fluid1phipf");
-        initGlue.selection().named("sel_glue_domain");
-        PhysicsFeature initGas = pf.feature("initfluid2");
         initGas.set("InitialValuesOption", "SpecifyPhase");
         initGas.set("FluidInDomain", "Fluid2phipf");
+        trace.record("initialValues.gas.selection.named", "before");
         initGas.selection().named("sel_gas_domain");
-        if (!sameIds(glueDomainIds, initGlue.selection().entities(2)) ||
-            !sameIds(gasDomainIds, initGas.selection().entities(2))) {
-            throw new IllegalStateException("Phase Field fluid initial-value domain mapping mismatch");
+        trace.record("initialValues.gas.selection.named", "after");
+        Map<String, Object> initialDomainReadback =
+            verifyInitialDomainCoverage(pf, initGlue, initGas, glueDomainIds, gasDomainIds);
+        if (!sameIds(gasDomainIds, initGas.selection().entities(2)) ||
+            !"SpecifyPhase".equals(initGlue.getString("InitialValuesOption")) ||
+            !"SpecifyPhase".equals(initGas.getString("InitialValuesOption")) ||
+            !"Fluid1phipf".equals(initGlue.getString("FluidInDomain")) ||
+            !"Fluid2phipf".equals(initGas.getString("FluidInDomain"))) {
+            throw new IllegalStateException("Phase Field fluid initial-value domain/property mapping mismatch");
         }
 
         String[] existingWettedWallTags = wettedWallTags(pf);
-        List<String> requestedSurfaceTags = new ArrayList<>(wetSelections.keySet());
-        if (existingWettedWallTags.length > requestedSurfaceTags.size()) {
-            throw new IllegalStateException("unexpected extra default Wetted Wall features in fresh fixture");
+        if (!Arrays.equals(existingWettedWallTags, new String[]{"ww1"})) {
+            throw new IllegalStateException("fresh Phase Field must contain only the default Wetted Wall node ww1");
         }
+        PhysicsFeature defaultWettedWall = pf.feature("ww1");
+        if (!"ww1".equals(defaultWettedWall.tag()) || !"WettedWall".equals(defaultWettedWall.getType())) {
+            throw new IllegalStateException("fresh default Wetted Wall identity/type differs from ww1/WettedWall");
+        }
+        Map<String, Object> defaultWettedWallMetadata = new LinkedHashMap<>();
+        defaultWettedWallMetadata.put("feature_tag", defaultWettedWall.tag());
+        defaultWettedWallMetadata.put("feature_type", defaultWettedWall.getType());
+        defaultWettedWallMetadata.put("classification",
+            "COMSOL_6_4_DEFAULT_ALL_NOT_OVERRIDDEN_SELECTION_DOC_5838_CHUNK_19242");
+        defaultWettedWallMetadata.put("selection_status", "DOCUMENTED_DEFAULT_NOT_EDITABLE");
+
         Map<String, Object> wettingReadback = new LinkedHashMap<>();
+        Set<Integer> assignedWettingBoundaryIds = new HashSet<>();
         int index = 0;
         for (Map.Entry<String, int[]> entry : wetSelections.entrySet()) {
-            String tag;
-            if (index < existingWettedWallTags.length) {
-                tag = existingWettedWallTags[index];
-            } else {
-                tag = "wwshape" + (index + 1);
-                pf.create(tag, "WettedWall", 1);
+            String tag = "wwshape" + (index + 1);
+            if (contains(pf.feature().tags(), tag)) {
+                throw new IllegalStateException("unexpected existing custom Wetted Wall feature: " + tag);
             }
-            PhysicsFeature wetted = pf.feature(tag);
-            if (!"WettedWall".equals(wetted.getType())) {
-                throw new IllegalStateException("unexpected COMSOL feature type for " + tag + ": " + wetted.getType());
+            PhysicsFeature wetted = pf.create(tag, "WettedWall", 1);
+            if (!tag.equals(wetted.tag()) || !"WettedWall".equals(wetted.getType())) {
+                throw new IllegalStateException("unexpected COMSOL feature identity/type for " + tag);
             }
+            trace.record("wettedWall." + (index + 1) + ".selection.named", "before");
             wetted.selection().named(entry.getKey());
+            trace.record("wettedWall." + (index + 1) + ".selection.named", "after");
             wetted.set("SpecifyContactAngle", "SpecifyContactAngleDirectly");
             wetted.set("thetaw", "thetaSubstrate");
             int[] observed = wetted.selection().entities(1);
-            if (!sameIds(entry.getValue(), observed) ||
+            if (observed.length == 0 || !sameIds(entry.getValue(), observed) ||
                 !"SpecifyContactAngleDirectly".equals(wetted.getString("SpecifyContactAngle")) ||
                 !"thetaSubstrate".equals(wetted.getString("thetaw"))) {
                 throw new IllegalStateException("Wetted Wall readback mismatch for " + tag);
             }
+            for (int boundaryId : observed) {
+                if (!assignedWettingBoundaryIds.add(boundaryId)) {
+                    throw new IllegalStateException("custom Wetted Wall selections overlap at boundary " + boundaryId);
+                }
+            }
             Map<String, Object> surface = new LinkedHashMap<>();
             surface.put("feature_tag", tag);
+            surface.put("feature_type", wetted.getType());
+            surface.put("surface_selection", entry.getKey());
             surface.put("boundary_ids", boxed(observed));
             surface.put("contact_angle_expression", wetted.getString("thetaw"));
             wettingReadback.put(entry.getKey(), surface);
             index++;
+        }
+        Set<String> expectedWettedWallTags = new HashSet<>();
+        expectedWettedWallTags.add("ww1");
+        for (int wallIndex = 1; wallIndex <= wetSelections.size(); wallIndex++) {
+            expectedWettedWallTags.add("wwshape" + wallIndex);
+        }
+        Set<String> observedWettedWallTags = new HashSet<>(Arrays.asList(wettedWallTags(pf)));
+        if (observedWettedWallTags.size() != expectedWettedWallTags.size() ||
+            !observedWettedWallTags.equals(expectedWettedWallTags)) {
+            throw new IllegalStateException("Wetted Wall default/custom feature inventory is not exact");
         }
 
         MultiphysicsCoupling tpf = model.component(COMPONENT).multiphysics()
@@ -500,58 +2123,177 @@ public final class W24StaticShapeFixture {
         tpf.set("Fluid_physics", "spf");
         tpf.set("Mathematics_physics", "pf");
         tpf.set("multiphaseMaterialList", "mpmat1");
-        tpf.set("IncludeSurfaceTension", "on");
+        requireStringEnumProperty(tpf, "IncludeSurfaceTension", "1");
+        requireStringEnumProperty(tpf, "SurfaceTensionCoefficient", "userdef");
+        requirePropertyValueType(tpf, "sigma", "String");
+        tpf.set("IncludeSurfaceTension", "1");
         tpf.set("SurfaceTensionCoefficient", "userdef");
         tpf.set("sigma", "sigma0");
+        String surfaceTensionSwitch = tpf.getString("IncludeSurfaceTension");
+        boolean surfaceTensionEnabled = "1".equals(surfaceTensionSwitch);
         if (!"TwoPhaseFlowPhaseField".equals(tpf.getType()) ||
             !"spf".equals(tpf.getString("Fluid_physics")) ||
             !"pf".equals(tpf.getString("Mathematics_physics")) ||
             !"mpmat1".equals(tpf.getString("multiphaseMaterialList")) ||
+            !"1".equals(surfaceTensionSwitch) ||
             !"userdef".equals(tpf.getString("SurfaceTensionCoefficient")) ||
             !"sigma0".equals(tpf.getString("sigma"))) {
             throw new IllegalStateException("Two-Phase Flow, Phase Field coupling readback mismatch");
         }
-        String includeSurfaceTension = tpf.getString("IncludeSurfaceTension");
-        if (!("on".equalsIgnoreCase(includeSurfaceTension) || "1".equals(includeSurfaceTension) ||
-              "true".equalsIgnoreCase(includeSurfaceTension))) {
-            throw new IllegalStateException("surface-tension force must be enabled, got " + includeSurfaceTension);
+        if (!surfaceTensionEnabled) {
+            throw new IllegalStateException("surface-tension force must retain exact String enum value 1");
         }
 
         Map<String, Object> readback = new LinkedHashMap<>();
         readback.put("laminar_flow_type", spf.getType());
         readback.put("laminar_flow_domain_ids", boxed(spf.selection().entities(2)));
-        readback.put("gravity_readback", spf.prop("PhysicalModel").getString("IncludeGravity"));
-        readback.put("compressibility_readback", spf.prop("PhysicalModel").getString("Compressibility"));
+        readback.put("gravity_enabled", gravityEnabled);
+        readback.put("flow_compressibility", compressibility);
         readback.put("closed_cavity_pressure_reference", pressureReference);
         readback.put("phase_field_type", pf.getType());
+        readback.put("phase_field_model_tag", phaseFieldModel.tag());
         readback.put("phase_field_model_type", phaseFieldModel.getType());
         readback.put("phase_field_epsilon_expression", phaseFieldModel.getString("epsilon_pf"));
-        readback.put("phase_field_chi_expression", phaseFieldModel.getString("chi"));
+        readback.put("phase_field_chi_option", chiOption);
+        readback.put("phase_field_chi_value_type", phaseFieldModel.getValueType("chi"));
+        readback.put("phase_field_chi_expression", chiExpression);
+        readback.put("phase1_initial_feature_tag", initGlue.tag());
+        readback.put("phase1_initial_feature_type", initGlue.getType());
+        readback.put("phase1_initial_values_option", initGlue.getString("InitialValuesOption"));
         readback.put("phase1_initial_values_selection", boxed(initGlue.selection().entities(2)));
         readback.put("phase1_initial_value", initGlue.getString("FluidInDomain"));
+        readback.put("phase1_initial_values_option_value_type", initGlue.getValueType("InitialValuesOption"));
+        readback.put("phase1_initial_values_option_allowed_values",
+            Arrays.asList(initGlue.getAllowedPropertyValues("InitialValuesOption")));
+        readback.put("phase1_initial_fluid_in_domain_value_type", initGlue.getValueType("FluidInDomain"));
+        readback.put("phase1_initial_fluid_in_domain_allowed_values",
+            Arrays.asList(initGlue.getAllowedPropertyValues("FluidInDomain")));
+        readback.put("phase2_initial_feature_tag", initGas.tag());
+        readback.put("phase2_initial_feature_type", initGas.getType());
+        readback.put("phase2_initial_values_option", initGas.getString("InitialValuesOption"));
         readback.put("phase2_initial_values_selection", boxed(initGas.selection().entities(2)));
         readback.put("phase2_initial_value", initGas.getString("FluidInDomain"));
+        readback.put("phase2_initial_values_option_value_type", initGas.getValueType("InitialValuesOption"));
+        readback.put("phase2_initial_values_option_allowed_values",
+            Arrays.asList(initGas.getAllowedPropertyValues("InitialValuesOption")));
+        readback.put("phase2_initial_fluid_in_domain_value_type", initGas.getValueType("FluidInDomain"));
+        readback.put("phase2_initial_fluid_in_domain_allowed_values",
+            Arrays.asList(initGas.getAllowedPropertyValues("FluidInDomain")));
+        readback.putAll(initialDomainReadback);
+        readback.put("default_wetted_wall_feature_metadata", defaultWettedWallMetadata);
         readback.put("wetting_surfaces", wettingReadback);
         readback.put("multiphysics_type", tpf.getType());
+        readback.put("surface_tension_enabled", surfaceTensionEnabled);
         readback.put("coupling_fluid_physics", tpf.getString("Fluid_physics"));
         readback.put("coupling_phase_field_physics", tpf.getString("Mathematics_physics"));
         readback.put("coupling_multiphase_material", tpf.getString("multiphaseMaterialList"));
-        readback.put("surface_tension_force", includeSurfaceTension);
+        readback.put("surface_tension_force", surfaceTensionEnabled);
         readback.put("surface_tension_mode", tpf.getString("SurfaceTensionCoefficient"));
         readback.put("surface_tension_expression", tpf.getString("sigma"));
         readback.put("case_id", caseId);
         return readback;
     }
 
-    private static Map<String, Object> addClosedCavityPressureReference(Model model, Physics spf) {
+    private static Map<String, Object> verifyInitialDomainCoverage(Physics phaseField,
+            PhysicsFeature defaultInit, PhysicsFeature fluid2Init, int[] glueDomainIds,
+            int[] gasDomainIds) {
+        int[] allDomainIds = sortedUnion(glueDomainIds, gasDomainIds);
+        int[] phaseFieldDomainIds = phaseField.selection().entities(2);
+        int[] defaultInputDomainIds = defaultInit.selection().inputEntities();
+        String defaultNamedSelectionTag = defaultInit.selection().named();
+        int[] defaultSelectionEntities = defaultInit.selection().entities(2);
+        int[] fluid2InputDomainIds = fluid2Init.selection().inputEntities();
+        String fluid2NamedSelectionTag = fluid2Init.selection().named();
+        int[] fluid2SelectionEntities = fluid2Init.selection().entities(2);
+        if (allDomainIds.length != 2 || intersects(glueDomainIds, gasDomainIds) ||
+            !sameIds(phaseFieldDomainIds, allDomainIds) ||
+            defaultInputDomainIds == null || !sameIds(defaultInputDomainIds, allDomainIds) ||
+            defaultNamedSelectionTag == null || !defaultNamedSelectionTag.isEmpty() ||
+            fluid2InputDomainIds == null || !sameIds(fluid2InputDomainIds, gasDomainIds) ||
+            !"sel_gas_domain".equals(fluid2NamedSelectionTag) ||
+            !sameIds(fluid2SelectionEntities, gasDomainIds)) {
+            throw new IllegalStateException("Phase Field initial-value raw inputs or explicit Fluid2 override differ");
+        }
+        int[] effectiveDefaultDomainIds;
+        boolean defaultRemainderDirect = false;
+        String defaultRemainderSource;
+        if (sameIds(defaultSelectionEntities, allDomainIds)) {
+            effectiveDefaultDomainIds = difference(allDomainIds, gasDomainIds);
+            defaultRemainderSource = "DOCUMENTED_DEFAULT_REMAINDER_DERIVED_FROM_ALL_MINUS_FLUID2_OVERRIDE";
+        } else if (sameIds(defaultSelectionEntities, glueDomainIds)) {
+            effectiveDefaultDomainIds = defaultSelectionEntities.clone();
+            defaultRemainderDirect = true;
+            defaultRemainderSource = "DIRECT_SELECTION_GETTER_REMAINDER_MATCHING_DOCUMENTED_DEFAULT";
+        } else {
+            throw new IllegalStateException("default Fluid1 selection getter is neither the full base nor the glue remainder");
+        }
+        if (!sameIds(effectiveDefaultDomainIds, glueDomainIds) ||
+            intersects(effectiveDefaultDomainIds, fluid2SelectionEntities) ||
+            !sameIds(sortedUnion(effectiveDefaultDomainIds, fluid2SelectionEntities), allDomainIds)) {
+            throw new IllegalStateException("default-remainder and Fluid2 override do not partition the exact two domains");
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("all_domain_ids", boxed(allDomainIds));
+        result.put("phase_field_domain_ids", boxed(phaseFieldDomainIds));
+        result.put("phase1_initial_raw_input_domain_ids", boxed(defaultInputDomainIds));
+        result.put("phase1_initial_raw_input_entities_read_status", "READ");
+        result.put("phase1_initial_raw_named_selection_tag", defaultNamedSelectionTag);
+        result.put("phase1_initial_selection_entities_readback", boxed(defaultSelectionEntities));
+        result.put("phase1_initial_effective_domain_ids", boxed(effectiveDefaultDomainIds));
+        result.put("phase1_initial_effective_domain_source", defaultRemainderSource);
+        result.put("phase1_initial_effective_domain_is_direct_readback", defaultRemainderDirect);
+        result.put("phase1_initial_selection_semantics",
+            "COMSOL_6_4_DEFAULT_SELECTION_ALL_ENTITIES_NOT_OVERRIDDEN_BY_SAME_LEVEL_NODE_DOC_5838_CHUNK_19242");
+        result.put("phase1_initial_selection", boxed(effectiveDefaultDomainIds));
+        result.put("phase1_initial_default_feature_classification",
+            "NOT_EXPOSED_BY_READ_ONLY_API_METADATA");
+        result.put("phase2_initial_raw_input_domain_ids", boxed(fluid2InputDomainIds));
+        result.put("phase2_initial_raw_input_entities_read_status", "READ");
+        result.put("phase2_initial_raw_named_selection_tag", fluid2NamedSelectionTag);
+        result.put("phase2_initial_selection_entities_readback", boxed(fluid2SelectionEntities));
+        result.put("phase2_initial_effective_domain_ids", boxed(fluid2SelectionEntities));
+        result.put("phase2_initial_effective_domain_source", "DIRECT_NAMED_SELECTION_READBACK");
+        result.put("phase2_initial_effective_domain_is_direct_readback", true);
+        result.put("phase2_initial_selection", boxed(fluid2SelectionEntities));
+        return result;
+    }
+
+    private static int[] difference(int[] base, int[] removed) {
+        List<Integer> result = new ArrayList<>();
+        for (int value : base) {
+            boolean discard = false;
+            for (int excluded : removed) if (value == excluded) discard = true;
+            if (!discard) result.add(value);
+        }
+        int[] values = new int[result.size()];
+        for (int index = 0; index < result.size(); index++) values[index] = result.get(index);
+        Arrays.sort(values);
+        return values;
+    }
+
+    private static Map<String, Object> addClosedCavityPressureReference(Model model, Physics spf, SelectionTrace trace) {
         String selectionTag = "sel_pressure_reference";
+        trace.record("selection." + selectionTag + ".create", "before");
         model.component(COMPONENT).selection().create(selectionTag, "Box");
+        trace.record("selection." + selectionTag + ".create", "after");
+        trace.record("selection." + selectionTag + ".entitydim", "before");
         model.component(COMPONENT).selection(selectionTag).set("entitydim", 0);
+        trace.record("selection." + selectionTag + ".entitydim", "after");
+        trace.record("selection." + selectionTag + ".xmin", "before");
         model.component(COMPONENT).selection(selectionTag).set("xmin", R_BOX - BOUNDARY_TOL);
+        trace.record("selection." + selectionTag + ".xmin", "after");
+        trace.record("selection." + selectionTag + ".xmax", "before");
         model.component(COMPONENT).selection(selectionTag).set("xmax", R_BOX + BOUNDARY_TOL);
+        trace.record("selection." + selectionTag + ".xmax", "after");
+        trace.record("selection." + selectionTag + ".ymin", "before");
         model.component(COMPONENT).selection(selectionTag).set("ymin", H_BOX - BOUNDARY_TOL);
+        trace.record("selection." + selectionTag + ".ymin", "after");
+        trace.record("selection." + selectionTag + ".ymax", "before");
         model.component(COMPONENT).selection(selectionTag).set("ymax", H_BOX + BOUNDARY_TOL);
+        trace.record("selection." + selectionTag + ".ymax", "after");
+        trace.record("selection." + selectionTag + ".condition", "before");
         model.component(COMPONENT).selection(selectionTag).set("condition", "intersects");
+        trace.record("selection." + selectionTag + ".condition", "after");
         int[] pointIds = model.component(COMPONENT).selection(selectionTag).entities(0);
         if (pointIds.length != 1) {
             throw new IllegalStateException("closed-cavity pressure reference must resolve to the single outer-corner point");
@@ -561,7 +2303,9 @@ public final class W24StaticShapeFixture {
             throw new IllegalStateException("unexpected existing pressure-reference feature in fresh Laminar Flow");
         }
         PhysicsFeature reference = spf.create(featureTag, "PressurePointConstraint", 0);
+        trace.record("pressureReference.selection.named", "before");
         reference.selection().named(selectionTag);
+        trace.record("pressureReference.selection.named", "after");
         reference.set("p0", "0[Pa]");
         int[] readbackIds = reference.selection().entities(0);
         if (!"PressurePointConstraint".equals(reference.getType()) ||
@@ -587,44 +2331,103 @@ public final class W24StaticShapeFixture {
         return tags.toArray(new String[0]);
     }
 
-    private static void addShapeMetricDefinitions(Model model) {
-        model.component(COMPONENT).cpl().create("ivol", "Integration");
-        model.component(COMPONENT).cpl("ivol").selection().geom(GEOMETRY, 2);
-        model.component(COMPONENT).cpl("ivol").selection().all();
-        model.component(COMPONENT).cpl().create("maxspeed", "Maximum");
-        model.component(COMPONENT).cpl("maxspeed").selection().geom(GEOMETRY, 2);
-        model.component(COMPONENT).cpl("maxspeed").selection().all();
+    private static void addShapeMetricDefinitions(Model model, SelectionTrace trace) {
+        trace.call("metric.ivol.create", () -> {
+            model.component(COMPONENT).cpl().create("ivol", "Integration"); return null;
+        });
+        trace.call("integration.selection.geom", () -> {
+            model.component(COMPONENT).cpl("ivol").selection().geom(GEOMETRY, 2); return null;
+        });
+        trace.call("integration.selection.all", () -> {
+            model.component(COMPONENT).cpl("ivol").selection().all(); return null;
+        });
+        trace.call("metric.maxspeed.create", () -> {
+            model.component(COMPONENT).cpl().create("maxspeed", "Maximum"); return null;
+        });
+        trace.call("maximum.selection.geom", () -> {
+            model.component(COMPONENT).cpl("maxspeed").selection().geom(GEOMETRY, 2); return null;
+        });
+        trace.call("maximum.selection.all", () -> {
+            model.component(COMPONENT).cpl("maxspeed").selection().all(); return null;
+        });
 
-        model.component(COMPONENT).variable().create("shapeMetrics");
-        model.component(COMPONENT).variable("shapeMetrics").set("shape_phi", "pf.phipf");
-        model.component(COMPONENT).variable("shapeMetrics").set("phase1_volume",
-            "ivol((1-pf.phipf)/2)");
-        model.component(COMPONENT).variable("shapeMetrics").set("phase2_volume",
-            "ivol((1+pf.phipf)/2)");
-        model.component(COMPONENT).variable("shapeMetrics").set("phase1_mass",
-            "ivol(rhoGlue*(1-pf.phipf)/2)");
-        model.component(COMPONENT).variable("shapeMetrics").set("phasefield_bulk_free_energy",
-            "ivol(lambdaPF/2*(d(pf.phipf,r)^2+d(pf.phipf,z)^2)+" +
-            "lambdaPF/(4*epsPF^2)*(pf.phipf^2-1)^2)");
-        model.component(COMPONENT).variable("shapeMetrics").set("kinetic_energy",
-            "ivol(0.5*(rhoGlue*(1-pf.phipf)/2+rhoGas*(1+pf.phipf)/2)*" +
-            "(spf.u^2+spf.w^2))");
-        model.component(COMPONENT).variable("shapeMetrics").set("maximum_speed",
-            "maxspeed(sqrt(spf.u^2+spf.w^2))");
+        trace.call("metrics.variable.shapeMetrics.create", () -> {
+            model.component(COMPONENT).variable().create("shapeMetrics"); return null;
+        });
+        trace.call("metrics.shapeMetrics.set.shape_phi", () -> {
+            model.component(COMPONENT).variable("shapeMetrics").set("shape_phi", "pf.phipf"); return null;
+        });
+        trace.call("metrics.shapeMetrics.set.phase1_volume", () -> {
+            model.component(COMPONENT).variable("shapeMetrics").set("phase1_volume", "ivol((1-pf.phipf)/2)"); return null;
+        });
+        trace.call("metrics.shapeMetrics.set.phase2_volume", () -> {
+            model.component(COMPONENT).variable("shapeMetrics").set("phase2_volume", "ivol((1+pf.phipf)/2)"); return null;
+        });
+        trace.call("metrics.shapeMetrics.set.phase1_mass", () -> {
+            model.component(COMPONENT).variable("shapeMetrics").set("phase1_mass", "ivol(rhoGlue*(1-pf.phipf)/2)"); return null;
+        });
+        trace.call("metrics.shapeMetrics.set.phasefield_bulk_free_energy", () -> {
+            model.component(COMPONENT).variable("shapeMetrics").set("phasefield_bulk_free_energy",
+                "ivol(lambdaPF/2*(d(pf.phipf,r)^2+d(pf.phipf,z)^2)+" +
+                "lambdaPF/(4*epsPF^2)*(pf.phipf^2-1)^2)"); return null;
+        });
+        trace.call("metrics.shapeMetrics.set.kinetic_energy", () -> {
+            model.component(COMPONENT).variable("shapeMetrics").set("kinetic_energy",
+                "ivol(0.5*(rhoGlue*(1-pf.phipf)/2+rhoGas*(1+pf.phipf)/2)*" +
+                "(spf.u^2+spf.w^2))"); return null;
+        });
+        trace.call("metrics.shapeMetrics.set.maximum_speed", () -> {
+            model.component(COMPONENT).variable("shapeMetrics").set("maximum_speed",
+                "maxspeed(sqrt(spf.u^2+spf.w^2))"); return null;
+        });
+        trace.call("metrics.shapeMetrics.get.shape_phi", () -> {
+            requireExactMetric(model, "shape_phi", "pf.phipf"); return null;
+        });
+        trace.call("metrics.shapeMetrics.get.phase1_volume", () -> {
+            requireExactMetric(model, "phase1_volume", "ivol((1-pf.phipf)/2)"); return null;
+        });
+        trace.call("metrics.shapeMetrics.get.phase2_volume", () -> {
+            requireExactMetric(model, "phase2_volume", "ivol((1+pf.phipf)/2)"); return null;
+        });
+        trace.call("metrics.shapeMetrics.get.phase1_mass", () -> {
+            requireExactMetric(model, "phase1_mass", "ivol(rhoGlue*(1-pf.phipf)/2)"); return null;
+        });
+        trace.call("metrics.shapeMetrics.get.phasefield_bulk_free_energy", () -> {
+            requireExactMetric(model, "phasefield_bulk_free_energy",
+                "ivol(lambdaPF/2*(d(pf.phipf,r)^2+d(pf.phipf,z)^2)+" +
+                "lambdaPF/(4*epsPF^2)*(pf.phipf^2-1)^2)"); return null;
+        });
+        trace.call("metrics.shapeMetrics.get.kinetic_energy", () -> {
+            requireExactMetric(model, "kinetic_energy",
+                "ivol(0.5*(rhoGlue*(1-pf.phipf)/2+rhoGas*(1+pf.phipf)/2)*(spf.u^2+spf.w^2))"); return null;
+        });
+        trace.call("metrics.shapeMetrics.get.maximum_speed", () -> {
+            requireExactMetric(model, "maximum_speed", "maxspeed(sqrt(spf.u^2+spf.w^2))"); return null;
+        });
     }
 
-    private static Map<String, Object> addMesh(Model model, Configuration configuration) {
-        MeshSequence mesh = model.component(COMPONENT).mesh().create("mesh1", GEOMETRY);
-        mesh.feature("size").set("custom", "on");
-        mesh.feature("size").set("hmax", configuration.meshHmaxM);
-        mesh.feature("size").set("hmin", configuration.meshHminM);
-        mesh.run();
-        double hmax = mesh.feature("size").getDouble("hmax");
-        double hmin = mesh.feature("size").getDouble("hmin");
+    private static void requireExactMetric(Model model, String name, String expected) {
+        String actual = model.component(COMPONENT).variable("shapeMetrics").get(name);
+        if (!expected.equals(actual)) {
+            throw new IllegalStateException("static-shape metric getter differs from its frozen expression: " + name);
+        }
+    }
+
+    private static Map<String, Object> addMesh(Model model, Configuration configuration, SelectionTrace trace) {
+        MeshSequence mesh = trace.call("mesh.mesh1.create", () ->
+            model.component(COMPONENT).mesh().create("mesh1", GEOMETRY));
+        MeshFeature size = trace.call("mesh.mesh1.size.resolve", () -> mesh.feature("size"));
+        trace.call("mesh.mesh1.size.set.custom", () -> { size.set("custom", "on"); return null; });
+        trace.call("mesh.mesh1.size.set.hmax", () -> { size.set("hmax", configuration.meshHmaxM); return null; });
+        trace.call("mesh.mesh1.size.set.hmin", () -> { size.set("hmin", configuration.meshHminM); return null; });
+        trace.call("mesh.mesh1.run", () -> { mesh.run(); return null; });
+        double hmax = trace.call("mesh.mesh1.size.get.hmax", () -> size.getDouble("hmax"));
+        double hmin = trace.call("mesh.mesh1.size.get.hmin", () -> size.getDouble("hmin"));
+        String custom = trace.call("mesh.mesh1.size.get.custom", () -> size.getString("custom"));
         if (!Double.isFinite(hmax) || !Double.isFinite(hmin) ||
             Math.abs(hmax - configuration.meshHmaxM) > Math.max(1e-15, configuration.meshHmaxM * 1e-12) ||
             Math.abs(hmin - configuration.meshHminM) > Math.max(1e-15, configuration.meshHminM * 1e-12) ||
-            !"on".equalsIgnoreCase(mesh.feature("size").getString("custom"))) {
+            !"on".equalsIgnoreCase(custom)) {
             throw new IllegalStateException("native sensitivity mesh size readback differs from the frozen configuration");
         }
         Map<String, Object> result = new LinkedHashMap<>();
@@ -638,56 +2441,117 @@ public final class W24StaticShapeFixture {
         return result;
     }
 
-    private static Map<String, Object> addUnsolvedStudy(Model model, Configuration configuration) {
-        Study study = model.study().create("stdShape");
-        study.create("phasei", "PhaseInitialization");
-        study.create("time", "Transient");
-        study.feature("time").set("initstudy", "stdShape");
-        study.feature("time").set("useinitsol", "on");
-        study.feature("time").set("usertol", "on");
-        study.feature("time").set("rtol", "1e-4");
-        study.feature("time").set("tlist", "range(0[s],tCapillary/2,20*tCapillary)");
-        study.feature("time").set("tout", "tsteps");
-        study.feature("time").set("tstepsbdf", "strict");
-        study.feature("time").set("tstepsstore", "1");
-        study.createAutoSequences("sol");
-        String[] sequenceTags = study.getSolverSequences("SolverSequence");
-        if (sequenceTags.length != 1) {
-            throw new IllegalStateException("static-shape study must generate exactly one solver sequence");
+    private static Map<String, Object> addUnsolvedStudy(Model model, Configuration configuration,
+                                                         SelectionTrace trace) {
+        Study study = trace.call("study.stdShape.create", () -> model.study().create("stdShape"));
+        trace.call("study.stdShape.phasei.create", () -> {
+            study.create("phasei", "PhaseInitialization"); return null;
+        });
+        trace.call("study.stdShape.time.create", () -> {
+            study.create("time", "Transient"); return null;
+        });
+        String[] stepTags = trace.call("study.stdShape.steps.get.tags", () -> study.feature().tags());
+        if (!Arrays.equals(stepTags, new String[]{"phasei", "time"})) {
+            throw new IllegalStateException("static-shape study step topology differs from phasei then time");
         }
-        SolverSequence sequence = model.sol(sequenceTags[0]);
-        if (!sequence.isAttached() || !"stdShape".equals(sequence.study())) {
-            throw new IllegalStateException("static-shape solver sequence is not attached to stdShape");
+        StudyFeature phasei = trace.call("study.stdShape.phasei.resolve", () -> study.feature("phasei"));
+        StudyFeature time = trace.call("study.stdShape.time.resolve", () -> study.feature("time"));
+        String phaseiType = trace.call("study.stdShape.phasei.get.type", () -> phasei.getType());
+        String timeType = trace.call("study.stdShape.time.get.type", () -> time.getType());
+        if (!"PhaseInitialization".equals(phaseiType) || !"Transient".equals(timeType)) {
+            throw new IllegalStateException("static-shape study step types differ from phasei/Transient");
         }
-        SolverFeature solverTime = findUniqueTimeFeature(sequence);
-        configureTimeSolver(solverTime, configuration.maximumStepS);
-        if (!Double.isFinite(solverTime.getDouble("maxstepbdf")) ||
-            Math.abs(solverTime.getDouble("maxstepbdf") - configuration.maximumStepS) >
-                Math.max(1e-15, configuration.maximumStepS * 1e-12) ||
-            !"const".equals(solverTime.getString("maxstepconstraintbdf")) ||
-            !"strict".equals(solverTime.getString("tstepsbdf")) ||
-            !"tsteps".equals(solverTime.getString("tout")) ||
-            solverTime.getInt("tstepsstore") != 1) {
-            throw new IllegalStateException("static-shape BDF maximum-step/output settings failed readback");
+        trace.call("study.stdShape.time.set.usertol", () -> { time.set("usertol", "on"); return null; });
+        trace.call("study.stdShape.time.set.rtol", () -> { time.set("rtol", "1e-4"); return null; });
+        String timeListExpected = "range(0[s],tCapillary/2,20*tCapillary)";
+        trace.call("study.stdShape.time.set.tlist", () -> { time.set("tlist", timeListExpected); return null; });
+        String userTolerance = trace.call("study.stdShape.time.get.usertol", () -> time.getString("usertol"));
+        String relativeTolerance = trace.call("study.stdShape.time.get.rtol", () -> time.getString("rtol"));
+        String timeList = trace.call("study.stdShape.time.get.tlist", () -> time.getString("tlist"));
+        if (!"on".equals(userTolerance) || !"1e-4".equals(relativeTolerance) ||
+            !timeListExpected.equals(timeList)) {
+            throw new IllegalStateException("static-shape transient user-tolerance/time-list controls failed exact readback");
         }
+
+        trace.call("study.stdShape.createAutoSequences.sol", () -> {
+            study.createAutoSequences("sol"); return null;
+        });
+        Map<String, Object> chain = inspectGeneratedStudySolverChain(model, study);
+        String chainStatus = String.valueOf(chain.get("status"));
+        String[] sequenceTags = ((List<String>) chain.get("sequence_tag_union")).toArray(new String[0]);
+        String selectedSequenceTag = (String) chain.get("selected_attached_sequence_tag");
+        String storedOutputTag = (String) chain.get("store_solution_output_tag");
+        Map<String, Object> stepInitialization = (Map<String, Object>) chain.get("study_step_initialization_readback");
+        Map<String, Object> timeInitialization = (Map<String, Object>) stepInitialization.get("time");
+        String initMethod = timeInitialization == null ? null : (String) timeInitialization.get("initmethod");
+        String initStudy = timeInitialization == null ? null : (String) timeInitialization.get("initstudy");
+        String useInitSolution = timeInitialization == null ? null : (String) timeInitialization.get("useinitsol");
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("study_tag", "stdShape");
         result.put("configuration_id", configuration.id);
-        result.put("study_step_order", Arrays.asList("phasei", "time"));
-        result.put("phase_initialization_step_type", study.feature("phasei").getType());
-        result.put("time_step_type", study.feature("time").getType());
-        result.put("time_list_expression", study.feature("time").getString("tlist"));
-        result.put("output_mode", study.feature("time").getString("tout"));
-        result.put("bdf_output_time_policy", study.feature("time").getString("tstepsbdf"));
-        result.put("stored_time_steps_policy", study.feature("time").getString("tstepsstore"));
-        result.put("solver_sequences", Arrays.asList(sequenceTags));
-        result.put("max_step_s", solverTime.getDouble("maxstepbdf"));
-        result.put("max_step_constraint", solverTime.getString("maxstepconstraintbdf"));
-        result.put("solver_tstepsbdf", solverTime.getString("tstepsbdf"));
-        result.put("solver_tout", solverTime.getString("tout"));
-        result.put("solver_tstepsstore", solverTime.getInt("tstepsstore"));
+        result.put("study_step_order", Arrays.asList(stepTags));
+        result.put("phase_initialization_step_type", phaseiType);
+        result.put("time_step_type", timeType);
+        result.put("time_list_expression", timeList);
+        result.put("time_initialization_method", initMethod);
+        result.put("time_initialization_study", initStudy);
+        result.put("use_initial_solution", useInitSolution);
+        result.put("use_user_tolerance", userTolerance);
+        result.put("relative_tolerance", relativeTolerance);
+        result.put("solver_sequence_tags", Arrays.asList(sequenceTags));
+        result.put("generated_study_solver_chain", chain);
+        result.put("attached_solver_sequence_tag", selectedSequenceTag);
+        result.put("stored_solution_output_tag", storedOutputTag);
+        result.put("time_solver_output_owner", "GENERATED_TIME_SOLVER_FEATURE");
         result.put("study_run_calls", 0);
         result.put("phase_initialization_executed", false);
+        result.put("time_solver_settings_configured", false);
+        if (!"PHASE_INIT_TO_TIME_CHAIN_VALIDATED".equals(chainStatus) ||
+            selectedSequenceTag == null || storedOutputTag == null) {
+            result.put("status", "CHAIN_CAPTURED_WITH_FINDINGS_NOT_SOLVED");
+            result.put("time_solver_feature_tag", null);
+            result.put("semantic_findings", chain.get("semantic_findings"));
+            return result;
+        }
+        String sequenceTag = traceToken(selectedSequenceTag);
+        SolverSequence sequence = trace.call("solver." + sequenceTag + ".resolve", () -> model.sol(sequenceTag));
+        boolean attached = trace.call("solver." + sequenceTag + ".get.isAttached", () -> sequence.isAttached());
+        String attachedStudy = trace.call("solver." + sequenceTag + ".get.study", () -> sequence.study());
+        if (!attached || !"stdShape".equals(attachedStudy)) {
+            throw new IllegalStateException("static-shape solver sequence is not attached to stdShape");
+        }
+        SolverFeature solverTime = findUniqueTimeFeature(sequence, sequenceTag, trace);
+        String solverTimeTag = traceToken(trace.call(
+            "solver." + sequenceTag + ".time.get.tag", () -> solverTime.tag()));
+        configureTimeSolver(solverTime, configuration.maximumStepS, sequenceTag, solverTimeTag, trace);
+        double maxStep = trace.call("solver." + sequenceTag + "." + solverTimeTag + ".get.maxstepbdf",
+            () -> solverTime.getDouble("maxstepbdf"));
+        String maxStepConstraint = trace.call("solver." + sequenceTag + "." + solverTimeTag + ".get.maxstepconstraintbdf",
+            () -> solverTime.getString("maxstepconstraintbdf"));
+        String solverBdfOutput = trace.call("solver." + sequenceTag + "." + solverTimeTag + ".get.tstepsbdf",
+            () -> solverTime.getString("tstepsbdf"));
+        String solverOutputMode = trace.call("solver." + sequenceTag + "." + solverTimeTag + ".get.tout",
+            () -> solverTime.getString("tout"));
+        int solverStoredSteps = trace.call("solver." + sequenceTag + "." + solverTimeTag + ".get.tstepsstore",
+            () -> solverTime.getInt("tstepsstore"));
+        if (!Double.isFinite(maxStep) ||
+            Math.abs(maxStep - configuration.maximumStepS) >
+                Math.max(1e-15, configuration.maximumStepS * 1e-12) ||
+            !"const".equals(maxStepConstraint) || !"strict".equals(solverBdfOutput) ||
+            !"tsteps".equals(solverOutputMode) || solverStoredSteps != 1) {
+            throw new IllegalStateException("static-shape BDF maximum-step/output settings failed readback");
+        }
+        result.put("time_solver_feature_tag", solverTimeTag);
+        result.put("output_mode", solverOutputMode);
+        result.put("bdf_output_time_policy", solverBdfOutput);
+        result.put("stored_time_steps_policy", solverStoredSteps);
+        result.put("max_step_s", maxStep);
+        result.put("max_step_constraint", maxStepConstraint);
+        result.put("solver_tstepsbdf", solverBdfOutput);
+        result.put("solver_tout", solverOutputMode);
+        result.put("solver_tstepsstore", solverStoredSteps);
+        result.put("time_solver_settings_configured", true);
+        result.put("status", "UNSOLVED_CHAIN_CONFIGURED");
         return result;
     }
 
@@ -735,19 +2599,27 @@ public final class W24StaticShapeFixture {
         }
     }
 
-    private static void configureTimeSolver(SolverFeature time, double maxStep) {
-        time.set("timemethod", "bdf");
-        time.set("tunit", "s");
-        time.set("tstepsbdf", "strict");
-        time.set("maxstepconstraintbdf", "const");
-        time.set("maxstepbdf", maxStep);
-        time.set("tout", "tsteps");
-        time.set("tstepsstore", 1);
+    private static void configureTimeSolver(SolverFeature time, double maxStep, String sequenceTag,
+                                            String timeFeatureTag, SelectionTrace trace) {
+        String prefix = "solver." + sequenceTag + "." + timeFeatureTag;
+        trace.call(prefix + ".set.timemethod", () -> { time.set("timemethod", "bdf"); return null; });
+        trace.call(prefix + ".set.tunit", () -> { time.set("tunit", "s"); return null; });
+        trace.call(prefix + ".set.tstepsbdf", () -> { time.set("tstepsbdf", "strict"); return null; });
+        trace.call(prefix + ".set.maxstepconstraintbdf", () -> {
+            time.set("maxstepconstraintbdf", "const"); return null;
+        });
+        trace.call(prefix + ".set.maxstepbdf", () -> { time.set("maxstepbdf", maxStep); return null; });
+        trace.call(prefix + ".set.tout", () -> { time.set("tout", "tsteps"); return null; });
+        trace.call(prefix + ".set.tstepsstore", () -> { time.set("tstepsstore", 1); return null; });
     }
 
-    private static SolverFeature findUniqueTimeFeature(SolverSequence sequence) {
+    private static SolverFeature findUniqueTimeFeature(SolverSequence sequence, String sequenceTag,
+                                                       SelectionTrace trace) {
         Map<String, SolverFeature> matches = new LinkedHashMap<>();
-        collectTimeFeatures(sequence.feature().tags(), sequence.feature(), "", matches);
+        SolverFeatureList root = trace.call("solver." + sequenceTag + ".feature_list.resolve",
+            () -> sequence.feature());
+        String[] rootTags = trace.call("solver." + sequenceTag + ".feature_list.get.tags", () -> root.tags());
+        collectTimeFeatures(rootTags, root, "", sequenceTag, trace, matches);
         if (matches.size() != 1) {
             throw new IllegalStateException("expected one Time solver feature; found " + matches.keySet());
         }
@@ -755,14 +2627,34 @@ public final class W24StaticShapeFixture {
     }
 
     private static void collectTimeFeatures(String[] tags, SolverFeatureList list, String parent,
+                                            String sequenceTag, SelectionTrace trace,
                                             Map<String, SolverFeature> matches) {
         for (String tag : tags) {
-            SolverFeature feature = list.get(tag);
+            String token = traceToken(tag);
             String path = parent.isEmpty() ? tag : parent + "/" + tag;
-            if ("Time".equals(feature.getType())) matches.put(path, feature);
-            String[] childTags = feature.feature().tags();
-            if (childTags.length > 0) collectTimeFeatures(childTags, feature.feature(), path, matches);
+            String tracePath = parent.isEmpty() ? token : parent.replace('/', '.') + "." + token;
+            SolverFeature feature = trace.call("solver." + sequenceTag + ".feature." + tracePath + ".resolve",
+                () -> list.get(tag));
+            String type = trace.call("solver." + sequenceTag + ".feature." + tracePath + ".get.type",
+                () -> feature.getType());
+            if ("Time".equals(type)) matches.put(path, feature);
+            SolverFeatureList children = trace.call(
+                "solver." + sequenceTag + ".feature." + tracePath + ".feature_list.resolve",
+                () -> feature.feature());
+            String[] childTags = trace.call(
+                "solver." + sequenceTag + ".feature." + tracePath + ".feature_list.get.tags",
+                () -> children.tags());
+            if (childTags.length > 0) {
+                collectTimeFeatures(childTags, children, path, sequenceTag, trace, matches);
+            }
         }
+    }
+
+    private static String traceToken(String value) {
+        if (value == null || !value.matches("[A-Za-z0-9_-]{1,24}")) {
+            throw new IllegalStateException("generated COMSOL feature tag is outside the bounded trace token envelope");
+        }
+        return value;
     }
 
     private static Map<String, Object> metricDefinitions() {

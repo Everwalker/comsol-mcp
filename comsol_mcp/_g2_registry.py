@@ -786,6 +786,16 @@ def _effective_input_schema(catalog_schema: Mapping[str, Any], operation_id: str
             "additionalProperties": False,
             "description": "Production ModelRef object; legacy catalog string is not used by the managed wire.",
         }
+    if operation_id == "node.children" and isinstance(properties, dict):
+        # Runtime-wire extension: the absent default still probes every known
+        # collection; a requested collection narrows the Worker probe before
+        # accessors run and is echoed/bound into filtered-page cursors.
+        from ._g2_engine import COLLECTION_CANDIDATES
+        properties["collection"] = {
+            "type": "string",
+            "enum": [row["collection"] for row in COLLECTION_CANDIDATES],
+            "description": "Optional child-collection filter. Omission preserves all-collection completeness and errors.",
+        }
     if operation_id == "node.create":
         properties["properties"]["default"] = []
     elif operation_id == "node.remove":
@@ -1889,15 +1899,31 @@ def _validate_operation_shape(operation_id: str, arguments: Mapping[str, Any]) -
     elif operation_id == "result.mode_overlap_basis_v2":
         from ._w23_basis_v2_results import validate_request_shape
         validate_request_shape(arguments)
+    elif operation_id == "result.at_points":
+        from ._g3_results import validate_native_default_unit_requests
+        spec = arguments.get("spec")
+        if isinstance(spec, Mapping):
+            validate_native_default_unit_requests(spec.get("expressions"), spec.get("units"))
     elif operation_id == "study.run" and "recovery_policy" in arguments:
         policy = arguments.get("recovery_policy")
         if not isinstance(policy, Mapping) or set(policy) != {"mode"} or policy.get("mode") != "restart_from_checkpoint":
             raise ExecutionContractError("INVALID_REQUEST", "recovery_policy must be {mode: restart_from_checkpoint}")
     elif operation_id in path_operations:
         NodePath.from_wire(arguments.get("path"))
+    if operation_id == "node.children" and "collection" in arguments:
+        from ._g2_engine import COLLECTION_CANDIDATES
+        allowed_collections = {row["collection"] for row in COLLECTION_CANDIDATES}
+        value = arguments["collection"]
+        if not isinstance(value, str) or value not in allowed_collections:
+            raise ExecutionContractError("INVALID_REQUEST", "node.children.collection is not a supported child collection")
     if operation_id == "node.inspect":
         if "include_values" in arguments and type(arguments["include_values"]) is not bool:
             raise ExecutionContractError("INVALID_REQUEST", "include_values must be a boolean")
+        if "include_properties" in arguments and type(arguments["include_properties"]) is not bool:
+            raise ExecutionContractError("INVALID_REQUEST", "include_properties must be a boolean")
+        if arguments.get("include_values", False) is True and arguments.get("include_properties", True) is False:
+            raise ExecutionContractError(
+                "INVALID_REQUEST", "include_values requires include_properties=true")
     elif operation_id == "node.property_get":
         names = arguments.get("names")
         if not isinstance(names, list) or not names or not all(isinstance(name, str) and name for name in names):

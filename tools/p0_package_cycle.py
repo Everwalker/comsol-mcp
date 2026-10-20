@@ -14,6 +14,13 @@ MAX_TOTAL_OUTPUT_BYTES = 64 * 1024 * 1024
 FEATURE_PATH = {"segments": [*GEOMETRY["segments"], {"collection": "feature", "tag": "r1"}]}
 
 
+def action_arguments(op: str, body: dict, project_id: str, session_id: str) -> dict:
+    # These two existing artifact reads are project-only host operations.
+    if op in {"artifact.preview", "artifact.verify"}:
+        return {"project_id": project_id, **body}
+    return {"project_id": project_id, "session_id": session_id, **body}
+
+
 def size_readback(data: dict) -> dict:
     rows = data.get("properties", [])
     if (len(rows) != 1 or rows[0].get("name") != "size"
@@ -86,7 +93,7 @@ async def run_cycle(call, *, workspace: Path, project_id: str, session_id: str,
             raise RuntimeError("P0 package activity output budget exceeded")
 
     async def action(op, body, *, ref=None, rev=None):
-        body = {"project_id": project_id, "session_id": session_id, **body}
+        body = action_arguments(op, body, project_id, session_id)
         if ref is not None:
             body["model_ref"] = ref
         value = await call(op, body, ref=ref, revision=rev)

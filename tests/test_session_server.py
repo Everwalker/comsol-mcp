@@ -111,6 +111,11 @@ def test_server_command_is_session_scoped_and_platform_explicit(tmp_path):
     assert mac[mac.index("-portfile") + 1] == str(dirs.port_file)
     assert mac[mac.index("-prefsdir") + 1] == str(dirs.preferences)
     assert "-multi" in mac and mac[mac.index("-multi") + 1] == "on"
+    assert "-np" not in mac
+    mac_np2 = build_server_command(dirs, platform_name="darwin", server_np=2)
+    assert mac_np2[:4] == [str(dirs.private_installation / "bin/comsol"), "mphserver", "-np", "2"]
+    assert mac_np2[mac_np2.index("-np") + 1] == "2"
+    assert mac_np2.count("-np") == 1
 
     windows_launcher = dirs.private_installation / "bin/win64/comsolmphserver.exe"
     windows_launcher.parent.mkdir()
@@ -118,6 +123,29 @@ def test_server_command_is_session_scoped_and_platform_explicit(tmp_path):
     windows = build_server_command(dirs, platform_name="windows")
     assert windows[0] == str(windows_launcher)
     assert "mphserver" not in windows
+    windows_np2 = build_server_command(dirs, platform_name="windows", server_np=2)
+    assert windows_np2[:3] == [str(windows_launcher), "-np", "2"]
+
+
+@pytest.mark.parametrize("server_np", [True, False, 0, -1, 65, 1.0, "2"])
+def test_server_np_command_configuration_is_narrow_and_fail_closed(tmp_path, server_np):
+    dirs = ServerDirectories(
+        root=tmp_path, private_installation=tmp_path / "install", runtime=tmp_path / "runtime",
+        preferences=tmp_path / "prefs", temporary=tmp_path / "tmp", recovery=tmp_path / "recovery",
+        logs=tmp_path / "logs", port_file=tmp_path / "runtime/port",
+        log_file=tmp_path / "logs/server.log",
+    )
+    dirs.private_installation.mkdir(parents=True)
+    (dirs.private_installation / "bin").mkdir()
+    (dirs.private_installation / "bin/comsol").write_text("launcher", encoding="utf-8")
+    with pytest.raises(OwnedServerError, match="server_np"):
+        build_server_command(dirs, platform_name="darwin", server_np=server_np)
+
+
+@pytest.mark.parametrize("server_np", [True, 0, -1, 65, 1.0])
+def test_owned_server_launcher_rejects_invalid_np_before_any_start(server_np):
+    with pytest.raises(OwnedServerError, match="server_np"):
+        OwnedServerLauncher(server_np=server_np, platform_name="darwin")
 
 
 def test_windows_server_budget_uses_full_hashed_session_suffix_and_fails_closed(tmp_path):
@@ -350,12 +378,13 @@ def _startup_diagnostic_path(runtime: SessionRuntimeConfig, project="project", s
 
 
 def _launcher_for_startup(process_factory, *, process_identity_reader=None, listener_reader=None,
-                          ready_timeout_s=0.05):
+                          ready_timeout_s=0.05, server_np=None):
     return OwnedServerLauncher(
         process_factory=process_factory,
         process_identity_reader=process_identity_reader or (lambda _pid: {"alive": True, "start_epoch_ms": 123456}),
         listener_reader=listener_reader or (lambda port: [(9182, CanonicalSocket("127.0.0.1", port))]),
-        platform_name="darwin", ready_timeout_s=ready_timeout_s, poll_interval_s=0.001,
+        platform_name="darwin", server_np=server_np,
+        ready_timeout_s=ready_timeout_s, poll_interval_s=0.001,
     )
 
 
@@ -388,6 +417,73 @@ def test_owned_server_start_records_created_birth_and_ready_snapshot(tmp_path):
     assert sink_rows[0]["pid"] == 9182 and sink_rows[0]["birth"] is None
     assert sink_rows[1]["birth"] == "start_epoch_ms:123456"
     assert json.loads(_startup_diagnostic_path(runtime).read_text(encoding="utf-8")) == sink_rows[-1]
+
+
+def test_owned_server_np_is_part_of_original_popen_birth_and_launch_record(tmp_path):
+    runtime = _startup_runtime(tmp_path)
+    process = _StartupProcess()
+    commands = []
+
+    def create(command, **_options):
+        commands.append(list(command))
+        Path(command[command.index("-portfile") + 1]).write_text("2036", encoding="ascii")
+        return process
+
+    handle = _launcher_for_startup(create, server_np=2).start(runtime, "project", "session")
+    identity = handle.process_identity
+    assert commands == [build_server_command(handle.directories, platform_name="darwin", server_np=2)]
+    assert commands[0][:4] == [str(handle.directories.private_installation / "bin/comsol"),
+                                "mphserver", "-np", "2"]
+    assert identity is not None and identity.server_np == 2
+    assert identity.launch_argv_sha256 == hashlib.sha256(
+        json.dumps(commands[0], ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+
+def test_owned_server_default_np_preserves_legacy_argv_and_identity(tmp_path):
+    runtime = _startup_runtime(tmp_path)
+    process = _StartupProcess()
+    commands = []
+
+    def create(command, **_options):
+        commands.append(list(command))
+        Path(command[command.index("-portfile") + 1]).write_text("2036", encoding="ascii")
+        return process
+
+    handle = _launcher_for_startup(create).start(runtime, "project", "session")
+    assert "-np" not in commands[0]
+    assert handle.process_identity is not None and handle.process_identity.server_np is None
+
+
+def test_preferences_consumer_rebuilds_command_from_core_birth_np(tmp_path, monkeypatch):
+    import comsol_mcp._session_server as session_server
+
+    runtime = _startup_runtime(tmp_path)
+    project_id, session_id = "12345678-1234-1234-1234-123456789abc", "session-np-binding"
+    session_root = session_state_directory(runtime.session_state_root, project_id, session_id)
+    owned_root = session_root / "owned-server"
+    directories = session_server._server_directories(owned_root)
+    directories.preferences.mkdir(parents=True)
+    directories.private_installation.joinpath("bin").mkdir(parents=True)
+    executable = directories.private_installation / "bin/comsol"
+    executable.write_text("private launcher", encoding="utf-8")
+    endpoint = CanonicalSocket("127.0.0.1", 19045)
+    identity = OwnedServerProcessIdentity(
+        pid=19045, birth="start_epoch_ms:1800000000450", executable=str(executable.resolve()),
+        listener_sockets=(endpoint,), start_epoch_ms=1_800_000_000_450,
+        launch_argv_sha256="a" * 64, server_np=2)
+    seen = []
+    original_builder = session_server.build_server_command
+
+    def capture_builder(dirs, **kwargs):
+        seen.append(kwargs.get("server_np"))
+        return original_builder(dirs, **kwargs)
+
+    monkeypatch.setattr(session_server, "build_server_command", capture_builder)
+    prefs = session_server.owned_server_preferences_directory(
+        runtime, project_id, session_id, identity, platform_name="darwin")
+    assert prefs == directories.preferences.resolve(strict=True)
+    assert seen == [2]
 
 
 def test_owned_server_start_fast_exit_records_actual_exit_and_never_mutates_child(tmp_path):

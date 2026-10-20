@@ -2,11 +2,18 @@ from __future__ import annotations
 
 import cmath
 import copy
+import hashlib
+import json
 import math
+import shutil
+from pathlib import Path
 
 import pytest
 
 from tools import w23_te_science_protocol as protocol
+from tools import run_native_w23_saved_mph_diagnostic as saved_mph
+
+_W23_R13_ORIGINAL_BASE = saved_mph.science.W23_R13_BASE_ROOT
 
 
 def _stored_solver(tag: str, value_real: float, value_imag: float):
@@ -300,6 +307,7 @@ def test_main_frequency_singleton_rejects_unproven_or_multistate_axes(mutate):
 def _requested_unit_application(expressions, units):
     return {"status": "VERIFIED_REQUESTED_UNITS_BEFORE_AND_AFTER_NUMERIC_READ",
             "requested_expressions": list(expressions), "requested_units": list(units),
+            "native_default_unit_expressions": [expression for expression, unit in zip(expressions, units) if unit == ""],
             "setter": "actual Interp NumericalFeature.setIndex(unit,requested,index)",
             "no_external_scaling_or_relabeling": True,
             **{key: {"stage": stage, "status": "VERIFIED_EXACT_NATIVE_ARRAYS",
@@ -344,6 +352,73 @@ def test_bma_mode_formula_readback_requires_exact_store_binding_units_and_values
     points["bmaOutput"]["expression_units"]["emw.beta_2"] = "V/m"
     with pytest.raises(protocol.ScienceProtocolError, match="units"):
         protocol.reconcile_bma_mode_point_readbacks(bindings, points, main, field_scheme="emw_down")
+
+
+def test_bma_neff_native_default_is_exact_and_legacy_dimensionless_request_stays_valid():
+    frequency = 1.9341448903225803e14
+    k0 = 2 * math.pi * frequency / 299_792_458.0
+    neff = 1.540405036791
+    bindings = {"status": "PASS_BMA_STUDY_STORE_DATASET_BINDINGS", "bindings": []}
+    points = {}
+    for step, port, dataset, solution in (
+            ("bmaInput", "1", "dset2", "sol2"),
+            ("bmaOutput", "2", "dset3", "sol3")):
+        lam = complex(0.0, -k0 * neff)
+        expressions = protocol.bma_point_expressions(port, field_scheme="emw_down")
+        bindings["bindings"].append({
+            "study_step_tag": step, "port_name": port, "dataset_tag": dataset,
+            "store_solution_reference": solution, "mode_frequency_expression": "f0",
+            "sequence_parameter_observation": {"values": [{"parameters": [{
+                "name": "lambda", "real": lam.real, "imag": lam.imag, "unit": "1/m"}]}]},
+        })
+        # Keep one existing consumer on the legacy explicit unit array; the fresh runner
+        # requests COMSOL's native default only for the exact built-in neff expression.
+        units = ["1/m", "1", "1/m"] if port == "1" else ["1/m", "", "1/m"]
+        points[step] = {
+            "status": "PRODUCTION_NATIVE_COMPLEX_POINT_READBACK", "native_is_complex": True,
+            "dataset": dataset, "solution": solution, "sample_count": 1,
+            "requested_unit_application": _requested_unit_application(expressions, units),
+            "expression_units": dict(zip(expressions, units)),
+            "expressions": [
+                {"expression": expressions[0], "real": [k0 * neff], "imag": [0.0]},
+                {"expression": expressions[1], "real": [neff], "imag": [0.0]},
+                {"expression": expressions[2], "real": [k0], "imag": [0.0]},
+            ],
+        }
+    main = {"status": "PASS_NATIVE_NUMERICAL_FREQUENCY_HZ", "frequency_hz": frequency, "frequency_unit": "Hz"}
+    result = protocol.reconcile_bma_mode_point_readbacks(bindings, points, main, field_scheme="emw_down")
+    assert result["status"] == "PASS_BMA_FORMULA_CROSSCHECK_ONLY"
+    assert points["bmaInput"]["requested_unit_application"]["requested_units"] == ["1/m", "1", "1/m"]
+    assert points["bmaOutput"]["requested_unit_application"]["requested_units"] == ["1/m", "", "1/m"]
+
+    malformed = copy.deepcopy(points)
+    malformed["bmaOutput"]["requested_unit_application"] = _requested_unit_application(
+        protocol.bma_point_expressions("2", field_scheme="emw_down"), ["", "", "1/m"])
+    with pytest.raises(protocol.ScienceProtocolError, match="requested-unit"):
+        protocol.reconcile_bma_mode_point_readbacks(bindings, malformed, main, field_scheme="emw_down")
+    malformed = copy.deepcopy(points)
+    malformed["bmaOutput"]["expression_units"]["emw.neff_2"] = "1"
+    with pytest.raises(protocol.ScienceProtocolError, match="units"):
+        protocol.reconcile_bma_mode_point_readbacks(bindings, malformed, main, field_scheme="emw_down")
+
+
+def test_requested_native_default_allowlist_includes_only_exact_neff_and_xy_normals():
+    allowed = ["emw.neff_1", "emw.neff_2", "emw.nx", "emw.ny"]
+    for expression in allowed:
+        application = _requested_unit_application([expression], [""])
+        protocol._require_requested_unit_application(application, [expression], [""])
+        legacy_or_incomplete = copy.deepcopy(application)
+        legacy_or_incomplete.pop("native_default_unit_expressions")
+        with pytest.raises(protocol.ScienceProtocolError, match="not bound to its exact expressions"):
+            protocol._require_requested_unit_application(legacy_or_incomplete, [expression], [""])
+    for expression in ["nx", "emw.Nx", "emw.nx ", "emw.beta_1", "freq"]:
+        application = _requested_unit_application([expression], [""])
+        with pytest.raises(protocol.ScienceProtocolError, match="allowlist"):
+            protocol._require_requested_unit_application(application, [expression], [""])
+    inconsistent_nonblank = _requested_unit_application(["emw.beta_1"], ["1/m"])
+    inconsistent_nonblank["native_default_unit_expressions"] = ["emw.neff_1"]
+    with pytest.raises(protocol.ScienceProtocolError, match="for a nonblank unit request"):
+        protocol._require_requested_unit_application(inconsistent_nonblank, ["emw.beta_1"], ["1/m"])
 
 
 def test_production_complex_point_readback_preserves_exact_dataset_shape_and_coordinates():
@@ -413,6 +488,143 @@ def test_production_complex_point_readback_preserves_exact_dataset_shape_and_coo
             expected_solution_count=1, plane_id="output_x8", field_scheme="emw_down")
 
 
+def _offline_delta_validator_fixture(root: Path, monkeypatch, *, add_unallowlisted: bool = False):
+    science = saved_mph.science
+    original = _W23_R13_ORIGINAL_BASE
+    base_root = root / "pinned-r13"
+    (base_root / "prepare/offline_gates").mkdir(parents=True)
+    for relative in (
+            "prepare/source_manifest.json",
+            "prepare/offline_gates/activity024_focused_junit.xml",
+            "prepare/offline_gates/compile.json"):
+        shutil.copyfile(original / relative, base_root / relative)
+    shutil.copytree(original / "prepare/offline_gates/compile",
+                    base_root / "prepare/offline_gates/compile")
+    monkeypatch.setattr(science, "W23_R13_BASE_ROOT", base_root)
+    base_manifest = json.loads((base_root / "prepare/source_manifest.json").read_text())
+    current_files = copy.deepcopy(base_manifest["source_files"])
+    for relative in science.W23_R13_ALLOWED_COMMON_SOURCE_DELTA:
+        row = current_files[relative]
+        row["bytes"] += 1
+        row["sha256"] = hashlib.sha256(("current:" + relative).encode()).hexdigest()
+        row["path"] = str(root / "source" / relative)
+    added_path = "tests/test_interp_native_default_units.py"
+    current_files[added_path] = {
+        "path": str(root / "source" / added_path), "bytes": 17,
+        "sha256": hashlib.sha256(b"supplemental-test").hexdigest(),
+    }
+    if add_unallowlisted:
+        extra = "tests/test_unreviewed_delta.py"
+        current_files[extra] = {
+            "path": str(root / "source" / extra), "bytes": 8,
+            "sha256": hashlib.sha256(b"unreviewed").hexdigest(),
+        }
+
+    candidate = root / "candidate/prepare"
+    offline = candidate / "offline_gates"
+    offline.mkdir(parents=True)
+    junit = offline / "focused_delta_junit.xml"
+    cases = "".join(f'<testcase classname="focused" name="case{i}" />' for i in range(30))
+    junit.write_text(f'<testsuites><testsuite tests="30" failures="0" errors="0" skipped="0">{cases}</testsuite></testsuites>')
+    guard = offline / "diagnostic-network-guard.jsonl"
+    guard.write_text(json.dumps({"event": "GUARD_ACTIVE_BEFORE_CHILD_ENTRYPOINT"}) + "\n")
+    manifest_sha = science._source_manifest_sha256(current_files)
+    test_receipt_path = offline / "diagnostic_junit_receipt.json"
+    required_tests = [
+        "tests/test_interp_native_default_units.py",
+        "tests/test_native_w23_te_science_protocol.py",
+        "tests/test_native_w23_saved_mph_diagnostic.py",
+        "tests/test_native_w23_te_science_runner.py",
+        "tests/test_g3_results.py",
+    ]
+    test_receipt = {
+        "status": "PASS_FOCUSED_STRICT_GUARDED_JUNIT", "returncode": 0,
+        "candidate_source_manifest_sha256": manifest_sha,
+        "junit_path": str(junit), "junit_sha256": science.sha256_file(junit),
+        "test_paths": [current_files[name]["path"] for name in required_tests],
+        "network_guard": {
+            "status": "ACTIVE_NO_DENY_OR_SETUP_ERROR",
+            "path": str(guard), "sha256": science.sha256_file(guard), "event_count": 1,
+        },
+    }
+    test_receipt_path.write_text(json.dumps(test_receipt))
+    focused = {
+        "receipt_path": "offline_gates/diagnostic_junit_receipt.json",
+        "receipt_sha256": science.sha256_file(test_receipt_path),
+        "junit_path": "offline_gates/focused_delta_junit.xml",
+        "junit_sha256": science.sha256_file(junit),
+        "network_guard_path": "offline_gates/diagnostic-network-guard.jsonl",
+        "network_guard_sha256": science.sha256_file(guard),
+    }
+    delta_receipt = {
+        "schema_version": 1,
+        "status": "PASS_OFFLINE_BASE_INHERITED_PLUS_FOCUSED_DELTA",
+        "candidate_id": saved_mph.CANDIDATE_ID,
+        "candidate_revision": saved_mph.CANDIDATE_REVISION,
+        "activity_id": saved_mph.ACTIVITY_ID,
+        "candidate_source_manifest_sha256": manifest_sha,
+        "inherited_base": saved_mph._r13_inherited_base_record(),
+        "source_delta": saved_mph._source_delta_from_r13(current_files),
+        "focused_tests": focused,
+    }
+    delta_path = offline / "focused_delta_receipt.json"
+    delta_path.write_text(json.dumps(delta_receipt))
+    freeze = {
+        "activity_id": saved_mph.ACTIVITY_ID,
+        "candidate_id": saved_mph.CANDIDATE_ID,
+        "candidate_revision": saved_mph.CANDIDATE_REVISION,
+        "source_files": current_files,
+        "source_manifest_sha256": manifest_sha,
+        "offline_preflight": {
+            "status": "PASS_OFFLINE_BASE_INHERITED_PLUS_FOCUSED_DELTA",
+            "focused_delta_receipt": {
+                "path": "offline_gates/focused_delta_receipt.json",
+                "sha256": science.sha256_file(delta_path),
+            },
+        },
+    }
+    return candidate / "freeze.json", freeze, base_root
+
+
+def test_inherited_offline_delta_validator_positive_and_negative_controls(tmp_path, monkeypatch):
+    science = saved_mph.science
+    valid_path, valid_freeze, _valid_base = _offline_delta_validator_fixture(tmp_path / "valid", monkeypatch)
+    result = science._validate_inherited_offline_delta(valid_path, valid_freeze)
+    assert result["status"] == "PASS_OFFLINE_BASE_INHERITED_PLUS_FOCUSED_DELTA"
+    assert result["focused_test_counts"]["tests"] == 30
+
+    inherited_compile = science.W23_R13_BASE_ROOT / "prepare/offline_gates/compile.json"
+    compile_receipt = json.loads(inherited_compile.read_text())
+    legacy_candidate = tmp_path / "legacy-pass-all"
+    legacy_offline = legacy_candidate / "offline_gates"
+    legacy_offline.mkdir(parents=True)
+    shutil.copytree(science.W23_R13_BASE_ROOT / "prepare/offline_gates/compile",
+                    legacy_offline / "compile")
+    legacy_freeze = {
+        "offline_preflight": {"status": "PASS_ALL_OFFLINE_GATES",
+                              "compile": compile_receipt},
+    }
+    legacy_result = science._check_offline_receipts(legacy_candidate / "freeze.json", legacy_freeze)
+    assert legacy_result["status"] == "PASS_FROZEN_CLASSPATH_AND_CLASS_OUTPUT_REVALIDATED"
+    assert "inherited_offline_delta" not in legacy_result
+
+    receipt_path = valid_path.parent / "offline_gates/diagnostic_junit_receipt.json"
+    receipt_path.write_text(receipt_path.read_text() + " ")
+    with pytest.raises(RuntimeError, match="changed after freezing"):
+        science._validate_inherited_offline_delta(valid_path, valid_freeze)
+
+    tampered_path, tampered_freeze, tampered_base = _offline_delta_validator_fixture(tmp_path / "tampered-base", monkeypatch)
+    manifest_path = tampered_base / "prepare/source_manifest.json"
+    manifest_path.write_text(manifest_path.read_text() + " ")
+    with pytest.raises(RuntimeError, match="tampered"):
+        science._validate_inherited_offline_delta(tampered_path, tampered_freeze)
+
+    delta_path, delta_freeze, _delta_base = _offline_delta_validator_fixture(
+        tmp_path / "unallowlisted-delta", monkeypatch, add_unallowlisted=True)
+    with pytest.raises(RuntimeError, match="outside the exact pre-frozen allowlist"):
+        science._validate_inherited_offline_delta(delta_path, delta_freeze)
+
+
 def test_attached_frequency_count_witness_binds_native_point_readback_without_axis_completion():
     study, inventory = _main_frequency_inventory()
     witness = protocol.resolve_main_frequency_dataset(study, inventory)
@@ -450,7 +662,7 @@ def test_attached_frequency_count_witness_binds_native_point_readback_without_ax
                                  "coordinates": [[8.0, 8.0], [-1.0, 1.0]], "unit": "um"},
         "point_count": 2, "expressions": ["emw.nx", "emw.ny"],
         "complex_mode": "preserve", "is_complex": True,
-        "expression_units": {"emw.nx": "1", "emw.ny": ""},
+        "expression_units": {"emw.nx": "1", "emw.ny": "1"},
         "values": [
             [[{"real": 1.0, "imag": 0.0}, {"real": 1.0, "imag": 0.0}]],
             [[{"real": 0.0, "imag": 0.0}, {"real": 0.0, "imag": 0.0}]],
@@ -460,7 +672,7 @@ def test_attached_frequency_count_witness_binds_native_point_readback_without_ax
         result, dataset_tag="dset1", solution_tag="sol1", expressions=["emw.nx", "emw.ny"],
         expected_points=[[8.0, -1.0], [8.0, 1.0]], expected_solution_count=1,
         plane_id="output_x8", expected_count_witness=witness,
-        expected_expression_units={"emw.nx": ("1", ""), "emw.ny": ("1", "")},
+        expected_expression_units={"emw.nx": "1", "emw.ny": "1"},
         require_x_plane_normal=True, field_scheme="emw_down")
     assert decoded["normal_status"] == "VERIFIED_FROM_NATIVE_NX_NY"
     assert decoded["native_normal_x"] == 1
@@ -474,7 +686,7 @@ def test_attached_frequency_count_witness_binds_native_point_readback_without_ax
             malformed, dataset_tag="dset1", solution_tag="sol1", expressions=["emw.nx", "emw.ny"],
             expected_points=[[8.0, -1.0], [8.0, 1.0]], expected_solution_count=1,
             plane_id="output_x8", expected_count_witness=witness,
-            expected_expression_units={"emw.nx": ("1", ""), "emw.ny": ("1", "")},
+            expected_expression_units={"emw.nx": "1", "emw.ny": "1"},
             require_x_plane_normal=True, field_scheme="emw_down")
 
     malformed = copy.deepcopy(result)
@@ -484,13 +696,24 @@ def test_attached_frequency_count_witness_binds_native_point_readback_without_ax
             malformed, dataset_tag="dset1", solution_tag="sol1", expressions=["emw.nx", "emw.ny"],
             expected_points=[[8.0, -1.0], [8.0, 1.0]], expected_solution_count=1,
             plane_id="output_x8", expected_count_witness=witness,
-            expected_expression_units={"emw.nx": ("1", ""), "emw.ny": ("1", "")},
+            expected_expression_units={"emw.nx": "1", "emw.ny": "1"},
+            require_x_plane_normal=True, field_scheme="emw_down")
+
+    malformed = copy.deepcopy(result)
+    malformed["expression_units"]["emw.ny"] = ""
+    with pytest.raises(protocol.ScienceProtocolError, match="unit"):
+        protocol.decode_production_complex_point_readback(
+            malformed, dataset_tag="dset1", solution_tag="sol1", expressions=["emw.nx", "emw.ny"],
+            expected_points=[[8.0, -1.0], [8.0, 1.0]], expected_solution_count=1,
+            plane_id="output_x8", expected_count_witness=witness,
+            expected_expression_units={"emw.nx": "1", "emw.ny": "1"},
             require_x_plane_normal=True, field_scheme="emw_down")
 
 
 def test_simpson_and_native_integral_reconciliation_use_registered_metre_grid():
-    coordinates = [-8e-6 + 16e-6 * index / 320 for index in range(321)]
-    integral = protocol.simpson_integral([1.0] * 321, coordinates)
+    coordinates = [-8e-6 + 16e-6 * index / (protocol.SAMPLE_COUNT - 1)
+                   for index in range(protocol.SAMPLE_COUNT)]
+    integral = protocol.simpson_integral([1.0] * protocol.SAMPLE_COUNT, coordinates)
     assert integral.real == pytest.approx(16e-6, rel=1e-12)
     assert integral.imag == 0
 
@@ -679,16 +902,29 @@ def test_software_signal_global_phase_control_rotates_cross_integral_only():
     assert max(receipt["invariant_relative_errors"].values()) < 1e-12
 
 
-def test_321_to_641_quadrature_refinement_is_an_explicit_gate():
+def test_321_to_641_quadrature_refinement_remains_an_explicit_full_science_gate():
     coarse = protocol.independent_integrals(
-        _raw("output_x8", 8e-6, 1, sample_count=321),
-        _raw("input_xminus10", -10e-6, -1, sample_count=321), field_scheme="emw_down")
+        _raw("output_x8", 8e-6, 1, sample_count=protocol.SAMPLE_COUNT),
+        _raw("input_xminus10", -10e-6, -1, sample_count=protocol.SAMPLE_COUNT), field_scheme="emw_down")
     fine = protocol.independent_integrals(
-        _raw("output_x8", 8e-6, 1, sample_count=641),
-        _raw("input_xminus10", -10e-6, -1, sample_count=641), field_scheme="emw_down")
+        _raw("output_x8", 8e-6, 1, sample_count=protocol.REFINED_SAMPLE_COUNT),
+        _raw("input_xminus10", -10e-6, -1, sample_count=protocol.REFINED_SAMPLE_COUNT), field_scheme="emw_down")
     receipt = protocol.compare_quadrature_refinement(coarse, fine)
     assert receipt["status"] == "PASS_321_TO_641_QUADRATURE_REFINEMENT"
     assert receipt["coarse_points"] == 321 and receipt["fine_points"] == 641
+
+
+def test_saved_mph_641_to_1281_quadrature_refinement_is_a_separate_explicit_gate():
+    coarse = protocol.independent_integrals(
+        _raw("output_x8", 8e-6, 1, sample_count=protocol.SAVED_MPH_SAMPLE_COUNT),
+        _raw("input_xminus10", -10e-6, -1, sample_count=protocol.SAVED_MPH_SAMPLE_COUNT), field_scheme="emw_down")
+    fine = protocol.independent_integrals(
+        _raw("output_x8", 8e-6, 1, sample_count=protocol.SAVED_MPH_REFINED_SAMPLE_COUNT),
+        _raw("input_xminus10", -10e-6, -1, sample_count=protocol.SAVED_MPH_REFINED_SAMPLE_COUNT), field_scheme="emw_down")
+    receipt = protocol.compare_quadrature_refinement(
+        coarse, fine, sample_counts=protocol.SAVED_MPH_QUADRATURE_SAMPLE_COUNTS)
+    assert receipt["status"] == "PASS_641_TO_1281_QUADRATURE_REFINEMENT"
+    assert receipt["coarse_points"] == 641 and receipt["fine_points"] == 1281
 
 
 def test_coordinate_and_boundary_normal_readback_fail_closed():
@@ -896,3 +1132,319 @@ def test_frequency_dual_units_refuses_label_only_results_or_changed_native_ident
     else: ghz["expressions"][0]["real"][0] = -1
     with pytest.raises(protocol.ScienceProtocolError):
         protocol.verify_frequency_unit_scaling(hz, ghz, contexts)
+
+
+
+def _current_full_offline_receipt_fixture(root, monkeypatch):
+    import hashlib
+    from pathlib import Path
+    from comsol_mcp import _java_worker
+    from tools import run_native_w23_saved_mph_diagnostic as saved
+
+    science = saved.science
+    candidate = root / "candidate"
+    offline = candidate / "offline_gates"
+    full_root = offline / "current_full"
+    compile_root = full_root / "compile"
+    test_root = root / "source_files"
+    source_files = {}
+    required = (
+        "comsol_mcp/worker_java/PersistentComsolWorker.java",
+        "tools/java/NativeW23TEScienceFixture.java",
+        "tests/test_w23_r21_direction_discovery.py",
+        "tests/test_unit_a_node_public_api.py",
+        "tests/test_native_w23_te_science_protocol.py",
+        "tests/test_native_w23_saved_mph_diagnostic.py",
+        "tests/test_native_w23_te_science_runner.py",
+        "tests/test_g3_results.py",
+        "tests/test_interp_native_default_units.py",
+        "tests/test_g2_registry_packaging.py",
+        "tests/test_g2_security_guards.py",
+    )
+    for relative in required:
+        path = test_root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload = ("candidate source " + relative + "\n").encode()
+        path.write_bytes(payload)
+        source_files[relative] = {
+            "path": str(path.resolve()), "bytes": len(payload),
+            "sha256": hashlib.sha256(payload).hexdigest(),
+        }
+    source_map_sha = science._source_manifest_sha256(source_files)
+
+    compiled_sources = {}
+    for label, relative in (
+            ("persistent_worker", "comsol_mcp/worker_java/PersistentComsolWorker.java"),
+            ("science_fixture", "tools/java/NativeW23TEScienceFixture.java")):
+        class_path = compile_root / label / "classes" / (label + ".class")
+        class_path.parent.mkdir(parents=True, exist_ok=True)
+        class_payload = ("compiled " + label).encode()
+        class_path.write_bytes(class_payload)
+        source_row = source_files[relative]
+        compiled_sources[label] = {
+            "source": source_row["path"], "source_sha256": source_row["sha256"],
+            "classes": {class_path.name: {
+                "bytes": len(class_payload),
+                "sha256": hashlib.sha256(class_payload).hexdigest(),
+            }},
+        }
+    compile_receipt = {
+        "status": "PASS_COMSOL_64_JDK11_COMPILE_AND_JAVAP",
+        "classpath_manifest_sha256": "a" * 64,
+        "classpath_jar_count": 2,
+        "classpath_jar_content_fingerprint_sha256": "b" * 64,
+        "compiled_sources": compiled_sources,
+    }
+    gate_rows = {
+        "runtime_imports": {"status": "PASS_EXECUTE_HELPER_IMPORTS"},
+        "software_negative_controls": {"status": "PASS_SOFTWARE_NEGATIVE_CONTROLS"},
+        "pip_check": {"status": "PASS_FRESH_RUNTIME_BOUND_PIP_CHECK", "returncode": 0},
+        "stdio_initialize_tools_list": {
+            "status": "PASS_REAL_PRODUCTION_STDIO_INITIALIZE_TOOLS_LIST",
+            "entrypoint": "python -m comsol_mcp.mcp_server",
+        },
+        "comsol64_jdk11_javac_javap": compile_receipt,
+    }
+    full = {
+        "status": "PASS_ALL_OFFLINE_GATES",
+        "mode": science.CURRENT_FULL_OFFLINE_MODE,
+        "source_manifest_sha256": source_map_sha,
+        "source_count": len(source_files),
+        "gates": gate_rows,
+        "native_process_started": False,
+        "native_study_run_calls": 0,
+        "runtime_imports": gate_rows["runtime_imports"],
+        "software_negative_controls": gate_rows["software_negative_controls"],
+        "pip_check": gate_rows["pip_check"],
+        "stdio": gate_rows["stdio_initialize_tools_list"],
+        "compile": compile_receipt,
+        "gate_source_manifest_sha256": {
+            name: source_map_sha for name in gate_rows
+        },
+        "gate_receipt_sha256": {
+            name: science.sha256_json(value) for name, value in gate_rows.items()
+        },
+    }
+    science.write_json(full_root / "offline_preflight_progress.json", full)
+    science.write_json(full_root / "compile.json", compile_receipt)
+
+    junit_path = offline / "focused_delta_junit.xml"
+    junit_path.parent.mkdir(parents=True, exist_ok=True)
+    junit_path.write_text(
+        '<testsuite tests="25" failures="0" errors="0" skipped="0"></testsuite>\n',
+        encoding="utf-8")
+    guard_path = offline / "diagnostic-network-guard.jsonl"
+    guard_path.write_text(
+        json.dumps({"event": "GUARD_ACTIVE_BEFORE_CHILD_ENTRYPOINT"}) + "\n",
+        encoding="utf-8")
+    test_paths = [source_files[name]["path"] for name in required[2:]]
+    excluded = [
+        "tests/test_w23_r21_direction_discovery.py::"
+        "test_science_dispatch_uses_actual_registered_session_runtime_after_public_model_load"
+    ]
+    test_receipt = {
+        "status": "PASS_FOCUSED_STRICT_GUARDED_JUNIT",
+        "returncode": 0,
+        "candidate_source_manifest_sha256": source_map_sha,
+        "test_paths": test_paths,
+        "excluded_test_paths": excluded,
+        "junit_path": str(junit_path),
+        "junit_sha256": science.sha256_file(junit_path),
+        "network_guard": {
+            "status": "ACTIVE_NO_DENY_OR_SETUP_ERROR",
+            "path": str(guard_path),
+            "sha256": science.sha256_file(guard_path),
+            "event_count": 1,
+        },
+    }
+    science.write_json(offline / "diagnostic_junit_receipt.json", test_receipt)
+    focused_receipt = {
+        "schema_version": 1,
+        "status": "PASS_FOCUSED_DELTA_CURRENT_FULL_SOURCE_MAP",
+        "candidate_source_manifest_sha256": source_map_sha,
+        "focused_tests": {
+            "receipt_path": "offline_gates/diagnostic_junit_receipt.json",
+            "receipt_sha256": science.sha256_file(offline / "diagnostic_junit_receipt.json"),
+            "junit_path": "offline_gates/focused_delta_junit.xml",
+            "junit_sha256": science.sha256_file(junit_path),
+            "network_guard_path": "offline_gates/diagnostic-network-guard.jsonl",
+            "network_guard_sha256": science.sha256_file(guard_path),
+        },
+        "registered_core_loopback": {
+            "status": "NOT_RUN_DEFERRED_POST_W24_TERMINAL",
+            "test_path": excluded[0],
+            "strict_network_guard_enabled": False,
+            "counted_in_guarded_junit": False,
+        },
+    }
+    focused_path = offline / "focused_delta_receipt.json"
+    science.write_json(focused_path, focused_receipt)
+    current_progress_path = full_root / "offline_preflight_progress.json"
+    compile_path = full_root / "compile.json"
+    freeze = {
+        "source_files": source_files,
+        "source_manifest_sha256": source_map_sha,
+        "offline_preflight": {
+            "status": "PASS_ALL_OFFLINE_GATES",
+            "mode": science.CURRENT_FULL_OFFLINE_MODE,
+            "source_manifest_sha256": source_map_sha,
+            "source_count": len(source_files),
+            "current_full_gate_receipt": full,
+            "current_full_receipt": {
+                "path": "offline_gates/current_full/offline_preflight_progress.json",
+                "sha256": science.sha256_file(current_progress_path),
+            },
+            "compile": compile_receipt,
+            "runtime_imports": full["runtime_imports"],
+            "software_negative_controls": full["software_negative_controls"],
+            "pip_check": full["pip_check"],
+            "stdio": full["stdio"],
+            "compile_receipt": {
+                "path": "offline_gates/current_full/compile.json",
+                "sha256": science.sha256_file(compile_path),
+            },
+            "compile_artifact_root": "offline_gates/current_full/compile",
+            "focused_delta_receipt": {
+                "path": "offline_gates/focused_delta_receipt.json",
+                "sha256": science.sha256_file(focused_path),
+            },
+            "registered_core_loopback": focused_receipt["registered_core_loopback"],
+        },
+    }
+
+    class FakeJavaWorkerPaths:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def classpath(self):
+            return ("candidate-classpath", "a" * 64, 2, "b" * 64)
+
+    monkeypatch.setattr(_java_worker, "JavaWorkerPaths", FakeJavaWorkerPaths)
+    return science, freeze, candidate / "freeze.json", full, source_files, focused_path
+
+
+def test_current_full_offline_receipt_positive_and_negative_controls(tmp_path, monkeypatch):
+    science, freeze, freeze_path, full, source_files, focus_path = _current_full_offline_receipt_fixture(
+        tmp_path / "valid", monkeypatch)
+    result = science._check_offline_receipts(freeze_path, freeze)
+    assert result["status"] == "PASS_FROZEN_CLASSPATH_AND_CLASS_OUTPUT_REVALIDATED"
+    assert result["current_full_offline_gates"]["status"] == "PASS_CURRENT_FULL_SOURCE_BOUND_OFFLINE_GATES"
+    assert result["current_full_offline_gates"]["registered_core_loopback"] == "NOT_RUN_DEFERRED_POST_W24_TERMINAL"
+
+    science, tampered, freeze_path, full, _files, _focus = _current_full_offline_receipt_fixture(
+        tmp_path / "mixed-gate-map", monkeypatch)
+    bad = dict(full)
+    bad["gate_source_manifest_sha256"] = dict(full["gate_source_manifest_sha256"])
+    bad["gate_source_manifest_sha256"]["stdio_initialize_tools_list"] = "0" * 64
+    progress = freeze_path.parent / "offline_gates/current_full/offline_preflight_progress.json"
+    science.write_json(progress, bad)
+    tampered["offline_preflight"]["current_full_gate_receipt"] = bad
+    tampered["offline_preflight"]["current_full_receipt"]["sha256"] = science.sha256_file(progress)
+    with pytest.raises(RuntimeError, match="not bound to the frozen source map"):
+        science._check_offline_receipts(freeze_path, tampered)
+
+    science, tampered, freeze_path, full, _files, _focus = _current_full_offline_receipt_fixture(
+        tmp_path / "changed-java-source", monkeypatch)
+    bad_compile = copy.deepcopy(full["compile"])
+    bad_compile["compiled_sources"]["persistent_worker"]["source_sha256"] = "0" * 64
+    bad = copy.deepcopy(full)
+    bad["compile"] = bad_compile
+    bad["gates"]["comsol64_jdk11_javac_javap"] = bad_compile
+    bad["gate_receipt_sha256"]["comsol64_jdk11_javac_javap"] = science.sha256_json(bad_compile)
+    progress = freeze_path.parent / "offline_gates/current_full/offline_preflight_progress.json"
+    science.write_json(progress, bad)
+    compile_path = freeze_path.parent / "offline_gates/current_full/compile.json"
+    science.write_json(compile_path, bad_compile)
+    outer = tampered["offline_preflight"]
+    outer.update({
+        "current_full_gate_receipt": bad,
+        "current_full_receipt": {"path": "offline_gates/current_full/offline_preflight_progress.json",
+                                 "sha256": science.sha256_file(progress)},
+        "compile": bad_compile,
+        "compile_receipt": {"path": "offline_gates/current_full/compile.json",
+                            "sha256": science.sha256_file(compile_path)},
+    })
+    with pytest.raises(RuntimeError, match="differs from frozen Java source"):
+        science._check_offline_receipts(freeze_path, tampered)
+
+    science, tampered, freeze_path, _full, _files, focus_path = _current_full_offline_receipt_fixture(
+        tmp_path / "focused-map-mismatch", monkeypatch)
+    focus = json.loads(focus_path.read_text())
+    focus["candidate_source_manifest_sha256"] = "0" * 64
+    science.write_json(focus_path, focus)
+    tampered["offline_preflight"]["focused_delta_receipt"]["sha256"] = science.sha256_file(focus_path)
+    with pytest.raises(RuntimeError, match="current full source map"):
+        science._check_offline_receipts(freeze_path, tampered)
+
+    science, tampered, freeze_path, _full, source_files, _focus = _current_full_offline_receipt_fixture(
+        tmp_path / "mutated-source", monkeypatch)
+    changed = Path(source_files["comsol_mcp/worker_java/PersistentComsolWorker.java"]["path"])
+    changed.write_text("changed after current source map\n", encoding="utf-8")
+    with pytest.raises(RuntimeError, match="differs from its frozen map"):
+        science._check_offline_receipts(freeze_path, tampered)
+
+
+
+def test_offline_preflight_current_full_binds_gate_hashes_same_map(tmp_path, monkeypatch):
+    from tools import run_native_w23_te_science as science
+    from tools import w23_te_science_protocol as protocol_module
+
+    source_path = tmp_path / "candidate-source.py"
+    source_path.write_text("synthetic source identity only\n", encoding="utf-8")
+    source_files = {
+        "candidate-source.py": {
+            "path": str(source_path.resolve()),
+            "bytes": source_path.stat().st_size,
+            "sha256": science.sha256_file(source_path),
+        }
+    }
+    source_map_sha = science._source_manifest_sha256(source_files)
+    binding = {"binding_sha256": "f" * 64}
+    budget = {"scope": "offline-wrapper-test-only"}
+    calls = []
+
+    monkeypatch.setattr(science, "_runtime_helper_imports",
+                        lambda: {"resolved": "production import gate invoked"})
+    monkeypatch.setattr(protocol_module, "run_negative_controls",
+                        lambda: {"status": "PASS_SOFTWARE_NEGATIVE_CONTROLS",
+                                 "controls": [{"control": "test"}]})
+
+    def pip_check(*, runtime_binding=None, runtime_budget=None):
+        calls.append((runtime_binding, runtime_budget))
+        if runtime_binding is None:
+            return {"status": "PASS_TASK_VENV_PIP_CHECK"}
+        return {"status": "PASS_FRESH_RUNTIME_BOUND_PIP_CHECK",
+                "runtime_binding_sha256": runtime_binding["binding_sha256"]}
+
+    monkeypatch.setattr(science, "_pip_dependency_check", pip_check)
+    monkeypatch.setattr(science, "_actual_stdio_preflight",
+                        lambda _path: {"status": "PASS_REAL_PRODUCTION_STDIO_INITIALIZE_TOOLS_LIST"})
+    monkeypatch.setattr(science, "_compile_sources",
+                        lambda _path: {"status": "PASS_COMSOL_64_JDK11_COMPILE_AND_JAVAP",
+                                       "compiled_sources": {}})
+
+    current = science.offline_preflight(
+        tmp_path / "current-full",
+        current_source_files=source_files,
+        runtime_binding=binding,
+        runtime_budget=budget)
+    assert current["status"] == "PASS_ALL_OFFLINE_GATES"
+    assert current["mode"] == science.CURRENT_FULL_OFFLINE_MODE
+    assert current["source_manifest_sha256"] == source_map_sha
+    assert current["source_count"] == 1
+    assert set(current["gate_source_manifest_sha256"]) == set(science.CURRENT_FULL_OFFLINE_GATES)
+    assert set(current["gate_receipt_sha256"]) == set(science.CURRENT_FULL_OFFLINE_GATES)
+    assert all(value == source_map_sha
+               for value in current["gate_source_manifest_sha256"].values())
+    assert all(current["gate_receipt_sha256"][name] == science.sha256_json(current["gates"][name])
+               for name in science.CURRENT_FULL_OFFLINE_GATES)
+    assert calls == [(binding, budget)]
+    saved = json.loads((tmp_path / "current-full/offline_preflight_progress.json").read_text())
+    assert saved == current
+
+    legacy = science.offline_preflight(tmp_path / "legacy-default")
+    assert legacy["status"] == "PASS_ALL_OFFLINE_GATES"
+    assert "mode" not in legacy
+    assert "gate_source_manifest_sha256" not in legacy
+    assert "gate_receipt_sha256" not in legacy
+    assert calls[-1] == (None, None)
