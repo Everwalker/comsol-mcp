@@ -1,0 +1,1511 @@
+"""Narrow W25 zero-solve fingerprint probe over an existing managed session.
+
+The caller creates ``BoundManagedPublicGate`` only after the existing project,
+runtime, once-binding, owner, and terminal-evidence admission path succeeds.
+This module never starts a Server/Worker, reconnects, retries, or calls COMSOL
+through a private API. Every model operation goes through ControlDaemon's
+public dispatch and every response is written before inspection.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import stat
+import subprocess
+import time
+from typing import Any, Mapping
+from uuid import uuid4
+
+from comsol_mcp._execution_contract import ModelRef, model_ref_from_mapping
+from operation_store_witness import ProbeEvidenceError, derive_saved_witness, save_raw_response_once
+
+
+ACTIVE_STOP_HOLD_SECONDS = 600.0
+CLEANUP_STOP_HOLD_SECONDS = 120.0
+PER_CALL_SECONDS = 60.0
+JOB_LOG_LIMIT = 500
+SENTINEL_NAME = "w25_probe_sentinel"
+
+
+class ProbeAdmissionError(RuntimeError):
+    pass
+
+
+class ProbeUnknown(RuntimeError):
+    """An admitted operation may have reached the original Worker."""
+
+
+class ProbePreDispatchFailure(RuntimeError):
+    """One public mutation is durably FAILED before any Worker dispatch."""
+
+    def __init__(self, step: str, proof: Mapping[str, Any]):
+        self.step = step
+        self.proof = dict(proof)
+        super().__init__(f"{step} is terminal FAILED before Worker dispatch ({proof.get('error_code')})")
+
+
+class ProbeActiveStop(ProbeUnknown):
+    """The active admission boundary was reached before the next call was dispatched."""
+
+
+@dataclass(frozen=True)
+class ProbeCloseGrantSeed:
+    """Hashes from the exact run once-binding and approval record; no scope exists yet."""
+
+    once_binding_sha256: str
+    approval_sha256: str
+
+    def __post_init__(self) -> None:
+        for value in (self.once_binding_sha256, self.approval_sha256):
+            if not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None:
+                raise ProbeAdmissionError("close grant seed must bind exact lowercase once/approval SHA-256 values")
+
+
+_W25_CLOSE_TRACE_SEAL = object()
+
+
+@dataclass(frozen=True)
+class ProbeCloseTraceCheckpoint:
+    """Private trace-derived current state for one W25 model.close delegation."""
+
+    kind: str
+    active_stop_checkpoint: str | None
+    run_id: str
+    project_id: str
+    session_id: str
+    model_ref: ModelRef
+    expected_revision: int
+    public_call_count_before_close: int
+    trace_sha256: str
+    witness_labels: tuple[str, ...]
+    current_label: str
+    current_parameters: tuple[tuple[str, str], ...]
+    _seal: Any = field(default=None, repr=False, compare=False)
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "kind": self.kind,
+            "active_stop_checkpoint": self.active_stop_checkpoint,
+            "run_id": self.run_id,
+            "project_id": self.project_id,
+            "session_id": self.session_id,
+            "model_ref": self.model_ref.as_dict(),
+            "expected_revision": self.expected_revision,
+            "public_call_count_before_close": self.public_call_count_before_close,
+            "trace_sha256": self.trace_sha256,
+            "witness_labels": list(self.witness_labels),
+            "current_label": self.current_label,
+            "current_parameters": [list(row) for row in self.current_parameters],
+        }
+
+
+def _validate_probe_close_trace_checkpoint(checkpoint: Any, *, run_id: str,
+                                           project_id: str, session_id: str,
+                                           model_ref: ModelRef) -> None:
+    if (type(checkpoint) is not ProbeCloseTraceCheckpoint
+            or checkpoint._seal is not _W25_CLOSE_TRACE_SEAL
+            or checkpoint.run_id != run_id or checkpoint.project_id != project_id
+            or checkpoint.session_id != session_id or type(checkpoint.model_ref) is not ModelRef
+            or type(checkpoint.expected_revision) is not int
+            or type(checkpoint.public_call_count_before_close) is not int
+            or checkpoint.model_ref != model_ref
+            or not re.fullmatch(r"[0-9a-f]{64}", checkpoint.trace_sha256 or "")
+            or checkpoint.current_label != "W25 zero-solve fingerprint probe"
+            or checkpoint.current_parameters != ((SENTINEL_NAME, "0.5"),)):
+        raise ProbeAdmissionError("close requires a current W25 trace-derived baseline checkpoint")
+    allowed = {
+        ("NORMAL_COMPLETION", None, 5, 16, ("W0", "W1", "W2", "W3", "W4")),
+        ("ACTIVE_RESTORED_AFTER_W0", "AFTER_W0", 1, 8,
+         ("W0", "active-stop-before-restore", "active-stop-restored")),
+        ("ACTIVE_RESTORED_AFTER_W0_INSPECT", "AFTER_W0_INSPECT", 1, 8,
+         ("W0", "active-stop-before-restore", "active-stop-restored")),
+        ("ACTIVE_RESTORED_AFTER_SENTINEL_875", "AFTER_SENTINEL_875", 3, 10,
+         ("W0", "active-stop-before-restore", "active-stop-restored")),
+        ("ACTIVE_RESTORED_AFTER_W1_INSPECT", "AFTER_W1_INSPECT", 3, 12,
+         ("W0", "W1", "active-stop-before-restore", "active-stop-restored")),
+        ("ACTIVE_RESTORED_AFTER_W2", "AFTER_W2", 3, 14,
+         ("W0", "W1", "W2", "active-stop-before-restore", "active-stop-restored")),
+        ("ACTIVE_RESTORED_AFTER_LABEL_NONCE", "AFTER_LABEL_NONCE", 5, 16,
+         ("W0", "W1", "W2", "active-stop-before-restore", "active-stop-restored")),
+        ("ACTIVE_RESTORED_AFTER_W3_INSPECT", "AFTER_W3_INSPECT", 5, 16,
+         ("W0", "W1", "W2", "W3", "W4")),
+    }
+    key = (checkpoint.kind, checkpoint.active_stop_checkpoint, checkpoint.expected_revision,
+           checkpoint.public_call_count_before_close, checkpoint.witness_labels)
+    if key not in allowed:
+        raise ProbeAdmissionError("close checkpoint revision, public-call count, or witness trace is outside the W25 fixed path")
+
+
+def _probe_close_authorization_ref(seed: ProbeCloseGrantSeed, *, run_id: str, project_id: str,
+                                   session_id: str, model_ref: ModelRef,
+                                   checkpoint: ProbeCloseTraceCheckpoint,
+                                   worker_binding: Mapping[str, Any]) -> str:
+    if (type(seed) is not ProbeCloseGrantSeed or type(model_ref) is not ModelRef
+            or model_ref.session_id != session_id or not project_id or not run_id):
+        raise ProbeAdmissionError("probe close scope is not bound to the exact created model and run")
+    _validate_probe_close_trace_checkpoint(checkpoint, run_id=run_id, project_id=project_id,
+                                           session_id=session_id, model_ref=model_ref)
+    material = {
+        "schema": "w25-zero-solve-probe-close-grant/2",
+        "once_binding_sha256": seed.once_binding_sha256,
+        "approval_sha256": seed.approval_sha256,
+        "run_id": run_id,
+        "project_id": project_id,
+        "session_id": session_id,
+        "model_ref": model_ref.as_dict(),
+        "checkpoint": checkpoint.as_dict(),
+        "destination_ref": None,
+        "worker_binding": dict(worker_binding),
+    }
+    return "w25-probe-close-v2:" + hashlib.sha256(_json_bytes(material)).hexdigest()
+
+
+def _json_bytes(value: Any) -> bytes:
+    return (json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":"),
+                        allow_nan=False) + "\n").encode("utf-8")
+
+
+def _write_new_json(path: Path, value: Mapping[str, Any]) -> dict[str, Any]:
+    raw = _json_bytes(dict(value))
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    try:
+        os.fchmod(fd, 0o600)
+        view = memoryview(raw)
+        while view:
+            view = view[os.write(fd, view):]
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    info = path.lstat()
+    if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or path.is_symlink():
+        raise ProbeUnknown("new evidence file is not a private regular single-link file")
+    return {"path": str(path), "bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest(),
+            "mode": stat.S_IMODE(info.st_mode), "inode": info.st_ino}
+
+
+def _safe_component(value: str) -> str:
+    return "".join(char if char.isalnum() or char in "-_." else "_" for char in value)
+
+
+def _private_directory(path: Path, *, project_root: Path, create: bool) -> Path:
+    """Create/check one exact private directory after its registered project path is trusted."""
+    if create:
+        path.mkdir(mode=0o700)
+    try:
+        info = path.lstat()
+        resolved = path.resolve(strict=True)
+    except OSError as exc:
+        raise ProbeAdmissionError("probe evidence directory could not be verified") from exc
+    if (stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode)
+            or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700
+            or not resolved.is_relative_to(project_root)):
+        raise ProbeAdmissionError("probe evidence directory is not a private owned child of the registered project")
+    return resolved
+
+
+def _prepare_evidence_root(gate: Any, evidence_root: str | Path) -> tuple[Path, Path]:
+    """Validate the nearest existing ancestor before creating any evidence path."""
+    project_value = getattr(getattr(gate, "context", None), "project_root", None)
+    if not isinstance(project_value, (str, os.PathLike)):
+        raise ProbeAdmissionError("registered project root is unavailable")
+    try:
+        project_input = Path(project_value)
+        if not project_input.is_absolute():
+            raise ProbeAdmissionError("registered project root must be absolute")
+        project_root = project_input.resolve(strict=True)
+        project_info = project_root.lstat()
+    except ProbeAdmissionError:
+        raise
+    except OSError as exc:
+        raise ProbeAdmissionError("registered project root cannot be verified") from exc
+    if (not stat.S_ISDIR(project_info.st_mode) or stat.S_ISLNK(project_info.st_mode)
+            or project_info.st_uid != os.getuid()):
+        raise ProbeAdmissionError("registered project root is not an owned directory")
+
+    raw_root = Path(evidence_root)
+    if not raw_root.is_absolute() or ".." in raw_root.parts:
+        raise ProbeAdmissionError("probe evidence root must be an absolute normalized project path")
+    root = Path(os.path.abspath(raw_root))
+    if root == project_root or not root.is_relative_to(project_root):
+        raise ProbeAdmissionError("probe evidence must remain below the exact registered project root")
+    if root.exists() or root.is_symlink():
+        raise ProbeAdmissionError("probe evidence root must be a new path")
+
+    missing: list[Path] = []
+    nearest = root.parent
+    while True:
+        try:
+            nearest_info = nearest.lstat()
+            break
+        except FileNotFoundError:
+            missing.append(nearest)
+            parent = nearest.parent
+            if parent == nearest:
+                raise ProbeAdmissionError("probe evidence path has no existing project ancestor")
+            nearest = parent
+        except OSError as exc:
+            raise ProbeAdmissionError("nearest existing evidence parent cannot be read safely") from exc
+
+    if (not stat.S_ISDIR(nearest_info.st_mode) or stat.S_ISLNK(nearest_info.st_mode)
+            or nearest_info.st_uid != os.getuid()):
+        raise ProbeAdmissionError("nearest existing evidence parent must be an owned real directory")
+    if not nearest.is_relative_to(project_root):
+        raise ProbeAdmissionError("nearest existing evidence parent is outside the registered project")
+
+    # Inspect every existing component so an internal symlink cannot redirect
+    # a lexically project-scoped path before the first mkdir.
+    cursor = project_root
+    relative_existing = nearest.relative_to(project_root)
+    for component in relative_existing.parts:
+        cursor = cursor / component
+        try:
+            info = cursor.lstat()
+            resolved = cursor.resolve(strict=True)
+        except OSError as exc:
+            raise ProbeAdmissionError("existing evidence path component changed during verification") from exc
+        if (stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode)
+                or info.st_uid != os.getuid() or not resolved.is_relative_to(project_root)):
+            raise ProbeAdmissionError("existing evidence path component is not an owned in-project directory")
+
+    current = nearest
+    for missing_path in reversed(missing):
+        current = current / missing_path.name
+        _private_directory(current, project_root=project_root, create=True)
+    _private_directory(root, project_root=project_root, create=True)
+    return root.resolve(strict=True), project_root
+
+
+def registered_worker_binding(context: Any, model_ref: Mapping[str, Any], project_id: str) -> dict[str, Any]:
+    """Derive both server-ID domains from the registered context, never raw job.log.
+
+    ``raw_server_endpoint`` comes from the backend's accepted Worker connect
+    identity. ``public_server_instance_id`` comes from the registered
+    SessionLedger. The two fields are independently cross-checked against the
+    typed ModelRef and the exact session/epoch.
+    """
+    try:
+        ref = model_ref_from_mapping(dict(model_ref)).as_dict()
+    except Exception as exc:
+        raise ProbeAdmissionError("typed ModelRef is malformed") from exc
+    backend = getattr(context, "backend", None)
+    service = getattr(context, "service", None)
+    identity = getattr(backend, "worker_identity", None)
+    ledger = getattr(service, "ledger", None)
+    endpoint = getattr(context, "endpoint", None)
+    observed_peer = getattr(endpoint, "observed_peer", None)
+    if (getattr(context, "project_id", None) != project_id
+            or getattr(context, "session_id", None) != ref.get("session_id")
+            or getattr(context, "worker", None) is None
+            or getattr(context, "worker", None) is not getattr(backend, "worker", None)
+            or not isinstance(identity, Mapping)
+            or not isinstance(identity.get("worker_instance_id"), str)
+            or not identity.get("worker_instance_id")
+            or type(identity.get("connection_epoch")) is not int
+            or not isinstance(identity.get("endpoint"), str) or not identity.get("endpoint")
+            or not isinstance(getattr(ledger, "server_instance_id", None), str)
+            or not isinstance(getattr(context, "worker_instance_id", None), str)
+            or type(getattr(context, "worker_epoch", None)) is not int
+            or getattr(context, "worker_instance_id") != identity.get("worker_instance_id")
+            or getattr(context, "worker_epoch") != identity.get("connection_epoch")
+            or getattr(ledger, "session_id", None) != context.session_id
+            or getattr(ledger, "server_instance_id", None) != identity.get("server_instance_id")
+            or ref.get("server_instance_id") != identity.get("server_instance_id")
+            or observed_peer is None
+            or type(getattr(endpoint, "port", None)) is not int
+            or not isinstance(getattr(endpoint, "host", None), str)):
+        raise ProbeAdmissionError("registered backend, Worker epoch, Core ledger, and typed ModelRef do not bind")
+    raw_endpoint = str(identity["endpoint"])
+    # connect_session accepts only the server string returned by the same
+    # Worker connect request and records the independently observed peer. Keep
+    # this legacy endpoint domain separate from the Core server hash above.
+    if raw_endpoint != f"{endpoint.host}:{endpoint.port}":
+        raise ProbeAdmissionError("registered raw Worker endpoint differs from its exact bound session endpoint")
+    return {
+        "instance_id": str(identity["worker_instance_id"]),
+        "generation": int(identity["connection_epoch"]),
+        "raw_server_endpoint": raw_endpoint,
+        "public_server_instance_id": str(ledger.server_instance_id),
+    }
+
+
+@dataclass(frozen=True)
+class BoundManagedPublicGate:
+    """A capability bound to one already-live registered owned session."""
+
+    daemon: Any
+    project_id: str
+    session_id: str
+    context: Any
+    backend: Any
+    worker: Any
+    worker_process: subprocess.Popen
+    server_handle: Any
+    server_process: subprocess.Popen
+    server_identity: Any
+    worker_child_identity: Mapping[str, Any]
+    close_delegator: Any = None
+
+    @classmethod
+    def bind(cls, daemon: Any, project_id: str, session_id: str, *, close_delegator: Any = None) -> "BoundManagedPublicGate":
+        from comsol_mcp._control_daemon import ControlDaemon
+        from comsol_mcp._session_context import SessionRuntimeContext
+        from comsol_mcp._session_server import ManagedServerHandle
+
+        if (type(daemon) is not ControlDaemon or not isinstance(project_id, str) or not project_id
+                or not isinstance(session_id, str) or not session_id):
+            raise ProbeAdmissionError("exact ControlDaemon and project/session identity are required")
+        key = (project_id, session_id)
+        try:
+            context = daemon.session_registry.get(project_id, session_id)
+        except Exception as exc:
+            raise ProbeAdmissionError("registered project/session runtime is unavailable") from exc
+        if (type(context) is not SessionRuntimeContext or context.project_id != project_id
+                or context.session_id != session_id or context.server_ownership != "mcp_managed"
+                or context.server_started_by_mcp is not True or context.process_identity is None
+                or context.endpoint.owned_process is not context.process_identity
+                or context.backend is None or context.service is None or context.worker is None):
+            raise ProbeAdmissionError("runtime is not the exact project-owned managed session")
+        backend, worker = context.backend, context.worker
+        server_handle = daemon._session_server_handles.get(key)
+        if type(server_handle) is not ManagedServerHandle:
+            raise ProbeAdmissionError("original owned Server handle is unavailable")
+        server_process = server_handle.process
+        worker_process = getattr(worker, "_process", None)
+        if (type(server_process) is not subprocess.Popen or type(worker_process) is not subprocess.Popen
+                or server_handle.retired or server_handle.process_identity is not context.process_identity
+                or context.server_handle is not server_process
+                or daemon._session_worker_handles.get(key) is not worker
+                or daemon._session_backends.get(key) is not backend
+                or backend.worker is not worker or backend.service is not context.service):
+            raise ProbeAdmissionError("original Server/Worker Popen handles do not match the registered owner")
+        child = daemon._session_worker_child_identities.get(key)
+        if (not isinstance(child, Mapping) or child.get("worker") is not worker
+                or child.get("process") is not worker_process or child.get("pid") != worker_process.pid
+                or type(child.get("start_epoch_ms")) is not int or child.get("start_epoch_ms") <= 0):
+            raise ProbeAdmissionError("original Worker Popen birth record is unavailable")
+        if server_process.poll() is not None or worker_process.poll() is not None:
+            raise ProbeAdmissionError("original Server or Worker Popen is already terminal")
+        try:
+            verified_server = daemon.session_server_launcher.verify(server_handle)
+        except Exception as exc:
+            raise ProbeAdmissionError("retained Server Popen/listener identity could not be reverified") from exc
+        if verified_server != context.process_identity:
+            raise ProbeAdmissionError("reverified Server identity differs from registered process birth")
+        return cls(daemon, project_id, session_id, context, backend, worker,
+                   worker_process, server_handle, server_process, verified_server, dict(child), close_delegator)
+
+    def assert_live(self) -> dict[str, Any]:
+        key = (self.project_id, self.session_id)
+        if (self.daemon._closing is True
+                or self.daemon.session_registry.get(self.project_id, self.session_id) is not self.context
+                or self.daemon._session_backends.get(key) is not self.backend
+                or self.daemon._session_worker_handles.get(key) is not self.worker
+                or self.daemon._session_server_handles.get(key) is not self.server_handle
+                or self.server_handle.process is not self.server_process
+                or getattr(self.worker, "_process", None) is not self.worker_process
+                or self.server_process.poll() is not None or self.worker_process.poll() is not None
+                or self.daemon._session_worker_child_identities.get(key) != dict(self.worker_child_identity)):
+            raise ProbeUnknown("original registered runtime owner changed or became terminal")
+        return {"project_id": self.project_id, "session_id": self.session_id,
+                "server_pid": self.server_process.pid, "worker_pid": self.worker_process.pid,
+                "worker_instance_id": self.context.worker_instance_id,
+                "worker_epoch": self.context.worker_epoch,
+                "server_birth": self.server_identity.birth,
+                "original_server_popen_retained": True,
+                "original_worker_popen_retained": True}
+
+    def dispatch(self, request: Mapping[str, Any]) -> Mapping[str, Any]:
+        """Use the actual cached public ControlDaemon dispatch method."""
+        if not isinstance(request, Mapping):
+            raise ProbeAdmissionError("public request must be a mapping")
+        return self.daemon.dispatch(dict(request))
+
+    def expected_worker_binding(self, model_ref: Mapping[str, Any]) -> dict[str, Any]:
+        return registered_worker_binding(self.context, model_ref, self.project_id)
+
+
+def _model_execution(gate: Any, model_ref: Mapping[str, Any], revision: int,
+                     request_id: str, key: str, timeout_s: float) -> dict[str, Any]:
+    return {"project_id": gate.project_id, "session_id": gate.session_id,
+            "model_ref": dict(model_ref), "expected_revision": revision,
+            "request_id": request_id, "idempotency_key": key,
+            "rpc_timeout_s": timeout_s, "execution_timeout_s": timeout_s}
+
+
+def _operation_request(operation: str, arguments: Mapping[str, Any], execution: Mapping[str, Any]) -> dict[str, Any]:
+    return {"operation": operation, "arguments": dict(arguments), "execution": dict(execution)}
+
+
+def _wrapped_request(operation: str, arguments: Mapping[str, Any], execution: Mapping[str, Any]) -> dict[str, Any]:
+    return _operation_request("operation_call", {"operation_id": operation, "arguments": dict(arguments)}, execution)
+
+
+def _response_data(response: Mapping[str, Any], *, label: str) -> Mapping[str, Any]:
+    if response.get("success") is not True:
+        error = response.get("error")
+        code = error.get("code") if isinstance(error, Mapping) else "UNKNOWN"
+        raise ProbeUnknown(f"{label} did not return terminal success ({code})")
+    data = response.get("data")
+    if not isinstance(data, Mapping):
+        raise ProbeUnknown(f"{label} response has no data object")
+    execution = response.get("execution")
+    if isinstance(execution, Mapping) and execution.get("status") in {"RUNNING", "QUEUED", "UNKNOWN"}:
+        raise ProbeUnknown(f"{label} response is not terminal")
+    return data
+
+
+def _terminal_pre_dispatch_failure_proof(gate: Any, operation: str,
+                                         request_execution: Mapping[str, Any],
+                                         response: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Accept only the exact R6 validation refusal plus durable FAILED/no-Worker evidence."""
+    if operation != "parameter.set" or response.get("success") is not False:
+        return None
+    error = response.get("error")
+    details = error.get("details") if isinstance(error, Mapping) else None
+    execution = response.get("execution")
+    if (not isinstance(error, Mapping) or error.get("code") != "ISOLATION_PROOF_REQUIRED"
+            or error.get("stage") != "validation" or error.get("safe_retry") is not False
+            or not isinstance(details, Mapping)
+            or details.get("target_operation_dispatched") is not False
+            or details.get("worker_operation_dispatched") is not False
+            or not isinstance(execution, Mapping)
+            or execution.get("request_id") != request_execution.get("request_id")
+            or execution.get("idempotency_key") != request_execution.get("idempotency_key")
+            or execution.get("status") in {"QUEUED", "RUNNING", "UNKNOWN"}
+            or not isinstance(execution.get("operation_id"), str)
+            or not execution.get("operation_id")
+            or not isinstance(execution.get("job_id"), str)
+            or not execution.get("job_id")):
+        return None
+    data = response.get("data")
+    if isinstance(data, Mapping) and data.get("execution_state_unknown") is True:
+        return None
+    if not all(hasattr(gate, name) for name in ("daemon", "project_id", "session_id")):
+        return None
+    store = getattr(gate.daemon, "store", None)
+    if store is None:
+        return None
+    operation_id, job_id = execution["operation_id"], execution["job_id"]
+    request_id, idempotency_key = request_execution.get("request_id"), request_execution.get("idempotency_key")
+    try:
+        operation_record = store.get_operation(operation_id)
+        job_record = store.operation_job(operation_id)
+        events = store.events(job_id, 0, 1000)
+    except Exception:
+        return None
+    event_names = [row.get("event") for row in events if isinstance(row, Mapping)]
+    if (not isinstance(operation_record, Mapping) or not isinstance(job_record, Mapping)
+            or operation_record.get("operation_id") != operation_id
+            or operation_record.get("operation") != operation
+            or operation_record.get("request_id") != request_id
+            or operation_record.get("idempotency_key") != idempotency_key
+            or operation_record.get("request_hash") != execution.get("request_hash")
+            or operation_record.get("status") != "FAILED"
+            or operation_record.get("result") != dict(response)
+            or job_record.get("job_id") != job_id
+            or job_record.get("operation_id") != operation_id
+            or job_record.get("status") != "FAILED"
+            or event_names != ["RUNNING", "FAILED"]
+            or any("worker" in str(name).casefold() for name in event_names)):
+        return None
+    if (execution.get("project_id") not in (None, gate.project_id)
+            or execution.get("session_id") not in (None, gate.session_id)):
+        return None
+    return {
+        "schema": "w25-probe-terminal-predispatch-failure/1",
+        "status": "PROVEN_TERMINAL_FAILED_BEFORE_WORKER_DISPATCH",
+        "operation": operation, "operation_id": operation_id, "job_id": job_id,
+        "request_id": request_id, "idempotency_key": idempotency_key,
+        "request_hash": execution.get("request_hash"), "error_code": error["code"],
+        "error_stage": error["stage"], "safe_retry": False,
+        "target_operation_dispatched": False, "worker_operation_dispatched": False,
+        "operation_status": operation_record["status"], "job_status": job_record["status"],
+        "event_names": event_names, "worker_request_events": 0,
+        "no_replay": True,
+    }
+
+
+def _assert_operation_execution(response: Mapping[str, Any], *, gate: Any, request_id: str,
+                                model_ref: Mapping[str, Any] | None = None,
+                                revision: int | None = None) -> Mapping[str, Any]:
+    execution = response.get("execution")
+    if not isinstance(execution, Mapping) or execution.get("request_id") != request_id:
+        raise ProbeUnknown("ControlDaemon response request identity differs from the one submitted")
+    if execution.get("project_id") not in (None, gate.project_id):
+        raise ProbeUnknown("ControlDaemon response project identity changed")
+    if execution.get("session_id") not in (None, gate.session_id):
+        raise ProbeUnknown("ControlDaemon response session identity changed")
+    if model_ref is not None and execution.get("model_ref") != dict(model_ref):
+        raise ProbeUnknown("ControlDaemon response ModelRef changed")
+    if revision is not None and execution.get("revision") != revision:
+        raise ProbeUnknown("ControlDaemon response revision differs from the expected state")
+    if execution.get("dirty") not in (None, False):
+        raise ProbeUnknown("ControlDaemon response marks the model dirty")
+    return execution
+
+
+class _PublicCallRun:
+    def __init__(self, gate: Any, evidence_root: Path, close_grant_seed: ProbeCloseGrantSeed,
+                 run_id: str | None = None):
+        self.gate = gate
+        self.close_delegator = getattr(gate, "close_delegator", None)
+        self.root = evidence_root
+        self.close_grant_seed = close_grant_seed
+        self.authorization_ref: str | None = None
+        self.close_scope_binding: dict[str, Any] | None = None
+        if run_id is None:
+            run_id = uuid4().hex
+        if (not isinstance(run_id, str) or len(run_id) != 32
+                or any(char not in "0123456789abcdef" for char in run_id)):
+            raise ProbeAdmissionError("probe run identity must be one lowercase 128-bit hex id")
+        delegated_run_id = getattr(self.close_delegator, "run_id", None)
+        if self.close_delegator is not None and delegated_run_id != run_id:
+            raise ProbeAdmissionError("probe run identity differs from the constructor-installed close delegator")
+        self.run_id = run_id
+        self.started = time.monotonic()
+        self.cleanup_started: float | None = None
+        self.call_count = 0
+        self.calls: list[dict[str, Any]] = []
+        self.witnesses: list[dict[str, Any]] = []
+        self.model_ref: dict[str, Any] | None = None
+        self.typed_model_ref: ModelRef | None = None
+        self.revision: int | None = None
+        self.worker_binding: dict[str, Any] | None = None
+        self.created_model = False
+        self.created_label: str | None = None
+        self.known_label: str | None = None
+        self.known_parameters: dict[str, str] = {}
+        self.baseline_witness: dict[str, Any] | None = None
+        self.baseline_components: Mapping[str, Any] | None = None
+        self.baseline_external_event_counter: int | None = None
+        self.cleanup_orchestration: dict[str, Any] | None = None
+        self.terminal_failure: dict[str, Any] | None = None
+        self.terminal_closed = False
+        self.active_stop_checkpoint: dict[str, Any] | None = None
+
+    def _timeout(self, *, cleanup: bool) -> float:
+        elapsed = time.monotonic() - self.started
+        if not cleanup and elapsed >= ACTIVE_STOP_HOLD_SECONDS:
+            raise ProbeActiveStop("600 second active admission stop/hold threshold reached before dispatch")
+        if cleanup and elapsed >= ACTIVE_STOP_HOLD_SECONDS and self.cleanup_started is None:
+            self.cleanup_started = time.monotonic()
+        cleanup_elapsed = 0.0 if self.cleanup_started is None else time.monotonic() - self.cleanup_started
+        total_remaining = ACTIVE_STOP_HOLD_SECONDS + CLEANUP_STOP_HOLD_SECONDS - elapsed
+        if cleanup:
+            cleanup_remaining = (CLEANUP_STOP_HOLD_SECONDS - cleanup_elapsed
+                                 if self.cleanup_started is not None else total_remaining)
+            remaining = min(PER_CALL_SECONDS, total_remaining, cleanup_remaining)
+        else:
+            # A non-cleanup request may not be admitted with a timeout that
+            # crosses the active stop/hold boundary. Restores may consume the
+            # separately fixed cleanup reserve, including a restore already
+            # in flight as the active window ends.
+            active_remaining = ACTIVE_STOP_HOLD_SECONDS - elapsed
+            remaining = min(PER_CALL_SECONDS, total_remaining, active_remaining)
+        if remaining <= 0:
+            raise ProbeUnknown("120 second cleanup stop/hold threshold reached")
+        return remaining
+
+    def _call(self, step: str, operation: str, arguments: Mapping[str, Any], execution: Mapping[str, Any],
+              *, wrapper: bool = False, cleanup: bool = False, secret_fields: tuple[str, ...] = ()) -> Mapping[str, Any]:
+        if self.call_count >= 17:
+            raise ProbeUnknown("fixed 17-call public budget exhausted")
+        timeout = self._timeout(cleanup=cleanup)
+        self.call_count += 1
+        call_index = self.call_count
+        request_id = str(execution.get("request_id"))
+        key = str(execution.get("idempotency_key"))
+        body = dict(arguments)
+        call_execution = {**dict(execution), "rpc_timeout_s": timeout, "execution_timeout_s": timeout}
+        public_request = (_wrapped_request(operation, body, call_execution) if wrapper
+                          else _operation_request(operation, body, call_execution))
+        safe_body = dict(body)
+        redacted = {}
+        for field in secret_fields:
+            if field in safe_body:
+                raw_secret = safe_body.pop(field)
+                redacted[field + "_sha256"] = hashlib.sha256(str(raw_secret).encode("utf-8")).hexdigest()
+        intent_path = self.root / "calls" / f"{call_index:02d}-{_safe_component(step)}-intent.json"
+        intent_record = _write_new_json(intent_path, {
+            "schema": "w25-zero-solve-call-intent/1", "run_id": self.run_id, "step": step,
+            "operation": operation, "request_id": request_id, "idempotency_key": key,
+            "arguments": safe_body, "redacted_fields": redacted,
+            "execution": {k: v for k, v in call_execution.items() if k != "authorization_ref"},
+            "timeout_seconds": timeout, "cleanup_phase": cleanup,
+        })
+        self.gate.assert_live()
+        try:
+            response = self.gate.dispatch(public_request)
+        except Exception as exc:
+            failure_path = self.root / "calls" / f"{call_index:02d}-{_safe_component(step)}-dispatch-failure.json"
+            self.calls.append(_write_new_json(failure_path, {
+                "schema": "w25-zero-solve-dispatch-failure/1", "run_id": self.run_id,
+                "step": step, "operation": operation, "request_id": request_id,
+                "exception_type": type(exc).__name__, "status": "UNKNOWN_NO_REPLAY",
+                "original_owner_retained": True,
+            }))
+            raise ProbeUnknown(f"{step} dispatch ended without a saved terminal response") from exc
+        response_path = self.root / "calls" / f"{call_index:02d}-{_safe_component(step)}-response.json"
+        response_record = save_raw_response_once(response_path, _json_bytes(response))
+        self.gate.assert_live()
+        terminal_failure = _terminal_pre_dispatch_failure_proof(
+            self.gate, operation, call_execution, response,
+        )
+        if terminal_failure is not None:
+            terminal_failure.update({
+                "intent_path": str(intent_path), "intent_sha256": intent_record["sha256"],
+                "response_path": str(response_path), "response_sha256": response_record["sha256"],
+            })
+            self.terminal_failure = terminal_failure
+            self.calls.append({"ordinal": call_index, "step": step, "operation": operation,
+                               "request_id": request_id, "intent_path": str(intent_path),
+                               "intent_sha256": intent_record["sha256"],
+                               "response_path": str(response_path), "response_sha256": response_record["sha256"],
+                               "terminal": True, "terminal_status": "FAILED",
+                               "terminal_failure_proof": terminal_failure})
+            raise ProbePreDispatchFailure(step, terminal_failure)
+        call_record = {"ordinal": call_index, "step": step, "operation": operation,
+                       "request_id": request_id, "intent_path": str(intent_path),
+                       "intent_sha256": intent_record["sha256"],
+                       "response_path": str(response_path), "response_sha256": response_record["sha256"],
+                       "terminal": response.get("success") is True}
+        self.calls.append(call_record)
+        return response
+
+    def _next_identity(self, step: str) -> tuple[str, str]:
+        request_id = f"w25-probe-{self.run_id}-{self.call_count + 1:02d}-{_safe_component(step)}"
+        return request_id, f"w25-probe-{self.run_id}-{self.call_count + 1:02d}"
+
+    def _derive_trace_state(self) -> dict[str, Any]:
+        """Re-read and validate every terminal intent/response before a close grant."""
+        if (type(self.call_count) is not int or self.call_count != len(self.calls)
+                or self.call_count < 1 or self.call_count > 16):
+            raise ProbeUnknown("close trace call count is not the exact bounded pre-close call prefix")
+        revision: int | None = None
+        model_ref: ModelRef | None = None
+        label: str | None = None
+        parameters: dict[str, str] = {}
+        operations: list[str] = []
+        trace_rows: list[dict[str, Any]] = []
+        request_ids: set[str] = set()
+        idempotency_keys: set[str] = set()
+        last_job_id: str | None = None
+        for ordinal, call in enumerate(self.calls, 1):
+            if (not isinstance(call, Mapping) or call.get("ordinal") != ordinal
+                    or call.get("terminal") is not True or not isinstance(call.get("operation"), str)):
+                raise ProbeUnknown("close trace contains a missing, nonterminal, or reordered public call")
+            try:
+                intent_path = Path(call["intent_path"])
+                intent_raw = intent_path.read_bytes()
+                response_path = Path(call["response_path"])
+                response_raw = response_path.read_bytes()
+            except (KeyError, OSError, TypeError) as exc:
+                raise ProbeUnknown("close trace intent or terminal response is unavailable") from exc
+            intent_hash = hashlib.sha256(intent_raw).hexdigest()
+            response_hash = hashlib.sha256(response_raw).hexdigest()
+            if (intent_hash != call.get("intent_sha256") or response_hash != call.get("response_sha256")
+                    or intent_path.is_symlink() or response_path.is_symlink()):
+                raise ProbeUnknown("close trace intent/response bytes differ from their recorded hashes")
+            try:
+                intent = json.loads(intent_raw)
+                response = json.loads(response_raw)
+            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                raise ProbeUnknown("close trace intent or response is malformed") from exc
+            if (not isinstance(intent, Mapping) or intent.get("schema") != "w25-zero-solve-call-intent/1"
+                    or intent.get("run_id") != self.run_id or intent.get("ordinal", ordinal) != ordinal
+                    or intent.get("operation") != call.get("operation")
+                    or intent.get("request_id") != call.get("request_id")
+                    or not isinstance(intent.get("execution"), Mapping)
+                    or intent["execution"].get("request_id") != call.get("request_id")
+                    or not isinstance(response, Mapping) or response.get("success") is not True):
+                raise ProbeUnknown("close trace does not bind the exact successful operation intent")
+            response_execution = response.get("execution")
+            operation = call["operation"]
+            if ((operation != "job.log" and not isinstance(response_execution, Mapping))
+                    or (isinstance(response_execution, Mapping)
+                        and response_execution.get("status") in {"UNKNOWN", "RUNNING", "QUEUED"})):
+                raise ProbeUnknown("close trace contains an ambiguous managed execution result")
+            arguments = intent.get("arguments")
+            if not isinstance(arguments, Mapping):
+                raise ProbeUnknown("close trace arguments are malformed")
+            operations.append(operation)
+            request_id = call.get("request_id")
+            if not isinstance(request_id, str) or request_id in request_ids:
+                raise ProbeUnknown("close trace reuses a public request identity")
+            request_ids.add(request_id)
+            idempotency_key = intent.get("idempotency_key")
+            if not isinstance(idempotency_key, str) or not idempotency_key or idempotency_key in idempotency_keys:
+                raise ProbeUnknown("close trace reuses a public idempotency identity")
+            idempotency_keys.add(idempotency_key)
+            data = response.get("data")
+            if operation == "model.create":
+                if ordinal != 1 or revision is not None or not isinstance(data, Mapping):
+                    raise ProbeUnknown("close trace does not begin with its one new model.create")
+                raw_ref = response_execution.get("model_ref")
+                if not isinstance(raw_ref, Mapping) or data.get("model_ref") != raw_ref:
+                    raise ProbeUnknown("close trace model.create has no unique typed ModelRef")
+                try:
+                    model_ref = model_ref_from_mapping(dict(raw_ref))
+                except Exception as exc:
+                    raise ProbeUnknown("close trace model.create ModelRef is malformed") from exc
+                revision = 0
+                label = arguments.get("label")
+                if (not isinstance(label, str) or response_execution.get("revision") != 0
+                        or response_execution.get("model_ownership") != "mcp_owned"
+                        or response_execution.get("dirty") is not False):
+                    raise ProbeUnknown("close trace model.create does not prove a new clean owned blank")
+            elif operation in {"parameter.set", "node.label_set"}:
+                if revision is None or model_ref is None or not isinstance(data, Mapping):
+                    raise ProbeUnknown("close trace mutation precedes the exact owned model.create")
+                if intent["execution"].get("expected_revision") != revision:
+                    raise ProbeUnknown("close trace mutation intent is not bound to the prior observed revision")
+                next_revision = revision + 1
+                if response_execution.get("revision") != next_revision:
+                    raise ProbeUnknown("close trace mutation revision is not a terminal one-step advance")
+                if operation == "parameter.set":
+                    rows = arguments.get("parameters")
+                    applied = data.get("applied")
+                    if (data.get("status") != "APPLIED" or data.get("ok") is not True
+                            or data.get("execution_state_unknown") is not False
+                            or data.get("failed_count") != 0 or data.get("not_executed_count") != 0
+                            or data.get("applied_count") != 1 or not isinstance(rows, list) or len(rows) != 1
+                            or not isinstance(rows[0], Mapping) or not isinstance(applied, list) or len(applied) != 1
+                            or not isinstance(applied[0], Mapping)):
+                        raise ProbeUnknown("close trace parameter result is not one exact terminal APPLIED row")
+                    name, expression = rows[0].get("name"), rows[0].get("expression")
+                    result_row = applied[0]
+                    if (name != SENTINEL_NAME or not isinstance(expression, str)
+                            or result_row.get("name") != name or result_row.get("expression") != expression
+                            or result_row.get("readback") != expression or result_row.get("readback_match") is not True):
+                        raise ProbeUnknown("close trace parameter readback differs from its exact intent")
+                    parameters[name] = expression
+                else:
+                    path = arguments.get("path")
+                    requested_label = arguments.get("label")
+                    if (not isinstance(path, Mapping) or path.get("segments") != []
+                            or not isinstance(requested_label, str) or data.get("execution_state_unknown") is True
+                            or data.get("partial_change") is True or ("ok" in data and data.get("ok") is not True)):
+                        raise ProbeUnknown("close trace label result is not the exact terminal root-label change")
+                    label = requested_label
+                revision = next_revision
+            elif operation == "model.inspect":
+                if (revision is None or model_ref is None
+                        or intent["execution"].get("expected_revision") != revision
+                        or response_execution.get("revision") != revision
+                        or response_execution.get("model_ref") != model_ref.as_dict()):
+                    raise ProbeUnknown("close trace inspection differs from the current owned model revision")
+                last_job_id = response_execution.get("job_id")
+                if not isinstance(last_job_id, str) or not last_job_id:
+                    raise ProbeUnknown("close trace inspection has no durable job identity")
+            elif operation == "job.log":
+                if (last_job_id is None or arguments.get("job_id") != last_job_id
+                        or not isinstance(data, Mapping) or not isinstance(data.get("events"), list)):
+                    raise ProbeUnknown("close trace job.log does not consume the immediately preceding inspection")
+                last_job_id = None
+            else:
+                raise ProbeUnknown("close trace contains an operation outside the fixed W25 model path")
+            trace_rows.append({"ordinal": ordinal, "operation": operation, "request_id": request_id,
+                               "intent_sha256": intent_hash, "response_sha256": response_hash})
+        if (revision is None or model_ref is None or model_ref != self.typed_model_ref
+                or model_ref.as_dict() != self.model_ref or revision != self.revision
+                or label != self.known_label or parameters != self.known_parameters):
+            raise ProbeUnknown("close trace-derived model/revision/state differs from the live runner state")
+        witness_labels: list[str] = []
+        for witness in self.witnesses:
+            if not isinstance(witness, Mapping) or not isinstance(witness.get("label"), str):
+                raise ProbeUnknown("close trace witness manifest is malformed")
+            path = Path(witness.get("path", ""))
+            try:
+                raw = path.read_bytes()
+                saved = json.loads(raw)
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+                raise ProbeUnknown("close trace witness file is unavailable or malformed") from exc
+            if (hashlib.sha256(raw).hexdigest() != witness.get("sha256") or path.is_symlink()
+                    or not isinstance(saved, Mapping) or saved.get("label") != witness["label"]
+                    or saved.get("revision") != witness.get("revision")):
+                raise ProbeUnknown("close trace witness bytes differ from the recorded exact evidence")
+            witness_labels.append(witness["label"])
+        return {
+            "revision": revision,
+            "call_count": len(self.calls),
+            "operations": tuple(operations),
+            "witness_labels": tuple(witness_labels),
+            "current_label": label,
+            "current_parameters": tuple(sorted(parameters.items())),
+            "trace_sha256": hashlib.sha256(_json_bytes(trace_rows)).hexdigest(),
+        }
+
+    def _capture_active_stop_checkpoint(self) -> dict[str, Any]:
+        trace = self._derive_trace_state()
+        expected_prefixes = {
+            "AFTER_W0": {
+                "call_count": 4, "revision": 1,
+                "operations": ("model.create", "parameter.set", "model.inspect", "job.log"),
+                "witness_labels": ("W0",), "label": self.created_label,
+                "parameters": ((SENTINEL_NAME, "0.5"),),
+            },
+            "AFTER_W0_INSPECT": {
+                "call_count": 3, "revision": 1,
+                "operations": ("model.create", "parameter.set", "model.inspect"),
+                "witness_labels": (), "label": self.created_label,
+                "parameters": ((SENTINEL_NAME, "0.5"),),
+            },
+            "AFTER_SENTINEL_875": {
+                "call_count": 5, "revision": 2,
+                "operations": ("model.create", "parameter.set", "model.inspect", "job.log", "parameter.set"),
+                "witness_labels": ("W0",), "label": self.created_label,
+                "parameters": ((SENTINEL_NAME, "0.875"),),
+            },
+            "AFTER_W1_INSPECT": {
+                "call_count": 6, "revision": 2,
+                "operations": ("model.create", "parameter.set", "model.inspect", "job.log",
+                               "parameter.set", "model.inspect"),
+                "witness_labels": ("W0",), "label": self.created_label,
+                "parameters": ((SENTINEL_NAME, "0.875"),),
+            },
+            "AFTER_W2": {
+                "call_count": 10, "revision": 3,
+                "operations": ("model.create", "parameter.set", "model.inspect", "job.log",
+                               "parameter.set", "model.inspect", "job.log", "parameter.set",
+                               "model.inspect", "job.log"),
+                "witness_labels": ("W0", "W1", "W2"), "label": self.created_label,
+                "parameters": ((SENTINEL_NAME, "0.5"),),
+            },
+            "AFTER_LABEL_NONCE": {
+                "call_count": 11, "revision": 4,
+                "operations": ("model.create", "parameter.set", "model.inspect", "job.log",
+                               "parameter.set", "model.inspect", "job.log", "parameter.set",
+                               "model.inspect", "job.log", "node.label_set"),
+                "witness_labels": ("W0", "W1", "W2"),
+                "label": "W25_PROBE_LABEL_" + self.run_id,
+                "parameters": ((SENTINEL_NAME, "0.5"),),
+            },
+            "AFTER_W3_INSPECT": {
+                "call_count": 12, "revision": 4,
+                "operations": ("model.create", "parameter.set", "model.inspect", "job.log",
+                               "parameter.set", "model.inspect", "job.log", "parameter.set",
+                               "model.inspect", "job.log", "node.label_set", "model.inspect"),
+                "witness_labels": ("W0", "W1", "W2"),
+                "label": "W25_PROBE_LABEL_" + self.run_id,
+                "parameters": ((SENTINEL_NAME, "0.5"),),
+            },
+        }
+        for name, expected in expected_prefixes.items():
+            if (trace["call_count"] == expected["call_count"] and trace["revision"] == expected["revision"]
+                    and trace["operations"] == expected["operations"]
+                    and trace["witness_labels"] == expected["witness_labels"]
+                    and trace["current_label"] == expected["label"]
+                    and trace["current_parameters"] == expected["parameters"]):
+                pending = name.endswith("_INSPECT")
+                if pending and (not self.calls or self.calls[-1].get("operation") != "model.inspect"
+                                or self.calls[-1].get("step") != name.removeprefix("AFTER_").removesuffix("_INSPECT") + "-inspect"):
+                    continue
+                checkpoint = {"kind": name, "pre_cleanup_call_count": trace["call_count"],
+                              "pre_cleanup_revision": trace["revision"],
+                              "pre_cleanup_trace_sha256": trace["trace_sha256"],
+                              "pending_inspect": pending}
+                self.active_stop_checkpoint = checkpoint
+                return checkpoint
+        raise ProbeUnknown("active stop is not one of the fixed W25 trace-derived safe checkpoints")
+
+    def _record_saved_witness(self, label: str, expected_revision: int,
+                              inspect_path: Path, log_path: Path) -> dict[str, Any]:
+        witness = derive_saved_witness(inspect_path, log_path, expected_model_ref=self.model_ref,
+                                       expected_worker=self.worker_binding,
+                                       expected_project_id=self.gate.project_id)
+        if witness.get("revision") != expected_revision:
+            raise ProbeUnknown("saved witness revision differs from its exact inspect admission")
+        witness["label"] = label
+        witness_path = self.root / "witnesses" / f"{_safe_component(label)}.json"
+        witness["evidence_path"] = str(witness_path)
+        witness_record = _write_new_json(witness_path, witness)
+        self.witnesses.append({"label": label, "sha256": witness_record["sha256"],
+                               "path": str(witness_path), "revision": witness["revision"]})
+        if label == "W0":
+            if self.baseline_witness is not None:
+                raise ProbeUnknown("baseline witness was observed more than once")
+            self.baseline_witness = witness
+            self.baseline_components = self._components(witness)
+            self.baseline_external_event_counter = witness["external_event_counter"]
+        return witness
+
+    def _complete_pending_active_stop_inspect(self, label: str, expected_revision: int) -> dict[str, Any]:
+        """Complete only the exact inspect whose next job.log hit the active-stop boundary."""
+        expected = {"W0": ("AFTER_W0_INSPECT", 3),
+                    "W1": ("AFTER_W1_INSPECT", 6),
+                    "W3": ("AFTER_W3_INSPECT", 12)}
+        spec = expected.get(label)
+        if (spec is None or not isinstance(self.active_stop_checkpoint, Mapping)
+                or self.active_stop_checkpoint.get("kind") != spec[0]
+                or self.active_stop_checkpoint.get("pending_inspect") is not True
+                or self.call_count != spec[1] or len(self.calls) != spec[1]):
+            raise ProbeUnknown("active stop does not bind the exact fixed pending inspect prefix")
+        call = self.calls[-1]
+        if call.get("operation") != "model.inspect" or call.get("step") != label + "-inspect":
+            raise ProbeUnknown("pending active-stop response is not the exact requested inspect")
+        inspect_path = Path(str(call.get("response_path", "")))
+        try:
+            inspect_raw = inspect_path.read_bytes()
+            inspect_response = json.loads(inspect_raw)
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ProbeUnknown("pending active-stop inspect response is unavailable or malformed") from exc
+        if (inspect_path.is_symlink() or hashlib.sha256(inspect_raw).hexdigest() != call.get("response_sha256")
+                or not isinstance(inspect_response, Mapping)):
+            raise ProbeUnknown("pending active-stop inspect bytes differ from the exact saved call")
+        _response_data(inspect_response, label=label + " model.inspect")
+        _assert_operation_execution(inspect_response, gate=self.gate,
+                                    request_id=str(call.get("request_id")),
+                                    model_ref=self.model_ref, revision=expected_revision)
+        job_id = inspect_response.get("execution", {}).get("job_id")
+        if not isinstance(job_id, str) or not job_id:
+            raise ProbeUnknown("pending active-stop inspect has no durable job identity")
+        request_id, key = self._next_identity(label + "-joblog")
+        log_execution = {"project_id": self.gate.project_id, "session_id": self.gate.session_id,
+                         "request_id": request_id, "idempotency_key": key,
+                         "rpc_timeout_s": PER_CALL_SECONDS}
+        log_response = self._call(label + "-joblog", "job.log",
+                                  {"job_id": job_id, "limit": JOB_LOG_LIMIT}, log_execution,
+                                  wrapper=True, cleanup=True)
+        _response_data(log_response, label=label + " job.log")
+        log_path = Path(str(self.calls[-1].get("response_path", "")))
+        return self._record_saved_witness(label, expected_revision, inspect_path, log_path)
+
+    def _derive_close_checkpoint(self) -> ProbeCloseTraceCheckpoint:
+        trace = self._derive_trace_state()
+        if self.active_stop_checkpoint is None:
+            if (trace["call_count"] != 16 or trace["revision"] != 5
+                    or trace["operations"] != ("model.create", "parameter.set", "model.inspect", "job.log",
+                                                "parameter.set", "model.inspect", "job.log", "parameter.set",
+                                                "model.inspect", "job.log", "node.label_set", "model.inspect",
+                                                "job.log", "node.label_set", "model.inspect", "job.log")
+                    or trace["witness_labels"] != ("W0", "W1", "W2", "W3", "W4")):
+                raise ProbeUnknown("normal close is not the exact complete 16-call W25 trace")
+            kind = "NORMAL_COMPLETION"
+            active_checkpoint = None
+        else:
+            active_checkpoint = self.active_stop_checkpoint.get("kind")
+            expected = {
+                "AFTER_W0": (1, 8,
+                    ("model.create", "parameter.set", "model.inspect", "job.log", "model.inspect", "job.log",
+                     "model.inspect", "job.log"), ("W0", "active-stop-before-restore", "active-stop-restored"),
+                    "ACTIVE_RESTORED_AFTER_W0"),
+                "AFTER_W0_INSPECT": (1, 8,
+                    ("model.create", "parameter.set", "model.inspect", "job.log", "model.inspect", "job.log",
+                     "model.inspect", "job.log"), ("W0", "active-stop-before-restore", "active-stop-restored"),
+                    "ACTIVE_RESTORED_AFTER_W0_INSPECT"),
+                "AFTER_SENTINEL_875": (3, 10,
+                    ("model.create", "parameter.set", "model.inspect", "job.log", "parameter.set",
+                     "model.inspect", "job.log", "parameter.set", "model.inspect", "job.log"),
+                    ("W0", "active-stop-before-restore", "active-stop-restored"),
+                    "ACTIVE_RESTORED_AFTER_SENTINEL_875"),
+                "AFTER_W1_INSPECT": (3, 12,
+                    ("model.create", "parameter.set", "model.inspect", "job.log", "parameter.set",
+                     "model.inspect", "job.log", "model.inspect", "job.log", "parameter.set",
+                     "model.inspect", "job.log"),
+                    ("W0", "W1", "active-stop-before-restore", "active-stop-restored"),
+                    "ACTIVE_RESTORED_AFTER_W1_INSPECT"),
+                "AFTER_W2": (3, 14,
+                    ("model.create", "parameter.set", "model.inspect", "job.log", "parameter.set",
+                     "model.inspect", "job.log", "parameter.set", "model.inspect", "job.log",
+                     "model.inspect", "job.log", "model.inspect", "job.log"),
+                    ("W0", "W1", "W2", "active-stop-before-restore", "active-stop-restored"),
+                    "ACTIVE_RESTORED_AFTER_W2"),
+                "AFTER_LABEL_NONCE": (5, 16,
+                    ("model.create", "parameter.set", "model.inspect", "job.log", "parameter.set",
+                     "model.inspect", "job.log", "parameter.set", "model.inspect", "job.log",
+                     "node.label_set", "model.inspect", "job.log", "node.label_set", "model.inspect", "job.log"),
+                    ("W0", "W1", "W2", "active-stop-before-restore", "active-stop-restored"),
+                    "ACTIVE_RESTORED_AFTER_LABEL_NONCE"),
+                "AFTER_W3_INSPECT": (5, 16,
+                    ("model.create", "parameter.set", "model.inspect", "job.log", "parameter.set",
+                     "model.inspect", "job.log", "parameter.set", "model.inspect", "job.log",
+                     "node.label_set", "model.inspect", "job.log", "node.label_set", "model.inspect", "job.log"),
+                    ("W0", "W1", "W2", "W3", "W4"),
+                    "ACTIVE_RESTORED_AFTER_W3_INSPECT"),
+            }
+            if active_checkpoint not in expected:
+                raise ProbeUnknown("active close has no fixed W25 source checkpoint")
+            revision, count, operations, witness_labels, kind = expected[active_checkpoint]
+            if (trace["revision"] != revision or trace["call_count"] != count
+                    or trace["operations"] != operations or trace["witness_labels"] != witness_labels):
+                raise ProbeUnknown("active close trace does not match its pre-dispatch stop checkpoint")
+        if (trace["current_label"] != self.created_label
+                or trace["current_parameters"] != ((SENTINEL_NAME, "0.5"),)):
+            raise ProbeUnknown("close trace has not independently restored the exact W0 metadata")
+        checkpoint = ProbeCloseTraceCheckpoint(
+            kind=kind, active_stop_checkpoint=active_checkpoint, run_id=self.run_id,
+            project_id=self.gate.project_id, session_id=self.gate.session_id,
+            model_ref=self.typed_model_ref, expected_revision=trace["revision"],
+            public_call_count_before_close=trace["call_count"], trace_sha256=trace["trace_sha256"],
+            witness_labels=trace["witness_labels"], current_label=trace["current_label"],
+            current_parameters=trace["current_parameters"], _seal=_W25_CLOSE_TRACE_SEAL,
+        )
+        _validate_probe_close_trace_checkpoint(checkpoint, run_id=self.run_id,
+                                               project_id=self.gate.project_id,
+                                               session_id=self.gate.session_id,
+                                               model_ref=self.typed_model_ref)
+        return checkpoint
+
+    def inspect_witness(self, label: str, expected_revision: int, *, cleanup: bool = False) -> dict[str, Any]:
+        request_id, key = self._next_identity(label + "-inspect")
+        execution = _model_execution(self.gate, self.model_ref, expected_revision, request_id, key, PER_CALL_SECONDS)
+        inspect_response = self._call(label + "-inspect", "model.inspect", {"detail": "structure"}, execution,
+                                      wrapper=True, cleanup=cleanup)
+        _response_data(inspect_response, label=label + " model.inspect")
+        _assert_operation_execution(inspect_response, gate=self.gate, request_id=request_id,
+                                    model_ref=self.model_ref, revision=expected_revision)
+        job_id = inspect_response.get("execution", {}).get("job_id")
+        if not isinstance(job_id, str) or not job_id:
+            raise ProbeUnknown(f"{label} model.inspect has no durable job_id")
+        log_request_id, log_key = self._next_identity(label + "-joblog")
+        log_execution = {"project_id": self.gate.project_id, "session_id": self.gate.session_id,
+                         "request_id": log_request_id, "idempotency_key": log_key,
+                         "rpc_timeout_s": PER_CALL_SECONDS}
+        log_response = self._call(label + "-joblog", "job.log",
+                                  {"job_id": job_id, "limit": JOB_LOG_LIMIT}, log_execution,
+                                  wrapper=True, cleanup=cleanup)
+        _response_data(log_response, label=label + " job.log")
+        inspect_path = Path(str(self.calls[-2].get("response_path", "")))
+        log_path = Path(str(self.calls[-1].get("response_path", "")))
+        return self._record_saved_witness(label, expected_revision, inspect_path, log_path)
+
+    @staticmethod
+    def _components(witness: Mapping[str, Any]) -> Mapping[str, Any]:
+        value = witness.get("fingerprint_components")
+        if not isinstance(value, Mapping):
+            raise ProbeUnknown("witness has no fingerprint components")
+        return value
+
+    @staticmethod
+    def _assert_readback(response: Mapping[str, Any], *, gate: Any, request_id: str,
+                         model_ref: Mapping[str, Any], expected_revision: int,
+                         expected_status: str | None = None,
+                         expected_parameter: tuple[str, str] | None = None) -> int:
+        data = _response_data(response, label="managed write")
+        execution = _assert_operation_execution(response, gate=gate, request_id=request_id, model_ref=model_ref)
+        revision = execution.get("revision")
+        if type(revision) is not int or revision != expected_revision + 1:
+            raise ProbeUnknown("managed mutation did not advance exactly one revision")
+        if data.get("execution_state_unknown") is True:
+            raise ProbeUnknown("managed write reports unknown side effects")
+        if "ok" in data and data.get("ok") is not True:
+            raise ProbeUnknown("managed write domain result is not fully applied")
+        if expected_status is not None and data.get("status") != expected_status:
+            raise ProbeUnknown("managed write terminal domain status differs from expected")
+        if expected_parameter is not None:
+            # W13's shared status helper sets partial_change=true whenever at
+            # least one parameter was applied, including a complete APPLIED
+            # response. Accept that flag only with the complete, exact single-
+            # row result and independent textual readback required here.
+            applied = data.get("applied")
+            name, expression = expected_parameter
+            if (data.get("status") != "APPLIED" or data.get("ok") is not True
+                    or data.get("execution_state_unknown") is not False
+                    or data.get("failed_count") != 0 or data.get("not_executed_count") != 0
+                    or data.get("applied_count") != 1 or not isinstance(applied, list)
+                    or len(applied) != 1 or not isinstance(applied[0], Mapping)):
+                raise ProbeUnknown("parameter write lacks a complete single-row APPLIED result")
+            row = applied[0]
+            if (row.get("name") != name or row.get("expression") != expression
+                    or row.get("readback") != expression or row.get("readback_match") is not True):
+                raise ProbeUnknown("parameter write did not prove the exact requested textual readback")
+        elif data.get("partial_change") is True:
+            raise ProbeUnknown("managed write reports partial side effects")
+        return revision
+
+    def _write_parameter(self, label: str, expression: str, *, cleanup: bool = False) -> int:
+        request_id, key = self._next_identity(label)
+        execution = _model_execution(self.gate, self.model_ref, self.revision, request_id, key, PER_CALL_SECONDS)
+        response = self._call(label, "parameter.set",
+                              {"parameters": [{"name": SENTINEL_NAME, "expression": expression}]},
+                              execution, cleanup=cleanup)
+        revision = self._assert_readback(response, gate=self.gate, request_id=request_id, model_ref=self.model_ref,
+                                         expected_revision=self.revision, expected_status="APPLIED",
+                                         expected_parameter=(SENTINEL_NAME, expression))
+        self.known_parameters[SENTINEL_NAME] = expression
+        return revision
+
+    def _write_label(self, label: str, value: str, *, cleanup: bool = False) -> int:
+        request_id, key = self._next_identity(label)
+        execution = _model_execution(self.gate, self.model_ref, self.revision, request_id, key, PER_CALL_SECONDS)
+        response = self._call(label, "node.label_set",
+                              {"path": {"segments": []}, "label": value}, execution, cleanup=cleanup)
+        revision = self._assert_readback(response, gate=self.gate, request_id=request_id, model_ref=self.model_ref,
+                                         expected_revision=self.revision)
+        self.known_label = value
+        return revision
+
+    def close_owned_blank(self) -> None:
+        if (self.close_delegator is None or self.typed_model_ref is None or self.model_ref is None or self.worker_binding is None
+                or self.revision is None or self.authorization_ref is not None):
+            raise ProbeUnknown("close grant cannot be bound before one exact created ModelRef and current revision")
+        self.gate.assert_live()
+        current_binding = self.gate.expected_worker_binding(self.typed_model_ref.as_dict())
+        if current_binding != self.worker_binding:
+            raise ProbeUnknown("close grant Worker binding differs from the registered model.create binding")
+        try:
+            checkpoint = self._derive_close_checkpoint()
+            self.authorization_ref, self.close_scope_binding = self.close_delegator.bind_close_scope(
+                gate=self.gate, seed=self.close_grant_seed, run_id=self.run_id,
+                project_id=self.gate.project_id, session_id=self.gate.session_id,
+                model_ref=self.typed_model_ref, checkpoint=checkpoint,
+                worker_binding=current_binding, destination_ref=None,
+            )
+        except Exception as exc:
+            raise ProbeUnknown(
+                f"W25 delegated close scope was not created or verified: {type(exc).__name__}: {str(exc)[:256]}"
+            ) from exc
+        request_id, key = self._next_identity("close-owned-blank")
+        execution = _model_execution(self.gate, self.model_ref, self.revision, request_id, key, PER_CALL_SECONDS)
+        response = self._call("close-owned-blank", "model.close",
+                              {"discard_changes": True, "authorization_ref": self.authorization_ref},
+                              execution, cleanup=True, secret_fields=("authorization_ref",))
+        data = _response_data(response, label="owned blank model.close")
+        if (data.get("status") != "CLOSED" or data.get("model_ref") != self.model_ref
+                or data.get("model_tag") != self.model_ref.get("model_tag")
+                or data.get("model_tag_absent") is not True
+                or data.get("other_model_tags_preserved") is not True
+                or data.get("terminal_close_verified") is not True):
+            raise ProbeUnknown("model.close did not prove exact owned tag removal and preservation of other tags")
+        _assert_operation_execution(response, gate=self.gate, request_id=request_id,
+                                    model_ref=self.model_ref, revision=self.revision + 1)
+        self.terminal_closed = True
+
+    @staticmethod
+    def _parameter_map(components: Mapping[str, Any]) -> dict[str, str]:
+        rows = components.get("parameters")
+        if not isinstance(rows, list):
+            raise ProbeUnknown("fingerprint components have no parameter list")
+        result: dict[str, str] = {}
+        for row in rows:
+            if (not isinstance(row, Mapping) or not isinstance(row.get("name"), str)
+                    or not isinstance(row.get("expression"), str) or row["name"] in result):
+                raise ProbeUnknown("fingerprint components contain an ambiguous parameter row")
+            result[row["name"]] = row["expression"]
+        return result
+
+    def _assert_terminal_owned_blank(self, witness: Mapping[str, Any], *, expected_label: str,
+                                     expected_parameters: Mapping[str, str]) -> None:
+        if self.baseline_witness is None or self.baseline_components is None:
+            raise ProbeUnknown("no W0 terminal witness proves the owned blank baseline")
+        components = self._components(witness)
+        observed_worker = witness.get("worker_binding")
+        expected_worker = ({**self.worker_binding, "server_id_domains_checked_separately": True}
+                           if isinstance(self.worker_binding, Mapping) else None)
+        if (witness.get("model_ref") != self.model_ref or witness.get("project_id") != self.gate.project_id
+                or witness.get("dirty") is not False or observed_worker != expected_worker
+                or witness.get("external_event_counter") != self.baseline_external_event_counter
+                or components.get("label") != expected_label
+                or components.get("file_path") != self.baseline_components.get("file_path")
+                or self._parameter_map(components) != dict(expected_parameters)):
+            raise ProbeUnknown("owned blank label/parameters/Worker epoch/external counter are not terminally known")
+        tree = witness.get("shallow_tree")
+        if not isinstance(tree, Mapping):
+            raise ProbeUnknown("owned blank structural witness is absent")
+        if any(tree.get(key) for key in ("components", "component_details", "studies", "solutions", "datasets", "results")):
+            raise ProbeUnknown("owned blank gained a component/study/solution/dataset/result")
+        if tree.get("parameters") != sorted(expected_parameters):
+            raise ProbeUnknown("owned blank parameter-name tree differs from the terminal parameter state")
+
+    def restore_and_close_after_active_stop(self) -> dict[str, Any]:
+        """Use only the fixed cleanup reserve after one pre-dispatch active stop."""
+        if (not isinstance(self.active_stop_checkpoint, Mapping)
+                or self.active_stop_checkpoint.get("kind") not in {
+                    "AFTER_W0", "AFTER_W0_INSPECT", "AFTER_SENTINEL_875",
+                    "AFTER_W1_INSPECT", "AFTER_W2", "AFTER_LABEL_NONCE", "AFTER_W3_INSPECT"}):
+            raise ProbeUnknown("active stop has no exact trace-derived W25 restoration checkpoint")
+        if self.model_ref is None or not self.created_model:
+            self.cleanup_orchestration = {"status": "NO_MODEL_CREATED", "restore_calls": 0, "close_called": False}
+            return self.cleanup_orchestration
+
+        active_kind = self.active_stop_checkpoint.get("kind")
+        pending_witness = None
+        if active_kind == "AFTER_W0_INSPECT":
+            pending_witness = self._complete_pending_active_stop_inspect("W0", 1)
+            c0 = self._components(pending_witness)
+            if (c0.get("parameters") != [{"name": SENTINEL_NAME, "expression": "0.5"}]
+                    or pending_witness.get("shallow_tree", {}).get("components")
+                    or pending_witness.get("shallow_tree", {}).get("component_details")
+                    or pending_witness.get("shallow_tree", {}).get("studies")
+                    or pending_witness.get("shallow_tree", {}).get("solutions")
+                    or pending_witness.get("shallow_tree", {}).get("datasets")
+                    or pending_witness.get("shallow_tree", {}).get("results")):
+                raise ProbeUnknown("completed W0 does not prove the exact empty baseline state")
+            self._assert_terminal_owned_blank(pending_witness, expected_label=self.created_label,
+                                              expected_parameters={SENTINEL_NAME: "0.5"})
+        elif active_kind == "AFTER_W1_INSPECT":
+            pending_witness = self._complete_pending_active_stop_inspect("W1", 2)
+            components = self._components(pending_witness)
+            if (components.get("label") != self.created_label
+                    or components.get("file_path") != self.baseline_components.get("file_path")
+                    or components.get("parameters") != [{"name": SENTINEL_NAME, "expression": "0.875"}]
+                    or pending_witness.get("shallow_tree") != self.baseline_witness.get("shallow_tree")):
+                raise ProbeUnknown("completed W1 does not prove the exact sentinel-only probe state")
+            self._assert_terminal_owned_blank(pending_witness, expected_label=self.created_label,
+                                              expected_parameters={SENTINEL_NAME: "0.875"})
+        elif active_kind == "AFTER_W3_INSPECT":
+            pending_witness = self._complete_pending_active_stop_inspect("W3", 4)
+            expected_nonce = "W25_PROBE_LABEL_" + self.run_id
+            components = self._components(pending_witness)
+            if (components.get("label") != expected_nonce
+                    or components.get("file_path") != self.baseline_components.get("file_path")
+                    or components.get("parameters") != [{"name": SENTINEL_NAME, "expression": "0.5"}]
+                    or pending_witness.get("shallow_tree") != self.baseline_witness.get("shallow_tree")):
+                raise ProbeUnknown("completed W3 does not prove the exact nonce-only probe state")
+            self._assert_terminal_owned_blank(pending_witness, expected_label=expected_nonce,
+                                              expected_parameters={SENTINEL_NAME: "0.5"})
+
+        if (self.baseline_witness is None or self.baseline_components is None
+                or not isinstance(self.created_label, str)
+                or not isinstance(self.known_label, str)):
+            raise ProbeUnknown("active stop has no terminal-proven owned blank state; preserve without restore/close")
+        baseline_label = self.baseline_components.get("label")
+        baseline_parameters = self._parameter_map(self.baseline_components)
+        if (baseline_label != self.created_label
+                or baseline_parameters != {SENTINEL_NAME: "0.5"}
+                or self.known_label is None or SENTINEL_NAME not in self.known_parameters):
+            raise ProbeUnknown("W0 does not prove the exact expected sentinel/label baseline")
+
+        if active_kind == "AFTER_W3_INSPECT":
+            # The exact pre-stop W3 inspect plus its one job.log completes the
+            # pre-restore witness. A fresh W3 pair + restore + W4 pair + close
+            # would exceed the fixed budget; this branch is the exact 17-call
+            # path and refuses before the label mutation if that prefix drifts.
+            if (self.call_count != 13 or self.revision != 4 or pending_witness is None
+                    or self.call_count + 4 != 17
+                    or self.known_label != "W25_PROBE_LABEL_" + self.run_id
+                    or self.known_parameters != {SENTINEL_NAME: "0.5"}):
+                raise ProbeUnknown("W3 active-stop restoration no longer fits its exact fixed 17-call path")
+            restored_revision = self._write_label(
+                "active-stop-restore-label", str(baseline_label), cleanup=True)
+            self.revision = restored_revision
+            restored = self.inspect_witness("W4", self.revision, cleanup=True)
+            self._assert_terminal_owned_blank(restored, expected_label=str(baseline_label),
+                                              expected_parameters=baseline_parameters)
+            restored_components = self._components(restored)
+            if (restored_components.get("label") != baseline_label
+                    or restored_components.get("file_path") != self.baseline_components.get("file_path")
+                    or self._parameter_map(restored_components) != baseline_parameters
+                    or restored.get("shallow_tree") != self.baseline_witness.get("shallow_tree")):
+                raise ProbeUnknown("W3 active-stop restoration did not recover the exact W0 baseline")
+            self.close_owned_blank()
+            self.cleanup_orchestration = {
+                "status": "RESTORED_AND_CLOSED",
+                "baseline_witness": self.baseline_witness.get("evidence_path"),
+                "pre_restore_witness": pending_witness.get("evidence_path"),
+                "restored_witness": restored.get("evidence_path"),
+                "restore_mutation_calls": 1,
+                "close_called": True,
+                "terminal_close_verified": self.terminal_closed,
+                "cleanup_reserve_seconds": CLEANUP_STOP_HOLD_SECONDS,
+                "original_owner_retained": True,
+                "fixed_call_budget": 17,
+            }
+            return self.cleanup_orchestration
+
+        before = self.inspect_witness("active-stop-before-restore", self.revision, cleanup=True)
+        self._assert_terminal_owned_blank(before, expected_label=self.known_label,
+                                          expected_parameters=self.known_parameters)
+        restore_calls = 0
+        if self.known_parameters != baseline_parameters:
+            self.revision = self._write_parameter("active-stop-restore-sentinel", "0.5", cleanup=True)
+            restore_calls += 1
+        if self.known_label != baseline_label:
+            self.revision = self._write_label("active-stop-restore-label", str(baseline_label), cleanup=True)
+            restore_calls += 1
+
+        restored = self.inspect_witness("active-stop-restored", self.revision, cleanup=True)
+        self._assert_terminal_owned_blank(restored, expected_label=str(baseline_label),
+                                          expected_parameters=baseline_parameters)
+        restored_components = self._components(restored)
+        if (restored_components.get("label") != baseline_label
+                or restored_components.get("file_path") != self.baseline_components.get("file_path")
+                or self._parameter_map(restored_components) != baseline_parameters
+                or restored.get("shallow_tree") != self.baseline_witness.get("shallow_tree")):
+            raise ProbeUnknown("active-stop restoration did not recover exact W0 label/parameters and shallow tree")
+        self.close_owned_blank()
+        self.cleanup_orchestration = {
+            "status": "RESTORED_AND_CLOSED",
+            "baseline_witness": self.baseline_witness.get("evidence_path"),
+            "pre_restore_witness": before.get("evidence_path"),
+            "restored_witness": restored.get("evidence_path"),
+            "restore_mutation_calls": restore_calls,
+            "close_called": True,
+            "terminal_close_verified": self.terminal_closed,
+            "cleanup_reserve_seconds": CLEANUP_STOP_HOLD_SECONDS,
+            "original_owner_retained": True,
+        }
+        return self.cleanup_orchestration
+
+    def report(self, status: str, error: str | None = None) -> dict[str, Any]:
+        value = {"schema": "w25-zero-solve-probe-run/1", "status": status,
+                 "native_acceptance": "NOT_CLAIMED", "run_id": self.run_id,
+                 "public_calls_used": self.call_count, "public_call_budget": 17,
+                 "per_call_timeout_seconds_max": PER_CALL_SECONDS,
+                 "active_stop_hold_seconds": ACTIVE_STOP_HOLD_SECONDS,
+                 "cleanup_stop_hold_seconds": CLEANUP_STOP_HOLD_SECONDS,
+                 "os_hard_kill_timer": False,
+                 "unknown_may_persist_past_thresholds": status.startswith("UNKNOWN"),
+                 "project_id": self.gate.project_id, "session_id": self.gate.session_id,
+                 "model_ref": self.model_ref, "call_records": self.calls,
+                 "witnesses": self.witnesses, "original_owner_retained_on_stop": True,
+                 "active_stop_checkpoint": self.active_stop_checkpoint,
+                 "terminal_close_verified": self.terminal_closed,
+                 "cleanup_orchestration": self.cleanup_orchestration,
+                 "terminal_failure": self.terminal_failure,
+                 "close_scope_binding": self.close_scope_binding or {
+                     "status": "NOT_BOUND_NO_UNAMBIGUOUS_SUCCESSFUL_MODEL_CREATE"}}
+        if error is not None:
+            value["error"] = error
+        return value
+
+
+def run_probe(gate: Any, evidence_root: str | Path, *, close_grant_seed: ProbeCloseGrantSeed,
+              run_id: str | None = None) -> dict[str, Any]:
+    """Run the fixed no-solve sequence through an already-bound public gate.
+
+    The caller must have consumed its exact Main-reviewed one-use admission and
+    must retain the original ControlDaemon/Server/Worker owners. This function
+    takes no endpoint, model tag, parameter name, callback, or alternate
+    Worker/Server route from user input.
+    """
+    if (not callable(getattr(gate, "assert_live", None)) or not callable(getattr(gate, "dispatch", None))
+            or not callable(getattr(gate, "expected_worker_binding", None))
+            or not isinstance(getattr(gate, "project_id", None), str)
+            or not isinstance(getattr(gate, "session_id", None), str)):
+        raise ProbeAdmissionError("already-bound managed public gate required")
+    if type(close_grant_seed) is not ProbeCloseGrantSeed:
+        raise ProbeAdmissionError("exact once/approval-bound close grant seed is required before model creation")
+    root, project_root = _prepare_evidence_root(gate, evidence_root)
+    run = _PublicCallRun(gate, root, close_grant_seed, run_id=run_id)
+    status = "UNKNOWN_NO_REPLAY"
+    error: str | None = None
+    try:
+        calls = _private_directory(root / "calls", project_root=project_root, create=True)
+        _private_directory(root / "witnesses", project_root=project_root, create=True)
+        gate.assert_live()
+        create_request_id, create_key = run._next_identity("create-owned-blank")
+        create_execution = {"project_id": gate.project_id, "session_id": gate.session_id,
+                            "request_id": create_request_id, "idempotency_key": create_key,
+                            "rpc_timeout_s": PER_CALL_SECONDS, "execution_timeout_s": PER_CALL_SECONDS}
+        create_response = run._call("create-owned-blank", "model.create",
+                                    {"label": "W25 zero-solve fingerprint probe"}, create_execution)
+        create_data = _response_data(create_response, label="model.create")
+        create_exec = create_response.get("execution")
+        if not isinstance(create_exec, Mapping):
+            raise ProbeUnknown("model.create response has no managed execution envelope")
+        raw_ref = create_exec.get("model_ref")
+        if not isinstance(raw_ref, Mapping) or create_data.get("model_ref") != raw_ref:
+            raise ProbeUnknown("model.create did not return one exact typed ModelRef")
+        typed_ref = model_ref_from_mapping(dict(raw_ref))
+        self_ref = typed_ref.as_dict()
+        if (self_ref.get("session_id") != gate.session_id
+                or create_exec.get("project_id") not in (None, gate.project_id)
+                or create_exec.get("revision") != 0
+                or create_exec.get("dirty") is not False
+                or create_exec.get("model_ownership") != "mcp_owned"
+                or create_exec.get("request_id") != create_request_id
+                or not isinstance(create_exec.get("job_id"), str) or not create_exec["job_id"]
+                or not isinstance(create_exec.get("operation_id"), str) or not create_exec["operation_id"]):
+            raise ProbeUnknown("model.create did not establish a new clean project-owned blank")
+        run.model_ref = self_ref
+        run.typed_model_ref = typed_ref
+        run.revision = 0
+        run.created_model = True
+        run.created_label = "W25 zero-solve fingerprint probe"
+        run.known_label = run.created_label
+        run.worker_binding = gate.expected_worker_binding(self_ref)
+        if run.close_delegator is None or not callable(getattr(run.close_delegator, "seal_created_model", None)):
+            raise ProbeUnknown("W25 constructor-installed close delegator is unavailable")
+        run.close_scope_binding = run.close_delegator.seal_created_model(
+            gate=gate, seed=close_grant_seed, run_id=run.run_id,
+            project_id=gate.project_id, session_id=gate.session_id,
+            model_ref=typed_ref, created_label=run.created_label,
+            worker_binding=run.worker_binding,
+            create_execution=create_exec, create_response_sha256=run.calls[-1].get("response_sha256"),
+            public_call_count=run.call_count,
+        )
+
+        run.revision = run._write_parameter("baseline-sentinel-set", "0.5")
+        w0 = run.inspect_witness("W0", run.revision)
+        c0 = run._components(w0)
+        if (c0.get("parameters") != [{"name": SENTINEL_NAME, "expression": "0.5"}]
+                or any(w0["shallow_tree"].get(key) for key in ("components", "component_details", "studies", "solutions", "datasets", "results"))):
+            raise ProbeUnknown("W0 is not the exact empty owned blank plus baseline sentinel")
+
+        run.revision = run._write_parameter("sentinel-875-set", "0.875")
+        w1 = run.inspect_witness("W1", run.revision)
+        c1 = run._components(w1)
+        if (c1.get("label") != c0.get("label") or c1.get("file_path") != c0.get("file_path")
+                or c1.get("parameters") != [{"name": SENTINEL_NAME, "expression": "0.875"}]):
+            raise ProbeUnknown("W1 contains an unplanned metadata difference")
+
+        run.revision = run._write_parameter("sentinel-restore", "0.5", cleanup=True)
+        w2 = run.inspect_witness("W2", run.revision, cleanup=True)
+        c2 = run._components(w2)
+        if (c2.get("label") != c0.get("label") or c2.get("file_path") != c0.get("file_path")
+                or c2.get("parameters") != [{"name": SENTINEL_NAME, "expression": "0.5"}]):
+            raise ProbeUnknown("W2 did not restore the baseline parameter metadata")
+
+        nonce = "W25_PROBE_LABEL_" + run.run_id
+        run.revision = run._write_label("label-nonce-set", nonce)
+        w3 = run.inspect_witness("W3", run.revision)
+        c3 = run._components(w3)
+        if (c3.get("label") != nonce or c3.get("file_path") != c2.get("file_path")
+                or c3.get("parameters") != c2.get("parameters")
+                or w3.get("shallow_tree") != w2.get("shallow_tree")):
+            raise ProbeUnknown("W3 contains an unplanned metadata or tree difference")
+
+        original_label = c0.get("label")
+        if not isinstance(original_label, str):
+            raise ProbeUnknown("W0 label is not a restorable string")
+        run.revision = run._write_label("label-restore", original_label, cleanup=True)
+        w4 = run.inspect_witness("W4", run.revision, cleanup=True)
+        c4 = run._components(w4)
+        if (c4.get("label") != original_label or c4.get("file_path") != c2.get("file_path")
+                or c4.get("parameters") != c2.get("parameters")
+                or w4.get("shallow_tree") != w2.get("shallow_tree")):
+            raise ProbeUnknown("W4 did not restore the original label/parameter/tree metadata")
+        run.close_owned_blank()
+        status = "COMPLETED_17_PUBLIC_CALLS_PROBE_CLOSED_NOT_NATIVE_ACCEPTANCE"
+    except ProbePreDispatchFailure as exc:
+        status = "FAILED_TERMINAL_PRE_DISPATCH_VALIDATION_NO_REPLAY"
+        error = str(exc)
+    except ProbeActiveStop as exc:
+        error = str(exc)
+        if run.model_ref is None:
+            status = "ACTIVE_STOPPED_BEFORE_MODEL_CREATION"
+            run.cleanup_orchestration = {"status": "NO_MODEL_CREATED", "restore_calls": 0,
+                                         "close_called": False, "original_owner_retained": True}
+        else:
+            try:
+                run._capture_active_stop_checkpoint()
+                cleanup = run.restore_and_close_after_active_stop()
+                if cleanup.get("status") == "RESTORED_AND_CLOSED" and run.terminal_closed:
+                    status = "ACTIVE_STOPPED_RESTORED_AND_CLOSED_NOT_NATIVE_ACCEPTANCE"
+                else:
+                    status = "UNKNOWN_OR_BLOCKED_NO_REPLAY"
+                    error = "active stop did not retain an exactly recorded terminal close result"
+            except BaseException as cleanup_exc:
+                status = "UNKNOWN_OR_BLOCKED_NO_REPLAY"
+                error = f"active-stop cleanup halted without replay: {type(cleanup_exc).__name__}: {str(cleanup_exc)[:512]}"
+                run.cleanup_orchestration = {
+                    "status": "UNKNOWN_NO_REPLAY",
+                    "cleanup_exception_type": type(cleanup_exc).__name__,
+                    "cleanup_error": str(cleanup_exc)[:512],
+                    "close_called": any(row.get("operation") == "model.close" for row in run.calls),
+                    "original_owner_retained": True,
+                }
+    except BaseException as exc:
+        # Any unexpected parser, binding, dispatch, filesystem, or adapter
+        # exception after admission is UNKNOWN. Never restore or close after an
+        # UNKNOWN result because the last native effect may be unobserved.
+        status = "UNKNOWN_OR_BLOCKED_NO_REPLAY"
+        error = f"{type(exc).__name__}: {str(exc)[:512]}"
+    report = run.report(status, error)
+    _write_new_json(root / "RUN_RESULT.json", report)
+    return report

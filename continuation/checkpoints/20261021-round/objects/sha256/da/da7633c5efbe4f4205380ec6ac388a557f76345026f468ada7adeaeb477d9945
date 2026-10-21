@@ -1,0 +1,23 @@
+# Windows R6I bound PREP wrapper R2
+
+This immutable local candidate binds the already-rendered five-leaf R6I PREP payload to an exact wrapper, RESUME checkpoint, package contract, manifest, and accepted R6I source review. It does not alter the reviewed R6I source package or the rendered payload.
+
+- Accepted source review: `27660ccfce5f97fa2203001088d30cd738cd329cee1ee99c20bc35931ad8f10b`.
+- Accepted payload review: `2941ea41792357de1ec474139b13903ecdbafcd6129f497deb72fb2834e7a15d`.
+- Current RESUME: `75e379846288130299cb3632f109cf3c1e9c29884de3d7d9c89116571a8469e4`.
+- Payload: `952eca570a5cc16e3f2639caeade14c0403158a293063aa3f5b1dee3e65778c8` (346467 bytes).
+- SSH/native/approval/once: NOT RUN / NOT CREATED.
+- Three JSON files in `templates/` are inert templates; their status is intentionally invalid for the strict consumers. Main must create the actual records only after review.
+- Main's strict consumer paths and single-send command remain pinned in the wrapper. No SSH is executed by this candidate.
+
+Check-only command:
+
+```sh
+/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312/bin/python -I -B repository/_state/windows-primary-owner-r6i-bound-prep-r2-8b4137e9-ab90-41d8-87f0-01181044f8b3-20261020/source/windows_primary_owner_r6i_bound_strict_ssh_prep.py --check-only --current-resume-sha256 75e379846288130299cb3632f109cf3c1e9c29884de3d7d9c89116571a8469e4
+```
+
+Test command:
+
+```sh
+/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312/bin/python -I -B -m pytest -p no:cacheprovider -q repository/_state/windows-primary-owner-r6i-bound-prep-r2-8b4137e9-ab90-41d8-87f0-01181044f8b3-20261020/tests/test_bound_prep_wrapper.py
+```

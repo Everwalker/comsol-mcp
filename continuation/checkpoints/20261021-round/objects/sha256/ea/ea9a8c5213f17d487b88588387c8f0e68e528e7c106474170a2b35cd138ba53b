@@ -1,0 +1,189 @@
+from __future__ import annotations
+
+import ast
+import errno
+import json
+from pathlib import Path
+import runpy
+import stat
+from types import SimpleNamespace
+import unittest
+from unittest.mock import patch
+
+
+ROOT = Path(__file__).resolve().parents[4]
+CANDIDATE = ROOT / "repository/_state/windows-r6i-metadata-only-r2-live-unobserved-24716951-a3b2-48c0-b5f0-9d7dfc717949-20261021"
+PAYLOAD_PATH = CANDIDATE / "source/windows_r6i_metadata_only_probe.py"
+WRAPPER_PATH = CANDIDATE / "source/windows_r6i_metadata_only_strict_ssh.py"
+
+
+def load_module(path: Path, name: str):
+    namespace = runpy.run_path(str(path), run_name=name)
+    return SimpleNamespace(**namespace)
+
+
+class MetadataPayloadTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.module = load_module(PAYLOAD_PATH, "r6i_metadata_probe_test_module")
+
+    def test_exact_ten_fixed_paths_and_only_lstat_observation(self):
+        expected_ids = (
+            "helpers_directory", "authority_directory", "outer_gate_source", "probe_source",
+            "binding", "prebirth_binding", "main_approval", "once_used",
+            "probe_run_directory", "owner_probe_output",
+        )
+        self.assertEqual(tuple(row[0] for row in self.module.PATHS), expected_ids)
+        self.assertEqual(len(self.module.PATHS), 10)
+        calls = []
+
+        def fake_lstat(path):
+            calls.append(path)
+            kind = stat.S_IFDIR if path.endswith(("helpers-primary-owner-r6i", "authority-primary-owner-r6i",
+                                                  "primary-owner-probe-r6i")) else stat.S_IFREG
+            return SimpleNamespace(st_mode=kind | 0o640, st_size=7, st_mtime_ns=101,
+                                   st_ctime_ns=202, st_file_attributes=0x20)
+
+        result = self.module.collect_metadata(fake_lstat)
+        self.assertEqual(result["path_count"], 10)
+        self.assertEqual([row["id"] for row in result["paths"]], list(expected_ids))
+        self.assertEqual(len(calls), 10)
+        self.assertEqual(len(set(calls)), 10)
+        self.assertTrue(all(row["status"] == "PRESENT" for row in result["paths"]))
+        self.assertEqual(result["paths"][0]["object_type"], "directory")
+        self.assertEqual(result["paths"][2]["object_type"], "regular_file")
+        self.assertEqual(result["paths"][2]["size_bytes"], 7)
+        self.assertEqual(result["paths"][2]["mtime_ns"], 101)
+        self.assertEqual(result["paths"][2]["ctime_ns"], 202)
+        self.assertEqual(result["paths"][2]["file_attributes"], 0x20)
+        self.assertEqual(result["scope"]["remote_write_count"], 0)
+        self.assertFalse(result["scope"]["target_content_read"])
+        self.assertEqual(result["scope"]["r6i_child_alive_or_terminal"], "NOT_ESTABLISHED_BY_METADATA")
+        self.assertFalse(result["scope"]["old_r6f_exact_once_authority_applies"])
+
+    def test_missing_and_access_errors_are_data_not_retries(self):
+        calls = 0
+
+        def fake_lstat(_path):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                raise FileNotFoundError(errno.ENOENT, "missing")
+            if calls == 2:
+                raise PermissionError(errno.EACCES, "denied")
+            return SimpleNamespace(st_mode=stat.S_IFREG | 0o600, st_size=0,
+                                   st_mtime_ns=1, st_ctime_ns=2, st_file_attributes=0)
+
+        result = self.module.collect_metadata(fake_lstat)
+        self.assertEqual(calls, 10)
+        self.assertEqual(result["paths"][0]["status"], "MISSING")
+        self.assertEqual(result["paths"][1]["status"], "ERROR")
+        self.assertEqual(result["paths"][1]["errno"], errno.EACCES)
+
+    def test_payload_has_no_open_read_or_process_api(self):
+        tree = ast.parse(PAYLOAD_PATH.read_text(encoding="utf-8"))
+        forbidden = {"open", "read", "read_bytes", "read_text", "Popen", "run", "system",
+                     "startfile", "CreateProcess", "getpid", "kill", "token"}
+        called = {node.func.id for node in ast.walk(tree)
+                  if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)}
+        self.assertFalse(called & forbidden, called & forbidden)
+        lstat_refs = [node for node in ast.walk(tree)
+                      if isinstance(node, ast.Attribute) and node.attr == "lstat"]
+        self.assertEqual(len(lstat_refs), 1)
+        self.assertIsInstance(lstat_refs[0].value, ast.Name)
+        self.assertEqual(lstat_refs[0].value.id, "os")
+
+
+class StrictWrapperTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.module = load_module(WRAPPER_PATH, "r6i_metadata_wrapper_test_module")
+
+    def test_exact_r2_transport_and_ten_path_binding(self):
+        argv = self.module.ssh_argv()
+        self.assertEqual(argv, [
+            "/usr/bin/ssh", "-T", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
+            "-o", "UpdateHostKeys=no", "-o", "ControlMaster=no", "-o", "ControlPath=none",
+            "-o", "ConnectionAttempts=1", "-o", "ConnectTimeout=15",
+            "-o", "ServerAliveInterval=10", "-o", "ServerAliveCountMax=1",
+            "everwalker@192.168.100.2",
+            '"C:\\Users\\Everwalker\\AppData\\Local\\Programs\\Python\\Python312-comsol-mcp\\python.exe" -I -B -',
+        ])
+        binding = self.module.invocation(self.module.read_checked_payload()[0])
+        self.assertEqual(binding["path_count"], 10)
+        self.assertEqual(binding["path_ids"], list(self.module.PATH_IDS))
+        self.assertFalse(binding["automatic_retry_or_replay"])
+        self.assertEqual(binding["original_r6i_r2_activity"]["status"], "UNOBSERVED")
+        self.assertFalse(binding["old_activity_resend_or_replay_permitted"])
+        self.assertEqual(binding["new_diagnostic_connection_deadlines"], [
+            "ConnectionAttempts=1", "ConnectTimeout=15", "ServerAliveInterval=10", "ServerAliveCountMax=1"])
+
+    def test_check_only_is_local_and_never_calls_popen(self):
+        def forbidden_popen(*_args, **_kwargs):
+            raise AssertionError("Popen must not be reached by check-only")
+
+        with patch("sys.stdout.write") as write:
+            self.assertEqual(self.module.main(["--check-only"], popen_factory=forbidden_popen), 0)
+            text = "".join(call.args[0] for call in write.call_args_list)
+        result = json.loads(text)
+        self.assertEqual(result["status"], "PASS_EXACT_UNSIGNED_METADATA_ONLY_SOURCE_AND_ARGV")
+        self.assertEqual(result["remote_path_count"], 10)
+        self.assertEqual(result["popen"], "NOT_RUN")
+        self.assertEqual(result["once_authorization"], "NOT_CREATED")
+        self.assertEqual(result["original_r6i_r2_activity"]["status"], "UNOBSERVED")
+        self.assertFalse(result["old_activity_resend_or_replay_permitted"])
+
+    def test_unobserved_old_activity_is_accepted_as_context_for_fresh_diagnostic(self):
+        result = self.module.validate_activity_scope(
+            requested_run_root=str(self.module.RUN_ROOT.relative_to(self.module.ROOT)))
+        self.assertEqual(result["original_activity"]["status"], "UNOBSERVED")
+        self.assertTrue(result["original_activity"]["once_consumed"])
+        self.assertFalse(result["old_activity_replay"])
+
+    def test_old_activity_replay_or_root_reuse_is_rejected(self):
+        with self.assertRaisesRegex(RuntimeError, "replay or resend"):
+            self.module.validate_activity_scope(
+                requested_run_root=str(self.module.RUN_ROOT.relative_to(self.module.ROOT)),
+                replay_original=True)
+        with self.assertRaisesRegex(RuntimeError, "fresh run root"):
+            self.module.validate_activity_scope(
+                requested_run_root=self.module.ORIGINAL_ACTIVITY["run_root"])
+
+    def test_send_fails_closed_without_fresh_main_authority(self):
+        calls = []
+
+        def forbidden_popen(*_args, **_kwargs):
+            calls.append(True)
+            raise AssertionError("Popen must not be reached without a fresh review and once authorization")
+
+        with self.assertRaises(FileNotFoundError):
+            self.module.execute_once(popen_factory=forbidden_popen)
+        self.assertEqual(calls, [])
+        self.assertFalse(self.module.RUN_ROOT.exists())
+
+    def test_remote_consumer_rejects_extra_or_child_state_claims(self):
+        rows = [{"id": path_id, "status": "MISSING"} for path_id in self.module.PATH_IDS]
+        valid = {
+            "schema": "cv3-windows-r6i-fixed-path-metadata-observation/1",
+            "status": "METADATA_ONLY_CAPTURED", "remote_root": self.module.REMOTE_ROOT,
+            "path_count": 10, "paths": rows,
+            "scope": {"operation": "os.lstat once per fixed path",
+                      "target_content_opened": False, "target_content_read": False,
+                      "remote_write_count": 0, "process_inspection": False,
+                      "token_access": False, "r6i_child_state": "NOT_OBSERVED",
+                      "r6i_child_alive_or_terminal": "NOT_ESTABLISHED_BY_METADATA",
+                      "old_r6f_exact_once_authority_applies": False},
+        }
+        self.assertEqual(self.module.validate_remote_record(json.dumps(valid).encode()), valid)
+        bad = json.loads(json.dumps(valid))
+        bad["scope"]["r6i_child_alive_or_terminal"] = "TERMINAL"
+        with self.assertRaises(RuntimeError):
+            self.module.validate_remote_record(json.dumps(bad).encode())
+        bad = json.loads(json.dumps(valid))
+        bad["paths"].append({"id": "unapproved", "status": "MISSING"})
+        with self.assertRaises(RuntimeError):
+            self.module.validate_remote_record(json.dumps(bad).encode())
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

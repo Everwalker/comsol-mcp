@@ -1,0 +1,1230 @@
+"""One-shot strict SSH wrapper for the reviewed R6G remote PREP payload.
+
+It remains inert until the exact R6G source review, separate R6D read-only
+raw-result record, wrapper source review, persistent human PREP authorization,
+and a new Main exact-once authorization all match. It sends only the R6G PREP
+payload; the R6D inspector is separate and never sent by this wrapper. After
+Popen returns, the exact original process remains owned through natural
+terminal, with no signal, retry, or payload resend.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import time
+from typing import Any, Callable, Mapping
+
+
+ROOT = Path(__file__).resolve().parents[4]
+WRAPPER_PATH = ROOT / "repository/_state/windows-primary-owner-r6g-prep-wrapper-r3-20261015/source/windows_primary_owner_r6g_strict_ssh_prep.py"
+PACKAGE = ROOT / "repository/_state/windows-primary-owner-r6g-source-prep-r2-20261015/package"
+PAYLOAD_PATH = PACKAGE / "PRIMARY_OWNER_R6G_REMOTE_PREP_SCRIPT.py"
+CONTRACT_PATH = PACKAGE / "PRIMARY_OWNER_R6G_PREP_CONTRACT.json"
+MANIFEST_PATH = PACKAGE / "PRIMARY_OWNER_R6G_LOCAL_PREP_MANIFEST.json"
+REQUEST_PATH = ROOT / "repository/docs/full_project_continuation_v3/state/WINDOWS_PRIMARY_OWNER_R6G_MAIN_REVIEW_REQUEST_R2.json"
+SOURCE_REVIEW_PATH = ROOT / "repository/docs/full_project_continuation_v3/state/WINDOWS_PRIMARY_OWNER_R6G_MAIN_SOURCE_REVIEW_R1.json"
+WRAPPER_REVIEW_PATH = ROOT / "repository/docs/full_project_continuation_v3/state/WINDOWS_PRIMARY_OWNER_R6G_PREP_WRAPPER_MAIN_SOURCE_REVIEW_R3.json"
+AUTHORIZATION_PATH = ROOT / "repository/docs/full_project_continuation_v3/state/WINDOWS_PRIMARY_OWNER_R6G_PREP_ONCE_AUTHORIZATION_R3.json"
+PERSISTENT_AUTHORIZATION_PATH = ROOT / "repository/docs/full_project_continuation_v3/state/PERSISTENT_WINDOWS_FIVE_LEAF_PREP_AUTHORIZATION_R1.json"
+R6D_READONLY_SOURCE_REVIEW_PATH = ROOT / "repository/docs/full_project_continuation_v3/state/WINDOWS_R6D_DIAGNOSTIC_R3_MAIN_SOURCE_REVIEW_R1.json"
+R6D_READONLY_INSPECTOR_SOURCE_PATH = ROOT / "repository/_state/windows-primary-owner-r6d-readonly-inspector-diagnostic-r3-20261015/source/WINDOWS_PRIMARY_OWNER_R6D_POSTFAILURE_READONLY_INSPECTOR_DIAGNOSTIC_R3.py"
+R6D_READONLY_INDEPENDENT_ACTUAL_REVIEW_PATH = ROOT / "repository/docs/full_project_continuation_v3/state/WINDOWS_R6D_DIAGNOSTIC_R4_MAIN_ACTUAL_MATCHED_READBACK_REVIEW_R1.json"
+R6D_READONLY_RECOVERED_ACTUAL_REVIEW_PATH = ROOT / "repository/docs/full_project_continuation_v3/state/WINDOWS_R6D_DIAGNOSTIC_R4_MAIN_RECOVERED_ACTUAL_READBACK_REVIEW_R2.json"
+R6D_READONLY_HUMAN_EXPECTATIONS_PATH = ROOT / "repository/docs/full_project_continuation_v3/state/WINDOWS_PRIMARY_OWNER_R6D_READONLY_INSPECTOR_DIAGNOSTIC_R2_HUMAN_AUTHORIZATION_R1.json"
+R6D_READONLY_WRAPPER_REVIEW_PATH = ROOT / "repository/docs/full_project_continuation_v3/state/WINDOWS_PRIMARY_OWNER_R6D_READONLY_INSPECTOR_DIAGNOSTIC_R4_WRAPPER_MAIN_SOURCE_REVIEW_R1.json"
+R6D_READONLY_EXECUTION_AUTHORIZATION_PATH = ROOT / "repository/docs/full_project_continuation_v3/state/WINDOWS_PRIMARY_OWNER_R6D_READONLY_INSPECTOR_DIAGNOSTIC_R4_WRAPPER_MAIN_AUTHORIZATION_R1.json"
+R6D_READONLY_ROOT = ROOT / "repository/_state/windows-primary-owner-r6d-readonly-inspector-diagnostic-r4-ssh-r1-20261015"
+R6D_READONLY_ACTUAL_RESULT_PATH = ROOT / "repository/docs/full_project_continuation_v3/state/WINDOWS_PRIMARY_OWNER_R6D_READONLY_INSPECTOR_DIAGNOSTIC_R4_ACTUAL_RESULT_REPORT_R1.json"
+R6D_READONLY_LAUNCH_INTENT_PATH = R6D_READONLY_ROOT / "SSH_LAUNCH_INTENT.json"
+R6D_READONLY_STATE_PATH = R6D_READONLY_ROOT / "SSH_STATE.jsonl"
+R6D_READONLY_REPORT_PATH = R6D_READONLY_ROOT / "LOCAL_READONLY_INSPECTION_REPORT.json"
+R6D_READONLY_TERMINAL_PATH = R6D_READONLY_ROOT / "SSH_TERMINAL.json"
+R6D_READONLY_STDOUT_PATH = R6D_READONLY_ROOT / "SSH.stdout"
+R6D_READONLY_STDERR_PATH = R6D_READONLY_ROOT / "SSH.stderr"
+RUN_ROOT = ROOT / "repository/_state/windows-primary-owner-r6g-ssh-prep-r3-20261015"
+SSH_PATH = "/usr/bin/ssh"
+SSH_USER_HOST = "everwalker@192.168.100.2"
+REMOTE_PYTHON = r"C:\Users\Everwalker\AppData\Local\Programs\Python\Python312-comsol-mcp\python.exe"
+REMOTE_COMMAND = '"' + REMOTE_PYTHON + '" -I -B -'
+ACTIVE_CUTOFF_SECONDS = 120
+EXPECTED_REMOTE_STATUS = "REMOTE_PREPARED_CLOSED_NO_NATIVE_AUTHORITY"
+PAYLOAD_FILENAME = "PRIMARY_OWNER_R6G_REMOTE_PREP_SCRIPT.py"
+PAYLOAD_REPO_PATH = str(PAYLOAD_PATH.relative_to(ROOT))
+R6G_MANIFEST_SHA256 = "e06257546887cae529afa225546430fce43538736cd28d579a1c8c3e809792f1"
+R6G_CONTRACT_SHA256 = "746afd1564fbfa85043420c9bb8c0c413794ef05f621cc5dce2ae09752115320"
+R6G_PAYLOAD_SHA256 = "56e3394da9db34cc36bc35ff8d9ea08b43256a8c7c6605c5eb483a5b41130ad1"
+R6G_REQUEST_SHA256 = "d64f910425404d188c43175fc7b26239d7d25d7f8a64ac77c88d1de54b72d017"
+R6G_SOURCE_REVIEW_SHA256 = "92a556ebd8bd0d1f4efcfc5047c0400ab883ab7ed14c525dceb13146b6c56158"
+PERSISTENT_USER_AUTHORIZATION_SHA256 = "2ef2ea3707dc3fa4c8deaf1989d33423193c5458dd205fa66ec7e416f66524c4"
+R6D_READONLY_SOURCE_REVIEW_SHA256 = "679a39d1c79689dce08daa2702bb565474de1d5a102dc0dbf54eb84f99d82efc"
+R6D_READONLY_HUMAN_EXPECTATIONS_SHA256 = "9264531f74b9ff66aa059a6446b155945383304e77b03c748a9df10af16a7841"
+R6D_READONLY_WRAPPER_REVIEW_SHA256 = "1606f582521e09da0737e00c3a9eaee0a32d45bfa437286ad22cd69a23122bd6"
+R6D_READONLY_EXECUTION_AUTHORIZATION_SHA256 = "30289daa600444f43b3d807370241a9d6e7c179a0459319de7bc25ab0afb18a0"
+R6D_READONLY_INSPECTOR_SHA256 = "f28126025fcd549654295940c452957a15743e053200d18f8feab571db217480"
+R6D_READONLY_INSPECTOR_BYTES = 24732
+R6D_READONLY_ACTUAL_RESULT_SHA256 = "010952ffd73564bca8abff6f0a6fb4bbf52ccf453b8b649566243c48f0b1e63a"
+R6D_READONLY_INDEPENDENT_ACTUAL_REVIEW_SHA256 = "fadff625de36868bc6f96271465e7a0567e92768b63c2403f99ea2bc31d77502"
+R6D_READONLY_RECOVERED_ACTUAL_REVIEW_SHA256 = "2eee408b0615d042899035acfa8406d7dcb8ab2ad1d417fb5183ffce5237fe88"
+R6D_READONLY_INCIDENT_RECORD_SHA256 = "f11e58e31e3a50b3ba7af2b3a333d6eb636c882573f83325a30377bbefa7a508"
+R6D_READONLY_RESTORATION_RECEIPT_SHA256 = "8d953757aef17aad8f1e35edef0542ddff41c6eb7bc21503986d2fc2dd3e859b"
+R6D_READONLY_R4_WRAPPER_SHA256 = "0b03d71cefbc0f1170d79a36049ee2d58b8970fc36f5a64f21ede23a4877a634"
+R6D_READONLY_LAUNCH_INTENT_SHA256 = "970922ca1a36318e0b85855642c47f8c7fbb17472c679ef8e80648315bfe69f3"
+R6D_READONLY_STATE_SHA256 = "f9ac424c41eb14065e823b236c245a68658d9b83badd77cc6cf1f2673f56e6ae"
+R6D_READONLY_REPORT_SHA256 = "965714e7cdebd8c6df9ba1ec97f98e41d8b474f3e95899d2e25b7bd67011a6b4"
+R6D_READONLY_TERMINAL_SHA256 = "6d0b9bf46c3422e2dec8c4f4e22ea978597d5802eb4f817b043b253da9088372"
+R6D_READONLY_STDOUT_SHA256 = "6256547059fd0c48b063d4c5a4bde20cd0b78a12ed10c0be65af00eeeb0a8f61"
+R6D_READONLY_STDERR_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+R6G_HISTORICAL_INSPECTOR_SHA256 = "ca1b35a5a64547476df05fe006caf0347fece393c85ea240f5ae54f835f692c5"
+R6G_HISTORICAL_INSPECTOR_BYTES = 14129
+R6G_HISTORICAL_INSPECTOR_PATH = "repository/_state/windows-primary-owner-r6g-source-prep-r2-20261015/package/WINDOWS_PRIMARY_OWNER_R6D_POSTFAILURE_READONLY_INSPECTOR.py"
+EXPECTED_R6D_READONLY_FILES = {
+    r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c\helpers-primary-owner-r6d\windows_primary_token_owner_probe_r6d.py": "bc9f34ec4259acf49181b30b802903cc343561704ca7ce0f9069c774ea97904a",
+    r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c\helpers-primary-owner-r6d\windows_primary_token_owner_outer_gate_r6d.py": "497665208412c7e1f08f6ace1f54ce3b9c4451cfac71e310d167b3d15ddd0318",
+    r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c\authority-primary-owner-r6d\BINDING.json": "b11fbf3d348408fb07cb9bdd946883f2036c89e08120f7a25c1c3388c30beceb",
+    r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c\authority-primary-owner-r6d\PREBIRTH_BINDING.json": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c\authority-primary-owner-r6d\MAIN_APPROVAL.json": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+}
+R6D_READONLY_TERMINAL_FIELDS = {
+    "schema", "status", "target", "original_local_ssh_pid", "original_local_ssh_returncode",
+    "original_popen_created", "same_original_popen_retained_through_terminal",
+    "payload_write_attempted_once", "payload_write_bytes", "payload_sha256",
+    "active_cutoff_seconds", "active_cutoff_reached", "elapsed_seconds",
+    "signals_kills_retries_resends", "send_error", "remote_write_cleanup_native_authority",
+}
+R6D_READONLY_REPORT_FIELDS = {
+    "schema", "status", "ssh_returncode", "stdout_bytes", "stdout_sha256",
+    "stderr_bytes", "stderr_sha256", "parsed_inspector_status",
+    "diagnostic_only_not_R14_security_path_proof", "parse_error_type",
+    "no_remote_file_write_or_cleanup",
+}
+EXPECTED_TARGETS = ['C:\\Users\\Everwalker\\AppData\\Local\\cvw26-current-9f07a952265c\\helpers-primary-owner-r6g\\windows_primary_token_owner_probe_r6g.py', 'C:\\Users\\Everwalker\\AppData\\Local\\cvw26-current-9f07a952265c\\helpers-primary-owner-r6g\\windows_primary_token_owner_outer_gate_r6g.py', 'C:\\Users\\Everwalker\\AppData\\Local\\cvw26-current-9f07a952265c\\authority-primary-owner-r6g\\BINDING.json', 'C:\\Users\\Everwalker\\AppData\\Local\\cvw26-current-9f07a952265c\\authority-primary-owner-r6g\\PREBIRTH_BINDING.json', 'C:\\Users\\Everwalker\\AppData\\Local\\cvw26-current-9f07a952265c\\authority-primary-owner-r6g\\MAIN_APPROVAL.json']
+SOURCE_PATHS = ('_state/windows-restored-host-current-20261014/KERNEL_R14_ACTUAL_READBACK2/remote_files/authority-r14/BINDING.json', 'repository/_state/windows-primary-owner-r6f-local-prep-r1-20261015/package/PRIMARY_OWNER_R6F_INNER_BINDING_PROPOSAL.json', 'repository/_state/windows-primary-owner-r6f-local-prep-r1-20261015/package/PRIMARY_OWNER_R6F_LOCAL_PREP_MANIFEST.json', 'repository/_state/windows-primary-owner-r6f-local-prep-r1-20261015/package/PRIMARY_OWNER_R6F_REMOTE_PREP_SCRIPT.py', 'repository/_state/windows-primary-owner-r6g-source-prep-r2-20261015/source/prepare_primary_owner_r6g_local.py', 'repository/_state/windows-primary-owner-r6g-source-prep-r2-20261015/source/tests/test_windows_primary_owner_r6g_source.py', 'repository/_state/windows-primary-owner-r6g-source-prep-r2-20261015/source/tools/windows_primary_token_owner_outer_gate_r6g.py', 'repository/_state/windows-primary-owner-r6g-source-prep-r2-20261015/source/tools/windows_primary_token_owner_probe_r6g.py', 'repository/_state/windows-primary-owner-r6g-source-prep-r2-20261015/source/windows_primary_owner_r6d_readonly_inspector.py', 'repository/_state/windows-primary-owner-r6g-source-prep-r2-20261015/source/windows_primary_owner_r6g_prep_payload_template.py.txt', 'repository/docs/full_project_continuation_v3/state/WINDOWS_PRIMARY_OWNER_R6F_PREP_ACTUAL_FAILURE_REPORT_R1.json', 'repository/docs/full_project_continuation_v3/state/WINDOWS_PRIMARY_OWNER_R6F_PREP_MAIN_SOURCE_REVIEW_R1.json', 'repository/tests/test_windows_primary_owner_authority_root_lease_r6b.py', 'repository/tools/windows_primary_owner_authority_root_lease_r6b.py', 'repository/tools/windows_primary_token_owner_outer_gate_r6d.py', 'repository/tools/windows_primary_token_owner_probe_r6d.py')
+
+OUTPUT_NAMES = ('SSH_LAUNCH_INTENT.json', 'SSH.stdout', 'SSH.stderr', 'SSH_STATE.jsonl', 'SSH_TERMINAL.json', 'REMOTE_PREP_REPORT.json')
+_UNKNOWN_POPEN_HANDLES: list[Any] = []
+
+
+def sha(raw: bytes) -> str:
+    return hashlib.sha256(raw).hexdigest()
+
+
+def canonical(value: Any) -> bytes:
+    return (json.dumps(value, sort_keys=True, indent=2, ensure_ascii=False, allow_nan=False) + "\n").encode("utf-8")
+
+
+def strict_json(raw: bytes, label: str) -> dict[str, Any]:
+    def pairs(items):
+        result = {}
+        for key, value in items:
+            if key in result:
+                raise ValueError("duplicate JSON key")
+            result[key] = value
+        return result
+
+    try:
+        value = json.loads(raw.decode("utf-8", "strict"), object_pairs_hook=pairs,
+                           parse_constant=lambda item: (_ for _ in ()).throw(ValueError(item)))
+    except (UnicodeError, ValueError, json.JSONDecodeError) as exc:
+        raise RuntimeError(label + " is not strict duplicate-free UTF-8 JSON") from exc
+    if not isinstance(value, dict):
+        raise RuntimeError(label + " root is not an object")
+    return value
+
+
+def read_regular(path: Path, *, maximum: int = 256 * 1024 * 1024) -> bytes:
+    if path.is_symlink() or not path.is_file():
+        raise RuntimeError("expected an existing ordinary local file: " + str(path))
+    with path.open("rb", buffering=0) as stream:
+        before = os.fstat(stream.fileno())
+        if before.st_size < 0 or before.st_size > maximum:
+            raise RuntimeError("local input exceeds its fixed byte bound: " + str(path))
+        raw = stream.read(maximum + 1)
+        after = os.fstat(stream.fileno())
+    sig = lambda row: (row.st_dev, row.st_ino, row.st_size, row.st_mtime_ns, row.st_ctime_ns)
+    if len(raw) > maximum or len(raw) != after.st_size or sig(before) != sig(after):
+        raise RuntimeError("local input changed while the exact bytes were read: " + str(path))
+    return raw
+
+
+def ssh_argv() -> list[str]:
+    return [
+        SSH_PATH, "-T", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
+        "-o", "UpdateHostKeys=no", "-o", "ControlMaster=no", "-o", "ControlPath=none",
+        SSH_USER_HOST, REMOTE_COMMAND,
+    ]
+
+
+def invocation_binding(payload_sha256: str, payload_bytes: int) -> dict[str, Any]:
+    argv = ssh_argv()
+    return {
+        "schema": "cv3-windows-primary-owner-r6g-ssh-invocation/1",
+        "argv": argv,
+        "argv_sha256": sha(canonical(argv)),
+        "shell": False,
+        "target": SSH_USER_HOST,
+        "remote_command": REMOTE_COMMAND,
+        "payload_sha256": payload_sha256,
+        "payload_bytes": payload_bytes,
+        "stdin_mode": "one exact binary payload write to the single original Popen stdin",
+        "output_mode": "raw binary stdout/stderr redirected directly to exclusive local evidence files",
+        "active_cutoff_seconds": ACTIVE_CUTOFF_SECONDS,
+        "after_cutoff": "Persist UNKNOWN and passively wait on the same original Popen object to natural terminal; do not kill, signal, close, duplicate, or resend.",
+        "remote_write_targets": list(EXPECTED_TARGETS),
+        "native_child": "NOT_AUTHORIZED",
+        "current_execution": "NOT_RUN_NO_SSH_CONNECTION_NO_PAYLOAD_SENT",
+    }
+
+
+def _source_hashes() -> dict[str, str]:
+    return {relative: sha(read_regular(ROOT / relative)) for relative in SOURCE_PATHS}
+
+
+def _readonly_proof_binding(evidence: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "status": "READ_ONLY_SNAPSHOT_MATCHES_EXPECTED_PARTIAL_R6D",
+        "inspector_sha256": R6D_READONLY_INSPECTOR_SHA256,
+        "inspector_bytes": R6D_READONLY_INSPECTOR_BYTES,
+        "r6g_prep_payload_sha256": R6G_PAYLOAD_SHA256,
+        "r6g_historical_inspector_path": R6G_HISTORICAL_INSPECTOR_PATH,
+        "r6g_historical_inspector_sha256": R6G_HISTORICAL_INSPECTOR_SHA256,
+        "r6g_historical_inspector_bytes": R6G_HISTORICAL_INSPECTOR_BYTES,
+        "r6g_payload_reissued_or_modified": False,
+        "inspector_source_review_sha256": evidence["source_review_sha256"],
+        "r4_wrapper_source_review_sha256": evidence["wrapper_review_sha256"],
+        "r4_wrapper_execution_authorization_sha256": evidence["execution_authorization_sha256"],
+        "r4_actual_result_report_path": str(R6D_READONLY_ACTUAL_RESULT_PATH.relative_to(ROOT)),
+        "r4_actual_result_report_sha256": evidence["actual_result_sha256"],
+        "r4_launch_intent_sha256": evidence["launch_intent_sha256"],
+        "r4_state_sha256": evidence["state_sha256"],
+        "r4_local_capture_report_sha256": evidence["report_sha256"],
+        "r4_terminal_sha256": evidence["terminal_sha256"],
+        "r4_stdout_sha256": evidence["stdout_sha256"],
+        "r4_stderr_sha256": evidence["stderr_sha256"],
+        "r4_independent_actual_review_sha256": evidence["independent_actual_review_sha256"],
+        "r4_recovered_actual_review_path": str(R6D_READONLY_RECOVERED_ACTUAL_REVIEW_PATH.relative_to(ROOT)),
+        "r4_recovered_actual_review_sha256": evidence["recovered_actual_review_sha256"],
+        "r4_incident_record_sha256": evidence["incident_sha256"],
+        "r4_exact_byte_restoration_receipt_sha256": evidence["restoration_receipt_sha256"],
+        "five_file_sha256": evidence["file_sha256"],
+        "runtime_time_domain": "cpython-3.12.10-windows-path-ctime-is-birthtime-fstat-ctime-is-change-time",
+        "path_fd_common_identity_and_same_source_stability": "PASS_ALL_FIVE",
+        "diagnostic_only_not_R14_security_path_proof": True,
+    }
+
+
+def expected_wrapper_review(*, wrapper_sha256: str, manifest_sha256: str,
+                           contract_sha256: str, payload_sha256: str, payload_bytes: int,
+                           request_sha256: str, source_review_sha256: str,
+                           persistent_authorization_sha256: str,
+                           readonly_evidence: dict[str, Any],
+                           invocation_sha256: str, invocation: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema": "cv3-windows-primary-owner-r6g-prep-wrapper-main-review/1",
+        "status": "PASS_EXACT_R6G_PREP_WRAPPER_SOURCE_REVIEW_NO_REMOTE_ACTION",
+        "wrapper_path": str(WRAPPER_PATH.relative_to(ROOT)),
+        "wrapper_sha256": wrapper_sha256,
+        "candidate_manifest_sha256": manifest_sha256,
+        "contract_sha256": contract_sha256,
+        "payload_sha256": payload_sha256,
+        "payload_bytes": payload_bytes,
+        "r6g_main_review_request_sha256": request_sha256,
+        "r6g_source_review_sha256": source_review_sha256,
+        "persistent_human_prep_authorization_sha256": persistent_authorization_sha256,
+        "r6d_readonly_proof": _readonly_proof_binding(readonly_evidence),
+        "ssh_argv_sha256": invocation["argv_sha256"],
+        "ssh_invocation_sha256": invocation_sha256,
+        "target": SSH_USER_HOST,
+        "remote_command": REMOTE_COMMAND,
+        "remote_write_targets": list(EXPECTED_TARGETS),
+        "remote_write_count": 5,
+        "run_root": str(RUN_ROOT.relative_to(ROOT)),
+        "active_cutoff_seconds": ACTIVE_CUTOFF_SECONDS,
+        "original_popen_retained_until_natural_terminal": True,
+        "remote_write_cleanup_retry_or_native_authority": "NONE",
+    }
+
+
+def expected_authorization(*, wrapper_sha256: str, manifest_sha256: str,
+                           contract_sha256: str, payload_sha256: str, payload_bytes: int,
+                           request_sha256: str, source_review_sha256: str,
+                           wrapper_review_sha256: str,
+                           persistent_authorization_sha256: str,
+                           readonly_evidence: dict[str, Any],
+                           invocation_sha256: str) -> dict[str, Any]:
+    return {
+        "schema": "cv3-windows-primary-owner-r6g-prep-once-authorization/1",
+        "status": "MAIN_AUTHORIZED_EXACT_R6G_PREP_ONCE_AFTER_MATCHED_R6D_READONLY",
+        "wrapper_sha256": wrapper_sha256,
+        "candidate_manifest_sha256": manifest_sha256,
+        "contract_sha256": contract_sha256,
+        "payload_sha256": payload_sha256,
+        "payload_bytes": payload_bytes,
+        "r6g_main_review_request_sha256": request_sha256,
+        "r6g_source_review_sha256": source_review_sha256,
+        "wrapper_source_review_sha256": wrapper_review_sha256,
+        "persistent_human_prep_authorization_sha256": persistent_authorization_sha256,
+        "r6d_readonly_proof": _readonly_proof_binding(readonly_evidence),
+        "ssh_invocation_sha256": invocation_sha256,
+        "target": SSH_USER_HOST,
+        "remote_write_targets": list(EXPECTED_TARGETS),
+        "remote_write_count": 5,
+        "run_root": str(RUN_ROOT.relative_to(ROOT)),
+        "active_cutoff_seconds": ACTIVE_CUTOFF_SECONDS,
+        "passive_wait_same_original_popen_after_cutoff": True,
+        "resend_or_retry": False,
+        "native_child_authority": False,
+        "COMSOL_GUI_JVM_authority": False,
+        "account_privilege_acl_changes": False,
+    }
+
+
+def _decode_concatenated_json_objects(raw: bytes, label: str) -> list[dict[str, Any]]:
+    def pairs(items):
+        result = {}
+        for key, value in items:
+            if key in result:
+                raise ValueError("duplicate key")
+            result[key] = value
+        return result
+
+    try:
+        text = raw.decode("utf-8", "strict")
+        decoder = json.JSONDecoder(
+            object_pairs_hook=pairs,
+            parse_constant=lambda item: (_ for _ in ()).throw(ValueError(item)),
+        )
+        records = []
+        position = 0
+        while position < len(text):
+            while position < len(text) and text[position].isspace():
+                position += 1
+            if position == len(text):
+                break
+            value, position = decoder.raw_decode(text, position)
+            if not isinstance(value, dict):
+                raise ValueError("state record is not an object")
+            records.append(value)
+    except (UnicodeError, ValueError, json.JSONDecodeError) as exc:
+        raise RuntimeError(label + " is not a sequence of strict JSON objects") from exc
+    return records
+
+
+def _validate_readonly_evidence(report_path: Path, terminal_path: Path,
+                                stdout_path: Path, stderr_path: Path,
+                                *, actual_result_path: Path = R6D_READONLY_ACTUAL_RESULT_PATH,
+                                launch_intent_path: Path = R6D_READONLY_LAUNCH_INTENT_PATH,
+                                state_path: Path = R6D_READONLY_STATE_PATH,
+                                source_review_path: Path = R6D_READONLY_SOURCE_REVIEW_PATH,
+                                inspector_source_path: Path = R6D_READONLY_INSPECTOR_SOURCE_PATH,
+                                readonly_wrapper_review_path: Path = R6D_READONLY_WRAPPER_REVIEW_PATH,
+                                execution_authorization_path: Path = R6D_READONLY_EXECUTION_AUTHORIZATION_PATH,
+                                independent_actual_review_path: Path = R6D_READONLY_INDEPENDENT_ACTUAL_REVIEW_PATH,
+                                recovered_actual_review_path: Path = R6D_READONLY_RECOVERED_ACTUAL_REVIEW_PATH,
+                                human_expectations_path: Path = R6D_READONLY_HUMAN_EXPECTATIONS_PATH) -> dict[str, Any]:
+    """Consume the exact R4 producer files and independently reviewed R3 raw proof."""
+    raw_by_name = {
+        "actual_result": read_regular(actual_result_path, maximum=2 * 1024 * 1024),
+        "launch_intent": read_regular(launch_intent_path, maximum=2 * 1024 * 1024),
+        "state": read_regular(state_path, maximum=2 * 1024 * 1024),
+        "report": read_regular(report_path, maximum=2 * 1024 * 1024),
+        "terminal": read_regular(terminal_path, maximum=2 * 1024 * 1024),
+        "stdout": read_regular(stdout_path, maximum=2 * 1024 * 1024),
+        "stderr": read_regular(stderr_path, maximum=2 * 1024 * 1024),
+        "source_review": read_regular(source_review_path, maximum=2 * 1024 * 1024),
+        "inspector_source": read_regular(inspector_source_path, maximum=2 * 1024 * 1024),
+        "wrapper_review": read_regular(readonly_wrapper_review_path, maximum=2 * 1024 * 1024),
+        "execution_authorization": read_regular(execution_authorization_path, maximum=2 * 1024 * 1024),
+        "independent_actual_review": read_regular(independent_actual_review_path, maximum=2 * 1024 * 1024),
+        "recovered_actual_review": read_regular(recovered_actual_review_path, maximum=2 * 1024 * 1024),
+        "human_expectations": read_regular(human_expectations_path, maximum=2 * 1024 * 1024),
+    }
+    hashes = {name: sha(raw) for name, raw in raw_by_name.items()}
+    expected_hashes = {
+        "actual_result": R6D_READONLY_ACTUAL_RESULT_SHA256,
+        "launch_intent": R6D_READONLY_LAUNCH_INTENT_SHA256,
+        "state": R6D_READONLY_STATE_SHA256,
+        "report": R6D_READONLY_REPORT_SHA256,
+        "terminal": R6D_READONLY_TERMINAL_SHA256,
+        "stdout": R6D_READONLY_STDOUT_SHA256,
+        "stderr": R6D_READONLY_STDERR_SHA256,
+        "source_review": R6D_READONLY_SOURCE_REVIEW_SHA256,
+        "inspector_source": R6D_READONLY_INSPECTOR_SHA256,
+        "wrapper_review": R6D_READONLY_WRAPPER_REVIEW_SHA256,
+        "execution_authorization": R6D_READONLY_EXECUTION_AUTHORIZATION_SHA256,
+        "independent_actual_review": R6D_READONLY_INDEPENDENT_ACTUAL_REVIEW_SHA256,
+        "recovered_actual_review": R6D_READONLY_RECOVERED_ACTUAL_REVIEW_SHA256,
+        "human_expectations": R6D_READONLY_HUMAN_EXPECTATIONS_SHA256,
+    }
+    if hashes != expected_hashes:
+        changed = sorted(name for name in expected_hashes if hashes[name] != expected_hashes[name])
+        raise RuntimeError("R4 read-only evidence bytes differ from exact reviewed records: " + ",".join(changed))
+
+    actual_report = strict_json(raw_by_name["actual_result"], "R4 independent local actual-result report")
+    launch = strict_json(raw_by_name["launch_intent"], "R4 read-only launch intent")
+    report = strict_json(raw_by_name["report"], "R4 read-only local capture report")
+    terminal = strict_json(raw_by_name["terminal"], "R4 read-only SSH terminal")
+    result = strict_json(raw_by_name["stdout"], "R4 read-only inspector stdout")
+    source_review = strict_json(raw_by_name["source_review"], "R3 inspector Main source review")
+    wrapper_review = strict_json(raw_by_name["wrapper_review"], "R4 wrapper Main source review")
+    execution_authorization = strict_json(raw_by_name["execution_authorization"], "R4 exact read-only execution authorization")
+    actual_review = strict_json(raw_by_name["independent_actual_review"], "R4 independent actual matched-readback review")
+    recovered_actual_review = strict_json(raw_by_name["recovered_actual_review"], "R4 Main recovery readback review")
+    human_expectations = strict_json(raw_by_name["human_expectations"], "R4 independent file-hash expectation source")
+    records = _decode_concatenated_json_objects(raw_by_name["state"], "R4 SSH_STATE.jsonl")
+
+    if (source_review.get("schema") != "windows-r6d-diag-r3-main-source-review/1"
+            or source_review.get("status") != "PASS_EXACT_DIAGNOSTIC_SOURCE_AND_SOFTWARE_CONTROLS_NO_REMOTE_ACTION"
+            or source_review.get("candidate_path") != str(R6D_READONLY_INSPECTOR_SOURCE_PATH.relative_to(ROOT))
+            or source_review.get("candidate_bytes") != R6D_READONLY_INSPECTOR_BYTES
+            or source_review.get("candidate_sha256") != R6D_READONLY_INSPECTOR_SHA256
+            or source_review.get("SSH") != "NOT_RUN"
+            or source_review.get("remote_write_native_COMSOL_JVM_GUI") != "NOT_RUN"):
+        raise RuntimeError("R3 inspector source review does not bind the fixed source-only candidate")
+    if (wrapper_review.get("schema") != "windows-r6d-r4-main-wrapper-source-review/1"
+            or wrapper_review.get("status") != "PASS_EXACT_R4_WRAPPER_REAL_PRODUCER_CONTRACT_AND_NO_REMOTE_EXECUTION"
+            or wrapper_review.get("wrapper") != {
+                "path": "repository/_state/windows-primary-owner-r6d-readonly-inspector-wrapper-r4-20261015/source/windows_primary_owner_r6d_readonly_ssh_wrapper.py",
+                "bytes": 19814, "sha256": R6D_READONLY_R4_WRAPPER_SHA256}
+            or wrapper_review.get("source_review_sha256") != R6D_READONLY_SOURCE_REVIEW_SHA256
+            or wrapper_review.get("execution_auth_created_by_source_review") is not False
+            or wrapper_review.get("SSH") != "NOT_RUN"
+            or wrapper_review.get("native") != "NOT_RUN"):
+        raise RuntimeError("R4 wrapper source review does not bind the reviewed read-only producer")
+    if (execution_authorization.get("schema") != "cv3-windows-primary-owner-r6d-readonly-inspector-diagnostic-r4-wrapper-main-authorization/1"
+            or execution_authorization.get("status") != "PASS_EXACT_DIAGNOSTIC_R4_WRAPPER_AND_SINGLE_SEND_AUTHORIZED"
+            or execution_authorization.get("wrapper_sha256") != R6D_READONLY_R4_WRAPPER_SHA256
+            or execution_authorization.get("diagnostic_source_review_sha256") != R6D_READONLY_SOURCE_REVIEW_SHA256
+            or execution_authorization.get("inspector_sha256") != R6D_READONLY_INSPECTOR_SHA256
+            or execution_authorization.get("inspector_bytes") != R6D_READONLY_INSPECTOR_BYTES
+            or execution_authorization.get("run_root") != str(R6D_READONLY_ROOT.relative_to(ROOT))
+            or execution_authorization.get("remote_write_cleanup_retry_or_native_authority") != "NONE"):
+        raise RuntimeError("R4 read-only execution authorization does not bind the one-send inspector run")
+    if (actual_review.get("schema") != "windows-r6d-r4-main-actual-readback-review/1"
+            or actual_review.get("status") != "PASS_SCOPED_READONLY_PARTIAL_STATE_MATCH_NOT_NATIVE"
+            or actual_review.get("actual_report_sha256") != R6D_READONLY_ACTUAL_RESULT_SHA256
+            or actual_review.get("payload_sha256") != R6D_READONLY_INSPECTOR_SHA256
+            or actual_review.get("actual_snapshot_status") != "READ_ONLY_SNAPSHOT_MATCHES_EXPECTED_PARTIAL_R6D"
+            or actual_review.get("file_match_count") != 5
+            or actual_review.get("directory_match_count") != 2
+            or actual_review.get("absence_check_count") != 3
+            or actual_review.get("diagnostic_not_R14_security_proof") is not True
+            or actual_review.get("remote_writes_or_native") != "NONE"):
+        raise RuntimeError("independent R4 actual review does not PASS the exact partial read-only snapshot")
+    if sha(raw_by_name["human_expectations"]) != R6D_READONLY_HUMAN_EXPECTATIONS_SHA256:
+        raise RuntimeError("independent R4 file-hash expectation source changed")
+    if (actual_review.get("independent_file_hash_expectations_source") != {
+            "path": str(R6D_READONLY_HUMAN_EXPECTATIONS_PATH.relative_to(ROOT)),
+            "sha256": R6D_READONLY_HUMAN_EXPECTATIONS_SHA256}
+            or actual_review.get("all_common_path_fd_identity_and_full_same_domain_stability_checks_pass") is not True
+            or actual_review.get("raw_ctime_domain_difference_on_populated_files") != 3):
+        raise RuntimeError("independent actual review does not bind hash source and CPython time-domain evidence")
+    if (recovered_actual_review.get("schema") != "windows-r6d-r4-main-recovered-actual-readback-review/2"
+            or recovered_actual_review.get("status") != "PASS_SCOPED_READONLY_MATCH_AFTER_DOCUMENTED_LOCAL_LOG_RECOVERY_NOT_NATIVE"
+            or recovered_actual_review.get("base_main_actual_review") != {
+                "path": str(R6D_READONLY_INDEPENDENT_ACTUAL_REVIEW_PATH.relative_to(ROOT)),
+                "sha256": R6D_READONLY_INDEPENDENT_ACTUAL_REVIEW_SHA256}
+            or recovered_actual_review.get("incident") != {
+                "path": "repository/docs/full_project_continuation_v3/evidence/windows_r4_state_contamination_recovery_20261015_r1/INCIDENT_AND_MAIN_RECOVERY_DECISION_R1.json",
+                "sha256": R6D_READONLY_INCIDENT_RECORD_SHA256}
+            or recovered_actual_review.get("restoration") != {
+                "path": "repository/docs/full_project_continuation_v3/evidence/windows_r4_state_contamination_recovery_20261015_r1/EXACT_BYTE_RESTORATION_RECEIPT_R1.json",
+                "sha256": R6D_READONLY_RESTORATION_RECEIPT_SHA256}
+            or recovered_actual_review.get("raw_contents_match_original_frozen_capture") is not True
+            or recovered_actual_review.get("local_state_log_was_mutated_and_recovered") is not True
+            or recovered_actual_review.get("timestamps_not_original") is not True
+            or recovered_actual_review.get("other5_raw_files_unchanged") is not True
+            or recovered_actual_review.get("old_reports_not_edited") is not True
+            or recovered_actual_review.get("remote_state_unmodified") is not True
+            or recovered_actual_review.get("R6G_PREP_wrapper_must_bind_this_recovery_review") is not True):
+        raise RuntimeError("R4 recovery review does not retain and disclose the exact local evidence restoration")
+
+    if set(report) != R6D_READONLY_REPORT_FIELDS:
+        raise RuntimeError("R4 local capture report fields differ from the actual wrapper producer")
+    if (report.get("schema") != "cv3-r6d-readonly-inspector-local-result/1"
+            or report.get("status") != "READ_ONLY_INSPECTION_REPORT_CAPTURED"
+            or report.get("ssh_returncode") != 0
+            or report.get("parsed_inspector_status") != "READ_ONLY_SNAPSHOT_MATCHES_EXPECTED_PARTIAL_R6D"
+            or report.get("diagnostic_only_not_R14_security_path_proof") is not True
+            or report.get("parse_error_type") is not None
+            or report.get("no_remote_file_write_or_cleanup") is not True
+            or report.get("stdout_bytes") != len(raw_by_name["stdout"])
+            or report.get("stdout_sha256") != hashes["stdout"]
+            or report.get("stderr_bytes") != len(raw_by_name["stderr"])
+            or report.get("stderr_sha256") != hashes["stderr"]):
+        raise RuntimeError("R4 local report does not bind clean captured stdout/stderr bytes")
+    if (launch.get("schema") != "cv3-r6d-readonly-inspector-launch-intent/1"
+            or launch.get("status") != "LOCAL_INTENT_RECORDED_BEFORE_POPEN"
+            or launch.get("wrapper_sha256") != R6D_READONLY_R4_WRAPPER_SHA256
+            or launch.get("inspector_sha256") != R6D_READONLY_INSPECTOR_SHA256
+            or launch.get("inspector_bytes") != R6D_READONLY_INSPECTOR_BYTES
+            or launch.get("run_root") != str(R6D_READONLY_ROOT.relative_to(ROOT))):
+        raise RuntimeError("R4 launch intent does not bind the reviewed inspector and exact run root")
+    invocation = launch.get("invocation")
+    if (not isinstance(invocation, dict)
+            or invocation.get("schema") != "cv3-r6d-readonly-inspector-diagnostic-r4-ssh-invocation/1"
+            or invocation.get("target") != SSH_USER_HOST
+            or invocation.get("argv") != [SSH_PATH, "-T", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
+                                            "-o", "UpdateHostKeys=no", "-o", "ControlMaster=no", "-o", "ControlPath=none",
+                                            SSH_USER_HOST, REMOTE_COMMAND]
+            or invocation.get("argv_sha256") != "cdae9aca7d22ec37f9330eacf972fe8a59aa072aca3a5706212c2398255aa1db"
+            or invocation.get("inspector_sha256") != R6D_READONLY_INSPECTOR_SHA256
+            or invocation.get("inspector_bytes") != R6D_READONLY_INSPECTOR_BYTES
+            or invocation.get("active_cutoff_seconds") != 120
+            or invocation.get("shell") is not False
+            or invocation.get("current_execution") != "NOT_RUN_NO_SSH_CONNECTION_NO_PAYLOAD_SENT"):
+        raise RuntimeError("R4 launch invocation differs from the fixed read-only SSH command")
+    if (terminal.get("schema") != "cv3-r6d-readonly-inspector-ssh-terminal/1"
+            or terminal.get("status") != "SSH_TERMINAL_CAPTURED_NO_RETRY"
+            or terminal.get("target") != SSH_USER_HOST
+            or type(terminal.get("original_local_ssh_pid")) is not int
+            or terminal.get("original_local_ssh_returncode") != 0
+            or terminal.get("original_popen_created") is not True
+            or terminal.get("same_original_popen_retained_through_terminal") is not True
+            or terminal.get("payload_write_attempted_once") is not True
+            or terminal.get("payload_write_bytes") != R6D_READONLY_INSPECTOR_BYTES
+            or terminal.get("payload_sha256") != R6D_READONLY_INSPECTOR_SHA256
+            or terminal.get("active_cutoff_seconds") != 120
+            or terminal.get("active_cutoff_reached") is not False
+            or terminal.get("signals_kills_retries_resends") != 0
+            or terminal.get("send_error") is not None
+            or terminal.get("remote_write_cleanup_native_authority") != "NONE"):
+        raise RuntimeError("R4 terminal does not prove the single original-Popen natural completion")
+    if len(records) != 3 or [row.get("state") for row in records] != [
+            "REVIEWED_ONE_SHOT_READY_NO_CONNECTION", "ORIGINAL_POPEN_CREATED", "ONE_STDIN_WRITE_CLOSED"]:
+        raise RuntimeError("R4 process journal does not contain the exact one-send terminal sequence")
+    if (records[1].get("pid") != terminal.get("original_local_ssh_pid")
+            or records[1].get("signals_kills_retries_resends") != 0
+            or records[2].get("pid") != terminal.get("original_local_ssh_pid")
+            or records[2].get("bytes_written") != R6D_READONLY_INSPECTOR_BYTES
+            or records[2].get("exact_write") is not True
+            or records[2].get("resend_count") != 0):
+        raise RuntimeError("R4 journal does not bind the exact original process and one write")
+
+    expected_top = {"absence_checks", "diagnostic_only_not_R14_security_path_proof", "directories", "files",
+                    "preflight", "read_only", "root", "runtime_time_domain", "schema", "status"}
+    if (set(result) != expected_top
+            or result.get("schema") != "cv3-windows-primary-owner-r6d-readonly-inspection/1"
+            or result.get("status") != "READ_ONLY_SNAPSHOT_MATCHES_EXPECTED_PARTIAL_R6D"
+            or result.get("read_only") is not True
+            or result.get("diagnostic_only_not_R14_security_path_proof") is not True
+            or result.get("preflight") != {"child_directory_preflights": "COMPLETE",
+                                           "leaf_hashing": "COMPLETED_AFTER_PRECHECK",
+                                           "root_ordinary_directory": True}):
+        raise RuntimeError("R3 raw stdout is not the exact clean matched partial-readonly inspector result")
+    root_record = result.get("root", {})
+    if (root_record.get("state") != "PRESENT_ORDINARY_DIRECTORY"
+            or root_record.get("path") != r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c"
+            or root_record.get("metadata", {}).get("is_symlink") is not False
+            or root_record.get("metadata", {}).get("reparse_point") is not False):
+        raise RuntimeError("R3 inspector did not prove its diagnostic task root ordinary")
+    expected_runtime = {
+        "birthtime_policy": "required exact integer in Windows FILETIME nanosecond range derived from CPython's signed 64-bit 100 ns LARGE_INTEGER conversion, equal across path/fd",
+        "implementation": "cpython",
+        "open_fstat_raw_ctime_ns_meaning": "Windows FILE_BASIC_INFO.ChangeTime metadata-change time",
+        "os_name": "nt",
+        "path_stat_raw_ctime_ns_meaning": "compatibility alias of st_birthtime_ns (creation time)",
+        "python_version": "3.12.10",
+        "windows_3_12_10_split_ctime_birthtime_comparator": True,
+    }
+    if result.get("runtime_time_domain") != expected_runtime:
+        raise RuntimeError("R3 raw stdout does not report the exact reviewed Windows CPython time domains")
+
+    expected_directories = {
+        r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c\helpers-primary-owner-r6d": {
+            "windows_primary_token_owner_probe_r6d.py", "windows_primary_token_owner_outer_gate_r6d.py"},
+        r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c\authority-primary-owner-r6d": {
+            "BINDING.json", "PREBIRTH_BINDING.json", "MAIN_APPROVAL.json"},
+    }
+    directories = result.get("directories")
+    if not isinstance(directories, list) or len(directories) != 2:
+        raise RuntimeError("R3 raw stdout does not contain the exact two inspected directories")
+    for directory in directories:
+        expected_names = expected_directories.get(directory.get("path"))
+        entries = directory.get("entries")
+        if (expected_names is None or directory.get("state") != "STABLE_READ_ONLY_ENUMERATION"
+                or directory.get("matches_expected_names") is not True
+                or directory.get("is_symlink") is not False
+                or directory.get("reparse_point") is not False
+                or not isinstance(entries, list)
+                or {entry.get("name") for entry in entries} != expected_names
+                or any(entry.get("is_symlink") is not False or entry.get("reparse_point") is not False
+                       for entry in entries)):
+            raise RuntimeError("R3 directory enumeration differs from exact ordinary two-directory target set")
+
+    files = result.get("files")
+    if not isinstance(files, list) or len(files) != 5 or {row.get("path") for row in files} != set(EXPECTED_R6D_READONLY_FILES):
+        raise RuntimeError("R3 file result does not contain the exact five protected partial-R6D leaves")
+    expected_sizes = {
+        r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c\helpers-primary-owner-r6d\windows_primary_token_owner_probe_r6d.py": 82183,
+        r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c\helpers-primary-owner-r6d\windows_primary_token_owner_outer_gate_r6d.py": 113582,
+        r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c\authority-primary-owner-r6d\BINDING.json": 1793,
+        r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c\authority-primary-owner-r6d\PREBIRTH_BINDING.json": 0,
+        r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c\authority-primary-owner-r6d\MAIN_APPROVAL.json": 0,
+    }
+    identity_fields = ["st_dev", "st_ino", "st_mode", "st_size", "st_mtime_ns", "st_birthtime_ns", "st_file_attributes"]
+    file_sha256 = {}
+    domain_split_count = 0
+    for row in files:
+        path = row.get("path")
+        diagnostic = row.get("metadata_stability_diagnostic", {})
+        observation = row.get("after_path_fd_time_observation", {})
+        path_times = observation.get("raw_path_times", {})
+        fd_times = observation.get("raw_fd_times", {})
+        if (row.get("state") != "STABLE_READ_ONLY_HASH"
+                or row.get("sha256") != EXPECTED_R6D_READONLY_FILES[path]
+                or row.get("matches_expected_sha256") is not True
+                or row.get("size") != expected_sizes[path]
+                or row.get("bytes_read") != expected_sizes[path]
+                or row.get("is_symlink") is not False
+                or row.get("reparse_point") is not False
+                or diagnostic.get("path_before_after_full_signature_equal") is not True
+                or diagnostic.get("handle_before_after_full_signature_equal") is not True
+                or diagnostic.get("after_path_fd_common_identity_equal") is not True
+                or diagnostic.get("raw_before_path_times") != diagnostic.get("raw_after_path_times")
+                or diagnostic.get("raw_before_fd_times") != diagnostic.get("raw_after_fd_times")
+                or observation.get("comparison_domain") != "CPYTHON_3_12_10_WINDOWS_COMMON_PATH_FD_IDENTITY"
+                or observation.get("field_names") != identity_fields
+                or observation.get("difference_keys") != []
+                or observation.get("missing_or_invalid_fields") != []
+                or observation.get("path_values") != observation.get("fd_values")
+                or path_times.get("st_ctime_ns_domain") != "CPYTHON_3_12_10_WINDOWS_PATH_STAT_CTIME_NS_MIRRORS_BIRTHTIME_NS"
+                or fd_times.get("st_ctime_ns_domain") != "CPYTHON_3_12_10_WINDOWS_FSTAT_CTIME_NS_IS_CHANGE_TIME"
+                or type(path_times.get("raw_st_birthtime_ns")) is not int
+                or path_times.get("raw_st_birthtime_ns") != fd_times.get("raw_st_birthtime_ns")):
+            raise RuntimeError("R3 leaf does not pass exact expected hash and path/fd/domain stability: " + str(path))
+        if path_times.get("raw_st_ctime_ns") != fd_times.get("raw_st_ctime_ns"):
+            domain_split_count += 1
+        file_sha256[path] = row["sha256"]
+    if domain_split_count != 3:
+        raise RuntimeError("R3 path-vs-fstat ctime domain split count differs from the exact reviewed three populated leaves")
+
+    expected_absent = {
+        r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c\authority-primary-owner-r6d\ONCE_USED.json",
+        r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c\primary-owner-probe-r6d",
+        r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c\cases-primary-owner-r6d",
+    }
+    absence = result.get("absence_checks")
+    if (not isinstance(absence, list) or len(absence) != 3
+            or {row.get("path") for row in absence} != expected_absent
+            or any(row.get("state") != "ABSENT" or row.get("error_type") is not None for row in absence)):
+        raise RuntimeError("R3 absence results differ from the exact absent ONCE/output/cases paths")
+
+    if (actual_report.get("schema") != "cv3-windows-primary-owner-r6d-readonly-inspector-r4-actual-result-report/1"
+            or actual_report.get("status") != "PASS_READ_ONLY_MATCHED_PARTIAL_R6D_SNAPSHOT"
+            or actual_report.get("actual_status") != result.get("status")
+            or actual_report.get("read_only") is not True
+            or actual_report.get("no_remote_write_or_cleanup") is not True
+            or actual_report.get("limitations", {}).get("diagnostic_only_not_R14_security_path_proof") is not True
+            or actual_report.get("R6G_provenance_boundary") != {
+                "R6G_prep_payload_sha256": R6G_PAYLOAD_SHA256,
+                "R6G_reviewed_historical_embedded_inspector_sha256": R6G_HISTORICAL_INSPECTOR_SHA256,
+                "R6G_source_review_status": "PASS_SCOPED_R6G_SOURCE_AND_R6D_READONLY_INSPECTOR",
+                "current_readback_inspector_sha256": R6D_READONLY_INSPECTOR_SHA256,
+                "payload_changed_or_reissued": False}):
+        raise RuntimeError("R4 actual-result report status or separated R6G historical provenance changed")
+    expected_raw_paths = {
+        "SSH_LAUNCH_INTENT.json": launch_intent_path,
+        "SSH.stdout": stdout_path,
+        "SSH.stderr": stderr_path,
+        "SSH_STATE.jsonl": state_path,
+        "SSH_TERMINAL.json": terminal_path,
+        "LOCAL_READONLY_INSPECTION_REPORT.json": report_path,
+    }
+    for name, path in expected_raw_paths.items():
+        rec = actual_report.get("raw_evidence", {}).get(name)
+        if (not isinstance(rec, dict) or rec.get("path") != str(path.relative_to(ROOT))
+                or rec.get("bytes") != len(raw_by_name[{
+                    "SSH_LAUNCH_INTENT.json": "launch_intent", "SSH.stdout": "stdout",
+                    "SSH.stderr": "stderr", "SSH_STATE.jsonl": "state",
+                    "SSH_TERMINAL.json": "terminal", "LOCAL_READONLY_INSPECTION_REPORT.json": "report"}[name]])
+                or rec.get("sha256") != hashes[{
+                    "SSH_LAUNCH_INTENT.json": "launch_intent", "SSH.stdout": "stdout",
+                    "SSH.stderr": "stderr", "SSH_STATE.jsonl": "state",
+                    "SSH_TERMINAL.json": "terminal", "LOCAL_READONLY_INSPECTION_REPORT.json": "report"}[name]]):
+            raise RuntimeError("R4 actual-result report does not bind raw producer bytes: " + name)
+    expected_file_summaries = {row.get("path"): row for row in actual_report.get("files", [])}
+    if (set(expected_file_summaries) != set(EXPECTED_R6D_READONLY_FILES)
+            or any(expected_file_summaries[path].get("sha256") != digest
+                   or expected_file_summaries[path].get("matches_fixed_expected_sha256") is not True
+                   or expected_file_summaries[path].get("same_path_and_handle_signatures_stable") is not True
+                   or expected_file_summaries[path].get("path_fd_common_identity_equal") is not True
+                   for path, digest in EXPECTED_R6D_READONLY_FILES.items())
+            or actual_report.get("domain_observation", {}).get("observed_path_ctime_differs_from_fstat_change_time") != 3):
+        raise RuntimeError("R4 actual-result report does not preserve all five expected hashes and domain observations")
+
+    verified_records = actual_review.get("verified_raw_records")
+    if not isinstance(verified_records, list) or len(verified_records) != 6:
+        raise RuntimeError("R4 independent review does not retain the six raw producer records")
+    by_path = {row.get("path"): row for row in verified_records}
+    for name, path in expected_raw_paths.items():
+        record = by_path.get(str(path.relative_to(ROOT)))
+        key = {"SSH_LAUNCH_INTENT.json": "launch_intent", "SSH.stdout": "stdout", "SSH.stderr": "stderr",
+               "SSH_STATE.jsonl": "state", "SSH_TERMINAL.json": "terminal",
+               "LOCAL_READONLY_INSPECTION_REPORT.json": "report"}[name]
+        if (not isinstance(record, dict) or record.get("bytes") != len(raw_by_name[key])
+                or record.get("sha256") != hashes[key]):
+            raise RuntimeError("R4 independent review raw-record table differs from the captured producer: " + name)
+    recovered_records = recovered_actual_review.get("verified_raw_records")
+    if not isinstance(recovered_records, list) or len(recovered_records) != 6:
+        raise RuntimeError("R4 recovery review does not retain the complete six-record raw evidence table")
+    recovered_by_path = {row.get("path"): row for row in recovered_records}
+    for name, path in expected_raw_paths.items():
+        record = recovered_by_path.get(str(path.relative_to(ROOT)))
+        key = {"SSH_LAUNCH_INTENT.json": "launch_intent", "SSH.stdout": "stdout", "SSH.stderr": "stderr",
+               "SSH_STATE.jsonl": "state", "SSH_TERMINAL.json": "terminal",
+               "LOCAL_READONLY_INSPECTION_REPORT.json": "report"}[name]
+        if (not isinstance(record, dict) or record.get("bytes") != len(raw_by_name[key])
+                or record.get("sha256") != hashes[key]):
+            raise RuntimeError("R4 recovery review raw-record table differs from the restored capture: " + name)
+
+    return {
+        "status": result["status"],
+        "source_review_sha256": hashes["source_review"],
+        "inspector_source_sha256": hashes["inspector_source"],
+        "wrapper_review_sha256": hashes["wrapper_review"],
+        "execution_authorization_sha256": hashes["execution_authorization"],
+        "independent_actual_review_sha256": hashes["independent_actual_review"],
+        "recovered_actual_review_sha256": hashes["recovered_actual_review"],
+        "incident_sha256": R6D_READONLY_INCIDENT_RECORD_SHA256,
+        "restoration_receipt_sha256": R6D_READONLY_RESTORATION_RECEIPT_SHA256,
+        "actual_result_sha256": hashes["actual_result"],
+        "launch_intent_sha256": hashes["launch_intent"],
+        "state_sha256": hashes["state"],
+        "report_sha256": hashes["report"],
+        "terminal_sha256": hashes["terminal"],
+        "stdout_sha256": hashes["stdout"],
+        "stderr_sha256": hashes["stderr"],
+        "file_sha256": file_sha256,
+        "path_fstat_ctime_domain_difference_count": domain_split_count,
+        "inspector_bytes": R6D_READONLY_INSPECTOR_BYTES,
+        "historical_r6g_inspector_sha256": R6G_HISTORICAL_INSPECTOR_SHA256,
+        "diagnostic_only_not_R14_security_path_proof": True,
+    }
+
+def _validate_inputs(payload_path: Path, contract_path: Path, manifest_path: Path,
+                     request_path: Path, source_review_path: Path, wrapper_review_path: Path,
+                     authorization_path: Path, persistent_authorization_path: Path,
+                     readonly_wrapper_review_path: Path, readonly_report_path: Path,
+                     readonly_terminal_path: Path, readonly_stdout_path: Path,
+                     readonly_stderr_path: Path, wrapper_path: Path) -> tuple[bytes, dict[str, Any]]:
+    manifest_raw = read_regular(manifest_path)
+    if sha(manifest_raw) != R6G_MANIFEST_SHA256:
+        raise RuntimeError("R6G manifest differs from the exact reviewed candidate")
+    manifest = strict_json(manifest_raw, "R6G candidate manifest")
+    if (manifest.get("schema") != "cv3-windows-primary-owner-r6g-local-prep-manifest/1"
+            or manifest.get("status") != "LOCAL_CANDIDATE_READY_FOR_MAIN_REVIEW_NO_REMOTE_OR_NATIVE_ACTION"):
+        raise RuntimeError("candidate manifest is not the exact closed R6G package schema")
+
+    payload_record = manifest.get("package_files", {}).get(PAYLOAD_FILENAME)
+    if (not isinstance(payload_record, dict) or set(payload_record) != {"sha256", "bytes"}
+            or payload_record.get("sha256") != R6G_PAYLOAD_SHA256
+            or type(payload_record.get("bytes")) is not int or payload_record["bytes"] <= 0):
+        raise RuntimeError("R6G manifest does not contain the exact frozen PREP payload record")
+    payload_raw = read_regular(payload_path)
+    expected_payload_sha256 = payload_record["sha256"]
+    expected_payload_bytes = payload_record["bytes"]
+    if len(payload_raw) != expected_payload_bytes or sha(payload_raw) != expected_payload_sha256:
+        raise RuntimeError("PREP payload bytes differ from the exact R6G manifest payload digest")
+
+    contract_raw = read_regular(contract_path)
+    if sha(contract_raw) != R6G_CONTRACT_SHA256:
+        raise RuntimeError("R6G contract differs from the exact reviewed candidate")
+    contract = strict_json(contract_raw, "R6G PREP contract")
+    if (contract.get("schema") != "cv3-windows-primary-owner-r6g-source-only-contract/1"
+            or contract.get("status") != "LOCAL_SOURCE_CANDIDATE_ONLY_NO_REMOTE_ACTION"
+            or contract.get("candidate_paths", {}).get("five_leaf_targets") != EXPECTED_TARGETS
+            or contract.get("candidate_paths", {}).get("distinct_from_partial_R6D") is not True
+            or contract.get("R6D_inspector", {}).get("sha256") != R6G_HISTORICAL_INSPECTOR_SHA256):
+        raise RuntimeError("R6G contract does not bind exact new targets and separate inert R6D inspector")
+
+    request_raw = read_regular(request_path)
+    if sha(request_raw) != R6G_REQUEST_SHA256:
+        raise RuntimeError("R6G source request differs from its exact Main-reviewed revision")
+    request = strict_json(request_raw, "R6G Main source review request")
+    if request.get("status") != "PENDING_MAIN_EXACT_SOURCE_REVIEW_NO_REMOTE_OR_NATIVE_AUTHORITY":
+        raise RuntimeError("R6G source request status changed")
+    if request.get("authority_boundary", {}).get("SSH") != "NOT_RUN":
+        raise RuntimeError("R6G source request no longer says remote SSH is not run")
+
+    source_review_raw = read_regular(source_review_path)
+    if sha(source_review_raw) != R6G_SOURCE_REVIEW_SHA256:
+        raise RuntimeError("R6G source review differs from its exact Main PASS record")
+    source_review = strict_json(source_review_raw, "R6G Main source review")
+    if (source_review.get("schema") != "WINDOWS_PRIMARY_OWNER_R6G_MAIN_SOURCE_REVIEW_V1"
+            or source_review.get("status") != "PASS_SCOPED_R6G_SOURCE_AND_R6D_READONLY_INSPECTOR"
+            or source_review.get("request_sha256") != sha(request_raw)
+            or source_review.get("payload") != {
+                "path": PAYLOAD_REPO_PATH, "bytes": expected_payload_bytes,
+                "sha256": expected_payload_sha256}
+            or source_review.get("inspector") != {
+                "path": R6G_HISTORICAL_INSPECTOR_PATH,
+                "bytes": R6G_HISTORICAL_INSPECTOR_BYTES,
+                "sha256": R6G_HISTORICAL_INSPECTOR_SHA256}
+            or source_review.get("remote") != "NOT_RUN"
+            or source_review.get("rendered_payload_reproduced_exactly") is not True
+            or source_review.get("source_and_package_hashes_verified") is not True):
+        raise RuntimeError("Main R6G source review does not PASS the exact local candidate")
+
+    human_auth_raw = read_regular(persistent_authorization_path, maximum=1024 * 1024)
+    if sha(human_auth_raw) != PERSISTENT_USER_AUTHORIZATION_SHA256:
+        raise RuntimeError("persistent user PREP authorization differs from exact saved hash")
+    human_auth = strict_json(human_auth_raw, "persistent human PREP authorization")
+    if (human_auth.get("schema") != "cv3-persistent-windows-five-leaf-prep-authorization/1"
+            or human_auth.get("status") != "USER_AUTHORIZED"
+            or human_auth.get("target") != SSH_USER_HOST + ":22"
+            or "Main-reviewed corrected PREP source payload revisions" not in human_auth.get("direct_reply_scope", "")
+            or "helper, gate, two binding files and zero-byte MAIN_APPROVAL placeholder only"
+               not in human_auth.get("direct_reply_scope", "")):
+        raise RuntimeError("persistent user authority does not cover the exact bounded PREP effect")
+
+    readonly_evidence = _validate_readonly_evidence(
+        readonly_report_path, readonly_terminal_path, readonly_stdout_path, readonly_stderr_path,
+        readonly_wrapper_review_path=readonly_wrapper_review_path)
+
+    package_records = manifest.get("package_files")
+    if not isinstance(package_records, dict):
+        raise RuntimeError("R6G package file records are missing")
+    for name, record in package_records.items():
+        if not isinstance(name, str) or Path(name).name != name or not isinstance(record, dict):
+            raise RuntimeError("R6G package file map is not an exact flat file map")
+        raw = read_regular(PACKAGE / name)
+        if (set(record) != {"sha256", "bytes"} or len(raw) != record.get("bytes")
+                or sha(raw) != record.get("sha256")):
+            raise RuntimeError("R6G package member does not match manifest: " + name)
+
+    manifest_sources = manifest.get("source_files")
+    request_sources = request.get("source_files")
+    if (not isinstance(manifest_sources, dict) or not isinstance(request_sources, dict)
+            or manifest_sources != request_sources
+            or set(manifest_sources) != set(SOURCE_PATHS)):
+        raise RuntimeError("R6G request and manifest source closures differ from the fixed reviewed source set")
+    files = {}
+    for relative in SOURCE_PATHS:
+        record = request_sources[relative]
+        raw = read_regular(ROOT / relative)
+        if (not isinstance(record, dict) or set(record) != {"sha256", "bytes"}
+                or len(raw) != record.get("bytes") or sha(raw) != record.get("sha256")):
+            raise RuntimeError("R6G source bytes differ from the Main-reviewed source map: " + relative)
+        files[relative] = sha(raw)
+
+    artifacts = request.get("artifacts", {})
+    if artifacts.get("manifest") != {
+            "path": str(manifest_path.relative_to(ROOT)),
+            "bytes": len(manifest_raw), "sha256": sha(manifest_raw)}:
+        raise RuntimeError("R6G source request does not bind the exact candidate manifest")
+    if artifacts.get("payload") != {
+            "path": PAYLOAD_REPO_PATH, "bytes": expected_payload_bytes,
+            "sha256": expected_payload_sha256}:
+        raise RuntimeError("R6G source request does not bind the exact PREP payload")
+
+    wrapper_path = Path(wrapper_path)
+    if wrapper_path != WRAPPER_PATH.resolve() or wrapper_path.is_symlink():
+        raise RuntimeError("wrapper is not loaded from its exact fixed source path")
+    wrapper_raw = read_regular(wrapper_path)
+    wrapper_sha256 = sha(wrapper_raw)
+    invocation = invocation_binding(expected_payload_sha256, expected_payload_bytes)
+    invocation_sha256 = sha(canonical(invocation))
+
+    wrapper_review_raw = read_regular(wrapper_review_path, maximum=1024 * 1024)
+    wrapper_review = strict_json(wrapper_review_raw, "Main R6G PREP wrapper source review")
+    wrapper_review_expected = expected_wrapper_review(
+        wrapper_sha256=wrapper_sha256, manifest_sha256=sha(manifest_raw),
+        contract_sha256=sha(contract_raw), payload_sha256=expected_payload_sha256,
+        payload_bytes=expected_payload_bytes, request_sha256=sha(request_raw),
+        source_review_sha256=sha(source_review_raw),
+        persistent_authorization_sha256=sha(human_auth_raw),
+        readonly_evidence=readonly_evidence,
+        invocation_sha256=invocation_sha256, invocation=invocation)
+    if wrapper_review != wrapper_review_expected:
+        raise RuntimeError("Main wrapper review does not PASS this exact R6G PREP wrapper source")
+
+    authorization_raw = read_regular(authorization_path, maximum=1024 * 1024)
+    authorization = strict_json(authorization_raw, "Main exact-once R6G PREP authorization")
+    authorization_expected = expected_authorization(
+        wrapper_sha256=wrapper_sha256, manifest_sha256=sha(manifest_raw),
+        contract_sha256=sha(contract_raw), payload_sha256=expected_payload_sha256,
+        payload_bytes=expected_payload_bytes, request_sha256=sha(request_raw),
+        source_review_sha256=sha(source_review_raw),
+        wrapper_review_sha256=sha(wrapper_review_raw),
+        persistent_authorization_sha256=sha(human_auth_raw),
+        readonly_evidence=readonly_evidence,
+        invocation_sha256=invocation_sha256)
+    if authorization != authorization_expected:
+        raise RuntimeError("Main exact-once authorization does not bind exact R6D readback and R6G PREP scope")
+
+    return payload_raw, {
+        "payload_sha256": sha(payload_raw), "payload_bytes": len(payload_raw),
+        "contract_sha256": sha(contract_raw), "manifest_sha256": sha(manifest_raw),
+        "review_request_sha256": sha(request_raw), "source_review_sha256": sha(source_review_raw),
+        "wrapper_review_sha256": sha(wrapper_review_raw),
+        "authorization_sha256": sha(authorization_raw),
+        "persistent_authorization_sha256": sha(human_auth_raw),
+        "readonly_proof": _readonly_proof_binding(readonly_evidence),
+        "invocation": invocation, "invocation_sha256": invocation_sha256,
+        "source_hashes": files,
+    }
+
+
+def _write_exclusive(path: Path, raw: bytes) -> None:
+    with path.open("xb") as stream:
+        stream.write(raw)
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
+def _append_state(path: Path, status: str, *, pid: int | None, started: float,
+                  details: Mapping[str, Any] | None = None) -> None:
+    record = {"status": status, "original_local_ssh_pid": pid,
+              "elapsed_seconds": time.monotonic() - started, **dict(details or {})}
+    with path.open("ab", buffering=0) as stream:
+        stream.write(json.dumps(record, sort_keys=True, ensure_ascii=False, allow_nan=False).encode("utf-8") + b"\n")
+        os.fsync(stream.fileno())
+
+
+def _output_digest(path: Path) -> dict[str, Any]:
+    raw = read_regular(path, maximum=1024 * 1024 * 1024)
+    return {"path": str(path), "bytes": len(raw), "sha256": sha(raw)}
+
+
+_ACTIVE_POPEN_OWNERS: list["OriginalPopenOwner"] = []
+
+
+class OriginalPopenOwner:
+    """Strong owner that never returns while the exact Popen is live.
+
+    Journal and observation failures are diagnostic data. They cannot bypass
+    the passive same-object hold, and they never cause a second payload send.
+    The guard owns the process object and its original bound communicate/wait
+    methods until a natural terminal code is observed.
+    """
+
+    def __init__(self, child: Any, *, state_path: Path, started: float,
+                 active_cutoff_seconds: float = ACTIVE_CUTOFF_SECONDS,
+                 state_writer: Callable[..., Any] = _append_state,
+                 fault_hook: Callable[[str], None] | None = None):
+        self.child = child
+        self.pid = getattr(child, "pid", None)
+        self._communicate = child.communicate
+        self._wait = child.wait
+        self.state_path = state_path
+        self.started = started
+        self.active_cutoff_seconds = active_cutoff_seconds
+        self.state_writer = state_writer
+        self.fault_hook = fault_hook
+        self.first_cause: BaseException | None = None
+        self.diagnostic_errors: list[dict[str, str]] = []
+        self.suppressed_diagnostics = 0
+        self.failed_journal_statuses: set[str] = set()
+        self.payload_send_attempted = False
+        self.active_cutoff_exceeded = False
+        self.terminal_observed = getattr(child, "returncode", None) is not None
+        if not any(item is self for item in _ACTIVE_POPEN_OWNERS):
+            _ACTIVE_POPEN_OWNERS.append(self)
+
+    def remember_first(self, cause: BaseException) -> None:
+        if self.first_cause is None:
+            self.first_cause = cause
+
+    def _remember_diagnostic(self, stage: str, error: BaseException) -> None:
+        self.remember_first(error)
+        if len(self.diagnostic_errors) < 32:
+            self.diagnostic_errors.append({"stage": stage, "error_type": type(error).__name__,
+                                           "error": str(error)[:2000]})
+        else:
+            self.suppressed_diagnostics += 1
+
+    def record_state(self, status: str, details: Mapping[str, Any] | None = None) -> bool:
+        if status in self.failed_journal_statuses:
+            self.suppressed_diagnostics += 1
+            return False
+        try:
+            self.state_writer(self.state_path, status, pid=self.pid, started=self.started,
+                              details=details)
+            return True
+        except BaseException as exc:
+            self.failed_journal_statuses.add(status)
+            self._remember_diagnostic("state_journal:" + status, exc)
+            return False
+
+    def _fault(self, operation: str) -> None:
+        if self.fault_hook is not None:
+            self.fault_hook(operation)
+
+    def send_payload_once(self, payload: bytes) -> None:
+        if self.payload_send_attempted:
+            error = RuntimeError("payload send already entered; no retry or resend")
+            self.remember_first(error)
+            self.record_state("UNKNOWN_DUPLICATE_SEND_REFUSED", {"action": "NO_RESEND"})
+            self.hold_until_terminal()
+            return
+        self.payload_send_attempted = True
+        try:
+            self._fault("communicate")
+            self._communicate(input=payload, timeout=self.active_cutoff_seconds)
+        except subprocess.TimeoutExpired:
+            self.active_cutoff_exceeded = True
+            self.record_state("UNKNOWN_ACTIVE_CUTOFF_SAME_POPEN_RETAINED", {
+                "cutoff_seconds": self.active_cutoff_seconds,
+                "action": "PASSIVE_WAIT_SAME_ORIGINAL_POPEN_NO_SIGNAL_NO_RESEND",
+            })
+        except BaseException as exc:
+            self._remember_diagnostic("payload_communicate", exc)
+            self.record_state("UNKNOWN_COMMUNICATE_ERROR_SAME_POPEN_RETAINED", {
+                "error_type": type(exc).__name__, "error": str(exc),
+                "action": "PASSIVE_WAIT_SAME_ORIGINAL_POPEN_NO_SIGNAL_NO_RESEND",
+            })
+        self.hold_until_terminal()
+
+    def hold_until_terminal(self) -> None:
+        """Wait forever if needed, using only this Popen and no input resend."""
+        if self.terminal_observed:
+            return
+        while getattr(self.child, "returncode", None) is None:
+            try:
+                self._fault("communicate")
+                self._communicate()
+            except BaseException as exc:
+                self._remember_diagnostic("passive_communicate", exc)
+                self.record_state("UNKNOWN_PASSIVE_COMMUNICATE_ERROR_SAME_POPEN", {
+                    "error_type": type(exc).__name__, "error": str(exc),
+                    "action": "RETAIN_AND_WAIT_SAME_ORIGINAL_POPEN_NO_SIGNAL_NO_RESEND",
+                })
+                # A failed drain may leave the child waiting for stdin. Close
+                # only the original input pipe to deliver EOF; do not close the
+                # Popen/process handle, signal it, or send another byte.
+                stream = getattr(self.child, "stdin", None)
+                if stream is not None and not getattr(stream, "closed", True):
+                    try:
+                        stream.close()
+                    except BaseException as close_error:
+                        self._remember_diagnostic("original_stdin_eof", close_error)
+            if getattr(self.child, "returncode", None) is None:
+                try:
+                    self._fault("wait")
+                    self._wait()
+                except BaseException as exc:
+                    self._remember_diagnostic("passive_wait", exc)
+                    self.record_state("UNKNOWN_WAIT_ERROR_SAME_POPEN_RETAINED", {
+                        "error_type": type(exc).__name__, "error": str(exc),
+                        "action": "RETAIN_AND_WAIT_SAME_ORIGINAL_POPEN_NO_SIGNAL_NO_RESEND",
+                    })
+            if getattr(self.child, "returncode", None) is None:
+                try:
+                    time.sleep(0.01)
+                except BaseException as exc:
+                    self._remember_diagnostic("passive_wait_pause", exc)
+
+        self.terminal_observed = True
+        for index, owner in enumerate(_ACTIVE_POPEN_OWNERS):
+            if owner is self:
+                del _ACTIVE_POPEN_OWNERS[index]
+                break
+        self.record_state("NATURAL_TERMINAL_OBSERVED", {
+            "returncode": getattr(self.child, "returncode", None),
+            "active_cutoff_exceeded": self.active_cutoff_exceeded,
+            "first_cause": (type(self.first_cause).__name__ + ":" + str(self.first_cause)
+                            if self.first_cause is not None else None),
+            "diagnostic_error_count": len(self.diagnostic_errors) + self.suppressed_diagnostics,
+        })
+
+
+def _validate_remote_result(stdout_path: Path, returncode: int) -> tuple[str, dict[str, Any] | None]:
+    if returncode != 0:
+        return "FAILED_REMOTE_PREP_SSH_NONZERO_NO_REPLAY", None
+    raw = read_regular(stdout_path, maximum=1024 * 1024 * 1024)
+    try:
+        remote = strict_json(raw, "remote PREP stdout")
+    except RuntimeError:
+        return "FAILED_REMOTE_PREP_STDOUT_INVALID_NO_REPLAY", None
+    native = remote.get("native_child")
+    if (remote.get("status") != EXPECTED_REMOTE_STATUS
+            or remote.get("r14", {}).get("source_helper_count") != 179
+            or remote.get("r14", {}).get("stdlib_hash_count") != 179
+            or not isinstance(native, dict)
+            or native.get("CreateProcessWithTokenW") != "NOT_CALLED"
+            or native.get("child_processes") != 0
+            or remote.get("remote_objects", {}).get("once_absent") is not True
+            or remote.get("remote_objects", {}).get("output_absent") is not True
+            or remote.get("remote_objects", {}).get("cases_absent") is not True):
+        return "FAILED_REMOTE_PREP_RESULT_SCOPE_NO_REPLAY", remote
+    return "PASS_REMOTE_PREP_CLOSED_NO_NATIVE_AUTHORITY", remote
+
+
+def main(*, popen_factory: Callable[..., Any] = subprocess.Popen,
+         run_root: Path = RUN_ROOT, payload_path: Path = PAYLOAD_PATH,
+         contract_path: Path = CONTRACT_PATH, manifest_path: Path = MANIFEST_PATH,
+         request_path: Path = REQUEST_PATH, source_review_path: Path = SOURCE_REVIEW_PATH,
+         wrapper_review_path: Path = WRAPPER_REVIEW_PATH,
+         authorization_path: Path = AUTHORIZATION_PATH,
+         persistent_authorization_path: Path = PERSISTENT_AUTHORIZATION_PATH,
+         readonly_wrapper_review_path: Path = R6D_READONLY_WRAPPER_REVIEW_PATH,
+         readonly_report_path: Path = R6D_READONLY_REPORT_PATH,
+         readonly_terminal_path: Path = R6D_READONLY_TERMINAL_PATH,
+         readonly_stdout_path: Path = R6D_READONLY_STDOUT_PATH,
+         readonly_stderr_path: Path = R6D_READONLY_STDERR_PATH,
+         wrapper_path: Path = Path(__file__).resolve(),
+         state_writer: Callable[..., Any] = _append_state,
+         fault_hook: Callable[[str], None] | None = None,
+         active_cutoff_seconds: float = ACTIVE_CUTOFF_SECONDS) -> int:
+    if run_root.exists() or run_root.is_symlink():
+        raise RuntimeError("strict SSH run evidence path already exists; no overwrite, retry, or replay")
+    payload, binding = _validate_inputs(
+        payload_path, contract_path, manifest_path, request_path, source_review_path,
+        wrapper_review_path, authorization_path, persistent_authorization_path,
+        readonly_wrapper_review_path, readonly_report_path, readonly_terminal_path,
+        readonly_stdout_path, readonly_stderr_path, wrapper_path)
+    run_root.mkdir(parents=True, exist_ok=False, mode=0o700)
+    intent_path, stdout_path, stderr_path, state_path, terminal_path, report_path = (
+        run_root / name for name in OUTPUT_NAMES
+    )
+    started = time.monotonic()
+    launch_intent = {
+        "schema": "cv3-windows-primary-owner-r6g-ssh-launch-intent/1",
+        "status": "STRICT_SSH_LAUNCH_INTENT_ONE_PAYLOAD_SEND",
+        **binding,
+        "output_directory": str(run_root),
+        "popen_birth": "NOT_YET_OBSERVED",
+        "retry": False,
+    }
+    _write_exclusive(intent_path, canonical(launch_intent))
+    state_path.open("xb").close()
+    child = None
+    with stdout_path.open("xb", buffering=0) as stdout_file, stderr_path.open("xb", buffering=0) as stderr_file:
+        try:
+            child = popen_factory(
+                binding["invocation"]["argv"], stdin=subprocess.PIPE,
+                stdout=stdout_file, stderr=stderr_file, shell=False, cwd=str(ROOT),
+            )
+        except BaseException as exc:
+            terminal = {
+                "schema": "cv3-windows-primary-owner-r6g-ssh-terminal/1",
+                "status": "UNKNOWN_POPEN_CONSTRUCTION_NO_REPLAY",
+                "original_local_ssh_pid": None, "original_local_ssh_returncode": None,
+                "error_type": type(exc).__name__, "error": str(exc),
+                "payload_may_have_been_sent": "UNKNOWN", "retry": False,
+                **binding,
+            }
+            try:
+                _write_exclusive(terminal_path, canonical(terminal))
+                state_writer(state_path, terminal["status"], pid=None, started=started)
+                _write_exclusive(report_path, canonical({"status": terminal["status"], "terminal": terminal}))
+            except BaseException:
+                # There is no returned original Popen to hold. Preserve the
+                # launch attempt and never retry, even if local evidence fails.
+                pass
+            return 1
+        # Install the process owner immediately after birth, before logging or
+        # any other operation can fail. Its finally path is the only route out
+        # of this frame and cannot return while this exact Popen is live.
+        owner = OriginalPopenOwner(child, state_path=state_path, started=started,
+                                   active_cutoff_seconds=active_cutoff_seconds,
+                                   state_writer=state_writer, fault_hook=fault_hook)
+        remote = None
+        remote_status = "UNKNOWN_POST_POPEN_NO_REPLAY"
+        try:
+            valid_pid = type(owner.pid) is int and owner.pid > 0
+            if not valid_pid:
+                owner.remember_first(RuntimeError("original Popen PID is malformed"))
+                owner.record_state("UNKNOWN_POPEN_PID_MALFORMED_NO_REPLAY")
+            else:
+                birth_logged = owner.record_state("ORIGINAL_POPEN_BIRTH_OBSERVED", {
+                    "payload_sha256": binding["payload_sha256"],
+                    "payload_bytes": binding["payload_bytes"],
+                })
+                # If the birth record cannot be persisted, do not send even the
+                # first byte. Close only stdin by passive communicate and hold
+                # the same child to terminal.
+                if birth_logged and owner.first_cause is None:
+                    owner.send_payload_once(payload)
+                else:
+                    owner.hold_until_terminal()
+            # Keep the owner guard outside all readback/report operations too.
+            owner.hold_until_terminal()
+            stdout_file.flush(); os.fsync(stdout_file.fileno())
+            stderr_file.flush(); os.fsync(stderr_file.fileno())
+            remote_status, remote = _validate_remote_result(stdout_path, child.returncode)
+            final_status = ("UNKNOWN_POST_POPEN_FAILURE_TERMINAL_NO_REPLAY"
+                            if owner.first_cause is not None else remote_status)
+        except BaseException as exc:
+            owner.remember_first(exc)
+            owner.record_state("UNKNOWN_POST_POPEN_EXCEPTION_SAME_OWNER_RETAINED", {
+                "error_type": type(exc).__name__, "error": str(exc),
+            })
+            final_status = "UNKNOWN_POST_POPEN_FAILURE_TERMINAL_NO_REPLAY"
+            remote = None
+        finally:
+            # Unconditional owner guard: log, classification, or report
+            # failures cannot let a live local SSH child escape this scope.
+            owner.hold_until_terminal()
+
+    terminal = {
+        "schema": "cv3-windows-primary-owner-r6g-ssh-terminal/1",
+        "status": "PASSIVE_TERMINAL_AFTER_ACTIVE_CUTOFF" if owner.active_cutoff_exceeded else "NATURAL_TERMINAL_OBSERVED",
+        "original_local_ssh_pid": owner.pid,
+        "original_local_ssh_returncode": child.returncode,
+        "active_cutoff_seconds": active_cutoff_seconds,
+        "active_cutoff_exceeded": owner.active_cutoff_exceeded,
+        "elapsed_seconds": time.monotonic() - started,
+        "argv": binding["invocation"]["argv"],
+        "payload_sha256": binding["payload_sha256"],
+        "payload_bytes": binding["payload_bytes"],
+        "stdout": _output_digest(stdout_path),
+        "stderr": _output_digest(stderr_path),
+        "remote_status": remote.get("status") if remote else None,
+        "final_classification": final_status,
+        "same_original_popen_retained_through_terminal": owner.terminal_observed,
+        "payload_send_attempted_once": owner.payload_send_attempted,
+        "signals_kills_retries_resends": 0,
+        "first_cause": (type(owner.first_cause).__name__ + ":" + str(owner.first_cause)
+                        if owner.first_cause is not None else None),
+        "diagnostic_errors": owner.diagnostic_errors,
+        "suppressed_diagnostic_count": owner.suppressed_diagnostics,
+        **{key: binding[key] for key in ("contract_sha256", "manifest_sha256", "review_request_sha256",
+                                         "source_review_sha256", "authorization_sha256",
+                                         "invocation_sha256", "source_hashes")},
+    }
+    _write_exclusive(terminal_path, canonical(terminal))
+    report = {
+        "schema": "cv3-windows-primary-owner-r6g-ssh-actual-report/1",
+        "status": final_status,
+        "remote": remote,
+        "terminal": terminal,
+        "evidence": {
+            "stdout": _output_digest(stdout_path), "stderr": _output_digest(stderr_path),
+            "state": _output_digest(state_path), "terminal": _output_digest(terminal_path),
+        },
+        "replay": False,
+        "native_child": "NOT_AUTHORIZED",
+    }
+    _write_exclusive(report_path, canonical(report))
+    return 0 if final_status == "PASS_REMOTE_PREP_CLOSED_NO_NATIVE_AUTHORITY" else 1
+
+
+def cli_entrypoint(main_callable: Callable[[], int] = main) -> int:
+    """Return the CLI status; the final SystemExit is deliberately outside this guard."""
+    try:
+        code = main_callable()
+    except SystemExit as exc:
+        code = exc.code if type(exc.code) is int else 1
+    except BaseException as exc:
+        try:
+            sys.stderr.write("STRICT_SSH_PREP_FAILED_NO_RETRY: " + type(exc).__name__ + ": " + str(exc) + "\n")
+            sys.stderr.flush()
+        except BaseException:
+            pass
+        return 1
+    if type(code) is not int or not 0 <= code <= 255:
+        return 1
+    return code
+
+
+if __name__ == "__main__":
+    # SystemExit for a successful main return is not caught and converted into
+    # a failure string. Any post-Popen exception has already passed through
+    # OriginalPopenOwner's unconditional natural-terminal guard in main().
+    raise SystemExit(cli_entrypoint())

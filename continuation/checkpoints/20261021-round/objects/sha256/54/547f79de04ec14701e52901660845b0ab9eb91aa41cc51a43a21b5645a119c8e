@@ -1,0 +1,27 @@
+"""R6 source-only preflight; Main owns invocation of the guarded entry API."""
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from probe import w23_actual_entry_r6 as actual  # noqa: E402
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--source-projection-sha256", required=True,
+                        help="SHA-256 of evidence/SOURCE_PROJECTION_R6.json")
+    args = parser.parse_args(argv)
+    print(json.dumps(actual.source_only_preflight(args.source_projection_sha256),
+                     sort_keys=True, ensure_ascii=False, allow_nan=False))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

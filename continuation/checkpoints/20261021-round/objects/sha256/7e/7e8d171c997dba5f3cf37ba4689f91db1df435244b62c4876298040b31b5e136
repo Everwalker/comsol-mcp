@@ -1,0 +1,668 @@
+from __future__ import annotations
+
+import importlib.util
+import hashlib
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import time
+from types import ModuleType, SimpleNamespace
+
+
+ROOT = Path(__file__).resolve().parents[1]
+CONTROLLER = ROOT / "probe/w23_actual_controller_r12.py"
+CHILD_DRIVER = ROOT / "tests/passive_hold_driver_child.py"
+SPEC = importlib.util.spec_from_file_location("w23_actual_controller_r12_test_target", CONTROLLER)
+TARGET = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = TARGET
+SPEC.loader.exec_module(TARGET)
+
+
+def test_check_imports_cli_runs_actual_r6_w25_consumer_without_authority_or_dispatch():
+    r6_root = Path(
+        "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/"
+        "w23-r17-current-source-r6-nonhidden-input-0deda67f-c823-4880-8825-5300adcd517c-20261021")
+    r8_root = TARGET.R8_ROOT
+    fixed_leaves = [
+        r6_root / "evidence/W23_R6_MAIN_RUNTIME_REVIEW.json",
+        r6_root / "evidence/W23_R6_MAIN_SINGLE_USE_BINDING.json",
+        r8_root / "evidence/W23_R8_OUTER_MAIN_REVIEW_NOT_CREATED.json",
+        r8_root / "evidence/W23_R8_OUTER_ONCE_BINDING_NOT_CREATED.json",
+        TARGET.R12_MAIN_REVIEW_PATH,
+        TARGET.R12_ONCE_BINDING_PATH,
+    ]
+    before = [(p.exists(), p.is_symlink()) for p in fixed_leaves]
+    proc = subprocess.run(
+        [sys.executable, "-I", "-B", str(CONTROLLER), "--check-imports"],
+        cwd=str(TARGET.REPOSITORY), capture_output=True, text=True, timeout=60, check=False)
+    assert proc.returncode == 0, proc.stderr
+    result = json.loads(proc.stdout)
+    assert result["status"] == "SOURCE_IMPORTS_PASS_NO_AUTHORITY_NO_DISPATCH"
+    assert result["r6_projected_member_count"] == 914
+    actual = result["r6_w25_import_preflight"]
+    assert actual["status"] == "PASS_EXACT_R6_W25_IMPORTS_NO_HOST_NO_DISPATCH"
+    assert actual["control_daemon_module"] == "comsol_mcp._control_daemon"
+    assert actual["operation_store_module"] == "comsol_mcp._operation_store"
+    assert result["approval_created"] is False and result["once_created"] is False
+    assert result["host_created"] is False and result["process_started"] is False
+    assert result["public_calls"] == 0 and result["COMSOL"] == result["native"] == "NOT_RUN"
+    assert [(p.exists(), p.is_symlink()) for p in fixed_leaves] == before
+
+
+def test_source_only_external_cli_uses_exact_isolated_argv_and_is_cwd_independent(tmp_path):
+    """Exercise the published source-only entry without importing candidate cwd."""
+    fixed_leaves = [
+        TARGET.R8_ROOT / "evidence/W23_R8_OUTER_MAIN_REVIEW_NOT_CREATED.json",
+        TARGET.R8_ROOT / "evidence/W23_R8_OUTER_ONCE_BINDING_NOT_CREATED.json",
+        TARGET.R12_MAIN_REVIEW_PATH,
+        TARGET.R12_ONCE_BINDING_PATH,
+    ]
+    before = [(path.exists(), path.is_symlink()) for path in fixed_leaves]
+    proc = subprocess.run(
+        [sys.executable, "-I", "-B", str(CONTROLLER), "--source-only"],
+        cwd=str(tmp_path), capture_output=True, text=True, timeout=60, check=False)
+    assert proc.returncode == 0, proc.stderr
+    result = json.loads(proc.stdout)
+    assert result["status"] == "SOURCE_ONLY_PASS_NO_AUTHORITY_NO_DISPATCH"
+    assert result["authorized_callable"] == "probe.w23_actual_controller_r12.run_authorized_external_driver"
+    assert result["r8_entry_calls"] == 0 and result["public_calls"] == 0
+    assert result["approval_created"] is False and result["once_created"] is False
+    assert result["COMSOL"] == result["Java"] == result["native"] == "NOT_RUN"
+    assert [(path.exists(), path.is_symlink()) for path in fixed_leaves] == before
+
+
+def test_r12_source_manifest_exactly_binds_all_entry_and_test_members(tmp_path):
+    observed = TARGET._verify_r12_source_manifest()
+    assert observed["member_count"] == len(TARGET.R12_SOURCE_MEMBERS)
+    assert {row["path"] for row in observed["files"]} == set(TARGET.R12_SOURCE_MEMBERS)
+
+    root = tmp_path / "candidate"
+    root.mkdir(mode=0o700)
+    (root / "nested").mkdir(mode=0o700)
+    (root / "entry.py").write_bytes(b"exact entry")
+    (root / "nested" / "control.py").write_bytes(b"exact control")
+    rows = []
+    for name in ("entry.py", "nested/control.py"):
+        raw = (root / name).read_bytes()
+        rows.append({"path": name, "bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()})
+    manifest_path = root / "manifest.json"
+    manifest_path.write_text(json.dumps({"schema": "W23_R12_SOURCE_MANIFEST/1",
+                                        "candidate_root": str(root.resolve()),
+                                        "files": rows}, sort_keys=True), encoding="utf-8")
+    expected = ("entry.py", "nested/control.py")
+    accepted = TARGET._verify_r12_source_manifest(root=root, manifest_path=manifest_path,
+                                                 expected_members=expected)
+    assert accepted["member_count"] == 2
+    (root / "entry.py").write_bytes(b"changed entry")
+    try:
+        TARGET._verify_r12_source_manifest(root=root, manifest_path=manifest_path,
+                                          expected_members=expected)
+    except TARGET.OuterControllerError as exc:
+        assert "differs from manifest" in str(exc)
+    else:
+        raise AssertionError("modified candidate source must fail closed")
+
+
+def test_r12_once_rejects_every_expected_source_authority_and_budget_drift():
+    expected = {
+        "source_plan_sha256": "1" * 64,
+        "source_manifest_sha256": "2" * 64,
+        "controller_sha256": "3" * 64,
+        "r8_main_review_sha256": "4" * 64,
+        "r8_once_binding_sha256": "5" * 64,
+        "r8_controller_sha256": "6" * 64,
+        "r8_source_manifest_sha256": "7" * 64,
+        "r8_source_map_sha256": "8" * 64,
+        "r8_packet_manifest_sha256": "9" * 64,
+        "r6_main_review_sha256": "a" * 64,
+        "r6_once_binding_sha256": "b" * 64,
+        "r6_source_projection_sha256": "c" * 64,
+        "wall_budget_seconds": TARGET.WALL_BUDGET_SECONDS,
+        "cleanup_reserve_seconds": TARGET.CLEANUP_RESERVE_SECONDS,
+        "public_budgets": dict(TARGET.PUBLIC_BUDGETS),
+    }
+    TARGET._verify_once_matches_expected(dict(expected), expected)
+    for key, value in expected.items():
+        changed = dict(expected)
+        changed[key] = {"tampered": True} if isinstance(value, dict) else "tampered"
+        try:
+            TARGET._verify_once_matches_expected(changed, expected)
+        except TARGET.OuterControllerError as exc:
+            assert "R12 once does not bind" in str(exc)
+        else:
+            raise AssertionError(f"once drift in {key} must fail closed")
+
+
+def test_dispatch_deadline_wraps_both_existing_routes_and_blocks_before_route_body():
+    class R5:
+        @staticmethod
+        def _server_birth_epoch_seconds(gate):
+            assert gate is expected_gate
+            return 1000.0
+
+    expected_gate = object()
+
+    class Bridge:
+        def __init__(self):
+            self.gate = expected_gate
+
+        def dispatch(self, *args, **kwargs):
+            raise AssertionError("the synthetic route body is not the dispatcher")
+
+    class FreshOwnerRoute:
+        def __init__(self, dispatcher):
+            self.dispatcher = dispatcher
+            self.calls = 0
+
+        def call_raw(self, *args, **kwargs):
+            self.calls += 1
+            return "fresh-owner-route-called"
+
+    class PublicRoute:
+        def __init__(self, dispatcher):
+            self.dispatcher = dispatcher
+            self.calls = 0
+
+        def call_raw(self, *args, **kwargs):
+            self.calls += 1
+            return "public-route-called"
+
+    times = iter((2000.0, 2680.0))  # 800s remain; then exactly 120s reserve remains.
+    deadline = TARGET.DispatchDeadline(R5, now=lambda: next(times))
+    runtime = SimpleNamespace(FreshOwnerRoute=FreshOwnerRoute, PublicRoute=PublicRoute)
+    bridge = Bridge()
+    fresh = FreshOwnerRoute(bridge.dispatch)
+    public = PublicRoute(bridge.dispatch)
+    restore = TARGET.install_dispatch_deadline(runtime, deadline)
+    try:
+        assert fresh.call_raw() == "fresh-owner-route-called"
+        try:
+            public.call_raw()
+        except TARGET.WallDeadlineExceeded:
+            pass
+        else:
+            raise AssertionError("route with only cleanup reserve remaining must be blocked")
+    finally:
+        restore()
+    assert fresh.calls == 1
+    assert public.calls == 0
+    assert [row["dispatch_allowed"] for row in deadline.checks] == [True, False]
+    assert deadline.deadline_epoch == 2800.0
+    assert all(row["cleanup_reserve_seconds"] == TARGET.CLEANUP_RESERVE_SECONDS for row in deadline.checks)
+
+
+def test_unknown_without_original_owner_references_is_terminal_without_hold_or_claim(tmp_path):
+    class R5:
+        @staticmethod
+        def _original_owner_references(host, outcome):
+            raise AssertionError("no holder means no process observation")
+
+    result = {"status": "UNKNOWN_NO_REPLAY_NO_MORE_RPC_NO_CLOSE"}
+    terminal = TARGET._passive_hold_unknown(result, (), R5, run_root=tmp_path)
+    assert terminal["status"] == "UNKNOWN_NO_REPLAY_TERMINAL_NO_ORIGINAL_OWNER_REFERENCES"
+    assert terminal["driver_public_calls_after_r8_return"] == 0
+    assert terminal["driver_process_signals"] == 0
+    assert terminal["driver_host_close_after_r8_return"] == 0
+    assert terminal["native_child_absence_claimed"] is False
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_observer_failure_without_any_provable_handle_is_terminal_and_reported(tmp_path):
+    holder = SimpleNamespace(host=object(), outcome={}, owner_references=())
+
+    class R5:
+        @staticmethod
+        def _original_owner_references(*args):
+            raise RuntimeError("synthetic observer unavailable")
+
+    terminal = TARGET._passive_hold_unknown(
+        {"status": "UNKNOWN_NO_REPLAY_NO_MORE_RPC_NO_CLOSE"}, (holder,), R5,
+        run_root=tmp_path)
+    assert terminal["status"] == "UNKNOWN_NO_REPLAY_TERMINAL_NO_ORIGINAL_OWNER_REFERENCES"
+    assert terminal["first_observer_error"] == "RuntimeError: synthetic observer unavailable"
+    assert terminal["owner_observer_error_count"] == 1
+    assert terminal["native_child_absence_claimed"] is False
+    assert terminal["driver_process_signals"] == 0
+    assert terminal["driver_public_calls_after_r8_return"] == 0
+    assert terminal["driver_host_close_after_r8_return"] == 0
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_success_result_is_terminal_without_post_r8_rpc_or_close(tmp_path):
+    result = {"schema": "r8-result/1",
+              "status": "PASS_SOURCE_READS_TERMINAL_THEN_WORKER_RETIRED_SERVER_CLOSED_NOT_NATIVE_ACCEPTANCE"}
+
+    class R5:
+        @staticmethod
+        def _original_owner_references(*args):
+            raise AssertionError("success path must not add post-result process inspection")
+
+    terminal = TARGET._passive_hold_unknown(result, (), R5, run_root=tmp_path)
+    assert terminal["status"] == "PASS_R8_NORMAL_RETIREMENT_TERMINAL"
+    assert terminal["driver_public_calls_after_r8_return"] == 0
+    assert terminal["driver_process_signals"] == 0
+    assert terminal["driver_host_close_after_r8_return"] == 0
+    assert terminal["science"] == "NOT_EVALUATED"
+    assert terminal["direction"] == "NOT_PROVEN"
+
+
+def test_external_driver_calls_r8_once_and_applies_deadline_before_dispatch(tmp_path, monkeypatch):
+    driver_root = tmp_path / "driver"
+    driver_root.mkdir(mode=0o700)
+    gate = object()
+
+    class R5:
+        @staticmethod
+        def _server_birth_epoch_seconds(value):
+            assert value is gate
+            return 1000.0
+
+        @staticmethod
+        def _original_owner_references(host, outcome):
+            raise AssertionError("no retained holders in this synthetic orchestration control")
+
+    class Bridge:
+        def __init__(self):
+            self.gate = gate
+
+        def dispatch(self):
+            raise AssertionError("route calls are guarded, not direct dispatch calls")
+
+    class FreshOwnerRoute:
+        def __init__(self, dispatcher):
+            self.dispatcher = dispatcher
+            self.calls = 0
+
+        def call_raw(self):
+            self.calls += 1
+            return {"success": True}
+
+    class PublicRoute:
+        def call_raw(self):
+            raise AssertionError("unused alternate route")
+
+    bridge = Bridge()
+    route = FreshOwnerRoute(bridge.dispatch)
+    runtime = SimpleNamespace(FreshOwnerRoute=FreshOwnerRoute, PublicRoute=PublicRoute)
+    calls = {"r8": 0}
+
+    def r8_entry(**kwargs):
+        calls["r8"] += 1
+        assert set(kwargs) == {"outer_review_sha256", "outer_once_sha256", "r6_review_sha256",
+                               "r6_once_sha256", "source_projection_sha256"}
+        route.call_raw()
+        return {"status": "UNKNOWN_NO_REPLAY_NO_MORE_RPC_NO_CLOSE"}
+
+    r8 = SimpleNamespace(RETAINED_UNKNOWN_HOLDERS=[], run_authorized_outer_entry=r8_entry)
+    review = {"driver_run_root": str(driver_root)}
+    once = {"status": "INERT_TEST_FIXTURE_NOT_AUTHORITY"}
+    source_data = {"driver_run_root": driver_root, "controller_sha256": "d" * 64}
+    injected = (review, once, source_data, r8, {}, SimpleNamespace(), runtime, R5)
+    monkeypatch.setattr(TARGET, "_strict_r12_authority", lambda **kwargs: injected)
+    monkeypatch.setattr(TARGET, "_consume_r12_once", lambda *args, **kwargs: "e" * 64)
+    deadline_type = TARGET.DispatchDeadline
+    monkeypatch.setattr(TARGET, "DispatchDeadline",
+                        lambda r5: deadline_type(r5, now=lambda: 2000.0))
+    args = {name: ch * 64 for name, ch in (
+        ("r12_review_sha256", "a"), ("r12_once_sha256", "b"),
+        ("r8_review_sha256", "c"), ("r8_once_sha256", "d"),
+        ("r6_review_sha256", "e"), ("r6_once_sha256", "f"),
+        ("source_projection_sha256", "0"))}
+    result = TARGET.run_authorized_external_driver(**args)
+    assert calls["r8"] == 1
+    assert route.calls == 1
+    assert result["r8_outer_call_count"] == 1
+    assert result["deadline"]["route_checks"][0]["dispatch_allowed"] is True
+    assert result["driver_public_calls_after_r8_return"] == 0
+    assert result["driver_process_signals"] == 0
+    assert result["driver_host_close_after_r8_return"] == 0
+    assert result["direction_status"] == "NOT_PROVEN"
+    assert result["scientific_acceptance"] == "NOT_EVALUATED"
+    assert json.loads((driver_root / "R12_EXTERNAL_DRIVER_TERMINAL.json").read_text()) == result
+
+
+def test_external_driver_deadline_exception_prevents_route_body_and_does_not_retry(tmp_path, monkeypatch):
+    driver_root = tmp_path / "driver"
+    driver_root.mkdir(mode=0o700)
+    gate = object()
+
+    class R5:
+        @staticmethod
+        def _server_birth_epoch_seconds(value):
+            return 1000.0
+
+        @staticmethod
+        def _original_owner_references(host, outcome):
+            raise AssertionError("no child holder exists after predispatch block")
+
+    class Bridge:
+        def __init__(self):
+            self.gate = gate
+
+        def dispatch(self):
+            raise AssertionError("should never reach route body")
+
+    class FreshOwnerRoute:
+        def __init__(self, dispatcher):
+            self.dispatcher = dispatcher
+            self.calls = 0
+
+        def call_raw(self):
+            self.calls += 1
+            raise AssertionError("deadline must block before original route")
+
+    class PublicRoute:
+        def call_raw(self):
+            raise AssertionError("unused alternate route")
+
+    route = FreshOwnerRoute(Bridge().dispatch)
+    runtime = SimpleNamespace(FreshOwnerRoute=FreshOwnerRoute, PublicRoute=PublicRoute)
+    calls = {"r8": 0}
+
+    def r8_entry(**kwargs):
+        calls["r8"] += 1
+        route.call_raw()
+
+    r8 = SimpleNamespace(RETAINED_UNKNOWN_HOLDERS=[], run_authorized_outer_entry=r8_entry)
+    injected = ({"driver_run_root": str(driver_root)}, {},
+                {"driver_run_root": driver_root, "controller_sha256": "d" * 64},
+                r8, {}, SimpleNamespace(), runtime, R5)
+    monkeypatch.setattr(TARGET, "_strict_r12_authority", lambda **kwargs: injected)
+    monkeypatch.setattr(TARGET, "_consume_r12_once", lambda *args, **kwargs: "e" * 64)
+    deadline_type = TARGET.DispatchDeadline
+    monkeypatch.setattr(TARGET, "DispatchDeadline",
+                        lambda r5: deadline_type(r5, now=lambda: 2680.0))  # exactly 120 s remains
+    args = {name: ch * 64 for name, ch in (
+        ("r12_review_sha256", "a"), ("r12_once_sha256", "b"),
+        ("r8_review_sha256", "c"), ("r8_once_sha256", "d"),
+        ("r6_review_sha256", "e"), ("r6_once_sha256", "f"),
+        ("source_projection_sha256", "0"))}
+    result = TARGET.run_authorized_external_driver(**args)
+    assert calls["r8"] == 1
+    assert route.calls == 0
+    assert result["r8_result"]["status"] == "UNKNOWN_NO_REPLAY_R8_CALL_RAISED"
+    assert result["deadline"]["dispatches_blocked_before_route_body"] == 1
+    assert result["passive_terminal"]["status"] == "UNKNOWN_NO_REPLAY_TERMINAL_NO_ORIGINAL_OWNER_REFERENCES"
+    assert result["r8_outer_call_count"] == 1
+    assert result["driver_public_calls_after_r8_return"] == 0
+
+
+def test_external_driver_process_stays_alive_until_same_python_owner_children_exit(tmp_path):
+    run_root = tmp_path / "driver-run"
+    child = subprocess.Popen(
+        [sys.executable, str(CHILD_DRIVER), str(CONTROLLER), str(run_root)],
+        stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        text=True, close_fds=True,
+        env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
+    )
+    marker = run_root / "R12_PASSIVE_HOLD_STARTED.json"
+    deadline = time.monotonic() + 5.0
+    while not marker.exists() and child.poll() is None and time.monotonic() < deadline:
+        time.sleep(0.02)
+    assert marker.exists(), "driver did not enter passive hold"
+    hold = json.loads(marker.read_text())
+    assert hold["status"] == "UNKNOWN_ORIGINAL_OWNERS_PASSIVELY_HELD_NO_RPC_NO_CLOSE"
+    assert len(hold["original_owner_processes"]) == 2
+    assert child.poll() is None, "driver must remain running while the same original owner children are live"
+    live_children = []
+    for row in hold["original_owner_processes"]:
+        try:
+            os.kill(row["pid"], 0)
+            live_children.append(row["pid"])
+        except ProcessLookupError:
+            pass
+    assert len(live_children) == 2
+    stdout, stderr = child.communicate(timeout=6)
+    assert child.returncode == 0, stderr
+    outer = json.loads(stdout)
+    terminal = outer["passive_terminal"]
+    assert outer["status"] == "UNKNOWN_NO_REPLAY_ORIGINAL_OWNERS_TERMINAL_OBSERVED"
+    assert outer["r8_outer_call_count"] == 1
+    assert outer["deadline"]["route_checks"][0]["dispatch_allowed"] is True
+    assert outer["driver_public_calls_after_r8_return"] == 0
+    assert outer["driver_process_signals"] == 0
+    assert outer["driver_host_close_after_r8_return"] == 0
+    assert terminal["status"] == "UNKNOWN_NO_REPLAY_ORIGINAL_OWNERS_TERMINAL_OBSERVED"
+    assert terminal["passive_process_poll_only"] is True
+    assert terminal["signals"] == 0
+    assert terminal["RPC_after_R8_return"] == 0
+    assert terminal["host_close_after_R8_return"] == 0
+    assert terminal["native_child_absence_claimed"] is False
+    assert terminal["passive_hold_seconds"] >= 0.75
+    assert all(row["returncode"] == 0 for row in terminal["original_owner_processes"])
+
+
+def test_external_driver_retains_known_handles_when_owner_observer_always_raises(tmp_path):
+    run_root = tmp_path / "driver-observer-failure"
+    child = subprocess.Popen(
+        [sys.executable, str(CHILD_DRIVER), str(CONTROLLER), str(run_root)],
+        stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        text=True, close_fds=True,
+        env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1",
+             "W23_R12_TEST_OBSERVER_ALWAYS_FAIL": "1"},
+    )
+    marker = run_root / "R12_PASSIVE_HOLD_STARTED.json"
+    deadline = time.monotonic() + 5.0
+    while not marker.exists() and child.poll() is None and time.monotonic() < deadline:
+        time.sleep(0.02)
+    assert marker.exists(), "observer failure must not discard holder-known Popen references"
+    hold = json.loads(marker.read_text())
+    assert hold["status"] == "UNKNOWN_ORIGINAL_OWNERS_PASSIVELY_HELD_NO_RPC_NO_CLOSE"
+    assert hold["owner_observer_error_count"] == 1
+    assert hold["first_observer_error"].startswith("RuntimeError: synthetic same-host owner observer failure")
+    assert len(hold["original_owner_processes"]) == 2
+    assert child.poll() is None, "external driver must stay alive while known owners remain live"
+    for row in hold["original_owner_processes"]:
+        assert row["original_popen_object_retained"] is True
+        try:
+            os.kill(row["pid"], 0)
+        except ProcessLookupError:
+            raise AssertionError("known owner child exited before the passive hold control")
+
+    stdout, stderr = child.communicate(timeout=6)
+    assert child.returncode == 0, stderr
+    outer = json.loads(stdout)
+    terminal = outer["passive_terminal"]
+    assert outer["status"] == "UNKNOWN_NO_REPLAY_ORIGINAL_OWNERS_TERMINAL_OBSERVED"
+    assert outer["r8_outer_call_count"] == 1
+    assert outer["driver_public_calls_after_r8_return"] == 0
+    assert outer["driver_process_signals"] == 0
+    assert outer["driver_host_close_after_r8_return"] == 0
+    assert terminal["owner_observer_error_count"] >= 2, "initial and subsequent observer failures must be preserved"
+    assert terminal["first_observer_error"] == hold["first_observer_error"]
+    assert terminal["first_reference_or_poll_error"] is None
+    assert terminal["passive_process_poll_only"] is True
+    assert terminal["signals"] == 0
+    assert terminal["RPC_after_R8_return"] == 0
+    assert terminal["host_close_after_R8_return"] == 0
+    assert terminal["native_child_absence_claimed"] is False
+    assert terminal["passive_hold_seconds"] >= 0.75
+    assert all(row["returncode"] == 0 for row in terminal["original_owner_processes"])
+
+
+def test_full_r12_review_once_schema_consumer_with_temporary_authorities(monkeypatch, tmp_path):
+    """Exercise the actual three-generation consumer without touching fixed authority paths."""
+    source_plan, source_plan_sha = TARGET._read_json(TARGET.R12_SOURCE_PLAN_PATH)
+    _, source_manifest_sha = TARGET._read_json(TARGET.R12_SOURCE_MANIFEST_PATH)
+    paths = source_plan["fresh_path_proposals_uncreated"]
+    lower_review = {
+        "runtime_root": paths["runtime_root"],
+        "host_provider_config_root": paths["host_provider_config_root"],
+        "persistent_evidence_root": paths["persistent_evidence_root"],
+        "outer_run_root": paths["r8_outer_run_root"],
+    }
+    lower_args = {
+        "r8_review_sha256": "a" * 64, "r8_once_sha256": "b" * 64,
+        "r6_review_sha256": "c" * 64, "r6_once_sha256": "d" * 64,
+        "source_projection_sha256": TARGET.R6_SOURCE_PROJECTION_SHA256,
+    }
+    calls = []
+
+    class FakeR8:
+        @staticmethod
+        def source_only_preflight():
+            return {"status":"SOURCE_ONLY_PASS_NO_AUTHORITY_NO_DISPATCH", "public_calls":0, "approval_created":False, "once_created":False}
+
+        @staticmethod
+        def _strict_authority(**kwargs):
+            calls.append(kwargs)
+            assert kwargs == {
+                "outer_review_sha256": lower_args["r8_review_sha256"],
+                "outer_once_sha256": lower_args["r8_once_sha256"],
+                "r6_review_sha256": lower_args["r6_review_sha256"],
+                "r6_once_sha256": lower_args["r6_once_sha256"],
+                "source_projection_sha256": TARGET.R6_SOURCE_PROJECTION_SHA256,
+            }
+            return lower_review, {}, {}, object(), object(), object()
+
+    monkeypatch.setattr(TARGET, "_load_r8", lambda: FakeR8)
+    review_path = tmp_path / "synthetic-review.json"
+    once_path = tmp_path / "synthetic-once.json"
+    monkeypatch.setattr(TARGET, "R12_MAIN_REVIEW_PATH", review_path)
+    monkeypatch.setattr(TARGET, "R12_ONCE_BINDING_PATH", once_path)
+
+    expected = {
+        "source_plan_sha256": source_plan_sha,
+        "source_manifest_sha256": source_manifest_sha,
+        "controller_sha256": hashlib.sha256(CONTROLLER.read_bytes()).hexdigest(),
+        "r8_main_review_sha256": lower_args["r8_review_sha256"],
+        "r8_once_binding_sha256": lower_args["r8_once_sha256"],
+        "r8_controller_sha256": TARGET.R8_CONTROLLER_SHA256,
+        "r8_source_manifest_sha256": TARGET.R8_SOURCE_MANIFEST_SHA256,
+        "r8_source_map_sha256": TARGET.R8_SOURCE_MAP_SHA256,
+        "r8_packet_manifest_sha256": TARGET.R8_PACKET_MANIFEST_SHA256,
+        "r6_main_review_sha256": lower_args["r6_review_sha256"],
+        "r6_once_binding_sha256": lower_args["r6_once_sha256"],
+        "r6_source_projection_sha256": TARGET.R6_SOURCE_PROJECTION_SHA256,
+        "wall_budget_seconds": TARGET.WALL_BUDGET_SECONDS,
+        "cleanup_reserve_seconds": TARGET.CLEANUP_RESERVE_SECONDS,
+        "public_budgets": dict(TARGET.PUBLIC_BUDGETS),
+    }
+
+    def install_pair(*, review_change=None, once_change=None, drop_review=()):
+        review = {
+            "schema": TARGET.R12_REVIEW_SCHEMA,
+            "decision": "APPROVE_ONE_W23_R12_EXTERNAL_DRIVER_ENTRY",
+            **expected,
+            "runtime_root": paths["runtime_root"],
+            "host_provider_config_root": paths["host_provider_config_root"],
+            "persistent_evidence_root": paths["persistent_evidence_root"],
+            "r8_outer_run_root": paths["r8_outer_run_root"],
+            "driver_run_root": paths["driver_run_root"],
+            "approval_sha256": "",
+        }
+        if review_change:
+            review.update({key: value for key, value in review_change.items()
+                           if key != "__approval_override"})
+        for field in drop_review:
+            review.pop(field)
+        review["approval_sha256"] = TARGET._review_authority_sha(review)
+        if review_change and "__approval_override" in review_change:
+            review["approval_sha256"] = review_change["__approval_override"]
+        review_raw = json.dumps(review, sort_keys=True, separators=(",", ":"),
+                                ensure_ascii=False, allow_nan=False).encode("utf-8")
+        once = {key: value for key, value in review.items()
+                if key not in {"decision", "approval_sha256"}}
+        once.update({
+            "schema": TARGET.R12_ONCE_SCHEMA,
+            "status": "AUTHORIZED_SINGLE_ENTRY",
+            "normal_attempts": 1,
+            "main_review_sha256": hashlib.sha256(review_raw).hexdigest(),
+            "approval_sha256": review["approval_sha256"],
+        })
+        if once_change:
+            once.update(once_change)
+        once_raw = json.dumps(once, sort_keys=True, separators=(",", ":"),
+                              ensure_ascii=False, allow_nan=False).encode("utf-8")
+        review_path.write_bytes(review_raw)
+        once_path.write_bytes(once_raw)
+        return hashlib.sha256(review_raw).hexdigest(), hashlib.sha256(once_raw).hexdigest()
+
+    review_sha, once_sha = install_pair()
+    accepted = TARGET._strict_r12_authority(
+        r12_review_sha256=review_sha, r12_once_sha256=once_sha, **lower_args)
+    assert accepted[2]["driver_run_root"] == Path(paths["driver_run_root"])
+    assert len(calls) == 1
+
+    negative_pairs = [
+        ("review schema", {"schema": "wrong-schema"}, None),
+        ("review unknown field", {"unexpected": "x"}, None),
+        ("review approval digest", {"__approval_override": "0" * 64}, None),
+        ("once schema", None, {"schema": "wrong-schema"}),
+        ("once unknown field", None, {"unexpected": "x"}),
+        ("once expected source", None, {"source_plan_sha256": "f" * 64}),
+        ("once path", None, {"driver_run_root": "/private/tmp/wrong-driver-root"}),
+        ("once attempt count", None, {"normal_attempts": True}),
+    ]
+    for label, review_change, once_change in negative_pairs:
+        review_sha, once_sha = install_pair(review_change=review_change,
+                                            once_change=once_change)
+        try:
+            TARGET._strict_r12_authority(
+                r12_review_sha256=review_sha, r12_once_sha256=once_sha, **lower_args)
+        except TARGET.OuterControllerError:
+            pass
+        else:
+            raise AssertionError(f"R12 authority consumer accepted {label} drift")
+
+    review_sha, once_sha = install_pair(drop_review=("decision",))
+    try:
+        TARGET._strict_r12_authority(
+            r12_review_sha256=review_sha, r12_once_sha256=once_sha, **lower_args)
+    except TARGET.OuterControllerError:
+        pass
+    else:
+        raise AssertionError("R12 authority consumer accepted a missing review field")
+
+    install_pair()
+    bad_lower = dict(lower_review, runtime_root="/private/tmp/cross-generation-runtime")
+    class CrossGenerationR8:
+        @staticmethod
+        def source_only_preflight():
+            return {"status": "SOURCE_ONLY_PASS_NO_AUTHORITY_NO_DISPATCH", "public_calls": 0,
+                    "approval_created": False, "once_created": False}
+
+        @staticmethod
+        def _strict_authority(**kwargs):
+            return bad_lower, {}, {}, object(), object(), object()
+    monkeypatch.setattr(TARGET, "_load_r8", lambda: CrossGenerationR8)
+    review_sha, once_sha = install_pair()
+    try:
+        TARGET._strict_r12_authority(
+            r12_review_sha256=review_sha, r12_once_sha256=once_sha, **lower_args)
+    except TARGET.OuterControllerError as exc:
+        assert "paths diverge from exact R8 Main-bound" in str(exc)
+    else:
+        raise AssertionError("R12 accepted paths from a different R8 authority generation")
+
+
+if __name__ == "__main__":
+    raise SystemExit("run with pytest in the project dev-python312 environment")
+
+
+def test_fresh_r12_external_isolated_canonical_probe_consumer_positive_and_negative():
+    child = TARGET.R8_ROOT / "tests/canonical_probe_loader_child.py"
+    python = "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312/bin/python"
+    controller = str(TARGET.R8_CONTROLLER_PATH)
+    positive = subprocess.run([python, "-I", "-B", str(child), "--controller", controller],
+                              cwd=str(TARGET.REPOSITORY), capture_output=True, text=True, timeout=60, check=False)
+    assert positive.returncode == 0, positive.stderr
+    report = json.loads(positive.stdout)
+    assert report["status"] == "PASS_CANONICAL_R6_LOADER_TO_W25_MODULE_IMPORTS"
+    # Use the current R6 candidate binding, not the plan's historical R13
+    # compile-lineage record in ``frozen_r6``.
+    r6_root = Path(TARGET._read_json(TARGET.R12_SOURCE_PLAN_PATH)[0]
+                   ["dependencies"]["r6_candidate_root"])
+    assert Path(report["module_origins"]["probe"]).resolve() == r6_root / "probe/__init__.py"
+    assert Path(report["module_origins"]["owned_runtime_entry"]).resolve() == r6_root / "probe/w23_owned_runtime_entry.py"
+    assert report["public_calls"] == 0 and not report["owner_created"]
+    assert not report["approval_created"] and not report["once_created"] and not report["jpype_loaded"]
+
+    negative = subprocess.run([python, "-I", "-B", str(child), "--controller", controller, "--wrong-probe"],
+                              cwd=str(TARGET.REPOSITORY), capture_output=True, text=True, timeout=30, check=False)
+    assert negative.returncode == 0, negative.stderr
+    rejected = json.loads(negative.stdout)
+    assert rejected["status"] == "PASS_WRONG_PROBE_ORIGIN_REJECTED"
+    assert rejected["submodules_imported"] is False

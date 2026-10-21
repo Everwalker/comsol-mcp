@@ -1,0 +1,54 @@
+# R6I one-child native entry R2 — unsigned preparation
+
+This is a new, private R6I execution candidate. It is source preparation only.
+No Main review/admission/once record was created, the R6I empty approval was not
+written, and SSH/native/COMSOL/JVM/GUI were not run.
+
+The remote payload is based on the exact Main-reviewed R6I gate, helper, inner
+binding, PREBIRTH binding, R14 binding, and embedded R6B lease. Before dispatch,
+it checks the captured empty `MAIN_APPROVAL` raw proof and gate projection, then
+opens the existing file once and compares the legacy volume/file-index/size
+domain separately from the native six-field fingerprint. It uses the frozen
+R6B `R14AuthorityRootOpsR6B._write_flush_readback` implementation on that same
+handle for an empty readback followed by one exact approval write, flush, and
+readback. It rechecks object identity, creation time, link count, owner SID and
+descriptor before the unchanged R6I gate is invoked. The result retains all
+six native fingerprint fields from before and after the write, including the
+observed change and write times. A failed or ambiguous write cannot trigger a
+second write or gate invocation.
+
+The regression controls exercise the actual R2 `_same_handle_write` consumer
+and the exact R6B writer method. A synthetic in-memory Win32/API shim supplies
+the platform boundary; it does not claim a Windows runtime result. Positive
+coverage verifies same-handle write/readback, unchanged security, and exact
+approval bytes. Negative controls reject changed legacy identity, any changed
+native identity/time field, owner or descriptor drift before write, and
+post-write descriptor drift. There are also controls for captured-proof
+projection, exact approval rendering, gate `SystemExit` diagnostics, and
+strict-SSH check-only behavior.
+
+`templates/` contains only explicitly unsigned templates. The R6I approval
+template is copied byte-for-byte from the accepted R1 schema so the frozen gate
+continues to enforce its exact closed field set; its `UNSIGNED_TEMPLATE_NOT_AUTHORITY`
+status and `NOT_ISSUED` nonce are not executable approval values. The separate
+R2 source-review record pins both the current live RESUME snapshot and the
+historical R6I PREP checkpoint. Those hashes have different meanings and must
+not be substituted for the frozen gate's `current_resume_sha256` field, which
+is validated against the PREBIRTH binding.
+
+The exact outer route remains `ssh -T` with batch mode, strict host-key
+checking, no connection sharing, and one stdin payload followed by EOF to one
+original Popen. The remote interpreter uses `-I -B -` (not `-S`, which would
+hide the reviewed installed `mcp` dependency). Remote scope is one native child
+for at most 60 seconds, with COMSOL/JVM/GUI/Study/solver all zero. The local
+wrapper retains and passively waits on that same SSH Popen until natural
+terminal; it has no retry, replay, signal, or kill path.
+
+The live RESUME hash recorded by the last check-only run is a review-time
+snapshot. If RESUME changes before Main admission, the source review/admission
+must bind the new snapshot; the historical PREP checkpoint remains separately
+bound. The wrapper's fixed run root is fresh and absent at preparation time.
+
+See `evidence/CROSS_PACKET_W23_R16_R15_PROVENANCE_NOTE_R1.json` for a separate
+read-only reconciliation of stale R15-labeled provenance fields in the W23 R16
+packet. No W23 packet file was modified, and R6I R2 consumes no W23 source.

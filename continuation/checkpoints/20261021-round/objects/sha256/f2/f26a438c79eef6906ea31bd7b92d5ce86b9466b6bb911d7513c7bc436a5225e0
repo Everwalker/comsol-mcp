@@ -1,0 +1,48 @@
+{
+  "schema": "W26_R31_SOURCE_CONTROLS_RUN_R1",
+  "candidate_source_fingerprint_sha256": "893b37f2dc577c6513541e499ba6aad90708d4bced6886fe6d8abe6e33e5b10f",
+  "python_executable": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312/bin/python",
+  "run_1": {
+    "command": "python -m pytest -q -p no:cacheprovider [3 R15 changed tests, 2 R17 selection tests, 1 R31 map proposal test, science recipe entrypoint, W24 v2 readback, cure preflight, cure v2 capture, cure coupon tests]",
+    "exit_code": 1,
+    "passed": 343,
+    "failed": 11,
+    "failed_nodeids": [
+      "tests/test_run_native_w24_static_shape_setup_campaign.py::test_real_harmless_popen_keeps_core_epoch_and_ps_lstart_in_separate_domains",
+      "tests/test_run_native_w24_static_shape_setup_campaign.py::test_production_g2_consumer_accepts_core_receipt_and_rejects_identity_mutations",
+      "tests/test_session_server_control.py::test_public_owned_server_start_attach_disconnect_retire_stop",
+      "tests/test_session_server_control.py::test_public_session_stop_returns_bounded_server_verify_stage_diagnostic",
+      "tests/test_session_server_control.py::test_w24_connected_inspect_checker_accepts_actual_control_daemon_response",
+      "tests/test_session_server_control.py::test_owned_server_start_idempotency_reuses_original_process",
+      "tests/test_session_server_control.py::test_owned_server_stop_unknown_retains_handle_and_close_never_blind_kills",
+      "tests/test_session_server_control.py::test_owned_server_stop_keeps_unknown_when_windows_listener_query_fails",
+      "tests/test_session_server_control.py::test_daemon_close_retires_attached_worker_before_owned_server",
+      "tests/test_session_server_control.py::test_daemon_close_preserves_owned_server_when_shutdown_stop_is_uncertain",
+      "tests/test_session_server_control.py::test_cross_project_attach_and_stop_cannot_bypass_owned_endpoint_boundary"
+    ],
+    "observed_environment_failure": "First failure shows Python subprocess unable to execute /bin/ps: PermissionError [Errno 13] in the constrained process-inspection test. Other listed failures are process/socket/owned-server controls; no additional exact common cause is asserted.",
+    "classification": "MIXED_SOURCE_AND_HOST_PROCESS_CONTROLS; preserve failure; not a product acceptance result."
+  },
+  "run_2": {
+    "command": "python -m pytest -q -p no:cacheprovider [R17 selection diagnostics+overflow regression, proposed r14 product map control, science recipe entrypoint, W24 v2 readback/cure preflight/v2/coupon controls]",
+    "exit_code": 0,
+    "passed": 148,
+    "failed": 0,
+    "skipped": 0,
+    "classification": "SOURCE_ONLY_PASS; no native/JVM/Java execution."
+  },
+  "native": "NOT_RUN_FOR_R31_CANDIDATE; separately linked W24 R17 actual setup14 evidence is scoped to the R17 source snapshot and is not R31 native/product acceptance.",
+  "java": "NOT_RUN",
+  "javac": "NOT_RUN",
+  "app_build": "NOT_RUN",
+  "installation": "NOT_RUN",
+  "active_reader_r14": "NOT_ENABLED; map is proposal-only",
+  "inherited_actual_evidence": {
+    "path": "repository/docs/full_project_continuation_v3/state/W24_R17_MAIN_ACTUAL_SETUP14_ACCEPTANCE_20261021_R1.json",
+    "sha256": "11c03deac09b6f4c6f08d0528287f31f28ba7e309d06f5a2f968996c6efbb922",
+    "status": "PASS_SCOPED_ACTUAL_14_UNSOLVED_BUILD_SAVE_FORMAL_REOPEN_FULL_CONFIG_READBACK",
+    "source_fingerprint_sha256": "c9112abc94dd86d6bf8295a432f407fe7367827373615ae7a81959e7b6c35ad8",
+    "scope": "W24 R17 setup14 build/save/reopen/configuration-readback; 14/14 unsolved artifacts; 133 operations and 133 jobs SUCCEEDED; 1374 terminal Worker RPC pairs; cleanup accepted.",
+    "limitations": "No study/solver evaluation or science acceptance; final Reviewer NOT_RUN; SQLite original unopened; this receipt is for the R17 source snapshot, not the complete R31 candidate."
+  }
+}

@@ -1,0 +1,337 @@
+from __future__ import annotations
+
+import hashlib
+import json
+from pathlib import Path
+
+import pytest
+
+from tools import run_native_w24_cure_preflight as preflight
+from tools import w24_v2_setup_readback as consumer
+
+
+ROOT = Path(__file__).resolve().parents[1]
+JAVA = ROOT / "tools/java/W24CureCouponFixture.java"
+RUNNER = ROOT / "tools/run_native_w24_cure_preflight.py"
+R31_BUILD_V2_METHOD_SHA256 = "afb39257260c7ee01dd8f46f825aea778147c6d40dab121c19daf1d5f40c516b"
+
+
+def capture(operation: str, value):
+    return {"status": "READ", "operation": operation, "value": value}
+
+
+def property_capture(*, present=True, value_type="Boolean", allowed=None, current=False):
+    if not present:
+        absent = {"status": "NOT_QUERIED_PROPERTY_ABSENT_OR_UNKNOWN"}
+        return {
+            "property_name": "geometricNonlinearity",
+            "property_names": capture("properties", ["tlist", "rtol"]),
+            "has_property": capture("hasProperty", False),
+            "value_type": absent,
+            "allowed_values": absent,
+            "current_value": absent,
+        }
+    getter = consumer.SURVEY_GETTERS[value_type]
+    return {
+        "property_name": "geometricNonlinearity",
+        "property_names": capture("properties", ["geometricNonlinearity", "rtol"]),
+        "has_property": capture("hasProperty", True),
+        "value_type": capture("getValueType", value_type),
+        "allowed_values": capture("getAllowedPropertyValues", allowed),
+        "current_value": {
+            **capture(getter, current),
+            "reported_type": value_type,
+            "reader": getter,
+        },
+    }
+
+
+def survey_row():
+    stages = []
+    sequences = []
+    for index, tag in enumerate(consumer.SURVEY_STAGES):
+        sequence = f"sol{index + 1}"
+        sequences.append(sequence)
+        stages.append({
+            "study_tag": tag,
+            "study_step_path": f"{tag}/time",
+            "study_step_tag": "time",
+            "study_step_type": "Transient",
+            "study_step_property": property_capture(present=False),
+            "attached_time_solver": {
+                "sequence_tag": sequence,
+                "sequence_type": "TimeDependent",
+                "sequence_attached": True,
+                "sequence_study_tag": tag,
+                "feature_path": "t1",
+                "feature_tag": "t1",
+                "feature_type": "Time",
+                "property": property_capture(allowed=None, current=False),
+            },
+        })
+    licenses = {}
+    for product in consumer.SURVEY_PRODUCTS:
+        licenses[product] = {
+            "product": product,
+            "status": "READ",
+            "current_license_allows_product": product != "STRUCTURALMECHANICS",
+        }
+    return {
+        "schema": "W24_GEOMETRIC_NONLINEARITY_PROPERTY_SURVEY_V1",
+        "status": "SURVEY_COMPLETED_NO_DISPUTED_SETTER",
+        "target_property": "geometricNonlinearity",
+        "study_stages": stages,
+        "study_tags": list(consumer.SURVEY_STAGES),
+        "solver_sequence_tags": sequences,
+        "physics_tags": ["solid", "ht", "odeDose"],
+        "license_availability_by_product": licenses,
+        "module_license": "UNVERIFIED_FAIL_CLOSED",
+        "native_semantics": "UNVERIFIED_FAIL_CLOSED",
+        "study_solver_submissions": 0,
+        "setter_save_compute_calls_in_survey": 0,
+    }
+
+
+def _method_body(source: str, signature: str) -> str:
+    start = source.index(signature)
+    open_brace = source.index("{", start)
+    depth = 0
+    quote = None
+    escaped = False
+    line_comment = False
+    block_comment = False
+    i = open_brace
+    while i < len(source):
+        char = source[i]
+        nxt = source[i + 1] if i + 1 < len(source) else ""
+        if line_comment:
+            if char == "\n":
+                line_comment = False
+        elif block_comment:
+            if char == "*" and nxt == "/":
+                block_comment = False
+                i += 1
+        elif quote:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+        elif char == "/" and nxt == "/":
+            line_comment = True
+            i += 1
+        elif char == "/" and nxt == "*":
+            block_comment = True
+            i += 1
+        elif char in ('"', "'"):
+            quote = char
+        elif char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return source[start:i + 1]
+        i += 1
+    raise AssertionError(f"unterminated Java method: {signature}")
+
+
+def test_real_survey_consumer_accepts_three_stage_metadata_and_separate_license_results():
+    row = survey_row()
+    assert consumer._validate_geonl_property_survey(row) == {
+        "status": "PROPERTY_SURVEY_SHAPE_VALIDATED",
+        "stages": 3,
+        "licensed_semantics": "UNVERIFIED_FAIL_CLOSED",
+    }
+    # A false Structural Mechanics result is retained without rewriting the
+    # independent availability observations for the other products.
+    assert row["license_availability_by_product"]["STRUCTURALMECHANICS"][
+        "current_license_allows_product"] is False
+    assert row["license_availability_by_product"]["ACOUSTICS"][
+        "current_license_allows_product"] is True
+    assert row["module_license"] == "UNVERIFIED_FAIL_CLOSED"
+
+
+def test_survey_consumer_preserves_null_allowed_values_and_uses_reported_getter():
+    row = survey_row()
+    row["study_stages"][0]["attached_time_solver"]["property"] = property_capture(
+        value_type="String", allowed=None, current="on")
+    assert consumer._validate_geonl_property_survey(row)["stages"] == 3
+    property_row = row["study_stages"][0]["attached_time_solver"]["property"]
+    assert property_row["allowed_values"]["value"] is None
+    property_row["current_value"]["reader"] = "getBoolean"
+    with pytest.raises(consumer.V2SetupError, match="typed getter does not match"):
+        consumer._validate_geonl_property_survey(row)
+
+
+def test_survey_consumer_rejects_known_supported_type_without_getter_observation():
+    row = survey_row()
+    current = row["study_stages"][0]["attached_time_solver"]["property"]["current_value"]
+    row["study_stages"][0]["attached_time_solver"]["property"]["current_value"] = {
+        "status": "NOT_QUERIED_VALUE_TYPE_UNKNOWN",
+    }
+    assert current["status"] == "READ"
+    with pytest.raises(consumer.V2SetupError, match="supported property type omitted its declared typed getter"):
+        consumer._validate_geonl_property_survey(row)
+
+
+@pytest.mark.parametrize("mutation", [
+    "study_solver_submissions", "invented_stage", "duplicate_sequence",
+    "license_product_missing", "native_semantics_pass", "setter_claim",
+    "study_step_wrong_type", "time_solver_wrong_type", "wrong_stage_path", "sequence_type_malformed",
+])
+def test_survey_consumer_rejects_scope_or_actual_object_identity_drift(mutation):
+    row = survey_row()
+    if mutation == "study_solver_submissions":
+        row["study_solver_submissions"] = 1
+    elif mutation == "invented_stage":
+        row["study_stages"][0]["study_tag"] = "stdInvented"
+    elif mutation == "duplicate_sequence":
+        row["study_stages"][1]["attached_time_solver"]["sequence_tag"] = "sol1"
+    elif mutation == "license_product_missing":
+        row["license_availability_by_product"].pop("MEMS")
+    elif mutation == "native_semantics_pass":
+        row["native_semantics"] = "PASS"
+    elif mutation == "setter_claim":
+        row["setter_save_compute_calls_in_survey"] = 1
+    elif mutation == "study_step_wrong_type":
+        row["study_stages"][0]["study_step_type"] = "Stationary"
+    elif mutation == "time_solver_wrong_type":
+        row["study_stages"][0]["attached_time_solver"]["feature_type"] = "Stationary"
+    elif mutation == "wrong_stage_path":
+        row["study_stages"][2]["study_step_path"] = "stdUV/time"
+    elif mutation == "sequence_type_malformed":
+        row["study_stages"][1]["attached_time_solver"]["sequence_type"] = None
+    with pytest.raises(consumer.V2SetupError):
+        consumer._validate_geonl_property_survey(row)
+
+
+def test_survey_branch_is_additive_and_historical_build_v2_body_is_byte_stable():
+    source = JAVA.read_text(encoding="utf-8")
+    build_v2 = _method_body(source, "private static Map<String, Object> buildV2(")
+    assert hashlib.sha256(build_v2.encode()).hexdigest() == R31_BUILD_V2_METHOD_SHA256
+    assert 'if ("build_v2".equals(phase)) return buildV2(model, args);' in source
+    assert 'if ("survey_v2_geometric_nonlinearity".equals(phase)) return buildV2GeometricNonlinearitySurvey(model, args);' in source
+    assert '"survey_v2_geometric_nonlinearity".equals(phase)' in _method_body(
+        source, "public static Object runInPlace(")
+    survey = _method_body(source, "private static Map<String, Object> buildV2GeometricNonlinearitySurvey(")
+    required_order = [
+        "addStudies(model);", "configureV2DoseSolverTolerance(model);",
+        "return observeV2GeometricNonlinearity(model);",
+    ]
+    assert [survey.index(item) for item in required_order] == sorted(survey.index(item) for item in required_order)
+    assert "configureV2GeometricNonlinearity(model)" not in survey
+    assert "readbackV2(model)" not in survey
+    observe = _method_body(source, "private static Map<String, Object> observeV2GeometricNonlinearity(")
+    for forbidden in (".set(", ".create(", ".remove(", ".save(", ".run(", ".compute(", "checkoutLicense("):
+        assert forbidden not in observe
+    assert 'ModelUtil.hasProduct(product)' in observe
+    assert all(product in observe for product in consumer.SURVEY_PRODUCTS)
+    assert source == (ROOT / "comsol_mcp/data/science_recipes/java/W24CureCouponFixture.java").read_text()
+
+
+def test_existing_public_mcp_preflight_dispatches_survey_and_returns_before_save_reopen_validation():
+    source = RUNNER.read_text(encoding="utf-8")
+    assert "W24_GEONL_PROPERTY_SURVEY_OFFLINE_FREEZE_V1" in source
+    assert 'candidate.get("mode") == "geonl_property_survey"' in source
+    assert '"survey_v2_geometric_nonlinearity" if survey_only else' in source
+    branch = source.index('if survey_only:\n            survey_readback = _java_action_readback(')
+    assert source.index("_validate_geonl_property_survey(survey_readback)", branch) < source.index(
+        "return summary", branch)
+    assert source.index("return summary", branch) < source.index("_validate_v2(build_readback)", branch)
+    assert "_actual_study_run_submissions(daemon, project_id)" in source[branch:source.index("native_epoch_capability = None", branch)]
+    assert '"NATIVE_PROPERTY_SURVEY_PASS_NO_SOLVES"' in source
+
+
+def test_actual_preflight_source_closure_has_its_original_proposal_and_survey_plan():
+    closure = preflight._frozen_hashes()
+    assert closure["proposal"]["path"].endswith("/W24_CURE_FIXTURE_PROPOSAL.md")
+    assert closure["geonl_survey_tests"]["path"].endswith("/test_w24_geonl_property_survey.py")
+    assert closure["java_fixture"]["sha256"] == hashlib.sha256(JAVA.read_bytes()).hexdigest()
+
+
+def _freeze_candidate(root: Path, plan: Path, *, mode="geonl_property_survey"):
+    distributions = [
+        {"name": "mcp", "version": "1.30.0"},
+        {"name": "mph", "version": "1.4.0"},
+        {"name": "jpype1", "version": "1.7.1"},
+    ]
+    python = "/private/tmp/survey-test-venv/bin/python"
+    source_closure = {"tools/java/W24CureCouponFixture.java": {
+        "path": str(root / "tools/java/W24CureCouponFixture.java"), "sha256": "a" * 64}}
+    return {
+        "schema": "W24_GEONL_PROPERTY_SURVEY_OFFLINE_FREEZE_V1",
+        "candidate_id": "W24-CURE-GEONL-SURVEY-01",
+        "mode": mode,
+        "status": "FROZEN_OFFLINE_CANDIDATE_AWAITING_ROOT_NATIVE_SLOT",
+        "survey_scope": "PROPERTY_METADATA_AND_CURRENT_LICENSE_AVAILABILITY_ONLY",
+        "study_solver_submissions": 0,
+        "setter_save_solve_compute_allowed": False,
+        "mu_scale": 1.0,
+        "native_execution": {
+            "status": "NOT_RUN", "engine_births_this_candidate": 0,
+            "study_run_submissions": 0,
+            "macos_6_3_arm64": "USER_REQUESTED_SKIP",
+            "macos_6_3_x86_64": "USER_REQUESTED_SKIP",
+        },
+        "independent_native_budget": {
+            "owned_server_processes": 1,
+            "max_seconds_from_exact_birth_including_setup_reopen_and_cleanup": 900.0,
+            "cleanup_reserve_seconds": 45.0,
+            "worker_sessions_sequential": 1,
+            "study_or_solver_submissions": 0,
+        },
+        "runtime_environment": {
+            "python_executable": python,
+            "python_resolved_executable": python,
+            "pip_check_python": python,
+            "pip_check_python_resolved": python,
+            "python_version": "3.12.1",
+            "pip_check_python_version": "3.12.1",
+            "pip_check_version": "pip 25.0",
+            "distributions": distributions,
+            "distributions_sha256": preflight._json_sha256(distributions),
+            "ignored_appledouble_metadata": [],
+        },
+        "source_closure": source_closure,
+        "plan": {"path": str(plan), "sha256": preflight.sha256(plan)},
+        "offline_java_compile": {"exit_code": 0, "classes": ["synthetic test shape only"]},
+        "python_compile": {"exit_code": 0},
+        "focused_software_tests": {"exit_code": 0, "stdout": "13 passed"},
+    }
+
+
+@pytest.mark.parametrize("mutation", [None, "legacy_mode", "wrong_scope", "wrong_mu_scale", "wrong_plan"])
+def test_existing_offline_candidate_consumer_accepts_only_the_finite_survey_profile(tmp_path, monkeypatch, mutation):
+    source_root = tmp_path / "repository"
+    freeze_root = source_root / "docs/full_project_execution/w24/evidence/setup_candidate_"
+    freeze_root.mkdir(parents=True)
+    plan = source_root / "docs/full_project_execution/w24/W24_GEONL_PROPERTY_SURVEY_PLAN_R1.md"
+    plan.parent.mkdir(parents=True, exist_ok=True)
+    plan.write_text("survey plan fixture\n", encoding="utf-8")
+    expected_sources = {"tools/java/W24CureCouponFixture.java": {
+        "path": str(source_root / "tools/java/W24CureCouponFixture.java"), "sha256": "a" * 64}}
+    monkeypatch.setattr(preflight, "REPO", source_root)
+    monkeypatch.setattr(preflight, "PROPERTY_SURVEY_PLAN", plan)
+    monkeypatch.setattr(preflight, "_frozen_hashes", lambda: expected_sources)
+    candidate = _freeze_candidate(source_root, plan)
+    if mutation == "legacy_mode":
+        candidate["mode"] = "build_v2"
+    elif mutation == "wrong_scope":
+        candidate["setter_save_solve_compute_allowed"] = True
+    elif mutation == "wrong_mu_scale":
+        candidate["mu_scale"] = 1.25
+    elif mutation == "wrong_plan":
+        candidate["plan"]["sha256"] = "f" * 64
+    path = freeze_root / "survey_candidate.json"
+    path.write_text(json.dumps(candidate), encoding="utf-8")
+    digest = preflight.sha256(path)
+    if mutation is None:
+        verified = preflight._verify_offline_candidate_freeze(path, digest)
+        assert verified["survey_only"] is True
+        assert verified["candidate_id"] == "W24-CURE-GEONL-SURVEY-01"
+        assert verified["mu_scale"] == 1.0
+    else:
+        with pytest.raises(RuntimeError):
+            preflight._verify_offline_candidate_freeze(path, digest)
+

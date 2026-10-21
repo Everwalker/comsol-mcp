@@ -1,0 +1,1524 @@
+from __future__ import annotations
+
+import json
+import hashlib
+import subprocess
+import sys
+import tempfile
+import types
+import unittest
+import copy
+import stat
+from pathlib import Path
+from unittest.mock import patch
+
+ROOT = Path(__file__).resolve().parents[1]
+SOURCE = ROOT / "source"
+sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(SOURCE))
+
+# This contract-only environment intentionally runs with `python -S`; provide
+# inert MCP result type names so the actual gateway dispatcher module imports.
+# The positive/negative tests below exercise its real dispatch function and
+# the real private control-client dispatch, not an imitation of either.
+if "mcp.types" not in sys.modules:
+    mcp_package = types.ModuleType("mcp")
+    mcp_types = types.ModuleType("mcp.types")
+
+    class _MCPResultType:
+        def __init__(self, **values):
+            self.__dict__.update(values)
+
+    for _name in ("CallToolResult", "ImageContent", "TextContent"):
+        setattr(mcp_types, _name, type(_name, (_MCPResultType,), {}))
+    mcp_package.types = mcp_types
+    sys.modules["mcp"] = mcp_package
+    sys.modules["mcp.types"] = mcp_types
+
+from comsol_mcp import _control_client, _mcp_gateway  # noqa: E402
+from probe import w23_owned_runtime_entry as owned_runtime  # noqa: E402
+from probe import w23_zero_solve_runtime as runtime  # noqa: E402
+import test_zero_solve_entry as entry_fixtures  # noqa: E402
+import test_direction_proof as material_fixtures  # noqa: E402
+
+
+class _FullEntryFixtureDispatcher:
+    """Inert transport using the recorded actual direction graph and exact producer shapes."""
+
+    def __init__(self, plan=None, *, two_materials=False, geometry_dimension=2,
+                 adjacency_target_dimension=2):
+        fixture_path = (SOURCE / "tests" / "fixtures" /
+                        "w23_r31r2_actual_direction_replay.json")
+        fixture = json.loads(fixture_path.read_text())
+        self.graph_records = fixture["records"]
+        self.graph_used = set()
+        self.calls = []
+        self.plan = plan
+        self.geometry_dimension = geometry_dimension
+        self.adjacency_target_dimension = adjacency_target_dimension
+        self.two_materials = two_materials
+        self.point_rows = []
+        self.integral_rows = []
+        self.owner_load_mutation = None
+        self.owner_status_mutation = None
+        self.owner_jobs = {}
+        if two_materials:
+            (self.material_inventory, self.material_inspections, _adjacency) = \
+                material_fixtures._observed_two_materials(
+                    epsilon_core=[["n_core^2", "0", "0"],
+                                  ["0", "n_core^2", "0"],
+                                  ["0", "0", "n_core^2"]],
+                    epsilon_clad=[["n_clad^2", "0", "0"],
+                                  ["0", "n_clad^2", "0"],
+                                  ["0", "0", "n_clad^2"]],
+                )
+            self.parameter_payload = material_fixtures._parameter_payload_rows(
+                {"n_core": 1.45, "n_clad": 1.0})
+        else:
+            (self.material_inventory, self.material_inspections,
+             _adjacency, _inspection) = material_fixtures._observed()
+            self.parameter_payload = None
+
+    @staticmethod
+    def _public(data):
+        context = _context()
+        return {
+            "success": True,
+            "execution": {
+                "project_id": context["project_id"],
+                "session_id": context["model_ref"]["session_id"],
+                "model_ref": context["model_ref"],
+                "revision": context["expected_revision"],
+            },
+            "data": data,
+        }
+
+    def _recorded_graph_response(self, operation_id, arguments):
+        for index, row in enumerate(self.graph_records):
+            if index in self.graph_used:
+                continue
+            if row["operation_id"] == operation_id and row["arguments"] == arguments:
+                self.graph_used.add(index)
+                return row["public_data"]
+        raise AssertionError(
+            f"no recorded graph response for {operation_id}: "
+            f"{json.dumps(arguments, sort_keys=True)}"
+        )
+
+    def __call__(self, operation, wrapper, execution):
+        if operation != "operation_call" or set(wrapper) != {"operation_id", "arguments"}:
+            raise AssertionError("unexpected fake transport envelope")
+        operation_id, arguments = wrapper["operation_id"], wrapper["arguments"]
+        self.calls.append((operation_id, copy.deepcopy(arguments)))
+        if operation_id in {"artifact.register", "model.load", "job.status"}:
+            self.assert_unbound_owner_context(execution)
+        else:
+            self.assert_owner_context(execution)
+
+        if operation_id == "artifact.register":
+            if (arguments["project_id"] != _session_context()["project_id"]
+                    or arguments["path"] != _source_relative_path()
+                    or arguments["role"] != "saved_model"
+                    or arguments["classification"] != "project_local"
+                    or arguments["artifact_type"] != "application/vnd.comsol.mph"
+                    or arguments["format_version"] != "comsol-mph-savecopy/1"):
+                raise AssertionError("artifact.register source receipt request drifted")
+            identity = runtime.entry.verify_saved_mph_copy(str(_saved_copy()))
+            request_id = execution["request_id"]
+            operation_id_value = "fixture-artifact-register-operation"
+            data = {
+                "artifact_id": identity["sha256"], "sha256": identity["sha256"],
+                "path": f"g2_artifacts/registered/{identity['sha256']}.mph",
+                "size": identity["bytes"], "role": "saved_model",
+                "classification": "project_local",
+                "artifact_type": "application/vnd.comsol.mph",
+                "format_version": "comsol-mph-savecopy/1",
+                "provenance": {
+                    "source_project_relative_path": arguments["path"],
+                    "request_id": request_id,
+                    "registering_operation_id": operation_id_value,
+                    "source_sha256": identity["sha256"],
+                },
+                "reused": False, "host_scope": "local_loopback_engine_and_current_project",
+            }
+            response = {
+                "success": True,
+                "execution": {
+                    "project_id": _session_context()["project_id"],
+                    "request_id": request_id, "idempotency_key": execution["idempotency_key"],
+                    "operation_id": operation_id_value,
+                    "job_id": "fixture-artifact-register-job", "request_hash": "a" * 64,
+                },
+                "data": data,
+            }
+            return self._record_owner_job(operation_id, arguments, execution, response)
+
+        if operation_id == "model.load":
+            identity = runtime.entry.verify_saved_mph_copy(str(_saved_copy()))
+            if (arguments != {"artifact_id": identity["sha256"],
+                              "path_policy": {"mode": "registered_artifact"}}):
+                raise AssertionError("model.load did not use the fresh registered saved-MPH identity")
+            context = _context()
+            model_ref = copy.deepcopy(context["model_ref"])
+            revision = context["expected_revision"]
+            data = {
+                "status": "LOADED", "ownership": "mcp_owned",
+                "project_id": context["project_id"], "model_tag": model_ref["model_tag"],
+                "model_ref": model_ref, "artifact_id": identity["sha256"],
+                "sha256": identity["sha256"], "size_bytes": identity["bytes"],
+            }
+            response = {
+                "success": True,
+                "execution": {
+                    "project_id": context["project_id"],
+                    "session_id": context["model_ref"]["session_id"],
+                    "model_ref": model_ref, "revision": revision,
+                    "model_ownership": "mcp_owned", "dirty": False,
+                    "request_id": execution["request_id"],
+                    "idempotency_key": execution["idempotency_key"],
+                    "operation_id": "fixture-model-load-operation",
+                    "job_id": "fixture-model-load-job", "request_hash": "b" * 64,
+                },
+                "data": data,
+            }
+            if self.owner_load_mutation == "artifact_sha":
+                response["data"]["sha256"] = "0" * 64
+            elif self.owner_load_mutation == "project":
+                response["execution"]["project_id"] = "foreign-project"
+                response["data"]["project_id"] = "foreign-project"
+            elif self.owner_load_mutation == "model_ref_execution":
+                response["execution"]["model_ref"]["model_tag"] = "other-tag"
+            elif self.owner_load_mutation == "model_ref_data":
+                response["data"]["model_ref"]["model_tag"] = "other-tag"
+            elif self.owner_load_mutation == "revision":
+                response["execution"]["revision"] = revision + 1
+            elif self.owner_load_mutation == "ownership":
+                response["execution"]["model_ownership"] = "user_owned"
+                response["data"]["ownership"] = "user_owned"
+            return self._record_owner_job(operation_id, arguments, execution, response)
+
+        if operation_id == "job.status":
+            if set(arguments) != {"job_id"} or arguments["job_id"] not in self.owner_jobs:
+                raise AssertionError("job.status did not query the exact preceding owner job")
+            job = copy.deepcopy(self.owner_jobs[arguments["job_id"]])
+            if self.owner_status_mutation == "missing_status":
+                job.pop("status", None)
+                job["operation"].pop("status", None)
+            elif self.owner_status_mutation == "failed_status":
+                job["status"] = "FAILED"
+                job["operation"]["status"] = "FAILED"
+            elif self.owner_status_mutation == "foreign_project":
+                job["metadata"]["execution"]["project_id"] = "foreign-project"
+                job["operation"]["metadata"]["execution"]["project_id"] = "foreign-project"
+            elif self.owner_status_mutation == "foreign_request":
+                job["operation"]["request_id"] = "other-request"
+            elif self.owner_status_mutation == "changed_result":
+                job["result"]["data"]["sha256"] = "0" * 64
+                job["operation"]["result"]["data"]["sha256"] = "0" * 64
+            if self.owner_status_mutation == "foreign_read_project":
+                job["metadata"]["execution"]["project_id"] = "foreign-project"
+            elif self.owner_status_mutation == "foreign_read_request":
+                job["metadata"]["execution"]["request_id"] = "other-status-request"
+            # This mirrors ControlDaemon._control_read(job_status): the cached
+            # producer returns the stored snapshot in {success,data}, without
+            # creating a second execution envelope for the status read.
+            return {"success": True, "data": job}
+
+        if operation_id in {"node.children", "node.inspect", "node.property_schema", "node.property_get"}:
+            return self._public(self._recorded_graph_response(operation_id, arguments))
+        if operation_id == "model.inspect":
+            return self._public({"model_identity": _context()["model_ref"],
+                                 "revision": _context()["expected_revision"],
+                                 "dirty": False, "comsol_version": "6.4.0.293",
+                                 "detail": "summary"})
+        if operation_id == "runtime.capabilities":
+            if arguments != {"refresh": False}:
+                raise AssertionError("runtime.capabilities must be a no-refresh read")
+            worker_id = "12345678-1234-4234-8234-123456789abc"
+            return self._public({
+                "worker": {"available": True, "connected": True,
+                           "instance_id": worker_id, "generation": 19,
+                           "source": "PersistentJavaWorker.runtime_metadata()", "error": None},
+                "runtime_identity": {"instance_id": worker_id, "generation": 19,
+                                     "connected": True, "source": "PersistentJavaWorker.runtime_metadata()",
+                                     "error": None, "runtime_id": "runtime-" + worker_id,
+                                     "runtime_id_source": "PersistentJavaWorker.runtime_metadata().instance_id",
+                                     "revision_dependency": {"required": False,
+                                         "reason": "a runtime capability query is not bound to a model revision"},
+                                     "bound_model_required": False},
+                "engine": {"comsol_version": "6.4.0.293",
+                           "source": "ModelUtil.getComsolVersion()",
+                           "channel": "worker", "worker_generation": 19},
+            })
+        if operation_id == "geometry.inspect":
+            return self._public({
+                "path": arguments["path"], "kind": "geom",
+                "geometry_state": {"dimension": self.geometry_dimension, "length_unit": "um"},
+            })
+        if operation_id == "dataset.list":
+            datasets = [
+                {"tag": f"dset{index}", "type_id": "Solution", "solution": f"sol{index}"}
+                for index in (1, 2, 3)
+            ]
+            return self._public({"datasets": datasets, "count": len(datasets), "read_errors": []})
+        if operation_id == "dataset.solution_indices":
+            tag = arguments["path"]
+            index = int(tag.removeprefix("dset"))
+            return self._public({
+                "dataset": tag, "solution": f"sol{index}",
+                "binding_complete": True, "solution_count": 1,
+            })
+        if operation_id == "selection.list":
+            rows = [
+                {"tag": tag, "geometry": "geom1", "entity_dimension": 1,
+                 "dimension": 1, "entities": entities, "is_inheriting": False}
+                for tag, entities in (("selInputPort", [17]), ("selReceiverX8", [24]))
+            ]
+            return self._public({"selections": rows, "count": len(rows)})
+        if operation_id == "selection.inspect":
+            tag = arguments["tag"]
+            entities = [17] if tag == "selInputPort" else [24]
+            return self._public({
+                "tag": tag, "component": "comp1", "entity_dimension": 1,
+                "dimension": 1, "entities": entities,
+                "state": {"geometry": "geom1", "entities": entities,
+                          "is_inheriting": False, "named": tag},
+            })
+        if operation_id == "material.list":
+            if arguments != {"component": "comp1"}:
+                raise AssertionError("material inventory request drifted")
+            return self._public(copy.deepcopy(self.material_inventory))
+        if operation_id == "material.inspect":
+            tag = arguments["path"]["segments"][1]["tag"]
+            inspection = next(row for row in self.material_inspections if row["tag"] == tag)
+            return self._public(copy.deepcopy(inspection))
+        if operation_id == "selection.adjacency":
+            selection_tag = arguments["selection"]["tag"]
+            entity = 17 if selection_tag == "selInputPort" else 24
+            domain = 1 if not self.two_materials or selection_tag == "selInputPort" else 2
+            return self._public({
+                "entity_dimension": 1, "target_dimension": self.adjacency_target_dimension,
+                "per_entity_truncated": False, "source_entities": [entity],
+                "per_entity": [{"entity": entity, "adjacent": [domain]}],
+                "adjacent_entities": [domain],
+            })
+        if operation_id == "parameter.get":
+            if self.parameter_payload is None:
+                raise AssertionError("plain material fixture must not request fabricated parameters")
+            if (arguments.get("names") != ["n_clad", "n_core"]
+                    or arguments.get("evaluate") is not True):
+                raise AssertionError("global material parameter query was not exact and bounded")
+            return self._public(copy.deepcopy(self.parameter_payload))
+        if operation_id == "result.at_points":
+            if self.plan is None:
+                raise AssertionError("full-entry numeric fixture requires the unpatched metadata plan")
+            slot = next(row for row in self.plan["point_read_slots"]
+                        if row["request_arguments"] == arguments
+                        and row not in self.point_rows)
+            count = slot["sample_count"]
+            prefix, port = slot["physics_identifier_observed"], slot["port_name_observed"]
+            entries = {name: (0.0, 0.0) for name in slot["expressions"]}
+            entries[f"down({prefix}.Ey)"] = (2.0, 0.0)
+            entries[f"down({prefix}.Hz)"] = (1.0, 0.0)
+            entries[f"{prefix}.Emodey_{port}"] = (2.0, 0.0)
+            entries[f"{prefix}.Hmodez_{port}"] = (-1.0, 0.0)
+            entries[f"{prefix}.nx"] = (-1.0, 0.0)
+            values = [
+                [[[{"real": entries[name][0], "imag": entries[name][1]}
+                   for _ in range(count)]]]
+                for name in arguments["spec"]["expressions"]
+            ]
+            points = arguments["points"]
+            data = {
+                "expressions": arguments["spec"]["expressions"],
+                "dataset": slot["dataset_tag_observed"],
+                "solution": slot["solution_tag_observed"],
+                "complex_mode": "preserve", "is_complex": True,
+                "expression_units": dict(zip(slot["expressions"], slot["requested_units"])),
+                "coordinate_readback": {
+                    "status": "VERIFIED", "unit": "um",
+                    "coordinates": [[p["x"] for p in points], [p["y"] for p in points]],
+                },
+                "field_array": {
+                    "axes": ["expression", "outer", "inner", "point"],
+                    "shape": [len(slot["expressions"]), 1, 1, count],
+                    "is_complex": True, "values": values,
+                },
+                "values": values,
+                "feature_readback": {
+                    "data": slot["dataset_tag_observed"], "data_status": "VERIFIED",
+                    "source": "NumericalFeature.getString('data') after set('data')",
+                },
+                "result_budget": {"status": "PASS", "publish_allowed": True},
+                "cleanup": {"created": True, "removed": True, "verified_removed": True,
+                            "cleanup_failed": False, "error": None},
+                "status": {"ok": True, "engine_error": None, "cleanup_failed": False,
+                           "verification_status": "PASSED"},
+                "verification_status": "PASSED",
+            }
+            self.point_rows.append(slot)
+            return self._public(data)
+        if operation_id == "result.evaluate":
+            if self.plan is None:
+                raise AssertionError("full-entry numeric fixture requires the unpatched metadata plan")
+            slot = next(row for row in self.plan["native_integral_slots"]
+                        if row["request_arguments"] == arguments
+                        and row not in self.integral_rows)
+            values = [[[[value]]] for value in (16e-6, -16e-6, -16e-6, 16e-6)]
+            data = {
+                "aggregate": "integral", "complex_mode": "real",
+                "dataset": slot["dataset_tag_observed"], "solution": slot["solution_tag_observed"],
+                "expressions": slot["expressions"],
+                "expression_units": dict(zip(slot["expressions"], slot["requested_units"])),
+                "status": {"ok": True, "cleanup_failed": False},
+                "cleanup": {"created": True, "removed": True,
+                            "verified_removed": True, "cleanup_failed": False, "children": []},
+                "field_array": {"axes": ["expression", "outer", "inner", "point"],
+                                "shape": [4, 1, 1, 1], "is_complex": False,
+                                "values": values},
+                "values": values,
+            }
+            self.integral_rows.append(slot)
+            return self._public(data)
+        raise AssertionError(f"unexpected operation in full-entry fake transport: {operation_id}")
+
+    def _record_owner_job(self, operation_id, arguments, execution, response):
+        job_id = response["execution"]["job_id"]
+        metadata = {"operation": "operation_call",
+                    "arguments": {"operation_id": operation_id,
+                                  "arguments": copy.deepcopy(arguments)},
+                    "execution": copy.deepcopy(execution)}
+        operation_record = {
+            "operation_id": response["execution"]["operation_id"],
+            "request_id": execution["request_id"],
+            "idempotency_key": execution["idempotency_key"],
+            "request_hash": response["execution"]["request_hash"],
+            "operation": "operation_call", "status": "SUCCEEDED",
+            "finished_at": "2026-10-19T00:00:00Z",
+            "metadata": copy.deepcopy(metadata), "result": copy.deepcopy(response),
+        }
+        job_metadata = copy.deepcopy(metadata)
+        # ControlDaemon persists request identity in both records and merges
+        # queue/finish observations into the job-only metadata copy.
+        job_metadata.update({"queue_wait_s": 0.002, "engine_started_at": 1792368000.0,
+                             "finished_observed_at": 1792368001.0})
+        self.owner_jobs[job_id] = {
+            "job_id": job_id, "operation_id": operation_record["operation_id"],
+            "status": "SUCCEEDED", "finished_at": "2026-10-19T00:00:00Z",
+            "metadata": job_metadata, "operation": operation_record,
+            "result": copy.deepcopy(response),
+        }
+        return response
+
+    @staticmethod
+    def assert_owner_context(execution):
+        if (execution["project_id"] != _context()["project_id"]
+                or execution["model_ref"] != _context()["model_ref"]
+                or execution["session_id"] != _context()["model_ref"]["session_id"]
+                or execution["execution_timeout_s"] is not None):
+            raise AssertionError("full-entry fixture context changed")
+        forbidden = {"approval", "approval_id", "once", "once_token", "token"}
+        if set(execution) & forbidden:
+            raise AssertionError("authority field reached inert fixture transport")
+
+    @staticmethod
+    def assert_unbound_owner_context(execution):
+        if (execution.get("project_id") != _session_context()["project_id"]
+                or execution.get("session_id") != _session_context()["session_id"]
+                or execution.get("model_ref") is not None
+                or execution.get("expected_revision") is not None
+                or execution.get("execution_timeout_s") is not None):
+            raise AssertionError("fresh artifact registration/model.load used a stale bound context")
+        forbidden = {"approval", "approval_id", "once", "once_token", "token"}
+        if set(execution) & forbidden:
+            raise AssertionError("authority field reached inert fixture transport")
+
+
+def _context():
+    return {
+        "project_id": "offline-project-r5",
+        "model_ref": {
+            "schema_version": 1,
+            "session_id": "offline-session-r5",
+            "server_instance_id": "offline-server-r5",
+            "model_tag": "savedcopy-r5",
+            "generation": 9,
+        },
+        "expected_revision": 0,
+    }
+
+
+def _session_context():
+    return {"project_id": _context()["project_id"],
+            "session_id": _context()["model_ref"]["session_id"]}
+
+
+def _saved_copy():
+    return ROOT / "inputs" / "w23_coarse-phase0_provisional.mph"
+
+
+def _source_relative_path():
+    # Full-entry fixtures use the immutable MPH already present under the
+    # candidate root.  The actual owned-entry path is separately exercised
+    # through _copy_pinned_mph_to_project_input and the real ArtifactStore
+    # route below; this helper must name a file that actually exists.
+    return "inputs/w23_coarse-phase0_provisional.mph"
+
+
+def _source_projection_sha256():
+    raw = (ROOT / "evidence" / "SOURCE_PROJECTION_R6.json").read_bytes()
+    import hashlib
+    return hashlib.sha256(raw).hexdigest()
+
+
+class _FakeDaemon:
+    def __init__(self, response):
+        self.response = response
+        self.requests = []
+
+    def dispatch(self, endpoint, payload, timeout):
+        self.requests.append((endpoint, payload, timeout))
+        self.assert_contract(payload)
+        return self.response
+
+    @staticmethod
+    def assert_contract(payload):
+        assert payload["operation"] == "operation_call"
+        assert payload["arguments"] == {
+            "operation_id": "model.inspect",
+            "arguments": {},
+        }
+        execution = payload["execution"]
+        assert execution["project_id"] == _context()["project_id"]
+        assert execution["session_id"] == _context()["model_ref"]["session_id"]
+        assert execution["model_ref"] == _context()["model_ref"]
+        assert execution["expected_revision"] == _context()["expected_revision"]
+        assert execution["rpc_timeout_s"] == 30.0
+        assert execution["execution_timeout_s"] is None
+        assert execution["queue_timeout_s"] == 60.0
+        assert execution["request_id"].startswith("w23-zero-r6-req-")
+        assert execution["idempotency_key"].startswith("w23-zero-r6-idem-")
+        forbidden = {"approval", "approval_id", "once", "once_token", "token"}
+        assert not (set(execution) & forbidden)
+
+
+class _FixtureOperationStoreTransport:
+    """Synthetic OperationStore rows for software-only public-contract tests."""
+
+    def __init__(self, dispatcher):
+        self.dispatcher = dispatcher
+        self.records = {}
+        self.calls = []
+        self.next_id = 0
+        self.owner_identity = {
+            "project_id": _context()["project_id"],
+            "session_id": _context()["model_ref"]["session_id"],
+            "server_pid": 20001, "worker_pid": 20002,
+            "worker_instance_id": "12345678-1234-4234-8234-123456789abc",
+            "worker_epoch": 19,
+        }
+        self.gate = _FixtureOwnedGate(self.owner_identity)
+
+    @staticmethod
+    def _sha(value):
+        import hashlib
+        return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"),
+                                  ensure_ascii=False, allow_nan=False).encode()).hexdigest()
+
+    def _record(self, response, operation, arguments, execution):
+        response = copy.deepcopy(response)
+        response_execution = response.setdefault("execution", {})
+        if not isinstance(response_execution, dict):
+            raise AssertionError("fixture public response execution must be an object")
+        response_execution.pop("status", None)
+        self.next_id += 1
+        operation_id = f"fixture-public-operation-{self.next_id}"
+        job_id = f"fixture-public-job-{self.next_id}"
+        request = {"operation": "operation_call",
+                   "arguments": {"operation_id": operation, "arguments": copy.deepcopy(arguments)},
+                   "execution": copy.deepcopy(execution)}
+        request_hash = self._sha({"operation": operation, "arguments": arguments,
+                                  "model_ref": execution.get("model_ref"),
+                                  "expected_revision": execution.get("expected_revision"),
+                                  "request": execution.get("request_id")})
+        response_execution.update({
+            "project_id": execution["project_id"], "session_id": execution["session_id"],
+            "request_id": execution["request_id"],
+            "idempotency_key": execution["idempotency_key"],
+            "model_ref": execution.get("model_ref"),
+            "revision": execution.get("expected_revision"),
+            "operation_id": operation_id, "job_id": job_id,
+            "request_hash": request_hash,
+        })
+        metadata = {"operation": "operation_call", "arguments": copy.deepcopy(request["arguments"]),
+                    "execution": copy.deepcopy(execution)}
+        operation_row = {
+            "operation_id": operation_id, "request_id": execution["request_id"],
+            "idempotency_key": execution["idempotency_key"], "request_hash": request_hash,
+            "operation": "operation_call", "status": "SUCCEEDED",
+            "finished_at": "2026-10-19T00:00:00Z", "metadata": metadata,
+            "result": copy.deepcopy(response),
+        }
+        job_metadata = {**metadata, "queue_wait_s": 0.001,
+                        "engine_started_at": 1792368000.0,
+                        "finished_observed_at": 1792368001.0}
+        job_row = {
+            "job_id": job_id, "operation_id": operation_id, "status": "SUCCEEDED",
+            "finished_at": "2026-10-19T00:00:00Z", "metadata": job_metadata,
+            "operation": copy.deepcopy(operation_row), "result": copy.deepcopy(response),
+        }
+        self.records[(operation_id, job_id)] = {
+            "request": request, "operation": operation_row, "job": job_row,
+            "owner_identity": dict(self.owner_identity),
+        }
+        return response
+
+    def __call__(self, operation, arguments, execution):
+        self.calls.append((operation, copy.deepcopy(arguments), copy.deepcopy(execution)))
+        response = self.dispatcher(operation, arguments, execution)
+        if (isinstance(response, dict) and response.get("success") is True
+                and arguments.get("operation_id") not in {
+                    "artifact.register", "model.load", "job.status"}):
+            return self._record(response, arguments["operation_id"],
+                                arguments["arguments"], execution)
+        return response
+
+    def dispatch(self, operation, arguments, execution):
+        return self(operation, arguments, execution)
+
+    def read_terminal_pair(self, request, response):
+        execution = response.get("execution") if isinstance(response, dict) else None
+        if not isinstance(execution, dict):
+            return None
+        pair = self.records.get((execution.get("operation_id"), execution.get("job_id")))
+        if pair is None or pair["request"] != request:
+            return None
+        return {key: copy.deepcopy(pair[key]) for key in ("operation", "job", "owner_identity")}
+
+    def bind_direct_response(self, response, operation, arguments, execution):
+        return self._record(response, operation, arguments, execution)
+
+
+class _FixtureOwnedGate:
+    """Explicit synthetic owner identity for offline-only composition tests."""
+
+    def __init__(self, owner_identity):
+        self.owner_identity = dict(owner_identity)
+        self.project_id = self.owner_identity["project_id"]
+        self.session_id = self.owner_identity["session_id"]
+        self.live = True
+
+    def assert_live(self):
+        if not self.live:
+            raise RuntimeError("synthetic fixture owner is terminal")
+        return dict(self.owner_identity)
+
+
+def _bound_fixture_pair(response, operation, arguments=None):
+    context = _context()
+    execution = {
+        "project_id": context["project_id"],
+        "session_id": context["model_ref"]["session_id"],
+        "model_ref": context["model_ref"], "expected_revision": context["expected_revision"],
+        "rpc_timeout_s": 30.0, "execution_timeout_s": None,
+        "queue_timeout_s": 60.0,
+        "request_id": "fixture-bound-request-" + operation.replace(".", "-"),
+        "idempotency_key": "fixture-bound-idempotency-" + operation.replace(".", "-"),
+    }
+    nested_arguments = dict(arguments or {})
+    request = {"operation": "operation_call",
+               "arguments": {"operation_id": operation, "arguments": nested_arguments},
+               "execution": execution}
+    transport = _FixtureOperationStoreTransport(lambda *_args: None)
+    raw = transport.bind_direct_response(response, operation, nested_arguments, execution)
+    snapshot = transport.read_terminal_pair(request, raw)
+    proof = runtime._terminal_operation_job_proof(raw, request, snapshot, operation)
+    return raw, proof
+
+
+class _OwnerGatewayDaemon:
+    """Fake RPC endpoint behind the actual control client/gateway composition."""
+
+    def __init__(self):
+        self.fixture_dispatcher = _FullEntryFixtureDispatcher()
+        self.requests = []
+
+    def dispatch(self, endpoint, payload, timeout):
+        self.requests.append((endpoint, copy.deepcopy(payload), timeout))
+        if payload.get("operation") != "operation_call":
+            raise AssertionError("owner admission left the public operation_call route")
+        nested = payload.get("arguments")
+        if (not isinstance(nested, dict)
+                or nested.get("operation_id") not in {"artifact.register", "model.load", "job.status"}):
+            raise AssertionError("owner admission attempted an operation outside its fixed public route")
+        return self.fixture_dispatcher("operation_call", nested, payload["execution"])
+
+
+class ZeroSolveRuntimeRouteTests(unittest.TestCase):
+    def _run_through_private_transport(self, response):
+        daemon = _FakeDaemon(response)
+        endpoint = {"port": 1, "token": "offline-test-only"}
+        with tempfile.TemporaryDirectory(prefix="w23-r3-route-") as scratch:
+            journal = runtime.DurableJournal(scratch)
+            transport = _FixtureOperationStoreTransport(
+                lambda operation, arguments, execution: _mcp_gateway.dispatch(
+                    operation, arguments, execution))
+            route = runtime.PublicRoute(
+                _context(), journal, dispatcher=transport,
+                terminal_pair_reader=transport.read_terminal_pair)
+            with patch.object(_control_client, "ensure_control", return_value=endpoint), \
+                    patch.object(_control_client, "_request", side_effect=daemon.dispatch):
+                outcome = None
+                error = None
+                try:
+                    outcome = route.call_raw("model.inspect", {}, category="metadata")
+                except Exception as exc:  # asserted by each test below
+                    error = exc
+            journal.close()
+            records = [json.loads(line) for line in journal.path.read_text().splitlines()]
+            return daemon, route, outcome, error, records, transport
+
+    def test_public_gateway_control_client_daemon_positive_terminal_receipt(self):
+        response = {
+            "success": True,
+            "execution": {
+                "status": "SUCCEEDED",
+                "project_id": _context()["project_id"],
+                "session_id": _context()["model_ref"]["session_id"],
+                "model_ref": _context()["model_ref"],
+                "revision": _context()["expected_revision"],
+            },
+            "data": {"status": "INSPECTED", "observed": True},
+        }
+        daemon, route, outcome, error, records, _transport = self._run_through_private_transport(response)
+        self.assertIsNone(error)
+        self.assertTrue(outcome["success"])
+        self.assertNotIn("status", outcome["execution"])
+        self.assertEqual(outcome["execution"]["project_id"], _context()["project_id"])
+        self.assertTrue(outcome["execution"]["operation_id"].startswith("fixture-public-operation-"))
+        self.assertEqual(len(daemon.requests), 1)
+        self.assertEqual(route.total_calls, 1)
+        self.assertEqual([row["kind"] for row in records], [
+            "dispatch_intent", "dispatch_response", "terminal_operation_job_pair_proof"])
+        self.assertEqual(records[0]["retry"], "FORBIDDEN_AFTER_DISPATCH")
+        self.assertEqual(records[1]["raw_response"], outcome)
+        self.assertNotIn("status", records[1]["raw_response"]["execution"])
+        self.assertEqual(records[2]["proof"]["operation_status"], "SUCCEEDED")
+        self.assertEqual(records[2]["proof"]["job_status"], "SUCCEEDED")
+
+    def test_public_success_without_owner_pair_is_unknown_and_never_replayed(self):
+        response = {
+            "success": True,
+            "execution": {
+                "project_id": _context()["project_id"],
+                "session_id": _context()["model_ref"]["session_id"],
+                "model_ref": _context()["model_ref"],
+                "revision": _context()["expected_revision"],
+            },
+            "data": {"status": "INSPECTED", "observed": True},
+        }
+        daemon = _FakeDaemon(response)
+        endpoint = {"port": 1, "token": "offline-test-only"}
+        with tempfile.TemporaryDirectory(prefix="w23-r5-unproven-public-success-") as scratch:
+            journal = runtime.DurableJournal(scratch)
+            route = runtime.PublicRoute(_context(), journal,
+                                        dispatcher=_mcp_gateway.dispatch,
+                                        terminal_pair_reader=lambda _request, _response: None)
+            with patch.object(_control_client, "ensure_control", return_value=endpoint), \
+                    patch.object(_control_client, "_request", side_effect=daemon.dispatch):
+                with self.assertRaises(runtime.RuntimeOutcomeUnknown):
+                    route.call_raw("model.inspect", {}, category="metadata")
+            records = [json.loads(line) for line in journal.path.read_text().splitlines()]
+            journal.close()
+        self.assertEqual(len(daemon.requests), 1)
+        self.assertEqual(route.total_calls, 1)
+        self.assertEqual(records[-1]["state"], "UNKNOWN_NO_REPLAY")
+        raw_record = next(row for row in records if row["kind"] == "dispatch_response")
+        self.assertEqual(raw_record["raw_response"], response)
+
+    def test_preserved_actual_public_point_producer_omits_execution_status(self):
+        actual_path = (ROOT.parents[1] / "_state" / "t044-r13-main-actual-0b8171f9-20261019"
+                       / "preserved-runtime" / "evidence" / "16-result.at_points.json")
+        envelope = json.loads(actual_path.read_text(encoding="utf-8"))
+        raw = envelope["structuredContent"]
+        raw_before = copy.deepcopy(raw)
+        self.assertIs(raw["success"], True)
+        self.assertNotIn("status", raw["execution"])
+        self.assertTrue(raw["execution"]["operation_id"])
+        self.assertTrue(raw["execution"]["job_id"])
+        self.assertEqual(raw["data"]["status"]["ok"], True)
+        self.assertEqual(raw["data"]["cleanup"]["verified_removed"], True)
+        with self.assertRaisesRegex(entry_fixtures.entry.ObservationError,
+                                    "terminal operation/job proof"):
+            entry_fixtures.entry.validate_terminal_operation_job_pair(
+                raw, {}, expected_operation="result.at_points")
+        self.assertEqual(raw, raw_before)
+
+    def test_owned_entry_imports_exact_pinned_w25_and_w23_sources_only(self):
+        # Other repository test modules may have imported canonical comsol_mcp
+        # modules into this interpreter before this test runs. The production
+        # bridge must reject that mixed namespace; prove the positive path in a
+        # clean interpreter, matching Main's fresh projected runtime process.
+        code = "\n".join((
+            "import importlib.util, json, pathlib, sys",
+            f"root = pathlib.Path({str(ROOT)!r})",
+            "sys.path[:0] = [str(root / 'tests'), str(root), str(root / 'source')]",
+            "spec = importlib.util.spec_from_file_location('test_zero_solve_runtime', root / 'tests' / 'test_zero_solve_runtime.py')",
+            "module = importlib.util.module_from_spec(spec)",
+            "sys.modules[spec.name] = module",
+            "spec.loader.exec_module(module)",
+            "admission, runner, daemon, store = module.owned_runtime._w25_modules()",
+            "try:",
+            " module.owned_runtime.W23OwnedRuntimeBridge({'project_id': 'caller-context'})",
+            "except module.owned_runtime.OwnedRuntimeEntryError as exc:",
+            " invalid_admission_error = str(exc)",
+            "else:",
+            " raise AssertionError('caller context unexpectedly created an owned bridge')",
+            "print(json.dumps({'admission': admission.__file__, 'runner': runner.__file__,",
+            " 'daemon': sys.modules['comsol_mcp._control_daemon'].__file__,",
+            " 'store': sys.modules['comsol_mcp._operation_store'].__file__,",
+            " 'daemon_type': daemon.__module__, 'store_type': store.__module__,",
+            " 'invalid_admission_error': invalid_admission_error}))",
+        ))
+        completed = subprocess.run([sys.executable, "-S", "-c", code], cwd=ROOT,
+                                   text=True, capture_output=True, timeout=20, check=False)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        imported = json.loads(completed.stdout.strip().splitlines()[-1])
+        expected_w25 = ROOT.parents[1] / "_state" / owned_runtime._W25_ROOT_NAME / "probe"
+        self.assertEqual(Path(imported["admission"]).resolve(), (expected_w25 / "admission.py").resolve())
+        self.assertEqual(Path(imported["runner"]).resolve(), (expected_w25 / "runner.py").resolve())
+        self.assertEqual(Path(imported["daemon"]).resolve(),
+                         (SOURCE / "comsol_mcp" / "_control_daemon.py").resolve())
+        self.assertEqual(Path(imported["store"]).resolve(),
+                         (SOURCE / "comsol_mcp" / "_operation_store.py").resolve())
+        self.assertEqual(imported["daemon_type"], "comsol_mcp._control_daemon")
+        self.assertEqual(imported["store_type"], "comsol_mcp._operation_store")
+        self.assertIn("exact pinned W25 ProbeSessionAdmission", imported["invalid_admission_error"])
+
+    def test_pinned_saved_mph_copy_is_created_once_at_exact_nonhidden_project_input(self):
+        run_id = "1234567890abcdef1234567890abcdef"
+        with tempfile.TemporaryDirectory(prefix="w23-r5-owned-copy-") as scratch:
+            base = Path(scratch).resolve() / "managed-root"
+            base.mkdir(mode=0o700)
+            owner_root = base / f".w25-probe-{run_id}"
+            owner_root.mkdir(mode=0o700)
+            workspace = owner_root / "workspace"
+            workspace.mkdir(mode=0o700)
+            before = (ROOT / "inputs" / "w23_coarse-phase0_provisional.mph").stat()
+            result = owned_runtime._copy_pinned_mph_to_project_input(
+                project_root=base, workspace=workspace, run_id=run_id)
+            after = (ROOT / "inputs" / "w23_coarse-phase0_provisional.mph").stat()
+            self.assertEqual(result["source_identity"]["sha256"],
+                             "cba0c1d404003c4e60a20b04316cb1456c38cc2b45596dc2dc29bbed62674a8c")
+            self.assertEqual(result["destination_identity"]["sha256"], result["source_identity"]["sha256"])
+            self.assertEqual(result["destination_identity"]["bytes"], 13_795_478)
+            self.assertEqual(result["destination_identity"]["mode"], "0o400")
+            self.assertEqual(result["source_project_relative_path"],
+                             f"w23-input-{run_id}/w23_coarse-phase0_provisional.mph")
+            copied = base / result["source_project_relative_path"]
+            with copied.open("rb") as source_stream, \
+                    (ROOT / "inputs" / "w23_coarse-phase0_provisional.mph").open("rb") as input_stream:
+                self.assertEqual(source_stream.read(32), input_stream.read(32))
+            self.assertEqual(stat.S_IMODE(copied.stat().st_mode), 0o400)
+            self.assertEqual(stat.S_IMODE(copied.parent.stat().st_mode), 0o700)
+            self.assertEqual(list(workspace.iterdir()), [])
+            self.assertEqual((before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns),
+                             (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns))
+            with self.assertRaisesRegex(owned_runtime.OwnedRuntimeEntryError, "exact admitted W25 workspace"):
+                owned_runtime._copy_pinned_mph_to_project_input(
+                    project_root=base, workspace=base, run_id=run_id)
+            with self.assertRaises(owned_runtime.OwnedRuntimeEntryError):
+                owned_runtime._copy_pinned_mph_to_project_input(
+                    project_root=base, workspace=workspace, run_id=run_id)
+            self.assertEqual(copied.stat().st_size, 13_795_478)
+
+    def test_candidate_cli_is_source_only_and_never_dispatches(self):
+        manifest = ROOT / "evidence" / "SOURCE_PROJECTION_R6.json"
+        projection_sha = hashlib.sha256(manifest.read_bytes()).hexdigest()
+        launcher = ROOT / "probe" / "launch_w23_zero_solve_r6.py"
+        completed = subprocess.run(
+            [sys.executable, "-S", str(launcher), "--source-projection-sha256", projection_sha],
+            cwd=ROOT, text=True, capture_output=True, timeout=20, check=False)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        result = json.loads(completed.stdout)
+        self.assertEqual(result["status"], "SOURCE_ONLY_PREPARATION_PASS_NO_DISPATCH")
+        self.assertEqual(result["owner_admission"], "NOT_CREATED")
+        self.assertEqual(result["public_calls"], 0)
+        self.assertFalse(result["approval_created"])
+        self.assertFalse(result["once_created"])
+        self.assertEqual(result["COMSOL"], "NOT_RUN")
+
+    def test_unowned_caller_context_cannot_reach_dispatch(self):
+        calls = []
+        with tempfile.TemporaryDirectory(prefix="w23-r5-unowned-entry-") as scratch:
+            with self.assertRaisesRegex(runtime.RuntimeEntryError,
+                                        "fresh in-process W25 owned-admission entry"):
+                runtime.run_zero_solve_entry(
+                    session_context=_session_context(),
+                    source_projection_sha256=_source_projection_sha256(),
+                    project_root=str(ROOT),
+                    source_project_relative_path=_source_relative_path(),
+                    saved_mph_copy=str(_saved_copy()), evidence_parent=scratch,
+                    execute_numeric=True,
+                    dispatcher=lambda *_args: calls.append("dispatched"),
+                )
+        self.assertEqual(calls, [])
+
+    def test_unknown_from_real_control_client_composition_is_persisted_and_never_replayed(self):
+        response = {
+            "success": False,
+            "error": {"code": "EXECUTION_STATE_UNKNOWN", "safe_retry": False},
+            "execution": {"request_id": "offline-unknown"},
+            "data": {"status": "UNKNOWN"},
+        }
+        daemon, route, outcome, error, records, _transport = self._run_through_private_transport(response)
+        self.assertIsNone(outcome)
+        self.assertIsInstance(error, runtime.RuntimeOutcomeUnknown)
+        self.assertEqual(len(daemon.requests), 1)
+        self.assertEqual(route.total_calls, 1)
+        self.assertEqual([row["kind"] for row in records],
+                         ["dispatch_intent", "dispatch_response"])
+        self.assertEqual(records[1]["raw_response"], response)
+
+    def test_fresh_registered_owner_uses_public_gateway_and_control_client_once(self):
+        endpoint = {"port": 1, "token": "offline-test-only"}
+        daemon = _OwnerGatewayDaemon()
+        with tempfile.TemporaryDirectory(prefix="w23-r5-owner-gateway-") as scratch:
+            journal = runtime.DurableJournal(scratch)
+            route = runtime.FreshOwnerRoute(_session_context(), journal,
+                                            dispatcher=_mcp_gateway.dispatch)
+            source_identity = runtime._verify_registered_mph_source(
+                str(_saved_copy()), str(ROOT), _source_relative_path())
+            with patch.object(_control_client, "ensure_control", return_value=endpoint), \
+                    patch.object(_control_client, "_request", side_effect=daemon.dispatch):
+                loaded_context, binding = runtime._admit_registered_mph(
+                    route, _session_context(), source_identity, _source_projection_sha256())
+            journal.close()
+            records = [json.loads(line) for line in journal.path.read_text().splitlines()]
+
+        self.assertEqual(len(daemon.requests), 4)
+        self.assertEqual([row[1]["arguments"]["operation_id"] for row in daemon.requests],
+                         ["artifact.register", "job.status", "model.load", "job.status"])
+        self.assertEqual([row["kind"] for row in records], [
+            "dispatch_intent", "dispatch_response", "dispatch_intent", "dispatch_response",
+            "dispatch_intent", "dispatch_response", "dispatch_intent", "dispatch_response",
+        ])
+        self.assertEqual(loaded_context["model_ref"],
+                         binding["model_load_response"]["execution"]["model_ref"])
+        self.assertNotIn("status", binding["artifact_register_response"]["execution"])
+        self.assertNotIn("status", binding["model_load_response"]["execution"])
+        self.assertEqual(binding["model_project_binding"]["project_id"],
+                         _session_context()["project_id"])
+        self.assertEqual(route.owner_calls[0]["response"]["data"]["sha256"],
+                         runtime.entry.SAVED_MPH_SHA256)
+        self.assertEqual(route.terminal_status_reads[0]["response"]["data"]["status"],
+                         "SUCCEEDED")
+        self.assertEqual(binding["terminal_owner_status"], {
+            "artifact.register": "SUCCEEDED", "model.load": "SUCCEEDED",
+            "source": "PUBLIC_JOB_STATUS_RAW_OPERATION_STORE_READBACK",
+        })
+
+    def test_runtime_capability_pin_uses_actual_worker_producer_fields_and_fails_closed(self):
+        dispatcher = _FullEntryFixtureDispatcher()
+        execution = {
+            "project_id": _context()["project_id"],
+            "session_id": _context()["model_ref"]["session_id"],
+            "model_ref": _context()["model_ref"],
+            "expected_revision": _context()["expected_revision"],
+            "request_id": "fixture-capabilities-request",
+            "idempotency_key": "fixture-capabilities-idempotency",
+            "execution_timeout_s": None,
+        }
+        response = dispatcher("operation_call", {
+            "operation_id": "runtime.capabilities", "arguments": {"refresh": False},
+        }, execution)
+        response, pair_proof = _bound_fixture_pair(
+            response, "runtime.capabilities", {"refresh": False})
+        self.assertNotIn("status", response["execution"])
+        pin = runtime._runtime_identity_pin(response, pair_proof)
+        self.assertEqual(pin["worker_instance_id"], "12345678-1234-4234-8234-123456789abc")
+        self.assertEqual(pin["connection_epoch"], 19)
+        self.assertEqual(pin["comsol_version"], "6.4.0.293")
+        self.assertNotIn("server", pin)
+
+        failures = {}
+        bad = copy.deepcopy(response)
+        del bad["data"]["worker"]["source"]
+        failures["worker_source_missing"] = bad
+        bad = copy.deepcopy(response)
+        bad["data"]["runtime_identity"]["generation"] = 20
+        failures["epoch_split"] = bad
+        bad = copy.deepcopy(response)
+        bad["data"]["runtime_identity"]["runtime_id_source"] = "caller-label"
+        failures["runtime_id_source_changed"] = bad
+        bad = copy.deepcopy(response)
+        bad["data"]["engine"]["comsol_version"] = "6.3.0.290"
+        failures["comsol_version_changed"] = bad
+        bad = copy.deepcopy(response)
+        bad["data"]["engine"]["worker_generation"] = 18
+        failures["engine_worker_epoch_changed"] = bad
+        for label, candidate in failures.items():
+            with self.subTest(label=label), self.assertRaises(runtime.RuntimeEntryError):
+                bound, proof = _bound_fixture_pair(candidate, "runtime.capabilities", {"refresh": False})
+                runtime._runtime_identity_pin(bound, proof)
+
+    def test_fixed_metadata_ceiling_refuses_before_public_dispatch(self):
+        daemon = _FakeDaemon({})
+        endpoint = {"port": 1, "token": "offline-test-only"}
+        with tempfile.TemporaryDirectory(prefix="w23-r3-ceiling-") as scratch:
+            journal = runtime.DurableJournal(scratch)
+            route = runtime.PublicRoute(_context(), journal,
+                                        dispatcher=_mcp_gateway.dispatch)
+            route.metadata_calls = runtime.entry.MAX_METADATA_PUBLIC_CALLS
+            with patch.object(_control_client, "ensure_control", return_value=endpoint), \
+                    patch.object(_control_client, "_request", side_effect=daemon.dispatch):
+                with self.assertRaisesRegex(runtime.RuntimeEntryError, "ceiling reached"):
+                    route.call_raw("model.inspect", {}, category="metadata")
+            journal.close()
+            self.assertEqual(daemon.requests, [])
+            self.assertEqual(route.total_calls, 0)
+            self.assertEqual(journal.record_count, 0)
+
+    def test_numeric_route_reserves_all_selection_and_read_slots_before_dispatch(self):
+        observation = entry_fixtures._observation()
+        plan = entry_fixtures.entry.build_read_plan(observation)
+        saved_copy = _saved_copy()
+        original_route = runtime.PublicRoute
+        for metadata_count, total_count in ((117, 121), (115, 119)):
+            with self.subTest(metadata_count=metadata_count, total_count=total_count), \
+                    tempfile.TemporaryDirectory(prefix="w23-r5-reserve-budget-") as scratch:
+                dispatcher = _FullEntryFixtureDispatcher(plan=plan)
+                transport = _FixtureOperationStoreTransport(dispatcher)
+                owner_runtime_response = dispatcher._public({
+                    "worker": {"available": True, "connected": True,
+                               "instance_id": "12345678-1234-4234-8234-123456789abc",
+                               "generation": 19,
+                               "source": "PersistentJavaWorker.runtime_metadata()", "error": None},
+                    "runtime_identity": {
+                        "instance_id": "12345678-1234-4234-8234-123456789abc",
+                        "generation": 19, "connected": True,
+                        "source": "PersistentJavaWorker.runtime_metadata()", "error": None,
+                        "runtime_id": "runtime-12345678-1234-4234-8234-123456789abc",
+                        "runtime_id_source": "PersistentJavaWorker.runtime_metadata().instance_id",
+                        "revision_dependency": {"required": False,
+                            "reason": "a runtime capability query is not bound to a model revision"},
+                        "bound_model_required": False,
+                    },
+                    "engine": {"comsol_version": "6.4.0.293",
+                               "source": "ModelUtil.getComsolVersion()",
+                               "channel": "worker", "worker_generation": 19},
+                })
+                owner_runtime_response, owner_runtime_pair = _bound_fixture_pair(
+                    owner_runtime_response, "runtime.capabilities", {"refresh": False})
+                observation = dict(observation)
+                observation.update({
+                    "runtime_capabilities_raw_observed": owner_runtime_response,
+                    "runtime_identity_pin": runtime._runtime_identity_pin(
+                        owner_runtime_response, owner_runtime_pair),
+                    "model_inspect_response_raw_observed": dispatcher._public({
+                        "model_identity": _context()["model_ref"],
+                        "revision": _context()["expected_revision"], "dirty": False,
+                        "comsol_version": "6.4.0.293", "detail": "summary",
+                    }),
+                })
+
+                class _NearBudgetRoute(original_route):
+                    def __init__(self, *args, **kwargs):
+                        super().__init__(*args, **kwargs)
+                        self.metadata_calls = metadata_count
+                        self.total_calls = total_count
+
+                with patch.object(runtime, "PublicRoute", _NearBudgetRoute), \
+                        patch.object(runtime, "_capture_metadata", return_value=(observation, plan, [])), \
+                        self.assertRaisesRegex(runtime.RuntimeEntryError, "no numeric dispatch"):
+                    runtime.run_zero_solve_entry(
+                        session_context=_session_context(),
+                        source_projection_sha256=_source_projection_sha256(),
+                        project_root=str(ROOT), source_project_relative_path=_source_relative_path(),
+                        saved_mph_copy=str(saved_copy), evidence_parent=scratch,
+                        execute_numeric=True, dispatcher=transport.dispatch,
+                        terminal_pair_reader=transport.read_terminal_pair,
+                        owned_gate=transport.gate,
+                    )
+                self.assertEqual([operation for operation, _ in dispatcher.calls],
+                                 ["artifact.register", "job.status", "model.load", "job.status"])
+                self.assertEqual(dispatcher.point_rows, [])
+                self.assertEqual(dispatcher.integral_rows, [])
+
+    def test_mutation_solver_and_nonintegral_evaluate_are_refused_before_transport(self):
+        daemon = _FakeDaemon({})
+        endpoint = {"port": 1, "token": "offline-test-only"}
+        with tempfile.TemporaryDirectory(prefix="w23-r3-allowlist-") as scratch:
+            journal = runtime.DurableJournal(scratch)
+            route = runtime.PublicRoute(_context(), journal,
+                                        dispatcher=_mcp_gateway.dispatch)
+            with patch.object(_control_client, "ensure_control", return_value=endpoint), \
+                    patch.object(_control_client, "_request", side_effect=daemon.dispatch):
+                for operation, category, arguments in (
+                    ("study.run", "metadata", {}),
+                    ("solver.run", "metadata", {}),
+                    ("node.property_set", "metadata", {}),
+                    ("model.save", "metadata", {}),
+                    ("code.execute_java", "metadata", {}),
+                    ("result.evaluate", "integral", {"spec": {"aggregate": "average"}}),
+                ):
+                    with self.subTest(operation=operation):
+                        with self.assertRaises(runtime.RuntimeEntryError):
+                            route.call_raw(operation, arguments, category=category)
+            journal.close()
+            self.assertEqual(daemon.requests, [])
+            self.assertEqual(route.total_calls, 0)
+            self.assertEqual(journal.record_count, 0)
+
+    def test_point_consumer_requires_producer_status_cleanup_readback_and_budget(self):
+        observation = entry_fixtures._observation()
+        slot = runtime.entry.build_read_plan(observation)["point_read_slots"][0]
+        count = slot["sample_count"]
+        expressions = slot["expressions"]
+        values = [[[[{"real": 1.0, "imag": -0.25} for _ in range(count)]]]
+                  for _ in expressions]
+        points = slot["request_arguments"]["points"]
+        data = {
+            "expressions": list(expressions),
+            "dataset": slot["dataset_tag_observed"],
+            "solution": slot["solution_tag_observed"],
+            "complex_mode": "preserve", "is_complex": True,
+            "expression_units": dict(zip(expressions, slot["requested_units"])),
+            "coordinate_readback": {
+                "status": "VERIFIED", "unit": "um",
+                "coordinates": [[row["x"] for row in points], [row["y"] for row in points]],
+            },
+            "field_array": {
+                "axes": ["expression", "outer", "inner", "point"],
+                "shape": [len(expressions), 1, 1, count],
+                "is_complex": True, "values": values,
+            },
+            "values": values,
+            "feature_readback": {"data": slot["dataset_tag_observed"], "data_status": "VERIFIED"},
+            "result_budget": {"status": "PASS", "publish_allowed": True},
+            "cleanup": {
+                "created": True, "removed": True, "verified_removed": True,
+                "cleanup_failed": False, "error": None,
+            },
+            "status": {
+                "ok": True, "engine_error": None, "cleanup_failed": False,
+                "verification_status": "PASSED",
+            },
+            "verification_status": "PASSED",
+        }
+        selection = {
+            "component": "comp1", "geometry": "geom1", "entity_dimension": 1,
+            "dimension": 1, "tag": slot["selection"]["tag"],
+            "named": slot["selection"]["tag"], "is_inheriting": False,
+            "entities": slot["selection"]["actual_entity_ids"],
+        }
+        wrapper = {"success": True, "execution": {}, "data": data}
+        wrapper, pair_proof = _bound_fixture_pair(
+            wrapper, "result.at_points", slot["request_arguments"])
+
+        decoded, _fields = runtime._point_readback(wrapper, pair_proof, slot, selection, selection)
+        self.assertEqual(decoded["status"], "PRODUCTION_NATIVE_COMPLEX_POINT_READBACK")
+
+        failures = {}
+        broken = copy.deepcopy(wrapper)
+        broken["data"]["status"]["ok"] = False
+        failures["engine_status_false"] = broken
+        broken = copy.deepcopy(wrapper)
+        broken["data"]["status"]["cleanup_failed"] = True
+        failures["status_cleanup_failed"] = broken
+        broken = copy.deepcopy(wrapper)
+        del broken["data"]["cleanup"]
+        failures["cleanup_missing"] = broken
+        broken = copy.deepcopy(wrapper)
+        broken["data"]["cleanup"]["verified_removed"] = False
+        failures["feature_not_removed"] = broken
+        broken = copy.deepcopy(wrapper)
+        broken["data"]["feature_readback"]["data_status"] = "UNVERIFIED"
+        failures["dataset_readback_unverified"] = broken
+        broken = copy.deepcopy(wrapper)
+        broken["data"]["result_budget"]["publish_allowed"] = False
+        failures["budget_not_publishable"] = broken
+        broken = copy.deepcopy(wrapper)
+        broken["data"]["verification_status"] = "FAILED"
+        failures["verification_failed"] = broken
+        for label, candidate in failures.items():
+            with self.subTest(label=label), self.assertRaises(runtime.RuntimeEntryError):
+                bound, proof = _bound_fixture_pair(
+                    candidate, "result.at_points", slot["request_arguments"])
+                runtime._point_readback(bound, proof, slot, selection, selection)
+
+    def test_unpatched_metadata_capture_then_full_four_point_two_integral_entry(self):
+        saved_copy = _saved_copy()
+        preflight = _FullEntryFixtureDispatcher()
+        with tempfile.TemporaryDirectory(prefix="w23-r5-metadata-plan-") as scratch:
+            journal = runtime.DurableJournal(scratch)
+            preflight_transport = _FixtureOperationStoreTransport(preflight)
+            route = runtime.PublicRoute(
+                _context(), journal, dispatcher=preflight_transport,
+                terminal_pair_reader=preflight_transport.read_terminal_pair)
+            observed, plan, material_proofs = runtime._capture_metadata(route, str(saved_copy))
+            metadata_calls_before_numeric = route.metadata_calls
+            journal.close()
+
+        self.assertEqual(observed["schema"], "W23_FRESH_TYPED_METADATA_OBSERVATION_R1")
+        self.assertEqual(observed["saved_model_sha256"], runtime.entry.SAVED_MPH_SHA256)
+        self.assertEqual(observed["geometry_readback_raw_observed"]["geometry_state"]["dimension"], 2)
+        self.assertEqual(len(observed["material_inspections_raw_observed"]), 1)
+        self.assertEqual(len(material_proofs), 2)
+        self.assertEqual(metadata_calls_before_numeric, 103)
+        self.assertLessEqual(metadata_calls_before_numeric + 12, runtime.entry.MAX_METADATA_PUBLIC_CALLS)
+
+        full_dispatcher = _FullEntryFixtureDispatcher(plan=plan)
+        full_transport = _FixtureOperationStoreTransport(full_dispatcher)
+        with tempfile.TemporaryDirectory(prefix="w23-r5-full-entry-") as scratch:
+            result = runtime.run_zero_solve_entry(
+                session_context=_session_context(),
+                source_projection_sha256=_source_projection_sha256(),
+                project_root=str(ROOT), source_project_relative_path=_source_relative_path(),
+                saved_mph_copy=str(saved_copy),
+                evidence_parent=scratch, execute_numeric=True, dispatcher=full_transport.dispatch,
+                terminal_pair_reader=full_transport.read_terminal_pair,
+                owned_gate=full_transport.gate,
+            )
+            records = [json.loads(line) for line in Path(result["journal"]).read_text().splitlines()]
+
+        self.assertEqual(result["status"], "SOURCE_READS_TERMINAL_DIRECTION_NOT_PROVEN")
+        self.assertEqual((result["metadata_call_count"], result["point_calls"],
+                          result["integral_calls"], result["total_public_call_count"]),
+                         (115, 4, 2, 125))
+        self.assertEqual(result["owner_call_count"], 2)
+        self.assertEqual(result["owner_terminal_status_read_count"], 2)
+        self.assertEqual(result["owner_public_call_count"], 4)
+        self.assertEqual(len(full_dispatcher.point_rows), 4)
+        self.assertEqual(len(full_dispatcher.integral_rows), 2)
+        self.assertEqual(sum(op == "result.at_points" for op, _ in full_dispatcher.calls), 4)
+        self.assertEqual(sum(op == "result.evaluate" for op, _ in full_dispatcher.calls), 2)
+        self.assertEqual(sum(row["kind"] == "point_read_proof" for row in records), 4)
+        self.assertEqual(sum(row["kind"] == "native_integral_proof" for row in records), 2)
+        owner_rows = [row for row in records if row.get("category") == "owner"
+                      and row["kind"] == "dispatch_response"]
+        self.assertEqual([row["operation_id"] for row in owner_rows],
+                         ["artifact.register", "model.load"])
+        self.assertEqual(owner_rows[0]["raw_response"]["data"]["sha256"],
+                         runtime.entry.SAVED_MPH_SHA256)
+        self.assertEqual(owner_rows[1]["raw_response"]["data"]["model_ref"],
+                         owner_rows[1]["raw_response"]["execution"]["model_ref"])
+        terminal_rows = [row for row in records
+                         if row.get("category") == "owner_terminal_status"
+                         and row["kind"] == "dispatch_response"]
+        self.assertEqual([row["raw_response"]["data"]["status"] for row in terminal_rows],
+                         ["SUCCEEDED", "SUCCEEDED"])
+        metadata_record = next(row for row in records if row["kind"] == "fresh_metadata_plan")
+        self.assertEqual(metadata_record["fresh_owner_binding"]["status"],
+                         "PASS_FROM_THIS_RUN_RAW_PUBLIC_RECEIPTS")
+        self.assertEqual(metadata_record["fresh_owner_binding"]["runtime_identity_pin"]["comsol_version"],
+                         "6.4.0.293")
+        raw_point_rows = [row for row in records
+                          if row["kind"] == "dispatch_response"
+                          and row["operation_id"] == "result.at_points"]
+        self.assertEqual(len(raw_point_rows), 4)
+        self.assertTrue(all(row["raw_response"]["data"]["cleanup"]["verified_removed"] is True
+                            for row in raw_point_rows))
+        self.assertFalse(result["approval_created"])
+        self.assertFalse(result["once_created"])
+        self.assertEqual(result["Study.run"], 0)
+        self.assertEqual(result["solver.run"], 0)
+        self.assertNotIn("study.run", [op for op, _ in full_dispatcher.calls])
+        self.assertNotIn("solver.run", [op for op, _ in full_dispatcher.calls])
+
+    def test_fresh_owner_load_rejects_raw_identity_drift_before_metadata_dispatch(self):
+        for mutation in ("artifact_sha", "project", "model_ref_execution",
+                         "model_ref_data", "revision", "ownership"):
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory(
+                    prefix="w23-r5-owner-negative-") as scratch:
+                dispatcher = _FullEntryFixtureDispatcher()
+                dispatcher.owner_load_mutation = mutation
+                transport = _FixtureOperationStoreTransport(dispatcher)
+                with self.assertRaises((runtime.RuntimeEntryError,
+                                        runtime.RuntimeOutcomeUnknown)):
+                    runtime.run_zero_solve_entry(
+                        session_context=_session_context(),
+                        source_projection_sha256=_source_projection_sha256(),
+                        project_root=str(ROOT),
+                        source_project_relative_path=_source_relative_path(),
+                        saved_mph_copy=str(_saved_copy()), evidence_parent=scratch,
+                        execute_numeric=False, dispatcher=transport.dispatch,
+                        terminal_pair_reader=transport.read_terminal_pair,
+                        owned_gate=transport.gate,
+                    )
+                expected = ["artifact.register", "job.status", "model.load"]
+                if mutation != "project":
+                    expected.append("job.status")
+                self.assertEqual([operation for operation, _ in dispatcher.calls], expected)
+
+    def test_fresh_owner_requires_exact_durable_terminal_job_status_readback(self):
+        for mutation in ("missing_status", "failed_status", "foreign_project",
+                         "foreign_request", "changed_result", "foreign_read_project",
+                         "foreign_read_request"):
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory(
+                    prefix="w23-r5-owner-status-negative-") as scratch:
+                dispatcher = _FullEntryFixtureDispatcher()
+                dispatcher.owner_status_mutation = mutation
+                transport = _FixtureOperationStoreTransport(dispatcher)
+                with self.assertRaises((runtime.RuntimeEntryError,
+                                        runtime.RuntimeOutcomeUnknown)):
+                    runtime.run_zero_solve_entry(
+                        session_context=_session_context(),
+                        source_projection_sha256=_source_projection_sha256(),
+                        project_root=str(ROOT),
+                        source_project_relative_path=_source_relative_path(),
+                        saved_mph_copy=str(_saved_copy()), evidence_parent=scratch,
+                        execute_numeric=False, dispatcher=transport.dispatch,
+                        terminal_pair_reader=transport.read_terminal_pair,
+                        owned_gate=transport.gate,
+                    )
+                self.assertEqual([operation for operation, _ in dispatcher.calls],
+                                 ["artifact.register", "job.status"])
+
+    def test_actual_read_shaped_two_material_closure_binds_1d_ports_to_observed_2d_geometry(self):
+        saved_copy = _saved_copy()
+        dispatcher = _FullEntryFixtureDispatcher(two_materials=True)
+        with tempfile.TemporaryDirectory(prefix="w23-r5-two-material-closure-") as scratch:
+            journal = runtime.DurableJournal(scratch)
+            transport = _FixtureOperationStoreTransport(dispatcher)
+            route = runtime.PublicRoute(
+                _context(), journal, dispatcher=transport,
+                terminal_pair_reader=transport.read_terminal_pair)
+            observed, plan, proofs = runtime._capture_metadata(route, str(saved_copy))
+            journal.close()
+
+        self.assertEqual(observed["geometry_readback_raw_observed"]["geometry_state"]["dimension"], 2)
+        self.assertEqual(observed["port_selection_readbacks"][0]["entity_dimension"], 1)
+        self.assertEqual(observed["adjacency_raw_observed"]["selInputPort"]["target_dimension"], 2)
+        self.assertEqual(len(observed["material_inspections_raw_observed"]), 2)
+        self.assertEqual(observed["parameter_get_raw_observed"]["count"], 2)
+        self.assertEqual(set(row["name"] for row in
+                             observed["parameter_get_raw_observed"]["parameters"]),
+                         {"n_core", "n_clad"})
+        self.assertEqual([slot["geometry_dimension_observed"]
+                          for slot in plan["point_read_slots"]], [2, 2, 2, 2])
+        self.assertEqual([item["proof"]["status"] for item in proofs], [
+            "PASS_OBSERVED_ADJACENT_MATERIAL_COVERAGE_AND_RECIPROCITY",
+            "PASS_OBSERVED_ADJACENT_MATERIAL_COVERAGE_AND_RECIPROCITY",
+        ])
+
+        for geometry_dimension, adjacency_target, label in (
+                (3, 2, "wrong_geometry"), (2, 3, "wrong_target_dimension")):
+            with self.subTest(label=label), tempfile.TemporaryDirectory(
+                    prefix="w23-r5-two-material-negative-") as scratch:
+                bad = _FullEntryFixtureDispatcher(
+                    two_materials=True, geometry_dimension=geometry_dimension,
+                    adjacency_target_dimension=adjacency_target)
+                journal = runtime.DurableJournal(scratch)
+                bad_transport = _FixtureOperationStoreTransport(bad)
+                route = runtime.PublicRoute(
+                    _context(), journal, dispatcher=bad_transport,
+                    terminal_pair_reader=bad_transport.read_terminal_pair)
+                with self.assertRaises(ValueError):
+                    runtime._capture_metadata(route, str(saved_copy))
+                journal.close()
+
+    def test_full_numeric_entry_uses_exact_read_slots_and_keeps_signed_diagnostic(self):
+        observation = entry_fixtures._observation()
+        plan = runtime.entry.build_read_plan(observation)
+        observed_owner_fixture = _FullEntryFixtureDispatcher()
+        worker_id = "12345678-1234-4234-8234-123456789abc"
+        owner_runtime_response = observed_owner_fixture._public({
+            "worker": {"available": True, "connected": True,
+                       "instance_id": worker_id, "generation": 19,
+                       "source": "PersistentJavaWorker.runtime_metadata()", "error": None},
+            "runtime_identity": {"instance_id": worker_id, "generation": 19,
+                                 "connected": True, "source": "PersistentJavaWorker.runtime_metadata()",
+                                 "error": None, "runtime_id": "runtime-" + worker_id,
+                                 "runtime_id_source": "PersistentJavaWorker.runtime_metadata().instance_id",
+                                 "revision_dependency": {"required": False,
+                                     "reason": "a runtime capability query is not bound to a model revision"},
+                                 "bound_model_required": False},
+            "engine": {"comsol_version": "6.4.0.293",
+                       "source": "ModelUtil.getComsolVersion()",
+                       "channel": "worker", "worker_generation": 19},
+        })
+        owner_model_inspect_response = observed_owner_fixture._public({
+            "model_identity": _context()["model_ref"],
+            "revision": _context()["expected_revision"], "dirty": False,
+            "comsol_version": "6.4.0.293", "detail": "summary",
+        })
+        owner_runtime_response, owner_runtime_pair = _bound_fixture_pair(
+            owner_runtime_response, "runtime.capabilities", {"refresh": False})
+        observation = dict(observation)
+        observation.update({
+            "runtime_capabilities_raw_observed": owner_runtime_response,
+            "runtime_identity_pin": runtime._runtime_identity_pin(
+                owner_runtime_response, owner_runtime_pair),
+            "model_inspect_response_raw_observed": owner_model_inspect_response,
+        })
+        slots_by_label = {slot["label"]: slot for slot in plan["point_read_slots"]}
+        point_rows = []
+        integral_rows = []
+        calls = []
+        owner_dispatcher = _FullEntryFixtureDispatcher()
+
+        def response(data):
+            return {
+                "success": True,
+                "execution": {
+                    "status": "SUCCEEDED", "project_id": _context()["project_id"],
+                    "session_id": _context()["model_ref"]["session_id"],
+                    "model_ref": _context()["model_ref"],
+                    "revision": _context()["expected_revision"],
+                },
+                "data": data,
+            }
+
+        def dispatcher(operation, wrapper, execution):
+            self.assertEqual(operation, "operation_call")
+            self.assertEqual(set(wrapper), {"operation_id", "arguments"})
+            operation_id, arguments = wrapper["operation_id"], wrapper["arguments"]
+            calls.append((operation_id, arguments))
+            if operation_id in {"artifact.register", "model.load", "job.status"}:
+                return owner_dispatcher(operation, wrapper, execution)
+            self.assertEqual(execution["project_id"], _context()["project_id"])
+            self.assertEqual(execution["model_ref"], _context()["model_ref"])
+            self.assertIsNone(execution["execution_timeout_s"])
+            self.assertNotIn("approval", execution)
+            self.assertNotIn("once_token", execution)
+
+            if operation_id == "selection.inspect":
+                tag = arguments["tag"]
+                entities = [17] if tag == "selInputPort" else [24]
+                return response({
+                    "tag": tag, "component": "comp1", "entity_dimension": 1,
+                    "dimension": 1, "entities": entities,
+                    "state": {"geometry": "geom1", "entities": entities,
+                              "is_inheriting": False, "named": tag},
+                })
+
+            if operation_id == "result.at_points":
+                spec = arguments["spec"]
+                slot = next(row for row in plan["point_read_slots"]
+                            if row["label"] not in {p["label"] for p in point_rows}
+                            and row["request_arguments"] == arguments)
+                count = slot["sample_count"]
+                port = slot["port_name_observed"]
+                prefix = slot["physics_identifier_observed"]
+                entries = {name: (0.0, 0.0) for name in slot["expressions"]}
+                entries[f"down({prefix}.Ey)"] = (2.0, 0.0)
+                entries[f"down({prefix}.Hz)"] = (1.0, 0.0)
+                entries[f"{prefix}.Emodey_{port}"] = (2.0, 0.0)
+                entries[f"{prefix}.Hmodez_{port}"] = (-1.0, 0.0)
+                entries[f"{prefix}.nx"] = (-1.0, 0.0)
+                values = [
+                    [[[{"real": entries[name][0], "imag": entries[name][1]}
+                       for _ in range(count)]]]
+                    for name in spec["expressions"]
+                ]
+                points = arguments["points"]
+                data = {
+                    "expressions": spec["expressions"], "dataset": "dset1", "solution": "sol1",
+                    "complex_mode": "preserve", "is_complex": True,
+                    "expression_units": dict(zip(spec["expressions"], spec["units"])),
+                    "coordinate_readback": {
+                        "status": "VERIFIED", "unit": "um",
+                        "coordinates": [[p["x"] for p in points], [p["y"] for p in points]],
+                    },
+                    "field_array": {"axes": ["expression", "outer", "inner", "point"],
+                                    "shape": [len(spec["expressions"]), 1, 1, count],
+                                    "is_complex": True, "values": values},
+                    "values": values,
+                    "feature_readback": {
+                        "data": "dset1", "data_status": "VERIFIED",
+                        "source": "NumericalFeature.getString('data') after set('data')",
+                    },
+                    "result_budget": {"status": "PASS", "publish_allowed": True},
+                    "cleanup": {
+                        "tag": "w23_test_interp", "type_id": "Interp",
+                        "created": True, "removed": True, "verified_removed": True,
+                        "cleanup_failed": False, "error": None,
+                    },
+                    "status": {
+                        "ok": True, "engine_error": None, "cleanup_failed": False,
+                        "verification_status": "PASSED",
+                    },
+                    "verification_status": "PASSED",
+                }
+                point_rows.append(slot)
+                return response(data)
+
+            if operation_id == "result.evaluate":
+                slot = next(row for row in plan["native_integral_slots"]
+                            if row["label"] not in {p["label"] for p in integral_rows})
+                self.assertEqual(arguments, slot["request_arguments"])
+                values = [[[[value]]] for value in (16e-6, -16e-6, -16e-6, 16e-6)]
+                data = {
+                    "aggregate": "integral", "complex_mode": "real",
+                    "dataset": "dset1", "solution": "sol1",
+                    "expressions": slot["expressions"],
+                    "expression_units": dict(zip(slot["expressions"], slot["requested_units"])),
+                    "status": {"ok": True, "cleanup_failed": False},
+                    "cleanup": {"created": True, "removed": True,
+                                "verified_removed": True, "cleanup_failed": False,
+                                "children": []},
+                    "field_array": {"axes": ["expression", "outer", "inner", "point"],
+                                    "shape": [4, 1, 1, 1], "is_complex": False,
+                                    "values": values},
+                    "values": values,
+                }
+                integral_rows.append(slot)
+                return response(data)
+
+            self.fail(f"unexpected operation in numeric runtime path: {operation_id}")
+
+        saved_copy = _saved_copy()
+        with tempfile.TemporaryDirectory(prefix="w23-r5-entry-") as scratch:
+            transport = _FixtureOperationStoreTransport(dispatcher)
+            with patch.object(runtime, "_capture_metadata",
+                              return_value=(observation, plan, [])):
+                result = runtime.run_zero_solve_entry(
+                    session_context=_session_context(),
+                    source_projection_sha256=_source_projection_sha256(),
+                    project_root=str(ROOT), source_project_relative_path=_source_relative_path(),
+                    saved_mph_copy=str(saved_copy),
+                    evidence_parent=scratch, execute_numeric=True, dispatcher=transport.dispatch,
+                    terminal_pair_reader=transport.read_terminal_pair,
+                    owned_gate=transport.gate,
+                )
+            records = [json.loads(line) for line in Path(result["journal"]).read_text().splitlines()]
+
+        self.assertEqual(result["status"], "SOURCE_READS_TERMINAL_DIRECTION_NOT_PROVEN")
+        self.assertEqual((result["metadata_call_count"], result["point_calls"],
+                          result["integral_calls"], result["total_public_call_count"]),
+                         (12, 4, 2, 22))
+        self.assertEqual(result["owner_call_count"], 2)
+        self.assertEqual(result["owner_terminal_status_read_count"], 2)
+        self.assertEqual(result["owner_public_call_count"], 4)
+        self.assertEqual(len(point_rows), 4)
+        self.assertEqual(len(integral_rows), 2)
+        self.assertEqual(result["direction_status"], "NOT_PROVEN")
+        self.assertEqual(result["scientific_acceptance"], "NOT_EVALUATED")
+        self.assertFalse(result["approval_created"])
+        self.assertFalse(result["once_created"])
+        self.assertEqual(result["Study.run"], 0)
+        self.assertEqual(result["solver.run"], 0)
+        self.assertEqual(sum(op == "result.at_points" for op, _args in calls), 4)
+        self.assertEqual(sum(op == "result.evaluate" for op, _args in calls), 2)
+        self.assertFalse(any(op in {"study.run", "solver.run", "node.property_set",
+                                    "model.save", "code.execute_java"}
+                             for op, _args in calls))
+        self.assertEqual(sum(row["kind"] == "point_read_proof" for row in records), 4)
+        self.assertEqual(sum(row["kind"] == "native_integral_proof" for row in records), 2)
+        for record in records:
+            if record["kind"] == "native_integral_proof":
+                proof = record["native_integral"]
+                self.assertEqual(proof["status"], "PASS_NATIVE_SIGNED_INTEGRAL_RECEIPT_SHAPE_AND_CLEANUP")
+                self.assertEqual(proof["scientific_acceptance"], "NOT_EVALUATED")
+                self.assertTrue(record["quadrature_comparison"]["no_absolute_value_or_forced_sign"])
+                self.assertEqual(proof["signed_integrals_W_per_m"], {
+                    "signal_global_plus_x": 16e-6,
+                    "signal_outward_n_dot_S": -16e-6,
+                    "BMA_mode_global_plus_x": -16e-6,
+                    "BMA_mode_outward_n_dot_S": 16e-6,
+                })
+
+
+if __name__ == "__main__":
+    unittest.main()

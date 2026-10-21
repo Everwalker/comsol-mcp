@@ -1,0 +1,634 @@
+from __future__ import annotations
+
+import hashlib
+import importlib.util
+import json
+import os
+import shutil
+import stat
+import sys
+import uuid
+from contextlib import contextmanager
+from dataclasses import replace
+from pathlib import Path
+from types import ModuleType, SimpleNamespace
+
+import pytest
+
+
+CANDIDATE_ROOT = Path(__file__).resolve().parents[1]
+PROBE_ROOT = CANDIDATE_ROOT / "probe"
+
+
+def _load_candidate_modules():
+    package_name = "_w23_first_cause_candidate_r1"
+    package = ModuleType(package_name)
+    package.__path__ = [str(PROBE_ROOT)]
+    sys.modules[package_name] = package
+
+    def load(name: str):
+        spec = importlib.util.spec_from_file_location(
+            f"{package_name}.{name}", PROBE_ROOT / f"{name}.py")
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)
+        return module
+
+    r6 = load("w23_actual_entry_r6")
+    r8 = load("w23_actual_controller_r8")
+    return r6, r8
+
+
+def test_r6_fsyncs_primary_cause_before_raw_archive_failure(tmp_path, monkeypatch):
+    r6, _ = _load_candidate_modules()
+    candidate_root = tmp_path / "candidate"
+    evidence_root = candidate_root / "evidence"
+    evidence_root.mkdir(parents=True, mode=0o700)
+    (candidate_root / "source").mkdir(mode=0o700)
+    runtime_root = tmp_path / "runtime"
+    runtime_root.mkdir(mode=0o700)
+    persistent = evidence_root / "ACTUAL_RUNS_R6" / "w23-r6-actual-test"
+    owner_root = tmp_path / "original-owner"
+    owner_root.mkdir(mode=0o700)
+
+    r6.ENTRY_ROOT = candidate_root
+    r6.EVIDENCE_ROOT = evidence_root
+    r6._load_authority = lambda **_: (
+        {}, {"approval_sha256": "a" * 64, "runtime_id": "comsol-install:test"},
+        {"runtime_root": runtime_root, "persistent_evidence_dir": persistent,
+         "host_provider_config_root": tmp_path / "hostcfg",
+         "source_projection": {"source_map_sha256": "b" * 64}})
+    r6._consume_once = lambda *args, **kwargs: "c" * 64
+
+    class FakeHost:
+        def __init__(self):
+            self.root = owner_root
+            self.daemon = SimpleNamespace(backend=SimpleNamespace(project_root=tmp_path))
+
+    class FakeAdmission:
+        def __init__(self, host):
+            self.host = host
+            self.daemon = host.daemon
+            self.root = owner_root
+            self.project_id = "project-test"
+            self.session_id = "session-test"
+            self.runtime_id = "comsol-install:test"
+            self.setup_result = {
+                "setup_public_calls_used": 3,
+                "setup_public_call_budget": 3,
+                "probe_public_call_budget": 17,
+            }
+            self.setup_calls = [1, 2, 3]
+
+    class FakeAdmissionModule:
+        ProbeSessionAdmission = FakeAdmission
+
+        @staticmethod
+        def create_probe_control_host(**kwargs):
+            return FakeHost()
+
+        @staticmethod
+        def admit_probe_session(host, runtime_id):
+            assert runtime_id == "comsol-install:test"
+            return FakeAdmission(host)
+
+    class FakeRunner:
+        class ProbeCloseGrantSeed:
+            def __init__(self, *_):
+                pass
+
+    r6.owned._w25_modules = lambda: (FakeAdmissionModule, FakeRunner, object, object)
+    r6._validate_host = lambda *args, **kwargs: None
+    route_calls = []
+
+    def fail_route(*args, **kwargs):
+        route_calls.append((args, kwargs))
+        raise ValueError("the exact synthetic inner first cause")
+
+    r6.owned.run_w23_from_owned_admission = fail_route
+    archive_calls = []
+
+    def fail_archive(*args, **kwargs):
+        archive_calls.append((args, kwargs))
+        first_path = persistent / "R6_FIRST_FAILURE.json"
+        assert first_path.is_file()
+        first_during_archive = json.loads(first_path.read_text())
+        assert first_during_archive["failure_type"] == "ValueError"
+        assert first_during_archive["failure_short"] == \
+            "the exact synthetic inner first cause"
+        raise OSError("synthetic raw evidence archive failure")
+
+    r6._persist_raw_evidence = fail_archive
+
+    outcome = r6.run_authorized_entry(
+        main_review_sha256="d" * 64,
+        once_binding_sha256="e" * 64,
+        source_projection_sha256="f" * 64)
+
+    assert len(route_calls) == 1
+    assert len(archive_calls) == 1
+    assert outcome.result["failure_type"] == "ValueError"
+    assert outcome.result["failure_short"] == "the exact synthetic inner first cause"
+    assert outcome.result["persistent_archive_status"] == \
+        "FAILED_RAW_EVIDENCE_REMAINS_IN_ORIGINAL_OWNER_ROOT"
+    assert "synthetic raw evidence archive failure" in \
+        outcome.result["persistent_archive_failure"]
+
+    record_ref = outcome.result["first_failure_record"]
+    assert record_ref["status"] == "PASS_FIRST_CAUSE_FSYNCED_BEFORE_RAW_ARCHIVE"
+    record_path = Path(record_ref["path"])
+    raw = record_path.read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == record_ref["sha256"]
+    first = json.loads(raw)
+    assert first["failure_type"] == "ValueError"
+    assert first["failure_short"] == "the exact synthetic inner first cause"
+    assert first["source_projection_sha256"] == "f" * 64
+    assert first["status"] == "UNKNOWN_OR_BLOCKED_NO_REPLAY"
+    assert first["cleanup"] == "NOT_CALLED_NO_REPLAY"
+
+
+def test_r8_actual_outer_failure_persists_exact_inner_result(tmp_path, monkeypatch):
+    _, r8 = _load_candidate_modules()
+    outer_run_root = tmp_path / "outer"
+    outer_run_root.mkdir(mode=0o700)
+    persistent_root = tmp_path / "persistent"
+    persistent_root.mkdir(mode=0o700)
+
+    inner = {
+        "schema": "w23-zero-solve-r6-actual-entry-failure/1",
+        "status": "UNKNOWN_OR_BLOCKED_NO_REPLAY",
+        "failure_type": "ValueError",
+        "failure_short": "specific first cause survives outer generic validation",
+        "first_failure_record": {"path": "/private/evidence/R6_FIRST_FAILURE.json",
+                                  "sha256": "1" * 64},
+        "persistent_archive_status": "FAILED_RAW_EVIDENCE_REMAINS_IN_ORIGINAL_OWNER_ROOT",
+    }
+
+    class FakeOutcome:
+        def __init__(self):
+            self.host = object()
+            self.admission = object()
+            self.result = inner
+            self.runtime_root = tmp_path / "runtime"
+            self.once_guard_sha256 = "2" * 64
+
+    outcome = FakeOutcome()
+    fake_r6 = SimpleNamespace(
+        ActualEntryOutcome=FakeOutcome,
+        run_authorized_entry=lambda **kwargs: outcome)
+    source_data = {
+        "outer_run_root": str(outer_run_root),
+        "persistent_evidence_root": str(persistent_root),
+    }
+    r8._strict_authority = lambda **kwargs: ({}, {}, source_data, fake_r6, object(), object())
+    r8._create_outer_once_guard = lambda *args, **kwargs: "3" * 64
+    r8._bind_r5_outputs = lambda *args, **kwargs: (_ for _ in ()).throw(
+        RuntimeError("synthetic stop before any owner operation"))
+    writes = []
+    r8._write_new_json = lambda path, value: writes.append((Path(path), dict(value))) or "4" * 64
+
+    result = r8.run_authorized_outer_entry(
+        outer_review_sha256="5" * 64,
+        outer_once_sha256="6" * 64,
+        r6_review_sha256="7" * 64,
+        r6_once_sha256="8" * 64,
+        source_projection_sha256="9" * 64)
+
+    assert result["status"] == "UNKNOWN_NO_REPLAY_NO_MORE_RPC_NO_CLOSE"
+    assert result["r6_inner_failure"] == inner
+    raw = json.dumps(inner, sort_keys=True, separators=(",", ":"),
+                     ensure_ascii=False, allow_nan=False).encode("utf-8")
+    assert result["r6_inner_failure_sha256"] == hashlib.sha256(raw).hexdigest()
+    assert len(writes) == 1
+    assert writes[0][1]["r6_inner_failure"] == inner
+    assert result["worker_or_server_rpc_after_entry_return"] == 0
+    assert result["host_close_called"] is False
+    assert result["no_replay"] is True
+
+
+def test_r8_does_not_attach_success_receipt_as_inner_failure():
+    _, r8 = _load_candidate_modules()
+    failure = {"schema": "outer"}
+    outcome = SimpleNamespace(result={
+        "schema": "w23-zero-solve-r6-actual-entry-result/1",
+        "status": "SOURCE_READS_TERMINAL_DIRECTION_NOT_PROVEN"})
+    r8._attach_r6_inner_failure(failure, outcome)
+    assert failure == {"schema": "outer"}
+
+
+def test_r8_preserves_unknown_failure_mapping_with_unexpected_details():
+    _, r8 = _load_candidate_modules()
+    inner = {
+        "schema": "w23-zero-solve-r6-actual-entry-failure/1",
+        "status": "UNKNOWN_OR_BLOCKED_NO_REPLAY",
+        "failure_type": "KeyError",
+        "failure_short": "primary cause",
+        "new_detail": {"code": 9},
+    }
+    failure = {"schema": "outer"}
+    r8._attach_r6_inner_failure(failure, SimpleNamespace(result=inner))
+    assert failure["r6_inner_failure"] == inner
+    encoded = json.dumps(inner, sort_keys=True, separators=(",", ":"),
+                          ensure_ascii=False, allow_nan=False).encode("utf-8")
+    assert failure["r6_inner_failure_sha256"] == hashlib.sha256(encoded).hexdigest()
+
+
+def _mkdir_private(path: Path) -> None:
+    path.mkdir(mode=0o700)
+    assert stat.S_IMODE(path.lstat().st_mode) == 0o700
+
+
+def _write_file(path: Path, data: bytes = b"fixture\n") -> None:
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "wb") as stream:
+        stream.write(data)
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
+def _owner_root(r6, tmp_path: Path, *, complete: bool, workspace_mode: str = "empty") -> Path:
+    run_id = "1234567890abcdef1234567890abcdef"
+    root = tmp_path / f".w25-probe-{run_id}"
+    _mkdir_private(root)
+    setup = root / "setup"
+    _mkdir_private(setup)
+    ordinals = ((1, "project-create"), (2, "session-start"), (3, "session-connect"))
+    suffixes = ("intent", "response") if complete else ("intent",)
+    for ordinal, operation in ordinals:
+        for suffix in suffixes:
+            _write_file(setup / f"{ordinal:02d}-{operation}-{suffix}.json")
+    _write_file(root / "ADMISSION_RESULT.json")
+    workspace = root / "workspace"
+    _mkdir_private(workspace)
+    if workspace_mode == "unexpected":
+        _write_file(workspace / "unexpected.txt")
+    if complete:
+        source_identity = r6.entry.verify_saved_mph_copy(str(r6.SAVED_MPH_PATH))
+        digest = source_identity["sha256"]
+        input_relative = f"w23-input-{run_id}/w23_coarse-phase0_provisional.mph"
+        input_root = tmp_path / f"w23-input-{run_id}"
+        _mkdir_private(input_root)
+        if workspace_mode == "saved":
+            saved = input_root / "w23_coarse-phase0_provisional.mph"
+            shutil.copyfile(r6.SAVED_MPH_PATH, saved)
+            os.chmod(saved, 0o400)
+            dest_identity = r6.entry.verify_saved_mph_copy(str(saved))
+        else:
+            dest_identity = {
+                "path": str(input_root / "w23_coarse-phase0_provisional.mph"),
+                    "bytes": source_identity["bytes"], "sha256": digest,
+                "mode": "0o400", "opened_by_comsol": False,
+            }
+        binding = {
+            "schema": "w23-r6-saved-mph-copy-binding/2",
+            "status": "PASS_EXACT_IMMUTABLE_SOURCE_COPIED_TO_NON_HIDDEN_PROJECT_INPUT",
+            "run_id": run_id, "project_id": "synthetic-project", "session_id": "synthetic-session",
+            "project_root": str(tmp_path), "source_identity": source_identity,
+            "destination_identity": dest_identity, "source_project_relative_path": input_relative,
+            "opened_by_comsol": False,
+        }
+        _write_file(root / "W23_SAVED_MPH_COPY_BINDING_R2.json",
+                    (json.dumps(binding, sort_keys=True) + "\n").encode())
+        evidence = root / "w23-evidence"
+        _mkdir_private(evidence)
+        run = evidence / f"w23-zero-solve-{uuid.uuid4()}"
+        _mkdir_private(run)
+        _write_file(run / "public-receipts.jsonl", b"{}\n")
+    return root
+
+
+def test_partial_archive_accepts_only_empty_pre_copy_workspace(tmp_path):
+    r6, _ = _load_candidate_modules()
+    source = _owner_root(r6, tmp_path, complete=False, workspace_mode="empty")
+    destination = tmp_path / "persistent"
+    _mkdir_private(destination)
+
+    manifest = r6._persist_raw_evidence(source, destination, partial=True,
+                                        project_input_root=source.parent)
+
+    assert manifest["partial"] is True
+    assert manifest["status"] == "PARTIAL_BOUNDED_RAW_EVIDENCE_COPIED_AND_READ_BACK"
+    assert manifest["workspace_archive_disposition"] == \
+        "EMPTY_EARLY_PARTIAL_NO_BINDING_OR_JOURNAL"
+    assert all(row["source_root"] == str(source) for row in manifest["files"])
+    assert (destination / "ADMISSION_RESULT.json").read_bytes() == \
+        (source / "ADMISSION_RESULT.json").read_bytes()
+
+
+@pytest.mark.parametrize("case", ["copy-binding", "journal", "unexpected-child"])
+def test_partial_archive_rejects_empty_or_unexpected_workspace_after_copy_boundary(tmp_path, case):
+    r6, _ = _load_candidate_modules()
+    source = _owner_root(r6, tmp_path, complete=False, workspace_mode="empty")
+    if case == "copy-binding":
+        _write_file(source / "W23_SAVED_MPH_COPY_BINDING_R2.json")
+    elif case == "journal":
+        evidence = source / "w23-evidence"
+        _mkdir_private(evidence)
+        run = evidence / f"w23-zero-solve-{uuid.uuid4()}"
+        _mkdir_private(run)
+        _write_file(run / "public-receipts.jsonl", b"{}\n")
+    else:
+        _write_file(source / "workspace" / "unexpected.txt")
+    destination = tmp_path / "persistent"
+    _mkdir_private(destination)
+
+    with pytest.raises(r6.ActualEntryGuardError):
+        r6._persist_raw_evidence(source, destination, partial=True,
+                                 project_input_root=source.parent)
+
+
+def test_full_archive_still_requires_exact_immutable_saved_mph(tmp_path):
+    r6, _ = _load_candidate_modules()
+    source = _owner_root(r6, tmp_path, complete=True, workspace_mode="saved")
+    destination = tmp_path / "persistent"
+    _mkdir_private(destination)
+
+    manifest = r6._persist_raw_evidence(source, destination, partial=False,
+                                        project_input_root=source.parent)
+
+    assert manifest["partial"] is False
+    assert manifest["status"] == "PASS_EXACT_BOUNDED_RAW_EVIDENCE_COPIED_AND_READ_BACK"
+    assert manifest["schema"] == "w23-zero-solve-r6-persisted-raw-evidence/2"
+    assert manifest["workspace_archive_disposition"] == \
+        "EMPTY_PRIVATE_W25_WORKSPACE_PROJECT_INPUT_COPY_INCLUDED"
+    input_relative = "w23-input-1234567890abcdef1234567890abcdef/w23_coarse-phase0_provisional.mph"
+    input_row = next(row for row in manifest["files"] if row["source_relative_path"] == input_relative)
+    assert input_row["source_root"] == str(source.parent)
+    assert (destination / input_relative).read_bytes() == \
+        (source.parent / input_relative).read_bytes()
+
+
+def test_full_archive_rejects_missing_mph_even_when_every_other_entry_is_complete(tmp_path):
+    r6, _ = _load_candidate_modules()
+    source = _owner_root(r6, tmp_path, complete=True, workspace_mode="missing")
+    destination = tmp_path / "persistent"
+    _mkdir_private(destination)
+
+    with pytest.raises(r6.ActualEntryGuardError):
+        r6._persist_raw_evidence(source, destination, partial=False,
+                                 project_input_root=source.parent)
+
+
+@contextmanager
+def _exact_candidate_imports():
+    candidate_root = CANDIDATE_ROOT
+    source_root = candidate_root / "source"
+    w25_probe_root = (candidate_root.parents[1] / "_state" /
+                      "w25-r5-fresh-runtime-entry-6fc675b5-c7a1-4483-9de5-51d2ceeccd8f-20261019" /
+                      "probe")
+    saved_modules = {
+        name: module for name, module in tuple(sys.modules.items())
+        if (name == "probe" or name.startswith("probe.")
+            or name == "comsol_mcp" or name.startswith("comsol_mcp.")
+            or name == "mcp" or name.startswith("mcp.")
+            or name in {"runner", "admission", "operation_store_witness"})
+    }
+    for name in saved_modules:
+        sys.modules.pop(name, None)
+    original_path = list(sys.path)
+    sys.path[:0] = [str(source_root), str(w25_probe_root)]
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "probe", candidate_root / "probe" / "__init__.py",
+            submodule_search_locations=[str(candidate_root / "probe")])
+        assert spec is not None and spec.loader is not None
+        package = importlib.util.module_from_spec(spec)
+        sys.modules["probe"] = package
+        spec.loader.exec_module(package)
+        from comsol_mcp._control_daemon import ControlDaemon
+        from comsol_mcp._session_context import (
+            CanonicalSocket, OwnedServerProcessIdentity, SessionEndpointIdentity,
+            SessionRuntimeConfig, SessionRuntimeContext,
+        )
+        from admission import ProbeControlHost, ProbeSessionAdmission, W25ProbeCloseDelegator
+        from runner import BoundManagedPublicGate, ProbeCloseGrantSeed
+        from probe.w23_owned_runtime_entry import W23OwnedRuntimeBridge
+        yield {
+            "ControlDaemon": ControlDaemon,
+            "CanonicalSocket": CanonicalSocket,
+            "OwnedServerProcessIdentity": OwnedServerProcessIdentity,
+            "SessionEndpointIdentity": SessionEndpointIdentity,
+            "SessionRuntimeConfig": SessionRuntimeConfig,
+            "SessionRuntimeContext": SessionRuntimeContext,
+            "ProbeControlHost": ProbeControlHost,
+            "ProbeSessionAdmission": ProbeSessionAdmission,
+            "W25ProbeCloseDelegator": W25ProbeCloseDelegator,
+            "BoundManagedPublicGate": BoundManagedPublicGate,
+            "ProbeCloseGrantSeed": ProbeCloseGrantSeed,
+            "W23OwnedRuntimeBridge": W23OwnedRuntimeBridge,
+            "admission_module": sys.modules["admission"],
+            "runner": sys.modules["runner"],
+            "owned_module": sys.modules["probe.w23_owned_runtime_entry"],
+            "runtime_module": sys.modules["probe.w23_zero_solve_runtime"],
+        }
+    finally:
+        for name in tuple(sys.modules):
+            if (name == "probe" or name.startswith("probe.")
+                    or name == "comsol_mcp" or name.startswith("comsol_mcp.")
+                    or name == "mcp" or name.startswith("mcp.")
+                    or name in {"runner", "admission", "operation_store_witness"}):
+                sys.modules.pop(name, None)
+        sys.modules.update(saved_modules)
+        sys.path[:] = original_path
+
+
+def test_real_control_daemon_registered_context_to_bridge_cached_route(tmp_path, monkeypatch):
+    """Exercise the actual source-bound Bridge and ControlDaemon; all owners are inert fixtures."""
+    with _exact_candidate_imports() as api:
+        daemon_home = tmp_path / "daemon-home"
+        project_root = tmp_path / "projects"
+        host_root = project_root / ".w25-probe-11111111111111111111111111111111"
+        for path in (daemon_home, project_root, host_root):
+            _mkdir_private(path)
+        grant_root = host_root / "close-grant"
+        _mkdir_private(grant_root)
+        seed = api["ProbeCloseGrantSeed"]("a" * 64, "b" * 64)
+        run_id = "1" * 32
+        delegator = api["W25ProbeCloseDelegator"](
+            seed=seed, run_id=run_id, private_root=grant_root)
+        daemon = api["ControlDaemon"](
+            daemon_home, project_root=project_root,
+            project_authorization_verifier=delegator)
+
+        class InertOwnerProcess:
+            def __init__(self, pid):
+                self.pid = pid
+
+            def poll(self):
+                return None
+
+        server_process = InertOwnerProcess(900001)
+        worker_process = InertOwnerProcess(900002)
+        worker = SimpleNamespace(_process=worker_process)
+        service = SimpleNamespace()
+        context_backend = SimpleNamespace(worker=worker, service=service,
+                                          scoped_host_provider=delegator)
+        project_id, session_id = "fixture-project", "fixture-session"
+        runtime = api["SessionRuntimeConfig"](
+            "comsol-install:software-fixture", "6.4", tmp_path,
+            tmp_path / "java", (tmp_path / "classpath.jar",),
+            tmp_path / "preferences", tmp_path / "session-state")
+        peer = api["CanonicalSocket"]("127.0.0.1", 2040)
+        process_identity = api["OwnedServerProcessIdentity"](
+            900001, "software-fixture-birth", "/fixture/server", (peer,),
+            start_epoch_ms=1, runtime_id=runtime.runtime_id)
+        endpoint = api["SessionEndpointIdentity"](
+            "127.0.0.1", 2040, 1, observed_peer=peer,
+            owned_process=process_identity)
+        context = api["SessionRuntimeContext"](
+            project_id, session_id, project_root, runtime, endpoint,
+            backend=context_backend, worker_instance_id="software-fixture-worker",
+            worker=worker, service=service, client=worker,
+            server_handle=server_process, server_ownership="mcp_managed",
+            process_identity=process_identity, server_started_by_mcp=True)
+        key = (project_id, session_id)
+        daemon.session_registry.register(context)
+        server_handle = SimpleNamespace(process=server_process, retired=False,
+                                        process_identity=process_identity)
+        child_identity = {"worker": worker, "process": worker_process,
+                          "pid": worker_process.pid, "start_epoch_ms": 1}
+        daemon._session_worker_handles[key] = worker
+        daemon._session_backends[key] = context_backend
+        daemon._session_server_handles[key] = server_handle
+        daemon._session_worker_child_identities[key] = child_identity
+        host = api["ProbeControlHost"](daemon, run_id, host_root, delegator, seed)
+        gate = api["BoundManagedPublicGate"](
+            daemon=daemon, project_id=project_id, session_id=session_id,
+            context=context, backend=context_backend, worker=worker,
+            worker_process=worker_process, server_handle=server_handle,
+            server_process=server_process, server_identity=process_identity,
+            worker_child_identity=child_identity, close_delegator=delegator)
+        (host_root / "setup").mkdir(mode=0o700)
+        workspace = project_root / f"{host_root.name}/workspace"
+        workspace.mkdir(mode=0o700)
+
+        # Keep the actual W25 admission producer and its return-object
+        # construction. Only its three setup transport calls and live-owner
+        # binding are inert fixtures; no setup RPC or process is created.
+        def fake_public_setup_call(_daemon, root, ordinal, operation, arguments, execution):
+            if ordinal == 1:
+                assert operation == "project.create"
+                assert arguments["workspace"] == f"{host_root.name}/workspace"
+                response = {"success": True, "data": {"project": {
+                    "project_id": project_id, "workspace": str(workspace.resolve(strict=True))}}}
+            elif ordinal == 2:
+                assert operation == "session.start"
+                response = {"success": True, "data": {
+                    "project_id": project_id, "session_id": session_id,
+                    "runtime_id": runtime.runtime_id, "server_ownership": "mcp_managed",
+                    "endpoint": {"host": "127.0.0.1", "port": 2040}}}
+            else:
+                assert ordinal == 3 and operation == "session.connect"
+                response = {"success": True, "data": {
+                    "project_id": project_id, "session_id": session_id,
+                    "runtime_id": runtime.runtime_id,
+                    "endpoint": {"host": "127.0.0.1", "port": 2040},
+                    "server_ownership": "mcp_managed"}}
+            operation_name = operation.replace(".", "-")
+            response_path = root / "setup" / f"{ordinal:02d}-{operation_name}-response.json"
+            intent_path = root / "setup" / f"{ordinal:02d}-{operation_name}-intent.json"
+            _write_file(response_path, json.dumps(response, sort_keys=True).encode("utf-8"))
+            _write_file(intent_path, b"inert setup intent\n")
+            return {"ordinal": ordinal, "operation": operation,
+                    "intent": {"path": str(intent_path)},
+                    "response": {"path": str(response_path)},
+                    "terminal_success": True, "request_id": execution["request_id"]}
+
+        monkeypatch.setattr(api["admission_module"], "_public_setup_call", fake_public_setup_call)
+        monkeypatch.setattr(api["runner"].BoundManagedPublicGate, "bind",
+                            classmethod(lambda cls, *_args, **_kwargs: gate))
+        admission = api["admission_module"].admit_probe_session(
+            host, runtime_id=runtime.runtime_id)
+        assert type(admission) is api["ProbeSessionAdmission"]
+        assert admission.workspace == f"{host_root.name}/workspace"
+        assert admission.setup_result["workspace"] == str(workspace.resolve(strict=True))
+        assert admission.setup_result["setup_public_calls_used"] == 3
+        public_dispatches = []
+        original_dispatch = daemon.dispatch
+
+        def observe_dispatch(request):
+            public_dispatches.append(request)
+            return original_dispatch(request)
+
+        monkeypatch.setattr(daemon, "dispatch", observe_dispatch)
+
+        # The exact W25 relative/absolute pair must pass the strict R6
+        # producer-consumer binding and copy the immutable MPH before entering
+        # the read route. Stop at the route boundary: no W23 RPC is made.
+        class StopBeforePublicReads(Exception):
+            pass
+
+        def stop_before_reads(**_kwargs):
+            raise StopBeforePublicReads("software control stops before any W23 public read")
+
+        monkeypatch.setattr(api["runtime_module"], "run_zero_solve_entry", stop_before_reads)
+        wrong_public = replace(admission, setup_result={
+            **admission.setup_result,
+            "workspace": str(project_root / "foreign" / "workspace"),
+        })
+        with pytest.raises(api["owned_module"].OwnedRuntimeEntryError,
+                           match="relative workspace and public absolute workspace"):
+            api["owned_module"].run_w23_from_owned_admission(
+                wrong_public, source_projection_sha256="a" * 64, execute_numeric=True)
+        with pytest.raises(api["owned_module"].OwnedRuntimeEntryError,
+                           match="relative workspace and public absolute workspace"):
+            api["owned_module"].run_w23_from_owned_admission(
+                replace(admission, workspace="../foreign/workspace"),
+                source_projection_sha256="a" * 64, execute_numeric=True)
+        with pytest.raises(api["owned_module"].OwnedRuntimeEntryError,
+                           match="not the exact admitted W25 workspace"):
+            api["owned_module"]._copy_pinned_mph_to_project_input(
+                project_root=project_root, workspace=admission.workspace, run_id=run_id)
+        assert not (workspace / "w23_coarse-phase0_provisional.mph").exists()
+        assert public_dispatches == []
+
+        with pytest.raises(StopBeforePublicReads, match="before any W23 public read"):
+            api["owned_module"].run_w23_from_owned_admission(
+                admission, source_projection_sha256="a" * 64, execute_numeric=True)
+        copied = project_root / f"w23-input-{run_id}" / "w23_coarse-phase0_provisional.mph"
+        assert copied.is_file()
+        assert copied.stat().st_size == 13795478
+        digest = hashlib.sha256()
+        with copied.open("rb") as stream:
+            for block in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(block)
+        assert digest.hexdigest() == \
+            "cba0c1d404003c4e60a20b04316cb1456c38cc2b45596dc2dc29bbed62674a8c"
+        assert stat.S_IMODE(copied.stat().st_mode) == 0o400
+        assert list(workspace.iterdir()) == []
+        copy_binding = json.loads((host_root / "W23_SAVED_MPH_COPY_BINDING_R2.json").read_text())
+        assert copy_binding["opened_by_comsol"] is False
+        assert copy_binding["source_project_relative_path"] == \
+            f"w23-input-{run_id}/w23_coarse-phase0_provisional.mph"
+        assert copy_binding["source_identity"]["sha256"] == \
+            "cba0c1d404003c4e60a20b04316cb1456c38cc2b45596dc2dc29bbed62674a8c"
+        assert daemon._control_dispatch_inflight == 0
+        assert public_dispatches == []
+
+        try:
+            bridge = api["W23OwnedRuntimeBridge"](admission)
+            owner = bridge._assert_owner()
+            assert owner["project_id"] == project_id
+            assert owner["session_id"] == session_id
+            response = bridge.dispatch(
+                "operation_call",
+                {"operation_id": "job.status", "arguments": {"job_id": "absent-fixture-job"}},
+                {"project_id": project_id, "session_id": session_id,
+                 "request_id": "bridge-software-control", "idempotency_key": "bridge-software-control"})
+            assert isinstance(response, dict)
+            assert response.get("success") is False
+            assert response.get("error", {}).get("code") == "NODE_NOT_FOUND"
+            assert response["error"].get("safe_retry") is False
+            assert len(public_dispatches) == 1
+            assert daemon._control_dispatch_inflight == 0
+            assert daemon.store is bridge.store
+            assert daemon.session_registry.get(project_id, session_id) is context
+            assert server_process.poll() is None and worker_process.poll() is None
+        finally:
+            daemon.session_registry.remove(project_id, session_id, expected=context)
+            daemon._session_worker_handles.pop(key, None)
+            daemon._session_backends.pop(key, None)
+            daemon._session_server_handles.pop(key, None)
+            daemon._session_worker_child_identities.pop(key, None)
+            daemon.close()

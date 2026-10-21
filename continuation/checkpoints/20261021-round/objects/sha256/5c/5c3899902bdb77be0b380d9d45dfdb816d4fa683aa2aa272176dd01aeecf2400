@@ -1,0 +1,53 @@
+# W24 geometric-nonlinearity property survey (R32)
+
+Status: `UNSIGNED_PLAN_ONLY_MAIN_REVIEW_REQUIRED`. This is a bounded diagnostic branch based on the immutable R31 905-file source checkpoint, fingerprint `893b37f2dc577c6513541e499ba6aad90708d4bced6886fe6d8abe6e33e5b10f` and manifest SHA-256 `466a8545d3623df9a8a0acb993552bd6eec61b20aa892e969a8a4f986dbc7fb8`. It does not repair or reinterpret the R4/R5 failures, grant solver authority, or accept any scientific result.
+
+## Question and retained evidence
+
+R4's actual `Unknown_property` establishes that `geometricNonlinearity` was rejected by the concrete `SolverFeature` returned by `findUniqueTimeFeature` in that run. The pre-call inspection described an empty model and did not enumerate the constructed receiver graph. It does not establish whether the property belongs on the transient `StudyFeature`, whether the Time Solver supports it in this actual context, or whether the relevant module license is available. The existing R5 source change is not integrated and remains excluded.
+
+R32 uses a new phase, `survey_v2_geometric_nonlinearity`, in the existing `W24CureCouponFixture` and existing `run_native_w24_cure_preflight.py`. It repeats the v2 setup to `configureV2DoseSolverTolerance`, then observes the three study-step objects and their attached Time Solver objects. It never invokes the disputed setter. The historical `build_v2` method body remains byte-stable at SHA-256 `afb39257260c7ee01dd8f46f825aea778147c6d40dab121c19daf1d5f40c516b`.
+
+## Observations
+
+For each of `stdUV`, `stdBake`, and `stdCool`, the result records the actual study tag, study-step path/tag/type, actual attached sequence tag/type/study/attachment state, and recursively found Time Solver feature path/tag/type. Both objects are queried for the actual `properties()`, `hasProperty`, `getValueType`, and `getAllowedPropertyValues` results for `geometricNonlinearity`. The survey preserves `null` from `getAllowedPropertyValues` as a successful `null` result. It calls a typed getter only for a reported API value type with an explicit reader mapping; unknown types and unreadable type metadata are reported as not queried. Getter failures are retained as read errors.
+
+The survey separately calls documented `ModelUtil.hasProduct` for `STRUCTURALMECHANICS`, `ACOUSTICS`, `MEMS`, and `MULTIBODYDYNAMICS`. Each result is reported independently as a current-license availability query. No product's false result implies another product is unavailable, and a true result does not establish property support. `module_license` and `native_semantics` remain `UNVERIFIED_FAIL_CLOSED` for all outcomes.
+
+Official COMSOL 6.4.0.293 reference material used for the API surface:
+
+- `PropFeature` (doc 7675, chunk 23015, SHA-256 `befb8cc1c0e3df1ce74d2fa2cd1377e73d378e5c26170558e9f40dc255cc3bc3`) documents the property inventory, presence/type/allowed-value queries and typed getters; null means the allowed set is not a finite string set.
+- `StudyFeature` (doc 7717, chunk 23091, SHA-256 `a9ffe9c3ac8a45d945eb51d23ab78277cc8970b14f5d5bddfd504147867ca674`) extends `PropFeature`.
+- `ModelUtil.hasProduct` (doc 7768, chunk 23168, SHA-256 `a5e4c080407a673a5dd78e95b9fb089d92c0f518477ffdcc4f62b3348085c4eb`) reports whether the current license allows the named product; the survey does not call `checkoutLicense`.
+- COMSOL product names (doc 4086, chunk 16700, SHA-256 `efba38a9c78d87e68e7306ced73ccc947c97ca43802bfb5b29045b45c56bb16a`) identify the four separate product identifiers used above.
+- Time Dependent study (doc 4676, chunk 17657, SHA-256 `57574dddd12e3caf99bd8c69b99f650ff01970d8deacce2a45147718117f0e22`) lists its documented settings but does not establish this property on the present object.
+- Time Solver (doc 4646, chunk 17600, SHA-256 `952793e73990d64af9163e1c3f21b8f50c0b43bbc9b4b0b728be06cdb889c819`) documents `geometricNonlinearity` values and license conditions, but does not prove the property exists on this actual receiver.
+
+## Execution boundary
+
+The survey setup uses the existing W24 cure preflight, fresh registered project/model, `code.execute_java` operation, managed Worker, server owner and exact cleanup path. Construction of the model, mesh, studies, and solver configuration is necessary to materialize the disputed context. After that setup, the survey method only reads properties and license availability. It does not call `set`, `create`, `remove`, `save`, `Study.run`, solver `run`, `compute`, or `checkoutLicense`. The preflight returns immediately after the survey response and zero-submission ledger check, before the existing v2 validation, template save/reopen, and science path. Its terminal status is limited to `NATIVE_PROPERTY_SURVEY_PASS_NO_SOLVES`.
+
+The R31 candidate omitted the existing proposal document that its preflight explicitly freezes at `tools/run_native_w24_cure_preflight.py:SOURCE_PATHS["proposal"]`. R32 includes the canonical 897 source's exact document bytes as an additional inherited input: `W24_CURE_FIXTURE_PROPOSAL.md`, SHA-256 `642995c0f082fa5410095e1f76e07df50fc914c95430f8b5d74c63cd09bef6a7`. This closes the actual preflight source path without changing R31 or rewriting the document.
+
+The survey Java source is mirrored into the package resource tree, and `SOURCE_ORIGINS.json` now records its actual R32 bytes. Therefore the historical `current175-r13` lock (`1dd9ba4d…e9b826`) remains unchanged but does not describe this candidate's package bytes. R32 carries a revised unsigned `current175-r14` lock (`c83ba787…9746dc`, member fingerprint `7c816c28…56b07`) and proposed profile-map entry (`b9acd32e…4f58`); the active profile map still selects R13. No R14 app bundle has been built or accepted. A fresh app build against the proposed R14 lock, plus Main's review, is required before any native preflight can be admitted.
+
+Run only after exact source review and a separate fresh Main native admission, with new nonexisting task-owned work/evidence paths; do not reuse R4/R5 paths, once records, models, PIDs, or approvals. Required command shape:
+
+```text
+<reviewed Python 3.12> <R32 source>/tools/run_native_w24_cure_preflight.py \
+  --work /private/tmp/comsol-mcp-w24-cure-geonl-survey-<new-unique-id>-work \
+  --evidence /private/tmp/comsol-mcp-w24-cure-geonl-survey-<new-unique-id>-evidence \
+  --candidate-freeze <R32 source>/docs/full_project_execution/w24/evidence/setup_candidate_/geonl_property_survey_r32.json \
+  --expected-candidate-sha256 <hash-of-reviewed-freeze>
+```
+
+The preflight enforces the fixed W24 temporary-root grammar, empty new roots, current runtime and complete source closure, offline Java compile and focused software receipts, fresh process/listener inventories, one owned COMSOL server, one sequential Worker, terminal-ledger reconciliation, and exact-owner cleanup. No freeze with fabricated compile receipts is supplied by this source packet. Java compilation and native admission remain `NOT_RUN` pending Main review; the source-only Python controls are not runtime Java evidence.
+
+## Frozen interpretation limits
+
+- The survey is not a setter experiment; no property is changed.
+- No study/solver is run and no model is saved.
+- The current license query is availability evidence only.
+- `Unknown_property` remains an observed R4 failure with unresolved receiver/context/license cause until actual survey output is reviewed.
+- W24 material-law, solver, numerical, physical, historical-trajectory, and final scientific acceptance remain unchanged and unaccepted.
+- R31 source, the canonical tree, R4/R5 packets, the historical R13 lock, and prior native receipts are not modified by this R32 candidate. The R14 lock/profile map are only candidate-local proposed bytes; they are not active or accepted.

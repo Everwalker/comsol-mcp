@@ -1,0 +1,47 @@
+{
+  "schema": "windows-r6i-r2-cross-packet-w23-r16-provenance-note/1",
+  "status": "READ_ONLY_SOURCE_PATH_RECONCILIATION_NO_W23_MUTATION",
+  "r6i_r2_consumes_w23_paths": false,
+  "w23_r16_root": "repository/_state/w23-r13-fixed-authority-live-set-r16-86d4a421-8ced-4ecb-98b2-8927d9222b1e-20261021",
+  "r16_request": {
+    "path": "evidence/MAIN_REVIEW_REQUEST_R8.json",
+    "sha256": "28fe6d24b28be5b96dcdf3bdfe9aa0fdb181b497221a95835cd4d7d4a75f6f44",
+    "schema_label": "W23_R8_R15_MAIN_SOURCE_REVIEW_REQUEST",
+    "candidate_id": "86d4a421-8ced-4ecb-98b2-8927d9222b1e",
+    "candidate_root_is_r16": true,
+    "controller_path_is_r16": true,
+    "controller_sha256": "4240fad18aea2d800872fe8d8fb1f602eecda42c86cdf0e8090add813cb73851",
+    "compile_plan_and_receipt_paths_are_r15": true
+  },
+  "r16_current_controller": {
+    "path": "probe/w23_actual_controller_r8.py",
+    "bytes": 98434,
+    "sha256": "4240fad18aea2d800872fe8d8fb1f602eecda42c86cdf0e8090add813cb73851",
+    "source_manifest_path": "evidence/SOURCE_MANIFEST_R1.json",
+    "source_manifest_sha256": "fd36248ffe6b07a5299d7b7cda21672c302bf34b59033dc94adedaeec2f5313c",
+    "validation_receipt_path": "evidence/VALIDATION_RECEIPT_R16.json",
+    "validation_receipt_sha256": "17d38512301d830d513c580e227da5fbf14c012ba62d2cc5f87ac73602227ba4"
+  },
+  "r16_outer_plan": {
+    "path": "evidence/W23_R8_OUTER_SOURCE_PLAN_R1.json",
+    "sha256": "e09e490274ebe6de4b53716bea11e78e920b98b547b90af1b150fefce9249014",
+    "frozen_r6_candidate_root_is_r15": true,
+    "frozen_r6_packet_manifest_path_is_r15": true,
+    "frozen_r6_compile_sidecar_paths_are_r15": true,
+    "fresh_r6_source_review_request_sha256_from_prior_proposal": "21c7f61a82c2790c17e5a5c786f4bd3b83fb135a24be80a0c510e17ca228223d",
+    "frozen_r6_controller_sha256": "fc72932ecb728d96155d29ce0262b6232d8248ec795606d27246f7ee895cadd2",
+    "actual_r15_controller_sha256": "fc72932ecb728d96155d29ce0262b6232d8248ec795606d27246f7ee895cadd2",
+    "actual_r16_controller_sha256": "4240fad18aea2d800872fe8d8fb1f602eecda42c86cdf0e8090add813cb73851"
+  },
+  "r15_compile_provenance": {
+    "candidate_root": "repository/_state/w23-r13-current-source-r6r15-a3bf7054-79cd-4696-ae7a-4197c7fbe530-20261021",
+    "plan_path": "evidence/JAVA11_COMPILE_R6/JAVA11_COMPILE_PLAN_R15_UNSIGNED.json",
+    "plan_sha256": "250c9380d5c398396efe97fb166f9c11ea97eddb5d064cfeb7ed60f801a09cd9",
+    "receipt_path": "evidence/JAVA11_COMPILE_R6/JAVA11_COMPILE_RECEIPT_R6.json",
+    "receipt_sha256": "6ad0ad132f736d027fef88aadd692190182c81da12c15ee3da6251dfcbfe9d91",
+    "main_review_path": "evidence/JAVA11_COMPILE_R6/MAIN_JAVA11_COMPILE_REVIEW_R15.json",
+    "main_review_sha256": "316c75d2cf7d7d92499b7170b21511779040570a573e4c68864b4d37bb0591ee",
+    "interpretation": "Historical separately verified R15 compile provenance; not the current R16 controller/source path and not an R6I R2 dependency."
+  },
+  "guardrail": "The R16 request controller path itself is current R16 and matches its current manifest; its schema label and compile paths are still R15-labeled. Do not resolve R16 execution/source identity from the stale schema or frozen_r6 path/hash fields. For any future R16 activity, use the R16 candidate root and its current source manifest/controller hash, while retaining the separately verified R15 compile receipt only in its stated provenance role. W23 packet files are unchanged."
+}

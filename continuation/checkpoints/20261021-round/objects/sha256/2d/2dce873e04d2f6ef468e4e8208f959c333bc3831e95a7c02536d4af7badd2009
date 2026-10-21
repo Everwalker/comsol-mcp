@@ -1,0 +1,64 @@
+{
+  "schema": "W23_R17_MAIN_SOURCE_REVIEW_REQUEST/1",
+  "status": "REQUEST_SOURCE_REVIEW_ONLY_NO_EFFECTFUL_AUTHORITY",
+  "candidate_id": "0deda67f-c823-4880-8825-5300adcd517c",
+  "r6_candidate_root": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w23-r17-current-source-r6-nonhidden-input-0deda67f-c823-4880-8825-5300adcd517c-20261021",
+  "r8_candidate_root": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w23-r17-fixed-authority-live-set-nonhidden-input-0deda67f-c823-4880-8825-5300adcd517c-20261021",
+  "prior_r16_actual": {
+    "review_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/W23_R16_MAIN_ACTUAL_FAILURE_TERMINAL_REVIEW_20261021_R1.json",
+    "review_sha256": "5d14462d3efa6209b5377214d786dc2e7d9b4f2f143e885e5d3f470a68b6b79d",
+    "status": "FAIL_PROTECTED_PATH_VALIDATION_OUTER_UNKNOWN_RETAINED_EXACT_OWNERS_TERMINAL",
+    "replay": "FORBIDDEN; old UNKNOWN and all consumed authorities remain unchanged"
+  },
+  "root_cause": "The R16 artifact.register destination was under the protected hidden W25 private workspace. The production route correctly returned ACCESS_VIOLATION before model.load or field reads.",
+  "bounded_fix": "Create an exact byte-identical saved-MPH copy at a project-relative non-hidden w23-input-<run-id> path. Keep the private .w25-probe-* workspace empty. Do not relax ArtifactStore protected-path rules.",
+  "actual_production_route_controls": {
+    "route": "ControlDaemon -> ManagedBackend -> ArtifactStore through the production operation contract",
+    "positive": "The exact saved-MPH copy at the non-hidden project input path registers successfully and preserves the SHA/provenance binding.",
+    "negative": "The same actual route rejects a protected hidden private-workspace destination with ACCESS_VIOLATION; the artifact store remains unchanged.",
+    "validation_receipt_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w23-r17-current-source-r6-nonhidden-input-0deda67f-c823-4880-8825-5300adcd517c-20261021/evidence/VALIDATION_RECEIPT_R3.json",
+    "validation_receipt_sha256": "d66c4850ba9930bb6a069087226d2c022a23d712f0c609a2bcfb4f6555415faa"
+  },
+  "current_r6": {
+    "source_projection_sha256": "a3f12cf612ccea2fff02471e97dc1ffb9c449d088cf561211eddbfb2db5813dd",
+    "source_map_sha256": "3dca5216603a5bb3b55d97498d8db692751db4685ca8a094e8b281825fc17c06",
+    "packet_manifest_sha256": "2eef77a6fec7950ee1aed3ea8b7bfdcb61088f3828edd89460c48aebfc3859b9",
+    "projected_members": 914,
+    "source_packet_records": 921,
+    "exact_delta_from_r15": [
+      "probe/w23_actual_controller_r8.py",
+      "probe/w23_actual_entry_r6.py",
+      "probe/w23_owned_runtime_entry.py",
+      "probe/w23_zero_solve_runtime.py",
+      "tests/r6_transport_cached_status_contract_child.py",
+      "tests/test_first_cause_durability.py",
+      "tests/test_r6_transport_cached_status_contract.py",
+      "tests/test_zero_solve_runtime.py"
+    ],
+    "java": "Inherited exact Main-executed R15 JDK11 compile sidecar at original path; source inputs unchanged; no new javac run."
+  },
+  "current_r8": {
+    "source_plan_sha256": "317753ecc946c0e3dc19ab1b58347b329da59b541e8682f849233f551b9691b4",
+    "source_map_sha256": "c30df5dbff02bf239d6b6f9649cc8d5a7356c431a5d00ec4e2f191f475b439a1",
+    "source_manifest_sha256": "747f2811601b0f912c272f06e19ec577e1fbb5d4f2b438710c131d640019d831",
+    "manifest_members": 10,
+    "outer_tests": "23 passed",
+    "source_only_cli": "PASS_SOURCE_ONLY_NO_AUTHORITY_NO_DISPATCH"
+  },
+  "predecessor_runtime_output_handling": {
+    "r15_source_packet_records": 975,
+    "R16_UNKNOWN_output_allowlist_files": 15,
+    "R16_Main_terminal_review_sha256": "5d14462d3efa6209b5377214d786dc2e7d9b4f2f143e885e5d3f470a68b6b79d",
+    "other_unlisted_files": "REJECTED"
+  },
+  "authority_state": {
+    "effective_approval_created": false,
+    "effective_once_created": false,
+    "native_run": false,
+    "SSH": false,
+    "COMSOL": false,
+    "host_created": false,
+    "public_calls": 0
+  },
+  "requested_review": "Review this exact frozen source/software packet only. A source review does not create native permission or a one-shot authorization."
+}

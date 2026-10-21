@@ -1,0 +1,394 @@
+from __future__ import annotations
+
+import copy
+import hashlib
+import importlib.util
+import json
+import sys
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+spec = importlib.util.spec_from_file_location("probe.w23_r2_entry", ROOT / "probe/w23_zero_solve_entry.py")
+assert spec is not None and spec.loader is not None
+entry = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = entry
+spec.loader.exec_module(entry)
+
+
+def _synthetic_terminal_pair(response, operation):
+    """Build an explicitly synthetic operation/job proof for contract tests only."""
+    execution = response.setdefault("execution", {})
+    execution.update({
+        "status": "SUCCEEDED", "project_id": "offline-integral-project",
+        "session_id": "offline-integral-session", "operation_id": "offline-operation-id",
+        "job_id": "offline-job-id", "request_id": "offline-request-id",
+        "idempotency_key": "offline-idempotency-key", "request_hash": "a" * 64,
+    })
+    raw_sha = hashlib.sha256(json.dumps(
+        response, sort_keys=True, separators=(",", ":"),
+        ensure_ascii=False, allow_nan=False).encode()).hexdigest()
+    return {
+        "schema": "W23_OWNER_OPERATION_JOB_TERMINAL_PAIR_R1",
+        "source": "LIVE_BOUND_MANAGED_PUBLIC_GATE_OPERATIONSTORE",
+        "terminal_pair_status": "OPERATION_AND_JOB_SUCCEEDED",
+        "public_operation": operation, "raw_response_sha256": raw_sha,
+        "operation_result_sha256": raw_sha, "job_result_sha256": raw_sha,
+        "operation_id": execution["operation_id"], "job_id": execution["job_id"],
+        "request_id": execution["request_id"],
+        "idempotency_key": execution["idempotency_key"],
+        "request_hash": execution["request_hash"],
+        "operation_status": "SUCCEEDED", "job_status": "SUCCEEDED",
+        "operation_finished_at": "2026-10-19T00:00:00Z",
+        "job_finished_at": "2026-10-19T00:00:00Z",
+        "operation_metadata_sha256": "b" * 64,
+        "job_metadata_sha256": "c" * 64,
+        "request_sha256": "d" * 64,
+        "owner_identity": {
+            "project_id": execution["project_id"],
+            "session_id": execution["session_id"],
+            "server_pid": 20001, "worker_pid": 20002,
+            "worker_instance_id": "12345678-1234-4234-8234-123456789abc",
+            "worker_epoch": 19,
+        },
+    }
+
+
+def _typed(name: str, value: str, allowed=None):
+    schema = {
+        "name": name,
+        "has_property": True,
+        "metadata_status": "KNOWN",
+        "type_id": "Port",
+        "value_type": "String",
+        "kind": "string",
+        "shape_rank": 0,
+        "getter": "getString",
+        "allowed_values": allowed,
+    }
+    return {
+        "schema": schema,
+        "decision": {"status": "PROPERTY_PRESENT_TYPED", "should_get": True},
+        "typed_get": {
+            "status": "TYPED_VALUE_CAPTURED",
+            "name": name,
+            "typed_value": {"kind": "string", "shape": [], "data": value},
+        },
+    }
+
+
+def _observation(physics_identifier="emwActual", physics_tag="ewfd"):
+    properties = {
+        "PortName": ("1", ["1", "2"]),
+        "PortType": ("Numeric", ["Numeric"]),
+        "PortOrientation": ("ForwardPort", ["ForwardPort", "ReversePort"]),
+        "PortExcitation": ("on", ["on", "off"]),
+        "Pin": ("1[W/m]", None),
+        "PortModeNumber": ("1", None),
+        "PortSlit": ("0", ["0", "1"]),
+        "SlitType": ("DomainBacked", ["DomainBacked", "PECBacked"]),
+    }
+    port_rows = []
+    for port_name, tag in (("1", "portInputObserved"), ("2", "portOutputObserved")):
+        values = {key: value for key, value in properties.items()}
+        values["PortName"] = (port_name, ["1", "2"])
+        values["PortExcitation"] = ("on" if port_name == "1" else "off", ["on", "off"])
+        port_rows.append({
+            "tag": tag,
+            "type_id": "Port",
+            "properties": {
+                name: _typed(name, value, allowed)
+                for name, (value, allowed) in values.items()
+            },
+        })
+    source = "fresh StudyStep.study/studystep -> StoreSolution.sol -> Dataset.solution"
+    bma = [
+        {"port_name": "1", "status": "UNIQUE_EXACT_LINK", "study_tag": "std1", "bma_tag": "bma1",
+         "dataset_tag": "dset2", "solution_tag": "sol2", "dataset_type": "Solution",
+         "dataset_binding_complete": True, "source": source},
+        {"port_name": "2", "status": "UNIQUE_EXACT_LINK", "study_tag": "std1", "bma_tag": "bma2",
+         "dataset_tag": "dset3", "solution_tag": "sol3", "dataset_type": "Solution",
+         "dataset_binding_complete": True, "source": source},
+    ]
+    return {
+        "schema": "W23_FRESH_TYPED_METADATA_OBSERVATION_R1",
+        "saved_model_bytes": entry.SAVED_MPH_BYTES,
+        "saved_model_sha256": entry.SAVED_MPH_SHA256,
+        "geometry_readback_raw_observed": {
+            "path": {"segments": [
+                {"collection": "component", "tag": "comp1"},
+                {"collection": "geom", "tag": "geom1"},
+            ]},
+            "kind": "geom",
+            "geometry_state": {"dimension": 2, "length_unit": "um"},
+        },
+        "physics_inventory": [
+            {"tag": physics_tag, "type_id": "ElectromagneticWaves",
+             "identifier_status": "OBSERVED", "identifier": physics_identifier}
+        ],
+        "ports": port_rows,
+        "physical_solution_binding": {
+            "status": "UNIQUE_EXACT_FREQUENCY_DATASET_BINDING",
+            "dataset_tag": "dset1", "dataset_type": "Solution", "solution_tag": "sol1",
+            "binding_complete": True, "numeric_solution_count": 1,
+            "source": "fresh dataset.list + dataset.solution_indices + exact StudyStep/StoreSolution chain",
+        },
+        "bma_solution_bindings": bma,
+        "port_selection_readbacks": [
+            {"tag": "selInputPort", "component": "comp1", "geometry": "geom1",
+             "entity_dimension": 1, "dimension": 1, "is_inheriting": False,
+             "named": "selInputPort", "entities": [17]},
+            {"tag": "selReceiverX8", "component": "comp1", "geometry": "geom1",
+             "entity_dimension": 1, "dimension": 1, "is_inheriting": False,
+             "named": "selReceiverX8", "entities": [24]},
+        ],
+    }
+
+
+def _selection_witness(slot):
+    target = slot["selection"]
+    native = {
+        "geometry": target["geometry"], "dimension": 1, "named": target["tag"],
+        "is_inheriting": False, "entities": list(target["actual_entity_ids"]),
+    }
+    return {
+        "before": {
+            "stage": "before_numeric_read", "kind": "named",
+            "component": target["component"], "geometry": target["geometry"],
+            "entity_dimension": 1, "tag": target["tag"],
+            "native_selection_readback": copy.deepcopy(native),
+        },
+        "after": {
+            "stage": "after_numeric_read", "kind": "named",
+            "component": target["component"], "geometry": target["geometry"],
+            "entity_dimension": 1, "tag": target["tag"],
+            "native_selection_readback": copy.deepcopy(native),
+        },
+    }
+
+
+def _decoded(slot, *, normal_x=-1.0):
+    count = slot["sample_count"]
+    prefix = slot["physics_identifier_observed"]
+    port = slot["port_name_observed"]
+    values = {name: (0.0, 0.0) for name in slot["expressions"]}
+    values[f"down({prefix}.Ey)"] = (2.0, 0.0)
+    values[f"down({prefix}.Hz)"] = (1.0, 0.0)
+    values[f"{prefix}.Emodey_{port}"] = (2.0, 0.0)
+    values[f"{prefix}.Hmodez_{port}"] = (-1.0, 0.0)
+    values[f"{prefix}.nx"] = (normal_x, 0.0)
+    values[f"{prefix}.ny"] = (0.0, 0.0)
+    rows = [
+        {"expression": name, "real": [value[0]] * count, "imag": [value[1]] * count}
+        for name, value in values.items()
+    ]
+    y = [-8e-6 + 16e-6 * index / (count - 1) for index in range(count)]
+    x_um = -10.0 if slot["role"] == "input_xminus10" else 8.0
+    return {
+        "status": "PRODUCTION_NATIVE_COMPLEX_POINT_READBACK",
+        "operation": "result.at_points",
+        "science_acceptance": "NOT_EVALUATED",
+        "complex_readback": True,
+        "dataset": slot["dataset_tag_observed"],
+        "solution": slot["solution_tag_observed"],
+        "sample_count": count,
+        "expressions": rows,
+        "expression_units": dict(zip(slot["expressions"], slot["requested_units"])),
+        "coordinates_m": [[x_um * 1e-6] * count, y],
+        "coordinate_geometry_unit": "m",
+    }
+
+
+class ZeroSolveEntryTests(unittest.TestCase):
+    def test_saved_model_copy_is_exact_read_only_input(self):
+        result = entry.verify_saved_mph_copy(str(ROOT / "inputs/w23_coarse-phase0_provisional.mph"))
+        self.assertEqual(result["bytes"], 13_795_478)
+        self.assertEqual(result["sha256"], "cba0c1d404003c4e60a20b04316cb1456c38cc2b45596dc2dc29bbed62674a8c")
+        self.assertFalse(result["opened_by_comsol"])
+
+    def test_actual_identifier_metadata_builds_four_bounded_reads_and_zero_solve_plan(self):
+        plan = entry.build_read_plan(_observation())
+        self.assertEqual(plan["schema"], "W23_FRESH_SAVED_MPH_ZERO_SOLVE_READ_PLAN_R3")
+        self.assertEqual(plan["status"], "SOURCE_PLAN_ONLY_NOT_ADMITTED")
+        self.assertEqual(plan["observed_physics_tag"], "ewfd")
+        self.assertEqual(plan["observed_physics_identifier"], "emwActual")
+        self.assertTrue(all("emwActual" in slot["expressions"][0] for slot in plan["point_read_slots"]))
+        self.assertEqual([row["sample_count"] for row in plan["point_read_slots"]], [641, 1281, 641, 1281])
+        self.assertEqual([row["dataset_tag_observed"] for row in plan["point_read_slots"]],
+                         ["dset1", "dset1", "dset1", "dset1"])
+        self.assertEqual(plan["limits"]["result.at_points"], 4)
+        self.assertEqual(plan["limits"]["result.evaluate.aggregate_integral"], 2)
+        self.assertEqual(plan["limits"]["metadata_public_calls_max"], 128)
+        self.assertEqual(plan["limits"]["total_public_calls_max"], 134)
+        self.assertEqual(plan["observed_geometry"]["dimension"], 2)
+        self.assertEqual(len(plan["native_integral_slots"]), 2)
+        self.assertTrue(all(slot["request_arguments"]["spec"]["entity_dim"] == 1
+                            for slot in plan["native_integral_slots"]))
+        self.assertTrue(all(slot["geometry_dimension_observed"] == 2
+                            for slot in plan["native_integral_slots"]))
+        self.assertTrue(all(slot["request_arguments"]["spec"]["solution"] ==
+                            {"dataset": "dset1", "solution": "sol1"}
+                            for slot in plan["native_integral_slots"]))
+        self.assertTrue(all("abs(" not in expression
+                            for slot in plan["native_integral_slots"]
+                            for expression in slot["expressions"]))
+        self.assertEqual(plan["limits"]["Study.run"], 0)
+        self.assertEqual(plan["limits"]["solver.run"], 0)
+        self.assertEqual(plan["material_proof_contract"]["parameter_scope"].split(";")[0],
+                         "validate the exact observed model-global symbol union once")
+        self.assertIn("Two exact result.evaluate aggregate=integral calls",
+                      plan["signed_power_proof"]["independent_native_integral"])
+
+    def test_geometry_and_integral_requests_are_closed_to_observed_dimensions(self):
+        bad = _observation()
+        bad["geometry_readback_raw_observed"]["geometry_state"]["dimension"] = 3
+        with self.assertRaisesRegex(entry.ObservationError, "exact observed 2D"):
+            entry.build_read_plan(bad)
+        plan = entry.build_read_plan(_observation())
+        slot = plan["native_integral_slots"][0]
+        self.assertEqual(slot["operation_id"], "result.evaluate")
+        self.assertEqual(slot["aggregate"], "integral")
+        self.assertEqual(slot["complex_mode"], "real")
+        self.assertEqual(slot["request_arguments"]["spec"]["selection"]["entity_dimension"], 1)
+        self.assertEqual(slot["requested_units"], ["W/m"] * 4)
+
+    def test_native_integral_receipt_requires_exact_bindings_signed_fields_and_cleanup(self):
+        plan = entry.build_read_plan(_observation())
+        slot = plan["native_integral_slots"][0]
+        values = [[[[1.0]]], [[[2.0]]], [[[-3.0]]], [[[4.0]]]]
+        field_array = {"axes": ["expression", "outer", "inner", "point"],
+                       "shape": [4, 1, 1, 1], "is_complex": False, "values": values}
+        data = {
+            "aggregate": "integral", "complex_mode": "real",
+            "dataset": "dset1", "solution": "sol1", "expressions": list(slot["expressions"]),
+            "expression_units": dict(zip(slot["expressions"], ["W/m"] * 4)),
+            "status": {"ok": True, "cleanup_failed": False},
+            "cleanup": {"created": True, "removed": True, "verified_removed": True,
+                        "cleanup_failed": False, "children": [
+                            {"created": True, "removed": True, "verified_removed": True,
+                             "cleanup_failed": False}]},
+            "field_array": field_array, "values": values,
+        }
+        selection = {"component": "comp1", "tag": slot["selection"]["tag"],
+                     "entity_dimension": 1, "dimension": 1, "geometry": "geom1",
+                     "is_inheriting": False, "entities": list(slot["selection"]["actual_entity_ids"])}
+        response = {"success": True, "execution": {"status": "SUCCEEDED"}, "data": data}
+        terminal_pair = _synthetic_terminal_pair(response, "result.evaluate")
+        proof = entry.validate_native_integral_receipt(
+            response, slot, terminal_pair_proof=terminal_pair,
+            selection_before=selection, selection_after=copy.deepcopy(selection))
+        self.assertEqual(proof["signed_integrals_W_per_m"], {
+            "signal_global_plus_x": 1.0, "signal_outward_n_dot_S": 2.0,
+            "BMA_mode_global_plus_x": -3.0, "BMA_mode_outward_n_dot_S": 4.0})
+        self.assertEqual(proof["scientific_acceptance"], "NOT_EVALUATED")
+        bad = copy.deepcopy(response)
+        bad["data"]["cleanup"]["children"][0]["removed"] = False
+        bad_terminal_pair = _synthetic_terminal_pair(bad, "result.evaluate")
+        with self.assertRaisesRegex(entry.ObservationError, "cleanup child"):
+            entry.validate_native_integral_receipt(
+                bad, slot, terminal_pair_proof=bad_terminal_pair,
+                selection_before=selection, selection_after=selection)
+        bad = copy.deepcopy(response)
+        bad["data"]["expressions"][0] = "abs(ewfd.Sx)"
+        bad_terminal_pair = _synthetic_terminal_pair(bad, "result.evaluate")
+        with self.assertRaisesRegex(entry.ObservationError, "expression identity"):
+            entry.validate_native_integral_receipt(
+                bad, slot, terminal_pair_proof=bad_terminal_pair,
+                selection_before=selection, selection_after=selection)
+
+    def test_native_integral_comparison_preserves_sign_and_is_diagnostic(self):
+        native = {"port_name_observed": "1", "dataset_observed": "dset1", "solution_observed": "sol1",
+                  "signed_integrals_W_per_m": {
+                      "signal_global_plus_x": 1.01, "signal_outward_n_dot_S": -1.01,
+                      "BMA_mode_global_plus_x": -0.99, "BMA_mode_outward_n_dot_S": 0.99}}
+        coarse = {"port_name_observed": "1", "dataset_observed": "dset1", "solution_observed": "sol1",
+                  "sample_count": 641,
+                  "global_plus_x_power": {"signal": 1.0, "BMA_mode": -1.0},
+                  "outward_n_dot_S": {"signal": -1.0, "BMA_mode": 1.0}}
+        fine = {**coarse, "sample_count": 1281}
+        result = entry.compare_native_integral_to_quadrature(native, coarse, fine)
+        self.assertLess(result["metrics"]["signal_global_plus_x"]["relative_difference_vs_1281"], 0.02)
+        self.assertTrue(result["no_absolute_value_or_forced_sign"])
+        self.assertEqual(result["scientific_acceptance"], "NOT_EVALUATED")
+
+    def test_schema_or_identifier_drift_fails_closed(self):
+        bad = _observation()
+        bad["ports"][0]["properties"].pop("PortOrientation")
+        with self.assertRaisesRegex(entry.ObservationError, "PortOrientation"):
+            entry.build_read_plan(bad)
+        bad = _observation()
+        bad["physics_inventory"][0]["identifier_status"] = "MISSING"
+        with self.assertRaisesRegex(entry.ObservationError, "identifier"):
+            entry.build_read_plan(bad)
+        bad = _observation(physics_identifier="ewfd", physics_tag="ewfd")
+        self.assertEqual(entry.build_read_plan(bad)["observed_physics_identifier"], "ewfd")
+
+    def test_fresh_entry_is_bound_to_the_corrected_material_consumer(self):
+        with self.assertRaisesRegex(ValueError, "port adjacency"):
+            entry.prove_fresh_material_closure({}, {}, [], observed_geometry_dimension=2)
+
+    def test_complex_point_receipt_recomputes_signed_global_and_actual_outward_flux(self):
+        plan = entry.build_read_plan(_observation())
+        slot = plan["point_read_slots"][0]
+        decoded = _decoded(slot, normal_x=-1.0)
+        raw_before = copy.deepcopy(decoded)
+        result = entry.signed_power(decoded, slot, _selection_witness(slot))
+        self.assertEqual(decoded, raw_before)
+        self.assertEqual(result["status"], "SOFTWARE_RECOMPUTED_FROM_FRESH_NATIVE_COMPLEX_POINT_RECEIPT")
+        self.assertAlmostEqual(result["global_plus_x_power"]["signal"], 16e-6, places=15)
+        self.assertAlmostEqual(result["global_plus_x_power"]["BMA_mode"], -16e-6, places=15)
+        self.assertAlmostEqual(result["outward_n_dot_S"]["signal"], -16e-6, places=15)
+        self.assertAlmostEqual(result["outward_n_dot_S"]["BMA_mode"], 16e-6, places=15)
+        self.assertEqual(result["measured_direction"]["signal"], "+x")
+        self.assertEqual(result["measured_direction"]["BMA_mode"], "-x")
+        self.assertFalse(result["measured_direction"]["same_global_direction"])
+        self.assertEqual(result["native_normal_x"], -1.0)
+        self.assertEqual(result["scientific_acceptance"], "NOT_EVALUATED")
+        self.assertEqual(len(result["raw_native_receipt_sha256"]), 64)
+        self.assertFalse(result["normal_inversion"])
+        geometry_um = _decoded(slot, normal_x=-1.0)
+        geometry_um["coordinate_geometry_unit"] = "um"
+        self.assertEqual(entry.signed_power(geometry_um, slot, _selection_witness(slot))["global_plus_x_power"],
+                         result["global_plus_x_power"])
+
+    def test_point_receipt_requires_exact_units_complex_arrays_coordinates_and_selection(self):
+        plan = entry.build_read_plan(_observation())
+        slot = plan["point_read_slots"][0]
+        witness = _selection_witness(slot)
+        good = _decoded(slot)
+        bad = copy.deepcopy(good)
+        bad["expressions"][0].pop("imag")
+        with self.assertRaisesRegex(entry.ObservationError, "real and imaginary"):
+            entry.signed_power(bad, slot, witness)
+        bad = copy.deepcopy(good)
+        bad["expression_units"][slot["expressions"][0]] = "A/m"
+        with self.assertRaisesRegex(entry.ObservationError, "exact units"):
+            entry.signed_power(bad, slot, witness)
+        bad = copy.deepcopy(good)
+        bad["coordinates_m"][1][100] += 1e-8
+        with self.assertRaisesRegex(entry.ObservationError, "coordinates differ"):
+            entry.signed_power(bad, slot, witness)
+        bad_witness = copy.deepcopy(witness)
+        bad_witness["after"]["native_selection_readback"]["entities"] = [999]
+        with self.assertRaisesRegex(entry.ObservationError, "selection identity"):
+            entry.signed_power(good, slot, bad_witness)
+        bad = copy.deepcopy(good)
+        bad["complex_readback"] = False
+        with self.assertRaisesRegex(entry.ObservationError, "complex mode"):
+            entry.signed_power(bad, slot, witness)
+
+    def test_refinement_is_diagnostic_and_never_changes_acceptance(self):
+        result = entry.compare_refinements(
+            {"sample_count": 641, "global_plus_x_power": {"signal": 1.0, "BMA_mode": -1.0},
+             "outward_n_dot_S": {"signal": -1.0, "BMA_mode": 1.0}},
+            {"sample_count": 1281, "global_plus_x_power": {"signal": 1.0001, "BMA_mode": -1.0001},
+             "outward_n_dot_S": {"signal": -1.0001, "BMA_mode": 1.0001}},
+        )
+        self.assertEqual(result["status"], "DIAGNOSTIC_ONLY_NO_ACCEPTANCE_CHANGE")
+        self.assertEqual(result["relative_tolerance"], 1e-3)
+        self.assertEqual(result["native_scientific_acceptance"], "NOT_EVALUATED")
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

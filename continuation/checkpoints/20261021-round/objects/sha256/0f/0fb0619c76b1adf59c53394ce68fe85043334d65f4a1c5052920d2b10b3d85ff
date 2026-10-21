@@ -1,0 +1,526 @@
+"""Remote one-shot approval admission for the exact reviewed R6I outer gate.
+
+This stdin program is sent only after the local Main wrapper review and a
+separate exact one-use authorization bind the R2 entry review, R6I native
+approval bytes, the historical R6I PREP checkpoint, the live RESUME snapshot
+captured for this R2 review, and the rendered payload digest. These checkpoint
+and live-state hashes are distinct fields and are never substituted for one
+another. It performs one
+in-place write to the already-existing empty MAIN_APPROVAL object, then runs
+the exact R6I gate in this same interpreter. It creates no other candidate,
+authority, or evidence path itself.
+"""
+from __future__ import annotations
+
+import base64
+import contextlib
+import hashlib
+import io
+import json
+import os
+from pathlib import Path
+import re
+import runpy
+import sys
+import types
+
+
+EXPECTED_GATE_SHA256 = "4ef244f15282bf49770d7ae9c468c40aa8818462bfb071652c7c1b9423aef1c9"
+EXPECTED_HELPER_SHA256 = "b64ae1a12251858c13a876f41e092eb8402cb490a7998eee3dbd5ac2fea32d5a"
+EXPECTED_INNER_SHA256 = "6b5e6ad756045dee4551be992a32ba0228a357907dc2ee58dbb7391e1505f67a"
+EXPECTED_OUTER_SHA256 = "bb058d5422c32be438934e017d222ed2d10d9983fd97438d0a100b561b1b7ade"
+EXPECTED_R14_BINDING_SHA256 = "075250aa28a0ae33eec9ac414ab0f143c046df090b00613669ffdf0fbf59dabb"
+EXPECTED_R6B_SOURCE_SHA256 = "68bb01164f6c2bb51ecc4924076252409c75d9d9406d654ba09ac76c52126259"
+EXPECTED_APPROVAL_IDENTITY = {
+    "device": 543112286,
+    "inode": 5066549581541651,
+    "security_sha256": "7d6d4adc787a461f97c0dec29d54f80e1466a7c56f938719a98c309e6b71423e",
+}
+HISTORICAL_R6I_CAPTURE_APPROVAL_RAW_PROOF_SHA256 = "9f506f2c9d74a28a30e57428efa7aba94cd106372f0ba2a2ec7a5f7e0cb245fd"
+EXPECTED_APPROVAL_PROJECTED_PROOF_SHA256 = "9febe250c34a9e176bbca8e32829f9ccd9d04c8656c59968f509c03c129a7339"
+EXPECTED_APPROVAL_LEGACY_IDENTITY = (543112286, 5066549581541651)
+APPROVAL_B64 = "__R6I_R2_EXACT_APPROVAL_BASE64__"
+APPROVAL_SHA256 = "__R6I_R2_EXACT_APPROVAL_SHA256__"
+EMPTY_APPROVAL_PROOF_B64 = "ewogICJpZGVudGl0eSI6IHsKICAgICJkZXZpY2UiOiA1NDMxMTIyODYsCiAgICAiaW5vZGUiOiA1MDY2NTQ5NTgxNTQxNjUxLAogICAgInNlY3VyaXR5X3NoYTI1NiI6ICI3ZDZkNGFkYzc4N2E0NjFmOTdjMGRlYzI5ZDU0ZjgwZTE0NjZhN2M1NmY5Mzg3MTlhOThjMzA5ZTZiNzE0MjNlIgogIH0sCiAgInBhdGhfY2hhaW4iOiBbCiAgICB7CiAgICAgICJkZXNjcmlwdG9yX3NoYTI1NiI6ICJkMTdiY2RjNTk4MjRhMDk0Y2M0NWVhYzU0MmI4OWI0MzhjMDcwOTE1ZTY1ZDA4ZDZhZTllZTI3N2Y4NjRiODNlIiwKICAgICAgImRpcmVjdG9yeSI6IHRydWUsCiAgICAgICJpZGVudGl0eSI6IHsKICAgICAgICAiZGV2aWNlIjogNTQzMTEyMjg2LAogICAgICAgICJpbm9kZSI6IDE0MDczNzQ4ODM1NTMyODUKICAgICAgfSwKICAgICAgImluZm9fc2l6ZSI6IDEyMjg4LAogICAgICAibmF0aXZlX2Z1bGxfZmluZ2VycHJpbnQiOiBbCiAgICAgICAgWwogICAgICAgICAgNTE5NzI1ODczMzM3MDk0ODcwMiwKICAgICAgICAgIDE0MDczNzQ4ODM1NTMyODUKICAgICAgICBdLAogICAgICAgIDEyMjg4LAogICAgICAgIDEzMjIwMTgzMDI0NDYwOTc3NywKICAgICAgICAxMzQzNzAxODcyNjE0Mzk2NjksCiAgICAgICAgMTM0MzcwMTg3MjYxNDM5NjY5LAogICAgICAgIDEKICAgICAgXSwKICAgICAgIm5hdGl2ZV9mdWxsX2ZpbmdlcnByaW50X3NlY29uZCI6IFsKICAgICAgICBbCiAgICAgICAgICA1MTk3MjU4NzMzMzcwOTQ4NzAyLAogICAgICAgICAgMTQwNzM3NDg4MzU1MzI4NQogICAgICAgIF0sCiAgICAgICAgMTIyODgsCiAgICAgICAgMTMyMjAxODMwMjQ0NjA5Nzc3LAogICAgICAgIDEzNDM3MDE4NzI2MTQzOTY2OSwKICAgICAgICAxMzQzNzAxODcyNjE0Mzk2NjksCiAgICAgICAgMQogICAgICBdLAogICAgICAib3V0c2lkZV90YXNrX3Jvb3RfYW5jZXN0b3IiOiB0cnVlLAogICAgICAib3V0c2lkZV90YXNrX3Jvb3RfYW5jZXN0b3JfdGltZV9kaWZmZXJlbmNlcyI6IHt9LAogICAgICAib3duZXJfY2xhc3NpZmljYXRpb24iOiAidHJ1c3RlZC1ob3N0LWFkbWluIiwKICAgICAgIm93bmVyX3NpZCI6ICJTLTEtNS04MC05NTYwMDg4ODUtMzQxODUyMjY0OS0xODMxMDM4MDQ0LTE4NTMyOTI2MzEtMjI3MTQ3ODQ2NCIsCiAgICAgICJwYXRoIjogIkM6XFwiCiAgICB9LAogICAgewogICAgICAiZGVzY3JpcHRvcl9zaGEyNTYiOiAiZThhMjVmMjBjZTBmNWM0OWI4NWIyN2M3ZWVmNmI2YjE0MTZiNjY3NzM2MjU4NTU3ZTAyM2U1OGViM2Y5ZWJkNiIsCiAgICAgICJkaXJlY3RvcnkiOiB0cnVlLAogICAgICAiaWRlbnRpdHkiOiB7CiAgICAgICAgImRldmljZSI6IDU0MzExMjI4NiwKICAgICAgICAiaW5vZGUiOiAyODE0NzQ5Nzg0MDEzODUKICAgICAgfSwKICAgICAgImluZm9fc2l6ZSI6IDQwOTYsCiAgICAgICJuYXRpdmVfZnVsbF9maW5nZXJwcmludCI6IFsKICAgICAgICBbCiAgICAgICAgICA1MTk3MjU4NzMzMzcwOTQ4NzAyLAogICAgICAgICAgMjgxNDc0OTc4NDAxMzg1CiAgICAgICAgXSwKICAgICAgICA0MDk2LAogICAgICAgIDEzMzU2NDI5Njc2MTg0NDM0OCwKICAgICAgICAxMzM4NTgwMTQyMjQ2MDY5NzEsCiAgICAgICAgMTMzODU3OTQwNzk3Mjc5NTI5LAogICAgICAgIDEKICAgICAgXSwKICAgICAgIm5hdGl2ZV9mdWxsX2ZpbmdlcnByaW50X3NlY29uZCI6IFsKICAgICAgICBbCiAgICAgICAgICA1MTk3MjU4NzMzMzcwOTQ4NzAyLAogICAgICAgICAgMjgxNDc0OTc4NDAxMzg1CiAgICAgICAgXSwKICAgICAgICA0MDk2LAogICAgICAgIDEzMzU2NDI5Njc2MTg0NDM0OCwKICAgICAgICAxMzM4NTgwMTQyMjQ2MDY5NzEsCiAgICAgICAgMTMzODU3OTQwNzk3Mjc5NTI5LAogICAgICAgIDEKICAgICAgXSwKICAgICAgIm91dHNpZGVfdGFza19yb290X2FuY2VzdG9yIjogdHJ1ZSwKICAgICAgIm91dHNpZGVfdGFza19yb290X2FuY2VzdG9yX3RpbWVfZGlmZmVyZW5jZXMiOiB7fSwKICAgICAgIm93bmVyX2NsYXNzaWZpY2F0aW9uIjogInRydXN0ZWQtaG9zdC1hZG1pbiIsCiAgICAgICJvd25lcl9zaWQiOiAiUy0xLTUtMTgiLAogICAgICAicGF0aCI6ICJDOlxcVXNlcnMiCiAgICB9LAogICAgewogICAgICAiZGVzY3JpcHRvcl9zaGEyNTYiOiAiNTkyODgxNzQyM2Y1MDk5NjIyNDM3YzE2YmRlYzRjMTUwOGQyMWY5NDVlZDM4ZDZmZGYyZWFmZjRhNTY3YTUyMSIsCiAgICAgICJkaXJlY3RvcnkiOiB0cnVlLAogICAgICAiaWRlbnRpdHkiOiB7CiAgICAgICAgImRldmljZSI6IDU0MzExMjI4NiwKICAgICAgICAiaW5vZGUiOiA1OTEwOTc0NTEyNjM0NDU5CiAgICAgIH0sCiAgICAgICJpbmZvX3NpemUiOiA0OTE1MiwKICAgICAgIm5hdGl2ZV9mdWxsX2ZpbmdlcnByaW50IjogWwogICAgICAgIFsKICAgICAgICAgIDUxOTcyNTg3MzMzNzA5NDg3MDIsCiAgICAgICAgICA1OTEwOTc0NTEyNjM0NDU5CiAgICAgICAgXSwKICAgICAgICA0OTE1MiwKICAgICAgICAxMzM4NTc5NDA3OTQxNDAxOTQsCiAgICAgICAgMTM0MzY3ODIxMzkwNzgzMTU2LAogICAgICAgIDEzNDM2NzgyMTM5MDc4MzE1NiwKICAgICAgICAxCiAgICAgIF0sCiAgICAgICJuYXRpdmVfZnVsbF9maW5nZXJwcmludF9zZWNvbmQiOiBbCiAgICAgICAgWwogICAgICAgICAgNTE5NzI1ODczMzM3MDk0ODcwMiwKICAgICAgICAgIDU5MTA5NzQ1MTI2MzQ0NTkKICAgICAgICBdLAogICAgICAgIDQ5MTUyLAogICAgICAgIDEzMzg1Nzk0MDc5NDE0MDE5NCwKICAgICAgICAxMzQzNjc4MjEzOTA3ODMxNTYsCiAgICAgICAgMTM0MzY3ODIxMzkwNzgzMTU2LAogICAgICAgIDEKICAgICAgXSwKICAgICAgIm91dHNpZGVfdGFza19yb290X2FuY2VzdG9yIjogdHJ1ZSwKICAgICAgIm91dHNpZGVfdGFza19yb290X2FuY2VzdG9yX3RpbWVfZGlmZmVyZW5jZXMiOiB7fSwKICAgICAgIm93bmVyX2NsYXNzaWZpY2F0aW9uIjogInRydXN0ZWQtaG9zdC1hZG1pbiIsCiAgICAgICJvd25lcl9zaWQiOiAiUy0xLTUtMTgiLAogICAgICAicGF0aCI6ICJDOlxcVXNlcnNcXEV2ZXJ3YWxrZXIiCiAgICB9LAogICAgewogICAgICAiZGVzY3JpcHRvcl9zaGEyNTYiOiAiMGQxZjQ2ZWMyZGM4YjI4YTQ1NjY3MGE3YTI1NTg2MjA2NWRmZjZiYWU3MzZiZmI1Nzk5Y2FhMmU3NWY0NWQwMCIsCiAgICAgICJkaXJlY3RvcnkiOiB0cnVlLAogICAgICAiaWRlbnRpdHkiOiB7CiAgICAgICAgImRldmljZSI6IDU0MzExMjI4NiwKICAgICAgICAiaW5vZGUiOiA1OTEwOTc0NTEyNjM0NDcyCiAgICAgIH0sCiAgICAgICJpbmZvX3NpemUiOiAwLAogICAgICAibmF0aXZlX2Z1bGxfZmluZ2VycHJpbnQiOiBbCiAgICAgICAgWwogICAgICAgICAgNTE5NzI1ODczMzM3MDk0ODcwMiwKICAgICAgICAgIDU5MTA5NzQ1MTI2MzQ0NzIKICAgICAgICBdLAogICAgICAgIDAsCiAgICAgICAgMTMzODU3OTQwNzk0Mjk2MTMxLAogICAgICAgIDEzMzg1ODAxNDI2MTY0MzgxNCwKICAgICAgICAxMzM4NTgwMTQyNjE2NDM4MTQsCiAgICAgICAgMQogICAgICBdLAogICAgICAibmF0aXZlX2Z1bGxfZmluZ2VycHJpbnRfc2Vjb25kIjogWwogICAgICAgIFsKICAgICAgICAgIDUxOTcyNTg3MzMzNzA5NDg3MDIsCiAgICAgICAgICA1OTEwOTc0NTEyNjM0NDcyCiAgICAgICAgXSwKICAgICAgICAwLAogICAgICAgIDEzMzg1Nzk0MDc5NDI5NjEzMSwKICAgICAgICAxMzM4NTgwMTQyNjE2NDM4MTQsCiAgICAgICAgMTMzODU4MDE0MjYxNjQzODE0LAogICAgICAgIDEKICAgICAgXSwKICAgICAgIm91dHNpZGVfdGFza19yb290X2FuY2VzdG9yIjogdHJ1ZSwKICAgICAgIm91dHNpZGVfdGFza19yb290X2FuY2VzdG9yX3RpbWVfZGlmZmVyZW5jZXMiOiB7fSwKICAgICAgIm93bmVyX2NsYXNzaWZpY2F0aW9uIjogImRhZW1vbiIsCiAgICAgICJvd25lcl9zaWQiOiAiUy0xLTUtMjEtMjg0NDY1NjgxNi04ODI0NDMwMDEtNDA1NTA5NTkwOS0xMDAxIiwKICAgICAgInBhdGgiOiAiQzpcXFVzZXJzXFxFdmVyd2Fsa2VyXFxBcHBEYXRhIgogICAgfSwKICAgIHsKICAgICAgImRlc2NyaXB0b3Jfc2hhMjU2IjogIjBkMWY0NmVjMmRjOGIyOGE0NTY2NzBhN2EyNTU4NjIwNjVkZmY2YmFlNzM2YmZiNTc5OWNhYTJlNzVmNDVkMDAiLAogICAgICAiZGlyZWN0b3J5IjogdHJ1ZSwKICAgICAgImlkZW50aXR5IjogewogICAgICAgICJkZXZpY2UiOiA1NDMxMTIyODYsCiAgICAgICAgImlub2RlIjogNTkxMDk3NDUxMjYzNDUwMgogICAgICB9LAogICAgICAiaW5mb19zaXplIjogNDA5NjAsCiAgICAgICJuYXRpdmVfZnVsbF9maW5nZXJwcmludCI6IFsKICAgICAgICBbCiAgICAgICAgICA1MTk3MjU4NzMzMzcwOTQ4NzAyLAogICAgICAgICAgNTkxMDk3NDUxMjYzNDUwMgogICAgICAgIF0sCiAgICAgICAgNDA5NjAsCiAgICAgICAgMTMzODU3OTQwNzk0Mjk2MTMxLAogICAgICAgIDEzNDM2OTM4NzEyNzQxODM0MiwKICAgICAgICAxMzQzNjkzODcxMjc0MTgzNDIsCiAgICAgICAgMQogICAgICBdLAogICAgICAibmF0aXZlX2Z1bGxfZmluZ2VycHJpbnRfc2Vjb25kIjogWwogICAgICAgIFsKICAgICAgICAgIDUxOTcyNTg3MzMzNzA5NDg3MDIsCiAgICAgICAgICA1OTEwOTc0NTEyNjM0NTAyCiAgICAgICAgXSwKICAgICAgICA0MDk2MCwKICAgICAgICAxMzM4NTc5NDA3OTQyOTYxMzEsCiAgICAgICAgMTM0MzY5Mzg3MTI3NDE4MzQyLAogICAgICAgIDEzNDM2OTM4NzEyNzQxODM0MiwKICAgICAgICAxCiAgICAgIF0sCiAgICAgICJvdXRzaWRlX3Rhc2tfcm9vdF9hbmNlc3RvciI6IHRydWUsCiAgICAgICJvdXRzaWRlX3Rhc2tfcm9vdF9hbmNlc3Rvcl90aW1lX2RpZmZlcmVuY2VzIjoge30sCiAgICAgICJvd25lcl9jbGFzc2lmaWNhdGlvbiI6ICJkYWVtb24iLAogICAgICAib3duZXJfc2lkIjogIlMtMS01LTIxLTI4NDQ2NTY4MTYtODgyNDQzMDAxLTQwNTUwOTU5MDktMTAwMSIsCiAgICAgICJwYXRoIjogIkM6XFxVc2Vyc1xcRXZlcndhbGtlclxcQXBwRGF0YVxcTG9jYWwiCiAgICB9LAogICAgewogICAgICAiZGVzY3JpcHRvcl9zaGEyNTYiOiAiYmVkMzYwMDg3NGMyNDFkYTU1NTg3MTg2NjZkZDY0MTY5ZWY2ODg3OTViN2RlYzJkNGVlMjU0MGY1YjU0MjNhYiIsCiAgICAgICJkaXJlY3RvcnkiOiB0cnVlLAogICAgICAiaWRlbnRpdHkiOiB7CiAgICAgICAgImRldmljZSI6IDU0MzExMjI4NiwKICAgICAgICAiaW5vZGUiOiAxMzc5MjI3Mzg1ODk5MTUxMQogICAgICB9LAogICAgICAiaW5mb19zaXplIjogMzI3NjgsCiAgICAgICJuYXRpdmVfZnVsbF9maW5nZXJwcmludCI6IFsKICAgICAgICBbCiAgICAgICAgICA1MTk3MjU4NzMzMzcwOTQ4NzAyLAogICAgICAgICAgMTM3OTIyNzM4NTg5OTE1MTEKICAgICAgICBdLAogICAgICAgIDMyNzY4LAogICAgICAgIDEzNDM2NDE2Mjg5NTQwNzI3OSwKICAgICAgICAxMzQzNjk4MTcxMTgwNTQ3ODUsCiAgICAgICAgMTM0MzY5ODE3MTE4MDU0Nzg1LAogICAgICAgIDEKICAgICAgXSwKICAgICAgIm5hdGl2ZV9mdWxsX2ZpbmdlcnByaW50X3NlY29uZCI6IFsKICAgICAgICBbCiAgICAgICAgICA1MTk3MjU4NzMzMzcwOTQ4NzAyLAogICAgICAgICAgMTM3OTIyNzM4NTg5OTE1MTEKICAgICAgICBdLAogICAgICAgIDMyNzY4LAogICAgICAgIDEzNDM2NDE2Mjg5NTQwNzI3OSwKICAgICAgICAxMzQzNjk4MTcxMTgwNTQ3ODUsCiAgICAgICAgMTM0MzY5ODE3MTE4MDU0Nzg1LAogICAgICAgIDEKICAgICAgXSwKICAgICAgIm91dHNpZGVfdGFza19yb290X2FuY2VzdG9yIjogZmFsc2UsCiAgICAgICJvdXRzaWRlX3Rhc2tfcm9vdF9hbmNlc3Rvcl90aW1lX2RpZmZlcmVuY2VzIjoge30sCiAgICAgICJvd25lcl9jbGFzc2lmaWNhdGlvbiI6ICJkYWVtb24iLAogICAgICAib3duZXJfc2lkIjogIlMtMS01LTIxLTI4NDQ2NTY4MTYtODgyNDQzMDAxLTQwNTUwOTU5MDktMTAwMSIsCiAgICAgICJwYXRoIjogIkM6XFxVc2Vyc1xcRXZlcndhbGtlclxcQXBwRGF0YVxcTG9jYWxcXGN2dzI2LWN1cnJlbnQtOWYwN2E5NTIyNjVjIgogICAgfSwKICAgIHsKICAgICAgImRlc2NyaXB0b3Jfc2hhMjU2IjogImY0YzRlYWU2NTQ2ZTZlNzBiMDI2YmNmNDhlOTViMzlkYzBiMmU1ODFkZWZmOTA3ZWI2NmM2ZGFiZWVlYTg1YzUiLAogICAgICAiZGlyZWN0b3J5IjogdHJ1ZSwKICAgICAgImlkZW50aXR5IjogewogICAgICAgICJkZXZpY2UiOiA1NDMxMTIyODYsCiAgICAgICAgImlub2RlIjogNDUwMzU5OTYyODEyMDMzNAogICAgICB9LAogICAgICAiaW5mb19zaXplIjogNDA5NiwKICAgICAgIm5hdGl2ZV9mdWxsX2ZpbmdlcnByaW50IjogWwogICAgICAgIFsKICAgICAgICAgIDUxOTcyNTg3MzMzNzA5NDg3MDIsCiAgICAgICAgICA0NTAzNTk5NjI4MTIwMzM0CiAgICAgICAgXSwKICAgICAgICA0MDk2LAogICAgICAgIDEzNDM2OTgxNzExODA0ODMzOSwKICAgICAgICAxMzQzNjk4MTcxMTgwNjk4NDksCiAgICAgICAgMTM0MzY5ODE3MTE4MDY5ODQ5LAogICAgICAgIDEKICAgICAgXSwKICAgICAgIm5hdGl2ZV9mdWxsX2ZpbmdlcnByaW50X3NlY29uZCI6IFsKICAgICAgICBbCiAgICAgICAgICA1MTk3MjU4NzMzMzcwOTQ4NzAyLAogICAgICAgICAgNDUwMzU5OTYyODEyMDMzNAogICAgICAgIF0sCiAgICAgICAgNDA5NiwKICAgICAgICAxMzQzNjk4MTcxMTgwNDgzMzksCiAgICAgICAgMTM0MzY5ODE3MTE4MDY5ODQ5LAogICAgICAgIDEzNDM2OTgxNzExODA2OTg0OSwKICAgICAgICAxCiAgICAgIF0sCiAgICAgICJvdXRzaWRlX3Rhc2tfcm9vdF9hbmNlc3RvciI6IGZhbHNlLAogICAgICAib3V0c2lkZV90YXNrX3Jvb3RfYW5jZXN0b3JfdGltZV9kaWZmZXJlbmNlcyI6IHt9LAogICAgICAib3duZXJfY2xhc3NpZmljYXRpb24iOiAiZGFlbW9uIiwKICAgICAgIm93bmVyX3NpZCI6ICJTLTEtNS0yMS0yODQ0NjU2ODE2LTg4MjQ0MzAwMS00MDU1MDk1OTA5LTEwMDEiLAogICAgICAicGF0aCI6ICJDOlxcVXNlcnNcXEV2ZXJ3YWxrZXJcXEFwcERhdGFcXExvY2FsXFxjdncyNi1jdXJyZW50LTlmMDdhOTUyMjY1Y1xcYXV0aG9yaXR5LXByaW1hcnktb3duZXItcjZpIgogICAgfSwKICAgIHsKICAgICAgImRlc2NyaXB0b3Jfc2hhMjU2IjogImZkZDk3MWZiYjRkOGI1NGNlNDMzNzRmMThkZGM4MDBhODU2ZmI2N2VlZDEzZTQ0MGVlZGNlYjc1MjMxZjVmYmQiLAogICAgICAiZGlyZWN0b3J5IjogZmFsc2UsCiAgICAgICJpZGVudGl0eSI6IHsKICAgICAgICAiZGV2aWNlIjogNTQzMTEyMjg2LAogICAgICAgICJpbm9kZSI6IDUwNjY1NDk1ODE1NDE2NTEKICAgICAgfSwKICAgICAgImluZm9fc2l6ZSI6IDAsCiAgICAgICJuYXRpdmVfZnVsbF9maW5nZXJwcmludCI6IFsKICAgICAgICBbCiAgICAgICAgICA1MTk3MjU4NzMzMzcwOTQ4NzAyLAogICAgICAgICAgNTA2NjU0OTU4MTU0MTY1MQogICAgICAgIF0sCiAgICAgICAgMCwKICAgICAgICAxMzQzNjk4MTcxMTgwNjk4NDksCiAgICAgICAgMTM0MzY5ODE3MTE4MDY5ODQ5LAogICAgICAgIDEzNDM2OTgxNzExODA2OTg0OSwKICAgICAgICAxCiAgICAgIF0sCiAgICAgICJuYXRpdmVfZnVsbF9maW5nZXJwcmludF9zZWNvbmQiOiBbCiAgICAgICAgWwogICAgICAgICAgNTE5NzI1ODczMzM3MDk0ODcwMiwKICAgICAgICAgIDUwNjY1NDk1ODE1NDE2NTEKICAgICAgICBdLAogICAgICAgIDAsCiAgICAgICAgMTM0MzY5ODE3MTE4MDY5ODQ5LAogICAgICAgIDEzNDM2OTgxNzExODA2OTg0OSwKICAgICAgICAxMzQzNjk4MTcxMTgwNjk4NDksCiAgICAgICAgMQogICAgICBdLAogICAgICAib3V0c2lkZV90YXNrX3Jvb3RfYW5jZXN0b3IiOiBmYWxzZSwKICAgICAgIm91dHNpZGVfdGFza19yb290X2FuY2VzdG9yX3RpbWVfZGlmZmVyZW5jZXMiOiB7fSwKICAgICAgIm93bmVyX2NsYXNzaWZpY2F0aW9uIjogImRhZW1vbiIsCiAgICAgICJvd25lcl9zaWQiOiAiUy0xLTUtMjEtMjg0NDY1NjgxNi04ODI0NDMwMDEtNDA1NTA5NTkwOS0xMDAxIiwKICAgICAgInBhdGgiOiAiQzpcXFVzZXJzXFxFdmVyd2Fsa2VyXFxBcHBEYXRhXFxMb2NhbFxcY3Z3MjYtY3VycmVudC05ZjA3YTk1MjI2NWNcXGF1dGhvcml0eS1wcmltYXJ5LW93bmVyLXI2aVxcTUFJTl9BUFBST1ZBTC5qc29uIgogICAgfQogIF0sCiAgInJlcGFyc2VfZnJlZV90YXJnZXQiOiB0cnVlLAogICJzZWN1cml0eV9zZW1hbnRpY3MiOiAid2luZG93cy1yZWFkLWNvbnRyb2wtb3duZXItZGFjbC1wZXJzaXN0ZW50LWFjbHMrUjVKLW91dHNpZGUtdGFzay1yb290LWFuY2VzdG9yLXRpbWUtZGlhZ25vc3RpY3MiLAogICJzZWN1cml0eV9zaGEyNTYiOiAiN2Q2ZDRhZGM3ODdhNDYxZjk3YzBkZWMyOWQ1NGY4MGUxNDY2YTdjNTZmOTM4NzE5YTk4YzMwOWU2YjcxNDIzZSIsCiAgInNvdXJjZV9ieXRlcyI6IDAsCiAgInNvdXJjZV9jb250ZW50X3NoYTI1NiI6ICJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1Igp9Cg=="
+MAX_APPROVAL_BYTES = 256 * 1024
+MAX_GATE_STREAM_BYTES = 32 * 1024 * 1024
+KNOWN_HELPER_TERMINAL_STATUSES = frozenset({
+    "PASS_SAME_SID_PRIMARY_OWNER_FILE_PROBE",
+    "FAIL_OR_HOLD_OWNER_PROBE",
+    "FAIL_EVIDENCE_PERSISTENCE",
+})
+
+
+def _sha(raw: bytes) -> str:
+    return hashlib.sha256(raw).hexdigest()
+
+
+def _canonical(value):
+    return json.dumps(value, sort_keys=True, separators=(",", ":"),
+                      ensure_ascii=False, allow_nan=False).encode("utf-8")
+
+
+def _strict_pairs(pairs):
+    value = {}
+    for key, item in pairs:
+        if key in value:
+            raise ValueError("duplicate JSON key: " + key)
+        value[key] = item
+    return value
+
+
+def _json(raw: bytes, label: str):
+    result = json.loads(raw.decode("utf-8", "strict"), object_pairs_hook=_strict_pairs,
+                        parse_constant=lambda x: (_ for _ in ()).throw(ValueError(x)))
+    if not isinstance(result, dict):
+        raise ValueError(label + " must be an object")
+    return result
+
+
+def _stable_bytes(path: str, maximum: int):
+    import stat
+    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(path, flags)
+    try:
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or before.st_size > maximum:
+            raise RuntimeError("expected bounded ordinary file: " + path)
+        chunks = []
+        remaining = maximum + 1
+        while remaining:
+            block = os.read(fd, min(1024 * 1024, remaining))
+            if not block:
+                break
+            chunks.append(block)
+            remaining -= len(block)
+        after = os.fstat(fd)
+        sig = lambda row: (row.st_dev, row.st_ino, row.st_size, row.st_mtime_ns, row.st_ctime_ns)
+        raw = b"".join(chunks)
+        if len(raw) > maximum or len(raw) != after.st_size or sig(before) != sig(after):
+            raise RuntimeError("file changed or exceeded its exact bound: " + path)
+        return raw
+    finally:
+        os.close(fd)
+
+
+def _load_gate():
+    import ntpath
+    if os.name != "nt":
+        raise RuntimeError("R6I native dispatch payload is Windows-only")
+    task_root = r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c"
+    gate_path = task_root + r"\helpers-primary-owner-r6i\windows_primary_token_owner_outer_gate_r6i.py"
+    helper_path = task_root + r"\helpers-primary-owner-r6i\windows_primary_token_owner_probe_r6i.py"
+    inner_path = task_root + r"\authority-primary-owner-r6i\BINDING.json"
+    outer_path = task_root + r"\authority-primary-owner-r6i\PREBIRTH_BINDING.json"
+    r14_path = task_root + r"\authority-r14\BINDING.json"
+    expected_python = r"C:\Users\Everwalker\AppData\Local\Programs\Python\Python312-comsol-mcp\python.exe"
+    if (ntpath.normcase(ntpath.abspath(sys.executable)) != ntpath.normcase(expected_python)
+            or sys.version.split()[0] != "3.12.10"):
+        raise RuntimeError("remote interpreter identity/version differs from exact R6I PREP")
+    gate_raw = _stable_bytes(gate_path, 2 * 1024 * 1024)
+    helper_raw = _stable_bytes(helper_path, 2 * 1024 * 1024)
+    inner_raw = _stable_bytes(inner_path, 1024 * 1024)
+    outer_raw = _stable_bytes(outer_path, 8 * 1024 * 1024)
+    r14_raw = _stable_bytes(r14_path, 8 * 1024 * 1024)
+    actuals = {
+        "gate": _sha(gate_raw), "helper": _sha(helper_raw), "inner": _sha(inner_raw),
+        "outer": _sha(outer_raw), "r14": _sha(r14_raw),
+    }
+    expecteds = {"gate": EXPECTED_GATE_SHA256, "helper": EXPECTED_HELPER_SHA256,
+                 "inner": EXPECTED_INNER_SHA256, "outer": EXPECTED_OUTER_SHA256,
+                 "r14": EXPECTED_R14_BINDING_SHA256}
+    if actuals != expecteds:
+        raise RuntimeError("one or more frozen R6I/R14 remote source bytes differ: "
+                           + json.dumps(actuals, sort_keys=True))
+    gate = types.ModuleType("cv3_r6i_gate_exact")
+    gate.__file__ = gate_path
+    gate.__package__ = ""
+    exec(compile(gate_raw.decode("utf-8", "strict"), gate_path, "exec"), gate.__dict__)
+    if _sha(_stable_bytes(gate_path, 2 * 1024 * 1024)) != EXPECTED_GATE_SHA256:
+        raise RuntimeError("R6I gate changed during exact import")
+    outer = _json(outer_raw, "R6I PREBIRTH_BINDING")
+    gate._validate_outer_envelope(outer)
+    source = outer.get("source_fingerprints", {})
+    if source.get("r6b_lease_source_sha256") != EXPECTED_R6B_SOURCE_SHA256:
+        raise RuntimeError("outer binding R6B source pin differs from reviewed R6I")
+    live = gate._verify_remote_snapshot(outer)
+    return gate, outer, live, {"gate": gate_path, "helper": helper_path,
+                              "inner": inner_path, "outer": outer_path,
+                              "approval": gate.APPROVAL_PATH}, inner_raw, helper_raw, gate_raw
+
+
+def _verify_empty_approval(gate, live, captured_proof):
+    record = live.get("approval")
+    if not isinstance(record, dict) or record.get("sha256") != _sha(b"") or record.get("bytes") != 0:
+        raise RuntimeError("prepared MAIN_APPROVAL is no longer its original empty object")
+    proof = record.get("private_path")
+    if not isinstance(proof, dict) or proof.get("identity") != EXPECTED_APPROVAL_IDENTITY:
+        raise RuntimeError("prepared MAIN_APPROVAL file ID or cumulative security proof changed")
+    # The accepted read-only capture supplies this exact same-leaf full proof.
+    # Raw proof SHA is preserved as provenance; comparison uses only the original
+    # gate projection, whose four permitted outside-root directory time slots
+    # remain the sole projected differences.
+    captured_raw = gate._canonical_json(captured_proof)
+    captured_raw_sha = _sha(captured_raw)
+    if captured_raw_sha != HISTORICAL_R6I_CAPTURE_APPROVAL_RAW_PROOF_SHA256:
+        raise RuntimeError("embedded accepted empty approval raw proof digest changed")
+    try:
+        captured_projected = gate._r5j_identity_projection(captured_proof)
+        current_projected = gate._r5j_identity_projection(proof)
+        captured_projected_sha = _sha(gate._canonical_json(captured_projected))
+        projected_proof_sha = _sha(gate._canonical_json(current_projected))
+    except BaseException as exc:
+        raise RuntimeError("cannot recompute current MAIN_APPROVAL projected proof") from exc
+    if captured_projected_sha != EXPECTED_APPROVAL_PROJECTED_PROOF_SHA256:
+        raise RuntimeError("accepted captured empty approval projection digest changed")
+    if current_projected != captured_projected:
+        raise RuntimeError("current MAIN_APPROVAL proof differs from accepted captured proof outside the gate projection")
+    if projected_proof_sha != EXPECTED_APPROVAL_PROJECTED_PROOF_SHA256:
+        raise RuntimeError("current MAIN_APPROVAL projected proof differs from Main-reviewed R6I_CAPTURE evidence")
+    if (proof.get("source_content_sha256") != _sha(b"") or proof.get("source_bytes") != 0
+            or proof.get("reparse_free_target") is not True):
+        raise RuntimeError("prepared MAIN_APPROVAL empty-file/reparse proof changed")
+    chain = proof.get("path_chain")
+    if not isinstance(chain, list) or not chain:
+        raise RuntimeError("prepared MAIN_APPROVAL has no pinned path chain")
+    leaf = chain[-1]
+    if (leaf.get("identity") != {"device": EXPECTED_APPROVAL_LEGACY_IDENTITY[0],
+                                  "inode": EXPECTED_APPROVAL_LEGACY_IDENTITY[1]}
+            or not isinstance(leaf.get("native_full_fingerprint"), (tuple, list))
+            or len(leaf["native_full_fingerprint"]) != 6
+            or not isinstance(leaf.get("descriptor_sha256"), str)
+            or re.fullmatch(r"[0-9a-f]{64}", leaf["descriptor_sha256"]) is None
+            or not isinstance(leaf.get("owner_classification"), str)
+            or not leaf["owner_classification"]
+            or not isinstance(leaf.get("owner_sid"), str)
+            or not leaf["owner_sid"]):
+        raise RuntimeError("prepared MAIN_APPROVAL final pinned leaf identity/security is malformed")
+    return leaf
+
+
+_R6I_NATIVE_FULL_FIELDS = (
+    "file_identity", "size", "creation_time", "change_time", "write_time", "link_count",
+)
+
+
+def _named_native_full_fingerprint(gate, value, *, label):
+    """Use R6I's exact numeric validator and bind values by its frozen names."""
+    normalized = gate._normalize_native_full_fingerprint(value, label=label)
+    names = tuple(getattr(gate, "_NATIVE_FULL_FINGERPRINT_FIELDS", ()))
+    if names != _R6I_NATIVE_FULL_FIELDS:
+        raise RuntimeError("frozen R6I native full fingerprint field names changed")
+    file_identity, size, creation_time, change_time, write_time, link_count = normalized
+    file_identity = tuple(file_identity)
+    return {
+        "file_identity": file_identity,
+        "size": size,
+        "creation_time": creation_time,
+        "change_time": change_time,
+        "write_time": write_time,
+        "link_count": link_count,
+    }
+
+
+def _validate_same_handle_prewrite(gate, expected_leaf, observed_legacy_identity, observed_legacy_size,
+                                   observed_native, descriptor_sha, owner_class, owner_sid):
+    """Compare each opened-handle identity only with its own exact captured proof value."""
+    expected_legacy = EXPECTED_APPROVAL_LEGACY_IDENTITY
+    leaf_legacy_obj = expected_leaf.get("identity")
+    if not isinstance(leaf_legacy_obj, dict):
+        raise RuntimeError("captured MAIN_APPROVAL proof legacy identity is malformed")
+    leaf_legacy = (leaf_legacy_obj.get("device"), leaf_legacy_obj.get("inode"))
+    if (any(type(value) is not int or value < 0 for value in leaf_legacy)
+            or leaf_legacy != expected_legacy):
+        raise RuntimeError("captured proof legacy volume32/file-index64 domain differs from accepted capture")
+    observed_legacy = tuple(observed_legacy_identity)
+    if (len(observed_legacy) != 2
+            or any(type(value) is not int or value < 0 for value in observed_legacy)
+            or observed_legacy != leaf_legacy):
+        raise RuntimeError("opened-handle legacy volume32/file-index64 differs from captured proof")
+    if (type(observed_legacy_size) is not int or observed_legacy_size != 0
+            or type(expected_leaf.get("info_size")) is not int
+            or expected_leaf["info_size"] != observed_legacy_size):
+        raise RuntimeError("opened-handle legacy size differs from the exact empty-object proof")
+
+    expected_native = _named_native_full_fingerprint(
+        gate, expected_leaf.get("native_full_fingerprint"), label="captured MAIN_APPROVAL native proof",
+    )
+    if not isinstance(observed_native, dict) or set(observed_native) != set(_R6I_NATIVE_FULL_FIELDS):
+        raise RuntimeError("opened-handle native fingerprint fields are malformed")
+    observed_identity = observed_native.get("file_identity")
+    if (not isinstance(observed_identity, (tuple, list)) or len(observed_identity) != 2
+            or any(type(value) is not int or value < 0 for value in observed_identity)):
+        raise RuntimeError("opened-handle native volume64/file-id128 identity is malformed")
+    for field in _R6I_NATIVE_FULL_FIELDS:
+        value = observed_native[field]
+        if field == "file_identity":
+            observed_value = tuple(value)
+        else:
+            if type(value) is not int or value < 0:
+                raise RuntimeError("opened-handle native field is malformed: " + field)
+            observed_value = value
+        if observed_value != expected_native[field]:
+            raise RuntimeError("opened-handle native fingerprint field differs: " + field)
+    if (expected_native["size"] != observed_legacy_size
+            or expected_native["link_count"] != 1):
+        raise RuntimeError("captured native size/link count differs from the empty single-link object")
+
+    expected_descriptor = expected_leaf.get("descriptor_sha256")
+    expected_owner_class = expected_leaf.get("owner_classification")
+    expected_owner_sid = expected_leaf.get("owner_sid")
+    if (not isinstance(expected_descriptor, str)
+            or re.fullmatch(r"[0-9a-f]{64}", expected_descriptor) is None
+            or descriptor_sha != expected_descriptor
+            or not isinstance(expected_owner_class, str) or not expected_owner_class
+            or owner_class != expected_owner_class
+            or not isinstance(expected_owner_sid, str) or not expected_owner_sid
+            or owner_sid != expected_owner_sid):
+        raise RuntimeError("opened-handle owner or descriptor differs from the exact captured proof")
+    return {"legacy_identity_domain": list(expected_legacy),
+            "native_file_identity_domain": list(expected_native["file_identity"]),
+            "native_fields_checked": list(_R6I_NATIVE_FULL_FIELDS),
+            "domains_compared_separately": True}
+
+
+def _same_handle_write(gate, approval_raw: bytes, expected_leaf):
+    from comsol_mcp import _host_scoped_provider as provider
+    api, hold_original, finish_original = gate._runtime_path_binding_api()
+    owner = hold_original(api)
+    handle = None
+    primary = None
+    try:
+        persistent_acls, volume = provider._windows_volume_has_persistent_acls(
+            api, Path(gate.APPROVAL_PATH),
+        )
+        if not persistent_acls or int(volume) != EXPECTED_APPROVAL_IDENTITY["device"]:
+            raise RuntimeError("MAIN_APPROVAL volume ACL or identity differs from PREP")
+        handle = api.open(gate.APPROVAL_PATH, directory=False, create=False)
+        identity, size = api.info(handle, directory=False)
+        full_getter = provider._windows_original_full_getter(api)
+        full = _named_native_full_fingerprint(
+            gate, full_getter(handle, directory=False), label="opened existing MAIN_APPROVAL handle",
+        )
+        expected_full = _named_native_full_fingerprint(
+            gate, expected_leaf.get("native_full_fingerprint"),
+            label="R14 captured MAIN_APPROVAL leaf",
+        )
+        daemon_sid, trusted_sids, _ = provider._windows_security_context(api)
+        descriptor_sha, owner_class = provider._win32_descriptor_digest(
+            api, handle, directory=False, require_daemon_owner=True,
+            daemon_sid=daemon_sid, trusted_sids=trusted_sids,
+        )
+        owner_sid = gate._runtime_owner_sid_text(api, handle)
+        comparison = _validate_same_handle_prewrite(
+            gate, expected_leaf, identity, size, full, descriptor_sha, owner_class, owner_sid,
+        )
+        if (full != expected_full
+                or full["creation_time"] != expected_full["creation_time"]
+                or full["link_count"] != 1):
+            raise RuntimeError("opened MAIN_APPROVAL native six-field fingerprint differs from captured proof")
+        opened_identity = tuple(identity)
+        r6b = gate._load_embedded_r6b_lease(EXPECTED_R6B_SOURCE_SHA256)
+        ops = object.__new__(r6b.R14AuthorityRootOpsR6B)
+        ops.owner = owner
+        ops.api = api
+        same_handle_write = r6b.R14AuthorityRootOpsR6B._write_flush_readback
+        empty_digest, empty_size = same_handle_write(ops, handle, b"")
+        if empty_digest != _sha(b"") or empty_size != 0:
+            raise RuntimeError("same-handle prewrite readback is not empty")
+        written_digest, written_size = same_handle_write(ops, handle, approval_raw)
+        if written_digest != _sha(approval_raw) or written_size != len(approval_raw):
+            raise RuntimeError("R6B same-handle write/flush/readback differs from exact approval")
+        after_identity, after_size = api.info(handle, directory=False)
+        after_full = _named_native_full_fingerprint(
+            gate, full_getter(handle, directory=False), label="MAIN_APPROVAL handle after exact write",
+        )
+        after_descriptor, after_owner_class = provider._win32_descriptor_digest(
+            api, handle, directory=False, require_daemon_owner=True,
+            daemon_sid=daemon_sid, trusted_sids=trusted_sids,
+        )
+        after_owner_sid = gate._runtime_owner_sid_text(api, handle)
+        if (tuple(int(v) for v in after_identity) != opened_identity
+                or after_size != len(approval_raw) or after_full["size"] != len(approval_raw)
+                or after_full["size"] != after_size
+                or after_full["file_identity"] != full["file_identity"]
+                or after_full["creation_time"] != full["creation_time"]
+                or after_full["link_count"] != full["link_count"]
+                or after_descriptor != descriptor_sha or after_owner_class != owner_class
+                or after_owner_sid != owner_sid):
+            raise RuntimeError("approval write changed the object identity or owner/DACL")
+        return {"status": "SAME_OBJECT_APPROVAL_WRITE_READBACK_PASS",
+                "approval_sha256": written_digest, "approval_bytes": written_size,
+                "identity": [int(v) for v in after_identity],
+                "opened_native_full_fingerprint": {
+                    "file_identity": list(full["file_identity"]), "size": full["size"],
+                    "creation_time": full["creation_time"], "change_time": full["change_time"],
+                    "write_time": full["write_time"], "link_count": full["link_count"],
+                },
+                "after_native_full_fingerprint": {
+                    "file_identity": list(after_full["file_identity"]), "size": after_full["size"],
+                    "creation_time": after_full["creation_time"], "change_time": after_full["change_time"],
+                    "write_time": after_full["write_time"], "link_count": after_full["link_count"],
+                },
+                "descriptor_sha256": after_descriptor, "owner_sid": after_owner_sid,
+                "owner_classification": after_owner_class,
+                "identity_domains": comparison,
+                "same_file_id_and_security_preserved": True,
+                "creation_filetime_preserved": after_full["creation_time"] == full["creation_time"],
+                "link_count_preserved": after_full["link_count"] == full["link_count"],
+                "change_and_write_filetimes_recorded_after_write": True}
+    except BaseException as exc:
+        primary = exc
+        raise
+    finally:
+        close_error = None
+        if handle is not None:
+            try:
+                api.close(handle)
+            except BaseException as exc:
+                close_error = exc
+        try:
+            finish_original(api, primary or close_error)
+        except BaseException:
+            if primary is None:
+                raise
+        if primary is None and close_error is not None:
+            raise close_error
+
+
+def _run_gate(gate, paths):
+    saved_argv = list(sys.argv)
+    out = io.StringIO()
+    err = io.StringIO()
+    code = 1
+    exception = None
+    system_exit_diagnostic = None
+    sys.argv = [paths["gate"], "--binding", paths["inner"], "--approval", paths["approval"],
+                "--once", gate.ONCE_PATH]
+    try:
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            try:
+                runpy.run_path(paths["gate"], run_name="__main__")
+            except SystemExit as exc:
+                raw_code = exc.code
+                if raw_code is None:
+                    code = 0
+                elif type(raw_code) is int:
+                    code = raw_code
+                else:
+                    code = 1
+                    system_exit_diagnostic = {
+                        "exception_type": type(raw_code).__name__,
+                        "text": str(raw_code)[:2048],
+                    }
+            except BaseException as exc:
+                exception = type(exc).__name__ + ":" + str(exc)[:2048]
+                code = 1
+    finally:
+        sys.argv = saved_argv
+    out_raw = out.getvalue().encode("utf-8", "replace")
+    err_raw = err.getvalue().encode("utf-8", "replace")
+    if len(out_raw) > MAX_GATE_STREAM_BYTES or len(err_raw) > MAX_GATE_STREAM_BYTES:
+        return code, b"", b"", "UNKNOWN_GATE_STREAM_LIMIT", exception, system_exit_diagnostic
+    return code, out_raw, err_raw, "R6I_GATE_RETURNED", exception, system_exit_diagnostic
+
+
+def main() -> int:
+    approval_raw = base64.b64decode(APPROVAL_B64.encode("ascii"), validate=True)
+    captured_proof_raw = base64.b64decode(EMPTY_APPROVAL_PROOF_B64.encode("ascii"), validate=True)
+    captured_proof = _json(captured_proof_raw, "accepted captured empty MAIN_APPROVAL proof")
+    if not approval_raw or len(approval_raw) > MAX_APPROVAL_BYTES:
+        raise RuntimeError("embedded R6I approval is empty or outside the fixed byte budget")
+    gate, outer, live, paths, inner_raw, helper_raw, gate_raw = _load_gate()
+    approval = gate._strict_json(approval_raw, label="R6I embedded exact R6I native approval")
+    if (set(approval) != gate.APPROVAL_FIELDS or approval.get("schema") != gate.APPROVAL_SCHEMA
+            or approval.get("status") != "APPROVED_EXECUTE_ONCE"
+            or _sha(approval_raw) != APPROVAL_SHA256):
+        raise RuntimeError("embedded approval does not match the unchanged exact R6I schema")
+    gate._validate_approval(
+        outer, approval, outer_sha256=EXPECTED_OUTER_SHA256,
+        inner_sha256=EXPECTED_INNER_SHA256, helper_sha256=EXPECTED_HELPER_SHA256,
+        gate_sha256=EXPECTED_GATE_SHA256,
+    )
+    outer_proof_sha = gate._sha256(gate._canonical_json(
+        gate._r5j_identity_projection(live["outer_binding"]["private_path"]),
+    ))
+    if approval.get("outer_binding_file_proof_sha256") != outer_proof_sha:
+        raise RuntimeError("approval does not bind the current exact prepared outer file proof")
+    inner = gate._strict_json(inner_raw, label="R6I helper binding")
+    if inner.get("schema") != "cv3-windows-primary-token-owner-binding-r6i/1":
+        raise RuntimeError("R6I inner binding schema changed")
+    leaf = _verify_empty_approval(gate, live, captured_proof)
+    write = _same_handle_write(gate, approval_raw, leaf)
+    out_code, out_raw, err_raw, gate_status, gate_exception, system_exit_diagnostic = _run_gate(gate, paths)
+    terminal_lines = [line for line in out_raw.decode("utf-8", "replace").splitlines()
+                      if line.startswith("PRIMARY_OWNER_TERMINAL_STATUS ")]
+    terminal_status = None
+    if len(terminal_lines) == 1:
+        candidate_status = terminal_lines[0].split(" ", 1)[1]
+        if candidate_status in KNOWN_HELPER_TERMINAL_STATUSES:
+            terminal_status = candidate_status
+    successful_probe = (out_code == 0
+                        and terminal_status == "PASS_SAME_SID_PRIMARY_OWNER_FILE_PROBE")
+    process_owner_terminal_observed = terminal_status is not None
+    process_call_evidence = (
+        "CALLED_AND_HELPER_REACHED_PROCESS_INFORMATION_TERMINAL_RECEIPT"
+        if process_owner_terminal_observed else "NOT_PROVEN_GATE_MAY_HAVE_FAILED_BEFORE_OR_DURING_BIRTH"
+    )
+    record = {
+        "schema": "cv3-windows-r6i-native-result-r2/1",
+        "status": gate_status,
+        "approval_sha256": _sha(approval_raw),
+        "approval_bytes": len(approval_raw),
+        "gate_sha256": EXPECTED_GATE_SHA256,
+        "helper_sha256": EXPECTED_HELPER_SHA256,
+        "binding_sha256": EXPECTED_INNER_SHA256,
+        "outer_binding_sha256": EXPECTED_OUTER_SHA256,
+        "approval_write": write,
+        "reviewed_empty_approval_capture_raw_proof_sha256": HISTORICAL_R6I_CAPTURE_APPROVAL_RAW_PROOF_SHA256,
+        "reviewed_empty_approval_capture_projected_proof_sha256": EXPECTED_APPROVAL_PROJECTED_PROOF_SHA256,
+        "gate_returncode": out_code,
+        "gate_functional_status": terminal_status,
+        "gate_terminal_status_line_count": len(terminal_lines),
+        "process_information_terminal_receipt_observed": process_owner_terminal_observed,
+        "create_process_with_token_w": process_call_evidence,
+        "gate_stdout_bytes": len(out_raw), "gate_stdout_sha256": _sha(out_raw),
+        "gate_stdout_b64": base64.b64encode(out_raw).decode("ascii"),
+        "gate_stderr_bytes": len(err_raw), "gate_stderr_sha256": _sha(err_raw),
+        "gate_stderr_b64": base64.b64encode(err_raw).decode("ascii"),
+        "gate_exception": gate_exception,
+        "gate_system_exit_diagnostic": system_exit_diagnostic,
+        "native_children": 1 if successful_probe else "UNKNOWN",
+        "native_child_state": ("ONE_CHILD_PROBE_PASS" if successful_probe else
+                               "PROCESS_INFORMATION_TERMINAL_STATUS_NOT_ACCEPTED" if process_owner_terminal_observed else
+                               "UNKNOWN_NATIVE_CALL_OR_BIRTH_NOT_PROVEN"),
+        "COMSOL": 0, "GUI": 0, "JVM": 0, "Study": 0, "solver": 0,
+        "replay": False, "no_retry": True,
+    }
+    sys.stdout.write(json.dumps(record, sort_keys=True, separators=(",", ":"),
+                                ensure_ascii=False, allow_nan=False) + "\n")
+    sys.stdout.flush()
+    return 0
+
+
+def _entrypoint(main_call=main, *, error_stream=None) -> int:
+    """Return a bounded result; keep the successful SystemExit outside this catch."""
+    stream = sys.stderr if error_stream is None else error_stream
+    try:
+        code = main_call()
+    except BaseException as exc:
+        # An exception after the same-handle approval write must never trigger
+        # a second write or gate invocation. SSH's original Popen remains the
+        # local owner until this remote interpreter terminates naturally.
+        stream.write("R6I_REMOTE_UNKNOWN_NO_REPLAY " + type(exc).__name__ + ": " + str(exc)[:2048] + "\n")
+        stream.flush()
+        return 70
+    if type(code) is not int or not 0 <= code <= 255:
+        stream.write("R6I_REMOTE_UNKNOWN_NO_REPLAY invalid_entrypoint_code\n")
+        stream.flush()
+        return 70
+    return code
+
+
+if __name__ == "__main__":
+    # SystemExit is intentionally outside _entrypoint's BaseException guard;
+    # a successful main() return must remain exit status zero.
+    raise SystemExit(_entrypoint())

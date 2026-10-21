@@ -1,0 +1,115 @@
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import subprocess
+import textwrap
+from pathlib import Path
+
+import pytest
+
+from tools import run_native_w24_static_shape_sensitivity_lifecycle as lifecycle
+
+
+SOURCE_ROOT = Path(__file__).resolve().parents[1]
+SETUP_EVIDENCE = Path(
+    "/private/tmp/w24-r17-setup14-a31d15f4-2286-40cd-a2d6-7504ffb7fe3b"
+    "/candidate-evidence-r17/native-setup-run")
+SETUP_CAMPAIGN = SETUP_EVIDENCE / "campaign_receipt.json"
+
+
+def _sha(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _accepted_setup():
+    return lifecycle.validate_setup_campaign_receipt(SETUP_CAMPAIGN, _sha(SETUP_CAMPAIGN))
+
+
+def test_real_accepted_setup_receipt_keeps_worker_epoch_separate_from_model_generation():
+    setup = _accepted_setup()
+    assert len(setup["historical_setup_slots"]) == 14
+    session_id, worker_epoch, server_id = setup["historical_worker_epoch"]
+    assert worker_epoch == 2
+    assert setup["accepted_runtime_binding"]["schema"] == lifecycle.RUNTIME_BINDING_SCHEMA
+    assert setup["accepted_runtime_binding"]["setup_runtime_binding_sha256"] == (
+        setup["runtime_binding_sha256"])
+
+    first_key = lifecycle.CAPTURE_KEY_ORDER[0]
+    binding = setup["historical_setup_slots"][first_key]["binding"]
+    assert binding["model_ref"]["generation"] == 1
+    assert binding["session_id"] == session_id
+    assert binding["model_ref"]["server_instance_id"] == server_id
+    assert lifecycle._one_epoch(binding, setup["project_id"], first_key) == (session_id, server_id)
+
+    foreign_session = json.loads(json.dumps(binding))
+    foreign_session["model_ref"]["session_id"] = "foreign-session"
+    with pytest.raises(lifecycle.LifecycleError, match="foreign project or incomplete epoch"):
+        lifecycle._one_epoch(foreign_session, setup["project_id"], first_key)
+    foreign_tag = json.loads(json.dumps(binding))
+    foreign_tag["model_ref"]["model_tag"] = "foreign-model"
+    with pytest.raises(lifecycle.LifecycleError, match="foreign project or incomplete epoch"):
+        lifecycle._one_epoch(foreign_tag, setup["project_id"], first_key)
+
+
+def test_accepted_runtime_binding_checks_receipt_candidate_and_binding_hashes():
+    setup = _accepted_setup()
+    runtime = setup["accepted_runtime_binding"]
+    assert runtime["python"]["entry"].endswith("/work/dev-python312/bin/python")
+    assert runtime["python"]["no_site"] is True
+    assert runtime["comsol"]["exact_build"] == "6.4.0.293"
+    assert runtime["jdk"]["version"]["version"].startswith("11.")
+
+    with pytest.raises(lifecycle.LifecycleError, match="runtime binding hash"):
+        lifecycle._accepted_setup_runtime_binding(
+            run_dir=Path(setup["run_dir"]),
+            setup_candidate_sha256=setup["setup_candidate_sha256"],
+            expected_binding_sha256="0" * 64,
+        )
+    with pytest.raises(lifecycle.LifecycleError, match="does not bind the accepted setup candidate"):
+        lifecycle._accepted_setup_runtime_binding(
+            run_dir=Path(setup["run_dir"]),
+            setup_candidate_sha256="0" * 64,
+            expected_binding_sha256=setup["runtime_binding_sha256"],
+        )
+
+
+def test_current_interpreter_binding_works_in_exact_no_site_python_process():
+    code = textwrap.dedent(f"""
+        import hashlib
+        from pathlib import Path
+        import json
+        from tools import run_native_w24_static_shape_sensitivity_lifecycle as lifecycle
+        p = Path({str(SETUP_CAMPAIGN)!r})
+        setup = lifecycle.validate_setup_campaign_receipt(p, hashlib.sha256(p.read_bytes()).hexdigest())
+        print(json.dumps(lifecycle._verify_current_python_binding(setup['accepted_runtime_binding'])))
+    """)
+    python_entry = Path("/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312/bin/python")
+    site_packages = Path("/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312/lib/python3.12/site-packages")
+    env = dict(os.environ)
+    env["PYTHONPATH"] = os.pathsep.join((str(SOURCE_ROOT), str(site_packages)))
+    result = subprocess.run([str(python_entry), "-S", "-c", code], cwd=SOURCE_ROOT,
+                            env=env, capture_output=True, text=True, check=False, timeout=30)
+    assert result.returncode == 0, result.stderr
+    observed = json.loads(result.stdout)
+    assert observed["entry"] == str(python_entry)
+    assert observed["no_site"] is True
+
+    bad_code = textwrap.dedent(f"""
+        import hashlib
+        from pathlib import Path
+        from tools import run_native_w24_static_shape_sensitivity_lifecycle as lifecycle
+        p = Path({str(SETUP_CAMPAIGN)!r})
+        setup = lifecycle.validate_setup_campaign_receipt(p, hashlib.sha256(p.read_bytes()).hexdigest())
+        setup['accepted_runtime_binding']['python']['version'] = '3.12.999'
+        try:
+            lifecycle._verify_current_python_binding(setup['accepted_runtime_binding'])
+        except lifecycle.LifecycleError:
+            raise SystemExit(0)
+        raise SystemExit(7)
+    """)
+    rejected = subprocess.run([str(python_entry), "-S", "-c", bad_code], cwd=SOURCE_ROOT,
+                              env=env, capture_output=True, text=True, check=False, timeout=30)
+    assert rejected.returncode == 0, rejected.stderr
+

@@ -1,0 +1,92 @@
+{
+  "base_source": {
+    "candidate_id": "w24-r17-trace-setup14-source-a31d15f4-2286-40cd-a2d6-7504ffb7fe3b-20261021",
+    "production_preimage_sha256": "c2dbdb468a85705ba9c087f567d7e77a252defc0e20762f7c41a95ca107a3c3a",
+    "source_file_count": 898,
+    "source_fingerprint_sha256": "c9112abc94dd86d6bf8295a432f407fe7367827373615ae7a81959e7b6c35ad8",
+    "source_map_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w24-r17-trace-setup14-source-a31d15f4-2286-40cd-a2d6-7504ffb7fe3b-20261021/evidence/R17_SOURCE_MAP_R1.json",
+    "source_map_sha256": "a71089c742c9687a2a51aa291d1ea2e642efa70a49dda76251cf32adac821180"
+  },
+  "canonical_source_modified": false,
+  "delta": {
+    "added_test_member_count": 1,
+    "members": {
+      "new_consumer_tests": {
+        "bytes": 11894,
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w24-r18-science-receipt-projection-20261021/source_overlay/tests/test_w24_r18_receipt_projection.py",
+        "sha256": "27aa98292981b3caae01ba7a9b8723ca103f0a89adaf57e750c886a6db618f2f"
+      },
+      "production_overlay": {
+        "bytes": 109037,
+        "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w24-r18-science-receipt-projection-20261021/source_overlay/tools/run_native_w24_static_shape_sensitivity_lifecycle.py",
+        "sha256": "eca49079ec3a5a22ebb978cae2f6d245c94d76b2da8ee33278663a1d9acf660c"
+      }
+    },
+    "other_source_members_changed": 0,
+    "patch": {
+      "bytes": 12572,
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w24-r18-science-receipt-projection-20261021/evidence/W24_R18_LIFECYCLE_SOURCE_DELTA_R1.patch",
+      "postimage_sha256": "eca49079ec3a5a22ebb978cae2f6d245c94d76b2da8ee33278663a1d9acf660c",
+      "preimage_sha256": "c2dbdb468a85705ba9c087f567d7e77a252defc0e20762f7c41a95ca107a3c3a",
+      "sha256": "5966582c2854dbe15e852dfb60e15c4c330f8b4aaf55a134a0057b3b31d89a41"
+    },
+    "replaced_production_member_count": 1
+  },
+  "effective_approval_created": false,
+  "native_execution": "NOT_RUN",
+  "next_science_inputs": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w24-r18-science-receipt-projection-20261021/evidence/W24_R18_STATIC_SHAPE_SCIENCE_INPUT_BINDING_R1.json",
+    "sha256": "3821bc63d6e495804334ed15c0e92ddba3a212d2ef4b39ac89ffc76b850b4975",
+    "status": "R17 setup only; all 14 MPH/receipt hashes rechecked; native science NOT_RUN"
+  },
+  "once_created_or_consumed": false,
+  "r17_frozen_candidate_modified": false,
+  "r17_setup_actual_acceptance": {
+    "candidate_sha256": "aa184ed0a3f7606768e38ef62ff4463d0322bdb1c3c266542e9716d415254b4d",
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/W24_R17_MAIN_ACTUAL_SETUP14_ACCEPTANCE_20261021_R1.json",
+    "sha256": "11c03deac09b6f4c6f08d0528287f31f28ba7e309d06f5a2f968996c6efbb922",
+    "source_fingerprint_sha256": "c9112abc94dd86d6bf8295a432f407fe7367827373615ae7a81959e7b6c35ad8",
+    "status": "PASS_SCOPED_ACTUAL_14_UNSOLVED_BUILD_SAVE_FORMAL_REOPEN_FULL_CONFIG_READBACK"
+  },
+  "repair_note": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w24-r18-science-receipt-projection-20261021/R18_SOURCE_REPAIR_NOTE.md",
+    "sha256": "a1d7f4d02a4a2673c80c69ed36c9b296bf9e064bbb49f20c89cb1be869532a83"
+  },
+  "schema": "W24_R18_SCIENCE_RECEIPT_PROJECTION_PACKET_V1",
+  "software_controls": {
+    "R17_frozen_readmission_regression": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=<R17 source> <workspace>/work/dev-python312/bin/python -m pytest -q -p no:cacheprovider <R17 source>/tests/test_run_native_w24_static_shape_science.py -k readmission",
+      "exit_code": 0,
+      "stdout_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w24-r18-science-receipt-projection-20261021/evidence/R17_READMISSION_REGRESSION_R1.stdout",
+      "stdout_sha256": "cc3177b14318f3583a7a52053e8fdce3e96e0124ce2740ce6a759c4618307c0c",
+      "summary": "22 passed, 19 deselected"
+    },
+    "R18_actual_consumer_and_negative_controls": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 <workspace>/work/dev-python312/bin/python -m pytest -q -p no:cacheprovider <packet>/source_overlay/tests/test_w24_r18_receipt_projection.py",
+      "exit_code": 0,
+      "stdout_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w24-r18-science-receipt-projection-20261021/evidence/R18_RECEIPT_PROJECTION_TESTS_R3.stdout",
+      "stdout_sha256": "b1d9ebb85fb470cb7c3ff654a11dd085a01968877e9c83669bd7431ab139f39a",
+      "summary": "7 passed"
+    },
+    "failed_test_authoring_attempt": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w24-r18-science-receipt-projection-20261021/evidence/R18_RECEIPT_PROJECTION_TESTS_R2.stdout",
+      "sha256": "6ce872f34b22c7c2d362d97e1f80f9198fe8dcc9321b8d5ebbd56f68ec6e70f4",
+      "summary": "1 test-file import path typo; corrected in R3; not a production failure"
+    },
+    "generated_bytecode_not_bound_as_source": [
+      {
+        "bytes": 25040,
+        "path": "source_overlay/tests/__pycache__/test_w24_r18_receipt_projection.cpython-312-pytest-9.1.1.pyc",
+        "reason": "intermediate Python bytecode from earlier local test run; not a source or entry member",
+        "sha256": "c4e3e291073eeb15590fc32c4b33e5511750f93200cb8af6e91b6ead9cbfe030"
+      },
+      {
+        "bytes": 125027,
+        "path": "source_overlay/tools/__pycache__/run_native_w24_static_shape_sensitivity_lifecycle.cpython-312.pyc",
+        "reason": "intermediate Python bytecode from earlier local test run; not a source or entry member",
+        "sha256": "2b4c80fdfd2b5eccc0a5ace9e1245265e8730a03a8b22797ac401c4bd7a444fb"
+      }
+    ]
+  },
+  "status": "SOURCE_ONLY_CANDIDATE_READY_FOR_MAIN_REVIEW"
+}

@@ -1,0 +1,50 @@
+from __future__ import annotations
+
+import importlib.util
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+import pytest
+
+
+ROOT = Path(__file__).resolve().parents[1]
+CHECK_ONLY = ROOT / "source/w25_r12_readonly_install_check.py"
+DEV_PYTHON = Path("/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312/bin/python")
+SPEC = importlib.util.spec_from_file_location("w25_r12_readonly_check_r2_test", CHECK_ONLY)
+CHECK = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = CHECK
+SPEC.loader.exec_module(CHECK)
+
+
+def test_exact_external_check_only_cli_reaches_real_installed_caller_consumer(tmp_path):
+    fixed = [CHECK.R1_PLAN, CHECK.R1_MANIFEST, CHECK.R5_BINDING, CHECK.R5_REVIEW_PATH]
+    before = [(path.exists(), path.is_symlink()) for path in fixed]
+    proc = subprocess.run(
+        [str(DEV_PYTHON), "-I", "-B", str(CHECK_ONLY), "--check-only"],
+        cwd=str(tmp_path), capture_output=True, text=True, timeout=120, check=False)
+    assert proc.returncode == 0, proc.stderr
+    result = json.loads(proc.stdout)
+    assert result["status"] == "PASS_ACTUAL_R5_CONSUMER_READONLY_CHECK_ONLY"
+    assert result["r1_packet_members_rehashed"] == 10
+    assert result["package_members_rehashed"] == 172
+    assert result["caller_source_hashes"] == CHECK.EXPECTED_CALLER_HASHES
+    assert result["retained_lifecycle_status"] == "FAILURE_RETAINED_NONEMPTY_UNINSTALL_GUARD; not promoted"
+    assert result["authority_created"] is False and result["once_read_or_consumed"] is False
+    assert result["runtime_root_created"] is False and result["native_Popen"] == 0
+    assert result["GUI"] == result["COMSOL"] == result["JVM"] == "NOT_RUN"
+    assert [(path.exists(), path.is_symlink()) for path in fixed] == before
+
+
+def test_actual_r5_consumer_rejects_tampered_binding_copy(tmp_path):
+    actor = CHECK._load_exact_actor()
+    source_inputs = actor._verify_r12_source_inputs()
+    binding = json.loads(CHECK.R5_BINDING.read_text(encoding="utf-8"))
+    binding["source_profile"] = "tampered-profile"
+    changed = tmp_path / "tampered-binding.json"
+    changed.write_text(json.dumps(binding, sort_keys=True), encoding="utf-8")
+    changed.chmod(0o600)
+    with pytest.raises(RuntimeError, match="pending, stale, or outside source-only install scope"):
+        actor._verify_current_r12_install(CHECK.INSTALLED_ROOT, changed, source_inputs)

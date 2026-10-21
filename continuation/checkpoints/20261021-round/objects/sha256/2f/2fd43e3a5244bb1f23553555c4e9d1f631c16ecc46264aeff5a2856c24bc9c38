@@ -1,0 +1,53 @@
+{
+  "schema": "SCIENCE76_R5_ROOT_CAUSE_CORRECTION_R2",
+  "status": "RECEIVER_NOT_PROVEN_R5_JAVA_NOT_INTEGRATED",
+  "prior_packet_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w26-science76-r14-r5-geonl-study-step-fix-20261021/R5_ROOT_CAUSE_AND_API_EVIDENCE_R1.json",
+  "prior_packet_sha256": "06047a04317f324f28d70690caa31706b4b9009dabac54f04930bfb70049ae9d",
+  "R4_terminal_review_sha256": "92596478c0c717c0227d97d03389dc672b90454efbef44d16a299264e52060a9",
+  "R4_call_sha256": "c98912442c37ee33850f0fe5a54714dd3f46f2bd89f1096130849c6c261fba43",
+  "R4_pre_failure_inspect_sha256": "c6b164a3458593108e37aa90ab9e0a9fbcf56bc55e936bfb331e07101e5eec5d",
+  "R4_actual_receiver": "SolverFeature returned by findUniqueTimeFeature(...)",
+  "R4_actual_error": "Unknown property geometricNonlinearity from PropFeatureDb.set",
+  "R4_pre_failure_inspect_limit": "The inspect summary reported zero components/studies/solutions/datasets/results; it did not enumerate the Java fixture object graph that triggered the failed setter. It cannot resolve the study-step or solver receiver contract.",
+  "inference_limit": "The observed failure proves only that this property was rejected on this actual receiver in this actual model/license context. It does not establish whether the intended receiver is StudyFeature, whether the property is available on this transient step, or whether the required module license/context exists.",
+  "docs": [
+    {
+      "doc_id": 4646,
+      "chunk_id": 17600,
+      "sha256": "952793e73990d64af9163e1c3f21b8f50c0b43bbc9b4b0b728be06cdb889c819",
+      "finding": "Time solver table lists geometricNonlinearity on|off; availability is conditional on Structural Mechanics, Acoustics, MEMS, or Multibody Dynamics module license."
+    },
+    {
+      "doc_id": 4676,
+      "chunk_id": 17657,
+      "sha256": "57574dddd12e3caf99bd8c69b99f650ff01970d8deacce2a45147718117f0e22",
+      "finding": "Transient StudyFeature table lists tlist/usertol/rtol/tunit, not geometricNonlinearity; this does not prove absence in all contexts but does not support R5 receiver."
+    },
+    {
+      "doc_id": 25191,
+      "chunk_id": 109585,
+      "sha256": "6bfd94f857751f497f219ea8876bdd45158470a4114cc5ddf11919bd7c2abbc3",
+      "finding": "StudyFeature example sets geometricNonlinearity on a Stationary step."
+    },
+    {
+      "doc_id": 3626,
+      "chunk_id": 11449,
+      "sha256": "5b7f23ad2eae77f59d71935f4f6c9b6b9ede380dc34da065181841e512bbc105",
+      "finding": "Programming manual Stationary table lists the boolean and the same module-license condition."
+    },
+    {
+      "doc_id": 12464,
+      "chunk_id": 36361,
+      "sha256": "f97e9cfb4b6cb9465a887bdba7d8f59d57458d6b20143b6f76d668e6fd274cfd",
+      "finding": "MBD guide describes Study Settings for Stationary/Time Dependent and specific MBD physics features that force geometric nonlinearity; it does not prove the cure fixture/license/context."
+    }
+  ],
+  "existing_same_version_source_search": "Existing Java contains transient StudyFeature creation and time-list/tolerance settings. No accepted same-version W24 cure model/readback source found that establishes geometricNonlinearity support on the cure transient StudyFeature or an active Time solver for this fixture.",
+  "module_license": "UNVERIFIED_FAIL_CLOSED",
+  "excluded_changes": [
+    "tools/java/W24CureCouponFixture.java",
+    "comsol_mcp/data/science_recipes/java/W24CureCouponFixture.java",
+    "tools/w24_v2_setup_readback.py"
+  ],
+  "next": "Main-review a bounded fresh no-solve public-MCP property survey before any activity; inspect actual StudyFeature and Time solver objects and license gate without setting properties or running study/solver."
+}

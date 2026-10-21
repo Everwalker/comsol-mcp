@@ -1,0 +1,173 @@
+{
+  "candidate_runtime_contract": {
+    "feature_resolution": "Enumerate live Physics feature tags; resolve the unique PhaseFieldModel by exact getType() semantics; resolve Fluid1phipf and Fluid2phipf initial-value features by exact hasProperty/getString semantics and record each observed tag/type/options.",
+    "fresh_build_6_4_0_293_defaults": "INITIAL_FEATURES_OBSERVED_BY_READ_ONLY_METADATA_ACTION; DEFAULT_CLASSIFICATION_NOT_EXPOSED; POST_OVERRIDE_SAVE_REOPEN_NOT_RUN",
+    "native_model_execution": false,
+    "phase_initial_values": {
+      "default_fluid1_selection": {
+        "classification": "NOT_EXPOSED_BY_READ_ONLY_API_METADATA",
+        "effective_domain_semantics": "all same-level entities not overridden by another node",
+        "raw_input_domains": "all two Phase Field domains",
+        "setter": "FORBIDDEN_DEFAULT_NODE_SELECTION_IS_UNCHANGEABLE"
+      },
+      "exact_feature_types": {
+        "Fluid1phipf": "init",
+        "Fluid2phipf": "initFluid2"
+      },
+      "exact_string_enum_sets": {
+        "FluidInDomain": [
+          "Fluid1phipf",
+          "Fluid2phipf"
+        ],
+        "InitialValuesOption": [
+          "SpecifyPhase",
+          "UserDefined"
+        ]
+      },
+      "fluid2_selection": {
+        "effective_domain_readback": "DIRECT_NAMED_SELECTION_READBACK",
+        "named_selection": "sel_gas_domain",
+        "target_feature_type": "initFluid2"
+      },
+      "runtime_tag_lookup": "enumerate live tags and resolve exactly one feature by type plus FluidInDomain semantic; reject extras or ambiguity"
+    },
+    "physics_dependency": "Create and verify API type PhaseField pf over the exact two-domain union before Multiphase vfDefinition references pf; create Laminar Flow and the two-phase coupling after materials.",
+    "science_acceptance": "NOT_RUN",
+    "source_does_not_hardcode_historical_initial_feature_tags": true,
+    "study_or_solver_execution": false,
+    "typed_property_gates": {
+      "chi_expression": {
+        "exact_getString_readback": true,
+        "expression": "chiPF",
+        "numeric_substitution_allowed": false,
+        "property": "chi",
+        "value_type": "Double"
+      },
+      "chi_option": {
+        "allowed_value": "userdef",
+        "property": "chiOption",
+        "set_explicitly": true,
+        "type": "String"
+      },
+      "compressibility": {
+        "allowed_value": "Incompressible",
+        "case": "exact",
+        "property": "Compressibility",
+        "type": "String"
+      },
+      "flow_property_group": "PhysicalModelProperty",
+      "gravity": {
+        "getter": "getBoolean(name)",
+        "property": "IncludeGravity",
+        "serialized_value": false,
+        "setter": "set(name, boolean)",
+        "type": "Boolean"
+      },
+      "phase_field_model": {
+        "feature_type": "PhaseFieldModel",
+        "resolution": "unique live feature getType() match"
+      },
+      "phase_initial_values": {
+        "record_tag_type_and_InitialValuesOption": true,
+        "selector": "FluidInDomain"
+      },
+      "surface_tension_enabled": {
+        "getter": "getBoolean(name)",
+        "property": "IncludeSurfaceTension",
+        "serialized_value": true,
+        "setter": "set(name, boolean)",
+        "type": "Boolean"
+      },
+      "surface_tension_mode": {
+        "allowed_value": "userdef",
+        "property": "SurfaceTensionCoefficient",
+        "type": "String"
+      }
+    }
+  },
+  "comsol_version": "6.4.0.293",
+  "historical_saved_model_observation": {
+    "dmodel_xml_sha256": "0126e916e0d80a37f3974c4d08a347f66fbca7493413613e1284803c62c560d6",
+    "model_path": "/Applications/COMSOL64/Multiphysics/applications/CFD_Module/Multiphase_Flow/capillary_filling_pf.mph",
+    "observed_api_type": "PhaseField",
+    "observed_legacy_tags": [
+      "init1",
+      "initfluid2"
+    ],
+    "observed_ui_label": "Phase Field in Fluids",
+    "outer_sha256": "47f68ba89d9bda3781316c53543e0f8b3f474deaf51ac2e143f50edaf5a83ffe",
+    "recorded_creation_action": "t(s(\"/component/comp1/physics\")) m(s(\"create\")) s(\"pf\") s(\"PhaseField\") s(\"geom1\")",
+    "saved_model_version": "COMSOL 6.4.0.257",
+    "scope": "Historical inspection only; this model is not the W24 candidate and these tags are not used as the runtime lookup contract."
+  },
+  "official_local_documentation": [
+    {
+      "chunk_id": 16577,
+      "doc_id": 4014,
+      "sha256": "444f4671d15af6ddfefb58cb7dae1e93d7a51f1a872ceef2cf40ed8bd8f33f0d",
+      "supports": "Named explicit physics-feature selections and inputEntities() preserve the entities assigned to the selection.",
+      "title": "COMSOL 6.4 - Using Selections"
+    },
+    {
+      "chunk_id": 16692,
+      "doc_id": 4082,
+      "sha256": "e83f428fe1baed130a0a275f814660110cfc1fc5149418500ff3e7641ca78a2b",
+      "supports": "inputEntities() reports raw assignment input while entities(dim) may report a filtered selection.",
+      "title": "COMSOL 6.4 - Selections"
+    },
+    {
+      "chunk_id": 19242,
+      "doc_id": 5838,
+      "sha256": "b2069f4780ca75b13dd1f35cb9faee9a0e1eef9371f74cdead3ce8d0a4875f9e",
+      "supports": "Default node selections cover entities not overridden by another same-level node; default node selection cannot be changed.",
+      "title": "COMSOL 6.4 - Physics Interface Default Nodes"
+    },
+    {
+      "chunk_id": 22963,
+      "doc_id": 7644,
+      "sha256": "463ef0c4e8b2b7315e8950bd576f4b783718c75308307cef0a4d584d86b835ab",
+      "supports": "tags() returns the tags of listed model entities.",
+      "title": "ModelEntityList"
+    },
+    {
+      "chunk_id": 23005,
+      "doc_id": 7668,
+      "sha256": "d48a6bc07e9862244a7fd496246477200d065a661ae69605de4ef3ae7e678539",
+      "supports": "hasProperty and typed property getter APIs used for fail-closed runtime inspection.",
+      "title": "ParameterEntity"
+    },
+    {
+      "chunk_id": 23018,
+      "doc_id": 7675,
+      "sha256": "befb8cc1c0e3df1ce74d2fa2cd1377e73d378e5c26170558e9f40dc255cc3bc3",
+      "supports": "getValueType distinguishes Boolean and String and directs typed getters; property type/readback API.",
+      "title": "PropFeature"
+    },
+    {
+      "chunk_id": 23153,
+      "doc_id": 7758,
+      "sha256": "9eeb763b12eb4d5f6eaff7561381bb200aab2150165063410a4e9fa3592b5e7c",
+      "supports": "Feature lookup by tag and feature-type readback.",
+      "title": "PhysicsFeature"
+    },
+    {
+      "chunk_id": 23154,
+      "doc_id": 7759,
+      "sha256": "54d7fd17c368fc504f66502692d4da8a0b83edb6f7ba0f58e8f7d6c83aa3dcff",
+      "supports": "Feature-list tag enumeration and feature creation API.",
+      "title": "PhysicsFeatureList"
+    }
+  ],
+  "rejected_api_literal_observation": {
+    "Study_solver_calls": 0,
+    "activity_id": "93902709-285e-4dc1-8d14-3f0c6f77d844",
+    "job_id": "c0b7bb56-573f-4acf-af50-b15d870da0aa",
+    "literal": "PhaseFieldInFluids",
+    "main_review_sha256": "9be4a6b7b1528cb8993584edff9287fd8e7a51949e1de97d7ecc836d8ff644ea",
+    "result": "Unknown_physics_interface",
+    "setup_slots_completed": 0,
+    "status": "UNKNOWN_PRESERVED_NO_REPLAY"
+  },
+  "schema": "W24_STATIC_SHAPE_PHASEFIELD_INITIAL_VALUES_API_PROVENANCE_V1",
+  "scope": "Offline source/API provenance for dependency ordering and dynamic Phase Field initial-value feature resolution."
+}

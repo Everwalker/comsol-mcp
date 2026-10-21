@@ -1,0 +1,26 @@
+# R6I ten-path metadata-only observation (unsigned R2)
+
+This packet prepares one future, read-only SSH observation of exactly ten fixed paths under `C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c`. The payload calls `os.lstat` once per path and emits type, size, mode, mtime, ctime, file attributes, or a missing/error record. It never opens a target file, reads contents, inspects processes or tokens, writes remotely, imports the project, or launches a test/native process.
+
+The fixed whitelist is two directories, five files, and three runtime paths. No other remote paths are included. Windows `ctime_ns` is retained as reported; its meaning is platform-dependent. The report is an instantaneous metadata snapshot and explicitly does not establish whether the old R6I child is alive or terminal.
+
+The original activity remains `UNOBSERVED`: exec 89189, local SSH PID 47520 (parent 47502), with its once already consumed. This packet does not poll, signal, terminate, retry, or replay that activity. Only a *new* metadata-only connection may later be considered, after Main reviews the exact source and creates a separate one-time authorization. The new connection alone uses `ConnectionAttempts=1`, `ConnectTimeout=15`, `ServerAliveInterval=10`, and `ServerAliveCountMax=1`; these transport deadlines neither inspect nor establish the old activity's terminal state.
+
+The strict wrapper uses the previously reviewed R6I target, Python 3.12 path, fixed ten-path payload, and `OriginalReadOnlyPopenOwner` source SHA. Default `--check-only` does not call Popen. No review, authorization, or once record is included. The old R6F one-time authorization does not cover this R6I connection.
+
+## Fixed paths
+
+1. `helpers-primary-owner-r6i` (directory)
+2. `authority-primary-owner-r6i` (directory)
+3. `helpers-primary-owner-r6i\windows_primary_token_owner_outer_gate_r6i.py` (file)
+4. `helpers-primary-owner-r6i\windows_primary_token_owner_probe_r6i.py` (file)
+5. `authority-primary-owner-r6i\BINDING.json` (file)
+6. `authority-primary-owner-r6i\PREBIRTH_BINDING.json` (file)
+7. `authority-primary-owner-r6i\MAIN_APPROVAL.json` (file)
+8. `authority-primary-owner-r6i\ONCE_USED.json` (runtime path)
+9. `primary-owner-probe-r6i` (runtime directory)
+10. `primary-owner-probe-r6i\owner-probe.bin` (runtime path)
+
+## Status
+
+Local software controls and strict-wrapper `--check-only` are to be recorded in the R2 evidence packet. SSH, remote metadata capture, native execution, Java, COMSOL, GUI, approvals, and once consumption remain `NOT_RUN`. The original R6I R2 SSH remains owned by its original process/session; this packet neither observes nor changes it.

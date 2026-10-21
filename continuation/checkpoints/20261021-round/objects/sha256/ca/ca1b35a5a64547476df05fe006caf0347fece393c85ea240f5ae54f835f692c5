@@ -1,0 +1,279 @@
+"""Read-only diagnostic snapshot for the partial R6D PREP namespace.
+
+Run only after separate Main review and any required authority. It reads the
+five named leaves and two named directories, hashes regular leaf files, and
+checks three fixed absence paths. It does not modify or clean any path. The
+result is diagnostic and is not an R14 security/path proof.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+from pathlib import Path
+import stat
+import sys
+
+TASK_ROOT = r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c"
+HELPER_DIR = TASK_ROOT + r"\helpers-primary-owner-r6d"
+AUTHORITY_ROOT = TASK_ROOT + r"\authority-primary-owner-r6d"
+DIRECTORIES = (HELPER_DIR, AUTHORITY_ROOT)
+EXPECTED_FILES = (
+    (r"helpers-primary-owner-r6d\windows_primary_token_owner_probe_r6d.py",
+     "bc9f34ec4259acf49181b30b802903cc343561704ca7ce0f9069c774ea97904a"),
+    (r"helpers-primary-owner-r6d\windows_primary_token_owner_outer_gate_r6d.py",
+     "497665208412c7e1f08f6ace1f54ce3b9c4451cfac71e310d167b3d15ddd0318"),
+    (r"authority-primary-owner-r6d\BINDING.json",
+     "b11fbf3d348408fb07cb9bdd946883f2036c89e08120f7a25c1c3388c30beceb"),
+    (r"authority-primary-owner-r6d\PREBIRTH_BINDING.json", hashlib.sha256(b"").hexdigest()),
+    (r"authority-primary-owner-r6d\MAIN_APPROVAL.json", hashlib.sha256(b"").hexdigest()),
+)
+ABSENCE_RELATIVE = (
+    r"authority-primary-owner-r6d\ONCE_USED.json",
+    r"primary-owner-probe-r6d",
+    r"cases-primary-owner-r6d",
+)
+REPARSE_POINT = 0x400
+MAX_FILE_BYTES = 16 * 1024 * 1024
+CHUNK_BYTES = 1024 * 1024
+
+
+def _attrs(row: os.stat_result) -> int:
+    return int(getattr(row, "st_file_attributes", 0))
+
+
+def _signature(row: os.stat_result) -> tuple[int, ...]:
+    return (int(row.st_dev), int(row.st_ino), int(row.st_mode), int(row.st_size),
+            int(row.st_mtime_ns), int(row.st_ctime_ns), _attrs(row))
+
+
+def _lstat(path: str):
+    try:
+        return os.lstat(path), None
+    except FileNotFoundError:
+        return None, "ABSENT"
+    except OSError as exc:
+        return None, type(exc).__name__
+
+
+def _join(root: str, relative: str) -> str:
+    return os.path.join(root, *relative.split("\\"))
+
+
+def _metadata(path: str, row: os.stat_result) -> dict:
+    return {"path": path, "mode": int(row.st_mode), "device": int(row.st_dev),
+            "inode": int(row.st_ino), "size": int(row.st_size),
+            "mtime_ns": int(row.st_mtime_ns), "ctime_ns": int(row.st_ctime_ns),
+            "file_attributes": _attrs(row), "reparse_point": bool(_attrs(row) & REPARSE_POINT),
+            "is_symlink": stat.S_ISLNK(row.st_mode)}
+
+
+def snapshot_file(path: str, expected_sha256: str, *, max_bytes: int = MAX_FILE_BYTES) -> dict:
+    before_path, before_error = _lstat(path)
+    if before_path is None:
+        return {"path": path, "state": before_error}
+    result = _metadata(path, before_path)
+    if (not stat.S_ISREG(before_path.st_mode) or stat.S_ISLNK(before_path.st_mode)
+            or _attrs(before_path) & REPARSE_POINT):
+        result.update({"state": "PRESENT_NONREGULAR_OR_REPARSE_NOT_OPENED", "sha256": None,
+                       "matches_expected_sha256": False})
+        return result
+    if before_path.st_size < 0 or before_path.st_size > max_bytes:
+        result.update({"state": "PRESENT_OVERSIZE_NOT_OPENED", "sha256": None,
+                       "matches_expected_sha256": False})
+        return result
+    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        fd = os.open(path, flags)
+        try:
+            before_fd = os.fstat(fd)
+            if (not stat.S_ISREG(before_fd.st_mode) or _attrs(before_fd) & REPARSE_POINT
+                    or _signature(before_path) != _signature(before_fd)):
+                result.update({"state": "CHANGED_OR_REPARSE_BETWEEN_LSTAT_AND_OPEN", "sha256": None,
+                               "matches_expected_sha256": False})
+                return result
+            digest = hashlib.sha256()
+            count = 0
+            while True:
+                chunk = os.read(fd, CHUNK_BYTES)
+                if not chunk:
+                    break
+                count += len(chunk)
+                if count > max_bytes:
+                    result.update({"state": "READ_EXCEEDED_FIXED_BOUND", "sha256": None,
+                                   "matches_expected_sha256": False})
+                    return result
+                digest.update(chunk)
+            after_fd = os.fstat(fd)
+        finally:
+            os.close(fd)
+    except OSError as exc:
+        result.update({"state": "READ_ERROR", "error_type": type(exc).__name__, "sha256": None,
+                       "matches_expected_sha256": False})
+        return result
+    after_path, after_error = _lstat(path)
+    digest_hex = digest.hexdigest()
+    if (after_path is None or _signature(before_fd) != _signature(after_fd)
+            or _signature(after_fd) != _signature(after_path) or count != after_fd.st_size):
+        result.update({"state": "CHANGED_DURING_READ", "after_state": after_error,
+                       "bytes_read": count, "sha256": digest_hex,
+                       "matches_expected_sha256": digest_hex == expected_sha256})
+        return result
+    result.update({"state": "STABLE_READ_ONLY_HASH", "bytes_read": count,
+                   "sha256": digest_hex, "matches_expected_sha256": digest_hex == expected_sha256})
+    return result
+
+
+def snapshot_directory(path: str, expected_names: tuple[str, ...]) -> dict:
+    before, before_error = _lstat(path)
+    if before is None:
+        return {"path": path, "state": before_error, "entries": [], "matches_expected_names": False}
+    result = _metadata(path, before)
+    if (not stat.S_ISDIR(before.st_mode) or stat.S_ISLNK(before.st_mode)
+            or _attrs(before) & REPARSE_POINT):
+        result.update({"state": "PRESENT_NONDIRECTORY_OR_REPARSE_NOT_ENUMERATED", "entries": [],
+                       "matches_expected_names": False})
+        return result
+    try:
+        entries = []
+        with os.scandir(path) as stream:
+            for entry in stream:
+                info = entry.stat(follow_symlinks=False)
+                entries.append({"name": entry.name, "mode": int(info.st_mode),
+                    "device": int(info.st_dev), "inode": int(info.st_ino), "size": int(info.st_size),
+                    "mtime_ns": int(info.st_mtime_ns), "ctime_ns": int(info.st_ctime_ns),
+                    "file_attributes": _attrs(info),
+                    "reparse_point": bool(_attrs(info) & REPARSE_POINT),
+                    "is_symlink": stat.S_ISLNK(info.st_mode)})
+    except OSError as exc:
+        result.update({"state": "ENUMERATION_ERROR", "error_type": type(exc).__name__, "entries": [],
+                       "matches_expected_names": False})
+        return result
+    after, after_error = _lstat(path)
+    names = tuple(sorted(row["name"].casefold() for row in entries))
+    expected = tuple(sorted(name.casefold() for name in expected_names))
+    result.update({"state": "STABLE_READ_ONLY_ENUMERATION" if after and _signature(before) == _signature(after)
+                                else "CHANGED_DURING_ENUMERATION",
+                   "after_state": after_error,
+                   "entries": sorted(entries, key=lambda row: row["name"].casefold()),
+                   "matches_expected_names": names == expected,
+                   "expected_names": list(expected_names)})
+    return result
+
+
+def snapshot_presence(path: str) -> dict:
+    row, error = _lstat(path)
+    return {"path": path, "state": "ABSENT" if row is None and error == "ABSENT"
+            else "PRESENT" if row is not None else "ERROR",
+            "metadata": _metadata(path, row) if row is not None else None,
+            "error_type": error if row is None and error != "ABSENT" else None}
+
+
+def _ordinary_directory(row: os.stat_result | None) -> bool:
+    return bool(row is not None and stat.S_ISDIR(row.st_mode) and not stat.S_ISLNK(row.st_mode)
+                and not (_attrs(row) & REPARSE_POINT))
+
+
+def _reported_signature(row: dict) -> tuple[int, ...]:
+    return (row["device"], row["inode"], row["mode"], row["size"], row["mtime_ns"],
+            row["ctime_ns"], row["file_attributes"])
+
+
+def _uninspected_files(task_root: str) -> list[dict]:
+    return [{"path": _join(task_root, relative), "state": "NOT_HASHED_PARENT_PATH_UNSAFE_OR_UNSTABLE",
+             "sha256": None, "matches_expected_sha256": False}
+            for relative, _expected in EXPECTED_FILES]
+
+
+def _absence_rows(task_root: str) -> list[dict]:
+    return [snapshot_presence(_join(task_root, relative)) for relative in ABSENCE_RELATIVE]
+
+
+def collect(task_root: str = TASK_ROOT) -> dict:
+    root_row, root_error = _lstat(task_root)
+    root_valid = _ordinary_directory(root_row)
+    root = {"path": task_root, "state": "PRESENT_ORDINARY_DIRECTORY" if root_valid
+            else "UNSAFE_OR_UNAVAILABLE" if root_row is not None else root_error,
+            "metadata": _metadata(task_root, root_row) if root_row else None}
+    if not root_valid:
+        return {"schema": "cv3-windows-primary-owner-r6d-readonly-inspection/1",
+                "status": "READ_ONLY_SNAPSHOT_DIFFERS_OR_HAS_ERRORS",
+                "diagnostic_only_not_R14_security_path_proof": True,
+                "read_only": True, "preflight": {"root_ordinary_directory": False,
+                    "child_directory_preflights": "NOT_RUN", "leaf_hashing": "NOT_RUN"},
+                "root": root, "directories": [], "files": _uninspected_files(task_root),
+                "absence_checks": _absence_rows(task_root)}
+
+    helper_dir = _join(task_root, "helpers-primary-owner-r6d")
+    authority_root = _join(task_root, "authority-primary-owner-r6d")
+    dirs = ((helper_dir, ("windows_primary_token_owner_probe_r6d.py",
+                          "windows_primary_token_owner_outer_gate_r6d.py")),
+            (authority_root, ("BINDING.json", "PREBIRTH_BINDING.json", "MAIN_APPROVAL.json")))
+    directory_rows = []
+    for path, names in dirs:
+        row = snapshot_directory(path, names)
+        directory_rows.append(row)
+        if row.get("state") != "STABLE_READ_ONLY_ENUMERATION":
+            return {"schema": "cv3-windows-primary-owner-r6d-readonly-inspection/1",
+                    "status": "READ_ONLY_SNAPSHOT_DIFFERS_OR_HAS_ERRORS",
+                    "diagnostic_only_not_R14_security_path_proof": True,
+                    "read_only": True, "preflight": {"root_ordinary_directory": True,
+                        "child_directory_preflights": "UNSAFE_OR_UNSTABLE", "leaf_hashing": "NOT_RUN"},
+                    "root": root, "directories": directory_rows,
+                    "files": _uninspected_files(task_root), "absence_checks": _absence_rows(task_root)}
+
+    # Recheck the root and both fixed parent directories immediately before any
+    # leaf open. A changed identity, reparse point, non-directory, or metadata
+    # error stops this diagnostic without hashing child paths.
+    root_again, root_again_error = _lstat(task_root)
+    preflight_same = bool(_ordinary_directory(root_again) and _signature(root_row) == _signature(root_again))
+    if not preflight_same:
+        return {"schema": "cv3-windows-primary-owner-r6d-readonly-inspection/1",
+                "status": "READ_ONLY_SNAPSHOT_DIFFERS_OR_HAS_ERRORS",
+                "diagnostic_only_not_R14_security_path_proof": True,
+                "read_only": True, "preflight": {"root_ordinary_directory": True,
+                    "root_recheck": "CHANGED_OR_UNAVAILABLE:" + str(root_again_error),
+                    "child_directory_preflights": "COMPLETE", "leaf_hashing": "NOT_RUN"},
+                "root": root, "directories": directory_rows,
+                "files": _uninspected_files(task_root), "absence_checks": _absence_rows(task_root)}
+    for path, row in zip((helper_dir, authority_root), directory_rows, strict=True):
+        current, current_error = _lstat(path)
+        if (not _ordinary_directory(current) or _signature(current) != _reported_signature(row)):
+            return {"schema": "cv3-windows-primary-owner-r6d-readonly-inspection/1",
+                    "status": "READ_ONLY_SNAPSHOT_DIFFERS_OR_HAS_ERRORS",
+                    "diagnostic_only_not_R14_security_path_proof": True,
+                    "read_only": True, "preflight": {"root_ordinary_directory": True,
+                        "child_directory_preflights": "CHANGED_OR_UNAVAILABLE:" + str(current_error),
+                        "leaf_hashing": "NOT_RUN"},
+                    "root": root, "directories": directory_rows,
+                    "files": _uninspected_files(task_root), "absence_checks": _absence_rows(task_root)}
+
+    file_rows = [snapshot_file(_join(task_root, relative), expected) for relative, expected in EXPECTED_FILES]
+    absence_rows = _absence_rows(task_root)
+    expected_ok = (
+        root["state"] == "PRESENT_ORDINARY_DIRECTORY"
+        and all(row.get("state") == "STABLE_READ_ONLY_ENUMERATION" and row.get("matches_expected_names")
+                for row in directory_rows)
+        and all(row.get("state") == "STABLE_READ_ONLY_HASH" and row.get("matches_expected_sha256")
+                for row in file_rows)
+        and all(row["state"] == "ABSENT" for row in absence_rows)
+    )
+    return {"schema": "cv3-windows-primary-owner-r6d-readonly-inspection/1",
+            "status": "READ_ONLY_SNAPSHOT_MATCHES_EXPECTED_PARTIAL_R6D" if expected_ok
+                     else "READ_ONLY_SNAPSHOT_DIFFERS_OR_HAS_ERRORS",
+            "diagnostic_only_not_R14_security_path_proof": True,
+            "read_only": True, "preflight": {"root_ordinary_directory": True,
+                "child_directory_preflights": "COMPLETE", "leaf_hashing": "COMPLETED_AFTER_PRECHECK"},
+            "root": root, "directories": directory_rows,
+            "files": file_rows, "absence_checks": absence_rows}
+
+
+def main() -> int:
+    if len(sys.argv) != 1:
+        raise SystemExit("arguments are not accepted")
+    print(json.dumps(collect(), sort_keys=True, ensure_ascii=False, allow_nan=False))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

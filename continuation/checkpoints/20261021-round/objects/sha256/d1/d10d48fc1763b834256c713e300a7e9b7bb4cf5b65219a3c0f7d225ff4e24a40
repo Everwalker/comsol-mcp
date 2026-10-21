@@ -1,0 +1,597 @@
+from __future__ import annotations
+
+import hashlib
+import importlib.util
+import json
+from pathlib import Path
+import sys
+import subprocess
+import shutil
+import stat
+import tempfile
+import types
+import unittest
+from unittest.mock import Mock, patch
+
+
+ROOT = Path(__file__).resolve().parents[1]
+SPEC = importlib.util.spec_from_file_location(
+    "w23_r8_outer_controller_test_target",
+    ROOT / "probe/w23_actual_controller_r8.py")
+TARGET = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = TARGET
+SPEC.loader.exec_module(TARGET)
+
+
+def canonical(value):
+    return json.dumps(value, sort_keys=True, separators=(",", ":"),
+                      ensure_ascii=False, allow_nan=False).encode("utf-8")
+
+
+def _make_raw_journal(path: Path, *, metadata_calls: int = 115,
+                      bad_status_envelope: bool = False,
+                      wrong_status_job_id: bool = False,
+                      omit_pair_ordinal: int | None = None) -> tuple[dict, dict]:
+    rows = []
+    ordinal = 0
+    counts = {"owner": 0, "owner_terminal_status": 0,
+              "metadata": 0, "point": 0, "integral": 0}
+    owner_raw = []
+
+    def add(operation_id, category, arguments, *, owner_response=None):
+        nonlocal ordinal
+        ordinal += 1
+        request_id = f"req-{ordinal:03d}"
+        idem = f"idem-{ordinal:03d}"
+        request_execution = {
+            "project_id": "project-r8-test", "session_id": "session-r8-test",
+            "model_ref": None, "expected_revision": None,
+            "rpc_timeout_s": 30.0, "execution_timeout_s": None,
+            "queue_timeout_s": 60.0, "idempotency_key": idem,
+            "request_id": request_id,
+        }
+        nested_arguments = dict(arguments)
+        if category == "owner" and operation_id == "artifact.register":
+            nested_arguments.update({"request_id": request_id, "idempotency_key": idem})
+        intent = {
+            "kind": "dispatch_intent", "ordinal": ordinal, "category": category,
+            "request": {"operation": "operation_call",
+                        "arguments": {"operation_id": operation_id,
+                                      "arguments": nested_arguments},
+                        "execution": request_execution},
+            "retry": "FORBIDDEN_AFTER_DISPATCH",
+        }
+        rows.append(intent)
+        if category == "owner":
+            raw = {
+                "success": True,
+                "data": {"status": "REGISTERED" if operation_id == "artifact.register" else "LOADED"},
+                "execution": {"project_id": "project-r8-test", "session_id": "session-r8-test",
+                              "operation_id": f"owner-op-{ordinal}", "job_id": f"owner-job-{ordinal}",
+                              "request_id": request_id, "idempotency_key": idem,
+                              "request_hash": f"{ordinal:064x}"},
+            }
+            owner_raw.append(raw)
+        elif category == "owner_terminal_status":
+            owner = owner_response
+            operation = {
+                "operation_id": owner["execution"]["operation_id"],
+                "request_id": owner["execution"]["request_id"],
+                "idempotency_key": owner["execution"]["idempotency_key"],
+                "request_hash": owner["execution"]["request_hash"],
+                "status": "SUCCEEDED", "finished_at": "2026-10-19T00:00:00Z",
+                "operation": "operation_call", "result": owner,
+                "metadata": {"operation": "operation_call",
+                             "arguments": {"operation_id": owner["data"].get("owner_operation"),
+                                           "arguments": {}},
+                             "execution": request_execution},
+            }
+            # Copy the exact preceding owner's persisted semantic arguments.
+            owner_intent = next(row for row in reversed(rows[:-1])
+                                if row.get("kind") == "dispatch_intent"
+                                and row.get("category") == "owner")
+            operation["metadata"]["arguments"] = owner_intent["request"]["arguments"]
+            operation["metadata"]["execution"] = owner_intent["request"]["execution"]
+            job = {"job_id": owner["execution"]["job_id"],
+                   "operation_id": owner["execution"]["operation_id"],
+                   "status": "SUCCEEDED", "finished_at": "2026-10-19T00:00:00Z",
+                   "result": owner, "operation": operation,
+                   "metadata": dict(operation["metadata"])}
+            data = {**job}
+            if wrong_status_job_id:
+                data["job_id"] = "another-owner-job"
+            if bad_status_envelope:
+                raw = {"success": True, "data": data, "execution": {"status": "SUCCEEDED"}}
+            else:
+                raw = {"success": True, "data": data}
+        else:
+            raw = {"success": True,
+                   "data": {"status": "OK", "observed": {"operation": operation_id}},
+                   "execution": {"project_id": "project-r8-test", "session_id": "session-r8-test",
+                                 "model_ref": {"schema_version": 1, "session_id": "session-r8-test",
+                                               "server_instance_id": "server-r8-test",
+                                               "model_tag": "Model1", "generation": 1},
+                                 "expected_revision": 1, "request_id": request_id,
+                                 "idempotency_key": idem, "status": "SUCCEEDED"}}
+        raw_sha = hashlib.sha256(canonical(raw)).hexdigest()
+        response = {"kind": "dispatch_response", "ordinal": ordinal,
+                    "category": category, "operation_id": operation_id,
+                    "request_id": request_id, "idempotency_key": idem,
+                    "response_sha256": raw_sha, "raw_response": raw}
+        rows.append(response)
+        if category in {"metadata", "point", "integral"}:
+            proof = {"schema": "W23_OWNER_OPERATION_JOB_TERMINAL_PAIR_R1",
+                     "source": "LIVE_BOUND_MANAGED_PUBLIC_GATE_OPERATIONSTORE",
+                     "terminal_pair_status": "OPERATION_AND_JOB_SUCCEEDED",
+                     "public_operation": operation_id,
+                     "raw_response_sha256": raw_sha,
+                     "operation_status": "SUCCEEDED", "job_status": "SUCCEEDED"}
+            if omit_pair_ordinal != ordinal:
+                rows.append({"kind": "terminal_operation_job_pair_proof",
+                             "ordinal": ordinal, "operation_id": operation_id,
+                             "request_id": request_id,
+                             "raw_response_sha256": raw_sha, "proof": proof})
+        counts[category] += 1
+        return raw
+
+    register = add("artifact.register", "owner", {
+        "project_id": "project-r8-test", "path": "saved.mph",
+        "role": "saved_model", "classification": "project_local",
+        "artifact_type": "application/vnd.comsol.mph", "format_version": "comsol-mph-savecopy/1"})
+    add("job.status", "owner_terminal_status", {"job_id": register["execution"]["job_id"]},
+        owner_response=register)
+    load = add("model.load", "owner", {
+        "artifact_id": "a" * 64, "path_policy": {"mode": "registered_artifact"}})
+    add("job.status", "owner_terminal_status", {"job_id": load["execution"]["job_id"]},
+        owner_response=load)
+    for i in range(metadata_calls):
+        operation = "runtime.capabilities" if i == 0 else "node.inspect"
+        add(operation, "metadata", {"path": []})
+    for _ in range(4):
+        add("result.at_points", "point", {"dataset": "dset1", "points": [[0.0]]})
+    for _ in range(2):
+        add("result.evaluate", "integral", {"spec": {"aggregate": "integral"}})
+    route_total = ordinal
+    final = {
+        "kind": "terminal_source_readback",
+        "input_identity_before": {"path": "/tmp/test/workspace/saved.mph", "bytes": 13795478,
+                                  "sha256": "cba0c1d404003c4e60a20b04316cb1456c38cc2b45596dc2dc29bbed62674a8c",
+                                  "mode": "0o400", "opened_by_comsol": False},
+        "input_identity_after": {"path": "/tmp/test/workspace/saved.mph", "bytes": 13795478,
+                                 "sha256": "cba0c1d404003c4e60a20b04316cb1456c38cc2b45596dc2dc29bbed62674a8c",
+                                 "mode": "0o400", "opened_by_comsol": False},
+        "metadata_call_count": metadata_calls, "point_call_count": 4,
+        "integral_call_count": 2, "owner_call_count": 2,
+        "owner_terminal_status_read_count": 2, "owner_public_call_count": 4,
+        "point_call_count": 4, "integral_call_count": 2,
+        "point_calls": 4, "integral_calls": 2,
+        "total_public_call_count": route_total,
+        "direction_status": "NOT_PROVEN", "scientific_acceptance": "NOT_EVALUATED",
+        "Study.run": 0, "solver.run": 0, "node.property_set": 0,
+        "model.save": 0, "code.execute_java": 0,
+    }
+    rows.append(final)
+    raw = b"".join(canonical(row) + b"\n" for row in rows)
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    path.write_bytes(raw)
+    path.chmod(0o600)
+    result = {
+        "metadata_call_count": metadata_calls, "point_calls": 4,
+        "integral_calls": 2, "owner_call_count": 2,
+        "owner_terminal_status_read_count": 2,
+        "owner_public_call_count": 4, "total_public_call_count": route_total,
+    }
+    return result, {"sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw)}
+
+
+class JournalConsumerTests(unittest.TestCase):
+    def test_external_child_rejects_prebound_wrong_probe_before_submodule_import(self):
+        child = ROOT / "tests/canonical_probe_loader_child.py"
+        proc = subprocess.run(["/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312/bin/python",
+                               "-I", "-B", str(child), "--controller",
+                               str(ROOT / "probe/w23_actual_controller_r8.py"), "--wrong-probe"],
+                              cwd=str(TARGET.REPOSITORY), capture_output=True,
+                              text=True, timeout=30, check=False)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(json.loads(proc.stdout)["status"],
+                         "PASS_WRONG_PROBE_ORIGIN_REJECTED")
+
+    def test_source_projection_and_real_canonical_loader_run_in_isolated_child(self):
+        child = ROOT / "tests/canonical_probe_loader_child.py"
+        proc = subprocess.run(["/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312/bin/python",
+                               "-I", "-B", str(child), "--controller",
+                               str(ROOT / "probe/w23_actual_controller_r8.py")],
+                              cwd=str(TARGET.REPOSITORY), capture_output=True,
+                              text=True, timeout=60, check=False)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        report = json.loads(proc.stdout)
+        self.assertEqual(report["status"], "PASS_CANONICAL_R6_LOADER_TO_W25_MODULE_IMPORTS")
+        self.assertEqual(report["public_calls"], 0)
+        self.assertFalse(report["owner_created"])
+        self.assertFalse(report["approval_created"])
+        self.assertFalse(report["once_created"])
+
+    def test_r2_source_closure_and_new_packet_bind_exact_live_rows(self):
+        result = TARGET._verify_r6_source_rebind_lineage()
+        self.assertEqual(result["projected_member_count"], 914)
+        self.assertEqual(result["exact_source_delta"]["removed"], [])
+        self.assertEqual(result["r2_reviewed_closure"]["reviewed_member_count"], 884)
+        self.assertEqual(result["packet_live_integrity"]["status"],
+                         "PASS_EXACT_LIVE_RECORDS_AND_DECLARED_RUNTIME_AUTHORITIES")
+        self.assertEqual(result["packet_live_integrity"]["record_count"], 921)
+        self.assertEqual(result["packet_live_integrity"]["observed_runtime_authority_leaves"], [])
+        self.assertEqual(result["predecessor_packet_live_integrity"]["record_count"], 975)
+        self.assertEqual(result["predecessor_packet_live_integrity"]["separately_verified_file_count"], 34)
+        self.assertEqual(result["predecessor_historical_output"]["status"],
+                         "PASS_EXACT_R16_UNKNOWN_OUTPUT_PRESERVED")
+        self.assertEqual(result["predecessor_historical_output"]["file_count"], 15)
+
+    def test_r16_historical_unknown_output_has_exact_file_and_hash_allowlist(self):
+        with tempfile.TemporaryDirectory(prefix="w23-r16-preserved-output-") as tmp:
+            clone = Path(tmp) / "candidate"
+            run_rel = TARGET.R16_HISTORICAL_RUN_RELATIVE
+            for rel in TARGET.R16_HISTORICAL_RUN_FILES:
+                source = TARGET.R6_PREVIOUS_ROOT / run_rel / rel
+                destination = clone / run_rel / rel
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, destination, follow_symlinks=False)
+            accepted = TARGET._verify_r16_historical_output(root=clone)
+            self.assertEqual(accepted["file_count"], 15)
+            extra = clone / run_rel / "UNDECLARED.json"
+            extra.write_text("{}\n", encoding="utf-8")
+            with self.assertRaisesRegex(TARGET.OuterControllerError,
+                                        "exact declared 15-file set"):
+                TARGET._verify_r16_historical_output(root=clone)
+
+    def _copy_complete_r6_packet_layout(self, clone_root: Path):
+        packet, _ = TARGET._strict_json(TARGET.R6_PACKET_MANIFEST,
+                                         limit=64 * 1024 * 1024)
+        excluded = set(packet["excluded_self_referential_files"])
+        records = {row["path"] for row in packet["records"]}
+        for rel in sorted(records | excluded):
+            source = TARGET.R6_ROOT / rel
+            source_info = source.lstat()
+            if stat.S_ISLNK(source_info.st_mode) or not stat.S_ISREG(source_info.st_mode):
+                raise AssertionError(f"accepted R6 packet source is not a regular file: {rel}")
+            target = clone_root / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, target, follow_symlinks=False)
+            target_info = target.lstat()
+            if (not stat.S_ISREG(target_info.st_mode)
+                    or target_info.st_nlink != 1
+                    or target.read_bytes() != source.read_bytes()):
+                raise AssertionError(f"R6 packet clone did not preserve independent exact bytes: {rel}")
+        return (packet, records, excluded,
+                TARGET.R6_COMPILE_RECEIPT_SHA256,
+                TARGET.R6_COMPILE_REVIEW_SHA256)
+
+    def _copy_compile_sidecar(self, clone_root: Path):
+        source_root = TARGET.R6_PREVIOUS_ROOT
+        sidecar = TARGET._verify_r6_compile_sidecar(root=source_root)
+        for rel in sidecar["sidecar_paths"]:
+            source = source_root / rel
+            destination = clone_root / rel
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, destination, follow_symlinks=False)
+        compile_root = clone_root / "evidence/JAVA11_COMPILE_R6"
+        classes_root = compile_root / "classes_r15"
+        receipt_path = compile_root / "JAVA11_COMPILE_RECEIPT_R6.json"
+        review_path = compile_root / "MAIN_JAVA11_COMPILE_REVIEW_R15.json"
+        receipt = json.loads(receipt_path.read_text())
+        receipt["classes_root"] = str(classes_root)
+        receipt["plan_path"] = str(compile_root / "JAVA11_COMPILE_PLAN_R15_UNSIGNED.json")
+        review = json.loads(review_path.read_text())
+        review["new_output"] = str(classes_root)
+        review_bytes = json.dumps(review, indent=2, ensure_ascii=False).encode() + b"\n"
+        review_path.write_bytes(review_bytes)
+        review_path.chmod(0o600)
+        receipt["Main_review_sha256"] = hashlib.sha256(review_bytes).hexdigest()
+        receipt_bytes = json.dumps(receipt, indent=2, ensure_ascii=False).encode() + b"\n"
+        receipt_path.write_bytes(receipt_bytes)
+        receipt_path.chmod(0o600)
+        return hashlib.sha256(receipt_bytes).hexdigest(), hashlib.sha256(review_bytes).hexdigest()
+
+    def test_fixed_authority_leaves_on_complete_r6_packet_clone(self):
+        with tempfile.TemporaryDirectory(prefix="w23-r6-fixed-authority-clone-") as tmp:
+            clone_root = Path(tmp) / "r6"
+            packet, records, excluded, receipt_sha, review_sha = self._copy_complete_r6_packet_layout(clone_root)
+            cloned_packet = dict(packet)
+            cloned_packet["candidate_root"] = str(clone_root)
+            packet_raw = TARGET._canonical_bytes(cloned_packet)
+            packet_sha = hashlib.sha256(packet_raw).hexdigest()
+            (clone_root / "evidence/PACKET_MANIFEST_R6_R3.json").write_bytes(packet_raw)
+
+            # Rebind only the test module's fixed roots to a complete isolated
+            # clone. The source records and live bytes remain exactly those in
+            # the accepted manifest; the test never writes to the frozen R6.
+            with patch.object(TARGET, "R6_ROOT", clone_root), \
+                    patch.object(TARGET, "R6_PACKET_MANIFEST_SHA256", packet_sha), \
+                    patch.object(TARGET, "R6_COMPILE_RECEIPT_SHA256", receipt_sha), \
+                    patch.object(TARGET, "R6_COMPILE_REVIEW_SHA256", review_sha):
+                source_only = TARGET._verify_r6_packet_manifest(cloned_packet, packet_sha)
+                self.assertEqual(source_only["record_count"], 921)
+                self.assertEqual(source_only["live_file_count"], 940)
+                self.assertEqual(source_only["observed_runtime_authority_leaves"], [])
+                self.assertEqual(source_only["compile_sidecar"]["sidecar_file_count"], 19)
+
+                # These inert bytes exercise only the exact fixed-path live
+                # set. They are not review/once records and cannot authorize
+                # anything; the R6 strict current-hash reader remains the
+                # separate content consumer.
+                for rel in sorted(TARGET.R6_RUNTIME_AUTHORITY_LEAVES):
+                    leaf = clone_root / rel
+                    leaf.parent.mkdir(parents=True, exist_ok=True)
+                    leaf.write_bytes(b"inert fixed-layout test placeholder; never an authority\n")
+                paired = TARGET._verify_r6_packet_manifest(cloned_packet, packet_sha)
+                self.assertEqual(paired["observed_runtime_authority_leaves"],
+                                 sorted(TARGET.R6_RUNTIME_AUTHORITY_LEAVES))
+                self.assertEqual(paired["runtime_authority_content_consumer"],
+                                 "PINNED_R6_STRICT_CURRENT_HASH_READER")
+
+                extra = clone_root / "evidence/UNDECLARED_EXTRA_R10.json"
+                extra.write_text("{}\n", encoding="utf-8")
+                with self.assertRaisesRegex(TARGET.OuterControllerError,
+                                            "exact live regular-file set"):
+                    TARGET._verify_r6_packet_manifest(cloned_packet, packet_sha)
+                extra.unlink()
+
+                (clone_root / "evidence/W23_R6_MAIN_SINGLE_USE_BINDING.json").unlink()
+                with self.assertRaisesRegex(TARGET.OuterControllerError,
+                                            "both absent or both present"):
+                    TARGET._verify_r6_packet_manifest(cloned_packet, packet_sha)
+
+            # The packet membership rule never makes review/once content
+            # optional: source keeps the fixed reader paths and invocation.
+            r6_source = TARGET.R6_ENTRY_PATH.read_text(encoding="utf-8")
+            r8_source = TARGET.OUTER_SOURCE_PLAN_PATH.read_text(encoding="utf-8")
+            self.assertIn('REVIEW_PATH = EVIDENCE_ROOT / "W23_R6_MAIN_RUNTIME_REVIEW.json"',
+                          r6_source)
+            self.assertIn('ONCE_PATH = EVIDENCE_ROOT / "W23_R6_MAIN_SINGLE_USE_BINDING.json"',
+                          r6_source)
+            self.assertIn('r6._load_authority(',
+                          TARGET.OUTER_ROOT.joinpath("probe/w23_actual_controller_r8.py")
+                          .read_text(encoding="utf-8"))
+            self.assertIn("PINNED_R6_ENTRY_STRICT_CURRENT_HASH_READER", r8_source)
+
+    def test_r6_compile_sidecar_rejects_unreviewed_class_output(self):
+        with tempfile.TemporaryDirectory(prefix="w23-r6-jdk11-sidecar-") as tmp:
+            clone_root = Path(tmp) / "r15"
+            receipt_sha, review_sha = self._copy_compile_sidecar(clone_root)
+            with patch.object(TARGET, "R6_PREVIOUS_ROOT", clone_root), \
+                    patch.object(TARGET, "R6_COMPILE_RECEIPT_SHA256", receipt_sha), \
+                    patch.object(TARGET, "R6_COMPILE_REVIEW_SHA256", review_sha):
+                (clone_root / "evidence/JAVA11_COMPILE_R6/classes_r15/unreviewed.class").write_bytes(b"extra")
+                with self.assertRaisesRegex(TARGET.OuterControllerError, "class output file set differs"):
+                    TARGET._verify_r6_compile_sidecar(root=clone_root)
+
+    def _make_fixed_r6_layout(self, root: Path):
+        expected = {"probe/w23_actual_entry_r6.py", "evidence/ordinary-packet-record.txt"}
+        excluded = {
+            "evidence/PACKET_MANIFEST_R6_R3.json",
+            "evidence/W23_R6_SOURCE_REVIEW_REQUEST_R3.json",
+            "evidence/VALIDATION_RECEIPT_R3.json",
+        }
+        for rel in expected | excluded | TARGET.R6_RUNTIME_AUTHORITY_LEAVES:
+            path = root / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"fixed-layout-fixture\n")
+        return expected, excluded
+
+    def test_fixed_layout_two_authorities_are_separate_from_source_packet_set(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "r6-root"
+            expected, excluded = self._make_fixed_r6_layout(root)
+            result = TARGET._verify_r6_live_member_set(root, expected, excluded)
+            self.assertEqual(result["status"],
+                             "PASS_EXACT_LIVE_RECORDS_AND_DECLARED_RUNTIME_AUTHORITIES")
+            self.assertEqual(result["observed_runtime_authority_leaves"],
+                             sorted(TARGET.R6_RUNTIME_AUTHORITY_LEAVES))
+            self.assertEqual(result["runtime_authority_content_consumer"],
+                             "PINNED_R6_STRICT_CURRENT_HASH_READER")
+
+    def test_fixed_layout_rejects_any_unlisted_leaf_even_with_authorities_present(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "r6-root"
+            expected, excluded = self._make_fixed_r6_layout(root)
+            (root / "evidence/unexpected-extra.json").write_text("{}\n")
+            with self.assertRaisesRegex(TARGET.OuterControllerError,
+                                        "exact live regular-file set"):
+                TARGET._verify_r6_live_member_set(root, expected, excluded)
+
+    def test_fixed_layout_rejects_partial_authority_pair(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "r6-root"
+            expected, excluded = self._make_fixed_r6_layout(root)
+            (root / "evidence/W23_R6_MAIN_SINGLE_USE_BINDING.json").unlink()
+            with self.assertRaisesRegex(TARGET.OuterControllerError,
+                                        "both absent or both present"):
+                TARGET._verify_r6_live_member_set(root, expected, excluded)
+
+    def test_r6_authority_contents_remain_bound_to_strict_current_hash_reader(self):
+        source = TARGET.R6_ENTRY_PATH.read_text(encoding="utf-8")
+        outer_source = (TARGET.OUTER_ROOT / "probe/w23_actual_controller_r8.py").read_text(
+            encoding="utf-8")
+        self.assertIn('REVIEW_PATH = EVIDENCE_ROOT / "W23_R6_MAIN_RUNTIME_REVIEW.json"', source)
+        self.assertIn('ONCE_PATH = EVIDENCE_ROOT / "W23_R6_MAIN_SINGLE_USE_BINDING.json"', source)
+        self.assertIn("review, review_sha = _read_stable(REVIEW_PATH)", source)
+        self.assertIn("once, once_sha = _read_stable(ONCE_PATH)", source)
+        self.assertIn("Main authority file hashes differ from the exact entry arguments", source)
+        self.assertIn("r6._load_authority(", outer_source)
+
+    def test_unsigned_outer_authority_template_names_exact_consumer_paths(self):
+        template = json.loads((ROOT / "evidence/AUTHORITY_TEMPLATES_UNSIGNED_PREP_ONLY_R1.json").read_text())
+        layer = next(row for row in template["layers"]
+                     if row.get("layer") == "R8 outer lifecycle authority")
+        self.assertEqual(layer["review_live_path"], str(TARGET.OUTER_MAIN_REVIEW_PATH))
+        self.assertEqual(layer["once_live_path"], str(TARGET.OUTER_ONCE_PATH))
+        self.assertFalse(template["created_approval"])
+        self.assertFalse(template["created_once"])
+
+    def test_r2_source_review_digest_drift_fails_closed(self):
+        original = TARGET.R2_POSTIMAGE_PINS_SHA256
+        TARGET.R2_POSTIMAGE_PINS_SHA256 = "0" * 64
+        try:
+            with self.assertRaisesRegex(TARGET.OuterControllerError,
+                                        "Main-accepted R2 source review"):
+                TARGET._verify_r2_reviewed_closure()
+        finally:
+            TARGET.R2_POSTIMAGE_PINS_SHA256 = original
+
+    def test_live_packet_rejects_changed_record_sha(self):
+        packet, packet_sha = TARGET._strict_json(TARGET.R6_PACKET_MANIFEST,
+                                                 limit=64 * 1024 * 1024)
+        mutated = dict(packet)
+        mutated["records"] = [dict(row) for row in packet["records"]]
+        mutated["records"][0]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(TARGET.OuterControllerError,
+                                    "differs from exact bytes/mode"):
+            TARGET._verify_r6_packet_manifest(mutated, packet_sha)
+
+    def test_real_r6_journal_shape_positive_keeps_raw_cached_status(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            journal = Path(tmp) / "public-receipts.jsonl"
+            route, _raw = _make_raw_journal(journal)
+            result = TARGET._verify_journal(journal, route)
+            self.assertEqual(result["status"], "PASS_RAW_JOURNAL_ALL_DISPATCHES_TERMINAL")
+            self.assertEqual(result["category_counts"], {
+                "owner": 2, "owner_terminal_status": 2,
+                "metadata": 115, "point": 4, "integral": 2})
+            self.assertEqual(result["dispatch_count"], 125)
+            self.assertTrue(result["cached_status_raw_responses_preserved"])
+
+    def test_missing_same_owner_pair_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            journal = Path(tmp) / "public-receipts.jsonl"
+            route, _ = _make_raw_journal(journal, omit_pair_ordinal=5)
+            with self.assertRaisesRegex(TARGET.OuterControllerError, "terminal pair proof"):
+                TARGET._verify_journal(journal, route)
+
+    def test_cached_job_status_cannot_be_fabricated_as_new_execution(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            journal = Path(tmp) / "public-receipts.jsonl"
+            route, _ = _make_raw_journal(journal, bad_status_envelope=True)
+            with self.assertRaisesRegex(TARGET.OuterControllerError, "cached job.status raw producer"):
+                TARGET._verify_journal(journal, route)
+
+    def test_cached_job_status_must_bind_the_exact_preceding_owner_job(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            journal = Path(tmp) / "public-receipts.jsonl"
+            route, _ = _make_raw_journal(journal, wrong_status_job_id=True)
+            with self.assertRaisesRegex(TARGET.OuterControllerError, "not bound to the preceding raw owner response"):
+                TARGET._verify_journal(journal, route)
+
+    def test_mutated_raw_response_cannot_reuse_old_response_hash_or_proof(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            journal = Path(tmp) / "public-receipts.jsonl"
+            route, _ = _make_raw_journal(journal)
+            rows = [json.loads(line) for line in journal.read_text().splitlines()]
+            response = next(row for row in rows if row.get("kind") == "dispatch_response"
+                            and row.get("category") == "point")
+            response["raw_response"]["data"]["tampered"] = True
+            journal.write_bytes(b"".join(canonical(row) + b"\n" for row in rows))
+            journal.chmod(0o600)
+            with self.assertRaisesRegex(TARGET.OuterControllerError, "raw response does not bind"):
+                TARGET._verify_journal(journal, route)
+
+    def test_direction_or_science_promotion_fails_even_when_raw_reads_are_terminal(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            journal = Path(tmp) / "public-receipts.jsonl"
+            route, _ = _make_raw_journal(journal)
+            rows = [json.loads(line) for line in journal.read_text().splitlines()]
+            rows[-1]["direction_status"] = "PROVEN"
+            journal.write_bytes(b"".join(canonical(row) + b"\n" for row in rows))
+            journal.chmod(0o600)
+            with self.assertRaisesRegex(TARGET.OuterControllerError, "promotes direction/science"):
+                TARGET._verify_journal(journal, route)
+
+
+class OriginalOwnerCleanupTests(unittest.TestCase):
+    def _fake_r5(self, temp_root):
+        r5 = types.ModuleType("r5_fake")
+        r5._install_original_owner_shutdown_guards = Mock(return_value=(object(), object(), object()))
+        r5._original_owner_references = Mock(return_value=(("server", object()), ("worker", object())))
+        r5._remaining_wall_seconds = Mock(return_value=100.0)
+        r5._disconnect_operation_once = Mock()
+        r5._worker_retirement_ledger = Mock()
+        r5._closed_lifecycle_readback = Mock()
+        return r5
+
+    def test_cleanup_reserve_exhaustion_does_not_dispatch_or_close(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            r5 = self._fake_r5(tmp)
+            host = types.SimpleNamespace(close=Mock())
+            holder = types.SimpleNamespace(host=host, outcome=object(),
+                                           close_attempted=False, disconnect_attempted=False,
+                                           owner_references=(), shutdown_guards=())
+            with unittest.mock.patch.object(TARGET, "_remaining_wall_seconds", return_value=100.0):
+                result = TARGET._success_cleanup(r5, holder, {"sha256": "a" * 64}, Path(tmp))
+            self.assertEqual(result["cleanup_rpc_calls"], 0)
+            self.assertFalse(holder.disconnect_attempted)
+            self.assertFalse(holder.close_attempted)
+            r5._disconnect_operation_once.assert_not_called()
+            host.close.assert_not_called()
+
+    def test_one_disconnect_failure_never_replays_or_closes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "lifecycle"
+            root.mkdir(mode=0o700)
+            r5 = self._fake_r5(tmp)
+            r5._remaining_wall_seconds = Mock(return_value=600.0)
+            r5._disconnect_operation_once = Mock(return_value=({"success": False,
+                                                               "raw": {"error": "terminal-failure"}},
+                                                              "req-r8", "idem-r8"))
+            host = types.SimpleNamespace(close=Mock())
+            holder = types.SimpleNamespace(host=host, outcome=object(),
+                                           close_attempted=False, disconnect_attempted=False,
+                                           owner_references=(), shutdown_guards=())
+            with unittest.mock.patch.object(TARGET, "_remaining_wall_seconds", return_value=600.0):
+                result = TARGET._success_cleanup(r5, holder, {"sha256": "a" * 64}, root)
+            self.assertEqual(result["status"], "UNKNOWN_NO_REPLAY_DISCONNECT_RESPONSE_NOT_SUCCESS")
+            self.assertTrue(holder.disconnect_attempted)
+            self.assertFalse(holder.close_attempted)
+            self.assertEqual(r5._disconnect_operation_once.call_count, 1)
+            host.close.assert_not_called()
+
+    def test_exact_success_retirement_uses_one_disconnect_then_one_default_close(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "lifecycle"
+            root.mkdir(mode=0o700)
+            r5 = self._fake_r5(tmp)
+            r5._remaining_wall_seconds = Mock(side_effect=[600.0, 500.0])
+            r5._disconnect_operation_once = Mock(return_value=({"success": True,
+                                                               "data": {"state": "DISCONNECTED"}},
+                                                              "req-r8", "idem-r8"))
+            r5._worker_retirement_ledger = Mock(return_value={"status": "RETIRED"})
+            r5._closed_lifecycle_readback = Mock(return_value={"lifecycle": "STOPPED"})
+            worker_guard = types.SimpleNamespace(summary=lambda: {"role": "worker"})
+            server_guard = types.SimpleNamespace(summary=lambda: {"role": "server"},
+                                                 verify_binding=Mock())
+            r5._install_original_owner_shutdown_guards = Mock(
+                return_value=(object(), worker_guard, server_guard))
+            host = types.SimpleNamespace(close=Mock(return_value={"closed": True}))
+            holder = types.SimpleNamespace(host=host, outcome=object(),
+                                           close_attempted=False, disconnect_attempted=False,
+                                           owner_references=(), shutdown_guards=())
+            with unittest.mock.patch.object(TARGET, "_remaining_wall_seconds", side_effect=[600.0, 500.0]):
+                result = TARGET._success_cleanup(r5, holder, {"sha256": "a" * 64}, root)
+            self.assertEqual(result["status"], "PASS_SOURCE_READS_TERMINAL_THEN_WORKER_RETIRED_SERVER_CLOSED_NOT_NATIVE_ACCEPTANCE")
+            self.assertTrue(holder.disconnect_attempted)
+            self.assertTrue(holder.close_attempted)
+            r5._disconnect_operation_once.assert_called_once()
+            r5._worker_retirement_ledger.assert_called_once()
+            host.close.assert_called_once()
+            r5._closed_lifecycle_readback.assert_called_once()
+            self.assertEqual(result["scientific_acceptance"], "NOT_EVALUATED")
+
+    def test_r6_in_memory_adapter_keeps_raw_receipt_unchanged(self):
+        admission = object()
+        raw_result = {"status": "UNKNOWN_OR_BLOCKED_NO_REPLAY", "marker": {"raw": True}}
+        outcome = types.SimpleNamespace(result=raw_result, admission=admission)
+        view = TARGET.R6OutcomeView(outcome)
+        self.assertIs(view.result["admission"], admission)
+        self.assertEqual(outcome.result, raw_result)
+        self.assertNotIn("admission", outcome.result)
+
+
+if __name__ == "__main__":
+    unittest.main()

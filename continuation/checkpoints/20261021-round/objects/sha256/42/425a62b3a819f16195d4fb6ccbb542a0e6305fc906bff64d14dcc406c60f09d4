@@ -1,0 +1,401 @@
+"""Render an inert R6I five-leaf PREP payload for one exact checkpoint.
+
+The R6G PREP template and renderer are reused with only the reviewed R6I
+namespace/source inputs parameterized. Rendering is local-only. SSH is owned
+by a separate exact-review wrapper and is not invoked from this module.
+"""
+from __future__ import annotations
+
+import argparse
+import ast
+import base64
+import hashlib
+import json
+import re
+from pathlib import Path
+from typing import Any
+
+
+ROOT = Path(__file__).resolve().parents[4]
+CANDIDATE_ROOT = Path(__file__).resolve().parents[1]
+PACKAGE = CANDIDATE_ROOT / "rendered_package"
+EVIDENCE = CANDIDATE_ROOT / "evidence"
+H_SOURCE_ROOT = CANDIDATE_ROOT
+H_PACKAGE = H_SOURCE_ROOT / "package"
+H_HELPER = H_PACKAGE / "windows_primary_token_owner_probe_r6i.py"
+H_GATE = H_PACKAGE / "windows_primary_token_owner_outer_gate_r6i.py"
+H_INNER = H_PACKAGE / "PRIMARY_OWNER_R6I_INNER_BINDING_PROPOSAL.json"
+H_PLAN = H_SOURCE_ROOT / "evidence/SOURCE_PLAN_R1.json"
+H_CONTROLS = H_SOURCE_ROOT / "tests/test_windows_primary_owner_r6i_source.py"
+H_MAIN_REVIEW = ROOT / "repository/docs/full_project_continuation_v3/state/WINDOWS_PRIMARY_OWNER_R6I_TOKEN_ELEVATION_MAIN_SOURCE_REVIEW_R1.json"
+PERSISTENT_USER_AUTH = ROOT / "repository/docs/full_project_continuation_v3/state/PERSISTENT_WINDOWS_FIVE_LEAF_PREP_AUTHORIZATION_R1.json"
+RESUME_PATH = ROOT / "repository/docs/full_project_continuation_v3/state/RESUME.json"
+R6G_TEMPLATE = ROOT / "repository/_state/windows-primary-owner-r6g-source-prep-r2-20261015/package/windows_primary_owner_r6g_prep_payload_template.py.txt"
+R6G_SEED_PAYLOAD = ROOT / "repository/_state/windows-primary-owner-r6g-source-prep-r2-20261015/package/PRIMARY_OWNER_R6G_REMOTE_PREP_SCRIPT.py"
+R6B_SOURCE = ROOT / "repository/tools/windows_primary_owner_authority_root_lease_r6b.py"
+R6B_CONTROLS = ROOT / "repository/tests/test_windows_primary_owner_authority_root_lease_r6b.py"
+R14_BINDING = ROOT / "_state/windows-restored-host-current-20261014/KERNEL_R14_ACTUAL_READBACK2/remote_files/authority-r14/BINDING.json"
+PROTECTED13 = ROOT / "_state/windows-restored-host-current-20261014/PRIMARY_OWNER_R4_PROTECTED13_BEFORE.json"
+
+H_MAIN_REVIEW_SHA256 = "PENDING_MAIN_REVIEW_HASH"
+H_SOURCE_PLAN_SHA256 = "4491a64a805439ffe51140c29a690ee2872b8c4376ee066d87fac8f5bc63f23b"
+H_HELPER_SHA256 = "b64ae1a12251858c13a876f41e092eb8402cb490a7998eee3dbd5ac2fea32d5a"
+H_GATE_SHA256 = "4ef244f15282bf49770d7ae9c468c40aa8818462bfb071652c7c1b9423aef1c9"
+H_INNER_SHA256 = "6b5e6ad756045dee4551be992a32ba0228a357907dc2ee58dbb7391e1505f67a"
+H_CONTROLS_SHA256 = "2cb3b2755d87f8a488a65beb5da69d484e8444949e9906792ba3d1d450552a44"
+PERSISTENT_USER_AUTH_SHA256 = "2ef2ea3707dc3fa4c8deaf1989d33423193c5458dd205fa66ec7e416f66524c4"
+R6G_TEMPLATE_SHA256 = "7f0e810e2c0139dab0e1d20770148a636ac4cd5c0325dbffe0e70d683725fdff"
+R6G_SEED_PAYLOAD_SHA256 = "56e3394da9db34cc36bc35ff8d9ea08b43256a8c7c6605c5eb483a5b41130ad1"
+R14_BINDING_SHA256 = "075250aa28a0ae33eec9ac414ab0f143c046df090b00613669ffdf0fbf59dabb"
+R14_SOURCE_CLOSURE_SHA256 = "5a486fa543ec9c550be48575ca96de866822c5688e8a52edc4c2e3743a3618b9"
+R6B_SOURCE_SHA256 = "68bb01164f6c2bb51ecc4924076252409c75d9d9406d654ba09ac76c52126259"
+R6B_CONTROLS_SHA256 = "160469c1279c4f8213cb7d19e69155110639b691e0b2fd7e78d40ede8b6afe61"
+PROTECTED13_SHA256 = "ea641286bec1332718129f0386f5dc12ac5b9658892b3f0c4079dde9e4f74077"
+R5J_PLAN_SHA256 = "57cda3615c46e5a7cd32ad64396b9ef51d73bfa77e711b709f641c2974036cd2"
+R5J_REVIEW_SHA256 = "ec710a57b5376cd15da54275f6b232a4357cd855212b1d641d943a7e2379f5f9"
+R5J_GATE_SHA256 = "4425d5f6e4585648a4cabfe72e12bdafac7fba765747350947ad126e09ac97ca"
+
+TASK_ROOT = r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c"
+PYTHON_EXE = r"C:\Users\Everwalker\AppData\Local\Programs\Python\Python312-comsol-mcp\python.exe"
+PYTHON_VERSION = "3.12.10"
+EXPECTED_USER_SID = "S-1-5-21-2844656816-882443001-4055095909-1001"
+HELPER_DIR = TASK_ROOT + r"\helpers-primary-owner-r6i"
+AUTHORITY_ROOT = TASK_ROOT + r"\authority-primary-owner-r6i"
+OUTPUT_ROOT = TASK_ROOT + r"\primary-owner-probe-r6i"
+R6I_REMOTE_TARGETS = (
+    HELPER_DIR + r"\windows_primary_token_owner_probe_r6i.py",
+    HELPER_DIR + r"\windows_primary_token_owner_outer_gate_r6i.py",
+    AUTHORITY_ROOT + r"\BINDING.json",
+    AUTHORITY_ROOT + r"\PREBIRTH_BINDING.json",
+    AUTHORITY_ROOT + r"\MAIN_APPROVAL.json",
+)
+CONFIG_KEYS = frozenset({
+    "task_root", "python_executable", "python_version", "helper_directory", "authority_root",
+    "expected_user_sid", "current_resume_sha256", "helper_sha256", "helper_controls_sha256",
+    "gate_sha256", "gate_controls_sha256", "inner_binding_sha256", "protected13_manifest_sha256",
+    "r14_binding_sha256", "r14_source_closure_sha256", "r5j_gate_sha256",
+    "r5j_source_plan_sha256", "r5j_source_review_sha256", "r6b_lease_source_sha256",
+    "r6b_lease_controls_sha256",
+})
+
+
+def sha(raw: bytes) -> str:
+    return hashlib.sha256(raw).hexdigest()
+
+
+def canonical(value: Any) -> bytes:
+    return (json.dumps(value, sort_keys=True, indent=2, ensure_ascii=False,
+                       allow_nan=False) + "\n").encode("utf-8")
+
+
+def _read_exact(path: Path, expected_sha256: str, *, maximum: int = 64 * 1024 * 1024) -> bytes:
+    if path.is_symlink() or not path.is_file():
+        raise RuntimeError("expected an existing ordinary source file: " + str(path))
+    raw = path.read_bytes()
+    if len(raw) > maximum or sha(raw) != expected_sha256:
+        raise RuntimeError("exact reviewed input hash/size check failed: " + str(path))
+    return raw
+
+
+def _strict_json(raw: bytes, label: str) -> dict[str, Any]:
+    def pairs(items):
+        result = {}
+        for key, value in items:
+            if key in result:
+                raise ValueError("duplicate JSON key " + key)
+            result[key] = value
+        return result
+    value = json.loads(raw.decode("utf-8", "strict"), object_pairs_hook=pairs,
+                       parse_constant=lambda item: (_ for _ in ()).throw(ValueError(item)))
+    if not isinstance(value, dict):
+        raise RuntimeError(label + " must be a JSON object")
+    return value
+
+
+def _check_h_source_review() -> tuple[dict[str, Any], dict[str, bytes]]:
+    review_raw = _read_exact(H_MAIN_REVIEW, H_MAIN_REVIEW_SHA256, maximum=128 * 1024)
+    review = _strict_json(review_raw, "R6I helper/gate Main source review")
+    if (review.get("status") != "PASS_R6I_TOKEN_ELEVATION_FIXED_DWORD_SOURCE_ONLY"
+            or review.get("source_plan_sha256") != H_SOURCE_PLAN_SHA256):
+        raise RuntimeError("R6I helper/gate source review status or plan pin differs")
+    rows = {
+        "helper": (H_HELPER, H_HELPER_SHA256),
+        "gate": (H_GATE, H_GATE_SHA256),
+        "inner_binding_proposal": (H_INNER, H_INNER_SHA256),
+        "controls": (H_CONTROLS, H_CONTROLS_SHA256),
+        "source_plan": (H_PLAN, H_SOURCE_PLAN_SHA256),
+    }
+    actual: dict[str, bytes] = {}
+    for key, (path, expected_hash) in rows.items():
+        raw = _read_exact(path, expected_hash)
+        item = review.get("candidate_files", {}).get(key)
+        if (not isinstance(item, dict) or item.get("path") != str(path.relative_to(ROOT))
+                or item.get("bytes") != len(raw) or item.get("sha256") != expected_hash):
+            raise RuntimeError("R6I Main review does not bind exact " + key)
+        actual[key] = raw
+    return review, actual
+
+
+def _decode_seed_config(seed_payload: bytes) -> dict[str, Any]:
+    tree = ast.parse(seed_payload.decode("utf-8", "strict"))
+    rows = [node for node in tree.body if isinstance(node, ast.Assign)
+            and any(isinstance(target, ast.Name) and target.id == "CONFIG" for target in node.targets)]
+    if len(rows) != 1:
+        raise RuntimeError("reviewed R6G PREP seed must expose exactly one CONFIG assignment")
+    value = rows[0].value
+    if not (isinstance(value, ast.Call) and isinstance(value.func, ast.Attribute)
+            and value.func.attr == "loads" and value.args):
+        raise RuntimeError("R6G PREP seed CONFIG shape changed")
+    decode_call = value.args[0]
+    if (not isinstance(decode_call, ast.Call) or not isinstance(decode_call.func, ast.Attribute)
+            or decode_call.func.attr != "decode" or not decode_call.args
+            or not isinstance(decode_call.func.value, ast.Call)
+            or not isinstance(decode_call.func.value.func, ast.Attribute)
+            or decode_call.func.value.func.attr != "b64decode"):
+        raise RuntimeError("R6G PREP seed CONFIG is not a literal base64 JSON value")
+    b64_call = decode_call.func.value
+    if len(b64_call.args) != 1 or not isinstance(b64_call.args[0], ast.Constant) or not isinstance(b64_call.args[0].value, str):
+        raise RuntimeError("R6G PREP seed CONFIG base64 value is not a single literal")
+    raw = base64.b64decode(b64_call.args[0].value, validate=True)
+    config = _strict_json(raw, "R6G PREP seed CONFIG")
+    return config
+
+
+def _b64_expr(raw: bytes) -> str:
+    value = base64.b64encode(raw).decode("ascii")
+    chunks = [value[index:index + 96] for index in range(0, len(value), 96)]
+    return "(" + ",\n        ".join(repr(chunk) for chunk in chunks) + ",)"
+
+
+def _validate_checkpoint(raw: bytes, supplied_sha256: str) -> dict[str, Any]:
+    if not isinstance(supplied_sha256, str) or re.fullmatch(r"[0-9a-f]{64}", supplied_sha256) is None:
+        raise RuntimeError("exact current checkpoint SHA-256 must be supplied at preparation")
+    actual = sha(raw)
+    if actual != supplied_sha256:
+        raise RuntimeError("supplied current checkpoint hash differs from current RESUME bytes")
+    checkpoint = _strict_json(raw, "current RESUME checkpoint")
+    return {"path": str(RESUME_PATH.relative_to(ROOT)), "bytes": len(raw), "sha256": actual,
+            "schema": checkpoint.get("schema"), "status": checkpoint.get("status")}
+
+
+def render_payload(*, current_resume_raw: bytes, supplied_current_resume_sha256: str) -> dict[str, Any]:
+    """Render in memory from the current checkpoint and exact reviewed H sources."""
+    checkpoint = _validate_checkpoint(current_resume_raw, supplied_current_resume_sha256)
+    review, sources = _check_h_source_review()
+    r6g_template = _read_exact(R6G_TEMPLATE, R6G_TEMPLATE_SHA256, maximum=2 * 1024 * 1024)
+    seed_payload = _read_exact(R6G_SEED_PAYLOAD, R6G_SEED_PAYLOAD_SHA256, maximum=16 * 1024 * 1024)
+    r6b_source = _read_exact(R6B_SOURCE, R6B_SOURCE_SHA256, maximum=2 * 1024 * 1024)
+    r6b_controls = _read_exact(R6B_CONTROLS, R6B_CONTROLS_SHA256, maximum=2 * 1024 * 1024)
+    r14_binding = _read_exact(R14_BINDING, R14_BINDING_SHA256, maximum=16 * 1024 * 1024)
+    protected13_raw = _read_exact(PROTECTED13, PROTECTED13_SHA256, maximum=4 * 1024 * 1024)
+    base = _decode_seed_config(seed_payload)
+    fixed_inputs = {
+        "task_root": TASK_ROOT, "python_executable": PYTHON_EXE, "python_version": PYTHON_VERSION,
+        "expected_user_sid": EXPECTED_USER_SID, "r14_binding_sha256": R14_BINDING_SHA256,
+        "r14_source_closure_sha256": R14_SOURCE_CLOSURE_SHA256,
+        "protected13_manifest_sha256": PROTECTED13_SHA256,
+        "r6b_lease_source_sha256": sha(r6b_source),
+        "r6b_lease_controls_sha256": sha(r6b_controls),
+        "r5j_gate_sha256": R5J_GATE_SHA256,
+    }
+    for name, expected in fixed_inputs.items():
+        if base.get(name) != expected:
+            raise RuntimeError("R6G seed has a changed frozen base input: " + name)
+    # Retain only keys the existing PREP template consumes. In particular, the
+    # seed's old current_resume_sha256 is dropped and replaced by this exact
+    # preparation-time byte/hash pair; historical af6/d5a is never defaulted.
+    config = {key: base[key] for key in CONFIG_KEYS if key in base}
+    missing = sorted(CONFIG_KEYS - set(config))
+    if missing:
+        raise RuntimeError("R6G seed is missing a required PREP config field: " + ",".join(missing))
+    config.update({
+        "current_resume_sha256": checkpoint["sha256"],
+        "helper_directory": HELPER_DIR,
+        "authority_root": AUTHORITY_ROOT,
+        "helper_sha256": sha(sources["helper"]),
+        "helper_controls_sha256": sha(sources["controls"]),
+        "gate_sha256": sha(sources["gate"]),
+        "gate_controls_sha256": sha(sources["controls"]),
+        "inner_binding_sha256": sha(sources["inner_binding_proposal"]),
+        # The gate schema calls these fields R5J source pins. They now point to
+        # the Main-reviewed R6I helper/gate plan and review for this generation.
+        "r5j_source_plan_sha256": sha(sources["source_plan"]),
+        "r5j_source_review_sha256": H_MAIN_REVIEW_SHA256,
+    })
+    if set(config) != CONFIG_KEYS:
+        raise RuntimeError("filtered PREP CONFIG keys differ from the exact template consumption set")
+
+    template = r6g_template.decode("utf-8", "strict").replace("R6G", "R6I").replace("r6g", "r6i")
+    for old in ("helpers-primary-owner-r6g", "authority-primary-owner-r6g", "primary-owner-probe-r6g",
+                "cases-primary-owner-r6g"):
+        if old in template:
+            raise RuntimeError("R6I template retains consumed R6G namespace: " + old)
+    substitutions = {
+        "__CONFIG_B64__": repr(base64.b64encode(canonical(config)).decode("ascii")),
+        "__HELPER_B64__": _b64_expr(sources["helper"]),
+        "__GATE_B64__": _b64_expr(sources["gate"]),
+        "__INNER_B64__": _b64_expr(sources["inner_binding_proposal"]),
+    }
+    for marker, replacement in substitutions.items():
+        if template.count(marker) != 1:
+            raise RuntimeError("R6I PREP template marker missing or ambiguous: " + marker)
+        template = template.replace(marker, replacement, 1)
+    payload = template.encode("utf-8")
+    compile(payload.decode("utf-8", "strict"), "PRIMARY_OWNER_R6I_REMOTE_PREP_SCRIPT.py", "exec")
+    rendered_config = _decode_rendered_config(payload)
+    if rendered_config != config or rendered_config.get("current_resume_sha256") != checkpoint["sha256"]:
+        raise RuntimeError("rendered payload CONFIG does not retain exact current checkpoint binding")
+    inner = _strict_json(sources["inner_binding_proposal"], "R6I inner binding proposal")
+    if (inner.get("schema") != "cv3-windows-primary-token-owner-binding-r6i/1"
+            or inner.get("helper_path") != R6I_REMOTE_TARGETS[0]
+            or inner.get("helper_sha256") != sha(sources["helper"])):
+        raise RuntimeError("reviewed R6I inner binding no longer identifies the exact new helper")
+    manifest = {
+        "schema": "cv3-windows-primary-owner-r6i-prep-rendered-manifest/1",
+        "status": "LOCAL_RENDER_READY_FOR_EXACT_MAIN_REVIEW_NO_REMOTE_ACTION",
+        "candidate": "R6I five-leaf PREP; no remote authority or execution approval",
+        "current_checkpoint": checkpoint,
+        "r6i_source_review_sha256": H_MAIN_REVIEW_SHA256,
+        "r6i_source_plan_sha256": H_SOURCE_PLAN_SHA256,
+        "r6i_source_files": {
+            "helper": {"sha256": sha(sources["helper"]), "bytes": len(sources["helper"])},
+            "gate": {"sha256": sha(sources["gate"]), "bytes": len(sources["gate"])},
+            "inner_binding": {"sha256": sha(sources["inner_binding_proposal"]),
+                              "bytes": len(sources["inner_binding_proposal"])},
+            "controls": {"sha256": sha(sources["controls"]), "bytes": len(sources["controls"])},
+        },
+        "remote_targets": list(R6I_REMOTE_TARGETS),
+        "source_fingerprints": {
+            "source_plan_sha256": config["r5j_source_plan_sha256"],
+            "source_review_sha256": config["r5j_source_review_sha256"],
+            "helper_sha256": config["helper_sha256"],
+            "helper_controls_sha256": config["helper_controls_sha256"],
+            "gate_sha256": config["gate_sha256"],
+            "gate_controls_sha256": config["gate_controls_sha256"],
+            "inner_binding_sha256": config["inner_binding_sha256"],
+            "current_resume_sha256": checkpoint["sha256"],
+            "r14_binding_sha256": config["r14_binding_sha256"],
+            "r14_source_closure_sha256": config["r14_source_closure_sha256"],
+            "r6b_lease_source_sha256": config["r6b_lease_source_sha256"],
+            "r6b_lease_controls_sha256": config["r6b_lease_controls_sha256"],
+        },
+        "payload": {"sha256": sha(payload), "bytes": len(payload)},
+        "authority_boundary": {"SSH": "NOT_RUN", "approval_created": False,
+                               "once_created": False, "native": "NOT_RUN"},
+    }
+    contract = {
+        "schema": "cv3-windows-primary-owner-r6i-five-leaf-prep-contract/1",
+        "status": "LOCAL_RENDER_ONLY_PENDING_EXACT_MAIN_PAYLOAD_REVIEW",
+        "task_root": TASK_ROOT,
+        "current_checkpoint": checkpoint,
+        "remote_write_targets": list(R6I_REMOTE_TARGETS),
+        "remote_write_count": 5,
+        "main_approval_target": "zero-byte empty placeholder only",
+        "forbidden": ["valid approval bytes", "ONCE_USED", "native child", "account/ACL change", "COMSOL/JVM"],
+        "source_provenance": {
+            "r6i_helper_gate_review_sha256": H_MAIN_REVIEW_SHA256,
+            "r6i_helper_gate_plan_sha256": H_SOURCE_PLAN_SHA256,
+            "r6g_prep_template_sha256": R6G_TEMPLATE_SHA256,
+            "r6g_seed_payload_sha256": R6G_SEED_PAYLOAD_SHA256,
+            "r14_binding_sha256": sha(r14_binding),
+            "r6b_source_sha256": sha(r6b_source),
+            "r6b_controls_sha256": sha(r6b_controls),
+            "protected13_manifest_sha256": sha(protected13_raw),
+        },
+        "payload": {"sha256": sha(payload), "bytes": len(payload)},
+        "authority_boundary": {"SSH": "NOT_RUN", "remote_writes": 0,
+                               "approval_created": False, "once_created": False,
+                               "native": "NOT_RUN"},
+    }
+    return {"payload": payload, "config": config, "manifest": manifest,
+            "contract": contract, "checkpoint": checkpoint,
+            "r6i_source_review_sha256": H_MAIN_REVIEW_SHA256}
+
+
+def _decode_rendered_config(payload: bytes) -> dict[str, Any]:
+    tree = ast.parse(payload.decode("utf-8", "strict"))
+    rows = [node for node in tree.body if isinstance(node, ast.Assign)
+            and any(isinstance(target, ast.Name) and target.id == "CONFIG" for target in node.targets)]
+    if len(rows) != 1:
+        raise RuntimeError("rendered R6I payload has no unique CONFIG assignment")
+    value = rows[0].value
+    try:
+        b64_literal = value.args[0].func.value.args[0].value
+        raw = base64.b64decode(b64_literal, validate=True)
+    except (AttributeError, IndexError, TypeError, ValueError) as exc:
+        raise RuntimeError("rendered R6I payload CONFIG is not the fixed base64 JSON form") from exc
+    return _strict_json(raw, "rendered R6I CONFIG")
+
+
+def _write_exclusive(path: Path, raw: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("xb") as stream:
+        stream.write(raw)
+        stream.flush()
+
+
+def render_from_path(*, supplied_current_resume_sha256: str,
+                     resume_path: Path = RESUME_PATH) -> dict[str, Any]:
+    raw = _read_exact(resume_path, supplied_current_resume_sha256, maximum=16 * 1024 * 1024)
+    return render_payload(current_resume_raw=raw,
+                          supplied_current_resume_sha256=supplied_current_resume_sha256)
+
+
+def write_rendered_candidate(rendered: dict[str, Any]) -> dict[str, Any]:
+    if PACKAGE.exists() or PACKAGE.is_symlink():
+        raise RuntimeError("R6I exact payload package already exists; no overwrite or implicit successor")
+    payload = rendered["payload"]
+    sources = _check_h_source_review()[1]
+    files = {
+        "PRIMARY_OWNER_R6I_REMOTE_PREP_SCRIPT.py": payload,
+        "PRIMARY_OWNER_R6I_INNER_BINDING_PROPOSAL.json": sources["inner_binding_proposal"],
+        "windows_primary_token_owner_probe_r6i.py": sources["helper"],
+        "windows_primary_token_owner_outer_gate_r6i.py": sources["gate"],
+        "PRIMARY_OWNER_R6I_PREP_CONTRACT.json": canonical(rendered["contract"]),
+        "PRIMARY_OWNER_R6I_PREP_MANIFEST.json": canonical(rendered["manifest"]),
+    }
+    PACKAGE.mkdir()
+    for name, raw in files.items():
+        _write_exclusive(PACKAGE / name, raw)
+    request = {
+        "schema": "cv3-windows-primary-owner-r6i-rendered-payload-main-review-request/1",
+        "status": "PENDING_EXACT_RENDERED_PAYLOAD_MAIN_REVIEW_NO_REMOTE_AUTHORITY",
+        "candidate_root": str(CANDIDATE_ROOT.relative_to(ROOT)),
+        "current_checkpoint": rendered["checkpoint"],
+        "r6i_helper_gate_source_review_sha256": H_MAIN_REVIEW_SHA256,
+        "r6i_helper_gate_source_plan_sha256": H_SOURCE_PLAN_SHA256,
+        "package_files": {name: {"bytes": len(raw), "sha256": sha(raw)} for name, raw in files.items()},
+        "remote_targets": list(R6I_REMOTE_TARGETS),
+        "authority_boundary": {"SSH": "NOT_RUN", "approval_created": False,
+                               "once_created": False, "native": "NOT_RUN"},
+        "review_required_before_any_SSH": True,
+    }
+    request_path = EVIDENCE / ("RENDERED_PAYLOAD_MAIN_REVIEW_REQUEST_" + rendered["checkpoint"]["sha256"][:12] + ".json")
+    _write_exclusive(request_path, canonical(request))
+    return {"package": str(PACKAGE.relative_to(ROOT)), "files": request["package_files"],
+            "review_request": str(request_path.relative_to(ROOT)),
+            "review_request_sha256": sha(request_path.read_bytes())}
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser()
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--check-only", action="store_true")
+    mode.add_argument("--render", action="store_true")
+    parser.add_argument("--current-resume-sha256", required=True)
+    args = parser.parse_args(argv)
+    rendered = render_from_path(supplied_current_resume_sha256=args.current_resume_sha256)
+    result = {"status": "PASS_R6I_LOCAL_RENDER_CHECK_ONLY" if args.check_only
+              else "PASS_R6I_RENDERED_PENDING_MAIN_PAYLOAD_REVIEW",
+              "current_checkpoint": rendered["checkpoint"],
+              "payload_sha256": sha(rendered["payload"]), "payload_bytes": len(rendered["payload"]),
+              "ssh": "NOT_RUN", "approval_created": False, "once_created": False,
+              "native": "NOT_RUN"}
+    if args.render:
+        result["written"] = write_rendered_candidate(rendered)
+    print(json.dumps(result, sort_keys=True, separators=(",", ":")))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

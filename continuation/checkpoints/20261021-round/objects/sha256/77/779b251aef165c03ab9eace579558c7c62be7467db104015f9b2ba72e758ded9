@@ -1,0 +1,431 @@
+"""Bounded one-send owner for the exact R6I empty MAIN_APPROVAL proof capture."""
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import threading
+import time
+import types
+from typing import Any, Callable
+
+ROOT = Path(__file__).resolve().parents[4]
+CANDIDATE_ROOT = ROOT / "repository/_state/windows-primary-owner-r6i-empty-approval-proof-capture-r1-ecdef934-2edd-4bf7-8768-924468d9293e-20261021"
+CAPTURE_SOURCE = CANDIDATE_ROOT / "source/capture_r6i_empty_approval_proof.py"
+CAPTURE_REVIEW_PATH = ROOT / "repository/docs/full_project_continuation_v3/state/WINDOWS_R6I_EMPTY_APPROVAL_PROOF_CAPTURE_MAIN_SOURCE_REVIEW_R1.json"
+WRAPPER_REVIEW_PATH = ROOT / "repository/docs/full_project_continuation_v3/state/WINDOWS_R6I_EMPTY_APPROVAL_PROOF_CAPTURE_SSH_WRAPPER_REVIEW_R1.json"
+ONCE_AUTHORIZATION_PATH = ROOT / "repository/docs/full_project_continuation_v3/state/WINDOWS_R6I_EMPTY_APPROVAL_PROOF_CAPTURE_ONCE_AUTHORIZATION_R1.json"
+RUN_ROOT = ROOT / "repository/_state/windows-primary-owner-r6i-empty-approval-proof-capture-ssh-run-r1-1a35cbad-274d-4a38-9cee-c40ef07d2ecf"
+
+SSH_PATH = "/usr/bin/ssh"
+SSH_USER_HOST = "everwalker@192.168.100.2"
+REMOTE_PYTHON = r"C:\Users\Everwalker\AppData\Local\Programs\Python\Python312-comsol-mcp\python.exe"
+REMOTE_COMMAND = '"' + REMOTE_PYTHON + '" -I -B -'
+REMOTE_TARGET = r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c\authority-primary-owner-r6i\MAIN_APPROVAL.json"
+REMOTE_TARGET_BYTES = 0
+REMOTE_TARGET_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+REMOTE_TARGET_DEVICE = 543112286
+REMOTE_TARGET_INODE = 5066549581541651
+REMOTE_TARGET_SECURITY_SHA256 = "7d6d4adc787a461f97c0dec29d54f80e1466a7c56f938719a98c309e6b71423e"
+R6I_GATE_SHA256 = "4ef244f15282bf49770d7ae9c468c40aa8818462bfb071652c7c1b9423aef1c9"
+R6I_GATE_PATH = ROOT / "repository/_state/windows-primary-owner-r6i-token-elevation-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019/package/windows_primary_token_owner_outer_gate_r6i.py"
+R6I_SOURCE_REVIEW_SHA256 = "27660ccfce5f97fa2203001088d30cd738cd329cee1ee99c20bc35931ad8f10b"
+R6I_PREP_ACCEPTANCE_SHA256 = "ae9626a6535ac0e2cac9ab87902038429144681e228548a3df561b0bad045ae8"
+R6I_PREP_REPORT_SHA256 = "78eadf555cd78a44777e6b6616bc4fa7ce66e2c6a8e97b513f5f2b2326130a40"
+CAPTURE_SOURCE_SHA256 = "a64256aad04d6df1aecc26b5ee1dabeaf3a85d65211362a3b023ffc4a3fe1989"
+CAPTURE_SOURCE_BYTES = 29200
+CAPTURE_SCHEMA = "cv3-windows-primary-owner-r6i-empty-approval-private-path-capture/1"
+MAX_STDOUT_BYTES = 256 * 1024
+MAX_STDERR_BYTES = 64 * 1024
+ACTIVE_CUTOFF_SECONDS = 120
+OUTPUT_NAMES = ("SSH_LAUNCH_INTENT.json", "SSH.stdout", "SSH.stderr", "SSH_STATE.jsonl",
+                "SSH_TERMINAL.json", "LOCAL_READONLY_CAPTURE_REPORT.json")
+
+
+def sha(raw: bytes) -> str:
+    return hashlib.sha256(raw).hexdigest()
+
+
+def canonical(value: Any) -> bytes:
+    return (json.dumps(value, sort_keys=True, indent=2, ensure_ascii=False,
+                       allow_nan=False) + "\n").encode("utf-8")
+
+
+def strict_json(raw: bytes, label: str) -> dict[str, Any]:
+    def pairs(items):
+        out = {}
+        for key, value in items:
+            if key in out:
+                raise ValueError("duplicate JSON key " + key)
+            out[key] = value
+        return out
+    value = json.loads(raw.decode("utf-8", "strict"), object_pairs_hook=pairs,
+                       parse_constant=lambda item: (_ for _ in ()).throw(ValueError(item)))
+    if not isinstance(value, dict):
+        raise RuntimeError(label + " must be a JSON object")
+    return value
+
+
+def read_regular(path: Path, *, maximum: int) -> bytes:
+    before_name = os.lstat(path)
+    if path.is_symlink() or not path.is_file() or before_name.st_size < 0 or before_name.st_size > maximum:
+        raise RuntimeError("bounded ordinary file required: " + str(path))
+    with path.open("rb", buffering=0) as stream:
+        before = os.fstat(stream.fileno())
+        raw = stream.read(maximum + 1)
+        after = os.fstat(stream.fileno())
+    after_name = os.lstat(path)
+    sig = lambda row: (row.st_dev, row.st_ino, row.st_size, row.st_mtime_ns, row.st_ctime_ns)
+    if (len(raw) > maximum or len(raw) != after.st_size or sig(before) != sig(after)
+            or sig(before_name) != sig(after_name)):
+        raise RuntimeError("file changed during bounded stable read: " + str(path))
+    return raw
+
+
+def ssh_argv() -> list[str]:
+    return [SSH_PATH, "-T", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
+            "-o", "UpdateHostKeys=no", "-o", "ControlMaster=no", "-o", "ControlPath=none",
+            SSH_USER_HOST, REMOTE_COMMAND]
+
+
+def invocation_binding(payload: bytes) -> dict[str, Any]:
+    argv = ssh_argv()
+    invocation = {"argv": argv, "argv_sha256": sha(canonical(argv)), "shell": False,
+                  "stdin_mode": "one exact source byte write followed by EOF",
+                  "payload_sha256": sha(payload), "payload_bytes": len(payload),
+                  "remote_target": REMOTE_TARGET, "remote_target_bytes": REMOTE_TARGET_BYTES,
+                  "remote_target_sha256": REMOTE_TARGET_SHA256, "remote_writes": 0,
+                  "target_metadata_read": True, "target_content_read": False,
+                  "remote_once_read": False, "native_children": 0,
+                  "retry_or_replay": False, "stdout_max_bytes": MAX_STDOUT_BYTES,
+                  "stderr_max_bytes": MAX_STDERR_BYTES,
+                  "active_cutoff_seconds": ACTIVE_CUTOFF_SECONDS,
+                  "after_cutoff": "retain and passively wait on the same original Popen to natural terminal"}
+    return {"argv": argv, "invocation": invocation,
+            "invocation_sha256": sha(canonical(invocation))}
+
+
+def read_checked_inputs() -> tuple[bytes, dict[str, Any]]:
+    payload = read_regular(CAPTURE_SOURCE, maximum=MAX_STDOUT_BYTES)
+    if len(payload) != CAPTURE_SOURCE_BYTES or sha(payload) != CAPTURE_SOURCE_SHA256:
+        raise RuntimeError("capture source differs from exact reviewed bytes")
+    refs = {
+        "r6i_source_review": (ROOT / "repository/docs/full_project_continuation_v3/state/WINDOWS_PRIMARY_OWNER_R6I_TOKEN_ELEVATION_MAIN_SOURCE_REVIEW_R1.json", R6I_SOURCE_REVIEW_SHA256),
+        "r6i_prep_acceptance": (ROOT / "repository/docs/full_project_continuation_v3/state/WINDOWS_R6I_MAIN_ACTUAL_FIVE_LEAF_PREP_ACCEPTANCE_20261020_R1.json", R6I_PREP_ACCEPTANCE_SHA256),
+        "r6i_prep_report": (ROOT / "repository/_state/windows-primary-owner-r6i-prep-ssh-bound-r2-8b4137e9-ab90-41d8-87f0-01181044f8b3-20261020/REMOTE_PREP_REPORT.json", R6I_PREP_REPORT_SHA256),
+        "r6i_gate": (ROOT / "repository/_state/windows-primary-owner-r6i-token-elevation-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019/package/windows_primary_token_owner_outer_gate_r6i.py", R6I_GATE_SHA256),
+    }
+    observed = {}
+    for name, (path, expected) in refs.items():
+        raw = read_regular(path, maximum=32 * 1024 * 1024)
+        if sha(raw) != expected:
+            raise RuntimeError(name + " exact accepted input changed")
+        observed[name] = {"path": str(path.relative_to(ROOT)), "bytes": len(raw), "sha256": sha(raw)}
+    return payload, {"capture_source_sha256": sha(payload), "capture_source_bytes": len(payload),
+                     "accepted_inputs": observed}
+
+
+def expected_capture_review(binding: dict[str, Any]) -> dict[str, Any]:
+    return {"schema": "windows-r6i-empty-approval-proof-capture-main-source-review/1",
+            "status": "PASS_EXACT_READONLY_CAPTURE_SOURCE_NO_REMOTE_ACTION",
+            "capture_source_sha256": binding["capture_source_sha256"],
+            "capture_source_bytes": binding["capture_source_bytes"],
+            "r6i_source_review_sha256": R6I_SOURCE_REVIEW_SHA256,
+            "r6i_prep_acceptance_sha256": R6I_PREP_ACCEPTANCE_SHA256,
+            "r6i_prep_report_sha256": R6I_PREP_REPORT_SHA256, "r6i_gate_sha256": R6I_GATE_SHA256,
+            "remote_target": REMOTE_TARGET, "remote_target_bytes": REMOTE_TARGET_BYTES,
+            "remote_target_sha256": REMOTE_TARGET_SHA256,
+            "scope": "one exact existing zero-byte MAIN_APPROVAL metadata/path proof; no file content read or output",
+            "legacy_identity_baseline": {"device": REMOTE_TARGET_DEVICE,
+                                         "inode": REMOTE_TARGET_INODE,
+                                         "security_sha256": REMOTE_TARGET_SECURITY_SHA256},
+            "planned_approval_metadata_read": True, "actual_remote_metadata_read": False,
+            "approval_content_read": False,
+            "remote_once_read": False, "remote_writes": 0, "native_children": 0}
+
+
+def expected_wrapper_review(binding: dict[str, Any], capture_review_sha256: str,
+                            wrapper_sha256: str, invocation: dict[str, Any]) -> dict[str, Any]:
+    return {"schema": "windows-r6i-empty-approval-proof-capture-ssh-wrapper-review/1",
+            "status": "PASS_EXACT_BOUNDED_STRICT_SSH_WRAPPER_NO_REMOTE_ACTION",
+            "wrapper_sha256": wrapper_sha256, "capture_source_review_sha256": capture_review_sha256,
+            "capture_source_sha256": binding["capture_source_sha256"],
+            "capture_source_bytes": binding["capture_source_bytes"],
+            "ssh_argv_sha256": invocation["argv_sha256"], "invocation_sha256": sha(canonical(invocation)),
+            "remote_target": REMOTE_TARGET, "remote_writes": 0, "one_original_popen": True,
+            "one_payload_write_then_eof": True, "original_popen_passive_hold_until_natural_terminal": True,
+            "stdout_max_bytes": MAX_STDOUT_BYTES, "stderr_max_bytes": MAX_STDERR_BYTES,
+            "run_root": str(RUN_ROOT.relative_to(ROOT)), "retry_or_replay": False, "native_children": 0}
+
+
+def read_execution_authority(binding: dict[str, Any], payload: bytes) -> dict[str, Any]:
+    capture_raw = read_regular(CAPTURE_REVIEW_PATH, maximum=128 * 1024)
+    if strict_json(capture_raw, "Main capture review") != expected_capture_review(binding):
+        raise RuntimeError("Main review does not bind exact read-only source and target")
+    capture_review_sha = sha(capture_raw)
+    wrapper_sha = sha(read_regular(Path(__file__).resolve(), maximum=512 * 1024))
+    wrapper_raw = read_regular(WRAPPER_REVIEW_PATH, maximum=128 * 1024)
+    inv = invocation_binding(payload)["invocation"]
+    if strict_json(wrapper_raw, "Main wrapper review") != expected_wrapper_review(binding, capture_review_sha, wrapper_sha, inv):
+        raise RuntimeError("Main wrapper review does not bind source, transport and output root")
+    wrapper_review_sha = sha(wrapper_raw)
+    once_raw = read_regular(ONCE_AUTHORIZATION_PATH, maximum=128 * 1024)
+    expected_once = {"schema": "windows-r6i-empty-approval-proof-capture-once-authorization/1",
+                     "status": "MAIN_AUTHORIZED_EXACT_READONLY_CAPTURE_ONCE",
+                     "capture_source_review_sha256": capture_review_sha,
+                     "wrapper_sha256": wrapper_sha, "wrapper_review_sha256": wrapper_review_sha,
+                     "capture_source_sha256": binding["capture_source_sha256"],
+                     "capture_source_bytes": binding["capture_source_bytes"],
+                     "ssh_argv_sha256": inv["argv_sha256"], "invocation_sha256": sha(canonical(inv)),
+                     "run_root": str(RUN_ROOT.relative_to(ROOT)), "remote_target": REMOTE_TARGET,
+                     "remote_target_bytes": REMOTE_TARGET_BYTES, "remote_target_sha256": REMOTE_TARGET_SHA256,
+                     "remote_writes": 0, "target_metadata_read": True,
+                     "target_content_read": False, "remote_once_read": False,
+                     "native_children": 0,
+                     "send_count": 1, "retry_or_replay": False,
+                     "stdout_max_bytes": MAX_STDOUT_BYTES, "stderr_max_bytes": MAX_STDERR_BYTES}
+    if strict_json(once_raw, "one-send authorization") != expected_once:
+        raise RuntimeError("one-time authorization differs from exact read-only SSH scope")
+    return {"capture_source_review_sha256": capture_review_sha, "wrapper_sha256": wrapper_sha,
+            "wrapper_review_sha256": wrapper_review_sha, "once_authorization_sha256": sha(once_raw),
+            "invocation": inv, "invocation_sha256": sha(canonical(inv))}
+
+
+class BoundedDrain:
+    """Continuously drain one original pipe but retain at most the fixed byte cap."""
+    def __init__(self, stream: Any, path: Path, limit: int):
+        self.stream, self.path, self.limit = stream, path, limit
+        self.total = self.retained = 0
+        self.error: str | None = None
+        self.thread = threading.Thread(target=self._run, name="r6i-readonly-ssh-output", daemon=True)
+
+    def start(self) -> None:
+        self.thread.start()
+
+    def _run(self) -> None:
+        try:
+            with self.path.open("xb", buffering=0) as out:
+                while True:
+                    chunk = self.stream.read(64 * 1024)
+                    if not chunk:
+                        break
+                    self.total += len(chunk)
+                    keep = chunk[:max(0, self.limit - self.retained)]
+                    if keep:
+                        out.write(keep)
+                        self.retained += len(keep)
+                out.flush()
+                os.fsync(out.fileno())
+        except BaseException as exc:
+            self.error = type(exc).__name__ + ":" + str(exc)[:1000]
+
+
+class OriginalReadOnlyPopenOwner:
+    """Single Popen owner: write once, close stdin, passively wait to natural exit."""
+    def __init__(self, child: Any):
+        self.child = child
+        self.pid = getattr(child, "pid", None)
+        self.sent = False
+        self.active_cutoff_exceeded = False
+        self.first_cause: str | None = None
+        self.stdout: BoundedDrain | None = None
+        self.stderr: BoundedDrain | None = None
+
+    def start_drainers(self, stdout_path: Path, stderr_path: Path) -> None:
+        self.stdout = BoundedDrain(self.child.stdout, stdout_path, MAX_STDOUT_BYTES)
+        self.stderr = BoundedDrain(self.child.stderr, stderr_path, MAX_STDERR_BYTES)
+        self.stdout.start()
+        self.stderr.start()
+
+    def send_once_then_eof(self, payload: bytes) -> None:
+        if self.sent:
+            self.first_cause = "duplicate send refused"
+            return
+        self.sent = True
+        try:
+            written = self.child.stdin.write(payload)
+            if written != len(payload):
+                self.first_cause = "short stdin write; no resend"
+            self.child.stdin.flush()
+        except BaseException as exc:
+            self.first_cause = type(exc).__name__ + ":" + str(exc)[:1000]
+        finally:
+            try:
+                self.child.stdin.close()
+            except BaseException as exc:
+                if self.first_cause is None:
+                    self.first_cause = "stdin EOF close failed:" + type(exc).__name__
+
+    def wait_naturally(self) -> None:
+        try:
+            self.child.wait(timeout=ACTIVE_CUTOFF_SECONDS)
+        except subprocess.TimeoutExpired:
+            self.active_cutoff_exceeded = True
+            self.child.wait()
+        except BaseException as exc:
+            self.first_cause = self.first_cause or (type(exc).__name__ + ":" + str(exc)[:1000])
+            while getattr(self.child, "returncode", None) is None:
+                try:
+                    self.child.wait()
+                except BaseException:
+                    time.sleep(0.05)
+        for drain in (self.stdout, self.stderr):
+            if drain is not None:
+                drain.thread.join()
+                if drain.error and self.first_cause is None:
+                    self.first_cause = "bounded output drain failed:" + drain.error
+
+
+def validate_capture_response(raw: bytes) -> dict[str, Any]:
+    if len(raw) > MAX_STDOUT_BYTES:
+        raise RuntimeError("captured stdout exceeds fixed cap")
+    record = strict_json(raw, "remote capture response")
+    capture_module, gate = _load_local_capture_and_gate()
+    try:
+        capture_module.validate_capture_record(record, gate)
+    except BaseException as exc:
+        raise RuntimeError("remote response violates the exact frozen capture consumer: "
+                           + type(exc).__name__ + ":" + str(exc)[:1200]) from exc
+    return record
+
+
+def _load_local_capture_and_gate() -> tuple[types.ModuleType, types.ModuleType]:
+    capture_raw = read_regular(CAPTURE_SOURCE, maximum=MAX_STDOUT_BYTES)
+    if len(capture_raw) != CAPTURE_SOURCE_BYTES or sha(capture_raw) != CAPTURE_SOURCE_SHA256:
+        raise RuntimeError("local frozen capture source differs from the accepted pin")
+    capture_module = types.ModuleType("_r6i_empty_approval_capture_consumer")
+    capture_module.__file__ = str(CAPTURE_SOURCE)
+    capture_module.__package__ = ""
+    exec(compile(capture_raw.decode("utf-8", "strict"), str(CAPTURE_SOURCE), "exec"),
+         capture_module.__dict__)
+    raw = read_regular(R6I_GATE_PATH, maximum=2 * 1024 * 1024)
+    if sha(raw) != R6I_GATE_SHA256:
+        raise RuntimeError("local frozen R6I gate source differs from the accepted pin")
+    module = types.ModuleType("_r6i_empty_approval_response_gate")
+    module.__file__ = str(R6I_GATE_PATH)
+    module.__package__ = ""
+    exec(compile(raw.decode("utf-8", "strict"), str(R6I_GATE_PATH), "exec"), module.__dict__)
+    if getattr(module, "APPROVAL_PATH", None) != REMOTE_TARGET:
+        raise RuntimeError("local frozen gate does not bind the exact approval path")
+    return capture_module, module
+
+
+def append_state(path: Path, status: str, details: dict[str, Any]) -> None:
+    with path.open("ab", buffering=0) as stream:
+        stream.write(json.dumps({"status": status, "time_monotonic": time.monotonic(), **details},
+                                sort_keys=True, ensure_ascii=False, allow_nan=False).encode() + b"\n")
+        os.fsync(stream.fileno())
+
+
+def write_exclusive(path: Path, raw: bytes) -> None:
+    with path.open("xb") as stream:
+        stream.write(raw)
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
+def check_only() -> dict[str, Any]:
+    payload, binding = read_checked_inputs()
+    inv = invocation_binding(payload)
+    if RUN_ROOT.exists() or RUN_ROOT.is_symlink():
+        raise RuntimeError("fixed capture evidence root exists; no replay")
+    return {"schema": "cv3-windows-r6i-readonly-capture-ssh-check-only/1",
+            "status": "PASS_EXACT_SOURCE_AND_TRANSPORT_BOUND_NO_SSH", **binding,
+            "remote_target": REMOTE_TARGET, "remote_target_sha256": REMOTE_TARGET_SHA256,
+            "remote_target_bytes": REMOTE_TARGET_BYTES, "ssh_argv_sha256": inv["invocation"]["argv_sha256"],
+            "invocation_sha256": inv["invocation_sha256"], "run_root": str(RUN_ROOT.relative_to(ROOT)),
+            "stdout_max_bytes": MAX_STDOUT_BYTES, "stderr_max_bytes": MAX_STDERR_BYTES,
+            "SSH": "NOT_RUN", "Popen": "NOT_RUN", "remote_writes": 0,
+            "planned_approval_metadata_read": True, "actual_remote_metadata_read": False,
+            "approval_content_read": False, "remote_once_read": False, "native_children": 0}
+
+
+def execute_once(*, popen_factory: Callable[..., Any] = subprocess.Popen) -> int:
+    payload, binding = read_checked_inputs()
+    inv = invocation_binding(payload)
+    authority = read_execution_authority(binding, payload)
+    if RUN_ROOT.exists() or RUN_ROOT.is_symlink():
+        raise RuntimeError("fixed capture run root exists; no replay")
+    RUN_ROOT.mkdir(parents=True, exist_ok=False, mode=0o700)
+    paths = {name: RUN_ROOT / name for name in OUTPUT_NAMES}
+    started = time.monotonic()
+    write_exclusive(paths["SSH_LAUNCH_INTENT.json"], canonical({"status": "ONE_READONLY_CAPTURE_SEND_INTENT",
+                    **binding, **authority,
+                    "permitted_scope": {"approval_metadata_read": True,
+                                        "approval_content_read": False,
+                                        "remote_once_read": False,
+                                        "remote_writes": 0, "native_children": 0},
+                    "retry_or_replay": False}))
+    paths["SSH_STATE.jsonl"].open("xb").close()
+    child = owner = None
+    remote_record = None
+    status = "UNKNOWN_NO_REPLAY"
+    try:
+        child = popen_factory(inv["argv"], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE, shell=False, cwd=str(ROOT), bufsize=0)
+        owner = OriginalReadOnlyPopenOwner(child)
+        owner.start_drainers(paths["SSH.stdout"], paths["SSH.stderr"])
+        append_state(paths["SSH_STATE.jsonl"], "ORIGINAL_POPEN_CREATED", {"pid": owner.pid})
+        owner.send_once_then_eof(payload)
+        owner.wait_naturally()
+        if owner.first_cause:
+            status = "UNKNOWN_OWNER_OR_CAPTURE_DIAGNOSTIC_NO_REPLAY"
+        elif owner.stdout.total > MAX_STDOUT_BYTES or owner.stderr.total > MAX_STDERR_BYTES:
+            status = "FAILED_OUTPUT_CAP_EXCEEDED_NO_REPLAY"
+        elif getattr(child, "returncode", None) != 0:
+            status = "FAILED_SSH_NONZERO_NO_REPLAY"
+        else:
+            remote_record = validate_capture_response(read_regular(paths["SSH.stdout"], maximum=MAX_STDOUT_BYTES))
+            status = "PASS_READONLY_EMPTY_APPROVAL_PATH_PROOF_CAPTURED"
+    except BaseException as exc:
+        status = "UNKNOWN_LOCAL_CAPTURE_ERROR_NO_REPLAY" if child is not None else "FAILED_PRE_POPEN_NO_REMOTE_ACTION"
+        if owner is not None:
+            owner.first_cause = owner.first_cause or (type(exc).__name__ + ":" + str(exc)[:1000])
+            owner.wait_naturally()
+    terminal = {"status": status, "local_original_popen_pid": getattr(owner, "pid", None),
+                "local_original_popen_returncode": getattr(child, "returncode", None),
+                "elapsed_seconds": time.monotonic() - started,
+                "same_original_popen_natural_terminal": bool(child is not None and child.returncode is not None),
+                "payload_send_attempted_once": bool(owner and owner.sent),
+                "active_cutoff_exceeded": bool(owner and owner.active_cutoff_exceeded),
+                "stdout_bytes": paths["SSH.stdout"].stat().st_size if paths["SSH.stdout"].exists() else 0,
+                "stderr_bytes": paths["SSH.stderr"].stat().st_size if paths["SSH.stderr"].exists() else 0,
+                "stdout_total_observed": owner.stdout.total if owner and owner.stdout else 0,
+                "stderr_total_observed": owner.stderr.total if owner and owner.stderr else 0,
+                "first_cause": owner.first_cause if owner else None,
+                "remote_status": remote_record.get("status") if remote_record else None,
+                "signals_kills_retries_resends": 0, "remote_writes": 0,
+                "permitted_approval_metadata_read": True,
+                "approval_metadata_read_confirmed_by_response": remote_record is not None,
+                "approval_content_read": False, "remote_once_read": False,
+                "native_children": 0, "authority": authority}
+    write_exclusive(paths["SSH_TERMINAL.json"], canonical(terminal))
+    report = {"schema": "cv3-windows-r6i-readonly-capture-ssh-report/1", "status": status,
+              "terminal": terminal, "remote": remote_record, "replay": False,
+              "remote_writes": 0, "permitted_approval_metadata_read": True,
+              "approval_metadata_read_confirmed_by_response": remote_record is not None,
+              "approval_content_read": False, "remote_once_read": False, "native_children": 0}
+    write_exclusive(paths["LOCAL_READONLY_CAPTURE_REPORT.json"], canonical(report))
+    return 0 if status == "PASS_READONLY_EMPTY_APPROVAL_PATH_PROOF_CAPTURED" else 1
+
+
+def main(argv: list[str] | None = None, popen_factory: Callable[..., Any] = subprocess.Popen) -> int:
+    args = list(sys.argv[1:] if argv is None else argv)
+    if args == ["--check-only"]:
+        sys.stdout.write(json.dumps(check_only(), sort_keys=True, separators=(",", ":")) + "\n")
+        return 0
+    if args == ["--capture-once"]:
+        return execute_once(popen_factory=popen_factory)
+    raise RuntimeError("use --check-only or a separately authorized --capture-once")
+
+
+if __name__ == "__main__":
+    try:
+        code = main()
+    except BaseException as exc:
+        sys.stderr.write(type(exc).__name__ + ":" + str(exc)[:2000] + "\n")
+        code = 2
+    raise SystemExit(code)

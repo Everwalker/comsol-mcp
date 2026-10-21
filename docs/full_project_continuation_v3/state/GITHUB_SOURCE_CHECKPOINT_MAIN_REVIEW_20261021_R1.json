@@ -1,0 +1,126 @@
+{
+  "schema": "MAIN_CURRENT_ROUND_PORTABLE_SOURCE_PUBLICATION_REVIEW_R1",
+  "created_at_utc": "2026-10-21T03:53:30.586765+00:00",
+  "decision": "PASS_SOURCE_CHECKPOINT_PUBLICATION_SCOPE_ONLY",
+  "user_instruction": "Finish this round, sync latest progress and all source required for remote development to GitHub, verify remote, then pause.",
+  "public_git_baseline": "65ced71e9d63c56e6b6009984ae5c4185f4be3bd",
+  "checkpoint": {
+    "status": "MAIN_SOURCE_HANDOFF_CHECKS_PASS_PENDING_ORDINARY_PUSH_AND_REMOTE_READBACK",
+    "manifest": {
+      "path": "continuation/checkpoints/20261021-round/CHECKPOINT_MANIFEST_R2.json",
+      "bytes": 3461978,
+      "sha256": "80277c2255086615e91698e15f4d248b49746251f2aa679faf2431d75e524d2b"
+    },
+    "file_mappings": 3978,
+    "unique_SHA256_objects": 1105,
+    "CAS_bytes": 54528600,
+    "required_source_coverage": [
+      {
+        "scope": "R31_full905",
+        "required": 905,
+        "covered": 905
+      },
+      {
+        "scope": "R32_R3_full908",
+        "required": 908,
+        "covered": 908
+      },
+      {
+        "scope": "W23_W25_closure",
+        "required": 1145,
+        "covered": 1145
+      },
+      {
+        "scope": "W24_R20_full900",
+        "required": 900,
+        "covered": 900
+      },
+      {
+        "scope": "Windows_R6I_gate_probe_implementation",
+        "required": 2,
+        "covered": 2
+      },
+      {
+        "scope": "Windows_latest_exact_source",
+        "required": 9,
+        "covered": 9
+      }
+    ],
+    "missing_source_count": 0,
+    "actual_new_directory_restore": "3978/3978 exact bytes and1105/1105 CAS objects verified",
+    "restored_R32_R3_consumer_tests": "21PASS0skip; project module origins within restored source",
+    "unresolved_credential_findings": 0,
+    "authority_restored": false,
+    "native_acceptance": "NOT_CLAIMED",
+    "canonical": "R30/current175-r13 unchanged",
+    "final_Reviewer": "NOT_RUN",
+    "main_review": "docs/full_project_continuation_v3/state/GITHUB_SOURCE_CHECKPOINT_MAIN_REVIEW_20261021_R1.json"
+  },
+  "evidence": [
+    {
+      "path": "_state/github-sync-pause-20261021-r1/MAIN_ACTUAL_SOURCE_COVERAGE_FINAL_R2.json",
+      "bytes": 948,
+      "sha256": "dfadb7b59ae5810400ff3c32db79d562d72d7fc2503aef7d7f37a55c4ef684b7"
+    },
+    {
+      "path": "_state/github-sync-pause-20261021-r1/MAIN_CAS_CONTENT_AUDIT_R2.json",
+      "bytes": 3062,
+      "sha256": "fb65044ec9e854c3752e229d3d168dc2c532f9977f17b77ce74c1dc2ac4a729d"
+    },
+    {
+      "path": "_state/github-sync-pause-20261021-r1/MAIN_CAS_CONTENT_AUDIT_CLASSIFICATION_R3.json",
+      "bytes": 1566,
+      "sha256": "f33ec13d3d0d25d2cb9377427724fdd355c5302ea5c8657afea0a4371832576a"
+    },
+    {
+      "path": "_state/github-sync-pause-20261021-r1/PUBLIC_BASE_TEST_TLS_FIXTURE_ALLOWLIST_R1.json",
+      "bytes": 932,
+      "sha256": "e027e6a11a8fae5117f5c18af6d8c254cf091132325a85b92bfb802a54e021c0"
+    },
+    {
+      "path": "_state/github-sync-pause-20261021-r1/MAIN_SOURCE_RESTORE_READBACK_R2.json",
+      "bytes": 1386,
+      "sha256": "25aa18c57d037c6faafbbaec2153ec5c44b731aa0ad44ce93bdff5cf0e72056c"
+    },
+    {
+      "path": "_state/github-sync-pause-20261021-r1/MAIN_RESTORED_R32_R3_CONSUMER_REVIEW_R1.json",
+      "bytes": 1774,
+      "sha256": "0caa109d13f89d88cea4c068daba2bd5c1642aaa92b2aa822f604d4d3e57b370"
+    },
+    {
+      "path": "_state/github-sync-pause-20261021-r1/MAIN_RESTORED_R32_R3_21_CONTROLS_R1.xml",
+      "bytes": 3777,
+      "sha256": "eecbfda6b8f664703b7ff5f06c8e17477f50cd523118a2347440faa11b6a145f"
+    }
+  ],
+  "current_handoff": {
+    "path": "docs/full_project_continuation_v3/CURRENT_HANDOFF.md",
+    "bytes": 8767,
+    "sha256": "f0d98c4db95346f98e935d37cad87a8b9ce2ac9710d0902f7a35c857b7bdd878"
+  },
+  "progress": {
+    "path": "PROGRESS.md",
+    "bytes": 5769,
+    "sha256": "1805c0fb383d4010f6ac47c245b8b58abaa6fb5488c7e6a710933b1f4fe24631"
+  },
+  "resume_snapshot": {
+    "path": "docs/full_project_continuation_v3/state/RESUME.json",
+    "bytes": 138355,
+    "sha256": "056b38f9db6a629bbae8a50e1a35caddaea8b90bcf477f59f35c908e248eddca"
+  },
+  "canonical_production_tree": "897 exact members already verified in public baseline; no candidate promotion",
+  "source_round_trip": "Main restored3978 files into a new directory, all hashes exact;21 strict-consumer controls use restored source imports",
+  "credential_review": "One scanner-test literal uses repeated A characters; three exact already-public TLS fixtures; zero unresolved real credential findings. Raw scan retained.",
+  "publication_boundary": {
+    "effective_approval_once": false,
+    "commercial_JAR_MPH_DB_installed_environment_compiled_output": false,
+    "source_historical_identity_literals": "Preserved source bytes; not execution authority. Fresh host binding required.",
+    "remote_progress_proof": "The final commit is verified by a subsequent ordinary push and independent fetch; this pre-commit record does not claim its own remote publication."
+  },
+  "preexisting_related_doc_changes": "Two design documents document the optional code_recipe_register entrypoint; retained and reviewed.",
+  "original_Windows_R6I_R2": "Original exec89189 remains held with no output; remote child UNOBSERVED; no replay or signal.",
+  "project_status": "CHANGES_REQUIRED",
+  "final_independent_Reviewer": "NOT_RUN",
+  "no_new_COMSOL_JVM_GUI_native_activity_in_this_publication": true,
+  "remaining": "Normal commit/push, independent fetch/readback, then user-requested goal pause. This review is not full-project acceptance."
+}

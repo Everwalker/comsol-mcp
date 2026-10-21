@@ -1,0 +1,69 @@
+{
+  "schema": "WINDOWS_R6I_TOKEN_ELEVATION_MAIN_SOURCE_REVIEW_V1",
+  "status": "PASS_R6I_TOKEN_ELEVATION_FIXED_DWORD_SOURCE_ONLY",
+  "at_utc": "2026-10-20T14:17:42.718376+00:00",
+  "source_plan_sha256": "4491a64a805439ffe51140c29a690ee2872b8c4376ee066d87fac8f5bc63f23b",
+  "candidate_files": {
+    "helper": {
+      "path": "repository/_state/windows-primary-owner-r6i-token-elevation-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019/package/windows_primary_token_owner_probe_r6i.py",
+      "bytes": 84101,
+      "sha256": "b64ae1a12251858c13a876f41e092eb8402cb490a7998eee3dbd5ac2fea32d5a"
+    },
+    "gate": {
+      "path": "repository/_state/windows-primary-owner-r6i-token-elevation-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019/package/windows_primary_token_owner_outer_gate_r6i.py",
+      "bytes": 113898,
+      "sha256": "4ef244f15282bf49770d7ae9c468c40aa8818462bfb071652c7c1b9423aef1c9"
+    },
+    "inner_binding_proposal": {
+      "path": "repository/_state/windows-primary-owner-r6i-token-elevation-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019/package/PRIMARY_OWNER_R6I_INNER_BINDING_PROPOSAL.json",
+      "bytes": 1793,
+      "sha256": "6b5e6ad756045dee4551be992a32ba0228a357907dc2ee58dbb7391e1505f67a"
+    },
+    "controls": {
+      "path": "repository/_state/windows-primary-owner-r6i-token-elevation-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019/tests/test_windows_primary_owner_r6i_source.py",
+      "bytes": 14375,
+      "sha256": "2cb3b2755d87f8a488a65beb5da69d484e8444949e9906792ba3d1d450552a44"
+    },
+    "source_plan": {
+      "path": "repository/_state/windows-primary-owner-r6i-token-elevation-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019/evidence/SOURCE_PLAN_R1.json",
+      "bytes": 6613,
+      "sha256": "4491a64a805439ffe51140c29a690ee2872b8c4376ee066d87fac8f5bc63f23b"
+    },
+    "prep_builder": {
+      "path": "repository/_state/windows-primary-owner-r6i-token-elevation-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019/source/prepare_primary_owner_r6i_prep.py",
+      "bytes": 22481,
+      "sha256": "425a62b3a819f16195d4fb6ccbb542a0e6305fc906bff64d14dcc406c60f09d4"
+    },
+    "prep_wrapper": {
+      "path": "repository/_state/windows-primary-owner-r6i-token-elevation-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019/source/windows_primary_owner_r6i_strict_ssh_prep.py",
+      "bytes": 24977,
+      "sha256": "22d5ac35b2f484d93f6f1d3c6f1f4b629b15d323ac9bb40c584198d95a195c7e"
+    },
+    "prep_template": {
+      "path": "repository/_state/windows-primary-owner-r6i-token-elevation-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019/source/windows_primary_owner_r6i_prep_payload_template.py.txt",
+      "bytes": 44347,
+      "sha256": "82329c37e1242f68153c2dd7ff73e114276236766d24c6d4bfca6e9e193e7232"
+    }
+  },
+  "packet_manifest_sha256": "abf887b7096a6e19df485bbd9a8dd88a6ab1f6b08cd76e95a4845624d276b3d4",
+  "packet_members_rehashed": 21,
+  "Main_pytest_PASS": 11,
+  "Main_subtests_PASS": 7,
+  "Main_JUnit": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/WINDOWS_R6I_MAIN_CONTROLS_20261020_R1.xml",
+  "decision": {
+    "TOKEN_ELEVATION": "EXACT_INT20_ONE_DIRECT_FOUR_BYTE_QUERY_SUCCESS_AND_EXACT_RETURNLENGTH4_REQUIRED",
+    "other_token_classes": "UNCHANGED_BOUNDED_TWO_CALL_VALIDATION",
+    "gate_template": "NAMESPACE_ONLY_EXACT_R6H_INHERITANCE_VERIFIED",
+    "builder_wrapper": "FINITE_CANDIDATE_PATH_HASH_REVIEW_STATUS_PINS_ONLY_NO_EFFECT_POLICY_RELAXATION",
+    "R11_diagnostics": "EXACT_INHERITED_SOURCE_ONLY_EXCERPT",
+    "native_entry": "NOT_PREPARED_NOT_RUN_PENDING_NEW_PREP_MAIN_REVIEW"
+  },
+  "authority": {
+    "SSH": "NOT_RUN",
+    "remote_writes": 0,
+    "native_child": "NOT_RUN",
+    "COMSOL_JVM_GUI": "NOT_RUN",
+    "effective_native_approval_once": "NOT_CREATED"
+  },
+  "next": "Prepare exact local five-leaf PREP payload and wrapper bound to this source review/current RESUME; Main reviews then strict SSH one send under persistent user authorization."
+}

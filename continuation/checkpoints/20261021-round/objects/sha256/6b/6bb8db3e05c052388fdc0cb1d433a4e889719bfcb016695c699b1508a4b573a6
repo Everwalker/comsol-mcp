@@ -1,0 +1,101 @@
+{
+  "authority_boundary": {
+    "SSH": "NOT_RUN",
+    "native": "NOT_RUN",
+    "once_created": false,
+    "remote_reads": 0,
+    "remote_writes": 0,
+    "valid_approval_created": false
+  },
+  "candidate_root": "repository/_state/windows-primary-owner-r6i-token-elevation-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019",
+  "current_new_source": {
+    "R11_systemexit_diagnostic_excerpt": {
+      "bytes": 2692,
+      "path": "repository/_state/windows-primary-owner-r6i-token-elevation-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019/source/R6I_NATIVE_ENTRY_DIAGNOSTIC_INHERITANCE_R1.py.txt",
+      "sha256": "de75549d965fe534c32e69c46e9cc8164ce15b3c0c8bec55225de07a1c92fada"
+    },
+    "gate": {
+      "bytes": 113898,
+      "path": "repository/_state/windows-primary-owner-r6i-token-elevation-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019/package/windows_primary_token_owner_outer_gate_r6i.py",
+      "sha256": "4ef244f15282bf49770d7ae9c468c40aa8818462bfb071652c7c1b9423aef1c9"
+    },
+    "helper": {
+      "bytes": 84101,
+      "path": "repository/_state/windows-primary-owner-r6i-token-elevation-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019/package/windows_primary_token_owner_probe_r6i.py",
+      "sha256": "b64ae1a12251858c13a876f41e092eb8402cb490a7998eee3dbd5ac2fea32d5a"
+    },
+    "inner_binding_proposal": {
+      "bytes": 1793,
+      "path": "repository/_state/windows-primary-owner-r6i-token-elevation-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019/package/PRIMARY_OWNER_R6I_INNER_BINDING_PROPOSAL.json",
+      "sha256": "6b5e6ad756045dee4551be992a32ba0228a357907dc2ee58dbb7391e1505f67a"
+    }
+  },
+  "future_activity": {
+    "COMSOL": 0,
+    "GUI": 0,
+    "JVM": 0,
+    "Study": 0,
+    "activity_id": "ALLOCATE_FRESH_UUID_BY_MAIN_AFTER_PREP_REVIEW",
+    "approval_and_once_created_now": false,
+    "approval_fields": [
+      "schema",
+      "status",
+      "binding_sha256",
+      "outer_binding_sha256",
+      "helper_sha256",
+      "helper_controls_sha256",
+      "gate_sha256",
+      "gate_controls_sha256",
+      "r6b_lease_source_sha256",
+      "r6b_lease_controls_sha256",
+      "python_executable_sha256",
+      "python_executable_path_proof_sha256",
+      "protected13_manifest_sha256",
+      "current_resume_sha256",
+      "source_plan_sha256",
+      "source_review_sha256",
+      "r14_binding_sha256",
+      "r14_source_closure_sha256",
+      "source_path_proofs_sha256",
+      "outer_binding_file_proof_sha256",
+      "budget",
+      "native_nonce"
+    ],
+    "approval_schema": "cv3-Main-primary-owner-once-r6i/1",
+    "approval_status": "APPROVED_EXECUTE_ONCE",
+    "authority_directory": "C:\\Users\\Everwalker\\AppData\\Local\\cvw26-current-9f07a952265c\\authority-primary-owner-r6i",
+    "local_evidence_root": "NEW_PRIVATE_UUID_ROOT_BY_MAIN; MUST NOT REUSE windows-primary-owner-r6h-native-execution-ssh-r10-20261019",
+    "maximum_active_seconds": 60,
+    "maximum_child_processes": 1,
+    "once_path": "C:\\Users\\Everwalker\\AppData\\Local\\cvw26-current-9f07a952265c\\authority-primary-owner-r6i\\ONCE_USED.json",
+    "remote_private_root": "C:\\Users\\Everwalker\\AppData\\Local\\cvw26-current-9f07a952265c",
+    "solver": 0
+  },
+  "prohibited_inputs": [
+    "R10 R4 R3 R2 approval bytes",
+    "old R10 consumed ONCE_USED",
+    "old R10 fixed entry/payload",
+    "old remote PIDs",
+    "expected values copied from live actual identity"
+  ],
+  "raw_diagnostic_contract": {
+    "baseline_r11_review_sha256": "698b2b7be3ea6e2aaa4fd38c7506b4ff23ca491784309fd0603ebd297697f5b9",
+    "baseline_r11_source_path": "repository/_state/windows-primary-owner-r6h-native-entry-r11-gate-diagnostic-f0a927a8-d03a-47ed-8118-fae6af73908a-20261019/source/windows_primary_owner_r6h_native_payload.py.txt",
+    "candidate_excerpt": {
+      "bytes": 2692,
+      "path": "repository/_state/windows-primary-owner-r6i-token-elevation-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019/source/R6I_NATIVE_ENTRY_DIAGNOSTIC_INHERITANCE_R1.py.txt",
+      "sha256": "de75549d965fe534c32e69c46e9cc8164ce15b3c0c8bec55225de07a1c92fada"
+    },
+    "no_old_r10_identity_or_proof_constants": "TRUE",
+    "raw_gate_stdout_stderr": "Keep exact captured bytes and their hashes in the final result; diagnostic SystemExit string/type stays a separate bounded field."
+  },
+  "required_order": [
+    "Main source-reviews exact R6I packet; no PREP before it.",
+    "Prepare one fresh exact R6I five-leaf PREP payload from the current RESUME bytes and reviewed R6I helper/gate/inner binding; Main reviews the exact payload and the single-send wrapper before the bounded PREP action.",
+    "Preserve and verify the actual remote PREP report; obtain new same-handle/outer identity proof for R6I MAIN_APPROVAL and the full unchanged R14 source closure. Do not derive expected identity from the current object or reuse R10/R4/R3 proof values.",
+    "Build a new R6I native payload/wrapper binding the fresh actual PREP proof, new exact source projection, new activity ID, and exact R6I approval/once schemas; carry only the reviewed R11 bounded SystemExit diagnostic and raw observed gate streams.",
+    "Main reviews this exact native candidate and creates a new one-use authority. Only then may its strict one-child entry run; UNKNOWN is retained without replay."
+  ],
+  "schema": "WINDOWS_R6I_FRESH_NATIVE_ENTRY_PLAN/1",
+  "status": "PREP_AND_NATIVE_NOT_RUN_AWAITING_MAIN_REVIEW_AND_FRESH_ACTUAL_PREP_PROOF"
+}

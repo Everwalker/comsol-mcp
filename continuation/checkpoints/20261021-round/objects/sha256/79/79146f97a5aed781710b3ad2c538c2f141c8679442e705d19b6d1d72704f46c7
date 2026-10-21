@@ -1,0 +1,125 @@
+#!/usr/bin/env python3
+"""P0 task-owned observer around ordinary production serve, no injected backend."""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import stat
+import sys
+import threading
+
+sys.path.insert(0,str(Path(__file__).resolve().parent))
+from p0_original_controller_hold import P0OriginalControllerOwner, canonical, pairs, file_signature, private_fd
+
+
+def write(path, value):
+    path.write_text(json.dumps(value,sort_keys=True,indent=2,allow_nan=False)+"\n")
+
+
+def load_config(path):
+    fd,root_inode=private_fd(path.parent)
+    try:
+        before=os.stat(path.name,dir_fd=fd,follow_symlinks=False)
+        if not stat.S_ISREG(before.st_mode) or before.st_uid!=os.getuid() or stat.S_IMODE(before.st_mode)!=0o600 or before.st_nlink!=1 or not 0<before.st_size<=32768:
+            raise ValueError("private ordinary source-bound P0 config required")
+        with os.fdopen(os.open(path.name,os.O_RDONLY|os.O_NOFOLLOW,dir_fd=fd),"rb") as stream:
+            opened=os.fstat(stream.fileno());raw=stream.read(32769);after=os.fstat(stream.fileno())
+        current=os.stat(path.name,dir_fd=fd,follow_symlinks=False)
+        root_now=path.parent.lstat()
+        if ((root_now.st_dev,root_now.st_ino)!=root_inode or not stat.S_ISDIR(root_now.st_mode)
+                or root_now.st_uid!=os.getuid() or stat.S_IMODE(root_now.st_mode)!=0o700
+                or any(file_signature(st)!=file_signature(before) for st in (opened,after,current))
+                or not 0<len(raw)<=32768 or len(raw)!=before.st_size):
+            raise ValueError("config/root changed during complete pinned read")
+    finally:os.close(fd)
+    config=json.loads(raw,object_pairs_hook=pairs,parse_constant=lambda _:(_ for _ in ()).throw(ValueError("nonfinite")))
+    execution_mode=config.get("execution_mode","source")
+    if execution_mode=="source":
+        if set(config)!={"binding","source","freeze","home"}:raise ValueError("closed config required")
+        binding_keys={"activity_id","namespace","source_sha256","harness_sha256","entry_sha256","holder_sha256","owner_nonce"}
+    elif execution_mode=="installed-current175-r13":
+        if set(config)!={"binding","source","freeze","home","execution_mode","installed_profile",
+                "installed_profile_sha256","installed_venv","source_freeze_sha256"}:
+            raise ValueError("closed installed-mode controller config required")
+        binding_keys={"activity_id","namespace","source_sha256","harness_sha256","entry_sha256","holder_sha256",
+                "owner_nonce","execution_mode","installed_profile_sha256","source_freeze_sha256"}
+    else:raise ValueError("finite controller execution mode required")
+    binding=config["binding"]
+    if not isinstance(binding,dict) or set(binding)!=binding_keys:raise ValueError("closed owner binding required")
+    if any(not isinstance(v,str) or not v for v in binding.values()):raise ValueError("string owner binding required")
+    from uuid import UUID
+    if str(UUID(binding["owner_nonce"]))!=binding["owner_nonce"]:raise ValueError("canonical nonce required")
+    root=Path(binding["namespace"])
+    if path!=root/"P0_OWNER_CONFIG.json" or binding["activity_id"]!=root.name or config["home"]!=str(root/"home/control-private"):raise ValueError("fresh config path differs")
+    tool=Path(__file__).resolve().parent
+    for name,field in (("run_v3_public_mcp_smoke.py","harness_sha256"),("p0_owned_control_entry.py","entry_sha256"),("p0_original_controller_hold.py","holder_sha256")):
+        if hashlib.sha256((tool/name).read_bytes()).hexdigest()!=binding[field]:raise ValueError("task source differs")
+    source=Path(config["source"]).resolve(strict=True);freeze_path=Path(config["freeze"])
+    if freeze_path.is_symlink() or not freeze_path.is_file():raise ValueError("regular source freeze required")
+    freeze=json.loads(freeze_path.read_text())
+    files={p.relative_to(source).as_posix() for p in (source/"comsol_mcp").rglob("*") if p.is_file() and "__pycache__" not in p.parts}
+    if files!=set(freeze["files"]):raise ValueError("production source files differ")
+    for relative,sha in freeze["files"].items():
+        target=source/relative
+        if target.is_symlink() or hashlib.sha256(target.read_bytes()).hexdigest()!=sha:raise ValueError("production source differs")
+    sha=hashlib.sha256(canonical(freeze["files"]).encode()).hexdigest()
+    if sha!=binding["source_sha256"]:raise ValueError("production identity differs")
+    if execution_mode=="installed-current175-r13":
+        profile_path=Path(config["installed_profile"])
+        profile_parent=profile_path.parent
+        profile_parent_stat=profile_parent.lstat()
+        installed_venv=Path(config["installed_venv"])
+        import science_native_once_entry as entry
+        freeze_raw,_=entry.read_file(freeze_path)
+        freeze=entry._strict_json_bytes(freeze_raw)
+        if (binding["execution_mode"]!=execution_mode or binding["installed_profile_sha256"]!=config["installed_profile_sha256"]
+                or binding["source_freeze_sha256"]!=config["source_freeze_sha256"]
+                or config["source_freeze_sha256"]!=hashlib.sha256(freeze_raw).hexdigest()
+                or not profile_path.is_absolute() or profile_path.resolve(strict=True)!=profile_path
+                or profile_parent.parent!=Path("/private/tmp") or profile_path.name!="INSTALLED_PROFILE.json"
+                or not stat.S_ISDIR(profile_parent_stat.st_mode) or profile_parent_stat.st_uid!=os.getuid()
+                or stat.S_IMODE(profile_parent_stat.st_mode)!=0o700
+                or not installed_venv.is_absolute() or installed_venv.is_symlink()
+                or installed_venv.resolve(strict=True)!=installed_venv
+                or freeze.get("source_commit")!="65ced71e9d63c56e6b6009984ae5c4185f4be3bd"):
+            raise ValueError("exact installed-mode controller source/profile binding differs")
+        if Path(entry.__file__).resolve()!=tool/"science_native_once_entry.py":raise ValueError("installed-profile reader origin differs")
+        entry.verify_installed_profile(config["installed_profile"],config["installed_profile_sha256"],source,freeze,
+            expected_venv=config["installed_venv"],source_freeze_sha256=config["source_freeze_sha256"])
+    return config
+
+
+def main(argv=None):
+    parser=argparse.ArgumentParser();parser.add_argument("--config",type=Path,required=True);args=parser.parse_args(argv)
+    config=load_config(args.config)
+    owner=P0OriginalControllerOwner(config["binding"]["namespace"],config["binding"],write)
+    done=threading.Event()
+    def listen():
+        try:
+            if config.get("execution_mode")=="installed-current175-r13":
+                from science_native_once_entry import verify_installed_profile
+                from science_native_once_entry import read_file, _strict_json_bytes
+                freeze_raw,_=read_file(config["freeze"])
+                if hashlib.sha256(freeze_raw).hexdigest()!=config["source_freeze_sha256"]:
+                    raise RuntimeError("source freeze changed before installed controller import")
+                freeze=_strict_json_bytes(freeze_raw)
+                profile=verify_installed_profile(config["installed_profile"],config["installed_profile_sha256"],
+                    Path(config["source"]),freeze,
+                    expected_venv=config["installed_venv"],source_freeze_sha256=config["source_freeze_sha256"])
+                from comsol_mcp import _control_daemon
+                expected=Path(profile["package_root"])/"_control_daemon.py"
+                if Path(_control_daemon.__file__).resolve()!=expected:
+                    raise RuntimeError("actual control daemon is not the exact installed product member")
+            else:
+                from comsol_mcp import _control_daemon
+                if Path(_control_daemon.__file__).resolve() != Path(config["source"])/"comsol_mcp/_control_daemon.py":
+                    raise RuntimeError("actual production controller import differs from pinned source")
+            _control_daemon.serve(config["home"],_owner_observer=lambda daemon:owner.bind(daemon,guard_birth=True))
+        except BaseException as exc:owner.cause(exc);owner.diagnostic("production_listener",exc)
+        finally:done.set()
+    thread=threading.Thread(target=listen,name="p0-production-control-listener",daemon=True);thread.start()
+    owner.watch(done)
+    return 1  # All hold completions remain failed/UNKNOWN evidence.
+
+if __name__=="__main__":raise SystemExit(main())

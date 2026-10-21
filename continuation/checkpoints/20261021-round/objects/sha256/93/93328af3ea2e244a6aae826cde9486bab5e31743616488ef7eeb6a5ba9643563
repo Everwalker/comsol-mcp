@@ -1,0 +1,230 @@
+#!/usr/bin/env python3
+"""Read-only check-only entry for the accepted W25 R5/R26 caller consumer.
+
+This command imports the exact Main-reviewed R5 actor source bytes and calls
+its real source-lock and installed-caller consumers. It does not call PREP,
+EXECUTE, lane inspection, process inventory, GUI, JVM, COMSOL, or any authority
+or once reader.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import importlib.util
+import json
+import os
+from pathlib import Path
+import stat
+import sys
+from types import ModuleType
+from typing import Any
+
+
+REPOSITORY = Path(__file__).resolve().parents[3]
+CANDIDATE_ROOT = Path(__file__).resolve().parents[1]
+R1_ROOT = REPOSITORY / "_state/w25-gui-current175-r12-blank-entry-r1-28f3dba7-c029-4af2-acbb-4fcda5c94fcb-20261021"
+R1_PLAN = R1_ROOT / "evidence/W25_UNSIGNED_ENTRY_PLAN_R1.json"
+R1_PLAN_SHA256 = "1687c05968747e15ad236266069dfe2fdf9ea8ae4a8961fae117432d76aeaaab"
+R1_MANIFEST = R1_ROOT / "evidence/FINAL_PACKET_MANIFEST_R1.json"
+R1_MANIFEST_SHA256 = "35a5df2de922fde188958a3fb84679d8f980ba556f7d439931d6866b04c21884"
+R5_REVIEW_PATH = REPOSITORY / "docs/full_project_continuation_v3/state/W25_GUI_R5_CURRENT175_R12_MAIN_SOURCE_REVIEW_20261020_R1.json"
+R5_REVIEW_SHA256 = "91bd37705b96a8c9c50efb37c1fa7cc4747409f1a87dc94bab3e7d3fe5c245e1"
+R5_ROOT = REPOSITORY / "_state/w25-gui-current175-r12-entry-r5-ff3fa94b-81c0-4b30-af0c-3f1ef8b46fc7-20261020"
+R5_ACTOR = R5_ROOT / "source/tools/w25_macos_owned_desktop_actor_r12_r5.py"
+R5_ACTOR_SHA256 = "87b9a4f04457877e1d7c528ee3b0382d7cf16658a2560c0fefb75600bd32760e"
+R5_BINDING = R5_ROOT / "inputs/W26_R26_ACTUAL_INSTALL_BINDING_R1.json"
+R5_BINDING_SHA256 = "1ffe748a850a04cfcfc42a6502e568e4ebc26b4e2fb14316ede1c922bde93d9b"
+INSTALLED_ROOT = Path("/private/tmp/cvw26-lifecycle-r15-30153873")
+R26_REVIEW_SHA256 = "40d8357dd216d20c943587ba5a756c33c56ce935d42fc52c7773fb6efbb78146"
+EXPECTED_CALLER_HASHES = {
+    "comsol_mcp._desktop_macos": "f1f3b3bebf6029e00d6f05ec40285ed9dbba0fb16e0b28198231841128ae84e6",
+    "comsol_mcp._desktop_platforms": "4c50c4596cbc8d79dd610d66cada1deb38e400c607a5bb04b59f1766a9c76059",
+    "comsol_mcp._desktop_service": "00691307ad6b2c780f7086b4a306b4adbb5360e986754c3e9e97e2a4ea38dcf1",
+    "comsol_mcp._desktop_selector_profile": "c29d6a439e3d2fb1e2b0e55b04486335d3ec22c15527e16d3e72ef67855b6c6c",
+}
+
+
+class CheckOnlyError(RuntimeError):
+    pass
+
+
+def _sha(raw: bytes) -> str:
+    return hashlib.sha256(raw).hexdigest()
+
+
+def _read_pinned(path: Path, expected_sha256: str, *, maximum: int = 4 * 1024 * 1024) -> bytes:
+    path = Path(path)
+    before_name = path.lstat()
+    if (stat.S_ISLNK(before_name.st_mode) or not stat.S_ISREG(before_name.st_mode)
+            or before_name.st_size > maximum):
+        raise CheckOnlyError(f"pinned input is not a bounded regular file: {path}")
+    fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    try:
+        before_fd = os.fstat(fd)
+        name_sig = lambda row: (row.st_dev, row.st_ino, row.st_mode, row.st_uid,
+                                row.st_nlink, row.st_size, row.st_mtime_ns)
+        fd_sig = lambda row: (row.st_dev, row.st_ino, row.st_mode, row.st_uid,
+                              row.st_nlink, row.st_size, row.st_mtime_ns)
+        if (name_sig(before_name) != name_sig(path.lstat())
+                or before_fd.st_dev != before_name.st_dev
+                or before_fd.st_ino != before_name.st_ino
+                or before_fd.st_size != before_name.st_size
+                or before_fd.st_mtime_ns != before_name.st_mtime_ns):
+            raise CheckOnlyError(f"pinned input identity changed before read: {path}")
+        chunks = []
+        remaining = maximum + 1
+        while remaining:
+            block = os.read(fd, min(1024 * 1024, remaining))
+            if not block:
+                break
+            chunks.append(block)
+            remaining -= len(block)
+        after_fd = os.fstat(fd)
+        after_name = path.lstat()
+        if (name_sig(before_name) != name_sig(after_name)
+                or fd_sig(before_fd) != fd_sig(after_fd)
+                or after_fd.st_dev != after_name.st_dev
+                or after_fd.st_ino != after_name.st_ino
+                or after_fd.st_size != after_name.st_size
+                or after_fd.st_mtime_ns != after_name.st_mtime_ns):
+            raise CheckOnlyError(f"pinned input identity changed during read: {path}")
+        raw = b"".join(chunks)
+        if len(raw) != after_fd.st_size or len(raw) > maximum or _sha(raw) != expected_sha256:
+            raise CheckOnlyError(f"pinned input bytes differ from expected SHA-256: {path}")
+        return raw
+    finally:
+        os.close(fd)
+
+
+def _load_json(path: Path, digest: str) -> dict[str, Any]:
+    try:
+        value = json.loads(_read_pinned(path, digest).decode("utf-8", "strict"))
+    except CheckOnlyError:
+        raise
+    except Exception as exc:
+        raise CheckOnlyError(f"invalid pinned JSON: {path}") from exc
+    if not isinstance(value, dict):
+        raise CheckOnlyError(f"pinned JSON object required: {path}")
+    return value
+
+
+def _verify_r1_packet() -> tuple[dict[str, Any], dict[str, Any]]:
+    manifest = _load_json(R1_MANIFEST, R1_MANIFEST_SHA256)
+    if (manifest.get("schema") != "W25_CURRENT175_R12_BLANK_GUI_UNSIGNED_PACKET_MANIFEST/1"
+            or manifest.get("candidate_root") != str(R1_ROOT)
+            or manifest.get("member_count") != 10
+            or manifest.get("status") != "FROZEN_SOURCE_ONLY_PACKET_NO_AUTHORITY"):
+        raise CheckOnlyError("R1 frozen unsigned packet identity or scope changed")
+    rows = manifest.get("members")
+    if not isinstance(rows, list) or len(rows) != 10:
+        raise CheckOnlyError("R1 packet member list is not the exact 10-file closure")
+    for row in rows:
+        if not isinstance(row, dict) or set(row) != {"bytes", "mode_octal", "path", "sha256"}:
+            raise CheckOnlyError("R1 packet manifest row is malformed")
+        rel = Path(row["path"])
+        if rel.is_absolute() or ".." in rel.parts:
+            raise CheckOnlyError("R1 packet path escaped candidate root")
+        target = R1_ROOT / rel
+        raw = _read_pinned(target, row["sha256"], maximum=64 * 1024 * 1024)
+        info = target.lstat()
+        if len(raw) != row["bytes"] or f"{stat.S_IMODE(info.st_mode):04o}" != row["mode_octal"]:
+            raise CheckOnlyError("R1 packet member size or mode differs from its frozen manifest")
+    plan = _load_json(R1_PLAN, R1_PLAN_SHA256)
+    if (plan.get("schema") != "W25_CURRENT175_R12_BLANK_GUI_UNSIGNED_ENTRY_PLAN_R1"
+            or plan.get("candidate_root") != str(R1_ROOT)
+            or plan.get("source_lineage", {}).get("r5_main_review", {}).get("sha256")
+            != R5_REVIEW_SHA256):
+        raise CheckOnlyError("R1 unsigned plan does not bind the accepted R5 source review")
+    authority = plan.get("authority")
+    expected_authority = {
+        "COMSOL": "NOT_RUN", "GUI": "NOT_RUN", "JVM": "NOT_RUN",
+        "candidate_review": "NOT_CREATED", "lane_check": "NOT_CREATED",
+        "once_binding": "NOT_CREATED", "runtime_candidate": "NOT_CREATED",
+        "unit_once_guard": "NOT_CREATED", "valid_approval": "NOT_CREATED",
+    }
+    if authority != expected_authority:
+        raise CheckOnlyError("R1 unsigned plan contains an unexpected authority state")
+    if plan.get("scope") != {
+        "AX_depth": 2, "AX_nodes_max": 64, "active_observation_seconds": 540,
+        "blank_owned_standalone_windows": 1, "cleanup_reserve_seconds": 60,
+        "clicks": 0, "control_actions": "NOT_RUN", "endpoint_challenge": "NOT_RUN",
+        "model_open": 0, "other_owner_stop_or_reuse": "FORBIDDEN", "pixels": 0,
+        "screenshots": 0, "solver_science": "NOT_RUN", "total_seconds": 600,
+    }:
+        raise CheckOnlyError("R1 W25 observation scope differs from the bounded unsigned plan")
+    return manifest, plan
+
+
+def _load_exact_actor() -> ModuleType:
+    raw = _read_pinned(R5_ACTOR, R5_ACTOR_SHA256, maximum=8 * 1024 * 1024)
+    review = _load_json(R5_REVIEW_PATH, R5_REVIEW_SHA256)
+    if review.get("status") != "PASS_SCOPED_SOURCE_AND_ACTUAL_INSTALLED_CALLER_BYTES_FRESH_GUI_ADMISSION_REQUIRED":
+        raise CheckOnlyError("R5 Main review is not the accepted source-only caller review")
+    name = "w25_r12_exact_r5_actor_check_only_r2"
+    module = ModuleType(name)
+    module.__file__ = str(R5_ACTOR)
+    module.__package__ = ""
+    sys.modules[name] = module
+    exec(compile(raw, str(R5_ACTOR), "exec"), module.__dict__)
+    if module.CURRENT_R12 != "current175-r12" or module.APP_VERSION != "0.1.10":
+        raise CheckOnlyError("Main-reviewed actor did not load the exact R12 profile")
+    return module
+
+
+def run_check_only() -> dict[str, Any]:
+    manifest, plan = _verify_r1_packet()
+    actor = _load_exact_actor()
+    source_inputs = actor._verify_r12_source_inputs()
+    actual = actor._verify_current_r12_install(INSTALLED_ROOT, R5_BINDING, source_inputs)
+    binding = actual["binding"]
+    if (binding.get("sha256") != R5_BINDING_SHA256
+            or actual.get("root") != str(INSTALLED_ROOT)
+            or actual.get("actual_review", {}).get("sha256") != R26_REVIEW_SHA256
+            or len(actual.get("package_records", ())) != 172
+            or {key: row.get("sha256") for key, row in actual.get("caller_source_hashes", {}).items()}
+            != EXPECTED_CALLER_HASHES):
+        raise CheckOnlyError("R5 actual installed-caller consumer returned a mismatched identity")
+    return {
+        "schema": "W25_R12_READONLY_CHECK_ONLY_RESULT/1",
+        "status": "PASS_ACTUAL_R5_CONSUMER_READONLY_CHECK_ONLY",
+        "r1_packet_manifest_sha256": R1_MANIFEST_SHA256,
+        "r1_packet_members_rehashed": manifest["member_count"],
+        "r1_unsigned_plan_sha256": R1_PLAN_SHA256,
+        "r5_actor_sha256": R5_ACTOR_SHA256,
+        "r5_main_source_review_sha256": R5_REVIEW_SHA256,
+        "r26_actual_install_review_sha256": R26_REVIEW_SHA256,
+        "install_binding_sha256": R5_BINDING_SHA256,
+        "installed_root": actual["root"],
+        "source_profile": actor.CURRENT_R12,
+        "package_members_rehashed": len(actual["package_records"]),
+        "caller_source_hashes": {key: value["sha256"]
+                                  for key, value in actual["caller_source_hashes"].items()},
+        "retained_lifecycle_status": plan["installed_caller"]["full_lifecycle"],
+        "scope": plan["scope"],
+        "authority_created": False,
+        "once_read_or_consumed": False,
+        "runtime_root_created": False,
+        "process_inventory": "NOT_RUN",
+        "GUI": "NOT_RUN",
+        "COMSOL": "NOT_RUN",
+        "JVM": "NOT_RUN",
+        "native_Popen": 0,
+    }
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--check-only", action="store_true", required=True)
+    args = parser.parse_args(argv)
+    if args.check_only is not True:
+        parser.error("only --check-only is supported")
+    print(json.dumps(run_check_only(), sort_keys=True, separators=(",", ":")))
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except (CheckOnlyError, OSError, RuntimeError) as exc:
+        print(f"W25_R12_CHECK_ONLY_BLOCKED: {type(exc).__name__}: {str(exc)[:800]}", file=sys.stderr)
+        raise SystemExit(2)

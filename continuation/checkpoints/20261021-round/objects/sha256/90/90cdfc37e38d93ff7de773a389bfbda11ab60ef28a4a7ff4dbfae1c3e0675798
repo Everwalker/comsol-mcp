@@ -1,0 +1,534 @@
+"""Bounded source entry for a newly registered W25 no-solve probe session.
+
+The three admission operations and their evidence live outside the fixed
+17-operation model probe budget. This module only calls ControlDaemon's
+public dispatch; it never constructs a Server or Worker itself.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
+import hashlib
+import hmac
+import ipaddress
+import json
+import os
+from pathlib import Path
+import stat
+import subprocess
+from typing import Any, Mapping
+from uuid import uuid4
+
+from comsol_mcp._control_daemon import ControlDaemon
+from runner import (
+    BoundManagedPublicGate,
+    ProbeAdmissionError,
+    ProbeCloseTraceCheckpoint,
+    ProbeCloseGrantSeed,
+    _json_bytes,
+    _probe_close_authorization_ref,
+    _validate_probe_close_trace_checkpoint,
+    _write_new_json,
+    run_probe,
+)
+from operation_store_witness import save_raw_response_once
+
+
+ADMISSION_PUBLIC_CALL_BUDGET = 3
+PROBE_PUBLIC_CALL_BUDGET = 17
+_PROJECT_PERMISSIONS = ["inspect", "project_write", "compute", "host_control"]
+
+
+@dataclass(frozen=True)
+class ProbeSessionAdmission:
+    host: "ProbeControlHost"
+    daemon: ControlDaemon
+    run_id: str
+    project_id: str
+    session_id: str
+    runtime_id: str
+    workspace: str
+    gate: Any
+    root: Path
+    setup_calls: tuple[Mapping[str, Any], ...]
+    setup_result: Mapping[str, Any]
+
+
+@dataclass
+class ProbeControlHost:
+    daemon: ControlDaemon
+    run_id: str
+    root: Path
+    close_delegator: "W25ProbeCloseDelegator"
+    close_grant_seed: ProbeCloseGrantSeed
+    _unknown_owner_hold: dict[str, Any] | None = field(default=None, init=False, repr=False)
+    _held_owner_processes: tuple[Any, Any] | None = field(default=None, init=False, repr=False)
+
+    def _retain_original_owners_after_probe_stop(self, admission: ProbeSessionAdmission,
+                                                 probe: Mapping[str, Any]) -> dict[str, Any]:
+        probe_status = probe.get("status")
+        if (type(admission) is not ProbeSessionAdmission or admission.host is not self
+                or admission.run_id != self.run_id
+                or probe_status not in {"UNKNOWN_OR_BLOCKED_NO_REPLAY",
+                                        "FAILED_TERMINAL_PRE_DISPATCH_VALIDATION_NO_REPLAY"}):
+            raise ProbeAdmissionError("only this run's terminal no-replay probe result may retain its owners")
+        if (probe_status == "FAILED_TERMINAL_PRE_DISPATCH_VALIDATION_NO_REPLAY"
+                and (not isinstance(probe.get("terminal_failure"), Mapping)
+                     or probe["terminal_failure"].get("status") != "PROVEN_TERMINAL_FAILED_BEFORE_WORKER_DISPATCH")):
+            raise ProbeAdmissionError("terminal FAILED owner hold requires the exact durable pre-dispatch proof")
+        gate = admission.gate
+        if (not isinstance(gate, BoundManagedPublicGate)
+                or gate.daemon is not self.daemon or gate.close_delegator is not self.close_delegator
+                or gate.context.project_id != admission.project_id
+                or gate.context.session_id != admission.session_id):
+            raise ProbeAdmissionError("UNKNOWN owner hold does not bind the exact registered managed session")
+        server_process, worker_process = gate.server_process, gate.worker_process
+        if (type(server_process) is not subprocess.Popen or type(worker_process) is not subprocess.Popen
+                or self._unknown_owner_hold is not None):
+            raise ProbeAdmissionError("UNKNOWN owner hold requires the two original retained Popen owners")
+        self._held_owner_processes = (server_process, worker_process)
+        unknown = probe_status == "UNKNOWN_OR_BLOCKED_NO_REPLAY"
+        self._unknown_owner_hold = {
+            "status": ("UNKNOWN_ORIGINAL_SERVER_AND_WORKER_OWNERS_HELD" if unknown else
+                       "FAILED_PRE_DISPATCH_ORIGINAL_SERVER_AND_WORKER_OWNERS_HELD"),
+            "run_id": self.run_id, "project_id": admission.project_id,
+            "session_id": admission.session_id, "probe_status": probe_status,
+            "original_server_popen_retained": True, "original_worker_popen_retained": True,
+            "signals_during_hold": 0,
+            "session_cleanup": ("SUPPRESSED_UNTIL_EXTERNAL_TERMINAL_RECONCILIATION" if unknown else
+                                "SUPPRESSED_AFTER_TERMINAL_VALIDATION_FAILURE_NO_REPLAY"),
+        }
+        return dict(self._unknown_owner_hold)
+
+    def close(self) -> dict[str, Any]:
+        if self._unknown_owner_hold is not None:
+            held = self._held_owner_processes or (None, None)
+            return {**self._unknown_owner_hold,
+                    "server_popen_live": held[0] is not None and held[0].poll() is None,
+                    "worker_popen_live": held[1] is not None and held[1].poll() is None}
+        try:
+            self.daemon.close()
+        finally:
+            self.close_delegator.close()
+        return {"status": "CONTROL_DAEMON_CLOSED", "original_owners_released": True}
+
+
+def create_probe_control_host(*, home: str | Path, project_root: str | Path,
+                              close_grant_seed: ProbeCloseGrantSeed,
+                              host_provider_config_root: str | Path | None = None,
+                              service: Any = None, registry: Any = None, worker: Any = None,
+                              desktop_adapter: Any = None,
+                              session_runtime_resolver: Any = None,
+                              session_worker_factory: Any = None,
+                              session_peer_observer: Any = None,
+                              session_server_launcher: Any = None) -> ProbeControlHost:
+    """Construct the exact W25 ControlDaemon with its close delegator already installed."""
+    if type(close_grant_seed) is not ProbeCloseGrantSeed:
+        raise ProbeAdmissionError("ControlDaemon construction requires exact once/approval close hashes")
+    root_path = Path(project_root)
+    run_id = uuid4().hex
+    root = _private_child_root(root_path, run_id)
+    if host_provider_config_root is None:
+        grant_root = root / "close-grant"
+        grant_root.mkdir(mode=0o700)
+        info = grant_root.lstat()
+        if (stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode)
+                or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700):
+            raise ProbeAdmissionError("W25 close-grant directory is not a private owned directory")
+    else:
+        grant_root = _prepare_host_provider_config_root(host_provider_config_root)
+    delegator = W25ProbeCloseDelegator(seed=close_grant_seed, run_id=run_id, private_root=grant_root)
+    daemon = ControlDaemon(
+        home, service=service, registry=registry, worker=worker,
+        project_root=root_path, desktop_adapter=desktop_adapter,
+        session_runtime_resolver=session_runtime_resolver,
+        session_worker_factory=session_worker_factory,
+        session_peer_observer=session_peer_observer,
+        session_server_launcher=session_server_launcher,
+        project_authorization_verifier=delegator,
+    )
+    if daemon._scoped_host_provider is not delegator or daemon.backend.scoped_host_provider is not delegator:
+        daemon.close()
+        delegator.close()
+        raise ProbeAdmissionError("W25 close delegator was not retained in both original ControlDaemon scopes")
+    return ProbeControlHost(daemon, run_id, root, delegator, close_grant_seed)
+
+
+def _prepare_host_provider_config_root(value: str | Path) -> Path:
+    """Create one exact R4 config-only directory on local ownership-enforcing /private/tmp."""
+    path = Path(value)
+    temp_root = Path("/private/tmp")
+    if (not path.is_absolute() or path.parent != temp_root or ".." in path.parts
+            or not path.name.startswith("w25-probe17-host-provider-r4-")
+            or len(path.name) != len("w25-probe17-host-provider-r4-") + 36):
+        raise ProbeAdmissionError("W25 R4 host provider config root must be a UUID child of /private/tmp")
+    try:
+        import uuid
+        uuid.UUID(path.name.removeprefix("w25-probe17-host-provider-r4-"))
+        for component in (Path("/"), Path("/private"), temp_root):
+            info = component.lstat()
+            if stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode):
+                raise ProbeAdmissionError("W25 R4 /private/tmp path contains a non-directory or symlink")
+        if temp_root.resolve(strict=True) != temp_root:
+            raise ProbeAdmissionError("W25 R4 /private/tmp path is not canonical")
+        if path.exists() or path.is_symlink():
+            raise ProbeAdmissionError("W25 R4 host provider config root already exists; refusing reuse")
+        path.mkdir(mode=0o700)
+        info = path.lstat()
+        if (stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode)
+                or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700
+                or path.resolve(strict=True) != path):
+            raise ProbeAdmissionError("W25 R4 host provider config root is not an exact private owned directory")
+        from comsol_mcp._host_scoped_provider import verify_private_path_security
+        checked = verify_private_path_security(path, directory=True)
+        if checked.get("identity") != {"device": info.st_dev, "inode": info.st_ino}:
+            raise ProbeAdmissionError("W25 R4 host provider config root identity changed during ownership check")
+    except ProbeAdmissionError:
+        raise
+    except Exception as exc:
+        raise ProbeAdmissionError("W25 R4 host provider config root failed the production ownership/mount gate") from exc
+    return path
+
+
+class W25ProbeCloseDelegator:
+    """One-run host-owned close grant, installed before ControlDaemon creation."""
+
+    def __init__(self, *, seed: ProbeCloseGrantSeed, run_id: str, private_root: Path):
+        if (type(seed) is not ProbeCloseGrantSeed or not isinstance(run_id, str)
+                or len(run_id) != 32 or any(char not in "0123456789abcdef" for char in run_id)):
+            raise ProbeAdmissionError("W25 close delegator requires the exact run seed and run id")
+        self._seed = seed
+        self._run_id = run_id
+        self._private_root = Path(private_root)
+        self._gate: BoundManagedPublicGate | None = None
+        self._created: dict[str, Any] | None = None
+        self._checkpoint: ProbeCloseTraceCheckpoint | None = None
+        self._scope: dict[str, Any] | None = None
+        self._authorization_ref: str | None = None
+        self._provider: Any = None
+        self._used = False
+
+    def __call__(self, _project_id: str, _authorization_ref: str) -> bool:
+        # This object must never authorize project.policy_set or broad control.
+        return False
+
+    @property
+    def run_id(self) -> str:
+        return self._run_id
+
+    def seal_created_model(self, *, gate: Any, seed: ProbeCloseGrantSeed, run_id: str,
+                           project_id: str, session_id: str, model_ref: Any,
+                           created_label: str,
+                           worker_binding: Mapping[str, Any], create_execution: Mapping[str, Any],
+                           create_response_sha256: str | None, public_call_count: int) -> dict[str, Any]:
+        from comsol_mcp._execution_contract import ModelRef
+
+        if (self._created is not None or type(gate) is not BoundManagedPublicGate
+                or gate.close_delegator is not self or seed != self._seed or run_id != self._run_id
+                or project_id != gate.project_id or session_id != gate.session_id
+                or type(model_ref) is not ModelRef or model_ref.session_id != session_id
+                or created_label != "W25 zero-solve fingerprint probe"
+                or type(public_call_count) is not int or public_call_count != 1
+                or not isinstance(create_response_sha256, str) or len(create_response_sha256) != 64
+                or not isinstance(create_execution.get("job_id"), str)
+                or not isinstance(create_execution.get("operation_id"), str)
+                or create_execution.get("request_id") != "w25-probe-" + run_id + "-01-create-owned-blank"):
+            raise ProbeAdmissionError("only this run's one complete public model.create may seal a close grant")
+        if gate.daemon._scoped_host_provider is not self or gate.backend.scoped_host_provider is not self:
+            raise ProbeAdmissionError("close delegator was not installed before ControlDaemon/session registration")
+        gate.assert_live()
+        expected_binding = gate.expected_worker_binding(model_ref.as_dict())
+        if dict(worker_binding) != expected_binding:
+            raise ProbeAdmissionError("created blank Worker binding differs from the registered owner")
+        self._gate = gate
+        self._created = {
+            "project_id": project_id, "session_id": session_id, "model_ref": model_ref,
+            "created_label": created_label,
+            "worker_binding": dict(expected_binding), "create_response_sha256": create_response_sha256,
+            "create_job_id": create_execution["job_id"], "create_operation_id": create_execution["operation_id"],
+            "create_revision": 0,
+        }
+        return {
+            "status": "SEALED_UNIQUE_SUCCESSFUL_MODEL_CREATE",
+            "project_id": project_id, "session_id": session_id, "model_ref": model_ref.as_dict(),
+            "created_label": created_label,
+            "create_response_sha256": create_response_sha256,
+            "create_job_id": create_execution["job_id"],
+            "create_operation_id": create_execution["operation_id"],
+            "worker_binding_sha256": hashlib.sha256(_json_bytes(dict(expected_binding))).hexdigest(),
+            "once_binding_sha256": self._seed.once_binding_sha256,
+            "approval_sha256": self._seed.approval_sha256,
+        }
+
+    def bind_close_scope(self, *, gate: Any, seed: ProbeCloseGrantSeed, run_id: str,
+                         project_id: str, session_id: str, model_ref: Any,
+                         checkpoint: ProbeCloseTraceCheckpoint, worker_binding: Mapping[str, Any],
+                         destination_ref: None) -> tuple[str, dict[str, Any]]:
+        from comsol_mcp._execution_contract import ModelRef
+        from comsol_mcp._host_scoped_provider import scope_sha256, load_host_scoped_provider
+
+        created = self._created
+        if (created is None or self._checkpoint is not None or self._scope is not None or self._authorization_ref is not None
+                or type(gate) is not BoundManagedPublicGate or gate is not self._gate
+                or gate.close_delegator is not self or seed != self._seed or run_id != self._run_id
+                or project_id != created["project_id"] or session_id != created["session_id"]
+                or type(model_ref) is not ModelRef or model_ref != created["model_ref"]
+                or destination_ref is not None):
+            raise ProbeAdmissionError("close scope is not this run's unique created blank with no destination")
+        _validate_probe_close_trace_checkpoint(checkpoint, run_id=run_id, project_id=project_id,
+                                               session_id=session_id, model_ref=model_ref)
+        if checkpoint.current_label != created["created_label"]:
+            raise ProbeAdmissionError("close trace label differs from the sealed public model.create label")
+        expected_revision = checkpoint.expected_revision
+        public_call_count = checkpoint.public_call_count_before_close
+        gate.assert_live()
+        current_binding = gate.expected_worker_binding(model_ref.as_dict())
+        if current_binding != created["worker_binding"] or dict(worker_binding) != current_binding:
+            raise ProbeAdmissionError("close scope Worker binding differs from the sealed model.create owner")
+        scope = {"model_ref": model_ref.as_dict(), "expected_revision": expected_revision,
+                 "destination_ref": None}
+        authorization_ref = _probe_close_authorization_ref(
+            seed, run_id=run_id, project_id=project_id, session_id=session_id,
+            model_ref=model_ref, checkpoint=checkpoint,
+            worker_binding=current_binding,
+        )
+        expiry = (datetime.now(timezone.utc) + timedelta(minutes=5)).replace(microsecond=0)
+        expires_at_utc = expiry.strftime("%Y-%m-%dT%H:%M:%SZ")
+        config_path = self._private_root / "HOST_SCOPED_PROVIDER_CONFIG.json"
+        config = {
+            "schema": "comsol-mcp.host-scoped-provider-config/1",
+            "destinations": [],
+            "grants": [{
+                "project_id": project_id, "action": "model.close",
+                "authorization_ref_sha256": hashlib.sha256(authorization_ref.encode("utf-8")).hexdigest(),
+                "scope_sha256": scope_sha256(project_id, "model.close", scope),
+                "expires_at_utc": expires_at_utc,
+            }],
+        }
+        config_record = _write_new_json(config_path, config)
+        if config_record.get("mode") != 0o600:
+            raise ProbeAdmissionError("ephemeral W25 exact-scope HostScopedProvider config is not mode 0600")
+        provider = load_host_scoped_provider(config_path)
+        self._scope = scope
+        self._checkpoint = checkpoint
+        self._authorization_ref = authorization_ref
+        self._provider = provider
+        receipt = {
+            "status": "EXACT_SCOPE_HOST_PROVIDER_LOADED",
+            "scope": scope, "scope_sha256": config["grants"][0]["scope_sha256"],
+            "close_checkpoint": checkpoint.as_dict(),
+            "expected_revision": expected_revision,
+            "public_call_count_before_close": public_call_count,
+            "authorization_ref_sha256": config["grants"][0]["authorization_ref_sha256"],
+            "once_binding_sha256": seed.once_binding_sha256, "approval_sha256": seed.approval_sha256,
+            "worker_binding_sha256": hashlib.sha256(_json_bytes(current_binding)).hexdigest(),
+            "provider_config": config_record, "expires_at_utc": expires_at_utc,
+            "public_close_budget": 1,
+        }
+        return authorization_ref, receipt
+
+    def verify_scope(self, project_id: str, action: str, scope: Mapping[str, Any],
+                     authorization_ref: str) -> bool:
+        if (self._used or self._provider is None or self._gate is None or self._created is None
+                or self._checkpoint is None
+                or action != "model.close" or project_id != self._created["project_id"]
+                or not isinstance(scope, Mapping) or set(scope) != {"model_ref", "expected_revision", "destination_ref"}
+                or scope != self._scope or not isinstance(authorization_ref, str)
+                or not hmac.compare_digest(authorization_ref, self._authorization_ref or "")):
+            return False
+        if scope.get("expected_revision") != self._checkpoint.expected_revision:
+            return False
+        try:
+            self._gate.assert_live()
+            ref = self._created["model_ref"]
+            if self._gate.expected_worker_binding(ref.as_dict()) != self._created["worker_binding"]:
+                return False
+            accepted = self._provider.verify_scope(project_id, action, scope, authorization_ref)
+        except Exception:
+            return False
+        if accepted is True:
+            self._used = True
+            return True
+        return False
+
+    def close(self) -> None:
+        provider, self._provider = self._provider, None
+        close = getattr(provider, "close", None)
+        if callable(close):
+            close()
+
+
+def _private_child_root(project_root: Path, run_id: str) -> Path:
+    base = Path(project_root)
+    try:
+        base_info = base.lstat()
+        resolved = base.resolve(strict=True)
+    except OSError as exc:
+        raise ProbeAdmissionError("ControlDaemon workspace root cannot be verified") from exc
+    if (not base.is_absolute() or stat.S_ISLNK(base_info.st_mode) or not stat.S_ISDIR(base_info.st_mode)
+            or base_info.st_uid != os.getuid() or resolved != base):
+        raise ProbeAdmissionError("ControlDaemon workspace root is not the exact owned directory")
+    root = base / f".w25-probe-{run_id}"
+    if root.exists() or root.is_symlink():
+        raise ProbeAdmissionError("fresh W25 admission evidence root already exists")
+    root.mkdir(mode=0o700)
+    info = root.lstat()
+    if (stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode)
+            or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700
+            or root.resolve(strict=True) != root):
+        raise ProbeAdmissionError("new W25 admission evidence root is not a private owned child")
+    setup = root / "setup"
+    setup.mkdir(mode=0o700)
+    setup_info = setup.lstat()
+    if stat.S_ISLNK(setup_info.st_mode) or not stat.S_ISDIR(setup_info.st_mode) \
+            or setup_info.st_uid != os.getuid() or stat.S_IMODE(setup_info.st_mode) != 0o700:
+        raise ProbeAdmissionError("W25 setup evidence directory is not private")
+    return root
+
+
+def _public_setup_call(daemon: ControlDaemon, root: Path, ordinal: int, operation: str,
+                       arguments: Mapping[str, Any], execution: Mapping[str, Any]) -> dict[str, Any]:
+    if type(ordinal) is not int or not 1 <= ordinal <= ADMISSION_PUBLIC_CALL_BUDGET:
+        raise ProbeAdmissionError("fixed three-call admission budget exhausted")
+    name = f"{ordinal:02d}-{operation.replace('.', '-') }"
+    request = {"operation": operation, "arguments": dict(arguments), "execution": dict(execution)}
+    intent_path = root / "setup" / f"{name}-intent.json"
+    intent = _write_new_json(intent_path, {
+        "schema": "w25-probe-admission-call-intent/1", "ordinal": ordinal,
+        "operation": operation, "request": request, "retry": False,
+    })
+    try:
+        response = daemon.dispatch(request)
+    except BaseException as exc:
+        failure = _write_new_json(root / "setup" / f"{name}-failure.json", {
+            "schema": "w25-probe-admission-call-failure/1", "ordinal": ordinal,
+            "operation": operation, "status": "UNKNOWN_NO_REPLAY",
+            "exception_type": type(exc).__name__, "owner_handles_retained": True,
+        })
+        raise ProbeAdmissionError(f"{operation} has no terminal setup response; preserve owners and do not replay") from exc
+    response_record = save_raw_response_once(root / "setup" / f"{name}-response.json", _json_bytes(response))
+    if (not isinstance(response, Mapping) or response.get("success") is not True
+            or (isinstance(response.get("execution"), Mapping)
+                and response["execution"].get("status") in {"RUNNING", "QUEUED", "UNKNOWN"})):
+        raise ProbeAdmissionError(f"{operation} did not produce terminal public success; preserve evidence and do not replay")
+    return {"ordinal": ordinal, "operation": operation, "intent": intent,
+            "response": response_record, "terminal_success": True, "request_id": execution.get("request_id")}
+
+
+def admit_probe_session(host: ProbeControlHost, *, runtime_id: str) -> ProbeSessionAdmission:
+    """Create and connect exactly one project-owned managed session via public calls."""
+    if (type(host) is not ProbeControlHost or type(host.daemon) is not ControlDaemon
+            or host.daemon._scoped_host_provider is not host.close_delegator
+            or host.daemon.backend.scoped_host_provider is not host.close_delegator
+            or not isinstance(runtime_id, str) or not runtime_id.strip() or len(runtime_id) > 128):
+        raise ProbeAdmissionError("exact constructor-installed W25 ControlDaemon and approved runtime id are required")
+    daemon = host.daemon
+    base = daemon.backend.project_root
+    run_id = host.run_id
+    root = host.root
+    if root != base / f".w25-probe-{run_id}":
+        raise ProbeAdmissionError("W25 admission root differs from the constructor-installed run identity")
+    workspace = f"{root.name}/workspace"
+    setup_calls: list[dict[str, Any]] = []
+
+    request_id = f"w25-probe-{run_id}-setup-01-project-create"
+    key = f"w25-probe-{run_id}-setup-01"
+    created = _public_setup_call(daemon, root, 1, "project.create", {
+        "label": "W25 zero-solve fingerprint probe",
+        "workspace": workspace,
+        "policy": {"permissions": list(_PROJECT_PERMISSIONS)},
+    }, {"request_id": request_id, "idempotency_key": key})
+    setup_calls.append(created)
+    create_response = __import__("json").loads(Path(created["response"]["path"]).read_text(encoding="utf-8"))
+    project = create_response.get("data", {}).get("project") if isinstance(create_response.get("data"), Mapping) else None
+    if (not isinstance(project, Mapping) or not isinstance(project.get("project_id"), str)
+            or project.get("workspace") != str((base / workspace).resolve(strict=True))):
+        raise ProbeAdmissionError("project.create did not bind the exact new workspace")
+    project_id = project["project_id"]
+
+    request_id = f"w25-probe-{run_id}-setup-02-session-start"
+    key = f"w25-probe-{run_id}-setup-02"
+    started = _public_setup_call(daemon, root, 2, "session.start", {
+        "project_id": project_id, "runtime_id": runtime_id, "options": {}, "resources": {},
+        "request_id": request_id, "idempotency_key": key,
+    }, {"project_id": project_id, "request_id": request_id, "idempotency_key": key})
+    setup_calls.append(started)
+    start_response = __import__("json").loads(Path(started["response"]["path"]).read_text(encoding="utf-8"))
+    start_data = start_response.get("data")
+    if (not isinstance(start_data, Mapping) or start_data.get("project_id") != project_id
+            or start_data.get("runtime_id") != runtime_id or start_data.get("server_ownership") != "mcp_managed"
+            or not isinstance(start_data.get("session_id"), str) or not start_data["session_id"]
+            or not isinstance(start_data.get("endpoint"), Mapping)):
+        raise ProbeAdmissionError("session.start lacks exact project, runtime, owned session, or endpoint binding")
+    endpoint = dict(start_data["endpoint"])
+    try:
+        address = ipaddress.ip_address(endpoint.get("host"))
+    except (TypeError, ValueError) as exc:
+        raise ProbeAdmissionError("session.start endpoint is not a literal loopback address") from exc
+    if not address.is_loopback or type(endpoint.get("port")) is not int or not 1 <= endpoint["port"] <= 65535:
+        raise ProbeAdmissionError("session.start endpoint is outside the exact loopback-only admission scope")
+    session_id = start_data["session_id"]
+
+    request_id = f"w25-probe-{run_id}-setup-03-session-connect"
+    key = f"w25-probe-{run_id}-setup-03"
+    connected = _public_setup_call(daemon, root, 3, "session.connect", {
+        "project_id": project_id, "session_id": session_id, "runtime_id": runtime_id,
+        "endpoint": endpoint, "request_id": request_id, "idempotency_key": key,
+    }, {"project_id": project_id, "request_id": request_id, "idempotency_key": key})
+    setup_calls.append(connected)
+    connect_response = __import__("json").loads(Path(connected["response"]["path"]).read_text(encoding="utf-8"))
+    connect_data = connect_response.get("data")
+    if (not isinstance(connect_data, Mapping) or connect_data.get("project_id") != project_id
+            or connect_data.get("session_id") != session_id or connect_data.get("runtime_id") != runtime_id
+            or connect_data.get("endpoint") != endpoint or connect_data.get("server_ownership") != "mcp_managed"):
+        raise ProbeAdmissionError("session.connect did not return the exact started project-owned endpoint")
+
+    from runner import BoundManagedPublicGate
+    gate = BoundManagedPublicGate.bind(daemon, project_id, session_id, close_delegator=host.close_delegator)
+    owner = gate.assert_live()
+    setup_result = {
+        "schema": "w25-probe-session-admission/1", "status": "ADMITTED_REGISTERED_MANAGED_SESSION",
+        "run_id": run_id, "project_id": project_id, "session_id": session_id,
+        "runtime_id": runtime_id, "workspace": project["workspace"], "endpoint": endpoint,
+        "setup_public_calls_used": len(setup_calls), "setup_public_call_budget": ADMISSION_PUBLIC_CALL_BUDGET,
+        "probe_public_call_budget": PROBE_PUBLIC_CALL_BUDGET, "setup_calls": setup_calls,
+        "original_owner": owner, "original_server_popen_retained": True,
+        "original_worker_popen_retained": True,
+        "close_grant_seed": {"once_binding_sha256": host.close_grant_seed.once_binding_sha256,
+                              "approval_sha256": host.close_grant_seed.approval_sha256},
+        "cleanup": "original managed owners remain held by ControlDaemon; no replay or implicit takeover",
+    }
+    saved_setup = _write_new_json(root / "ADMISSION_RESULT.json", setup_result)
+    return ProbeSessionAdmission(host, daemon, run_id, project_id, session_id, runtime_id, workspace,
+                                 gate, root, tuple(setup_calls), {**setup_result, "evidence": saved_setup})
+
+
+def run_admitted_probe(host: ProbeControlHost, *, runtime_id: str) -> dict[str, Any]:
+    """Run admission (3 setup calls) then the independent fixed 17-call probe."""
+    admission = admit_probe_session(host, runtime_id=runtime_id)
+    probe_root = Path(admission.gate.context.project_root) / "probe17"
+    probe = run_probe(admission.gate, probe_root, close_grant_seed=host.close_grant_seed,
+                      run_id=admission.run_id)
+    owner_hold = None
+    if probe.get("status") in {"UNKNOWN_OR_BLOCKED_NO_REPLAY",
+                                "FAILED_TERMINAL_PRE_DISPATCH_VALIDATION_NO_REPLAY"}:
+        owner_hold = host._retain_original_owners_after_probe_stop(admission, probe)
+    entry = {
+        "schema": "w25-probe-registered-entry-result/1",
+        "status": "ENTRY_COMPLETED" if probe.get("status") == "COMPLETED_17_PUBLIC_CALLS_PROBE_CLOSED_NOT_NATIVE_ACCEPTANCE" else probe.get("status"),
+        "admission_result": admission.setup_result["evidence"],
+        "project_id": admission.project_id, "session_id": admission.session_id,
+        "setup_public_calls_used": admission.setup_result["setup_public_calls_used"],
+        "setup_public_call_budget": ADMISSION_PUBLIC_CALL_BUDGET,
+        "probe_public_calls_used": probe.get("public_calls_used"),
+        "probe_public_call_budget": PROBE_PUBLIC_CALL_BUDGET,
+        "probe_result": {"path": str(probe_root / "RUN_RESULT.json"),
+                         "sha256": __import__("hashlib").sha256((probe_root / "RUN_RESULT.json").read_bytes()).hexdigest()},
+        "original_owner_retained": True, "native_acceptance": "NOT_CLAIMED",
+        "owner_hold": owner_hold,
+        "session_cleanup": ("SUPPRESSED_AFTER_TERMINAL_NO_REPLAY; original Server/Worker Popen handles remain passively retained"
+                            if owner_hold is not None else
+                            "NOT_RUN; original Server/Worker handles remain owned by this ControlDaemon"),
+    }
+    entry_record = _write_new_json(admission.root / "PROBE_ENTRY_RESULT.json", entry)
+    return {"admission": admission, "probe": probe, "entry": entry, "entry_record": entry_record}

@@ -1,0 +1,39 @@
+"""Finite proposal integrity checks; the active reader remains current175-r13."""
+import hashlib
+import json
+from pathlib import Path
+import unittest
+ROOT = Path(__file__).resolve().parents[1]
+LOCK = ROOT / "tools/w26_application_sources_175_r14_prepared.lock.json"
+MAP = ROOT / "tools/w26_profile_map_current_r14_proposed.json"
+R13_LOCK = ROOT / "tools/w26_application_sources_175_r13_prepared.lock.json"
+R13_SHA256 = "1dd9ba4db2264e44a6c778eff8d9d18d34709f7b954bff6252bce6cbede9b826"
+CHANGED_PACKAGE_PATHS = ("comsol_mcp/_control_daemon.py", "comsol_mcp/_session_server.py", "comsol_mcp/data/science_recipes/SOURCE_ORIGINS.json", "comsol_mcp/data/science_recipes/java/W24StaticShapeFixture.java")
+def digest(data): return hashlib.sha256(data).hexdigest()
+class Current175R14ProposalTests(unittest.TestCase):
+ def test_old_lock_unchanged_and_new_finite_member_set(self):
+  self.assertEqual(digest(R13_LOCK.read_bytes()), R13_SHA256)
+  old=json.loads(R13_LOCK.read_text()); lock=json.loads(LOCK.read_text())
+  self.assertEqual(old["profile"],"current175-r13"); self.assertEqual(lock["profile"],"current175-r14")
+  self.assertEqual((lock["member_count"],lock["package_count"],lock["root_count"]),(175,172,3))
+  self.assertEqual(set(lock["members"]),set(old["members"]))
+  changed={p for p in lock["members"] if lock["members"][p]!=old["members"][p]}
+  self.assertEqual(changed,set(CHANGED_PACKAGE_PATHS))
+  for rel in CHANGED_PACKAGE_PATHS: self.assertEqual(lock["members"][rel],digest((ROOT/rel).read_bytes()),rel)
+ def test_proposed_map_pins_new_lock_without_activating_reader(self):
+  lockbytes=LOCK.read_bytes(); lock=json.loads(lockbytes); pm=json.loads(MAP.read_text())
+  row=pm["current_profiles"]["current175-r14"]; supported=pm["supported_current_profiles"]["current175-r14"]
+  self.assertEqual(row["source_lock_name"],LOCK.name); self.assertEqual(row["source_lock_sha256"],digest(lockbytes))
+  self.assertEqual(supported["source_lock_name"],LOCK.name); self.assertEqual(supported["source_lock_sha256"],digest(lockbytes))
+  self.assertEqual(row["source_profile"],"current175-r14")
+  fp=digest(json.dumps(lock["members"],sort_keys=True,separators=(",",":"),ensure_ascii=False,allow_nan=False).encode())
+  self.assertEqual(row["member_fingerprint_sha256"],fp)
+  self.assertEqual(pm["current_profiles"]["current175-r13"]["source_lock_sha256"],R13_SHA256)
+  active=json.loads((ROOT/"tools/w26_profile_map_current.json").read_text())
+  self.assertNotIn("current175-r14",active["current_profiles"])
+ def test_r5_java_and_readback_preimages_are_not_incorporated(self):
+  expected="70a46009b84148d54f34613171d5c83ecc557306574764edad59b9bc9262a2d0"
+  for rel in ("tools/java/W24CureCouponFixture.java","comsol_mcp/data/science_recipes/java/W24CureCouponFixture.java"):
+   self.assertEqual(digest((ROOT/rel).read_bytes()),expected,rel)
+  self.assertEqual(digest((ROOT/"tools/w24_v2_setup_readback.py").read_bytes()),"4e94cd835cb6511f28f12ffd4b9bbd85983f0c1b5b1d16bf2326c7fe29504d7b")
+if __name__=="__main__": unittest.main()

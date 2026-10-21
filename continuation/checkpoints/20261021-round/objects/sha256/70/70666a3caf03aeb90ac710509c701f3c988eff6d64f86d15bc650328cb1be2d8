@@ -1,0 +1,102 @@
+"""Exercise the R12 external driver with inert Python owner stand-ins only."""
+from __future__ import annotations
+
+import importlib.util
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import time
+from types import SimpleNamespace
+
+
+controller_path = Path(sys.argv[1])
+run_root = Path(sys.argv[2])
+spec = importlib.util.spec_from_file_location("w23_r12_child_control_target", controller_path)
+controller = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(controller)
+run_root.mkdir(mode=0o700, parents=False, exist_ok=False)
+state = {"holder": None, "observer_calls": 0}
+
+
+class R5:
+    @staticmethod
+    def _server_birth_epoch_seconds(gate):
+        assert gate is state["gate"]
+        return time.time() - 10.0
+
+    @staticmethod
+    def _original_owner_references(host, outcome):
+        state["observer_calls"] += 1
+        holder = state["holder"]
+        assert holder is not None and host is holder.host and outcome is holder.outcome
+        if os.environ.get("W23_R12_TEST_OBSERVER_ALWAYS_FAIL") == "1":
+            raise RuntimeError("synthetic same-host owner observer failure")
+        return holder.owner_references
+
+
+class Bridge:
+    def __init__(self):
+        self.gate = object()
+        state["gate"] = self.gate
+
+    def dispatch(self, *args, **kwargs):
+        return {"success": True, "data": {"synthetic": True}}
+
+
+class FreshOwnerRoute:
+    def __init__(self, dispatcher):
+        self.dispatcher = dispatcher
+        self.calls = 0
+
+    def call_raw(self):
+        self.calls += 1
+        return self.dispatcher("one inert test call")
+
+
+class PublicRoute:
+    def call_raw(self):
+        raise AssertionError("unused alternate route")
+
+
+bridge = Bridge()
+route = FreshOwnerRoute(bridge.dispatch)
+runtime = SimpleNamespace(FreshOwnerRoute=FreshOwnerRoute, PublicRoute=PublicRoute)
+r8 = SimpleNamespace(RETAINED_UNKNOWN_HOLDERS=[])
+
+
+def fake_r8_entry(**kwargs):
+    assert set(kwargs) == {"outer_review_sha256", "outer_once_sha256", "r6_review_sha256",
+                           "r6_once_sha256", "source_projection_sha256"}
+    route.call_raw()
+    server = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(0.9)"],
+                              stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL, close_fds=True)
+    worker = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(1.1)"],
+                              stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL, close_fds=True)
+    holder = SimpleNamespace(host=object(), outcome={},
+                              owner_references=(("server", server), ("worker", worker)))
+    state["holder"] = holder
+    r8.RETAINED_UNKNOWN_HOLDERS.append((holder, R5))
+    return {"schema": "synthetic-r8-unknown/1",
+            "status": "UNKNOWN_NO_REPLAY_NO_MORE_RPC_NO_CLOSE"}
+
+
+r8.run_authorized_outer_entry = fake_r8_entry
+review = {"driver_run_root": str(run_root)}
+once = {"status": "INERT_TEST_FIXTURE_NOT_AUTHORITY"}
+source_data = {"driver_run_root": run_root, "controller_sha256": "d" * 64}
+injected = (review, once, source_data, r8, {}, SimpleNamespace(), runtime, R5)
+controller._strict_r12_authority = lambda **kwargs: injected
+controller._consume_r12_once = lambda *args, **kwargs: "e" * 64
+real_deadline_type = controller.DispatchDeadline
+controller.DispatchDeadline = lambda r5: real_deadline_type(r5, now=time.time)
+sha_args = {name: char * 64 for name, char in (
+    ("r12_review_sha256", "a"), ("r12_once_sha256", "b"),
+    ("r8_review_sha256", "c"), ("r8_once_sha256", "d"),
+    ("r6_review_sha256", "e"), ("r6_once_sha256", "f"),
+    ("source_projection_sha256", "0"))}
+terminal = controller.run_authorized_external_driver(**sha_args)
+print(json.dumps(terminal, sort_keys=True, separators=(",", ":")))

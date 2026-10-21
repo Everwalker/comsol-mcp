@@ -1,0 +1,113 @@
+{
+  "schema": "SCIENCE76_GEOMETRIC_NONLINEARITY_PROPERTY_SURVEY_UNSIGNED_PLAN_R2",
+  "status": "PLAN_ONLY_MAIN_REVIEW_REQUIRED_BEFORE_NATIVE",
+  "candidate_source_fingerprint_sha256": "893b37f2dc577c6513541e499ba6aad90708d4bced6886fe6d8abe6e33e5b10f",
+  "source_changes_included": false,
+  "reuse": "Existing W24 cure public-MCP execution/owner path and the established W24 cure setup sequence; add only a reviewed, hash-bound survey phase in a new immutable source candidate if Main accepts the plan. Do not add a second runner or edit R31 source.",
+  "purpose": "Observe the actual transient StudyFeature, attached Time Solver feature, their geometricNonlinearity property metadata, physics context, and current license availability without attempting the disputed setter or any solve.",
+  "actual_R4_failure": {
+    "raw_path": "repository/_state/science76-r14-r4-main-recovery-20261021-r1/TERMINAL_RAW/evidence/64-code.execute_java.json",
+    "raw_sha256": "c98912442c37ee33850f0fe5a54714dd3f46f2bd89f1096130849c6c261fba43",
+    "entrypoint": "W24CureCouponFixture#runInPlace; phase build_v2",
+    "observed_receiver": "SolverFeature returned by findUniqueTimeFeature for the attached sequence; code called time.set(\"geometricNonlinearity\", \"on\").",
+    "observed_error": "FlException: Unknown_property; execution_state_unknown=true; partial model changes were recorded.",
+    "what_it_proves": "That setter failed on that concrete SolverFeature in that execution context.",
+    "what_it_does_not_prove": "It does not prove a wrong receiver, StudyFeature property availability, license status, or a defect in COMSOL."
+  },
+  "existing_pre_call_inspection": {
+    "raw_path": "repository/_state/science76-r14-r4-main-recovery-20261021-r1/TERMINAL_RAW/evidence/63-model.inspect.json",
+    "sha256": "c6b164a3458593108e37aa90ab9e0a9fbcf56bc55e936bfb331e07101e5eec5d",
+    "observation": "The inspect summary was taken before the build call and reported an empty model; it does not enumerate the constructed transient StudyFeature or Time Solver objects."
+  },
+  "exact_existing_recipe_context": {
+    "source_path": "tools/java/W24CureCouponFixture.java",
+    "source_sha256": "70a46009b84148d54f34613171d5c83ecc557306574764edad59b9bc9262a2d0",
+    "build_order": "buildV2 constructs geometry/physics/mesh, addStudies creates stdUV/stdBake/stdCool with StudyFeature tag time and type Transient, configures their attached solver sequences, then configures dose tolerances, and finally calls configureV2GeometricNonlinearity.",
+    "current_disputed_write": "configureV2GeometricNonlinearity loops over stdUV/stdBake/stdCool, finds the unique attached solver sequence and the unique Time Solver feature, then writes geometricNonlinearity=on.",
+    "selected_objects": "For each study: inspect model.study(studyTag).feature(\"time\"); identify the actual attached SolverSequence using the existing unique-attachment helper; inspect the unique recursive SolverFeature whose getType() is Time and preserve its sequence tag, feature path, and feature tag."
+  },
+  "proposed_fresh_survey_route": [
+    "Use one new fresh W24 cure v2 model and the existing public MCP Java execution/ownership route. Do not use or replay the R4 model reference or once.",
+    "In a separate survey-only phase in a reviewed immutable source candidate, reproduce the existing buildV2 setup through configureV2DoseSolverTolerance, then stop before configureV2GeometricNonlinearity. This setup may create the intended geometry/physics/mesh/studies/solver features, but the survey phase itself must not set the disputed property.",
+    "For each of stdUV, stdBake, stdCool, record the exact StudyFeature tag/type and read properties(), hasProperty(\"geometricNonlinearity\"), getValueType(\"geometricNonlinearity\"), and getAllowedPropertyValues(\"geometricNonlinearity\").",
+    "For each attached sequence, record sequence tag and the actual recursively selected Time Solver feature path/tag/type, then collect the same property metadata using only documented PropFeature reads.",
+    "Only if hasProperty is true and getValueType is supported, perform the matching typed getter as a read; otherwise record value as not queried. Preserve null from getAllowedPropertyValues as “not a finite string set,” not as false or unsupported.",
+    "Record exact existing physics and feature tags before the readback; do not add licensed physics or alter the model to force property presence.",
+    "Call ModelUtil.hasProduct(\"STRUCTURALMECHANICS\") once as documented current-license availability evidence. Do not call checkoutLicense; if the query errors or returns false, retain module_license=UNVERIFIED_FAIL_CLOSED and stop further licensed validation.",
+    "Capture the full structured response and pre/post model revision/dirty identity; the survey must not call set/create/delete/save, study.run, solver.run, or compute after setup, and must report zero study/solver submissions."
+  ],
+  "official_COMSOL_6_4_API_sources": [
+    {
+      "doc_id": 7717,
+      "chunk_id": 23091,
+      "sha256": "a9ffe9c3ac8a45d945eb51d23ab78277cc8970b14f5d5bddfd504147867ca674",
+      "finding": "StudyFeature extends PropFeature and exposes study-step operations."
+    },
+    {
+      "doc_id": 7675,
+      "chunk_id": 23015,
+      "sha256": "befb8cc1c0e3df1ce74d2fa2cd1377e73d378e5c26170558e9f40dc255cc3bc3",
+      "finding": "PropFeature documents getType, properties, hasProperty, getValueType, getAllowedPropertyValues and typed getters; allowed values are finite strings or null."
+    },
+    {
+      "doc_id": 7768,
+      "chunk_id": 23168,
+      "sha256": "a5e4c080407a673a5dd78e95b9fb089d92c0f518477ffdcc4f62b3348085c4eb",
+      "finding": "ModelUtil.hasProduct checks whether the current license allows specified products; do not use checkoutLicense for this survey."
+    },
+    {
+      "doc_id": 4086,
+      "chunk_id": 16700,
+      "sha256": "efba38a9c78d87e68e7306ced73ccc947c97ca43802bfb5b29045b45c56bb16a",
+      "finding": "The official product-name table identifies Structural Mechanics Module as STRUCTURALMECHANICS."
+    },
+    {
+      "doc_id": 4676,
+      "chunk_id": 17657,
+      "sha256": "57574dddd12e3caf99bd8c69b99f650ff01970d8deacce2a45147718117f0e22",
+      "finding": "Time Dependent study documentation lists tlist/usertol/rtol/tunit; it does not establish geometricNonlinearity on StudyFeature."
+    },
+    {
+      "doc_id": 4646,
+      "chunk_id": 17600,
+      "sha256": "952793e73990d64af9163e1c3f21b8f50c0b43bbc9b4b0b728be06cdb889c819",
+      "finding": "Time Solver documentation describes geometricNonlinearity on|off with module-specific license conditions; it does not establish that this actual model/receiver has the property."
+    }
+  ],
+  "decision_rules": [
+    "Do not classify the R4 Unknown_property as a confirmed wrong-receiver root cause.",
+    "If StudyFeature reports property support and the Time Solver does not, report an observed API difference only; no setter follows.",
+    "If the Time Solver reports property support but current license availability is false/unknown, report those facts separately and stop; no setter or solve follows.",
+    "If neither receiver reports the property, retain R4 as an execution-context rejection and do not infer why from documentation alone.",
+    "Any later mutation/solve experiment requires a separate plan, exact source/profile/owner binding, fresh Main review, and fresh approval; this survey is not authority for that step."
+  ],
+  "prohibitions": [
+    "Do not replay R4/R5 model references, once, PIDs, or saved approvals.",
+    "Do not call the disputed geometricNonlinearity setter in the survey phase.",
+    "Do not call checkoutLicense, Study.run, solver.run, compute, or save.",
+    "Do not add a licensed physics interface or alter the built context to force property presence.",
+    "Do not modify the frozen R31 905-file source tree; any survey implementation belongs in a separately reviewed immutable candidate.",
+    "Do not interpret this API survey as approval for a later mutation, solve, model save, scientific claim, or product acceptance."
+  ],
+  "current_classification": {
+    "wrong_receiver": "UNPROVEN",
+    "module_license": "UNVERIFIED_FAIL_CLOSED",
+    "R31_native": "NOT_RUN",
+    "R31_scientific_acceptance": "NOT_RUN"
+  },
+  "phase_separation": {
+    "setup_phase": "A fresh, hash-bound v2 fixture must be constructed through the reviewed existing W24 cure owner/preflight route. Existing setup creates the model nodes, configures baseline values, and meshes; these writes are necessary to materialize the exact context and are not described as read-only.",
+    "survey_phase": "After all three transient studies and attached Time solvers exist, survey only their actual object/property metadata and ModelUtil license availability. The survey phase performs no property setters, node creation/removal, save, study/solver run, or compute.",
+    "required_code_boundary": "The current build_v2 path unconditionally performs the disputed setter at its end. A new additive survey-only branch in a separate immutable candidate must stop immediately before that call; do not edit or reinterpret frozen R31 source."
+  },
+  "license_query": {
+    "call": "ModelUtil.hasProduct(\"STRUCTURALMECHANICS\")",
+    "source_doc": {
+      "doc_id": 4086,
+      "chunk_id": 16700,
+      "sha256": "efba38a9c78d87e68e7306ced73ccc947c97ca43802bfb5b29045b45c56bb16a"
+    },
+    "meaning": "The documented method reports whether the current license allows the named product; the same source table maps Structural Mechanics Module to STRUCTURALMECHANICS.",
+    "result_handling": "Record the raw boolean/exception. True is current license-availability evidence for that product only; it does not prove property support or scientific acceptance. False/error remains UNVERIFIED_FAIL_CLOSED. Never call checkoutLicense."
+  }
+}

@@ -1,0 +1,24 @@
+# R6I ten-path metadata-only observation (unsigned)
+
+This packet prepares one future, read-only SSH observation of exactly ten fixed paths under `C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c`. The payload calls `os.lstat` once per path and emits type, size, mode, mtime, ctime, file attributes, or a missing/error record. It never opens a target file, reads contents, inspects processes or tokens, writes remotely, imports the project, or launches a test/native process.
+
+The fixed whitelist is two directories, five files, and three runtime paths. No other remote paths are included. Windows `ctime_ns` is retained as the platform-reported value; its meaning is platform-dependent. The report is an instantaneous metadata snapshot and explicitly does not establish whether the existing R6I child is alive or terminal.
+
+The strict SSH wrapper uses the already reviewed R6I host, Python 3.12 path, SSH options, and `OriginalReadOnlyPopenOwner` source SHA. Its default `--check-only` command does not call Popen. `--capture-once` refuses to reach Popen until Main supplies (a) a separate proof that the original R6I R2 SSH Popen reached natural terminal, (b) an exact source review, and (c) a separate one-send authorization. No review, authorization, or local once record is included here. R6F's old one-time authorization does not cover this R6I activity.
+
+## Fixed paths
+
+1. `helpers-primary-owner-r6i` (directory)
+2. `authority-primary-owner-r6i` (directory)
+3. `helpers-primary-owner-r6i\windows_primary_token_owner_outer_gate_r6i.py` (file)
+4. `helpers-primary-owner-r6i\windows_primary_token_owner_probe_r6i.py` (file)
+5. `authority-primary-owner-r6i\BINDING.json` (file)
+6. `authority-primary-owner-r6i\PREBIRTH_BINDING.json` (file)
+7. `authority-primary-owner-r6i\MAIN_APPROVAL.json` (file)
+8. `authority-primary-owner-r6i\ONCE_USED.json` (runtime path)
+9. `primary-owner-probe-r6i` (runtime directory)
+10. `primary-owner-probe-r6i\owner-probe.bin` (runtime path)
+
+## Status
+
+Local software controls and strict-wrapper `--check-only` passed. SSH, remote metadata capture, native execution, Java, COMSOL, GUI, approvals, and once consumption are `NOT_RUN`. The original R6I R2 SSH remains owned by its original process/session; this packet neither polls nor changes that process.

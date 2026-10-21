@@ -1,0 +1,1250 @@
+"""R8 outer controller for the frozen W23 R6 owned-entry candidate.
+
+This module adds no COMSOL/Worker execution surface of its own. Its authorized
+entry calls the frozen R6 entry exactly once, retains that returned host and
+the original Popen objects, validates the append-only raw receipt journal,
+and performs one success-only worker retirement plus the reviewed default
+host close. Any uncertainty performs no additional RPC or close.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+import hashlib
+import importlib
+import importlib.util
+import json
+import os
+from pathlib import Path
+import re
+import stat
+import subprocess
+import sys
+import time
+from types import ModuleType
+from typing import Any, Mapping
+import uuid
+
+
+REPOSITORY = Path(__file__).resolve().parents[3]
+R6_ROOT = REPOSITORY / "_state" / "w23-zero-solve-owned-entry-r6-r12-5cea6c56-67d4-4c08-a2a9-21c18a4489c9-20261019"
+R5_ROOT = REPOSITORY / "_state" / "w25-r5-fresh-runtime-entry-6fc675b5-c7a1-4483-9de5-51d2ceeccd8f-20261019"
+R6_MAIN_REVIEW = Path("/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/docs/full_project_continuation_v3/state/W23_R6_MAIN_SOURCE_REVIEW_20261019_R1.json")
+R6_SOURCE_MANIFEST = R6_ROOT / "evidence/SOURCE_PROJECTION_R6.json"
+R6_REVIEWED_ROOT = REPOSITORY / "_state" / "w23-zero-solve-owned-entry-r6-12c5a72f-ca8f-4c51-8039-276417884bcc-20261019"
+R6_REVIEWED_SOURCE_MANIFEST = R6_REVIEWED_ROOT / "evidence/SOURCE_PROJECTION_R6.json"
+R6_REVIEWED_SOURCE_MAP = R6_REVIEWED_ROOT / "evidence/SOURCE_MAP_R6.json"
+R6_REVIEWED_PACKET_MANIFEST = R6_REVIEWED_ROOT / "evidence/PACKET_MANIFEST_R6.json"
+R6_SOURCE_MAP = R6_ROOT / "evidence/SOURCE_MAP_R6.json"
+R6_PACKET_MANIFEST = R6_ROOT / "evidence/PACKET_MANIFEST_R6.json"
+R6_ENTRY_PATH = R6_ROOT / "probe/w23_actual_entry_r6.py"
+R5_CONTROLLER_PATH = R5_ROOT / "probe/actual_runtime_controller.py"
+OUTER_ROOT = Path(__file__).resolve().parents[1]
+EVIDENCE_ROOT = OUTER_ROOT / "evidence"
+OUTER_MAIN_REVIEW_PATH = EVIDENCE_ROOT / "W23_R8_OUTER_MAIN_REVIEW_NOT_CREATED.json"
+OUTER_ONCE_PATH = EVIDENCE_ROOT / "W23_R8_OUTER_ONCE_BINDING_NOT_CREATED.json"
+OUTER_SOURCE_PLAN_PATH = EVIDENCE_ROOT / "W23_R8_OUTER_SOURCE_PLAN_R1.json"
+OUTER_SOURCE_MANIFEST_PATH = EVIDENCE_ROOT / "SOURCE_MANIFEST_R1.json"
+R6_MAIN_REVIEW_SHA256 = "4d0214e760b4ca9106e711b2b5c49f3b5c88939e50f6b702a3e02b23da93259c"
+R6_SOURCE_MANIFEST_SHA256 = "d2f1a60b04f00732923857223e4209ca5bf3c356f2a3bef24834fae8485c9dd2"
+R6_SOURCE_MAP_SHA256 = "272a79af7ec49c011374d0f3771ce9dd9860678a42ffc76e2db26a75a80021c5"
+R6_PACKET_MANIFEST_SHA256 = "836f9114be8e660ca25d17e57e4d6205002fd68dbecf0929ed1c9ec89372c1dd"
+R6_REVIEWED_SOURCE_MANIFEST_SHA256 = "e253b0aa1572ec653376f2fb29ecf106505f9cd2cfcbffc78934778d4d89f208"
+R6_REVIEWED_SOURCE_MAP_SHA256 = "c7836b825863f1dab9ced3f735ee8f3ad791a92a30f70010cc31f86e335dae6f"
+R6_REVIEWED_PACKET_MANIFEST_SHA256 = "39661338911548769e9bebdda783286ae1bf1fcdf05bd3a6591a763c45fa60ee"
+R6_ENTRY_SHA256 = "82c392f7d32d81623918c219bee43d8dd01d3e73513e9a6bdcd532a064832d3b"
+R5_CONTROLLER_SHA256 = "f2fb7f562672a6f75586fe829cd186cfa023ad747004f98e8f1dbd09867e7dce"
+OUTER_REVIEW_SCHEMA = "w23-r8-outer-controller-main-review/1"
+OUTER_ONCE_SCHEMA = "w23-r8-outer-controller-single-use-binding/1"
+OUTER_REVIEW_FIELDS = {
+    "schema", "decision", "source_plan_sha256", "source_manifest_sha256",
+    "controller_sha256", "r6_main_review_sha256", "r6_once_binding_sha256",
+    "r6_source_projection_sha256", "r6_source_map_sha256", "r5_controller_sha256",
+    "runtime_root", "host_provider_config_root", "persistent_evidence_root",
+    "outer_run_root", "runtime_id", "wall_budget_seconds", "cleanup_reserve_seconds",
+    "public_budgets", "approval_sha256",
+}
+OUTER_ONCE_FIELDS = {
+    "schema", "status", "normal_attempts", "main_review_sha256",
+    "approval_sha256", "source_plan_sha256", "source_manifest_sha256",
+    "controller_sha256", "r6_main_review_sha256", "r6_once_binding_sha256",
+    "r6_source_projection_sha256", "r6_source_map_sha256", "r5_controller_sha256",
+    "runtime_root", "host_provider_config_root", "persistent_evidence_root",
+    "outer_run_root", "runtime_id", "wall_budget_seconds", "cleanup_reserve_seconds",
+    "public_budgets",
+}
+HEX64 = re.compile(r"^[0-9a-f]{64}$")
+MAX_AUTHORITY_BYTES = 1024 * 1024
+MAX_JOURNAL_BYTES = 64 * 1024 * 1024
+WALL_BUDGET_SECONDS = 1800
+CLEANUP_RESERVE_SECONDS = 120
+PUBLIC_BUDGETS = {
+    "w25_setup_calls_exact": 3,
+    "w23_owner_calls_exact": 2,
+    "w23_owner_status_reads_exact": 2,
+    "w23_metadata_calls_max": 128,
+    "w23_point_calls_exact": 4,
+    "w23_integral_calls_exact": 2,
+    "w23_route_calls_max": 134,
+    "combined_public_calls_max": 137,
+    "success_cleanup_public_calls_max": 1,
+    "study_run_calls": 0,
+    "solver_run_calls": 0,
+    "worker_term_calls_max": 1,
+    "server_term_calls_max": 1,
+    "kill_calls": 0,
+    "normal_attempts": 1,
+}
+RETAINED_UNKNOWN_HOLDERS: list[tuple[Any, ModuleType]] = []
+
+
+class OuterControllerError(RuntimeError):
+    """R8 source, authority, result, or original-owner verification failed."""
+
+
+def _canonical_bytes(value: Any) -> bytes:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"),
+                      ensure_ascii=False, allow_nan=False).encode("utf-8")
+
+
+def _attach_r6_inner_failure(failure: dict[str, Any], outcome: Any) -> None:
+    """Retain the exact R6 UNKNOWN result when outer validation also fails.
+
+    R6's result mapping is the in-memory primary-cause record.  It is preserved
+    verbatim alongside the outer error so a later evidence-copy failure cannot
+    reduce the report to a generic R8 validation message.
+    """
+    result = getattr(outcome, "result", None)
+    if (not isinstance(result, Mapping)
+            or result.get("status") != "UNKNOWN_OR_BLOCKED_NO_REPLAY"
+            or result.get("schema") != "w23-zero-solve-r6-actual-entry-failure/1"):
+        return
+    exact = dict(result)
+    raw = _canonical_bytes(exact)
+    failure["r6_inner_failure"] = exact
+    failure["r6_inner_failure_sha256"] = hashlib.sha256(raw).hexdigest()
+    failure["r6_inner_failure_bytes"] = len(raw)
+
+
+def _pairs_unique(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise OuterControllerError("duplicate JSON key")
+        result[key] = value
+    return result
+
+
+def _stable_bytes(path: Path, *, limit: int) -> tuple[bytes, os.stat_result]:
+    path = Path(path)
+    named = path.lstat()
+    if (stat.S_ISLNK(named.st_mode) or not stat.S_ISREG(named.st_mode)
+            or named.st_uid != os.getuid() or named.st_nlink != 1
+            or named.st_mode & 0o022 or named.st_size > limit):
+        raise OuterControllerError(f"unsafe or oversized evidence file: {path}")
+    fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    try:
+        before = os.fstat(fd)
+        sig = lambda s: (s.st_dev, s.st_ino, s.st_mode, s.st_uid, s.st_nlink,
+                         s.st_size, s.st_mtime_ns, s.st_ctime_ns)
+        if sig(named) != sig(before):
+            raise OuterControllerError("evidence identity changed while opening")
+        chunks: list[bytes] = []
+        count = 0
+        while True:
+            block = os.read(fd, min(1024 * 1024, limit + 1 - count))
+            if not block:
+                break
+            count += len(block)
+            if count > limit:
+                raise OuterControllerError("evidence exceeds exact read bound")
+            chunks.append(block)
+        after = os.fstat(fd)
+        if sig(before) != sig(after) or sig(after) != sig(path.lstat()):
+            raise OuterControllerError("evidence identity changed during read")
+        raw = b"".join(chunks)
+        if len(raw) != before.st_size:
+            raise OuterControllerError("evidence size differs from stable file identity")
+        return raw, after
+    finally:
+        os.close(fd)
+
+
+def _strict_json(path: Path, *, limit: int = MAX_AUTHORITY_BYTES) -> tuple[dict[str, Any], str]:
+    raw, _ = _stable_bytes(path, limit=limit)
+    try:
+        value = json.loads(raw.decode("utf-8"), object_pairs_hook=_pairs_unique,
+                           parse_constant=lambda _: (_ for _ in ()).throw(
+                               OuterControllerError("non-finite JSON number")))
+    except OuterControllerError:
+        raise
+    except Exception as exc:
+        raise OuterControllerError("strict JSON evidence is malformed") from exc
+    if not isinstance(value, dict):
+        raise OuterControllerError("JSON evidence root must be an object")
+    return value, hashlib.sha256(raw).hexdigest()
+
+
+def _write_new_json(path: Path, value: Mapping[str, Any]) -> str:
+    path = Path(path)
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    parent_info = path.parent.lstat()
+    if (stat.S_ISLNK(parent_info.st_mode) or not stat.S_ISDIR(parent_info.st_mode)
+            or parent_info.st_uid != os.getuid() or stat.S_IMODE(parent_info.st_mode) != 0o700):
+        raise OuterControllerError("outer evidence parent is not a private owned directory")
+    raw = _canonical_bytes(dict(value)) + b"\n"
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    try:
+        view = memoryview(raw)
+        while view:
+            count = os.write(fd, view)
+            if count <= 0:
+                raise OuterControllerError("evidence write made no forward progress")
+            view = view[count:]
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    _parent_fd = os.open(path.parent, os.O_RDONLY)
+    try:
+        os.fsync(_parent_fd)
+    finally:
+        os.close(_parent_fd)
+    readback, _ = _stable_bytes(path, limit=MAX_AUTHORITY_BYTES)
+    if readback != raw:
+        raise OuterControllerError("new authority/receipt differs on stable readback")
+    return hashlib.sha256(raw).hexdigest()
+
+
+def _approval_digest(review: Mapping[str, Any]) -> str:
+    return hashlib.sha256(_canonical_bytes({k: v for k, v in review.items()
+                                            if k != "approval_sha256"})).hexdigest()
+
+
+def _load_r6_package() -> tuple[ModuleType, ModuleType]:
+    """Load canonical probe only when its package origin is this exact R6 root."""
+    probe_root = (R6_ROOT / "probe").resolve(strict=True)
+    init_path = (probe_root / "__init__.py").resolve(strict=True)
+
+    def validate_package(package: ModuleType) -> None:
+        try:
+            package_file = Path(package.__file__).resolve(strict=True)
+            package_paths = tuple(Path(value).resolve(strict=True)
+                                  for value in getattr(package, "__path__", ()))
+            spec_paths = tuple(Path(value).resolve(strict=True)
+                               for value in getattr(getattr(package, "__spec__", None),
+                                                    "submodule_search_locations", ()) or ())
+        except (OSError, TypeError, ValueError) as exc:
+            raise OuterControllerError("canonical probe package has no stable filesystem origin") from exc
+        if package_file != init_path or package_paths != (probe_root,) or spec_paths != (probe_root,):
+            raise OuterControllerError("canonical probe package is already bound to a different source root")
+
+    package = sys.modules.get("probe")
+    if package is None:
+        spec = importlib.util.spec_from_file_location(
+            "probe", init_path, submodule_search_locations=[str(probe_root)])
+        if spec is None or spec.loader is None:
+            raise OuterControllerError("fresh R6 canonical probe package cannot be loaded")
+        package = importlib.util.module_from_spec(spec)
+        before = {name for name in sys.modules if name == "probe" or name.startswith("probe.")}
+        sys.modules["probe"] = package
+        try:
+            spec.loader.exec_module(package)
+        except BaseException:
+            for name in tuple(sys.modules):
+                if (name == "probe" or name.startswith("probe.")) and name not in before:
+                    sys.modules.pop(name, None)
+            raise
+        validate_package(package)
+    else:
+        validate_package(package)
+
+    expected_modules = {
+        "probe.w23_actual_entry_r6": R6_ENTRY_PATH,
+        "probe.w23_zero_solve_runtime": R6_ROOT / "probe/w23_zero_solve_runtime.py",
+    }
+    for name, expected_path in expected_modules.items():
+        existing = sys.modules.get(name)
+        if existing is not None:
+            try:
+                observed = Path(existing.__file__).resolve(strict=True)
+            except (OSError, TypeError) as exc:
+                raise OuterControllerError(f"{name} has no stable source origin") from exc
+            if observed != expected_path.resolve(strict=True):
+                raise OuterControllerError(f"{name} is already loaded from another R6 source root")
+
+    entry_module = importlib.import_module("probe.w23_actual_entry_r6")
+    runtime_module = importlib.import_module("probe.w23_zero_solve_runtime")
+    validate_package(package)
+    if (entry_module.__name__ != "probe.w23_actual_entry_r6"
+            or runtime_module.__name__ != "probe.w23_zero_solve_runtime"
+            or Path(entry_module.__file__).resolve(strict=True) != R6_ENTRY_PATH.resolve(strict=True)
+            or Path(runtime_module.__file__).resolve(strict=True) !=
+                (R6_ROOT / "probe/w23_zero_solve_runtime.py").resolve(strict=True)):
+        raise OuterControllerError("R6 canonical package import escaped the exact fresh candidate")
+    return entry_module, runtime_module
+
+
+
+def _load_r5_controller() -> ModuleType:
+    name = "_w25_r5_owner_lifecycle_frozen_6fc675b5"
+    existing = sys.modules.get(name)
+    if existing is not None:
+        if Path(getattr(existing, "__file__", "")).resolve() != R5_CONTROLLER_PATH.resolve():
+            raise OuterControllerError("R5 lifecycle helper module name is bound to another source")
+        return existing
+    spec = importlib.util.spec_from_file_location(name, R5_CONTROLLER_PATH)
+    if spec is None or spec.loader is None:
+        raise OuterControllerError("pinned R5 original-owner controller cannot be loaded")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    try:
+        spec.loader.exec_module(module)
+    except BaseException:
+        sys.modules.pop(name, None)
+        raise
+    if Path(module.__file__).resolve() != R5_CONTROLLER_PATH.resolve():
+        raise OuterControllerError("R5 helper import escaped its frozen file")
+    return module
+
+
+def _verify_r6_source_rebind_lineage() -> dict[str, Any]:
+    """Prove the fresh path rebind changes only the reviewed R6 candidate identity."""
+    old_projection, old_projection_sha = _strict_json(R6_REVIEWED_SOURCE_MANIFEST)
+    new_projection, new_projection_sha = _strict_json(R6_SOURCE_MANIFEST)
+    old_map, old_map_sha = _strict_json(R6_REVIEWED_SOURCE_MAP)
+    new_map, new_map_sha = _strict_json(R6_SOURCE_MAP)
+    new_packet, new_packet_sha = _strict_json(R6_PACKET_MANIFEST, limit=64 * 1024 * 1024)
+    if (old_projection_sha != R6_REVIEWED_SOURCE_MANIFEST_SHA256
+            or old_map_sha != R6_REVIEWED_SOURCE_MAP_SHA256
+            or old_projection.get("schema") != new_projection.get("schema")
+            or old_projection.get("base_manifest_sha256") != new_projection.get("base_manifest_sha256")
+            or old_projection.get("files") != new_projection.get("files")
+            or old_projection.get("source_map_sha256") != old_map_sha
+            or new_projection.get("source_map_sha256") != new_map_sha):
+        raise OuterControllerError("fresh R6 source projection is not byte-row identical to reviewed R6")
+    normalized_old_map = dict(old_map)
+    normalized_old_map["candidate_root"] = str(R6_ROOT)
+    if normalized_old_map != new_map:
+        raise OuterControllerError("fresh R6 source map changes fields beyond candidate_root rebind")
+    if (new_packet_sha != R6_PACKET_MANIFEST_SHA256
+            or new_packet.get("schema") != "W23_R6_PACKET_MANIFEST_R1"
+            or new_packet.get("candidate_root") != str(R6_ROOT)
+            or type(new_packet.get("record_count")) is not int
+            or new_packet["record_count"] != len(new_packet.get("records", []))):
+        raise OuterControllerError("fresh R6 packet manifest is not the exact frozen candidate packet")
+    return {"reviewed_source_projection_sha256": old_projection_sha,
+            "reviewed_source_map_sha256": old_map_sha,
+            "source_projection_sha256": new_projection_sha,
+            "source_map_sha256": new_map_sha,
+            "packet_manifest_sha256": new_packet_sha,
+            "projected_member_count": len(new_projection["files"]),
+            "only_source_map_identity_change": "candidate_root"}
+
+
+def verify_frozen_inputs() -> dict[str, Any]:
+    """Verify R6's inherited source review and exact fresh-path source rebind."""
+    hashes = {
+        R6_SOURCE_MANIFEST: R6_SOURCE_MANIFEST_SHA256,
+        R6_SOURCE_MAP: R6_SOURCE_MAP_SHA256,
+        R6_PACKET_MANIFEST: R6_PACKET_MANIFEST_SHA256,
+        R6_ENTRY_PATH: R6_ENTRY_SHA256,
+        R5_CONTROLLER_PATH: R5_CONTROLLER_SHA256,
+        R6_MAIN_REVIEW: R6_MAIN_REVIEW_SHA256,
+        R6_REVIEWED_SOURCE_MANIFEST: R6_REVIEWED_SOURCE_MANIFEST_SHA256,
+        R6_REVIEWED_SOURCE_MAP: R6_REVIEWED_SOURCE_MAP_SHA256,
+        R6_REVIEWED_PACKET_MANIFEST: R6_REVIEWED_PACKET_MANIFEST_SHA256,
+    }
+    actual: dict[str, str] = {}
+    for path, expected in hashes.items():
+        raw, _ = _stable_bytes(path, limit=64 * 1024 * 1024)
+        digest = hashlib.sha256(raw).hexdigest()
+        if digest != expected:
+            raise OuterControllerError(f"frozen input SHA-256 changed: {path}")
+        actual[str(path)] = digest
+    review, _ = _strict_json(R6_MAIN_REVIEW)
+    if (review.get("schema") != "W23_R6_MAIN_SOURCE_REVIEW/1"
+            or review.get("status") != "PASS_SCOPED_SOURCE_SOFTWARE_FULL_BOOTSTRAP_PENDING_OUTER_CONTROLLER"
+            or review.get("source_projection_sha256") != R6_REVIEWED_SOURCE_MANIFEST_SHA256
+            or review.get("packet_sha256") != R6_REVIEWED_PACKET_MANIFEST_SHA256
+            or review.get("runtime") != "NOT_RUN"
+            or review.get("science") != "NOT_EVALUATED"):
+        raise OuterControllerError("inherited Main R6 source review is not the exact approved source-only receipt")
+    lineage = _verify_r6_source_rebind_lineage()
+    local_manifest, local_manifest_sha = _verify_local_source_manifest()
+    source_plan, _ = _strict_json(OUTER_SOURCE_PLAN_PATH)
+    source_map, _ = _strict_json(EVIDENCE_ROOT / "W23_R8_SOURCE_MAP_R1.json")
+    frozen = source_plan.get("frozen_r6", {})
+    inherited = source_plan.get("inherited_r6_source_review", {})
+    if (source_plan.get("schema") != "W23_R8_OUTER_SOURCE_PLAN/1"
+            or source_plan.get("candidate_root") != str(OUTER_ROOT)
+            or frozen.get("source_projection_sha256") != R6_SOURCE_MANIFEST_SHA256
+            or frozen.get("source_map_sha256") != R6_SOURCE_MAP_SHA256
+            or frozen.get("packet_manifest_sha256") != R6_PACKET_MANIFEST_SHA256
+            or frozen.get("entry_sha256") != R6_ENTRY_SHA256
+            or frozen.get("main_source_review_sha256") != R6_MAIN_REVIEW_SHA256
+            or inherited.get("reviewed_source_projection_sha256") != R6_REVIEWED_SOURCE_MANIFEST_SHA256
+            or inherited.get("reviewed_packet_manifest_sha256") != R6_REVIEWED_PACKET_MANIFEST_SHA256
+            or inherited.get("review_sha256") != R6_MAIN_REVIEW_SHA256
+            or source_plan.get("pinned_r5_lifecycle_helpers", {}).get("sha256") != R5_CONTROLLER_SHA256
+            or source_plan.get("outer_authority", {}).get("main_review") !=
+                "NOT_CREATED; Main must bind this R8 source packet, fresh R6 runtime review/once, and new roots/budgets"
+            or source_plan.get("outer_authority", {}).get("once_binding") !=
+                "NOT_CREATED; exactly one normal attempt; Main-owned only"
+            or source_plan.get("public_budgets") != PUBLIC_BUDGETS
+            or source_map.get("schema") != "W23_R8_OUTER_SOURCE_MAP/1"
+            or source_map.get("candidate_root") != str(OUTER_ROOT)
+            or source_map.get("frozen_r6_source_projection_sha256") != R6_SOURCE_MANIFEST_SHA256
+            or source_map.get("frozen_r6_source_map_sha256") != R6_SOURCE_MAP_SHA256
+            or source_map.get("inherited_reviewed_r6_source_projection_sha256") != R6_REVIEWED_SOURCE_MANIFEST_SHA256
+            or source_map.get("pinned_r5_controller_sha256") != R5_CONTROLLER_SHA256
+            or source_map.get("source_members") != [row["path"] for row in local_manifest["files"]]
+            or source_map.get("canonical_integration") is not False):
+        raise OuterControllerError("R8 source plan/map changed or exceeds its reviewed source-only scope")
+    entry_module, runtime_module = _load_r6_package()
+    projection = runtime_module._verify_source_projection(R6_SOURCE_MANIFEST_SHA256)
+    if (projection.get("source_map_sha256") != R6_SOURCE_MAP_SHA256
+            or projection.get("member_count") != 892):
+        raise OuterControllerError("R6 production projection consumer no longer reports the exact fresh 892-file source")
+    return {"r6_source_projection_sha256": R6_SOURCE_MANIFEST_SHA256,
+            "r6_source_map_sha256": R6_SOURCE_MAP_SHA256,
+            "r6_packet_manifest_sha256": R6_PACKET_MANIFEST_SHA256,
+            "r6_main_source_review_sha256": R6_MAIN_REVIEW_SHA256,
+            "r6_reviewed_source_projection_sha256": R6_REVIEWED_SOURCE_MANIFEST_SHA256,
+            "r6_entry_sha256": R6_ENTRY_SHA256,
+            "r5_controller_sha256": R5_CONTROLLER_SHA256,
+            "r6_projected_member_count": 892,
+            "r6_source_rebind_lineage": lineage,
+            "r6_entry_module": entry_module.__name__,
+            "r8_source_manifest_sha256": local_manifest_sha,
+            "r8_source_files": len(local_manifest["files"]),
+            "r8_source_references": actual}
+
+
+
+def _verify_local_source_manifest() -> tuple[dict[str, Any], str]:
+    manifest, digest = _strict_json(OUTER_SOURCE_MANIFEST_PATH)
+    if (manifest.get("schema") != "W23_R8_OUTER_SOURCE_MANIFEST/1"
+            or manifest.get("candidate_root") != str(OUTER_ROOT)
+            or not isinstance(manifest.get("files"), list)
+            or not manifest["files"]):
+        raise OuterControllerError("R8 source manifest schema or candidate root is invalid")
+    seen: set[str] = set()
+    for row in manifest["files"]:
+        if (not isinstance(row, Mapping) or set(row) != {"path", "bytes", "sha256"}
+                or not isinstance(row.get("path"), str)
+                or row["path"] in seen
+                or Path(row["path"]).is_absolute()
+                or ".." in Path(row["path"]).parts
+                or type(row.get("bytes")) is not int
+                or not isinstance(row.get("sha256"), str)
+                or not HEX64.fullmatch(row["sha256"])):
+            raise OuterControllerError("R8 source manifest member row is malformed or duplicated")
+        seen.add(row["path"])
+        path = OUTER_ROOT / row["path"]
+        raw, _ = _stable_bytes(path, limit=MAX_JOURNAL_BYTES)
+        if len(raw) != row["bytes"] or hashlib.sha256(raw).hexdigest() != row["sha256"]:
+            raise OuterControllerError(f"R8 frozen source member changed: {row['path']}")
+    expected = {"README_R8.md", "evidence/W23_R8_OUTER_SOURCE_PLAN_R1.json",
+                "evidence/W23_R8_SOURCE_MAP_R1.json", "probe/__init__.py",
+                "probe/w23_actual_controller_r8.py", "tests/canonical_probe_loader_child.py",
+                "tests/test_w23_actual_controller_r8.py"}
+    if seen != expected:
+        raise OuterControllerError("R8 source manifest member set is not the exact reviewed source/test packet")
+    return manifest, digest
+
+
+def _read_journal(path: Path) -> tuple[list[dict[str, Any]], str, int]:
+    raw, info = _stable_bytes(path, limit=MAX_JOURNAL_BYTES)
+    if stat.S_IMODE(info.st_mode) != 0o600:
+        raise OuterControllerError("R6 raw public journal mode differs from its 0600 producer")
+    if not raw.endswith(b"\n"):
+        raise OuterControllerError("R6 raw public journal has an unterminated final record")
+    records: list[dict[str, Any]] = []
+    for line_no, line in enumerate(raw.splitlines(keepends=True), 1):
+        payload = line[:-1]
+        if not payload:
+            raise OuterControllerError("R6 raw public journal contains an empty line")
+        try:
+            record = json.loads(payload.decode("utf-8"), object_pairs_hook=_pairs_unique,
+                                parse_constant=lambda _: (_ for _ in ()).throw(
+                                    OuterControllerError("non-finite journal value")))
+        except OuterControllerError:
+            raise
+        except Exception as exc:
+            raise OuterControllerError(f"R6 journal line {line_no} is malformed") from exc
+        if not isinstance(record, dict) or _canonical_bytes(record) != payload:
+            raise OuterControllerError("R6 journal record is not canonical raw JSON")
+        records.append(record)
+    if not records:
+        raise OuterControllerError("R6 public journal is empty")
+    return records, hashlib.sha256(raw).hexdigest(), len(raw)
+
+
+def _verify_journal(path: Path, result: Mapping[str, Any]) -> dict[str, Any]:
+    records, digest, size = _read_journal(path)
+    intents: dict[int, dict[str, Any]] = {}
+    responses: dict[int, dict[str, Any]] = {}
+    pair_proofs: dict[int, dict[str, Any]] = {}
+    for row in records:
+        kind = row.get("kind")
+        if kind in {"dispatch_exception", "malformed_response", "terminal_operation_job_pair_unavailable"}:
+            raise OuterControllerError("R6 journal contains an unresolved or failed dispatch record")
+        if kind == "dispatch_intent":
+            ordinal = row.get("ordinal")
+            if type(ordinal) is not int or ordinal < 1 or ordinal in intents:
+                raise OuterControllerError("R6 journal dispatch ordinal is invalid or duplicated")
+            request = row.get("request")
+            if (not isinstance(request, Mapping) or request.get("operation") != "operation_call"
+                    or not isinstance(request.get("arguments"), Mapping)
+                    or not isinstance(request["arguments"].get("operation_id"), str)
+                    or not isinstance(request.get("execution"), Mapping)
+                    or row.get("retry") != "FORBIDDEN_AFTER_DISPATCH"):
+                raise OuterControllerError("R6 intent is outside the exact public operation_call route")
+            intents[ordinal] = dict(row)
+        elif kind == "dispatch_response":
+            ordinal = row.get("ordinal")
+            if type(ordinal) is not int or ordinal < 1 or ordinal in responses:
+                raise OuterControllerError("R6 journal response ordinal is invalid or duplicated")
+            responses[ordinal] = dict(row)
+        elif kind == "terminal_operation_job_pair_proof":
+            ordinal = row.get("ordinal")
+            if type(ordinal) is not int or ordinal < 1 or ordinal in pair_proofs:
+                raise OuterControllerError("R6 terminal-pair proof ordinal is invalid or duplicated")
+            pair_proofs[ordinal] = dict(row)
+    if set(intents) != set(responses):
+        raise OuterControllerError("not every R6 dispatch intent has its one raw response")
+    pair_required = {ordinal for ordinal, row in intents.items()
+                     if row.get("category") in {"metadata", "point", "integral"}}
+    if set(pair_proofs) != pair_required:
+        raise OuterControllerError("R6 public reads do not each have exactly one same-owner terminal pair proof")
+    operation_names: list[str] = []
+    categories: dict[str, int] = {"owner": 0, "owner_terminal_status": 0,
+                                 "metadata": 0, "point": 0, "integral": 0}
+    allowed_operations = {
+        "owner": {"artifact.register", "model.load"},
+        "owner_terminal_status": {"job.status"},
+        "metadata": {"runtime.capabilities", "model.inspect", "geometry.inspect",
+                      "dataset.list", "dataset.solution_indices", "node.children",
+                      "node.inspect", "node.property_schema", "node.property_get",
+                      "selection.list", "selection.inspect", "selection.adjacency",
+                      "material.list", "material.inspect", "parameter.get"},
+        "point": {"result.at_points"},
+        "integral": {"result.evaluate"},
+    }
+    raw_response_hashes: list[str] = []
+    for ordinal in sorted(intents):
+        intent, response = intents[ordinal], responses[ordinal]
+        proof_record = pair_proofs.get(ordinal)
+        request = intent["request"]
+        execution = request["execution"]
+        nested = request["arguments"]
+        operation_id = nested["operation_id"]
+        category = intent.get("category")
+        if operation_id not in allowed_operations.get(category, set()):
+            raise OuterControllerError("R6 raw journal operation is outside its exact category allowlist")
+        raw = response.get("raw_response")
+        raw_sha = hashlib.sha256(_canonical_bytes(raw)).hexdigest()
+        if (response.get("category") != intent.get("category")
+                or response.get("operation_id") != operation_id
+                or response.get("request_id") != execution.get("request_id")
+                or response.get("response_sha256") != raw_sha):
+            raise OuterControllerError("raw response does not bind the exact R6 dispatch intent")
+        if intent["category"] in {"metadata", "point", "integral"}:
+            proof = proof_record.get("proof") if isinstance(proof_record, Mapping) else None
+            if (proof_record.get("operation_id") != operation_id
+                    or proof_record.get("request_id") != execution.get("request_id")
+                    or proof_record.get("raw_response_sha256") != raw_sha
+                    or not isinstance(proof, Mapping)
+                    or proof.get("raw_response_sha256") != raw_sha
+                    or proof.get("terminal_pair_status") != "OPERATION_AND_JOB_SUCCEEDED"
+                    or proof.get("operation_status") != "SUCCEEDED"
+                    or proof.get("job_status") != "SUCCEEDED"
+                    or proof.get("public_operation") != operation_id):
+                raise OuterControllerError("same-owner terminal pair does not bind the exact observed raw response")
+        elif (intent["category"] not in {"owner", "owner_terminal_status"}
+              or not isinstance(raw, Mapping) or raw.get("success") is not True
+              or not isinstance(raw.get("data"), Mapping)):
+            raise OuterControllerError("R6 owner or cached-status response is malformed or not terminal")
+        categories[category] = categories.get(category, 0) + 1
+        operation_names.append(operation_id)
+        raw_response_hashes.append(raw_sha)
+    owner_response_rows = [row for row in records
+                           if row.get("kind") == "dispatch_response" and row.get("category") == "owner"]
+    status_response_rows = [row for row in records
+                            if row.get("kind") == "dispatch_response" and row.get("category") == "owner_terminal_status"]
+    # FreshOwnerRoute cached job.status reads are intentionally bare {success,data}
+    # responses and are validated by the frozen consumer, not represented as new jobs.
+    if len(owner_response_rows) != 2 or len(status_response_rows) != 2:
+        raise OuterControllerError("R6 journal lacks the two raw owner operations and their two cached status readbacks")
+    if [row.get("operation_id") for row in owner_response_rows] != ["artifact.register", "model.load"]:
+        raise OuterControllerError("R6 owner operation order differs from artifact.register then model.load")
+    ordered_dispatches = [intents[index] for index in sorted(intents)]
+    if ([row.get("category") for row in ordered_dispatches[:4]] !=
+            ["owner", "owner_terminal_status", "owner", "owner_terminal_status"]
+            or [row["request"]["arguments"]["operation_id"] for row in ordered_dispatches[:4]] !=
+            ["artifact.register", "job.status", "model.load", "job.status"]):
+        raise OuterControllerError("R6 raw owner registration/status/load/status sequence changed")
+    for owner_row_index, status_dispatch_index in ((0, 1), (1, 3)):
+        owner_execution = owner_response_rows[owner_row_index]["raw_response"].get("execution")
+        status_intent = ordered_dispatches[status_dispatch_index]["request"]["arguments"].get("arguments")
+        if (not isinstance(owner_execution, Mapping)
+                or not isinstance(owner_execution.get("job_id"), str)
+                or not owner_execution.get("job_id")
+                or not isinstance(owner_execution.get("operation_id"), str)
+                or not owner_execution.get("operation_id")
+                or status_intent != {"job_id": owner_execution.get("job_id")}):
+            raise OuterControllerError("R6 cached job.status request differs from the exact preceding owner job id")
+    for index, status_row in enumerate(status_response_rows):
+        raw_status = status_row.get("raw_response")
+        if (not isinstance(raw_status, Mapping) or set(raw_status) != {"success", "data"}
+                or raw_status.get("success") is not True
+                or not isinstance(raw_status.get("data"), Mapping)
+                or raw_status["data"].get("status") != "SUCCEEDED"):
+            raise OuterControllerError("R6 cached job.status raw producer envelope is not exact terminal success")
+        owner = owner_response_rows[index].get("raw_response")
+        owner_exec = owner.get("execution") if isinstance(owner, Mapping) else None
+        status_operation = raw_status["data"].get("operation")
+        if (not isinstance(owner_exec, Mapping)
+                or not isinstance(status_operation, Mapping)
+                or raw_status["data"].get("job_id") != owner_exec.get("job_id")
+                or raw_status["data"].get("operation_id") != owner_exec.get("operation_id")
+                or status_operation.get("result") != owner):
+            raise OuterControllerError("R6 cached status readback is not bound to the preceding raw owner response")
+    final = records[-1]
+    if final.get("kind") != "terminal_source_readback":
+        raise OuterControllerError("R6 journal does not end with its durable terminal source-readback record")
+    input_before, input_after = final.get("input_identity_before"), final.get("input_identity_after")
+    if (not isinstance(input_before, Mapping) or not isinstance(input_after, Mapping)
+            or input_before != input_after
+            or input_before.get("bytes") != 13795478
+            or input_before.get("sha256") != "cba0c1d404003c4e60a20b04316cb1456c38cc2b45596dc2dc29bbed62674a8c"
+            or input_before.get("mode") != "0o400"
+            or input_before.get("path") != input_after.get("path")):
+        raise OuterControllerError("R6 terminal readback does not preserve the exact immutable saved-MPH source copy")
+    expected_counts = {
+        "metadata_call_count": categories.get("metadata", 0),
+        "point_call_count": categories.get("point", 0),
+        "integral_call_count": categories.get("integral", 0),
+        "owner_call_count": len(owner_response_rows),
+        "owner_terminal_status_read_count": len(status_response_rows),
+        "owner_public_call_count": len(owner_response_rows) + len(status_response_rows),
+    }
+    route_count_keys = {"point_call_count": "point_calls",
+                        "integral_call_count": "integral_calls"}
+    for key, expected in expected_counts.items():
+        if result.get(route_count_keys.get(key, key)) != expected or final.get(key) != expected:
+            raise OuterControllerError(f"R6 route count {key} differs from its raw journal")
+    if (categories.get("metadata", 0) > 128
+            or categories.get("point", 0) != 4
+            or categories.get("integral", 0) != 2
+            or len(intents) > 134
+            or len(intents) != categories.get("metadata", 0) + 4 + 2 + 4):
+        raise OuterControllerError("R6 public dispatches exceed or differ from the fixed bounded route")
+    if (final.get("Study.run") != 0 or final.get("solver.run") != 0
+            or final.get("direction_status") != "NOT_PROVEN"
+            or final.get("scientific_acceptance") != "NOT_EVALUATED"
+            or final.get("node.property_set") != 0
+            or final.get("model.save") != 0
+            or final.get("code.execute_java") != 0):
+        raise OuterControllerError("R6 terminal journal promotes direction/science or records a forbidden run")
+    return {"status": "PASS_RAW_JOURNAL_ALL_DISPATCHES_TERMINAL",
+            "sha256": digest, "bytes": size, "record_count": len(records),
+            "dispatch_count": len(intents), "category_counts": categories,
+            "raw_response_sha256s": raw_response_hashes,
+            "terminal_pair_proof_count": len(pair_proofs),
+            "cached_status_raw_responses_preserved": True}
+
+
+def _validate_success_outcome(r6: ModuleType, outcome: Any) -> dict[str, Any]:
+    if type(outcome) is not r6.ActualEntryOutcome:
+        raise OuterControllerError("R6 returned no exact ActualEntryOutcome; result remains unresolved")
+    host, admission, receipt = outcome.host, outcome.admission, outcome.result
+    if not isinstance(receipt, Mapping):
+        raise OuterControllerError("R6 entry result is not its original receipt mapping")
+    route = receipt.get("w23_route_result")
+    if (not isinstance(route, Mapping)
+            or receipt.get("status") != "SOURCE_READS_TERMINAL_DIRECTION_NOT_PROVEN"
+            or route.get("status") != "SOURCE_READS_TERMINAL_DIRECTION_NOT_PROVEN"
+            or receipt.get("direction_status") != "NOT_PROVEN"
+            or route.get("direction_status") != "NOT_PROVEN"
+            or receipt.get("scientific_acceptance") != "NOT_EVALUATED"
+            or route.get("scientific_acceptance") != "NOT_EVALUATED"
+            or receipt.get("approval_created") is not False
+            or receipt.get("once_created") is not False
+            or route.get("approval_created") is not False
+            or route.get("once_created") is not False
+            or type(receipt.get("Study.run")) is not int or receipt["Study.run"] != 0
+            or type(receipt.get("solver.run")) is not int or receipt["solver.run"] != 0
+            or route.get("Study.run") != 0 or route.get("solver.run") != 0):
+        raise OuterControllerError("R6 result is not the exact zero-solve terminal NOT_PROVEN outcome")
+    if (getattr(outcome, "host", None) is not host
+            or getattr(admission, "host", None) is not host
+            or getattr(admission, "daemon", None) is not getattr(host, "daemon", None)
+            or not isinstance(getattr(admission, "setup_result", None), Mapping)
+            or admission.setup_result.get("setup_public_calls_used") != 3
+            or admission.setup_result.get("setup_public_call_budget") != 3
+            or len(getattr(admission, "setup_calls", ())) != 3):
+        raise OuterControllerError("R6 returned host/admission identities or three-call setup do not agree")
+    counts = {
+        "metadata_call_count": route.get("metadata_call_count"),
+        "point_calls": route.get("point_calls"),
+        "integral_calls": route.get("integral_calls"),
+        "owner_call_count": route.get("owner_call_count"),
+        "owner_terminal_status_read_count": route.get("owner_terminal_status_read_count"),
+        "owner_public_call_count": route.get("owner_public_call_count"),
+        "total_public_call_count": route.get("total_public_call_count"),
+    }
+    if (any(type(value) is not int for value in counts.values())
+            or not 0 <= counts["metadata_call_count"] <= 128
+            or counts["point_calls"] != 4 or counts["integral_calls"] != 2
+            or counts["owner_call_count"] != 2
+            or counts["owner_terminal_status_read_count"] != 2
+            or counts["owner_public_call_count"] != 4
+            or counts["total_public_call_count"] != counts["metadata_call_count"] + 10
+            or counts["total_public_call_count"] > 134
+            or counts["total_public_call_count"] + 3 > 137):
+        raise OuterControllerError("R6 raw result count fields exceed or diverge from the exact public-call ceilings")
+    journal_path = Path(str(route.get("journal", "")))
+    run_id = route.get("run_id")
+    if not isinstance(run_id, str) or not journal_path.is_absolute():
+        raise OuterControllerError("R6 result omitted the absolute durable journal identity")
+    try:
+        if str(uuid.UUID(run_id)) != run_id:
+            raise ValueError
+    except (ValueError, AttributeError) as exc:
+        raise OuterControllerError("R6 journal run id is not a canonical UUID") from exc
+    expected_parent = Path(admission.root) / "w23-evidence" / f"w23-zero-solve-{run_id}"
+    if (journal_path != expected_parent / "public-receipts.jsonl"
+            or journal_path.parent != expected_parent):
+        raise OuterControllerError("R6 raw public journal escaped this admitted owner's evidence root")
+    journal = _verify_journal(journal_path, route)
+    return {"route_counts": counts, "journal": journal,
+            "project_id": admission.project_id, "session_id": admission.session_id,
+            "runtime_id": admission.runtime_id, "run_id": run_id,
+            "runtime_root": str(outcome.runtime_root),
+            "once_guard_sha256": outcome.once_guard_sha256}
+
+
+def _verify_persisted_r6_evidence(outcome: Any, *, persistent_root: Path,
+                                  journal_path: Path, journal_proof: Mapping[str, Any]) -> dict[str, Any]:
+    receipt = outcome.result
+    reference = receipt.get("persistent_record") if isinstance(receipt, Mapping) else None
+    if not isinstance(reference, Mapping):
+        raise OuterControllerError("R6 successful result has no durable-evidence copy reference")
+    record_path = persistent_root / "R6_ENTRY_RESULT.json"
+    manifest_path = persistent_root / "PERSISTED_RAW_EVIDENCE_MANIFEST_R1.json"
+    if (reference.get("path") != str(record_path)
+            or reference.get("manifest_path") != str(manifest_path)):
+        raise OuterControllerError("R6 persistent evidence references escaped the Main-bound destination")
+    record, record_sha = _strict_json(record_path)
+    manifest, manifest_sha = _strict_json(manifest_path)
+    if (record_sha != reference.get("sha256")
+            or manifest_sha != reference.get("manifest_sha256")
+            or record.get("schema") != receipt.get("schema")
+            or record.get("status") != receipt.get("status")):
+        raise OuterControllerError("R6 durable receipt/manifest hash differs from its returned reference")
+    record_without_manifest = dict(record)
+    nested_manifest = record_without_manifest.pop("persistent_evidence_manifest", None)
+    raw_receipt = {key: value for key, value in receipt.items() if key != "persistent_record"}
+    if nested_manifest != {
+            "path": str(manifest_path), "sha256": manifest_sha,
+            "file_count": reference.get("file_count"),
+            "total_bytes": reference.get("total_bytes"),
+            "status": manifest.get("status")} or record_without_manifest != raw_receipt:
+        raise OuterControllerError("persisted R6 receipt differs from the exact returned raw receipt")
+    admission = outcome.admission
+    source_root = Path(admission.root)
+    if (manifest.get("schema") != "w23-zero-solve-r6-persisted-raw-evidence/2"
+            or manifest.get("status") != "PASS_EXACT_BOUNDED_RAW_EVIDENCE_COPIED_AND_READ_BACK"
+            or manifest.get("source_root") != str(source_root)
+            or manifest.get("project_root") != str(source_root.parent)
+            or manifest.get("persistent_root") != str(persistent_root)
+            or type(manifest.get("file_count")) is not int
+            or type(manifest.get("total_bytes")) is not int
+            or manifest.get("workspace_archive_disposition") !=
+                "EMPTY_PRIVATE_W25_WORKSPACE_PROJECT_INPUT_COPY_INCLUDED"
+            or not isinstance(manifest.get("files"), list)):
+        raise OuterControllerError("R6 persisted raw-evidence manifest has an unexpected source/destination scope")
+    run_id = outcome.result["w23_route_result"]["run_id"]
+    journal_relative = journal_path.relative_to(source_root).as_posix()
+    input_relative = f"w23-input-{run_id}/w23_coarse-phase0_provisional.mph"
+    expected_relative_paths = {
+        "setup/01-project-create-intent.json", "setup/01-project-create-response.json",
+        "setup/02-session-start-intent.json", "setup/02-session-start-response.json",
+        "setup/03-session-connect-intent.json", "setup/03-session-connect-response.json",
+        "ADMISSION_RESULT.json", "W23_SAVED_MPH_COPY_BINDING_R2.json",
+        input_relative, journal_relative,
+    }
+    rows = manifest["files"]
+    actual_paths = {row.get("source_relative_path") for row in rows if isinstance(row, Mapping)}
+    if actual_paths != expected_relative_paths or len(rows) != len(expected_relative_paths):
+        raise OuterControllerError("R6 persisted evidence manifest differs from its exact ten-file whitelist")
+    expected_sources = {path: str(source_root) for path in expected_relative_paths}
+    expected_sources[input_relative] = str(source_root.parent)
+    if any(not isinstance(row, Mapping)
+           or row.get("source_root") != expected_sources.get(row.get("source_relative_path"))
+           or row.get("persistent_relative_path") != row.get("source_relative_path")
+           for row in rows):
+        raise OuterControllerError("R6 persisted evidence row roots or paths differ from the exact source scope")
+    input_row = next(row for row in rows
+                     if row.get("source_relative_path") == input_relative)
+    input_bytes, input_info = _stable_bytes(persistent_root / input_relative, limit=13_795_478)
+    if (input_row.get("bytes") != 13_795_478
+            or input_row.get("sha256") !=
+                "cba0c1d404003c4e60a20b04316cb1456c38cc2b45596dc2dc29bbed62674a8c"
+            or hashlib.sha256(input_bytes).hexdigest() != input_row.get("sha256")
+            or stat.S_IMODE(input_info.st_mode) != 0o400):
+        raise OuterControllerError("persisted non-hidden project input differs from the exact immutable saved MPH")
+    journal_row = next((row for row in rows
+                        if isinstance(row, Mapping)
+                        and row.get("source_relative_path") == journal_relative), None)
+    persistent_journal = persistent_root / journal_relative
+    journal_bytes, journal_info = _stable_bytes(persistent_journal, limit=MAX_JOURNAL_BYTES)
+    if (journal_row is None
+            or journal_row.get("persistent_relative_path") != journal_relative
+            or journal_row.get("sha256") != journal_proof.get("sha256")
+            or journal_row.get("bytes") != len(journal_bytes)
+            or hashlib.sha256(journal_bytes).hexdigest() != journal_proof.get("sha256")
+            or stat.S_IMODE(journal_info.st_mode) != 0o600):
+        raise OuterControllerError("persisted raw public journal differs from the live R6 journal bytes")
+    if manifest.get("file_count") != len(rows) or manifest.get("total_bytes") != sum(row["bytes"] for row in rows):
+        raise OuterControllerError("R6 manifest file/byte totals differ from its exact whitelist rows")
+    return {"record_path": str(record_path), "record_sha256": record_sha,
+            "manifest_path": str(manifest_path), "manifest_sha256": manifest_sha,
+            "file_count": len(rows), "total_bytes": manifest["total_bytes"],
+            "raw_journal_persistent_copy_sha256": hashlib.sha256(journal_bytes).hexdigest(),
+            "run_id": run_id}
+
+
+@dataclass
+class R6OutcomeView:
+    """In-memory adapter exposing R6's separate admission to reviewed R5 helpers.
+
+    The `admission` reference is not copied into, or represented as part of,
+    the raw R6 receipt. It only lets the pinned R5 owner-reference functions
+    traverse the same actual gate and Popen objects returned by R6.
+    """
+    original: Any
+
+    @property
+    def result(self) -> Mapping[str, Any]:
+        raw = getattr(self.original, "result", None)
+        if not isinstance(raw, Mapping):
+            return {}
+        view = dict(raw)
+        admission = getattr(self.original, "admission", None)
+        if admission is not None:
+            view["admission"] = admission
+        return view
+
+
+def _bind_r5_outputs(r5: ModuleType, lifecycle_root: Path) -> None:
+    lifecycle_root.mkdir(mode=0o700, parents=True, exist_ok=False)
+    info = lifecycle_root.lstat()
+    if (stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode)
+            or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700):
+        raise OuterControllerError("fresh R8 lifecycle output root is not an owned 0700 directory")
+    r5.HOLDER_STATE = lifecycle_root / "R8_OWNER_HOLDER_STATE.json"
+    r5.POST_CLOSE_STORE_READBACK = lifecycle_root / "R8_POST_CLOSE_STORE_READBACK"
+
+
+def _remaining_wall_seconds(r5: ModuleType, gate: Any) -> float:
+    remaining = float(WALL_BUDGET_SECONDS) - (time.time() - r5._server_birth_epoch_seconds(gate))
+    return max(0.0, remaining)
+
+
+def _success_cleanup(r5: ModuleType, holder: Any, journal_proof: Mapping[str, Any],
+                     lifecycle_root: Path) -> dict[str, Any]:
+    """Use R5's exact owner guards and one success-only disconnect/close path."""
+    if (getattr(holder, "close_attempted", False)
+            or getattr(holder, "disconnect_attempted", False)):
+        raise OuterControllerError("R8 cleanup was already attempted; no replay")
+    gate, worker_guard, server_guard = r5._install_original_owner_shutdown_guards(
+        holder.host, holder.outcome)
+    references = dict(r5._original_owner_references(holder.host, holder.outcome))
+    if set(references) != {"server", "worker"}:
+        raise OuterControllerError("R6 owner set is not exactly the two original Server/Worker Popen objects")
+    holder.owner_references = tuple((role, references[role]) for role in ("server", "worker"))
+    holder.shutdown_guards = (worker_guard, server_guard)
+    remaining = _remaining_wall_seconds(r5, gate)
+    if remaining <= CLEANUP_RESERVE_SECONDS:
+        return {"status": "UNKNOWN_NO_REPLAY_CLEANUP_RESERVE_NOT_AVAILABLE",
+                "remaining_wall_seconds": remaining, "cleanup_rpc_calls": 0,
+                "host_close_called": False, "raw_journal": dict(journal_proof)}
+    holder.disconnect_attempted = True
+    response, request_id, idempotency_key = r5._disconnect_operation_once(gate)
+    response_path = lifecycle_root / "R8_WORKER_DISCONNECT_RAW_RESPONSE.json"
+    response_sha = _write_new_json(response_path, response)
+    if response.get("success") is not True:
+        return {"status": "UNKNOWN_NO_REPLAY_DISCONNECT_RESPONSE_NOT_SUCCESS",
+                "disconnect_request_id": request_id,
+                "disconnect_idempotency_key": idempotency_key,
+                "disconnect_response_path": str(response_path),
+                "disconnect_response_sha256": response_sha,
+                "raw_response": dict(response), "cleanup_rpc_calls": 1,
+                "host_close_called": False, "raw_journal": dict(journal_proof)}
+    worker_result = r5._worker_retirement_ledger(
+        holder.host, gate, response, worker_guard, request_id)
+    if _remaining_wall_seconds(r5, gate) <= 5:
+        raise OuterControllerError("server close reserve expired after Worker retirement; host.close withheld")
+    server_guard.verify_binding(require_live=True)
+    holder.close_attempted = True
+    close_result = holder.host.close()
+    lifecycle = r5._closed_lifecycle_readback(holder.host, gate, server_guard)
+    evidence = {
+        "schema": "w23-r8-outer-owner-retirement/1",
+        "status": "PASS_SOURCE_READS_TERMINAL_THEN_WORKER_RETIRED_SERVER_CLOSED_NOT_NATIVE_ACCEPTANCE",
+        "r6_source_projection_sha256": R6_SOURCE_MANIFEST_SHA256,
+        "r6_source_map_sha256": R6_SOURCE_MAP_SHA256,
+        "r5_controller_sha256": R5_CONTROLLER_SHA256,
+        "w23_raw_journal": dict(journal_proof),
+        "disconnect_request_id": request_id,
+        "disconnect_idempotency_key": idempotency_key,
+        "disconnect_raw_response_path": str(response_path),
+        "disconnect_raw_response_sha256": response_sha,
+        "disconnect_raw_response": dict(response),
+        "worker_retirement": worker_result,
+        "worker_guard": worker_guard.summary(),
+        "server_guard": server_guard.summary(),
+        "host_close_called_once": True,
+        "host_close_result": close_result,
+        "closed_lifecycle_readback": lifecycle,
+        "direction_status": "NOT_PROVEN",
+        "scientific_acceptance": "NOT_EVALUATED",
+        "Study.run": 0, "solver.run": 0,
+        "native_acceptance": "NOT_CLAIMED",
+        "success_cleanup_public_calls": 1,
+        "total_public_calls_with_setup_max": PUBLIC_BUDGETS["combined_public_calls_max"],
+    }
+    evidence_path = lifecycle_root / "R8_SUCCESS_RETIREMENT_RESULT.json"
+    evidence_sha = _write_new_json(evidence_path, evidence)
+    return {**evidence, "retirement_result_path": str(evidence_path),
+            "retirement_result_sha256": evidence_sha}
+
+
+def _strict_authority(*, outer_review_sha256: str, outer_once_sha256: str,
+                      r6_review_sha256: str, r6_once_sha256: str,
+                      source_projection_sha256: str) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], ModuleType, ModuleType, ModuleType]:
+    if any(not isinstance(value, str) or not HEX64.fullmatch(value) for value in
+           (outer_review_sha256, outer_once_sha256, r6_review_sha256,
+            r6_once_sha256, source_projection_sha256)):
+        raise OuterControllerError("exact Main outer/R6 authority and source-projection SHA-256 values are required")
+    frozen = verify_frozen_inputs()
+    if source_projection_sha256 != R6_SOURCE_MANIFEST_SHA256:
+        raise OuterControllerError("R8 source projection argument differs from Main-reviewed R6 source")
+    review, review_sha = _strict_json(OUTER_MAIN_REVIEW_PATH)
+    once, once_sha = _strict_json(OUTER_ONCE_PATH)
+    if review_sha != outer_review_sha256 or once_sha != outer_once_sha256:
+        raise OuterControllerError("outer Main review/once file hashes differ from exact entry arguments")
+    if set(review) != OUTER_REVIEW_FIELDS or set(once) != OUTER_ONCE_FIELDS:
+        raise OuterControllerError("outer Main authority has missing or unknown fields")
+    if (review.get("schema") != OUTER_REVIEW_SCHEMA
+            or review.get("decision") != "APPROVE_ONE_W23_R6_OUTER_CONTROLLED_ENTRY"
+            or once.get("schema") != OUTER_ONCE_SCHEMA
+            or once.get("status") != "AUTHORIZED_SINGLE_ENTRY"
+            or type(once.get("normal_attempts")) is not int
+            or once.get("normal_attempts") != 1
+            or review.get("approval_sha256") != _approval_digest(review)
+            or once.get("approval_sha256") != review.get("approval_sha256")
+            or once.get("main_review_sha256") != review_sha):
+        raise OuterControllerError("outer Main decision or exact one-use binding is invalid")
+    source_plan_path = OUTER_ROOT / "evidence/W23_R8_OUTER_SOURCE_PLAN_R1.json"
+    source_manifest_path = OUTER_ROOT / "evidence/SOURCE_MANIFEST_R1.json"
+    source_plan, source_plan_sha = _strict_json(source_plan_path)
+    source_manifest, source_manifest_sha = _strict_json(source_manifest_path)
+    controller_raw, _ = _stable_bytes(Path(__file__), limit=MAX_JOURNAL_BYTES)
+    controller_sha = hashlib.sha256(controller_raw).hexdigest()
+    expected = {
+        "source_plan_sha256": source_plan_sha,
+        "source_manifest_sha256": source_manifest_sha,
+        "controller_sha256": controller_sha,
+        "r6_main_review_sha256": r6_review_sha256,
+        "r6_once_binding_sha256": r6_once_sha256,
+        "r6_source_projection_sha256": source_projection_sha256,
+        "r6_source_map_sha256": R6_SOURCE_MAP_SHA256,
+        "r5_controller_sha256": R5_CONTROLLER_SHA256,
+        "wall_budget_seconds": WALL_BUDGET_SECONDS,
+        "cleanup_reserve_seconds": CLEANUP_RESERVE_SECONDS,
+        "public_budgets": PUBLIC_BUDGETS,
+    }
+    if (any(review.get(k) != v for k, v in expected.items())
+            or any(once.get(k) != v for k, v in expected.items())
+            or any(once.get(k) != review.get(k) for k in (
+                "runtime_root", "host_provider_config_root", "persistent_evidence_root",
+                "outer_run_root", "runtime_id"))):
+        raise OuterControllerError("outer Main review and once do not bind the exact sources, R6 authority, paths, and budgets")
+    for field, prefix in (("runtime_root", "w23-r6-runtime-"),
+                          ("host_provider_config_root", "w25-probe17-host-provider-r4-")):
+        value = review.get(field)
+        path = Path(value) if isinstance(value, str) else Path(".")
+        if (not path.is_absolute() or path.parent != Path("/private/tmp")
+                or not path.name.startswith(prefix) or path.exists() or path.is_symlink()):
+            raise OuterControllerError(f"Main did not bind a fresh private /private/tmp path for {field}")
+        try:
+            if str(uuid.UUID(path.name.removeprefix(prefix))) != path.name.removeprefix(prefix):
+                raise ValueError
+        except (ValueError, AttributeError) as exc:
+            raise OuterControllerError(f"Main-bound {field} does not end in a canonical UUID") from exc
+    persistent_root = Path(str(review.get("persistent_evidence_root", "")))
+    if (not persistent_root.is_absolute() or persistent_root.parent != R6_ROOT / "evidence/ACTUAL_RUNS_R6"
+            or not persistent_root.name.startswith("w23-r6-actual-")
+            or persistent_root.exists() or persistent_root.is_symlink()):
+        raise OuterControllerError("outer review does not bind the same fresh R6 persistent evidence child")
+    outer_run_root = Path(str(review.get("outer_run_root", "")))
+    if (not outer_run_root.is_absolute()
+            or outer_run_root.parent != EVIDENCE_ROOT / "OUTER_RUNS"
+            or not outer_run_root.name.startswith("w23-r8-outer-")
+            or outer_run_root.exists() or outer_run_root.is_symlink()):
+        raise OuterControllerError("outer review does not bind a fresh exact R8 UUID output child")
+    try:
+        if str(uuid.UUID(outer_run_root.name.removeprefix("w23-r8-outer-"))) != outer_run_root.name.removeprefix("w23-r8-outer-"):
+            raise ValueError
+    except (ValueError, AttributeError) as exc:
+        raise OuterControllerError("R8 outer run path suffix is not a canonical UUID") from exc
+    r6, r6_runtime = _load_r6_package()
+    # This pre-consumption read validates R6 authority and the exact Java/MPH
+    # source; it writes no once marker and starts no owner process.
+    r6._load_authority(main_review_sha256=r6_review_sha256,
+                       once_binding_sha256=r6_once_sha256,
+                       source_projection_sha256=source_projection_sha256)
+    r5 = _load_r5_controller()
+    return review, once, {**frozen, "source_plan_sha256": source_plan_sha,
+                          "source_manifest_sha256": source_manifest_sha,
+                          "controller_sha256": controller_sha,
+                          "persistent_evidence_root": str(persistent_root),
+                          "outer_run_root": str(outer_run_root)}, r6, r6_runtime, r5
+
+
+def _create_outer_once_guard(path: Path, *, review_sha256: str,
+                             once_sha256: str, source_data: Mapping[str, Any]) -> str:
+    if path.exists() or path.is_symlink():
+        raise OuterControllerError("R8 outer one-use guard already exists; no replay")
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    info = path.parent.lstat()
+    if (stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode)
+            or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700):
+        raise OuterControllerError("R8 one-use guard directory is not private and owned")
+    return _write_new_json(path, {
+        "schema": "w23-r8-outer-controller-once-guard/1",
+        "status": "CONSUMED_BEFORE_R6_ENTRY_NO_REPLAY",
+        "outer_main_review_sha256": review_sha256,
+        "outer_once_binding_sha256": once_sha256,
+        "r6_main_review_sha256": source_data["r6_main_review_sha256"],
+        "r6_once_binding_sha256": source_data["r6_once_binding_sha256"],
+        "r6_source_projection_sha256": R6_SOURCE_MANIFEST_SHA256,
+        "r6_source_map_sha256": R6_SOURCE_MAP_SHA256,
+        "controller_sha256": source_data["controller_sha256"],
+        "created_at_unix": time.time(),
+        "COMSOL_started_here": False,
+        "approval_created_here": False,
+        "once_created_here": False,
+    })
+
+
+def run_authorized_outer_entry(*, outer_review_sha256: str, outer_once_sha256: str,
+                               r6_review_sha256: str, r6_once_sha256: str,
+                               source_projection_sha256: str) -> dict[str, Any]:
+    """Run only after exact Main outer/R6 authorities exist; source CLI never calls this.
+
+    R6's once is consumed by its frozen entry. R8 has a separate Main-issued
+    once, consumed first, so the new cleanup/controller code is also explicitly
+    bound. No approval, once, or permission is created by this module.
+    """
+    review, _once, source_data, r6, _runtime, r5 = _strict_authority(
+        outer_review_sha256=outer_review_sha256,
+        outer_once_sha256=outer_once_sha256,
+        r6_review_sha256=r6_review_sha256,
+        r6_once_sha256=r6_once_sha256,
+        source_projection_sha256=source_projection_sha256)
+    outer_run_root = Path(source_data["outer_run_root"])
+    guard_path = outer_run_root / "R8_OUTER_ONCE_GUARD.json"
+    guard_sha = _create_outer_once_guard(
+        guard_path, review_sha256=outer_review_sha256,
+        once_sha256=outer_once_sha256,
+        source_data={**source_data, "r6_main_review_sha256": r6_review_sha256,
+                     "r6_once_binding_sha256": r6_once_sha256})
+    try:
+        outcome = r6.run_authorized_entry(
+            main_review_sha256=r6_review_sha256,
+            once_binding_sha256=r6_once_sha256,
+            source_projection_sha256=source_projection_sha256)
+    except BaseException as exc:
+        # R6 consumes its one-use guard before host construction. With no
+        # returned host/Popen objects there is no safe cleanup or replay claim.
+        failure = {
+            "schema": "w23-r8-outer-controller-prehost-outcome/1",
+            "status": "UNKNOWN_NO_REPLAY_CONTROLLER_ENTRY_DID_NOT_RETURN_HOST",
+            "failure_type": type(exc).__name__, "failure_short": str(exc)[:500],
+            "outer_once_guard_sha256": guard_sha,
+            "outer_run_root": str(outer_run_root),
+            "owner_birth": "NOT_OBSERVED_BY_RETURNED_OUTCOME",
+            "automatic_cleanup": False, "no_replay": True,
+            "native_acceptance": "NOT_CLAIMED",
+        }
+        _write_new_json(outer_run_root / "R8_PREHOST_UNKNOWN.json", failure)
+        return failure
+    view = R6OutcomeView(outcome)
+    lifecycle_root = Path(source_data["persistent_evidence_root"]) / "R8_OWNER_LIFECYCLE"
+    holder = None
+    try:
+        validated = _validate_success_outcome(r6, outcome)
+        if (Path(outcome.runtime_root) != Path(review["runtime_root"])
+                or receipt_value(outcome, "runtime_root") != str(review["runtime_root"])
+                or getattr(outcome.admission, "runtime_id", None) != review["runtime_id"]
+                or outcome.result.get("main_review_sha256") != r6_review_sha256
+                or outcome.result.get("once_binding_sha256") != r6_once_sha256
+                or outcome.result.get("source_projection_sha256") != source_projection_sha256):
+            raise OuterControllerError("actual R6 outcome differs from the exact Main-bound runtime/authority identities")
+        validated["persisted_evidence"] = _verify_persisted_r6_evidence(
+            outcome, persistent_root=Path(review["persistent_evidence_root"]),
+            journal_path=Path(outcome.result["w23_route_result"]["journal"]),
+            journal_proof=validated["journal"])
+        _bind_r5_outputs(r5, lifecycle_root)
+        holder = r5.SameHostOriginalOwnerHolder(
+            host=outcome.host, outcome=view, run_root=Path(outcome.runtime_root),
+            runtime_plan_sha256=R6_SOURCE_MANIFEST_SHA256,
+            entry_once_sha256=r6_once_sha256, owner_references=(),
+            source_plan_sha256=source_data["source_plan_sha256"],
+            execution_plan_sha256=source_data["source_manifest_sha256"],
+            entry_source_plan_sha256=R6_SOURCE_MANIFEST_SHA256)
+        holder.owner_references = r5._original_owner_references(outcome.host, view)
+        cleanup = _success_cleanup(r5, holder, validated["journal"], lifecycle_root)
+        if cleanup.get("status") != "PASS_SOURCE_READS_TERMINAL_THEN_WORKER_RETIRED_SERVER_CLOSED_NOT_NATIVE_ACCEPTANCE":
+            holder.unknown_reason = str(cleanup.get("status", "success cleanup was not proven"))
+            state = holder.snapshot()
+            r5._best_effort_holder_state(holder, state)
+            RETAINED_UNKNOWN_HOLDERS.append((holder, r5))
+            failure = {
+                "schema": "w23-r8-outer-controller-unknown/1",
+                "status": "UNKNOWN_NO_REPLAY_NO_MORE_RPC_NO_CLOSE",
+                "outer_once_guard_sha256": guard_sha,
+                "r6_source_projection_sha256": R6_SOURCE_MANIFEST_SHA256,
+                "r6_once_binding_sha256": r6_once_sha256,
+                "same_original_host_retained": True,
+                "original_owner_popen_handles_retained": True,
+                "owner_state": state,
+                "cleanup_result": cleanup,
+                "worker_or_server_rpc_after_entry_return": int(holder.disconnect_attempted),
+                "host_close_called": bool(holder.close_attempted),
+                "automatic_cleanup": False,
+                "no_replay": True,
+                "direction_status": "NOT_PROVEN",
+                "scientific_acceptance": "NOT_EVALUATED",
+                "native_acceptance": "NOT_CLAIMED",
+            }
+            _write_new_json(lifecycle_root / "R8_OUTER_UNKNOWN.json", failure)
+            return failure
+        final = {
+            "schema": "w23-r8-outer-controller-result/1",
+            "status": cleanup.get("status"),
+            "outer_once_guard_sha256": guard_sha,
+            "r6_source_projection_sha256": R6_SOURCE_MANIFEST_SHA256,
+            "r6_source_map_sha256": R6_SOURCE_MAP_SHA256,
+            "r6_main_review_sha256": r6_review_sha256,
+            "r6_once_binding_sha256": r6_once_sha256,
+            "r5_controller_sha256": R5_CONTROLLER_SHA256,
+            "r6_result": dict(outcome.result),
+            "owner_retirement": cleanup,
+            "direction_status": "NOT_PROVEN",
+            "scientific_acceptance": "NOT_EVALUATED",
+            "native_acceptance": "NOT_CLAIMED",
+            "no_replay": True,
+        }
+        _write_new_json(lifecycle_root / "R8_OUTER_RESULT.json", final)
+        return final
+    except BaseException as exc:
+        # Once the frozen entry returns a host, every error is UNKNOWN: retain
+        # this exact host/outcome and original handles; never re-dispatch.
+        try:
+            if holder is None:
+                if not lifecycle_root.exists():
+                    _bind_r5_outputs(r5, lifecycle_root)
+                view = R6OutcomeView(outcome)
+                holder = r5.SameHostOriginalOwnerHolder(
+                    host=outcome.host, outcome=view, run_root=Path(outcome.runtime_root),
+                    runtime_plan_sha256=R6_SOURCE_MANIFEST_SHA256,
+                    entry_once_sha256=r6_once_sha256, owner_references=(),
+                    source_plan_sha256=source_data["source_plan_sha256"],
+                    execution_plan_sha256=source_data["source_manifest_sha256"],
+                    entry_source_plan_sha256=R6_SOURCE_MANIFEST_SHA256)
+                holder.owner_references = r5._original_owner_references(outcome.host, view)
+            holder.unknown_reason = f"{type(exc).__name__}: {str(exc)[:400]}"
+            state = holder.snapshot()
+            r5._best_effort_holder_state(holder, state)
+        except BaseException as hold_exc:
+            state = {"status": "UNKNOWN_NO_REPLAY_ORIGINAL_HOST_RETAINED",
+                     "holder_observation_error": type(hold_exc).__name__,
+                     "holder_observation_error_short": str(hold_exc)[:300],
+                     "same_original_host_retained": True,
+                     "worker_or_server_rpc_after_entry_return": 0,
+                     "host_close_called": False,
+                     "automatic_cleanup": False,
+                     "no_replay": True}
+        failure = {
+            "schema": "w23-r8-outer-controller-unknown/1",
+            "status": "UNKNOWN_NO_REPLAY_NO_MORE_RPC_NO_CLOSE",
+            "failure_type": type(exc).__name__, "failure_short": str(exc)[:500],
+            "outer_once_guard_sha256": guard_sha,
+            "r6_source_projection_sha256": R6_SOURCE_MANIFEST_SHA256,
+            "r6_once_binding_sha256": r6_once_sha256,
+            "same_original_host_retained": True,
+            "original_owner_popen_handles_retained": True,
+            "owner_state": state,
+            "worker_or_server_rpc_after_entry_return": int(getattr(holder, "disconnect_attempted", False)),
+            "host_close_called": bool(getattr(holder, "close_attempted", False)),
+            "automatic_cleanup": False,
+            "no_replay": True,
+            "direction_status": "NOT_PROVEN",
+            "scientific_acceptance": "NOT_EVALUATED",
+            "native_acceptance": "NOT_CLAIMED",
+        }
+        _attach_r6_inner_failure(failure, outcome)
+        if holder is not None and not any(item[0] is holder for item in RETAINED_UNKNOWN_HOLDERS):
+            RETAINED_UNKNOWN_HOLDERS.append((holder, r5))
+        _write_new_json(lifecycle_root / "R8_OUTER_UNKNOWN.json", failure)
+        return failure
+
+
+def receipt_value(outcome: Any, key: str) -> Any:
+    receipt = getattr(outcome, "result", None)
+    return receipt.get(key) if isinstance(receipt, Mapping) else None
+
+
+def observe_retained_unknown_owners() -> list[dict[str, Any]]:
+    """Passively poll retained original Popen objects; never RPC, signal, or close."""
+    observations = []
+    for holder, r5 in tuple(RETAINED_UNKNOWN_HOLDERS):
+        state = holder.snapshot()
+        state["passive_process_signals_sent"] = 0
+        state["worker_or_server_rpc_after_entry_return"] = int(holder.disconnect_attempted)
+        state["control_daemon_close_called"] = bool(holder.close_attempted)
+        r5._best_effort_holder_state(holder, state)
+        observations.append(state)
+    return observations
+
+
+def source_only_preflight() -> dict[str, Any]:
+    frozen = verify_frozen_inputs()
+    return {
+        "status": "SOURCE_ONLY_PASS_NO_AUTHORITY_NO_DISPATCH",
+        "frozen_inputs": frozen,
+        "outer_main_review": "NOT_CREATED_BY_CANDIDATE; path not inspected",
+        "outer_once_binding": "NOT_CREATED_BY_CANDIDATE; path not inspected",
+        "r6_main_review": "inherited source-review provenance only; runtime authority not inspected",
+        "r6_once_binding": "NOT_CREATED_BY_CANDIDATE; path not inspected",
+        "owner_admission": "NOT_RUN",
+        "public_calls": 0,
+        "approval_created": False,
+        "authority_written_by_candidate": False,
+        "once_created": False,
+        "once_written_by_candidate": False,
+        "COMSOL": "NOT_RUN",
+        "Java": "NOT_RUN_BY_R8",
+        "native": "NOT_RUN",
+        "direction_status": "NOT_PROVEN",
+        "scientific_acceptance": "NOT_EVALUATED",
+        "authorized_callable": "probe.w23_actual_controller_r8.run_authorized_outer_entry",
+    }
+
+
+if __name__ == "__main__":
+    print(json.dumps(source_only_preflight(), sort_keys=True))

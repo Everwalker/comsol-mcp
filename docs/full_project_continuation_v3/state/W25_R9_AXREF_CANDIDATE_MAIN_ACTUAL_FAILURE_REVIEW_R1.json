@@ -1,0 +1,66 @@
+{
+  "schema": "w25-r9-axref-candidate-main-actual-review/1",
+  "status": "FAIL_PRESERVED_NATIVE_ATTEMPT_RESOURCES_TERMINAL",
+  "checked_utc": "2026-10-15T08:49:04.371274+00:00",
+  "refs": {
+    "FIRST_FAILURE.json": {
+      "path": "/private/tmp/cvw25-macos-d5812363/FIRST_FAILURE.json",
+      "bytes": 8925,
+      "sha256": "0f0241aaa15cb60f39f5abc7004f34ea9fa4056164b79641cbd73b581210836a"
+    },
+    "UNIT_ONCE_GUARD.json": {
+      "path": "/private/tmp/cvw25-macos-d5812363/UNIT_ONCE_GUARD.json",
+      "bytes": 732,
+      "sha256": "69a92c4d83a9dfc880f27c74c0cd3aff7558e5b6e993d1fa4f2d24a2ed1ce8b8"
+    },
+    "MAIN_SOURCE_REVIEW.json": {
+      "path": "/private/tmp/cvw25-macos-d5812363/MAIN_SOURCE_REVIEW.json",
+      "bytes": 1795,
+      "sha256": "19b41c209fb7f72dbf56742605011ce7cf3251c2deb833223fd1308fa4cbc2a7"
+    },
+    "MAIN_ONCE_BINDING.json": {
+      "path": "/private/tmp/cvw25-macos-d5812363/MAIN_ONCE_BINDING.json",
+      "bytes": 1445,
+      "sha256": "90939ba7948a135a4dbf17fc52ce0102ad57ddc32e712132ec63cac84bd5c503"
+    },
+    "ACTOR_CANDIDATE_macos1.json": {
+      "path": "/private/tmp/cvw25-macos-d5812363/ACTOR_CANDIDATE_macos1.json",
+      "bytes": 3141,
+      "sha256": "41d62611509868f8076a81b08072d297c0f3036564ffc9470ebf65adae0a5c76"
+    }
+  },
+  "failure": "DesktopOperationError: task-owned process identity is unavailable",
+  "first_failure": {
+    "error": "task-owned process identity is unavailable",
+    "phase": "task_owned_observation",
+    "type": "DesktopOperationError"
+  },
+  "ax_readiness_attempt_count": 0,
+  "first_owned_window": null,
+  "cleanup": {
+    "errors": [],
+    "force_stopped_known_owned_pids": [],
+    "known_owned_pid_count": 2,
+    "original_popen_pid": 8964,
+    "original_popen_returncode": -15,
+    "owned_group_absence_inventory_complete": true,
+    "owned_group_absent": true,
+    "remaining_owned_group_or_session_pids": [],
+    "unresolved_known_owned_pids": []
+  },
+  "fresh_absence": {
+    "target_pids": [
+      8932,
+      8964,
+      8975
+    ],
+    "pgid": 8964,
+    "matches": [],
+    "full_process_inventory_sha256": "4ff3975399fa1d9b859dea151030c4cd9b0623176f43f3b51da346665b6de991"
+  },
+  "axref_fix_native_status": "NOT_EXERCISED",
+  "no_replay": true,
+  "native_acceptance": false,
+  "source_root_cause_inference": "Exact error text comes from production _process_record wrapping psutil.Process(pid) failure. A short-lived captured child may have disappeared before frozen tree validation; raw cause chain not persisted so not confirmed.",
+  "next": "Source-only capture original exception chain; controlled real own-child exit reproduction. Only propose bounded pre-first-window vanished-child recapture with exact original-root and full new-tree proof; no permission/identity ambiguity recovery."
+}

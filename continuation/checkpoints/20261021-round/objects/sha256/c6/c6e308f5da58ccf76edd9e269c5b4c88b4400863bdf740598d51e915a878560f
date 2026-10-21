@@ -1,0 +1,751 @@
+"""Fail-closed offline W23 material and phasor proof consumer.
+
+This module consumes preserved observed payloads only. It never opens a model,
+creates an approval, dispatches a native operation, or infers actual values from
+an expected recipe.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import math
+import re
+from decimal import localcontext
+from decimal import Decimal, InvalidOperation
+from typing import Any, Mapping, Sequence
+
+
+_NUMBER = re.compile(
+    r"\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)\s*(?:\[([^\]]+)\])?\s*"
+)
+_EXPRESSION_TOKEN = re.compile(
+    r"\s*(?:(?P<number>(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)|"
+    r"(?P<identifier>[A-Za-z_][A-Za-z0-9_]*)|(?P<operator>[()+*/^\-]))"
+)
+_DIMENSIONLESS_UNITS = {None, "", "1", "dimensionless"}
+
+
+def _canonical_sha256(value: Any) -> str:
+    payload = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+                         allow_nan=False).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _positive_int_pair(value: Any, label: str) -> list[int]:
+    if (not isinstance(value, list) or len(value) != 2
+            or any(type(item) is not int or item <= 0 for item in value)):
+        raise ValueError(f"{label} must be two captured positive integer dimensions")
+    return list(value)
+
+
+def _numeric_literal(raw: Any, *, property_name: str, require_unit: str | None) -> tuple[Decimal, str | None]:
+    if not isinstance(raw, str):
+        raise ValueError(f"UNVERIFIED {property_name}: material getter entry is not an observed string")
+    match = _NUMBER.fullmatch(raw)
+    if match is None:
+        raise ValueError(f"UNVERIFIED {property_name}: only a finite real numeric literal is admissible")
+    unit = match.group(2).strip() if match.group(2) is not None else None
+    if require_unit is None:
+        if unit not in (None, "1"):
+            raise ValueError(f"UNVERIFIED {property_name}: expected dimensionless raw entry, got {unit!r}")
+    elif unit not in (None, require_unit):
+        raise ValueError(f"UNVERIFIED {property_name}: expected {require_unit}, got {unit!r}")
+    try:
+        number = Decimal(match.group(1))
+    except InvalidOperation as exc:
+        raise ValueError(f"UNVERIFIED {property_name}: invalid Decimal literal") from exc
+    if not number.is_finite():
+        raise ValueError(f"UNVERIFIED {property_name}: non-finite material value")
+    try:
+        numeric = float(number)
+    except (OverflowError, ValueError) as exc:
+        raise ValueError(f"UNVERIFIED {property_name}: value outside finite numeric range") from exc
+    if not math.isfinite(numeric):
+        raise ValueError(f"UNVERIFIED {property_name}: value outside finite numeric range")
+    return number, unit
+
+
+def _observed_parameter_values(payload: Mapping[str, Any] | None) -> tuple[dict[str, Decimal], dict[str, Any]]:
+    """Validate an exact parameter.get(evaluate=True) payload, retaining its raw provenance."""
+    if payload is None:
+        return {}, {}
+    allowed_payload = {"scope", "parameters", "count", "unit_policy"}
+    if set(payload) != allowed_payload or payload.get("scope") != "model":
+        raise ValueError("UNVERIFIED parameters: require the exact observed model-scope parameter.get envelope")
+    rows = payload.get("parameters")
+    if (not isinstance(rows, list) or type(payload.get("count")) is not int
+            or payload["count"] != len(rows)
+            or payload.get("unit_policy") != "units are reported verbatim from evaluateUnit(); this layer never converts"):
+        raise ValueError("UNVERIFIED parameters: incomplete evaluated parameter readback")
+    values: dict[str, Decimal] = {}
+    provenance: dict[str, Any] = {}
+    allowed_row = {"name", "group", "expression", "description", "description_error", "unit", "unit_error",
+                   "evaluated", "evaluate_errors"}
+    for row in rows:
+        if not isinstance(row, Mapping) or set(row) != allowed_row:
+            raise ValueError("UNVERIFIED parameters: parameter row fields are incomplete or unknown")
+        name = row.get("name")
+        if (not isinstance(name, str) or re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name) is None
+                or name in values or not isinstance(row.get("expression"), str)
+                or (row.get("group") is not None and not isinstance(row.get("group"), str))
+                or (row.get("description") is not None and not isinstance(row.get("description"), str))
+                or row.get("description_error") is not None):
+            raise ValueError("UNVERIFIED parameters: malformed, duplicate, or non-expression parameter identity")
+        if (row.get("unit") not in _DIMENSIONLESS_UNITS or row.get("unit_error") is not None
+                or row.get("evaluate_errors") is not None):
+            raise ValueError(f"UNVERIFIED parameter {name}: unit or evaluation readback failed/is dimensional")
+        evaluated = row.get("evaluated")
+        if (not isinstance(evaluated, Mapping) or set(evaluated) != {"kind", "shape", "data"}
+                or evaluated.get("kind") != "float64" or evaluated.get("shape") != []):
+            raise ValueError(f"UNVERIFIED parameter {name}: only a typed scalar real evaluation is supported")
+        number = evaluated.get("data")
+        try:
+            finite_number = math.isfinite(float(number))
+        except (TypeError, ValueError, OverflowError):
+            finite_number = False
+        if isinstance(number, bool) or not isinstance(number, (int, float)) or not finite_number:
+            raise ValueError(f"UNVERIFIED parameter {name}: observed evaluated value is not finite real")
+        value = Decimal(str(number))
+        values[name] = value
+        provenance[name] = {
+            "name": name,
+            "group": row.get("group"),
+            "raw_expression": row["expression"],
+            "raw_expression_sha256": _canonical_sha256(row["expression"]),
+            "observed_unit": row["unit"],
+            "typed_evaluated": dict(evaluated),
+            "row_sha256": _canonical_sha256(dict(row)),
+        }
+    return values, provenance
+
+
+class _ClosedRealExpression:
+    """Small arithmetic grammar; identifiers resolve only to captured real parameters."""
+
+    def __init__(self, expression: str, parameters: Mapping[str, Decimal]):
+        if not expression or len(expression) > 256:
+            raise ValueError("expression length is outside the bounded grammar")
+        self.parameters = parameters
+        self.identifiers: set[str] = set()
+        self.tokens: list[tuple[str, str]] = []
+        cursor = 0
+        while cursor < len(expression):
+            match = _EXPRESSION_TOKEN.match(expression, cursor)
+            if match is None:
+                raise ValueError("expression contains a token outside the closed arithmetic grammar")
+            kind = "number" if match.group("number") is not None else (
+                "identifier" if match.group("identifier") is not None else "operator")
+            self.tokens.append((kind, match.group(kind)))
+            cursor = match.end()
+            if len(self.tokens) > 128:
+                raise ValueError("expression exceeds the closed grammar token bound")
+        self.index = 0
+
+    def _peek(self, token: str | None = None) -> bool:
+        if self.index >= len(self.tokens):
+            return False
+        return token is None or self.tokens[self.index][1] == token
+
+    def _take(self, token: str | None = None) -> tuple[str, str]:
+        if not self._peek(token):
+            raise ValueError(f"expected {token!r} in closed arithmetic expression")
+        item = self.tokens[self.index]
+        self.index += 1
+        return item
+
+    @staticmethod
+    def _bounded(value: Decimal) -> Decimal:
+        if not value.is_finite() or abs(value) > Decimal("1e308"):
+            raise ValueError("arithmetic result is outside the finite real bound")
+        return value
+
+    def parse(self) -> tuple[Decimal, list[str]]:
+        with localcontext() as context:
+            context.prec = 80
+            value = self._sum()
+        if self.index != len(self.tokens):
+            raise ValueError("trailing token in closed arithmetic expression")
+        return self._bounded(value), sorted(self.identifiers)
+
+    def parse_identifiers(self) -> list[str]:
+        """Validate syntax and discover symbols without evaluating the expression.
+
+        In particular, no placeholder parameter values are invented here. Only
+        an exponent that is itself a numeric constant is evaluated, because the
+        closed grammar intentionally limits powers to bounded integer literals.
+        Runtime denominators are checked later against observed parameter values.
+        """
+        self.index = 0
+        self.identifiers.clear()
+        ast = self._syntax_sum()
+        if self.index != len(self.tokens):
+            raise ValueError("trailing token in closed arithmetic expression")
+        del ast
+        return sorted(self.identifiers)
+
+    def _syntax_sum(self) -> tuple[Any, ...]:
+        value = self._syntax_product()
+        while self._peek("+") or self._peek("-"):
+            operator = self._take()[1]
+            value = ("binary", operator, value, self._syntax_product())
+        return value
+
+    def _syntax_product(self) -> tuple[Any, ...]:
+        value = self._syntax_unary()
+        while self._peek("*") or self._peek("/"):
+            operator = self._take()[1]
+            value = ("binary", operator, value, self._syntax_unary())
+        return value
+
+    def _syntax_unary(self) -> tuple[Any, ...]:
+        if self._peek("+") or self._peek("-"):
+            operator = self._take()[1]
+            return ("unary", operator, self._syntax_unary())
+        return self._syntax_power()
+
+    def _syntax_power(self) -> tuple[Any, ...]:
+        value = self._syntax_primary()
+        if self._peek("^"):
+            self._take("^")
+            exponent = self._syntax_unary()
+            numeric_exponent = self._constant_value(exponent)
+            if numeric_exponent != numeric_exponent.to_integral_value() or abs(numeric_exponent) > 32:
+                raise ValueError("only bounded integer exponents are supported")
+            value = ("binary", "^", value, exponent)
+        return value
+
+    def _syntax_primary(self) -> tuple[Any, ...]:
+        if self._peek("("):
+            self._take("(")
+            value = self._syntax_sum()
+            self._take(")")
+            return value
+        if self.index >= len(self.tokens):
+            raise ValueError("expression ended before a value")
+        kind, token = self._take()
+        if kind == "number":
+            try:
+                return ("number", Decimal(token))
+            except InvalidOperation as exc:
+                raise ValueError("invalid numeric literal in closed expression") from exc
+        if kind == "identifier":
+            self.identifiers.add(token)
+            return ("identifier", token)
+        raise ValueError("unexpected operator in closed arithmetic expression")
+
+    def _constant_value(self, node: tuple[Any, ...]) -> Decimal:
+        kind = node[0]
+        if kind == "number":
+            return self._bounded(node[1])
+        if kind == "identifier":
+            raise ValueError("only bounded integer exponents are supported")
+        if kind == "unary":
+            value = self._constant_value(node[2])
+            return self._bounded(value if node[1] == "+" else -value)
+        if kind != "binary":
+            raise ValueError("invalid constant expression in exponent")
+        operator, left_node, right_node = node[1], node[2], node[3]
+        left, right = self._constant_value(left_node), self._constant_value(right_node)
+        try:
+            if operator == "+":
+                value = left + right
+            elif operator == "-":
+                value = left - right
+            elif operator == "*":
+                value = left * right
+            elif operator == "/":
+                if right == 0:
+                    raise ValueError("division by zero in constant exponent")
+                value = left / right
+            elif operator == "^":
+                if right != right.to_integral_value() or abs(right) > 32:
+                    raise ValueError("only bounded integer exponents are supported")
+                value = left ** int(right)
+            else:
+                raise ValueError("unexpected operator in constant exponent")
+        except (InvalidOperation, ZeroDivisionError, OverflowError) as exc:
+            raise ValueError("invalid constant exponent") from exc
+        return self._bounded(value)
+
+    def _sum(self) -> Decimal:
+        value = self._product()
+        while self._peek("+") or self._peek("-"):
+            operator = self._take()[1]
+            right = self._product()
+            value = self._bounded(value + right if operator == "+" else value - right)
+        return value
+
+    def _product(self) -> Decimal:
+        value = self._unary()
+        while self._peek("*") or self._peek("/"):
+            operator = self._take()[1]
+            right = self._unary()
+            if operator == "/" and right == 0:
+                raise ValueError("division by zero in closed arithmetic expression")
+            try:
+                value = self._bounded(value * right if operator == "*" else value / right)
+            except (InvalidOperation, ZeroDivisionError) as exc:
+                raise ValueError("invalid arithmetic result in closed expression") from exc
+        return value
+
+    def _unary(self) -> Decimal:
+        if self._peek("+"):
+            self._take("+")
+            return self._unary()
+        if self._peek("-"):
+            self._take("-")
+            return self._bounded(-self._unary())
+        return self._power()
+
+    def _power(self) -> Decimal:
+        value = self._primary()
+        if self._peek("^"):
+            self._take("^")
+            exponent = self._unary()
+            if exponent != exponent.to_integral_value() or abs(exponent) > 32:
+                raise ValueError("only bounded integer exponents are supported")
+            try:
+                value = self._bounded(value ** int(exponent))
+            except (InvalidOperation, ZeroDivisionError, OverflowError) as exc:
+                raise ValueError("invalid exponentiation in closed expression") from exc
+        return value
+
+    def _primary(self) -> Decimal:
+        if self._peek("("):
+            self._take("(")
+            value = self._sum()
+            self._take(")")
+            return value
+        if self.index >= len(self.tokens):
+            raise ValueError("expression ended before a value")
+        kind, token = self._take()
+        if kind == "number":
+            try:
+                return self._bounded(Decimal(token))
+            except InvalidOperation as exc:
+                raise ValueError("invalid numeric literal in closed expression") from exc
+        if kind == "identifier":
+            if token not in self.parameters:
+                raise ValueError(f"unobserved symbol {token!r} in closed material expression")
+            self.identifiers.add(token)
+            return self._bounded(self.parameters[token])
+        raise ValueError("unexpected operator in closed arithmetic expression")
+
+
+def _numeric_observation(raw: Any, *, property_name: str, require_unit: str | None,
+                         parameters: Mapping[str, Decimal]) -> tuple[Decimal, str | None, list[str]]:
+    try:
+        number, unit = _numeric_literal(raw, property_name=property_name, require_unit=require_unit)
+        return number, unit, []
+    except ValueError as literal_error:
+        if not isinstance(raw, str):
+            raise
+        expression = raw.strip()
+        unit = None
+        suffix = re.fullmatch(r"(.+?)\s*\[([^\]]+)\]", expression)
+        if suffix is not None:
+            expression, unit = suffix.group(1).strip(), suffix.group(2).strip()
+            if require_unit is None and unit != "1":
+                raise ValueError(f"UNVERIFIED {property_name}: expression has non-dimensionless unit {unit!r}") from literal_error
+            if require_unit is not None and unit not in (None, require_unit):
+                raise ValueError(f"UNVERIFIED {property_name}: expected {require_unit}, got {unit!r}") from literal_error
+        try:
+            parser = _ClosedRealExpression(expression, parameters)
+            number, identifiers = parser.parse()
+        except ValueError as exc:
+            raise ValueError(f"UNVERIFIED {property_name}: raw expression is outside the closed observed-real grammar: {exc}") from literal_error
+        return number, unit, identifiers
+
+
+def required_parameter_names(material_inspections: Sequence[Mapping[str, Any]]) -> list[str]:
+    """Return the exact symbol query set for a later observed parameter.get call.
+
+    The function only tokenizes and validates the closed arithmetic syntax; it
+    never supplies values or evaluates the expression. A caller can then read
+    exactly these names from the same model and pass that raw typed payload to
+    ``prove_adjacent_materials``.
+    """
+    names: set[str] = set()
+    for material in material_inspections:
+        groups = material.get("property_groups") if isinstance(material, Mapping) else None
+        if not isinstance(groups, list):
+            raise ValueError("UNVERIFIED material: property groups are absent before parameter discovery")
+        definitions = [item for item in groups if isinstance(item, Mapping) and item.get("group") == "def"]
+        if len(definitions) != 1 or not isinstance(definitions[0].get("properties"), list):
+            raise ValueError("UNVERIFIED material: exact def properties are required before parameter discovery")
+        rows = definitions[0]["properties"]
+        by_name = {row.get("name"): row for row in rows if isinstance(row, Mapping)}
+        if len(by_name) != len(rows) or set(by_name) != {
+                "relpermittivity", "relpermeability", "electricconductivity"}:
+            raise ValueError("UNVERIFIED material: exact unique property rows are required before parameter discovery")
+        for property_name in ("relpermittivity", "relpermeability"):
+            if property_name not in by_name:
+                raise ValueError(f"UNVERIFIED {material.get('tag')}: {property_name} readback is absent")
+            matrix_raw, _, _ = _observed_entries(by_name[property_name], property_name)
+            for line in matrix_raw:
+                for raw in line:
+                    try:
+                        _numeric_literal(raw, property_name=property_name, require_unit=None)
+                        continue
+                    except ValueError:
+                        pass
+                    if not isinstance(raw, str):
+                        raise ValueError(f"UNVERIFIED {property_name}: non-string expression has no parameter symbols")
+                    expression = raw.strip()
+                    suffix = re.fullmatch(r"(.+?)\s*\[([^\]]+)\]", expression)
+                    if suffix is not None:
+                        if suffix.group(2).strip() != "1":
+                            raise ValueError(f"UNVERIFIED {property_name}: only a dimensionless [1] expression suffix is supported")
+                        expression = suffix.group(1).strip()
+                    lexer = _ClosedRealExpression(expression, {})
+                    try:
+                        names.update(lexer.parse_identifiers())
+                    except ValueError as exc:
+                        raise ValueError(
+                            f"UNVERIFIED {property_name}: raw expression is outside the closed syntax grammar: {exc}") from exc
+    return sorted(names)
+
+
+def _observed_entries(row: Mapping[str, Any], property_name: str) -> tuple[list[list[str]], str, list[int]]:
+    if row.get("name") != property_name or row.get("error") is not None:
+        raise ValueError(f"UNVERIFIED {property_name}: property row is absent, mismatched, or errored")
+    value_type, getter = row.get("value_type"), row.get("getter")
+    raw = row.get("value")
+    stored = _positive_int_pair(row.get("stored_size"), f"{property_name}.stored_size")
+    if (row.get("metadata_status") != "KNOWN"
+            or row.get("size_getter") != "MaterialModel.size"
+            or row.get("size_argument") != property_name
+            or row.get("stored_size_status") != "CAPTURED"):
+        raise ValueError(f"UNVERIFIED {property_name}: getter metadata or MaterialModel.size evidence is incomplete")
+    if value_type == "String" and getter == "getString" and isinstance(raw, str):
+        if row.get("shape_rank") != 0 or stored not in ([1, 1], [3, 3]):
+            raise ValueError(f"UNVERIFIED {property_name}: scalar getter has incompatible rank or stored size")
+        return [[raw if r == c else "0" for c in range(3)] for r in range(3)], "isotropic-scalar", stored
+    if value_type == "StringArray" and getter == "getStringArray" and isinstance(raw, list):
+        if row.get("shape_rank") != 1 or len(raw) != 1 or not isinstance(raw[0], str):
+            raise ValueError(f"UNVERIFIED {property_name}: only an exact one-entry isotropic StringArray is supported")
+        if stored not in ([1, 1], [3, 3]):
+            raise ValueError(f"UNVERIFIED {property_name}: one-entry StringArray has an unsupported stored size")
+        return [[raw[0] if r == c else "0" for c in range(3)] for r in range(3)], "isotropic-one-entry-array", stored
+    if (value_type == "StringMatrix" and getter == "getStringMatrix"
+            and isinstance(raw, list) and len(raw) == 3
+            and all(isinstance(line, list) and len(line) == 3 for line in raw)
+            and all(isinstance(item, str) for line in raw for item in line)):
+        if row.get("shape_rank") != 2 or stored != [3, 3]:
+            raise ValueError(f"UNVERIFIED {property_name}: matrix getter and MaterialModel.size disagree")
+        return [list(line) for line in raw], "full-3x3-matrix", stored
+    raise ValueError(f"UNVERIFIED {property_name}: typed getter/raw shape pair is outside the closed grammar")
+
+
+def _read_material_property(row: Mapping[str, Any], property_name: str,
+                            *, required_unit: str | None, parameter_values: Mapping[str, Decimal],
+                            allow_observed_parameter_expressions: bool) -> tuple[dict[str, Any], set[str]]:
+    matrix_raw, representation, stored_size = _observed_entries(row, property_name)
+    numeric: list[list[Decimal]] = []
+    unit_rows: list[list[str | None]] = []
+    used_parameters: set[str] = set()
+    for line in matrix_raw:
+        numeric_line: list[Decimal] = []
+        unit_line: list[str | None] = []
+        for raw in line:
+            if allow_observed_parameter_expressions:
+                value, unit, identifiers = _numeric_observation(
+                    raw, property_name=property_name, require_unit=required_unit, parameters=parameter_values)
+                used_parameters.update(identifiers)
+            else:
+                value, unit = _numeric_literal(raw, property_name=property_name, require_unit=required_unit)
+            numeric_line.append(value)
+            unit_line.append(unit)
+        numeric.append(numeric_line)
+        unit_rows.append(unit_line)
+    return {
+        "name": property_name,
+        "representation": representation,
+        "value_type": row["value_type"],
+        "getter": row["getter"],
+        "raw_shape_rank": row["shape_rank"],
+        "stored_size": stored_size,
+        "raw_value": row["value"],
+        "raw_value_sha256": _canonical_sha256(row["value"]),
+        "matrix_decimal": [[str(value) for value in line] for line in numeric],
+        "units_observed": unit_rows,
+        "observed_parameter_names_used": sorted(used_parameters),
+    }, numeric, used_parameters
+
+
+def validate_material_properties(material: Mapping[str, Any], *,
+                                 observed_parameters: Mapping[str, Any] | None = None,
+                                 observed_geometry_dimension: int | None = None,
+                                 _parameter_values: Mapping[str, Decimal] | None = None,
+                                 _parameter_provenance: Mapping[str, Any] | None = None,
+                                 _global_parameter_names: Sequence[str] | None = None,
+                                 _global_parameter_payload_sha256: str | None = None) -> dict[str, Any]:
+    tag = material.get("tag")
+    if not isinstance(tag, str) or not tag:
+        raise ValueError("UNVERIFIED material: observed material tag is missing")
+    selection = material.get("selection")
+    if not isinstance(selection, Mapping) or selection.get("read_status") != "OK":
+        raise ValueError(f"UNVERIFIED {tag}: material domain selection is not complete")
+    if material.get("errors") not in ([], None):
+        raise ValueError(f"UNVERIFIED {tag}: material.inspect reported property or size errors")
+    if type(observed_geometry_dimension) is not int or observed_geometry_dimension != 2:
+        raise ValueError("UNVERIFIED geometry: only an exact fresh 2D geometry readback is supported")
+    coverage = material.get("domain_coverage")
+    if not isinstance(coverage, Mapping) or coverage.get("entity_dimension") != observed_geometry_dimension:
+        raise ValueError(f"UNVERIFIED {tag}: material coverage dimension differs from the observed geometry")
+    if (coverage.get("entities") != selection.get("entities")
+            or coverage.get("entity_count") != len(selection.get("entities") or [])):
+        raise ValueError(f"UNVERIFIED {tag}: material selection and domain coverage differ")
+    groups = material.get("property_groups")
+    if not isinstance(groups, list) or sum(1 for group in groups if isinstance(group, Mapping) and group.get("group") == "def") != 1:
+        raise ValueError(f"UNVERIFIED {tag}: exactly one observed def property group is required")
+    group = next(item for item in groups if item.get("group") == "def")
+    props = group.get("properties")
+    if not isinstance(props, list):
+        raise ValueError(f"UNVERIFIED {tag}: property getter rows are absent")
+    by_name: dict[str, Mapping[str, Any]] = {}
+    for row in props:
+        if not isinstance(row, Mapping) or not isinstance(row.get("name"), str) or row["name"] in by_name:
+            raise ValueError(f"UNVERIFIED {tag}: malformed or duplicate material property row")
+        by_name[row["name"]] = row
+    required = ("relpermittivity", "relpermeability", "electricconductivity")
+    if set(by_name) != set(required):
+        raise ValueError(f"UNVERIFIED {tag}: explicit proof read must contain exactly {required!r}")
+
+    if _parameter_values is None or _parameter_provenance is None:
+        parameter_values, parameter_provenance = _observed_parameter_values(observed_parameters)
+        global_parameter_names = sorted(parameter_provenance)
+        global_parameter_payload_sha256 = _canonical_sha256(observed_parameters)
+        require_exact_parameter_closure = True
+    else:
+        parameter_values = dict(_parameter_values)
+        parameter_provenance = dict(_parameter_provenance)
+        global_parameter_names = sorted(set(_global_parameter_names or ()))
+        global_parameter_payload_sha256 = _global_parameter_payload_sha256
+        require_exact_parameter_closure = False
+    epsilon, eps_values, eps_parameters = _read_material_property(
+        by_name["relpermittivity"], "relpermittivity", required_unit=None,
+        parameter_values=parameter_values, allow_observed_parameter_expressions=True)
+    permeability, mu_values, mu_parameters = _read_material_property(
+        by_name["relpermeability"], "relpermeability", required_unit=None,
+        parameter_values=parameter_values, allow_observed_parameter_expressions=True)
+    conductivity, sigma_values, _ = _read_material_property(
+        by_name["electricconductivity"], "electricconductivity", required_unit="S/m",
+        parameter_values={}, allow_observed_parameter_expressions=False)
+    used_parameters = eps_parameters | mu_parameters
+    if require_exact_parameter_closure:
+        if used_parameters != set(parameter_provenance):
+            raise ValueError(f"UNVERIFIED {tag}: evaluated parameter readback is not the exact symbol closure")
+    elif not used_parameters.issubset(set(global_parameter_names)):
+        raise ValueError(f"UNVERIFIED {tag}: used symbols are outside the exact global query set")
+    for label, matrix in (("relpermittivity", eps_values), ("relpermeability", mu_values)):
+        if any(matrix[r][c] != matrix[c][r] for r in range(3) for c in range(3)):
+            raise ValueError(f"UNVERIFIED {tag}: {label} is not exactly symmetric in the observed raw values")
+    if any(value != 0 for line in sigma_values for value in line):
+        raise ValueError(f"UNVERIFIED {tag}: electricconductivity is not exact finite zero S/m")
+    return {
+        "status": "PASS_OBSERVED_LOSSLESS_RECIPROCAL_MATERIAL",
+        "tag": tag,
+        "observed_geometry_dimension": observed_geometry_dimension,
+        "domain_coverage": dict(coverage),
+        "relative_permittivity": epsilon,
+        "relative_permeability": permeability,
+        "electricconductivity": conductivity,
+        "real_symmetric_epsilon": True,
+        "real_symmetric_mu": True,
+        "zero_conductivity_S_per_m": True,
+        "observed_parameters": {name: parameter_provenance[name] for name in sorted(used_parameters)},
+        "global_parameter_query_symbols": global_parameter_names,
+        "global_parameter_payload_sha256": global_parameter_payload_sha256,
+        "raw_material_values_preserved": True,
+    }
+
+
+def prove_adjacent_materials(port_adjacency: Mapping[str, Any], material_inventory: Mapping[str, Any],
+                             material_inspections: Sequence[Mapping[str, Any]], *,
+                             observed_parameters: Mapping[str, Any] | None = None,
+                             observed_geometry_dimension: int | None = None) -> dict[str, Any]:
+    if type(observed_geometry_dimension) is not int or observed_geometry_dimension != 2:
+        raise ValueError("UNVERIFIED geometry: only an exact fresh 2D geometry readback is supported")
+    if (port_adjacency.get("entity_dimension") != 1
+            or port_adjacency.get("target_dimension") != observed_geometry_dimension
+            or port_adjacency.get("per_entity_truncated") is not False):
+        raise ValueError("UNVERIFIED port adjacency: require complete observed 1D-to-2D adjacency")
+    per_entity = port_adjacency.get("per_entity")
+    source = port_adjacency.get("source_entities")
+    adjacent = port_adjacency.get("adjacent_entities")
+    if not isinstance(per_entity, list) or not isinstance(source, list) or not isinstance(adjacent, list):
+        raise ValueError("UNVERIFIED port adjacency: entity arrays are absent")
+    if len(source) == 0 or len(set(source)) != len(source) or any(type(x) is not int or x <= 0 for x in source):
+        raise ValueError("UNVERIFIED port adjacency: source port boundary identities are malformed")
+    recomputed: set[int] = set()
+    per_source: set[int] = set()
+    for row in per_entity:
+        if not isinstance(row, Mapping) or type(row.get("entity")) is not int or not isinstance(row.get("adjacent"), list):
+            raise ValueError("UNVERIFIED port adjacency: per-entity rows are malformed")
+        entity = row["entity"]
+        if entity in per_source or any(type(x) is not int or x <= 0 for x in row["adjacent"]):
+            raise ValueError("UNVERIFIED port adjacency: duplicate or malformed entity record")
+        per_source.add(entity)
+        recomputed.update(row["adjacent"])
+    if per_source != set(source) or sorted(recomputed) != adjacent or not adjacent:
+        raise ValueError("UNVERIFIED port adjacency: aggregate domain identities differ from the exact per-entity readback")
+
+    inventory_rows = material_inventory.get("materials")
+    if (material_inventory.get("scope") != "component" or not isinstance(inventory_rows, list)
+            or type(material_inventory.get("material_count")) is not int
+            or material_inventory.get("material_count") != len(inventory_rows)
+            or material_inventory.get("errors") not in ([], None)):
+        raise ValueError("UNVERIFIED material inventory: incomplete component-scoped material list")
+    inventory_by_tag: dict[str, Mapping[str, Any]] = {}
+    for row in inventory_rows:
+        if not isinstance(row, Mapping) or not isinstance(row.get("tag"), str) or row["tag"] in inventory_by_tag:
+            raise ValueError("UNVERIFIED material inventory: duplicate or malformed material tag")
+        if (row.get("read_status") != "OK"
+                or row.get("dimension") != observed_geometry_dimension
+                or not isinstance(row.get("entities"), list)):
+            raise ValueError("UNVERIFIED material inventory: a material selection does not match observed 2D geometry")
+        entities = row["entities"]
+        if any(type(item) is not int or item <= 0 for item in entities) or len(set(entities)) != len(entities):
+            raise ValueError("UNVERIFIED material inventory: malformed domain identities")
+        inventory_by_tag[row["tag"]] = row
+    inspection_by_tag: dict[str, Mapping[str, Any]] = {}
+    for row in material_inspections:
+        if not isinstance(row, Mapping) or not isinstance(row.get("tag"), str) or row["tag"] in inspection_by_tag:
+            raise ValueError("UNVERIFIED material inspections: duplicate or malformed material identity")
+        inspection_by_tag[row["tag"]] = row
+    if set(inspection_by_tag) != set(inventory_by_tag):
+        raise ValueError("UNVERIFIED material inspections: exact complete inventory-to-inspection closure is required")
+
+    # MaterialModel parameter readback is model-global. Validate its exact
+    # symbol union once across the complete captured material inventory, then
+    # let each material proof cite only the subset it actually uses. Preserve
+    # and hash the entire observed payload so per-material projection cannot
+    # erase extra/missing-row evidence.
+    global_parameter_names = required_parameter_names(material_inspections)
+    parameter_values, parameter_provenance = _observed_parameter_values(observed_parameters)
+    if set(parameter_provenance) != set(global_parameter_names):
+        raise ValueError("UNVERIFIED parameters: evaluated parameter readback is not the exact global symbol union")
+    global_parameter_payload_sha256 = _canonical_sha256(observed_parameters)
+    if observed_parameters is None:
+        retained_global_parameter_payload = None
+    else:
+        retained_global_parameter_payload = json.loads(
+            json.dumps(observed_parameters, sort_keys=True, ensure_ascii=False, allow_nan=False))
+
+    domain_to_materials: dict[int, list[str]] = {}
+    proofs: dict[str, dict[str, Any]] = {}
+    for tag, inventory_row in inventory_by_tag.items():
+        domains = list(inventory_row["entities"])
+        inspection = inspection_by_tag[tag]
+        coverage = inspection.get("domain_coverage")
+        if (not isinstance(coverage, Mapping)
+                or coverage.get("entity_dimension") != observed_geometry_dimension
+                or coverage.get("entities") != domains or coverage.get("entity_count") != len(domains)):
+            raise ValueError(f"UNVERIFIED {tag}: material.inspect coverage differs from material.list")
+        for domain in domains:
+            domain_to_materials.setdefault(domain, []).append(tag)
+    for domain in adjacent:
+        owners = domain_to_materials.get(domain, [])
+        if len(owners) != 1:
+            raise ValueError(f"UNVERIFIED adjacent physical domain {domain}: expected one observed material, found {owners!r}")
+        tag = owners[0]
+        proofs[tag] = validate_material_properties(
+            inspection_by_tag[tag], observed_parameters=observed_parameters,
+            observed_geometry_dimension=observed_geometry_dimension,
+            _parameter_values=parameter_values, _parameter_provenance=parameter_provenance,
+            _global_parameter_names=global_parameter_names,
+            _global_parameter_payload_sha256=global_parameter_payload_sha256)
+    return {
+        "status": "PASS_OBSERVED_ADJACENT_MATERIAL_COVERAGE_AND_RECIPROCITY",
+        "observed_geometry_dimension": observed_geometry_dimension,
+        "port_entity_dimension": 1,
+        "physical_domain_dimension": observed_geometry_dimension,
+        "port_source_entities": list(source),
+        "adjacent_physical_domains": list(adjacent),
+        "domain_material_assignments": {str(domain): domain_to_materials[domain][0] for domain in adjacent},
+        "material_proofs": proofs,
+        "global_parameter_query": {
+            "status": "PASS_EXACT_GLOBAL_SYMBOL_UNION",
+            "scope": "model",
+            "symbols": global_parameter_names,
+            "raw_observed_payload": retained_global_parameter_payload,
+            "raw_observed_payload_sha256": global_parameter_payload_sha256,
+            "unit_policy": "units are reported verbatim from evaluateUnit(); this layer never converts",
+        },
+        "raw_material_and_adjacency_observations_retained": True,
+    }
+
+
+def prove_fresh_material_direction_closure(port_adjacency: Mapping[str, Any],
+                                           material_inventory: Mapping[str, Any],
+                                           material_inspections: Sequence[Mapping[str, Any]], *,
+                                           observed_parameters: Mapping[str, Any] | None = None,
+                                           observed_geometry_dimension: int | None = None) -> dict[str, Any]:
+    """Named entry point for the fresh W23 zero-solve proof consumer.
+
+    The raw inventory, inspections, adjacency and model-scope parameter payload
+    are passed through unchanged to the strict proof function. No expected
+    material values or parameter rows are synthesized here.
+    """
+    return prove_adjacent_materials(port_adjacency, material_inventory, material_inspections,
+                                   observed_parameters=observed_parameters,
+                                   observed_geometry_dimension=observed_geometry_dimension)
+
+
+def _pair(value: Any, label: str) -> tuple[float, float]:
+    if (not isinstance(value, list) or len(value) != 2
+            or any(isinstance(x, bool) or not isinstance(x, (int, float)) or not math.isfinite(float(x)) for x in value)):
+        raise ValueError(f"{label} must be an observed finite [real, imag] pair")
+    return float(value[0]), float(value[1])
+
+
+def time_reverse_eh(raw_fields: Mapping[str, Any], *, source_basis_id: str,
+                    transformed_basis_id: str) -> dict[str, Any]:
+    """Apply the approved time-reversal convention to observed full E/H phasors.
+
+    The transformed result intentionally makes no physical direction claim;
+    that requires independent native integral evidence in the next stage.
+    """
+    if (not isinstance(source_basis_id, str) or not source_basis_id
+            or not isinstance(transformed_basis_id, str) or not transformed_basis_id
+            or source_basis_id == transformed_basis_id):
+        raise ValueError("basis identities must be distinct observed identifiers")
+    if not isinstance(raw_fields, Mapping) or set(raw_fields) != {"electric", "magnetic"}:
+        raise ValueError("raw phasor input must contain exactly electric and magnetic arrays")
+    electric, magnetic = raw_fields["electric"], raw_fields["magnetic"]
+    if (not isinstance(electric, list) or not isinstance(magnetic, list) or not electric
+            or len(electric) != len(magnetic)):
+        raise ValueError("raw E/H arrays must contain matching nonempty sample lists")
+
+    def transform(values: list[Any], *, electric_field: bool) -> list[list[list[float]]]:
+        out: list[list[list[float]]] = []
+        for sample_index, vector in enumerate(values):
+            if not isinstance(vector, list) or len(vector) != 3:
+                raise ValueError("each raw E/H sample must contain exactly three Cartesian components")
+            transformed_vector: list[list[float]] = []
+            for component_index, raw_pair in enumerate(vector):
+                real, imag = _pair(raw_pair, f"sample[{sample_index}].component[{component_index}]")
+                if electric_field:
+                    transformed_vector.append([real, -imag])
+                else:
+                    transformed_vector.append([-real, imag])
+            out.append(transformed_vector)
+        return out
+
+    retained_raw = json.loads(json.dumps(raw_fields, allow_nan=False))
+    transformed = {
+        "electric": transform(electric, electric_field=True),
+        "magnetic": transform(magnetic, electric_field=False),
+    }
+    return {
+        "status": "PASS_TIME_REVERSAL_ALGEBRA_ONLY",
+        "phasor_convention": "E_to_conj_E__H_to_minus_conj_H",
+        "source_basis_id": source_basis_id,
+        "transformed_basis_id": transformed_basis_id,
+        "raw_fields": retained_raw,
+        "raw_fields_sha256": _canonical_sha256(retained_raw),
+        "transformed_fields": transformed,
+        "transformed_fields_sha256": _canonical_sha256(transformed),
+        "physical_direction_status": "NOT_PROVEN_PENDING_INDEPENDENT_NATIVE_INTEGRALS",
+    }

@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CapabilityEvidence",
+  "type": "object",
+  "properties": {
+    "operation_id": {
+      "type": "string"
+    },
+    "runtime_id": {
+      "type": "string"
+    },
+    "environment": {
+      "type": "object",
+      "properties": {
+        "os": {
+          "type": "string"
+        },
+        "os_version": {
+          "type": "string"
+        },
+        "architecture": {
+          "type": "string"
+        },
+        "comsol_build": {
+          "type": "string"
+        },
+        "jdk_version": {
+          "type": "string"
+        },
+        "backend_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "os",
+        "os_version",
+        "architecture",
+        "comsol_build",
+        "jdk_version",
+        "backend_version"
+      ],
+      "additionalProperties": false
+    },
+    "status": {
+      "enum": [
+        "SUPPORTED_VERIFIED",
+        "SUPPORTED_UNVERIFIED",
+        "BLOCKED_LICENSE",
+        "BLOCKED_PLATFORM",
+        "BLOCKED_PERMISSION",
+        "BLOCKED_API_GAP",
+        "FAILED_VALIDATION"
+      ]
+    },
+    "products": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "test_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "evidence_artifacts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "checked_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "operation_id",
+    "runtime_id",
+    "environment",
+    "status",
+    "products",
+    "test_ids",
+    "evidence_artifacts",
+    "limitations"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "SUPPORTED_VERIFIED"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "test_ids": {
+            "minItems": 1
+          },
+          "evidence_artifacts": {
+            "minItems": 1
+          }
+        }
+      }
+    }
+  ]
+}

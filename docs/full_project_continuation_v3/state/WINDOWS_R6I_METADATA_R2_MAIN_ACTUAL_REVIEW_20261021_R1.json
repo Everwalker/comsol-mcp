@@ -1,0 +1,71 @@
+{
+  "schema": "WINDOWS_R6I_METADATA_R2_MAIN_ACTUAL_READONLY_REVIEW_V1",
+  "at_utc": "2026-10-21T02:48:12.118141+00:00",
+  "status": "PASS_SCOPED_READONLY_METADATA_NOT_NATIVE_ACCEPTANCE",
+  "report_sha256": "d14f86dc5eee98277456ebab9875690e0ff149650fd2c6a9b37d2e3707634ccb",
+  "new_diagnostic_original_ssh_pid": 80421,
+  "new_diagnostic_natural_returncode": 0,
+  "Main_controls": 9,
+  "payload_bytes": 4394,
+  "payload_sha256": "2f330ba7e0f361426bfd4df8ccb4f94bd7bc53fc1a28aeb442db9889db4ac0da",
+  "remote_writes": 0,
+  "file_content_reads": 0,
+  "remote_process_inspection": false,
+  "native_children_created_by_diagnostic": 0,
+  "fixed_path_count": 10,
+  "observed": {
+    "main_approval": {
+      "ctime_ns": 1792508111806984900,
+      "expected_kind": "file",
+      "file_attributes": 32,
+      "id": "main_approval",
+      "mode": 33206,
+      "mtime_ns": 1792548349351588300,
+      "object_type": "regular_file",
+      "relative_path": "authority-primary-owner-r6i\\MAIN_APPROVAL.json",
+      "reparse_point": false,
+      "size_bytes": 2018,
+      "status": "PRESENT"
+    },
+    "once_used": {
+      "ctime_ns": 1792548372387371700,
+      "expected_kind": "runtime_path",
+      "file_attributes": 32,
+      "id": "once_used",
+      "mode": 33206,
+      "mtime_ns": 1792548372387371700,
+      "object_type": "regular_file",
+      "relative_path": "authority-primary-owner-r6i\\ONCE_USED.json",
+      "reparse_point": false,
+      "size_bytes": 0,
+      "status": "PRESENT"
+    },
+    "probe_run_directory": {
+      "errno": 2,
+      "error_type": "FileNotFoundError",
+      "expected_kind": "runtime_path",
+      "id": "probe_run_directory",
+      "relative_path": "primary-owner-probe-r6i",
+      "status": "MISSING"
+    },
+    "owner_probe_output": {
+      "errno": 2,
+      "error_type": "FileNotFoundError",
+      "expected_kind": "runtime_path",
+      "id": "owner_probe_output",
+      "relative_path": "primary-owner-probe-r6i\\owner-probe.bin",
+      "status": "MISSING"
+    }
+  },
+  "original_activity": {
+    "exec": 89189,
+    "controller_pid": 47502,
+    "ssh_pid": 47520,
+    "status": "UNOBSERVED; original exec confirmed still live after diagnostic; no new stdout/stderr",
+    "remote_child_state": "NOT_ESTABLISHED_BY_METADATA",
+    "once": "CONSUMED_OR_RESERVED_NO_REPLAY; zero bytes is not unused authorization",
+    "signals_retries_resends": 0
+  },
+  "next": "User-requested current-round source/progress synchronization then pause; retain original owner. Further remote investigation or original connection recovery requires fresh live observation and exact scope, never replay.",
+  "final_Reviewer": "NOT_RUN"
+}

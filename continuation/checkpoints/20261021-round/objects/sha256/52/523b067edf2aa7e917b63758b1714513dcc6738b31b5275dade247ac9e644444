@@ -1,0 +1,92 @@
+from __future__ import annotations
+import argparse
+import importlib.util
+import json
+from pathlib import Path
+import sys
+import tempfile
+import types
+
+def load_controller(path: Path):
+    spec = importlib.util.spec_from_file_location("_w23_r8_external_loader_control", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("cannot load exact R8 source")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--controller", required=True, type=Path)
+    parser.add_argument("--wrong-probe", action="store_true")
+    args = parser.parse_args()
+    controller = load_controller(args.controller.resolve(strict=True))
+    if args.wrong_probe:
+        with tempfile.TemporaryDirectory(prefix="w23-r8-decoy-") as tmp:
+            decoy = Path(tmp) / "probe"
+            decoy.mkdir()
+            init = decoy / "__init__.py"
+            init.write_text("# decoy package\n", encoding="utf-8")
+            spec = importlib.util.spec_from_file_location(
+                "probe", init, submodule_search_locations=[str(decoy)])
+            wrong = importlib.util.module_from_spec(spec)
+            sys.modules["probe"] = wrong
+            try:
+                controller._load_r6_package()
+            except controller.OuterControllerError as exc:
+                assert "different source root" in str(exc)
+                assert "probe.w23_actual_entry_r6" not in sys.modules
+                assert "probe.w23_zero_solve_runtime" not in sys.modules
+                print(json.dumps({"status":"PASS_WRONG_PROBE_ORIGIN_REJECTED",
+                                  "submodules_imported":False},sort_keys=True))
+                return 0
+            raise AssertionError("wrong canonical probe root must fail closed")
+    # Exercise the real R6 package loader and the exact production W25 import
+    # consumer without invoking source-only receipt checks that require the
+    # still-pending fresh JDK11 compile receipt.
+    entry_module, runtime_module = controller._load_r6_package()
+    projection = runtime_module._verify_source_projection(
+        controller.R6_SOURCE_MANIFEST_SHA256)
+    preflight = controller._preflight_r6_w25_imports(entry_module)
+    assert projection["member_count"] == 914
+    owned = __import__("probe.w23_owned_runtime_entry", fromlist=["_w25_modules"])
+    loaded = owned._w25_modules()
+    candidate = controller.R6_ROOT.resolve(strict=True)
+    package = sys.modules.get("probe")
+    origins = {
+        "probe": str(Path(package.__file__).resolve(strict=True)),
+        "r6_entry": str(Path(sys.modules["probe.w23_actual_entry_r6"].__file__).resolve(strict=True)),
+        "r6_runtime": str(Path(sys.modules["probe.w23_zero_solve_runtime"].__file__).resolve(strict=True)),
+        "owned_runtime_entry": str(Path(owned.__file__).resolve(strict=True)),
+        "control_daemon": str(Path(sys.modules["comsol_mcp._control_daemon"].__file__).resolve(strict=True)),
+        "operation_store": str(Path(sys.modules["comsol_mcp._operation_store"].__file__).resolve(strict=True)),
+    }
+    expected = {
+        "probe": candidate/"probe/__init__.py",
+        "r6_entry": candidate/"probe/w23_actual_entry_r6.py",
+        "r6_runtime": candidate/"probe/w23_zero_solve_runtime.py",
+        "owned_runtime_entry": candidate/"probe/w23_owned_runtime_entry.py",
+        "control_daemon": candidate/"source/comsol_mcp/_control_daemon.py",
+        "operation_store": candidate/"source/comsol_mcp/_operation_store.py",
+    }
+    assert all(Path(origins[k]) == v for k,v in expected.items()), origins
+    assert preflight["status"] == "PASS_EXACT_R6_W25_IMPORTS_NO_HOST_NO_DISPATCH"
+    assert preflight["public_calls"] == 0
+    assert len(loaded) == 4
+    assert "jpype" not in sys.modules, "source import unexpectedly loaded JPype"
+    print(json.dumps({"status":"PASS_CANONICAL_R6_LOADER_TO_W25_MODULE_IMPORTS",
+                      "preflight":preflight["status"],"module_origins":origins,
+                      "module_tuple_types":[type(x).__name__ for x in loaded],
+                      "jpype_loaded":False,"public_calls":0,"owner_created":False,
+                      "approval_created":False,"once_created":False},
+                     sort_keys=True,separators=(",",":")))
+    return 0
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except Exception as exc:
+        print(f"R8_LOADER_CONTROL_FAILED: {type(exc).__name__}: {str(exc)[:500]}",
+              file=sys.stderr)
+        raise SystemExit(2)

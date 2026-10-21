@@ -1,0 +1,242 @@
+from __future__ import annotations
+
+import hashlib
+import importlib.util
+import json
+import shutil
+import sys
+from pathlib import Path
+
+import pytest
+
+
+REPO = Path(__file__).resolve().parents[5]
+R17_SOURCE = (REPO / "repository/_state/w24-r17-trace-setup14-source-a31d15f4-2286-40cd-a2d6-7504ffb7fe3b-20261021/source").resolve()
+R18_LIFECYCLE = (Path(__file__).resolve().parents[1] /
+                 "tools/run_native_w24_static_shape_sensitivity_lifecycle.py")
+if str(R17_SOURCE) not in sys.path:
+    sys.path.insert(0, str(R17_SOURCE))
+
+
+def _load_module(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+lifecycle = _load_module("w24_r18_lifecycle_under_test", R18_LIFECYCLE)
+from tools.run_native_w24_cure_science import CampaignError
+from tools.run_native_w24_static_shape_sensitivity_science import CAPTURE_KEY_ORDER
+from tools.run_native_w24_cure_science import _project_path
+
+
+def _sha(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _setup_projection_fixture(tmp_path: Path):
+    workspace = (tmp_path / "registered-project").resolve()
+    output_dir = workspace / "outputs"
+    project_evidence = workspace / "evidence" / "readmission-runner"
+    source_evidence = (tmp_path / "prior-setup-evidence").resolve()
+    output_dir.mkdir(parents=True)
+    project_evidence.mkdir(parents=True)
+    source_evidence.mkdir(parents=True)
+    slots = {}
+    source_bytes = {}
+    for index, key in enumerate(CAPTURE_KEY_ORDER, start=1):
+        configuration_id, case_id = key.split(":", 1)
+        artifact_path = output_dir / f"setup-{index:02d}.mph"
+        artifact_path.write_bytes(f"synthetic unsolved artifact {key}".encode())
+        artifact_bytes = artifact_path.stat().st_size
+        receipt = {
+            "schema": "W24_STATIC_SHAPE_MANAGED_SETUP_V2",
+            "status": "MANAGED_BUILD_SAVE_REOPEN_READBACK_COMPLETE",
+            "native_acceptance": "NOT_RUN",
+            "configuration_id": configuration_id,
+            "case_id": case_id,
+            "project_artifact": {
+                "path": str(artifact_path),
+                "sha256": _sha(artifact_path),
+                "size_bytes": artifact_bytes,
+            },
+            "study_run_submissions": [],
+            "study_run_submission_count": 0,
+            "phase_initialization_executed": False,
+        }
+        receipt_path = source_evidence / f"{index:02d}_{configuration_id}_{case_id}.json"
+        encoded = (json.dumps(receipt, sort_keys=True, separators=(",", ":")) + "\n").encode()
+        receipt_path.write_bytes(encoded)
+        source_bytes[key] = encoded
+        slots[key] = {"receipt_path": str(receipt_path),
+                      "receipt_sha256": hashlib.sha256(encoded).hexdigest()}
+    return workspace, project_evidence, source_evidence, slots, source_bytes
+
+
+def test_projects_fourteen_exact_receipts_and_real_project_path_consumer(tmp_path):
+    workspace, project_evidence, source_evidence, slots, source_bytes = _setup_projection_fixture(tmp_path)
+    result = lifecycle._stage_historical_setup_receipts(
+        project_workspace=workspace,
+        project_evidence_dir=project_evidence,
+        historical_evidence_dir=source_evidence,
+        historical_setup_slots=slots,
+        transition_id="projection-positive-0001",
+    )
+
+    assert result["receipt_count"] == 14
+    manifest = json.loads(Path(result["manifest_path"]).read_text(encoding="utf-8"))
+    assert manifest["native_acceptance"] == "NOT_RUN"
+    assert manifest["study_run_submissions"] == 0
+    assert set(manifest["slots"]) == set(CAPTURE_KEY_ORDER)
+    for key in CAPTURE_KEY_ORDER:
+        projected = result["receipt_paths"][key]
+        assert projected.read_bytes() == source_bytes[key]
+        assert projected.stat().st_nlink == 1
+        assert _project_path(workspace, projected, must_exist=True) == projected
+        assert _sha(Path(slots[key]["receipt_path"])) == slots[key]["receipt_sha256"]
+    with pytest.raises(CampaignError, match="outside the registered science workspace"):
+        _project_path(workspace, Path(slots[CAPTURE_KEY_ORDER[0]]["receipt_path"]),
+                      must_exist=True)
+
+
+@pytest.mark.parametrize("fault", ["receipt_hash", "outside_source", "artifact_hash"])
+def test_preflight_rejects_changed_or_unconfined_source_before_creating_output(tmp_path, fault):
+    workspace, project_evidence, source_evidence, slots, _ = _setup_projection_fixture(tmp_path)
+    first = CAPTURE_KEY_ORDER[0]
+    if fault == "receipt_hash":
+        slots[first]["receipt_sha256"] = "0" * 64
+    elif fault == "outside_source":
+        outside = tmp_path / "outside.json"
+        outside.write_bytes(Path(slots[first]["receipt_path"]).read_bytes())
+        slots[first]["receipt_path"] = str(outside)
+    else:
+        receipt_path = Path(slots[first]["receipt_path"])
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+        receipt["project_artifact"]["sha256"] = "f" * 64
+        encoded = (json.dumps(receipt, sort_keys=True, separators=(",", ":")) + "\n").encode()
+        receipt_path.write_bytes(encoded)
+        slots[first]["receipt_sha256"] = hashlib.sha256(encoded).hexdigest()
+
+    with pytest.raises(lifecycle.LifecycleError):
+        lifecycle._stage_historical_setup_receipts(
+            project_workspace=workspace,
+            project_evidence_dir=project_evidence,
+            historical_evidence_dir=source_evidence,
+            historical_setup_slots=slots,
+            transition_id=f"projection-negative-{fault}",
+        )
+    assert not (project_evidence / "historical_setup_receipts").exists()
+
+
+def test_existing_transition_directory_is_never_reused_or_overwritten(tmp_path):
+    workspace, project_evidence, source_evidence, slots, _ = _setup_projection_fixture(tmp_path)
+    transition = "projection-collision-0001"
+    destination = project_evidence / "historical_setup_receipts" / transition
+    destination.mkdir(parents=True)
+    marker = destination / "preserve.txt"
+    marker.write_text("keep", encoding="utf-8")
+    with pytest.raises(lifecycle.LifecycleError, match="already exists"):
+        lifecycle._stage_historical_setup_receipts(
+            project_workspace=workspace,
+            project_evidence_dir=project_evidence,
+            historical_evidence_dir=source_evidence,
+            historical_setup_slots=slots,
+            transition_id=transition,
+        )
+    assert marker.read_text(encoding="utf-8") == "keep"
+
+
+def test_real_control_daemon_readmission_consumes_project_confined_projection(tmp_path, monkeypatch):
+    r17_test_path = R17_SOURCE / "tests/test_run_native_w24_static_shape_science.py"
+    existing_tests = _load_module("w24_r17_science_test_fixtures", r17_test_path)
+    science = existing_tests.sensitivity_science
+    original_readmit = science.readmit_sensitivity_setup_artifacts
+    observed = {}
+
+    def stage_then_readmit(managed_runner, *, historical_setup_receipt_paths,
+                           expected_historical_setup_receipt_sha256,
+                           expected_setup_fixture_source_sha256,
+                           expected_setup_readback_source_sha256, transition_id,
+                           birth_budget, maximum_transition_wall_time_s):
+        source_root = (tmp_path / "setup-activity-evidence").resolve()
+        source_root.mkdir()
+        external_slots = {}
+        for index, key in enumerate(CAPTURE_KEY_ORDER, start=1):
+            source = Path(historical_setup_receipt_paths[key])
+            copied = source_root / f"{index:02d}_{key.replace(':', '_')}.json"
+            shutil.copyfile(source, copied)
+            external_slots[key] = {
+                "receipt_path": str(copied),
+                "receipt_sha256": expected_historical_setup_receipt_sha256[key],
+            }
+        projection = lifecycle._stage_historical_setup_receipts(
+            project_workspace=Path(managed_runner.workspace),
+            project_evidence_dir=Path(managed_runner.evidence_dir),
+            historical_evidence_dir=source_root,
+            historical_setup_slots=external_slots,
+            transition_id=transition_id,
+        )
+        observed.update({"source_root": source_root, "projection": projection,
+                         "external_slots": external_slots})
+        return original_readmit(
+            managed_runner,
+            historical_setup_receipt_paths=projection["receipt_paths"],
+            expected_historical_setup_receipt_sha256=expected_historical_setup_receipt_sha256,
+            expected_setup_fixture_source_sha256=expected_setup_fixture_source_sha256,
+            expected_setup_readback_source_sha256=expected_setup_readback_source_sha256,
+            transition_id=transition_id,
+            birth_budget=birth_budget,
+            maximum_transition_wall_time_s=maximum_transition_wall_time_s,
+        )
+
+    monkeypatch.setattr(science, "readmit_sensitivity_setup_artifacts", stage_then_readmit)
+    context = existing_tests._real_sensitivity_readmission_fixture(tmp_path, monkeypatch)
+    assert context["readmission"] is not None, context["readmission_error"]
+    assert context["readmission"]["status"] == "SCIENCE_WORKER_READMISSION_COMPLETE"
+    assert len(context["worker_state"]["model_load_paths"]) == 14
+    assert observed["projection"]["receipt_count"] == 14
+    for key in CAPTURE_KEY_ORDER:
+        projected = observed["projection"]["receipt_paths"][key]
+        assert _project_path(Path(context["workspace"]), projected, must_exist=True) == projected
+        assert _sha(projected) == context["historical_receipt_sha256"][key]
+        with pytest.raises(CampaignError, match="outside the registered science workspace"):
+            _project_path(Path(context["workspace"]),
+                          Path(observed["external_slots"][key]["receipt_path"]),
+                          must_exist=True)
+
+
+def test_real_readmission_consumer_rejects_external_receipts_before_model_load(tmp_path, monkeypatch):
+    r17_test_path = R17_SOURCE / "tests/test_run_native_w24_static_shape_science.py"
+    existing_tests = _load_module("w24_r17_science_test_external_path_control", r17_test_path)
+    science = existing_tests.sensitivity_science
+    original_readmit = science.readmit_sensitivity_setup_artifacts
+    observed = {}
+
+    def pass_external_paths_without_projection(managed_runner, *, historical_setup_receipt_paths,
+                                               expected_historical_setup_receipt_sha256, **kwargs):
+        source_root = (tmp_path / "external-setup-activity-evidence").resolve()
+        source_root.mkdir()
+        external = {}
+        for index, key in enumerate(CAPTURE_KEY_ORDER, start=1):
+            copied = source_root / f"{index:02d}_{key.replace(':', '_')}.json"
+            shutil.copyfile(Path(historical_setup_receipt_paths[key]), copied)
+            external[key] = copied
+        observed["external"] = external
+        return original_readmit(
+            managed_runner,
+            historical_setup_receipt_paths=external,
+            expected_historical_setup_receipt_sha256=expected_historical_setup_receipt_sha256,
+            **kwargs,
+        )
+
+    monkeypatch.setattr(science, "readmit_sensitivity_setup_artifacts",
+                        pass_external_paths_without_projection)
+    context = existing_tests._real_sensitivity_readmission_fixture(tmp_path, monkeypatch)
+    assert context["readmission"] is None
+    assert isinstance(context["readmission_error"], CampaignError)
+    assert "outside the registered science workspace" in str(context["readmission_error"])
+    assert context["worker_state"]["model_load_paths"] == []
+    assert set(observed["external"]) == set(CAPTURE_KEY_ORDER)

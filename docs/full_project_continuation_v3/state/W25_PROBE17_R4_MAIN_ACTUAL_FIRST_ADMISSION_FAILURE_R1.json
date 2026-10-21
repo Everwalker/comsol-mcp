@@ -1,0 +1,31 @@
+{
+  "schema": "W25_PROBE17_R4_MAIN_ACTUAL_FIRST_ADMISSION_FAILURE_V1",
+  "status": "FAIL_FIRST_PROJECT_CREATE_POLICY_REFUSED_NO_REPLAY",
+  "created_at_utc": "2026-10-15T15:03:30.581193+00:00",
+  "runtime_namespace": "/private/tmp/cv-w25-probe17-runtime-r8-r4-a8f27a2b",
+  "original_exec_session": 35037,
+  "original_controller_holding": true,
+  "runtime_review_sha256": "8857aef80c0d4a2e82659e2ff7b8a99e35daeb7b86c810424f10ee5900c3a063",
+  "once_sha256": "72f3f972926e87838743ddee9f4071f38c79b4f756dd256d46dd13298bea87a2",
+  "response": {
+    "path": "/private/tmp/cv-w25-probe17-runtime-r8-r4-a8f27a2b/project-root/.w25-probe-cfbfb2ad27f84950bccba39440fb6c50/setup/01-project-create-response.json",
+    "sha256": "c0f680b7a9423a42c08ea85f1957e1ea0ac16590067df18aa8d25d3c0cb32e8c",
+    "error_code": "POLICY_ESCALATION_REFUSED",
+    "operation_id": "4c41e94b-3298-4110-b046-62caf6070898",
+    "job_id": "cadf65ed-47d7-4d8e-948b-a6b6c135a12e"
+  },
+  "failure_receipt": {
+    "path": "/private/tmp/cv-w25-probe17-runtime-r8-r4-a8f27a2b/W25_PROBE17_ACTUAL_ENTRY_FAILURE_R4.json",
+    "sha256": "8aece8defad1ac40443d1edb2734ddf0796da0e441589b7a99e033a0b8cf9c6a"
+  },
+  "birth": "NO_SERVER_WORKER_OR_MODEL_OBSERVED; SAME_HOST_OWNER_LIST_EMPTY",
+  "registered_probe_calls": 0,
+  "admission_calls_attempted": 1,
+  "root_cause": "R4 requests host_control in project policy but omits existing COMSOL_MCP_HOST_CONTROL startup opt-in before default daemon construction; trusted policy correctly refuses escalation.",
+  "next": "New R5 exact entry/controller with Main-bound host startup grant and real default registered-route controls. Empty-owner known refusal needs same-host no-birth terminal proof for natural exit; unresolved graph retains hold. Preserve R4 consumed once and failure; no replay.",
+  "acceptance": {
+    "native_probe": "NOT_RUN",
+    "science": "NOT_RUN",
+    "independent_reviewer": "NOT_RUN"
+  }
+}

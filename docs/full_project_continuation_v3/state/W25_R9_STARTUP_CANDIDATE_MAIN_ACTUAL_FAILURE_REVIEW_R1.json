@@ -1,0 +1,119 @@
+{
+  "schema": "w25-r9-startup-candidate-main-actual-review/1",
+  "checked_utc": "2026-10-15T09:14:34.597420+00:00",
+  "status": "FAIL_PRESERVED_NATIVE_ATTEMPT_RESOURCES_TERMINAL",
+  "refs": {
+    "FIRST_FAILURE.json": {
+      "path": "/private/tmp/cvw25-macos-8df1efcc/FIRST_FAILURE.json",
+      "bytes": 11468,
+      "sha256": "15bbca8d73993e341c69217fc1f662f9b48267f878e2a93d7676a2dcf35f9379"
+    },
+    "UNIT_ONCE_GUARD.json": {
+      "path": "/private/tmp/cvw25-macos-8df1efcc/UNIT_ONCE_GUARD.json",
+      "bytes": 733,
+      "sha256": "47ea797737b88ddea1880e22e2129f2050345e59d047805bb9a8d1b406ae449d"
+    },
+    "MAIN_SOURCE_REVIEW.json": {
+      "path": "/private/tmp/cvw25-macos-8df1efcc/MAIN_SOURCE_REVIEW.json",
+      "bytes": 2242,
+      "sha256": "7dda25974942f158024b079775edc66f11ce00828d078d2218a3a380c88afb61"
+    },
+    "MAIN_ONCE_BINDING.json": {
+      "path": "/private/tmp/cvw25-macos-8df1efcc/MAIN_ONCE_BINDING.json",
+      "bytes": 1445,
+      "sha256": "df89b9fd16ad36505339e084a9ea2e453b88ffa82a6aa74bd6d7615845c2ff94"
+    },
+    "ACTOR_CANDIDATE_macos1.json": {
+      "path": "/private/tmp/cvw25-macos-8df1efcc/ACTOR_CANDIDATE_macos1.json",
+      "bytes": 3141,
+      "sha256": "7774ca5ba4c9acbf1d4751b267bb88c273207c00b1d41fbd4a3e5a5d141960ee"
+    },
+    "OWNED_WINDOW_FIRST.json": {
+      "path": "/private/tmp/cvw25-macos-8df1efcc/OWNED_WINDOW_FIRST.json",
+      "bytes": 674,
+      "sha256": "7ff82af7cf9b9c3512bcc16d6b09d4ea1eee945a478f7c19e366daa01521e13f"
+    }
+  },
+  "actual_failure": "DesktopOperationError: task-owned COMSOL process tree has multiple visible windows",
+  "actual_ax_attempts": [
+    {
+      "attempt": 1,
+      "diagnostics": {
+        "attribute": "AXWindows",
+        "ax_error_code": -25204,
+        "ax_error_name": "cannot_complete",
+        "kind": "AX_ERROR",
+        "readiness_transient": true,
+        "scope": "application_window_map"
+      },
+      "elapsed_seconds": 0.023,
+      "status": "RETRY_AX_WINDOWS_READINESS"
+    },
+    {
+      "attempt": 2,
+      "diagnostics": {
+        "attribute": "AXWindows",
+        "ax_error_code": -25204,
+        "ax_error_name": "cannot_complete",
+        "kind": "AX_ERROR",
+        "readiness_transient": true,
+        "scope": "application_window_map"
+      },
+      "elapsed_seconds": 1.041,
+      "status": "RETRY_AX_WINDOWS_READINESS"
+    },
+    {
+      "attempt": 3,
+      "diagnostics": {
+        "attribute": "AXPosition",
+        "ax_error_code": -25202,
+        "ax_error_name": "invalid_ui_element",
+        "kind": "AX_ERROR",
+        "readiness_transient": false,
+        "scope": "window_association"
+      },
+      "elapsed_seconds": 6.584,
+      "status": "FAIL_TERMINAL"
+    }
+  ],
+  "elapsed_seconds": 8.196,
+  "startup_child_exit_recoveries": 0,
+  "AXREF_refresh_receipts": 0,
+  "first_owned_window": {
+    "comsol_version": "6.4.0",
+    "desktop_session_id": "process-session:77946",
+    "login_id": "uid:501",
+    "native_window_id": "CGWindow:2637",
+    "platform": "macos",
+    "process_birth": "1792055567.795712",
+    "process_id": 78019
+  },
+  "cleanup": {
+    "errors": [],
+    "force_stopped_known_owned_pids": [],
+    "known_owned_pid_count": 4,
+    "original_popen_pid": 77946,
+    "original_popen_returncode": -15,
+    "owned_group_absence_inventory_complete": true,
+    "owned_group_absent": true,
+    "remaining_owned_group_or_session_pids": [],
+    "unresolved_known_owned_pids": []
+  },
+  "fresh_absence": {
+    "target_pids": [
+      77917,
+      77946,
+      78019,
+      78020,
+      78021
+    ],
+    "pgid": 77946,
+    "matches": [],
+    "full_process_inventory_sha256": "33c589c5b758bb0463edf2d66cbed6620daa6ac02fb50feb642ffb091d4400ac"
+  },
+  "unchanged_replay": false,
+  "native_GUI_or_selector_or_control_acceptance": false,
+  "Main_architecture_decision": "Stop immediate GUI retry/patch loop. Keep multiple-window no-selection predicate; plan bounded owned-only lifecycle diagnostics and explicit unique-window transition proof before further source/native changes. Prioritize ready W23 read-only and Windows work.",
+  "source_startup_fix_native_status": "NOT_EXERCISED",
+  "source_AXREF_fix_native_status": "REVALIDATION_REJECTED_MULTIPLE_OWNED_WINDOWS"
+}

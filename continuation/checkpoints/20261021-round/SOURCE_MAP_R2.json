@@ -1,0 +1,141 @@
+{
+  "authority_and_runtime": {
+    "approval_once_pid_token_database_mph_commercial_jar_installed_environment_compiled_output": "NOT_INCLUDED",
+    "windows_execution_identity_permissions_hostpaths_ssh_credentials": "LOCAL_ONLY_REBIND_REQUIRED"
+  },
+  "manifest": "CHECKPOINT_MANIFEST_R2.json",
+  "objects": {
+    "bytes": 54528600,
+    "root": "objects/sha256/",
+    "unique_sha256_objects": 1105
+  },
+  "restore_behavior": {
+    "executes_source": false,
+    "new_directory_only": true,
+    "restored_file_mode": "0644",
+    "restores_authority": false,
+    "windows_source_included": true
+  },
+  "restore_tool": "restore_checkpoint_sources.py",
+  "schema": "COMSOL_MCP_FULL_PROJECT_PORTABLE_SOURCE_MAP_R2",
+  "source_reference_rule": "Every manifest record keeps source_ref, lane, role, exact byte length, and SHA-256. Original absolute host paths are not used as restore destinations.",
+  "source_roots": [
+    {
+      "lane": "project-instructions",
+      "member_count": 13,
+      "notes": "Top-level and V3 project instructions preserved separately.",
+      "restore_root": "project-instructions/"
+    },
+    {
+      "groups": {
+        "R12_PACKET_INDEX": 1,
+        "R12_R18_FINAL_PACKET_MEMBER": 13,
+        "R6_PINNED_EXTERNAL_HELPERS": 3,
+        "R6_SOURCE_PROJECTION_R6": 914,
+        "R6_STATIC_METADATA": 5,
+        "R8_FINAL_PACKET_MEMBER": 15,
+        "R8_PACKET_INDEX": 1,
+        "W25_R1_DEPENDENCY": 6,
+        "W25_R1_PACKET_INDEX": 1,
+        "W25_R2_EXTERNAL_RECURSIVE_DEPENDENCY": 2,
+        "W25_R2_FINAL_PACKET_MEMBER": 8,
+        "W25_R2_PACKET_INDEX": 1,
+        "W26_R26_R12_EXACT_SOURCE_LOCK_175": 175
+      },
+      "lane": "w23-w25-source-static",
+      "member_count": 1145,
+      "notes": "Each frozen candidate/source group remains separate; no overlay or merge is performed.",
+      "restore_root": "sources/w23-w25/<source_group>/<original repository-relative path>"
+    },
+    {
+      "fingerprint_sha256": "30e7a1fbc3ae2ae39e32480535af81a6077becaa4e36af79cc6a1ba34ec320b8",
+      "lane": "w24-r20-source",
+      "member_count": 900,
+      "notes": "The original source root remains under its original _state/.../source subtree; original and frozen package bytes were both checked.",
+      "restore_root": "sources/w24-r20/"
+    },
+    {
+      "fingerprint_sha256": "893b37f2dc577c6513541e499ba6aad90708d4bced6886fe6d8abe6e33e5b10f",
+      "lane": "w26-r31",
+      "member_count": 905,
+      "notes": "Complete R31 source snapshot.",
+      "restore_root": "sources/w26-r31/"
+    },
+    {
+      "fingerprint_sha256": "eb017ce92b2878d422b2361deb1fe4009e4fd99b75bcdabfe2cd990ffe5e10f3",
+      "lane": "w26-r32-r3",
+      "member_count": 908,
+      "notes": "Complete R32 R3 source snapshot.",
+      "restore_root": "sources/w26-r32-r3/"
+    },
+    {
+      "lane": "windows-r6i-token-owner-source",
+      "member_count": 11,
+      "notes": "R6I gate/probe/source/template/controls plus source manifest and plan.",
+      "restore_root": "sources/windows-r6i-token-owner/"
+    },
+    {
+      "lane": "windows-r6i-native-entry-source",
+      "member_count": 1,
+      "notes": "Earlier R6I native-entry payload iteration retained as history; use the separately listed latest R2 source group for current development.",
+      "restore_root": "sources/windows-r6i-native-entry-r2/"
+    },
+    {
+      "lane": "windows-r6i-metadata-only-source",
+      "member_count": 7,
+      "notes": "Earlier R1 metadata-only source snapshot retained as history; current R2 source and unsigned plan are separately listed.",
+      "restore_root": "sources/windows-r6i-metadata-only/"
+    },
+    {
+      "lane": "windows-r6i-metadata-only-source-dependency",
+      "member_count": 1,
+      "notes": "Exact prior OriginalReadOnlyPopenOwner code; local SSH/host identity still requires fresh binding.",
+      "restore_root": "sources/windows-r6i-metadata-only-deps/"
+    },
+    {
+      "lane": "windows-r6i-transitive-source-dependencies",
+      "member_count": 17,
+      "notes": "R6B/R5J source and tests, R6G owner/template/seed, R6H source controls and R11 source fixture.",
+      "restore_root": "sources/windows-r6i-deps/"
+    },
+    {
+      "lane": "windows-r6i-latest-exact-source",
+      "member_count": 8,
+      "notes": "Eight exact latest R6I R2 native-entry, metadata-only, and bound-PREP source/test rows. Windows execution identity remains LOCAL_ONLY.",
+      "restore_root": "Per-file paths in the manifest: sources/windows-r6i-native-entry-r2-current/, sources/windows-r6i-metadata-only-r2-current/, and sources/windows-r6i-bound-prep-r2/."
+    }
+  ],
+  "static_metadata_roots": [
+    {
+      "lane": "metadata",
+      "member_count": 31,
+      "notes": "Source maps/manifests, unsigned plans, candidate diffs, and source-only reports outside the three explicitly listed current Windows R6I metadata groups.",
+      "restore_root": "metadata/"
+    },
+    {
+      "lane": "windows-r6i-native-entry-r2-metadata",
+      "member_count": 13,
+      "notes": "Latest packet manifest, source-only context and unsigned/non-authority templates.",
+      "restore_root": "metadata/windows-r6i-native-entry-r2/"
+    },
+    {
+      "lane": "windows-r6i-metadata-only-r2-metadata",
+      "member_count": 10,
+      "notes": "Latest metadata-only source manifest, unsigned plan, context, templates and source-only receipts.",
+      "restore_root": "metadata/windows-r6i-metadata-only-r2/"
+    },
+    {
+      "lane": "windows-r6i-bound-prep-r2-metadata",
+      "member_count": 8,
+      "notes": "Bound PREP source/packet manifests, diff, request and unsigned templates.",
+      "restore_root": "metadata/windows-r6i-bound-prep-r2/"
+    }
+  ],
+  "status": "SOURCE_HANDOFF_ONLY_NOT_RELEASE_NOT_AUTHORITY",
+  "windows_latest_exact_source_coverage": {
+    "included_count": 9,
+    "local_execution_identity": "LOCAL_ONLY_REBIND_REQUIRED",
+    "new_source_and_test_members": 8,
+    "required_count": 9
+  }
+}

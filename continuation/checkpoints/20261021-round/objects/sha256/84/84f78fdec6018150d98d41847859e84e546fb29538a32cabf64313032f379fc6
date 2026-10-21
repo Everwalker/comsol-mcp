@@ -1,0 +1,404 @@
+from __future__ import annotations
+
+import copy
+import hashlib
+import json
+import os
+import shutil
+import tempfile
+import unittest
+from pathlib import Path
+from types import SimpleNamespace
+import uuid
+
+from comsol_mcp._control_daemon import ControlDaemon
+from comsol_mcp._execution_contract import SessionLedger
+from comsol_mcp._execution_service import ExecutionService
+from probe import w23_actual_entry_r6 as actual
+from probe import w23_owned_runtime_entry as owned
+from probe import w23_zero_solve_runtime as runtime
+
+
+def _canonical(value):
+    return json.dumps(value, sort_keys=True, separators=(",", ":"),
+                      ensure_ascii=False, allow_nan=False).encode("utf-8")
+
+
+class _Gate:
+    def __init__(self, daemon, project_id, session_id):
+        self.daemon = daemon
+        self.project_id = project_id
+        self.session_id = session_id
+        self.requests = []
+
+    def assert_live(self):
+        return {"server_pid": 41001, "worker_pid": 41002,
+                "worker_instance_id": "r6-test-worker",
+                "worker_epoch": 9}
+
+    def dispatch(self, request):
+        self.requests.append(copy.deepcopy(request))
+        return self.daemon.dispatch(dict(request))
+
+
+def _bridge(daemon, gate):
+    # Exercise the production W23OwnedRuntimeBridge.dispatch body while
+    # keeping this offline test clear of Server/Worker construction.
+    bridge = object.__new__(owned.W23OwnedRuntimeBridge)
+    bridge.host = SimpleNamespace(daemon=daemon)
+    bridge.daemon = daemon
+    bridge.gate = gate
+    bridge.store = daemon.store
+    bridge.project_id = gate.project_id
+    bridge.session_id = gate.session_id
+    bridge._control_daemon_type = ControlDaemon
+    bridge._operation_store_type = type(daemon.store)
+    return bridge
+
+
+def _durable_owner_response(daemon, *, project_id, session_id, operation_id):
+    request_id = f"r6-{operation_id}-request"
+    idempotency_key = f"r6-{operation_id}-idempotency"
+    nested = {
+        "operation_id": operation_id,
+        "arguments": {"r6_fixture": operation_id},
+    }
+    execution = {
+        "project_id": project_id, "session_id": session_id,
+        "request_id": request_id, "idempotency_key": idempotency_key,
+        "model_ref": None, "expected_revision": None,
+        "rpc_timeout_s": 30.0, "execution_timeout_s": None,
+        "queue_timeout_s": 60.0,
+    }
+    request = {"operation": "operation_call", "arguments": nested,
+               "execution": execution}
+    request_hash = hashlib.sha256(_canonical(request)).hexdigest()
+    metadata = {"operation": "operation_call", "arguments": nested,
+                "execution": execution}
+    record, replay = daemon.store.begin(
+        request_id=request_id, idempotency_key=idempotency_key,
+        request_hash=request_hash, operation="operation_call",
+        metadata=metadata, timeouts={},
+    )
+    if replay:
+        raise AssertionError("test fixture unexpectedly reused an idempotency key")
+    response = {
+        "success": True,
+        "data": {"durable_fixture": operation_id},
+        "execution": {
+            "project_id": project_id, "request_id": request_id,
+            "idempotency_key": idempotency_key,
+            "operation_id": record["operation_id"], "job_id": record["job_id"],
+            "request_hash": request_hash,
+        },
+    }
+    daemon.store.finish(record["operation_id"], status="SUCCEEDED", result=response)
+    return {
+        "operation_id": operation_id, "request_id": request_id,
+        "idempotency_key": idempotency_key, "nested_arguments": nested,
+        "execution": execution, "response": response,
+    }
+
+
+class R6TransportAndCachedStatusContractTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="w23-r6-contract-")
+        root = Path(self.temp.name)
+        self.project_root = root / "projects"
+        self.project_root.mkdir(mode=0o700)
+        self.daemon = ControlDaemon(root / "home", project_root=self.project_root)
+        self.project_id = "r6-project-contract"
+        self.session_id = "r6-session-contract"
+        self.gate = _Gate(self.daemon, self.project_id, self.session_id)
+        self.bridge = _bridge(self.daemon, self.gate)
+
+    def tearDown(self):
+        try:
+            self.daemon.close()
+        finally:
+            self.temp.cleanup()
+
+    def test_fresh_owner_status_uses_real_bare_cached_job_read_and_same_owner_record(self):
+        owner_call = _durable_owner_response(
+            self.daemon, project_id=self.project_id, session_id=self.session_id,
+            operation_id="artifact.register",
+        )
+        owner_execution = owner_call["response"]["execution"]
+        owner_call["execution"] = {
+            **owner_call["execution"],
+            "request_id": owner_call["request_id"],
+            "idempotency_key": owner_call["idempotency_key"],
+        }
+        with tempfile.TemporaryDirectory(prefix="w23-r6-status-journal-") as journal_root:
+            journal = runtime.DurableJournal(journal_root)
+            route = runtime.FreshOwnerRoute(
+                {"project_id": self.project_id, "session_id": self.session_id},
+                journal, dispatcher=self.bridge.dispatch,
+            )
+            route.calls.append(owner_call)
+            route.owner_calls.append(owner_call)
+            raw = route.call_raw("job.status", {"job_id": owner_execution["job_id"]})
+            journal.close()
+
+            self.assertEqual(set(raw), {"success", "data"})
+            self.assertNotIn("execution", raw)
+            self.assertEqual(raw["data"]["job_id"], owner_execution["job_id"])
+            self.assertEqual(raw["data"]["status"], "SUCCEEDED")
+            self.assertEqual(raw["data"]["operation"]["result"], owner_call["response"])
+            self.assertEqual(route.terminal_status_reads[0]["response"], raw)
+
+        self.assertEqual(len(self.gate.requests), 1)
+        request = self.gate.requests[0]
+        self.assertEqual(request["operation"], "operation_call")
+        self.assertEqual(request["arguments"], {
+            "operation_id": "job.status",
+            "arguments": {"job_id": owner_execution["job_id"]},
+        })
+        self.assertEqual(request["execution"]["project_id"], self.project_id)
+        self.assertEqual(request["execution"]["session_id"], self.session_id)
+
+    def test_owner_status_rejects_wrong_job_and_cached_snapshot_drift(self):
+        owner_call = _durable_owner_response(
+            self.daemon, project_id=self.project_id, session_id=self.session_id,
+            operation_id="model.load",
+        )
+        response_execution = owner_call["response"]["execution"]
+        owner_call["execution"] = {
+            **owner_call["execution"], "request_id": owner_call["request_id"],
+            "idempotency_key": owner_call["idempotency_key"],
+        }
+        with tempfile.TemporaryDirectory(prefix="w23-r6-negative-journal-") as journal_root:
+            journal = runtime.DurableJournal(journal_root)
+            route = runtime.FreshOwnerRoute(
+                {"project_id": self.project_id, "session_id": self.session_id},
+                journal, dispatcher=self.bridge.dispatch,
+            )
+            route.calls.append(owner_call)
+            route.owner_calls.append(owner_call)
+            with self.assertRaises(runtime.RuntimeEntryError):
+                route.call_raw("job.status", {"job_id": "foreign-job"})
+            self.assertEqual(self.gate.requests, [])
+
+            real = self.daemon.dispatch({
+                "operation": "operation_call",
+                "arguments": {"operation_id": "job.status",
+                              "arguments": {"job_id": response_execution["job_id"]}},
+                "execution": {"project_id": self.project_id, "session_id": self.session_id},
+            })
+            route._validate_status_readback_envelope(real)
+            bad_envelopes = [
+                {**real, "execution": {"status": "SUCCEEDED"}},
+                {**real, "extra": "unexpected"},
+                {"success": False, "data": real["data"]},
+            ]
+            for bad in bad_envelopes:
+                with self.subTest(envelope=sorted(bad)):
+                    with self.assertRaises(runtime.RuntimeOutcomeUnknown):
+                        route._validate_status_readback_envelope(bad)
+
+            for field, value in (("status", "UNKNOWN"), ("job_id", "foreign-job")):
+                drift = copy.deepcopy(real["data"])
+                drift[field] = value
+                with self.subTest(snapshot_field=field):
+                    with self.assertRaises(runtime.RuntimeOutcomeUnknown):
+                        route._validate_terminal_status_snapshot(drift)
+            journal.close()
+
+    def test_public_route_passes_one_complete_transport_envelope_to_real_daemon(self):
+        context = {
+            "project_id": self.project_id,
+            "model_ref": {
+                "schema_version": 1, "session_id": self.session_id,
+                "server_instance_id": "r6-server", "model_tag": "Model",
+                "generation": 1,
+            },
+            "expected_revision": 0,
+        }
+        with tempfile.TemporaryDirectory(prefix="w23-r6-public-journal-") as journal_root:
+            journal = runtime.DurableJournal(journal_root)
+            route = runtime.PublicRoute(context, journal, dispatcher=self.bridge.dispatch)
+            with self.assertRaises(runtime.RuntimeEntryError):
+                route.call_raw("model.inspect", {"deep": False})
+            journal.close()
+        self.assertEqual(len(self.gate.requests), 1)
+        request = self.gate.requests[0]
+        self.assertEqual(request["operation"], "operation_call")
+        self.assertEqual(request["arguments"], {
+            "operation_id": "model.inspect", "arguments": {"deep": False},
+        })
+        self.assertNotEqual(request["arguments"].get("operation_id"), "operation_call")
+
+    def test_bridge_rejects_extra_or_cross_session_transport_before_dispatch(self):
+        malformed = [
+            ("operation_call", {"operation_id": "model.inspect", "arguments": {},
+                                "extra": "not-public-contract"},
+             {"project_id": self.project_id, "session_id": self.session_id}),
+            ("operation_call", {"operation_id": "model.inspect", "arguments": {}},
+             {"project_id": "foreign-project", "session_id": self.session_id}),
+            ("model.inspect", {"deep": False},
+             {"project_id": self.project_id, "session_id": self.session_id}),
+        ]
+        for operation, arguments, execution in malformed:
+            with self.subTest(operation=operation, arguments=arguments):
+                with self.assertRaises(owned.OwnedRuntimeEntryError):
+                    self.bridge.dispatch(operation, arguments, execution)
+        self.assertEqual(self.gate.requests, [])
+
+    def test_persisted_raw_evidence_copies_only_the_fixed_manifested_files(self):
+        with tempfile.TemporaryDirectory(prefix="w23-r6-evidence-copy-") as scratch:
+            scratch_root = Path(scratch).resolve(strict=True)
+            project_root = scratch_root / "project"
+            project_root.mkdir(mode=0o700)
+            run_id = "00000000000040008000000000000001"
+            root = project_root / f".w25-probe-{run_id}"
+            setup, workspace, evidence = root / "setup", root / "workspace", root / "w23-evidence"
+            run = evidence / "w23-zero-solve-00000000-0000-4000-8000-000000000001"
+            for path in (root, setup, workspace, evidence, run):
+                path.mkdir(mode=0o700)
+            setup_names = [
+                "01-project-create-intent.json", "01-project-create-response.json",
+                "02-session-start-intent.json", "02-session-start-response.json",
+                "03-session-connect-intent.json", "03-session-connect-response.json",
+            ]
+            for name in setup_names:
+                (setup / name).write_bytes((name + "\n").encode("utf-8"))
+                (setup / name).chmod(0o600)
+            (root / "ADMISSION_RESULT.json").write_bytes(b'{"synthetic":"admission"}\n')
+            (root / "ADMISSION_RESULT.json").chmod(0o600)
+            input_root = project_root / f"w23-input-{run_id}"
+            input_root.mkdir(mode=0o700)
+            model = input_root / actual.SAVED_MPH_PATH.name
+            shutil.copyfile(actual.SAVED_MPH_PATH, model)
+            model.chmod(0o400)
+            source_identity = actual.entry.verify_saved_mph_copy(str(actual.SAVED_MPH_PATH))
+            destination_identity = actual.entry.verify_saved_mph_copy(str(model))
+            binding = {
+                "schema": "w23-r6-saved-mph-copy-binding/2",
+                "status": "PASS_EXACT_IMMUTABLE_SOURCE_COPIED_TO_NON_HIDDEN_PROJECT_INPUT",
+                "run_id": run_id, "project_id": "r6-project-contract",
+                "session_id": "r6-session-contract", "project_root": str(project_root),
+                "source_identity": source_identity,
+                "destination_identity": destination_identity,
+                "source_project_relative_path": f"w23-input-{run_id}/{model.name}",
+                "opened_by_comsol": False,
+            }
+            (root / "W23_SAVED_MPH_COPY_BINDING_R2.json").write_text(
+                json.dumps(binding, sort_keys=True) + "\n", encoding="utf-8")
+            (root / "W23_SAVED_MPH_COPY_BINDING_R2.json").chmod(0o600)
+            journal = run / "public-receipts.jsonl"
+            journal.write_bytes(b'{"raw_response":{"success":true}}\n')
+            journal.chmod(0o600)
+            destination = scratch_root / "persistent"
+            destination.mkdir(mode=0o700)
+
+            manifest = actual._persist_raw_evidence(
+                root, destination, project_input_root=project_root)
+            self.assertEqual(manifest["status"],
+                             "PASS_EXACT_BOUNDED_RAW_EVIDENCE_COPIED_AND_READ_BACK")
+            self.assertEqual(manifest["file_count"], 10)
+            self.assertEqual((destination / f"w23-input-{run_id}" / model.name).read_bytes(),
+                             model.read_bytes())
+            self.assertEqual(manifest["workspace_archive_disposition"],
+                             "EMPTY_PRIVATE_W25_WORKSPACE_PROJECT_INPUT_COPY_INCLUDED")
+            self.assertEqual((destination / "w23-evidence" / run.name /
+                              "public-receipts.jsonl").read_bytes(), journal.read_bytes())
+
+            (workspace / "unreviewed-extra.bin").write_bytes(b"outside the exact W23 input")
+            (workspace / "unreviewed-extra.bin").chmod(0o600)
+            second_destination = scratch_root / "persistent-extra-workspace"
+            second_destination.mkdir(mode=0o700)
+            with self.assertRaisesRegex(
+                    actual.ActualEntryGuardError,
+                    "W25 admitted workspace must remain empty after project-input relocation"):
+                actual._persist_raw_evidence(
+                    root, second_destination, project_input_root=project_root)
+            (workspace / "unreviewed-extra.bin").unlink()
+
+            (root / "unexpected.json").write_bytes(b"must reject")
+            (root / "unexpected.json").chmod(0o600)
+            with self.assertRaises(actual.ActualEntryGuardError):
+                actual._persist_raw_evidence(root, destination, partial=True,
+                                             project_input_root=project_root)
+
+    def test_real_artifact_register_accepts_nonhidden_input_and_rejects_private_workspace(self):
+        """Use the actual public ControlDaemon -> ManagedBackend -> ArtifactStore route."""
+        class Snapshot:
+            def model_snapshot(self, _tag):
+                return {"model_tag": "unused", "server_instance_id": "r6-path-server",
+                        "external_event_counter": 0, "fingerprint": "unused"}
+
+        with tempfile.TemporaryDirectory(prefix="w23-r6-artifact-register-") as scratch:
+            root = Path(scratch).resolve(strict=True)
+            project_container = root / "projects"
+            project_container.mkdir(mode=0o700)
+            ledger = SessionLedger("r6-path-session", "r6-path-server")
+            service = ExecutionService(ledger, Snapshot(), project_root=project_container)
+            daemon = ControlDaemon(root / "control", service=service, registry={},
+                                  project_root=project_container)
+            daemon.backend.endpoint_key = "127.0.0.1:2040"
+            try:
+                created = daemon.dispatch({
+                    "operation": "project.create",
+                    "arguments": {
+                        "label": "r6-path-project", "workspace": "r6-path-project",
+                        "policy": {"permissions": ["inspect", "project_write", "compute"]},
+                    },
+                    "execution": {"request_id": "r6-path-project-create",
+                                  "idempotency_key": "r6-path-project-create"},
+                })
+                self.assertTrue(created["success"], created)
+                project = created["data"]["project"]
+                project_root = Path(project["workspace"]).resolve(strict=True)
+                run_id = uuid.uuid4().hex
+                input_root = project_root / f"w23-input-{run_id}"
+                input_root.mkdir(mode=0o700)
+                saved = input_root / actual.SAVED_MPH_PATH.name
+                shutil.copyfile(actual.SAVED_MPH_PATH, saved)
+                saved.chmod(0o400)
+                expected_sha = "cba0c1d404003c4e60a20b04316cb1456c38cc2b45596dc2dc29bbed62674a8c"
+                self.assertEqual(actual.entry.verify_saved_mph_copy(str(saved))["sha256"],
+                                 expected_sha)
+
+                def register(path, key):
+                    return daemon.dispatch({
+                        "operation": "artifact.register",
+                        "arguments": {
+                            "project_id": project["project_id"],
+                            "idempotency_key": key, "path": path,
+                            "role": "saved_model", "classification": "project_local",
+                            "artifact_type": "application/vnd.comsol.mph",
+                            "format_version": "comsol-mph-savecopy/1",
+                        },
+                        "execution": {"project_id": project["project_id"],
+                                      "request_id": key + "-request",
+                                      "idempotency_key": key},
+                    })
+
+                allowed_relative = f"w23-input-{run_id}/{saved.name}"
+                accepted = register(allowed_relative, "r6-nonhidden-register")
+                self.assertTrue(accepted["success"], accepted)
+                self.assertEqual(accepted["data"]["sha256"], expected_sha)
+                self.assertEqual(accepted["data"]["provenance"]["source_project_relative_path"],
+                                 allowed_relative)
+                before = daemon.store.list_metadata("artifacts")
+                self.assertEqual(len(before), 1)
+
+                private = project_root / f".w25-probe-{run_id}" / "workspace"
+                private.mkdir(parents=True, mode=0o700)
+                private_saved = private / saved.name
+                shutil.copyfile(saved, private_saved)
+                private_saved.chmod(0o400)
+                refused = register(
+                    f".w25-probe-{run_id}/workspace/{saved.name}",
+                    "r6-hidden-workspace-register",
+                )
+                error = refused.get("error") or refused.get("data", {}).get("error", {})
+                self.assertFalse(refused["success"], refused)
+                self.assertEqual(error.get("code"), "ACCESS_VIOLATION", refused)
+                self.assertEqual(daemon.store.list_metadata("artifacts"), before)
+            finally:
+                daemon.close()
+
+
+if __name__ == "__main__":
+    unittest.main()

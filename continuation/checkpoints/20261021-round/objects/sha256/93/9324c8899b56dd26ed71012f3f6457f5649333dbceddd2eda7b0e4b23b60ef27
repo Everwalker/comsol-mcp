@@ -1,0 +1,184 @@
+"""Strict v2 setup comparison; no native admission or solved-state claims."""
+from tools.run_native_w24_cure_preflight import _compare_reopened_readback, _compare_configuration_values
+from tools.w24_cure_v2_capture import validate_cure_law_v2_contract_readback
+
+V2_FIELDS = {'cure_law_version','relative_exposure_dose','spatial_uv_readback',
+    'activation_readback','viscoelastic_readback','dose_solver_tolerance_readbacks',
+    'geometric_nonlinearity_readbacks','native_semantics','module_license'}
+
+class V2SetupError(ValueError): pass
+
+SURVEY_STAGES = ('stdUV', 'stdBake', 'stdCool')
+SURVEY_PRODUCTS = ('STRUCTURALMECHANICS', 'ACOUSTICS', 'MEMS', 'MULTIBODYDYNAMICS')
+SURVEY_GETTERS = {
+    'String': 'getString', 'Boolean': 'getBoolean', 'Int': 'getInt', 'Double': 'getDouble',
+    'StringArray': 'getStringArray', 'BooleanArray': 'getBooleanArray',
+    'IntArray': 'getIntArray', 'DoubleArray': 'getDoubleArray',
+}
+
+def _survey_capture(value, operation, *, allow_error=True):
+    if not isinstance(value, dict) or value.get('operation') != operation:
+        raise V2SetupError(f'{operation} capture is malformed')
+    if value.get('status') == 'READ':
+        if set(value) != {'status', 'operation', 'value'}: raise V2SetupError(f'{operation} successful capture shape differs')
+        return value['value']
+    if allow_error and value.get('status') == 'READ_ERROR':
+        if set(value) != {'status', 'operation', 'error_type', 'error'} or not all(
+                isinstance(value.get(key), str) and value[key] for key in ('error_type', 'error')):
+            raise V2SetupError(f'{operation} error capture shape differs')
+        return None
+    raise V2SetupError(f'{operation} did not produce an allowed read status')
+
+def _validate_survey_property(value):
+    expected = {'property_name', 'property_names', 'has_property', 'value_type',
+                'allowed_values', 'current_value'}
+    if not isinstance(value, dict) or set(value) != expected or value['property_name'] != 'geometricNonlinearity':
+        raise V2SetupError('survey property capture has missing/extra fields')
+    names = _survey_capture(value['property_names'], 'properties')
+    if names is not None and (not isinstance(names, list) or any(not isinstance(item, str) for item in names)):
+        raise V2SetupError('survey property inventory is not a string list')
+    has = _survey_capture(value['has_property'], 'hasProperty')
+    if has is None:
+        if value['value_type'] != {'status': 'NOT_QUERIED_PROPERTY_ABSENT_OR_UNKNOWN'} or \
+                value['allowed_values'] != {'status': 'NOT_QUERIED_PROPERTY_ABSENT_OR_UNKNOWN'} or \
+                value['current_value'] != {'status': 'NOT_QUERIED_PROPERTY_ABSENT_OR_UNKNOWN'}:
+            raise V2SetupError('survey queried a property after hasProperty failed')
+        return
+    if type(has) is not bool:
+        raise V2SetupError('hasProperty capture must be boolean')
+    if not has:
+        if value['value_type'] != {'status': 'NOT_QUERIED_PROPERTY_ABSENT_OR_UNKNOWN'} or \
+                value['allowed_values'] != {'status': 'NOT_QUERIED_PROPERTY_ABSENT_OR_UNKNOWN'} or \
+                value['current_value'] != {'status': 'NOT_QUERIED_PROPERTY_ABSENT_OR_UNKNOWN'}:
+            raise V2SetupError('absent property has type/allowed/current value observations')
+        return
+    value_type = _survey_capture(value['value_type'], 'getValueType')
+    allowed = _survey_capture(value['allowed_values'], 'getAllowedPropertyValues')
+    if allowed is not None and (not isinstance(allowed, list) or any(not isinstance(item, str) for item in allowed)):
+        raise V2SetupError('allowed property values must be a string list or explicit null')
+    current = value['current_value']
+    if not isinstance(current, dict) or not isinstance(current.get('status'), str):
+        raise V2SetupError('current property value capture is malformed')
+    if value_type is None:
+        if current != {'status': 'NOT_QUERIED_VALUE_TYPE_UNKNOWN'}:
+            raise V2SetupError('typed getter ran without a reported property type')
+        return
+    expected_getter = SURVEY_GETTERS.get(value_type) if isinstance(value_type, str) else None
+    if expected_getter is None:
+        if current.get('status') != 'NOT_QUERIED_UNSUPPORTED_REPORTED_TYPE' or current.get('reported_type') != value_type:
+            raise V2SetupError('unsupported property type was interpreted by a getter')
+        return
+    if current.get('status') == 'NOT_QUERIED_VALUE_TYPE_UNKNOWN':
+        raise V2SetupError('supported property type omitted its declared typed getter')
+    if current.get('reported_type') != value_type or current.get('reader') != expected_getter:
+        raise V2SetupError('typed getter does not match the reported property type')
+    if current.get('status') == 'READ':
+        if set(current) != {'status', 'operation', 'value', 'reported_type', 'reader'} or current['operation'] != expected_getter:
+            raise V2SetupError('typed getter success capture shape differs')
+    elif current.get('status') == 'READ_ERROR':
+        if set(current) != {'status', 'operation', 'error_type', 'error', 'reported_type', 'reader'} or current['operation'] != expected_getter:
+            raise V2SetupError('typed getter error capture shape differs')
+    else:
+        raise V2SetupError('reported supported property type was not observed with its declared getter')
+
+def _validate_geonl_property_survey(row):
+    """Validate the production survey response; this is diagnostic, never scientific authority."""
+    expected = {'schema', 'status', 'target_property', 'study_stages', 'study_tags',
+                'solver_sequence_tags', 'physics_tags', 'license_availability_by_product',
+                'module_license', 'native_semantics', 'study_solver_submissions',
+                'setter_save_compute_calls_in_survey'}
+    if not isinstance(row, dict) or set(row) != expected:
+        raise V2SetupError('property survey top-level shape differs')
+    if (row['schema'] != 'W24_GEOMETRIC_NONLINEARITY_PROPERTY_SURVEY_V1' or
+            row['status'] != 'SURVEY_COMPLETED_NO_DISPUTED_SETTER' or
+            row['target_property'] != 'geometricNonlinearity' or
+            row['module_license'] != 'UNVERIFIED_FAIL_CLOSED' or
+            row['native_semantics'] != 'UNVERIFIED_FAIL_CLOSED' or
+            row['study_solver_submissions'] != 0 or
+            row['setter_save_compute_calls_in_survey'] != 0):
+        raise V2SetupError('property survey scope/status markers are not fail-closed')
+    if not isinstance(row['study_stages'], list) or len(row['study_stages']) != len(SURVEY_STAGES):
+        raise V2SetupError('property survey must include all three actual stages')
+    seen_sequences = set()
+    for expected_stage, stage in zip(SURVEY_STAGES, row['study_stages']):
+        if not isinstance(stage, dict) or set(stage) != {
+                'study_tag', 'study_step_path', 'study_step_tag', 'study_step_type',
+                'study_step_property', 'attached_time_solver'}:
+            raise V2SetupError('study stage row shape differs')
+        if (stage['study_tag'] != expected_stage or stage['study_step_path'] != expected_stage + '/time' or
+                stage['study_step_tag'] != 'time' or stage['study_step_type'] != 'Transient'):
+            raise V2SetupError('actual transient study-step identity differs')
+        _validate_survey_property(stage['study_step_property'])
+        solver = stage['attached_time_solver']
+        if not isinstance(solver, dict) or set(solver) != {
+                'sequence_tag', 'sequence_type', 'sequence_attached', 'sequence_study_tag',
+                'feature_path', 'feature_tag', 'feature_type', 'property'}:
+            raise V2SetupError('attached Time Solver row shape differs')
+        if (not isinstance(solver['sequence_tag'], str) or not solver['sequence_tag'] or
+                solver['sequence_tag'] in seen_sequences or solver['sequence_attached'] is not True or
+                not isinstance(solver['sequence_type'], str) or not solver['sequence_type'] or
+                solver['sequence_study_tag'] != expected_stage or
+                not isinstance(solver['feature_path'], str) or not solver['feature_path'] or
+                not isinstance(solver['feature_tag'], str) or not solver['feature_tag'] or
+                solver['feature_type'] != 'Time'):
+            raise V2SetupError('attached Time Solver identity/path differs')
+        seen_sequences.add(solver['sequence_tag'])
+        _validate_survey_property(solver['property'])
+    for key in ('study_tags', 'solver_sequence_tags', 'physics_tags'):
+        values = row[key]
+        if not isinstance(values, list) or any(not isinstance(item, str) or not item for item in values):
+            raise V2SetupError(f'{key} must retain the actual string tags')
+    if not set(SURVEY_STAGES) <= set(row['study_tags']) or not seen_sequences <= set(row['solver_sequence_tags']):
+        raise V2SetupError('observed stages/sequences differ from the model tag inventory')
+    if not {'solid', 'ht', 'odeDose'} <= set(row['physics_tags']):
+        raise V2SetupError('survey physics inventory omitted the frozen v2 context')
+    license_rows = row['license_availability_by_product']
+    if not isinstance(license_rows, dict) or set(license_rows) != set(SURVEY_PRODUCTS):
+        raise V2SetupError('license availability must be reported independently for each documented product')
+    for product, result in license_rows.items():
+        if not isinstance(result, dict) or result.get('product') != product:
+            raise V2SetupError('license product result identity differs')
+        if result.get('status') == 'READ':
+            if set(result) != {'product', 'status', 'current_license_allows_product'} or \
+                    type(result['current_license_allows_product']) is not bool:
+                raise V2SetupError('license availability read is malformed')
+        elif result.get('status') == 'READ_ERROR':
+            if set(result) != {'product', 'status', 'error_type', 'error'} or \
+                    not all(isinstance(result.get(key), str) and result[key] for key in ('error_type', 'error')):
+                raise V2SetupError('license availability error is malformed')
+        else:
+            raise V2SetupError('license availability has no read/error status')
+    return {'status': 'PROPERTY_SURVEY_SHAPE_VALIDATED',
+            'stages': len(row['study_stages']), 'licensed_semantics': 'UNVERIFIED_FAIL_CLOSED'}
+
+def _validate_v2(row):
+    validate_cure_law_v2_contract_readback(row)
+    if not V2_FIELDS <= set(row): raise V2SetupError('missing required v2 setup markers')
+    if type(row.get('native_study_run_calls')) is not int or row['native_study_run_calls'] != 0:
+        raise V2SetupError('setup must capture zero Study submissions')
+    if row['native_semantics'] != 'UNVERIFIED_FAIL_CLOSED' or row['module_license'] != 'UNVERIFIED_FAIL_CLOSED':
+        raise V2SetupError('configuration capture cannot certify native semantics or licensing')
+    flags=row['geometric_nonlinearity_readbacks']
+    if not isinstance(flags,dict) or set(flags)!={'stdUV','stdBake','stdCool'}:
+        raise V2SetupError('all three actual nonlinear Time solver getters are required')
+    sequences=set()
+    for flag in flags.values():
+        if not isinstance(flag,dict) or set(flag)!={'receiver_type','sequence_tag','feature_tag','property','getter','value','frame_mapping'} or flag['receiver_type']!='Time' or flag['property']!='geometricNonlinearity' or flag['getter']!='getString' or flag['value']!='on' or flag['frame_mapping']!='REQUIRES_FRESH_EQUATION_VIEW_NOT_INHERITED_FROM_V1' or not all(isinstance(flag[k],str) and flag[k] for k in ('sequence_tag','feature_tag')) or flag['sequence_tag'] in sequences:
+            raise V2SetupError('nonlinear flag has missing, ambiguous or wrong native provenance')
+        sequences.add(flag['sequence_tag'])
+
+def compare_v2_save_reopen(before, after):
+    """Retain v1 strict 21-field and mesh gates plus every explicit v2 field."""
+    _validate_v2(before);_validate_v2(after)
+    # Only the named, independently validated v2 fields are split for comparison.
+    # Unknown/missing physical fields remain rejected by the v1 closed schema.
+    legacy_before={k:v for k,v in before.items() if k not in V2_FIELDS and k!='native_study_run_calls'}
+    legacy_after={k:v for k,v in after.items() if k not in V2_FIELDS and k!='native_study_run_calls'}
+    physical=_compare_reopened_readback(legacy_before,legacy_after)
+    v2=_compare_configuration_values({k:before[k] for k in V2_FIELDS},{k:after[k] for k in V2_FIELDS})
+    return {'schema':'W24_V2_SETUP_REOPEN_COMPARISON_V1','matches':physical['matches'] and v2['matches'],
+        'physical_and_mesh':physical,'mesh_volume':physical['mesh_volume'],'v2_configuration':v2,
+        'status':'CONFIGURATION_COMPARISON_ONLY_REQUIRES_NATIVE_OPERATION_ORIGIN_AND_FRESH_CONTEXT',
+        'native_semantics':'UNVERIFIED','full_DOF_history':'NOT_CAPTURED',
+        'stable_gel_shape_transfer':'REQUIRED_NOT_SUPPLIED','scientific_acceptance':'NOT_ACCEPTED',
+        'Study_solver_authorized':0}

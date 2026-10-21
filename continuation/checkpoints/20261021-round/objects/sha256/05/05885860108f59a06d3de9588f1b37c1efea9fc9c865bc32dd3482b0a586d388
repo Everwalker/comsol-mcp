@@ -1,0 +1,403 @@
+"""Unsigned, exact one-send SSH wrapper for a fixed R6I metadata snapshot.
+
+Default use is ``--check-only`` (local source/argv validation only). The
+``--capture-once`` path is intentionally inert until Main supplies a matching
+source review, a separate one-time authorization, and proof that the original
+R6I R2 SSH Popen reached its natural terminal. No approval or once record is
+included in this candidate.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import time
+import types
+from typing import Any
+
+
+ROOT = Path(__file__).resolve().parents[4]
+CANDIDATE_REL = "repository/_state/windows-r6i-metadata-only-r1-2b8316cf-c338-4c27-8c21-e68f3d84bf21-20261021"
+CANDIDATE_ROOT = ROOT / CANDIDATE_REL
+PAYLOAD_PATH = CANDIDATE_ROOT / "source/windows_r6i_metadata_only_probe.py"
+PAYLOAD_SHA256 = "2f330ba7e0f361426bfd4df8ccb4f94bd7bc53fc1a28aeb442db9889db4ac0da"
+PAYLOAD_BYTES = 4394
+OWNER_PATH = ROOT / "repository/_state/windows-primary-owner-r6i-empty-approval-proof-capture-r1-ecdef934-2edd-4bf7-8768-924468d9293e-20261021/source/windows_primary_owner_r6i_empty_approval_capture_ssh.py"
+OWNER_SHA256 = "779b251aef165c03ab9eace579558c7c62be7467db104015f9b2ba72e758ded9"
+OWNER_CLASS = "OriginalReadOnlyPopenOwner"
+MAIN_REVIEW_PATH = CANDIDATE_ROOT / "evidence/MAIN_SOURCE_REVIEW.json"
+ONCE_AUTHORIZATION_PATH = CANDIDATE_ROOT / "evidence/MAIN_ONCE_AUTHORIZATION.json"
+PREVIOUS_TERMINAL_PROOF_PATH = CANDIDATE_ROOT / "evidence/PREVIOUS_R6I_R2_NATURAL_TERMINAL_PROOF.json"
+RUN_ROOT = CANDIDATE_ROOT / "execution"
+SSH_PATH = "/usr/bin/ssh"
+SSH_USER_HOST = "everwalker@192.168.100.2"
+REMOTE_PYTHON = r"C:\Users\Everwalker\AppData\Local\Programs\Python\Python312-comsol-mcp\python.exe"
+REMOTE_ROOT = r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c"
+REMOTE_COMMAND = '"' + REMOTE_PYTHON + '" -I -B -'
+ACTIVE_CUTOFF_SECONDS = 120
+MAX_STDOUT_BYTES = 128 * 1024
+MAX_STDERR_BYTES = 64 * 1024
+OUTPUT_NAMES = ("WRAPPER_ONCE_USED.json", "SSH_LAUNCH_INTENT.json", "SSH.stdout", "SSH.stderr",
+                "SSH_STATE.jsonl", "SSH_TERMINAL.json", "METADATA_OBSERVATION_REPORT.json")
+PATH_IDS = (
+    "helpers_directory", "authority_directory", "outer_gate_source", "probe_source",
+    "binding", "prebirth_binding", "main_approval", "once_used",
+    "probe_run_directory", "owner_probe_output",
+)
+ORIGINAL_R6I_R2_RUN_ROOT = (
+    "repository/_state/windows-primary-owner-r6i-native-execution-ssh-r2-"
+    "9e6f622a-5441-4b2f-84c1-e31cfe36ce4d-20261021"
+)
+
+
+def sha(raw: bytes) -> str:
+    return hashlib.sha256(raw).hexdigest()
+
+
+def canonical(value: Any) -> bytes:
+    return (json.dumps(value, sort_keys=True, indent=2, ensure_ascii=False,
+                       allow_nan=False) + "\n").encode("utf-8")
+
+
+def strict_json(raw: bytes, label: str) -> dict[str, Any]:
+    def pairs(items):
+        result = {}
+        for key, value in items:
+            if key in result:
+                raise ValueError("duplicate JSON key " + key)
+            result[key] = value
+        return result
+    value = json.loads(raw.decode("utf-8", "strict"), object_pairs_hook=pairs,
+                       parse_constant=lambda item: (_ for _ in ()).throw(ValueError(item)))
+    if not isinstance(value, dict):
+        raise RuntimeError(label + " must be an object")
+    return value
+
+
+def read_regular(path: Path, *, maximum: int) -> bytes:
+    before_name = os.lstat(path)
+    if path.is_symlink() or not path.is_file() or before_name.st_size < 0 or before_name.st_size > maximum:
+        raise RuntimeError("bounded ordinary local file required: " + str(path))
+    with path.open("rb", buffering=0) as stream:
+        before = os.fstat(stream.fileno())
+        raw = stream.read(maximum + 1)
+        after = os.fstat(stream.fileno())
+    after_name = os.lstat(path)
+    signature = lambda row: (row.st_dev, row.st_ino, row.st_size, row.st_mtime_ns, row.st_ctime_ns)
+    if (len(raw) > maximum or len(raw) != after.st_size or signature(before) != signature(after)
+            or signature(before_name) != signature(after_name)):
+        raise RuntimeError("local source changed during bounded read: " + str(path))
+    return raw
+
+
+def ssh_argv() -> list[str]:
+    return [SSH_PATH, "-T", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
+            "-o", "UpdateHostKeys=no", "-o", "ControlMaster=no", "-o", "ControlPath=none",
+            SSH_USER_HOST, REMOTE_COMMAND]
+
+
+def invocation(payload: bytes) -> dict[str, Any]:
+    argv = ssh_argv()
+    record = {
+        "argv": argv,
+        "argv_sha256": sha(canonical(argv)),
+        "shell": False,
+        "payload_sha256": sha(payload),
+        "payload_bytes": len(payload),
+        "target": SSH_USER_HOST,
+        "remote_python": REMOTE_PYTHON,
+        "remote_root": REMOTE_ROOT,
+        "path_ids": list(PATH_IDS),
+        "path_count": 10,
+        "remote_write_count": 0,
+        "file_content_read": False,
+        "process_inspection": False,
+        "token_access": False,
+        "active_cutoff_seconds": ACTIVE_CUTOFF_SECONDS,
+        "same_original_popen_passive_hold_to_natural_terminal": True,
+        "automatic_retry_or_replay": False,
+    }
+    return record
+
+
+def read_checked_payload() -> tuple[bytes, dict[str, Any]]:
+    payload = read_regular(PAYLOAD_PATH, maximum=MAX_STDOUT_BYTES)
+    if len(payload) != PAYLOAD_BYTES or sha(payload) != PAYLOAD_SHA256:
+        raise RuntimeError("fixed ten-path remote payload differs from reviewed bytes")
+    module = types.ModuleType("r6i_fixed_metadata_probe_exact")
+    module.__file__ = str(PAYLOAD_PATH)
+    module.__package__ = ""
+    exec(compile(payload.decode("utf-8", "strict"), str(PAYLOAD_PATH), "exec"), module.__dict__)
+    if (getattr(module, "REMOTE_ROOT", None) != REMOTE_ROOT
+            or tuple(row[0] for row in getattr(module, "PATHS", ())) != PATH_IDS
+            or len(module.PATHS) != 10):
+        raise RuntimeError("remote payload does not bind the closed ten-path list")
+    owner = read_regular(OWNER_PATH, maximum=512 * 1024)
+    if sha(owner) != OWNER_SHA256:
+        raise RuntimeError("Main-reviewed OriginalReadOnlyPopenOwner source changed")
+    return payload, {"payload_sha256": sha(payload), "payload_bytes": len(payload),
+                     "owner_source_sha256": sha(owner), "owner_source_bytes": len(owner),
+                     "remote_path_ids": list(PATH_IDS), "remote_path_count": 10}
+
+
+def load_owner_class():
+    raw = read_regular(OWNER_PATH, maximum=512 * 1024)
+    if sha(raw) != OWNER_SHA256:
+        raise RuntimeError("Main-reviewed OriginalReadOnlyPopenOwner source changed")
+    module = types.ModuleType("r6i_reviewed_readonly_popen_owner_exact")
+    module.__file__ = str(OWNER_PATH)
+    module.__package__ = ""
+    exec(compile(raw.decode("utf-8", "strict"), str(OWNER_PATH), "exec"), module.__dict__)
+    owner = getattr(module, OWNER_CLASS, None)
+    if not callable(owner):
+        raise RuntimeError("pinned R6I source lacks OriginalReadOnlyPopenOwner")
+    return owner
+
+
+def expected_review(binding: dict[str, Any], prior_terminal_sha256: str) -> dict[str, Any]:
+    payload, _ = read_checked_payload()
+    wrapper_sha = sha(read_regular(Path(__file__).resolve(), maximum=512 * 1024))
+    inv = invocation(payload)
+    return {
+        "schema": "windows-r6i-fixed-metadata-main-source-review/1",
+        "status": "PASS_EXACT_TEN_PATH_METADATA_ONLY_SSH_SOURCE_NO_ACTION",
+        "wrapper_sha256": wrapper_sha,
+        "payload_sha256": binding["payload_sha256"],
+        "payload_bytes": binding["payload_bytes"],
+        "owner_source_sha256": binding["owner_source_sha256"],
+        "ssh_argv_sha256": inv["argv_sha256"],
+        "invocation_sha256": sha(canonical(inv)),
+        "remote_root": REMOTE_ROOT,
+        "remote_path_ids": list(PATH_IDS),
+        "remote_path_count": 10,
+        "previous_r6i_r2_terminal_proof_sha256": prior_terminal_sha256,
+        "remote_write_count": 0,
+        "remote_content_read": False,
+        "process_inspection": False,
+        "token_access": False,
+        "r6i_child_state_claim": "NOT_OBSERVED_BY_METADATA",
+        "old_r6f_authority_used": False,
+    }
+
+
+def _read_prior_terminal_proof() -> tuple[bytes, dict[str, Any]]:
+    raw = read_regular(PREVIOUS_TERMINAL_PROOF_PATH, maximum=64 * 1024)
+    proof = strict_json(raw, "prior R6I R2 natural-terminal proof")
+    if (proof.get("schema") != "windows-r6i-r2-original-ssh-terminal-proof/1"
+            or proof.get("status") != "MAIN_CONFIRMED_ORIGINAL_R6I_R2_POPEN_NATURAL_TERMINAL"
+            or proof.get("original_run_root") != ORIGINAL_R6I_R2_RUN_ROOT
+            or proof.get("natural_terminal_observed") is not True
+            or type(proof.get("original_local_ssh_pid")) is not int
+            or proof["original_local_ssh_pid"] <= 0
+            or type(proof.get("original_local_ssh_returncode")) is not int
+            or proof.get("signals_kills_retries_resends") != 0):
+        raise RuntimeError("Main has not proven the original R6I R2 SSH Popen reached natural terminal")
+    return raw, proof
+
+
+def expected_once(binding: dict[str, Any], review_sha256: str,
+                  terminal_proof_sha256: str) -> dict[str, Any]:
+    payload, _ = read_checked_payload()
+    inv = invocation(payload)
+    wrapper_sha = sha(read_regular(Path(__file__).resolve(), maximum=512 * 1024))
+    return {
+        "schema": "windows-r6i-fixed-metadata-main-once-authorization/1",
+        "status": "MAIN_AUTHORIZED_EXACT_TEN_PATH_METADATA_READONLY_ONE_SEND",
+        "source_review_sha256": review_sha256,
+        "wrapper_sha256": wrapper_sha,
+        "payload_sha256": binding["payload_sha256"],
+        "owner_source_sha256": binding["owner_source_sha256"],
+        "ssh_argv_sha256": inv["argv_sha256"],
+        "invocation_sha256": sha(canonical(inv)),
+        "previous_r6i_r2_terminal_proof_sha256": terminal_proof_sha256,
+        "run_root": str(RUN_ROOT.relative_to(ROOT)),
+        "remote_root": REMOTE_ROOT,
+        "remote_path_ids": list(PATH_IDS),
+        "remote_path_count": 10,
+        "one_payload_send_then_eof": True,
+        "same_original_popen_passive_hold_to_natural_terminal": True,
+        "remote_write_count": 0,
+        "file_content_read": False,
+        "process_inspection": False,
+        "token_access": False,
+        "old_r6f_authority_used": False,
+        "automatic_retry_or_replay": False,
+    }
+
+
+def _read_authority(binding: dict[str, Any]) -> dict[str, Any]:
+    terminal_raw, _ = _read_prior_terminal_proof()
+    terminal_sha = sha(terminal_raw)
+    review_raw = read_regular(MAIN_REVIEW_PATH, maximum=128 * 1024)
+    review = strict_json(review_raw, "Main source review")
+    expected = expected_review(binding, terminal_sha)
+    if review != expected:
+        raise RuntimeError("Main review does not bind exact payload, wrapper, argv and prior terminal proof")
+    review_sha = sha(review_raw)
+    once_raw = read_regular(ONCE_AUTHORIZATION_PATH, maximum=128 * 1024)
+    if strict_json(once_raw, "Main one-send authorization") != expected_once(binding, review_sha, terminal_sha):
+        raise RuntimeError("one-send authorization differs from the exact closed metadata-only scope")
+    return {"source_review_sha256": review_sha,
+            "once_authorization_sha256": sha(once_raw),
+            "previous_r6i_r2_terminal_proof_sha256": terminal_sha,
+            "invocation": invocation(read_checked_payload()[0])}
+
+
+def validate_remote_record(raw: bytes) -> dict[str, Any]:
+    if len(raw) > MAX_STDOUT_BYTES:
+        raise RuntimeError("remote metadata JSON exceeds the fixed stdout cap")
+    record = strict_json(raw, "remote metadata-only report")
+    scope = record.get("scope")
+    rows = record.get("paths")
+    if (record.get("schema") != "cv3-windows-r6i-fixed-path-metadata-observation/1"
+            or record.get("status") != "METADATA_ONLY_CAPTURED"
+            or record.get("remote_root") != REMOTE_ROOT
+            or record.get("path_count") != 10
+            or not isinstance(rows, list)
+            or [row.get("id") for row in rows if isinstance(row, dict)] != list(PATH_IDS)
+            or len(rows) != 10
+            or not isinstance(scope, dict)
+            or scope.get("operation") != "os.lstat once per fixed path"
+            or scope.get("target_content_opened") is not False
+            or scope.get("target_content_read") is not False
+            or scope.get("remote_write_count") != 0
+            or scope.get("process_inspection") is not False
+            or scope.get("token_access") is not False
+            or scope.get("r6i_child_state") != "NOT_OBSERVED"
+            or scope.get("r6i_child_alive_or_terminal") != "NOT_ESTABLISHED_BY_METADATA"
+            or scope.get("old_r6f_exact_once_authority_applies") is not False):
+        raise RuntimeError("remote report differs from the exact ten-path metadata-only contract")
+    if any(row.get("status") not in {"PRESENT", "MISSING", "ERROR"} for row in rows):
+        raise RuntimeError("remote report contains an unknown lstat status")
+    return record
+
+
+def write_exclusive(path: Path, raw: bytes) -> None:
+    with path.open("xb") as stream:
+        stream.write(raw)
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
+def check_only() -> dict[str, Any]:
+    payload, binding = read_checked_payload()
+    if RUN_ROOT.exists() or RUN_ROOT.is_symlink():
+        raise RuntimeError("execution root already exists; no replay")
+    inv = invocation(payload)
+    return {
+        "schema": "windows-r6i-fixed-metadata-strict-ssh-check-only/1",
+        "status": "PASS_EXACT_UNSIGNED_METADATA_ONLY_SOURCE_AND_ARGV",
+        **binding,
+        "ssh_argv": ssh_argv(),
+        "ssh_argv_sha256": inv["argv_sha256"],
+        "invocation_sha256": sha(canonical(inv)),
+        "previous_r6i_r2_terminal_proof": "REQUIRED_BEFORE_ANY_SEND",
+        "main_review": "NOT_CREATED",
+        "once_authorization": "NOT_CREATED",
+        "ssh": "NOT_RUN",
+        "popen": "NOT_RUN",
+        "remote_write_count": 0,
+        "remote_content_read": False,
+        "r6i_child_alive_or_terminal": "NOT_ESTABLISHED_BY_METADATA",
+        "old_r6f_authority_used": False,
+    }
+
+
+def execute_once(*, popen_factory=subprocess.Popen) -> int:
+    payload, binding = read_checked_payload()
+    authority = _read_authority(binding)
+    if RUN_ROOT.exists() or RUN_ROOT.is_symlink():
+        raise RuntimeError("execution root already exists; no replay")
+    RUN_ROOT.mkdir(parents=True, exist_ok=False, mode=0o700)
+    paths = {name: RUN_ROOT / name for name in OUTPUT_NAMES}
+    started = time.monotonic()
+    argv = authority["invocation"]["argv"]
+    write_exclusive(paths["WRAPPER_ONCE_USED.json"], canonical({
+        "schema": "windows-r6i-fixed-metadata-local-once-used/1",
+        "status": "LOCAL_ONE_SEND_CONSUMED",
+        "source_review_sha256": authority["source_review_sha256"],
+        "once_authorization_sha256": authority["once_authorization_sha256"],
+        "payload_sha256": binding["payload_sha256"],
+        "ssh_argv_sha256": authority["invocation"]["argv_sha256"],
+        "remote_write_count": 0,
+        "automatic_retry_or_replay": False,
+    }))
+    write_exclusive(paths["SSH_LAUNCH_INTENT.json"], canonical({
+        "schema": "windows-r6i-fixed-metadata-ssh-launch-intent/1",
+        "status": "ONE_READONLY_METADATA_PAYLOAD_SEND_INTENT",
+        **binding, **authority,
+        "remote_write_count": 0, "native_children": 0,
+        "automatic_retry_or_replay": False,
+    }))
+    paths["SSH_STATE.jsonl"].open("xb").close()
+    child = owner = None
+    remote_record = None
+    status = "UNKNOWN_NO_REPLAY"
+    try:
+        child = popen_factory(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE, shell=False, cwd=str(ROOT), bufsize=0)
+        owner = load_owner_class()(child)
+        owner.start_drainers(paths["SSH.stdout"], paths["SSH.stderr"])
+        owner.send_once_then_eof(payload)
+        owner.wait_naturally()
+        if owner.first_cause:
+            status = "UNKNOWN_ORIGINAL_POPEN_OWNER_DIAGNOSTIC_NO_REPLAY"
+        elif owner.stdout.total > MAX_STDOUT_BYTES or owner.stderr.total > MAX_STDERR_BYTES:
+            status = "FAILED_FIXED_OUTPUT_CAP_NO_REPLAY"
+        elif child.returncode != 0:
+            status = "FAILED_SSH_NONZERO_NO_REPLAY"
+        else:
+            remote_record = validate_remote_record(read_regular(paths["SSH.stdout"], maximum=MAX_STDOUT_BYTES))
+            status = "PASS_METADATA_ONLY_CAPTURED"
+    except BaseException as exc:
+        status = "UNKNOWN_LOCAL_AFTER_POPEN_NO_REPLAY" if child is not None else "FAILED_PRE_POPEN_NO_REMOTE_ACTION"
+        if owner is not None:
+            owner.first_cause = owner.first_cause or (type(exc).__name__ + ":" + str(exc)[:1000])
+            owner.wait_naturally()
+    terminal = {
+        "schema": "windows-r6i-fixed-metadata-ssh-terminal/1",
+        "status": status,
+        "original_local_ssh_pid": getattr(owner, "pid", None),
+        "original_local_ssh_returncode": getattr(child, "returncode", None),
+        "elapsed_seconds": time.monotonic() - started,
+        "same_original_popen_natural_terminal": bool(child is not None and child.returncode is not None),
+        "payload_send_attempted_once": bool(owner and owner.sent),
+        "active_cutoff_exceeded": bool(owner and owner.active_cutoff_exceeded),
+        "stdout_total_observed": owner.stdout.total if owner and owner.stdout else 0,
+        "stderr_total_observed": owner.stderr.total if owner and owner.stderr else 0,
+        "first_cause": owner.first_cause if owner else None,
+        "signals_kills_retries_resends": 0,
+        "remote_write_count": 0,
+        "remote_r6i_child_state": "NOT_OBSERVED_BY_METADATA",
+        "remote_r6i_child_alive_or_terminal": "NOT_ESTABLISHED_BY_METADATA",
+        "authority": authority,
+    }
+    write_exclusive(paths["SSH_TERMINAL.json"], canonical(terminal))
+    write_exclusive(paths["METADATA_OBSERVATION_REPORT.json"], canonical({
+        "schema": "windows-r6i-fixed-metadata-observation-local-report/1",
+        "status": status, "terminal": terminal, "remote": remote_record,
+        "remote_write_count": 0, "replay": False,
+    }))
+    return 0 if status == "PASS_METADATA_ONLY_CAPTURED" else 1
+
+
+def main(argv: list[str] | None = None, *, popen_factory=subprocess.Popen) -> int:
+    args = list(sys.argv[1:] if argv is None else argv)
+    if args == ["--check-only"]:
+        print(json.dumps(check_only(), sort_keys=True, separators=(",", ":")))
+        return 0
+    if args == ["--capture-once"]:
+        return execute_once(popen_factory=popen_factory)
+    raise RuntimeError("use --check-only or separately reviewed and authorized --capture-once")
+
+
+if __name__ == "__main__":
+    try:
+        exit_code = main()
+    except Exception as exc:
+        sys.stderr.write(type(exc).__name__ + ":" + str(exc)[:2000] + "\n")
+        exit_code = 2
+    raise SystemExit(exit_code)

@@ -1,0 +1,87 @@
+{
+  "actual_consumer_controls": {
+    "consumer": "R2 payload _same_handle_write plus unmodified embedded R6B R14AuthorityRootOpsR6B._write_flush_readback",
+    "execution_order": "actual payload main calls same-handle writer before exact frozen R6I gate",
+    "negative": [
+      "captured proof owner SID drift",
+      "captured native file ID drift",
+      "captured descriptor drift",
+      "captured leaf size drift",
+      "prewrite legacy file ID drift",
+      "prewrite native file ID drift",
+      "prewrite native size drift",
+      "prewrite native creation/change/write time drift",
+      "prewrite native link count drift",
+      "prewrite owner SID drift",
+      "prewrite descriptor drift",
+      "postwrite descriptor drift"
+    ],
+    "platform_boundary": "synthetic in-memory API shim; no claim of Windows runtime acceptance",
+    "positive": "same opened fake handle, exact bounded approval bytes, flush, readback, postwrite identity/creation/link/owner/descriptor and complete before/after native fingerprint recorded"
+  },
+  "candidate_root": "repository/_state/windows-primary-owner-r6i-native-entry-r2-0c27cf8e-c022-4598-8cd2-6351bedbca11-20261021",
+  "check_only": {
+    "SSH": "NOT_RUN",
+    "bytes": 6151,
+    "current_live_resume_sha256": "637c89338de9d8dd69da89520bb4d4d646f8a126b204953a8f017b5c95f6eafb",
+    "fresh_run_root_exists": false,
+    "historical_prep_checkpoint_sha256": "75e379846288130299cb3632f109cf3c1e9c29884de3d7d9c89116571a8469e4",
+    "main_records_or_approval_or_once": "NOT_CREATED",
+    "native": "NOT_RUN",
+    "path": "evidence/CHECK_ONLY_R2.json",
+    "payload_template_sha256": "0fb0619c76b1adf59c53394ce68fe85043334d65f4a1c5052920d2b10b3d85ff",
+    "remote_write": "NOT_RUN",
+    "sha256": "b73a6583534839453c0e7be4ddfefbc0c8b7586031f80813885d7c6d4307e20e",
+    "status": "PASS_EXACT_SOURCE_AND_CAPTURE_PROOFS_UNSIGNED_NO_SSH"
+  },
+  "execution_state": {
+    "COMSOL": "NOT_RUN",
+    "GUI": "NOT_RUN",
+    "JVM": "NOT_RUN",
+    "MAIN_APPROVAL": "UNSIGNED_TEMPLATE_ONLY",
+    "SSH": "NOT_RUN",
+    "entry_admission": "UNSIGNED_TEMPLATE_ONLY",
+    "native": "NOT_RUN",
+    "once_authorization": "UNSIGNED_TEMPLATE_ONLY",
+    "source_review": "UNSIGNED_TEMPLATE_ONLY",
+    "wrapper_review": "UNSIGNED_TEMPLATE_ONLY"
+  },
+  "limits": {
+    "COMSOL": 0,
+    "GUI": 0,
+    "JVM": 0,
+    "Study": 0,
+    "active_seconds": 60,
+    "automatic_retry": false,
+    "native_children": 1,
+    "process_signals_or_kills": false,
+    "replay": false,
+    "solver": 0
+  },
+  "pins": {
+    "embedded_r6b_lease_sha256": "68bb01164f6c2bb51ecc4924076252409c75d9d9406d654ba09ac76c52126259",
+    "empty_approval_capture_acceptance_sha256": "92d2f13de1e6d904fc6d06cac67437db99a0cd9c7704260bb66116e7e5f01a49",
+    "empty_approval_projected_sha256": "9febe250c34a9e176bbca8e32829f9ccd9d04c8656c59968f509c03c129a7339",
+    "empty_approval_raw_proof_sha256": "9f506f2c9d74a28a30e57428efa7aba94cd106372f0ba2a2ec7a5f7e0cb245fd",
+    "persistent_user_authorization_sha256": "93a8037a7114a3d939f81197f9808fc73612264f984825331660a646d242bf66",
+    "prebirth_capture_acceptance_sha256": "43b385f3d2c9db3913fe93ed19722f93abecc95e8e73a84530cc1794bbb34c15",
+    "r14_binding_sha256": "075250aa28a0ae33eec9ac414ab0f143c046df090b00613669ffdf0fbf59dabb",
+    "r6i_gate_sha256": "4ef244f15282bf49770d7ae9c468c40aa8818462bfb071652c7c1b9423aef1c9",
+    "r6i_helper_sha256": "b64ae1a12251858c13a876f41e092eb8402cb490a7998eee3dbd5ac2fea32d5a",
+    "r6i_inner_sha256": "6b5e6ad756045dee4551be992a32ba0228a357907dc2ee58dbb7391e1505f67a",
+    "r6i_outer_binding_sha256": "bb058d5422c32be438934e017d222ed2d10d9983fd97438d0a100b561b1b7ade",
+    "r6i_source_review_sha256": "27660ccfce5f97fa2203001088d30cd738cd329cee1ee99c20bc35931ad8f10b"
+  },
+  "pytest": {
+    "command": "work/dev-python312/bin/python -I -B -m pytest -q -p no:cacheprovider repository/_state/windows-primary-owner-r6i-native-entry-r2-0c27cf8e-c022-4598-8cd2-6351bedbca11-20261021/tests/test_r6i_native_entry_r2.py",
+    "output": {
+      "bytes": 99,
+      "path": "evidence/PYTEST_R2.stdout",
+      "sha256": "b411c023c70b8479e9c4dc98b4a317930ed647ad5f3b6f0ea8bcb3a01496dd08"
+    },
+    "result": "22 passed in 0.11s"
+  },
+  "python": "work/dev-python312/bin/python",
+  "schema": "windows-r6i-native-entry-r2-validation-receipt/1",
+  "status": "PASS_LOCAL_SOURCE_CONTROLS_AND_CHECK_ONLY_UNSIGNED_NO_REMOTE_ACTION"
+}

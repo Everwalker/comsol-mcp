@@ -1,0 +1,16 @@
+"""Retired R3 caller-context entry.
+
+R3 trusted a caller-provided ModelRef and did not freshly register/load the
+pinned saved MPH. It remains here as historical evidence but is deliberately
+non-executable; use ``launch_w23_zero_solve_r5.py`` for the fresh owner path.
+"""
+from __future__ import annotations
+
+import argparse
+def main(argv: list[str] | None = None) -> int:
+    argparse.ArgumentParser(description=__doc__).parse_args(argv)
+    raise SystemExit("R3 caller-context entry is retired; use launch_w23_zero_solve_r5.py")
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

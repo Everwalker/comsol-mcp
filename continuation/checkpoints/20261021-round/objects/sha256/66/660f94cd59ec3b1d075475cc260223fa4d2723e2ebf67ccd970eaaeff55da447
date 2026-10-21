@@ -1,0 +1,108 @@
+--- repository/_state/windows-primary-owner-r6i-token-elevation-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019/source/windows_primary_owner_r6i_strict_ssh_prep.py
++++ repository/_state/windows-primary-owner-r6i-bound-prep-r2-8b4137e9-ab90-41d8-87f0-01181044f8b3-20261020/source/windows_primary_owner_r6i_bound_strict_ssh_prep.py
+@@ -19,17 +19,17 @@
+ 
+ 
+ ROOT = Path(__file__).resolve().parents[4]
+-CANDIDATE_ROOT = ROOT / "repository/_state/windows-primary-owner-r6i-token-elevation-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019"
++CANDIDATE_ROOT = ROOT / "repository/_state/windows-primary-owner-r6i-rendered-prep-r1-bd4c87ce-27ae-47a2-8c91-cb51b9c1c319-20261020"
+ PACKAGE = CANDIDATE_ROOT / "rendered_package"
+ PAYLOAD_PATH = PACKAGE / "PRIMARY_OWNER_R6I_REMOTE_PREP_SCRIPT.py"
+ CONTRACT_PATH = PACKAGE / "PRIMARY_OWNER_R6I_PREP_CONTRACT.json"
+ MANIFEST_PATH = PACKAGE / "PRIMARY_OWNER_R6I_PREP_MANIFEST.json"
+-R6I_BUILDER_PATH = CANDIDATE_ROOT / "source/prepare_primary_owner_r6i_prep.py"
+-R6I_TEMPLATE_PATH = CANDIDATE_ROOT / "source/windows_primary_owner_r6i_prep_payload_template.py.txt"
+-R6I_HELPER_PATH = CANDIDATE_ROOT / "package/windows_primary_token_owner_probe_r6i.py"
+-R6I_GATE_PATH = CANDIDATE_ROOT / "package/windows_primary_token_owner_outer_gate_r6i.py"
+-R6I_INNER_PATH = CANDIDATE_ROOT / "package/PRIMARY_OWNER_R6I_INNER_BINDING_PROPOSAL.json"
+-R6I_PLAN_PATH = CANDIDATE_ROOT / "evidence/SOURCE_PLAN_R1.json"
++R6I_BUILDER_PATH = ROOT / "repository/_state/windows-primary-owner-r6i-token-elevation-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019/source/prepare_primary_owner_r6i_prep.py"
++R6I_TEMPLATE_PATH = ROOT / "repository/_state/windows-primary-owner-r6i-token-elevation-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019/source/windows_primary_owner_r6i_prep_payload_template.py.txt"
++R6I_HELPER_PATH = ROOT / "repository/_state/windows-primary-owner-r6i-token-elevation-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019/package/windows_primary_token_owner_probe_r6i.py"
++R6I_GATE_PATH = ROOT / "repository/_state/windows-primary-owner-r6i-token-elevation-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019/package/windows_primary_token_owner_outer_gate_r6i.py"
++R6I_INNER_PATH = ROOT / "repository/_state/windows-primary-owner-r6i-token-elevation-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019/package/PRIMARY_OWNER_R6I_INNER_BINDING_PROPOSAL.json"
++R6I_PLAN_PATH = ROOT / "repository/_state/windows-primary-owner-r6i-token-elevation-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019/evidence/SOURCE_PLAN_R1.json"
+ R6I_HELPER_GATE_REVIEW_PATH = ROOT / "repository/docs/full_project_continuation_v3/state/WINDOWS_PRIMARY_OWNER_R6I_TOKEN_ELEVATION_MAIN_SOURCE_REVIEW_R1.json"
+ PREP_REVIEW_PATH = ROOT / "repository/docs/full_project_continuation_v3/state/WINDOWS_PRIMARY_OWNER_R6I_FIVE_LEAF_PREP_MAIN_SOURCE_REVIEW_R1.json"
+ WRAPPER_REVIEW_PATH = ROOT / "repository/docs/full_project_continuation_v3/state/WINDOWS_PRIMARY_OWNER_R6I_PREP_WRAPPER_MAIN_SOURCE_REVIEW_R1.json"
+@@ -37,9 +37,14 @@
+ PERSISTENT_USER_AUTH_PATH = ROOT / "repository/docs/full_project_continuation_v3/state/PERSISTENT_WINDOWS_FIVE_LEAF_PREP_AUTHORIZATION_R1.json"
+ RESUME_PATH = ROOT / "repository/docs/full_project_continuation_v3/state/RESUME.json"
+ ORIGINAL_OWNER_PATH = ROOT / "repository/_state/windows-primary-owner-r6g-prep-wrapper-r3-20261015/source/windows_primary_owner_r6g_strict_ssh_prep.py"
+-RUN_ROOT = ROOT / "repository/_state/windows-primary-owner-r6i-prep-ssh-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019"
+-
+-R6I_HELPER_GATE_REVIEW_SHA256 = "PENDING_MAIN_REVIEW_HASH"
++RUN_ROOT = ROOT / "repository/_state/windows-primary-owner-r6i-prep-ssh-bound-r2-8b4137e9-ab90-41d8-87f0-01181044f8b3-20261020"
++
++R6I_HELPER_GATE_REVIEW_SHA256 = "27660ccfce5f97fa2203001088d30cd738cd329cee1ee99c20bc35931ad8f10b"
++BOUND_RESUME_SHA256 = "75e379846288130299cb3632f109cf3c1e9c29884de3d7d9c89116571a8469e4"
++BOUND_PAYLOAD_SHA256 = "952eca570a5cc16e3f2639caeade14c0403158a293063aa3f5b1dee3e65778c8"
++BOUND_PAYLOAD_BYTES = 346467
++BOUND_CONTRACT_SHA256 = "e415b305a65250f1b504964d322bd53c76bccc535d2fa2eaaa5cc88b2b01a304"
++BOUND_MANIFEST_SHA256 = "cfe787c70fc6c1d721af6c66867aab2cfc86297d001f9a5094e5549f3b115160"
+ R6I_HELPER_GATE_PLAN_SHA256 = "4491a64a805439ffe51140c29a690ee2872b8c4376ee066d87fac8f5bc63f23b"
+ R6I_HELPER_SHA256 = "b64ae1a12251858c13a876f41e092eb8402cb490a7998eee3dbd5ac2fea32d5a"
+ R6I_GATE_SHA256 = "4ef244f15282bf49770d7ae9c468c40aa8818462bfb071652c7c1b9423aef1c9"
+@@ -118,30 +123,28 @@
+     module.__file__ = str(R6I_BUILDER_PATH)
+     module.__package__ = ""
+     exec(compile(raw.decode("utf-8", "strict"), module.__file__, "exec"), module.__dict__)
++    module.H_MAIN_REVIEW_SHA256 = R6I_HELPER_GATE_REVIEW_SHA256
+     return module
+ 
+ 
+ def _check_only(*, resume_path: Path = RESUME_PATH,
+                 supplied_current_resume_sha256: str | None = None) -> dict[str, Any]:
+-    builder = _load_builder()
+     resume_raw = read_regular(resume_path, maximum=16 * 1024 * 1024)
+     checkpoint_sha = sha(resume_raw)
++    if checkpoint_sha != BOUND_RESUME_SHA256:
++        raise RuntimeError("current RESUME differs from the exact rendered PREP checkpoint")
+     if supplied_current_resume_sha256 is not None and supplied_current_resume_sha256 != checkpoint_sha:
+         raise RuntimeError("check-only current checkpoint differs from its supplied exact hash")
+-    rendered = builder.render_payload(current_resume_raw=resume_raw,
+-                                      supplied_current_resume_sha256=checkpoint_sha)
+-    payload_path_exists = PAYLOAD_PATH.exists()
+-    package_match = None
+-    if payload_path_exists:
+-        local_payload = read_regular(PAYLOAD_PATH)
+-        package_match = local_payload == rendered["payload"]
+-        if not package_match:
+-            raise RuntimeError("rendered package payload differs from current H source/checkpoint inputs")
+-    return {"schema": "cv3-windows-primary-owner-r6i-prep-check-only/1",
+-            "status": "PASS_LOCAL_SOURCE_AND_EXACT_CHECKPOINT_RENDER_ONLY",
+-            "current_checkpoint": rendered["checkpoint"],
+-            "payload_sha256": sha(rendered["payload"]), "payload_bytes": len(rendered["payload"]),
+-            "package_payload_present": payload_path_exists, "package_payload_matches": package_match,
++    payload, binding = _validate_rendered_package(resume_path=resume_path)
++    if sha(payload) != BOUND_PAYLOAD_SHA256 or len(payload) != BOUND_PAYLOAD_BYTES:
++        raise RuntimeError("bound payload differs from the independently reviewed rendered payload")
++    return {"schema": "cv3-windows-primary-owner-r6i-bound-prep-check-only/1",
++            "status": "PASS_EXACT_BOUND_LOCAL_PREP_SOURCE_AND_PACKAGE_ONLY",
++            "current_checkpoint_sha256": checkpoint_sha,
++            "payload_sha256": sha(payload), "payload_bytes": len(payload),
++            "contract_sha256": binding["contract_sha256"],
++            "manifest_sha256": binding["manifest_sha256"],
++            "remote_targets": list(REMOTE_TARGETS),
+             "ssh": "NOT_RUN", "popen": "NOT_RUN", "approval_created": False,
+             "once_created": False, "native": "NOT_RUN", "remote_writes": 0}
+ 
+@@ -182,6 +185,8 @@
+     builder = _load_builder()
+     resume_raw = read_regular(resume_path, maximum=16 * 1024 * 1024)
+     resume_sha = sha(resume_raw)
++    if resume_sha != BOUND_RESUME_SHA256:
++        raise RuntimeError("current RESUME differs from the exact rendered PREP checkpoint")
+     rendered = builder.render_payload(current_resume_raw=resume_raw,
+                                       supplied_current_resume_sha256=resume_sha)
+     payload_raw = read_regular(PAYLOAD_PATH)
+@@ -191,6 +196,9 @@
+     manifest = _strict_json(manifest_raw, "R6I PREP manifest")
+     if payload_raw != rendered["payload"]:
+         raise RuntimeError("exact rendered R6I payload differs from current RESUME/source inputs")
++    if (sha(payload_raw) != BOUND_PAYLOAD_SHA256 or len(payload_raw) != BOUND_PAYLOAD_BYTES
++            or sha(contract_raw) != BOUND_CONTRACT_SHA256 or sha(manifest_raw) != BOUND_MANIFEST_SHA256):
++        raise RuntimeError("rendered package differs from the exact frozen PREP payload/contract/manifest")
+     if (contract.get("payload", {}).get("sha256") != sha(payload_raw)
+             or contract.get("current_checkpoint") != rendered["checkpoint"]
+             or manifest.get("payload", {}).get("sha256") != sha(payload_raw)

@@ -1,0 +1,1720 @@
+"""Fresh, bounded W23 saved-MPH reads over the private public gateway.
+
+This entry owns no authority. It never creates an approval, once token, model,
+Study, or solver action. Optional numerical reads still pass through the
+ordinary MCP gateway -> control client -> ControlDaemon -> Worker route. Every
+request intent and raw response is append-only and fsynced before proceeding.
+"""
+from __future__ import annotations
+
+import hashlib
+import importlib
+import json
+import os
+import stat
+import sys
+from pathlib import Path
+from typing import Any, Mapping
+from uuid import UUID, uuid4
+
+from . import w23_zero_solve_entry as entry
+
+
+_READONLY_METADATA_OPERATIONS = frozenset({
+    "model.inspect", "geometry.inspect", "dataset.list", "dataset.solution_indices",
+    "node.children", "node.inspect", "node.property_schema", "node.property_get",
+    "selection.list", "selection.inspect", "selection.adjacency",
+    "material.list", "material.inspect", "parameter.get",
+})
+_CATEGORY_OPERATIONS = {
+    "metadata": _READONLY_METADATA_OPERATIONS | frozenset({"runtime.capabilities"}),
+    "point": frozenset({"result.at_points"}),
+    "integral": frozenset({"result.evaluate"}),
+    "owner": frozenset({"artifact.register", "model.load"}),
+}
+
+
+class RuntimeEntryError(RuntimeError):
+    """A bounded public read could not be safely completed."""
+
+
+class RuntimeOutcomeUnknown(RuntimeEntryError):
+    """A dispatched operation has no terminal, trustworthy public response."""
+
+
+_SOURCE_PROJECTION_SCHEMA = "W23_R6_SOURCE_PROJECTION_R1"
+_SOURCE_BASE_MANIFEST_SHA256 = "354943be6bbd749c145d78c443b17c3a982df1c0b87e9b1a607e339085d70547"
+_SOURCE_BASE_MEMBER_FINGERPRINT_SHA256 = "07bf379ab84ec70ed3907c6d98ce0944a4e446937d4066bc415f71e06cfe4f46"
+_SOURCE_BASE_MEMBER_COUNT = 896
+_SOURCE_OVERLAY_POSTIMAGES = {
+    "source/comsol_mcp/_g3_w15.py": {
+        "overlay_path": "overlay/comsol_mcp/_g3_w15.py",
+        "canonical_sha256": "c267190f280c8f712ed177d0f3be2382e0dd8250479476ba4ebb9bd0a2091ff1",
+    },
+}
+_PINNED_W25_DEPENDENCIES = [
+    {"path": "_state/w25-r5-fresh-runtime-entry-6fc675b5-c7a1-4483-9de5-51d2ceeccd8f-20261019/probe/admission.py",
+     "bytes": 31173,
+     "sha256": "90cdfc37e38d93ff7de773a389bfbda11ab60ef28a4a7ff4dbfae1c3e0675798"},
+    {"path": "_state/w25-r5-fresh-runtime-entry-6fc675b5-c7a1-4483-9de5-51d2ceeccd8f-20261019/probe/runner.py",
+     "bytes": 92778,
+     "sha256": "6c677fe266d977b8ab6a4cd4edc799d6764061ba4113d8c6213956a87c685930"},
+    {"path": "_state/w25-r5-fresh-runtime-entry-6fc675b5-c7a1-4483-9de5-51d2ceeccd8f-20261019/probe/operation_store_witness.py",
+     "bytes": 13572,
+     "sha256": "37a81dc70d01cca7f09b14a6a77a48eab3bf871212c4fa7b23603eae7143f08f"},
+]
+
+
+def _canonical_bytes(value: Any) -> bytes:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"),
+                      ensure_ascii=False, allow_nan=False).encode("utf-8")
+
+
+def _verify_source_projection(expected_sha256: str) -> dict[str, Any]:
+    root = Path(__file__).resolve().parents[1]
+    evidence = root / "evidence"
+    manifest_path = evidence / "SOURCE_PROJECTION_R6.json"
+    source_map_path = evidence / "SOURCE_MAP_R6.json"
+    try:
+        raw = manifest_path.read_bytes()
+    except OSError as exc:
+        raise RuntimeEntryError("the frozen R6 source projection manifest is unavailable") from exc
+    actual_manifest_sha = hashlib.sha256(raw).hexdigest()
+    if not isinstance(expected_sha256, str) or actual_manifest_sha != expected_sha256:
+        raise RuntimeEntryError("the supplied source projection fingerprint differs from the frozen R6 manifest")
+    try:
+        manifest = json.loads(raw)
+        source_map_bytes = source_map_path.read_bytes()
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeEntryError("the R6 source map or projection manifest is malformed") from exc
+    if (not isinstance(manifest, Mapping)
+            or set(manifest) != {"schema", "base_manifest_sha256", "source_map_sha256", "files"}
+            or manifest.get("schema") != _SOURCE_PROJECTION_SCHEMA
+            or manifest.get("base_manifest_sha256") != _SOURCE_BASE_MANIFEST_SHA256
+            or hashlib.sha256(source_map_bytes).hexdigest() != manifest.get("source_map_sha256")):
+        raise RuntimeEntryError("the R6 source map does not match the exact projection manifest")
+    try:
+        source_map = json.loads(source_map_bytes)
+    except json.JSONDecodeError as exc:
+        raise RuntimeEntryError("the R6 source map is invalid JSON") from exc
+    source_map_fields = {
+        "schema", "candidate_root", "base_manifest_sha256", "base_member_count",
+        "base_member_fingerprint_sha256", "base_canonical_members",
+        "canonical_source_postimage_differences", "applied_source_overlays",
+        "candidate_projection_roots", "candidate_projected_member_count",
+        "candidate_projected_members", "pinned_external_dependencies", "scope",
+    }
+    if (not isinstance(source_map, Mapping) or set(source_map) != source_map_fields
+            or source_map.get("schema") != "W23_R6_SOURCE_MAP_R1"
+            or source_map.get("base_manifest_sha256") != _SOURCE_BASE_MANIFEST_SHA256
+            or source_map.get("base_member_count") != _SOURCE_BASE_MEMBER_COUNT
+            or source_map.get("base_member_fingerprint_sha256") != _SOURCE_BASE_MEMBER_FINGERPRINT_SHA256
+            or source_map.get("candidate_root") != str(root)
+            or source_map.get("candidate_projection_roots") != ["source", "probe", "tests", "overlay"]
+            or source_map.get("candidate_projected_members") != manifest.get("files")
+            or source_map.get("candidate_projected_member_count") != len(manifest.get("files", []))
+            or source_map.get("pinned_external_dependencies") != _PINNED_W25_DEPENDENCIES
+            or source_map.get("scope") != (
+                "isolated W23 R6 projection over the exact Main-accepted R13 plus W24 R11 R3 896-member source closure, one reviewed material-size source overlay, "
+                "R2 probe postimages, hash-pinned W25 owner-entry dependency, and an exact immutable MPH copy at a non-hidden project-relative input path while the admitted W25 workspace stays empty; "
+                "not canonical integration, native execution, or scientific acceptance")):
+        raise RuntimeEntryError("the R6 source map is not pinned to the projection base")
+    repository = root.parents[1]
+    for dependency in _PINNED_W25_DEPENDENCIES:
+        dependency_path = repository / dependency["path"]
+        try:
+            dependency_bytes = dependency_path.read_bytes()
+        except OSError as exc:
+            raise RuntimeEntryError("the exact W25 owned-entry source dependency is unavailable") from exc
+        if (len(dependency_bytes) != dependency["bytes"]
+                or hashlib.sha256(dependency_bytes).hexdigest() != dependency["sha256"]):
+            raise RuntimeEntryError("the pinned W25 owner-entry source dependency changed")
+    members = manifest.get("files")
+    if not isinstance(members, list):
+        raise RuntimeEntryError("the R6 source projection file table is malformed")
+    expected: dict[str, Mapping[str, Any]] = {}
+    for row in members:
+        if (not isinstance(row, Mapping) or set(row) != {"path", "bytes", "sha256"}
+                or not isinstance(row.get("path"), str) or row["path"] in expected
+                or type(row.get("bytes")) is not int or row["bytes"] < 0
+                or not isinstance(row.get("sha256"), str) or len(row["sha256"]) != 64):
+            raise RuntimeEntryError("the R6 source projection contains a malformed or duplicate member")
+        relative = Path(row["path"])
+        if not relative.parts or relative.is_absolute() or ".." in relative.parts or relative.parts[0] not in {
+                "source", "probe", "tests", "overlay"}:
+            raise RuntimeEntryError("the R6 source projection contains a path outside its closed roots")
+        expected[row["path"]] = row
+    actual_paths: set[str] = set()
+    for folder in ("source", "probe", "tests", "overlay"):
+        base = root / folder
+        for path in base.rglob("*"):
+            if "__pycache__" in path.parts or path.suffix == ".pyc":
+                continue
+            if path.is_symlink():
+                raise RuntimeEntryError("the R6 source projection contains a symlink")
+            if path.is_dir():
+                continue
+            info = path.lstat()
+            if not stat.S_ISREG(info.st_mode):
+                raise RuntimeEntryError("the R6 source projection contains a non-regular file")
+            actual_paths.add(path.relative_to(root).as_posix())
+    if actual_paths != set(expected):
+        raise RuntimeEntryError("the R6 source projection file set changed after freezing")
+    for relative, row in expected.items():
+        path = root / relative
+        raw_member = path.read_bytes()
+        if len(raw_member) != row["bytes"] or hashlib.sha256(raw_member).hexdigest() != row["sha256"]:
+            raise RuntimeEntryError(f"the frozen R6 source member changed: {relative}")
+    base_members = source_map.get("base_canonical_members")
+    if not isinstance(base_members, list) or len(base_members) != _SOURCE_BASE_MEMBER_COUNT:
+        raise RuntimeEntryError("the R6 source map omitted the exact 896-member Main-reviewed R13 plus W24 R11 R3 base")
+    base_by_path: dict[str, Mapping[str, Any]] = {}
+    for row in base_members:
+        if (not isinstance(row, Mapping) or set(row) != {"path", "bytes", "sha256"}
+                or not isinstance(row.get("path"), str) or row["path"] in base_by_path
+                or type(row.get("bytes")) is not int or row["bytes"] < 0
+                or not isinstance(row.get("sha256"), str) or len(row["sha256"]) != 64):
+            raise RuntimeEntryError("the R6 canonical base member table is malformed")
+        base_relative = Path(row["path"])
+        if (not base_relative.parts or base_relative.is_absolute()
+                or ".." in base_relative.parts or "" in base_relative.parts):
+            raise RuntimeEntryError("the R6 canonical base contains an unsafe source path")
+        base_by_path[row["path"]] = row
+    if hashlib.sha256(_canonical_bytes(base_members)).hexdigest() != _SOURCE_BASE_MEMBER_FINGERPRINT_SHA256:
+        raise RuntimeEntryError("the 896-member canonical base fingerprint differs from the Main-reviewed R13 plus W24 R11 R3 freeze")
+    differences = source_map.get("canonical_source_postimage_differences")
+    overlays = source_map.get("applied_source_overlays")
+    if not isinstance(differences, list) or not isinstance(overlays, list):
+        raise RuntimeEntryError("the R6 source overlay/difference tables are malformed")
+    expected_differences = []
+    expected_overlays = []
+    for source_path, metadata in _SOURCE_OVERLAY_POSTIMAGES.items():
+        canonical_relative = source_path.removeprefix("source/")
+        base_row = base_by_path.get(canonical_relative)
+        overlay_row = expected.get(metadata["overlay_path"])
+        source_row = expected.get(source_path)
+        if (base_row is None or base_row["sha256"] != metadata["canonical_sha256"]
+                or overlay_row is None or source_row is None
+                or overlay_row["sha256"] != source_row["sha256"]
+                or overlay_row["bytes"] != source_row["bytes"]):
+            raise RuntimeEntryError("the exact reviewed W23 source overlay postimage is missing or divergent")
+        expected_differences.append({
+            "path": source_path, "canonical_sha256": base_row["sha256"],
+            "postimage_bytes": source_row["bytes"], "postimage_sha256": source_row["sha256"],
+        })
+        expected_overlays.append({
+            "overlay_path": metadata["overlay_path"], "source_path": source_path,
+            "bytes": source_row["bytes"], "sha256": source_row["sha256"],
+            "canonical_preimage_sha256": base_row["sha256"],
+            "byte_identical_overlay_to_source": True,
+        })
+    if differences != expected_differences or overlays != expected_overlays:
+        raise RuntimeEntryError("the R6 canonical-difference set is not exactly the reviewed material-size overlay")
+    allowed_source_paths = {"source/" + path for path in base_by_path}
+    if not allowed_source_paths.issubset(expected):
+        raise RuntimeEntryError("the R6 projection omitted a canonical base source member")
+    changed = {path for path in allowed_source_paths
+               if expected[path]["sha256"] != base_by_path[path.removeprefix("source/")]["sha256"]}
+    if changed != set(_SOURCE_OVERLAY_POSTIMAGES):
+        raise RuntimeEntryError("the R6 source projection contains an unreviewed canonical source change")
+    for path in allowed_source_paths - changed:
+        source_row = expected[path]
+        base_row = base_by_path[path.removeprefix("source/")]
+        if source_row["bytes"] != base_row["bytes"]:
+            raise RuntimeEntryError("a canonical source member changed size outside the reviewed overlays")
+    return {"manifest_path": str(manifest_path), "manifest_sha256": actual_manifest_sha,
+            "source_map_path": str(source_map_path),
+            "source_map_sha256": hashlib.sha256(source_map_bytes).hexdigest(),
+            "base_manifest_sha256": manifest["base_manifest_sha256"],
+            "member_count": len(expected)}
+
+
+def _runtime_identity_pin(response: Any, terminal_pair_proof: Mapping[str, Any]) -> dict[str, Any]:
+    try:
+        verified_pair = entry.validate_terminal_operation_job_pair(
+            response, terminal_pair_proof, expected_operation="runtime.capabilities")
+    except entry.ObservationError as exc:
+        raise RuntimeOutcomeUnknown(
+            "runtime.capabilities lacks an exact terminal owner operation/job pair") from exc
+    data = response.get("data")
+    if not isinstance(data, Mapping):
+        raise RuntimeEntryError("runtime.capabilities omitted its raw data")
+    worker, identity, engine = data.get("worker"), data.get("runtime_identity"), data.get("engine")
+    if not isinstance(worker, Mapping) or not isinstance(identity, Mapping) or not isinstance(engine, Mapping):
+        raise RuntimeEntryError("runtime.capabilities omitted Worker, bound identity, or engine readback")
+    instance = worker.get("instance_id")
+    generation = worker.get("generation")
+    if (worker.get("available") is not True or worker.get("connected") is not True
+            or not isinstance(instance, str) or not instance or type(generation) is not int or generation < 1
+            or identity.get("instance_id") != instance or identity.get("generation") != generation
+            or identity.get("connected") is not True
+            or identity.get("source") != worker.get("source")
+            or identity.get("error") is not None
+            or identity.get("runtime_id") != "runtime-" + instance
+            or identity.get("runtime_id_source") != "PersistentJavaWorker.runtime_metadata().instance_id"
+            or identity.get("revision_dependency") != {
+                "required": False,
+                "reason": "a runtime capability query is not bound to a model revision",
+            }
+            or identity.get("bound_model_required") is not False
+            or worker.get("source") != "PersistentJavaWorker.runtime_metadata()"
+            or worker.get("error") is not None
+            or engine.get("comsol_version") != "6.4.0.293"
+            or engine.get("source") != "ModelUtil.getComsolVersion()"
+            or engine.get("worker_generation") != generation):
+        raise RuntimeEntryError("the live Worker UUID/epoch/source or COMSOL 6.4.0.293 binding is incomplete")
+    owner = verified_pair["owner_identity"]
+    if (worker.get("instance_id") != owner.get("worker_instance_id")
+            or worker.get("generation") != owner.get("worker_epoch")):
+        raise RuntimeOutcomeUnknown(
+            "runtime.capabilities Worker UUID/epoch differs from the original owner terminal pair")
+    try:
+        if str(UUID(instance)) != instance:
+            raise ValueError
+    except (ValueError, AttributeError) as exc:
+        raise RuntimeEntryError("runtime.capabilities Worker instance_id is not a canonical UUID") from exc
+    return {"worker_instance_id": instance, "connection_epoch": generation,
+            "runtime_id": identity["runtime_id"], "worker_source": worker["source"],
+            "runtime_identity_source": identity["runtime_id_source"],
+            "comsol_version": engine["comsol_version"],
+            "comsol_version_source": engine["source"]}
+
+
+def _validate_session_context(context: Any) -> dict[str, str]:
+    if not isinstance(context, Mapping) or set(context) != {"project_id", "session_id"}:
+        raise RuntimeEntryError("fresh session context must contain only project_id/session_id")
+    project_id, session_id = context.get("project_id"), context.get("session_id")
+    if (not isinstance(project_id, str) or not project_id.strip()
+            or not isinstance(session_id, str) or not session_id.strip()):
+        raise RuntimeEntryError("fresh session context identities must be nonempty observed strings")
+    return {"project_id": project_id, "session_id": session_id}
+
+
+def _verify_registered_mph_source(saved_mph_copy: str, project_root: str,
+                                  source_project_relative_path: str) -> dict[str, Any]:
+    identity = entry.verify_saved_mph_copy(saved_mph_copy)
+    root = Path(project_root)
+    try:
+        root_info = os.lstat(root)
+        if not stat.S_ISDIR(root_info.st_mode) or stat.S_ISLNK(root_info.st_mode):
+            raise RuntimeEntryError("project root must be an existing real directory")
+        root_real = root.resolve(strict=True)
+        relative = Path(source_project_relative_path)
+        if (not isinstance(source_project_relative_path, str) or not source_project_relative_path
+                or relative.is_absolute() or ".." in relative.parts or relative.suffix.lower() != ".mph"):
+            raise RuntimeEntryError("registered MPH source must be a project-relative .mph path without traversal")
+        source = root_real / relative
+        cursor = root_real
+        for part in relative.parts:
+            cursor = cursor / part
+            info = os.lstat(cursor)
+            if stat.S_ISLNK(info.st_mode):
+                raise RuntimeEntryError("registered MPH source path contains a symlink")
+        source_real = source.resolve(strict=True)
+        copy_real = Path(saved_mph_copy).resolve(strict=True)
+        if source_real != copy_real:
+            raise RuntimeEntryError("artifact.register source path is not the exact immutable saved-MPH copy")
+        source_identity = entry.verify_saved_mph_copy(str(source_real))
+    except RuntimeEntryError:
+        raise
+    except (OSError, TypeError, ValueError) as exc:
+        raise RuntimeEntryError("registered MPH source path could not be verified inside the project") from exc
+    if source_identity != identity:
+        raise RuntimeEntryError("project-relative registered source identity differs from the frozen saved-MPH copy")
+    return {**identity, "project_root": str(root_real),
+            "source_project_relative_path": relative.as_posix()}
+
+
+class DurableJournal:
+    """Create one private run directory and a durable append-only JSONL log."""
+
+    def __init__(self, parent: str | os.PathLike[str]):
+        base = Path(parent)
+        info = os.lstat(base)
+        if not stat.S_ISDIR(info.st_mode) or stat.S_ISLNK(info.st_mode):
+            raise RuntimeEntryError("evidence parent must be an existing real directory")
+        self.run_id = str(uuid4())
+        self.directory = base / f"w23-zero-solve-{self.run_id}"
+        os.mkdir(self.directory, 0o700)
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        self.path = self.directory / "public-receipts.jsonl"
+        self._fd = os.open(self.path, flags, 0o600)
+        self._count = 0
+        self._closed = False
+        dir_fd = os.open(self.directory, os.O_RDONLY)
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
+
+    def append(self, record: Mapping[str, Any]) -> None:
+        if self._closed:
+            raise RuntimeEntryError("journal is already closed")
+        view = memoryview(_canonical_bytes(dict(record)) + b"\n")
+        while view:
+            count = os.write(self._fd, view)
+            if count <= 0:
+                raise RuntimeEntryError("journal append made no forward progress")
+            view = view[count:]
+        os.fsync(self._fd)
+        self._count += 1
+
+    def close(self) -> None:
+        if self._closed:
+            return
+        os.fsync(self._fd)
+        os.close(self._fd)
+        dir_fd = os.open(self.directory, os.O_RDONLY)
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
+        self._closed = True
+
+    @property
+    def record_count(self) -> int:
+        return self._count
+
+
+class FreshOwnerRoute:
+    """One-shot registered-source admission with durable terminal readback.
+
+    The public producer may omit ``execution.status`` for artifact.register
+    and model.load. That omission is not itself success: each owner response is
+    retained unchanged, then its exact returned job id is queried once through
+    the fixed public ``job.status`` read. The nested operation/job snapshot
+    must prove terminal success for that exact response before the next owner
+    operation may be dispatched.
+    """
+
+    _ORDERED_OPERATIONS = (
+        "artifact.register", "job.status", "model.load", "job.status",
+    )
+    _OWNER_OPERATIONS = frozenset({"artifact.register", "model.load"})
+
+    def __init__(self, session_context: Mapping[str, str], journal: DurableJournal,
+                 dispatcher=None):
+        self.session_context = _validate_session_context(session_context)
+        self.journal = journal
+        self.dispatcher = dispatcher or _production_dispatch
+        self.calls: list[dict[str, Any]] = []
+        self.owner_calls: list[dict[str, Any]] = []
+        self.terminal_status_reads: list[dict[str, Any]] = []
+
+    def call_raw(self, operation_id: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+        ordinal = len(self.calls)
+        if ordinal >= len(self._ORDERED_OPERATIONS) or operation_id != self._ORDERED_OPERATIONS[ordinal]:
+            raise RuntimeEntryError("fresh owner admission operation/order is outside the fixed four-readback plan")
+        nested_arguments = dict(arguments)
+        request_id = f"w23-zero-r6-owner-req-{uuid4()}"
+        idempotency_key = f"w23-zero-r6-owner-idem-{uuid4()}"
+        if operation_id == "artifact.register":
+            if set(nested_arguments) != {
+                    "project_id", "path", "role", "classification", "artifact_type", "format_version"}:
+                raise RuntimeEntryError("artifact.register arguments differ from the exact fresh-source registration shape")
+            nested_arguments.update({"request_id": request_id, "idempotency_key": idempotency_key})
+        elif set(nested_arguments) != {"artifact_id", "path_policy"}:
+            if operation_id == "model.load":
+                raise RuntimeEntryError("model.load arguments differ from the exact registered-artifact load shape")
+        if operation_id == "job.status":
+            if len(self.calls) not in {1, 3} or not self.owner_calls:
+                raise RuntimeEntryError("job.status is permitted only immediately after its owner operation")
+            owner_response = self.owner_calls[-1]["response"]
+            owner_execution = owner_response.get("execution") if isinstance(owner_response, Mapping) else None
+            expected_job_id = owner_execution.get("job_id") if isinstance(owner_execution, Mapping) else None
+            if (not isinstance(expected_job_id, str) or not expected_job_id
+                    or nested_arguments != {"job_id": expected_job_id}):
+                raise RuntimeEntryError("job.status must read only the exact job returned by the preceding owner call")
+        elif operation_id == "model.load" and len(self.calls) != 2:
+            raise RuntimeEntryError("model.load requires terminal artifact.register status readback first")
+        execution = {
+            "project_id": self.session_context["project_id"],
+            "session_id": self.session_context["session_id"],
+            "model_ref": None, "expected_revision": None,
+            "rpc_timeout_s": 30.0, "execution_timeout_s": None,
+            "queue_timeout_s": 60.0, "idempotency_key": idempotency_key,
+            "request_id": request_id,
+        }
+        nested = {"operation_id": operation_id, "arguments": nested_arguments}
+        category = "owner_terminal_status" if operation_id == "job.status" else "owner"
+        self.journal.append({
+            "kind": "dispatch_intent", "ordinal": ordinal + 1, "category": category,
+            "request": {"operation": "operation_call", "arguments": nested,
+                        "execution": execution},
+            "retry": "FORBIDDEN_AFTER_DISPATCH",
+        })
+        try:
+            response = self.dispatcher("operation_call", nested, execution)
+        except BaseException as exc:
+            self.journal.append({
+                "kind": "dispatch_exception", "ordinal": ordinal + 1,
+                "operation_id": operation_id, "request_id": request_id,
+                "exception_type": type(exc).__name__, "exception": str(exc)[:1000],
+                "state": "UNKNOWN_NO_REPLAY",
+            })
+            raise RuntimeOutcomeUnknown(
+                f"{operation_id} raised after owner admission intent; no replay"
+            ) from exc
+        try:
+            raw_hash = hashlib.sha256(_canonical_bytes(response)).hexdigest()
+        except Exception as exc:
+            self.journal.append({
+                "kind": "malformed_response", "ordinal": ordinal + 1,
+                "operation_id": operation_id, "request_id": request_id,
+                "state": "UNKNOWN_NO_REPLAY", "exception": f"{type(exc).__name__}: {exc}",
+            })
+            raise RuntimeOutcomeUnknown("owner admission response is not canonicalizable; no replay") from exc
+        self.journal.append({
+            "kind": "dispatch_response", "ordinal": ordinal + 1, "category": category,
+            "operation_id": operation_id, "request_id": request_id,
+            "idempotency_key": idempotency_key, "response_sha256": raw_hash,
+            "raw_response": response,
+        })
+        if not isinstance(response, Mapping) or response.get("success") is not True:
+            error = response.get("error") if isinstance(response, Mapping) else None
+            if isinstance(error, Mapping) and error.get("code") == "EXECUTION_STATE_UNKNOWN":
+                raise RuntimeOutcomeUnknown(f"{operation_id} returned UNKNOWN; no replay")
+            raise RuntimeEntryError(f"{operation_id} failed; raw response retained: {error!r}")
+        data = response.get("data")
+        if operation_id in self._OWNER_OPERATIONS:
+            actual = response.get("execution")
+            if not isinstance(actual, Mapping):
+                raise RuntimeOutcomeUnknown(f"{operation_id} omitted execution metadata; no replay")
+            status = actual.get("status")
+            if status is not None and not isinstance(status, str):
+                raise RuntimeOutcomeUnknown(f"{operation_id} returned malformed terminal status; no replay")
+            if status in {"QUEUED", "RUNNING", "UNKNOWN"}:
+                raise RuntimeOutcomeUnknown(f"{operation_id} status={status}; no polling/resubmission")
+            if status not in {None, "SUCCEEDED", "COMPLETED"}:
+                raise RuntimeEntryError(f"{operation_id} is not terminal success: {status!r}")
+            if (actual.get("project_id") != self.session_context["project_id"]
+                    or actual.get("request_id") != request_id
+                    or actual.get("idempotency_key") != idempotency_key
+                    or not isinstance(actual.get("operation_id"), str)
+                    or not actual["operation_id"]
+                    or not isinstance(actual.get("job_id"), str)
+                    or not actual["job_id"]
+                    or ("session_id" in actual
+                        and actual.get("session_id") != self.session_context["session_id"])):
+                raise RuntimeOutcomeUnknown(f"{operation_id} response identity differs from the fresh owner request")
+            if not isinstance(data, Mapping):
+                raise RuntimeOutcomeUnknown(f"{operation_id} omitted data; no replay")
+            data_status = data.get("status")
+            if isinstance(data_status, str) and data_status in {"UNKNOWN", "QUEUED", "RUNNING"}:
+                raise RuntimeOutcomeUnknown(f"{operation_id} data remains unresolved; no replay")
+        else:
+            if not isinstance(data, Mapping):
+                raise RuntimeOutcomeUnknown("job.status omitted its durable job snapshot; no replay")
+            self._validate_status_readback_envelope(response)
+            self._validate_terminal_status_snapshot(data)
+        call = {"operation_id": operation_id, "request_id": request_id,
+                "idempotency_key": idempotency_key,
+                "nested_arguments": nested, "execution": execution,
+                "response": response}
+        self.calls.append(call)
+        if operation_id in self._OWNER_OPERATIONS:
+            self.owner_calls.append(call)
+        else:
+            self.terminal_status_reads.append(call)
+        return dict(response)
+
+    def _validate_status_readback_envelope(self, response: Mapping[str, Any]) -> None:
+        """Require the actual cached-control read shape, without inventing a job.
+
+        ControlDaemon._cached_registry_control routes job.status to
+        _dispatch_catalog_job_control -> _control_read. That read returns the
+        existing OperationStore job snapshot as {success, data}; it does not
+        create a new durable operation and therefore has no execution envelope.
+        The exact queried job id is already constrained to the preceding owner
+        response before dispatch, while the returned snapshot is bound to that
+        owner's raw response and persisted request metadata below.
+        """
+        if (set(response) != {"success", "data"}
+                or response.get("success") is not True
+                or "execution" in response
+                or not isinstance(response.get("data"), Mapping)):
+            raise RuntimeOutcomeUnknown(
+                "job.status differs from the exact cached {success,data} producer response; no replay")
+
+    def _validate_terminal_status_snapshot(self, job: Mapping[str, Any]) -> None:
+        if not self.owner_calls:
+            raise RuntimeEntryError("job.status has no preceding owner response to corroborate")
+        owner_call = self.owner_calls[-1]
+        owner_response = owner_call["response"]
+        owner_execution = owner_response.get("execution")
+        operation = job.get("operation")
+        if not isinstance(owner_execution, Mapping) or not isinstance(operation, Mapping):
+            raise RuntimeOutcomeUnknown("job.status omitted the owner operation record; no replay")
+        metadata = operation.get("metadata")
+        if not isinstance(metadata, Mapping) or not isinstance(metadata.get("execution"), Mapping):
+            raise RuntimeOutcomeUnknown("job.status omitted persisted request identity; no replay")
+        persisted_execution = metadata["execution"]
+        expected_owner_operation = owner_call["operation_id"]
+        expected_job_id = owner_execution.get("job_id")
+        if (job.get("job_id") != expected_job_id
+                or job.get("operation_id") != owner_execution.get("operation_id")
+                or job.get("status") != "SUCCEEDED"
+                or job.get("finished_at") in (None, "")
+                or operation.get("status") != "SUCCEEDED"
+                or operation.get("finished_at") in (None, "")
+                or operation.get("operation") != "operation_call"
+                or operation.get("operation_id") != owner_execution.get("operation_id")
+                or operation.get("request_id") != owner_call["request_id"]
+                or operation.get("idempotency_key") != owner_call["idempotency_key"]
+                or operation.get("request_hash") != owner_execution.get("request_hash")
+                or not isinstance(operation.get("request_hash"), str)
+                or len(operation["request_hash"]) != 64
+                or any(char not in "0123456789abcdef" for char in operation["request_hash"])
+                or job.get("result") != owner_response
+                or operation.get("result") != owner_response
+                or metadata.get("operation") != "operation_call"
+                or metadata.get("arguments") != owner_call["nested_arguments"]
+                or metadata.get("execution") != owner_call["execution"]
+                or persisted_execution.get("project_id") != self.session_context["project_id"]
+                or persisted_execution.get("session_id") != self.session_context["session_id"]
+                or persisted_execution.get("request_id") != owner_call["request_id"]
+                or persisted_execution.get("idempotency_key") != owner_call["idempotency_key"]):
+            raise RuntimeOutcomeUnknown(
+                f"job.status does not prove terminal success for the exact {expected_owner_operation} owner request; no replay"
+            )
+        job_metadata = job.get("metadata")
+        if (not isinstance(job_metadata, Mapping)
+                or any(job_metadata.get(key) != value for key, value in metadata.items())):
+            raise RuntimeOutcomeUnknown("job.status operation/job identity metadata copies differ; no replay")
+
+
+def _validate_context(context: Any) -> dict[str, Any]:
+    if not isinstance(context, Mapping) or set(context) != {
+            "project_id", "model_ref", "expected_revision"}:
+        raise RuntimeEntryError("fresh context must contain only project_id/model_ref/expected_revision")
+    project_id, model_ref, revision = (
+        context.get("project_id"), context.get("model_ref"), context.get("expected_revision"))
+    ref_fields = {"schema_version", "session_id", "server_instance_id", "model_tag", "generation"}
+    if not isinstance(project_id, str) or not project_id.strip():
+        raise RuntimeEntryError("project_id must be a nonempty observed identity")
+    if not isinstance(model_ref, Mapping) or set(model_ref) != ref_fields:
+        raise RuntimeEntryError("model_ref must be the exact typed identity mapping")
+    if (type(model_ref.get("schema_version")) is not int or model_ref["schema_version"] != 1
+            or any(not isinstance(model_ref.get(k), str) or not model_ref[k]
+                   for k in ("session_id", "server_instance_id", "model_tag"))
+            or type(model_ref.get("generation")) is not int or model_ref["generation"] < 1
+            or type(revision) is not int or revision < 0):
+        raise RuntimeEntryError("model_ref or expected_revision is malformed")
+    return {"project_id": project_id, "model_ref": dict(model_ref),
+            "expected_revision": revision}
+
+
+def _admit_registered_mph(route: FreshOwnerRoute, session_context: Mapping[str, str],
+                          source_identity: Mapping[str, Any],
+                          source_projection_sha256: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    registered_raw = route.call_raw("artifact.register", {
+        "project_id": session_context["project_id"],
+        "path": source_identity["source_project_relative_path"],
+        "role": "saved_model", "classification": "project_local",
+        "artifact_type": "application/vnd.comsol.mph",
+        "format_version": "comsol-mph-savecopy/1",
+    })
+    registered_execution = registered_raw.get("execution")
+    registered_terminal_status = route.call_raw("job.status", {
+        "job_id": registered_execution.get("job_id")
+        if isinstance(registered_execution, Mapping) else None,
+    })
+    registered = registered_raw.get("data")
+    if not isinstance(registered, Mapping) or not isinstance(registered_execution, Mapping):
+        raise RuntimeOutcomeUnknown("artifact.register omitted its durable source receipt; no replay")
+    register_call = route.owner_calls[0]
+    expected_provenance_keys = {
+        "source_project_relative_path", "request_id", "registering_operation_id", "source_sha256",
+    }
+    provenance = registered.get("provenance")
+    if (registered.get("artifact_id") != source_identity["sha256"]
+            or registered.get("sha256") != source_identity["sha256"]
+            or registered.get("size") != source_identity["bytes"]
+            or registered.get("role") != "saved_model"
+            or registered.get("classification") != "project_local"
+            or registered.get("artifact_type") != "application/vnd.comsol.mph"
+            or registered.get("format_version") != "comsol-mph-savecopy/1"
+            or registered.get("host_scope") != "local_loopback_engine_and_current_project"
+            or not isinstance(registered.get("path"), str)
+            or registered.get("path") != f"g2_artifacts/registered/{source_identity['sha256']}.mph"
+            or not isinstance(provenance, Mapping) or set(provenance) != expected_provenance_keys
+            or provenance.get("source_project_relative_path") != source_identity["source_project_relative_path"]
+            or not isinstance(provenance.get("request_id"), str) or not provenance["request_id"]
+            or not isinstance(provenance.get("registering_operation_id"), str)
+            or not provenance["registering_operation_id"]
+            or provenance.get("source_sha256") != source_identity["sha256"]
+            or registered_execution.get("project_id") != session_context["project_id"]
+            or registered_execution.get("request_id") != register_call["request_id"]
+            or registered_execution.get("idempotency_key") != register_call["idempotency_key"]
+            or (registered.get("reused") is False
+                and (provenance.get("request_id") != registered_execution.get("request_id")
+                     or provenance.get("registering_operation_id") != registered_execution.get("operation_id")))
+            or type(registered.get("reused")) is not bool):
+        raise RuntimeEntryError("artifact.register receipt is not the exact project-local saved-MPH source")
+
+    load_raw = route.call_raw("model.load", {
+        "artifact_id": source_identity["sha256"],
+        "path_policy": {"mode": "registered_artifact"},
+    })
+    load_execution = load_raw.get("execution")
+    load_terminal_status = route.call_raw("job.status", {
+        "job_id": load_execution.get("job_id") if isinstance(load_execution, Mapping) else None,
+    })
+    load_data, load_execution = load_raw.get("data"), load_raw.get("execution")
+    if not isinstance(load_data, Mapping) or not isinstance(load_execution, Mapping):
+        raise RuntimeOutcomeUnknown("model.load omitted its new owner identity; no replay")
+    load_call = route.owner_calls[1]
+    model_ref = load_execution.get("model_ref")
+    revision = load_execution.get("revision")
+    if (load_data.get("status") != "LOADED"
+            or load_data.get("ownership") != "mcp_owned"
+            or load_data.get("project_id") != session_context["project_id"]
+            or load_data.get("artifact_id") != source_identity["sha256"]
+            or load_data.get("sha256") != source_identity["sha256"]
+            or load_data.get("size_bytes") != source_identity["bytes"]
+            or load_data.get("model_ref") != model_ref
+            or load_data.get("model_tag") != model_ref.get("model_tag")
+            or load_execution.get("project_id") != session_context["project_id"]
+            or load_execution.get("session_id", session_context["session_id"]) != session_context["session_id"]
+            or not isinstance(load_execution.get("operation_id"), str)
+            or not load_execution.get("operation_id")
+            or load_execution.get("request_id") != load_call["request_id"]
+            or load_execution.get("idempotency_key") != load_call["idempotency_key"]
+            or load_execution.get("model_ownership") != "mcp_owned"
+            or load_execution.get("dirty") is not False
+            or not isinstance(model_ref, Mapping) or type(revision) is not int or revision != 0):
+        raise RuntimeEntryError("model.load did not bind the registered saved MPH to a fresh owned ModelRef/revision")
+    context = _validate_context({"project_id": session_context["project_id"],
+                                 "model_ref": model_ref, "expected_revision": revision})
+    if context["model_ref"]["session_id"] != session_context["session_id"]:
+        raise RuntimeOutcomeUnknown("model.load created a ModelRef outside the requested fresh session")
+    owner_binding = {
+        "schema": "W23_R6_FRESH_REGISTERED_MPH_OWNER_BINDING_R1",
+        "status": "PASS_FROM_THIS_RUN_RAW_PUBLIC_RECEIPTS",
+        "input_identity": dict(source_identity),
+        "source_projection_sha256": source_projection_sha256,
+        "artifact_register_response": registered_raw,
+        "artifact_register_terminal_job_status_response": registered_terminal_status,
+        "model_load_response": load_raw,
+        "model_load_terminal_job_status_response": load_terminal_status,
+        "terminal_owner_status": {
+            "artifact.register": registered_terminal_status["data"]["status"],
+            "model.load": load_terminal_status["data"]["status"],
+            "source": "PUBLIC_JOB_STATUS_RAW_OPERATION_STORE_READBACK",
+        },
+        "model_project_binding": {
+            "attribution": "PROJECT_BOUND_FROM_MODEL_LOAD_RESPONSE",
+            "project_id": load_execution["project_id"],
+            "model_ref": dict(model_ref),
+            "revision": revision,
+            "ownership": load_execution["model_ownership"],
+        },
+        "runtime_capabilities_and_model_inspect": "captured_as_first_bound_metadata_reads",
+    }
+    return context, owner_binding
+
+
+def _production_dispatch(operation: str, arguments: dict[str, Any],
+                         execution: dict[str, Any]) -> dict[str, Any]:
+    source_root = Path(__file__).resolve().parents[1] / "source"
+    if str(source_root) not in sys.path:
+        sys.path.insert(0, str(source_root))
+    from comsol_mcp._mcp_gateway import dispatch
+    return dispatch(operation, arguments, execution)
+
+
+def _load_candidate_direction_discovery():
+    """Load direction helpers from this candidate's pinned source projection only."""
+    source_root = (Path(__file__).resolve().parents[1] / "source").resolve()
+    source_text = str(source_root)
+    if source_text in sys.path:
+        sys.path.remove(source_text)
+    sys.path.insert(0, source_text)
+    expected = source_root / "tools" / "w23_direction_discovery.py"
+    expected_protocol = source_root / "tools" / "w23_te_science_protocol.py"
+    for module_name, expected_path in (
+            ("tools.w23_direction_discovery", expected),
+            ("tools.w23_te_science_protocol", expected_protocol)):
+        loaded = sys.modules.get(module_name)
+        loaded_path = getattr(loaded, "__file__", None) if loaded is not None else None
+        if loaded_path is not None and Path(loaded_path).resolve() != expected_path:
+            del sys.modules[module_name]
+            package = sys.modules.get("tools")
+            if package is not None and hasattr(package, module_name.rsplit(".", 1)[1]):
+                delattr(package, module_name.rsplit(".", 1)[1])
+    direction = importlib.import_module("tools.w23_direction_discovery")
+    protocol = sys.modules.get("tools.w23_te_science_protocol")
+    if (Path(direction.__file__).resolve() != expected
+            or protocol is None
+            or Path(protocol.__file__).resolve() != expected_protocol):
+        raise RuntimeEntryError("direction discovery escaped the exact candidate source projection")
+    return direction
+
+
+def _terminal_operation_job_proof(response: Any, request: Mapping[str, Any],
+                                  snapshot: Any, expected_operation: str) -> dict[str, Any]:
+    """Validate live OperationStore records and summarize their raw response binding."""
+    if not isinstance(response, Mapping) or not isinstance(request, Mapping):
+        raise RuntimeOutcomeUnknown("terminal owner-pair input is malformed; no replay")
+    if not isinstance(snapshot, Mapping) or set(snapshot) != {
+            "operation", "job", "owner_identity"}:
+        raise RuntimeOutcomeUnknown("original owner did not provide both durable terminal records; no replay")
+    operation, job, owner = snapshot["operation"], snapshot["job"], snapshot["owner_identity"]
+    execution = response.get("execution")
+    if (not isinstance(operation, Mapping) or not isinstance(job, Mapping)
+            or not isinstance(execution, Mapping)):
+        raise RuntimeOutcomeUnknown("terminal owner-pair records or raw execution identity are absent; no replay")
+    request_arguments = request.get("arguments")
+    request_execution = request.get("execution")
+    metadata = operation.get("metadata")
+    job_metadata = job.get("metadata")
+    if (request.get("operation") != "operation_call"
+            or not isinstance(request_arguments, Mapping)
+            or request_arguments.get("operation_id") != expected_operation
+            or set(request_arguments) != {"operation_id", "arguments"}
+            or not isinstance(request_arguments.get("arguments"), Mapping)
+            or not isinstance(request_execution, Mapping)
+            or not isinstance(metadata, Mapping) or not isinstance(job_metadata, Mapping)):
+        raise RuntimeOutcomeUnknown("terminal owner-pair intent does not match an exact public operation_call; no replay")
+    raw_hash = hashlib.sha256(_canonical_bytes(response)).hexdigest()
+    raw_operation_id = execution.get("operation_id")
+    raw_job_id = execution.get("job_id")
+    raw_request_id = execution.get("request_id")
+    raw_idempotency_key = execution.get("idempotency_key")
+    raw_request_hash = execution.get("request_hash")
+    operation_result_hash = hashlib.sha256(_canonical_bytes(operation.get("result"))).hexdigest()
+    job_result_hash = hashlib.sha256(_canonical_bytes(job.get("result"))).hexdigest()
+    if (response.get("success") is not True
+            or operation.get("operation") != "operation_call"
+            or operation.get("operation_id") != raw_operation_id
+            or job.get("operation_id") != raw_operation_id
+            or job.get("job_id") != raw_job_id
+            or operation.get("request_id") != raw_request_id
+            or operation.get("idempotency_key") != raw_idempotency_key
+            or operation.get("request_hash") != raw_request_hash
+            or not isinstance(raw_operation_id, str) or not raw_operation_id
+            or not isinstance(raw_job_id, str) or not raw_job_id
+            or not isinstance(raw_request_id, str) or not raw_request_id
+            or not isinstance(raw_idempotency_key, str) or not raw_idempotency_key
+            or not isinstance(raw_request_hash, str) or len(raw_request_hash) != 64
+            or any(char not in "0123456789abcdef" for char in raw_request_hash)
+            or operation.get("status") != "SUCCEEDED" or job.get("status") != "SUCCEEDED"
+            or not isinstance(operation.get("finished_at"), str) or not operation["finished_at"].strip()
+            or not isinstance(job.get("finished_at"), str) or not job["finished_at"].strip()
+            or operation_result_hash != raw_hash or job_result_hash != raw_hash
+            or operation.get("result") != response or job.get("result") != response
+            or job.get("operation") != operation
+            or metadata.get("operation") != "operation_call"
+            or metadata.get("arguments") != dict(request_arguments)
+            or metadata.get("execution") != dict(request_execution)
+            or any(job_metadata.get(key) != value for key, value in metadata.items())):
+        raise RuntimeOutcomeUnknown("OperationStore operation/job pair does not prove this exact terminal response; no replay")
+    allowed_job_metadata_extras = {"queue_wait_s", "engine_started_at", "finished_observed_at"}
+    if set(job_metadata) - set(metadata) - allowed_job_metadata_extras:
+        raise RuntimeOutcomeUnknown("OperationStore job metadata contains an unreviewed field; no replay")
+    if (not isinstance(owner, Mapping)
+            or set(owner) != {"project_id", "session_id", "server_pid", "worker_pid",
+                              "worker_instance_id", "worker_epoch"}
+            or owner.get("project_id") != request_execution.get("project_id")
+            or owner.get("session_id") != request_execution.get("session_id")):
+        raise RuntimeOutcomeUnknown("terminal OperationStore read did not remain on the exact live original owner; no replay")
+    proof = {
+        "schema": "W23_OWNER_OPERATION_JOB_TERMINAL_PAIR_R1",
+        "source": "LIVE_BOUND_MANAGED_PUBLIC_GATE_OPERATIONSTORE",
+        "terminal_pair_status": "OPERATION_AND_JOB_SUCCEEDED",
+        "public_operation": expected_operation,
+        "raw_response_sha256": raw_hash,
+        "operation_result_sha256": operation_result_hash,
+        "job_result_sha256": job_result_hash,
+        "operation_id": raw_operation_id, "job_id": raw_job_id,
+        "request_id": raw_request_id, "idempotency_key": raw_idempotency_key,
+        "request_hash": raw_request_hash,
+        "operation_status": operation["status"], "job_status": job["status"],
+        "operation_finished_at": operation["finished_at"], "job_finished_at": job["finished_at"],
+        "operation_metadata_sha256": hashlib.sha256(_canonical_bytes(metadata)).hexdigest(),
+        "job_metadata_sha256": hashlib.sha256(_canonical_bytes(job_metadata)).hexdigest(),
+        "request_sha256": hashlib.sha256(_canonical_bytes(request)).hexdigest(),
+        "owner_identity": dict(owner),
+    }
+    try:
+        return entry.validate_terminal_operation_job_pair(
+            response, proof, expected_operation=expected_operation)
+    except entry.ObservationError as exc:
+        raise RuntimeOutcomeUnknown("terminal owner-pair proof failed raw-response binding; no replay") from exc
+
+
+class PublicRoute:
+    """One dispatch boundary with non-replay and fixed per-operation limits."""
+
+    def __init__(self, context: Mapping[str, Any], journal: DurableJournal,
+                 dispatcher=None, *, terminal_pair_reader=None,
+                 initial_total_calls: int = 0):
+        self.context = _validate_context(context)
+        self.journal = journal
+        self.dispatcher = dispatcher or _production_dispatch
+        self.terminal_pair_reader = terminal_pair_reader
+        self._terminal_pair_proofs: dict[tuple[str, str], dict[str, Any]] = {}
+        self.metadata_calls = 0
+        self.point_calls = 0
+        self.integral_calls = 0
+        if type(initial_total_calls) is not int or initial_total_calls < 0:
+            raise RuntimeEntryError("initial total call count must be a nonnegative integer")
+        self.total_calls = initial_total_calls
+
+    def terminal_pair_proof(self, response: Mapping[str, Any]) -> dict[str, Any]:
+        execution = response.get("execution") if isinstance(response, Mapping) else None
+        if not isinstance(execution, Mapping):
+            raise RuntimeOutcomeUnknown("raw response has no execution identity for its terminal owner proof")
+        request_id = execution.get("request_id")
+        response_sha = hashlib.sha256(_canonical_bytes(response)).hexdigest()
+        proof = self._terminal_pair_proofs.get((str(request_id), response_sha))
+        if proof is None:
+            raise RuntimeOutcomeUnknown("this exact raw response has no captured original-owner terminal pair")
+        return dict(proof)
+
+    def call_raw(self, operation_id: str, arguments: Mapping[str, Any], *,
+                 category: str = "metadata") -> dict[str, Any]:
+        if category not in {"metadata", "point", "integral"}:
+            raise RuntimeEntryError("call category is outside the fixed W23 budget")
+        if operation_id not in _CATEGORY_OPERATIONS[category]:
+            raise RuntimeEntryError(
+                f"{operation_id!r} is outside the fixed {category} operation allowlist"
+            )
+        if category == "integral":
+            spec = arguments.get("spec") if isinstance(arguments, Mapping) else None
+            if not isinstance(spec, Mapping) or spec.get("aggregate") != "integral":
+                raise RuntimeEntryError("result.evaluate is allowed only with exact aggregate=integral")
+        if category == "metadata" and self.metadata_calls >= entry.MAX_METADATA_PUBLIC_CALLS:
+            raise RuntimeEntryError("metadata call ceiling reached; dispatch refused")
+        if category == "point" and self.point_calls >= entry.MAX_RESULT_AT_POINTS_CALLS:
+            raise RuntimeEntryError("result.at_points ceiling reached; dispatch refused")
+        if category == "integral" and self.integral_calls >= entry.MAX_RESULT_EVALUATE_INTEGRAL_CALLS:
+            raise RuntimeEntryError("result.evaluate integral ceiling reached; dispatch refused")
+        if self.total_calls >= entry.MAX_TOTAL_PUBLIC_CALLS:
+            raise RuntimeEntryError("total public-call ceiling reached; dispatch refused")
+        self.total_calls += 1
+        if category == "metadata":
+            self.metadata_calls += 1
+        elif category == "point":
+            self.point_calls += 1
+        else:
+            self.integral_calls += 1
+        ordinal = self.total_calls
+        request_id = f"w23-zero-r6-req-{uuid4()}"
+        idempotency_key = f"w23-zero-r6-idem-{uuid4()}"
+        execution = {
+            "project_id": self.context["project_id"],
+            "session_id": self.context["model_ref"]["session_id"],
+            "model_ref": dict(self.context["model_ref"]),
+            "expected_revision": self.context["expected_revision"],
+            "rpc_timeout_s": 30.0, "execution_timeout_s": None,
+            "queue_timeout_s": 60.0, "idempotency_key": idempotency_key,
+            "request_id": request_id,
+        }
+        nested = {"operation_id": operation_id, "arguments": dict(arguments)}
+        self.journal.append({
+            "kind": "dispatch_intent", "ordinal": ordinal, "category": category,
+            "request": {"operation": "operation_call", "arguments": nested,
+                        "execution": execution},
+            "retry": "FORBIDDEN_AFTER_DISPATCH",
+        })
+        request = {"operation": "operation_call", "arguments": nested,
+                   "execution": execution}
+        try:
+            response = self.dispatcher("operation_call", nested, execution)
+        except BaseException as exc:
+            self.journal.append({
+                "kind": "dispatch_exception", "ordinal": ordinal,
+                "operation_id": operation_id, "request_id": request_id,
+                "exception_type": type(exc).__name__, "exception": str(exc)[:1000],
+                "state": "UNKNOWN_NO_REPLAY",
+            })
+            raise RuntimeOutcomeUnknown(
+                f"{operation_id} raised after its intent was persisted; no replay"
+            ) from exc
+        try:
+            raw_hash = hashlib.sha256(_canonical_bytes(response)).hexdigest()
+        except Exception as exc:
+            self.journal.append({
+                "kind": "malformed_response", "ordinal": ordinal,
+                "operation_id": operation_id, "request_id": request_id,
+                "state": "UNKNOWN_NO_REPLAY",
+                "exception": f"{type(exc).__name__}: {exc}",
+            })
+            raise RuntimeOutcomeUnknown("response is not JSON-canonicalizable; no replay") from exc
+        self.journal.append({
+            "kind": "dispatch_response", "ordinal": ordinal, "category": category,
+            "operation_id": operation_id, "request_id": request_id,
+            "idempotency_key": idempotency_key, "response_sha256": raw_hash,
+            "raw_response": response,
+        })
+        if not isinstance(response, Mapping) or response.get("success") is not True:
+            error = response.get("error") if isinstance(response, Mapping) else None
+            if isinstance(error, Mapping) and error.get("code") == "EXECUTION_STATE_UNKNOWN":
+                raise RuntimeOutcomeUnknown(f"{operation_id} returned UNKNOWN; no replay")
+            raise RuntimeEntryError(f"{operation_id} failed; raw response retained: {error!r}")
+        actual = response.get("execution")
+        if not isinstance(actual, Mapping):
+            raise RuntimeOutcomeUnknown(f"{operation_id} omitted execution metadata; no replay")
+        status = actual.get("status")
+        if status in {"QUEUED", "RUNNING", "UNKNOWN"}:
+            raise RuntimeOutcomeUnknown(f"{operation_id} status={status}; no polling/resubmission")
+        if status not in {"SUCCEEDED", "COMPLETED", None}:
+            raise RuntimeEntryError(f"{operation_id} is not terminal success: {status!r}")
+        if self.terminal_pair_reader is None:
+            raise RuntimeOutcomeUnknown(
+                f"{operation_id} has no original-owner OperationStore reader; no replay")
+        try:
+            snapshot = self.terminal_pair_reader(request, response)
+            terminal_proof = _terminal_operation_job_proof(
+                response, request, snapshot, operation_id)
+        except BaseException as exc:
+            self.journal.append({
+                "kind": "terminal_operation_job_pair_unavailable", "ordinal": ordinal,
+                "operation_id": operation_id, "request_id": request_id,
+                "raw_response_sha256": raw_hash, "state": "UNKNOWN_NO_REPLAY",
+                "exception_type": type(exc).__name__, "exception": str(exc)[:1000],
+            })
+            if isinstance(exc, RuntimeOutcomeUnknown):
+                raise
+            raise RuntimeOutcomeUnknown(
+                f"{operation_id} owner operation/job terminal proof failed; no replay") from exc
+        self._terminal_pair_proofs[(request_id, raw_hash)] = terminal_proof
+        self.journal.append({
+            "kind": "terminal_operation_job_pair_proof", "ordinal": ordinal,
+            "operation_id": operation_id, "request_id": request_id,
+            "raw_response_sha256": raw_hash,
+            "proof": terminal_proof,
+        })
+        if (actual.get("project_id") != self.context["project_id"]
+                or actual.get("model_ref") != self.context["model_ref"]
+                or actual.get("session_id") != self.context["model_ref"]["session_id"]
+                or actual.get("revision") != self.context["expected_revision"]):
+            raise RuntimeOutcomeUnknown(f"{operation_id} response identity differs from its fresh request")
+        data = response.get("data")
+        if not isinstance(data, Mapping):
+            raise RuntimeOutcomeUnknown(f"{operation_id} omitted data; no replay")
+        data_status = data.get("status")
+        if isinstance(data_status, str) and data_status in {"UNKNOWN", "QUEUED", "RUNNING"}:
+            raise RuntimeOutcomeUnknown(f"{operation_id} data remains unresolved; no replay")
+        return dict(response)
+
+    def call(self, operation_id: str, arguments: Mapping[str, Any], *,
+             category: str = "metadata") -> dict[str, Any]:
+        response = self.call_raw(operation_id, arguments, category=category)
+        data = response.get("data")
+        if not isinstance(data, Mapping):
+            raise RuntimeOutcomeUnknown(f"{operation_id} omitted data; no replay")
+        return dict(data)
+
+
+def _require_mapping(data: Any, label: str) -> dict[str, Any]:
+    if not isinstance(data, Mapping):
+        raise RuntimeEntryError(f"{label} public data is not an object")
+    return dict(data)
+
+
+def _identity_readback(row: Mapping[str, Any]) -> dict[str, Any]:
+    state = row.get("state")
+    if not isinstance(state, Mapping):
+        raise RuntimeEntryError("selection.inspect omitted state readback")
+    return {
+        "tag": row.get("tag"), "component": row.get("component"),
+        "geometry": state.get("geometry"),
+        "entity_dimension": row.get("entity_dimension"),
+        "dimension": row.get("dimension"), "entities": state.get("entities"),
+        "is_inheriting": state.get("is_inheriting"), "named": state.get("named"),
+    }
+
+
+def _capture_direction_graph(call, dataset_rows: list[Mapping[str, Any]],
+                             solution_indices: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+    """Capture exact Port/BMA identities and top-level solver intervals only."""
+    direction = _load_candidate_direction_discovery()
+
+    root = direction.node_path([])
+    components = direction.exact_children(
+        call("node.children", direction.children_arguments(root, collection="component")),
+        path=root, collection="component", maximum=direction.MAX_ROOT_ENTITIES,
+        requested_collection="component")
+    studies = direction.exact_children(
+        call("node.children", direction.children_arguments(root, collection="study")),
+        path=root, collection="study", maximum=direction.MAX_ROOT_ENTITIES,
+        requested_collection="study")
+    solvers = direction.exact_children(
+        call("node.children", direction.children_arguments(root, collection="sol")),
+        path=root, collection="sol", maximum=direction.MAX_ROOT_ENTITIES,
+        requested_collection="sol")
+    if sum(row["tag"] == "comp1" for row in components) != 1:
+        raise RuntimeEntryError("complete component inventory lacks unique comp1")
+
+    comp_path = direction.node_path([{"collection": "component", "tag": "comp1"}])
+    physics_rows = direction.exact_children(
+        call("node.children", direction.children_arguments(comp_path, collection="physics")),
+        path=comp_path, collection="physics", maximum=direction.MAX_ROOT_ENTITIES,
+        requested_collection="physics")
+    physics_inventory = []
+    for row in physics_rows:
+        path = direction.node_path([{"collection": "component", "tag": "comp1"},
+                                    {"collection": "physics", "tag": row["tag"]}])
+        actual = direction._inspect(call, path)
+        if actual["tag"] != row["tag"]:
+            raise RuntimeEntryError("Physics child and identity readback differ")
+        physics_inventory.append({**actual, "path": path})
+    waves = [row for row in physics_inventory if row.get("type_id") == "ElectromagneticWaves"]
+    if len(waves) != 1:
+        raise RuntimeEntryError("physics inventory must contain exactly one ElectromagneticWaves interface")
+    physics = waves[0]
+    ports = []
+    for child in direction._feature_rows(call, physics["path"]):
+        path = direction.node_path([{"collection": "component", "tag": "comp1"},
+                                    {"collection": "physics", "tag": physics["tag"]},
+                                    {"collection": "feature", "tag": child["tag"]}])
+        actual = direction._inspect(call, path)
+        if actual["tag"] != child["tag"]:
+            raise RuntimeEntryError("physics feature and identity readback differ")
+        if actual["type_id"] == "Port":
+            props = {name: direction.capture_property(call, path, name)
+                     for name in entry._PORT_PROPERTIES}
+            ports.append({**actual, "path": path, "properties": props})
+
+    bmas = []
+    for study in studies:
+        study_path = direction.node_path([{"collection": "study", "tag": study["tag"]}])
+        for child in direction._feature_rows(call, study_path):
+            path = direction.node_path(study_path["segments"] + [
+                {"collection": "feature", "tag": child["tag"]}])
+            actual = direction._inspect(call, path)
+            if actual["tag"] != child["tag"]:
+                raise RuntimeEntryError("Study feature and identity readback differ")
+            if actual["type_id"] == "BoundaryModeAnalysis":
+                props = {name: direction.capture_property(call, path, name)
+                         for name in direction.BMA_PROPERTIES}
+                bmas.append({"study_tag": study["tag"], **actual,
+                             "path": path, "properties": props})
+
+    solver_orders: dict[str, dict[str, Any]] = {}
+    solver_inventory = []
+    solver_nodes = []
+    for solver in solvers:
+        path = direction.node_path([{"collection": "sol", "tag": solver["tag"]}])
+        actual_solver = direction._inspect(call, path)
+        if actual_solver["tag"] != solver["tag"]:
+            raise RuntimeEntryError("solver tag differs from identity readback")
+        children, (order, index_by_tag) = direction._feature_rows(
+            call, path, with_solver_order=True)
+        if order.get("order_status") != "VERIFIED_STABLE_TWO_SAMPLES":
+            raise RuntimeEntryError("solver top-level order lacks the exact two-sample witness")
+        if len(children) > direction.MAX_FEATURES_PER_PARENT:
+            raise RuntimeEntryError("solver top-level feature count exceeds its fixed limit")
+        solver_orders[solver["tag"]] = order
+        solver_inventory.append({**actual_solver, "path": path, "feature_order": order})
+        for child in children:
+            child_path = direction.node_path(path["segments"] + [
+                {"collection": "feature", "tag": child["tag"]}])
+            actual = direction._inspect(call, child_path)
+            if actual["tag"] != child["tag"]:
+                raise RuntimeEntryError("solver feature tag differs from identity readback")
+            props = None
+            if actual["type_id"] == "StudyStep":
+                props = {name: direction.capture_property(call, child_path, name)
+                         for name in direction.STUDY_STEP_PROPERTIES}
+            elif actual["type_id"] in {"StoreSolution", "CopySolution"}:
+                props = {name: direction.capture_property(call, child_path, name)
+                         for name in direction.STORE_SOLUTION_PROPERTIES}
+            solver_nodes.append({**actual, "solver_tag": solver["tag"],
+                                 "path": child_path, "depth": 1,
+                                 "collection_order_index": index_by_tag.get(child["tag"]),
+                                 "properties": props})
+
+    dataset_by_tag = {row.get("tag"): dict(row) for row in dataset_rows
+                      if isinstance(row, Mapping)}
+    solutions = [row for row in dataset_by_tag.values()
+                 if str(row.get("type_id", "")).lower() == "solution"]
+    if not solutions or len(solutions) > 10:
+        raise RuntimeEntryError("Solution dataset inventory is empty or over the fixed bound")
+    for row in solutions:
+        tag = row.get("tag")
+        index = solution_indices.get(tag)
+        if (not isinstance(index, Mapping) or index.get("dataset") != tag
+                or index.get("binding_complete") is not True
+                or type(index.get("solution_count")) is not int
+                or index.get("solution_count") < 1
+                or index.get("solution") != row.get("solution")):
+            raise RuntimeEntryError(f"Dataset.solution and solution_indices disagree for {tag!r}")
+
+    steps = [row for row in solver_nodes
+             if row["type_id"] == "StudyStep" and row.get("properties") is not None]
+    stores = [row for row in solver_nodes
+              if row["type_id"] in {"StoreSolution", "CopySolution"}
+              and row.get("properties") is not None]
+    eigenvalues = [row for row in solver_nodes if row["type_id"] == "Eigenvalue"]
+    bindings = []
+    for bma in bmas:
+        port_name = direction.typed_text(bma["properties"]["PortName"].get("typed_get") or {})
+        bma_tag = bma["tag"]
+        matched_steps = [row for row in steps
+                         if direction.typed_text(row["properties"]["study"].get("typed_get") or {}) == bma["study_tag"]
+                         and direction.typed_text(row["properties"]["studystep"].get("typed_get") or {}) == bma_tag]
+        candidates = [row for row in stores
+                      if any(row["solver_tag"] == step["solver_tag"] for step in matched_steps)]
+        linked, order_proof = direction._ordered_store_solution_links(
+            matched_steps, steps, stores, eigenvalues, solver_orders)
+
+        def dataset_matches(store_rows):
+            names = {direction.typed_text(row["properties"]["sol"].get("typed_get") or {})
+                     for row in store_rows}
+            return [dataset for dataset in solutions
+                    if isinstance(dataset.get("solution"), str) and dataset["solution"] in names]
+
+        candidate_datasets = dataset_matches(candidates)
+        exact_datasets = dataset_matches(linked)
+        link_status = direction._bma_solution_binding_status(
+            matched_steps, linked, exact_datasets, order_proof)
+        dataset = exact_datasets[0] if len(exact_datasets) == 1 else {}
+        dataset_tag = dataset.get("tag")
+        index = solution_indices.get(dataset_tag) if dataset_tag else None
+        solution = (direction.typed_text(linked[0]["properties"]["sol"].get("typed_get") or {})
+                    if len(linked) == 1 else None)
+        bindings.append({
+            "port_name": port_name, "status": link_status,
+            "study_tag": bma["study_tag"], "bma_tag": bma_tag,
+            "dataset_tag": dataset_tag, "solution_tag": solution,
+            "dataset_type": dataset.get("type_id"),
+            "dataset_binding_complete": isinstance(index, Mapping)
+                and index.get("binding_complete") is True and index.get("solution_count") == 1,
+            "source": "fresh StudyStep.study/studystep -> StoreSolution.sol -> Dataset.solution",
+            "mode_frequency_raw_observed": bma["properties"]["modeFreq"],
+            "study_step_matches": matched_steps, "store_solution_candidates": candidates,
+            "store_solution_matches": linked, "dataset_candidates": candidate_datasets,
+            "dataset_matches": exact_datasets, "order_link_evidence": order_proof,
+        })
+    return {
+        "physics_inventory": physics_inventory, "ports": ports,
+        "bma_features": bmas, "solver_sequences": solver_inventory,
+        "solver_features_top_level": solver_nodes,
+        "bma_solution_bindings": bindings,
+        "dataset_inventory_from_public_list": [dict(row) for row in dataset_rows],
+        "dataset_solution_indices_raw": {tag: dict(row) for tag, row in solution_indices.items()},
+        "scope": "complete Port/BMA/top-level solver interval proof; nested solver trees not traversed",
+    }
+
+
+def _capture_metadata(route: PublicRoute, mph_copy: str
+                      ) -> tuple[dict[str, Any], dict[str, Any], list[dict[str, Any]]]:
+    source_root = Path(__file__).resolve().parents[1] / "source"
+    if str(source_root) not in sys.path:
+        sys.path.insert(0, str(source_root))
+    from .material_direction_proof import required_parameter_names
+
+    input_identity = entry.verify_saved_mph_copy(mph_copy)
+    runtime_capabilities_raw = route.call_raw(
+        "runtime.capabilities", {"refresh": False}, category="metadata")
+    runtime_identity = _runtime_identity_pin(
+        runtime_capabilities_raw, route.terminal_pair_proof(runtime_capabilities_raw))
+    model_inspect_raw = route.call_raw("model.inspect", {}, category="metadata")
+    model_identity = _require_mapping(model_inspect_raw.get("data"), "model.inspect")
+    if (model_identity.get("model_identity") != route.context["model_ref"]
+            or model_identity.get("revision") != route.context["expected_revision"]
+            or model_identity.get("dirty") is not False
+            or model_identity.get("comsol_version") != "6.4.0.293"):
+        raise RuntimeOutcomeUnknown(
+            "model.inspect does not preserve the freshly loaded ModelRef/revision, clean state, and COMSOL 6.4.0.293"
+        )
+    geometry_path = {"segments": [
+        {"collection": "component", "tag": "comp1"},
+        {"collection": "geom", "tag": "geom1"},
+    ]}
+    geometry = _require_mapping(route.call("geometry.inspect", {"path": geometry_path}),
+                                "geometry.inspect")
+
+    dataset_list = _require_mapping(route.call("dataset.list", {}), "dataset.list")
+    dataset_rows = dataset_list.get("datasets")
+    if (not isinstance(dataset_rows, list) or dataset_list.get("count") != len(dataset_rows)
+            or dataset_list.get("read_errors") != []):
+        raise RuntimeEntryError("dataset.list is incomplete or includes read errors")
+    solution_indices = {}
+    for row in dataset_rows:
+        if not isinstance(row, Mapping) or str(row.get("type_id", "")).lower() != "solution":
+            continue
+        tag = row.get("tag")
+        if not isinstance(tag, str) or tag in solution_indices:
+            raise RuntimeEntryError("dataset.list has a malformed or duplicate Solution tag")
+        solution_indices[tag] = _require_mapping(
+            route.call("dataset.solution_indices", {"path": tag}),
+            f"dataset.solution_indices({tag})")
+    graph = _capture_direction_graph(route.call, dataset_rows, solution_indices)
+
+    selection_list = _require_mapping(route.call("selection.list", {"component": "comp1"}),
+                                      "selection.list")
+    selection_summaries = selection_list.get("selections")
+    if (not isinstance(selection_summaries, list)
+            or selection_list.get("count") != len(selection_summaries)):
+        raise RuntimeEntryError("selection.list is incomplete")
+    selection_readbacks = []
+    for tag in ("selInputPort", "selReceiverX8"):
+        summary = [row for row in selection_summaries
+                   if isinstance(row, Mapping) and row.get("tag") == tag]
+        if len(summary) != 1:
+            raise RuntimeEntryError(f"selection.list lacks unique {tag}")
+        raw = _require_mapping(route.call(
+            "selection.inspect", {"component": "comp1", "tag": tag}),
+            f"selection.inspect({tag})")
+        identity = _identity_readback(raw)
+        if (identity["tag"] != tag or identity["component"] != "comp1"
+                or identity["geometry"] != summary[0].get("geometry")
+                or identity["entity_dimension"] != summary[0].get("entity_dimension")
+                or identity["dimension"] != summary[0].get("dimension")
+                or identity["entities"] != summary[0].get("entities")
+                or identity["is_inheriting"] != summary[0].get("is_inheriting")):
+            raise RuntimeEntryError(f"selection.list/inspect identity differs for {tag}")
+        selection_readbacks.append({
+            **identity, "selection_list_raw": dict(summary[0]),
+            "selection_inspect_raw": raw,
+        })
+
+    material_inventory = _require_mapping(route.call("material.list", {"component": "comp1"}),
+                                          "material.list")
+    materials = material_inventory.get("materials")
+    if (not isinstance(materials, list) or material_inventory.get("material_count") != len(materials)
+            or not materials or len(materials) > 10):
+        raise RuntimeEntryError("material.list is empty, malformed, or over the fixed bound")
+    material_inspections = []
+    for item in materials:
+        if not isinstance(item, Mapping) or not isinstance(item.get("tag"), str):
+            raise RuntimeEntryError("material.list contains a malformed owner")
+        path = {"segments": [
+            {"collection": "component", "tag": "comp1"},
+            {"collection": "material", "tag": item["tag"]},
+        ]}
+        material_inspections.append(_require_mapping(route.call("material.inspect", {
+            "path": path, "groups": ["def"],
+            "properties": ["relpermittivity", "relpermeability", "electricconductivity"],
+        }), f"material.inspect({item['tag']})"))
+
+    names = required_parameter_names(material_inspections)
+    parameter_payload = None
+    if names:
+        parameter_payload = _require_mapping(route.call("parameter.get", {
+            "names": list(names), "evaluate": True,
+        }), "parameter.get")
+    adjacency_by_tag = {}
+    for tag in ("selInputPort", "selReceiverX8"):
+        adjacency_by_tag[tag] = _require_mapping(route.call("selection.adjacency", {
+            "selection": {"kind": "named", "component": "comp1",
+                          "geometry": "geom1", "entity_dimension": 1, "tag": tag},
+            "target_dimension": 2,
+        }), f"selection.adjacency({tag})")
+
+    geometry_raw = {
+        "path": geometry.get("path"), "kind": geometry.get("kind"),
+        "geometry_state": geometry.get("geometry_state"),
+    }
+    physical_rows = [row for row in dataset_rows if isinstance(row, Mapping)
+                     and row.get("tag") == "dset1"
+                     and str(row.get("type_id", "")).lower() == "solution"]
+    if len(physical_rows) != 1:
+        raise RuntimeEntryError("dataset.list lacks the exact physical dset1")
+    physical_index = solution_indices.get("dset1")
+    if (not isinstance(physical_index, Mapping)
+            or physical_index.get("binding_complete") is not True
+            or physical_index.get("solution_count") != 1
+            or physical_index.get("solution") != physical_rows[0].get("solution")):
+        raise RuntimeEntryError("dset1 lacks a unique observed one-solution binding")
+    physical_binding = {
+        "status": "UNIQUE_EXACT_FREQUENCY_DATASET_BINDING",
+        "dataset_tag": "dset1", "dataset_type": physical_rows[0].get("type_id"),
+        "solution_tag": physical_rows[0].get("solution"), "binding_complete": True,
+        "numeric_solution_count": physical_index["solution_count"],
+        "source": "fresh dataset.list + dataset.solution_indices + exact StudyStep/StoreSolution chain",
+        "dataset_list_raw_observed": dict(physical_rows[0]),
+        "solution_indices_raw_observed": dict(physical_index),
+    }
+    observed = {
+        "schema": "W23_FRESH_TYPED_METADATA_OBSERVATION_R1",
+        "saved_model_bytes": input_identity["bytes"],
+        "saved_model_sha256": input_identity["sha256"],
+        "runtime_capabilities_raw_observed": runtime_capabilities_raw,
+        "runtime_identity_pin": runtime_identity,
+        "model_inspect_response_raw_observed": model_inspect_raw,
+        "model_inspect_raw_observed": model_identity,
+        "geometry_readback_raw_observed": geometry_raw,
+        "physics_inventory": graph["physics_inventory"],
+        "ports": graph["ports"],
+        "physical_solution_binding": physical_binding,
+        "bma_solution_bindings": graph["bma_solution_bindings"],
+        "port_selection_readbacks": selection_readbacks,
+        "dataset_list_raw_observed": dataset_list,
+        "dataset_solution_indices_raw_observed": solution_indices,
+        "material_inventory_raw_observed": material_inventory,
+        "material_inspections_raw_observed": material_inspections,
+        "parameter_get_raw_observed": parameter_payload,
+        "adjacency_raw_observed": adjacency_by_tag,
+        "solver_order_inventory_raw_observed": graph,
+    }
+    plan = entry.build_read_plan(observed)
+    geometry_state = geometry.get("geometry_state")
+    dimension = geometry_state.get("dimension") if isinstance(geometry_state, Mapping) else None
+    material_proofs = []
+    for tag in ("selInputPort", "selReceiverX8"):
+        material_proofs.append({
+            "port_selection": tag,
+            "proof": entry.prove_fresh_material_closure(
+                adjacency_by_tag[tag], material_inventory, material_inspections,
+                observed_parameters=parameter_payload,
+                observed_geometry_dimension=dimension),
+        })
+    return observed, plan, material_proofs
+
+
+def _selection_witness(slot: Mapping[str, Any], before: Mapping[str, Any],
+                       after: Mapping[str, Any]) -> dict[str, Any]:
+    target = slot["selection"]
+
+    def stage(name: str, selection: Mapping[str, Any]) -> dict[str, Any]:
+        return {
+            "stage": name, "kind": "named", "component": selection.get("component"),
+            "geometry": selection.get("geometry"),
+            "entity_dimension": selection.get("entity_dimension"),
+            "tag": selection.get("tag"),
+            "native_selection_readback": {
+                "geometry": selection.get("geometry"),
+                "dimension": selection.get("dimension"),
+                "named": selection.get("named"),
+                "is_inheriting": selection.get("is_inheriting"),
+                "entities": selection.get("entities"),
+            },
+        }
+
+    for current in (before, after):
+        if (current.get("component") != target["component"]
+                or current.get("geometry") != target["geometry"]
+                or current.get("entity_dimension") != target["entity_dimension"]
+                or current.get("dimension") != 1 or current.get("tag") != target["tag"]
+                or current.get("named") != target["tag"]
+                or current.get("is_inheriting") is not False
+                or current.get("entities") != target["actual_entity_ids"]):
+            raise entry.ObservationError("selection.inspect identity/entities differ from the planned port")
+    return {"before": stage("before_numeric_read", before),
+            "after": stage("after_numeric_read", after)}
+
+
+def _point_readback(raw_response: Mapping[str, Any], terminal_pair_proof: Mapping[str, Any],
+                    slot: Mapping[str, Any],
+                    before: Mapping[str, Any], after: Mapping[str, Any]) -> tuple[dict[str, Any], dict[str, list[complex]]]:
+    try:
+        entry.validate_terminal_operation_job_pair(
+            raw_response, terminal_pair_proof, expected_operation="result.at_points")
+    except entry.ObservationError as exc:
+        raise RuntimeOutcomeUnknown(
+            "result.at_points lacks a matching original-owner terminal operation/job pair") from exc
+    data = raw_response.get("data")
+    if not isinstance(data, Mapping):
+        raise entry.ObservationError("result.at_points response has no raw data object")
+    status = data.get("status")
+    cleanup = data.get("cleanup")
+    if not isinstance(status, Mapping):
+        raise RuntimeOutcomeUnknown("result.at_points omitted the producer engine/status receipt")
+    if status.get("cleanup_failed") is not False or status.get("ok") is not True:
+        raise RuntimeOutcomeUnknown("result.at_points engine or cleanup status is not successful; no replay")
+    if (status.get("engine_error") is not None
+            or status.get("verification_status") != "PASSED"
+            or data.get("verification_status") != "PASSED"):
+        raise RuntimeOutcomeUnknown("result.at_points engine verification is not a terminal PASS; no replay")
+    if (not isinstance(cleanup, Mapping)
+            or cleanup.get("created") is not True
+            or cleanup.get("removed") is not True
+            or cleanup.get("verified_removed") is not True
+            or cleanup.get("cleanup_failed") is not False
+            or cleanup.get("error") is not None):
+        raise RuntimeOutcomeUnknown("result.at_points temporary feature cleanup is absent or unverified; no replay")
+    feature_readback = data.get("feature_readback")
+    if (not isinstance(feature_readback, Mapping)
+            or feature_readback.get("data_status") != "VERIFIED"
+            or feature_readback.get("data") != data.get("dataset")):
+        raise RuntimeOutcomeUnknown("result.at_points dataset feature readback is absent or mismatched; no replay")
+    result_budget = data.get("result_budget")
+    if (not isinstance(result_budget, Mapping)
+            or result_budget.get("status") != "PASS"
+            or result_budget.get("publish_allowed") is not True):
+        raise RuntimeEntryError("result.at_points numeric result budget did not permit publication")
+    if (data.get("expressions") != slot.get("expressions")
+            or data.get("dataset") != slot.get("dataset_tag_observed")
+            or data.get("solution") != slot.get("solution_tag_observed")
+            or data.get("complex_mode") != "preserve"
+            or data.get("is_complex") is not True
+            or data.get("expression_units") != dict(zip(slot["expressions"], slot["requested_units"]))):
+        raise entry.ObservationError("point response expression/solution/complex/unit binding changed")
+    coordinates = data.get("coordinate_readback")
+    field = data.get("field_array")
+    count, expression_count = slot["sample_count"], len(slot["expressions"])
+    if (not isinstance(coordinates, Mapping) or coordinates.get("status") != "VERIFIED"
+            or not isinstance(coordinates.get("unit"), str)
+            or not isinstance(coordinates.get("coordinates"), list)
+            or not isinstance(field, Mapping)
+            or field.get("axes") != ["expression", "outer", "inner", "point"]
+            or field.get("shape") != [expression_count, 1, 1, count]
+            or field.get("is_complex") is not True):
+        raise entry.ObservationError("point response omitted verified coordinates or exact complex FieldArray")
+    values = field.get("values")
+    if values != data.get("values") or not isinstance(values, list) or len(values) != expression_count:
+        raise entry.ObservationError("point response top-level values differ from its FieldArray")
+    unit_scale = {"m": 1.0, "cm": 1e-2, "mm": 1e-3,
+                  "um": 1e-6, "µm": 1e-6, "nm": 1e-9}.get(coordinates["unit"])
+    axes = coordinates["coordinates"]
+    if (unit_scale is None or len(axes) != 2
+            or any(not isinstance(axis, list) or len(axis) != count for axis in axes)):
+        raise entry.ObservationError("actual point coordinates are not exact supported 2xN geometry readbacks")
+    rows = []
+    for expression, expression_values in zip(slot["expressions"], values):
+        if (not isinstance(expression_values, list) or len(expression_values) != 1
+                or not isinstance(expression_values[0], list) or len(expression_values[0]) != 1
+                or not isinstance(expression_values[0][0], list)
+                or len(expression_values[0][0]) != count):
+            raise entry.ObservationError("point FieldArray does not have singleton solution axes")
+        real, imag = [], []
+        for value in expression_values[0][0]:
+            if not isinstance(value, Mapping) or set(value) != {"real", "imag"}:
+                raise entry.ObservationError("complex point value lacks exact real/imag fields")
+            real.append(value["real"])
+            imag.append(value["imag"])
+        rows.append({"expression": expression, "real": real, "imag": imag})
+    decoded = {
+        "status": "PRODUCTION_NATIVE_COMPLEX_POINT_READBACK",
+        "operation": "result.at_points", "science_acceptance": "NOT_EVALUATED",
+        "complex_readback": True, "dataset": data["dataset"], "solution": data["solution"],
+        "sample_count": count, "expressions": rows,
+        "expression_units": dict(data["expression_units"]),
+        "coordinates_m": [[float(value) * unit_scale for value in axis] for axis in axes],
+        "coordinate_geometry_unit": coordinates["unit"],
+    }
+    witness = _selection_witness(slot, before, after)
+    fields = entry.validate_capture(decoded, slot, witness)
+    return decoded, fields
+
+
+def _time_reversal_receipts(decoded: Mapping[str, Any], slot: Mapping[str, Any]) -> list[dict[str, Any]]:
+    from .material_direction_proof import time_reverse_eh
+
+    rows = {row["expression"]: row for row in decoded["expressions"]}
+    prefix, port = slot["physics_identifier_observed"], slot["port_name_observed"]
+    results = []
+    for basis in ("signal", "BMA_mode"):
+        if basis == "signal":
+            enames = [f"down({prefix}.E{axis})" for axis in "xyz"]
+            hnames = [f"down({prefix}.H{axis})" for axis in "xyz"]
+        else:
+            enames = [f"{prefix}.Emode{axis}_{port}" for axis in "xyz"]
+            hnames = [f"{prefix}.Hmode{axis}_{port}" for axis in "xyz"]
+
+        def samples(names: list[str]) -> list[list[list[float]]]:
+            components = [rows[name] for name in names]
+            count = slot["sample_count"]
+            return [[
+                [float(components[c]["real"][i]), float(components[c]["imag"][i])]
+                for c in range(3)
+            ] for i in range(count)]
+
+        source_id = f"observed:{slot['label']}:{basis}"
+        derived_id = f"time-reversed:{slot['label']}:{basis}"
+        results.append({
+            "basis": basis,
+            "proof": time_reverse_eh(
+                {"electric": samples(enames), "magnetic": samples(hnames)},
+                source_basis_id=source_id, transformed_basis_id=derived_id),
+        })
+    return results
+
+
+def _selection_for_numeric_read(route: PublicRoute, slot: Mapping[str, Any]) -> dict[str, Any]:
+    tag = slot["selection"]["tag"]
+    raw = route.call("selection.inspect", {"component": "comp1", "tag": tag})
+    return _identity_readback(raw)
+
+
+def run_zero_solve_entry(*, session_context: Mapping[str, Any],
+                         source_projection_sha256: str, project_root: str,
+                         source_project_relative_path: str, saved_mph_copy: str,
+                         evidence_parent: str | os.PathLike[str],
+                         execute_numeric: bool = False, dispatcher=None,
+                         terminal_pair_reader=None, owned_gate: Any = None) -> dict[str, Any]:
+    """Capture metadata and optionally issue exactly four point/two integral reads.
+
+    The default is source/admission preparation only. This entry does not mint
+    authority; if explicitly invoked for numeric reads, the unchanged
+    ControlDaemon ownership and authority gates decide whether dispatch occurs.
+    """
+    if type(execute_numeric) is not bool:
+        raise RuntimeEntryError("execute_numeric must be an explicit Boolean")
+    if dispatcher is None or owned_gate is None:
+        raise RuntimeEntryError(
+            "runtime dispatch requires the fresh in-process W25 owned-admission entry; caller session JSON is source-only")
+    if terminal_pair_reader is None:
+        raise RuntimeEntryError("public reads require original-owner operation/job terminal-pair verification")
+    if owned_gate is not None:
+        dispatch_owner = getattr(dispatcher, "__self__", None)
+        pair_reader_owner = getattr(terminal_pair_reader, "__self__", None)
+        if (dispatch_owner is None or dispatch_owner is not pair_reader_owner
+                or getattr(dispatch_owner, "gate", None) is not owned_gate
+                or getattr(owned_gate, "project_id", None) != session_context.get("project_id")
+                or getattr(owned_gate, "session_id", None) != session_context.get("session_id")):
+            raise RuntimeEntryError("owned W23 dispatch and terminal reader are not the same admitted original gate")
+        try:
+            owned_gate.assert_live()
+        except Exception as exc:
+            raise RuntimeOutcomeUnknown("original W25 Server/Worker owner is not live; no dispatch") from exc
+    checked_session = _validate_session_context(session_context)
+    source_projection = _verify_source_projection(source_projection_sha256)
+    source_identity = _verify_registered_mph_source(
+        saved_mph_copy, project_root, source_project_relative_path)
+    journal = DurableJournal(evidence_parent)
+    route = None
+    try:
+        if _verify_registered_mph_source(saved_mph_copy, project_root,
+                                         source_project_relative_path) != source_identity:
+            raise RuntimeEntryError("project-local saved-MPH source changed before fresh registration")
+        owner_route = FreshOwnerRoute(checked_session, journal, dispatcher=dispatcher)
+        loaded_context, owner_binding = _admit_registered_mph(
+            owner_route, checked_session, source_identity, source_projection_sha256)
+        input_before = entry.verify_saved_mph_copy(saved_mph_copy)
+        if any(input_before.get(key) != source_identity.get(key)
+               for key in ("path", "bytes", "sha256", "mode")):
+            raise RuntimeEntryError("saved-MPH identity changed during fresh registration and model.load")
+        route = PublicRoute(loaded_context, journal, dispatcher=dispatcher,
+                            terminal_pair_reader=terminal_pair_reader,
+                            initial_total_calls=len(owner_route.calls))
+        observed, plan, material_proofs = _capture_metadata(route, saved_mph_copy)
+        owner_binding["runtime_capabilities_response"] = observed["runtime_capabilities_raw_observed"]
+        owner_binding["runtime_identity_pin"] = observed["runtime_identity_pin"]
+        owner_binding["model_inspect_response"] = observed["model_inspect_response_raw_observed"]
+        journal.append({
+            "kind": "fresh_metadata_plan", "input_identity": input_before,
+            "fresh_owner_binding": owner_binding,
+            "owner_binding_raw_observed": dict(owner_binding),
+            "source_projection": source_projection,
+            "metadata_observation": observed, "read_plan": plan,
+            "material_direction_proofs": material_proofs,
+            "metadata_call_count": route.metadata_calls,
+            "owner_call_count": len(owner_route.owner_calls),
+            "owner_terminal_status_read_count": len(owner_route.terminal_status_reads),
+            "owner_public_call_count": len(owner_route.calls),
+            "scientific_acceptance": "NOT_EVALUATED",
+        })
+        if not execute_numeric:
+            return {
+                "status": "SOURCE_AND_ADMISSION_READY_NO_NUMERIC_DISPATCH",
+                "run_id": journal.run_id, "journal": str(journal.path),
+                "input_identity": input_before, "metadata_call_count": route.metadata_calls,
+                "owner_call_count": len(owner_route.owner_calls),
+                "owner_terminal_status_read_count": len(owner_route.terminal_status_reads),
+                "owner_public_call_count": len(owner_route.calls),
+                "total_public_call_count": route.total_calls,
+                "point_calls": 0, "integral_calls": 0,
+                "Study.run": 0, "solver.run": 0,
+                "approval_created": False, "once_created": False,
+                "scientific_acceptance": "NOT_EVALUATED",
+            }
+
+        point_slots = plan.get("point_read_slots")
+        integral_slots = plan.get("native_integral_slots")
+        if (not isinstance(point_slots, list) or len(point_slots) != entry.MAX_RESULT_AT_POINTS_CALLS
+                or not isinstance(integral_slots, list)
+                or len(integral_slots) != entry.MAX_RESULT_EVALUATE_INTEGRAL_CALLS):
+            raise RuntimeEntryError("numeric plan does not contain the exact fixed four-point/two-integral slots")
+        selection_readbacks_required = 2 * (len(point_slots) + len(integral_slots))
+        numeric_calls_required = len(point_slots) + len(integral_slots)
+        if (route.metadata_calls + selection_readbacks_required > entry.MAX_METADATA_PUBLIC_CALLS
+                or route.total_calls + selection_readbacks_required + numeric_calls_required
+                > entry.MAX_TOTAL_PUBLIC_CALLS):
+            raise RuntimeEntryError(
+                "insufficient remaining fixed public-call budget for the complete numeric route; no numeric dispatch")
+
+        point_by_port: dict[str, dict[int, dict[str, Any]]] = {"1": {}, "2": {}}
+        point_summaries = []
+        for slot in point_slots:
+            before = _selection_for_numeric_read(route, slot)
+            raw = route.call_raw("result.at_points", slot["request_arguments"], category="point")
+            after = _selection_for_numeric_read(route, slot)
+            decoded, _fields = _point_readback(
+                raw, route.terminal_pair_proof(raw), slot, before, after)
+            power = entry.signed_power(decoded, slot, _selection_witness(slot, before, after))
+            phasors = _time_reversal_receipts(decoded, slot)
+            proof = {
+                "slot": slot["label"], "raw_response_sha256": hashlib.sha256(
+                    _canonical_bytes(raw)).hexdigest(),
+                "raw_response_preserved_in_journal": True,
+                "selection_before": before, "selection_after": after,
+                "decoded_receipt": decoded, "signed_power": power,
+                "phasor_transform_receipts": phasors,
+            }
+            journal.append({"kind": "point_read_proof", **proof})
+            point_summaries.append(proof)
+            point_by_port[slot["port_name_observed"]][slot["sample_count"]] = power
+
+        integral_proofs = []
+        integral_by_port = {}
+        for slot in integral_slots:
+            before = _selection_for_numeric_read(route, slot)
+            raw = route.call_raw("result.evaluate", slot["request_arguments"], category="integral")
+            after = _selection_for_numeric_read(route, slot)
+            integral = entry.validate_native_integral_receipt(
+                raw, slot, terminal_pair_proof=route.terminal_pair_proof(raw),
+                selection_before=before, selection_after=after)
+            port_points = point_by_port[slot["port_name_observed"]]
+            if set(port_points) != {641, 1281}:
+                raise RuntimeEntryError("both exact point resolutions are required before integral comparison")
+            comparison = entry.compare_native_integral_to_quadrature(
+                integral, port_points[641], port_points[1281])
+            proof = {
+                "slot": slot["label"], "raw_response_sha256": hashlib.sha256(
+                    _canonical_bytes(raw)).hexdigest(),
+                "raw_response_preserved_in_journal": True,
+                "selection_before": before, "selection_after": after,
+                "native_integral": integral, "quadrature_comparison": comparison,
+            }
+            journal.append({"kind": "native_integral_proof", **proof})
+            integral_proofs.append(proof)
+            integral_by_port[slot["port_name_observed"]] = integral
+
+        refinement = {
+            port: entry.compare_refinements(points[641], points[1281])
+            for port, points in point_by_port.items()
+        }
+        input_after = entry.verify_saved_mph_copy(saved_mph_copy)
+        if input_after != input_before:
+            raise RuntimeEntryError("immutable saved-MPH copy identity changed during read-only entry")
+        journal.append({
+            "kind": "terminal_source_readback",
+            "input_identity_before": input_before, "input_identity_after": input_after,
+            "point_call_count": route.point_calls,
+            "integral_call_count": route.integral_calls,
+            "metadata_call_count": route.metadata_calls,
+            "owner_call_count": len(owner_route.owner_calls),
+            "owner_terminal_status_read_count": len(owner_route.terminal_status_reads),
+            "owner_public_call_count": len(owner_route.calls),
+            "total_public_call_count": route.total_calls,
+            "point_proofs": point_summaries, "integral_proofs": integral_proofs,
+            "refinement_diagnostics": refinement,
+            "direction_status": "NOT_PROVEN",
+            "scientific_acceptance": "NOT_EVALUATED",
+            "Study.run": 0, "solver.run": 0, "node.property_set": 0,
+            "model.save": 0, "code.execute_java": 0,
+        })
+        return {
+            "status": "SOURCE_READS_TERMINAL_DIRECTION_NOT_PROVEN",
+            "run_id": journal.run_id, "journal": str(journal.path),
+            "metadata_call_count": route.metadata_calls,
+            "point_calls": route.point_calls, "integral_calls": route.integral_calls,
+            "owner_call_count": len(owner_route.owner_calls),
+            "owner_terminal_status_read_count": len(owner_route.terminal_status_reads),
+            "owner_public_call_count": len(owner_route.calls),
+            "total_public_call_count": route.total_calls,
+            "direction_status": "NOT_PROVEN",
+            "scientific_acceptance": "NOT_EVALUATED",
+            "approval_created": False, "once_created": False,
+            "Study.run": 0, "solver.run": 0,
+        }
+    finally:
+        journal.close()

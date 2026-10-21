@@ -1,0 +1,413 @@
+--- _state/windows-primary-owner-r6h-helper-gate-r1-20261015/package/windows_primary_token_owner_probe_r6h.py
++++ _state/windows-primary-owner-r6i-token-elevation-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019/package/windows_primary_token_owner_probe_r6i.py
+@@ -1,4 +1,4 @@
+-"""R6H revision: one-shot task-private same-SID probe with best-effort diagnostics and an unconditional original-owner hold.
++"""R6I revision: one-shot task-private same-SID probe with best-effort diagnostics and an unconditional original-owner hold.
+ 
+ The helper is inert unless a fresh exact-source binding and Main once approval
+ are supplied. It never edits the caller's process token, user accounts, token
+@@ -31,12 +31,12 @@
+ TASK_ROOT = r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c"
+ PYTHON_EXE = r"C:\Users\Everwalker\AppData\Local\Programs\Python\Python312-comsol-mcp\python.exe"
+ PYTHON_VERSION = "3.12.10"
+-HELPER_PATH = TASK_ROOT + r"\helpers-primary-owner-r6h\windows_primary_token_owner_probe_r6h.py"
+-AUTHORITY_ROOT = TASK_ROOT + r"\authority-primary-owner-r6h"
++HELPER_PATH = TASK_ROOT + r"\helpers-primary-owner-r6i\windows_primary_token_owner_probe_r6i.py"
++AUTHORITY_ROOT = TASK_ROOT + r"\authority-primary-owner-r6i"
+ BINDING_PATH = AUTHORITY_ROOT + r"\BINDING.json"
+ APPROVAL_PATH = AUTHORITY_ROOT + r"\MAIN_APPROVAL.json"
+ ONCE_PATH = AUTHORITY_ROOT + r"\ONCE_USED.json"
+-OUTPUT_ROOT = TASK_ROOT + r"\primary-owner-probe-r6h"
++OUTPUT_ROOT = TASK_ROOT + r"\primary-owner-probe-r6i"
+ OUTPUT_FILE = OUTPUT_ROOT + r"\owner-probe.bin"
+ LEASE_EVENTS = OUTPUT_ROOT + r"\OWNER_LEASE_EVENTS.jsonl"
+ EXPECTED_USER_SID = "S-1-5-21-2844656816-882443001-4055095909-1001"
+@@ -47,7 +47,7 @@
+ MAX_TOKEN_INFO_BYTES = 1_048_576
+ MAX_GROUPS = 4096
+ MAX_PRIVILEGES = 4096
+-PROBE_BYTES = b"cv3-primary-owner-probe-r6h\n"
++PROBE_BYTES = b"cv3-primary-owner-probe-r6i\n"
+ 
+ TOKEN_QUERY = 0x0008
+ TOKEN_DUPLICATE = 0x0002
+@@ -139,7 +139,7 @@
+     ]
+ 
+ 
+-# The local R6HProcessOwnerController in _main is the lifetime owner. These
++# The local R6IProcessOwnerController in _main is the lifetime owner. These
+ # module lists are secondary diagnostics/retention indexes, never the only
+ # reference that can keep an unresolved PROCESS_INFORMATION alive.
+ _PROCESS_LEASES: list["ProcessLease"] = []
+@@ -404,11 +404,44 @@
+             rows.append((low, high, int(item.Attributes)))
+         return tuple(sorted(rows))
+ 
++    def token_elevation_info(self, token: Any):
++        """Read TOKEN_ELEVATION's fixed DWORD without a size-probe call.
++
++        Windows documents TOKEN_ELEVATION as one DWORD.  Some Windows token
++        providers reject the generic NULL/zero size query for this fixed-size
++        class, so this one class uses the documented four-byte buffer and
++        still requires both API success and an exact four-byte ReturnLength.
++        All variable-sized and other scalar classes keep token_info's bounded
++        two-call contract.
++        """
++        buffer_size = C.sizeof(C.c_uint32)
++        if buffer_size != 4:
++            _fail("TOKEN_ELEVATION DWORD ABI is not four bytes", size=buffer_size)
++        buffer = C.create_string_buffer(buffer_size)
++        returned = W.DWORD()
++        self._check(
++            self.a.GetTokenInformation(token, TOKEN_ELEVATION, buffer, buffer_size,
++                                       C.byref(returned)),
++            "GetTokenInformation(TOKEN_ELEVATION)",
++        )
++        if int(returned.value) != buffer_size:
++            _fail("TOKEN_ELEVATION returned an invalid byte count",
++                  info_class=TOKEN_ELEVATION, returned=int(returned.value),
++                  expected=buffer_size)
++        return buffer, buffer_size
++
+     def scalar_info(self, token: Any, info_class: int) -> int:
+-        buffer, size = self.token_info(token, info_class)
+-        if size != C.sizeof(W.DWORD):
+-            _fail("scalar token-information ABI has unexpected size", info_class=info_class, size=size)
+-        return int(W.DWORD.from_buffer(buffer).value)
++        # Exact-type dispatch matters: bool and numeric lookalikes must reach
++        # token_info's existing pre-dispatch DWORD validation and fail closed.
++        if type(info_class) is int and info_class == TOKEN_ELEVATION:
++            buffer, size = self.token_elevation_info(token)
++        else:
++            buffer, size = self.token_info(token, info_class)
++        expected_size = C.sizeof(C.c_uint32)
++        if size != expected_size:
++            _fail("scalar token-information ABI has unexpected size", info_class=info_class,
++                  size=size, expected=expected_size)
++        return int(C.c_uint32.from_buffer(buffer).value)
+ 
+     def statistics_info(self, token: Any) -> TOKEN_STATISTICS:
+         buffer, size = self.token_info(token, TOKEN_INFORMATION_CLASS_STATISTICS)
+@@ -635,8 +668,8 @@
+             _PROCESS_LEASES.remove(self)
+ 
+ 
+-class R6HProcessOwnerController:
+-    """Local-stack R6H holder for the reviewed R6B authority lease and exact process handle.
++class R6IProcessOwnerController:
++    """Local-stack R6I holder for the reviewed R6B authority lease and exact process handle.
+ 
+     This controller is held directly by parent-mode ``_main`` and its
+     unconditional ``finally``. The global R6B registries are diagnostic
+@@ -649,7 +682,7 @@
+         self.root_lease = root_lease
+         self.process_lease: ProcessLease | None = None
+         self.partial_hold: PartialProcessInformationHold | None = None
+-        self.state = "R6H_PARENT_CONTROLLER_ACTIVE"
++        self.state = "R6I_PARENT_CONTROLLER_ACTIVE"
+         self.bind_error: str | None = None
+         self.unknown_recorded = False
+ 
+@@ -657,7 +690,7 @@
+         # Keep both the R6B root owner and original PROCESS_INFORMATION holder
+         # on this parent stack. A thread signal is not process terminal proof.
+         self.partial_hold = partial_hold
+-        self.state = "UNKNOWN_R6H_PARTIAL_PROCESS_INFORMATION_CONTROLLER_RETAINED"
++        self.state = "UNKNOWN_R6I_PARTIAL_PROCESS_INFORMATION_CONTROLLER_RETAINED"
+         partial_hold.hold_forever()
+         self._park_forever("partial PROCESS_INFORMATION hold unexpectedly returned")
+ 
+@@ -685,7 +718,7 @@
+         except BaseException as exc:
+             self.bind_error = _safe_error_text(exc)
+             self._mark_unqualified_unknown(exc)
+-            process_lease.state = "UNKNOWN_R6H_ORIGINAL_PROCESS_BIND"
++            process_lease.state = "UNKNOWN_R6I_ORIGINAL_PROCESS_BIND"
+             process_lease.record_event({
+                 "status": process_lease.state,
+                 "error": self.bind_error,
+@@ -719,7 +752,7 @@
+                 "original_process_information": lease.original_handles(),
+                 "root_lease_state": getattr(self.root_lease, "state", "UNKNOWN"),
+                 "root_lease_unknown_reason": getattr(self.root_lease, "unknown_reason", None),
+-                "action": "KEEP_LOCAL_R6H_CONTROLLER_LIVE; RETAIN_ALL_UNRESOLVED_HANDLES; PASSIVE_WAIT_ONLY; NO_PID_REOPEN; NO_SIGNAL; NO_CLOSE",
++                "action": "KEEP_LOCAL_R6I_CONTROLLER_LIVE; RETAIN_ALL_UNRESOLVED_HANDLES; PASSIVE_WAIT_ONLY; NO_PID_REOPEN; NO_SIGNAL; NO_CLOSE",
+             }
+             if details:
+                 record.update(dict(details))
+@@ -728,9 +761,9 @@
+             _best_effort_print("PRIMARY_OWNER_UNKNOWN_DIAGNOSTIC_UNAVAILABLE " + _safe_error_text(exc))
+ 
+     def _park_forever(self, reason: str) -> None:
+-        self.state = "UNKNOWN_R6H_LOCAL_CONTROLLER_RETAINED"
++        self.state = "UNKNOWN_R6I_LOCAL_CONTROLLER_RETAINED"
+         try:
+-            self._record_unknown_once("UNKNOWN_R6H_LOCAL_CONTROLLER_RETAINED", {"reason": reason})
++            self._record_unknown_once("UNKNOWN_R6I_LOCAL_CONTROLLER_RETAINED", {"reason": reason})
+         except BaseException as exc:
+             _best_effort_print("PRIMARY_OWNER_PARK_DIAGNOSTIC_UNAVAILABLE " + _safe_error_text(exc))
+         # The local controller itself is the lifetime owner. Diagnostic
+@@ -760,7 +793,7 @@
+                     self.root_lease.observe_wait_timeout(lease.process_handle, WAIT_FAILED)
+                 except BaseException:
+                     self._mark_unqualified_unknown(exc)
+-                lease.state = "UNKNOWN_R6H_ORIGINAL_HANDLE_WAIT_FAILED"
++                lease.state = "UNKNOWN_R6I_ORIGINAL_HANDLE_WAIT_FAILED"
+                 lease.record_event({
+                     "status": lease.state,
+                     "observation_error": _safe_error_text(exc),
+@@ -806,7 +839,7 @@
+                         self.root_lease.observe_wait_timeout(lease.process_handle, WAIT_FAILED)
+                     except BaseException:
+                         self._mark_unqualified_unknown(exc)
+-                    self._record_unknown_once("UNKNOWN_R6H_NATURAL_TERMINAL_EXITCODE_READ")
++                    self._record_unknown_once("UNKNOWN_R6I_NATURAL_TERMINAL_EXITCODE_READ")
+                     self._park_forever("WAIT_OBJECT_0 without a readable exact exit code")
+                 exit_code = int(code.value)
+                 if exit_code == STILL_ACTIVE or not 0 <= exit_code <= 0xFFFFFFFF:
+@@ -821,14 +854,14 @@
+                     )
+                 except BaseException as exc:
+                     self._mark_unqualified_unknown(exc)
+-                    self._record_unknown_once("UNKNOWN_R6H_OWNER_RELEASE_AFTER_TERMINAL", {
++                    self._record_unknown_once("UNKNOWN_R6I_OWNER_RELEASE_AFTER_TERMINAL", {
+                         "error": _safe_error_text(exc),
+                         "exit_code": exit_code,
+                     })
+                     self._park_forever("R6B authority owner could not be released after the exact terminal tuple")
+                 lease.terminal_code = exit_code
+                 lease.terminal_observed = True
+-                lease.state = "NATURALLY_TERMINAL_R6H_ROOT_RELEASED"
++                lease.state = "NATURALLY_TERMINAL_R6I_ROOT_RELEASED"
+                 lease.record_event({
+                     "status": lease.state,
+                     "original_process_information": lease.original_handles(),
+@@ -841,19 +874,19 @@
+                 try:
+                     lease.close_after_terminal()
+                 except BaseException as exc:
+-                    self._record_unknown_once("UNKNOWN_R6H_PROCESS_INFORMATION_HANDLE_CLOSE", {
++                    self._record_unknown_once("UNKNOWN_R6I_PROCESS_INFORMATION_HANDLE_CLOSE", {
+                         "error": _safe_error_text(exc),
+                     })
+                     self._park_forever("process-information handle cleanup failed after natural terminal")
+-                self.state = "R6H_OWNER_AND_PROCESS_HANDLES_RELEASED_AFTER_TERMINAL"
++                self.state = "R6I_OWNER_AND_PROCESS_HANDLES_RELEASED_AFTER_TERMINAL"
+                 return exit_code
+ 
+             try:
+                 self.root_lease.observe_wait_timeout(lease.process_handle, result)
+             except BaseException as exc:
+                 self._mark_unqualified_unknown(exc)
+-            lease.state = ("UNKNOWN_R6H_ORIGINAL_HANDLE_WAIT_FAILED" if result == WAIT_FAILED
+-                           else "UNKNOWN_R6H_UNEXPECTED_WAIT_RESULT")
++            lease.state = ("UNKNOWN_R6I_ORIGINAL_HANDLE_WAIT_FAILED" if result == WAIT_FAILED
++                           else "UNKNOWN_R6I_UNEXPECTED_WAIT_RESULT")
+             lease.record_event({
+                 "status": lease.state,
+                 "wait_result": result,
+@@ -878,11 +911,11 @@
+             except BaseException:
+                 pass
+             try:
+-                self.state = "UNKNOWN_R6H_OUTER_HOLDER_EXCEPTION_RETAINED"
++                self.state = "UNKNOWN_R6I_OUTER_HOLDER_EXCEPTION_RETAINED"
+             except BaseException:
+                 pass
+             try:
+-                self._record_unknown_once("UNKNOWN_R6H_OUTER_HOLDER_EXCEPTION_RETAINED", {
++                self._record_unknown_once("UNKNOWN_R6I_OUTER_HOLDER_EXCEPTION_RETAINED", {
+                     "error": _safe_error_text(exc),
+                 })
+             except BaseException:
+@@ -894,11 +927,11 @@
+                     pass
+ 
+     def _hold_before_parent_handle_cleanup_once(self) -> None:
+-        if self.state == "R6H_OWNER_AND_PROCESS_HANDLES_RELEASED_AFTER_TERMINAL":
++        if self.state == "R6I_OWNER_AND_PROCESS_HANDLES_RELEASED_AFTER_TERMINAL":
+             return
+         if self.process_lease is not None:
+             self.wait_to_natural_terminal()
+-            if self.state != "R6H_OWNER_AND_PROCESS_HANDLES_RELEASED_AFTER_TERMINAL":
++            if self.state != "R6I_OWNER_AND_PROCESS_HANDLES_RELEASED_AFTER_TERMINAL":
+                 self._park_forever("controller could not establish exact released terminal state")
+             return
+         root_state = getattr(self.root_lease, "state", None)
+@@ -1216,9 +1249,9 @@
+     if not root.is_dir() or root.is_symlink():
+         _fail("task-private root is absent or is a link")
+     if Path(ONCE_PATH).exists() or Path(ONCE_PATH).is_symlink():
+-        _fail("fresh R6H once path already exists; no replay")
++        _fail("fresh R6I once path already exists; no replay")
+     if Path(OUTPUT_ROOT).exists() or Path(OUTPUT_ROOT).is_symlink():
+-        _fail("fresh R6H output root already exists; no overwrite")
++        _fail("fresh R6I output root already exists; no overwrite")
+     helper_path = ntpath.normcase(ntpath.abspath(__file__))
+     if helper_path != ntpath.normcase(HELPER_PATH):
+         _fail("loaded source path is not the exact reviewed helper path", actual=__file__, expected=HELPER_PATH)
+@@ -1235,7 +1268,7 @@
+     binding_sha = _sha256(binding_raw)
+     approval_sha = _sha256(approval_raw)
+     expected_binding = {
+-        "schema": "cv3-windows-primary-token-owner-binding-r6h/1",
++        "schema": "cv3-windows-primary-token-owner-binding-r6i/1",
+         "task_root": TASK_ROOT,
+         "python_executable": PYTHON_EXE,
+         "python_version": PYTHON_VERSION,
+@@ -1267,7 +1300,7 @@
+         _fail("current interpreter path differs from the fixed reviewed Python path", actual=sys.executable)
+     if sys.version.split()[0] != PYTHON_VERSION:
+         _fail("current interpreter version differs from the fixed reviewed Python version", actual=sys.version)
+-    if approval.get("schema") != "cv3-Main-primary-owner-once-r6h/1" or approval.get("status") != "APPROVED_EXECUTE_ONCE":
++    if approval.get("schema") != "cv3-Main-primary-owner-once-r6i/1" or approval.get("status") != "APPROVED_EXECUTE_ONCE":
+         _fail("Main approval schema/status is not an execute-once authority")
+     if approval.get("binding_sha256") != binding_sha or approval.get("helper_sha256") != helper_sha:
+         _fail("Main approval does not match the exact binding/source bytes")
+@@ -1362,7 +1395,7 @@
+     r6b_module = globals().get("_CV3_R6B_LEASE_MODULE")
+     if (not isinstance(r6b_outer, Mapping) or not isinstance(r6b_live, Mapping)
+             or r6b_gate is None or r6b_module is None):
+-        _fail("R6H parent mode requires the same-process R5J proof and embedded reviewed lease module")
++        _fail("R6I parent mode requires the same-process R5J proof and embedded reviewed lease module")
+     try:
+         from comsol_mcp import _host_scoped_provider as r6b_provider
+         provider_path = ntpath.normcase(ntpath.abspath(r6b_provider.__file__ or ""))
+@@ -1378,9 +1411,9 @@
+         )
+         r6b_root_lease = r6b_module.AuthorityRootLeaseR6B(r6b_ops)
+     except BaseException as exc:
+-        _fail("R6H same-process authority-root owner could not be initialized",
++        _fail("R6I same-process authority-root owner could not be initialized",
+               error_type=type(exc).__name__, error=_safe_error_text(exc))
+-    r6b_controller = R6HProcessOwnerController(r6b_root_lease)
++    r6b_controller = R6IProcessOwnerController(r6b_root_lease)
+ 
+     process_token = W.HANDLE()
+     desired_original_access = TOKEN_QUERY | TOKEN_DUPLICATE
+@@ -1391,7 +1424,7 @@
+     process_lease: ProcessLease | None = None
+     partial_hold: PartialProcessInformationHold | None = None
+     token_close_errors: list[str] = []
+-    event_name = "Local\\CV3PrimaryOwnerR6H-" + approval["native_nonce"]
++    event_name = "Local\\CV3PrimaryOwnerR6I-" + approval["native_nonce"]
+     events_started = time.monotonic()
+     try:
+         parent_before = api.token_snapshot(process_token)
+@@ -1404,7 +1437,7 @@
+         if not 0 <= parent_session <= 0x7FFFFFFF:
+             _fail("current process token session ID is outside the supported range")
+         once_record = {
+-            "schema": "cv3-primary-owner-once-use-r6h/1",
++            "schema": "cv3-primary-owner-once-use-r6i/1",
+             "status": "CONSUMED_BEFORE_TOKEN_DUPLICATION",
+             **fingerprint,
+             "r6b_lease_source_sha256": binding["r6b_lease_source_sha256"],
+@@ -1604,7 +1637,7 @@
+         else:
+             final_status = "PASS_SAME_SID_PRIMARY_OWNER_FILE_PROBE"
+         result = {
+-            "schema": "cv3-windows-primary-token-owner-probe-result-r6h/1",
++            "schema": "cv3-windows-primary-token-owner-probe-result-r6i/1",
+             "status": final_status,
+             "source": fingerprint,
+             "process": process_lease.identity,
+--- _state/windows-primary-owner-r6h-helper-gate-r1-20261015/package/windows_primary_token_owner_outer_gate_r6h.py
++++ _state/windows-primary-owner-r6i-token-elevation-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019/package/windows_primary_token_owner_outer_gate_r6i.py
+@@ -28,15 +28,15 @@
+ TASK_ROOT = r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c"
+ PYTHON_EXE = r"C:\Users\Everwalker\AppData\Local\Programs\Python\Python312-comsol-mcp\python.exe"
+ PYTHON_VERSION = "3.12.10"
+-HELPER_DIR = TASK_ROOT + r"\helpers-primary-owner-r6h"
+-AUTHORITY_ROOT = TASK_ROOT + r"\authority-primary-owner-r6h"
+-HELPER_PATH = HELPER_DIR + r"\windows_primary_token_owner_probe_r6h.py"
+-GATE_PATH = HELPER_DIR + r"\windows_primary_token_owner_outer_gate_r6h.py"
++HELPER_DIR = TASK_ROOT + r"\helpers-primary-owner-r6i"
++AUTHORITY_ROOT = TASK_ROOT + r"\authority-primary-owner-r6i"
++HELPER_PATH = HELPER_DIR + r"\windows_primary_token_owner_probe_r6i.py"
++GATE_PATH = HELPER_DIR + r"\windows_primary_token_owner_outer_gate_r6i.py"
+ INNER_BINDING_PATH = AUTHORITY_ROOT + r"\BINDING.json"
+ OUTER_BINDING_PATH = AUTHORITY_ROOT + r"\PREBIRTH_BINDING.json"
+ APPROVAL_PATH = AUTHORITY_ROOT + r"\MAIN_APPROVAL.json"
+ ONCE_PATH = AUTHORITY_ROOT + r"\ONCE_USED.json"
+-OUTPUT_ROOT = TASK_ROOT + r"\primary-owner-probe-r6h"
++OUTPUT_ROOT = TASK_ROOT + r"\primary-owner-probe-r6i"
+ OUTPUT_FILE = OUTPUT_ROOT + r"\owner-probe.bin"
+ LEASE_EVENTS = OUTPUT_ROOT + r"\OWNER_LEASE_EVENTS.jsonl"
+ R14_BINDING_PATH = TASK_ROOT + r"\authority-r14\BINDING.json"
+@@ -44,8 +44,8 @@
+ R14_HELPER_ROOT = TASK_ROOT + r"\helpers-r14"
+ R14_BINDING_SHA256 = "075250aa28a0ae33eec9ac414ab0f143c046df090b00613669ffdf0fbf59dabb"
+ EXPECTED_USER_SID = "S-1-5-21-2844656816-882443001-4055095909-1001"
+-OUTER_SCHEMA = "cv3-windows-primary-owner-prebirth-binding-r6h/1"
+-APPROVAL_SCHEMA = "cv3-Main-primary-owner-once-r6h/1"
++OUTER_SCHEMA = "cv3-windows-primary-owner-prebirth-binding-r6i/1"
++APPROVAL_SCHEMA = "cv3-Main-primary-owner-once-r6i/1"
+ R6B_LEASE_SOURCE_SHA256 = "68bb01164f6c2bb51ecc4924076252409c75d9d9406d654ba09ac76c52126259"
+ R6B_LEASE_CONTROLS_SHA256 = "160469c1279c4f8213cb7d19e69155110639b691e0b2fd7e78d40ede8b6afe61"
+ R6B_LEASE_SOURCE_B64 = (
+@@ -566,7 +566,7 @@
+     "Study": 0,
+     "solver": 0,
+ }
+-OUTER_CANDIDATE = "Windows R6H evidence-persistence terminal classification using the reviewed R5J gate and R6B root-lease module"
++OUTER_CANDIDATE = "Windows R6I evidence-persistence terminal classification using the reviewed R5J gate and R6B root-lease module"
+ SOURCE_FINGERPRINT_FIELDS = frozenset({
+     "source_plan_sha256", "source_review_sha256", "helper_sha256", "helper_controls_sha256",
+     "gate_sha256", "gate_controls_sha256", "inner_binding_sha256",
+@@ -1362,7 +1362,7 @@
+     _assert_path_kind(ONCE_PATH, directory=False, must_exist=False)
+     _assert_path_kind(OUTPUT_FILE, directory=False, must_exist=False)
+     _assert_path_kind(LEASE_EVENTS, directory=False, must_exist=False)
+-    cases_path = TASK_ROOT + r"\cases-primary-owner-r6h"
++    cases_path = TASK_ROOT + r"\cases-primary-owner-r6i"
+     _assert_path_kind(cases_path, directory=True, must_exist=False)
+ 
+     # Bootstrap trust in the R14 verifier only after checking its exact binding
+@@ -1552,7 +1552,7 @@
+     _validate_approval(outer, approval, outer_sha256=outer_sha, inner_sha256=inner_sha,
+                        helper_sha256=helper_sha, gate_sha256=gate_sha)
+     expected_inner = {
+-        "schema": "cv3-windows-primary-token-owner-binding-r6h/1",
++        "schema": "cv3-windows-primary-token-owner-binding-r6i/1",
+         "task_root": TASK_ROOT,
+         "python_executable": PYTHON_EXE,
+         "python_version": PYTHON_VERSION,
+--- _state/windows-primary-owner-r6h-helper-gate-r1-20261015/package/PRIMARY_OWNER_R6H_INNER_BINDING_PROPOSAL.json
++++ _state/windows-primary-owner-r6i-token-elevation-e647167d-2c9d-4eb1-a931-0ee6b35470e1-20261019/package/PRIMARY_OWNER_R6I_INNER_BINDING_PROPOSAL.json
+@@ -3,25 +3,25 @@
+   "GUI": 0,
+   "JVM": 0,
+   "Study": 0,
+-  "approval_path": "C:\\Users\\Everwalker\\AppData\\Local\\cvw26-current-9f07a952265c\\authority-primary-owner-r6h\\MAIN_APPROVAL.json",
+-  "authority_root": "C:\\Users\\Everwalker\\AppData\\Local\\cvw26-current-9f07a952265c\\authority-primary-owner-r6h",
+-  "binding_path": "C:\\Users\\Everwalker\\AppData\\Local\\cvw26-current-9f07a952265c\\authority-primary-owner-r6h\\BINDING.json",
++  "approval_path": "C:\\Users\\Everwalker\\AppData\\Local\\cvw26-current-9f07a952265c\\authority-primary-owner-r6i\\MAIN_APPROVAL.json",
++  "authority_root": "C:\\Users\\Everwalker\\AppData\\Local\\cvw26-current-9f07a952265c\\authority-primary-owner-r6i",
++  "binding_path": "C:\\Users\\Everwalker\\AppData\\Local\\cvw26-current-9f07a952265c\\authority-primary-owner-r6i\\BINDING.json",
+   "case_processes": 1,
+   "expected_user_sid": "S-1-5-21-2844656816-882443001-4055095909-1001",
+-  "helper_path": "C:\\Users\\Everwalker\\AppData\\Local\\cvw26-current-9f07a952265c\\helpers-primary-owner-r6h\\windows_primary_token_owner_probe_r6h.py",
+-  "helper_sha256": "b6f84dab70ad110206b6308d12fee0af581357de1a17caba1b6f492d4ae146be",
++  "helper_path": "C:\\Users\\Everwalker\\AppData\\Local\\cvw26-current-9f07a952265c\\helpers-primary-owner-r6i\\windows_primary_token_owner_probe_r6i.py",
++  "helper_sha256": "b64ae1a12251858c13a876f41e092eb8402cb490a7998eee3dbd5ac2fea32d5a",
+   "max_active_seconds": 60,
+   "no_account_or_acl_mutation": true,
+   "no_privilege_enablement": true,
+   "no_process_signal_or_pid_reopen": true,
+-  "once_path": "C:\\Users\\Everwalker\\AppData\\Local\\cvw26-current-9f07a952265c\\authority-primary-owner-r6h\\ONCE_USED.json",
+-  "output_file": "C:\\Users\\Everwalker\\AppData\\Local\\cvw26-current-9f07a952265c\\primary-owner-probe-r6h\\owner-probe.bin",
+-  "output_root": "C:\\Users\\Everwalker\\AppData\\Local\\cvw26-current-9f07a952265c\\primary-owner-probe-r6h",
++  "once_path": "C:\\Users\\Everwalker\\AppData\\Local\\cvw26-current-9f07a952265c\\authority-primary-owner-r6i\\ONCE_USED.json",
++  "output_file": "C:\\Users\\Everwalker\\AppData\\Local\\cvw26-current-9f07a952265c\\primary-owner-probe-r6i\\owner-probe.bin",
++  "output_root": "C:\\Users\\Everwalker\\AppData\\Local\\cvw26-current-9f07a952265c\\primary-owner-probe-r6i",
+   "python_executable": "C:\\Users\\Everwalker\\AppData\\Local\\Programs\\Python\\Python312-comsol-mcp\\python.exe",
+   "python_version": "3.12.10",
+   "r6b_lease_controls_sha256": "160469c1279c4f8213cb7d19e69155110639b691e0b2fd7e78d40ede8b6afe61",
+   "r6b_lease_source_sha256": "68bb01164f6c2bb51ecc4924076252409c75d9d9406d654ba09ac76c52126259",
+-  "schema": "cv3-windows-primary-token-owner-binding-r6h/1",
++  "schema": "cv3-windows-primary-token-owner-binding-r6i/1",
+   "solver": 0,
+   "task_root": "C:\\Users\\Everwalker\\AppData\\Local\\cvw26-current-9f07a952265c"
+ }

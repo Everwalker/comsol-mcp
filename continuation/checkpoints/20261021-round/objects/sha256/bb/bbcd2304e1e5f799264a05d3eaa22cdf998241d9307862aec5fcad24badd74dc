@@ -1,0 +1,148 @@
+{
+  "candidate_id": "f97964e9-b7bc-412a-9568-b57030ebf8d3",
+  "candidate_root": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w25-gui-current175-r12-blank-entry-r2-f97964e9-b7bc-412a-9568-b57030ebf8d3-20261021",
+  "direct_candidate_sources": {
+    "manifest_path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w25-gui-current175-r12-blank-entry-r2-f97964e9-b7bc-412a-9568-b57030ebf8d3-20261021/evidence/SOURCE_MANIFEST_R2.json",
+    "manifest_sha256": "ed7cf198302888ef43bf31c48847cc5d11a7e6699b2fd8748fc35cc9fe2695cc",
+    "member_count": 2,
+    "members": [
+      {
+        "bytes": 11338,
+        "path": "source/w25_r12_readonly_install_check.py",
+        "sha256": "93328af3ea2e244a6aae826cde9486bab5e31743616488ef7eeb6a5ba9643563"
+      },
+      {
+        "bytes": 2391,
+        "path": "tests/test_w25_r12_readonly_install_check.py",
+        "sha256": "d002243e00e40512fe08066d91f161873578dc996e1b4b9bce0a63473dc104f6"
+      }
+    ]
+  },
+  "evidence": {
+    "actual_caller_returncode": 0,
+    "actual_caller_status": "PASS_ACTUAL_R5_CONSUMER_READONLY_CHECK_ONLY",
+    "actual_caller_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "actual_caller_stdout_sha256": "7367208d2274efc91306298233f6ac853fd4a7943f846cd40551e7773d060f27",
+    "installed_package_members_rehashed": 172,
+    "pytest_command": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312/bin/python -I -B -m pytest -q tests",
+    "pytest_passed": 2,
+    "pytest_returncode": 0,
+    "pytest_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "pytest_stdout_sha256": "7e15266061ed0d31aa89e2241ce9ed802cf0173def79bf29c0398d727932d5d2",
+    "r1_packet_members_rehashed": 10
+  },
+  "external_import_closure": {
+    "installed_package": "The R5 verifier hashes/validates the exact 172-member installed R12 package; the check-only path does not import the COMSOL Python package or initialize GUI/JPype/JVM.",
+    "loaded_external_source": {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w25-gui-current175-r12-entry-r5-ff3fa94b-81c0-4b30-af0c-3f1ef8b46fc7-20261020/source/tools/w25_macos_owned_desktop_actor_r12_r5.py",
+      "role": "Main-reviewed source consumer; imported by exact bytes through compile/exec",
+      "sha256": "87b9a4f04457877e1d7c528ee3b0382d7cf16658a2560c0fefb75600bd32760e"
+    },
+    "r2_cli_external_packages": [],
+    "software_test_tool": {
+      "distribution": "pytest",
+      "environment": "work/dev-python312",
+      "runtime_dependency": false,
+      "version": "9.1.1"
+    }
+  },
+  "retained_failure": "R26 full lifecycle remains FAILURE_RETAINED_NONEMPTY_UNINSTALL_GUARD; not promoted.",
+  "runtime_import_graph": [
+    {
+      "consumer": "R2 check-only CLI",
+      "effectful_entrypoints": "none; --check-only required",
+      "imports": [
+        "__future__",
+        "argparse",
+        "hashlib",
+        "importlib",
+        "json",
+        "os",
+        "pathlib",
+        "stat",
+        "sys",
+        "types",
+        "typing"
+      ],
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w25-gui-current175-r12-blank-entry-r2-f97964e9-b7bc-412a-9568-b57030ebf8d3-20261021/source/w25_r12_readonly_install_check.py",
+      "sha256": "93328af3ea2e244a6aae826cde9486bab5e31743616488ef7eeb6a5ba9643563"
+    },
+    {
+      "consumer": "R2 negative/positive controls",
+      "external_process": "test subprocess only: actual isolated Python -I -B check-only CLI; no GUI/native process",
+      "imports": [
+        "__future__",
+        "importlib",
+        "json",
+        "os",
+        "pathlib",
+        "pytest",
+        "subprocess",
+        "sys"
+      ],
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w25-gui-current175-r12-blank-entry-r2-f97964e9-b7bc-412a-9568-b57030ebf8d3-20261021/tests/test_w25_r12_readonly_install_check.py",
+      "sha256": "d002243e00e40512fe08066d91f161873578dc996e1b4b9bce0a63473dc104f6"
+    },
+    {
+      "consumer": "R5 actual source/install verifier",
+      "imports": [
+        "__future__",
+        "argparse",
+        "comsol_mcp",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "importlib",
+        "jpype",
+        "json",
+        "math",
+        "os",
+        "pathlib",
+        "plistlib",
+        "psutil",
+        "re",
+        "signal",
+        "stat",
+        "subprocess",
+        "sys",
+        "threading",
+        "time",
+        "typing",
+        "uuid"
+      ],
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w25-gui-current175-r12-entry-r5-ff3fa94b-81c0-4b30-af0c-3f1ef8b46fc7-20261020/source/tools/w25_macos_owned_desktop_actor_r12_r5.py",
+      "sha256": "87b9a4f04457877e1d7c528ee3b0382d7cf16658a2560c0fefb75600bd32760e",
+      "status": "Main-reviewed exact source bytes loaded by R2; only _verify_r12_source_inputs and _verify_current_r12_install called"
+    },
+    {
+      "caller_source_hashes": {
+        "comsol_mcp._desktop_macos": "f1f3b3bebf6029e00d6f05ec40285ed9dbba0fb16e0b28198231841128ae84e6",
+        "comsol_mcp._desktop_platforms": "4c50c4596cbc8d79dd610d66cada1deb38e400c607a5bb04b59f1766a9c76059",
+        "comsol_mcp._desktop_selector_profile": "c29d6a439e3d2fb1e2b0e55b04486335d3ec22c15527e16d3e72ef67855b6c6c",
+        "comsol_mcp._desktop_service": "00691307ad6b2c780f7086b4a306b4adbb5360e986754c3e9e97e2a4ea38dcf1"
+      },
+      "consumer": "R26 installed current175-r12 caller",
+      "installed_root": "/private/tmp/cvw26-lifecycle-r15-30153873",
+      "package_members_rehashed": 172,
+      "runtime_status": "installed bytes checked read-only; GUI/JVM/COMSOL not run"
+    }
+  ],
+  "schema": "W25_CURRENT175_R12_R2_SOURCE_MAP/1",
+  "scope": {
+    "AX_depth": 2,
+    "AX_nodes_max": 64,
+    "active_observation_seconds": 540,
+    "blank_owned_standalone_windows": 1,
+    "cleanup_reserve_seconds": 60,
+    "clicks": 0,
+    "control_actions": "NOT_RUN",
+    "endpoint_challenge": "NOT_RUN",
+    "model_open": 0,
+    "other_owner_stop_or_reuse": "FORBIDDEN",
+    "pixels": 0,
+    "screenshots": 0,
+    "solver_science": "NOT_RUN",
+    "total_seconds": 600
+  },
+  "status": "UNSIGNED_READONLY_CHECK_ONLY_SOFTWARE_CLOSURE"
+}

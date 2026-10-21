@@ -1,0 +1,292 @@
+{
+  "schema": "VCSEL_BASIS_V1",
+  "spec": {
+    "schema": "W22_SYNTHETIC_REFERENCE_V1",
+    "origin": "SYNTHETIC_NOT_USER_DEVICE_DATA",
+    "rings": [
+      {
+        "id": "center",
+        "radius_m": 0.0,
+        "count": 1,
+        "power_W_each": 0.8
+      },
+      {
+        "id": "ring1",
+        "radius_m": 0.006,
+        "count": 6,
+        "power_W_each": 0.75
+      },
+      {
+        "id": "ring2",
+        "radius_m": 0.012,
+        "count": 12,
+        "power_W_each": 0.65,
+        "disabled_indices": [
+          0
+        ]
+      }
+    ],
+    "kernel": {
+      "name": "normalized_2D_Gaussian",
+      "sigma0_m": 0.002,
+      "slope": 0.05,
+      "notes": "synthetic sigma(L), not measured divergence/NA"
+    },
+    "L_candidates_m": [
+      0.01,
+      0.02,
+      0.03
+    ],
+    "absorption_fraction": 0.6,
+    "grid": {
+      "half_width_m": 0.025,
+      "points_per_axis": 101
+    },
+    "workpiece_radius_m": 0.02,
+    "roi_radius_m": 0.015,
+    "calibration_status": "UNVERIFIED",
+    "guard": "No automatic source renormalization on finite workpiece/ROI"
+  },
+  "emitters": [
+    {
+      "id": "center_0",
+      "group": "center",
+      "x_m": 0.0,
+      "y_m": 0.0,
+      "power_W": 0.8,
+      "enabled": true
+    },
+    {
+      "id": "ring1_0",
+      "group": "ring1",
+      "x_m": 0.006,
+      "y_m": 0.0,
+      "power_W": 0.75,
+      "enabled": true
+    },
+    {
+      "id": "ring1_1",
+      "group": "ring1",
+      "x_m": 0.003000000000000001,
+      "y_m": 0.005196152422706632,
+      "power_W": 0.75,
+      "enabled": true
+    },
+    {
+      "id": "ring1_2",
+      "group": "ring1",
+      "x_m": -0.0029999999999999988,
+      "y_m": 0.005196152422706633,
+      "power_W": 0.75,
+      "enabled": true
+    },
+    {
+      "id": "ring1_3",
+      "group": "ring1",
+      "x_m": -0.006,
+      "y_m": 7.347880794884119e-19,
+      "power_W": 0.75,
+      "enabled": true
+    },
+    {
+      "id": "ring1_4",
+      "group": "ring1",
+      "x_m": -0.0030000000000000027,
+      "y_m": -0.005196152422706631,
+      "power_W": 0.75,
+      "enabled": true
+    },
+    {
+      "id": "ring1_5",
+      "group": "ring1",
+      "x_m": 0.003000000000000001,
+      "y_m": -0.005196152422706632,
+      "power_W": 0.75,
+      "enabled": true
+    },
+    {
+      "id": "ring2_0",
+      "group": "ring2",
+      "x_m": 0.012,
+      "y_m": 0.0,
+      "power_W": 0.0,
+      "enabled": false
+    },
+    {
+      "id": "ring2_1",
+      "group": "ring2",
+      "x_m": 0.010392304845413265,
+      "y_m": 0.005999999999999999,
+      "power_W": 0.65,
+      "enabled": true
+    },
+    {
+      "id": "ring2_2",
+      "group": "ring2",
+      "x_m": 0.006000000000000002,
+      "y_m": 0.010392304845413263,
+      "power_W": 0.65,
+      "enabled": true
+    },
+    {
+      "id": "ring2_3",
+      "group": "ring2",
+      "x_m": 7.347880794884119e-19,
+      "y_m": 0.012,
+      "power_W": 0.65,
+      "enabled": true
+    },
+    {
+      "id": "ring2_4",
+      "group": "ring2",
+      "x_m": -0.0059999999999999975,
+      "y_m": 0.010392304845413265,
+      "power_W": 0.65,
+      "enabled": true
+    },
+    {
+      "id": "ring2_5",
+      "group": "ring2",
+      "x_m": -0.010392304845413265,
+      "y_m": 0.005999999999999999,
+      "power_W": 0.65,
+      "enabled": true
+    },
+    {
+      "id": "ring2_6",
+      "group": "ring2",
+      "x_m": -0.012,
+      "y_m": 1.4695761589768239e-18,
+      "power_W": 0.65,
+      "enabled": true
+    },
+    {
+      "id": "ring2_7",
+      "group": "ring2",
+      "x_m": -0.010392304845413265,
+      "y_m": -0.005999999999999997,
+      "power_W": 0.65,
+      "enabled": true
+    },
+    {
+      "id": "ring2_8",
+      "group": "ring2",
+      "x_m": -0.006000000000000005,
+      "y_m": -0.010392304845413262,
+      "power_W": 0.65,
+      "enabled": true
+    },
+    {
+      "id": "ring2_9",
+      "group": "ring2",
+      "x_m": -2.2043642384652355e-18,
+      "y_m": -0.012,
+      "power_W": 0.65,
+      "enabled": true
+    },
+    {
+      "id": "ring2_10",
+      "group": "ring2",
+      "x_m": 0.006000000000000002,
+      "y_m": -0.010392304845413263,
+      "power_W": 0.65,
+      "enabled": true
+    },
+    {
+      "id": "ring2_11",
+      "group": "ring2",
+      "x_m": 0.01039230484541326,
+      "y_m": -0.006000000000000005,
+      "power_W": 0.65,
+      "enabled": true
+    }
+  ],
+  "sources": [
+    {
+      "file": "basis_l0_g0.txt",
+      "function": "b0g0",
+      "L_m": 0.01,
+      "group": "center",
+      "group_index": 0,
+      "active_count": 1,
+      "sha256": "d4d5bbcacc4b75747036c2e4adef8cb150e8dd0fad1935943f48d02cc59f9cab"
+    },
+    {
+      "file": "basis_l0_g1.txt",
+      "function": "b0g1",
+      "L_m": 0.01,
+      "group": "ring1",
+      "group_index": 1,
+      "active_count": 6,
+      "sha256": "ede5489070fa81f741a4533c17c6b3df69397751918ad4686b2e18073694bcf5"
+    },
+    {
+      "file": "basis_l0_g2.txt",
+      "function": "b0g2",
+      "L_m": 0.01,
+      "group": "ring2",
+      "group_index": 2,
+      "active_count": 11,
+      "sha256": "7169570886841d16fd307710c9c4e02678f4fb3e9c28728d06b22bc06036419b"
+    },
+    {
+      "file": "basis_l1_g0.txt",
+      "function": "b1g0",
+      "L_m": 0.02,
+      "group": "center",
+      "group_index": 0,
+      "active_count": 1,
+      "sha256": "7e7c7f18afbbc80e3610d283e56c8f34db3b20a98f729fcd03ff06d8b91c5c92"
+    },
+    {
+      "file": "basis_l1_g1.txt",
+      "function": "b1g1",
+      "L_m": 0.02,
+      "group": "ring1",
+      "group_index": 1,
+      "active_count": 6,
+      "sha256": "a726c1bbfce7fd8b892aefe3882719914c930d207ed5ffb7ce2d77c633c6460b"
+    },
+    {
+      "file": "basis_l1_g2.txt",
+      "function": "b1g2",
+      "L_m": 0.02,
+      "group": "ring2",
+      "group_index": 2,
+      "active_count": 11,
+      "sha256": "e8e115995e00ddb718900f6e6db402e7abb4302f74e48428ffb5bfa1c68ed817"
+    },
+    {
+      "file": "basis_l2_g0.txt",
+      "function": "b2g0",
+      "L_m": 0.03,
+      "group": "center",
+      "group_index": 0,
+      "active_count": 1,
+      "sha256": "e0ea8e6c04ff54c886780d355ff25109887950217c7e039caf4e491baf60fe91"
+    },
+    {
+      "file": "basis_l2_g1.txt",
+      "function": "b2g1",
+      "L_m": 0.03,
+      "group": "ring1",
+      "group_index": 1,
+      "active_count": 6,
+      "sha256": "9be82fdcb583de5b05a1e8716396c52df472d2992de2eccfd929460252567cc5"
+    },
+    {
+      "file": "basis_l2_g2.txt",
+      "function": "b2g2",
+      "L_m": 0.03,
+      "group": "ring2",
+      "group_index": 2,
+      "active_count": 11,
+      "sha256": "d01c1816f007bc62b8b2b2f6b029e0bf0ae26a6cfc10bc4d222e08f34d8f3970"
+    }
+  ],
+  "coordinate_unit": "m",
+  "basis_unit": "1/m^2",
+  "interpolation": "linear",
+  "extrapolation": "zero",
+  "physical_validation": "UNVERIFIED"
+}

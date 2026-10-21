@@ -1,0 +1,49 @@
+{
+  "schema": "SCIENCE76_GEOMETRIC_NONLINEARITY_PROPERTY_SURVEY_UNSIGNED_PLAN_R1",
+  "status": "PLAN_ONLY_MAIN_REVIEW_REQUIRED_BEFORE_NATIVE",
+  "reuse": "Existing W24 cure preflight/profile and public MCP controls; no new execution framework.",
+  "model": "One fresh unsolved model generated through the existing W24 cure setup route; no R4/R5 replay.",
+  "read_only_queries": [
+    "StudyFeature type/class, properties(), hasProperty/geometricNonlinearity, getValueType and getAllowedPropertyValues only where the public API documents support.",
+    "Exact study-step tag/type and existing solver-sequence tag/feature graph.",
+    "Recursive Time Solver type/class, properties(), hasProperty/geometricNonlinearity, getValueType/getAllowedPropertyValues where supported.",
+    "Existing physics interfaces/features, before any configuration changes.",
+    "Existing license gate response; preserve UNVERIFIED_FAIL_CLOSED if unavailable."
+  ],
+  "prohibited": [
+    "set/create/delete/save",
+    "Study.run or solver.run",
+    "adding any licensed physics",
+    "assuming license or property availability"
+  ],
+  "decision": "StudyFeature remains a candidate only; use actual object inventory and public property support to decide whether a later narrowly approved native validation is justified.",
+  "same_version_source_result": "No accepted W24 cure Java/readback source found proving the transient StudyFeature or active Time Solver receiver contract; existing code only configures transient time/tolerance on StudyFeature.",
+  "preflight_gate": "Fresh model, actual target physics/features and license gate must be captured before property enumeration; if license is unavailable, leave result UNVERIFIED_FAIL_CLOSED and do not infer availability.",
+  "official_api_methods": [
+    {
+      "doc_id": 7717,
+      "chunk_id": 23091,
+      "sha256": "a9ffe9c3ac8a45d945eb51d23ab78277cc8970b14f5d5bddfd504147867ca674",
+      "finding": "StudyFeature explicitly extends PropFeature."
+    },
+    {
+      "doc_id": 7675,
+      "chunk_id": 23015,
+      "sha256": "befb8cc1c0e3df1ce74d2fa2cd1377e73d378e5c26170558e9f40dc255cc3bc3",
+      "finding": "PropFeature documents hasProperty, getValueType, getAllowedPropertyValues; the last returns finite string values or null."
+    },
+    {
+      "solver_feature": "PropFeature known subinterface list",
+      "source_doc_id": 7675,
+      "source_chunk_id": 23015,
+      "source_sha256": "befb8cc1c0e3df1ce74d2fa2cd1377e73d378e5c26170558e9f40dc255cc3bc3"
+    }
+  ],
+  "survey_read_sequence": [
+    "Use the existing fresh setup/preflight path only through the point where the actual target transient StudyFeature and attached Time Solver exist; do not reach the existing setter that failed in R4.",
+    "On the actual StudyFeature and actual Time Solver objects, call documented getType(), hasProperty(\"geometricNonlinearity\"), getValueType(\"geometricNonlinearity\"), and getAllowedPropertyValues(\"geometricNonlinearity\"); record exact object tags/types and method outcomes.",
+    "Call a typed value getter only if hasProperty is true and the returned type is consistent with that getter; do not set the property.",
+    "Record existing physics/features and license gate output without adding a licensed physics interface. If license availability cannot be proven, retain UNVERIFIED_FAIL_CLOSED.",
+    "Stop before save, Study.run, or solver.run; preserve raw MCP and Java response receipts and classify this as API property survey only, not native/scientific acceptance."
+  ]
+}

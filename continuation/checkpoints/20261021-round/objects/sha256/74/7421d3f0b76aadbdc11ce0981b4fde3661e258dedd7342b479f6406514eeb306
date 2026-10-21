@@ -1,0 +1,48 @@
+"""Source-only preflight for the W23 R5 owned zero-solve entry.
+
+This command cannot dispatch. The full route requires Main's exact in-process
+W25 ProbeSessionAdmission object and is exposed by
+``run_w23_from_owned_admission`` in ``w23_owned_runtime_entry.py``.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from probe import w23_zero_solve_entry as entry  # noqa: E402
+from probe import w23_zero_solve_runtime as runtime  # noqa: E402
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--source-projection-sha256", required=True,
+                        help="SHA-256 of the frozen evidence/SOURCE_PROJECTION_R5.json")
+    args = parser.parse_args(argv)
+    source = runtime._verify_source_projection(args.source_projection_sha256)
+    input_path = ROOT / "inputs" / "w23_coarse-phase0_provisional.mph"
+    source_input = entry.verify_saved_mph_copy(str(input_path))
+    result = {
+        "status": "SOURCE_ONLY_PREPARATION_PASS_NO_DISPATCH",
+        "source_projection": source,
+        "immutable_saved_mph_input": source_input,
+        "owner_admission": "NOT_CREATED",
+        "public_calls": 0,
+        "approval_created": False,
+        "once_created": False,
+        "COMSOL": "NOT_RUN",
+        "native": "NOT_RUN",
+        "scientific_acceptance": "NOT_EVALUATED",
+        "full_entry": "probe.w23_owned_runtime_entry.run_w23_from_owned_admission",
+    }
+    print(json.dumps(result, sort_keys=True, ensure_ascii=False, allow_nan=False))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

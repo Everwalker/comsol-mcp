@@ -1,0 +1,268 @@
+from __future__ import annotations
+
+import ast
+import ctypes as C
+import difflib
+import hashlib
+import importlib.util
+import json
+from pathlib import Path
+import tempfile
+from unittest.mock import patch
+import unittest
+
+
+ROOT = Path(__file__).resolve().parents[4]
+CANDIDATE = Path(__file__).resolve().parents[1]
+PACKAGE = CANDIDATE / "package"
+HELPER = PACKAGE / "windows_primary_token_owner_probe_r6i.py"
+GATE = PACKAGE / "windows_primary_token_owner_outer_gate_r6i.py"
+INNER = PACKAGE / "PRIMARY_OWNER_R6I_INNER_BINDING_PROPOSAL.json"
+FROZEN_R6H = ROOT / "repository/_state/windows-primary-owner-r6h-helper-gate-r1-20261015/package/windows_primary_token_owner_probe_r6h.py"
+FROZEN_R6H_GATE = ROOT / "repository/_state/windows-primary-owner-r6h-helper-gate-r1-20261015/package/windows_primary_token_owner_outer_gate_r6h.py"
+R11_PAYLOAD = ROOT / "repository/_state/windows-primary-owner-r6h-native-entry-r11-gate-diagnostic-f0a927a8-d03a-47ed-8118-fae6af73908a-20261019/source/windows_primary_owner_r6h_native_payload.py.txt"
+R6I_DIAGNOSTIC = CANDIDATE / "source/R6I_NATIVE_ENTRY_DIAGNOSTIC_INHERITANCE_R1.py.txt"
+PREP_BUILDER = CANDIDATE / "source/prepare_primary_owner_r6i_prep.py"
+PREP_WRAPPER = CANDIDATE / "source/windows_primary_owner_r6i_strict_ssh_prep.py"
+SOURCE_PLAN = CANDIDATE / "evidence/SOURCE_PLAN_R1.json"
+
+
+def _module(path: Path, name: str):
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("cannot load candidate source: " + str(path))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _api(module, behavior):
+    callback_type = C.CFUNCTYPE(
+        C.c_int32, C.c_void_p, C.c_uint32, C.c_void_p, C.c_uint32,
+        C.POINTER(module.W.DWORD),
+    )
+    callback = callback_type(behavior)
+    class Api:
+        GetTokenInformation = callback
+    return Api(), callback
+
+
+class R6ITokenElevationSourceTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.helper = _module(HELPER, "candidate_r6i_primary_owner_helper")
+
+    def test_token_elevation_uses_one_typed_exact_four_byte_query(self):
+        calls = []
+        def behavior(_token, info_class, buffer, buffer_size, returned):
+            calls.append((int(info_class), bool(buffer), int(buffer_size)))
+            returned[0] = 4
+            C.memmove(buffer, C.byref(C.c_uint32(1)), 4)
+            return 1
+        win32 = object.__new__(self.helper.Win32)
+        win32.a, callback = _api(self.helper, behavior)
+        self.assertEqual(self.helper.Win32.scalar_info(win32, C.c_void_p(1), 20), 1)
+        self.assertEqual(calls, [(20, True, 4)])
+        self.assertEqual(callback._argtypes_, (
+            C.c_void_p, C.c_uint32, C.c_void_p, C.c_uint32,
+            C.POINTER(self.helper.W.DWORD),
+        ))
+
+    def test_token_elevation_api_failure_remains_failure_with_native_error(self):
+        calls = []
+        def behavior(_token, info_class, buffer, buffer_size, returned):
+            calls.append((int(info_class), bool(buffer), int(buffer_size)))
+            returned[0] = 4
+            return 0
+        win32 = object.__new__(self.helper.Win32)
+        win32.a, _callback = _api(self.helper, behavior)
+        with patch.object(C, "get_last_error", return_value=24, create=True):
+            with self.assertRaises(self.helper.ProbeError) as raised:
+                self.helper.Win32.scalar_info(win32, C.c_void_p(1), 20)
+        self.assertIn('"winerror": 24', str(raised.exception))
+        self.assertEqual(calls, [(20, True, 4)])
+
+    def test_token_elevation_requires_exact_success_return_length_four(self):
+        for returned_length in (0, 3, 5):
+            with self.subTest(returned_length=returned_length):
+                calls = []
+                def behavior(_token, info_class, buffer, buffer_size, returned):
+                    calls.append((int(info_class), bool(buffer), int(buffer_size)))
+                    returned[0] = returned_length
+                    C.memmove(buffer, C.byref(C.c_uint32(1)), 4)
+                    return 1
+                win32 = object.__new__(self.helper.Win32)
+                win32.a, _callback = _api(self.helper, behavior)
+                with self.assertRaisesRegex(self.helper.ProbeError, "invalid byte count"):
+                    self.helper.Win32.scalar_info(win32, C.c_void_p(1), 20)
+                self.assertEqual(calls, [(20, True, 4)])
+
+    def test_non_exact_class_20_values_fail_before_any_api_call(self):
+        for invalid in (20.0, True, -1, 1 << 32):
+            with self.subTest(invalid=repr(invalid)):
+                calls = []
+                def behavior(*args):
+                    calls.append(args)
+                    return 1
+                win32 = object.__new__(self.helper.Win32)
+                win32.a, _callback = _api(self.helper, behavior)
+                with self.assertRaises(self.helper.ProbeError):
+                    self.helper.Win32.scalar_info(win32, C.c_void_p(1), invalid)
+                self.assertEqual(calls, [])
+
+    def test_other_scalar_class_keeps_bounded_two_call_contract(self):
+        calls = []
+        def behavior(_token, info_class, buffer, buffer_size, returned):
+            calls.append((int(info_class), bool(buffer), int(buffer_size)))
+            returned[0] = 4
+            if not buffer:
+                return 0
+            C.memmove(buffer, C.byref(C.c_uint32(2)), 4)
+            return 1
+        win32 = object.__new__(self.helper.Win32)
+        win32.a, _callback = _api(self.helper, behavior)
+        with patch.object(C, "get_last_error", return_value=self.helper.ERROR_INSUFFICIENT_BUFFER,
+                          create=True):
+            result = self.helper.Win32.scalar_info(win32, C.c_void_p(1),
+                                                   self.helper.TOKEN_ELEVATION_TYPE)
+        self.assertEqual(result, 2)
+        self.assertEqual(calls, [(18, False, 0), (18, True, 4)])
+
+    def test_gate_changes_only_the_disjoint_namespace(self):
+        old = FROZEN_R6H_GATE.read_bytes()
+        new = GATE.read_bytes()
+        normalized = new.replace(b"R6I", b"R6H").replace(b"r6i", b"r6h")
+        self.assertEqual(normalized, old)
+        self.assertEqual(hashlib.sha256(FROZEN_R6H.read_bytes()).hexdigest(),
+                         "b6f84dab70ad110206b6308d12fee0af581357de1a17caba1b6f492d4ae146be")
+
+    def test_inner_binding_is_disjoint_and_keeps_one_child_60_second_limits(self):
+        binding = json.loads(INNER.read_text(encoding="utf-8"))
+        helper_sha = hashlib.sha256(HELPER.read_bytes()).hexdigest()
+        self.assertEqual(binding["schema"], "cv3-windows-primary-token-owner-binding-r6i/1")
+        self.assertTrue(binding["helper_path"].endswith(
+            r"helpers-primary-owner-r6i\windows_primary_token_owner_probe_r6i.py"))
+        self.assertEqual(binding["helper_sha256"], helper_sha)
+        self.assertEqual(binding["max_active_seconds"], 60)
+        self.assertEqual(binding["case_processes"], 1)
+        self.assertTrue(binding["no_privilege_enablement"])
+        self.assertTrue(binding["no_account_or_acl_mutation"])
+        self.assertIn("authority-primary-owner-r6i", binding["authority_root"])
+        self.assertNotIn("R6H", json.dumps(binding))
+
+    def test_native_payload_inherits_reviewed_r11_diagnostic_without_raw_stream_edits(self):
+        source = R11_PAYLOAD.read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        functions = {node.name: node for node in tree.body
+                     if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+        start = functions["_system_exit_diagnostic"].lineno - 1
+        end = functions["_run_gate"].end_lineno
+        expected = ("\n".join(source.splitlines()[start:end]) + "\n")
+        expected = expected.replace("R6H", "R6I").replace("r6h", "r6i")
+        self.assertEqual(R6I_DIAGNOSTIC.read_text(encoding="utf-8"), expected)
+        source = R6I_DIAGNOSTIC.read_text(encoding="utf-8")
+        self.assertIn("exit_diagnostic = _system_exit_diagnostic(exc.code)", source)
+        self.assertIn("return code, out_raw, err_raw, \"R6I_GATE_RETURNED\"", source)
+        self.assertIn('"gate_system_exit_diagnostic": gate_exit_diagnostic',
+                      R11_PAYLOAD.read_text(encoding="utf-8"))
+        self.assertIn('"gate_stdout_sha256": _sha(out_raw)',
+                      R11_PAYLOAD.read_text(encoding="utf-8"))
+        self.assertIn('"gate_stderr_sha256": _sha(err_raw)',
+                      R11_PAYLOAD.read_text(encoding="utf-8"))
+        ast.parse(source)
+
+    def test_exact_five_leaf_prep_and_future_native_entry_are_source_only(self):
+        builder = _module(PREP_BUILDER, "r6i_prep_builder_source_test")
+        wrapper = _module(PREP_WRAPPER, "r6i_prep_wrapper_source_test")
+        targets = (
+            r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c\helpers-primary-owner-r6i\windows_primary_token_owner_probe_r6i.py",
+            r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c\helpers-primary-owner-r6i\windows_primary_token_owner_outer_gate_r6i.py",
+            r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c\authority-primary-owner-r6i\BINDING.json",
+            r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c\authority-primary-owner-r6i\PREBIRTH_BINDING.json",
+            r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c\authority-primary-owner-r6i\MAIN_APPROVAL.json",
+        )
+        self.assertEqual(builder.R6I_REMOTE_TARGETS, targets)
+        self.assertEqual(wrapper.REMOTE_TARGETS, targets)
+        self.assertEqual(builder.R6I_REMOTE_TARGETS[-1].rsplit("\\", 1)[-1],
+                         "MAIN_APPROVAL.json")
+        self.assertEqual(wrapper.ACTIVE_CUTOFF_SECONDS, 120)  # PREP only; native is separately bounded at 60.
+        self.assertEqual(wrapper.R6I_HELPER_GATE_REVIEW_SHA256, "PENDING_MAIN_REVIEW_HASH")
+        self.assertEqual(builder.H_MAIN_REVIEW_SHA256, "PENDING_MAIN_REVIEW_HASH")
+        self.assertFalse(builder.H_MAIN_REVIEW.exists())
+        with self.assertRaisesRegex(RuntimeError, "expected an existing ordinary source file"):
+            builder._check_h_source_review()
+        self.assertFalse(wrapper.RUN_ROOT.exists())
+        self.assertFalse(builder.PACKAGE.exists())
+
+    def test_prep_review_consumer_accepts_exact_candidate_and_rejects_drift(self):
+        builder = _module(PREP_BUILDER, "r6i_prep_review_consumer_test")
+        rows = {
+            "helper": (builder.H_HELPER, builder.H_HELPER_SHA256),
+            "gate": (builder.H_GATE, builder.H_GATE_SHA256),
+            "inner_binding_proposal": (builder.H_INNER, builder.H_INNER_SHA256),
+            "controls": (builder.H_CONTROLS, hashlib.sha256(builder.H_CONTROLS.read_bytes()).hexdigest()),
+            "source_plan": (builder.H_PLAN, builder.H_SOURCE_PLAN_SHA256),
+        }
+        candidate_files = {}
+        for name, (path, expected_sha) in rows.items():
+            raw = path.read_bytes()
+            candidate_files[name] = {
+                "path": str(path.relative_to(builder.ROOT)),
+                "bytes": len(raw),
+                "sha256": expected_sha,
+            }
+        review = {
+            "status": "PASS_R6I_TOKEN_ELEVATION_FIXED_DWORD_SOURCE_ONLY",
+            "source_plan_sha256": builder.H_SOURCE_PLAN_SHA256,
+            "candidate_files": candidate_files,
+        }
+
+        def write_review(path, value):
+            raw = (json.dumps(value, sort_keys=True, indent=2) + "\n").encode("utf-8")
+            path.write_bytes(raw)
+            return hashlib.sha256(raw).hexdigest()
+
+        with tempfile.TemporaryDirectory(prefix="r6i-review-consumer-") as temp:
+            review_path = Path(temp) / "synthetic-review.json"
+            good_sha = write_review(review_path, review)
+            with patch.object(builder, "H_MAIN_REVIEW", review_path), \
+                    patch.object(builder, "H_MAIN_REVIEW_SHA256", good_sha):
+                accepted, source_bytes = builder._check_h_source_review()
+                self.assertEqual(accepted["status"], review["status"])
+                self.assertEqual(set(source_bytes), set(rows))
+                for name, (path, _expected_sha) in rows.items():
+                    self.assertEqual(source_bytes[name], path.read_bytes())
+
+            drift = json.loads(json.dumps(review))
+            drift["candidate_files"]["helper"]["sha256"] = "0" * 64
+            drift_sha = write_review(review_path, drift)
+            with patch.object(builder, "H_MAIN_REVIEW", review_path), \
+                    patch.object(builder, "H_MAIN_REVIEW_SHA256", drift_sha):
+                with self.assertRaisesRegex(RuntimeError, "does not bind exact helper"):
+                    builder._check_h_source_review()
+
+            wrong_status = json.loads(json.dumps(review))
+            wrong_status["status"] = "PASS_BUT_NOT_THE_REQUIRED_REVIEW"
+            wrong_status_sha = write_review(review_path, wrong_status)
+            with patch.object(builder, "H_MAIN_REVIEW", review_path), \
+                    patch.object(builder, "H_MAIN_REVIEW_SHA256", wrong_status_sha):
+                with self.assertRaisesRegex(RuntimeError, "status or plan pin differs"):
+                    builder._check_h_source_review()
+
+    def test_plan_keeps_unknown_and_defers_native_until_fresh_prep_proof(self):
+        plan = json.loads(SOURCE_PLAN.read_text(encoding="utf-8"))
+        self.assertEqual(plan["status"], "READY_FOR_MAIN_SOURCE_REVIEW_SOURCE_ONLY")
+        self.assertEqual(plan["future_native_entry"]["status"],
+                         "NOT_PREPARED_PENDING_FRESH_R6I_PREP_ACTUAL_READBACK_AND_MAIN_REVIEW")
+        self.assertEqual(plan["future_native_entry"]["max_active_seconds"], 60)
+        self.assertEqual(plan["future_native_entry"]["case_processes"], 1)
+        self.assertEqual(plan["future_native_entry"]["max_native_child_processes"], 1)
+        self.assertEqual(plan["frozen_history"]["R10"],
+                         "UNKNOWN_REMOTE_OR_NATIVE_RESULT_NO_REPLAY")
+        self.assertEqual(plan["authority_boundary"]["valid_approval_created"], False)
+        self.assertEqual(plan["authority_boundary"]["once_created"], False)
+        self.assertEqual(len(plan["prep"]["remote_write_targets"]), 5)
+
+
+if __name__ == "__main__":
+    unittest.main()

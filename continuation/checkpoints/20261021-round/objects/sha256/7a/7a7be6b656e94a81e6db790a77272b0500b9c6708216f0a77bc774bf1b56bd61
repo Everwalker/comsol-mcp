@@ -1,0 +1,137 @@
+"""Regression controls pinned to the preserved R16 native failure output.
+
+These checks inspect copied raw JSON/JSONL and the source candidate. They do
+not replay the activity, open its SQLite database, or claim runtime success.
+"""
+
+from copy import deepcopy
+import hashlib
+import json
+from pathlib import Path
+import re
+import unittest
+
+
+ROOT = Path(__file__).resolve().parents[1]
+EVIDENCE = ROOT / "tests" / "fixtures" / "w24_r16_selection_trace_overflow"
+FIXTURE = ROOT / "tools/java/W24StaticShapeFixture.java"
+PACKAGE_FIXTURE = ROOT / "comsol_mcp/data/science_recipes/java/W24StaticShapeFixture.java"
+ORIGINS = ROOT / "comsol_mcp/data/science_recipes/SOURCE_ORIGINS.json"
+RESULT = EVIDENCE / "0ee8ceb3d1db0851721c88ba7875fbec60ad2f14c74dc24209c177867138da91_result.json"
+FLAT_TRACE = EVIDENCE / "w24_selection_stage_baseline_flat_44d781f8463847fab8946678a8ed0ae1.jsonl"
+STEP_TRACE = EVIDENCE / "w24_selection_stage_baseline_step_7d6e33f49f9d4b4f9e27106a1b004d1c.jsonl"
+
+EXPECTED_SHA256 = {
+    RESULT.name: "99840b19ff0feaa356c64533f7a8e7c19d83891d4c66b9db80746c4c875746b5",
+    FLAT_TRACE.name: "7578b1bbd341fba6448f80b0a75b204c821fc462c57218d71b2ad92babb8fad7",
+    STEP_TRACE.name: "e77dfcae800d155a23b978274b7ba58740f3e1c8be6345a91cb29466ba27df66",
+}
+ORIGINAL_FIXTURE_SHA256 = "b21580cd15a38f7d1306a113d67466de6f6e72a29b11f01a49c8957d88d54ce1"
+CAPACITY = 4096
+
+
+def load_rows(path):
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+
+
+def assert_actual_failure_shape(testcase, result, rows):
+    """Reject a substitute/tampered record; preserve the historical UNKNOWN."""
+    route = result
+    response = route["response"]
+    data = response["data"]
+    worker = data["worker"]
+    failure = worker["failure"]
+    cause_chain = failure["cause_chain"]
+    testcase.assertEqual(route["operation"], "operation_call")
+    testcase.assertEqual(route["slot"], ["baseline", "step"])
+    testcase.assertEqual(response["success"], False)
+    testcase.assertEqual(response["execution_state_unknown"], True)
+    testcase.assertEqual(response["error"]["code"], "EXECUTION_STATE_UNKNOWN")
+    testcase.assertEqual(response["error"]["safe_retry"], False)
+    testcase.assertEqual(data["source_sha256"], ORIGINAL_FIXTURE_SHA256)
+    testcase.assertEqual(worker["status"], "FAILED")
+    testcase.assertEqual(failure["code"], "ENGINE_CALL_FAILED")
+    testcase.assertEqual(cause_chain[-1]["type"], "java.lang.IllegalStateException")
+    testcase.assertEqual(cause_chain[-1]["message"], "selection trace exceeded its fixed safe envelope")
+    testcase.assertEqual(len(rows), 1024)
+    testcase.assertEqual([row["sequence"] for row in rows], list(range(1, 1025)))
+    testcase.assertEqual(rows[-1]["stage"], "solver.sol1.feature.t1.i1.resolve")
+    testcase.assertEqual(rows[-1]["phase"], "before")
+
+
+class W24R16SelectionTraceOverflowTests(unittest.TestCase):
+    def setUp(self):
+        for path in (RESULT, FLAT_TRACE, STEP_TRACE):
+            self.assertTrue(path.is_file(), path)
+            self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), EXPECTED_SHA256[path.name])
+        self.result = json.loads(RESULT.read_text(encoding="utf-8"))
+        self.flat_rows = load_rows(FLAT_TRACE)
+        self.step_rows = load_rows(STEP_TRACE)
+        self.source = FIXTURE.read_text(encoding="utf-8")
+
+    def test_preserved_output_reproduces_exact_step_trace_overflow_unknown(self):
+        assert_actual_failure_shape(self, self.result, self.step_rows)
+
+    def test_flat_control_finished_below_the_old_fixed_cap(self):
+        self.assertEqual(len(self.flat_rows), 957)
+        self.assertEqual(self.flat_rows[0], {"sequence": 1, "stage": "trace.start", "phase": "start"})
+        self.assertEqual(self.flat_rows[-1]["stage"], "solver.sol1.t1.get.tstepsstore")
+        self.assertEqual(self.flat_rows[-1]["phase"], "after")
+        self.assertTrue(all(row["sequence"] == index for index, row in enumerate(self.flat_rows, 1)))
+
+    def test_candidate_capacity_covers_the_actual_prefix_and_terminal_record(self):
+        match = re.search(r"MAX_SELECTION_TRACE_EVENTS\s*=\s*(\d+)\s*;", self.source)
+        self.assertIsNotNone(match)
+        self.assertEqual(int(match.group(1)), CAPACITY)
+        # The actual R16 step output ended at 1,024. The new fixed ceiling
+        # leaves room for later calls and each call's completion/error record.
+        self.assertGreaterEqual(CAPACITY - len(self.step_rows), 2)
+
+    def test_each_traced_api_call_reserves_before_and_outcome_before_dispatch(self):
+        method_at = self.source.index("<T> T call(String stage, TraceCall<T> operation)")
+        method_end = self.source.index("private static String jsonQuote", method_at)
+        call_body = self.source[method_at:method_end]
+        reserve_at = call_body.index("requireCompleteCallRecordCapacity();")
+        before_at = call_body.index('record(stage, "before")')
+        operation_at = call_body.index("operation.run()")
+        after_at = call_body.index('record(stage, "after")')
+        failure_at = call_body.index("recordFailure(stage, failure)")
+        self.assertLess(reserve_at, before_at)
+        self.assertLess(before_at, operation_at)
+        self.assertLess(operation_at, after_at)
+        self.assertLess(operation_at, failure_at)
+        self.assertIn("events > MAX_SELECTION_TRACE_EVENTS - 2", self.source)
+
+    def test_actual_output_tampering_controls_are_rejected(self):
+        changed_worker = deepcopy(self.result)
+        changed_worker["response"]["data"]["worker"]["failure"]["cause_chain"][-1]["message"] = "different"
+        with self.assertRaises(AssertionError):
+            assert_actual_failure_shape(self, changed_worker, self.step_rows)
+
+        changed_trace = deepcopy(self.step_rows)
+        changed_trace[-1]["stage"] = "solver.other"
+        with self.assertRaises(AssertionError):
+            assert_actual_failure_shape(self, self.result, changed_trace)
+
+        missing_output = self.step_rows[:-1]
+        with self.assertRaises(AssertionError):
+            assert_actual_failure_shape(self, self.result, missing_output)
+
+    def test_private_fresh_trace_guards_and_identical_mirror_remain(self):
+        source_bytes = FIXTURE.read_bytes()
+        self.assertEqual(source_bytes, PACKAGE_FIXTURE.read_bytes())
+        self.assertIn("Files.exists(path, LinkOption.NOFOLLOW_LINKS)", self.source)
+        self.assertIn("Files.isSymbolicLink(parent)", self.source)
+        self.assertIn("StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE", self.source)
+        self.assertNotIn("StandardOpenOption.TRUNCATE_EXISTING", self.source)
+        self.assertIn('!stage.matches("[A-Za-z0-9_.-]{1,96}")', self.source)
+        self.assertIn("events >= MAX_SELECTION_TRACE_EVENTS", self.source)
+        origin = json.loads(ORIGINS.read_text(encoding="utf-8"))
+        rows = [row for row in origin["files"] if row.get("origin") == "tools/java/W24StaticShapeFixture.java"]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["bytes"], len(source_bytes))
+        self.assertEqual(rows[0]["sha256"], hashlib.sha256(source_bytes).hexdigest())
+
+
+if __name__ == "__main__":
+    unittest.main()

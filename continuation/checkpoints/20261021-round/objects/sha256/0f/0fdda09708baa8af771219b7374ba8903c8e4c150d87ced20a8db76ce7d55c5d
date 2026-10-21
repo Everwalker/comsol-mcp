@@ -1,0 +1,461 @@
+--- a/w23-r13-current-source-r2-probe-owned-entry-r12-6f310c0c-b4ca-4036-85d1-a310bd0c121c-20261020/README_R12.md
++++ b/w23-r17-external-driver-r18-9a34b780-8a98-4cc8-a21e-35ecc49f4452-20261021/README_R12.md
+@@ -1,9 +1,5 @@
+-# W23 R12 fresh external driver source candidate
++# W23 R17 fresh R12 external driver candidate 9a34b780-8a98-4cc8-a21e-35ecc49f4452
+ 
+-Candidate UUID `6f310c0c-b4ca-4036-85d1-a310bd0c121c`, source-only preparation. This fresh outer driver binds the R8 canonical-probe loader candidate `f4b81e67-53a6-49c2-9a76-5e492093b4a8`, which in turn binds the fresh R6 source projection over the accepted R13 + W24 R11 R3 baseline and exact W23 R2 postimages.
++This R18 packet binds the R17 R6/R8 source chain and the non-hidden saved-MPH project input. It carries forward the R16 driver lifecycle, wall/deadline guard, exact route budgets, one R8 call, no retry/replay, and passive hold of the original owner handles on UNKNOWN. The R16 UNKNOWN and consumed authorities remain historical and are not reused.
+ 
+-R12 preserves one external authorized call, exact three-layer SHA-bound review/once equality, the 1,800-second Server-birth deadline checked immediately before each existing R6 route body, a 120-second cleanup reserve, and passive retention of original owner Popen references on UNKNOWN. It does not add RPC, retry, replay, signal, host close, solver/study execution, or any claim that native child absence was proved. Science remains NOT_EVALUATED and direction remains NOT_PROVEN.
+-
+-Fresh runtime, host configuration, persistent evidence, R8 outer output, and R12 driver paths appear only as absent-checked proposals in `evidence/FRESH_PATH_PROPOSALS_UNCREATED_R3.json`; this candidate creates none of those roots. All R6/R8/R12 review and one-use files remain Main-owned and uncreated. No approval, once, COMSOL, GUI, SSH, Java runtime, or native execution occurred here. The previous R12 UNKNOWN is preserved and is not replayed.
+-
+-Use the exact source-only command in `evidence/W23_R12_SOURCE_PLAN_R1.json`. The command template is inert and its placeholder SHA arguments are not authorization.
++R15 Java 11 classes and receipt are inherited only after the R17 R8 consumer rehashes their exact 19-file sidecar at their original paths. No source/JAR/class copy or new compile is made here. This packet is unsigned preparation only: no Main authority, once, host, native, GUI, SSH, or public dispatch is created or run.
+--- a/w23-r13-current-source-r2-probe-owned-entry-r12-6f310c0c-b4ca-4036-85d1-a310bd0c121c-20261020/probe/w23_actual_controller_r12.py
++++ b/w23-r17-external-driver-r18-9a34b780-8a98-4cc8-a21e-35ecc49f4452-20261021/probe/w23_actual_controller_r12.py
+@@ -27,13 +27,13 @@
+ 
+ 
+ REPOSITORY = Path(__file__).resolve().parents[3]
+-R8_ROOT = REPOSITORY / "_state/w23-r13-current-source-r2-probe-owned-entry-r8-f4b81e67-53a6-49c2-9a76-5e492093b4a8-20261020"
++R8_ROOT = REPOSITORY / "_state/w23-r17-fixed-authority-live-set-nonhidden-input-0deda67f-c823-4880-8825-5300adcd517c-20261021"
+ R8_CONTROLLER_PATH = R8_ROOT / "probe/w23_actual_controller_r8.py"
+ R8_SOURCE_PLAN_PATH = R8_ROOT / "evidence/W23_R8_OUTER_SOURCE_PLAN_R1.json"
+ R8_SOURCE_MAP_PATH = R8_ROOT / "evidence/W23_R8_SOURCE_MAP_R1.json"
+ R8_SOURCE_MANIFEST_PATH = R8_ROOT / "evidence/SOURCE_MANIFEST_R1.json"
+ R8_PACKET_MANIFEST_PATH = R8_ROOT / "evidence/FINAL_PACKET_MANIFEST_R1.json"
+-R8_REVIEW_REQUEST_PATH = R8_ROOT / "evidence/MAIN_REVIEW_REQUEST_R8.json"
++R8_REVIEW_REQUEST_PATH = R8_ROOT / "evidence/MAIN_REVIEW_REQUEST_R17.json"
+ OUTER_ROOT = Path(__file__).resolve().parents[1]
+ EVIDENCE_ROOT = OUTER_ROOT / "evidence"
+ R12_MAIN_REVIEW_PATH = EVIDENCE_ROOT / "W23_R12_MAIN_REVIEW_R1.json"
+@@ -46,18 +46,19 @@
+     "probe/w23_actual_controller_r12.py",
+     "tests/passive_hold_driver_child.py",
+     "tests/test_w23_actual_controller_r12.py",
++    "tests/test_w23_r17_three_layer_strict_consumers.py",
+ )
+ 
+-R8_SOURCE_MANIFEST_SHA256 = "ddc9360c54c40820abc45173ac36cc44e3724f3e9334e7f897fa4c02a0d990a8"
+-R8_SOURCE_MAP_SHA256 = "cf7733d56935df92f24a20866aed85f9eb7382759b370ac7214634bdc8899680"
+-R8_SOURCE_PLAN_SHA256 = "819e0782497c0f3ca1975a157538358d4a4c5ce7bc565bb2481c565d2a3cfb94"
+-R8_CONTROLLER_SHA256 = "2970975c8a8010da6041f4a4a147fd3b777eb00ad752a15f2aaaac63c3e47cb9"
+-R8_TESTS_SHA256 = "3b38d13ea581df3c8ccae279ef863cd601dde57eb3b5c13ee44996ed9622a926"
+-R8_PACKET_MANIFEST_SHA256 = "109a21c172ad678e933bbdaa44f2f4e85f6c0a8172df721d9a2b07451408ed34"
+-R6_SOURCE_PROJECTION_SHA256 = "47a3f5e67f595fc625c23488582a75d86cf5f5bf961943d7d52aa408c5af6593"
+-R6_SOURCE_MAP_SHA256 = "d4c83cca9e998782298566ac61dc571da3f15fb8faa5ab1fd35d91d1772d53ea"
+-R6_MAIN_SOURCE_REVIEW_SHA256 = "4d0214e760b4ca9106e711b2b5c49f3b5c88939e50f6b702a3e02b23da93259c"
+-R8_REVIEW_REQUEST_SHA256 = "26fbdfe749a3516498eb0131a2810e2a1c659c2762ee383bba4dd0c40c7c4976"
++R8_SOURCE_MANIFEST_SHA256 = "747f2811601b0f912c272f06e19ec577e1fbb5d4f2b438710c131d640019d831"
++R8_SOURCE_MAP_SHA256 = "c30df5dbff02bf239d6b6f9649cc8d5a7356c431a5d00ec4e2f191f475b439a1"
++R8_SOURCE_PLAN_SHA256 = "317753ecc946c0e3dc19ab1b58347b329da59b541e8682f849233f551b9691b4"
++R8_CONTROLLER_SHA256 = "02acedca67d2b5013cf6a0eb254820e43460bff7d98430f402bdabf46efd62c7"
++R8_TESTS_SHA256 = "d10d48fc1763b834256c713e300a7e9b7bb4cf5b65219a3c0f7d225ff4e24a40"
++R8_PACKET_MANIFEST_SHA256 = "4d5f065938d74a9f9150375105537857514bdf38bce6093448023dabb01ae5c6"
++R6_SOURCE_PROJECTION_SHA256 = "a3f12cf612ccea2fff02471e97dc1ffb9c449d088cf561211eddbfb2db5813dd"
++R6_SOURCE_MAP_SHA256 = "3dca5216603a5bb3b55d97498d8db692751db4685ca8a094e8b281825fc17c06"
++R6_MAIN_SOURCE_REVIEW_SHA256 = "160e7b1d35d6f65fcf0b1e43c38fcf2aeb3d4d8f89f53a4671226bf1f3854582"
++R8_REVIEW_REQUEST_SHA256 = "2dce873e04d2f6ef468e4e8208f959c333bc3831e95a7c02536d4af7badd2009"
+ 
+ WALL_BUDGET_SECONDS = 1800
+ CLEANUP_RESERVE_SECONDS = 120
+@@ -247,7 +248,7 @@
+ 
+ 
+ def _load_r8() -> ModuleType:
+-    name = "_w23_r8_frozen_for_r12_f4b81e67"
++    name = "_w23_r8_frozen_for_r16_d8b0a788"
+     existing = sys.modules.get(name)
+     if existing is not None:
+         if Path(existing.__file__).resolve() != R8_CONTROLLER_PATH.resolve():
+@@ -710,6 +711,24 @@
+     return final
+ 
+ 
++def check_imports_preflight() -> dict[str, Any]:
++    """Run exact R6 package and W25 import consumers without authority reads or dispatch."""
++    r8 = _load_r8()
++    entry_module, runtime_module = r8._load_r6_package()
++    projection = runtime_module._verify_source_projection(r8.R6_SOURCE_MANIFEST_SHA256)
++    if projection.get("member_count") != 914:
++        raise OuterControllerError("R6 import preflight did not resolve the exact 914-member source projection")
++    imports = r8._preflight_r6_w25_imports(entry_module)
++    return {"status": "SOURCE_IMPORTS_PASS_NO_AUTHORITY_NO_DISPATCH",
++            "r6_source_projection_sha256": r8.R6_SOURCE_MANIFEST_SHA256,
++            "r6_source_map_sha256": r8.R6_SOURCE_MAP_SHA256,
++            "r6_projected_member_count": projection.get("member_count"),
++            "r6_w25_import_preflight": imports,
++            "approval_created": False, "once_created": False,
++            "host_created": False, "process_started": False,
++            "public_calls": 0, "COMSOL": "NOT_RUN", "native": "NOT_RUN"}
++
++
+ def source_only_preflight() -> dict[str, Any]:
+     frozen = verify_frozen_inputs()
+     return {"status": "SOURCE_ONLY_PASS_NO_AUTHORITY_NO_DISPATCH",
+@@ -725,6 +744,7 @@
+     parser = argparse.ArgumentParser()
+     mode = parser.add_mutually_exclusive_group(required=True)
+     mode.add_argument("--source-only", action="store_true")
++    mode.add_argument("--check-imports", action="store_true")
+     mode.add_argument("--run-authorized-once", action="store_true")
+     for name in ("r12-review-sha256", "r12-once-sha256", "r8-review-sha256",
+                  "r8-once-sha256", "r6-review-sha256", "r6-once-sha256",
+@@ -735,10 +755,10 @@
+             "r12_review_sha256", "r12_once_sha256", "r8_review_sha256", "r8_once_sha256",
+             "r6_review_sha256", "r6_once_sha256", "source_projection_sha256")):
+         parser.error("--run-authorized-once requires all seven exact authority/source SHA-256 arguments")
+-    if args.source_only and any(getattr(args, name.replace("-", "_")) is not None for name in (
++    if (args.source_only or args.check_imports) and any(getattr(args, name.replace("-", "_")) is not None for name in (
+             "r12_review_sha256", "r12_once_sha256", "r8_review_sha256", "r8_once_sha256",
+             "r6_review_sha256", "r6_once_sha256", "source_projection_sha256")):
+-        parser.error("--source-only accepts no authority arguments")
++        parser.error("--source-only and --check-imports accept no authority arguments")
+     return args
+ 
+ 
+@@ -746,6 +766,9 @@
+     args = _parse_args(argv)
+     if args.source_only:
+         print(json.dumps(source_only_preflight(), sort_keys=True, separators=(",", ":")))
++        return 0
++    if args.check_imports:
++        print(json.dumps(check_imports_preflight(), sort_keys=True, separators=(",", ":")))
+         return 0
+     result = run_authorized_external_driver(
+         r12_review_sha256=args.r12_review_sha256, r12_once_sha256=args.r12_once_sha256,
+--- a/w23-r13-current-source-r2-probe-owned-entry-r12-6f310c0c-b4ca-4036-85d1-a310bd0c121c-20261020/tests/test_w23_actual_controller_r12.py
++++ b/w23-r17-external-driver-r18-9a34b780-8a98-4cc8-a21e-35ecc49f4452-20261021/tests/test_w23_actual_controller_r12.py
+@@ -20,14 +20,57 @@
+ SPEC.loader.exec_module(TARGET)
+ 
+ 
+-def test_source_only_preflight_binds_frozen_r8_and_creates_no_authority_or_dispatch():
+-    result = TARGET.source_only_preflight()
++def test_check_imports_cli_runs_actual_r6_w25_consumer_without_authority_or_dispatch():
++    r6_root = Path(
++        "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/"
++        "w23-r17-current-source-r6-nonhidden-input-0deda67f-c823-4880-8825-5300adcd517c-20261021")
++    r8_root = TARGET.R8_ROOT
++    fixed_leaves = [
++        r6_root / "evidence/W23_R6_MAIN_RUNTIME_REVIEW.json",
++        r6_root / "evidence/W23_R6_MAIN_SINGLE_USE_BINDING.json",
++        r8_root / "evidence/W23_R8_OUTER_MAIN_REVIEW_NOT_CREATED.json",
++        r8_root / "evidence/W23_R8_OUTER_ONCE_BINDING_NOT_CREATED.json",
++        TARGET.R12_MAIN_REVIEW_PATH,
++        TARGET.R12_ONCE_BINDING_PATH,
++    ]
++    before = [(p.exists(), p.is_symlink()) for p in fixed_leaves]
++    proc = subprocess.run(
++        [sys.executable, "-I", "-B", str(CONTROLLER), "--check-imports"],
++        cwd=str(TARGET.REPOSITORY), capture_output=True, text=True, timeout=60, check=False)
++    assert proc.returncode == 0, proc.stderr
++    result = json.loads(proc.stdout)
++    assert result["status"] == "SOURCE_IMPORTS_PASS_NO_AUTHORITY_NO_DISPATCH"
++    assert result["r6_projected_member_count"] == 914
++    actual = result["r6_w25_import_preflight"]
++    assert actual["status"] == "PASS_EXACT_R6_W25_IMPORTS_NO_HOST_NO_DISPATCH"
++    assert actual["control_daemon_module"] == "comsol_mcp._control_daemon"
++    assert actual["operation_store_module"] == "comsol_mcp._operation_store"
++    assert result["approval_created"] is False and result["once_created"] is False
++    assert result["host_created"] is False and result["process_started"] is False
++    assert result["public_calls"] == 0 and result["COMSOL"] == result["native"] == "NOT_RUN"
++    assert [(p.exists(), p.is_symlink()) for p in fixed_leaves] == before
++
++
++def test_source_only_external_cli_uses_exact_isolated_argv_and_is_cwd_independent(tmp_path):
++    """Exercise the published source-only entry without importing candidate cwd."""
++    fixed_leaves = [
++        TARGET.R8_ROOT / "evidence/W23_R8_OUTER_MAIN_REVIEW_NOT_CREATED.json",
++        TARGET.R8_ROOT / "evidence/W23_R8_OUTER_ONCE_BINDING_NOT_CREATED.json",
++        TARGET.R12_MAIN_REVIEW_PATH,
++        TARGET.R12_ONCE_BINDING_PATH,
++    ]
++    before = [(path.exists(), path.is_symlink()) for path in fixed_leaves]
++    proc = subprocess.run(
++        [sys.executable, "-I", "-B", str(CONTROLLER), "--source-only"],
++        cwd=str(tmp_path), capture_output=True, text=True, timeout=60, check=False)
++    assert proc.returncode == 0, proc.stderr
++    result = json.loads(proc.stdout)
+     assert result["status"] == "SOURCE_ONLY_PASS_NO_AUTHORITY_NO_DISPATCH"
+-    assert result["frozen_inputs"]["r8_source_manifest_sha256"] == TARGET.R8_SOURCE_MANIFEST_SHA256
+-    assert result["frozen_inputs"]["r8_review_request_sha256"] == TARGET.R8_REVIEW_REQUEST_SHA256
++    assert result["authorized_callable"] == "probe.w23_actual_controller_r12.run_authorized_external_driver"
+     assert result["r8_entry_calls"] == 0 and result["public_calls"] == 0
+     assert result["approval_created"] is False and result["once_created"] is False
+     assert result["COMSOL"] == result["Java"] == result["native"] == "NOT_RUN"
++    assert [(path.exists(), path.is_symlink()) for path in fixed_leaves] == before
+ 
+ 
+ def test_r12_source_manifest_exactly_binds_all_entry_and_test_members(tmp_path):
+@@ -608,7 +651,10 @@
+     assert positive.returncode == 0, positive.stderr
+     report = json.loads(positive.stdout)
+     assert report["status"] == "PASS_CANONICAL_R6_LOADER_TO_W25_MODULE_IMPORTS"
+-    r6_root = Path(TARGET._read_json(TARGET.R12_SOURCE_PLAN_PATH)[0]["frozen_r6"]["candidate_root"])
++    # Use the current R6 candidate binding, not the plan's historical R13
++    # compile-lineage record in ``frozen_r6``.
++    r6_root = Path(TARGET._read_json(TARGET.R12_SOURCE_PLAN_PATH)[0]
++                   ["dependencies"]["r6_candidate_root"])
+     assert Path(report["module_origins"]["probe"]).resolve() == r6_root / "probe/__init__.py"
+     assert Path(report["module_origins"]["owned_runtime_entry"]).resolve() == r6_root / "probe/w23_owned_runtime_entry.py"
+     assert report["public_calls"] == 0 and not report["owner_created"]
+--- a/w23-r13-current-source-r2-probe-owned-entry-r12-6f310c0c-b4ca-4036-85d1-a310bd0c121c-20261020/tests/test_w23_r17_three_layer_strict_consumers.py
++++ b/w23-r17-external-driver-r18-9a34b780-8a98-4cc8-a21e-35ecc49f4452-20261021/tests/test_w23_r17_three_layer_strict_consumers.py
+@@ -0,0 +1,254 @@
++from __future__ import annotations
++
++import hashlib
++import importlib.util
++import json
++import os
++from pathlib import Path
++import sys
++
++import pytest
++
++
++ROOT = Path(__file__).resolve().parents[1]
++CONTROLLER = ROOT / "probe/w23_actual_controller_r12.py"
++R6_ROOT = ROOT.parents[1] / "w23-r17-current-source-r6-nonhidden-input-0deda67f-c823-4880-8825-5300adcd517c-20261021"
++R8_ROOT = ROOT.parents[1] / "w23-r17-fixed-authority-live-set-nonhidden-input-0deda67f-c823-4880-8825-5300adcd517c-20261021"
++DEV_PYTHON = Path("/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312/bin/python")
++SPEC = importlib.util.spec_from_file_location("w23_r17_r12_strict_consumer_target", CONTROLLER)
++TARGET = importlib.util.module_from_spec(SPEC)
++sys.modules[SPEC.name] = TARGET
++SPEC.loader.exec_module(TARGET)
++
++
++def _canonical(value):
++    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
++                      allow_nan=False).encode("utf-8")
++
++
++def _write(path: Path, value: dict):
++    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
++    raw = _canonical(value)
++    path.write_bytes(raw)
++    path.chmod(0o600)
++    return hashlib.sha256(raw).hexdigest()
++
++
++def _digest(path: Path) -> str:
++    return hashlib.sha256(path.read_bytes()).hexdigest()
++
++
++def test_actual_r6_r8_r12_strict_consumers_positive_and_negative(tmp_path, monkeypatch):
++    """Exercise the three real strict consumers with isolated temp-file path injection.
++
++    These self-hashed records are test fixtures only: no fixed review/once path is
++    written, and none of the entry/once-consumption methods are called.
++    """
++    # Keep canonical probe namespace state local to this test and restore it after.
++    saved_probe = {name: module for name, module in tuple(sys.modules.items())
++                   if name == "probe" or name.startswith("probe.")}
++    for name in saved_probe:
++        sys.modules.pop(name, None)
++    try:
++        r8 = TARGET._load_r8()
++        entry, runtime = r8._load_r6_package()
++        paths = TARGET._read_json(TARGET.R12_SOURCE_PLAN_PATH)[0]["fresh_path_proposals_uncreated"]
++        auth = tmp_path / "synthetic-main-shaped-records"
++        r6_review_path = auth / "r6-review.json"
++        r6_once_path = auth / "r6-once.json"
++        r8_review_path = auth / "r8-review.json"
++        r8_once_path = auth / "r8-once.json"
++        r12_review_path = auth / "r12-review.json"
++        r12_once_path = auth / "r12-once.json"
++        entry.REVIEW_PATH = r6_review_path
++        entry.ONCE_PATH = r6_once_path
++        r8.OUTER_MAIN_REVIEW_PATH = r8_review_path
++        r8.OUTER_ONCE_PATH = r8_once_path
++        TARGET.R12_MAIN_REVIEW_PATH = r12_review_path
++        TARGET.R12_ONCE_BINDING_PATH = r12_once_path
++
++        # R6 strict consumer positive: source projection, Java receipt and saved MPH
++        # are obtained from the actual current R17 code and checked by its consumer.
++        projection = runtime._verify_source_projection(TARGET.R6_SOURCE_PROJECTION_SHA256)
++        saved = entry.entry.verify_saved_mph_copy(str(entry.SAVED_MPH_PATH))
++        java_source = entry.ENTRY_ROOT / "source/comsol_mcp/worker_java/PersistentComsolWorker.java"
++        java_sha = hashlib.sha256(java_source.read_bytes()).hexdigest()
++        compile_sha = _digest(entry.COMPILE_RECEIPT_PATH)
++        compile_result = entry._compile_provenance(java_sha, compile_sha)
++        assert compile_result["class_file_count"] == 15
++        assert compile_result["classfile_major_versions"] == [55]
++        assert projection["member_count"] == 914
++        common_r6 = {
++            "source_projection_sha256": TARGET.R6_SOURCE_PROJECTION_SHA256,
++            "source_map_sha256": projection["source_map_sha256"],
++            "entry_sha256": hashlib.sha256(Path(entry.__file__).read_bytes()).hexdigest(),
++            "compile_receipt_sha256": compile_sha,
++            "saved_mph": {"bytes": saved["bytes"], "sha256": saved["sha256"]},
++            "runtime_id": "comsol-install:isolated-strict-consumer-control",
++            "fresh_run_root": paths["runtime_root"],
++            "host_provider_config_root": paths["host_provider_config_root"],
++            "persistent_evidence_dir": paths["persistent_evidence_root"],
++            "host_control_startup_grant": entry.HOST_CONTROL_STARTUP_GRANT,
++            "public_budgets": entry.PUBLIC_BUDGETS,
++        }
++        r6_review = {"schema": entry.REVIEW_SCHEMA,
++                     "decision": "APPROVE_ONE_FRESH_W23_R6_ENTRY",
++                     **common_r6, "approval_sha256": ""}
++        r6_review["approval_sha256"] = entry._approval_digest(r6_review)
++        r6_review_sha = _write(r6_review_path, r6_review)
++        r6_once = {key: value for key, value in r6_review.items()
++                   if key not in {"decision", "approval_sha256"}}
++        r6_once.update({"schema": entry.ONCE_SCHEMA,
++                        "status": "AUTHORIZED_SINGLE_ENTRY",
++                        "normal_attempts": 1,
++                        "main_review_sha256": r6_review_sha,
++                        "approval_sha256": r6_review["approval_sha256"]})
++        r6_once_sha = _write(r6_once_path, r6_once)
++        assert set(r6_review) == entry.REVIEW_FIELDS
++        assert set(r6_once) == entry.ONCE_FIELDS
++        entry._load_authority(main_review_sha256=r6_review_sha,
++                              once_binding_sha256=r6_once_sha,
++                              source_projection_sha256=TARGET.R6_SOURCE_PROJECTION_SHA256)
++
++        # The real R8 loader/consumer remains in use; only its fixed authority
++        # file paths are redirected to private test files, like the R6 paths above.
++        original_package_loader = r8._load_r6_package
++
++        def load_r6_with_isolated_authority_paths():
++            loaded_entry, loaded_runtime = original_package_loader()
++            loaded_entry.REVIEW_PATH = r6_review_path
++            loaded_entry.ONCE_PATH = r6_once_path
++            return loaded_entry, loaded_runtime
++
++        r8._load_r6_package = load_r6_with_isolated_authority_paths
++        monkeypatch.setattr(TARGET, "_load_r8", lambda: r8)
++        common_r8 = {
++            "source_plan_sha256": _digest(r8.OUTER_SOURCE_PLAN_PATH),
++            "source_manifest_sha256": _digest(r8.OUTER_SOURCE_MANIFEST_PATH),
++            "controller_sha256": hashlib.sha256(r8.Path(r8.__file__).read_bytes()).hexdigest(),
++            "r6_main_review_sha256": r6_review_sha,
++            "r6_once_binding_sha256": r6_once_sha,
++            "r6_source_projection_sha256": TARGET.R6_SOURCE_PROJECTION_SHA256,
++            "r6_source_map_sha256": r8.R6_SOURCE_MAP_SHA256,
++            "r5_controller_sha256": r8.R5_CONTROLLER_SHA256,
++            "runtime_root": paths["runtime_root"],
++            "host_provider_config_root": paths["host_provider_config_root"],
++            "persistent_evidence_root": paths["persistent_evidence_root"],
++            "outer_run_root": paths["r8_outer_run_root"],
++            "runtime_id": common_r6["runtime_id"],
++            "wall_budget_seconds": r8.WALL_BUDGET_SECONDS,
++            "cleanup_reserve_seconds": r8.CLEANUP_RESERVE_SECONDS,
++            "public_budgets": r8.PUBLIC_BUDGETS,
++        }
++        r8_review = {"schema": r8.OUTER_REVIEW_SCHEMA,
++                     "decision": "APPROVE_ONE_W23_R6_OUTER_CONTROLLED_ENTRY",
++                     **common_r8, "approval_sha256": ""}
++        r8_review["approval_sha256"] = r8._approval_digest(r8_review)
++        r8_review_sha = _write(r8_review_path, r8_review)
++        r8_once = {key: value for key, value in r8_review.items()
++                   if key not in {"decision", "approval_sha256"}}
++        r8_once.update({"schema": r8.OUTER_ONCE_SCHEMA,
++                        "status": "AUTHORIZED_SINGLE_ENTRY",
++                        "normal_attempts": 1,
++                        "main_review_sha256": r8_review_sha,
++                        "approval_sha256": r8_review["approval_sha256"]})
++        r8_once_sha = _write(r8_once_path, r8_once)
++        assert set(r8_review) == r8.OUTER_REVIEW_FIELDS
++        assert set(r8_once) == r8.OUTER_ONCE_FIELDS
++        r8._strict_authority(outer_review_sha256=r8_review_sha,
++                             outer_once_sha256=r8_once_sha,
++                             r6_review_sha256=r6_review_sha,
++                             r6_once_sha256=r6_once_sha,
++                             source_projection_sha256=TARGET.R6_SOURCE_PROJECTION_SHA256)
++
++        # The R12 consumer invokes the real R8 strict consumer above and therefore
++        # reaches the actual R6 strict consumer as well.
++        source_plan_sha = _digest(TARGET.R12_SOURCE_PLAN_PATH)
++        source_manifest_sha = _digest(TARGET.R12_SOURCE_MANIFEST_PATH)
++        common_r12 = {
++            "source_plan_sha256": source_plan_sha,
++            "source_manifest_sha256": source_manifest_sha,
++            "controller_sha256": hashlib.sha256(CONTROLLER.read_bytes()).hexdigest(),
++            "r8_main_review_sha256": r8_review_sha,
++            "r8_once_binding_sha256": r8_once_sha,
++            "r8_controller_sha256": TARGET.R8_CONTROLLER_SHA256,
++            "r8_source_manifest_sha256": TARGET.R8_SOURCE_MANIFEST_SHA256,
++            "r8_source_map_sha256": TARGET.R8_SOURCE_MAP_SHA256,
++            "r8_packet_manifest_sha256": TARGET.R8_PACKET_MANIFEST_SHA256,
++            "r6_main_review_sha256": r6_review_sha,
++            "r6_once_binding_sha256": r6_once_sha,
++            "r6_source_projection_sha256": TARGET.R6_SOURCE_PROJECTION_SHA256,
++            "runtime_root": paths["runtime_root"],
++            "host_provider_config_root": paths["host_provider_config_root"],
++            "persistent_evidence_root": paths["persistent_evidence_root"],
++            "r8_outer_run_root": paths["r8_outer_run_root"],
++            "driver_run_root": paths["driver_run_root"],
++            "wall_budget_seconds": TARGET.WALL_BUDGET_SECONDS,
++            "cleanup_reserve_seconds": TARGET.CLEANUP_RESERVE_SECONDS,
++            "public_budgets": TARGET.PUBLIC_BUDGETS,
++        }
++        r12_review = {"schema": TARGET.R12_REVIEW_SCHEMA,
++                      "decision": "APPROVE_ONE_W23_R12_EXTERNAL_DRIVER_ENTRY",
++                      **common_r12, "approval_sha256": ""}
++        r12_review["approval_sha256"] = TARGET._review_authority_sha(r12_review)
++        r12_review_sha = _write(r12_review_path, r12_review)
++        r12_once = {key: value for key, value in r12_review.items()
++                    if key not in {"decision", "approval_sha256"}}
++        r12_once.update({"schema": TARGET.R12_ONCE_SCHEMA,
++                         "status": "AUTHORIZED_SINGLE_ENTRY",
++                         "normal_attempts": 1,
++                         "main_review_sha256": r12_review_sha,
++                         "approval_sha256": r12_review["approval_sha256"]})
++        r12_once_sha = _write(r12_once_path, r12_once)
++        assert set(r12_review) == TARGET.R12_REVIEW_FIELDS
++        assert set(r12_once) == TARGET.R12_ONCE_FIELDS
++        accepted = TARGET._strict_r12_authority(
++            r12_review_sha256=r12_review_sha, r12_once_sha256=r12_once_sha,
++            r8_review_sha256=r8_review_sha, r8_once_sha256=r8_once_sha,
++            r6_review_sha256=r6_review_sha, r6_once_sha256=r6_once_sha,
++            source_projection_sha256=TARGET.R6_SOURCE_PROJECTION_SHA256)
++        assert accepted[2]["driver_run_root"] == Path(paths["driver_run_root"])
++
++        # Per-layer negative controls execute each original consumer against an
++        # updated file hash so failure is from its schema/expected-content gate.
++        bad_r6_once = dict(r6_once, source_projection_sha256="f" * 64)
++        bad_r6_once_sha = _write(r6_once_path, bad_r6_once)
++        with pytest.raises(entry.ActualEntryGuardError):
++            entry._load_authority(main_review_sha256=r6_review_sha,
++                                  once_binding_sha256=bad_r6_once_sha,
++                                  source_projection_sha256=TARGET.R6_SOURCE_PROJECTION_SHA256)
++        _write(r6_once_path, r6_once)
++
++        bad_r8_once = dict(r8_once, r6_source_map_sha256="f" * 64)
++        bad_r8_once_sha = _write(r8_once_path, bad_r8_once)
++        with pytest.raises(r8.OuterControllerError):
++            r8._strict_authority(outer_review_sha256=r8_review_sha,
++                                 outer_once_sha256=bad_r8_once_sha,
++                                 r6_review_sha256=r6_review_sha,
++                                 r6_once_sha256=r6_once_sha,
++                                 source_projection_sha256=TARGET.R6_SOURCE_PROJECTION_SHA256)
++        _write(r8_once_path, r8_once)
++
++        bad_r12_once = dict(r12_once, source_plan_sha256="f" * 64)
++        bad_r12_once_sha = _write(r12_once_path, bad_r12_once)
++        with pytest.raises(TARGET.OuterControllerError):
++            TARGET._strict_r12_authority(
++                r12_review_sha256=r12_review_sha, r12_once_sha256=bad_r12_once_sha,
++                r8_review_sha256=r8_review_sha, r8_once_sha256=r8_once_sha,
++                r6_review_sha256=r6_review_sha, r6_once_sha256=r6_once_sha,
++                source_projection_sha256=TARGET.R6_SOURCE_PROJECTION_SHA256)
++
++        fixed_leaves = [
++            R6_ROOT / "evidence/W23_R6_MAIN_RUNTIME_REVIEW.json",
++            R6_ROOT / "evidence/W23_R6_MAIN_SINGLE_USE_BINDING.json",
++            R8_ROOT / "evidence/W23_R8_OUTER_MAIN_REVIEW_NOT_CREATED.json",
++            R8_ROOT / "evidence/W23_R8_OUTER_ONCE_BINDING_NOT_CREATED.json",
++            TARGET.OUTER_ROOT / "evidence/W23_R12_MAIN_REVIEW_R1.json",
++            TARGET.OUTER_ROOT / "evidence/W23_R12_SINGLE_USE_BINDING_R1.json",
++        ]
++        assert all(not path.exists() and not path.is_symlink() for path in fixed_leaves)
++    finally:
++        for name in tuple(sys.modules):
++            if name == "probe" or name.startswith("probe."):
++                sys.modules.pop(name, None)
++        sys.modules.update(saved_probe)

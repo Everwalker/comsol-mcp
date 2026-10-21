@@ -1787,3 +1787,5 @@ null运行期限意味着未设定引擎任务时长上限，不代表无资源/
 来源：https://modelcontextprotocol.io/specification/2025-11-25/basic/utilities/tasks
 
 核验用途：所查版本中 Tasks 为实验性功能；需能力协商并保留传统 job 轮询兼容。
+
+代码 recipe 注册可显式提供 `entrypoint`（非空字符串，最多 256 字符，使用现有 Java class 或 class#method grammar），用于包含内部类的真实源码；缺省推断规则保持。注册仍要求同 source SHA、同 entrypoint 的真实 durable 执行 witness；运行按已注册的 entrypoint 回读源并校验，不重新推断。该修正未增加逻辑 action，测试或零求解构建不构成科学验收。

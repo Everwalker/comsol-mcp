@@ -1,0 +1,797 @@
+# Generated R6I bounded Windows PREP payload; this is not an execution approval.
+from __future__ import annotations
+import base64, ctypes, hashlib, json, os, sys, time, types
+from pathlib import Path
+
+CONFIG = json.loads(base64.b64decode(__CONFIG_B64__).decode("utf-8", "strict"))
+HELPER_BYTES = base64.b64decode("".join(__HELPER_B64__).encode("ascii"), validate=True)
+GATE_BYTES = base64.b64decode("".join(__GATE_B64__).encode("ascii"), validate=True)
+INNER_BYTES = base64.b64decode("".join(__INNER_B64__).encode("ascii"), validate=True)
+TASK_ROOT = CONFIG["task_root"]
+PYTHON_EXE = CONFIG["python_executable"]
+PYTHON_VERSION = CONFIG["python_version"]
+HELPER_DIR = CONFIG["helper_directory"]
+AUTHORITY_ROOT = CONFIG["authority_root"]
+HELPER_PATH = HELPER_DIR + r"\windows_primary_token_owner_probe_r6i.py"
+GATE_PATH = HELPER_DIR + r"\windows_primary_token_owner_outer_gate_r6i.py"
+INNER_PATH = AUTHORITY_ROOT + r"\BINDING.json"
+PREBIRTH_PATH = AUTHORITY_ROOT + r"\PREBIRTH_BINDING.json"
+APPROVAL_PATH = AUTHORITY_ROOT + r"\MAIN_APPROVAL.json"
+ONCE_PATH = AUTHORITY_ROOT + r"\ONCE_USED.json"
+OUTPUT_ROOT = TASK_ROOT + r"\primary-owner-probe-r6i"
+OUTPUT_FILE = OUTPUT_ROOT + r"\owner-probe.bin"
+LEASE_EVENTS = OUTPUT_ROOT + r"\OWNER_LEASE_EVENTS.jsonl"
+CASES_ROOT = TASK_ROOT + r"\cases-primary-owner-r6i"
+R14_BINDING_PATH = TASK_ROOT + r"\authority-r14\BINDING.json"
+R14_SOURCE_ROOT = TASK_ROOT + r"\source-r14"
+R14_HELPER_ROOT = TASK_ROOT + r"\helpers-r14"
+MAX_SECONDS = 300
+STARTED = time.monotonic()
+FILE_ATTRIBUTE_DIRECTORY = 0x10
+FILE_ATTRIBUTE_REPARSE_POINT = 0x400
+INVALID_FILE_ATTRIBUTES = 0xFFFFFFFF
+
+
+def fail(message, **details):
+    suffix = " " + json.dumps(details, sort_keys=True, ensure_ascii=False) if details else ""
+    raise RuntimeError(message + suffix)
+
+
+def sha(raw):
+    return hashlib.sha256(raw).hexdigest()
+
+
+def canonical(value):
+    return (json.dumps(value, sort_keys=True, indent=2, ensure_ascii=False, allow_nan=False) + "\n").encode("utf-8")
+
+
+def budget():
+    if time.monotonic() - STARTED > MAX_SECONDS:
+        fail("bounded PREP payload exceeded its five-minute active budget; no retry")
+
+
+def attrs(path):
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.GetFileAttributesW.argtypes = [ctypes.c_wchar_p]
+    kernel.GetFileAttributesW.restype = ctypes.c_uint32
+    return int(kernel.GetFileAttributesW(path))
+
+
+def stdlib_read(path, maximum=268435456):
+    before_attrs = attrs(path)
+    if (before_attrs == INVALID_FILE_ATTRIBUTES
+            or before_attrs & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)):
+        fail("standard-library prehash path is absent, a directory, or a reparse point", path=path)
+    target = Path(path)
+    if target.is_symlink():
+        fail("standard-library prehash rejects a symlink name", path=path)
+    try:
+        with target.open("rb", buffering=0) as stream:
+            before = os.fstat(stream.fileno())
+            if getattr(before, "st_file_attributes", 0) & FILE_ATTRIBUTE_REPARSE_POINT:
+                fail("opened standard-library prehash handle is a reparse point", path=path)
+            if before.st_size < 0 or before.st_size > maximum:
+                fail("standard-library prehash size exceeds bound", path=path)
+            raw = stream.read(maximum + 1)
+            after = os.fstat(stream.fileno())
+        after_attrs = attrs(path)
+    except OSError as exc:
+        raise RuntimeError("standard-library prehash open/read failed: " + path) from exc
+    sig = lambda value: (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
+    if (len(raw) > maximum or sig(before) != sig(after) or len(raw) != after.st_size
+            or before_attrs != after_attrs or after_attrs & FILE_ATTRIBUTE_REPARSE_POINT):
+        fail("standard-library prehash changed during read", path=path)
+    return raw
+
+
+def strict_json(raw, label):
+    def pairs(items):
+        result = {}
+        for key, value in items:
+            if key in result:
+                raise ValueError("duplicate key")
+            result[key] = value
+        return result
+    try:
+        value = json.loads(raw.decode("utf-8", "strict"), object_pairs_hook=pairs,
+                           parse_constant=lambda item: (_ for _ in ()).throw(ValueError(item)))
+    except (UnicodeError, ValueError, json.JSONDecodeError) as exc:
+        raise RuntimeError(label + " is not strict duplicate-free UTF-8 JSON") from exc
+    if not isinstance(value, dict):
+        fail(label + " root is not an object")
+    return value
+
+
+def stdlib_closure(binding):
+    result = {}
+    for group in ("source175", "helpers"):
+        records = binding.get(group)
+        if not isinstance(records, dict) or not records:
+            fail("R14 source closure group is missing", group=group)
+        result[group] = {}
+        for relative, row in records.items():
+            if not isinstance(relative, str) or not isinstance(row, dict):
+                fail("R14 source closure row is malformed", group=group)
+            count, digest = row.get("bytes"), row.get("sha256")
+            if type(count) is not int or count < 0 or not isinstance(digest, str) or len(digest) != 64:
+                fail("R14 source closure hash/length is malformed", group=group, path=relative)
+            result[group][relative] = {"bytes": count, "sha256": digest}
+    return result
+
+
+def source_path(group, relative):
+    root = R14_SOURCE_ROOT if group == "source175" else TASK_ROOT
+    return os.path.join(root, relative.replace("/", "\\"))
+
+
+def load_r5j_gate():
+    module = types.ModuleType("r5j_verified_prebirth_gate")
+    module.__file__ = GATE_PATH
+    module.__package__ = ""
+    sys.modules[module.__name__] = module
+    exec(compile(GATE_BYTES, GATE_PATH, "exec"), module.__dict__)
+    return module
+
+
+def audit_raw_proof(gate, proof, label):
+    if not isinstance(proof, dict):
+        fail("private path proof must be an object", label=label)
+    chain = proof.get("path_chain")
+    if not isinstance(chain, list) or not chain:
+        fail("private path proof has no complete raw path chain", label=label)
+    audited = 0
+    for index, row in enumerate(chain):
+        if not isinstance(row, dict):
+            fail("private path proof component is malformed", label=label, index=index)
+        for name in ("native_full_fingerprint", "native_full_fingerprint_second"):
+            if name not in row:
+                fail("raw full fingerprint observation is missing", label=label, index=index, field=name)
+            value = row[name]
+            normalized = gate._normalize_native_full_fingerprint(value, label=f"{label} {index} {name}")
+            if type(value) is not list or normalized != value:
+                fail("raw full fingerprint was not preserved as its exact validated list", label=label, index=index, field=name)
+            audited += 1
+    return audited
+
+
+def add_proof(gate, table, name, proof):
+    table[name] = proof
+    return audit_raw_proof(gate, proof, name)
+
+
+def raw_sig(value):
+    return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
+
+
+def _verified_owner_receipt_snapshot(receipt, expected_user_sid):
+    """Copy only after the original context manager has confirmed restoration."""
+    if (not isinstance(receipt, dict) or receipt.get("restored") is not True
+            or receipt.get("primary_unchanged") is not True
+            or receipt.get("UserSID") != expected_user_sid):
+        fail("task-thread owner receipt was read before confirmed context restoration")
+    return dict(receipt)
+
+
+def _raw_value_deltas(before, after, path="$"):
+    """Return every changed raw JSON leaf with both original values retained."""
+    if isinstance(before, dict) and isinstance(after, dict):
+        deltas = []
+        for key in sorted(set(before) | set(after), key=lambda item: str(item)):
+            child = path + "." + str(key)
+            if key not in before or key not in after:
+                deltas.append({"path": child, "before_present": key in before,
+                               "after_present": key in after,
+                               "before": before.get(key), "after": after.get(key)})
+            else:
+                deltas.extend(_raw_value_deltas(before[key], after[key], child))
+        return deltas
+    if isinstance(before, (list, tuple)) and isinstance(after, (list, tuple)):
+        if len(before) != len(after):
+            return [{"path": path, "before_length": len(before), "after_length": len(after),
+                     "before": list(before), "after": list(after)}]
+        deltas = []
+        for index, (left, right) in enumerate(zip(before, after)):
+            deltas.extend(_raw_value_deltas(left, right, path + "[" + str(index) + "]"))
+        return deltas
+    if type(before) is not type(after) or before != after:
+        return [{"path": path, "before": before, "after": after}]
+    return []
+
+
+def proof_recheck_diagnostic(gate, before, after, label):
+    """Audit both full raw proofs, then derive identity solely through R5J."""
+    before_count = audit_raw_proof(gate, before, label + " before")
+    after_count = audit_raw_proof(gate, after, label + " after")
+    before_identity = gate._r5j_identity_projection(before)
+    after_identity = gate._r5j_identity_projection(after)
+    raw_deltas = _raw_value_deltas(before, after)
+    return {
+        "label": label,
+        "raw_path_proof_sha256_before": sha(canonical(before)),
+        "raw_path_proof_sha256_after": sha(canonical(after)),
+        "raw_delta_count": len(raw_deltas),
+        "raw_delta_sha256": sha(canonical(raw_deltas)),
+        "raw_deltas": raw_deltas,
+        "canonical_identity_sha256_before": sha(canonical(before_identity)),
+        "canonical_identity_sha256_after": sha(canonical(after_identity)),
+        "canonical_identity_equal": before_identity == after_identity,
+        "raw_full_fingerprint_observations_validated_before": before_count,
+        "raw_full_fingerprint_observations_validated_after": after_count,
+    }
+
+
+def check_same_raw_proof(gate, before, after, label):
+    diagnostic = proof_recheck_diagnostic(gate, before, after, label)
+    if not diagnostic["canonical_identity_equal"]:
+        fail("canonical path-proof identity changed after PREBIRTH_BINDING finalization",
+             label=label, raw_diagnostic=diagnostic)
+    diagnostic["status"] = "PASS_UNCHANGED_R5J_IDENTITY_PROJECTION"
+    return diagnostic
+
+
+def collect_source_readback(gate, provider, closure, stdlib_records, phase, native_reader):
+    """Build one complete raw 179-member readback for its actual filesystem phase."""
+    records = {}
+    raw_audit_count = 0
+    for group in ("source175", "helpers"):
+        for relative, expected in closure[group].items():
+            budget()
+            full = source_path(group, relative)
+            raw, digest, metadata = native_reader(Path(full))
+            baseline = stdlib_records.get(group + ":" + relative)
+            if (digest != expected["sha256"] or len(raw) != expected["bytes"]
+                    or baseline != {"sha256": digest, "bytes": len(raw)}):
+                fail("R14 source bytes differ from the prewrite standard-library hash", phase=phase,
+                     group=group, path=full)
+            proof = gate._private_file_proof(
+                provider, full, expected_sha256=digest, expected_bytes=len(raw),
+                expected_native_fingerprint=metadata.get("full_native_fingerprint"),
+            )
+            raw_audit_count += audit_raw_proof(gate, proof, "R14 " + phase + " source " + relative)
+            records[relative] = {"content_sha256": digest, "bytes": len(raw), "private_path": proof}
+    if len(records) != 179 or len(stdlib_records) != 179:
+        fail("complete remote R14 source/helper proof count differs", phase=phase, actual=len(records))
+    identity = gate._r5j_identity_projection(records)
+    return records, {
+        "raw_full_fingerprint_observations_validated": raw_audit_count,
+        "source_path_proofs_sha256": sha(canonical(identity)),
+        "raw_source_path_proofs_sha256": sha(canonical(records)),
+    }
+
+
+def check_same_source_readback(gate, before, after, label):
+    """Audit all raw pairs, then compare only unchanged R5J path identity."""
+    if (not isinstance(before, dict) or not isinstance(after, dict)
+            or len(before) != 179 or len(after) != 179 or set(before) != set(after)):
+        fail("strict complete 179-member source proof set changed", label=label)
+    proof_diagnostics = {}
+    for relative in sorted(after):
+        old_row, new_row = before[relative], after[relative]
+        if (not isinstance(old_row, dict) or not isinstance(new_row, dict)
+                or not isinstance(old_row.get("private_path"), dict)
+                or not isinstance(new_row.get("private_path"), dict)):
+            fail("source proof row is malformed", label=label, path=relative)
+        proof_diagnostics[relative] = proof_recheck_diagnostic(
+            gate, old_row["private_path"], new_row["private_path"], label + " " + relative,
+        )
+        if not proof_diagnostics[relative]["canonical_identity_equal"]:
+            fail("canonical source path-proof identity changed after finalization",
+                 label=label, path=relative, raw_diagnostic=proof_diagnostics[relative])
+    before_identity = gate._r5j_identity_projection(before)
+    after_identity = gate._r5j_identity_projection(after)
+    if before_identity != after_identity:
+        raw_deltas = _raw_value_deltas(before, after)
+        fail("canonical source/path identity changed after finalization", label=label,
+             before_raw_sha256=sha(canonical(before)), after_raw_sha256=sha(canonical(after)),
+             raw_delta_sha256=sha(canonical(raw_deltas)), raw_delta_count=len(raw_deltas))
+    raw_deltas = [
+        {"path": relative, **detail}
+        for relative, proof in proof_diagnostics.items()
+        for detail in proof["raw_deltas"]
+    ]
+    return {
+        "status": "PASS_UNCHANGED_R5J_IDENTITY_PROJECTION",
+        "source_path_proofs_sha256": sha(canonical(after_identity)),
+        "raw_source_path_proofs_sha256_before": sha(canonical(before)),
+        "raw_source_path_proofs_sha256": sha(canonical(after)),
+        "raw_delta_count": len(raw_deltas),
+        "raw_delta_sha256": sha(canonical(raw_deltas)),
+        "raw_deltas": raw_deltas,
+        "per_source_path_diagnostics": proof_diagnostics,
+        "raw_full_fingerprint_observations_validated_before": sum(
+            item["raw_full_fingerprint_observations_validated_before"]
+            for item in proof_diagnostics.values()
+        ),
+        "raw_full_fingerprint_observations_validated_after": sum(
+            item["raw_full_fingerprint_observations_validated_after"]
+            for item in proof_diagnostics.values()
+        ),
+    }
+
+
+def directory_entry_snapshot(state_restore, path):
+    """Enumerate one fixed directory through its original R14 chain handle."""
+    with state_restore._chain(Path(path)) as chain:
+        chain.verify()
+        rows = chain.api.enumerate_directory(chain.root_handle)
+        result = {}
+        for row in rows:
+            name, file_id = row.get("name"), row.get("file_id")
+            if (not isinstance(name, str) or not name or type(file_id) is not int or file_id <= 0
+                    or name.casefold() in {item.casefold() for item in result}):
+                fail("R14 directory enumeration has malformed or duplicate entries", path=str(path))
+            result[name] = file_id
+        return dict(sorted(result.items(), key=lambda item: item[0].casefold()))
+
+
+def verify_exact_directory_entries(before, expected_names, label):
+    expected = {name.casefold() for name in expected_names}
+    actual = {name.casefold() for name in before}
+    if actual != expected:
+        fail("closed candidate directory entry set differs from the exact five-object design",
+             label=label, expected=sorted(expected), actual=sorted(actual))
+    return dict(before)
+
+
+def verify_authorized_root_entry_delta(before, after, expected_added):
+    old = {name.casefold(): (name, file_id) for name, file_id in before.items()}
+    new = {name.casefold(): (name, file_id) for name, file_id in after.items()}
+    removed = sorted(set(old) - set(new))
+    added = sorted(set(new) - set(old))
+    changed = sorted(key for key in set(old) & set(new) if old[key][1] != new[key][1])
+    expected = {name.casefold() for name in expected_added}
+    if removed or changed or set(added) != expected:
+        fail("TaskRoot entry delta differs from the two authorized PREP directory creations",
+             removed=removed, changed=changed, added=added, expected_added=sorted(expected))
+    return {
+        "before": dict(before), "after": dict(after), "removed": removed,
+        "changed_existing_ids": changed,
+        "added": {new[key][0]: new[key][1] for key in added},
+        "expected_added_names": sorted(expected),
+    }
+
+
+def root_entry_effect_record(gate, before, after, entry_delta):
+    """Keep private TaskRoot fingerprints raw; report the exact authorized entry effects."""
+    audit_raw_proof(gate, before, "TaskRoot prewrite raw proof")
+    audit_raw_proof(gate, after, "TaskRoot post-entry raw proof")
+    def root_component(proof):
+        rows = [row for row in proof.get("path_chain", [])
+                if row.get("path", "").casefold() == TASK_ROOT.casefold()
+                and row.get("directory") is True]
+        if len(rows) != 1:
+            fail("TaskRoot component is missing or duplicated in the complete R14 proof")
+        return rows[0]
+    old = root_component(before)
+    new = root_component(after)
+    old_fp = gate._normalize_native_full_fingerprint(old.get("native_full_fingerprint"), label="TaskRoot before entries")
+    new_fp = gate._normalize_native_full_fingerprint(new.get("native_full_fingerprint"), label="TaskRoot after entries")
+    field_names = ("file_identity", "size", "creation_time", "change_time", "write_time", "link_count")
+    if old_fp[0] != new_fp[0] or old_fp[2] != new_fp[2] or old_fp[5] != new_fp[5]:
+        fail("authorized PREP directory creation changed TaskRoot file identity, birth time, or link count")
+    changed = [field_names[index] for index in range(1, 6) if old_fp[index] != new_fp[index]]
+    if any(field not in {"size", "change_time", "write_time"} for field in changed):
+        fail("TaskRoot changed outside fields attributable to its authorized new directory entries",
+             changed_fields=changed)
+    return {
+        "authorized_effect": "create exactly helpers-primary-owner-r6i and authority-primary-owner-r6i",
+        "root_file_identity_before": old_fp[0], "root_file_identity_after": new_fp[0],
+        "native_full_fingerprint_before": old_fp, "native_full_fingerprint_after": new_fp,
+        "changed_fields_recorded_without_projection": changed,
+        "entry_delta": entry_delta,
+        "prewrite_raw_proof_sha256": sha(canonical(before)),
+        "post_entry_raw_proof_sha256": sha(canonical(after)),
+        "prewrite_full_raw_path_proof": before,
+        "post_entry_full_raw_path_proof": after,
+    }
+
+
+def main():
+    if os.name != "nt" or sys.flags.optimize != 0:
+        fail("R6I requires the exact unoptimized Windows Python runtime")
+    if os.path.normcase(os.path.abspath(sys.executable)) != os.path.normcase(PYTHON_EXE):
+        fail("Python executable path differs from the exact R6I candidate", actual=sys.executable)
+    if sys.version.split()[0] != CONFIG["python_version"]:
+        fail("Python version differs from the exact R6I candidate", actual=sys.version)
+    if sys.argv != ["-"]:
+        fail("payload requires exact stdin-only `python -` invocation with no arguments", argv=sys.argv)
+    if sha(HELPER_BYTES) != CONFIG["helper_sha256"] or sha(GATE_BYTES) != CONFIG["gate_sha256"]:
+        fail("embedded helper or R5J gate bytes differ from the reviewed exact hashes")
+    if sha(INNER_BYTES) != CONFIG["inner_binding_sha256"]:
+        fail("embedded inner binding differs from its candidate hash")
+    if sha(HELPER_BYTES) != CONFIG["helper_sha256"]:
+        fail("embedded helper digest mismatch")
+
+    # Bootstrap only with the standard library: verify the exact R14 binding,
+    # canonical 179-member closure and every byte before importing any R14 code.
+    r14_raw = stdlib_read(R14_BINDING_PATH, 16 * 1024 * 1024)
+    if sha(r14_raw) != CONFIG["r14_binding_sha256"]:
+        fail("remote R14 binding hash differs from the frozen exact source")
+    r14 = strict_json(r14_raw, "remote R14 binding")
+    if os.path.normcase(r14.get("taskroot", "")) != os.path.normcase(TASK_ROOT):
+        fail("remote R14 binding targets another TaskRoot")
+    closure = stdlib_closure(r14)
+    closure_sha = sha(canonical(closure))
+    if closure_sha != CONFIG["r14_source_closure_sha256"]:
+        fail("remote R14 closure digest differs", actual=closure_sha)
+    if sum(len(group) for group in closure.values()) != 179:
+        fail("remote R14 source/helper closure is not exactly 179 members")
+    stdlib_records = {}
+    for group in ("source175", "helpers"):
+        for relative, expected in closure[group].items():
+            budget()
+            full = source_path(group, relative)
+            raw = stdlib_read(full)
+            digest = sha(raw)
+            if digest != expected["sha256"] or len(raw) != expected["bytes"]:
+                fail("standard-library source prehash differs from exact R14 closure", group=group, path=full,
+                     expected_sha256=expected["sha256"], actual_sha256=digest,
+                     expected_bytes=expected["bytes"], actual_bytes=len(raw))
+            stdlib_records[group + ":" + relative] = {"sha256": digest, "bytes": len(raw)}
+
+    # Only after the independent 179-member byte pass may the exact source
+    # modules be imported and the reviewed R5J proof implementation executed.
+    sys.path[:0] = [R14_SOURCE_ROOT, R14_HELPER_ROOT]
+    from comsol_mcp import _host_scoped_provider as provider
+    from comsol_mcp import _windows_state_restore as state_restore
+    from windows_task_thread_owner import stable_native_bytes, task_thread_owner
+    expected_modules = {
+        provider: os.path.join(R14_SOURCE_ROOT, "comsol_mcp", "_host_scoped_provider.py"),
+        state_restore: os.path.join(R14_SOURCE_ROOT, "comsol_mcp", "_windows_state_restore.py"),
+    }
+    for module, expected_path in expected_modules.items():
+        if os.path.normcase(os.path.abspath(module.__file__ or "")) != os.path.normcase(os.path.abspath(expected_path)):
+            fail("qualified R14 production module imported from an unexpected location", module=module.__name__)
+    owner_module = sys.modules.get("windows_task_thread_owner")
+    expected_owner_module = os.path.join(R14_HELPER_ROOT, "windows_task_thread_owner.py")
+    if (owner_module is None or os.path.normcase(os.path.abspath(owner_module.__file__ or ""))
+            != os.path.normcase(os.path.abspath(expected_owner_module))):
+        fail("qualified R14 task-thread owner imported from an unexpected location")
+    gate = load_r5j_gate()
+    if gate._r14_closure(r14) != closure:
+        fail("embedded R5J closure parser differs from the standard-library closure")
+    fixed_paths = {
+        "TASK_ROOT": TASK_ROOT, "PYTHON_EXE": PYTHON_EXE, "HELPER_DIR": HELPER_DIR,
+        "AUTHORITY_ROOT": AUTHORITY_ROOT, "HELPER_PATH": HELPER_PATH, "GATE_PATH": GATE_PATH,
+        "INNER_BINDING_PATH": INNER_PATH, "OUTER_BINDING_PATH": PREBIRTH_PATH,
+        "APPROVAL_PATH": APPROVAL_PATH, "ONCE_PATH": ONCE_PATH, "OUTPUT_ROOT": OUTPUT_ROOT,
+        "OUTPUT_FILE": OUTPUT_FILE, "LEASE_EVENTS": LEASE_EVENTS,
+        "R14_BINDING_PATH": R14_BINDING_PATH, "R14_SOURCE_ROOT": R14_SOURCE_ROOT,
+        "R14_HELPER_ROOT": R14_HELPER_ROOT,
+    }
+    for name, expected in fixed_paths.items():
+        if getattr(gate, name, None) != expected:
+            fail("embedded R5J gate fixed path differs from payload contract", field=name)
+    if gate.OUTER_SCHEMA != "cv3-windows-primary-owner-prebirth-binding-r6i/1":
+        fail("embedded gate schema differs from reviewed R5J")
+
+    # Candidate output, authority, and case paths are absent before any stage write.
+    for path in (HELPER_DIR, AUTHORITY_ROOT, ONCE_PATH, OUTPUT_ROOT, OUTPUT_FILE, LEASE_EVENTS, CASES_ROOT):
+        gate._assert_path_kind(path, directory=path in (HELPER_DIR, AUTHORITY_ROOT, OUTPUT_ROOT, CASES_ROOT),
+                               must_exist=False)
+    if attrs(TASK_ROOT) == INVALID_FILE_ATTRIBUTES or attrs(TASK_ROOT) & (
+            FILE_ATTRIBUTE_REPARSE_POINT) or not attrs(TASK_ROOT) & FILE_ATTRIBUTE_DIRECTORY:
+        fail("TaskRoot must be an existing non-reparse directory")
+
+    raw_audit_count = 0
+    # This complete prewrite snapshot is retained as an audit only. Creating
+    # the two approved child directories changes private TaskRoot timestamps,
+    # so it must never be used as the final PREBIRTH source proof.
+    prewrite_source_readback, prewrite_source_receipt = collect_source_readback(
+        gate, provider, closure, stdlib_records, "PREWRITE_AUDIT", stable_native_bytes,
+    )
+    raw_audit_count += prewrite_source_receipt["raw_full_fingerprint_observations_validated"]
+
+    python_proof = gate._runtime_image_proof(provider, stable_native_bytes)
+    raw_audit_count += audit_raw_proof(gate, python_proof["private_path"], "Python image")
+    gate._normalize_native_full_fingerprint(python_proof["native_fingerprint"], label="Python raw native image")
+    python_identity_sha = sha(canonical(gate._r5j_identity_projection(python_proof)))
+    if python_proof["path"] != PYTHON_EXE:
+        fail("Python runtime image differs from the frozen exact runtime image")
+
+    r14_binding_proof = gate._private_file_proof(
+        provider, R14_BINDING_PATH, expected_sha256=CONFIG["r14_binding_sha256"], expected_bytes=len(r14_raw),
+    )
+    raw_audit_count += audit_raw_proof(gate, r14_binding_proof, "R14 binding")
+    initial_root_proof = gate._r5j_private_path_proof(provider, TASK_ROOT, directory=True)
+    raw_audit_count += audit_raw_proof(gate, initial_root_proof, "TaskRoot prewrite")
+    with state_restore._chain(Path(TASK_ROOT)) as root_chain:
+        root_chain.verify()
+        initial_root_identity = dict(root_chain.root_id)
+        initial_root_entries = directory_entry_snapshot(state_restore, TASK_ROOT)
+    gate._validate_restore_chain_identity(r14.get("root_identity", {}), initial_root_identity,
+                                         r14.get("root_identity", {}))
+    gate._validate_root_acl_descriptor(r14.get("root_security", ""), initial_root_proof)
+
+    # All 179 source/helper bytes and private proofs, the runtime leaf, and the
+    # TaskRoot restore-chain identity are frozen before the first candidate write.
+    target_objects = {
+        "helper": (HELPER_PATH, False), "gate": (GATE_PATH, False),
+        "inner": (INNER_PATH, False), "prebirth": (PREBIRTH_PATH, False),
+        "approval": (APPROVAL_PATH, False),
+    }
+    for label, (path, _directory) in target_objects.items():
+        if attrs(path) != INVALID_FILE_ATTRIBUTES:
+            fail("no-overwrite candidate file exists before PREP", target=label, path=path)
+    if attrs(HELPER_DIR) != INVALID_FILE_ATTRIBUTES or attrs(AUTHORITY_ROOT) != INVALID_FILE_ATTRIBUTES:
+        fail("no-overwrite candidate directory exists before PREP")
+
+    files = {}
+    write_started = False
+    try:
+        with task_thread_owner() as owner_receipt:
+            write_started = True
+            os.mkdir(HELPER_DIR)
+            os.mkdir(AUTHORITY_ROOT)
+            for label, (path, _directory) in target_objects.items():
+                files[label] = open(path, "x+b", buffering=0)
+            if set(files) != set(target_objects):
+                fail("exclusive creation did not produce the exact five remote file objects")
+            empty_approval_before = raw_sig(os.fstat(files["approval"].fileno()))
+            empty_once_absent = attrs(ONCE_PATH) == INVALID_FILE_ATTRIBUTES
+            if not empty_once_absent:
+                fail("ONCE_USED appeared during PREP")
+
+            # The directory entry set is now complete. Write only into the
+            # three pre-created source objects; approval remains zero bytes.
+            for label, raw in (("helper", HELPER_BYTES), ("gate", GATE_BYTES), ("inner", INNER_BYTES)):
+                stream = files[label]
+                if os.fstat(stream.fileno()).st_size != 0:
+                    fail("exclusive PREP file is not empty before in-place population", target=label)
+                stream.seek(0)
+                if stream.write(raw) != len(raw):
+                    fail("in-place PREP file write was short", target=label)
+                stream.flush()
+                os.fsync(stream.fileno())
+                stream.seek(0)
+                if stream.read(len(raw) + 1) != raw:
+                    fail("in-place PREP file readback differs", target=label)
+
+            # Verify the exact authorized root-entry delta and the closed
+            # helper/auth directory contents through the R14 pinned API.
+            post_entry_root_entries = directory_entry_snapshot(state_restore, TASK_ROOT)
+            root_entry_delta = verify_authorized_root_entry_delta(
+                initial_root_entries, post_entry_root_entries,
+                (os.path.basename(HELPER_DIR), os.path.basename(AUTHORITY_ROOT)),
+            )
+            helper_entries = verify_exact_directory_entries(
+                directory_entry_snapshot(state_restore, HELPER_DIR),
+                (os.path.basename(HELPER_PATH), os.path.basename(GATE_PATH)), "helper_directory",
+            )
+            authority_entries = verify_exact_directory_entries(
+                directory_entry_snapshot(state_restore, AUTHORITY_ROOT),
+                ("BINDING.json", "PREBIRTH_BINDING.json", "MAIN_APPROVAL.json"), "authority_root",
+            )
+
+            directory_proofs = {}
+            for label, path in (("task_root", TASK_ROOT), ("helper_directory", HELPER_DIR),
+                                ("authority_root", AUTHORITY_ROOT)):
+                proof = gate._r5j_private_path_proof(provider, path, directory=True)
+                raw_audit_count += audit_raw_proof(gate, proof, label + " post-entry-set")
+                if label == "task_root":
+                    gate._validate_root_acl_descriptor(r14.get("root_security", ""), proof)
+                directory_proofs[label] = proof
+            root_entry_effect = root_entry_effect_record(
+                gate, initial_root_proof, directory_proofs["task_root"], root_entry_delta,
+            )
+
+            candidate_file_proofs = {}
+            file_map = (("helper_path", "helper"), ("gate_path", "gate"),
+                        ("inner_binding_path", "inner"))
+            for proof_name, handle_name in file_map:
+                stream = files[handle_name]
+                raw = {"helper": HELPER_BYTES, "gate": GATE_BYTES, "inner": INNER_BYTES}[handle_name]
+                proof = gate._r5j_private_path_proof(
+                    provider, stream.name, directory=False, borrowed_fd=stream.fileno(),
+                    borrowed_info=os.fstat(stream.fileno()), expected_sha256=sha(raw), expected_bytes=len(raw),
+                )
+                raw_audit_count += audit_raw_proof(gate, proof, proof_name)
+                candidate_file_proofs[proof_name] = proof
+
+            # Collect the final full source/path proofs only after all five
+            # target names exist and helper/gate/inner bytes are fixed.
+            source_readback, final_source_receipt = collect_source_readback(
+                gate, provider, closure, stdlib_records, "FINAL_AFTER_ENTRY_SET", stable_native_bytes,
+            )
+            raw_audit_count += final_source_receipt["raw_full_fingerprint_observations_validated"]
+            source_proofs_sha = final_source_receipt["source_path_proofs_sha256"]
+            source_raw_sha = final_source_receipt["raw_source_path_proofs_sha256"]
+
+            r14_binding_final_proof = gate._private_file_proof(
+                provider, R14_BINDING_PATH, expected_sha256=CONFIG["r14_binding_sha256"], expected_bytes=len(r14_raw),
+            )
+            raw_audit_count += audit_raw_proof(gate, r14_binding_final_proof, "R14 binding final")
+            path_proofs = {
+                "task_root": directory_proofs["task_root"],
+                "helper_directory": directory_proofs["helper_directory"],
+                "authority_root": directory_proofs["authority_root"],
+                "helper_path": candidate_file_proofs["helper_path"],
+                "gate_path": candidate_file_proofs["gate_path"],
+                "inner_binding_path": candidate_file_proofs["inner_binding_path"],
+                "r14_binding_path": r14_binding_final_proof,
+                "python_executable": python_proof,
+                "task_root_windows_state_restore_identity": initial_root_identity,
+            }
+            source_fingerprints = {
+                "source_plan_sha256": CONFIG["r5j_source_plan_sha256"],
+                "source_review_sha256": CONFIG["r5j_source_review_sha256"],
+                "helper_sha256": CONFIG["helper_sha256"],
+                "helper_controls_sha256": CONFIG["helper_controls_sha256"],
+                "gate_sha256": CONFIG["gate_sha256"],
+                "gate_controls_sha256": CONFIG["gate_controls_sha256"],
+                "inner_binding_sha256": CONFIG["inner_binding_sha256"],
+                "protected13_manifest_sha256": CONFIG["protected13_manifest_sha256"],
+                "current_resume_sha256": CONFIG["current_resume_sha256"],
+                "r14_binding_sha256": CONFIG["r14_binding_sha256"],
+                "r14_source_closure_sha256": CONFIG["r14_source_closure_sha256"],
+                "r6b_lease_source_sha256": CONFIG["r6b_lease_source_sha256"],
+                "r6b_lease_controls_sha256": CONFIG["r6b_lease_controls_sha256"],
+                "source_path_proofs_sha256": source_proofs_sha,
+                "python_executable_sha256": python_proof["sha256"],
+                "python_executable_path_proof_sha256": python_identity_sha,
+            }
+            outer = {
+                "schema": gate.OUTER_SCHEMA,
+                "status": "REMOTE_PREPARED_CLOSED",
+                "candidate": gate.OUTER_CANDIDATE,
+                "identity_domains": gate.ROOT_IDENTITY_DOMAINS,
+                "source_fingerprints": source_fingerprints,
+                "paths": gate.EXPECTED_PATHS,
+                "path_proofs": path_proofs,
+                "r14_source_path_readback": source_readback,
+                "r14_source_path_readback_count": 179,
+                "limits": gate.OUTER_LIMITS,
+                "native_execution": gate.OUTER_NATIVE_EXECUTION,
+                "closed_authority": gate.OUTER_CLOSED_AUTHORITY,
+            }
+            gate._validate_outer_envelope(outer)
+            outer_raw = gate._canonical_json(outer)
+            outer_stream = files["prebirth"]
+            if os.fstat(outer_stream.fileno()).st_size != 0:
+                fail("PREBIRTH_BINDING placeholder is not empty before finalization")
+            outer_stream.seek(0)
+            if outer_stream.write(outer_raw) != len(outer_raw):
+                fail("in-place PREBIRTH_BINDING finalization was short")
+            outer_stream.flush()
+            os.fsync(outer_stream.fileno())
+            outer_stream.seek(0)
+            if outer_stream.read(len(outer_raw) + 1) != outer_raw:
+                fail("in-place PREBIRTH_BINDING final readback differs")
+            parsed_outer = gate._strict_json(outer_raw, label="new PREBIRTH_BINDING")
+            gate._validate_outer_envelope(parsed_outer)
+            outer_path_proof = gate._r5j_private_path_proof(
+                provider, PREBIRTH_PATH, directory=False, borrowed_fd=outer_stream.fileno(),
+                borrowed_info=os.fstat(outer_stream.fileno()), expected_sha256=sha(outer_raw),
+                expected_bytes=len(outer_raw),
+            )
+            raw_audit_count += audit_raw_proof(gate, outer_path_proof, "PREBIRTH_BINDING final")
+
+            approval_stream = files["approval"]
+            approval_after = raw_sig(os.fstat(approval_stream.fileno()))
+            if (approval_after != empty_approval_before or os.fstat(approval_stream.fileno()).st_size != 0
+                    or attrs(ONCE_PATH) != INVALID_FILE_ATTRIBUTES):
+                fail("reserved approval object changed or ONCE_USED appeared")
+            approval_proof = gate._r5j_private_path_proof(
+                provider, APPROVAL_PATH, directory=False, borrowed_fd=approval_stream.fileno(),
+                borrowed_info=os.fstat(approval_stream.fileno()), expected_sha256=sha(b""), expected_bytes=0,
+            )
+            raw_audit_count += audit_raw_proof(gate, approval_proof, "MAIN_APPROVAL empty placeholder")
+
+            postfinal_source_readback, postfinal_source_receipt = collect_source_readback(
+                gate, provider, closure, stdlib_records, "POST_FINALIZATION_RECHECK", stable_native_bytes,
+            )
+            raw_audit_count += postfinal_source_receipt["raw_full_fingerprint_observations_validated"]
+            final_source_recheck = check_same_source_readback(
+                gate, source_readback, postfinal_source_readback, "all 179 FINAL source proofs",
+            )
+            raw_audit_count += (
+                final_source_recheck["raw_full_fingerprint_observations_validated_before"]
+                + final_source_recheck["raw_full_fingerprint_observations_validated_after"]
+            )
+
+            postfinal_directory_rechecks = {}
+            for label, path in (("task_root", TASK_ROOT), ("helper_directory", HELPER_DIR),
+                                ("authority_root", AUTHORITY_ROOT)):
+                proof = gate._r5j_private_path_proof(provider, path, directory=True)
+                raw_audit_count += audit_raw_proof(gate, proof, label + " post-finalization")
+                diagnostic = check_same_raw_proof(gate, directory_proofs[label], proof, label)
+                raw_audit_count += (
+                    diagnostic["raw_full_fingerprint_observations_validated_before"]
+                    + diagnostic["raw_full_fingerprint_observations_validated_after"]
+                )
+                postfinal_directory_rechecks[label] = diagnostic
+                if label == "task_root":
+                    gate._validate_root_acl_descriptor(r14.get("root_security", ""), proof)
+            final_root_entries = directory_entry_snapshot(state_restore, TASK_ROOT)
+            final_helper_entries = directory_entry_snapshot(state_restore, HELPER_DIR)
+            final_authority_entries = directory_entry_snapshot(state_restore, AUTHORITY_ROOT)
+            if final_root_entries != post_entry_root_entries:
+                fail("TaskRoot entry IDs changed after the closed entry-set proof")
+            if final_helper_entries != helper_entries or final_authority_entries != authority_entries:
+                fail("helper or authority entry IDs changed after the closed entry-set proof")
+            for path in (ONCE_PATH, OUTPUT_ROOT, OUTPUT_FILE, LEASE_EVENTS, CASES_ROOT):
+                if attrs(path) != INVALID_FILE_ATTRIBUTES:
+                    fail("forbidden authority/output/cases object appeared during PREP", path=path)
+            if any(os.fstat(stream.fileno()).st_size != len(raw) for stream, raw in (
+                (files["helper"], HELPER_BYTES), (files["gate"], GATE_BYTES),
+                (files["inner"], INNER_BYTES), (files["prebirth"], outer_raw),
+            )):
+                fail("one or more staged file objects have an unexpected final size")
+
+            staged_records = {}
+            for label, raw in (("helper", HELPER_BYTES), ("gate", GATE_BYTES),
+                               ("inner", INNER_BYTES), ("prebirth", outer_raw)):
+                stream = files[label] if label != "prebirth" else outer_stream
+                stream.seek(0)
+                readback = stream.read(len(raw) + 1)
+                if readback != raw:
+                    fail("final same-handle staged readback mismatch", target=label)
+                staged_records[label] = {"sha256": sha(readback), "bytes": len(readback)}
+        owner_copy = _verified_owner_receipt_snapshot(owner_receipt, CONFIG["expected_user_sid"])
+        report = {
+            "schema": "cv3-windows-primary-owner-r6i-remote-prep-receipt/1",
+            "status": "REMOTE_PREPARED_CLOSED_NO_NATIVE_AUTHORITY",
+            "python": {"path": PYTHON_EXE, "version": sys.version.split()[0],
+                       "sha256": python_proof["sha256"], "path_proof_sha256": python_identity_sha},
+            "r14": {"binding_sha256": sha(r14_raw), "closure_sha256": closure_sha,
+                    "source_helper_count": 179, "stdlib_hash_count": len(stdlib_records),
+                    "original_handle_proof_count": len(source_readback),
+                    "source_path_proofs_sha256": source_proofs_sha,
+                    "raw_source_path_proofs_sha256": source_raw_sha,
+                    "prewrite_audit_only": {
+                        "source_path_proofs_sha256": prewrite_source_receipt["source_path_proofs_sha256"],
+                        "raw_source_path_proofs_sha256": prewrite_source_receipt["raw_source_path_proofs_sha256"],
+                        "raw_full_fingerprint_observations_validated": prewrite_source_receipt["raw_full_fingerprint_observations_validated"],
+                        "source_path_readback": prewrite_source_readback,
+                        "stdlib_hash_records": stdlib_records,
+                        "used_as_prepared_expected_source_proof": False,
+                    },
+                    "postfinalization_exact_recheck": final_source_recheck,
+                    "postfinalization_directory_identity_rechecks": postfinal_directory_rechecks,
+                    "raw_full_fingerprint_observations_validated": raw_audit_count},
+            "remote_objects": {
+                "candidate_files": staged_records,
+                "gate_target": GATE_PATH,
+                "gate_source_sha256": sha(GATE_BYTES),
+                "authority_root_proof_identity_sha256": sha(canonical(gate._r5j_identity_projection(directory_proofs["authority_root"]))),
+                "authority_root_raw_proof_sha256": sha(canonical(directory_proofs["authority_root"])),
+                "authorized_task_root_entry_effect": root_entry_effect,
+                "helper_directory_entry_ids": helper_entries,
+                "authority_directory_entry_ids": authority_entries,
+                "postfinal_task_root_entry_ids": final_root_entries,
+                "empty_main_approval": {"bytes": 0, "sha256": sha(b""),
+                                         "raw_proof_sha256": sha(canonical(approval_proof)),
+                                         "identity": approval_proof["identity"]},
+                "once_absent": True, "output_absent": True, "cases_absent": True,
+                "prebirth_raw_proof_sha256": sha(canonical(outer_path_proof)),
+            },
+            "native_child": {"CreateProcessWithTokenW": "NOT_CALLED", "child_processes": 0},
+            "account_privilege_acl_mutations": 0,
+            "owner_receipt": owner_copy,
+            "budget_seconds": int(time.monotonic() - STARTED),
+            "replay": False,
+        }
+        sys.stdout.write(json.dumps(report, sort_keys=True, ensure_ascii=False) + "\n")
+        sys.stdout.flush()
+        return 0
+    finally:
+        # Closing the five original preparation file handles is ordinary local
+        # resource release. No file/directory is removed or recreated.
+        for stream in reversed(list(files.values())):
+            try:
+                stream.close()
+            except BaseException:
+                pass
+
+
+if __name__ == "__main__":
+    try:
+        result_code = main()
+    except BaseException as exc:
+        sys.stderr.write(json.dumps({"status": "PREP_FAILED_NO_RETRY", "error_type": type(exc).__name__,
+                                     "error": str(exc), "replay": False},
+                                    sort_keys=True, ensure_ascii=False) + "\n")
+        sys.stderr.flush()
+        raise
+    raise SystemExit(result_code)
+

@@ -1,0 +1,165 @@
+{
+  "schema": "W22_BENCHMARK_V1",
+  "scope": "D1-D6; stop before W23",
+  "origin": "SYNTHETIC_NOT_MEASURED_DEVICE",
+  "fixture": {
+    "schema": "W22_SYNTHETIC_REFERENCE_V1",
+    "origin": "SYNTHETIC_NOT_USER_DEVICE_DATA",
+    "rings": [
+      {
+        "id": "center",
+        "radius_m": 0.0,
+        "count": 1,
+        "power_W_each": 0.8
+      },
+      {
+        "id": "ring1",
+        "radius_m": 0.006,
+        "count": 6,
+        "power_W_each": 0.75
+      },
+      {
+        "id": "ring2",
+        "radius_m": 0.012,
+        "count": 12,
+        "power_W_each": 0.65,
+        "disabled_indices": [
+          0
+        ]
+      }
+    ],
+    "kernel": {
+      "name": "normalized_2D_Gaussian",
+      "sigma0_m": 0.002,
+      "slope": 0.05,
+      "notes": "synthetic sigma(L), not measured divergence/NA"
+    },
+    "L_candidates_m": [
+      0.01,
+      0.02,
+      0.03
+    ],
+    "absorption_fraction": 0.6,
+    "grid": {
+      "half_width_m": 0.025,
+      "points_per_axis": 101
+    },
+    "workpiece_radius_m": 0.02,
+    "roi_radius_m": 0.015,
+    "calibration_status": "UNVERIFIED",
+    "guard": "No automatic source renormalization on finite workpiece/ROI"
+  },
+  "geometry": {
+    "shape": "square_slab",
+    "width_m": 0.04,
+    "thickness_m": 0.001,
+    "top_z_m": 0.001,
+    "roi_radius_m": 0.015,
+    "reason": "separable independent 3D spectral reference"
+  },
+  "thermal": {
+    "k_W_mK": 20,
+    "rho_kg_m3": 3000,
+    "Cp_J_kgK": 700,
+    "T0_K": 300,
+    "Tamb_K": 300,
+    "bottom_h_W_m2K": 500,
+    "side": "adiabatic",
+    "top": "positive inward alpha times incident W/m2",
+    "radiation": false
+  },
+  "times_s": [
+    0,
+    1,
+    5,
+    20,
+    60
+  ],
+  "search": {
+    "L_m": [
+      0.01,
+      0.02,
+      0.03
+    ],
+    "p_center_W": [
+      0.6,
+      0.8,
+      1.0
+    ],
+    "p_ring1_W": [
+      0.65,
+      0.75,
+      0.85
+    ],
+    "p_ring2_W": "(12.45-p_center-6*p_ring1)/11",
+    "total_W": 12.45,
+    "each_active_W_bounds": [
+      0,
+      1
+    ],
+    "mean_deltaT_min_K": 3,
+    "objective": "min area-weighted ROI std(deltaT)/mean(deltaT) at 60s",
+    "unique_candidate_budget": 27,
+    "wall_time_per_L_s": 3600,
+    "controls_solve_allowance_per_version": 6,
+    "reviewer_fresh_solve_allowance_per_version": 2,
+    "cache_repeat_expected_solves": 0
+  },
+  "tolerances": {
+    "source_integral_relative": 0.01,
+    "source_integral_absolute_W": 1e-06,
+    "source_point_relative": 0.02,
+    "source_point_absolute_W_m2": 1,
+    "energy_balance_relative": 0.02,
+    "reference_mean_relative": 0.01,
+    "reference_mean_absolute_K": 0.05,
+    "reference_std_relative": 0.01,
+    "reference_std_absolute_K": 0.02,
+    "reference_extrema_relative": 0.02,
+    "reference_extrema_absolute_K": 0.05,
+    "fresh_relative": 0.01,
+    "fresh_absolute_K": 0.02,
+    "reference_convergence_relative": 0.002
+  },
+  "source_probes_m": [
+    [
+      0.012,
+      0
+    ],
+    [
+      -0.012,
+      0
+    ],
+    [
+      0,
+      0.012
+    ],
+    [
+      0,
+      -0.012
+    ]
+  ],
+  "outside_probe_m": [
+    0.026,
+    0
+  ],
+  "independent_reference": {
+    "method": "xy cosine modes plus thickness Robin eigenfunctions, full 3D transient",
+    "coarse": [
+      48,
+      64
+    ],
+    "fine": [
+      64,
+      96
+    ],
+    "interpolated_source_reference_required": true
+  },
+  "impossible_control": {
+    "target_roi_absorbed_W": 20,
+    "upper_bound_W": 10.8,
+    "proof": "alpha*active_count*each_max = 0.6*18*1; ROI cannot exceed entire plane"
+  },
+  "physical_validation": "UNVERIFIED",
+  "native_status": "NOT_RUN"
+}

@@ -1,0 +1,124 @@
+{
+  "schema": "ROOT_W24_STRESS_AND_COUPLED_EXECUTION_ARCHITECTURE/1",
+  "created_utc": "2026-10-12T10:19:01.076310+00:00",
+  "status": "APPROVED_SOURCE_DESIGN_ONLY_NO_NATIVE_ADMISSION",
+  "actual_equation_view": {
+    "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/repository/docs/full_project_continuation_v2/evidence/w24_cure_preflight_current11/native-run-current11-001/solid_equation_view_expression_inventory.json",
+    "sha256": "f217718fd1ea4d1173fd986aa724599c1e4043246a3264d85dc0703875b3246c",
+    "bytes": 374792
+  },
+  "inventory_sha256": "90207e9a3813b4914af2dfc5e354fb71bdebe7146dd15051b0b1bfe90c410b4e",
+  "primary_evidence": [
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-coupled-science-20261012-candidate01/stress-primary-evidence/PRIMARY_25190_107086.json",
+      "sha256": "cc31ff1c6c56e764846557701b4ef74bd4395f3587a3dcdd4ae5d3fc90aa4b45",
+      "primary_doc_id": 25190,
+      "primary_chunk_id": 107086,
+      "original_source_sha256": "6ff3141a4a55a08a9e6b345875500f5d92e824007ff9d58d1e60ce1977bc960f"
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-coupled-science-20261012-candidate01/stress-primary-evidence/PRIMARY_25979_110955.json",
+      "sha256": "8bb9d6fde1867f0256400878fe913086b93cadb23b69c06c326c682071adee88",
+      "primary_doc_id": 25979,
+      "primary_chunk_id": 110955,
+      "original_source_sha256": "54e7689563694d8027ebdf4e571dfd644bc647fa30ee1db1af701c6554c58ae1"
+    },
+    {
+      "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w24-coupled-science-20261012-candidate01/stress-primary-evidence/PRIMARY_25986_110963.json",
+      "sha256": "3cc90561a7412576a36dd3654af4abc1d134e53b97022054f4f79b5f39fc9003",
+      "primary_doc_id": 25986,
+      "primary_chunk_id": 110963,
+      "original_source_sha256": "0d6914acda8d0e5e00be13306f14122255f4539357a4db5d065fa902ff9779ba"
+    }
+  ],
+  "approved_mapping": {
+    "radial_normal": {
+      "expression": "solid.srr",
+      "requested_evaluation_unit": "Pa",
+      "original_equation_view_unit": "N/m^2",
+      "tensor_measure": "CAUCHY",
+      "frame": "SPATIAL",
+      "axisymmetric_component": "rr",
+      "definition": "solid.SRR",
+      "description": "应力张量，rr 分量",
+      "physics_tag": "solid",
+      "feature_tag": "lemm1",
+      "raw_row_index": 230,
+      "raw_group_path": "/solid/StressGroup/root.comp1.solid.s/",
+      "raw_display_group": "/固体力学/应力/应力张量 （空间坐标系）/",
+      "raw_feature_path": "/PhysicsList/solid/PhysicsFeatureList/lemm1",
+      "dependent_dof_status": "NOT_ESTABLISHED_FROM_EQUATION_VIEW;requires_actual_XmeshInfoDofs_solved_state"
+    },
+    "hoop_normal": {
+      "expression": "solid.sphiphi",
+      "requested_evaluation_unit": "Pa",
+      "original_equation_view_unit": "N/m^2",
+      "tensor_measure": "CAUCHY",
+      "frame": "SPATIAL",
+      "axisymmetric_component": "phiphi",
+      "definition": "solid.SPHIPHI",
+      "description": "应力张量，phiphi 分量",
+      "physics_tag": "solid",
+      "feature_tag": "lemm1",
+      "raw_row_index": 233,
+      "raw_group_path": "/solid/StressGroup/root.comp1.solid.s/",
+      "raw_display_group": "/固体力学/应力/应力张量 （空间坐标系）/",
+      "raw_feature_path": "/PhysicsList/solid/PhysicsFeatureList/lemm1",
+      "dependent_dof_status": "NOT_ESTABLISHED_FROM_EQUATION_VIEW;requires_actual_XmeshInfoDofs_solved_state"
+    },
+    "axial_normal": {
+      "expression": "solid.szz",
+      "requested_evaluation_unit": "Pa",
+      "original_equation_view_unit": "N/m^2",
+      "tensor_measure": "CAUCHY",
+      "frame": "SPATIAL",
+      "axisymmetric_component": "zz",
+      "definition": "solid.SZZ",
+      "description": "应力张量，zz 分量",
+      "physics_tag": "solid",
+      "feature_tag": "lemm1",
+      "raw_row_index": 235,
+      "raw_group_path": "/solid/StressGroup/root.comp1.solid.s/",
+      "raw_display_group": "/固体力学/应力/应力张量 （空间坐标系）/",
+      "raw_feature_path": "/PhysicsList/solid/PhysicsFeatureList/lemm1",
+      "dependent_dof_status": "NOT_ESTABLISHED_FROM_EQUATION_VIEW;requires_actual_XmeshInfoDofs_solved_state"
+    },
+    "rz_shear": {
+      "expression": "solid.srz",
+      "requested_evaluation_unit": "Pa",
+      "original_equation_view_unit": "N/m^2",
+      "tensor_measure": "CAUCHY",
+      "frame": "SPATIAL",
+      "axisymmetric_component": "rz",
+      "definition": "solid.SRZ",
+      "description": "应力张量，rz 分量",
+      "physics_tag": "solid",
+      "feature_tag": "lemm1",
+      "raw_row_index": 232,
+      "raw_group_path": "/solid/StressGroup/root.comp1.solid.s/",
+      "raw_display_group": "/固体力学/应力/应力张量 （空间坐标系）/",
+      "raw_feature_path": "/PhysicsList/solid/PhysicsFeatureList/lemm1",
+      "dependent_dof_status": "NOT_ESTABLISHED_FROM_EQUATION_VIEW;requires_actual_XmeshInfoDofs_solved_state"
+    }
+  },
+  "decision": [
+    "For W24 residual/handoff spatial stress use the four explicit actual axisymmetric spatial Cauchy rows rr/phiphi/zz/rz. This is an inference jointly supported by actual native spatial group descriptions and same-version official stress definitions, not numerical acceptance.",
+    "Keep raw13-cell row/column observation and feature/component/group/frame evidence; unique exact matching of witnessed rows, reject missing/duplicate/ambiguous/wrongframe/Piola/traction/deviatoric/alias selections. Do not choose first English/Chinese substring or infer tensor meaning solely from symbol casing.",
+    "N/m^2 is the raw native pressure unit, dimensionally the SI unit Pa. Preserve that raw unit separately from requested evaluation Pa. Actual numerical features must set requestedPa and read back exact expression/unit arrays on the same feature/data before accepting values; no outside numeric rescaling or relabeling of a getter.",
+    "Current geometrically linear definitions alias material tensor; documentation permits equality in linear analysis only. Newv2 geometrically nonlinear models require freshly captured EquationView and actual configured nonlinear flag, with frame mapping rerun; never inherit equality across states.",
+    "Stress derived-versus-dependent classification cannot replace solved XmeshInfoDofs evidence. Keep full allDOF history/state, branch DOF native discovery and wasactive gates; never invent Maxwell stress/state DOF names."
+  ],
+  "next_implementation_unit": [
+    "Preserve immutable candidate01 typedreadiness NEEDS_NATIVE_V2_CONFIGURATION_AND_STABLE_GEL_SHAPE_TRANSFER, current11 v1 and all actualFAILs. Create private successor02 only.",
+    "Implement witnessed versioned tensor/frame mapping with actual current11 raw artifact regressions and missing/duplicates/wrongunit/frame/symbol/alias negatives. Preserve legacy mapping compatibility only where explicitly legacy; no synthetic receipt may mint actual native source authority.",
+    "Prepare one zeroStudy setup unit using existing managed runners/adapters: fresh cure-lawv2 configured model build_v2/readback_v2/save/reopen with same21physical plus fullv2dose/activation/Maxwell readbacks, and original static flat/step baseline setup readbacks, all original14slot sensitivity plan retained. No Study/PhaseInitialization/solverRun in this setup unit. OneownedServer/serialWorker, exact activity/model/source/ledger budgets frozen before Rootnativeadmission.",
+    "Stable-shape-to-cure geometry/history adapter design must consume actual authenticated native converged flat/step baseline output, exact raw PF grid/times/final profile/contact/wallsegments and original volume gates. Preserve both model provenance and any projection approximation/error explicitly; no analytic spherical cap, guessed wall or interpolation substituted for required native convergence. A source-only contract may be implemented now but cannot invent missing native stable shape.",
+    "After actualsetup success, prioritize native static baseline/stability and v2 gel/Maxwell independent controls before a fullUV/bake/cool campaign. Reuse original runners/Store/budgets; no parallel execution system. Required14shape configurations and original cure/fullhistory criteria remain unchanged."
+  ],
+  "native_fields": "NOT_EVALUATED",
+  "numerical_convergence": "NOT_RUN",
+  "physical": "UNVERIFIED",
+  "experimental_calibration": "NOT_SUPPLIED",
+  "formal_W24": "NOT_ACCEPTED",
+  "Goal": "INCOMPLETE"
+}

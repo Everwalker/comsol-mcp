@@ -1,0 +1,3715 @@
+--- a/comsol_mcp/_control_daemon.py
++++ b/comsol_mcp/_control_daemon.py
+@@ -5351,7 +5351,12 @@
+         except OwnedServerError:
+             raise
+         except Exception as exc:
+-            raise OwnedServerError("owned Server process/listener readback failed", handle=handle, uncertain=True) from exc
++            raise OwnedServerError(
++                "owned Server process/listener readback failed", handle=handle, uncertain=True,
++                diagnostic={"stage": "session_server_launcher.verify",
++                            "exception_type": type(exc).__name__,
++                            "message": str(exc)[:512]},
++            ) from exc
+         return handle, identity
+ 
+     @staticmethod
+@@ -5857,10 +5862,13 @@
+             try:
+                 handle, identity = self._owned_server_handle(project_id, session_id, lifecycle)
+             except OwnedServerError as exc:
++                data = {"session_id": session_id, "server_handle_preserved": True,
++                        "server_stopped": False}
++                if isinstance(exc.diagnostic, Mapping):
++                    data["server_verify_diagnostic"] = dict(exc.diagnostic)
+                 return self._finish(record, self._error(
+                     "SERVER_OWNERSHIP_UNKNOWN", str(exc),
+-                    data={"session_id": session_id, "server_handle_preserved": True,
+-                          "server_stopped": False}, execution_state_unknown=True,
++                    data=data, execution_state_unknown=True,
+                 ), "UNKNOWN")
+             other_binding = self._other_session_binding_uses_owned_server(key, identity)
+             if other_binding is not False:
+--- a/comsol_mcp/_session_server.py
++++ b/comsol_mcp/_session_server.py
+@@ -35,7 +35,8 @@
+     def __init__(self, message: str, *, handle: "ManagedServerHandle | None" = None,
+                  uncertain: bool = False, diagnostic_persistence_failed: bool = False,
+                  startup_exception_type: str | None = None, startup_errno: int | None = None,
+-                 startup_winerror: int | None = None):
++                 startup_winerror: int | None = None,
++                 diagnostic: Mapping[str, Any] | None = None):
+         super().__init__(message)
+         self.handle = handle
+         self.uncertain = uncertain
+@@ -43,6 +44,7 @@
+         self.startup_exception_type = startup_exception_type
+         self.startup_errno = startup_errno
+         self.startup_winerror = startup_winerror
++        self.diagnostic = dict(diagnostic) if isinstance(diagnostic, Mapping) else None
+ 
+ 
+ def _safe_exception_type(exception: BaseException) -> str:
+--- a/comsol_mcp/data/science_recipes/SOURCE_ORIGINS.json
++++ b/comsol_mcp/data/science_recipes/SOURCE_ORIGINS.json
+@@ -11,10 +11,10 @@
+       "sha256": "63be8fa15063b914f9f37cd09cd4fe048f18c6a37c856820f44737bb4857e23e"
+     },
+     {
+-      "bytes": 157661,
++      "bytes": 158035,
+       "origin": "tools/java/W24StaticShapeFixture.java",
+       "resource": "comsol_mcp/data/science_recipes/java/W24StaticShapeFixture.java",
+-      "sha256": "b21580cd15a38f7d1306a113d67466de6f6e72a29b11f01a49c8957d88d54ce1"
++      "sha256": "516ffe216bf6389a87564c92a2a387092751a7e01e479abdb108d4bde9ad5975"
+     },
+     {
+       "origin": "tools/java/W24CureCouponFixture.java",
+--- a/comsol_mcp/data/science_recipes/java/W24StaticShapeFixture.java
++++ b/comsol_mcp/data/science_recipes/java/W24StaticShapeFixture.java
+@@ -63,7 +63,7 @@
+     private static final double THETA_WALL = Math.PI / 3.0;
+     private static final double BOUNDARY_TOL = 1e-9;
+     private static final double DOMAIN_PROBE_HALF_WIDTH = 0.5e-6;
+-    private static final int MAX_SELECTION_TRACE_EVENTS = 1024;
++    private static final int MAX_SELECTION_TRACE_EVENTS = 4096;
+ 
+     /** Private, append-only execution breadcrumbs for bounded fixture operations. */
+     private static final class SelectionTrace implements AutoCloseable {
+@@ -136,7 +136,15 @@
+                 jsonQuote(message == null ? "" : message) + "}");
+         }
+ 
++        private void requireCompleteCallRecordCapacity() {
++            if (channel != null && events > MAX_SELECTION_TRACE_EVENTS - 2) {
++                throw new IllegalStateException(
++                    "selection trace cannot start an API call without room for its completion or failure event");
++            }
++        }
++
+         <T> T call(String stage, TraceCall<T> operation) {
++            requireCompleteCallRecordCapacity();
+             record(stage, "before");
+             try {
+                 T value = operation.run();
+--- a/tests/test_run_native_w24_static_shape_setup_campaign.py
++++ b/tests/test_run_native_w24_static_shape_setup_campaign.py
+@@ -1186,12 +1186,26 @@
+         process_identity=SimpleNamespace(birth=frozen_server_identity["birth"],
+                                           start_epoch_ms=frozen_server_identity["start_epoch_ms"]),
+     )
++    session = connected["data"]
++    server_key = (project["project_id"], session["session_id"])
+     server = SimpleNamespace(
+         proc=process, _original_server_popen=process, port=2047,
++        _original_server_pid=process.pid, _server_birth_attempted=True,
++        _unknown_hold_state=None, managed_project_id=project["project_id"],
++        managed_session_id=session["session_id"],
+         managed_handle=handle, process_identity={**frozen_server_identity, "port": 2047},
+         server_postexec_identity=frozen_server_identity,
+-        launcher=SimpleNamespace(authorization_ref="w24-owned-server:test-bound-reference"),
++        launcher=SimpleNamespace(authorization_ref="w24-owned-server:test-bound-reference",
++                                 _handles={server_key: handle}),
+     )
++    daemon._session_server_handles[server_key] = handle
++    campaign._capture_hold_handles(server, daemon)
++    worker_process = worker._process
++    original_close = worker.close
++    def close_and_release_handle():
++        original_close()
++        worker._process = None
++    worker.close = close_and_release_handle
+     stop_calls = []
+     direct_dispatch = campaign._direct_dispatch
+ 
+@@ -1207,7 +1221,6 @@
+ 
+     monkeypatch.setattr(campaign, "_direct_dispatch", route)
+     monitor = Monitor()
+-    session = connected["data"]
+     try:
+         result = campaign._retire_worker_and_server(
+             daemon=daemon, server=server, monitor=monitor,
+@@ -1223,7 +1236,13 @@
+         inspect = campaign.json.loads((run_dir / "disconnected_session_inspect.json").read_text())
+         assert inspect["data"]["lifecycle"]["client_state"] == "RETIRED"
+         assert worker.disconnect_calls == worker.close_calls == 1
+-        assert worker._process.wait_calls == 1
++        assert worker._process is None and worker_process.wait_calls == 1
++        retirement = server._unknown_hold_state["retired_workers"][server_key]
++        assert retirement["worker"] is worker
++        assert retirement["process"] is not None
++        assert campaign._valid_public_worker_retirement(
++            server._unknown_hold_state, server_key, worker,
++            server._unknown_hold_state["workers"][server_key])
+         assert monitor.worker_required_live is False and monitor.stopped
+         assert len(stop_calls) == 1 and stop_calls[0]["operation"] == "session.stop"
+         assert stop_calls[0]["session_id"] == session["session_id"]
+@@ -1232,6 +1251,7 @@
+         assert daemon.store.path.is_file()
+         assert (tmp_path / "control-daemon").is_dir()
+     finally:
++        daemon._session_server_handles.pop(server_key, None)
+         daemon.close()
+ 
+ @pytest.fixture(params=['setup14', 'schema_only'])
+@@ -1693,6 +1713,10 @@
+         "start_epoch_ms": identity.start_epoch_ms,
+         "uid": os.getuid(),
+         "java": dict(java_identity),
++        "text_query_command": ["/usr/sbin/lsof", "-nP", "-a", "-p", str(process.pid),
++                               "-d", "txt", "-FnDfi"],
++        "text_query_stdout_sha256": "a" * 64,
++        "text_query_stderr_sha256": hashlib.sha256(b"").hexdigest(),
+         "listener": [{"pid": process.pid, "endpoint": "127.0.0.1:55222"}],
+     }
+ 
+@@ -1706,9 +1730,10 @@
+                         lambda pid: {"alive": True, "start_epoch_ms": probe["start_epoch_ms"]})
+     monkeypatch.setattr(campaign, "_read_process_uid", lambda pid: probe["uid"])
+     monkeypatch.setattr(campaign, "_read_text_executable_identity",
+-                        lambda pid, path: {**probe["java"], "command": ["/usr/sbin/lsof"],
+-                                           "stdout_sha256": "a" * 64,
+-                                           "stderr_sha256": hashlib.sha256(b"").hexdigest()})
++                        lambda pid, path: {**probe["java"],
++                                           "command": list(probe["text_query_command"]),
++                                           "stdout_sha256": probe["text_query_stdout_sha256"],
++                                           "stderr_sha256": probe["text_query_stderr_sha256"]})
+     monkeypatch.setattr(campaign, "_lsof_listener",
+                         lambda pid, port: {"exit_code": 0, "stderr_sha256": hashlib.sha256(b"").hexdigest(),
+                                            "rows": list(probe["listener"]), "command": ["/usr/sbin/lsof"],
+@@ -1728,6 +1753,69 @@
+     assert frozen["identity"]["birth"] != frozen["identity"]["process_snapshot_birth"]
+     campaign._validate_frozen_server_identity(
+         server.server_postexec_identity, frozen["identity"], proc=process, original_proc=process)
++
++
++def test_w24_verify_accepts_changed_java_query_hashes_and_preserves_observations(monkeypatch, tmp_path):
++    server, probe, _launcher, handle, process = _managed_server_observer_fixture(tmp_path, monkeypatch)
++    server.verify_managed_server_identity()
++    frozen = dict(server.server_postexec_identity["java_executable"])
++    probe["text_query_stdout_sha256"] = "d" * 64
++    probe["text_query_stderr_sha256"] = hashlib.sha256(b" \n").hexdigest()
++    assert probe["java"] == {key: frozen[key]
++                             for key in ("path", "device", "inode", "sha256")}
++
++    w24 = campaign.W24SetupOwnedServerLauncher.__new__(campaign.W24SetupOwnedServerLauncher)
++    w24._handles = {(server.managed_project_id, server.managed_session_id): handle}
++    w24._core = SimpleNamespace(verify=lambda _handle: handle.process_identity)
++    w24.observer = server
++    assert w24.verify(handle) is handle.process_identity
++    observation = server.verify_managed_server_identity()["identity"]["java_executable"]
++    assert observation["path"] == frozen["path"]
++    assert observation["device"] == frozen["device"]
++    assert observation["inode"] == frozen["inode"]
++    assert observation["sha256"] == frozen["sha256"]
++    assert frozen["stdout_sha256"] == "a" * 64
++    assert observation["stdout_sha256"] == "d" * 64
++    assert observation["stderr_sha256"] == hashlib.sha256(b" \n").hexdigest()
++
++
++@pytest.mark.parametrize("case", [
++    "changed_path", "changed_device", "changed_inode", "changed_content_sha256",
++    "wrong_pid_command", "extra_command_arg", "malformed_stdout_hash",
++    "malformed_stderr_hash", "extra_observation_field",
++])
++def test_w24_verify_rejects_java_identity_or_query_schema_drift(monkeypatch, tmp_path, case):
++    from comsol_mcp._session_server import OwnedServerError
++
++    server, probe, _launcher, handle, _process = _managed_server_observer_fixture(tmp_path, monkeypatch)
++    server.verify_managed_server_identity()
++    if case == "changed_path":
++        probe["java"]["path"] = "/foreign/java"
++    elif case == "changed_device":
++        probe["java"]["device"] += 1
++    elif case == "changed_inode":
++        probe["java"]["inode"] += 1
++    elif case == "changed_content_sha256":
++        probe["java"]["sha256"] = "f" * 64
++    elif case == "wrong_pid_command":
++        probe["text_query_command"][4] = str(handle.process.pid + 1)
++    elif case == "extra_command_arg":
++        probe["text_query_command"].append("--foreign")
++    elif case == "malformed_stdout_hash":
++        probe["text_query_stdout_sha256"] = "not-a-sha256"
++    elif case == "malformed_stderr_hash":
++        probe["text_query_stderr_sha256"] = "not-a-sha256"
++    elif case == "extra_observation_field":
++        probe["java"]["unexpected"] = "not-allowed"
++
++    w24 = campaign.W24SetupOwnedServerLauncher.__new__(campaign.W24SetupOwnedServerLauncher)
++    w24._handles = {(server.managed_project_id, server.managed_session_id): handle}
++    w24._core = SimpleNamespace(verify=lambda _handle: handle.process_identity)
++    w24.observer = server
++    with pytest.raises(OwnedServerError) as caught:
++        w24.verify(handle)
++    assert caught.value.diagnostic["stage"] == "w24_frozen_postexec_identity_verify"
++    assert caught.value.diagnostic["exception_type"] == "CandidateError"
+ 
+ 
+ @pytest.mark.parametrize("case", [
+@@ -1784,9 +1872,19 @@
+             core_birth=core_birth, core_start_epoch_ms=core_start_ms)
+         assert normalized == {"birth": core_birth, "start_epoch_ms": core_start_ms,
+                               "process_snapshot_birth": snapshot["birth"]}
++        java = Path(_sys.executable).resolve(strict=True)
++        java_stat = java.stat()
++        java_observation = {
++            "path": str(java), "device": int(java_stat.st_dev), "inode": int(java_stat.st_ino),
++            "sha256": campaign._sha_file(java),
++            "command": ["/usr/sbin/lsof", "-nP", "-a", "-p", str(process.pid),
++                        "-d", "txt", "-FnDfi"],
++            "stdout_sha256": "a" * 64, "stderr_sha256": hashlib.sha256(b"").hexdigest(),
++        }
+         expected = {"pid": process.pid, "birth": core_birth,
+                     "start_epoch_ms": core_start_ms,
+-                    "process_snapshot_birth": snapshot["birth"], "launch_command": list(process.args)}
++                    "process_snapshot_birth": snapshot["birth"], "launch_command": list(process.args),
++                    "java_executable": java_observation}
+         changed = {**expected, "process_snapshot_birth": snapshot["birth"] + " changed"}
+         with pytest.raises(campaign.CandidateError, match="process_snapshot_birth"):
+             campaign._validate_frozen_server_identity(
+@@ -1863,6 +1961,84 @@
+     assert state["server_key"] == key
+     assert state["complete"] is True
+     assert state["server_process"] is process
++
++
++def _publicly_retired_worker_hold_fixture(tmp_path, monkeypatch):
++    daemon, project, worker, connected = _sqlite_control_daemon_with_stub_worker(
++        tmp_path, monkeypatch)
++    from types import SimpleNamespace
++
++    server = SimpleNamespace(
++        _unknown_hold_state=None, _original_server_popen=None, _original_server_pid=None,
++        proc=None, managed_handle=None, _server_birth_attempted=False,
++        managed_project_id=None, managed_session_id=None, launcher=None,
++    )
++    initial = campaign._capture_hold_handles(server, daemon)
++    assert initial["complete"] is True
++    original_close = worker.close
++
++    def close_and_release_handle():
++        original_close()
++        worker._process = None
++
++    worker.close = close_and_release_handle
++    session_id = connected["data"]["session_id"]
++    response = daemon.dispatch({
++        "operation": "session.disconnect",
++        "arguments": {"project_id": project["project_id"], "session_id": session_id,
++                      "retire_worker": True, "idempotency_key": "hold-proof-public-retirement"},
++        "execution": {},
++    })
++    assert response["success"] is True, response
++    proof = campaign._validate_worker_retirement_response(
++        response, project_id=project["project_id"], session_id=session_id,
++        worker_instance_id=connected["data"]["worker_instance_id"],
++        connected_epoch=connected["data"]["worker_epoch"])
++    record = campaign._record_public_worker_retirement(
++        server, daemon, project_id=project["project_id"], session_id=session_id,
++        worker=worker, worker_instance_id=connected["data"]["worker_instance_id"],
++        connected_epoch=connected["data"]["worker_epoch"], proof=proof, response=response)
++    return daemon, project, worker, server, response, proof, record
++
++
++def test_unknown_hold_accepts_worker_process_clear_only_after_exact_public_retirement(
++        tmp_path, monkeypatch):
++    daemon, _project, worker, server, response, proof, record = _publicly_retired_worker_hold_fixture(
++        tmp_path, monkeypatch)
++    try:
++        assert worker._process is None
++        assert record["public_response_sha256"] == campaign._sha_bytes(
++            campaign.json.dumps(response, sort_keys=True, separators=(",", ":"),
++                                ensure_ascii=False, allow_nan=False).encode("utf-8"))
++        state = campaign._capture_hold_handles(server, daemon)
++        assert state["complete"] is True
++        assert state["graph_changed"] is False
++        assert state["retired_workers"][(response["data"]["project_id"],
++                                          response["data"]["session_id"])]["proof"] == proof
++    finally:
++        daemon.close()
++
++
++@pytest.mark.parametrize("damage", ["missing_receipt", "wrong_worker", "wrong_birth", "foreign_process"])
++def test_unknown_hold_rejects_unproven_worker_process_clear_or_replacement(
++        tmp_path, monkeypatch, damage):
++    daemon, project, worker, server, response, proof, record = _publicly_retired_worker_hold_fixture(
++        tmp_path, monkeypatch)
++    try:
++        key = (response["data"]["project_id"], response["data"]["session_id"])
++        state = server._unknown_hold_state
++        if damage == "missing_receipt":
++            state["retired_workers"].pop(key)
++        elif damage == "wrong_worker":
++            record["worker"] = object()
++        elif damage == "wrong_birth":
++            record["start_epoch_ms"] += 1
++        else:
++            worker._process = SimpleNamespace(pid=record["pid"] + 1, poll=lambda: 0)
++        result = campaign._capture_hold_handles(server, daemon)
++        assert result["complete"] is False
++    finally:
++        daemon.close()
+ 
+ 
+ def test_lost_session_start_response_resolves_exact_store_session_and_same_handle(tmp_path):
+@@ -2211,8 +2387,9 @@
+         monkeypatch.setattr(campaign, "_read_process_uid", lambda _pid: os.getuid())
+         monkeypatch.setattr(
+             campaign, "_read_text_executable_identity",
+-            lambda _pid, expected: {**campaign._canonical_executable_identity(expected),
+-                                    "command": ["/usr/sbin/lsof"],
++            lambda pid, expected: {**campaign._canonical_executable_identity(expected),
++                                    "command": ["/usr/sbin/lsof", "-nP", "-a", "-p", str(pid),
++                                                "-d", "txt", "-FnDfi"],
+                                     "stdout_sha256": "a" * 64,
+                                     "stderr_sha256": hashlib.sha256(b"").hexdigest()})
+         monkeypatch.setattr(
+@@ -2276,6 +2453,12 @@
+         session = campaign._session_identity(
+             connected, project_id=project_id, expected_port=active["port"])
+         assert session["session_id"] == server_session["session_id"]
++        # Mirror the production setup path: retain the exact live Worker/Popen
++        # identity before retirement so the holder can later prove a cleared
++        # Worker pointer only through its public disconnect receipt.
++        hold_snapshot = campaign._capture_hold_handles(server, daemon)
++        assert hold_snapshot["complete"] is True
++        assert hold_snapshot["workers"][(project_id, session["session_id"])][1] is worker_process
+         assert len(worker_runtimes) == 1
+         assert worker_runtimes[0].preferences_dir == handle.directories.preferences.resolve()
+         assert worker_runtimes[0].preferences_dir != daemon._session_runtime_configs[
+--- a/tests/test_session_server_control.py
++++ b/tests/test_session_server_control.py
+@@ -511,6 +511,70 @@
+ 
+ 
+ @pytest.mark.skipif(sys.platform not in {"darwin", "win32"}, reason="exact process/listener proof adapter is supported on Darwin and Windows")
++def test_public_session_stop_returns_bounded_server_verify_stage_diagnostic(tmp_path, monkeypatch):
++    worker_process = _sleeping_child()
++    worker = _AttachedWorker(worker_process)
++    daemon = None
++    server_process = None
++    try:
++        daemon, project_id, server_command, _xml, _hash = _make_daemon(
++            tmp_path, monkeypatch, worker=worker,
++        )
++        started = _start(daemon, project_id, key="diagnostic-stop-start")
++        assert started["success"] is True, started
++        session_id = started["data"]["session_id"]
++        endpoint = started["data"]["endpoint"]
++        server_process = server_command.processes[0]
++        connected = daemon.dispatch({
++            "operation": "session.connect",
++            "arguments": {"project_id": project_id, "session_id": session_id,
++                          "runtime_id": "fixture-runtime", "endpoint": endpoint,
++                          "idempotency_key": "diagnostic-stop-connect"},
++            "execution": {},
++        })
++        assert connected["success"] is True, connected
++        disconnected = daemon.dispatch({
++            "operation": "session.disconnect",
++            "arguments": {"project_id": project_id, "session_id": session_id,
++                          "retire_worker": True,
++                          "idempotency_key": "diagnostic-stop-disconnect"},
++            "execution": {},
++        })
++        assert disconnected["success"] is True, disconnected
++
++        expected_diagnostic = {
++            "stage": "w24_frozen_postexec_identity_verify",
++            "exception_type": "CandidateError",
++            "message": "server process identity changed before TERM: java_executable",
++        }
++
++        def fail_verify_with_stage(_handle):
++            raise OwnedServerError(
++                "W24 frozen post-exec Server identity verification failed",
++                handle=daemon._session_server_handles[(project_id, session_id)],
++                uncertain=True, diagnostic=expected_diagnostic,
++            )
++
++        monkeypatch.setattr(daemon.session_server_launcher, "verify", fail_verify_with_stage)
++        stopped = _stop(daemon, project_id, session_id, key="diagnostic-stop")
++        assert stopped["success"] is False
++        assert stopped["error"]["code"] == "SERVER_OWNERSHIP_UNKNOWN"
++        assert stopped["error"]["execution_state_unknown"] is True
++        assert stopped["data"]["server_verify_diagnostic"] == expected_diagnostic
++        assert stopped["data"]["server_stopped"] is False
++        assert daemon.store.job(stopped["execution"]["job_id"])["status"] == "UNKNOWN"
++        assert daemon._session_server_handles[(project_id, session_id)].process is server_process
++        assert server_process.poll() is None
++    finally:
++        if daemon is not None:
++            daemon.close()
++        if server_process is not None and server_process.poll() is None:
++            server_process.terminate(); server_process.wait(timeout=3)
++        if worker_process.poll() is None:
++            worker_process.terminate(); worker_process.wait(timeout=3)
++
++
++@pytest.mark.skipif(sys.platform not in {"darwin", "win32"}, reason="exact process/listener proof adapter is supported on Darwin and Windows")
+ def test_w24_connected_inspect_checker_accepts_actual_control_daemon_response(tmp_path, monkeypatch):
+     from tools import run_native_w24_static_shape_setup_campaign as campaign
+ 
+--- a/tests/test_w24_operation_store_terminal_proof.py
++++ b/tests/test_w24_operation_store_terminal_proof.py
+@@ -4,6 +4,7 @@
+ import hashlib
+ import json
+ from pathlib import Path
++import re
+ import time
+ from uuid import uuid4
+ import zipfile
+@@ -23,6 +24,7 @@
+     BudgetedSetupDaemon, CandidateError, LEGACY_STORE_TERMINAL_PROOF_OPERATIONS,
+     SampledRssMonitor, _sha_file,
+ )
++from tools.run_native_w24_static_shape_setup import CampaignError as StaticShapeCampaignError
+ 
+ 
+ class _SyntheticModel:
+@@ -314,6 +316,34 @@
+     }
+ 
+ 
++def _runner_terminal_consumer(tmp_path, wrapper, project_id: str, session_id: str):
++    """Use the production runner consumer over the real ControlDaemon proof gate."""
++    from types import SimpleNamespace
++    from tools.run_native_w24_cure_preflight import _worker_request_terminal
++    from tools.run_native_w24_static_shape_setup import StaticShapeManagedRunner
++
++    runner = StaticShapeManagedRunner.__new__(StaticShapeManagedRunner)
++    runner.daemon = wrapper
++    runner.project_id = project_id
++    runner.parent_binding = SimpleNamespace(session_id=session_id)
++    runner.setup_runner = SimpleNamespace(_worker_request_terminal=_worker_request_terminal)
++    runner.timeout_s = 10.0
++    runner.response_dir = tmp_path / "runner-managed-responses"
++    runner.response_dir.mkdir()
++    runner.rpc_journal = tmp_path / "runner-managed-actions.jsonl"
++    runner.rpc_journal.write_bytes(b"")
++    runner.native_epoch_capability = None
++    runner._worker_binding_anchor = None
++    return runner
++
++
++def _rehash_terminal_pair_proof(proof):
++    body = {key: value for key, value in proof.items() if key != "proof_sha256"}
++    return {**body, "proof_sha256": hashlib.sha256(json.dumps(
++        body, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
++        allow_nan=False).encode("utf-8")).hexdigest()}
++
++
+ def test_real_control_daemon_model_create_uses_store_terminal_pair_local_gate(tmp_path, monkeypatch):
+     daemon, wrapper, worker, project_id, session_id, _context, events_path = _new_environment(tmp_path, monkeypatch)
+     try:
+@@ -506,12 +536,16 @@
+         assert wrapper.unknown is False
+ 
+         load_key = f"w24-managed-artifact-load-{uuid4()}"
+-        loaded = wrapper.dispatch({
+-            "operation": "model.load", "arguments": {"artifact_id": artifact_id},
+-            "execution": {"project_id": project_id, "session_id": session_id,
+-                          "request_id": load_key, "idempotency_key": load_key},
+-        })
++        runner = _runner_terminal_consumer(tmp_path, wrapper, project_id, session_id)
++        loaded = runner._dispatch(
++            "model.load", {"artifact_id": artifact_id}, session_id=session_id,
++            worker_required=True, request_id=load_key, idempotency_key=load_key)
+         assert loaded["success"] is True, loaded
++        runner_event = json.loads(runner.rpc_journal.read_text().splitlines()[-1])
++        assert runner_event["event"] == "dispatch_returned"
++        assert runner_event["terminal_observed"] is True
++        assert runner_event["terminal_proof_kind"] == "operation_store_terminal_pair"
++        assert re.fullmatch(r"[0-9a-f]{64}", runner_event["terminal_proof_sha256"])
+         loaded_ref = loaded["execution"]["model_ref"]
+         assert loaded_ref["model_tag"] not in before_tags
+         assert loaded_ref["model_tag"] != tag
+@@ -541,6 +575,61 @@
+         load_raw = json.loads(load_result_path.read_text())
+         assert load_raw["response"]["data"]["artifact_id"] == artifact_id
+         assert adopted["execution"]["model_ownership"] == "user_owned"
++    finally:
++        daemon.close()
++
++
++@pytest.mark.parametrize("damage", ["operation", "job_id", "request_hash", "worker_epoch"])
++def test_runner_model_load_terminal_pair_rejects_mismatched_gate_identity(
++        tmp_path, monkeypatch, damage):
++    daemon, wrapper, worker, project_id, session_id, _context, _events_path = _new_environment(
++        tmp_path, monkeypatch, separate_registered_service=True,
++    )
++    try:
++        _tag, _adopted = _adopt_java_created_user_model(wrapper, worker, project_id, session_id)
++        model_path = Path(wrapper.workspace) / "outputs" / "static_shape_flat.mph"
++        _saved_mph_zip(model_path)
++        wrapper.slot_stage = "saved"
++        wrapper.slot_artifact = {"path": str(model_path), "sha256": _sha_file(model_path),
++                                 "size_bytes": model_path.stat().st_size}
++        registered = _register_saved_mph_through_public_route(
++            wrapper, project_id, session_id, model_path)
++        assert registered["success"] is True
++        runner = _runner_terminal_consumer(tmp_path, wrapper, project_id, session_id)
++        original_dispatch = wrapper.dispatch
++
++        def corrupt_gate_proof(request):
++            response = original_dispatch(request)
++            if request.get("operation") == "model.load":
++                request_id = request["execution"]["request_id"]
++                proof = dict(wrapper._model_load_terminal_pair_proofs[request_id])
++                identity = dict(proof["operation_identity"])
++                if damage == "operation":
++                    proof["operation"] = "model_load"
++                elif damage == "job_id":
++                    identity["job_id"] = "foreign-job"
++                    proof["operation_identity"] = identity
++                elif damage == "request_hash":
++                    identity["request_hash"] = "f" * 64
++                    proof["operation_identity"] = identity
++                else:
++                    proof["worker_epoch"] += 1
++                wrapper._model_load_terminal_pair_proofs[request_id] = _rehash_terminal_pair_proof(proof)
++            return response
++
++        wrapper.dispatch = corrupt_gate_proof
++        load_key = f"negative-terminal-proof-{damage}-{uuid4()}"
++        with pytest.raises(StaticShapeCampaignError, match="lacks an observed terminal result"):
++            runner._dispatch("model.load", {"artifact_id": registered["data"]["artifact_id"]},
++                             session_id=session_id, worker_required=True,
++                             request_id=load_key, idempotency_key=load_key)
++        assert wrapper.unknown is True
++        assert worker.request_count > 0
++        event = json.loads(runner.rpc_journal.read_text().splitlines()[-1])
++        assert event["event"] == "dispatch_returned"
++        assert event["terminal_observed"] is False
++        assert event["terminal_proof_kind"] is None
++        assert load_key not in wrapper._model_load_terminal_pair_proofs
+     finally:
+         daemon.close()
+ 
+--- /dev/null
++++ b/tests/test_w24_r16_selection_trace_overflow_regression.py
+@@ -0,0 +1,137 @@
++"""Regression controls pinned to the preserved R16 native failure output.
++
++These checks inspect copied raw JSON/JSONL and the source candidate. They do
++not replay the activity, open its SQLite database, or claim runtime success.
++"""
++
++from copy import deepcopy
++import hashlib
++import json
++from pathlib import Path
++import re
++import unittest
++
++
++ROOT = Path(__file__).resolve().parents[1]
++EVIDENCE = ROOT / "tests" / "fixtures" / "w24_r16_selection_trace_overflow"
++FIXTURE = ROOT / "tools/java/W24StaticShapeFixture.java"
++PACKAGE_FIXTURE = ROOT / "comsol_mcp/data/science_recipes/java/W24StaticShapeFixture.java"
++ORIGINS = ROOT / "comsol_mcp/data/science_recipes/SOURCE_ORIGINS.json"
++RESULT = EVIDENCE / "0ee8ceb3d1db0851721c88ba7875fbec60ad2f14c74dc24209c177867138da91_result.json"
++FLAT_TRACE = EVIDENCE / "w24_selection_stage_baseline_flat_44d781f8463847fab8946678a8ed0ae1.jsonl"
++STEP_TRACE = EVIDENCE / "w24_selection_stage_baseline_step_7d6e33f49f9d4b4f9e27106a1b004d1c.jsonl"
++
++EXPECTED_SHA256 = {
++    RESULT.name: "99840b19ff0feaa356c64533f7a8e7c19d83891d4c66b9db80746c4c875746b5",
++    FLAT_TRACE.name: "7578b1bbd341fba6448f80b0a75b204c821fc462c57218d71b2ad92babb8fad7",
++    STEP_TRACE.name: "e77dfcae800d155a23b978274b7ba58740f3e1c8be6345a91cb29466ba27df66",
++}
++ORIGINAL_FIXTURE_SHA256 = "b21580cd15a38f7d1306a113d67466de6f6e72a29b11f01a49c8957d88d54ce1"
++CAPACITY = 4096
++
++
++def load_rows(path):
++    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
++
++
++def assert_actual_failure_shape(testcase, result, rows):
++    """Reject a substitute/tampered record; preserve the historical UNKNOWN."""
++    route = result
++    response = route["response"]
++    data = response["data"]
++    worker = data["worker"]
++    failure = worker["failure"]
++    cause_chain = failure["cause_chain"]
++    testcase.assertEqual(route["operation"], "operation_call")
++    testcase.assertEqual(route["slot"], ["baseline", "step"])
++    testcase.assertEqual(response["success"], False)
++    testcase.assertEqual(response["execution_state_unknown"], True)
++    testcase.assertEqual(response["error"]["code"], "EXECUTION_STATE_UNKNOWN")
++    testcase.assertEqual(response["error"]["safe_retry"], False)
++    testcase.assertEqual(data["source_sha256"], ORIGINAL_FIXTURE_SHA256)
++    testcase.assertEqual(worker["status"], "FAILED")
++    testcase.assertEqual(failure["code"], "ENGINE_CALL_FAILED")
++    testcase.assertEqual(cause_chain[-1]["type"], "java.lang.IllegalStateException")
++    testcase.assertEqual(cause_chain[-1]["message"], "selection trace exceeded its fixed safe envelope")
++    testcase.assertEqual(len(rows), 1024)
++    testcase.assertEqual([row["sequence"] for row in rows], list(range(1, 1025)))
++    testcase.assertEqual(rows[-1]["stage"], "solver.sol1.feature.t1.i1.resolve")
++    testcase.assertEqual(rows[-1]["phase"], "before")
++
++
++class W24R16SelectionTraceOverflowTests(unittest.TestCase):
++    def setUp(self):
++        for path in (RESULT, FLAT_TRACE, STEP_TRACE):
++            self.assertTrue(path.is_file(), path)
++            self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), EXPECTED_SHA256[path.name])
++        self.result = json.loads(RESULT.read_text(encoding="utf-8"))
++        self.flat_rows = load_rows(FLAT_TRACE)
++        self.step_rows = load_rows(STEP_TRACE)
++        self.source = FIXTURE.read_text(encoding="utf-8")
++
++    def test_preserved_output_reproduces_exact_step_trace_overflow_unknown(self):
++        assert_actual_failure_shape(self, self.result, self.step_rows)
++
++    def test_flat_control_finished_below_the_old_fixed_cap(self):
++        self.assertEqual(len(self.flat_rows), 957)
++        self.assertEqual(self.flat_rows[0], {"sequence": 1, "stage": "trace.start", "phase": "start"})
++        self.assertEqual(self.flat_rows[-1]["stage"], "solver.sol1.t1.get.tstepsstore")
++        self.assertEqual(self.flat_rows[-1]["phase"], "after")
++        self.assertTrue(all(row["sequence"] == index for index, row in enumerate(self.flat_rows, 1)))
++
++    def test_candidate_capacity_covers_the_actual_prefix_and_terminal_record(self):
++        match = re.search(r"MAX_SELECTION_TRACE_EVENTS\s*=\s*(\d+)\s*;", self.source)
++        self.assertIsNotNone(match)
++        self.assertEqual(int(match.group(1)), CAPACITY)
++        # The actual R16 step output ended at 1,024. The new fixed ceiling
++        # leaves room for later calls and each call's completion/error record.
++        self.assertGreaterEqual(CAPACITY - len(self.step_rows), 2)
++
++    def test_each_traced_api_call_reserves_before_and_outcome_before_dispatch(self):
++        method_at = self.source.index("<T> T call(String stage, TraceCall<T> operation)")
++        method_end = self.source.index("private static String jsonQuote", method_at)
++        call_body = self.source[method_at:method_end]
++        reserve_at = call_body.index("requireCompleteCallRecordCapacity();")
++        before_at = call_body.index('record(stage, "before")')
++        operation_at = call_body.index("operation.run()")
++        after_at = call_body.index('record(stage, "after")')
++        failure_at = call_body.index("recordFailure(stage, failure)")
++        self.assertLess(reserve_at, before_at)
++        self.assertLess(before_at, operation_at)
++        self.assertLess(operation_at, after_at)
++        self.assertLess(operation_at, failure_at)
++        self.assertIn("events > MAX_SELECTION_TRACE_EVENTS - 2", self.source)
++
++    def test_actual_output_tampering_controls_are_rejected(self):
++        changed_worker = deepcopy(self.result)
++        changed_worker["response"]["data"]["worker"]["failure"]["cause_chain"][-1]["message"] = "different"
++        with self.assertRaises(AssertionError):
++            assert_actual_failure_shape(self, changed_worker, self.step_rows)
++
++        changed_trace = deepcopy(self.step_rows)
++        changed_trace[-1]["stage"] = "solver.other"
++        with self.assertRaises(AssertionError):
++            assert_actual_failure_shape(self, self.result, changed_trace)
++
++        missing_output = self.step_rows[:-1]
++        with self.assertRaises(AssertionError):
++            assert_actual_failure_shape(self, self.result, missing_output)
++
++    def test_private_fresh_trace_guards_and_identical_mirror_remain(self):
++        source_bytes = FIXTURE.read_bytes()
++        self.assertEqual(source_bytes, PACKAGE_FIXTURE.read_bytes())
++        self.assertIn("Files.exists(path, LinkOption.NOFOLLOW_LINKS)", self.source)
++        self.assertIn("Files.isSymbolicLink(parent)", self.source)
++        self.assertIn("StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE", self.source)
++        self.assertNotIn("StandardOpenOption.TRUNCATE_EXISTING", self.source)
++        self.assertIn('!stage.matches("[A-Za-z0-9_.-]{1,96}")', self.source)
++        self.assertIn("events >= MAX_SELECTION_TRACE_EVENTS", self.source)
++        origin = json.loads(ORIGINS.read_text(encoding="utf-8"))
++        rows = [row for row in origin["files"] if row.get("origin") == "tools/java/W24StaticShapeFixture.java"]
++        self.assertEqual(len(rows), 1)
++        self.assertEqual(rows[0]["bytes"], len(source_bytes))
++        self.assertEqual(rows[0]["sha256"], hashlib.sha256(source_bytes).hexdigest())
++
++
++if __name__ == "__main__":
++    unittest.main()
+--- a/tests/test_w24_static_shape_selection_diagnostic.py
++++ b/tests/test_w24_static_shape_selection_diagnostic.py
+@@ -11,7 +11,13 @@
+ class StaticShapeSelectionDiagnosticTests(unittest.TestCase):
+     def test_fixture_trace_is_private_fresh_append_only_and_bounded(self):
+         source = FIXTURE.read_text()
+-        self.assertIn("MAX_SELECTION_TRACE_EVENTS = 1024", source)
++        self.assertIn("MAX_SELECTION_TRACE_EVENTS = 4096", source)
++        self.assertIn("events > MAX_SELECTION_TRACE_EVENTS - 2", source)
++        call_body = source[source.index("<T> T call(String stage, TraceCall<T> operation)"):
++                           source.index("private static String jsonQuote", source.index("<T> T call(String stage, TraceCall<T> operation)"))]
++        self.assertLess(call_body.index("requireCompleteCallRecordCapacity();"),
++                        call_body.index('record(stage, "before")'))
++        self.assertLess(call_body.index('record(stage, "before")'), call_body.index("operation.run()"))
+         self.assertIn('w24_selection_stage_[A-Za-z0-9_-]{1,96}[.]jsonl', source)
+         self.assertIn("if (suppliedPath == null) return new SelectionTrace(null);", source)
+         self.assertIn("if (channel == null) return;", source)
+--- /dev/null
++++ b/tests/test_w26_r31_current175_r14_product_map_proposal.py
+@@ -0,0 +1,39 @@
++"""Finite proposal integrity checks; the active reader remains current175-r13."""
++import hashlib
++import json
++from pathlib import Path
++import unittest
++ROOT = Path(__file__).resolve().parents[1]
++LOCK = ROOT / "tools/w26_application_sources_175_r14_prepared.lock.json"
++MAP = ROOT / "tools/w26_profile_map_current_r14_proposed.json"
++R13_LOCK = ROOT / "tools/w26_application_sources_175_r13_prepared.lock.json"
++R13_SHA256 = "1dd9ba4db2264e44a6c778eff8d9d18d34709f7b954bff6252bce6cbede9b826"
++CHANGED_PACKAGE_PATHS = ("comsol_mcp/_control_daemon.py", "comsol_mcp/_session_server.py", "comsol_mcp/data/science_recipes/SOURCE_ORIGINS.json", "comsol_mcp/data/science_recipes/java/W24StaticShapeFixture.java")
++def digest(data): return hashlib.sha256(data).hexdigest()
++class Current175R14ProposalTests(unittest.TestCase):
++ def test_old_lock_unchanged_and_new_finite_member_set(self):
++  self.assertEqual(digest(R13_LOCK.read_bytes()), R13_SHA256)
++  old=json.loads(R13_LOCK.read_text()); lock=json.loads(LOCK.read_text())
++  self.assertEqual(old["profile"],"current175-r13"); self.assertEqual(lock["profile"],"current175-r14")
++  self.assertEqual((lock["member_count"],lock["package_count"],lock["root_count"]),(175,172,3))
++  self.assertEqual(set(lock["members"]),set(old["members"]))
++  changed={p for p in lock["members"] if lock["members"][p]!=old["members"][p]}
++  self.assertEqual(changed,set(CHANGED_PACKAGE_PATHS))
++  for rel in CHANGED_PACKAGE_PATHS: self.assertEqual(lock["members"][rel],digest((ROOT/rel).read_bytes()),rel)
++ def test_proposed_map_pins_new_lock_without_activating_reader(self):
++  lockbytes=LOCK.read_bytes(); lock=json.loads(lockbytes); pm=json.loads(MAP.read_text())
++  row=pm["current_profiles"]["current175-r14"]; supported=pm["supported_current_profiles"]["current175-r14"]
++  self.assertEqual(row["source_lock_name"],LOCK.name); self.assertEqual(row["source_lock_sha256"],digest(lockbytes))
++  self.assertEqual(supported["source_lock_name"],LOCK.name); self.assertEqual(supported["source_lock_sha256"],digest(lockbytes))
++  self.assertEqual(row["source_profile"],"current175-r14")
++  fp=digest(json.dumps(lock["members"],sort_keys=True,separators=(",",":"),ensure_ascii=False,allow_nan=False).encode())
++  self.assertEqual(row["member_fingerprint_sha256"],fp)
++  self.assertEqual(pm["current_profiles"]["current175-r13"]["source_lock_sha256"],R13_SHA256)
++  active=json.loads((ROOT/"tools/w26_profile_map_current.json").read_text())
++  self.assertNotIn("current175-r14",active["current_profiles"])
++ def test_r5_java_and_readback_preimages_are_not_incorporated(self):
++  expected="70a46009b84148d54f34613171d5c83ecc557306574764edad59b9bc9262a2d0"
++  for rel in ("tools/java/W24CureCouponFixture.java","comsol_mcp/data/science_recipes/java/W24CureCouponFixture.java"):
++   self.assertEqual(digest((ROOT/rel).read_bytes()),expected,rel)
++  self.assertEqual(digest((ROOT/"tools/w24_v2_setup_readback.py").read_bytes()),"4e94cd835cb6511f28f12ffd4b9bbd85983f0c1b5b1d16bf2326c7fe29504d7b")
++if __name__=="__main__": unittest.main()
+--- a/tools/java/W24StaticShapeFixture.java
++++ b/tools/java/W24StaticShapeFixture.java
+@@ -63,7 +63,7 @@
+     private static final double THETA_WALL = Math.PI / 3.0;
+     private static final double BOUNDARY_TOL = 1e-9;
+     private static final double DOMAIN_PROBE_HALF_WIDTH = 0.5e-6;
+-    private static final int MAX_SELECTION_TRACE_EVENTS = 1024;
++    private static final int MAX_SELECTION_TRACE_EVENTS = 4096;
+ 
+     /** Private, append-only execution breadcrumbs for bounded fixture operations. */
+     private static final class SelectionTrace implements AutoCloseable {
+@@ -136,7 +136,15 @@
+                 jsonQuote(message == null ? "" : message) + "}");
+         }
+ 
++        private void requireCompleteCallRecordCapacity() {
++            if (channel != null && events > MAX_SELECTION_TRACE_EVENTS - 2) {
++                throw new IllegalStateException(
++                    "selection trace cannot start an API call without room for its completion or failure event");
++            }
++        }
++
+         <T> T call(String stage, TraceCall<T> operation) {
++            requireCompleteCallRecordCapacity();
+             record(stage, "before");
+             try {
+                 T value = operation.run();
+--- a/tools/p0_owned_control_entry.py
++++ b/tools/p0_owned_control_entry.py
+@@ -34,9 +34,19 @@
+             raise ValueError("config/root changed during complete pinned read")
+     finally:os.close(fd)
+     config=json.loads(raw,object_pairs_hook=pairs,parse_constant=lambda _:(_ for _ in ()).throw(ValueError("nonfinite")))
+-    if set(config)!={"binding","source","freeze","home"}:raise ValueError("closed config required")
++    execution_mode=config.get("execution_mode","source")
++    if execution_mode=="source":
++        if set(config)!={"binding","source","freeze","home"}:raise ValueError("closed config required")
++        binding_keys={"activity_id","namespace","source_sha256","harness_sha256","entry_sha256","holder_sha256","owner_nonce"}
++    elif execution_mode=="installed-current175-r13":
++        if set(config)!={"binding","source","freeze","home","execution_mode","installed_profile",
++                "installed_profile_sha256","installed_venv","source_freeze_sha256"}:
++            raise ValueError("closed installed-mode controller config required")
++        binding_keys={"activity_id","namespace","source_sha256","harness_sha256","entry_sha256","holder_sha256",
++                "owner_nonce","execution_mode","installed_profile_sha256","source_freeze_sha256"}
++    else:raise ValueError("finite controller execution mode required")
+     binding=config["binding"]
+-    if not isinstance(binding,dict) or set(binding)!={"activity_id","namespace","source_sha256","harness_sha256","entry_sha256","holder_sha256","owner_nonce"}:raise ValueError("closed owner binding required")
++    if not isinstance(binding,dict) or set(binding)!=binding_keys:raise ValueError("closed owner binding required")
+     if any(not isinstance(v,str) or not v for v in binding.values()):raise ValueError("string owner binding required")
+     from uuid import UUID
+     if str(UUID(binding["owner_nonce"]))!=binding["owner_nonce"]:raise ValueError("canonical nonce required")
+@@ -45,7 +55,9 @@
+     tool=Path(__file__).resolve().parent
+     for name,field in (("run_v3_public_mcp_smoke.py","harness_sha256"),("p0_owned_control_entry.py","entry_sha256"),("p0_original_controller_hold.py","holder_sha256")):
+         if hashlib.sha256((tool/name).read_bytes()).hexdigest()!=binding[field]:raise ValueError("task source differs")
+-    source=Path(config["source"]).resolve(strict=True);freeze=json.loads(Path(config["freeze"]).read_text())
++    source=Path(config["source"]).resolve(strict=True);freeze_path=Path(config["freeze"])
++    if freeze_path.is_symlink() or not freeze_path.is_file():raise ValueError("regular source freeze required")
++    freeze=json.loads(freeze_path.read_text())
+     files={p.relative_to(source).as_posix() for p in (source/"comsol_mcp").rglob("*") if p.is_file() and "__pycache__" not in p.parts}
+     if files!=set(freeze["files"]):raise ValueError("production source files differ")
+     for relative,sha in freeze["files"].items():
+@@ -53,6 +65,28 @@
+         if target.is_symlink() or hashlib.sha256(target.read_bytes()).hexdigest()!=sha:raise ValueError("production source differs")
+     sha=hashlib.sha256(canonical(freeze["files"]).encode()).hexdigest()
+     if sha!=binding["source_sha256"]:raise ValueError("production identity differs")
++    if execution_mode=="installed-current175-r13":
++        profile_path=Path(config["installed_profile"])
++        profile_parent=profile_path.parent
++        profile_parent_stat=profile_parent.lstat()
++        installed_venv=Path(config["installed_venv"])
++        import science_native_once_entry as entry
++        freeze_raw,_=entry.read_file(freeze_path)
++        freeze=entry._strict_json_bytes(freeze_raw)
++        if (binding["execution_mode"]!=execution_mode or binding["installed_profile_sha256"]!=config["installed_profile_sha256"]
++                or binding["source_freeze_sha256"]!=config["source_freeze_sha256"]
++                or config["source_freeze_sha256"]!=hashlib.sha256(freeze_raw).hexdigest()
++                or not profile_path.is_absolute() or profile_path.resolve(strict=True)!=profile_path
++                or profile_parent.parent!=Path("/private/tmp") or profile_path.name!="INSTALLED_PROFILE.json"
++                or not stat.S_ISDIR(profile_parent_stat.st_mode) or profile_parent_stat.st_uid!=os.getuid()
++                or stat.S_IMODE(profile_parent_stat.st_mode)!=0o700
++                or not installed_venv.is_absolute() or installed_venv.is_symlink()
++                or installed_venv.resolve(strict=True)!=installed_venv
++                or freeze.get("source_commit")!="65ced71e9d63c56e6b6009984ae5c4185f4be3bd"):
++            raise ValueError("exact installed-mode controller source/profile binding differs")
++        if Path(entry.__file__).resolve()!=tool/"science_native_once_entry.py":raise ValueError("installed-profile reader origin differs")
++        entry.verify_installed_profile(config["installed_profile"],config["installed_profile_sha256"],source,freeze,
++            expected_venv=config["installed_venv"],source_freeze_sha256=config["source_freeze_sha256"])
+     return config
+ 
+ 
+@@ -63,9 +97,24 @@
+     done=threading.Event()
+     def listen():
+         try:
+-            from comsol_mcp import _control_daemon
+-            if Path(_control_daemon.__file__).resolve() != Path(config["source"])/"comsol_mcp/_control_daemon.py":
+-                raise RuntimeError("actual production controller import differs from pinned source")
++            if config.get("execution_mode")=="installed-current175-r13":
++                from science_native_once_entry import verify_installed_profile
++                from science_native_once_entry import read_file, _strict_json_bytes
++                freeze_raw,_=read_file(config["freeze"])
++                if hashlib.sha256(freeze_raw).hexdigest()!=config["source_freeze_sha256"]:
++                    raise RuntimeError("source freeze changed before installed controller import")
++                freeze=_strict_json_bytes(freeze_raw)
++                profile=verify_installed_profile(config["installed_profile"],config["installed_profile_sha256"],
++                    Path(config["source"]),freeze,
++                    expected_venv=config["installed_venv"],source_freeze_sha256=config["source_freeze_sha256"])
++                from comsol_mcp import _control_daemon
++                expected=Path(profile["package_root"])/"_control_daemon.py"
++                if Path(_control_daemon.__file__).resolve()!=expected:
++                    raise RuntimeError("actual control daemon is not the exact installed product member")
++            else:
++                from comsol_mcp import _control_daemon
++                if Path(_control_daemon.__file__).resolve() != Path(config["source"])/"comsol_mcp/_control_daemon.py":
++                    raise RuntimeError("actual production controller import differs from pinned source")
+             _control_daemon.serve(config["home"],_owner_observer=lambda daemon:owner.bind(daemon,guard_birth=True))
+         except BaseException as exc:owner.cause(exc);owner.diagnostic("production_listener",exc)
+         finally:done.set()
+--- a/tools/run_native_w24_static_shape_setup.py
++++ b/tools/run_native_w24_static_shape_setup.py
+@@ -516,10 +516,21 @@
+         worker_data = response.get("data", {}).get("worker") if isinstance(response.get("data"), Mapping) else None
+         terminal = (self.setup_runner._worker_request_terminal(response)
+                     if worker_required else response.get("success") is True)
++        terminal_pair_proof = None
++        if worker_required and not terminal and operation == "model.load":
++            consume_terminal_pair = getattr(
++                self.daemon, "consume_verified_model_load_terminal_pair", None)
++            if callable(consume_terminal_pair):
++                terminal_pair_proof = consume_terminal_pair(request, response)
++                terminal = isinstance(terminal_pair_proof, Mapping)
+         _append_jsonl_fsynced(self.rpc_journal, {
+             "event": "dispatch_returned", **event, "terminal_observed": bool(terminal),
+             "success": response.get("success") is True,
+             "worker_status": worker_data.get("status") if isinstance(worker_data, Mapping) else None,
++            "terminal_proof_kind": (terminal_pair_proof.get("proof_kind")
++                                    if isinstance(terminal_pair_proof, Mapping) else None),
++            "terminal_proof_sha256": (terminal_pair_proof.get("proof_sha256")
++                                      if isinstance(terminal_pair_proof, Mapping) else None),
+             "request_id": response.get("execution", {}).get("request_id")
+                           if isinstance(response.get("execution"), Mapping) else None})
+         if not terminal:
+--- a/tools/run_native_w24_static_shape_setup_campaign.py
++++ b/tools/run_native_w24_static_shape_setup_campaign.py
+@@ -1257,6 +1257,39 @@
+     return uid
+ 
+ 
++_JAVA_EXECUTABLE_OBSERVATION_KEYS = frozenset({
++    "path", "device", "inode", "sha256", "command", "stdout_sha256", "stderr_sha256",
++})
++
++
++def _validate_java_executable_observation(value: Any, *, pid: int,
++                                          label: str) -> tuple[str, int, int, str]:
++    """Validate one exact lsof observation and return only stable executable identity."""
++    if not isinstance(value, Mapping) or set(value) != _JAVA_EXECUTABLE_OBSERVATION_KEYS:
++        raise CandidateError(f"{label} Java executable observation schema is invalid")
++    path = value.get("path")
++    device = value.get("device")
++    inode = value.get("inode")
++    digest = value.get("sha256")
++    command = value.get("command")
++    if (not isinstance(path, str) or not path or "\n" in path or "\r" in path or
++            type(device) is not int or device < 0 or
++            type(inode) is not int or inode <= 0 or
++            not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest)):
++        raise CandidateError(f"{label} Java executable identity fields are malformed")
++    expected_command = ["/usr/sbin/lsof", "-nP", "-a", "-p", str(pid),
++                        "-d", "txt", "-FnDfi"]
++    if (not isinstance(command, list) or
++            any(not isinstance(token, str) for token in command) or
++            command != expected_command):
++        raise CandidateError(f"{label} Java executable query command is not the exact lsof request")
++    for key in ("stdout_sha256", "stderr_sha256"):
++        value_hash = value.get(key)
++        if not isinstance(value_hash, str) or not re.fullmatch(r"[0-9a-f]{64}", value_hash):
++            raise CandidateError(f"{label} Java executable {key} is malformed")
++    return path, device, inode, digest
++
++
+ def _validate_frozen_server_identity(expected: Mapping[str, Any],
+                                      current: Mapping[str, Any], *,
+                                      proc: Any, original_proc: Any) -> None:
+@@ -1264,9 +1297,18 @@
+         raise CandidateError("server stop does not retain the original live Popen")
+     if list(getattr(proc, "args", [])) != expected.get("launch_command"):
+         raise CandidateError("original server Popen argv changed before TERM")
++    pid = expected.get("pid")
++    if type(pid) is not int or pid <= 1:
++        raise CandidateError("frozen server PID is malformed before Java identity comparison")
++    expected_java = _validate_java_executable_observation(
++        expected.get("java_executable"), pid=pid, label="frozen")
++    current_java = _validate_java_executable_observation(
++        current.get("java_executable"), pid=pid, label="current")
++    if current_java != expected_java:
++        raise CandidateError("server Java executable path/device/inode/content changed before TERM")
+     for key in ("pid", "uid", "birth", "start_epoch_ms", "process_snapshot_birth",
+                 "post_exec_command_sha256",
+-                "launch_command_sha256", "java_executable", "post_exec_argv",
++                "launch_command_sha256", "post_exec_argv",
+                 "argv0_display", "allowed_argv0_labels", "argv0_role",
+                 "listener", "launch_command", "server_paths"):
+         if current.get(key) != expected.get(key):
+@@ -1518,12 +1560,127 @@
+         state["diagnostics"].append({"phase": phase, "type": type(exc).__name__, "error": _hold_text(exc)})
+ 
+ 
++def _record_public_worker_retirement(server: Any, daemon: Any, *,
++                                     project_id: str, session_id: str,
++                                     worker: Any, worker_instance_id: str,
++                                     connected_epoch: int, proof: Mapping[str, Any],
++                                     response: Mapping[str, Any]) -> dict[str, Any]:
++    """Bind a successful public disconnect to the exact Popen retained at birth."""
++    state = getattr(server, "_unknown_hold_state", None)
++    key = (project_id, session_id)
++    if (not isinstance(state, dict) or state.get("server") is not server or
++            state.get("daemon") is not daemon or state.get("graph_changed") is True):
++        raise CandidateError("public Worker retirement cannot bind the original holder state")
++    saved = state.get("workers", {}).get(key)
++    if not isinstance(saved, tuple) or len(saved) != 4:
++        raise CandidateError("original holder has no exact pre-retirement Worker/Popen capture")
++    saved_worker, saved_process, child_identity, saved_pid = saved
++    identity = proof.get("process_identity") if isinstance(proof, Mapping) else None
++    response_execution = response.get("execution") if isinstance(response, Mapping) else None
++    if (saved_worker is not worker or saved_process is None or
++            getattr(worker, "_process", None) not in (saved_process, None) or
++            not isinstance(child_identity, Mapping) or
++            child_identity.get("worker") is not worker or
++            child_identity.get("process") is not saved_process or
++            child_identity.get("pid") != saved_pid or
++            not isinstance(identity, Mapping) or
++            child_identity.get("start_epoch_ms") != identity.get("start_epoch_ms") or
++            type(saved_pid) is not int or saved_pid <= 1 or identity.get("pid") != saved_pid or
++            proof.get("worker_instance_id") != worker_instance_id or
++            type(proof.get("worker_epoch")) is not int or proof.get("worker_epoch") <= connected_epoch or
++            proof.get("status") != "RETIRED" or proof.get("exact_popen_handle") is not True or
++            proof.get("birth_identity_matched_before_close") is not True or
++            proof.get("child_exit_confirmed") is not True or proof.get("child_reaped") is not True or
++            proof.get("admission_fence") != "RETIRED" or
++            proof.get("disconnect_rpc_dispatched") is not True or
++            proof.get("worker_close_started") is not True or
++            response.get("success") is not True or not isinstance(response_execution, Mapping) or
++            not all(isinstance(response_execution.get(name), str) and response_execution.get(name)
++                    for name in ("operation_id", "job_id", "request_id", "idempotency_key", "request_hash"))):
++        raise CandidateError("public retirement does not bind the original Worker, Popen, birth, and route")
++    digest = _sha_bytes(json.dumps(dict(response), sort_keys=True, separators=(",", ":"),
++                                    ensure_ascii=False, allow_nan=False).encode("utf-8"))
++    record = {
++        "schema": "W24_PUBLIC_WORKER_RETIREMENT_BINDING_V1",
++        "project_id": project_id, "session_id": session_id,
++        "worker": worker, "process": saved_process,
++        "worker_instance_id": worker_instance_id,
++        "connected_epoch": connected_epoch,
++        "retired_epoch": proof["worker_epoch"],
++        "pid": saved_pid, "start_epoch_ms": identity["start_epoch_ms"],
++        "child_identity": child_identity,
++        "operation_identity": {name: response_execution[name] for name in
++                               ("operation_id", "job_id", "request_id", "idempotency_key", "request_hash")},
++        "public_response_sha256": digest,
++        "proof": dict(proof),
++    }
++    record["record_sha256"] = _json_hash({
++        "schema": record["schema"], "project_id": project_id, "session_id": session_id,
++        "worker_instance_id": worker_instance_id,
++        "connected_epoch": connected_epoch, "retired_epoch": proof["worker_epoch"],
++        "pid": saved_pid, "start_epoch_ms": identity["start_epoch_ms"],
++        "operation_identity": record["operation_identity"],
++        "public_response_sha256": digest, "proof": dict(proof),
++    })
++    state.setdefault("retired_workers", {})[key] = record
++    return record
++
++
++def _valid_public_worker_retirement(state: Mapping[str, Any], key: tuple[str, str],
++                                    worker: Any, saved: Any) -> bool:
++    if not isinstance(saved, tuple) or len(saved) != 4:
++        return False
++    saved_worker, saved_process, child_identity, saved_pid = saved
++    record = state.get("retired_workers", {}).get(key) if isinstance(state, Mapping) else None
++    if not isinstance(record, Mapping):
++        return False
++    proof = record.get("proof")
++    identity = proof.get("process_identity") if isinstance(proof, Mapping) else None
++    operation_identity = record.get("operation_identity")
++    record_sha = _json_hash({
++        "schema": record.get("schema"), "project_id": record.get("project_id"),
++        "session_id": record.get("session_id"),
++        "worker_instance_id": record.get("worker_instance_id"),
++        "connected_epoch": record.get("connected_epoch"),
++        "retired_epoch": record.get("retired_epoch"), "pid": record.get("pid"),
++        "start_epoch_ms": record.get("start_epoch_ms"),
++        "operation_identity": dict(operation_identity) if isinstance(operation_identity, Mapping) else operation_identity,
++        "public_response_sha256": record.get("public_response_sha256"),
++        "proof": dict(proof) if isinstance(proof, Mapping) else proof,
++    })
++    return (
++        record.get("schema") == "W24_PUBLIC_WORKER_RETIREMENT_BINDING_V1" and
++        record.get("project_id") == key[0] and record.get("session_id") == key[1] and
++        record.get("worker") is saved_worker is worker and record.get("process") is saved_process and
++        record.get("child_identity") is child_identity and
++        child_identity.get("worker") is worker and child_identity.get("process") is saved_process and
++        child_identity.get("pid") == saved_pid and record.get("pid") == saved_pid and
++        record.get("start_epoch_ms") == child_identity.get("start_epoch_ms") and
++        isinstance(identity, Mapping) and identity.get("pid") == saved_pid and
++        identity.get("start_epoch_ms") == child_identity.get("start_epoch_ms") and
++        record.get("worker_instance_id") == proof.get("worker_instance_id") and
++        type(record.get("retired_epoch")) is int and record.get("retired_epoch") == proof.get("worker_epoch") and
++        type(record.get("connected_epoch")) is int and record.get("retired_epoch") > record.get("connected_epoch") and
++        proof.get("status") == "RETIRED" and proof.get("exact_popen_handle") is True and
++        proof.get("birth_identity_matched_before_close") is True and
++        proof.get("child_exit_confirmed") is True and proof.get("child_reaped") is True and
++        proof.get("admission_fence") == "RETIRED" and
++        proof.get("disconnect_rpc_dispatched") is True and proof.get("worker_close_started") is True and
++        isinstance(operation_identity, Mapping) and
++        all(isinstance(operation_identity.get(name), str) and operation_identity.get(name)
++            for name in ("operation_id", "job_id", "request_id", "idempotency_key", "request_hash")) and
++        isinstance(record.get("public_response_sha256"), str) and
++        re.fullmatch(r"[0-9a-f]{64}", record["public_response_sha256"]) is not None and
++        record.get("record_sha256") == record_sha
++    )
++
++
+ def _capture_hold_handles(server: Any, daemon: Any, first_cause: BaseException | None = None) -> dict[str, Any]:
+     """Keep actual receivers before cleanup/diagnostics; never reconstruct PIDs."""
+     state = getattr(server, "_unknown_hold_state", None)
+     if state is None:
+         state = {"server": server, "daemon": daemon, "server_process": getattr(server, "_original_server_popen", None), "server_pid": getattr(server, "_original_server_pid", None),
+-                 "workers": {}, "backends": {}, "collections": {}, "diagnostics": [],
++                 "workers": {}, "retired_workers": {}, "backends": {}, "collections": {}, "diagnostics": [],
+                  "first_cause": first_cause, "complete": False, "graph_changed": False,
+                  "server_handle": getattr(server, "managed_handle", None),
+                  "server_key": ((getattr(server, "managed_project_id", None),
+@@ -1531,6 +1688,7 @@
+                                  if getattr(server, "managed_project_id", None) is not None else None),
+                  "default_backend": getattr(daemon, "_default_backend", None), "services": {}}
+         server._unknown_hold_state = state
++    state.setdefault("retired_workers", {})
+     if state["first_cause"] is None:
+         state["first_cause"] = first_cause
+     if state["server"] is not server or state["daemon"] is not daemon:
+@@ -1595,12 +1753,20 @@
+                     proof = daemon._session_worker_child_identities.get(key)
+                     if saved is None:
+                         state["workers"][key] = (worker, process, proof, getattr(process, "pid", None))
+-                    elif saved[0] is not worker or saved[1] is not process:
+-                        raise CandidateError("original registered Worker/Popen changed")
++                    elif saved[0] is not worker:
++                        raise CandidateError("original registered Worker receiver changed")
++                    elif saved[1] is not process:
++                        if not (process is None and _valid_public_worker_retirement(
++                                state, key, worker, saved)):
++                            raise CandidateError("original registered Worker/Popen changed without exact public retirement proof")
+                 complete = (not daemon._control_dispatch_inflight and not daemon._worker_admission_inflight
+                             and not daemon.running and server_owner_exact)
+-                for worker, process, proof, original_pid in state["workers"].values():
++                for key, (worker, process, proof, original_pid) in state["workers"].items():
+                     complete = complete and process is not None and isinstance(proof, Mapping) and proof.get("worker") is worker and proof.get("process") is process and proof.get("pid") == original_pid and type(proof.get("start_epoch_ms")) is int and proof["start_epoch_ms"] > 0
++                    current_process = getattr(worker, "_process", None)
++                    if current_process is not process:
++                        complete = complete and current_process is None and _valid_public_worker_retirement(
++                            state, key, worker, (worker, process, proof, original_pid))
+                 for key, backend in state["backends"].items():
+                     complete = complete and key in state["workers"]
+             finally:
+@@ -1707,8 +1873,23 @@
+                 except BaseException as exc:
+                     terminal = False
+                     _hold_diagnostic(state, "original_popen_poll", exc)
++            retired_rows = []
++            for key, record in state.get("retired_workers", {}).items():
++                if isinstance(record, Mapping):
++                    retired_rows.append({
++                        "project_id": key[0], "session_id": key[1],
++                        "worker_instance_id": record.get("worker_instance_id"),
++                        "connected_epoch": record.get("connected_epoch"),
++                        "retired_epoch": record.get("retired_epoch"),
++                        "pid": record.get("pid"),
++                        "start_epoch_ms": record.get("start_epoch_ms"),
++                        "operation_identity": dict(record.get("operation_identity", {})),
++                        "public_response_sha256": record.get("public_response_sha256"),
++                        "record_sha256": record.get("record_sha256"),
++                    })
+             receipt = {"status": "FAIL_UNKNOWN_PRESERVED_ORIGINAL_CHILDREN_TERMINAL" if terminal else "UNKNOWN_RETAINED_ORIGINAL_OWNER",
+                        "original_proof_complete": state["complete"], "children": rows,
++                       "publicly_retired_workers": retired_rows,
+                        "safe_retry": False, "signals_sent": False, "new_sdk_calls": False,
+                        "action_budget": "UNRESOLVED_WHILE_ORIGINAL_CHILDREN_LIVE_OR_PROOF_INCOMPLETE",
+                        "first_cause": None if state["first_cause"] is None else _hold_text(state["first_cause"]),
+@@ -2327,8 +2508,28 @@
+         exact = [(key, value) for key, value in self._handles.items() if value is handle]
+         if len(exact) != 1 or self.observer.managed_handle is not handle:
+             raise OwnedServerError("W24 verify requires the exact original ManagedServerHandle", handle=handle, uncertain=True)
+-        identity = self._core.verify(handle)
+-        self.observer.verify_managed_server_identity()
++        try:
++            identity = self._core.verify(handle)
++        except Exception as exc:
++            raise OwnedServerError(
++                "W24 Core Server process/listener verification failed",
++                handle=handle, uncertain=True,
++                diagnostic={"stage": "core_process_birth_or_listener_verify",
++                            "exception_type": type(exc).__name__,
++                            "message": str(exc)[:512],
++                            "cause_diagnostic": dict(exc.diagnostic)
++                            if isinstance(getattr(exc, "diagnostic", None), Mapping) else None},
++            ) from exc
++        try:
++            self.observer.verify_managed_server_identity()
++        except Exception as exc:
++            raise OwnedServerError(
++                "W24 frozen post-exec Server identity verification failed",
++                handle=handle, uncertain=True,
++                diagnostic={"stage": "w24_frozen_postexec_identity_verify",
++                            "exception_type": type(exc).__name__,
++                            "message": str(exc)[:512]},
++            ) from exc
+         return identity
+ 
+     def stop(self, handle: Any, *, timeout_s: float = 30.0) -> dict[str, Any]:
+@@ -2771,6 +2972,10 @@
+         self.schema_probe_only = schema_probe_only
+         self.schema_probe_completed = False
+         self.schema_probe_result: dict[str, Any] | None = None
++        # A model.load proof is produced only after the real ControlDaemon and
++        # OperationStore pair have been checked. Keep that exact proof in
++        # memory for the enclosing runner; never mutate the public response.
++        self._model_load_terminal_pair_proofs: dict[str, dict[str, Any]] = {}
+ 
+     @property
+     def store(self) -> Any:
+@@ -2792,6 +2997,96 @@
+         self.slot_artifact = None
+         self.slot_adopt_binding = None
+         self.slot_load_binding = None
++
++    def consume_verified_model_load_terminal_pair(
++        self, request: Mapping[str, Any], response: Mapping[str, Any],
++    ) -> dict[str, Any] | None:
++        """Consume a one-shot, gate-produced proof for the exact model.load."""
++        execution = request.get("execution") if isinstance(request, Mapping) else None
++        request_id = execution.get("request_id") if isinstance(execution, Mapping) else None
++        if not isinstance(request_id, str) or not request_id:
++            return None
++        proof = self._model_load_terminal_pair_proofs.pop(request_id, None)
++        if proof is None:
++            return None
++        try:
++            context = self._terminal_proof_context_snapshot(execution)
++            proof_body = {key: value for key, value in proof.items() if key != "proof_sha256"}
++            proof_hash = hashlib.sha256(json.dumps(
++                proof_body, sort_keys=True, separators=(",", ":"),
++                ensure_ascii=False, allow_nan=False,
++            ).encode("utf-8")).hexdigest()
++            response_hash = hashlib.sha256(json.dumps(
++                dict(response), sort_keys=True, separators=(",", ":"),
++                ensure_ascii=False, allow_nan=False,
++            ).encode("utf-8")).hexdigest()
++            response_execution = response.get("execution")
++            identity = proof.get("operation_identity")
++            pairs = proof.get("worker_request_pairs")
++            endpoint = proof.get("endpoint")
++            proof_valid = (
++                proof.get("schema") == "W24_OPERATION_STORE_TERMINAL_PAIR_PROOF_V1"
++                and proof.get("proof_kind") == "operation_store_terminal_pair"
++                and proof.get("operation") == "model.load"
++                and proof.get("proof_sha256") == proof_hash
++                and proof.get("raw_public_response_sha256") == response_hash
++                and request.get("operation") == "model.load"
++                and response.get("success") is True
++                and response.get("error") in (None, {})
++                and response.get("execution_state_unknown") is not True
++                and isinstance(response.get("data"), Mapping)
++                and "worker" not in response["data"]
++                and isinstance(response_execution, Mapping)
++                and isinstance(identity, Mapping)
++                and isinstance(pairs, list) and bool(pairs)
++                and proof.get("worker_request_pair_count") == len(pairs)
++                and type(proof.get("worker_epoch")) is int
++                and proof.get("worker_epoch") > 0
++                and isinstance(proof.get("worker_instance_id"), str)
++                and bool(proof.get("worker_instance_id"))
++                and isinstance(proof.get("server_instance_id"), str)
++                and bool(proof.get("server_instance_id"))
++                and isinstance(endpoint, Mapping)
++                and endpoint.get("host") == "127.0.0.1"
++                and type(endpoint.get("port")) is int
++                and 0 < endpoint["port"] <= 65535
++                and endpoint.get("host") == context.get("endpoint_host")
++                and endpoint.get("port") == context.get("endpoint_port")
++                and isinstance(execution.get("project_id"), str)
++                and isinstance(execution.get("session_id"), str)
++                and proof.get("project_id") == execution.get("project_id")
++                and proof.get("session_id") == execution.get("session_id")
++                and proof.get("worker_epoch") == context.get("worker_epoch")
++                and proof.get("worker_instance_id") == context.get("worker_instance_id")
++                and proof.get("server_instance_id") == context.get("server_instance_id")
++                and response_execution.get("project_id") == execution.get("project_id")
++                and response_execution.get("session_id") == execution.get("session_id")
++                and response_execution.get("request_id") == request_id
++                and response_execution.get("idempotency_key") == execution.get("idempotency_key")
++                and response_execution.get("operation_id") == identity.get("operation_id")
++                and response_execution.get("job_id") == identity.get("job_id")
++                and response_execution.get("request_hash") == identity.get("request_hash")
++                and identity.get("request_id") == request_id
++                and identity.get("idempotency_key") == execution.get("idempotency_key")
++                and all(isinstance(identity.get(field), str) and identity.get(field)
++                        for field in ("operation_id", "job_id", "request_id",
++                                      "idempotency_key", "request_hash"))
++                and all(isinstance(row, Mapping)
++                        and isinstance(row.get("request_id"), str) and row.get("request_id")
++                        and isinstance(row.get("kind"), str) and row.get("kind")
++                        and isinstance(row.get("request_hash"), str)
++                        and re.fullmatch(r"[0-9a-f]{64}", row.get("request_hash")) is not None
++                        and type(row.get("submitted_event_id")) is int
++                        and type(row.get("observed_event_id")) is int
++                        and row.get("submitted_event_id") < row.get("observed_event_id")
++                        for row in pairs)
++            )
++        except Exception:
++            proof_valid = False
++        if not proof_valid:
++            self.unknown = True
++            return None
++        return dict(proof)
+ 
+     def clear_slot(self) -> None:
+         if self.slot is not None and self.slot_stage == "readback_complete":
+@@ -4028,6 +4323,13 @@
+                 self.slot_stage = "saved"
+             elif action == "readback" and self.slot_stage == "reopened_inspected":
+                 self.slot_stage = "readback_complete"
++        if operation == "model.load" and isinstance(terminal_pair_proof, Mapping):
++            proof_request_id = execution.get("request_id") if isinstance(execution, Mapping) else None
++            if (not isinstance(proof_request_id, str) or not proof_request_id or
++                    proof_request_id in self._model_load_terminal_pair_proofs):
++                self.unknown = True
++                raise CandidateError("model.load terminal proof is missing its unique exact request identity")
++            self._model_load_terminal_pair_proofs[proof_request_id] = dict(terminal_pair_proof)
+         return response
+ 
+ 
+@@ -4772,6 +5074,10 @@
+     _write_new(run_dir / "pre_retirement_ledger.json", ledger)
+     if ledger.get("safe_to_retire") is not True:
+         raise CandidateError("durable job/Worker-request ledger is not fully terminal; preserve the exact Worker")
++    worker_key = (project_id, str(session["session_id"]))
++    retirement_worker = daemon._session_worker_handles.get(worker_key)
++    if retirement_worker is None:
++        raise CandidateError("public Worker retirement lacks the exact currently registered Worker handle")
+     remaining = deadline_monotonic - time.monotonic()
+     if remaining <= 1.0:
+         raise CandidateError("wall-clock budget is exhausted before exact cleanup")
+@@ -4787,6 +5093,10 @@
+         response, project_id=project_id, session_id=str(session["session_id"]),
+         worker_instance_id=str(session["worker_instance_id"]),
+         connected_epoch=int(session["worker_epoch"]))
++    _record_public_worker_retirement(
++        server, daemon, project_id=project_id, session_id=str(session["session_id"]),
++        worker=retirement_worker, worker_instance_id=str(session["worker_instance_id"]),
++        connected_epoch=int(session["worker_epoch"]), proof=proof, response=response)
+     _write_new(run_dir / "worker_retirement_proof.json", proof)
+     inspect = _direct_dispatch(
+         daemon, run_dir, operation="session.inspect",
+--- a/tools/run_v3_public_mcp_smoke.py
++++ b/tools/run_v3_public_mcp_smoke.py
+@@ -109,7 +109,7 @@
+     return body
+ 
+ 
+-def source_identity(source: Path, freeze: dict) -> dict:
++def source_identity(source: Path, freeze: dict, *, require_commit=False) -> dict:
+     paths = {p.relative_to(source).as_posix() for p in (source / "comsol_mcp").rglob("*")
+              if p.is_file() and "__pycache__" not in p.parts}
+     if paths != set(freeze["files"]):
+@@ -117,18 +117,22 @@
+     for rel, expected in freeze["files"].items():
+         if (source / rel).is_symlink() or digest(source / rel) != expected:
+             raise RuntimeError("production source snapshot differs: " + rel)
+-    return {"source_commit": freeze["source_commit"], "source_scope": freeze.get("scope"),
++    commit = freeze.get("source_commit")
++    if require_commit and commit != "65ced71e9d63c56e6b6009984ae5c4185f4be3bd":
++        raise RuntimeError("installed mode requires the exact reviewed source commit")
++    if commit is not None and (not isinstance(commit,str) or len(commit)!=40 or any(c not in "0123456789abcdef" for c in commit)):
++        raise RuntimeError("source freeze commit is malformed")
++    return {"source_commit": commit, "source_scope": freeze.get("scope"),
+             "uncommitted_source_delta": freeze.get("uncommitted_source_delta", []), "files": len(paths),
+             "sha256": hashlib.sha256(json.dumps(freeze["files"], sort_keys=True,
+                                                  separators=(",", ":")).encode()).hexdigest()}
+ 
+ 
+ async def run(args) -> int:
+-    from mcp import ClientSession, StdioServerParameters
+-    from mcp.client.stdio import stdio_client
+-    import psutil
+-
+     science = bool(getattr(args, "science_recipes", False))
++    execution_mode = getattr(args,"execution_mode","source")
++    if execution_mode not in {"source","installed-current175-r13"}:
++        raise RuntimeError("finite execution mode required")
+     cost = bool(getattr(args, "checkpoint_cost_cycle", False))
+     thermal = bool(getattr(args, "thermal_benchmark", False))
+     if thermal and any((science,cost,args.package_cycle,args.parameter_io,args.parameter_csv,args.runtime_observation)):
+@@ -142,7 +146,24 @@
+ 
+     source = args.source.resolve(strict=True)
+     freeze = json.loads(args.freeze.read_text(encoding="utf-8"))
+-    before = source_identity(source, freeze)
++    before = source_identity(source, freeze,require_commit=execution_mode=="installed-current175-r13")
++    installed_profile = None
++    if execution_mode=="installed-current175-r13":
++        if not args.installed_profile or not args.installed_profile_sha256 or not args.installed_venv or not args.source_freeze_sha256:
++            raise RuntimeError("installed mode requires bound profile, freeze SHA and venv")
++        import science_native_once_entry as source_entry
++        if Path(source_entry.__file__).resolve()!=Path(__file__).resolve().with_name("science_native_once_entry.py"):
++            raise RuntimeError("installed-profile validator origin differs")
++        freeze_raw,_=source_entry.read_file(args.freeze)
++        if hashlib.sha256(freeze_raw).hexdigest()!=args.source_freeze_sha256:
++            raise RuntimeError("installed mode source freeze bytes differ")
++        freeze=source_entry._strict_json_bytes(freeze_raw)
++        before=source_identity(source,freeze,require_commit=True)
++        installed_profile=source_entry.verify_installed_profile(args.installed_profile,args.installed_profile_sha256,
++            source,freeze,expected_venv=args.installed_venv,source_freeze_sha256=args.source_freeze_sha256)
++    from mcp import ClientSession, StdioServerParameters
++    from mcp.client.stdio import stdio_client
++    import psutil
+     science_module = science_plan = None
+     if science:
+         import science_recipe_cycle as science_module
+@@ -184,7 +205,13 @@
+                           "public_calls": public_call_budget, "servers": 1, "workers": 1,
+                           "explicit_study_or_solver_calls": 2 if thermal else 0, "gui_calls": 0},
+                "science_acceptance": "NOT_RUN", "release_acceptance": "NOT_RUN",
++               "execution_mode":execution_mode,
+                "original_unknown_replay": False}
++    if installed_profile is not None:
++        summary["installed_package_profile"]={"profile":installed_profile["profile"],
++            "venv_root":installed_profile["venv_root"],"profile_sha256":args.installed_profile_sha256,
++            "package_files":len(installed_profile["package_files"]),
++            "distributions":len(installed_profile["distributions"])}
+     harness_hash = digest(Path(__file__).resolve())
+     summary["harness_sha256"] = harness_hash
+     summary["optional_modes"] = {"csv": args.parameter_csv, "runtime_observation": args.runtime_observation,
+@@ -220,12 +247,15 @@
+         summary.update(status="BLOCKED", reason="existing native processes need ownership inspection")
+         write(summary_path, summary)
+         return 2
+-    env = {k: v for k, v in os.environ.items() if not k.startswith("COMSOL_")}
++    env = {k: v for k, v in os.environ.items()
++           if not k.startswith("COMSOL_") and k not in {"PYTHONPATH","PYTHONHOME"}}
+     env.update(COMSOL_ROOT=str(install), COMSOL_JAVA_HOME=str(args.java_home.resolve(strict=True)),
+                COMSOL_SERVER_MCP_HOME=str(home), COMSOL_PROJECT_ROOT=str(project_root),
+                COMSOL_MCP_HOST_CONTROL="1", COMSOL_MCP_TOOL_PROFILE="full",
+                COMSOL_MCP_ISOLATION_RECEIPT=str(root / "isolation.json"),
+-               PYTHONPATH=str(source), PYTHONDONTWRITEBYTECODE="1", TMPDIR=str(root))
++               PYTHONDONTWRITEBYTECODE="1", TMPDIR=str(root))
++    if execution_mode=="source":
++        env["PYTHONPATH"]=str(source)
+     if args.runtime_observation or args.package_cycle or science or cost or thermal:
+         env["COMSOL_MCP_TRUSTED_CODE"] = "1"
+     owner_entry = Path(__file__).resolve().parent / "p0_owned_control_entry.py"
+@@ -233,16 +263,25 @@
+     owner_binding = {"activity_id": root.name, "namespace": str(root), "source_sha256": before["sha256"],
+         "harness_sha256": harness_hash, "entry_sha256": digest(owner_entry),
+         "holder_sha256": digest(owner_helper), "owner_nonce": str(uuid4())}
++    if installed_profile is not None:
++        owner_binding.update(execution_mode=execution_mode,installed_profile_sha256=args.installed_profile_sha256,
++                             source_freeze_sha256=args.source_freeze_sha256)
+     owner_config = root / "P0_OWNER_CONFIG.json"
+     with owner_config.open("x", encoding="utf-8") as handle:
+         os.chmod(owner_config, 0o600)
+-        json.dump({"binding": owner_binding, "source": str(source), "freeze": str(args.freeze.resolve()),
+-                   "home": str(home / "control-private")}, handle, allow_nan=False)
+-    command = [sys.executable, str(owner_entry), "--config", str(owner_config)]
++        owner_config_value={"binding": owner_binding, "source": str(source), "freeze": str(args.freeze.resolve()),
++                   "home": str(home / "control-private")}
++        if installed_profile is not None:
++            owner_config_value.update(execution_mode=execution_mode,installed_profile=str(args.installed_profile),
++                installed_profile_sha256=args.installed_profile_sha256,installed_venv=str(args.installed_venv),
++                source_freeze_sha256=args.source_freeze_sha256)
++        json.dump(owner_config_value, handle, allow_nan=False)
++    command = ([sys.executable,"-I","-B",str(owner_entry), "--config", str(owner_config)]
++               if installed_profile is not None else [sys.executable, str(owner_entry), "--config", str(owner_config)])
+     summary["controller_exact_argv"] = command
+     summary["owner_binding"] = owner_binding
+     log = (evidence / "control.stdout.log").open("ab", buffering=0)
+-    controller = subprocess.Popen(command, cwd=source, env=env, stdin=subprocess.DEVNULL,
++    controller = subprocess.Popen(command, cwd=(home/"control-private" if installed_profile is not None else source), env=env, stdin=subprocess.DEVNULL,
+                                   stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+     # Popen is retained before diagnostic observations can fail.
+     summary["controller"] = {"pid": controller.pid, "original_popen_retained": True}
+@@ -280,7 +319,9 @@
+             raise RuntimeError("control endpoint differs from original daemon Popen")
+         transport_log = (evidence / "mcp.stderr.log").open("w", encoding="utf-8")
+         parameters = StdioServerParameters(command=sys.executable,
+-                    args=["-m", "comsol_mcp.mcp_server"], cwd=str(source), env=env)
++                    args=(["-I","-B","-m","comsol_mcp.mcp_server"] if installed_profile is not None
++                          else ["-m", "comsol_mcp.mcp_server"]),
++                    cwd=str(home/"control-private" if installed_profile is not None else source), env=env)
+         async with stdio_client(parameters, errlog=transport_log) as (read, output):
+             async with ClientSession(read, output, read_timeout_seconds=timedelta(seconds=science_plan["budget"]["transport_read_timeout_seconds"] if science else 80)) as client:
+                 await client.initialize()
+@@ -610,7 +651,7 @@
+         log.close()
+         print(json.dumps({"status": summary["status"], "evidence": str(summary_path),
+                           "calls": len(summary["calls"]), "cleanup": stopped,
+-                          "source_commit": freeze["source_commit"]}, sort_keys=True), flush=True)
++                          "source_commit": freeze.get("source_commit")}, sort_keys=True), flush=True)
+     return 0 if summary["status"] in {"PASS_PUBLIC_BUILD_READ_SAVE", "PASS_PUBLIC_RECIPE_UNSOLVED_BUILD_READ_SAVE"} else 1
+ 
+ 
+@@ -631,6 +672,11 @@
+     parser.add_argument("--science-recipes", action="store_true", help="fixed separately approved zero-solve domain recipe mode")
+     parser.add_argument("--science-plan", type=Path, help="owner-private source/input/literal plan prepared by fixed science_recipe_cycle")
+     parser.add_argument("--science-plan-sha256", default="")
++    parser.add_argument("--execution-mode",choices=["source","installed-current175-r13"],default="source")
++    parser.add_argument("--installed-profile",type=Path)
++    parser.add_argument("--installed-profile-sha256",default="")
++    parser.add_argument("--installed-venv",type=Path)
++    parser.add_argument("--source-freeze-sha256",default="")
+     return asyncio.run(run(parser.parse_args()))
+ 
+ 
+--- /dev/null
++++ b/tools/science76_installed_profile_spec_r14.json
+@@ -0,0 +1,534 @@
++{
++  "application_main_acceptance_sha256": "72cf7b19bcae21234b36de610da828ba9a420c4bd213720d9e8acb51301cd5ee",
++  "application_result_sha256": "4e19b22aafabf18f8680a39d06806efc8e62cee1b3d6db1b5c44a133bafeb7d99",
++  "application_wheel_sha256": "657af7fe8cd34139f5427cf40f43b5a0e56e4930f01176b2179ef8169d0f160b",
++  "base_prefix": "/private/tmp/cvw26-runtime-r16-bbf9c681/install/cpython",
++  "base_python": "/private/tmp/cvw26-runtime-r16-bbf9c681/install/cpython/bin/python3.12",
++  "ensurepip_version": "25.0.1",
++  "expected_distribution_count": 43,
++  "expected_distributions": [
++    {
++      "name": "annotated-types",
++      "version": "0.8.0"
++    },
++    {
++      "name": "anyio",
++      "version": "4.15.1"
++    },
++    {
++      "name": "attrs",
++      "version": "26.1.0"
++    },
++    {
++      "name": "certifi",
++      "version": "2026.7.22"
++    },
++    {
++      "name": "cffi",
++      "version": "2.1.1"
++    },
++    {
++      "name": "click",
++      "version": "8.5.0"
++    },
++    {
++      "name": "comsol-mcp",
++      "version": "0.1.10"
++    },
++    {
++      "name": "cryptography",
++      "version": "50.0.1"
++    },
++    {
++      "name": "h11",
++      "version": "0.16.0"
++    },
++    {
++      "name": "httpcore",
++      "version": "1.0.9"
++    },
++    {
++      "name": "httpx",
++      "version": "0.28.1"
++    },
++    {
++      "name": "httpx-sse",
++      "version": "0.4.3"
++    },
++    {
++      "name": "idna",
++      "version": "3.20"
++    },
++    {
++      "name": "jpype1",
++      "version": "1.7.1"
++    },
++    {
++      "name": "jsonschema",
++      "version": "4.26.0"
++    },
++    {
++      "name": "jsonschema-specifications",
++      "version": "2025.9.1"
++    },
++    {
++      "name": "mcp",
++      "version": "1.30.0"
++    },
++    {
++      "name": "mph",
++      "version": "1.4.0"
++    },
++    {
++      "name": "numpy",
++      "version": "2.5.3"
++    },
++    {
++      "name": "packaging",
++      "version": "26.3"
++    },
++    {
++      "name": "pip",
++      "version": "25.0.1"
++    },
++    {
++      "name": "psutil",
++      "version": "5.9.8"
++    },
++    {
++      "name": "pycparser",
++      "version": "3.0"
++    },
++    {
++      "name": "pydantic",
++      "version": "2.13.5"
++    },
++    {
++      "name": "pydantic-core",
++      "version": "2.46.5"
++    },
++    {
++      "name": "pydantic-settings",
++      "version": "2.15.0"
++    },
++    {
++      "name": "pyjwt",
++      "version": "2.15.0"
++    },
++    {
++      "name": "pyobjc-core",
++      "version": "12.2.2"
++    },
++    {
++      "name": "pyobjc-framework-applicationservices",
++      "version": "12.2.2"
++    },
++    {
++      "name": "pyobjc-framework-cocoa",
++      "version": "12.2.2"
++    },
++    {
++      "name": "pyobjc-framework-coremedia",
++      "version": "12.2.2"
++    },
++    {
++      "name": "pyobjc-framework-coretext",
++      "version": "12.2.2"
++    },
++    {
++      "name": "pyobjc-framework-quartz",
++      "version": "12.2.2"
++    },
++    {
++      "name": "pyobjc-framework-screencapturekit",
++      "version": "12.2.2"
++    },
++    {
++      "name": "python-dotenv",
++      "version": "1.2.3"
++    },
++    {
++      "name": "python-multipart",
++      "version": "0.0.32"
++    },
++    {
++      "name": "referencing",
++      "version": "0.37.0"
++    },
++    {
++      "name": "rpds-py",
++      "version": "2026.6.3"
++    },
++    {
++      "name": "sse-starlette",
++      "version": "3.4.11"
++    },
++    {
++      "name": "starlette",
++      "version": "1.7.0"
++    },
++    {
++      "name": "typing-extensions",
++      "version": "4.16.0"
++    },
++    {
++      "name": "typing-inspection",
++      "version": "0.4.4"
++    },
++    {
++      "name": "uvicorn",
++      "version": "0.53.0"
++    }
++  ],
++  "offline_bundle_sha256": "574de38b3d0d256d0d788a4a9bed7d166bc9897a0b055767095c2f5d4e9b804b",
++  "offline_wheels": [
++    {
++      "name": "annotated-types",
++      "normalized_name": "annotated-types",
++      "version": "0.8.0",
++      "wheel_bytes": 13427,
++      "wheel_name": "annotated_types-0.8.0-py3-none-any.whl",
++      "wheel_sha256": "f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0"
++    },
++    {
++      "name": "anyio",
++      "normalized_name": "anyio",
++      "version": "4.15.1",
++      "wheel_bytes": 132079,
++      "wheel_name": "anyio-4.15.1-py3-none-any.whl",
++      "wheel_sha256": "6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101"
++    },
++    {
++      "name": "attrs",
++      "normalized_name": "attrs",
++      "version": "26.1.0",
++      "wheel_bytes": 67548,
++      "wheel_name": "attrs-26.1.0-py3-none-any.whl",
++      "wheel_sha256": "c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309"
++    },
++    {
++      "name": "certifi",
++      "normalized_name": "certifi",
++      "version": "2026.7.22",
++      "wheel_bytes": 136983,
++      "wheel_name": "certifi-2026.7.22-py3-none-any.whl",
++      "wheel_sha256": "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775"
++    },
++    {
++      "name": "cffi",
++      "normalized_name": "cffi",
++      "version": "2.1.1",
++      "wheel_bytes": 184719,
++      "wheel_name": "cffi-2.1.1-cp312-cp312-macosx_11_0_arm64.whl",
++      "wheel_sha256": "f81b3b8f3d4e343550fa4baa0e479bba9f2d29ce9c2e9b51d1ce1718d7442fcf"
++    },
++    {
++      "name": "click",
++      "normalized_name": "click",
++      "version": "8.5.0",
++      "wheel_bytes": 125251,
++      "wheel_name": "click-8.5.0-py3-none-any.whl",
++      "wheel_sha256": "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360"
++    },
++    {
++      "name": "comsol-mcp",
++      "normalized_name": "comsol-mcp",
++      "version": "0.1.10",
++      "wheel_bytes": 2866224,
++      "wheel_name": "comsol_mcp-0.1.10-py3-none-any.whl",
++      "wheel_sha256": "657af7fe8cd34139f5427cf40f43b5a0e56e4930f01176b2179ef8169d0f160b"
++    },
++    {
++      "name": "cryptography",
++      "normalized_name": "cryptography",
++      "version": "50.0.1",
++      "wheel_bytes": 4035307,
++      "wheel_name": "cryptography-50.0.1-cp39-abi3-macosx_11_0_arm64.whl",
++      "wheel_sha256": "ca83d00d9e69cd5eb63f2e69c3a5a59e0cecae5ae14c6ae0b35830fe3b37bad0"
++    },
++    {
++      "name": "h11",
++      "normalized_name": "h11",
++      "version": "0.16.0",
++      "wheel_bytes": 37515,
++      "wheel_name": "h11-0.16.0-py3-none-any.whl",
++      "wheel_sha256": "63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86"
++    },
++    {
++      "name": "httpcore",
++      "normalized_name": "httpcore",
++      "version": "1.0.9",
++      "wheel_bytes": 78784,
++      "wheel_name": "httpcore-1.0.9-py3-none-any.whl",
++      "wheel_sha256": "2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55"
++    },
++    {
++      "name": "httpx",
++      "normalized_name": "httpx",
++      "version": "0.28.1",
++      "wheel_bytes": 73517,
++      "wheel_name": "httpx-0.28.1-py3-none-any.whl",
++      "wheel_sha256": "d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad"
++    },
++    {
++      "name": "httpx-sse",
++      "normalized_name": "httpx-sse",
++      "version": "0.4.3",
++      "wheel_bytes": 8960,
++      "wheel_name": "httpx_sse-0.4.3-py3-none-any.whl",
++      "wheel_sha256": "0ac1c9fe3c0afad2e0ebb25a934a59f4c7823b60792691f779fad2c5568830fc"
++    },
++    {
++      "name": "idna",
++      "normalized_name": "idna",
++      "version": "3.20",
++      "wheel_bytes": 69583,
++      "wheel_name": "idna-3.20-py3-none-any.whl",
++      "wheel_sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c"
++    },
++    {
++      "name": "jpype1",
++      "normalized_name": "jpype1",
++      "version": "1.7.1",
++      "wheel_bytes": 569654,
++      "wheel_name": "jpype1-1.7.1-1-cp312-cp312-macosx_11_0_universal2.whl",
++      "wheel_sha256": "b3ddd9f9099202212a34679dfb95dda590bcfbd23289559d104e24abec9120d1"
++    },
++    {
++      "name": "jsonschema",
++      "normalized_name": "jsonschema",
++      "version": "4.26.0",
++      "wheel_bytes": 90630,
++      "wheel_name": "jsonschema-4.26.0-py3-none-any.whl",
++      "wheel_sha256": "d489f15263b8d200f8387e64b4c3a75f06629559fb73deb8fdfb525f2dab50ce"
++    },
++    {
++      "name": "jsonschema-specifications",
++      "normalized_name": "jsonschema-specifications",
++      "version": "2025.9.1",
++      "wheel_bytes": 18437,
++      "wheel_name": "jsonschema_specifications-2025.9.1-py3-none-any.whl",
++      "wheel_sha256": "98802fee3a11ee76ecaca44429fda8a41bff98b00a0f2838151b113f210cc6fe"
++    },
++    {
++      "name": "mcp",
++      "normalized_name": "mcp",
++      "version": "1.30.0",
++      "wheel_bytes": 234581,
++      "wheel_name": "mcp-1.30.0-py3-none-any.whl",
++      "wheel_sha256": "666edb5009503e1047c9d60346a756f94b261f05cc2625f23d41c728ffc484d0"
++    },
++    {
++      "name": "mph",
++      "normalized_name": "mph",
++      "version": "1.4.0",
++      "wheel_bytes": 65897,
++      "wheel_name": "mph-1.4.0-py3-none-any.whl",
++      "wheel_sha256": "835835ac9d211601def50a6f8c61b783531e905d7165c8de7bf8a378a040c385"
++    },
++    {
++      "name": "numpy",
++      "normalized_name": "numpy",
++      "version": "2.5.3",
++      "wheel_bytes": 12009327,
++      "wheel_name": "numpy-2.5.3-cp312-cp312-macosx_11_0_arm64.whl",
++      "wheel_sha256": "f59a878c33d6b88122d80d239bb3b845d58708750b0cb06a09aebb9b18ec696c"
++    },
++    {
++      "name": "packaging",
++      "normalized_name": "packaging",
++      "version": "26.3",
++      "wheel_bytes": 129956,
++      "wheel_name": "packaging-26.3-py3-none-any.whl",
++      "wheel_sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c"
++    },
++    {
++      "name": "psutil",
++      "normalized_name": "psutil",
++      "version": "5.9.8",
++      "wheel_bytes": 249898,
++      "wheel_name": "psutil-5.9.8-cp38-abi3-macosx_11_0_arm64.whl",
++      "wheel_sha256": "d16bbddf0693323b8c6123dd804100241da461e41d6e332fb0ba6058f630f8c8"
++    },
++    {
++      "name": "pycparser",
++      "normalized_name": "pycparser",
++      "version": "3.0",
++      "wheel_bytes": 48172,
++      "wheel_name": "pycparser-3.0-py3-none-any.whl",
++      "wheel_sha256": "b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992"
++    },
++    {
++      "name": "pydantic",
++      "normalized_name": "pydantic",
++      "version": "2.13.5",
++      "wheel_bytes": 472589,
++      "wheel_name": "pydantic-2.13.5-py3-none-any.whl",
++      "wheel_sha256": "346a034f080da3755d8e9cb5e00e8b07de1d39e4f6e2c87d8ab7cafa0b269a73"
++    },
++    {
++      "name": "pydantic-core",
++      "normalized_name": "pydantic-core",
++      "version": "2.46.5",
++      "wheel_bytes": 1922874,
++      "wheel_name": "pydantic_core-2.46.5-cp312-cp312-macosx_11_0_arm64.whl",
++      "wheel_sha256": "a39ac25a9a2fa4072efdb429833c4a4c8009a51ff9eea3eeae131713cd27991e"
++    },
++    {
++      "name": "pydantic-settings",
++      "normalized_name": "pydantic-settings",
++      "version": "2.15.0",
++      "wheel_bytes": 69413,
++      "wheel_name": "pydantic_settings-2.15.0-py3-none-any.whl",
++      "wheel_sha256": "0ba092c291c94baceb5eff768aa0d56400a457585bc0175925a5a5510303da42"
++    },
++    {
++      "name": "pyjwt",
++      "normalized_name": "pyjwt",
++      "version": "2.15.0",
++      "wheel_bytes": 33680,
++      "wheel_name": "pyjwt-2.15.0-py3-none-any.whl",
++      "wheel_sha256": "7a3742debf6b879e912dbb9819ceec1594be812452b78c5f2e2dfc56564954f8"
++    },
++    {
++      "name": "pyobjc-core",
++      "normalized_name": "pyobjc-core",
++      "version": "12.2.2",
++      "wheel_bytes": 6427637,
++      "wheel_name": "pyobjc_core-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
++      "wheel_sha256": "122e6ad302a2abf5d4d4adb0156db751600ddf2768441696cba17b31323085e7"
++    },
++    {
++      "name": "pyobjc-framework-applicationservices",
++      "normalized_name": "pyobjc-framework-applicationservices",
++      "version": "12.2.2",
++      "wheel_bytes": 32765,
++      "wheel_name": "pyobjc_framework_applicationservices-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
++      "wheel_sha256": "5506bd6b5268a97fcb79b5b021f6cbbaaf5cdff3ec87094d8870268d8cf096ed"
++    },
++    {
++      "name": "pyobjc-framework-cocoa",
++      "normalized_name": "pyobjc-framework-cocoa",
++      "version": "12.2.2",
++      "wheel_bytes": 388117,
++      "wheel_name": "pyobjc_framework_cocoa-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
++      "wheel_sha256": "e106f395531e67694376b0f1184612cbeea3ec8b9bf56b55ef41d026171d2a2d"
++    },
++    {
++      "name": "pyobjc-framework-coremedia",
++      "normalized_name": "pyobjc-framework-coremedia",
++      "version": "12.2.2",
++      "wheel_bytes": 29421,
++      "wheel_name": "pyobjc_framework_coremedia-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
++      "wheel_sha256": "84f5deee8d366bf73069a0525509637aa578ccd0e6688923b09999a8bc3077a8"
++    },
++    {
++      "name": "pyobjc-framework-coretext",
++      "normalized_name": "pyobjc-framework-coretext",
++      "version": "12.2.2",
++      "wheel_bytes": 30120,
++      "wheel_name": "pyobjc_framework_coretext-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
++      "wheel_sha256": "a69611de569d92776e6391ca25492a5bbb4a05ba744006349e377a4fc5f7c8a5"
++    },
++    {
++      "name": "pyobjc-framework-quartz",
++      "normalized_name": "pyobjc-framework-quartz",
++      "version": "12.2.2",
++      "wheel_bytes": 219003,
++      "wheel_name": "pyobjc_framework_quartz-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
++      "wheel_sha256": "7f668979d0c7320bf8f7ed6e030da578f93ab0f5dd619b295ec735cd8d5faa34"
++    },
++    {
++      "name": "pyobjc-framework-screencapturekit",
++      "normalized_name": "pyobjc-framework-screencapturekit",
++      "version": "12.2.2",
++      "wheel_bytes": 11598,
++      "wheel_name": "pyobjc_framework_screencapturekit-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
++      "wheel_sha256": "5c81c68bc0399ad7ca6ccaa978574354a4da8fbb474527664fdbf08cc8f8abd5"
++    },
++    {
++      "name": "python-dotenv",
++      "normalized_name": "python-dotenv",
++      "version": "1.2.3",
++      "wheel_bytes": 22780,
++      "wheel_name": "python_dotenv-1.2.3-py3-none-any.whl",
++      "wheel_sha256": "904552145e8bfed22162c09dab1c2b9b54fefa7b23ba780f4f26ca0316b0f0d9"
++    },
++    {
++      "name": "python-multipart",
++      "normalized_name": "python-multipart",
++      "version": "0.0.32",
++      "wheel_bytes": 30042,
++      "wheel_name": "python_multipart-0.0.32-py3-none-any.whl",
++      "wheel_sha256": "ff6d3f776f16878c894e52e107296ffc890e913c611b1a4ec6c44e2821fe2e23"
++    },
++    {
++      "name": "referencing",
++      "normalized_name": "referencing",
++      "version": "0.37.0",
++      "wheel_bytes": 26766,
++      "wheel_name": "referencing-0.37.0-py3-none-any.whl",
++      "wheel_sha256": "381329a9f99628c9069361716891d34ad94af76e461dcb0335825aecc7692231"
++    },
++    {
++      "name": "rpds-py",
++      "normalized_name": "rpds-py",
++      "version": "2026.6.3",
++      "wheel_bytes": 338542,
++      "wheel_name": "rpds_py-2026.6.3-cp312-cp312-macosx_11_0_arm64.whl",
++      "wheel_sha256": "538949e262e46caa31ac01bdb3c1e8f642622922cacbabbae6a8445d9dc33eaf"
++    },
++    {
++      "name": "sse-starlette",
++      "normalized_name": "sse-starlette",
++      "version": "3.4.11",
++      "wheel_bytes": 17122,
++      "wheel_name": "sse_starlette-3.4.11-py3-none-any.whl",
++      "wheel_sha256": "c7b2244bdff016fe7f64e10075e89a3e6bbf899649cc89b0fe884b5545042453"
++    },
++    {
++      "name": "starlette",
++      "normalized_name": "starlette",
++      "version": "1.7.0",
++      "wheel_bytes": 78980,
++      "wheel_name": "starlette-1.7.0-py3-none-any.whl",
++      "wheel_sha256": "67f8e99895493dd2911a03f11314af6ceebeae4e704bb9f43dfc6a9db151c93e"
++    },
++    {
++      "name": "typing-extensions",
++      "normalized_name": "typing-extensions",
++      "version": "4.16.0",
++      "wheel_bytes": 45571,
++      "wheel_name": "typing_extensions-4.16.0-py3-none-any.whl",
++      "wheel_sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8"
++    },
++    {
++      "name": "typing-inspection",
++      "normalized_name": "typing-inspection",
++      "version": "0.4.4",
++      "wheel_bytes": 14750,
++      "wheel_name": "typing_inspection-0.4.4-py3-none-any.whl",
++      "wheel_sha256": "65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147"
++    },
++    {
++      "name": "uvicorn",
++      "normalized_name": "uvicorn",
++      "version": "0.53.0",
++      "wheel_bytes": 87081,
++      "wheel_name": "uvicorn-0.53.0-py3-none-any.whl",
++      "wheel_sha256": "e8dca71ec86dce5f04e333f0d56cdedf942446e6643b9cea1af0d6d3a02cb03e"
++    }
++  ],
++  "platform": "macOS arm64",
++  "product_lock_sha256": "1dd9ba4db2264e44a6c778eff8d9d18d34709f7b954bff6252bce6cbede9b826",
++  "profile": "current175-r13-installed-macos-arm64",
++  "python_version": "3.12.13",
++  "requirements_lock_bytes": 4254,
++  "requirements_lock_sha256": "5ee54be969534414afb0c148c7b88377f5c223ffba44a81b4467c5fd1d213ba2",
++  "runtime_build_result_sha256": "0e9f9ee6290142cf190b5e35f07de6c074e3bee59000e1c9a04ea078adb1df8a",
++  "runtime_main_acceptance_sha256": "d56d99535797c939094c811b1f07944fa5a1a9de86f25d7fad946f929e44e83f",
++  "schema": "SCIENCE76_CURRENT175_R13_INSTALLED_PROFILE_SPEC/1",
++  "scope": "source-out-of-tree current175-r13 ARM package only; software provenance not science acceptance",
++  "source_commit": "65ced71e9d63c56e6b6009984ae5c4185f4be3bd",
++  "wheelhouse_member_count": 42
++}
+--- a/tools/science_native_once_entry.py
++++ b/tools/science_native_once_entry.py
+@@ -8,23 +8,33 @@
+ import argparse
+ from datetime import datetime, timezone
+ import hashlib
++import importlib.metadata
++import importlib.util
+ import json
+ import os
+ from pathlib import Path
++import platform
+ import re
+ import stat
+ import sys
++import sysconfig
+ 
+ BINDING_SCHEMA = 'science-native-fixed-binding/1'
+ CURRENT_BINDING_SCHEMA = 'science-native-fixed-binding/2'
++INSTALLED_BINDING_SCHEMA = 'science-native-fixed-binding/3'
++INSTALLED_PROFILE_SCHEMA = 'SCIENCE76_CURRENT175_R13_INSTALLED_PROFILE/1'
+ APPROVAL_SCHEMA = 'science-native-main-approval/1'
+ BINDING_KEYS = {'schema','activity_id','authority','source_root','source_files','source_sha256',
+                 'source_freeze','source_freeze_sha256','plan','plan_sha256','runtime_namespace',
+                 'argv','environment','budget','app4_production_sha256','sdk_receipt_sha256'}
+ CURRENT_BINDING_KEYS = (BINDING_KEYS - {'app4_production_sha256'}) | {'production_sha256'}
++INSTALLED_BINDING_KEYS = CURRENT_BINDING_KEYS | {'execution_mode','installed_profile','installed_profile_sha256','installed_venv'}
+ APPROVAL_KEYS = {'schema','status','issuer','activity_id','binding_sha256','entry_sha256',
+                  'nonce','expires_at_utc','budget','approval_scope'}
+ SHA = re.compile(r'[0-9a-f]{64}')
++SOURCE_COMMIT = '65ced71e9d63c56e6b6009984ae5c4185f4be3bd'
++PROFILE_SPEC_SHA256 = 'ede4212a0533f49f2dd19834582ceec50b20040eb9c7ce1a62fcebb0891ded0a'
++PROFILE_SPEC_PATH = Path(__file__).resolve().with_name('science76_installed_profile_spec_r14.json')
+ 
+ 
+ def canonical(value):
+@@ -67,6 +77,235 @@
+     if hashlib.sha256(raw).hexdigest()!=sha:raise ValueError('record SHA differs')
+     value=json.loads(raw,object_pairs_hook=pairs,parse_constant=lambda _:(_ for _ in ()).throw(ValueError('nonfinite')))
+     return value,sig
++
++
++def _strict_json_bytes(raw):
++    return json.loads(raw,object_pairs_hook=pairs,parse_constant=lambda _:(_ for _ in ()).throw(ValueError('nonfinite')))
++
++
++def _profile_spec():
++    raw,_=read_file(PROFILE_SPEC_PATH)
++    if hashlib.sha256(raw).hexdigest()!=PROFILE_SPEC_SHA256:
++        raise ValueError('frozen installed-profile spec SHA differs')
++    spec=_strict_json_bytes(raw)
++    if (set(spec)!={'schema','profile','scope','source_commit','product_lock_sha256',
++            'runtime_build_result_sha256','runtime_main_acceptance_sha256','application_result_sha256',
++            'application_main_acceptance_sha256','application_wheel_sha256','offline_bundle_sha256',
++            'requirements_lock_sha256','requirements_lock_bytes','offline_wheels','wheelhouse_member_count',
++            'expected_distributions','expected_distribution_count','python_version','base_python',
++            'base_prefix','platform','ensurepip_version'}
++            or spec['schema']!='SCIENCE76_CURRENT175_R13_INSTALLED_PROFILE_SPEC/1'
++            or spec['profile']!='current175-r13-installed-macos-arm64'
++            or spec['source_commit']!=SOURCE_COMMIT or len(spec['offline_wheels'])!=42
++            or len(spec['expected_distributions'])!=43 or spec['expected_distribution_count']!=43):
++        raise ValueError('closed installed-profile spec differs')
++    return spec
++
++
++def _normalized_dist_name(name):
++    return re.sub(r'[-_.]+','-',name).lower()
++
++
++def _dist_records(site_packages):
++    rows=[]
++    for dist in importlib.metadata.distributions(path=[str(site_packages)]):
++        name=dist.metadata.get('Name')
++        version=dist.version
++        if not isinstance(name,str) or not name or not isinstance(version,str) or not version:
++            raise ValueError('installed distribution metadata incomplete')
++        rows.append({'name':_normalized_dist_name(name),'version':version})
++    rows.sort(key=lambda row:(row['name'],row['version']))
++    if len({row['name'] for row in rows})!=len(rows):
++        raise ValueError('duplicate installed distribution name')
++    return rows
++
++
++def _no_source_shadow(source):
++    source=Path(source).resolve(strict=True)
++    for raw in sys.path:
++        if not raw:
++            continue
++        try:
++            resolved=Path(raw).resolve(strict=True)
++        except (OSError,RuntimeError):
++            continue
++        if resolved==source or resolved==source/'comsol_mcp':
++            raise ValueError('source snapshot would shadow installed package')
++
++
++def _package_tree(source,freeze):
++    source=Path(source).resolve(strict=True)
++    expected=freeze.get('files')
++    if not isinstance(expected,dict) or len(expected)!=172:
++        raise ValueError('exact frozen current172 package map required')
++    package=source/'comsol_mcp'
++    if package.is_symlink() or not package.is_dir():
++        raise ValueError('frozen source package root required')
++    actual={p.relative_to(source).as_posix() for p in package.rglob('*')
++            if p.is_file() and '__pycache__' not in p.parts}
++    if actual!=set(expected):
++        raise ValueError('frozen package member set differs')
++    for rel,sha in expected.items():
++        if not rel.startswith('comsol_mcp/') or not isinstance(sha,str) or not SHA.fullmatch(sha):
++            raise ValueError('invalid frozen package member')
++        p=source/rel
++        raw,_=read_file(p)
++        if p.is_symlink() or p.lstat().st_mode&0o222 or hashlib.sha256(raw).hexdigest()!=sha:
++            raise ValueError('frozen source package member differs: '+rel)
++    return expected
++
++
++def _resolve_venv(expected_venv):
++    root=Path(expected_venv)
++    if not root.is_absolute() or root.is_symlink() or root.resolve(strict=True)!=root:
++        raise ValueError('canonical installed venv path required')
++    st=root.lstat()
++    if not stat.S_ISDIR(st.st_mode) or st.st_uid!=os.getuid():
++        raise ValueError('owned installed venv directory required')
++    return root
++
++
++def _live_installed_state(expected_venv,source,freeze):
++    spec=_profile_spec();venv=_resolve_venv(expected_venv)
++    if (set(freeze)!={'schema','profile','active_manifest','active_manifest_sha256','active_source_fingerprint',
++            'product_lock','product_lock_sha256','files','source_commit','scope','uncommitted_source_delta'}
++            or freeze.get('schema')!='SCIENCE_CURRENT175_R13_SOURCE_FREEZE_V2'
++            or freeze.get('profile')!='current175-r13' or freeze.get('source_commit')!=SOURCE_COMMIT
++            or freeze.get('product_lock_sha256')!=spec['product_lock_sha256']
++            or not isinstance(freeze.get('active_source_fingerprint'),str)
++            or not SHA.fullmatch(freeze['active_source_fingerprint'])
++            or not isinstance(freeze.get('active_manifest_sha256'),str)
++            or not SHA.fullmatch(freeze['active_manifest_sha256'])
++            or not isinstance(freeze.get('uncommitted_source_delta'),list)):
++        raise ValueError('complete exact current R13 source freeze required')
++    lock_rel=freeze['product_lock']
++    if (not isinstance(lock_rel,str) or Path(lock_rel).is_absolute() or '..' in Path(lock_rel).parts
++            or '\\' in lock_rel):
++        raise ValueError('relative pinned current175 product lock path required')
++    lock_path=Path(source).resolve(strict=True)/lock_rel
++    lock_raw,_=read_file(lock_path)
++    if hashlib.sha256(lock_raw).hexdigest()!=spec['product_lock_sha256']:
++        raise ValueError('current175-r13 product lock bytes differ')
++    if Path(sys.prefix).resolve(strict=True)!=venv or Path(sys.executable).resolve(strict=True)!=venv/'bin/python3.12':
++        raise ValueError('actual Python prefix/executable differs from bound venv')
++    if Path(sys.base_prefix).resolve(strict=True)!=Path(spec['base_prefix']).resolve(strict=True):
++        raise ValueError('venv base prefix differs from accepted R16 runtime')
++    if sys.version.split()[0]!=spec['python_version'] or platform.machine()!='arm64' or sys.platform!='darwin':
++        raise ValueError('exact Python/macOS ARM runtime required')
++    _no_source_shadow(source)
++    site=Path(sysconfig.get_paths()['purelib']).resolve(strict=True)
++    expected_site=venv/'lib/python3.12/site-packages'
++    if site!=expected_site or site.is_symlink():
++        raise ValueError('venv site-packages path differs')
++    package=site/'comsol_mcp'
++    expected_files=_package_tree(source,freeze)
++    if package.is_symlink() or not package.is_dir():
++        raise ValueError('installed application package absent')
++    actual_files={p.relative_to(site).as_posix() for p in package.rglob('*')
++                  if p.is_file() and '__pycache__' not in p.parts}
++    if actual_files!=set(expected_files):
++        raise ValueError('installed package member set differs')
++    for rel,sha in expected_files.items():
++        p=site/rel
++        raw,_=read_file(p)
++        if p.is_symlink() or hashlib.sha256(raw).hexdigest()!=sha:
++            raise ValueError('installed package member differs: '+rel)
++    distributions=_dist_records(site)
++    if distributions!=spec['expected_distributions']:
++        raise ValueError('installed exact locked distribution set differs')
++    origins={}
++    for name in ('comsol_mcp','mcp','psutil'):
++        found=importlib.util.find_spec(name)
++        if found is None or found.origin is None:
++            raise ValueError('required installed import absent: '+name)
++        origin=Path(found.origin).resolve(strict=True)
++        if not origin.is_relative_to(site):
++            raise ValueError('required import is not from venv site-packages: '+name)
++        origins[name]=str(origin)
++    if Path(origins['comsol_mcp'])!=package/'__init__.py':
++        raise ValueError('production package import origin differs')
++    return {'spec':spec,'venv':venv,'site':site,'package':package,'package_files':expected_files,
++            'distributions':distributions,'origins':origins}
++
++
++def capture_installed_profile(output,source,freeze_path,freeze_sha256,expected_venv):
++    """Capture a new local readback profile after the exact offline installation."""
++    freeze_raw,_=read_file(freeze_path)
++    if hashlib.sha256(freeze_raw).hexdigest()!=freeze_sha256:
++        raise ValueError('current source freeze SHA differs')
++    freeze=_strict_json_bytes(freeze_raw)
++    if (freeze.get('profile')!='current175-r13' or freeze.get('source_commit')!=SOURCE_COMMIT
++            or freeze.get('product_lock_sha256')!='1dd9ba4db2264e44a6c778eff8d9d18d34709f7b954bff6252bce6cbede9b826'):
++        raise ValueError('current R13 source freeze identity differs')
++    live=_live_installed_state(expected_venv,source,freeze)
++    venv=live['venv'];site=live['site'];package=live['package'];python=Path(sys.executable).resolve(strict=True)
++    rows={'schema':INSTALLED_PROFILE_SCHEMA,'profile':live['spec']['profile'],
++          'source_commit':SOURCE_COMMIT,'product_lock_sha256':live['spec']['product_lock_sha256'],
++          'runtime_build_result_sha256':live['spec']['runtime_build_result_sha256'],
++          'runtime_main_acceptance_sha256':live['spec']['runtime_main_acceptance_sha256'],
++          'application_result_sha256':live['spec']['application_result_sha256'],
++          'application_main_acceptance_sha256':live['spec']['application_main_acceptance_sha256'],
++          'application_wheel_sha256':live['spec']['application_wheel_sha256'],
++          'offline_bundle_sha256':live['spec']['offline_bundle_sha256'],
++          'requirements_lock_sha256':live['spec']['requirements_lock_sha256'],
++          'profile_spec_sha256':PROFILE_SPEC_SHA256,'source_freeze_sha256':freeze_sha256,
++          'venv_root':str(venv),'venv_root_identity':list(signature(venv.lstat())),
++          'python_executable':str(python),'python_identity':list(signature(python.lstat())),
++          'python_version':sys.version.split()[0],'base_prefix':str(Path(sys.base_prefix).resolve(strict=True)),
++          'site_packages':str(site),'site_packages_identity':list(signature(site.lstat())),
++          'package_root':str(package),'package_root_identity':list(signature(package.lstat())),
++          'package_files':live['package_files'],'distributions':live['distributions'],
++          'import_origins':live['origins'],'source_freeze_profile':freeze['profile']}
++    out=Path(output)
++    if not out.is_absolute() or out.resolve(strict=False)!=out or out.exists() or out.is_symlink():
++        raise ValueError('new canonical installed-profile output path required')
++    parent=out.parent
++    pst=parent.lstat()
++    if (parent.resolve(strict=True)!=parent or not stat.S_ISDIR(pst.st_mode) or pst.st_uid!=os.getuid()
++            or stat.S_IMODE(pst.st_mode)!=0o700):
++        raise ValueError('private owner profile directory required')
++    raw=canonical(rows)+b'\n'
++    fd=os.open(out,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
++    dirfd=os.open(parent,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
++    try:
++        with os.fdopen(fd,'wb',closefd=False) as stream:stream.write(raw);stream.flush();os.fsync(fd)
++        os.fsync(dirfd)
++    finally:os.close(fd);os.close(dirfd)
++    return hashlib.sha256(raw).hexdigest()
++
++
++def verify_installed_profile(profile_path,profile_sha256,source,freeze,*,expected_venv,source_freeze_sha256):
++    profile,_=read_json(profile_path,profile_sha256)
++    if not isinstance(source_freeze_sha256,str) or not SHA.fullmatch(source_freeze_sha256):
++        raise ValueError('exact source freeze SHA required')
++    keys={'schema','profile','source_commit','product_lock_sha256','runtime_build_result_sha256',
++          'runtime_main_acceptance_sha256','application_result_sha256','application_main_acceptance_sha256',
++          'application_wheel_sha256','offline_bundle_sha256','requirements_lock_sha256','profile_spec_sha256',
++          'source_freeze_sha256','venv_root','venv_root_identity','python_executable','python_identity',
++          'python_version','base_prefix','site_packages','site_packages_identity','package_root',
++          'package_root_identity','package_files','distributions','import_origins','source_freeze_profile'}
++    if set(profile)!=keys or profile['schema']!=INSTALLED_PROFILE_SCHEMA:
++        raise ValueError('closed exact installed-profile record required')
++    live=_live_installed_state(profile['venv_root'] if expected_venv is None else expected_venv,source,freeze)
++    spec=live['spec'];venv=live['venv'];site=live['site'];package=live['package'];python=Path(sys.executable).resolve(strict=True)
++    expected={'schema':INSTALLED_PROFILE_SCHEMA,'profile':spec['profile'],'source_commit':SOURCE_COMMIT,
++          'product_lock_sha256':spec['product_lock_sha256'],'runtime_build_result_sha256':spec['runtime_build_result_sha256'],
++          'runtime_main_acceptance_sha256':spec['runtime_main_acceptance_sha256'],
++          'application_result_sha256':spec['application_result_sha256'],
++          'application_main_acceptance_sha256':spec['application_main_acceptance_sha256'],
++          'application_wheel_sha256':spec['application_wheel_sha256'],'offline_bundle_sha256':spec['offline_bundle_sha256'],
++          'requirements_lock_sha256':spec['requirements_lock_sha256'],'profile_spec_sha256':PROFILE_SPEC_SHA256,
++          'source_freeze_sha256':source_freeze_sha256,'venv_root':str(venv),
++          'venv_root_identity':list(signature(venv.lstat())),'python_executable':str(python),
++          'python_identity':list(signature(python.lstat())),'python_version':sys.version.split()[0],
++          'base_prefix':str(Path(sys.base_prefix).resolve(strict=True)),'site_packages':str(site),
++          'site_packages_identity':list(signature(site.lstat())),'package_root':str(package),
++          'package_root_identity':list(signature(package.lstat())),'package_files':live['package_files'],
++          'distributions':live['distributions'],'import_origins':live['origins'],
++          'source_freeze_profile':freeze['profile']}
++    if profile!=expected:
++        raise ValueError('installed profile first-record or package/distribution readback differs')
++    return profile
+ 
+ 
+ def namespace_absent(path):
+@@ -98,7 +337,7 @@
+ def validate_production_identity(binding, appfiles):
+     if binding['schema']==BINDING_SCHEMA:
+         count, key = 174, 'app4_production_sha256'
+-    elif binding['schema']==CURRENT_BINDING_SCHEMA:
++    elif binding['schema'] in {CURRENT_BINDING_SCHEMA,INSTALLED_BINDING_SCHEMA}:
+         count, key = 175, 'production_sha256'
+         package={p for p in appfiles if p.startswith('comsol_mcp/')}
+         if len(package)!=172 or 'comsol_mcp/_windows_state_restore.py' not in package:
+@@ -111,7 +350,9 @@
+ 
+ def validate(binding_path,binding_sha,approval_path,approval_sha,nonce):
+     binding,bsig=read_json(binding_path,binding_sha);approval,asig=read_json(approval_path,approval_sha)
+-    keys = BINDING_KEYS if binding.get('schema')==BINDING_SCHEMA else CURRENT_BINDING_KEYS if binding.get('schema')==CURRENT_BINDING_SCHEMA else None
++    keys = (BINDING_KEYS if binding.get('schema')==BINDING_SCHEMA else
++            CURRENT_BINDING_KEYS if binding.get('schema')==CURRENT_BINDING_SCHEMA else
++            INSTALLED_BINDING_KEYS if binding.get('schema')==INSTALLED_BINDING_SCHEMA else None)
+     if keys is None or set(binding)!=keys:raise ValueError('closed binding required')
+     if set(approval)!=APPROVAL_KEYS or approval['schema']!=APPROVAL_SCHEMA:raise ValueError('closed Main approval required')
+     authority=Path(binding['authority']);before=authority.lstat()
+@@ -128,6 +369,17 @@
+     if expires.tzinfo is None or expires<=datetime.now(timezone.utc):raise ValueError('Main approval expired')
+     namespace_absent(binding['runtime_namespace']);source_identity(binding)
+     if binding['activity_id']!=Path(binding['runtime_namespace']).name:raise ValueError('activity/namespace differs')
++    if binding['schema']==INSTALLED_BINDING_SCHEMA:
++        if binding.get('execution_mode')!='installed-current175-r13' or not isinstance(binding.get('installed_venv'),str):
++            raise ValueError('explicit current R13 installed mode and venv required')
++        if (not isinstance(binding.get('installed_profile_sha256'),str)
++                or not SHA.fullmatch(binding['installed_profile_sha256'])):
++            raise ValueError('exact installed profile SHA required')
++        if Path(binding['installed_profile'])!=authority/'INSTALLED_PROFILE.json':
++            raise ValueError('installed profile must be the fresh authority member')
++        venv=Path(binding['installed_venv'])
++        if not venv.is_absolute() or venv.resolve(strict=True)!=venv:
++            raise ValueError('canonical absolute installed venv required')
+     raw,_=read_file(Path(__file__).resolve())
+     if hashlib.sha256(raw).hexdigest()!=approval['entry_sha256']:raise ValueError('actual entry differs')
+     source=Path(binding['source_root']);sys.path.insert(0,str(source/'tools'))
+@@ -136,6 +388,11 @@
+     plan=science.validate_plan(binding['plan'],binding['plan_sha256'],source=source,runtime=binding['runtime_namespace'],
+          installation=binding['argv'][binding['argv'].index('--installation')+1],java_home=binding['argv'][binding['argv'].index('--java-home')+1])
+     freeze,_=read_json(binding['source_freeze'],binding['source_freeze_sha256'])
++    if binding['schema']==INSTALLED_BINDING_SCHEMA:
++        if freeze.get('source_commit')!=SOURCE_COMMIT:
++            raise ValueError('actual current product source commit differs')
++        verify_installed_profile(binding['installed_profile'],binding['installed_profile_sha256'],source,freeze,
++            expected_venv=binding['installed_venv'],source_freeze_sha256=binding['source_freeze_sha256'])
+     if freeze['files']!={p:sha for p,sha in binding['source_files'].items() if p.startswith('comsol_mcp/')}:
+         raise ValueError('production freeze differs from closed source inventory')
+     appfiles={p:sha for p,sha in binding['source_files'].items() if p.startswith('comsol_mcp/') or p in {'LICENSE','README.md','pyproject.toml'}}
+@@ -146,9 +403,14 @@
+     expected=[sys.executable,str(source/'tools/run_v3_public_mcp_smoke.py'),'--source',str(source),'--freeze',binding['source_freeze'],
+       '--runtime',binding['runtime_namespace'],'--installation',plan['runtime_identity']['comsol_root'],'--java-home',plan['runtime_identity']['java_home'],
+       '--science-recipes','--science-plan',binding['plan'],'--science-plan-sha256',binding['plan_sha256']]
++    if binding['schema']==INSTALLED_BINDING_SCHEMA:
++        expected += ['--execution-mode','installed-current175-r13','--installed-profile',binding['installed_profile'],
++                     '--installed-profile-sha256',binding['installed_profile_sha256'],'--installed-venv',binding['installed_venv']]
+     if binding['argv']!=expected:raise ValueError('fixed literal executable argv differs')
+     env={'HOME':str(Path.home()),'PATH':'/usr/bin:/bin:/usr/sbin:/sbin','LANG':'C','LC_ALL':'C',
+-         'PYTHONUTF8':'1','PYTHONPATH':str(source),'PYTHONDONTWRITEBYTECODE':'1'}
++         'PYTHONUTF8':'1','PYTHONDONTWRITEBYTECODE':'1'}
++    if binding['schema']!=INSTALLED_BINDING_SCHEMA:
++        env['PYTHONPATH']=str(source)
+     if binding['environment']!=env:raise ValueError('fixed host environment differs')
+     # Recheck all pinned records/authority after source/runtime reads.
+     if (read_file(binding_path,private=True)[1]!=bsig or read_file(approval_path,private=True)[1]!=asig
+@@ -183,6 +445,11 @@
+         if (current.st_dev,current.st_ino,current.st_uid,current.st_mode)!=(authority_before.st_dev,authority_before.st_ino,authority_before.st_uid,authority_before.st_mode):
+             raise ValueError('authority original directory lost after once')
+         read_json(authority/'BINDING.json',binding_sha);read_json(authority/'MAIN_APPROVAL.json',approval_sha)
++        if binding['schema']==INSTALLED_BINDING_SCHEMA:
++            freeze,_=read_json(binding['source_freeze'],binding['source_freeze_sha256'])
++            verify_installed_profile(binding['installed_profile'],binding['installed_profile_sha256'],
++                Path(binding['source_root']),freeze,expected_venv=binding['installed_venv'],
++                source_freeze_sha256=binding['source_freeze_sha256'])
+         os.chdir(binding['source_root'])
+         os.execve(binding['argv'][0],binding['argv'],binding['environment'])
+     finally:os.close(fd)
+@@ -190,8 +457,24 @@
+ 
+ def main(argv=None):
+     parser=argparse.ArgumentParser(description=__doc__)
+-    for name in ['binding','binding-sha256','approval','approval-sha256','nonce']:parser.add_argument('--'+name,required=True)
++    parser.add_argument('--capture-installed-profile',action='store_true')
++    parser.add_argument('--profile-output',type=Path)
++    parser.add_argument('--source-root',type=Path)
++    parser.add_argument('--source-freeze',type=Path)
++    parser.add_argument('--source-freeze-sha256')
++    parser.add_argument('--installed-venv',type=Path)
++    for name in ['binding','binding-sha256','approval','approval-sha256','nonce']:parser.add_argument('--'+name)
+     args=parser.parse_args(argv)
++    if args.capture_installed_profile:
++        if any((args.binding,args.binding_sha256,args.approval,args.approval_sha256,args.nonce)):
++            parser.error('profile capture is a separate pre-effect operation')
++        if not all((args.profile_output,args.source_root,args.source_freeze,args.source_freeze_sha256,args.installed_venv)):
++            parser.error('complete profile capture inputs required')
++        print(json.dumps({'status':'PROFILE_CAPTURED','profile_sha256':capture_installed_profile(
++            args.profile_output,args.source_root,args.source_freeze,args.source_freeze_sha256,args.installed_venv)},sort_keys=True))
++        return 0
++    if not all((args.binding,args.binding_sha256,args.approval,args.approval_sha256,args.nonce)):
++        parser.error('exact Main binding and approval arguments required')
+     binding,before=validate(Path(args.binding),args.binding_sha256,Path(args.approval),args.approval_sha256,args.nonce)
+     consume_and_exec(binding,before,args.binding_sha256,args.approval_sha256,args.nonce)
+     return 1
+--- a/tools/science_recipe_cycle.py
++++ b/tools/science_recipe_cycle.py
+@@ -127,6 +127,25 @@
+     if body!=resolve(slot['arguments']):raise RuntimeError('literal base/cleanup body differs')
+ 
+ 
++def resolve_cycle_literal_body(value,*,bindings,workspace,model_ref,ref=None,revision=None):
++    """Resolve only the finite runtime values in a planned recipe call body."""
++    def resolve(item):
++        if isinstance(item,str) and item in bindings:return bindings[item]
++        if item == '$REVISION':return revision
++        if isinstance(item,str):return expand(item,workspace,ref or model_ref)
++        if isinstance(item,dict):return {key:resolve(child) for key,child in item.items()}
++        if isinstance(item,list):return [resolve(child) for child in item]
++        return item
++    return resolve(value)
++
++
++def check_cycle_literal(slot,operation,body,*,bindings,workspace,model_ref,ref=None,revision=None):
++    expected=resolve_cycle_literal_body(slot['arguments'],bindings=bindings,workspace=workspace,
++                                        model_ref=model_ref,ref=ref,revision=revision)
++    if operation!=slot['operation'] or body!=expected:
++        raise RuntimeError('exact literal recipe call/body differs')
++
++
+ def literal_cycle_calls(stage,cases):
+     slots=[]
+     def add(op,body):slots.append({'operation':op,'arguments':body})
+@@ -137,7 +156,7 @@
+         if index:add('model.create',{'label':'science-'+case['id']+'-witness','idempotency_key':'new'})
+         add('model.inspect',{'detail':'summary'})
+         add('code.execute_java',{'source_artifact':'$SOURCE_PATH','entrypoint':case['entrypoint'],'arguments':case['witness'],'mode':'trusted','timeout_s':120,'expected_revision':'$REVISION','idempotency_key':'new'})
+-        getter={'source_artifact':'science/java/ScientificBuildReadback.java','entrypoint':'ScientificBuildReadback','arguments':{'domain':case['id'],'expected_model_tag':'$MODEL_TAG'},'mode':'trusted','timeout_s':120,'expected_revision':'$REVISION','idempotency_key':'new'}
++        getter={'source_artifact':'$READBACK_SOURCE_PATH','entrypoint':'ScientificBuildReadback','arguments':{'domain':case['id'],'expected_model_tag':'$MODEL_TAG'},'mode':'trusted','timeout_s':120,'expected_revision':'$REVISION','idempotency_key':'new'}
+         add('code.execute_java',getter);add('model.inspect',{'detail':'summary'})
+         add('code.recipe_register',{'source_artifact':'$SOURCE_ID','entrypoint':case['entrypoint'],'input_schema':'$EXACT_INPUT_SCHEMA','test_refs':['$WITNESS_OPERATION_ID'],'expected_revision':'$REVISION','idempotency_key':'new'})
+         add('model.create',{'label':'science-'+case['id']+'-rebuilt','idempotency_key':'new'});add('model.inspect',{'detail':'summary'})
+@@ -244,15 +263,10 @@
+         nonlocal slot_index
+         check_closure(source,plan_value)
+         if any(digest(p)!=sha for p,sha in staged.items()):raise RuntimeError('registered literal data changed before next effect')
+-        def resolve(value):
+-            if isinstance(value,str) and value in bindings:return bindings[value]
+-            if value == '$REVISION':return rev
+-            if isinstance(value,str):return expand(value,workspace,ref or model_ref)
+-            if isinstance(value,dict):return {k:resolve(v) for k,v in value.items()}
+-            if isinstance(value,list):return [resolve(v) for v in value]
+-            return value
+         slot=slots[slot_index] if slot_index<len(slots) else None
+-        if slot is None or op!=slot['operation'] or body!=resolve(slot['arguments']):raise RuntimeError('exact literal recipe call/body differs')
++        if slot is None:raise RuntimeError('exact literal recipe call/body differs')
++        check_cycle_literal(slot,op,body,bindings=bindings,workspace=workspace,model_ref=model_ref,
++                           ref=ref,revision=rev)
+         slot_index+=1
+         wire_body=body if op=='model.inspect' else {'project_id':project_id,'session_id':session_id,**body}
+         value=await call(op,wire_body,ref=ref,revision=rev)
+@@ -280,6 +294,7 @@
+         known.append(ref);return ref,value['execution']['revision']
+     async def readback(case,ref,rev):
+         getter=registered['ScientificBuildReadback.java']
++        bindings['$READBACK_SOURCE_PATH']=getter['path']
+         value=await action('code.execute_java',{'source_artifact':getter['path'],'entrypoint':'ScientificBuildReadback','arguments':{'domain':case['id'],'expected_model_tag':ref['model_tag']},'mode':'trusted','timeout_s':120,'expected_revision':rev,'idempotency_key':'new'},ref=ref,rev=rev)
+         raw=payload(value)
+         if raw.get('schema')!='COMSOL_SCIENTIFIC_UNSOLVED_BUILD_READBACK_V1' or raw.get('model_tag')!=ref['model_tag'] or raw.get('domain')!=case['id'] or not raw.get('parameters') or not raw.get('material_tags') or not raw.get('physics_tags') or raw.get('study_or_solver_invoked') is not False:raise RuntimeError('domain-specific native unsolved metadata missing')
+--- /dev/null
++++ b/tools/w26_application_sources_175_r14_prepared.lock.json
+@@ -0,0 +1,697 @@
++{
++  "member_count": 175,
++  "members": {
++    "LICENSE": {
++      "bytes": 1065,
++      "sha256": "0fd0c78f436110d75bc7b780c43407dda1c21d803abb0b1e3faf73cc5d3a5baf"
++    },
++    "README.md": {
++      "bytes": 28789,
++      "sha256": "c93aeef71000f6149edd67d6a195f100a4bea104840ba7a47ed7431eeb6a6921"
++    },
++    "comsol_mcp/__init__.py": {
++      "bytes": 198,
++      "sha256": "17b614b0aa965a4bf24a07e3908a981875f917e13845ea97ceee9f29a97eee39"
++    },
++    "comsol_mcp/_artifact_preview_io.py": {
++      "bytes": 8200,
++      "sha256": "26da9be95a52466094b293230ee39e128027f413643ab8cc789d78070aac91a2"
++    },
++    "comsol_mcp/_artifact_store.py": {
++      "bytes": 98678,
++      "sha256": "c7ee8c61036176dad499769fa3274f610d956e34d53d8a6bffd61e3afff253bd"
++    },
++    "comsol_mcp/_atomic_save.py": {
++      "bytes": 7281,
++      "sha256": "635222c08633ff37f3f7d8e5ec6d5bdf5da8c58236f11271be1c662695ffdfd0"
++    },
++    "comsol_mcp/_complex_transform.py": {
++      "bytes": 5720,
++      "sha256": "0adebdb27a8e9d28a0807e1908d44bd957d0c7f5523933fed94b86a382e173a0"
++    },
++    "comsol_mcp/_comsol_progress_capture.py": {
++      "bytes": 29612,
++      "sha256": "84c87c9728edb0554bf094ae55f2288156f78f5f2a037a02088303e867223fd9"
++    },
++    "comsol_mcp/_connection.py": {
++      "bytes": 3930,
++      "sha256": "2699f12230b5832c7c8fe806fa1bfdca3be2e108ecc753a39808d92d862b7ea3"
++    },
++    "comsol_mcp/_control_client.py": {
++      "bytes": 8865,
++      "sha256": "c2f68007eb56a4a9ef274f241dc377376c7126c4876c51228e8b6aa47da62754"
++    },
++    "comsol_mcp/_control_daemon.py": "5c27d2da4cf5a51f5fc030bfc2be7dfdd54ef5bd988ca84fa6530a3f29fb9769",
++    "comsol_mcp/_convergence_store.py": {
++      "bytes": 5845,
++      "sha256": "51d53df4ee7b404e27452a2c1b8733dd3a372d92baf60cdad5bb43fef6566f13"
++    },
++    "comsol_mcp/_daemon_quiescence.py": {
++      "bytes": 12334,
++      "sha256": "8ecd34eabb3a940b74d8ad015d0d10d3b9dc59e30a5085cdaee7791ad90ee025"
++    },
++    "comsol_mcp/_dataset_binding.py": {
++      "bytes": 21562,
++      "sha256": "891f9a06595217d5101aa361cb60b53bb3a9f6b88a918bef41765b0f5f82627e"
++    },
++    "comsol_mcp/_desktop_capture.py": {
++      "bytes": 24607,
++      "sha256": "34abdab7926e461b8c9909d7deee12ce4cf34e0aa0e91f8030043c1c0e1e3ce7"
++    },
++    "comsol_mcp/_desktop_macos.py": {
++      "bytes": 82679,
++      "sha256": "f1f3b3bebf6029e00d6f05ec40285ed9dbba0fb16e0b28198231841128ae84e6"
++    },
++    "comsol_mcp/_desktop_platforms.py": {
++      "bytes": 3913,
++      "sha256": "4c50c4596cbc8d79dd610d66cada1deb38e400c607a5bb04b59f1766a9c76059"
++    },
++    "comsol_mcp/_desktop_selector_profile.py": {
++      "bytes": 25648,
++      "sha256": "c29d6a439e3d2fb1e2b0e55b04486335d3ec22c15527e16d3e72ef67855b6c6c"
++    },
++    "comsol_mcp/_desktop_service.py": {
++      "bytes": 101103,
++      "sha256": "00691307ad6b2c780f7086b4a306b4adbb5360e986754c3e9e97e2a4ea38dcf1"
++    },
++    "comsol_mcp/_desktop_uia.py": {
++      "bytes": 25817,
++      "sha256": "acda9856131cec82aa319905f83b9944184a30a357bc3982bab58ea8b4ef7a73"
++    },
++    "comsol_mcp/_desktop_win32_identity.py": {
++      "bytes": 2833,
++      "sha256": "c528e3e8e950883b759b3f8f96ab036783186a640cfff4588f9aa105b3b7f065"
++    },
++    "comsol_mcp/_desktop_windows.py": {
++      "bytes": 23237,
++      "sha256": "10f8105e9b93aff5a717e294931d8b36680bf8560a0d21e43e1fb9c295ee5256"
++    },
++    "comsol_mcp/_domain_outcome.py": {
++      "bytes": 50597,
++      "sha256": "019eb5c28304283a3b2d05d6f3c974013d09783400edbb7be123668ecd91f51b"
++    },
++    "comsol_mcp/_ephemeral_result_ticket.py": {
++      "bytes": 25103,
++      "sha256": "952559539e56992aa06be9c7c4cfb3d3629c4f798582dba6aecbefdf5d92ccee"
++    },
++    "comsol_mcp/_execution_contract.py": {
++      "bytes": 22753,
++      "sha256": "dbb112cbbdef9a4d45f69c230123d4e9e57f7b71e337532d83989aa827e6c9e3"
++    },
++    "comsol_mcp/_execution_service.py": {
++      "bytes": 34298,
++      "sha256": "ccd2d2d5ba953e4a96c4ba5187eaf8da08222630881d48687599261f0a15cd2c"
++    },
++    "comsol_mcp/_g2_artifact_preview.py": {
++      "bytes": 36780,
++      "sha256": "55cb9787f61adaa9b0a0f9dd4c57bcaf502b4d845717f5330eda01c82da9f6a7"
++    },
++    "comsol_mcp/_g2_artifact_reads.py": {
++      "bytes": 26903,
++      "sha256": "49150afce13a1445c761ee0a8196163ac5976c92428c04d6abcd9f6869d0b9a1"
++    },
++    "comsol_mcp/_g2_artifact_verify.py": {
++      "bytes": 101052,
++      "sha256": "ea050a723b67b06ff8ef3ad2b12d317669c3393ed2b8af545d3ba449c04676db"
++    },
++    "comsol_mcp/_g2_checkpoint_diff.py": {
++      "bytes": 60492,
++      "sha256": "ee3b2f9339634de4429c63a64c90a37ad0eb46d503b0da50849a40e2b0687c57"
++    },
++    "comsol_mcp/_g2_checkpoint_ops.py": {
++      "bytes": 34099,
++      "sha256": "b566d9132fd87c103e1179811eb4c554af2389741b91064f223faeaf10d4c08d"
++    },
++    "comsol_mcp/_g2_code.py": {
++      "bytes": 6087,
++      "sha256": "107a256c53e915bb3a546bef67ec8917a55fd5254c703ba612b9a38db151873d"
++    },
++    "comsol_mcp/_g2_contract.py": {
++      "bytes": 26203,
++      "sha256": "16bef84fcc56495711d25992be55ff1a7d78ddb208cee1ef999d8465417dec59"
++    },
++    "comsol_mcp/_g2_copy_subtree.py": {
++      "bytes": 8498,
++      "sha256": "49d8017bd3694cbbd07d2c3ef48d1638134ffb820a33d755b87c38a72c9eef21"
++    },
++    "comsol_mcp/_g2_docs.py": {
++      "bytes": 13902,
++      "sha256": "af8d7825a3db29b9f33e1dbb3b5f19e32a8713136595a97b5e7433114337cbd5"
++    },
++    "comsol_mcp/_g2_engine.py": {
++      "bytes": 108784,
++      "sha256": "54ff44cb11fac2790d817fd7f2f3614681fb2b4424149826624611b13302b773"
++    },
++    "comsol_mcp/_g2_group_remove.py": {
++      "bytes": 26748,
++      "sha256": "20ef39e03db66cfe713e0959a135c36702ea1b721a4567165dfbd719e42b86c1"
++    },
++    "comsol_mcp/_g2_isolation.py": {
++      "bytes": 87592,
++      "sha256": "adcf410ca553bbe2457d285d99907a8ce67726f4a7c8e1131d706ec359f65cdf"
++    },
++    "comsol_mcp/_g2_model_compare.py": {
++      "bytes": 53038,
++      "sha256": "96a5750d8c7760d9a20244585e0a9b0d97a5b04840e690a8283d25dfd4e83597"
++    },
++    "comsol_mcp/_g2_public_api.py": {
++      "bytes": 15106,
++      "sha256": "9c8f8823dfa3ee8f8535c945d6b5867e7c846972cc720e2dbdc33bf4bd2ec6d5"
++    },
++    "comsol_mcp/_g2_registry.py": {
++      "bytes": 130520,
++      "sha256": "afac00c22213e580c482896bfa4fac633238436ef35d5536e1fa2283270bf260"
++    },
++    "comsol_mcp/_g2_tools.py": {
++      "bytes": 2557,
++      "sha256": "d62451b60a529d146c91849f47b9f51be6d19788962131e3ea24386e7a2a04f9"
++    },
++    "comsol_mcp/_g2_transactions.py": {
++      "bytes": 26302,
++      "sha256": "d8c5d84d58f205627df5e31489360b4ef2e7759d7ef67b916dc4fc5318cfba80"
++    },
++    "comsol_mcp/_g3_common.py": {
++      "bytes": 78897,
++      "sha256": "207629d74cedd2790433d8e1bc45d18050e4a3652ac3d3e293bc8d2db71fbd9e"
++    },
++    "comsol_mcp/_g3_definition_validation.py": {
++      "bytes": 72411,
++      "sha256": "914756c51449d605fe98d1e6602793fa1b9a0f99eaef529f0097ed38dfb885ce"
++    },
++    "comsol_mcp/_g3_exports.py": {
++      "bytes": 68240,
++      "sha256": "519625eb060ab847fc76ec2b44c51679dfcdfe697a30bb82faba61bd3841cd7c"
++    },
++    "comsol_mcp/_g3_managed_models.py": {
++      "bytes": 113523,
++      "sha256": "ed9ef412f42a050f70fb492ad835bdf8244b76d8738a11b7331393dae95a31a9"
++    },
++    "comsol_mcp/_g3_mesh_convergence_executor.py": {
++      "bytes": 49078,
++      "sha256": "06dbb670839d56d0096562083f90c146c4da3135ce9d4c25418d5c3a95c3aa3e"
++    },
++    "comsol_mcp/_g3_metrics.py": {
++      "bytes": 69281,
++      "sha256": "89e9297c13ac8f42c5260c61e723ffbdb24d3a46858b0d9abf8729ac62241d87"
++    },
++    "comsol_mcp/_g3_model_delivery.py": {
++      "bytes": 68294,
++      "sha256": "9c6aa7c1de31e325dca21f49bec1df9351a642952869b215f47e50b092a65e80"
++    },
++    "comsol_mcp/_g3_model_domains.py": {
++      "bytes": 85265,
++      "sha256": "ea789f9d2e48e1e32254d2f2c346d2c27440bfb6f6e2f8af6a54469172210df8"
++    },
++    "comsol_mcp/_g3_ops.py": {
++      "bytes": 10349,
++      "sha256": "d456796622636eeb6eab7b0176901892effc84261ae0d699a6dd801dbb31287a"
++    },
++    "comsol_mcp/_g3_parameter_io.py": {
++      "bytes": 35879,
++      "sha256": "6a447e14bd3ae5b03b268562769593d0e530000284463729ddb95e4487937369"
++    },
++    "comsol_mcp/_g3_results.py": {
++      "bytes": 422286,
++      "sha256": "3a1cd479d11d10aa1a25456a1abfa6b911b64ab36026deb18faeba41f81be78f"
++    },
++    "comsol_mcp/_g3_runtime.py": {
++      "bytes": 57141,
++      "sha256": "663af8ffdd7b6d99a915acfb4bad768a5c2227e18088511a375dcb7d7e75ae52"
++    },
++    "comsol_mcp/_g3_solver_ops.py": {
++      "bytes": 57874,
++      "sha256": "bf8188154c68d08dcc64c23a11004d9360267951ccabcafe608cd0cdbcd0ee27"
++    },
++    "comsol_mcp/_g3_units.py": {
++      "bytes": 22854,
++      "sha256": "99a785c59bd2fe6c1d6fad20369a650041850f2008ccd4079bab11377d952d64"
++    },
++    "comsol_mcp/_g3_w13.py": {
++      "bytes": 143829,
++      "sha256": "9556b74bf44e5b0b0849e732c34f407210fa60e7c6a95b486c2a5e1b40111928"
++    },
++    "comsol_mcp/_g3_w14.py": {
++      "bytes": 154303,
++      "sha256": "a6cfbf3cbd330701f04f05341bec0b62e08bb9c459a4b9e4ed57fbeb504aa8d6"
++    },
++    "comsol_mcp/_g3_w15.py": {
++      "bytes": 186453,
++      "sha256": "c267190f280c8f712ed177d0f3be2382e0dd8250479476ba4ebb9bd0a2091ff1"
++    },
++    "comsol_mcp/_g3_w16.py": {
++      "bytes": 179886,
++      "sha256": "1242cd85660cb59baf1d34b7d5bd08a025ef9cbd92f34bf9264c188d6dbc0708"
++    },
++    "comsol_mcp/_g3_w18.py": {
++      "bytes": 48113,
++      "sha256": "378376fe50e4dcf14a55a7e1b03ed807ef29b1472ce342475044b83893ed09fd"
++    },
++    "comsol_mcp/_g3_w20_validation.py": {
++      "bytes": 68279,
++      "sha256": "77ec0f38f2da8b3d7cb53f2fe72bcb247d3d5568e027c19cda515e98a67aafc3"
++    },
++    "comsol_mcp/_g3_w21.py": {
++      "bytes": 27290,
++      "sha256": "bf567f34257d58e931f457d211182fddf04f1d94c6c0771fb4c69833fd2886a6"
++    },
++    "comsol_mcp/_gate_a_reopen.py": {
++      "bytes": 15146,
++      "sha256": "9ce03851f179ea74da0a911a6b31cab055e84f3b3cc27ab535ed5aac68fdd16a"
++    },
++    "comsol_mcp/_host_scoped_provider.py": {
++      "bytes": 70567,
++      "sha256": "565c15d14d6b5487ef700361ba4e35026579c3ddb7093c6dd4235e5b9c9c477d"
++    },
++    "comsol_mcp/_java_worker.py": {
++      "bytes": 72329,
++      "sha256": "29bf5de2eef5ec4f0b6a701a7b797ce17206a42971317175eec9265600772a12"
++    },
++    "comsol_mcp/_managed_backend.py": {
++      "bytes": 249453,
++      "sha256": "e07c1d5227e2ed3c4b357bec0904de182308be8fbd3ad598c177531c460235a7"
++    },
++    "comsol_mcp/_mcp_gateway.py": {
++      "bytes": 15493,
++      "sha256": "ff40a6f0f4a472a4950bb698c3d8a0b05330ed4ffa186538cffcb3edccade16f"
++    },
++    "comsol_mcp/_measure_spec.py": {
++      "bytes": 15506,
++      "sha256": "4f73e40b4b560934fff54763a1532f38597fe758edf66a0e077671b0674afea1"
++    },
++    "comsol_mcp/_metric_contract.py": {
++      "bytes": 20169,
++      "sha256": "98860f7c00cb1dafb10d3facfce8ee39c5389b0f0557369d198af150c187b8bb"
++    },
++    "comsol_mcp/_mode_overlap.py": {
++      "bytes": 45199,
++      "sha256": "f93b87c26f3af7b2fa4498cf88b430069ae200619606dfed6906479d2036ba56"
++    },
++    "comsol_mcp/_model.py": {
++      "bytes": 9708,
++      "sha256": "814baf91e74eeb370ab25f9a8b6ae768a1ab0a851d68870b67cb13b88b88ac13"
++    },
++    "comsol_mcp/_model_ops.py": {
++      "bytes": 64890,
++      "sha256": "b06872a04433529f42b03a77007cd62048360ef9b1126e3b4feb024e70357944"
++    },
++    "comsol_mcp/_observation_store.py": {
++      "bytes": 5318,
++      "sha256": "fa1eec16402dce15c33e66423ecd6f8d227fa1abac63e76a47c6c288af4cdc3e"
++    },
++    "comsol_mcp/_operation_store.py": {
++      "bytes": 298973,
++      "sha256": "135dd6d809f160ccccf200a03c83b77399b2621619f8b9bde674f5e557f1370d"
++    },
++    "comsol_mcp/_phase1_runtime.py": {
++      "bytes": 8419,
++      "sha256": "e4636f8f790079593f53f11e8abd544526c5a5a289e068ccfbcf4b599dbe62f7"
++    },
++    "comsol_mcp/_physics_ops.py": {
++      "bytes": 12501,
++      "sha256": "3a006aef40f484b61ba0151cc9a76fc612d093ba8853789b26d5924a0df25ac9"
++    },
++    "comsol_mcp/_platform_paths.py": {
++      "bytes": 1646,
++      "sha256": "96d3bc7defee41fda14f45ffa050ff7089e4e0573345a2929e0facba7f663b32"
++    },
++    "comsol_mcp/_platform_process.py": {
++      "bytes": 14391,
++      "sha256": "f201026c8ebc66ae22548917e1cc248b1397c61b4681df3134a59a9f83f2795d"
++    },
++    "comsol_mcp/_probe_manage.py": {
++      "bytes": 58266,
++      "sha256": "447b45d5bc3fdcee6a2ec3935f32a140d18fa1b02af23814fb92ef0027adcf1e"
++    },
++    "comsol_mcp/_process_diagnostics.py": {
++      "bytes": 8820,
++      "sha256": "e9f0626eb8b6c122fa30cce4b2728d87da112e5002d3517dac24e6ed8d1ad4e9"
++    },
++    "comsol_mcp/_project_authority.py": {
++      "bytes": 32352,
++      "sha256": "82b90c1157b242f80feb9079ac4b58e2a1295719a7a323a97532497a740181a8"
++    },
++    "comsol_mcp/_result_budget.py": {
++      "bytes": 26401,
++      "sha256": "64a3de71839c4224fc92869d89b2dae6cb6bd1726878bb2f0a121e00f9ebcf4c"
++    },
++    "comsol_mcp/_runtime_control.py": {
++      "bytes": 20182,
++      "sha256": "e9acab89e52a6ed27a55610dec5f75f76ad2baab1ea57ed84e6612177d820ffe"
++    },
++    "comsol_mcp/_runtime_installation.py": {
++      "bytes": 29061,
++      "sha256": "afb2bbd81783d025d030e9790d720d11cde0d0a6fd6fe890f38d69813e3e31ce"
++    },
++    "comsol_mcp/_runtime_state.py": {
++      "bytes": 6511,
++      "sha256": "6d2de604b0ba4cab7283de66107df6401dab3d5d74cb99e4b34c331d162cc3d6"
++    },
++    "comsol_mcp/_security_os.py": {
++      "bytes": 6479,
++      "sha256": "34d3c47c3ac27de98ba74b36cf6f2bbf51ba2873514bdc22e4c60af00b1f373c"
++    },
++    "comsol_mcp/_server.py": {
++      "bytes": 11704,
++      "sha256": "59f74086ebe2a954c2ceecbae47299900c91c858b474bbf763ed2a60e59f9358"
++    },
++    "comsol_mcp/_session_context.py": {
++      "bytes": 40152,
++      "sha256": "379d8200052f67041c6ee3c7ae48010fbc74c00b8074c7ed9f55702db699a77b"
++    },
++    "comsol_mcp/_session_lifecycle.py": {
++      "bytes": 14637,
++      "sha256": "dce3150c1d826f5d53206031e482493a96d1a30c64b95f135e16a18a9efd4ce7"
++    },
++    "comsol_mcp/_session_server.py": "14bfe7c3767ff908d79fb6e8e75bf392327f779be92bfe568efbcad68600923b",
++    "comsol_mcp/_solution_binding.py": {
++      "bytes": 30311,
++      "sha256": "655715000630adc6a22d0cfa187e2bde3717c8e0e40d842e40793d78bf8a6e15"
++    },
++    "comsol_mcp/_solver_ops.py": {
++      "bytes": 3725,
++      "sha256": "2a8dcd6bd6f79898e0e0ae4af8941c9e97cfd4cf18e4190d7267e7bdda682595"
++    },
++    "comsol_mcp/_source_manifest.py": {
++      "bytes": 4898,
++      "sha256": "273226a8538438feeec4156bb883bbbdb121294ca9d928c10683386085f0c1ae"
++    },
++    "comsol_mcp/_stage_contract.py": {
++      "bytes": 48940,
++      "sha256": "c028b33223b0cca3d994c9359efc6a02b27ed2f3103511639e9d3014bfacdbbe"
++    },
++    "comsol_mcp/_state.py": {
++      "bytes": 27468,
++      "sha256": "71c862d438c588ff0d8aae6db349873813f0f4f94e041e4b60a3f481d8b0d78c"
++    },
++    "comsol_mcp/_state_backup.py": {
++      "bytes": 194733,
++      "sha256": "b4a5b8d524f8812871146741795532cc675f2c824d9fc640da7d08999d356076"
++    },
++    "comsol_mcp/_tools_connection.py": {
++      "bytes": 11901,
++      "sha256": "6cf46068542fa46308f92c89bee6a9574a3507c73d69b59f265cf26290d520e5"
++    },
++    "comsol_mcp/_tools_control.py": {
++      "bytes": 3490,
++      "sha256": "c6d3007117268be2529f8ca725f2bbe3bdb3fae5c2f9d04223437817c3efc6d0"
++    },
++    "comsol_mcp/_tools_desktop.py": {
++      "bytes": 4359,
++      "sha256": "f341c9096a4efb913912b785ff04beafafce1e7ce229b46e60e96318531d4b43"
++    },
++    "comsol_mcp/_tools_geometry.py": {
++      "bytes": 6895,
++      "sha256": "8e3a8b12ae252b6fb7ccf718e38de7b959228d5c2aeb1653e95443cec41c0e0a"
++    },
++    "comsol_mcp/_tools_model.py": {
++      "bytes": 3881,
++      "sha256": "aa247e34e6cbacc3f7481082c91edabc999273a7118de41536f3539e44ddc7b5"
++    },
++    "comsol_mcp/_tools_params.py": {
++      "bytes": 19355,
++      "sha256": "d6faf82a2c49466b60e4d045bf04cdcb3fc8c6d0771359f1de278876dd6753ce"
++    },
++    "comsol_mcp/_tools_phase1.py": {
++      "bytes": 775,
++      "sha256": "8a3eab8d289b29bd5b9d1a63fb8e9eeb93576d506b333f57e24d21b6e49f1060"
++    },
++    "comsol_mcp/_tools_physics.py": {
++      "bytes": 12558,
++      "sha256": "72ed57f61a778d2cb822809b91914e70a869890699f18d3da1bfed474414eb98"
++    },
++    "comsol_mcp/_tools_snapshot.py": {
++      "bytes": 10871,
++      "sha256": "ddd37955676f032c065e13812fa8f945e954c9ebe82c06ce0754e118b31c7e35"
++    },
++    "comsol_mcp/_tools_solver.py": {
++      "bytes": 9867,
++      "sha256": "60adf34f7c1aa67ece852b5259099339c4391fbd26a77e4b80be994fffed3934"
++    },
++    "comsol_mcp/_tools_w18.py": {
++      "bytes": 704,
++      "sha256": "2df053e4a1ac0d326f230300e69597a71068a3b2f66270976bf5f0600d1d5fd4"
++    },
++    "comsol_mcp/_tools_w20.py": {
++      "bytes": 7837,
++      "sha256": "6182269064dfc8973fdb6845b4e768bbf60e92322e79ac0e92ad4913496f564e"
++    },
++    "comsol_mcp/_tools_w21.py": {
++      "bytes": 9096,
++      "sha256": "e686b2d9545eb91d470aca99ac5f5e8eb01278ab669b35b7c34abcd87f22d964"
++    },
++    "comsol_mcp/_tools_workflow.py": {
++      "bytes": 22520,
++      "sha256": "4c35c2c92afc09acd2136647c142b7607ca3fbc0cb6b22b4a04d487764c2b9ad"
++    },
++    "comsol_mcp/_vcsel_source.py": {
++      "bytes": 9535,
++      "sha256": "7a4a79426cd14c426099f07535b70566cdd1c16bbf2a4b9261814610b514d963"
++    },
++    "comsol_mcp/_w21_execution.py": {
++      "bytes": 94999,
++      "sha256": "d9ec833c69eb691a9c0acd85984c7ae39828da763962d1fe80722ff8819547ba"
++    },
++    "comsol_mcp/_w21_initial_stage.py": {
++      "bytes": 12374,
++      "sha256": "9019f0046d25c0287918dac28e3e84ff8de4766e558590e90bd7a675634d0ffe"
++    },
++    "comsol_mcp/_w21_mesh_evidence.py": {
++      "bytes": 26977,
++      "sha256": "8d13794d74547742a4dd38e1516eca3c7102980cc856c96e974216261e193181"
++    },
++    "comsol_mcp/_w21_mesh_readback.py": {
++      "bytes": 30742,
++      "sha256": "c6fe5120c7ca3dbb89c4dbe0e3be9bfcba821ae938964147d11cd7ba867e9851"
++    },
++    "comsol_mcp/_w21_native_output.py": {
++      "bytes": 97313,
++      "sha256": "33d9c229711335decf01f665ef761a3ded583a1b66972930b54b3c5519f0773d"
++    },
++    "comsol_mcp/_w21_stage_backend.py": {
++      "bytes": 115705,
++      "sha256": "c57ae9a25ead998d714e8c89a10434f134e670a532c7dae9b4fa1007220873d7"
++    },
++    "comsol_mcp/_w23_basis_v2_contract.py": {
++      "bytes": 20040,
++      "sha256": "837f3508acb505d1b6be726274099009d3a6d5d95e3dcf410b2d7db40b877aa4"
++    },
++    "comsol_mcp/_w23_basis_v2_provenance.py": {
++      "bytes": 38968,
++      "sha256": "16feeb0fba3f2952616eb472bb3cdab391cf8240ea04a5edcc9d0f0c25e399c9"
++    },
++    "comsol_mcp/_w23_basis_v2_results.py": {
++      "bytes": 52371,
++      "sha256": "ef06db7a645dc79ec6a9898d47952fbec75ea27b046221b026a5825135ea6eef"
++    },
++    "comsol_mcp/_w23_results.py": {
++      "bytes": 54222,
++      "sha256": "fae3ddcc4abab9866eaa3a667b418ef2fe8a70c4fba651bc62ab323316c991ca"
++    },
++    "comsol_mcp/_w26_memory_resources.py": {
++      "bytes": 69020,
++      "sha256": "64b1e29407b308151cfe7a789b36d8f311ec8861ba06b91f9ed3e620bba4185f"
++    },
++    "comsol_mcp/_w26_os_resources.py": {
++      "bytes": 184880,
++      "sha256": "7fbf94fd1f0f75ab4e65f5a51a78ed4ec055ce887861155180af0f0df8171dfb"
++    },
++    "comsol_mcp/_windows_appcontainer.py": {
++      "bytes": 6748,
++      "sha256": "dd0c4ee8f710d2a8163e09249e6126a8c1d1ed630ddec5527ae9dc93622fde66"
++    },
++    "comsol_mcp/_windows_appcontainer_native.py": {
++      "bytes": 10735,
++      "sha256": "9fb8c0173f5d096eb0774825814f74a9bdd80f4e95b85df6e0a9e83bafb15175"
++    },
++    "comsol_mcp/_windows_filter_group.py": {
++      "bytes": 20507,
++      "sha256": "966ff5fa3228e84cc38ca2aa841db3b9f984fbfe9834dd26a9c700f22652f87e"
++    },
++    "comsol_mcp/_windows_host_change.py": {
++      "bytes": 71816,
++      "sha256": "c8daf247c7024161693c7c28f64347a53ff32ed206b0044d4c4e53f9eca231eb"
++    },
++    "comsol_mcp/_windows_host_identity_owner.py": {
++      "bytes": 3860,
++      "sha256": "8e819326ec6cb1726bb1e501f2bf9a049de84921a4d4ec02af62d08251547990"
++    },
++    "comsol_mcp/_windows_host_preflight_owner.py": {
++      "bytes": 8398,
++      "sha256": "943f04db6bea5dff21c1b325e6eced787184d6c5072a9ff80cfed9c0de7fcdfa"
++    },
++    "comsol_mcp/_windows_job_limits.py": {
++      "bytes": 13459,
++      "sha256": "38db220f2e88971b3b09a929e4343223e32411289515a008464472fe070f7ee2"
++    },
++    "comsol_mcp/_windows_model_publish.py": {
++      "bytes": 31709,
++      "sha256": "45b3909296707a0d9c2d35777a7d443b338af9d27d6a30b248f0eaebcd2923d6"
++    },
++    "comsol_mcp/_windows_owned_resources.py": {
++      "bytes": 6988,
++      "sha256": "82db7815c97093b92d5936d0dbc34915064715d51ad48905ff554e720454f784"
++    },
++    "comsol_mcp/_windows_parameter_publish.py": {
++      "bytes": 49678,
++      "sha256": "70135df2e5271d5287155b252cf5c75f235df5317aee0453fd7091af982822a2"
++    },
++    "comsol_mcp/_windows_policy_owner.py": {
++      "bytes": 1513,
++      "sha256": "2d3cbca91e8a1145853f377af9ef9ffe27616038ee11efed2c93c2bd72d4edf5"
++    },
++    "comsol_mcp/_windows_service_sid.py": {
++      "bytes": 20237,
++      "sha256": "573b859dc21ec87ab235c338d9aaf7803066e96fa12b437df316e7a4b3d2b384"
++    },
++    "comsol_mcp/_windows_service_sid_native.py": {
++      "bytes": 16458,
++      "sha256": "3975becc1ce3b85d24ce854974b7f1319e499c6debbf72b83b8b24403e22886a"
++    },
++    "comsol_mcp/_windows_state_restore.py": {
++      "bytes": 35416,
++      "sha256": "92cca3954185bcd6d36aae4c296a8920bf2955b5fa8c07d67794e42383609915"
++    },
++    "comsol_mcp/_windows_t037.py": {
++      "bytes": 112576,
++      "sha256": "71c855fd326302ad2612060921bf5de4ea1af9babdf8b72c791ce0f07d37e231"
++    },
++    "comsol_mcp/_windows_t037_acl.py": {
++      "bytes": 13644,
++      "sha256": "5414f1a2875578c9ad2f9ebcc02e03356e0e5c9e0bbe03978dbe445cad0b482d"
++    },
++    "comsol_mcp/_windows_t037_bootstrap.py": {
++      "bytes": 8814,
++      "sha256": "eb51cdef6223c777efac95085ca2ae9667db1d04950e5837736530ea8308a5d9"
++    },
++    "comsol_mcp/_windows_t037_broker.py": {
++      "bytes": 27803,
++      "sha256": "01ea46733a87cd4cba91eb7d4066207509dd5eac8e2cf57b2163bc96a3171847"
++    },
++    "comsol_mcp/_windows_t037_child.py": {
++      "bytes": 8886,
++      "sha256": "ac0721c61d9ca7e4e57248e0c738ab9ae5e39bc32a748f557f60bfeb8b550db3"
++    },
++    "comsol_mcp/_windows_t037_effective.py": {
++      "bytes": 9834,
++      "sha256": "78dac3b65d62b4c5ab8c29b68187363aa4cce360d9f88cc7fb289956fc2f1590"
++    },
++    "comsol_mcp/_windows_t037_native.py": {
++      "bytes": 105274,
++      "sha256": "15475e12c06205071e12411cf21ab7c0a59441a23d7b6254666b794371ec19a0"
++    },
++    "comsol_mcp/_windows_t037_resume.py": {
++      "bytes": 7809,
++      "sha256": "39095a91bdb370884bae49dce644acf9e881e2c6ba25dd0d78b62be13872a45d"
++    },
++    "comsol_mcp/_windows_t037_wfp.py": {
++      "bytes": 56981,
++      "sha256": "0db03c2829157949ffb2335cd28bafc45d1c0301fa5796b9b3b5babc373122ca"
++    },
++    "comsol_mcp/_windows_wfp_mutation_owner.py": {
++      "bytes": 7053,
++      "sha256": "cf63509b33100660926aba940914415a61eecae8cbb376fe9407d0be1903bfdc"
++    },
++    "comsol_mcp/data/g2/02_ACTION_CATALOG.json": {
++      "bytes": 583457,
++      "sha256": "c49201c72932ac87b799da7bdbea9a982912e24bde9c3c9887c2916a1fea3b10"
++    },
++    "comsol_mcp/data/g2/common.schema.json": {
++      "bytes": 7757,
++      "sha256": "1beb031c1da5fedcdbfbb43750aa4e4d0e8b7c07ce4513a832ff3fe535dd7afa"
++    },
++    "comsol_mcp/data/science_recipes/SOURCE_ORIGINS.json": "6ce532e581e27aa149bba05badec2a7131567e5ab9e952ee78fe6e2c7b8b7fa5",
++    "comsol_mcp/data/science_recipes/java/NativeW23TEScienceFixture.java": {
++      "bytes": 83724,
++      "sha256": "63be8fa15063b914f9f37cd09cd4fe048f18c6a37c856820f44737bb4857e23e"
++    },
++    "comsol_mcp/data/science_recipes/java/ScientificBuildReadback.java": {
++      "bytes": 3609,
++      "sha256": "09e5f810483b476b110fa036212534e7d61c2b48d401c0ad56777e97e0d0b122"
++    },
++    "comsol_mcp/data/science_recipes/java/W22Fixture.java": {
++      "bytes": 7354,
++      "sha256": "9b08c4febdace0617fa9f7e88aff638bdc6204e3d9fb7f8282c0867e31c1d216"
++    },
++    "comsol_mcp/data/science_recipes/java/W24CureCouponFixture.java": {
++      "bytes": 132161,
++      "sha256": "70a46009b84148d54f34613171d5c83ecc557306574764edad59b9bc9262a2d0"
++    },
++    "comsol_mcp/data/science_recipes/java/W24StaticShapeFixture.java": "516ffe216bf6389a87564c92a2a387092751a7e01e479abdb108d4bde9ad5975",
++    "comsol_mcp/data/science_recipes/parameters.json": {
++      "bytes": 7284,
++      "sha256": "1b32c3094cd210e3f8a8569294fa29704b94fbe85fd188e575d623165cbdf0d9"
++    },
++    "comsol_mcp/data/science_recipes/w22_benchmark.json": {
++      "bytes": 3566,
++      "sha256": "d94322296feff1cd7678e345bf798616a704c638c8c108d3c8f78f4128f4b1fe"
++    },
++    "comsol_mcp/data/science_recipes/w22_source/basis_l0_g0.txt": {
++      "bytes": 636646,
++      "sha256": "d4d5bbcacc4b75747036c2e4adef8cb150e8dd0fad1935943f48d02cc59f9cab"
++    },
++    "comsol_mcp/data/science_recipes/w22_source/basis_l0_g1.txt": {
++      "bytes": 627669,
++      "sha256": "ede5489070fa81f741a4533c17c6b3df69397751918ad4686b2e18073694bcf5"
++    },
++    "comsol_mcp/data/science_recipes/w22_source/basis_l0_g2.txt": {
++      "bytes": 614657,
++      "sha256": "7169570886841d16fd307710c9c4e02678f4fb3e9c28728d06b22bc06036419b"
++    },
++    "comsol_mcp/data/science_recipes/w22_source/basis_l1_g0.txt": {
++      "bytes": 633279,
++      "sha256": "7e7c7f18afbbc80e3610d283e56c8f34db3b20a98f729fcd03ff06d8b91c5c92"
++    },
++    "comsol_mcp/data/science_recipes/w22_source/basis_l1_g1.txt": {
++      "bytes": 622723,
++      "sha256": "a726c1bbfce7fd8b892aefe3882719914c930d207ed5ffb7ce2d77c633c6460b"
++    },
++    "comsol_mcp/data/science_recipes/w22_source/basis_l1_g2.txt": {
++      "bytes": 610007,
++      "sha256": "e8e115995e00ddb718900f6e6db402e7abb4302f74e48428ffb5bfa1c68ed817"
++    },
++    "comsol_mcp/data/science_recipes/w22_source/basis_l2_g0.txt": {
++      "bytes": 629134,
++      "sha256": "e0ea8e6c04ff54c886780d355ff25109887950217c7e039caf4e491baf60fe91"
++    },
++    "comsol_mcp/data/science_recipes/w22_source/basis_l2_g1.txt": {
++      "bytes": 617366,
++      "sha256": "9be82fdcb583de5b05a1e8716396c52df472d2992de2eccfd929460252567cc5"
++    },
++    "comsol_mcp/data/science_recipes/w22_source/basis_l2_g2.txt": {
++      "bytes": 607158,
++      "sha256": "d01c1816f007bc62b8b2b2f6b029e0bf0ae26a6cfc10bc4d222e08f34d8f3970"
++    },
++    "comsol_mcp/data/science_recipes/w22_source/manifest.json": {
++      "bytes": 6987,
++      "sha256": "9fd3a145c9ebb46072edc396ced3cc420fa7fe14ac6d6289a76c40adb5c6bb12"
++    },
++    "comsol_mcp/mcp_server.py": {
++      "bytes": 1927,
++      "sha256": "daa3972ca26b8e1ba72b07f3d346a1523b390bb556197aede0b8d58f4231a0a4"
++    },
++    "comsol_mcp/phase1_java/BoundPhase1Poc.java": {
++      "bytes": 2662,
++      "sha256": "093c51f1144b2713f1427194014266ee2cd82f0f5597bcaba71c11a34816c00f"
++    },
++    "comsol_mcp/phase1_java/BoundPhase1ProductProbe.java": {
++      "bytes": 423,
++      "sha256": "788e85cceb5b2a4b55a93e738eee6e37aa8faf8dc7c38587f2c95ef39a4ff619"
++    },
++    "comsol_mcp/phase1_java/BoundPhase1Reopen.java": {
++      "bytes": 732,
++      "sha256": "4625f30ca27d492c05442e7b370ea1353389259e83e0b0382868c35e658081a4"
++    },
++    "comsol_mcp/worker_java/PersistentComsolWorker.java": {
++      "bytes": 145908,
++      "sha256": "7054a163f8a68732922320f4906d0586cb8481d7ca0bbfbd1593aace2b50c5d7"
++    },
++    "pyproject.toml": {
++      "bytes": 1807,
++      "sha256": "fc8eaefc0db93fe956021cee3f8718f2e573bdbb88102fad9f1d097e8ea67995"
++    }
++  },
++  "package_count": 172,
++  "profile": "current175-r14",
++  "root_count": 3,
++  "schema": "w26-application-source-closure/1"
++}
+--- /dev/null
++++ b/tools/w26_profile_map_current_r14_proposed.json
+@@ -0,0 +1,521 @@
++{
++  "current_loader": {
++    "member_names": [
++      "_w26_original_binary.py",
++      "_w26_original_process.py",
++      "_w26_original_tls.py",
++      "full_project_release.py",
++      "release_transition_lifecycle.py",
++      "w26_application_bundle.py",
++      "w26_application_bundle_current.py",
++      "w26_application_lifecycle.py",
++      "w26_application_lifecycle_base_current.py",
++      "w26_application_lifecycle_current.py",
++      "w26_application_sources.lock.json",
++      "w26_application_sources_175_r10_prepared.lock.json",
++      "w26_application_sources_175_r11_prepared.lock.json",
++      "w26_application_sources_175_r12_prepared.lock.json",
++      "w26_application_sources_175_r13_prepared.lock.json",
++      "w26_application_sources_175_r4.lock.json",
++      "w26_application_sources_175_r5.lock.json",
++      "w26_application_sources_175_r6.lock.json",
++      "w26_application_sources_175_r7_final.lock.json",
++      "w26_application_sources_175_r8_prepared.lock.json",
++      "w26_application_sources_175_r9_prepared.lock.json",
++      "w26_application_stage.py",
++      "w26_current_runtime_profile.py",
++      "w26_dependency_profile.py",
++      "w26_dependency_stage.py",
++      "w26_dependency_unit.py",
++      "w26_dependency_unit_current.py",
++      "w26_hold_exec.py",
++      "w26_lifecycle_stage.py",
++      "w26_prepare_current_inputs.py",
++      "w26_profile_map_current.json",
++      "w26_rebuild_current_runtime.py",
++      "w26_runtime_actor.py",
++      "w26_runtime_actor_current.py",
++      "w26_runtime_sources.lock.json",
++      "w26_sealed_data.py",
++      "w26_sealed_data_base_current.py",
++      "w26_sealed_data_current.py",
++      "w26_sealed_data_r9.py",
++      "w26_target_inputs.py",
++      "w26_application_sources_175_r14_prepared.lock.json"
++    ],
++    "module_routes": {
++      "actor": "tools.w26_runtime_actor_current",
++      "base": "tools.w26_sealed_data_base_current",
++      "bundle": "tools.w26_application_bundle_current",
++      "dependency_unit": "tools.w26_dependency_unit_current",
++      "lifecycle": "tools.w26_application_lifecycle_current",
++      "lifecycle_base": "tools.w26_application_lifecycle_base_current",
++      "reader": "tools.w26_sealed_data_current"
++    },
++    "root": "module-parent",
++    "schema": "w26-current-versioned-loader-source-closure/1"
++  },
++  "current_profiles": {
++    "current175-r10": {
++      "allowed_lock_roots": [
++        "current_tools"
++      ],
++      "member_count": 175,
++      "member_fingerprint_sha256": "6a482dd9b57736b46c078ab0449fca59bbdfdb67eba615f633af6b8a322482f9",
++      "package_count": 172,
++      "root_count": 3,
++      "source_lock_name": "w26_application_sources_175_r10_prepared.lock.json",
++      "source_lock_sha256": "fe4867edc08cf418201f317bc943bee1c8f2e95d07e2884c6f49f7aa64e13b0d",
++      "source_profile": "current175-r10"
++    },
++    "current175-r11": {
++      "allowed_lock_roots": [
++        "current_tools"
++      ],
++      "member_count": 175,
++      "member_fingerprint_sha256": "4433034853ee5b6aea878178887be328fde44c2783d06ce10ca9464945200738",
++      "package_count": 172,
++      "root_count": 3,
++      "source_lock_name": "w26_application_sources_175_r11_prepared.lock.json",
++      "source_lock_sha256": "7be4e8bf7c58611c65bbc8d6833acd0ed884de77c7620be2bd987e94b5e72abe",
++      "source_profile": "current175-r11"
++    },
++    "current175-r12": {
++      "allowed_lock_roots": [
++        "current_tools"
++      ],
++      "member_count": 175,
++      "member_fingerprint_sha256": "27da0545a17a4071ee3c21708b1f2d8f00535380b780525c31bbcedf9b799fd1",
++      "package_count": 172,
++      "root_count": 3,
++      "source_lock_name": "w26_application_sources_175_r12_prepared.lock.json",
++      "source_lock_sha256": "1f6adc82daa12c720509fbd58f86e381f834f4dd215bc5716302096f2b6c5a25",
++      "source_profile": "current175-r12"
++    },
++    "current175-r13": {
++      "allowed_lock_roots": [
++        "current_tools"
++      ],
++      "member_count": 175,
++      "member_fingerprint_sha256": "66ba2d86fa2ff81027e0f3fc293d24ee98921fe0696acfd18fb2bce8c8426daf",
++      "package_count": 172,
++      "root_count": 3,
++      "source_lock_name": "w26_application_sources_175_r13_prepared.lock.json",
++      "source_lock_sha256": "1dd9ba4db2264e44a6c778eff8d9d18d34709f7b954bff6252bce6cbede9b826",
++      "source_profile": "current175-r13"
++    },
++    "current175-r9": {
++      "allowed_lock_roots": [
++        "legacy_tools",
++        "current_tools"
++      ],
++      "member_count": 175,
++      "member_fingerprint_sha256": "401d720192bba5456c8c576f9ed845a74e0555b9c8d4a5e9fa04dcb28d89ef26",
++      "package_count": 172,
++      "root_count": 3,
++      "source_lock_name": "w26_application_sources_175_r9_prepared.lock.json",
++      "source_lock_sha256": "a524e533f01ed5e5ea0f06cfa5caf49ab0ddf50474258b672265c13f62f987a2",
++      "source_profile": "current175-r9"
++    },
++    "current175-r14": {
++      "allowed_lock_roots": [
++        "current_tools"
++      ],
++      "member_count": 175,
++      "member_fingerprint_sha256": "d399515235480989765d9821ea2f21ca0eb8fef3ce52e568ace7aa82a8de7d11",
++      "package_count": 172,
++      "root_count": 3,
++      "source_lock_name": "w26_application_sources_175_r14_prepared.lock.json",
++      "source_lock_sha256": "44b83af14cdfe827b9dfef929165b6e810df1888f9ba6e338a152e513247e139",
++      "source_profile": "current175-r14"
++    }
++  },
++  "legacy_profile": {
++    "loader_source_closure": {
++      "members": {
++        "_w26_original_binary.py": {
++          "bytes": 6023,
++          "ctime_ns": 1791912590658580193,
++          "dev": 16777245,
++          "inode": 1333663,
++          "mode": 33188,
++          "mtime_ns": 1791912590658580193,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/_w26_original_binary.py",
++          "sha256": "eeaa220b40844b04b71c52c87c311499fcac4cc19e5e3cb0f4d2db4bc7b15c6e",
++          "uid": 501
++        },
++        "_w26_original_process.py": {
++          "bytes": 10905,
++          "ctime_ns": 1791911663115642785,
++          "dev": 16777245,
++          "inode": 1329196,
++          "mode": 33188,
++          "mtime_ns": 1791911663115642785,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/_w26_original_process.py",
++          "sha256": "368d5403191a870f12e1d6d899c51e158de9078ca0c7b7841b878ba7ad68c8a2",
++          "uid": 501
++        },
++        "_w26_original_tls.py": {
++          "bytes": 7099,
++          "ctime_ns": 1791916411668525293,
++          "dev": 16777245,
++          "inode": 1342167,
++          "mode": 33152,
++          "mtime_ns": 1791916411668462667,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/_w26_original_tls.py",
++          "sha256": "cc0dd12a6ca613f06d9780d7989d69145aa5b140a2cbd1f3fc02fb3baf0c8847",
++          "uid": 501
++        },
++        "full_project_release.py": {
++          "bytes": 203499,
++          "ctime_ns": 1791942301277313885,
++          "dev": 16777245,
++          "inode": 1299697,
++          "mode": 33188,
++          "mtime_ns": 1791942301277313885,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/full_project_release.py",
++          "sha256": "391b4d53a75bcea237a2a1bd686bb35368c5013bc0f4ed20a15d98e58a657215",
++          "uid": 501
++        },
++        "release_transition_lifecycle.py": {
++          "bytes": 50328,
++          "ctime_ns": 1791927070009294335,
++          "dev": 16777245,
++          "inode": 1299756,
++          "mode": 33188,
++          "mtime_ns": 1791927070009294335,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/release_transition_lifecycle.py",
++          "sha256": "08591b2a0adcceef0516a9c448e1def6b3c4f14fac0fd471a6f8276e61b87c41",
++          "uid": 501
++        },
++        "w26_application_bundle.py": {
++          "bytes": 37208,
++          "ctime_ns": 1792008960114398997,
++          "dev": 16777245,
++          "inode": 1362610,
++          "mode": 33188,
++          "mtime_ns": 1792008960114217162,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/w26_application_bundle.py",
++          "sha256": "305ab5d79998f42f6c472ed3bf0c1a78184a880c59868576cd5c1f98e6f347db",
++          "uid": 501
++        },
++        "w26_application_lifecycle.py": {
++          "bytes": 39893,
++          "ctime_ns": 1791982951394711291,
++          "dev": 16777245,
++          "inode": 1350390,
++          "mode": 33188,
++          "mtime_ns": 1791982951394711291,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/w26_application_lifecycle.py",
++          "sha256": "dc2cfe637243077f55bdf5451cef3369fcececaa7b72989d4016553ed12087c4",
++          "uid": 501
++        },
++        "w26_application_sources.lock.json": {
++          "bytes": 27092,
++          "ctime_ns": 1791933981604770978,
++          "dev": 16777245,
++          "inode": 1350946,
++          "mode": 33188,
++          "mtime_ns": 1791933981604770978,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/w26_application_sources.lock.json",
++          "sha256": "17ddf5bfa9596ebfc52e1744df15a85efa82de5be65b04150ce91a92960d7006",
++          "uid": 501
++        },
++        "w26_application_sources_175_r4.lock.json": {
++          "bytes": 27250,
++          "ctime_ns": 1791965918377971429,
++          "dev": 16777245,
++          "inode": 1354632,
++          "mode": 33152,
++          "mtime_ns": 1791965918377971429,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/w26_application_sources_175_r4.lock.json",
++          "sha256": "996a4c3be3bceac0f3c1981da45683c447b8076f0de3da94def64c59df956df5",
++          "uid": 501
++        },
++        "w26_application_sources_175_r5.lock.json": {
++          "bytes": 27250,
++          "ctime_ns": 1791972160383749190,
++          "dev": 16777245,
++          "inode": 1355140,
++          "mode": 33152,
++          "mtime_ns": 1791972160383749190,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/w26_application_sources_175_r5.lock.json",
++          "sha256": "61062b661cf2c1c2a2d00cfd54d98d95fbe7bc371790bae0181a4e1f358bf693",
++          "uid": 501
++        },
++        "w26_application_sources_175_r6.lock.json": {
++          "bytes": 27250,
++          "ctime_ns": 1791983458989667088,
++          "dev": 16777245,
++          "inode": 1361372,
++          "mode": 33188,
++          "mtime_ns": 1791983458989667088,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/w26_application_sources_175_r6.lock.json",
++          "sha256": "016166b15329c83e8a0f1175f9cc44e5b0f3cd17a5873c1b6ad3dc77a3e843d1",
++          "uid": 501
++        },
++        "w26_application_sources_175_r7_final.lock.json": {
++          "bytes": 27250,
++          "ctime_ns": 1791990333594180566,
++          "dev": 16777245,
++          "inode": 1361711,
++          "mode": 33188,
++          "mtime_ns": 1791990333594180566,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/w26_application_sources_175_r7_final.lock.json",
++          "sha256": "6062c06724846eeb294c10767bd25579ffe44d1035bdcc505d3f843a01c1ab8a",
++          "uid": 501
++        },
++        "w26_application_sources_175_r8_prepared.lock.json": {
++          "bytes": 27250,
++          "ctime_ns": 1792003002180100677,
++          "dev": 16777245,
++          "inode": 1362296,
++          "mode": 33188,
++          "mtime_ns": 1792003002180054968,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/w26_application_sources_175_r8_prepared.lock.json",
++          "sha256": "11ff744bc2bd7d860c75fced51575ab99f8c9fa13f959b1c38b0d79c13823a12",
++          "uid": 501
++        },
++        "w26_application_sources_175_r9_prepared.lock.json": {
++          "bytes": 27251,
++          "ctime_ns": 1792006365844570830,
++          "dev": 16777245,
++          "inode": 1362492,
++          "mode": 33188,
++          "mtime_ns": 1792006365844570830,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/w26_application_sources_175_r9_prepared.lock.json",
++          "sha256": "a524e533f01ed5e5ea0f06cfa5caf49ab0ddf50474258b672265c13f62f987a2",
++          "uid": 501
++        },
++        "w26_application_stage.py": {
++          "bytes": 2352,
++          "ctime_ns": 1791923868275408834,
++          "dev": 16777245,
++          "inode": 1350239,
++          "mode": 33188,
++          "mtime_ns": 1791923868275408834,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/w26_application_stage.py",
++          "sha256": "034b480eb4a8d9365d39de52b904850d1013a90f2a54b2dddb3b85bcd468ed93",
++          "uid": 501
++        },
++        "w26_current_runtime_profile.py": {
++          "bytes": 8294,
++          "ctime_ns": 1791916726585707488,
++          "dev": 16777245,
++          "inode": 1329368,
++          "mode": 33188,
++          "mtime_ns": 1791916726585707488,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/w26_current_runtime_profile.py",
++          "sha256": "9213b2cc1eb9da4820fdb101e7b92a91dcd628625f6d91297eb852bdd4ceef08",
++          "uid": 501
++        },
++        "w26_dependency_profile.py": {
++          "bytes": 2139,
++          "ctime_ns": 1791920034935784177,
++          "dev": 16777245,
++          "inode": 1349382,
++          "mode": 33188,
++          "mtime_ns": 1791920034935784177,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/w26_dependency_profile.py",
++          "sha256": "cf2a9f888ace358ba1926e0f75dfe2a8aa80c2366c7b81e3d3aecf3b4312e15b",
++          "uid": 501
++        },
++        "w26_dependency_stage.py": {
++          "bytes": 4146,
++          "ctime_ns": 1791920034956238744,
++          "dev": 16777245,
++          "inode": 1349381,
++          "mode": 33188,
++          "mtime_ns": 1791920034956238744,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/w26_dependency_stage.py",
++          "sha256": "4ecd63c0749bad8b98cb3a062f11c98f0d658664d335a6d30a1e9df8565e4880",
++          "uid": 501
++        },
++        "w26_dependency_unit.py": {
++          "bytes": 15764,
++          "ctime_ns": 1791921079483187689,
++          "dev": 16777245,
++          "inode": 1349385,
++          "mode": 33188,
++          "mtime_ns": 1791921079483187689,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/w26_dependency_unit.py",
++          "sha256": "0d9111368bf636b017a48bb5fa30b21df04c0c3d290aa906bbbe0cecb6ba3b3c",
++          "uid": 501
++        },
++        "w26_hold_exec.py": {
++          "bytes": 1995,
++          "ctime_ns": 1791912110620226815,
++          "dev": 16777245,
++          "inode": 1329367,
++          "mode": 33188,
++          "mtime_ns": 1791912110620226815,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/w26_hold_exec.py",
++          "sha256": "a2256087068cb68436c03c3dba53aa887b45042a66ac86020f8ac5f31d187090",
++          "uid": 501
++        },
++        "w26_lifecycle_stage.py": {
++          "bytes": 2390,
++          "ctime_ns": 1791926340493492299,
++          "dev": 16777245,
++          "inode": 1350388,
++          "mode": 33188,
++          "mtime_ns": 1791926340493492299,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/w26_lifecycle_stage.py",
++          "sha256": "ec10ef6e1f9d037412132b2669fc8cd0a662259c8606bfebe11e6702696d145f",
++          "uid": 501
++        },
++        "w26_prepare_current_inputs.py": {
++          "bytes": 17121,
++          "ctime_ns": 1791909964390224943,
++          "dev": 16777245,
++          "inode": 1318970,
++          "mode": 33188,
++          "mtime_ns": 1791909964390224943,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/w26_prepare_current_inputs.py",
++          "sha256": "d06c535888443ccc92e1f573ba44db281b4c20fbc895e6584564be074ad5be5c",
++          "uid": 501
++        },
++        "w26_rebuild_current_runtime.py": {
++          "bytes": 9567,
++          "ctime_ns": 1791915304167180925,
++          "dev": 16777245,
++          "inode": 1329180,
++          "mode": 33188,
++          "mtime_ns": 1791915304167180925,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/w26_rebuild_current_runtime.py",
++          "sha256": "9daa69390f6d5851a81fa9c2bc4cec2c3be0186cb2e3177286404c5b545131e3",
++          "uid": 501
++        },
++        "w26_runtime_actor.py": {
++          "bytes": 47788,
++          "ctime_ns": 1791933396982035940,
++          "dev": 16777245,
++          "inode": 1329363,
++          "mode": 33188,
++          "mtime_ns": 1791933396982035940,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/w26_runtime_actor.py",
++          "sha256": "309c24315d7df32fd62ce3803477594b763f97d9b0b10e05f4b5e1b1feb0bf47",
++          "uid": 501
++        },
++        "w26_runtime_sources.lock.json": {
++          "bytes": 1590,
++          "ctime_ns": 1791911295924718162,
++          "dev": 16777245,
++          "inode": 1329181,
++          "mode": 33188,
++          "mtime_ns": 1791911295924718162,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/w26_runtime_sources.lock.json",
++          "sha256": "f6e3e3cb8e30b2db9bf677df3008b3ab456510c492ccd4fd2c17ba228c5f68d7",
++          "uid": 501
++        },
++        "w26_sealed_data.py": {
++          "bytes": 47488,
++          "ctime_ns": 1791982940235945758,
++          "dev": 16777245,
++          "inode": 1350377,
++          "mode": 33188,
++          "mtime_ns": 1791982940235945758,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/w26_sealed_data.py",
++          "sha256": "f9c77a286b755747e69d7ee8a67a5849128751f899d970073698e5a0c08ba4c8",
++          "uid": 501
++        },
++        "w26_sealed_data_r9.py": {
++          "bytes": 22818,
++          "ctime_ns": 1792008960114742123,
++          "dev": 16777245,
++          "inode": 1362611,
++          "mode": 33188,
++          "mtime_ns": 1792008960114610248,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/w26_sealed_data_r9.py",
++          "sha256": "b7bb254e6cef089e39ef9408c0a16371703b84ad4e706c74bad0ced418c0153c",
++          "uid": 501
++        },
++        "w26_target_inputs.py": {
++          "bytes": 14714,
++          "ctime_ns": 1791942774483058739,
++          "dev": 16777245,
++          "inode": 1352222,
++          "mode": 33188,
++          "mtime_ns": 1791942774483058739,
++          "nlink": 1,
++          "path": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools/w26_target_inputs.py",
++          "sha256": "baf059f035ce97db398fac4f26cb51c300276ca852619c44e3fdc4612264d787",
++          "uid": 501
++        }
++      },
++      "root": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/tools",
++      "schema": "w26-current-application-loader-source-closure/1"
++    },
++    "profile_spec": null,
++    "source_profile": "current175-r9"
++  },
++  "negative_contracts": [
++    "unknown-profile-refused",
++    "subset-member-set-refused",
++    "legacy-profile_spec-none-cannot-use-current-closure",
++    "current-profile-cannot-use-legacy-reader-module-cache",
++    "cross-root-tools-package-refused"
++  ],
++  "schema": "w26-current-profile-map/1",
++  "supported_current_profiles": {
++    "current175-r12": {
++      "source_lock_name": "w26_application_sources_175_r12_prepared.lock.json",
++      "source_lock_sha256": "1f6adc82daa12c720509fbd58f86e381f834f4dd215bc5716302096f2b6c5a25"
++    },
++    "current175-r4": {
++      "source_lock_name": "w26_application_sources_175_r4.lock.json",
++      "source_lock_sha256": "996a4c3be3bceac0f3c1981da45683c447b8076f0de3da94def64c59df956df5"
++    },
++    "current175-r5": {
++      "source_lock_name": "w26_application_sources_175_r5.lock.json",
++      "source_lock_sha256": "61062b661cf2c1c2a2d00cfd54d98d95fbe7bc371790bae0181a4e1f358bf693"
++    },
++    "current175-r6": {
++      "source_lock_name": "w26_application_sources_175_r6.lock.json",
++      "source_lock_sha256": "016166b15329c83e8a0f1175f9cc44e5b0f3cd17a5873c1b6ad3dc77a3e843d1"
++    },
++    "current175-r7": {
++      "source_lock_name": "w26_application_sources_175_r7_final.lock.json",
++      "source_lock_sha256": "6062c06724846eeb294c10767bd25579ffe44d1035bdcc505d3f843a01c1ab8a"
++    },
++    "current175-r8": {
++      "source_lock_name": "w26_application_sources_175_r8_prepared.lock.json",
++      "source_lock_sha256": "11ff744bc2bd7d860c75fced51575ab99f8c9fa13f959b1c38b0d79c13823a12"
++    },
++    "current175-r9": {
++      "source_lock_name": "w26_application_sources_175_r9_prepared.lock.json",
++      "source_lock_sha256": "a524e533f01ed5e5ea0f06cfa5caf49ab0ddf50474258b672265c13f62f987a2"
++    },
++    "current175-r14": {
++      "source_lock_name": "w26_application_sources_175_r14_prepared.lock.json",
++      "source_lock_sha256": "44b83af14cdfe827b9dfef929165b6e810df1888f9ba6e338a152e513247e139"
++    }
++  }
++}

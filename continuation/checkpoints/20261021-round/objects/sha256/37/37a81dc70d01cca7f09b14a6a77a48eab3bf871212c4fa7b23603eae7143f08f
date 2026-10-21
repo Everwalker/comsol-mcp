@@ -1,0 +1,255 @@
+"""Join saved managed ``model.inspect`` and exact ``job.log`` evidence.
+
+This reader never dispatches an MCP call or contacts a Worker/COMSOL runtime.
+The runner must save the complete public responses with exclusive create
+before this module parses or derives a witness.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import stat
+from pathlib import Path
+from typing import Any, Mapping
+
+from comsol_mcp._execution_contract import model_ref_from_mapping
+from comsol_mcp._execution_service import _validated_fingerprint_components
+
+
+class ProbeEvidenceError(RuntimeError):
+    """Evidence is insufficient to justify any next probe step."""
+
+    def __init__(self, code: str, message: str):
+        super().__init__(message)
+        self.code = code
+        self.safe_retry = False
+
+
+def _fail(message: str) -> None:
+    raise ProbeEvidenceError("EXECUTION_STATE_UNKNOWN", message)
+
+
+def _strict_json(raw: bytes) -> Any:
+    return json.loads(raw.decode("utf-8", errors="strict"),
+                      parse_constant=lambda _: (_ for _ in ()).throw(ValueError("non-finite JSON")))
+
+
+def _read_saved_json(path: str | Path) -> tuple[Any, dict[str, Any]]:
+    source = Path(path)
+    try:
+        fd = os.open(source, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    except OSError as exc:
+        raise ProbeEvidenceError("EXECUTION_STATE_UNKNOWN", "saved response cannot be opened safely") from exc
+    try:
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
+            _fail("saved response is not a regular single-link file")
+        chunks: list[bytes] = []
+        while True:
+            chunk = os.read(fd, 1024 * 1024)
+            if not chunk:
+                break
+            chunks.append(chunk)
+        raw = b"".join(chunks)
+        after = os.fstat(fd)
+        named = os.lstat(source)
+
+        def signature(value: os.stat_result) -> tuple[int, ...]:
+            return (value.st_dev, value.st_ino, value.st_uid, stat.S_IMODE(value.st_mode),
+                    value.st_nlink, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
+
+        if (signature(before) != signature(after) or signature(after) != signature(named)
+                or len(raw) != before.st_size):
+            _fail("saved response changed while being read")
+        try:
+            decoded = _strict_json(raw)
+        except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+            raise ProbeEvidenceError("EXECUTION_STATE_UNKNOWN", "saved response is not strict UTF-8 JSON") from exc
+        return decoded, {"path": str(source), "device": named.st_dev, "inode": named.st_ino,
+                         "uid": named.st_uid, "mode": stat.S_IMODE(named.st_mode), "nlink": named.st_nlink,
+                         "bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()}
+    finally:
+        os.close(fd)
+
+
+def save_raw_response_once(path: str | Path, raw_json: bytes) -> dict[str, Any]:
+    """Persist a complete public response before deriving anything from it."""
+    if not isinstance(raw_json, bytes) or not raw_json:
+        raise ProbeEvidenceError("INVALID_REQUEST", "raw MCP response must be non-empty JSON bytes")
+    try:
+        _strict_json(raw_json)
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+        raise ProbeEvidenceError("INVALID_REQUEST", "raw MCP response is not strict UTF-8 JSON") from exc
+    target = Path(path)
+    try:
+        fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    except FileExistsError:
+        raise
+    except OSError as exc:
+        raise ProbeEvidenceError("EXECUTION_STATE_UNKNOWN", "raw response could not be stored safely") from exc
+    try:
+        os.fchmod(fd, 0o600)
+        view = memoryview(raw_json)
+        while view:
+            written = os.write(fd, view)
+            view = view[written:]
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    _, record = _read_saved_json(target)
+    if record["sha256"] != hashlib.sha256(raw_json).hexdigest():
+        _fail("saved public response bytes differ from the source response")
+    return record
+
+
+def derive_saved_witness(
+    inspect_response_path: str | Path,
+    job_log_response_path: str | Path,
+    *,
+    expected_model_ref: Mapping[str, Any],
+    expected_worker: Mapping[str, Any],
+    expected_project_id: str,
+) -> dict[str, Any]:
+    """Validate one saved managed read and its exact raw Worker sample.
+
+    The two server identifiers intentionally remain in separate domains:
+    ``ModelRef.server_instance_id`` is the Core hash from the trusted
+    registered ledger, while the raw Java Worker reply carries the endpoint
+    string from the trusted registered backend. Neither is inferred from the
+    raw reply itself.
+    """
+    inspect, inspect_record = _read_saved_json(inspect_response_path)
+    job_log, job_log_record = _read_saved_json(job_log_response_path)
+    try:
+        model_ref = model_ref_from_mapping(dict(expected_model_ref)).as_dict()
+    except Exception as exc:
+        raise ProbeEvidenceError("EXECUTION_STATE_UNKNOWN", "expected typed ModelRef is invalid") from exc
+    required_worker = {"instance_id", "generation", "raw_server_endpoint", "public_server_instance_id"}
+    if (set(expected_worker) != required_worker
+            or not isinstance(expected_worker.get("instance_id"), str) or not expected_worker["instance_id"]
+            or type(expected_worker.get("generation")) is not int or expected_worker["generation"] < 1
+            or not isinstance(expected_worker.get("raw_server_endpoint"), str) or not expected_worker["raw_server_endpoint"]
+            or expected_worker.get("public_server_instance_id") != model_ref.get("server_instance_id")
+            or not isinstance(expected_project_id, str) or not expected_project_id
+            or model_ref.get("session_id") == ""):
+        _fail("trusted registered Worker/Core binding is incomplete or crosses identity domains")
+
+    if not isinstance(inspect, Mapping) or inspect.get("success") is not True:
+        _fail("model.inspect did not return a successful managed result")
+    data, execution = inspect.get("data"), inspect.get("execution")
+    if not isinstance(data, Mapping) or not isinstance(execution, Mapping):
+        _fail("model.inspect response is missing data or execution identity")
+    if (execution.get("model_ref") != model_ref or data.get("model_identity") != model_ref
+            or execution.get("project_id") != expected_project_id
+            or execution.get("session_id") != model_ref["session_id"]
+            or type(execution.get("dirty")) is not bool or execution.get("dirty") is not False
+            or execution.get("revision") != data.get("revision")
+            or type(data.get("revision")) is not int or data["revision"] < 0
+            or data.get("detail") != "structure"):
+        _fail("model.inspect ModelRef, project, clean revision, or structure detail does not match")
+    operation_id, job_id = execution.get("operation_id"), execution.get("job_id")
+    if not isinstance(operation_id, str) or not operation_id or not isinstance(job_id, str) or not job_id:
+        _fail("model.inspect did not return its durable operation_id and job_id")
+    structure = data.get("structure")
+    required_tree_fields = {"components", "component_details", "parameters", "studies", "solutions", "datasets", "results"}
+    if not isinstance(structure, Mapping) or set(structure) != required_tree_fields:
+        _fail("model.inspect shallow structure is absent or has an unexpected schema")
+    tree_parameters = structure.get("parameters")
+    if (not isinstance(tree_parameters, list)
+            or any(not isinstance(name, str) or not name for name in tree_parameters)
+            or len(tree_parameters) != len(set(tree_parameters))):
+        _fail("model.inspect parameter-name inventory is malformed")
+
+    if not isinstance(job_log, Mapping) or job_log.get("success") is not True:
+        _fail("job.log did not return a successful read")
+    log_data = job_log.get("data")
+    if not isinstance(log_data, Mapping) or log_data.get("job_id") != job_id:
+        _fail("job.log is not bound to the exact model.inspect job")
+    events = log_data.get("events")
+    # Catalogued job.log caps a page at 500 rows. Exactly 500 may hide a next
+    # page, so the fixed 17-call probe refuses it instead of spending calls.
+    if not isinstance(events, list) or len(events) >= 500 or log_data.get("next_offset") != len(events):
+        _fail("job.log page is malformed or reaches the one-page evidence cap")
+
+    worker_events: list[Mapping[str, Any]] = []
+    for row in events:
+        if not isinstance(row, Mapping) or row.get("job_id") != job_id:
+            _fail("job.log contains a malformed or foreign-job event")
+        if row.get("event") != "worker_request":
+            continue
+        metadata = row.get("metadata")
+        if not isinstance(metadata, Mapping) or metadata.get("operation_id") != operation_id:
+            _fail("worker event is not bound to the exact model.inspect operation")
+        worker_events.append(metadata)
+    snapshots = [row for row in worker_events if row.get("kind") == "model_snapshot"]
+    if len(snapshots) != 2 or {row.get("phase") for row in snapshots} != {"submitted", "observed"}:
+        _fail("model.inspect must have exactly one submitted/observed model_snapshot pair")
+    submitted = next(row for row in snapshots if row.get("phase") == "submitted")
+    observed = next(row for row in snapshots if row.get("phase") == "observed")
+    request_id = submitted.get("request_id")
+    request_hash = submitted.get("request_hash")
+    if (not isinstance(request_id, str) or not request_id or observed.get("request_id") != request_id
+            or not isinstance(request_hash, str) or len(request_hash) != 64
+            or any(char not in "0123456789abcdef" for char in request_hash)
+            or observed.get("request_hash") != request_hash):
+        _fail("model_snapshot submitted/observed correlation is incomplete")
+    for event in (submitted, observed):
+        payload = event.get("metadata")
+        if (not isinstance(payload, Mapping) or payload.get("type") != "model_snapshot"
+                or payload.get("tag") != model_ref.get("model_tag")
+                or payload.get("request_id") != request_id):
+            _fail("model_snapshot request payload is not bound to the exact ModelRef tag")
+
+    reply = observed.get("reply")
+    if (not isinstance(reply, Mapping) or reply.get("ok") is not True
+            or reply.get("status") != "SUCCEEDED" or reply.get("type") != "model_snapshot"
+            or reply.get("request_id") != request_id):
+        _fail("observed model_snapshot reply is not terminal success for the submitted request")
+    result = reply.get("result")
+    if not isinstance(result, Mapping):
+        _fail("observed model_snapshot reply has no result")
+    model_tag = model_ref.get("model_tag")
+    fingerprint = result.get("fingerprint")
+    if (result.get("tag") != model_tag or result.get("model_tag") != model_tag
+            or result.get("server_instance_id") != expected_worker["raw_server_endpoint"]
+            or result.get("instance_id") != expected_worker["instance_id"]
+            or result.get("worker_instance_id") != expected_worker["instance_id"]
+            or result.get("generation") != expected_worker["generation"]
+            or type(result.get("external_event_counter")) is not int or result["external_event_counter"] < 0
+            or not isinstance(fingerprint, str) or len(fingerprint) != 64
+            or any(char not in "0123456789abcdef" for char in fingerprint)
+            or result.get("fingerprint_scope") != ["tag", "label", "file_path", "time_modified", "parameters"]):
+        _fail("raw Worker endpoint, Worker epoch, counter, digest, or scope differs from registered binding")
+    try:
+        components = _validated_fingerprint_components(
+            result.get("fingerprint_components"), model_tag=model_tag, fingerprint=fingerprint,
+        )
+    except Exception as exc:
+        raise ProbeEvidenceError("EXECUTION_STATE_UNKNOWN", "same-sample StageA fingerprint components failed validation") from exc
+    component_names = [row["name"] for row in components["parameters"]]
+    if set(component_names) != set(tree_parameters) or len(component_names) != len(tree_parameters):
+        _fail("same-sample parameter vector differs from model.inspect shallow tree")
+    return {
+        "schema": "w25-zero-solve-fingerprint-witness/2",
+        "status": "DERIVED_FROM_SAVED_MANAGED_MCP_EVIDENCE_NOT_NATIVE_ACCEPTANCE",
+        "model_ref": model_ref,
+        "project_id": expected_project_id,
+        "operation_id": operation_id,
+        "job_id": job_id,
+        "worker_request_id": request_id,
+        "worker_binding": {
+            "instance_id": expected_worker["instance_id"],
+            "generation": expected_worker["generation"],
+            "raw_server_endpoint": expected_worker["raw_server_endpoint"],
+            "public_server_instance_id": expected_worker["public_server_instance_id"],
+            "server_id_domains_checked_separately": True,
+        },
+        "revision": data["revision"],
+        "dirty": False,
+        "fingerprint": fingerprint,
+        "external_event_counter": result["external_event_counter"],
+        "fingerprint_components": components,
+        "shallow_tree": dict(structure),
+        "source_records": {"model_inspect": inspect_record, "job_log": job_log_record},
+    }

@@ -1,0 +1,107 @@
+"""Instantaneous metadata-only observation of the exact ten R6I paths.
+
+This payload is intended for the reviewed R6I Python 3.12 ``-I -B -`` SSH
+stdin path. It never opens a target, reads target bytes, inspects processes,
+reads tokens, writes remotely, or imports project code. It does not establish
+whether the separately launched R6I child is alive or terminal.
+"""
+from __future__ import annotations
+
+import json
+import ntpath
+import os
+import stat
+import time
+
+
+REMOTE_ROOT = r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c"
+PATHS = (
+    ("helpers_directory", r"helpers-primary-owner-r6i", "directory"),
+    ("authority_directory", r"authority-primary-owner-r6i", "directory"),
+    ("outer_gate_source", r"helpers-primary-owner-r6i\windows_primary_token_owner_outer_gate_r6i.py", "file"),
+    ("probe_source", r"helpers-primary-owner-r6i\windows_primary_token_owner_probe_r6i.py", "file"),
+    ("binding", r"authority-primary-owner-r6i\BINDING.json", "file"),
+    ("prebirth_binding", r"authority-primary-owner-r6i\PREBIRTH_BINDING.json", "file"),
+    ("main_approval", r"authority-primary-owner-r6i\MAIN_APPROVAL.json", "file"),
+    ("once_used", r"authority-primary-owner-r6i\ONCE_USED.json", "runtime_path"),
+    ("probe_run_directory", r"primary-owner-probe-r6i", "runtime_path"),
+    ("owner_probe_output", r"primary-owner-probe-r6i\owner-probe.bin", "runtime_path"),
+)
+
+
+def _kind(mode: int) -> str:
+    if stat.S_ISDIR(mode):
+        return "directory"
+    if stat.S_ISREG(mode):
+        return "regular_file"
+    if stat.S_ISLNK(mode):
+        return "symlink"
+    return "other"
+
+
+def collect_metadata(lstat=None) -> dict[str, object]:
+    """Call lstat once for each fixed path; return metadata without opening it."""
+    lstat = os.lstat if lstat is None else lstat
+    rows = []
+    for path_id, relative_path, expected_kind in PATHS:
+        absolute_path = ntpath.join(REMOTE_ROOT, relative_path)
+        try:
+            info = lstat(absolute_path)
+        except FileNotFoundError as exc:
+            rows.append({"id": path_id, "relative_path": relative_path,
+                         "expected_kind": expected_kind, "status": "MISSING",
+                         "error_type": type(exc).__name__, "errno": exc.errno})
+            continue
+        except OSError as exc:
+            rows.append({"id": path_id, "relative_path": relative_path,
+                         "expected_kind": expected_kind, "status": "ERROR",
+                         "error_type": type(exc).__name__, "errno": exc.errno})
+            continue
+        attributes = getattr(info, "st_file_attributes", None)
+        rows.append({
+            "id": path_id,
+            "relative_path": relative_path,
+            "expected_kind": expected_kind,
+            "status": "PRESENT",
+            "object_type": _kind(info.st_mode),
+            "size_bytes": info.st_size,
+            "mode": info.st_mode,
+            "mtime_ns": getattr(info, "st_mtime_ns", None),
+            # Preserve Python's platform-reported ctime field as-is. Its
+            # meaning is platform-dependent on Windows.
+            "ctime_ns": getattr(info, "st_ctime_ns", None),
+            "file_attributes": attributes,
+            "reparse_point": bool(attributes is not None and attributes & 0x400),
+        })
+    return {
+        "schema": "cv3-windows-r6i-fixed-path-metadata-observation/1",
+        "status": "METADATA_ONLY_CAPTURED",
+        "remote_root": REMOTE_ROOT,
+        "captured_unix_ns": time.time_ns(),
+        "path_count": len(rows),
+        "paths": rows,
+        "scope": {
+            "operation": "os.lstat once per fixed path",
+            "target_content_opened": False,
+            "target_content_read": False,
+            "remote_write_count": 0,
+            "process_inspection": False,
+            "token_access": False,
+            "project_import": False,
+            "test_child_started": False,
+            "native_or_gui_process_started": False,
+            "r6i_child_state": "NOT_OBSERVED",
+            "r6i_child_alive_or_terminal": "NOT_ESTABLISHED_BY_METADATA",
+            "old_r6f_exact_once_authority_applies": False,
+        },
+    }
+
+
+def main() -> int:
+    print(json.dumps(collect_metadata(), ensure_ascii=False, sort_keys=True,
+                     separators=(",", ":"), allow_nan=False))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

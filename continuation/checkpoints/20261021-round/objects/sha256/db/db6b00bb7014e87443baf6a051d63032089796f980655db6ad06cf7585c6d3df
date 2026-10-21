@@ -1,0 +1,51 @@
+{
+  "schema": "W23_R6_R2_POSTIMAGES_R2/1",
+  "r2_candidate_root": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w23-r12-first-cause-durability-r2-4e812e36-dc98-4965-8291-9e1f8a680606",
+  "r2_main_source_review": "repository/docs/full_project_continuation_v3/state/W23_R12_DURABILITY_R2_MAIN_SOURCE_REVIEW_20261020_R1.json",
+  "r2_main_source_review_sha256": "5d32a32ba885fd82a3d615f07502be76f97b1f3a6ce2465746b40ff23c639f8e",
+  "r2_source_closure_manifest_sha256": "eb8cb05fd66f223cd6bd48d39488183b8feae6e7e7f9e25ab23c2b8cc991ae2c",
+  "r2_review_request_sha256": "29f2271ae33c8c836815a1d46b47c91109e23cace22968f4dbd89cff1a03a207",
+  "original_r6_root": "repository/_state/w23-zero-solve-owned-entry-r6-r12-5cea6c56-67d4-4c08-a2a9-21c18a4489c9-20261019",
+  "old_r6_projection_sha256": "d2f1a60b04f00732923857223e4209ca5bf3c356f2a3bef24834fae8485c9dd2",
+  "postimages": [
+    {
+      "path": "probe/w23_actual_entry_r6.py",
+      "bytes": 43589,
+      "sha256": "bead2b8ef2b689a502166135eb7e864e0f828ddc9679d9a8404c311e3bcf3042",
+      "exact_r2_postimage": true
+    },
+    {
+      "path": "probe/w23_owned_runtime_entry.py",
+      "bytes": 23694,
+      "sha256": "162d103f14f40bdd15ba669a4720aabf5e3b4d32e96a6ce5b5b471d8b6d6c59f",
+      "exact_r2_postimage": true
+    },
+    {
+      "path": "probe/w23_actual_controller_r8.py",
+      "bytes": 70798,
+      "sha256": "fc72932ecb728d96155d29ce0262b6232d8248ec795606d27246f7ee895cadd2",
+      "exact_r2_postimage": true
+    },
+    {
+      "path": "tests/test_first_cause_durability.py",
+      "bytes": 27668,
+      "sha256": "49f5ad55c9bdcf1f0cab92fdc26eb6c3a3df6a7ee089dc80e892eed6eacc5b2f",
+      "exact_r2_postimage": false,
+      "r2_original_bytes": 27548,
+      "r2_original_sha256": "3702f6825da6cab5e25ba35a132c1cb8cebcf6176c8d9e49d75d76d6e645f2e3",
+      "adaptations": [
+        "isolate imported mcp/mcp.* stub modules during exact source-bound ControlDaemon import; no production change"
+      ]
+    }
+  ],
+  "additional_test_only_change": {
+    "path": "tests/r6_transport_cached_status_contract_child.py",
+    "reason": "update stale inherited expected error text to the exact R2 workspace rejection wording",
+    "old_expected": "unexpected files outside the exact saved MPH",
+    "new_expected": "W25 admitted workspace is neither the exact saved MPH nor an empty pre-copy partial workspace"
+  },
+  "source_projection_member_count": 894,
+  "source_map_sha256": "f3397a205bd52d30b4cdae0649ace0bea5e98555c0f03fe0816b245b6222172d",
+  "source_projection_sha256": "bc0dbab15f42548490f3929f8d9d9b334f34a3bc74a1b0ee064f506000ce5eda",
+  "status": "FROZEN_SOURCE_CANDIDATE_R2_REVIEW_ACCEPTED"
+}

@@ -1,0 +1,31 @@
+--- R2/source/tests/test_w24_geonl_property_survey.py
++++ R3/source/tests/test_w24_geonl_property_survey.py
+@@ -161,6 +161,17 @@
+     assert property_row["allowed_values"]["value"] is None
+     property_row["current_value"]["reader"] = "getBoolean"
+     with pytest.raises(consumer.V2SetupError, match="typed getter does not match"):
++        consumer._validate_geonl_property_survey(row)
++
++
++def test_survey_consumer_rejects_known_supported_type_without_getter_observation():
++    row = survey_row()
++    current = row["study_stages"][0]["attached_time_solver"]["property"]["current_value"]
++    row["study_stages"][0]["attached_time_solver"]["property"]["current_value"] = {
++        "status": "NOT_QUERIED_VALUE_TYPE_UNKNOWN",
++    }
++    assert current["status"] == "READ"
++    with pytest.raises(consumer.V2SetupError, match="supported property type omitted its declared typed getter"):
+         consumer._validate_geonl_property_survey(row)
+ 
+ 
+--- R2/source/tools/w24_v2_setup_readback.py
++++ R3/source/tools/w24_v2_setup_readback.py
+@@ -69,7 +69,7 @@
+             raise V2SetupError('unsupported property type was interpreted by a getter')
+         return
+     if current.get('status') == 'NOT_QUERIED_VALUE_TYPE_UNKNOWN':
+-        return
++        raise V2SetupError('supported property type omitted its declared typed getter')
+     if current.get('reported_type') != value_type or current.get('reader') != expected_getter:
+         raise V2SetupError('typed getter does not match the reported property type')
+     if current.get('status') == 'READ':

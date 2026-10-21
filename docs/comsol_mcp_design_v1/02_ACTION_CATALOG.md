@@ -112,7 +112,7 @@ JSON 附件为每个动作提供顶层输入 schema；类型见 common.schema.js
 | `code_compile_java` | `runtime_id:str,source_artifact:str,entrypoint:str` | 按目标引擎classpath编译，不执行模型动作 | COMPUTE / G2 |
 | `code_execute_java` | `source_artifact:str,entrypoint:str,arguments:object,mode:str,timeout_s:number?,invariants:objects?` | 在注入的目标Model上执行已授权代码 | TRUSTED_CODE / G2 |
 | `code_inspect_run` | `job_id:str` | 读取代码、编译信息、日志与副作用 | READ / G2 |
-| `code_recipe_register` | `source_artifact:str,input_schema:object,test_refs:strings` | 把测试过代码登记为可复用recipe | STATE_WRITE / G5 |
+| `code_recipe_register` | `source_artifact:str,input_schema:object,test_refs:strings,entrypoint?:str` | 把测试过代码登记为可复用recipe | STATE_WRITE / G5 |
 | `code_recipe_run` | `recipe_id:str,arguments:object` | 按版本检查执行指定recipe | TRUSTED_CODE / G5 |
 
 ## 参数、分组与案例（parameter）

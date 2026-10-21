@@ -1,0 +1,34 @@
+{
+  "schema": "MAIN_ACTUAL_CAS_CONTENT_AUDIT_CLASSIFICATION_R3",
+  "created_at_utc": "2026-10-21T03:51:28.723156+00:00",
+  "status": "PASS_NO_REAL_CREDENTIALS_AFTER_EXACT_SOURCE_CLASSIFICATION",
+  "manifest_sha256": "80277c2255086615e91698e15f4d248b49746251f2aa679faf2431d75e524d2b",
+  "objects": 1105,
+  "mappings": 3978,
+  "raw_scan": {
+    "path": "_state/github-sync-pause-20261021-r1/MAIN_CAS_CONTENT_AUDIT_R2.json",
+    "sha256": "fb65044ec9e854c3752e229d3d168dc2c532f9977f17b77ce74c1dc2ac4a729d",
+    "high_confidence_pattern_hits": 1
+  },
+  "classification": {
+    "object_sha256": "ed8eee452452fca0c40cea92e5df94e809bb6b921c93174299dad620f0effc5d",
+    "source": "tests/test_full_project_release.py",
+    "test_function": "test_scanner_detects_pem_private_key_block_but_not_parser_header_constant",
+    "line_start": 743,
+    "line_end": 753,
+    "disposition": "SYNTHETIC_SECRET_SCANNER_TEST_LITERAL",
+    "body_construction": "Repeated one-byte ASCII A 160 times in test; no operational private key material",
+    "exact_public_baseline": "65ced71e9d63c56e6b6009984ae5c4185f4be3bd",
+    "base_bytes_equal": true
+  },
+  "known_public_TLS_fixtures": {
+    "count": 3,
+    "allowlist_path": "_state/github-sync-pause-20261021-r1/PUBLIC_BASE_TEST_TLS_FIXTURE_ALLOWLIST_R1.json",
+    "allowlist_sha256": "e027e6a11a8fae5117f5c18af6d8c254cf091132325a85b92bfb802a54e021c0"
+  },
+  "unresolved_credentials": 0,
+  "commercial_archive_or_DB_magic_hits": 0,
+  "effective_authority_filename_hits": 0,
+  "native_executed": false,
+  "raw_secret_values_printed": false
+}

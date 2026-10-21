@@ -1,0 +1,537 @@
+"""Single-send R6I approval admission and one-child probe payload.
+
+This source is a template. The local strict wrapper inserts only Main's exact
+approval bytes and the previously accepted empty-leaf proof. The remote
+process validates the exact existing R6I gate, proves the still-empty
+MAIN_APPROVAL object through the gate's same-handle path API, writes the
+approval through one already-open file handle, then invokes the unchanged gate
+once in this same interpreter. It never retries or removes evidence.
+"""
+from __future__ import annotations
+
+import base64
+import contextlib
+import hashlib
+import io
+import json
+import os
+from pathlib import Path
+import re
+import runpy
+import sys
+import types
+
+
+EXPECTED_GATE_SHA256 = "4ef244f15282bf49770d7ae9c468c40aa8818462bfb071652c7c1b9423aef1c9"
+EXPECTED_HELPER_SHA256 = "b64ae1a12251858c13a876f41e092eb8402cb490a7998eee3dbd5ac2fea32d5a"
+EXPECTED_INNER_SHA256 = "6b5e6ad756045dee4551be992a32ba0228a357907dc2ee58dbb7391e1505f67a"
+EXPECTED_OUTER_SHA256 = "bb058d5422c32be438934e017d222ed2d10d9983fd97438d0a100b561b1b7ade"
+EXPECTED_R14_BINDING_SHA256 = "075250aa28a0ae33eec9ac414ab0f143c046df090b00613669ffdf0fbf59dabb"
+EXPECTED_R6B_SOURCE_SHA256 = "68bb01164f6c2bb51ecc4924076252409c75d9d9406d654ba09ac76c52126259"
+EXPECTED_EMPTY_APPROVAL_RAW_PROOF_SHA256 = "9f506f2c9d74a28a30e57428efa7aba94cd106372f0ba2a2ec7a5f7e0cb245fd"
+EXPECTED_EMPTY_APPROVAL_PROJECTED_PROOF_SHA256 = "9febe250c34a9e176bbca8e32829f9ccd9d04c8656c59968f509c03c129a7339"
+EXPECTED_EMPTY_APPROVAL_IDENTITY = {
+    "device": 543112286,
+    "inode": 5066549581541651,
+    "security_sha256": "7d6d4adc787a461f97c0dec29d54f80e1466a7c56f938719a98c309e6b71423e",
+}
+EXPECTED_EMPTY_APPROVAL_LEGACY_IDENTITY = (543112286, 5066549581541651)
+EXPECTED_EMPTY_APPROVAL_PROOF_B64 = "__R6I_R2_EMPTY_APPROVAL_PROOF_BASE64__"
+APPROVAL_B64 = "__R6I_R2_MAIN_APPROVAL_BASE64__"
+APPROVAL_SHA256 = "__R6I_R2_MAIN_APPROVAL_SHA256__"
+MAX_APPROVAL_BYTES = 16 * 1024
+MAX_GATE_STREAM_BYTES = 256 * 1024
+KNOWN_TERMINAL_STATUSES = frozenset({
+    "PASS_SAME_SID_PRIMARY_OWNER_FILE_PROBE",
+    "FAIL_OR_HOLD_OWNER_PROBE",
+    "FAIL_EVIDENCE_PERSISTENCE",
+})
+
+
+def _sha(raw: bytes) -> str:
+    return hashlib.sha256(raw).hexdigest()
+
+
+def _canonical(value: object) -> bytes:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"),
+                      ensure_ascii=False, allow_nan=False).encode("utf-8")
+
+
+def _strict_json(raw: bytes, label: str) -> dict[str, object]:
+    def pairs(items):
+        result = {}
+        for key, value in items:
+            if key in result:
+                raise ValueError("duplicate JSON key: " + key)
+            result[key] = value
+        return result
+    value = json.loads(raw.decode("utf-8", "strict"), object_pairs_hook=pairs,
+                       parse_constant=lambda item: (_ for _ in ()).throw(ValueError(item)))
+    if not isinstance(value, dict):
+        raise ValueError(label + " must be a JSON object")
+    return value
+
+
+def _bounded_text(value: object, limit: int = 2048) -> str:
+    try:
+        text = str(value)
+    except BaseException as exc:
+        text = "<text-conversion-failed:" + type(exc).__name__ + ">"
+    return text[:limit]
+
+
+def _stable_bytes(path: str, maximum: int) -> bytes:
+    import stat
+    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(path, flags)
+    try:
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or before.st_size < 0 or before.st_size > maximum:
+            raise RuntimeError("expected bounded ordinary file: " + path)
+        chunks = []
+        while True:
+            block = os.read(fd, min(1024 * 1024, maximum + 1 - sum(map(len, chunks))))
+            if not block:
+                break
+            chunks.append(block)
+            if sum(map(len, chunks)) > maximum:
+                raise RuntimeError("bounded source read exceeded: " + path)
+        after = os.fstat(fd)
+        sig = lambda row: (row.st_dev, row.st_ino, row.st_size, row.st_mtime_ns, row.st_ctime_ns)
+        raw = b"".join(chunks)
+        if len(raw) != after.st_size or sig(before) != sig(after):
+            raise RuntimeError("file changed during same-descriptor read: " + path)
+        return raw
+    finally:
+        os.close(fd)
+
+
+def _source_fingerprint_errors(outer: dict[str, object]) -> list[str]:
+    source = outer.get("source_fingerprints")
+    expected = {
+        "current_resume_sha256": "75e379846288130299cb3632f109cf3c1e9c29884de3d7d9c89116571a8469e4",
+        "gate_controls_sha256": "2cb3b2755d87f8a488a65beb5da69d484e8444949e9906792ba3d1d450552a44",
+        "gate_sha256": EXPECTED_GATE_SHA256,
+        "helper_controls_sha256": "2cb3b2755d87f8a488a65beb5da69d484e8444949e9906792ba3d1d450552a44",
+        "helper_sha256": EXPECTED_HELPER_SHA256,
+        "inner_binding_sha256": EXPECTED_INNER_SHA256,
+        "r14_binding_sha256": EXPECTED_R14_BINDING_SHA256,
+        "r14_source_closure_sha256": "5a486fa543ec9c550be48575ca96de866822c5688e8a52edc4c2e3743a3618b9",
+        "r6b_lease_controls_sha256": "160469c1279c4f8213cb7d19e69155110639b691e0b2fd7e78d40ede8b6afe61",
+        "r6b_lease_source_sha256": EXPECTED_R6B_SOURCE_SHA256,
+        "source_plan_sha256": "4491a64a805439ffe51140c29a690ee2872b8c4376ee066d87fac8f5bc63f23b",
+        "source_review_sha256": "27660ccfce5f97fa2203001088d30cd738cd329cee1ee99c20bc35931ad8f10b",
+        "source_path_proofs_sha256": "67cfdc553079fd3795afe765eda1bf18ac2d679901204e297030cb5b94e45a43",
+        "python_executable_sha256": "4d6f5f81a4bca11191c4c7c6b43632694d0a4ce74e068619d8fdc161d469859a",
+        "python_executable_path_proof_sha256": "fa06b30d008caab9673b5359e6c4a41ba5ea48474413309494a2efce5d267526",
+        "protected13_manifest_sha256": "ea641286bec1332718129f0386f5dc12ac5b9658892b3f0c4079dde9e4f74077",
+    }
+    if not isinstance(source, dict):
+        return ["outer source_fingerprints is not an object"]
+    return [name for name, value in expected.items() if source.get(name) != value]
+
+
+def _load_gate():
+    import ntpath
+    if os.name != "nt":
+        raise RuntimeError("R6I native dispatch payload is Windows-only")
+    task_root = r"C:\Users\Everwalker\AppData\Local\cvw26-current-9f07a952265c"
+    gate_path = task_root + r"\helpers-primary-owner-r6i\windows_primary_token_owner_outer_gate_r6i.py"
+    helper_path = task_root + r"\helpers-primary-owner-r6i\windows_primary_token_owner_probe_r6i.py"
+    inner_path = task_root + r"\authority-primary-owner-r6i\BINDING.json"
+    outer_path = task_root + r"\authority-primary-owner-r6i\PREBIRTH_BINDING.json"
+    r14_path = task_root + r"\authority-r14\BINDING.json"
+    expected_python = r"C:\Users\Everwalker\AppData\Local\Programs\Python\Python312-comsol-mcp\python.exe"
+    if (ntpath.normcase(ntpath.abspath(sys.executable)) != ntpath.normcase(expected_python)
+            or sys.version.split()[0] != "3.12.10"):
+        raise RuntimeError("remote interpreter identity/version differs from accepted R6I PREP")
+    gate_raw = _stable_bytes(gate_path, 2 * 1024 * 1024)
+    helper_raw = _stable_bytes(helper_path, 2 * 1024 * 1024)
+    inner_raw = _stable_bytes(inner_path, 1024 * 1024)
+    outer_raw = _stable_bytes(outer_path, 8 * 1024 * 1024)
+    r14_raw = _stable_bytes(r14_path, 8 * 1024 * 1024)
+    actuals = {
+        "gate": _sha(gate_raw), "helper": _sha(helper_raw), "inner": _sha(inner_raw),
+        "outer": _sha(outer_raw), "r14": _sha(r14_raw),
+    }
+    expecteds = {
+        "gate": EXPECTED_GATE_SHA256, "helper": EXPECTED_HELPER_SHA256,
+        "inner": EXPECTED_INNER_SHA256, "outer": EXPECTED_OUTER_SHA256,
+        "r14": EXPECTED_R14_BINDING_SHA256,
+    }
+    if actuals != expecteds:
+        raise RuntimeError("frozen R6I/R14 remote source bytes differ: " + json.dumps(actuals, sort_keys=True))
+    gate = types.ModuleType("cv3_r6i_gate_exact_r2")
+    gate.__file__ = gate_path
+    gate.__package__ = ""
+    exec(compile(gate_raw.decode("utf-8", "strict"), gate_path, "exec"), gate.__dict__)
+    if _sha(_stable_bytes(gate_path, 2 * 1024 * 1024)) != EXPECTED_GATE_SHA256:
+        raise RuntimeError("R6I gate changed during exact import")
+    outer = gate._strict_json(outer_raw, label="R6I PREBIRTH_BINDING")
+    gate._validate_outer_envelope(outer)
+    errors = _source_fingerprint_errors(outer)
+    if errors:
+        raise RuntimeError("R6I outer source pins differ: " + ",".join(errors))
+    if _sha(outer_raw) != EXPECTED_OUTER_SHA256:
+        raise RuntimeError("R6I outer binding SHA differs from accepted PREP")
+    live = gate._verify_remote_snapshot(outer)
+    return gate, outer, live, {
+        "gate": gate_path, "helper": helper_path, "inner": inner_path,
+        "outer": outer_path, "approval": gate.APPROVAL_PATH, "r14": r14_path,
+    }, inner_raw, helper_raw, gate_raw, outer_raw
+
+
+def _verify_empty_approval(gate, live):
+    expected_raw = base64.b64decode(EXPECTED_EMPTY_APPROVAL_PROOF_B64.encode("ascii"), validate=True)
+    expected = _strict_json(expected_raw, "Main-accepted empty MAIN_APPROVAL proof")
+    expected_raw_sha = _sha(gate._canonical_json(expected))
+    if expected_raw_sha != EXPECTED_EMPTY_APPROVAL_RAW_PROOF_SHA256:
+        raise RuntimeError("embedded Main-accepted empty proof bytes or raw digest differ")
+    record = live.get("approval")
+    if not isinstance(record, dict) or record.get("sha256") != _sha(b"") or record.get("bytes") != 0:
+        raise RuntimeError("MAIN_APPROVAL is no longer the exact zero-byte object")
+    proof = record.get("private_path")
+    if not isinstance(proof, dict):
+        raise RuntimeError("R6I gate omitted the complete MAIN_APPROVAL same-handle proof")
+    if proof.get("identity") != EXPECTED_EMPTY_APPROVAL_IDENTITY:
+        raise RuntimeError("MAIN_APPROVAL legacy file identity or security digest changed")
+    if proof.get("source_content_sha256") != _sha(b"") or proof.get("source_bytes") != 0:
+        raise RuntimeError("MAIN_APPROVAL content is not still exactly empty")
+    if proof.get("reparse_free_target") is not True:
+        raise RuntimeError("MAIN_APPROVAL target is not proven reparse-free")
+    try:
+        actual_projection = gate._r5j_identity_projection(proof)
+        expected_projection = gate._r5j_identity_projection(expected)
+        actual_projection_sha = _sha(gate._canonical_json(actual_projection))
+        expected_projection_sha = _sha(gate._canonical_json(expected_projection))
+        actual_raw_sha = _sha(gate._canonical_json(proof))
+    except BaseException as exc:
+        raise RuntimeError("cannot validate the exact R6I MAIN_APPROVAL proof projection") from exc
+    if actual_projection_sha != EXPECTED_EMPTY_APPROVAL_PROJECTED_PROOF_SHA256:
+        raise RuntimeError("live MAIN_APPROVAL gate projection differs from Main-approved capture")
+    if expected_projection_sha != EXPECTED_EMPTY_APPROVAL_PROJECTED_PROOF_SHA256:
+        raise RuntimeError("embedded accepted proof no longer projects to Main's exact digest")
+    if actual_projection != expected_projection:
+        raise RuntimeError("live MAIN_APPROVAL proof has a protected path, owner, ACL, or identity drift")
+    chain = proof.get("path_chain")
+    if not isinstance(chain, list) or not chain:
+        raise RuntimeError("live MAIN_APPROVAL proof has no pinned path chain")
+    leaf = chain[-1]
+    if (leaf.get("identity") != {"device": EXPECTED_EMPTY_APPROVAL_LEGACY_IDENTITY[0],
+                                  "inode": EXPECTED_EMPTY_APPROVAL_LEGACY_IDENTITY[1]}
+            or leaf.get("info_size") != 0
+            or not isinstance(leaf.get("native_full_fingerprint"), (tuple, list))
+            or len(leaf["native_full_fingerprint"]) != 6
+            or not isinstance(leaf.get("descriptor_sha256"), str)
+            or re.fullmatch(r"[0-9a-f]{64}", leaf["descriptor_sha256"]) is None
+            or not isinstance(leaf.get("owner_classification"), str)
+            or not leaf["owner_classification"]
+            or not isinstance(leaf.get("owner_sid"), str)
+            or not leaf["owner_sid"]):
+        raise RuntimeError("live MAIN_APPROVAL final pinned leaf is malformed")
+    return leaf, {"captured_raw_sha256": expected_raw_sha,
+                  "current_raw_sha256": actual_raw_sha,
+                  "projected_sha256": actual_projection_sha}
+
+
+_NATIVE_FULL_FIELDS = ("file_identity", "size", "creation_time",
+                       "change_time", "write_time", "link_count")
+
+
+def _named_native_full_fingerprint(gate, value, *, label):
+    normalized = gate._normalize_native_full_fingerprint(value, label=label)
+    names = tuple(getattr(gate, "_NATIVE_FULL_FINGERPRINT_FIELDS", ()))
+    if names != _NATIVE_FULL_FIELDS:
+        raise RuntimeError("R6I native full fingerprint field names changed")
+    file_identity, size, creation_time, change_time, write_time, link_count = normalized
+    return {
+        "file_identity": tuple(file_identity), "size": size,
+        "creation_time": creation_time, "change_time": change_time,
+        "write_time": write_time, "link_count": link_count,
+    }
+
+
+def _validate_same_handle_prewrite(gate, expected_leaf, observed_legacy_identity,
+                                   observed_legacy_size, observed_native,
+                                   descriptor_sha, owner_class, owner_sid):
+    expected_identity = EXPECTED_EMPTY_APPROVAL_LEGACY_IDENTITY
+    identity_obj = expected_leaf.get("identity")
+    if not isinstance(identity_obj, dict):
+        raise RuntimeError("captured empty approval legacy identity is malformed")
+    expected_legacy = (identity_obj.get("device"), identity_obj.get("inode"))
+    if (any(type(value) is not int or value < 0 for value in expected_legacy)
+            or expected_legacy != expected_identity):
+        raise RuntimeError("empty approval legacy volume/file identity differs from accepted capture")
+    observed_legacy = tuple(observed_legacy_identity)
+    if (len(observed_legacy) != 2
+            or any(type(value) is not int or value < 0 for value in observed_legacy)
+            or observed_legacy != expected_legacy):
+        raise RuntimeError("opened MAIN_APPROVAL legacy volume/file identity differs")
+    if (type(observed_legacy_size) is not int or observed_legacy_size != 0
+            or type(expected_leaf.get("info_size")) is not int
+            or expected_leaf["info_size"] != observed_legacy_size):
+        raise RuntimeError("opened MAIN_APPROVAL is not the exact zero-byte placeholder")
+    expected_native = _named_native_full_fingerprint(
+        gate, expected_leaf.get("native_full_fingerprint"),
+        label="Main-accepted R6I empty MAIN_APPROVAL native fingerprint",
+    )
+    if not isinstance(observed_native, dict) or set(observed_native) != set(_NATIVE_FULL_FIELDS):
+        raise RuntimeError("opened MAIN_APPROVAL extended fingerprint fields are malformed")
+    for field in _NATIVE_FULL_FIELDS:
+        value = observed_native[field]
+        if field == "file_identity":
+            if not isinstance(value, (tuple, list)) or len(value) != 2 or \
+                    any(type(item) is not int or item < 0 for item in value):
+                raise RuntimeError("opened MAIN_APPROVAL native file identity is malformed")
+            actual = tuple(value)
+        else:
+            if type(value) is not int or value < 0:
+                raise RuntimeError("opened MAIN_APPROVAL native fingerprint field is malformed: " + field)
+            actual = value
+        if actual != expected_native[field]:
+            raise RuntimeError("opened MAIN_APPROVAL native fingerprint differs: " + field)
+    if expected_native["size"] != 0 or expected_native["link_count"] != 1:
+        raise RuntimeError("accepted MAIN_APPROVAL native size/link count differs from the empty leaf")
+    expected_descriptor = expected_leaf.get("descriptor_sha256")
+    expected_class = expected_leaf.get("owner_classification")
+    expected_sid = expected_leaf.get("owner_sid")
+    if (not isinstance(expected_descriptor, str)
+            or re.fullmatch(r"[0-9a-f]{64}", expected_descriptor) is None
+            or descriptor_sha != expected_descriptor
+            or not isinstance(expected_class, str) or not expected_class
+            or owner_class != expected_class
+            or not isinstance(expected_sid, str) or not expected_sid
+            or owner_sid != expected_sid):
+        raise RuntimeError("opened MAIN_APPROVAL owner or descriptor differs from accepted proof")
+    return {"legacy_identity_domain": list(expected_identity),
+            "native_file_identity_domain": list(expected_native["file_identity"]),
+            "native_fields_checked": list(_NATIVE_FULL_FIELDS),
+            "domains_compared_separately": True}
+
+
+def _same_handle_write(gate, approval_raw: bytes, expected_leaf):
+    from comsol_mcp import _host_scoped_provider as provider
+    api, hold_original, finish_original = gate._runtime_path_binding_api()
+    owner = hold_original(api)
+    handle = None
+    primary = None
+    try:
+        persistent_acls, volume = provider._windows_volume_has_persistent_acls(
+            api, Path(gate.APPROVAL_PATH),
+        )
+        if not persistent_acls or int(volume) != EXPECTED_EMPTY_APPROVAL_IDENTITY["device"]:
+            raise RuntimeError("MAIN_APPROVAL volume ACL/identity differs from its accepted PREP proof")
+        handle = api.open(gate.APPROVAL_PATH, directory=False, create=False)
+        legacy_identity, legacy_size = api.info(handle, directory=False)
+        full_getter = provider._windows_original_full_getter(api)
+        full = _named_native_full_fingerprint(
+            gate, full_getter(handle, directory=False), label="original opened MAIN_APPROVAL handle",
+        )
+        daemon_sid, trusted_sids, _security_context = provider._windows_security_context(api)
+        descriptor_sha, owner_class = provider._win32_descriptor_digest(
+            api, handle, directory=False, require_daemon_owner=True,
+            daemon_sid=daemon_sid, trusted_sids=trusted_sids,
+        )
+        owner_sid = gate._runtime_owner_sid_text(api, handle)
+        comparison = _validate_same_handle_prewrite(
+            gate, expected_leaf, legacy_identity, legacy_size, full,
+            descriptor_sha, owner_class, owner_sid,
+        )
+        if (full["size"] != 0 or full["link_count"] != 1
+                or tuple(full["file_identity"]) != tuple(
+                    _named_native_full_fingerprint(
+                        gate, expected_leaf["native_full_fingerprint"],
+                        label="accepted empty proof",
+                    )["file_identity"]
+                )):
+            raise RuntimeError("opened MAIN_APPROVAL is not the exact accepted native empty file")
+        r6b = gate._load_embedded_r6b_lease(EXPECTED_R6B_SOURCE_SHA256)
+        ops = object.__new__(r6b.R14AuthorityRootOpsR6B)
+        ops.owner, ops.api = owner, api
+        same_handle_write = r6b.R14AuthorityRootOpsR6B._write_flush_readback
+        empty_digest, empty_size = same_handle_write(ops, handle, b"")
+        if empty_digest != _sha(b"") or empty_size != 0:
+            raise RuntimeError("same-handle prewrite readback is not empty")
+        written_digest, written_size = same_handle_write(ops, handle, approval_raw)
+        if written_digest != _sha(approval_raw) or written_size != len(approval_raw):
+            raise RuntimeError("R6B same-handle approval write/flush/readback differs")
+        after_legacy, after_size = api.info(handle, directory=False)
+        after_full = _named_native_full_fingerprint(
+            gate, full_getter(handle, directory=False), label="same MAIN_APPROVAL handle after write",
+        )
+        after_descriptor, after_class = provider._win32_descriptor_digest(
+            api, handle, directory=False, require_daemon_owner=True,
+            daemon_sid=daemon_sid, trusted_sids=trusted_sids,
+        )
+        after_sid = gate._runtime_owner_sid_text(api, handle)
+        if (tuple(int(value) for value in after_legacy) != tuple(int(value) for value in legacy_identity)
+                or after_size != len(approval_raw) or after_full["size"] != len(approval_raw)
+                or after_full["file_identity"] != full["file_identity"]
+                or after_full["creation_time"] != full["creation_time"]
+                or after_full["link_count"] != full["link_count"]
+                or after_descriptor != descriptor_sha or after_class != owner_class
+                or after_sid != owner_sid):
+            raise RuntimeError("same-handle approval write changed file identity, owner, or DACL")
+        return {"status": "SAME_OBJECT_APPROVAL_WRITE_READBACK_PASS",
+                "approval_sha256": written_digest, "approval_bytes": written_size,
+                "legacy_identity": [int(value) for value in after_legacy],
+                "native_file_identity": list(after_full["file_identity"]),
+                "descriptor_sha256": after_descriptor, "owner_sid": after_sid,
+                "owner_classification": after_class, "identity_domains": comparison,
+                "same_file_id_and_security_preserved": True,
+                "creation_filetime_preserved": after_full["creation_time"] == full["creation_time"]}
+    except BaseException as exc:
+        primary = exc
+        raise
+    finally:
+        close_error = None
+        if handle is not None:
+            try:
+                api.close(handle)
+            except BaseException as exc:
+                close_error = exc
+        try:
+            finish_original(api, primary or close_error)
+        except BaseException:
+            if primary is None:
+                raise
+        if primary is None and close_error is not None:
+            raise close_error
+
+
+class _BoundedText:
+    def __init__(self, cap: int):
+        self.cap, self.parts, self.size, self.overflow = cap, [], 0, False
+
+    def write(self, text: str) -> int:
+        raw = str(text)
+        remaining = max(0, self.cap - self.size)
+        keep = raw[:remaining]
+        if keep:
+            self.parts.append(keep)
+            self.size += len(keep)
+        if len(keep) != len(raw):
+            self.overflow = True
+        return len(raw)
+
+    def flush(self) -> None:
+        return None
+
+    def getvalue(self) -> str:
+        return "".join(self.parts)
+
+
+def _run_gate(gate, paths):
+    saved_argv = list(sys.argv)
+    out, err = _BoundedText(MAX_GATE_STREAM_BYTES), _BoundedText(MAX_GATE_STREAM_BYTES)
+    result = {"returncode": 1, "status": "UNKNOWN_GATE_NO_TERMINAL",
+              "system_exit": None, "exception": None}
+    sys.argv = [paths["gate"], "--binding", paths["inner"],
+                "--approval", paths["approval"], "--once", gate.ONCE_PATH]
+    try:
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            try:
+                runpy.run_path(paths["gate"], run_name="__main__")
+                result.update(returncode=0, status="R6I_GATE_RETURNED")
+            except SystemExit as exc:
+                code = exc.code
+                if type(code) is int:
+                    result.update(returncode=code, status="R6I_GATE_SYSTEMEXIT",
+                                  system_exit={"code_type": "int", "code": code})
+                elif code is None:
+                    result.update(returncode=0, status="R6I_GATE_SYSTEMEXIT",
+                                  system_exit={"code_type": "NoneType", "code": None})
+                else:
+                    result.update(returncode=1, status="R6I_GATE_SYSTEMEXIT_STRING_OR_OBJECT",
+                                  system_exit={"code_type": type(code).__name__,
+                                               "code_text": _bounded_text(code)})
+            except BaseException as exc:
+                result.update(returncode=1, status="R6I_GATE_EXCEPTION",
+                              exception={"type": type(exc).__name__,
+                                         "text": _bounded_text(exc)})
+    finally:
+        sys.argv = saved_argv
+    out_raw, err_raw = out.getvalue().encode("utf-8", "replace"), err.getvalue().encode("utf-8", "replace")
+    result["stream_overflow"] = bool(out.overflow or err.overflow)
+    result["stdout"] = out_raw
+    result["stderr"] = err_raw
+    return result
+
+
+def main() -> int:
+    approval_raw = base64.b64decode(APPROVAL_B64.encode("ascii"), validate=True)
+    if (not approval_raw or len(approval_raw) > MAX_APPROVAL_BYTES
+            or _sha(approval_raw) != APPROVAL_SHA256):
+        raise RuntimeError("Main approval bytes are empty, oversized, or differ from the exact one-use digest")
+    gate, outer, live, paths, inner_raw, helper_raw, gate_raw, outer_raw = _load_gate()
+    approval = gate._strict_json(approval_raw, label="Main signed R6I one-use approval")
+    gate._validate_approval(
+        outer, approval, outer_sha256=_sha(outer_raw), inner_sha256=_sha(inner_raw),
+        helper_sha256=_sha(helper_raw), gate_sha256=_sha(gate_raw),
+    )
+    outer_proof_sha = gate._sha256(gate._canonical_json(
+        gate._r5j_identity_projection(live["outer_binding"]["private_path"]),
+    ))
+    if (outer_proof_sha != "7960259252b7002abda3768646d9babafe2c62cbc59624c332e1fc9347cb48da"
+            or approval.get("outer_binding_file_proof_sha256") != outer_proof_sha):
+        raise RuntimeError("Main approval does not bind the accepted PREBIRTH_BINDING gate projection")
+    leaf, empty_proof = _verify_empty_approval(gate, live)
+    write = _same_handle_write(gate, approval_raw, leaf)
+    gate_result = _run_gate(gate, paths)
+    stdout_raw, stderr_raw = gate_result.pop("stdout"), gate_result.pop("stderr")
+    lines = [line for line in stdout_raw.decode("utf-8", "replace").splitlines()
+             if line.startswith("PRIMARY_OWNER_TERMINAL_STATUS ")]
+    terminal_status = None
+    if len(lines) == 1:
+        candidate = lines[0].split(" ", 1)[1]
+        if candidate in KNOWN_TERMINAL_STATUSES:
+            terminal_status = candidate
+    pass_probe = (write.get("status") == "SAME_OBJECT_APPROVAL_WRITE_READBACK_PASS"
+                  and gate_result["returncode"] == 0
+                  and terminal_status == "PASS_SAME_SID_PRIMARY_OWNER_FILE_PROBE"
+                  and len(lines) == 1 and not gate_result["stream_overflow"]
+                  and gate_result["exception"] is None)
+    if pass_probe:
+        status = "PASS_ONE_CHILD_R6I_PRIMARY_TOKEN_FILE_PROBE"
+    elif terminal_status in KNOWN_TERMINAL_STATUSES:
+        status = "TERMINAL_PROBE_FAILURE_OR_HOLD"
+    elif write.get("status") == "SAME_OBJECT_APPROVAL_WRITE_READBACK_PASS":
+        status = "UNKNOWN_AFTER_APPROVAL_WRITE_NO_REPLAY"
+    else:
+        status = "FAILED_OR_UNKNOWN_BEFORE_NATIVE_TERMINAL"
+    record = {
+        "schema": "cv3-windows-r6i-native-result-r2/1",
+        "status": status,
+        "approval_sha256": _sha(approval_raw), "approval_bytes": len(approval_raw),
+        "outer_binding_sha256": _sha(outer_raw), "inner_binding_sha256": _sha(inner_raw),
+        "gate_sha256": EXPECTED_GATE_SHA256, "helper_sha256": EXPECTED_HELPER_SHA256,
+        "empty_approval_proof": empty_proof, "approval_write": write,
+        "gate": gate_result, "terminal_status": terminal_status,
+        "terminal_status_line_count": len(lines),
+        "native_children": 1 if pass_probe else "UNKNOWN",
+        "native_child_state": "ONE_CHILD_TERMINAL_PASS" if pass_probe else "UNKNOWN_OR_FAILURE_REQUIRES_MAIN_REVIEW",
+        "COMSOL": 0, "GUI": 0, "JVM": 0, "Study": 0, "solver": 0,
+        "replay": False, "retry": False, "resend": False,
+        "remote_scope": {"approval_write": "ONE SAME-HANDLE IN-PLACE WRITE",
+                         "once": "R6I GATE CONTROLLED",
+                         "one_child_limit": 1, "max_active_seconds": 60},
+        "gate_stdout_bytes": len(stdout_raw), "gate_stdout_sha256": _sha(stdout_raw),
+        "gate_stdout_b64": base64.b64encode(stdout_raw).decode("ascii"),
+        "gate_stderr_bytes": len(stderr_raw), "gate_stderr_sha256": _sha(stderr_raw),
+        "gate_stderr_b64": base64.b64encode(stderr_raw).decode("ascii"),
+    }
+    sys.stdout.write(json.dumps(record, sort_keys=True, separators=(",", ":"),
+                                ensure_ascii=False, allow_nan=False) + "\n")
+    sys.stdout.flush()
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        _code = main()
+    except BaseException as exc:
+        sys.stderr.write("R6I_REMOTE_UNKNOWN_NO_REPLAY " + type(exc).__name__ +
+                         ":" + _bounded_text(exc) + "\n")
+        sys.stderr.flush()
+        _code = 70
+    raise SystemExit(_code)

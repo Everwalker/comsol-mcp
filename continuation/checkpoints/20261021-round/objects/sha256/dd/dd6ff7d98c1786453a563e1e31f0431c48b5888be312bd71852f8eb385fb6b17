@@ -1,0 +1,87 @@
+{
+  "schema": "W23_R17_R8_SOURCE_ONLY_VALIDATION/1",
+  "status": "PASS_SOURCE_AND_SOFTWARE_CONTROLS_NO_AUTHORITY_NO_DISPATCH",
+  "candidate_root": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w23-r17-fixed-authority-live-set-nonhidden-input-0deda67f-c823-4880-8825-5300adcd517c-20261021",
+  "source_manifest_sha256": "747f2811601b0f912c272f06e19ec577e1fbb5d4f2b438710c131d640019d831",
+  "source_plan_sha256": "317753ecc946c0e3dc19ab1b58347b329da59b541e8682f849233f551b9691b4",
+  "source_map_sha256": "c30df5dbff02bf239d6b6f9649cc8d5a7356c431a5d00ec4e2f191f475b439a1",
+  "R6_source_projection_sha256": "a3f12cf612ccea2fff02471e97dc1ffb9c449d088cf561211eddbfb2db5813dd",
+  "R6_source_map_sha256": "3dca5216603a5bb3b55d97498d8db692751db4685ca8a094e8b281825fc17c06",
+  "R6_packet_sha256": "2eef77a6fec7950ee1aed3ea8b7bfdcb61088f3828edd89460c48aebfc3859b9",
+  "R6_validation_receipt_sha256": "d66c4850ba9930bb6a069087226d2c022a23d712f0c609a2bcfb4f6555415faa",
+  "outer_source_tests": {
+    "passed": 23,
+    "failed": 0,
+    "exit_code": 0,
+    "controls": [
+      {
+        "path": "evidence/CONTROL_PYTEST_R17.stdout.bin",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "mode_octal": "0600",
+        "command": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312/bin/python -I -B -m unittest discover -s tests -p test_w23_actual_controller_r8.py -v",
+        "returncode": 0,
+        "meaning": "23 outer source/consumer tests PASS"
+      },
+      {
+        "path": "evidence/CONTROL_PYTEST_R17.stderr.bin",
+        "bytes": 4319,
+        "sha256": "a9aaa19ad6e159c555dce79fb57777e07c99db17e807b03fda06529c3f897538",
+        "mode_octal": "0600",
+        "command": "same command stderr",
+        "returncode": 0,
+        "meaning": "23 tests; exit status recorded separately as zero"
+      }
+    ]
+  },
+  "source_only_cli": {
+    "status": "SOURCE_ONLY_PASS_NO_AUTHORITY_NO_DISPATCH",
+    "exit_code": 0,
+    "projected_members": 914,
+    "packet_records": 921,
+    "public_calls": 0,
+    "host_created": false,
+    "approval_created": false,
+    "once_created": false,
+    "controls": [
+      {
+        "path": "evidence/CONTROL_SOURCE_ONLY_R17.stdout.bin",
+        "bytes": 14576,
+        "sha256": "929a5ab9f04f26a96de7da13d985a788939f326d15202c2b167a334721f1168c",
+        "mode_octal": "0600",
+        "command": "/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/work/dev-python312/bin/python -I -B probe/w23_actual_controller_r8.py",
+        "returncode": 0,
+        "meaning": "SOURCE_ONLY_PASS_NO_AUTHORITY_NO_DISPATCH; 914 projected members; 921 packet records; 0 public calls"
+      },
+      {
+        "path": "evidence/CONTROL_SOURCE_ONLY_R17.stderr.bin",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "mode_octal": "0600",
+        "command": "same source-only command stderr",
+        "returncode": 0,
+        "meaning": "empty stderr; exit status recorded separately as zero"
+      }
+    ]
+  },
+  "historical_R16_UNKNOWN": {
+    "preserved": true,
+    "no_replay": true,
+    "main_terminal_review_sha256": "5d14462d3efa6209b5377214d786dc2e7d9b4f2f143e885e5d3f470a68b6b79d",
+    "exact_predecessor_output_files": 15
+  },
+  "compile_provenance": {
+    "status": "INHERITED_NOT_RECOMPILED",
+    "receipt_sha256": "6ad0ad132f736d027fef88aadd692190182c81da12c15ee3da6251dfcbfe9d91",
+    "main_review_sha256": "316c75d2cf7d7d92499b7170b21511779040570a573e4c68864b4d37bb0591ee",
+    "class_count": 15,
+    "classfile_major": 55
+  },
+  "SSH": "NOT_RUN",
+  "COMSOL": "NOT_RUN",
+  "native": "NOT_RUN",
+  "direction": "NOT_PROVEN",
+  "scientific_acceptance": "NOT_EVALUATED",
+  "effective_approval_created": false,
+  "effective_once_created": false
+}

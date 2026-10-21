@@ -1,0 +1,98 @@
+from __future__ import annotations
+import hashlib, importlib.util, json, shutil
+from pathlib import Path
+import pytest
+
+ROOT = Path('/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3')
+WRAPPER = ROOT / 'repository/_state/windows-primary-owner-r6i-bound-prep-r2-8b4137e9-ab90-41d8-87f0-01181044f8b3-20261020/source/windows_primary_owner_r6i_bound_strict_ssh_prep.py'
+RESUME = ROOT / "repository/docs/full_project_continuation_v3/state/RESUME.json"
+EXPECTED_RESUME = '75e379846288130299cb3632f109cf3c1e9c29884de3d7d9c89116571a8469e4'
+
+def load_module():
+    spec = importlib.util.spec_from_file_location("r6i_bound_prep_test", WRAPPER)
+    module = importlib.util.module_from_spec(spec)
+    assert spec and spec.loader
+    spec.loader.exec_module(module)
+    return module
+
+def test_actual_check_only_passes_exact_rendered_package_and_never_popen(monkeypatch, capsys):
+    module = load_module()
+    monkeypatch.setattr(module.subprocess, "Popen", lambda *a, **k: pytest.fail("Popen in check-only"))
+    result = module.main(argv=["--check-only", "--current-resume-sha256", EXPECTED_RESUME],
+                         popen_factory=lambda *a, **k: pytest.fail("Popen in check-only"))
+    assert result == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["status"] == "PASS_EXACT_BOUND_LOCAL_PREP_SOURCE_AND_PACKAGE_ONLY"
+    assert data["payload_sha256"] == module.BOUND_PAYLOAD_SHA256
+    assert data["current_checkpoint_sha256"] == EXPECTED_RESUME
+    assert data["remote_writes"] == 0 and data["ssh"] == "NOT_RUN"
+    assert not module.RUN_ROOT.exists()
+
+def test_check_only_rejects_wrong_checkpoint_before_any_process(tmp_path):
+    module = load_module()
+    bad = tmp_path / "bad-resume.json"
+    raw = RESUME.read_bytes() + b"\n"
+    bad.write_bytes(raw)
+    try:
+        with pytest.raises(RuntimeError, match="exact rendered PREP checkpoint"):
+            module._check_only(resume_path=bad, supplied_current_resume_sha256=hashlib.sha256(raw).hexdigest())
+    finally:
+        bad.unlink()
+    assert not module.RUN_ROOT.exists()
+
+def test_check_only_rejects_payload_drift(monkeypatch, tmp_path):
+    module = load_module()
+    bad_payload = tmp_path / "payload.py"
+    bad_payload.write_bytes(module.PAYLOAD_PATH.read_bytes() + b"# altered\n")
+    monkeypatch.setattr(module, "PAYLOAD_PATH", bad_payload)
+    with pytest.raises(RuntimeError, match="payload differs"):
+        module._check_only(resume_path=RESUME, supplied_current_resume_sha256=EXPECTED_RESUME)
+    assert not module.RUN_ROOT.exists()
+
+def test_check_only_rejects_manifest_drift(monkeypatch, tmp_path):
+    module = load_module()
+    altered = json.loads(module.MANIFEST_PATH.read_bytes())
+    altered["status"] = "PASS_UNEXPECTED"
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(json.dumps(altered), encoding="utf-8")
+    monkeypatch.setattr(module, "MANIFEST_PATH", manifest)
+    with pytest.raises(RuntimeError, match="frozen PREP payload/contract/manifest"):
+        module._check_only(resume_path=RESUME, supplied_current_resume_sha256=EXPECTED_RESUME)
+    assert not module.RUN_ROOT.exists()
+
+def test_check_only_rejects_contract_drift(monkeypatch, tmp_path):
+    module = load_module()
+    altered = json.loads(module.CONTRACT_PATH.read_bytes())
+    altered["status"] = "PASS_UNEXPECTED"
+    contract = tmp_path / "contract.json"
+    contract.write_text(json.dumps(altered), encoding="utf-8")
+    monkeypatch.setattr(module, "CONTRACT_PATH", contract)
+    with pytest.raises(RuntimeError, match="frozen PREP payload/contract/manifest"):
+        module._check_only(resume_path=RESUME, supplied_current_resume_sha256=EXPECTED_RESUME)
+    assert not module.RUN_ROOT.exists()
+
+def test_templates_are_explicitly_non_authority_and_exact_targets():
+    root = WRAPPER.parents[1]
+    names = ["PREP_MAIN_REVIEW_TEMPLATE_NOT_AUTHORITY.json", "WRAPPER_MAIN_REVIEW_TEMPLATE_NOT_AUTHORITY.json", "ONCE_AUTHORIZATION_TEMPLATE_NOT_AUTHORITY.json"]
+    values = [json.loads((root / "templates" / name).read_bytes()) for name in names]
+    accepted_review = ROOT / "repository/docs/full_project_continuation_v3/state/WINDOWS_PRIMARY_OWNER_R6I_FIVE_LEAF_PREP_MAIN_SOURCE_REVIEW_R1.json"
+    accepted_review_sha = hashlib.sha256(accepted_review.read_bytes()).hexdigest()
+    assert len(values) == 3
+    assert all("TEMPLATE_NOT_AUTHORIZED" in value["status"] for value in values)
+    assert values[0]["payload_sha256"] == '952eca570a5cc16e3f2639caeade14c0403158a293063aa3f5b1dee3e65778c8'
+    assert values[1]["wrapper_sha256"] == hashlib.sha256(WRAPPER.read_bytes()).hexdigest()
+    assert values[2]["remote_write_count"] == 5
+    assert all(value["remote_targets"] == list(load_module().REMOTE_TARGETS) for value in values)
+    assert values[0]["accepted_payload_review_sha256"] == accepted_review_sha
+    assert values[1]["prep_source_review_sha256"] == accepted_review_sha
+    assert values[2]["prep_source_review_sha256"] == accepted_review_sha
+    assert set(values[2]) == {
+        "active_cutoff_seconds", "argv_sha256", "contract_sha256",
+        "current_resume_sha256", "invocation_sha256", "manifest_sha256",
+        "passive_wait_same_original_popen_after_cutoff", "payload_bytes",
+        "payload_sha256", "persistent_user_authorization_sha256",
+        "prep_source_review_sha256", "remote_native_or_other_effects",
+        "remote_targets", "remote_write_count", "run_root", "schema", "status",
+        "wrapper_review_sha256", "wrapper_sha256",
+    }
+    assert values[2]["status"] != "MAIN_AUTHORIZED_EXACT_R6I_PREP_ONCE"

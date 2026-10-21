@@ -1,0 +1,380 @@
+from __future__ import annotations
+
+import base64
+import copy
+import ctypes
+import hashlib
+import importlib.util
+import ast
+import json
+import sys
+import types
+from pathlib import Path
+
+import pytest
+
+
+CANDIDATE = Path(__file__).resolve().parents[1]
+SOURCE = CANDIDATE / "source"
+PAYLOAD_PATH = SOURCE / "windows_primary_owner_r6i_native_payload_r2.py.txt"
+WRAPPER_PATH = SOURCE / "windows_primary_owner_r6i_native_strict_ssh_r2.py"
+PROOF_PATH = CANDIDATE / "evidence/EMPTY_MAIN_APPROVAL_CAPTURED_PROOF_R1.json"
+APPROVAL_TEMPLATE_PATH = CANDIDATE / "templates/MAIN_APPROVAL_TEMPLATE_NOT_AUTHORITY_R2.json"
+
+
+def _load_module(name: str, path: Path):
+    module = types.ModuleType(name)
+    module.__file__ = str(path)
+    module.__package__ = ""
+    sys.modules[name] = module
+    source = path.read_text(encoding="utf-8")
+    exec(compile(source, str(path), "exec"), module.__dict__)
+    return module
+
+
+@pytest.fixture(scope="module")
+def wrapper():
+    return _load_module("r6i_native_entry_r2_test_wrapper", WRAPPER_PATH)
+
+
+@pytest.fixture(scope="module")
+def payload():
+    return _load_module("r6i_native_entry_r2_test_payload", PAYLOAD_PATH)
+
+
+@pytest.fixture(scope="module")
+def gate(wrapper):
+    return wrapper._load_gate_source()
+
+
+@pytest.fixture(scope="module")
+def proof():
+    return json.loads(PROOF_PATH.read_text(encoding="utf-8"))
+
+
+def _approval_bytes(wrapper):
+    approval = json.loads(APPROVAL_TEMPLATE_PATH.read_text(encoding="utf-8"))
+    approval["status"] = "APPROVED_EXECUTE_ONCE"
+    approval["native_nonce"] = "0123456789abcdef0123456789abcdef"
+    return (json.dumps(approval, sort_keys=True, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+
+
+class _Pointer:
+    @staticmethod
+    def set(pointer, value):
+        pointer._obj.value = value
+
+
+class FakeAPI:
+    def __init__(self, leaf):
+        self.handle = object()
+        self.k = object()
+        identity = leaf["identity"]
+        self.identity = (identity["device"], identity["inode"])
+        file_identity, size, creation, change, write, links = leaf["native_full_fingerprint"]
+        self.full = {"file_identity": tuple(file_identity), "size": size,
+                     "creation_time": creation, "change_time": change,
+                     "write_time": write, "link_count": links}
+        self.descriptor = leaf["descriptor_sha256"]
+        self.owner_class = leaf["owner_classification"]
+        self.owner_sid = leaf["owner_sid"]
+        self.content = bytearray()
+        self.cursor = 0
+        self.open_count = 0
+        self.close_count = 0
+        self.write_calls = 0
+        self.flush_calls = 0
+        self.read_calls = 0
+        self.seek_calls = 0
+        self.events = []
+
+    def open(self, path, *, directory, create):
+        assert directory is False and create is False
+        self.open_count += 1
+        return self.handle
+
+    def close(self, handle):
+        assert handle is self.handle
+        self.close_count += 1
+
+    def info(self, handle, *, directory):
+        assert handle is self.handle and directory is False
+        return self.identity, len(self.content)
+
+
+class FakeOwner:
+    def __init__(self, api):
+        self.api = api
+
+    def function(self, name, _library):
+        api = self.api
+        if name == "WriteFile":
+            def write(handle, buffer, amount, written, _overlapped):
+                assert handle is api.handle
+                data = ctypes.string_at(buffer, amount)
+                start = api.cursor
+                api.content[start:start + amount] = data
+                api.cursor = start + amount
+                api.full["size"] = len(api.content)
+                _Pointer.set(written, amount)
+                api.write_calls += 1
+                api.events.append(("write", amount, bytes(data)))
+                return 1
+            return write
+        if name == "FlushFileBuffers":
+            def flush(handle):
+                assert handle is api.handle
+                api.flush_calls += 1
+                api.events.append(("flush",))
+                return 1
+            return flush
+        if name == "SetFilePointerEx":
+            def seek(handle, distance, position, _method):
+                assert handle is api.handle
+                offset = int(distance)
+                api.cursor = offset
+                _Pointer.set(position, offset)
+                api.seek_calls += 1
+                return 1
+            return seek
+        if name == "ReadFile":
+            def read(handle, buffer, amount, count, _overlapped):
+                assert handle is api.handle
+                data = bytes(api.content[api.cursor:api.cursor + amount])
+                if data:
+                    ctypes.memmove(buffer, data, len(data))
+                api.cursor += len(data)
+                _Pointer.set(count, len(data))
+                api.read_calls += 1
+                api.events.append(("read", len(data), data))
+                return 1
+            return read
+        raise AssertionError("unexpected R6B Win32 function: " + name)
+
+    def hold(self, *_objects):
+        return None
+
+
+def _install_fake_provider(monkeypatch, api, *, descriptor_after_open=None):
+    pkg = types.ModuleType("comsol_mcp")
+    pkg.__path__ = []
+    provider = types.ModuleType("comsol_mcp._host_scoped_provider")
+    owner_module = types.ModuleType("comsol_mcp._windows_host_preflight_owner")
+    owner = FakeOwner(api)
+    finish_calls = []
+    descriptor_calls = 0
+
+    def volume(_api, _path):
+        return True, api.identity[0]
+
+    def full_getter(_api):
+        return lambda _handle, *, directory: [
+            tuple(api.full["file_identity"]), api.full["size"], api.full["creation_time"],
+            api.full["change_time"], api.full["write_time"], api.full["link_count"],
+        ]
+
+    def security(_api):
+        return api.owner_sid, frozenset(), None
+
+    def descriptor(_api, _handle, *, directory, require_daemon_owner, daemon_sid, trusted_sids):
+        nonlocal descriptor_calls
+        assert directory is False and require_daemon_owner is True
+        descriptor_calls += 1
+        if descriptor_after_open is not None and descriptor_calls >= 2:
+            return descriptor_after_open, api.owner_class
+        return api.descriptor, api.owner_class
+
+    provider._windows_volume_has_persistent_acls = volume
+    provider._windows_original_full_getter = full_getter
+    provider._windows_security_context = security
+    provider._win32_descriptor_digest = descriptor
+    pkg._host_scoped_provider = provider
+    owner_module.scalar = lambda value, kind: bool(value) if kind == "BOOL" else (_ for _ in ()).throw(AssertionError(kind))
+    monkeypatch.setitem(sys.modules, "comsol_mcp", pkg)
+    monkeypatch.setitem(sys.modules, "comsol_mcp._host_scoped_provider", provider)
+    monkeypatch.setitem(sys.modules, "comsol_mcp._windows_host_preflight_owner", owner_module)
+
+    def hold_original(_api):
+        return owner
+
+    def finish_original(_api, error):
+        finish_calls.append(error)
+        if error is not None:
+            return None
+
+    return owner, finish_calls, hold_original, finish_original
+
+
+def _prepare_gate(gate, api, monkeypatch, *, descriptor_after_open=None):
+    owner, finish_calls, hold_original, finish_original = _install_fake_provider(
+        monkeypatch, api, descriptor_after_open=descriptor_after_open,
+    )
+    gate._runtime_path_binding_api = lambda: (api, hold_original, finish_original)
+    gate._runtime_owner_sid_text = lambda _api, _handle: api.owner_sid
+    return owner, finish_calls
+
+
+def test_captured_empty_approval_is_accepted_by_frozen_gate_projection(wrapper, payload, gate, proof):
+    live = {"approval": {"sha256": hashlib.sha256(b"").hexdigest(), "bytes": 0,
+                          "private_path": proof}}
+    leaf = payload._verify_empty_approval(gate, live, proof)
+    assert leaf == proof["path_chain"][-1]
+    assert leaf["info_size"] == 0
+
+
+@pytest.mark.parametrize("change", ["owner_sid", "native_file_id", "descriptor", "size"])
+def test_captured_proof_rejects_changed_security_or_identity(wrapper, payload, gate, proof, change):
+    altered = copy.deepcopy(proof)
+    leaf = altered["path_chain"][-1]
+    if change == "owner_sid":
+        leaf["owner_sid"] = "S-1-5-18"
+    elif change == "native_file_id":
+        leaf["native_full_fingerprint"][0][1] += 1
+    elif change == "descriptor":
+        leaf["descriptor_sha256"] = "0" * 64
+    else:
+        leaf["info_size"] = 1
+    live = {"approval": {"sha256": hashlib.sha256(b"").hexdigest(), "bytes": 0,
+                          "private_path": altered}}
+    with pytest.raises(RuntimeError):
+        payload._verify_empty_approval(gate, live, proof)
+
+
+def test_actual_r6b_same_handle_writer_writes_and_reads_exact_approval(wrapper, payload, gate, proof, monkeypatch):
+    leaf = proof["path_chain"][-1]
+    api = FakeAPI(leaf)
+    owner, finish_calls = _prepare_gate(gate, api, monkeypatch)
+    raw = _approval_bytes(wrapper)
+    result = payload._same_handle_write(gate, raw, leaf)
+    assert result["status"] == "SAME_OBJECT_APPROVAL_WRITE_READBACK_PASS"
+    assert result["approval_sha256"] == hashlib.sha256(raw).hexdigest()
+    assert result["approval_bytes"] == len(raw)
+    assert bytes(api.content) == raw
+    assert api.open_count == api.close_count == 1
+    assert api.write_calls == 1
+    assert api.flush_calls == 2
+    assert api.seek_calls == 2
+    assert api.read_calls >= 2
+    assert len(finish_calls) == 1 and finish_calls[0] is None
+    assert result["identity_domains"]["domains_compared_separately"] is True
+    before_file_identity, before_size, before_creation, before_change, before_write, before_links = leaf["native_full_fingerprint"]
+    assert result["opened_native_full_fingerprint"] == {
+        "file_identity": before_file_identity, "size": before_size,
+        "creation_time": before_creation, "change_time": before_change,
+        "write_time": before_write, "link_count": before_links,
+    }
+    after = result["after_native_full_fingerprint"]
+    assert after["file_identity"] == before_file_identity
+    assert after["size"] == len(raw)
+    assert after["creation_time"] == before_creation
+    assert after["link_count"] == before_links
+    assert result["change_and_write_filetimes_recorded_after_write"] is True
+
+
+@pytest.mark.parametrize("mutation", [
+    "legacy", "native_file_identity", "native_size", "native_creation_time",
+    "native_change_time", "native_write_time", "native_link_count", "owner", "descriptor",
+])
+def test_actual_writer_fails_closed_before_write_on_prewrite_drift(wrapper, payload, gate, proof, monkeypatch, mutation):
+    leaf = proof["path_chain"][-1]
+    api = FakeAPI(leaf)
+    if mutation == "legacy":
+        api.identity = (api.identity[0], api.identity[1] + 1)
+    elif mutation == "native_file_identity":
+        api.full["file_identity"] = (api.full["file_identity"][0], api.full["file_identity"][1] + 1)
+    elif mutation in ("native_size", "native_creation_time", "native_change_time", "native_write_time", "native_link_count"):
+        field = mutation.removeprefix("native_")
+        api.full[field] += 1
+    elif mutation == "owner":
+        api.owner_sid = "S-1-5-18"
+    else:
+        api.descriptor = "0" * 64
+    _prepare_gate(gate, api, monkeypatch)
+    with pytest.raises(RuntimeError):
+        payload._same_handle_write(gate, _approval_bytes(wrapper), leaf)
+    assert api.write_calls == 0
+    assert api.open_count == api.close_count == 1
+
+
+def test_actual_writer_rejects_postwrite_security_drift(wrapper, payload, gate, proof, monkeypatch):
+    leaf = proof["path_chain"][-1]
+    api = FakeAPI(leaf)
+    owner, finish_calls = _prepare_gate(gate, api, monkeypatch, descriptor_after_open="f" * 64)
+    raw = _approval_bytes(wrapper)
+    with pytest.raises(RuntimeError, match="owner/DACL"):
+        payload._same_handle_write(gate, raw, leaf)
+    assert bytes(api.content) == raw
+    assert api.write_calls == 1
+    assert api.open_count == api.close_count == 1
+    assert finish_calls and finish_calls[0] is not None
+
+
+def test_rendered_payload_binds_closed_r6i_approval_bytes(wrapper):
+    template = wrapper.read_regular(wrapper.PAYLOAD_TEMPLATE_PATH, maximum=wrapper.MAX_PAYLOAD_BYTES)
+    raw = _approval_bytes(wrapper)
+    rendered = wrapper._render_payload(raw, template)
+    assert b"__R6I_R2_" not in rendered
+    assert (b'APPROVAL_SHA256 = "' + hashlib.sha256(raw).hexdigest().encode() + b'"') in rendered
+    compile(rendered.decode("utf-8"), "<r6i-render-control>", "exec")
+
+
+@pytest.mark.parametrize("raised, expected_code, expected_diagnostic", [
+    (SystemExit("PRIMARY_OWNER_PROBE_BLOCKED: synthetic"), 1,
+     {"exception_type": "str", "text": "PRIMARY_OWNER_PROBE_BLOCKED: synthetic"}),
+    (SystemExit(70), 70, None),
+])
+def test_gate_system_exit_diagnostic_is_preserved_without_fabricated_stderr(
+        wrapper, payload, gate, monkeypatch, raised, expected_code, expected_diagnostic):
+    original_argv = list(payload.sys.argv)
+    def raise_exit(*_args, **_kwargs):
+        raise raised
+    monkeypatch.setattr(payload.runpy, "run_path", raise_exit)
+    code, stdout, stderr, status, exception, diagnostic = payload._run_gate(
+        gate, {"gate": "gate.py", "inner": "BINDING.json", "approval": "MAIN_APPROVAL.json"},
+    )
+    assert code == expected_code
+    assert stdout == b"" and stderr == b""
+    assert status == "R6I_GATE_RETURNED" and exception is None
+    assert diagnostic == expected_diagnostic
+    assert payload.sys.argv == original_argv
+
+
+def test_payload_writes_same_handle_before_invoking_frozen_gate(payload):
+    source = PAYLOAD_PATH.read_text(encoding="utf-8")
+    tree = ast.parse(source, filename=str(PAYLOAD_PATH))
+    main = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "main")
+    calls = [node.func.id for node in ast.walk(main)
+             if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)]
+    assert calls.index("_same_handle_write") < calls.index("_run_gate")
+
+
+def test_check_only_is_exact_and_effect_free(wrapper, monkeypatch):
+    assert not wrapper.RUN_ROOT.exists()
+    result = wrapper.check_only()
+    assert result["status"] == "PASS_EXACT_SOURCE_AND_CAPTURE_PROOFS_UNSIGNED_NO_SSH"
+    assert result["current_live_resume_sha256"] == hashlib.sha256(
+        wrapper.read_regular(wrapper.RESUME_PATH, maximum=16 * 1024 * 1024)
+    ).hexdigest()
+    assert result["historical_r6i_prep_checkpoint_sha256"] == "75e379846288130299cb3632f109cf3c1e9c29884de3d7d9c89116571a8469e4"
+    assert result["SSH"] == result["native"] == "NOT_RUN"
+    invocation = result["invocation"]
+    assert invocation["shell"] is False
+    assert invocation["argv"][0] == "/usr/bin/ssh"
+    assert invocation["argv"][-1].endswith(" -I -B -")
+    assert "-S" not in invocation["argv"][-1]
+    assert invocation["remote_native_budget"] == {
+        "child_processes": 1, "active_seconds": 60, "COMSOL": 0,
+        "GUI": 0, "JVM": 0, "Study": 0, "solver": 0,
+    }
+    assert not wrapper.RUN_ROOT.exists()
+
+
+def test_execute_once_refuses_missing_main_authorities_before_popen(wrapper, monkeypatch):
+    calls = []
+    def forbidden_popen(*args, **kwargs):
+        calls.append((args, kwargs))
+        raise AssertionError("Popen must not run without exact Main records")
+    with pytest.raises((RuntimeError, FileNotFoundError)):
+        wrapper.execute_once(popen_factory=forbidden_popen)
+    assert calls == []
+    assert not wrapper.RUN_ROOT.exists()

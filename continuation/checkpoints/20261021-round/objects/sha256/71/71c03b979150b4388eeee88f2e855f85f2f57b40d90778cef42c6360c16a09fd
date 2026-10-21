@@ -1,0 +1,926 @@
+"""Single-entry W23 R6 bootstrap through the pinned W25 original owner.
+
+This module consumes only Main-issued review/once records.  It never mints
+authority and has no caller-admission or direct-backend path.  Its ordinary
+CLI is source-only; the native route is the explicit run_authorized_entry API.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import stat
+import sys
+from typing import Any, Mapping
+import uuid
+
+from . import w23_owned_runtime_entry as owned
+from . import w23_zero_solve_entry as entry
+from . import w23_zero_solve_runtime as runtime
+
+
+ENTRY_ROOT = Path(__file__).resolve().parents[1]
+EVIDENCE_ROOT = ENTRY_ROOT / "evidence"
+REVIEW_PATH = EVIDENCE_ROOT / "W23_R6_MAIN_RUNTIME_REVIEW.json"
+ONCE_PATH = EVIDENCE_ROOT / "W23_R6_MAIN_SINGLE_USE_BINDING.json"
+ENTRY_GUARD_NAME = "W23_R6_ENTRY_ONCE_GUARD.json"
+INHERITED_COMPILE_ROOT = Path("/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w23-r13-current-source-r6r15-a3bf7054-79cd-4696-ae7a-4197c7fbe530-20261021/evidence/JAVA11_COMPILE_R6")
+COMPILE_RECEIPT_PATH = INHERITED_COMPILE_ROOT / "JAVA11_COMPILE_RECEIPT_R6.json"
+SAVED_MPH_PATH = ENTRY_ROOT / "inputs" / "w23_coarse-phase0_provisional.mph"
+RUNTIME_ID_PATTERN = re.compile(r"^comsol-install:[^\x00\r\n]{1,110}$")
+HEX64 = re.compile(r"^[0-9a-f]{64}$")
+MAX_AUTHORITY_BYTES = 1024 * 1024
+MAX_EVIDENCE_FILE_BYTES = 64 * 1024 * 1024
+MAX_EVIDENCE_TOTAL_BYTES = 128 * 1024 * 1024
+
+HOST_CONTROL_STARTUP_GRANT = {
+    "environment_variable": "COMSOL_MCP_HOST_CONTROL", "value": "1",
+    "permission": "host_control",
+    "source": "exact W23 R6 Main runtime review plus matching one-use binding",
+    "request_may_grant_permission": False, "production_policy_modified": False,
+}
+PUBLIC_BUDGETS = {
+    "w25_admission_setup_calls": 3,
+    "w25_optional_probe_calls": 0,
+    "w23_route_total_calls": 134,
+    "w23_metadata_calls": 128,
+    "w23_point_calls": 4,
+    "w23_integral_calls": 2,
+    "combined_public_calls_max": 137,
+}
+REVIEW_SCHEMA = "w23-zero-solve-r6-main-runtime-review/1"
+ONCE_SCHEMA = "w23-zero-solve-r6-main-single-use-binding/1"
+REVIEW_FIELDS = {
+    "schema", "decision", "source_projection_sha256", "source_map_sha256",
+    "entry_sha256", "compile_receipt_sha256", "saved_mph", "runtime_id",
+    "fresh_run_root", "host_provider_config_root", "persistent_evidence_dir",
+    "host_control_startup_grant", "public_budgets", "approval_sha256",
+}
+ONCE_FIELDS = {
+    "schema", "status", "normal_attempts", "main_review_sha256",
+    "approval_sha256", "source_projection_sha256", "source_map_sha256",
+    "entry_sha256", "compile_receipt_sha256", "saved_mph", "runtime_id",
+    "fresh_run_root", "host_provider_config_root", "persistent_evidence_dir",
+    "host_control_startup_grant", "public_budgets",
+}
+
+
+class ActualEntryGuardError(RuntimeError):
+    """A source, owner, or exact single-use authorization gate failed."""
+
+
+@dataclass
+class ActualEntryOutcome:
+    host: Any
+    admission: Any
+    result: Mapping[str, Any]
+    runtime_root: Path
+    once_guard_sha256: str
+
+
+def _canonical_bytes(value: Any) -> bytes:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"),
+                      ensure_ascii=False, allow_nan=False).encode("utf-8")
+
+
+def _pairs_unique(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ActualEntryGuardError("authority JSON contains a duplicate key")
+        result[key] = value
+    return result
+
+
+def _read_stable(path: Path) -> tuple[dict[str, Any], str]:
+    path = Path(path)
+    if not path.is_absolute():
+        raise ActualEntryGuardError("authority path must be absolute")
+    try:
+        named = path.lstat()
+        if (stat.S_ISLNK(named.st_mode) or not stat.S_ISREG(named.st_mode)
+                or named.st_uid != os.getuid() or named.st_nlink != 1
+                or named.st_mode & 0o022 or named.st_size > MAX_AUTHORITY_BYTES):
+            raise ActualEntryGuardError("authority file identity, mode, link count, or size is rejected")
+        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        try:
+            before = os.fstat(fd)
+            signature = lambda item: (item.st_dev, item.st_ino, item.st_mode, item.st_uid,
+                                      item.st_nlink, item.st_size, item.st_mtime_ns, item.st_ctime_ns)
+            if signature(named) != signature(before):
+                raise ActualEntryGuardError("authority file changed while opening")
+            chunks, count = [], 0
+            while True:
+                block = os.read(fd, min(1024 * 1024, MAX_AUTHORITY_BYTES + 1 - count))
+                if not block:
+                    break
+                count += len(block)
+                if count > MAX_AUTHORITY_BYTES:
+                    raise ActualEntryGuardError("authority file exceeds its exact size bound")
+                chunks.append(block)
+            after = os.fstat(fd)
+            if signature(before) != signature(after):
+                raise ActualEntryGuardError("authority file changed during read")
+        finally:
+            os.close(fd)
+        raw = b"".join(chunks)
+        if signature(after) != signature(path.lstat()):
+            raise ActualEntryGuardError("authority file name changed during read")
+        value = json.loads(raw.decode("utf-8"), object_pairs_hook=_pairs_unique,
+                           parse_constant=lambda _: (_ for _ in ()).throw(
+                               ActualEntryGuardError("authority JSON contains a non-finite value")))
+        if not isinstance(value, dict):
+            raise ActualEntryGuardError("authority JSON root must be an object")
+        return value, hashlib.sha256(raw).hexdigest()
+    except ActualEntryGuardError:
+        raise
+    except Exception as exc:
+        raise ActualEntryGuardError("authority file could not be read as stable strict JSON") from exc
+
+
+def _sha(value: bytes) -> str:
+    return hashlib.sha256(value).hexdigest()
+
+
+def _private_tmp_child(path_value: Any, *, prefix: str) -> Path:
+    if not isinstance(path_value, str) or not path_value:
+        raise ActualEntryGuardError("Main did not bind a private runtime path")
+    path = Path(path_value)
+    if (not path.is_absolute() or path.parent != Path("/private/tmp")
+            or not path.name.startswith(prefix) or path.exists() or path.is_symlink()):
+        raise ActualEntryGuardError("Main runtime path must be a new exact UUID child of /private/tmp")
+    suffix = path.name.removeprefix(prefix)
+    try:
+        if str(uuid.UUID(suffix)) != suffix:
+            raise ValueError
+    except (ValueError, AttributeError) as exc:
+        raise ActualEntryGuardError("Main runtime path suffix is not a canonical UUID") from exc
+    for parent in (Path("/"), Path("/private"), Path("/private/tmp")):
+        info = parent.lstat()
+        if stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode):
+            raise ActualEntryGuardError("private runtime path includes a non-directory or symlink")
+    if Path("/private/tmp").resolve(strict=True) != Path("/private/tmp"):
+        raise ActualEntryGuardError("/private/tmp is not canonical")
+    return path
+
+
+def _compile_provenance(expected_source_sha256: str,
+                        expected_receipt_sha256: str) -> dict[str, Any]:
+    receipt, receipt_sha = _read_stable(COMPILE_RECEIPT_PATH)
+    if receipt_sha != expected_receipt_sha256:
+        raise ActualEntryGuardError("Main approval does not bind the exact R6 Java compile receipt")
+    source = ENTRY_ROOT / "source" / "comsol_mcp" / "worker_java" / "PersistentComsolWorker.java"
+    source_raw = source.read_bytes()
+    source_sha = hashlib.sha256(source_raw).hexdigest()
+    if (source_sha != expected_source_sha256
+            or receipt.get("schema") != "w23-r6-local-jdk11-javac-receipt/1"
+            or receipt.get("status") != "COMPILE_PASS_SOURCE_ONLY"
+            or receipt.get("source_sha256") != source_sha
+            or receipt.get("source_bytes") != len(source_raw)
+            or receipt.get("compiler_version") != "javac 11.0.31"
+            or receipt.get("release") != "11"
+            or receipt.get("classfile_major_versions") != [55]
+            or type(receipt.get("class_file_count")) is not int
+            or receipt["class_file_count"] < 1
+            or receipt.get("native") != "NOT_RUN"
+            or receipt.get("worker_process") != "NOT_RUN"):
+        raise ActualEntryGuardError("R6 Java compile receipt does not prove the exact Java 11 source-only build")
+    classes_root = Path(receipt.get("classes_root", ""))
+    if not classes_root.is_absolute() or not classes_root.is_relative_to(COMPILE_RECEIPT_PATH.parent):
+        raise ActualEntryGuardError("compiled classes are outside the exact R6 compile evidence directory")
+    return {"path": str(COMPILE_RECEIPT_PATH), "sha256": receipt_sha,
+            "source_sha256": source_sha, "source_bytes": len(source_raw),
+            "classes_root": str(classes_root), "class_file_count": receipt["class_file_count"],
+            "classfile_major_versions": [55], "compiler_version": "javac 11.0.31"}
+
+
+def _approval_digest(review: Mapping[str, Any]) -> str:
+    return _sha(_canonical_bytes({key: value for key, value in review.items()
+                                  if key != "approval_sha256"}))
+
+
+def _load_authority(*, main_review_sha256: str, once_binding_sha256: str,
+                    source_projection_sha256: str) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    if not HEX64.fullmatch(main_review_sha256 or "") or not HEX64.fullmatch(once_binding_sha256 or ""):
+        raise ActualEntryGuardError("exact Main review and once SHA-256 values are required")
+    projection = runtime._verify_source_projection(source_projection_sha256)
+    review, review_sha = _read_stable(REVIEW_PATH)
+    once, once_sha = _read_stable(ONCE_PATH)
+    if review_sha != main_review_sha256 or once_sha != once_binding_sha256:
+        raise ActualEntryGuardError("Main authority file hashes differ from the exact entry arguments")
+    if set(review) != REVIEW_FIELDS or set(once) != ONCE_FIELDS:
+        raise ActualEntryGuardError("Main authority records contain missing or unknown fields")
+    if (review.get("schema") != REVIEW_SCHEMA or review.get("decision") != "APPROVE_ONE_FRESH_W23_R6_ENTRY"
+            or once.get("schema") != ONCE_SCHEMA or once.get("status") != "AUTHORIZED_SINGLE_ENTRY"
+            or type(once.get("normal_attempts")) is not int or once["normal_attempts"] != 1):
+        raise ActualEntryGuardError("Main authority schema or single-attempt decision is not exact")
+    if (review.get("approval_sha256") != _approval_digest(review)
+            or once.get("approval_sha256") != review.get("approval_sha256")
+            or once.get("main_review_sha256") != review_sha):
+        raise ActualEntryGuardError("once binding does not bind the exact Main review approval digest")
+    input_identity = entry.verify_saved_mph_copy(str(SAVED_MPH_PATH))
+    expected_saved = {"bytes": input_identity["bytes"], "sha256": input_identity["sha256"]}
+    java_path = ENTRY_ROOT / "source" / "comsol_mcp" / "worker_java" / "PersistentComsolWorker.java"
+    java_sha = hashlib.sha256(java_path.read_bytes()).hexdigest()
+    compile = _compile_provenance(java_sha, once.get("compile_receipt_sha256"))
+    expected = {
+        "source_projection_sha256": source_projection_sha256,
+        "source_map_sha256": projection["source_map_sha256"],
+        "entry_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "compile_receipt_sha256": compile["sha256"],
+        "saved_mph": expected_saved,
+        "host_control_startup_grant": HOST_CONTROL_STARTUP_GRANT,
+        "public_budgets": PUBLIC_BUDGETS,
+    }
+    if (not RUNTIME_ID_PATTERN.fullmatch(review.get("runtime_id", ""))
+            or review.get("approval_sha256") != _approval_digest(review)
+            or any(review.get(key) != value for key, value in expected.items())
+            or any(once.get(key) != value for key, value in expected.items())
+            or once.get("runtime_id") != review.get("runtime_id")):
+        raise ActualEntryGuardError("review and once do not bind the exact R6 source, MPH, Java build, runtime, and budget")
+    runtime_root = _private_tmp_child(review.get("fresh_run_root"), prefix="w23-r6-runtime-")
+    host_config = _private_tmp_child(review.get("host_provider_config_root"),
+                                     prefix="w25-probe17-host-provider-r4-")
+    persistent = review.get("persistent_evidence_dir")
+    persistent_path = Path(persistent) if isinstance(persistent, str) else Path(".")
+    expected_parent = EVIDENCE_ROOT / "ACTUAL_RUNS_R6"
+    if (not persistent_path.is_absolute() or persistent_path.parent != expected_parent
+            or not persistent_path.name.startswith("w23-r6-actual-")
+            or persistent_path.exists() or persistent_path.is_symlink()):
+        raise ActualEntryGuardError("Main persistent evidence destination is not a fresh R6 candidate child")
+    if (any(once.get(key) != review.get(key) for key in (
+            "fresh_run_root", "host_provider_config_root", "persistent_evidence_dir"))
+            or os.environ.get("COMSOL_MCP_TRUSTED_CODE", "").strip().lower() in {"1", "true", "yes"}
+            or "COMSOL_MCP_HOST_CONTROL" in os.environ):
+        raise ActualEntryGuardError("runtime destination, once scope, or ambient startup grant is not exact")
+    return review, once, {"source_projection": projection, "saved_mph": input_identity,
+                          "java_compile": compile, "runtime_root": runtime_root,
+                          "host_provider_config_root": host_config,
+                          "persistent_evidence_dir": persistent_path}
+
+
+def _write_new_json(path: Path, value: Mapping[str, Any]) -> str:
+    raw = (json.dumps(value, sort_keys=True, indent=2, ensure_ascii=False,
+                      allow_nan=False) + "\n").encode("utf-8")
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(raw)
+            stream.flush()
+            os.fsync(stream.fileno())
+        dfd = os.open(path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) |
+                      getattr(os, "O_NOFOLLOW", 0))
+        try:
+            os.fsync(dfd)
+        finally:
+            os.close(dfd)
+    except BaseException:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        raise
+    return hashlib.sha256(raw).hexdigest()
+
+
+def _ensure_persistent_directory(path: Path) -> None:
+    expected_parent = EVIDENCE_ROOT / "ACTUAL_RUNS_R6"
+    if path.parent != expected_parent:
+        raise ActualEntryGuardError("persistent evidence directory escaped its exact R6 root")
+    if expected_parent.exists() or expected_parent.is_symlink():
+        info = expected_parent.lstat()
+        if (stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode)
+                or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700
+                or expected_parent.resolve(strict=True) != expected_parent):
+            raise ActualEntryGuardError("persistent evidence root is not a private owned directory")
+    else:
+        expected_parent.mkdir(mode=0o700)
+        info = expected_parent.lstat()
+        if (stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode)
+                or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700
+                or expected_parent.resolve(strict=True) != expected_parent):
+            raise ActualEntryGuardError("new persistent evidence root failed its private ownership check")
+    path.mkdir(mode=0o700)
+    info = path.lstat()
+    if (stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode)
+            or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700
+            or path.resolve(strict=True) != path):
+        raise ActualEntryGuardError("new persistent evidence directory failed its private ownership check")
+
+
+def _read_stable_evidence(path: Path) -> tuple[bytes, dict[str, Any]]:
+    try:
+        named = path.lstat()
+        if (stat.S_ISLNK(named.st_mode) or not stat.S_ISREG(named.st_mode)
+                or named.st_uid != os.getuid() or named.st_nlink != 1
+                or named.st_size > MAX_EVIDENCE_FILE_BYTES):
+            raise ActualEntryGuardError("runtime evidence file identity or size is outside its exact bound")
+        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        try:
+            before = os.fstat(fd)
+            signature = lambda item: (item.st_dev, item.st_ino, item.st_mode, item.st_uid,
+                                      item.st_nlink, item.st_size, item.st_mtime_ns, item.st_ctime_ns)
+            if signature(named) != signature(before):
+                raise ActualEntryGuardError("runtime evidence file changed while opening")
+            chunks, count = [], 0
+            while True:
+                block = os.read(fd, min(1024 * 1024, MAX_EVIDENCE_FILE_BYTES + 1 - count))
+                if not block:
+                    break
+                count += len(block)
+                if count > MAX_EVIDENCE_FILE_BYTES:
+                    raise ActualEntryGuardError("runtime evidence file exceeded its exact byte cap")
+                chunks.append(block)
+            after = os.fstat(fd)
+            if signature(before) != signature(after):
+                raise ActualEntryGuardError("runtime evidence file changed while reading")
+        finally:
+            os.close(fd)
+        raw = b"".join(chunks)
+        if len(raw) != named.st_size or signature(after) != signature(path.lstat()):
+            raise ActualEntryGuardError("runtime evidence file name or byte count changed during read")
+        return raw, {
+            "bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest(),
+            "source_device": named.st_dev, "source_inode": named.st_ino,
+            "source_mode": stat.S_IMODE(named.st_mode), "source_uid": named.st_uid,
+        }
+    except ActualEntryGuardError:
+        raise
+    except Exception as exc:
+        raise ActualEntryGuardError("runtime evidence file could not be read stably") from exc
+
+
+def _mkdir_private_child(parent: Path, child_name: str) -> Path:
+    child = parent / child_name
+    child.mkdir(mode=0o700)
+    info = child.lstat()
+    if (stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode)
+            or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700
+            or child.resolve(strict=True) != child):
+        raise ActualEntryGuardError("persistent evidence child directory is not private and owned")
+    fd = os.open(parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) |
+                 getattr(os, "O_NOFOLLOW", 0))
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    return child
+
+
+def _copy_evidence_file(source_root: Path, destination_root: Path,
+                        relative: str, rows: list[dict[str, Any]], total: list[int], *,
+                        persistent_relative: str | None = None) -> None:
+    source = source_root / relative
+    raw, source_identity = _read_stable_evidence(source)
+    total[0] += len(raw)
+    if total[0] > MAX_EVIDENCE_TOTAL_BYTES:
+        raise ActualEntryGuardError("persistent raw evidence exceeded the aggregate byte cap")
+    destination_relative = persistent_relative or relative
+    destination = destination_root / destination_relative
+    cursor = destination_root
+    for component in Path(destination_relative).parts[:-1]:
+        cursor = cursor / component
+        if not cursor.exists():
+            _mkdir_private_child(cursor.parent, cursor.name)
+        info = cursor.lstat()
+        if (stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode)
+                or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700):
+            raise ActualEntryGuardError("persistent evidence path contains a non-private directory")
+    fd = os.open(destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL |
+                 getattr(os, "O_NOFOLLOW", 0), 0o600)
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(raw)
+            stream.flush()
+            os.fsync(stream.fileno())
+    except BaseException:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        raise
+    written, target_identity = _read_stable_evidence(destination)
+    if written != raw or target_identity["sha256"] != source_identity["sha256"]:
+        raise ActualEntryGuardError("persistent raw evidence readback differs from its source bytes")
+    dfd = os.open(destination.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) |
+                  getattr(os, "O_NOFOLLOW", 0))
+    try:
+        os.fsync(dfd)
+    finally:
+        os.close(dfd)
+    rows.append({
+        "source_root": str(source_root),
+        "source_relative_path": relative, "persistent_relative_path": destination_relative,
+        "bytes": len(raw), "sha256": source_identity["sha256"],
+        "source_identity": {key: source_identity[key] for key in (
+            "source_device", "source_inode", "source_mode", "source_uid")},
+        "persistent_device": target_identity["source_device"],
+        "persistent_inode": target_identity["source_inode"],
+        "persistent_mode": target_identity["source_mode"],
+    })
+
+
+def _persist_raw_evidence(source_root: Path, destination_root: Path, *,
+                          partial: bool = False,
+                          project_input_root: Path | None = None) -> dict[str, Any]:
+    """Copy a fixed, bounded evidence set without sweeping runtime state.
+
+    The complete immutable saved-MPH project-input copy, when it exists, three
+    setup call records, W25 admission result, W23 copy binding, and W23 raw
+    response journal are retained byte-for-byte. The admitted W25 workspace
+    must remain empty. An early partial failure may have no input copy only
+    when neither the copy binding nor W23 journal exists. Unexpected
+    root/setup/workspace/W23 evidence entries fail closed;
+    no recursive filesystem snapshot or process cleanup is attempted.
+    """
+    source_root = Path(source_root)
+    root_info = source_root.lstat()
+    if (stat.S_ISLNK(root_info.st_mode) or not stat.S_ISDIR(root_info.st_mode)
+            or root_info.st_uid != os.getuid() or stat.S_IMODE(root_info.st_mode) != 0o700
+            or source_root.resolve(strict=True) != source_root):
+        raise ActualEntryGuardError("original W25 admission evidence root is not the exact private owner directory")
+    allowed_root_entries = {
+        "setup", "ADMISSION_RESULT.json", "W23_SAVED_MPH_COPY_BINDING_R2.json",
+        "workspace", "w23-evidence",
+    }
+    observed_root_entries = {entry.name for entry in source_root.iterdir()}
+    if (not observed_root_entries <= allowed_root_entries
+            or (not partial and observed_root_entries != allowed_root_entries)
+            or "setup" not in observed_root_entries):
+        raise ActualEntryGuardError("W25 admission evidence root contains missing or unexpected entries")
+
+    setup = source_root / "setup"
+    setup_info = setup.lstat()
+    if (stat.S_ISLNK(setup_info.st_mode) or not stat.S_ISDIR(setup_info.st_mode)
+            or setup_info.st_uid != os.getuid() or stat.S_IMODE(setup_info.st_mode) != 0o700):
+        raise ActualEntryGuardError("W25 setup evidence directory identity is invalid")
+    setup_names = sorted(entry.name for entry in setup.iterdir())
+    allowed_setup_names = {
+        f"{ordinal:02d}-{operation}-{suffix}.json"
+        for ordinal, operation in ((1, "project-create"), (2, "session-start"),
+                                   (3, "session-connect"))
+        for suffix in ("intent", "response", "failure")
+    }
+    if not set(setup_names) <= allowed_setup_names:
+        raise ActualEntryGuardError("W25 setup evidence contains an unexpected record")
+    if not partial:
+        expected_setup_names = {
+            f"{ordinal:02d}-{operation}-{suffix}.json"
+            for ordinal, operation in ((1, "project-create"), (2, "session-start"),
+                                       (3, "session-connect"))
+            for suffix in ("intent", "response")
+        }
+        if set(setup_names) != expected_setup_names:
+            raise ActualEntryGuardError("successful W25 admission lacks one of its exact three setup responses")
+
+    run_dirs = []
+    if "w23-evidence" in observed_root_entries:
+        evidence_root = source_root / "w23-evidence"
+        evidence_info = evidence_root.lstat()
+        if (stat.S_ISLNK(evidence_info.st_mode) or not stat.S_ISDIR(evidence_info.st_mode)
+                or evidence_info.st_uid != os.getuid() or stat.S_IMODE(evidence_info.st_mode) != 0o700):
+            raise ActualEntryGuardError("W23 evidence parent is not a private owned directory")
+        run_dirs = list(evidence_root.iterdir())
+        if len(run_dirs) > 1:
+            raise ActualEntryGuardError("W23 evidence root contains more than one run")
+    elif not partial:
+        raise ActualEntryGuardError("successful W23 entry omitted its raw evidence directory")
+    journal_relative = None
+    if run_dirs:
+        run_dir = run_dirs[0]
+        run_info = run_dir.lstat()
+        if (not run_dir.name.startswith("w23-zero-solve-") or stat.S_ISLNK(run_info.st_mode)
+                or not stat.S_ISDIR(run_info.st_mode) or run_info.st_uid != os.getuid()
+                or stat.S_IMODE(run_info.st_mode) != 0o700):
+            raise ActualEntryGuardError("W23 journal run directory identity is invalid")
+        suffix = run_dir.name.removeprefix("w23-zero-solve-")
+        try:
+            if str(uuid.UUID(suffix)) != suffix:
+                raise ValueError
+        except (ValueError, AttributeError) as exc:
+            raise ActualEntryGuardError("W23 journal run directory is not a UUID child") from exc
+        if {entry.name for entry in run_dir.iterdir()} != {"public-receipts.jsonl"}:
+            raise ActualEntryGuardError("W23 journal directory contains missing or unexpected entries")
+        journal_relative = f"w23-evidence/{run_dir.name}/public-receipts.jsonl"
+    elif not partial:
+        raise ActualEntryGuardError("successful W23 entry omitted its raw public-response journal")
+
+    fixed_files = [f"setup/{name}" for name in setup_names]
+    for filename in ("ADMISSION_RESULT.json", "W23_SAVED_MPH_COPY_BINDING_R2.json"):
+        if filename in observed_root_entries:
+            fixed_files.append(filename)
+        elif not partial:
+            raise ActualEntryGuardError(f"successful W23 entry omitted {filename}")
+    workspace_disposition = "NOT_PRESENT_IN_PARTIAL_OWNER_ROOT"
+    if "workspace" in observed_root_entries:
+        workspace = source_root / "workspace"
+        workspace_info = workspace.lstat()
+        if (stat.S_ISLNK(workspace_info.st_mode) or not stat.S_ISDIR(workspace_info.st_mode)
+                or workspace_info.st_uid != os.getuid() or stat.S_IMODE(workspace_info.st_mode) != 0o700):
+            raise ActualEntryGuardError("W25 admitted workspace is not a private owned directory")
+        workspace_names = {entry.name for entry in workspace.iterdir()}
+        if workspace_names == set():
+            workspace_disposition = "EMPTY_PRIVATE_W25_WORKSPACE"
+        else:
+            raise ActualEntryGuardError("W25 admitted workspace must remain empty after project-input relocation")
+    elif not partial:
+        raise ActualEntryGuardError("successful W23 entry omitted its admitted workspace")
+
+    binding_name = "W23_SAVED_MPH_COPY_BINDING_R2.json"
+    binding_path = source_root / binding_name
+    input_root = None
+    input_relative = None
+    if binding_name in observed_root_entries:
+        if project_input_root is None:
+            project_input_root = source_root.parent
+        project_input_root = Path(project_input_root)
+        try:
+            project_info = project_input_root.lstat()
+        except OSError as exc:
+            raise ActualEntryGuardError("trusted project input root is missing") from exc
+        if (project_input_root != source_root.parent
+                or stat.S_ISLNK(project_info.st_mode)
+                or not stat.S_ISDIR(project_info.st_mode)
+                or project_info.st_uid != os.getuid()
+                or project_input_root.resolve(strict=True) != project_input_root):
+            raise ActualEntryGuardError("trusted project input root is not the exact admission-root parent")
+        binding_raw, _ = _read_stable_evidence(binding_path)
+        try:
+            binding = json.loads(binding_raw)
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ActualEntryGuardError("W23 project-input copy binding is malformed") from exc
+        if (not isinstance(binding, Mapping)
+                or set(binding) != {"schema", "status", "run_id", "project_id", "session_id",
+                                   "project_root", "source_identity", "destination_identity",
+                                   "source_project_relative_path", "opened_by_comsol"}
+                or binding.get("schema") != "w23-r6-saved-mph-copy-binding/2"
+                or binding.get("status") != "PASS_EXACT_IMMUTABLE_SOURCE_COPIED_TO_NON_HIDDEN_PROJECT_INPUT"
+                or binding.get("project_root") != str(project_input_root)
+                or binding.get("opened_by_comsol") is not False):
+            raise ActualEntryGuardError("W23 project-input binding does not match the exact v2 schema and root")
+        run_id = binding.get("run_id")
+        try:
+            if (not isinstance(run_id, str) or len(run_id) != 32
+                    or uuid.UUID(hex=run_id).hex != run_id):
+                raise ValueError
+        except (ValueError, AttributeError) as exc:
+            raise ActualEntryGuardError("W23 project-input binding run id is invalid") from exc
+        if source_root.name != f".w25-probe-{run_id}":
+            raise ActualEntryGuardError("W23 binding run id does not identify the exact private W25 owner root")
+        input_relative = f"w23-input-{run_id}/{SAVED_MPH_PATH.name}"
+        if binding.get("source_project_relative_path") != input_relative:
+            raise ActualEntryGuardError("W23 project-input binding path is not the exact non-hidden relative path")
+        input_root = project_input_root / f"w23-input-{run_id}"
+        try:
+            input_info = input_root.lstat()
+        except OSError as exc:
+            raise ActualEntryGuardError("W23 project-input directory is missing") from exc
+        if (stat.S_ISLNK(input_info.st_mode) or not stat.S_ISDIR(input_info.st_mode)
+                or input_info.st_uid != os.getuid() or stat.S_IMODE(input_info.st_mode) != 0o700
+                or input_root.resolve(strict=True) != input_root
+                or input_root.name.startswith(".")):
+            raise ActualEntryGuardError("W23 project-input directory is not a private owned non-hidden child")
+        input_names = {entry.name for entry in input_root.iterdir()}
+        if input_names != {SAVED_MPH_PATH.name}:
+            raise ActualEntryGuardError("W23 project-input directory contains missing or unexpected entries")
+        input_path = input_root / SAVED_MPH_PATH.name
+        try:
+            input_info = input_path.lstat()
+        except OSError as exc:
+            raise ActualEntryGuardError("W23 project-input MPH is missing") from exc
+        if (stat.S_ISLNK(input_info.st_mode) or not stat.S_ISREG(input_info.st_mode)
+                or input_info.st_uid != os.getuid() or input_info.st_nlink != 1
+                or stat.S_IMODE(input_info.st_mode) != 0o400):
+            raise ActualEntryGuardError("W23 project-input MPH is not an immutable owned regular file")
+        input_raw, input_identity = _read_stable_evidence(input_path)
+        source_identity = binding.get("source_identity")
+        destination_identity = binding.get("destination_identity")
+        pinned_source_identity = entry.verify_saved_mph_copy(str(SAVED_MPH_PATH))
+        expected_identity = {"bytes": len(input_raw), "sha256": hashlib.sha256(input_raw).hexdigest(),
+                             "mode": "0o400", "opened_by_comsol": False}
+        if (not isinstance(source_identity, Mapping) or not isinstance(destination_identity, Mapping)
+                or dict(source_identity) != pinned_source_identity
+                or destination_identity.get("path") != str(input_path)
+                or any(destination_identity.get(key) != value for key, value in expected_identity.items())
+                or any(source_identity.get(key) != value for key, value in expected_identity.items()
+                       if key != "mode")
+                or len(input_raw) != 13_795_478
+                or hashlib.sha256(input_raw).hexdigest() !=
+                   "cba0c1d404003c4e60a20b04316cb1456c38cc2b45596dc2dc29bbed62674a8c"
+                or input_identity["source_mode"] != 0o400
+                or input_identity["source_uid"] != os.getuid()):
+            raise ActualEntryGuardError("W23 project-input bytes or exact copy binding differ from the immutable MPH")
+        workspace_disposition = "EMPTY_PRIVATE_W25_WORKSPACE_PROJECT_INPUT_COPY_INCLUDED"
+    elif partial:
+        if journal_relative is not None:
+            raise ActualEntryGuardError("W23 raw journal exists without its exact project-input copy binding")
+        if project_input_root is None:
+            project_input_root = source_root.parent
+        try:
+            run_id = source_root.name.removeprefix(".w25-probe-")
+            str(uuid.UUID(hex=run_id))
+            if len(run_id) != 32:
+                raise ValueError
+        except (ValueError, AttributeError) as exc:
+            raise ActualEntryGuardError("partial W25 owner root does not contain a canonical run id") from exc
+        unbound_input = Path(project_input_root) / f"w23-input-{run_id}"
+        try:
+            unbound_input.lstat()
+        except FileNotFoundError:
+            pass
+        except OSError as exc:
+            raise ActualEntryGuardError("unbound W23 project-input path could not be checked") from exc
+        else:
+            raise ActualEntryGuardError("unbound W23 project-input directory exists at the partial archive boundary")
+        if "workspace" in observed_root_entries and journal_relative is None:
+            # W25 setup has allocated its private workspace, but W23 has not
+            # recorded either a copy binding or a public response journal.
+            # This is a valid incomplete pre-copy evidence boundary.
+            workspace_disposition = "EMPTY_EARLY_PARTIAL_NO_BINDING_OR_JOURNAL"
+    elif not partial:
+        raise ActualEntryGuardError("successful W23 entry omitted its project-input copy binding")
+    if journal_relative is not None:
+        fixed_files.append(journal_relative)
+    rows: list[dict[str, Any]] = []
+    total = [0]
+    for relative in sorted(fixed_files):
+        _copy_evidence_file(source_root, destination_root, relative, rows, total)
+    if input_relative is not None and input_root is not None:
+        _copy_evidence_file(project_input_root, destination_root, input_relative,
+                            rows, total, persistent_relative=input_relative)
+    return {
+        "schema": "w23-zero-solve-r6-persisted-raw-evidence/2",
+        "status": ("PARTIAL_BOUNDED_RAW_EVIDENCE_COPIED_AND_READ_BACK" if partial else
+                   "PASS_EXACT_BOUNDED_RAW_EVIDENCE_COPIED_AND_READ_BACK"),
+        "partial": partial,
+        "source_root": str(source_root), "project_root": str(project_input_root or source_root.parent),
+        "persistent_root": str(destination_root),
+        "file_count": len(rows), "total_bytes": total[0], "files": rows,
+        "raw_public_journal": journal_relative,
+        "workspace_archive_disposition": workspace_disposition,
+        "evidence_boundary": "exact W25 setup/admission, immutable saved-MPH copy/binding, and W23 raw response journal only",
+    }
+
+
+def _persist_entry_record(persistent: Path, source_root: Path | None,
+                          record_name: str, record: Mapping[str, Any], *,
+                          partial: bool,
+                          project_input_root: Path | None = None) -> dict[str, Any]:
+    if not persistent.exists():
+        _ensure_persistent_directory(persistent)
+    if source_root is None:
+        manifest = {
+            "schema": "w23-zero-solve-r6-persisted-raw-evidence/1",
+            "status": "NO_OWNER_ROOT_CREATED",
+            "source_root": None, "persistent_root": str(persistent),
+            "file_count": 0, "total_bytes": 0, "files": [],
+            "raw_public_journal": None,
+            "evidence_boundary": "no owner evidence root existed before failure",
+        }
+    else:
+        manifest = _persist_raw_evidence(
+            source_root, persistent, partial=partial, project_input_root=project_input_root)
+    manifest_path = persistent / "PERSISTED_RAW_EVIDENCE_MANIFEST_R1.json"
+    manifest_sha = _write_new_json(manifest_path, manifest)
+    persisted = dict(record)
+    persisted["persistent_evidence_manifest"] = {
+        "path": str(manifest_path), "sha256": manifest_sha,
+        "file_count": manifest["file_count"], "total_bytes": manifest["total_bytes"],
+        "status": manifest["status"],
+    }
+    record_path = persistent / record_name
+    record_sha = _write_new_json(record_path, persisted)
+    return {"path": str(record_path), "sha256": record_sha,
+            "manifest_path": str(manifest_path), "manifest_sha256": manifest_sha,
+            "file_count": manifest["file_count"], "total_bytes": manifest["total_bytes"]}
+
+
+def _persist_first_failure(persistent: Path, record: Mapping[str, Any]) -> dict[str, Any]:
+    """Durably record the first failure before attempting raw-evidence archival.
+
+    This small record has no dependency on the original owner's evidence tree,
+    so a bounded copy/read failure cannot erase the primary exception.  It is
+    append-only and never replaces an earlier first-cause record.
+    """
+    persistent = Path(persistent)
+    info = persistent.lstat()
+    if (stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode)
+            or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700
+            or persistent.resolve(strict=True) != persistent):
+        raise ActualEntryGuardError("first-failure destination is not the exact private persistent directory")
+    target = persistent / "R6_FIRST_FAILURE.json"
+    digest = _write_new_json(target, record)
+    readback, identity = _read_stable_evidence(target)
+    if hashlib.sha256(readback).hexdigest() != digest or identity["sha256"] != digest:
+        raise ActualEntryGuardError("durable first-failure record did not pass stable readback")
+    return {"path": str(target), "sha256": digest, "bytes": len(readback),
+            "status": "PASS_FIRST_CAUSE_FSYNCED_BEFORE_RAW_ARCHIVE"}
+
+
+def _consume_once(once: Mapping[str, Any], *, once_binding_sha256: str,
+                  main_review_sha256: str, runtime_root: Path) -> str:
+    runtime_root.mkdir(mode=0o700)
+    info = runtime_root.lstat()
+    if (stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode)
+            or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700
+            or runtime_root.resolve(strict=True) != runtime_root):
+        raise ActualEntryGuardError("fresh runtime root is not an exact private owned directory")
+    guard = {
+        "schema": "w23-zero-solve-r6-entry-once-guard/1",
+        "status": "CONSUMED_NO_REPLAY",
+        "main_review_sha256": main_review_sha256,
+        "once_binding_sha256": once_binding_sha256,
+        "approval_sha256": once["approval_sha256"],
+        "source_projection_sha256": once["source_projection_sha256"],
+        "runtime_root": str(runtime_root),
+        "normal_attempts": 1,
+    }
+    return _write_new_json(runtime_root / ENTRY_GUARD_NAME, guard)
+
+
+def _prepare_private_runtime_directories(runtime_root: Path) -> tuple[Path, Path]:
+    home, project_root = runtime_root / "control-home", runtime_root / "project-root"
+    for path in (home, project_root):
+        if path.exists() or path.is_symlink():
+            raise ActualEntryGuardError("fresh W23 R6 runtime output path already exists; no retry")
+        path.mkdir(mode=0o700)
+        info = path.lstat()
+        if (stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode)
+                or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700
+                or path.resolve(strict=True) != path):
+            raise ActualEntryGuardError("private W23 R6 runtime directory identity is invalid")
+    return home, project_root
+
+
+def _validate_host(host: Any, *, admission_module: Any, runner: Any,
+                   control_daemon_type: Any) -> None:
+    from comsol_mcp._session_server import OwnedServerLauncher
+
+    expected_permissions = {"inspect", "project_write", "compute", "host_control"}
+    if (type(host) is not admission_module.ProbeControlHost
+            or type(host.daemon) is not control_daemon_type
+            or type(host.daemon.session_server_launcher) is not OwnedServerLauncher
+            or host.daemon._scoped_host_provider is not host.close_delegator
+            or host.daemon.backend.scoped_host_provider is not host.close_delegator
+            or set(host.daemon.backend.host_permission_ceiling) != expected_permissions
+            or host.daemon.project_authority.grant_ceiling != frozenset(expected_permissions)
+            or host.daemon._project_host_permissions() != expected_permissions
+            or type(host.close_grant_seed) is not runner.ProbeCloseGrantSeed):
+        raise ActualEntryGuardError("fresh W25 ControlDaemon does not match the reviewed default owner/permission path")
+
+
+def run_authorized_entry(*, main_review_sha256: str, once_binding_sha256: str,
+                         source_projection_sha256: str) -> ActualEntryOutcome:
+    """Consume one exact Main binding, admit W25 once, then run full W23 reads.
+
+    This method is deliberately not called by the candidate CLI.  Once the
+    one-use guard exists, every error is no-replay and the original host object
+    is returned for Main-owned terminal reconciliation; this module never
+    signals or reconstructs a process owner.
+    """
+    review, once, pins = _load_authority(
+        main_review_sha256=main_review_sha256,
+        once_binding_sha256=once_binding_sha256,
+        source_projection_sha256=source_projection_sha256,
+    )
+    runtime_root = pins["runtime_root"]
+    persistent = pins["persistent_evidence_dir"]
+    guard_sha = _consume_once(once, once_binding_sha256=once_binding_sha256,
+                              main_review_sha256=main_review_sha256,
+                              runtime_root=runtime_root)
+    host = None
+    admission = None
+    try:
+        _ensure_persistent_directory(persistent)
+        home, project_root = _prepare_private_runtime_directories(runtime_root)
+        os.environ[HOST_CONTROL_STARTUP_GRANT["environment_variable"]] = HOST_CONTROL_STARTUP_GRANT["value"]
+        if os.environ.get("COMSOL_MCP_HOST_CONTROL") != "1":
+            raise ActualEntryGuardError("exact approved host_control startup grant was not retained")
+
+        repository = ENTRY_ROOT.parents[1]
+        w25_probe_root = repository / "_state" / owned._W25_ROOT_NAME / "probe"
+        source_root = ENTRY_ROOT / "source"
+        for prefix in (str(source_root.resolve(strict=True)), str(ENTRY_ROOT / "probe"),
+                       str(w25_probe_root)):
+            if prefix in sys.path:
+                sys.path.remove(prefix)
+        sys.path[:0] = [str(source_root), str(ENTRY_ROOT / "probe"), str(w25_probe_root)]
+        admission_module, runner, control_daemon_type, _operation_store_type = owned._w25_modules()
+        host = admission_module.create_probe_control_host(
+            home=home, project_root=project_root,
+            close_grant_seed=runner.ProbeCloseGrantSeed(
+                once_binding_sha256, once["approval_sha256"]),
+            host_provider_config_root=pins["host_provider_config_root"],
+        )
+        _validate_host(host, admission_module=admission_module, runner=runner,
+                       control_daemon_type=control_daemon_type)
+        admission = admission_module.admit_probe_session(host, runtime_id=once["runtime_id"])
+        if (type(admission) is not admission_module.ProbeSessionAdmission
+                or admission.host is not host or admission.daemon is not host.daemon
+                or admission.setup_result.get("setup_public_calls_used") != 3
+                or admission.setup_result.get("setup_public_call_budget") != 3
+                or admission.setup_result.get("probe_public_call_budget") != 17
+                or len(admission.setup_calls) != 3):
+            raise ActualEntryGuardError("fresh W25 public admission did not complete its exact three-call setup")
+        result = owned.run_w23_from_owned_admission(
+            admission, source_projection_sha256=source_projection_sha256,
+            execute_numeric=True,
+        )
+        receipt = {
+            "schema": "w23-zero-solve-r6-actual-entry-result/1",
+            "status": result.get("status"),
+            "main_review_sha256": main_review_sha256,
+            "once_binding_sha256": once_binding_sha256,
+            "approval_sha256": once["approval_sha256"],
+            "source_projection_sha256": source_projection_sha256,
+            "source_map_sha256": pins["source_projection"]["source_map_sha256"],
+            "runtime_root": str(runtime_root),
+            "project_id": admission.project_id, "session_id": admission.session_id,
+            "runtime_id": admission.runtime_id, "endpoint": dict(admission.setup_result["endpoint"]),
+            "setup_public_calls_used": 3, "w23_route_public_call_budget": 134,
+            "w23_route_result": dict(result),
+            "direction_status": result.get("direction_status", "NOT_PROVEN"),
+            "scientific_acceptance": result.get("scientific_acceptance", "NOT_EVALUATED"),
+            "Study.run": 0, "solver.run": 0,
+            "original_owner_disposition": "RETAIN_EXACT_HOST_UNTIL_MAIN_TERMINAL_REVIEW",
+            "native_acceptance": "NOT_CLAIMED_BY_SOURCE_ENTRY",
+        }
+        persisted = _persist_entry_record(
+            persistent, admission.root, "R6_ENTRY_RESULT.json", receipt, partial=False,
+            project_input_root=Path(host.daemon.backend.project_root))
+        receipt["persistent_record"] = persisted
+        return ActualEntryOutcome(host, admission, receipt, runtime_root, guard_sha)
+    except BaseException as exc:
+        # Any failure after owner birth retains the exact in-memory host.  The
+        # caller must reconcile the original owner; no replay or auto-close.
+        outcome = {
+            "schema": "w23-zero-solve-r6-actual-entry-failure/1",
+            "status": "UNKNOWN_OR_BLOCKED_NO_REPLAY",
+            "failure_type": type(exc).__name__, "failure_short": str(exc)[:600],
+            "main_review_sha256": main_review_sha256,
+            "once_binding_sha256": once_binding_sha256,
+            "runtime_root": str(runtime_root),
+            "admission_created": admission is not None,
+            "server_worker_cleanup": "NOT_CALLED; exact original host remains retained",
+            "new_public_calls_after_exception": 0,
+        }
+        first_cause = {
+            "schema": "w23-zero-solve-r6-first-failure/1",
+            "status": "UNKNOWN_OR_BLOCKED_NO_REPLAY",
+            "failure_type": type(exc).__name__,
+            "failure_short": str(exc)[:600],
+            "main_review_sha256": main_review_sha256,
+            "once_binding_sha256": once_binding_sha256,
+            "source_projection_sha256": source_projection_sha256,
+            "runtime_root": str(runtime_root),
+            "admission_created": admission is not None,
+            "original_owner_retained": host is not None,
+            "new_public_calls_after_exception": 0,
+            "cleanup": "NOT_CALLED_NO_REPLAY",
+        }
+        outcome["first_failure"] = first_cause
+        try:
+            outcome["first_failure_record"] = _persist_first_failure(persistent, first_cause)
+        except BaseException as first_record_exc:
+            # Preserve the in-memory first cause and the specific persistence
+            # failure; do not replace it with a later raw-copy error.
+            outcome["first_failure_record"] = {
+                "status": "FAILED_FIRST_CAUSE_RECORD_WRITE",
+                "failure_type": type(first_record_exc).__name__,
+                "failure_short": str(first_record_exc)[:400],
+            }
+        source_root = host.root if host is not None else None
+        try:
+            persisted = _persist_entry_record(
+                persistent, source_root, "R6_ENTRY_FAILURE.json", outcome, partial=True,
+                project_input_root=(Path(host.daemon.backend.project_root) if host is not None else None))
+            outcome["persistent_record"] = persisted
+        except BaseException as archive_exc:
+            # Never lose or dispose of an already-born original owner because
+            # durable copying itself failed; expose both failures to Main.
+            outcome["persistent_archive_status"] = "FAILED_RAW_EVIDENCE_REMAINS_IN_ORIGINAL_OWNER_ROOT"
+            outcome["persistent_archive_failure"] = f"{type(archive_exc).__name__}: {str(archive_exc)[:500]}"
+            outcome["original_owner_evidence_root"] = str(source_root) if source_root is not None else None
+        if host is not None:
+            return ActualEntryOutcome(host, admission, outcome, runtime_root, guard_sha)
+        raise
+
+
+def source_only_preflight(source_projection_sha256: str) -> dict[str, Any]:
+    """Verify candidate source/input only; do not read authority or dispatch."""
+    source = runtime._verify_source_projection(source_projection_sha256)
+    saved_mph = entry.verify_saved_mph_copy(str(SAVED_MPH_PATH))
+    return {
+        "status": "SOURCE_ONLY_PREPARATION_PASS_NO_DISPATCH",
+        "source_projection": source, "immutable_saved_mph_input": saved_mph,
+        "java_compile_receipt": "SEE evidence/JAVA11_COMPILE_R6/JAVA11_COMPILE_RECEIPT_R6.json",
+        "main_review": "NOT_CREATED", "once_binding": "NOT_CREATED",
+        "owner_admission": "NOT_CREATED", "public_calls": 0,
+        "approval_created": False, "once_created": False,
+        "COMSOL": "NOT_RUN", "native": "NOT_RUN",
+        "direction_status": "NOT_PROVEN", "scientific_acceptance": "NOT_EVALUATED",
+        "actual_entry": "probe.w23_actual_entry_r6.run_authorized_entry",
+    }

@@ -1,0 +1,86 @@
+{
+  "schema": "w25-r9-main-actual-gui-review/1",
+  "checked_utc": "2026-10-15T08:30:07.113160+00:00",
+  "status": "FAIL_PRESERVED_NATIVE_ATTEMPT_RESOURCES_TERMINAL",
+  "bound_files": {
+    "FIRST_FAILURE.json": {
+      "path": "/private/tmp/cvw25-macos-2df2985f/FIRST_FAILURE.json",
+      "bytes": 11701,
+      "sha256": "a4f3832425e1334a8005534cc47c658f8b36cc4646302ed41acf2cc54b9235c2"
+    },
+    "UNIT_ONCE_GUARD.json": {
+      "path": "/private/tmp/cvw25-macos-2df2985f/UNIT_ONCE_GUARD.json",
+      "bytes": 733,
+      "sha256": "7e91652fcd5aac810900a5fb4fa0782c89311d9aa6bef3ed617ad538bd744704"
+    },
+    "OWNED_WINDOW_FIRST.json": {
+      "path": "/private/tmp/cvw25-macos-2df2985f/OWNED_WINDOW_FIRST.json",
+      "bytes": 674,
+      "sha256": "f19d19affd75e18d5e6ea651e2065fe16afe584406c6b7fe2f05df6e16ed1184"
+    }
+  },
+  "main_source_review_sha256": "59d25075967c56b86f18e7dd391b8a37f86d6b901609649d7a518432ec92e449",
+  "actual_result_status": "FAIL_PRESERVED_NATIVE_ATTEMPT",
+  "cli_exit_code": 0,
+  "cli_exit_code_is_acceptance": false,
+  "ax_first_cause": {
+    "diagnostics": {
+      "attribute": "AXPosition",
+      "ax_error_code": -25202,
+      "ax_error_name": "invalid_ui_element",
+      "kind": "AX_ERROR",
+      "readiness_transient": false,
+      "scope": "window_association"
+    },
+    "error": "Accessibility attribute read failed (invalid_ui_element, -25202): AXPosition in window_association",
+    "phase": "task_owned_observation",
+    "type": "DesktopOperationError"
+  },
+  "owned_window": {
+    "comsol_version": "6.4.0",
+    "desktop_session_id": "process-session:81240",
+    "login_id": "uid:501",
+    "native_window_id": "CGWindow:2516",
+    "platform": "macos",
+    "process_birth": "1792052506.624163",
+    "process_id": 81310
+  },
+  "original_popen_returncode": -15,
+  "cleanup": {
+    "errors": [],
+    "force_stopped_known_owned_pids": [],
+    "known_owned_pid_count": 4,
+    "original_popen_pid": 81240,
+    "original_popen_returncode": -15,
+    "owned_group_absence_inventory_complete": true,
+    "owned_group_absent": true,
+    "remaining_owned_group_or_session_pids": [],
+    "unresolved_known_owned_pids": []
+  },
+  "fresh_process_query": {
+    "argv": [
+      "/bin/ps",
+      "-axo",
+      "pid=,ppid=,pgid=,uid=,lstart=,command="
+    ],
+    "returncode": 0,
+    "full_stdout_sha256": "30e0bb671663a9104ab21f49f79a61e331b590486e32bda56d8e5b514ba3414f",
+    "targets": [
+      81223,
+      81240,
+      81310,
+      81311,
+      81312
+    ],
+    "process_group": 81240,
+    "matches": [],
+    "full_inventory_row_count": 791
+  },
+  "selector_certification": "NOT_RUN",
+  "controls": "NOT_RUN",
+  "pixels": "NOT_RUN",
+  "model_binding": "UNVERIFIED",
+  "science": "NOT_RUN",
+  "unchanged_replay_allowed": false,
+  "next_action": "Review narrow actor-only initial AX stale-reference refresh with original ownership and unique Quartz identity revalidation; source controls before fresh candidate."
+}

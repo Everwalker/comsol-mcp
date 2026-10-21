@@ -1,0 +1,909 @@
+from __future__ import annotations
+
+import hashlib
+import copy
+from pathlib import Path
+
+import pytest
+
+from tests.w21_initial_stage_fixture import build_initial_stage_fixture
+from comsol_mcp._execution_contract import model_ref_from_mapping
+from comsol_mcp._w21_stage_backend import validate_initial_output_acceptance
+
+
+def _validate_initial_proof(value, proof):
+    stage = next(item for item in value["definition"]["stages"]
+                 if item["stage_id"] == value["stage_id"])
+    return validate_initial_output_acceptance(
+        proof,
+        binding=proof["stage_attempt_binding"],
+        stage=stage,
+        stage_run_operation_id=proof["stage_run_operation_id"],
+        solve_revision=proof["solve_revision"],
+        output_revision=proof["output_revision"],
+        observed_artifact_sha256=proof["saved_artifact_observed_sha256"],
+    )
+
+
+def _refresh_initial_event_snapshot_receipt(proof):
+    """Rebind deliberate canonical event mutations to a valid snapshot receipt."""
+    from comsol_mcp._stage_contract import sha256_json
+
+    rows = proof["job_event_rows"]
+    collection = proof["worker_event_collection"]
+    assert collection["status"] == "COMPLETE" and collection["complete"] is True
+    assert collection["job_row_count"] == 1 and collection["issues"] == []
+    assert collection["sentinel_checked"] is True
+    assert collection["terminal_sentinel_checked"] is True
+    assert collection["terminal_sentinel_count"] == collection["overflow_sentinel_count"] == 0
+    assert collection["terminal_sentinel"]["checked"] is True
+    assert collection["terminal_sentinel"]["count"] == 0
+    worker_rows = [row for row in rows if row.get("event") == "worker_request"]
+    proof["worker_event_rows"] = copy.deepcopy(worker_rows)
+    event_ids = [row["id"] for row in rows]
+    assert event_ids == sorted(set(event_ids))
+    page_size = collection["page_size"]
+    page_count = (len(rows) + page_size - 1) // page_size if rows else 0
+    last_id = event_ids[-1] if event_ids else 0
+    id_sha256 = hashlib.sha256(",".join(str(value) for value in event_ids).encode("ascii")).hexdigest()
+    collection.update({
+        "expected_page_count": page_count,
+        "expected_event_count": len(rows),
+        "fetched_event_count": len(rows),
+        "fetched_job_event_count": len(rows),
+        "snapshot_last_id": last_id,
+        "event_ids": event_ids,
+        "id_sha256": id_sha256,
+        "events_sha256": sha256_json(rows),
+        "worker_request_event_count": len(worker_rows),
+        "limit": page_size,
+    })
+    pages = []
+    for page_index in range(page_count):
+        offset = page_index * page_size
+        page_rows = rows[offset:offset + page_size]
+        page_ids = event_ids[offset:offset + page_size]
+        pages.append({
+            "index": page_index,
+            "offset": offset,
+            "count": len(page_rows),
+            "first_id": page_ids[0] if page_ids else None,
+            "last_id": page_ids[-1] if page_ids else None,
+            "id_sha256": hashlib.sha256(",".join(str(value) for value in page_ids).encode("ascii")).hexdigest(),
+            "events_sha256": sha256_json(page_rows),
+        })
+    collection["pages"] = pages
+    sentinel = collection["terminal_sentinel"]
+    sentinel.update({
+        "checked": True,
+        "job_id": collection["job_id"],
+        "snapshot_last_id": last_id,
+        "offset": len(rows),
+        "count": 0,
+        "event_id": None,
+    })
+
+
+def test_registered_initial_stage_accepts_complete_fake_worker_output(tmp_path):
+    value = build_initial_stage_fixture(tmp_path)
+    try:
+        assert value["defined"]["success"] is True, value["defined"]
+        result = value["result"]
+        assert result is not None
+        assert result["success"] is True, {"result": result, "attempt": value["attempt"],
+                                            "transport": value["transport_requests"][-8:]}
+        assert result["data"]["acceptance_status"] == "INITIAL_OUTPUT_ACCEPTED"
+        assert result["data"]["initial_output_acceptance"]["status"] == "PASS"
+        assert result["data"]["initial_output_acceptance"]["scope"] == "INITIAL_OUTPUT_AND_SOURCE_ARTIFACT_ONLY"
+        attempt = value["attempt"]
+        assert attempt["status"] == "ACCEPTED"
+        assert attempt["acceptance_status"] == "INITIAL_OUTPUT_ACCEPTED"
+        assert attempt["execution_status"] == "SOLVE_SUCCEEDED"
+        proof = result["data"]["initial_output_acceptance"]["native_evidence"]
+        row = next(item for item in attempt["evidence"] if item.get("kind") == "initial-output-native-evidence")
+        assert row["native_evidence"] == proof
+        assert proof["native_output_readback"]["checks"] == []
+        assert proof["native_output_readback"]["variables_dof_readback"]["n_dofs"] == 9
+        assert proof["native_output_readback"]["solution_mesh_association"]["mesh_tag"] == "mesh1"
+        assert proof["mesh_snapshot_readback"]["status"] == "CURRENT_MESH_CAPTURE_ONLY"
+        assert proof["saved_artifact"]["sha256"] == proof["saved_artifact_observed_sha256"]
+        event_collection = proof["worker_event_collection"]
+        assert event_collection["schema"] == "operation-store-job-event-snapshot/v1"
+        assert event_collection["status"] == "COMPLETE"
+        assert event_collection["complete"] is True
+        assert event_collection["page_size"] == event_collection["limit"] == 1000
+        assert event_collection["sentinel_checked"] is True
+        assert event_collection["terminal_sentinel_checked"] is True
+        assert event_collection["terminal_sentinel"]["checked"] is True
+        assert event_collection["terminal_sentinel"]["count"] == 0
+        assert (event_collection["expected_event_count"]
+                == event_collection["fetched_event_count"]
+                == event_collection["fetched_job_event_count"])
+        assert event_collection["fetched_job_event_count"] < 1000
+        assert event_collection["job_row_count"] == 1
+        assert event_collection["worker_request_event_count"] == len(proof["worker_event_rows"])
+        assert event_collection["overflow_sentinel_count"] == 0
+        assert len(event_collection["event_ids"]) == event_collection["expected_event_count"]
+        assert event_collection["snapshot_last_id"] == event_collection["event_ids"][-1]
+        assert len(event_collection["events_sha256"]) == 64
+        assert len(event_collection["pages"]) == event_collection["expected_page_count"]
+        dispatches = proof["solve_save_dispatches"]
+        phase_handles = {}
+        for dispatch in dispatches:
+            phase = "solve" if dispatch["operation"] == "run_study" else "save"
+            rows = [item for item in proof["worker_event_rows"]
+                    if item.get("event") == "worker_request"
+                    and isinstance(item.get("metadata"), dict)
+                    and item["metadata"].get("request_id") == dispatch["worker_request_id"]
+                    and item["metadata"].get("phase") == "submitted"]
+            assert len(rows) == 1
+            phase_handles[phase] = rows[0]["metadata"]["w21_backend_binding"]["model_handle"]
+        assert phase_handles["solve"] != phase_handles["save"]
+        xmesh_steps = [step for step in proof["native_output_readback"]["revision_chain"]
+                       if step.get("readphase") == "initial-stage-active-variables-xmesh"]
+        assert len(xmesh_steps) == 1
+        xmesh = xmesh_steps[0]
+        assert xmesh["operation"] == "solver.inspect"
+        assert xmesh["effect"] == "EVALUATE"
+        assert xmesh["expected_revision"] == proof["solve_revision"]
+        assert xmesh["revision"] == proof["solve_revision"] + 1
+        assert xmesh["managed_ticket_operation"] == "w21_initial_variables_xmesh"
+        assert len(xmesh["request_hash"]) == 64
+        assert sum(row.get("type") == "call" and row.get("method") == "getVariablesXmeshReadback"
+                   for row in value["transport_requests"]) == 1
+        worker_rows = proof["worker_event_rows"]
+        request_phases = {}
+        for row in worker_rows:
+            metadata = row.get("metadata", {})
+            if isinstance(metadata, dict):
+                request_phases.setdefault(metadata.get("request_id"), set()).add(metadata.get("phase"))
+        assert len(request_phases) == proof["raw_worker_rpc_count"]
+        assert all(phases == {"submitted", "observed"} for phases in request_phases.values())
+        tlist_failures = [row for row in worker_rows
+                          if isinstance(row.get("metadata"), dict)
+                          and row["metadata"].get("phase") == "observed"
+                          and isinstance(row["metadata"].get("metadata"), dict)
+                          and row["metadata"]["metadata"].get("method") == "getDoubleArray"
+                          and row["metadata"]["metadata"].get("args") == ["tlist"]]
+        assert len(tlist_failures) == 3
+        assert all(row["metadata"]["status"] == "FAILED"
+                   and row["metadata"]["reply"]["request_id"] == row["metadata"]["request_id"]
+                   and row["metadata"]["reply"]["failure"]["code"] == "ENGINE_CALL_FAILED"
+                   for row in tlist_failures)
+        file_path_reads = [row for row in worker_rows
+                           if isinstance(row.get("metadata"), dict)
+                           and row["metadata"].get("phase") == "observed"
+                           and isinstance(row["metadata"].get("metadata"), dict)
+                           and row["metadata"]["metadata"].get("method") == "getFilePath"]
+        file_path_ids = {row["metadata"]["request_id"] for row in file_path_reads}
+        assert file_path_ids
+        assert all(row["metadata"]["reply"]["status"] == "SUCCEEDED"
+                   and row["metadata"]["reply"].get("result") == ""
+                   for row in file_path_reads)
+        auxiliary_ids = {row["worker_request_id"] for row in proof["worker_auxiliary_requests"]}
+        label_ids = {
+            row["metadata"]["request_id"] for row in worker_rows
+            if row.get("event") == "worker_request"
+            and row.get("metadata", {}).get("request_id") in auxiliary_ids
+            and row.get("metadata", {}).get("metadata", {}).get("method") == "label"
+        }
+        assert label_ids
+        for request_id in label_ids:
+            pair = [row["metadata"] for row in worker_rows
+                    if row.get("event") == "worker_request"
+                    and row.get("metadata", {}).get("request_id") == request_id]
+            assert len(pair) == 2
+            assert {row.get("phase") for row in pair} == {"submitted", "observed"}
+            assert pair[0].get("request_hash") == pair[1].get("request_hash")
+            for event in pair:
+                payload = event["metadata"]
+                phase = event["w21_backend_binding"]["phase"]
+                assert phase in phase_handles
+                assert payload["method"] == "label"
+                assert payload["args"] == []
+                assert payload["handle"] == phase_handles[phase]
+                assert event["w21_backend_binding"]["model_handle"] == phase_handles[phase]
+            observed = next(row for row in pair if row["phase"] == "observed")
+            assert observed["status"] == "SUCCEEDED"
+            assert observed["reply"]["status"] == "SUCCEEDED"
+        typed_array_properties = {
+            "probes", "disabledvariables", "disabledcoordinatesystems", "disabledpair",
+        }
+        typed_array_reads = [row for row in worker_rows
+                             if isinstance(row.get("metadata"), dict)
+                             and row["metadata"].get("phase") == "observed"
+                             and isinstance(row["metadata"].get("metadata"), dict)
+                             and row["metadata"]["metadata"].get("method") == "getStringArray"
+                             and row["metadata"]["metadata"].get("args", [None])[0]
+                             in typed_array_properties]
+        assert typed_array_properties <= {
+            row["metadata"]["metadata"]["args"][0] for row in typed_array_reads
+        }
+        assert all(row["metadata"]["status"] == "SUCCEEDED"
+                   and row["metadata"]["reply"]["status"] == "SUCCEEDED"
+                   for row in typed_array_reads)
+        assert not [row for row in worker_rows
+                    if isinstance(row.get("metadata"), dict)
+                    and row["metadata"].get("phase") == "observed"
+                    and isinstance(row["metadata"].get("metadata"), dict)
+                    and row["metadata"]["metadata"].get("method") in {"getString", "getDouble"}
+                    and row["metadata"]["metadata"].get("args", [None])[0]
+                    in typed_array_properties]
+        assert not [row for row in value["transport_requests"]
+                    if row.get("type") == "call" and row.get("method") == "solveFor"
+                    and row.get("args") == []]
+    finally:
+        value["daemon"].close()
+
+
+def test_initial_acceptance_rejects_missing_or_tampered_event_collection(tmp_path):
+    value = build_initial_stage_fixture(tmp_path, runner_profile=True)
+    try:
+        proof = value["result"]["data"]["initial_output_acceptance"]["native_evidence"]
+        mutations = []
+        missing = copy.deepcopy(proof)
+        missing.pop("worker_event_collection")
+        mutations.append(missing)
+        overflow = copy.deepcopy(proof)
+        overflow["worker_event_collection"]["overflow_sentinel_count"] = 1
+        mutations.append(overflow)
+        count_mismatch = copy.deepcopy(proof)
+        count_mismatch["worker_event_collection"]["worker_request_event_count"] += 1
+        mutations.append(count_mismatch)
+        fetched_understated = copy.deepcopy(proof)
+        fetched_understated["worker_event_collection"]["fetched_job_event_count"] = 0
+        mutations.append(fetched_understated)
+        fetched_bool = copy.deepcopy(proof)
+        fetched_bool["worker_event_collection"]["fetched_job_event_count"] = True
+        mutations.append(fetched_bool)
+        for candidate in mutations:
+            valid, missing_reasons = _validate_initial_proof(value, candidate)
+            assert valid is False
+            assert "complete bounded exact-job event snapshot and Worker projection" in missing_reasons
+    finally:
+        value["daemon"].close()
+
+
+def test_initial_acceptance_rejects_cross_phase_model_handle_tamper(tmp_path):
+    value = build_initial_stage_fixture(tmp_path, runner_profile=True)
+    try:
+        proof = copy.deepcopy(value["result"]["data"]["initial_output_acceptance"]["native_evidence"])
+        phase_handles = {}
+        for dispatch in proof["solve_save_dispatches"]:
+            phase = "solve" if dispatch["operation"] == "run_study" else "save"
+            row = next(item for item in proof["worker_event_rows"]
+                       if item.get("event") == "worker_request"
+                       and item.get("metadata", {}).get("request_id") == dispatch["worker_request_id"]
+                       and item.get("metadata", {}).get("phase") == "submitted")
+            phase_handles[phase] = row["metadata"]["w21_backend_binding"]["model_handle"]
+        assert phase_handles["solve"] != phase_handles["save"]
+        auxiliary_ids = {row["worker_request_id"] for row in proof["worker_auxiliary_requests"]}
+        tampered = 0
+        for row in proof["job_event_rows"]:
+            envelope = row.get("metadata")
+            if (not isinstance(envelope, dict) or envelope.get("request_id") not in auxiliary_ids
+                    or envelope.get("phase") not in {"submitted", "observed"}
+                    or envelope.get("metadata", {}).get("method") != "label"):
+                continue
+            binding = envelope.get("w21_backend_binding")
+            if isinstance(binding, dict) and binding.get("phase") == "save":
+                binding["model_handle"] = phase_handles["solve"]
+                tampered += 1
+        assert tampered == 8  # submit/observe rows for all four save-phase label calls
+        _refresh_initial_event_snapshot_receipt(proof)
+        valid, missing = _validate_initial_proof(value, proof)
+        assert valid is False
+        assert "complete bounded exact-job event snapshot and Worker projection" not in missing
+        assert "auxiliary Worker receiver matches the correlated Model handle for its phase" in missing
+    finally:
+        value["daemon"].close()
+
+
+@pytest.mark.parametrize(
+    "tamper",
+    ["model_ref", "binding_hash", "request_hash", "missing_submitted", "missing_observed"],
+)
+def test_initial_acceptance_rejects_tampered_model_label_auxiliary_evidence(tmp_path, tamper):
+    value = build_initial_stage_fixture(tmp_path, runner_profile=True)
+    try:
+        proof = copy.deepcopy(value["result"]["data"]["initial_output_acceptance"]["native_evidence"])
+        aux_ids = {row["worker_request_id"] for row in proof["worker_auxiliary_requests"]}
+        label_rows = [row for row in proof["job_event_rows"]
+                      if row.get("metadata", {}).get("request_id") in aux_ids
+                      and row.get("metadata", {}).get("metadata", {}).get("method") == "label"
+                      and row.get("metadata", {}).get("w21_backend_binding", {}).get("phase") == "save"]
+        assert len(label_rows) >= 4
+        request_id = label_rows[0]["metadata"]["request_id"]
+        if tamper == "model_ref":
+            label_rows[0]["metadata"]["w21_backend_binding"]["model_ref"]["model_tag"] = "foreign-model"
+        elif tamper == "binding_hash":
+            label_rows[0]["metadata"]["w21_backend_binding"]["binding_sha256"] = "f" * 64
+        elif tamper == "request_hash":
+            label_rows[0]["metadata"]["request_hash"] = "0" * 64
+        else:
+            phase = "submitted" if tamper == "missing_submitted" else "observed"
+            matching_rows = [row for row in proof["job_event_rows"]
+                             if row.get("metadata", {}).get("request_id") == request_id
+                             and row.get("metadata", {}).get("phase") == phase]
+            assert len(matching_rows) == 1
+            proof["job_event_rows"] = [
+                row for row in proof["job_event_rows"]
+                if not (row.get("metadata", {}).get("request_id") == request_id
+                        and row.get("metadata", {}).get("phase") == phase)
+            ]
+        _refresh_initial_event_snapshot_receipt(proof)
+        valid, missing = _validate_initial_proof(value, proof)
+        assert valid is False
+        assert "complete bounded exact-job event snapshot and Worker projection" not in missing
+        if tamper in {"missing_submitted", "missing_observed"}:
+            assert "auxiliary Worker request has a complete lifecycle" in missing
+        else:
+            assert any("auxiliary Worker request is outside the safe root-operation allowlist" in item
+                       or "auxiliary root Worker request has the exact stage binding" in item
+                       for item in missing)
+    finally:
+        value["daemon"].close()
+
+
+def test_initial_stage_snapshot_page_limit_blocks_acceptance(tmp_path, monkeypatch):
+    import comsol_mcp._operation_store as operation_store
+
+    monkeypatch.setattr(operation_store, "JOB_EVENT_SNAPSHOT_MAX_PAGES", 1)
+    value = build_initial_stage_fixture(tmp_path, runner_profile=True, event_padding_total=1101)
+    try:
+        result = value["result"]
+        assert result is not None and result["success"] is False
+        assert result["error"]["code"] == "STAGE_ACCEPTANCE_UNVERIFIED"
+        attempt = value["attempt"]
+        assert attempt["status"] == "SUCCEEDED_PARTIAL"
+        output = next(row for row in attempt["evidence"] if row.get("kind") == "stage-output-readback")
+        collection = output["worker_event_collection"]
+        assert collection["status"] == "INCOMPLETE"
+        assert collection["complete"] is False
+        assert collection["expected_event_count"] == 1101
+        assert collection["expected_page_count"] == 2
+        assert collection["max_page_count"] == 1
+        assert collection["fetched_event_count"] == 0
+        assert collection["fetched_job_event_count"] == 0
+        assert collection["terminal_sentinel_checked"] is False
+        assert collection["terminal_sentinel"]["checked"] is False
+        assert collection["terminal_sentinel_count"] == 0
+        assert any("bounded page limit" in issue for issue in collection["issues"])
+        assert "complete bounded exact-job event snapshot and Worker projection" in output["missing"]
+        missing = attempt["result"]["output_missing"]
+        assert output["missing"] == missing
+        assert output["missing"] == result["data"]["attempt"]["result"]["output_missing"]
+    finally:
+        value["daemon"].close()
+
+
+def test_initial_acceptance_collects_complete_job_snapshot_above_1000(tmp_path, monkeypatch):
+    """A valid Worker transcript must survive unrelated events beyond row 1000."""
+    import comsol_mcp._w21_stage_backend as stage_backend
+
+    captured = []
+    original_validator = stage_backend.validate_initial_output_acceptance
+
+    def capture_validation(evidence, **kwargs):
+        captured.append(copy.deepcopy(evidence))
+        return original_validator(evidence, **kwargs)
+
+    monkeypatch.setattr(stage_backend, "validate_initial_output_acceptance", capture_validation)
+    value = build_initial_stage_fixture(tmp_path, runner_profile=True, event_padding_total=1101)
+    try:
+        assert value["event_padding_receipt"] is not None, {
+            "event_padding_reads": value.get("event_padding_reads"),
+            "result": value.get("result"),
+            "attempt_status": value.get("attempt", {}).get("status"),
+            "attempt_evidence_kinds": [row.get("kind") for row in value.get("attempt", {}).get("evidence", [])],
+        }
+        padding = value["event_padding_receipt"]
+        assert padding["original_event_count"] <= 1000
+        assert padding["final_event_count"] == 1101
+        assert padding["all_original_worker_events_precede_padding"] is True
+        # Controller validation and the store's transactional finalization
+        # independently validate the same frozen evidence payload.
+        assert len(captured) == 2
+        assert captured[0] == captured[1]
+        evidence = captured[0]
+        assert evidence["worker_job_id"] == padding["job_id"]
+        assert len(evidence["worker_event_rows"]) == padding["original_worker_request_event_count"]
+        valid, missing = original_validator(
+            evidence,
+            binding=evidence["stage_attempt_binding"],
+            stage=next(row for row in value["definition"]["stages"]
+                       if row["stage_id"] == value["stage_id"]),
+            stage_run_operation_id=evidence["stage_run_operation_id"],
+            solve_revision=evidence["solve_revision"],
+            output_revision=evidence["output_revision"],
+            observed_artifact_sha256=evidence["saved_artifact_observed_sha256"],
+        )
+        assert valid is True, missing
+        assert value["result"] is not None and value["result"]["success"] is True, {
+            "error_code": value["result"].get("error", {}).get("code"),
+            "output_missing": value["result"].get("data", {}).get("output_missing"),
+            "event_padding": padding,
+        }
+        proof = value["result"]["data"]["initial_output_acceptance"]["native_evidence"]
+        assert proof["worker_event_collection"]["complete"] is True
+        assert proof["worker_event_collection"]["expected_event_count"] == 1101
+        assert proof["worker_event_collection"]["fetched_event_count"] == 1101
+        assert len(proof["job_event_rows"]) == 1101
+        assert len(proof["worker_event_rows"]) == padding["original_worker_request_event_count"]
+
+        def invoke(candidate):
+            return original_validator(
+                candidate,
+                binding=evidence["stage_attempt_binding"],
+                stage=next(row for row in value["definition"]["stages"]
+                           if row["stage_id"] == value["stage_id"]),
+                stage_run_operation_id=evidence["stage_run_operation_id"],
+                solve_revision=evidence["solve_revision"],
+                output_revision=evidence["output_revision"],
+                observed_artifact_sha256=evidence["saved_artifact_observed_sha256"],
+            )
+
+        tamper_cases = {
+            "truncated": lambda candidate: candidate["job_event_rows"].pop(),
+            "mixed_nonworker": lambda candidate: candidate["job_event_rows"][
+                padding["original_event_count"]
+            ].update({"event": "worker_request"}),
+            "duplicate": lambda candidate: candidate["job_event_rows"].__setitem__(
+                1, copy.deepcopy(candidate["job_event_rows"][0]),
+            ),
+            "foreign_job": lambda candidate: candidate["job_event_rows"][0].update(
+                {"job_id": "foreign-job"},
+            ),
+            "out_of_order": lambda candidate: candidate["job_event_rows"].__setitem__(
+                slice(0, 2), reversed(candidate["job_event_rows"][:2]),
+            ),
+            "wrong_last_id": lambda candidate: candidate["worker_event_collection"].update(
+                {"snapshot_last_id": candidate["worker_event_collection"]["snapshot_last_id"] + 1},
+            ),
+            "wrong_digest": lambda candidate: candidate["worker_event_collection"].update(
+                {"events_sha256": "0" * 64},
+            ),
+            "wrong_page": lambda candidate: candidate["worker_event_collection"]["pages"][0].update(
+                {"offset": 1},
+            ),
+            "wrong_sentinel": lambda candidate: candidate["worker_event_collection"][
+                "terminal_sentinel"
+            ].update({"count": 1, "event_id": 999999}),
+            "worker_projection": lambda candidate: candidate["worker_event_rows"].pop(),
+        }
+        for fault, mutate in tamper_cases.items():
+            tampered = copy.deepcopy(evidence)
+            mutate(tampered)
+            accepted, reasons = invoke(tampered)
+            assert accepted is False, fault
+            assert "complete bounded exact-job event snapshot and Worker projection" in reasons, fault
+    finally:
+        value["daemon"].close()
+
+
+def test_runner_frozen_initial_plan_accepts_through_same_fake_worker_path(tmp_path):
+    value = build_initial_stage_fixture(
+        tmp_path, runner_profile=True, expected_revision=2,
+        stage_define_request_id="frozen-initial-define-request",
+        stage_define_idempotency_key="frozen-initial-define-key",
+        stage_run_request_id="frozen-initial-run-request",
+        stage_run_idempotency_key="frozen-initial-run-key",
+        stage_define_execution_options={"rpc_timeout_s": 45},
+        stage_run_execution_options={
+            "queue_timeout_s": 30, "execution_timeout_s": 240, "rpc_timeout_s": 45,
+        },
+    )
+    try:
+        assert value["defined"]["success"] is True, value["defined"]
+        result = value["result"]
+        assert result is not None and result["success"] is True, result
+        attempt = value["attempt"]
+        assert attempt["status"] == "ACCEPTED"
+        assert attempt["acceptance_status"] == "INITIAL_OUTPUT_ACCEPTED"
+        assert attempt["plan_id"] == "w21_initial_stage"
+        assert attempt["stage_id"] == "thermal_initial"
+        assert attempt["expected_revision"] == 2
+        assert value["stage_define_execution"]["request_id"] == "frozen-initial-define-request"
+        assert value["stage_define_execution"]["idempotency_key"] == "frozen-initial-define-key"
+        assert value["stage_define_execution"]["rpc_timeout_s"] == 45
+        assert value["stage_run_execution"]["request_id"] == "frozen-initial-run-request"
+        assert value["stage_run_execution"]["idempotency_key"] == "frozen-initial-run-key"
+        assert value["stage_run_execution"]["queue_timeout_s"] == 30
+        assert value["stage_run_execution"]["execution_timeout_s"] == 240
+        assert value["stage_run_execution"]["rpc_timeout_s"] == 45
+        assert [row["operation"] for row in value["public_dispatches"]] == [
+            "experiment.stage_define", "experiment.stage_run",
+        ]
+        acceptance = result["data"]["initial_output_acceptance"]
+        proof = acceptance["native_evidence"]
+        assert acceptance["status"] == "PASS"
+        assert proof["managed_internal_action_plan"] == [
+            "study.inspect:preflight", "study.inspect:postsolve", "solver.inspect:active-variables",
+            "Variables.xmeshInfo:active-variables", "dataset.solution_indices:output-tuple",
+            "dataset.solution_indices:solution-mesh-association", "dataset.solution_indices:field-binding:0",
+            "result.evaluate:field:0", "mesh.inspect:post-stage",
+        ]
+        assert proof["internal_read_cap"] == 12
+        assert result["data"]["internal_read_count"] == proof["internal_read_count"]
+        assert result["data"]["internal_read_count"] <= proof["internal_read_cap"]
+        assert result["data"]["raw_worker_rpc_count"] == proof["raw_worker_rpc_count"] > 0
+        row = next(item for item in attempt["evidence"]
+                   if item.get("kind") == "initial-output-native-evidence")
+        assert row["native_evidence"] == proof
+    finally:
+        value["daemon"].close()
+
+
+def test_initial_acceptance_rejects_missing_foreign_and_tampered_root_terminals(tmp_path):
+    value = build_initial_stage_fixture(tmp_path, runner_profile=True)
+    try:
+        result = value["result"]
+        assert result is not None and result["success"] is True, result
+        proof = result["data"]["initial_output_acceptance"]["native_evidence"]
+        stage = next(row for row in value["definition"]["stages"]
+                     if row["stage_id"] == value["stage_id"])
+
+        def validate(candidate):
+            return validate_initial_output_acceptance(
+                candidate, binding=candidate["stage_attempt_binding"], stage=stage,
+                stage_run_operation_id=candidate["stage_run_operation_id"],
+                solve_revision=candidate["solve_revision"],
+                output_revision=candidate["output_revision"],
+                observed_artifact_sha256=candidate["saved_artifact_observed_sha256"],
+            )
+
+        assert validate(proof) == (True, [])
+        solve_dispatch = next(row for row in proof["solve_save_dispatches"]
+                              if row["operation"] == "run_study")
+        solve_id = solve_dispatch["worker_request_id"]
+        xmesh_step = next(row for row in proof["native_output_readback"]["revision_chain"]
+                          if row.get("readphase") == "initial-stage-active-variables-xmesh")
+        xmesh_id = xmesh_step["worker_requests"][0]["worker_request_id"]
+
+        tampered = copy.deepcopy(proof)
+        row = next(row for row in tampered["worker_event_rows"]
+                   if row.get("metadata", {}).get("request_id") == solve_id
+                   and row.get("metadata", {}).get("phase") == "observed")
+        row["metadata"]["w21_backend_binding"]["request_id"] = "foreign-stage-request"
+        assert validate(tampered)[0] is False
+
+        tampered = copy.deepcopy(proof)
+        row = next(row for row in tampered["worker_event_rows"]
+                   if row.get("metadata", {}).get("request_id") == xmesh_id
+                   and row.get("metadata", {}).get("phase") == "observed")
+        row["metadata"]["reply"]["request_id"] = "foreign-worker-request"
+        assert validate(tampered)[0] is False
+
+        tampered = copy.deepcopy(proof)
+        tampered["worker_event_rows"] = [
+            row for row in tampered["worker_event_rows"]
+            if not (row.get("metadata", {}).get("request_id") == xmesh_id
+                    and row.get("metadata", {}).get("phase") == "observed")
+        ]
+        assert validate(tampered)[0] is False
+
+        tampered = copy.deepcopy(proof)
+        row = next(row for row in tampered["worker_event_rows"]
+                   if row.get("metadata", {}).get("request_id") == solve_id
+                   and row.get("metadata", {}).get("phase") == "observed")
+        row["metadata"]["status"] = "FAILED"
+        row["metadata"]["reply"].update(ok=False, status="FAILED")
+        assert validate(tampered)[0] is False
+    finally:
+        value["daemon"].close()
+
+
+@pytest.mark.parametrize(("kind", "field", "replacement"), [
+    ("solve", "method", "clear"),
+    ("solve", "handle", "foreign-study-handle"),
+    ("solve", "args", ["foreign"]),
+    ("model", "tag", "foreign-model-tag"),
+    ("model_snapshot", "tag", "foreign-snapshot-tag"),
+])
+def test_initial_acceptance_rejects_mutated_worker_payload_shape(tmp_path, kind, field, replacement):
+    value = build_initial_stage_fixture(tmp_path, runner_profile=True)
+    try:
+        result = value["result"]
+        assert result is not None and result["success"] is True, result
+        proof = result["data"]["initial_output_acceptance"]["native_evidence"]
+        stage = next(row for row in value["definition"]["stages"]
+                     if row["stage_id"] == value["stage_id"])
+
+        def validate(candidate):
+            return validate_initial_output_acceptance(
+                candidate, binding=candidate["stage_attempt_binding"], stage=stage,
+                stage_run_operation_id=candidate["stage_run_operation_id"],
+                solve_revision=candidate["solve_revision"],
+                output_revision=candidate["output_revision"],
+                observed_artifact_sha256=candidate["saved_artifact_observed_sha256"],
+            )
+
+        assert validate(proof) == (True, [])
+        if kind == "solve":
+            solve_id = next(row["worker_request_id"] for row in proof["solve_save_dispatches"]
+                            if row["operation"] == "run_study")
+        else:
+            model_tag = proof["stage_attempt_binding"]["model_ref"]["model_tag"]
+            solve_id = next(
+                row["metadata"]["request_id"] for row in proof["worker_event_rows"]
+                if row.get("metadata", {}).get("phase") == "submitted"
+                and row.get("metadata", {}).get("kind") == kind
+                and row.get("metadata", {}).get("metadata", {}).get("tag") == model_tag
+            )
+        tampered = copy.deepcopy(proof)
+        pair = [row for row in tampered["worker_event_rows"]
+                if row.get("metadata", {}).get("request_id") == solve_id]
+        assert {row["metadata"]["phase"] for row in pair} == {"submitted", "observed"}
+        for row in pair:
+            payload = row["metadata"]["metadata"]
+            assert payload.get(field) != replacement
+            payload[field] = replacement
+        assert validate(tampered)[0] is False
+    finally:
+        value["daemon"].close()
+
+
+@pytest.mark.parametrize("phase", ["solve", "save"])
+def test_initial_acceptance_binds_auxiliary_revision_to_stage_revision(tmp_path, phase):
+    value = build_initial_stage_fixture(tmp_path, runner_profile=True)
+    try:
+        result = value["result"]
+        assert result is not None and result["success"] is True, result
+        proof = result["data"]["initial_output_acceptance"]["native_evidence"]
+        stage = next(row for row in value["definition"]["stages"]
+                     if row["stage_id"] == value["stage_id"])
+
+        def validate(candidate):
+            return validate_initial_output_acceptance(
+                candidate, binding=candidate["stage_attempt_binding"], stage=stage,
+                stage_run_operation_id=candidate["stage_run_operation_id"],
+                solve_revision=candidate["solve_revision"],
+                output_revision=candidate["output_revision"],
+                observed_artifact_sha256=candidate["saved_artifact_observed_sha256"],
+            )
+
+        assert validate(proof) == (True, [])
+        root_ids = {row["worker_request_id"] for row in proof["solve_save_dispatches"]}
+        tampered = copy.deepcopy(proof)
+        changed = set()
+        for row in tampered["worker_event_rows"]:
+            event = row.get("metadata")
+            if not isinstance(event, dict) or event.get("request_id") in root_ids:
+                continue
+            backend_binding = event.get("w21_backend_binding")
+            if isinstance(backend_binding, dict) and backend_binding.get("phase") == phase:
+                backend_binding["expected_revision"] = 9876
+                changed.add(event["request_id"])
+        assert changed
+        assert validate(tampered)[0] is False
+    finally:
+        value["daemon"].close()
+
+
+@pytest.mark.parametrize("terminal_status", ["UNKNOWN", "SUCCEEDED", None],
+                         ids=["unknown", "succeeded", "missing"])
+def test_initial_acceptance_requires_failed_status_for_known_tlist_terminal(tmp_path, terminal_status):
+    value = build_initial_stage_fixture(tmp_path, runner_profile=True)
+    try:
+        result = value["result"]
+        assert result is not None and result["success"] is True, result
+        proof = result["data"]["initial_output_acceptance"]["native_evidence"]
+        stage = next(row for row in value["definition"]["stages"]
+                     if row["stage_id"] == value["stage_id"])
+
+        def validate(candidate):
+            return validate_initial_output_acceptance(
+                candidate, binding=candidate["stage_attempt_binding"], stage=stage,
+                stage_run_operation_id=candidate["stage_run_operation_id"],
+                solve_revision=candidate["solve_revision"],
+                output_revision=candidate["output_revision"],
+                observed_artifact_sha256=candidate["saved_artifact_observed_sha256"],
+            )
+
+        assert validate(proof) == (True, [])
+        tampered = copy.deepcopy(proof)
+        changed = 0
+        for row in tampered["worker_event_rows"]:
+            event = row.get("metadata")
+            payload = event.get("metadata") if isinstance(event, dict) else None
+            if (isinstance(event, dict) and event.get("phase") == "observed"
+                    and isinstance(payload, dict) and payload.get("method") == "getDoubleArray"
+                    and payload.get("args") == ["tlist"]):
+                event["status"] = terminal_status
+                changed += 1
+        assert changed == 3
+        assert validate(tampered)[0] is False
+    finally:
+        value["daemon"].close()
+
+
+@pytest.mark.parametrize("fault", [
+    "tlist_timeout", "tlist_request_id_mismatch", "tlist_unrelated_failure",
+])
+def test_optional_tlist_probe_does_not_hide_unknown_or_unrelated_worker_failures(tmp_path, fault):
+    value = build_initial_stage_fixture(tmp_path, fault=fault, runner_profile=True)
+    try:
+        result = value["result"]
+        assert result is not None and result["success"] is False, result
+        attempt = value["attempt"]
+        assert attempt["status"] != "ACCEPTED"
+        assert attempt["acceptance_status"] != "INITIAL_OUTPUT_ACCEPTED"
+
+        submitted = [row for row in value["transport_requests"]
+                     if row.get("type") == "call" and row.get("method") == "getDoubleArray"
+                     and row.get("args") == ["tlist"]]
+        assert len(submitted) == 3
+        job = value["daemon"].store.operation_job(attempt["operation_id"])
+        assert isinstance(job, dict) and isinstance(job.get("job_id"), str)
+        events = value["daemon"].store.events(job["job_id"], limit=1000)
+        tlist_ids = {row["request_id"] for row in submitted}
+        observed = [row for row in events if row.get("event") == "worker_request"
+                    and isinstance(row.get("metadata"), dict)
+                    and row["metadata"].get("request_id") in tlist_ids]
+        if fault in {"tlist_timeout", "tlist_request_id_mismatch"}:
+            assert not any(row["metadata"].get("phase") == "observed" for row in observed)
+            assert any(row["metadata"].get("phase") in {"unknown", "unresponsive"}
+                       for row in observed)
+        else:
+            failed = [row for row in observed
+                      if row["metadata"].get("phase") == "observed"
+                      and isinstance(row["metadata"].get("reply"), dict)]
+            assert failed
+            assert all(row["metadata"]["reply"].get("status") == "FAILED"
+                       for row in failed)
+    finally:
+        value["daemon"].close()
+
+
+def test_multiple_active_variables_features_make_zero_xmesh_calls(tmp_path):
+    value = build_initial_stage_fixture(tmp_path, fault="ambiguous_variables", runner_profile=True)
+    try:
+        result = value["result"]
+        assert result is not None and result["success"] is False, result
+        assert value["attempt"]["status"] != "ACCEPTED"
+        variables_reads = [row for row in value["transport_requests"]
+                           if row.get("type") == "call" and row.get("method") == "isActive"
+                           and row.get("handle") in {"variables-v1", "variables-v2"}]
+        assert len(variables_reads) == 2
+        xmesh_calls = [row for row in value["transport_requests"]
+                       if row.get("type") == "call"
+                       and row.get("method") == "getVariablesXmeshReadback"]
+        assert xmesh_calls == []
+    finally:
+        value["daemon"].close()
+
+
+def test_public_solver_inspect_stays_read_only_and_rejects_ticket_flags(tmp_path):
+    value = build_initial_stage_fixture(tmp_path, runner_profile=True)
+    try:
+        result = value["result"]
+        assert result is not None and result["success"] is True, result
+        ref = value["model_ref"]
+        state = value["service"].ledger._state_for(model_ref_from_mapping(ref))
+        revision = result["execution"]["revision"]
+        before_revision = state.revision
+        assert before_revision == revision and state.dirty is False
+
+        execution = {
+            "project_id": value["project_id"], "session_id": ref["session_id"],
+            "model_ref": ref, "expected_revision": revision,
+            "request_id": "public-solver-inspect-read",
+            "idempotency_key": "public-solver-inspect-read",
+        }
+        path = {"segments": [{"collection": "sol", "tag": "sol1"}]}
+        public_read = value["daemon"].dispatch({
+            "operation": "solver.inspect", "arguments": {"path": path},
+            "execution": execution,
+        })
+        assert public_read["success"] is True, public_read
+        assert state.revision == revision and state.dirty is False
+
+        feature_path = public_read["data"]["features"][0]["path"]
+        flagged = value["daemon"].dispatch({
+            "operation": "solver.inspect",
+            "arguments": {"path": feature_path, "variables_xmesh_ticket": True,
+                           "effect_override": "EVALUATE"},
+            "execution": {**execution, "request_id": "public-solver-inspect-forged-ticket",
+                          "idempotency_key": "public-solver-inspect-forged-ticket",
+                              "variables_xmesh_ticket": True, "effect_override": "EVALUATE"},
+        })
+        assert flagged["success"] is False
+        assert flagged["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        assert flagged["error"]["details"]["cause_code"] == "INVALID_REQUEST"
+        assert flagged["error"]["details"]["witness"]["engine_calls"] == 0
+        assert state.revision == revision and state.dirty is False
+        assert sum(row.get("type") == "call" and row.get("method") == "getVariablesXmeshReadback"
+                   for row in value["transport_requests"]) == 1
+    finally:
+        value["daemon"].close()
+
+
+def test_unknown_xmesh_ticket_marks_model_dirty_and_is_not_replayed_or_saved(tmp_path):
+    value = build_initial_stage_fixture(tmp_path, fault="xmesh_timeout", runner_profile=True)
+    try:
+        result = value["result"]
+        assert result is not None and result["success"] is False
+        assert result["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        attempt = value["attempt"]
+        assert attempt["status"] == "UNKNOWN"
+        assert attempt["acceptance_status"] == "UNKNOWN"
+        model_state = value["service"].ledger._state_for(
+            model_ref_from_mapping(value["model_ref"]),
+        )
+        assert model_state.dirty is True
+        xmesh_calls = [row for row in value["transport_requests"]
+                       if row.get("type") == "call"
+                       and row.get("method") == "getVariablesXmeshReadback"]
+        assert len(xmesh_calls) == 1
+        job = value["daemon"].store.operation_job(attempt["operation_id"])
+        assert isinstance(job, dict) and isinstance(job.get("job_id"), str)
+        events = value["daemon"].store.events(job["job_id"], limit=1000)
+        xmesh_id = xmesh_calls[0]["request_id"]
+        xmesh_events = [row for row in events
+                        if row.get("event") == "worker_request"
+                        and isinstance(row.get("metadata"), dict)
+                        and row["metadata"].get("request_id") == xmesh_id]
+        phases = [row["metadata"].get("phase") for row in xmesh_events]
+        assert phases.count("submitted") == 1
+        assert phases.count("unknown") == 1
+        assert "observed" not in phases
+        assert sum(row.get("type") == "call" and row.get("method") == "save"
+                   for row in value["transport_requests"]) == 0
+    finally:
+        value["daemon"].close()
+
+
+@pytest.mark.parametrize("fault", [
+    "inactive_variables", "missing_dof", "bad_frame", "wrong_tuple",
+    "wrong_unit", "forced_unit", "missing_unit", "wrong_control_numeric", "wrong_mesh",
+])
+def test_registered_initial_stage_mismatches_never_accept(tmp_path, fault):
+    value = build_initial_stage_fixture(tmp_path, fault=fault, runner_profile=True)
+    try:
+        assert value["defined"]["success"] is True, value["defined"]
+        result = value["result"]
+        assert result is not None and result["success"] is False
+        assert result["error"]["code"] in {"STAGE_ACCEPTANCE_UNVERIFIED", "EXECUTION_STATE_UNKNOWN"}
+        attempt = value["attempt"]
+        assert attempt["status"] != "ACCEPTED"
+        assert attempt["acceptance_status"] != "INITIAL_OUTPUT_ACCEPTED"
+    finally:
+        value["daemon"].close()
+
+
+@pytest.mark.parametrize("fault", ["unknown_after_eval", "dispatch_mismatch"])
+def test_unknown_initial_field_dispatch_is_not_replayed_or_saved(tmp_path, fault):
+    value = build_initial_stage_fixture(tmp_path, fault=fault, runner_profile=True)
+    try:
+        result = value["result"]
+        assert result is not None and result["success"] is False
+        assert result["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        attempt = value["attempt"]
+        assert attempt["status"] == "UNKNOWN"
+        assert attempt["execution_status"] == "UNKNOWN"
+        calls = [row for row in value["transport_requests"] if row.get("type") == "call"]
+        assert sum(row.get("method") == "run" and row.get("handle") == "study-std1" for row in calls) == 1
+        assert sum(row.get("method") == "getStrictFieldReadback" for row in calls) == 1
+        assert not any(row.get("method") == "save" for row in calls)
+    finally:
+        value["daemon"].close()
+
+
+def test_initial_artifact_bytes_changed_after_first_hash_remain_unknown(tmp_path):
+    value = build_initial_stage_fixture(tmp_path, fault="artifact_mismatch", runner_profile=True)
+    try:
+        result = value["result"]
+        assert result is not None and result["success"] is False
+        assert result["error"]["code"] == "EXECUTION_STATE_UNKNOWN"
+        attempt = value["attempt"]
+        assert attempt["status"] == "UNKNOWN"
+        assert attempt["acceptance_status"] == "UNKNOWN"
+        artifact = next(item for item in attempt["evidence"]
+                        if item.get("kind") == "saved-stage-artifact")
+        path = artifact["path"]
+        digest = hashlib.sha256(Path(path).read_bytes()).hexdigest()
+        assert digest != artifact["sha256"]
+        calls = [row for row in value["transport_requests"] if row.get("type") == "call"]
+        assert sum(row.get("method") == "save" for row in calls) == 1
+    finally:
+        value["daemon"].close()

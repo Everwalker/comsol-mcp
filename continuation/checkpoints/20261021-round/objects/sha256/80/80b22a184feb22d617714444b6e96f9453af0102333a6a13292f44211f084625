@@ -1,0 +1,887 @@
+--- a/probe/w23_actual_controller_r8.py
++++ b/probe/w23_actual_controller_r8.py
+@@ -753,27 +753,47 @@
+         raise OuterControllerError("persisted R6 receipt differs from the exact returned raw receipt")
+     admission = outcome.admission
+     source_root = Path(admission.root)
+-    if (manifest.get("schema") != "w23-zero-solve-r6-persisted-raw-evidence/1"
++    if (manifest.get("schema") != "w23-zero-solve-r6-persisted-raw-evidence/2"
+             or manifest.get("status") != "PASS_EXACT_BOUNDED_RAW_EVIDENCE_COPIED_AND_READ_BACK"
+             or manifest.get("source_root") != str(source_root)
++            or manifest.get("project_root") != str(source_root.parent)
+             or manifest.get("persistent_root") != str(persistent_root)
+             or type(manifest.get("file_count")) is not int
+             or type(manifest.get("total_bytes")) is not int
++            or manifest.get("workspace_archive_disposition") !=
++                "EMPTY_PRIVATE_W25_WORKSPACE_PROJECT_INPUT_COPY_INCLUDED"
+             or not isinstance(manifest.get("files"), list)):
+         raise OuterControllerError("R6 persisted raw-evidence manifest has an unexpected source/destination scope")
+     run_id = outcome.result["w23_route_result"]["run_id"]
+     journal_relative = journal_path.relative_to(source_root).as_posix()
++    input_relative = f"w23-input-{run_id}/w23_coarse-phase0_provisional.mph"
+     expected_relative_paths = {
+         "setup/01-project-create-intent.json", "setup/01-project-create-response.json",
+         "setup/02-session-start-intent.json", "setup/02-session-start-response.json",
+         "setup/03-session-connect-intent.json", "setup/03-session-connect-response.json",
+-        "ADMISSION_RESULT.json", "W23_SAVED_MPH_COPY_BINDING_R1.json",
+-        "workspace/w23_coarse-phase0_provisional.mph", journal_relative,
++        "ADMISSION_RESULT.json", "W23_SAVED_MPH_COPY_BINDING_R2.json",
++        input_relative, journal_relative,
+     }
+     rows = manifest["files"]
+     actual_paths = {row.get("source_relative_path") for row in rows if isinstance(row, Mapping)}
+     if actual_paths != expected_relative_paths or len(rows) != len(expected_relative_paths):
+         raise OuterControllerError("R6 persisted evidence manifest differs from its exact ten-file whitelist")
++    expected_sources = {path: str(source_root) for path in expected_relative_paths}
++    expected_sources[input_relative] = str(source_root.parent)
++    if any(not isinstance(row, Mapping)
++           or row.get("source_root") != expected_sources.get(row.get("source_relative_path"))
++           or row.get("persistent_relative_path") != row.get("source_relative_path")
++           for row in rows):
++        raise OuterControllerError("R6 persisted evidence row roots or paths differ from the exact source scope")
++    input_row = next(row for row in rows
++                     if row.get("source_relative_path") == input_relative)
++    input_bytes, input_info = _stable_bytes(persistent_root / input_relative, limit=13_795_478)
++    if (input_row.get("bytes") != 13_795_478
++            or input_row.get("sha256") !=
++                "cba0c1d404003c4e60a20b04316cb1456c38cc2b45596dc2dc29bbed62674a8c"
++            or hashlib.sha256(input_bytes).hexdigest() != input_row.get("sha256")
++            or stat.S_IMODE(input_info.st_mode) != 0o400):
++        raise OuterControllerError("persisted non-hidden project input differs from the exact immutable saved MPH")
+     journal_row = next((row for row in rows
+                         if isinstance(row, Mapping)
+                         and row.get("source_relative_path") == journal_relative), None)
+--- a/probe/w23_actual_entry_r6.py
++++ b/probe/w23_actual_entry_r6.py
+@@ -27,7 +27,8 @@
+ REVIEW_PATH = EVIDENCE_ROOT / "W23_R6_MAIN_RUNTIME_REVIEW.json"
+ ONCE_PATH = EVIDENCE_ROOT / "W23_R6_MAIN_SINGLE_USE_BINDING.json"
+ ENTRY_GUARD_NAME = "W23_R6_ENTRY_ONCE_GUARD.json"
+-COMPILE_RECEIPT_PATH = EVIDENCE_ROOT / "JAVA11_COMPILE_R6" / "JAVA11_COMPILE_RECEIPT_R6.json"
++INHERITED_COMPILE_ROOT = Path("/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V3/repository/_state/w23-r13-current-source-r6r15-a3bf7054-79cd-4696-ae7a-4197c7fbe530-20261021/evidence/JAVA11_COMPILE_R6")
++COMPILE_RECEIPT_PATH = INHERITED_COMPILE_ROOT / "JAVA11_COMPILE_RECEIPT_R6.json"
+ SAVED_MPH_PATH = ENTRY_ROOT / "inputs" / "w23_coarse-phase0_provisional.mph"
+ RUNTIME_ID_PATTERN = re.compile(r"^comsol-install:[^\x00\r\n]{1,110}$")
+ HEX64 = re.compile(r"^[0-9a-f]{64}$")
+@@ -370,15 +371,17 @@
+ 
+ 
+ def _copy_evidence_file(source_root: Path, destination_root: Path,
+-                        relative: str, rows: list[dict[str, Any]], total: list[int]) -> None:
++                        relative: str, rows: list[dict[str, Any]], total: list[int], *,
++                        persistent_relative: str | None = None) -> None:
+     source = source_root / relative
+     raw, source_identity = _read_stable_evidence(source)
+     total[0] += len(raw)
+     if total[0] > MAX_EVIDENCE_TOTAL_BYTES:
+         raise ActualEntryGuardError("persistent raw evidence exceeded the aggregate byte cap")
+-    destination = destination_root / relative
++    destination_relative = persistent_relative or relative
++    destination = destination_root / destination_relative
+     cursor = destination_root
+-    for component in Path(relative).parts[:-1]:
++    for component in Path(destination_relative).parts[:-1]:
+         cursor = cursor / component
+         if not cursor.exists():
+             _mkdir_private_child(cursor.parent, cursor.name)
+@@ -409,7 +412,8 @@
+     finally:
+         os.close(dfd)
+     rows.append({
+-        "source_relative_path": relative, "persistent_relative_path": relative,
++        "source_root": str(source_root),
++        "source_relative_path": relative, "persistent_relative_path": destination_relative,
+         "bytes": len(raw), "sha256": source_identity["sha256"],
+         "source_identity": {key: source_identity[key] for key in (
+             "source_device", "source_inode", "source_mode", "source_uid")},
+@@ -420,14 +424,16 @@
+ 
+ 
+ def _persist_raw_evidence(source_root: Path, destination_root: Path, *,
+-                          partial: bool = False) -> dict[str, Any]:
++                          partial: bool = False,
++                          project_input_root: Path | None = None) -> dict[str, Any]:
+     """Copy a fixed, bounded evidence set without sweeping runtime state.
+ 
+-    The complete immutable saved-MPH workspace copy, when it exists, three
++    The complete immutable saved-MPH project-input copy, when it exists, three
+     setup call records, W25 admission result, W23 copy binding, and W23 raw
+-    response journal are retained byte-for-byte. An early partial failure may
+-    have an empty workspace only when neither the copy binding nor W23 journal
+-    exists. Unexpected root/setup/workspace/W23 evidence entries fail closed;
++    response journal are retained byte-for-byte. The admitted W25 workspace
++    must remain empty. An early partial failure may have no input copy only
++    when neither the copy binding nor W23 journal exists. Unexpected
++    root/setup/workspace/W23 evidence entries fail closed;
+     no recursive filesystem snapshot or process cleanup is attempted.
+     """
+     source_root = Path(source_root)
+@@ -437,7 +443,7 @@
+             or source_root.resolve(strict=True) != source_root):
+         raise ActualEntryGuardError("original W25 admission evidence root is not the exact private owner directory")
+     allowed_root_entries = {
+-        "setup", "ADMISSION_RESULT.json", "W23_SAVED_MPH_COPY_BINDING_R1.json",
++        "setup", "ADMISSION_RESULT.json", "W23_SAVED_MPH_COPY_BINDING_R2.json",
+         "workspace", "w23-evidence",
+     }
+     observed_root_entries = {entry.name for entry in source_root.iterdir()}
+@@ -503,7 +509,7 @@
+         raise ActualEntryGuardError("successful W23 entry omitted its raw public-response journal")
+ 
+     fixed_files = [f"setup/{name}" for name in setup_names]
+-    for filename in ("ADMISSION_RESULT.json", "W23_SAVED_MPH_COPY_BINDING_R1.json"):
++    for filename in ("ADMISSION_RESULT.json", "W23_SAVED_MPH_COPY_BINDING_R2.json"):
+         if filename in observed_root_entries:
+             fixed_files.append(filename)
+         elif not partial:
+@@ -516,40 +522,142 @@
+                 or workspace_info.st_uid != os.getuid() or stat.S_IMODE(workspace_info.st_mode) != 0o700):
+             raise ActualEntryGuardError("W25 admitted workspace is not a private owned directory")
+         workspace_names = {entry.name for entry in workspace.iterdir()}
+-        if workspace_names == {SAVED_MPH_PATH.name}:
+-            model_path = workspace / SAVED_MPH_PATH.name
+-            model_info = model_path.lstat()
+-            if (stat.S_ISLNK(model_info.st_mode) or not stat.S_ISREG(model_info.st_mode)
+-                    or model_info.st_uid != os.getuid() or model_info.st_nlink != 1
+-                    or stat.S_IMODE(model_info.st_mode) != 0o400):
+-                raise ActualEntryGuardError("fresh W23 saved-MPH workspace copy is not immutable and exact")
+-            fixed_files.append(f"workspace/{SAVED_MPH_PATH.name}")
+-            workspace_disposition = "SAVED_MPH_COPY_INCLUDED"
+-        elif (workspace_names == set() and partial
+-              and "W23_SAVED_MPH_COPY_BINDING_R1.json" not in observed_root_entries
+-              and journal_relative is None):
++        if workspace_names == set():
++            workspace_disposition = "EMPTY_PRIVATE_W25_WORKSPACE"
++        else:
++            raise ActualEntryGuardError("W25 admitted workspace must remain empty after project-input relocation")
++    elif not partial:
++        raise ActualEntryGuardError("successful W23 entry omitted its admitted workspace")
++
++    binding_name = "W23_SAVED_MPH_COPY_BINDING_R2.json"
++    binding_path = source_root / binding_name
++    input_root = None
++    input_relative = None
++    if binding_name in observed_root_entries:
++        if project_input_root is None:
++            project_input_root = source_root.parent
++        project_input_root = Path(project_input_root)
++        try:
++            project_info = project_input_root.lstat()
++        except OSError as exc:
++            raise ActualEntryGuardError("trusted project input root is missing") from exc
++        if (project_input_root != source_root.parent
++                or stat.S_ISLNK(project_info.st_mode)
++                or not stat.S_ISDIR(project_info.st_mode)
++                or project_info.st_uid != os.getuid()
++                or project_input_root.resolve(strict=True) != project_input_root):
++            raise ActualEntryGuardError("trusted project input root is not the exact admission-root parent")
++        binding_raw, _ = _read_stable_evidence(binding_path)
++        try:
++            binding = json.loads(binding_raw)
++        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
++            raise ActualEntryGuardError("W23 project-input copy binding is malformed") from exc
++        if (not isinstance(binding, Mapping)
++                or set(binding) != {"schema", "status", "run_id", "project_id", "session_id",
++                                   "project_root", "source_identity", "destination_identity",
++                                   "source_project_relative_path", "opened_by_comsol"}
++                or binding.get("schema") != "w23-r6-saved-mph-copy-binding/2"
++                or binding.get("status") != "PASS_EXACT_IMMUTABLE_SOURCE_COPIED_TO_NON_HIDDEN_PROJECT_INPUT"
++                or binding.get("project_root") != str(project_input_root)
++                or binding.get("opened_by_comsol") is not False):
++            raise ActualEntryGuardError("W23 project-input binding does not match the exact v2 schema and root")
++        run_id = binding.get("run_id")
++        try:
++            if (not isinstance(run_id, str) or len(run_id) != 32
++                    or uuid.UUID(hex=run_id).hex != run_id):
++                raise ValueError
++        except (ValueError, AttributeError) as exc:
++            raise ActualEntryGuardError("W23 project-input binding run id is invalid") from exc
++        if source_root.name != f".w25-probe-{run_id}":
++            raise ActualEntryGuardError("W23 binding run id does not identify the exact private W25 owner root")
++        input_relative = f"w23-input-{run_id}/{SAVED_MPH_PATH.name}"
++        if binding.get("source_project_relative_path") != input_relative:
++            raise ActualEntryGuardError("W23 project-input binding path is not the exact non-hidden relative path")
++        input_root = project_input_root / f"w23-input-{run_id}"
++        try:
++            input_info = input_root.lstat()
++        except OSError as exc:
++            raise ActualEntryGuardError("W23 project-input directory is missing") from exc
++        if (stat.S_ISLNK(input_info.st_mode) or not stat.S_ISDIR(input_info.st_mode)
++                or input_info.st_uid != os.getuid() or stat.S_IMODE(input_info.st_mode) != 0o700
++                or input_root.resolve(strict=True) != input_root
++                or input_root.name.startswith(".")):
++            raise ActualEntryGuardError("W23 project-input directory is not a private owned non-hidden child")
++        input_names = {entry.name for entry in input_root.iterdir()}
++        if input_names != {SAVED_MPH_PATH.name}:
++            raise ActualEntryGuardError("W23 project-input directory contains missing or unexpected entries")
++        input_path = input_root / SAVED_MPH_PATH.name
++        try:
++            input_info = input_path.lstat()
++        except OSError as exc:
++            raise ActualEntryGuardError("W23 project-input MPH is missing") from exc
++        if (stat.S_ISLNK(input_info.st_mode) or not stat.S_ISREG(input_info.st_mode)
++                or input_info.st_uid != os.getuid() or input_info.st_nlink != 1
++                or stat.S_IMODE(input_info.st_mode) != 0o400):
++            raise ActualEntryGuardError("W23 project-input MPH is not an immutable owned regular file")
++        input_raw, input_identity = _read_stable_evidence(input_path)
++        source_identity = binding.get("source_identity")
++        destination_identity = binding.get("destination_identity")
++        pinned_source_identity = entry.verify_saved_mph_copy(str(SAVED_MPH_PATH))
++        expected_identity = {"bytes": len(input_raw), "sha256": hashlib.sha256(input_raw).hexdigest(),
++                             "mode": "0o400", "opened_by_comsol": False}
++        if (not isinstance(source_identity, Mapping) or not isinstance(destination_identity, Mapping)
++                or dict(source_identity) != pinned_source_identity
++                or destination_identity.get("path") != str(input_path)
++                or any(destination_identity.get(key) != value for key, value in expected_identity.items())
++                or any(source_identity.get(key) != value for key, value in expected_identity.items()
++                       if key != "mode")
++                or len(input_raw) != 13_795_478
++                or hashlib.sha256(input_raw).hexdigest() !=
++                   "cba0c1d404003c4e60a20b04316cb1456c38cc2b45596dc2dc29bbed62674a8c"
++                or input_identity["source_mode"] != 0o400
++                or input_identity["source_uid"] != os.getuid()):
++            raise ActualEntryGuardError("W23 project-input bytes or exact copy binding differ from the immutable MPH")
++        workspace_disposition = "EMPTY_PRIVATE_W25_WORKSPACE_PROJECT_INPUT_COPY_INCLUDED"
++    elif partial:
++        if journal_relative is not None:
++            raise ActualEntryGuardError("W23 raw journal exists without its exact project-input copy binding")
++        if project_input_root is None:
++            project_input_root = source_root.parent
++        try:
++            run_id = source_root.name.removeprefix(".w25-probe-")
++            str(uuid.UUID(hex=run_id))
++            if len(run_id) != 32:
++                raise ValueError
++        except (ValueError, AttributeError) as exc:
++            raise ActualEntryGuardError("partial W25 owner root does not contain a canonical run id") from exc
++        unbound_input = Path(project_input_root) / f"w23-input-{run_id}"
++        try:
++            unbound_input.lstat()
++        except FileNotFoundError:
++            pass
++        except OSError as exc:
++            raise ActualEntryGuardError("unbound W23 project-input path could not be checked") from exc
++        else:
++            raise ActualEntryGuardError("unbound W23 project-input directory exists at the partial archive boundary")
++        if "workspace" in observed_root_entries and journal_relative is None:
+             # W25 setup has allocated its private workspace, but W23 has not
+             # recorded either a copy binding or a public response journal.
+-            # This is a valid incomplete pre-copy evidence boundary.  It is
+-            # never accepted on the complete/success path.
++            # This is a valid incomplete pre-copy evidence boundary.
+             workspace_disposition = "EMPTY_EARLY_PARTIAL_NO_BINDING_OR_JOURNAL"
+-        else:
+-            raise ActualEntryGuardError(
+-                "W25 admitted workspace is neither the exact saved MPH nor an empty pre-copy partial workspace")
+     elif not partial:
+-        raise ActualEntryGuardError("successful W23 entry omitted its admitted workspace")
++        raise ActualEntryGuardError("successful W23 entry omitted its project-input copy binding")
+     if journal_relative is not None:
+         fixed_files.append(journal_relative)
+     rows: list[dict[str, Any]] = []
+     total = [0]
+     for relative in sorted(fixed_files):
+         _copy_evidence_file(source_root, destination_root, relative, rows, total)
++    if input_relative is not None and input_root is not None:
++        _copy_evidence_file(project_input_root, destination_root, input_relative,
++                            rows, total, persistent_relative=input_relative)
+     return {
+-        "schema": "w23-zero-solve-r6-persisted-raw-evidence/1",
++        "schema": "w23-zero-solve-r6-persisted-raw-evidence/2",
+         "status": ("PARTIAL_BOUNDED_RAW_EVIDENCE_COPIED_AND_READ_BACK" if partial else
+                    "PASS_EXACT_BOUNDED_RAW_EVIDENCE_COPIED_AND_READ_BACK"),
+         "partial": partial,
+-        "source_root": str(source_root), "persistent_root": str(destination_root),
++        "source_root": str(source_root), "project_root": str(project_input_root or source_root.parent),
++        "persistent_root": str(destination_root),
+         "file_count": len(rows), "total_bytes": total[0], "files": rows,
+         "raw_public_journal": journal_relative,
+         "workspace_archive_disposition": workspace_disposition,
+@@ -559,7 +667,8 @@
+ 
+ def _persist_entry_record(persistent: Path, source_root: Path | None,
+                           record_name: str, record: Mapping[str, Any], *,
+-                          partial: bool) -> dict[str, Any]:
++                          partial: bool,
++                          project_input_root: Path | None = None) -> dict[str, Any]:
+     if not persistent.exists():
+         _ensure_persistent_directory(persistent)
+     if source_root is None:
+@@ -572,7 +681,8 @@
+             "evidence_boundary": "no owner evidence root existed before failure",
+         }
+     else:
+-        manifest = _persist_raw_evidence(source_root, persistent, partial=partial)
++        manifest = _persist_raw_evidence(
++            source_root, persistent, partial=partial, project_input_root=project_input_root)
+     manifest_path = persistent / "PERSISTED_RAW_EVIDENCE_MANIFEST_R1.json"
+     manifest_sha = _write_new_json(manifest_path, manifest)
+     persisted = dict(record)
+@@ -739,7 +849,8 @@
+             "native_acceptance": "NOT_CLAIMED_BY_SOURCE_ENTRY",
+         }
+         persisted = _persist_entry_record(
+-            persistent, admission.root, "R6_ENTRY_RESULT.json", receipt, partial=False)
++            persistent, admission.root, "R6_ENTRY_RESULT.json", receipt, partial=False,
++            project_input_root=Path(host.daemon.backend.project_root))
+         receipt["persistent_record"] = persisted
+         return ActualEntryOutcome(host, admission, receipt, runtime_root, guard_sha)
+     except BaseException as exc:
+@@ -784,7 +895,8 @@
+         source_root = host.root if host is not None else None
+         try:
+             persisted = _persist_entry_record(
+-                persistent, source_root, "R6_ENTRY_FAILURE.json", outcome, partial=True)
++                persistent, source_root, "R6_ENTRY_FAILURE.json", outcome, partial=True,
++                project_input_root=(Path(host.daemon.backend.project_root) if host is not None else None))
+             outcome["persistent_record"] = persisted
+         except BaseException as archive_exc:
+             # Never lose or dispose of an already-born original owner because
+--- a/probe/w23_owned_runtime_entry.py
++++ b/probe/w23_owned_runtime_entry.py
+@@ -267,13 +267,14 @@
+             info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+ 
+ 
+-def _copy_pinned_mph_to_workspace(*, project_root: str | Path, workspace: str | Path,
+-                                  run_id: str) -> dict[str, Any]:
+-    """Create and verify the exact read-only MPH copy in a fresh W25 workspace.
++def _copy_pinned_mph_to_project_input(*, project_root: str | Path, workspace: str | Path,
++                                      run_id: str) -> dict[str, Any]:
++    """Create the exact read-only MPH copy at a non-hidden project input path.
+ 
+     The destination is created once with O_EXCL and fsynced. A partial or
+-    pre-existing destination is retained and fails closed; this function
+-    never overwrites or cleans up an uncertain copy.
++    pre-existing destination is retained and fails closed. The W25 workspace
++    remains private and empty; artifact.register reads the byte-identical copy
++    from the ordinary project-relative ``w23-input-<run-id>/`` directory.
+     """
+     candidate_root = Path(__file__).resolve().parents[1]
+     source = candidate_root / "inputs" / "w23_coarse-phase0_provisional.mph"
+@@ -313,7 +314,19 @@
+         if _path_signature(source_before) != _path_signature(source_open):
+             raise OwnedRuntimeEntryError("immutable W23 MPH candidate changed while opening")
+ 
+-        target = workspace_path / source.name
++        input_root = base / f"w23-input-{run_id}"
++        try:
++            os.mkdir(input_root, 0o700)
++        except FileExistsError as exc:
++            raise OwnedRuntimeEntryError("fresh W23 non-hidden project input directory already exists") from exc
++        input_info = input_root.lstat()
++        if (stat.S_ISLNK(input_info.st_mode) or not stat.S_ISDIR(input_info.st_mode)
++                or input_info.st_uid != os.getuid() or stat.S_IMODE(input_info.st_mode) != 0o700
++                or input_root.resolve(strict=True) != input_root
++                or input_root.parent != base or input_root.name.startswith(".")):
++            raise OwnedRuntimeEntryError("W23 project input directory is not an owned canonical non-hidden child")
++
++        target = input_root / source.name
+         target_fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL |
+                             getattr(os, "O_NOFOLLOW", 0), 0o400)
+         os.fchmod(target_fd, 0o400)
+@@ -347,7 +360,7 @@
+         if (stat.S_ISLNK(target_named.st_mode)
+                 or _path_signature(target_open) != _path_signature(target_named)):
+             raise OwnedRuntimeEntryError("W23 managed-workspace MPH identity changed after copy")
+-        dfd = os.open(workspace_path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) |
++        dfd = os.open(input_root, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) |
+                       getattr(os, "O_NOFOLLOW", 0))
+         try:
+             os.fsync(dfd)
+@@ -357,8 +370,10 @@
+         if (destination_identity["bytes"] != identity["bytes"]
+                 or destination_identity["sha256"] != identity["sha256"]
+                 or destination_identity["mode"] != "0o400"):
+-            raise OwnedRuntimeEntryError("W23 managed-workspace MPH readback differs from its immutable source")
++            raise OwnedRuntimeEntryError("W23 project-input MPH readback differs from its immutable source")
+         relative = target.relative_to(base).as_posix()
++        if relative != f"w23-input-{run_id}/{source.name}":
++            raise OwnedRuntimeEntryError("W23 project input did not remain at the exact non-hidden relative path")
+         return {"source_identity": identity, "destination_identity": destination_identity,
+                 "source_project_relative_path": relative}
+     except OwnedRuntimeEntryError:
+@@ -400,15 +415,16 @@
+             or Path(public_workspace) != expected_workspace):
+         raise OwnedRuntimeEntryError(
+             "W25 relative workspace and public absolute workspace do not bind the exact admitted project root")
+-    source_copy = _copy_pinned_mph_to_workspace(
++    source_copy = _copy_pinned_mph_to_project_input(
+         project_root=project_root,
+         workspace=public_workspace, run_id=admission.run_id)
+-    receipt_path = admission_root / "W23_SAVED_MPH_COPY_BINDING_R1.json"
++    receipt_path = admission_root / "W23_SAVED_MPH_COPY_BINDING_R2.json"
+     source_copy_record = {
+-        "schema": "w23-r6-saved-mph-copy-binding/1",
+-        "status": "PASS_EXACT_IMMUTABLE_SOURCE_COPIED_TO_FRESH_ADMITTED_WORKSPACE",
++        "schema": "w23-r6-saved-mph-copy-binding/2",
++        "status": "PASS_EXACT_IMMUTABLE_SOURCE_COPIED_TO_NON_HIDDEN_PROJECT_INPUT",
+         "run_id": admission.run_id, "project_id": bridge.project_id,
+         "session_id": bridge.session_id,
++        "project_root": str(project_root),
+         "source_identity": source_copy["source_identity"],
+         "destination_identity": source_copy["destination_identity"],
+         "source_project_relative_path": source_copy["source_project_relative_path"],
+--- a/probe/w23_zero_solve_runtime.py
++++ b/probe/w23_zero_solve_runtime.py
+@@ -116,7 +116,7 @@
+             or source_map.get("pinned_external_dependencies") != _PINNED_W25_DEPENDENCIES
+             or source_map.get("scope") != (
+                 "isolated W23 R6 projection over the exact Main-accepted R13 plus W24 R11 R3 896-member source closure, one reviewed material-size source overlay, "
+-                "R2 probe postimages, and hash-pinned W25 owner-entry dependency; "
++                "R2 probe postimages, hash-pinned W25 owner-entry dependency, and an exact immutable MPH copy at a non-hidden project-relative input path while the admitted W25 workspace stays empty; "
+                 "not canonical integration, native execution, or scientific acceptance")):
+         raise RuntimeEntryError("the R6 source map is not pinned to the projection base")
+     repository = root.parents[1]
+--- a/tests/r6_transport_cached_status_contract_child.py
++++ b/tests/r6_transport_cached_status_contract_child.py
+@@ -3,12 +3,17 @@
+ import copy
+ import hashlib
+ import json
++import os
++import shutil
+ import tempfile
+ import unittest
+ from pathlib import Path
+ from types import SimpleNamespace
++import uuid
+ 
+ from comsol_mcp._control_daemon import ControlDaemon
++from comsol_mcp._execution_contract import SessionLedger
++from comsol_mcp._execution_service import ExecutionService
+ from probe import w23_actual_entry_r6 as actual
+ from probe import w23_owned_runtime_entry as owned
+ from probe import w23_zero_solve_runtime as runtime
+@@ -242,7 +247,10 @@
+     def test_persisted_raw_evidence_copies_only_the_fixed_manifested_files(self):
+         with tempfile.TemporaryDirectory(prefix="w23-r6-evidence-copy-") as scratch:
+             scratch_root = Path(scratch).resolve(strict=True)
+-            root = scratch_root / "owner-root"
++            project_root = scratch_root / "project"
++            project_root.mkdir(mode=0o700)
++            run_id = "00000000000040008000000000000001"
++            root = project_root / f".w25-probe-{run_id}"
+             setup, workspace, evidence = root / "setup", root / "workspace", root / "w23-evidence"
+             run = evidence / "w23-zero-solve-00000000-0000-4000-8000-000000000001"
+             for path in (root, setup, workspace, evidence, run):
+@@ -257,23 +265,41 @@
+                 (setup / name).chmod(0o600)
+             (root / "ADMISSION_RESULT.json").write_bytes(b'{"synthetic":"admission"}\n')
+             (root / "ADMISSION_RESULT.json").chmod(0o600)
+-            (root / "W23_SAVED_MPH_COPY_BINDING_R1.json").write_bytes(b'{"synthetic":"binding"}\n')
+-            (root / "W23_SAVED_MPH_COPY_BINDING_R1.json").chmod(0o600)
+-            model = workspace / actual.SAVED_MPH_PATH.name
+-            model.write_bytes(b"synthetic-mph-bytes")
++            input_root = project_root / f"w23-input-{run_id}"
++            input_root.mkdir(mode=0o700)
++            model = input_root / actual.SAVED_MPH_PATH.name
++            shutil.copyfile(actual.SAVED_MPH_PATH, model)
+             model.chmod(0o400)
++            source_identity = actual.entry.verify_saved_mph_copy(str(actual.SAVED_MPH_PATH))
++            destination_identity = actual.entry.verify_saved_mph_copy(str(model))
++            binding = {
++                "schema": "w23-r6-saved-mph-copy-binding/2",
++                "status": "PASS_EXACT_IMMUTABLE_SOURCE_COPIED_TO_NON_HIDDEN_PROJECT_INPUT",
++                "run_id": run_id, "project_id": "r6-project-contract",
++                "session_id": "r6-session-contract", "project_root": str(project_root),
++                "source_identity": source_identity,
++                "destination_identity": destination_identity,
++                "source_project_relative_path": f"w23-input-{run_id}/{model.name}",
++                "opened_by_comsol": False,
++            }
++            (root / "W23_SAVED_MPH_COPY_BINDING_R2.json").write_text(
++                json.dumps(binding, sort_keys=True) + "\n", encoding="utf-8")
++            (root / "W23_SAVED_MPH_COPY_BINDING_R2.json").chmod(0o600)
+             journal = run / "public-receipts.jsonl"
+             journal.write_bytes(b'{"raw_response":{"success":true}}\n')
+             journal.chmod(0o600)
+             destination = scratch_root / "persistent"
+             destination.mkdir(mode=0o700)
+ 
+-            manifest = actual._persist_raw_evidence(root, destination)
++            manifest = actual._persist_raw_evidence(
++                root, destination, project_input_root=project_root)
+             self.assertEqual(manifest["status"],
+                              "PASS_EXACT_BOUNDED_RAW_EVIDENCE_COPIED_AND_READ_BACK")
+             self.assertEqual(manifest["file_count"], 10)
+-            self.assertEqual((destination / "workspace" / model.name).read_bytes(),
++            self.assertEqual((destination / f"w23-input-{run_id}" / model.name).read_bytes(),
+                              model.read_bytes())
++            self.assertEqual(manifest["workspace_archive_disposition"],
++                             "EMPTY_PRIVATE_W25_WORKSPACE_PROJECT_INPUT_COPY_INCLUDED")
+             self.assertEqual((destination / "w23-evidence" / run.name /
+                               "public-receipts.jsonl").read_bytes(), journal.read_bytes())
+ 
+@@ -283,14 +309,95 @@
+             second_destination.mkdir(mode=0o700)
+             with self.assertRaisesRegex(
+                     actual.ActualEntryGuardError,
+-                    "W25 admitted workspace is neither the exact saved MPH nor an empty pre-copy partial workspace"):
+-                actual._persist_raw_evidence(root, second_destination)
++                    "W25 admitted workspace must remain empty after project-input relocation"):
++                actual._persist_raw_evidence(
++                    root, second_destination, project_input_root=project_root)
+             (workspace / "unreviewed-extra.bin").unlink()
+ 
+             (root / "unexpected.json").write_bytes(b"must reject")
+             (root / "unexpected.json").chmod(0o600)
+             with self.assertRaises(actual.ActualEntryGuardError):
+-                actual._persist_raw_evidence(root, destination, partial=True)
++                actual._persist_raw_evidence(root, destination, partial=True,
++                                             project_input_root=project_root)
++
++    def test_real_artifact_register_accepts_nonhidden_input_and_rejects_private_workspace(self):
++        """Use the actual public ControlDaemon -> ManagedBackend -> ArtifactStore route."""
++        class Snapshot:
++            def model_snapshot(self, _tag):
++                return {"model_tag": "unused", "server_instance_id": "r6-path-server",
++                        "external_event_counter": 0, "fingerprint": "unused"}
++
++        with tempfile.TemporaryDirectory(prefix="w23-r6-artifact-register-") as scratch:
++            root = Path(scratch).resolve(strict=True)
++            project_container = root / "projects"
++            project_container.mkdir(mode=0o700)
++            ledger = SessionLedger("r6-path-session", "r6-path-server")
++            service = ExecutionService(ledger, Snapshot(), project_root=project_container)
++            daemon = ControlDaemon(root / "control", service=service, registry={},
++                                  project_root=project_container)
++            daemon.backend.endpoint_key = "127.0.0.1:2040"
++            try:
++                created = daemon.dispatch({
++                    "operation": "project.create",
++                    "arguments": {
++                        "label": "r6-path-project", "workspace": "r6-path-project",
++                        "policy": {"permissions": ["inspect", "project_write", "compute"]},
++                    },
++                    "execution": {"request_id": "r6-path-project-create",
++                                  "idempotency_key": "r6-path-project-create"},
++                })
++                self.assertTrue(created["success"], created)
++                project = created["data"]["project"]
++                project_root = Path(project["workspace"]).resolve(strict=True)
++                run_id = uuid.uuid4().hex
++                input_root = project_root / f"w23-input-{run_id}"
++                input_root.mkdir(mode=0o700)
++                saved = input_root / actual.SAVED_MPH_PATH.name
++                shutil.copyfile(actual.SAVED_MPH_PATH, saved)
++                saved.chmod(0o400)
++                expected_sha = "cba0c1d404003c4e60a20b04316cb1456c38cc2b45596dc2dc29bbed62674a8c"
++                self.assertEqual(actual.entry.verify_saved_mph_copy(str(saved))["sha256"],
++                                 expected_sha)
++
++                def register(path, key):
++                    return daemon.dispatch({
++                        "operation": "artifact.register",
++                        "arguments": {
++                            "project_id": project["project_id"],
++                            "idempotency_key": key, "path": path,
++                            "role": "saved_model", "classification": "project_local",
++                            "artifact_type": "application/vnd.comsol.mph",
++                            "format_version": "comsol-mph-savecopy/1",
++                        },
++                        "execution": {"project_id": project["project_id"],
++                                      "request_id": key + "-request",
++                                      "idempotency_key": key},
++                    })
++
++                allowed_relative = f"w23-input-{run_id}/{saved.name}"
++                accepted = register(allowed_relative, "r6-nonhidden-register")
++                self.assertTrue(accepted["success"], accepted)
++                self.assertEqual(accepted["data"]["sha256"], expected_sha)
++                self.assertEqual(accepted["data"]["provenance"]["source_project_relative_path"],
++                                 allowed_relative)
++                before = daemon.store.list_metadata("artifacts")
++                self.assertEqual(len(before), 1)
++
++                private = project_root / f".w25-probe-{run_id}" / "workspace"
++                private.mkdir(parents=True, mode=0o700)
++                private_saved = private / saved.name
++                shutil.copyfile(saved, private_saved)
++                private_saved.chmod(0o400)
++                refused = register(
++                    f".w25-probe-{run_id}/workspace/{saved.name}",
++                    "r6-hidden-workspace-register",
++                )
++                error = refused.get("error") or refused.get("data", {}).get("error", {})
++                self.assertFalse(refused["success"], refused)
++                self.assertEqual(error.get("code"), "ACCESS_VIOLATION", refused)
++                self.assertEqual(daemon.store.list_metadata("artifacts"), before)
++            finally:
++                daemon.close()
+ 
+ 
+ if __name__ == "__main__":
+--- a/tests/test_first_cause_durability.py
++++ b/tests/test_first_cause_durability.py
+@@ -4,6 +4,7 @@
+ import importlib.util
+ import json
+ import os
++import shutil
+ import stat
+ import sys
+ import uuid
+@@ -63,7 +64,7 @@
+     class FakeHost:
+         def __init__(self):
+             self.root = owner_root
+-            self.daemon = object()
++            self.daemon = SimpleNamespace(backend=SimpleNamespace(project_root=tmp_path))
+ 
+     class FakeAdmission:
+         def __init__(self, host):
+@@ -246,8 +247,9 @@
+         os.fsync(stream.fileno())
+ 
+ 
+-def _owner_root(tmp_path: Path, *, complete: bool, workspace_mode: str = "saved") -> Path:
+-    root = tmp_path / "owner-root"
++def _owner_root(r6, tmp_path: Path, *, complete: bool, workspace_mode: str = "empty") -> Path:
++    run_id = "1234567890abcdef1234567890abcdef"
++    root = tmp_path / f".w25-probe-{run_id}"
+     _mkdir_private(root)
+     setup = root / "setup"
+     _mkdir_private(setup)
+@@ -259,14 +261,35 @@
+     _write_file(root / "ADMISSION_RESULT.json")
+     workspace = root / "workspace"
+     _mkdir_private(workspace)
+-    if workspace_mode == "saved":
+-        saved = workspace / "w23_coarse-phase0_provisional.mph"
+-        _write_file(saved, b"synthetic immutable mph bytes\n")
+-        os.chmod(saved, 0o400)
+-    elif workspace_mode == "unexpected":
++    if workspace_mode == "unexpected":
+         _write_file(workspace / "unexpected.txt")
+     if complete:
+-        _write_file(root / "W23_SAVED_MPH_COPY_BINDING_R1.json")
++        source_identity = r6.entry.verify_saved_mph_copy(str(r6.SAVED_MPH_PATH))
++        digest = source_identity["sha256"]
++        input_relative = f"w23-input-{run_id}/w23_coarse-phase0_provisional.mph"
++        input_root = tmp_path / f"w23-input-{run_id}"
++        _mkdir_private(input_root)
++        if workspace_mode == "saved":
++            saved = input_root / "w23_coarse-phase0_provisional.mph"
++            shutil.copyfile(r6.SAVED_MPH_PATH, saved)
++            os.chmod(saved, 0o400)
++            dest_identity = r6.entry.verify_saved_mph_copy(str(saved))
++        else:
++            dest_identity = {
++                "path": str(input_root / "w23_coarse-phase0_provisional.mph"),
++                    "bytes": source_identity["bytes"], "sha256": digest,
++                "mode": "0o400", "opened_by_comsol": False,
++            }
++        binding = {
++            "schema": "w23-r6-saved-mph-copy-binding/2",
++            "status": "PASS_EXACT_IMMUTABLE_SOURCE_COPIED_TO_NON_HIDDEN_PROJECT_INPUT",
++            "run_id": run_id, "project_id": "synthetic-project", "session_id": "synthetic-session",
++            "project_root": str(tmp_path), "source_identity": source_identity,
++            "destination_identity": dest_identity, "source_project_relative_path": input_relative,
++            "opened_by_comsol": False,
++        }
++        _write_file(root / "W23_SAVED_MPH_COPY_BINDING_R2.json",
++                    (json.dumps(binding, sort_keys=True) + "\n").encode())
+         evidence = root / "w23-evidence"
+         _mkdir_private(evidence)
+         run = evidence / f"w23-zero-solve-{uuid.uuid4()}"
+@@ -277,18 +300,18 @@
+ 
+ def test_partial_archive_accepts_only_empty_pre_copy_workspace(tmp_path):
+     r6, _ = _load_candidate_modules()
+-    source = _owner_root(tmp_path, complete=False, workspace_mode="empty")
++    source = _owner_root(r6, tmp_path, complete=False, workspace_mode="empty")
+     destination = tmp_path / "persistent"
+     _mkdir_private(destination)
+ 
+-    manifest = r6._persist_raw_evidence(source, destination, partial=True)
++    manifest = r6._persist_raw_evidence(source, destination, partial=True,
++                                        project_input_root=source.parent)
+ 
+     assert manifest["partial"] is True
+     assert manifest["status"] == "PARTIAL_BOUNDED_RAW_EVIDENCE_COPIED_AND_READ_BACK"
+     assert manifest["workspace_archive_disposition"] == \
+         "EMPTY_EARLY_PARTIAL_NO_BINDING_OR_JOURNAL"
+-    assert all(not row["source_relative_path"].startswith("workspace/")
+-               for row in manifest["files"])
++    assert all(row["source_root"] == str(source) for row in manifest["files"])
+     assert (destination / "ADMISSION_RESULT.json").read_bytes() == \
+         (source / "ADMISSION_RESULT.json").read_bytes()
+ 
+@@ -296,9 +319,9 @@
+ @pytest.mark.parametrize("case", ["copy-binding", "journal", "unexpected-child"])
+ def test_partial_archive_rejects_empty_or_unexpected_workspace_after_copy_boundary(tmp_path, case):
+     r6, _ = _load_candidate_modules()
+-    source = _owner_root(tmp_path, complete=False, workspace_mode="empty")
++    source = _owner_root(r6, tmp_path, complete=False, workspace_mode="empty")
+     if case == "copy-binding":
+-        _write_file(source / "W23_SAVED_MPH_COPY_BINDING_R1.json")
++        _write_file(source / "W23_SAVED_MPH_COPY_BINDING_R2.json")
+     elif case == "journal":
+         evidence = source / "w23-evidence"
+         _mkdir_private(evidence)
+@@ -310,33 +333,41 @@
+     destination = tmp_path / "persistent"
+     _mkdir_private(destination)
+ 
+-    with pytest.raises(r6.ActualEntryGuardError, match="workspace is neither"):
+-        r6._persist_raw_evidence(source, destination, partial=True)
++    with pytest.raises(r6.ActualEntryGuardError):
++        r6._persist_raw_evidence(source, destination, partial=True,
++                                 project_input_root=source.parent)
+ 
+ 
+ def test_full_archive_still_requires_exact_immutable_saved_mph(tmp_path):
+     r6, _ = _load_candidate_modules()
+-    source = _owner_root(tmp_path, complete=True, workspace_mode="saved")
++    source = _owner_root(r6, tmp_path, complete=True, workspace_mode="saved")
+     destination = tmp_path / "persistent"
+     _mkdir_private(destination)
+ 
+-    manifest = r6._persist_raw_evidence(source, destination, partial=False)
++    manifest = r6._persist_raw_evidence(source, destination, partial=False,
++                                        project_input_root=source.parent)
+ 
+     assert manifest["partial"] is False
+     assert manifest["status"] == "PASS_EXACT_BOUNDED_RAW_EVIDENCE_COPIED_AND_READ_BACK"
+-    assert manifest["workspace_archive_disposition"] == "SAVED_MPH_COPY_INCLUDED"
+-    assert any(row["source_relative_path"] ==
+-               "workspace/w23_coarse-phase0_provisional.mph" for row in manifest["files"])
++    assert manifest["schema"] == "w23-zero-solve-r6-persisted-raw-evidence/2"
++    assert manifest["workspace_archive_disposition"] == \
++        "EMPTY_PRIVATE_W25_WORKSPACE_PROJECT_INPUT_COPY_INCLUDED"
++    input_relative = "w23-input-1234567890abcdef1234567890abcdef/w23_coarse-phase0_provisional.mph"
++    input_row = next(row for row in manifest["files"] if row["source_relative_path"] == input_relative)
++    assert input_row["source_root"] == str(source.parent)
++    assert (destination / input_relative).read_bytes() == \
++        (source.parent / input_relative).read_bytes()
+ 
+ 
+ def test_full_archive_rejects_missing_mph_even_when_every_other_entry_is_complete(tmp_path):
+     r6, _ = _load_candidate_modules()
+-    source = _owner_root(tmp_path, complete=True, workspace_mode="empty")
++    source = _owner_root(r6, tmp_path, complete=True, workspace_mode="missing")
+     destination = tmp_path / "persistent"
+     _mkdir_private(destination)
+ 
+-    with pytest.raises(r6.ActualEntryGuardError, match="workspace is neither"):
+-        r6._persist_raw_evidence(source, destination, partial=False)
++    with pytest.raises(r6.ActualEntryGuardError):
++        r6._persist_raw_evidence(source, destination, partial=False,
++                                 project_input_root=source.parent)
+ 
+ 
+ @contextmanager
+@@ -547,7 +578,7 @@
+                 source_projection_sha256="a" * 64, execute_numeric=True)
+         with pytest.raises(api["owned_module"].OwnedRuntimeEntryError,
+                            match="not the exact admitted W25 workspace"):
+-            api["owned_module"]._copy_pinned_mph_to_workspace(
++            api["owned_module"]._copy_pinned_mph_to_project_input(
+                 project_root=project_root, workspace=admission.workspace, run_id=run_id)
+         assert not (workspace / "w23_coarse-phase0_provisional.mph").exists()
+         assert public_dispatches == []
+@@ -555,14 +586,21 @@
+         with pytest.raises(StopBeforePublicReads, match="before any W23 public read"):
+             api["owned_module"].run_w23_from_owned_admission(
+                 admission, source_projection_sha256="a" * 64, execute_numeric=True)
+-        copied = workspace / "w23_coarse-phase0_provisional.mph"
++        copied = project_root / f"w23-input-{run_id}" / "w23_coarse-phase0_provisional.mph"
+         assert copied.is_file()
+         assert copied.stat().st_size == 13795478
+-        assert hashlib.sha256(copied.read_bytes()).hexdigest() == \
++        digest = hashlib.sha256()
++        with copied.open("rb") as stream:
++            for block in iter(lambda: stream.read(1024 * 1024), b""):
++                digest.update(block)
++        assert digest.hexdigest() == \
+             "cba0c1d404003c4e60a20b04316cb1456c38cc2b45596dc2dc29bbed62674a8c"
+         assert stat.S_IMODE(copied.stat().st_mode) == 0o400
+-        copy_binding = json.loads((host_root / "W23_SAVED_MPH_COPY_BINDING_R1.json").read_text())
++        assert list(workspace.iterdir()) == []
++        copy_binding = json.loads((host_root / "W23_SAVED_MPH_COPY_BINDING_R2.json").read_text())
+         assert copy_binding["opened_by_comsol"] is False
++        assert copy_binding["source_project_relative_path"] == \
++            f"w23-input-{run_id}/w23_coarse-phase0_provisional.mph"
+         assert copy_binding["source_identity"]["sha256"] == \
+             "cba0c1d404003c4e60a20b04316cb1456c38cc2b45596dc2dc29bbed62674a8c"
+         assert daemon._control_dispatch_inflight == 0
+--- a/tests/test_r6_transport_cached_status_contract.py
++++ b/tests/test_r6_transport_cached_status_contract.py
+@@ -30,7 +30,7 @@
+             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False,
+         )
+         self.assertEqual(completed.returncode, 0, completed.stdout)
+-        self.assertIn("Ran 5 tests", completed.stdout)
++        self.assertIn("Ran 6 tests", completed.stdout)
+         self.assertIn("OK", completed.stdout)
+ 
+ 
+--- a/tests/test_zero_solve_runtime.py
++++ b/tests/test_zero_solve_runtime.py
+@@ -8,6 +8,7 @@
+ import types
+ import unittest
+ import copy
++import stat
+ from pathlib import Path
+ from unittest.mock import patch
+ 
+@@ -457,6 +458,10 @@
+ 
+ 
+ def _source_relative_path():
++    # Full-entry fixtures use the immutable MPH already present under the
++    # candidate root.  The actual owned-entry path is separately exercised
++    # through _copy_pinned_mph_to_project_input and the real ArtifactStore
++    # route below; this helper must name a file that actually exists.
+     return "inputs/w23_coarse-phase0_provisional.mph"
+ 
+ 
+@@ -790,7 +795,7 @@
+         self.assertEqual(imported["store_type"], "comsol_mcp._operation_store")
+         self.assertIn("exact pinned W25 ProbeSessionAdmission", imported["invalid_admission_error"])
+ 
+-    def test_pinned_saved_mph_copy_is_created_once_in_exact_private_owner_workspace(self):
++    def test_pinned_saved_mph_copy_is_created_once_at_exact_nonhidden_project_input(self):
+         run_id = "1234567890abcdef1234567890abcdef"
+         with tempfile.TemporaryDirectory(prefix="w23-r5-owned-copy-") as scratch:
+             base = Path(scratch).resolve() / "managed-root"
+@@ -800,7 +805,7 @@
+             workspace = owner_root / "workspace"
+             workspace.mkdir(mode=0o700)
+             before = (ROOT / "inputs" / "w23_coarse-phase0_provisional.mph").stat()
+-            result = owned_runtime._copy_pinned_mph_to_workspace(
++            result = owned_runtime._copy_pinned_mph_to_project_input(
+                 project_root=base, workspace=workspace, run_id=run_id)
+             after = (ROOT / "inputs" / "w23_coarse-phase0_provisional.mph").stat()
+             self.assertEqual(result["source_identity"]["sha256"],
+@@ -809,17 +814,23 @@
+             self.assertEqual(result["destination_identity"]["bytes"], 13_795_478)
+             self.assertEqual(result["destination_identity"]["mode"], "0o400")
+             self.assertEqual(result["source_project_relative_path"],
+-                             f".w25-probe-{run_id}/workspace/w23_coarse-phase0_provisional.mph")
++                             f"w23-input-{run_id}/w23_coarse-phase0_provisional.mph")
++            copied = base / result["source_project_relative_path"]
++            with copied.open("rb") as source_stream, \
++                    (ROOT / "inputs" / "w23_coarse-phase0_provisional.mph").open("rb") as input_stream:
++                self.assertEqual(source_stream.read(32), input_stream.read(32))
++            self.assertEqual(stat.S_IMODE(copied.stat().st_mode), 0o400)
++            self.assertEqual(stat.S_IMODE(copied.parent.stat().st_mode), 0o700)
++            self.assertEqual(list(workspace.iterdir()), [])
+             self.assertEqual((before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns),
+                              (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns))
+             with self.assertRaisesRegex(owned_runtime.OwnedRuntimeEntryError, "exact admitted W25 workspace"):
+-                owned_runtime._copy_pinned_mph_to_workspace(
++                owned_runtime._copy_pinned_mph_to_project_input(
+                     project_root=base, workspace=base, run_id=run_id)
+             with self.assertRaises(owned_runtime.OwnedRuntimeEntryError):
+-                owned_runtime._copy_pinned_mph_to_workspace(
++                owned_runtime._copy_pinned_mph_to_project_input(
+                     project_root=base, workspace=workspace, run_id=run_id)
+-            self.assertEqual((workspace / "w23_coarse-phase0_provisional.mph").stat().st_size,
+-                             13_795_478)
++            self.assertEqual(copied.stat().st_size, 13_795_478)
+ 
+     def test_candidate_cli_is_source_only_and_never_dispatches(self):
+         manifest = ROOT / "evidence" / "SOURCE_PROJECTION_R6.json"
