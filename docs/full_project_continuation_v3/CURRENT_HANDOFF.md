@@ -2,6 +2,8 @@
 
 用户要求本轮收尾后，将最新进度和全部异地开发所需源码同步 GitHub，核对远端，然后暂停。这个停止边界取代“同步后自动继续”；只有用户明确恢复后才进入下一活动。原 W01–W26 总目标保留，项目仍为 **CHANGES_REQUIRED**，独立最终 Reviewer 为 **NOT_RUN**。
 
+本轮完整源码 checkpoint [`7e25b963`](https://github.com/Everwalker/comsol-mcp/commit/7e25b963156302a3e809c0e9dd79ba6d0e416264) 已普通推送到 GitHub main，并经独立 fetch 核对完全一致。此后仅发布这份同步回执和暂停交接；不继续开发或派发测试。详见 [远端核对回执](state/GITHUB_SOURCE_CHECKPOINT_REMOTE_VERIFICATION_20261021_R1.json)。
+
 ## 从哪里开始
 
 1. 在新目录克隆 `https://github.com/Everwalker/comsol-mcp.git` 的 `main`，记录该 checkout 的 `git rev-parse HEAD`。不要覆盖已有项目、重建原任务表或运行旧 bootstrap/init_completion。
