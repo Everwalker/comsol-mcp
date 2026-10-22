@@ -7,11 +7,13 @@
 - M3 单位通用化：小补丁与受影响软件回归已执行；五模块 347 PASS、1 FAIL、1 显式排除。两个历史 fixture 缺失的失败完整保留，不能称全 suite PASS；详见 [原始结果](docs/universal_mcp_execution/evidence/unit-default/affected-result.json)。原生验证 NOT_RUN。
 - 环境：Mac ARM 6.4 及 Windows 6.3/6.4 可达，版本/JDK 已只读核实；现有 Windows standalone Desktop 保留。本轮新建 Mac 受管会话已启动，求解尚未验收；原始引用见 RESUME/M2A_NATIVE。
 - GENERAL_COVERAGE 已一次映射 273 动作、原 60 测试的 427 子断言（通用义务可用等价模型履行），冻结后拒绝覆盖已有结果；定向 API 快照刷新和只读校验通过。U01–U12 尚无全组完成声明。
-- M4 软件/构件阶段 PASS：补齐普通 Desktop 依赖与 canonical lock，保留全部原包版本；通用构建入口不再需要固定活动 profile。131 项软件测试通过，三架构离线 ZIP/清单/源 wheel 逐成员核对通过，Mac ARM 干净源外离线安装及 112 工具启动通过。Intel 使用明确披露的同版本 cryptography 派生 wheel；原 40/41 输入报告保留。Windows 安装、完整原生离线 T056 与最终 Reviewer 仍开放。
+- M4 软件/构件阶段 PASS：补齐普通 Desktop 依赖与 canonical lock，保留全部原包版本；通用构建入口不再需要固定活动 profile。131 项软件测试通过，三架构离线 ZIP/清单/源 wheel 逐成员核对通过，Mac ARM 干净源外离线安装及 112 工具启动通过。Intel 使用明确披露的同版本 cryptography 派生 wheel；原 40/41 输入报告保留。随后 Windows35轮子哈希锁定安装、172源文件及112工具协议启动已由Main限定审查通过；两版doctor汇总仍UNKNOWN。完整原生离线T056与最终Reviewer仍开放。
 - 最终独立 Reviewer、两类未预设任务迁移、当前候选的跨平台原生及交付统一验收均 NOT_RUN。
 
-阶段同步：`4759c097eabfdf588a366af51d9c7d1b90d1ac1b` 已普通推送，独立 fetch 回读与 origin/main 一致。
+阶段同步：M0/M1 为 `4759c097`，M4 为 `47d05a8ed464bf074199b029601addcfcc8560df`，均已普通推送并独立 fetch 回读一致。后续 README 使用说明修正待新快照，不冒充已测试构件字节。
 
 下一动作：同一 Luna 正在执行 M2a：普通安装 MCP → 新项目 Java → 指定现有模型 → 真实小型求解/回读/产物；并行推进交付依赖。不中途宣告完成。
 
 历史 current175-r13、旧科学活动与暂停交接保留于 [2026-10-21 原交接](docs/full_project_continuation_v3/CURRENT_HANDOFF.md)，只按其原范围引用，不升级为本轮通用核心批准。
+
+Windows 原生门槛：已复现只读 SID 转换故障，同一 Luna 正在修复；新服务/隔离资源尚未授权或创建，主机计划仍缺精确材料。低可提交内存为一次观察值，正在独立交叉核对；不把提案10GiB变成新增验收门槛。详见 [Windows准备](docs/universal_mcp_execution/evidence/WINDOWS_PREP.json)。

@@ -1,0 +1,508 @@
+{
+  "schema": "comsol-mcp.universal-windows-prep/1",
+  "status": "SOFTWARE_PREP_COMPLETE_NATIVE_GATED",
+  "created_utc": "2026-10-22T12:55:34.992918+00:00",
+  "agent_role": "Bounded PREP executor; not final reviewer",
+  "candidate": {
+    "offline_archive_path": "_state/universal-release-tooling/release-candidate/win_amd64/offline.zip",
+    "offline_archive_sha256": "66bb4eb330b8ea7b7abb7991ebf74e44e18a700e97a33702e5a9667ea08dd2ee",
+    "offline_archive_bytes": 31109771,
+    "app_wheel_sha256": "c733b15e7c1c4dd709a46d92fe7c8054cd88b5f95be8b4fa56339d3d7d35c7a9",
+    "install_lock_sha256": "f5d5e93e2d4c295e9ef1799daa24ac2d9c3a0cf120ed2c97f23157fe37cacd2f",
+    "source_snapshot_content_sha256": "6c7e67b3bea49671e65452e11cf2fe46b397d234fa2aae2e73e9c30b822e7a5c",
+    "installed_package_files_exact": 172,
+    "final_source_freeze": false,
+    "binding_rule": "Only this candidate and its installed source fingerprints. Rebuild/rebind affected checks after the final M2b freeze."
+  },
+  "new_windows_paths": {
+    "candidate_project": "C:/Users/Everwalker/universal-windows-prep-20261022-c66bb4e-98ed441cd2",
+    "venv_python": "C:/Users/Everwalker/universal-windows-prep-20261022-c66bb4e-98ed441cd2/venv/Scripts/python.exe",
+    "earlier_preserved_prep": "C:/Users/Everwalker/universal-windows-prep-20261022-98ed441cd2"
+  },
+  "software_results": {
+    "offline_install": "PASS_SOFTWARE_ONLY",
+    "wheel_count": 35,
+    "pip_check": "PASS",
+    "installed_imports_and_source": "PASS_SOFTWARE_ONLY",
+    "versions": {
+      "comsol-mcp": "0.1.10",
+      "mcp": "1.30.0",
+      "JPype1": "1.7.1",
+      "numpy": "2.5.3",
+      "pywin32": "312"
+    },
+    "mcp_stdio": {
+      "initialize": "PASS",
+      "tools_list_count": 112,
+      "next_cursor": null,
+      "scope": "Actual installed MCP transport; discovery only."
+    },
+    "runtime_discover": {
+      "status": "OBSERVED",
+      "versions": [
+        "6.3.0.290",
+        "6.4.0.293"
+      ],
+      "engines_started": false
+    },
+    "runtime_doctor": [
+      {
+        "runtime_id": "comsol-install:C%3A%5CProgram%20Files%5CCOMSOL%5CCOMSOL63%5CMultiphysics",
+        "business_success": true,
+        "aggregate_status": "UNKNOWN",
+        "checks": {
+          "installation": "PASS",
+          "version": "PASS",
+          "build": "PASS",
+          "launcher": "PASS",
+          "architecture": "PASS",
+          "java": "PASS",
+          "directories": "PASS",
+          "configuration": "OBSERVED"
+        },
+        "comsol_started": false,
+        "license_checked_out": false
+      },
+      {
+        "runtime_id": "comsol-install:C%3A%5CProgram%20Files%5CCOMSOL%5CCOMSOL64%5CMultiphysics",
+        "business_success": true,
+        "aggregate_status": "UNKNOWN",
+        "checks": {
+          "installation": "PASS",
+          "version": "PASS",
+          "build": "PASS",
+          "launcher": "PASS",
+          "architecture": "PASS",
+          "java": "PASS",
+          "directories": "PASS",
+          "configuration": "OBSERVED"
+        },
+        "comsol_started": false,
+        "license_checked_out": false
+      }
+    ],
+    "runtime_project_call_scope": "Actual installed production public ControlDaemon.dispatch in process; no injected engine/provider/SCM owner. Metadata handlers exercised and closed. Their MCP RPC transport was not exercised.",
+    "projects": [
+      {
+        "project_id": "2a6b52c9-2793-4c44-b37a-e17ff2e244ef",
+        "label": "Windows 63 PREP only",
+        "workspace": "C:\\Users\\Everwalker\\universal-windows-prep-20261022-c66bb4e-98ed441cd2\\workspaces\\comsol63",
+        "policy": {
+          "permissions": [
+            "inspect",
+            "project_write"
+          ],
+          "timeouts": {}
+        }
+      },
+      {
+        "project_id": "bddfbf65-84aa-44e7-a046-e0a90d3b5a65",
+        "label": "Windows 64 PREP only",
+        "workspace": "C:\\Users\\Everwalker\\universal-windows-prep-20261022-c66bb4e-98ed441cd2\\workspaces\\comsol64",
+        "policy": {
+          "permissions": [
+            "inspect",
+            "project_write"
+          ],
+          "timeouts": {}
+        }
+      }
+    ],
+    "project_create_inspect_permissions_successful_calls": 6,
+    "helper_negative_controls": {
+      "scope": "LOCAL_HELPER_PATH_NO_OVERWRITE_CONTROLS_ONLY",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "native_evidence": false
+    }
+  },
+  "host_readonly": {
+    "ssh_strict_host_key_checking": true,
+    "batch_mode": true,
+    "elevated_token_observed": true,
+    "filesystem": "NTFS",
+    "default_config_absence_does_not_prove_custom_config_absence": true,
+    "allowlisted_process_user_machine_config_selector_audit": {
+      "inherited_host_profile_or_provider_selectors_found": 0,
+      "JAVA_HOME_present": true,
+      "scope_limit": "Allowlisted environment/registry selectors only; no claim of no custom config elsewhere."
+    },
+    "service_create_access_handle": "OPENED_READONLY_NO_CREATE_CALL",
+    "proposed_service_name": "ComsolMcpUniversalPrep_98ed441cd2",
+    "proposed_service_query_winerror": 1060,
+    "proposed_account_lookup_winerror": 1332,
+    "proposed_protected_root_exists": false,
+    "physical_memory_total_bytes": 68448202752,
+    "physical_memory_available_bytes": 8854155264,
+    "available_commit_observation_bytes": 411279360,
+    "SeAssignPrimaryTokenPrivilege": "NOT_PRESENT_IN_OBSERVED_SSH_TOKEN; future service token not observed",
+    "protected_desktop": {
+      "pid": 20592,
+      "original_birth_image_preserved": true,
+      "adopted_or_signalled": false
+    },
+    "prior_this_run_metadata_process": {
+      "pid": 2928,
+      "finally_alive": false,
+      "query_only": true
+    },
+    "observation_limit": "Some system processes were not queryable; no claim of complete host process/config absence.",
+    "installation_files_observed": [
+      {
+        "path": "C:\\Users\\Everwalker\\AppData\\Local\\Programs\\Python\\Python312-comsol-mcp\\python.exe",
+        "file_version": "3.12.10150.1013",
+        "sha256": "4d6f5f81a4bca11191c4c7c6b43632694d0a4ce74e068619d8fdc161d469859a"
+      },
+      {
+        "path": "C:\\Users\\Everwalker\\jdk11\\bin\\java.exe",
+        "file_version": "11.0.32.1",
+        "sha256": "9fcc7d5d43918e389df240d44601c98a4d3aa9e7d0cbbd6d208304e0b574c7e2"
+      },
+      {
+        "path": "C:\\Program Files\\COMSOL\\COMSOL63\\Multiphysics\\bin\\win64\\comsolmphserver.exe",
+        "file_version": "6.3.0.290",
+        "sha256": "74b83b834a342de62f2a0eb4c256e7eb241e2438902413bf96c0a57a228ff533"
+      },
+      {
+        "path": "C:\\Program Files\\COMSOL\\COMSOL64\\Multiphysics\\bin\\win64\\comsolmphserver.exe",
+        "file_version": "6.4.0.293",
+        "sha256": "901760d88bfb5b5f1f8dcc8a32eb4a7696d420c80d296b7341a0e48134e56a74"
+      }
+    ],
+    "external_jdk_release_metadata": {
+      "IMPLEMENTOR": "Eclipse Adoptium",
+      "IMPLEMENTOR_VERSION": "Temurin-11.0.32.1+1",
+      "JAVA_VERSION": "11.0.32.1",
+      "OS_ARCH": "x86_64"
+    }
+  },
+  "native_and_authorization": {
+    "comsol_native": "NOT_RUN",
+    "JVM_started_by_probes": false,
+    "services_accounts_appcontainers_created": 0,
+    "WFP_firewall_license_changes": 0,
+    "host_ACL_apply": 0,
+    "host_change_apply_or_restore": "NOT_RUN",
+    "native_authorization_issued": false,
+    "historical_receipts_tokens_Popen_authority_restored": false
+  },
+  "host_plan": {
+    "status": "REVIEWABLE_NOT_EXECUTABLE_NOT_AUTHORIZED",
+    "json_path": "_state/universal-windows-prep/HOST_PLAN.json",
+    "json_sha256": "60d9d40c771f9d6fe0838cecbaff4fef11e7458db9f4e0fd495b7d264db9def8",
+    "human_readable_path": "_state/universal-windows-prep/HOST_PLAN.md",
+    "human_readable_sha256": "2ec756197d138d1ddd4449f2a9a59a85a0bbb1be9bd505271b52dde5f9ffec69",
+    "service": {
+      "name": "ComsolMcpUniversalPrep_98ed441cd2",
+      "start_mode_proposal": "DEMAND_START_ONLY",
+      "proposed_account": ".\\ComsolPrep98ed44",
+      "service_sid_type": "RESTRICTED",
+      "service_logon_sid": null,
+      "service_sid": null,
+      "profile_switch_rule": "One service uses exactly one pinned target profile at a time. Reconfigure only after verified owned-session shutdown and separately recorded profile/source/SCM plan; preserve phase-63 baseline before phase-64."
+    },
+    "protected_config_root": {
+      "path": "C:/ProgramData/ComsolMcpUniversalPrep_98ed441cd2",
+      "currently_exists": false,
+      "created": false,
+      "proposed_owner": "Actual new service identity with explicitly reviewed SYSTEM/administrator access; interactive-write access excluded for the trusted profile/config subtree",
+      "requires_additional_creation_scope_approval": true
+    },
+    "targets": [
+      {
+        "target": "6.3",
+        "profile_id": "universal-win63-98ed441cd2",
+        "project_id": "2a6b52c9-2793-4c44-b37a-e17ff2e244ef",
+        "workspace": "C:\\Users\\Everwalker\\universal-windows-prep-20261022-c66bb4e-98ed441cd2\\workspaces\\comsol63",
+        "installation_root": "C:/Program Files/COMSOL/COMSOL63/Multiphysics",
+        "profile_path": "C:/ProgramData/ComsolMcpUniversalPrep_98ed441cd2/profiles/comsol63-v3.json",
+        "control_home": "C:/ProgramData/ComsolMcpUniversalPrep_98ed441cd2/control/comsol63",
+        "proposed_appcontainer_name": "ComsolMcpUniversal63_98ed441cd2",
+        "proposed_server_port": 25463,
+        "port_state": "PROPOSED_NOT_BOUND_NOT_RESERVED_RECHECK_BEFORE_ACTIVATION",
+        "wfp_provider_key": "3c2173b8-f912-4d00-88b3-7bcc9fd4e96a",
+        "wfp_sublayer_key": "c17c4b61-f920-4d3b-9108-1e01237f83b6",
+        "wfp_filter_keys": null,
+        "wfp_grants": null,
+        "network_material_state": "EXACT_IMAGE_PRINCIPAL_ALE_V4_V6_LOOPBACK_LICENSE_TUPLES_REQUIRED_BEFORE_PLAN_VALIDATION",
+        "profile_state": "INTENT_ONLY_NOT_CREATED_NOT_TRUSTED",
+        "runtime_id": "comsol-install:C%3A%5CProgram%20Files%5CCOMSOL%5CCOMSOL63%5CMultiphysics"
+      },
+      {
+        "target": "6.4",
+        "profile_id": "universal-win64-98ed441cd2",
+        "project_id": "bddfbf65-84aa-44e7-a046-e0a90d3b5a65",
+        "workspace": "C:\\Users\\Everwalker\\universal-windows-prep-20261022-c66bb4e-98ed441cd2\\workspaces\\comsol64",
+        "installation_root": "C:/Program Files/COMSOL/COMSOL64/Multiphysics",
+        "profile_path": "C:/ProgramData/ComsolMcpUniversalPrep_98ed441cd2/profiles/comsol64-v3.json",
+        "control_home": "C:/ProgramData/ComsolMcpUniversalPrep_98ed441cd2/control/comsol64",
+        "proposed_appcontainer_name": "ComsolMcpUniversal64_98ed441cd2",
+        "proposed_server_port": 25464,
+        "port_state": "PROPOSED_NOT_BOUND_NOT_RESERVED_RECHECK_BEFORE_ACTIVATION",
+        "wfp_provider_key": "9a35833a-f183-4385-951f-e97d6968531a",
+        "wfp_sublayer_key": "3a856ee4-8c56-494f-a466-c4f53ca95b7f",
+        "wfp_filter_keys": null,
+        "wfp_grants": null,
+        "network_material_state": "EXACT_IMAGE_PRINCIPAL_ALE_V4_V6_LOOPBACK_LICENSE_TUPLES_REQUIRED_BEFORE_PLAN_VALIDATION",
+        "profile_state": "INTENT_ONLY_NOT_CREATED_NOT_TRUSTED",
+        "runtime_id": "comsol-install:C%3A%5CProgram%20Files%5CCOMSOL%5CCOMSOL64%5CMultiphysics"
+      }
+    ],
+    "budget": {
+      "simultaneous_native_versions": 1,
+      "simultaneous_native_sessions": 1,
+      "job_limits": {
+        "schema": "comsol-mcp.windows-job-limits/1",
+        "process_memory_limit_bytes": 4294967296,
+        "job_memory_limit_bytes": 8589934592,
+        "active_process_limit": 8
+      },
+      "disk": {
+        "mode": "ADMISSION_ONLY",
+        "reserve_free_bytes": 10737418240,
+        "max_task_reservation_bytes": 4294967296,
+        "require_hard_quota": false
+      },
+      "proposed_prelaunch_headroom": {
+        "available_commit_bytes_min": 10737418240,
+        "available_physical_bytes_min": 10737418240,
+        "status": "PLANNED_OPERATOR_BUDGET_RECHECK_REQUIRED_NOT_NATIVE_EVIDENCE"
+      },
+      "software_probe_waits_seconds": {
+        "install": 120,
+        "readonly_preflight": 30
+      },
+      "native_solver_deadline_seconds": null,
+      "cpu_wall_rss_or_hard_quota_enforcement_claimed": false
+    },
+    "rollback_state": "NOT_EXECUTABLE_UNTIL_BASELINES_AND_APPLY_JOURNAL_EXIST",
+    "rollback_summary": [
+      "Reconcile and normally stop only the freshly owned session and exact new SCM service after accepted work drains; retain UNKNOWN/busy resources.",
+      "Delete only applied journal-matching new WFP filters, then sublayer and provider; preserve all foreign/drifted resources.",
+      "Restore exact approved ACLs from captured native descriptors/hashed backups, with live identity checks.",
+      "Delete only the exact new service and AppContainer profiles whose fresh apply/readback records match; account/logon-right removal only if created solely by this plan and no owned service/session remains.",
+      "Retain source/profile fingerprints, audit and failure evidence; remove only explicitly approved disposable new directories after hashes/retention checks."
+    ],
+    "public_plan_endpoint": {
+      "registry_describe_host_change_plan": "UNSUPPORTED_OPERATION",
+      "registry_describe_host_preflight": "UNSUPPORTED_OPERATION",
+      "available_source_builder": "_w26_os_resources.build_host_change_plan requires a complete real HostResourceProfile; not called with fabricated SIDs/baselines."
+    },
+    "approval_need_for_Main": "After reviewing the exact plan and completing real missing bindings, Main must request explicit scope for the new account/service/AppContainers/protected root, the exact ACL paths and complete WFP object/tuple list. Elevated SSH and project metadata permissions do not grant this authorization. No apply request was made by this agent.",
+    "missing_materials_and_gates": [
+      {
+        "id": "WIN-PREP-AUTH",
+        "state": "NOT_AUTHORIZED",
+        "owner": "Main/user",
+        "material": "Explicit bounded approval for one fresh local service account, SCM service, two AppContainers, the new protected config root, exact project/config ACLs and the final enumerated WFP objects. An elevated token is capability evidence only."
+      },
+      {
+        "id": "WIN-PREP-IDENTITIES",
+        "state": "NOT_CREATED",
+        "owner": "Approved Windows operator",
+        "material": "Create .\\ComsolPrep98ed44 via secure local provisioning, service logon right, noninteractive restrictions; obtain real logon SID, distinct restricted service SID and distinct interactive SID. Query actual SCM config/process PID/birth/image. Passwords/credentials stay outside artifacts."
+      },
+      {
+        "id": "WIN-PREP-PROFILE",
+        "state": "REAL_BINDINGS_MISSING",
+        "owner": "Approved Windows operator/Main",
+        "material": "Observe host fingerprint, root volume/file IDs/owner, protected non-reparse profile ancestry and complete SDDL digests; derive two real new AppContainer/capability SID sets; pin selected launcher/server/worker image and canonical argv hashes. Construct closed v3 profiles only after these are real. The present JSON plan is not a trusted profile."
+      },
+      {
+        "id": "WIN-PREP-NETWORK",
+        "state": "EXACT_TUPLES_MISSING",
+        "owner": "Main/Windows operator",
+        "material": "Supply legitimate COMSOL/license server and vendor-daemon endpoint/port requirements, selected worker JDK and exact images; expand per-role/per-principal ALE connect/accept IPv4/IPv6 conditions, explicit default BLOCK and every filter key. No wildcard allow, firewall relaxation, loopback exemption or license change is authorized."
+      },
+      {
+        "id": "WIN-PREP-BASELINE",
+        "state": "PARTIAL_READONLY_OBSERVATIONS",
+        "owner": "Approved Windows operator",
+        "material": "Before any apply capture absence or complete owner/group/DACL/config snapshots for every named resource, durable rollback backups and hashes, source/profile/plan fingerprints. Current evidence confirms the proposed service/account/config-root absent; AppContainer and WFP absence/effective policy have not been proven."
+      },
+      {
+        "id": "WIN-PREP-TRUSTED-BOOTSTRAP",
+        "state": "NEEDS_OPERATOR_BOOTSTRAP",
+        "owner": "Main/approved Windows operator",
+        "material": "Unconfigured console/project metadata cannot mint the SCM host-control issuer. The legitimate separately approved operator flow must bootstrap the fresh account/logon right, protected roots/ACLs and SCM registration. Existing internal executor supports AppContainer, restricted service-SID and bounded WFP/filter-group leaves; it does not provide generic account, SCM-registration or arbitrary ACL apply. Configure real HostScopedProvider and exact operation-store/job bindings; no synthetic receipts, environment privilege flags, seals or owner substitution."
+      },
+      {
+        "id": "WIN-PREP-SID-READBACK",
+        "state": "CURRENT_CANDIDATE_UNVERIFIED",
+        "owner": "Main/core owner",
+        "material": "Actual no-profile T037 feasibility exits 2 with T037_UNSUPPORTED: Win32 SID could not be converted to canonical text. Diagnose/fix in the production owner task and rerun the same read-only command on the frozen build; this PREP agent does not patch core."
+      },
+      {
+        "id": "WIN-PREP-PREBIRTH",
+        "state": "CURRENT_CANDIDATE_FAIL_CLOSED",
+        "owner": "Main/core owner",
+        "material": "Installed T037SessionProcessFactory.preflight and refuse_unverified_prebirth still refuse T037_POLICY_UNVERIFIED. Native SCM, lowbox/suspended-child, ACL/WFP and Job paths exist; account/service creation alone cannot establish a native admission or one-use Resume capability. Resolve the actual current candidate reasons before any COMSOL child."
+      },
+      {
+        "id": "WIN-PREP-MEMORY",
+        "state": "CURRENT_HEADROOM_BELOW_PROPOSED_BUDGET",
+        "owner": "Main/Windows operator",
+        "material": "At observation AvailPageFile was 411279360 bytes and AvailPhys 8854155264. Recheck free commit and physical headroom before native admission; retain Desktop 20592. No app termination, pagefile edit or memory-policy change is part of this plan."
+      },
+      {
+        "id": "WIN-PREP-FINAL-FREEZE",
+        "state": "PREP_CANDIDATE_ONLY",
+        "owner": "Main/Hume",
+        "material": "After M2b final freeze rebuild/reverify the source snapshot, offline archive, install lock, wheel, installed files and any affected profile/image/argv bindings. This candidate is software PREP evidence and grants no final/native approval."
+      }
+    ],
+    "supported_executor_scope": {
+      "implemented_bounded_resource_leaves": [
+        "AppContainer profile leaf",
+        "Restricted service-SID leaf on the configured existing SCM service",
+        "Bounded WFP provider/sublayer/filter and filter-group leaves"
+      ],
+      "external_operator_bootstrap_required": [
+        "Fresh local service-account provisioning and service-logon right",
+        "Fresh SCM service registration and exact SCM binary configuration",
+        "Protected root/profile and exact filesystem ACL establishment"
+      ],
+      "evidence": "Installed _windows_host_change._normalize_supported_actions; complete candidate wheel source snapshot bound. Generic account creation, SCM registration and arbitrary ACL apply are not supported executor action kinds."
+    },
+    "exact_permission_scope_for_Main": [
+      {
+        "resource": ".\\ComsolPrep98ed44",
+        "needed": "Approve only new local SAM account creation and service-logon right, secure credential provision and reviewed noninteractive service-account restrictions. No existing account/domain policy edit."
+      },
+      {
+        "resource": "ComsolMcpUniversalPrep_98ed441cd2",
+        "needed": "SC_MANAGER_CREATE_SERVICE plus target-specific query/configure/start/stop/delete and security readback rights for only the new demand-start service. Create access handle was observed; authorization and service token are absent."
+      },
+      {
+        "resource": "C:/ProgramData/ComsolMcpUniversalPrep_98ed441cd2",
+        "needed": "Approve exclusive new directory creation and exact protected owner/DACL; READ_CONTROL/WRITE_DAC/WRITE_OWNER only on the explicitly approved new config subtree and the two new project workspaces. Capture backups before changes; no unrelated ancestor/vendor ACL mutation."
+      },
+      {
+        "resource": "Two named new AppContainer profiles and the final explicit capability SID set",
+        "needed": "Explicit profile-creation/access rights under the approved service identity, with native SID/path/token readback; capability set not yet supplied, no broad network capability assumed."
+      },
+      {
+        "resource": "Only proposed per-target WFP provider/sublayer GUIDs and the final enumerated filter GUIDs",
+        "needed": "Approve exact object-scoped add/delete/query/security rights and complete image/principal/ALE/endpoint tuples. No global firewall action. Filter grant/backup definitions remain missing; not ready for apply."
+      },
+      {
+        "resource": "Future original service/launcher tokens",
+        "needed": "Observe actual CreateProcessAsUser/token/Job capabilities, including applicable SeAssignPrimaryTokenPrivilege and SeIncreaseQuotaPrivilege requirements; do not infer them from SSH elevation. This PREP does not enable or grant privileges."
+      }
+    ],
+    "future_project_runtime_activation": {
+      "state": "NOT_AUTHORIZED_NOT_SUBMITTED",
+      "project_permission_now": [
+        "inspect",
+        "project_write"
+      ],
+      "later_required": "Main must authorize the native scope, configure genuine host grants, and use the supported public project.policy_set route with a valid authorization reference to grant only required compute scope. Reread project.permissions before any engine request. This PREP does not grant compute, trusted_code or host_control.",
+      "later_public_operation": "session.start",
+      "fresh_identity_rule": "Use the real new project_id and discovered runtime_id, a newly generated submission idempotency key, the newly approved profile/owner and original this-run launcher handles. No old receipt/token/Popen authority.",
+      "native_submission_performed": false
+    }
+  },
+  "current_t037_snapshot": {
+    "read_only_feasibility": {
+      "host_changes": "NOT_RUN",
+      "native_policy": "NOT_RUN",
+      "platform": "win32",
+      "reason": "Win32 SID could not be converted to canonical text",
+      "reason_code": "T037_UNSUPPORTED",
+      "schema": "comsol-mcp.windows-t037-feasibility/1",
+      "sensitive_values_included": false,
+      "state": "UNVERIFIED"
+    },
+    "exit_code": 2,
+    "routes_present": [
+      "_windows_t037_broker.WindowsScmServiceBroker and SCM bootstrap entrypoint",
+      "_windows_host_change._normalize_supported_actions: AppContainer, restricted service-SID and bounded WFP/filter-group leaves; account/SCM-registration/ACL bootstrap is a separate approved operator flow",
+      "_windows_t037._Win32LaunchApi suspended AppContainer child path",
+      "_windows_job_limits explicit committed-memory/active-process targets",
+      "_windows_t037_native native policy observation and _windows_t037_resume prebirth gate"
+    ],
+    "admission_scope": "Current installed preflight/refuse_unverified_prebirth refuse before COMSOL child creation. Remaining reasons include Job required target, MIC, full filesystem isolation and vendor loopback/license compatibility; no one-use native Resume authority was issued.",
+    "source_fingerprints": {
+      "_windows_t037.py": "71c855fd326302ad2612060921bf5de4ea1af9babdf8b72c791ce0f07d37e231",
+      "_windows_t037_resume.py": "39095a91bdb370884bae49dce644acf9e881e2c6ba25dd0d78b62be13872a45d",
+      "_windows_host_change.py": "c8daf247c7024161693c7c28f64347a53ff32ed206b0044d4c4e53f9eca231eb",
+      "_windows_t037_native.py": "15475e12c06205071e12411cf21ab7c0a59441a23d7b6254666b794371ec19a0",
+      "_windows_t037_broker.py": "01ea46733a87cd4cba91eb7d4066207509dd5eac8e2cf57b2163bc96a3171847",
+      "_control_daemon.py": "e0a680802a25c4939525381ab6f732ed7cc657f62e3c0e871d42b85b0731627c",
+      "_windows_job_limits.py": "38db220f2e88971b3b09a929e4343223e32411289515a008464472fe070f7ee2",
+      "_w26_os_resources.py": "7fbf94fd1f0f75ab4e65f5a51a78ed4ec055ce887861155180af0f0df8171dfb"
+    },
+    "historical_doc_role": "WINDOWS_T037_PROFILE.md is historical input context; implementation claims here are bound to the installed candidate sources."
+  },
+  "retained_failures": [
+    {
+      "scope": "Earlier fixed-4759 wheel software probe",
+      "result": "Helper imported absent optional psutil; pip install/pip check had succeeded. No installation replay; later probes use Win32 only.",
+      "private_path": "_state/universal-windows-prep/reconciled/installed-inspect.stderr"
+    },
+    {
+      "scope": "Earlier fresh metadata process ownership check",
+      "result": "Helper rejected FRESH_CONTROL_OWNERSHIP_MISMATCH before MCP calls. Own original Popen stopped; final query confirms the old metadata PID dead. No native identity adopted.",
+      "private_path": "_state/universal-windows-prep/software-probe.result.json"
+    },
+    {
+      "scope": "New candidate first two project requests",
+      "result": "IDEMPOTENCY_CONFLICT retained. Only the mismatched request construction corrected; six new project create/read calls passed with matching fresh body/envelope IDs.",
+      "private_path": "_state/universal-windows-prep/candidate-results/public-control-observations.json"
+    },
+    {
+      "scope": "SSH/PowerShell inventory transport attempts",
+      "result": "Sandbox denial, command-line-length rejection and two timeouts retained privately. Short SSH/SCP and Python/Win32 recovery succeeded; no COMSOL job replay.",
+      "private_path": "_state/universal-windows-prep"
+    }
+  ],
+  "commands_and_results": [
+    {
+      "command": "C:/Users/Everwalker/universal-windows-prep-20261022-c66bb4e-98ed441cd2/venv/Scripts/python.exe -m pip install --disable-pip-version-check --no-input --no-index --require-hashes --find-links C:/Users/Everwalker/universal-windows-prep-20261022-c66bb4e-98ed441cd2/release/wheelhouse -r C:/Users/Everwalker/universal-windows-prep-20261022-c66bb4e-98ed441cd2/release/locks/requirements.lock",
+      "exit_code": 0
+    },
+    {
+      "command": "C:/Users/Everwalker/universal-windows-prep-20261022-c66bb4e-98ed441cd2/venv/Scripts/python.exe -m pip check",
+      "exit_code": 0
+    },
+    {
+      "command": "C:/Users/Everwalker/universal-windows-prep-20261022-c66bb4e-98ed441cd2/venv/Scripts/python.exe -B C:/Users/Everwalker/universal-windows-prep-20261022-c66bb4e-98ed441cd2/candidate_prepare.py probe",
+      "exit_code": 0,
+      "scope": "112-tool actual stdio discovery plus installed in-process runtime handlers; original project refusals preserved"
+    },
+    {
+      "command": "C:/Users/Everwalker/universal-windows-prep-20261022-c66bb4e-98ed441cd2/venv/Scripts/python.exe -B C:/Users/Everwalker/universal-windows-prep-20261022-c66bb4e-98ed441cd2/projects_prepare.py",
+      "exit_code": 0,
+      "scope": "Only corrected fresh project create/inspect/permissions requests; six successes"
+    },
+    {
+      "command": "C:/Users/Everwalker/universal-windows-prep-20261022-c66bb4e-98ed441cd2/venv/Scripts/python.exe -B -m comsol_mcp._windows_t037 --json",
+      "exit_code": 2,
+      "result": "UNVERIFIED/T037_UNSUPPORTED; host changes and native policy NOT_RUN"
+    }
+  ],
+  "private_evidence": {
+    "directory": "_state/universal-windows-prep",
+    "index_path": "_state/universal-windows-prep/private-evidence-index.json",
+    "index_sha256": "261465f3aed1a8532599c06cc798abba46f1b987ccebdcb684de6f5b5241cbb3",
+    "raw_logs_binaries_environment_values_tokens_public": false
+  },
+  "write_scope": "Only this new public WINDOWS_PREP.json and the new private _state/Windows project trees; no GENERAL_COVERAGE, production source, shared lock/release tooling or historical tree edits.",
+  "main_stage_review": {
+    "status": "PASS_SCOPED_WINDOWS_SOFTWARE_INSTALL_AND_PREP_REVIEWED_NATIVE_GATED",
+    "reviewed_utc": "2026-10-22T13:07:12.152750+00:00",
+    "candidate_wheel_sha256": "c733b15e7c1c4dd709a46d92fe7c8054cd88b5f95be8b4fa56339d3d7d35c7a9",
+    "private_evidence_index_and_members_verified": 11,
+    "install_venv_pip_check_exit0": true,
+    "source_members_matches_bound_snapshot": 172,
+    "actual_MCP_stdio_initialize_and_tool_discovery": 112,
+    "project_metadata_calls_verified": 6,
+    "metadata_call_transport": "In-process production dispatch; not claimed as MCP RPC coverage",
+    "policy_apply_counter": 0,
+    "native_engine": "NOT_RUN",
+    "runtime_doctor_aggregate": "UNKNOWN",
+    "host_plan": "NOT_APPLY_READY; exact selectors/materials and minimal bootstrap review still required",
+    "initial_main_validator_attempt": "Expected string NONE for host_policy_mutations; actual schema is integer counter0. Corrected validation against raw schema; no evidence/artifact changed."
+  }
+}

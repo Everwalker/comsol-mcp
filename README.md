@@ -2,15 +2,20 @@
 
 中文 | [English](#english)
 
-`comsol-mcp` 是一个面向 COMSOL Multiphysics 的 MCP Server。它采用
-**attach-first** 工作流：先连接到一个已经运行的 COMSOL Multiphysics Server，
-再加载并锁定一个主 `.mph` 模型，让 MCP 和 COMSOL Desktop 看到并操作同一个
-服务端模型。
+**当前状态（2026-10-22）：通用核心开发中，尚未完成统一验收。** 当前目标、证据和
+续跑入口见 [PROGRESS](PROGRESS.md)、[通用核心合同](docs/universal_mcp_execution/MASTER_GOAL.md)
+和 [RESUME](docs/universal_mcp_execution/state/RESUME.json)。下文带日期的旧验收与暂停段落是
+历史记录；当前平台范围见 [TARGETS](docs/universal_mcp_execution/config/TARGETS.json)。
+
+`comsol-mcp` 为 COMSOL Multiphysics 提供受管项目、会话、模型与作业接口。
+可以连接已有 Server，或在授权项目中启动独立受管会话。领域动作、通用对象/API 与
+项目 Java 通过同一模型身份、权限、队列和产物系统执行。Desktop 可连接同一 Server
+观察服务端模型；已有的 visible-main 工作流继续可用。
 
 这个项目的目标不是把 COMSOL 当成黑盒批处理器，而是让自动化过程保持可见：
 你可以在 Desktop 中实时观察 MCP 对几何、参数、网格、求解和保存流程的修改。
 
-## 当前执行状态（2026-10-05，Full MASTER W01–W26）
+## 历史执行快照（2026-10-05，Full MASTER W01–W26）
 
 > 按用户指令，完成 cutoff066 GitHub 同步后暂停项目，先进行本地空间只读审计，重点检查 /private/tmp。原始 W01–W26 范围保持不变；以下有界软件结果不合并为全项目验收。
 
@@ -95,16 +100,22 @@
 ## 环境要求
 
 - macOS (Apple Silicon / Intel) 或 Windows x64
-- Python 3.10 或更高版本
+- 源码包要求 Python 3.10+；当前离线构件使用 CPython 3.12
 - 本机已安装 COMSOL Multiphysics (6.3 或 6.4)
-- JDK 11 或更高版本
+- 外部 JDK 11，架构与选定运行时匹配；其他 JDK 版本须单独验证
 - 有效的 COMSOL 许可证
-- 手动启动的 `COMSOL Multiphysics Server`
+- 受管 Server，或明确授权连接的已有 `COMSOL Multiphysics Server`
 
 ## 安装
 
+对应架构的离线包包含 `README_OFFLINE_INSTALL.txt`、`docs/RELEASE_OPERATIONS.md`、
+哈希锁、SBOM 与许可证清单。按包内说明使用本地 wheelhouse 安装；升级、回退和卸载
+使用同一包内的发布工具。当前构件与目标机验证状态见 PROGRESS。
+
+开发者源码安装：
+
 ```powershell
-git clone https://github.com/Ching-Chiang/comsol-mcp.git comsol-mcp
+git clone https://github.com/Everwalker/comsol-mcp.git comsol-mcp
 cd comsol-mcp
 python -m pip install -e .
 ```
@@ -122,10 +133,14 @@ python -m pip install -e ".[dev]"
 ```powershell
 $env:COMSOL_ROOT = "C:\Program Files\COMSOL\COMSOL63\Multiphysics"
 $env:COMSOL_SERVER_MCP_HOME = "$PWD\comsol-server-home"
+$env:COMSOL_PROJECT_ROOT = "$PWD\projects"
+New-Item -ItemType Directory -Force -Path $env:COMSOL_PROJECT_ROOT | Out-Null
 ```
 
 `COMSOL_SERVER_MCP_HOME` 用于保存运行状态、日志、输出和快照。该目录默认位于
 仓库下的 `comsol-server-home/`，并已被 `.gitignore` 忽略。
+`COMSOL_PROJECT_ROOT` 是授权项目目录的上级目录；安装在 site-packages 后必须明确配置，
+并与运行时私有目录分开。MCP Host 启动的进程也需要这些配置。
 
 ## 启动 MCP Server
 
@@ -155,13 +170,35 @@ Claude Desktop 或其他 MCP host 可以参考：
   "mcpServers": {
     "comsol-mcp-server": {
       "command": "python",
-      "args": ["-m", "comsol_mcp.mcp_server"]
+      "args": ["-m", "comsol_mcp.mcp_server"],
+      "env": {
+        "COMSOL_PROJECT_ROOT": "C:/projects/comsol",
+        "COMSOL_SERVER_MCP_HOME": "C:/comsol-mcp-runtime"
+      }
     }
   }
 }
 ```
 
 ## 推荐工作流
+
+通用受管入口使用 `operation_describe` 查询当前 schema，再通过 `operation_call` 执行：
+
+1. `runtime.discover` / `runtime.inspect` 取得实际安装、版本与运行条件。
+2. `project.create` 创建授权项目；`session.start` / `session.connect` 建立受管连接。
+3. `model.create`、`model.load` 或授权的采用操作返回真实 `ModelRef`；保存返回的 revision。
+4. 优先使用领域动作与 `node.*`、`api.describe` / `api.invoke`。未审定签名会说明限制和可用路线。
+5. 将新 Java 放入项目，用 `code.describe_java` / `code.compile_java` / `code.execute_java`
+   执行于指定模型。入口为 `public static run(Model[, Map])`，使用注入的模型；多模型管理走模型入口。
+6. 经结果、绘图、保存和产物接口回读；每次使用返回的模型身份及 revision。
+7. 通过 `job.*` 查询原作业。调用等待超时后先协调原作业，重试沿用原幂等键。
+   会话绑定的 `UNKNOWN` 还需 `session.recover` 核对原 Worker epoch、模型及 revision；
+   `job.reconcile` 观察到请求终态，并不单独解除会话的修改门禁。
+
+项目 Java 需要部署时明确启用的 `COMSOL_MCP_TRUSTED_CODE=1` 权限上限，以及对应项目授权。
+该权限不表示 OS 沙箱；实际隔离能力与限制由运行时验证。
+
+以下是保留的 visible-main 连接流程：
 
 ```mermaid
 flowchart LR
@@ -351,16 +388,20 @@ MIT. See `LICENSE`.
 
 ## English
 
-`comsol-mcp` is an MCP server for COMSOL Multiphysics. It uses an
-**attach-first** workflow: connect to an already running COMSOL Multiphysics
-Server, load and lock a main `.mph` model, and let MCP tools and COMSOL
-Desktop operate on the same server-side model.
+`comsol-mcp` exposes managed projects, sessions, models and jobs for COMSOL Multiphysics.
+Connect to an authorized existing Server or start an isolated managed session.
+Domain actions, generic objects/APIs and project-local Java share model identity,
+permissions, queue and artifact handling. Desktop can observe the same server-side
+model, and the existing visible-main workflow remains available.
 
-The goal is visible automation. Instead of treating COMSOL as a black-box
-batch runner, this server lets you watch geometry, parameters, mesh, solve
-steps, and saved snapshots evolve in COMSOL Desktop.
+The goal is visible automation: watch geometry, parameters, mesh, solve steps
+and saved snapshots evolve in COMSOL Desktop.
 
-### Current execution status (2026-10-05, Full MASTER W01–W26)
+Current status (2026-10-22): universal core work is **IN_PROGRESS**, with final independent
+acceptance still pending. Use [PROGRESS](PROGRESS.md) and the
+[current contract](docs/universal_mcp_execution/MASTER_GOAL.md). Dated sections below are historical snapshots.
+
+### Historical execution snapshot (2026-10-05, Full MASTER W01–W26)
 
 > At the user request, pause project work after cutoff066 GitHub synchronization and perform a read-only local storage audit, especially /private/tmp. Original scope remains incomplete; these separate software results do not establish full-project acceptance.
 
@@ -430,16 +471,23 @@ See [MASTER_GOAL](docs/full_project_execution/MASTER_GOAL.md), [PROGRESS](PROGRE
 ### Requirements
 
 - macOS (Apple Silicon / Intel) or Windows x64
-- Python 3.10+
+- Python 3.10+ for source installs; current offline bundles target CPython 3.12
 - Local COMSOL Multiphysics installation (6.3 or 6.4)
-- JDK 11+
+- External JDK 11 matching the selected runtime architecture; other versions need separate validation
 - Valid COMSOL license
-- A manually started `COMSOL Multiphysics Server`
+- A managed Server or an explicitly authorized existing `COMSOL Multiphysics Server`
 
 ### Install
 
+Architecture-specific offline bundles contain `README_OFFLINE_INSTALL.txt`,
+`docs/RELEASE_OPERATIONS.md`, hash locks, SBOM and licenses. Follow those instructions
+for local-wheelhouse installation and the included release tool for lifecycle operations.
+See PROGRESS for the actual build and target-install acceptance scope.
+
+Developer source install:
+
 ```powershell
-git clone https://github.com/Ching-Chiang/comsol-mcp.git comsol-mcp
+git clone https://github.com/Everwalker/comsol-mcp.git comsol-mcp
 cd comsol-mcp
 python -m pip install -e .
 ```
@@ -457,6 +505,8 @@ Set environment variables for your COMSOL installation:
 ```powershell
 $env:COMSOL_ROOT = "C:\Program Files\COMSOL\COMSOL63\Multiphysics"
 $env:COMSOL_SERVER_MCP_HOME = "$PWD\comsol-server-home"
+$env:COMSOL_PROJECT_ROOT = "$PWD\projects"
+New-Item -ItemType Directory -Force -Path $env:COMSOL_PROJECT_ROOT | Out-Null
 ```
 
 Start the MCP server:
@@ -472,13 +522,30 @@ Example MCP host configuration:
   "mcpServers": {
     "comsol-mcp-server": {
       "command": "python",
-      "args": ["-m", "comsol_mcp.mcp_server"]
+      "args": ["-m", "comsol_mcp.mcp_server"],
+      "env": {
+        "COMSOL_PROJECT_ROOT": "C:/projects/comsol",
+        "COMSOL_SERVER_MCP_HOME": "C:/comsol-mcp-runtime"
+      }
     }
   }
 }
 ```
 
 ### Recommended Workflow
+
+Use `operation_describe` for current schemas and `operation_call` for managed actions:
+discover/inspect a runtime, create a project, start/connect a session, then create/load/adopt
+the target model. Keep its actual `ModelRef` and returned revision. Domain actions,
+`node.*`, public API calls and project-local Java share that execution identity.
+Project Java uses the injected `Model` and requires explicit deployment and project
+`trusted_code` grants; the grant does not establish OS sandboxing. Read results and
+artifacts through the managed interfaces, and reconcile the original job after a wait timeout.
+Session-bound `UNKNOWN` jobs also require `session.recover` to verify the original Worker
+epoch, model and revision; request-status reconciliation alone does not release mutation admission.
+Installed packages require an explicit `COMSOL_PROJECT_ROOT` separate from private runtime state.
+
+The retained visible-main workflow is:
 
 1. Start `COMSOL Multiphysics Server` manually.
 2. Note the real listening port from the server console.

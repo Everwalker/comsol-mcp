@@ -7,11 +7,17 @@
       "targets": {
         "windows-x64-6.3": {
           "native": "NOT_RUN",
-          "group_acceptance": "NOT_RUN"
+          "group_acceptance": "NOT_RUN",
+          "software_install": "PASS_SCOPED_CANDIDATE",
+          "MCP_protocol_discovery": "PASS_SCOPED_112_TOOLS",
+          "runtime_doctor": "UNKNOWN_NATIVE_NOT_RUN"
         },
         "windows-x64-6.4": {
           "native": "NOT_RUN",
-          "group_acceptance": "NOT_RUN"
+          "group_acceptance": "NOT_RUN",
+          "software_install": "PASS_SCOPED_CANDIDATE",
+          "MCP_protocol_discovery": "PASS_SCOPED_112_TOOLS",
+          "runtime_doctor": "UNKNOWN_NATIVE_NOT_RUN"
         },
         "macos-arm64-6.4": {
           "native": "PARTIAL_NATIVE_FOUNDATION_NO_SOLVE_ACCEPTANCE",
@@ -22,7 +28,8 @@
         "evidence/M1_MAIN_STAGE_REVIEW.json",
         "evidence/recovery-relocation/result.json",
         "evidence/M2A_NATIVE.json",
-        "evidence/M4_RELEASE_TOOLING.json"
+        "evidence/M4_RELEASE_TOOLING.json",
+        "evidence/WINDOWS_PREP.json"
       ],
       "scope": "Software evidence plus fresh installed MCP native Mac runtime start/connect/two-model creation only; full group and final acceptance remain open.",
       "delivery_evidence_scope": "Three architecture software bundles/hash/SBOM/lock; Mac ARM clean --no-index --require-hashes install+MCP112tool startup; native offline/Windowsinstall/final acceptance not included."
@@ -74,7 +81,7 @@
     },
     {
       "id": "U04",
-      "status": "NOT_RUN",
+      "status": "PARTIAL",
       "targets": {
         "windows-x64-6.3": {
           "native": "NOT_RUN",
@@ -85,11 +92,14 @@
           "group_acceptance": "NOT_RUN"
         },
         "macos-arm64-6.4": {
-          "native": "NOT_RUN",
+          "native": "PARTIAL_COMPILE_AND_FIRST_EXECUTION_UNKNOWN_QUIESCENT_NO_REPLAY",
           "group_acceptance": "NOT_RUN"
         }
       },
-      "evidence_refs": []
+      "evidence_refs": [
+        "evidence/M2A_NATIVE.json"
+      ],
+      "scope": "Public installed MCP compiled new project Java. First execution not accepted: original UNKNOWN retained, Worker requests reconciled quiescent without replay; project/model readback and normal-path completion still open."
     },
     {
       "id": "U05",
@@ -145,14 +155,15 @@
           "group_acceptance": "NOT_RUN"
         },
         "macos-arm64-6.4": {
-          "native": "NOT_RUN",
+          "native": "PARTIAL_COMPILE_AND_FIRST_EXECUTION_UNKNOWN_QUIESCENT_NO_REPLAY",
           "group_acceptance": "NOT_RUN"
         }
       },
       "evidence_refs": [
-        "evidence/M1_MAIN_STAGE_REVIEW.json"
+        "evidence/M1_MAIN_STAGE_REVIEW.json",
+        "evidence/M2A_NATIVE.json"
       ],
-      "scope": "Software/source/input evidence only; required native and final acceptance remain open."
+      "scope": "Public installed MCP compiled new project Java. First execution not accepted: original UNKNOWN retained, Worker requests reconciled quiescent without replay; project/model readback and normal-path completion still open."
     },
     {
       "id": "U08",
@@ -203,11 +214,17 @@
       "targets": {
         "windows-x64-6.3": {
           "native": "NOT_RUN",
-          "group_acceptance": "NOT_RUN"
+          "group_acceptance": "NOT_RUN",
+          "software_install": "PASS_SCOPED_CANDIDATE",
+          "MCP_protocol_discovery": "PASS_SCOPED_112_TOOLS",
+          "runtime_doctor": "UNKNOWN_NATIVE_NOT_RUN"
         },
         "windows-x64-6.4": {
           "native": "NOT_RUN",
-          "group_acceptance": "NOT_RUN"
+          "group_acceptance": "NOT_RUN",
+          "software_install": "PASS_SCOPED_CANDIDATE",
+          "MCP_protocol_discovery": "PASS_SCOPED_112_TOOLS",
+          "runtime_doctor": "UNKNOWN_NATIVE_NOT_RUN"
         },
         "macos-arm64-6.4": {
           "native": "NOT_RUN",
@@ -216,7 +233,8 @@
       },
       "evidence_refs": [
         "evidence/dependency-prep.json",
-        "evidence/M4_RELEASE_TOOLING.json"
+        "evidence/M4_RELEASE_TOOLING.json",
+        "evidence/WINDOWS_PREP.json"
       ],
       "scope": "Software/source/input evidence only; required native and final acceptance remain open.",
       "delivery_evidence_scope": "Three architecture software bundles/hash/SBOM/lock; Mac ARM clean --no-index --require-hashes install+MCP112tool startup; native offline/Windowsinstall/final acceptance not included."
@@ -246,11 +264,17 @@
       "targets": {
         "windows-x64-6.3": {
           "native": "NOT_RUN",
-          "group_acceptance": "NOT_RUN"
+          "group_acceptance": "NOT_RUN",
+          "software_install": "PASS_SCOPED_CANDIDATE",
+          "MCP_protocol_discovery": "PASS_SCOPED_112_TOOLS",
+          "runtime_doctor": "UNKNOWN_NATIVE_NOT_RUN"
         },
         "windows-x64-6.4": {
           "native": "NOT_RUN",
-          "group_acceptance": "NOT_RUN"
+          "group_acceptance": "NOT_RUN",
+          "software_install": "PASS_SCOPED_CANDIDATE",
+          "MCP_protocol_discovery": "PASS_SCOPED_112_TOOLS",
+          "runtime_doctor": "UNKNOWN_NATIVE_NOT_RUN"
         },
         "macos-arm64-6.4": {
           "native": "NOT_RUN",
@@ -259,7 +283,8 @@
       },
       "evidence_refs": [
         "state/GENERAL_COVERAGE.json",
-        "evidence/M4_RELEASE_TOOLING.json"
+        "evidence/M4_RELEASE_TOOLING.json",
+        "evidence/WINDOWS_PREP.json"
       ],
       "scope": "Software/source/input evidence only; required native and final acceptance remain open.",
       "delivery_evidence_scope": "Three architecture software bundles/hash/SBOM/lock; Mac ARM clean --no-index --require-hashes install+MCP112tool startup; native offline/Windowsinstall/final acceptance not included."

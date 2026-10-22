@@ -17,3 +17,9 @@ M0/M1 软件阶段已普通推送并独立回读为 `4759c097eabfdf588a366af51d9
 M4 输入准备已完成可得部分：Windows34/34、ARM41/41、Intel40/41。上游 cryptography49起移除Intel Mac支持，50.0.1缺官方Intel wheel；同版本私有派生构建独立进行，不能宣称上游支持或Intel硬件通过。原r13 pyproject哈希与当前相同，uv.lock确实缺desktop extra；核心M1改动仍需新的源码/构件绑定。
 
 M4 通用发布工具阶段已由 Main 限定审查通过：`tools/universal_release.py` 复用既有 source/wheel/hash/SBOM/打包 API，不再增加固定 current175-rN profile。131 项软件测试无失败/跳过，三架构 ZIP 共 154 个清单成员核对通过（ARM53/Windows46/Intel55），175 个当前源成员与快照一致、172 个包成员与测试 wheel 一致；Mac ARM 干净环境已 `--no-index --require-hashes` 安装并启动112工具。详见 evidence/M4_RELEASE_TOOLING.json。Windows 安装、完整原生离线及最终 Reviewer 未验收；后续生产/README变化需新源码快照，不能将旧构件改名冒充。
+
+Windows PREP 随后已由 Main 限定审查：实际35 wheels离线安装/pip check、172包源字节一致、真实MCP stdio初始化与112工具发现通过；6个项目元数据调用是生产dispatch进程内调用，不冒充MCP RPC覆盖。两版doctor各7项静态PASS但汇总UNKNOWN，原生未启动。只读T037已复现SID转换故障，同一Windows Luna正修复；主机plan尚缺精确网络/绑定材料，账户/SCM/AppContainer/ACL/WFP均未授权或应用。当前低可提交内存仅一次观察，提案10GiB不是新增完成门槛。证据：evidence/WINDOWS_PREP.json，后续源修复/计划另记录。
+
+M2a 新项目Java经公开已安装MCP编译通过。首次执行因项目输入漏传参数名而未成功，原job `a1d8c9ed-2d03-407b-8d0c-65b7b0cc8030` 保留UNKNOWN；Worker请求已确认静止且未重放。注册会话必须由公开session.recover核验原Worker/模型/revision，job.reconcile独自不解除门禁。继续使用原target/sentinel，不接管旧科学活动；原始引用及下一动作以RESUME和evidence/M2A_NATIVE.json为准。
+
+README已修正当前通用受管流程、源外项目根与外部JDK11说明，旧快照保留；该文档变化尚未进入47d05a8e的已测构件。M2b还需受控Java默认禁止全局模型切换、compile禁注解处理及UNKNOWN按冲突Server资源隔离的实质修补/负控；最终候选须重新捕获源码并按影响范围验证，不能重标旧wheel。
