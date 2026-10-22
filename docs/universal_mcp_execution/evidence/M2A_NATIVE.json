@@ -1,7 +1,7 @@
 {
   "schema": "universal-m2a-native-evidence-v1",
   "milestone": "M2a bounded native foundation",
-  "status": "M2A_R3_PARTIAL_PASS_SAVE_REFRESH_NEGATIVE_PASS_REOPEN_AND_RECOVERY_UNKNOWN",
+  "status": "M2A_R3_PARTIAL_REOPEN_READBACK_PASS_RESULT_AT_POINTS_UNKNOWN_RECOVERY_PARTIAL_UNRESOLVED",
   "scope": "fresh installed MCP stdio entrypoint, private project/runtime, managed macOS COMSOL 6.4.0.293, bound Java conduction solve, public result/artifact readback and save",
   "baseline": {
     "stage_commit": "4759c097eabfdf588a366af51d9c7d1b90d1ac1b",
@@ -485,106 +485,56 @@
     "response_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/runtime/model-create-sentinel.response.json"
   },
   "current_checkpoint": {
-    "status": "PARTIAL_PASS_NATIVE_SAVE_REFRESH_AND_NEGATIVE_PASS_REOPEN_AND_RECOVERY_UNKNOWN",
-    "recorded_at_utc": "2026-10-22T19:09:32.158932+00:00",
-    "candidate": {
-      "id": "r3",
-      "wheel_sha256": "6b4a40ea76443bb6e6a28a73f47548db2c656df4dfd88b272ae4737d40260e23",
-      "installed_runtime": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3",
-      "console_entrypoint": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/venv/bin/comsol-mcp",
-      "public_mcp_server_version": "1.30.0",
-      "tool_count": 112,
-      "transport": "installed console entrypoint over MCP stdio",
-      "source_receipt_sha256": "1b27ca5b0b8f68f7609cf209f546744416a35395db470ef5dd3870689b827464"
-    },
-    "project": {
-      "project_id": "df096475-c434-4816-9b5a-86cfa9248c3f",
-      "project_revision": 1,
-      "effective_permissions": [
-        "compute",
-        "host_control",
-        "inspect",
-        "project_write",
-        "trusted_code"
-      ],
-      "session_id": "session-24f852fcaa464a8db9e76b102254db91",
-      "workspace": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/project_root/m2a-r3-native-20261023",
-      "session_state_at_last_public_inspect": "CONNECTED"
-    },
-    "session_start": {
-      "status": "PASS",
-      "request_id": null,
-      "job_id": "13d0260f-5542-406b-a5c5-9acbc7c36298",
-      "session_id": "session-24f852fcaa464a8db9e76b102254db91",
-      "server_pid": 18219,
-      "endpoint": {
-        "host": "127.0.0.1",
-        "port": 54381
-      },
-      "server_birth": "start_epoch_ms:1792692929019",
-      "response": {
-        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/session-start-response-r1.json",
-        "sha256": "28fa4b216c584ef0e27cb554ede3d14e7f2aeeb14f9449503dcbed3e165c35dd"
-      }
-    },
-    "target_model_ref": {
+    "status": "M2A_R3_PARTIAL_REOPEN_READBACK_PASS_RESULT_AT_POINTS_UNKNOWN_RECOVERY_PARTIAL_UNRESOLVED",
+    "recorded_at_utc": "2026-10-22T20:17:55.208445+00:00",
+    "candidate_id": "r3",
+    "project_id": "df096475-c434-4816-9b5a-86cfa9248c3f",
+    "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+    "new_model_ref": {
       "schema_version": 1,
       "session_id": "session-24f852fcaa464a8db9e76b102254db91",
       "server_instance_id": "8fd0d9db5b90f4a3aec11cbee418d1d066fd9a89fd11542954bd29af2c64200e",
-      "model_tag": "mcp1",
+      "model_tag": "mcp_4c4cc11ae0e7",
       "generation": 1
     },
-    "target_revision_before_unknown_load": 9,
-    "sentinel_model_ref": {
-      "schema_version": 1,
-      "session_id": "session-24f852fcaa464a8db9e76b102254db91",
-      "server_instance_id": "8fd0d9db5b90f4a3aec11cbee418d1d066fd9a89fd11542954bd29af2c64200e",
-      "model_tag": "mcp2",
-      "generation": 1
-    },
-    "sentinel_revision": 1,
+    "last_confirmed_revision_before_post_dispatch_unknown": 2,
     "passed": [
-      "stationary study.run",
-      "public result.evaluate native-default and explicit K",
-      "midpoint x=0.005m",
-      "configured PNG render",
-      "model.save with solution",
-      "sentinel readback before unknown model.load",
-      "managed model.inspect refresh with CAS_NONE",
-      "wrong-server identity negative refused before durable job"
+      "same-key session.recover of original model.load UNKNOWN: NO_UNRESOLVED_WORK; historical response preserved",
+      "same-key model.load: LOADED exact saved artifact as a new ModelRef",
+      "public model.inspect on new ModelRef: stored comp1/cmpM2AR3, pdeM2AR3, stdM2AR3, sol1, dset1",
+      "public result.evaluate aggregate=none in default and explicit K units: 136 values each, both exactly match prior target arrays",
+      "read-only original-job event query found getData reply 349.9999999999981 K at requested x=0.005 m"
     ],
+    "midpoint_observation": {
+      "value_K": 349.9999999999981,
+      "source": "persisted Worker getData reply in result.at_points job; enclosing operation remains UNKNOWN"
+    },
     "unresolved": [
-      "public model.load returned EXECUTION_STATE_UNKNOWN",
-      "public session.recover returned EXECUTION_STATE_UNKNOWN",
-      "reopen is not verified",
-      "sentinel after unknown load not re-read"
+      "result.at_points returned post_dispatch EXECUTION_STATE_UNKNOWN because COMSOL read back unit K while exact request was empty native-default string",
+      "one session.recover returned PARTIAL_UNRESOLVED; three Worker requests report SUCCEEDED but terminal=false, so no strong quiescence proof"
     ],
-    "pending_refs": {
-      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/pending-refs.json",
-      "sha256": "5d55dd045e64de9dd3e20b18b5a429e150a6a7d2b1ea6ef4567ba15f22ef974e",
-      "pending_count": 2,
-      "items": [
-        {
-          "operation_id": "model.load",
-          "request_id": "8cc009c3-859d-492c-ae73-9081d8984d74",
-          "state": "UNKNOWN_UNRECONCILED_NO_DURABLE_OPERATION_OR_JOB_ROW"
-        },
-        {
-          "operation_id": "session.recover",
-          "request_id": "ac8f9c97-dacb-4a38-818c-f6c4d2a9338d",
-          "state": "UNKNOWN_UNRECONCILED_NO_DURABLE_OPERATION_OR_JOB_ROW"
-        }
-      ]
-    },
-    "session_stop_gate": {
-      "status": "NOT_ATTEMPTED_FORMAL_AUTHORIZATION_REF_UNAVAILABLE",
-      "project_host_control_permission": "PRESENT",
-      "authorization_decision_receipt_sha256": "2e1e57fe010ed9e395b2eb9f285b83a2e10e74df39a933fb3e445724636df2cd",
-      "authorization_ref_field_present": false,
-      "public_schema_requires_authorization_ref": true,
-      "pid_signal_or_private_cleanup": "NOT_ATTEMPTED"
-    },
-    "next_action": "Main review the unresolved public-control response and formal stop authorization material; no further model/lifecycle request dispatched from this executor."
+    "pending_refs": [
+      {
+        "operation_id": "af5e80ca-8158-4143-84d2-80897084db96",
+        "request_id": "390ae65a-bc2d-4ed8-8d77-769747c7d262",
+        "idempotency_key": "dba0cd45-a336-49ce-9054-83d05dded084",
+        "job_id": "833f44d3-f5d3-4f80-a48a-b41007e967a6",
+        "status": "UNKNOWN"
+      },
+      {
+        "operation_id": "01a75b8a-5d29-4d7e-9f1b-c5f04ca8c2b8",
+        "request_id": "a8782121-0b07-417f-90a9-9c30504bf4a4",
+        "idempotency_key": "0f45a89a-053e-4d66-8153-3a9b0371ff26",
+        "job_id": "c7d6b21b-ba13-4e6c-9263-d229956210f0",
+        "status": "SUCCEEDED_RECONCILIATION_PARTIAL"
+      }
+    ],
+    "sentinel_after_reopen": "NOT_RUN",
+    "disconnect_retire_worker": "NOT_RUN",
+    "fresh_worker_reconnect_load": "NOT_RUN",
+    "new_render_after_reconnect": "NOT_RUN",
+    "session_stop": "NOT_ATTEMPTED_NO_FORMAL_AUTH_REF",
+    "next_action": "Main review the unknown unit readback and nonterminal Worker requests; no further model/lifecycle calls from this executor."
   },
   "attempts": [
     {
@@ -2359,7 +2309,7 @@
     }
   ],
   "historical_status_before_r3": "M2A_ARCHITECTURE_ESCALATION",
-  "recorded_current_checkpoint_utc": "2026-10-22T19:09:32.158932+00:00",
+  "recorded_current_checkpoint_utc": "2026-10-22T20:17:55.208445+00:00",
   "old_b_lifecycle_correction": {
     "project_id": "7bc6e674-0a03-498e-9929-997a93c1f53f",
     "session_id": "session-dbcda66decc045c8b081a7588a7af394",
@@ -3676,8 +3626,8 @@
     "license_checked_out": false
   },
   "current_r3_native_completion": {
-    "status": "PARTIAL_PASS_NATIVE_SAVE_REFRESH_AND_NEGATIVE_PASS_REOPEN_AND_RECOVERY_UNKNOWN",
-    "recorded_at_utc": "2026-10-22T19:09:32.158932+00:00",
+    "status": "M2A_R3_PARTIAL_REOPEN_READBACK_PASS_RESULT_AT_POINTS_UNKNOWN_RECOVERY_PARTIAL_UNRESOLVED",
+    "recorded_at_utc": "2026-10-22T20:17:55.208445+00:00",
     "scope": "M2a bounded normal-path continuation on frozen installed r3; no production source or tests changed in this continuation",
     "candidate": {
       "id": "r3",
@@ -4036,7 +3986,23 @@
       "tests_rerun_this_continuation": false,
       "software_triage_status": "Preserved from accepted r3 triage; expanded 357/5 remains FAIL with prior fixture/history classifications"
     },
-    "next_action": "Main review the unresolved public-control response and formal stop authorization material; no further model/lifecycle request dispatched from this executor."
+    "next_action": "Main review the unresolved public-control response and formal stop authorization material; no further model/lifecycle request dispatched from this executor.",
+    "reconciliation_after_r1": {
+      "receipt": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/reopened-result-at-points-recovery-result-r1.json",
+        "sha256": "b7d8d23d55810fdbef4b7bbb10f194e8ee736b0c1bc01e831d03225077b70dd8"
+      },
+      "same_key_recovery_original_unknown": "PASS_NO_UNRESOLVED_WORK",
+      "same_key_model_load": "PASS_LOADED_NEW_MODEL_REF",
+      "reopened_model_inspect": "PASS",
+      "reopened_result_evaluate": "PASS_DEFAULT_AND_EXPLICIT_K_MATCH_PRIOR_136_VALUES",
+      "raw_midpoint_getData_observation_K": 349.9999999999981,
+      "outer_result_at_points": "UNKNOWN_POST_DISPATCH_NATIVE_DEFAULT_UNIT_READBACK_MISMATCH",
+      "session_recovery_after_at_points": "PARTIAL_UNRESOLVED_THREE_NONTERMINAL_WORKER_REQUESTS",
+      "sentinel_after_reopen": "NOT_RUN",
+      "disconnect_and_fresh_worker": "NOT_RUN",
+      "session_stop": "NOT_ATTEMPTED"
+    }
   },
   "control_request_admission_update": {
     "status": "MAIN_ACCEPTED_SOURCE_SOFTWARE_NOT_NATIVE_FROZEN_R3_UNCHANGED",
@@ -4070,5 +4036,78 @@
     "Main_review_path": "_state/universal-main-review/20261023-control-admission/MAIN_REVIEW.json",
     "Main_review_sha256": "76bb843437efd0ef3c35e32a386a7d4e90d48ad95ce397ba7524072d03b26cd4",
     "Main_metadata_loopback": "1PASS actual task-owned registry-only stdio/RPC fixture; no COMSOL configured, separate from original 40PASS/1skip run"
+  },
+  "latest_post_load_reconciliation": {
+    "status": "M2A_R3_PARTIAL_REOPEN_READBACK_PASS_RESULT_AT_POINTS_UNKNOWN_RECOVERY_PARTIAL_UNRESOLVED",
+    "recorded_at_utc": "2026-10-22T20:17:55.208445+00:00",
+    "candidate_id": "r3",
+    "project_id": "df096475-c434-4816-9b5a-86cfa9248c3f",
+    "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+    "new_model_ref": {
+      "schema_version": 1,
+      "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+      "server_instance_id": "8fd0d9db5b90f4a3aec11cbee418d1d066fd9a89fd11542954bd29af2c64200e",
+      "model_tag": "mcp_4c4cc11ae0e7",
+      "generation": 1
+    },
+    "last_confirmed_revision_before_post_dispatch_unknown": 2,
+    "passed": [
+      "same-key session.recover of original model.load UNKNOWN: NO_UNRESOLVED_WORK; historical response preserved",
+      "same-key model.load: LOADED exact saved artifact as a new ModelRef",
+      "public model.inspect on new ModelRef: stored comp1/cmpM2AR3, pdeM2AR3, stdM2AR3, sol1, dset1",
+      "public result.evaluate aggregate=none in default and explicit K units: 136 values each, both exactly match prior target arrays",
+      "read-only original-job event query found getData reply 349.9999999999981 K at requested x=0.005 m"
+    ],
+    "midpoint_observation": {
+      "value_K": 349.9999999999981,
+      "source": "persisted Worker getData reply in result.at_points job; enclosing operation remains UNKNOWN"
+    },
+    "unresolved": [
+      "result.at_points returned post_dispatch EXECUTION_STATE_UNKNOWN because COMSOL read back unit K while exact request was empty native-default string",
+      "one session.recover returned PARTIAL_UNRESOLVED; three Worker requests report SUCCEEDED but terminal=false, so no strong quiescence proof"
+    ],
+    "pending_refs": [
+      {
+        "operation_id": "af5e80ca-8158-4143-84d2-80897084db96",
+        "request_id": "390ae65a-bc2d-4ed8-8d77-769747c7d262",
+        "idempotency_key": "dba0cd45-a336-49ce-9054-83d05dded084",
+        "job_id": "833f44d3-f5d3-4f80-a48a-b41007e967a6",
+        "status": "UNKNOWN"
+      },
+      {
+        "operation_id": "01a75b8a-5d29-4d7e-9f1b-c5f04ca8c2b8",
+        "request_id": "a8782121-0b07-417f-90a9-9c30504bf4a4",
+        "idempotency_key": "0f45a89a-053e-4d66-8153-3a9b0371ff26",
+        "job_id": "c7d6b21b-ba13-4e6c-9263-d229956210f0",
+        "status": "SUCCEEDED_RECONCILIATION_PARTIAL"
+      }
+    ],
+    "sentinel_after_reopen": "NOT_RUN",
+    "disconnect_retire_worker": "NOT_RUN",
+    "fresh_worker_reconnect_load": "NOT_RUN",
+    "new_render_after_reconnect": "NOT_RUN",
+    "session_stop": "NOT_ATTEMPTED_NO_FORMAL_AUTH_REF",
+    "next_action": "Main review the unknown unit readback and nonterminal Worker requests; no further model/lifecycle calls from this executor.",
+    "receipt": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/reopened-result-at-points-recovery-result-r1.json",
+      "sha256": "b7d8d23d55810fdbef4b7bbb10f194e8ee736b0c1bc01e831d03225077b70dd8"
+    }
+  },
+  "Main_latest_limited_native_readback": {
+    "status": "MAIN_LIMITED_REOPEN_READBACK_VERIFIED_NEW_AT_POINTS_UNKNOWN_PRESERVED",
+    "review": {
+      "path": "_state/universal-main-review/20261023-core-r3/NATIVE_REOPEN_AND_UNKNOWN_READBACK.json",
+      "bytes": 8859,
+      "sha256": "6a628e9115314710074157a4f981146be9e1f4c5df7ba6e072d6eb4e910fb4f0"
+    },
+    "verified_raw_refs": 13,
+    "readonly_operation_job_rows": 5,
+    "old_R1_responses_verified_unchanged": 2,
+    "reopened_136_values_default_and_explicit_K_equal_prior": true,
+    "actual_inner_midpoint_K": 349.9999999999981,
+    "outer_at_points": "UNKNOWN_NOT_PASS",
+    "recovery": "PARTIAL_UNRESOLVED",
+    "native_goal": "NOT_ACCEPTED",
+    "forward_source_unit": "Interp default unit readback and explicit Java null-success protocol; old installation not patched"
   }
 }
