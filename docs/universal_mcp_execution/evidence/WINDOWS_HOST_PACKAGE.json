@@ -1,0 +1,360 @@
+{
+  "kind": "WINDOWS_HOST_PACKAGE",
+  "recorded_utc": "2026-10-22T19:47:37.446494+00:00",
+  "status": "IMPLEMENTED_OFFLINE_DRY_RUN_SOFTWARE_ONLY",
+  "review_status": "MAIN_ACCEPTED_OFFLINE_DRAFT_SOURCE_SOFTWARE_NOT_APPLY_READY",
+  "source_binding": {
+    "path": "_state/universal-windows-host-package/FINAL_SOURCE_BINDING.json",
+    "bytes": 1145,
+    "sha256": "1e1d9a3bde03b8b1dafc7f5af966fdff0ccb95153e911c3dc9d0db35c1b07bf8"
+  },
+  "production_baseline": {
+    "commit": "b90ef4861a8146c57ecf542eafba75ea206c2119",
+    "manifest": {
+      "path": "_state/universal-windows-host-package/SOURCE_B90.json",
+      "bytes": 30194,
+      "sha256": "ae596d96d682c11832e6b629cddd681423c14b6a4a676c092023f73905c6758c"
+    },
+    "production_files": 177,
+    "other_owner_worktree_overlay": false
+  },
+  "files": [
+    {
+      "path": "tools/build_windows_host_package.py",
+      "bytes": 46418,
+      "sha256": "c2785941b5bbc55913560cb663675a65e9561ac36852a1700ff380c9e78e5d08",
+      "frozen_path": "_state/universal-windows-host-package/fixture-portability-r1/frozen/tools/build_windows_host_package.py"
+    },
+    {
+      "path": "tests/test_build_windows_host_package.py",
+      "bytes": 22512,
+      "sha256": "7e6176821e437d8d4fd4d863208a38c29366224f21dfd9f9ff4d294df9ea0cb0",
+      "frozen_path": "_state/universal-windows-host-package/fixture-portability-r1/frozen/tests/test_build_windows_host_package.py"
+    }
+  ],
+  "artifact_manifest": {
+    "path": "_state/universal-windows-host-package/ARTIFACTS.json",
+    "bytes": 18115,
+    "sha256": "6e27a066b3741c2e2d44d99407654ebfd99befaa6f765c9be8af4fb8b828e60e"
+  },
+  "deliverable": {
+    "archive": {
+      "path": "_state/universal-windows-host-package/WINDOWS_HOST_PACKAGE-b90.zip",
+      "bytes": 45544157,
+      "sha256": "8d48b42f9c8e222ab5b4af825832f2e52abaab14d1bb6a7e4657605297e20265"
+    },
+    "directory": "_state/universal-windows-host-package/package-final2",
+    "plan": {
+      "path": "_state/universal-windows-host-package/package-final2/HOST_PACKAGE.json",
+      "bytes": 23715,
+      "sha256": "5ae46b7ce5654df7a1211b6c6f5bc90c5caaa670cabedf78bf03b9bc86fddfb2"
+    },
+    "manifest": {
+      "path": "_state/universal-windows-host-package/package-final2/MANIFEST.json",
+      "bytes": 2585,
+      "sha256": "d5cef4733bbf2ec9af64913a67774088820d6137585e4a394dddadd9b25b7bec"
+    },
+    "operator": {
+      "path": "_state/universal-windows-host-package/package-final2/operator.ps1",
+      "bytes": 1236,
+      "sha256": "ec86c8df04f845067d908b4f4bb10dadaf8472f4a3482daf217e6e4f40a7397a"
+    },
+    "state": "REVIEWABLE_INTENT_ONLY",
+    "apply_ready": false,
+    "host_apply": "NOT_AUTHORIZED",
+    "Windows_install_this_unit": "NOT_RUN",
+    "native_admission": "NOT_RUN"
+  },
+  "public_interfaces": {
+    "build": "python tools/build_windows_host_package.py build --spec <hash-bound-input-spec> --output <new-directory>",
+    "check": "python tools/build_windows_host_package.py check <package-directory>",
+    "validate_profile": "validate-profile --template <exact-target-template> --profile <actual-materialized-profile> --session-id <new-actual-session>",
+    "prepare_plans": "prepare-plans --template <template> --profile <profile> --session-id <id> --security <SDK-serialized-provider-sublayer-descriptors> --group-id <approved-group-GUID> --output <new-directory>",
+    "authority": "All commands are offline schema/byte/intent operations. No host apply/install/restore/issuer mode, no SID calculation, grant or receipt minting. Existing trusted SCM bootstrap/HostScopedProvider/SQLite admission/native executor remain required."
+  },
+  "concrete_scope": {
+    "root": "C:\\ProgramData\\CMW_a4c81d",
+    "service": "ComsolMcpW_a4c81d",
+    "service_account": "LocalSystem",
+    "new_SAM_accounts": 0,
+    "SCM": {
+      "automatic_restart": false,
+      "original_SCM_descriptor": null,
+      "required_privileges_proposal": [
+        "SeTcbPrivilege",
+        "SeAssignPrimaryTokenPrivilege",
+        "SeIncreaseQuotaPrivilege",
+        "SeChangeNotifyPrivilege"
+      ],
+      "restricted_SID_entrypoint": "Existing _windows_service_sid UPDATE leaf with actual canonical backup; no sc.exe shortcut or fabricated receipt.",
+      "scope": "Only this new own-process service. No global LSA right/account changes; actual SCM token/config/required-privilege readback pending.",
+      "service_sid": null,
+      "service_sid_type": "RESTRICTED",
+      "service_type": "WIN32_OWN_PROCESS",
+      "start": "DEMAND_START"
+    },
+    "targets": [
+      {
+        "version": "63",
+        "installation_root": "C:\\Program Files\\COMSOL\\COMSOL63\\Multiphysics",
+        "version_expectation": "6.3.0.290",
+        "profile_root": "C:\\ProgramData\\CMW_a4c81d\\p63",
+        "project_data": "C:\\ProgramData\\CMW_a4c81d\\p63\\data",
+        "session_state_root": "C:\\ProgramData\\CMW_a4c81d\\p63\\state",
+        "profile_path": "C:\\ProgramData\\CMW_a4c81d\\profiles\\comsol63-v3.json",
+        "server_listener": 25463,
+        "worker_listener": 25563,
+        "historical_source_port_range": [
+          1024,
+          60000
+        ],
+        "group_id": "{88435254-52C1-455A-90C3-8DF2AA101706}"
+      },
+      {
+        "version": "64",
+        "installation_root": "C:\\Program Files\\COMSOL\\COMSOL64\\Multiphysics",
+        "version_expectation": "6.4.0.293",
+        "profile_root": "C:\\ProgramData\\CMW_a4c81d\\p64",
+        "project_data": "C:\\ProgramData\\CMW_a4c81d\\p64\\data",
+        "session_state_root": "C:\\ProgramData\\CMW_a4c81d\\p64\\state",
+        "profile_path": "C:\\ProgramData\\CMW_a4c81d\\profiles\\comsol64-v3.json",
+        "server_listener": 25464,
+        "worker_listener": 25564,
+        "historical_source_port_range": [
+          1024,
+          60000
+        ],
+        "group_id": "{5C99EB48-87B2-4639-B0BD-39ABD02A6FD8}"
+      }
+    ],
+    "simultaneous_versions": 1,
+    "simultaneous_sessions": 1,
+    "new_WFP_objects": 18,
+    "filters_per_target": {
+      "BLOCK": 4,
+      "PERMIT_IPv4": 3,
+      "PERMIT_IPv6": 0
+    },
+    "historical_range_source": {
+      "path": "_state/universal-windows-network-intent/release-recovery-r3/actual/readonly-result.json",
+      "bytes": 8663,
+      "sha256": "86d4e791f6fafdfcd43ebf48b298ca9f11fb67e6683e754a272929c15f721873"
+    },
+    "range_freshness": "Historical readonly1024..60000 only; fresh original getter and exact equality required before later native admission; no guessed49152 or global set.",
+    "ACL_templates": {
+      "path": "_state/universal-windows-host-package/package-final2/ACL_CHANGE_TEMPLATES.json",
+      "bytes": 5290,
+      "sha256": "04c8156448b41cba3d882b205bdb8a1802565acf78ecbbb11f7bbcc36e2150ee"
+    },
+    "unresolved_templates": "profiles/63.unresolved.json and64.unresolved.json; SDK/new-metadata values remain null, not pretend canonical SIDs/fileIDs/SD hashes.",
+    "memory_disk": "Finite4GiB Job/3GiB process/6process budget proposal,256MiB reserve; disk512MiB reservation/1GiB free reserve. Historical memory observation not refreshed or promoted; not a release/science threshold.",
+    "rollback": "Existing native leaf RESTORE uses exact original plan/receipt/journal + fresh dependency/marker/SD comparisons. Initial namespace/SCM/shared ACL operator restore requires retained original bytes and exact current-postimage comparison; unknown/drift/extra files refuse. No restore was run."
+  },
+  "software": {
+    "JUnit": {
+      "path": "_state/universal-windows-host-package/fixture-portability-r1/focused-clean.xml",
+      "bytes": 6843,
+      "sha256": "fb3531b62be4c5020c44f9bf727cbc8c303bc2d3b2aff6766012dbf1c9a1fc12"
+    },
+    "command": {
+      "path": "_state/universal-windows-host-package/fixture-portability-r1/focused-clean.command.json",
+      "bytes": 488,
+      "sha256": "f4dbd9cc3385a72a6098cd550346eba538d061208acd9ff5a0fc294fced7a883"
+    },
+    "counts": {
+      "tests": 44,
+      "passed": 44,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "imports": {
+      "path": "_state/universal-windows-host-package/fixture-portability-r1/CLEAN_TEST_BINDING.json",
+      "bytes": 5027,
+      "sha256": "03658eb96743f00b22b7476f2bb051e3e12f38d292abf8175335d575cc166172"
+    },
+    "actual_imports": 20,
+    "scope": "44 unchanged test assertions/negative controls on fresh git-archive b90 projection (895 inputs) + two leased files. Inline synthetic hostplan only; no _state directory before/after, no copied or read private hostPlan/license materials. All 20 observed imports bound to clean tree. Software only, never SDK/native/authorization evidence.",
+    "controls": [
+      "No overwrite/reparse/unsafe Windows ZIP paths/case collisions/symlinks",
+      "Whole source/wheelhouse/lock/package member+hash binding and drift/extra/missing rejection",
+      "Null identity templates cannot parse; fixed root/account/image/port/range/list/ACL/session/SID-role changes refuse",
+      "Existing WFP group/AppContainer pure plan builders preserve4defaults/3IPv4permits; grants/authorization/receipt remain empty",
+      "Actual raw pretty-JSON file bytes hashed separately from canonical-document intent",
+      "SIGN/raw license fields excluded; no subprocess/SDK path in offline builder except pure list2cmdline"
+    ],
+    "historical": {
+      "first_run": {
+        "JUnit": {
+          "path": "_state/universal-windows-host-package/focused-r1.xml",
+          "bytes": 8309,
+          "sha256": "a347d4927db8b81ce5c089247103fdfa3c65a1e0b91cbf3cd7b8023c4cb8cb15"
+        },
+        "passed": 40,
+        "failed": 1,
+        "fact": "Legitimate ADMISSION_ONLY quota_profile_id=null was misclassified; fixed without making unresolved identity slots optional."
+      },
+      "intermediate43": {
+        "path": "_state/universal-windows-host-package/focused-r2.xml",
+        "bytes": 6685,
+        "sha256": "e5b3b9995a8a7d5b5b65a29280e409220c6700c70db636a2a7ebc93b761e322d"
+      },
+      "intermediate44": {
+        "path": "_state/universal-windows-host-package/focused-final.xml",
+        "bytes": 6843,
+        "sha256": "4da9d21b52282f0f6af7698fc95d34de49893fafec655423ffbf9c197869d728"
+      },
+      "counts_not_added": true,
+      "pre_portability44": {
+        "JUnit": {
+          "path": "_state/universal-windows-host-package/focused-final2.xml",
+          "bytes": 6843,
+          "sha256": "930e60f6d1716a2d25a651a13f1016adb7a290ef749564423991869b770dfd4e"
+        },
+        "command": {
+          "path": "_state/universal-windows-host-package/focused-final2.command.json",
+          "bytes": 348,
+          "sha256": "5044367212a1a794524e8a76b749b359369ade3673da6707f34e02784a37e7ed"
+        },
+        "imports": {
+          "path": "_state/universal-windows-host-package/TEST_IMPORTS_FINAL2.json",
+          "bytes": 4223,
+          "sha256": "0503e33c271c08268e0db32f4b9bd63a7f2667f06310402bad614569f709f808"
+        },
+        "actual_imports": 21,
+        "counts": {
+          "tests": 44,
+          "passed": 44,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "scope": "Retained development run; private host-plan dependency means it was not a clean-checkout portability proof."
+      }
+    },
+    "portability": {
+      "path": "_state/universal-windows-host-package/fixture-portability-r1/PORTABILITY.json",
+      "bytes": 3043,
+      "sha256": "e5bba9074142e778767b65d0eedb2530dad242be26091e34e25f17d041411c86"
+    }
+  },
+  "actual_local_packaging": {
+    "build": {
+      "path": "_state/universal-windows-host-package/actual-build-final2.command.json",
+      "bytes": 798,
+      "sha256": "ba11b3f9bcd628e200deca696b56825dd209a4decbafbe9132d844bd28702511"
+    },
+    "check": {
+      "path": "_state/universal-windows-host-package/actual-check-final2.stdout",
+      "bytes": 90,
+      "sha256": "7beecf944d039d3d2decaf333b109eefb8d19f6562b7961191786c108e4526a9"
+    },
+    "checks": {
+      "path": "_state/universal-windows-host-package/PACKAGE_CHECK.json",
+      "bytes": 650,
+      "sha256": "d412d66af50d87eae6486dce5cb474447e6c8acc34f27c1f6d17e0cc1ee811ef"
+    },
+    "source_bound_app_wheel": {
+      "app_source_members": 177,
+      "application_wheel_sha256": "a3eaaa608a8889d513aebdbc2763ee9cccdf8e9dd72cfad32e67f7b1f8454be4",
+      "install_lock_sha256": "d2635b03a6f2077f075b120134df848145012fb4df0c133238c78ea152ee3082",
+      "wheel_count": 35
+    },
+    "offline_zip": {
+      "path": "_state/universal-windows-host-package/offline-b90/offline.zip",
+      "bytes": 31163713,
+      "sha256": "184fb3be15da4da5e3c85a5bd998ffa0d19822502242559abb43e52fdd2463e0"
+    },
+    "normal_offline_material": "Existing public release builder, b90 source and prepared34Windows dependencies; no final release or Windows install/native acceptance."
+  },
+  "Windows_readonly": {
+    "materials": {
+      "path": "_state/universal-windows-host-package/WINDOWS_MATERIALS.json",
+      "bytes": 83552,
+      "sha256": "139a424b0ea4e1c7d54d696831aa902ab586a1fe8f3115726385f61ede3795dd"
+    },
+    "command": {
+      "path": "_state/universal-windows-host-package/materials-readonly.command.json",
+      "bytes": 355,
+      "sha256": "ca6c89ff64298678c973c581d4e2133d4e6bf352c8477baa6c839d1074bfd407"
+    },
+    "jdk_files": 504,
+    "jdk_bytes": 319887707,
+    "source_user_writable": true,
+    "trusted_installed_JDK": false,
+    "python_artifact": {
+      "path": "_state/universal-windows-host-package/python.3.12.10.nupkg",
+      "bytes": 14515433,
+      "sha256": "0eb85c2dfccccf1b17352de4c397f69194035b7d37149eacc16f1147d93de3b8"
+    },
+    "scope": "Hash only existing exact JDK and previously downloaded official CPython artifact; copied CPython to new local package directory. No Windows file writes, engine/service/account/ACL/WFP/BFE/license/network changes."
+  },
+  "PowerShell": {
+    "command": {
+      "path": "_state/universal-windows-host-package/operator-parse-final.command.json",
+      "bytes": 6180,
+      "sha256": "0a88240cacaffb569740b4b62b96c7585a811a5d1b21f4d9d264d5c17f976147"
+    },
+    "result": {
+      "path": "_state/universal-windows-host-package/operator-parse-final.stdout",
+      "bytes": 276,
+      "sha256": "3bf5f690993086f2bc75a1b13c5f5f07e6f06040c5576012baec9310557f6d00"
+    },
+    "state": "AST_PARSE_ONLY_ERRORS0",
+    "operator_body_executed": false,
+    "host_changes": 0
+  },
+  "exact_current_gaps": [
+    {
+      "id": "SCM-ACL-BOOTSTRAP",
+      "path": "comsol_mcp/_windows_host_change.py",
+      "line": 106,
+      "symbol": "_normalize_supported_actions",
+      "finding": "Supported AppContainer/service-SID/WFP leaves exist. Initial SCM registration, protected namespace/ACL/RequiredPrivileges bootstrap remains outside this executor; Main SCM-source integration pending."
+    },
+    {
+      "id": "WINDOWS-DISK-STARTUP",
+      "path": "comsol_mcp/_w26_os_resources.py",
+      "line": 1419,
+      "symbol": "TrustedDiskResourceConfig.load",
+      "finding": "Windows explicitly returns DISK_RESOURCE_CONFIG_PROVIDER_UNSUPPORTED. Template and service flag are retained; current service recipe is blocked, not claimed runnable by dropping disk admission."
+    },
+    {
+      "id": "PREBIRTH-ISSUER",
+      "path": "comsol_mcp/_windows_t037.py",
+      "line": 1095,
+      "symbol": "T037SessionProcessFactory.preflight",
+      "finding": "b90 native prebirth/child-proof issuer explicitly refuses. Native/Isolation stay NOT_RUN/UNVERIFIED."
+    },
+    {
+      "id": "ACTUAL-NEW-IDENTITIES-SDS",
+      "finding": "No protected root/new SCM service/AppContainer/project-session objects created. Need original native fresh IDs/actual serialized SDs + exact names and final image/argv binding. Their assignment does not alone demand a second approval; no fake SID or old receipt fills it."
+    },
+    {
+      "id": "FINAL-SOURCE-AND-SCOPED-ENV",
+      "path": "comsol_mcp/_java_worker.py",
+      "line": 487,
+      "finding": "This b90 candidate excludes future SCM/child-owner changes. After Main freeze rebuild/rebind actual source and protected installation; inherited env is not proof of scoped TEMP. Installer env proposal is local only, no global change."
+    }
+  ],
+  "write_scope": {
+    "new_builder": true,
+    "new_dedicated_tests": true,
+    "existing_production_files_edited": 0,
+    "Main_state_writes": 0,
+    "Git_mutations": 0,
+    "other_owner_files_edited": 0,
+    "Primary_Mac_r3_queue_actions": 0
+  },
+  "host_apply": "NOT_AUTHORIZED",
+  "apply_ready": false,
+  "Native": "NOT_RUN",
+  "ISOLATION": "UNVERIFIED",
+  "ISSUER": "UNCHANGED",
+  "next_for_Main": "Publish limited draft-source/software unit, implement Windows pinned-root/trusted-disk adapter and SCM/ACL bootstrap/native producers before final-source package rebuild and one required host approval.",
+  "Main_review": {
+    "path": "_state/universal-main-review/20261023-host-package/MAIN_REVIEW.json",
+    "bytes": 4415,
+    "sha256": "e040b0568c841217def5fcb45681f3673b34d6fadf205eacee23116e12c2bfd0"
+  }
+}

@@ -14,6 +14,7 @@
 - 原M2a失败run的Worker已通过公开入口退役，原UNKNOWN未重放或改成成功；stop因历史UNKNOWN拒绝，原自有Server保留隔离。源码已定位stop门禁遗漏现有强静止证明判断，纳入M2b。旧ModelRefs为历史引用，不能继续使用。
 - Windows SID/两条SCM lookup修补已由Main限定接收：受影响133项软件PASS，173个包文件与R3 wheel/源码一致，实际已安装只读SCM/token探测和缺profile拒绝通过。共享host-profile SID随后完成161项聚焦PASS与真实Windows6个正向/16个反向intent解析，仍为NOT_VERIFIED；另59项资源回归原11FAIL已定位为外层观测权限与Worker替身协议缺失；原断言保留，新增2身份反例后61PASS，原失败报告保留，不推广为OS隔离验收。端口接口及真实原生启动授权尚需实现，host plan非apply-ready。服务/AppContainer/ACL/WFP变更未授权或应用；原有Desktop保留。
 - Windows固定监听软件阶段经Main验收并同步 `b90ef486`、独立回读一致：同一profile固定Server/Worker两端口、Java明确IPv4及实际ready地址，Core正文独立反向核对只改两行；Worker原G2 owner/factory/profile/Job/argv/HANDLE精确出生与ready/OS读回一致。洁净5aed+7overlay的232项PASS、11明确deselect，新增完整ordinary-Popen拒绝路径1PASS。895输入/118import核对一致，旧219+1与实际Java记录分开，非原生隔离/准入通过。原child归属软件单位已由Main限定验收：514项PASS，Main完整Worker迟到退出反例由1FAIL修复并独立重跑1PASS；原输出/owner/一次释放与未知围栏完整，未升格native，已普通发布7ae6140e并独立fetch回读一致。现有issuer门禁未启用。见[固定监听证据](docs/universal_mcp_execution/evidence/WINDOWS_FIXED_LISTENERS.json)。
+- Windows离线主机包工具经Main限定验收：44项测试在无私有_state的干净b90+两文件源码副本PASS，20个实际import和30个compact引用哈希核对一致。当前真实包绑定旧b90/177生产文件/35wheels；operator仅只读/预览，apply_ready=false，未安装或应用Windows配置。SCM/ACL bootstrap、Windows可信磁盘/root及A/B/C准入仍缺，最终源码须重打包。见[准备证据](docs/universal_mcp_execution/evidence/WINDOWS_HOST_PACKAGE.json)。
 - 最终候选、Windows6.3/6.4与MacARM6.4适用核心原生验证、两类未预设任务及最终独立Reviewer仍未完成。当前不能声明整体完成。
 - Windows子进程只读证据阶段经Main接收：87软件测试、真实Windows12项负控、7类SDK观测及原始HANDLE退出/释放核验通过。探针为普通高完整性、非AppContainer token，从未Resume；不是T037隔离/issuer/COMSOL通过。见[限定证据](docs/universal_mcp_execution/evidence/WINDOWS_CHILD_EVIDENCE.json)。
 - Windows网络释放修补经Main有限验收：当前127项聚焦PASS、旧源码15项负控失败；新正常离线安装getter一次SHOW查询1024..60000，四个原CloseHandle返回1、pinning一致、零遗留。旧164及177+89记录保留原范围，不叠加计数。固定监听/有效WFP隔离/准入仍未通过。见[限定证据](docs/universal_mcp_execution/evidence/WINDOWS_NETWORK_INTENT.json)。
@@ -22,6 +23,6 @@
 
 已同步阶段：M0/M1 `4759c097`，M4构件 `47d05a8e`，Windows软件准备/使用说明 `4f236d14`，交付生命周期/权限 `c10c066a`；后续SID/资源阶段见RESUME.git。新增子进程只读证据 `f68b3c7a`、网络范围/getter `03388462`、固定子进程限制属性 `b1474a85`，均普通推送并独立回读一致。MIC/network/events释放修补有限阶段 `fe4e4c72` 已同步并独立回读一致。后续核心变化须重新捕获源码构件，不能重标旧wheel。
 
-下一动作：ControlClient分类源软件已Main验收（17聚焦/40相关PASS+1原skip，Main独立补实际无COMSOL loopback1PASS），待本次普通发布；随后Primary继续原owner/原幂等键协调；Leibniz接SCM原runtime/有限A/Job顺序（944回归的6项whole-Job fixture契约整改中），冻结后修Main已复现的Job关闭UNKNOWN重复进入反例1FAIL；Kier接离线operator包。三单位均无host apply或旧UNKNOWN重放；集中审查后逐阶段普通发布，候选就绪后独立Reviewer自行选题。
+下一动作：ControlClient分类源软件已Main验收（17聚焦/40相关PASS+1原skip，Main独立补实际无COMSOL loopback1PASS），已普通发布275c1b84并fetch回读一致；Primary按Main明确计划继续原owner/原幂等键单次协议协调，保留旧UNKNOWN；Leibniz接SCM原runtime/有限A/Job顺序（944软件PASS后Main全局控制锁并发反例1FAIL，整改中），冻结后修Main已复现的Job关闭UNKNOWN重复进入反例1FAIL；Kier离线operator工具44项可复现测试已Main限定接收，下一窄单位为Windows可信磁盘/root接线。三单位均无host apply或旧UNKNOWN重放；集中审查后逐阶段普通发布，候选就绪后独立Reviewer自行选题。
 
 旧交接与科学历史见 [2026-10-21交接](docs/full_project_continuation_v3/CURRENT_HANDOFF.md)，保持原证据范围。
