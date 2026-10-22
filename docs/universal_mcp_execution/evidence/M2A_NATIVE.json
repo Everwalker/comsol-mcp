@@ -1,7 +1,7 @@
 {
   "schema": "universal-m2a-native-evidence-v1",
   "milestone": "M2a bounded native foundation",
-  "status": "M2A_R3_PUBLIC_PREFLIGHT_BLOCKED_HOST_PERMISSION_CEILING_NO_SESSION_START",
+  "status": "M2A_R3_PARTIAL_PASS_SAVE_REFRESH_NEGATIVE_PASS_REOPEN_AND_RECOVERY_UNKNOWN",
   "scope": "fresh installed MCP stdio entrypoint, private project/runtime, managed macOS COMSOL 6.4.0.293, bound Java conduction solve, public result/artifact readback and save",
   "baseline": {
     "stage_commit": "4759c097eabfdf588a366af51d9c7d1b90d1ac1b",
@@ -61,15 +61,62 @@
   },
   "active_references": {
     "candidate": "r3",
-    "control_home": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/mcp_home",
-    "project_root": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/project_root",
-    "pending_refs_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/pending-refs.json",
-    "project_id": "a9e87dd3-d62f-4582-8955-c90051a4d975",
-    "session_id": null,
-    "model_refs": null,
-    "server_pid": null,
-    "server_endpoint": null,
-    "status": "CURRENT_R3_PRIVATE_PROJECT_ONLY; no session or ModelRefs; blocked before session.start by captured host permission ceiling"
+    "control_home": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/control_home",
+    "project_root": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/project_root",
+    "pending_refs_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/pending-refs.json",
+    "project_id": "df096475-c434-4816-9b5a-86cfa9248c3f",
+    "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+    "model_refs": {
+      "target": {
+        "schema_version": 1,
+        "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+        "server_instance_id": "8fd0d9db5b90f4a3aec11cbee418d1d066fd9a89fd11542954bd29af2c64200e",
+        "model_tag": "mcp1",
+        "generation": 1
+      },
+      "target_revision": 9,
+      "target_dirty": false,
+      "target_label": "M2a target conduction r3",
+      "target_ownership": "mcp_owned",
+      "sentinel": {
+        "schema_version": 1,
+        "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+        "server_instance_id": "8fd0d9db5b90f4a3aec11cbee418d1d066fd9a89fd11542954bd29af2c64200e",
+        "model_tag": "mcp2",
+        "generation": 1
+      },
+      "sentinel_revision": 1,
+      "sentinel_dirty": false,
+      "sentinel_label": "M2a preservation sentinel r3",
+      "sentinel_ownership": "mcp_owned",
+      "sentinel_baseline_expected": {
+        "m2a_sentinel_marker": "47[mm]"
+      },
+      "sentinel_set_response_sha256": "78ee57821374b7ee9f50faa340d8840c5dea9b561672f020866f07f8b0bc0e92",
+      "sentinel_baseline_readback": {
+        "status": "PASS",
+        "parameter_count": 1,
+        "group_count": 1,
+        "group": "default",
+        "name": "m2a_sentinel_marker",
+        "expression": "47[mm]",
+        "reported_unit": "m",
+        "unit_readback_status": "UNVERIFIED",
+        "revision": 1,
+        "response_sha256": "3e05162ad6052d02df450a662106eff3a8e84cb608a0b4bd2468289343a406f9"
+      }
+    },
+    "server_pid": 18219,
+    "server_birth": "start_epoch_ms:1792692929019",
+    "server_endpoint": {
+      "host": "127.0.0.1",
+      "port": 54381
+    },
+    "server_instance_id": "8fd0d9db5b90f4a3aec11cbee418d1d066fd9a89fd11542954bd29af2c64200e",
+    "worker_instance_id": "3481cda9-2bc6-406f-ba71-0223cdc10895",
+    "worker_epoch": 2,
+    "server_ownership": "mcp_managed",
+    "status": "R3 native save/refresh/negative passed; model.load and session.recover are UNKNOWN and unresolved; no replay or process cleanup"
   },
   "failed_attempts": [
     {
@@ -199,6 +246,24 @@
       "job_id": "d33a40da-e2dc-427b-ac7b-5e836a7120a1",
       "record": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/project-create-response.json",
       "sha256": "cfa8d62a61e293149509369f7424dcb5d752d8d12be5154dcfa9f5bba2f1b5f7"
+    },
+    {
+      "operation_id": "operation_describe",
+      "request_id": "cf894e22-9741-40a1-b999-1601bfc63ad4",
+      "status": "UNKNOWN_RESPONSE_NO_DURABLE_ROW_ENGINE_NOT_STARTED",
+      "response_sha256": "a568e22eefeecd6c6d0f203587ce1ad7e33b28a0c388cadd11ba7873545ba472"
+    },
+    {
+      "operation_id": "model.load",
+      "request_id": "8cc009c3-859d-492c-ae73-9081d8984d74",
+      "status": "UNKNOWN_RESPONSE_NO_DURABLE_OPERATION_OR_JOB_ROW",
+      "response_sha256": "80ab6b5d7bbd76921079e781a423fa82a3ce59fff1de4fd3db47be1112c1cb02"
+    },
+    {
+      "operation_id": "session.recover",
+      "request_id": "ac8f9c97-dacb-4a38-818c-f6c4d2a9338d",
+      "status": "UNKNOWN_RESPONSE_NO_DURABLE_OPERATION_OR_JOB_ROW",
+      "response_sha256": "87efcab7c5fddd015b920cd64686c03d011e53b39b91eb86bdbf38ec5dac1d43"
     }
   ],
   "sandbox_gate": {
@@ -207,9 +272,9 @@
     "future_native_calls_may_require_same_escalation": true
   },
   "next_steps": [
-    "Keep r3 public session.start NOT_RUN: host-default project policy lacks host_control and trusted_code.",
-    "Await Main decision whether to create a fresh private ControlDaemon with task-local opt-ins; do not broaden the current process, edit global config, restart old A/B resources, or capture Worker Java delta into r3.",
-    "Keep expanded 357/5 suite FAIL and 261-pass prior receipt unchanged; native result.evaluate, solve, image, save, sentinel, refresh, recovery remain NOT_RUN on r3."
+    "Main review the saved UNKNOWN model.load and UNKNOWN session.recover receipts and the exact empty durable-row reconciliation.",
+    "Do not repeat model.load or session.recover; do not re-read the sentinel until Main resolves session-effect uncertainty.",
+    "Do not dispatch session.stop without a valid formal authorization_ref; no PID or private cleanup."
   ],
   "not_run": [
     "native-default and explicit-K public result values (default request safely refused before getData)",
@@ -252,7 +317,7 @@
     "current_recovery_job_list_request_sha256": "f4da67694825035cde66731005b23b990652f37c7bace0c943e2bfa6a21e6398",
     "current_recovery_job_list_response_sha256": "fcbbcde6ad80417479df0cde6acb5d4f61b7f5c1aa49fba06b3c5be8c19c4484",
     "session_recover_request_sha256": "6a53e9cd141b6d583d16d26c68c826a524c585eedfa8e2724d065f7eaccd2662",
-    "session_recover_response_sha256": "d3a9d71c13d0d171dd2148db22d5dec8bcdf894a5a37c2a557b7cbc197b1502d",
+    "session_recover_response_sha256": "87efcab7c5fddd015b920cd64686c03d011e53b39b91eb86bdbf38ec5dac1d43",
     "target_inspect_after_session_recovery_request_sha256": "9391483768a44ebe32a8d29d89a2e74f0f7206d2b2ce24961e1f0c708b48ae9e",
     "target_inspect_after_session_recovery_response_sha256": "7e4fcab74d3c75a2dcf623b2b930662b2d9d55e018cf4a68b342f7b75471db98",
     "sentinel_inspect_after_session_recovery_request_sha256": "9753a99c794e119b68cdb0f4a4e932c59c5db5e4161c609605882daef39d02a5",
@@ -281,7 +346,11 @@
     "latest_job_list_final_response_sha256": "572e3c7b707bd00ee08b6e3ebbed45352925a320758e10c0ef15fd9d26abfe02",
     "latest_public_refresh_job_status_response_sha256": "5ed52d3e0d5fca9d6c74e6c7bdd485f375f11460843b175ca7ed2e15a6de6945",
     "latest_public_refresh_job_reconcile_response_sha256": "e95e66eeafcf09af9585a87b0288df2a8add1e8e45a9364bc1d9d59db41171f4",
-    "latest_sentinel_final_response_sha256": "d87a04840ea83d4c3c060d5d04c957686aa0be40d445db582776ac45ed7d61e2"
+    "latest_sentinel_final_response_sha256": "d87a04840ea83d4c3c060d5d04c957686aa0be40d445db582776ac45ed7d61e2",
+    "model_load_admission_sha256": "9d55278b84502fa32de8df1e16a5ccbb6e1e8e73c87360bf8243c53aa39c6221",
+    "model_load_unknown_reconciliation_sha256": "e688d26883758bd1dfa5d8f6d607ef7379dc455fd6189f823e5d04b1dd7fbe91",
+    "pending_refs_final_sha256": "5d55dd045e64de9dd3e20b18b5a429e150a6a7d2b1ea6ef4567ba15f22ef974e",
+    "model_load_response_sha256": "80ab6b5d7bbd76921079e781a423fa82a3ce59fff1de4fd3db47be1112c1cb02"
   },
   "runtime_inspect": {
     "status": "PASS_READ_ONLY",
@@ -316,28 +385,28 @@
     "candidate": "r3"
   },
   "session_start_pending": {
-    "status": "NOT_DISPATCHED_HOST_PERMISSION_CEILING",
-    "candidate": "r3",
-    "project_id": "a9e87dd3-d62f-4582-8955-c90051a4d975",
-    "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics",
-    "required_project_permission": "host_control",
-    "observed_project_permissions": [
-      "compute",
-      "inspect",
-      "project_write"
-    ],
-    "request_id": null,
-    "idempotency_key": null,
-    "reason": "known predispatch permission gate; no session.start call was sent"
+    "status": "NO_CURRENT_SESSION_START_PENDING",
+    "historical_pre_authorized_permission_gate": "MOVED_TO_historical_session_start_pending_pre_task_local_authorization",
+    "current_session_id": "session-24f852fcaa464a8db9e76b102254db91",
+    "current_start_response": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/session-start-response-r1.json",
+      "sha256": "28fa4b216c584ef0e27cb554ede3d14e7f2aeeb14f9449503dcbed3e165c35dd"
+    }
   },
   "session_start": {
-    "status": "NOT_RUN_R3_HOST_PERMISSION_GATE",
-    "project_id": "a9e87dd3-d62f-4582-8955-c90051a4d975",
-    "session_id": null,
-    "server_pid": null,
-    "server_endpoint": null,
-    "comsol_server_started": false,
-    "license_checked_out": false
+    "status": "PASS_TASK_LOCAL_AUTHORIZED_R3_SESSION_START",
+    "project_id": "df096475-c434-4816-9b5a-86cfa9248c3f",
+    "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+    "server_pid": 18219,
+    "server_birth": "start_epoch_ms:1792692929019",
+    "server_endpoint": {
+      "host": "127.0.0.1",
+      "port": 54381
+    },
+    "comsol_server_started": true,
+    "license_checked_out": true,
+    "response_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/session-start-response-r1.json",
+    "response_sha256": "28fa4b216c584ef0e27cb554ede3d14e7f2aeeb14f9449503dcbed3e165c35dd"
   },
   "session_connect": {
     "status": "PASS",
@@ -416,38 +485,106 @@
     "response_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/runtime/model-create-sentinel.response.json"
   },
   "current_checkpoint": {
-    "status": "M2A_R3_PUBLIC_NATIVE_PERMISSION_GATE_NO_SESSION_START",
-    "recorded_at_utc": "2026-10-22T17:46:14Z",
+    "status": "PARTIAL_PASS_NATIVE_SAVE_REFRESH_AND_NEGATIVE_PASS_REOPEN_AND_RECOVERY_UNKNOWN",
+    "recorded_at_utc": "2026-10-22T19:09:32.158932+00:00",
     "candidate": {
-      "source_receipt_sha256": "1b27ca5b0b8f68f7609cf209f546744416a35395db470ef5dd3870689b827464",
+      "id": "r3",
       "wheel_sha256": "6b4a40ea76443bb6e6a28a73f47548db2c656df4dfd88b272ae4737d40260e23",
-      "install_root": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3"
+      "installed_runtime": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3",
+      "console_entrypoint": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/venv/bin/comsol-mcp",
+      "public_mcp_server_version": "1.30.0",
+      "tool_count": 112,
+      "transport": "installed console entrypoint over MCP stdio",
+      "source_receipt_sha256": "1b27ca5b0b8f68f7609cf209f546744416a35395db470ef5dd3870689b827464"
     },
-    "project_id": "a9e87dd3-d62f-4582-8955-c90051a4d975",
-    "project_revision": 1,
-    "project_permissions": [
-      "compute",
-      "inspect",
-      "project_write"
+    "project": {
+      "project_id": "df096475-c434-4816-9b5a-86cfa9248c3f",
+      "project_revision": 1,
+      "effective_permissions": [
+        "compute",
+        "host_control",
+        "inspect",
+        "project_write",
+        "trusted_code"
+      ],
+      "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+      "workspace": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/project_root/m2a-r3-native-20261023",
+      "session_state_at_last_public_inspect": "CONNECTED"
+    },
+    "session_start": {
+      "status": "PASS",
+      "request_id": null,
+      "job_id": "13d0260f-5542-406b-a5c5-9acbc7c36298",
+      "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+      "server_pid": 18219,
+      "endpoint": {
+        "host": "127.0.0.1",
+        "port": 54381
+      },
+      "server_birth": "start_epoch_ms:1792692929019",
+      "response": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/session-start-response-r1.json",
+        "sha256": "28fa4b216c584ef0e27cb554ede3d14e7f2aeeb14f9449503dcbed3e165c35dd"
+      }
+    },
+    "target_model_ref": {
+      "schema_version": 1,
+      "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+      "server_instance_id": "8fd0d9db5b90f4a3aec11cbee418d1d066fd9a89fd11542954bd29af2c64200e",
+      "model_tag": "mcp1",
+      "generation": 1
+    },
+    "target_revision_before_unknown_load": 9,
+    "sentinel_model_ref": {
+      "schema_version": 1,
+      "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+      "server_instance_id": "8fd0d9db5b90f4a3aec11cbee418d1d066fd9a89fd11542954bd29af2c64200e",
+      "model_tag": "mcp2",
+      "generation": 1
+    },
+    "sentinel_revision": 1,
+    "passed": [
+      "stationary study.run",
+      "public result.evaluate native-default and explicit K",
+      "midpoint x=0.005m",
+      "configured PNG render",
+      "model.save with solution",
+      "sentinel readback before unknown model.load",
+      "managed model.inspect refresh with CAS_NONE",
+      "wrong-server identity negative refused before durable job"
     ],
-    "session_id": null,
-    "target_model_ref": null,
-    "sentinel_model_ref": null,
-    "control_daemon": {
-      "pid": 95751,
-      "process_start_epoch_ms": 1792690554844,
-      "endpoint": "127.0.0.1:58000",
-      "role": "private r3 ControlDaemon, not COMSOL Server"
+    "unresolved": [
+      "public model.load returned EXECUTION_STATE_UNKNOWN",
+      "public session.recover returned EXECUTION_STATE_UNKNOWN",
+      "reopen is not verified",
+      "sentinel after unknown load not re-read"
+    ],
+    "pending_refs": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/pending-refs.json",
+      "sha256": "5d55dd045e64de9dd3e20b18b5a429e150a6a7d2b1ea6ef4567ba15f22ef974e",
+      "pending_count": 2,
+      "items": [
+        {
+          "operation_id": "model.load",
+          "request_id": "8cc009c3-859d-492c-ae73-9081d8984d74",
+          "state": "UNKNOWN_UNRECONCILED_NO_DURABLE_OPERATION_OR_JOB_ROW"
+        },
+        {
+          "operation_id": "session.recover",
+          "request_id": "ac8f9c97-dacb-4a38-818c-f6c4d2a9338d",
+          "state": "UNKNOWN_UNRECONCILED_NO_DURABLE_OPERATION_OR_JOB_ROW"
+        }
+      ]
     },
-    "runtime": {
-      "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics",
-      "version": "6.4.0",
-      "build": 293,
-      "metadata_only": true
+    "session_stop_gate": {
+      "status": "NOT_ATTEMPTED_FORMAL_AUTHORIZATION_REF_UNAVAILABLE",
+      "project_host_control_permission": "PRESENT",
+      "authorization_decision_receipt_sha256": "2e1e57fe010ed9e395b2eb9f285b83a2e10e74df39a933fb3e445724636df2cd",
+      "authorization_ref_field_present": false,
+      "public_schema_requires_authorization_ref": true,
+      "pid_signal_or_private_cleanup": "NOT_ATTEMPTED"
     },
-    "session_start_dispatched": false,
-    "reason": "session.start schema requires project host_control and bound project Java requires trusted_code; both absent from the existing daemon host-default ceiling. No process/global permission changes are authorized under the current project-only scope.",
-    "next_action": "Await explicit decision on a fresh task-local private-daemon opt-in or retain this gate; do not modify captured daemon or global config."
+    "next_action": "Main review the unresolved public-control response and formal stop authorization material; no further model/lifecycle request dispatched from this executor."
   },
   "attempts": [
     {
@@ -1758,8 +1895,1275 @@
     "uv_lock_sha256_after_M4_parallel_update": "a6bb3dc08acdb783a1d3553f71e21bde8c7a8e01394a6f70a062357a4ce04fc2",
     "wheel_metadata_check": "Requires-Dist reflects the pyproject snapshot used for build; wheel predates M4 platform extras update and is labeled development-only."
   },
-  "active_references_status": "Current independent r3 project a9e87dd3-d62f-4582-8955-c90051a4d975 has compute/inspect/project_write only; no session start was dispatched. Old A/B references remain historical and unchanged.",
+  "active_references_status": "CURRENT_R3_MODEL_LOAD_AND_SESSION_RECOVER_UNKNOWN; no durable job rows; engine quiescence not proven",
   "latest_native_run": {
+    "status": "PARTIAL_PASS_NATIVE_SAVE_REFRESH_AND_NEGATIVE_PASS_REOPEN_AND_RECOVERY_UNKNOWN",
+    "recorded_at_utc": "2026-10-22T19:09:32.158932+00:00",
+    "scope": "M2a bounded normal-path continuation on frozen installed r3; no production source or tests changed in this continuation",
+    "candidate": {
+      "id": "r3",
+      "wheel_sha256": "6b4a40ea76443bb6e6a28a73f47548db2c656df4dfd88b272ae4737d40260e23",
+      "installed_runtime": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3",
+      "console_entrypoint": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/venv/bin/comsol-mcp",
+      "public_mcp_server_version": "1.30.0",
+      "tool_count": 112,
+      "transport": "installed console entrypoint over MCP stdio",
+      "source_receipt_sha256": "1b27ca5b0b8f68f7609cf209f546744416a35395db470ef5dd3870689b827464"
+    },
+    "runtime": {
+      "release": "6.4.0",
+      "build": "6.4.0.293",
+      "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics",
+      "server_ownership": "mcp_managed",
+      "server_instance_id": "8fd0d9db5b90f4a3aec11cbee418d1d066fd9a89fd11542954bd29af2c64200e",
+      "server_pid_recorded": 18219,
+      "server_birth_recorded": "start_epoch_ms:1792692929019",
+      "endpoint": {
+        "host": "127.0.0.1",
+        "port": 54381
+      },
+      "listener_loopback_verified": true,
+      "worker_instance_id": "3481cda9-2bc6-406f-ba71-0223cdc10895",
+      "worker_epoch": 2,
+      "remote_engine_version": "COMSOL Multiphysics 6.4 (开发版本: 293)",
+      "resource_preflight_receipt": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/model-load-admission-r1.json",
+      "ps_probe": "sandbox refused; lsof confirmed recorded PID listener; no PID-based action"
+    },
+    "project": {
+      "project_id": "df096475-c434-4816-9b5a-86cfa9248c3f",
+      "project_revision": 1,
+      "effective_permissions": [
+        "compute",
+        "host_control",
+        "inspect",
+        "project_write",
+        "trusted_code"
+      ],
+      "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+      "workspace": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/project_root/m2a-r3-native-20261023",
+      "session_state_at_last_public_inspect": "CONNECTED"
+    },
+    "model_refs": {
+      "target": {
+        "schema_version": 1,
+        "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+        "server_instance_id": "8fd0d9db5b90f4a3aec11cbee418d1d066fd9a89fd11542954bd29af2c64200e",
+        "model_tag": "mcp1",
+        "generation": 1
+      },
+      "target_revision_before_unknown_load": 9,
+      "sentinel": {
+        "schema_version": 1,
+        "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+        "server_instance_id": "8fd0d9db5b90f4a3aec11cbee418d1d066fd9a89fd11542954bd29af2c64200e",
+        "model_tag": "mcp2",
+        "generation": 1
+      },
+      "sentinel_revision": 1
+    },
+    "task_java": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/project_root/m2a-r3-native-20261023/java/M2aRepairedConduction.java",
+      "initial_source_sha256": "b00802b8fcde0058d419bf880403cc345de575a63f1a2ef0c8ab7efedfc10a02",
+      "current_source_sha256": "42557a3549b9c7760eddcd661d19bf1aa387627f0ba3e6a0113da67331e24955",
+      "plot_fix_receipt": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/task-source-plot-fix-r1.json",
+      "plot_fix_receipt_sha256": "33e045562930790ef84c6ca20c0b668164b6e364dca42494786d5fccf02d7ba9",
+      "source_changes_task_input_only": true,
+      "production_source_changed": false,
+      "properties": {
+        "explicit_pde_f": "0[W/m^3]",
+        "preserved_default_component": "comp1",
+        "new_component": "cmpM2AR3",
+        "new_geometry": "geomM2AR3"
+      }
+    },
+    "normal_path": {
+      "session_start": {
+        "status": "PASS",
+        "request_id": null,
+        "job_id": "13d0260f-5542-406b-a5c5-9acbc7c36298",
+        "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+        "server_pid": 18219,
+        "endpoint": {
+          "host": "127.0.0.1",
+          "port": 54381
+        },
+        "server_birth": "start_epoch_ms:1792692929019",
+        "response": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/session-start-response-r1.json",
+          "sha256": "28fa4b216c584ef0e27cb554ede3d14e7f2aeeb14f9449503dcbed3e165c35dd"
+        }
+      },
+      "connect": {
+        "status": "PASS",
+        "request_id": null,
+        "job_id": "feddbbf9-58a2-49a2-a53a-1943a0976f8b",
+        "worker_instance_id": "3481cda9-2bc6-406f-ba71-0223cdc10895",
+        "worker_epoch": 2,
+        "response": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/session-connect-response-r1.json",
+          "sha256": "982b63d8139a867d5c2d49e3803139e41e9d5f2f105fd5bbcf67f951a62dfeb0"
+        }
+      },
+      "compile": {
+        "status": "PASS_ZERO_DIAGNOSTICS",
+        "job_id": "0c10cf47-ec77-4524-b721-d23ece7e287a",
+        "response": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/target-java-compile-response-r1.json",
+          "sha256": "1787ffc27e192c7095a634e33719e6bb629840c2a82eb86468965fb8440540fc"
+        }
+      },
+      "execute_build": {
+        "status": "PASS",
+        "job_id": "b0bf0743-bcc2-4669-ac74-faff70d34aa4",
+        "revision": 1,
+        "response": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/target-java-execute-response-r1.json",
+          "sha256": "a90f7489fc8386254f62929069734083556f74866c55f1f934096791edab8c72"
+        }
+      },
+      "study_run": {
+        "status": "PASS_STATIONARY",
+        "job_id": "fca5dbba-0eb6-489c-a24e-8dbec7cf7065",
+        "revision": 2,
+        "response": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/target-study-run-response-r1.json",
+          "sha256": "9d7560c88886fe3a3a15792195421a43427cba4dc52d225fb4461d48159f8059"
+        }
+      }
+    },
+    "result_evaluate": {
+      "status": "PASS_NATIVE_DEFAULT_AND_EXPLICIT_K",
+      "operation": "public result.evaluate aggregate=none on dset1 -> sol1 -> stdM2AR3",
+      "default_units_request": [
+        ""
+      ],
+      "explicit_units_request": [
+        "K"
+      ],
+      "default_response": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/target-result-evaluate-default-response-r1.json",
+        "sha256": "169b4b2658fc9dc34e21903698a886c3cb918bb6357a804fea877ff1794eec73"
+      },
+      "explicit_response": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/target-result-evaluate-explicit-k-response-r1.json",
+        "sha256": "d381e5a00f4a481542bcfcbce2d8e3d4f1e137ed14117a44eef79396bb5a7cdd"
+      },
+      "default_numeric_values": 136,
+      "explicit_numeric_values": 136,
+      "default_min": 300.0,
+      "default_max": 400.0,
+      "explicit_values_match_default": true,
+      "default_expression_unit": {
+        "u+0[K]": "K"
+      },
+      "explicit_expression_unit": {
+        "u+0[K]": "K"
+      },
+      "numeric_solution_count": 1,
+      "count_witness": "VERIFIED_SINGLE_ATTACHED_STATIONARY_NUMERIC_COUNT",
+      "budget_pre_getdata_and_postread": "PASS",
+      "solution_axes": "UNVERIFIED",
+      "pair_mapping_complete": false,
+      "field_array_published": false,
+      "notes": "No outer/inner axes or FieldArray fabricated; native-default and explicit-unit values retained."
+    },
+    "midpoint_oracle": {
+      "status": "PASS",
+      "expression": "u",
+      "point_x_m": 0.005,
+      "value_K": 349.9999999999981,
+      "expected_K": 350.0,
+      "absolute_error_K": 1.8758328224066645e-12,
+      "tolerance_K": 1e-06,
+      "response": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/target-midpoint-at-points-response-r1.json",
+        "sha256": "6aa458a8ce136fd42ad9660528a202d71449482db7e3d2bb04ff6f3ec3076bda"
+      }
+    },
+    "render": {
+      "status": "PASS_CONFIGURED_NONEMPTY_LINEGRAPH",
+      "artifact_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/project_root/m2a-r3-native-20261023/g2_artifacts/plots/m2a-r3-target-configured.png",
+      "artifact_sha256": "947f6d079994a4a1b7d8d1c851c192f0265f47d471dfe6dc882635736ae25a34",
+      "artifact_size_bytes": 33206,
+      "media_type": "image/png",
+      "mcp_image_bytes_match_file": true,
+      "image_dimensions_px": [
+        1200,
+        800
+      ],
+      "response": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/target-plot-render-configured-response-r1.json",
+        "sha256": "63d8fbaaf6fda4d165a1a65a17fcd8bc008294f781877049ab05ecd715ec0512"
+      },
+      "initial_blank_render": {
+        "status": "FAIL_VISUALLY_EMPTY_PRESERVED",
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/project_root/m2a-r3-native-20261023/g2_artifacts/plots/m2a-r3-target.png",
+        "sha256": "4da5647655e620b1939985ffb46c4d7de516ec65fc749eb7e0c19b88c37af0f9"
+      }
+    },
+    "save": {
+      "status": "PASS_SAVED_WITH_SOLUTION",
+      "job_id": "719e6735-2127-4588-b548-c0b09266c155",
+      "artifact_id": null,
+      "sha256": null,
+      "file_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/project_root/m2a-r3-native-20261023/m2a-r3-target-solved.mph",
+      "file_sha256": "cccc806c196f5999dfce88e6bc7fcae43f4a7dd314f782ad56e4e43b22dbb080",
+      "size_bytes": null,
+      "include_solution": null,
+      "source_revision": null,
+      "revision_after_save": 9,
+      "response": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/target-model-save-response-r2.json",
+        "sha256": "3155a2cec50964e407b34d1fcd1e633b7d1e07b642470a493cfe108b9b0ee318"
+      },
+      "first_invalid_destination_attempt": {
+        "status": "REFUSED_BEFORE_ENGINE_CALL",
+        "error_code": "INVALID_DESTINATION",
+        "engine_calls": 0,
+        "response": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/target-model-save-response-r1.json",
+          "sha256": "31ed2ec4a7a927226fdc3f5c526d4dfc187353076946f8e2a5c3c9f0540c123c"
+        }
+      }
+    },
+    "reopen": {
+      "status": "UNKNOWN_NOT_VERIFIED",
+      "operation": "model.load",
+      "artifact_id": null,
+      "request_id": "8cc009c3-859d-492c-ae73-9081d8984d74",
+      "idempotency_key": "e73b984b-11aa-4858-a4b9-3c4c69a0e2fc",
+      "response_error": "EXECUTION_STATE_UNKNOWN",
+      "response": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/model-load-reopen-response-r1.json",
+        "sha256": "80ab6b5d7bbd76921079e781a423fa82a3ce59fff1de4fd3db47be1112c1cb02"
+      },
+      "read_only_reconciliation": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/model-load-unknown-reconciliation-r1.json",
+        "sha256": "e688d26883758bd1dfa5d8f6d607ef7379dc455fd6189f823e5d04b1dd7fbe91"
+      },
+      "replay_or_new_load_attempt": "NOT_RUN"
+    },
+    "sentinel": {
+      "status": "PASS_PRE_UNKNOWN_LOAD_ONLY",
+      "model_ref": {
+        "schema_version": 1,
+        "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+        "server_instance_id": "8fd0d9db5b90f4a3aec11cbee418d1d066fd9a89fd11542954bd29af2c64200e",
+        "model_tag": "mcp2",
+        "generation": 1
+      },
+      "revision": 1,
+      "marker": "m2a_sentinel_marker=47[mm]",
+      "unit_readback": "m",
+      "unit_status": "UNVERIFIED",
+      "response": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/sentinel-final-parameter-list-response-r1.json",
+        "sha256": "cca325807945c67e8494dfae31a3dbcc15271e98adc72ca7870264e10ae50d01"
+      },
+      "post_unknown_load_readback": "NOT_RUN_UNKNOWN_SESSION_EFFECT"
+    },
+    "managed_refresh": {
+      "status": "PASS_BEFORE_UNKNOWN_LOAD",
+      "model_ref": {
+        "schema_version": 1,
+        "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+        "server_instance_id": "8fd0d9db5b90f4a3aec11cbee418d1d066fd9a89fd11542954bd29af2c64200e",
+        "model_tag": "mcp1",
+        "generation": 1
+      },
+      "revision": 9,
+      "coverage": "parameters plus shallow tree identity",
+      "cas_guarantee": "NONE",
+      "external_dependencies": "NOT_EXHAUSTIVELY_ENUMERATED",
+      "response": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/target-model-inspect-refresh-response-r1.json",
+        "sha256": "9ffc068161b663d5f867934a4f6117ad57d314544814f1a1db45e749e621cf36"
+      }
+    },
+    "resource_identity_negative": {
+      "status": "PASS_REFUSED_BEFORE_DURABLE_JOB",
+      "operation": "model.inspect refresh=true",
+      "changed_field": "execution.model_ref.server_instance_id only",
+      "error_code": "MODEL_IDENTITY_MISMATCH",
+      "durable_job_rows": 0,
+      "request_id": "9225897c-8b05-43fa-a8b0-5aa01a907fda",
+      "response": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/target-model-inspect-wrong-server-negative-response-r1.json",
+        "sha256": "830d11a95d9fde2859ec53196238ebedc139bfb9a2139fc44e1f7adc1f9e857e"
+      }
+    },
+    "public_reconciliation": {
+      "status": "UNKNOWN_RESPONSE_UNAVAILABLE",
+      "operation": "session.recover",
+      "request_id": "ac8f9c97-dacb-4a38-818c-f6c4d2a9338d",
+      "idempotency_key": "ae89bbe5-9c53-4b2f-a882-14b790bc1a05",
+      "response_error": "EXECUTION_STATE_UNKNOWN",
+      "response": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/session-recover-after-model-load-unknown-response-r1.json",
+        "sha256": "87efcab7c5fddd015b920cd64686c03d011e53b39b91eb86bdbf38ec5dac1d43"
+      },
+      "database_rows_for_model_load_and_recover": 0,
+      "active_jobs": 0,
+      "control_generation_metadata": [
+        "mcp1",
+        "mcp2"
+      ],
+      "engine_quiescence_proven": false,
+      "reconciliation_receipt": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/model-load-unknown-reconciliation-r1.json",
+        "sha256": "e688d26883758bd1dfa5d8f6d607ef7379dc455fd6189f823e5d04b1dd7fbe91"
+      }
+    },
+    "operation_describe_model_load": {
+      "status": "UNKNOWN_RESPONSE_NO_DURABLE_ROW",
+      "request_id": "cf894e22-9741-40a1-b999-1601bfc63ad4",
+      "idempotency_key": "e1371b5b-ca7f-468c-89b5-6eebad45d196",
+      "engine_started": false,
+      "response": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/model-load-schema-r1.json",
+        "sha256": "a568e22eefeecd6c6d0f203587ce1ad7e33b28a0c388cadd11ba7873545ba472"
+      },
+      "installed_catalog_schema_matched_repository_schema": true
+    },
+    "session_stop": {
+      "status": "NOT_ATTEMPTED_FORMAL_AUTHORIZATION_REF_UNAVAILABLE",
+      "project_host_control_permission": "PRESENT",
+      "authorization_decision_receipt_sha256": "2e1e57fe010ed9e395b2eb9f285b83a2e10e74df39a933fb3e445724636df2cd",
+      "authorization_ref_field_present": false,
+      "public_schema_requires_authorization_ref": true,
+      "pid_signal_or_private_cleanup": "NOT_ATTEMPTED"
+    },
+    "other_server_or_old_resources": "NOT_STARTED_OR_TOUCHED; no second server; old A/B and PID 70543 untouched",
+    "pending_refs": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/pending-refs.json",
+      "sha256": "5d55dd045e64de9dd3e20b18b5a429e150a6a7d2b1ea6ef4567ba15f22ef974e",
+      "pending_count": 2,
+      "items": [
+        {
+          "operation_id": "model.load",
+          "request_id": "8cc009c3-859d-492c-ae73-9081d8984d74",
+          "state": "UNKNOWN_UNRECONCILED_NO_DURABLE_OPERATION_OR_JOB_ROW"
+        },
+        {
+          "operation_id": "session.recover",
+          "request_id": "ac8f9c97-dacb-4a38-818c-f6c4d2a9338d",
+          "state": "UNKNOWN_UNRECONCILED_NO_DURABLE_OPERATION_OR_JOB_ROW"
+        }
+      ]
+    },
+    "source_and_tests": {
+      "production_source_changed": false,
+      "tests_changed": false,
+      "tests_rerun_this_continuation": false,
+      "software_triage_status": "Preserved from accepted r3 triage; expanded 357/5 remains FAIL with prior fixture/history classifications"
+    },
+    "next_action": "Main review the unresolved public-control response and formal stop authorization material; no further model/lifecycle request dispatched from this executor."
+  },
+  "current_installation": {
+    "source_snapshot_fingerprint_sha256": "b9807c6823ea82aecba25fdb464072c838e62dedb5e5fffb65ce969aaaee4732",
+    "application_wheel_sha256": "1706ea4085e72d999de0f0dffe7d56e0af34bb76e275b30d08e6823668c1ff92",
+    "offline_zip_sha256": "d8aa6654e7475550a7acfb2e529c121c2713fd3e0235cc1ea09d9128f580f500",
+    "source_lock_sha256": "a6bb3dc08acdb783a1d3553f71e21bde8c7a8e01394a6f70a062357a4ce04fc2",
+    "resolved_requirements_lock_sha256": "a42c480858b64585f3d6044a5da1b800e14da08901520cdc9e2a08f4930ab7a7",
+    "offline_install_exit_code": 0,
+    "installed_source_files_match": 172,
+    "frozen_source_package_files": 172,
+    "mismatches": [],
+    "borrowed_or_editable_paths": false,
+    "python": "3.12",
+    "mcp_server_version": "1.30.0",
+    "tool_count": 112
+  },
+  "core_repair_current": {
+    "status": "SOFTWARE_REPAIR_PASS_NEW_FROZEN_CANDIDATE_INSTALLED_NATIVE_NOT_RUN",
+    "base_commit": "d56c05b2b98d10f8f7ed9777c8b39a10e29455c7",
+    "frozen_source_receipt_sha256": "1b27ca5b0b8f68f7609cf209f546744416a35395db470ef5dd3870689b827464",
+    "source_manifest_sha256": "f49cfdef09fb6f9c1d992c2985880104c24b384a12fd5510fcb1ec47b42b1372",
+    "overlay_hashes": {
+      "comsol_mcp/_g3_results.py": "5a7b3d8925cfbbed3b4e890f20401c6140e4f9b53403a27bde1224078f04101b",
+      "tests/test_g3_results.py": "a1fe81d10cd583584eef37c15b3bbf6b45621b0327b2e91c29b913048ba2058c"
+    },
+    "focused_public_adapter_tests": {
+      "passed": 14,
+      "deselected": 237,
+      "exit_code": 0,
+      "junit_sha256": "8b35f9eb67045047429025e58ab70a9aef7a3d17d72cc8fe395fc32618c15d79"
+    },
+    "affected_results_regression": {
+      "passed": 261,
+      "exit_code": 0,
+      "junit_sha256": "e0312e4fa33de8d85076f9dc5508cdacd7da2984ef530d3a630fe3f5635789eb"
+    },
+    "adjacent_regression": {
+      "passed": 357,
+      "failed": 5,
+      "exit_code": 1,
+      "receipt_sha256": "dd439ed11a0db8d99a40d21b3e5ea05fb315088b3aa654a382612c973fed3d04",
+      "classification": "four W17 fixture/expectation failures and one unavailable historical T044 fixture; retained without changing unrelated tests"
+    },
+    "release_json_sha256": "20f962cc9b31fcdd03e9a606737d670d51465f3600a079b96a64eb6546225798",
+    "wheel_sha256": "6b4a40ea76443bb6e6a28a73f47548db2c656df4dfd88b272ae4737d40260e23",
+    "offline_zip_sha256": "0d2c904fbb59489ff0f2aa6416e293f89ec6d2789f46d6885bafb23955634fbc",
+    "fresh_install_package_match": "PASS; 173 files byte-identical; no borrowed/editable paths",
+    "installed_mcp": "PASS initialize + 112 tools + result.evaluate operation_describe; no engine started",
+    "result_evaluate_native": "NOT_RUN"
+  },
+  "core_repair_attempts": [
+    {
+      "attempt": "frozen-source extraction r1",
+      "status": "FAILED_SAFE_REFUSAL",
+      "cause": "Python tar data filter rejected tracked absolute evidence symlink; no link followed",
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2-core-repair-source-20261022T160004Z"
+    },
+    {
+      "attempt": "release build r1 output path",
+      "status": "FAILED_INPUT_VALIDATION",
+      "cause": "relative ../ path not canonical; no output directory created"
+    },
+    {
+      "attempt": "uv python discovery",
+      "status": "FAILED_SANDBOX_CACHE_ACCESS",
+      "cause": "uv could not read ~/.cache/uv; solved by explicit /opt/homebrew/bin/python3.12 and private UV_CACHE_DIR"
+    },
+    {
+      "attempt": "fresh public MCP operation_describe(model.inspect)",
+      "status": "UNKNOWN_CONTROL_STARTUP_ERROR",
+      "request_id": "896fd791-3579-4ae0-9b87-df0dee730614",
+      "idempotency_key": "a56c351b-05fe-4d03-aa71-4d0c98a1b3c5",
+      "cause": "localhost bind permission denied; read-only operations/jobs counts are zero; no engine start"
+    },
+    {
+      "attempt": "public result.evaluate aggregate=none count-witness repair r3",
+      "status": "FOCUSED_AND_AFFECTED_PASS_ADJACENT_FAILURES_RETAINED",
+      "evidence": "docs/universal_mcp_execution/evidence/M2_CORE_REPAIR.json"
+    },
+    {
+      "attempt": "r3 fresh release/install/public MCP cold start",
+      "status": "PASS_SOFTWARE_ONLY_NATIVE_NOT_RUN",
+      "wheel_sha256": "6b4a40ea76443bb6e6a28a73f47548db2c656df4dfd88b272ae4737d40260e23"
+    },
+    {
+      "attempt": "old B public disconnect",
+      "status": "PASS_DISCONNECTED_WORKER_RETIRED_SERVER_PRESERVED",
+      "receipt": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/runtime/old-b-disconnect-r1.json"
+    },
+    {
+      "attempt": "old B public stop",
+      "status": "AUTO_REVIEW_REJECTED_NOT_EXECUTED_NO_VERIFIED_AUTH_REF",
+      "receipt": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/runtime/old-b-stop-review-rejection.json"
+    },
+    {
+      "attempt": "independent server resource/license preflight",
+      "status": "NOT_SUPPORTED_LICENSE_CAPACITY_UNKNOWN_THREE_SERVERS_PRESENT",
+      "receipt": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/runtime/resource-preflight-r1.json"
+    }
+  ],
+  "historical_status_before_r3": "M2A_ARCHITECTURE_ESCALATION",
+  "recorded_current_checkpoint_utc": "2026-10-22T19:09:32.158932+00:00",
+  "old_b_lifecycle_correction": {
+    "project_id": "7bc6e674-0a03-498e-9929-997a93c1f53f",
+    "session_id": "session-dbcda66decc045c8b081a7588a7af394",
+    "disconnect": "PUBLIC_SUCCESS_DISCONNECTED_RETIRED; server_stopped=false.",
+    "response_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/runtime/old-b-disconnect-r1.json",
+    "response_sha256": "d1f4f59709022a11ae049f1225ac4206f4d73c5f9a5394c75a46ca371776384d",
+    "request_id": "88df5f80-6bf6-4a77-a180-d7ac039aaeb3",
+    "idempotency_key": "712dfa8c-0477-430a-84fb-5ba1bab722e2",
+    "operation_id": "71d50e84-0008-49a0-9839-43a76da86e6b",
+    "job_id": "a9d0636b-ade6-4d31-b6ce-1b679722268c",
+    "request_hash": "f1995968a6101625558f9085001f633a1fc7efc8488e47c04c54a7b6321f4c34",
+    "worker": {
+      "worker_instance_id": "c5d4f20c-a3aa-4366-8dbd-074623a26c70",
+      "epoch": 3,
+      "exact_popen_handle": true,
+      "pid": 59565,
+      "birth_epoch_ms": 1792678700782,
+      "birth_identity_matched_before_close": true,
+      "child_exit_confirmed": true,
+      "child_reaped": true
+    },
+    "stop": {
+      "status": "NOT_EXECUTED_AUTO_REVIEW_REJECTED",
+      "rejection_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/runtime/old-b-stop-review-rejection.json",
+      "rejection_sha256": "a1f8cf9dfb07f8cd549846f8e614efd0bbd7fe219594328bc08118fbb6313920",
+      "public_schema_requires_authorization_ref": true,
+      "project_host_control_observed_effective": true,
+      "verified_authorization_ref_available": false,
+      "effect": "none; no pending stop request or lifecycle mutation was dispatched.",
+      "policy": "Do not omit/fabricate a reference or retry. Preserve B running/fenced."
+    },
+    "preservation": "No PID signal, private cleanup, or new-candidate takeover."
+  },
+  "independent_resource_preflight": {
+    "historical_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/runtime/resource-preflight-r1.json",
+    "sha256": "1d66720bb1c675bbf670353519345fa8dc18ad26dc92533859f6a2e723fb2a3a",
+    "historical_raw_process_count": 3,
+    "historical_raw_listener_count": 3,
+    "historical_three_servers_claim": "WITHDRAWN; PID 70543 is a PersistentComsolWorker, not a Server.",
+    "main_readonly_role_receipt": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-main-review/20261023-auth-review/process-role-readonly.json",
+    "main_readonly_role_receipt_sha256": "cb4a5c92a1546045da6d6ff4780b6e3eb1ebb268118af8fb14b15cacd496ae379",
+    "observed_roles": {
+      "58888": "COMSOL ServerApplication/mphserver",
+      "82522": "COMSOL ServerApplication/mphserver",
+      "70543": "PersistentComsolWorker; parent 52944"
+    },
+    "license_seat_capacity": "NOT_ESTABLISHED; absence of a license server does not establish no capacity.",
+    "new_server_birth": "NOT_ATTEMPTED_YET",
+    "native_gate": "FRESH_READONLY_PREFLIGHT_THEN_AT_MOST_ONE_NORMAL_PUBLIC_START",
+    "old_process_policy": "Do not touch old A, old B, or PID 70543; do not retry old-B stop."
+  },
+  "software_failure_triage": {
+    "candidate": "r3",
+    "expanded_suite": "FAIL: 357 passed, 5 failed; all five individually compared on frozen r2.",
+    "classification": "Four W17 failures reproduced on r2 as existing fixture/assertion mismatches; T044 is NOT_RUN_MISSING_HISTORICAL_R9_EVIDENCE.",
+    "evidence_ref": "M2_CORE_REPAIR.json#expanded_regression_triage",
+    "source_or_tests_changed_for_triage": false
+  },
+  "fresh_native_preflight": {
+    "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/fresh-native-preflight.json",
+    "sha256": "6643de7d32611cd6e6a30073e9a589b56c4a61bc332949894c9810077d6a8a2b",
+    "status": "PASS_READ_ONLY",
+    "native_start": "NOT_YET_DISPATCHED",
+    "new_private_home": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/mcp_home",
+    "new_project_root": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/project_root",
+    "processes_and_listeners": [
+      {
+        "pid": 58888,
+        "ppid": 52944,
+        "started_local": "2026-10-22 22:17:30",
+        "role": "COMSOL ServerApplication/mphserver",
+        "exe_or_command": ".../universal-m2a-repaired-install-20261022-d898e40069/.../installation/bin/comsol mphserver",
+        "birth_epoch_seconds": 1792678650.131374,
+        "listener": {
+          "address": "127.0.0.1",
+          "port": 59595
+        }
+      },
+      {
+        "pid": 70543,
+        "ppid": 52944,
+        "started_local": "2026-10-22 22:32:21",
+        "role": "PersistentComsolWorker",
+        "exe_or_command": "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home/bin/java",
+        "birth_epoch_seconds": 1792679541.479461,
+        "listener": {
+          "address": "127.0.0.1",
+          "port": 62828
+        }
+      },
+      {
+        "pid": 82522,
+        "ppid": 80024,
+        "started_local": "2026-10-22 20:09:33",
+        "role": "COMSOL ServerApplication/mphserver",
+        "exe_or_command": ".../universal-m2a-20261022T115828Z-43b2d2/.../installation/bin/comsol mphserver",
+        "birth_epoch_seconds": 1792670973.071216,
+        "listener": {
+          "address": "127.0.0.1",
+          "port": 64796
+        }
+      }
+    ],
+    "memory_total_bytes": 137438953472,
+    "disk_available": "348GiB",
+    "schema_only_attempt_1": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/attempts/schema-inspection-init-failure.json",
+      "sha256": "c710670812c0abdeddd61b6e0f0e2c28e49abc8a61c9335aeb8c6a3e297af27e",
+      "status": "TIMED_OUT_DURING_CONTROL_STARTUP_CONFIGURATION",
+      "native_request_dispatched": false,
+      "root_cause": "COMSOL_PROJECT_ROOT was absent; isolated control daemon requires the authorized workspace root to exist."
+    }
+  },
+  "historical_initial_project_create": {
+    "status": "PASS",
+    "project_id": "87d759ca-0764-473a-9978-2b51d5da74e1",
+    "project_create_operation_id": "9883e35a-42aa-4ae7-a2d2-bb77119f277a",
+    "project_create_job_id": "d9e1ee94-cbba-4056-9720-fbc0cfce819a",
+    "request_id": "m2a-20261022-project-create-6a52a5510ad3",
+    "idempotency_key": "m2a-project-create-f7c3f84c5da5471d96e8ce2743c52b32",
+    "workspace": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/project_root/m2a-native-conduction-20261022-A7",
+    "initial_revision": 1,
+    "permissions": [
+      "compute",
+      "host_control",
+      "inspect",
+      "project_write",
+      "trusted_code"
+    ],
+    "timeouts": {
+      "queue_timeout_s": 20,
+      "execution_timeout_s": 300
+    },
+    "response_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/runtime/project-create.response.json"
+  },
+  "historical_initial_session_start_pending": {
+    "status": "COMPLETED",
+    "request_id": "m2a-20261022-session-start-c444b4deec1c",
+    "idempotency_key": "m2a-session-start-e52be893807842a8af299da03bf64763",
+    "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics",
+    "project_id": "87d759ca-0764-473a-9978-2b51d5da74e1",
+    "queue_timeout_s": 20,
+    "execution_timeout_s": 240,
+    "rpc_timeout_s": 245,
+    "request_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/runtime/session-start.request.json",
+    "pending_refs_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/pending-refs.json",
+    "process_check": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/runtime/prestart-process-check.json",
+      "sha256": "085be0aedc86c2a8a48accb747ea4ecfc9420724d97881acd70474e89b25cb5b",
+      "observed_comsol_related_process_count": 0,
+      "read_only": true
+    },
+    "pending_refs_sha256": "fcb307211e70e7d36355cedd04193dd81036ca4b8d0b033afd01e186624715f6"
+  },
+  "historical_initial_session_start": {
+    "status": "PASS",
+    "request_id": "m2a-20261022-session-start-c444b4deec1c",
+    "idempotency_key": "m2a-session-start-e52be893807842a8af299da03bf64763",
+    "operation_id": "368a2174-0fec-450d-b60a-e818554cb0d3",
+    "job_id": "c27e57e8-725e-4066-896d-24e9dc5a3c21",
+    "session_id": "session-e4b78e9a6f0c472d8d4ec5017f3f3c03",
+    "project_id": "87d759ca-0764-473a-9978-2b51d5da74e1",
+    "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics",
+    "comsol_version": "6.4.0",
+    "verified_build_from_runtime_inspect": 293,
+    "server_ownership": "mcp_managed",
+    "loopback_only_verified": true,
+    "endpoint": {
+      "host": "127.0.0.1",
+      "port": 64796
+    },
+    "listener_sockets": [
+      {
+        "address": "127.0.0.1",
+        "port": 64796
+      }
+    ],
+    "process_identity": {
+      "pid": 82522,
+      "birth": "start_epoch_ms:1792670973071",
+      "executable": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/mcp_home/server/control-private/session-runtime-state/sessions/4f99bc0dfc30cd465e799cab721e40788ae97ce177024f9a1c14ead160b6c59e/owned-server/installation/bin/comsol"
+    },
+    "client_state": "DISCONNECTED",
+    "response_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/runtime/session-start.response.json"
+  },
+  "historical_checkpoint_before_r3_permission_gate": {
+    "status": "M2A_ARCHITECTURE_ESCALATION_PUBLIC_MODEL_RECONCILIATION_ROUTE_MISSING",
+    "recorded_at_utc": "2026-10-22T14:55:51Z",
+    "run_key": "universal-m2a-repaired-install-20261022-d898e40069",
+    "project_id": "7bc6e674-0a03-498e-9929-997a93c1f53f",
+    "session_id": "session-dbcda66decc045c8b081a7588a7af394",
+    "server_instance_id": "2cda65ba76ec397cc20749e19f8ac56b2040f532de43f1e0f149f1032dc0346e",
+    "worker_instance_id": "c5d4f20c-a3aa-4366-8dbd-074623a26c70",
+    "worker_epoch": 2,
+    "target_model_ref": {
+      "schema_version": 1,
+      "session_id": "session-dbcda66decc045c8b081a7588a7af394",
+      "server_instance_id": "2cda65ba76ec397cc20749e19f8ac56b2040f532de43f1e0f149f1032dc0346e",
+      "model_tag": "mcp1",
+      "generation": 1
+    },
+    "target_revision": 3,
+    "target_dirty": true,
+    "sentinel_model_ref": {
+      "schema_version": 1,
+      "session_id": "session-dbcda66decc045c8b081a7588a7af394",
+      "server_instance_id": "2cda65ba76ec397cc20749e19f8ac56b2040f532de43f1e0f149f1032dc0346e",
+      "model_tag": "mcp2",
+      "generation": 1
+    },
+    "sentinel_revision": 1,
+    "native_solver_submitted": true,
+    "native_solver_job_id": "b332f63b-9359-4502-b1ac-a2c452827810",
+    "native_solver_status": "SUCCEEDED",
+    "result_readback_status": "SOLUTION_AXES_UNVERIFIED_PRE_GETDATA",
+    "unbound_refresh_job_id": "1f87ec01-5469-452d-8bfa-ead562faf2e5",
+    "unbound_refresh_job_status": "UNKNOWN",
+    "reconcile_status": "WORKER_BINDING_UNKNOWN",
+    "next_action": "Main decision/refreeze for exact managed-session public reconciliation route; no further native mutation or replay."
+  },
+  "previous_next_steps_before_r3_permission_gate": [
+    "Main review the exact SolutionBinding pre-getData refusal and missing project/session-scoped public refresh/reconcile route.",
+    "Keep UNKNOWN job 1f87ec01-5469-452d-8bfa-ead562faf2e5 and prior failed jobs/results unchanged; do not replay or edit control database.",
+    "After Main chooses/refreezes the reconciliation route, use a fresh ordinary installed candidate and isolated control home/project/session if required, then resume public result/unit readback, artifact preview, save, and sentinel verification."
+  ],
+  "r3_permission_gate": {
+    "receipt": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/permission-gate.json",
+    "sha256": "5604cb1acbae53e640a3c32c96ac3636eef6a5cf09c4434b1202d11f0fa6370f",
+    "pending_refs_sha256": "a0688ec53e7dd83aeaf09a4c6ad749636d0721481b3081381cf69d7a9a8eb900",
+    "runtime_discovery_response_sha256": "af76246666a015cc50378118cc6da76820b85e3f5c19914208cf28351bbd47f2",
+    "session_start_schema_response_sha256": "223d8c73fe4f2313a65da6c54580d6bad2d292ef514d95412d59c4131337b8d8",
+    "project_create_response_sha256": "4c40f03088b7768a1a12778362ed9c957e40867eaed51e2e4f9ce06ae5953f50",
+    "durable_counts": {
+      "operations": 3,
+      "jobs": 3,
+      "projects": 1,
+      "sessions": 0,
+      "runtimes": 0,
+      "artifacts": 0
+    },
+    "native_engine_started": false,
+    "worker_java_r3_sha256": "ca7a15e7f613f627b46389dcae1878d2261e1fc423c5c86563dcd3a12373db96",
+    "worker_java_handed_to_kier_for_ipv4_follow_on": true
+  },
+  "current_r3_native_attempt": {
+    "status": "PARTIAL_PASS_NATIVE_SAVE_REFRESH_AND_NEGATIVE_PASS_REOPEN_AND_RECOVERY_UNKNOWN",
+    "candidate": {
+      "id": "r3",
+      "wheel_sha256": "6b4a40ea76443bb6e6a28a73f47548db2c656df4dfd88b272ae4737d40260e23",
+      "installed_runtime": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3",
+      "console_entrypoint": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/venv/bin/comsol-mcp",
+      "public_mcp_server_version": "1.30.0",
+      "tool_count": 112,
+      "transport": "installed console entrypoint over MCP stdio",
+      "source_receipt_sha256": "1b27ca5b0b8f68f7609cf209f546744416a35395db470ef5dd3870689b827464"
+    },
+    "project_id": "df096475-c434-4816-9b5a-86cfa9248c3f",
+    "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+    "session_start_dispatched": true,
+    "solver_dispatched": true,
+    "result_evaluate_native": "PASS_DEFAULT_AND_EXPLICIT_K",
+    "midpoint_oracle": "PASS",
+    "save": "PASS",
+    "reopen": "UNKNOWN",
+    "session_recover": "UNKNOWN",
+    "pending_refs_sha256": "5d55dd045e64de9dd3e20b18b5a429e150a6a7d2b1ea6ef4567ba15f22ef974e",
+    "next": "Main review the unresolved public-control response and formal stop authorization material; no further model/lifecycle request dispatched from this executor."
+  },
+  "active_references_before_task_local_authorization": {
+    "candidate": "r3",
+    "control_home": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/mcp_home",
+    "project_root": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/project_root",
+    "pending_refs_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/pending-refs.json",
+    "project_id": "a9e87dd3-d62f-4582-8955-c90051a4d975",
+    "session_id": null,
+    "model_refs": null,
+    "server_pid": null,
+    "server_endpoint": null,
+    "status": "CURRENT_R3_PRIVATE_PROJECT_ONLY; no session or ModelRefs; blocked before session.start by captured host permission ceiling"
+  },
+  "historical_checkpoint_before_task_local_authorization": {
+    "status": "M2A_R3_PUBLIC_NATIVE_PERMISSION_GATE_NO_SESSION_START",
+    "recorded_at_utc": "2026-10-22T17:46:14Z",
+    "candidate": {
+      "source_receipt_sha256": "1b27ca5b0b8f68f7609cf209f546744416a35395db470ef5dd3870689b827464",
+      "wheel_sha256": "6b4a40ea76443bb6e6a28a73f47548db2c656df4dfd88b272ae4737d40260e23",
+      "install_root": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3"
+    },
+    "project_id": "a9e87dd3-d62f-4582-8955-c90051a4d975",
+    "project_revision": 1,
+    "project_permissions": [
+      "compute",
+      "inspect",
+      "project_write"
+    ],
+    "session_id": null,
+    "target_model_ref": null,
+    "sentinel_model_ref": null,
+    "control_daemon": {
+      "pid": 95751,
+      "process_start_epoch_ms": 1792690554844,
+      "endpoint": "127.0.0.1:58000",
+      "role": "private r3 ControlDaemon, not COMSOL Server"
+    },
+    "runtime": {
+      "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics",
+      "version": "6.4.0",
+      "build": 293,
+      "metadata_only": true
+    },
+    "session_start_dispatched": false,
+    "reason": "session.start schema requires project host_control and bound project Java requires trusted_code; both absent from the existing daemon host-default ceiling. No process/global permission changes are authorized under the current project-only scope.",
+    "next_action": "Await explicit decision on a fresh task-local private-daemon opt-in or retain this gate; do not modify captured daemon or global config."
+  },
+  "authorized_runtime_evidence_hashes": {
+    "task_config": "30acce80726154153e9024efc1382e65f83688fb3f83f08b61d80c4451791e99",
+    "authorization": "2e1e57fe010ed9e395b2eb9f285b83a2e10e74df39a933fb3e445724636df2cd",
+    "client": "cf07abbf5e4f0206ebc634eaba3e20bf414b7af80f9e8f75f8ea8449e729130e",
+    "describe": "75d4dd8e5aa231265e753651a97f198c633e2ce9bf7f4db680e85fc73a4e0aa9",
+    "runtime_inspect": "f9bda913e3ddd268cc7872ed8d31edc72d4d22a2400a082e45a4d3a9041a8c7b",
+    "project_create": "75c2d955fb38ad9903ea0cd65ef40d87a1dfd136e1d48349131af3458c4ca321",
+    "project_inspect": "aee7447e8dc441f629d199b25df9ce9614548335e79c5c28c077f8f2ea6c048e",
+    "preflight": "0b238589b7d3b2c7408fe742a1e55c86d2604a9864c497f0dd77217b06d57cbb",
+    "refs": "1d83918a27e501bba49b92767855a2fc3781cc3d6d8b898a6d06a8258c1a4f4b",
+    "input_plan": "d16e281247a92a9087b4d1e641d0d82837d814d9a4bb09aacea080770a21d163",
+    "source": "b00802b8fcde0058d419bf880403cc345de575a63f1a2ef0c8ab7efedfc10a02",
+    "regex_attempt": "17b5fa5e8255b11fabca5b070b61754d45ebad8e5ae9b65da229271b726df2ee",
+    "status_reconcile_after_429": "c7b816e0e77adebf9ffac862c78c91f5973c0ed118044d49a4aa4f1a9bf48505",
+    "session_start_request": "7418e98f9d577bb442955f22375236359e2daf5720ddbfc08bfbe009b1d11201",
+    "pending_refs_pre_start": "e1ee7350f5e4596617cab9881432e162118ad6c2b22a219c2337b3c1246d6754",
+    "session_start_response": "28fa4b216c584ef0e27cb554ede3d14e7f2aeeb14f9449503dcbed3e165c35dd",
+    "pending_refs_after_start": "8a671bc3c553142aa94e3bbebb39cdc319e627aee9fae8245d9d6ffc864c9062",
+    "session_connect_request": "54b454a3ee2eed729bf7ff90397f891c70a12191e59cd25ee850f8c34175d8ce",
+    "pending_refs_before_connect": "910a20332e2180581c99c8ac6cdbb6ba293e3af75feff4479e93b2a77c8950b8",
+    "session_connect_response": "982b63d8139a867d5c2d49e3803139e41e9d5f2f105fd5bbcf67f951a62dfeb0",
+    "pending_refs_after_connect": "d710b44fe6733e5dfed5a3a1f509adaf1985d44bcd6ef7237bf662c53af91080",
+    "session_inspect_request": "9f26e071425adecd998dbbdede5a6c0426969ccb02ea531b4141f7c2a69b8e45",
+    "pending_refs_before_session_inspect": "de2425f590dd5b2929ce92ddf4fb2f6fee9cdfa6031547abf7b09c1070e5bda0",
+    "session_inspect_response": "35581add81fdee16bffa754d11c84ce3b5fd33b47666cd21e9ab2e2b53947814",
+    "pending_refs_after_session_inspect": "a9ed0ee2ddc202b75dc81e12b8f5eee67f211a2e613732dc7d6c46e2ad72c3ce",
+    "target_model_create_request": "eabd6b4d1a7462d948f13f90f2335c217e9c6cecbb53f8d7b3a5f7b6d7c35b3d",
+    "pending_refs_before_target_create": "88d41bc628024f585afd1313742d8a7d0975b39065588a36578136618f372639",
+    "target_model_create_r1_response": "1f10c36d9b948a0b1c1f9908d737f81e4a0cbd95b8d09a099330c60e84969fd5",
+    "target_model_create_r2_request": "3eff424e96c1e9118a4a805b26b8af85cb0c7f4f9ac9fc7abf9046cb08fe5549",
+    "pending_refs_before_target_create_r2": "30407229a76cb2c0e01f982d86e50ce4f026754599668d973743667f48322850",
+    "target_model_create_r2_response": "75a78787f1d405df8d1bace49b5be1431f8e058c9fe0b5f948c705dc9db1d2cd",
+    "pending_refs_after_target_create": "66f195cd6e3beaa04bde78e9352962899d953333593ed21634cf1d4ee88f8863",
+    "sentinel_model_create_request": "a60285afe919cbadb69bc313e38785c66cc2f51fa4766330c75ffd4ab5b57f9c",
+    "pending_refs_before_sentinel_create": "c89cfc0d83e2184cd3e0b7394dc8472110a92d03e891aeac738b8d7500b56579",
+    "sentinel_model_create_response": "a5805c7827634a3c4c3914741793e270450e4b953e9612c03b094b4d8ba55ed4",
+    "pending_refs_after_sentinel_create": "8207d261ce38160a381f0a702f51f49d7e204044f22b4c1b81e67f0eae6b742b",
+    "parameter_schema": "d3ce56df6f7420c0a150a991a426a4c852d0d0ae5456362b0f4cfa87c82f4def",
+    "sentinel_parameter_set_request": "92abf7c27b2e1a5e83bf81f0ad93d3465a1cf51047c16ef7c6b729f9df645c9f",
+    "pending_refs_before_sentinel_set": "364157d0ea81aa55d2f92f16bbcd394225a40f8f60eaa616f704f3ef3d26ec18",
+    "sentinel_parameter_set_response": "78ee57821374b7ee9f50faa340d8840c5dea9b561672f020866f07f8b0bc0e92",
+    "pending_refs_after_sentinel_set": "13d65e4b8351f0f0683dc6c75c71f4fd54caa8c59ce654873a5b511701daf76c",
+    "sentinel_parameter_list_request": "ca00dd7b5cabcaea064540312a46316b9360111019e64816a3993f74a7fe2a1f",
+    "pending_refs_before_sentinel_list": "e44da0ebd7ef7f1d310fc9138458d8853653de121dfc0ba0eb18782d58fd60e9",
+    "sentinel_parameter_list_response": "3e05162ad6052d02df450a662106eff3a8e84cb608a0b4bd2468289343a406f9",
+    "pending_refs_after_sentinel_list": "d55e2acda4dfadf8072fed259d7dc5eea24573ef49e51adefc46415e46cf2fc6"
+  },
+  "provider_429_user_reported": {
+    "not_native_failure": true,
+    "new_server_operation_dispatched_after_report": false,
+    "state_reconciled_before_continuation": true
+  },
+  "current_runtime_directory": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime",
+  "historical_active_references_pre_final_native_chain": {
+    "candidate": "r3",
+    "control_home": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/control_home/control-private",
+    "project_root": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/project_root",
+    "pending_refs_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/pending-refs.json",
+    "project_id": "df096475-c434-4816-9b5a-86cfa9248c3f",
+    "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+    "model_refs": {
+      "target": {
+        "schema_version": 1,
+        "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+        "server_instance_id": "8fd0d9db5b90f4a3aec11cbee418d1d066fd9a89fd11542954bd29af2c64200e",
+        "model_tag": "mcp1",
+        "generation": 1
+      },
+      "target_revision": 0,
+      "target_dirty": false,
+      "target_label": "M2a target conduction r3",
+      "target_ownership": "mcp_owned",
+      "sentinel": {
+        "schema_version": 1,
+        "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+        "server_instance_id": "8fd0d9db5b90f4a3aec11cbee418d1d066fd9a89fd11542954bd29af2c64200e",
+        "model_tag": "mcp2",
+        "generation": 1
+      },
+      "sentinel_revision": 1,
+      "sentinel_dirty": false,
+      "sentinel_label": "M2a preservation sentinel r3",
+      "sentinel_ownership": "mcp_owned",
+      "sentinel_baseline_expected": {
+        "m2a_sentinel_marker": "47[mm]"
+      },
+      "sentinel_set_response_sha256": "78ee57821374b7ee9f50faa340d8840c5dea9b561672f020866f07f8b0bc0e92",
+      "sentinel_baseline_readback": {
+        "status": "PASS",
+        "parameter_count": 1,
+        "group_count": 1,
+        "group": "default",
+        "name": "m2a_sentinel_marker",
+        "expression": "47[mm]",
+        "reported_unit": "m",
+        "unit_readback_status": "UNVERIFIED",
+        "revision": 1,
+        "response_sha256": "3e05162ad6052d02df450a662106eff3a8e84cb608a0b4bd2468289343a406f9"
+      }
+    },
+    "server_pid": 18219,
+    "server_birth": "start_epoch_ms:1792692929019",
+    "server_endpoint": {
+      "host": "127.0.0.1",
+      "port": 54381
+    },
+    "server_instance_id": "8fd0d9db5b90f4a3aec11cbee418d1d066fd9a89fd11542954bd29af2c64200e",
+    "worker_instance_id": "3481cda9-2bc6-406f-ba71-0223cdc10895",
+    "worker_epoch": 2,
+    "server_ownership": "mcp_managed",
+    "status": "target mcp1 revision 0; sentinel mcp2 revision 1 with exact parameter marker read back; target Java compile next",
+    "session_start_job_id": "13d0260f-5542-406b-a5c5-9acbc7c36298",
+    "session_connect_job_id": "feddbbf9-58a2-49a2-a53a-1943a0976f8b",
+    "session_connect_operation_id": "ff24911a-69fb-46a3-98a6-b1f336470e49",
+    "session_revision": 4,
+    "session_state": "CONNECTED",
+    "health": "HEALTHY"
+  },
+  "historical_checkpoint_pre_save_reopen_chain": {
+    "status": "M2A_R3_SENTINEL_BASELINE_PUBLIC_READBACK_PASS",
+    "recorded_at_utc": "2026-10-22T18:26:07.042854+00:00",
+    "candidate": {
+      "source_receipt_sha256": "1b27ca5b0b8f68f7609cf209f546744416a35395db470ef5dd3870689b827464",
+      "wheel_sha256": "6b4a40ea76443bb6e6a28a73f47548db2c656df4dfd88b272ae4737d40260e23",
+      "installed_package_files_verified": 173,
+      "borrowed_or_editable_paths": false
+    },
+    "process_scope": {
+      "host_control": "1",
+      "trusted_code": "1",
+      "global_configuration_changed": false,
+      "fresh_private_control_daemon": {
+        "pid": 10810,
+        "process_start_epoch_ms": 1792692096287,
+        "endpoint": "127.0.0.1:49957"
+      },
+      "default_ceiling_daemon_preserved": {
+        "pid": 95751,
+        "endpoint": "127.0.0.1:58000"
+      }
+    },
+    "runtime": {
+      "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics",
+      "release": "6.4.0",
+      "build": 293,
+      "architecture": "arm64",
+      "comsol_started_by_r3": false,
+      "license_checked_out": false,
+      "job_id": "6e1e359a-914d-4d64-9d20-0b4a79d9bc94",
+      "response_sha256": "f9bda913e3ddd268cc7872ed8d31edc72d4d22a2400a082e45a4d3a9041a8c7b"
+    },
+    "project": {
+      "project_id": "df096475-c434-4816-9b5a-86cfa9248c3f",
+      "revision": 1,
+      "workspace": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/project_root/m2a-r3-native-20261023",
+      "effective_permissions": [
+        "compute",
+        "host_control",
+        "inspect",
+        "project_write",
+        "trusted_code"
+      ],
+      "timeouts": {
+        "queue_timeout_s": 60,
+        "execution_timeout_s": 600
+      },
+      "inspect_job_id": "178ee81c-9a9e-4f98-b148-5d1ab1145d14",
+      "inspect_response_sha256": "aee7447e8dc441f629d199b25df9ce9614548335e79c5c28c077f8f2ea6c048e"
+    },
+    "accepted_control_jobs": {
+      "runtime.inspect": {
+        "job_id": "6e1e359a-914d-4d64-9d20-0b4a79d9bc94",
+        "status": "SUCCEEDED"
+      },
+      "project.create": {
+        "job_id": "7b22c433-e7c7-45d1-8437-4a8324a3be22",
+        "status": "SUCCEEDED"
+      },
+      "project.inspect": {
+        "job_id": "178ee81c-9a9e-4f98-b148-5d1ab1145d14",
+        "status": "SUCCEEDED"
+      }
+    },
+    "pending_inspection_reconciled": {
+      "operation": "project.inspect",
+      "job_id": "178ee81c-9a9e-4f98-b148-5d1ab1145d14",
+      "operation_id": "19d1fdc7-b86f-4870-b48a-1a37ae9ba253",
+      "status": "SUCCEEDED",
+      "effective_permissions": [
+        "compute",
+        "host_control",
+        "inspect",
+        "project_write",
+        "trusted_code"
+      ],
+      "response_sha256": "aee7447e8dc441f629d199b25df9ce9614548335e79c5c28c077f8f2ea6c048e",
+      "status_reconcile_receipt_sha256": "c7b816e0e77adebf9ffac862c78c91f5973c0ed118044d49a4aa4f1a9bf48505",
+      "no_resubmission": true
+    },
+    "session_start": {
+      "dispatched": true,
+      "pending_request": false,
+      "request_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/session-start-request-r1.json",
+      "response_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/session-start-response-r1.json",
+      "request_id": "86e41bee-14f2-41b4-a322-8dc4345ade8a",
+      "idempotency_key": "b8a48e89-79ab-4896-a28a-04a9cb16c828",
+      "operation_id": "bff15524-8567-4da8-8681-dec24b9a2212",
+      "job_id": "13d0260f-5542-406b-a5c5-9acbc7c36298",
+      "request_hash": "08552312d71f6ee617f426694c374c357341eb7f92ab3da53b3763c2532f125a",
+      "response_sha256": "28fa4b216c584ef0e27cb554ede3d14e7f2aeeb14f9449503dcbed3e165c35dd",
+      "server_births": 1,
+      "budget": 1,
+      "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+      "server_pid": 18219,
+      "server_birth": "start_epoch_ms:1792692929019",
+      "endpoint": {
+        "host": "127.0.0.1",
+        "port": 54381
+      },
+      "ownership": "mcp_managed",
+      "loopback_only_verified": true,
+      "client_state": "DISCONNECTED",
+      "no_retry_or_replay": true
+    },
+    "resource_preflight": {
+      "receipt": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/resource-preflight-r1.json",
+      "memory_free_percent": "29%",
+      "physical_memory_bytes": 137438953472,
+      "disk_available_1024_blocks": 365316080,
+      "commands_exit_zero": true,
+      "old_processes_untouched": {
+        "pid_58888": "ServerApplication",
+        "pid_70543": "PersistentComsolWorker",
+        "pid_82522": "ServerApplication"
+      },
+      "after_429_process_state_reconfirmed": true
+    },
+    "task_input": {
+      "java_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/project_root/m2a-r3-native-20261023/java/M2aRepairedConduction.java",
+      "source_sha256": "b00802b8fcde0058d419bf880403cc345de575a63f1a2ef0c8ab7efedfc10a02",
+      "entrypoint": "M2aRepairedConduction",
+      "all_required_build_argument_keys_validated_locally": true,
+      "required_key_count": 22,
+      "source_operation_dispatched": false
+    },
+    "provider_event": {
+      "source": "user report",
+      "classification": "provider 429 exceededretrylimit; not a COMSOL engine failure",
+      "accepted_work_replayed": false
+    },
+    "latest_evidence_sha256": {
+      "task_config": "30acce80726154153e9024efc1382e65f83688fb3f83f08b61d80c4451791e99",
+      "authorization": "2e1e57fe010ed9e395b2eb9f285b83a2e10e74df39a933fb3e445724636df2cd",
+      "client": "cf07abbf5e4f0206ebc634eaba3e20bf414b7af80f9e8f75f8ea8449e729130e",
+      "describe": "75d4dd8e5aa231265e753651a97f198c633e2ce9bf7f4db680e85fc73a4e0aa9",
+      "runtime_inspect": "f9bda913e3ddd268cc7872ed8d31edc72d4d22a2400a082e45a4d3a9041a8c7b",
+      "project_create": "75c2d955fb38ad9903ea0cd65ef40d87a1dfd136e1d48349131af3458c4ca321",
+      "project_inspect": "aee7447e8dc441f629d199b25df9ce9614548335e79c5c28c077f8f2ea6c048e",
+      "preflight": "0b238589b7d3b2c7408fe742a1e55c86d2604a9864c497f0dd77217b06d57cbb",
+      "refs": "1d83918a27e501bba49b92767855a2fc3781cc3d6d8b898a6d06a8258c1a4f4b",
+      "input_plan": "d16e281247a92a9087b4d1e641d0d82837d814d9a4bb09aacea080770a21d163",
+      "source": "b00802b8fcde0058d419bf880403cc345de575a63f1a2ef0c8ab7efedfc10a02",
+      "regex_attempt": "17b5fa5e8255b11fabca5b070b61754d45ebad8e5ae9b65da229271b726df2ee",
+      "project_inspect_response": "aee7447e8dc441f629d199b25df9ce9614548335e79c5c28c077f8f2ea6c048e",
+      "status_reconcile_after_429": "c7b816e0e77adebf9ffac862c78c91f5973c0ed118044d49a4aa4f1a9bf48505",
+      "session_start_request": "7418e98f9d577bb442955f22375236359e2daf5720ddbfc08bfbe009b1d11201",
+      "pending_refs_pre_start": "e1ee7350f5e4596617cab9881432e162118ad6c2b22a219c2337b3c1246d6754",
+      "session_start_response": "28fa4b216c584ef0e27cb554ede3d14e7f2aeeb14f9449503dcbed3e165c35dd",
+      "pending_refs_after_start": "8a671bc3c553142aa94e3bbebb39cdc319e627aee9fae8245d9d6ffc864c9062",
+      "session_connect_request": "54b454a3ee2eed729bf7ff90397f891c70a12191e59cd25ee850f8c34175d8ce",
+      "pending_refs_before_connect": "910a20332e2180581c99c8ac6cdbb6ba293e3af75feff4479e93b2a77c8950b8",
+      "session_connect_response": "982b63d8139a867d5c2d49e3803139e41e9d5f2f105fd5bbcf67f951a62dfeb0",
+      "pending_refs_after_connect": "d710b44fe6733e5dfed5a3a1f509adaf1985d44bcd6ef7237bf662c53af91080",
+      "session_inspect_request": "9f26e071425adecd998dbbdede5a6c0426969ccb02ea531b4141f7c2a69b8e45",
+      "pending_refs_before_session_inspect": "de2425f590dd5b2929ce92ddf4fb2f6fee9cdfa6031547abf7b09c1070e5bda0",
+      "session_inspect_response": "35581add81fdee16bffa754d11c84ce3b5fd33b47666cd21e9ab2e2b53947814",
+      "pending_refs_after_session_inspect": "a9ed0ee2ddc202b75dc81e12b8f5eee67f211a2e613732dc7d6c46e2ad72c3ce",
+      "target_model_create_request": "eabd6b4d1a7462d948f13f90f2335c217e9c6cecbb53f8d7b3a5f7b6d7c35b3d",
+      "pending_refs_before_target_create": "88d41bc628024f585afd1313742d8a7d0975b39065588a36578136618f372639",
+      "target_model_create_r1_response": "1f10c36d9b948a0b1c1f9908d737f81e4a0cbd95b8d09a099330c60e84969fd5",
+      "target_model_create_r2_request": "3eff424e96c1e9118a4a805b26b8af85cb0c7f4f9ac9fc7abf9046cb08fe5549",
+      "pending_refs_before_target_create_r2": "30407229a76cb2c0e01f982d86e50ce4f026754599668d973743667f48322850",
+      "target_model_create_r2_response": "75a78787f1d405df8d1bace49b5be1431f8e058c9fe0b5f948c705dc9db1d2cd",
+      "pending_refs_after_target_create": "66f195cd6e3beaa04bde78e9352962899d953333593ed21634cf1d4ee88f8863",
+      "sentinel_model_create_request": "a60285afe919cbadb69bc313e38785c66cc2f51fa4766330c75ffd4ab5b57f9c",
+      "pending_refs_before_sentinel_create": "c89cfc0d83e2184cd3e0b7394dc8472110a92d03e891aeac738b8d7500b56579",
+      "sentinel_model_create_response": "a5805c7827634a3c4c3914741793e270450e4b953e9612c03b094b4d8ba55ed4",
+      "pending_refs_after_sentinel_create": "8207d261ce38160a381f0a702f51f49d7e204044f22b4c1b81e67f0eae6b742b",
+      "parameter_schema": "d3ce56df6f7420c0a150a991a426a4c852d0d0ae5456362b0f4cfa87c82f4def",
+      "sentinel_parameter_set_request": "92abf7c27b2e1a5e83bf81f0ad93d3465a1cf51047c16ef7c6b729f9df645c9f",
+      "pending_refs_before_sentinel_set": "364157d0ea81aa55d2f92f16bbcd394225a40f8f60eaa616f704f3ef3d26ec18",
+      "sentinel_parameter_set_response": "78ee57821374b7ee9f50faa340d8840c5dea9b561672f020866f07f8b0bc0e92",
+      "pending_refs_after_sentinel_set": "13d65e4b8351f0f0683dc6c75c71f4fd54caa8c59ce654873a5b511701daf76c",
+      "sentinel_parameter_list_request": "ca00dd7b5cabcaea064540312a46316b9360111019e64816a3993f74a7fe2a1f",
+      "pending_refs_before_sentinel_list": "e44da0ebd7ef7f1d310fc9138458d8853653de121dfc0ba0eb18782d58fd60e9",
+      "sentinel_parameter_list_response": "3e05162ad6052d02df450a662106eff3a8e84cb608a0b4bd2468289343a406f9",
+      "pending_refs_after_sentinel_list": "d55e2acda4dfadf8072fed259d7dc5eea24573ef49e51adefc46415e46cf2fc6"
+    },
+    "next": "Validate the saved project Java argument map and describe exact code.compile/build_execute schema; dispatch compile against target ModelRef only.",
+    "session_connect": {
+      "request_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/session-connect-request-r1.json",
+      "response_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/session-connect-response-r1.json",
+      "request_id": "1ba23a9f-021b-48dc-9d1a-760125046988",
+      "idempotency_key": "cfd3e971-a900-4b95-90e5-461d5ec0aeb8",
+      "operation_id": "ff24911a-69fb-46a3-98a6-b1f336470e49",
+      "job_id": "feddbbf9-58a2-49a2-a53a-1943a0976f8b",
+      "request_hash": "1c80599aacbe1cec67bacb0e489cd24645c35773e19904895d4e32acd9635597",
+      "response_sha256": "982b63d8139a867d5c2d49e3803139e41e9d5f2f105fd5bbcf67f951a62dfeb0",
+      "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+      "project_id": "df096475-c434-4816-9b5a-86cfa9248c3f",
+      "server_pid": 18219,
+      "server_birth": "start_epoch_ms:1792692929019",
+      "endpoint": {
+        "host": "127.0.0.1",
+        "port": 54381
+      },
+      "server_instance_id": "8fd0d9db5b90f4a3aec11cbee418d1d066fd9a89fd11542954bd29af2c64200e",
+      "worker_instance_id": "3481cda9-2bc6-406f-ba71-0223cdc10895",
+      "worker_epoch": 2,
+      "observed_peer": {
+        "address": "127.0.0.1",
+        "port": 54381
+      },
+      "remote_engine_version": "COMSOL Multiphysics 6.4 (开发版本: 293)",
+      "reported_build": null,
+      "build_source": "NOT_REPORTED",
+      "new_server_births": 0,
+      "total_task_server_births": 1
+    },
+    "session_inspect": {
+      "request_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/session-inspect-connected-request-r1.json",
+      "response_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/session-inspect-connected-response-r1.json",
+      "request_id": "589a49c2-b3b7-4e76-8af7-83607dca5694",
+      "idempotency_key": "f93d9257-2fb6-416b-8b86-1b6bae519400",
+      "operation_id": "session.inspect",
+      "job_id": null,
+      "request_hash": null,
+      "response_sha256": "35581add81fdee16bffa754d11c84ce3b5fd33b47666cd21e9ab2e2b53947814",
+      "project_id": "df096475-c434-4816-9b5a-86cfa9248c3f",
+      "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+      "revision": 4,
+      "state": "CONNECTED",
+      "client_state": "CONNECTED",
+      "server_state": "MCP_MANAGED",
+      "server_ownership": "mcp_managed",
+      "server_pid": 18219,
+      "server_birth": "start_epoch_ms:1792692929019",
+      "endpoint": {
+        "host": "127.0.0.1",
+        "port": 54381
+      },
+      "server_instance_id": "8fd0d9db5b90f4a3aec11cbee418d1d066fd9a89fd11542954bd29af2c64200e",
+      "worker_instance_id": "3481cda9-2bc6-406f-ba71-0223cdc10895",
+      "worker_epoch": 2,
+      "health": "HEALTHY",
+      "runtime_live": true,
+      "worker_binding": {
+        "worker_instance_id": "3481cda9-2bc6-406f-ba71-0223cdc10895",
+        "worker_epoch": 2,
+        "server_lane": "owned"
+      }
+    },
+    "target_model_create": {
+      "request_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/target-model-create-request-r2.json",
+      "response_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/target-model-create-response-r2.json",
+      "request_id": "63aef435-8afb-4909-8e5d-13656a7309c5",
+      "idempotency_key": "af22c90a-7fe1-4010-9655-226a17279dfa",
+      "operation_id": "77b7d7b0-684b-4658-8f4c-cef640ffe986",
+      "job_id": "3a38b996-9bd1-486d-9fe0-dbdf681201ab",
+      "request_hash": "42f31371761a812724f031ba2ee389938d77c438475384d1daf1ac2a10ef44f5",
+      "response_sha256": "75a78787f1d405df8d1bace49b5be1431f8e058c9fe0b5f948c705dc9db1d2cd",
+      "model_ref": {
+        "schema_version": 1,
+        "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+        "server_instance_id": "8fd0d9db5b90f4a3aec11cbee418d1d066fd9a89fd11542954bd29af2c64200e",
+        "model_tag": "mcp1",
+        "generation": 1
+      },
+      "revision": 0,
+      "dirty": false,
+      "label": "M2a target conduction r3",
+      "dimension": 1,
+      "ownership": "mcp_owned",
+      "project_id": "df096475-c434-4816-9b5a-86cfa9248c3f"
+    },
+    "sentinel_model_create": {
+      "request_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/sentinel-model-create-request-r1.json",
+      "response_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/sentinel-model-create-response-r1.json",
+      "request_id": "d618c04e-fcc0-4f88-88bb-e6f0e14b3349",
+      "idempotency_key": "c8f8641f-62b2-46c6-905f-ff1695e8cb9c",
+      "operation_id": "33bd54be-9b6b-41bd-9cee-d6f1453c1665",
+      "job_id": "1828af62-78ca-4705-acb4-f374bbfde281",
+      "request_hash": "213346cd38deeecb4f2e905885e01490a44e367f6ff3bd6fea09ef25a226ed3c",
+      "response_sha256": "a5805c7827634a3c4c3914741793e270450e4b953e9612c03b094b4d8ba55ed4",
+      "model_ref": {
+        "schema_version": 1,
+        "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+        "server_instance_id": "8fd0d9db5b90f4a3aec11cbee418d1d066fd9a89fd11542954bd29af2c64200e",
+        "model_tag": "mcp2",
+        "generation": 1
+      },
+      "revision": 0,
+      "dirty": false,
+      "label": "M2a preservation sentinel r3",
+      "dimension": 1,
+      "ownership": "mcp_owned"
+    },
+    "sentinel_baseline": {
+      "operation_schema_sha256": "d3ce56df6f7420c0a150a991a426a4c852d0d0ae5456362b0f4cfa87c82f4def",
+      "set_request_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/sentinel-parameter-set-request-r1.json",
+      "request_id": "45534b53-39cb-419b-ba31-8d170de62e77",
+      "idempotency_key": "60a89ff8-202a-427b-a560-53020a2fb983",
+      "model_ref": {
+        "schema_version": 1,
+        "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+        "server_instance_id": "8fd0d9db5b90f4a3aec11cbee418d1d066fd9a89fd11542954bd29af2c64200e",
+        "model_tag": "mcp2",
+        "generation": 1
+      },
+      "expected_revision": 0,
+      "parameter": {
+        "name": "m2a_sentinel_marker",
+        "expression": "47[mm]"
+      },
+      "pending_before_dispatch": true,
+      "request_sha256": "92abf7c27b2e1a5e83bf81f0ad93d3465a1cf51047c16ef7c6b729f9df645c9f",
+      "set_response_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/sentinel-parameter-set-response-r1.json",
+      "operation_id": "30acdfc8-3378-466c-8705-88ec8c42a8d1",
+      "job_id": "bb9dc973-4958-45f9-af6c-3937e1938256",
+      "request_hash": "22c0235de5d230ab4335682eb52ce412e97966bf8b3b3c70f7c4a01a951d2b85",
+      "response_sha256": "78ee57821374b7ee9f50faa340d8840c5dea9b561672f020866f07f8b0bc0e92",
+      "revision_after": 1,
+      "dirty": false,
+      "status": "PASS_EXACT_EXPRESSION_READBACK",
+      "applied_count": 1,
+      "failed_count": 0,
+      "partial_change": true,
+      "execution_state_unknown": false,
+      "readback_match": true,
+      "readback_expression": "47[mm]",
+      "unit_readback_status": "UNVERIFIED",
+      "isolation_proof": {
+        "verified": true,
+        "proof_scope": "active SessionRuntimeContext + same ManagedBackend/Worker/service + original Server Popen/kernel birth + exact IPv4 loopback listener + live bidirectional Worker socket pair",
+        "project_id": "df096475-c434-4816-9b5a-86cfa9248c3f",
+        "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+        "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics",
+        "worker_instance_id": "3481cda9-2bc6-406f-ba71-0223cdc10895",
+        "worker_epoch": 2,
+        "server_pid": 18219,
+        "server_birth": "start_epoch_ms:1792692929019",
+        "server_start_epoch_ms": 1792692929019,
+        "worker_pid": 20044,
+        "worker_start_epoch_ms": 1792693089469,
+        "endpoint": "127.0.0.1:54381",
+        "listener": {
+          "pid": 18219,
+          "endpoint": "127.0.0.1:54381",
+          "local_endpoint": "127.0.0.1:54381",
+          "remote_endpoint": null,
+          "state": "LISTEN",
+          "raw": "java    18219 everwalker   59u  IPv6 0xe5fa8428d071a117      0t0  TCP 127.0.0.1:54381 (LISTEN)"
+        },
+        "worker_client_ephemeral_port": 55238,
+        "established_client_pids": [
+          18219,
+          20044
+        ],
+        "worker_health_rpc_performed": false
+      },
+      "list_request_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/sentinel-parameter-list-request-r1.json",
+      "list_request_id": "bfbca2ff-190b-47df-9011-a67da63de0ec",
+      "list_idempotency_key": "4b50d647-016d-40d9-a5ad-e45a1f28b871",
+      "list_expected_revision": 1,
+      "list_pending_before_dispatch": true,
+      "list_request_sha256": "ca00dd7b5cabcaea064540312a46316b9360111019e64816a3993f74a7fe2a1f",
+      "list_response_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/sentinel-parameter-list-response-r1.json",
+      "list_operation_id": "4d4c2cf2-d352-42e1-aecc-1245aa7c4e2b",
+      "list_job_id": "0475aa81-14d4-4231-932e-0017e2c7357d",
+      "list_request_hash": "d56be3451b014e8cad7907f12406b0c34a337e683b17ecb500382f0f4872f650",
+      "list_response_sha256": "3e05162ad6052d02df450a662106eff3a8e84cb608a0b4bd2468289343a406f9",
+      "parameter_count": 1,
+      "group_count": 1,
+      "group": "default",
+      "readback_name": "m2a_sentinel_marker",
+      "reported_unit": "m",
+      "readback_revision": 1
+    }
+  },
+  "historical_latest_native_run_pre_unknown_reconciliation": {
     "run_key": "universal-m2a-repaired-install-20261022-d898e40069",
     "status": "BLOCKED_ARCHITECTURE_PUBLIC_RECONCILIATION_UNAVAILABLE",
     "recorded_at_utc": "2026-10-22T14:55:51Z",
@@ -2104,352 +3508,7 @@
       "sentinel_final_response_sha256": "d87a04840ea83d4c3c060d5d04c957686aa0be40d445db582776ac45ed7d61e2"
     }
   },
-  "current_installation": {
-    "source_snapshot_fingerprint_sha256": "b9807c6823ea82aecba25fdb464072c838e62dedb5e5fffb65ce969aaaee4732",
-    "application_wheel_sha256": "1706ea4085e72d999de0f0dffe7d56e0af34bb76e275b30d08e6823668c1ff92",
-    "offline_zip_sha256": "d8aa6654e7475550a7acfb2e529c121c2713fd3e0235cc1ea09d9128f580f500",
-    "source_lock_sha256": "a6bb3dc08acdb783a1d3553f71e21bde8c7a8e01394a6f70a062357a4ce04fc2",
-    "resolved_requirements_lock_sha256": "a42c480858b64585f3d6044a5da1b800e14da08901520cdc9e2a08f4930ab7a7",
-    "offline_install_exit_code": 0,
-    "installed_source_files_match": 172,
-    "frozen_source_package_files": 172,
-    "mismatches": [],
-    "borrowed_or_editable_paths": false,
-    "python": "3.12",
-    "mcp_server_version": "1.30.0",
-    "tool_count": 112
-  },
-  "core_repair_current": {
-    "status": "SOFTWARE_REPAIR_PASS_NEW_FROZEN_CANDIDATE_INSTALLED_NATIVE_NOT_RUN",
-    "base_commit": "d56c05b2b98d10f8f7ed9777c8b39a10e29455c7",
-    "frozen_source_receipt_sha256": "1b27ca5b0b8f68f7609cf209f546744416a35395db470ef5dd3870689b827464",
-    "source_manifest_sha256": "f49cfdef09fb6f9c1d992c2985880104c24b384a12fd5510fcb1ec47b42b1372",
-    "overlay_hashes": {
-      "comsol_mcp/_g3_results.py": "5a7b3d8925cfbbed3b4e890f20401c6140e4f9b53403a27bde1224078f04101b",
-      "tests/test_g3_results.py": "a1fe81d10cd583584eef37c15b3bbf6b45621b0327b2e91c29b913048ba2058c"
-    },
-    "focused_public_adapter_tests": {
-      "passed": 14,
-      "deselected": 237,
-      "exit_code": 0,
-      "junit_sha256": "8b35f9eb67045047429025e58ab70a9aef7a3d17d72cc8fe395fc32618c15d79"
-    },
-    "affected_results_regression": {
-      "passed": 261,
-      "exit_code": 0,
-      "junit_sha256": "e0312e4fa33de8d85076f9dc5508cdacd7da2984ef530d3a630fe3f5635789eb"
-    },
-    "adjacent_regression": {
-      "passed": 357,
-      "failed": 5,
-      "exit_code": 1,
-      "receipt_sha256": "dd439ed11a0db8d99a40d21b3e5ea05fb315088b3aa654a382612c973fed3d04",
-      "classification": "four W17 fixture/expectation failures and one unavailable historical T044 fixture; retained without changing unrelated tests"
-    },
-    "release_json_sha256": "20f962cc9b31fcdd03e9a606737d670d51465f3600a079b96a64eb6546225798",
-    "wheel_sha256": "6b4a40ea76443bb6e6a28a73f47548db2c656df4dfd88b272ae4737d40260e23",
-    "offline_zip_sha256": "0d2c904fbb59489ff0f2aa6416e293f89ec6d2789f46d6885bafb23955634fbc",
-    "fresh_install_package_match": "PASS; 173 files byte-identical; no borrowed/editable paths",
-    "installed_mcp": "PASS initialize + 112 tools + result.evaluate operation_describe; no engine started",
-    "result_evaluate_native": "NOT_RUN"
-  },
-  "core_repair_attempts": [
-    {
-      "attempt": "frozen-source extraction r1",
-      "status": "FAILED_SAFE_REFUSAL",
-      "cause": "Python tar data filter rejected tracked absolute evidence symlink; no link followed",
-      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2-core-repair-source-20261022T160004Z"
-    },
-    {
-      "attempt": "release build r1 output path",
-      "status": "FAILED_INPUT_VALIDATION",
-      "cause": "relative ../ path not canonical; no output directory created"
-    },
-    {
-      "attempt": "uv python discovery",
-      "status": "FAILED_SANDBOX_CACHE_ACCESS",
-      "cause": "uv could not read ~/.cache/uv; solved by explicit /opt/homebrew/bin/python3.12 and private UV_CACHE_DIR"
-    },
-    {
-      "attempt": "fresh public MCP operation_describe(model.inspect)",
-      "status": "UNKNOWN_CONTROL_STARTUP_ERROR",
-      "request_id": "896fd791-3579-4ae0-9b87-df0dee730614",
-      "idempotency_key": "a56c351b-05fe-4d03-aa71-4d0c98a1b3c5",
-      "cause": "localhost bind permission denied; read-only operations/jobs counts are zero; no engine start"
-    },
-    {
-      "attempt": "public result.evaluate aggregate=none count-witness repair r3",
-      "status": "FOCUSED_AND_AFFECTED_PASS_ADJACENT_FAILURES_RETAINED",
-      "evidence": "docs/universal_mcp_execution/evidence/M2_CORE_REPAIR.json"
-    },
-    {
-      "attempt": "r3 fresh release/install/public MCP cold start",
-      "status": "PASS_SOFTWARE_ONLY_NATIVE_NOT_RUN",
-      "wheel_sha256": "6b4a40ea76443bb6e6a28a73f47548db2c656df4dfd88b272ae4737d40260e23"
-    },
-    {
-      "attempt": "old B public disconnect",
-      "status": "PASS_DISCONNECTED_WORKER_RETIRED_SERVER_PRESERVED",
-      "receipt": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/runtime/old-b-disconnect-r1.json"
-    },
-    {
-      "attempt": "old B public stop",
-      "status": "AUTO_REVIEW_REJECTED_NOT_EXECUTED_NO_VERIFIED_AUTH_REF",
-      "receipt": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/runtime/old-b-stop-review-rejection.json"
-    },
-    {
-      "attempt": "independent server resource/license preflight",
-      "status": "NOT_SUPPORTED_LICENSE_CAPACITY_UNKNOWN_THREE_SERVERS_PRESENT",
-      "receipt": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/runtime/resource-preflight-r1.json"
-    }
-  ],
-  "historical_status_before_r3": "M2A_ARCHITECTURE_ESCALATION",
-  "recorded_current_checkpoint_utc": "2026-10-22T17:46:14Z",
-  "old_b_lifecycle_correction": {
-    "project_id": "7bc6e674-0a03-498e-9929-997a93c1f53f",
-    "session_id": "session-dbcda66decc045c8b081a7588a7af394",
-    "disconnect": "PUBLIC_SUCCESS_DISCONNECTED_RETIRED; server_stopped=false.",
-    "response_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/runtime/old-b-disconnect-r1.json",
-    "response_sha256": "d1f4f59709022a11ae049f1225ac4206f4d73c5f9a5394c75a46ca371776384d",
-    "request_id": "88df5f80-6bf6-4a77-a180-d7ac039aaeb3",
-    "idempotency_key": "712dfa8c-0477-430a-84fb-5ba1bab722e2",
-    "operation_id": "71d50e84-0008-49a0-9839-43a76da86e6b",
-    "job_id": "a9d0636b-ade6-4d31-b6ce-1b679722268c",
-    "request_hash": "f1995968a6101625558f9085001f633a1fc7efc8488e47c04c54a7b6321f4c34",
-    "worker": {
-      "worker_instance_id": "c5d4f20c-a3aa-4366-8dbd-074623a26c70",
-      "epoch": 3,
-      "exact_popen_handle": true,
-      "pid": 59565,
-      "birth_epoch_ms": 1792678700782,
-      "birth_identity_matched_before_close": true,
-      "child_exit_confirmed": true,
-      "child_reaped": true
-    },
-    "stop": {
-      "status": "NOT_EXECUTED_AUTO_REVIEW_REJECTED",
-      "rejection_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/runtime/old-b-stop-review-rejection.json",
-      "rejection_sha256": "a1f8cf9dfb07f8cd549846f8e614efd0bbd7fe219594328bc08118fbb6313920",
-      "public_schema_requires_authorization_ref": true,
-      "project_host_control_observed_effective": true,
-      "verified_authorization_ref_available": false,
-      "effect": "none; no pending stop request or lifecycle mutation was dispatched.",
-      "policy": "Do not omit/fabricate a reference or retry. Preserve B running/fenced."
-    },
-    "preservation": "No PID signal, private cleanup, or new-candidate takeover."
-  },
-  "independent_resource_preflight": {
-    "historical_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/runtime/resource-preflight-r1.json",
-    "sha256": "1d66720bb1c675bbf670353519345fa8dc18ad26dc92533859f6a2e723fb2a3a",
-    "historical_raw_process_count": 3,
-    "historical_raw_listener_count": 3,
-    "historical_three_servers_claim": "WITHDRAWN; PID 70543 is a PersistentComsolWorker, not a Server.",
-    "main_readonly_role_receipt": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-main-review/20261023-auth-review/process-role-readonly.json",
-    "main_readonly_role_receipt_sha256": "cb4a5c92a1546045da6d6ff4780b6e3eb1ebb268118af8fb14b15cacd496ae379",
-    "observed_roles": {
-      "58888": "COMSOL ServerApplication/mphserver",
-      "82522": "COMSOL ServerApplication/mphserver",
-      "70543": "PersistentComsolWorker; parent 52944"
-    },
-    "license_seat_capacity": "NOT_ESTABLISHED; absence of a license server does not establish no capacity.",
-    "new_server_birth": "NOT_ATTEMPTED_YET",
-    "native_gate": "FRESH_READONLY_PREFLIGHT_THEN_AT_MOST_ONE_NORMAL_PUBLIC_START",
-    "old_process_policy": "Do not touch old A, old B, or PID 70543; do not retry old-B stop."
-  },
-  "software_failure_triage": {
-    "candidate": "r3",
-    "expanded_suite": "FAIL: 357 passed, 5 failed; all five individually compared on frozen r2.",
-    "classification": "Four W17 failures reproduced on r2 as existing fixture/assertion mismatches; T044 is NOT_RUN_MISSING_HISTORICAL_R9_EVIDENCE.",
-    "evidence_ref": "M2_CORE_REPAIR.json#expanded_regression_triage",
-    "source_or_tests_changed_for_triage": false
-  },
-  "fresh_native_preflight": {
-    "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/fresh-native-preflight.json",
-    "sha256": "6643de7d32611cd6e6a30073e9a589b56c4a61bc332949894c9810077d6a8a2b",
-    "status": "PASS_READ_ONLY",
-    "native_start": "NOT_YET_DISPATCHED",
-    "new_private_home": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/mcp_home",
-    "new_project_root": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/project_root",
-    "processes_and_listeners": [
-      {
-        "pid": 58888,
-        "ppid": 52944,
-        "started_local": "2026-10-22 22:17:30",
-        "role": "COMSOL ServerApplication/mphserver",
-        "exe_or_command": ".../universal-m2a-repaired-install-20261022-d898e40069/.../installation/bin/comsol mphserver",
-        "birth_epoch_seconds": 1792678650.131374,
-        "listener": {
-          "address": "127.0.0.1",
-          "port": 59595
-        }
-      },
-      {
-        "pid": 70543,
-        "ppid": 52944,
-        "started_local": "2026-10-22 22:32:21",
-        "role": "PersistentComsolWorker",
-        "exe_or_command": "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home/bin/java",
-        "birth_epoch_seconds": 1792679541.479461,
-        "listener": {
-          "address": "127.0.0.1",
-          "port": 62828
-        }
-      },
-      {
-        "pid": 82522,
-        "ppid": 80024,
-        "started_local": "2026-10-22 20:09:33",
-        "role": "COMSOL ServerApplication/mphserver",
-        "exe_or_command": ".../universal-m2a-20261022T115828Z-43b2d2/.../installation/bin/comsol mphserver",
-        "birth_epoch_seconds": 1792670973.071216,
-        "listener": {
-          "address": "127.0.0.1",
-          "port": 64796
-        }
-      }
-    ],
-    "memory_total_bytes": 137438953472,
-    "disk_available": "348GiB",
-    "schema_only_attempt_1": {
-      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/attempts/schema-inspection-init-failure.json",
-      "sha256": "c710670812c0abdeddd61b6e0f0e2c28e49abc8a61c9335aeb8c6a3e297af27e",
-      "status": "TIMED_OUT_DURING_CONTROL_STARTUP_CONFIGURATION",
-      "native_request_dispatched": false,
-      "root_cause": "COMSOL_PROJECT_ROOT was absent; isolated control daemon requires the authorized workspace root to exist."
-    }
-  },
-  "historical_initial_project_create": {
-    "status": "PASS",
-    "project_id": "87d759ca-0764-473a-9978-2b51d5da74e1",
-    "project_create_operation_id": "9883e35a-42aa-4ae7-a2d2-bb77119f277a",
-    "project_create_job_id": "d9e1ee94-cbba-4056-9720-fbc0cfce819a",
-    "request_id": "m2a-20261022-project-create-6a52a5510ad3",
-    "idempotency_key": "m2a-project-create-f7c3f84c5da5471d96e8ce2743c52b32",
-    "workspace": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/project_root/m2a-native-conduction-20261022-A7",
-    "initial_revision": 1,
-    "permissions": [
-      "compute",
-      "host_control",
-      "inspect",
-      "project_write",
-      "trusted_code"
-    ],
-    "timeouts": {
-      "queue_timeout_s": 20,
-      "execution_timeout_s": 300
-    },
-    "response_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/runtime/project-create.response.json"
-  },
-  "historical_initial_session_start_pending": {
-    "status": "COMPLETED",
-    "request_id": "m2a-20261022-session-start-c444b4deec1c",
-    "idempotency_key": "m2a-session-start-e52be893807842a8af299da03bf64763",
-    "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics",
-    "project_id": "87d759ca-0764-473a-9978-2b51d5da74e1",
-    "queue_timeout_s": 20,
-    "execution_timeout_s": 240,
-    "rpc_timeout_s": 245,
-    "request_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/runtime/session-start.request.json",
-    "pending_refs_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/pending-refs.json",
-    "process_check": {
-      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/runtime/prestart-process-check.json",
-      "sha256": "085be0aedc86c2a8a48accb747ea4ecfc9420724d97881acd70474e89b25cb5b",
-      "observed_comsol_related_process_count": 0,
-      "read_only": true
-    },
-    "pending_refs_sha256": "fcb307211e70e7d36355cedd04193dd81036ca4b8d0b033afd01e186624715f6"
-  },
-  "historical_initial_session_start": {
-    "status": "PASS",
-    "request_id": "m2a-20261022-session-start-c444b4deec1c",
-    "idempotency_key": "m2a-session-start-e52be893807842a8af299da03bf64763",
-    "operation_id": "368a2174-0fec-450d-b60a-e818554cb0d3",
-    "job_id": "c27e57e8-725e-4066-896d-24e9dc5a3c21",
-    "session_id": "session-e4b78e9a6f0c472d8d4ec5017f3f3c03",
-    "project_id": "87d759ca-0764-473a-9978-2b51d5da74e1",
-    "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics",
-    "comsol_version": "6.4.0",
-    "verified_build_from_runtime_inspect": 293,
-    "server_ownership": "mcp_managed",
-    "loopback_only_verified": true,
-    "endpoint": {
-      "host": "127.0.0.1",
-      "port": 64796
-    },
-    "listener_sockets": [
-      {
-        "address": "127.0.0.1",
-        "port": 64796
-      }
-    ],
-    "process_identity": {
-      "pid": 82522,
-      "birth": "start_epoch_ms:1792670973071",
-      "executable": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/mcp_home/server/control-private/session-runtime-state/sessions/4f99bc0dfc30cd465e799cab721e40788ae97ce177024f9a1c14ead160b6c59e/owned-server/installation/bin/comsol"
-    },
-    "client_state": "DISCONNECTED",
-    "response_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/runtime/session-start.response.json"
-  },
-  "historical_checkpoint_before_r3_permission_gate": {
-    "status": "M2A_ARCHITECTURE_ESCALATION_PUBLIC_MODEL_RECONCILIATION_ROUTE_MISSING",
-    "recorded_at_utc": "2026-10-22T14:55:51Z",
-    "run_key": "universal-m2a-repaired-install-20261022-d898e40069",
-    "project_id": "7bc6e674-0a03-498e-9929-997a93c1f53f",
-    "session_id": "session-dbcda66decc045c8b081a7588a7af394",
-    "server_instance_id": "2cda65ba76ec397cc20749e19f8ac56b2040f532de43f1e0f149f1032dc0346e",
-    "worker_instance_id": "c5d4f20c-a3aa-4366-8dbd-074623a26c70",
-    "worker_epoch": 2,
-    "target_model_ref": {
-      "schema_version": 1,
-      "session_id": "session-dbcda66decc045c8b081a7588a7af394",
-      "server_instance_id": "2cda65ba76ec397cc20749e19f8ac56b2040f532de43f1e0f149f1032dc0346e",
-      "model_tag": "mcp1",
-      "generation": 1
-    },
-    "target_revision": 3,
-    "target_dirty": true,
-    "sentinel_model_ref": {
-      "schema_version": 1,
-      "session_id": "session-dbcda66decc045c8b081a7588a7af394",
-      "server_instance_id": "2cda65ba76ec397cc20749e19f8ac56b2040f532de43f1e0f149f1032dc0346e",
-      "model_tag": "mcp2",
-      "generation": 1
-    },
-    "sentinel_revision": 1,
-    "native_solver_submitted": true,
-    "native_solver_job_id": "b332f63b-9359-4502-b1ac-a2c452827810",
-    "native_solver_status": "SUCCEEDED",
-    "result_readback_status": "SOLUTION_AXES_UNVERIFIED_PRE_GETDATA",
-    "unbound_refresh_job_id": "1f87ec01-5469-452d-8bfa-ead562faf2e5",
-    "unbound_refresh_job_status": "UNKNOWN",
-    "reconcile_status": "WORKER_BINDING_UNKNOWN",
-    "next_action": "Main decision/refreeze for exact managed-session public reconciliation route; no further native mutation or replay."
-  },
-  "previous_next_steps_before_r3_permission_gate": [
-    "Main review the exact SolutionBinding pre-getData refusal and missing project/session-scoped public refresh/reconcile route.",
-    "Keep UNKNOWN job 1f87ec01-5469-452d-8bfa-ead562faf2e5 and prior failed jobs/results unchanged; do not replay or edit control database.",
-    "After Main chooses/refreezes the reconciliation route, use a fresh ordinary installed candidate and isolated control home/project/session if required, then resume public result/unit readback, artifact preview, save, and sentinel verification."
-  ],
-  "r3_permission_gate": {
-    "receipt": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/permission-gate.json",
-    "sha256": "5604cb1acbae53e640a3c32c96ac3636eef6a5cf09c4434b1202d11f0fa6370f",
-    "pending_refs_sha256": "a0688ec53e7dd83aeaf09a4c6ad749636d0721481b3081381cf69d7a9a8eb900",
-    "runtime_discovery_response_sha256": "af76246666a015cc50378118cc6da76820b85e3f5c19914208cf28351bbd47f2",
-    "session_start_schema_response_sha256": "223d8c73fe4f2313a65da6c54580d6bad2d292ef514d95412d59c4131337b8d8",
-    "project_create_response_sha256": "4c40f03088b7768a1a12778362ed9c957e40867eaed51e2e4f9ce06ae5953f50",
-    "durable_counts": {
-      "operations": 3,
-      "jobs": 3,
-      "projects": 1,
-      "sessions": 0,
-      "runtimes": 0,
-      "artifacts": 0
-    },
-    "native_engine_started": false,
-    "worker_java_r3_sha256": "ca7a15e7f613f627b46389dcae1878d2261e1fc423c5c86563dcd3a12373db96",
-    "worker_java_handed_to_kier_for_ipv4_follow_on": true
-  },
-  "current_r3_native_attempt": {
+  "historical_r3_attempt_permission_gate": {
     "schema": "m2a-r3-public-native-permission-gate/1",
     "recorded_utc": "2026-10-22T17:46:14Z",
     "candidate": {
@@ -2591,5 +3650,425 @@
     "pending_refs_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/pending-refs.json",
     "pending_refs_sha256": "a0688ec53e7dd83aeaf09a4c6ad749636d0721481b3081381cf69d7a9a8eb900",
     "next": "Await explicit decision whether a distinct fresh private r3 daemon may receive task-local host_control/trusted_code opt-ins. Existing daemon ceiling is immutable; do not broaden it or dispatch session.start."
+  },
+  "historical_session_start_pending_pre_task_local_authorization": {
+    "status": "NOT_DISPATCHED_HOST_PERMISSION_CEILING",
+    "candidate": "r3",
+    "project_id": "a9e87dd3-d62f-4582-8955-c90051a4d975",
+    "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics",
+    "required_project_permission": "host_control",
+    "observed_project_permissions": [
+      "compute",
+      "inspect",
+      "project_write"
+    ],
+    "request_id": null,
+    "idempotency_key": null,
+    "reason": "known predispatch permission gate; no session.start call was sent"
+  },
+  "historical_session_start_pre_task_local_authorization": {
+    "status": "NOT_RUN_R3_HOST_PERMISSION_GATE",
+    "project_id": "a9e87dd3-d62f-4582-8955-c90051a4d975",
+    "session_id": null,
+    "server_pid": null,
+    "server_endpoint": null,
+    "comsol_server_started": false,
+    "license_checked_out": false
+  },
+  "current_r3_native_completion": {
+    "status": "PARTIAL_PASS_NATIVE_SAVE_REFRESH_AND_NEGATIVE_PASS_REOPEN_AND_RECOVERY_UNKNOWN",
+    "recorded_at_utc": "2026-10-22T19:09:32.158932+00:00",
+    "scope": "M2a bounded normal-path continuation on frozen installed r3; no production source or tests changed in this continuation",
+    "candidate": {
+      "id": "r3",
+      "wheel_sha256": "6b4a40ea76443bb6e6a28a73f47548db2c656df4dfd88b272ae4737d40260e23",
+      "installed_runtime": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3",
+      "console_entrypoint": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/venv/bin/comsol-mcp",
+      "public_mcp_server_version": "1.30.0",
+      "tool_count": 112,
+      "transport": "installed console entrypoint over MCP stdio",
+      "source_receipt_sha256": "1b27ca5b0b8f68f7609cf209f546744416a35395db470ef5dd3870689b827464"
+    },
+    "runtime": {
+      "release": "6.4.0",
+      "build": "6.4.0.293",
+      "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics",
+      "server_ownership": "mcp_managed",
+      "server_instance_id": "8fd0d9db5b90f4a3aec11cbee418d1d066fd9a89fd11542954bd29af2c64200e",
+      "server_pid_recorded": 18219,
+      "server_birth_recorded": "start_epoch_ms:1792692929019",
+      "endpoint": {
+        "host": "127.0.0.1",
+        "port": 54381
+      },
+      "listener_loopback_verified": true,
+      "worker_instance_id": "3481cda9-2bc6-406f-ba71-0223cdc10895",
+      "worker_epoch": 2,
+      "remote_engine_version": "COMSOL Multiphysics 6.4 (开发版本: 293)",
+      "resource_preflight_receipt": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/model-load-admission-r1.json",
+      "ps_probe": "sandbox refused; lsof confirmed recorded PID listener; no PID-based action"
+    },
+    "project": {
+      "project_id": "df096475-c434-4816-9b5a-86cfa9248c3f",
+      "project_revision": 1,
+      "effective_permissions": [
+        "compute",
+        "host_control",
+        "inspect",
+        "project_write",
+        "trusted_code"
+      ],
+      "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+      "workspace": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/project_root/m2a-r3-native-20261023",
+      "session_state_at_last_public_inspect": "CONNECTED"
+    },
+    "model_refs": {
+      "target": {
+        "schema_version": 1,
+        "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+        "server_instance_id": "8fd0d9db5b90f4a3aec11cbee418d1d066fd9a89fd11542954bd29af2c64200e",
+        "model_tag": "mcp1",
+        "generation": 1
+      },
+      "target_revision_before_unknown_load": 9,
+      "sentinel": {
+        "schema_version": 1,
+        "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+        "server_instance_id": "8fd0d9db5b90f4a3aec11cbee418d1d066fd9a89fd11542954bd29af2c64200e",
+        "model_tag": "mcp2",
+        "generation": 1
+      },
+      "sentinel_revision": 1
+    },
+    "task_java": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/project_root/m2a-r3-native-20261023/java/M2aRepairedConduction.java",
+      "initial_source_sha256": "b00802b8fcde0058d419bf880403cc345de575a63f1a2ef0c8ab7efedfc10a02",
+      "current_source_sha256": "42557a3549b9c7760eddcd661d19bf1aa387627f0ba3e6a0113da67331e24955",
+      "plot_fix_receipt": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/task-source-plot-fix-r1.json",
+      "plot_fix_receipt_sha256": "33e045562930790ef84c6ca20c0b668164b6e364dca42494786d5fccf02d7ba9",
+      "source_changes_task_input_only": true,
+      "production_source_changed": false,
+      "properties": {
+        "explicit_pde_f": "0[W/m^3]",
+        "preserved_default_component": "comp1",
+        "new_component": "cmpM2AR3",
+        "new_geometry": "geomM2AR3"
+      }
+    },
+    "normal_path": {
+      "session_start": {
+        "status": "PASS",
+        "request_id": null,
+        "job_id": "13d0260f-5542-406b-a5c5-9acbc7c36298",
+        "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+        "server_pid": 18219,
+        "endpoint": {
+          "host": "127.0.0.1",
+          "port": 54381
+        },
+        "server_birth": "start_epoch_ms:1792692929019",
+        "response": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/session-start-response-r1.json",
+          "sha256": "28fa4b216c584ef0e27cb554ede3d14e7f2aeeb14f9449503dcbed3e165c35dd"
+        }
+      },
+      "connect": {
+        "status": "PASS",
+        "request_id": null,
+        "job_id": "feddbbf9-58a2-49a2-a53a-1943a0976f8b",
+        "worker_instance_id": "3481cda9-2bc6-406f-ba71-0223cdc10895",
+        "worker_epoch": 2,
+        "response": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/session-connect-response-r1.json",
+          "sha256": "982b63d8139a867d5c2d49e3803139e41e9d5f2f105fd5bbcf67f951a62dfeb0"
+        }
+      },
+      "compile": {
+        "status": "PASS_ZERO_DIAGNOSTICS",
+        "job_id": "0c10cf47-ec77-4524-b721-d23ece7e287a",
+        "response": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/target-java-compile-response-r1.json",
+          "sha256": "1787ffc27e192c7095a634e33719e6bb629840c2a82eb86468965fb8440540fc"
+        }
+      },
+      "execute_build": {
+        "status": "PASS",
+        "job_id": "b0bf0743-bcc2-4669-ac74-faff70d34aa4",
+        "revision": 1,
+        "response": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/target-java-execute-response-r1.json",
+          "sha256": "a90f7489fc8386254f62929069734083556f74866c55f1f934096791edab8c72"
+        }
+      },
+      "study_run": {
+        "status": "PASS_STATIONARY",
+        "job_id": "fca5dbba-0eb6-489c-a24e-8dbec7cf7065",
+        "revision": 2,
+        "response": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/target-study-run-response-r1.json",
+          "sha256": "9d7560c88886fe3a3a15792195421a43427cba4dc52d225fb4461d48159f8059"
+        }
+      }
+    },
+    "result_evaluate": {
+      "status": "PASS_NATIVE_DEFAULT_AND_EXPLICIT_K",
+      "operation": "public result.evaluate aggregate=none on dset1 -> sol1 -> stdM2AR3",
+      "default_units_request": [
+        ""
+      ],
+      "explicit_units_request": [
+        "K"
+      ],
+      "default_response": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/target-result-evaluate-default-response-r1.json",
+        "sha256": "169b4b2658fc9dc34e21903698a886c3cb918bb6357a804fea877ff1794eec73"
+      },
+      "explicit_response": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/target-result-evaluate-explicit-k-response-r1.json",
+        "sha256": "d381e5a00f4a481542bcfcbce2d8e3d4f1e137ed14117a44eef79396bb5a7cdd"
+      },
+      "default_numeric_values": 136,
+      "explicit_numeric_values": 136,
+      "default_min": 300.0,
+      "default_max": 400.0,
+      "explicit_values_match_default": true,
+      "default_expression_unit": {
+        "u+0[K]": "K"
+      },
+      "explicit_expression_unit": {
+        "u+0[K]": "K"
+      },
+      "numeric_solution_count": 1,
+      "count_witness": "VERIFIED_SINGLE_ATTACHED_STATIONARY_NUMERIC_COUNT",
+      "budget_pre_getdata_and_postread": "PASS",
+      "solution_axes": "UNVERIFIED",
+      "pair_mapping_complete": false,
+      "field_array_published": false,
+      "notes": "No outer/inner axes or FieldArray fabricated; native-default and explicit-unit values retained."
+    },
+    "midpoint_oracle": {
+      "status": "PASS",
+      "expression": "u",
+      "point_x_m": 0.005,
+      "value_K": 349.9999999999981,
+      "expected_K": 350.0,
+      "absolute_error_K": 1.8758328224066645e-12,
+      "tolerance_K": 1e-06,
+      "response": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/target-midpoint-at-points-response-r1.json",
+        "sha256": "6aa458a8ce136fd42ad9660528a202d71449482db7e3d2bb04ff6f3ec3076bda"
+      }
+    },
+    "render": {
+      "status": "PASS_CONFIGURED_NONEMPTY_LINEGRAPH",
+      "artifact_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/project_root/m2a-r3-native-20261023/g2_artifacts/plots/m2a-r3-target-configured.png",
+      "artifact_sha256": "947f6d079994a4a1b7d8d1c851c192f0265f47d471dfe6dc882635736ae25a34",
+      "artifact_size_bytes": 33206,
+      "media_type": "image/png",
+      "mcp_image_bytes_match_file": true,
+      "image_dimensions_px": [
+        1200,
+        800
+      ],
+      "response": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/target-plot-render-configured-response-r1.json",
+        "sha256": "63d8fbaaf6fda4d165a1a65a17fcd8bc008294f781877049ab05ecd715ec0512"
+      },
+      "initial_blank_render": {
+        "status": "FAIL_VISUALLY_EMPTY_PRESERVED",
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/project_root/m2a-r3-native-20261023/g2_artifacts/plots/m2a-r3-target.png",
+        "sha256": "4da5647655e620b1939985ffb46c4d7de516ec65fc749eb7e0c19b88c37af0f9"
+      }
+    },
+    "save": {
+      "status": "PASS_SAVED_WITH_SOLUTION",
+      "job_id": "719e6735-2127-4588-b548-c0b09266c155",
+      "artifact_id": null,
+      "sha256": null,
+      "file_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/project_root/m2a-r3-native-20261023/m2a-r3-target-solved.mph",
+      "file_sha256": "cccc806c196f5999dfce88e6bc7fcae43f4a7dd314f782ad56e4e43b22dbb080",
+      "size_bytes": null,
+      "include_solution": null,
+      "source_revision": null,
+      "revision_after_save": 9,
+      "response": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/target-model-save-response-r2.json",
+        "sha256": "3155a2cec50964e407b34d1fcd1e633b7d1e07b642470a493cfe108b9b0ee318"
+      },
+      "first_invalid_destination_attempt": {
+        "status": "REFUSED_BEFORE_ENGINE_CALL",
+        "error_code": "INVALID_DESTINATION",
+        "engine_calls": 0,
+        "response": {
+          "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/target-model-save-response-r1.json",
+          "sha256": "31ed2ec4a7a927226fdc3f5c526d4dfc187353076946f8e2a5c3c9f0540c123c"
+        }
+      }
+    },
+    "reopen": {
+      "status": "UNKNOWN_NOT_VERIFIED",
+      "operation": "model.load",
+      "artifact_id": null,
+      "request_id": "8cc009c3-859d-492c-ae73-9081d8984d74",
+      "idempotency_key": "e73b984b-11aa-4858-a4b9-3c4c69a0e2fc",
+      "response_error": "EXECUTION_STATE_UNKNOWN",
+      "response": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/model-load-reopen-response-r1.json",
+        "sha256": "80ab6b5d7bbd76921079e781a423fa82a3ce59fff1de4fd3db47be1112c1cb02"
+      },
+      "read_only_reconciliation": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/model-load-unknown-reconciliation-r1.json",
+        "sha256": "e688d26883758bd1dfa5d8f6d607ef7379dc455fd6189f823e5d04b1dd7fbe91"
+      },
+      "replay_or_new_load_attempt": "NOT_RUN"
+    },
+    "sentinel": {
+      "status": "PASS_PRE_UNKNOWN_LOAD_ONLY",
+      "model_ref": {
+        "schema_version": 1,
+        "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+        "server_instance_id": "8fd0d9db5b90f4a3aec11cbee418d1d066fd9a89fd11542954bd29af2c64200e",
+        "model_tag": "mcp2",
+        "generation": 1
+      },
+      "revision": 1,
+      "marker": "m2a_sentinel_marker=47[mm]",
+      "unit_readback": "m",
+      "unit_status": "UNVERIFIED",
+      "response": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/sentinel-final-parameter-list-response-r1.json",
+        "sha256": "cca325807945c67e8494dfae31a3dbcc15271e98adc72ca7870264e10ae50d01"
+      },
+      "post_unknown_load_readback": "NOT_RUN_UNKNOWN_SESSION_EFFECT"
+    },
+    "managed_refresh": {
+      "status": "PASS_BEFORE_UNKNOWN_LOAD",
+      "model_ref": {
+        "schema_version": 1,
+        "session_id": "session-24f852fcaa464a8db9e76b102254db91",
+        "server_instance_id": "8fd0d9db5b90f4a3aec11cbee418d1d066fd9a89fd11542954bd29af2c64200e",
+        "model_tag": "mcp1",
+        "generation": 1
+      },
+      "revision": 9,
+      "coverage": "parameters plus shallow tree identity",
+      "cas_guarantee": "NONE",
+      "external_dependencies": "NOT_EXHAUSTIVELY_ENUMERATED",
+      "response": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/target-model-inspect-refresh-response-r1.json",
+        "sha256": "9ffc068161b663d5f867934a4f6117ad57d314544814f1a1db45e749e621cf36"
+      }
+    },
+    "resource_identity_negative": {
+      "status": "PASS_REFUSED_BEFORE_DURABLE_JOB",
+      "operation": "model.inspect refresh=true",
+      "changed_field": "execution.model_ref.server_instance_id only",
+      "error_code": "MODEL_IDENTITY_MISMATCH",
+      "durable_job_rows": 0,
+      "request_id": "9225897c-8b05-43fa-a8b0-5aa01a907fda",
+      "response": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/target-model-inspect-wrong-server-negative-response-r1.json",
+        "sha256": "830d11a95d9fde2859ec53196238ebedc139bfb9a2139fc44e1f7adc1f9e857e"
+      }
+    },
+    "public_reconciliation": {
+      "status": "UNKNOWN_RESPONSE_UNAVAILABLE",
+      "operation": "session.recover",
+      "request_id": "ac8f9c97-dacb-4a38-818c-f6c4d2a9338d",
+      "idempotency_key": "ae89bbe5-9c53-4b2f-a882-14b790bc1a05",
+      "response_error": "EXECUTION_STATE_UNKNOWN",
+      "response": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/session-recover-after-model-load-unknown-response-r1.json",
+        "sha256": "87efcab7c5fddd015b920cd64686c03d011e53b39b91eb86bdbf38ec5dac1d43"
+      },
+      "database_rows_for_model_load_and_recover": 0,
+      "active_jobs": 0,
+      "control_generation_metadata": [
+        "mcp1",
+        "mcp2"
+      ],
+      "engine_quiescence_proven": false,
+      "reconciliation_receipt": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/model-load-unknown-reconciliation-r1.json",
+        "sha256": "e688d26883758bd1dfa5d8f6d607ef7379dc455fd6189f823e5d04b1dd7fbe91"
+      }
+    },
+    "operation_describe_model_load": {
+      "status": "UNKNOWN_RESPONSE_NO_DURABLE_ROW",
+      "request_id": "cf894e22-9741-40a1-b999-1601bfc63ad4",
+      "idempotency_key": "e1371b5b-ca7f-468c-89b5-6eebad45d196",
+      "engine_started": false,
+      "response": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/model-load-schema-r1.json",
+        "sha256": "a568e22eefeecd6c6d0f203587ce1ad7e33b28a0c388cadd11ba7873545ba472"
+      },
+      "installed_catalog_schema_matched_repository_schema": true
+    },
+    "session_stop": {
+      "status": "NOT_ATTEMPTED_FORMAL_AUTHORIZATION_REF_UNAVAILABLE",
+      "project_host_control_permission": "PRESENT",
+      "authorization_decision_receipt_sha256": "2e1e57fe010ed9e395b2eb9f285b83a2e10e74df39a933fb3e445724636df2cd",
+      "authorization_ref_field_present": false,
+      "public_schema_requires_authorization_ref": true,
+      "pid_signal_or_private_cleanup": "NOT_ATTEMPTED"
+    },
+    "other_server_or_old_resources": "NOT_STARTED_OR_TOUCHED; no second server; old A/B and PID 70543 untouched",
+    "pending_refs": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/pending-refs.json",
+      "sha256": "5d55dd045e64de9dd3e20b18b5a429e150a6a7d2b1ea6ef4567ba15f22ef974e",
+      "pending_count": 2,
+      "items": [
+        {
+          "operation_id": "model.load",
+          "request_id": "8cc009c3-859d-492c-ae73-9081d8984d74",
+          "state": "UNKNOWN_UNRECONCILED_NO_DURABLE_OPERATION_OR_JOB_ROW"
+        },
+        {
+          "operation_id": "session.recover",
+          "request_id": "ac8f9c97-dacb-4a38-818c-f6c4d2a9338d",
+          "state": "UNKNOWN_UNRECONCILED_NO_DURABLE_OPERATION_OR_JOB_ROW"
+        }
+      ]
+    },
+    "source_and_tests": {
+      "production_source_changed": false,
+      "tests_changed": false,
+      "tests_rerun_this_continuation": false,
+      "software_triage_status": "Preserved from accepted r3 triage; expanded 357/5 remains FAIL with prior fixture/history classifications"
+    },
+    "next_action": "Main review the unresolved public-control response and formal stop authorization material; no further model/lifecycle request dispatched from this executor."
+  },
+  "control_request_admission_update": {
+    "status": "MAIN_ACCEPTED_SOURCE_SOFTWARE_NOT_NATIVE_FROZEN_R3_UNCHANGED",
+    "evidence_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/docs/universal_mcp_execution/evidence/CONTROL_REQUEST_ADMISSION.json",
+    "evidence_sha256": "f0d71c5b35ab714b3255a12be78427b28daa10e87a3ea0fa65241eb91cf22af8",
+    "detail_receipt_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-control-admission/read-only-cause-r3.json",
+    "detail_receipt_sha256": "f3628b5cd1340833e49b0363e6d43e7f92d7e26a998eec70fda5e64ce3f2f808",
+    "frozen_r3_control_client_sha256": "c2f68007eb56a4a9ef274f241dc377376c7126c4876c51228e8b6aa47da62754",
+    "repository_control_client_sha256": "56ad8127c6aea59ceee2d716dd268b7836cb4534e10f4c9a2c2f2900f2b86565",
+    "historical_model_load_status": "EXECUTION_STATE_UNKNOWN_PRESERVED",
+    "historical_session_recover_status": "EXECUTION_STATE_UNKNOWN_PRESERVED",
+    "native_actions_this_unit": {
+      "model_load": "NOT_RUN",
+      "session_recover": "NOT_RUN",
+      "session_stop": "NOT_RUN",
+      "session_start": "NOT_RUN",
+      "new_server": "NOT_STARTED",
+      "live_patch": "NOT_DONE",
+      "process_signals": "NONE"
+    },
+    "classification_authority": "Main; no historical UNKNOWN reclassification made by executor",
+    "source_file_sha256": "56ad8127c6aea59ceee2d716dd268b7836cb4534e10f4c9a2c2f2900f2b86565",
+    "test_file_sha256": "b4ca7e07018827e622cced255a71f1a240c567a880294b09fdd6a0a4fd7d791c",
+    "frozen_r3_installed_file_sha256": "c2f68007eb56a4a9ef274f241dc377376c7126c4876c51228e8b6aa47da62754",
+    "native_validation_of_fix": "NOT_RUN_FROZEN_R3_INSTALL_UNCHANGED",
+    "test_summary": {
+      "focused_control_client": "17 passed, 0 failed",
+      "control_client_gateway_transport": "40 passed, 1 existing fixture-gated skip, 0 failed",
+      "historical_unknowns_preserved": true
+    },
+    "Main_review_path": "_state/universal-main-review/20261023-control-admission/MAIN_REVIEW.json",
+    "Main_review_sha256": "76bb843437efd0ef3c35e32a386a7d4e90d48ad95ce397ba7524072d03b26cd4",
+    "Main_metadata_loopback": "1PASS actual task-owned registry-only stdio/RPC fixture; no COMSOL configured, separate from original 40PASS/1skip run"
   }
 }

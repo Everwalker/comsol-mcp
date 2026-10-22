@@ -177,24 +177,40 @@ def dispatch(operation: str, arguments: dict, execution: dict) -> dict:
     rpc_timeout = execution.get("rpc_timeout_s", 30.0)
     if isinstance(rpc_timeout, bool) or not isinstance(rpc_timeout, (int, float)) or not 0 <= rpc_timeout <= 300:
         return {"success": False, "error": {"code": "INVALID_REQUEST", "message": "rpc_timeout_s must be between 0 and 300"}, "data": {}}
+
     try:
         endpoint = ensure_control()
-        return _request(endpoint, {"operation": operation, "arguments": arguments, "execution": execution}, rpc_timeout + 5.0)
-    except ControlStartupError as exc:
+    except Exception as exc:
         error = {
-            "code": "EXECUTION_STATE_UNKNOWN",
+            "code": "CONTROL_REQUEST_NOT_SUBMITTED",
             "type": type(exc).__name__,
-            "message": str(exc),
+            "message": (
+                str(exc)
+                if isinstance(exc, ControlStartupError)
+                else "Control preflight failed; the requested operation was not submitted."
+            ),
             "safe_retry": False,
         }
-        if exc.action:
+        if isinstance(exc, ControlStartupError) and exc.action:
             error["action"] = exc.action
         return {
             "success": False,
             "error": error,
             "execution": {"request_id": execution["request_id"], "idempotency_key": execution["idempotency_key"]},
-            "data": {"status": "UNKNOWN"},
+            "data": {
+                "status": "NOT_SUBMITTED",
+                "operation_dispatched": False,
+                "execution_state_unknown": False,
+                "dispatch_stage": "pre_dispatch",
+                # ensure_control may have started a daemon before discovering
+                # that it is not ready. This describes the requested operation
+                # only and makes no claim about control-daemon startup effects.
+                "control_startup_outcome": "UNRESOLVED",
+            },
         }
+
+    try:
+        return _request(endpoint, {"operation": operation, "arguments": arguments, "execution": execution}, rpc_timeout + 5.0)
     except Exception as exc:
         return {
             "success": False,

@@ -1,0 +1,171 @@
+{
+  "schema": "control-request-admission/1",
+  "recorded_utc": "2026-10-22T19:38:10.630353+00:00",
+  "status": "MAIN_ACCEPTED_SOURCE_AND_SCOPED_SOFTWARE_ONLY",
+  "scope": "read-only causal reconciliation plus isolated software tests; no load/recover/stop/start/native request, no live patch, no signal",
+  "root_cause": {
+    "finding": "sandbox EPERM occurs during ensure_control health preflight; with recorded daemon birth still alive it raises RuntimeError before requested operation _request. Original dispatch caught ensure and operation RPC in one try and mislabeled this as UNKNOWN.",
+    "confidence": "code-order plus paired host/sandbox health receipts and isolated guarded trace support pre-dispatch cause for the observed sandbox failures",
+    "ledger_absence_limit": "zero rows corroborate but do not alone prove no dispatch or no engine effect",
+    "main_decision_required": "Main retains authority to classify historical UNKNOWN; this unit does not rewrite history or authorize replay"
+  },
+  "old_unknowns": {
+    "model_load": {
+      "request_id": "8cc009c3-859d-492c-ae73-9081d8984d74",
+      "idempotency_key": "e73b984b-11aa-4858-a4b9-3c4c69a0e2fc",
+      "saved_code": "EXECUTION_STATE_UNKNOWN",
+      "preserved": true
+    },
+    "session_recover": {
+      "request_id": "ac8f9c97-dacb-4a38-818c-f6c4d2a9338d",
+      "idempotency_key": "ae89bbe5-9c53-4b2f-a882-14b790bc1a05",
+      "saved_code": "EXECUTION_STATE_UNKNOWN",
+      "preserved": true
+    },
+    "no_history_reclassification": true,
+    "old_r3_install_source_sha256": "c2f68007eb56a4a9ef274f241dc377376c7126c4876c51228e8b6aa47da62754",
+    "new_checkout_not_installed_or_exercised_natively": true
+  },
+  "public_metadata_probe": {
+    "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/operation-describe-model-load-reconciliation-r2.json",
+    "sha256": "1ca0a5e112ecffeb46f90160e8335d399de608fe565fbe41e521cd04d34c2962",
+    "operation": "model.load",
+    "success": true,
+    "is_error": false,
+    "engine_started": false,
+    "tool_count": 112,
+    "server_info": {
+      "name": "comsol-mcp-server",
+      "title": null,
+      "version": "1.30.0",
+      "websiteUrl": null,
+      "icons": null
+    }
+  },
+  "source_change": {
+    "files": {
+      "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/comsol_mcp/_control_client.py": {
+        "before_sha256": "c2f68007eb56a4a9ef274f241dc377376c7126c4876c51228e8b6aa47da62754",
+        "after_sha256": "56ad8127c6aea59ceee2d716dd268b7836cb4534e10f4c9a2c2f2900f2b86565"
+      },
+      "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/tests/test_control_client.py": {
+        "before_sha256": "8ec4060bc76e038238ef5efe4f5700c8733be7707d2ba352a2cbeaf0478bb73f",
+        "after_sha256": "b4ca7e07018827e622cced255a71f1a240c567a880294b09fdd6a0a4fd7d791c"
+      }
+    },
+    "behavior": "ensure_control is handled as pre-dispatch; it returns CONTROL_REQUEST_NOT_SUBMITTED, NOT_SUBMITTED, operation_dispatched=false, execution_state_unknown=false, dispatch_stage=pre_dispatch, and control_startup_outcome=UNRESOLVED. ControlStartupError message/action are preserved. Only exceptions from the subsequent operation _request remain EXECUTION_STATE_UNKNOWN.",
+    "invariants": "request/idempotency IDs preserved; safe_retry=false; no automatic retry; ensure_control liveness/singleton/Windows breakaway code unchanged; generic exception details redacted; old frozen r3 install untouched"
+  },
+  "test_results": {
+    "baseline_old_suite": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-control-admission/test-control-client-before.xml",
+      "sha256": "997e06413355d990691503ed1d49cb08ebc76d9c7309c4dbc70d5c6ab4afbe75",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "old_source_negative_control": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-control-admission/test-control-client-regression-before-prod.xml",
+      "sha256": "c4e85bb60459aca30ac67958e05cfc927435f563cc4c7f915539dee208b0ff7c",
+      "tests": 16,
+      "failures": 6,
+      "errors": 0,
+      "skipped": 0,
+      "classification": "expected failures exposing the old pre-dispatch UNKNOWN contract"
+    },
+    "final_focused": {
+      "tests": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-control-admission/test-control-client-focused-r3.xml",
+      "sha256": "2dd59c4b8fd462b81fd3e982aa9ce3fff4550bf27b340b3421dc333a48870b1c"
+    },
+    "final_gateway_transport": {
+      "tests": 41,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-control-admission/test-control-client-gateway-transport-final.xml",
+      "sha256": "ccf2671898039be28c0b3588a56b1ba4224c5ed4c946f68c11ff591acd8d0f99",
+      "skipped_cases": [
+        {
+          "name": "test_opt_in_real_stdio_to_task_owned_control_listener",
+          "classname": "tests.test_mcp_gateway",
+          "reason": "requires the explicitly enabled task-owned loopback fixture"
+        }
+      ]
+    },
+    "failure_history": [
+      {
+        "command": "frozen r3 venv python -m pytest tests/test_control_client.py",
+        "exit_code": 1,
+        "reason": "pytest is not installed in frozen clean runtime; no package install performed"
+      },
+      {
+        "command": "expanded contract tests against old source",
+        "exit_code": 1,
+        "result": "6 expected contract failures and 10 passes; all six were preflight outcomes still labeled EXECUTION_STATE_UNKNOWN"
+      },
+      {
+        "command": "first post-fix focused run",
+        "exit_code": 1,
+        "result": "15 passed, 1 test assertion failed because test expected action to begin with python -m; actual documented action has a human-readable prefix; assertion corrected and rerun"
+      }
+    ],
+    "existing_skip": "test_opt_in_real_stdio_to_task_owned_control_listener requires an explicitly enabled task-owned loopback fixture; not enabled or run natively"
+  },
+  "readonly_process_control_and_worker_observations": {
+    "control_endpoint": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/control_home/control-private/control.json",
+      "sha256": "bef9aff00a212277de59f46d3efa88c06bbe2ae3ec3af7f723690413561296df",
+      "mtime_ns": 1792692096767669635,
+      "pid": 10810,
+      "port": 49957,
+      "process_start_epoch_ms": 1792692096287
+    },
+    "same_as_after_metadata_probe_snapshot": true,
+    "prior_mtime_limit": false,
+    "host_health_receipt_sha256": "4bf205cbaf4dfefa88e353315b27b4dad6fcc57f76dd458738a066ea5b628371",
+    "host_health_status": "HTTP 200 READY, active_jobs=[]",
+    "sandbox_health": "URLError(PermissionError errno=1 EPERM) in 0.00672s",
+    "process_births_from_approved_readonly_ps": {
+      "control_pid_10810": "Fri Oct 23 02:01:36 2026",
+      "server_pid_18219": "Fri Oct 23 02:15:29 2026"
+    },
+    "database": "read-only snapshot: 24 operations/24 jobs, all terminal; both historical request/idempotency pairs have 0 matching operations and 0 associated jobs",
+    "session_registration": "CONNECTED project df096475-c434-4816-9b5a-86cfa9248c3f / session-24f852fcaa464a8db9e76b102254db91; Worker epoch 2; mcp1 and mcp2 generation 1; no active tickets or active model operations in current durable snapshot",
+    "worker_quiescence_limit": "Control health and durable registry show no active jobs/tickets; no fresh direct Worker queue-only RPC was issued, so this does not prove engine-effect absence",
+    "control_json_snapshot_consistency": {
+      "sha256_unchanged_since_metadata_probe": true,
+      "mtime_ns_unchanged_since_metadata_probe": true,
+      "current_mtime_ns": 1792692096767669635,
+      "pid": 10810,
+      "port": 49957,
+      "process_start_epoch_ms": 1792692096287,
+      "earlier_mtime_limit": "no pre-metadata control.json mtime snapshot was present in earlier receipts; equality is established from the post-probe snapshot through final software tests only"
+    }
+  },
+  "private_detailed_receipts": {
+    "r1_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-control-admission/read-only-cause-r1.json",
+    "r1_sha256": "85203c603f93dfc98d186f814389ed3e5991d6930e9270b8daf118fa5f77e2b2",
+    "r2_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-control-admission/read-only-cause-r2.json",
+    "r2_sha256": "7e56eafa7ffdc98d8c83d06642f470eb8127a70da02da03eec74f2e0e13a10a4",
+    "prechange_trace_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-control-admission/prechange-frozen-r3-dispatch-trace.py",
+    "prechange_trace_sha256": "ebe50b30c29a6a8f417e233126828f611d947c9824942161b0c51f3155fc2c16",
+    "latest_r3_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-control-admission/read-only-cause-r3.json",
+    "latest_r3_sha256": "f3628b5cd1340833e49b0363e6d43e7f92d7e26a998eec70fda5e64ce3f2f808"
+  },
+  "native_acceptance": "NOT_RUN; frozen r3 install remains unchanged",
+  "review_boundary": {
+    "status": "MAIN_PASS_LIMITED_SOURCE_SOFTWARE_NOT_NATIVE_COMSOL",
+    "review": {
+      "path": "_state/universal-main-review/20261023-control-admission/MAIN_REVIEW.json",
+      "sha256": "76bb843437efd0ef3c35e32a386a7d4e90d48ad95ce397ba7524072d03b26cd4",
+      "bytes": 3095
+    },
+    "historical_UNKNOWN_preserved": true,
+    "loopback_metadata_fixture": "Main1PASS_separate_scope_not_added_to17_or40"
+  }
+}
