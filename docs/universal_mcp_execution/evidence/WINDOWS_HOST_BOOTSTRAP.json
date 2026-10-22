@@ -1,0 +1,365 @@
+{
+  "SCM_contract": {
+    "SID_type": "RESTRICTED",
+    "account": "LocalSystem",
+    "failure_actions": "empty array, no command/reboot; noncrash flag false",
+    "required_privileges": [
+      "SeTcbPrivilege",
+      "SeAssignPrimaryTokenPrivilege",
+      "SeIncreaseQuotaPrivilege",
+      "SeChangeNotifyPrivilege"
+    ],
+    "start": "SERVICE_DEMAND_START",
+    "start_stop_API": "not exposed or bound",
+    "type": "SERVICE_WIN32_OWN_PROCESS"
+  },
+  "authority": {
+    "AppContainer_restore": "RESTORE_NOT_IMPLEMENTED_IN_EXISTING_LEAF",
+    "JSON_or_plan_is_T037_authority": false,
+    "T037": "UNVERIFIED",
+    "installer_only": true,
+    "native_start": "BLOCKED_UNMATERIALIZED_TRUSTED_PROFILE",
+    "package_apply_ready": false,
+    "service_state_write_ACL": "NOT_GRANTED"
+  },
+  "changed_paths": [
+    "comsol_mcp/_windows_host_bootstrap.py",
+    "tools/windows_host_bootstrap.py",
+    "tests/test_windows_host_bootstrap.py",
+    "docs/universal_mcp_execution/evidence/WINDOWS_HOST_BOOTSTRAP.json",
+    "_state/universal-windows-host-bootstrap/**"
+  ],
+  "exact_new_code_diff": {
+    "bytes": 130065,
+    "path": "_state/universal-windows-host-bootstrap/sharing-fileid-rework/final-freeze/candidate.patch",
+    "sha256": "b6947548b0df4cbbc10da6e03ec1e86a684a74ff47877a5e214a0e5d8832e03e"
+  },
+  "imports": {
+    "bytes": 31646,
+    "path": "_state/universal-windows-host-bootstrap/sharing-fileid-rework/clean-software-apfs/runtime-imports.json",
+    "sha256": "d1d2034724a10b9369f5a985a2b2664e42049abc99e9cbd09f4cbc8aa1626644"
+  },
+  "incremental_rework_diff": {
+    "bytes": 19901,
+    "path": "_state/universal-windows-host-bootstrap/sharing-fileid-rework/final-freeze/rework.patch",
+    "sha256": "04c5725468f9915d0e389457621425c4f74f281ddec476754ffac39f4ec891c9"
+  },
+  "initial_failed_tests": {
+    "junit.xml": {
+      "path": "_state/universal-windows-host-bootstrap/attempt-02-sdk-negatives/junit.xml",
+      "sha256": "9032ca316a66346916b448a038da9062b604ce268963b87142802d82b8fd28f6"
+    },
+    "result": {
+      "errors": 0,
+      "failures": 11,
+      "skipped": 0,
+      "tests": 11
+    },
+    "run.json": {
+      "path": "_state/universal-windows-host-bootstrap/attempt-02-sdk-negatives/run.json",
+      "sha256": "56a853b5a646d893bae95576c6f36a1ded03cd73b7fe284b928231831710298f"
+    },
+    "source-binding.json": {
+      "path": "_state/universal-windows-host-bootstrap/attempt-02-sdk-negatives/source-binding.json",
+      "sha256": "d87a5ea0a508202c7b0426805e82155c8f2595a817e6f2562eceed6a310056ef"
+    },
+    "stderr.log": {
+      "path": "_state/universal-windows-host-bootstrap/attempt-02-sdk-negatives/stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stdout.log": {
+      "path": "_state/universal-windows-host-bootstrap/attempt-02-sdk-negatives/stdout.log",
+      "sha256": "e2b042a94644079d50bb5fae6038a22f19d4c5479e0962ba4f9d01db52d1ac9d"
+    }
+  },
+  "limits": [
+    "Native start BLOCKED: serve_windows_scm_service loads a trusted v2 T037 profile before ServiceMain. No AppContainer profile, SID, project/session ID or trusted profile is materialized by this unit; no fake GUID/SID or loader bypass.",
+    "Service-state and child writable leaf ACLs are deliberately not granted. Real startup needs a separately scoped actual profile/provider/resource and explicit writable-leaf setup.",
+    "SYSTEM owner creation requires an already capable context: SYSTEM or an elevated admin token with SeRestorePrivilege already enabled. This module does not enable/acquire that privilege or spawn another bootstrap process. Main must select any real authorized initial context.",
+    "Input is not the current b90 offline preview package as-is. Normal CPython offline pip materialization and the approved complete inventory must be provided separately; this unit does not claim the package apply_ready.",
+    "Original-owner restore is in-process only. Loss of original handles/journal after process death is not permission for name-only adoption or automatic replay; no durable cross-process restore capability is claimed.",
+    "SCM comparison covers the exact queried base config, SID type, RequiredPrivileges, failure actions/flag, status, raw object SD and dependents; no all-registry/all-host/DLL closure proof is claimed.",
+    "Full AppContainer/WFP apply/restore remains in existing modules. Existing AppContainer RESTORE_NOT_IMPLEMENTED remains an independent gap.",
+    "T037 causal isolation, admission, native enforcement and the overall universal goal are not accepted by these software tests."
+  ],
+  "main_review": {
+    "state": "ACCEPTED_LIMITED_SCOPE",
+    "receipt": {
+      "path": "_state/universal-main-review/20261023-host-bootstrap/MAIN_REVIEW.json",
+      "bytes": 1904,
+      "sha256": "5c70f20b74aec519c92914c41abe45da913d939c8acffccee133d9d93afb8cf4"
+    },
+    "Main_sharing_counter": "initial1FAIL/final1PASS; no native DELETE-sharing claim",
+    "host_apply": "NOT_RUN_NOT_AUTHORIZED",
+    "apply_ready": false
+  },
+  "native": {
+    "ACL_LSA_BFE_AppContainer_or_global_environment_changed": false,
+    "Windows_apply": "NOT_RUN_NOT_AUTHORIZED",
+    "Windows_restore": "NOT_RUN_NOT_AUTHORIZED",
+    "host_mutations": 0,
+    "native_calls_on_real_Windows_for_unit": 36,
+    "native_same_PID_Python_service": "NOT_RUN",
+    "protected_prefix_created": false,
+    "readonly_Windows_probe": {
+      "FileIdInfo_alignment": 8,
+      "FileIdInfo_bytes": 24,
+      "FileIdInfo_offsets": {
+        "file_id": 8,
+        "volume": 0
+      },
+      "SDK_header_version": "NOT_OBSERVED",
+      "all_close_confirmed_once": true,
+      "dependents_count": 2,
+      "file_scope": "task-owned private uploaded hash-pinned source; both opens OPEN_EXISTING readonly, no DELETE/WRITE access",
+      "host_policy_write_dispatches": 0,
+      "initial_local_sandbox_refusal": {
+        "bytes": 73,
+        "path": "_state/universal-windows-host-bootstrap/sharing-fileid-rework/readonly-probe/transport-receipt.json",
+        "sha256": "534c1b106c3e0d60d8a5d42a32e3a26d78cf00c1a0e42d2d20e5d063596ea777"
+      },
+      "limits": {
+        "ReFS_hardware_high_128_bits": "NOT_RUN; software high-bit negatives are distinct",
+        "T037_causal_isolation": "UNVERIFIED",
+        "installed_service": "NOT_RUN_NOT_AUTHORIZED",
+        "native_DELETE_access_sharing_control": "NOT_RUN_SOFTWARE_ONLY_COUNTER",
+        "package_apply_ready": false,
+        "start": "BLOCKED_UNMATERIALIZED_TRUSTED_PROFILE"
+      },
+      "native_probe_invocations": 1,
+      "no_native_retry_or_alternate_target": true,
+      "original_handles": 4,
+      "original_handles_closed": 4,
+      "pins": {
+        "bytes": 1918,
+        "path": "_state/universal-windows-host-bootstrap/sharing-fileid-rework/readonly-probe/source-binding.json",
+        "sha256": "7ae7ed4c1974cc2cd67dbac10d15cb35db9bf80562b5904ba779d7a4353e4b04"
+      },
+      "raw_result": {
+        "bytes": 26412,
+        "path": "_state/universal-windows-host-bootstrap/sharing-fileid-rework/readonly-probe/probe-result.json",
+        "sha256": "a9e06778b8bcd9a9dedb784897de21cf25f7a33661fa45fd470cf28d0bbf5f22"
+      },
+      "remote_c_quote_setup_failure": {
+        "bytes": 90,
+        "path": "_state/universal-windows-host-bootstrap/sharing-fileid-rework/readonly-probe/authorized-transport-receipt.json",
+        "sha256": "90c36413d750fd1de57df36b4e2e70cb0abaffd61fe6a8d3a5f7ac40a7c0f750"
+      },
+      "runtime": {
+        "executable": "C:\\Users\\Everwalker\\AppData\\Local\\Programs\\Python\\Python312-comsol-mcp\\python.exe",
+        "platform": "Windows-11-10.0.26300-SP0",
+        "python": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+        "sha256": "4d6f5f81a4bca11191c4c7c6b43632694d0a4ce74e068619d8fdc161d469859a"
+      },
+      "scope": "ONE native readonly file/service metadata probe, not installation, start, restore, native DELETE-sharing control or T037 acceptance",
+      "sdk_call_count": 36,
+      "sdk_calls_by_name": {
+        "CloseHandle": 2,
+        "CloseServiceHandle": 2,
+        "CreateFileW": 2,
+        "EnumDependentServicesW": 1,
+        "GetFileInformationByHandle": 4,
+        "GetFileInformationByHandleEx": 4,
+        "GetFinalPathNameByHandleW": 2,
+        "GetKernelObjectSecurity": 2,
+        "OpenSCManagerW": 1,
+        "OpenServiceW": 1,
+        "QueryServiceConfig2W": 4,
+        "QueryServiceConfigW": 1,
+        "QueryServiceObjectSecurity": 1,
+        "QueryServiceStatusEx": 1,
+        "ReadFile": 6,
+        "SetFilePointerEx": 2
+      },
+      "service": "EventLog",
+      "setup_failure_native_invocations": 0,
+      "source_sha256": "5bcb5fe9da43535893632bd61fb84371a5dede9e2e5ba75d136bd16d1b2ea215",
+      "state": "READONLY_METADATA_OBSERVED_ORIGINAL_HANDLES_CLOSED",
+      "transport": {
+        "bytes": 1209,
+        "path": "_state/universal-windows-host-bootstrap/sharing-fileid-rework/readonly-probe/final-transport-receipt.json",
+        "sha256": "34df170ac31446c31a70ce8ddfe893edd6a84df423e24680b3ba057c0c4704f2"
+      }
+    },
+    "services_registered_started_stopped_deleted": 0
+  },
+  "official_sources": {
+    "ctypes_layout_evidence": "SOFTWARE_ONLY fixed-width/high-bit/sharing negative tests plus ONE real Windows readonly FileIdInfo/image + EventLog config/status/rawSD/dependents observation; install/write ownership and ReFS high-bit hardware evidence NOT_RUN",
+    "installed_SDK_version": "NOT_OBSERVED",
+    "source": "Microsoft Learn Win32 SDK signatures/structures and documented return/ownership semantics; no invented installed SDK version",
+    "urls": [
+      "https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-createservicew",
+      "https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-changeserviceconfig2w",
+      "https://learn.microsoft.com/en-us/windows/win32/api/winsvc/ns-winsvc-service_required_privileges_infow",
+      "https://learn.microsoft.com/en-us/windows/win32/api/winsvc/ns-winsvc-service_sid_info",
+      "https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-queryserviceobjectsecurity",
+      "https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-closeservicehandle",
+      "https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-deleteservice",
+      "https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-enumdependentservicesw",
+      "https://learn.microsoft.com/en-us/windows/win32/api/winsvc/ns-winsvc-service_failure_actionsw",
+      "https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_disposition_info",
+      "https://learn.microsoft.com/en-us/windows/win32/api/aclapi/nf-aclapi-setsecurityinfo",
+      "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createdirectoryw",
+      "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-setfileinformationbyhandle",
+      "https://learn.microsoft.com/en-us/windows/win32/api/winsvc/ns-winsvc-query_service_configw",
+      "https://learn.microsoft.com/en-us/windows/win32/api/winsvc/ns-winsvc-enum_service_statusw",
+      "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-localfree",
+      "https://learn.microsoft.com/en-us/windows/win32/secauthz/privilege-constants",
+      "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew",
+      "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-getfileinformationbyhandleex",
+      "https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_id_info",
+      "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/ns-fileapi-by_handle_file_information",
+      "https://learn.microsoft.com/en-us/windows/win32/api/minwinbase/ne-minwinbase-file_info_by_handle_class"
+    ]
+  },
+  "receipt": {
+    "bytes": 15073,
+    "path": "_state/universal-windows-host-bootstrap/sharing-fileid-rework/UNIT_RECEIPT.json",
+    "sha256": "127a6257b88724a859d06312b47334fea23b6a2be314fd923c09d37f1a34bb7c"
+  },
+  "schema": "comsol-mcp.windows-host-bootstrap-evidence/1",
+  "scope": "Single new absent SCM namespace + protected code/config prefix, local administrator installer TCB only",
+  "sharing_fileid_rework": {
+    "actual_software_origins": {
+      "bytes": 31646,
+      "path": "_state/universal-windows-host-bootstrap/sharing-fileid-rework/clean-software-apfs/runtime-imports.json",
+      "sha256": "d1d2034724a10b9369f5a985a2b2664e42049abc99e9cbd09f4cbc8aa1626644"
+    },
+    "fresh_compare": "readonly access unchanged; share READ|WRITE|DELETE (7) compatible with retained DELETE-capable original installation HANDLE",
+    "identity": "full FileIdInfo volume u64 + opaque ID 128 bits read before/after on same original HANDLE; BY_HANDLE_FILE_INFORMATION only kind/links/size/times",
+    "native_scope": "readonly metadata only; real installed DELETE access sharing/start/restore/causal isolation NOT_RUN/UNVERIFIED",
+    "original_release_roots": "closer/cache/UNKNOWN and documented LocalFree retry distinction unchanged",
+    "unsupported_capability": "FILE_ID_CAPABILITY with original KnownSdkFailure cause, no legacy fallback"
+  },
+  "software_tests": {
+    "bootstrap_unit_tests": 118,
+    "final_affected": {
+      "by_module": {
+        "tests.test_build_windows_host_package": 44,
+        "tests.test_windows_host_bootstrap": 118,
+        "tests.test_windows_scm_birth_concurrency": 8,
+        "tests.test_windows_scm_prebirth": 31,
+        "tests.test_windows_t037_broker": 11
+      },
+      "counts": {
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0,
+        "tests": 212
+      },
+      "junit": {
+        "bytes": 33554,
+        "path": "_state/universal-windows-host-bootstrap/sharing-fileid-rework/clean-software-apfs/junit.xml",
+        "sha256": "cc2331035bdef978a7ae3788e2cd864fbd7368a5e67eb33074dd9fc73613c329"
+      },
+      "run": {
+        "bytes": 4735,
+        "path": "_state/universal-windows-host-bootstrap/sharing-fileid-rework/clean-software-apfs/run.json",
+        "sha256": "9944806c362ecc1240919a66f4ae1927c759a9946eac75be5aa4fb0db5309780"
+      },
+      "stderr": {
+        "bytes": 0,
+        "path": "_state/universal-windows-host-bootstrap/sharing-fileid-rework/clean-software-apfs/stderr.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "bytes": 260,
+        "path": "_state/universal-windows-host-bootstrap/sharing-fileid-rework/clean-software-apfs/stdout.log",
+        "sha256": "12e15f31a5da65fad5479756fad2503861b3a04953e7654c153081b94e716a17"
+      }
+    },
+    "initial_clean_volume_failure": {
+      "counts": {
+        "errors": 0,
+        "failures": 33,
+        "skipped": 0,
+        "tests": 213
+      },
+      "junit": {
+        "bytes": 104607,
+        "path": "_state/universal-windows-host-bootstrap/sharing-fileid-rework/clean-software/junit.xml",
+        "sha256": "e140bae486f700cc68667d3ed22e373c35eb2c74d5598a33231c781eb5864cd4"
+      },
+      "run": {
+        "bytes": 4978,
+        "path": "_state/universal-windows-host-bootstrap/sharing-fileid-rework/clean-software/run.json",
+        "sha256": "ed6893d54fdcd83b4ba191a2a667d8b6092457843a40aa1e91fbc7181d029542"
+      },
+      "stderr": {
+        "bytes": 0,
+        "path": "_state/universal-windows-host-bootstrap/sharing-fileid-rework/clean-software/stderr.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "bytes": 57881,
+        "path": "_state/universal-windows-host-bootstrap/sharing-fileid-rework/clean-software/stdout.log",
+        "sha256": "02625b959d147609f2386c760208984eb730ad8a718da0313c0d758a942e46c7"
+      }
+    },
+    "main_counter": {
+      "actual_copy": {
+        "bytes": 1783,
+        "path": "_state/universal-windows-host-bootstrap/sharing-fileid-rework/review-counter/test_bootstrap_sharing_review.py",
+        "sha256": "179f244c8d9ca623ae5e4f13e0f9b87cf40e0abb62d6c3ac637a880d2fecce23"
+      },
+      "case": "_state.universal-windows-host-bootstrap.sharing-fileid-rework.review-counter.test_bootstrap_sharing_review::test_native_fresh_compare_can_open_original_delete_capable_install_handle",
+      "execution_count": 1,
+      "failures": 0,
+      "junit": {
+        "bytes": 104607,
+        "path": "_state/universal-windows-host-bootstrap/sharing-fileid-rework/clean-software/junit.xml",
+        "sha256": "e140bae486f700cc68667d3ed22e373c35eb2c74d5598a33231c781eb5864cd4"
+      },
+      "original": {
+        "bytes": 1783,
+        "path": "_state/universal-main-review/20261023-host-bootstrap/test_bootstrap_sharing_review.py",
+        "sha256": "179f244c8d9ca623ae5e4f13e0f9b87cf40e0abb62d6c3ac637a880d2fecce23"
+      },
+      "scope": "SOFTWARE_ONLY Windows sharing contract simulator, not OS evidence; this passing case belongs to the initial 213-case suite whose 33 independent mount/ownership failures remain preserved",
+      "source_sha256": "5bcb5fe9da43535893632bd61fb84371a5dede9e2e5ba75d136bd16d1b2ea215",
+      "tests": 1
+    },
+    "old_104": "Preserved at original caf34f source, never relabeled",
+    "old_11_failures": "Preserved at original source/test fingerprints, never relabeled",
+    "old_source_new_negatives": {
+      "counts": {
+        "errors": 0,
+        "failures": 14,
+        "skipped": 0,
+        "tests": 14
+      },
+      "junit": {
+        "bytes": 12963,
+        "path": "_state/universal-windows-host-bootstrap/sharing-fileid-rework/attempt-01-before-fix/junit.xml",
+        "sha256": "0ac406b4d029e4620f3ed6335822105d901a25e59f105ade7cf190e66135fc48"
+      },
+      "run": {
+        "bytes": 1183,
+        "path": "_state/universal-windows-host-bootstrap/sharing-fileid-rework/attempt-01-before-fix/run.json",
+        "sha256": "52216da168c586343abe14510e6ba36658b58ebf491c67aa2c3e34cb9ce7e758"
+      },
+      "stderr": {
+        "bytes": 0,
+        "path": "_state/universal-windows-host-bootstrap/sharing-fileid-rework/attempt-01-before-fix/stderr.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "bytes": 12273,
+        "path": "_state/universal-windows-host-bootstrap/sharing-fileid-rework/attempt-01-before-fix/stdout.log",
+        "sha256": "3f7e228c7e901df3bc30dc406735cb065769409d41ff8e89e0e057b6a2316b2f"
+      }
+    },
+    "scope": "SOFTWARE_ONLY; fixed 05da827f + ONLY 3 leased files; actual imports and all baseline regular-file hashes unchanged"
+  },
+  "source_closure": {
+    "bytes": 3698686,
+    "path": "_state/universal-windows-host-bootstrap/sharing-fileid-rework/source-binding.json",
+    "sha256": "889567f68bbeab61249768a4e79ba2943cd19e1b131f3b97118d8930fe901bf0"
+  },
+  "source_sha256": {
+    "comsol_mcp/_windows_host_bootstrap.py": "5bcb5fe9da43535893632bd61fb84371a5dede9e2e5ba75d136bd16d1b2ea215",
+    "tests/test_windows_host_bootstrap.py": "b5313a14f12c67e0cf447ce771e2742ef5ea99b504ec197d5a39e502f4dc403a",
+    "tools/windows_host_bootstrap.py": "90cfb5d98245dc421fee8c36b2a58272bba7259f8842b00b6b0202ebf3bd3718"
+  },
+  "state": "MAIN_ACCEPTED_SOURCE_SOFTWARE212_AND_READONLY_METADATA_ONLY"
+}

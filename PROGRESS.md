@@ -19,6 +19,7 @@
 - 原Job关闭源码/软件单位经Main限定验收：固定4c基线+五租约文件的988项全部PASS（常规987+含Main原反例1，不叠加）；620原archive/622候选文件、140实际imports与43引用核对。SDK前deferral可由原factory的新public cleanup协调；可能生效的关闭UNKNOWN不再查询/重关，确认成功后记账失败只补记账。初始失败/旧未知收据保留，实际SDK/host/native/issuer未通过。
 - Windows离线主机包工具经Main限定验收：44项测试在无私有_state的干净b90+两文件源码副本PASS，20个实际import和30个compact引用哈希核对一致。当前真实包绑定旧b90/177生产文件/35wheels；operator仅只读/预览，apply_ready=false，未安装或应用Windows配置。SCM/ACL bootstrap、Windows可信磁盘/root及A/B/C准入仍缺，最终源码须重打包。见[准备证据](docs/universal_mcp_execution/evidence/WINDOWS_HOST_PACKAGE.json)。
 - Windows磁盘/root源码与软件单元经Main限定验收：干净96c6+三个overlay的247项PASS（含Main三个原反例，不叠加），902原archive/904候选文件、102实际imports和105引用核对。确认释放后的记账可继续；CloseHandle结果未知不重关；一个root未决不再冻结独立root/config。容量仅ADMISSION_ONLY。R4实际SDK未重跑，历史R2 SDK证据只绑定其原源码；daemon私有配置真实正例与实际准入仍未验证，未做任何host变更。见[磁盘证据](docs/universal_mcp_execution/evidence/WINDOWS_DISK_RESOURCES.json)。
+- Windows初始bootstrap源码/软件经Main限定验收：固定05da+三租约文件的212项PASS（118 bootstrap）；Main原共享反例由1FAIL修复、独立重跑1PASS。21,765原archive/21,768候选文件、87实际imports、71引用核对；完整64位volume/128位file ID和share7比较修补保留原closer/cache/UNKNOWN主体。一次真实只读SDK36调用、四原HANDLE确认关闭，未安装/启动/恢复服务或创建保护prefix。实际执行上下文、运行时文件HANDLE交接、可信profile/provider/memory/disk配置及AppContainer回滚仍缺；包apply_ready=false。见[bootstrap证据](docs/universal_mcp_execution/evidence/WINDOWS_HOST_BOOTSTRAP.json)。
 - 最终候选、Windows6.3/6.4与MacARM6.4适用核心原生验证、两类未预设任务及最终独立Reviewer仍未完成。当前不能声明整体完成。
 - Windows子进程只读证据阶段经Main接收：87软件测试、真实Windows12项负控、7类SDK观测及原始HANDLE退出/释放核验通过。探针为普通高完整性、非AppContainer token，从未Resume；不是T037隔离/issuer/COMSOL通过。见[限定证据](docs/universal_mcp_execution/evidence/WINDOWS_CHILD_EVIDENCE.json)。
 - Windows网络释放修补经Main有限验收：当前127项聚焦PASS、旧源码15项负控失败；新正常离线安装getter一次SHOW查询1024..60000，四个原CloseHandle返回1、pinning一致、零遗留。旧164及177+89记录保留原范围，不叠加计数。固定监听/有效WFP隔离/准入仍未通过。见[限定证据](docs/universal_mcp_execution/evidence/WINDOWS_NETWORK_INTENT.json)。
@@ -27,6 +28,6 @@
 
 已同步阶段：M0/M1 `4759c097`，M4构件 `47d05a8e`，Windows软件准备/使用说明 `4f236d14`，交付生命周期/权限 `c10c066a`；后续SID/资源阶段见RESUME.git。新增子进程只读证据 `f68b3c7a`、网络范围/getter `03388462`、固定子进程限制属性 `b1474a85`，均普通推送并独立回读一致。MIC/network/events释放修补有限阶段 `fe4e4c72` 已同步并独立回读一致。后续核心变化须重新捕获源码构件，不能重标旧wheel。
 
-下一动作：Main已验收磁盘/root247软件，按精确白名单普通同步；Primary已返回固定035b的r4离线构件/正常安装112schema，Main审包，同时只读核查新的Mac有限资源/许可准入，不提前启动COMSOL。Leibniz继续有限A V4目标/profile/policy producer；Lorentz按Main共享模式反例和完整128位文件ID问题整改bootstrap。旧原生UNKNOWN保持、host未应用；候选就绪后独立Reviewer自行选题。
+下一动作：Main已验收磁盘/root247软件，按精确白名单普通同步；Primary已返回固定035b的r4离线构件/正常安装112schema，Main审包，同时只读核查新的Mac有限资源/许可准入，不提前启动COMSOL。Leibniz继续有限A V4目标/profile/policy producer；Lorentz的共享模式/完整文件ID整改已Main限定验收，下一步处理静态文件运行时HANDLE交接；Main同时决策限定installer上下文源码。旧原生UNKNOWN保持、host未应用；候选就绪后独立Reviewer自行选题。
 
 旧交接与科学历史见 [2026-10-21交接](docs/full_project_continuation_v3/CURRENT_HANDOFF.md)，保持原证据范围。
