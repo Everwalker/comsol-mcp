@@ -2338,7 +2338,7 @@ def _activity014_replay_tree(monkeypatch):
 def test_actual014_raw_reproduces_original_r5_exact_label_rejection(monkeypatch):
     import importlib.util
     from pathlib import Path
-    old=Path('/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261012-candidate20-r5/comsol_mcp/_g3_results.py')
+    old=Path(__file__).resolve().parents[1] / 'continuation/external-source/cb9949f2055e969d/_g3_results.py'
     spec=importlib.util.spec_from_file_location('comsol_mcp._activity014_frozen_r5_results',old)
     import hashlib
     assert hashlib.sha256(old.read_bytes()).hexdigest()=='cb9949f2055e969d3bedb19cac1df31f6e3bdfa710c78d749e2363f5ff3c1de3'

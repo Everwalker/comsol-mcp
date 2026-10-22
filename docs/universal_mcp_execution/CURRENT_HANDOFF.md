@@ -1,25 +1,21 @@
 # 当前续跑交接 — 2026-10-22
 
-本轮执行通用核心合同，目标仍为 **IN_PROGRESS**。唯一续跑指针是 [state/RESUME.json](state/RESUME.json)；冻结完成标准见 [RELEASE_DOD.md](RELEASE_DOD.md)。原三类案例的科学终点保留原状态，通用能力仍 required。
+目标 **IN_PROGRESS**。唯一续跑指针 [state/RESUME.json](state/RESUME.json)，冻结范围 [MASTER_GOAL](MASTER_GOAL.md)/[RELEASE_DOD](RELEASE_DOD.md)。三案例科学终点不作主线；未完成专项状态、历史失败和UNKNOWN原件保留。最终独立Reviewer及两类未预设任务尚未启动。
 
-固定源码 `cd47281777eae6f4ea0d40c5c754dca9982eda86`、tree `94e6523bfffe21ace621045710335bea5512c3c1` 已恢复并核验 21,682 个原始跟踪文件。候选源码恢复并校验 3,978 个映射、1,105 个对象，尚未批量覆盖生产树。Git 基线已恢复到 `universal-core`，未 reset/checkout 当前工作文件。恢复工具缺失可选 AGENTS 的问题已修复；36 项恢复工具软件测试通过（含恢复副本自校验）。
+恢复已核验固定commit `cd47281777eae6f4ea0d40c5c754dca9982eda86`、tree `94e6523bfffe21ace621045710335bea5512c3c1`，21,682原跟踪文件及候选3,978映射/1,105对象。规范生产树为本repository；candidate_sources只作恢复证据，不批量覆盖。Git分支universal-core，普通main发布获既有授权，禁止force。已同步M0/M1 `4759c097`、M4 `47d05a8e`、Windows软件准备/使用说明 `4f236d14`；下一阶段同步状态见RESUME.git。
 
-M1 公开签名/effect、多类型与 null、6.3/6.4 实际版本适配及 Windows 会话验证接线的软件阶段已由 Main 集中审查：303 测试通过、112 工具源外安装 MCP smoke 通过，8 个受影响生产文件与已测试 wheel 字节一致。执行与 Main 审查见 evidence/M1_20261022_execution.json 和 evidence/M1_MAIN_STAGE_REVIEW.json。MCP smoke 使用 recording backend 和已准备依赖路径，不是完整离线安装或原生 COMSOL 验收。一次性 273 动作/427 子断言映射完成并防止重置已有状态。最终候选尚未冻结，独立 Reviewer 与两类未预设任务仍 NOT_RUN。
+已审查的有限软件阶段：M1 303项测试、112工具源外协议smoke，覆盖审定公共签名/发现/类型/null/6.3与6.4策略；GENERAL_COVERAGE一次映射273动作/427子断言并只读检查通过。M3 native-default不再按四个表达式特判；原347通过/1失败/1明确排除回归不改写，排除项后由仓库内同SHA旧源码恢复相对路径单项通过。剩余历史编译凭据缺失只影响该历史复现测试。
 
-Main 已做小型 M3 单位补丁：通用 Interp 不再按四个光学表达式限制 native-default；空白原生单位不再误标 VERIFIED。新回归先复现 8 失败/18 通过。修复后两模块为 256 通过/1 失败；五模块受影响回归为 347 通过/1 失败/1 明确排除。两项缺失历史 fixture 的失败分别保留，未改成 SKIP 或 PASS，详见 [单位证据](evidence/unit-default/affected-result.json)。这些都是软件缝隙测试，COMSOL 原生单位及科学验收 NOT_RUN。
+M4三架构离线构件/哈希锁/SBOM/许可完成限定审查，131项发布测试通过，Mac/Windows正常软件安装及112工具启动已实际执行。Intel同版本cryptography派生wheel已验证静态架构与依赖功能，未冒称Intel COMSOL原生支持。详见evidence/M4_RELEASE_TOOLING.json、evidence/WINDOWS_PREP.json；这些构件不是后续所有核心修改的最终候选。
 
-本机 macOS ARM COMSOL 6.4.0.293/JDK11 和 Windows 主机 6.3.0.290/6.4.0.293/JDK11 已只读确认可达，见 [环境预检](state/ENVIRONMENT_PREFLIGHT.json)。Windows 已有 standalone Desktop 保留；不接管、不终止。历史 R6I/once/UNKNOWN 原件未重放，新项目不继承旧权限或 PID 身份。
+新交付生命周期证据evidence/M4_DELIVERY_LIFECYCLE.json经Main核验118份原始记录和36个外部文件：真实0.1.10旧→新→旧代码回退、持久UNKNOWN/幂等历史、生产全状态备份恢复、非空标记venv卸载通过。app旧C733、新1706（全SHA见receipt/RESUME）；只属于MacARM软件数据范围，非版本迁移、非原生/科学/完整T056。Framework Python卸载拒绝及额外sandbox的ps拒绝均保留；成功卸载使用私有standalone CPython和原有普通CLI，未放宽任何保护。
 
-M0/M1 软件阶段已普通推送并独立回读为 `4759c097eabfdf588a366af51d9c7d1b90d1ac1b`。
+M2a原run在workpack/_state/universal-m2a-20261022T115828Z-43b2d2。首次Java执行漏传参数名，源job `a1d8c9ed-2d03-407b-8d0c-65b7b0cc8030`保持UNKNOWN；公开session.recover核验后请求静止，未重放。公开disconnect(retire_worker=true)已退役Worker，旧ModelRefs失效；随后stop拒绝SESSION_BINDING_BUSY，原自有Server PID82522/birth start_epoch_ms:1792670973071仍保留隔离。PID本身不是停止/接管授权，不重试旧stop，不触碰旧科学活动。
 
-下一步：同一 Luna 正在执行普通已安装 MCP 的项目 Java→绑定模型→真实求解/回读/产物闭环，再完成结果、恢复、安装及活跃目标验证。不能把本次源码恢复、软件测试或同步写成整个目标完成。
+Main确认真实源码差距：stop直接阻塞所有非终态job，没有复用disconnect已使用的强session.recover静止证明检查。M2b需复用既有强验证，同时保留历史UNKNOWN/结果和所有权/其他连接/忙碌门禁；不要新造审批/证明框架。另有项目Java默认全局ModelUtil模型管理边界、实际javac禁注解处理、UNKNOWN按真实冲突Server资源隔离三项待修。
 
-M4 输入准备已完成可得部分：Windows34/34、ARM41/41、Intel40/41。上游 cryptography49起移除Intel Mac支持，50.0.1缺官方Intel wheel；同版本私有派生构建独立进行，不能宣称上游支持或Intel硬件通过。原r13 pyproject哈希与当前相同，uv.lock确实缺desktop extra；核心M1改动仍需新的源码/构件绑定。
+model_inspect(refresh=true)项目写权限映射已补，Main对精确冻结模块17项软件测试通过。新修补包app `1706ea4085e72d999de0f0dffe7d56e0af34bb76e275b30d08e6823668c1ff92`，普通42-wheels哈希锁离线安装在workpack/_state/universal-m2a-repaired-install-20261022-d898e40069。Main核对172包文件与冻结源码/wheel完全一致，无editable/借用依赖路径；原生新daemon来源/求解/结果图像/保存仍由同一主执行Luna继续。该候选不含并行Windows SID改动，不是最终候选。
 
-M4 通用发布工具阶段已由 Main 限定审查通过：`tools/universal_release.py` 复用既有 source/wheel/hash/SBOM/打包 API，不再增加固定 current175-rN profile。131 项软件测试无失败/跳过，三架构 ZIP 共 154 个清单成员核对通过（ARM53/Windows46/Intel55），175 个当前源成员与快照一致、172 个包成员与测试 wheel 一致；Mac ARM 干净环境已 `--no-index --require-hashes` 安装并启动112工具。详见 evidence/M4_RELEASE_TOOLING.json。Windows 安装、完整原生离线及最终 Reviewer 未验收；后续生产/README变化需新源码快照，不能将旧构件改名冒充。
+Mac ARM6.4.0.293及Windows6.3.0.290/6.4.0.293与JDK11可达；Windows已有standalone Desktop保持原样。Windows SID首轮修补131软件测试和实际只读token观察通过，Main发现第二条SCM lookup路径遗漏后同一执行端已补修，最终绑定/测试与host plan待集中接收。新服务、AppContainer、ACL/WFP尚未授权或应用；不得用elevated SSH token冒充主机变更授权。10GiB只是早期提案，不是新增门槛；内存已做独立API交叉观察，实际启动按有限任务预算判定。
 
-Windows PREP 随后已由 Main 限定审查：实际35 wheels离线安装/pip check、172包源字节一致、真实MCP stdio初始化与112工具发现通过；6个项目元数据调用是生产dispatch进程内调用，不冒充MCP RPC覆盖。两版doctor各7项静态PASS但汇总UNKNOWN，原生未启动。只读T037已复现SID转换故障，同一Windows Luna正修复；主机plan尚缺精确网络/绑定材料，账户/SCM/AppContainer/ACL/WFP均未授权或应用。当前低可提交内存仅一次观察，提案10GiB不是新增完成门槛。证据：evidence/WINDOWS_PREP.json，后续源修复/计划另记录。
-
-M2a 新项目Java经公开已安装MCP编译通过。首次执行因项目输入漏传参数名而未成功，原job `a1d8c9ed-2d03-407b-8d0c-65b7b0cc8030` 保留UNKNOWN；Worker请求已确认静止且未重放。注册会话必须由公开session.recover核验原Worker/模型/revision，job.reconcile独自不解除门禁。继续使用原target/sentinel，不接管旧科学活动；原始引用及下一动作以RESUME和evidence/M2A_NATIVE.json为准。
-
-README已修正当前通用受管流程、源外项目根与外部JDK11说明，旧快照保留；该文档变化尚未进入47d05a8e的已测构件。M2b还需受控Java默认禁止全局模型切换、compile禁注解处理及UNKNOWN按冲突Server资源隔离的实质修补/负控；最终候选须重新捕获源码并按影响范围验证，不能重标旧wheel。
+续跑先读RESUME与最新原始pending-refs/job，核实实际进程和所有权；新独立资源可继续，禁止重放旧UNKNOWN、伪造Popen或修改活daemon代码。当前原生目标/跳过范围仍严格按config/TARGETS.json。完成所有required、真实跨平台适用验证及最终独立Reviewer批准前，不写整体完成。

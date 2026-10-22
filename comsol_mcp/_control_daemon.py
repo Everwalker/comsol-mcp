@@ -12019,6 +12019,20 @@ class ControlDaemon:
                 effect = None
         if effect is None:
             effect = _g2_registry.LEGACY_TOOL_EFFECTS.get(scoped_operation)
+        if scoped_operation == "model_inspect":
+            scoped_arguments = (
+                arguments.get("arguments", {})
+                if operation in {"registry_call", "operation_call"}
+                and isinstance(arguments.get("arguments"), Mapping)
+                else arguments
+            )
+            refresh = scoped_arguments.get("refresh", False)
+            if type(refresh) is not bool:
+                raise ExecutionContractError("INVALID_REQUEST", "model_inspect refresh must be a boolean")
+            # A normal bound-model inspection is read-only.  Refresh asks the
+            # backend to reconcile its revision ledger against the live model,
+            # so the project write grant must be checked before dispatch.
+            effect = "project_write" if refresh else "inspect"
         if scoped_operation in {"api.invoke", "api_invoke"}:
             from ._g2_public_api import routed_arguments, provisional_effect
             effect = provisional_effect(routed_arguments(operation, arguments))

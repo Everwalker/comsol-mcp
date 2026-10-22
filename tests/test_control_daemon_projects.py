@@ -6,7 +6,7 @@ import threading
 import time
 
 from comsol_mcp._control_daemon import ControlDaemon
-from comsol_mcp._execution_contract import ExecutionContractError, SessionLedger
+from comsol_mcp._execution_contract import ExecutionContractError, ModelRef, SessionLedger
 from comsol_mcp._execution_service import ExecutionService
 
 
@@ -85,6 +85,92 @@ def test_project_create_is_offline_and_uses_the_registered_workspace(tmp_path, m
         assert daemon.service is None
         job = daemon.store.job(result["execution"]["job_id"])
         assert job["metadata"]["engine_dispatched"] is False
+    finally:
+        daemon.close()
+
+
+def test_model_inspect_refresh_uses_read_or_project_write_grant_and_keeps_model_binding(tmp_path):
+    workspace_root = tmp_path / "projects"
+    workspace_root.mkdir()
+    daemon = ControlDaemon(tmp_path / "control", project_root=workspace_root, registry={})
+
+    def create_with_permissions(name, permissions):
+        result = daemon.dispatch({
+            "operation": "project.create",
+            "arguments": {
+                "label": name,
+                "workspace": name,
+                "policy": {"permissions": permissions},
+            },
+            "execution": {"request_id": f"create-{name}", "idempotency_key": f"create-{name}"},
+        })
+        assert result["success"] is True, result
+        return result["data"]["project"]
+
+    inspect_only = create_with_permissions("inspect-only", ["inspect"])
+    writer = create_with_permissions("writer", ["inspect", "project_write"])
+    ref = ModelRef("bound-session", "bound-server", "bound-model", 1).as_dict()
+    daemon.store.put_metadata("revisions", daemon.backend._model_project_key(ref), {
+        "model_ref": ref, "revision": 0, "project_id": inspect_only["project_id"],
+        "attribution": "PROJECT_BOUND",
+    })
+    try:
+        # Missing refresh defaults to the handler's read-only behavior.
+        daemon._authorize_project_execution(
+            "model_inspect", {}, {"project_id": inspect_only["project_id"], "model_ref": ref},
+        )
+        daemon._authorize_project_execution(
+            "model_inspect", {"refresh": False},
+            {"project_id": inspect_only["project_id"], "model_ref": ref},
+        )
+        daemon._authorize_project_execution(
+            "operation_call", {"operation_id": "model_inspect", "arguments": {"refresh": False}},
+            {"project_id": inspect_only["project_id"], "model_ref": ref},
+        )
+
+        try:
+            daemon._authorize_project_execution(
+                "model_inspect", {"refresh": True},
+                {"project_id": inspect_only["project_id"], "model_ref": ref},
+            )
+        except ExecutionContractError as exc:
+            assert exc.code == "PERMISSION_DENIED"
+        else:
+            raise AssertionError("refresh must require the project_write grant")
+        try:
+            daemon._authorize_project_execution(
+                "operation_call", {"operation_id": "model_inspect", "arguments": {"refresh": True}},
+                {"project_id": inspect_only["project_id"], "model_ref": ref},
+            )
+        except ExecutionContractError as exc:
+            assert exc.code == "PERMISSION_DENIED"
+        else:
+            raise AssertionError("fallback refresh must require the project_write grant")
+
+        # A write grant on a different project cannot rebind this exact model.
+        try:
+            daemon._authorize_project_execution(
+                "model_inspect", {"refresh": True},
+                {"project_id": writer["project_id"], "model_ref": ref},
+            )
+        except ExecutionContractError as exc:
+            assert exc.code == "PROJECT_IDENTITY_MISMATCH"
+        else:
+            raise AssertionError("refresh must preserve the exact ModelRef project binding")
+
+        daemon._authorize_project_execution(
+            "model_inspect", {"refresh": True}, {"project_id": writer["project_id"]},
+        )
+        for malformed in (None, 0, 1, "true", [], {}):
+            try:
+                daemon._authorize_project_execution(
+                    "model_inspect", {"refresh": malformed},
+                    {"project_id": writer["project_id"]},
+                )
+            except ExecutionContractError as exc:
+                assert exc.code == "INVALID_REQUEST"
+            else:
+                raise AssertionError(f"non-boolean refresh was accepted: {malformed!r}")
     finally:
         daemon.close()
 

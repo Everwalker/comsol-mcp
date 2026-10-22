@@ -1,19 +1,20 @@
 # 当前进度 — 2026-10-22
 
-**状态：IN_PROGRESS，通用核心尚未完成。** 当前执行 [MASTER_GOAL](docs/universal_mcp_execution/MASTER_GOAL.md)；续跑以 [RESUME](docs/universal_mcp_execution/state/RESUME.json) 和 [当前交接](docs/universal_mcp_execution/CURRENT_HANDOFF.md) 为准。原三案例科学终点已按明确 scope 拆出；其历史失败、UNKNOWN 和科学未验收记录保留。
+**IN_PROGRESS：通用核心尚未完成。** 执行 [MASTER_GOAL](docs/universal_mcp_execution/MASTER_GOAL.md)，以 [RESUME](docs/universal_mcp_execution/state/RESUME.json) 和 [当前交接](docs/universal_mcp_execution/CURRENT_HANDOFF.md) 续跑。原三案例科学终点已拆出，历史失败及 UNKNOWN 保留。
 
-- M0 源码恢复 PASS：固定 commit/tree、21,682 个跟踪文件及候选 3,978 映射/1,105 对象核验完成；36 项工作包工具测试通过（含恢复副本自校验）。这不代表运行时、原生或科学验收。
-- M1 软件阶段 PASS：24 个审定公共签名及完整受限元数据发现、实际类型/null/精确签名、6.3/6.4 release 适配和 Windows 严格会话验证生产接线已实现。303 项聚焦测试无失败/跳过；源外 wheel 的公开 MCP 112 工具协议 smoke 通过。Main 核对 8 个受影响生产文件与已测试 wheel 完全一致。仅软件/SDK 缝隙证据，原生 COMSOL NOT_RUN。
-- M3 单位通用化：小补丁与受影响软件回归已执行；五模块 347 PASS、1 FAIL、1 显式排除。两个历史 fixture 缺失的失败完整保留，不能称全 suite PASS；详见 [原始结果](docs/universal_mcp_execution/evidence/unit-default/affected-result.json)。原生验证 NOT_RUN。
-- 环境：Mac ARM 6.4 及 Windows 6.3/6.4 可达，版本/JDK 已只读核实；现有 Windows standalone Desktop 保留。本轮新建 Mac 受管会话已启动，求解尚未验收；原始引用见 RESUME/M2A_NATIVE。
-- GENERAL_COVERAGE 已一次映射 273 动作、原 60 测试的 427 子断言（通用义务可用等价模型履行），冻结后拒绝覆盖已有结果；定向 API 快照刷新和只读校验通过。U01–U12 尚无全组完成声明。
-- M4 软件/构件阶段 PASS：补齐普通 Desktop 依赖与 canonical lock，保留全部原包版本；通用构建入口不再需要固定活动 profile。131 项软件测试通过，三架构离线 ZIP/清单/源 wheel 逐成员核对通过，Mac ARM 干净源外离线安装及 112 工具启动通过。Intel 使用明确披露的同版本 cryptography 派生 wheel；原 40/41 输入报告保留。随后 Windows35轮子哈希锁定安装、172源文件及112工具协议启动已由Main限定审查通过；两版doctor汇总仍UNKNOWN。完整原生离线T056与最终Reviewer仍开放。
-- 最终独立 Reviewer、两类未预设任务迁移、当前候选的跨平台原生及交付统一验收均 NOT_RUN。
+- M0 恢复 PASS：固定源码/tree、21,682 个原跟踪文件，候选3,978映射/1,105对象核验；36项恢复工具测试通过。
+- M1 软件阶段 PASS：24个审定公共签名、受限发现/类型/null/6.3与6.4适配及严格会话接线；303项聚焦测试通过，源外安装MCP112工具smoke通过。属于软件/SDK范围，未升格原生验收。
+- 一次性 GENERAL_COVERAGE 已冻结273动作、原60测试的427子断言（414核心/13案例）；最新只读结构检查通过。U01–U12尚无全组完成声明。
+- M3单位通用化：五模块原回归347 PASS/1 FAIL/1明确排除的记录保留。被排除的旧源码复现测试已找到仓库内精确SHA副本，改为相对路径后单项1 PASS；另一份历史编译凭据仍缺失。不能称全suite PASS。见 [单位证据](docs/universal_mcp_execution/evidence/unit-default/affected-result.json)。
+- M4构件阶段 PASS：三架构离线包、哈希锁、SBOM/许可及正常启动已限定审查；Intel使用明确披露的同版本cryptography派生wheel，未声称Intel COMSOL硬件通过。131项发布软件测试通过。Windows实际离线安装/112工具启动通过，两版doctor汇总仍UNKNOWN。
+- M4交付生命周期软件阶段 PASS：真实0.1.10构件同版本代码切换/回退、生产全状态备份恢复和非空隔离venv卸载通过；Main核验118份原始记录及36个保留文件。子进程禁网范围已验证；Windows/Intel生命周期、完整原生T056及科学验收未据此转PASS。Homebrew Framework卸载仍保留fail-closed UNKNOWN，成功路径为私有standalone CPython。见 [交付证据](docs/universal_mcp_execution/evidence/M4_DELIVERY_LIFECYCLE.json)。
+- M2a：普通新修补包已干净离线安装，Main核对172包文件与源码/wheel一致，112工具协议启动通过。`model_inspect(refresh=true)`项目写权限修补经精确冻结运行时代码17项软件测试通过；原生求解/结果/图像/保存仍待闭环。
+- 原M2a失败run的Worker已通过公开入口退役，原UNKNOWN未重放或改成成功；stop因历史UNKNOWN拒绝，原自有Server保留隔离。源码已定位stop门禁遗漏现有强静止证明判断，纳入M2b。旧ModelRefs为历史引用，不能继续使用。
+- Windows SID通用修补已完成首轮131软件PASS及真实只读探测。Main发现另一SCM lookup路径漏修后已交回同一执行端；最终源/测试/安装绑定与最小host plan仍在整理。服务/AppContainer/ACL/WFP变更未授权或应用；原有Desktop保留。
+- 最终候选、Windows6.3/6.4与MacARM6.4适用核心原生验证、两类未预设任务及最终独立Reviewer仍未完成。当前不能声明整体完成。
 
-阶段同步：M0/M1 为 `4759c097`，M4 为 `47d05a8ed464bf074199b029601addcfcc8560df`，均已普通推送并独立 fetch 回读一致。后续 README 使用说明修正待新快照，不冒充已测试构件字节。
+已同步阶段：M0/M1 `4759c097`，M4构件 `47d05a8e`，Windows软件准备/使用说明 `4f236d14`，均普通推送并独立回读。当前交付生命周期/权限软件阶段正同步；后续核心变化须重新捕获源码构件，不能重标旧wheel。
 
-下一动作：同一 Luna 正在执行 M2a：普通安装 MCP → 新项目 Java → 指定现有模型 → 真实小型求解/回读/产物；并行推进交付依赖。不中途宣告完成。
+下一动作：同一Luna继续M2a新项目Java→绑定模型→真实求解/回读/图像/保存；随后M2b修受控Java全局模型边界、注解处理与UNKNOWN冲突资源/停止门禁。Windows执行端并行完成SID最终绑定和具体主机计划。最终独立Reviewer只在候选就绪后启动。
 
-历史 current175-r13、旧科学活动与暂停交接保留于 [2026-10-21 原交接](docs/full_project_continuation_v3/CURRENT_HANDOFF.md)，只按其原范围引用，不升级为本轮通用核心批准。
-
-Windows 原生门槛：已复现只读 SID 转换故障，同一 Luna 正在修复；新服务/隔离资源尚未授权或创建，主机计划仍缺精确材料。低可提交内存为一次观察值，正在独立交叉核对；不把提案10GiB变成新增验收门槛。详见 [Windows准备](docs/universal_mcp_execution/evidence/WINDOWS_PREP.json)。
+旧交接与科学历史见 [2026-10-21交接](docs/full_project_continuation_v3/CURRENT_HANDOFF.md)，保持原证据范围。

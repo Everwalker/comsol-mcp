@@ -1,0 +1,400 @@
+{
+  "schema": "comsol-mcp-delivery-lifecycle-evidence/1",
+  "created_utc": "2026-10-22T14:20:24.173262+00:00",
+  "status": "PASS_SCOPED_SOFTWARE_LIFECYCLE",
+  "scope": "Mac ARM64 disposable same-version 0.1.10 old -> new -> old code artifact transition; production full-state API on synthetic ledger and reviewed MPH bytes; normal guarded marked-venv uninstall",
+  "inputs": {
+    "old": {
+      "root": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-release-tooling/release-candidate/macos_arm64",
+      "version": "0.1.10",
+      "application_wheel": {
+        "file": "comsol_mcp-0.1.10-py3-none-any.whl",
+        "bytes": 2871041,
+        "sha256": "c733b15e7c1c4dd709a46d92fe7c8054cd88b5f95be8b4fa56339d3d7d35c7a9"
+      },
+      "wheel_count": 42,
+      "dependency_wheel_count": 41,
+      "requirements": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-release-tooling/release-candidate/macos_arm64/requirements.lock",
+        "sha256": "87a5922edd4585a6abcf975bc9a8badbe78d6055db68e6e1cb29e367263b57b0"
+      },
+      "runtime_requirements": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-release-tooling/release-candidate/macos_arm64/requirements-runtime.lock",
+        "sha256": "1370dddc5222241dc0d1167fdd6807863df5136531cfc7c42db235a8d4ba1b61"
+      },
+      "archive": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-release-tooling/release-candidate/macos_arm64/offline.zip",
+        "sha256": "ae9bf085a59a396e3ff4757524598222707ab0228dc5b0613a01bede6a2cbe2d"
+      },
+      "application_code_payload_sha256": "e3da7b519cce2243a0c9ba39f4924495691bbeca65575d30962a8866eb9f42e0",
+      "application_package_members": 172,
+      "applicable_hash_pins": 42
+    },
+    "new": {
+      "root": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-repaired-release-20261022/macos_arm64",
+      "version": "0.1.10",
+      "application_wheel": {
+        "file": "comsol_mcp-0.1.10-py3-none-any.whl",
+        "bytes": 2873232,
+        "sha256": "1706ea4085e72d999de0f0dffe7d56e0af34bb76e275b30d08e6823668c1ff92"
+      },
+      "wheel_count": 42,
+      "dependency_wheel_count": 41,
+      "requirements": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-repaired-release-20261022/macos_arm64/requirements.lock",
+        "sha256": "a42c480858b64585f3d6044a5da1b800e14da08901520cdc9e2a08f4930ab7a7"
+      },
+      "runtime_requirements": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-repaired-release-20261022/macos_arm64/requirements-runtime.lock",
+        "sha256": "1370dddc5222241dc0d1167fdd6807863df5136531cfc7c42db235a8d4ba1b61"
+      },
+      "archive": {
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-repaired-release-20261022/macos_arm64/offline.zip",
+        "sha256": "d8aa6654e7475550a7acfb2e529c121c2713fd3e0235cc1ea09d9128f580f500"
+      },
+      "application_code_payload_sha256": "3009dd3b6b429994d91d73832428d4d36a39b399066e78be0cc39ef41c9f2913",
+      "application_package_members": 172,
+      "applicable_hash_pins": 42
+    }
+  },
+  "dependency_wheels_identical": true,
+  "input_inventory": {
+    "path": "_state/universal-delivery-lifecycle/raw/input-readback.json",
+    "sha256": "14c293f7ab1fe4c5a7e602ba85cc626a6d0ea5a2f17fced4f9ae71daa497506b",
+    "bytes": 21090
+  },
+  "final_input_readback": {
+    "path": "_state/universal-delivery-lifecycle/raw/original-inputs-final-readback.json",
+    "sha256": "15bf7225c52cb22edba7e0e98d57f5c14cd878e6c02400f427cdae2caa1ca647",
+    "bytes": 344
+  },
+  "driver": {
+    "source": "Unchanged existing generic drivers, extracted from shipped new offline.zip; copies match repository byte-for-byte",
+    "files": {
+      "tools/full_project_release.py": {
+        "source_archive": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-repaired-release-20261022/macos_arm64/offline.zip",
+        "output": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-delivery-lifecycle/product-driver/tools/full_project_release.py",
+        "sha256": "51de33eb63943f2aed114e2efb6a26e4e84d893508a4f95920df0e606e9fb4d4",
+        "matches_repository": true
+      },
+      "tools/release_transition_lifecycle.py": {
+        "source_archive": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-repaired-release-20261022/macos_arm64/offline.zip",
+        "output": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-delivery-lifecycle/product-driver/tools/release_transition_lifecycle.py",
+        "sha256": "08591b2a0adcceef0516a9c448e1def6b3c4f14fac0fd471a6f8276e61b87c41",
+        "matches_repository": true
+      }
+    },
+    "layout": "product-driver bundle root and disposable venvs are siblings under private root; existing source-tree, marker, content, process, mount guards unchanged",
+    "code_modifications": []
+  },
+  "private_runtime": {
+    "version": "3.12.13",
+    "framework": "",
+    "preparation": "uv built-in CPython download definition, explicit private --install-dir, --no-bin, --no-registry, --no-config; no mirror override; private base venv bootstraps only existing pinned packaging26.3 wheel",
+    "interpreter_sha256": "96793b100c947cdc81a38e8fb8c9c1889abccda9840ce1bef58d372bf3f2c263",
+    "bootstrap_receipt": {
+      "path": "_state/universal-delivery-lifecycle/raw/private-python-bootstrap.json",
+      "sha256": "a4c85cb7a29d2b6d596763fa8ff912d5233ebd642d1db27b19ea2b408a63b49a",
+      "bytes": 4198
+    },
+    "download_command": {
+      "path": "_state/universal-delivery-lifecycle/raw/private-python.command.json",
+      "sha256": "d45f080d95de4e0b1ec755297fc97e6c043aba2cf8b6db99dac085737ab29a98",
+      "bytes": 773
+    },
+    "system_or_shared_environment_modified": false
+  },
+  "transition": {
+    "status": "PASS_DISPOSABLE_CODE_DATA_LIFECYCLE_RELEASE_UNVERIFIED",
+    "command": {
+      "path": "_state/universal-delivery-lifecycle/raw/transition-attempt-3.command.json",
+      "sha256": "d7877d8c2e916037d5de4007784871458c1f1e7bf0fb14fa73fd0386e9242943",
+      "bytes": 2302
+    },
+    "result": {
+      "path": "_state/universal-delivery-lifecycle/attempt-3/transition-result.json",
+      "sha256": "753d41ec224372fe3a78604710bf57ed81d963be3d561d65ae42f15ccda3f57f",
+      "bytes": 189703
+    },
+    "same_version": true,
+    "version_migration_verified": false,
+    "code_transition_verified": true,
+    "states": [
+      {
+        "state": "old_release_installed",
+        "version": "0.1.10",
+        "package_payload_sha256": "a0a881d5d220e5a1846c65388f06fbcbf5bf6a14e8b895b7258b0cd7a4b4a33f",
+        "distribution_inventory_sha256": "b85806bdbe55791031643f61693e389747fb9b4838ebb62b2b2b022bbaae3c2a",
+        "distribution_count": 43
+      },
+      {
+        "state": "candidate_attempted",
+        "version": "0.1.10",
+        "package_payload_sha256": "d865b37bd6224137bb7e3a15fdade73c86263ee63a1e6d80fedc1141656964c5",
+        "distribution_inventory_sha256": "b85806bdbe55791031643f61693e389747fb9b4838ebb62b2b2b022bbaae3c2a",
+        "distribution_count": 43
+      },
+      {
+        "state": "old_release_restored",
+        "version": "0.1.10",
+        "package_payload_sha256": "a0a881d5d220e5a1846c65388f06fbcbf5bf6a14e8b895b7258b0cd7a4b4a33f",
+        "distribution_inventory_sha256": "b85806bdbe55791031643f61693e389747fb9b4838ebb62b2b2b022bbaae3c2a",
+        "distribution_count": 43
+      }
+    ],
+    "installed_identity_checks": {
+      "candidate": true,
+      "old": true,
+      "restored": true
+    },
+    "rollback_identity_matches": {
+      "distribution_fingerprint": true,
+      "package_fingerprint": true
+    },
+    "bootstrap_exceptions": {
+      "pip": "25.0.1"
+    },
+    "candidate_install_exit_code": 0,
+    "rollback_install_exit_code": 0,
+    "dependency_payload_contract": "Same41 exact dependency wheel inputs. All42 pins installed each phase with --no-index --require-hashes; candidate/rollback --force-reinstall. Exact installed distribution versions checked each phase, app source/METADATA matched to each wheel. Initial and rollback whole-venv owned inventories equal. No separate all-dependency-file capture at candidate phase.",
+    "rollback_payload": {
+      "status": "PASS",
+      "whole_owned_venv_inventory_equal_to_initial": {
+        "status": "CLEAR",
+        "reason": "install contents match the helper-recorded ownership baseline",
+        "expected_entry_count": 4820,
+        "current_entry_count": 4820,
+        "expected_sha256": "b9d6438181c19fb3bb176c32b6d203c01583e44dbe2856b32e4ca728ec69b96a",
+        "current_sha256": "b9d6438181c19fb3bb176c32b6d203c01583e44dbe2856b32e4ca728ec69b96a",
+        "protected_artifact_count": 0
+      },
+      "direct_wheel_members_matched": 2834,
+      "mismatches": [],
+      "installation_transform_count": 42,
+      "transforms": "pip RECORD/script transformations excluded from direct wheel byte comparison; included in whole owned-venv baseline comparison",
+      "receipt": {
+        "path": "_state/universal-delivery-lifecycle/raw/attempt-3-installed-rollback-wheel-payload.json",
+        "sha256": "6e5d879209a2610271deeb6b3834ee84b9ac21834598d19e8c6f3bbfae3f814b",
+        "bytes": 14256
+      }
+    }
+  },
+  "process_network_isolation": {
+    "transition_status": "PASS_PROCESS_ISOLATED",
+    "mechanism": "Existing sandbox-exec deny network* for install/upgrade/rollback/data children; no global firewall/proxy/service changes",
+    "listener_accepted": false,
+    "child_probe": {
+      "status": "PASS",
+      "errno": 1,
+      "detail": "[Errno 1] Operation not permitted"
+    },
+    "profile_sha256": "52d2e8f0d947edf9c29e8b85a5ebe6fa47cfd8cbedb27247643fe143a638dd62",
+    "receipt": {
+      "path": "_state/universal-delivery-lifecycle/attempt-3/transition-evidence/offline-install-process.log.json",
+      "sha256": "0e28d7c6221a8e211530cd96608bef97b28b08b850452ade26243fd6c3bb9f9c",
+      "bytes": 29000
+    },
+    "uninstall": "NOT_APPLIED_PROCESS_NETWORK_ISOLATION: ordinary supported uninstall supervisor executes setuid /bin/ps outside the network sandbox; all original guards retained. Transition offline proof is separate."
+  },
+  "data": {
+    "status": "PASS",
+    "fixture": {
+      "source": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/evidence/w21_closure/windows/reviewer64_reopen01/project/review_reopen.mph",
+      "copy": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-delivery-lifecycle/product-driver/evidence/w21_closure/windows/reviewer64_reopen01/project/review_reopen.mph",
+      "sha256": "ee71658d66a92efc19c78de7742eb24c1ef3b16f1fb33b1d6814b1e79c96b9d6",
+      "bytes": 10725566,
+      "scope": "reviewed MPH bytes only; no native/scientific claim"
+    },
+    "fixture_scope": "Registered artifact ZIP/hash/byte preservation only; no engine/model/scientific result",
+    "original_seed_sha256": "c6d91d284df427e2a5d64295f2441e959f693811518562929f8f30d5256121a4",
+    "idempotency_replay_and_conflict_checks": "PASS_FIXED_SYNTHETIC_OPERATIONSTORE_ROWS",
+    "candidate_unknown_reconciliation": "PASS_UNKNOWN_to_RECONCILING_without_safe_retry",
+    "restored_unknown_status": "UNKNOWN",
+    "restored_unknown_safe_retry_false": "PASS_FIXED_SCRIPT_ASSERTION",
+    "backup_vs_restored_history_and_schema": {
+      "bytes_identical": null,
+      "durable_history_sha256_identical": true,
+      "expected_durable_history_sha256": "b9cd7319511303e9054eccefc5fc94220074ea56356cb8bd1400db2c096a862e",
+      "expected_schema_version": 1,
+      "note": "full restore rebinds project/workspace/host metadata; archive database bytes are not expected to equal the rebound database",
+      "observed_durable_history_sha256": "b9cd7319511303e9054eccefc5fc94220074ea56356cb8bd1400db2c096a862e",
+      "observed_schema_version": 1,
+      "schema_identical": null,
+      "schema_version_identical": true
+    },
+    "production_full_backup": {
+      "status": "PASS",
+      "project_count": 1,
+      "file_count": 1,
+      "archive": {
+        "path": "_state/universal-delivery-lifecycle/attempt-3/transition-evidence/before-candidate-open.full-state.tar",
+        "sha256": "4e83f4e0f85fd33b4a4bf4fbd23f5c38305cb8c0aa5f7d59117b86efb66ed2f5",
+        "bytes": 10915840
+      },
+      "manifest": {
+        "path": "_state/universal-delivery-lifecycle/attempt-3/transition-evidence/before-candidate-open.full-state.tar.manifest.json",
+        "sha256": "19d0d646300727e60aff7f0edc62fdfcf5cbb108eab72b3e54d6e2afab05ff8e",
+        "bytes": 2981
+      }
+    },
+    "production_full_restore": {
+      "status": "PASS",
+      "operation_replay_performed": false,
+      "worker_or_model_bindings_revived": false,
+      "daemon_started": false,
+      "registered_mph_sha256": "ee71658d66a92efc19c78de7742eb24c1ef3b16f1fb33b1d6814b1e79c96b9d6",
+      "registered_mph_bytes": 10725566,
+      "schema_version": 1,
+      "durable_history_sha256": "b9cd7319511303e9054eccefc5fc94220074ea56356cb8bd1400db2c096a862e"
+    },
+    "controlled_failure": {
+      "expected_exit_code": 73,
+      "observed_exit_code": 73,
+      "raw": {
+        "path": "_state/universal-delivery-lifecycle/attempt-3/transition-evidence/lifecycle-011-controlled-failure.json",
+        "sha256": "f162c811eccaf79978d7c561af53f35f4fdb661933cea0e85d3ea72088a1ad17",
+        "bytes": 938
+      }
+    },
+    "old_independent_restored_data_reopen": {
+      "status": "PASS",
+      "raw": {
+        "path": "_state/universal-delivery-lifecycle/attempt-3/transition-evidence/lifecycle-019-old-independent-reopen.json",
+        "sha256": "31bba7bfae6531afb89ce77032e7e4d8382f2ed25ae95be6b6f6eadb4bcdb91b",
+        "bytes": 14709
+      }
+    },
+    "full_recover": "NOT_RUN_NOT_NEEDED_NO_RESTORE_INTERRUPTION",
+    "database_bytes_identical": "NOT_CLAIMED_RESTORE_REBINDS_WORKSPACE_PROJECT_HOST_METADATA"
+  },
+  "uninstall": {
+    "status": "PASS_UNINSTALLED",
+    "command": {
+      "path": "_state/universal-delivery-lifecycle/raw/uninstall-supported-confirm.command.json",
+      "sha256": "c92533af02f1e88d047ab852f28437a48d487883db1291269c2d9f5910df8ce8",
+      "bytes": 1005
+    },
+    "result": {
+      "path": "_state/universal-delivery-lifecycle/uninstall-supported-confirm/uninstall-result.json",
+      "sha256": "2a5b7adfe2a3847a3fde60b2749859c544f4882cc20d24c1c8fe152557a2b2c3",
+      "bytes": 1705
+    },
+    "install_id": "3e14300b-f430-4a9c-bbc3-4993c46e7ea8",
+    "removed_exact_venv": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/universal-delivery-lifecycle/attempt-3/transition-venv",
+    "nonempty_owned_entry_count": 4820,
+    "ownership_guard": "CLEAR",
+    "first_process_guard": "CLEAR",
+    "second_process_guard": "CLEAR_INFERRED_FROM_PASS_UNINSTALLED_UNCHANGED_DRIVER_CONTROL_FLOW; successful receipt does not separately serialize second CLEAR check",
+    "target_exists_after": false,
+    "external_preservation": {
+      "status": "PASS",
+      "file_count": 36,
+      "all_bytes_and_hashes_identical": true,
+      "before": {
+        "path": "_state/universal-delivery-lifecycle/raw/attempt-3-preserved-external-before.json",
+        "sha256": "dcb1de53c34776b508a8c946ba447ec1dc16486ccf59f664cd150d8a92ac01a8",
+        "bytes": 7854
+      },
+      "after": {
+        "path": "_state/universal-delivery-lifecycle/raw/uninstall-supported-external-after.json",
+        "sha256": "a76aa097654af4fdd312c28c5302797b113a2eaaddd5c065f9c1fd78bad48a2e",
+        "bytes": 7847
+      }
+    }
+  },
+  "retained_failures_and_blockers": [
+    {
+      "attempt": "transition-attempt-1",
+      "status": "FAIL_ENVIRONMENT_EPERM_BEFORE_INSTALL",
+      "exit_code": 2,
+      "cause": "Outer execution sandbox denied local listener before install; host-supervised product-isolated invocation then passed",
+      "raw": [
+        {
+          "path": "_state/universal-delivery-lifecycle/raw/transition-attempt-1.command.json",
+          "sha256": "7c8a90175b224e76a58bc9688fa70b63c540baf498629f3e7e9d491129a7e001",
+          "bytes": 2083
+        },
+        {
+          "path": "_state/universal-delivery-lifecycle/raw/transition-attempt-1.stderr.log",
+          "sha256": "15b3384da8588938530268e084c937cf8135337b0ae6f6ac0c2adeacf2e3a6f9",
+          "bytes": 82
+        }
+      ]
+    },
+    {
+      "attempt": "Homebrew Framework uninstall after successful transition-attempt-2",
+      "status": "BLOCKED_UNKNOWN",
+      "cause": "Existing fail-closed Darwin Framework runtime prerequisite guard. No deletion attempted; private attempt-2 venv retained.",
+      "raw": {
+        "path": "_state/universal-delivery-lifecycle/uninstall-plan/uninstall-plan.json",
+        "sha256": "eaf81e5111145a69fc9840ba61e6448ede43cbb12e1f8a5e49d314bd1182d3e5",
+        "bytes": 2039
+      },
+      "successful_lifecycle": {
+        "path": "_state/universal-delivery-lifecycle/attempt-2/transition-result.json",
+        "sha256": "4aee2e563b39a222cceee49bc57504959fc2a47e7d6fb9c7427a2a8a0ae09090",
+        "bytes": 189699
+      }
+    },
+    {
+      "attempt": "standalone uninstall additionally wrapped in network sandbox",
+      "status": "BLOCKED_UNKNOWN",
+      "cause": "macOS setuid /bin/ps denied EPERM inside sandbox-exec. Ordinary supported uninstall CLI outside extra wrapper then passed unchanged guards.",
+      "raw": {
+        "path": "_state/universal-delivery-lifecycle/uninstall-standalone-plan/uninstall-plan.json",
+        "sha256": "cebe6139f830b3196c56568c8d0d32cc01d459d3736f34f54e9aef9b3429ff54",
+        "bytes": 1645
+      },
+      "diagnostic": {
+        "path": "_state/universal-delivery-lifecycle/raw/uninstall-process-inventory-diagnostic.json",
+        "sha256": "2a536fb6bcf8691d1205a6133b852eb83df4adba5bcb84314fc0f44f3cc466d1",
+        "bytes": 2251
+      },
+      "pre_final_preservation": {
+        "path": "_state/universal-delivery-lifecycle/raw/attempt-3-preserved-external-after.json",
+        "sha256": "fee034dc8d9208f082699b1dfa36f5b044ed1eee3aee0a768f17cfaa0c6cb9a8",
+        "bytes": 7847
+      }
+    },
+    {
+      "attempt": "evidence assembly attempt1",
+      "status": "FAIL_EVIDENCE_WRITER_ONLY",
+      "cause": "Wrong assumption that successful uninstall serializes process_guard_before_delete; corrected evidence distinguishes explicit first check from second control-flow inference. No product rerun or code change.",
+      "raw": {
+        "path": "_state/universal-delivery-lifecycle/raw/evidence-writer-attempt-1.error.log",
+        "sha256": "7942dfaff37c20011b66ae9cc936a45a5879e08caeacfe3225dd86603d93f1a4",
+        "bytes": 430
+      }
+    }
+  ],
+  "not_run": {
+    "COMSOL_or_JVM_or_GUI": "NOT_RUN",
+    "native_model_reopen_or_solve": "NOT_RUN",
+    "science": "NOT_RUN",
+    "Windows_install_or_lifecycle": "NOT_RUN",
+    "Intel_lifecycle": "NOT_RUN",
+    "full_T056_native_offline": "NOT_RUN",
+    "final_reviewer_or_release_acceptance": "NOT_RUN",
+    "version_migration": "NOT_VERIFIED_SAME_VERSION"
+  },
+  "write_scope": [
+    "_state/universal-delivery-lifecycle",
+    "docs/universal_mcp_execution/evidence/M4_DELIVERY_LIFECYCLE.json"
+  ],
+  "raw_output_index": {
+    "path": "_state/universal-delivery-lifecycle/raw/raw-output-index.json",
+    "sha256": "0f1f9ea522d515a42bc9a0cc93547711838aa4d92cb1001f62bfdc42583ee322",
+    "bytes": 26889
+  },
+  "main_stage_review": {
+    "status": "PASS_SCOPED_SOFTWARE_DELIVERY_LIFECYCLE",
+    "reviewed_utc": "2026-10-22T14:24:11.584966+00:00",
+    "named_receipt_hashes_verified": 31,
+    "raw_index_members_verified": 118,
+    "current_external_files_hashes_verified": 36,
+    "driver_files_equal_to_shipped_archive_and_current_repository": 2,
+    "main_inspection": "Actual 20-step transition, exact old/new app hashes, strong data/history assertions, production restore no-replay/no-rebind, guarded nonempty uninstall and preserved failure receipts reviewed. Native/Windows/Intel/version migration/full-machine offline/final review not promoted.",
+    "review_validator_notes": "Two Main read-only validator path assumptions failed before correction: raw-index paths are repo-relative; external-preservation paths are private-run-root-relative. Correct bases then verified every member. These are review-script errors, not product artifact failures.",
+    "remaining_scope": "Final candidate must be recaptured after pending core changes. Homebrew Framework uninstall remains fail-closed UNKNOWN; supported private standalone CPython path exercised. No blanket uninstall/target/native acceptance."
+  }
+}
