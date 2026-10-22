@@ -7,6 +7,7 @@ from ._w26_os_resources import MAX_HOST_PLAN_BYTES
 from ._windows_host_preflight_owner import scalar
 from ._windows_owned_resources import registry_for
 from . import _windows_t037_native as native
+from ._windows_sid import normalize_scm_account_name
 D=C.c_uint32;H=C.c_void_p
 
 class Config(C.Structure):
@@ -130,6 +131,7 @@ def text(storage,length,pointer,*,multi=False):
 
 
 def account_sid(ctx,entry,account):
+    account=normalize_scm_account_name(account)
     n=D();dn=D();use=D();hold(ctx,entry,n,dn,use)
     fn=ctx['sdk']['LookupAccountNameW']
     result=scalar(fn(None,account,None,C.byref(n),None,C.byref(dn),C.byref(use)),'BOOL')

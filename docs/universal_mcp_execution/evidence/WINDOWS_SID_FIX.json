@@ -1,0 +1,364 @@
+{
+  "schema": "COMSOL_MCP_WINDOWS_SID_FIX_EVIDENCE_V1",
+  "scope": "BOUNDED_SOFTWARE_FIX_AND_REAL_WINDOWS_READONLY_PREP_ONLY",
+  "created_utc": "2026-10-22T14:19:45.917114+00:00",
+  "acceptance": {
+    "Main_final_acceptance": "PENDING",
+    "published_or_released": false,
+    "COMSOL_native": "NOT_RUN",
+    "SCM_new_service": "NOT_RUN",
+    "host_policy_apply": "NOT_RUN",
+    "trusted_T037_profile": "NOT_CONFIGURED"
+  },
+  "root_causes": [
+    {
+      "path": "comsol_mcp/_windows_t037.py::_Win32ReadOnlyApi._sid_text + native SID validation",
+      "finding": "The former SID regex required at least two subauthorities and rejected valid actual token SIDs including Everyone S-1-1-0 and integrity S-1-16-12288. The shared strict revision1 SID grammar accepts one to fifteen bounded uint32 subauthorities and never attests identity."
+    },
+    {
+      "paths": [
+        "comsol_mcp/_windows_t037_native.py::CtypesWindowsPolicyApi._lookup_sid",
+        "comsol_mcp/_windows_service_sid_native.py::subject -> account_sid"
+      ],
+      "finding": "SCM may return LocalSystem/localSystem; LookupAccountNameW needs its real account name. Both paths now call the same pure normalize_scm_account_name before the genuine Win32 lookup. Only ASCII LocalSystem and .\\LocalSystem case variants are translated to NT AUTHORITY\\SYSTEM. Other names remain unchanged; no SID literal result, fallback, authorization or privilege grant is introduced."
+    }
+  ],
+  "ownership_scope": "Keep actual Win32 signatures and exact original LocalFree/CloseHandle owners. Copy ConvertSidToStringSidW text before original LocalFree. Caller-owned LookupAccountNameW SID/domain buffers are not LocalFree allocations. No resource-release code in the SCM leaf was changed.",
+  "files": {
+    "comsol_mcp/_windows_service_sid_native.py": {
+      "sha256": "8d00a98718196ae5c7819083bea72ef521ed96200cd3796362b5422c16b1a4b5",
+      "wheel_source_sha256": "8d00a98718196ae5c7819083bea72ef521ed96200cd3796362b5422c16b1a4b5"
+    },
+    "comsol_mcp/_windows_sid.py": {
+      "sha256": "89efc9f4328ea3b39a18ee7a46563742ac9f86191a99fc602939b92b14a9d5c0",
+      "wheel_source_sha256": "89efc9f4328ea3b39a18ee7a46563742ac9f86191a99fc602939b92b14a9d5c0"
+    },
+    "comsol_mcp/_windows_t037.py": {
+      "sha256": "6849f7c13f532753057c59f993fb7cc2ec6813da1f55e9986fc51d54c7d9758b",
+      "wheel_source_sha256": "6849f7c13f532753057c59f993fb7cc2ec6813da1f55e9986fc51d54c7d9758b"
+    },
+    "comsol_mcp/_windows_t037_native.py": {
+      "sha256": "c7a06a0fa0560773964102c5c72ae480029d87cd0cb27d44aa95bd4914c712ef",
+      "wheel_source_sha256": "c7a06a0fa0560773964102c5c72ae480029d87cd0cb27d44aa95bd4914c712ef"
+    },
+    "tests/test_windows_sid_conversion.py": {
+      "sha256": "b60325dc8b4d188bede3f3d79f30342cfd1bfea71a958cc46b49dbd298c13661"
+    }
+  },
+  "source_and_install_binding": {
+    "base_M1_source_content_manifest": "6c7e67b3bea49671e65452e11cf2fe46b397d234fa2aae2e73e9c30b822e7a5c",
+    "scope": "Immutable Hume 175-file source + four exact Windows SID production modules, 176 source files/173 package files. Ongoing Main M2 source changes are excluded; this is not the final release source freeze.",
+    "freeze": {
+      "path": "_state/universal-windows-prep/SID_FIX/R3/source-freeze.json",
+      "sha256": "b0b31304dae752a795c4cf42c9acab8c664f8657862caba68ead466d0ed2ab78"
+    },
+    "wheel": {
+      "path": "_state/universal-windows-prep/SID_FIX/R3/build/wheels/comsol_mcp-0.1.10-py3-none-any.whl",
+      "sha256": "c89930caabaff834dab0adc1fc7ae98ffd38a7a7158b1b93f9c5b2b50ffb2cdd"
+    },
+    "payload_sha256": "fff438bfab8e693296b6b171c5e5036b131805f85d87ba7a7e1166508ba6f14d",
+    "install_lock_sha256": "aa81256a31e2db1ac99f704fe91747b10fc37bbcfb32e423e6dcda580dc2cb95",
+    "normal_PEP517_build": {
+      "path": "_state/universal-windows-prep/SID_FIX/R3/build/result.json",
+      "sha256": "ce90541a08b924daeb50a0ad6eb01c6f4da3e735144dc8f42656e30a6f54e87b"
+    },
+    "remote_root": "C:/Users/Everwalker/universal-windows-sidfix-20261022-a4c81d-r3",
+    "installation": "Fresh normal Python3.12 venv, --no-index --require-hashes, 35 wheels; pip check0; all173 installed package source files exact.",
+    "installed_readback": {
+      "path": "_state/universal-windows-prep/SID_FIX/R3/readbacks/install-result.json",
+      "sha256": "9f4b9a607f193b9d840f836dcaff6259561251236195027aeb75c31fce97eca4"
+    },
+    "retained_R2": {
+      "wheel_sha256": "d30d77386dda8297943f2cb83e01f48770f59aecd193a14d1c8ef183c92e7add",
+      "scope": "Retained original R2, before shared second-path normalization; not relabeled as R3. Its separate direct-CPython runtime/PID probe remains R2 app scope."
+    }
+  },
+  "software_tests": {
+    "initial_SID_regression": {
+      "tests": 37,
+      "passed": 25,
+      "failed": 12,
+      "errors": 0,
+      "skipped": 0,
+      "report": {
+        "path": "_state/universal-windows-prep/SID_FIX/before-focused.xml",
+        "sha256": "8cf8e2c29f0454317b2e36eeccd8f0ca5304e1ac4c25c5f9161a61994b50edec"
+      }
+    },
+    "previous_131_pass": {
+      "tests": 131,
+      "passed": 131,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": {
+        "path": "_state/universal-windows-prep/SID_FIX/final-focused.xml",
+        "sha256": "5389865c0625b66da72c7a1857104fbc2f8614e036f6b0a5bd1b130638d1f193"
+      },
+      "scope": "Previously run focused five-file SID/T037/identity/bootstrap suite; preserved, not rerun wholesale for this latest SCM leaf change."
+    },
+    "second_lookup_regression": {
+      "tests": 7,
+      "passed": 2,
+      "failed": 5,
+      "errors": 0,
+      "skipped": 0,
+      "report": {
+        "path": "_state/universal-windows-prep/SID_FIX/R3/before-service-leaf.xml",
+        "sha256": "5be384879f1a61b578e8f2c045e63fdbfd5eaa7c41654c43d17d8828770f8cd1"
+      },
+      "command": ".venv/bin/python -B -m pytest -q -p no:cacheprovider tests/test_windows_sid_conversion.py -k service_sid_leaf --junitxml=_state/universal-windows-prep/SID_FIX/R3/before-service-leaf.xml"
+    },
+    "R3_affected_suite": {
+      "tests": 133,
+      "passed": 133,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": {
+        "path": "_state/universal-windows-prep/SID_FIX/R3/after-service-leaf.xml",
+        "sha256": "a8ced9078857e94cf38bbd059a46d6e2ea14ce8f7b1235e6378ddb350f0d656a"
+      },
+      "command": ".venv/bin/python -B -m pytest -q -p no:cacheprovider tests/test_windows_sid_conversion.py tests/test_windows_service_sid_native.py tests/test_windows_service_sid_r17_contracts.py --junitxml=_state/universal-windows-prep/SID_FIX/R3/after-service-leaf.xml",
+      "scope": "Software ABI doubles/negative controls only; not native policy proof. Covers both lookup routes, failed lookups/no fallback, strict name preservation and original resource ownership."
+    }
+  },
+  "actual_Windows_readonly": {
+    "initial_before": {
+      "exit_code": 2,
+      "state": "UNVERIFIED",
+      "reason_code": "T037_UNSUPPORTED",
+      "message": "Win32 SID could not be converted to canonical text",
+      "raw": {
+        "path": "_state/universal-windows-prep/SID_FIX/before/before-feasibility.stdout",
+        "sha256": "19e461f783fadd51f99cb590b52f6e8b3aec6c20b8dcef9429bcb35aba7dc652"
+      }
+    },
+    "R2_SCM_leaf_before_R3": {
+      "raw": {
+        "path": "_state/universal-windows-prep/SID_FIX/R3/readbacks/service-leaf-before-R3.json",
+        "sha256": "a7d8a915cfbce53d39842e18c2d7d5a8a4ba5d9c6948cea2f2c63382014cbed0"
+      },
+      "standard_start_states": [
+        {
+          "SCM_name": "localSystem",
+          "state": "UNVERIFIED",
+          "sid": null,
+          "error_code": "HOST_CHANGE_SCM_ABI_INVALID"
+        },
+        {
+          "SCM_name": "NT AUTHORITY\\LocalService",
+          "state": "OBSERVED",
+          "sid": "S-1-5-19",
+          "error_code": null
+        },
+        {
+          "SCM_name": "NT Authority\\NetworkService",
+          "state": "OBSERVED",
+          "sid": "S-1-5-20",
+          "error_code": null
+        }
+      ],
+      "finding": "R2 real LocalSystem SCM leaf failed HOST_CHANGE_SCM_ABI_INVALID/account SID size invalid; LocalService and NetworkService were observable."
+    },
+    "R3_after": {
+      "raw": {
+        "path": "_state/universal-windows-prep/SID_FIX/R3/readbacks/readonly-result.json",
+        "sha256": "bf827cf218a7db30d829c0d44ac633bcb08d407aa7878074778c2c001ababcaf"
+      },
+      "feasibility_exit_code": 0,
+      "feasibility_state": "READ_ONLY_OBSERVATIONS_COMPLETE",
+      "profile_state": "NOT_CONFIGURED",
+      "native_policy": "NOT_RUN",
+      "host_changes": "NOT_RUN",
+      "token_state": "OBSERVED",
+      "three_actual_SCM_service_start_SIDs": [
+        "S-1-5-18",
+        "S-1-5-19",
+        "S-1-5-20"
+      ],
+      "all_SCM_queries_observed": true,
+      "native_resources_unresolved": {
+        "SCM": 0,
+        "policy": 0,
+        "token": 0
+      },
+      "no_profile_factory_refusal": {
+        "code": "T037_PROFILE_INVALID",
+        "child_created": false
+      }
+    },
+    "standard_identity_parser_diagnostic": {
+      "rows": [
+        {
+          "SCM_start_name": "LocalSystem",
+          "native_lookup_sid": "S-1-5-18",
+          "is_canonical_sid": true,
+          "parse_profile_document_v1": "ACCEPTED_SOFTWARE_INTENT_ONLY",
+          "verification_state": "NOT_VERIFIED",
+          "old_shared_regex_only": false
+        },
+        {
+          "SCM_start_name": "NT AUTHORITY\\LocalService",
+          "native_lookup_sid": "S-1-5-19",
+          "is_canonical_sid": true,
+          "parse_profile_document_v1": "ACCEPTED_SOFTWARE_INTENT_ONLY",
+          "verification_state": "NOT_VERIFIED",
+          "old_shared_regex_only": false
+        },
+        {
+          "SCM_start_name": "NT AUTHORITY\\NetworkService",
+          "native_lookup_sid": "S-1-5-20",
+          "is_canonical_sid": true,
+          "parse_profile_document_v1": "ACCEPTED_SOFTWARE_INTENT_ONLY",
+          "verification_state": "NOT_VERIFIED",
+          "old_shared_regex_only": false
+        }
+      ],
+      "meaning": "Actual new installed is_canonical_sid and parse_profile_document(v1) results. v1 inputs are explicitly synthetic software intent and remain NOT_VERIFIED; no trusted profile, AppContainer or native policy is created."
+    },
+    "old_after_field_clarification": "R1/R2 after-result.json standard_service_identities.shared_schema_regex_accepts=false calls the unchanged shared _w26_os_resources._SID_RE. It is a historical/shared regex diagnostic, not the new canonical helper or v1 parser result. Original raw files are retained. The remaining shared v2/v3 schema issue is assigned to Main, outside this Windows-only write set.",
+    "standalone_Desktop20592": {
+      "preserved": true,
+      "birth_filetime": 134370450066508547,
+      "last_readback": {
+        "path": "_state/universal-windows-prep/SID_FIX/R3/readbacks/processes-after.json",
+        "sha256": "380284d78890f26d64eac2eabcc5181c4f216b55e304cc5783b6a8fd6efa1b8c"
+      },
+      "limit": "Existing Desktop identity observed unchanged; process inventory has five inaccessible processes, so it is not a claim of global host quiescence. No existing process was adopted or signalled."
+    },
+    "direct_CPython_runtime_PREP": {
+      "readback": {
+        "path": "_state/universal-windows-prep/SID_FIX/R2/standalone-install-result.json",
+        "sha256": "f7adb6b0d8b4d2394118082dc51e2626eed93bf4f89bfdbd60e51c76b0a8cfdd"
+      },
+      "official_package_sha256": "0eb85c2dfccccf1b17352de4c397f69194035b7d37149eacc16f1147d93de3b8",
+      "scope": "Ordinary official CPython3.12.10 prefix + R2 app install, direct fresh Popen PID/image matched and exited0; SCM dispatcher NOT_RUN. Not relabeled R3."
+    }
+  },
+  "host_plan_v2": {
+    "json": {
+      "path": "_state/universal-windows-prep/SID_FIX/hostplan-v2/HOST_PLAN_V2.json",
+      "sha256": "8c1aef4bb94071e5a5f251e2e46fd82c3f90b7cd3e86e97ebdf228424739676f"
+    },
+    "human_readable": {
+      "path": "_state/universal-windows-prep/SID_FIX/hostplan-v2/HOST_PLAN_V2.md",
+      "sha256": "c1ecea75d19b53835cfbd6ef2f264d958be0cb4281811a085d08a312f828887d"
+    },
+    "argv": {
+      "path": "_state/universal-windows-prep/SID_FIX/hostplan-v2/ARGV_TEMPLATES.json",
+      "sha256": "7ada2aea97232f5683ff7c47f14fe233702b2c1bf8cf9392e33d09668422479d"
+    },
+    "apply_ready": false,
+    "authorization_to_apply": false,
+    "concrete_resources": {
+      "root": "C:/ProgramData/CMW_a4c81d",
+      "new_service": "ComsolMcpW_a4c81d",
+      "new_SAM_accounts": 0,
+      "AppContainers": 2,
+      "WFP_providers": 2,
+      "WFP_sublayers": 2,
+      "WFP_filters": 20,
+      "shared_BFE_descriptor_delegations_upper_bound": 8
+    },
+    "Main_gaps": [
+      {
+        "id": "WIN-SHARED-SID",
+        "owner": "Main shared schema",
+        "blocking": "Trusted v2/v3 host profile parser still rejects real standard service SIDs through old _w26_os_resources regex. Reuse the canonical helper in that existing contract; no new required criterion or new SAM workaround."
+      },
+      {
+        "id": "WIN-EXACT-PORTS",
+        "owner": "Main Server/Worker/connection interfaces",
+        "blocking": "The exact per-role tuples are now listed but not requestable by current production port0/automatic source-port path. Resolve before a truthful apply-ready WFP profile; this executor may not change those generic/Worker files."
+      },
+      {
+        "id": "WIN-FINAL-MATERIALS",
+        "owner": "Main final freeze/rebuild",
+        "blocking": "Pin final approved source/wheels/lock, protected JDK copy manifest and freshly bound metadata/profile/config hashes. R2 installed successfully but intentionally excludes ongoing Main M2 changes."
+      },
+      {
+        "id": "WIN-BOOTSTRAP-AUTH",
+        "owner": "Main/user operator approval",
+        "blocking": "One bounded new protected tree + privileged own-process SCM service + new package identities + 24 exact WFP objects and at most eight exact BFE ACL delegations. No host apply is authorized by current PREP scope."
+      },
+      {
+        "id": "WIN-RESOURCE",
+        "owner": "Main/user normal scheduling",
+        "blocking": "One-time dual-API memory sample cannot fit this proposed finite small-fixture reservation; preserve all long jobs. No universal10GiB gate or repeated memory sample."
+      },
+      {
+        "id": "WIN-LICENSE-PROOF",
+        "owner": "Main authorized native stage",
+        "blocking": "Only bounded sanitized license metadata is observed; actual selected license entitlement/checkout and potential custom selector remain UNVERIFIED. No external endpoint allow is invented."
+      }
+    ],
+    "scope": "Exact resources/IPv4+IPv6 per-role tuples/budgets/rollback, no new approval framework. One bounded future approval may bind fresh SID/fileID to exact new names; they alone do not trigger reapproval."
+  },
+  "license_metadata_handling": {
+    "source": {
+      "path": "_state/universal-windows-prep/SID_FIX/before/license-metadata-sanitized.json",
+      "sha256": "780abde05f0470b36abac960bd9def555c03525141955a61bcc8180eab7fda87"
+    },
+    "finding": "Two selected installed files show UNCOUNTED/LMCOMSOL and no SERVER/VENDOR/DAEMON/USE_SERVER network directives; no external license grant is invented. Custom config not disproved, license validity/checkout UNVERIFIED. Original non-allowlisted collector data retained privately, never republished here.",
+    "license_keys_full_lines_and_raw_tokens_in_public_evidence": false
+  },
+  "retention": {
+    "path": "_state/universal-windows-prep/SID_FIX/R3/retained-evidence-hashes.json",
+    "sha256": "96224552fd3b62c6883556703f4928c951ffdfa939dfbfd7a95d4063f47be053"
+  },
+  "observed_mutations": {
+    "COMSOL_JVM_start": 0,
+    "SCM_service_change": 0,
+    "account_change": 0,
+    "AppContainer_change": 0,
+    "WFP_policy_change": 0,
+    "host_ACL_change": 0,
+    "firewall_change": 0,
+    "license_change": 0
+  },
+  "Main_review_state": "PASS_SCOPED_WINDOWS_SID_SOFTWARE_AND_INSTALLED_NATIVE_READONLY_ONLY",
+  "primary_sources": [
+    "https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/c92a27b1-c772-4fa7-a432-15df5f1b66a1",
+    "https://learn.microsoft.com/en-us/windows/win32/api/sddl/nf-sddl-convertsidtostringsidw",
+    "https://learn.microsoft.com/en-us/windows/win32/services/localsystem-account",
+    "https://learn.microsoft.com/en-us/windows/win32/api/wtsapi32/nf-wtsapi32-wtsqueryusertoken",
+    "https://learn.microsoft.com/en-us/windows/win32/fwp/access-control",
+    "https://learn.microsoft.com/en-us/windows/win32/api/fwpmu/nf-fwpmu-fwpmfilteradd0"
+  ],
+  "main_stage_review": {
+    "status": "PASS_SCOPED_WINDOWS_SID_SOFTWARE_AND_INSTALLED_NATIVE_READONLY_ONLY",
+    "reviewed_utc": "2026-10-22T14:31:18.661931+00:00",
+    "named_artifact_hashes_verified": 18,
+    "wheel_source_package_members_exact": 173,
+    "current_production_files_equal_to_tested_R3_wheel": 4,
+    "junit_counts_verified": {
+      "initial_SID_regression": {
+        "tests": 37,
+        "failures": 12,
+        "errors": 0,
+        "skipped": 0
+      },
+      "previous_131_pass": {
+        "tests": 131,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "second_lookup_regression": {
+        "tests": 7,
+        "failures": 5,
+        "errors": 0,
+        "skipped": 0
+      },
+      "R3_affected_suite": {
+        "tests": 133,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "actual_native_observation": "Installed current production SCM observe -> account_sid path and T037 lookup/token paths, three standard identities, original allocation cleanup, no profile prebirth refusal. No engine or policy apply.",
+    "limits": "Shared host-profile SID parser remains open, exact network binding interfaces need architecture decision, plan apply_ready=false. No host setup or Windows COMSOL acceptance. The R3 software/read-only fix is accepted in this narrow scope only."
+  }
+}

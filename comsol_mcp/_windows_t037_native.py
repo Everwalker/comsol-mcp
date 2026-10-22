@@ -23,6 +23,7 @@ import uuid
 from typing import Any, Mapping
 
 from ._execution_contract import ExecutionContractError
+from ._windows_sid import is_canonical_sid, normalize_scm_account_name
 
 MAX_ENUM_PAGE = 256
 MAX_ENUM_ROWS = 100_000
@@ -36,7 +37,6 @@ _SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 _GUID_BODY = (r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
               r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
 _GUID_RE = re.compile(r"^(?:\{" + _GUID_BODY + r"\}|" + _GUID_BODY + r")$")
-_SID_RE = re.compile(r"^S-1-(?:[0-9]{1,2})-(?:[0-9]{1,10})(?:-[0-9]{1,10}){1,14}$", re.I)
 
 # ctypes.wintypes follows the host C ABI on non-Windows Python builds.  On
 # Darwin, for example, wintypes.DWORD aliases an eight-byte c_ulong.  Use the
@@ -162,7 +162,7 @@ def _validate_normalized_fwp_value(value: Any, *, depth: int = 0) -> None:
         valid = (type(value["size"]) is int and 0 <= value["size"] <= MAX_BLOB_BYTES
                  and isinstance(value["sha256"], str) and bool(_SHA_RE.fullmatch(value["sha256"])))
     elif kind == 13:
-        valid = isinstance(value["value"], str) and bool(_SID_RE.fullmatch(value["value"]))
+        valid = is_canonical_sid(value["value"])
     elif kind == 17:
         valid = isinstance(value["value"], str) and len(value["value"]) <= MAX_NATIVE_TEXT
     elif kind == 256:
@@ -1121,6 +1121,7 @@ class CtypesWindowsPolicyApi:
         return buffer, int(returned.value)
 
     def _lookup_sid(self, account: str) -> str:
+        account = normalize_scm_account_name(account)
         sid_len, domain_len, use = DWORD(0), DWORD(0), DWORD(0)
         self._advapi.LookupAccountNameW(None, account, None, C.byref(sid_len), None,
                                         C.byref(domain_len), C.byref(use))
@@ -1140,7 +1141,7 @@ class CtypesWindowsPolicyApi:
             value = text.value
         finally:
             text_owner.release_owned(text_owner.registry.owner)
-        if not isinstance(value, str) or not re.fullmatch(r"S-1-(?:[0-9]{1,2})-(?:[0-9]{1,10})(?:-[0-9]{1,10}){1,14}", value, re.I):
+        if not is_canonical_sid(value):
             _fail("T037_NATIVE_SCM_IDENTITY_UNVERIFIED", "resolved service identity is not a canonical SID")
         return value.upper()
 
@@ -1389,9 +1390,12 @@ class CtypesWindowsPolicyApi:
             self._winerr("ConvertSidToStringSidW(WFP)")
         text_owner=self._owned(C.cast(text,C.c_void_p),self._kernel32.LocalFree,mode="LOCALFREE",label="policy_sid",domain="localfree",keepalive=(text,))
         try:
-            return str(text.value).upper()
+            value = text.value
         finally:
             text_owner.release_owned(text_owner.registry.owner)
+        if not is_canonical_sid(value):
+            _fail("T037_NATIVE_WFP_ABI_INVALID", "FWP_SID conversion did not return canonical SID text")
+        return value.upper()
 
     def _display_data(self, value: FWPM_DISPLAY_DATA0, kind: str) -> dict[str, str | None]:
         return {"name": _bounded_utf16(value.name, f"{kind} display name", nullable=True),

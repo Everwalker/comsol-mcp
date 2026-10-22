@@ -10,10 +10,10 @@
 - M4交付生命周期软件阶段 PASS：真实0.1.10构件同版本代码切换/回退、生产全状态备份恢复和非空隔离venv卸载通过；Main核验118份原始记录及36个保留文件。子进程禁网范围已验证；Windows/Intel生命周期、完整原生T056及科学验收未据此转PASS。Homebrew Framework卸载仍保留fail-closed UNKNOWN，成功路径为私有standalone CPython。见 [交付证据](docs/universal_mcp_execution/evidence/M4_DELIVERY_LIFECYCLE.json)。
 - M2a：普通新修补包已干净离线安装，Main核对172包文件与源码/wheel一致，112工具协议启动通过。`model_inspect(refresh=true)`项目写权限修补经精确冻结运行时代码17项软件测试通过；原生求解/结果/图像/保存仍待闭环。
 - 原M2a失败run的Worker已通过公开入口退役，原UNKNOWN未重放或改成成功；stop因历史UNKNOWN拒绝，原自有Server保留隔离。源码已定位stop门禁遗漏现有强静止证明判断，纳入M2b。旧ModelRefs为历史引用，不能继续使用。
-- Windows SID通用修补已完成首轮131软件PASS及真实只读探测。Main发现另一SCM lookup路径漏修后已交回同一执行端；最终源/测试/安装绑定与最小host plan仍在整理。服务/AppContainer/ACL/WFP变更未授权或应用；原有Desktop保留。
+- Windows SID/两条SCM lookup修补已由Main限定接收：受影响133项软件PASS，173个包文件与R3 wheel/源码一致，实际已安装只读SCM/token探测和缺profile拒绝通过。共享host-profile SID校验及端口绑定接口仍需补齐，具体host plan尚非apply-ready。服务/AppContainer/ACL/WFP变更未授权或应用；原有Desktop保留。
 - 最终候选、Windows6.3/6.4与MacARM6.4适用核心原生验证、两类未预设任务及最终独立Reviewer仍未完成。当前不能声明整体完成。
 
-已同步阶段：M0/M1 `4759c097`，M4构件 `47d05a8e`，Windows软件准备/使用说明 `4f236d14`，均普通推送并独立回读。当前交付生命周期/权限软件阶段正同步；后续核心变化须重新捕获源码构件，不能重标旧wheel。
+已同步阶段：M0/M1 `4759c097`，M4构件 `47d05a8e`，Windows软件准备/使用说明 `4f236d14`，均普通推送并独立回读。交付生命周期/权限软件阶段已同步并独立回读 `c10c066af2a6e43fa0910c4a20b99019f43fe846`；后续核心变化须重新捕获源码构件，不能重标旧wheel。
 
 下一动作：同一Luna继续M2a新项目Java→绑定模型→真实求解/回读/图像/保存；随后M2b修受控Java全局模型边界、注解处理与UNKNOWN冲突资源/停止门禁。Windows执行端并行完成SID最终绑定和具体主机计划。最终独立Reviewer只在候选就绪后启动。
 

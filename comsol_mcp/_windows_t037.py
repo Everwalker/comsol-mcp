@@ -26,6 +26,7 @@ import sys
 from typing import Any, Callable, Mapping, Sequence
 
 from ._execution_contract import ExecutionContractError
+from ._windows_sid import is_canonical_sid
 
 PROFILE_SCHEMA = "comsol-mcp.windows-t037-profile/1"
 PROFILE_SCHEMA_V2 = "comsol-mcp.windows-t037-profile/2"
@@ -35,7 +36,6 @@ MAX_SIDS = 64
 MAX_JOB_PIDS = 4096
 MAX_ACL_BYTES = 1024 * 1024
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
-_SID = re.compile(r"^S-1-(?:[0-9]{1,2})-(?:[0-9]{1,10})(?:-[0-9]{1,10}){1,14}$", re.IGNORECASE)
 _PROFILE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$")
 
 ERROR_UNSUPPORTED = "T037_UNSUPPORTED"
@@ -233,13 +233,13 @@ def parse_profile_document(document: Any, *, source_sha256: str,
             _refuse(ERROR_PROFILE_INVALID, f"T037 {name} must be a lowercase SHA-256 digest")
     for name in ("service_account_sid", "interactive_account_sid", "appcontainer_sid"):
         value = document[name]
-        if not isinstance(value, str) or not _SID.fullmatch(value):
+        if not is_canonical_sid(value):
             _refuse(ERROR_PROFILE_INVALID, f"T037 {name} is not a canonical SID string")
     if document["service_account_sid"].casefold() == document["interactive_account_sid"].casefold():
         _refuse(ERROR_PROFILE_INVALID, "T037 service and interactive account SIDs must be distinct")
     capabilities = document["capability_sids"]
     if (not isinstance(capabilities, list) or len(capabilities) > MAX_SIDS
-            or any(not isinstance(sid, str) or not _SID.fullmatch(sid) for sid in capabilities)
+            or any(not is_canonical_sid(sid) for sid in capabilities)
             or len({sid.casefold() for sid in capabilities}) != len(capabilities)):
         _refuse(ERROR_PROFILE_INVALID, "T037 capability_sids must be a bounded unique SID array")
     root = document["workspace_root"]
@@ -781,7 +781,7 @@ class _Win32ReadOnlyApi:
             value = text.value
         finally:
             resource.release_owned(resource.registry.owner)
-        if not isinstance(value, str) or not _SID.fullmatch(value):
+        if not is_canonical_sid(value):
             _refuse(ERROR_UNSUPPORTED, "Win32 SID could not be converted to canonical text")
         return value.upper()
 
