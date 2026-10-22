@@ -58,9 +58,10 @@ def parse_job_limits(document):
 
 
 def require_limits(profile):
-    from ._windows_t037 import WindowsT037ProfileV2, PROFILE_SCHEMA_V3
-    if type(profile) is not WindowsT037ProfileV2 or profile.job_limits is None or profile.wrapper_schema != PROFILE_SCHEMA_V3:
-        _fail('JOB_LIMITS_NOT_CONFIGURED', 'explicit trusted v3 Job limits required before owned Job/child birth')
+    from ._windows_t037 import WindowsT037ProfileV2, PROFILE_SCHEMA_V3, PROFILE_SCHEMA_V4
+    if (type(profile) is not WindowsT037ProfileV2 or profile.job_limits is None
+            or profile.wrapper_schema not in {PROFILE_SCHEMA_V3, PROFILE_SCHEMA_V4}):
+        _fail('JOB_LIMITS_NOT_CONFIGURED', 'explicit trusted v3/v4 Job limits required before owned Job/child birth')
     if type(profile.job_limits) is not JobLimitsV1:
         _fail('JOB_LIMITS_INVALID', 'Job limits are not the closed typed host configuration')
     # Revalidate to reject tampered in-process data before entering the SDK.

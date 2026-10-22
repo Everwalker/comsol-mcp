@@ -31,8 +31,10 @@
 
 - Windows静态runtime HANDLE交接与ABI/记账整改经Main限定验收：固定0fbd+两overlay的284项PASS（278相关+含原Main6，不叠加），Main在冻结90a源码/6a01测试独立重跑原6项PASS。21,772基线文件/87实际imports/407引用已核，原Call/Handle/Owner AST不变。精确DWORD ABI；已确认原Close仅补记账，原restore复用DELETE pins，opaque结果仍拒绝。一次历史96b普通私有CPython R2仅证明两pin转换、child生前原身份/正常退出、18文件HANDLE BOOL1关闭及两副本比较后删除；最终90a/ABI/ack实际SDK未跑，完整Bootstrap SD仍拒绝。历史155项旧测试指针后被覆盖，原失败/JUnit保留、该源码复现UNVERIFIED；不影响当前284冻结绑定。Start/profile/host/T037仍未通过。见[限定证据](docs/universal_mcp_execution/evidence/WINDOWS_BOOTSTRAP_RUNTIME_HANDOFF.json)。
 
+- Windows有限静态A源码/软件经Main限定验收：固定05da选定622原Git/archive输入+六租约overlay/三Main输入为627文件，1103项PASS（987常规/108有限A/原Main6+1及旧Job1，各只计一次），144实际imports/9004引用核对。Main独立原7反例在冻结候选7PASS，初始5FAIL1PASS/foreign1FAIL及1062旧收据保留。失败或opaque getter不因可读输出free；精确service SID只可写data/temp；foreign WFP行保留且SD未知，own缺失/额外/漂移/cleanup严格，全球可见性/仲裁仍UNVERIFIED。Factory/birth/close/SCM/原issuer/native/effective主体保持。实际SDK静态A/B/C/隔离均未通过，Resume仍拒绝。见[有限A证据](docs/universal_mcp_execution/evidence/WINDOWS_FINITE_A_TARGETS.json)。
+
 已同步阶段：M0/M1 `4759c097`，M4构件 `47d05a8e`，Windows软件准备/使用说明 `4f236d14`，交付生命周期/权限 `c10c066a`；后续SID/资源阶段见RESUME.git。新增子进程只读证据 `f68b3c7a`、网络范围/getter `03388462`、固定子进程限制属性 `b1474a85`，均普通推送并独立回读一致。MIC/network/events释放修补有限阶段 `fe4e4c72` 已同步并独立回读一致。后续核心变化须重新捕获源码构件，不能重标旧wheel。
 
-下一动作：Main集中验收有限A三项整改后的clean1103（含原Main6+1及旧Job1，只计一次）。AppC强技术审查已收敛，Main选同存活原owner/runtime、有限TCB、generation UNAVAILABLE，Halley实施首个持久ProfileEffect强root源码单元；真实pause/allJobs/storage/非创建式缺席producer未齐仍拒绝restore。正式stop-ref内置签发未找到，旧实例不绕过；r4缺finite memory输入，native HOLD。最终统一Reviewer尚未开始。
+下一动作：普通同步有限A1103的精确10文件，随后同Luna实施SCM runtime/factory有限profile生命周期与出生围栏；Halley继续AppC持久ProfileEffect强root。真实storage/非创建式缺席未qualified时restore仍拒绝，不新增Delete/SID-only/native。正式stop授权签发、r4有限memory输入与生命周期覆盖缺口保留，native HOLD；最终统一Reviewer仍未开始。
 
 旧交接与科学历史见 [2026-10-21交接](docs/full_project_continuation_v3/CURRENT_HANDOFF.md)，保持原证据范围。

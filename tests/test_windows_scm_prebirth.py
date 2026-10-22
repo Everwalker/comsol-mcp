@@ -50,7 +50,7 @@ def record(tmp_path, **facts):
 
 
 @contextmanager
-def running_factory_chain(daemon, factory, tmp_path, monkeypatch):
+def running_factory_chain(daemon, factory, tmp_path, monkeypatch, *, profile_path='SOFTWARE_PINNED_PROFILE'):
     """Original broker/ServiceMain runtime, retained by the exact real daemon.
 
     Only the SCM export boundary is synthetic. A remains unavailable; callers
@@ -63,7 +63,7 @@ def running_factory_chain(daemon, factory, tmp_path, monkeypatch):
     with monkeypatch.context() as m:
         m.setattr(daemon,'_scoped_host_provider',provider)
         m.setattr(daemon.project_authority,'authorization_verifier',provider)
-        m.setattr(daemon,'_windows_t037_profile_path','SOFTWARE_PINNED_PROFILE')
+        m.setattr(daemon,'_windows_t037_profile_path',profile_path)
         def service_main(runtime):
             runtimes.append(runtime)
             runtime.mark_running()

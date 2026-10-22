@@ -31,6 +31,7 @@ from ._windows_sid import is_canonical_sid
 PROFILE_SCHEMA = "comsol-mcp.windows-t037-profile/1"
 PROFILE_SCHEMA_V2 = "comsol-mcp.windows-t037-profile/2"
 PROFILE_SCHEMA_V3 = "comsol-mcp.windows-t037-profile/3"
+PROFILE_SCHEMA_V4 = "comsol-mcp.windows-t037-profile/4"
 MAX_PROFILE_BYTES = 64 * 1024
 MAX_SIDS = 64
 MAX_JOB_PIDS = 4096
@@ -99,6 +100,7 @@ class WindowsT037ProfileV2:
     security_semantics: str
     job_limits: Any = None
     wrapper_schema: str = PROFILE_SCHEMA_V2
+    finite_targets: Any = None
 
     @property
     def profile_id(self) -> str:
@@ -158,6 +160,14 @@ class WindowsT037ProfileV2:
 
     @property
     def sha256(self) -> str:
+        if self.wrapper_schema == PROFILE_SCHEMA_V4:
+            from ._windows_job_limits import require_limits
+            from ._windows_t037_targets import require_contract
+            return hashlib.sha256(json.dumps({"schema": PROFILE_SCHEMA_V4,
+                "host_resource_profile_sha256": self.host_resource_profile.sha256,
+                "job_limits": require_limits(self).as_dict(),
+                "finite_targets": require_contract(self).as_dict()}, sort_keys=True,
+                separators=(",", ":"), allow_nan=False).encode()).hexdigest()
         if self.wrapper_schema == PROFILE_SCHEMA_V3:
             from ._windows_job_limits import require_limits
             return hashlib.sha256(json.dumps({"schema": PROFILE_SCHEMA_V3,
@@ -207,6 +217,12 @@ class WindowsT037ProfileV2:
             targets = require_limits(self)
             result.update(schema=PROFILE_SCHEMA_V3, profile_sha256=self.sha256,
                           job_limits=targets.as_dict(), job_limits_sha256=targets.sha256)
+        elif self.wrapper_schema == PROFILE_SCHEMA_V4:
+            from ._windows_job_limits import require_limits
+            from ._windows_t037_targets import require_contract
+            result.update(schema=PROFILE_SCHEMA_V4, profile_sha256=self.sha256,
+                          job_limits=require_limits(self).as_dict(),
+                          finite_targets_sha256=require_contract(self).sha256)
         return result
 
 
@@ -313,6 +329,22 @@ def parse_profile_v3_document(document: Any, *, source_sha256: str,
         previous.source_identity, previous.security_semantics, targets, PROFILE_SCHEMA_V3)
 
 
+def parse_profile_v4_document(document: Any, *, source_sha256: str,
+                              source_identity: Mapping[str, Any] | None = None,
+                              security_semantics: str = "UNVERIFIED") -> WindowsT037ProfileV2:
+    """Finite static intent only. Parsing never retains a native source origin."""
+    from ._windows_t037_targets import parse_contract
+    if (type(document) is not dict or document.get("schema") != PROFILE_SCHEMA_V4
+            or set(document) != {"schema", "host_resource_profile", "job_limits", "finite_targets"}):
+        _refuse(ERROR_PROFILE_INVALID, "T037 v4 requires its exact finite-target wrapper")
+    previous = parse_profile_v3_document({"schema": PROFILE_SCHEMA_V3,
+        "host_resource_profile": document["host_resource_profile"], "job_limits": document["job_limits"]},
+        source_sha256=source_sha256, source_identity=source_identity, security_semantics=security_semantics)
+    targets = parse_contract(document["finite_targets"], previous.host_resource_profile)
+    return WindowsT037ProfileV2(previous.host_resource_profile, previous.source_sha256,
+        previous.source_identity, previous.security_semantics, previous.job_limits, PROFILE_SCHEMA_V4, targets)
+
+
 def load_trusted_profile(path: str | os.PathLike[str], *,
                          host_fingerprint_reader: Callable[[], str] | None = None) -> WindowsT037Profile | WindowsT037ProfileV2:
     """Read a private, ACL-verified profile through a pinned Windows handle.
@@ -328,12 +360,12 @@ def load_trusted_profile(path: str | os.PathLike[str], *,
         _refuse(ERROR_PROFILE_INVALID, "T037 profile path must be an absolute ordinary file path")
     try:
         from ._host_scoped_provider import verify_private_path_security
-        from ._windows_parameter_publish import _API
-        api = _API()
-        before = verify_private_path_security(target, directory=False)
-        chain = api.open_security_path(target.parent, directory=True)
+        from ._windows_t037_targets import _loader_api, _finish_loader_api
+        api = _loader_api()
         handle = None
         try:
+            before = verify_private_path_security(target, directory=False)
+            chain = api.open_security_path(target.parent, directory=True)
             handle = api.open_source(chain[-1], target.name)
             identity, size, creation, written, links = api.source_fingerprint(handle)
             expected_identity = {"device": identity[0], "inode": identity[1],
@@ -377,13 +409,13 @@ def load_trusted_profile(path: str | os.PathLike[str], *,
             elif isinstance(document, Mapping) and document.get("schema") == PROFILE_SCHEMA_V3:
                 profile = parse_profile_v3_document(document, source_sha256=digest,
                     source_identity=expected_identity, security_semantics=before["security_semantics"])
+            elif isinstance(document, Mapping) and document.get("schema") == PROFILE_SCHEMA_V4:
+                profile = parse_profile_v4_document(document, source_sha256=digest,
+                    source_identity=expected_identity, security_semantics=before["security_semantics"])
             else:
                 _refuse(ERROR_PROFILE_INVALID, "T037 profile schema version is unsupported")
         finally:
-            if handle is not None:
-                api.close(handle)
-            for item in reversed(chain):
-                api.close(item)
+            _finish_loader_api(api)
     except WindowsT037Error:
         raise
     except ExecutionContractError as exc:
@@ -395,6 +427,9 @@ def load_trusted_profile(path: str | os.PathLike[str], *,
         _refuse(ERROR_UNSUPPORTED, "current Windows host fingerprint is unavailable")
     if not _constant_digest_equal(profile.host_fingerprint_sha256, actual_fingerprint):
         _refuse(ERROR_HOST_MISMATCH, "T037 profile is bound to a different Windows host")
+    if type(profile) is WindowsT037ProfileV2 and profile.wrapper_schema == PROFILE_SCHEMA_V4:
+        from ._windows_t037_targets import _retain_loaded_origin
+        _retain_loaded_origin(profile, os.fspath(target))
     return profile
 
 

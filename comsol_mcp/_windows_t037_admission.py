@@ -1,8 +1,8 @@
 """Same-process SCM lifetime and finite A diagnostics. No Resume authority.
 
-The current profile has no typed finite filesystem/MIC target contract. Exact
-SDK static inputs can be compared, but that missing producer still refuses A.
-Neither these diagnostics nor an observation value can authorize native birth.
+V4 adds a closed finite filesystem/MIC/source/owned-policy contract. Legacy
+profiles still refuse its missing producers. Static comparisons never grant
+B/C qualification or Resume authority.
 """
 from __future__ import annotations
 
@@ -120,13 +120,19 @@ def _observe_static_inputs(profile, owner):
     from ._windows_owned_resources import registry_for,attach_registry
     registry=registry_for(owner)
     if registry.unresolved():
-        _refuse('STATIC_NATIVE_OWNER_UNRESOLVED','original static resources remain owned; no observation retry')
+        from ._windows_t037_targets import _has_only_original_pins
+        if not _has_only_original_pins(owner,registry):
+            _refuse('STATIC_NATIVE_OWNER_UNRESOLVED','original static resources remain owned; no observation retry')
     scope=registry.scope()
     observer=win.WindowsT037Observer()
     owner._prebirth_observers.append(observer)
     attach_registry(observer.api,registry)
     try:
-        adapter=WindowsNativePolicyAdapter()
+        if profile.wrapper_schema == win.PROFILE_SCHEMA_V4:
+            from ._windows_t037_targets import FinitePolicyApi
+            adapter=WindowsNativePolicyAdapter(api=FinitePolicyApi(profile))
+        else:
+            adapter=WindowsNativePolicyAdapter()
         observer._native_policy_adapters=[adapter]
         attach_registry(adapter.api,registry)
         if win.windows_host_fingerprint(resource_registry=registry)!=profile.host_fingerprint_sha256:
@@ -172,6 +178,17 @@ def _observe_static_inputs(profile, owner):
                     if guid_key(b['layer_key'])==guid_key(r['layer_key']))
                     for r in rows if r['action_type']==0x1002)):
             _refuse('STATIC_OWNED_FOUR_LAYER_CONFIGURATION_MISMATCH','owned group defaults/permit precedence mismatch')
+        if profile.wrapper_schema == win.PROFILE_SCHEMA_V4:
+            from ._windows_t037_targets import require_owned_policy
+            owned_before=require_owned_policy(profile,snapshot,adapter.api)
+            # A second bounded read must retain the exact configured set and
+            # protection. Global arbitration/visibility reasons remain facts.
+            fresh=adapter.api.observe_wfp_policy_snapshot()
+            owned_after=require_owned_policy(profile,fresh,adapter.api)
+            layer_rows=lambda value: sorted([r for r in value['layers'] if guid_key(r['layer_key'])
+                in {guid_key(k) for k in LAYERS}],key=lambda r:r['layer_key'])
+            if owned_before!=owned_after or layer_rows(fresh)!=layer_rows(snapshot):
+                _refuse('STATIC_POLICY_CHANGED','own policy/four-layer schema changed during finite static A')
         if adapter.api.observe_service(profile.service_name)!=before or observer.observe_process(os.getpid())!=current:
             _refuse('STATIC_SCM_CHANGED','original SCM/process facts changed during static read')
         return {'scope':'STATIC_SDK_INPUTS_ONLY_NOT_ADMISSION','service_pid':os.getpid(),
@@ -188,6 +205,16 @@ def require_static_prebirth(profile, *, owner):
     if profile is not original:
         _refuse('STATIC_PROFILE_MISMATCH','static read requires the exact original profile object')
     provider._assert_stable()  # Actual pinned startup provider; never a JSON approval.
+    from ._windows_t037 import PROFILE_SCHEMA_V4
+    if profile.wrapper_schema == PROFILE_SCHEMA_V4:
+        from ._windows_t037_targets import finite_target_scope
+        with finite_target_scope(profile,owner,daemon):
+            _observe_static_inputs(profile,owner)
+            _require_factory_runtime(owner)
+            provider._assert_stable()
+        # Only static A completes here. The existing original Job/birth path
+        # and unimplemented B/C issuer remain the next independent gates.
+        return
     observation=_observe_static_inputs(profile,owner)
     _require_factory_runtime(owner)
     # No inferred file type, mandatory label, code/TCB tree or permission is
