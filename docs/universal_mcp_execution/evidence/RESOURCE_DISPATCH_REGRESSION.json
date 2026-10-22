@@ -1,0 +1,377 @@
+{
+  "schema": "COMSOL_MCP_RESOURCE_DISPATCH_REGRESSION_V1",
+  "created_utc": "2026-10-22T15:05:46.325119+00:00",
+  "status": "PASS_FOCUSED_SOFTWARE_REGRESSION",
+  "scope": "Existing resource/dispatch59 cases plus2 negative Worker identity cases; no engine/server/JVM/GUI or native isolation acceptance",
+  "changed_paths": [
+    "tests/test_w26_os_resources.py",
+    "_state/universal-resource-regression",
+    "docs/universal_mcp_execution/evidence/RESOURCE_DISPATCH_REGRESSION.json"
+  ],
+  "upstream_control": {
+    "source_evidence": {
+      "path": "docs/universal_mcp_execution/evidence/WINDOWS_SHARED_SID.json",
+      "sha256": "adeafc12614518e4c8a7277d060e40c2e9197e91c426d30a47b6f8411e3ed24e",
+      "bytes": 14674
+    },
+    "original_shared_regression_counts": {
+      "tests": 59,
+      "passed": 48,
+      "failed": 11,
+      "skipped": 0,
+      "state": "11_FAIL_RETAINED_WITH_IDENTICAL_ACCEPTED_CHECKER_CONTROL"
+    },
+    "accepted_checker_control": {
+      "path": "_state/universal-windows-prep/SID_FIX/SHARED_SID/accepted-checker-shared-regression.xml",
+      "sha256": "ae0ac43a6b2f33ce4254d6644fc3072442d255e665043d84e800b94bdae0eb34"
+    },
+    "accepted_checker_binding": {
+      "path": "_state/universal-windows-prep/SID_FIX/SHARED_SID/accepted-checker-binding.json",
+      "sha256": "f6fb872895fc87ea32a58bc76fa188009b2505a0e86cada324342cfb989755db"
+    },
+    "identical_failure_comparison": {
+      "path": "_state/universal-windows-prep/SID_FIX/SHARED_SID/shared-regression-comparison.json",
+      "sha256": "8f05a9348b5b782f55b0b153e15143a97d3906920ce6217c2065fb20117a8ed5"
+    },
+    "combined_historical_XML": {
+      "tests": 204,
+      "passed": 191,
+      "failed": 13,
+      "extra_failures": 2,
+      "meaning": "Historical combined result includes two separately corrected SID boundary tests; not relabeled as this resource result. No SID tests rerun here."
+    },
+    "current_11_exactly_reproduced": true,
+    "baseline_failure_not_treated_as_pass": true,
+    "local_control_readback": {
+      "path": "_state/universal-resource-regression/raw/upstream-control.json",
+      "sha256": "e0600025f9130fd9c67d42f7cbf135ef3c8a8a36eb474c462042df5c26445c09",
+      "bytes": 3871
+    }
+  },
+  "root_causes": [
+    {
+      "kind": "EXECUTION_ENVIRONMENT_FILESYSTEM",
+      "finding": "External APFS working volume reports IGNORE_OWNERSHIP; unchanged trusted-path security correctly refused29 cases during config loading before original dispatch failure could be reached. Kept as59 tests30pass29fail, not a production fix or relaxed gate.",
+      "resolution": "Use new owned ephemeral pytest work directory on internal ownership-valid filesystem. No mount/security/ownership settings changed. Work files verified into local archive, then only this owned ephemeral directory removed.",
+      "raw": {
+        "path": "_state/universal-resource-regression/before/pytest.log",
+        "sha256": "88e1b3f9d0aa6fa71454e91ffb22352a2ed86f3e71612d05d101dcd29e6fb4aa",
+        "bytes": 295601
+      }
+    },
+    {
+      "kind": "EXECUTION_ENVIRONMENT_MEMORY_OBSERVATION",
+      "affected_original_cases": 10,
+      "finding": "Actual Darwin _DarwinMemoryApi._sysctl(kern.boottime) raised PermissionError EPERM inside outer tool execution sandbox. HostMemoryObservationProvider correctly returned MEMORY_OBSERVATION_UNAVAILABLE before dispatch; no native attestation or successful observation was fabricated.",
+      "resolution": "Same untouched59 tests executed with authorized host permissions: zero observer errors,56pass3fail. Eight originally failing memory budget/atomicity/UNKNOWN/restart/release cases passed unchanged; two memory dynamic-write cases reached the remaining Worker fixture fault. No syscall/API/provider was replaced or relaxed.",
+      "representative_raw": {
+        "path": "_state/universal-resource-regression/before-ownership-valid/probe/0007-memory-observer-error.json",
+        "sha256": "aaa9182641af6a7a56ce04f2137baabe1cbb1ce661fff1e38e6eae725f95b0e8",
+        "bytes": 1136
+      },
+      "memory_error_raw_count": 10
+    },
+    {
+      "kind": "STALE_TEST_WORKER_CONTRACT",
+      "affected_host_cases": [
+        "test_dynamic_api_write_with_sufficient_budget_dispatches_and_releases_terminal_reservation",
+        "test_memory_only_admission_precedes_worker_and_terminal_release_is_durable",
+        "test_sufficient_disk_and_memory_admission_commit_together_and_release_after_terminal"
+      ],
+      "finding": "_DaemonResourceWorker omitted real PersistentJavaWorker.entity_identity. Returned RemoteJava proxy is a different Python object even with the same opaque handle/generation, so execute_prepared fallback returned-is-node failed and correctly fenced dispatched writes as UNKNOWN. This affected disk-only and both memory API-write positives. Existing adapter snapshots, public request path/envelope, model-project binding and partial descriptor remained valid; expanded M1 metadata/generic registry was not a second production defect.",
+      "fix": "Only fixture adds entity_identity delegation to the actual PersistentJavaWorker Python client, g2_entity_identity transport reply, and full strict Worker success envelope with consistent assigned request_id/timestamps. Does not copy or weaken production identity validation.",
+      "source": {
+        "path": "tests/test_w26_os_resources.py",
+        "sha256": "f49238b79c0a43eba03010088261b6a82d2f592608c895fe07818b7481cee03e",
+        "bytes": 106206
+      },
+      "response_and_worker_readback": {
+        "path": "_state/universal-resource-regression/raw/response-root-cause-readback.json",
+        "sha256": "52aed442fc881b8ada9d7bb59f8d7f103f2ec02786bb15fc3fee0699146d3967",
+        "bytes": 6168
+      }
+    }
+  ],
+  "tests": {
+    "before": {
+      "tests": 59,
+      "passed": 30,
+      "failed": 29,
+      "errors": 0,
+      "skipped": 0,
+      "failure_names": [
+        "test_trusted_disk_config_loads_exact_host_scope_and_rejects_tampering",
+        "test_disk_coordinator_binds_real_operationstore_then_releases_terminal_reservation",
+        "test_disk_coordinator_denies_wrong_inner_operation_and_wrong_authorized_root_without_mutation",
+        "test_disk_coordinator_requires_project_write_authority_for_file_producer",
+        "test_disk_coordinator_rejects_mismatched_durable_wrapper_records",
+        "test_concurrent_disk_admissions_serialize_actual_operationstore_reservations",
+        "test_unknown_disk_reservation_survives_restart_and_is_not_age_released",
+        "test_queued_only_crash_keeps_disk_reservation_and_reconciles_without_dispatch",
+        "test_control_daemon_reserves_before_running_then_releases_only_after_terminal",
+        "test_dynamic_api_write_with_low_budget_refuses_before_any_worker_send",
+        "test_dynamic_api_write_with_sufficient_budget_dispatches_and_releases_terminal_reservation",
+        "test_all_catalog_dynamic_routes_require_configured_disk_reservation[api.invoke]",
+        "test_all_catalog_dynamic_routes_require_configured_disk_reservation[result.numerical_manage]",
+        "test_all_catalog_dynamic_routes_require_configured_disk_reservation[result.table_manage]",
+        "test_all_catalog_dynamic_routes_require_configured_disk_reservation[plot.view_manage]",
+        "test_control_daemon_refuses_competing_reservation_before_worker_dispatch",
+        "test_control_daemon_wrong_or_changed_root_fails_before_domain_dispatch[wrong_profile-RESOURCE_RESERVATION_ROOT_AUTHORITY_MISMATCH]",
+        "test_control_daemon_wrong_or_changed_root_fails_before_domain_dispatch[replaced_after_startup-RESOURCE_RESERVATION_ROOT_IDENTITY_MISMATCH]",
+        "test_control_daemon_unknown_keeps_reservation_across_restart",
+        "test_memory_only_admission_precedes_worker_and_terminal_release_is_durable",
+        "test_sufficient_disk_and_memory_admission_commit_together_and_release_after_terminal",
+        "test_low_memory_in_combined_admission_rolls_back_disk_before_running",
+        "test_low_disk_in_combined_admission_never_writes_memory_reservation",
+        "test_stale_memory_observation_after_prepare_rolls_back_both_reservations_before_dispatch",
+        "test_dispatched_lost_or_expired_memory_reservation_stays_held[LOST]",
+        "test_dispatched_lost_or_expired_memory_reservation_stays_held[EXPIRED]",
+        "test_dispatched_lost_or_expired_memory_reservation_stays_held[CANCELLED]",
+        "test_durable_queued_abort_proof_releases_memory_reservation_without_worker_send",
+        "test_memory_unknown_reservation_survives_restart_and_counts_other_projects"
+      ],
+      "command": {
+        "path": "_state/universal-resource-regression/before/command.json",
+        "sha256": "e381c1eba4e064bd5020cfb38afd46ecee23e1afb117b5f78ae0dd7cd9dd60fa",
+        "bytes": 847
+      },
+      "junit": {
+        "path": "_state/universal-resource-regression/before/results.xml",
+        "sha256": "6e48b8baf93fa35ec53897999320a94edfeefeaea52f7882acb5400faf3ba401",
+        "bytes": 305158
+      },
+      "stdout": {
+        "path": "_state/universal-resource-regression/before/pytest.log",
+        "sha256": "88e1b3f9d0aa6fa71454e91ffb22352a2ed86f3e71612d05d101dcd29e6fb4aa",
+        "bytes": 295601
+      },
+      "stderr": {
+        "path": "_state/universal-resource-regression/before/pytest.stderr.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      }
+    },
+    "before-ownership-valid": {
+      "tests": 59,
+      "passed": 48,
+      "failed": 11,
+      "errors": 0,
+      "skipped": 0,
+      "failure_names": [
+        "test_dynamic_api_write_with_sufficient_budget_dispatches_and_releases_terminal_reservation",
+        "test_memory_only_admission_precedes_worker_and_terminal_release_is_durable",
+        "test_sufficient_disk_and_memory_admission_commit_together_and_release_after_terminal",
+        "test_low_memory_in_combined_admission_rolls_back_disk_before_running",
+        "test_low_disk_in_combined_admission_never_writes_memory_reservation",
+        "test_stale_memory_observation_after_prepare_rolls_back_both_reservations_before_dispatch",
+        "test_dispatched_lost_or_expired_memory_reservation_stays_held[LOST]",
+        "test_dispatched_lost_or_expired_memory_reservation_stays_held[EXPIRED]",
+        "test_dispatched_lost_or_expired_memory_reservation_stays_held[CANCELLED]",
+        "test_durable_queued_abort_proof_releases_memory_reservation_without_worker_send",
+        "test_memory_unknown_reservation_survives_restart_and_counts_other_projects"
+      ],
+      "command": {
+        "path": "_state/universal-resource-regression/before-ownership-valid/command.json",
+        "sha256": "0d704d160eb10241e277136be7b69c44ce83f1f7c3828db843908260530a02fc",
+        "bytes": 980
+      },
+      "junit": {
+        "path": "_state/universal-resource-regression/before-ownership-valid/results.xml",
+        "sha256": "5ba7cca96d87baeaf2f7d06cf1e622abd47051c7df96a747f35e6290cd29fb11",
+        "bytes": 40201
+      },
+      "stdout": {
+        "path": "_state/universal-resource-regression/before-ownership-valid/pytest.log",
+        "sha256": "1b925a368ab1b854631bbd2a94e45f4e1107a8cd8dcfc6fa47dcb0813fc08518",
+        "bytes": 30557
+      },
+      "stderr": {
+        "path": "_state/universal-resource-regression/before-ownership-valid/pytest.stderr.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      }
+    },
+    "before-host": {
+      "tests": 59,
+      "passed": 56,
+      "failed": 3,
+      "errors": 0,
+      "skipped": 0,
+      "failure_names": [
+        "test_dynamic_api_write_with_sufficient_budget_dispatches_and_releases_terminal_reservation",
+        "test_memory_only_admission_precedes_worker_and_terminal_release_is_durable",
+        "test_sufficient_disk_and_memory_admission_commit_together_and_release_after_terminal"
+      ],
+      "command": {
+        "path": "_state/universal-resource-regression/before-host/command.json",
+        "sha256": "d6953f046e6378e7c3ba8e1b3d7193934e5f2183e067cb841229876d7f746d9a",
+        "bytes": 941
+      },
+      "junit": {
+        "path": "_state/universal-resource-regression/before-host/results.xml",
+        "sha256": "cccea384ec7e6e565ac77c0877053eff2b9971def50faee41f71e299ed4fae7b",
+        "bytes": 16715
+      },
+      "stdout": {
+        "path": "_state/universal-resource-regression/before-host/pytest.log",
+        "sha256": "7504348b0e97c6d49ccb403f41a7a1dd1968081869b06da68e57c1a3b8250bb2",
+        "bytes": 7567
+      },
+      "stderr": {
+        "path": "_state/universal-resource-regression/before-host/pytest.stderr.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      }
+    },
+    "after-diagnostic": {
+      "tests": 61,
+      "passed": 61,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failure_names": [],
+      "command": {
+        "path": "_state/universal-resource-regression/after-diagnostic/command.json",
+        "sha256": "2928dd7270cf734f350e4672daa9fbfade8929ab423f31f234b155f5595af088",
+        "bytes": 932
+      },
+      "junit": {
+        "path": "_state/universal-resource-regression/after-diagnostic/results.xml",
+        "sha256": "1593749ca2149e9882ba680808121797ed56a828aa51fd75dc94dc55c0326ced",
+        "bytes": 9358
+      },
+      "stdout": {
+        "path": "_state/universal-resource-regression/after-diagnostic/pytest.log",
+        "sha256": "f5d782f49f5cf686791dd1420545390c713f71300e8a74e3c596e1dba004d1dd",
+        "bytes": 99
+      },
+      "stderr": {
+        "path": "_state/universal-resource-regression/after-diagnostic/pytest.stderr.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      }
+    },
+    "after-final": {
+      "tests": 61,
+      "passed": 61,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failure_names": [],
+      "command": {
+        "path": "_state/universal-resource-regression/after-final/command.json",
+        "sha256": "dc492ac10f78fcf9e1cc4946bec99cfb093fe2fb2aebe821c76bc58468b03f53",
+        "bytes": 993
+      },
+      "junit": {
+        "path": "_state/universal-resource-regression/after-final/results.xml",
+        "sha256": "fcbc5694a6e07fe154d9c73c20a6ddbc3cf2fb030da1a9029364a3b9bbf1a28d",
+        "bytes": 9358
+      },
+      "stdout": {
+        "path": "_state/universal-resource-regression/after-final/pytest.log",
+        "sha256": "1db0bbd9e518dbe11f6a35d7361858cd02e3b25c13d915c732802ad414eb94e7",
+        "bytes": 99
+      },
+      "stderr": {
+        "path": "_state/universal-resource-regression/after-final/pytest.stderr.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      }
+    }
+  },
+  "original_eleven_before_after": {
+    "path": "_state/universal-resource-regression/raw/original-eleven-comparison.json",
+    "sha256": "c66194fffff869abf17c25afab0b82ca4380ef6c0f490ca614b512a7c28786eb",
+    "bytes": 3451
+  },
+  "original_assertions": {
+    "original_test_functions": 50,
+    "original_cases": 59,
+    "all_original_bodies_decorators_assertions_AST_identical": true,
+    "changed_original_tests": [],
+    "all_original_59_final_PASS": true,
+    "added_cases": 2,
+    "new_controls": "different-reference and wrong-generation identity RPC replies remain post-dispatch UNKNOWN with safe_retry false and held disk reservation after a real fixture setter mutation. Production client validates the strict RPC envelope.",
+    "receipt": {
+      "path": "_state/universal-resource-regression/raw/assertion-preservation.json",
+      "sha256": "e2fce993c0223da54f770b41de4ce10bc7f913212966792412b92e6ed60adff8",
+      "bytes": 414
+    },
+    "diff": {
+      "path": "_state/universal-resource-regression/raw/test-change.diff",
+      "sha256": "05dbddf83761ef0d17131c0b69dc582ea9cc940b61c75dbe63f659b2b6e868f6",
+      "bytes": 4986
+    },
+    "tested_test_copy": {
+      "path": "_state/universal-resource-regression/raw/tested-test_w26_os_resources.py",
+      "sha256": "f49238b79c0a43eba03010088261b6a82d2f592608c895fe07818b7481cee03e",
+      "bytes": 106206
+    }
+  },
+  "production_blocking_decision": {
+    "blocking_production_bug_reproduced": false,
+    "production_fix_requested": false,
+    "reason": "All original budgets, pre-dispatch barriers, atomic rollback, UNKNOWN/restart/cross-project accounting and durable release assertions passed unchanged once real execution preconditions and the Worker fixture contract were satisfied. Baseline failures remain FAIL in their original reports.",
+    "production_python_files_hash_unchanged": 149,
+    "source_before": {
+      "path": "_state/universal-resource-regression/raw/source-before.json",
+      "sha256": "72b6d01434bd1d02f3384818ca3cdb07ef652cbc9d74566307f3d2e8846cfc01",
+      "bytes": 25001
+    },
+    "source_after": {
+      "path": "_state/universal-resource-regression/raw/source-after.json",
+      "sha256": "eeaddafca431939263ca2c1ca20f1b383b80abdba92a8e0f1024f8037af2ee87",
+      "bytes": 24955
+    }
+  },
+  "reproduction_requirements": [
+    "Use the final recorded focused command and an ownership-valid new --basetemp; external IGNORE_OWNERSHIP paths deliberately remain refused.",
+    "Execute with permission for the existing readonly Darwin memory observer to read kern.boottime; an outer sandbox denial remains a real fail-closed result, not a fixture PASS.",
+    "No network/native preflight, shared project/home/venv mutation, host policy apply or unrelated release suite. Existing .venv interpreter/dependencies used read-only with -B."
+  ],
+  "raw_retention": {
+    "index": {
+      "path": "_state/universal-resource-regression/raw/raw-output-index.json",
+      "sha256": "ce63b311f70c9a5dd11015ba86fa4e20162f6680c52269d7219b1b53e249e057",
+      "bytes": 67958
+    },
+    "owned_ephemeral_work_archive": {
+      "path": "_state/universal-resource-regression/raw/private-pytest-work-files.tar.gz",
+      "sha256": "3c9ce26c9c1b9da354f5d94d0323b54554229697ac25c5d07eac20d1454c37fe",
+      "bytes": 1026038
+    },
+    "archive_verified_manifest": {
+      "path": "_state/universal-resource-regression/raw/private-pytest-work-files.manifest.json",
+      "sha256": "6d7a01516f1f5b9430c7e32452c034ed8be10fe56d4b66d66f0fd0c7b56afa35",
+      "bytes": 285959
+    },
+    "before_and_control_failures_preserved": true
+  },
+  "not_run": {
+    "COMSOL_server_JVM_GUI": "NOT_RUN",
+    "Windows_kernel_budget_or_policy": "NOT_RUN",
+    "T037_OS_isolation": "NOT_VERIFIED",
+    "native_science": "NOT_RUN",
+    "unrelated_release_suite": "NOT_RUN_OUT_OF_SCOPE",
+    "final_acceptance_or_Git_sync": "NOT_RUN_MAIN_OWNS"
+  },
+  "Main_review": {
+    "status": "PASS_SCOPED_RESOURCE_SOFTWARE_REGRESSION_FIXTURE_AND_ENVIRONMENT",
+    "reviewed_utc": "2026-10-22T15:23:20.134819+00:00",
+    "named_receipt_hashes_verified": 38,
+    "original_test_function_AST_identical": 50,
+    "final_junit_counts": {
+      "tests": 61,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "original_cases_preserved": 59,
+    "new_identity_negative_cases": 2,
+    "production_file_hash_maps_identical": 149,
+    "review": "Actual production entity_identity client reused by fixture; strict transport envelope modeled, not production validation replaced. Original setter mutation then wrong-reference/wrong-generation correctly remains UNKNOWN with reservation held. Original test bodies/decorators/assertions independently AST-compared. Real host memory sampler and ownership-valid ephemeral paths used; refusal paths preserved.",
+    "review_validator_note": "Initial Main whole-capture equality assertion included the intentionally changed test file; corrected comparison verifies all149 production module records unchanged. No product artifact was altered by this review error.",
+    "limits": "Budget/dispatch software behavior only; not Windows kernel resources, T037 OS isolation, COMSOL/JVM/GUI/native scientific/final approval. Earlier fail receipts unchanged. Concurrent Core and Windows network work needs affected validation."
+  }
+}

@@ -1144,11 +1144,19 @@ class _DaemonResourceWorker:
             ],
         }
 
+    def entity_identity(self, left, right, **kwargs):
+        # Reuse the real client's generation and closed-envelope validation.
+        # Fixture handles represent stable references; Python proxy identity
+        # cannot prove that a setter returned the same Worker-side receiver.
+        from comsol_mcp._java_worker import PersistentJavaWorker
+        return PersistentJavaWorker.entity_identity(self, left, right, **kwargs)
+
     def submit(self, kind, payload, **kwargs):
         safe_payload = dict(payload)
+        request_id = kwargs.get("request_id") or f"fixture-{len(self.submitted) + 1}"
         if self._event_callback is not None:
             self._event_callback({"phase": "submitted", "kind": kind,
-                                  "request_id": kwargs.get("request_id", f"fixture-{len(self.submitted) + 1}"),
+                                  "request_id": request_id,
                                   "payload": safe_payload})
         self.submitted.append((kind, safe_payload))
         result = None
@@ -1180,7 +1188,14 @@ class _DaemonResourceWorker:
             elif method == "get" and handle.endswith(":param"):
                 result = (self.readback_override if self.readback_override is not None
                           else self.parameters[str(args[0])])
-        return {"ok": True, "status": "SUCCEEDED", "result": result}
+        elif kind == "g2_entity_identity":
+            result = {"same_reference": payload["left_handle"] == payload["right_handle"],
+                      "generation": self.generation,
+                      "identity_scope": "java_reference_identity"}
+        stamp = str(time.time_ns() // 1_000_000)
+        return {"ok": True, "type": kind, "request_id": request_id,
+                "status": "SUCCEEDED", "queued_at_ms": stamp,
+                "started_at_ms": stamp, "completed_at_ms": stamp, "result": result}
 
 
 def _daemon_disk_environment(tmp_path, *, reserve_free=0, allowed_operation="parameter.set",
@@ -1425,6 +1440,53 @@ def test_dynamic_api_write_with_sufficient_budget_dispatches_and_releases_termin
             "SELECT event FROM job_events WHERE job_id=? ORDER BY id", (job_id,)).fetchall()]
         assert names.index("W26DiskAdmission") < names.index("RUNNING") < names.index("worker_request")
         assert names.index("SUCCEEDED") < names.index("W26DiskReservationReleased")
+    finally:
+        daemon.close()
+
+
+@pytest.mark.parametrize("identity_fault", ["different-reference", "wrong-generation"])
+@pytest.mark.skipif(os.name == "nt", reason="POSIX coordinator; Windows kernel adapter NOT_RUN")
+def test_dynamic_api_identity_fault_keeps_unknown_and_disk_reservation(tmp_path, monkeypatch,
+                                                                     identity_fault):
+    from comsol_mcp import _g3_ops
+
+    monkeypatch.setattr(_g3_ops, "REQUIRES_ISOLATION", frozenset())
+    daemon, request, _project, _project_id, _profile, _config = _daemon_disk_environment(
+        tmp_path, allowed_operation="api.invoke", operation="api.invoke",
+        arguments=_dynamic_api_write_request(),
+    )
+    monkeypatch.setattr(daemon.backend, "_require_g2_isolation",
+                        lambda: {"scope": "SOFTWARE_FIXTURE_ONLY"})
+    submit = daemon.worker.submit
+
+    def faulty_identity_reply(kind, payload, **kwargs):
+        reply = submit(kind, payload, **kwargs)
+        if kind == "g2_entity_identity":
+            if identity_fault == "different-reference":
+                reply["result"]["same_reference"] = False
+            else:
+                reply["result"]["generation"] += 1
+        return reply
+
+    monkeypatch.setattr(daemon.worker, "submit", faulty_identity_reply)
+    try:
+        result = daemon.dispatch(request)
+        assert result["success"] is False, result
+        assert result["error"]["code"] == "EXECUTION_STATE_UNKNOWN", result
+        assert result["error"]["safe_retry"] is False
+        assert result["data"]["dispatch_stage"] == "post_dispatch"
+        assert daemon.worker.comments["model:Model:feature:resource_test"] \
+            == "disk-admitted dynamic write"
+        assert any(kind == "g2_entity_identity" for kind, _payload in daemon.worker.submitted)
+        job_id = result["execution"]["job_id"]
+        assert daemon.store.job(job_id)["status"] == "UNKNOWN"
+        rows = [item for bound_job, item in resources._load_reservations(daemon.store.db).values()
+                if bound_job == job_id]
+        assert len(rows) == 1 and rows[0]["status"] == "RESERVED"
+        events = [row[0] for row in daemon.store.db.execute(
+            "SELECT event FROM job_events WHERE job_id=? ORDER BY id", (job_id,)).fetchall()]
+        assert events.index("W26DiskAdmission") < events.index("RUNNING") < events.index("worker_request")
+        assert "SUCCEEDED" not in events and "W26DiskReservationReleased" not in events
     finally:
         daemon.close()
 
