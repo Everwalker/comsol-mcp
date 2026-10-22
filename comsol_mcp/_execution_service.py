@@ -313,7 +313,20 @@ class ExecutionService:
         )
         self.ledger.mark_external_observed(model_ref, fingerprint=snapshot["fingerprint"])
         self._emit("reconciled", model_ref)
-        return self._metadata(model_ref)
+        return {
+            **self._metadata(model_ref),
+            "model_snapshot": {
+                "model_tag": model_ref.model_tag,
+                "server_instance_id": self.ledger.server_instance_id,
+                "fingerprint": snapshot["fingerprint"],
+                "external_event_counter": snapshot["external_event_counter"],
+                "coverage": "parameters+shallow_tree_identity",
+                "cas_guarantee": "NONE",
+                "fingerprint_components_status": snapshot["fingerprint_components_status"],
+                **({"fingerprint_components": snapshot["fingerprint_components"]}
+                   if snapshot["fingerprint_components_status"] == "AVAILABLE_V1" else {}),
+            },
+        }
 
     def execute_legacy(
         self,

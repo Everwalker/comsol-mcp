@@ -15,9 +15,8 @@ and B, so these tests do three things that ordinary unit tests cannot do alone:
   code that will consume it, not by a restatement of it;
 * check every engine method name the implementation actually calls against the
   Java worker's ``METHODS``/``MODEL_UTIL`` allow-list parsed from
-  ``worker_java/PersistentComsolWorker.java``, and check that the additions this
-  module asked for are genuinely missing there (the Java worker is not modified
-  by this task).
+  ``worker_java/PersistentComsolWorker.java``, and check that reported missing
+  additions are genuinely missing there.
 """
 from __future__ import annotations
 
@@ -282,6 +281,12 @@ class FSolver(FNode):
             raise FakeEngineError(f"missing imaginary values for solnum {args[0]}")
         return list(row[1])
 
+    def getNU(self, *args: Any) -> Any:
+        self._guard("getNU", args)
+        if args != ("Sol",):
+            raise FakeEngineError("count witness requires the exact getNU('Sol') argument")
+        return self._read("getNU")
+
     def getPNames(self) -> Any:
         self._guard("getPNames", ())
         return self._read("getPNames")
@@ -458,7 +463,7 @@ def build_tree(*, times: Sequence[float] | None = None, feature_times: Any = Non
     if solver_size is None:
         solver_size = (100, max(1, len(parameter_rows)))
     info = register(FSolutionInfo(solver_parameter_units or {}, props={
-        "getLevelNames": list(solver_level_names or solver_parameter_names),
+        "getLevelNames": list(solver_parameter_names if solver_level_names is None else solver_level_names),
         "getLevels": 1 if solver_levels is None else solver_levels,
         "getOuterSolnum": list([1] if solver_outer_solnums is None else solver_outer_solnums),
     })) if solver_parameter_units is not None else None
@@ -469,6 +474,7 @@ def build_tree(*, times: Sequence[float] | None = None, feature_times: Any = Non
                                      "getPNames": list(solver_parameter_names),
                                      "getSize": list(solver_size),
                                      "getSizeMulti": list(solver_size_multi),
+                                     "getNU": int(solver_size[1]),
                                      "getSequenceType": solver_sequence_type,
                                      "isAttached": solver_attached},
                               parameter_rows=parameter_rows, solution_info=info,
@@ -1293,13 +1299,97 @@ def test_result_at_points_allows_only_documented_attached_frequency_singleton(mo
     assert observation["observation"]["get_size_multi"] == [1, 1]
     assert observation["observation"]["solution_info_count_scope"] == {
         "getLevelNames": ["freq"], "getLevels": 1, "getOuterSolnum": [],
-        "getOuterSolnum_semantics": "empty means no outer parameter/values per COMSOL 6.4 doc7709/chunk23066",
+        "getOuterSolnum_semantics": "empty means no outer parameter/values per official COMSOL 6.3/6.4 SolutionInfo API docs",
         "read_errors": [],
     }
     assert result["solution_axes"]["pair_mapping_complete"] is False
     assert result["field_array"] is None
     assert result["values"] == [[[{"real": 1.0, "imag": 0.5},
                                   {"real": 2.0, "imag": -0.25}]]]
+
+
+def _stationary_count_tree(count: int = 2):
+    tree = build_tree(
+        sdim=2, length_unit="m",
+        dataset_props={"solution": "sol1", "comp": "comp1", "geom": "geom1"},
+        solver_parameter_names=("",), solver_parameter_units={"": ""},
+        solver_size=(100, count), solver_size_multi=(1, count),
+        solver_level_names=(), solver_levels=0, solver_outer_solnums=(),
+        solver_type="Stationary", solver_sequence_type="SolverSequence",
+        solver_attached=True, complex_=False,
+    )
+    return tree
+
+
+def _run_stationary_count_points(monkeypatch, tree):
+    nodes = []
+    def factory(tag, kind):
+        node = FInterp(tag, kind, complex_=False,
+                       props={"data": None, "expr": [], "unit": ["K"], "coord": None})
+        nodes.append(node)
+        return node
+    tree.numerical.factory = factory
+    tree.stationary_count_nodes = nodes
+    def set_coordinates(self, values):
+        self._guard("setInterpolationCoordinates", (values,))
+        self.coords = values
+        self.values = [[[300.0], [400.0]]]
+    monkeypatch.setattr(FInterp, "setInterpolationCoordinates", set_coordinates, raising=False)
+    monkeypatch.setattr(FInterp, "getCoordinates", lambda self: self.coords, raising=False)
+    result = results.result_at_points(tree.worker, "Model", {
+        "points": [[0.005, 0.0]], "coordinate_unit": "m",
+        "spec": {"expressions": ["T"], "solution": {"dataset": "dset1", "solution": "sol1"},
+                 "complex_mode": "real"},
+    })
+    return result, nodes
+
+
+def test_attached_stationary_multisolution_count_only_budget_does_not_invent_axes(monkeypatch):
+    tree = _stationary_count_tree(2)
+    result, nodes = _run_stationary_count_points(monkeypatch, tree)
+    assert result["status"]["ok"] is True, result["status"]
+    count = result["solution_axes"]["numeric_count_observation"]
+    assert count["status"] == "VERIFIED_ATTACHED_STATIONARY_NUMERIC_COUNT"
+    assert count["numeric_solution_count"] == 2
+    assert count["solution_axes_pair_mapping_complete"] is False
+    assert count["axes_scope"] == "numeric_count_only_outer_inner_unverified"
+    assert result["solution_axes"]["pair_mapping_complete"] is False
+    assert result["solution_axes"]["outer"] == result["solution_axes"]["inner"] == []
+    assert result["field_array"] is None
+    assert result["values"] == [[[300.0], [400.0]]]
+    budget = result["result_budget"]["records"][0]
+    assert budget["status"] == "PASS" and budget["allowed"] is True
+    assert budget["solution_axes_verification_scope"] == "numeric_count_only"
+    assert budget["solution_axes_pair_mapping_complete"] is False
+    assert budget["requested"]["inner_count"] == 2
+    assert "getData" in nodes[0].methods()
+
+
+@pytest.mark.parametrize("mutation", ["getnu_mismatch", "size_multi_mismatch", "zero", "oversized", "drift"])
+def test_attached_stationary_count_malformed_or_drifting_refuses_before_getdata(monkeypatch, mutation):
+    tree = _stationary_count_tree(2)
+    if mutation == "getnu_mismatch":
+        tree.solver.props["getNU"] = 3
+    elif mutation == "size_multi_mismatch":
+        tree.solver.props["getSizeMulti"] = [2, 2]
+    elif mutation == "zero":
+        tree.solver.props.update({"getNU": 0, "getSize": [100, 0], "getSizeMulti": [1, 0]})
+    elif mutation == "oversized":
+        tree.solver.props.update({"getNU": 4097, "getSize": [100, 4097], "getSizeMulti": [1, 4097]})
+    elif mutation == "drift":
+        reads = iter([2, 2, 3, 3])
+        tree.solver.getNU = lambda *args: tree.solver._guard("getNU", args) or next(reads, 3)
+    if mutation == "drift":
+        with pytest.raises(ExecutionContractError) as info:
+            _run_stationary_count_points(monkeypatch, tree)
+        assert info.value.code == "SOLUTION_COUNT_DRIFT"
+        nodes = tree.stationary_count_nodes
+        assert nodes and not any("getData" in node.methods() for node in nodes)
+        return
+    result, nodes = _run_stationary_count_points(monkeypatch, tree)
+    assert result["status"]["ok"] is False
+    assert result["result_budget"]["records"][0]["getdata_called"] is False
+    assert not any("getData" in node.methods() for node in nodes)
 
 
 @pytest.mark.parametrize("mutation", [
@@ -2222,6 +2312,297 @@ def _real_public_points_daemon(tmp_path, monkeypatch, tree):
     project = created["data"]["project"]["project_id"]
     daemon.backend._bind_model_project(ref,project);daemon.backend.persist()
     return daemon,ref,project
+
+
+def _dispatch_public_result_evaluate(tmp_path, monkeypatch, tree, body, *, request_id="public-evaluate"):
+    """Drive result.evaluate through the production ControlDaemon adapter."""
+    import time
+    from tools import run_native_w23_saved_mph_diagnostic as runner
+
+    daemon, ref, project = _real_public_points_daemon(tmp_path, monkeypatch, tree)
+    request = {
+        "operation": "operation_call",
+        "arguments": {"operation_id": "result.evaluate", "arguments": body},
+        "execution": {
+            "project_id": project,
+            "session_id": ref["session_id"],
+            "model_ref": ref,
+            "expected_revision": 0,
+            "request_id": request_id,
+            "idempotency_key": request_id,
+            "rpc_timeout_s": 30,
+            "queue_timeout_s": 30,
+            "execution_timeout_s": None,
+        },
+    }
+    runner._set_dispatch_allowlist(
+        daemon,
+        tmp_path / f"{request_id}-journal.jsonl",
+        allow=lambda candidate: candidate == request,
+    )
+    try:
+        response = daemon.dispatch(request)
+        if response.get("execution", {}).get("job_id"):
+            response = runner.science._wait_job(
+                daemon,
+                response,
+                deadline_epoch=time.time() + 20,
+                cleanup_reserve_s=1,
+                label=request_id,
+                evidence=tmp_path,
+            )
+        return response, daemon, ref, project
+    except BaseException:
+        daemon.close()
+        raise
+
+
+def _raw_eval_stationary_fixture(monkeypatch, *, count=1, point_count=3, values=None):
+    tree = _stationary_count_tree(count)
+    nodes = []
+
+    class EvalFeature(FInterp):
+        def __init__(self, tag, type_id):
+            super().__init__(tag, type_id, complex_=False,
+                             props={"data": None, "expr": [], "unit": ["K"], "coord": None})
+            self.values = values if values is not None else [
+                [[float(100 * solution + point) for point in range(point_count)]
+                 for solution in range(count)]
+            ]
+
+        def getCoordinatesShape(self):
+            self._guard("getCoordinatesShape", ())
+            return {
+                "kind": "coordinates_shape",
+                "shape": [2, point_count],
+                "dimension": 2,
+                "point_count": point_count,
+                "source": "native NumericalFeature.getCoordinates()",
+                "values_transmitted": False,
+                "wire_payload": "shape-only",
+            }
+
+    def factory(tag, kind):
+        node = EvalFeature(tag, kind)
+        nodes.append(node)
+        return node
+
+    tree.numerical.factory = factory
+    tree.raw_eval_nodes = nodes
+    return tree, nodes
+
+
+@pytest.mark.parametrize("count", [1, 3])
+def test_public_result_evaluate_stationary_count_only_uses_real_eval_budget_path(
+    tmp_path, monkeypatch, count
+):
+    from tools import run_native_w23_saved_mph_diagnostic as runner
+
+    tree, nodes = _raw_eval_stationary_fixture(monkeypatch, count=count, point_count=3)
+    response, daemon, _ref, _project = _dispatch_public_result_evaluate(
+        tmp_path,
+        monkeypatch,
+        tree,
+        {
+            "spec": {
+                "expressions": ["T"],
+                "units": ["K"],
+                "solution": {"dataset": "dset1", "solution": "sol1"},
+                "aggregate": "none",
+                "complex_mode": "real",
+                "storage": "inline",
+            }
+        },
+        request_id=f"public-evaluate-count-{count}",
+    )
+    try:
+        assert response["success"] is True, response
+        data = runner._response_body(response)
+        assert data["status"]["ok"] is True, data["status"]
+        assert data["aggregate"] == "none"
+        assert data["solution_axes"]["numeric_count_observation"]["numeric_solution_count"] == count
+        assert data["solution_axes"]["numeric_count_observation"]["status"] in {
+            "VERIFIED_SINGLE_ATTACHED_STATIONARY_NUMERIC_COUNT",
+            "VERIFIED_ATTACHED_STATIONARY_NUMERIC_COUNT",
+        }
+        assert data["solution_axes"]["pair_mapping_complete"] is False
+        assert data["solution_axes"]["outer"] == data["solution_axes"]["inner"] == []
+        assert data["solution_axes"]["axis_metadata_status"] == "UNVERIFIED"
+        assert data["field_array"] is None
+        record = data["result_budget"]["records"][0]
+        assert record["status"] == "PASS" and record["publish_allowed"] is True
+        assert record["getdata_called"] is True
+        assert record["solution_axes_verification_scope"] == (
+            "numeric_singleton_count_only" if count == 1 else "numeric_count_only"
+        )
+        assert "getData" in nodes[0].methods()
+        assert nodes[0].props["unit"] == ["K"]
+        assert data["expression_units"] == {"T": "K"}
+        assert data["values"] == [[
+            [float(100 * solution + point) for point in range(3)]
+            for solution in range(count)
+        ]]
+    finally:
+        daemon.close()
+
+
+def test_public_result_evaluate_count_only_keeps_native_default_unit_unverified(
+    tmp_path, monkeypatch
+):
+    from tools import run_native_w23_saved_mph_diagnostic as runner
+
+    tree, nodes = _raw_eval_stationary_fixture(monkeypatch, count=1, point_count=2)
+    response, daemon, _ref, _project = _dispatch_public_result_evaluate(
+        tmp_path,
+        monkeypatch,
+        tree,
+        {"spec": {
+            "expressions": ["T"], "units": [""],
+            "solution": {"dataset": "dset1", "solution": "sol1"},
+            "aggregate": "none", "complex_mode": "real", "storage": "inline",
+        }},
+        request_id="public-evaluate-native-default-unit",
+    )
+    try:
+        assert response["success"] is True, response
+        data = runner._response_body(response)
+        assert data["status"]["ok"] is True
+        assert data["expression_units"] == {"T": None}
+        assert nodes[0].props["unit"] == [""]
+        assert data["field_array"] is None
+    finally:
+        daemon.close()
+
+
+@pytest.mark.parametrize("strict_mode", ["field", "metric"])
+def test_result_evaluate_strict_readback_still_requires_complete_solution_axes(
+    monkeypatch, strict_mode
+):
+    tree, nodes = _raw_eval_stationary_fixture(monkeypatch, count=1, point_count=2)
+    spec = {
+        "expressions": ["T"],
+        "solution": {"dataset": "dset1", "solution": "sol1", "outer": 1, "inner": 1},
+        "aggregate": "none" if strict_mode == "field" else "average",
+        "complex_mode": "preserve" if strict_mode == "field" else "real",
+        "selection": {"component": "comp1", "geometry": "geom1", "entity_dimension": 2, "kind": "all"},
+    }
+    with pytest.raises(ExecutionContractError) as exc_info:
+        results.result_evaluate(
+            tree.worker,
+            "Model",
+            {"spec": spec},
+            strict_field_readback=(strict_mode == "field"),
+            strict_metric_evidence=(strict_mode == "metric"),
+        )
+    assert exc_info.value.code == "SOLUTION_AXIS_METADATA_UNAVAILABLE"
+    assert not nodes
+
+
+@pytest.mark.parametrize("mutation", [
+    "wrong_dataset_solution", "wrong_requested_solution", "wrong_study",
+    "detached", "malformed_count", "oversized_count", "fresh_pre_read_drift",
+    "oversized_payload",
+])
+def test_public_result_evaluate_rejects_untrusted_count_before_getdata(
+    tmp_path, monkeypatch, mutation
+):
+    from tools import run_native_w23_saved_mph_diagnostic as runner
+
+    count = 2
+    point_count = 3
+    if mutation == "oversized_payload":
+        point_count = 500_001
+    tree, nodes = _raw_eval_stationary_fixture(
+        monkeypatch, count=count, point_count=point_count,
+        values=[] if mutation == "oversized_payload" else None,
+    )
+    body = {
+        "spec": {
+            "expressions": ["T"],
+            "units": ["K"],
+            "solution": {"dataset": "dset1", "solution": "sol1"},
+            "aggregate": "none",
+            "complex_mode": "real",
+            "storage": "inline",
+        }
+    }
+    if mutation == "wrong_dataset_solution":
+        tree.datasets.items["dset1"].props["solution"] = "missing_solution"
+    elif mutation == "wrong_requested_solution":
+        body["spec"]["solution"]["solution"] = "missing_solution"
+    elif mutation == "wrong_study":
+        tree.solver.study = lambda *args: "missing_study"
+    elif mutation == "detached":
+        tree.solver.props["isAttached"] = False
+    elif mutation == "malformed_count":
+        tree.solver.props["getSizeMulti"] = [2, 2]
+    elif mutation == "oversized_count":
+        tree.solver.props.update({"getSize": [100, 4097], "getSizeMulti": [1, 4097], "getNU": 4097})
+    elif mutation == "fresh_pre_read_drift":
+        reads = iter([2] * 2 + [3] * 2)
+        tree.solver.getNU = lambda *args: tree.solver._guard("getNU", args) or next(reads, 3)
+
+    response, daemon, _ref, _project = _dispatch_public_result_evaluate(
+        tmp_path, monkeypatch, tree, body, request_id=f"public-evaluate-refuse-{mutation}"
+    )
+    try:
+        if mutation in {"wrong_dataset_solution", "wrong_requested_solution"}:
+            assert response["success"] is False, response
+            assert not any("getData" in node.methods() for node in nodes)
+            assert not nodes
+            return
+        if response["success"] is False:
+            error = response.get("error")
+            assert isinstance(error, Mapping), response
+            if mutation == "fresh_pre_read_drift":
+                assert error.get("code") == "SOLUTION_COUNT_DRIFT", error
+                assert error.get("details", {}).get("mutation_issued") is False
+            assert not any("getData" in node.methods() for node in nodes)
+            assert len(nodes) == (1 if mutation == "oversized_payload" else 0)
+            return
+        data = runner._response_body(response)
+        assert data["status"]["ok"] is False, data["status"]
+        assert data["field_array"] is None
+        assert data["result_budget"]["records"]
+        record = data["result_budget"]["records"][0]
+        assert record["publish_allowed"] is False
+        assert record["getdata_called"] is False
+        assert not any("getData" in node.methods() for node in nodes)
+        assert mutation == "oversized_payload" and len(nodes) == 1
+    finally:
+        daemon.close()
+
+
+def test_public_result_evaluate_count_drift_after_getdata_does_not_publish(
+    tmp_path, monkeypatch
+):
+    from tools import run_native_w23_saved_mph_diagnostic as runner
+
+    tree, nodes = _raw_eval_stationary_fixture(monkeypatch, count=2, point_count=3)
+    reads = iter([2] * 6 + [3] * 2)
+    tree.solver.getNU = lambda *args: tree.solver._guard("getNU", args) or next(reads, 3)
+    response, daemon, _ref, _project = _dispatch_public_result_evaluate(
+        tmp_path,
+        monkeypatch,
+        tree,
+        {"spec": {
+            "expressions": ["T"], "units": ["K"],
+            "solution": {"dataset": "dset1", "solution": "sol1"},
+            "aggregate": "none", "complex_mode": "real", "storage": "inline",
+        }},
+        request_id="public-evaluate-post-read-drift",
+    )
+    try:
+        assert response["success"] is False, response
+        error = response.get("error")
+        assert isinstance(error, Mapping) and error.get("code") == "EXECUTION_STATE_UNKNOWN", error
+        assert error.get("details", {}).get("cause_code") == "SOLUTION_COUNT_DRIFT"
+        assert error.get("details", {}).get("stage") == "after_native_read"
+        assert error.get("details", {}).get("native_read_completed") is True
+        assert error.get("details", {}).get("publish_allowed") is False
+        assert "getData" in nodes[0].methods()
+    finally:
+        daemon.close()
 
 
 @pytest.mark.parametrize("case", ["freq_Hz","freq_GHz","field_8_641","field_minus10_641","port1","port2"])

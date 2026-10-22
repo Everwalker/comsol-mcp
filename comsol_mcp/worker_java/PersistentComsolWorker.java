@@ -50,8 +50,18 @@ import javax.tools.ToolProvider;
 import javax.tools.SimpleJavaFileObject;
 import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.CompilationUnitTree;
+import com.sun.source.tree.BlockTree;
+import com.sun.source.tree.ImportTree;
+import com.sun.source.tree.MemberReferenceTree;
+import com.sun.source.tree.MethodInvocationTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.util.JavacTask;
+import com.sun.source.util.TreePath;
+import com.sun.source.util.TreePathScanner;
+import com.sun.source.util.Trees;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.TypeElement;
 import java.nio.file.attribute.BasicFileAttributes;
 
 /**
@@ -84,7 +94,7 @@ public final class PersistentComsolWorker {
       "comments", "create", "createAutoSequences", "dataset", "descr", "disableUpdates",
       "feature", "geom", "get", "getAllowedPropertyValues", "getComsolVersion",
       "getEntityFromModelPath", "getFilePath", "getLastComputationDate",
-      "getLastComputationTime", "getLastComputationVersion", "getSize", "getSizeMulti", "getPVals", "getReal",
+      "getLastComputationTime", "getLastComputationVersion", "getSize", "getSizeMulti", "getNU", "getPVals", "getReal",
       "getData", "getImag", "getBoolean", "getBooleanArray", "getBooleanMatrix",
       "getDouble", "getDoubleArray", "getDoubleMatrix", "getInt", "getIntArray", "getIntMatrix",
       "getString", "getStringArray", "getStringMatrix", "getType", "getValueType",
@@ -592,8 +602,6 @@ public final class PersistentComsolWorker {
       return map("compiled", true, "source_sha256", source.sha256, "entrypoint", source.entrypoint,
           "artifact", existing.classes.toString(), "diagnostics", Collections.emptyList());
     }
-    if (source.text.matches("(?s).*\\bstatic\\s*\\{.*"))
-      throw new WorkerFailure("TRUSTED_CODE_REJECTED", "Java source contains a static initializer", map("source_sha256", source.sha256, "entrypoint", source.entrypoint, "diagnostics", Collections.emptyList()));
     JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
     if (compiler == null) throw new WorkerFailure("COMPILE_UNAVAILABLE", "the Worker JVM does not expose javac", map("source_sha256", source.sha256, "entrypoint", source.entrypoint, "diagnostics", Collections.emptyList()));
     Path classes = codeRoot.resolve(source.sha256.substring(0, 24));
@@ -653,14 +661,30 @@ public final class PersistentComsolWorker {
     List<String> publicTypes = new ArrayList<>();
     try (StandardJavaFileManager manager = compiler.getStandardFileManager(null, Locale.ROOT, StandardCharsets.UTF_8)) {
       DiagnosticCollector<JavaFileObject> parseDiagnostics = new DiagnosticCollector<>();
+      List<String> analysisOptions = Arrays.asList(
+          "-proc:none", "-classpath", System.getProperty("java.class.path", ""));
       JavacTask parser = (JavacTask)compiler.getTask(null, manager, parseDiagnostics,
-          Arrays.asList("-proc:none"), null, Collections.singletonList(snapshotFile(source, "RegisteredSource.java")));
+          analysisOptions, null, Collections.singletonList(snapshotFile(source, "RegisteredSource.java")));
       Iterable<? extends CompilationUnitTree> units = parser.parse();
       for (Diagnostic<? extends JavaFileObject> diagnostic : parseDiagnostics.getDiagnostics()) {
         if (diagnostic.getKind() == Diagnostic.Kind.ERROR)
           return map("compiled", false, "diagnostics", sourceDiagnostics(source, parseDiagnostics));
       }
+      try {
+        parser.analyze();
+      } catch (RuntimeException ignored) {
+        // javac's actual compile below remains authoritative for ordinary
+        // source errors; inspect every symbol that did resolve fail-closed.
+      }
+      Trees trees = Trees.instance(parser);
       for (CompilationUnitTree unit : units) {
+        String finding = trustedCodePolicyFinding(unit, trees);
+        if (finding != null) {
+          throw new WorkerFailure("TRUSTED_CODE_REJECTED", finding,
+              map("source_sha256", source.sha256, "entrypoint", source.entrypoint,
+                  "diagnostics", sourceDiagnostics(source, parseDiagnostics),
+                  "policy", "javac_ast_resolved_ModelUtil_owner_and_static_initializer"));
+        }
         for (Tree type : unit.getTypeDecls()) {
           if (type instanceof ClassTree && ((ClassTree)type).getModifiers().getFlags().contains(javax.lang.model.element.Modifier.PUBLIC))
             publicTypes.add(((ClassTree)type).getSimpleName().toString());
@@ -672,11 +696,56 @@ public final class PersistentComsolWorker {
     DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
     boolean success;
     try (StandardJavaFileManager manager = compiler.getStandardFileManager(diagnostics, Locale.ROOT, StandardCharsets.UTF_8)) {
-      List<String> options = Arrays.asList("-encoding", "UTF-8", "-classpath", System.getProperty("java.class.path", ""), "-d", classes.toString());
+      List<String> options = Arrays.asList("-proc:none", "-encoding", "UTF-8", "-classpath",
+          System.getProperty("java.class.path", ""), "-d", classes.toString());
       success = Boolean.TRUE.equals(compiler.getTask(null, manager, diagnostics, options, null,
           Collections.singletonList(snapshotFile(source, filename))).call());
     }
     return map("compiled", success, "diagnostics", sourceDiagnostics(source, diagnostics));
+  }
+  private static String trustedCodePolicyFinding(CompilationUnitTree unit, Trees trees) {
+    final String modelUtil = "com.comsol.model.util.ModelUtil";
+    // Runtime version is environment metadata. ModelUtil.tags() is excluded:
+    // even names-only global model enumeration crosses the injected Model scope.
+    final Set<String> safeMetadata = Collections.singleton("getComsolVersion");
+    for (ImportTree imported : unit.getImports()) {
+      if (!imported.isStatic()) continue;
+      String name = imported.getQualifiedIdentifier().toString();
+      String prefix = modelUtil + ".";
+      if (name.startsWith(prefix)) {
+        String member = name.substring(prefix.length());
+        if (member.contains(".") || member.equals("*") || !safeMetadata.contains(member))
+          return "project Java may not statically import ModelUtil model/connection management APIs";
+      }
+    }
+    final String[] finding = new String[1];
+    new TreePathScanner<Void, Void>() {
+      private void inspect(TreePath path) {
+        Element element = trees.getElement(path);
+        if (!(element instanceof ExecutableElement)) return;
+        Element owner = element.getEnclosingElement();
+        if (owner instanceof TypeElement
+            && ((TypeElement)owner).getQualifiedName().contentEquals(modelUtil)) {
+          String method = element.getSimpleName().toString();
+          if (!safeMetadata.contains(method))
+            finding[0] = "project Java may not call ModelUtil." + method
+                + "; global model and connection management is outside the injected Model scope";
+        }
+      }
+      @Override public Void visitMethodInvocation(MethodInvocationTree node, Void unused) {
+        inspect(new TreePath(getCurrentPath(), node.getMethodSelect()));
+        return finding[0] == null ? super.visitMethodInvocation(node, unused) : null;
+      }
+      @Override public Void visitMemberReference(MemberReferenceTree node, Void unused) {
+        inspect(getCurrentPath());
+        return finding[0] == null ? super.visitMemberReference(node, unused) : null;
+      }
+      @Override public Void visitBlock(com.sun.source.tree.BlockTree node, Void unused) {
+        if (node.isStatic()) finding[0] = "project Java may not declare a static initializer";
+        return finding[0] == null ? super.visitBlock(node, unused) : null;
+      }
+    }.scan(unit, null);
+    return finding[0];
   }
   private static List<Object> sourceDiagnostics(SourceSpec source, DiagnosticCollector<JavaFileObject> diagnostics) {
     List<Object> rows = new ArrayList<>();

@@ -425,7 +425,6 @@ class FWiredTree:
         self.solver = FNode(tag="sol1", type_id="SolverSequence",
                             props={"getPVals": [0.0, 0.1, 0.2],
                                    "getParamNames": ["p1", "p2"], "getParamVals": [[1.0, 2.0], [10.0, 20.0]]})
-        self.solver.getPVals = lambda *args: self.solver._guard("getPVals", args) or self.solver.props["getPVals"]
         # ``SolverSequence.study()`` is a *method* on the live engine
         # (``model.sol("sol1").study()`` -> ``"std1"``); the fake deliberately
         # does not publish it as a ``getString`` property, because the pre-fix
@@ -437,7 +436,8 @@ class FWiredTree:
 
         # SolutionInfo route (§4/F04): dataset.solution_indices reads the real
         # outer/inner axes through SolverSequence.getSolutioninfo(), so the fake
-        # exposes the same four accessors the live worker now allow-lists.
+        # exposes the matching mapping and unit accessors. Supplemental
+        # SolverSequence metadata below cannot certify a refused mapping.
         self.solution_info = FNode(tag="solutioninfo", type_id="SolutionInfo",
                                    props={"getOuterSolnum": [1], "getMaxInner": 3,
                                           "getLevelNames": ["outer", "inner"]})
@@ -451,9 +451,43 @@ class FWiredTree:
                 return len(values) if values else configured
             return configured
 
-        self.solution_info.getSolnum = lambda outer, strict: (
+        # Direct SolverSequence observations supplement SolutionInfo; they do
+        # not substitute for its outer/inner mapping. Keep the documented
+        # no-argument time-vector and one-based parameter-row overloads apart.
+        self.solver.getSequenceType = lambda: self.solver._guard("getSequenceType", ()) or "SolverSequence"
+        self.solver.isAttached = lambda: self.solver._guard("isAttached", ()) or True
+        self.solver.getSize = lambda: self.solver._guard("getSize", ()) or [100, _inner_count()]
+        self.solver.getSizeMulti = lambda: self.solver._guard("getSizeMulti", ()) or [1, _inner_count()]
+        self.solver.getPNames = lambda: self.solver._guard("getPNames", ()) or ["p1", "p2", "t"]
+
+        def _parameter_values(solnum: int | None = None) -> list[float]:
+            self.solver._guard("getPVals", () if solnum is None else (solnum,))
+            if solnum is None:
+                return list(self.solver.props["getPVals"])
+            if type(solnum) is not int or not 1 <= solnum <= _inner_count():
+                raise FakeEngineError("Unknown_solution")
+            return [1.0, 2.0, (solnum - 1) * 0.1]
+
+        def _imaginary_parameter_values(solnum: int) -> list[float]:
+            self.solver._guard("getPValsImag", (solnum,))
+            if type(solnum) is not int or not 1 <= solnum <= _inner_count():
+                raise FakeEngineError("Unknown_solution")
+            return [0.0, 0.0, 0.0]
+
+        def _solnums(outer: int, strict: bool) -> list[int]:
             self.solution_info._guard("getSolnum", (outer, strict))
-            or list(range(1, _inner_count() + 1))
+            if type(outer) is not int or outer not in self.solution_info.props["getOuterSolnum"]:
+                raise FakeEngineError("Unknown_solution")
+            return list(range(1, _inner_count() + 1))
+
+        self.solver.getPVals = _parameter_values
+        self.solver.getPValsImag = _imaginary_parameter_values
+        self.solution_info.getSolnum = _solnums
+        self.solution_info.getLevels = lambda: (
+            self.solution_info._guard("getLevels", ()) or len(self.solution_info.props["getLevelNames"])
+        )
+        self.solution_info.getUnit = lambda name: (
+            self.solution_info._guard("getUnit", (name,)) or {"p1": "1", "p2": "1", "t": "s"}[name]
         )
         self.solution_info.getPNames = lambda pairs: (
             self.solution_info._guard("getPNames", (pairs,))
@@ -771,6 +805,13 @@ def test_solution_indices_reads_the_outer_axis_from_the_engine() -> None:
     assert data["axis_metadata_complete"] is True
     assert data["level_names"] == ["outer", "inner"]
     assert data["read_errors"] == []
+    observed_methods = {name for name, _args in tree.solver.calls}
+    assert {"getSequenceType", "isAttached", "getSize", "getSizeMulti", "getPNames"} <= observed_methods
+    assert tree.solver.getPVals() == [0.0, 0.1, 0.2]
+    assert tree.solver.getPVals(2) == [1.0, 2.0, 0.1]
+    assert tree.solver.getPValsImag(2) == [0.0, 0.0, 0.0]
+    with pytest.raises(FakeEngineError, match="Unknown_solution"):
+        tree.solution_info.getSolnum(99, True)
 
 
 def test_result_evaluate_complex_field_modes() -> None:
@@ -870,13 +911,57 @@ def test_strict_metric_evaluate_reads_back_transient_selection_and_solution_bind
     # A native selection getter that reports different membership must fail
     # closed even when the requested explicit list itself is well-formed.
     monkeypatch.setattr(FSelection, "entities", lambda self: [1])
-    with pytest.raises(ExecutionContractError, match="selection geometry, dimension, or members"):
+    numeric_reads = []
+
+    def unexpected_numeric_read(self: FNumericalFeature, *args: Any) -> Any:
+        numeric_reads.append((self.tag_, args))
+        raise AssertionError("mismatched membership reached a numerical getter")
+
+    monkeypatch.setattr(FNumericalFeature, "getData", unexpected_numeric_read)
+    monkeypatch.setattr(FNumericalFeature, "getReal", unexpected_numeric_read)
+    refused_tree = FWiredTree(numerical_real=42.0)
+    with pytest.raises(ExecutionContractError, match="transient feature geometry/dimension/named/membership/inheritance differs") as exc_info:
         results.result_evaluate(
-            FWiredTree(numerical_real=42.0).worker,
+            refused_tree.worker,
             "Model",
             arguments,
             strict_metric_evidence=True,
         )
+    assert exc_info.value.code == "SELECTION_READBACK_MISMATCH"
+    assert numeric_reads == []
+    assert refused_tree.numerical_list.tags() == []
+
+
+@pytest.mark.parametrize("fault", ["geometry", "dimension"])
+def test_strict_metric_rejects_selection_identity_drift_before_numeric_read(
+    monkeypatch: pytest.MonkeyPatch, fault: str,
+) -> None:
+    tree = FWiredTree(numerical_real=42.0)
+    original_geom = FSelection.geom
+    if fault == "geometry":
+        def wrong_geometry(self: FSelection, *args: Any) -> str | None:
+            return original_geom(self, *args) if args else "other_geometry"
+        monkeypatch.setattr(FSelection, "geom", wrong_geometry)
+    else:
+        monkeypatch.setattr(FSelection, "dim", lambda self: 2)
+    numeric_reads = []
+
+    def unexpected_numeric_read(self: FNumericalFeature, *args: Any) -> Any:
+        numeric_reads.append((self.tag_, args))
+        raise AssertionError("mismatched selection identity reached a numerical getter")
+
+    monkeypatch.setattr(FNumericalFeature, "getData", unexpected_numeric_read)
+    monkeypatch.setattr(FNumericalFeature, "getReal", unexpected_numeric_read)
+    with pytest.raises(ExecutionContractError, match="transient feature geometry/dimension/named/membership/inheritance differs") as exc_info:
+        results.result_evaluate(tree.worker, "Model", {"spec": {
+            "expressions": ["T"], "solution": {"dataset": "dset1", "solution": "sol1"},
+            "aggregate": "integral", "complex_mode": "real", "storage": "inline",
+            "selection": {"kind": "explicit", "component": "comp1", "geometry": "geom1",
+                          "entity_dimension": 3, "entities": [1, 2]},
+        }}, strict_metric_evidence=True)
+    assert exc_info.value.code == "SELECTION_READBACK_MISMATCH"
+    assert numeric_reads == []
+    assert tree.numerical_list.tags() == []
 
 
 def test_strict_weighted_metric_keeps_global_unit_readback_out_of_roi_scope_and_cleans_up() -> None:
@@ -1408,6 +1493,7 @@ def test_result_at_points_and_coordinate_readback() -> None:
         "data": "dset1",
         "data_status": "VERIFIED",
         "source": "NumericalFeature.getString('data') after set('data')",
+        "selection_application": {},
     }
     assert res["coordinate_readback"]["status"] == "VERIFIED"
     assert res["cleanup"]["type_id"] == "Interp"
@@ -1426,12 +1512,17 @@ def test_result_at_points_rejects_aggregate_getreal_for_multiple_points(
     """
     tree = FWiredTree(numerical_real=[[42.0]])
     original = tree.numerical_list.factory
+    numeric_reads = []
 
     class _AggregateOnlyFeature(FNumericalFeature):
         def getData(self) -> Any:
+            self._guard("getData", ())
+            numeric_reads.append("getData")
             raise FakeEngineError("getData is unavailable", code="API_UNSUPPORTED")
 
         def getReal(self) -> Any:
+            self._guard("getReal", ())
+            numeric_reads.append("getReal")
             return [[42.0]]
 
     def factory(tag: str, *args: Any) -> Any:
@@ -1454,7 +1545,14 @@ def test_result_at_points_rejects_aggregate_getreal_for_multiple_points(
         "inner_indices_by_outer": {1: [1]},
         "solnum_pairs": [{"outer": 1, "inner": 1, "solnum": 1}],
     }
-    monkeypatch.setattr(results, "_result_solution_binding", lambda *_args: binding)
+    binding_calls = []
+
+    def single_pair_binding(_model: Any, solution_tag: str, *,
+                            _skip_empty_outer_tuple_diagnostic: bool = False) -> dict[str, Any]:
+        binding_calls.append((solution_tag, _skip_empty_outer_tuple_diagnostic))
+        return binding
+
+    monkeypatch.setattr(results, "_result_solution_binding", single_pair_binding)
 
     with pytest.raises(ExecutionContractError) as exc_info:
         dispatch("result.at_points", tree.worker, "Model", {
@@ -1468,6 +1566,43 @@ def test_result_at_points_rejects_aggregate_getreal_for_multiple_points(
             "frame": "spatial",
         })
     assert exc_info.value.code == "FIELD_ARRAY_SHAPE_MISMATCH"
+    assert "getData/getImagData" in str(exc_info.value)
+    assert numeric_reads == ["getData", "getReal"]
+    assert binding_calls == [("sol1", False)]
+    assert tree.numerical_list.tags() == []
+
+
+@pytest.mark.parametrize("fault", ["wrong-outer", "missing-outer", "missing-inner"])
+def test_result_at_points_does_not_accept_wrong_or_unavailable_axes(
+    monkeypatch: pytest.MonkeyPatch, fault: str,
+) -> None:
+    tree = FWiredTree(numerical_real=[300.0, 350.0])
+    if fault == "missing-outer":
+        tree.solution_info.unavailable.add("getOuterSolnum")
+    elif fault == "missing-inner":
+        tree.solution_info.unavailable.add("getSolnum")
+    numeric_reads = []
+    get_data = FNumericalFeature.getData
+
+    def observed_data(self: FNumericalFeature) -> Any:
+        numeric_reads.append(self.tag_)
+        return get_data(self)
+
+    monkeypatch.setattr(FNumericalFeature, "getData", observed_data)
+    with pytest.raises(ExecutionContractError) as exc_info:
+        dispatch("result.at_points", tree.worker, "Model", {
+            "spec": {"expressions": ["T"], "complex_mode": "real",
+                     "solution": {"dataset": "dset1", "outer": 99 if fault == "wrong-outer" else 1}},
+            "points": [[0.0, 0.0, 0.0], [0.01, 0.01, 0.01]],
+            "coordinate_unit": "m", "frame": "spatial",
+        })
+    if fault == "wrong-outer":
+        assert exc_info.value.code == "INVALID_REQUEST"
+        assert "outer index 99 out of range" in str(exc_info.value)
+    else:
+        assert exc_info.value.code == "SOLUTION_AXIS_METADATA_UNAVAILABLE"
+        assert numeric_reads == []
+    assert tree.numerical_list.tags() == []
 
 
 def test_result_at_points_refuses_an_ignored_dataset_setter_and_cleans_up() -> None:

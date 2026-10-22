@@ -915,6 +915,10 @@ def _effective_input_schema(catalog_schema: Mapping[str, Any], operation_id: str
                 "type": "string", "enum": ["summary", "structure", "dependencies"],
                 "description": "summary includes identity, structure counts, solutions and dependency scope; structure and dependencies return their corresponding detailed inventory.",
             }
+            properties["refresh"] = {
+                "type": "boolean", "default": False,
+                "description": "Reconcile this exact project/session/ModelRef using its current Worker and expected revision; requires project_write. Reports parameters plus shallow-tree identity only, with CAS_NONE scope.",
+            }
     if operation_id == "result.mode_overlap" and isinstance(properties, dict):
         # Managed identities live in the outer execution envelope. Replace
         # the catalog's historical unconstrained definition object with the
@@ -1970,6 +1974,8 @@ def _validate_operation_shape(operation_id: str, arguments: Mapping[str, Any]) -
         detail = arguments.get("detail", "summary")
         if detail not in {"summary", "structure", "dependencies"}:
             raise ExecutionContractError("INVALID_REQUEST", "detail must be summary, structure, or dependencies")
+        if "refresh" in arguments and type(arguments["refresh"]) is not bool:
+            raise ExecutionContractError("INVALID_REQUEST", "refresh must be a boolean")
     elif operation_id == "result.mode_overlap":
         from ._w23_results import validate_request_shape
         validate_request_shape(arguments)

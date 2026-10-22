@@ -1,0 +1,435 @@
+{
+  "schema": "COMSOL_MCP_W17_FIXTURE_COMPATIBILITY_V1",
+  "created_utc": "2026-10-22T17:45:42.419049+00:00",
+  "status": "PASS_W17_SOFTWARE_RELATED_SUITE_INCOMPLETE_MISSING_T044_INPUT",
+  "scope": "Only this unit's W17 synthetic SDK fixtures/expectations and five explicit negative cases; this executor made no Core/Worker/Windows production edit and ran no native engine.",
+  "changed_paths": [
+    "tests/test_g3_w17.py",
+    "docs/universal_mcp_execution/evidence/W17_FIXTURE_COMPATIBILITY.json",
+    "_state/universal-w17-fixture-compatibility"
+  ],
+  "source_binding": {
+    "before_test_sha256": "9cb0da538f0d806c42a1e585f76f72dc42c8b316581309b42a7129a47d5d977c",
+    "after_test_sha256": "c94240766f3749508707c245415f98e751596064ad93f5d7c994999591df737e",
+    "tested_test_copy": {
+      "path": "_state/universal-w17-fixture-compatibility/raw/tested-test_g3_w17.py",
+      "sha256": "c94240766f3749508707c245415f98e751596064ad93f5d7c994999591df737e",
+      "bytes": 82968
+    },
+    "main_evidence_snapshot": {
+      "path": "_state/universal-w17-fixture-compatibility/oldraw/M2_CORE_REPAIR.input.json",
+      "sha256": "b113fcfbd4f67cd1f17c3569d57dbf1da1ee9520bcad919afa3a6699906e06f2",
+      "bytes": 47396
+    },
+    "r2_source_receipt": {
+      "path": "_state/universal-w17-fixture-compatibility/oldraw/r2-SOURCE.json",
+      "sha256": "e03d23ca14ec245f88b152c8cf4afebf0f238bc58bf66209704ed67605a5e152",
+      "bytes": 3695534
+    },
+    "r3_source_receipt": {
+      "path": "_state/universal-w17-fixture-compatibility/oldraw/r3-SOURCE.json",
+      "sha256": "1b27ca5b0b8f68f7609cf209f546744416a35395db470ef5dd3870689b827464",
+      "bytes": 3696889
+    },
+    "complete_related_suite_source_inputs": {
+      "path": "_state/universal-w17-fixture-compatibility/full-related/source-inputs.json",
+      "sha256": "c43a1e62c0b7f827615e0227334446613baf52fa20a16df48c4c8d009f2097f9",
+      "bytes": 27779
+    },
+    "source_after": {
+      "path": "_state/universal-w17-fixture-compatibility/raw/source-after.json",
+      "sha256": "87e4da143e89408f1ed505c1d3ec5d49a236fa6cf1f58d5191e211f927912638",
+      "bytes": 27878
+    },
+    "source_drift_during_complete_related_suite": [],
+    "production_changes_by_this_executor": [],
+    "production_files_unchanged_from_task_start": 161,
+    "parallel_source_change_before_full_suite": {
+      "path": "_state/universal-w17-fixture-compatibility/raw/concurrent-source-change.json",
+      "sha256": "29aeedb714ce2a6caf9dedeb330cca54e70642e12df393e4dad0da8c16a3ceba",
+      "bytes": 1314
+    },
+    "working_tree_vs_frozen_r3_boundary": "Full related suite ran against its exact recorded current working-tree inputs, including this Java file; not an execution of the immutable r3 release package."
+  },
+  "original_failures_preserved": {
+    "expanded_original": {
+      "passed": 357,
+      "failed": 5,
+      "skipped": 0,
+      "total": 362,
+      "command_exit_code": 1,
+      "receipt": {
+        "path": "_state/universal-w17-fixture-compatibility/oldraw/RESULT_EVALUATE_ADJACENT_REGRESSION_ATTEMPT1.json",
+        "sha256": "dd439ed11a0db8d99a40d21b3e5ea05fb315088b3aa654a382612c973fed3d04",
+        "bytes": 3677
+      },
+      "junit": {
+        "path": "_state/universal-w17-fixture-compatibility/oldraw/expanded-adjacent-regression-original.xml",
+        "sha256": "844161cb512a0d0617bc404142bff8785933542da3e154b903d46a1968bf7230",
+        "bytes": 72889
+      },
+      "status": "FAIL_UNCHANGED_NOT_RELABELLED"
+    },
+    "five_individual_frozen_r2_JUnit": [
+      {
+        "test": "tests.test_g3_w17::test_solution_indices_reads_the_outer_axis_from_the_engine",
+        "copy": {
+          "path": "_state/universal-w17-fixture-compatibility/oldraw/r2-individual-w17-outer-axis.xml",
+          "sha256": "55ed7b52bec054cf4245fbff002c6c4bd05200de7bf6ac8ec606ca1790c7a222",
+          "bytes": 1754
+        },
+        "original_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/runtime/r2-individual-w17-outer-axis.xml"
+      },
+      {
+        "test": "tests.test_g3_w17::test_strict_metric_evaluate_reads_back_transient_selection_and_solution_binding",
+        "copy": {
+          "path": "_state/universal-w17-fixture-compatibility/oldraw/r2-individual-w17-strict-selection-message.xml",
+          "sha256": "0e41f90e6b56d1dde1aa1473f3ca26fc23f420229771e85021ee62e1d2bfd8ff",
+          "bytes": 2892
+        },
+        "original_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/runtime/r2-individual-w17-strict-selection-message.xml"
+      },
+      {
+        "test": "tests.test_g3_w17::test_result_at_points_and_coordinate_readback",
+        "copy": {
+          "path": "_state/universal-w17-fixture-compatibility/oldraw/r2-individual-w17-point-readback.xml",
+          "sha256": "2f14ae90aa1c081efbb3c202be2dba27f831e75229a6eec77477af0f7146bae6",
+          "bytes": 2200
+        },
+        "original_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/runtime/r2-individual-w17-point-readback.xml"
+      },
+      {
+        "test": "tests.test_g3_w17::test_result_at_points_rejects_aggregate_getreal_for_multiple_points",
+        "copy": {
+          "path": "_state/universal-w17-fixture-compatibility/oldraw/r2-individual-w17-aggregate-getreal.xml",
+          "sha256": "99c3e73adfc6de0016c5e15cf72ca353720a755e1658f094e09fd531702f05cb",
+          "bytes": 12771
+        },
+        "original_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/runtime/r2-individual-w17-aggregate-getreal.xml"
+      },
+      {
+        "test": "tests.test_t044_r10_stationary_count_only::test_exact_r9_actual_getter_shape_is_preserved_without_parameter_reinterpretation",
+        "copy": {
+          "path": "_state/universal-w17-fixture-compatibility/oldraw/r2-individual-t044-r9-fixture.xml",
+          "sha256": "cc56239f598ecb6d0405122e0b3f0c7d28650906a0a532cba05f1e291dfe717f",
+          "bytes": 2550
+        },
+        "original_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-core-repair-20261023-r3/runtime/r2-individual-t044-r9-fixture.xml"
+      }
+    ],
+    "current_four_unchanged_reproduction": {
+      "tests": 4,
+      "passed": 0,
+      "failed": 4,
+      "errors": 0,
+      "skipped": 0,
+      "failure_names": [
+        "test_solution_indices_reads_the_outer_axis_from_the_engine",
+        "test_strict_metric_evaluate_reads_back_transient_selection_and_solution_binding",
+        "test_result_at_points_and_coordinate_readback",
+        "test_result_at_points_rejects_aggregate_getreal_for_multiple_points"
+      ],
+      "command": {
+        "path": "_state/universal-w17-fixture-compatibility/before/current/command.json",
+        "sha256": "826f20f419d7fa865a97c4ec7cc9a25c0dd80fcac249cfd14bfd0b58162a842b",
+        "bytes": 1177
+      },
+      "junit": {
+        "path": "_state/universal-w17-fixture-compatibility/before/current/results.xml",
+        "sha256": "7ce1a98702e9efb39321b3e5a7fba1b57a6ac1b911531fbfb56fdab43dda12c6",
+        "bytes": 9006
+      },
+      "raw": {
+        "path": "_state/universal-w17-fixture-compatibility/before/current/pytest.log",
+        "sha256": "701e747bfd023debd363f28c9d08aaa8ef08d9c83dfce053c3feccb0373fdc1c",
+        "bytes": 7949
+      }
+    }
+  },
+  "pre_core_attribution": {
+    "claim": "These four exact W17 compatibility failures also reproduce on the exact original d56 package source and original identical test. This establishes pre-Core provenance for these four only; r2 alone would establish only pre-r3 provenance.",
+    "commit": "d56c05b2b98d10f8f7ed9777c8b39a10e29455c7",
+    "package_source_capture": {
+      "path": "_state/universal-w17-fixture-compatibility/raw/d56-readonly-capture.json",
+      "sha256": "60a4f2a5891125499f799a9d1cfe6596e15bf5754b5f4c45ddb5ebbc11d940bb",
+      "bytes": 30052
+    },
+    "git_read_only_archive": {
+      "path": "_state/universal-w17-fixture-compatibility/oldraw/d56-package-and-w17.tar",
+      "sha256": "eff9ff44597bcd2c73adc8049bdc0f48c5e6c3dfa156c4204cd7b7ee1fd7e530",
+      "bytes": 14376960
+    },
+    "baseline_test_sha256": "9cb0da538f0d806c42a1e585f76f72dc42c8b316581309b42a7129a47d5d977c",
+    "result": {
+      "tests": 4,
+      "passed": 0,
+      "failed": 4,
+      "errors": 0,
+      "skipped": 0,
+      "failure_names": [
+        "test_solution_indices_reads_the_outer_axis_from_the_engine",
+        "test_strict_metric_evaluate_reads_back_transient_selection_and_solution_binding",
+        "test_result_at_points_and_coordinate_readback",
+        "test_result_at_points_rejects_aggregate_getreal_for_multiple_points"
+      ]
+    },
+    "command": {
+      "path": "_state/universal-w17-fixture-compatibility/before/d56/command.json",
+      "sha256": "caf1128a2960277ad9c75a52bf9f87c1b8a5b2630fdad6f346f3b905a1c7f4cf",
+      "bytes": 1232
+    },
+    "junit": {
+      "path": "_state/universal-w17-fixture-compatibility/before/d56/results.xml",
+      "sha256": "8fe22a538305c10c68e9aca96d177809fd65d6b3b0936cc7146b3799ed192dde",
+      "bytes": 8922
+    },
+    "raw": {
+      "path": "_state/universal-w17-fixture-compatibility/before/d56/pytest.log",
+      "sha256": "e3402fd4b781834c6cc110d8308f4409c978eba9290de9acc82d8e13a77db926",
+      "bytes": 7865
+    },
+    "binding_note": "Subprocess cwd and PYTHONPATH select only captured package; traceback confirms old _g3_results result_at_points call at line6937 versus current7200. No mixed production overlay or Git checkout/reset.",
+    "comparison": {
+      "path": "_state/universal-w17-fixture-compatibility/raw/four-case-comparison.json",
+      "sha256": "9d92ad3af6c4c1ebaf8e388af89aaeb20a8daf241cd0dad479d11f9b17ef04eb",
+      "bytes": 1933
+    }
+  },
+  "repairs": [
+    {
+      "case": "test_solution_indices_reads_the_outer_axis_from_the_engine",
+      "root_cause": "FWiredTree lacked five supplemental SolverSequence getter observations.",
+      "change": "Provide getSequenceType/isAttached/getSize/getSizeMulti/getPNames with documented shapes; support getPVals() time-vector versus getPVals(int) typed parameter row, getPValsImag(int), SolutionInfo.getUnit and getLevels. Record all calls and retain unavailable-method guards. Reject unknown outer/solnum instead of fabricating a row.",
+      "assertions": "Original outer=[1,2], inner=[1,2], complete flag, level names and read_errors=[] unchanged. Added actual getter-use, overload and wrong-outer checks. Existing refused-SolutionInfo and unitted-time negatives still pass."
+    },
+    {
+      "case": "test_strict_metric_evaluate_reads_back_transient_selection_and_solution_binding",
+      "root_cause": "Refusal was correct; regex expected obsolete wording.",
+      "change": "Match the exact current transient selection error and assert typed SELECTION_READBACK_MISMATCH.",
+      "assertions": "Keep every original positive strict-evidence/ROI/solution-pair/unit assertion. Membership, geometry and dimension mismatches now prove getData/getReal are never called and ephemeral features are removed."
+    },
+    {
+      "case": "test_result_at_points_and_coordinate_readback",
+      "root_cause": "Exact expected feature_readback dictionary omitted selection_application.",
+      "change": "Retain exact dictionary comparison and all original entries, adding selection_application={} for this no-selection request.",
+      "assertions": "Point count, dataset->solution/component/geometry binding, coordinate verification and cleanup unchanged; no subset-only or ignored-new-fields assertion."
+    },
+    {
+      "case": "test_result_at_points_rejects_aggregate_getreal_for_multiple_points",
+      "root_cause": "Binding lambda rejected the new private keyword before reaching the intended aggregate getter refusal.",
+      "change": "Use exact model/solution_tag plus keyword-only _skip_empty_outer_tuple_diagnostic=False signature; record its actual false argument.",
+      "assertions": "Still require FIELD_ARRAY_SHAPE_MISMATCH, now additionally prove attempted getData->aggregate getReal fallback, getData/getImagData refusal message and cleanup. No arbitrary **kwargs swallowing."
+    }
+  ],
+  "assertion_preservation": {
+    "original_test_functions": 31,
+    "unchanged_original_function_AST": 27,
+    "only_four_requested_test_functions_updated": [
+      "test_solution_indices_reads_the_outer_axis_from_the_engine",
+      "test_strict_metric_evaluate_reads_back_transient_selection_and_solution_binding",
+      "test_result_at_points_and_coordinate_readback",
+      "test_result_at_points_rejects_aggregate_getreal_for_multiple_points"
+    ],
+    "original_assertion_constraints_removed": 0,
+    "sole_exact_shape_extension": {
+      "test": "test_result_at_points_and_coordinate_readback",
+      "old_fields_preserved": [
+        "data",
+        "data_status",
+        "source"
+      ],
+      "added_exact_field": {
+        "selection_application": {}
+      }
+    },
+    "audit": {
+      "path": "_state/universal-w17-fixture-compatibility/raw/assertion-preservation.json",
+      "sha256": "2f65231c72abef66b93efe4706cf0d73fef13264e5be7f5ff1cb3e0f19e6a484",
+      "bytes": 4842
+    },
+    "diff": {
+      "path": "_state/universal-w17-fixture-compatibility/raw/test-change.diff",
+      "sha256": "66dad1743dc982e5ef4b62d24cd16100bd0474bafc925fc46cd7d9cfab723e79",
+      "bytes": 11376
+    }
+  },
+  "negative_controls": {
+    "added_cases": 5,
+    "geometry_and_dimension": {
+      "cases": 2,
+      "expected_code": "SELECTION_READBACK_MISMATCH",
+      "getData_getReal_calls": 0,
+      "cleanup_verified": true
+    },
+    "membership_existing_case_strengthened": {
+      "expected_code": "SELECTION_READBACK_MISMATCH",
+      "getData_getReal_calls": 0,
+      "cleanup_verified": true
+    },
+    "wrong_outer": {
+      "expected_code": "INVALID_REQUEST",
+      "exact_request": "outer=99",
+      "error_requires": "outer index 99 out of range",
+      "no_successful_field_payload": true,
+      "pre_getData_claim": false
+    },
+    "missing_outer_or_inner": {
+      "cases": 2,
+      "refused_getters": [
+        "getOuterSolnum",
+        "getSolnum"
+      ],
+      "explicit_outer": 1,
+      "expected_code": "SOLUTION_AXIS_METADATA_UNAVAILABLE",
+      "getData_calls": 0,
+      "cleanup_verified": true
+    },
+    "no_native_or_scientific_claim": true
+  },
+  "new_results": {
+    "W17_only_debug": {
+      "tests": 36,
+      "passed": 36,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failure_names": [],
+      "command": {
+        "path": "_state/universal-w17-fixture-compatibility/after-w17/command.json",
+        "sha256": "c069222cab284225e507c86aac68836ebb3b4bd28fd2eb35eba47b2926fdcacd",
+        "bytes": 690
+      },
+      "junit": {
+        "path": "_state/universal-w17-fixture-compatibility/after-w17/results.xml",
+        "sha256": "cf20c1b6762fb889bd6fc386afdfe201e70a5e26bd26eff0b8d85db0dbf6d525",
+        "bytes": 4712
+      },
+      "note": "Before final removal of redundant overwritten legacy getter assignment/comment cleanup; final exact code validated by complete related suite below."
+    },
+    "complete_related_suite_once": {
+      "tests": 367,
+      "passed": 366,
+      "failed": 1,
+      "errors": 0,
+      "skipped": 0,
+      "failure_names": [
+        "test_exact_r9_actual_getter_shape_is_preserved_without_parameter_reinterpretation"
+      ],
+      "exit_code": 1,
+      "status": "FAIL_MISSING_HISTORICAL_INPUT_ONLY",
+      "command": {
+        "path": "_state/universal-w17-fixture-compatibility/full-related/command.json",
+        "sha256": "c6cbcaaf741e77a101682ccc1fe8ab904494267b2e6e54f4e978fe27579c1f44",
+        "bytes": 1008
+      },
+      "junit": {
+        "path": "_state/universal-w17-fixture-compatibility/full-related/results.xml",
+        "sha256": "56391758458064d10c8b4a540f1c698f258f060fcac1bda33f1fdd402d455ee9",
+        "bytes": 54692
+      },
+      "stdout": {
+        "path": "_state/universal-w17-fixture-compatibility/full-related/pytest.log",
+        "sha256": "c3f9511b02a00d75d75738491d1dab217cdc3835033732de50f83445754beea4",
+        "bytes": 1853
+      },
+      "stderr": {
+        "path": "_state/universal-w17-fixture-compatibility/full-related/pytest.stderr.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "per_module": {
+        "tests.test_g3_results": {
+          "tests": 251,
+          "passed": 251,
+          "failed": 0,
+          "skipped": 0
+        },
+        "tests.test_g3_w17": {
+          "tests": 36,
+          "passed": 36,
+          "failed": 0,
+          "skipped": 0
+        },
+        "tests.test_result_budget": {
+          "tests": 10,
+          "passed": 10,
+          "failed": 0,
+          "skipped": 0
+        },
+        "tests.test_t044_r10_stationary_count_only": {
+          "tests": 70,
+          "passed": 69,
+          "failed": 1,
+          "skipped": 0
+        }
+      },
+      "W17_final_exact_code": {
+        "original_cases_passed": 31,
+        "new_negative_cases_passed": 5,
+        "total_passed": 36,
+        "failed": 0,
+        "skipped": 0
+      },
+      "difference_from_old_expanded": {
+        "original_failures_repaired": 4,
+        "new_negative_cases_passed": 5,
+        "historical_input_case_still_not_executed": 1
+      },
+      "no_full_repository_rerun": true
+    }
+  },
+  "T044_historical_input": {
+    "test": "test_exact_r9_actual_getter_shape_is_preserved_without_parameter_reinterpretation",
+    "acceptance_status": "NOT_RUN_MISSING_HISTORICAL_R9_EVIDENCE",
+    "raw_JUnit_status": "FAIL_FileNotFoundError",
+    "required_path": "_state/t044-r9-actual-partial-ff2952bf2c3c/MAIN_ACTUAL_TERMINAL_EVIDENCE_R1.json",
+    "search": {
+      "path": "_state/universal-w17-fixture-compatibility/raw/historical-file-search.json",
+      "sha256": "4f821bd0f6f2cd8ae039839b2a45c2e85dd9fe166f3dc3ebc8a57e0bb83eaf96",
+      "bytes": 421
+    },
+    "matches": [],
+    "search_attempts": 1,
+    "no_more_search_or_reconstruction": true,
+    "test_or_skip_marker_modified": false,
+    "not_promoted_to_PASS": true,
+    "decision": "Main owns any later material restoration; no blocking production fix found in these four W17 cases."
+  },
+  "raw_retention": {
+    "index": {
+      "path": "_state/universal-w17-fixture-compatibility/raw/raw-output-index.json",
+      "sha256": "8a8c3e6e9de09c8c25b0f1d4098daeafbc41c8ad52bd08293fb4b3f10fb86c38",
+      "bytes": 51242
+    },
+    "owned_ephemeral_work_archive": {
+      "path": "_state/universal-w17-fixture-compatibility/raw/related-pytest-work-files.tar.gz",
+      "sha256": "60e6e628a73455d048e663c4d6106e9d651b4bf1f913b89b81053c0d71045c6b",
+      "bytes": 666582
+    },
+    "verified_archive_manifest": {
+      "path": "_state/universal-w17-fixture-compatibility/raw/related-pytest-work-files.manifest.json",
+      "sha256": "6538b625627a9c66697095ff5309b73da72380d0e7384bbae0e6c171df7cc99d",
+      "bytes": 74200
+    },
+    "original_failed_sources_and_JUnit_separate_from_new_results": true,
+    "provenance_audit_failure_and_correction": {
+      "path": "_state/universal-w17-fixture-compatibility/raw/final-provenance-audit-attempt1.log",
+      "sha256": "530a68d67659c545e05fec7ce3e9a7a2fe0cfb8a8cd2d04dd2537ab022af8ad1",
+      "bytes": 470
+    }
+  },
+  "not_run": {
+    "COMSOL_Server_JVM_GUI": "NOT_RUN",
+    "native_SDK_or_science_validation": "NOT_RUN",
+    "Windows_OS_isolation": "NOT_RUN",
+    "release_rebuild_or_new_freeze": "NOT_RUN",
+    "Git_state_progress_Main_final_acceptance_changes": "NOT_RUN_MAIN_OWNS"
+  },
+  "main_review": {
+    "state": "MAIN_ACCEPTED_TEST_FIXTURE_COMPATIBILITY_ONLY",
+    "recorded_utc": "2026-10-22T17:52:32.738122+00:00",
+    "path": "_state/universal-main-review/20261023-core-r3/MAIN_CORE_SOFTWARE_REVIEW.json",
+    "sha256": "e5951f6ae92bd11fae6c2de01a9c827ae6d63c11f879617fc4bbe576e81ea591",
+    "scope": "36 W17 software PASS; full related366/1 remains FAIL with historical missing input NOT_RUN; no production/native acceptance by this fixture unit."
+  }
+}

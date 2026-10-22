@@ -20,7 +20,7 @@ def _java_major(home):
     return int(match.group(1)) if match else None
 
 
-def test_production_compile_snapshot_compiles_and_tests_each_w24_artifact_alone(tmp_path):
+def test_production_compile_snapshot_rejects_global_model_access_and_keeps_injected_model_java(tmp_path):
     comsol_root = Path(os.environ.get("COMSOL_ROOT", str(DEFAULT_COMSOL))).expanduser()
     configured_jdk = os.environ.get("COMSOL_TEST_JDK11") or os.environ.get("COMSOL_JAVA_HOME") or os.environ.get("JAVA_HOME")
     jdk = Path(configured_jdk).expanduser() if configured_jdk else DEFAULT_JDK11
@@ -55,5 +55,5 @@ def test_production_compile_snapshot_compiles_and_tests_each_w24_artifact_alone(
     )
     (tmp_path / "single-source-harness.log").write_text(result.stdout + result.stderr, encoding="utf-8")
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "PASS_W24_SINGLE_SOURCE_COMPILE_AND_HELPER_CONTROLS" in result.stdout
+    assert "PASS_W24_GLOBAL_SCOPE_BOUNDARY_AND_SAFE_INJECTED_MODEL" in result.stdout
     assert "engine=NOT_RUN Worker_constructor=NOT_RUN model=NOT_RUN" in result.stdout

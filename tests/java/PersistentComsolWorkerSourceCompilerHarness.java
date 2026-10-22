@@ -5,9 +5,25 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.security.MessageDigest;
 import java.util.*;
+import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.RoundEnvironment;
+import javax.annotation.processing.SupportedAnnotationTypes;
+import javax.annotation.processing.SupportedSourceVersion;
+import javax.lang.model.SourceVersion;
+import javax.lang.model.element.TypeElement;
 
 /** Actual production snapshot and javac helper; no Worker constructor, socket, ModelUtil or model. */
 public final class PersistentComsolWorkerSourceCompilerHarness {
+  @SupportedAnnotationTypes("*")
+  @SupportedSourceVersion(SourceVersion.RELEASE_11)
+  public static final class MarkerProcessor extends AbstractProcessor {
+    @Override public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment round) {
+      String marker=System.getProperty("m2.processor.marker");
+      if(marker!=null) try { Files.write(Paths.get(marker),new byte[]{1}); }
+      catch(Exception e) { throw new RuntimeException(e); }
+      return false;
+    }
+  }
   static Method source, compile;
   static Path root;
   static int checks;
@@ -111,7 +127,52 @@ public final class PersistentComsolWorkerSourceCompilerHarness {
     }
     Path forbidden=registered("public class Forbidden { static { } }");
     try { actualCompile.invoke(worker,snapshot(forbidden,"Forbidden"));throw new AssertionError("static initializer accepted"); }
-    catch(InvocationTargetException ex) { check(ex.getCause().getMessage().contains("static initializer"),"actual trusted static initializer rejection"); }
+    catch(InvocationTargetException ex) { check(ex.getCause().getMessage().contains("static initializer"),"actual javac AST static initializer rejection"); }
+    for (String blocked : new String[] {
+        "public class UsesCreate { Object run(){ return com.comsol.model.util.ModelUtil.create(\"x\"); } }",
+        "public class UsesCreateUnique { Object run(){ return com.comsol.model.util.ModelUtil.createUnique(\"x\"); } }",
+        "public class UsesClear { void run(){ com.comsol.model.util.ModelUtil.clear(); } }",
+        "public class UsesRemove { void run(){ com.comsol.model.util.ModelUtil.remove(\"x\"); } }",
+        "public class UsesModel { Object run(){ return com.comsol.model.util.ModelUtil.model(\"x\"); } }",
+        "public class UsesLoad { Object run() throws Exception { return com.comsol.model.util.ModelUtil.load(\"x\", \"x.mph\"); } }",
+        "public class UsesConnect { void run(){ com.comsol.model.util.ModelUtil.connect(); } }",
+        "public class UsesDisconnect { void run(){ com.comsol.model.util.ModelUtil.disconnect(); } }",
+        "public class UsesTags { String[] run(){ return com.comsol.model.util.ModelUtil.tags(); } }",
+        "import static com.comsol.model.util.ModelUtil.create; public class UsesStaticImport { Object run(){ return create(\"x\"); } }",
+        "import static com.comsol.model.util.ModelUtil.tags; public class UsesGlobalTags { String[] run(){ return tags(); } }",
+        "public class UsesMethodRef { Runnable run(){ return com.comsol.model.util.ModelUtil::clear; } }",
+        "public class UsesUnicode { Object run(){ return com.comsol.model.util.ModelUtil.cr\\u0065ate(\"x\"); } }"
+    }) {
+      Path p=registered(blocked);
+      try { actualCompile.invoke(worker,snapshot(p,"Blocked"));throw new AssertionError("global ModelUtil operation accepted: "+blocked); }
+      catch(InvocationTargetException ex) { check(ex.getCause().getMessage().contains("ModelUtil"),"resolved ModelUtil boundary: "+blocked); }
+    }
+    Path harmless=registered("package example; class ModelUtil { static Object model(String value){return null;} } public class Harmless { String text=\"ModelUtil.create\"; Object run(){ /* ModelUtil.clear(); */ return ModelUtil.model(text); } }");
+    check(Boolean.TRUE.equals(((Map<?,?>)actualCompile.invoke(worker,snapshot(harmless,"Harmless"))).get("compiled")),
+        "comments, string contents, and non-COMSOL ModelUtil lookalike remain ordinary Java");
+    Path metadata=registered("public class MetadataOnly { String run(){ return com.comsol.model.util.ModelUtil.getComsolVersion(); } }");
+    check(Boolean.TRUE.equals(((Map<?,?>)actualCompile.invoke(worker,snapshot(metadata,"MetadataOnly"))).get("compiled")),
+        "explicitly reviewed read-only ModelUtil version metadata remains usable");
+    Path fakeStatic=registered("public class FakeStatic { String text=\"static { ModelUtil.clear(); }\"; /* static { ignored(); } */ }");
+    check(Boolean.TRUE.equals(((Map<?,?>)actualCompile.invoke(worker,snapshot(fakeStatic,"FakeStatic"))).get("compiled")),
+        "static initializer text in comments and literals is not treated as an AST initializer");
+    Path serviceRoot=root.resolve("processor-service");
+    Path service=serviceRoot.resolve("META-INF/services/javax.annotation.processing.Processor");
+    Files.createDirectories(service.getParent());
+    Files.write(service,"comsol_mcp.worker_java.PersistentComsolWorkerSourceCompilerHarness$MarkerProcessor\n".getBytes(StandardCharsets.UTF_8));
+    Path marker=root.resolve("annotation-processor-ran");
+    String oldClasspath=System.getProperty("java.class.path","");
+    System.setProperty("java.class.path",oldClasspath+java.io.File.pathSeparator+serviceRoot);
+    System.setProperty("m2.processor.marker",marker.toString());
+    try {
+      Path processorProbe=registered("@Deprecated public class ProcessorProbe {} ");
+      check(Boolean.TRUE.equals(((Map<?,?>)actualCompile.invoke(worker,snapshot(processorProbe,"ProcessorProbe"))).get("compiled")),
+          "annotated project source compiles with processors disabled");
+      check(!Files.exists(marker),"javac -proc:none prevents annotation-processor side effects");
+    } finally {
+      System.setProperty("java.class.path",oldClasspath);
+      System.clearProperty("m2.processor.marker");
+    }
     for (String name : new String[]{"P0ParameterReadback.java", "P0ExportJava.java"}) {
       Path fixture=Paths.get(args[1]).resolve(name);byte[] bytes=Files.readAllBytes(fixture);
       Path registered=root.resolve(sha(bytes)+".java");Files.write(registered,bytes);

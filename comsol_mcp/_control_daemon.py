@@ -826,6 +826,10 @@ class ControlDaemon:
                 if not isinstance(inner, str) or not isinstance(inner_args, dict):
                     break
                 nested_operation, nested_arguments = inner, inner_args
+            if nested_operation in {"model.inspect", "model_inspect"} and isinstance(nested_arguments, dict):
+                self._validate_model_inspect_refresh_binding(
+                    nested_operation, nested_arguments, execution,
+                )
             if nested_operation == "result.at_points" and isinstance(nested_arguments, dict):
                 # This request-dependent unit rule must fail before durable
                 # operation/job admission, not only later inside the adapter.
@@ -5844,10 +5848,9 @@ class ControlDaemon:
                     data={"session_id": session_id, "server_stopped": False,
                           "worker_handle_preserved": True}, safe_retry=False,
                 ), "FAILED")
-            pending = [job for job in self._session_jobs_for_project(project_id)
-                       if job.get("operation_id") != record["operation_id"]
-                       and self._job_belongs_to_session(job, project_id, session_id)
-                       and job.get("status") not in TERMINAL]
+            pending = self._session_has_unresolved_jobs(
+                project_id, session_id, excluding_operation_id=record["operation_id"],
+            )
             if pending:
                 return self._finish(record, self._error(
                     "SESSION_BINDING_BUSY", "owned Server has unresolved accepted work and remains running",
@@ -8599,6 +8602,62 @@ class ControlDaemon:
         }:
             return lifecycle_resolution
         return isinstance(metadata, Mapping) and metadata.get("reconciled_quiescent") is True
+
+    def _independent_owned_server_contexts(self, first: Any, second: Any) -> bool:
+        """Prove two contexts use distinct observed MCP-owned Server births.
+
+        Project ids, ModelRefs, Worker epochs, and descriptive server ids are
+        deliberately not physical-resource evidence. Shared or unobserved
+        endpoints remain conflicting.
+        """
+        from ._session_context import CanonicalSocket, OwnedServerProcessIdentity
+
+        def evidence(context):
+            endpoint = getattr(context, "endpoint", None)
+            peer = getattr(endpoint, "observed_peer", None)
+            owner = getattr(endpoint, "owned_process", None)
+            if (getattr(context, "server_ownership", None) != "mcp_managed"
+                    or type(peer) is not CanonicalSocket
+                    or type(owner) is not OwnedServerProcessIdentity
+                    or getattr(context, "process_identity", None) is not owner
+                    or not owner.attests_peer(peer)):
+                return None
+            return peer, owner
+
+        left, right = evidence(first), evidence(second)
+        if left is None or right is None:
+            return False
+        left_peer, left_owner = left
+        right_peer, right_owner = right
+        if left_peer == right_peer:
+            return False
+        if (left_owner.pid, left_owner.birth) == (right_owner.pid, right_owner.birth):
+            return False
+        # An observed peer that is attested by the other process, or a
+        # listener alias in either direction, means the endpoints may still
+        # reach one physical Server despite differing requested host strings.
+        if (left_owner.attests_peer(right_peer) or right_owner.attests_peer(left_peer)
+                or self._endpoint_may_alias_owned_listener(
+                    left_peer.address, left_peer.port, right_peer,
+                )
+                or self._endpoint_may_alias_owned_listener(
+                    right_peer.address, right_peer.port, left_peer,
+                )):
+            return False
+        return True
+
+    def _unknown_job_conflicts_with_execution(
+        self, job: Mapping[str, Any], execution: Mapping[str, Any],
+    ) -> bool:
+        """Fail closed unless the job and request have distinct physical owned Servers."""
+        try:
+            current = self._execution_session_context(execution)
+            unresolved = self._resolve_job_runtime_context(job)
+        except Exception:
+            return True
+        if current is None or unresolved is None:
+            return True
+        return not self._independent_owned_server_contexts(current, unresolved)
 
     def _session_job_events(self, job_id: str) -> list[dict[str, Any]]:
         events: list[dict[str, Any]] = []
@@ -12019,7 +12078,7 @@ class ControlDaemon:
                 effect = None
         if effect is None:
             effect = _g2_registry.LEGACY_TOOL_EFFECTS.get(scoped_operation)
-        if scoped_operation == "model_inspect":
+        if scoped_operation in {"model_inspect", "model.inspect"}:
             scoped_arguments = (
                 arguments.get("arguments", {})
                 if operation in {"registry_call", "operation_call"}
@@ -12050,6 +12109,66 @@ class ControlDaemon:
         if permission is None:
             raise ExecutionContractError("PROJECT_SCOPE_UNSUPPORTED", "project-scoped operation has no enforced effect mapping")
         self.project_authority.authorize_operation(project_id, permission)
+
+    def _validate_model_inspect_refresh_binding(
+        self, operation: str, arguments: Mapping[str, Any], execution: Mapping[str, Any],
+    ) -> None:
+        """Reject refresh without a live, exact managed model binding before queue admission."""
+        refresh = arguments.get("refresh", False)
+        if type(refresh) is not bool:
+            raise ExecutionContractError("INVALID_REQUEST", "model.inspect refresh must be a boolean")
+        nested_identity = {"project_id", "session_id", "model_ref", "expected_revision",
+                          "idempotency_key", "request_id"}
+        if nested_identity.intersection(arguments):
+            raise ExecutionContractError(
+                "INVALID_REQUEST", "model.inspect identity belongs in the outer execution envelope",
+            )
+        if not refresh:
+            return
+        project_id = execution.get("project_id")
+        session_id = execution.get("session_id")
+        raw_ref = execution.get("model_ref")
+        revision = execution.get("expected_revision")
+        if not isinstance(project_id, str) or not project_id:
+            raise ExecutionContractError("PROJECT_IDENTITY_REQUIRED", "model.inspect refresh requires execution.project_id")
+        if not isinstance(session_id, str) or not session_id:
+            raise ExecutionContractError("MODEL_IDENTITY_REQUIRED", "model.inspect refresh requires execution.session_id")
+        if not isinstance(raw_ref, dict):
+            raise ExecutionContractError("MODEL_IDENTITY_REQUIRED", "model.inspect refresh requires an exact outer ModelRef")
+        if isinstance(revision, bool) or not isinstance(revision, int) or revision < 0:
+            raise ExecutionContractError("REVISION_CONFLICT", "model.inspect refresh requires a non-negative execution.expected_revision")
+        from ._execution_contract import model_ref_from_mapping
+        try:
+            ref = model_ref_from_mapping(raw_ref)
+        except (ExecutionContractError, TypeError, ValueError) as exc:
+            raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "model.inspect refresh ModelRef is malformed") from exc
+        if ref.session_id != session_id:
+            raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "model.inspect refresh ModelRef session differs from execution.session_id")
+        context = self._execution_session_context(execution)
+        if context is None:
+            raise ExecutionContractError(
+                "WORKER_BINDING_UNKNOWN", "model.inspect refresh requires the exact registered managed session; default Server fallback is refused",
+            )
+        if (context.project_id != project_id or context.session_id != session_id
+                or context.backend is None or context.worker is None or context.service is None
+                or context.backend.worker is not context.worker or context.backend.service is not context.service
+                or context.worker_epoch != context.endpoint.worker_epoch
+                or context.client_connected is not True or context.client_retired is not False):
+            raise ExecutionContractError("WORKER_BINDING_MISMATCH", "model.inspect refresh session/Worker epoch binding is incomplete or stale")
+        lifecycle = self.session_lifecycle.get(project_id, session_id)
+        if (not isinstance(lifecycle, Mapping) or lifecycle.get("state") != "CONNECTED"
+                or lifecycle.get("client_state") != "CONNECTED"
+                or lifecycle.get("worker_instance_id") != context.worker_instance_id
+                or lifecycle.get("worker_epoch") != context.worker_epoch):
+            raise ExecutionContractError("WORKER_BINDING_MISMATCH", "model.inspect refresh lifecycle does not confirm this active Worker epoch")
+        if context.service.ledger.session_id != session_id:
+            raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "model.inspect refresh ledger session differs from execution.session_id")
+        state = context.service.ledger._state_for(ref)
+        if state.revision != revision:
+            raise ExecutionContractError("REVISION_CONFLICT", "model.inspect refresh expected_revision is stale")
+        binding = context.backend.model_project_binding(ref.as_dict())
+        if binding.get("attribution") != "PROJECT_BOUND" or binding.get("project_id") != project_id:
+            raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "model.inspect refresh ModelRef is not bound to execution.project_id")
 
     def _dispatch_catalog_job_resume(self, inner_arguments: dict[str, Any], *, execution: dict[str, Any], timeouts: dict[str, Any]) -> dict[str, Any]:
         source_id = inner_arguments.get("job_id") if isinstance(inner_arguments, Mapping) else None
@@ -12331,7 +12450,9 @@ class ControlDaemon:
                       if job["job_id"] != job_id
                       and job["status"] in {"UNKNOWN", "RECONCILING"}
                       and not self._job_quiescence_proven(job)]
-        if unresolved and operation not in {"server_connect", "model_inspect"}:
+        conflicting = [job for job in unresolved
+                       if self._unknown_job_conflicts_with_execution(job, execution)]
+        if conflicting:
             return self._finish(record, self._error("EXECUTION_STATE_UNKNOWN", "reconcile unfinished engine work before new operations"), "FAILED")
         disk_admission_required = False
         memory_admission_required = False

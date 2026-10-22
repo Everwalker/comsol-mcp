@@ -1210,10 +1210,15 @@ class ManagedBackend:
             if operation == "model_adopt":
                 return self.adopt(arguments["model_tag"], project_id=execution.get("project_id"))
             if operation == "model_inspect":
+                refresh = self._validate_model_inspect_refresh(arguments, execution)
                 if ref is None:
                     raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "model_ref is required")
-                if arguments.get("refresh", False):
-                    return {"success": True, "data": {}, **self.service.reconcile(ref)}
+                if refresh:
+                    reconciled = self.service.reconcile(ref)
+                    return {"success": True, "data": {
+                        "model_snapshot": reconciled.get("model_snapshot"),
+                        "scope": "parameters+shallow_tree_identity; CAS_NONE; not full-model certification",
+                    }, **reconciled}
                 return {"success": True, "data": {}, **self.service.inspect(ref)}
             if operation in {"server_start", "server_disconnect", "prune_loaded_models"}:
                 raise ExecutionContractError("PERMISSION_DENIED", "shared-server lifecycle changes are not enabled by this backend")
@@ -2081,9 +2086,51 @@ class ManagedBackend:
             },
         }
 
+    def _validate_model_inspect_refresh(self, arguments, execution):
+        """Require refresh to use the exact active managed session and revision."""
+        refresh = arguments.get("refresh", False)
+        if type(refresh) is not bool:
+            raise ExecutionContractError("INVALID_REQUEST", "model.inspect refresh must be a boolean")
+        if not refresh:
+            return False
+        project_id = execution.get("project_id")
+        session_id = execution.get("session_id")
+        raw_ref = execution.get("model_ref")
+        revision = execution.get("expected_revision")
+        if (not isinstance(project_id, str) or not project_id
+                or not isinstance(session_id, str) or not session_id
+                or not isinstance(raw_ref, Mapping)):
+            raise ExecutionContractError("MODEL_IDENTITY_REQUIRED", "model.inspect refresh requires outer project/session/ModelRef identity")
+        if isinstance(revision, bool) or not isinstance(revision, int) or revision < 0:
+            raise ExecutionContractError("REVISION_CONFLICT", "model.inspect refresh requires a non-negative expected_revision")
+        from ._execution_contract import model_ref_from_mapping
+        ref = model_ref_from_mapping(dict(raw_ref))
+        if ref.session_id != session_id:
+            raise ExecutionContractError("MODEL_IDENTITY_MISMATCH", "model.inspect refresh ModelRef session differs from execution.session_id")
+        selected = active_session_context()
+        if (selected is None or selected.backend is not self or selected.worker is not self.worker
+                or selected.service is not self.service or selected.project_id != project_id
+                or selected.session_id != session_id
+                or selected.worker_epoch != selected.endpoint.worker_epoch
+                or selected.client_connected is not True or selected.client_retired is not False):
+            raise ExecutionContractError("WORKER_BINDING_MISMATCH", "model.inspect refresh is not bound to the current registered Worker epoch")
+        state = self.service.ledger._state_for(ref)
+        if state.revision != revision:
+            raise ExecutionContractError("REVISION_CONFLICT", "model.inspect refresh expected_revision is stale")
+        binding = self.model_project_binding(ref.as_dict())
+        if binding.get("attribution") != "PROJECT_BOUND" or binding.get("project_id") != project_id:
+            raise ExecutionContractError("PROJECT_IDENTITY_MISMATCH", "model.inspect refresh ModelRef is not bound to execution.project_id")
+        if "project_write" not in self.service.ledger.permissions:
+            raise ExecutionContractError("PERMISSION_DENIED", "permission required: project_write")
+        return True
+
     def _invoke_g2_model(self, operation, arguments, execution, operation_id, event_callback):
         if self.service is None or self.worker is None:
             raise ExecutionContractError("ENGINE_UNRESPONSIVE", "a connected persistent Worker is required")
+        refresh_model_inspection = (
+            self._validate_model_inspect_refresh(arguments, execution)
+            if operation == "model.inspect" else False
+        )
         if operation in {"model.list", "model.create", "model.load"}:
             return self._invoke_g3_session_model(operation, arguments, execution, operation_id)
         if operation in {"model.tree", "model.save", "model.clone", "model.close",
@@ -2159,6 +2206,10 @@ class ManagedBackend:
                 raise ExecutionContractError("INVALID_REQUEST", "server_model_tag must be a non-empty string")
             return self.adopt(tag, project_id=execution.get("project_id"))
         ref_mapping = execution.get("model_ref") or arguments.get("model_ref")
+        if refresh_model_inspection:
+            # Refresh cannot select the legacy current model. The exact outer
+            # ModelRef was validated against this registered session's epoch.
+            ref_mapping = execution["model_ref"]
         if not isinstance(ref_mapping, dict):
             from ._server import session_server as srv
             cur = getattr(srv, "_current_model", None)
@@ -2255,12 +2306,14 @@ class ManagedBackend:
                 prepared_a = prepare_node_action(self.worker, ref.model_tag, operation, body, model_revision=bound_revision)
 
         if operation == "model.inspect":
-            if "inspect" not in self.service.ledger.permissions:
-                raise ExecutionContractError("PERMISSION_DENIED", "permission required: inspect")
+            required_permission = "project_write" if refresh_model_inspection else "inspect"
+            if required_permission not in self.service.ledger.permissions:
+                raise ExecutionContractError("PERMISSION_DENIED", f"permission required: {required_permission}")
             supplied_revision = execution.get("expected_revision")
-            if supplied_revision is not None and supplied_revision != bound_revision:
+            if ((refresh_model_inspection and supplied_revision != bound_revision)
+                    or (supplied_revision is not None and supplied_revision != bound_revision)):
                 raise ExecutionContractError("REVISION_CONFLICT", "model.inspect expected_revision does not match the bound model")
-            identity = self.service.inspect(ref)
+            identity = self.service.reconcile(ref) if refresh_model_inspection else self.service.inspect(ref)
             model = self.worker.client().model(ref.model_tag)
             java = model.java
             detail = arguments.get("detail", "summary")
@@ -2335,6 +2388,8 @@ class ManagedBackend:
                 "detail": detail,
                 "file_path": "OMITTED",
             }
+            if refresh_model_inspection:
+                data["model_snapshot"] = identity.get("model_snapshot")
             if detail == "summary":
                 data["structure_counts"] = {name: len(structure[name]) for name in
                                              ("components", "parameters", "studies", "solutions", "datasets", "results")}

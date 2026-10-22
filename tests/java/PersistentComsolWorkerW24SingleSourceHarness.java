@@ -94,6 +94,28 @@ public final class PersistentComsolWorkerW24SingleSourceHarness {
         return snapshot;
     }
 
+    private static void expectModelUtilDenied(Path sourcePath, String method) throws Exception {
+        Method sourceSpec = PersistentComsolWorker.class.getDeclaredMethod("sourceSpec", Map.class);
+        sourceSpec.setAccessible(true);
+        Map<String, Object> request = new HashMap<>();
+        request.put("source_artifact", sourcePath.toString());
+        request.put("entrypoint", sourcePath.getFileName().toString().replaceFirst("\\.java$", ""));
+        Object snapshot = sourceSpec.invoke(null, request);
+        Class<?> sourceSpecClass = Class.forName("comsol_mcp.worker_java.PersistentComsolWorker$SourceSpec");
+        Method compileSnapshot = PersistentComsolWorker.class.getDeclaredMethod(
+            "compileSnapshot", sourceSpecClass, Path.class);
+        compileSnapshot.setAccessible(true);
+        try {
+            compileSnapshot.invoke(null, snapshot, sourcePath.getParent().resolve("rejected-classes"));
+            throw new AssertionError("global ModelUtil." + method + " was accepted");
+        } catch (InvocationTargetException ex) {
+            check(ex.getCause().getClass().getSimpleName().equals("WorkerFailure"),
+                "global ModelUtil call returns a typed Worker refusal");
+            check(String.valueOf(ex.getCause().getMessage()).contains("ModelUtil." + method),
+                "global ModelUtil refusal identifies the exact resolved method");
+        }
+    }
+
     private static SemanticResult exerciseArtifact(String className, Path classesPath) throws Exception {
         try (URLClassLoader loader = new URLClassLoader(
                 new URL[] {classesPath.toUri().toURL()}, PersistentComsolWorkerW24SingleSourceHarness.class.getClassLoader())) {
@@ -347,20 +369,21 @@ public final class PersistentComsolWorkerW24SingleSourceHarness {
         Path readback = sourceRoot.resolve("tools/java/W24StaticShapeReadback.java");
         String fixtureSha = sha(fixture);
         String readbackSha = sha(readback);
-        Path fixtureClasses = Files.createDirectory(outputRoot.resolve("fixture-classes"));
         Path readbackClasses = Files.createDirectory(outputRoot.resolve("readback-classes"));
-        snapshotAndCompile(fixture, fixtureClasses);
+        expectModelUtilDenied(fixture, "tags");
         snapshotAndCompile(readback, readbackClasses);
-        check(!Files.exists(readbackClasses.resolve("W24StaticShapeFixture.class")),
-            "readback output contains no fixture artifact");
-        check(!Files.exists(fixtureClasses.resolve("W24StaticShapeReadback.class")),
-            "fixture output contains no readback artifact");
-        SemanticResult fixtureResult = exerciseArtifact("W24StaticShapeFixture", fixtureClasses);
+
+        Path safeSource = outputRoot.resolve("SafeBoundProjectJava.java");
+        Files.write(safeSource, ("public class SafeBoundProjectJava { " +
+            "public static String run(com.comsol.model.Model model) { return model.tag(); } }")
+            .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        Path safeClasses = Files.createDirectory(outputRoot.resolve("safe-bound-classes"));
+        snapshotAndCompile(safeSource, safeClasses);
         SemanticResult readbackResult = exerciseArtifact("W24StaticShapeReadback", readbackClasses);
-        check(fixtureResult.equals(readbackResult), "two independently compiled artifacts share exact resolver semantics");
+        check(readbackResult != null, "injected-Model W24 readback artifact exercises its resolver controls");
         check(fixtureSha.equals(sha(fixture)) && readbackSha.equals(sha(readback)),
-            "registered source bytes remain unchanged through compileSnapshot");
-        System.out.println("PASS_W24_SINGLE_SOURCE_COMPILE_AND_HELPER_CONTROLS checks=" + checks +
+            "registered W24 source bytes remain unchanged through compileSnapshot");
+        System.out.println("PASS_W24_GLOBAL_SCOPE_BOUNDARY_AND_SAFE_INJECTED_MODEL checks=" + checks +
             " fixture_sha256=" + fixtureSha + " readback_sha256=" + readbackSha +
             " engine=NOT_RUN Worker_constructor=NOT_RUN model=NOT_RUN");
     }

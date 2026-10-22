@@ -259,6 +259,9 @@ ALLOWLIST_ADDITIONS: tuple[str, ...] = (
 #:   SolutionInfo.getMaxInner(int[]) -> int
 #:   SolutionInfo.getLevelNames() -> String[]
 ALLOWLIST_ADDITIONS_PUBLISHED: tuple[str, ...] = (
+    # COMSOL 6.3/6.4 SolverSequence.getNU(String) supplies the stored numeric
+    # solution count; it does not establish outer/inner tuple identity.
+    "getNU",
     # COMSOL 6.4 Study.getSolverSequences(String) is used only by the private
     # initial-stage admission context to bind one solver sequence to its
     # registered study target.
@@ -598,6 +601,7 @@ def _solver_sequence_parameter_observation(
     observed_study = read(solution, "study")
     raw_size = read(solution, "getSize")
     raw_size_multi = read(solution, "getSizeMulti")
+    raw_numeric_count = read(solution, "getNU", "Sol") if stationary_count_only and type_value in {"Stationary", None} else None
     raw_names = read(solution, "getPNames")
     stationary_count_candidate = stationary_count_only and (type_value == "Stationary" or type_value is None)
     names = list(raw_names) if isinstance(raw_names, (list, tuple)) else None
@@ -668,7 +672,7 @@ def _solver_sequence_parameter_observation(
         "getLevelNames": list(level_names) if isinstance(level_names, (list, tuple)) else level_names,
         "getLevels": levels,
         "getOuterSolnum": list(outer_solnums) if isinstance(outer_solnums, (list, tuple)) else outer_solnums,
-        "getOuterSolnum_semantics": "empty means no outer parameter/values per COMSOL 6.4 doc7709/chunk23066",
+        "getOuterSolnum_semantics": "empty means no outer parameter/values per official COMSOL 6.3/6.4 SolutionInfo API docs",
         "read_errors": count_scope_errors,
     }
 
@@ -679,7 +683,30 @@ def _solver_sequence_parameter_observation(
     # the bounded count observer below; the shared general-purpose observer
     # keeps its existing typed-parameter behavior.
     if stationary_count_candidate:
+        # Repeat the count and identity getters before any numerical getData
+        # call. This is a scoped stability check, not an atomic COMSOL CAS.
+        second_size = read(solution, "getSize")
+        second_size_multi = read(solution, "getSizeMulti")
+        second_numeric_count = read(solution, "getNU", "Sol")
+        second_type = read(solution, "getType")
+        second_sequence_type = read(solution, "getSequenceType")
+        second_attached = read(solution, "isAttached")
+        second_study = read(solution, "study")
+        second_names = read(solution, "getPNames")
+        second_count_scope_errors: list[dict[str, Any]] = []
+        second_level_names = _record(solution_info, "getLevelNames", errors=second_count_scope_errors) \
+            if solution_info is not None else None
+        second_levels = _record(solution_info, "getLevels", errors=second_count_scope_errors) \
+            if solution_info is not None else None
+        second_outer_solnums = _record(solution_info, "getOuterSolnum", errors=second_count_scope_errors) \
+            if solution_info is not None else None
         raw_pnames = list(raw_names) if isinstance(raw_names, (list, tuple)) else raw_names
+        second_count_scope = {
+            "getLevelNames": list(second_level_names) if isinstance(second_level_names, (list, tuple)) else second_level_names,
+            "getLevels": second_levels,
+            "getOuterSolnum": list(second_outer_solnums) if isinstance(second_outer_solnums, (list, tuple)) else second_outer_solnums,
+            "read_errors": second_count_scope_errors,
+        }
         return {
             "status": ("OBSERVED_STATIONARY_COUNT_ONLY_INPUTS" if type_value == "Stationary"
                        else "UNVERIFIED_STATIONARY_TYPE_READ_ERROR"),
@@ -695,13 +722,26 @@ def _solver_sequence_parameter_observation(
                 observed_study == study_tag if isinstance(observed_study, str) and study_tag else None),
             "get_size": size if size is not None else raw_size,
             "get_size_raw": raw_size,
-            "get_size_semantics": "[degrees_of_freedom, solution_number_count] per COMSOL 6.4 doc7714/chunk23082",
+            "get_size_semantics": "[degrees_of_freedom, solution_number_count] per official COMSOL 6.3/6.4 SolverSequence API docs",
             "get_size_multi": size_multi if size_multi is not None else raw_size_multi,
+            "get_nu_sol": raw_numeric_count,
+            "count_recheck": {
+                "get_size": list(second_size) if isinstance(second_size, (list, tuple)) else second_size,
+                "get_size_multi": list(second_size_multi) if isinstance(second_size_multi, (list, tuple)) else second_size_multi,
+                "get_nu_sol": second_numeric_count,
+                "solution_type": second_type if isinstance(second_type, str) else None,
+                "sequence_type": second_sequence_type if isinstance(second_sequence_type, str) else None,
+                "attached": second_attached if isinstance(second_attached, bool) else None,
+                "study": second_study if isinstance(second_study, str) else second_study,
+                "pnames": list(second_names) if isinstance(second_names, (list, tuple)) else second_names,
+                "solution_info_count_scope": second_count_scope,
+                "read_errors": errors,
+            },
             "get_size_multi_getter": {
                 "method": "SolverSequence.getSizeMulti()",
                 "status": "CAPTURED" if size_multi is not None else "ERROR",
                 "raw": size_multi if size_multi is not None else raw_size_multi,
-                "semantics": "[local solution count in multisolution, total solution number count] per COMSOL 6.4 doc7714/chunk23082",
+                "semantics": "[local solution count in multisolution, total solution number count] per official COMSOL 6.3/6.4 SolverSequence API docs",
             },
             "solution_info_count_scope": count_scope,
             "solution_number_count": size[1] if size is not None and len(size) == 2 else None,
@@ -758,7 +798,7 @@ def _solver_sequence_parameter_observation(
             "method": "SolverSequence.getSizeMulti()",
             "status": "CAPTURED" if size_multi is not None else "ERROR",
             "raw": size_multi if size_multi is not None else raw_size_multi,
-            "semantics": "[local solution count in multisolution, total solution number count] per COMSOL 6.4 doc7714/chunk23082",
+            "semantics": "[local solution count in multisolution, total solution number count] per official COMSOL 6.3/6.4 SolverSequence API docs",
         },
         "solution_info_count_scope": count_scope,
         "solution_number_count": solnum_count,
@@ -3206,6 +3246,22 @@ def _budget_refusal(
     }
 
 
+def _has_bounded_count_only_witness(observation: Mapping[str, Any] | None) -> bool:
+    """Validate a numeric allocation witness without asserting tuple axes."""
+    return bool(
+        isinstance(observation, Mapping)
+        and observation.get("status") in {
+            "VERIFIED_SINGLE_STORED_NUMERIC_COUNT",
+            "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT",
+            "VERIFIED_SINGLE_ATTACHED_STATIONARY_NUMERIC_COUNT",
+            "VERIFIED_ATTACHED_STATIONARY_NUMERIC_COUNT",
+        }
+        and type(observation.get("numeric_solution_count")) is int
+        and 1 <= observation.get("numeric_solution_count") <= 4096
+        and observation.get("solution_axes_pair_mapping_complete") is False
+    )
+
+
 def _make_result_budget_guard(
     *,
     operation: str,
@@ -3213,6 +3269,7 @@ def _make_result_budget_guard(
     expressions: Sequence[str],
     binding: Mapping[str, Any] | None,
     single_solution_count_observation: Mapping[str, Any] | None = None,
+    count_only_pre_getdata_check: Any | None = None,
     point_count: int | None = None,
     max_elements: int = RESULT_NUMERIC_PAYLOAD_MAX_ELEMENTS,
     max_bytes: int = RESULT_NUMERIC_PAYLOAD_MAX_BYTES,
@@ -3260,19 +3317,11 @@ def _make_result_budget_guard(
         # singleton numeric allocation bound without proving any outer/inner
         # tuple mapping. This exception is count-only: no axis selectors or
         # FieldArray coordinates are synthesized from it.
-        count_only_witness = bool(
-            isinstance(single_solution_count_observation, Mapping)
-            and single_solution_count_observation.get("status") in {
-                "VERIFIED_SINGLE_STORED_NUMERIC_COUNT",
-                "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT",
-                "VERIFIED_SINGLE_ATTACHED_STATIONARY_NUMERIC_COUNT",
-            }
-            and type(single_solution_count_observation.get("numeric_solution_count")) is int
-            and single_solution_count_observation.get("numeric_solution_count") == 1
-            and single_solution_count_observation.get("solution_axes_pair_mapping_complete") is False
-        )
+        count_only_witness = _has_bounded_count_only_witness(single_solution_count_observation)
+        if count_only_witness and callable(count_only_pre_getdata_check):
+            count_only_pre_getdata_check()
         if not binding_verified and count_only_witness:
-            planned_solution_count = 1
+            planned_solution_count = single_solution_count_observation["numeric_solution_count"]
             solution_count_source = str(single_solution_count_observation.get("source"))
         elif binding_verified:
             planned_solution_count = len(inner_values)
@@ -3352,13 +3401,15 @@ def _make_result_budget_guard(
             raw_layout="expression,solnum,vertex",
             expression_count_verified=True,
             point_count_verified=True,
-            solution_axes_verified=True,
+            solution_axes_verified=binding_verified,
             expression_source="validated-request-expressions",
             point_count_source=raw_point_source,
             # The planner's solution-axis witness is used as a numeric
             # allocation bound here. The separate fields below preserve
             # whether an outer/inner tuple mapping actually exists.
-            solution_axes_source=solution_count_source,
+            solution_axes_source=solution_count_source if binding_verified else None,
+            solution_count_bound_verified=count_only_witness,
+            solution_count_source=solution_count_source if count_only_witness else None,
             raw_point_upper_bound=raw_point_count,
             raw_upper_bound_verified=raw_bound_verified,
             raw_upper_bound_source=raw_point_source if raw_bound_verified else None,
@@ -3366,7 +3417,10 @@ def _make_result_budget_guard(
         )
         decision = _append(decision)
         decision["solution_axes_verification_scope"] = (
-            "numeric_singleton_count_only" if count_only_witness else "outer_inner_tuple_mapping"
+            (("numeric_count_only"
+              if single_solution_count_observation["numeric_solution_count"] > 1
+              else "numeric_singleton_count_only")
+             if count_only_witness else "outer_inner_tuple_mapping")
         )
         decision["solution_axes_pair_mapping_complete"] = bool(binding_verified)
         decision["solution_count_observation"] = (
@@ -4148,14 +4202,16 @@ def _single_stored_solution_count_observation(
     dataset_binding: Mapping[str, Any] | None,
     solution_tag: Any,
 ) -> dict[str, Any]:
-    """Prove a bounded one-state allocation without inventing solution axes.
+    """Prove a bounded numeric allocation without inventing solution axes.
 
     The existing detached Stored/Eigenfrequency case remains count-only.  The
     one additional supported case is the exact attached frequency sequence:
     Parametric/SolverSequence, one ``freq`` level, no outer-solution axis,
     ``getSize()[1] == 1`` and ``getSizeMulti() == [1, 1]``.  Neither case
     repairs SolutionInfo tuple metadata or enables outer/inner selectors or a
-    FieldArray.
+    FieldArray. An attached stationary sequence can prove a bounded numeric
+    count only when its independent native count getters and exact dataset to
+    solution to study binding agree; that witness still supplies no tuple axes.
     """
     base: dict[str, Any] = {
         "status": "UNVERIFIED",
@@ -4219,12 +4275,17 @@ def _single_stored_solution_count_observation(
         size = observation.get("get_size")
         if (not isinstance(size, (list, tuple)) or len(size) != 2
                 or any(type(value) is not int for value in size)
-                or size[0] <= 0 or size[1] != 1):
-            reasons.append("direct getSize() did not prove a positive DOF count and exactly one solution number")
+                or size[0] <= 0 or not 1 <= size[1] <= 4096):
+            reasons.append("direct getSize() did not prove positive DOF and a bounded 1..4096 solution-number count")
+        numeric_count = size[1] if isinstance(size, (list, tuple)) and len(size) == 2 and type(size[1]) is int else None
         size_multi = observation.get("get_size_multi")
-        if (not isinstance(size_multi, (list, tuple)) or list(size_multi) != [1, 1]
-                or any(type(value) is not int for value in size_multi)):
-            reasons.append("direct getSizeMulti() did not read back the exact singleton [1,1]")
+        if (not isinstance(size_multi, (list, tuple)) or len(size_multi) != 2
+                or any(type(value) is not int for value in size_multi)
+                or size_multi[0] != 1 or size_multi[1] != numeric_count):
+            reasons.append("direct getSizeMulti() did not agree with one local multisolution and the getSize solnum count")
+        nu_sol = observation.get("get_nu_sol")
+        if type(nu_sol) is not int or nu_sol != numeric_count:
+            reasons.append("direct getNU('Sol') did not agree with the getSize solnum count")
         pnames = observation.get("pnames")
         if (not isinstance(pnames, (list, tuple)) or len(pnames) != 1
                 or type(pnames[0]) is not str or pnames[0] != ""):
@@ -4243,6 +4304,29 @@ def _single_stored_solution_count_observation(
             reasons.append("SolutionInfo.getLevels() did not read back exact integer zero")
         if (not isinstance(outer_solnums, (list, tuple)) or list(outer_solnums) != []):
             reasons.append("SolutionInfo.getOuterSolnum() did not read back an empty outer axis")
+
+        recheck = observation.get("count_recheck")
+        if not isinstance(recheck, Mapping) or recheck.get("read_errors"):
+            reasons.append("stationary count/identity recheck before getData failed")
+        else:
+            if (recheck.get("get_size") != size
+                    or recheck.get("get_size_multi") != size_multi
+                    or type(recheck.get("get_nu_sol")) is not int
+                    or recheck.get("get_nu_sol") != nu_sol):
+                reasons.append("stationary numeric count changed between its pre-getData getter observations")
+            if (recheck.get("solution_type") != observation.get("solution_type")
+                    or recheck.get("sequence_type") != observation.get("sequence_type")
+                    or recheck.get("attached") != observation.get("attached")
+                    or recheck.get("study") != observation.get("study")
+                    or recheck.get("pnames") != pnames):
+                reasons.append("stationary identity changed between its pre-getData getter observations")
+            recheck_scope = recheck.get("solution_info_count_scope")
+            if (not isinstance(recheck_scope, Mapping)
+                    or recheck_scope.get("read_errors")
+                    or recheck_scope.get("getLevelNames") != level_names
+                    or recheck_scope.get("getLevels") != levels
+                    or recheck_scope.get("getOuterSolnum") != outer_solnums):
+                reasons.append("SolutionInfo count scope changed between its pre-getData observations")
 
         membership_errors: list[dict[str, Any]] = []
         membership_tags: list[Any] = []
@@ -4281,13 +4365,18 @@ def _single_stored_solution_count_observation(
             base["reasons"] = reasons
             return base
 
+        witness_count = int(numeric_count)
         base.update({
-            "status": "VERIFIED_SINGLE_ATTACHED_STATIONARY_NUMERIC_COUNT",
-            "witness_kind": "attached_stationary_count_only_singleton",
-            "numeric_solution_count": 1,
+            "status": ("VERIFIED_SINGLE_ATTACHED_STATIONARY_NUMERIC_COUNT" if witness_count == 1
+                       else "VERIFIED_ATTACHED_STATIONARY_NUMERIC_COUNT"),
+            "witness_kind": ("attached_stationary_count_only_singleton" if witness_count == 1
+                             else "attached_stationary_count_only"),
+            "numeric_solution_count": witness_count,
             "source": ("exact dataset.solution→model.sol().tags() binding plus attached Stationary/SolverSequence identity, "
-                       "positive getSize()[0], getSize()[1]=1, getSizeMulti()==[1,1], exact raw getPNames()==[''], "
-                       "SolutionInfo levels=0/level names=[]/outer=[] and stable same-model Study membership"),
+                       f"positive getSize()[0], getSize()[1]={witness_count}, getSizeMulti()==[1,{witness_count}], "
+                       f"getNU('Sol')={witness_count}, exact raw getPNames()==[''], SolutionInfo levels=0/level names=[]/outer=[] "
+                       "and stable same-model Study membership; numeric count only, no outer/inner tuple mapping"),
+            "axes_scope": "numeric_count_only_outer_inner_unverified",
             "reasons": [],
         })
         return base
@@ -5138,6 +5227,10 @@ def result_evaluate(
         or _string_or_none(dset_node, "data", [])
     )
     solution_binding = _result_solution_binding(model, solution_tag)
+    pair_mapping_complete = (
+        isinstance(solution_binding, Mapping)
+        and solution_binding.get("pair_mapping_complete") is True
+    )
     strict_selection_enabled = strict_metric_evidence or strict_field_readback
     if strict_selection_enabled:
         strict_selection = spec.get("selection")
@@ -5247,6 +5340,138 @@ def result_evaluate(
         selection=spec.get("selection"),
     )
     feat_type = ms.feature_type
+
+    # A raw Eval allocation can be bounded by direct native numeric-count
+    # witnesses even when SolutionInfo cannot map that allocation to outer /
+    # inner tuples.  Keep that count-only evidence separate from the typed
+    # SolutionBinding; it must never create axes or a FieldArray.
+    single_solution_count_observation: dict[str, Any] | None = None
+    stationary_count_identity: dict[str, Any] | None = None
+    if aggregate == "none" and feat_type == "Eval" and not pair_mapping_complete:
+        single_solution_count_observation = _single_stored_solution_count_observation(
+            model, dataset_binding, solution_tag
+        )
+        if not _has_bounded_count_only_witness(single_solution_count_observation):
+            raise PreWriteRefusal(
+                "SOLUTION_AXES_UNVERIFIED",
+                "raw Eval requires complete SolutionBinding metadata or an exact bounded numeric-count witness",
+                details={
+                    "dataset": dataset_tag,
+                    "solution": solution_tag,
+                    "count_observation_status": single_solution_count_observation.get("status"),
+                    "reasons": single_solution_count_observation.get("reasons"),
+                    "mutation_issued": False,
+                    "getdata_called": False,
+                    "publish_allowed": False,
+                },
+            )
+        if single_solution_count_observation.get("status") in {
+            "VERIFIED_SINGLE_ATTACHED_STATIONARY_NUMERIC_COUNT",
+            "VERIFIED_ATTACHED_STATIONARY_NUMERIC_COUNT",
+        }:
+            from copy import deepcopy
+
+            observed = single_solution_count_observation.get("observation")
+            membership = single_solution_count_observation.get("attached_study_membership")
+            sources = dataset_binding.get("sources") if isinstance(dataset_binding, Mapping) else None
+            stationary_count_identity = {
+                "dataset_binding": {
+                    "dataset": dataset_binding.get("dataset") if isinstance(dataset_binding, Mapping) else None,
+                    "dataset_type": dataset_binding.get("dataset_type") if isinstance(dataset_binding, Mapping) else None,
+                    "solution": dataset_binding.get("solution") if isinstance(dataset_binding, Mapping) else None,
+                    "sources": deepcopy(dict(sources)) if isinstance(sources, Mapping) else None,
+                },
+                "count_status": single_solution_count_observation.get("status"),
+                "witness_kind": single_solution_count_observation.get("witness_kind"),
+                "numeric_solution_count": single_solution_count_observation.get("numeric_solution_count"),
+                "solution_axes_pair_mapping_complete": single_solution_count_observation.get("solution_axes_pair_mapping_complete"),
+                "solver_observation": deepcopy({
+                    name: observed.get(name)
+                    for name in (
+                        "solution_type", "sequence_type", "attached", "study",
+                        "get_size", "get_size_multi", "get_nu_sol", "pnames",
+                        "solution_info_count_scope",
+                    )
+                }) if isinstance(observed, Mapping) else None,
+                "study_membership": deepcopy({
+                    name: membership.get(name)
+                    for name in (
+                        "status", "study", "study_tags_before", "study_tags_after",
+                        "solution_study_after", "tags_complete", "tags_stable",
+                        "study_identity_stable", "actual_member", "read_errors",
+                    )
+                }) if isinstance(membership, Mapping) else None,
+            }
+
+    def verify_stationary_count_binding(stage: str) -> None:
+        if stationary_count_identity is None:
+            return
+        from copy import deepcopy
+
+        current_binding = _resolve_dataset_binding(
+            model,
+            str(dataset_tag),
+            requested_solution=solution_tag if isinstance(solution_tag, str) else None,
+        )
+        current_count = _single_stored_solution_count_observation(
+            model, current_binding, solution_tag
+        )
+        current_sources = current_binding.get("sources") if isinstance(current_binding, Mapping) else None
+        observed = current_count.get("observation")
+        membership = current_count.get("attached_study_membership")
+        current_identity = {
+            "dataset_binding": {
+                "dataset": current_binding.get("dataset") if isinstance(current_binding, Mapping) else None,
+                "dataset_type": current_binding.get("dataset_type") if isinstance(current_binding, Mapping) else None,
+                "solution": current_binding.get("solution") if isinstance(current_binding, Mapping) else None,
+                "sources": deepcopy(dict(current_sources)) if isinstance(current_sources, Mapping) else None,
+            },
+            "count_status": current_count.get("status"),
+            "witness_kind": current_count.get("witness_kind"),
+            "numeric_solution_count": current_count.get("numeric_solution_count"),
+            "solution_axes_pair_mapping_complete": current_count.get("solution_axes_pair_mapping_complete"),
+            "solver_observation": deepcopy({
+                name: observed.get(name)
+                for name in (
+                    "solution_type", "sequence_type", "attached", "study",
+                    "get_size", "get_size_multi", "get_nu_sol", "pnames",
+                    "solution_info_count_scope",
+                )
+            }) if isinstance(observed, Mapping) else None,
+            "study_membership": deepcopy({
+                name: membership.get(name)
+                for name in (
+                    "status", "study", "study_tags_before", "study_tags_after",
+                    "solution_study_after", "tags_complete", "tags_stable",
+                    "study_identity_stable", "actual_member", "read_errors",
+                )
+            }) if isinstance(membership, Mapping) else None,
+        }
+        if current_identity != stationary_count_identity:
+            details = {
+                "stage": stage,
+                "before": stationary_count_identity,
+                "after": current_identity,
+                "native_read_completed": stage == "after_native_read",
+                "publish_allowed": False,
+            }
+            if stage == "before_feature_create":
+                raise PreWriteRefusal(
+                    "SOLUTION_COUNT_DRIFT",
+                    "dataset-to-solution-to-study stationary count changed before creating the raw Eval feature",
+                    details={**details, "mutation_issued": False},
+                )
+            raise ExecutionContractError(
+                "SOLUTION_COUNT_DRIFT",
+                "dataset-to-solution-to-study stationary count identity changed around the raw Eval read",
+                details=details,
+                stage="post_dispatch",
+            )
+
+    # Catch a count/binding change before even creating the transient feature.
+    # The budget guard repeats this check immediately before getData, and the
+    # post-read check prevents publishing data if the native identity moved.
+    verify_stationary_count_binding("before_feature_create")
 
     ephemeral_tag = _unique_tag(tag_list(numerical_list))
     cleanup: dict[str, Any] = {
@@ -5361,6 +5586,8 @@ def result_evaluate(
                 feature_kind="Eval",
                 expressions=expressions,
                 binding=solution_binding,
+                single_solution_count_observation=single_solution_count_observation,
+                count_only_pre_getdata_check=lambda: verify_stationary_count_binding("before_getdata"),
                 max_elements=(W21_FIELD_READBACK_MAX_NUMERIC_SCALARS
                               if strict_field_readback else RESULT_NUMERIC_PAYLOAD_MAX_ELEMENTS),
                 max_bytes=(W21_FIELD_READBACK_MAX_JSON_BYTES
@@ -5447,6 +5674,8 @@ def result_evaluate(
             outer_getters=feat_type not in {"Eval", "Interp", "EvalGlobal"},
             strict_field_reader=(_strict_field_reader if strict_field_readback else None),
         )
+        if aggregate == "none" and feat_type == "Eval":
+            verify_stationary_count_binding("after_native_read")
         expression_units = _feature_units(feature, expressions)
 
         if strict_metric_evidence and weight_expression is not None:
@@ -5660,7 +5889,7 @@ def result_evaluate(
                 point_operation = aggregate
             if point_operation is not None:
                 transformed = _point_reduce(transformed, point_operation)
-        if solution_binding:
+        if solution_binding and solution_binding.get("pair_mapping_complete") is True:
             from ._solution_binding import FieldArray
             point_axis_count = _feature_point_count(transformed, raw_layout)
             aggregate_point_axis = aggregate != "none" or bool(weight_expression)
@@ -6594,9 +6823,34 @@ def result_evaluate(
             else (field_array_payload.to_dict() if field_array_payload is not None else None)
         ),
         "solution_axes": {
-            "outer": list(solution_binding.get("outer_indices", [])) if solution_binding else [],
-            "inner": list(solution_binding.get("inner_indices", [])) if solution_binding else [],
-            "pair_mapping_complete": bool(solution_binding and solution_binding.get("pair_mapping_complete")),
+            "outer": (
+                list(solution_binding.get("outer_indices", []))
+                if solution_binding and solution_binding.get("pair_mapping_complete") is True else []
+            ),
+            "inner": (
+                list(solution_binding.get("inner_indices", []))
+                if solution_binding and solution_binding.get("pair_mapping_complete") is True else []
+            ),
+            "pair_mapping_complete": bool(solution_binding and solution_binding.get("pair_mapping_complete") is True),
+            "axis_metadata_status": (
+                "VERIFIED" if solution_binding and solution_binding.get("pair_mapping_complete") is True else "UNVERIFIED"
+            ),
+            "numeric_count_observation": (
+                dict(single_solution_count_observation)
+                if single_solution_count_observation is not None else None
+            ),
+            "count_scope": (
+                "numeric_count_only_outer_inner_unverified"
+                if single_solution_count_observation is not None
+                and single_solution_count_observation.get("status") in {
+                    "VERIFIED_SINGLE_STORED_NUMERIC_COUNT",
+                    "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT",
+                    "VERIFIED_SINGLE_ATTACHED_STATIONARY_NUMERIC_COUNT",
+                    "VERIFIED_ATTACHED_STATIONARY_NUMERIC_COUNT",
+                }
+                and not (solution_binding and solution_binding.get("pair_mapping_complete") is True)
+                else ("outer_inner_tuple_mapping" if solution_binding and solution_binding.get("pair_mapping_complete") is True else "UNVERIFIED")
+            ),
         },
         "axisymmetric": is_axisymmetric,
         "axisymmetric_measure_evidence": axisymmetric_measure_evidence,
@@ -6768,16 +7022,22 @@ def _requested_interp_properties(
 def _validate_count_only_point_samples(data: Any, *, num_expressions: int,
         point_count: int, raw_layout: str, count_observation: Mapping[str, Any] | None) -> None:
     """Validate bounded native samples without introducing physical tuple axes."""
+    verified_count = (count_observation.get("numeric_solution_count")
+                      if isinstance(count_observation, Mapping) else None)
+    allowed_count_status = (
+        isinstance(count_observation, Mapping)
+        and count_observation.get("status") in {
+            "VERIFIED_SINGLE_STORED_NUMERIC_COUNT",
+            "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT",
+            "VERIFIED_SINGLE_ATTACHED_STATIONARY_NUMERIC_COUNT",
+            "VERIFIED_ATTACHED_STATIONARY_NUMERIC_COUNT",
+        }
+        and type(verified_count) is int and 1 <= verified_count <= 4096
+        and count_observation.get("solution_axes_pair_mapping_complete") is False
+    )
     if (not isinstance(count_observation, Mapping)
-            or count_observation.get("status") not in {
-                "VERIFIED_SINGLE_STORED_NUMERIC_COUNT",
-                "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT",
-                "VERIFIED_SINGLE_ATTACHED_STATIONARY_NUMERIC_COUNT",
-            }
-            or type(count_observation.get("numeric_solution_count")) is not int
-            or count_observation["numeric_solution_count"] != 1
-            or count_observation.get("solution_axes_pair_mapping_complete") is not False):
-        raise ExecutionContractError("SOLUTION_AXIS_METADATA_UNAVAILABLE", "unmapped samples require independently verified singleton allocation")
+            or not allowed_count_status):
+        raise ExecutionContractError("SOLUTION_AXIS_METADATA_UNAVAILABLE", "unmapped samples require an independently verified bounded numeric count")
     if raw_layout not in {"expression,solnum,point", "expression,solnum"}:
         raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "unmapped native sample layout is unsupported")
     rows = lambda x: list(x) if isinstance(x, Sequence) and not isinstance(x, (str, bytes, Mapping)) else None
@@ -6786,15 +7046,16 @@ def _validate_count_only_point_samples(data: Any, *, num_expressions: int,
         raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "unmapped expression count differs from request")
     for expression in expressions:
         samples = rows(expression)
-        if samples is None or len(samples) != 1:
-            raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "unmapped native sample count differs from singleton allocation")
-        points = rows(samples[0]) if raw_layout.endswith("point") else [samples[0]]
-        if points is None or len(points) != point_count:
-            raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "unmapped point count differs from request")
-        for point in points:
-            values = list(point.values()) if isinstance(point, Mapping) and set(point) == {"real", "imag"} else [point]
-            if any(type(value) not in (int, float) or not math.isfinite(value) for value in values):
-                raise ExecutionContractError("COMPLEX_DATA_ERROR", "unmapped native sample is not finite numeric real/imag data")
+        if samples is None or len(samples) != verified_count:
+            raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "unmapped native sample count differs from the verified numeric allocation")
+        for sample in samples:
+            points = rows(sample) if raw_layout.endswith("point") else [sample]
+            if points is None or len(points) != point_count:
+                raise ExecutionContractError("FIELD_ARRAY_SHAPE_MISMATCH", "unmapped point count differs from request")
+            for point in points:
+                values = list(point.values()) if isinstance(point, Mapping) and set(point) == {"real", "imag"} else [point]
+                if any(type(value) not in (int, float) or not math.isfinite(value) for value in values):
+                    raise ExecutionContractError("COMPLEX_DATA_ERROR", "unmapped native sample is not finite numeric real/imag data")
 
 
 def result_at_points(worker: Any, model_tag: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
@@ -6926,13 +7187,15 @@ def result_at_points(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
             single_solution_count_observation.get("status") in {
                 "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT",
                 "VERIFIED_SINGLE_ATTACHED_STATIONARY_NUMERIC_COUNT",
+                "VERIFIED_ATTACHED_STATIONARY_NUMERIC_COUNT",
             }
             and single_solution_count_observation.get("witness_kind") in {
                 "attached_parametric_frequency_singleton",
                 "attached_stationary_count_only_singleton",
+                "attached_stationary_count_only",
             }
             and type(single_solution_count_observation.get("numeric_solution_count")) is int
-            and single_solution_count_observation["numeric_solution_count"] == 1
+            and 1 <= single_solution_count_observation["numeric_solution_count"] <= 4096
             and single_solution_count_observation.get("solution_axes_pair_mapping_complete") is False)
     solution_binding = _result_solution_binding(model, solution_tag,
         _skip_empty_outer_tuple_diagnostic=skip_empty_tuple_diagnostic)
@@ -6943,6 +7206,50 @@ def result_at_points(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
     if not pair_mapping_complete and single_solution_count_observation is None:
         single_solution_count_observation = _single_stored_solution_count_observation(
             model, dataset_binding, solution_tag)
+
+    stationary_count_identity = None
+    if (isinstance(dataset_binding, Mapping)
+            and dataset_binding.get("binding_complete") is True
+            and isinstance(single_solution_count_observation, Mapping)
+            and single_solution_count_observation.get("status") in {
+                "VERIFIED_SINGLE_ATTACHED_STATIONARY_NUMERIC_COUNT",
+                "VERIFIED_ATTACHED_STATIONARY_NUMERIC_COUNT",
+            }
+            and type(single_solution_count_observation.get("numeric_solution_count")) is int
+            and 1 <= single_solution_count_observation["numeric_solution_count"] <= 4096):
+        stationary_count_identity = (
+            dataset_binding.get("dataset"), dataset_binding.get("dataset_type"),
+            dataset_binding.get("solution"), tuple(sorted((dataset_binding.get("sources") or {}).items())),
+        )
+
+    def verify_stationary_count_binding() -> None:
+        if stationary_count_identity is None:
+            return
+        current_binding = _resolve_dataset_binding(
+            model, str(dataset_tag), requested_solution=solution_tag if isinstance(solution_tag, str) else None,
+        )
+        current_identity = (
+            current_binding.get("dataset"), current_binding.get("dataset_type"),
+            current_binding.get("solution"), tuple(sorted((current_binding.get("sources") or {}).items())),
+        ) if isinstance(current_binding, Mapping) else None
+        current_count = _single_stored_solution_count_observation(model, current_binding, solution_tag)
+        original = single_solution_count_observation or {}
+        if (not isinstance(current_binding, Mapping)
+                or current_binding.get("binding_complete") is not True
+                or current_identity != stationary_count_identity
+                or current_count.get("status") != original.get("status")
+                or current_count.get("numeric_solution_count") != original.get("numeric_solution_count")
+                or current_count.get("solution_axes_pair_mapping_complete") is not False):
+            raise ExecutionContractError(
+                "SOLUTION_COUNT_DRIFT",
+                "dataset-to-solution-to-study stationary numeric count changed or became unverified",
+                details={
+                    "before": {"dataset": original.get("dataset"), "solution": original.get("solution"),
+                               "count": original.get("numeric_solution_count"), "status": original.get("status")},
+                    "after": {"dataset": current_count.get("dataset"), "solution": current_count.get("solution"),
+                              "count": current_count.get("numeric_solution_count"), "status": current_count.get("status")},
+                },
+            )
 
     point_selection_expected = None
     if point_selection is not None:
@@ -6986,6 +7293,7 @@ def result_at_points(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
         expressions=expressions,
         binding=solution_binding,
         single_solution_count_observation=single_solution_count_observation,
+        count_only_pre_getdata_check=verify_stationary_count_binding,
         point_count=point_count,
         records=result_budget_records,
     )
@@ -7035,6 +7343,10 @@ def result_at_points(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
             num_expressions=len(expressions),
             budget_guard=result_budget_guard,
         )
+        # The budget callback repeats the stationary witness immediately
+        # before getData. Repeat it after the native read as well so a change
+        # during evaluation withholds publication without claiming tuple axes.
+        verify_stationary_count_binding()
         if requested_units is not None:
             after_units = _requested_interp_properties(feature, expressions, requested_units, stage="after_numeric_read")
             requested_unit_evidence = {
@@ -7201,14 +7513,14 @@ def result_at_points(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
                 if single_solution_count_observation is not None else None
             ),
             "interpretation": (
-            "numeric sample count may be bounded by a direct stored-solution observation; "
-            "a documented single-level attached frequency sequence may also bound one sample; "
-            "outer/inner tuple mapping remains unavailable"
+            "numeric sample count may be bounded by direct stored or attached Stationary count getters, "
+            "or the documented single-level attached frequency witness; outer/inner tuple mapping remains unavailable"
             if single_solution_count_observation is not None
                 and single_solution_count_observation.get("status") in {
                     "VERIFIED_SINGLE_STORED_NUMERIC_COUNT",
                     "VERIFIED_SINGLE_ATTACHED_PARAMETRIC_NUMERIC_COUNT",
                     "VERIFIED_SINGLE_ATTACHED_STATIONARY_NUMERIC_COUNT",
+                    "VERIFIED_ATTACHED_STATIONARY_NUMERIC_COUNT",
                 }
                 else "only a complete SolutionBinding establishes outer/inner tuples"
             ),

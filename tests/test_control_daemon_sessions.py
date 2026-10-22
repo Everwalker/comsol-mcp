@@ -519,6 +519,261 @@ def _connect_daemon(tmp_path, worker, *, peer=CanonicalSocket("127.0.0.1", 2046)
     return daemon, project["project_id"]
 
 
+class _RefreshInspectionJava:
+    def getFileResourceTags(self): return []
+    def getComsolVersion(self): return "6.4.0.293"
+    def getLastComputationTime(self): return None
+    def getLastComputationDate(self): return None
+    def getLastComputationVersion(self): return None
+
+
+class _RefreshInspectionWorker(_ObservedLifecycleWorker):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._model_java = _RefreshInspectionJava()
+
+    def model(self, model_tag):
+        return SimpleNamespace(tag=model_tag, java=self._model_java)
+
+
+def _refresh_inspection_fixture(tmp_path, monkeypatch):
+    from comsol_mcp._execution_contract import model_ref_from_mapping
+    worker = _RefreshInspectionWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker, monkeypatch=monkeypatch)
+    connected = daemon.dispatch(_connect_request(project_id, "refresh-inspection-connect"))
+    assert connected["success"] is True, connected
+    session_id = connected["data"]["session_id"]
+    context = daemon.session_registry.get(project_id, session_id)
+    ref_response = context.service.bind_model("refresh-target", ownership="mcp_owned")
+    model_ref = ref_response["execution"]["model_ref"]
+    ref = model_ref_from_mapping(model_ref)
+    state = context.service.ledger._state_for(ref)
+    key = daemon.backend._model_project_key(model_ref)
+    daemon.store.put_metadata("revisions", key, {
+        "model_ref": model_ref, "revision": state.revision, "dirty": state.dirty,
+        "fingerprint": state.fingerprint, "active_operation_id": state.active_operation_id,
+        "project_id": project_id, "attribution": "PROJECT_BOUND",
+    })
+    return daemon, worker, project_id, session_id, model_ref, state.revision
+
+
+def _model_inspect_public_request(route, project_id, session_id, model_ref, revision,
+                                  *, refresh=True, suffix="valid"):
+    execution = {
+        "project_id": project_id, "session_id": session_id, "model_ref": model_ref,
+        "expected_revision": revision, "request_id": f"refresh-{route}-{suffix}",
+        "idempotency_key": f"refresh-{route}-{suffix}", "rpc_timeout_s": 5,
+        "queue_timeout_s": 5, "execution_timeout_s": None,
+    }
+    body = {"refresh": refresh}
+    if route == "direct":
+        return {"operation": "model_inspect", "arguments": body, "execution": execution}
+    return {"operation": "operation_call",
+            "arguments": {"operation_id": "model.inspect", "arguments": body},
+            "execution": execution}
+
+
+def _await_public_result(daemon, response):
+    execution = response.get("execution", {}) if isinstance(response, dict) else {}
+    job_id = execution.get("job_id") if isinstance(execution, dict) else None
+    if not isinstance(job_id, str):
+        return response
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        job = daemon.store.job(job_id)
+        if job and job.get("status") in {"SUCCEEDED", "FAILED", "EXPIRED", "LOST", "CANCELLED"}:
+            return job.get("result") or response
+        time.sleep(0.01)
+    raise AssertionError(f"public model.inspect job did not finish: {job_id}")
+
+
+@pytest.mark.parametrize("route", ["direct", "operation_call"])
+def test_public_model_inspect_refresh_reconciles_exact_managed_model(route, tmp_path, monkeypatch):
+    from mcp.server.fastmcp import FastMCP
+    from comsol_mcp._g2_registry import BY_ID
+    from comsol_mcp._mcp_gateway import GatewayRegistry
+    from comsol_mcp import _tools_control
+    daemon, worker, project_id, session_id, model_ref, revision = _refresh_inspection_fixture(tmp_path, monkeypatch)
+    monkeypatch.setattr("comsol_mcp._model_ops._model_tree_data", lambda _model: {
+        "components": [], "component_details": [], "parameters": [], "studies": [],
+        "solutions": [], "datasets": [], "results": [], "label": "synthetic", "file_path": None,
+    })
+    try:
+        public = FastMCP("refresh-schema-test")
+        gateway = GatewayRegistry(public, lambda *_args: {"success": True, "data": {}})
+        _tools_control.register(gateway)
+        assert public._tool_manager._tools["model_inspect"].parameters["properties"]["refresh"]["type"] == "boolean"
+        assert BY_ID["model.inspect"].as_dict()["input_schema"]["properties"]["refresh"]["type"] == "boolean"
+        request = _model_inspect_public_request(route, project_id, session_id, model_ref, revision, suffix="success")
+        response = _await_public_result(daemon, daemon.dispatch(request))
+        assert response["success"] is True, response
+        data = response.get("data", {})
+        snapshot = data.get("model_snapshot")
+        assert isinstance(snapshot, dict), response
+        assert snapshot["model_tag"] == model_ref["model_tag"]
+        assert snapshot["coverage"] == "parameters+shallow_tree_identity"
+        assert snapshot["cas_guarantee"] == "NONE"
+        assert snapshot["fingerprint_components_status"] in {"AVAILABLE_V1", "UNAVAILABLE_LEGACY"}
+        assert worker.backend_snapshot_calls >= 2
+    finally:
+        daemon.close()
+
+
+@pytest.mark.parametrize("route", ["direct", "operation_call"])
+@pytest.mark.parametrize("mutation,code", [
+    ("wrong_type", "INVALID_REQUEST"), ("stale_revision", "REVISION_CONFLICT"),
+    ("missing_ref", "MODEL_IDENTITY_REQUIRED"), ("wrong_session", "MODEL_IDENTITY_MISMATCH"),
+    ("wrong_model_tag", "MODEL_IDENTITY_MISMATCH"), ("nested_ref", "INVALID_REQUEST"),
+])
+def test_public_model_inspect_refresh_identity_and_type_refuse_before_job_or_worker(
+        route, mutation, code, tmp_path, monkeypatch):
+    daemon, worker, project_id, session_id, model_ref, revision = _refresh_inspection_fixture(tmp_path, monkeypatch)
+    try:
+        request = _model_inspect_public_request(route, project_id, session_id, model_ref, revision,
+                                                suffix=f"{mutation}")
+        if mutation == "wrong_type":
+            body = request["arguments"]["arguments"] if route == "operation_call" else request["arguments"]
+            body["refresh"] = 1
+        elif mutation == "stale_revision":
+            request["execution"]["expected_revision"] = revision + 1
+        elif mutation == "missing_ref":
+            request["execution"].pop("model_ref")
+        elif mutation == "wrong_session":
+            request["execution"]["session_id"] = "not-this-session"
+        elif mutation == "wrong_model_tag":
+            request["execution"]["model_ref"] = {**model_ref, "model_tag": "other-model"}
+        elif mutation == "nested_ref":
+            nested = request["arguments"]["arguments"] if route == "operation_call" else request["arguments"]
+            nested["model_ref"] = model_ref
+        before_calls = worker.backend_snapshot_calls
+        before_jobs = len(daemon._session_jobs_for_project(project_id))
+        response = daemon.dispatch(request)
+        assert response["success"] is False, response
+        assert response["error"]["code"] == code, response
+        assert "job_id" not in response.get("execution", {})
+        assert worker.backend_snapshot_calls == before_calls
+        assert len(daemon._session_jobs_for_project(project_id)) == before_jobs
+    finally:
+        daemon.close()
+
+
+@pytest.mark.parametrize("route", ["direct", "operation_call"])
+def test_public_model_inspect_refresh_rejects_stale_worker_epoch_before_job(route, tmp_path, monkeypatch):
+    daemon, worker, project_id, session_id, model_ref, revision = _refresh_inspection_fixture(tmp_path, monkeypatch)
+    try:
+        lifecycle = daemon.session_lifecycle.get(project_id, session_id)
+        stale = daemon._updated_session_lifecycle(
+            lifecycle, state=lifecycle["state"], client_state=lifecycle["client_state"],
+            worker_instance_id=lifecycle["worker_instance_id"],
+            worker_epoch=lifecycle["worker_epoch"] + 1,
+        )
+        daemon.session_lifecycle.save(stale, expected_revision=lifecycle["revision"])
+        before_calls = worker.backend_snapshot_calls
+        before_jobs = len(daemon._session_jobs_for_project(project_id))
+        response = daemon.dispatch(_model_inspect_public_request(
+            route, project_id, session_id, model_ref, revision, suffix="stale-worker-epoch",
+        ))
+        assert response["success"] is False, response
+        assert response["error"]["code"] == "WORKER_BINDING_MISMATCH"
+        assert "job_id" not in response.get("execution", {})
+        assert worker.backend_snapshot_calls == before_calls
+        assert len(daemon._session_jobs_for_project(project_id)) == before_jobs
+    finally:
+        daemon.close()
+
+
+def test_public_model_inspect_refresh_requires_project_write_before_admission(tmp_path, monkeypatch):
+    daemon, worker, project_id, session_id, model_ref, revision = _refresh_inspection_fixture(tmp_path, monkeypatch)
+    seen = []
+    original = daemon.project_authority.authorize_operation
+    def deny_refresh(project, permission):
+        seen.append(permission)
+        if permission == "project_write":
+            raise ExecutionContractError("PERMISSION_DENIED", "fixture project has inspect-only grant")
+        return original(project, permission)
+    monkeypatch.setattr(daemon.project_authority, "authorize_operation", deny_refresh)
+    try:
+        before = len(daemon._session_jobs_for_project(project_id))
+        before_snapshots = worker.backend_snapshot_calls
+        response = daemon.dispatch(_model_inspect_public_request(
+            "operation_call", project_id, session_id, model_ref, revision, suffix="permission",
+        ))
+        assert response["success"] is False
+        assert response["error"]["code"] == "PERMISSION_DENIED"
+        assert seen == ["project_write"]
+        assert len(daemon._session_jobs_for_project(project_id)) == before
+        assert worker.backend_snapshot_calls == before_snapshots
+    finally:
+        daemon.close()
+
+
+def test_public_model_inspect_refresh_without_live_binding_refuses_before_job(tmp_path, monkeypatch):
+    daemon, worker, project_id, session_id, model_ref, revision = _refresh_inspection_fixture(tmp_path, monkeypatch)
+    try:
+        context = daemon.session_registry.get(project_id, session_id)
+        daemon.session_registry.remove(project_id, session_id, expected=context)
+        before_calls = worker.backend_snapshot_calls
+        before_jobs = len(daemon._session_jobs_for_project(project_id))
+        response = daemon.dispatch(_model_inspect_public_request(
+            "operation_call", project_id, session_id, model_ref, revision, suffix="no-live-binding",
+        ))
+        assert response["success"] is False, response
+        assert response["error"]["code"] == "SESSION_NOT_FOUND"
+        assert "job_id" not in response.get("execution", {})
+        assert worker.backend_snapshot_calls == before_calls
+        assert len(daemon._session_jobs_for_project(project_id)) == before_jobs
+    finally:
+        daemon.close()
+
+
+def test_session_stop_keeps_unknown_registered_session_job_busy_without_append_only_proof(tmp_path, monkeypatch):
+    worker = _ObservedLifecycleWorker()
+    daemon, project_id = _connect_daemon(tmp_path, worker, monkeypatch=monkeypatch)
+    try:
+        connected = daemon.dispatch(_connect_request(project_id, "stop-proof-connect"))
+        assert connected["success"] is True, connected
+        session_id = connected["data"]["session_id"]
+        job_id, _record, original_result, _ref, _worker_request_id = _unknown_session_model_job(
+            daemon, project_id, session_id, worker, "stop-proof",
+        )
+        # A stale generic flag is not the append-only session.recover proof.
+        daemon.store.update_job(job_id, "UNKNOWN", {"reconciled_quiescent": True})
+        source_before = daemon.store.job(job_id)
+        lifecycle = daemon.session_lifecycle.get(project_id, session_id)
+        owned_identity = {
+            "pid": 7771, "birth": "test-birth-7771", "executable": "/opt/comsol/server",
+            "runtime_id": "fixture-runtime", "endpoint": {"host": "127.0.0.1", "port": 2046},
+        }
+        disconnected = daemon._updated_session_lifecycle(
+            lifecycle, state="DISCONNECTED", client_state="RETIRED",
+            worker_instance_id=lifecycle["worker_instance_id"],
+            worker_epoch=lifecycle["worker_epoch"],
+            server_instance_id="server-physical-binding",
+            server_state="MCP_MANAGED", server_ownership="mcp_managed",
+            server_process_identity=owned_identity,
+        )
+        daemon.session_lifecycle.save(disconnected, expected_revision=lifecycle["revision"])
+        daemon._session_worker_handles.pop((project_id, session_id), None)
+        monkeypatch.setattr(daemon, "_authorize_server_control", lambda *_args: "synthetic-auth-digest")
+        response = daemon.dispatch({
+            "operation": "session.stop",
+            "arguments": {"project_id": project_id, "session_id": session_id,
+                          "authorization_ref": "fixture-authorization",
+                          "idempotency_key": "stop-with-unresolved-registered-job"},
+            "execution": {},
+        })
+        assert response["success"] is False, response
+        assert response["error"]["code"] == "SESSION_BINDING_BUSY"
+        assert response["data"]["server_stopped"] is False
+        assert job_id in response["data"]["unresolved_job_ids"]
+        source_after = daemon.store.job(job_id)
+        assert source_after["status"] == source_before["status"] == "UNKNOWN"
+        assert source_after["result"] == source_before["result"] == original_result
+        assert daemon._job_quiescence_proven(source_after) is False
+    finally:
+        daemon.close()
+
+
 def _unknown_connect_after_terminal_reply(monkeypatch, daemon, project_id, key):
     """Leave a real terminal connect reply behind an UNKNOWN lifecycle result."""
     original_save = daemon.session_lifecycle.save
@@ -4140,6 +4395,62 @@ def _runtime_context(project_id: str, session_id: str, *, pid: int, port: int, w
         server_ownership="mcp_managed",
         process_identity=process,
     )
+
+
+def test_unknown_execution_gate_requires_distinct_observed_server_births(tmp_path):
+    daemon = _daemon(tmp_path)
+    worker_a, worker_b = object(), object()
+    first = _runtime_context("project-a", "session-a", pid=9101, port=29101, worker=worker_a)
+    independent = _runtime_context("project-b", "session-b", pid=9102, port=29102, worker=worker_b)
+    daemon.session_registry.register(first)
+    daemon.session_registry.register(independent)
+
+    def source_job(context, *, model_tag):
+        return {"metadata": {
+            "runtime_binding": {
+                "kind": "registered_session", "project_id": context.project_id,
+                "session_id": context.session_id, "worker_epoch": context.worker_epoch,
+                "worker_instance_id": context.worker_instance_id,
+                # Descriptive ids and ModelRefs are not physical Server proof.
+                "server_instance_id": f"label-{model_tag}",
+            },
+            "execution": {"project_id": context.project_id, "session_id": context.session_id,
+                          "model_ref": {"model_tag": model_tag}},
+        }}
+
+    try:
+        assert daemon._unknown_job_conflicts_with_execution(
+            source_job(first, model_tag="model-a"),
+            {"project_id": independent.project_id, "session_id": independent.session_id,
+             "model_ref": {"model_tag": "different-model"}},
+        ) is False
+
+        # Different project/session/ModelRef/server labels still conflict when
+        # both sessions can address the same observed physical Server birth.
+        alias = _runtime_context("project-c", "session-c", pid=9101, port=29103, worker=object())
+        daemon.session_registry.register(alias)
+        assert daemon._unknown_job_conflicts_with_execution(
+            source_job(first, model_tag="model-a"),
+            {"project_id": alias.project_id, "session_id": alias.session_id,
+             "model_ref": {"model_tag": "different-model"}},
+        ) is True
+
+        unowned = replace(
+            _runtime_context("project-d", "session-d", pid=9103, port=29104, worker=object()),
+            server_ownership="shared",
+        )
+        daemon.session_registry.register(unowned)
+        assert daemon._unknown_job_conflicts_with_execution(
+            source_job(first, model_tag="model-a"),
+            {"project_id": unowned.project_id, "session_id": unowned.session_id},
+        ) is True
+
+        assert daemon._unknown_job_conflicts_with_execution(
+            {"metadata": {}},
+            {"project_id": independent.project_id, "session_id": independent.session_id},
+        ) is True
+    finally:
+        daemon.close()
 
 
 def _request(project_id: str, session_id: str, key: str):

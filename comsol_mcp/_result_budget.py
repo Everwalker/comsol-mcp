@@ -150,9 +150,11 @@ def plan_result_budget(
     expression_count_verified: bool = False,
     point_count_verified: bool = False,
     solution_axes_verified: bool = False,
+    solution_count_bound_verified: bool = False,
     expression_source: str | None = None,
     point_count_source: str | None = None,
     solution_axes_source: str | None = None,
+    solution_count_source: str | None = None,
     raw_point_upper_bound: int | None = None,
     raw_point_upper_bounds_by_outer: Sequence[int] | None = None,
     raw_upper_bound_verified: bool = False,
@@ -324,12 +326,20 @@ def plan_result_budget(
             "POINT_COUNT_UNVERIFIED",
             "point count must come from verified coordinates or another explicit point contract",
         )
-    if not solution_axes_verified or not solution_axes_source:
+    if not ((solution_axes_verified and solution_axes_source)
+            or (solution_count_bound_verified and solution_count_source)):
         return _reject(
             result,
             "SOLUTION_AXES_UNVERIFIED",
-            "outer/inner counts must come from a verified solution binding",
+            "solution allocation requires a verified outer/inner binding or a separate numeric count witness",
         )
+    result["solution_verification"] = {
+        "scope": "complete_outer_inner_axes" if solution_axes_verified else "numeric_count_only",
+        "axes_verified": bool(solution_axes_verified),
+        "numeric_count_bound_verified": bool(solution_count_bound_verified),
+        "axes_source": solution_axes_source if solution_axes_verified else None,
+        "count_source": solution_count_source if solution_count_bound_verified else None,
+    }
 
     kind = feature_kind.strip().lower()
     getter_is_raw_array = raw_getter in RAW_ARRAY_GETTERS
@@ -449,7 +459,8 @@ def plan_result_budget(
     result["metadata_sources"] = {
         "expression": expression_source,
         "point_count": point_count_source,
-        "solution_axes": solution_axes_source,
+        "solution_axes": solution_axes_source if solution_axes_verified else None,
+        "solution_count": solution_count_source if solution_count_bound_verified else None,
         "raw_point_upper_bound": bound_source,
     }
     if total_scalar_values > max_elems:
