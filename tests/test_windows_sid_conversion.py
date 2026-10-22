@@ -238,3 +238,140 @@ def test_service_sid_leaf_failed_native_lookup_has_no_identity_fallback(monkeypa
 def test_name_normalization_does_not_broaden_other_account_names(account):
     from comsol_mcp._windows_sid import normalize_scm_account_name
     assert normalize_scm_account_name(account) == account
+
+
+def shared_sid_document(service_sid="S-1-5-19", account=r"NT AUTHORITY\LocalService"):
+    """Existing complete shared contract, with software-only standard identity intent."""
+    from tests.test_windows_host_change import _profile
+    document = _profile().as_dict()
+    document["service_account_id"] = service_sid
+    document["windows_isolation"].update(service_start_name=account, service_logon_sid=service_sid)
+    return document
+
+
+def parse_shared_sid_wrapper(document, version):
+    wrapper = {"schema": t037.PROFILE_SCHEMA_V2, "host_resource_profile": document}
+    if version == 2:
+        return t037.parse_profile_v2_document(wrapper, source_sha256="d" * 64)
+    from comsol_mcp._windows_job_limits import JobLimitsV1
+    wrapper.update(schema=t037.PROFILE_SCHEMA_V3, job_limits=JobLimitsV1(4096, 16384, 4).as_dict())
+    return t037.parse_profile_v3_document(wrapper, source_sha256="d" * 64)
+
+
+@pytest.mark.parametrize("version", [2, 3])
+@pytest.mark.parametrize("account,sid", [
+    ("LocalSystem", "S-1-5-18"),
+    (r"NT AUTHORITY\LocalService", "S-1-5-19"),
+    (r"NT AUTHORITY\NetworkService", "S-1-5-20"),
+])
+def test_shared_sid_standard_service_identity_is_intent_only(version, account, sid):
+    document = shared_sid_document(sid, account)
+    parsed = parse_shared_sid_wrapper(document, version)
+    assert parsed.service_account_sid == sid
+    assert parsed.host_resource_profile.as_dict() == document
+    assert parsed.as_safe_dict()["verification_state"] == "NOT_VERIFIED"
+
+
+@pytest.mark.parametrize("version", [2, 3])
+@pytest.mark.parametrize("sid", [
+    "S-1-4294967295-4294967295", "S-1-0x000100000000-0",
+    "S-1-0xFFFFFFFFFFFF-4294967295", "S-1-5" + "-4294967295" * 15,
+])
+def test_shared_sid_legal_authority_and_subauthority_boundaries(version, sid):
+    from comsol_mcp._windows_sid import is_canonical_sid
+    assert is_canonical_sid(sid)
+    document = shared_sid_document()
+    # Capability fields exercise full SID width without widening the separate
+    # existing 128-character top-level account identifier contract.
+    document["windows_isolation"]["capability_sids"] = [sid]
+    parsed = parse_shared_sid_wrapper(document, version)
+    assert parsed.windows_policy.capability_sids == (sid,)
+    assert parsed.as_safe_dict()["verification_state"] == "NOT_VERIFIED"
+
+
+@pytest.mark.parametrize("field", ["service_logon_sid", "service_sid", "appcontainer_sid", "capability", "ACL", "WFP"])
+@pytest.mark.parametrize("bad_sid", [
+    "S-1-5", "S-1-5-4294967296", "S-1-4294967296-1",
+    "S-1-0x1000000000000-1", "S-1-05-19", "S-1-5" + "-1" * 16,
+])
+def test_shared_sid_rejects_invalid_grammar_at_every_existing_sid_field(field, bad_sid):
+    from comsol_mcp import _w26_os_resources as resources
+    document = shared_sid_document()
+    policy = document["windows_isolation"]
+    if field == "service_logon_sid":
+        document["service_account_id"] = bad_sid
+        policy[field] = bad_sid
+    elif field == "capability":
+        policy["capability_sids"] = [bad_sid]
+    elif field in {"ACL", "WFP"}:
+        policy["acl_grants" if field == "ACL" else "wfp_grants"][0]["principal_sid"] = bad_sid
+    else:
+        policy[field] = bad_sid
+    with pytest.raises(ValueError, match="SID"):
+        resources.parse_host_resource_profile(document)
+
+
+@pytest.mark.parametrize("version", [2, 3])
+@pytest.mark.parametrize("fault", [
+    "capability_duplicate", "ACL_duplicate", "WFP_duplicate", "filter_duplicate",
+    "service_interactive_same", "service_interactive_casefold_same", "logon_binding_mismatch",
+    "service_sid_is_logon", "service_sid_is_interactive", "policy_role_swap",
+    "WFP_service_principal", "ACL_interactive_principal", "WFP_wrong_role_image",
+    "write_outside_root", "invalid_port", "default_allow", "missing_owner", "claimed_proof",
+    "account_identifier_too_long",
+])
+def test_shared_sid_existing_identity_grant_and_resource_gates_still_refuse(version, fault):
+    import copy
+    document = shared_sid_document()
+    policy = document["windows_isolation"]
+    if fault == "capability_duplicate":
+        policy["capability_sids"].append(policy["capability_sids"][0].lower())
+    elif fault == "ACL_duplicate":
+        policy["acl_grants"].append(copy.deepcopy(policy["acl_grants"][0]))
+    elif fault == "WFP_duplicate":
+        policy["wfp_grants"].append(copy.deepcopy(policy["wfp_grants"][0]))
+    elif fault == "filter_duplicate":
+        policy["wfp_filter_keys"].append(policy["wfp_filter_keys"][0].lower())
+    elif fault.startswith("service_interactive"):
+        document["interactive_account_id"] = document["service_account_id"]
+        if fault.endswith("casefold_same"):
+            document["interactive_account_id"] = document["interactive_account_id"].lower()
+    elif fault == "logon_binding_mismatch":
+        document["service_account_id"] = "S-1-5-20"
+    elif fault == "service_sid_is_logon":
+        policy["service_sid"] = policy["service_logon_sid"]
+    elif fault == "service_sid_is_interactive":
+        policy["service_sid"] = document["interactive_account_id"]
+    elif fault == "policy_role_swap":
+        policy["service_sid"], policy["appcontainer_sid"] = policy["appcontainer_sid"], policy["service_sid"]
+    elif fault == "WFP_service_principal":
+        policy["wfp_grants"][0]["principal_sid"] = policy["service_sid"]
+    elif fault == "ACL_interactive_principal":
+        policy["acl_grants"][0]["principal_sid"] = document["interactive_account_id"]
+    elif fault == "WFP_wrong_role_image":
+        policy["wfp_grants"][0]["application_path"] = next(i["path"] for i in document["launch_images"] if i["role"] == "worker")
+    elif fault == "write_outside_root":
+        policy["acl_grants"][0].update(path=r"C:\unrelated", rights=["WRITE"])
+    elif fault == "invalid_port":
+        policy["wfp_grants"][0]["remote_ports"] = [65536]
+    elif fault == "default_allow":
+        policy["default_network_action"] = "ALLOW"
+    elif fault == "missing_owner":
+        document["root"]["owner_id"] = ""
+    elif fault == "claimed_proof":
+        policy["verification_state"] = "VERIFIED"
+    elif fault == "account_identifier_too_long":
+        document["service_account_id"] = policy["service_logon_sid"] = "S-1-5" + "-4294967295" * 15
+    with pytest.raises(t037.WindowsT037Error) as error:
+        parse_shared_sid_wrapper(document, version)
+    assert error.value.code == t037.ERROR_PROFILE_INVALID
+
+
+def test_shared_sid_legacy_profile_serialization_and_hash_unchanged():
+    from tests.test_windows_host_change import _profile
+    from comsol_mcp import _w26_os_resources as resources
+    legacy = _profile()
+    # Captured from the accepted 03e241b7 checker before this one-module change.
+    assert legacy.sha256 == "ce3b4ab1d20d1089549b3eb1bf13961f2450789ff2563e9a6677a3a939a840f8"
+    restored = resources.parse_host_resource_profile(legacy.as_dict())
+    assert restored.as_dict() == legacy.as_dict() and restored.sha256 == legacy.sha256

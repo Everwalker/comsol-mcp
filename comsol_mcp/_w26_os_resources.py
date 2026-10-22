@@ -30,6 +30,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from ._execution_contract import ExecutionContractError
+from ._windows_sid import is_canonical_sid
 
 
 PROFILE_SCHEMA = "comsol-mcp.host-resource-profile/v1"
@@ -46,7 +47,6 @@ _MAX_SQLITE_INT = (1 << 63) - 1
 _QUIESCENCE_MAX_AGE_NS = 30_000_000_000
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,127}$")
-_SID_RE = re.compile(r"^S-1-(?:[0-9]{1,2})-(?:[0-9]{1,10})(?:-[0-9]{1,10}){1,14}$", re.IGNORECASE)
 _GUID_BODY = (r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
               r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
 _GUID_RE = re.compile(r"^(?:\{" + _GUID_BODY + r"\}|" + _GUID_BODY + r")$")
@@ -466,7 +466,7 @@ def _validate_windows_isolation(profile: HostResourceProfile,
     for value, label in ((policy.service_logon_sid, "service_logon_sid"),
                          (policy.service_sid, "service_sid"),
                          (policy.appcontainer_sid, "appcontainer_sid")):
-        if not isinstance(value, str) or not _SID_RE.fullmatch(value):
+        if not isinstance(value, str) or not is_canonical_sid(value):
             raise ValueError(f"Windows {label} must be a canonical SID")
     if not _is_sha256(policy.host_fingerprint_sha256):
         raise ValueError("Windows host_fingerprint_sha256 must be a lowercase SHA-256 digest")
@@ -481,7 +481,7 @@ def _validate_windows_isolation(profile: HostResourceProfile,
         raise ValueError("Windows capability_sids must be a bounded tuple")
     capability_keys: set[str] = set()
     for sid in policy.capability_sids:
-        if not isinstance(sid, str) or not _SID_RE.fullmatch(sid):
+        if not isinstance(sid, str) or not is_canonical_sid(sid):
             raise ValueError("Windows capability SID is malformed")
         key = sid.casefold()
         if key in capability_keys:
@@ -511,7 +511,7 @@ def _validate_windows_isolation(profile: HostResourceProfile,
         if not isinstance(grant, WindowsPathAclGrant):
             raise ValueError("Windows ACL grants must use WindowsPathAclGrant")
         _path_key(grant.path, "windows")
-        if not isinstance(grant.principal_sid, str) or not _SID_RE.fullmatch(grant.principal_sid):
+        if not isinstance(grant.principal_sid, str) or not is_canonical_sid(grant.principal_sid):
             raise ValueError("Windows ACL grant principal must be a SID")
         if grant.principal_sid.casefold() not in allowed_principals:
             raise ValueError("Windows ACL grant principal is outside the configured service/AppContainer identities")
@@ -555,7 +555,7 @@ def _validate_windows_isolation(profile: HostResourceProfile,
         if len(expected_images) != 1 or _path_key(grant.application_path, "windows") != _path_key(
                 expected_images[0].path, "windows"):
             raise ValueError("Windows WFP application_path must equal the exact trusted launch image path")
-        if (not isinstance(grant.principal_sid, str) or not _SID_RE.fullmatch(grant.principal_sid)
+        if (not isinstance(grant.principal_sid, str) or not is_canonical_sid(grant.principal_sid)
                 or grant.principal_sid.casefold() != policy.appcontainer_sid.casefold()):
             raise ValueError("Windows WFP principal must bind the configured AppContainer SID")
         if grant.address_family not in {"IPV4", "IPV6"}:

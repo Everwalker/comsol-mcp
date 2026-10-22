@@ -1,0 +1,271 @@
+{
+  "schema": "COMSOL_MCP_WINDOWS_SHARED_SID_EVIDENCE_V1",
+  "created_utc": "2026-10-22T14:46:06.043909+00:00",
+  "scope": "WIN-SHARED-SID bounded intent-schema completion only; no native-engine/host-policy acceptance or publication",
+  "write_set": [
+    "comsol_mcp/_w26_os_resources.py",
+    "tests/test_windows_sid_conversion.py",
+    "docs/universal_mcp_execution/evidence/WINDOWS_SHARED_SID.json"
+  ],
+  "production_change": {
+    "file": "comsol_mcp/_w26_os_resources.py",
+    "old_sha256": "7fbf94fd1f0f75ab4e65f5a51a78ed4ec055ce887861155180af0f0df8171dfb",
+    "new_sha256": "52be79a4f5e58333d9f1b17c07f1e04fbd0c846c20bc9be0c2dacad235307dbe",
+    "summary": "Reuse accepted _windows_sid.is_canonical_sid for every former shared SID regex call. Five _SID_RE occurrences were one declaration plus four validation calls covering logon/service/AppContainer, capability, ACL principal and WFP principal SID fields. No profile shape/hash serialization, owner/permission/equality/uniqueness/role/image/endpoint/resource gate was changed.",
+    "scope_check": {
+      "path": "_state/universal-windows-prep/SID_FIX/SHARED_SID/scope-verification.json",
+      "sha256": "9f03d90df297220708c98e59a008cb4fe6745a25b5a6c6d3c1aa38d9f05009d8"
+    }
+  },
+  "reproduction": {
+    "current_old_checker_source_commit": "03e241b707c270870666b6cc487be6541521bf52",
+    "before": {
+      "path": "_state/universal-windows-prep/SID_FIX/SHARED_SID/before-shared-checker.json",
+      "sha256": "232e7b0f597650603efc917323d61aa790bbab184b1f795f18690d16e67c3130"
+    },
+    "standard_service_v2_v3_before": {
+      "tests": 6,
+      "passed": 0,
+      "failed": 6,
+      "errors": 0,
+      "skipped": 0,
+      "report": {
+        "path": "_state/universal-windows-prep/SID_FIX/SHARED_SID/before-standard-profiles.xml",
+        "sha256": "f391e0bccb3b843adf16b8fabc010327488c9b73af97c69d71c5cf335faa1e2d"
+      }
+    },
+    "finding": "Actual accepted production checker rejected all six standard service SID wrapper parses. Software input only; this before run was on macOS, not a claimed Windows policy execution."
+  },
+  "tests": {
+    "final_SID_and_closed_v2_v3_parsers": {
+      "tests": 161,
+      "passed": 161,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": {
+        "path": "_state/universal-windows-prep/SID_FIX/SHARED_SID/final-sid-profile.xml",
+        "sha256": "ac8dc8fcc34efbc0134d484273e3d7d2bdc6f912e74555547eabaec86b982dbc"
+      },
+      "command": ".venv/bin/python -B -m pytest -q -p no:cacheprovider tests/test_windows_sid_conversion.py tests/test_windows_t037_native.py::test_v2_profile_bridge_parses_complete_closed_windows_contract_only tests/test_windows_job_limits.py::test_v3_is_explicit_same_internal_type_and_v2_schema_hash_remains_exact tests/test_windows_job_limits.py::test_missing_malformed_targets_rejected_at_closed_profile_parser tests/test_windows_job_limits.py::test_unconfigured_wrapper_uses_typed_not_configured --junitxml=_state/universal-windows-prep/SID_FIX/SHARED_SID/final-sid-profile.xml",
+      "controls": [
+        "standard LocalSystem/LocalService/NetworkService in both wrappers remain NOT_VERIFIED",
+        "uint32/48-bit authority and 1..15 subauthority grammar; existing 128-character account identifier limit retained",
+        "malformed/overflow SID at every former grammar field",
+        "duplicate capability/filter/ACL/WFP scopes; service-interactive equality including casefold; logon/account mismatch",
+        "service SID conflation and role SID swap against existing grant bindings; wrong role image/principal",
+        "out-of-root write, invalid endpoint, default allow, missing owner and claimed proof refuse",
+        "old valid profile serialization SHA-256 unchanged"
+      ]
+    },
+    "existing_shared_cross_platform_regression": {
+      "tests": 59,
+      "passed": 48,
+      "failed": 11,
+      "skipped": 0,
+      "state": "11_FAIL_RETAINED_WITH_IDENTICAL_ACCEPTED_CHECKER_CONTROL",
+      "command": ".venv/bin/python -B -m pytest -q -p no:cacheprovider tests/test_windows_sid_conversion.py tests/test_w26_os_resources.py --junitxml=_state/universal-windows-prep/SID_FIX/SHARED_SID/after-shared-sid.xml",
+      "current_run_report": {
+        "path": "_state/universal-windows-prep/SID_FIX/SHARED_SID/after-shared-sid.xml",
+        "sha256": "e50e5879b618876bfcb4acad298903f7d229a33ec08c69ef22da88fb5d59b14d"
+      },
+      "accepted_checker_report": {
+        "path": "_state/universal-windows-prep/SID_FIX/SHARED_SID/accepted-checker-shared-regression.xml",
+        "sha256": "ae0ac43a6b2f33ce4254d6644fc3072442d255e665043d84e800b94bdae0eb34"
+      },
+      "control_command": ".venv/bin/python -B _state/universal-windows-prep/SID_FIX/SHARED_SID/baseline_check.py",
+      "control_binding": {
+        "path": "_state/universal-windows-prep/SID_FIX/SHARED_SID/accepted-checker-binding.json",
+        "sha256": "f6fb872895fc87ea32a58bc76fa188009b2505a0e86cada324342cfb989755db"
+      },
+      "comparison": {
+        "path": "_state/universal-windows-prep/SID_FIX/SHARED_SID/shared-regression-comparison.json",
+        "sha256": "8f05a9348b5b782f55b0b153e15143a97d3906920ce6217c2065fb20117a8ed5"
+      },
+      "failure_names": [
+        "test_dynamic_api_write_with_sufficient_budget_dispatches_and_releases_terminal_reservation",
+        "test_memory_only_admission_precedes_worker_and_terminal_release_is_durable",
+        "test_sufficient_disk_and_memory_admission_commit_together_and_release_after_terminal",
+        "test_low_memory_in_combined_admission_rolls_back_disk_before_running",
+        "test_low_disk_in_combined_admission_never_writes_memory_reservation",
+        "test_stale_memory_observation_after_prepare_rolls_back_both_reservations_before_dispatch",
+        "test_dispatched_lost_or_expired_memory_reservation_stays_held[LOST]",
+        "test_dispatched_lost_or_expired_memory_reservation_stays_held[EXPIRED]",
+        "test_dispatched_lost_or_expired_memory_reservation_stays_held[CANCELLED]",
+        "test_durable_queued_abort_proof_releases_memory_reservation_without_worker_send",
+        "test_memory_unknown_reservation_survives_restart_and_counts_other_projects"
+      ],
+      "interpretation": "All 59 original cases had identical pass/fail sets with the exact accepted shared module loaded in an isolated test process and the same other production sources. The 11 memory/dispatch failures are retained as FAIL for Main; they are not marked PASS/SKIP or repaired outside this scope.",
+      "count_scope": "Selected tests.test_w26_os_resources subset only, not total cases in the combined command/report.",
+      "combined_report_total_counts": {
+        "tests": 204,
+        "passed": 191,
+        "failed": 13,
+        "errors": 0,
+        "skipped": 0
+      },
+      "selected_original_shared_module_counts": {
+        "tests": 59,
+        "passed": 48,
+        "failed": 11,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "intermediate_run_retained": {
+      "tests": 204,
+      "passed": 191,
+      "failed": 13,
+      "errors": 0,
+      "skipped": 0,
+      "report": {
+        "path": "_state/universal-windows-prep/SID_FIX/SHARED_SID/after-shared-sid.xml",
+        "sha256": "e50e5879b618876bfcb4acad298903f7d229a33ec08c69ef22da88fb5d59b14d"
+      },
+      "meaning": "191 pass/13 fail includes the above 11 shared-regression failures and two new boundary-test expectations corrected to respect the existing 128-character account identifier constraint. Production identifier/resource checks were not loosened; final SID/parser report is separate."
+    }
+  },
+  "fresh_normal_Windows_install": {
+    "base_commit": "03e241b707c270870666b6cc487be6541521bf52",
+    "base_scope": "Exact accepted 03e241b707c270870666b6cc487be6541521bf52 package source + only _w26_os_resources.py grammar wiring. Does not absorb in-flight Main port/generic edits.",
+    "source_freeze": {
+      "path": "_state/universal-windows-prep/SID_FIX/SHARED_SID/source-freeze.json",
+      "sha256": "b245cc08473753ee782765fc4dd235105c2329d719ae38a5f19d2aa7c7e7c3db"
+    },
+    "source_files": 176,
+    "production_delta": [
+      "comsol_mcp/_w26_os_resources.py"
+    ],
+    "normal_PEP517_build": {
+      "path": "_state/universal-windows-prep/SID_FIX/SHARED_SID/build/result.json",
+      "sha256": "e4ded20e9c2f8b8de9e9bf004f492dfd7a829f979ff9043e4311e9dad7da5bbb"
+    },
+    "wheel": {
+      "path": "_state/universal-windows-prep/SID_FIX/SHARED_SID/build/wheels/comsol_mcp-0.1.10-py3-none-any.whl",
+      "sha256": "57ecd3e24879b00684b3510f640d2c6ee3d2ea2c999bbd398ad8179bd4bb937f"
+    },
+    "payload_sha256": "853f78aad826833296e353d7afd83d5b16c0e2966cca1f4499a98473b8a111a8",
+    "install_lock_sha256": "09e899c57a3c91f558cbf98dc3f9b03e775bc03c58712c137b61f535dbe32748",
+    "remote_root": "C:/Users/Everwalker/universal-windows-sharedsid-20261022-a4c81d",
+    "method": "Existing normal Python3.12, NEW disposable venv, --no-index --require-hashes; no new Python download. 35 wheels, pip check0, all173 installed package source files hash-exact.",
+    "installed_result": {
+      "path": "_state/universal-windows-prep/SID_FIX/SHARED_SID/readbacks/install-result.json",
+      "sha256": "0fc28ec5d30584139080e4d1d23b4c09a5d32397dda209d039afbeb838750c2a"
+    }
+  },
+  "actual_Windows_readonly": {
+    "result": {
+      "path": "_state/universal-windows-prep/SID_FIX/SHARED_SID/readbacks/readonly-result.json",
+      "sha256": "b8afbbc07cd09f7df72e43ef9d48e89d5b5c73f644b8b7e5ffa87be663a8bfbe"
+    },
+    "positive_standard_identity_v2_v3_parses": 6,
+    "standard_identities": [
+      {
+        "name": "LocalSystem",
+        "actual_Win32_lookup_sid": "S-1-5-18",
+        "wrapper": 2,
+        "verification_state": "NOT_VERIFIED"
+      },
+      {
+        "name": "LocalSystem",
+        "actual_Win32_lookup_sid": "S-1-5-18",
+        "wrapper": 3,
+        "verification_state": "NOT_VERIFIED"
+      },
+      {
+        "name": "NT AUTHORITY\\LocalService",
+        "actual_Win32_lookup_sid": "S-1-5-19",
+        "wrapper": 2,
+        "verification_state": "NOT_VERIFIED"
+      },
+      {
+        "name": "NT AUTHORITY\\LocalService",
+        "actual_Win32_lookup_sid": "S-1-5-19",
+        "wrapper": 3,
+        "verification_state": "NOT_VERIFIED"
+      },
+      {
+        "name": "NT AUTHORITY\\NetworkService",
+        "actual_Win32_lookup_sid": "S-1-5-20",
+        "wrapper": 2,
+        "verification_state": "NOT_VERIFIED"
+      },
+      {
+        "name": "NT AUTHORITY\\NetworkService",
+        "actual_Win32_lookup_sid": "S-1-5-20",
+        "wrapper": 3,
+        "verification_state": "NOT_VERIFIED"
+      }
+    ],
+    "negative_intents_refused": 16,
+    "native_resources_unresolved": {
+      "lookup": 0,
+      "token": 0
+    },
+    "actual_token_state": "OBSERVED",
+    "no_profile_refusal": {
+      "code": "T037_PROFILE_INVALID",
+      "child_created": false
+    },
+    "Desktop20592": {
+      "preserved_identity": true,
+      "birth_filetime": 134370450066508547,
+      "scope": "Named read-only query only, not adopted/signalled and not a claim of global host quiescence"
+    },
+    "trust_limit": "v2/v3 inputs include synthetic workspace/images/ACL/Job-target metadata solely to exercise closed intent parsing. No trusted loader, SCM issuer, authorization/receipt or native policy proof was created. The Job numbers in the software fixture were not applied as native budgets."
+  },
+  "retained_R3": {
+    "evidence_path": "docs/universal_mcp_execution/evidence/WINDOWS_SID_FIX.json",
+    "sha256": "21d705988756803ecf5f2029fd61820f6a1c6f98e21eaa2e1297360b01fb3926",
+    "state": "UNCHANGED_ACCEPTED_R3_SCOPE; neither its old wheel/raw nor 133 JUnit was relabeled as this new result"
+  },
+  "host_plan": {
+    "path": "_state/universal-windows-prep/SID_FIX/hostplan-v2/HOST_PLAN_V2.json",
+    "sha256": "8c1aef4bb94071e5a5f251e2e46fd82c3f90b7cd3e86e97ebdf228424739676f",
+    "apply_ready": false,
+    "authorized_to_apply": false,
+    "scope": "UNCHANGED. Only WIN-SHARED-SID intent expressibility has new software evidence. Main independently owns exact ports/ephemeral-source design and canonical state integration."
+  },
+  "acceptance_boundaries": {
+    "shared_SID_intent_expressibility": "SOFTWARE_VALIDATED_WITH_REAL_WINDOWS_INSTALLED_PARSER_READBACK",
+    "Main_final_acceptance": "PENDING",
+    "trusted_T037": "NOT_VERIFIED",
+    "COMSOL_JVM_native": "NOT_RUN",
+    "host_policy_apply": "NOT_RUN",
+    "services_accounts_AppContainer_WFP_hostACL_changes": 0,
+    "canonical_state_progress_changes_by_this_unit": 0,
+    "published_by_this_executor": false
+  },
+  "Main_handoff": "Review one production grammar-wiring diff and focused tests/new source binding. Integrate the existing shared-regression 11 FAIL facts separately; do not infer native isolation approval from this schema closure.",
+  "test_source": {
+    "path": "tests/test_windows_sid_conversion.py",
+    "sha256": "7c9fc0a4a4579c22b3cb270bb150212c5361ded615939d530b0f55e4d727be34",
+    "accepted_R3_base_sha256": "b60325dc8b4d188bede3f3d79f30342cfd1bfea71a958cc46b49dbd298c13661",
+    "private_tested_source_copy": {
+      "path": "_state/universal-windows-prep/SID_FIX/SHARED_SID/tested-test_windows_sid_conversion.py",
+      "sha256": "7c9fc0a4a4579c22b3cb270bb150212c5361ded615939d530b0f55e4d727be34"
+    }
+  },
+  "Main_review": {
+    "status": "PASS_SCOPED_SHARED_SID_INTENT_GRAMMAR_BROADER_FAILURES_OPEN",
+    "reviewed_utc": "2026-10-22T14:53:46.119278+00:00",
+    "named_artifact_hashes_verified": 17,
+    "wheel_source_package_files_exact": 173,
+    "current_production_module_equal_to_tested_wheel": true,
+    "focused_counts": {
+      "tests": 161,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "before_standard_intent_counts": {
+      "tests": 6,
+      "failures": 6,
+      "errors": 0,
+      "skipped": 0
+    },
+    "review": "One production module only delegates former SID grammar checks to accepted shared helper; role/equality/unique/root/endpoint/budget/serialization safeguards retained. Reviewed meaningful malformed/boundary/cross-role/profile negatives and old-profile hash. Real Windows readback exercises actual standard-principal lookup plus intent parse only; NOT_VERIFIED remains.",
+    "open_regression": "59 original shared resource cases48PASS/11FAIL, baseline control same failures; full intermediate204/191/13 clarified above. Separate same-Luna resource regression investigation underway; not accepted as all software PASS.",
+    "native_and_host_policy": "NOT_RUN; original profile prebirth refuses, actual native issuer remains missing, plan not apply-ready. R3 remains bound to its original source."
+  }
+}
