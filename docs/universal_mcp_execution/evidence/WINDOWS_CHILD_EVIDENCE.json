@@ -1,0 +1,327 @@
+{
+  "schema": "comsol-mcp.windows-child-evidence/1",
+  "created_utc": "2026-10-22T15:44:36.796259+00:00",
+  "scope": "INDEPENDENT_READ_ONLY_B_STAGE_SDK_OBSERVER_SLICE",
+  "implementation_status": "IMPLEMENTED_AND_SCOPED_SELF_VERIFIED",
+  "main_agent_review": {
+    "status": "PASS_SCOPED_READONLY_OBSERVER_ONLY",
+    "reviewed_utc": "2026-10-22T15:52:53.944548+00:00",
+    "production_sha256": "5577ff0b0c46c9ce6f1a5e30b2e41930d5692b24e282c23a74d4bc2e0dd4c5e1",
+    "tests_sha256": "14f6649fe64e31e046cf7cdb2c791578e70cec6de7433c4e32ba5263bd7c6a8f",
+    "checks": [
+      "New module, borrowed original registry entries, token buffer parsing, WMI COM/BSTR/VARIANT ownership, mapped-main/backing identity and failure/UNKNOWN paths reviewed.",
+      "80 named hash records covering73 unique source/test/raw files verified; actual uploaded source equals current module and native self-hash.",
+      "JUnit87 cases, zero failures/errors/skips; actual12 negative comparison/owner controls and all7 SDK components verified.",
+      "Original CreateProcess HANDLE-only cleanup confirmed child exited; thread/process/pin released once; no unresolved resources. Nine protected production files remained byte-identical."
+    ],
+    "validation_note": "Main first upload/selfhash comparison used POSIX key against Windows-backslash native keys; normalized path representation and verified the actual bytes. This was review-script path handling, not a product test failure.",
+    "limits": "Ordinary high-IL non-AppContainer probe only. No native release-failure injection, lowbox/restricted-token/Job/MIC/WFP/issuer/vendor/COMSOL/native-isolation acceptance; existing gates unchanged."
+  },
+  "admission_authority": false,
+  "source": [
+    {
+      "path": "comsol_mcp/_windows_t037_child_evidence.py",
+      "sha256": "5577ff0b0c46c9ce6f1a5e30b2e41930d5692b24e282c23a74d4bc2e0dd4c5e1",
+      "bytes": 35292
+    },
+    {
+      "path": "tests/test_windows_t037_child_evidence.py",
+      "sha256": "14f6649fe64e31e046cf7cdb2c791578e70cec6de7433c4e32ba5263bd7c6a8f",
+      "bytes": 23697
+    }
+  ],
+  "interface": {
+    "borrow": "BorrowedChildHandles(original_owner_api, original_process_entry, original_thread_entry, expected_pid, expected_thread_id, expected_birth_filetime)",
+    "query_api": "WindowsChildEvidenceApi(original_owner_api); attach original NativeOwnedRegistry, do not adopt by PID",
+    "pin": "api.pin_image(path) returns a retained read HANDLE; original owner explicitly releases pin.entry once",
+    "observe": "observe_child(binding, pin, api=api, expected_command_line=None, expected_modified_id=None) -> frozen ChildObservations",
+    "result": "immutable typed facts, comparisons and component issues; READ_ONLY_OBSERVATIONS_NOT_ADMISSION",
+    "failure": "missing/access/error/loader state produces UNVERIFIED component issue; invalid/stale borrow raises ObservationError before SDK",
+    "lifetime": "same-thread borrowed acquired registry entries only; no closure of original child entries; ancillary HANDLE/COM/BSTR/VARIANT resources retain original closers/storage; release errors stay UNKNOWN and are never retried",
+    "authority": "ordinary Python classes/dicts/dataclasses are not accepted by any issuer; no new issuer/resume/profile flag or production integration was added"
+  },
+  "implemented_components": [
+    {
+      "name": "identity",
+      "source_ref": "comsol_mcp/_windows_t037_child_evidence.py:463",
+      "api": "GetProcessId, GetThreadId, GetProcessIdOfThread, GetProcessTimes, GetThreadTimes, WaitForSingleObject(handle,0)",
+      "facts": "original HANDLE PID, TID, process association, creation FILETIMEs and liveness before/after"
+    },
+    {
+      "name": "token",
+      "source_ref": "comsol_mcp/_windows_t037_child_evidence.py:497",
+      "api": "OpenProcessToken(TOKEN_QUERY), GetTokenInformation, LookupPrivilegeNameW",
+      "facts": "User, RestrictedSids, Capabilities, IntegrityLevel SID/RID, MandatoryPolicy, all raw privilege LUIDs/attributes/names including every enabled privilege, TokenId, AuthenticationId, ModifiedId, IsAppContainer; fresh primary-token handle before/after"
+    },
+    {
+      "name": "child_policy",
+      "source_ref": "comsol_mcp/_windows_t037_child_evidence.py:532",
+      "api": "GetProcessMitigationPolicy(ProcessChildProcessPolicy=13)",
+      "facts": "raw DWORD and three documented child-policy bits, no policy setter"
+    },
+    {
+      "name": "remote_command",
+      "source_ref": "comsol_mcp/_windows_t037_child_evidence.py:639",
+      "api": "local IWbemLocator/IWbemServices/IEnumWbemClassObject/IWbemClassObject Win32_Process query",
+      "facts": "actual PID, CommandLine BSTR, concrete CreationDate; compare PID/birth against retained HANDLE observations; optional ExecutablePath null is preserved"
+    },
+    {
+      "name": "image_backing",
+      "source_ref": "comsol_mcp/_windows_t037_child_evidence.py:582",
+      "api": "QueryFullProcessImageNameW(native/Win32), VirtualQueryEx, GetMappedFileNameW, CreateFileW, GetFinalPathNameByHandleW(VOLUME_NAME_NT), GetFileInformationByHandle, ReadFile",
+      "facts": "bounded MEM_IMAGE mapping matching the kernel-reported main image name; reopen that actual mapped backing path read-only, compare volume/file ID and SHA256 with the retained pin; recheck pin identity/content stamp"
+    }
+  ],
+  "bounds": {
+    "abi": {
+      "pointer": 8,
+      "wchar": 2,
+      "STARTUPINFO": 104,
+      "PROCESS_INFORMATION": 24,
+      "MEMORY_BASIC_INFORMATION": 48,
+      "FILE_INFORMATION": 52,
+      "VARIANT": 24
+    },
+    "token_buffer_bytes": 1048576,
+    "UTF16_units_exclusive_max": 32768,
+    "groups_or_privileges_max": 4096,
+    "WMI_ConnectServer_max_seconds": 120,
+    "WMI_Next_timeout_ms": 1500,
+    "WMI_query_max_rows": 2,
+    "mapping_max_regions": 8192,
+    "mapping_scan_deadline_seconds": 2,
+    "pinned_regular_file_max_bytes": 268435456
+  },
+  "software_validation": {
+    "status": "PASS",
+    "new_tests": 83,
+    "existing_refusal_regressions": 4,
+    "total": 87,
+    "raw": {
+      "path": "_state/universal-native-child-evidence/unit-final.xml",
+      "sha256": "d69b8ad3e5f6fa06fa9c77e7736669335d6886d2d6694cc0c0dfae4834bb3738",
+      "bytes": 13825
+    },
+    "command": {
+      "path": "_state/universal-native-child-evidence/unit-final.command.json",
+      "sha256": "484307c0424362363f6aeaf5d54c0dbd910d102e8b9c4440748938019ade7c23",
+      "bytes": 489
+    },
+    "coverage": "wrong PID/birth/thread/association; liveness and owner changes; private registry sharing; actual raw privilege/IL fidelity; token ModifiedId change; empty/truncated/outside UTF16/SID/counts/sizes; SDK errors; mapped backing mismatch; COM BSTR/VARIANT ownership; failed release retained UNKNOWN/no retry; access-time-only regression with other file guards retained",
+    "native_claim": false
+  },
+  "native_validation": {
+    "status": "PASS_SCOPED_ORDINARY_NEVER_RESUMED_PROCESS_SDK_OBSERVATIONS_ONLY",
+    "python_provenance": "existing R2 official CPython 3.12.10 prefix; actual executable path and retained file SHA256 matched R2 record; no runtime install",
+    "python_sha256": "4d6f5f81a4bca11191c4c7c6b43632694d0a4ce74e068619d8fdc161d469859a",
+    "R2_reference": "_state/universal-windows-prep/SID_FIX/R2/standalone-install-result.json",
+    "fresh_child": {
+      "identity": {
+        "pid": 21128,
+        "thread_id": 23768,
+        "thread_process_id": 21128,
+        "birth_filetime": 134371571371337285,
+        "thread_birth_filetime": 134371571371337300,
+        "process_live": true,
+        "thread_live": true
+      },
+      "flags": 134217732,
+      "flags_meaning": "CREATE_SUSPENDED | CREATE_NO_WINDOW; no inherited HANDLEs; fixed -I -B -c pass",
+      "original_CreateProcess_HANDLES_retained": true,
+      "ResumeThread_called": false
+    },
+    "all_target_components_observed": true,
+    "component_issues": [],
+    "actual_token": {
+      "is_appcontainer": false,
+      "integrity_rid": 12288,
+      "low_integrity": false,
+      "restricted_sid_count": 0,
+      "capability_count": 0,
+      "mandatory_policy": 3,
+      "enabled_privileges_preserved": 24,
+      "ModifiedId_before": 698382080,
+      "ModifiedId_after": 698382080
+    },
+    "actual_child_policy": {
+      "flags": 0,
+      "no_child_process_creation": false,
+      "audit_no_child_process_creation": false,
+      "allow_secure_process_creation": false
+    },
+    "remote_command": {
+      "actual_WMI_CommandLine_matches_expected": true,
+      "actual_PID_birth_matches_retained_HANDLE": true,
+      "creation_date": "20261022233857.133728+480",
+      "ExecutablePath": null
+    },
+    "main_image": {
+      "memory_type": 16777216,
+      "memory_state": 4096,
+      "allocation_base": 140699111718912,
+      "file_ID_and_SHA256_match_pin": true,
+      "pin_stable": true,
+      "scope": "backing file hash only; no loaded-memory/all-DLL claim"
+    },
+    "controls": [
+      {
+        "name": "native facts versus wrong expected_pid",
+        "kind": "NATIVE_FACT_COMPARISON",
+        "status": "PASS"
+      },
+      {
+        "name": "native facts versus wrong expected_thread_id",
+        "kind": "NATIVE_FACT_COMPARISON",
+        "status": "PASS"
+      },
+      {
+        "name": "native facts versus wrong expected_birth_filetime",
+        "kind": "NATIVE_FACT_COMPARISON",
+        "status": "PASS"
+      },
+      {
+        "name": "actual WMI command versus wrong argv",
+        "kind": "NATIVE_FACT_COMPARISON",
+        "status": "PASS"
+      },
+      {
+        "name": "actual token ModifiedId versus wrong expected ID",
+        "kind": "NATIVE_FACT_COMPARISON",
+        "status": "PASS"
+      },
+      {
+        "name": "real mapped main versus different pinned file",
+        "kind": "REAL_SDK_DIFFERENT_PIN",
+        "status": "PASS"
+      },
+      {
+        "name": "original process HANDLE is not a thread HANDLE",
+        "kind": "REAL_SDK_HANDLE_TYPE_ERROR",
+        "status": "PASS"
+      },
+      {
+        "name": "real SDK undersized UTF16 image buffer",
+        "kind": "REAL_SDK_INSUFFICIENT_BUFFER",
+        "status": "PASS"
+      },
+      {
+        "name": "real SDK undersized TokenUser buffer",
+        "kind": "REAL_SDK_INSUFFICIENT_BUFFER",
+        "status": "PASS"
+      },
+      {
+        "name": "bounded parser rejects altered pointer in native TokenUser buffer",
+        "kind": "PARSER_ON_ALTERED_COPY_OF_NATIVE_BUFFER",
+        "status": "PASS"
+      },
+      {
+        "name": "closed original HANDLE rejected by SDK",
+        "kind": "REAL_SDK_CLOSED_HANDLE_ERROR",
+        "status": "PASS"
+      },
+      {
+        "name": "closed original owner rejected before observation",
+        "kind": "OWNER_GUARD_AFTER_REAL_HANDLE_RELEASE",
+        "status": "PASS"
+      }
+    ],
+    "controls_passed": 12,
+    "controls_failed": 0,
+    "cleanup": {
+      "terminate_original_handle": true,
+      "wait_result": 0,
+      "exit_code": 2615,
+      "exit_confirmed": true,
+      "thread_released_once": true,
+      "process_released_once": true,
+      "pin_released_once": true,
+      "unresolved_resources": []
+    },
+    "raw": [
+      {
+        "path": "_state/universal-native-child-evidence/attempt-2/readbacks/probe-result.json",
+        "sha256": "47acdf1540316c6e8ec29380fd4c55912f4af1ff066f7cfe84277642125f77ef",
+        "bytes": 14428
+      },
+      {
+        "path": "_state/universal-native-child-evidence/attempt-2/readbacks/main-observation.json",
+        "sha256": "e01d8a9ba675dbfb2af5881dbcf12b0e84499101daeef041a116415fdb0bb6b1",
+        "bytes": 10867
+      }
+    ],
+    "source_hashes_current_and_uploaded_match": true
+  },
+  "retained_failures_and_fix": {
+    "software_a1": "60 passed, 1 failed: test expected TypeError instead of documented dataclasses.replace ValueError; corrected test only; original JUnit/log retained",
+    "transport_a1": "sandbox SSH network denied before host connection; explicit task-scoped escalation succeeded; no host/security/network configuration changed",
+    "native_attempt_1": {
+      "outcome": "FILE_CHANGED before child creation; no child was created; pin released; no unresolved resource",
+      "raw": {
+        "path": "_state/universal-native-child-evidence/readbacks/probe-result.json",
+        "sha256": "dab847f67c914bfcabbd24885d12a92f9a439624c5e718f040a4363c9cd385a0",
+        "bytes": 2724
+      }
+    },
+    "diagnosis": {
+      "fact": "actual NTFS ReadFile changed LastAccessTime only; volume/file ID, size, creation/write times and official executable SHA256 stayed exact",
+      "raw": {
+        "path": "_state/universal-native-child-evidence/readbacks/pin-diagnostic.json",
+        "sha256": "5ee45d8401d680308adefe0b80f63f33532781904940e0f9688d16265c811b0a",
+        "bytes": 1549
+      }
+    },
+    "correction": "compare all other identity/content metadata and hash; retain before/after access timestamps without treating a read access-time update as content mutation; software negative controls retain write/creation/ID/link/attribute/short-read failures",
+    "native_attempt_2": "all target observations available; 12 controls passed; new child confirmed exited, handles released once"
+  },
+  "limits_and_NOT_RUN": [
+    "This ordinary existing-user process is not an AppContainer/low-IL/restricted T037 child; its 24 enabled privileges and child-policy flags=0 remain real facts, not T037_PASS.",
+    "AppContainer, restricted-token/low-IL creation, ACL/MIC/WFP/Job/service/SCM apply and qualification/vendor/COMSOL/JVM/GUI tests: NOT_RUN.",
+    "Integration with the existing T037 original factory owner, sealed issuer and qualification latch: NOT_RUN; existing prebirth/resume refusal remains unchanged.",
+    "Actual token mutation/ModifiedId-change injection: NOT_RUN; change detection is software-tested, native comparison rejects a wrong expected ModifiedId. Native release failure injection: NOT_RUN; failed-release controls are software only.",
+    "Observer does not query a suspend count or prove creation flags; only this probe's original CreateProcess return/control flow records its never-resumed scope.",
+    "Mapped evidence is a MEM_IMAGE name/backing-file correlation at observation time, not loaded-memory bytes, every DLL, full filesystem isolation or a complete OS policy proof.",
+    "WMI access, loader initialization and file/mapping availability may differ for future restricted children; errors must stay UNVERIFIED. Optional WMI ExecutablePath was null here.",
+    "No PID adoption or foreign process signaling, no protected Desktop20592 handle/query/termination, no host/port/memory inventory. No host-wide audit is claimed."
+  ],
+  "write_scope": {
+    "new_source": "comsol_mcp/_windows_t037_child_evidence.py",
+    "new_test": "tests/test_windows_t037_child_evidence.py",
+    "private": "_state/universal-native-child-evidence",
+    "compact": "docs/universal_mcp_execution/evidence/WINDOWS_CHILD_EVIDENCE.json",
+    "protected_nine_source_hashes_unchanged": true,
+    "before_hashes": {
+      "path": "_state/universal-native-child-evidence/protected-source-before.json",
+      "sha256": "fe1423c3c54dceb8163631d0c07c6230b372c20bc76a4a03a599fce75dc4eef6",
+      "bytes": 957
+    },
+    "Git_progress_Main_Hume_files_written": false
+  },
+  "reproduction": {
+    "software_command": "see private unit-final.command.json; -B and no pytest cache; all outputs task-private",
+    "native": "retained native_probe.py + isolated exact source payload + input.json + per-stage SSH commands/logs; use a fresh task directory and fresh log/output names for another authorized run; never overwrite prior raw or rerun in an existing probe root",
+    "explicit": "no clean restricted-T037 rebuild/run or admission claim"
+  },
+  "private_raw_manifest": {
+    "path": "_state/universal-native-child-evidence/raw-manifest.json",
+    "sha256": "a7e7b700f989a960d3d391c30bba742cd94dae52eedd003d3629e3c87cf1096a",
+    "bytes": 13623
+  },
+  "official_api_references": [
+    "https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-gettokeninformation",
+    "https://learn.microsoft.com/en-us/windows/win32/api/winnt/ne-winnt-token_information_class",
+    "https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-token_statistics",
+    "https://learn.microsoft.com/en-us/windows/win32/api/winnt/ne-winnt-process_mitigation_policy",
+    "https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntddk/ns-ntddk-_process_mitigation_child_process_policy",
+    "https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-process",
+    "https://learn.microsoft.com/en-us/windows/win32/api/wbemcli/nf-wbemcli-iwbemlocator-connectserver",
+    "https://learn.microsoft.com/en-us/windows/win32/api/wbemcli/nf-wbemcli-iwbemservices-execquery",
+    "https://learn.microsoft.com/en-us/windows/win32/api/wbemcli/nf-wbemcli-ienumwbemclassobject-next",
+    "https://learn.microsoft.com/en-us/windows/win32/api/wbemcli/nf-wbemcli-iwbemclassobject-get",
+    "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualqueryex",
+    "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-queryfullprocessimagenamew",
+    "https://learn.microsoft.com/en-us/windows/win32/api/psapi/nf-psapi-getmappedfilenamew",
+    "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfileinformationbyhandle",
+    "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfinalpathnamebyhandlew",
+    "https://learn.microsoft.com/en-us/windows/win32/sysinfo/file-times"
+  ]
+}

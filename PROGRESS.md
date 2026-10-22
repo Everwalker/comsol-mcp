@@ -12,9 +12,10 @@
 - 原M2a失败run的Worker已通过公开入口退役，原UNKNOWN未重放或改成成功；stop因历史UNKNOWN拒绝，原自有Server保留隔离。源码已定位stop门禁遗漏现有强静止证明判断，纳入M2b。旧ModelRefs为历史引用，不能继续使用。
 - Windows SID/两条SCM lookup修补已由Main限定接收：受影响133项软件PASS，173个包文件与R3 wheel/源码一致，实际已安装只读SCM/token探测和缺profile拒绝通过。共享host-profile SID随后完成161项聚焦PASS与真实Windows6个正向/16个反向intent解析，仍为NOT_VERIFIED；另59项资源回归原11FAIL已定位为外层观测权限与Worker替身协议缺失；原断言保留，新增2身份反例后61PASS，原失败报告保留，不推广为OS隔离验收。端口接口及真实原生启动授权尚需实现，host plan非apply-ready。服务/AppContainer/ACL/WFP变更未授权或应用；原有Desktop保留。
 - 最终候选、Windows6.3/6.4与MacARM6.4适用核心原生验证、两类未预设任务及最终独立Reviewer仍未完成。当前不能声明整体完成。
+- Windows子进程只读证据阶段经Main接收：87软件测试、真实Windows12项负控、7类SDK观测及原始HANDLE退出/释放核验通过。探针为普通高完整性、非AppContainer token，从未Resume；不是T037隔离/issuer/COMSOL通过。见[限定证据](docs/universal_mcp_execution/evidence/WINDOWS_CHILD_EVIDENCE.json)。
 
 已同步阶段：M0/M1 `4759c097`，M4构件 `47d05a8e`，Windows软件准备/使用说明 `4f236d14`，均普通推送并独立回读。交付生命周期/权限软件阶段已同步并独立回读 `c10c066af2a6e43fa0910c4a20b99019f43fe846`；后续核心变化须重新捕获源码构件，不能重标旧wheel。
 
-下一动作：同一Luna先批量修managed reconciliation公开wire、通用稳态解预算计数、Java全局模型边界/注解处理、UNKNOWN冲突资源与停止门禁，再以新正常安装重跑M2闭环；不在旧1706活进程中打补丁或重放请求。Windows执行端并行完成SID最终绑定和具体主机计划。最终独立Reviewer只在候选就绪后启动。
+下一动作：同一Luna先批量修managed reconciliation公开wire、通用稳态解预算计数、Java全局模型边界/注解处理、UNKNOWN冲突资源与停止门禁，再以新正常安装重跑M2闭环。Windows源端口范围/完整WFP组软件测试266项通过，Main要求补getter原始句柄失败保留及一次修正后完整只读实测；另一Luna只实现新子进程原始句柄的只读证据，不启用准入。最终独立Reviewer只在候选就绪后启动。
 
 旧交接与科学历史见 [2026-10-21交接](docs/full_project_continuation_v3/CURRENT_HANDOFF.md)，保持原证据范围。
