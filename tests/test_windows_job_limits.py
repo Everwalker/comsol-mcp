@@ -170,8 +170,12 @@ def test_readback_drift_is_sticky_no_retry_then_close_failure_requires_original_
     entry,=owned.registry_for(value).unresolved();assert entry.state=='UNKNOWN'
     # Replacing API field cannot redirect the already captured closer.
     value.k.CloseHandle=lambda *a:pytest.fail('replacement closer used')
-    value.k.close_result=1;value.close_job(job)
-    assert not owned.registry_for(value).unresolved()
+    before_retry=list(value.k.calls);first=entry.error
+    value.k.close_result=1
+    with pytest.raises(ExecutionContractError) as retry:value.close_job(job)
+    assert retry.value is first and entry.state=='UNKNOWN'
+    assert value.k.calls==before_retry and value.k.calls.count(('close',job))==1
+    assert owned.registry_for(value).unresolved()==(entry,)
 
 
 def test_factory_original_unknown_owner_survives_gc_and_explicit_close_is_not_resume():
@@ -183,8 +187,13 @@ def test_factory_original_unknown_owner_survives_gc_and_explicit_close_is_not_re
     with pytest.raises(ExecutionContractError):owner['factory'].close()
     assert not owner['factory']._closed and owner['factory']._job==300
     entry,=owned.registry_for(value).unresolved();value.k.close_result=1
-    owned.registry_for(value).retry_owned(entry,value)
-    owner['factory'].close();assert owner['factory']._closed and owner['factory']._job is None
+    first=entry.error;before=list(value.k.calls)
+    with pytest.raises(ExecutionContractError) as retry:owned.registry_for(value).retry_owned(entry,value)
+    assert retry.value is first
+    with pytest.raises(ExecutionContractError):owner['factory'].close()
+    gc.collect()
+    assert factory_ref() is owner['factory'] and owner['factory']._job==300 and not owner['factory']._closed
+    assert entry.state=='UNKNOWN' and entry.error is first and value.k.calls==before
 
 
 def test_v3_factory_current_native_policy_issuer_still_refuses_no_job_or_child():
@@ -349,8 +358,11 @@ def test_unknown_close_return_sticks_to_original_job_and_cannot_appear_success(r
     before=list(value.k.calls)
     with pytest.raises(ExecutionContractError):limits.require_configured_job(value,job,p)
     assert value.k.calls==before
-    value.k.close_result=1;value.close_job(job)
-    assert not owned.registry_for(value).unresolved()
+    value.k.close_result=1;first=entry.error
+    with pytest.raises(ExecutionContractError) as retry:value.close_job(job)
+    assert retry.value is first and entry.error is first and entry.state=='UNKNOWN'
+    assert value.k.calls==before and value.k.calls.count(('close',job))==1
+    assert owned.registry_for(value).unresolved()==(entry,)
 
 
 def test_capacity_refusal_before_child_birth_and_live_job_close_refused():

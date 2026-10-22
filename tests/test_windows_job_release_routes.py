@@ -82,11 +82,11 @@ def test_actual_controller_unknown_child_all_original_release_exits_deny_then_co
         assert not failed['success'] and child.poll() is None and sdk.ids==[456]
         with pytest.raises(ExecutionContractError) as denied:registry.retry_owned(entry,value)
         assert denied.value is first_cause and sdk.calls.count(('close',300))==before
-        state['cleanup_fail']=False;state['alive']=False;sdk.ids=[]  # Later SDK exit/empty Job observations.
+        state['cleanup_fail']=False;state['alive']=False  # Child exit is known; whole Job is not empty yet.
         lifecycle_before=daemon.session_lifecycle.get(project,sid)
         stopped=_stop(daemon,project,sid,key='close-route-confirmed-exit-'+route)
         # Child exit alone cannot complete the whole session's UNKNOWN Job.
-        assert not stopped['success'] and child._closed and type(child.poll()) is int and sdk.ids==[]
+        assert not stopped['success'] and child._closed and type(child.poll()) is int and sdk.ids==[456]
         assert stopped['data']['server_stopped'] is True
         assert stopped['data']['native_cleanup_state']=='EXIT_CONFIRMED'
         assert stopped['data']['job_retained'] is True and stopped['data']['server_handle_preserved'] is True
@@ -103,13 +103,20 @@ def test_actual_controller_unknown_child_all_original_release_exits_deny_then_co
             assert operation['status']=='UNKNOWN' and operation['result']==receipt
             assert daemon.store.job(receipt['execution']['job_id'])['status']=='UNKNOWN'
             unknown_receipts[operation['operation_id']]=operation
-        # Only the original pre-SDK deferral is reconciled explicitly after
-        # terminal child/ancillary and empty Job observations; not a native close UNKNOWN.
-        registry.retry_owned(entry,value)
-        assert entry.state=='RELEASED' and sdk.calls.count(('close',300))==before+1
-        before_reconcile=list(sdk.calls);child_events=list(events)
-        value._job_process_ids=lambda *a:pytest.fail('confirmed released HANDLE queried during reconcile')
+        # Cached UNKNOWN replay cannot reconcile even after Job emptiness changes.
+        sdk.ids=[];before_reconcile=list(sdk.calls);child_events=list(events)
+        assert _stop(daemon,project,sid,key='close-route-confirmed-exit-'+route)==stopped
+        assert sdk.calls==before_reconcile and entry.state=='UNKNOWN'
+        queries=[];original_ids=value._job_process_ids
+        def ids(job):queries.append(job);return original_ids(job)
+        value._job_process_ids=ids
+        # A new public cleanup request lets this original factory reconcile
+        # only its pre-SDK deferral after all terminal/empty observations.
         completed=_stop(daemon,project,sid,key='close-route-session-terminal-'+route)
+        assert entry.state=='RELEASED' and queries==[300]
+        assert sdk.calls==before_reconcile+[('close',300)]
+        before_reconcile=list(sdk.calls)
+        value._job_process_ids=lambda *a:pytest.fail('confirmed released HANDLE queried during reconcile')
         assert completed['success'] and completed['data']['state']=='STOPPED'
         assert completed['data']['server_stopped'] is True
         assert completed['data']['native_child_exit_evidence']['exit_confirmed'] is True
@@ -174,9 +181,11 @@ def test_original_job_sdk_callback_cannot_be_redirected_and_close_failure_keeps_
     with pytest.raises(ExecutionContractError) as denied:owned.registry_for(value).retry_owned(entry,value)
     assert denied.value is first and entry.error is first
     assert value.k.calls.count(('close',300))==1
-    value.k.ids=[];value.k.close_result=1;owned.registry_for(value).retry_owned(entry,value)
-    assert value.k.calls.count(('close',300))==2 and entry.state=='RELEASED'
-    value.close_job(job)
+    value.k.ids=[];value.k.close_result=1;before=list(value.k.calls)
+    with pytest.raises(ExecutionContractError) as terminal:owned.registry_for(value).retry_owned(entry,value)
+    assert terminal.value is first and entry.error is first
+    with pytest.raises(ExecutionContractError):value.close_job(job)
+    assert value.k.calls==before and value.k.calls.count(('close',300))==1 and entry.state=='UNKNOWN'
 
 
 def test_config_failed_empty_original_job_can_be_explicitly_released_without_config_retry():

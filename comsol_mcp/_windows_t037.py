@@ -1145,8 +1145,17 @@ class T037SessionProcessFactory:
             _refuse("NATIVE_RESOURCE_RELEASE_UNKNOWN", "factory-owned prebirth native observations remain unresolved")
         if self._api is not None:
             from ._windows_owned_resources import registry_for
-            if any(not (entry.adapter is self._api and entry.value == self._job
-                        and entry.label == "owned_session_job" and entry.state == "ACQUIRED")
+            from ._windows_job_limits import _original_job_close_call
+            cached_call = getattr(self, "_job_close_call", None)
+            close_call = None
+            if self._job is not None:
+                close_call = _original_job_close_call(self._api, self._job, expected=cached_call)
+            elif cached_call is not None:
+                close_call = _original_job_close_call(self._api, cached_call.value, expected=cached_call)
+                if close_call.phase != 'NATIVE_CONFIRMED':
+                    _refuse("NATIVE_RESOURCE_RELEASE_UNKNOWN", "original factory Job release is not confirmed")
+            if close_call is not None:self._job_close_call = close_call
+            if any(not (close_call is not None and entry is close_call.entry)
                    for entry in registry_for(self._api).unresolved()):
                 _refuse("NATIVE_RESOURCE_RELEASE_UNKNOWN", "actual native acquisition registry has unresolved ancillary ownership")
             from ._windows_t037_child import _PinnedParent, _PARENT_SEAL
@@ -1170,7 +1179,8 @@ class T037SessionProcessFactory:
             if getattr(self._api, "_unclassified_create_handles", None):
                 _refuse("NATIVE_CHILD_CREATION_UNKNOWN", "unclassified native creation handles block Job close")
             for process in getattr(self._api, "_retained_children", {}).values():
-                if type(process.poll()) is not int:
+                if (not (close_call is not None and close_call.phase == 'NATIVE_CONFIRMED')
+                        and type(process.poll()) is not int):
                     _refuse("NATIVE_CHILD_CLEANUP_UNKNOWN", "session Job/owner remains retained while child exit is unknown")
         if self._job is not None and self._api is not None:
             self._api.close_job(self._job)
