@@ -231,7 +231,7 @@ def test_real_factory_api_child_refusal_keeps_original_job_and_strong_controller
             assert not child._resume_attempted and sdk.ids==[456]
             with pytest.raises(ExecutionContractError):factory.close()
             assert sdk.calls.count(('close',300))==0 and factory._job==300
-            state['cleanup_fail']=False
+            state['cleanup_fail']=False;state['alive']=False;sdk.ids=[]  # SDK observes exit and empty Job; no termination retry.
             owner=object();assert original_error.transfer_to(owner) is child
             assert child.cleanup_owned(owner)==1 and sdk.ids==[]
         else:
@@ -274,18 +274,28 @@ def test_actual_owned_server_controller_store_failed_job_no_child_on_config_faul
 def test_actual_controller_store_child_unknown_and_explicit_cleanup_retains_job_owner(tmp_path,monkeypatch):
     from comsol_mcp._session_server import OwnedServerLauncher
     from tests.test_session_server_control import _make_daemon,_start,_stop
+    from tests.test_windows_network_intent import network_profile_and_plan
     p,value,events,state,sdk=prepared_child_api(monkeypatch,cleanup_fail=True)
-    # Real factory and original launcher; only prebirth unavailable-policy continuation is software-injected.
-    factory=win.T037SessionProcessFactory(p,'controller-child',api=value)
-    monkeypatch.setattr(factory,'preflight',lambda:None)
-    monkeypatch.setattr(win,'os',SimpleNamespace(name='nt'))
-    launcher=OwnedServerLauncher(process_factory=factory,platform_name='darwin')
+    # The fixed-listener consumer now requires a complete intent and the actual
+    # controller session. Keep those gates real; old single-leaf/profile and a
+    # hardcoded foreign session refused before reaching this Job-owner control.
+    host,_=network_profile_and_plan()
+    p=replace(p,host_resource_profile=host)
+    factories=[]
+    class OriginalSessionLauncher(OwnedServerLauncher):
+        def start(self,runtime,project_id,session_id,**kwargs):
+            original=win.T037SessionProcessFactory(p,session_id,api=value)
+            monkeypatch.setattr(original,'preflight',lambda:None)  # SOFTWARE policy continuation only.
+            factories.append(original)
+            return super().start(runtime,project_id,session_id,process_factory=original,**kwargs)
+    launcher=OriginalSessionLauncher(platform_name='darwin')
     # Session infrastructure filesystem OS dependency is shared module os; restore normal OS after call via local proxy.
     import os
     monkeypatch.setattr(win,'os',SimpleNamespace(**dict(vars(os),name='nt')))
     daemon,project,*_=_make_daemon(tmp_path,monkeypatch,server_launcher=launcher)
     try:
         started=_start(daemon,project);assert not started['success']
+        factory,=factories
         sid=started['data']['session_id'];key=(project,sid);handle=daemon._session_server_handles[key]
         assert daemon.store.job(started['execution']['job_id'])['status']=='UNKNOWN'
         assert handle.process._job_handle==factory._job==300 and not handle.process._resume_attempted
@@ -293,7 +303,7 @@ def test_actual_controller_store_child_unknown_and_explicit_cleanup_retains_job_
         with pytest.raises(ExecutionContractError):factory.close()
         failed=_stop(daemon,project,sid,key='owned-job-cleanup-failure')
         assert not failed['success'] and daemon._session_server_handles[key] is handle
-        state['cleanup_fail']=False
+        state['cleanup_fail']=False;state['alive']=False;sdk.ids=[]  # SDK observes exit and empty Job; no termination retry.
         stopped=_stop(daemon,project,sid,key='owned-job-cleanup-confirmed')
         assert stopped['success'] and sdk.ids==[] and handle.process._closed
         factory.close();assert sdk.calls[-1]==('close',300)

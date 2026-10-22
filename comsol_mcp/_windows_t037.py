@@ -1214,8 +1214,10 @@ class _Win32G2SessionLaunchOwner:
                  session_factory, seal):
         if (seal is not _G2_SESSION_LAUNCH_OWNER_SEAL
                 or type(api) is not _Win32LaunchApi
-                or type(process) is not _Win32ChildProcess
+                or type(process) is not _RetainedSuspendedChild
                 or process._api is not api or process._handle is not handle
+                or not process._creation_confirmed or not process._resume_confirmed
+                or process._thread_handle is not None or process._closed
                 or process.pid <= 1 or type(birth_filetime_100ns) is not int
                 or birth_filetime_100ns <= 0
                 or session_factory is None
@@ -1229,6 +1231,14 @@ class _Win32G2SessionLaunchOwner:
                 or not isinstance(image_path, str) or not image_path
                 or not isinstance(image_sha256, str) or len(image_sha256) != 64):
             _refuse(ERROR_POLICY_UNVERIFIED, "G2 session provenance has malformed native launch identity")
+        process._require_observable()
+        if (process._original_factory is not session_factory
+                or process._original_profile is not profile or process._original_job is not job_handle
+                or process._original_role != role or process.birth_filetime_100ns != birth_filetime_100ns
+                or process._creation_parameters[1] != tuple(argv)
+                or process._creation_parameters[0] != image_path
+                or image_sha256 != (profile.server_image_sha256 if role == "server" else profile.worker_image_sha256)):
+            _refuse(ERROR_POLICY_UNVERIFIED, "G2 provenance differs from the original native call owner")
         self._seal = seal
         self.process = process
         self.api = api
@@ -1250,7 +1260,12 @@ class _Win32G2SessionLaunchOwner:
 
 def _native_g2_session_launch_owner(process):
     """Return only the API-registered owner minted at the successful launch return."""
-    if type(process) is not _Win32ChildProcess:
+    if (type(process) is not _RetainedSuspendedChild or not process._returned
+            or process._termination_requested):
+        return None
+    try:
+        process._require_observable()
+    except Exception:
         return None
     api = getattr(process, "_api", None)
     owners = getattr(api, "_g2_session_launch_owners", None)
@@ -1259,6 +1274,10 @@ def _native_g2_session_launch_owner(process):
             or owner._seal is not _G2_SESSION_LAUNCH_OWNER_SEAL
             or owner.process is not process or owner.api is not api
             or owner.process_handle is not process._handle or owner.pid != process.pid
+            or owner.session_factory is not process._original_factory
+            or owner.profile is not process._original_profile or owner.job_handle is not process._original_job
+            or owner.role != process._original_role or owner.argv != process._creation_parameters[1]
+            or owner.birth_filetime_100ns != process.birth_filetime_100ns
             or process._closed or owner.profile_sha256 != owner.profile.sha256
             or type(owner.session_factory) is not T037SessionProcessFactory
             or owner.session_factory._api is not api
@@ -1314,49 +1333,241 @@ class _RetainedChildToken:
 
 
 class _RetainedSuspendedChild(_Win32ChildProcess):
-    """Unique actual HANDLE owner; metadata cannot enable simplified cleanup."""
-    def __init__(self, api, handle, pid, args, thread_handle, job, *, seal, creation_confirmed=True):
+    """One original call/output owner from pre-call storage through retirement.
+
+    This is lifecycle ownership only. Neither this object nor its registry
+    entries can issue native birth/Resume authority.
+    """
+    _FIXED = frozenset({"_api", "_registry", "_process_info", "_output_address",
+        "_call_storage", "_native_create", "_create_arguments", "_native_closer",
+        "_close_mode", "_original_poll", "_original_wait", "_original_terminate",
+        "_original_times", "_original_profile", "_original_factory", "_original_job",
+        "_original_role", "_parent_binding", "_image_api", "_image_entry", "_image_binding", "_outputs", "_owner"})
+
+    def __setattr__(self, name, value):
+        if name in self._FIXED and hasattr(self, name):
+            raise AttributeError("original native child acquisition binding is immutable")
+        object.__setattr__(self, name, value)
+
+    def __init__(self, api, process_info, args, job, *, profile, role, session_factory,
+                 parent, image_api, image_entry, call_storage, create_arguments, seal):
         if seal is not _NATIVE_SUSPENDED_CHILD_SEAL:
-            _refuse(ERROR_POLICY_UNVERIFIED, "retained child requires native creation provenance")
-        self._api, self._handle = api, handle
-        self.pid = pid if type(pid) is int and pid > 0 else None
-        self.args = list(args)
-        self.returncode = None
-        self._closed = False
-        self._creation_confirmed = creation_confirmed is True
-        self._seal = seal
-        self._thread_handle = thread_handle
-        self._job_handle = job
-        self._owner = api
-        self._resume_attempted = False
+            _refuse(ERROR_POLICY_UNVERIFIED, "retained child requires native call storage")
+        from ._windows_owned_resources import registry_for, handle_closer
+        self._api, self._registry = api, registry_for(api)
+        self._process_info = process_info
+        self._output_address = api.C.addressof(process_info)
+        self._call_storage, self._create_arguments = tuple(call_storage), tuple(create_arguments)
+        self._native_create = api.a.CreateProcessAsUserW
+        self._native_closer, self._close_mode = handle_closer(api)
+        self._original_poll, self._original_wait = api.poll_process, api.wait_process
+        self._original_terminate, self._original_times = api.terminate_process, api.process_times
+        self._original_profile, self._original_factory = profile, session_factory
+        self._original_job, self._original_role = job, role
+        self._parent_binding = parent
+        self._image_api, self._image_entry = image_api, image_entry
+        self._image_binding = (image_entry.adapter, image_entry.closer, image_entry.handle,
+                               image_entry.value, image_entry.mode, image_entry.label)
+        self._handle = self._thread_handle = self.pid = self.thread_id = None
+        self.args, self.returncode, self.birth_filetime_100ns = list(args), None, None
+        self._seal, self._job_handle, self._owner = seal, job, api
+        self._closed = self._creation_confirmed = self._resume_attempted = False
+        self._call_entered = self._no_effect = self._resume_confirmed = self._returned = False
+        self._process_entry = self._thread_entry = None
+        self._entry_bindings, self._release_attempts = {}, set()
+        self._release_deferrals = {}
+        self._release_request = None
+        self._termination_requested = False
+        self._terminate_error = None
+        self._retirement_error = None
         self._pending_resource_release_jobs = set()
         self._terminal_resource_release_observations = {}
         self._ownership_lock = __import__('threading').RLock()
+        self._launch_profile_sha256, self._launch_role, self._resume_epoch = profile.sha256, role, 0
+        self._creation_parameters = (create_arguments[1], tuple(args), call_storage[2].value)
+        self._creation_parameter_digests = {
+            "classification": "ACTUAL_CREATEPROCESS_PARAMETERS_NOT_REMOTE_READBACK",
+            "argv_sha256": hashlib.sha256(json.dumps(list(args), ensure_ascii=False,
+                separators=(",", ":")).encode("utf-8")).hexdigest(),
+            "command_line_sha256": hashlib.sha256(call_storage[2].value.encode("utf-16-le")).hexdigest(),
+            "application_name_sha256": hashlib.sha256(create_arguments[1].encode("utf-16-le")).hexdigest(),
+        }
+        if not hasattr(api, "_retained_children"):
+            api._retained_children = {}
+        api._retained_children[id(self)] = self  # Before any possibly effective SDK call.
+
+    def _check_original(self, *, allow_unknown=False):
+        from ._windows_owned_resources import registry_for
+        if (self._seal is not _NATIVE_SUSPENDED_CHILD_SEAL
+                or registry_for(self._api) is not self._registry or self._registry.owner is not self._api
+                or self._api.C.addressof(self._process_info) != self._output_address
+                or self._call_storage[0] is not self._process_info
+                or self._api.C.cast(self._create_arguments[-1], self._api.C.c_void_p).value != self._output_address
+                or self._job_handle is not self._original_job
+                or self._launch_role != self._original_role
+                or self._launch_profile_sha256 != self._original_profile.sha256
+                or tuple(self.args) != self._creation_parameters[1]
+                or (not self._closed and getattr(self._api, "_retained_children", {}).get(id(self)) is not self)):
+            _refuse("NATIVE_CHILD_OWNER_UNKNOWN", "original native call/storage/API binding changed")
+        if hasattr(self, "_outputs"):
+            slot = self._process_info
+            if (self._outputs != (slot.hProcess, slot.hThread, slot.dwProcessId, slot.dwThreadId)
+                    or self._handle != self._outputs[0] or self.pid != (self._outputs[2] or None)
+                    or self.thread_id != (self._outputs[3] or None)):
+                _refuse("NATIVE_CHILD_OWNER_UNKNOWN", "original PROCESS_INFORMATION output binding changed")
+        if self._closed and self._call_entered and not self._no_effect and (
+                type(self.returncode) is not int or self._process_entry is None
+                or self._process_entry.state != "RELEASED"
+                or self._thread_entry is None or self._thread_entry.state != "RELEASED"):
+            _refuse("NATIVE_CHILD_OWNER_UNKNOWN", "closed child lacks original confirmed resource retirement")
+        if self._original_factory is not None and (
+                self._original_factory._api is not self._api
+                or self._original_factory._job is not self._original_job
+                or self._original_factory.profile is not self._original_profile
+                or self._original_factory._closed):
+            _refuse("NATIVE_CHILD_OWNER_UNKNOWN", "original session factory/profile/Job changed")
+        image = self._image_entry
+        adapter, closer, handle, value, mode, label = self._image_binding
+        if (image.registry is not self._registry or image.adapter is not adapter
+                or adapter is not self._image_api or image.closer is not closer
+                or image.handle != handle or image.value != value or image.mode != mode or image.label != label):
+            _refuse("NATIVE_CHILD_OWNER_UNKNOWN", "original pinned image acquisition changed")
+        for name, (entry, closer, value, label) in self._entry_bindings.items():
+            if getattr(self, "_" + name + "_entry") is not entry:
+                _refuse("NATIVE_CHILD_OWNER_UNKNOWN", "original child acquisition entry was replaced")
+            if (entry.registry is not self._registry or entry.adapter is not self._api
+                    or entry.domain != "native" or entry.handle != value or entry.value != value
+                    or entry.closer is not closer or entry.mode != "VOID" or entry.label != label
+                    or entry.state not in {"ACQUIRED", "UNKNOWN", "RELEASED"}
+                    or (entry.state != "RELEASED" and (self._registry.find(self._api, value) is not entry
+                        or not any(item is self for item in entry.keepalive)
+                        or not any(item is self._process_info for item in entry.keepalive)))):
+                _refuse("NATIVE_CHILD_OWNER_UNKNOWN", "original child registry/closer binding changed")
+            if entry.state == "UNKNOWN" and not allow_unknown and not (name in self._release_deferrals
+                                                and entry.error is self._release_deferrals[name]):
+                raise entry.error
+        expected_thread = (None if self._thread_entry is not None
+            and self._thread_entry.state == "RELEASED" else self._outputs[1] if hasattr(self, "_outputs") else None)
+        if self._thread_handle != expected_thread:
+            _refuse("NATIVE_CHILD_OWNER_UNKNOWN", "original main thread ownership changed")
+
+    def create_original(self):
+        self._check_original()
+        if self._call_entered or self._closed:
+            _refuse("NATIVE_CHILD_CREATION_UNKNOWN", "original CreateProcess call cannot be repeated")
+        self._call_entered = True
         try:
-            if not self._creation_confirmed:
-                raise ValueError("creation response was not confirmed")
-            birth, exited = api.process_times(handle)
-            self.birth_filetime_100ns = birth if type(birth) is int and birth > 0 else None
-        except Exception:
-            self.birth_filetime_100ns = None
+            result = self._native_create(*self._create_arguments)
+        except BaseException:
+            self._capture_outputs(None)
+            raise
+        self._capture_outputs(result)
+        if not self._creation_confirmed and not self._no_effect:
+            _refuse("NATIVE_CHILD_CREATION_UNKNOWN", "native call/return/output identity is unconfirmed")
+        return result
+
+    def _capture_outputs(self, result):
+        # Even an exception after native output writes retains this exact slot.
+        slot = self._process_info
+        self._outputs = (slot.hProcess, slot.hThread, slot.dwProcessId, slot.dwThreadId)
+        self._handle, self._thread_handle = self._outputs[:2]
+        self.pid, self.thread_id = self._outputs[2] or None, self._outputs[3] or None
+        self._no_effect = type(result) is int and result == 0 and not any(self._outputs)
+        ceiling = (1 << (8 * self._api.C.sizeof(self._api.C.c_void_p))) - 16
+        valid = (all(type(value) is int and 0 < value < ceiling for value in self._outputs[:2])
+                 and self._handle != self._thread_handle and type(self.pid) is int and self.pid > 1
+                 and type(self.thread_id) is int and self.thread_id > 0)
+        self._creation_confirmed = type(result) is int and result != 0 and valid
+        for name, value in (("process", self._handle), ("thread", self._thread_handle)):
+            if type(value) is not int or not 0 < value < ceiling:
+                continue  # Invalid/unclassified output remains in original storage; never close it.
+            def close_original(handle, name=name):
+                self._check_original()
+                entry = self._entry_bindings[name][0]
+                request = self._release_request
+                if (type(request) is not tuple or len(request) != 2
+                        or request[0] is not entry or request[1] is not self._owner
+                        or not self._creation_confirmed or (name == "process" and type(self.returncode) is not int)
+                        or (name == "thread" and not self._resume_confirmed and type(self.returncode) is not int)):
+                    # This original guard ran before the captured SDK closer.
+                    # Only this exact deferral may be reconciled later by the
+                    # actual child owner, never by a caller flag or release retry.
+                    error = self._release_deferrals.setdefault(name, WindowsT037Error(
+                        "NATIVE_CHILD_CLEANUP_UNKNOWN", "original child owner/lifecycle release is not ready"))
+                    raise error
+                if name in self._release_attempts:
+                    _refuse("NATIVE_CHILD_RELEASE_UNKNOWN", "original native child close cannot be repeated")
+                self._release_attempts.add(name)
+                result = self._native_closer(handle)
+                if not (bool(result) if self._close_mode == "BOOL" else result is None or result is True):
+                    _refuse("NATIVE_CHILD_RELEASE_UNKNOWN", "original native child CloseHandle was not confirmed")
+            entry = self._registry.acquire(self._api, value, close_original, mode="VOID",
+                label="original_child_" + name, keepalive=(self, slot))
+            setattr(self, "_" + name + "_entry", entry)
+            self._entry_bindings[name] = (entry, close_original, value, "original_child_" + name)
+        if self._creation_confirmed:
+            self._check_original()
+            try:
+                birth, exited = self._original_times(self._handle)
+                if type(birth) is int and birth > 0 and exited is None:
+                    self.birth_filetime_100ns = birth
+            except Exception:
+                pass  # UNKNOWN birth is never invented; exact never-resumed cleanup still owns handles.
 
     @property
     def never_resumed(self):
         return self._seal is _NATIVE_SUSPENDED_CHILD_SEAL and self._creation_confirmed and not self._resume_attempted
 
-    def poll(self):
+    def _require_observable(self):
+        self._check_original()
         if not self._creation_confirmed:
-            _refuse("NATIVE_CHILD_CREATION_UNKNOWN", "unconfirmed creation handle is not terminal/ownership evidence")
-        return super().poll()
+            _refuse("NATIVE_CHILD_CREATION_UNKNOWN", "unconfirmed creation cannot be polled/waited/terminated")
+
+    def poll(self):
+        if self._closed:
+            return self.returncode
+        self._require_observable()
+        if self.returncode is None:
+            self.returncode = self._original_poll(self._handle)
+        return self.returncode
+
+    def wait(self, timeout=None):
+        if self._closed:
+            return self.returncode
+        self._require_observable()
+        if self.returncode is None:
+            self.returncode = self._original_wait(self._handle, timeout, self.args)
+        return self.returncode
+
+    def terminate(self):
+        with self._ownership_lock:
+            self._require_observable()
+            if self._resume_attempted and not self._returned:
+                _refuse("NATIVE_CHILD_OWNER_REQUIRED", "unreturned Resume outcome cannot use normal termination")
+            if self.poll() is None:
+                if self._terminate_error is not None:
+                    raise self._terminate_error
+                if self._termination_requested:
+                    return  # A successful request followed by timeout is not a new effect.
+                self._termination_requested = True
+                try:
+                    self._original_terminate(self._handle, 1)
+                except BaseException as error:
+                    self._terminate_error = error
+                    raise
 
     def transfer_owner(self, expected, owner):
         with self._ownership_lock:
+            # Moving this same object/slot is not a query, close or retry of an
+            # UNKNOWN acquisition. The new holder must still retain/refuse it.
+            self._check_original(allow_unknown=True)
             if self._owner is not expected or owner is None or owner is expected:
                 _refuse("NATIVE_CHILD_OWNER_TRANSFER_REFUSED", "actual child has already transferred its owner")
-            self._owner = owner
+            object.__setattr__(self, "_owner", owner)
 
     def note_resume_attempt(self):
         with self._ownership_lock:
+            self._require_observable()
             self._resume_attempted = True
 
     def ownership_observation(self):
@@ -1365,7 +1576,7 @@ class _RetainedSuspendedChild(_Win32ChildProcess):
         return {"schema": "comsol-mcp.retained-native-child/1", "pid": self.pid,
                 "birth_filetime_100ns": self.birth_filetime_100ns,
                 "creation_response_confirmed": self._creation_confirmed,
-                "resume_attempted": self._resume_attempted, "effect_possible": True,
+                "resume_attempted": self._resume_attempted, "effect_possible": not self._no_effect,
                 "never_resumed": self.never_resumed,
                 "terminal_state": "EXIT_CONFIRMED" if type(self.returncode) is int else "UNKNOWN"}
 
@@ -1383,24 +1594,74 @@ class _RetainedSuspendedChild(_Win32ChildProcess):
             self.close_owned(owner)
             return self.returncode
 
+    def retire_owned(self, owner, timeout=5):
+        """Normal retirement of this same successfully returned resumed child."""
+        with self._ownership_lock:
+            if (self._owner is not owner or not self._returned
+                    or not self._creation_confirmed or not self._resume_confirmed):
+                _refuse("NATIVE_CHILD_OWNER_REQUIRED", "normal retirement requires the original successful returned owner")
+            if self._closed:
+                return self.returncode
+            if self.poll() is None:
+                self.terminate()
+                self.wait(timeout=timeout)
+            if type(self.poll()) is not int:
+                _refuse("NATIVE_CHILD_CLEANUP_UNKNOWN", "original resumed child exit remains unconfirmed")
+            self.close_owned(owner)
+            return self.returncode
+
+    def release_main_thread(self):
+        self._require_observable()
+        if not self._resume_confirmed:
+            _refuse("NATIVE_CHILD_CLEANUP_UNKNOWN", "main thread release requires confirmed Resume return")
+        self._release_entry(self._thread_entry)
+        self._thread_handle = None
+
+    def _release_entry(self, entry):
+        self._check_original()
+        name = "process" if entry is self._process_entry else "thread"
+        retry = (entry.state == "UNKNOWN" and name in self._release_deferrals
+                 and entry.error is self._release_deferrals[name])
+        self._release_request = (entry, self._owner)
+        try:
+            entry.release_owned(self._registry.owner, retry=retry)
+        except BaseException as error:
+            # The registry's bookkeeping can itself fail after CloseHandle.
+            # Keep the original entry/slot, never repeat its captured closer.
+            entry.state, entry.error = "UNKNOWN", error
+            raise
+        finally:
+            self._release_request = None
+
     def close_owned(self, owner):
         with self._ownership_lock:
             if self._owner is not owner:
                 _refuse("NATIVE_CHILD_OWNER_REQUIRED", "only the actual transferred owner may close the child")
             if self._closed:
                 return
+            if self._retirement_error is not None:
+                raise self._retirement_error
             if type(self.poll()) is not int:
                 _refuse("NATIVE_CHILD_CLEANUP_UNKNOWN", "process handle cannot be closed before confirmed exit")
             if self._thread_handle:
-                self._api.close_handle(self._thread_handle)
+                self._release_entry(self._thread_entry)
                 self._thread_handle = None
-            super().close()
+            self._release_entry(self._process_entry)
+            try:
+                getattr(self._api, "_g2_session_launch_owners", {}).pop(id(self), None)
+                getattr(self._api, "_retained_children", {}).pop(id(self), None)
+            except BaseException as error:
+                self._retirement_error = error
+                raise
+            self._closed = True
 
     def close(self):
-        _refuse("NATIVE_CHILD_OWNER_REQUIRED", "retained child close requires the explicit unique owner")
+        if not self._returned or self._owner is not self._api:
+            _refuse("NATIVE_CHILD_OWNER_REQUIRED", "unreturned child close requires its explicit unique owner")
+        self.close_owned(self._owner)
 
     def __del__(self):
-        pass # GC is never ownership/recovery evidence and cannot release this handle.
+        pass  # GC never releases a child, including post-Resume bookkeeping failure.
 
 
 def is_native_suspended_child(process):
@@ -1649,6 +1910,17 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
                 or session_factory._api is not self or session_factory.profile is not profile
                 or session_factory._job is not job or session_factory._closed):
             _refuse(ERROR_POLICY_UNVERIFIED, "G2 session owner differs from the exact original T037 factory/profile/job")
+        for child in tuple(getattr(self, "_retained_children", {}).values()):
+            child._check_original(allow_unknown=True)  # No SDK query; binding drift cannot admit another birth.
+        if any((not child._closed and (not child._returned or child._termination_requested
+                                      or child._retirement_error is not None))
+               or (child._closed and any(entry is not None and entry.state != "RELEASED"
+                   for entry in (child._process_entry, child._thread_entry)))
+               for child in getattr(self, "_retained_children", {}).values()):
+            _refuse("NATIVE_CHILD_CREATION_UNKNOWN", "unresolved original child owner prohibits another birth")
+        from ._windows_owned_resources import registry_for
+        if any(entry.state == "UNKNOWN" for entry in registry_for(self).unresolved()):
+            _refuse("NATIVE_RESOURCE_RELEASE_UNKNOWN", "unresolved native acquisition prohibits another birth")
         C, W = self.C, self.W
         if role not in {"server", "worker"}:
             _refuse(ERROR_PROFILE_INVALID, "T037 child role is unsupported")
@@ -1676,7 +1948,7 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
         attach_registry(image_api,registry)
         image_closer=image_api._resource_closer() if hasattr(image_api,"_resource_closer") else image_api.close
         for parent in parent_handles:own(image_api,parent,image_closer,label="image_parent")
-        own(image_api,image_handle,image_closer,label="pinned_image")
+        image_entry = own(image_api,image_handle,image_closer,label="pinned_image")
         inherited: list[Any] = []
         duplicate_handles: list[Any] = []
         sid_allocations: list[Any] = []
@@ -1688,6 +1960,7 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
         attribute_pointer = None
         image_verified = False
         launch_release_failures = []
+        success_owner = None
         try:
             if not _constant_digest_equal(self._hash_image_handle(image_api, image_handle,
                                                                    image_fingerprint[1]), expected_hash):
@@ -1800,31 +2073,19 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
             native_parent = pin_native_parent(self)
             creation_parameters = (image_path, tuple(command), command_line.value)
             require_configured_job(self, job, profile)
-            created = self.a.CreateProcessAsUserW(
-                primary_token, image_path, command_line, None, None, True, flags,
-                C.cast(environment, C.c_void_p) if environment is not None else None,
-                cwd, C.byref(startup), C.byref(process_info))
-            process_handle, thread_handle = process_info.hProcess, process_info.hThread
-            complete = bool(created and process_handle and thread_handle and int(process_info.dwProcessId) > 0)
-            if process_handle or thread_handle:
-                retained_child = _RetainedSuspendedChild(
-                    self, process_handle, int(process_info.dwProcessId), command, thread_handle, job,
-                    seal=_NATIVE_SUSPENDED_CHILD_SEAL, creation_confirmed=complete)
-                retained_child._launch_profile_sha256 = profile.sha256
-                retained_child._launch_role = role
-                retained_child._resume_epoch = 0
-                retained_child._creation_parameters = creation_parameters
-                retained_child._creation_parameter_digests = {
-                    "classification": "ACTUAL_CREATEPROCESS_PARAMETERS_NOT_REMOTE_READBACK",
-                    "argv_sha256": hashlib.sha256(json.dumps(creation_parameters[1],
-                        ensure_ascii=False, separators=(",", ":")).encode("utf-8")).hexdigest(),
-                    "command_line_sha256": hashlib.sha256(creation_parameters[2].encode("utf-16-le")).hexdigest(),
-                    "application_name_sha256": hashlib.sha256(creation_parameters[0].encode("utf-16-le")).hexdigest(),
-                }
-                retained_child._parent_binding = native_parent
+            retained_child = _RetainedSuspendedChild(
+                self, process_info, command, job, profile=profile, role=role,
+                session_factory=session_factory, parent=native_parent, image_api=image_api,
+                image_entry=image_entry,
+                call_storage=(process_info, startup, command_line, environment, primary_token,
+                              attr_storage, security_caps, handles_array),
+                create_arguments=(primary_token, image_path, command_line, None, None, True, flags,
+                    C.cast(environment, C.c_void_p) if environment is not None else None,
+                    cwd, C.byref(startup), C.byref(process_info)),
+                seal=_NATIVE_SUSPENDED_CHILD_SEAL)
+            created = retained_child.create_original()
+            process_handle, thread_handle = retained_child._handle, retained_child._thread_handle
             self._check(created, "CreateProcessAsUserW(STARTUPINFOEX/SecurityCapabilities)")
-            if not complete:
-                _refuse(ERROR_UNSUPPORTED, "CreateProcessAsUserW returned incomplete process identity")
             require_configured_job(self, job, profile)
             self._check(self.k.AssignProcessToJobObject(job, process_handle), "AssignProcessToJobObject(shared session job)")
 
@@ -1862,8 +2123,9 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
                     or not self.is_process_in_job(process_handle, job)):
                 _refuse(ERROR_POLICY_UNVERIFIED, "suspended child token or exact Job membership failed readback")
             birth, _exit = self.process_times(process_handle)
-            if birth <= 0:
-                _refuse(ERROR_UNSUPPORTED, "suspended child birth identity is unavailable")
+            if (type(birth) is not int or birth <= 0 or _exit is not None
+                    or birth != retained_child.birth_filetime_100ns):
+                _refuse(ERROR_UNSUPPORTED, "suspended child original birth identity is unavailable/changed")
             # DACL observation is not MIC/WFP/quota/vendor or a child-bound
             # launch proof. Even a direct low-level call must fail before Resume.
             from ._windows_t037_child import observe_retained_child
@@ -1880,40 +2142,27 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
                 self._check(False, "ResumeThread(exact suspended main thread)")
             if resumed != 1:
                 _refuse(ERROR_POLICY_UNVERIFIED, "suspended child had an unexpected main-thread suspend count")
-            self.close_handle(thread_handle)
-            thread_handle = None
-            process = _Win32ChildProcess(self, process_handle, int(process_info.dwProcessId), command)
-            process_handle = None
+            retained_child._resume_confirmed = True
+            retained_child.release_main_thread()
             if session_factory is not None:
-                owner = _Win32G2SessionLaunchOwner(
-                    api=self, process=process, handle=process._handle,
+                success_owner = _Win32G2SessionLaunchOwner(
+                    api=self, process=retained_child, handle=retained_child._handle,
                     birth_filetime_100ns=birth, argv=tuple(command), job_handle=job,
                     profile=profile, role=role, image_path=image_path,
                     image_sha256=expected_hash, session_factory=session_factory,
                     seal=_G2_SESSION_LAUNCH_OWNER_SEAL,
                 )
-                if not hasattr(self, "_g2_session_launch_owners"):
-                    self._g2_session_launch_owners = {}
-                self._g2_session_launch_owners[id(process)] = owner
-            return process
         except BaseException as cause:
             if retained_child is not None:
-                try:
-                    retained_child.cleanup_owned(self, timeout=5)
-                except BaseException as cleanup_error:
-                    if not hasattr(self, "_retained_children"):
-                        self._retained_children = {}
-                    self._retained_children[id(retained_child)] = retained_child
-                    raise NativeSuspendedChildLaunchError(
-                        retained_child, cause, cleanup_error, seal=_NATIVE_SUSPENDED_CHILD_SEAL) from cause
-                finally:
-                    # The wrapper owns both native process/thread handles.
-                    process_handle = thread_handle = None
-            elif process_handle or thread_handle:
-                # No validated CreateProcess identity exists for a malformed
-                # partial response. Do not infer safe cleanup or PID ownership.
-                self._unclassified_create_handles = (process_handle, thread_handle)
-                _refuse("NATIVE_CHILD_CREATION_UNKNOWN", "partial native creation handles require owned recovery")
+                if not retained_child._call_entered or retained_child._no_effect:
+                    retained_child._closed = True
+                    self._retained_children.pop(id(retained_child), None)
+                else:
+                    try:
+                        retained_child.cleanup_owned(self, timeout=5)
+                    except BaseException as cleanup_error:
+                        raise NativeSuspendedChildLaunchError(
+                            retained_child, cause, cleanup_error, seal=_NATIVE_SUSPENDED_CHILD_SEAL) from cause
             raise
         finally:
             pending_error = sys.exc_info()[1]
@@ -1930,15 +2179,22 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
                     if not hasattr(self, "_retained_launch_cleanup"):
                         self._retained_launch_cleanup = []
                     self._retained_launch_cleanup.append((label, callback, args, error))
-            release_failures.extend(registry.drain(launch_scope))
+            # Keep exact original process/thread acquisitions under their one
+            # child owner. Ancillary scope cleanup cannot release a live child.
+            child_entries = (retained_child._process_entry, retained_child._thread_entry) if retained_child is not None else ()
+            for entry in reversed(registry.unresolved()):
+                if (entry.seq > launch_scope.seq and entry.thread_id == launch_scope.thread_id
+                        and not any(entry is original for original in child_entries)):
+                    try:
+                        entry.release_owned(registry.owner)
+                    except BaseException as error:
+                        release_failures.append((entry.label, error))
             if native_parent is not None:
                 release("native_parent", native_parent.close)
             if release_failures:
                 diagnostics = tuple({"stage": label, "exception_type": type(error).__name__}
                                     for label, error in release_failures)
-                if retained_child is not None:
-                    if not hasattr(self, "_retained_children"):
-                        self._retained_children = {}
+                if retained_child is not None and not retained_child._no_effect:
                     self._retained_children[id(retained_child)] = retained_child
                     handoff = NativeSuspendedChildLaunchError(retained_child,
                         pending_error or release_failures[0][1], release_failures[0][1],
@@ -1949,6 +2205,21 @@ class _Win32LaunchApi(_Win32ReadOnlyApi):
                     raise handoff from release_failures[0][1]
                 _refuse("NATIVE_LAUNCH_RELEASE_UNKNOWN", "native launch ancillary handles remain owned",
                         ancillary_cleanup_failures=diagnostics)
+
+        # Publish successful provenance only after all ancillary cleanup has
+        # confirmed. A publication fault keeps the same resumed owner UNKNOWN.
+        try:
+            retained_child._require_observable()
+            if success_owner is not None:
+                if not hasattr(self, "_g2_session_launch_owners"):
+                    self._g2_session_launch_owners = {}
+                self._g2_session_launch_owners[id(retained_child)] = success_owner
+            retained_child._returned = True
+            return retained_child
+        except BaseException as error:
+            retained_child._returned = False
+            raise NativeSuspendedChildLaunchError(retained_child, error, error,
+                seal=_NATIVE_SUSPENDED_CHILD_SEAL) from error
 
     def poll_process(self, process: Any) -> int | None:
         result = int(self.k.WaitForSingleObject(process, 0))

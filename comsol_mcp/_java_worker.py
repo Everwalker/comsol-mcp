@@ -376,6 +376,7 @@ class PersistentJavaWorker:
         self._launch_argv: tuple[str, ...] = ()
         self._listener_identity = None
         self._startup_unknown: JavaWorkerError | None = None
+        self._retirement_unknown: tuple[Any, JavaWorkerError] | None = None
         self._fixed_process = None
         self._fixed_launch_owner = None
 
@@ -502,6 +503,9 @@ class PersistentJavaWorker:
                     self._fixed_process = self._process
                     from ._windows_t037 import _native_g2_session_launch_owner
                     self._fixed_launch_owner = _native_g2_session_launch_owner(self._fixed_process)
+                from ._windows_t037 import _RetainedSuspendedChild
+                if type(self._process) is _RetainedSuspendedChild:
+                    self._process.transfer_owner(self._process._api, self)
                 if admission_owner is not None:
                     # Retain the actual factory/Popen object before any diagnostic.
                     admission_owner.bind_child(self._process, "worker")
@@ -512,6 +516,7 @@ class PersistentJavaWorker:
                     self._port = self._generation = None
                     unknown = JavaWorkerError("native Worker child cleanup is uncertain; actual owner retained")
                     unknown.execution_state_unknown = True
+                    self._startup_unknown = unknown
                     raise unknown from exc
                 if intent is not None and self._fixed_process is not None:
                     raise self._retain_startup_unknown() from exc
@@ -1081,17 +1086,66 @@ class PersistentJavaWorker:
     def close(self) -> None:
         # Only the child started by this instance is eligible for termination. No COMSOL server is touched.
         with self._lock:
-            if getattr(self, "_startup_unknown", None) is not None:
-                raise self._startup_unknown
-            from ._windows_t037 import _RetainedSuspendedChild
+            from ._windows_t037 import _RetainedSuspendedChild, is_native_suspended_child
+            recovery = type(self._process) is _RetainedSuspendedChild and is_native_suspended_child(self._process)
+            terminal_retirement = False
+            if getattr(self, "_startup_unknown", None) is not None and not recovery:
+                child = self._process
+                origin = getattr(self, "_retirement_unknown", None)
+                if (type(origin) is not tuple or len(origin) != 2
+                        or origin[0] is not child or origin[1] is not self._startup_unknown
+                        or type(child) is not _RetainedSuspendedChild):
+                    raise self._startup_unknown
+                try:
+                    # Only this original successful retirement may reconcile a
+                    # later exit. Startup/Resume UNKNOWN has no such binding.
+                    if (child is not self._fixed_process or child._owner is not self
+                            or not child._returned or not child._creation_confirmed or not child._resume_confirmed
+                            or child._closed or child._retirement_error is not None
+                            or "process" in child._release_attempts
+                            or child._process_entry.state != "ACQUIRED" or child._thread_entry.state != "RELEASED"):
+                        raise self._startup_unknown
+                    child._require_observable()  # Exact storage/API/registry/closers; no UNKNOWN release retry.
+                    if type(child.poll()) is not int:
+                        raise self._startup_unknown
+                except Exception as exc:
+                    if exc is self._startup_unknown:
+                        raise
+                    raise self._startup_unknown from exc
+                terminal_retirement = True
             if type(self._process) is _RetainedSuspendedChild:
-                self._process.cleanup_owned(self, timeout=3)
+                try:
+                    if recovery:
+                        self._process.cleanup_owned(self, timeout=3)
+                    elif terminal_retirement:
+                        # Exit is already confirmed: never repeat terminate,
+                        # kill or wait after the earlier uncertain retirement.
+                        self._process.close_owned(self)
+                    else:
+                        self._process.retire_owned(self, timeout=3)
+                except Exception:
+                    if self._startup_unknown is None:
+                        self._startup_unknown = JavaWorkerError(
+                            "original native Worker retirement is UNKNOWN; owner retained",
+                            reply={"status": "UNKNOWN", "execution_state_unknown": True,
+                                   "reason": "native_worker_retirement_unverified"})
+                        child = self._process
+                        if (not recovery and child is self._fixed_process and child._owner is self
+                                and child._returned and child._creation_confirmed and child._resume_confirmed
+                                and not child._closed and child._retirement_error is None
+                                and "process" not in child._release_attempts
+                                and child._process_entry.state == "ACQUIRED" and child._thread_entry.state == "RELEASED"):
+                            self._retirement_unknown = (child, self._startup_unknown)
+                    raise
             elif self._process is not None and self._process.poll() is None:
                 self._process.terminate()
                 try: self._process.wait(timeout=3)
                 except subprocess.TimeoutExpired: self._process.kill(); self._process.wait(timeout=3)
             self._process = None; self._port = None; self._generation = None
             self._classes_dir = None
+            self._fixed_process = self._fixed_launch_owner = None
+            self._startup_unknown = None
+            self._retirement_unknown = None
 
 
 def _require_d2_remote(worker: PersistentJavaWorker, node: Any) -> "RemoteJava":

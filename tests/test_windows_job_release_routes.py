@@ -3,6 +3,7 @@
 Synthetic SDK only; real Controller, Store, launcher, factory, child and registry.
 """
 from types import SimpleNamespace
+from dataclasses import replace
 import gc,os,weakref
 import pytest
 from comsol_mcp import _windows_t037 as win, _windows_owned_resources as owned
@@ -20,7 +21,9 @@ def release_route(route,value,entry,scope):
     elif route=='registry_release':registry.release(value,300)
     elif route=='drain':
         failures=registry.drain(scope)
-        if failures:raise failures[0][1]
+        # Child entries now also participate in the shared drain. This control
+        # checks the target Job's own first refusal, retaining all other errors.
+        if failures:raise entry.error if entry.error is not None else failures[0][1]
     elif route=='captured_closer':entry.closer(300)
     else:raise AssertionError(route)
 
@@ -29,13 +32,21 @@ def release_route(route,value,entry,scope):
 def test_actual_controller_unknown_child_all_original_release_exits_deny_then_confirmed_cleanup(tmp_path,monkeypatch,route):
     p,value,events,state,sdk=controls.prepared_child_api(monkeypatch,cleanup_fail=True)
     registry=owned.registry_for(value);scope=registry.scope()
-    factory=win.T037SessionProcessFactory(p,'release-route-child',api=value)
-    monkeypatch.setattr(factory,'preflight',lambda:None)
+    from tests.test_windows_network_intent import network_profile_and_plan
+    host,_=network_profile_and_plan();p=replace(p,host_resource_profile=host)
+    factories=[]
+    class OriginalSessionLauncher(OwnedServerLauncher):
+        def start(self,runtime,project_id,session_id,**kwargs):
+            original=win.T037SessionProcessFactory(p,session_id,api=value)
+            monkeypatch.setattr(original,'preflight',lambda:None)  # SOFTWARE policy continuation only.
+            factories.append(original)
+            return super().start(runtime,project_id,session_id,process_factory=original,**kwargs)
     monkeypatch.setattr(win,'os',SimpleNamespace(**dict(vars(os),name='nt')))
-    launcher=OwnedServerLauncher(process_factory=factory,platform_name='darwin')
+    launcher=OriginalSessionLauncher(platform_name='darwin')
     daemon,project,*_=_make_daemon(tmp_path,monkeypatch,server_launcher=launcher)
     try:
         result=_start(daemon,project);sid=result['data']['session_id'];key=(project,sid)
+        factory,=factories
         handle=daemon._session_server_handles[key];child=handle.process
         entry=next(e for e in registry.unresolved() if e.label=='owned_session_job')
         handle_ref=weakref.ref(handle);factory_ref=weakref.ref(factory);child_ref=weakref.ref(child)
@@ -59,7 +70,7 @@ def test_actual_controller_unknown_child_all_original_release_exits_deny_then_co
         assert not failed['success'] and child.poll() is None and sdk.ids==[456]
         with pytest.raises(ExecutionContractError) as denied:registry.retry_owned(entry,value)
         assert denied.value is first_cause and sdk.calls.count(('close',300))==before
-        state['cleanup_fail']=False
+        state['cleanup_fail']=False;state['alive']=False;sdk.ids=[]  # Later SDK exit/empty Job observations.
         stopped=_stop(daemon,project,sid,key='close-route-confirmed-exit-'+route)
         assert stopped['success'] and child._closed and type(child.poll()) is int and sdk.ids==[]
         assert key not in daemon._session_server_handles and not child._resume_attempted

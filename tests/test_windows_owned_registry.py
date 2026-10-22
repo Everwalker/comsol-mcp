@@ -15,7 +15,9 @@ def _ancillary_entries(api):
     if jobs:
         assert len(jobs)==1 and jobs[0].value==300 and jobs[0].registry.owner is api
         assert api._job_limit_bindings[300]['entry'] is jobs[0]
-    return tuple(e for e in entries if e.label!='owned_session_job')
+    children = {id(entry) for child in getattr(api,'_retained_children',{}).values()
+                for entry in (child._process_entry,child._thread_entry) if entry is not None}
+    return tuple(e for e in entries if e.label!='owned_session_job' and id(e) not in children)
 
 
 def _factory_guard(profile,api):
@@ -136,7 +138,8 @@ def test_dacl_helper_joins_same_launch_registry_and_terminal_child_does_not_rele
     assert registry is owned.registry_for(selected) is owned.registry_for(selected.files)
     entries=_ancillary_entries(api);assert len(entries)==1
     if fault=='chain':assert 11 in attempted and 10 in attempted
-    state['cleanup_fail']=False;launcher.stop(holder);assert holder.process._closed
+    state['cleanup_fail']=False;state['alive']=False  # SDK observes exit without repeating termination.
+    launcher.stop(holder);assert holder.process._closed
     _factory_guard(profile,api)
 
 

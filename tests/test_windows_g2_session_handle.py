@@ -291,10 +291,14 @@ def test_windows_handle_consumer_rejects_unsealed_process_and_changed_runtime_bi
     worker_process._handle = old_handle
 
     old_api = worker_process._api
-    worker_process._api = win._Win32LaunchApi.__new__(win._Win32LaunchApi)
+    with pytest.raises(AttributeError, match="immutable"):
+        worker_process._api = win._Win32LaunchApi.__new__(win._Win32LaunchApi)
+    # Deliberate internal corruption still exercises consumer refusal; ordinary
+    # assignment cannot replace the original call API in the corrected owner.
+    object.__setattr__(worker_process, "_api", win._Win32LaunchApi.__new__(win._Win32LaunchApi))
     with pytest.raises(ExecutionContractError):
         verify_session_owned_server(context, backend=backend, worker=worker, service=service)
-    worker_process._api = old_api
+    object.__setattr__(worker_process, "_api", old_api)
 
     old_args = list(worker_process.args)
     worker_process.args[-1] = "tampered"

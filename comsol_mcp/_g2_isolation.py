@@ -943,7 +943,7 @@ def _verify_windows_session_owned_server(context: Any, *, backend: Any, worker: 
     """Verify the exact Windows T037 HANDLE owners and their read-only socket pair."""
     from ._platform_process import process_identity
     from ._runtime_installation import runtime_id_for_root
-    from ._windows_t037 import _Win32ChildProcess, _native_g2_session_launch_owner
+    from ._windows_t037 import _RetainedSuspendedChild, _native_g2_session_launch_owner
     from ._session_server import _server_directories, build_server_command
     from ._session_context import (
         CanonicalSocket, OwnedServerProcessIdentity, SessionRuntimeContext,
@@ -1010,7 +1010,7 @@ def _verify_windows_session_owned_server(context: Any, *, backend: Any, worker: 
 
     server_identity = context.process_identity
     server_process = context.server_handle
-    if (type(server_process) is not _Win32ChildProcess
+    if (type(server_process) is not _RetainedSuspendedChild
             or not isinstance(server_identity, OwnedServerProcessIdentity)
             or endpoint_identity.owned_process is not server_identity
             or type(server_identity.start_epoch_ms) is not int or server_identity.start_epoch_ms <= 0

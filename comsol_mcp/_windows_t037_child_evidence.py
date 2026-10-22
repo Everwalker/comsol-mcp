@@ -261,6 +261,32 @@ class BorrowedChildHandles:
 class PinnedImage:
     entry: object
     api: object
+    original_adapter: object = None
+
+
+def borrow_original_child(process, *, api):
+    """Borrow original live launcher acquisitions for readonly SDK queries.
+
+    No HANDLE is opened, adopted, relabeled or released. The query adapter
+    joins the original registry; its own acquisitions retain its own closers.
+    These borrowing descriptions remain observations, never Resume authority.
+    """
+    from ._windows_t037 import _RetainedSuspendedChild
+    if type(process) is not _RetainedSuspendedChild or type(api) is not WindowsChildEvidenceApi:
+        _bad("original child borrow", "INVALID_BORROW")
+    process._require_observable()
+    if not process.never_resumed or process._owner is not process._api:
+        _bad("original child borrow", "OWNER_NOT_LIVE")
+    if type(process.birth_filetime_100ns) is not int or process.birth_filetime_100ns <= 0:
+        _bad("original child borrow", "BIRTH_UNVERIFIED")
+    p, t = process._process_entry, process._thread_entry
+    _entry(p, process._api, process._api)
+    _entry(t, process._api, process._api)
+    _entry(process._image_entry, process._api, process._image_api)
+    attach_registry(api, registry_for(process._api))
+    return (BorrowedChildHandles(process._api, p, t, process.pid,
+                process.thread_id, process.birth_filetime_100ns),
+            PinnedImage(process._image_entry, api, process._image_api))
 
 
 def _real_handle(value):
@@ -543,8 +569,9 @@ class WindowsChildEvidenceApi:
         entry = self._owned_handle(handle, "child_evidence_image_pin")
         return PinnedImage(entry, self)
 
-    def _file(self, entry):
-        handle = _entry(entry, registry_for(self).owner, self)
+    def _file(self, entry, *, original_adapter=None):
+        handle = _entry(entry, registry_for(self).owner,
+                        self if original_adapter is None else original_adapter)
         def info():
             value = _FileInfo()
             self._check(self.k.GetFileInformationByHandle(handle, C.byref(value)), "GetFileInformationByHandle")
@@ -582,7 +609,11 @@ class WindowsChildEvidenceApi:
     def image(self, process, pin):
         if type(pin) is not PinnedImage or pin.api is not self:
             _bad("PinnedImage", "OWNER_NOT_LIVE")
-        pinned_before = self._file(pin.entry)
+        def read_pin():
+            if pin.original_adapter is None:
+                return self._file(pin.entry)
+            return self._file(pin.entry, original_adapter=pin.original_adapter)
+        pinned_before = read_pin()
         def process_path(flags):
             buf, used = C.create_unicode_buffer(MAX_UTF16), U32(MAX_UTF16)
             self._check(self.k.QueryFullProcessImageNameW(process, flags, buf, C.byref(used)), "QueryFullProcessImageNameW")
@@ -606,7 +637,7 @@ class WindowsChildEvidenceApi:
                     backing_pin = self.pin_image("\\\\?\\GLOBALROOT" + mapped)
                     try:
                         backing = self._file(backing_pin.entry)
-                        pinned_after = self._file(pin.entry)
+                        pinned_after = read_pin()
                         same = (pinned_before.volume_serial, pinned_before.file_id, pinned_before.sha256) == (
                             backing.volume_serial, backing.file_id, backing.sha256)
                         return ImageObservation(win32, native, mapped, int(region.allocation_base or 0),

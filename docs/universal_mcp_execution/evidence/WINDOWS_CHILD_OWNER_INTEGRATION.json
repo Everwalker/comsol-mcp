@@ -1,0 +1,600 @@
+{
+  "schema": "comsol-mcp.windows-child-owner-integration/1",
+  "recorded_utc": "2026-10-22T18:58:47.993689+00:00",
+  "stage": "MAIN_ACCEPTED_SOURCE_AND_SCOPED_SOFTWARE_ONLY",
+  "native_issuer_authority": false,
+  "main_agent_acceptance": {
+    "status": "PASS_LIMITED_SOURCE_SOFTWARE_NOT_NATIVE",
+    "review": {
+      "path": "_state/universal-main-review/20261023-child-owner/MAIN_REVIEW.json",
+      "sha256": "02feb76cc0d1e9936f4e964918b5f6725cbb530ab7972c7e0f23a8a05604b406",
+      "bytes": 2958
+    },
+    "tests": 514,
+    "main_independent_counterexample": "1PASS_NOT_ADDED_TO514",
+    "native_issuer_changed": false,
+    "native_issuer_authority": false,
+    "host_apply_authorized": false
+  },
+  "baseline": {
+    "main_plan": {
+      "path": "_state/universal-windows-network-design/CHILD_OWNER_INTEGRATION_NEXT.json",
+      "sha256": "379a7ada747d270b776f06f1a5b8b92d9cfd162162a79c0b925cf9332780c177",
+      "bytes": 3836
+    },
+    "original_source_sha256": "c45b41131310bc127ef7b42f9ac98c10a091499ff0a14f9d6d190b9c2817ebca",
+    "original_source_snapshot": {
+      "path": "_state/universal-windows-child-owner/source-before/comsol_mcp/_windows_t037.py",
+      "sha256": "c45b41131310bc127ef7b42f9ac98c10a091499ff0a14f9d6d190b9c2817ebca",
+      "bytes": 115606
+    },
+    "fixed_listener_commit_reported_by_Main": "b90ef486",
+    "git_operations_this_unit": "NOT_RUN",
+    "worker_before_consumer_lease": {
+      "path": "_state/universal-windows-child-owner/implementation/consumer-baseline/comsol_mcp/_java_worker.py",
+      "sha256": "7f1284b4fb5383e24674a12a0c7855b458115e84f121264905a33e6becea6276",
+      "bytes": 81351
+    },
+    "expected_worker_before_consumer_lease_sha256": "7f1284b4fb5383e24674a12a0c7855b458115e84f121264905a33e6becea6276"
+  },
+  "IMPLEMENTED": [
+    "Same original _RetainedSuspendedChild/API owns exact PROCESS_INFORMATION/call buffers before SDK entry, including original CreateProcess target, parent/profile/factory/role/Job and captured original native closers.",
+    "Written outputs survive call/conversion failure. Unconfirmed/partial/malformed creation stays original-owner UNKNOWN; poll/wait/terminate/cleanup/new birth refuse. Only exact integer FALSE with all-zero original outputs permits a fresh owner attempt.",
+    "Original process/thread outputs acquire actual original shared registry entries. Scope cleanup excludes child entries; their original closer checks exact binding/owner/lifecycle. Actual close/termination uncertainty is retained and cannot repeat an effect.",
+    "The same original child survives confirmed suspension, Resume attempt, successful return and G2/finally/publication failure. No second owning return wrapper exists. G2 receipt is published after ancillary cleanup; getter signature/receipt fields are unchanged.",
+    "Readonly observer bridge borrows genuine original process/thread/image entries. Pinned file adapter/closer is preserved; query adapter shares the registry, hashes/compares actual SDK file/mapping observations and releases only its own backing resource. No observation grants Resume authority.",
+    "Successful Worker/Server returns transfer the same original child to the real consumer holder. Worker close separates never-resumed recovery from successful resumed retirement; UNKNOWN stays held with the existing startup latch. Server stop checks original holder before effects and releases only after exact HANDLE exit/listener absence.",
+    "Known pre-SDK release deferrals may be reconciled only by the explicit original lifecycle owner after terminal facts. Arbitrary registry retries cannot impersonate it; actual possibly-effective close errors retain original acquisition without reclose.",
+    "Normal termination refuses an unreturned Resume-UNKNOWN child; a copied ManagedServerHandle cannot terminate the original Server. Terminal release/registry/publication bookkeeping faults retain the same owner and source storage.",
+    "Worker retains the exact original child/error pair only for a failed normal returned-owner retirement before process CloseHandle. Subsequent close can query that same original HANDLE and release only after exact terminal exit with intact original ownership, ACQUIRED process/RELEASED main-thread entries, no process release attempt and no retirement bookkeeping error. It cannot repeat terminate/kill/wait; start/RPC remain latched until confirmed release. Startup/readiness, unreturned Resume, creation, registry, close and bookkeeping UNKNOWN remain refused."
+  ],
+  "SOFTWARE": {
+    "status": "PASS_SCOPED_SOFTWARE_ONLY",
+    "tests": 514,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modules": {
+      "tests.test_windows_native_child_ownership": 48,
+      "tests.test_windows_native_child_lifecycle": 44,
+      "tests.test_windows_fixed_listeners": 94,
+      "tests.test_windows_g2_session_handle": 6,
+      "tests.test_windows_suspended_ownership": 10,
+      "tests.test_windows_t037_child_evidence": 83,
+      "tests.test_windows_child_process_policy": 32,
+      "tests.test_windows_job_limits": 81,
+      "tests.test_windows_t037": 24,
+      "tests.test_windows_child_binding": 19,
+      "tests.test_windows_owned_registry": 22,
+      "tests.test_windows_job_release_routes": 39,
+      "tests.test_windows_child_acl": 11,
+      "_state.universal-main-review.20261023-child-owner.test_late_exit_review": 1
+    },
+    "exact_command": {
+      "path": "_state/universal-windows-child-owner/late-exit-repair/final.command.json",
+      "sha256": "68541ff387252d4e2504a4bb0204edb5b6b1ec62dd8338b015a0e617ee17d3c6",
+      "bytes": 1298
+    },
+    "junit": {
+      "path": "_state/universal-windows-child-owner/late-exit-repair/final.xml",
+      "sha256": "eef5005f520eeca0490a46fe2aac73c272daf8ee72f8733d829753ffb2e1eb8e",
+      "bytes": 84660
+    },
+    "log": {
+      "path": "_state/universal-windows-child-owner/late-exit-repair/final.log",
+      "sha256": "8f7ee3db0d3a8eebd3d117043280142b269cb43327c30683ae31b634ea1ad6cc",
+      "bytes": 660
+    },
+    "runtime_source_hashes_match_frozen_candidate": true,
+    "original_owner_raw_cases": 48,
+    "full_consumer_raw_cases": 44,
+    "original_four_red_contracts_now_pass": [
+      "test_original_sdk_outputs_survive_call_or_conversion_exception[write_then_raise]",
+      "test_original_sdk_outputs_survive_call_or_conversion_exception[write_then_conversion_raise]",
+      "test_success_return_has_one_process_owner_and_no_stale_retained_thread",
+      "test_post_resume_bookkeeping_exception_and_gc_keep_live_recovery_handle"
+    ],
+    "preserved_five_controls": [
+      "test_current_old_retained_and_software_capability_gc_does_not_close_live_returned_handle",
+      "test_unmodified_issuer_still_refuses_and_reaps_only_original_model_child",
+      "test_known_false_zero_output_has_no_child_owner_or_effect",
+      "test_unexpected_resume_return_retains_original_owner_without_simplified_cleanup",
+      "test_software_success_preserves_existing_g2_consumer_provenance_contract"
+    ],
+    "coverage": [
+      "SDK write-then-raise/ambiguous return and zero-output uncertainty",
+      "normal return identity, GC, G2 construction/publication and ancillary release faults",
+      "slot/entry/closer/API/profile drift; no repeated birth or termination",
+      "thread/process close FALSE/exception and post-close registry bookkeeping faults",
+      "same original process/thread/image registry borrowing, actual software SDK parser/hash/mapping positive and wrong backing",
+      "existing Worker original HANDLE FILETIME/readiness getter compatibility and all 94 fixed listener software controls",
+      "full Worker start/close positives, never-resumed recovery, Resume-UNKNOWN handoff and no restart/RPC/effect retry",
+      "full Server start/stop normal/already-exited positives, owner substitution refusal, termination/wait/close/poll/listener unknown controls",
+      "full public controller session.start/session.stop with a genuine original software-boundary resumed child; control source unchanged",
+      "Full Worker late exact-HANDLE exit after wait timeout, terminate response exception or temporarily unavailable poll; live/unknown retries preserve latch without a second effect. Exact child/error/owner/slot and registry guards, startup/unreturned/creation refusal even after exit, and initial/late possibly-effective close or bookkeeping failures remain held."
+    ],
+    "added_software_controls_this_repair": 23,
+    "main_private_counterexample": "PASS_SOFTWARE_ONLY"
+  },
+  "SDK_OBSERVATION": {
+    "status": "NOT_RUN_THIS_UNIT",
+    "real_SDK_CreateProcess_or_Resume": false,
+    "real_Windows_child": false,
+    "remote_or_SSH": false,
+    "host_policy_change": false
+  },
+  "ENFORCEMENT_NOT_RUN": [
+    "T037 native AppContainer/three-attribute launch acceptance",
+    "real Resume/behavior enforcement",
+    "COMSOL/JVM/Worker vendor compatibility",
+    "WFP/MIC/ACL/SCM apply or native admission"
+  ],
+  "ISSUER_UNCHANGED": {
+    "status": "UNCHANGED_REFUSES",
+    "prebirth_factory_byte_exact": true,
+    "source": {
+      "path": "comsol_mcp/_windows_t037_resume.py",
+      "sha256": "39095a91bdb370884bae49dce644acf9e881e2c6ba25dd0d78b62be13872a45d",
+      "bytes": 7809
+    },
+    "note": "Software positive branches substitute SDK/issuer functions only in test memory; no pending capability/JSON/observer row authorizes native birth/Resume."
+  },
+  "source_controls": {
+    "factory_byte_exact": true,
+    "factory_sha256": "6ee881d80f17c437db637d180f47f9742e7d1f1fb882098903abb78bd8b514f0",
+    "child_policy_attribute_list_byte_exact": true,
+    "base_wrapper_AST_unchanged": true,
+    "G2_signature_and_slots_unchanged": true,
+    "launch_methods_changed": [
+      "create_suspended_appcontainer_child"
+    ],
+    "worker_methods_changed": [
+      "__init__",
+      "close",
+      "start"
+    ],
+    "server_methods_changed": [
+      "_close_original_native_child",
+      "start",
+      "stop"
+    ],
+    "worker_original_HANDLE_birth_ready_endpoint_methods_byte_exact": true,
+    "protected_unchanged": [
+      {
+        "path": "comsol_mcp/_windows_t037_resume.py",
+        "sha256": "39095a91bdb370884bae49dce644acf9e881e2c6ba25dd0d78b62be13872a45d"
+      },
+      {
+        "path": "comsol_mcp/_windows_owned_resources.py",
+        "sha256": "82db7815c97093b92d5936d0dbc34915064715d51ad48905ff554e720454f784"
+      },
+      {
+        "path": "comsol_mcp/_windows_t037_child.py",
+        "sha256": "ac0721c61d9ca7e4e57248e0c738ab9ae5e39bc32a748f557f60bfeb8b550db3"
+      },
+      {
+        "path": "comsol_mcp/_windows_t037_acl.py",
+        "sha256": "5414f1a2875578c9ad2f9ebcc02e03356e0e5c9e0bbe03978dbe445cad0b482d"
+      },
+      {
+        "path": "comsol_mcp/_windows_t037_native.py",
+        "sha256": "c7a06a0fa0560773964102c5c72ae480029d87cd0cb27d44aa95bd4914c712ef"
+      },
+      {
+        "path": "comsol_mcp/_windows_parameter_publish.py",
+        "sha256": "70135df2e5271d5287155b252cf5c75f235df5317aee0453fd7091af982822a2"
+      },
+      {
+        "path": "comsol_mcp/_windows_job_limits.py",
+        "sha256": "38db220f2e88971b3b09a929e4343223e32411289515a008464472fe070f7ee2"
+      },
+      {
+        "path": "comsol_mcp/_managed_backend.py",
+        "sha256": "23ace5c66e545786b0ee3ea2cde3832ec346c2e8c5d82ad6c14ce50ac36af24a"
+      },
+      {
+        "path": "comsol_mcp/_control_daemon.py",
+        "sha256": "6696dcabf315314f79957f05c2ed2aaab4b2bf39892798bbc9080120ccec01b6"
+      }
+    ],
+    "late_exit_delta_worker_methods": [
+      "__init__",
+      "close"
+    ],
+    "late_exit_other_four_production_files_byte_exact_to_490_candidate": true,
+    "worker_start_and_startup_unknown_latch_byte_exact_to_490_candidate": true,
+    "late_exit_existing_lifecycle_tests_byte_exact": true,
+    "late_exit_other_eight_leased_tests_byte_exact": true,
+    "G2_representation_change_exactly_two_source_replacements": true
+  },
+  "changed_files": {
+    "production": [
+      "comsol_mcp/_windows_t037.py",
+      "comsol_mcp/_g2_isolation.py",
+      "comsol_mcp/_windows_t037_child_evidence.py",
+      "comsol_mcp/_java_worker.py",
+      "comsol_mcp/_session_server.py"
+    ],
+    "tests": [
+      "tests/test_windows_native_child_ownership.py",
+      "tests/test_windows_native_child_lifecycle.py",
+      "tests/test_windows_fixed_listeners.py",
+      "tests/test_windows_g2_session_handle.py",
+      "tests/test_windows_suspended_ownership.py",
+      "tests/test_windows_job_limits.py",
+      "tests/test_windows_child_binding.py",
+      "tests/test_windows_owned_registry.py",
+      "tests/test_windows_job_release_routes.py"
+    ],
+    "compact": "docs/universal_mcp_execution/evidence/WINDOWS_CHILD_OWNER_INTEGRATION.json",
+    "private_root": "_state/universal-windows-child-owner"
+  },
+  "review_packet": {
+    "candidate": {
+      "path": "_state/universal-windows-child-owner/late-exit-repair/candidate-manifest.json",
+      "sha256": "17eb12f2ecbe26a5d9dbd9870e254a344e2b5a579f2ef44368aa90f82fb9fb47",
+      "bytes": 7047
+    },
+    "diff": {
+      "path": "_state/universal-windows-child-owner/late-exit-repair/candidate.diff",
+      "sha256": "0e6430694225fce71c84c7658865ec384b0666253ce5261d4b4a418f25da6f11",
+      "bytes": 15099
+    },
+    "diff_scope": "Only this repair relative to frozen 490 candidate; cumulative prior diff preserved in reviewed_490_receipt",
+    "raw_manifest": {
+      "path": "_state/universal-windows-child-owner/late-exit-repair/raw-manifest.json",
+      "sha256": "ee9441bf75bfd66d38c80a75c78bee56fc07e94f1c92163d8d9db9da765f6974",
+      "bytes": 58519
+    },
+    "named_hash_refs": 237,
+    "unique_sha256": 149
+  },
+  "preserved_failures": {
+    "original": {
+      "path": "_state/universal-windows-child-owner/unit-final.xml",
+      "sha256": "fbfbd9c1d193810ca696fc3d3ace60f646e0a64670b5dfb004ae708ca15bbea2",
+      "bytes": 9975
+    },
+    "original_4_FAIL_5_control_result": {
+      "tests": 9,
+      "failures": 4,
+      "errors": 0,
+      "skipped": 0,
+      "modules": {
+        "tests.test_windows_native_child_ownership": 9
+      }
+    },
+    "original_manifest": {
+      "path": "_state/universal-windows-child-owner/raw-manifest.json",
+      "sha256": "49979f2068bdd2d381efbb59dbfcd322050c0ac4e60ae87fada4bd9f7da34d21",
+      "bytes": 9720
+    },
+    "original_manifest_hash_refs_unchanged": true,
+    "old_retained_GC_calibration": "Main accepted: old __del__ already no-op; actual original GC fault was the new base wrapper. Corrected same-object return intentionally keeps the original alive.",
+    "pre_review_488_candidate": {
+      "path": "_state/universal-windows-child-owner/implementation/candidate-final-manifest.json",
+      "sha256": "e8ee558da2f8e9d2fae6dc182b76f4ccae9d7eab3c5553fd005c6c6cb597cd3a",
+      "bytes": 5910
+    },
+    "final_surface_negative_controls": {
+      "path": "_state/universal-windows-child-owner/implementation/owner-surface-red.xml",
+      "sha256": "b601cf67183e59d15b1db89c010cecfb9851b35087e57ee33aa303d85edcab23",
+      "bytes": 2960
+    },
+    "surface_negative_result": {
+      "tests": 2,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0,
+      "modules": {
+        "tests.test_windows_native_child_lifecycle": 1,
+        "tests.test_windows_native_child_ownership": 1
+      }
+    },
+    "surface_raw": [
+      {
+        "path": "_state/universal-windows-child-owner/implementation/pytest-owner-surface-red/test_copied_server_dataclass_c0/consumer-case.json",
+        "sha256": "2593ef1b085ef4c63633d1cfc5a1ff33274bd06701cb1f8113bbd41961a94892",
+        "bytes": 2208
+      },
+      {
+        "path": "_state/universal-windows-child-owner/implementation/pytest-owner-surface-red/test_copied_server_dataclass_c0/server-runtime/state/sessions/2c4246be81e6b978255936dd12fc31d0112612ea50e150b82b5210d7b3bc3f62/owned-server/startup-diagnostic.json",
+        "sha256": "9a13890ef34abea44e3ff202e8df02005c69803e64c948e94814b8b66df16caf",
+        "bytes": 325
+      },
+      {
+        "path": "_state/universal-windows-child-owner/implementation/pytest-owner-surface-red/test_unreturned_resume_unknown0/case.json",
+        "sha256": "60c125b2990b0f3b13fa81027cae0082b388aa7d3ba4561e5c71233d932bb74d",
+        "bytes": 2262
+      }
+    ],
+    "surface_fix": "Move actual holder/return-state guard before Server termination; refuse direct terminate/kill of unreturned Resume-UNKNOWN child.",
+    "debug_attempt_logs": [
+      {
+        "path": "_state/universal-windows-child-owner/implementation/unit-c1.log",
+        "sha256": "23148982ab70560a5a85e6aa637c001ab25ef97cab8ab5435eb33a4aee829f82",
+        "bytes": 120462
+      },
+      {
+        "path": "_state/universal-windows-child-owner/implementation/unit-c2.log",
+        "sha256": "6c2a678cb8ff66131712a1b121c83d68ad9ba41dc7f452d50b8ce8234cea1d56",
+        "bytes": 163734
+      },
+      {
+        "path": "_state/universal-windows-child-owner/implementation/unit-c3.log",
+        "sha256": "02cf16d9b93b0c059c4cf9eb6d3216f6e90e130f8bb3fc42672d80d56a962b6c",
+        "bytes": 260
+      },
+      {
+        "path": "_state/universal-windows-child-owner/implementation/unit-c4.log",
+        "sha256": "f7d128a184dd22347cc679254774e66ca346a5d8b6ad72dd62b74c515f4ce16d",
+        "bytes": 99
+      },
+      {
+        "path": "_state/universal-windows-child-owner/implementation/unit-c5.log",
+        "sha256": "594cd3e5298ca6c344e41e30205fbc2091f70b03bfae1b18a6ac404b9a3b3ccc",
+        "bytes": 99
+      },
+      {
+        "path": "_state/universal-windows-child-owner/implementation/unit-c6.log",
+        "sha256": "eb75f3d2baeff532850c0cc95598a02a92a1be283956abcb13507ee1df5929b2",
+        "bytes": 580
+      },
+      {
+        "path": "_state/universal-windows-child-owner/implementation/unit-i1.log",
+        "sha256": "efcae20da1bd95978d614a8f92dfef97d0343c01625b5cc0458d162befaac052",
+        "bytes": 1533
+      },
+      {
+        "path": "_state/universal-windows-child-owner/implementation/unit-i2.log",
+        "sha256": "812a98b81b121193115a7e7588556fa886de0816f757b62075ff6ada12506000",
+        "bytes": 131707
+      },
+      {
+        "path": "_state/universal-windows-child-owner/implementation/unit-i3.log",
+        "sha256": "c9bbd6003fd69df247fa02b94179270957f9858ba70366aab2636fc8c64e326f",
+        "bytes": 2488
+      },
+      {
+        "path": "_state/universal-windows-child-owner/implementation/unit-i4.log",
+        "sha256": "46d52c752c5be6fd247b200428a6087b0adbef35e843a07cb8eaf3dd43993fbe",
+        "bytes": 340
+      },
+      {
+        "path": "_state/universal-windows-child-owner/implementation/unit-i5.log",
+        "sha256": "b66c138432108aa2646f4ddb8d0b4a241bd99b89670baaa71a28a98e1353a5bb",
+        "bytes": 254471
+      },
+      {
+        "path": "_state/universal-windows-child-owner/implementation/unit-i6.log",
+        "sha256": "ab0c01e819914292b2ca1a7234f616cb2606b71a4bbd0422c8ad5e4486257d08",
+        "bytes": 500
+      },
+      {
+        "path": "_state/universal-windows-child-owner/implementation/unit-i7.log",
+        "sha256": "b61c5936278e05d733e1c8b511c177ee5448b7e2ea1916e1a6c17223571d7e9f",
+        "bytes": 11844
+      },
+      {
+        "path": "_state/universal-windows-child-owner/implementation/unit-i8.log",
+        "sha256": "e5e989e98bce8d9abfab39bcd6065e18f10b97d18b5201bf4936a73233df8a21",
+        "bytes": 99
+      }
+    ],
+    "reviewed_490_receipt": {
+      "compact": {
+        "path": "_state/universal-windows-child-owner/late-exit-repair/before/docs/universal_mcp_execution/evidence/WINDOWS_CHILD_OWNER_INTEGRATION.json",
+        "sha256": "4686d66eb36040cc726db7246e0cac82df2f52de00cf2b8f4ae1a91884c2aea8",
+        "bytes": 17712
+      },
+      "junit": {
+        "path": "_state/universal-windows-child-owner/implementation/unit-reviewed.xml",
+        "sha256": "7dadaff9534e7609fb2f6257763dfdb4b5cc02190647123cc50055fcdb11b0c7",
+        "bytes": 80096
+      },
+      "result": {
+        "tests": 490,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "modules": {
+          "tests.test_windows_native_child_ownership": 48,
+          "tests.test_windows_native_child_lifecycle": 21,
+          "tests.test_windows_fixed_listeners": 94,
+          "tests.test_windows_g2_session_handle": 6,
+          "tests.test_windows_suspended_ownership": 10,
+          "tests.test_windows_t037_child_evidence": 83,
+          "tests.test_windows_child_process_policy": 32,
+          "tests.test_windows_job_limits": 81,
+          "tests.test_windows_t037": 24,
+          "tests.test_windows_child_binding": 19,
+          "tests.test_windows_owned_registry": 22,
+          "tests.test_windows_job_release_routes": 39,
+          "tests.test_windows_child_acl": 11
+        }
+      },
+      "review_packet": {
+        "candidate": {
+          "path": "_state/universal-windows-child-owner/implementation/candidate-reviewed-manifest.json",
+          "sha256": "79d2350194fc9c0716124ee8678a0af6b6453c7813b48e31992e4b781bd19b9f",
+          "bytes": 5910
+        },
+        "diff": {
+          "path": "_state/universal-windows-child-owner/implementation/candidate-reviewed.diff",
+          "sha256": "6a959c3e353bfd223d97564ba1ec1992078377907832d9e06ee48fdde63c7fc8",
+          "bytes": 138903
+        },
+        "raw_manifest": {
+          "path": "_state/universal-windows-child-owner/implementation/raw-reviewed-manifest.json",
+          "sha256": "7f422a8d1478db285fe0df148843e0a4be4c8ff79d5eed234f35562cefadd802",
+          "bytes": 184954
+        },
+        "named_hash_refs": 783,
+        "unique_sha256": 553
+      },
+      "all_old_raw_manifest_hashes_unchanged": true
+    },
+    "Main_late_exit_initial": {
+      "source": {
+        "path": "_state/universal-main-review/20261023-child-owner/test_late_exit_review.py",
+        "sha256": "66955925c256dc9bc04bbfb0e182d74086aa6867348825a109f314270b4c20e5",
+        "bytes": 1504
+      },
+      "junit": {
+        "path": "_state/universal-main-review/20261023-child-owner/late-exit-initial.xml",
+        "sha256": "827b140453be27bdac88e7ddecc17c6af426646c2830d21913c021d4bea221b2",
+        "bytes": 2942
+      },
+      "result": {
+        "tests": 1,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0,
+        "modules": {
+          "_state.universal-main-review.20261023-child-owner.test_late_exit_review": 1
+        }
+      },
+      "provenance": "Main concentrated software review using original full-function SDK-boundary fixture; no native or human approval implied"
+    },
+    "late_exit_repair_initial_red": {
+      "junit": {
+        "path": "_state/universal-windows-child-owner/late-exit-repair/red.xml",
+        "sha256": "174c6a7a1778b4540502f37d682e44b8fdcb3bc5640c6d606370da165bf30bac",
+        "bytes": 19223
+      },
+      "log": {
+        "path": "_state/universal-windows-child-owner/late-exit-repair/red.log",
+        "sha256": "a33735af3d3403d6a865518c8f7358fe8d320c8af8bcae1c2545c6586b987eb9",
+        "bytes": 18817
+      },
+      "command": {
+        "path": "_state/universal-windows-child-owner/late-exit-repair/red.command.json",
+        "sha256": "a203d764d19ca56c1d5f14c816dd16addc4b3c0d902e924809cfe248705374af",
+        "bytes": 836
+      },
+      "result": {
+        "tests": 4,
+        "failures": 4,
+        "errors": 0,
+        "skipped": 0,
+        "modules": {
+          "tests.test_windows_native_child_lifecycle": 3,
+          "_state.universal-main-review.20261023-child-owner.test_late_exit_review": 1
+        }
+      },
+      "production_source": {
+        "path": "_state/universal-windows-child-owner/late-exit-repair/before/comsol_mcp/_java_worker.py",
+        "sha256": "c11c4baedf0f1b8033cff0d88068b1ea54826d48794fe93163df6c6a66e37d58",
+        "bytes": 82479
+      },
+      "note": "Before production repair: all three full-function late-exit positives and unchanged Main counterexample failed at the existing Worker UNKNOWN gate. The failure logs preserve pytest assertion text; the new test file was not separately frozen at that red invocation."
+    }
+  },
+  "limitations": [
+    "Software boundary substitutions are not native SDK, isolation, vendor or issuer acceptance.",
+    "Original resources with possibly-effective release failure remain UNKNOWN and held; no new native recovery authority or global policy is introduced.",
+    "File hash/mapping correlation is retained backing-file evidence, not a hash/proof of all loaded memory or DLLs."
+  ],
+  "LATE_EXIT_REPAIR": {
+    "scope": "SOFTWARE_ONLY_EXISTING_ORIGINAL_OWNER_RETIREMENT_NO_NATIVE_OR_RESUME_AUTHORITY",
+    "cause": "Worker close rejected every non-never-resumed startup latch, including the latch it had itself created for a failed normal retirement.",
+    "repair_changed_files": [
+      "comsol_mcp/_java_worker.py",
+      "tests/test_windows_native_child_lifecycle.py"
+    ],
+    "main_counterexample": {
+      "path": "_state/universal-main-review/20261023-child-owner/test_late_exit_review.py",
+      "sha256": "66955925c256dc9bc04bbfb0e182d74086aa6867348825a109f314270b4c20e5",
+      "bytes": 1504
+    },
+    "main_counterexample_final": "PASS_SOFTWARE_ONLY",
+    "late_exit_positive_faults": [
+      "wait_timeout",
+      "terminate_exception",
+      "temporarily_unavailable_original_poll"
+    ],
+    "retry_requirements": [
+      "same exact original returned/resumed/creation-confirmed child and actual Worker owner",
+      "same exact existing error instance created by this normal retirement path; diagnostic text/dict is insufficient",
+      "intact original API/storage/factory/profile/Job/registry/closer bindings",
+      "process ACQUIRED and main thread RELEASED; no possibly-effective process release attempt or retirement bookkeeping error",
+      "same original HANDLE confirms exact int exit before original close_owned; no further termination/kill/wait"
+    ],
+    "negative_controls": [
+      "replacement error/child/fixed-child/owner/output slot",
+      "registry UNKNOWN, attempted process release, retirement bookkeeping UNKNOWN",
+      "ready/health startup failure, unreturned Resume or unconfirmed CreateProcess even with later exit or matching diagnostic",
+      "CloseHandle FALSE/exception, registry pop or owner pop failure on initial retirement and late-exit reconciliation",
+      "start/RPC blocked before cleanup; live/unqueryable retry and GC produce no further native effects"
+    ],
+    "source_controls": {
+      "factory_byte_exact": true,
+      "factory_sha256": "6ee881d80f17c437db637d180f47f9742e7d1f1fb882098903abb78bd8b514f0",
+      "child_policy_attribute_list_byte_exact": true,
+      "base_wrapper_AST_unchanged": true,
+      "G2_signature_and_slots_unchanged": true,
+      "launch_methods_changed": [
+        "create_suspended_appcontainer_child"
+      ],
+      "worker_methods_changed": [
+        "__init__",
+        "close",
+        "start"
+      ],
+      "server_methods_changed": [
+        "_close_original_native_child",
+        "start",
+        "stop"
+      ],
+      "worker_original_HANDLE_birth_ready_endpoint_methods_byte_exact": true,
+      "protected_unchanged": [
+        {
+          "path": "comsol_mcp/_windows_t037_resume.py",
+          "sha256": "39095a91bdb370884bae49dce644acf9e881e2c6ba25dd0d78b62be13872a45d"
+        },
+        {
+          "path": "comsol_mcp/_windows_owned_resources.py",
+          "sha256": "82db7815c97093b92d5936d0dbc34915064715d51ad48905ff554e720454f784"
+        },
+        {
+          "path": "comsol_mcp/_windows_t037_child.py",
+          "sha256": "ac0721c61d9ca7e4e57248e0c738ab9ae5e39bc32a748f557f60bfeb8b550db3"
+        },
+        {
+          "path": "comsol_mcp/_windows_t037_acl.py",
+          "sha256": "5414f1a2875578c9ad2f9ebcc02e03356e0e5c9e0bbe03978dbe445cad0b482d"
+        },
+        {
+          "path": "comsol_mcp/_windows_t037_native.py",
+          "sha256": "c7a06a0fa0560773964102c5c72ae480029d87cd0cb27d44aa95bd4914c712ef"
+        },
+        {
+          "path": "comsol_mcp/_windows_parameter_publish.py",
+          "sha256": "70135df2e5271d5287155b252cf5c75f235df5317aee0453fd7091af982822a2"
+        },
+        {
+          "path": "comsol_mcp/_windows_job_limits.py",
+          "sha256": "38db220f2e88971b3b09a929e4343223e32411289515a008464472fe070f7ee2"
+        },
+        {
+          "path": "comsol_mcp/_managed_backend.py",
+          "sha256": "23ace5c66e545786b0ee3ea2cde3832ec346c2e8c5d82ad6c14ce50ac36af24a"
+        },
+        {
+          "path": "comsol_mcp/_control_daemon.py",
+          "sha256": "6696dcabf315314f79957f05c2ed2aaab4b2bf39892798bbc9080120ccec01b6"
+        }
+      ],
+      "late_exit_delta_worker_methods": [
+        "__init__",
+        "close"
+      ],
+      "late_exit_other_four_production_files_byte_exact_to_490_candidate": true,
+      "worker_start_and_startup_unknown_latch_byte_exact_to_490_candidate": true,
+      "late_exit_existing_lifecycle_tests_byte_exact": true,
+      "late_exit_other_eight_leased_tests_byte_exact": true
+    },
+    "native_SDK_remote_host": "NOT_RUN",
+    "issuer": "UNCHANGED_REFUSES"
+  }
+}

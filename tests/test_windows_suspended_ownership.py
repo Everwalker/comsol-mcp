@@ -117,7 +117,7 @@ def test_unknown_child_has_single_owner_and_blocks_job_close_until_terminal(monk
     assert process._owner is owner
     with pytest.raises(RuntimeError):process.cleanup_owned(owner)
     assert not process._closed and process._owner is owner
-    state['cleanup_fail']=False
+    state['cleanup_fail']=False;state['alive']=False  # SDK observes exit; no uncertain termination retry.
     assert process.cleanup_owned(owner)==1
     assert process.cleanup_owned(owner)==1
     assert events.count(('close',200))==1 and events.count(('close',201))==1
@@ -137,7 +137,7 @@ def test_server_actual_start_transfers_unknown_child_to_managed_handle_then_clea
     assert handle.process._owner is handle and handle.endpoint is None and not handle.retired
     with pytest.raises(Exception):launcher.stop(handle)
     assert not handle.retired and not handle.process._closed
-    state['cleanup_fail']=False
+    state['cleanup_fail']=False;state['alive']=False  # SDK observes exit; no uncertain termination retry.
     outcome=launcher.stop(handle)
     assert outcome['never_resumed_native_child'] and outcome['exit_confirmed'] and handle.retired
 
@@ -172,7 +172,7 @@ def test_actual_java_worker_start_retains_native_child_and_close_failure_never_d
     assert process is error._process and process._owner is worker
     with pytest.raises(RuntimeError):worker.close()
     assert worker._process is process and not process._closed
-    state['cleanup_fail']=False
+    state['cleanup_fail']=False;state['alive']=False  # SDK observes exit; no uncertain termination retry.
     worker.close();worker.close()
     assert worker._process is None and process._closed
 
@@ -195,7 +195,7 @@ def test_actual_daemon_server_start_unknown_and_authorized_stop_keep_store_and_l
         failed=_stop(daemon,project,sid,key='native-stop-unknown')
         assert not failed['success'] and failed['error']['code']=='EXECUTION_STATE_UNKNOWN'
         assert daemon._session_server_handles[key] is handle and not handle.process._closed
-        state['cleanup_fail']=False
+        state['cleanup_fail']=False;state['alive']=False  # SDK observes exit; no uncertain termination retry.
         stopped=_stop(daemon,project,sid,key='native-stop-terminal')
         assert stopped['success'],stopped
         assert daemon.session_lifecycle.get(project,sid)['state']=='STOPPED'
@@ -231,7 +231,7 @@ def test_actual_daemon_worker_before_connect_dispatch_retains_unknown_owner_and_
         failed=retire('native-retire-fail')
         assert not failed['success'] and failed['error']['execution_state_unknown'] is True,failed
         assert daemon._session_worker_handles[key] is worker and worker._process is error._process
-        state['cleanup_fail']=False
+        state['cleanup_fail']=False;state['alive']=False  # SDK observes exit; no uncertain termination retry.
         original=daemon.store.add_event
         def fail_exit(job,event,metadata):
             if event=='NativeChildExitConfirmed':raise OSError('durable Worker exit event failed')
@@ -276,7 +276,7 @@ def test_actual_daemon_native_exit_event_write_failure_keeps_live_capability_for
     daemon,project,*_=_make_daemon(tmp_path,monkeypatch,server_launcher=launcher)
     try:
         started=_start(daemon,project);sid=started['data']['session_id'];key=(project,sid)
-        state['cleanup_fail']=False
+        state['cleanup_fail']=False;state['alive']=False  # SDK observes exit; no uncertain termination retry.
         original=daemon.store.add_event
         def fail_once(job,event,metadata):
             if event=='NativeChildExitConfirmed':raise RuntimeError('synthetic durable exit-event failure')

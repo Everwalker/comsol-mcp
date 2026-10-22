@@ -58,7 +58,8 @@ def test_actual_retained_child_original_handle_parent_birth_job_rechecks(monkeyp
     if change not in {'pid','unsealed'}:assert observations==[('close-parent',777)]
     # The observation did not Resume, release or steal the child's owner.
     assert process._owner is api and not process._closed and process.never_resumed
-    state['cleanup_fail']=False;process.cleanup_owned(api,timeout=1)
+    state['cleanup_fail']=False;state['alive']=False  # Later SDK exit, no uncertain TerminateProcess retry.
+    process.cleanup_owned(api,timeout=1)
 
 @pytest.mark.parametrize('capability',['dict','lookalike','unregistered_private'])
 def test_resume_boundary_cannot_be_unlocked_by_wire_or_private_value_without_issuer(monkeypatch,capability):
@@ -70,7 +71,8 @@ def test_resume_boundary_cannot_be_unlocked_by_wire_or_private_value_without_iss
     else:cap=boundary._NativeResumeCapability(process,profile.sha256,seal=boundary._SEAL)
     with pytest.raises(ExecutionContractError):boundary.resume_native_child(process,cap)
     assert 'RESUME' not in events and process.never_resumed
-    state['cleanup_fail']=False;process.cleanup_owned(api,timeout=1)
+    state['cleanup_fail']=False;state['alive']=False
+    process.cleanup_owned(api,timeout=1)
 
 
 def test_production_issuer_reports_every_missing_gate_and_never_registers_authority(monkeypatch):
@@ -130,8 +132,9 @@ def test_late_parent_release_error_cannot_mask_actual_retained_child_owner(monke
     assert api._retained_children[id(process)] is process
     factory=win.T037SessionProcessFactory(profile,'session-parent-release',api=api);factory._job=300
     with pytest.raises(win.WindowsT037Error) as refused:factory.close()
-    assert refused.value.code=='NATIVE_LAUNCH_RELEASE_UNKNOWN' and factory._job==300
-    api.close_handle=close;process._parent_binding.close();state['cleanup_fail']=False
+    assert refused.value.code=='NATIVE_RESOURCE_RELEASE_UNKNOWN' and factory._job==300
+    assert not process._parent_binding.closed  # Original parent and child entries both remain held.
+    api.close_handle=close;process._parent_binding.close();state['cleanup_fail']=False;state['alive']=False
     process.cleanup_owned(api,timeout=1);factory.close()
     assert factory._job is None and process._closed
 

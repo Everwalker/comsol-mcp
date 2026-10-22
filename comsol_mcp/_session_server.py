@@ -694,6 +694,9 @@ class OwnedServerLauncher:
         phase_category = "BIRTH_OBSERVATION_FAILED"
         terminal_observation_recorded = False
         try:
+            from ._windows_t037 import _RetainedSuspendedChild
+            if type(process) is _RetainedSuspendedChild:
+                process.transfer_owner(process._api, handle)
             emit_observation("PROCESS_CREATED", pid=process_pid, child_handle=handle)
             birth, start_epoch_ms = _birth_identity(process_pid, self.process_identity_reader)
             handle.start_epoch_ms = start_epoch_ms
@@ -829,18 +832,29 @@ class OwnedServerLauncher:
             return {"pid": process.pid, "birth_filetime_100ns": process.birth_filetime_100ns,
                     "exit_confirmed": True, "child_reaped": True, "returncode": result,
                     "server_stopped": True, "never_resumed_native_child": True}
+        from ._windows_t037 import _RetainedSuspendedChild
+        if type(process) is _RetainedSuspendedChild and (
+                process._owner is not handle or not process._returned or not process._resume_confirmed):
+            raise OwnedServerError("normal native stop requires the original successful Server owner",
+                                   handle=handle, uncertain=True)
         identity = handle.process_identity
         endpoint = handle.endpoint
         if (identity is None or endpoint is None or getattr(process, "pid", None) != identity.pid
                 or handle.start_epoch_ms != identity.start_epoch_ms):
             raise OwnedServerError("owned Server birth/listener evidence is incomplete", handle=handle, uncertain=True)
-        if process.poll() is not None:
+        try:
+            observed_exit = process.poll()
+        except Exception as exc:
+            raise OwnedServerError("original Server HANDLE exit is unverified; owner retained",
+                                   handle=handle, uncertain=True) from exc
+        if observed_exit is not None:
             try:
                 process.wait(timeout=0)
             except Exception as exc:
                 raise OwnedServerError("owned Server exited but Popen reap is unconfirmed", handle=handle, uncertain=True) from exc
             if list(self.listener_reader(endpoint.port)):
                 raise OwnedServerError("owned Server exited but its listener remains present", handle=handle, uncertain=True)
+            self._close_original_native_child(handle)
             handle.retired = True
             self._close_log(handle)
             return {"pid": identity.pid, "birth": identity.birth, "exit_confirmed": True,
@@ -866,11 +880,23 @@ class OwnedServerLauncher:
             raise OwnedServerError("owned Server child exit could not be confirmed", handle=handle, uncertain=True)
         if list(self.listener_reader(endpoint.port)):
             raise OwnedServerError("owned Server listener is still present after process exit", handle=handle, uncertain=True)
+        self._close_original_native_child(handle)
         handle.retired = True
         self._close_log(handle)
         return {"pid": identity.pid, "birth": identity.birth, "exit_confirmed": True,
                 "child_reaped": True, "listener_absent": True, "returncode": returncode,
                 "server_stopped": True}
+
+    @staticmethod
+    def _close_original_native_child(handle: ManagedServerHandle) -> None:
+        from ._windows_t037 import _RetainedSuspendedChild
+        process = handle.process
+        if type(process) is _RetainedSuspendedChild:
+            try:
+                process.close_owned(handle)
+            except Exception as exc:
+                raise OwnedServerError("original Server HANDLE release is unconfirmed; owner retained",
+                                       handle=handle, uncertain=True) from exc
 
     def verify(self, handle: ManagedServerHandle) -> OwnedServerProcessIdentity:
         """Recheck live birth and the complete exact loopback listener before use."""

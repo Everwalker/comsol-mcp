@@ -15,38 +15,34 @@ from tests.test_windows_network_intent import network_profile_and_plan
 
 
 def factory_for(profile=None):
-    if profile is None:profile,_=network_profile_and_plan()
-    wrapper=t037.WindowsT037ProfileV2(profile,'d'*64,{},'SOFTWARE_INTENT_ONLY')
+    if profile is None:
+        profile,_=network_profile_and_plan()
+        from tests.test_windows_child_acl import _observer
+        software_profile,*_=_observer()
+        profile=replace(profile,windows_isolation=replace(profile.windows_isolation,
+            acl_grants=software_profile.host_resource_profile.windows_isolation.acl_grants))
+    from comsol_mcp._windows_job_limits import JobLimitsV1
+    wrapper=t037.WindowsT037ProfileV2(profile,'d'*64,{},'SOFTWARE_INTENT_ONLY',
+        job_limits=JobLimitsV1(4096,16384,4),wrapper_schema=t037.PROFILE_SCHEMA_V3)
     return t037.T037SessionProcessFactory(wrapper,'session')
 
 
-def software_original_child(factory):
-    """SDK/owner-producer boundary only; never launch, resume or enable an issuer."""
-    api=t037._Win32LaunchApi.__new__(t037._Win32LaunchApi)
-    api._g2_session_launch_owners={}
-    state=dict(birth=(11644473600000+123456)*10000+789,exited=None,reads=[])
-    mutations=[]
-    def times(handle):
-        state['reads'].append(handle)
-        return state['birth'],state['exited']
-    api.process_times=times
-    api.poll_process=lambda handle:None
-    api.close_handle=lambda handle:mutations.append(('close',handle))
-    api.terminate_process=lambda handle,code:mutations.append(('terminate',handle,code))
-    factory._api=api;factory._job=object()
-    child=t037._Win32ChildProcess(api,object(),9182,[])
-    child.mutation_calls=mutations;child.software_sdk=state
-    return child
-
-
 def software_original_owner(factory,child,command,*,birth=None,role='worker'):
-    """Produce the real sealed owner shape with SDK stand-ins, without an issuer."""
-    child.args=list(command)
-    owner=t037._Win32G2SessionLaunchOwner(api=child._api,process=child,handle=child._handle,
-        birth_filetime_100ns=child.software_sdk['birth'] if birth is None else birth,
-        argv=command,job_handle=factory._job,profile=factory.profile,role=role,
-        image_path=factory.profile._launch_image('worker').path,image_sha256=factory.profile.worker_image_sha256,
-        session_factory=factory,seal=t037._G2_SESSION_LAUNCH_OWNER_SEAL)
+    """Negative-only receipt replacement on an actual SDK-boundary child.
+
+    Always construct the valid original receipt first. Deliberate internal
+    corruption below tests consumer refusal; it never creates birth authority.
+    """
+    original=child._api._g2_session_launch_owners[id(child)]
+    owner=t037._Win32G2SessionLaunchOwner(api=original.api,process=child,handle=original.process_handle,
+        birth_filetime_100ns=original.birth_filetime_100ns,argv=original.argv,
+        job_handle=original.job_handle,profile=original.profile,role=original.role,
+        image_path=original.image_path,image_sha256=original.image_sha256,
+        session_factory=child._original_factory,seal=t037._G2_SESSION_LAUNCH_OWNER_SEAL)
+    if factory is not child._original_factory:object.__setattr__(owner,'session_factory',factory)
+    if role!='worker':object.__setattr__(owner,'role',role)
+    if tuple(command)!=original.argv:object.__setattr__(owner,'argv',tuple(command))
+    if birth is not None:object.__setattr__(owner,'birth_filetime_100ns',birth)
     child._api._g2_session_launch_owners[id(child)]=owner
     return owner
 
@@ -89,7 +85,7 @@ def test_accessor_cannot_turn_wire_or_arbitrary_factory_profile_into_port_bindin
 
 
 def invalid_profile(fault):
-    profile,_=network_profile_and_plan();iso=profile.windows_isolation;grants=list(iso.wfp_grants)
+    profile=factory_for().profile.host_resource_profile;iso=profile.windows_isolation;grants=list(iso.wfp_grants)
     if fault=='port0':grants[0]=replace(grants[0],remote_ports=(0,))
     elif fault=='same_listeners':grants[2]=replace(grants[2],local_ports=(32001,))
     elif fault=='range_reversed':grants[0]=replace(grants[0],local_port_range=(45000,40000))
@@ -181,7 +177,42 @@ def worker_start(monkeypatch,tmp_path,fault=None,factory=None):
     for name in ['java','javac']:(jdk/'bin'/name).write_bytes(b'software')
     paths=worker_module.JavaWorkerPaths(root,jdk,project_root=tmp_path)
     worker=worker_module.PersistentJavaWorker(paths,state_dir=tmp_path/'worker',process_factory=factory)
-    process=software_original_child(factory);commands=[];compile_calls=[];health_calls=[];listener_reads=[]
+    from tests.test_windows_suspended_ownership import _launch_api
+    _base,api,events,model=_launch_api(monkeypatch)
+    api.close_job(300)  # Retire the fixture's old Job before binding this actual profile.
+    from tests.test_windows_job_limits import SDK
+    sdk=SDK()  # A fresh SDK Job really starts with zero limits, then is configured once.
+    api.k.CreateJobObjectW=sdk.CreateJobObjectW
+    api.k.QueryInformationJobObject=sdk.QueryInformationJobObject
+    api.k.SetInformationJobObject=sdk.SetInformationJobObject
+    state=dict(birth=(11644473600000+123456)*10000+789,exited=None,reads=[],producer_finished=False)
+    mutations=[];processes=[]
+    def times(handle):
+        if state['producer_finished']:state['reads'].append(handle)
+        return (10,None) if handle==777 else (state['birth'],state['exited'])
+    api.process_times=times
+    raw_close=api.close_handle
+    def native_close(handle):
+        if state['producer_finished'] and handle==200:mutations.append(('close',handle))
+        raw_close(handle);return 1
+    api.k.CloseHandle=native_close
+    api.close_handle=t037._Win32ReadOnlyApi.close_handle.__get__(api)
+    original_terminate=api.terminate_process
+    def terminate(handle,code):
+        mutations.append(('terminate',handle,code));return original_terminate(handle,code)
+    api.terminate_process=terminate
+    original_image=api._open_image
+    api._open_image=lambda path:(*original_image(path)[:4],path)
+    api._hash_image_handle=lambda *args:factory.profile.worker_image_sha256
+    api.process_image_path=lambda handle:state['image_path']
+    api._software_sdk=state
+    api._software_child_model=model;api._software_handle_events=events
+    factory._api=api;factory._job=api.create_job(profile=factory.profile)
+    def software_resume(child,capability):
+        child.note_resume_attempt();child._resume_epoch+=1;return 1
+    monkeypatch.setattr('comsol_mcp._windows_t037_resume.issue_native_resume',lambda *a:object())
+    monkeypatch.setattr('comsol_mcp._windows_t037_resume.resume_native_child',software_resume)
+    commands=[];compile_calls=[];health_calls=[];listener_reads=[]
     monkeypatch.setattr(t037.T037SessionProcessFactory,'preflight',lambda self:None)
     def compile(command,**kw):
         if Path(command[0]).name=='javac' and command[1:]!=['-version']:compile_calls.append(command)
@@ -190,8 +221,12 @@ def worker_start(monkeypatch,tmp_path,fault=None,factory=None):
     monkeypatch.setattr(worker_module.subprocess,'run',compile)
     def launch(self,command,**options):
         commands.append(tuple(command));endpoint=Path(command[command.index('--endpoint-file')+1])
-        if fault=='original_birth_differs':process.software_sdk['birth']-=10000
-        software_original_owner(self,process,command)
+        if fault=='original_birth_differs':state['birth']-=10000
+        state['image_path']=command[0]
+        process=api.create_suspended_appcontainer_child(command,options,profile=self.profile,
+            job=self._job,role='worker',session_factory=self)
+        state['producer_finished']=True
+        process.software_sdk=state;process.mutation_calls=mutations;processes.append(process)
         ready=dict(type='ready',host='127.0.0.1',port=factory.network_intent.worker_listen_port,pid=process.pid,process_start_epoch_ms=123456,
             generation=1,instance_id='software-instance',token=options['env']['COMSOL_MCP_WORKER_TOKEN'])
         if fault in ('wrong_port','port0','string_port','bool_port'):ready['port']={'wrong_port':32001,'port0':0,'string_port':'32002','bool_port':True}[fault]
@@ -205,6 +240,7 @@ def worker_start(monkeypatch,tmp_path,fault=None,factory=None):
     monkeypatch.setattr(t037.T037SessionProcessFactory,'__call__',launch)
     monkeypatch.setattr(worker_module,'process_identity',lambda pid:dict(alive=True,start_epoch_ms=123456))
     def listeners(port,**kwargs):
+        process=processes[0]
         listener_reads.append(port)
         address='::1' if fault=='listener_IPv6' else '127.0.0.1'
         pid=process.pid+1 if fault=='listener_wrong_pid' else process.pid
@@ -212,12 +248,13 @@ def worker_start(monkeypatch,tmp_path,fault=None,factory=None):
     monkeypatch.setattr(server,'listener_rows',listeners)
     def health(**kw):health_calls.append(worker.endpoint);return dict(status='HEALTHY')
     monkeypatch.setattr(worker,'health',health)
-    return factory,worker,process,commands,compile_calls,health_calls,listener_reads
+    return factory,worker,processes,commands,compile_calls,health_calls,listener_reads
 
 
 def test_full_startup_ready_and_current_os_match_but_original_handle_birth_differs(monkeypatch,tmp_path):
-    factory,worker,process,commands,compiled,health,reads=worker_start(monkeypatch,tmp_path,'original_birth_differs')
+    factory,worker,processes,commands,compiled,health,reads=worker_start(monkeypatch,tmp_path,'original_birth_differs')
     with pytest.raises(worker_module.JavaWorkerError) as caught:worker.start()
+    process=processes[0]
     ready=json.loads((worker.state_dir/'worker_endpoint.json').read_text())
     owner=t037._native_g2_session_launch_owner(process)
     assert ready['process_start_epoch_ms']==worker_module.process_identity(process.pid)['start_epoch_ms']==123456
@@ -232,8 +269,9 @@ def test_full_startup_ready_and_current_os_match_but_original_handle_birth_diffe
 
 
 def test_worker_fixed_listener_command_ready_and_original_binding(monkeypatch,tmp_path):
-    factory,worker,process,commands,compiled,health,reads=worker_start(monkeypatch,tmp_path)
+    factory,worker,processes,commands,compiled,health,reads=worker_start(monkeypatch,tmp_path)
     assert worker.start()['status']=='HEALTHY'
+    process=processes[0]
     assert commands[0][commands[0].index('--port')+1]=='32002'
     assert worker.endpoint==('127.0.0.1',32002) and health==[worker.endpoint] and reads==[32002]
     assert worker._network_intent.profile_sha256==factory.profile.sha256
@@ -247,7 +285,7 @@ def test_worker_fixed_listener_command_ready_and_original_binding(monkeypatch,tm
 @pytest.mark.parametrize('fault',['missing_owner','decorative_metadata','foreign_factory','wrong_role','wrong_argv',
     'wrapper_return','job_replaced','profile_replaced','api_replaced','handle_replaced','closed_process'])
 def test_full_startup_requires_original_private_owner_not_pid_metadata(monkeypatch,tmp_path,fault):
-    factory,worker,process,commands,compiled,health,reads=worker_start(monkeypatch,tmp_path)
+    factory,worker,processes,commands,compiled,health,reads=worker_start(monkeypatch,tmp_path)
     original=t037.T037SessionProcessFactory.__call__;returned=[];created_owners=[]
     def launch(self,command,**options):
         child=original(self,command,**options)
@@ -271,6 +309,7 @@ def test_full_startup_requires_original_private_owner_not_pid_metadata(monkeypat
     monkeypatch.setattr(t037.T037SessionProcessFactory,'__call__',launch)
     monkeypatch.setattr(worker_module.socket,'create_connection',lambda *a,**kw:pytest.fail('RPC before original owner validation'))
     with pytest.raises(worker_module.JavaWorkerError) as caught:worker.start()
+    process=processes[0]
     ready=json.loads((worker.state_dir/'worker_endpoint.json').read_text())
     assert ready['pid']==process.pid and ready['process_start_epoch_ms']==worker_module.process_identity(process.pid)['start_epoch_ms']
     assert caught.value.execution_state_unknown and worker._fixed_process is worker._process is returned[0]
@@ -284,12 +323,13 @@ def test_full_startup_requires_original_private_owner_not_pid_metadata(monkeypat
 
 
 def test_original_owner_producer_error_retains_factory_return_before_ready_or_rpc(monkeypatch,tmp_path):
-    factory,worker,process,commands,compiled,health,reads=worker_start(monkeypatch,tmp_path)
+    factory,worker,processes,commands,compiled,health,reads=worker_start(monkeypatch,tmp_path)
     def unavailable(child):
-        assert child is process
+        assert child is processes[0]
         raise OSError('software private original-owner producer failure')
     monkeypatch.setattr(t037,'_native_g2_session_launch_owner',unavailable)
     with pytest.raises(worker_module.JavaWorkerError) as caught:worker.start()
+    process=processes[0]
     assert caught.value.execution_state_unknown and worker._fixed_process is worker._process is process
     assert worker._fixed_launch_owner is None and not process.software_sdk['reads']
     assert not reads and not health and not process.mutation_calls
@@ -301,10 +341,11 @@ def test_original_owner_producer_error_retains_factory_return_before_ready_or_rp
 @pytest.mark.parametrize('fault',['birth_differs_below_ms','birth_bool','birth_zero','times_none','times_list',
     'times_extra','exited','sdk_exception'])
 def test_original_handle_readback_is_strict_and_required_before_rpc(monkeypatch,tmp_path,fault):
-    factory,worker,process,commands,compiled,health,reads=worker_start(monkeypatch,tmp_path)
-    times=process._api.process_times
+    factory,worker,processes,commands,compiled,health,reads=worker_start(monkeypatch,tmp_path)
+    times=factory._api.process_times
     def observed(handle):
         birth,exited=times(handle)
+        if not factory._api._software_sdk['producer_finished']:return birth,exited
         if fault=='birth_differs_below_ms':return birth+1,None
         if fault=='birth_bool':return True,None
         if fault=='birth_zero':return 0,None
@@ -313,8 +354,9 @@ def test_original_handle_readback_is_strict_and_required_before_rpc(monkeypatch,
         if fault=='times_extra':return birth,None,None
         if fault=='exited':return birth,birth+1
         raise OSError('software original GetProcessTimes failure')
-    process._api.process_times=observed
+    factory._api.process_times=observed
     with pytest.raises(worker_module.JavaWorkerError) as caught:worker.start()
+    process=processes[0]
     assert caught.value.execution_state_unknown and worker._fixed_process is worker._process is process
     assert process.software_sdk['reads']==[process._handle] and not health and not reads and not process.mutation_calls
     with pytest.raises(worker_module.JavaWorkerError):worker.start()
@@ -325,10 +367,11 @@ def test_original_handle_readback_is_strict_and_required_before_rpc(monkeypatch,
 @pytest.mark.parametrize('fault',['wrapper_after_capture','owner_after_capture','job_after_capture',
     'original_handle_birth_drift','current_os_birth_drift'])
 def test_listener_observation_cannot_replace_captured_child_or_original_birth(monkeypatch,tmp_path,fault):
-    factory,worker,process,commands,compiled,health,reads=worker_start(monkeypatch,tmp_path)
+    factory,worker,processes,commands,compiled,health,reads=worker_start(monkeypatch,tmp_path)
     original=server.listener_rows;replacement=[]
     def observe(port,**kwargs):
         rows=original(port,**kwargs)
+        process=processes[0]
         if fault=='wrapper_after_capture':
             wrapper=t037._Win32ChildProcess(process._api,process._handle,process.pid,commands[0])
             worker._process=wrapper;replacement.append(wrapper)
@@ -340,6 +383,7 @@ def test_listener_observation_cannot_replace_captured_child_or_original_birth(mo
     monkeypatch.setattr(server,'listener_rows',observe)
     monkeypatch.setattr(worker_module.socket,'create_connection',lambda *a,**kw:pytest.fail('RPC after original owner/birth drift'))
     with pytest.raises(worker_module.JavaWorkerError) as caught:worker.start()
+    process=processes[0]
     captured=worker._fixed_launch_owner
     assert caught.value.execution_state_unknown and captured.process is worker._fixed_process is process
     assert captured.process_handle is process._handle and reads==[32002] and not health and not process.mutation_calls
@@ -356,8 +400,9 @@ def test_listener_observation_cannot_replace_captured_child_or_original_birth(mo
                                  'missing_host','wrong_pid','wrong_birth','wrong_generation','wrong_token',
                                  'listener_IPv6','listener_wrong_pid'])
 def test_worker_ready_mismatch_preserves_unknown_no_rpc_restart_or_kill(monkeypatch,tmp_path,fault):
-    factory,worker,process,commands,compiled,health,reads=worker_start(monkeypatch,tmp_path,fault)
+    factory,worker,processes,commands,compiled,health,reads=worker_start(monkeypatch,tmp_path,fault)
     with pytest.raises(worker_module.JavaWorkerError) as caught:worker.start()
+    process=processes[0]
     assert caught.value.execution_state_unknown and worker._process is process
     assert worker._port is None and worker._generation is None and not health and not process.mutation_calls
     if fault not in ('listener_IPv6','listener_wrong_pid'):assert not reads
@@ -367,7 +412,7 @@ def test_worker_ready_mismatch_preserves_unknown_no_rpc_restart_or_kill(monkeypa
 
 
 def test_worker_T037_does_not_adopt_endpoint_json_or_mutated_factory(monkeypatch,tmp_path):
-    factory,worker,process,commands,compiled,health,reads=worker_start(monkeypatch,tmp_path)
+    factory,worker,processes,commands,compiled,health,reads=worker_start(monkeypatch,tmp_path)
     worker.state_dir.mkdir();cache=worker.state_dir/'worker_endpoint.json';cache.write_text('{}')
     with pytest.raises(worker_module.JavaWorkerError):worker.start()
     assert not commands and not compiled and not health and cache.read_text()=='{}'
@@ -377,13 +422,14 @@ def test_worker_T037_does_not_adopt_endpoint_json_or_mutated_factory(monkeypatch
 
 
 def test_ordinary_nonT037_still_requests_port_zero_and_ignores_decorative_intent(monkeypatch,tmp_path):
-    factory,worker,process,commands,compiled,health,reads=worker_start(monkeypatch,tmp_path)
+    factory,worker,processes,commands,compiled,health,reads=worker_start(monkeypatch,tmp_path)
     def ordinary(command,**options):
         return t037.T037SessionProcessFactory.__call__(factory,command,**options)
     ordinary.network_intent=factory.network_intent
     worker=worker_module.PersistentJavaWorker(worker.paths,state_dir=tmp_path/'ordinary',process_factory=ordinary)
     monkeypatch.setattr(worker,'health',lambda **kw:dict(status='HEALTHY'))
     worker.start()
+    process=processes[0]
     assert commands[0][commands[0].index('--port')+1]=='0' and not reads
     dirs=server._server_directories(tmp_path/'uncreated')
     argv=server.build_server_command(dirs,platform_name='darwin',validate_launcher=False,process_factory=ordinary)
@@ -398,7 +444,7 @@ def test_noncallable_factory_refuses_before_worker_temporary_directory(monkeypat
 
 @pytest.mark.parametrize('fault',['expected_endpoint','port','factory','profile'])
 def test_mutable_worker_decorations_do_not_replace_original_listener_binding(monkeypatch,tmp_path,fault):
-    factory,worker,process,commands,compiled,health,reads=worker_start(monkeypatch,tmp_path)
+    factory,worker,processes,commands,compiled,health,reads=worker_start(monkeypatch,tmp_path)
     original=t037.T037SessionProcessFactory.__call__
     def launch(self,command,**options):
         child=original(self,command,**options)
@@ -411,6 +457,7 @@ def test_mutable_worker_decorations_do_not_replace_original_listener_binding(mon
         return child
     monkeypatch.setattr(t037.T037SessionProcessFactory,'__call__',launch)
     with pytest.raises(worker_module.JavaWorkerError) as caught:worker.start()
+    process=processes[0]
     assert caught.value.execution_state_unknown and worker._process is process
     assert not reads and not health and not process.mutation_calls
 
@@ -430,14 +477,15 @@ def test_valid_network_intent_does_not_unlock_existing_preflight_or_create_defau
 
 
 def test_both_commands_follow_one_factory_and_changed_profile_without_port_constants(monkeypatch,tmp_path):
-    host,_=network_profile_and_plan();grants=list(host.windows_isolation.wfp_grants)
+    host=factory_for().profile.host_resource_profile;grants=list(host.windows_isolation.wfp_grants)
     grants[0]=replace(grants[0],remote_ports=(32111,));grants[1]=replace(grants[1],local_ports=(32111,))
     grants[2]=replace(grants[2],local_ports=(32112,))
     factory=factory_for(replace(host,windows_isolation=replace(host.windows_isolation,wfp_grants=tuple(grants))))
     factory,runtime,child,commands,reads,launcher=server_start(monkeypatch,tmp_path/'server',factory=factory)
     handle=launcher.start(runtime,'project','session')
-    factory,worker,process,argv,compiled,health,listeners=worker_start(monkeypatch,tmp_path/'worker',factory=factory)
+    factory,worker,processes,argv,compiled,health,listeners=worker_start(monkeypatch,tmp_path/'worker',factory=factory)
     worker.start()
+    process=processes[0]
     assert commands[0][commands[0].index('-port')+1]=='32111'
     assert argv[0][argv[0].index('--port')+1]=='32112'
     assert handle.network_intent==worker._network_intent==factory.network_intent
@@ -445,8 +493,9 @@ def test_both_commands_follow_one_factory_and_changed_profile_without_port_const
 
 
 def test_mutated_worker_port_and_decorative_fields_cannot_redirect_rpc(monkeypatch,tmp_path):
-    factory,worker,process,commands,compiled,health,reads=worker_start(monkeypatch,tmp_path)
+    factory,worker,processes,commands,compiled,health,reads=worker_start(monkeypatch,tmp_path)
     worker.start()
+    process=processes[0]
     worker._port=65000;worker._expected_endpoint=('127.0.0.1',65000)
     worker._network_intent={'worker_listen_port':65000,'state':'VERIFIED'}
     monkeypatch.setattr(worker_module.socket,'create_connection',lambda *a,**kw:pytest.fail('foreign port RPC attempted'))
