@@ -122,6 +122,13 @@ def _completed_native_pair(monkeypatch, tmp_path):
         else profile.worker_image_sha256
     )
 
+    from comsol_mcp._control_daemon import ControlDaemon
+    from tests.test_windows_scm_prebirth import running_factory_chain
+    daemon=ControlDaemon(tmp_path/'scm-control',registry={})
+    daemon._windows_t037_profile=profile
+    daemon._session_t037_process_factories[('project-test',session_id)]=factory
+    scm_scope=running_factory_chain(daemon,factory,tmp_path/'scm-chain',monkeypatch)
+    scm_scope.__enter__()
     original_os_name = win.os.name
     monkeypatch.setattr(win.os, "name", "nt")
     try:
@@ -129,6 +136,7 @@ def _completed_native_pair(monkeypatch, tmp_path):
         worker_process = factory(worker_argv)
     finally:
         monkeypatch.setattr(win.os, "name", original_os_name)
+        scm_scope.__exit__(None,None,None);daemon.close()
     server_owner = win._native_g2_session_launch_owner(server_process)
     worker_owner = win._native_g2_session_launch_owner(worker_process)
     assert server_owner is not None and worker_owner is not None

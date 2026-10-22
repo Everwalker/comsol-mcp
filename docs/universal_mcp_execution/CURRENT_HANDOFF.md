@@ -2,7 +2,7 @@
 
 目标 **IN_PROGRESS**。唯一续跑指针 [state/RESUME.json](state/RESUME.json)，冻结合同 [MASTER_GOAL](MASTER_GOAL.md)/[RELEASE_DOD](RELEASE_DOD.md)。主线是通用MCP；三案例科学终点与历史失败另存。最终强独立Reviewer及两类未预设任务尚未开始，U01–U12尚无整组完成声明。阶段发布不是主目标终点，真实阻塞不得写成完成。
 
-规范生产树为本repository，分支universal-core。恢复固定commit `cd47281777eae6f4ea0d40c5c754dca9982eda86`、tree `94e6523bfffe21ace621045710335bea5512c3c1`，21,682原跟踪文件、候选3,978映射/1,105对象已核验。AGENTS.md148–152授权逐阶段普通origin/main发布，禁止force。最近已验收发布 `275c1b84823ba5e774892e82bcd865c1d0de2421`（ControlClient源/软件），原child-owner为7ae6140e、固定监听为b90ef486；Core/W17为5aed6a04，MIC/network/events为fe4e4c72，均独立fetch回读一致。index为空。旧ca7/c45阶段暂存交接已经结束，后续审查通过的新单位正常按精确白名单stage，不套用旧禁止add规则。
+规范生产树为本repository，分支universal-core。恢复固定commit `cd47281777eae6f4ea0d40c5c754dca9982eda86`、tree `94e6523bfffe21ace621045710335bea5512c3c1`，21,682原跟踪文件、候选3,978映射/1,105对象已核验。AGENTS.md148–152授权逐阶段普通origin/main发布，禁止force。最近已验收发布 `0926fc5e3a0ab28199a98af33b6ff501524f01eb`（离线主机包工具源/软件），ControlClient为275c1b84，原child-owner为7ae6140e、固定监听为b90ef486；Core/W17为5aed6a04，MIC/network/events为fe4e4c72，均独立fetch回读一致。index为空。旧ca7/c45阶段暂存交接已经结束，后续审查通过的新单位正常按精确白名单stage，不套用旧禁止add规则。
 
 已验收的有限阶段：M0恢复36工具测试；M1 303软件测试、24公共签名和112工具源外协议smoke；GENERAL_COVERAGE冻结273动作/427原子断言（414核心/13案例）。M3原347PASS/1FAIL/1排除保持原件；被排除的旧源码精确SHA仓库副本已恢复并单项PASS，W23历史delta仍缺。M4三架构离线构件及131发布软件测试、Mac/Windows正常安装112工具启动已限定验收；Intel同版本cryptography派生wheel已披露，Intel COMSOL未验证。交付生命周期核对118原始记录及36保留文件，真实0.1.10同版本代码切换/回退、全状态备份恢复、私有standalone CPython非空venv卸载通过；Framework卸载UNKNOWN保留。Windows/Intel生命周期及完整原生T056未据此PASS。详见各compact与RESUME。
 
@@ -20,7 +20,7 @@ Windows：保留原standalone Desktop。SID/SCM133软件与实际只读查回、
 
 **原child-owner源码/软件单位Main已限定验收并普通发布7ae6140e，独立fetch回读一致**：Leibniz同一Luna完成5生产/9测试租约，原CreateProcess输出在SDK前即归属唯一对象，该同一对象经Resume/成功返回/G2/Worker/Server退休流转。原4FAIL/5对照及490PASS收据保留；Main另复现迟到退出1FAIL，现已修成只允许同一成功原owner的既存退役UNKNOWN在原HANDLE确证退出后一次关闭，不重复terminate/kill/wait或不明CloseHandle，启动/创建/Resume/registry/记账未知保持围栏。最终514PASS/0fail/error/skip，Main独立重跑反例1PASS（不累加）；19清单文件、9保护文件与61 compact哈希核对，factory/attribute_list与b90逐字节一致，原base wrapper AST和readiness出生验证保持。Main审查为_state/universal-main-review/20261023-child-owner/MAIN_REVIEW.json；SDK/host/native/issuer均未运行或改变。
 
-分工：Halley LunaMax独占冻结r3原生原owner/原请求ID幂等协议协调，另一个ControlClient分类源码单位已验收发布275c；原安装/daemon/旧response不改，不新Server或换key盲重跑；Leibniz LunaMax已接同进程SCM原runtime保留/有限A静态检查/原Job配置顺序源码单位，尚未授予Resume/host权；Kier LunaMax已完成独立host-package工具/专属测试/compact，Main限定验收44项可复现软件测试；下一Windows可信磁盘/root源码单位待Main窄租约，不改host；Hume、Lorentz已关闭、上下文可复用。Main独占PROGRESS、本交接、RESUME与Git并集中验收。后续Windows源码单位沿Main现有INTEGRATION_NEXT：复用同进程SCM ServiceMain→serve→mark_running→ControlDaemon；有限A静态profile/host/原空Job先于B原never-resumed child事实，C为一次用途的良性资格及真实vendor/OS负控。不得从JSON/dataclass/历史receipt mint准入，不把未出生B/C反过来阻断A。现有issuer仍拒绝。
+分工：Halley LunaMax独占冻结r3原生原owner/原请求ID幂等协议协调，另一个ControlClient分类源码单位已验收发布275c；原安装/daemon/旧response不改，不新Server或换key盲重跑；Leibniz LunaMax已接同进程SCM原runtime保留/有限A静态检查/原Job配置顺序源码单位，尚未授予Resume/host权；Kier LunaMax已完成独立host-package工具/专属测试/compact，Main限定验收44项可复现软件测试并发布0926fc5e；新Windows可信磁盘/root模块/专属测试窄租约已发，共享_w26接线待本SCM发布后放行，不改host；Hume、Lorentz已关闭、上下文可复用。Main独占PROGRESS、本交接、RESUME与Git并集中验收。后续Windows源码单位沿Main现有INTEGRATION_NEXT：复用同进程SCM ServiceMain→serve→mark_running→ControlDaemon；有限A静态profile/host/原空Job先于B原never-resumed child事实，C为一次用途的良性资格及真实vendor/OS负控。不得从JSON/dataclass/历史receipt mint准入，不把未出生B/C反过来阻断A。现有issuer仍拒绝。
 
 服务/AppContainer/ACL/WFP/BFE/账户变更尚未授权或应用；完成具体源码/profile/apply/compare-and-restore回滚包才请求一次所需host授权。当前活跃原生目标是Windows6.3/6.4与MacARM6.4，跳过硬件严格按config/TARGETS；历史资源样本不是实时容量/固定10GiB最低门。候选冻结后，fresh强Reviewer自行选两类未预设任务，用已安装MCP/项目代码执行，整改后按影响范围变体复测。所有required与适用目标满足且Reviewer批准以前，主目标保持IN_PROGRESS。
 
@@ -33,3 +33,5 @@ Main已另核冻结r3准入源码：原Store.begin在BEGIN IMMEDIATE下以唯一
 SCM六fixture契约已修并944软件PASS，尚未验收：Main又在内盘完整dispatch门+原birth scope软件反例复现全局控制锁阻塞1FAIL，_state/universal-main-review/20261023-scm-prebirth/control-birth-internal-initial.xml。同Luna现只修短锁在途计数/关闭等待、yield不占全局控制锁及并发负控；原944和环境首次APFS provider失败分开保留。A全静态producer与下一Job close缺陷仍未通过。
 
 离线主机包源码/软件单位Main已限定验收：44PASS/0fail/error/skip来自完全无_state的干净b90+两文件副本，原15测试函数AST/44case保持；20import及30compact引用核对。原私有fixture44记录与第一次audit错误保留，不累加。实际45,544,157字节包hash8d48b42f…仍绑定旧b90，不是当前最终候选；operator只有计划/预览，apply_ready=false。SCM/ACL bootstrap、Windows可信磁盘/root、有限A与B/C准入、实际新身份/SD/最终源码仍缺，未请求或应用host授权。Main审查_state/universal-main-review/20261023-host-package/MAIN_REVIEW.json；下一步源码接线后再重打包。
+
+SCM接线单位现经Main限定验收952软件PASS：五生产/六测试修改已完整审查，28清单文件与51compact引用核对；全局控制锁缺陷仅改_factory_birth_scope，原runtime等待/出生体在全局锁外，短closing/在途计数及finally通知使close等待、metadata可响应。新增8并发控制/Main原反例独立1PASS分开计数；旧944/有效1FAIL/首次外盘ENV失败保留。有限A仍缺四类producer而明确拒绝，B/C/host/native均未授予；原Job可能有效关闭UNKNOWN重复进入的另一1FAIL尚待下一单位。Main审查_state/universal-main-review/20261023-scm-prebirth/MAIN_REVIEW.json。

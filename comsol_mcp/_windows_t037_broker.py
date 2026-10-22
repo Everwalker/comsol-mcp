@@ -233,10 +233,13 @@ class ScmServiceRuntime:
         if seal is not _SCM_RUNTIME_SEAL:
             _fail("SCM_RUNTIME_SEAL_REQUIRED", "service runtime can only be created by the SCM broker")
         self._broker = broker
+        self._original_broker = broker
         self._seal = seal
         self._stop_event = threading.Event()
         self._active = True
         self._status_handle: Any = None
+        self._original_status_handle: Any = None
+        self._daemon_binding = None
         self._state = "REGISTERING"
         self._lock = threading.RLock()
 
@@ -262,13 +265,32 @@ class ScmServiceRuntime:
 
     def _activate(self, handle: Any) -> None:
         with self._lock:
+            if self._state != "REGISTERING" or self._original_status_handle is not None:
+                _fail("SCM_RUNTIME_REUSED", "original runtime registration cannot be repeated")
             self._status_handle = handle
+            self._original_status_handle = handle
             self._state = "START_PENDING"
 
     def _deactivate(self) -> None:
         with self._lock:
             self._active = False
             self._state = "STOPPED"
+
+
+def _require_original_runtime(runtime, *, running=True):
+    """Validate the actual same-process ServiceMain object, never a wire fact."""
+    if type(runtime) is not ScmServiceRuntime or runtime._seal is not _SCM_RUNTIME_SEAL:
+        _fail("SCM_RUNTIME_MISMATCH", "actual original ServiceMain runtime is required")
+    with runtime._lock:
+        broker = runtime._broker
+        if (type(broker) is not _ORIGINAL_SCM_BROKER_TYPE or broker is not runtime._original_broker
+                or broker._runtime is not runtime or not broker._started or not broker._entered
+                or broker._error is not None or broker.service_name != broker._original_service_name
+                or runtime._status_handle is None or runtime._status_handle is not runtime._original_status_handle
+                or not runtime._active or runtime.stop_requested
+                or runtime._state != ("RUNNING" if running else "START_PENDING")):
+            _fail("SCM_RUNTIME_MISMATCH", "original SCM callback/status lifetime is not live in the required state")
+    return runtime
 
 
 class WindowsScmServiceBroker:
@@ -284,6 +306,7 @@ class WindowsScmServiceBroker:
         if api is not None and _test_token is not _SCM_TEST_API_TOKEN:
             _fail("SCM_TEST_API_FORBIDDEN", "injected SCM APIs are reserved for explicit software tests")
         self.service_name = service_name
+        self._original_service_name = service_name
         self._service_main = service_main
         self._api = api if api is not None else CtypesWindowsScmApi()
         for name in ("start_service_ctrl_dispatcher", "register_service_ctrl_handler_ex", "set_service_status"):
@@ -373,8 +396,8 @@ class WindowsScmServiceBroker:
                 return ERROR_SUCCESS
             if code not in {SERVICE_CONTROL_STOP, SERVICE_CONTROL_SHUTDOWN}:
                 return ERROR_CALL_NOT_IMPLEMENTED
-            runtime._stop_event.set()
             with runtime._lock:
+                runtime._stop_event.set()
                 running = runtime._state == "RUNNING"
             if running:
                 self._set_status(runtime, ServiceStatus(
@@ -411,12 +434,16 @@ class WindowsScmServiceBroker:
             runtime._state = target_name
 
     def _mark_running(self, runtime: ScmServiceRuntime) -> None:
-        if runtime is not self._runtime or runtime._seal is not _SCM_RUNTIME_SEAL:
+        if runtime is not self._runtime:
             _fail("SCM_RUNTIME_MISMATCH", "service readiness came from another or forged SCM runtime")
+        _require_original_runtime(runtime, running=False)
         if runtime.stop_requested:
             _fail("SCM_START_ABORTED", "service cannot report ready after SCM requested stop")
         self._set_status(runtime, ServiceStatus(SERVICE_RUNNING,
                                                 SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN))
+
+
+_ORIGINAL_SCM_BROKER_TYPE = WindowsScmServiceBroker
 
 
 def _authorization_ref(value: Any) -> str:

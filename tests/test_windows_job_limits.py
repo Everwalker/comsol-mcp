@@ -222,6 +222,8 @@ def test_real_factory_api_child_refusal_keeps_original_job_and_strong_controller
     factory=daemon._new_t037_session_factory('p','configured-original');factory._api=value
     monkeypatch.setattr(factory,'preflight',lambda:None) # SOFTWARE continuation of the separately tested unavailable policy gate.
     monkeypatch.setattr(win,'os',SimpleNamespace(name='nt'))
+    from tests.test_windows_scm_prebirth import running_factory_chain
+    scm_scope=running_factory_chain(daemon,factory,tmp_path,monkeypatch);scm_scope.__enter__()
     try:
         if unknown:
             with pytest.raises(win.NativeSuspendedChildLaunchError) as e:factory([p._launch_image('server').path])
@@ -242,7 +244,7 @@ def test_real_factory_api_child_refusal_keeps_original_job_and_strong_controller
         daemon._close_t037_session_factory(('p','configured-original'))
         assert sdk.calls[-1]==('close',300) and not owned.registry_for(value).unresolved()
         assert not daemon._session_t037_process_factories
-    finally:daemon.close()
+    finally:scm_scope.__exit__(None,None,None);daemon.close()
 
 
 @pytest.mark.parametrize('fault',['none','null_profile','set_failure','readback_mismatch'])
@@ -281,13 +283,26 @@ def test_actual_controller_store_child_unknown_and_explicit_cleanup_retains_job_
     # hardcoded foreign session refused before reaching this Job-owner control.
     host,_=network_profile_and_plan()
     p=replace(p,host_resource_profile=host)
-    factories=[]
+    factories=[];scm_scopes=[]
     class OriginalSessionLauncher(OwnedServerLauncher):
         def start(self,runtime,project_id,session_id,**kwargs):
             original=win.T037SessionProcessFactory(p,session_id,api=value)
             monkeypatch.setattr(original,'preflight',lambda:None)  # SOFTWARE policy continuation only.
             factories.append(original)
-            return super().start(runtime,project_id,session_id,process_factory=original,**kwargs)
+            from tests.test_windows_scm_prebirth import running_factory_chain
+            prior_profile=daemon._windows_t037_profile
+            daemon._windows_t037_profile=p
+            daemon._session_t037_process_factories[(project_id,session_id)]=original
+            scope=running_factory_chain(daemon,original,tmp_path/'scm-chain',monkeypatch)
+            scope.__enter__();scm_scopes.append(scope)
+            try:
+                return super().start(runtime,project_id,session_id,process_factory=original,**kwargs)
+            finally:
+                # Restore this old cleanup-route fixture's controller profile;
+                # new births now refuse the changed binding, while exact owned
+                # never-resumed cleanup must remain available independently.
+                daemon._windows_t037_profile=prior_profile
+                scm_scopes.pop();scope.__exit__(None,None,None)
     launcher=OriginalSessionLauncher(platform_name='darwin')
     # Session infrastructure filesystem OS dependency is shared module os; restore normal OS after call via local proxy.
     import os
@@ -308,7 +323,9 @@ def test_actual_controller_store_child_unknown_and_explicit_cleanup_retains_job_
         assert stopped['success'] and sdk.ids==[] and handle.process._closed
         factory.close();assert sdk.calls[-1]==('close',300)
         assert not owned.registry_for(value).unresolved()
-    finally:daemon.close()
+    finally:
+        for scope in reversed(scm_scopes):scope.__exit__(None,None,None)
+        daemon.close()
 
 
 @pytest.mark.parametrize('raw',[None,0,-1,True,'300',2**64-1,2**64,SimpleNamespace(value=300),C.c_void_p(None)])

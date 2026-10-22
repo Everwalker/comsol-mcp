@@ -87,7 +87,11 @@ def resume_native_child(process,capability):
 
 
 def refuse_unverified_prebirth(profile, *, owner=None):
-    """Observe host/broker/policy only. No unborn child evidence is requested."""
+    """Legacy read-only diagnostic, always refusing; never the A birth gate.
+
+    Its mixed observation/reasons remain intact for historical diagnostic and
+    resource-owner callers. The actual factory uses require_static_prebirth.
+    """
     from ._windows_t037 import WindowsT037Observer,WindowsT037ProfileV2,T037SessionProcessFactory,windows_host_fingerprint
     from ._windows_t037_native import WindowsNativePolicyAdapter
     if type(profile) is not WindowsT037ProfileV2:
@@ -117,3 +121,9 @@ def refuse_unverified_prebirth(profile, *, owner=None):
         safe_retry=False,stage='pre_dispatch',details={'phase':'STATIC_HOST_BROKER_POLICY',
         'reasons':list(observation.reasons)+['JOB_REQUIRED_TARGET_UNAVAILABLE','MIC_UNVERIFIED',
         'FULL_FILESYSTEM_ISOLATION_UNVERIFIED','VENDOR_LOOPBACK_LICENSE_COMPATIBILITY_UNVERIFIED']})
+
+
+def require_static_prebirth(profile, *, owner):
+    """A static producer only; never issue B/C or ordinary Resume authority."""
+    from ._windows_t037_admission import require_static_prebirth as require_static
+    return require_static(profile, owner=owner)

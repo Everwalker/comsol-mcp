@@ -1019,11 +1019,10 @@ class _Win32ReadOnlyApi:
 class T037SessionProcessFactory:
     """Popen-compatible callable that refuses fallback and shares one Job.
 
-    This release has no native policy verifier or proof issuer, so the
-    process-factory preflight always rejects. No mutable proof field or
-    caller-provided receipt can unlock process creation. The call protocol
-    remains explicit so a future reviewed verifier can add an issuer without
-    a `Popen` fallback.
+    Static A uses the original in-process SCM lifetime and actual SDK inputs.
+    Its finite filesystem/MIC target is still unavailable, so preflight
+    refuses. Child B and purpose-bound C/Resume authority remain separate;
+    no observation value or caller receipt can unlock them.
     """
 
     def __init__(self, profile: WindowsT037Profile | WindowsT037ProfileV2, session_id: str, *,
@@ -1038,6 +1037,7 @@ class T037SessionProcessFactory:
         self._job = None
         self._closed = False
         self._prebirth_observers = []
+        self._scm_binding = None
         self._job_key = hashlib.sha256((profile.source_sha256 + "\0" + session_id).encode()).hexdigest()
         # Read-only network intent stays bound to this constructor's exact
         # profile. This captures configuration only, never native admission.
@@ -1075,23 +1075,50 @@ class T037SessionProcessFactory:
         self.preflight()
         if os.name != "nt":
             _refuse(ERROR_UNSUPPORTED, "T037 process launch requires Windows")
-        api = self._api if self._api is not None else _Win32LaunchApi()
-        self._api = api
-        role = self._infer_role(command)
-        if self._job is None:
-            self._job = api.create_job(profile=self.profile)
-        return api.create_suspended_appcontainer_child(
-            command, options, profile=self.profile, job=self._job, role=role,
-            session_factory=self,
-        )
+        from ._windows_t037_admission import _factory_birth_scope
+        with _factory_birth_scope(self):
+            api = self._api if self._api is not None else _Win32LaunchApi()
+            self._api = api
+            role = self._infer_role(command)
+            if self._job is None:
+                # The existing producer alone creates/configures/readbacks a
+                # genuinely fresh empty Job; no unborn child is required at A.
+                self._job = api.create_job(profile=self.profile)
+            else:
+                self._require_original_job_members()
+            return api.create_suspended_appcontainer_child(
+                command, options, profile=self.profile, job=self._job, role=role,
+                session_factory=self,
+            )
+
+    def _require_original_job_members(self):
+        """Recheck this configured Job against its actual returned children."""
+        from ._windows_job_limits import require_configured_job, _job_ids
+        api = self._api
+        require_configured_job(api, self._job, self.profile)
+        ids = _job_ids(api, self._job)
+        original_ids = []
+        for child in tuple(getattr(api, "_retained_children", {}).values()):
+            child._check_original()
+            if child._closed:
+                continue
+            receipt = _native_g2_session_launch_owner(child)
+            if (receipt is None or receipt.session_factory is not self
+                    or receipt.job_handle is not self._job or child.poll() is not None
+                    or api.is_process_in_job(child._handle, self._job) is not True):
+                _refuse("NATIVE_CHILD_CREATION_UNKNOWN", "original returned child/Job membership is not live and exact")
+            original_ids.append(child.pid)
+        if sorted(ids) != sorted(original_ids):
+            _refuse("NATIVE_CHILD_CREATION_UNKNOWN", "actual Job members differ from this factory's original returned children")
 
     def preflight(self) -> None:
         """Refuse before directory/file/child side effects until native proof exists."""
         if self._closed:
             _refuse(ERROR_POLICY_UNVERIFIED, "T037 session process factory is closed")
         if os.name == "nt":
-            from ._windows_t037_resume import refuse_unverified_prebirth
-            refuse_unverified_prebirth(self.profile, owner=self)
+            from ._windows_t037_resume import require_static_prebirth
+            require_static_prebirth(self.profile, owner=self)
+            return
         _refuse(ERROR_POLICY_UNVERIFIED, "T037 prebirth native policy admission and child-proof issuer remain unverified")
 
     def _infer_role(self, command: Sequence[str]) -> str:

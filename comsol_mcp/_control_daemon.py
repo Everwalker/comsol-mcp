@@ -380,6 +380,8 @@ class ControlDaemon:
         self._windows_t037_profile_path = (
             os.fspath(windows_t037_profile) if windows_t037_profile is not None else None
         )
+        self._windows_t037_scm_runtime = None
+        self._windows_t037_scm_binding = None
         self.backend.project_authorizer = self.project_authority.authorize_operation
         self.backend.scoped_host_provider = scoped_host_provider
         self._disk_resource_coordinator = None
@@ -12002,6 +12004,11 @@ class ControlDaemon:
                       "native_cleanup_state": "EXIT_CONFIRMED" if process._closed and type(process.returncode) is int else "UNKNOWN"},
                 execution_state_unknown=True, safe_retry=False, cause_type=type(exc).__name__), "UNKNOWN")
 
+    def _retain_t037_scm_runtime(self, runtime):
+        """Retain the actual ServiceMain object after listener RUNNING only."""
+        from ._windows_t037_admission import _bind_daemon_runtime
+        _bind_daemon_runtime(self, runtime)
+
     def _new_t037_session_factory(self, project_id: str, session_id: str):
         if self._windows_t037_profile is None:
             return None
@@ -12013,6 +12020,10 @@ class ControlDaemon:
             # Register the original object before any native preflight. This
             # owner survives refusal, failed Store admission and caller GC.
             self._session_t037_process_factories[key] = factory
+        if (getattr(self, "_windows_t037_scm_binding", None) is not None
+                and getattr(factory, "_scm_binding", None) is None):
+            from ._windows_t037_admission import _bind_session_factory
+            _bind_session_factory(self, factory, key)
         return factory
 
     def _discard_empty_t037_session_factory(self, key: tuple[str, str]) -> None:
@@ -13539,6 +13550,7 @@ def _serve_control_listener(home, daemon, token, _scm_runtime, bootstrap_path, p
                 # This does not attest child isolation or native policy readiness.
                 _scm_runtime.mark_running()
                 daemon._windows_t037_host_control_issuer(_scm_runtime)
+                daemon._retain_t037_scm_runtime(_scm_runtime)
                 bootstrap_future = None
                 if bootstrap_path is not None:
                     from ._windows_t037_bootstrap import submit_bootstrap

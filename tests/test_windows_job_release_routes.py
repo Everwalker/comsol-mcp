@@ -40,7 +40,18 @@ def test_actual_controller_unknown_child_all_original_release_exits_deny_then_co
             original=win.T037SessionProcessFactory(p,session_id,api=value)
             monkeypatch.setattr(original,'preflight',lambda:None)  # SOFTWARE policy continuation only.
             factories.append(original)
-            return super().start(runtime,project_id,session_id,process_factory=original,**kwargs)
+            from tests.test_windows_scm_prebirth import running_factory_chain
+            prior_profile=daemon._windows_t037_profile
+            daemon._windows_t037_profile=p
+            daemon._session_t037_process_factories[(project_id,session_id)]=original
+            with running_factory_chain(daemon,original,tmp_path/'scm-chain',monkeypatch):
+                try:
+                    return super().start(runtime,project_id,session_id,process_factory=original,**kwargs)
+                finally:
+                    # Leave this cleanup-route fixture's original project
+                    # provider/profile intact. The stopped SCM binding refuses
+                    # further births without blocking exact owned cleanup.
+                    daemon._windows_t037_profile=prior_profile
     monkeypatch.setattr(win,'os',SimpleNamespace(**dict(vars(os),name='nt')))
     launcher=OriginalSessionLauncher(platform_name='darwin')
     daemon,project,*_=_make_daemon(tmp_path,monkeypatch,server_launcher=launcher)
@@ -53,6 +64,7 @@ def test_actual_controller_unknown_child_all_original_release_exits_deny_then_co
         assert child.poll() is None and sdk.ids==[456] and not child._resume_attempted
         assert daemon.store.job(result['execution']['job_id'])['status']=='UNKNOWN'
         before=sdk.calls.count(('close',300))
+        assert before==0
         with pytest.raises(ExecutionContractError) as first:
             release_route(route,value,entry,scope)
         first_cause=first.value
@@ -71,18 +83,54 @@ def test_actual_controller_unknown_child_all_original_release_exits_deny_then_co
         with pytest.raises(ExecutionContractError) as denied:registry.retry_owned(entry,value)
         assert denied.value is first_cause and sdk.calls.count(('close',300))==before
         state['cleanup_fail']=False;state['alive']=False;sdk.ids=[]  # Later SDK exit/empty Job observations.
+        lifecycle_before=daemon.session_lifecycle.get(project,sid)
         stopped=_stop(daemon,project,sid,key='close-route-confirmed-exit-'+route)
-        assert stopped['success'] and child._closed and type(child.poll()) is int and sdk.ids==[]
-        assert key not in daemon._session_server_handles and not child._resume_attempted
+        # Child exit alone cannot complete the whole session's UNKNOWN Job.
+        assert not stopped['success'] and child._closed and type(child.poll()) is int and sdk.ids==[]
+        assert stopped['data']['server_stopped'] is True
+        assert stopped['data']['native_cleanup_state']=='EXIT_CONFIRMED'
+        assert stopped['data']['job_retained'] is True and stopped['data']['server_handle_preserved'] is True
+        assert daemon._session_server_handles[key] is handle_ref() is handle
+        assert daemon._session_t037_process_factories[key] is factory_ref() is factory
+        assert handle.process is child_ref() is child and not child._resume_attempted
+        assert daemon.session_lifecycle.get(project,sid)==lifecycle_before
         assert entry.state=='UNKNOWN' and entry.error is first_cause
-        # Only explicit original release after actual terminal/empty gates can reconcile.
+        assert value._job_limit_bindings[300]['entry'] is entry and factory._job==300
+        assert sdk.calls.count(('close',300))==before and registry.unresolved()==(entry,)
+        unknown_receipts={}
+        for receipt in (result,failed,stopped):
+            operation=daemon.store.get_operation(receipt['execution']['operation_id'])
+            assert operation['status']=='UNKNOWN' and operation['result']==receipt
+            assert daemon.store.job(receipt['execution']['job_id'])['status']=='UNKNOWN'
+            unknown_receipts[operation['operation_id']]=operation
+        # Only the original pre-SDK deferral is reconciled explicitly after
+        # terminal child/ancillary and empty Job observations; not a native close UNKNOWN.
         registry.retry_owned(entry,value)
         assert entry.state=='RELEASED' and sdk.calls.count(('close',300))==before+1
-        before_reconcile=list(sdk.calls)
+        before_reconcile=list(sdk.calls);child_events=list(events)
         value._job_process_ids=lambda *a:pytest.fail('confirmed released HANDLE queried during reconcile')
+        completed=_stop(daemon,project,sid,key='close-route-session-terminal-'+route)
+        assert completed['success'] and completed['data']['state']=='STOPPED'
+        assert completed['data']['server_stopped'] is True
+        assert completed['data']['native_child_exit_evidence']['exit_confirmed'] is True
+        terminal=daemon.session_lifecycle.get(project,sid)
+        assert terminal['state']=='STOPPED' and terminal['revision']==lifecycle_before['revision']+1
+        assert daemon.store.get_operation(completed['execution']['operation_id'])['status']=='SUCCEEDED'
+        assert daemon.store.job(completed['execution']['job_id'])['status']=='SUCCEEDED'
+        assert key not in daemon._session_server_handles and key not in daemon._session_t037_process_factories
         factory.close();factory.close()
         assert factory._closed and factory._job is None and not value._job_limit_bindings
-        assert sdk.calls==before_reconcile and not registry.unresolved()
+        # New cleanup completes CAS/unregistration without rewriting/reexecuting
+        # any earlier UNKNOWN receipt, including idempotent public replays.
+        assert _stop(daemon,project,sid,key='close-route-cleanup-failure-'+route)==failed
+        assert _stop(daemon,project,sid,key='close-route-confirmed-exit-'+route)==stopped
+        for operation_id,original in unknown_receipts.items():
+            assert daemon.store.get_operation(operation_id)==original
+            old_job=daemon.store.operation_job(operation_id)
+            assert old_job['status']=='UNKNOWN' and old_job['result']==original['result']
+        assert daemon.session_lifecycle.get(project,sid)==terminal
+        assert sdk.calls==before_reconcile and events==child_events and not registry.unresolved()
+        assert entry.error is first_cause and sdk.calls.count(('close',300))==1
     finally:daemon.close()
 
 

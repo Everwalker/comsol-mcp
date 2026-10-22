@@ -285,6 +285,8 @@ def test_production_scm_entrypoint_composes_actual_serve_and_drains_on_stop(tmp_
         def _windows_t037_host_control_issuer(self, runtime):
             assert runtime.is_active
             events.append('trusted-issuer')
+        def _retain_t037_scm_runtime(self, runtime):
+            assert runtime.is_active  # Stub daemon boundary only; actual retention has dedicated full-function coverage.
         def close(self):
             events.append('drained-close')
     class Server:
@@ -397,6 +399,7 @@ def test_service_bootstrap_observation_retains_pending_handle_on_stop_and_report
         def __init__(self,_home,**_options):
             self._windows_t037_profile=profile;daemons.append(self)
         def _windows_t037_host_control_issuer(self,runtime):assert runtime.is_active
+        def _retain_t037_scm_runtime(self,runtime):assert runtime.is_active  # Stub daemon; no factory/admission claimed.
         def _submit_scm_host_control(self,runtime,**request):
             assert runtime.is_active and request['plan']==plan and request['authorization_ref']=='apply-once'
             return future
