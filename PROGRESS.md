@@ -1,4 +1,4 @@
-# 当前进度 — 2026-10-22
+# 当前进度 — 2026-10-23
 
 **IN_PROGRESS：通用核心尚未完成。** 执行 [MASTER_GOAL](docs/universal_mcp_execution/MASTER_GOAL.md)，以 [RESUME](docs/universal_mcp_execution/state/RESUME.json) 和 [当前交接](docs/universal_mcp_execution/CURRENT_HANDOFF.md) 续跑。原三案例科学终点已拆出，历史失败及 UNKNOWN 保留。
 
@@ -14,11 +14,12 @@
 - Windows SID/两条SCM lookup修补已由Main限定接收：受影响133项软件PASS，173个包文件与R3 wheel/源码一致，实际已安装只读SCM/token探测和缺profile拒绝通过。共享host-profile SID随后完成161项聚焦PASS与真实Windows6个正向/16个反向intent解析，仍为NOT_VERIFIED；另59项资源回归原11FAIL已定位为外层观测权限与Worker替身协议缺失；原断言保留，新增2身份反例后61PASS，原失败报告保留，不推广为OS隔离验收。端口接口及真实原生启动授权尚需实现，host plan非apply-ready。服务/AppContainer/ACL/WFP变更未授权或应用；原有Desktop保留。
 - 最终候选、Windows6.3/6.4与MacARM6.4适用核心原生验证、两类未预设任务及最终独立Reviewer仍未完成。当前不能声明整体完成。
 - Windows子进程只读证据阶段经Main接收：87软件测试、真实Windows12项负控、7类SDK观测及原始HANDLE退出/释放核验通过。探针为普通高完整性、非AppContainer token，从未Resume；不是T037隔离/issuer/COMSOL通过。见[限定证据](docs/universal_mcp_execution/evidence/WINDOWS_CHILD_EVIDENCE.json)。
-- Windows网络意图/范围/完整WFP组软件与getter阶段经Main接收：本轮164项PASS，旧177+89记录单列；新正常离线安装的getter真实只读查询一次，1024..60000、4个原始句柄关闭确认、无遗留。尚未接固定监听启动，也未证明WFP有效隔离或启用准入。见[限定证据](docs/universal_mcp_execution/evidence/WINDOWS_NETWORK_INTENT.json)。
+- Windows网络释放修补经Main有限验收：当前127项聚焦PASS、旧源码15项负控失败；新正常离线安装getter一次SHOW查询1024..60000，四个原CloseHandle返回1、pinning一致、零遗留。旧164及177+89记录保留原范围，不叠加计数。固定监听/有效WFP隔离/准入仍未通过。见[限定证据](docs/universal_mcp_execution/evidence/WINDOWS_NETWORK_INTENT.json)。
 - Windows固定子进程创建限制属性经Main限定接收：92软件PASS，真实普通悬挂探针读回flags1、原HANDLE退出/释放核验；从未Resume，实际阻止行为/三属性T037原生创建/vendor兼容仍NOT_RUN。见[限定证据](docs/universal_mcp_execution/evidence/WINDOWS_CHILD_PROCESS_POLICY.json)。
+- 两项只读producer经Main有限验收：MIC当前160项PASS/旧源码10项负控失败，新源码实际两次LABEL读与两次原LocalFree确认、原owner关闭文件；无标签ACE，Medium仅文档默认。WFP当前62项PASS/旧a889源码6项负控失败，单次DWORD规范化与成功后记账异常不再重关。实际空事件SDK快照仍只绑定历史a889、NOT_OBSERVED；未重跑或重标。MIC阻止行为/非空事件/因果/T037均未通过。
 
-已同步阶段：M0/M1 `4759c097`，M4构件 `47d05a8e`，Windows软件准备/使用说明 `4f236d14`，交付生命周期/权限 `c10c066a`；后续SID/资源阶段见RESUME.git。新增子进程只读证据 `f68b3c7a`、网络范围/getter `03388462`，均普通推送并独立回读一致。后续核心变化须重新捕获源码构件，不能重标旧wheel。
+已同步阶段：M0/M1 `4759c097`，M4构件 `47d05a8e`，Windows软件准备/使用说明 `4f236d14`，交付生命周期/权限 `c10c066a`；后续SID/资源阶段见RESUME.git。新增子进程只读证据 `f68b3c7a`、网络范围/getter `03388462`、固定子进程限制属性 `b1474a85`，均普通推送并独立回读一致。后续核心变化须重新捕获源码构件，不能重标旧wheel。
 
-下一动作：同一Luna补Core原result.evaluate漏接并重冻/重装后完成M2闭环。Windows接着补固定监听/IPv4启动接线与真实A/B/C证据；只读对象MIC和WFP事件模块并行实现，不启用未证准入。最终独立Reviewer只在候选就绪后启动。
+下一动作：Core公开result.evaluate增量已集中审查，原Luna继续核查扩展回归5失败、统一r3指纹后，按当次资源合同尝试一次全新独立原生闭环。旧B停止审批拒绝保留不重试；70543是Worker RPC而非第三个Server。Windows随后接固定监听/IPv4与私有同进程A/B/C，不启用未证准入；最终独立Reviewer在候选就绪后启动。
 
 旧交接与科学历史见 [2026-10-21交接](docs/full_project_continuation_v3/CURRENT_HANDOFF.md)，保持原证据范围。

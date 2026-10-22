@@ -345,7 +345,7 @@ def transferred_getter_sdk(monkeypatch, fault=None):
     from types import SimpleNamespace as NS
     from comsol_mcp import _windows_t037_network as net
     state=NS(created=[], wrappers=[], detached=[], closed=[], queries=[], fail_close=fault=='close_failure',
-             close_result=1, reads=0, fault=fault, cleanup_owners=[])
+             close_result=1, close_fault=None, close_effects=[], reads=0, fault=fault, cleanup_owners=[])
     class Handle:
         def __init__(self,path,value):self.path=path;self.value=value;self.original=value
         def __int__(self):
@@ -381,6 +381,10 @@ def transferred_getter_sdk(monkeypatch, fault=None):
     def close(value):
         assert type(value) is int
         state.closed.append(value)
+        if state.close_fault=='effect_then_raise':
+            state.close_effects.append(value)
+            raise OSError('native close effect completed but Python return was lost')
+        if state.close_fault=='before_call_raise':raise OSError('no reliable SDK return')
         if state.fail_close and value==903:return 0
         return state.close_result
     def read(value,size):state.reads+=1;return 0,b'exe' if state.reads==1 else b''
@@ -449,22 +453,83 @@ def test_getter_uncertain_transfer_retains_sdk_return_and_never_redetaches_or_cl
     assert net._dynamic_range_owner is owner
 
 
-@pytest.mark.parametrize('returned',[None,True,1.0,'success'])
-def test_getter_invalid_close_sdk_result_remains_unknown_and_fixed_closer_recovery_only(monkeypatch,returned):
+@pytest.mark.parametrize('returned',[None,False,True,1.0,'success',1<<32,-(1<<31)-1,
+                                    'effect_then_raise','before_call_raise'])
+def test_getter_indeterminate_close_never_retries_or_requeries_even_after_closer_replacement(monkeypatch,returned):
     from types import SimpleNamespace
     from comsol_mcp import _windows_t037_network as net, _windows_owned_resources as owned
-    s=transferred_getter_sdk(monkeypatch);s.close_result=returned
+    s=transferred_getter_sdk(monkeypatch)
+    if returned in ('effect_then_raise','before_call_raise'):s.close_fault=returned
+    else:s.close_result=returned
     with pytest.raises(owned.NativeResourceError):net.read_windows_ipv4_tcp_dynamic_range()
     owner=net._dynamic_range_owner;entries=owner.registry.unresolved()
     assert len(entries)==4 and all(e.state=='UNKNOWN' for e in entries)
     assert s.closed==[903,902,901,900] and len(s.queries)==1
+    holders=[e.keepalive[1] for e in entries]
+    assert all(h.close_function is s.original_close and h.returned is e.keepalive[0]
+               and h.value==h.detached_return==e.value==e.handle for h,e in zip(holders,entries))
+    assert s.close_effects==([903,902,901,900] if returned=='effect_then_raise' else [])
     fake=SimpleNamespace(registry=owner.registry,state='UNKNOWN')
     with pytest.raises(owned.NativeResourceError):owner.recover_owned(fake)
     with pytest.raises(owned.NativeResourceError):owner.registry.retry_owned(dict(entries[0].__dict__),owner)
     with pytest.raises(owned.NativeResourceError):net.read_windows_ipv4_tcp_dynamic_range()
     assert s.closed==[903,902,901,900] and len(s.created)==4 and len(s.queries)==1
-    s.close_result=1;owner.recover_owned(owner)
-    assert s.closed==[903,902,901,900]*2 and net._dynamic_range_owner is None
+    s.close_result=1;s.close_fault=None
+    s.kernel.CloseHandle=lambda value:pytest.fail('replacement API closer used')
+    with pytest.raises(owned.NativeResourceError):owner.recover_owned(owner)
+    for entry,holder in zip(entries,holders):
+        with pytest.raises(owned.NativeResourceError):owner.registry.retry_owned(entry,owner)
+        with pytest.raises(owned.NativeResourceError):holder.close(entry.value)
+    owner.registry.drain(owner.registry.scope())
+    with pytest.raises(owned.NativeResourceError):net.read_windows_ipv4_tcp_dynamic_range()
+    gc.collect()
+    assert all(ref() is not None for ref in s.wrappers) and not s.cleanup_owners
+    assert s.closed==[903,902,901,900] and len(s.created)==4 and len(s.queries)==1
+    assert net._dynamic_range_owner is owner and all(e.state=='UNKNOWN' for e in entries)
+    assert all(h.state=='CLOSE_UNKNOWN' for h in holders)
+
+
+@pytest.mark.parametrize('fault',['effect_then_raise','before_call_raise',None,False,True,'bad'])
+def test_getter_known_failure_permission_is_consumed_before_indeterminate_retry(monkeypatch,fault):
+    from comsol_mcp import _windows_t037_network as net, _windows_owned_resources as owned
+    s=transferred_getter_sdk(monkeypatch,'close_failure')
+    with pytest.raises(owned.NativeResourceError):net.read_windows_ipv4_tcp_dynamic_range()
+    owner=net._dynamic_range_owner;entry,=owner.registry.unresolved()
+    s.fail_close=False
+    if fault in ('effect_then_raise','before_call_raise'):s.close_fault=fault
+    else:s.close_result=fault
+    with pytest.raises(owned.NativeResourceError):owner.recover_owned(owner)
+    s.close_fault=None;s.close_result=1
+    with pytest.raises(owned.NativeResourceError):owner.recover_owned(owner)
+    with pytest.raises(owned.NativeResourceError):owner.registry.retry_owned(entry,owner)
+    with pytest.raises(owned.NativeResourceError):net.read_windows_ipv4_tcp_dynamic_range()
+    assert s.closed==[903,902,901,900,903] and len(s.created)==4 and len(s.queries)==1
+    assert entry.state=='UNKNOWN' and net._dynamic_range_owner is owner and not s.cleanup_owners
+
+
+@pytest.mark.parametrize('fault',['detached','value','entry','closer'])
+def test_getter_known_failure_cannot_recover_changed_original_binding(monkeypatch,fault):
+    from comsol_mcp import _windows_t037_network as net, _windows_owned_resources as owned
+    s=transferred_getter_sdk(monkeypatch,'close_failure')
+    with pytest.raises(owned.NativeResourceError):net.read_windows_ipv4_tcp_dynamic_range()
+    owner=net._dynamic_range_owner;entry,=owner.registry.unresolved();holder=entry.keepalive[1]
+    if fault=='detached':holder.detached_return+=1
+    elif fault=='value':holder.value+=1
+    elif fault=='entry':entry.handle+=1
+    else:holder.close_function=lambda value:pytest.fail('replacement holder closer used')
+    s.fail_close=False
+    with pytest.raises(owned.NativeResourceError):owner.recover_owned(owner)
+    with pytest.raises(owned.NativeResourceError):owner.registry.retry_owned(entry,owner)
+    assert s.closed==[903,902,901,900] and len(s.queries)==1 and entry.state=='UNKNOWN'
+    assert net._dynamic_range_owner is owner and not s.cleanup_owners
+
+
+@pytest.mark.parametrize('returned',[-(1<<31),-1,1,(1<<31)-1])
+def test_getter_strict_signed_win32_bool_success_boundary_preserves_normal_cleanup(monkeypatch,returned):
+    from comsol_mcp import _windows_t037_network as net
+    s=transferred_getter_sdk(monkeypatch);s.close_result=returned
+    assert net.read_windows_ipv4_tcp_dynamic_range().verification_state=='NOT_VERIFIED'
+    assert s.closed==[903,902,901,900] and len(s.queries)==1 and net._dynamic_range_owner is None
 
 
 def test_getter_no_sdk_return_does_not_leave_false_owner_or_attempt_close(monkeypatch):

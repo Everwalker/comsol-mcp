@@ -1,4 +1,4 @@
-# 当前续跑交接 — 2026-10-22
+# 当前续跑交接 — 2026-10-23
 
 目标 **IN_PROGRESS**。唯一续跑指针 [state/RESUME.json](state/RESUME.json)，冻结范围 [MASTER_GOAL](MASTER_GOAL.md)/[RELEASE_DOD](RELEASE_DOD.md)。三案例科学终点不作主线；未完成专项状态、历史失败和UNKNOWN原件保留。最终独立Reviewer及两类未预设任务尚未启动。
 
@@ -29,3 +29,11 @@ Windows新子进程只读证据已由Main限定接收并同步f68b3c7a，见evid
 最新主线状态：修补候选1706的真实6.4.0.293 study.run已成功（job b332f63b-9359-4502-b1ac-a2c452827810）；result.evaluate因预算SolutionAxes未证在getData前拒绝，Eval临时节点已清理、target rev3 dirty。managed inspect缺refresh wire，legacy refresh未携带ModelRef调用空默认连接，产生未绑定UNKNOWN1f87ec01-5469-452d-8bfa-ead562faf2e5；job.reconcile拒绝，最终sentinel读被全局围栏拒绝。所有失败/原请求不改写。Primary现连续修上述两项及既有Core边界批次，软件通过后冻新源码/离线安装/新拥有资源重跑；不修活daemon、不重标1706。原Owner可在零活动并满足既有门禁时正常断开/退役/stop一次，否则保留隔离；不凭PID清理。详细现态以RESUME和原始pending-refs为准。
 
 本Core批次已有未验收检查点evidence/M2_CORE_REPAIR.json：d56基底加7生产/5测试overlay，执行端426软件PASS/1可选显式监听夹具SKIP；新app1f752ce0、42-wheel锁、全新源外安装及112工具元数据已记录。Main核对12个overlay当前/冻结一致，集中审查发现result_evaluate在5443的预算guard未接count witness；该witness调用仍仅位于at_points，因此本P0尚未关闭。Primary收到返工：在安全检查点保存已接受作业/原owner清理状态，补真实evaluate全路径/前后drift及完整函数反例，再重冻/重装新candidate。1f7/426+1skip保留原范围，不重标成功，不改活daemon。精确SHA/路径见RESUME.m2_core_checkpoint及原receipt；旧1706证据和原UNKNOWN保持原态。
+
+WFP事件observer当前也是本地未验收返工：源码dbb670f2、36软件PASS、一次collection1/单页零事件SDK记录保留；Main已发现释放闭包动态查找SDK方法/使用可变slot及native写出后异常未登记owner的具体缺口。Lorentz同Agent补固定原closer/原整数/原storage持有、UNKNOWN不重获/不自动重试与父子释放依赖，聚焦负控后获一次必要新修正版只读probe授权。无WFP/BFE/ACL/服务设置修改或流量生成，非空event解码/分类因果仍UNVERIFIED/NOT_RUN，见RESUME.windows_event_observer。
+
+MIC初版d7721960/149软件PASS/新私有文件一次2LABEL读原件保留；实际20字节SD、SACL absent、无ACE，Medium仅文档默认解释，未执行MIC阻止。Main发现其显式恢复允许在LocalFree结果不明后再free；同根问题也存在已同步网络getter的CLOSE_UNKNOWN恢复。Kierkegaard原Agent合并修这两处：区分明确native-no-release失败与效果不明，后者任何恢复均不重调、保留原owner/slot/值且不重获。现有通用registry/其他source不改，旧有限阶段事实不重标；聚焦后各一次必要新修正版只读SDK验证授权，无host设置/child/COMSOL动作。当前安全收口重开，见RESUME.windows_mic_observer/windows_network_design。
+
+Main最新验收：MIC badf8821/160项、network14a0fb8f/127项、events37d63f9e/62项（924后仅移除多余EOF换行，AST一致）软件与负控增量已通过有限审查，原源码和历史失败不重标。MIC新私有只读LABEL/网络新正常离线安装SHOW均核对当前来源和原释放结果；WFP实际零行SDK仍绑定a889，924补丁仅软件验证。原不明释放的重复调用已封闭，明确原生未释放失败才可由原owner显式重试；成功但记账异常不可再次native close。Main审查私有索引见RESUME对应main_review_path，隔离/准入/非空因果均未完成。
+
+旧B授权与资源只读澄清：实时project.inspect含host_control，但正式session.stop schema强制authorization_ref，不能以内部函数默认参数绕过；原自动审批拒绝记录保留，不再尝试旧B stop。58888与82522是Server，70543为PersistentComsolWorker/RPC，所有原owner/UNKNOWN保留。unserved许可容量未定不等于许可拒绝；根据MASTER_GOAL17/58，Primary先完成5失败triage/当前r3一致性，再经当次内存/资源门和厂商正常许可启动至多一次全新独立owned Server，不改许可证或安全设置。COMSOL官方同机client/server与多会话规则仅作解释，不冒认本地license类型/容量。

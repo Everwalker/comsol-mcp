@@ -25,9 +25,11 @@ class _FileHandleTransfer:
             _ownership_unknown('original file acquisition provenance required')
         self.returned = returned
         self.close_function = close
+        self._original_close_function = close
         self.value = None
         self.detached_return = None
         self.close_return = None
+        self.close_outcome = 'NOT_CALLED'
         self.state = 'ACQUIRED'
         self._seal = seal
 
@@ -49,15 +51,22 @@ class _FileHandleTransfer:
 
     def close(self, value):
         if (self._seal is not _OWNER_SEAL or type(value) is not int or value != self.value
-                or self.state not in {'DETACHED', 'CLOSE_UNKNOWN'}):
+                or self.detached_return != value or self.close_function is not self._original_close_function
+                or not (self.state == 'DETACHED' or
+                        self.state == 'CLOSE_UNKNOWN' and self.close_outcome == 'KNOWN_NOT_CLOSED')):
             _ownership_unknown('only the original confirmed detached HANDLE can use its SDK closer')
-        try:
-            self.close_return = self.close_function(value)
-            if type(self.close_return) is not int or self.close_return == 0:
-                _ownership_unknown('original SDK CloseHandle did not confirm release')
-        except BaseException:
-            self.state = 'CLOSE_UNKNOWN'
-            raise
+        # The original integer may already be invalidated/reused if a native
+        # effect loses its Python return. Do not retry an indeterminate result.
+        self.state = 'CLOSE_UNKNOWN'
+        self.close_outcome = 'RESULT_UNKNOWN'
+        self.close_return = None
+        self.close_return = self._original_close_function(value)
+        if type(self.close_return) is not int or not -(1 << 31) <= self.close_return < (1 << 31):
+            _ownership_unknown('original SDK CloseHandle returned no strict native BOOL')
+        if self.close_return == 0:
+            self.close_outcome = 'KNOWN_NOT_CLOSED'
+            _ownership_unknown('original SDK CloseHandle explicitly failed without closing')
+        self.close_outcome = 'RELEASED'
         self.state = 'RELEASED'
         return self.close_return
 
@@ -96,7 +105,7 @@ class _DynamicRangeOwner:
         return entry.handle
 
     def recover_owned(self, owner):
-        """Explicit in-process recovery via this original owner/closer only."""
+        """Retry only an explicit native BOOL-zero failure, with original bindings."""
         global _dynamic_range_owner
         with _query_lock:
             if (self._seal is not _OWNER_SEAL or owner is not self
@@ -104,8 +113,16 @@ class _DynamicRangeOwner:
                 _ownership_unknown('original unresolved query owner required')
             if self.pending_return is not None:
                 _ownership_unknown('unconfirmed original PyHANDLE transfer cannot be reconstructed or detached again')
+            entries = tuple(reversed(self.registry.unresolved()))
+            for entry in entries:
+                holder = entry.keepalive[1]
+                if (type(holder) is not _FileHandleTransfer or holder.state != 'CLOSE_UNKNOWN'
+                        or holder.close_outcome != 'KNOWN_NOT_CLOSED'
+                        or entry.keepalive[0] is not holder.returned or entry.keepalive[2] is not holder.close_function
+                        or entry.handle != holder.value or holder.detached_return != holder.value):
+                    _ownership_unknown('indeterminate CloseHandle result cannot be retried or reconstructed')
             errors = []
-            for entry in reversed(self.registry.unresolved()):
+            for entry in entries:
                 try:
                     self.registry.retry_owned(entry, self)
                 except BaseException as exc:
@@ -397,7 +414,8 @@ def read_windows_ipv4_tcp_dynamic_range():
     """One protected query; uncertain resources stay with their original owner.
 
     No caller PATH/shell, mutation or admission. A prior uncertain transfer or
-    close blocks reacquisition until that original owner's explicit recovery.
+    close blocks reacquisition. Only a confirmed no-close SDK failure can be
+    explicitly retried by that original owner; an indeterminate effect cannot.
     """
     import os
     global _dynamic_range_owner
