@@ -2465,7 +2465,7 @@ public final class PersistentComsolWorker {
     void succeed(Object value){result=value;status="SUCCEEDED";completedAt=Long.toString(System.currentTimeMillis());done.complete(null);}
     void fail(Map<String,Object> value){failure=value;status="FAILED";completedAt=Long.toString(System.currentTimeMillis());done.complete(null);}
     boolean active(){return "QUEUED".equals(status)||"RUNNING".equals(status);}
-    Map<String,Object> snapshot(){Map<String,Object> out=map("ok",!"FAILED".equals(status),"request_id",id,"type",type,"status",status,"queued_at_ms",queuedAt,"started_at_ms",startedAt,"completed_at_ms",completedAt);if(result!=null)out.put("result",result);if(failure!=null)out.put("failure",failure);return out;}
+    Map<String,Object> snapshot(){Map<String,Object> out=map("ok",!"FAILED".equals(status),"request_id",id,"type",type,"status",status,"queued_at_ms",queuedAt,"started_at_ms",startedAt,"completed_at_ms",completedAt);if("SUCCEEDED".equals(status)||result!=null)out.put("result",result);if(failure!=null)out.put("failure",failure);return out;}
   }
   static final class WorkerFailure extends RuntimeException {
     final String code; final Map<String,Object> details;

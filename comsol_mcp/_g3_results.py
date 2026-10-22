@@ -6986,14 +6986,26 @@ def result_evaluate(
 
 def _requested_interp_properties(
     feature: Any, expressions: Sequence[str], units: Sequence[str], *, stage: str,
+    before: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Bind requested numerical units to actual same-feature native property arrays.
+    """Bind requested expression/unit policy to same-feature native properties.
 
     COMSOL 6.4 Interp doc4485/chunks17293-17294 defines getData as the
     interpolation result and unit as the unit used for its expression.
-    This is property/application evidence, not a standalone runtime proof
-    of a particular model or conversion. No fallback, broadcast or relabel.
+    Explicit units stay exact. An empty unit requests COMSOL's native default,
+    whose actual unit may resolve during getData; a nonempty pre-read default
+    must remain stable. This is property evidence, not a proof of conversion.
+    No fallback, broadcast, scaling or relabeling is performed.
     """
+    if stage not in {"before_numeric_read", "after_numeric_read"}:
+        raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "Interp requested-unit stage is unsupported")
+    requested_expressions = list(expressions)
+    requested_units = list(units)
+    if (len(requested_expressions) != len(requested_units)
+            or any(not isinstance(value, str) for value in requested_expressions + requested_units)):
+        raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "Interp requested expr/unit arrays are malformed")
+    if stage == "after_numeric_read" and not isinstance(before, Mapping):
+        raise ExecutionContractError("EXECUTION_STATE_UNKNOWN", "Interp post-read unit check lacks its same-feature pre-read snapshot")
     try:
         observed_expr = _call(feature, "getStringArray", "expr")
         observed_unit = _call(feature, "getStringArray", "unit")
@@ -7002,21 +7014,61 @@ def _requested_interp_properties(
             "EXECUTION_STATE_UNKNOWN",
             f"Interp requested-unit {stage} native expr/unit getter failed: {exc}",
         ) from exc
-    snapshots = {}
-    for name, observed, requested in (("expr", observed_expr, expressions),
-                                      ("unit", observed_unit, units)):
-        if (not isinstance(observed, Sequence) or isinstance(observed, (str, bytes))
-                or any(not isinstance(value, str) for value in observed)
-                or list(observed) != list(requested)):
+    for name, observed in (("expr", observed_expr), ("unit", observed_unit)):
+        if (not isinstance(observed, Sequence) or isinstance(observed, (str, bytes, Mapping))
+                or any(not isinstance(value, str) for value in observed)):
             raise ExecutionContractError(
                 "EXECUTION_STATE_UNKNOWN",
-                f"Interp requested-unit {stage} {name} readback differs from exact requested array: "
-                f"observed={observed!r}, requested={list(requested)!r}",
+                f"Interp requested-unit {stage} {name} readback is not a string array",
             )
-        snapshots[name] = list(observed)
-    return {"stage": stage, "expressions": snapshots["expr"], "units": snapshots["unit"],
+    actual_expressions, actual_units = list(observed_expr), list(observed_unit)
+    if actual_expressions != requested_expressions:
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            f"Interp requested-unit {stage} expression readback differs from exact requested array: "
+            f"observed={actual_expressions!r}, requested={requested_expressions!r}",
+        )
+    if len(actual_units) != len(requested_units):
+        raise ExecutionContractError(
+            "EXECUTION_STATE_UNKNOWN",
+            f"Interp requested-unit {stage} unit readback shape differs from requested expressions: "
+            f"observed={actual_units!r}, requested_count={len(requested_units)}",
+        )
+    prior_units = None
+    if stage == "after_numeric_read":
+        prior_expressions = before.get("expressions")
+        prior_units = before.get("units")
+        if (not isinstance(prior_expressions, list) or prior_expressions != requested_expressions
+                or not isinstance(prior_units, list) or len(prior_units) != len(requested_units)
+                or any(not isinstance(value, str) for value in prior_units)):
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN", "Interp requested-unit post-read baseline is malformed or not expression-bound",
+            )
+    for index, (expression, requested, actual) in enumerate(
+            zip(requested_expressions, requested_units, actual_units)):
+        if actual and not actual.strip():
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                f"Interp requested-unit {stage} returned a whitespace-only native unit at index {index}: "
+                f"expression={expression!r}",
+            )
+        if requested:
+            if actual != requested:
+                raise ExecutionContractError(
+                    "EXECUTION_STATE_UNKNOWN",
+                    f"Interp requested-unit {stage} explicit unit differs at index {index}: "
+                    f"expression={expression!r}, observed={actual!r}, requested={requested!r}",
+                )
+        elif stage == "after_numeric_read" and prior_units[index] and actual != prior_units[index]:
+            raise ExecutionContractError(
+                "EXECUTION_STATE_UNKNOWN",
+                f"Interp requested-unit after_numeric_read changed from a nonempty pre-read native unit: "
+                f"expression={expression!r}, before={prior_units[index]!r}, after={actual!r}",
+            )
+    return {"stage": stage, "expressions": actual_expressions, "units": actual_units,
             "source": "same actual Interp NumericalFeature.getStringArray(expr/unit)",
-            "status": "VERIFIED_EXACT_NATIVE_ARRAYS"}
+            "status": "VERIFIED_EXACT_NATIVE_ARRAYS",
+            "unit_policy_status": "VERIFIED_EXPLICIT_EXACT_AND_NATIVE_DEFAULT_STABLE_OR_RESOLVED"}
 
 
 def _validate_count_only_point_samples(data: Any, *, num_expressions: int,
@@ -7348,13 +7400,34 @@ def result_at_points(worker: Any, model_tag: str, arguments: Mapping[str, Any]) 
         # during evaluation withholds publication without claiming tuple axes.
         verify_stationary_count_binding()
         if requested_units is not None:
-            after_units = _requested_interp_properties(feature, expressions, requested_units, stage="after_numeric_read")
+            after_units = _requested_interp_properties(
+                feature, expressions, requested_units, stage="after_numeric_read", before=before_units,
+            )
+            native_default_unit_resolution = {
+                expression: {
+                    "before_unit": before_unit,
+                    "after_unit": after_unit,
+                    "status": ("VERIFIED_ACTUAL_UNIT_READBACK" if after_unit
+                               else "UNVERIFIED_NATIVE_DEFAULT_UNIT_READBACK"),
+                }
+                for expression, requested, before_unit, after_unit in zip(
+                    expressions, requested_units, before_units["units"], after_units["units"],
+                ) if requested == ""
+            }
             requested_unit_evidence = {
-                "status": "VERIFIED_REQUESTED_UNITS_BEFORE_AND_AFTER_NUMERIC_READ",
+                "status": (
+                    "VERIFIED_REQUESTED_UNITS_BEFORE_AND_AFTER_NUMERIC_READ"
+                    if before_units["units"] == list(requested_units)
+                    and after_units["units"] == list(requested_units)
+                    else "VERIFIED_REQUESTED_UNIT_POLICY_BEFORE_AND_AFTER_NUMERIC_READ"
+                ),
+                "unit_policy_status": "VERIFIED_EXPLICIT_EXACT_AND_NATIVE_DEFAULT_STABLE_OR_RESOLVED",
                 "requested_expressions": list(expressions), "requested_units": list(requested_units),
                 "native_default_unit_expressions": [expr for expr, unit in zip(expressions, requested_units) if unit == ""],
+                "native_default_unit_resolution": native_default_unit_resolution,
                 "setter": "actual Interp NumericalFeature.setIndex(unit,requested,index)",
                 "before": before_units, "after": after_units,
+                "same_feature_instance_before_and_after": True,
                 "no_external_scaling_or_relabeling": True,
             }
             expression_units = dict(zip(after_units["expressions"], after_units["units"]))

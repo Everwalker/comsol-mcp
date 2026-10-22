@@ -1,0 +1,218 @@
+{
+  "schema_version": 1,
+  "unit": "Interp native-default resolution and Worker void-result terminal reply",
+  "captured_utc": "2026-10-22T20:39:01.342203+00:00",
+  "scope": {
+    "status": "SOFTWARE_SOURCE_AND_HARNESS_PASS",
+    "production_files": [
+      "repository/comsol_mcp/_g3_results.py",
+      "repository/comsol_mcp/worker_java/PersistentComsolWorker.java"
+    ],
+    "test_files": [
+      "repository/tests/test_interp_native_default_units.py",
+      "repository/tests/test_worker_void_reply.py"
+    ],
+    "private_receipts": "_state/universal-interp-default-void-protocol/",
+    "native_validation": "NOT_RUN_FOR_PATCHED_SOURCE; no new request, server, stop, or old-daemon operation was issued",
+    "review_status": "MAIN_ACCEPTED_SOURCE_SOFTWARE_INTERP_NATIVE_DEFAULT_AND_EXPLICIT_NULL_PROTOCOL_NOT_INSTALLED",
+    "git_or_canonical_progress": "NO_GIT_MUTATION; one read-only git diff --no-index invocation was inadvertently included in an earlier syntax-check command; it compared only the new test file to /dev/null and did not read or modify index, branch, history, remotes, or canonical progress."
+  },
+  "source_fingerprints": {
+    "g3_results_baseline_sha256": "5a7b3d8925cfbbed3b4e890f20401c6140e4f9b53403a27bde1224078f04101b",
+    "g3_results_current_sha256": "bcee6f8b8dafa5fd0e3b35f6f56bc714087b142d2f62a713474cf406f4d06349",
+    "worker_java_baseline_sha256": "81afe165e50a9b54c3fb62c5090ea6ad67980ecfb80302de35bcde42b8b38532",
+    "worker_java_current_sha256": "ac626ffa3d505906f0844880eb6a96a3a570fbccb44a83c21be463be29966a37",
+    "worker_java_exact_delta_proof": {
+      "only_change": "RequestState.snapshot emits result:null when status is SUCCEEDED",
+      "normalized_source_equal": true,
+      "normalized_sha256": "aa506c6377de450978963756b750d62e185406b6a5c236d43ca21afb6d2b0337",
+      "sensitive_spans_byte_identical_to_baseline": {
+        "worker_constructor_socket_bind": {
+          "sha256": "e3b0074e8b403a94f48e3990077336f20b84dace349065720c54c1d09f0963fc",
+          "matches_baseline": true
+        },
+        "worker_javac_ast_compile_snapshot": {
+          "sha256": "58ff292626a10a1b56eacd697a5109598bc3b2f474ef29b804e8171dff43a837",
+          "matches_baseline": true
+        },
+        "worker_trusted_code_modelutil_ast_policy": {
+          "sha256": "7bc5746cc6cecf3b08af7b35e987052e5df13687455239e2cf489955e0f596c6",
+          "matches_baseline": true
+        }
+      }
+    }
+  },
+  "interp_contract": {
+    "behavior": [
+      "Expression arrays remain exact in length, spelling, and order before and after numeric read.",
+      "Explicit nonempty units must equal the requested unit at both reads.",
+      "Exact empty unit requests COMSOL native default; the same feature may resolve it to its actual unit during getData.",
+      "A nonempty pre-read native unit must remain identical after getData; otherwise the adapter refuses.",
+      "Actual post-read unit is published per expression; a still-empty default remains UNVERIFIED.",
+      "No scaling, relabeling, broadcasting, expression allowlist, axis inference, or FieldArray synthesis was added."
+    ],
+    "native_default_proof_fields": [
+      "native_default_unit_resolution",
+      "same_feature_instance_before_and_after",
+      "unit_policy_status"
+    ],
+    "official_reference": {
+      "title": "COMSOL 6.4 - Interp",
+      "version": "6.4.0.293",
+      "doc_id": 4485,
+      "relative_path": "doc/help/wtpwebapps/ROOT/doc/com.comsol.help.comsol/comsol_api_results.52.082.html",
+      "source_sha256": "156412ab29631518953b57d6948b88a0181bf5312984b1a0f9e840a6ad848421",
+      "chunks": [
+        17293,
+        17294
+      ],
+      "documented_points": [
+        "getData recomputes when necessary and returns result[expression][solnum][coordinates].",
+        "unit property is the unit to use for expression; the property default is model dependent."
+      ],
+      "source_kind": "local official COMSOL 6.4 KB; documentation only, not model behavior proof"
+    }
+  },
+  "worker_reply_contract": {
+    "behavior": "RequestState.snapshot includes result even when null if and only if status is SUCCEEDED; QUEUED/RUNNING do not gain result; FAILED preserves failure object behavior.",
+    "strict_recovery_consumer": "ControlDaemon._read_session_job_requests unchanged; explicit result:null satisfies its existing terminal check; missing key, mismatched id/type, and nonterminal status still refuse.",
+    "actual_harness": {
+      "receipt_path": "_state/universal-interp-default-void-protocol/actual-java-harness/harness-receipt.json",
+      "snapshots_path": "_state/universal-interp-default-void-protocol/actual-java-harness/request-state-snapshots.json",
+      "jdk_home": "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home",
+      "compile": "actual PersistentComsolWorker.java plus reflection harness, javac -proc:none against installed COMSOL 6.4 apiplugins",
+      "execution": "RequestState and Json only; no Worker construction or COMSOL connection/start"
+    }
+  },
+  "historical_native_evidence": {
+    "disclaimer": "These are unchanged observations from frozen r3; they support the root cause only. They do not validate patched source or convert an old UNKNOWN to PASS.",
+    "public_result_evaluate_native_default": {
+      "request_path": "_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/target-result-evaluate-default-request-r1.json",
+      "request_sha256": "29049552920d0c38cbe71d381b51a28e94314d532de4f4d0af4e2888c626817e",
+      "response_path": "_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/target-result-evaluate-default-response-r1.json",
+      "response_sha256": "169b4b2658fc9dc34e21903698a886c3cb918bb6357a804fea877ff1794eec73",
+      "status": "SUCCEEDED_PUBLIC_EVAL_AGGREGATE_NONE",
+      "requested_units": [
+        ""
+      ],
+      "actual_expression_units": {
+        "u+0[K]": "K"
+      },
+      "result_budget": "PASS",
+      "numeric_solution_count": 1,
+      "solution_axes": "UNVERIFIED; no outer/inner tuple map claimed",
+      "scope": "prior native observation; result.evaluate response had no Interp requested_unit_application proof"
+    },
+    "explicit_k_control": {
+      "response_path": "_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/target-result-evaluate-explicit-k-response-r1.json",
+      "response_sha256": "d381e5a00f4a481542bcfcbce2d8e3d4f1e137ed14117a44eef79396bb5a7cdd",
+      "status": "SUCCEEDED_PUBLIC_EVAL_AGGREGATE_NONE",
+      "actual_expression_units": {
+        "u+0[K]": "K"
+      }
+    },
+    "old_public_at_points_unknown": {
+      "request_path": "_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/reopened-result-at-points-midpoint-request-r2.json",
+      "request_sha256": "e101fdb89b1e695dbb7fe5128dd4074545b24190995900ba2b5b56fd3b973a93",
+      "response_path": "_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/reopened-result-at-points-midpoint-response-r2.json",
+      "response_sha256": "4747e158048d4dbde6bb6bfd3edbaaf883080db6a231a65fc134bd1772b32ad9",
+      "operation_status": "UNKNOWN",
+      "job_status": "UNKNOWN",
+      "error_code": "EXECUTION_STATE_UNKNOWN",
+      "dispatch_stage": "post_dispatch",
+      "safe_retry": false,
+      "requested_units": [
+        ""
+      ],
+      "actual_post_read_units": [
+        "K"
+      ],
+      "getData_witnessed": true,
+      "engine_calls": 194,
+      "raw_midpoint_worker_reply": {
+        "job_id": "833f44d3-f5d3-4f80-a48a-b41007e967a6",
+        "worker_request_id": "wrk-4517b860-2cf7-4051-a7aa-48060eee42f6",
+        "event_id": 3410,
+        "reply_status": "SUCCEEDED",
+        "reply_sha256": "4eceb31b7550da5b502b232b2cabc851d98cb70d7462011592676a6ceec9b268",
+        "value_K": 349.9999999999981,
+        "scope": "native interpolation getData reply persisted under failed outer result.at_points request; does not convert outer UNKNOWN to PASS"
+      },
+      "recovery_status": "PARTIAL_UNRESOLVED",
+      "historical_unknown_preserved": true,
+      "recovery_response_path": "_state/universal-m2a-core-repair-20261023-r3/native/authorized-runtime/reopened-result-at-points-recovery-response-r1.json",
+      "recovery_response_sha256": "5515dfb382aff023873c5eb92a29d254fe15a0199d4868316df37780e543d64b",
+      "recovery_note": "three original SUCCEEDED replies had terminal=false because result was absent; the old result remains UNKNOWN and was not replayed."
+    }
+  },
+  "tests": {
+    "old_source_reproduction": {
+      "command": "repository/.venv/bin/python -m pytest tests/test_interp_native_default_units.py tests/test_worker_void_reply.py -q",
+      "result": "5 failed, 35 passed in 1.33s",
+      "exit_code": 1,
+      "interpretation": "5 expected failures and 35 passes after correcting a harness request-id mismatch; reproduces default blank-to-K rejection, drift distinction, null-key omission, and strict recovery refusal.",
+      "log_path": "_state/universal-interp-default-void-protocol/baseline/focused-corrected-fixtures.log",
+      "junit_path": "_state/universal-interp-default-void-protocol/baseline/junit-corrected-fixtures.xml"
+    },
+    "current": {
+      "focused": "44 passed in 1.38s",
+      "focused_exit_code": 0,
+      "g3_results_unit": "27 passed, 224 deselected in 0.43s",
+      "g3_results_exit_code": 0,
+      "worker_java_compiler": "2 passed in 4.97s",
+      "worker_java_compiler_exit_code": 0,
+      "stationary_count_full_attempt": "1 failed, 69 passed in 0.51s",
+      "stationary_count_full_exit_code": 1,
+      "stationary_count_without_only_missing_input": "69 passed, 1 deselected in 0.51s",
+      "stationary_count_filtered_exit_code": 0,
+      "missing_fixture": {
+        "test": "test_exact_r9_actual_getter_shape_is_preserved_without_parameter_reinterpretation",
+        "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository/_state/t044-r9-actual-partial-ff2952bf2c3c/MAIN_ACTUAL_TERMINAL_EVIDENCE_R1.json",
+        "test_execution_status": "FAIL_MISSING_HISTORICAL_INPUT",
+        "evidence_status": "NOT_RUN because the referenced historical input is absent",
+        "handling": "full-suite failure retained; no skip conversion or assertion change"
+      },
+      "junit_paths": [
+        "focused-final.xml",
+        "g3-results-unit-final.xml",
+        "worker-java-compiler-regression.xml",
+        "stationary-count-regression.xml",
+        "stationary-count-no-missing-fixture.xml"
+      ]
+    },
+    "attempt_receipts": [
+      "baseline/focused.log",
+      "baseline/focused-corrected-fixtures.log",
+      "focused-r1.log",
+      "focused-r2.log",
+      "focused-r3.log",
+      "focused-final.log",
+      "stationary-count-regression.log"
+    ],
+    "commands": {
+      "focused": "COMSOL_TEST_JDK11=/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home COMSOL_ROOT=/Applications/COMSOL64/Multiphysics repository/.venv/bin/python -m pytest tests/test_interp_native_default_units.py tests/test_worker_void_reply.py -q --junitxml=_state/universal-interp-default-void-protocol/focused-final.xml",
+      "g3_results_unit": "repository/.venv/bin/python -m pytest tests/test_g3_results.py -k \"requested_unit or native_default\" -q --junitxml=_state/universal-interp-default-void-protocol/g3-results-unit-final.xml",
+      "worker_java_compiler": "COMSOL_TEST_JDK11=/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home COMSOL_ROOT=/Applications/COMSOL64/Multiphysics repository/.venv/bin/python -m pytest tests/test_worker_registered_source_compiler.py -q --junitxml=_state/universal-interp-default-void-protocol/worker-java-compiler-regression.xml",
+      "stationary_count_full": "repository/.venv/bin/python -m pytest tests/test_t044_r10_stationary_count_only.py -q --junitxml=_state/universal-interp-default-void-protocol/stationary-count-regression.xml",
+      "stationary_count_remaining": "repository/.venv/bin/python -m pytest tests/test_t044_r10_stationary_count_only.py -k \"not exact_r9_actual_getter_shape_is_preserved_without_parameter_reinterpretation\" -q --junitxml=_state/universal-interp-default-void-protocol/stationary-count-no-missing-fixture.xml"
+    },
+    "result_json_receipts": [
+      "_state/universal-interp-default-void-protocol/focused-final-result.json",
+      "_state/universal-interp-default-void-protocol/g3-results-unit-final-result.json",
+      "_state/universal-interp-default-void-protocol/worker-java-compiler-regression-result.json",
+      "_state/universal-interp-default-void-protocol/stationary-count-regression-result.json",
+      "_state/universal-interp-default-void-protocol/stationary-count-no-missing-fixture-result.json"
+    ]
+  },
+  "limitations": [
+    "No new wheel/install or native test of patched source was performed.",
+    "No M2A_NATIVE/M2_CORE_REPAIR compact, canonical Main progress file, Git state, or unrelated production/test file was changed."
+  ],
+  "private_source_fingerprint_receipt": "_state/universal-interp-default-void-protocol/source-fingerprint.json",
+  "operational_disclosure": "No source, tests, state, or Git metadata were changed by the read-only diff invocation; the command itself is disclosed above.",
+  "Main_review": {
+    "path": "_state/universal-main-review/20261023-interp-void/MAIN_REVIEW.json",
+    "bytes": 5041,
+    "sha256": "d7fffd3d1cdde47111a489f6361f0edb0904d496c1216c795141e5529bfbde52"
+  }
+}
