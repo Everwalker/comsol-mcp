@@ -1,0 +1,393 @@
+{
+  "schema": "universal-dependency-intel-build/1",
+  "recorded_utc": "2026-10-22T11:58:45Z",
+  "scope": {
+    "goal": "M4/U10 Intel macOS architecture dependency candidate for the fixed cryptography==50.0.1 closure",
+    "write_scope": [
+      "_state/universal-intel-crypto/",
+      "tools/build_universal_intel_crypto.py",
+      "docs/universal_mcp_execution/evidence/dependency-intel-build.json"
+    ],
+    "source_scope": "Build only the cryptography 50.0.1 Intel wheel from its exact official sdist; do not change package pins, locks, canonical dependency-prep evidence, progress/state files, application bundle, M1 core, COMSOL installation, license, or system toolchain.",
+    "canonical_prep_before_and_after": {
+      "evidence": "docs/universal_mcp_execution/evidence/dependency-prep.json",
+      "macos_x86_64_status": "PREPARED_WITH_MISSING_WHEEL",
+      "prepared_wheels": 40,
+      "expected_distributions": 41,
+      "missing_distribution": "cryptography==50.0.1",
+      "candidate_integrated": false
+    }
+  },
+  "upstream_support": {
+    "distribution": "cryptography",
+    "version": "50.0.1",
+    "official_macos_x86_64_wheel_available": false,
+    "upstream_intel_support": "UNSUPPORTED_BY_UPSTREAM; PyCA changelog says macOS x86_64 support/wheels were removed beginning with 49.0.0. This wheel is project-derived and does not restore upstream support.",
+    "official_sources": [
+      {
+        "url": "https://cryptography.io/en/latest/changelog/",
+        "fact": "49.0.0 removed macOS x86_64 support and stopped publishing Intel wheels."
+      },
+      {
+        "url": "https://pypi.org/project/cryptography/50.0.1/",
+        "fact": "Official 50.0.1 source distribution is available; no macOS x86_64 wheel is published."
+      },
+      {
+        "url": "https://cryptography.io/en/latest/installation/",
+        "fact": "Documents source builds with Rust and private/static OpenSSL; it does not establish upstream Intel support."
+      },
+      {
+        "url": "https://cryptography.io/en/50.0.2/changelog/",
+        "fact": "PyCA 50.0.2's official platform wheels use OpenSSL 4.0.3; this project build independently compiles the pinned 50.0.1 source against that OpenSSL release."
+      }
+    ]
+  },
+  "verified_inputs": [
+    {
+      "name": "cryptography source",
+      "version": "50.0.1",
+      "source_url": "https://files.pythonhosted.org/packages/bb/ad/5d6702db60b1e40b41ef513b6967ff5848f307d50f8449baf1634f5908f1/cryptography-50.0.1.tar.gz",
+      "local_path": "_state/universal-intel-crypto/downloads/cryptography-50.0.1.tar.gz",
+      "bytes": 880381,
+      "sha256": "5dd9bda1c12b4162f6ff568eeb5e0ff956c28d14406e875cfe8a63a2d414ff20",
+      "verification": "Matches official PyPI JSON digest; source copied without edits to _state/universal-intel-crypto/src/cryptography-50.0.1/"
+    },
+    {
+      "name": "cryptography Cargo.lock",
+      "local_path": "_state/universal-intel-crypto/src/cryptography-50.0.1/Cargo.lock",
+      "sha256": "081ae57e95dabac9f47e2f070d2a3f0e8638ce9a560101b7d459b67cf4481fec",
+      "verification": "Used with maturin --locked; lockfile unchanged. Cargo registry downloads stayed under private CARGO_HOME and used Cargo.lock checksums."
+    },
+    {
+      "name": "OpenSSL source",
+      "version": "4.0.3",
+      "source_url": "https://github.com/openssl/openssl/releases/download/openssl-4.0.3/openssl-4.0.3.tar.gz",
+      "official_source_index": "https://www.openssl-library.org/source/",
+      "official_sha256_sidecar": "https://github.com/openssl/openssl/releases/download/openssl-4.0.3/openssl-4.0.3.tar.gz.sha256",
+      "local_path": "_state/universal-intel-crypto/downloads/openssl-4.0.3.tar.gz",
+      "sha256": "325b5c806167c13b40b1ffeadfe0248197c00eccc4cf123ec1e28d2d2fd216d9",
+      "verification": "Matches official published .sha256 sidecar; independently matches Homebrew formula source hash."
+    },
+    {
+      "name": "Maturin",
+      "version": "1.14.1",
+      "source_url": "https://github.com/PyO3/maturin/releases/download/v1.14.1/maturin-aarch64-apple-darwin-v1.14.1.tar.gz",
+      "local_archive": "_state/universal-intel-crypto/downloads/maturin-aarch64-apple-darwin-v1.14.1.tar.gz",
+      "archive_sha256": "4b619dec2d5b40d589d050f44b494e8dc3e0291a417de8e2f81b99dc8870d599",
+      "extracted_binary": "_state/universal-intel-crypto/toolchain/maturin/maturin",
+      "extracted_binary_sha256": "ccbdc41f320f189004e159c74d82f1277db78acdd10436746e08ac1029e9146b",
+      "verification": "maturin --version reports 1.14.1"
+    },
+    {
+      "name": "Rustup installer",
+      "version": "1.29.2",
+      "local_path": "_state/universal-intel-crypto/downloads/rustup-init-aarch64-apple-darwin",
+      "sha256": "f7c7e11eb2e07f006e532a8aaac77b32f4527d305ac386c0c633ca6133d35ca9",
+      "verification": "Matches adjacent official .sha256 file; installed only with private RUSTUP_HOME and CARGO_HOME."
+    },
+    {
+      "name": "Rust toolchain",
+      "rustc": "1.99.1 (58cf8f9c3 2026-10-13)",
+      "cargo": "1.99.1 (5f94df478 2026-08-27)",
+      "host_target": "aarch64-apple-darwin",
+      "installed_cross_target": "x86_64-apple-darwin",
+      "private_homes": [
+        "_state/universal-intel-crypto/toolchain/rustup/",
+        "_state/universal-intel-crypto/toolchain/cargo/"
+      ],
+      "distribution_manifest": {
+        "path": "_state/universal-intel-crypto/toolchain/rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/multirust-channel-manifest.toml",
+        "sha256": "48419307eb32e389a25ac360b6bccd4d196f3c4f35ce9d67a223319eff017c6c",
+        "note": "Pinned Rust distribution manifest containing the official component URLs and SHA-256 values for rustc, cargo, and host/target rust-std."
+      }
+    },
+    {
+      "name": "Python Build Standalone",
+      "version": "3.12.14",
+      "release_asset_index": "https://github.com/astral-sh/python-build-standalone/releases/expanded_assets/20260924",
+      "host_arm64_archive": "_state/universal-intel-crypto/python-build/cpython-3.12.14-aarch64-apple-darwin.tar.gz",
+      "host_arm64_sha256": "c2edb321cd32ec2b170df208db0446dccc4398db602ca27cf2079098fb1f7d9d",
+      "target_x86_64_archive": "_state/universal-intel-crypto/python-build/cpython-3.12.14-x86_64-apple-darwin.tar.gz",
+      "target_x86_64_sha256": "7ea9761b9069c10b9a20531d568645849d604c59e9c7f11f6659f1e1790c968e",
+      "verification": "Digests verified against official release asset page. A GitHub API metadata request returned HTTP 403; that lookup failure was retained and resolved using the official expanded-assets page."
+    },
+    {
+      "name": "private Python build tools",
+      "manifest": "_state/universal-intel-crypto/downloads/python-build-tools.json",
+      "installed_versions": {
+        "pip": "25.3",
+        "setuptools": "84.0.0",
+        "cffi": "2.0.0",
+        "pycparser": "3.0"
+      },
+      "verification": "PyPI artifact URLs, sizes, metadata hashes, wheel tags, and SHA-256 values are recorded in the manifest; installed to the private build venv offline with --require-hashes.",
+      "manifest_sha256": "299d4c8fc4aab42a20ea13ce3ec0cbea7b304f4ebaf95373ddc500e4997448a7"
+    }
+  ],
+  "build_environment": {
+    "host_architecture": "arm64 macOS cross-build host",
+    "command_line_tools": "/Library/Developer/CommandLineTools",
+    "macos_sdk_version": "27.0",
+    "target": "x86_64-apple-darwin",
+    "minimum_macos": "12.0",
+    "python_build_venv": "_state/universal-intel-crypto/python-build/build-venv/",
+    "target_python": "_state/universal-intel-crypto/python-build/target/python/ (CPython 3.12.14 x86_64 headers/lib for PyO3 cross configuration)",
+    "openssl_prefix": "_state/universal-intel-crypto/openSSL/x86_64-macos12/",
+    "environment_isolation": "Rustup, Cargo, Cargo target, pip cache, downloaded artifacts, sources, and build outputs are under _state/universal-intel-crypto/. No system Rust, user-global Rust, Homebrew package, security setting, or global toolchain was installed or changed.",
+    "network_note": "The first source/toolchain build fetched source artifacts and Cargo.lock-pinned crates. The resulting wheel was then installed from local files with pip --no-index during the functional check."
+  },
+  "builds": [
+    {
+      "component": "OpenSSL static x86_64",
+      "attempt": 1,
+      "script": "_state/universal-intel-crypto/build-openssl.sh",
+      "command": "bash _state/universal-intel-crypto/build-openssl.sh",
+      "configuration": [
+        "./Configure darwin64-x86_64-cc",
+        "no-shared",
+        "no-module",
+        "no-tests",
+        "-arch x86_64",
+        "-isysroot CommandLineTools MacOSX.sdk",
+        "-mmacosx-version-min=12.0",
+        "make -j4",
+        "make install_sw"
+      ],
+      "result": "PASS",
+      "outputs": [
+        "_state/universal-intel-crypto/openSSL/x86_64-macos12/lib/libcrypto.a",
+        "_state/universal-intel-crypto/openSSL/x86_64-macos12/lib/libssl.a"
+      ],
+      "audit": "Both archives are non-fat x86_64; OpenSSL CLI under Rosetta reports OpenSSL 4.0.3 29 Sep 2026, darwin64-x86_64-cc, and active default/legacy providers.",
+      "log": "_state/universal-intel-crypto/logs/openssl-build-attempt-1.log"
+    },
+    {
+      "component": "cryptography 50.0.1 Intel wheel",
+      "attempt": 1,
+      "script": "_state/universal-intel-crypto/build-cryptography.sh",
+      "command": "bash _state/universal-intel-crypto/build-cryptography.sh",
+      "effective_build_command": "maturin build --release --target x86_64-apple-darwin --interpreter _state/universal-intel-crypto/python-build/build-venv/bin/python --locked --out _state/universal-intel-crypto/wheelhouse/macos_x86_64",
+      "key_settings": [
+        "OPENSSL_STATIC=1",
+        "OPENSSL_DIR=private OpenSSL 4.0.3 prefix",
+        "PYO3_CROSS=1",
+        "PYO3_CROSS_PYTHON_VERSION=3.12",
+        "PYO3_CROSS_PYTHON_IMPLEMENTATION=CPython",
+        "PYO3_CROSS_LIB_DIR=private x86_64 CPython 3.12 libdir",
+        "private CARGO_HOME/RUSTUP_HOME/CARGO_TARGET_DIR",
+        "SDKROOT=CommandLineTools MacOSX.sdk",
+        "MACOSX_DEPLOYMENT_TARGET=12.0"
+      ],
+      "result": "PASS",
+      "compiler_warnings": "14 CFFI/OpenSSL const-qualifier warnings were emitted; no warning was suppressed, and the build completed successfully.",
+      "log": "_state/universal-intel-crypto/logs/cryptography-build-attempt-1.log"
+    }
+  ],
+  "candidate_wheel": {
+    "path": "_state/universal-intel-crypto/wheelhouse/macos_x86_64/cryptography-50.0.1-cp312-abi3-macosx_12_0_x86_64.whl",
+    "bytes": 4043680,
+    "sha256": "2973023be3599d26bfeaa82b08b2fd2b3c90f9df4d61647494fb59b84dac1254",
+    "distribution": "cryptography",
+    "version": "50.0.1",
+    "wheel_tag": "cp312-abi3-macosx_12_0_x86_64",
+    "requires_python": ">=3.9, !=3.9.0, !=3.9.1",
+    "requires_dist": [
+      "cffi>=2.0.0; platform_python_implementation != 'PyPy'",
+      "typing-extensions>=4.13.2; python_full_version < '3.11'"
+    ],
+    "build_backend": "maturin 1.14.1",
+    "nature": "PROJECT_DERIVED_CUSTOM_BUILD_NOT_AN_OFFICIAL_PYCA_WHEEL"
+  },
+  "binary_audit": {
+    "wheel_macho_members": [
+      "cryptography/hazmat/bindings/_rust.abi3.so"
+    ],
+    "macho_count": 1,
+    "architecture": "x86_64 only (lipo non-fat)",
+    "minimum_macos": "12.0 (LC_BUILD_VERSION)",
+    "sdk": "27.0 (LC_BUILD_VERSION)",
+    "otool_L_dependencies": [
+      "@rpath/cryptography.hazmat.bindings._rust.abi3.so (self install name)",
+      "/usr/lib/libiconv.2.dylib",
+      "/usr/lib/libSystem.B.dylib"
+    ],
+    "unexpected_external_openssl_dylib": false,
+    "openssl_linkage": "Static OpenSSL; runtime backend reports the privately compiled OpenSSL 4.0.3.",
+    "inspection_evidence": "Wheel contents and WHEEL/METADATA were parsed from the artifact; the installed extension was checked with file, lipo, otool -L, and otool -l."
+  },
+  "functional_check": {
+    "attempt": 1,
+    "classification": "ROSETTA_PURE_PYTHON_DEPENDENCY_FUNCTIONAL_SELFCHECK",
+    "script": "_state/universal-intel-crypto/verify-and-rosetta-selfcheck.sh",
+    "command": "bash _state/universal-intel-crypto/verify-and-rosetta-selfcheck.sh",
+    "result": "PASS",
+    "runtime": "CPython 3.12.14 x86_64 under /usr/bin/arch -x86_64 (Rosetta)",
+    "cryptography": "50.0.1",
+    "backend": "OpenSSL 4.0.3 29 Sep 2026",
+    "dependency_inputs": [
+      {
+        "name": "cffi",
+        "version": "2.1.1",
+        "path": "_state/universal-dependency-prep/macos_x86_64/cffi-2.1.1-cp312-cp312-macosx_10_15_x86_64.whl",
+        "sha256": "c8c69575568085ba0b1b10c0249d779a214aea6f6522e949a0fc9fb0fcb449d0",
+        "matched_existing_prep_manifest": true
+      },
+      {
+        "name": "pycparser",
+        "version": "3.0",
+        "path": "_state/universal-dependency-prep/macos_x86_64/pycparser-3.0-py3-none-any.whl",
+        "sha256": "b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992",
+        "matched_existing_prep_manifest": true
+      }
+    ],
+    "installation": "PASS: disposable x86_64 Python venv installed the candidate and the two exact prepared dependencies using pip --no-index --no-cache-dir --no-deps.",
+    "operations": [
+      {
+        "check": "AES-GCM encrypt/decrypt",
+        "result": "PASS"
+      },
+      {
+        "check": "AES-GCM tampered ciphertext rejection (InvalidTag)",
+        "result": "PASS"
+      },
+      {
+        "check": "ECDSA P-256 sign/verify",
+        "result": "PASS"
+      },
+      {
+        "check": "ECDSA tampered signature rejection (InvalidSignature)",
+        "result": "PASS"
+      }
+    ],
+    "log": "_state/universal-intel-crypto/logs/cryptography-rosetta-selfcheck-attempt-1.log",
+    "native_intel_hardware_acceptance": "NOT_RUN_USER_REQUESTED_SKIP",
+    "comsol_execution": "NOT_RUN"
+  },
+  "attempt_history": [
+    {
+      "event": "Python standalone release metadata API lookup",
+      "result": "HTTP 403; no source/build failure and no release asset was modified.",
+      "resolution": "Retrieved SHA-256 values from the official expanded-assets release page and verified both downloaded archives.",
+      "preserved_log": "_state/universal-intel-crypto/logs/python-standalone-api-403.log"
+    },
+    {
+      "event": "Rustup active-toolchain audit command initially omitted explicit RUSTUP_HOME",
+      "result": "Permission denied while rustup attempted to access its default /Users/everwalker/.rustup; command stopped before any state change.",
+      "resolution": "Repeated with explicit private RUSTUP_HOME and CARGO_HOME; stable-aarch64-apple-darwin, rustc/cargo 1.99.1, and x86_64-apple-darwin target were confirmed.",
+      "impact": "No system or user-global toolchain was installed or modified."
+    },
+    {
+      "event": "Cryptography cross-build compiler diagnostics",
+      "result": "14 non-fatal C const-qualifier warnings; build still passed and warnings remain visible in the preserved build log."
+    }
+  ],
+  "acceptance_status": {
+    "derived_wheel_build": "PASS",
+    "wheel_tag_architecture_linkage_audit": "PASS",
+    "Rosetta_pure_dependency_functional_check": "PASS",
+    "canonical_M4_macos_x86_64_dependency_closure": "INCOMPLETE_40_OF_41; candidate is not integrated into the existing closure or its lock/evidence.",
+    "complete_target_offline_install": "NOT_RUN",
+    "application_bundle_or_freeze": "NOT_RUN",
+    "Intel_native_hardware_acceptance": "NOT_RUN_USER_REQUESTED_SKIP",
+    "upstream_Intel_support": "UNSUPPORTED_BY_UPSTREAM",
+    "main_agent_acceptance": "PASS_SCOPED_DERIVED_BUILD_REVIEWED"
+  },
+  "reproduction_commands": [
+    "bash _state/universal-intel-crypto/build-openssl.sh",
+    "bash _state/universal-intel-crypto/build-cryptography.sh",
+    "bash _state/universal-intel-crypto/verify-and-rosetta-selfcheck.sh",
+    "python3 tools/build_universal_intel_crypto.py --inputs-dir <private-input-tree> --output-dir <fresh-output-path>  # plan only; verifies pinned inputs",
+    "python3 tools/build_universal_intel_crypto.py --inputs-dir <private-input-tree> --output-dir <fresh-output-path> --build  # opt-in offline build; not run in this task"
+  ],
+  "preserved_evidence": [
+    {
+      "path": "_state/universal-intel-crypto/build-openssl.sh",
+      "sha256": "e48a53498c352f0b6f6aed6f5cac7abfc198edc5cd052e7befad2c05b5ad0b5a"
+    },
+    {
+      "path": "_state/universal-intel-crypto/build-cryptography.sh",
+      "sha256": "d1f769a8853ffc25646bd377feeff44272298b99af5458efcf098485a16100be"
+    },
+    {
+      "path": "_state/universal-intel-crypto/verify-and-rosetta-selfcheck.sh",
+      "sha256": "740df5481b92ee4284682584ec822d4bfb74cd80a1628e697f0c81ebace0ac93"
+    },
+    {
+      "path": "_state/universal-intel-crypto/logs/openssl-build-attempt-1.log",
+      "sha256": "c9244c0b418393611081ccbde6703d3899ec975b4bef9058813b2b4c256ccd75"
+    },
+    {
+      "path": "_state/universal-intel-crypto/logs/openssl-runtime-probe.log",
+      "sha256": "ed5dcea1d25eb5130b69dbca9a3c282de5159e4dcc8c496470ba011c5c96c5e2"
+    },
+    {
+      "path": "_state/universal-intel-crypto/logs/cryptography-build-attempt-1.log",
+      "sha256": "166f7b3361875c123f439823e5278e38e3435c57f4f2c1a0997ee2a48187e629"
+    },
+    {
+      "path": "_state/universal-intel-crypto/logs/cryptography-rosetta-selfcheck-attempt-1.log",
+      "sha256": "1fb3b0f3dc2e28a276b5e71d4a0364fed939232ba97b9a90cc7cb8d124f94c37"
+    },
+    {
+      "path": "_state/universal-intel-crypto/logs/python-standalone-api-403.log",
+      "sha256": "a5518d3fd24de9516671166a6be81a8dc9466bc4f3298e00c803370d9dee8e04"
+    },
+    {
+      "path": "_state/universal-intel-crypto/wheelhouse/macos_x86_64/cryptography-50.0.1-cp312-abi3-macosx_12_0_x86_64.whl",
+      "sha256": "2973023be3599d26bfeaa82b08b2fd2b3c90f9df4d61647494fb59b84dac1254"
+    },
+    {
+      "path": "tools/build_universal_intel_crypto.py",
+      "sha256": "a5829f7497795f3a84b452af087fe9305d62fc91b7329324b248798995e197cd"
+    }
+  ],
+  "updated_utc": "2026-10-22T12:39:23Z",
+  "portable_helper": {
+    "path": "tools/build_universal_intel_crypto.py",
+    "sha256": "a5829f7497795f3a84b452af087fe9305d62fc91b7329324b248798995e197cd",
+    "interface": "--inputs-dir <caller-supplied-private-tree> --output-dir <fresh-path>; default prints a verified plan, --build opts into an offline build.",
+    "input_provenance": "Reads fixed artifact/toolchain hashes and versions from this evidence; verifies the source archives, Python/Maturin/Rustup inputs, build-wheel manifest and wheels, and Rust distribution manifest before planning/building.",
+    "output_controls": "Refuses an existing output path and overlapping input/output trees. All extraction, venvs, Rust/Cargo state, caches, logs, and wheels are directed to the caller output path.",
+    "validation": {
+      "syntax_and_help": "PASS",
+      "pinned_input_plan": "PASS (13 input fingerprints, six build commands, no output tree created)",
+      "source_layout": "PASS (planned cryptography cwd equals the shared extraction destination out/src/cryptography-src/cryptography-50.0.1)",
+      "environment_scope": "PASS (no HOME/CODEX_HOME override; build paths are output-scoped and Rust/Maturin probes use private RUSTUP_HOME/CARGO_HOME plus temporary TMPDIR)",
+      "home_override_negative_control": "PASS (helper rejects an injected HOME key)",
+      "no_overwrite_control": "PASS (existing sentinel preserved)",
+      "input_ancestry_control": "PASS (output under input tree rejected without creating it)",
+      "invalid_argument_control": "PASS",
+      "clean_rebuild": "NOT_RUN_PER_REQUEST",
+      "functional_retest": "NOT_RUN_PER_REQUEST"
+    },
+    "main_review": {
+      "status": "PASS_SCOPED_PLAN_HELPER_REVIEWED_CLEAN_REBUILD_NOT_RUN",
+      "sha256": "a5829f7497795f3a84b452af087fe9305d62fc91b7329324b248798995e197cd",
+      "fixes_verified": [
+        "planned cryptography source path shares the actual extraction layout",
+        "HOME/CODEX_HOME are not redirected; private Rust/Cargo/cache/temp roots used",
+        "provenance attributes review to Main without implying human approval"
+      ],
+      "scope": "The successful derived build and Rosetta selfcheck were not repeated. Helper syntax/verified plan/layout/environment/refusal controls only."
+    }
+  },
+  "main_agent_review": {
+    "status": "PASS_SCOPED_DERIVED_BUILD_REVIEWED",
+    "source": "Main Agent independent hash/source/binary/log review",
+    "scope": "Derived Intel wheel candidate only; not native Intel hardware acceptance or canonical dependency closure.",
+    "checks_reported": [
+      "9 existing evidence hashes match",
+      "485 official original sdist files are exact and unchanged",
+      "full wheel RECORD valid",
+      "Mach-O independently parsed as x86_64, min macOS 12.0, system libraries only, no RPATH",
+      "raw four Rosetta positive/negative crypto checks matched"
+    ],
+    "native_intel_hardware_acceptance": "NOT_RUN_USER_REQUESTED_SKIP"
+  },
+  "subsequent_canonical_closure": {
+    "evidence": "docs/universal_mcp_execution/evidence/M4_RELEASE_TOOLING.json",
+    "status": "NEW_RUN_ALL_THREE_TARGET_BUNDLES_PACKAGED_SOFTWARE_SCOPED",
+    "historical_40_of_41_prep_and_this_build_scope_preserved": true,
+    "intel_native": "NOT_RUN_USER_REQUESTED_SKIP"
+  }
+}

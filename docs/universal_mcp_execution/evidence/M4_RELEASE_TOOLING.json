@@ -1,0 +1,460 @@
+{
+  "schema": "universal-m4-release-tooling/1",
+  "recorded_utc": "2026-10-22T12:37:35.841114+00:00",
+  "status": "PASS_SCOPED_SOFTWARE_AND_ARTIFACT_BINDING_MAIN_REVIEWED",
+  "git_base": "4759c097eabfdf588a366af51d9c7d1b90d1ac1b",
+  "scope": "Only metadata/lock, the new release CLI/tests, the expressly authorized derived verifier/tests and this compact evidence were edited. Main production COMSOL code and Main progress/handoff/state were not edited; no Git publication.",
+  "source_files": [
+    {
+      "path": "pyproject.toml",
+      "bytes": 1989,
+      "sha256": "c96f28cc0ea2e699330189f80f3cf87685417c5bc95e2b0e5674923a1d1cdc1a"
+    },
+    {
+      "path": "uv.lock",
+      "bytes": 307301,
+      "sha256": "a6bb3dc08acdb783a1d3553f71e21bde8c7a8e01394a6f70a062357a4ce04fc2"
+    },
+    {
+      "path": "tools/universal_release.py",
+      "bytes": 16627,
+      "sha256": "4a2c295dcec914c40d6511afc2d6940084fe6aa0872b1b49af04b895b93f1115"
+    },
+    {
+      "path": "tests/test_universal_release.py",
+      "bytes": 8962,
+      "sha256": "6dd5b4819fe0a7f9e102812edf7ad8389dd7af191679a9ad4aac26a42b95db56"
+    },
+    {
+      "path": "tools/full_project_release.py",
+      "bytes": 218299,
+      "sha256": "51de33eb63943f2aed114e2efb6a26e4e84d893508a4f95920df0e606e9fb4d4"
+    },
+    {
+      "path": "tests/test_full_project_release.py",
+      "bytes": 85307,
+      "sha256": "edce7a39ce415a0280c4e86f9958c01bb1d7773f36aec0a7acdc047771a9ae01"
+    }
+  ],
+  "lock_refresh": {
+    "generator": "uv 0.11.21, official PyPI only; temporary exact constraints, then official re-resolution without constraints and offline locked check",
+    "changed_or_removed_existing_versions": {},
+    "prior_package_version_rows": 45,
+    "added": {
+      "psutil": [
+        "5.9.8"
+      ],
+      "pyobjc-core": [
+        "12.2.2"
+      ],
+      "pyobjc-framework-applicationservices": [
+        "12.2.2"
+      ],
+      "pyobjc-framework-cocoa": [
+        "12.2.2"
+      ],
+      "pyobjc-framework-coremedia": [
+        "12.2.2"
+      ],
+      "pyobjc-framework-coretext": [
+        "12.2.2"
+      ],
+      "pyobjc-framework-quartz": [
+        "12.2.2"
+      ],
+      "pyobjc-framework-screencapturekit": [
+        "12.2.2"
+      ]
+    },
+    "comparison": {
+      "path": "_state/universal-release-tooling/lock-resolution/version-comparison.json",
+      "bytes": 781,
+      "sha256": "cd8a59353d288fca48872d50a7081f457aadd099dbd117de434df9f2a087557d"
+    },
+    "candidate_pyproject_sha256": "c96f28cc0ea2e699330189f80f3cf87685417c5bc95e2b0e5674923a1d1cdc1a",
+    "candidate_uv_lock_sha256": "a6bb3dc08acdb783a1d3553f71e21bde8c7a8e01394a6f70a062357a4ce04fc2",
+    "existing_edge_marker_normalization": {
+      "edge": "exceptiongroup -> typing-extensions",
+      "before": "python_full_version < '3.13'",
+      "after": "python_full_version < '3.11'",
+      "result": "no effective base/dev pins or hash changes for Windows/ARM/Intel Python3.10 through3.15"
+    },
+    "base_dev_effective_comparisons": 18,
+    "base_dev_versions_and_hashes_equal": true,
+    "effective_comparison": {
+      "path": "_state/universal-release-tooling/lock-effective-comparison/RESULT.json",
+      "bytes": 2819,
+      "sha256": "8568710d853566f4a4ad310316145c6e26f02bebde460d9206fbddc53690ec46"
+    },
+    "prior_uv_lock": {
+      "path": "_state/universal-release-tooling/lock-resolution/uv.before.lock",
+      "bytes": 279458,
+      "sha256": "2058044231f3ace0a36b537a12b041579af94b9042add9acfd18ca0c0d7505c1"
+    }
+  },
+  "implementation": {
+    "entrypoint": "python -m tools.universal_release",
+    "composition": [
+      "source_snapshot",
+      "build_wheel",
+      "compose_derived_wheel_lock (optional Intel input)",
+      "compose_install_lock",
+      "create_bundle_manifest",
+      "package_wheelhouse_bundle"
+    ],
+    "source_profile_or_activity_hash_required": false,
+    "outputs": "Fresh explicit output only; retained readonly canonical comsol_mcp plus three root source files, exact wheel and lock hashes, generated target pins, graph audit, archive audit, SBOM and license inventory.",
+    "incomplete_inputs": "MISSING_INPUT persists available inputs/unknown transitive reachability and never packages an incomplete target.",
+    "historical_locks_and_closed_tools": "UNCHANGED",
+    "builder_hash_lock": {
+      "path": "continuation/packets/w26-offline-input-closure-r1/requirements-backend.lock",
+      "bytes": 360,
+      "sha256": "6f8b652ba4e1d8a0e040b2352e211f2d226acc9336a58c6229c874085643548a"
+    }
+  },
+  "candidate": {
+    "release_record": {
+      "path": "_state/universal-release-tooling/release-candidate/RELEASE.json",
+      "bytes": 39378,
+      "sha256": "9700b7e456c205a3f74cf408cc0556d31916129af4d96dea80b4ac51fed48824"
+    },
+    "source_manifest": {
+      "path": "_state/universal-release-tooling/release-candidate/SOURCE.json",
+      "bytes": 29667,
+      "sha256": "5227a936a8a6661aaeb07bc7c39e1a958975e832ea900e604ecdc8ae9989aa02"
+    },
+    "source_member_fingerprint_sha256": "6c7e67b3bea49671e65452e11cf2fe46b397d234fa2aae2e73e9c30b822e7a5c",
+    "source_file_count": 175,
+    "wheel": {
+      "path": "_state/universal-release-tooling/release-candidate/wheel/comsol_mcp-0.1.10-py3-none-any.whl",
+      "bytes": 2871041,
+      "sha256": "c733b15e7c1c4dd709a46d92fe7c8054cd88b5f95be8b4fa56339d3d7d35c7a9"
+    },
+    "uv_lock": {
+      "path": "_state/universal-release-tooling/release-candidate/inputs/uv.lock",
+      "bytes": 307301,
+      "sha256": "a6bb3dc08acdb783a1d3553f71e21bde8c7a8e01394a6f70a062357a4ce04fc2"
+    },
+    "uv_generated_export": {
+      "path": "_state/universal-release-tooling/release-candidate/inputs/requirements-export.lock",
+      "bytes": 74551,
+      "sha256": "07ffd2d910762bd98508d359474c9adc20af5019ba522836e71e606c05568657"
+    },
+    "targets": {
+      "macos_arm64": {
+        "status": "PACKAGED_NATIVE_UNVERIFIED",
+        "dependency_count": 41,
+        "expected": 41,
+        "application_plus_dependency_wheels": 42,
+        "missing": [],
+        "input_wheel_set_sha256": "f5e83a4ec6648e2ff951860dda49cc4a495e619d792aeb736b8d0b18fa76f260",
+        "input_hashes_manifest": {
+          "path": "_state/universal-release-tooling/release-candidate/macos_arm64/metadata/PACKAGE_MANIFEST.json",
+          "bytes": 32574,
+          "sha256": "e64c7f7f2c5e82309e7915a632673054045799a88f15401439624440405b592f"
+        },
+        "runtime_lock": {
+          "path": "_state/universal-release-tooling/release-candidate/macos_arm64/requirements-runtime.lock",
+          "bytes": 4153,
+          "sha256": "1370dddc5222241dc0d1167fdd6807863df5136531cfc7c42db235a8d4ba1b61"
+        },
+        "install_lock": {
+          "path": "_state/universal-release-tooling/release-candidate/macos_arm64/requirements.lock",
+          "bytes": 4324,
+          "sha256": "87a5922edd4585a6abcf975bc9a8badbe78d6055db68e6e1cb29e367263b57b0"
+        },
+        "archive": {
+          "path": "_state/universal-release-tooling/release-candidate/macos_arm64/offline.zip",
+          "bytes": 31054422,
+          "sha256": "ae9bf085a59a396e3ff4757524598222707ab0228dc5b0613a01bede6a2cbe2d"
+        },
+        "sbom": {
+          "path": "_state/universal-release-tooling/release-candidate/macos_arm64/metadata/SBOM.cdx.json",
+          "bytes": 23004,
+          "sha256": "cfeb2f81500b84550fdda42830910953395b265624c583184163465426750dd3"
+        },
+        "licenses": {
+          "path": "_state/universal-release-tooling/release-candidate/macos_arm64/metadata/LICENSES.json",
+          "bytes": 20709,
+          "sha256": "ddf561d424091462c1a9a092fb3ea565fcb6cec2cb096b8ab79d04187826be7c"
+        },
+        "target_install": "PASS_SOURCE_EXTERNAL_OFFLINE_INSTALL_AND_PROTOCOL",
+        "COMSOL_native": "NOT_RUN"
+      },
+      "win_amd64": {
+        "status": "PACKAGED_NATIVE_UNVERIFIED",
+        "dependency_count": 34,
+        "expected": 34,
+        "application_plus_dependency_wheels": 35,
+        "missing": [],
+        "input_wheel_set_sha256": "9331d46f16a5c2d8e78dce0c9c718369310818f1c8519d10b7f6ce3757f88dd8",
+        "input_hashes_manifest": {
+          "path": "_state/universal-release-tooling/release-candidate/win_amd64/metadata/PACKAGE_MANIFEST.json",
+          "bytes": 31224,
+          "sha256": "01622f9bf16bfc0d2379896b19d753a492befe75e889257b6449f57d65aa28ba"
+        },
+        "runtime_lock": {
+          "path": "_state/universal-release-tooling/release-candidate/win_amd64/requirements-runtime.lock",
+          "bytes": 3360,
+          "sha256": "949dfdd9cd84e27730fb60e2f2dc3d556da8f9b7e15d5882dc55f8d9c9807a24"
+        },
+        "install_lock": {
+          "path": "_state/universal-release-tooling/release-candidate/win_amd64/requirements.lock",
+          "bytes": 3531,
+          "sha256": "f5d5e93e2d4c295e9ef1799daa24ac2d9c3a0cf120ed2c97f23157fe37cacd2f"
+        },
+        "archive": {
+          "path": "_state/universal-release-tooling/release-candidate/win_amd64/offline.zip",
+          "bytes": 31109771,
+          "sha256": "66bb4eb330b8ea7b7abb7991ebf74e44e18a700e97a33702e5a9667ea08dd2ee"
+        },
+        "sbom": {
+          "path": "_state/universal-release-tooling/release-candidate/win_amd64/metadata/SBOM.cdx.json",
+          "bytes": 18879,
+          "sha256": "8420d17c47d4f7df4cca034e7a535f47d7b2e9fc6fa0a0e7509f982b49bc2c88"
+        },
+        "licenses": {
+          "path": "_state/universal-release-tooling/release-candidate/win_amd64/metadata/LICENSES.json",
+          "bytes": 21458,
+          "sha256": "cf54d9e3952f46b7438ff3d35e6d544de5b8f42a9d8abdf6a3ce36a37682600f"
+        },
+        "target_install": "NOT_RUN",
+        "COMSOL_native": "NOT_RUN"
+      },
+      "macos_x86_64": {
+        "status": "PACKAGED_NATIVE_UNVERIFIED",
+        "dependency_count": 41,
+        "expected": 41,
+        "application_plus_dependency_wheels": 42,
+        "missing": [],
+        "input_wheel_set_sha256": "cdeebe16b71f129b7d98f3b66aae76c175d590eeb559f83f528079bdf995d8db",
+        "input_hashes_manifest": {
+          "path": "_state/universal-release-tooling/release-candidate/macos_x86_64/metadata/PACKAGE_MANIFEST.json",
+          "bytes": 33646,
+          "sha256": "a3e5bb3a18d53b99f284a2e2a3b59458b6334bd70502977ea3d0575e67117474"
+        },
+        "runtime_lock": {
+          "path": "_state/universal-release-tooling/release-candidate/macos_x86_64/requirements-runtime.lock",
+          "bytes": 4153,
+          "sha256": "2ff5f8d1e76b1f9e08aacc7a8375d446c491f7d227e3fb91f3d4f053855b83ac"
+        },
+        "install_lock": {
+          "path": "_state/universal-release-tooling/release-candidate/macos_x86_64/requirements.lock",
+          "bytes": 4324,
+          "sha256": "7ac123cee0319866c191621c3000d51f40fd50f49dd9d2f9193e12936863bb69"
+        },
+        "archive": {
+          "path": "_state/universal-release-tooling/release-candidate/macos_x86_64/offline.zip",
+          "bytes": 36229410,
+          "sha256": "7137d31a971605871fb6d92a9d687bd629581714cf1ef3d53bb129c15e154f8b"
+        },
+        "sbom": {
+          "path": "_state/universal-release-tooling/release-candidate/macos_x86_64/metadata/SBOM.cdx.json",
+          "bytes": 24507,
+          "sha256": "b38d3a87ae9509f1f64ea6896cec35ea09421f399cf16457ed91581be4d27065"
+        },
+        "licenses": {
+          "path": "_state/universal-release-tooling/release-candidate/macos_x86_64/metadata/LICENSES.json",
+          "bytes": 21060,
+          "sha256": "8d2c16b5589a0938eae3d1d8c018b3117fc1051eb28bfc3df7c35aca3e9e9247"
+        },
+        "target_install": "NOT_RUN",
+        "COMSOL_native": "NOT_RUN_USER_REQUESTED_SKIP"
+      }
+    }
+  },
+  "derived_Intel": {
+    "provenance": {
+      "path": "_state/universal-release-tooling/derived-inputs/cryptography-derived-provenance.json",
+      "bytes": 2537,
+      "sha256": "c286890e102fb5d359100ee886ce01e0e956867e691814514ff1f0229ba2dac1"
+    },
+    "wheel_sha256": "2973023be3599d26bfeaa82b08b2fd2b3c90f9df4d61647494fb59b84dac1254",
+    "extension_sha256": "c6ac698d7752ffd42a002780d97714e3faa75c86e3c13fa000477cf288cf7b19",
+    "source_sdist_sha256": "5dd9bda1c12b4162f6ff568eeb5e0ff956c28d14406e875cfe8a63a2d414ff20",
+    "OpenSSL": {
+      "name": "OpenSSL",
+      "version": "4.0.3",
+      "source_url": "https://github.com/openssl/openssl/releases/download/openssl-4.0.3/openssl-4.0.3.tar.gz",
+      "source_sha256": "325b5c806167c13b40b1ffeadfe0248197c00eccc4cf123ec1e28d2d2fd216d9",
+      "linkage": "static",
+      "license": "Apache-2.0",
+      "license_file": {
+        "filename": "LICENSE.txt",
+        "bytes": 10175,
+        "sha256": "7d5450cb2d142651b8afa315b5f238efc805dad827d91ba367d8516bc9d49e7a"
+      }
+    },
+    "source_build_repeated": false,
+    "upstream_support": "PyCA removed Intel macOS support in49; this is a disclosed project-derived50.0.1 wheel, not restored upstream support.",
+    "legacy_license_archive_alias": "Existing full_project_release archive path licenses/openssl-4.0.2-LICENSE.txt is retained. The 4.0.3 LICENSE has the same 7d5450cb... SHA-256 as that preserved text; PACKAGE_MANIFEST/SBOM identify actual OpenSSL4.0.3 and its exact official source tuple.",
+    "native_status": "NOT_RUN_USER_REQUESTED_SKIP",
+    "old_40_of_41_dependency_prep": "UNCHANGED historical run"
+  },
+  "validation": {
+    "software_tests": {
+      "tests": 131,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "status": "PASS_SOFTWARE_ONLY",
+      "junit": {
+        "path": "_state/universal-release-tooling/tests-complete.xml",
+        "bytes": 19689,
+        "sha256": "fc6b5b2b1bb9a1e82b1c7593ce7b5ea85bb3fd54f50c8c9b72d3177c5316aca4"
+      },
+      "raw": {
+        "path": "_state/universal-release-tooling/tests-complete.log",
+        "bytes": 180,
+        "sha256": "c5084d27887c76960c645be14342891acda7e6804f625acc6061b4efef6ad839"
+      },
+      "published_junit": {
+        "path": "docs/universal_mcp_execution/evidence/M4_RELEASE_TOOLING.junit.xml",
+        "sha256": "fc6b5b2b1bb9a1e82b1c7593ce7b5ea85bb3fd54f50c8c9b72d3177c5316aca4"
+      }
+    },
+    "actual_negative_controls": {
+      "path": "_state/universal-release-tooling/negative-controls.json",
+      "bytes": 460,
+      "sha256": "208526af7821eaa7bb44c5f7ff0c3c4bab0d0051fa2ede0845f87eadef813357"
+    },
+    "mac_arm_offline_install_protocol": {
+      "status": "PASS_SOURCE_EXTERNAL_OFFLINE_INSTALL_AND_PROTOCOL",
+      "raw_result": {
+        "path": "_state/universal-release-tooling/smoke-candidate/RESULT.json",
+        "bytes": 4125,
+        "sha256": "98429f41c63c29c70c023612e041c286f546d5a93e098abeec9416264ea30cb7"
+      },
+      "install": {
+        "path": "_state/universal-release-tooling/smoke-candidate/install.json",
+        "bytes": 11962,
+        "sha256": "88afcbb48e5f7b836a070258fcefda107bfce93664ce6a71d63bd2b64ff42555"
+      },
+      "doctor": {
+        "path": "_state/universal-release-tooling/smoke-candidate/doctor.json",
+        "bytes": 5232,
+        "sha256": "84aa0048e3a6ead95e93c8a1d0b2779589cbba8345e1180de5d7daf6ba236b8f"
+      },
+      "protocol_stderr": {
+        "path": "_state/universal-release-tooling/smoke-candidate/protocol.stderr.log",
+        "bytes": 44,
+        "sha256": "cd20d1aa93e658cb9030369423498ab01104fe5a67117f3b778e1b23cebbc5b8"
+      },
+      "listed_tools": 112,
+      "installed_package_files_byte_match": 172,
+      "source_external_package": "/private/tmp/universal-release-final-smoke-8_65w5la/venv/lib/python3.12/site-packages/comsol_mcp/__init__.py",
+      "venv": "/private/tmp/universal-release-final-smoke-8_65w5la",
+      "COMSOL_native": "NOT_RUN"
+    },
+    "independent_Main_review": "PASS_SCOPED_STAGE_REVIEW_NOT_FINAL_INDEPENDENT_REVIEW"
+  },
+  "attempted_commands": [
+    {
+      "purpose": "lock constraints",
+      "command": "uv lock --directory _state/universal-release-tooling/lock-resolution --no-config --default-index https://pypi.org/simple --python /opt/homebrew/bin/python3.12 --no-python-downloads --cache-dir \"$PWD/_state/universal-release-tooling/uv-cache\"",
+      "status": "PASS",
+      "raw": {
+        "path": "_state/universal-release-tooling/lock-resolution/resolve-constrained.log",
+        "bytes": 414,
+        "sha256": "aac61f8a6e7a510a714deddf602084f1a25fe9b62361f6f93359d26294eb4e4d"
+      }
+    },
+    {
+      "purpose": "constraint-free final lock",
+      "command": "uv lock --directory _state/universal-release-tooling/lock-resolution --no-config --default-index https://pypi.org/simple --python /opt/homebrew/bin/python3.12 --no-python-downloads --cache-dir \"$PWD/_state/universal-release-tooling/uv-cache\"",
+      "status": "PASS",
+      "raw": {
+        "path": "_state/universal-release-tooling/lock-resolution/resolve-final.log",
+        "bytes": 112,
+        "sha256": "f9ba1d34bd7570f05ab88cbd643a3ad5e21ee01f8cb87c34ed708a44e8a7c955"
+      },
+      "precondition": "Temporary constraints removed from temp pyproject before this second official uv invocation."
+    },
+    {
+      "purpose": "official current locked check",
+      "command": "uv lock --check --offline --no-config --default-index https://pypi.org/simple --python /opt/homebrew/bin/python3.12 --no-python-downloads --cache-dir \"$PWD/_state/universal-release-tooling/uv-cache\"",
+      "status": "PASS",
+      "raw": {
+        "path": "_state/universal-release-tooling/uv-check-final.log",
+        "bytes": 29,
+        "sha256": "def6e6ae8ea3174b96d2b54370b3fbc0df1166820bd7eac9f88f3d5a3b1f3984"
+      }
+    },
+    {
+      "purpose": "tests",
+      "command": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m pytest -q -p no:cacheprovider -o addopts= tests/test_universal_release.py tests/test_full_project_release.py --basetemp=/private/tmp/universal-release-tests-20261022-m4-r4 --junitxml=_state/universal-release-tooling/tests-complete.xml",
+      "status": "131_PASS_SOFTWARE"
+    },
+    {
+      "purpose": "actual source wheel and three bundles",
+      "command": "PYTHONDONTWRITEBYTECODE=1 PIP_NO_INDEX=1 python3 -B -m tools.universal_release --source . --lock uv.lock --builder-python _state/universal-release-tooling/builder/bin/python --uv /opt/homebrew/bin/uv --operations docs/full_project_execution/release/RELEASE_OPERATIONS.md --wheelhouse macos_arm64=_state/universal-dependency-prep/macos_arm64 --wheelhouse win_amd64=_state/universal-dependency-prep/win_amd64 --wheelhouse macos_x86_64=_state/universal-dependency-prep/macos_x86_64 --derived-intel-wheel _state/universal-intel-crypto/wheelhouse/macos_x86_64/cryptography-50.0.1-cp312-abi3-macosx_12_0_x86_64.whl --derived-provenance _state/universal-release-tooling/derived-inputs/cryptography-derived-provenance.json --openssl-license _state/universal-intel-crypto/src/openssl-4.0.3/LICENSE.txt --output \"$PWD/_state/universal-release-tooling/release-candidate\"",
+      "status": "PASS_SCOPED_ARTIFACTS",
+      "raw": {
+        "path": "_state/universal-release-tooling/release-candidate.log",
+        "bytes": 129,
+        "sha256": "03398fb03fe9db29e49a9da75b1150291c4ed3b6e9477b96c4cfe7a26843d66e"
+      }
+    },
+    {
+      "purpose": "clean source-external ARM install/protocol",
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 -B _state/universal-release-tooling/smoke_bundle.py --repo \"$PWD\" --release \"$PWD/_state/universal-release-tooling/release-candidate\" --output \"$PWD/_state/universal-release-tooling/smoke-candidate\"",
+      "status": "PASS_SCOPED_NO_ENGINE",
+      "raw": {
+        "path": "_state/universal-release-tooling/smoke-candidate.log",
+        "bytes": 474,
+        "sha256": "f85eff4f3fbaa886970a409a9fdc394058f7abb1314efb71057d5794d95bb6d2"
+      }
+    }
+  ],
+  "preserved_failures": [
+    {
+      "kind": "test temporary-directory placement",
+      "status": "11_FAILED_118_PASSED",
+      "cause": "Initial pytest basetemp was inside the source tree; existing install/uninstall safety correctly rejected11 temporary venv fixtures. Fixed the test location only; no safety-rule relaxation.",
+      "raw": {
+        "path": "_state/universal-release-tooling/tests-attempt-1.log",
+        "bytes": 26274,
+        "sha256": "564afe03c995808e942970e5876f5d03d138ff8996944689bfd907fb5d6b9130"
+      },
+      "junit": {
+        "path": "_state/universal-release-tooling/tests-attempt-1.xml",
+        "bytes": 45139,
+        "sha256": "9293eacc237c07ea4f7313577c991903d3368aecb472ac3db568ee987ef254a0"
+      }
+    },
+    {
+      "kind": "provider502 ENOTFOUND",
+      "classification": "Provider transport interruption; not implementation/test failure. Recovered the already-running smoke result without resetting source or rebuilding crypto."
+    }
+  ],
+  "nonclaims": [
+    "Windows target install NOT_RUN",
+    "Intel physical native NOT_RUN_USER_REQUESTED_SKIP",
+    "COMSOL engine/native solve NOT_RUN by M4",
+    "No source/profile freeze or binary artifacts were pushed; Main review and sync remain external to this handoff"
+  ],
+  "main_stage_review": {
+    "reviewed_utc": "2026-10-22T12:43:06.397355+00:00",
+    "scope": "Software, exact source/wheel/three archive content binding and clean Mac ARM pip offline install/protocol only. Final independent Reviewer, native offline T056 and Windows install remain open.",
+    "evidence_sha_records_verified": 48,
+    "evidence_missing_or_mismatched": 0,
+    "junit_actual": {
+      "tests": 131,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "live_source_vs_snapshot_members": 175,
+    "package_vs_tested_wheel_members": 172,
+    "mismatches": 0,
+    "archive_members_verified": {
+      "macos_arm64": 53,
+      "win_amd64": 46,
+      "macos_x86_64": 55
+    },
+    "all_archives_contain_same_tested_application_wheel": true,
+    "actual_derived_sbom_OpenSSL_version": "4.0.3",
+    "initial_main_verifier_attempt": "Main initially looked for files/members rather than files_excluding_this_manifest and stopped on its own assertion. Corrected to the actual schema; all records verified without modifying artifacts.",
+    "native_or_final_acceptance_claimed": false
+  }
+}

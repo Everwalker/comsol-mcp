@@ -611,10 +611,14 @@ def verify_derived_wheel(provenance_path: pathlib.Path, wheel_path: pathlib.Path
 
     openssl = provenance.get("native_component", {})
     license_row = openssl.get("license_file", {})
-    if (openssl.get("name") != "OpenSSL" or openssl.get("version") != "4.0.2" or
+    supported_openssl_sources = {
+        ("4.0.2", OPENSSL_402_SOURCE_URL, OPENSSL_402_SOURCE_SHA256),
+        ("4.0.3", "https://github.com/openssl/openssl/releases/download/openssl-4.0.3/openssl-4.0.3.tar.gz",
+         "325b5c806167c13b40b1ffeadfe0248197c00eccc4cf123ec1e28d2d2fd216d9"),
+    }
+    if (openssl.get("name") != "OpenSSL" or
+            (openssl.get("version"), openssl.get("source_url"), openssl.get("source_sha256")) not in supported_openssl_sources or
             openssl.get("license") != "Apache-2.0" or openssl.get("linkage") != "static" or
-            openssl.get("source_url") != OPENSSL_402_SOURCE_URL or
-            openssl.get("source_sha256") != OPENSSL_402_SOURCE_SHA256 or
             license_row.get("filename") != openssl_license_path.name or
             license_row.get("sha256") != sha256_file(openssl_license_path) or
             license_row.get("bytes") != openssl_license_path.stat().st_size):

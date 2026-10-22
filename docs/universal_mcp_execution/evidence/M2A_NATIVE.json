@@ -1,0 +1,721 @@
+{
+  "schema": "universal-m2a-native-evidence-v1",
+  "milestone": "M2a bounded native foundation",
+  "status": "IN_PROGRESS",
+  "scope": "fresh installed MCP stdio entrypoint, private project/runtime, managed macOS COMSOL 6.4.0.293, bound Java conduction solve, public result/artifact readback and save",
+  "baseline": {
+    "stage_commit": "4759c097eabfdf588a366af51d9c7d1b90d1ac1b",
+    "main_reported_origin_main_equal": true,
+    "tracked_tree_clean_at_sync": true
+  },
+  "runtime_directory": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2",
+  "installation": {
+    "wheel_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/build/comsol_mcp-0.1.10-py3-none-any.whl",
+    "wheel_sha256": "c50d7d3c511fe641676f4bb9812039b5c87a112e343911bb2d55877403dc50e2",
+    "wheel_bytes": 2870999,
+    "source_package_sha256": "425da222b370a7881d2db4c7f92a70f7fa4cef34cc481adad5df9f88b589e7e1",
+    "source_file_count": 172,
+    "stage_commit_for_source": "4759c097eabfdf588a366af51d9c7d1b90d1ac1b",
+    "python": "3.12.13",
+    "installed_console_entrypoint": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/venv/bin/comsol-mcp",
+    "installed_package_origin": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/venv/lib/python3.12/site-packages/comsol_mcp/__init__.py",
+    "dependency_mode": "development install: fresh venv and project wheel; MCP/MPh/JPype dependencies loaded from repository/.venv/lib/python3.12/site-packages; no online dependency install",
+    "dependency_versions": {
+      "mcp": "1.30.0",
+      "MPh": "1.4.0",
+      "JPype1": "1.7.1"
+    },
+    "pyproject_sha256_used_by_wheel": "fc8eaefc0db93fe956021cee3f8718f2e573bdbb88102fad9f1d097e8ea67995",
+    "uv_lock_sha256_at_source_snapshot": "2058044231f3ace0a36b537a12b041579af94b9042add9acfd18ca0c0d7505c1",
+    "pyproject_sha256_after_M4_parallel_update": "c96f28cc0ea2e699330189f80f3cf87685417c5bc95e2b0e5674923a1d1cdc1a",
+    "uv_lock_sha256_after_M4_parallel_update": "a6bb3dc08acdb783a1d3553f71e21bde8c7a8e01394a6f70a062357a4ce04fc2",
+    "wheel_metadata_check": "Requires-Dist reflects the pyproject snapshot used for build; wheel predates M4 platform extras update and is labeled development-only."
+  },
+  "public_mcp_cold_start": {
+    "status": "PASS",
+    "entrypoint": "installed comsol-mcp console script outside source tree",
+    "transport": "MCP stdio ClientSession initialize/tools-list",
+    "server_info": {
+      "name": "comsol-mcp-server",
+      "version": "1.30.0"
+    },
+    "tool_count": 112,
+    "operation_call_present": true,
+    "process_exit_code": 0
+  },
+  "runtime_discovery": {
+    "status": "PASS_READ_ONLY",
+    "operation_id": "a903c8e0-6721-4bf7-a8b2-1ca7ca3c84eb",
+    "job_id": "8922466a-d925-44f4-a2bd-227f8f4e009f",
+    "request_id": "c190fa96-0cee-485d-be91-50264ff49c7c",
+    "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics",
+    "root": "/Applications/COMSOL64/Multiphysics",
+    "platform": "macos arm64",
+    "release": "6.4.0",
+    "build": 293,
+    "version_build_status": "OBSERVED",
+    "metadata_only": true,
+    "comsol_started": false,
+    "license_checked_out": false,
+    "response_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/runtime/runtime-discover-escalated.response.json"
+  },
+  "active_references": {
+    "project_id": "87d759ca-0764-473a-9978-2b51d5da74e1",
+    "session_id": "session-e4b78e9a6f0c472d8d4ec5017f3f3c03",
+    "model_refs": [],
+    "native_solver_job_id": null,
+    "control_home": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/mcp_home/server/control-private",
+    "project_root": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/project_root",
+    "session_runtime_state_root": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/mcp_home/server/control-private/session-state",
+    "runtime_inspect_job_id": "c26092f7-33a4-402d-96d4-baa0a4e1aebd",
+    "project_workspace": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/project_root/m2a-native-conduction-20261022-A7",
+    "project_create_job_id": "d9e1ee94-cbba-4056-9720-fbc0cfce819a",
+    "session_start_request_id": "m2a-20261022-session-start-c444b4deec1c",
+    "session_start_idempotency_key": "m2a-session-start-e52be893807842a8af299da03bf64763",
+    "pending_refs_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/pending-refs.json",
+    "session_start_job_id": "c27e57e8-725e-4066-896d-24e9dc5a3c21",
+    "server_pid": 82522,
+    "server_endpoint": {
+      "host": "127.0.0.1",
+      "port": 64796
+    },
+    "server_ownership": "mcp_managed",
+    "session_connect_job_id": "88b5113a-b676-4d0a-b881-68da3f3d517e",
+    "worker_instance_id": "59b53805-2490-4f6c-8761-651a21fa4aa5",
+    "worker_epoch": 2,
+    "server_instance_id": "04c12d9ab4dd3d6c4dbbdfb99b30cb94b6159582356928eb96c9d61bf178e184",
+    "target_model_ref": {
+      "schema_version": 1,
+      "session_id": "session-e4b78e9a6f0c472d8d4ec5017f3f3c03",
+      "server_instance_id": "04c12d9ab4dd3d6c4dbbdfb99b30cb94b6159582356928eb96c9d61bf178e184",
+      "model_tag": "mcp1",
+      "generation": 1
+    },
+    "target_model_revision": 0,
+    "target_model_create_job_id": "bce36722-6d14-41a5-8dfc-f07e4505c8ae",
+    "sentinel_model_ref": {
+      "schema_version": 1,
+      "session_id": "session-e4b78e9a6f0c472d8d4ec5017f3f3c03",
+      "server_instance_id": "04c12d9ab4dd3d6c4dbbdfb99b30cb94b6159582356928eb96c9d61bf178e184",
+      "model_tag": "mcp2",
+      "generation": 1
+    },
+    "sentinel_model_revision": 0,
+    "sentinel_model_create_job_id": "d179d29b-5399-4d7c-96ed-d95a88094dbe"
+  },
+  "failed_attempts": [
+    {
+      "attempt": 1,
+      "phase": "wheel build",
+      "status": "FAIL_ARGUMENT_RESOLUTION",
+      "effective_no_progress": false,
+      "detail": "Relative argument repository was interpreted as a distribution name; pip attempted PyPI and sandbox DNS failed. Corrected to ./repository with --no-index.",
+      "record": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/attempts/01-build-path-resolution.json"
+    },
+    {
+      "attempt": 2,
+      "phase": "control daemon startup",
+      "status": "FAIL_NO_DISPATCH",
+      "effective_no_progress": false,
+      "detail": "Sandbox denied authenticated loopback listener bind with PermissionError errno=1; endpoint absent, private DB had zero projects/operations/jobs/sessions, and COMSOL was not started.",
+      "record": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/attempts/02-control-loopback-sandbox-denied.json",
+      "log_sha256": "dfbb12080fe796835dad48292a49dc4112bd5efc19fe105a32e8bf3964c2143a"
+    },
+    {
+      "attempt": 3,
+      "phase": "diagnostic helper",
+      "status": "FAIL_TOOLING_PATH",
+      "effective_no_progress": false,
+      "detail": "Initial diagnostic python3.14 lacked workpack import path; corrected with explicit repository path. No product/runtime impact."
+    },
+    {
+      "attempt": 3,
+      "phase": "persist target model MCP result",
+      "status": "FAIL_LOCAL_EVIDENCE_PARSER",
+      "effective_no_progress": false,
+      "detail": "KeyError because model.create places execution at the top-level response; no file writes occurred and full response is retained. Corrected to use the top-level execution envelope.",
+      "record": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/attempts/03-target-evidence-parser.json"
+    }
+  ],
+  "sandbox_gate": {
+    "detail": "MCP control plane requires private authenticated 127.0.0.1 socket; sandbox bind refusal was observed.",
+    "escalation": "process-scoped escalation succeeded for read-only runtime.discover; no network settings or firewall changed.",
+    "future_native_calls_may_require_same_escalation": true
+  },
+  "next_steps": [
+    "Use official 6.4 KB/local API evidence to write one new project-owned Java source that receives the already-bound target Model and adds the 1D conduction model with unique tags.",
+    "Register and compile the source through public installed MCP; execute only against target_model_ref and verify typed/public structure.",
+    "Run bounded stationary solve, read custom expression in native-default and explicit-unit forms, retrieve/render an actual artifact, save the target model, and re-inspect sentinel."
+  ],
+  "not_run": [
+    "project Java artifact registration",
+    "code.compile_java",
+    "code.execute_java",
+    "study.run",
+    "result.evaluate custom/native-default and explicit-unit readback",
+    "artifact retrieval/render",
+    "model.save",
+    "sentinel final verification"
+  ],
+  "evidence_hashes": {
+    "runtime_discover_response_sha256": "b6ff9493f5904df7562b6d8e23f04723f3671b27ac44cbf47046670287c73949",
+    "cold_start_stderr_sha256": "d8713b8e5d5bd3790b933c881d776b997017b224e86dbd1fb7a06852e56fa7a7",
+    "source_snapshot_sha256": "ee45c6a0ffd34c0d5bdd9a474c7d7d8cf278684d1026d2a8b06ba523a481604e",
+    "runtime_inspect_response_sha256": "d88234ddd1528edbf8d79e5abbb91aa2d3803dff0ce6cd5f096d6a93a1ae1cf4",
+    "project_create_response_sha256": "a7f95b841107d5eebbe473fce854c97f3cc8ec04cfd7bc3e598df0a04a026075",
+    "prestart_process_check_sha256": "085be0aedc86c2a8a48accb747ea4ecfc9420724d97881acd70474e89b25cb5b",
+    "session_start_response_sha256": "e2920e22cfd97af596378a0f616234af6d4b9ea4ca580798cbdb10fab7e0623d",
+    "pending_refs_sha256": "89a032153d81ccd6de6865ddeb722f299a262b40404792e0d0c895450f65aed3",
+    "session_connect_response_sha256": "1baeb4279b81e0c8c7c588d236ce1b51a3e609987c2c4dfb24a597b636d80552",
+    "target_model_create_response_sha256": "4fbd89f08d59555fb70cb7d381a2a3975879c100057adc2a397bd98943657538",
+    "attempt_03_sha256": "5ccad11b8f4b57f84cc89f04d3852f818905326027c27ec774045332c1d3018e",
+    "sentinel_model_create_response_sha256": "49f340eb1423c7c2b88571ab32dead2e24919d0c5548111a83bd7708f2660395",
+    "sentinel_baseline_response_sha256": "6cc92e3dc0c2cc9f5f1b691e1784eaa8b7b6c397964d1ce5058b6e1d4a0ebd19",
+    "target_baseline_response_sha256": "3d614231518c96a2e7a9ae1012641aeddc4dffc30cb3084130a725dfc0956eef",
+    "recovery_job_list_response_sha256": "cbec0907234380dbf3575989a9be6c4b8095f18e81475f2ffde3bf44deb27953",
+    "project_java_source_sha256": "c8bf9b355dad27e97b5f9842497bed2809fb5fe6946d97e9e8799c057641f2e0",
+    "code_describe_request_sha256": "35e8040fba43039610f87e87696e76eeddb8c29f2351748942334b655d9b803b",
+    "code_describe_response_sha256": "c9a39e3178d0ccf1938027f4b3fd571d335deb8c1aeaa2b52495d1d4de534759",
+    "code_compile_request_sha256": "a689231e45b7157b0039a7d2a2678a569e1535a9ce275156164f91cc45818850"
+  },
+  "runtime_inspect": {
+    "status": "PASS_READ_ONLY",
+    "operation_id": "44662cd8-6988-4b68-9e1e-91fc3c94780a",
+    "job_id": "c26092f7-33a4-402d-96d4-baa0a4e1aebd",
+    "request_id": "m2a-20261022-runtime-inspect-01",
+    "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics",
+    "release": "6.4.0",
+    "build": 293,
+    "java_home": "/Library/Java/JavaVirtualMachines/amazon-corretto-11.jdk/Contents/Home",
+    "comsol_started": false,
+    "license_checked_out": false,
+    "response_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/runtime/runtime-inspect.response.json"
+  },
+  "project_create": {
+    "status": "PASS",
+    "project_id": "87d759ca-0764-473a-9978-2b51d5da74e1",
+    "project_create_operation_id": "9883e35a-42aa-4ae7-a2d2-bb77119f277a",
+    "project_create_job_id": "d9e1ee94-cbba-4056-9720-fbc0cfce819a",
+    "request_id": "m2a-20261022-project-create-6a52a5510ad3",
+    "idempotency_key": "m2a-project-create-f7c3f84c5da5471d96e8ce2743c52b32",
+    "workspace": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/project_root/m2a-native-conduction-20261022-A7",
+    "initial_revision": 1,
+    "permissions": [
+      "compute",
+      "host_control",
+      "inspect",
+      "project_write",
+      "trusted_code"
+    ],
+    "timeouts": {
+      "queue_timeout_s": 20,
+      "execution_timeout_s": 300
+    },
+    "response_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/runtime/project-create.response.json"
+  },
+  "session_start_pending": {
+    "status": "COMPLETED",
+    "request_id": "m2a-20261022-session-start-c444b4deec1c",
+    "idempotency_key": "m2a-session-start-e52be893807842a8af299da03bf64763",
+    "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics",
+    "project_id": "87d759ca-0764-473a-9978-2b51d5da74e1",
+    "queue_timeout_s": 20,
+    "execution_timeout_s": 240,
+    "rpc_timeout_s": 245,
+    "request_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/runtime/session-start.request.json",
+    "pending_refs_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/pending-refs.json",
+    "process_check": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/runtime/prestart-process-check.json",
+      "sha256": "085be0aedc86c2a8a48accb747ea4ecfc9420724d97881acd70474e89b25cb5b",
+      "observed_comsol_related_process_count": 0,
+      "read_only": true
+    },
+    "pending_refs_sha256": "fcb307211e70e7d36355cedd04193dd81036ca4b8d0b033afd01e186624715f6"
+  },
+  "session_start": {
+    "status": "PASS",
+    "request_id": "m2a-20261022-session-start-c444b4deec1c",
+    "idempotency_key": "m2a-session-start-e52be893807842a8af299da03bf64763",
+    "operation_id": "368a2174-0fec-450d-b60a-e818554cb0d3",
+    "job_id": "c27e57e8-725e-4066-896d-24e9dc5a3c21",
+    "session_id": "session-e4b78e9a6f0c472d8d4ec5017f3f3c03",
+    "project_id": "87d759ca-0764-473a-9978-2b51d5da74e1",
+    "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics",
+    "comsol_version": "6.4.0",
+    "verified_build_from_runtime_inspect": 293,
+    "server_ownership": "mcp_managed",
+    "loopback_only_verified": true,
+    "endpoint": {
+      "host": "127.0.0.1",
+      "port": 64796
+    },
+    "listener_sockets": [
+      {
+        "address": "127.0.0.1",
+        "port": 64796
+      }
+    ],
+    "process_identity": {
+      "pid": 82522,
+      "birth": "start_epoch_ms:1792670973071",
+      "executable": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/mcp_home/server/control-private/session-runtime-state/sessions/4f99bc0dfc30cd465e799cab721e40788ae97ce177024f9a1c14ead160b6c59e/owned-server/installation/bin/comsol"
+    },
+    "client_state": "DISCONNECTED",
+    "response_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/runtime/session-start.response.json"
+  },
+  "session_connect": {
+    "status": "PASS",
+    "request_id": "m2a-20261022-session-connect-8fd57782160f",
+    "idempotency_key": "m2a-session-connect-2546c663ec884ee3a05c798860b51b72",
+    "operation_id": "7a886b53-2a8b-426d-95f5-82f72651b103",
+    "job_id": "88b5113a-b676-4d0a-b881-68da3f3d517e",
+    "project_id": "87d759ca-0764-473a-9978-2b51d5da74e1",
+    "session_id": "session-e4b78e9a6f0c472d8d4ec5017f3f3c03",
+    "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics",
+    "worker_instance_id": "59b53805-2490-4f6c-8761-651a21fa4aa5",
+    "worker_epoch": 2,
+    "server_instance_id": "04c12d9ab4dd3d6c4dbbdfb99b30cb94b6159582356928eb96c9d61bf178e184",
+    "endpoint": {
+      "host": "127.0.0.1",
+      "port": 64796
+    },
+    "observed_peer": {
+      "address": "127.0.0.1",
+      "port": 64796
+    },
+    "server_ownership": "mcp_managed",
+    "remote_engine_version": "COMSOL Multiphysics 6.4 (开发版本: 293)",
+    "remote_engine_build": {
+      "value": null,
+      "status": "NOT_REPORTED",
+      "separate_installation_observation": {
+        "release": "6.4.0",
+        "build": 293,
+        "status": "OBSERVED"
+      }
+    },
+    "response_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/runtime/session-connect.response.json"
+  },
+  "target_model_create": {
+    "status": "PASS",
+    "request_id": "m2a-20261022-model-target-0624880f3bdb",
+    "idempotency_key": "m2a-model-target-1139c4c9c90149fab0e54ba74e2db610",
+    "operation_id": "52f98725-fe5b-4b7a-953e-f3c498eb938b",
+    "job_id": "bce36722-6d14-41a5-8dfc-f07e4505c8ae",
+    "project_id": "87d759ca-0764-473a-9978-2b51d5da74e1",
+    "session_id": "session-e4b78e9a6f0c472d8d4ec5017f3f3c03",
+    "model_ref": {
+      "schema_version": 1,
+      "session_id": "session-e4b78e9a6f0c472d8d4ec5017f3f3c03",
+      "server_instance_id": "04c12d9ab4dd3d6c4dbbdfb99b30cb94b6159582356928eb96c9d61bf178e184",
+      "model_tag": "mcp1",
+      "generation": 1
+    },
+    "revision": 0,
+    "label": "M2a Target 31B68",
+    "dimension": 1,
+    "ownership": "mcp_owned",
+    "response_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/runtime/model-create-target.response.json"
+  },
+  "sentinel_model_create": {
+    "status": "PASS",
+    "request_id": "m2a-20261022-model-sentinel-584d512fe866",
+    "idempotency_key": "m2a-model-sentinel-6b8d11b227d74ce3aae20df97d72d871",
+    "operation_id": "ad687ef8-9c06-4b02-89fa-5bf1366a9a04",
+    "job_id": "d179d29b-5399-4d7c-96ed-d95a88094dbe",
+    "project_id": "87d759ca-0764-473a-9978-2b51d5da74e1",
+    "session_id": "session-e4b78e9a6f0c472d8d4ec5017f3f3c03",
+    "model_ref": {
+      "schema_version": 1,
+      "session_id": "session-e4b78e9a6f0c472d8d4ec5017f3f3c03",
+      "server_instance_id": "04c12d9ab4dd3d6c4dbbdfb99b30cb94b6159582356928eb96c9d61bf178e184",
+      "model_tag": "mcp2",
+      "generation": 1
+    },
+    "revision": 0,
+    "label": "M2a Sentinel 31B68",
+    "dimension": 1,
+    "ownership": "mcp_owned",
+    "initial_dirty": false,
+    "response_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/runtime/model-create-sentinel.response.json"
+  },
+  "current_checkpoint": {
+    "status": "CODE_COMPILE_PERSISTED_BEFORE_DISPATCH",
+    "managed_server_pid": 82522,
+    "managed_server_birth": "start_epoch_ms:1792670973071",
+    "endpoint": {
+      "host": "127.0.0.1",
+      "port": 64796
+    },
+    "ownership": "mcp_managed",
+    "worker_id": "59b53805-2490-4f6c-8761-651a21fa4aa5",
+    "server_instance_id": "04c12d9ab4dd3d6c4dbbdfb99b30cb94b6159582356928eb96c9d61bf178e184",
+    "target_revision": 0,
+    "sentinel_revision": 0,
+    "sentinel_baseline": "PASS_READ_ONLY",
+    "native_solver_submitted": false,
+    "exact_pending_refs_sha256": "44027300311b9ba34f4e006e5584ee4754e34b3ad38901b209827403f19e8ff2",
+    "blocker": null,
+    "target_baseline": "PASS_READ_ONLY",
+    "provider_interruption": "HTTP 502 / ENOTFOUND (user-reported transport interruption, not engine failure)",
+    "project_java_source_sha256": "c8bf9b355dad27e97b5f9842497bed2809fb5fe6946d97e9e8799c057641f2e0"
+  },
+  "attempts": [
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/attempts/attempt-04-describe-python-env.json",
+      "sha256": "b642f50faceee917eaa229c1228ac128cb6cec00aee9d9b30ee02d3dc0465d0a",
+      "status": "FAILED_BEFORE_MCP_INITIALIZATION",
+      "native_effect": "NONE"
+    },
+    {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/attempts/attempt-05-provider-502-ENOTFOUND.json",
+      "sha256": "6253b5de013f6d9855bb64281a6898badfb37e21dd41f40d1d799b7a371151a6",
+      "status": "PROVIDER_TRANSPORT_INTERRUPTION",
+      "error_class": "HTTP_502_ENOTFOUND",
+      "native_engine_failure": false,
+      "native_effect": "NONE_REPORTED"
+    }
+  ],
+  "sentinel_baseline": {
+    "status": "PASS_READ_ONLY",
+    "entrypoint": "installed comsol-mcp operation_call -> model.inspect",
+    "request_id": "m2a-20261022-sentinel-baseline-01",
+    "job_id": "0619f447-f884-40ed-a2bc-60539e951f6b",
+    "operation_id": "43c3eaf2-6d7b-44be-bc48-84fd0a0b148a",
+    "request_hash": "5edf92a18c2893957aefff93406769b51711a7f700d17eae87e5a4bf253f4208",
+    "idempotency_key": "861ed4fe-fe16-402d-91b5-8522c49d83c8",
+    "response_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/runtime/sentinel-baseline.response.json",
+    "response_sha256": "6cc92e3dc0c2cc9f5f1b691e1784eaa8b7b6c397964d1ce5058b6e1d4a0ebd19",
+    "model_ref": {
+      "schema_version": 1,
+      "session_id": "session-e4b78e9a6f0c472d8d4ec5017f3f3c03",
+      "server_instance_id": "04c12d9ab4dd3d6c4dbbdfb99b30cb94b6159582356928eb96c9d61bf178e184",
+      "model_tag": "mcp2",
+      "generation": 1
+    },
+    "revision": 0,
+    "dirty": false,
+    "structure": {
+      "components": 1,
+      "parameters": 0,
+      "studies": 0,
+      "solutions": 0,
+      "datasets": 0,
+      "results": 0
+    },
+    "file_resource_count": 0
+  },
+  "target_baseline": {
+    "status": "PASS_READ_ONLY",
+    "entrypoint": "installed comsol-mcp operation_call -> model.inspect",
+    "request_id": "m2a-20261022-target-baseline-01",
+    "job_id": "12a1be18-8c3f-4014-aa2b-0a91472c796f",
+    "operation_id": "74802ab2-ffe6-4964-84c3-ff6ba8b1ba75",
+    "request_hash": "3aca138d8727ad859df92fac9401ae79cfaa8e2bda2eb1e95950db90387bbad4",
+    "idempotency_key": "cf4efb87-b9de-46eb-a9c4-11c0c9b5b149",
+    "response_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/runtime/target-baseline.response.json",
+    "response_sha256": "3d614231518c96a2e7a9ae1012641aeddc4dffc30cb3084130a725dfc0956eef",
+    "model_ref": {
+      "schema_version": 1,
+      "session_id": "session-e4b78e9a6f0c472d8d4ec5017f3f3c03",
+      "server_instance_id": "04c12d9ab4dd3d6c4dbbdfb99b30cb94b6159582356928eb96c9d61bf178e184",
+      "model_tag": "mcp1",
+      "generation": 1
+    },
+    "revision": 0,
+    "dirty": false,
+    "structure": {
+      "components": 1,
+      "parameters": 0,
+      "studies": 0,
+      "solutions": 0,
+      "datasets": 0,
+      "results": 0
+    }
+  },
+  "recovery": {
+    "status": "PASS_READ_ONLY_NO_SOLVER",
+    "original_server_pid": 82522,
+    "original_server_birth": "start_epoch_ms:1792670973071",
+    "original_endpoint": {
+      "host": "127.0.0.1",
+      "port": 64796
+    },
+    "Main_read_only_check": "server PID/birth and listener live; both baseline jobs SUCCEEDED; no solver in pending refs",
+    "action": "preserve original session and ModelRefs; query current project job list through installed MCP; never replay old requests",
+    "request_id": "m2a-20261022-job-list-recovery-01",
+    "response_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/runtime/recovery-job-list.response.json",
+    "response_sha256": "cbec0907234380dbf3575989a9be6c4b8095f18e81475f2ffde3bf44deb27953",
+    "project_job_count": 6,
+    "jobs": [
+      {
+        "job_id": "12a1be18-8c3f-4014-aa2b-0a91472c796f",
+        "status": "SUCCEEDED",
+        "operation": "model.inspect",
+        "request_id": "m2a-20261022-target-baseline-01",
+        "model_tag": "mcp1",
+        "created_at": "2026-10-22 12:20:02",
+        "study": null
+      },
+      {
+        "job_id": "0619f447-f884-40ed-a2bc-60539e951f6b",
+        "status": "SUCCEEDED",
+        "operation": "model.inspect",
+        "request_id": "m2a-20261022-sentinel-baseline-01",
+        "model_tag": "mcp2",
+        "created_at": "2026-10-22 12:17:56",
+        "study": null
+      },
+      {
+        "job_id": "d179d29b-5399-4d7c-96ed-d95a88094dbe",
+        "status": "SUCCEEDED",
+        "operation": "model.create",
+        "request_id": "m2a-20261022-model-sentinel-584d512fe866",
+        "model_tag": null,
+        "created_at": "2026-10-22 12:12:31",
+        "study": null
+      },
+      {
+        "job_id": "bce36722-6d14-41a5-8dfc-f07e4505c8ae",
+        "status": "SUCCEEDED",
+        "operation": "model.create",
+        "request_id": "m2a-20261022-model-target-0624880f3bdb",
+        "model_tag": null,
+        "created_at": "2026-10-22 12:11:30",
+        "study": null
+      },
+      {
+        "job_id": "88b5113a-b676-4d0a-b881-68da3f3d517e",
+        "status": "SUCCEEDED",
+        "operation": {
+          "operation_id": "7a886b53-2a8b-426d-95f5-82f72651b103",
+          "request_id": "m2a-20261022-session-connect-8fd57782160f",
+          "idempotency_key": "m2a-session-connect-2546c663ec884ee3a05c798860b51b72",
+          "request_hash": "d1f996f2adcac20106687d80ce64c5da496744dfb875b8df190c73e021cf8b34",
+          "operation": "session.connect",
+          "status": "SUCCEEDED",
+          "result": {
+            "data": {
+              "credentials_configured": false,
+              "endpoint": {
+                "host": "127.0.0.1",
+                "port": 64796
+              },
+              "observed_peer": {
+                "address": "127.0.0.1",
+                "port": 64796
+              },
+              "project_id": "87d759ca-0764-473a-9978-2b51d5da74e1",
+              "remote_engine_build": null,
+              "remote_engine_build_source": "NOT_REPORTED",
+              "remote_engine_version": "COMSOL Multiphysics 6.4 (开发版本: 293)",
+              "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics",
+              "server_instance_id": "04c12d9ab4dd3d6c4dbbdfb99b30cb94b6159582356928eb96c9d61bf178e184",
+              "server_ownership": "mcp_managed",
+              "session_id": "session-e4b78e9a6f0c472d8d4ec5017f3f3c03",
+              "worker_epoch": 2,
+              "worker_instance_id": "59b53805-2490-4f6c-8761-651a21fa4aa5"
+            },
+            "execution": {
+              "idempotency_key": "m2a-session-connect-2546c663ec884ee3a05c798860b51b72",
+              "job_id": "88b5113a-b676-4d0a-b881-68da3f3d517e",
+              "operation_id": "7a886b53-2a8b-426d-95f5-82f72651b103",
+              "request_hash": "d1f996f2adcac20106687d80ce64c5da496744dfb875b8df190c73e021cf8b34",
+              "request_id": "m2a-20261022-session-connect-8fd57782160f"
+            },
+            "success": true
+          },
+          "metadata": {
+            "credentials_configured": false,
+            "endpoint": {
+              "host": "127.0.0.1",
+              "port": 64796
+            },
+            "project_id": "87d759ca-0764-473a-9978-2b51d5da74e1",
+            "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics",
+            "session_id": "session-e4b78e9a6f0c472d8d4ec5017f3f3c03"
+          },
+          "created_at": "2026-10-22 12:10:51",
+          "started_at": "2026-10-22 12:10:52",
+          "finished_at": "2026-10-22 12:10:54",
+          "effective_timeouts": {
+            "execution_timeout_s": 240,
+            "no_progress_warning_s": null,
+            "queue_timeout_s": 20,
+            "rpc_timeout_s": 245
+          }
+        },
+        "request_id": null,
+        "model_tag": null,
+        "created_at": "2026-10-22 12:10:51",
+        "study": null
+      },
+      {
+        "job_id": "c27e57e8-725e-4066-896d-24e9dc5a3c21",
+        "status": "SUCCEEDED",
+        "operation": {
+          "operation_id": "368a2174-0fec-450d-b60a-e818554cb0d3",
+          "request_id": "m2a-20261022-session-start-c444b4deec1c",
+          "idempotency_key": "m2a-session-start-e52be893807842a8af299da03bf64763",
+          "request_hash": "8b0ac4052ac0523fa8a73d610668c8db9814a7cd50f329b356ee43fb38e2aeb1",
+          "operation": "session.start",
+          "status": "SUCCEEDED",
+          "result": {
+            "data": {
+              "client_state": "DISCONNECTED",
+              "comsol_version": "6.4.0",
+              "endpoint": {
+                "host": "127.0.0.1",
+                "port": 64796
+              },
+              "loopback_only_verified": true,
+              "project_id": "87d759ca-0764-473a-9978-2b51d5da74e1",
+              "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics",
+              "server_listener_sockets": [
+                {
+                  "address": "127.0.0.1",
+                  "port": 64796
+                }
+              ],
+              "server_ownership": "mcp_managed",
+              "server_process_identity": {
+                "birth": "start_epoch_ms:1792670973071",
+                "endpoint": {
+                  "host": "127.0.0.1",
+                  "port": 64796
+                },
+                "executable": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/mcp_home/server/control-private/session-runtime-state/sessions/4f99bc0dfc30cd465e799cab721e40788ae97ce177024f9a1c14ead160b6c59e/owned-server/installation/bin/comsol",
+                "pid": 82522,
+                "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics"
+              },
+              "session_id": "session-e4b78e9a6f0c472d8d4ec5017f3f3c03"
+            },
+            "execution": {
+              "idempotency_key": "m2a-session-start-e52be893807842a8af299da03bf64763",
+              "job_id": "c27e57e8-725e-4066-896d-24e9dc5a3c21",
+              "operation_id": "368a2174-0fec-450d-b60a-e818554cb0d3",
+              "request_hash": "8b0ac4052ac0523fa8a73d610668c8db9814a7cd50f329b356ee43fb38e2aeb1",
+              "request_id": "m2a-20261022-session-start-c444b4deec1c"
+            },
+            "success": true
+          },
+          "metadata": {
+            "arguments": {
+              "options": {},
+              "resources": {},
+              "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics"
+            },
+            "project_id": "87d759ca-0764-473a-9978-2b51d5da74e1",
+            "runtime_id": "comsol-install:%2FApplications%2FCOMSOL64%2FMultiphysics",
+            "session_id": "session-e4b78e9a6f0c472d8d4ec5017f3f3c03"
+          },
+          "created_at": "2026-10-22 12:09:33",
+          "started_at": "2026-10-22 12:09:33",
+          "finished_at": "2026-10-22 12:09:38",
+          "effective_timeouts": {
+            "execution_timeout_s": 240,
+            "no_progress_warning_s": null,
+            "queue_timeout_s": 20,
+            "rpc_timeout_s": 245
+          }
+        },
+        "request_id": null,
+        "model_tag": null,
+        "created_at": "2026-10-22 12:09:33",
+        "study": null
+      }
+    ],
+    "solver_pending_or_running": false
+  },
+  "project_java": {
+    "source_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/project_root/m2a-native-conduction-20261022-A7/java/M2aConduction.java",
+    "source_project_relative_path": "java/M2aConduction.java",
+    "source_sha256": "c8bf9b355dad27e97b5f9842497bed2809fb5fe6946d97e9e8799c057641f2e0",
+    "source_size_bytes": 6141,
+    "entrypoint": "M2aConduction",
+    "source_persisted_before_public_dispatch": true,
+    "public_operation_sequence": [
+      "code.describe_java",
+      "code.compile_java",
+      "code.execute_java(build)",
+      "study.run",
+      "result.at_points(native-default)",
+      "result.at_points(explicit K)",
+      "code.execute_java(render)",
+      "artifact.register(image)",
+      "artifact.preview(image)",
+      "model.save",
+      "model.inspect(target)",
+      "model.inspect(sentinel)"
+    ],
+    "planned_parameters": {
+      "component_tag": "comp1",
+      "geometry_tag": "geom1",
+      "interval_tag": "int31B68",
+      "physics_tag": "pde31B68",
+      "left_boundary_tag": "dirL31B68",
+      "right_boundary_tag": "dirR31B68",
+      "study_tag": "std31B68",
+      "study_step_tag": "stat31B68",
+      "plot_group_tag": "plt31B68",
+      "line_tag": "line31B68",
+      "length_expression": "0.01[m]",
+      "conductivity_expression": "10[W/(m*K)]",
+      "left_temperature_expression": "300[K]",
+      "right_temperature_expression": "400[K]",
+      "custom_result_expression": "u+0[K]",
+      "expected_midpoint_K": 350.0,
+      "image_tag": "img31B68",
+      "image_project_relative_path": "outputs/conduction-profile.png",
+      "image_output_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/project_root/m2a-native-conduction-20261022-A7/outputs/conduction-profile.png"
+    },
+    "request_ids": {
+      "describe": "m2a-20261022-describe-291b0b607eb5",
+      "compile": "m2a-20261022-compile-1b7758f61aef",
+      "execute_build": "m2a-20261022-execute_build-2bdca0d1a15e",
+      "study_run": "m2a-20261022-study_run-d497d2695d1d",
+      "result_default": "m2a-20261022-result_default-889cee11e9fe",
+      "result_explicit": "m2a-20261022-result_explicit-ec10afdc1bdd",
+      "execute_render": "m2a-20261022-execute_render-8ff475a41db6",
+      "model_save": "m2a-20261022-model_save-2e1d53d9657d",
+      "sentinel_after": "m2a-20261022-sentinel_after-5564bc6c9b56"
+    },
+    "idempotency_keys": {
+      "describe": "m2a-describe-291b0b607eb5443a913b10e0039e1bf1",
+      "compile": "m2a-compile-1b7758f61aef4669b764dd0d1dd14656",
+      "execute_build": "m2a-execute_build-2bdca0d1a15e49a68f84c8d2ae4dd89d",
+      "study_run": "m2a-study_run-d497d2695d1d408fa2ca4fc151530bbb",
+      "result_default": "m2a-result_default-889cee11e9fe4bc0bc9888e22f0c8e3c",
+      "result_explicit": "m2a-result_explicit-ec10afdc1bdd4414ad72e6e470d36ed0",
+      "execute_render": "m2a-execute_render-8ff475a41db644af84ad82326f7bb636",
+      "model_save": "m2a-model_save-2e1d53d9657d4b7aa75ad8ec1378e5b2",
+      "sentinel_after": "m2a-sentinel_after-5564bc6c9b564a66b230a3e02d24ef10"
+    },
+    "pending_refs_sha256_before_describe": "0039c8e665b9a1cdfa328879ef30c84f8a01461e9550dcb0d7b00378adab2ce5",
+    "pending_refs_updated_before_dispatch": true,
+    "status": "DESCRIBE_PASS_COMPILE_PENDING",
+    "describe_request": {
+      "request_id": "m2a-20261022-describe-291b0b607eb5",
+      "idempotency_key": "m2a-describe-291b0b607eb5443a913b10e0039e1bf1",
+      "request_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/runtime/code-describe-java.request.json",
+      "request_sha256": "35e8040fba43039610f87e87696e76eeddb8c29f2351748942334b655d9b803b",
+      "pending_refs_sha256": "c8ef4d058be6c980ae939e55ed3f2ef5d9f0df7f4007a96210a8aae1e941ef05",
+      "dispatched": true,
+      "job_id": "12b0ac8b-ca1b-43f0-8af2-732a2877bcae",
+      "operation_id": "a8fa4398-c554-4689-afb7-41d2c18a26b1",
+      "request_hash": "fe11062da4731d4d187c9549253226be7fac9e8b9d7df1e8a4a76785b60e753e",
+      "response_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/runtime/code-describe-java.response.json",
+      "response_sha256": "c9a39e3178d0ccf1938027f4b3fd571d335deb8c1aeaa2b52495d1d4de534759",
+      "status": "PASS"
+    },
+    "compile_request": {
+      "request_id": "m2a-20261022-compile-1b7758f61aef",
+      "idempotency_key": "m2a-compile-1b7758f61aef4669b764dd0d1dd14656",
+      "request_path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/runtime/code-compile-java.request.json",
+      "request_sha256": "a689231e45b7157b0039a7d2a2678a569e1535a9ce275156164f91cc45818850",
+      "source_sha256": "c8bf9b355dad27e97b5f9842497bed2809fb5fe6946d97e9e8799c057641f2e0",
+      "pending_refs_sha256": "44027300311b9ba34f4e006e5584ee4754e34b3ad38901b209827403f19e8ff2",
+      "dispatched": false
+    }
+  }
+}

@@ -10,6 +10,10 @@ Main 已做小型 M3 单位补丁：通用 Interp 不再按四个光学表达式
 
 本机 macOS ARM COMSOL 6.4.0.293/JDK11 和 Windows 主机 6.3.0.290/6.4.0.293/JDK11 已只读确认可达，见 [环境预检](state/ENVIRONMENT_PREFLIGHT.json)。Windows 已有 standalone Desktop 保留；不接管、不终止。历史 R6I/once/UNKNOWN 原件未重放，新项目不继承旧权限或 PID 身份。
 
-下一步：验收并同步 M1 实现阶段后，继续普通已安装 MCP 的项目 Java→绑定模型→真实求解/回读/产物闭环，再完成结果、恢复、安装及活跃目标验证。不能把本次源码恢复、软件测试或同步写成整个目标完成。
+M0/M1 软件阶段已普通推送并独立回读为 `4759c097eabfdf588a366af51d9c7d1b90d1ac1b`。
+
+下一步：同一 Luna 正在执行普通已安装 MCP 的项目 Java→绑定模型→真实求解/回读/产物闭环，再完成结果、恢复、安装及活跃目标验证。不能把本次源码恢复、软件测试或同步写成整个目标完成。
 
 M4 输入准备已完成可得部分：Windows34/34、ARM41/41、Intel40/41。上游 cryptography49起移除Intel Mac支持，50.0.1缺官方Intel wheel；同版本私有派生构建独立进行，不能宣称上游支持或Intel硬件通过。原r13 pyproject哈希与当前相同，uv.lock确实缺desktop extra；核心M1改动仍需新的源码/构件绑定。
+
+M4 通用发布工具阶段已由 Main 限定审查通过：`tools/universal_release.py` 复用既有 source/wheel/hash/SBOM/打包 API，不再增加固定 current175-rN profile。131 项软件测试无失败/跳过，三架构 ZIP 共 154 个清单成员核对通过（ARM53/Windows46/Intel55），175 个当前源成员与快照一致、172 个包成员与测试 wheel 一致；Mac ARM 干净环境已 `--no-index --require-hashes` 安装并启动112工具。详见 evidence/M4_RELEASE_TOOLING.json。Windows 安装、完整原生离线及最终 Reviewer 未验收；后续生产/README变化需新源码快照，不能将旧构件改名冒充。

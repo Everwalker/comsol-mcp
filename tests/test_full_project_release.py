@@ -345,6 +345,30 @@ def test_derived_wheel_provenance_rejects_temp_dylib_dependency_and_lock_drift(t
         release.verify_derived_wheel(bad_provenance, wheel, source_lock, openssl_license, "macos_x86_64")
 
 
+@pytest.mark.parametrize("tamper", [None, "version", "url", "source_sha256", "linkage", "license", "binary", "lock"])
+def test_exact_openssl_403_source_tuple_retains_existing_provenance_checks(tmp_path, tamper):
+    _house, wheel, _reqs, lock, provenance, _sha = make_derived_crypto_inputs(tmp_path)
+    payload = json.loads(provenance.read_text())
+    ssl = payload["native_component"]
+    ssl.update(version="4.0.3", source_url="https://github.com/openssl/openssl/releases/download/openssl-4.0.3/openssl-4.0.3.tar.gz",
+               source_sha256="325b5c806167c13b40b1ffeadfe0248197c00eccc4cf123ec1e28d2d2fd216d9")
+    license_path = tmp_path / "OpenSSL-4.0.2-LICENSE.txt"
+    if tamper == "version": ssl["version"] = "4.0.4"
+    if tamper == "url": ssl["source_url"] = "https://unreviewed.invalid/source.tar.gz"
+    if tamper == "source_sha256": ssl["source_sha256"] = "a" * 64
+    if tamper == "linkage": ssl["linkage"] = "dynamic"
+    if tamper == "license": license_path.write_text("changed")
+    if tamper == "binary": payload["wheel"]["sha256"] = "0" * 64
+    if tamper == "lock": payload["source_lock"]["sha256"] = "0" * 64
+    provenance.write_text(json.dumps(payload))
+    if tamper:
+        with pytest.raises(release.ReleaseError):
+            release.verify_derived_wheel(provenance, wheel, lock, license_path, "macos_x86_64")
+    else:
+        result = release.verify_derived_wheel(provenance, wheel, lock, license_path, "macos_x86_64")
+        assert result["native_component"]["version"] == "4.0.3"
+
+
 def test_derived_wheel_provenance_and_openssl_license_are_bundled(tmp_path: pathlib.Path) -> None:
     wheelhouse, crypto_wheel, requirements, source_lock, provenance, _crypto_sha = make_derived_crypto_inputs(tmp_path)
     openssl_license = tmp_path / "OpenSSL-4.0.2-LICENSE.txt"

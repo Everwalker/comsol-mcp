@@ -2,11 +2,56 @@
   "schema_version": 1,
   "baseline_commit": "cd47281777eae6f4ea0d40c5c754dca9982eda86",
   "baseline_tree": "94e6523bfffe21ace621045710335bea5512c3c1",
-  "state_revision": 7,
-  "phase": "M1_SCOPED_SOFTWARE_REVIEWED_SYNC_PENDING",
+  "state_revision": 16,
+  "phase": "M2A_NATIVE_FOUNDATION_IN_PROGRESS",
   "status": "IN_PROGRESS",
-  "next_action": "Commit and non-force synchronize the reviewed M0/M1/units/coverage software stage; then the same Luna executor runs M2a real macOS COMSOL through an installed MCP with new project Java bound to existing target ModelRef. No final review or release claim.",
-  "active_job_refs": [],
+  "next_action": "Same Luna executor: source-external installed MCP → fresh owned Mac ARM COMSOL 6.4 project → new project Java bound to existing target ModelRef → real deterministic solve/readback/artifacts/save while preserving sentinel. Main follows exact native job refs and prepares remaining generic lifecycle/delivery work. Final reviewer not started.",
+  "active_job_refs": [
+    {
+      "scope": "M2a_NEW_NATIVE_RESOURCES",
+      "project_id": "87d759ca-0764-473a-9978-2b51d5da74e1",
+      "session_id": "session-e4b78e9a6f0c472d8d4ec5017f3f3c03",
+      "original_session_start_job_id": "c27e57e8-725e-4066-896d-24e9dc5a3c21",
+      "solver_job_id": null,
+      "server_pid_observed": 82522,
+      "server_endpoint": {
+        "host": "127.0.0.1",
+        "port": 64796
+      },
+      "authority": "Original managed owner only; PID alone cannot authorize signals or adoption",
+      "runtime_directory": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2",
+      "pending_refs_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/pending-refs.json",
+      "evidence": "evidence/M2A_NATIVE.json",
+      "next": "Reconcile current job/session using original owner before any restart/retry",
+      "model_refs": [
+        {
+          "role": "target_model_create",
+          "model_ref": {
+            "schema_version": 1,
+            "session_id": "session-e4b78e9a6f0c472d8d4ec5017f3f3c03",
+            "server_instance_id": "04c12d9ab4dd3d6c4dbbdfb99b30cb94b6159582356928eb96c9d61bf178e184",
+            "model_tag": "mcp1",
+            "generation": 1
+          },
+          "last_recorded_revision": 0
+        },
+        {
+          "role": "sentinel_model_create",
+          "model_ref": {
+            "schema_version": 1,
+            "session_id": "session-e4b78e9a6f0c472d8d4ec5017f3f3c03",
+            "server_instance_id": "04c12d9ab4dd3d6c4dbbdfb99b30cb94b6159582356928eb96c9d61bf178e184",
+            "model_tag": "mcp2",
+            "generation": 1
+          },
+          "last_recorded_revision": 0
+        }
+      ],
+      "worker_instance_id": "59b53805-2490-4f6c-8761-651a21fa4aa5",
+      "worker_epoch": 2,
+      "server_instance_id": "04c12d9ab4dd3d6c4dbbdfb99b30cb94b6159582356928eb96c9d61bf178e184"
+    }
+  ],
   "blockers": [
     {
       "id": "HISTORICAL_SOURCE_FIXTURE_MISSING",
@@ -23,8 +68,8 @@
   ],
   "completed_groups": [],
   "scope_decision": "SCOPE_RESET.md",
-  "updated_utc": "2026-10-22T11:49:16.708696+00:00",
-  "native_execution_claimed": false,
+  "updated_utc": "2026-10-22T12:43:59.703640+00:00",
+  "native_execution_claimed": true,
   "recovery_checkpoint": {
     "scope": "workpack recovery repair, synthetic workpack tests, pinned source and candidate restoration, new-state initialization only",
     "package_repair": {
@@ -120,8 +165,23 @@
     "dependency_prep_model": "gpt-6-luna medium",
     "intel_dependency_build_agent_id": "01a16367-1e63-7e61-804f-c7ac2fa9a703",
     "intel_dependency_build_model": "gpt-6-luna max",
-    "coverage_agent_state": "COMPLETED_CLOSED",
-    "dependency_prep_agent_state": "COMPLETED_CLOSED"
+    "coverage_agent_state": "RESUMED_WINDOWS_MANAGED_PREP",
+    "dependency_prep_agent_state": "M4_COMPLETED_MAIN_REVIEWED_CLOSED",
+    "intel_dependency_build_agent_state": "COMPLETED_MAIN_REVIEWED_CLOSED",
+    "provider_incident": {
+      "observed_utc": "2026-10-22T12:35:43.298458+00:00",
+      "classification": "TRANSIENT_AGENT_PROVIDER_NETWORK_FAILURE_NOT_COMSOL_FAILURE",
+      "error": "502 Bad Gateway; Provider unreachable getaddrinfo ENOTFOUND chatgpt.com at local backend10100",
+      "affected_agents": [
+        "01a1632c-2788-73b2-a3d5-5023b2335cb6",
+        "01a16359-6b09-78e0-a17f-b1763a78c1d1",
+        "01a16335-4603-7dd1-a8b0-6956c46bf19c",
+        "01a16367-1e63-7e61-804f-c7ac2fa9a703"
+      ],
+      "recovery_requests_queued": 1,
+      "host_dns_now_resolves": true,
+      "network_or_global_security_changed": false
+    }
   },
   "current_changes": {
     "M0": "PINNED_SOURCE_AND_CANDIDATE_BYTES_VERIFIED_NO_NATIVE_ACCEPTANCE",
@@ -130,11 +190,14 @@
     "unit_default_evidence": "evidence/unit-default/affected-result.json",
     "M0_RELOCATION": "PASS_36_SOFTWARE_TESTS_AND_BOTH_PACKAGE_INTEGRITY_CHECKS",
     "M0_RELOCATION_EVIDENCE": "evidence/recovery-relocation/result.json",
-    "M4_DEPENDENCIES": "WINDOWS_34_OF_34_MAC_ARM_41_OF_41_MAC_INTEL_40_OF_41_SHA256_MATCHED_INPUTS_ONLY",
-    "M4_INTEL_CRYPTO": "OFFICIAL_50_0_1_INTEL_WHEEL_UNAVAILABLE_PRIVATE_DERIVED_BUILD_IN_PROGRESS",
+    "M4_DEPENDENCIES": "THREE_ARCHITECTURE_OFFLINE_BUNDLES_BUILT_AND_HASH_VERIFIED_WITH_NEW_LOCK_AND_SOURCE",
+    "M4_INTEL_CRYPTO": "PASS_SCOPED_DERIVED_BUILD_AND_PORTABLE_PLAN_HELPER_MAIN_REVIEWED_NEW_41_WHEEL_CLOSURE_PACKAGED_NATIVE_USER_REQUESTED_SKIP",
     "M4_DEPENDENCY_EVIDENCE": "evidence/dependency-prep.json",
     "GENERAL_COVERAGE": "273_ACTIONS_427_FROZEN_SUBASSERTIONS_STATE_PRESERVING_REFRESH_CHECK_PASS_NO_NATIVE_PASS",
-    "M1_MAIN_REVIEW": "evidence/M1_MAIN_STAGE_REVIEW.json"
+    "M1_MAIN_REVIEW": "evidence/M1_MAIN_STAGE_REVIEW.json",
+    "M4_INTEL_EVIDENCE": "evidence/dependency-intel-build.json",
+    "M4_RELEASE": "PASS_SCOPED_131_SOFTWARE_TESTS_THREE_ARCHIVES_MAC_ARM_CLEAN_OFFLINE_INSTALL_PROTOCOL_NATIVE_T056_OPEN",
+    "M4_RELEASE_EVIDENCE": "evidence/M4_RELEASE_TOOLING.json"
   },
   "legacy_unknown_preserved": {
     "source": "docs/full_project_continuation_v3/CURRENT_HANDOFF.md",
@@ -148,6 +211,142 @@
     "baseline_tree": "94e6523bfffe21ace621045710335bea5512c3c1",
     "history_reconstructed": true,
     "remote_main_before_stage": "cd47281777eae6f4ea0d40c5c754dca9982eda86",
-    "stage_sync_status": "PENDING"
+    "stage_sync_status": "VERIFIED_REMOTE_MATCH",
+    "last_synced_commit": "4759c097eabfdf588a366af51d9c7d1b90d1ac1b",
+    "remote_readback_commit": "4759c097eabfdf588a366af51d9c7d1b90d1ac1b",
+    "readback_utc": "2026-10-22T11:55:02.179636+00:00",
+    "current_stage_sync_status": "M4_REVIEWED_PENDING_COMMIT",
+    "publish_attempt_note": "M4 first prepublish scan stopped on unchanged synthetic OpenSSH marker/A*160 safety fixtures in test_full_project_release.py; no new commit was created and the attempted push reported up-to-date. Confirmed exact fixture construction against prior tracked source, then resumed explicit staging."
+  },
+  "remaining_core_findings": [
+    {
+      "id": "BOUND_JAVA_GLOBAL_MODEL_MANAGEMENT_DEFAULT",
+      "status": "OPEN_CORE_GAP",
+      "contract": "docs/comsol_mcp_design_v1/01_ARCHITECTURE.md:148",
+      "observed": "Worker injects target Model and checks identity, but compile/execute currently lacks an explicit default rejection for project-source ModelUtil.create/load/clear model-switching. trusted_code is not OS/model isolation.",
+      "next": "Same primary executor addresses after M2a normal path; enforce default known model-management boundary with meaningful compile/execute negatives, retain explicit OS isolation limits. No regex-only sandbox claim."
+    },
+    {
+      "id": "COMPILE_ANNOTATION_PROCESSOR_POLICY",
+      "status": "REVIEW_REQUIRED",
+      "observed": "AST parse uses -proc:none; actual compileSnapshot compiler task options currently omit it.",
+      "next": "Same M2b code-boundary patch review: compilation should not run annotation processors in a compile-only compute permission path."
+    },
+    {
+      "id": "CURRENT_USER_DOCUMENTATION",
+      "status": "OPEN_DOCUMENTATION_GAP",
+      "observed": "README current heading still labels October5 pause as current, starts with legacy attach-first only and lacks the source-external installed project/Java workflow. It also says JDK11-or-higher without common external Java11 certification scope.",
+      "next": "Main updates canonical user guide from actually exercised M2a requests after M4 source capture finishes; preserve historical snapshots and existing source evidence. Before final candidate freeze include current managed project flow, source-external config, offline install/lifecycle links and accurate platform limits."
+    }
+  ],
+  "windows_preparation": {
+    "read_only_evidence": "evidence/WINDOWS_HOST_READONLY_PREP.json",
+    "observation": "Elevated SSH token; no managed COMSOL MCP service/default profile directory observed in the selected locations; independent agent preparing exact new runtime/host plan. Not proof of all custom locations absent.",
+    "native_status": "NOT_RUN",
+    "host_policy_changes": "NOT_AUTHORIZED_OR_APPLIED"
+  },
+  "m2a_checkpoint": {
+    "evidence": "evidence/M2A_NATIVE.json",
+    "status": "IN_PROGRESS",
+    "runtime_directory": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2",
+    "public_installed_protocol": "PASS_DEVELOPMENT_INSTALL_BORROWED_DEPENDENCIES",
+    "runtime_discovery": "PASS_READ_ONLY",
+    "active_references": {
+      "project_id": "87d759ca-0764-473a-9978-2b51d5da74e1",
+      "session_id": "session-e4b78e9a6f0c472d8d4ec5017f3f3c03",
+      "model_refs": [
+        {
+          "role": "target_model_create",
+          "model_ref": {
+            "schema_version": 1,
+            "session_id": "session-e4b78e9a6f0c472d8d4ec5017f3f3c03",
+            "server_instance_id": "04c12d9ab4dd3d6c4dbbdfb99b30cb94b6159582356928eb96c9d61bf178e184",
+            "model_tag": "mcp1",
+            "generation": 1
+          },
+          "last_recorded_revision": 0
+        },
+        {
+          "role": "sentinel_model_create",
+          "model_ref": {
+            "schema_version": 1,
+            "session_id": "session-e4b78e9a6f0c472d8d4ec5017f3f3c03",
+            "server_instance_id": "04c12d9ab4dd3d6c4dbbdfb99b30cb94b6159582356928eb96c9d61bf178e184",
+            "model_tag": "mcp2",
+            "generation": 1
+          },
+          "last_recorded_revision": 0
+        }
+      ],
+      "native_solver_job_id": null,
+      "control_home": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/mcp_home/server/control-private",
+      "project_root": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/project_root",
+      "session_runtime_state_root": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/mcp_home/server/control-private/session-state",
+      "runtime_inspect_job_id": "c26092f7-33a4-402d-96d4-baa0a4e1aebd",
+      "project_workspace": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/project_root/m2a-native-conduction-20261022-A7",
+      "project_create_job_id": "d9e1ee94-cbba-4056-9720-fbc0cfce819a",
+      "session_start_request_id": "m2a-20261022-session-start-c444b4deec1c",
+      "session_start_idempotency_key": "m2a-session-start-e52be893807842a8af299da03bf64763",
+      "pending_refs_file": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/_state/universal-m2a-20261022T115828Z-43b2d2/pending-refs.json",
+      "session_start_job_id": "c27e57e8-725e-4066-896d-24e9dc5a3c21",
+      "server_pid": 82522,
+      "server_endpoint": {
+        "host": "127.0.0.1",
+        "port": 64796
+      },
+      "server_ownership": "mcp_managed",
+      "session_connect_job_id": "88b5113a-b676-4d0a-b881-68da3f3d517e",
+      "worker_instance_id": "59b53805-2490-4f6c-8761-651a21fa4aa5",
+      "worker_epoch": 2,
+      "server_instance_id": "04c12d9ab4dd3d6c4dbbdfb99b30cb94b6159582356928eb96c9d61bf178e184",
+      "target_model_ref": {
+        "schema_version": 1,
+        "session_id": "session-e4b78e9a6f0c472d8d4ec5017f3f3c03",
+        "server_instance_id": "04c12d9ab4dd3d6c4dbbdfb99b30cb94b6159582356928eb96c9d61bf178e184",
+        "model_tag": "mcp1",
+        "generation": 1
+      },
+      "target_model_revision": 0,
+      "target_model_create_job_id": "bce36722-6d14-41a5-8dfc-f07e4505c8ae",
+      "sentinel_model_ref": {
+        "schema_version": 1,
+        "session_id": "session-e4b78e9a6f0c472d8d4ec5017f3f3c03",
+        "server_instance_id": "04c12d9ab4dd3d6c4dbbdfb99b30cb94b6159582356928eb96c9d61bf178e184",
+        "model_tag": "mcp2",
+        "generation": 1
+      },
+      "sentinel_model_revision": 0,
+      "sentinel_model_create_job_id": "d179d29b-5399-4d7c-96ed-d95a88094dbe"
+    },
+    "native_solver": "NOT_RUN_YET",
+    "native_server": "PASS_SCOPED_MANAGED_START_CONNECT_TWO_MODELS_NO_SOLVE_ACCEPTANCE",
+    "interruption_reconciliation": {
+      "observed_utc": "2026-10-22T12:35:43.298458+00:00",
+      "process_pid82522_live": true,
+      "process_start_matches_recorded_birth": true,
+      "original_port64796_accepts_tcp": true,
+      "job_status_counts": {
+        "SUCCEEDED": 9
+      },
+      "nonterminal_or_unknown_jobs": [],
+      "native_solver_submitted": false,
+      "last_checkpoint": "TARGET_AND_SENTINEL_BASELINES_CAPTURED_PENDING_JAVA"
+    }
+  },
+  "m4_checkpoint": {
+    "status": "PASS_SCOPED_SOFTWARE_AND_ARTIFACT_BINDING",
+    "source_member_fingerprint_sha256": "6c7e67b3bea49671e65452e11cf2fe46b397d234fa2aae2e73e9c30b822e7a5c",
+    "application_wheel_sha256": "c733b15e7c1c4dd709a46d92fe7c8054cd88b5f95be8b4fa56339d3d7d35c7a9",
+    "uv_lock_sha256": "a6bb3dc08acdb783a1d3553f71e21bde8c7a8e01394a6f70a062357a4ce04fc2",
+    "release_record": {
+      "path": "_state/universal-release-tooling/release-candidate/RELEASE.json",
+      "bytes": 39378,
+      "sha256": "9700b7e456c205a3f74cf408cc0556d31916129af4d96dea80b4ac51fed48824"
+    },
+    "source_binding": "Current package source and three root files match recorded source snapshot at Main review. Later code/docs changes require a new final capture.",
+    "windows_install": "NOT_RUN",
+    "intel_native": "USER_REQUESTED_SKIP_NOT_PASS",
+    "COMSOL_native_offline_T056": "NOT_RUN",
+    "final_reviewer": "NOT_RUN"
   }
 }

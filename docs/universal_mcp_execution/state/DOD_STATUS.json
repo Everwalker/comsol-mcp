@@ -14,15 +14,18 @@
           "group_acceptance": "NOT_RUN"
         },
         "macos-arm64-6.4": {
-          "native": "NOT_RUN",
+          "native": "PARTIAL_NATIVE_FOUNDATION_NO_SOLVE_ACCEPTANCE",
           "group_acceptance": "NOT_RUN"
         }
       },
       "evidence_refs": [
         "evidence/M1_MAIN_STAGE_REVIEW.json",
-        "evidence/recovery-relocation/result.json"
+        "evidence/recovery-relocation/result.json",
+        "evidence/M2A_NATIVE.json",
+        "evidence/M4_RELEASE_TOOLING.json"
       ],
-      "scope": "Software/source/input evidence only; required native and final acceptance remain open."
+      "scope": "Software evidence plus fresh installed MCP native Mac runtime start/connect/two-model creation only; full group and final acceptance remain open.",
+      "delivery_evidence_scope": "Three architecture software bundles/hash/SBOM/lock; Mac ARM clean --no-index --require-hashes install+MCP112tool startup; native offline/Windowsinstall/final acceptance not included."
     },
     {
       "id": "U02",
@@ -37,14 +40,15 @@
           "group_acceptance": "NOT_RUN"
         },
         "macos-arm64-6.4": {
-          "native": "NOT_RUN",
+          "native": "PARTIAL_NATIVE_FOUNDATION_NO_SOLVE_ACCEPTANCE",
           "group_acceptance": "NOT_RUN"
         }
       },
       "evidence_refs": [
-        "evidence/M1_MAIN_STAGE_REVIEW.json"
+        "evidence/M1_MAIN_STAGE_REVIEW.json",
+        "evidence/M2A_NATIVE.json"
       ],
-      "scope": "Software/source/input evidence only; required native and final acceptance remain open."
+      "scope": "Software evidence plus fresh installed MCP native Mac runtime start/connect/two-model creation only; full group and final acceptance remain open."
     },
     {
       "id": "U03",
@@ -168,9 +172,11 @@
         }
       },
       "evidence_refs": [
-        "evidence/M1_MAIN_STAGE_REVIEW.json"
+        "evidence/M1_MAIN_STAGE_REVIEW.json",
+        "evidence/M4_RELEASE_TOOLING.json"
       ],
-      "scope": "Software/source/input evidence only; required native and final acceptance remain open."
+      "scope": "Software/source/input evidence only; required native and final acceptance remain open.",
+      "delivery_evidence_scope": "Three architecture software bundles/hash/SBOM/lock; Mac ARM clean --no-index --require-hashes install+MCP112tool startup; native offline/Windowsinstall/final acceptance not included."
     },
     {
       "id": "U09",
@@ -209,9 +215,11 @@
         }
       },
       "evidence_refs": [
-        "evidence/dependency-prep.json"
+        "evidence/dependency-prep.json",
+        "evidence/M4_RELEASE_TOOLING.json"
       ],
-      "scope": "Software/source/input evidence only; required native and final acceptance remain open."
+      "scope": "Software/source/input evidence only; required native and final acceptance remain open.",
+      "delivery_evidence_scope": "Three architecture software bundles/hash/SBOM/lock; Mac ARM clean --no-index --require-hashes install+MCP112tool startup; native offline/Windowsinstall/final acceptance not included."
     },
     {
       "id": "U11",
@@ -250,9 +258,11 @@
         }
       },
       "evidence_refs": [
-        "state/GENERAL_COVERAGE.json"
+        "state/GENERAL_COVERAGE.json",
+        "evidence/M4_RELEASE_TOOLING.json"
       ],
-      "scope": "Software/source/input evidence only; required native and final acceptance remain open."
+      "scope": "Software/source/input evidence only; required native and final acceptance remain open.",
+      "delivery_evidence_scope": "Three architecture software bundles/hash/SBOM/lock; Mac ARM clean --no-index --require-hashes install+MCP112tool startup; native offline/Windowsinstall/final acceptance not included."
     }
   ]
 }
