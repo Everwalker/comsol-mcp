@@ -24,20 +24,24 @@ def test_explicit_native_default_remains_exact_raw_blank_in_fieldarray(monkeypat
     assert proof['native_default_unit_expressions'] == ['emw.neff_1']
     assert data['expression_units'] == {'emw.neff_1': ''}
     assert data['field_array']['units']['expression'] == {'emw.neff_1': ''}
+    assert data['field_array']['metadata']['unit_readback_status'] == 'UNVERIFIED'
     assert 'not dimensionless evidence' in data['field_array']['metadata']['native_default_unit_semantics']
     assert not tree.numerical.items
 
 
-@pytest.mark.parametrize('expression', ['emw.beta_1', 'emw.k0', 'freq', 'emw.Nx', 'emw.nx '])
-def test_empty_unit_is_refused_before_any_engine_call_outside_exact_native_default_allowlist(monkeypatch, expression):
+@pytest.mark.parametrize('expression', ['compOdd.user_temperature', 'u_custom', 'x/1[mm]', '2', 'freq'])
+def test_native_default_uses_the_same_engine_pipeline_for_task_expressions(monkeypatch, expression):
     tree, nodes, args = complete_tree(monkeypatch)
     args['spec']['expressions'] = [expression]
     args['spec']['units'] = ['']
-    with pytest.raises(ExecutionContractError) as exc:
-        results.result_at_points(tree.worker, 'Model', args)
-    assert exc.value.code == 'INVALID_REQUEST'
-    assert nodes == [] and tree.numerical.items == {}
-    assert tree.engine_methods() == set()
+    data = results.result_at_points(tree.worker, 'Model', args)
+    assert data['status']['ok'] is True
+    proof = data['feature_readback']['requested_unit_application']
+    assert proof['requested_expressions'] == [expression]
+    assert proof['before']['units'] == proof['after']['units'] == ['']
+    assert data['field_array']['units']['expression'] == {expression: ''}
+    assert data['field_array']['metadata']['unit_readback_status'] == 'UNVERIFIED'
+    assert nodes and tree.numerical.items == {}
 
 
 def test_exact_builtin_normals_keep_literal_blank_native_default_readback(monkeypatch):
@@ -168,9 +172,11 @@ def test_empty_request_does_not_relax_expression_after_readback(monkeypatch):
     with pytest.raises(ExecutionContractError): results.result_at_points(tree.worker, 'Model', args)
 
 
-def test_exact_empty_request_through_real_public_gateway_and_registered_observation(tmp_path, monkeypatch):
+@pytest.mark.parametrize('expression', ['emw.neff_1', 'compOdd.user_temperature'])
+def test_exact_empty_request_through_real_public_gateway_and_registered_observation(tmp_path, monkeypatch, expression):
     from tools.run_native_w23_saved_mph_diagnostic import science, _response_body
     tree, nodes, args = complete_tree(monkeypatch)
+    args['spec']['expressions'] = [expression]
     study = tree.studies.items['std1']
     study.getLastComputationDate = lambda: 123
     study.getLastComputationVersion = lambda: '6.4.0.293'
@@ -186,7 +192,8 @@ def test_exact_empty_request_through_real_public_gateway_and_registered_observat
                                     cleanup_reserve_s=1, label='native-default', evidence=tmp_path)
     assert response['success'], response
     data = _response_body(response)
-    assert data['expression_units']['emw.neff_1'] == ''
+    assert data['expression_units'][expression] == ''
+    assert data['field_array']['metadata']['unit_readback_status'] == 'UNVERIFIED'
     assert data['observation_ref']['sha256']
     stored = daemon.store.operation_job(response['execution']['operation_id'])
     assert stored['status'] == 'SUCCEEDED'
@@ -228,9 +235,9 @@ def test_control_daemon_accepts_exact_normal_native_default_through_production_a
     assert daemon.store.list_jobs(project_id=project).total == jobs_before + 1
 
 
-def test_control_daemon_rejects_non_exact_normal_alias_before_operation_dispatch(tmp_path, monkeypatch):
+def test_control_daemon_rejects_empty_expression_before_operation_dispatch(tmp_path, monkeypatch):
     tree, nodes, args = complete_tree(monkeypatch)
-    args['spec']['expressions'] = ['emw.Nx']
+    args['spec']['expressions'] = [' ']
     args['spec']['units'] = ['']
     daemon, ref, project = _real_public_points_daemon(tmp_path, monkeypatch, tree)
     jobs_before = daemon.store.list_jobs(project_id=project).total

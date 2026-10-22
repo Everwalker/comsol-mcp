@@ -1,0 +1,633 @@
+{
+  "scope": "MAIN_STAGE_REVIEW_SCOPED_SOFTWARE_NOT_FINAL_INDEPENDENT_OR_NATIVE_ACCEPTANCE",
+  "status": "PASS_SCOPED_SOFTWARE",
+  "junit": {
+    "tests": 303,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "junit_sha256": "36743d17b6267d84c41779656533ae9a26b886a76ed08cfbe8f7a9306aa4cb9e",
+  "wheel_sha256": "911e607a5b37f03770f7addd2cbc57364ed9e22c3a2636128df06469bcfc7498",
+  "wheel_compares_current_production_members": {
+    "comsol_mcp/_g2_public_api.py": {
+      "sha256": "8d6eeb907687f2a6cc7c881807119d3e7a0035810694cb4cfe109ad6d87f9027",
+      "same_as_wheel": true
+    },
+    "comsol_mcp/_g2_engine.py": {
+      "sha256": "9e0d72f32d6d825d8550c6c7e01f6b36a59f06c457309fa0a06da010f5b25bcb",
+      "same_as_wheel": true
+    },
+    "comsol_mcp/_g2_registry.py": {
+      "sha256": "f1a795e311d3c12c387312bbe9c329311056e11dee93f0c251506a56aef4cc58",
+      "same_as_wheel": true
+    },
+    "comsol_mcp/_g2_checkpoint_diff.py": {
+      "sha256": "a331bae7b145f5d35194ab543e13d594641d5323bae97d3a3e33d0b522c77cb7",
+      "same_as_wheel": true
+    },
+    "comsol_mcp/_g2_copy_subtree.py": {
+      "sha256": "362e2a1db362d686c1a6dae1b386259a70c5c2acf0c5c05e38b0fcaa09b35de5",
+      "same_as_wheel": true
+    },
+    "comsol_mcp/_managed_backend.py": {
+      "sha256": "3baf238dbef82da894adc4f9531ea90287505d11ce5bd6a6baeaf65a0b7c37a9",
+      "same_as_wheel": true
+    },
+    "comsol_mcp/_g3_results.py": {
+      "sha256": "82261b51e7562b3bedb7bf5b7acf27e7bc8caaa7f5c0249fe6cb94cac445c4f0",
+      "same_as_wheel": true
+    },
+    "comsol_mcp/worker_java/PersistentComsolWorker.java": {
+      "sha256": "d0fe4f0cebb6ab3bdfda9819c8ed3a8ffc463e91a4779afa0b348ca39c229282",
+      "same_as_wheel": true
+    }
+  },
+  "source_outside_wheel_entrypoint_smoke": "PASS",
+  "mcp_protocol": {
+    "status": "PASS",
+    "native_comsol": "NOT_RUN",
+    "initialized": true,
+    "tool_count": 112,
+    "required_tools_present": true,
+    "operation_call_schema": {
+      "properties": {
+        "operation_id": {
+          "title": "Operation Id",
+          "type": "string"
+        },
+        "arguments": {
+          "additionalProperties": true,
+          "title": "Arguments",
+          "type": "object"
+        },
+        "execution": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Execution"
+        }
+      },
+      "required": [
+        "operation_id",
+        "arguments"
+      ],
+      "title": "operation_callArguments",
+      "type": "object"
+    },
+    "api_describe_schema": {
+      "operation_id": "api.describe",
+      "mcp_tool_name": "api_describe",
+      "domain": "api",
+      "purpose": "列出允许的公共方法、签名和版本文档",
+      "effect": "READ",
+      "scope": "model",
+      "gate": "G2",
+      "implementation_status": "SUPPORTED_UNVERIFIED",
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "api.describe input",
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "session_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "model_ref": {
+            "type": "object",
+            "required": [
+              "schema_version",
+              "session_id",
+              "server_instance_id",
+              "model_tag",
+              "generation"
+            ],
+            "properties": {
+              "schema_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "session_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "server_instance_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model_tag": {
+                "type": "string",
+                "minLength": 1
+              },
+              "generation": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "additionalProperties": false,
+            "description": "Production ModelRef object; legacy catalog string is not used by the managed wire."
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "path": {
+            "$ref": "common.schema.json#/$defs/NodePath"
+          },
+          "method": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "session_id",
+          "model_ref",
+          "path"
+        ],
+        "additionalProperties": false
+      },
+      "catalog_input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "api.describe input",
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "session_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "model_ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "path": {
+            "$ref": "common.schema.json#/$defs/NodePath"
+          },
+          "method": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "session_id",
+          "model_ref",
+          "path"
+        ],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "success",
+          "data"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object"
+          },
+          "error": {
+            "type": [
+              "object",
+              "string",
+              "null"
+            ]
+          },
+          "execution": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": true
+      },
+      "wire_compatibility": {
+        "transport": "MCP structuredContent plus text mirror; isError equals not success",
+        "request_execution": "execution is a keyword-only MCP field; registry_call/operation_call carries the same fields in its outer request",
+        "execution_fields": [
+          "session_id",
+          "model_ref",
+          "expected_revision",
+          "idempotency_key",
+          "request_id",
+          "rpc_timeout_s",
+          "queue_timeout_s",
+          "execution_timeout_s"
+        ],
+        "model_ref": "structured ModelRef object {schema_version,session_id,server_instance_id,model_tag,generation}; catalog string form is accepted only as historical metadata and is not the production wire shape",
+        "result_fields": [
+          "success",
+          "data",
+          "error",
+          "execution"
+        ]
+      },
+      "output_contract": "ActionResult; add domain-specific data schema before implementation gate is closed",
+      "route": "bound Java worker / public COMSOL API",
+      "required_tests": [
+        "schema_valid",
+        "normal_path",
+        "failure_is_truthful"
+      ],
+      "notes": "DYNAMIC actions must resolve subtype, required fields, authorization and actual effect before execution; EVALUATE may use ephemeral nodes and is not automatically a pure read.",
+      "executable": true,
+      "data_schema": {
+        "type": "object",
+        "required": [
+          "schema_version",
+          "operation",
+          "status",
+          "complete",
+          "source_identity",
+          "evidence",
+          "coverage",
+          "errors"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": 1
+          },
+          "operation": {
+            "const": "api.describe"
+          },
+          "status": {
+            "enum": [
+              "OBSERVED",
+              "INCOMPLETE",
+              "UNKNOWN"
+            ]
+          },
+          "complete": {
+            "type": "boolean"
+          },
+          "source_identity": {
+            "type": "object"
+          },
+          "evidence": {
+            "type": "object"
+          },
+          "coverage": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "isolation_proof": {
+            "type": "object"
+          },
+          "domain_state": {
+            "type": "string"
+          },
+          "verification_status": {
+            "type": "string"
+          },
+          "execution_state_unknown": {
+            "type": "boolean"
+          },
+          "partial_change": {
+            "type": "boolean"
+          },
+          "cleanup_failed": {
+            "type": "boolean"
+          },
+          "dispatch_stage": {
+            "type": "string"
+          },
+          "domain_outcome": {
+            "type": "object"
+          },
+          "effect": {
+            "type": "string"
+          },
+          "verified_outcome": {
+            "type": "string"
+          },
+          "metadata_complete": {
+            "type": "boolean"
+          },
+          "runtime_version_raw": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "path": {},
+          "runtime_version_format": {
+            "enum": [
+              "CANONICAL_FOUR_PART",
+              "COMSOL_ZH_DEVELOPMENT_BUILD",
+              "COMSOL_ENGLISH_BUILD"
+            ]
+          },
+          "runtime_version": {
+            "type": "string",
+            "minLength": 1
+          },
+          "methods": {
+            "type": "array",
+            "maxItems": 8192,
+            "items": {
+              "type": "object",
+              "required": [
+                "interface",
+                "method",
+                "parameters",
+                "returns",
+                "policy_status",
+                "invoke_allowed",
+                "effect",
+                "permission",
+                "supported_releases",
+                "argument_contract",
+                "return_contract",
+                "documentation",
+                "controlled_alternative"
+              ],
+              "properties": {
+                "interface": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "method": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "parameters": {
+                  "type": "array",
+                  "maxItems": 32,
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "returns": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "policy_status": {
+                  "enum": [
+                    "REVIEWED",
+                    "UNREVIEWED"
+                  ]
+                },
+                "invoke_allowed": {
+                  "type": "boolean"
+                },
+                "effect": {
+                  "enum": [
+                    "READ",
+                    "WRITE",
+                    null
+                  ]
+                },
+                "permission": {
+                  "enum": [
+                    "inspect",
+                    "project_write",
+                    null
+                  ]
+                },
+                "supported_releases": {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "6.3",
+                      "6.4"
+                    ]
+                  }
+                },
+                "argument_contract": {
+                  "type": "array",
+                  "maxItems": 32,
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "kind",
+                      "shape_rank"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "enum": [
+                          "boolean",
+                          "int32",
+                          "float64",
+                          "string",
+                          "unknown"
+                        ]
+                      },
+                      "shape_rank": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "minimum": 0,
+                        "maximum": 2
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "return_contract": {
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "kind",
+                        "shape_rank"
+                      ],
+                      "properties": {
+                        "kind": {
+                          "enum": [
+                            "boolean",
+                            "int32",
+                            "float64",
+                            "string"
+                          ]
+                        },
+                        "shape_rank": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "minimum": 0,
+                          "maximum": 2
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "documentation": {
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "path",
+                        "sha256",
+                        "source_version",
+                        "reference_only",
+                        "signature_observation_scope"
+                      ],
+                      "properties": {
+                        "path": {
+                          "type": "string"
+                        },
+                        "sha256": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{64}$"
+                        },
+                        "source_version": {
+                          "const": "6.4.0.293"
+                        },
+                        "reference_only": {
+                          "const": true
+                        },
+                        "signature_observation_scope": {
+                          "const": "actual_runtime_receiver_exact_interface_method_parameters_and_return"
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "controlled_alternative": {
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "operation",
+                        "permission",
+                        "authorization_required",
+                        "authorizes_this_signature"
+                      ],
+                      "properties": {
+                        "operation": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "permission": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "authorization_required": {
+                          "type": "boolean"
+                        },
+                        "authorizes_this_signature": {
+                          "type": "boolean"
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "metadata_limits": {
+            "type": "object",
+            "required": [
+              "interfaces",
+              "methods"
+            ],
+            "properties": {
+              "interfaces": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "methods": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "additionalProperties": false
+          },
+          "receiver_interfaces": {
+            "type": "array"
+          },
+          "capability_registry_sha": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "runtime_dispatch_contract": {
+        "handler": "serial managed actual public-interface adapter",
+        "entrypoints": [
+          "api.describe",
+          "api_describe",
+          "registry_call",
+          "operation_call"
+        ],
+        "effect_resolution": "api.invoke: pure exact overload at project ACL; actual receiver/interface/version before write ticket; caller declaration is assertion only",
+        "verification_scope": "software implementation only; native capability/dependency verification remains separately UNVERIFIED",
+        "limits": [
+          "same-list copy only until cross-parent tag-path native verification",
+          "remove refuses unknown dependency coverage",
+          "selection geometric revision and spatial/object adapters remain unsupported"
+        ]
+      }
+    },
+    "api_describe_status": "OBSERVED",
+    "api_describe_root_interfaces": [
+      "com.comsol.model.ModelEntity",
+      "com.comsol.model.PropFeature",
+      "com.comsol.model.Model"
+    ],
+    "api_invoke_status": "OBSERVED",
+    "api_invoke_typed_return": {
+      "kind": "value",
+      "java_type": "java.lang.String",
+      "value": {
+        "kind": "string",
+        "shape": [],
+        "data": "",
+        "java_signature": "java.lang.String"
+      }
+    }
+  },
+  "smoke_result_sha256": "a166706c9dfeb2c8577d3d7168130d5f2ccc268102491236f12f0468d50ac921",
+  "native_comsol": "NOT_RUN",
+  "limitations": [
+    "MCP smoke uses a recording backend and borrowed prepared dependency site; not a full clean offline install or native COMSOL acceptance.",
+    "M3 regression retains two missing historical fixture failures; no full-suite or native claim.",
+    "Final independent Reviewer and held-out transfer tasks remain NOT_RUN."
+  ],
+  "review_notes": [
+    "Public discovery does not grant unknown invocation; curated receiver/signature/effect policy retained.",
+    "Primitive null and boxed/primitive overload confusion rejected; actual runtime build and documentation source version separated.",
+    "Active Windows ownership failure cannot downgrade to a global legacy receipt.",
+    "New paths, model root and typed shape/null tests are software or compiled-SDK evidence only.",
+    "Versioned checkpoint projections retain observed receiver/build binding; metadata observation is separate from native model-value verification."
+  ],
+  "execution_record_sha256": "4e3c25326f228187ab7fa4c7d818bc10c4c358a26c665dd87ad927a61f19fdaf"
+}

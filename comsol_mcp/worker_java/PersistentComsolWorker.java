@@ -64,6 +64,9 @@ import java.nio.file.attribute.BasicFileAttributes;
  * a solve is running.</p>
  */
 public final class PersistentComsolWorker {
+  private static final int PUBLIC_METADATA_INTERFACE_LIMIT = 1024;
+  private static final int PUBLIC_METADATA_METHOD_LIMIT = 8192;
+  private static final int PUBLIC_METADATA_SCAN_LIMIT = 65536;
   private static final String D2_COMSOL_VERSION = "6.4.0.293";
   private static final String D2_VERSION_COMPONENT = "(?:0|[1-9][0-9]*)";
   private static final java.util.regex.Pattern D2_CANONICAL_VERSION = java.util.regex.Pattern.compile(
@@ -1962,10 +1965,12 @@ public final class PersistentComsolWorker {
     if (cause instanceof Error) throw (Error) cause; return new Exception(cause);
   }
   private static void publicInterfaces(Class<?> type, Set<Class<?>> out) {
-    if (type == null) return;
+    if (type == null || out.size() > PUBLIC_METADATA_INTERFACE_LIMIT) return;
     for (Class<?> iface : type.getInterfaces()) {
       if (Modifier.isPublic(iface.getModifiers()) && iface.getName().startsWith("com.comsol.model.")) out.add(iface);
+      if (out.size() > PUBLIC_METADATA_INTERFACE_LIMIT) return;
       publicInterfaces(iface, out);
+      if (out.size() > PUBLIC_METADATA_INTERFACE_LIMIT) return;
     }
     publicInterfaces(type.getSuperclass(), out);
   }
@@ -1987,23 +1992,44 @@ public final class PersistentComsolWorker {
   private static Map<String, Object> publicReceiverMetadata(Class<?> type, Object target) {
     Set<Class<?>> interfaces = new TreeSet<>(Comparator.comparing(Class::getName));
     publicInterfaces(type, interfaces);
-    List<String> names = new ArrayList<>(); List<Object> methods = new ArrayList<>();
+    boolean metadataComplete = interfaces.size() <= PUBLIC_METADATA_INTERFACE_LIMIT;
+    List<Class<?>> boundedInterfaces = new ArrayList<>();
+    List<String> names = new ArrayList<>();
     for (Class<?> iface : interfaces) {
+      if (boundedInterfaces.size() >= PUBLIC_METADATA_INTERFACE_LIMIT) break;
+      boundedInterfaces.add(iface);
       names.add(iface.getName());
+    }
+    TreeMap<String, Object> methods = new TreeMap<>();
+    int examined = 0;
+    outer:
+    for (Class<?> iface : boundedInterfaces) {
       for (Method method : iface.getMethods()) {
-        boolean typedIndex = target != null && modelEntityListIndexCapability(target, method, null);
-        boolean typedMaterialSize = target != null && materialModelSizeCapability(target, method, null);
-        if ((!METHODS.contains(method.getName()) && !D2_METADATA_METHODS.contains(method.getName())
-            && !typedIndex && !typedMaterialSize) || Modifier.isStatic(method.getModifiers())) continue;
-        if ("identifier".equals(method.getName())
-            && (iface != Physics.class || method.getParameterCount() != 0
-                || method.getReturnType() != String.class)) continue;
+        if (++examined > PUBLIC_METADATA_SCAN_LIMIT) {
+          metadataComplete = false;
+          break outer;
+        }
+        if (!Modifier.isPublic(method.getModifiers()) || Modifier.isStatic(method.getModifiers())
+            || method.getDeclaringClass() == Object.class || method.isSynthetic() || method.isBridge()) continue;
+        String owner = method.getDeclaringClass().getName();
+        if (!owner.startsWith("com.comsol.model.")) continue;
         List<String> parameters = new ArrayList<>();
         for (Class<?> parameter : method.getParameterTypes()) parameters.add(parameter.getName());
-        methods.add(map("interface", iface.getName(), "method", method.getName(), "parameters", parameters, "returns", method.getReturnType().getName()));
+        String returns = method.getReturnType().getName();
+        String key = owner + "#" + method.getName() + "(" + String.join(",", parameters) + ")->" + returns;
+        if (methods.containsKey(key)) continue;
+        if (methods.size() >= PUBLIC_METADATA_METHOD_LIMIT) {
+          metadataComplete = false;
+          break outer;
+        }
+        methods.put(key, map("interface", owner, "method", method.getName(),
+            "parameters", parameters, "returns", returns));
       }
     }
-    return map("interfaces", names, "methods", methods);
+    return map("interfaces", names, "methods", new ArrayList<>(methods.values()),
+        "metadata_complete", metadataComplete,
+        "metadata_limits", map("interfaces", PUBLIC_METADATA_INTERFACE_LIMIT,
+            "methods", PUBLIC_METADATA_METHOD_LIMIT));
   }
   private static boolean modelEntityListIndexCapability(Object target, Method method, List<?> args) {
     if (!(target instanceof ModelEntityList<?>) || method == null

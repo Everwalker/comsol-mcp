@@ -211,10 +211,6 @@ PATH_KINDS = ("line",)
 MIN_SAMPLE_POINTS = 2
 MAX_SAMPLE_POINTS = 10_000
 MAX_EXPRESSIONS = 32
-NATIVE_DEFAULT_ALLOWED_EXPRESSIONS = frozenset({
-    "emw.neff_1", "emw.neff_2", "emw.nx", "emw.ny",
-})
-
 COORDINATE_COLUMNS = ("x", "y", "z")
 SOLUTION_INDEX_COLUMN = "solnum"
 TIME_COLUMN = "time"
@@ -3932,7 +3928,7 @@ def _field_array_context(
         "solution_pairs": pair_records,
         "parameter_names": list(binding.get("parameter_names") or []),
         "expression_units": expression_unit_map,
-        "unit_readback_status": "VERIFIED" if expression_unit_map and all(value is not None for value in expression_unit_map.values()) else "UNVERIFIED",
+        "unit_readback_status": "VERIFIED" if expression_unit_map and all(value not in (None, "") for value in expression_unit_map.values()) else "UNVERIFIED",
         "point_coordinate_source": point_coordinate_source or (
             "request" if point_coordinates is not None else "numerical-feature"
         ),
@@ -3945,11 +3941,14 @@ def _field_array_context(
 
 
 def validate_native_default_unit_requests(expressions: Any, requested_units: Any) -> None:
-    """Keep literal empty-unit requests closed to four exact W23 built-ins.
+    """Validate native-default requests independently of expression names.
 
-    The managed gateway calls this during catalog validation so an invalid
-    empty unit is rejected before it creates an operation/job record. The
-    adapter calls it again at its own boundary as defense in depth.
+    A literal empty unit asks the same numerical feature for its native
+    default. COMSOL resolves the task expression; it is not a dimensionless
+    declaration. The actual expression/unit property arrays are still read
+    back before and after evaluation, and a returned empty unit remains
+    unverified unit metadata. Recipe-specific expression rules belong to the
+    recipe, not this common evaluation path.
     """
     if (not isinstance(requested_units, Sequence)
             or isinstance(requested_units, (str, bytes, Mapping))
@@ -3958,12 +3957,10 @@ def validate_native_default_unit_requests(expressions: Any, requested_units: Any
     expression_list = require_string_array(expressions, "spec.expressions")
     if len(requested_units) != len(expression_list):
         raise ExecutionContractError("INVALID_REQUEST", "spec.units must have exactly one unit per expression")
-    invalid = [expression for expression, unit in zip(expression_list, requested_units)
-               if unit == "" and expression not in NATIVE_DEFAULT_ALLOWED_EXPRESSIONS]
-    if invalid:
+    if any(not isinstance(unit, str) or (unit != "" and not unit.strip()) for unit in requested_units):
         raise ExecutionContractError(
             "INVALID_REQUEST",
-            "empty spec.units is a native-default request supported only for exact built-in emw.neff_1/emw.neff_2/emw.nx/emw.ny expressions",
+            "spec.units must contain exact empty strings or nonempty unit strings",
         )
 
 

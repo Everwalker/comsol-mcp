@@ -1,0 +1,153 @@
+{
+  "schema_version": 1,
+  "baseline_commit": "cd47281777eae6f4ea0d40c5c754dca9982eda86",
+  "baseline_tree": "94e6523bfffe21ace621045710335bea5512c3c1",
+  "state_revision": 7,
+  "phase": "M1_SCOPED_SOFTWARE_REVIEWED_SYNC_PENDING",
+  "status": "IN_PROGRESS",
+  "next_action": "Commit and non-force synchronize the reviewed M0/M1/units/coverage software stage; then the same Luna executor runs M2a real macOS COMSOL through an installed MCP with new project Java bound to existing target ModelRef. No final review or release claim.",
+  "active_job_refs": [],
+  "blockers": [
+    {
+      "id": "HISTORICAL_SOURCE_FIXTURE_MISSING",
+      "scope": "Historical before-fix reproduction test only; current behavior controls continue",
+      "test": "tests/test_g3_results.py::test_actual014_raw_reproduces_original_r5_exact_label_rejection",
+      "evidence": "evidence/unit-default/first-regression.json"
+    },
+    {
+      "id": "HISTORICAL_DELTA_FIXTURE_MISSING",
+      "scope": "W23 inherited offline delta source-validation test only",
+      "test": "tests/test_native_w23_te_science_protocol.py::test_inherited_offline_delta_validator_positive_and_negative_controls",
+      "evidence": "evidence/unit-default/affected-result.json"
+    }
+  ],
+  "completed_groups": [],
+  "scope_decision": "SCOPE_RESET.md",
+  "updated_utc": "2026-10-22T11:49:16.708696+00:00",
+  "native_execution_claimed": false,
+  "recovery_checkpoint": {
+    "scope": "workpack recovery repair, synthetic workpack tests, pinned source and candidate restoration, new-state initialization only",
+    "package_repair": {
+      "file": "tools/bootstrap.py",
+      "change": "AGENTS.md is optional: copy it only when a regular file exists; absent optional files are not synthesized.",
+      "baseline_failure_evidence": "review/RECOVERY_INITIAL_FAILURE.json",
+      "baseline_status": "BASELINE_BUG_REPRODUCED",
+      "baseline_exit_code": 2,
+      "regression_test": "tests/test_recovery.py::RecoveryTests::test_optional_agent_overlay_file",
+      "manifest_status": "WORKPACK_INTEGRITY_PASS"
+    },
+    "commands": [
+      {
+        "command": "python3 -m unittest discover -s tests -v",
+        "exit_code": 0,
+        "result": "35 tests passed; synthetic package/tool scope only"
+      },
+      {
+        "command": "python3 tools/verify_package.py",
+        "exit_code": 0,
+        "result": "34 manifest entries verified; native_certified=false"
+      },
+      {
+        "command": "python3 tools/bootstrap.py --method archive --target /Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository",
+        "attempt": "sandbox",
+        "exit_code": 2,
+        "result": "sandbox DNS denied; RECOVERY_FAILED receipt and incomplete staging retained"
+      },
+      {
+        "command": "python3 tools/bootstrap.py --method archive --target /Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository",
+        "attempt": "standard network escalation authorized by user",
+        "exit_code": 0,
+        "result": "pinned commit and full Git tree verified; 21682 tracked files"
+      },
+      {
+        "command": "python3 tools/restore_candidates.py --repo /Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository --target /Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/candidate_sources",
+        "exit_code": 0,
+        "result": "3978 files, 1105 objects, 202899113 bytes; source-only"
+      },
+      {
+        "command": "python3 tools/init_state.py --repo /Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository",
+        "exit_code": 0,
+        "result": "273 action IDs, 12 DoD groups; initialized new state only"
+      }
+    ],
+    "canonical_source": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository",
+      "commit": "cd47281777eae6f4ea0d40c5c754dca9982eda86",
+      "tree": "94e6523bfffe21ace621045710335bea5512c3c1",
+      "restore_method": "archive",
+      "file_count": 21682,
+      "git_history_ready": false,
+      "missing_lfs_backing_objects": 0
+    },
+    "candidate_source": {
+      "path": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/candidate_sources",
+      "manifest_sha256": "80277c2255086615e91698e15f4d248b49746251f2aa679faf2431d75e524d2b",
+      "file_count": 3978,
+      "unique_objects": 1105,
+      "source_executed": false,
+      "runtime_authority_restored": false,
+      "merged_into_production": false
+    },
+    "acceptance_boundary": {
+      "general_coverage_modified": false,
+      "production_core_modified": false,
+      "legacy_task_ledgers_initialized": false,
+      "native_execution": "NOT_RUN",
+      "independent_reviewer": "NOT_RUN",
+      "overall_project_status": "CHANGES_REQUIRED",
+      "archive_limitation": "The restored source tree has no .git history; do not claim a Git branch/commit or remote synchronization."
+    },
+    "as_of": "Recovery checkpoint before subsequent Git reconstruction/M1; entries below are historical observations, not current top-level status."
+  },
+  "m1_checkpoint": {
+    "scope": "M1 universal public API and active-session isolation dispatch only",
+    "evidence_file": "docs/universal_mcp_execution/evidence/M1_20261022_execution.json",
+    "windows_isolation": "Connect active Windows session to verify_session_owned_server; active proof failure must never fall back to legacy global receipt; unsupported platforms fail closed.",
+    "public_metadata": "Expose bounded/deduplicated reflected public com.comsol.model non-static signatures as discovery-only metadata; invoke remains gated by exact reviewed Python effect/signature and Worker policy.",
+    "native_execution": "NOT_RUN",
+    "current_status": "PASS_SCOPED_SOFTWARE_MAIN_REVIEWED_NATIVE_NOT_RUN",
+    "main_review": "evidence/M1_MAIN_STAGE_REVIEW.json"
+  },
+  "working_tree": "/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/repository",
+  "orchestration": {
+    "main_session_id": "01a1632a-74fd-7e22-aff5-86680aedb2d8",
+    "implementation_agent_id": "01a1632c-2788-73b2-a3d5-5023b2335cb6",
+    "coverage_agent_id": "01a16335-4603-7dd1-a8b0-6956c46bf19c",
+    "implementation_model": "gpt-6-luna max",
+    "progress_owner": "Main",
+    "reviewer_status": "NOT_RUN_FINAL_CANDIDATE_NOT_READY",
+    "dependency_prep_agent_id": "01a16359-6b09-78e0-a17f-b1763a78c1d1",
+    "dependency_prep_model": "gpt-6-luna medium",
+    "intel_dependency_build_agent_id": "01a16367-1e63-7e61-804f-c7ac2fa9a703",
+    "intel_dependency_build_model": "gpt-6-luna max",
+    "coverage_agent_state": "COMPLETED_CLOSED",
+    "dependency_prep_agent_state": "COMPLETED_CLOSED"
+  },
+  "current_changes": {
+    "M0": "PINNED_SOURCE_AND_CANDIDATE_BYTES_VERIFIED_NO_NATIVE_ACCEPTANCE",
+    "M1": "PASS_SCOPED_SOFTWARE_303_TESTS_112_TOOL_INSTALLED_MCP_SMOKE_NATIVE_NOT_RUN",
+    "M3_UNIT_DEFAULT": "SOFTWARE_PATCH_IMPLEMENTED_NATIVE_NOT_RUN",
+    "unit_default_evidence": "evidence/unit-default/affected-result.json",
+    "M0_RELOCATION": "PASS_36_SOFTWARE_TESTS_AND_BOTH_PACKAGE_INTEGRITY_CHECKS",
+    "M0_RELOCATION_EVIDENCE": "evidence/recovery-relocation/result.json",
+    "M4_DEPENDENCIES": "WINDOWS_34_OF_34_MAC_ARM_41_OF_41_MAC_INTEL_40_OF_41_SHA256_MATCHED_INPUTS_ONLY",
+    "M4_INTEL_CRYPTO": "OFFICIAL_50_0_1_INTEL_WHEEL_UNAVAILABLE_PRIVATE_DERIVED_BUILD_IN_PROGRESS",
+    "M4_DEPENDENCY_EVIDENCE": "evidence/dependency-prep.json",
+    "GENERAL_COVERAGE": "273_ACTIONS_427_FROZEN_SUBASSERTIONS_STATE_PRESERVING_REFRESH_CHECK_PASS_NO_NATIVE_PASS",
+    "M1_MAIN_REVIEW": "evidence/M1_MAIN_STAGE_REVIEW.json"
+  },
+  "legacy_unknown_preserved": {
+    "source": "docs/full_project_continuation_v3/CURRENT_HANDOFF.md",
+    "scope": "Only the original activity/resources; no replay or adoption",
+    "windows_desktop_observed_pid": 20592,
+    "desktop_process_not_adopted": true
+  },
+  "git": {
+    "branch": "universal-core",
+    "baseline_commit": "cd47281777eae6f4ea0d40c5c754dca9982eda86",
+    "baseline_tree": "94e6523bfffe21ace621045710335bea5512c3c1",
+    "history_reconstructed": true,
+    "remote_main_before_stage": "cd47281777eae6f4ea0d40c5c754dca9982eda86",
+    "stage_sync_status": "PENDING"
+  }
+}

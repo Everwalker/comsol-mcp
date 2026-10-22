@@ -1,6 +1,7 @@
 package comsol_mcp.worker_java;
 
 import com.comsol.model.ModelEntity;
+import com.comsol.model.PropFeature;
 import com.comsol.model.PropFeatureList;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -47,7 +48,12 @@ public final class PersistentComsolWorkerPublicApiHarness {
     Map<String,Object> entity=descriptor(ModelEntity.class);
     check(signature(entity,"com.comsol.model.ModelEntity","comments","[]","java.lang.String"),"actual inherited comments getter");
     check(signature(entity,"com.comsol.model.ModelEntity","comments","[java.lang.String]","com.comsol.model.ModelEntity"),"actual inherited comments setter");
+    check(signature(entity,"com.comsol.model.ModelEntity","isactive","[]","boolean"),"unreviewed public method remains discoverable");
     check(signature(entity,"com.comsol.model.PrimitiveModelEntity","resolveModelPath","[]","java.lang.String"),"actual primitive identity getter");
+    Map<String,Object> feature=descriptor(PropFeature.class);
+    check(signature(feature,"com.comsol.model.PropFeature","properties","[]","[Ljava.lang.String;"),"PropFeature metadata getter");
+    check(signature(feature,"com.comsol.model.PropFeature","getDoubleMatrix","[java.lang.String]","[[D"),"PropFeature typed matrix getter");
+    check(signature(feature,"com.comsol.model.PropFeature","remove","[java.lang.String, int]","com.comsol.model.PropFeature"),"unreviewed PropFeature overload remains discoverable");
     Map<String,Object> list=descriptor(PropFeatureList.class);
     check(signature(list,"com.comsol.model.PropFeatureList","create","[java.lang.String, java.lang.String]","com.comsol.model.PropFeature"),"actual typed list create");
     check(!entity.toString().contains("getClass"),"Object methods absent");

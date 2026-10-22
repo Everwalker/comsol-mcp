@@ -1769,16 +1769,28 @@ class ManagedBackend:
 
     def _require_g2_isolation(self) -> dict[str, Any]:
         selected = active_session_context()
-        if selected is not None and sys.platform == "darwin" and os.name != "nt":
+        if selected is not None:
+            # An active managed session is the authority for this route.  The
+            # session verifier selects the supported macOS or Windows owner
+            # adapter and must fail closed; never downgrade a failed session
+            # proof to a process-global legacy receipt.
             from ._g2_isolation import verify_session_owned_server
             return verify_session_owned_server(
                 selected, backend=self, worker=self.worker, service=self.service,
             )
 
-        # The new session-owned process adapter is scoped to macOS. Windows
-        # HANDLE owners and all unsupported platforms remain available only
-        # through the pre-existing explicit receipt adapter; a failed macOS
-        # session proof never falls back to that process-global path.
+        # Sessionless legacy integrations remain receipt-gated on the two
+        # supported host families.  Other platforms have no verified owner
+        # adapter and must not be accepted through a generic receipt.
+        if not (sys.platform == "darwin" or (sys.platform == "win32" and os.name == "nt")):
+            raise ExecutionContractError(
+                "UNSUPPORTED_PLATFORM",
+                "G2 isolation verification is unavailable on this platform",
+                stage="validation",
+                details={"target_operation_dispatched": False,
+                         "worker_operation_dispatched": False,
+                         "platform": sys.platform},
+            )
         receipt = configured_receipt()
         if receipt is None:
             raise ExecutionContractError(

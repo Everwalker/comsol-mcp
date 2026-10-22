@@ -714,9 +714,9 @@ def _unit_a_data_schema(operation: str) -> dict[str, Any]:
         "cleanup_failed": {"type": "boolean"}, "dispatch_stage": {"type": "string"},
         "domain_outcome": {"type": "object"}, "effect": {"type": "string"}, "verified_outcome": {"type": "string"},
     }
-    strings = {"type_id", "copy_method", "source_tag_path", "requested_label", "resolved_effect", "runtime_version", "capability_registry_sha"}
+    strings = {"type_id", "copy_method", "source_tag_path", "requested_label", "resolved_effect", "runtime_version", "runtime_version_raw", "runtime_version_format", "capability_registry_sha"}
     arrays = {"applied", "failed", "not_executed", "order_before", "order_after", "methods", "receiver_interfaces", "public_interfaces"}
-    booleans = {"created"}
+    booleans = {"created", "metadata_complete"}
     integers = {"index_dispatched"}
     allowed = {
         "node.create": {"created_path", "type_id", "created", "applied", "failed", "not_executed", "readback", "dependency_check", "property_result"},
@@ -727,13 +727,90 @@ def _unit_a_data_schema(operation: str) -> dict[str, Any]:
         "node.move": {"path", "anchor", "order_before", "order_after", "index_dispatched"},
         "node.selection_get": {"path", "selection_name", "public_interfaces", "selection", "readback"},
         "node.selection_set": {"path", "selection_name", "public_interfaces", "selection", "readback", "requested", "applied"},
-        "api.describe": {"path", "runtime_version", "methods", "receiver_interfaces", "capability_registry_sha"},
+        "api.describe": {"path", "runtime_version", "runtime_version_raw", "runtime_version_format", "metadata_complete", "metadata_limits", "methods", "receiver_interfaces", "capability_registry_sha"},
         "api.invoke": {"path", "capability", "resolved_effect", "typed_return", "readback"},
     }[operation]
     for name in allowed:
         fields[name] = ({"type": "string"} if name in strings else {"type": "array"} if name in arrays
                         else {"type": "boolean"} if name in booleans else {"type": "integer"} if name in integers else {})
+    documentation_schema = {"oneOf": [{"type": "null"}, {"type": "object",
+        "required": ["path", "sha256", "source_version", "reference_only", "signature_observation_scope"],
+        "properties": {"path": {"type": "string"}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                       "source_version": {"const": "6.4.0.293"}, "reference_only": {"const": True},
+                       "signature_observation_scope": {"const": "actual_runtime_receiver_exact_interface_method_parameters_and_return"}},
+        "additionalProperties": False}]}
+    if operation == "api.describe":
+        nullable_string = {"type": ["string", "null"]}
+        alternative = {"type": "object", "required": ["operation", "permission", "authorization_required", "authorizes_this_signature"],
+                       "properties": {"operation": {"type": "string", "minLength": 1},
+                                      "permission": {"type": "string", "minLength": 1},
+                                      "authorization_required": {"type": "boolean"},
+                                      "authorizes_this_signature": {"type": "boolean"}},
+                       "additionalProperties": False}
+        method_item = {
+            "type": "object",
+            "required": ["interface", "method", "parameters", "returns", "policy_status", "invoke_allowed",
+                         "effect", "permission", "supported_releases", "argument_contract", "return_contract",
+                         "documentation", "controlled_alternative"],
+            "properties": {
+                "interface": {"type": "string", "minLength": 1},
+                "method": {"type": "string", "minLength": 1},
+                "parameters": {"type": "array", "maxItems": 32, "items": {"type": "string"}},
+                "returns": {"type": "string", "minLength": 1},
+                "policy_status": {"enum": ["REVIEWED", "UNREVIEWED"]},
+                "invoke_allowed": {"type": "boolean"},
+                "effect": {"enum": ["READ", "WRITE", None]},
+                "permission": {"enum": ["inspect", "project_write", None]},
+                "supported_releases": {"type": "array", "items": {"enum": ["6.3", "6.4"]}},
+                "argument_contract": {"type": "array", "maxItems": 32, "items": {
+                    "type": "object", "required": ["kind", "shape_rank"],
+                    "properties": {"kind": {"enum": ["boolean", "int32", "float64", "string", "unknown"]},
+                                   "shape_rank": {"type": ["integer", "null"], "minimum": 0, "maximum": 2}},
+                    "additionalProperties": False}},
+                "return_contract": {"oneOf": [{"type": "null"}, {"type": "object", "required": ["kind", "shape_rank"],
+                    "properties": {"kind": {"enum": ["boolean", "int32", "float64", "string"]},
+                                   "shape_rank": {"type": ["integer", "null"], "minimum": 0, "maximum": 2}},
+                    "additionalProperties": False}]},
+                "documentation": documentation_schema,
+                "controlled_alternative": {"oneOf": [{"type": "null"}, alternative]},
+            },
+            "additionalProperties": False,
+        }
+        fields["methods"] = {"type": "array", "maxItems": 8192, "items": method_item}
+        fields["runtime_version"] = {"type": "string", "minLength": 1}
+        fields["runtime_version_raw"] = {"type": "string", "minLength": 1, "maxLength": 256}
+        fields["runtime_version_format"] = {"enum": ["CANONICAL_FOUR_PART", "COMSOL_ZH_DEVELOPMENT_BUILD", "COMSOL_ENGLISH_BUILD"]}
+        fields["metadata_complete"] = {"type": "boolean"}
+        fields["metadata_limits"] = {"type": "object", "required": ["interfaces", "methods"],
+                                      "properties": {"interfaces": {"type": "integer", "minimum": 1},
+                                                     "methods": {"type": "integer", "minimum": 1}},
+                                      "additionalProperties": False}
     if operation == "api.invoke":
+        fields["capability"] = {"type": "object", "required": [
+            "receiver_interface", "method", "java_signature", "java_return", "effect", "permission",
+            "supported_releases", "argument_contract", "return_contract", "documentation", "runtime_version",
+            "policy_status", "invoke_allowed"],
+            "properties": {
+                "receiver_interface": {"type": "string", "minLength": 1},
+                "method": {"type": "string", "minLength": 1},
+                "java_signature": {"type": "array", "maxItems": 32, "items": {"type": "string"}},
+                "java_return": {"type": "string", "minLength": 1},
+                "effect": {"enum": ["READ", "WRITE"]},
+                "permission": {"enum": ["inspect", "project_write"]},
+                "supported_releases": {"type": "array", "items": {"enum": ["6.3", "6.4"]}},
+                "argument_contract": {"type": "array", "maxItems": 32, "items": {
+                    "type": "object", "required": ["kind", "shape_rank"],
+                    "properties": {"kind": {"enum": ["boolean", "int32", "float64", "string", "unknown"]},
+                                   "shape_rank": {"type": ["integer", "null"], "minimum": 0, "maximum": 2}},
+                    "additionalProperties": False}},
+                "return_contract": {"oneOf": [{"type": "null"}, {"type": "object", "required": ["kind", "shape_rank"],
+                    "properties": {"kind": {"enum": ["boolean", "int32", "float64", "string"]},
+                                   "shape_rank": {"type": ["integer", "null"], "minimum": 0, "maximum": 2}},
+                    "additionalProperties": False}]},
+                "documentation": documentation_schema,
+                "runtime_version": {"type": "string", "minLength": 1},
+                "policy_status": {"const": "REVIEWED"}, "invoke_allowed": {"const": True},
+            }, "additionalProperties": False}
         def typed_return(kind, payload):
             return {"type": "object", "properties": {"kind": {"const": kind}, **payload},
                     "required": ["kind", *payload], "additionalProperties": False}

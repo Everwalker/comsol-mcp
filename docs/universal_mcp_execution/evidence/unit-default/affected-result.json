@@ -1,0 +1,56 @@
+{
+  "scope": "SOFTWARE_ONLY_NOT_NATIVE_OR_PHYSICAL_ACCEPTANCE",
+  "command": ".venv/bin/python -m pytest -q tests/test_interp_native_default_units.py tests/test_g3_results.py tests/test_native_w23_te_science_protocol.py tests/test_g3_r01_expression.py tests/test_g3_r03_indexed.py -k 'not test_actual014_raw_reproduces_original_r5_exact_label_rejection' --tb=short --junitxml=docs/universal_mcp_execution/evidence/unit-default/affected-junit.xml",
+  "excluded": [
+    {
+      "test": "test_actual014_raw_reproduces_original_r5_exact_label_rejection",
+      "status": "FAIL_MISSING_HISTORICAL_SOURCE_FIXTURE",
+      "preserved_result": "first-regression.json",
+      "not_counted_as_pass": true
+    }
+  ],
+  "chunk_id": "28a409",
+  "wall_time_seconds": 8.25e-06,
+  "exit_code": 1,
+  "original_token_count": 337,
+  "output": "........................F............. [ 82%]\n............................................................             [100%]\n=================================== FAILURES ===================================\n____ test_inherited_offline_delta_validator_positive_and_negative_controls _____\ntests/test_native_w23_te_science_protocol.py:591: in test_inherited_offline_delta_validator_positive_and_negative_controls\n    valid_path, valid_freeze, _valid_base = _offline_delta_validator_fixture(tmp_path / \"valid\", monkeypatch)\n                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests/test_native_w23_te_science_protocol.py:500: in _offline_delta_validator_fixture\n    shutil.copyfile(original / relative, base_root / relative)\n/opt/homebrew/Cellar/python@3.12/3.12.13_2/Frameworks/Python.framework/Versions/3.12/lib/python3.12/shutil.py:260: in copyfile\n    with open(src, 'rb') as fsrc:\n         ^^^^^^^^^^^^^^^\nE   FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/cv3n-w23-zero8-r13-b2cd449e/prepare/source_manifest.json'\n=========================== short test summary info ============================\nFAILED tests/test_native_w23_te_science_protocol.py::test_inherited_offline_delta_validator_positive_and_negative_controls\n1 failed, 347 passed, 1 deselected in 1.62s\n",
+  "failures": [
+    {
+      "test": "tests/test_native_w23_te_science_protocol.py::test_inherited_offline_delta_validator_positive_and_negative_controls",
+      "reason": "MISSING_EXTERNAL_HISTORICAL_FIXTURE",
+      "missing": "/private/tmp/cv3n-w23-zero8-r13-b2cd449e/prepare/source_manifest.json",
+      "not_counted_as_pass": true
+    }
+  ],
+  "module_counts": {
+    "tests.test_interp_native_default_units": {
+      "pass": 26,
+      "fail": 0,
+      "skip": 0
+    },
+    "tests.test_g3_results": {
+      "pass": 230,
+      "fail": 0,
+      "skip": 0
+    },
+    "tests.test_native_w23_te_science_protocol": {
+      "pass": 60,
+      "fail": 1,
+      "skip": 0
+    },
+    "tests.test_g3_r01_expression": {
+      "pass": 10,
+      "fail": 0,
+      "skip": 0
+    },
+    "tests.test_g3_r03_indexed": {
+      "pass": 21,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "changed_file_sha256": {
+    "comsol_mcp/_g3_results.py": "82261b51e7562b3bedb7bf5b7acf27e7bc8caaa7f5c0249fe6cb94cac445c4f0",
+    "tests/test_interp_native_default_units.py": "89da6bf657abb72fd3f358ee3b3604ebe7459c3f66cf9c514a0bdf9113ed58d3"
+  }
+}

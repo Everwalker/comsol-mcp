@@ -1,0 +1,216 @@
+{
+  "schema_version": 1,
+  "scope": "M1 universal public API and active-session isolation dispatch only",
+  "started_utc": "2026-10-22T10:54:03.942445+00:00",
+  "status": "PASS_SCOPED_SOFTWARE_MAIN_REVIEWED_NATIVE_NOT_RUN",
+  "native_execution": "NOT_RUN",
+  "environment": {
+    "preflight_reference": "_state/ENVIRONMENT_PREFLIGHT.json",
+    "platform_discovery_repeated": false,
+    "provided_windows_java": "Temurin 11.0.32.1+1 at C:/Users/Everwalker/jdk11; read-only java/javac checks exit 0",
+    "provided_comsol_builds": [
+      "6.3.0.290",
+      "6.4.0.293"
+    ],
+    "macos_java_comsol": "Use existing preflight only; no native process started by this M1 run"
+  },
+  "python_environment": {
+    "path": ".venv",
+    "python": "Python 3.12",
+    "install_attempts": [
+      {
+        "command": ".venv/bin/python -m pip install -e .[dev]",
+        "attempt": "sandbox",
+        "exit_code": 1,
+        "result": "PyPI DNS/network denied; initial failure preserved from session output"
+      },
+      {
+        "command": ".venv/bin/python -m pip install -e .[dev]",
+        "attempt": "standard network escalation",
+        "exit_code": 0,
+        "result": "development dependencies installed successfully"
+      }
+    ]
+  },
+  "findings": [
+    "ManagedBackend._require_g2_isolation dispatches active session ownership only on Darwin; active Windows sessions therefore fall through to the legacy process-global receipt path.",
+    "verify_session_owned_server already enforces sealed T037 Windows HANDLE owner and exact session/socket bindings.",
+    "PersistentComsolWorker.publicReceiverMetadata currently filters reflected public interface methods through METHODS/D2_METADATA_METHODS; broaden description-only discovery with an explicit no-invoke grant marker while retaining RPC invoke gates."
+  ],
+  "frozen_contract_hashes_before": {
+    "docs/universal_mcp_execution/CONTRACT_LOCK.json": "b4e11b69e68a69a7a66e5d86f9489759c495c2301e65a2a172d615c4ffdd6076"
+  },
+  "source_hashes_before": {
+    "comsol_mcp/_managed_backend.py": "e07c1d5227e2ed3c4b357bec0904de182308be8fbd3ad598c177531c460235a7",
+    "comsol_mcp/_g2_isolation.py": "adcf410ca553bbe2457d285d99907a8ce67726f4a7c8e1131d706ec359f65cdf",
+    "comsol_mcp/_g2_public_api.py": "9c8f8823dfa3ee8f8535c945d6b5867e7c846972cc720e2dbdc33bf4bd2ec6d5",
+    "comsol_mcp/_g2_engine.py": "54ff44cb11fac2790d817fd7f2f3614681fb2b4424149826624611b13302b773",
+    "comsol_mcp/worker_java/PersistentComsolWorker.java": "7054a163f8a68732922320f4906d0586cb8481d7ca0bbfbd1593aace2b50c5d7",
+    "comsol_mcp/_g2_registry.py": "afac00c22213e580c482896bfa4fac633238436ef35d5536e1fa2283270bf260",
+    "tests/test_windows_g2_session_handle.py": "65df7a9df1f6781098b8582fd198f6e6f11656eaad2fa1c1c54092dff221c197",
+    "tests/test_unit_a_node_public_api.py": "e789723e6aa099afb5fe37c6b7c081e3e29f2bd00d12c249107219088cdbdc10",
+    "tests/test_public_receiver_version_domain_r31r2.py": "05d8495d49c00c8d5b318e0925a50064d8ca8fb168333d54b9f4731ef37a9e9f"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=tests .venv/bin/pytest -q --junitxml=docs/universal_mcp_execution/evidence/M1_20261022_focused-regression.junit.xml tests/test_unit_a_node_public_api.py tests/test_g2_registry_packaging.py tests/test_windows_g2_session_handle.py tests/test_unit_c_checkpoint_diff.py",
+      "exit_code": 0,
+      "result": "303 passed in 4.73s; JUnit tests=303 failures=0 errors=0 skipped=0.",
+      "evidence": "docs/universal_mcp_execution/evidence/M1_20261022_focused-regression.junit.xml"
+    },
+    {
+      "command": "PYTHONPATH=/Users/everwalker/.cache/uv/archive-v0/hSVKm3zATOMykZht:/Users/everwalker/.cache/uv/archive-v0/znnDQLdCVw541_Or .venv/bin/python tools/universal_m1_smoke.py --builder .venv/bin/python --run-dir docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_mcp_fixed",
+      "exit_code": 0,
+      "result": "PASS: wheel build/install; MCP initialize; tools/list=112; operation_call schema; root Model api.describe and comments api.invoke. native_comsol=NOT_RUN.",
+      "evidence": "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_mcp_fixed/run_status.json"
+    }
+  ],
+  "notes": [
+    "No Git commands executed.",
+    "No native COMSOL engine was started or connected. Java SDK compilation and isolated Java harness JVMs did execute in focused tests.",
+    "No firewall or system-wide policy changed.",
+    "Do not modify CONTRACT_LOCK listed files; do not edit GENERAL_COVERAGE or REVIEW.",
+    "Final focused regression evidence includes Java worker metadata harness, exact-signature and primitive-null negative controls, Windows T037 session dispatch controls, registry schema checks, and checkpoint observation coverage replay.",
+    "Installed-wheel smoke used a read-only cached setuptools/wheel PYTHONPATH after uv cache initialization was denied; no network setting or cache content was modified.",
+    "The three failed smoke reports and one failed detached-control log are preserved alongside the passing smoke report; no failure evidence was overwritten."
+  ],
+  "validation_attempts": [
+    {
+      "command": "PYTHONPATH=tests .venv/bin/pytest -q tests/test_unit_a_node_public_api.py tests/test_g2_registry_packaging.py tests/test_windows_g2_session_handle.py tests/test_unit_c_checkpoint_diff.py",
+      "exit_code": 1,
+      "result": "Earlier regression: 40 failed, 259 passed. Public interface descriptor rows were OBSERVED and several checkpoint coverage gates incorrectly treated them as incomplete; retained projection and new exact-observation checks were repaired.",
+      "evidence": "Failure count and root cause are preserved in this execution evidence; final rerun result is docs/universal_mcp_execution/evidence/M1_20261022_focused-regression.junit.xml."
+    },
+    {
+      "command": "PYTHONPATH=tests .venv/bin/pytest -q tests/test_unit_c_checkpoint_diff.py",
+      "exit_code": 1,
+      "result": "42 failed, 99 passed during first helper iteration. The helper incorrectly required fixture interface order to be sorted; adjusted to compare a unique set against sorted recorded interfaces."
+    },
+    {
+      "command": "PYTHONPATH=tests .venv/bin/pytest -q tests/test_unit_c_checkpoint_diff.py",
+      "exit_code": 1,
+      "result": "140 passed, 1 failed. The sole failure was an over-specific expected error-message assertion for wrong build provenance; changed the test to require fail-closed rejection independent of diagnostic wording."
+    },
+    {
+      "command": ".venv/bin/python tools/universal_m1_smoke.py --builder .venv/bin/python --run-dir docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke",
+      "exit_code": 1,
+      "result": "Wheel build failed because the system Python selected after resolving the venv interpreter lacked setuptools.build_meta. Original failure and full output retained in run_status.json.",
+      "evidence": "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke/run_status.json"
+    },
+    {
+      "command": "uv pip install --offline --python .venv/bin/python 'setuptools>=68' wheel",
+      "exit_code": 2,
+      "result": "uv cache initialization was denied while opening /Users/everwalker/.cache/uv/sdists-v9/.git. No network or cache settings changed; read-only cached build backends were used through PYTHONPATH."
+    },
+    {
+      "command": "PYTHONPATH=/Users/everwalker/.cache/uv/archive-v0/hSVKm3zATOMykZht:/Users/everwalker/.cache/uv/archive-v0/znnDQLdCVw541_Or .venv/bin/python tools/universal_m1_smoke.py --builder .venv/bin/python --run-dir docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_uvcache",
+      "exit_code": 1,
+      "result": "Wheel build and install passed. MCP route failed because fixture worker reported server_instance_id=server while smoke SessionLedger used mcp-smoke-server; aligned the software fixture identity.",
+      "evidence": "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_uvcache/run_status.json"
+    },
+    {
+      "command": "PYTHONPATH=/Users/everwalker/.cache/uv/archive-v0/hSVKm3zATOMykZht:/Users/everwalker/.cache/uv/archive-v0/znnDQLdCVw541_Or .venv/bin/python tools/universal_m1_smoke.py --builder .venv/bin/python --run-dir docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_mcp_retry",
+      "exit_code": 1,
+      "result": "Wheel build/install and MCP tools/list passed. Detached control child lacked explicit COMSOL_PROJECT_ROOT because the injected ManagedBackend omitted project_root at construction; supplied the explicit temporary run root. Child log retained.",
+      "evidence": "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_mcp_retry/run_status.json; docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_mcp_retry/mcp-home/control-private/control.log"
+    }
+  ],
+  "source_hashes_after": {
+    "comsol_mcp/_managed_backend.py": "3baf238dbef82da894adc4f9531ea90287505d11ce5bd6a6baeaf65a0b7c37a9",
+    "comsol_mcp/_g2_isolation.py": "adcf410ca553bbe2457d285d99907a8ce67726f4a7c8e1131d706ec359f65cdf",
+    "comsol_mcp/_g2_public_api.py": "8d6eeb907687f2a6cc7c881807119d3e7a0035810694cb4cfe109ad6d87f9027",
+    "comsol_mcp/_g2_registry.py": "f1a795e311d3c12c387312bbe9c329311056e11dee93f0c251506a56aef4cc58",
+    "comsol_mcp/_g2_engine.py": "9e0d72f32d6d825d8550c6c7e01f6b36a59f06c457309fa0a06da010f5b25bcb",
+    "comsol_mcp/_g2_checkpoint_diff.py": "a331bae7b145f5d35194ab543e13d594641d5323bae97d3a3e33d0b522c77cb7",
+    "comsol_mcp/_g2_copy_subtree.py": "362e2a1db362d686c1a6dae1b386259a70c5c2acf0c5c05e38b0fcaa09b35de5",
+    "comsol_mcp/worker_java/PersistentComsolWorker.java": "d0fe4f0cebb6ab3bdfda9819c8ed3a8ffc463e91a4779afa0b348ca39c229282",
+    "tests/test_unit_a_node_public_api.py": "b30fc9f672423bfa4c76a6d189a743ee2aacdee9be93209ee8b5eef6ea3479f6",
+    "tests/test_windows_g2_session_handle.py": "627e8ecd3dc3f795e934a70b1165eb8cdac29adf1e5ce8d45978fb3ce33c2662",
+    "tests/test_unit_c_checkpoint_diff.py": "f64fad265e1563b79b13d286d99fd24a886a7f44289b51dc328b25e81885195b",
+    "tools/universal_m1_smoke.py": "5b93f6e397eb325d02c855bb7d205d93efeb8e89a4fabd25396c2bee16c8ccec"
+  },
+  "frozen_contract_hashes_after": {
+    "docs/universal_mcp_execution/CONTRACT_LOCK.json": "b4e11b69e68a69a7a66e5d86f9489759c495c2301e65a2a172d615c4ffdd6076"
+  },
+  "verification_boundary": {
+    "M1_software_implementation_and_focused_regression": "PASS; awaiting Main acceptance review",
+    "wheel_installed_public_MCP_smoke": "PASS; software-only synthetic Worker",
+    "native_COMSOL_runtime": "NOT_RUN",
+    "6.3_and_6.4_native_receiver_validation": "NOT_RUN",
+    "frozen_contract_unchanged": true,
+    "progress_files": "RESUME/PROGRESS/CURRENT_HANDOFF owned by Main; unchanged by this execution",
+    "git": "No Git commands executed"
+  },
+  "implementation_results": [
+    "Description-only Java metadata discovers bounded public non-static com.comsol.model interfaces and marks methods without invocation grants; Worker RPC invoke allowlist remains unchanged.",
+    "api.invoke exposes the reviewed ModelEntity and PropFeature getter/setter capabilities; property setters remain on existing typed node.property_* routes, tag setter remains excluded, and exact Java parameter signatures are preflighted.",
+    "Primitive Java getter nulls fail as execution-state-unknown while nullable Java reference String/array results retain typed null handling; Model root path is supported without exposing ModelUtil.",
+    "Release admission covers 6.3 and 6.4 by actual runtime receiver/signature, returns the complete observed build, and treats 6.4 documentation hashes as reference-only with explicit provenance.",
+    "Checkpoint public_interfaces remains OBSERVED and only satisfies replay coverage when bound to the exact path, runtime build, descriptor receipt, and interface set; it is never relabeled native VERIFIED.",
+    "Active Windows sessions use the existing sealed T037 HANDLE owner verification and fail closed on verification failure; unsupported platforms remain refused."
+  ],
+  "source_files_unchanged_since_final_tests": true,
+  "installed_wheel": {
+    "filename": "comsol_mcp-0.1.10-py3-none-any.whl",
+    "sha256": "911e607a5b37f03770f7addd2cbc57364ed9e22c3a2636128df06469bcfc7498",
+    "size_bytes": 2870999,
+    "evidence": "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_mcp_fixed/run_status.json"
+  },
+  "local_only_smoke_artifacts": {
+    "policy": "Keep local only; do not package or upload these generated runtime artifacts. Main may whitelist source, this compact execution JSON, and the JUnit report.",
+    "paths": [
+      "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke/wheelhouse",
+      "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke/installed-prefix",
+      "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke/runtime-venv",
+      "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke/mcp-home",
+      "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke/software-worker.sqlite",
+      "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_uvcache/wheelhouse",
+      "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_uvcache/installed-prefix",
+      "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_uvcache/runtime-venv",
+      "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_uvcache/mcp-home",
+      "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_uvcache/software-worker.sqlite",
+      "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_mcp_retry/wheelhouse",
+      "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_mcp_retry/installed-prefix",
+      "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_mcp_retry/runtime-venv",
+      "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_mcp_retry/mcp-home",
+      "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_mcp_retry/software-worker.sqlite",
+      "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_mcp_fixed/wheelhouse",
+      "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_mcp_fixed/installed-prefix",
+      "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_mcp_fixed/runtime-venv",
+      "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_mcp_fixed/mcp-home",
+      "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_mcp_fixed/software-worker.sqlite"
+    ],
+    "tokens_or_approvals_copied_to_public_evidence": false,
+    "failure_reports_to_preserve": [
+      "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke/run_status.json",
+      "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_uvcache/run_status.json",
+      "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_mcp_retry/run_status.json",
+      "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_mcp_retry/mcp-home/control-private/control.log"
+    ]
+  },
+  "evidence_hashes": {
+    "docs/universal_mcp_execution/evidence/M1_20261022_focused-regression.junit.xml": "36743d17b6267d84c41779656533ae9a26b886a76ed08cfbe8f7a9306aa4cb9e",
+    "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke/run_status.json": "492c72f43928abf863fc4e58f3c72569a5373263a1cf4837cc385ca1284ce62f",
+    "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_uvcache/run_status.json": "0a78e8ffefb4fc3a08115b4ce50894cf1d2172c6c3d24298e307eb8253dc065c",
+    "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_mcp_retry/run_status.json": "52132267de45039eeb2c818173df29489b3c4a6ab1488f72612b85f587649b07",
+    "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_mcp_fixed/run_status.json": "a166706c9dfeb2c8577d3d7168130d5f2ccc268102491236f12f0468d50ac921",
+    "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_mcp_retry/mcp-home/control-private/control.log": "dbd3dadcb5965a30b8b1c1e891628ebf4a73c64c03162c6f4ee88d0867dcefd8"
+  },
+  "final_hash_readback": {
+    "checked_utc": "2026-10-22T11:45:57Z",
+    "method": "SHA-256 readback of the recorded source, evidence, and installed-wheel artifacts; no tests rerun",
+    "source_hashes_match": true,
+    "source_file_count": 12,
+    "evidence_hashes_match": true,
+    "evidence_file_count": 6,
+    "wheel": {
+      "path": "docs/universal_mcp_execution/evidence/M1_20261022_wheel_smoke_mcp_fixed/wheelhouse/comsol_mcp-0.1.10-py3-none-any.whl",
+      "sha256": "911e607a5b37f03770f7addd2cbc57364ed9e22c3a2636128df06469bcfc7498",
+      "matches_installed_wheel_record": true
+    },
+    "source_files_unchanged_since_final_tests": true,
+    "tests_rerun": false,
+    "validation_attempts_recorded": 7
+  },
+  "main_review_reference": "M1_MAIN_STAGE_REVIEW.json"
+}

@@ -314,6 +314,26 @@ def test_retained_projection_exact_provenance_and_real_coverage_validation(env,c
     if case!='good':assert out['data']['comparison']['equal'] is None and any(e['code']=='PROJECTION_INCOMPATIBLE' for e in out['data']['errors'])
     preserve_control(env,'cache-'+case,out)
 
+def test_public_interface_observation_is_not_native_verified_coverage(env):
+    b,w,ref,row,tickets=env;p=projection(w)
+    observations=[c for c in p['coverage'] if c['field']=='public_interfaces']
+    assert p['complete'] and observations
+    assert all(c['status']=='OBSERVED' and c['getter']['method']=='describe_public' for c in observations)
+    assert not any(c['field']=='public_interfaces' and c['status']=='VERIFIED' for c in p['coverage'])
+
+@pytest.mark.parametrize('case',['missing_receipt','wrong_build','wrong_interfaces'])
+def test_public_interface_observation_requires_exact_receiver_receipt(env,case):
+    b,w,ref,row,tickets=env;p=projection(w);assert p['complete']
+    observed=next(c for c in p['coverage'] if c['field']=='public_interfaces')
+    if case=='missing_receipt':
+        p['receiver_receipts']=[r for r in p['receiver_receipts'] if diff.path_key(r['path'])!=diff.path_key(observed['path'])]
+    elif case=='wrong_build':observed['getter']['runtime_version']='6.4.0.292'
+    else:
+        receipt=next(r for r in p['receiver_receipts'] if diff.path_key(r['path'])==diff.path_key(observed['path']))
+        receipt['descriptor']['interfaces']=sorted(receipt['descriptor']['interfaces']+[P+'UnobservedInterface'])
+    with pytest.raises(ExecutionContractError):
+        diff._validate_retained_coverage(p,p['normalized_scope'])
+
 def test_publication_schema_alias_profiles_and_no_cached_hash_equal(env):
     entry=registry.BY_ID['checkpoint.diff'].as_dict();assert entry['implementation_status']=='SUPPORTED_UNVERIFIED';assert entry['input_schema']['additionalProperties'] is False;assert 'expected_revision' not in entry['input_schema']['properties'];assert entry['runtime_dispatch_contract']['permissions'].startswith('inspect;')
     assert registry.is_tool_published('checkpoint_diff',profile='domain') and registry.is_tool_published('checkpoint_diff',profile='expert')

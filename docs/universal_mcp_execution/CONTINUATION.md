@@ -1,0 +1,6 @@
+# 同一Goal持续推进
+恢复仓库的当前指针：`docs/universal_mcp_execution/state/RESUME.json`。先核对source、工作树和真实作业，再执行next_action。不得运行旧init_completion来重置全部历史任务。
+主Agent在安全里程碑更新：已改文件、真实命令及退出码、剩余required、next_action、活动job的非秘密身份、阻塞及其依赖。不要只记“继续检查”，应明确下一个可执行动作。
+保留一个GENERAL_COVERAGE和一个当前REVIEW记录，不持续复制多个权威总账。引用原证据时说明复用范围和source兼容性。
+上下文压缩/会话更换后先读本文件和state，不从头审计全仓。不能联系旧进程则按资源范围标UNKNOWN，不重放潜在写操作。可以在独立新项目推进无冲突工作。
+持续执行不意味着忽略宿主配额或实际资源上限；真正限制出现时保存可恢复状态，不承诺后台继续。重新触发同一Goal后从记录续跑。

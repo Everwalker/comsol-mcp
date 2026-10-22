@@ -12,7 +12,7 @@ from uuid import uuid4
 from ._execution_contract import ExecutionContractError, canonical_project_path, model_ref_from_mapping
 from ._g2_contract import ACCESSOR_METHODS, NodePath, engine_value_spec, typed_value_from_engine, validate_typed_value
 from ._g2_engine import _parse_search_budget
-from ._g2_public_api import VERSION, IDENTITY_FIELDS, describe_receiver
+from ._g2_public_api import VERSION, IDENTITY_FIELDS, describe_receiver, normalize_public_runtime_version, supports_release
 from ._g2_checkpoint_ops import pointer, pointer_equal, source_identity, retain_terminal_source_guard
 
 SCHEMA='comsol-public-semantic-projection-v1'
@@ -22,6 +22,41 @@ _MISSING=object()
 def canonical(value):return json.dumps(value,sort_keys=True,separators=(',',':'),allow_nan=False)
 def fail(code,message):raise ExecutionContractError(code,message)
 def path_key(path):return canonical(path)
+
+def _coverage_satisfied(row,receiver_receipts,runtime_version,nodes):
+    """Accept only reviewable getter coverage or a matching API observation.
+
+    Public interface metadata is useful to replay the actual receiver shape,
+    but it is not native model-value verification. Keep its status OBSERVED
+    and bind it to the exact path, runtime build, and retained interface list.
+    """
+    if row.get('status') in {'VERIFIED','NOT_APPLICABLE'}:return True
+    if row.get('field')!='public_interfaces' or row.get('status')!='OBSERVED':return False
+    getter=row.get('getter')
+    if not isinstance(getter,Mapping) or getter.get('method')!='describe_public' or getter.get('runtime_version')!=runtime_version:
+        return False
+    if not supports_release(runtime_version):return False
+    try:path=NodePath.from_wire(row['path']).as_dict();key=path_key(path)
+    except Exception:return False
+    matching=[]
+    for receipt in receiver_receipts:
+        try:
+            if path_key(NodePath.from_wire(receipt['path']).as_dict())==key:matching.append(receipt['descriptor'])
+        except Exception:continue
+    if len(matching)!=1:return False
+    descriptor=matching[0]
+    interfaces=descriptor.get('interfaces') if isinstance(descriptor,Mapping) else None
+    if (descriptor.get('runtime_version')!=runtime_version or not isinstance(interfaces,list)
+            or not interfaces or not all(isinstance(name,str) and name.startswith('com.comsol.model.') for name in interfaces)
+            or len(interfaces)!=len(set(interfaces))):return False
+    return any(isinstance(node,Mapping) and path_key(node.get('path',{}))==key
+               and isinstance(node.get('fields'),Mapping)
+               and node['fields'].get('public_interfaces')==sorted(interfaces) for node in nodes)
+
+def _coverage_errors(projection):
+    receipts=projection.get('receiver_receipts',[]);version=projection.get('runtime_version');nodes=projection.get('nodes',[])
+    return [row for row in projection.get('coverage',[])
+            if not _coverage_satisfied(row,receipts,version,nodes)]
 def java_name(name):
     return {'[I':'int[]','[J':'long[]','[D':'double[]','[Z':'boolean[]','[Ljava.lang.String;':'java.lang.String[]',
             '[[I':'int[][]','[[D':'double[][]','[[Z':'boolean[][]','[[Ljava.lang.String;':'java.lang.String[][]'}.get(name,name)
@@ -108,7 +143,7 @@ class Reader:
     def __init__(self,worker,tag,scope,budget,page_size,role,*,stop_on_unknown=False):
         self.worker=worker;self.tag=tag;self.scope=scope;self.budget=budget;self.page_size=page_size;self.role=role
         self.stop_on_unknown=stop_on_unknown
-        self.nodes={};self.coverage=[];self.errors=[];self.descriptors={};self.unknown=False;self.root_tag=None;self.receiver_receipts=[];self.receivers=[];self.receipt_keys=set()
+        self.nodes={};self.coverage=[];self.errors=[];self.descriptors={};self.unknown=False;self.root_tag=None;self.receiver_receipts=[];self.receivers=[];self.receipt_keys=set();self.runtime_version=None
     def coverage_row(self,path,field,status,signature=None,reason=None):
         self.coverage.append({'side':self.role,'path':path,'field':field,'status':status,'getter':signature,'reason':reason})
     def error(self,path,field,exc,*,dispatched=False,status='UNREADABLE'):
@@ -120,7 +155,10 @@ class Reader:
         key=id(node)
         if key not in self.descriptors:
             self.budget.take();desc=describe_receiver(self.worker,node)
-            if desc['runtime_version']!=VERSION:fail('API_UNSUPPORTED','receiver runtime has no reviewed6.4 projection adapter')
+            if not supports_release(desc['runtime_version']):fail('API_UNSUPPORTED','receiver runtime has no reviewed COMSOL release projection adapter')
+            if self.runtime_version is not None and self.runtime_version!=desc['runtime_version']:
+                fail('API_UNSUPPORTED','Worker returned inconsistent COMSOL builds during one projection')
+            self.runtime_version=desc['runtime_version']
             if not desc['interfaces'] or not any(x.startswith('com.comsol.model.') for x in desc['interfaces']):fail('API_UNSUPPORTED','not an actual public COMSOL typed receiver')
             self.descriptors[key]=desc
             self.receivers.append(node)  # Do not reuse a discarded proxy's id.
@@ -139,7 +177,7 @@ class Reader:
             self.error(path,field,ExecutionContractError('API_UNSUPPORTED','no exact reviewed public '+name+str(params)),status='UNSUPPORTED');return _MISSING
         if len({java_name(r['returns']) for r in rows})!=1:
             self.error(path,field,ExecutionContractError('API_UNSUPPORTED','ambiguous public return signature'),status='UNSUPPORTED');return _MISSING
-        signature={'interface':rows[0]['interface'],'method':name,'parameters':list(params),'returns':rows[0]['returns'],'runtime_version':VERSION}
+        signature={'interface':rows[0]['interface'],'method':name,'parameters':list(params),'returns':rows[0]['returns'],'runtime_version':desc['runtime_version']}
         try:
             self.budget.take();value=getattr(node,name)(*args)
             if value is None and not nullable:
@@ -205,7 +243,7 @@ class Reader:
     def metadata(self,node,desc,path,*,root=False):
         entity=self.role_has(desc,'ModelEntity');prop=self.role_has(desc,'PropFeature')
         self.record(path,'public_interfaces',sorted(desc['interfaces']))
-        self.coverage_row(path,'public_interfaces','VERIFIED',{'method':'describe_public','runtime_version':VERSION})
+        self.coverage_row(path,'public_interfaces','OBSERVED',{'method':'describe_public','runtime_version':desc['runtime_version']})
         for field,name,returns in [('label','label',{STRING}),('active','isActive',{'boolean'}),('comments','comments',{STRING})]:
             if entity:self.record(path,field,self.scalar(node,desc,path,field,name,returns=returns))
             else:self.coverage_row(path,field,'NOT_APPLICABLE',reason='actual public receiver is not ModelEntity')
@@ -362,8 +400,9 @@ class Reader:
             pass
         except BudgetStop as exc:self.error({'segments':[]},'requested_scope',exc,status='TRUNCATED')
         except Exception as exc:self.error({'segments':[]},'requested_scope',exc)
-        return {'schema':SCHEMA,'runtime_version':VERSION,'normalized_scope':self.scope,'nodes':[self.nodes[k] for k in sorted(self.nodes)],
-                'coverage':self.coverage,'errors':self.errors,'complete':all(c['status'] in {'VERIFIED','NOT_APPLICABLE'} for c in self.coverage),
+        projected_nodes=[self.nodes[k] for k in sorted(self.nodes)]
+        return {'schema':SCHEMA,'runtime_version':self.runtime_version,'normalized_scope':self.scope,'nodes':projected_nodes,
+                'coverage':self.coverage,'errors':self.errors,'complete':all(_coverage_satisfied(c,self.receiver_receipts,self.runtime_version,projected_nodes) for c in self.coverage),
                 'unknown':self.unknown,'root_tag_provenance':self.root_tag,'receiver_receipts':self.receiver_receipts,
                 'producer':SCHEMA,'coverage_contract':[{'path':c['path'],'field':c['field']} for c in self.coverage]}
 
@@ -414,7 +453,7 @@ class _RetainedView:
             self.nodes[key]=node['fields']
         for receipt in value['receiver_receipts']:
             path=NodePath.from_wire(receipt['path']).as_dict();key=path_key(path);desc=receipt['descriptor']
-            if desc.get('runtime_version')!=VERSION or not desc.get('interfaces') or not isinstance(desc.get('methods'),list):
+            if not supports_release(desc.get('runtime_version')) or not desc.get('interfaces') or not isinstance(desc.get('methods'),list):
                 fail('PROJECTION_INCOMPATIBLE','historical public receiver descriptor absent')
             if not all(isinstance(x,str) and x.startswith('com.comsol.model.') for x in desc['interfaces']):
                 fail('PROJECTION_INCOMPATIBLE','historical receiver is not a public COMSOL interface')
@@ -519,7 +558,7 @@ def _validate_retained_coverage(value,scope):
     expected=Reader(view,view.tag,scope,Budget(limits),100,'retained_validation').project()
     if not expected['complete'] or expected['unknown']:
         details=[{'path':c['path'],'field':c['field'],'status':c['status'],'reason':c['reason']}
-                 for c in expected['coverage'] if c['status'] not in {'VERIFIED','NOT_APPLICABLE'}]
+                 for c in _coverage_errors(expected)]
         fail('PROJECTION_INCOMPATIBLE','historical applicable getter obligations incomplete: '+canonical(details))
     def coverage(rows):
         result={}
@@ -545,19 +584,28 @@ def _validate_retained_coverage(value,scope):
 def cached_projection(row,scope,role):
     value=row.get('semantic_projection')
     if value is None:return None
-    good=(isinstance(value,Mapping) and value.get('schema')==SCHEMA and value.get('runtime_version')==VERSION
+    value_version=value.get('runtime_version') if isinstance(value,Mapping) else None
+    source_version=row.get('runtime_version')
+    try:
+        value_release=".".join(normalize_public_runtime_version(value_version)[0].split(".")[:2])
+        source_release=".".join(normalize_public_runtime_version(source_version)[0].split(".")[:2])
+    except (TypeError, ValueError):
+        value_release=source_release=None
+    good=(isinstance(value,Mapping) and value.get('schema')==SCHEMA and supports_release(value_version)
+          and supports_release(source_version) and value_release==source_release
           and value.get('source_sha256')==row['sha256'] and value.get('source_binding')==row['source_binding']
-          and value.get('source_version')==row.get('runtime_version')==VERSION and value.get('normalized_scope')==scope
+          and value.get('source_version')==source_version and value.get('normalized_scope')==scope
           and value.get('producer')==SCHEMA and value.get('complete') is True and value.get('unknown') is False and isinstance(value.get('nodes'),list) and value['nodes']
+          and isinstance(value.get('receiver_receipts'),list)
           and isinstance(value.get('coverage'),list) and value['coverage'] and not value.get('errors')
-          and all(isinstance(c,Mapping) and c.get('status') in {'VERIFIED','NOT_APPLICABLE'} for c in value['coverage']))
+          and all(isinstance(c,Mapping) and _coverage_satisfied(c,value.get('receiver_receipts',[]),value.get('runtime_version'),value.get('nodes',[])) for c in value['coverage']))
     diagnostic='historical schema/source/version/scope/coverage incompatible'
     if good:
         try:_validate_retained_coverage(value,scope)
         except Exception as exc:
             good=False;diagnostic=str(exc) or type(exc).__name__
     if good:return {**dict(value),'unknown':False,'coverage':[{**c,'side':role} for c in value['coverage']]}
-    return {'schema':SCHEMA,'runtime_version':VERSION,'normalized_scope':scope,'nodes':[],'complete':False,'unknown':False,
+    return {'schema':SCHEMA,'runtime_version':source_version,'normalized_scope':scope,'nodes':[],'complete':False,'unknown':False,
             'coverage':[{'side':role,'path':{'segments':[]},'field':'retained_projection','status':'UNSUPPORTED','getter':None,'reason':diagnostic}],
             'errors':[{'side':role,'stage':'retained_projection','path':{'segments':[]},'code':'PROJECTION_INCOMPATIBLE','message':'retained projection is not authoritative for requested coverage: '+diagnostic,'dispatched':False,'mutation_possible':False}]}
 
@@ -621,8 +669,8 @@ def run_diff(backend,ref,body,execution,selected,isolation):
             observation['semantic_changes']=compare(before,after)
             if observation['semantic_changes'] or not observation['snapshot_identity_unchanged']:unknown=True
             observation['requested_coverage_complete']=before['complete'] and after['complete']
-            before_errors={(path_key(c['path']),c['field'],c['status']) for c in before['coverage'] if c['status'] not in {'VERIFIED','NOT_APPLICABLE'}}
-            after_errors={(path_key(c['path']),c['field'],c['status']) for c in after['coverage'] if c['status'] not in {'VERIFIED','NOT_APPLICABLE'}}
+            before_errors={(path_key(c['path']),c['field'],c['status']) for c in _coverage_errors(before)}
+            after_errors={(path_key(c['path']),c['field'],c['status']) for c in _coverage_errors(after)}
             if {e for e in after_errors-before_errors if e[2]!='TRUNCATED'}:unknown=True
         except Exception as exc:
             unknown=True;observation['error']={'code':getattr(exc,'code','SOURCE_OBSERVATION_FAILED'),'message':str(exc),'cause_type':type(exc).__name__}

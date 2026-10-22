@@ -14,6 +14,7 @@ from comsol_mcp._managed_backend import ManagedBackend
 from comsol_mcp._session_context import (
     CanonicalSocket, OwnedServerProcessIdentity, SessionEndpointIdentity,
     SessionRuntimeConfig, SessionRuntimeContext, session_state_directory,
+    use_session_context,
 )
 from tests.test_windows_suspended_ownership import _launch_api
 
@@ -222,6 +223,52 @@ def test_real_windows_handle_consumer_accepts_bound_server_worker_socket_pair(mo
     assert proof["worker_pid"] == worker._process.pid
     assert proof["endpoint"] == "127.0.0.1:56389"
     assert proof["worker_health_rpc_performed"] is False
+
+
+def test_production_isolation_dispatch_accepts_only_active_windows_t037_session(monkeypatch, tmp_path):
+    values = _completed_native_pair(monkeypatch, tmp_path)
+    _profile, _api, _factory, _server, _worker_process, _server_owner, _worker_owner, backend, worker, service, context = values
+    with use_session_context(context):
+        proof = ManagedBackend._require_g2_isolation(backend)
+    assert proof["verified"] is True
+    assert "sealed original T037 Server/Worker HANDLEs" in proof["proof_scope"]
+    assert proof["worker_health_rpc_performed"] is False
+
+
+def test_production_dispatch_does_not_fall_back_to_global_receipt_after_active_proof_failure(
+    monkeypatch, tmp_path
+):
+    values = _completed_native_pair(monkeypatch, tmp_path)
+    _profile, api, _factory, _server, worker_process, _server_owner, _worker_owner, backend, worker, service, context = values
+    from comsol_mcp._execution_contract import ExecutionContractError
+
+    api._g2_session_launch_owners.pop(id(worker_process))
+    receipt_calls = []
+    monkeypatch.setattr("comsol_mcp._managed_backend.configured_receipt",
+                        lambda: receipt_calls.append("called") or {"verified": True})
+    with use_session_context(context):
+        with pytest.raises(ExecutionContractError):
+            ManagedBackend._require_g2_isolation(backend)
+    assert receipt_calls == []
+
+
+def test_production_dispatch_reports_unsupported_platform_without_receipt_fallback(
+    monkeypatch, tmp_path
+):
+    values = _completed_native_pair(monkeypatch, tmp_path)
+    _profile, _api, _factory, _server, _worker_process, _server_owner, _worker_owner, backend, worker, service, context = values
+    from comsol_mcp._execution_contract import ExecutionContractError
+
+    receipt_calls = []
+    monkeypatch.setattr("sys.platform", "freebsd")
+    monkeypatch.setattr("os.name", "posix")
+    monkeypatch.setattr("comsol_mcp._managed_backend.configured_receipt",
+                        lambda: receipt_calls.append("called") or {"verified": True})
+    with use_session_context(context):
+        with pytest.raises(ExecutionContractError) as error:
+            ManagedBackend._require_g2_isolation(backend)
+    assert error.value.code == "UNSUPPORTED_PLATFORM"
+    assert receipt_calls == []
 
 
 def test_windows_handle_consumer_rejects_unsealed_process_and_changed_runtime_binding(monkeypatch, tmp_path):

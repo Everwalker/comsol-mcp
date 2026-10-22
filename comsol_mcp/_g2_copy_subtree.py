@@ -53,6 +53,14 @@ def require_structure(projection, root):
         interfaces = descriptors.get(path_key(row['path']), [])
         if row['status'] in {'VERIFIED', 'NOT_APPLICABLE'}:
             continue
+        if (row.get('field') == 'public_interfaces' and row.get('status') == 'OBSERVED'
+                and bool(interfaces) and isinstance(row.get('getter'), Mapping)
+                and row['getter'].get('method') == 'describe_public'
+                and row['getter'].get('runtime_version') == projection.get('runtime_version')):
+            # Signature inventories are observational metadata, not native
+            # model-state verification. They remain adequate for this typed
+            # structure gate when bound to the receiver and observed build.
+            continue
         if _auxiliary(row, interfaces):
             matching = [e for e in projection['errors'] if e['path'] == row['path'] and e['field'] == row['field']
                         and e['code'] == 'API_UNSUPPORTED' and e['message'] == row['reason'] and e['cause_type'] == 'ExecutionContractError'

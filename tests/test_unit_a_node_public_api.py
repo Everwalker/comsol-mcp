@@ -1,5 +1,6 @@
 """Unit A isolated software contracts. Doubles are not COMSOL native evidence."""
 from contextlib import nullcontext
+from dataclasses import replace
 from types import SimpleNamespace
 import copy
 import pytest
@@ -18,6 +19,7 @@ def tv(value,kind='string',shape=None,signature=None):
     row={'kind':kind,'shape':[] if shape is None else shape,'data':value}
     if signature is not None:row['java_signature']=signature
     return row
+def raw(value):return value.get('data') if isinstance(value,dict) and {'kind','shape','data'}<=set(value) else value
 def method(interface,name,parameters=(),returns='void'):
     return {'interface':interface,'method':name,'parameters':list(parameters),'returns':returns}
 
@@ -39,23 +41,28 @@ class Selection:
 class Entity:
     def __init__(self,tag='a',type_id='Rectangle'):
         self.tag_value=tag;self.type_id=type_id;self.comment='';self.display='label-'+tag;self.flag=True;self.calls=[]
-        self.values={'flag':True,'empty':[],'matrix':[[1.0]],'expr':'a+b'};self.sel=Selection()
+        self.values={'flag':True,'empty':[],'matrix':[[1.0]],'expr':'a+b','bool':False,'integer':7,'double':1.25,
+                     'string':'value','bool_empty':[],'int_array':[1,2],
+                     'double_matrix':[[1.0,2.0],[3.0,4.0]],'string_matrix':[['a','b'],['c','d']],
+                     'bool_matrix_empty':[],'string_array_null':None,'PortName':'1','PortType':'Numeric'}
+        self.sel=Selection()
         self.metadata_calls=[];self.presence_overrides={}
     def feature(self,tag=None):return self.list if tag is None else self.list.items[tag]
     def getType(self):return self.type_id
     def tag(self):return self.tag_value
     def resolveModelPath(self):return 'm/'+self.tag_value
     def comments(self,*args):
-        if args:self.calls.append(('comments',args));self.comment=args[0]['data'] if isinstance(args[0],dict) else args[0];return self
+        if args:self.calls.append(('comments',args));self.comment=raw(args[0]);return self
         return self.comment
     def label(self,*args):
-        if args:self.calls.append(('label',args));self.display=args[0];return self
+        if args:self.calls.append(('label',args));self.display=raw(args[0]);return self
         return self.display
-    def active(self,value):self.calls.append(('active',value));self.flag=value;return self
+    def active(self,value):self.calls.append(('active',value));self.flag=raw(value);return self
     def isActive(self):return self.flag
     def selection(self,*args):return self.sel
     def properties(self):return list(self.values)
     def hasProperty(self,name):
+        name=raw(name)
         self.metadata_calls.append(('hasProperty',name))
         if name in self.presence_overrides:
             value=self.presence_overrides[name]
@@ -63,16 +70,31 @@ class Entity:
             return value
         return name in self.values
     def getValueType(self,name):
+        name=raw(name)
         self.metadata_calls.append(('getValueType',name))
         return {'flag':'Boolean','empty':'DoubleArray','matrix':'DoubleMatrix','expr':'String',
-                'PortName':'String','PortType':'String','PortOrientation':'String'}.get(name,'FutureType')
+                'PortName':'String','PortType':'String','PortOrientation':'String','bool':'Boolean',
+                'integer':'Int','double':'Double','string':'String','bool_empty':'BooleanArray',
+                'int_array':'IntArray','double_matrix':'DoubleMatrix','string_matrix':'StringMatrix',
+                'bool_matrix_empty':'BooleanMatrix','string_array_null':'StringArray',
+                'PortName':'String','PortType':'String'}.get(name,'FutureType')
     def getAllowedPropertyValues(self,name):
+        name=raw(name)
         self.metadata_calls.append(('getAllowedPropertyValues',name))
         return {'PortName':['1','2'],'PortType':['Numeric','Periodic']}.get(name)
-    def getBoolean(self,name):return self.values[name]
-    def getDoubleArray(self,name):return self.values[name]
-    def getDoubleMatrix(self,name):return self.values[name]
-    def getString(self,name):self.metadata_calls.append(('getString',name));return self.values[name]
+    def getType(self):return self.type_id
+    def getBoolean(self,name):return self.values[raw(name)]
+    def getBooleanArray(self,name):return self.values[raw(name)]
+    def getBooleanMatrix(self,name):return self.values[raw(name)]
+    def getDouble(self,name):return self.values[raw(name)]
+    def getDoubleArray(self,name):return self.values[raw(name)]
+    def getDoubleMatrix(self,name):return self.values[raw(name)]
+    def getInt(self,name):return self.values[raw(name)]
+    def getIntArray(self,name):return self.values[raw(name)]
+    def getIntMatrix(self,name):return self.values[raw(name)]
+    def getString(self,name):self.metadata_calls.append(('getString',raw(name)));return self.values[raw(name)]
+    def getStringArray(self,name):return self.values[raw(name)]
+    def getStringMatrix(self,name):return self.values[raw(name)]
     def set(self,name,value):self.calls.append(('set',name,value));self.values[name]=value['data']
 
 class Collection:
@@ -84,7 +106,7 @@ class Collection:
     def remove(self,tag):self.calls.append(('remove',tag));del self.items[tag];self.order.remove(tag)
 
 class Worker:
-    def __init__(self):self.model_node=Entity('m');self.model_node.list=Collection();self.descriptors=[];self.override=None
+    def __init__(self):self.model_node=Entity('m');self.model_node.list=Collection();self.descriptors=[];self.override=None;self.include_model_root_interface=False
     def client(self):return self
     def model(self,tag):assert tag=='m';return self.model_node
     def operation_context(self,*a,**kw):return nullcontext()
@@ -99,8 +121,19 @@ class Worker:
             rows=[method(owners[0],'geom',('int',)),method(owners[0],'geom',('java.lang.String','int')),method(owners[0],'set',('[I',)),method(owners[0],'all'),method(owners[0],'inherit',('boolean',)),method(owners[0],'isInheriting'),method(owners[1],'named',('java.lang.String',))]
         else:
             owners=[api.MODEL_ENTITY,'com.comsol.model.PropFeature']
-            rows=[method(api.MODEL_ENTITY,'comments',(),'java.lang.String'),method(api.MODEL_ENTITY,'comments',('java.lang.String',),api.MODEL_ENTITY),method(api.MODEL_ENTITY,'label',(),'java.lang.String'),method(api.MODEL_ENTITY,'label',('java.lang.String',),api.MODEL_ENTITY),method(api.MODEL_ENTITY,'active',('boolean',),api.MODEL_ENTITY),method(api.MODEL_ENTITY,'isActive',(),'boolean'),method(owners[1],'selection'),method(owners[1],'selection',('java.lang.String',))]
-        return {'runtime_version':api.VERSION,'interfaces':owners,'methods':rows}
+            if node is self.model_node and self.include_model_root_interface:
+                owners.append('com.comsol.model.Model')
+            rows=[method(cap.receiver,cap.method,cap.parameters,cap.returns) for cap in api.CAPABILITIES]
+            rows.extend([method(api.MODEL_ENTITY,'resolveModelPath',(),'java.lang.String'),
+                         method(api.MODEL_ENTITY,'isactive',(),'boolean'),
+                         method(owners[1],'selection'),
+                         method(owners[1],'selection',('java.lang.String',)),
+                         method(owners[1],'set',('java.lang.String','double'),owners[1]),
+                         method(owners[1],'remove',('java.lang.String','int'),owners[1])])
+            if node is self.model_node and self.include_model_root_interface:
+                rows.append(method('com.comsol.model.Model','getComsolVersion',(),'java.lang.String'))
+        return {'runtime_version':api.VERSION,'interfaces':owners,'methods':rows,
+                'metadata_complete':True,'metadata_limits':{'interfaces':1024,'methods':8192}}
     def model_snapshot(self,tag):return {'model_tag':tag,'server_instance_id':'server','fingerprint':'software-fingerprint','external_event_counter':0}
 
 @pytest.fixture
@@ -114,23 +147,29 @@ def backend(tmp_path,monkeypatch):
     b.docs_index.close();store.close()
 def execution(ref,revision=0):return {'project_id':'p','session_id':'session','model_ref':ref,'expected_revision':revision,'idempotency_key':'key','request_id':'request'}
 def request(value=None,declared=None):return {'path':path('a'),'method':'comments','arguments':[] if value is None else [tv(value)],'declared_effect':declared or ('READ' if value is None else 'WRITE')}
+def api_request(method_name,args=(),effect='READ',signature=None):
+    body={'path':path('a'),'method':method_name,'arguments':list(args),'declared_effect':effect}
+    if signature is not None:body['java_signature']=list(signature)
+    return body
 
 @pytest.mark.parametrize('route',['api.invoke','api_invoke','registry_call','operation_call'])
 def test_api_comments_actual_receiver_read_write_permissions_before_ticket(backend,route):
     b,w,ref,tickets=backend;e=execution(ref);args=request()
     if route in {'registry_call','operation_call'}:args={'operation_id':'api.invoke','arguments':args}
-    read=b.invoke(route,args,e,'read',None);assert read['success'];assert read['data']['typed_return']['value']==tv('');assert not tickets
+    read=b.invoke(route,args,e,'read',None);assert read['success'];assert read['data']['typed_return']['value']==tv('',signature='java.lang.String');assert not tickets
     args=request('new')
     if route in {'registry_call','operation_call'}:args={'operation_id':'api.invoke','arguments':args}
     write=b.invoke(route,args,e,'write',None);assert write['success'];assert len(tickets)==1;assert write['data']['typed_return']['model_ref']==ref;assert write['execution']['revision']==1
     assert write['data']['resolved_effect']=='WRITE';assert w.model_node.list.items['a'].comment=='new'
 
-@pytest.mark.parametrize('case',['declared_read','unknown_method','wrong_signature','wrong_receiver','wrong_version','missing_ref','body_ref_mismatch','stale_revision','permission'])
+@pytest.mark.parametrize('case',['declared_read','unknown_method','wrong_signature','boxed_primitive_signature','wrong_typed_value_signature','wrong_receiver','wrong_version','missing_ref','body_ref_mismatch','stale_revision','permission'])
 def test_api_invalid_requests_fail_before_ticket_or_setter(backend,case):
     b,w,ref,tickets=backend;e=execution(ref);args=request('new')
     if case=='declared_read':args['declared_effect']='READ'
     elif case=='unknown_method':args['method']='getClass'
     elif case=='wrong_signature':args['java_signature']=['int']
+    elif case=='boxed_primitive_signature':args=api_request('active',[tv(True,'boolean',signature='java.lang.Boolean')],'WRITE',signature=['java.lang.Boolean'])
+    elif case=='wrong_typed_value_signature':args=api_request('getString',[tv('flag',signature='java.lang.StringBuilder')],'READ')
     elif case in {'wrong_receiver','wrong_version'}:
         d=w.describe_public(w.model_node.list.items['a']);d['interfaces']=[] if case=='wrong_receiver' else d['interfaces'];d['runtime_version']='6.3' if case=='wrong_version' else d['runtime_version'];w.override=d
     elif case=='missing_ref':del e['model_ref']
@@ -140,11 +179,191 @@ def test_api_invalid_requests_fail_before_ticket_or_setter(backend,case):
     with pytest.raises(ExecutionContractError):b.invoke('api.invoke',args,e,'reject',None)
     assert tickets==[];assert w.model_node.list.items['a'].calls==[]
 
-def test_describe_only_publishes_reviewed_exact_overloads(backend):
+def test_describe_lists_actual_signatures_and_separates_reviewed_policy(backend):
     b,w,ref,tickets=backend
     out=b.invoke('api_describe',{'path':path('a')},execution(ref),'describe',None)
-    assert out['success'];methods=out['data']['methods'];assert [row['effect'] for row in methods]==['READ','WRITE'];assert all(row['method']=='comments' for row in methods);assert tickets==[]
+    assert out['success'];methods=out['data']['methods']
+    comments=[row for row in methods if row['method']=='comments']
+    assert [row['effect'] for row in comments]==['READ','WRITE']
+    assert all(row['policy_status']=='REVIEWED' and row['invoke_allowed'] is True for row in comments)
+    unknown=next(row for row in methods if row['method']=='resolveModelPath')
+    assert unknown['policy_status']=='UNREVIEWED' and unknown['invoke_allowed'] is False
+    assert unknown['controlled_alternative']['operation']=='code.execute_java'
+    prop_set=next(row for row in methods if row['method']=='set')
+    assert prop_set['policy_status']=='UNREVIEWED'
+    assert prop_set['controlled_alternative']['operation']=='node.property_set'
+    assert prop_set['controlled_alternative']['authorizes_this_signature'] is False
+    assert out['data']['runtime_version_raw']==api.VERSION and out['data']['metadata_complete'] is True
+    doc=comments[0]['documentation']
+    assert doc=={'path':api.MODEL_ENTITY_DOC,'sha256':api.MODEL_ENTITY_DOC_SHA,
+                 'source_version':'6.4.0.293','reference_only':True,
+                 'signature_observation_scope':api.SIGNATURE_OBSERVATION_SCOPE}
+    doc_schema=registry.operation_describe('api.describe')['data_schema']['properties']['methods']['items']['properties']['documentation']['oneOf'][1]
+    assert set(doc_schema['required'])==set(doc)
+    assert doc_schema['properties']['source_version']['const']=='6.4.0.293'
+    assert doc_schema['properties']['reference_only']['const'] is True
+    assert tickets==[]
     with pytest.raises(ExecutionContractError):b.invoke('api.describe',{'path':path('a'),'method':'getClass'},execution(ref),'no',None)
+
+
+@pytest.mark.parametrize(('method_name','args','effect','expected'),[
+    ('tag',(), 'READ', tv('a',signature='java.lang.String')),
+    ('isActive',(), 'READ', tv(True,'boolean',signature='boolean')),
+    ('getType',(), 'READ', tv('Rectangle',signature='java.lang.String')),
+    ('properties',(), 'READ', tv(list(Entity().values),'string',[len(Entity().values)],'[Ljava.lang.String;')),
+    ('getValueType',(tv('bool'),), 'READ', tv('Boolean',signature='java.lang.String')),
+    ('hasProperty',(tv('bool'),), 'READ', tv(True,'boolean',signature='boolean')),
+    ('getAllowedPropertyValues',(tv('PortType'),), 'READ', tv(['Numeric','Periodic'],'string',[2],'[Ljava.lang.String;')),
+])
+def test_public_model_and_propfeature_metadata_getters_have_typed_wire(backend,method_name,args,effect,expected):
+    b,w,ref,tickets=backend
+    result=b.invoke('api.invoke',api_request(method_name,args,effect),execution(ref),'read-'+method_name,None)
+    assert result['success'],result
+    assert result['data']['typed_return']['kind']=='value'
+    assert result['data']['typed_return']['value']==expected
+    assert tickets==[]
+
+
+@pytest.mark.parametrize(('property_name','method_name','expected'),[
+    ('bool','getBoolean',tv(False,'boolean',signature='boolean')),
+    ('integer','getInt',tv(7,'int32',signature='int')),
+    ('double','getDouble',tv(1.25,'float64',signature='double')),
+    ('string','getString',tv('value',signature='java.lang.String')),
+    ('bool_empty','getBooleanArray',tv([],'boolean',[0],'[Z')),
+    ('int_array','getIntArray',tv([1,2],'int32',[2],'[I')),
+    ('double_matrix','getDoubleMatrix',tv([[1.0,2.0],[3.0,4.0]],'float64',[2,2],'[[D')),
+    ('string_matrix','getStringMatrix',tv([['a','b'],['c','d']],'string',[2,2],'[[Ljava.lang.String;')),
+    ('bool_matrix_empty','getBooleanMatrix',tv([],'boolean',[0],'[[Z')),
+    ('string_array_null','getStringArray',None),
+])
+def test_propfeature_typed_getters_preserve_scalar_array_rank_empty_and_null(backend,property_name,method_name,expected):
+    b,w,ref,tickets=backend
+    result=b.invoke('api.invoke',api_request(method_name,[tv(property_name)]),execution(ref),'typed-'+property_name,None)
+    assert result['success'],result
+    actual=result['data']['typed_return']
+    if expected is None:
+        assert actual=={'kind':'null','java_type':'[Ljava.lang.String;'}
+    else:
+        assert actual['kind']=='value' and actual['value']==expected
+    assert tickets==[]
+
+
+@pytest.mark.parametrize(('method_name','property_name','value_type'),[
+    ('isActive',None,None),('getBoolean','bool','Boolean'),('getInt','integer','Int'),
+    ('getDouble','double','Double'),
+])
+def test_primitive_public_getters_returning_null_are_unknown(backend,method_name,property_name,value_type):
+    b,w,ref,tickets=backend;node=w.model_node if property_name is None else w.model_node.list.items['a']
+    if property_name is None:
+        node.flag=None;args=api_request(method_name,(), 'READ');args['path']=ROOT
+    else:
+        node.values[property_name]=None;args=api_request(method_name,[tv(property_name)],'READ')
+    result=b.invoke('api.invoke',args,execution(ref),'null-primitive-'+method_name,None)
+    assert result['success'] is False
+    assert result['data']['status']=='UNKNOWN'
+    assert result['data']['errors'][0]['code']=='EXECUTION_STATE_UNKNOWN'
+    assert tickets==[]
+
+
+def test_nullable_reference_getter_returns_remain_typed_null(backend):
+    b,w,ref,tickets=backend;node=w.model_node.list.items['a'];node.values['string']=None;node.values['double_matrix']=None
+    for method_name,property_name,java_type in [('getString','string','java.lang.String'),
+                                                 ('getDoubleMatrix','double_matrix','[[D')]:
+        result=b.invoke('api.invoke',api_request(method_name,[tv(property_name)]),execution(ref),
+                        'null-reference-'+method_name,None)
+        assert result['success'] is True
+        assert result['data']['typed_return']=={'kind':'null','java_type':java_type}
+    assert tickets==[]
+
+
+def test_api_describe_and_invoke_accept_bound_model_root_without_global_access(backend):
+    b,w,ref,tickets=backend;e=execution(ref);w.include_model_root_interface=True
+    described=b.invoke('api.describe',{'path':ROOT},e,'root-describe',None)
+    assert described['success'] is True
+    assert described['data']['path']==ROOT
+    assert 'com.comsol.model.Model' in described['data']['receiver_interfaces']
+    assert 'com.comsol.model.ModelUtil' not in described['data']['receiver_interfaces']
+    model_version=next(row for row in described['data']['methods'] if row['method']=='getComsolVersion')
+    assert model_version['policy_status']=='UNREVIEWED' and model_version['invoke_allowed'] is False
+    request_body=api_request('comments',(), 'READ');request_body['path']=ROOT
+    invoked=b.invoke('api.invoke',request_body,e,'root-invoke',None)
+    assert invoked['success'] is True
+    assert invoked['data']['path']==ROOT
+    assert invoked['data']['typed_return']['value']==tv('',signature='java.lang.String')
+    assert tickets==[]
+    registry.validate_call('api.describe',{'path':ROOT},allow_unbound_identity=True)
+
+
+@pytest.mark.parametrize(('method_name','args','effect','getter','expected'),[
+    ('label',(tv('renamed'),),'WRITE','label','renamed'),
+    ('comments',(tv('new note'),),'WRITE','comments','new note'),
+    ('active',(tv(False,'boolean'),),'WRITE','isActive',False),
+])
+def test_modelentity_setters_require_exact_signature_and_typed_readback(backend,method_name,args,effect,getter,expected):
+    b,w,ref,tickets=backend
+    result=b.invoke('api.invoke',api_request(method_name,args,effect),execution(ref),'set-'+method_name,None)
+    assert result['success'],result
+    assert result['data']['readback']==expected
+    assert result['data']['typed_return']['kind']=='node_ref'
+    assert len(tickets)==1
+
+
+def test_release_plus_exact_signature_admits_63_and_64_but_rejects_other_release(backend):
+    b,w,ref,tickets=backend
+    for raw_version in ('COMSOL Multiphysics 6.3 (Build: 290)', '6.4.0.901'):
+        w.override={**w.describe_public(w.model_node.list.items['a']), 'runtime_version':raw_version}
+        prepared=api.prepare_invoke(w,'m',api_request('comments',(), 'READ'))
+        assert prepared['descriptor']['runtime_version_raw']==raw_version
+        assert prepared['capability'].method=='comments'
+    w.override={**w.describe_public(w.model_node.list.items['a']), 'runtime_version':'6.5.0.100'}
+    with pytest.raises(ExecutionContractError) as error:
+        api.prepare_invoke(w,'m',api_request('comments',(), 'READ'))
+    assert error.value.code=='API_UNSUPPORTED'
+    assert tickets==[]
+
+
+def test_63_write_adapter_uses_actual_signature_and_preserves_observed_build(backend):
+    b,w,ref,tickets=backend
+    descriptor=w.describe_public(w.model_node.list.items['a'])
+    descriptor['runtime_version']='COMSOL Multiphysics 6.3 (Build: 290)'
+    w.override=descriptor
+    result=b.invoke('api.invoke',api_request('comments',[tv('6.3 write')],'WRITE'),execution(ref),'m1-63-write',None)
+    assert result['success'],result
+    assert result['data']['evidence']['descriptor']['runtime_version_raw']==descriptor['runtime_version']
+    assert result['data']['readback']=='6.3 write' and len(tickets)==1
+
+
+def test_63_node_action_requires_the_actual_reviewed_signature_before_write(backend):
+    b,w,ref,tickets=backend
+    descriptor=w.describe_public(w.model_node.list.items['a'])
+    descriptor['runtime_version']='COMSOL Multiphysics 6.3 (Build: 290)'
+    w.override=descriptor
+    result=b.invoke('node.label_set',{'path':path('a'),'label':'6.3 label'},execution(ref),'m1-63-node-write',None)
+    assert result['success'],result
+    assert result['data']['evidence']['descriptor']['runtime_version_raw']==descriptor['runtime_version']
+    assert len(tickets)==1
+    bad=copy.deepcopy(descriptor)
+    for row in bad['methods']:
+        if row['interface']==api.MODEL_ENTITY and row['method']=='label' and row['parameters']==['java.lang.String']:
+            row['returns']='java.lang.Object'
+    w.override=bad
+    with pytest.raises(ExecutionContractError) as error:
+        b.invoke('node.label_set',{'path':path('a'),'label':'refused'},execution(ref,1),'m1-63-bad-sig',None)
+    assert error.value.code=='API_UNSUPPORTED'
+    assert len(tickets)==1 and w.model_node.list.items['a'].display=='6.3 label'
+
+
+def test_method_descriptor_effect_claim_cannot_override_server_policy(backend):
+    b,w,ref,tickets=backend
+    descriptor=w.describe_public(w.model_node.list.items['a'])
+    for row in descriptor['methods']:
+        if row['method']=='comments' and row['parameters']==['java.lang.String']:
+            row['effect']='READ'
+    w.override=descriptor
+    with pytest.raises(ExecutionContractError) as error:
+        api.prepare_invoke(w,'m',api_request('comments',[tv('write')],'READ'))
+    assert error.value.code=='PERMISSION_DENIED'
+    assert tickets==[] and w.model_node.list.items['a'].calls==[]
 
 @pytest.mark.parametrize('route',['registry_call','operation_call','api_invoke','api.invoke'])
 def test_project_read_acl_uses_provisional_signature_not_declared_effect(route):
@@ -170,7 +389,9 @@ def test_project_api_route_ambiguity_and_identity_fail_closed(case,monkeypatch):
     elif case=='nonobject':args['arguments']=[]
     elif case=='nested_identity':body['model_ref']={}
     elif case=='foreign_project':e['project_id']='other'
-    else:monkeypatch.setattr(api,'CAPABILITIES',api.CAPABILITIES+(api.Capability(api.MODEL_ENTITY,'comments',('java.lang.String',),api.MODEL_ENTITY,'READ'),))
+    else:
+        original=next(cap for cap in api.CAPABILITIES if cap.method=='comments' and cap.parameters==('java.lang.String',))
+        monkeypatch.setattr(api,'CAPABILITIES',api.CAPABILITIES+(replace(original,effect='READ'),))
     # A route alias in operation_id is not a canonical fallback request.
     with pytest.raises(ExecutionContractError):daemon._authorize_project_execution('registry_call',args,e)
     assert calls==[]
@@ -250,6 +471,13 @@ def test_a_runtime_outputs_match_published_closed_domain_schema(backend,operatio
     data=out['data'];schema=registry.operation_describe(operation)['data_schema']
     assert set(schema['required'])<=set(data);assert set(data)<=set(schema['properties']);assert schema['additionalProperties'] is False
     assert data['schema_version']==1 and data['operation']==operation
+    if operation=='api.invoke':
+        capability_schema=schema['properties']['capability']
+        capability=data['capability']
+        assert capability_schema['additionalProperties'] is False
+        assert set(capability_schema['required'])==set(capability)
+        assert capability['documentation']['source_version']=='6.4.0.293'
+        assert capability['documentation']['reference_only'] is True
     if operation.startswith('node.selection_') or operation=='node.copy':assert not data['complete']
 
 def test_copy_readback_mismatch_preserves_created_target_unknown(backend,monkeypatch):
@@ -330,7 +558,9 @@ def test_stateful_daemon_a_admission_acl_and_closed_routes_before_backend(tmp_pa
         args=request();e={**execution(ref),'project_id':project['project_id'],'rpc_timeout_s':2}
         if case=='setter_denied':args=request('new')
         elif case=='unknown':args['method']='getClass'
-        elif case=='ambiguous':monkeypatch.setattr(api,'CAPABILITIES',api.CAPABILITIES+(api.Capability(api.MODEL_ENTITY,'comments',(),'java.lang.String','WRITE'),))
+        elif case=='ambiguous':
+            original=next(cap for cap in api.CAPABILITIES if cap.method=='comments' and cap.parameters==())
+            monkeypatch.setattr(api,'CAPABILITIES',api.CAPABILITIES+(replace(original,effect='WRITE'),))
         elif case=='body_ref_conflict':args['model_ref']={**ref,'model_tag':'foreign'}
         elif case=='body_project_conflict':args['project_id']='foreign'
         elif case=='outer_type':e['model_ref']='m'

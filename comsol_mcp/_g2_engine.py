@@ -94,9 +94,9 @@ def validate_node_action(operation: str, arguments: Mapping[str, Any]) -> dict[s
 
 def _public_require(worker: Any, node: Any, interface: str, method: str, parameters: tuple[str, ...],
                     returns: str | None = None):
-    from ._g2_public_api import VERSION, describe_receiver, supports
+    from ._g2_public_api import describe_receiver, supports, supports_release
     descriptor = describe_receiver(worker, node)
-    if descriptor["runtime_version"] != VERSION or not supports(descriptor, interface, method, parameters, returns):
+    if not supports_release(descriptor["runtime_version"]) or not supports(descriptor, interface, method, parameters, returns):
         raise PreWriteRefusal("API_UNSUPPORTED", f"actual public receiver has no reviewed {interface}.{method}{parameters}")
     return descriptor
 
@@ -121,7 +121,7 @@ def _entity_parent(worker: Any, model_tag: str, path: Mapping[str, Any]):
 
 def prepare_node_action(worker: Any, model_tag: str, operation: str, arguments: Mapping[str, Any], *, model_revision: int | None = None) -> dict[str, Any]:
     """Resolve the actual public capability before taking any new write ticket."""
-    from ._g2_public_api import MODEL_ENTITY, VERSION, describe_receiver, supports
+    from ._g2_public_api import MODEL_ENTITY, describe_receiver, supports, supports_release
     body = validate_node_action(operation, arguments)
     prepared: dict[str, Any] = {"body": body}
     if operation == "node.remove":
@@ -185,9 +185,12 @@ def prepare_node_action(worker: Any, model_tag: str, operation: str, arguments: 
         node = resolve_node_path(model, body["path"])
         prepared["node"] = node
         if operation in {"node.label_set", "node.active_set"}:
-            method, getter, parameter = (("label", "label", string) if operation == "node.label_set" else ("active", "isActive", "boolean"))
-            descriptor = _public_require(worker, node, MODEL_ENTITY, method, (parameter,))
-            _public_require(worker, node, MODEL_ENTITY, getter, ())
+            method, getter, parameter, setter_return, getter_return = (
+                ("label", "label", string, MODEL_ENTITY, string) if operation == "node.label_set"
+                else ("active", "isActive", "boolean", MODEL_ENTITY, "boolean")
+            )
+            descriptor = _public_require(worker, node, MODEL_ENTITY, method, (parameter,), setter_return)
+            _public_require(worker, node, MODEL_ENTITY, getter, (), getter_return)
             prepared.update(method=method, getter=getter, before=_call(node, getter), descriptor=descriptor)
         elif operation == "node.move":
             parent_path, container, leaf = _entity_parent(worker, model_tag, body["path"])
@@ -206,14 +209,14 @@ def prepare_node_action(worker: Any, model_tag: str, operation: str, arguments: 
         else:
             selection_name = body.get("selection_name")
             owner_descriptor = describe_receiver(worker, node)
-            if owner_descriptor["runtime_version"] != VERSION:
+            if not supports_release(owner_descriptor["runtime_version"]):
                 raise PreWriteRefusal("API_UNSUPPORTED", "selection owner runtime version has no reviewed adapter")
             selection_parameters = () if selection_name is None else (string,)
             if not any(supports(owner_descriptor, interface, "selection", selection_parameters) for interface in owner_descriptor["interfaces"]):
                 raise PreWriteRefusal("API_UNSUPPORTED", "owner has no exact public selection getter")
             selection = _call(node, "selection", *(() if selection_name is None else (selection_name,)))
             descriptor = describe_receiver(worker, selection)
-            if descriptor["runtime_version"] != VERSION:
+            if not supports_release(descriptor["runtime_version"]):
                 raise PreWriteRefusal("API_UNSUPPORTED", "selection receiver runtime version has no reviewed adapter")
             prepared.update(selection=selection, descriptor=descriptor)
             if operation == "node.selection_set":

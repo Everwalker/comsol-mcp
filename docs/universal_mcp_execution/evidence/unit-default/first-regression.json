@@ -1,0 +1,8 @@
+{
+  "scope": "SOFTWARE_REGRESSION_AFTER_GENERALIZATION",
+  "chunk_id": "ca6b0e",
+  "wall_time_seconds": 0.000006417,
+  "exit_code": 1,
+  "original_token_count": 339,
+  "output": "......                                [100%]\n=================================== FAILURES ===================================\n_______ test_actual014_raw_reproduces_original_r5_exact_label_rejection ________\ntests/test_g3_results.py:2344: in test_actual014_raw_reproduces_original_r5_exact_label_rejection\n    assert hashlib.sha256(old.read_bytes()).hexdigest()=='cb9949f2055e969d3bedb19cac1df31f6e3bdfa710c78d749e2363f5ff3c1de3'\n                          ^^^^^^^^^^^^^^^^\n/opt/homebrew/Cellar/python@3.12/3.12.13_2/Frameworks/Python.framework/Versions/3.12/lib/python3.12/pathlib.py:1019: in read_bytes\n    with self.open(mode='rb') as f:\n         ^^^^^^^^^^^^^^^^^^^^\n/opt/homebrew/Cellar/python@3.12/3.12.13_2/Frameworks/Python.framework/Versions/3.12/lib/python3.12/pathlib.py:1013: in open\n    return io.open(self, mode, buffering, encoding, errors, newline)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE   FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/SSD/COMSOL_MCP_FULL_PROJECT_CONTINUATION_V2/local-preservation/w23-saved-mph-science-readback-20261012-candidate20-r5/comsol_mcp/_g3_results.py'\n=========================== short test summary info ============================\nFAILED tests/test_g3_results.py::test_actual014_raw_reproduces_original_r5_exact_label_rejection\n1 failed, 256 passed in 1.35s\n"
+}

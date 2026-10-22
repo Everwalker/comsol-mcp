@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "status": "BASELINE_BUG_REPRODUCED",
+  "captured_utc": "2026-10-22T10:35:46.546448+00:00",
+  "scope": "controlled local fixture; restore_git stubbed to skip network and return an empty tracked-file list",
+  "command": "bootstrap.main(--method git) against temporary copy of this package",
+  "bootstrap_exit_code": 2,
+  "failure_type": "FileNotFoundError",
+  "failure_message": "[Errno 2] No such file or directory: '/Volumes/SSD/Comsol-MCP/COMSOL_MCP_UNIVERSAL_WORKPACK/review/.overlay-baseline-u22egd6j/workpack/AGENTS.md'",
+  "missing_source_relative_path": "AGENTS.md",
+  "cause": "AGENTS.md is in the required overlay copy tuple but absent from the workpack and PACKAGE_MANIFEST.json",
+  "target_created": false,
+  "staging_disposition": "temporary fixture and incomplete staging removed after evidence capture; no pinned source was fetched or restored"
+}

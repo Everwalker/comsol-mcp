@@ -1,0 +1,1091 @@
+{
+  "schema": "universal-dependency-prep/1",
+  "created_utc": "2026-10-22T11:31:54.378291+00:00",
+  "scope": "M4 offline dependency input preparation only; no install, application bundle, COMSOL engine/GUI, upload, or host-native acceptance.",
+  "source_inputs_sha256": {
+    "pyproject.toml": "fc8eaefc0db93fe956021cee3f8718f2e573bdbb88102fad9f1d097e8ea67995",
+    "uv.lock": "2058044231f3ace0a36b537a12b041579af94b9042add9acfd18ca0c0d7505c1",
+    "requirements-windows-cp312.txt": "9942348ecd8ee5048cc8355657d75439c849f85d9437adc7ef32c2b280ac8880",
+    "continuation/packets/w26-offline-input-closure-r1/requirements-runtime.lock": "8e959dfb421c3c22352e768f7a63d12e3459aac93d8e6479e8eb5c5a01603b42",
+    "continuation/packets/w26-offline-input-closure-r1/requirements-backend.lock": "6f8b652ba4e1d8a0e040b2352e211f2d226acc9336a58c6229c874085643548a",
+    "tools/w26_application_bundle_current.py": "288747c2f39dfa6f5b148a66cc08bda60b1e799d10b8108dc4bae51b376fa8e6",
+    "tools/w26_application_bundle.py": "305ab5d79998f42f6c472ed3bf0c1a78184a880c59868576cd5c1f98e6f347db",
+    "tools/w26_application_sources_175_r13_prepared.lock.json": "1dd9ba4db2264e44a6c778eff8d9d18d34709f7b954bff6252bce6cbede9b826",
+    "tools/w26_target_inputs.py": "650d113b85fc8dd76eb438a46b5291da3fe3528cc41cf5361643584823286784",
+    "tools/full_project_release.py": "6a700b55e0e6fc71d17d84947542fead320a5841e2dfde9bf92c2d2b64ed543a"
+  },
+  "dependency_basis": {
+    "pyproject_dependencies": [
+      "mcp>=1.30,<2",
+      "MPh",
+      "JPype1"
+    ],
+    "pyproject_desktop_extra": [
+      "psutil; sys_platform == 'darwin'",
+      "pyobjc-framework-ApplicationServices>=12.2.2; sys_platform == 'darwin'",
+      "pyobjc-framework-Quartz>=12.2.2; sys_platform == 'darwin'",
+      "pyobjc-framework-Cocoa>=12.2.2; sys_platform == 'darwin'"
+    ],
+    "uv_lock_sha256": "2058044231f3ace0a36b537a12b041579af94b9042add9acfd18ca0c0d7505c1",
+    "uv_lock_project_metadata": {
+      "requires_dist": [
+        {
+          "name": "jpype1"
+        },
+        {
+          "name": "mcp",
+          "specifier": ">=1.30,<2"
+        },
+        {
+          "name": "mph"
+        },
+        {
+          "name": "pytest",
+          "marker": "extra == 'dev'"
+        }
+      ],
+      "provides_extras": [
+        "dev"
+      ]
+    },
+    "existing_target_runtime_lock": "continuation/packets/w26-offline-input-closure-r1/requirements-runtime.lock",
+    "existing_target_builder_lock": "continuation/packets/w26-offline-input-closure-r1/requirements-backend.lock",
+    "platform_roots": "tools/w26_target_inputs.py: pywin32==312 on Windows; pyobjc CoreMedia and ScreenCaptureKit 12.2.2 on macOS.",
+    "lock_gap": "Current uv.lock project metadata only provides dev and omits the pyproject desktop extra. The prior target runtime lock supplied its established versions/hashes; main agent should refresh canonical lock and target closure for the frozen M1 source before ordinary bundle construction.",
+    "intel_psutil": "Prior runtime-lock hash did not match the Intel wheel. Official PyPI JSON was retained in metadata/psutil-5.9.8-pypi.json; the exact Intel filename/hash from that response was used and the required-hash download succeeded."
+  },
+  "commands": {
+    "lock_export": "UV_CACHE_DIR=\"$PWD/_state/universal-dependency-prep/uv-cache\" uv export --frozen --no-dev --no-emit-project --format requirements-txt --output-file _state/universal-dependency-prep/locks/runtime-uv-export.txt",
+    "win_amd64": "python3 -m pip download --index-url https://pypi.org/simple --only-binary=:all: --disable-pip-version-check --no-input --no-cache-dir --dest _state/universal-dependency-prep/win_amd64 --platform win_amd64 --python-version 3.12 --implementation cp --abi cp312 --abi abi3 --abi none --require-hashes --requirement _state/universal-dependency-prep/locks/win_amd64.requirements.txt",
+    "macos_arm64": "python3 -m pip download --index-url https://pypi.org/simple --only-binary=:all: --disable-pip-version-check --no-input --no-cache-dir --dest _state/universal-dependency-prep/macos_arm64 --platform macosx_11_0_arm64 --platform macosx_11_0_universal2 --python-version 3.12 --implementation cp --abi cp312 --abi abi3 --abi none --require-hashes --requirement _state/universal-dependency-prep/locks/macos_arm64.requirements.txt",
+    "macos_x86_64_available": "python3 -m pip download --index-url https://pypi.org/simple --only-binary=:all: --disable-pip-version-check --no-input --no-cache-dir --no-deps --dest _state/universal-dependency-prep/macos_x86_64 --platform macosx_12_0_x86_64 --platform macosx_12_0_universal2 --python-version 3.12 --implementation cp --abi cp312 --abi abi3 --abi none --require-hashes --requirement _state/universal-dependency-prep/locks/macos_x86_64-no-cryptography.requirements.txt"
+  },
+  "raw_outputs": [
+    {
+      "path": "_state/universal-dependency-prep/logs/macos_arm64-final.log",
+      "bytes": 9269,
+      "sha256": "2a6b8afdc3c4faf9bb3723887a39a16d7cd1d37d10630fc36b48808bd978e82f"
+    },
+    {
+      "path": "_state/universal-dependency-prep/logs/macos_arm64-supplement.log",
+      "bytes": 13364,
+      "sha256": "31b78f17e499eb350c29d4c05d7e616be0e1ac2fc0603afb67095bf682d42cae"
+    },
+    {
+      "path": "_state/universal-dependency-prep/logs/macos_x86_64-available-no-deps.log",
+      "bytes": 13633,
+      "sha256": "39454c88c8eb863e432aa33465f5eb8b6f697568eaeb261975f01ad9096033bc"
+    },
+    {
+      "path": "_state/universal-dependency-prep/logs/macos_x86_64-available-only.log",
+      "bytes": 9805,
+      "sha256": "1587ae59cc28b99dba14251bfe43fc1493c9a6264700a1ee0dab838a7b26155d"
+    },
+    {
+      "path": "_state/universal-dependency-prep/logs/macos_x86_64-final.log",
+      "bytes": 2383,
+      "sha256": "8a8ecc3f2aee3e8feef3af7a5776e869d594f85d348bb5e53c9f936852df95e3"
+    },
+    {
+      "path": "_state/universal-dependency-prep/logs/macos_x86_64-supplement.log",
+      "bytes": 8002,
+      "sha256": "865f3c787ea229f7e4b27f88260b9a836380b773b618a9b32be5c04e8979674f"
+    },
+    {
+      "path": "_state/universal-dependency-prep/logs/win_amd64-download-escalated.log",
+      "bytes": 9680,
+      "sha256": "b6e591ea12ba9c844af47388dc437f8f372cad1bc0904afc761bdff12667fb48"
+    },
+    {
+      "path": "_state/universal-dependency-prep/logs/win_amd64-download.log",
+      "bytes": 2084,
+      "sha256": "f6c732420fa1ee57da1ec392ee0eb264d9276560a7b35961f5865f3ed190f2a5"
+    },
+    {
+      "path": "_state/universal-dependency-prep/logs/win_amd64-final.log",
+      "bytes": 10761,
+      "sha256": "4b1d80ec9df86347c3b691b247276c2a295b75c825ba7d04a9fe0b5f7d795d4d"
+    }
+  ],
+  "targets": {
+    "win_amd64": {
+      "status": "PREPARED_STATIC_WHEEL_INPUTS",
+      "wheel_count": 34,
+      "expected_distribution_count": 34,
+      "missing_distributions": [],
+      "files": {
+        "annotated-types": {
+          "version": "0.8.0",
+          "filename": "annotated_types-0.8.0-py3-none-any.whl",
+          "bytes": 13427,
+          "sha256": "f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "anyio": {
+          "version": "4.15.1",
+          "filename": "anyio-4.15.1-py3-none-any.whl",
+          "bytes": 132079,
+          "sha256": "6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "attrs": {
+          "version": "26.1.0",
+          "filename": "attrs-26.1.0-py3-none-any.whl",
+          "bytes": 67548,
+          "sha256": "c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "certifi": {
+          "version": "2026.7.22",
+          "filename": "certifi-2026.7.22-py3-none-any.whl",
+          "bytes": 136983,
+          "sha256": "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "cffi": {
+          "version": "2.1.1",
+          "filename": "cffi-2.1.1-cp312-cp312-win_amd64.whl",
+          "bytes": 185919,
+          "sha256": "f53e442b08449d42821fa4a4fba000095af9f62742a500f978a9f557ec44339a",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "click": {
+          "version": "8.5.0",
+          "filename": "click-8.5.0-py3-none-any.whl",
+          "bytes": 125251,
+          "sha256": "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "cryptography": {
+          "version": "50.0.1",
+          "filename": "cryptography-50.0.1-cp311-abi3-win_amd64.whl",
+          "bytes": 3842826,
+          "sha256": "aed8db4f6d71c51efb89530e12d9464e7bf2923d46c3205dc794a2a93f8c0648",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "h11": {
+          "version": "0.16.0",
+          "filename": "h11-0.16.0-py3-none-any.whl",
+          "bytes": 37515,
+          "sha256": "63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "httpcore": {
+          "version": "1.0.9",
+          "filename": "httpcore-1.0.9-py3-none-any.whl",
+          "bytes": 78784,
+          "sha256": "2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "httpx": {
+          "version": "0.28.1",
+          "filename": "httpx-0.28.1-py3-none-any.whl",
+          "bytes": 73517,
+          "sha256": "d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "httpx-sse": {
+          "version": "0.4.3",
+          "filename": "httpx_sse-0.4.3-py3-none-any.whl",
+          "bytes": 8960,
+          "sha256": "0ac1c9fe3c0afad2e0ebb25a934a59f4c7823b60792691f779fad2c5568830fc",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "idna": {
+          "version": "3.20",
+          "filename": "idna-3.20-py3-none-any.whl",
+          "bytes": 69583,
+          "sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "jpype1": {
+          "version": "1.7.1",
+          "filename": "jpype1-1.7.1-cp312-cp312-win_amd64.whl",
+          "bytes": 356985,
+          "sha256": "d7dad528c73d02987358485dc37fab36edb9ad8bce53533e65f54cff1b68a4bc",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "jsonschema": {
+          "version": "4.26.0",
+          "filename": "jsonschema-4.26.0-py3-none-any.whl",
+          "bytes": 90630,
+          "sha256": "d489f15263b8d200f8387e64b4c3a75f06629559fb73deb8fdfb525f2dab50ce",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "jsonschema-specifications": {
+          "version": "2025.9.1",
+          "filename": "jsonschema_specifications-2025.9.1-py3-none-any.whl",
+          "bytes": 18437,
+          "sha256": "98802fee3a11ee76ecaca44429fda8a41bff98b00a0f2838151b113f210cc6fe",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "mcp": {
+          "version": "1.30.0",
+          "filename": "mcp-1.30.0-py3-none-any.whl",
+          "bytes": 234581,
+          "sha256": "666edb5009503e1047c9d60346a756f94b261f05cc2625f23d41c728ffc484d0",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "mph": {
+          "version": "1.4.0",
+          "filename": "mph-1.4.0-py3-none-any.whl",
+          "bytes": 65897,
+          "sha256": "835835ac9d211601def50a6f8c61b783531e905d7165c8de7bf8a378a040c385",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "numpy": {
+          "version": "2.5.3",
+          "filename": "numpy-2.5.3-cp312-cp312-win_amd64.whl",
+          "bytes": 12567828,
+          "sha256": "0a59a421a32580a009e8a1751345bf829631b990dc1794b80514ab722b435def",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "packaging": {
+          "version": "26.3",
+          "filename": "packaging-26.3-py3-none-any.whl",
+          "bytes": 129956,
+          "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pycparser": {
+          "version": "3.0",
+          "filename": "pycparser-3.0-py3-none-any.whl",
+          "bytes": 48172,
+          "sha256": "b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pydantic": {
+          "version": "2.13.5",
+          "filename": "pydantic-2.13.5-py3-none-any.whl",
+          "bytes": 472589,
+          "sha256": "346a034f080da3755d8e9cb5e00e8b07de1d39e4f6e2c87d8ab7cafa0b269a73",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pydantic-core": {
+          "version": "2.46.5",
+          "filename": "pydantic_core-2.46.5-cp312-cp312-win_amd64.whl",
+          "bytes": 2043140,
+          "sha256": "5e81740c09e310f5aa5cbd3e434a01c154d4bef93241c7877b39f211d2b78ba8",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pydantic-settings": {
+          "version": "2.15.0",
+          "filename": "pydantic_settings-2.15.0-py3-none-any.whl",
+          "bytes": 69413,
+          "sha256": "0ba092c291c94baceb5eff768aa0d56400a457585bc0175925a5a5510303da42",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pyjwt": {
+          "version": "2.15.0",
+          "filename": "pyjwt-2.15.0-py3-none-any.whl",
+          "bytes": 33680,
+          "sha256": "7a3742debf6b879e912dbb9819ceec1594be812452b78c5f2e2dfc56564954f8",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "python-dotenv": {
+          "version": "1.2.3",
+          "filename": "python_dotenv-1.2.3-py3-none-any.whl",
+          "bytes": 22780,
+          "sha256": "904552145e8bfed22162c09dab1c2b9b54fefa7b23ba780f4f26ca0316b0f0d9",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "python-multipart": {
+          "version": "0.0.32",
+          "filename": "python_multipart-0.0.32-py3-none-any.whl",
+          "bytes": 30042,
+          "sha256": "ff6d3f776f16878c894e52e107296ffc890e913c611b1a4ec6c44e2821fe2e23",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pywin32": {
+          "version": "312",
+          "filename": "pywin32-312-cp312-cp312-win_amd64.whl",
+          "bytes": 6914841,
+          "sha256": "b457f6d628a47e8a7346ce22acb7e1a46a4a78b52e1d17e1af56871bd19a93bc",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "referencing": {
+          "version": "0.37.0",
+          "filename": "referencing-0.37.0-py3-none-any.whl",
+          "bytes": 26766,
+          "sha256": "381329a9f99628c9069361716891d34ad94af76e461dcb0335825aecc7692231",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "rpds-py": {
+          "version": "2026.6.3",
+          "filename": "rpds_py-2026.6.3-cp312-cp312-win_amd64.whl",
+          "bytes": 220394,
+          "sha256": "2c958bf94822e9290a40aaf2a822d4bc5c88099093e3948ad6c571eca9272e5f",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "sse-starlette": {
+          "version": "3.4.11",
+          "filename": "sse_starlette-3.4.11-py3-none-any.whl",
+          "bytes": 17122,
+          "sha256": "c7b2244bdff016fe7f64e10075e89a3e6bbf899649cc89b0fe884b5545042453",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "starlette": {
+          "version": "1.7.0",
+          "filename": "starlette-1.7.0-py3-none-any.whl",
+          "bytes": 78980,
+          "sha256": "67f8e99895493dd2911a03f11314af6ceebeae4e704bb9f43dfc6a9db151c93e",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "typing-extensions": {
+          "version": "4.16.0",
+          "filename": "typing_extensions-4.16.0-py3-none-any.whl",
+          "bytes": 45571,
+          "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "typing-inspection": {
+          "version": "0.4.4",
+          "filename": "typing_inspection-0.4.4-py3-none-any.whl",
+          "bytes": 14750,
+          "sha256": "65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "uvicorn": {
+          "version": "0.53.0",
+          "filename": "uvicorn-0.53.0-py3-none-any.whl",
+          "bytes": 87081,
+          "sha256": "e8dca71ec86dce5f04e333f0d56cdedf942446e6643b9cea1af0d6d3a02cb03e",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        }
+      },
+      "sbom": "_state/universal-dependency-prep/win_amd64/sbom.cdx.json",
+      "sbom_sha256": "f2829d1c3a48200e161a1a1f24006c344ef358508e5f60aaf81e8909bee4d26e",
+      "offline_install_validation": "NOT_RUN",
+      "native_hardware_validation": "NOT_RUN"
+    },
+    "macos_arm64": {
+      "status": "PREPARED_STATIC_WHEEL_INPUTS",
+      "wheel_count": 41,
+      "expected_distribution_count": 41,
+      "missing_distributions": [],
+      "files": {
+        "annotated-types": {
+          "version": "0.8.0",
+          "filename": "annotated_types-0.8.0-py3-none-any.whl",
+          "bytes": 13427,
+          "sha256": "f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "anyio": {
+          "version": "4.15.1",
+          "filename": "anyio-4.15.1-py3-none-any.whl",
+          "bytes": 132079,
+          "sha256": "6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "attrs": {
+          "version": "26.1.0",
+          "filename": "attrs-26.1.0-py3-none-any.whl",
+          "bytes": 67548,
+          "sha256": "c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "certifi": {
+          "version": "2026.7.22",
+          "filename": "certifi-2026.7.22-py3-none-any.whl",
+          "bytes": 136983,
+          "sha256": "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "cffi": {
+          "version": "2.1.1",
+          "filename": "cffi-2.1.1-cp312-cp312-macosx_11_0_arm64.whl",
+          "bytes": 184719,
+          "sha256": "f81b3b8f3d4e343550fa4baa0e479bba9f2d29ce9c2e9b51d1ce1718d7442fcf",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "click": {
+          "version": "8.5.0",
+          "filename": "click-8.5.0-py3-none-any.whl",
+          "bytes": 125251,
+          "sha256": "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "cryptography": {
+          "version": "50.0.1",
+          "filename": "cryptography-50.0.1-cp311-abi3-macosx_11_0_arm64.whl",
+          "bytes": 4010153,
+          "sha256": "b8f852c65863251b9e3a1b8c150ce21e59b522dbb6a7d4bc80e680d38388e986",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "h11": {
+          "version": "0.16.0",
+          "filename": "h11-0.16.0-py3-none-any.whl",
+          "bytes": 37515,
+          "sha256": "63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "httpcore": {
+          "version": "1.0.9",
+          "filename": "httpcore-1.0.9-py3-none-any.whl",
+          "bytes": 78784,
+          "sha256": "2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "httpx": {
+          "version": "0.28.1",
+          "filename": "httpx-0.28.1-py3-none-any.whl",
+          "bytes": 73517,
+          "sha256": "d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "httpx-sse": {
+          "version": "0.4.3",
+          "filename": "httpx_sse-0.4.3-py3-none-any.whl",
+          "bytes": 8960,
+          "sha256": "0ac1c9fe3c0afad2e0ebb25a934a59f4c7823b60792691f779fad2c5568830fc",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "idna": {
+          "version": "3.20",
+          "filename": "idna-3.20-py3-none-any.whl",
+          "bytes": 69583,
+          "sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "jpype1": {
+          "version": "1.7.1",
+          "filename": "jpype1-1.7.1-1-cp312-cp312-macosx_11_0_universal2.whl",
+          "bytes": 569654,
+          "sha256": "b3ddd9f9099202212a34679dfb95dda590bcfbd23289559d104e24abec9120d1",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "jsonschema": {
+          "version": "4.26.0",
+          "filename": "jsonschema-4.26.0-py3-none-any.whl",
+          "bytes": 90630,
+          "sha256": "d489f15263b8d200f8387e64b4c3a75f06629559fb73deb8fdfb525f2dab50ce",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "jsonschema-specifications": {
+          "version": "2025.9.1",
+          "filename": "jsonschema_specifications-2025.9.1-py3-none-any.whl",
+          "bytes": 18437,
+          "sha256": "98802fee3a11ee76ecaca44429fda8a41bff98b00a0f2838151b113f210cc6fe",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "mcp": {
+          "version": "1.30.0",
+          "filename": "mcp-1.30.0-py3-none-any.whl",
+          "bytes": 234581,
+          "sha256": "666edb5009503e1047c9d60346a756f94b261f05cc2625f23d41c728ffc484d0",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "mph": {
+          "version": "1.4.0",
+          "filename": "mph-1.4.0-py3-none-any.whl",
+          "bytes": 65897,
+          "sha256": "835835ac9d211601def50a6f8c61b783531e905d7165c8de7bf8a378a040c385",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "numpy": {
+          "version": "2.5.3",
+          "filename": "numpy-2.5.3-cp312-cp312-macosx_11_0_arm64.whl",
+          "bytes": 12009327,
+          "sha256": "f59a878c33d6b88122d80d239bb3b845d58708750b0cb06a09aebb9b18ec696c",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "packaging": {
+          "version": "26.3",
+          "filename": "packaging-26.3-py3-none-any.whl",
+          "bytes": 129956,
+          "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "psutil": {
+          "version": "5.9.8",
+          "filename": "psutil-5.9.8-cp38-abi3-macosx_11_0_arm64.whl",
+          "bytes": 249898,
+          "sha256": "d16bbddf0693323b8c6123dd804100241da461e41d6e332fb0ba6058f630f8c8",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pycparser": {
+          "version": "3.0",
+          "filename": "pycparser-3.0-py3-none-any.whl",
+          "bytes": 48172,
+          "sha256": "b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pydantic": {
+          "version": "2.13.5",
+          "filename": "pydantic-2.13.5-py3-none-any.whl",
+          "bytes": 472589,
+          "sha256": "346a034f080da3755d8e9cb5e00e8b07de1d39e4f6e2c87d8ab7cafa0b269a73",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pydantic-core": {
+          "version": "2.46.5",
+          "filename": "pydantic_core-2.46.5-cp312-cp312-macosx_11_0_arm64.whl",
+          "bytes": 1922874,
+          "sha256": "a39ac25a9a2fa4072efdb429833c4a4c8009a51ff9eea3eeae131713cd27991e",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pydantic-settings": {
+          "version": "2.15.0",
+          "filename": "pydantic_settings-2.15.0-py3-none-any.whl",
+          "bytes": 69413,
+          "sha256": "0ba092c291c94baceb5eff768aa0d56400a457585bc0175925a5a5510303da42",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pyjwt": {
+          "version": "2.15.0",
+          "filename": "pyjwt-2.15.0-py3-none-any.whl",
+          "bytes": 33680,
+          "sha256": "7a3742debf6b879e912dbb9819ceec1594be812452b78c5f2e2dfc56564954f8",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pyobjc-core": {
+          "version": "12.2.2",
+          "filename": "pyobjc_core-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+          "bytes": 6427637,
+          "sha256": "122e6ad302a2abf5d4d4adb0156db751600ddf2768441696cba17b31323085e7",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pyobjc-framework-applicationservices": {
+          "version": "12.2.2",
+          "filename": "pyobjc_framework_applicationservices-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+          "bytes": 32765,
+          "sha256": "5506bd6b5268a97fcb79b5b021f6cbbaaf5cdff3ec87094d8870268d8cf096ed",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pyobjc-framework-cocoa": {
+          "version": "12.2.2",
+          "filename": "pyobjc_framework_cocoa-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+          "bytes": 388117,
+          "sha256": "e106f395531e67694376b0f1184612cbeea3ec8b9bf56b55ef41d026171d2a2d",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pyobjc-framework-coremedia": {
+          "version": "12.2.2",
+          "filename": "pyobjc_framework_coremedia-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+          "bytes": 29421,
+          "sha256": "84f5deee8d366bf73069a0525509637aa578ccd0e6688923b09999a8bc3077a8",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pyobjc-framework-coretext": {
+          "version": "12.2.2",
+          "filename": "pyobjc_framework_coretext-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+          "bytes": 30120,
+          "sha256": "a69611de569d92776e6391ca25492a5bbb4a05ba744006349e377a4fc5f7c8a5",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pyobjc-framework-quartz": {
+          "version": "12.2.2",
+          "filename": "pyobjc_framework_quartz-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+          "bytes": 219003,
+          "sha256": "7f668979d0c7320bf8f7ed6e030da578f93ab0f5dd619b295ec735cd8d5faa34",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pyobjc-framework-screencapturekit": {
+          "version": "12.2.2",
+          "filename": "pyobjc_framework_screencapturekit-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+          "bytes": 11598,
+          "sha256": "5c81c68bc0399ad7ca6ccaa978574354a4da8fbb474527664fdbf08cc8f8abd5",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "python-dotenv": {
+          "version": "1.2.3",
+          "filename": "python_dotenv-1.2.3-py3-none-any.whl",
+          "bytes": 22780,
+          "sha256": "904552145e8bfed22162c09dab1c2b9b54fefa7b23ba780f4f26ca0316b0f0d9",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "python-multipart": {
+          "version": "0.0.32",
+          "filename": "python_multipart-0.0.32-py3-none-any.whl",
+          "bytes": 30042,
+          "sha256": "ff6d3f776f16878c894e52e107296ffc890e913c611b1a4ec6c44e2821fe2e23",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "referencing": {
+          "version": "0.37.0",
+          "filename": "referencing-0.37.0-py3-none-any.whl",
+          "bytes": 26766,
+          "sha256": "381329a9f99628c9069361716891d34ad94af76e461dcb0335825aecc7692231",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "rpds-py": {
+          "version": "2026.6.3",
+          "filename": "rpds_py-2026.6.3-cp312-cp312-macosx_11_0_arm64.whl",
+          "bytes": 338542,
+          "sha256": "538949e262e46caa31ac01bdb3c1e8f642622922cacbabbae6a8445d9dc33eaf",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "sse-starlette": {
+          "version": "3.4.11",
+          "filename": "sse_starlette-3.4.11-py3-none-any.whl",
+          "bytes": 17122,
+          "sha256": "c7b2244bdff016fe7f64e10075e89a3e6bbf899649cc89b0fe884b5545042453",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "starlette": {
+          "version": "1.7.0",
+          "filename": "starlette-1.7.0-py3-none-any.whl",
+          "bytes": 78980,
+          "sha256": "67f8e99895493dd2911a03f11314af6ceebeae4e704bb9f43dfc6a9db151c93e",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "typing-extensions": {
+          "version": "4.16.0",
+          "filename": "typing_extensions-4.16.0-py3-none-any.whl",
+          "bytes": 45571,
+          "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "typing-inspection": {
+          "version": "0.4.4",
+          "filename": "typing_inspection-0.4.4-py3-none-any.whl",
+          "bytes": 14750,
+          "sha256": "65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "uvicorn": {
+          "version": "0.53.0",
+          "filename": "uvicorn-0.53.0-py3-none-any.whl",
+          "bytes": 87081,
+          "sha256": "e8dca71ec86dce5f04e333f0d56cdedf942446e6643b9cea1af0d6d3a02cb03e",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        }
+      },
+      "sbom": "_state/universal-dependency-prep/macos_arm64/sbom.cdx.json",
+      "sbom_sha256": "819181499a6582cf36cf08921cec1836003242e9dfd0250d3477a752dc3219ad",
+      "offline_install_validation": "NOT_RUN",
+      "native_hardware_validation": "NOT_RUN"
+    },
+    "macos_x86_64": {
+      "status": "PREPARED_WITH_MISSING_WHEEL",
+      "wheel_count": 40,
+      "expected_distribution_count": 41,
+      "missing_distributions": [
+        "cryptography"
+      ],
+      "files": {
+        "annotated-types": {
+          "version": "0.8.0",
+          "filename": "annotated_types-0.8.0-py3-none-any.whl",
+          "bytes": 13427,
+          "sha256": "f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "anyio": {
+          "version": "4.15.1",
+          "filename": "anyio-4.15.1-py3-none-any.whl",
+          "bytes": 132079,
+          "sha256": "6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "attrs": {
+          "version": "26.1.0",
+          "filename": "attrs-26.1.0-py3-none-any.whl",
+          "bytes": 67548,
+          "sha256": "c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "certifi": {
+          "version": "2026.7.22",
+          "filename": "certifi-2026.7.22-py3-none-any.whl",
+          "bytes": 136983,
+          "sha256": "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "cffi": {
+          "version": "2.1.1",
+          "filename": "cffi-2.1.1-cp312-cp312-macosx_10_15_x86_64.whl",
+          "bytes": 184821,
+          "sha256": "c8c69575568085ba0b1b10c0249d779a214aea6f6522e949a0fc9fb0fcb449d0",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "click": {
+          "version": "8.5.0",
+          "filename": "click-8.5.0-py3-none-any.whl",
+          "bytes": 125251,
+          "sha256": "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "h11": {
+          "version": "0.16.0",
+          "filename": "h11-0.16.0-py3-none-any.whl",
+          "bytes": 37515,
+          "sha256": "63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "httpcore": {
+          "version": "1.0.9",
+          "filename": "httpcore-1.0.9-py3-none-any.whl",
+          "bytes": 78784,
+          "sha256": "2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "httpx": {
+          "version": "0.28.1",
+          "filename": "httpx-0.28.1-py3-none-any.whl",
+          "bytes": 73517,
+          "sha256": "d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "httpx-sse": {
+          "version": "0.4.3",
+          "filename": "httpx_sse-0.4.3-py3-none-any.whl",
+          "bytes": 8960,
+          "sha256": "0ac1c9fe3c0afad2e0ebb25a934a59f4c7823b60792691f779fad2c5568830fc",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "idna": {
+          "version": "3.20",
+          "filename": "idna-3.20-py3-none-any.whl",
+          "bytes": 69583,
+          "sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "jpype1": {
+          "version": "1.7.1",
+          "filename": "jpype1-1.7.1-1-cp312-cp312-macosx_11_0_universal2.whl",
+          "bytes": 569654,
+          "sha256": "b3ddd9f9099202212a34679dfb95dda590bcfbd23289559d104e24abec9120d1",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "jsonschema": {
+          "version": "4.26.0",
+          "filename": "jsonschema-4.26.0-py3-none-any.whl",
+          "bytes": 90630,
+          "sha256": "d489f15263b8d200f8387e64b4c3a75f06629559fb73deb8fdfb525f2dab50ce",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "jsonschema-specifications": {
+          "version": "2025.9.1",
+          "filename": "jsonschema_specifications-2025.9.1-py3-none-any.whl",
+          "bytes": 18437,
+          "sha256": "98802fee3a11ee76ecaca44429fda8a41bff98b00a0f2838151b113f210cc6fe",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "mcp": {
+          "version": "1.30.0",
+          "filename": "mcp-1.30.0-py3-none-any.whl",
+          "bytes": 234581,
+          "sha256": "666edb5009503e1047c9d60346a756f94b261f05cc2625f23d41c728ffc484d0",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "mph": {
+          "version": "1.4.0",
+          "filename": "mph-1.4.0-py3-none-any.whl",
+          "bytes": 65897,
+          "sha256": "835835ac9d211601def50a6f8c61b783531e905d7165c8de7bf8a378a040c385",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "numpy": {
+          "version": "2.5.3",
+          "filename": "numpy-2.5.3-cp312-cp312-macosx_10_13_x86_64.whl",
+          "bytes": 16994982,
+          "sha256": "cb189f09db39283b26bfd061ec16189e14f71c6755207f72a0f7540867afe5b9",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "packaging": {
+          "version": "26.3",
+          "filename": "packaging-26.3-py3-none-any.whl",
+          "bytes": 129956,
+          "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "psutil": {
+          "version": "5.9.8",
+          "filename": "psutil-5.9.8-cp36-abi3-macosx_10_9_x86_64.whl",
+          "bytes": 248702,
+          "sha256": "aee678c8720623dc456fa20659af736241f575d79429a0e5e9cf88ae0605cc81",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pycparser": {
+          "version": "3.0",
+          "filename": "pycparser-3.0-py3-none-any.whl",
+          "bytes": 48172,
+          "sha256": "b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pydantic": {
+          "version": "2.13.5",
+          "filename": "pydantic-2.13.5-py3-none-any.whl",
+          "bytes": 472589,
+          "sha256": "346a034f080da3755d8e9cb5e00e8b07de1d39e4f6e2c87d8ab7cafa0b269a73",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pydantic-core": {
+          "version": "2.46.5",
+          "filename": "pydantic_core-2.46.5-cp312-cp312-macosx_10_12_x86_64.whl",
+          "bytes": 2076516,
+          "sha256": "b9fe6fb92520e3fd61f2e49000b6911b188824f089b75973ea06d6267f0b476d",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pydantic-settings": {
+          "version": "2.15.0",
+          "filename": "pydantic_settings-2.15.0-py3-none-any.whl",
+          "bytes": 69413,
+          "sha256": "0ba092c291c94baceb5eff768aa0d56400a457585bc0175925a5a5510303da42",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pyjwt": {
+          "version": "2.15.0",
+          "filename": "pyjwt-2.15.0-py3-none-any.whl",
+          "bytes": 33680,
+          "sha256": "7a3742debf6b879e912dbb9819ceec1594be812452b78c5f2e2dfc56564954f8",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pyobjc-core": {
+          "version": "12.2.2",
+          "filename": "pyobjc_core-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+          "bytes": 6427637,
+          "sha256": "122e6ad302a2abf5d4d4adb0156db751600ddf2768441696cba17b31323085e7",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pyobjc-framework-applicationservices": {
+          "version": "12.2.2",
+          "filename": "pyobjc_framework_applicationservices-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+          "bytes": 32765,
+          "sha256": "5506bd6b5268a97fcb79b5b021f6cbbaaf5cdff3ec87094d8870268d8cf096ed",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pyobjc-framework-cocoa": {
+          "version": "12.2.2",
+          "filename": "pyobjc_framework_cocoa-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+          "bytes": 388117,
+          "sha256": "e106f395531e67694376b0f1184612cbeea3ec8b9bf56b55ef41d026171d2a2d",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pyobjc-framework-coremedia": {
+          "version": "12.2.2",
+          "filename": "pyobjc_framework_coremedia-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+          "bytes": 29421,
+          "sha256": "84f5deee8d366bf73069a0525509637aa578ccd0e6688923b09999a8bc3077a8",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pyobjc-framework-coretext": {
+          "version": "12.2.2",
+          "filename": "pyobjc_framework_coretext-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+          "bytes": 30120,
+          "sha256": "a69611de569d92776e6391ca25492a5bbb4a05ba744006349e377a4fc5f7c8a5",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pyobjc-framework-quartz": {
+          "version": "12.2.2",
+          "filename": "pyobjc_framework_quartz-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+          "bytes": 219003,
+          "sha256": "7f668979d0c7320bf8f7ed6e030da578f93ab0f5dd619b295ec735cd8d5faa34",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "pyobjc-framework-screencapturekit": {
+          "version": "12.2.2",
+          "filename": "pyobjc_framework_screencapturekit-12.2.2-cp312-cp312-macosx_10_13_universal2.whl",
+          "bytes": 11598,
+          "sha256": "5c81c68bc0399ad7ca6ccaa978574354a4da8fbb474527664fdbf08cc8f8abd5",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "python-dotenv": {
+          "version": "1.2.3",
+          "filename": "python_dotenv-1.2.3-py3-none-any.whl",
+          "bytes": 22780,
+          "sha256": "904552145e8bfed22162c09dab1c2b9b54fefa7b23ba780f4f26ca0316b0f0d9",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "python-multipart": {
+          "version": "0.0.32",
+          "filename": "python_multipart-0.0.32-py3-none-any.whl",
+          "bytes": 30042,
+          "sha256": "ff6d3f776f16878c894e52e107296ffc890e913c611b1a4ec6c44e2821fe2e23",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "referencing": {
+          "version": "0.37.0",
+          "filename": "referencing-0.37.0-py3-none-any.whl",
+          "bytes": 26766,
+          "sha256": "381329a9f99628c9069361716891d34ad94af76e461dcb0335825aecc7692231",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "rpds-py": {
+          "version": "2026.6.3",
+          "filename": "rpds_py-2026.6.3-cp312-cp312-macosx_10_12_x86_64.whl",
+          "bytes": 343691,
+          "sha256": "a0811d33247c3d6128a3001d763f2aa056bb3425204335400ac54f89eec3a0d0",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "sse-starlette": {
+          "version": "3.4.11",
+          "filename": "sse_starlette-3.4.11-py3-none-any.whl",
+          "bytes": 17122,
+          "sha256": "c7b2244bdff016fe7f64e10075e89a3e6bbf899649cc89b0fe884b5545042453",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "starlette": {
+          "version": "1.7.0",
+          "filename": "starlette-1.7.0-py3-none-any.whl",
+          "bytes": 78980,
+          "sha256": "67f8e99895493dd2911a03f11314af6ceebeae4e704bb9f43dfc6a9db151c93e",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "typing-extensions": {
+          "version": "4.16.0",
+          "filename": "typing_extensions-4.16.0-py3-none-any.whl",
+          "bytes": 45571,
+          "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "typing-inspection": {
+          "version": "0.4.4",
+          "filename": "typing_inspection-0.4.4-py3-none-any.whl",
+          "bytes": 14750,
+          "sha256": "65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        },
+        "uvicorn": {
+          "version": "0.53.0",
+          "filename": "uvicorn-0.53.0-py3-none-any.whl",
+          "bytes": 87081,
+          "sha256": "e8dca71ec86dce5f04e333f0d56cdedf942446e6643b9cea1af0d6d3a02cb03e",
+          "hash_verified": true,
+          "target_tag_static_match": true
+        }
+      },
+      "sbom": "_state/universal-dependency-prep/macos_x86_64/sbom.cdx.json",
+      "sbom_sha256": "8a232a90f5f81c8ed3c7090b6dea98b73010d49faa4142e0c4bdfb6b5a2a80c4",
+      "offline_install_validation": "NOT_RUN",
+      "native_hardware_validation": "NOT_RUN",
+      "failure_details": {
+        "missing_distribution": "cryptography==50.0.1",
+        "pypi_wheel_resolution": "No matching official CPython 3.12 wheel for macosx_12_0_x86_64 or macosx_12_0_universal2; pip reported available versions only through 48.0.1 for the selected target tags.",
+        "raw_failure_log": "_state/universal-dependency-prep/logs/macos_x86_64-final.log",
+        "continuation": "Other 40 target distributions were fetched with exact required hashes using the preserved no-cryptography lock; no source build or version change was attempted."
+      }
+    }
+  },
+  "release_build": {
+    "status": "NOT_RUN",
+    "reason": "M1 source changes are still in flight; the user forbids freezing/building final source before M1 completes. The current175-r13 source lock DOES match the current pyproject.toml member exactly: both SHA-256 values are fc8eaefc0db93fe956021cee3f8718f2e573bdbb88102fad9f1d097e8ea67995 and both files are 1807 bytes. A new source freeze/closure is needed because M1 changes other source members. The current builder profile choices stop at r13; target inputs and primary notice manifest must be regenerated by the main agent for the post-M1 frozen source.",
+    "normal_builder_cli_shape": "python tools/w26_application_bundle_current.py --root <fresh-private-app-root> --prior-root <approved-prior-root> --source <main-agent-frozen-source-snapshot> --tag <fresh-tag> --source-profile <fresh-profile-supported-after-refreeze> --target-inputs <regenerated-target-inputs.json> --primary-notices <regenerated-primary-notice-manifest.json>",
+    "follow_on": "Main agent must refresh canonical source closure/profile, adapt these per-target hashed wheel inputs into current w26_target_inputs format, regenerate primary notices, and supply an authorized Intel cryptography wheel/provenance before ordinary three-target bundle construction."
+  },
+  "safety": {
+    "system_install": "NOT_RUN",
+    "prepared_venv_modified": false,
+    "COMSOL_license_or_install": "NOT_TOUCHED",
+    "native_acceptance": "NOT_RUN",
+    "network_settings": "UNCHANGED",
+    "upload": "NONE"
+  },
+  "lock_mismatch_decision_for_main_agent": "Current pyproject.toml has a desktop extra absent from uv.lock project metadata. Keep existing package versions fixed; main agent should decide and produce the refreshed canonical lock for the frozen M1 source. This prep only used existing target closure pins and official target-specific hashes."
+}
